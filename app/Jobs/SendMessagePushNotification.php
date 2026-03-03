@@ -1,0 +1,114 @@
+<?php
+
+namespace App\Jobs;
+
+use App\Models\Message;
+use App\Models\User;
+use App\Models\Seller;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
+use App\Http\Controllers\PushController;
+use Illuminate\Http\Request;
+
+class SendMessagePushNotification implements ShouldQueue
+{
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    protected int $messageId;
+
+    public function __construct(int $messageId)
+    {
+        $this->messageId = $messageId;
+    }
+
+    public function handle(): void
+    {
+        // 1. Eager Loading bilan yuklash
+        $message = Message::with(['conversation.user', 'conversation.shop'])
+            ->find($this->messageId);
+
+        if (!$message || $message->is_read) return;
+
+        $conversation = $message->conversation;
+        $tokens       = [];
+        $appKey       = 'kitobchi';
+        $senderName   = "Yangi xabar";
+        $senderAvatar = null;
+
+        // 2. Yo'nalishni aniqlash
+        if ($conversation->type === 'personal') {
+            // ── User <-> User ─────────────────────────────────────────────
+            $sender       = User::find($message->sender_id);
+            $senderName   = trim(($sender->name ?? '') . ' ' . ($sender->lastname ?? '')) ?: "Foydalanuvchi";
+            $senderAvatar = $sender->avatar ?? null;
+
+            $receiverId = ($message->sender_id == $conversation->user_id)
+                ? $conversation->receiver_id
+                : $conversation->user_id;
+
+            $receiver = User::with('devices')->find($receiverId);
+            if ($receiver) {
+                $tokens = $receiver->devices->pluck('fcm_token')->filter()->toArray();
+            }
+
+        } else {
+            if ($message->sender_id == $conversation->user_id) {
+                // ── User → Shop (Business App) ─────────────────────────────
+                $appKey = 'business';
+
+                $sender       = User::find($message->sender_id);
+                $senderName   = trim(($sender->name ?? '') . ' ' . ($sender->lastname ?? '')) ?: "Foydalanuvchi";
+                $senderAvatar = $sender->avatar ?? null;
+
+                $seller = Seller::with('devices')->find($conversation->shop_id);
+                if ($seller) {
+                    $tokens = $seller->devices->pluck('fcm_token')->filter()->toArray();
+                }
+            } else {
+                // ── Shop → User (Kitobchi App) ─────────────────────────────
+                $shop         = Seller::find($conversation->shop_id);
+                $senderName   = $shop->shop_name ?? "Do'kon";
+                $senderAvatar = $shop->photo ?? null;
+
+                $user = User::with('devices')->find($conversation->user_id);
+                if ($user) {
+                    $tokens = $user->devices->pluck('fcm_token')->filter()->toArray();
+                }
+            }
+        }
+
+        // 3. Tokenlarni tozalash (null, bo'sh, dublikat)
+        $tokens = array_values(array_unique(array_filter($tokens)));
+        if (empty($tokens)) return;
+
+        // 4. Push yuborish
+        $this->dispatchPush($appKey, $message, $conversation, $tokens, $senderName, $senderAvatar);
+    }
+
+    private function dispatchPush(
+        string  $appKey,
+        Message $message,
+                $conversation,
+        array   $tokens,
+        string  $senderName,
+        ?string $senderAvatar
+    ): void {
+        $pushRequest = new Request([
+            'app_key' => $appKey,
+            'title'   => $senderName,
+            'body'    => $message->message,
+            'tokens'  => $tokens,
+            'data'    => [
+                'type'             => 'chat',
+                'conversation_id'  => (string) $conversation->id,
+                'other_party_name' => $senderName,
+                'avatar'           => $senderAvatar,
+            ],
+        ]);
+
+        app(PushController::class)->sendPush($pushRequest);
+    }
+}

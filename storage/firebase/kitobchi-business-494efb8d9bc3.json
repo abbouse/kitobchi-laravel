@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "kitobchi-business",
+  "private_key_id": "494efb8d9bc31adb499055b7b89b6bf907afd7b8",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDM/ayDwSzm9jsr\nm3k8oZlgfpEt+cZORgsWtf1Hz1TZvYjvGgYEEm3UZ/6IU043dSylk/uaIpVDnFCs\nrQHeDujamZ8t3iK9jtTonvc7PJ4NNK3J+uedrKsubstsXbKD8YJeDObTVNHU0Kla\nrX+HDw+e0SoTIbT/FCqoTMO17rS1uOB4q4CevK+h5ICCNPe61jOMsotj3G55Jax8\newiP14Z0zkBE3CKI/ceCBAcJEO97/1BWx81Mb6zGntYBkfapiPVCYaI58YSdWSNI\nWPTu9FcyOawhcuoplLGKSwON5T2pNzYHQMMv8TLBqrebX1+ukRx1NwNBcEHoQsDd\nvz/pdvB7AgMBAAECgf8MMF6f6MA0icT670O4AePj9WnI/LvN67GgqBUuhUH4Ik0C\nI4n/JcQMwMzv+OetudgmqvtK9hjNlwwYjb85WI0qq00hF775FL4F+opHF+HcPH6K\nvO7P4x8uMdofl3KwnquwCGmxQ682ahVu+Yy4JdfH7xnKQlNH9Ad43fs28qVaYaUM\nyPsmY2HEhgFieoUrgPiIc1N6GQRW/u0PsWZIEOwQB6BST4+1LhILfZgKxUiHpHQp\n03P2z+WRLGciZxpVGzX17u2rb7lG4nF90CtkLYgRAoiZxKxTxslKwPrP/HXc40Rm\nwdjf5sQhuNmW/qPx8DCx117E+MHLPvDhDTyKBtkCgYEA6hq0y/H0rUm8uPNvPdsH\naAPcHUm40eLIoTlJad3P2BL0NNYMOz0Gny0kuShH+mOi+ugTHRVzjmYToF4o4iOb\ndxxA6fZ4puz5evC1ENM1qHUAkyilGIBNNqVy7xw7MsKZ/QssN/URCDcz4/H6fazS\ngSB+82Al8flg8LeZxQ9mpXUCgYEA4Cnjf5PikXmDa6wBQLgp27ut0lvjP0XMbVau\nipHoOjtrbExeBOIRT4c7VbzBndKaRgM6NK3a9H8hNDLTVqQLmQ1H9SFOvwG0tpLc\nC6XJUs5HTF49EXTey/XrzUGnUpQlUCal2kwvFW2y7i7PQlG0225ZikfrgLik3t1k\n7/sCUC8CgYEAt9hPQZZ66xdsQObT5oS6tUHKu6lonlN18b72W1BZaDvCUjgClQbg\ny2J9Y3cxx341wMs+L2noPN0G7rrjamxCK/EhPVtU9upFJfogh90GV4vC7s5NkQc5\nHAAkWYkXKE7Q9XqvuCYZwRTxCELAz69IBSYK7IAGbJfGPGRDOxFUL/0CgYEAouBs\n5+8JalCTmDGju2XVLE7DLx0LEpdhwXSBYDhCN8Wi+U7H5d5pW5LUHykGuekjpYmE\nynAkrxCMjMP9YW/S6YOH7GomMI1JxHsTHfd5QAyYK7oxvzRfCm4Gxt5UeKEiN4nN\nar9+WqCZqY0jlXmO4v3cW6iESsRfL3xIckK9XIsCgYEAuwuzMVU4hIVGFEUhGNU4\n1d78ddev7lkTbrwMMeUBfLaSODfbeJ7d4jf8F1Wl/pTTGkTNNIR1+tyY4fIrSH0G\nQIDMUxET2rV5n8qWbcqOSlQQCfOT/eLQHiYG9mZGdTw2IE1FLnPFIYOx2AcSydtR\nWttw3A8le1mbG6tTEUkgB18=\n-----END PRIVATE KEY-----\n",
+  "client_email": "firebase-adminsdk-fbsvc@kitobchi-business.iam.gserviceaccount.com",
+  "client_id": "111341736200952332180",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40kitobchi-business.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

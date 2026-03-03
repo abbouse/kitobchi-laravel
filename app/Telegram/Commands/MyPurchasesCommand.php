@@ -1,0 +1,66 @@
+<?php
+
+namespace App\Telegram\Commands;
+
+use SergiX44\Nutgram\Handlers\Type\Command;
+use SergiX44\Nutgram\Nutgram;
+use App\Models\User;
+use App\Models\Sold;
+
+class MyPurchasesCommand extends Command
+{
+    protected string $command = 'mypurchases';
+    protected ?string $description = 'Sotib olgan mahsulotlarimni ko\'rish';
+
+    public function handle(Nutgram $bot): void
+    {
+        $userId = $bot->message()->from->id;
+        $user = User::where('telegram_id', $userId)->first();
+
+        if (!$user) {
+            $bot->sendMessage("⚠️ Siz hali ro'yxatdan o'tmagansiz! Avval telefon raqamingizni yuboring.");
+            return;
+        }
+        $purchases = Sold::where('user_id', $user->id)
+            ->where('status', '!=', 'F')
+            ->orderBy('id', 'desc')
+            ->limit(3)
+            ->get();
+        $purchasesCount = Sold::where('user_id', $user->id)
+            ->where('status', '!=', 'F')
+            ->count();
+        $totalAmount = Sold::where('user_id', $user->id)
+            ->where('status', '!=', 'F')
+            ->sum('amount'); 
+        if ($purchases->isEmpty()) {
+            $bot->sendMessage("❌ Sizda hali hech qanday mahsulot mavjud emas.");
+            return;
+        }
+        $purchaseText = "🛍 *Sotib olishlar tarixi:*\n\n";
+        $purchaseText .= "📦 Umumiy mahsulotlar soni: *$purchasesCount ta*\n";
+        $purchaseText .= "💰 Umumiy summa: *" . number_format($totalAmount, 0, ',', ' ') . " UZS*";
+
+        foreach ($purchases as $purchase) {
+            $totalQuantity = array_sum(array_column($purchase->items, 'count_item'));
+            $purchaseText .= "\n-------------------\n";
+            $purchaseText .= "🆔 *Buyurtma raqami:* " . $purchase->id . "\n";
+            $purchaseText .= "📅 *Sana:* " . $purchase->created_at->format('d.m.Y, H:i') . "\n";
+            $purchaseText .= "📦 *Mahsulotlar ({$totalQuantity} ta):* " . number_format($purchase->amount, 0, ',', ' ') . " UZS\n";
+            $purchaseText .= "🚚 *Status:* " . $this->getStatusText($purchase->status);
+        }
+        
+            $bot->sendMessage(
+                text: $purchaseText, 
+                parse_mode: 'markdown');
+    }
+    private function getStatusText($status): string
+    {
+        return match ($status) {
+            'A' => 'Tayyorlanmoqda',
+            'B' => 'Yo\'lda',
+            'C' => 'Yetkazildi',
+            'F' => 'Bekor qilindi',
+            default => 'Noma’lum',
+        };
+    }
+}
