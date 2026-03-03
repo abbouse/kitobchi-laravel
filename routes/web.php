@@ -8,6 +8,8 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\Seller\ProductController;
 use App\Http\Controllers\LegalController;
 
+use App\Http\Controllers\Admin\DashboardController;
+
 
 Route::get('/', function () {
     return view('welcome');
@@ -24,9 +26,7 @@ Route::group(['prefix' => 'legal'], function () {
 });
 
 Route::group(['prefix' => 'boshqaruv'], function () {
-Route::get('/', function () {
-    return view('pages.dashboard.ecommerce', ['title' => 'E-commerce Dashboard']);
-})->name('dashboard');
+Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
 // calender pages
 Route::get('/calendar', function () {

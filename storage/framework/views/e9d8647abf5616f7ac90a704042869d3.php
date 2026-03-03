@@ -1,15 +1,40 @@
+<?php $attributes ??= new \Illuminate\View\ComponentAttributeBag;
+
+$__newAttributes = [];
+$__propNames = \Illuminate\View\ComponentAttributeBag::extractPropNames((['totalRevenue'=>0,'booksRevenue'=>0,'soldCount'=>0,'soldStatusC'=>0]));
+
+foreach ($attributes->all() as $__key => $__value) {
+    if (in_array($__key, $__propNames)) {
+        $$__key = $$__key ?? $__value;
+    } else {
+        $__newAttributes[$__key] = $__value;
+    }
+}
+
+$attributes = new \Illuminate\View\ComponentAttributeBag($__newAttributes);
+
+unset($__propNames);
+unset($__newAttributes);
+
+foreach (array_filter((['totalRevenue'=>0,'booksRevenue'=>0,'soldCount'=>0,'soldStatusC'=>0]), 'is_string', ARRAY_FILTER_USE_KEY) as $__key => $__value) {
+    $$__key = $$__key ?? $__value;
+}
+
+$__defined_vars = get_defined_vars();
+
+foreach ($attributes->all() as $__key => $__value) {
+    if (array_key_exists($__key, $__defined_vars)) unset($$__key);
+}
+
+unset($__defined_vars); ?>
+<?php $rate = $soldCount > 0 ? round(($soldStatusC/$soldCount)*100) : 0; ?>
 <div class="rounded-2xl border border-gray-200 bg-gray-100 dark:border-gray-800 dark:bg-white/[0.03]">
-    <div class="shadow-default rounded-2xl bg-white px-5 pb-11 pt-5 dark:bg-gray-900 sm:px-6 sm:pt-6">
+    <div class="rounded-2xl bg-white px-5 pb-8 pt-5 dark:bg-gray-900 sm:px-6 sm:pt-6">
         <div class="flex justify-between">
             <div>
-                <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">
-                    Monthly Target
-                </h3>
-                <p class="mt-1 text-theme-sm text-gray-500 dark:text-gray-400">
-                    Target you’ve set for each month
-                </p>
+                <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">Buyurtmalar holati</h3>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Bajarilish darajasi</p>
             </div>
-            <!-- Dropdown Menu -->
             <?php if (isset($component)) { $__componentOriginala50c193cb6f2974616f14721445453d4 = $component; } ?>
 <?php if (isset($attributes)) { $__attributesOriginala50c193cb6f2974616f14721445453d4 = $attributes; } ?>
 <?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.common.dropdown-menu','data' => []] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
@@ -30,72 +55,48 @@
 <?php $component = $__componentOriginala50c193cb6f2974616f14721445453d4; ?>
 <?php unset($__componentOriginala50c193cb6f2974616f14721445453d4); ?>
 <?php endif; ?>
-            <!-- End Dropdown Menu -->
-
         </div>
-        <div class="relative max-h-[195px]">
-            
-            <div id="chartTwo" class="h-full"></div>
-            <span class="absolute left-1/2 top-[85%] -translate-x-1/2 -translate-y-[85%] rounded-full bg-success-50 px-3 py-1 text-xs font-medium text-success-600 dark:bg-success-500/15 dark:text-success-500">+10%</span>
+        <div class="relative mt-4" style="height:180px">
+            <div id="chartTarget" class="h-full"></div>
+            <span class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-success-50 px-3 py-1 text-xs font-semibold text-success-600 dark:bg-success-500/15 dark:text-success-500 pointer-events-none">
+                <?php echo e($rate); ?>%
+            </span>
         </div>
-        <p class="mx-auto mt-1.5 w-full max-w-[380px] text-center text-sm text-gray-500 sm:text-base">
-            You earn $3287 today, it's higher than last month. Keep up your good work!
+        <p class="mx-auto mt-2 max-w-xs text-center text-sm text-gray-500">
+            <?php echo e(number_format($soldCount)); ?> ta buyurtmadan <?php echo e(number_format($soldStatusC)); ?> tasi yakunlangan.
         </p>
     </div>
-
-    <div class="flex items-center justify-center gap-5 px-6 py-3.5 sm:gap-8 sm:py-5">
-        <div>
-            <p class="mb-1 text-center text-theme-xs text-gray-500 dark:text-gray-400 sm:text-sm">
-                Target
-            </p>
-            <p
-                class="flex items-center justify-center gap-1 text-base font-semibold text-gray-800 dark:text-white/90 sm:text-lg">
-                $20K
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"
-                    xmlns="http://www.w3.org/2000/svg">
-                    <path fill-rule="evenodd" clip-rule="evenodd"
-                        d="M7.26816 13.6632C7.4056 13.8192 7.60686 13.9176 7.8311 13.9176C7.83148 13.9176 7.83187 13.9176 7.83226 13.9176C8.02445 13.9178 8.21671 13.8447 8.36339 13.6981L12.3635 9.70076C12.6565 9.40797 12.6567 8.9331 12.3639 8.6401C12.0711 8.34711 11.5962 8.34694 11.3032 8.63973L8.5811 11.36L8.5811 2.5C8.5811 2.08579 8.24531 1.75 7.8311 1.75C7.41688 1.75 7.0811 2.08579 7.0811 2.5L7.0811 11.3556L4.36354 8.63975C4.07055 8.34695 3.59568 8.3471 3.30288 8.64009C3.01008 8.93307 3.01023 9.40794 3.30321 9.70075L7.26816 13.6632Z"
-                        fill="#D92D20" />
-                </svg>
-            </p>
+    <div class="flex items-center justify-center gap-5 px-6 py-4 sm:gap-8">
+        <div class="text-center">
+            <p class="mb-1 text-xs text-gray-500 dark:text-gray-400">Umumiy daromad</p>
+            <p class="text-sm font-semibold text-gray-800 dark:text-white/90"><?php echo e(number_format($totalRevenue,0,'.',' ')); ?> so'm</p>
         </div>
-
         <div class="h-7 w-px bg-gray-200 dark:bg-gray-800"></div>
-
-        <div>
-            <p class="mb-1 text-center text-theme-xs text-gray-500 dark:text-gray-400 sm:text-sm">
-                Revenue
-            </p>
-            <p
-                class="flex items-center justify-center gap-1 text-base font-semibold text-gray-800 dark:text-white/90 sm:text-lg">
-                $20K
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"
-                    xmlns="http://www.w3.org/2000/svg">
-                    <path fill-rule="evenodd" clip-rule="evenodd"
-                        d="M7.60141 2.33683C7.73885 2.18084 7.9401 2.08243 8.16435 2.08243C8.16475 2.08243 8.16516 2.08243 8.16556 2.08243C8.35773 2.08219 8.54998 2.15535 8.69664 2.30191L12.6968 6.29924C12.9898 6.59203 12.9899 7.0669 12.6971 7.3599C12.4044 7.6529 11.9295 7.65306 11.6365 7.36027L8.91435 4.64004L8.91435 13.5C8.91435 13.9142 8.57856 14.25 8.16435 14.25C7.75013 14.25 7.41435 13.9142 7.41435 13.5L7.41435 4.64442L4.69679 7.36025C4.4038 7.65305 3.92893 7.6529 3.63613 7.35992C3.34333 7.06693 3.34348 6.59206 3.63646 6.29926L7.60141 2.33683Z"
-                        fill="#039855" />
-                </svg>
-            </p>
+        <div class="text-center">
+            <p class="mb-1 text-xs text-gray-500 dark:text-gray-400">Kitoblar</p>
+            <p class="text-sm font-semibold text-gray-800 dark:text-white/90"><?php echo e(number_format($booksRevenue,0,'.',' ')); ?> so'm</p>
         </div>
-
         <div class="h-7 w-px bg-gray-200 dark:bg-gray-800"></div>
-
-        <div>
-            <p class="mb-1 text-center text-theme-xs text-gray-500 dark:text-gray-400 sm:text-sm">
-                Today
-            </p>
-            <p
-                class="flex items-center justify-center gap-1 text-base font-semibold text-gray-800 dark:text-white/90 sm:text-lg">
-                $20K
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"
-                    xmlns="http://www.w3.org/2000/svg">
-                    <path fill-rule="evenodd" clip-rule="evenodd"
-                        d="M7.60141 2.33683C7.73885 2.18084 7.9401 2.08243 8.16435 2.08243C8.16475 2.08243 8.16516 2.08243 8.16556 2.08243C8.35773 2.08219 8.54998 2.15535 8.69664 2.30191L12.6968 6.29924C12.9898 6.59203 12.9899 7.0669 12.6971 7.3599C12.4044 7.6529 11.9295 7.65306 11.6365 7.36027L8.91435 4.64004L8.91435 13.5C8.91435 13.9142 8.57856 14.25 8.16435 14.25C7.75013 14.25 7.41435 13.9142 7.41435 13.5L7.41435 4.64442L4.69679 7.36025C4.4038 7.65305 3.92893 7.6529 3.63613 7.35992C3.34333 7.06693 3.34348 6.59206 3.63646 6.29926L7.60141 2.33683Z"
-                        fill="#039855" />
-                </svg>
-            </p>
+        <div class="text-center">
+            <p class="mb-1 text-xs text-gray-500 dark:text-gray-400">Yakunlangan</p>
+            <p class="text-sm font-semibold text-gray-800 dark:text-white/90"><?php echo e(number_format($soldStatusC)); ?></p>
         </div>
     </div>
 </div>
-
-<?php /**PATH /var/www/www-root/data/www/kitobchi.com/resources/views/components/ecommerce/monthly-target.blade.php ENDPATH**/ ?>
+<?php if (! $__env->hasRenderedOnce('5c2e9219-3877-4b92-90c4-6d12325c90d7')): $__env->markAsRenderedOnce('5c2e9219-3877-4b92-90c4-6d12325c90d7'); ?>
+<?php $__env->startPush('scripts'); ?>
+<script>
+(function(){
+    new ApexCharts(document.querySelector('#chartTarget'),{
+        series:[<?php echo e($soldStatusC); ?>,<?php echo e(max(0, $soldCount - $soldStatusC)); ?>],
+        labels:['Yakunlangan','Jarayonda'],
+        chart:{type:'donut',height:180,toolbar:{show:false}},
+        colors:['#10B981','#F59E0B'],
+        legend:{show:false},
+        dataLabels:{enabled:false},
+        plotOptions:{pie:{donut:{size:'70%'}}}
+    }).render();
+})();
+</script>
+<?php $__env->stopPush(); ?>
+<?php endif; ?><?php /**PATH /var/www/www-root/data/www/kitobchi.com/resources/views/components/ecommerce/monthly-target.blade.php ENDPATH**/ ?>
