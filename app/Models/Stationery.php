@@ -28,6 +28,7 @@ class Stationery extends Model
         'totalSalesWeek',
         'totalClientsWeek',
         'totalRevenueWeek',
+        'vectorData'
     ];
 
     protected $casts = [

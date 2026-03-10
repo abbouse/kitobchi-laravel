@@ -1,188 +1,181 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
-use App\Models\BookCategories;
-use App\Models\Books;
-use App\Models\Couriers;
-use App\Models\DeliveryService;
-use App\Models\MarketNews;
-use App\Models\Promocode;
-use App\Models\Sold;
 use App\Models\User;
+use App\Models\Sold;
+use App\Models\Books;
+use App\Models\Stationery;
+use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
-    private const CACHE_DURATION = 300;
-
-    public function index(Request $request)
+    public function index()
     {
-        if ($request->has('clear_cache')) {
-            $this->clearCache();
-            return redirect()->route('dashboard')->with('cache_cleared', true);
-        }
+        $now   = Carbon::now();
+        $today = Carbon::today();
 
-        return view('pages.dashboard.ecommerce', $this->getData());
-    }
+        // ============================================================
+        // KPI KARTALAR
+        // ============================================================
+        $totalRevenue      = Sold::where('paymentStatus', 2)->sum('amount');
+        $monthRevenue      = Sold::where('paymentStatus', 2)
+                                 ->whereMonth('created_at', $now->month)
+                                 ->whereYear('created_at', $now->year)
+                                 ->sum('amount');
+        $todayRevenue      = Sold::where('paymentStatus', 2)
+                                 ->whereDate('created_at', $today)
+                                 ->sum('amount');
 
-    private function clearCache(): void
-    {
-        $keys = [
-            'dash_sold_count','dash_status_a','dash_status_b','dash_status_c',
-            'dash_books_count','dash_categories_count','dash_top_book','dash_in_stock',
-            'dash_user_count','dash_new_users','dash_active_users','dash_inactive_users',
-            'dash_couriers','dash_delivery','dash_promo_count','dash_top_promo',
-            'dash_gifts','dash_news','dash_total_revenue','dash_books_revenue',
-            'dash_category_dist','dash_top_cats','dash_trend_7','dash_monthly_rev',
-        ];
-        foreach ($keys as $key) Cache::forget($key);
-    }
+        $totalOrders       = Sold::count();
+        $completedOrders   = Sold::where('status', 'C')->count();
+        $pendingOrders     = Sold::where('status', 'A')->count();
+        $cancelledOrders   = Sold::where('status', 'F')->count();
+        $todayOrders       = Sold::whereDate('created_at', $today)->count();
 
-    private function getData(): array
-    {
-        $c = self::CACHE_DURATION;
+        $totalUsers        = User::where(function($q){ $q->where('isDeleted','no')->orWhereNull('isDeleted'); })->count();
+        $premiumUsers      = User::where('is_premium', true)->where('premium_until', '>', $now)->count();
+        $verifiedUsers     = User::where('isVerified', true)->count();
+        $newUsersToday     = User::whereDate('created_at', $today)->count();
+        $newUsersWeek      = User::where('created_at', '>=', $now->copy()->subDays(7))->count();
+        $newUsersMonth     = User::where('created_at', '>=', $now->copy()->startOfMonth())->count();
 
-        /* ── Metrics ── */
-        $soldCount     = Cache::remember('dash_sold_count',       $c, fn() => Sold::count());
-        $soldStatusA   = Cache::remember('dash_status_a',         $c, fn() => Sold::where('status','A')->count());
-        $soldStatusB   = Cache::remember('dash_status_b',         $c, fn() => Sold::where('status','B')->count());
-        $soldStatusC   = Cache::remember('dash_status_c',         $c, fn() => Sold::where('status','C')->count());
+        // ============================================================
+        // ONLINE FOYDALANUVCHILAR (oxirgi 5 daqiqa)
+        // ============================================================
+        $onlineUsers       = User::where('last_seen_at', '>=', $now->copy()->subMinutes(5))->count();
+        $onlineUsersList   = User::where('last_seen_at', '>=', $now->copy()->subMinutes(5))
+                                  ->select('id','name','lastname','avatar','last_seen_at')
+                                  ->limit(8)
+                                  ->get();
 
-        $booksCount    = Cache::remember('dash_books_count',       $c, fn() => Books::count());
-        $catsCount     = Cache::remember('dash_categories_count',  $c, fn() => BookCategories::count());
-        $topBook       = Cache::remember('dash_top_book',          $c, fn() => Books::orderBy('totalSales','desc')->first()?->name ?? 'N/A');
-        $inStock       = Cache::remember('dash_in_stock',          $c, fn() => Books::where('count','>',0)->count());
+        // ============================================================
+        // ISOLAT (uzoq vaqt ko'rinmagan) FOYDALANUVCHILAR
+        // ============================================================
+        $isolatedUsers     = User::where('last_seen_at', '<=', $now->copy()->subDays(30))
+                                  ->orWhereNull('last_seen_at')
+                                  ->where(function($q){ $q->where('isDeleted','no')->orWhereNull('isDeleted'); })
+                                  ->count();
 
-        $userCount     = Cache::remember('dash_user_count',        $c, fn() => User::count());
-        $newUsers      = Cache::remember('dash_new_users',         $c, fn() => User::where('created_at','>=',now()->subDays(7))->count());
-        $activeUsers   = Cache::remember('dash_active_users',      $c, fn() => User::whereNotNull('fcm_token')->count());
-        $inactiveUsers = Cache::remember('dash_inactive_users',    $c, fn() => User::whereNull('fcm_token')->count());
+        // FCM token bo'lganlar (faol) / bo'lmaganlar (nofaol)
+        $activeUsers       = User::whereNotNull('fcm_token')->where('fcm_token','!=','')->count();
+        $inactiveUsers     = $totalUsers - $activeUsers;
 
-        $couriersCount = Cache::remember('dash_couriers',          $c, fn() => Couriers::count());
-        $deliveryCount = Cache::remember('dash_delivery',          $c, fn() => DeliveryService::count());
+        // ============================================================
+        // TOP SOTUVCHILAR (top books by sold count)
+        // ============================================================
+        $topSellingBooks = DB::table('solds')
+            ->join('books', function($join){
+                $join->on(DB::raw("JSON_UNQUOTE(JSON_EXTRACT(solds.items, '$[0].product_id'))"), '=', 'books.id');
+            })
+            ->select('books.id','books.name','books.images','books.price','books.discountPrice',
+                     DB::raw('COUNT(solds.id) as sold_count'),
+                     DB::raw('SUM(solds.amount) as total_revenue'))
+            ->where('solds.paymentStatus', 2)
+            ->groupBy('books.id','books.name','books.images','books.price','books.discountPrice')
+            ->orderByDesc('sold_count')
+            ->limit(5)
+            ->get();
 
-        $promosCount   = Cache::remember('dash_promo_count',       $c, fn() => Promocode::where('status',1)->count());
-        $topPromo      = Cache::remember('dash_top_promo',         $c, fn() => Promocode::orderBy('usedCount','desc')->first()?->code ?? 'N/A');
+        // ============================================================
+        // TOP MIJOZLAR (eng ko'p xarid qilganlar)
+        // ============================================================
+        $topBuyers = Sold::select('user_id',
+                            DB::raw('COUNT(*) as order_count'),
+                            DB::raw('SUM(amount) as total_spent'))
+                         ->where('paymentStatus', 2)
+                         ->where('status', 'C')
+                         ->groupBy('user_id')
+                         ->orderByDesc('total_spent')
+                         ->limit(5)
+                         ->with('user:id,name,lastname,avatar,phone_number')
+                         ->get();
 
-        $giftsCount    = Cache::remember('dash_gifts',             $c, fn() => Sold::whereNotNull('gift')->count());
-        $newsCount     = Cache::remember('dash_news',              $c, fn() => MarketNews::count());
+        // ============================================================
+        // SO'NGGI BUYURTMALAR
+        // ============================================================
+        $recentOrders = Sold::with('user:id,name,lastname,avatar')
+                            ->latest()
+                            ->limit(8)
+                            ->get()
+                            ->map(function($order) {
+                                $statusMap = [
+                                    'A' => ['label' => 'Kutilmoqda',     'color' => 'warning'],
+                                    'P' => ['label' => 'Qadoqlanmoqda', 'color' => 'info'],
+                                    'B' => ['label' => "Yo'lda",        'color' => 'primary'],
+                                    'C' => ['label' => 'Yetkazildi',    'color' => 'success'],
+                                    'F' => ['label' => 'Bekor qilindi', 'color' => 'error'],
+                                ];
+                                $s = $statusMap[$order->status] ?? ['label' => $order->status, 'color' => 'gray'];
+                                return [
+                                    'id'         => $order->id,
+                                    'customer'   => $order->user ? $order->user->full_name : 'Noma\'lum',
+                                    'avatar'     => $order->user?->avatar,
+                                    'amount'     => number_format($order->amount) . ' UZS',
+                                    'status'     => $s['label'],
+                                    'color'      => $s['color'],
+                                    'date'       => $order->created_at->format('d.m H:i'),
+                                    'items_count'=> is_array($order->items) ? count($order->items) : 0,
+                                    'gift'       => $order->isGift ?? false,
+                                ];
+                            });
 
-        $totalRevenue  = Cache::remember('dash_total_revenue',     $c, fn() => floatval(Sold::sum('amount')));
-        $booksRevenue  = Cache::remember('dash_books_revenue',     $c, fn() => floatval(Books::sum('totalRevenue')));
-
-        /* ── 7-day sales trend ── */
-        $soldTrend7 = Cache::remember('dash_trend_7', $c, function () {
-            $rows = Sold::selectRaw('DATE(created_at) as date, COUNT(*) as count')
-                ->where('created_at','>=',now()->subDays(6))
-                ->groupBy('date')->orderBy('date')->get();
-
-            $result = [];
-            for ($i = 6; $i >= 0; $i--) {
-                $day   = now()->subDays($i)->format('Y-m-d');
-                $found = $rows->firstWhere('date', $day);
-                $result[] = [
-                    'date'  => now()->subDays($i)->format('M d'),
-                    'count' => $found ? (int)$found->count : 0,
-                ];
-            }
-            return $result;
-        });
-
-        /* ── 6-month revenue trend ── */
-        $monthlyRevenue = Cache::remember('dash_monthly_rev', $c, function () {
-            $rows = Sold::selectRaw("DATE_FORMAT(created_at,'%Y-%m') as month, SUM(amount) as total")
-                ->where('created_at','>=',now()->subMonths(5)->startOfMonth())
-                ->groupBy('month')->orderBy('month')->get();
-
-            $result = [];
-            for ($i = 5; $i >= 0; $i--) {
-                $key   = now()->subMonths($i)->format('Y-m');
-                $found = $rows->firstWhere('month', $key);
-                $result[] = [
-                    'month' => now()->subMonths($i)->format('M Y'),
-                    'total' => $found ? round((float)$found->total) : 0,
-                ];
-            }
-            return $result;
-        });
-
-        /* ── Category distribution (donut) ── */
-        $categoryDist = Cache::remember('dash_category_dist', $c, fn() =>
-            BookCategories::withCount('books')->get()
-                ->filter(fn($c) => $c->books_count > 0)
-                ->map(fn($c) => ['label' => $c->title, 'value' => $c->books_count])
-                ->values()->toArray()
-        );
-
-        /* ── Top 5 categories by sales (donut) ── */
-        $topCatsSold = Cache::remember('dash_top_cats', $c, function () {
-            $categories = BookCategories::all()->keyBy('id');
-            $books      = Books::all()->keyBy('id');
-            $sales      = [];
-
-            Sold::chunk(200, function ($solds) use ($books, $categories, &$sales) {
-                foreach ($solds as $sold) {
-                    if (!is_array($sold->items)) continue;
-                    foreach ($sold->items as $item) {
-                        $bookId = $item['item_id']    ?? null;
-                        $qty    = $item['count_item'] ?? 0;
-                        if ($bookId && $qty > 0 && $books->has($bookId)) {
-                            $catId = $books->get($bookId)->category_id;
-                            if ($categories->has($catId)) {
-                                $title = $categories->get($catId)->title;
-                                $sales[$title] = ($sales[$title] ?? 0) + $qty;
-                            }
-                        }
-                    }
-                }
-            });
-
-            return collect($sales)->filter()->sortDesc()->take(5)
-                ->map(fn($v,$k) => ['label' => $k, 'value' => $v])
-                ->values()->toArray();
-        });
-
-        /* ── User status (donut) ── */
-        $userStatus = [
-            ['label' => 'Faol',   'value' => $activeUsers],
-            ['label' => "Nofaol", 'value' => $inactiveUsers],
-        ];
-
-        /* ── Recent orders ── */
-        $recentOrders = Sold::with('user')->latest()->take(10)->get()->map(function ($sold) {
-            $map = [
-                'A' => ['label' => 'Yetkazish kerak', 'color' => 'warning'],
-                'B' => ['label' => 'Jarayonda',       'color' => 'info'],
-                'C' => ['label' => 'Yakunlangan',     'color' => 'success'],
-            ];
-            $st = $map[$sold->status] ?? ['label' => "Noma'lum", 'color' => 'gray'];
+        // ============================================================
+        // OYLIK DAROMAD GRAFIGI (oxirgi 6 oy)
+        // ============================================================
+        $monthlyRevenue = collect(range(5, 0))->map(function($i) use ($now) {
+            $month = $now->copy()->subMonths($i);
+            $total = Sold::where('paymentStatus', 2)
+                         ->whereMonth('created_at', $month->month)
+                         ->whereYear('created_at', $month->year)
+                         ->sum('amount');
             return [
-                'id'       => $sold->id,
-                'customer' => $sold->user?->name ?? 'Mehmon',
-                'amount'   => number_format((float)$sold->amount, 0, '.', ' ') . " so'm",
-                'status'   => $st['label'],
-                'color'    => $st['color'],
-                'date'     => $sold->created_at->format('d.m.Y'),
-                'gift'     => !is_null($sold->gift),
+                'month' => $month->format('M'),
+                'total' => (int)$total,
             ];
-        })->toArray();
+        });
 
-        return compact(
-            'soldCount','soldStatusA','soldStatusB','soldStatusC',
-            'booksCount','catsCount','topBook','inStock',
-            'userCount','newUsers','activeUsers','inactiveUsers',
-            'couriersCount','deliveryCount',
-            'promosCount','topPromo',
-            'giftsCount','newsCount',
-            'totalRevenue','booksRevenue',
-            'soldTrend7','monthlyRevenue',
-            'categoryDist','topCatsSold','userStatus',
-            'recentOrders',
-        );
+        // ============================================================
+        // BUYURTMALAR STATUS TAQSIMOTI (donut chart)
+        // ============================================================
+        $orderStatusDist = [
+            ['label' => 'Yetkazildi',    'value' => $completedOrders,                          'color' => '#10B981'],
+            ['label' => "Yo'lda",        'value' => Sold::where('status','B')->count(),         'color' => '#3B82F6'],
+            ['label' => 'Qadoqlanmoqda', 'value' => Sold::where('status','P')->count(),         'color' => '#8B5CF6'],
+            ['label' => 'Kutilmoqda',    'value' => $pendingOrders,                             'color' => '#F59E0B'],
+            ['label' => 'Bekor qilindi', 'value' => $cancelledOrders,                           'color' => '#EF4444'],
+        ];
+
+        // ============================================================
+        // TO'LOV USULLARI (donut chart)
+        // ============================================================
+        $paymentDist = [
+            ['label' => 'Karta',           'value' => Sold::where('paymentStatus', 1)->count(), 'color' => '#465FFF'],
+            ['label' => "To'langan",       'value' => Sold::where('paymentStatus', 2)->count(), 'color' => '#10B981'],
+            ['label' => 'Qabul qilingan',  'value' => Sold::where('paymentStatus', 0)->count(), 'color' => '#F59E0B'],
+            ['label' => 'Rad etildi',      'value' => Sold::where('paymentStatus', 3)->count(), 'color' => '#EF4444'],
+        ];
+
+        // ============================================================
+        // KUNLIK BUYURTMALAR (oxirgi 7 kun, sparkline)
+        // ============================================================
+        $dailyOrders = collect(range(6, 0))->map(function($i) use ($now) {
+            $day   = $now->copy()->subDays($i);
+            $count = Sold::whereDate('created_at', $day->toDateString())->count();
+            return ['day' => $day->format('d M'), 'count' => $count];
+        });
+
+        return view('pages.dashboard.ecommerce', compact(
+            'totalRevenue', 'monthRevenue', 'todayRevenue',
+            'totalOrders', 'completedOrders', 'pendingOrders', 'cancelledOrders', 'todayOrders',
+            'totalUsers', 'premiumUsers', 'verifiedUsers', 'newUsersToday', 'newUsersWeek', 'newUsersMonth',
+            'onlineUsers', 'onlineUsersList', 'isolatedUsers',
+            'activeUsers', 'inactiveUsers',
+            'topSellingBooks', 'topBuyers',
+            'recentOrders', 'monthlyRevenue',
+            'orderStatusDist', 'paymentDist', 'dailyOrders'
+        ));
     }
 }

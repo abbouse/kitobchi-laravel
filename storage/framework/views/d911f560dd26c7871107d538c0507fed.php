@@ -55,7 +55,7 @@ unset($__defined_vars); ?>
         <div id="chartMonthlySales" class="-ml-5 h-[220px] min-w-[500px] pl-2 xl:min-w-full"></div>
     </div>
 </div>
-<?php if (! $__env->hasRenderedOnce('962e96c8-f5cd-4d92-8c73-e48daf02443e')): $__env->markAsRenderedOnce('962e96c8-f5cd-4d92-8c73-e48daf02443e'); ?>
+<?php if (! $__env->hasRenderedOnce('85480645-fa2a-4438-96a6-13e2b5f53998')): $__env->markAsRenderedOnce('85480645-fa2a-4438-96a6-13e2b5f53998'); ?>
 <?php $__env->startPush('scripts'); ?>
 <script>
 (function(){

@@ -38,7 +38,7 @@ unset($__defined_vars); ?>
         <div id="chartStatistics" class="-ml-4 min-w-[700px] pl-2 xl:min-w-full" style="height:280px"></div>
     </div>
 </div>
-<?php if (! $__env->hasRenderedOnce('a2fe27b2-cf95-4114-9377-31b3f2109dfc')): $__env->markAsRenderedOnce('a2fe27b2-cf95-4114-9377-31b3f2109dfc'); ?>
+<?php if (! $__env->hasRenderedOnce('654ceff4-01d0-477a-9214-e540b5a1d307')): $__env->markAsRenderedOnce('654ceff4-01d0-477a-9214-e540b5a1d307'); ?>
 <?php $__env->startPush('scripts'); ?>
 <script>
 (function(){
