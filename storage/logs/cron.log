@@ -44050,3 +44050,13 @@
 
    INFO  No scheduled commands are ready to run.  
 
+
+  2026-03-11 00:35:02 Running ['artisan' orders:cancel-unpaid] . 567.96ms DONE
+  ⇂ '/usr/bin/php8.3' 'artisan' orders:cancel-unpaid >> 'storage/logs/cancel_unpaid.log' 2>&1  
+
+
+   INFO  No scheduled commands are ready to run.  
+
+
+   INFO  No scheduled commands are ready to run.  
+
