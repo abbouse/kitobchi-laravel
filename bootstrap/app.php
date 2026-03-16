@@ -21,6 +21,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'api.client' => \App\Http\Middleware\VerifyApiClient::class,
             'payme'      => \App\Http\Middleware\PaymeMiddleware::class,
         ]);
+
+        // auth:user guruhidagi har bir so'rovda last_seen_at ni yangilaydi
+        $middleware->appendToGroup('api', \App\Http\Middleware\UpdateLastSeen::class);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

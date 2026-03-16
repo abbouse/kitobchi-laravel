@@ -3,179 +3,132 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
-use App\Models\Sold;
-use App\Models\Books;
-use App\Models\Stationery;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
+// Modellar
+use App\Models\User;
+use App\Models\Sold;
+use App\Models\Books;
+use App\Models\BookCategories;
+use App\Models\Couriers;
+use App\Models\DeliveryService;
+use App\Models\MarketNews;
+use App\Models\Promocode;
+use App\Models\Seller;
+use App\Models\SellerTransaction;
+
 class DashboardController extends Controller
 {
-    public function index()
+    private const CACHE_DURATION = 300; // 5 daqiqa
+
+    public function index(Request $request)
     {
-        $now   = Carbon::now();
-        $today = Carbon::today();
+        // Keshni tozalash buyrug'i kelsa
+        if ($request->has('clear_cache')) {
+            $this->clearCache();
+            return redirect()->route('dashboard')->with('cache_cleared', true);
+        }
 
-        // ============================================================
-        // KPI KARTALAR
-        // ============================================================
-        $totalRevenue      = Sold::where('paymentStatus', 2)->sum('amount');
-        $monthRevenue      = Sold::where('paymentStatus', 2)
-                                 ->whereMonth('created_at', $now->month)
-                                 ->whereYear('created_at', $now->year)
-                                 ->sum('amount');
-        $todayRevenue      = Sold::where('paymentStatus', 2)
-                                 ->whereDate('created_at', $today)
-                                 ->sum('amount');
+        return view('pages.dashboard.ecommerce', $this->getData());
+    }
 
-        $totalOrders       = Sold::count();
-        $completedOrders   = Sold::where('status', 'C')->count();
-        $pendingOrders     = Sold::where('status', 'A')->count();
-        $cancelledOrders   = Sold::where('status', 'F')->count();
-        $todayOrders       = Sold::whereDate('created_at', $today)->count();
+    private function clearCache(): void
+    {
+        $keys = [
+            'dash_sold_count','dash_status_a','dash_status_b','dash_status_c',
+            'dash_books_count','dash_categories_count','dash_top_book','dash_in_stock',
+            'dash_user_count','dash_new_users','dash_active_users','dash_inactive_users',
+            'dash_couriers','dash_delivery','dash_promo_count','dash_top_promo',
+            'dash_gifts','dash_news','dash_total_revenue','dash_books_revenue',
+            'dash_category_dist','dash_top_cats','dash_trend_7','dash_monthly_rev',
+            'dash_dau','dash_mau','dash_online','dash_top_sellers',
+            'dash_trending_books','dash_online_users_list',
+            'dash_expense_total','dash_expense_commission','dash_expense_pending',
+            'dash_expense_paid','dash_expense_rejected','dash_promo_analytics',
+        ];
+        foreach ($keys as $key) Cache::forget($key);
+    }
 
-        $totalUsers        = User::where(function($q){ $q->where('isDeleted','no')->orWhereNull('isDeleted'); })->count();
-        $premiumUsers      = User::where('is_premium', true)->where('premium_until', '>', $now)->count();
-        $verifiedUsers     = User::where('isVerified', true)->count();
-        $newUsersToday     = User::whereDate('created_at', $today)->count();
-        $newUsersWeek      = User::where('created_at', '>=', $now->copy()->subDays(7))->count();
-        $newUsersMonth     = User::where('created_at', '>=', $now->copy()->startOfMonth())->count();
+    private function getData(): array
+    {
+        $c = self::CACHE_DURATION;
+        $now = Carbon::now();
 
-        // ============================================================
-        // ONLINE FOYDALANUVCHILAR (oxirgi 5 daqiqa)
-        // ============================================================
-        $onlineUsers       = User::where('last_seen_at', '>=', $now->copy()->subMinutes(5))->count();
-        $onlineUsersList   = User::where('last_seen_at', '>=', $now->copy()->subMinutes(5))
-                                  ->select('id','name','lastname','avatar','last_seen_at')
-                                  ->limit(8)
-                                  ->get();
+        /* ── Order metrics ── */
+        $soldCount     = Cache::remember('dash_sold_count', $c, fn() => Sold::count());
+        $soldStatusA   = Cache::remember('dash_status_a',   $c, fn() => Sold::where('status','A')->count());
+        $soldStatusB   = Cache::remember('dash_status_b',   $c, fn() => Sold::where('status','B')->count());
+        $soldStatusC   = Cache::remember('dash_status_c',   $c, fn() => Sold::where('status','C')->count());
 
-        // ============================================================
-        // ISOLAT (uzoq vaqt ko'rinmagan) FOYDALANUVCHILAR
-        // ============================================================
-        $isolatedUsers     = User::where('last_seen_at', '<=', $now->copy()->subDays(30))
-                                  ->orWhereNull('last_seen_at')
-                                  ->where(function($q){ $q->where('isDeleted','no')->orWhereNull('isDeleted'); })
-                                  ->count();
+        /* ── Revenue ── */
+        $totalRevenue  = Cache::remember('dash_total_revenue', $c, fn() => floatval(Sold::where('paymentStatus', 2)->sum('amount')));
+        
+        /* ── Users ── */
+        $userCount     = Cache::remember('dash_user_count', $c, fn() => User::count());
+        $onlineCount   = Cache::remember('dash_online',     $c, fn() => User::where('last_seen_at', '>=', now()->subMinutes(5))->count());
 
-        // FCM token bo'lganlar (faol) / bo'lmaganlar (nofaol)
-        $activeUsers       = User::whereNotNull('fcm_token')->where('fcm_token','!=','')->count();
-        $inactiveUsers     = $totalUsers - $activeUsers;
+        /* ── Charts & Trends ── */
+        $monthlyRevenue = Cache::remember('dash_monthly_rev', $c, function () {
+            $result = [];
+            for ($i = 5; $i >= 0; $i--) {
+                $month = Carbon::now()->subMonths($i);
+                $total = Sold::where('paymentStatus', 2)
+                             ->whereMonth('created_at', $month->month)
+                             ->whereYear('created_at', $month->year)
+                             ->sum('amount');
+                $result[] = [
+                    'month' => $month->format('M'),
+                    'total' => (int)$total,
+                ];
+            }
+            return $result;
+        });
 
-        // ============================================================
-        // TOP SOTUVCHILAR (top books by sold count)
-        // ============================================================
-        $topSellingBooks = DB::table('solds')
-            ->join('books', function($join){
-                $join->on(DB::raw("JSON_UNQUOTE(JSON_EXTRACT(solds.items, '$[0].product_id'))"), '=', 'books.id');
-            })
-            ->select('books.id','books.name','books.images','books.price','books.discountPrice',
-                     DB::raw('COUNT(solds.id) as sold_count'),
-                     DB::raw('SUM(solds.amount) as total_revenue'))
-            ->where('solds.paymentStatus', 2)
-            ->groupBy('books.id','books.name','books.images','books.price','books.discountPrice')
-            ->orderByDesc('sold_count')
-            ->limit(5)
-            ->get();
+        /* ── Status Distributions (Donut Charts) ── */
+        $orderStatusDist = [
+            ['label' => 'Yetkazildi',    'value' => $soldStatusC, 'color' => '#10B981'],
+            ['label' => "Yo'lda",        'value' => $soldStatusB, 'color' => '#3B82F6'],
+            ['label' => 'Kutilmoqda',    'value' => $soldStatusA, 'color' => '#F59E0B'],
+            ['label' => 'Bekor qilindi', 'value' => Sold::where('status','F')->count(), 'color' => '#EF4444'],
+        ];
 
-        // ============================================================
-        // TOP MIJOZLAR (eng ko'p xarid qilganlar)
-        // ============================================================
-        $topBuyers = Sold::select('user_id',
-                            DB::raw('COUNT(*) as order_count'),
-                            DB::raw('SUM(amount) as total_spent'))
-                         ->where('paymentStatus', 2)
-                         ->where('status', 'C')
-                         ->groupBy('user_id')
-                         ->orderByDesc('total_spent')
-                         ->limit(5)
-                         ->with('user:id,name,lastname,avatar,phone_number')
-                         ->get();
+        /* ── Top Sellers ── */
+        $topSellers = Cache::remember('dash_top_sellers', $c, fn() =>
+            Seller::orderByDesc('successful_orders')
+                ->whereNotNull('shop_name')
+                ->limit(5)
+                ->get()
+                ->map(fn($s, $i) => [
+                    'rank'      => $i + 1,
+                    'name'      => $s->firstname . ' ' . $s->lastname,
+                    'shop_name' => $s->shop_name,
+                    'orders'    => $s->successful_orders,
+                    'balance'   => number_format($s->balance) . " so'm",
+                ])->toArray()
+        );
 
-        // ============================================================
-        // SO'NGGI BUYURTMALAR
-        // ============================================================
-        $recentOrders = Sold::with('user:id,name,lastname,avatar')
-                            ->latest()
-                            ->limit(8)
-                            ->get()
-                            ->map(function($order) {
-                                $statusMap = [
-                                    'A' => ['label' => 'Kutilmoqda',     'color' => 'warning'],
-                                    'P' => ['label' => 'Qadoqlanmoqda', 'color' => 'info'],
-                                    'B' => ['label' => "Yo'lda",        'color' => 'primary'],
-                                    'C' => ['label' => 'Yetkazildi',    'color' => 'success'],
-                                    'F' => ['label' => 'Bekor qilindi', 'color' => 'error'],
-                                ];
-                                $s = $statusMap[$order->status] ?? ['label' => $order->status, 'color' => 'gray'];
-                                return [
-                                    'id'         => $order->id,
-                                    'customer'   => $order->user ? $order->user->full_name : 'Noma\'lum',
-                                    'avatar'     => $order->user?->avatar,
-                                    'amount'     => number_format($order->amount) . ' UZS',
-                                    'status'     => $s['label'],
-                                    'color'      => $s['color'],
-                                    'date'       => $order->created_at->format('d.m H:i'),
-                                    'items_count'=> is_array($order->items) ? count($order->items) : 0,
-                                    'gift'       => $order->isGift ?? false,
-                                ];
-                            });
+        // Qo'shimcha barcha kerakli ma'lumotlarni compact qilib qaytaramiz
+        return array_merge(
+            compact('soldCount', 'soldStatusA', 'soldStatusB', 'soldStatusC', 'totalRevenue', 'userCount', 'onlineCount', 'monthlyRevenue', 'orderStatusDist', 'topSellers'),
+            [
+                'recentOrders' => $this->getRecentOrders(),
+            ]
+        );
+    }
 
-        // ============================================================
-        // OYLIK DAROMAD GRAFIGI (oxirgi 6 oy)
-        // ============================================================
-        $monthlyRevenue = collect(range(5, 0))->map(function($i) use ($now) {
-            $month = $now->copy()->subMonths($i);
-            $total = Sold::where('paymentStatus', 2)
-                         ->whereMonth('created_at', $month->month)
-                         ->whereYear('created_at', $month->year)
-                         ->sum('amount');
+    private function getRecentOrders()
+    {
+        return Sold::with('user')->latest()->take(10)->get()->map(function ($order) {
             return [
-                'month' => $month->format('M'),
-                'total' => (int)$total,
+                'id'       => $order->id,
+                'customer' => $order->user?->name ?? 'Mehmon',
+                'amount'   => number_format($order->amount) . " so'm",
+                'status'   => $order->status,
+                'date'     => $order->created_at->format('d.m.Y H:i'),
             ];
         });
-
-        // ============================================================
-        // BUYURTMALAR STATUS TAQSIMOTI (donut chart)
-        // ============================================================
-        $orderStatusDist = [
-            ['label' => 'Yetkazildi',    'value' => $completedOrders,                          'color' => '#10B981'],
-            ['label' => "Yo'lda",        'value' => Sold::where('status','B')->count(),         'color' => '#3B82F6'],
-            ['label' => 'Qadoqlanmoqda', 'value' => Sold::where('status','P')->count(),         'color' => '#8B5CF6'],
-            ['label' => 'Kutilmoqda',    'value' => $pendingOrders,                             'color' => '#F59E0B'],
-            ['label' => 'Bekor qilindi', 'value' => $cancelledOrders,                           'color' => '#EF4444'],
-        ];
-
-        // ============================================================
-        // TO'LOV USULLARI (donut chart)
-        // ============================================================
-        $paymentDist = [
-            ['label' => 'Karta',           'value' => Sold::where('paymentStatus', 1)->count(), 'color' => '#465FFF'],
-            ['label' => "To'langan",       'value' => Sold::where('paymentStatus', 2)->count(), 'color' => '#10B981'],
-            ['label' => 'Qabul qilingan',  'value' => Sold::where('paymentStatus', 0)->count(), 'color' => '#F59E0B'],
-            ['label' => 'Rad etildi',      'value' => Sold::where('paymentStatus', 3)->count(), 'color' => '#EF4444'],
-        ];
-
-        // ============================================================
-        // KUNLIK BUYURTMALAR (oxirgi 7 kun, sparkline)
-        // ============================================================
-        $dailyOrders = collect(range(6, 0))->map(function($i) use ($now) {
-            $day   = $now->copy()->subDays($i);
-            $count = Sold::whereDate('created_at', $day->toDateString())->count();
-            return ['day' => $day->format('d M'), 'count' => $count];
-        });
-
-        return view('pages.dashboard.ecommerce', compact(
-            'totalRevenue', 'monthRevenue', 'todayRevenue',
-            'totalOrders', 'completedOrders', 'pendingOrders', 'cancelledOrders', 'todayOrders',
-            'totalUsers', 'premiumUsers', 'verifiedUsers', 'newUsersToday', 'newUsersWeek', 'newUsersMonth',
-            'onlineUsers', 'onlineUsersList', 'isolatedUsers',
-            'activeUsers', 'inactiveUsers',
-            'topSellingBooks', 'topBuyers',
-            'recentOrders', 'monthlyRevenue',
-            'orderStatusDist', 'paymentDist', 'dailyOrders'
-        ));
     }
 }

@@ -475,59 +475,45 @@
         </div>
     </div>
 
-</div>{{-- end space-y-5 --}}
+    {{-- ════════════════════════════════════════════════
+         ROW 6 — Online users (DAU/MAU) + Expense breakdown
+         ════════════════════════════════════════════════ --}}
+    <div class="col-span-12 xl:col-span-7">
+        <x-ecommerce.online-users
+            :onlineCount="$onlineCount"
+            :dau="$dau"
+            :mau="$mau"
+            :users="$onlineUsersList"
+        />
+    </div>
 
-@push('scripts')
-<script>
-// Oylik daromad grafigi
-(function(){
-    var data = @json($monthlyRevenue);
-    new ApexCharts(document.querySelector('#chartMonthlyRevenue'), {
-        series: [{ name: 'Daromad', data: data.map(d => d.total) }],
-        chart: { type: 'bar', height: 200, toolbar: { show: false }, fontFamily: 'inherit' },
-        colors: ['#465FFF'],
-        plotOptions: { bar: { borderRadius: 6, columnWidth: '50%' } },
-        dataLabels: { enabled: false },
-        xaxis: {
-            categories: data.map(d => d.month),
-            axisBorder: { show: false },
-            axisTicks: { show: false },
-            labels: { style: { colors: '#9CA3AF', fontSize: '12px' } }
-        },
-        yaxis: { labels: { style: { colors: '#9CA3AF' }, formatter: v => (v/1000000).toFixed(1)+'M' } },
-        grid: { borderColor: '#F3F4F6', strokeDashArray: 4 },
-        tooltip: { y: { formatter: v => v.toLocaleString() + " UZS" } }
-    }).render();
-})();
+    <div class="col-span-12 xl:col-span-5">
+        <x-ecommerce.expense-breakdown
+            :totalPayout="$expenseTotalPayout"
+            :commission="$expenseCommission"
+            :pendingCount="$expensePendingCount"
+            :paidCount="$expensePaidCount"
+            :rejectedCount="$expenseRejectedCount"
+        />
+    </div>
 
-// Buyurtmalar status donut
-(function(){
-    var items = @json($orderStatusDist);
-    new ApexCharts(document.querySelector('#chartOrderStatus'), {
-        series: items.map(i => i.value),
-        labels: items.map(i => i.label),
-        colors: items.map(i => i.color),
-        chart: { type: 'donut', height: 200, toolbar: { show: false }, fontFamily: 'inherit' },
-        legend: { position: 'bottom', fontSize: '12px', labels: { colors: '#6B7280' } },
-        dataLabels: { enabled: false },
-        plotOptions: { pie: { donut: { size: '65%' } } }
-    }).render();
-})();
+    {{-- ════════════════════════════════════════════════
+         ROW 7 — Top sellers + Trending products
+         ════════════════════════════════════════════════ --}}
+    <div class="col-span-12 xl:col-span-5">
+        <x-ecommerce.top-sellers :sellers="$topSellers" />
+    </div>
 
-// To'lov usullari donut
-(function(){
-    var items = @json($paymentDist);
-    new ApexCharts(document.querySelector('#chartPayment'), {
-        series: items.map(i => i.value),
-        labels: items.map(i => i.label),
-        colors: items.map(i => i.color),
-        chart: { type: 'donut', height: 180, toolbar: { show: false }, fontFamily: 'inherit' },
-        legend: { position: 'bottom', fontSize: '11px', labels: { colors: '#6B7280' } },
-        dataLabels: { enabled: false },
-        plotOptions: { pie: { donut: { size: '60%' } } }
-    }).render();
-})();
-</script>
-@endpush
+    <div class="col-span-12 xl:col-span-7">
+        <x-ecommerce.trending-products :books="$trendingBooks" />
+    </div>
 
+    {{-- ════════════════════════════════════════════════
+         ROW 8 — Promo analytics (full width)
+         ════════════════════════════════════════════════ --}}
+    <div class="col-span-12">
+        <x-ecommerce.promo-analytics :promos="$promoAnalytics" />
+    </div>
+
+</div>
 @endsection
