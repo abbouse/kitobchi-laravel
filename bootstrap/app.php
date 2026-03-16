@@ -18,8 +18,8 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
-        'api.client' => \App\Http\Middleware\VerifyApiClient::class,
-        'payme' => \App\Http\Middleware\PaymeMiddleware::class,
+            'api.client' => \App\Http\Middleware\VerifyApiClient::class,
+            'payme'      => \App\Http\Middleware\PaymeMiddleware::class,
         ]);
 
         // auth:user guruhidagi har bir so'rovda last_seen_at ni yangilaydi
@@ -29,14 +29,71 @@ return Application::configure(basePath: dirname(__DIR__))
         //
     })
     ->withSchedule(function ($schedule) {
-    // 01:00 dagi restartdan qochish uchun 01:05 da ishga tushiramiz
-    $schedule->command('orders:cancel-unpaid')
-        ->hourlyAt(5) 
-        ->appendOutputTo(storage_path('logs/unpaid_orders_cancel.log'));
 
-    $schedule->command('queue:prune-batches --hours=24')->daily();
+        // ── 1. To'lanmagan buyurtmalarga eslatma (har 10 daqiqa) ─────────────
+        $schedule->command('orders:remind-unpaid')
+            ->everyTenMinutes()
+            ->timezone('Asia/Tashkent')
+            ->appendOutputTo(storage_path('logs/remind_unpaid.log'));
 
-    // Backup komandalarini ham restart vaqtidan (01:00 va 02:00) 10 daqiqa keyinga suramiz
-    $schedule->command('backup:clean')->daily()->at('01:10');
-    $schedule->command('backup:run')->daily()->at('02:10');
-})->create();
+        // ── 2. To'lanmagan buyurtmalarni bekor qilish ────────────────────────
+        //  everyFiveMinutes — 1 soatdan o'tgan buyurtmalar max 5 daqiqa kutadi
+        $schedule->command('orders:cancel-unpaid')
+            ->everyFiveMinutes()
+            ->timezone('Asia/Tashkent')
+            ->appendOutputTo(storage_path('logs/cancel_unpaid.log'));
+
+        // ── 3. Savatcha eslatmalari (kuniga 3 marta) ─────────────────────────
+        $schedule->command('cart:remind --time=morning')
+            ->dailyAt('08:00')
+            ->timezone('Asia/Tashkent')
+            ->appendOutputTo(storage_path('logs/cart_remind.log'));
+
+        $schedule->command('cart:remind --time=afternoon')
+            ->dailyAt('13:00')
+            ->timezone('Asia/Tashkent')
+            ->appendOutputTo(storage_path('logs/cart_remind.log'));
+
+        $schedule->command('cart:remind --time=evening')
+            ->dailyAt('19:00')
+            ->timezone('Asia/Tashkent')
+            ->appendOutputTo(storage_path('logs/cart_remind.log'));
+
+        // ── 4. Haftalik kitob o'qish eslatmasi (sesh, pay, shan) ─────────────
+        // Seshamba 10:00
+        $schedule->command('users:book-remind')
+            ->weeklyOn(2, '10:00')
+            ->timezone('Asia/Tashkent')
+            ->appendOutputTo(storage_path('logs/book_remind.log'));
+        // Payshanba 17:00
+        $schedule->command('users:book-remind')
+            ->weeklyOn(4, '17:00')
+            ->timezone('Asia/Tashkent')
+            ->appendOutputTo(storage_path('logs/book_remind.log'));
+        // Shanba 12:00
+        $schedule->command('users:book-remind')
+            ->weeklyOn(6, '12:00')
+            ->timezone('Asia/Tashkent')
+            ->appendOutputTo(storage_path('logs/book_remind.log'));
+
+        // ── 5. Vektorlarni qayta qurish (yakshanba, 02:00) ───────────────────
+        $schedule->command('vectors:rebuild --force')
+            ->weeklyOn(0, '02:00')
+            ->timezone('Asia/Tashkent')
+            ->appendOutputTo(storage_path('logs/vector_rebuild.log'));
+
+        // ── 5. Queue batch tozalash ───────────────────────────────────────────
+        $schedule->command('queue:prune-batches --hours=24')
+            ->daily()
+            ->timezone('Asia/Tashkent');
+
+        // ── 6. Backup ─────────────────────────────────────────────────────────
+        $schedule->command('backup:clean')
+            ->dailyAt('01:10')
+            ->timezone('Asia/Tashkent');
+
+        $schedule->command('backup:run')
+            ->dailyAt('02:10')
+            ->timezone('Asia/Tashkent');
+
+    })->create();

@@ -1,0 +1,167 @@
+<?php
+
+namespace App\Observers;
+
+use App\Models\Sold;
+use App\Models\Books;
+use App\Models\Stationery;
+use App\Models\StationeryVariant;
+use App\Models\Gifts;
+use App\Models\SellerOrder;
+use App\Models\CourierOrder;
+use App\Models\PromocodeHistory;
+use App\Models\User;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+
+class SoldObserver
+{
+    /**
+     * Sold model yangilanganda chaqiriladi.
+     * Status F ga o'zgarganda — to'liq rollback bajaradi.
+     */
+    public function updated(Sold $order): void
+    {
+        // Faqat status o'zgarganda va yangi qiymat F bo'lganda
+        if (!$order->wasChanged('status') || $order->status !== 'F') {
+            return;
+        }
+
+        // Oldingi status ham F bo'lsa — ikki marta rollback qilmaymiz
+        $previousStatus = $order->getOriginal('status');
+        if ($previousStatus === 'F') {
+            Log::info("SoldObserver: order #{$order->id} was already F, skip.");
+            return;
+        }
+
+        Log::info("SoldObserver: status changed {$previousStatus} → F for order #{$order->id}");
+
+        DB::beginTransaction();
+        try {
+
+            // ── 1. paymentStatus = 3 ──────────────────────────────────────────
+            DB::table('solds')
+                ->where('id', $order->id)
+                ->update(['paymentStatus' => 3, 'updated_at' => now()]);
+
+            // ── 2. Mahsulot stocklari ─────────────────────────────────────────
+            foreach ($order->items ?? [] as $item) {
+                $type      = $item['type'] ?? 'book';
+                $productId = (int) ($item['item_id'] ?? 0);
+                $variantId = isset($item['variant_id']) ? (int) $item['variant_id'] : null;
+                $quantity  = (int) ($item['count_item'] ?? 1);
+
+                if (!$productId || $type === 'gift') continue;
+
+                if ($type === 'book') {
+                    $product = Books::find($productId);
+                    if ($product) $product->increment('count', $quantity);
+
+                } elseif ($type === 'stationery') {
+                    $product = Stationery::find($productId);
+                    if ($product) {
+                        if ($variantId) {
+                            $variant = StationeryVariant::find($variantId);
+                            if ($variant) $variant->increment('stock', $quantity);
+                        } else {
+                            $product->increment('stock', $quantity);
+                        }
+                    }
+                }
+            }
+
+            // ── 3. Gift stock ─────────────────────────────────────────────────
+            if ($order->gift) {
+                $gift = Gifts::find($order->gift);
+                if ($gift && $gift->seller_id == 1) {
+                    $gift->increment('stock', 1);
+                }
+            }
+
+            // ── 4. Statistika minus ───────────────────────────────────────────
+            foreach ($order->items ?? [] as $item) {
+                $type      = $item['type'] ?? 'book';
+                $productId = (int) ($item['item_id'] ?? 0);
+                $quantity  = (int) ($item['count_item'] ?? 1);
+                $revenue   = (float) ($item['item_price'] ?? 0) * $quantity;
+
+                if (!$productId || $type === 'gift') continue;
+
+                $product = match ($type) {
+                    'book'       => Books::find($productId),
+                    'stationery' => Stationery::find($productId),
+                    default      => null,
+                };
+
+                if (!$product) continue;
+
+                $product->decrement('totalSales',       $quantity);
+                $product->decrement('totalRevenue',     $revenue);
+                $product->decrement('totalSalesWeek',   $quantity);
+                $product->decrement('totalRevenueWeek', $revenue);
+                $product->totalSales       = max(0, $product->totalSales);
+                $product->totalRevenue     = max(0, $product->totalRevenue);
+                $product->totalSalesWeek   = max(0, $product->totalSalesWeek);
+                $product->totalRevenueWeek = max(0, $product->totalRevenueWeek);
+                $product->save();
+            }
+
+            // ── 5. Gift statistika ────────────────────────────────────────────
+            if ($order->gift) {
+                $gift = Gifts::find($order->gift);
+                if ($gift && $gift->seller_id == 1) {
+                    $gift->decrement('totalSales',     1);
+                    $gift->decrement('totalSalesWeek', 1);
+                    $gift->totalSales     = max(0, $gift->totalSales);
+                    $gift->totalSalesWeek = max(0, $gift->totalSalesWeek);
+                    $gift->save();
+                }
+            }
+
+            // ── 6. Cashback ───────────────────────────────────────────────────
+            if ($order->withCashback && $order->cashbackAmount > 0) {
+                $user = User::find($order->user_id);
+                if ($user) {
+                    $user->increment('cashback', (int) $order->cashbackAmount);
+                    Log::info("SoldObserver: +{$order->cashbackAmount} cashback → user #{$user->id}");
+                }
+            }
+
+            // ── 7. Promokod ───────────────────────────────────────────────────
+            if ($order->promocode) {
+                $promo = DB::table('promocodes')->where('code', $order->promocode)->first();
+                if ($promo) {
+                    DB::table('promocodes')
+                        ->where('id', $promo->id)
+                        ->where('usedCount', '>', 0)
+                        ->decrement('usedCount');
+
+                    PromocodeHistory::where('user_id', $order->user_id)
+                        ->where('promocode_id', $promo->id)
+                        ->delete();
+
+                    Log::info("SoldObserver: promo '{$order->promocode}' returned → user #{$order->user_id}");
+                }
+            }
+
+            // ── 8. SellerOrder va CourierOrder ────────────────────────────────
+            $sellerCount  = SellerOrder::where('order_id', $order->id)
+                ->update(['status' => 3, 'updated_at' => now()]);
+
+            $courierCount = CourierOrder::where('order_id', $order->id)
+                ->update(['status' => 'rejected', 'updated_at' => now()]);
+
+            Log::info("SoldObserver: seller_orders={$sellerCount}, courier_orders={$courierCount} updated for #{$order->id}");
+
+            DB::commit();
+            Log::info("SoldObserver: order #{$order->id} rollback completed.");
+
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error("SoldObserver: FAILED for order #{$order->id}: {$e->getMessage()}", [
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+            ]);
+        }
+    }
+}

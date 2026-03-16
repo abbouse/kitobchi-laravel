@@ -9,6 +9,7 @@ class ChatMessageItem extends Model
     protected $fillable = [
         'chat_message_id',
         'product_id',
+        'product_type',
         'type',
     ];
 
@@ -19,6 +20,6 @@ class ChatMessageItem extends Model
 
     public function product()
     {
-        return $this->belongsTo(Books::class, 'product_id');
+        return $this->morphTo('product', 'product_type', 'product_id');
     }
 }
