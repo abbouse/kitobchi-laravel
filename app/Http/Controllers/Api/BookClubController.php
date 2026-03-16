@@ -170,8 +170,8 @@ class BookClubController extends Controller
             $followingIdsString = implode(',', array_merge($followingIds, [0]));
 
             $query = BookClub::with([
-                'user:id,name,lastname,position,avatar,isVerified,isSupport',
-                'originalAuthor:id,name,lastname,position,avatar,isVerified,isSupport',
+                'user:id,name,lastname,position,avatar,isVerified,isSupport,bio,role_emoji,role_title,role_place',
+                'originalAuthor:id,name,lastname,position,avatar,isVerified,isSupport,bio,role_emoji,role_title,role_place',
                 'images',
                 'votes'
             ])
@@ -218,8 +218,8 @@ class BookClubController extends Controller
             }
 
             $allPosts = BookClub::with([
-                'user:id,name,lastname,position,avatar,isVerified,isSupport',
-                'originalAuthor:id,name,lastname,position,avatar,isVerified,isSupport',
+                'user:id,name,lastname,position,avatar,isVerified,isSupport,bio,role_emoji,role_title,role_place',
+                'originalAuthor:id,name,lastname,position,avatar,isVerified,isSupport,bio,role_emoji,role_title,role_place',
                 'images',
                 'votes'
             ])
@@ -250,6 +250,10 @@ class BookClubController extends Controller
                         'is_me'           => $me ? ($me->id == $user->id) : false,
                         'isVerified'      => $user->isVerified,
                         'isSupport'       => $user->isSupport,
+                        'bio'             => $user->bio,
+                        'role_emoji'      => $user->role_emoji,
+                        'role_title'      => $user->role_title,
+                        'role_place'      => $user->role_place,
                     ],
                     'posts'   => $formattedOriginal,
                     'reposts' => $formattedReposts
@@ -280,7 +284,7 @@ class BookClubController extends Controller
             $modelClass = $typeMap[$type];
 
             $posts = BookClub::with([
-                'user:id,name,lastname,position,avatar,isVerified,isSupport',
+                'user:id,name,lastname,position,avatar,isVerified,isSupport,role_emoji,role_title,role_place',
                 'images',
                 'votes'
             ])

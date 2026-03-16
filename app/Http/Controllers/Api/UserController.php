@@ -148,26 +148,116 @@ class UserController extends Controller
     public function settings(Request $request)
 {
     $user = Auth::guard('user')->user();
-
     if (!$user) {
-        return response()->json([
-            'status' => 'error', 
-            'message' => "Bunday foydalanuvchi mavjud emas!"
-        ], 404);
+        return response()->json(['status' => 'error', 'message' => "Bunday foydalanuvchi mavjud emas!"], 404);
     }
-    $isNameChanged = ($request->name !== $user->name) || ($request->lastname !== $user->lastname);
 
-    if ($isNameChanged && $request->sex) {
-        $user->firstEdit = false;
+    // oddiy maydonlar
+    if ($request->filled('name'))      $user->name      = $request->name;
+    if ($request->filled('lastname'))  $user->lastname  = $request->lastname;
+    if ($request->has('sex'))          $user->sex       = $request->sex;
+
+    if ($request->has('bio')) {
+        $user->bio = $request->filled('bio')
+            ? mb_substr(strip_tags($request->bio), 0, 120)
+            : null;
     }
-    $user->name = $request->name;
-    $user->lastname = $request->lastname;
-    $user->sex = $request->sex;
+
+    // ── Role / Kasb qismi ────────────────────────────────────────────────
+    $presetId = $request->input('role_preset_id');   // asosiy parametr
+
+    if ($presetId !== null) {
+        if ($presetId == -77) {
+            // Custom holat
+            $user->role_preset_id = -77;
+            $user->role_emoji     = null;  // customda emoji kerak emas deb oldin aytgansiz
+            $user->role_title     = $request->filled('role_title')
+                ? mb_substr($request->role_title, 0, 100)
+                : null;
+            $user->role_place     = $request->filled('role_place')
+                ? mb_substr($request->role_place, 0, 150)
+                : null;
+        } 
+        else {
+            // Oddiy preset tanlangan
+            $preset = \App\Models\RolePreset::find($presetId);
+            if ($preset) {
+                $user->role_preset_id = $preset->id;
+
+                $lang = $user->locale ?? 'uz';
+                $field = match ($lang) {
+                    'ru' => 'title_ru',
+                    'en' => 'title_en',
+                    'ja' => 'title_ja',
+                    default => 'title_uz',
+                };
+
+                $user->role_emoji = $preset->emoji;
+                $user->role_title = $preset->$field;
+
+                // joy maydoni faqat needs_place true bo'lsa qabul qilinadi
+                if ($preset->needs_place) {
+                    $user->role_place = $request->filled('role_place')
+                        ? mb_substr($request->role_place, 0, 150)
+                        : null;
+                } else {
+                    $user->role_place = null;
+                }
+            } else {
+                // Noto'g'ri preset_id keldi → o'zgartirmaymiz
+            }
+        }
+    }
+
     $user->save();
 
+    // javobda ko'rsatish uchun formatlangan role
+    $displayRole = null;
+    if ($user->role_title || $user->role_emoji) {
+        $displayRole = trim(
+            ($user->role_emoji ? $user->role_emoji . ' ' : '') .
+            $user->role_title .
+            ($user->role_place ? ' at ' . $user->role_place : '')
+        );
+    }
+
     return response()->json([
-        'status' => 'success'
-    ], 201);
+        'status' => 'success',
+        'role'   => $displayRole,
+    ], 200);
+}
+    
+    public function rolePresets(Request $request)
+{
+    $user = Auth::guard('user')->user();
+
+    $presets = \App\Models\RolePreset::orderBy('sort')
+        ->get()
+        ->map(function ($r) use ($user) {
+            return [
+                'id'          => $r->id,
+                'emoji'       => $r->emoji,
+                'titles'      => [
+                    'uz' => $r->title_uz,
+                    'ru' => $r->title_ru,
+                    'en' => $r->title_en,
+                    'ja' => $r->title_ja,
+                ],
+                'needs_place' => (bool) $r->needs_place,
+                'selected'    => $user->role_preset_id == $r->id,
+            ];
+        });
+
+    return response()->json([
+        'status' => 'success',
+        'data'   => $presets,
+        'current' => [
+        'preset_id'   => $user->role_preset_id,
+        'title'       => $user->role_title,
+        'place'       => $user->role_place,
+        'is_custom'   => $user->role_preset_id == -77,
+    ]
+    ], 200);
 }
 
     /**

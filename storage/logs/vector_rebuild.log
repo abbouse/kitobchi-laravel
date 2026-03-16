@@ -159,3 +159,27 @@
  1/2 [▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░░░░░░░░░░░░░]  50%
  2/2 [▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓] 100%
 ✅ Vektorlar yangilandi!
+
+   Illuminate\Database\QueryException 
+
+  SQLSTATE[HY000] [2002] Connection refused (Connection: mysql, SQL: select * from `books` where `is_approved` = 1)
+
+  at vendor/laravel/framework/src/Illuminate/Database/Connection.php:825
+    821▕                     $this->getName(), $query, $this->prepareBindings($bindings), $e
+    822▕                 );
+    823▕             }
+    824▕ 
+  ➜ 825▕             throw new QueryException(
+    826▕                 $this->getName(), $query, $this->prepareBindings($bindings), $e
+    827▕             );
+    828▕         }
+    829▕     }
+
+      [2m+22 vendor frames [22m
+
+  23  app/Console/Commands/RebuildVectors.php:54
+      Illuminate\Database\Eloquent\Builder::get()
+
+  24  app/Console/Commands/RebuildVectors.php:35
+      App\Console\Commands\RebuildVectors::rebuildBooks()
+

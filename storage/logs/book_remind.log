@@ -60,3 +60,55 @@ Foydalanuvchilar soni: 59
   ✓ user #1763 [uz] msg#7
   ✓ user #1764 [uz] msg#7
 Yuborildi: 59 | O'tkazib yuborildi: 0
+12.03.2026 17:00:03 — Haftalik kitob eslatmasi boshlandi...
+
+   Illuminate\Database\QueryException 
+
+  SQLSTATE[HY000] [2002] Connection refused (Connection: mysql, SQL: select distinct `user_id` from `connected_devices` where `user_type` = user and `fcm_token` is not null)
+
+  at vendor/laravel/framework/src/Illuminate/Database/Connection.php:825
+    821▕                     $this->getName(), $query, $this->prepareBindings($bindings), $e
+    822▕                 );
+    823▕             }
+    824▕ 
+  ➜ 825▕             throw new QueryException(
+    826▕                 $this->getName(), $query, $this->prepareBindings($bindings), $e
+    827▕             );
+    828▕         }
+    829▕     }
+
+      [2m+20 vendor frames [22m
+
+  21  app/Console/Commands/WeeklyBookRemind.php:370
+      Illuminate\Database\Query\Builder::pluck()
+      [2m+13 vendor frames [22m
+
+  35  artisan:13
+      Illuminate\Foundation\Application::handleCommand()
+
+14.03.2026 12:00:04 — Haftalik kitob eslatmasi boshlandi...
+
+   Illuminate\Database\QueryException 
+
+  SQLSTATE[HY000] [2002] Connection refused (Connection: mysql, SQL: select distinct `user_id` from `connected_devices` where `user_type` = user and `fcm_token` is not null)
+
+  at vendor/laravel/framework/src/Illuminate/Database/Connection.php:825
+    821▕                     $this->getName(), $query, $this->prepareBindings($bindings), $e
+    822▕                 );
+    823▕             }
+    824▕ 
+  ➜ 825▕             throw new QueryException(
+    826▕                 $this->getName(), $query, $this->prepareBindings($bindings), $e
+    827▕             );
+    828▕         }
+    829▕     }
+
+      [2m+20 vendor frames [22m
+
+  21  app/Console/Commands/WeeklyBookRemind.php:370
+      Illuminate\Database\Query\Builder::pluck()
+      [2m+13 vendor frames [22m
+
+  35  artisan:13
+      Illuminate\Foundation\Application::handleCommand()
+

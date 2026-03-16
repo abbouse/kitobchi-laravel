@@ -73,6 +73,7 @@ Route::middleware('auth:user')->group(function () {
     });
     // Sozlamalar va foydalanuvchi yo'llari
     Route::post('settings', [UserController::class, 'settings']);
+    Route::get('settings/role-presets', [UserController::class, 'rolePresets']);
     Route::get('user/logout', [UserController::class, 'logout']);
     Route::get('user/devices', [UserController::class, 'devices']);
     Route::get('user/devices/{id}/delete', [UserController::class, 'logoutDevice']);

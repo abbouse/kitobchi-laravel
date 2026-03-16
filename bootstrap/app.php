@@ -30,6 +30,15 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withSchedule(function ($schedule) {
 
+        // ── 0. AI limit reset (00:05 — MySQL tayyor bo'lguncha 5 daqiqa) ─────
+        // ❌ 00:00 edi — server/MySQL restart vaqtiga to'g'ri kelib xato berardi
+        $schedule->command('ai:daily-reset')
+            ->dailyAt('00:05')
+            ->timezone('Asia/Tashkent')
+            ->withoutOverlapping()
+            ->runInBackground()
+            ->appendOutputTo(storage_path('logs/ai_reset.log'));
+
         // ── 1. To'lanmagan buyurtmalarga eslatma (har 10 daqiqa) ─────────────
         $schedule->command('orders:remind-unpaid')
             ->everyTenMinutes()
@@ -37,7 +46,6 @@ return Application::configure(basePath: dirname(__DIR__))
             ->appendOutputTo(storage_path('logs/remind_unpaid.log'));
 
         // ── 2. To'lanmagan buyurtmalarni bekor qilish ────────────────────────
-        //  everyFiveMinutes — 1 soatdan o'tgan buyurtmalar max 5 daqiqa kutadi
         $schedule->command('orders:cancel-unpaid')
             ->everyFiveMinutes()
             ->timezone('Asia/Tashkent')
@@ -60,40 +68,45 @@ return Application::configure(basePath: dirname(__DIR__))
             ->appendOutputTo(storage_path('logs/cart_remind.log'));
 
         // ── 4. Haftalik kitob o'qish eslatmasi (sesh, pay, shan) ─────────────
-        // Seshamba 10:00
         $schedule->command('users:book-remind')
             ->weeklyOn(2, '10:00')
             ->timezone('Asia/Tashkent')
             ->appendOutputTo(storage_path('logs/book_remind.log'));
-        // Payshanba 17:00
+
         $schedule->command('users:book-remind')
             ->weeklyOn(4, '17:00')
             ->timezone('Asia/Tashkent')
             ->appendOutputTo(storage_path('logs/book_remind.log'));
-        // Shanba 12:00
+
         $schedule->command('users:book-remind')
             ->weeklyOn(6, '12:00')
             ->timezone('Asia/Tashkent')
             ->appendOutputTo(storage_path('logs/book_remind.log'));
 
-        // ── 5. Vektorlarni qayta qurish (yakshanba, 02:00) ───────────────────
+        // ── 5. Backup ─────────────────────────────────────────────────────────
+        // ❌ backup:clean 01:10 edi — MySQL restart zonasiga yaqin
+        $schedule->command('backup:clean')
+            ->dailyAt('01:15')
+            ->timezone('Asia/Tashkent');
+
+        // backup:run o'zgarmadi — 02:10 xavfsiz vaqt
+        $schedule->command('backup:run')
+            ->dailyAt('02:10')
+            ->timezone('Asia/Tashkent');
+
+        // ── 6. Vektorlarni qayta qurish ───────────────────────────────────────
+        // ❌ 02:00 edi — backup:run bilan overlap qilardi (ikkalasi og'ir operatsiya)
+        // ✅ 02:30 — backup:run tugagandan keyin boshlanadi
         $schedule->command('vectors:rebuild --force')
-            ->weeklyOn(0, '02:00')
+            ->weeklyOn(0, '02:30')
             ->timezone('Asia/Tashkent')
             ->appendOutputTo(storage_path('logs/vector_rebuild.log'));
 
-        // ── 5. Queue batch tozalash ───────────────────────────────────────────
+        // ── 7. Queue batch tozalash ───────────────────────────────────────────
+        // ❌ daily() edi — vaqt belgilanmagan, Laravel uni 00:00 da ishlatadi
+        // ✅ 03:00 — barcha og'ir operatsiyalar tugagandan keyin
         $schedule->command('queue:prune-batches --hours=24')
-            ->daily()
-            ->timezone('Asia/Tashkent');
-
-        // ── 6. Backup ─────────────────────────────────────────────────────────
-        $schedule->command('backup:clean')
-            ->dailyAt('01:10')
-            ->timezone('Asia/Tashkent');
-
-        $schedule->command('backup:run')
-            ->dailyAt('02:10')
+            ->dailyAt('03:00')
             ->timezone('Asia/Tashkent');
 
     })->create();
