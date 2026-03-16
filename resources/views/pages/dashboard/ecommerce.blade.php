@@ -138,5 +138,45 @@
         <x-ecommerce.recent-orders :orders="$recentOrders" />
     </div>
 
+    {{-- ════════════════════════════════════════════════
+         ROW 6 — Online users (DAU/MAU) + Expense breakdown
+         ════════════════════════════════════════════════ --}}
+    <div class="col-span-12 xl:col-span-7">
+        <x-ecommerce.online-users
+            :onlineCount="$onlineCount"
+            :dau="$dau"
+            :mau="$mau"
+            :users="$onlineUsersList"
+        />
+    </div>
+
+    <div class="col-span-12 xl:col-span-5">
+        <x-ecommerce.expense-breakdown
+            :totalPayout="$expenseTotalPayout"
+            :commission="$expenseCommission"
+            :pendingCount="$expensePendingCount"
+            :paidCount="$expensePaidCount"
+            :rejectedCount="$expenseRejectedCount"
+        />
+    </div>
+
+    {{-- ════════════════════════════════════════════════
+         ROW 7 — Top sellers + Trending products
+         ════════════════════════════════════════════════ --}}
+    <div class="col-span-12 xl:col-span-5">
+        <x-ecommerce.top-sellers :sellers="$topSellers" />
+    </div>
+
+    <div class="col-span-12 xl:col-span-7">
+        <x-ecommerce.trending-products :books="$trendingBooks" />
+    </div>
+
+    {{-- ════════════════════════════════════════════════
+         ROW 8 — Promo analytics (full width)
+         ════════════════════════════════════════════════ --}}
+    <div class="col-span-12">
+        <x-ecommerce.promo-analytics :promos="$promoAnalytics" />
+    </div>
+
 </div>
 @endsection

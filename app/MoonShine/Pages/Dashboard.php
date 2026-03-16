@@ -176,6 +176,20 @@ class Dashboard extends Page
                         ->icon('user-plus'),
                 ])->columnSpan(3),
 
+                Column::make([
+                    ValueMetric::make('Bugungi faol (DAU)')
+                        ->value(Cache::remember('dau_count', self::CACHE_DURATION,
+                            fn() => User::where('last_seen_at', '>=', now()->subDay())->count()))
+                        ->icon('signal'),
+                ])->columnSpan(3),
+
+                Column::make([
+                    ValueMetric::make("Onlayn (5 daqiqa)")
+                        ->value(Cache::remember('online_count', self::CACHE_DURATION,
+                            fn() => User::where('last_seen_at', '>=', now()->subMinutes(5))->count()))
+                        ->icon('wifi'),
+                ])->columnSpan(3),
+
                 // ════════════════════════════════════════════
                 // KURYERLAR VA YETKAZIB BERISH
                 // ════════════════════════════════════════════
@@ -269,70 +283,46 @@ class Dashboard extends Page
                         ->columnSpan(6),
                 ])->columnSpan(6),
 
-                // ✅ LineChartMetric — to'g'ri: ->line(['Label' => $data], '#color')
-                // XATO: ->lines([['label'=>..., 'data'=>..., 'color'=>...]])  ← bu ishlaMaydi
-                //Column::make([
-                    //LineChartMetric::make('Sotuvlar trendi (7 kun)')
-                       // ->line(
-                       //     ['Sotuvlar soni' => $soldTrendData],
-                       //     '#EC4176'
-                      //  )
-                      //  ->columnSpan(6),
-               // ])->columnSpan(6),
-
-                // ✅ DonutChartMetric — foydalanuvchilar statusi
+                // Sotuvlar trendi (7 kun) — LineChartMetric
                 Column::make([
-                    DonutChartMetric::make('Foydalanuvchilar statusi')
-                        ->values([
-                            'Faol'   => Cache::remember('active_User', self::CACHE_DURATION,
-                                fn() => User::whereNotNull('fcm_token')->count()),
-                            'Nofaol' => Cache::remember('inactive_User', self::CACHE_DURATION,
-                                fn() => User::whereNull('fcm_token')->count()),
-                        ])
-                        ->colors(['#10B981', '#F43F5E'])
+                    LineChartMetric::make('Sotuvlar trendi (7 kun)')
+                        ->line(
+                            ['Sotuvlar soni' => $soldTrendData],
+                            '#EC4176'
+                        )
                         ->columnSpan(6),
                 ])->columnSpan(6),
 
-                // ✅ DonutChartMetric — top 5 kategoriya
+                // DonutChartMetric — foydalanuvchilar statusi (so'nggi 30 kun faolligi)
+                Column::make([
+                    DonutChartMetric::make('Foydalanuvchilar faolligi (30 kun)')
+                        ->values([
+                            'Oylik faol (MAU)'   => Cache::remember('mau_count', self::CACHE_DURATION,
+                                fn() => User::where('last_seen_at', '>=', now()->subDays(30))->count()),
+                            'Push yoqilgan' => Cache::remember('active_User', self::CACHE_DURATION,
+                                fn() => User::whereNotNull('fcm_token')->count()),
+                            'Nofaol (30 kun)' => Cache::remember('inactive_User', self::CACHE_DURATION,
+                                fn() => User::where(fn($q) => $q->whereNull('last_seen_at')->orWhere('last_seen_at', '<', now()->subDays(30)))->count()),
+                        ])
+                        ->colors(['#10B981', '#3B82F6', '#F43F5E'])
+                        ->columnSpan(6),
+                ])->columnSpan(6),
+
+                // DonutChartMetric — top 5 kategoriya (samarali JOIN orqali)
                 Column::make([
                     DonutChartMetric::make("Top 5 kategoriyalar (sotuv bo'yicha)")
                         ->values(
                             Cache::remember('top_categories_sold', self::CACHE_DURATION,
                                 function () {
-                                    $categories    = BookCategories::all()->keyBy('id');
-                                    $books         = Books::all()->keyBy('id');
-                                    $categorySales = [];
-
-                                    Sold::chunk(200, function ($solds) use ($books, $categories, &$categorySales) {
-                                        foreach ($solds as $sold) {
-                                            $items = $sold->items;
-                                            if (!is_array($items)) {
-                                                continue;
-                                            }
-                                            foreach ($items as $item) {
-                                                $bookId = $item['item_id']    ?? null;
-                                                $amount = $item['count_item'] ?? 0;
-
-                                                if ($bookId && $amount > 0 && $books->has($bookId)) {
-                                                    $book       = $books->get($bookId);
-                                                    $categoryId = $book->category_id;
-
-                                                    if ($categories->has($categoryId)) {
-                                                        $title = $categories->get($categoryId)->title;
-                                                        $categorySales[$title] = ($categorySales[$title] ?? 0) + $amount;
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    });
-
-                                    $filtered = collect($categorySales)
-                                        ->filter(fn($v) => $v > 0)
-                                        ->sortDesc()
-                                        ->take(5)
+                                    $results = Books::join('book_categories', 'books.category_id', '=', 'book_categories.id')
+                                        ->selectRaw('book_categories.title, SUM(books.totalSales) as total_sales')
+                                        ->groupBy('book_categories.id', 'book_categories.title')
+                                        ->orderByDesc('total_sales')
+                                        ->limit(5)
+                                        ->pluck('total_sales', 'title')
                                         ->toArray();
 
-                                    return empty($filtered) ? ["Ma'lumot yo'q" => 0] : $filtered;
+                                    return empty($results) ? ["Ma'lumot yo'q" => 0] : $results;
                                 }
                             )
                         )
