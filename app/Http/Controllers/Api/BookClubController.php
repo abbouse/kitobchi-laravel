@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\{User, Books, Stationery, BookClub, BookClubImages, BookClubLikes, BookClubVotes, BookClubComment, FavouriteProducts, BookClubNotification};
 use App\Jobs\SendBookClubPushNotification;
+use App\Models\Sold;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\{DB, Log, Storage, Auth};
 
@@ -12,11 +13,26 @@ class BookClubController extends Controller
 {
     /**
      * Mahsulotni API uchun formatlash
+     * product_type = 'order' bo'lsa Sold modelidan olamiz
      */
-    private function formatProduct($product, $user = null)
+    private function formatProduct($product, $user = null, string $productType = 'book')
     {
         if (!$product) return null;
 
+        // ── Order ──────────────────────────────────────────────────────────────
+        if ($productType === 'order') {
+            return [
+                'id'           => $product->id,
+                'product_type' => 'order',
+                'name'         => null, // order uchun name yo'q
+                'order_id'     => $product->id,
+                'amount'       => $product->amount,
+                'items'        => $product->items ?? [],
+                'status'       => $product->status,
+            ];
+        }
+
+        // ── Kitob yoki kantselyariya ────────────────────────────────────────────
         $isBook = $product instanceof Books;
 
         return [
@@ -45,6 +61,7 @@ class BookClubController extends Controller
                     'uz' => $tag->tag_name_uz ?? $tag->name_uz ?? null,
                     'ru' => $tag->tag_name_ru ?? $tag->name_ru ?? null,
                     'en' => $tag->tag_name_en ?? $tag->name_en ?? null,
+                    'ja' => $tag->tag_name_ja ?? $tag->name_ja ?? null,
                 ];
             })->filter()->values(),
             'seller'          => [
@@ -64,18 +81,24 @@ class BookClubController extends Controller
         $postIds = $posts->pluck('id')->toArray();
         $followingIds = $user ? $user->followings()->pluck('users.id')->toArray() : [];
         $myReposts = $user ? BookClub::where('user_id', $user->id)
-        ->where('repost', true)
-        ->where('is_deleted', false)
-        ->get(['reposted_user_id', 'product_id', 'text'])
-        ->map(function($r) {
-            return $r->reposted_user_id . '_' . $r->product_id . '_' . md5($r->text);
-        })->toArray() : [];
-        // Mahsulotlar uchun eager loading
-        $bookIds = $posts->where('product_type', 'book')->pluck('product_id')->filter()->unique();
-        $statIds = $posts->where('product_type', 'stationery')->pluck('product_id')->filter()->unique();
+            ->where('repost', true)
+            ->where('is_deleted', false)
+            ->get(['reposted_user_id', 'product_id', 'text'])
+            ->map(function ($r) {
+                return $r->reposted_user_id . '_' . $r->product_id . '_' . md5($r->text);
+            })->toArray() : [];
 
-        $books = Books::with(['category', 'tags', 'seller'])->whereIn('id', $bookIds)->get()->keyBy('id');
+        // ── Mahsulotlar uchun eager loading ────────────────────────────────────
+        $bookIds   = $posts->where('product_type', 'book')->pluck('product_id')->filter()->unique();
+        $statIds   = $posts->where('product_type', 'stationery')->pluck('product_id')->filter()->unique();
+        $orderIds  = $posts->where('product_type', 'order')->pluck('product_id')->filter()->unique();
+
+        $books       = Books::with(['category', 'tags', 'seller'])->whereIn('id', $bookIds)->get()->keyBy('id');
         $stationeries = Stationery::with(['category', 'tags', 'seller'])->whereIn('id', $statIds)->get()->keyBy('id');
+        // Order uchun faqat id, amount, items, status kerak
+        $orders     = $orderIds->isNotEmpty()
+            ? Sold::whereIn('id', $orderIds)->get(['id', 'amount', 'items', 'status'])->keyBy('id')
+            : collect();
 
         // Repostlar sonini hisoblash
         $repostCounts = BookClub::where('repost', true)
@@ -117,6 +140,7 @@ class BookClubController extends Controller
             $user,
             $books,
             $stationeries,
+            $orders,
             $voteCounts,
             $userVotes,
             $commentsCount,
@@ -126,59 +150,80 @@ class BookClubController extends Controller
             $repostCounts,
             $myReposts
         ) {
-            // Mahsulot ma'lumotlari
+            // ── Mahsulot ma'lumotlari ──────────────────────────────────────────
             if ($post->product_id) {
-                $productObj = ($post->product_type === 'book')
-                    ? $books->get($post->product_id)
-                    : $stationeries->get($post->product_id);
+                $productType = $post->product_type;
 
-                $post->product = $this->formatProduct($productObj, $user);
+                $productObj = match ($productType) {
+                    'book'       => $books->get($post->product_id),
+                    'stationery' => $stationeries->get($post->product_id),
+                    'order'      => $orders->get($post->product_id),
+                    default      => null,
+                };
+
+                $post->product = $this->formatProduct($productObj, $user, $productType);
             }
+
+            // ── Theme ma'lumotlari ─────────────────────────────────────────────
+            $post->theme = $post->theme ? [
+                'id'       => $post->theme->id,
+                'name'     => $post->theme->name,
+                'firework' => $post->theme->firework,
+                'slug'     => $post->theme->slug,
+            ] : null;
 
             // Ovozlar
             $totalVotes = 0;
             $post->votes->each(function ($vote) use (&$totalVotes, $voteCounts, $userVotes) {
-                $vote->vote_count = $voteCounts[$vote->id] ?? 0;
+                $vote->vote_count  = $voteCounts[$vote->id] ?? 0;
                 $vote->voted_by_me = $userVotes->has($vote->id);
                 $totalVotes += $vote->vote_count;
             });
 
-            $post->votes_count     = $totalVotes;
-            $post->comments_count  = $commentsCount[$post->id] ?? 0;
-            $post->likes_count     = $likesCount[$post->id] ?? 0;
-            $post->liked_by_me     = $userLikes->has($post->id);
+            $post->votes_count         = $totalVotes;
+            $post->comments_count      = $commentsCount[$post->id] ?? 0;
+            $post->likes_count         = $likesCount[$post->id] ?? 0;
+            $post->liked_by_me         = $userLikes->has($post->id);
             $post->is_following_author = in_array($post->user_id, $followingIds);
             $postKey = $post->user_id . '_' . $post->product_id . '_' . md5($post->text);
-            $post->reposted_by_me = in_array($postKey, $myReposts);
-            $post->is_repost       = $post->repost ?? false;
-            $post->reposts_count   = $post->repost ? 0 : ($repostCounts[$post->user_id] ?? 0);
+            $post->reposted_by_me      = in_array($postKey, $myReposts);
+            $post->is_repost           = $post->repost ?? false;
+            $post->reposts_count       = $post->repost ? 0 : ($repostCounts[$post->user_id] ?? 0);
 
             return $post;
         });
     }
 
     /**
-     * Asosiy feed - faqat original postlar
+     * with() ro'yxati
+     */
+    private function postWith(): array
+    {
+        return [
+            'user:id,name,lastname,position,avatar,isVerified,isSupport,bio,role_emoji,role_title,role_place',
+            'originalAuthor:id,name,lastname,position,avatar,isVerified,isSupport,bio,role_emoji,role_title,role_place',
+            'images',
+            'votes',
+            'theme:id,name,firework,slug',
+        ];
+    }
+
+    /**
+     * Asosiy feed
      */
     public function index(Request $request)
     {
         try {
-            $user = Auth::guard('user')->user();
+            $user    = Auth::guard('user')->user();
             $perPage = $request->input('per_page', 15);
 
-            $followingIds = $user ? $user->followings()->pluck('users.id')->toArray() : [];
+            $followingIds       = $user ? $user->followings()->pluck('users.id')->toArray() : [];
             $followingIdsString = implode(',', array_merge($followingIds, [0]));
 
-            $query = BookClub::with([
-                'user:id,name,lastname,position,avatar,isVerified,isSupport,bio,role_emoji,role_title,role_place',
-                'originalAuthor:id,name,lastname,position,avatar,isVerified,isSupport,bio,role_emoji,role_title,role_place',
-                'images',
-                'votes'
-            ])
+            $paginatedPosts = BookClub::with($this->postWith())
                 ->where('is_deleted', false)
-                ->where('repost', false);
-
-            $paginatedPosts = $query->orderByRaw("CASE WHEN user_id IN ($followingIdsString) THEN 1 ELSE 0 END DESC")
+                ->where('repost', false)
+                ->orderByRaw("CASE WHEN user_id IN ($followingIdsString) THEN 1 ELSE 0 END DESC")
                 ->orderBy('updated_at', 'DESC')
                 ->paginate($perPage);
 
@@ -190,8 +235,8 @@ class BookClubController extends Controller
                 'meta'   => [
                     'current_page' => $paginatedPosts->currentPage(),
                     'last_page'    => $paginatedPosts->lastPage(),
-                    'total'        => $paginatedPosts->total()
-                ]
+                    'total'        => $paginatedPosts->total(),
+                ],
             ]);
         } catch (\Exception $e) {
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
@@ -199,12 +244,12 @@ class BookClubController extends Controller
     }
 
     /**
-     * Foydalanuvchi profili - original postlar va repostlar alohida
+     * Foydalanuvchi profili
      */
     public function get_profile(Request $request)
     {
         try {
-            $me = Auth::guard('user')->user();
+            $me           = Auth::guard('user')->user();
             $targetUserId = $request->input('user_id') ?? ($me ? $me->id : null);
 
             if (!$targetUserId) {
@@ -217,22 +262,14 @@ class BookClubController extends Controller
                 return response()->json(['status' => 'error', 'message' => 'User not found'], 404);
             }
 
-            $allPosts = BookClub::with([
-                'user:id,name,lastname,position,avatar,isVerified,isSupport,bio,role_emoji,role_title,role_place',
-                'originalAuthor:id,name,lastname,position,avatar,isVerified,isSupport,bio,role_emoji,role_title,role_place',
-                'images',
-                'votes'
-            ])
+            $allPosts = BookClub::with($this->postWith())
                 ->where('user_id', $user->id)
                 ->where('is_deleted', false)
                 ->orderBy('created_at', 'DESC')
                 ->get();
 
-            $originalPosts = $allPosts->where('repost', false);
-            $reposts = $allPosts->where('repost', true);
-
-            $formattedOriginal = $this->attachMetaToPosts($originalPosts, $me);
-            $formattedReposts = $this->attachMetaToPosts($reposts, $me);
+            $formattedOriginal = $this->attachMetaToPosts($allPosts->where('repost', false), $me);
+            $formattedReposts  = $this->attachMetaToPosts($allPosts->where('repost', true), $me);
 
             return response()->json([
                 'status' => 'success',
@@ -256,8 +293,8 @@ class BookClubController extends Controller
                         'role_place'      => $user->role_place,
                     ],
                     'posts'   => $formattedOriginal,
-                    'reposts' => $formattedReposts
-                ]
+                    'reposts' => $formattedReposts,
+                ],
             ]);
         } catch (\Exception $e) {
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
@@ -272,33 +309,22 @@ class BookClubController extends Controller
         try {
             $user = Auth::guard('user')->user();
 
-            $typeMap = [
-                'book'       => 'book',
-                'stationery' => 'stationery'
-            ];
+            $typeMap = ['book' => 'book', 'stationery' => 'stationery', 'order' => 'order'];
 
             if (!isset($typeMap[$type])) {
                 return response()->json(['status' => 'error', 'message' => 'Noto\'g\'ri product type'], 400);
             }
 
-            $modelClass = $typeMap[$type];
-
-            $posts = BookClub::with([
-                'user:id,name,lastname,position,avatar,isVerified,isSupport,role_emoji,role_title,role_place',
-                'images',
-                'votes'
-            ])
+            $posts = BookClub::with($this->postWith())
                 ->where('product_id', $productId)
-                ->where('product_type', $modelClass)
+                ->where('product_type', $typeMap[$type])
                 ->where('is_deleted', false)
                 ->orderBy('created_at', 'DESC')
                 ->get();
 
-            $formattedPosts = $this->attachMetaToPosts($posts, $user);
-
             return response()->json([
                 'status' => 'success',
-                'data'   => $formattedPosts
+                'data'   => $this->attachMetaToPosts($posts, $user),
             ]);
         } catch (\Exception $e) {
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
@@ -306,7 +332,7 @@ class BookClubController extends Controller
     }
 
     /**
-     * Oddiy (matnli) post yaratish
+     * Post yaratish — book, stationery, order, yoki product_id=null
      */
     public function new_post(Request $request)
     {
@@ -317,22 +343,82 @@ class BookClubController extends Controller
             }
 
             return DB::transaction(function () use ($request, $user) {
+
+                // ── Product type tekshiruvi ────────────────────────────────────
+                $productType = null;
+                $productId   = null;
+
+                if ($request->filled('product_type') && $request->filled('product_id')) {
+                    $productType = match ($request->input('product_type')) {
+                        'book'       => 'book',
+                        'stationery' => 'stationery',
+                        'order'      => 'order',
+                        default      => null,
+                    };
+
+                    if ($productType === null) {
+                        return response()->json(['status' => 'error', 'message' => 'Noto\'g\'ri product type'], 400);
+                    }
+
+                    // Order validatsiya — foydalanuvchiga tegishli bo'lishi kerak
+                    if ($productType === 'order') {
+                        $orderExists = Sold::where('id', $request->input('product_id'))
+                            ->where('user_id', $user->id)
+                            ->exists();
+
+                        if (!$orderExists) {
+                            return response()->json([
+                                'status'  => 'error',
+                                'message' => 'Bu buyurtma sizga tegishli emas yoki topilmadi',
+                            ], 403);
+                        }
+                        $slug = Str::random(12);
+        $shared = SharedCart::create([
+            'user_id' => $user->id,
+            'order_id' => $orderId,
+        ]);
+                    }
+
+                    $productId = $request->input('product_id');
+                }
+
+                // ── Theme ─────────────────────────────────────────────────────
+                $themeId = null;
+
+                if ($request->boolean('new_theme') && $request->filled('theme_name')) {
+                    $name  = trim($request->input('theme_name'));
+                    $slug  = \Illuminate\Support\Str::slug($name);
+                    $theme = \App\Models\BookClubTheme::firstOrCreate(
+                        ['slug' => $slug],
+                        ['user_id' => $user->id, 'name' => $name, 'status' => 1]
+                    );
+                    $themeId = $theme->id;
+                } elseif ($request->filled('theme_id')) {
+                    $themeId = $request->input('theme_id');
+                }
+
+                // ── Post ──────────────────────────────────────────────────────
                 $bookClub = BookClub::create([
-                    'user_id' => $user->id,
-                    'text'    => $request->post_text ?? '',
+                    'user_id'      => $user->id,
+                    'text'         => $request->input('post_text', ''),
+                    'product_id'   => $productId,
+                    'product_type' => $productType,
+                    'theme_id'     => $themeId,
                 ]);
 
+                // ── Rasmlar ───────────────────────────────────────────────────
                 if ($request->hasFile('images')) {
                     foreach ($request->file('images') as $img) {
                         BookClubImages::create([
                             'user_id' => $user->id,
                             'post_id' => $bookClub->id,
                             'image'   => $img->store('book_club', 'public'),
-                            'status'  => 1
+                            'status'  => 1,
                         ]);
                     }
                 }
 
+                // ── Ovoz variantlari ──────────────────────────────────────────
                 $voteOptionsRaw = $request->input('vote_options');
                 if ($voteOptionsRaw) {
                     $options = is_string($voteOptionsRaw) ? json_decode($voteOptionsRaw, true) : $voteOptionsRaw;
@@ -351,10 +437,7 @@ class BookClubController extends Controller
 
                 $this->notifyFollowers($user, $bookClub->id);
 
-                return response()->json([
-                    'status'  => 'success',
-                    'post_id' => $bookClub->id
-                ], 201);
+                return response()->json(['status' => 'success', 'post_id' => $bookClub->id], 201);
             });
         } catch (\Exception $e) {
             Log::error("New Post Error: " . $e->getMessage());
@@ -363,78 +446,16 @@ class BookClubController extends Controller
     }
 
     /**
-     * Mahsulot bilan bog'langan post yaratish
+     * new_book_post → new_post ga yo'naltiriladi (eski endpoint uchun compatibility)
      */
     public function new_book_post(Request $request)
     {
-        try {
-            $user = Auth::guard('user')->user();
-            if (!$user) {
-                return response()->json(['status' => 'error', 'message' => 'User not found'], 404);
-            }
-
-            return DB::transaction(function () use ($request, $user) {
-                $productType = null;
-                if ($request->product_type === 'book') {
-                    $productType = 'book';
-                } elseif ($request->product_type === 'stationery') {
-                    $productType = 'stationery';
-                }
-
-                if (!$productType) {
-                    throw new \Exception('Mahsulot turi noto\'g\'ri');
-                }
-
-                $bookClub = BookClub::create([
-                    'user_id'      => $user->id,
-                    'text'         => $request->post_text ?? '',
-                    'product_id'   => $request->product_id,
-                    'product_type' => $productType,
-                ]);
-
-                if ($request->hasFile('images')) {
-                    foreach ($request->file('images') as $img) {
-                        BookClubImages::create([
-                            'user_id' => $user->id,
-                            'post_id' => $bookClub->id,
-                            'image'   => $img->store('book_club', 'public'),
-                            'status'  => 1
-                        ]);
-                    }
-                }
-
-                $voteOptionsRaw = $request->input('vote_options');
-                if ($voteOptionsRaw) {
-                    $options = is_string($voteOptionsRaw) ? json_decode($voteOptionsRaw, true) : $voteOptionsRaw;
-                    if (is_array($options)) {
-                        foreach ($options as $optionText) {
-                            if (!empty($optionText)) {
-                                BookClubVotes::create([
-                                    'user_id'     => $user->id,
-                                    'post_id'     => $bookClub->id,
-                                    'option_text' => $optionText,
-                                ]);
-                            }
-                        }
-                    }
-                }
-
-                $this->notifyFollowers($user, $bookClub->id);
-
-                return response()->json([
-                    'status'  => 'success',
-                    'post_id' => $bookClub->id,
-                    'message' => 'Post muvaffaqiyatli saqlandi'
-                ], 201);
-            });
-        } catch (\Exception $e) {
-            Log::error("New Book Post Error: " . $e->getMessage());
-            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
-        }
+        return $this->new_post($request);
     }
 
     /**
-     * Postni yangilash
+     * Postni yangilash — create bilan bir xil imkoniyatlar
+     * Yangilanishi mumkin: matn, rasmlar, voting, theme, product (book/stationery/order)
      */
     public function update_post(Request $request)
     {
@@ -453,47 +474,98 @@ class BookClubController extends Controller
                     return response()->json(['status' => 'error', 'message' => 'Post o\'chirilgan'], 400);
                 }
 
-                $post->update(['text' => $request->post_text ?? '']);
+                // ── Matn ──────────────────────────────────────────────────────
+                $updateData = ['text' => $request->input('post_text', $post->text)];
 
-                // Eski rasmlarni o'chirish
-                $deletedIds = json_decode($request->deleted_image_ids ?? '[]', true);
+                // ── Theme ─────────────────────────────────────────────────────
+                if ($request->boolean('clear_theme')) {
+                    $updateData['theme_id'] = null;
+                } elseif ($request->boolean('new_theme') && $request->filled('theme_name')) {
+                    $name  = trim($request->input('theme_name'));
+                    $slug  = \Illuminate\Support\Str::slug($name);
+                    $theme = \App\Models\BookClubTheme::firstOrCreate(
+                        ['slug' => $slug],
+                        ['user_id' => $user->id, 'name' => $name, 'status' => 1]
+                    );
+                    $updateData['theme_id'] = $theme->id;
+                } elseif ($request->filled('theme_id')) {
+                    $updateData['theme_id'] = $request->input('theme_id');
+                }
+
+                // ── Product (book / stationery / order) ───────────────────────
+                if ($request->boolean('clear_product')) {
+                    $updateData['product_id']   = null;
+                    $updateData['product_type'] = null;
+                } elseif ($request->filled('product_type') && $request->filled('product_id')) {
+                    $productType = match ($request->input('product_type')) {
+                        'book'       => 'book',
+                        'stationery' => 'stationery',
+                        'order'      => 'order',
+                        default      => null,
+                    };
+
+                    if ($productType !== null) {
+                        if ($productType === 'order') {
+                            $orderExists = Sold::where('id', $request->input('product_id'))
+                                ->where('user_id', $user->id)
+                                ->exists();
+                            if (!$orderExists) {
+                                return response()->json([
+                                    'status'  => 'error',
+                                    'message' => 'Bu buyurtma sizga tegishli emas',
+                                ], 403);
+                            }
+                        }
+                        $updateData['product_id']   = $request->input('product_id');
+                        $updateData['product_type'] = $productType;
+                    }
+                }
+
+                $post->update($updateData);
+
+                // ── Rasmlarni o'chirish ────────────────────────────────────────
+                $deletedIds = json_decode($request->input('deleted_image_ids', '[]'), true);
                 if (!empty($deletedIds)) {
-                    $images = BookClubImages::whereIn('id', $deletedIds)->get();
+                    $images = BookClubImages::whereIn('id', $deletedIds)
+                        ->where('post_id', $post->id)
+                        ->get();
                     foreach ($images as $img) {
                         Storage::disk('public')->delete($img->image);
                         $img->delete();
                     }
                 }
 
-                // Yangi rasmlar qo'shish
+                // ── Yangi rasmlar ─────────────────────────────────────────────
                 if ($request->hasFile('images')) {
                     foreach ($request->file('images') as $file) {
                         BookClubImages::create([
                             'user_id' => $user->id,
                             'post_id' => $post->id,
                             'image'   => $file->store('book_club', 'public'),
-                            'status'  => 1
+                            'status'  => 1,
                         ]);
                     }
                 }
 
-                // Ovoz variantlarini yangilash
-                $updatedVotes = json_decode($request->updated_votes ?? '[]', true);
+                // ── Mavjud voting o'zgartirish ────────────────────────────────
+                $updatedVotes = json_decode($request->input('updated_votes', '[]'), true);
                 if (!empty($updatedVotes)) {
                     foreach ($updatedVotes as $vData) {
                         BookClubVotes::where('id', $vData['id'] ?? 0)
+                            ->where('post_id', $post->id)
                             ->update(['option_text' => $vData['text'] ?? '']);
                     }
                 }
 
-                $newVotes = json_decode($request->new_vote_options ?? '[]', true);
+                // ── Yangi voting variantlari ──────────────────────────────────
+                $newVotes = json_decode($request->input('new_vote_options', '[]'), true);
                 if (!empty($newVotes)) {
                     foreach ($newVotes as $text) {
-                        if (!empty($text)) {
+                        if (!empty(trim($text))) {
                             BookClubVotes::create([
                                 'user_id'     => $user->id,
                                 'post_id'     => $post->id,
-                                'option_text' => $text,
+                                'option_text' => trim($text),
                             ]);
                         }
                     }
@@ -502,9 +574,11 @@ class BookClubController extends Controller
                 return response()->json(['status' => 'success', 'message' => 'Post yangilandi']);
             });
         } catch (\Exception $e) {
+            Log::error('Update Post Error: ' . $e->getMessage());
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
         }
     }
+
 
     /**
      * Like / Unlike
@@ -523,22 +597,16 @@ class BookClubController extends Controller
                 return response()->json(['status' => 'error', 'message' => 'Post o\'chirilgan'], 400);
             }
 
-            $like = BookClubLikes::where('post_id', $post->id)
-                ->where('user_id', $user->id)
-                ->first();
+            $like = BookClubLikes::where('post_id', $post->id)->where('user_id', $user->id)->first();
 
             if (!$like) {
-                BookClubLikes::create([
-                    'post_id' => $post->id,
-                    'user_id' => $user->id
-                ]);
+                BookClubLikes::create(['post_id' => $post->id, 'user_id' => $user->id]);
                 $this->sendNotification($post->user_id, $user, 'like', $post->id);
                 $status = 'liked';
             } else {
                 $like->delete();
 
-                // Bildirishnomani yangilash yoki o'chirish
-                $groupKey = "like_post_{$post->id}";
+                $groupKey     = "like_post_{$post->id}";
                 $notification = BookClubNotification::where('user_id', $post->user_id)
                     ->where('group_key', $groupKey)
                     ->where('is_read', 0)
@@ -550,12 +618,11 @@ class BookClubController extends Controller
                         $notification->delete();
                     } else {
                         $data['user_names'] = array_values(array_diff($data['user_names'] ?? [], [$user->name]));
-                        $data['count'] = count($data['user_names']);
-
+                        $data['count']      = count($data['user_names']);
                         if ($data['count'] > 0) {
-                            $data['last_user_name'] = end($data['user_names']);
-                            $lastUser = User::where('name', $data['last_user_name'])->first();
-                            $data['last_user_avatar'] = $lastUser?->avatar;
+                            $data['last_user_name']   = end($data['user_names']);
+                            $lastUser                  = User::where('name', $data['last_user_name'])->first();
+                            $data['last_user_avatar']  = $lastUser?->avatar;
                             $notification->update(['data' => $data]);
                         } else {
                             $notification->delete();
@@ -565,10 +632,7 @@ class BookClubController extends Controller
                 $status = 'unliked';
             }
 
-            return response()->json([
-                'status'     => 'success',
-                'like_status' => $status
-            ]);
+            return response()->json(['status' => 'success', 'like_status' => $status]);
         } catch (\Exception $e) {
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
         }
@@ -586,7 +650,7 @@ class BookClubController extends Controller
             }
 
             $option = BookClubVotes::findOrFail($optionId);
-            $post = BookClub::findOrFail($option->post_id);
+            $post   = BookClub::findOrFail($option->post_id);
 
             if ($post->is_deleted) {
                 return response()->json(['status' => 'error', 'message' => 'Post o\'chirilgan'], 400);
@@ -598,10 +662,7 @@ class BookClubController extends Controller
                 ->exists();
 
             if ($alreadyVoted) {
-                return response()->json([
-                    'status'  => 'error',
-                    'message' => 'Siz ushbu so\'rovnomada qatnashib bo\'lgansiz'
-                ], 400);
+                return response()->json(['status' => 'error', 'message' => 'Siz ushbu so\'rovnomada qatnashib bo\'lgansiz'], 400);
             }
 
             DB::table('book_club_voted_users')->insert([
@@ -619,12 +680,12 @@ class BookClubController extends Controller
     }
 
     /**
-     * Foydalanuvchiga obuna bo'lish / obunani bekor qilish
+     * Follow / Unfollow
      */
     public function followUser(Request $request)
     {
         try {
-            $me = Auth::guard('user')->user();
+            $me     = Auth::guard('user')->user();
             $target = User::findOrFail($request->user_id);
 
             if ($me->id === $target->id) {
@@ -633,17 +694,17 @@ class BookClubController extends Controller
 
             if ($me->followings()->where('following_id', $target->id)->exists()) {
                 $me->followings()->detach($target->id);
-                $status = "unfollowed";
+                $status = 'unfollowed';
             } else {
                 $me->followings()->attach($target->id);
                 $this->sendNotification($target->id, $me, 'follow');
-                $status = "followed";
+                $status = 'followed';
             }
 
             return response()->json([
                 'status'          => 'success',
                 'follow_status'   => $status,
-                'followers_count' => $target->followers()->count()
+                'followers_count' => $target->followers()->count(),
             ]);
         } catch (\Exception $e) {
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
@@ -651,7 +712,7 @@ class BookClubController extends Controller
     }
 
     /**
-     * Repost qilish
+     * Repost
      */
     public function repost(Request $request, $id)
     {
@@ -669,15 +730,15 @@ class BookClubController extends Controller
 
             return DB::transaction(function () use ($user, $original) {
                 $newPost = BookClub::create([
-                    'user_id'         => $user->id,
-                    'text'            => $original->text,
-                    'product_id'      => $original->product_id,
-                    'product_type'    => $original->product_type,
-                    'repost'          => true,
+                    'user_id'          => $user->id,
+                    'text'             => $original->text,
+                    'product_id'       => $original->product_id,
+                    'product_type'     => $original->product_type,
+                    'theme_id'         => $original->theme_id,
+                    'repost'           => true,
                     'reposted_user_id' => $original->user_id,
                 ]);
 
-                // Rasmlarni ko'chirish
                 foreach ($original->images as $img) {
                     BookClubImages::create([
                         'user_id' => $user->id,
@@ -687,7 +748,6 @@ class BookClubController extends Controller
                     ]);
                 }
 
-                // Ovoz variantlarini ko'chirish
                 foreach ($original->votes as $vote) {
                     BookClubVotes::create([
                         'user_id'     => $user->id,
@@ -696,16 +756,10 @@ class BookClubController extends Controller
                     ]);
                 }
 
-                // Original post egasiga bildirishnoma
                 $this->sendNotification($original->user_id, $user, 'repost', $original->id);
-
-                // Repost qiluvchining obunachilariga bildirishnoma
                 $this->notifyFollowers($user, $newPost->id);
 
-                return response()->json([
-                    'status'  => 'success',
-                    'post_id' => $newPost->id
-                ]);
+                return response()->json(['status' => 'success', 'post_id' => $newPost->id]);
             });
         } catch (\Exception $e) {
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
@@ -723,9 +777,7 @@ class BookClubController extends Controller
                 return response()->json(['status' => 'error', 'message' => 'User not found'], 404);
             }
 
-            $post = BookClub::where('user_id', $user->id)
-                ->where('id', $id)
-                ->first();
+            $post = BookClub::where('user_id', $user->id)->where('id', $id)->first();
 
             if (!$post || $post->is_deleted) {
                 return response()->json(['status' => 'error', 'message' => 'Post topilmadi yoki allaqachon o\'chirilgan'], 404);
@@ -739,9 +791,7 @@ class BookClubController extends Controller
         }
     }
 
-    // ──────────────────────────────────────────────────────────────────────────────
-    // Yordamchi metodlar
-    // ──────────────────────────────────────────────────────────────────────────────
+    // ─── Yordamchi metodlar ───────────────────────────────────────────────────────
 
     private function notifyFollowers($user, $postId)
     {
@@ -756,12 +806,9 @@ class BookClubController extends Controller
 
     private function sendNotification($receiverId, $sender, $type, $postId = null)
     {
-        if ($receiverId == $sender->id) {
-            return;
-        }
+        if ($receiverId == $sender->id) return;
 
-        $groupKey = $postId ? "{$type}_post_{$postId}" : "{$type}_user_{$sender->id}";
-
+        $groupKey     = $postId ? "{$type}_post_{$postId}" : "{$type}_user_{$sender->id}";
         $notification = BookClubNotification::where('user_id', $receiverId)
             ->where('group_key', $groupKey)
             ->where('is_read', 0)
@@ -770,24 +817,24 @@ class BookClubController extends Controller
         if ($notification) {
             $data = $notification->data;
             if (!in_array($sender->name, $data['user_names'] ?? [])) {
-                $data['count'] = ($data['count'] ?? 1) + 1;
-                $data['user_names'][] = $sender->name;
-                $data['last_user_name'] = $sender->name;
+                $data['count']            = ($data['count'] ?? 1) + 1;
+                $data['user_names'][]     = $sender->name;
+                $data['last_user_name']   = $sender->name;
                 $data['last_user_avatar'] = $sender->avatar;
                 $notification->update(['data' => $data, 'updated_at' => now()]);
             }
         } else {
             BookClubNotification::create([
-                'user_id' => $receiverId,
-                'type'    => $type,
-                'post_id' => $postId,
+                'user_id'   => $receiverId,
+                'type'      => $type,
+                'post_id'   => $postId,
                 'group_key' => $groupKey,
-                'data'    => [
-                    'count'           => 1,
-                    'last_user_name'  => $sender->name,
+                'data'      => [
+                    'count'            => 1,
+                    'last_user_name'   => $sender->name,
                     'last_user_avatar' => $sender->avatar,
-                    'user_names'      => [$sender->name]
-                ]
+                    'user_names'       => [$sender->name],
+                ],
             ]);
         }
 
@@ -807,16 +854,16 @@ class BookClubController extends Controller
                 ->limit(30)
                 ->get()
                 ->map(function ($n) {
-                    $data = $n->data;
-                    $name = $data['last_user_name'] ?? 'Kimdir';
+                    $data  = $n->data;
+                    $name  = $data['last_user_name'] ?? 'Kimdir';
                     $extra = ($data['count'] ?? 1) - 1;
 
                     $text = match ($n->type) {
-                        'like'    => $extra > 0 ? "$name va yana $extra kishi like bosdi" : "$name postga like bosdi",
-                        'new_post'=> "$name yangi post qoldirdi",
-                        'follow'  => "$name sizga obuna bo'ldi",
-                        'repost'  => $extra > 0 ? "$name va yana $extra kishi repost qildi" : "$name postni repost qildi",
-                        default   => "Yangi bildirishnoma"
+                        'like'     => $extra > 0 ? "$name va yana $extra kishi like bosdi" : "$name postga like bosdi",
+                        'new_post' => "$name yangi post qoldirdi",
+                        'follow'   => "$name sizga obuna bo'ldi",
+                        'repost'   => $extra > 0 ? "$name va yana $extra kishi repost qildi" : "$name postni repost qildi",
+                        default    => "Yangi bildirishnoma",
                     };
 
                     return [
@@ -826,14 +873,11 @@ class BookClubController extends Controller
                         'text'       => $text,
                         'avatar'     => $data['last_user_avatar'] ?? null,
                         'is_read'    => $n->is_read,
-                        'created_at' => $n->created_at->diffForHumans()
+                        'created_at' => $n->created_at->diffForHumans(),
                     ];
                 });
 
-            return response()->json([
-                'status' => 'success',
-                'data'   => $notifications
-            ]);
+            return response()->json(['status' => 'success', 'data' => $notifications]);
         } catch (\Exception $e) {
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
         }

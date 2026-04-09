@@ -8,9 +8,6 @@ use Illuminate\Database\Eloquent\Model;
 class MyCart extends Model
 {
     use HasFactory;
-
-    protected $table = 'my_cart';
-
     protected $fillable = [
         'user_id',
         'product_id',
@@ -34,17 +31,6 @@ class MyCart extends Model
     public function variant()
     {
         return $this->belongsTo(StationeryVariant::class, 'variant_id');
-    }
-
-    // Eski relationlar (agar boshqa joyda kerak bo‘lsa saqlab qoldik)
-    public function book()
-    {
-        return $this->belongsTo(Books::class, 'product_id')->where('product_type', 'book');
-    }
-
-    public function stationery()
-    {
-        return $this->belongsTo(Stationery::class, 'product_id')->where('product_type', 'stationery');
     }
 
     // Accessorlar (helperlar)

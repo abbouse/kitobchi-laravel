@@ -5,25 +5,20 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use App\Models\User;
 use App\Models\MyCart;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request as HttpRequest;
 
 class RemindCartItems extends Command
 {
-    protected $signature   = 'cart:remind';
-    protected $description = "Savatchada mahsuloti bor foydalanuvchilarga kuniga 2-3 marta hazil-mutoyiba push xabar yuborish";
-
-    // =========================================================================
-    //  KO'P TILLIK HAZIL-MUTOYIBA XABARLARI
-    //  Kuniga 3 ta vaqt: ertalab (08:00), tushda (13:00), kechqurun (19:00)
-    //  Har bir vaqt uchun alohida uslub
-    // =========================================================================
+    // ── FIX: configure() o'chirildi ───────────────────────────
+    // RemindUnpaidOrders kabi --time option to'g'ridan $signature ga yozildi
+    // configure() override qilinganda parent::configure() chaqirilmaydi,
+    // $signature parse qilinmaydi va option ro'yxatdan o'tmaydi
+    protected $signature   = 'cart:remind {--time= : morning | afternoon | evening}';
+    protected $description = "Savatchada mahsuloti bor foydalanuvchilarga kuniga 3 marta push xabar yuborish";
 
     private const REMINDERS = [
-
-        // ── ERTALAB (morning) ────────────────────────────────────────────────
         'morning' => [
             'uz' => [
                 'title' => "☀️ Xayrli tong! Savatchangi unutmadingizmi?",
@@ -42,8 +37,6 @@ class RemindCartItems extends Command
                 'body'  => "カートの{count}点の商品が朝のコーヒーを一緒に飲みたそうにしています ☕ 今日はいかがでしょうか？",
             ],
         ],
-
-        // ── TUSHDA (afternoon) ──────────────────────────────────────────────
         'afternoon' => [
             'uz' => [
                 'title' => "🌤️ Tushlik payti! Savat hali kutmoqda...",
@@ -62,8 +55,6 @@ class RemindCartItems extends Command
                 'body'  => "お昼ご飯の間、カートの{count}点の商品がひとりぼっちです 🥺 一緒に連れて帰りましょう！",
             ],
         ],
-
-        // ── KECHQURUN (evening) ─────────────────────────────────────────────
         'evening' => [
             'uz' => [
                 'title' => "🌙 Kechqurun — xarid qilish vaqti!",
@@ -84,30 +75,14 @@ class RemindCartItems extends Command
         ],
     ];
 
-    // =========================================================================
-    //  QAYSI VAQT EKANLIGI — schedule bilan sinxron
-    //  Kernel.php da:
-    //    $schedule->command('cart:remind --time=morning')->dailyAt('08:00');
-    //    $schedule->command('cart:remind --time=afternoon')->dailyAt('13:00');
-    //    $schedule->command('cart:remind --time=evening')->dailyAt('19:00');
-    // =========================================================================
-
-    protected function configure(): void
-    {
-        $this->addOption('time', null, \Symfony\Component\Console\Input\InputOption::VALUE_OPTIONAL, 'Vaqt: morning | afternoon | evening', null);
-    }
-
-    // =========================================================================
-    //  HANDLE
-    // =========================================================================
-
+    // ── HANDLE ────────────────────────────────────────────────
+    // RemindUnpaidOrders kabi — configure() yo'q, option() to'g'ridan ishlatiladi
     public function handle(): void
     {
-        // Vaqtni argument yoki hozirgi soatdan aniqlaymiz
         $timeSlot = $this->option('time');
 
         if (!in_array($timeSlot, ['morning', 'afternoon', 'evening'])) {
-            $hour = (int) now()->format('H');
+            $hour     = (int) now()->format('H');
             $timeSlot = match (true) {
                 $hour >= 6  && $hour < 12 => 'morning',
                 $hour >= 12 && $hour < 17 => 'afternoon',
@@ -117,7 +92,6 @@ class RemindCartItems extends Command
 
         $this->info(now()->format('d.m.Y H:i:s') . " — Savatcha eslatmasi boshlandi [{$timeSlot}]...");
 
-        // Savatchasida kamida 1 ta mahsulot bor foydalanuvchilar
         $userIdsWithCart = MyCart::select('user_id')
             ->groupBy('user_id')
             ->havingRaw('COUNT(*) >= 1')
@@ -131,33 +105,25 @@ class RemindCartItems extends Command
 
         $this->info("Savatchali foydalanuvchilar: " . count($userIdsWithCart));
 
-        $sent  = 0;
-        $skip  = 0;
+        $sent = 0;
+        $skip = 0;
 
         foreach ($userIdsWithCart as $userId) {
-            // Savatcadagi mahsulotlar soni
             $cartCount = MyCart::where('user_id', $userId)->sum('count_item') ?: 1;
-
-            $user = User::find($userId);
+            $user      = User::find($userId);
             if (!$user) { $skip++; continue; }
 
-            $success = $this->sendCartPush($user, (int) $cartCount, $timeSlot);
-            $success ? $sent++ : $skip++;
+            $this->sendCartPush($user, (int) $cartCount, $timeSlot) ? $sent++ : $skip++;
         }
 
         $this->info("Yuborildi: {$sent} | O'tkazib yuborildi: {$skip}");
     }
 
-    // =========================================================================
-    //  PUSH YUBORISH
-    // =========================================================================
-
     private function sendCartPush(User $user, int $cartCount, string $timeSlot): bool
     {
         try {
             $lang = in_array($user->lang ?? 'uz', ['uz', 'ru', 'en', 'ja'])
-                ? ($user->lang ?? 'uz')
-                : 'uz';
+                ? ($user->lang ?? 'uz') : 'uz';
 
             $msgs  = self::REMINDERS[$timeSlot][$lang];
             $title = str_replace('{count}', $cartCount, $msgs['title']);
@@ -168,9 +134,7 @@ class RemindCartItems extends Command
                 ->where('user_id', $user->id)
                 ->whereNotNull('fcm_token')
                 ->pluck('fcm_token')
-                ->unique()
-                ->values()
-                ->toArray();
+                ->unique()->values()->toArray();
 
             if (empty($tokens)) {
                 Log::info("CartRemind: user #{$user->id} uchun token topilmadi.");
@@ -182,9 +146,7 @@ class RemindCartItems extends Command
                 'title'   => $title,
                 'body'    => $body,
                 'tokens'  => $tokens,
-                'data'    => [
-                    'type' => 'cart_reminder',
-                ],
+                'data'    => ['type' => 'cart_reminder'],
             ];
 
             $request = new HttpRequest();

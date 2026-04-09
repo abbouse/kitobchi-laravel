@@ -17,10 +17,12 @@ class Transaction extends Model
     'perform_time',
     'cancel_time',
     'amount',
+    'payment_type',
     'state',
     'reason',
     'receivers',
     'order_id',
+    'payable_id',
     'perform_time_unix',
 ];
     public static function getTransactionsByTimeRange($from, $to)

@@ -2,58 +2,72 @@
 
 return [
     'defaults' => [
-        'guard' => env('AUTH_GUARD', 'web'),
+        'guard'     => env('AUTH_GUARD', 'web'),
         'passwords' => env('AUTH_PASSWORD_BROKER', 'users'),
     ],
+
     'guards' => [
         'web' => [
-            'driver' => 'session',
+            'driver'   => 'session',
             'provider' => 'users',
         ],
         'user' => [
-        'driver' => 'sanctum',
-        'provider' => 'users',
+            'driver'   => 'sanctum',
+            'provider' => 'users',
         ],
         'seller' => [
-        'driver' => 'sanctum',
-        'provider' => 'sellers',
+            'driver'   => 'sanctum',
+            'provider' => 'sellers',
         ],
         'courier' => [
-        'driver' => 'sanctum',
-        'provider' => 'couriers',
+            'driver'   => 'sanctum',
+            'provider' => 'couriers',
+        ],
+
+        // ✅ Panel admin guard (session based)
+        'panel' => [
+            'driver'   => 'session',
+            'provider' => 'admins',
         ],
     ],
+
     'providers' => [
         'users' => [
             'driver' => 'eloquent',
-            'model' => App\Models\User::class,
+            'model'  => App\Models\User::class,
         ],
         'sellers' => [
-        'driver' => 'eloquent',
-        'model' => App\Models\Seller::class,
+            'driver' => 'eloquent',
+            'model'  => App\Models\Seller::class,
         ],
         'couriers' => [
-        'driver' => 'eloquent',
-        'model' => App\Models\Couriers::class,
+            'driver' => 'eloquent',
+            'model'  => App\Models\Couriers::class,
+        ],
+
+        // ✅ Admin provider
+        'admins' => [
+            'driver' => 'eloquent',
+            'model'  => App\Models\Admin::class,
         ],
     ],
 
     'passwords' => [
         'users' => [
             'provider' => 'users',
-            'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
-            'expire' => 60,
+            'table'    => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
+            'expire'   => 60,
             'throttle' => 60,
         ],
         'sellers' => [
-        'driver' => 'eloquent',
-        'model' => App\Models\Seller::class,
+            'driver' => 'eloquent',
+            'model'  => App\Models\Seller::class,
         ],
         'couriers' => [
-        'driver' => 'eloquent',
-        'model' => App\Models\Couriers::class,
+            'driver' => 'eloquent',
+            'model'  => App\Models\Couriers::class,
         ],
     ],
-    'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 ];

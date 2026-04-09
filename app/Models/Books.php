@@ -53,10 +53,6 @@ class Books extends Model
     {
         return $this->hasMany(MyCart::class, 'book_id');
     }
-    public function discounts()
-{
-    return $this->belongsToMany(Discounts::class, 'book_discount', 'book_id', 'discount_id');
-}
     public function getFirstImageAttribute(): ?string
     {
         $images = $this->images;
@@ -67,11 +63,6 @@ class Books extends Model
 
         return $images[0] ?? null;
     }
-    public function getDiscountPercentAttribute()
-{
-    $discount = $this->discounts()->first();
-    return $discount ? $discount->discount : 0;
-}
 public function tags()
     {
         return $this->belongsToMany(BookTag::class, 'book_tag_relations', 'book_id', 'tag_id');

@@ -12,14 +12,8 @@ class ResetAiLimitsAndCleanChat extends Command
     protected $signature   = 'ai:daily-reset';
     protected $description = "Har kunlik: ai_limit ni 25 ga yangilash + eski ChatMessage/ChatMessageItem larni tozalash";
 
-    // ── Sozlamalar ─────────────────────────────────────────────────────────────
-    const AI_LIMIT          = 25;
-    const CHAT_KEEP_DAYS    = 30;   // Shu kundan eski xabarlar o'chiriladi
-    const CHUNK_SIZE        = 500;  // Bir vaqtda nechta user/xabar
-
-    // =========================================================================
-    //  HANDLE
-    // =========================================================================
+    const AI_LIMIT       = 25;
+    const CHUNK_SIZE     = 500;
 
     public function handle(): void
     {
@@ -34,11 +28,7 @@ class ResetAiLimitsAndCleanChat extends Command
         $this->info('✅ Jarayon muvaffaqiyatli tugadi.');
     }
 
-    // =========================================================================
-    //  1. AI LIMIT YANGILASH
-    //  Faqat ai_limit < 25 bo'lgan userlarni yangilaymiz (samarali)
-    // =========================================================================
-
+    // ── 1. AI limit yangilash ──────────────────────────────────
     private function resetAiLimits(): void
     {
         $this->info('── AI limitlarni yangilash ──────────────────────────');
@@ -55,7 +45,6 @@ class ResetAiLimitsAndCleanChat extends Command
 
             $this->info("Yangilanadigan userlar soni: {$count}");
 
-            // Chunk bilan yangilaymiz — katta DB uchun xavfsiz
             $updated = 0;
             DB::table('users')
                 ->where('ai_limit', '<', self::AI_LIMIT)
@@ -89,30 +78,16 @@ class ResetAiLimitsAndCleanChat extends Command
         }
     }
 
-    // =========================================================================
-    //  2. CHAT XABARLARINI TOZALASH
-    //  CHAT_KEEP_DAYS kundan eski ChatMessage + bog'liq ChatMessageItem lar
-    // =========================================================================
-
+    // ── 2. Chat xabarlarini tozalash ───────────────────────────
     private function cleanChatMessages(): void
     {
         $this->info('── Chat xabarlarini tozalash ────────────────────────');
 
-        $cutoff = Carbon::now()->subDays(self::CHAT_KEEP_DAYS);
-        $this->info("O'chirish chegarasi: {$cutoff->format('d.m.Y')} dan oldingi xabarlar");
+        $this->info("O'chirish chegarasi: hammasi");
 
         try {
             DB::table('chat_messages')
-                ->where('created_at', '<', $cutoff)->delete();
-            $this->info("✓ ChatMessage o'chirildi.");
-
-            Log::info('AI daily reset: chat cleaned', [
-                'deleted_messages' => $totalMessages,
-                'deleted_items'    => $totalItems,
-                'cutoff_date'      => $cutoff->toDateString(),
-                'at'               => now()->toDateTimeString(),
-            ]);
-
+                ->delete();
         } catch (\Throwable $e) {
             $this->error("Chat tozalashda xatolik: {$e->getMessage()}");
             Log::error('AI daily reset — chat clean error', [

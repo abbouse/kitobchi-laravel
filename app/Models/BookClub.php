@@ -1,7 +1,5 @@
 <?php
-
 namespace App\Models;
-
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -17,64 +15,64 @@ class BookClub extends Model
         'product_type',
         'text',
         'is_deleted',
+        'theme_id',
         'repost',
-        'reposted_user_id'
-    ];
-    
-    protected $casts = [
-    'is_deleted' => 'boolean',
-    'repost' => 'boolean'
+        'reposted_user_id',
     ];
 
-    /**
-     * Polymorphic relationship - kitob yoki kanselyariya
-     */
+    protected $casts = [
+        'is_deleted' => 'boolean',
+        'repost'     => 'boolean',
+    ];
+
+    // ── Morph map — product_type qiymatlari model klasslarga bog'lanadi ──────
+    // Bu bo'lmasa Laravel 'book' → 'App\Models\book' deb qidiradi (xato!)
+    // Controller manualdan load qilgani uchun bu relation
+    // to'g'ridan chaqirilmaydi, lekin ehtiyot uchun to'g'ri belgilaymiz.
     public function product()
     {
-        return $this->morphTo();
+        return $this->morphTo(__FUNCTION__, 'product_type', 'product_id');
     }
 
-    /**
-     * Post egasi
-     */
+    // ── User ──────────────────────────────────────────────────────────────────
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id', 'id');
     }
 
-    /**
-     * Post rasmlari
-     */
+    // ── Original author (repost uchun) ────────────────────────────────────────
+    public function originalAuthor()
+    {
+        return $this->belongsTo(User::class, 'reposted_user_id', 'id');
+    }
+
+    // ── Theme ─────────────────────────────────────────────────────────────────
+    public function theme()
+    {
+        return $this->belongsTo(BookClubTheme::class, 'theme_id', 'id');
+    }
+
+    // ── Rasmlar ───────────────────────────────────────────────────────────────
     public function images()
     {
         return $this->hasMany(BookClubImages::class, 'post_id', 'id');
     }
 
-    /**
-     * Ovoz berish variantlari
-     */
+    // ── Ovoz variantlari ──────────────────────────────────────────────────────
     public function votes()
     {
         return $this->hasMany(BookClubVotes::class, 'post_id', 'id');
     }
 
-    /**
-     * Likelar
-     */
+    // ── Likelar ───────────────────────────────────────────────────────────────
     public function likes()
     {
         return $this->hasMany(BookClubLikes::class, 'post_id', 'id');
     }
 
-    /**
-     * Izohlar
-     */
+    // ── Izohlar ───────────────────────────────────────────────────────────────
     public function comments()
     {
         return $this->hasMany(BookClubComment::class, 'post_id', 'id');
     }
-    public function originalAuthor()
-{
-    return $this->belongsTo(User::class, 'reposted_user_id');
-}
 }

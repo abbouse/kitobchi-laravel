@@ -9,7 +9,6 @@ class FcmNotifications extends Model
 {
     use HasFactory;
 
-    protected $table = 'fcm_notifications';
     protected $fillable = [
         'title',
         'body',

@@ -19,11 +19,46 @@ class SellerTransaction extends Model
         'commissionPrice',
         'netAmount',
         'status',
-        'rejected_desc'
+        'rejected_desc',
     ];
 
     protected $casts = [
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
+        'amount'          => 'integer',
+        'commissionPrice' => 'integer',
+        'netAmount'       => 'integer',
+        'created_at'      => 'datetime',
+        'updated_at'      => 'datetime',
     ];
+
+    // ── Status constants ───────────────────────────────────────
+    const STATUS_PENDING  = 'pending';
+    const STATUS_APPROVED = 'approved';
+    const STATUS_REJECTED = 'rejected';
+
+    // ── Relationships ──────────────────────────────────────────
+    public function seller()
+    {
+        return $this->belongsTo(Seller::class, 'seller_id');
+    }
+
+    // ── Helpers ────────────────────────────────────────────────
+    public function getStatusLabelAttribute(): string
+    {
+        return match($this->status) {
+            self::STATUS_PENDING  => 'Kutilmoqda',
+            self::STATUS_APPROVED => 'Tasdiqlangan',
+            self::STATUS_REJECTED => 'Rad etildi',
+            default               => $this->status,
+        };
+    }
+
+    public function getStatusColorAttribute(): string
+    {
+        return match($this->status) {
+            self::STATUS_PENDING  => 'warning',
+            self::STATUS_APPROVED => 'success',
+            self::STATUS_REJECTED => 'danger',
+            default               => 'muted',
+        };
+    }
 }

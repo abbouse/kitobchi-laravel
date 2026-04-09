@@ -1,6 +1,6 @@
 <?php
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\{UserController, NewsController, ProductsController, PurchaseController, SearchController, CartController, BookClubController, BookClubCommentController, GiftsController, ContestController, ReelController, PremiumController, CardController, ChatController, ReportController, ChatBotController};
+use App\Http\Controllers\Api\{UserController, NewsController, ProductsController, PurchaseController, SearchController, CartController, BookClubController, BookClubCommentController, BookClubThemeController, GiftsController, ContestController, ReelController, PremiumController, CardController, ChatController, ReportController, ChatBotController, GiftCertificateController, ShopApiController, SharedCartController, ShareController};
 
 // --- Ochiq qismlar ---
 Route::post('payme', [App\Http\Controllers\Api\PaymeController::class, 'index'])->middleware('payme');
@@ -11,27 +11,48 @@ Route::get('counts', [UserController::class, 'getGlobalCounts']);
 Route::get('news', [NewsController::class, 'index']);
 Route::get('blog', [NewsController::class, 'blog']);
 Route::prefix('products')->group(function () {
-    Route::get('{col}', [ProductsController::class, 'index']);
     Route::get('sellers/list', [ProductsController::class, 'sellersWithLatestProducts']);
-    Route::get('sellers/profile/{id}/{page}', [ProductsController::class, 'seller']);
+    Route::get('sellers/profile/{id}', [ProductsController::class, 'seller']);
+    Route::get('books-by-category', [ProductsController::class, 'booksByCategory']);
     Route::get('recommendation/{col}', [ProductsController::class, 'recommendation']);
+    Route::get('{col}', [ProductsController::class, 'index']);
 });
 Route::prefix('search')->group(function () {
     Route::get('/', [SearchController::class, 'search']);
+    Route::get('history', [SearchController::class, 'history']);
+    Route::delete('history', [SearchController::class, 'clearHistory']);
+    Route::get('suggestions', [SearchController::class, 'suggestions']);
+    Route::get('trending', [SearchController::class, 'trendingSearches']);
+    Route::get('recommendations', [SearchController::class, 'recommendations']);
     Route::get('categories', [SearchController::class, 'allCategories']);
-    Route::get('category/{cat_id}/{type}', [SearchController::class, 'category']);
+    Route::get('category-sellers', [SearchController::class, 'categoryBySellers']);
 });
 Route::get('product_comments/{productId}/{type}', [BookClubController::class, 'getProductPosts']);
 Route::get('book_club', [BookClubController::class, 'index']);
+Route::get('book_club/themes', [BookClubThemeController::class, 'index']);
 Route::get('book_club/comments/{post_id}', [BookClubCommentController::class, 'index']);
 Route::get('book_club/comments/{post_id}/replies', [BookClubCommentController::class, 'replies']);
 Route::get('cart_user', [CartController::class, 'index']);
 Route::get('cart_user/count', [CartController::class, 'count']);
 Route::get('contest/{sellerId}', [ContestController::class, 'getContest']);
 Route::get('reels', [ReelController::class, 'index']);
+Route::get('shop/info', [ShopApiController::class, 'info']);
+
+Route::prefix('share')->group(function () {
+    Route::get('product/{id}', [ShareController::class, 'product']);
+    Route::get('cart/{slug}',  [SharedCartController::class, 'show']);
+});
 
 // --- Faqat Token bilan kiriladigan qismlar ---
 Route::middleware('auth:user')->group(function () {
+    Route::post('shared-cart/create',            [SharedCartController::class, 'create']);
+    Route::post('shared-cart/{slug}/add-to-cart',[SharedCartController::class, 'addToCart']);
+    Route::get('shared-cart/my',                 [SharedCartController::class, 'myLinks']);
+    Route::delete('shared-cart/{slug}',          [SharedCartController::class, 'destroy']);
+    Route::post('cart_user/guest-sync',      [GuestSyncController::class, 'syncCart']);
+    Route::post('user/favorites/guest-sync', [GuestSyncController::class, 'syncFavorites']);
+    
+    
     Route::get('user/premium-status',   [PremiumController::class, 'status']);
     Route::post('user/subscribe-premium', [PremiumController::class, 'subscribe']);
     Route::post('user/cancel-premium',  [PremiumController::class, 'cancel']);
@@ -42,6 +63,14 @@ Route::middleware('auth:user')->group(function () {
     Route::post('cards', [CardController::class, 'store']);
     Route::post('cards/verify', [CardController::class, 'verify']);
     Route::delete('cards/{id}', [CardController::class, 'destroy']);
+    
+    Route::post('shop/mystery-box/subscribe',     [ShopApiController::class, 'subscribeMysteryBox']);
+    Route::get('shop/mystery-box/subscription/{id}',     [ShopApiController::class, 'subscriptionDetail']);
+    Route::post('shop/mystery-box/update-address',     [ShopApiController::class, 'updateSubscriptionAddress']);
+    
+    Route::post('shop/gift-certificate/buy',      [ShopApiController::class, 'buyCertificate']);
+    Route::post('shop/gift-certificate/activate', [ShopApiController::class, 'activateCertificate']);
+    Route::get('gift-certificates', [GiftCertificateController::class, 'index']);
     
     Route::post('report/send', [ReportController::class, 'sendReport']);
     Route::post('/bot/ask', [ChatBotController::class, 'ask']);
@@ -82,6 +111,7 @@ Route::middleware('auth:user')->group(function () {
     Route::post('user/update-status', [UserController::class, 'updateStatus']);
     Route::get('favourite_products', [UserController::class, 'favouriteProducts']);
     Route::get('favourite_products/{id}/add', [UserController::class, 'addFavourite']);
+    Route::delete('favourite_products/clear', [UserController::class, 'clearFavorites']);
 
     // Xaridlar
     Route::prefix('purchase')->group(function () {
@@ -105,6 +135,7 @@ Route::middleware('auth:user')->group(function () {
     Route::prefix('cart_user')->group(function () {
         Route::get('check/{product_id}', [CartController::class, 'check']);
         Route::get('delete/{cartId}', [CartController::class, 'remove']);
+        Route::delete('delete', [CartController::class, 'batchDelete']);
         Route::post('plus', [CartController::class, 'plus']);
         Route::get('{cartId}/minus', [CartController::class, 'minus']);
     });

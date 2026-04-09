@@ -516,3 +516,471 @@ Yuborildi: 18 | O'tkazib yuborildi: 129
   36  artisan:13
       Illuminate\Foundation\Application::handleCommand()
 
+17.03.2026 08:00:02 — Savatcha eslatmasi boshlandi [morning]...
+
+   Illuminate\Database\QueryException 
+
+  SQLSTATE[HY000] [2002] Connection refused (Connection: mysql, SQL: select `user_id` from `my_cart` group by `user_id` having COUNT(*) >= 1)
+
+  at vendor/laravel/framework/src/Illuminate/Database/Connection.php:825
+    821▕                     $this->getName(), $query, $this->prepareBindings($bindings), $e
+    822▕                 );
+    823▕             }
+    824▕ 
+  ➜ 825▕             throw new QueryException(
+    826▕                 $this->getName(), $query, $this->prepareBindings($bindings), $e
+    827▕             );
+    828▕         }
+    829▕     }
+
+      [2m+21 vendor frames [22m
+
+  22  app/Console/Commands/RemindCartItems.php:124
+      Illuminate\Database\Eloquent\Builder::pluck()
+      [2m+13 vendor frames [22m
+
+  36  artisan:13
+      Illuminate\Foundation\Application::handleCommand()
+
+17.03.2026 13:00:03 — Savatcha eslatmasi boshlandi [afternoon]...
+
+   Illuminate\Database\QueryException 
+
+  SQLSTATE[HY000] [2002] Connection refused (Connection: mysql, SQL: select `user_id` from `my_cart` group by `user_id` having COUNT(*) >= 1)
+
+  at vendor/laravel/framework/src/Illuminate/Database/Connection.php:825
+    821▕                     $this->getName(), $query, $this->prepareBindings($bindings), $e
+    822▕                 );
+    823▕             }
+    824▕ 
+  ➜ 825▕             throw new QueryException(
+    826▕                 $this->getName(), $query, $this->prepareBindings($bindings), $e
+    827▕             );
+    828▕         }
+    829▕     }
+
+      [2m+21 vendor frames [22m
+
+  22  app/Console/Commands/RemindCartItems.php:124
+      Illuminate\Database\Eloquent\Builder::pluck()
+      [2m+13 vendor frames [22m
+
+  36  artisan:13
+      Illuminate\Foundation\Application::handleCommand()
+
+17.03.2026 19:00:03 — Savatcha eslatmasi boshlandi [evening]...
+
+   Illuminate\Database\QueryException 
+
+  SQLSTATE[HY000] [2002] Connection refused (Connection: mysql, SQL: select `user_id` from `my_cart` group by `user_id` having COUNT(*) >= 1)
+
+  at vendor/laravel/framework/src/Illuminate/Database/Connection.php:825
+    821▕                     $this->getName(), $query, $this->prepareBindings($bindings), $e
+    822▕                 );
+    823▕             }
+    824▕ 
+  ➜ 825▕             throw new QueryException(
+    826▕                 $this->getName(), $query, $this->prepareBindings($bindings), $e
+    827▕             );
+    828▕         }
+    829▕     }
+
+      [2m+21 vendor frames [22m
+
+  22  app/Console/Commands/RemindCartItems.php:124
+      Illuminate\Database\Eloquent\Builder::pluck()
+      [2m+13 vendor frames [22m
+
+  36  artisan:13
+      Illuminate\Foundation\Application::handleCommand()
+
+18.03.2026 08:00:04 — Savatcha eslatmasi boshlandi [morning]...
+
+   Illuminate\Database\QueryException 
+
+  SQLSTATE[HY000] [2002] Connection refused (Connection: mysql, SQL: select `user_id` from `my_cart` group by `user_id` having COUNT(*) >= 1)
+
+  at vendor/laravel/framework/src/Illuminate/Database/Connection.php:825
+    821▕                     $this->getName(), $query, $this->prepareBindings($bindings), $e
+    822▕                 );
+    823▕             }
+    824▕ 
+  ➜ 825▕             throw new QueryException(
+    826▕                 $this->getName(), $query, $this->prepareBindings($bindings), $e
+    827▕             );
+    828▕         }
+    829▕     }
+
+      [2m+21 vendor frames [22m
+
+  22  app/Console/Commands/RemindCartItems.php:124
+      Illuminate\Database\Eloquent\Builder::pluck()
+      [2m+13 vendor frames [22m
+
+  36  artisan:13
+      Illuminate\Foundation\Application::handleCommand()
+
+18.03.2026 13:00:04 — Savatcha eslatmasi boshlandi [afternoon]...
+
+   Illuminate\Database\QueryException 
+
+  SQLSTATE[HY000] [2002] Connection refused (Connection: mysql, SQL: select `user_id` from `my_cart` group by `user_id` having COUNT(*) >= 1)
+
+  at vendor/laravel/framework/src/Illuminate/Database/Connection.php:825
+    821▕                     $this->getName(), $query, $this->prepareBindings($bindings), $e
+    822▕                 );
+    823▕             }
+    824▕ 
+  ➜ 825▕             throw new QueryException(
+    826▕                 $this->getName(), $query, $this->prepareBindings($bindings), $e
+    827▕             );
+    828▕         }
+    829▕     }
+
+      [2m+21 vendor frames [22m
+
+  22  app/Console/Commands/RemindCartItems.php:124
+      Illuminate\Database\Eloquent\Builder::pluck()
+      [2m+13 vendor frames [22m
+
+  36  artisan:13
+      Illuminate\Foundation\Application::handleCommand()
+
+18.03.2026 19:00:04 — Savatcha eslatmasi boshlandi [evening]...
+
+   Illuminate\Database\QueryException 
+
+  SQLSTATE[HY000] [2002] Connection refused (Connection: mysql, SQL: select `user_id` from `my_cart` group by `user_id` having COUNT(*) >= 1)
+
+  at vendor/laravel/framework/src/Illuminate/Database/Connection.php:825
+    821▕                     $this->getName(), $query, $this->prepareBindings($bindings), $e
+    822▕                 );
+    823▕             }
+    824▕ 
+  ➜ 825▕             throw new QueryException(
+    826▕                 $this->getName(), $query, $this->prepareBindings($bindings), $e
+    827▕             );
+    828▕         }
+    829▕     }
+
+      [2m+21 vendor frames [22m
+
+  22  app/Console/Commands/RemindCartItems.php:124
+      Illuminate\Database\Eloquent\Builder::pluck()
+      [2m+13 vendor frames [22m
+
+  36  artisan:13
+      Illuminate\Foundation\Application::handleCommand()
+
+19.03.2026 08:00:04 — Savatcha eslatmasi boshlandi [morning]...
+
+   Illuminate\Database\QueryException 
+
+  SQLSTATE[HY000] [2002] Connection refused (Connection: mysql, SQL: select `user_id` from `my_cart` group by `user_id` having COUNT(*) >= 1)
+
+  at vendor/laravel/framework/src/Illuminate/Database/Connection.php:825
+    821▕                     $this->getName(), $query, $this->prepareBindings($bindings), $e
+    822▕                 );
+    823▕             }
+    824▕ 
+  ➜ 825▕             throw new QueryException(
+    826▕                 $this->getName(), $query, $this->prepareBindings($bindings), $e
+    827▕             );
+    828▕         }
+    829▕     }
+
+      [2m+21 vendor frames [22m
+
+  22  app/Console/Commands/RemindCartItems.php:124
+      Illuminate\Database\Eloquent\Builder::pluck()
+      [2m+13 vendor frames [22m
+
+  36  artisan:13
+      Illuminate\Foundation\Application::handleCommand()
+
+19.03.2026 13:00:03 — Savatcha eslatmasi boshlandi [afternoon]...
+
+   Illuminate\Database\QueryException 
+
+  SQLSTATE[HY000] [2002] Connection refused (Connection: mysql, SQL: select `user_id` from `my_cart` group by `user_id` having COUNT(*) >= 1)
+
+  at vendor/laravel/framework/src/Illuminate/Database/Connection.php:825
+    821▕                     $this->getName(), $query, $this->prepareBindings($bindings), $e
+    822▕                 );
+    823▕             }
+    824▕ 
+  ➜ 825▕             throw new QueryException(
+    826▕                 $this->getName(), $query, $this->prepareBindings($bindings), $e
+    827▕             );
+    828▕         }
+    829▕     }
+
+      [2m+21 vendor frames [22m
+
+  22  app/Console/Commands/RemindCartItems.php:124
+      Illuminate\Database\Eloquent\Builder::pluck()
+      [2m+13 vendor frames [22m
+
+  36  artisan:13
+      Illuminate\Foundation\Application::handleCommand()
+
+19.03.2026 19:00:03 — Savatcha eslatmasi boshlandi [evening]...
+
+   Illuminate\Database\QueryException 
+
+  SQLSTATE[HY000] [2002] Connection refused (Connection: mysql, SQL: select `user_id` from `my_cart` group by `user_id` having COUNT(*) >= 1)
+
+  at vendor/laravel/framework/src/Illuminate/Database/Connection.php:825
+    821▕                     $this->getName(), $query, $this->prepareBindings($bindings), $e
+    822▕                 );
+    823▕             }
+    824▕ 
+  ➜ 825▕             throw new QueryException(
+    826▕                 $this->getName(), $query, $this->prepareBindings($bindings), $e
+    827▕             );
+    828▕         }
+    829▕     }
+
+      [2m+21 vendor frames [22m
+
+  22  app/Console/Commands/RemindCartItems.php:124
+      Illuminate\Database\Eloquent\Builder::pluck()
+      [2m+13 vendor frames [22m
+
+  36  artisan:13
+      Illuminate\Foundation\Application::handleCommand()
+
+20.03.2026 08:00:03 — Savatcha eslatmasi boshlandi [morning]...
+
+   Illuminate\Database\QueryException 
+
+  SQLSTATE[HY000] [2002] Connection refused (Connection: mysql, SQL: select `user_id` from `my_cart` group by `user_id` having COUNT(*) >= 1)
+
+  at vendor/laravel/framework/src/Illuminate/Database/Connection.php:825
+    821▕                     $this->getName(), $query, $this->prepareBindings($bindings), $e
+    822▕                 );
+    823▕             }
+    824▕ 
+  ➜ 825▕             throw new QueryException(
+    826▕                 $this->getName(), $query, $this->prepareBindings($bindings), $e
+    827▕             );
+    828▕         }
+    829▕     }
+
+      [2m+21 vendor frames [22m
+
+  22  app/Console/Commands/RemindCartItems.php:124
+      Illuminate\Database\Eloquent\Builder::pluck()
+      [2m+13 vendor frames [22m
+
+  36  artisan:13
+      Illuminate\Foundation\Application::handleCommand()
+
+20.03.2026 13:00:03 — Savatcha eslatmasi boshlandi [afternoon]...
+
+   Illuminate\Database\QueryException 
+
+  SQLSTATE[HY000] [2002] Connection refused (Connection: mysql, SQL: select `user_id` from `my_cart` group by `user_id` having COUNT(*) >= 1)
+
+  at vendor/laravel/framework/src/Illuminate/Database/Connection.php:825
+    821▕                     $this->getName(), $query, $this->prepareBindings($bindings), $e
+    822▕                 );
+    823▕             }
+    824▕ 
+  ➜ 825▕             throw new QueryException(
+    826▕                 $this->getName(), $query, $this->prepareBindings($bindings), $e
+    827▕             );
+    828▕         }
+    829▕     }
+
+      [2m+21 vendor frames [22m
+
+  22  app/Console/Commands/RemindCartItems.php:124
+      Illuminate\Database\Eloquent\Builder::pluck()
+      [2m+13 vendor frames [22m
+
+  36  artisan:13
+      Illuminate\Foundation\Application::handleCommand()
+
+20.03.2026 19:00:03 — Savatcha eslatmasi boshlandi [evening]...
+
+   Illuminate\Database\QueryException 
+
+  SQLSTATE[HY000] [2002] Connection refused (Connection: mysql, SQL: select `user_id` from `my_cart` group by `user_id` having COUNT(*) >= 1)
+
+  at vendor/laravel/framework/src/Illuminate/Database/Connection.php:825
+    821▕                     $this->getName(), $query, $this->prepareBindings($bindings), $e
+    822▕                 );
+    823▕             }
+    824▕ 
+  ➜ 825▕             throw new QueryException(
+    826▕                 $this->getName(), $query, $this->prepareBindings($bindings), $e
+    827▕             );
+    828▕         }
+    829▕     }
+
+      [2m+21 vendor frames [22m
+
+  22  app/Console/Commands/RemindCartItems.php:124
+      Illuminate\Database\Eloquent\Builder::pluck()
+      [2m+13 vendor frames [22m
+
+  36  artisan:13
+      Illuminate\Foundation\Application::handleCommand()
+
+21.03.2026 08:00:03 — Savatcha eslatmasi boshlandi [morning]...
+
+   Illuminate\Database\QueryException 
+
+  SQLSTATE[HY000] [2002] Connection refused (Connection: mysql, SQL: select `user_id` from `my_cart` group by `user_id` having COUNT(*) >= 1)
+
+  at vendor/laravel/framework/src/Illuminate/Database/Connection.php:825
+    821▕                     $this->getName(), $query, $this->prepareBindings($bindings), $e
+    822▕                 );
+    823▕             }
+    824▕ 
+  ➜ 825▕             throw new QueryException(
+    826▕                 $this->getName(), $query, $this->prepareBindings($bindings), $e
+    827▕             );
+    828▕         }
+    829▕     }
+
+      [2m+21 vendor frames [22m
+
+  22  app/Console/Commands/RemindCartItems.php:124
+      Illuminate\Database\Eloquent\Builder::pluck()
+      [2m+13 vendor frames [22m
+
+  36  artisan:13
+      Illuminate\Foundation\Application::handleCommand()
+
+21.03.2026 13:00:04 — Savatcha eslatmasi boshlandi [afternoon]...
+
+   Illuminate\Database\QueryException 
+
+  SQLSTATE[HY000] [2002] Connection refused (Connection: mysql, SQL: select `user_id` from `my_cart` group by `user_id` having COUNT(*) >= 1)
+
+  at vendor/laravel/framework/src/Illuminate/Database/Connection.php:825
+    821▕                     $this->getName(), $query, $this->prepareBindings($bindings), $e
+    822▕                 );
+    823▕             }
+    824▕ 
+  ➜ 825▕             throw new QueryException(
+    826▕                 $this->getName(), $query, $this->prepareBindings($bindings), $e
+    827▕             );
+    828▕         }
+    829▕     }
+
+      [2m+21 vendor frames [22m
+
+  22  app/Console/Commands/RemindCartItems.php:124
+      Illuminate\Database\Eloquent\Builder::pluck()
+      [2m+13 vendor frames [22m
+
+  36  artisan:13
+      Illuminate\Foundation\Application::handleCommand()
+
+21.03.2026 19:00:03 — Savatcha eslatmasi boshlandi [evening]...
+
+   Illuminate\Database\QueryException 
+
+  SQLSTATE[HY000] [2002] Connection refused (Connection: mysql, SQL: select `user_id` from `my_cart` group by `user_id` having COUNT(*) >= 1)
+
+  at vendor/laravel/framework/src/Illuminate/Database/Connection.php:825
+    821▕                     $this->getName(), $query, $this->prepareBindings($bindings), $e
+    822▕                 );
+    823▕             }
+    824▕ 
+  ➜ 825▕             throw new QueryException(
+    826▕                 $this->getName(), $query, $this->prepareBindings($bindings), $e
+    827▕             );
+    828▕         }
+    829▕     }
+
+      [2m+21 vendor frames [22m
+
+  22  app/Console/Commands/RemindCartItems.php:124
+      Illuminate\Database\Eloquent\Builder::pluck()
+      [2m+13 vendor frames [22m
+
+  36  artisan:13
+      Illuminate\Foundation\Application::handleCommand()
+
+22.03.2026 08:00:04 — Savatcha eslatmasi boshlandi [morning]...
+
+   Illuminate\Database\QueryException 
+
+  SQLSTATE[HY000] [2002] Connection refused (Connection: mysql, SQL: select `user_id` from `my_cart` group by `user_id` having COUNT(*) >= 1)
+
+  at vendor/laravel/framework/src/Illuminate/Database/Connection.php:825
+    821▕                     $this->getName(), $query, $this->prepareBindings($bindings), $e
+    822▕                 );
+    823▕             }
+    824▕ 
+  ➜ 825▕             throw new QueryException(
+    826▕                 $this->getName(), $query, $this->prepareBindings($bindings), $e
+    827▕             );
+    828▕         }
+    829▕     }
+
+      [2m+21 vendor frames [22m
+
+  22  app/Console/Commands/RemindCartItems.php:98
+      Illuminate\Database\Eloquent\Builder::pluck()
+      [2m+13 vendor frames [22m
+
+  36  artisan:13
+      Illuminate\Foundation\Application::handleCommand()
+
+22.03.2026 13:00:04 — Savatcha eslatmasi boshlandi [afternoon]...
+
+   Illuminate\Database\QueryException 
+
+  SQLSTATE[HY000] [2002] Connection refused (Connection: mysql, SQL: select `user_id` from `my_cart` group by `user_id` having COUNT(*) >= 1)
+
+  at vendor/laravel/framework/src/Illuminate/Database/Connection.php:825
+    821▕                     $this->getName(), $query, $this->prepareBindings($bindings), $e
+    822▕                 );
+    823▕             }
+    824▕ 
+  ➜ 825▕             throw new QueryException(
+    826▕                 $this->getName(), $query, $this->prepareBindings($bindings), $e
+    827▕             );
+    828▕         }
+    829▕     }
+
+      [2m+21 vendor frames [22m
+
+  22  app/Console/Commands/RemindCartItems.php:98
+      Illuminate\Database\Eloquent\Builder::pluck()
+      [2m+13 vendor frames [22m
+
+  36  artisan:13
+      Illuminate\Foundation\Application::handleCommand()
+
+22.03.2026 19:00:03 — Savatcha eslatmasi boshlandi [evening]...
+
+   Illuminate\Database\QueryException 
+
+  SQLSTATE[HY000] [2002] Connection refused (Connection: mysql, SQL: select `user_id` from `my_cart` group by `user_id` having COUNT(*) >= 1)
+
+  at vendor/laravel/framework/src/Illuminate/Database/Connection.php:825
+    821▕                     $this->getName(), $query, $this->prepareBindings($bindings), $e
+    822▕                 );
+    823▕             }
+    824▕ 
+  ➜ 825▕             throw new QueryException(
+    826▕                 $this->getName(), $query, $this->prepareBindings($bindings), $e
+    827▕             );
+    828▕         }
+    829▕     }
+
+      [2m+21 vendor frames [22m
+
+  22  app/Console/Commands/RemindCartItems.php:98
+      Illuminate\Database\Eloquent\Builder::pluck()
+      [2m+13 vendor frames [22m
+
+  36  artisan:13
+      Illuminate\Foundation\Application::handleCommand()
+

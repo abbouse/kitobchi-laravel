@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -14,21 +15,42 @@ class CourierOrder extends Model
         'user_id',
         'status',
         'amount',
-        'courierPrice'
+        'courierPrice',
+        'courierBonus',
     ];
+
+    // ── Relationships ──────────────────────────────────────────────
+
+    public function courier()
+    {
+        return $this->belongsTo(Couriers::class, 'courier_id');
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id')
+            ->select('id', 'name', 'lastname', 'avatar', 'phone_number', 'mainAddressID');
+    }
+
+    // alias: customer() — eski kod uchun
+    public function customer()
+    {
+        return $this->user();
+    }
+
+    public function order()
+    {
+        return $this->belongsTo(Sold::class, 'order_id');
+    }
 
     public function items()
     {
         return $this->hasMany(CourierOrderItem::class, 'order_id', 'order_id');
     }
-    public function customer()
-    {
-        return $this->belongsTo(User::class, 'user_id')
-        ->select('id', 'name', 'lastname', 'avatar', 'phone_number', 'mainAddressID');
-    }
+
     public function paymentStatus()
     {
         return $this->belongsTo(Sold::class, 'order_id')
-        ->select('id', 'paymentStatus');
+            ->select('id', 'paymentStatus');
     }
 }

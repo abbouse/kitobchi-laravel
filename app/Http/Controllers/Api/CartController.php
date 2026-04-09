@@ -267,6 +267,37 @@ class CartController extends Controller
 
         return response()->json(['status' => 'success', 'message' => 'Savatdan o‘chirildi']);
     }
+    public function batchDelete(Request $request)
+{
+    $user = Auth::guard('user')->user();
+    if (!$user) {
+        return response()->json([
+            'status'  => 'error',
+            'message' => 'Unauthorized'
+        ], 401);
+    }
+ 
+    $request->validate([
+        'cart_ids'   => 'required|array|min:1',
+        'cart_ids.*' => 'required|integer',
+    ]);
+ 
+    $deleted = MyCart::whereIn('id', $request->cart_ids)
+        ->where('user_id', $user->id)
+        ->delete();
+ 
+    if ($deleted === 0) {
+        return response()->json([
+            'status'  => 'error',
+            'message' => 'Hech narsa o\'chirilmadi'
+        ], 404);
+    }
+ 
+    return response()->json([
+        'status'  => 'success',
+        'deleted' => $deleted,
+    ]);
+}
     /**
      * Muayyan mahsulot savatda borligini tekshirish (Item sahifasi uchun)
      */

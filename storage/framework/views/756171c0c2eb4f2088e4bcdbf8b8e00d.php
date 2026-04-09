@@ -1,549 +1,1569 @@
-<?php $__env->startSection('content'); ?>
-<?php if (isset($component)) { $__componentOriginal781784ddc1cff9584ff159910cf34f25 = $component; } ?>
-<?php if (isset($attributes)) { $__attributesOriginal781784ddc1cff9584ff159910cf34f25 = $attributes; } ?>
-<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.common.page-breadcrumb','data' => ['pageTitle' => 'Dashboard']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
-<?php $component->withName('common.page-breadcrumb'); ?>
-<?php if ($component->shouldRender()): ?>
-<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
-<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
-<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
-<?php endif; ?>
-<?php $component->withAttributes(['pageTitle' => 'Dashboard']); ?>
-<?php echo $__env->renderComponent(); ?>
-<?php endif; ?>
-<?php if (isset($__attributesOriginal781784ddc1cff9584ff159910cf34f25)): ?>
-<?php $attributes = $__attributesOriginal781784ddc1cff9584ff159910cf34f25; ?>
-<?php unset($__attributesOriginal781784ddc1cff9584ff159910cf34f25); ?>
-<?php endif; ?>
-<?php if (isset($__componentOriginal781784ddc1cff9584ff159910cf34f25)): ?>
-<?php $component = $__componentOriginal781784ddc1cff9584ff159910cf34f25; ?>
-<?php unset($__componentOriginal781784ddc1cff9584ff159910cf34f25); ?>
-<?php endif; ?>
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AdminPanel — Dashboard</title>
 
-<div class="space-y-5">
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 
-    
-    <div class="grid grid-cols-2 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+<!-- Bootstrap 5 -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" rel="stylesheet"/>
 
-        
-        <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center justify-center w-12 h-12 rounded-xl bg-brand-50 dark:bg-brand-500/10 shrink-0">
-                    <svg class="w-6 h-6 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                </div>
-                <div class="text-right">
-                    <p class="mb-1 text-xs leading-normal text-gray-500 dark:text-gray-400">Jami daromad</p>
-                    <h4 class="text-xl font-bold text-gray-800 dark:text-white/90"><?php echo e(number_format($totalRevenue)); ?></h4>
-                    <p class="text-xs text-gray-400 mt-0.5">UZS</p>
-                </div>
-            </div>
-            <div class="mt-4 flex items-center gap-2 pt-4 border-t border-gray-100 dark:border-gray-800">
-                <span class="text-xs text-gray-500 dark:text-gray-400">Bugun:</span>
-                <span class="text-xs font-semibold text-success-500">+<?php echo e(number_format($todayRevenue)); ?> UZS</span>
-            </div>
-        </div>
+<!-- Bootstrap Icons -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" rel="stylesheet"/>
 
-        
-        <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center justify-center w-12 h-12 rounded-xl bg-success-50 dark:bg-success-500/10 shrink-0">
-                    <svg class="w-6 h-6 text-success-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
-                    </svg>
-                </div>
-                <div class="text-right">
-                    <p class="mb-1 text-xs leading-normal text-gray-500 dark:text-gray-400">Jami buyurtmalar</p>
-                    <h4 class="text-xl font-bold text-gray-800 dark:text-white/90"><?php echo e(number_format($totalOrders)); ?></h4>
-                    <p class="text-xs text-gray-400 mt-0.5">ta buyurtma</p>
-                </div>
-            </div>
-            <div class="mt-4 flex items-center gap-3 pt-4 border-t border-gray-100 dark:border-gray-800">
-                <span class="text-xs text-success-500 font-medium"><?php echo e($completedOrders); ?> yakunlangan</span>
-                <span class="text-gray-300 dark:text-gray-700">·</span>
-                <span class="text-xs text-warning-500 font-medium"><?php echo e($pendingOrders); ?> kutilmoqda</span>
-            </div>
-        </div>
+<!-- ApexCharts -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/apexcharts/3.49.0/apexcharts.min.css" rel="stylesheet"/>
 
-        
-        <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center justify-center w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-500/10 shrink-0">
-                    <svg class="w-6 h-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
-                    </svg>
-                </div>
-                <div class="text-right">
-                    <p class="mb-1 text-xs leading-normal text-gray-500 dark:text-gray-400">Foydalanuvchilar</p>
-                    <h4 class="text-xl font-bold text-gray-800 dark:text-white/90"><?php echo e(number_format($totalUsers)); ?></h4>
-                    <p class="text-xs text-gray-400 mt-0.5">ta foydalanuvchi</p>
-                </div>
-            </div>
-            <div class="mt-4 flex items-center gap-3 pt-4 border-t border-gray-100 dark:border-gray-800">
-                <span class="flex items-center gap-1 text-xs text-success-500">
-                    <span class="h-1.5 w-1.5 rounded-full bg-success-500 inline-block"></span>
-                    <?php echo e($onlineUsers); ?> online
-                </span>
-                <span class="text-gray-300 dark:text-gray-700">·</span>
-                <span class="text-xs text-brand-500">+<?php echo e($newUsersToday); ?> bugun</span>
-            </div>
-        </div>
+<style>
+:root {
+  --bg-base:       #0f1117;
+  --bg-surface:    #181c27;
+  --bg-elevated:   #1e2336;
+  --bg-hover:      #252b3d;
+  --border-color:  rgba(255,255,255,0.07);
+  --border-hover:  rgba(255,255,255,0.13);
+  --text-primary:  #eef0f7;
+  --text-secondary:#8b91a8;
+  --text-muted:    #555c75;
+  --accent:        #4f7cff;
+  --accent-dim:    rgba(79,124,255,0.12);
+  --accent-hover:  #6690ff;
+  --success:       #22c98e;
+  --success-dim:   rgba(34,201,142,0.12);
+  --warning:       #f5a623;
+  --warning-dim:   rgba(245,166,35,0.12);
+  --danger:        #ff5c6a;
+  --danger-dim:    rgba(255,92,106,0.12);
+  --info:          #38bdf8;
+  --info-dim:      rgba(56,189,248,0.12);
+  --sidebar-w:     260px;
+  --radius:        12px;
+  --radius-sm:     8px;
+  --shadow:        0 4px 24px rgba(0,0,0,0.35);
+}
 
-        
-        <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center justify-center w-12 h-12 rounded-xl bg-yellow-50 dark:bg-yellow-500/10 shrink-0">
-                    <svg class="w-6 h-6 text-yellow-500" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                    </svg>
-                </div>
-                <div class="text-right">
-                    <p class="mb-1 text-xs leading-normal text-gray-500 dark:text-gray-400">Premium a'zolar</p>
-                    <h4 class="text-xl font-bold text-gray-800 dark:text-white/90"><?php echo e(number_format($premiumUsers)); ?></h4>
-                    <p class="text-xs text-gray-400 mt-0.5">ta premium</p>
-                </div>
-            </div>
-            <div class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
-                <div class="flex items-center gap-2">
-                    <div class="flex-1 h-1.5 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
-                        <div class="h-full rounded-full bg-yellow-400" style="width: <?php echo e($totalUsers > 0 ? round(($premiumUsers/$totalUsers)*100) : 0); ?>%"></div>
-                    </div>
-                    <span class="text-xs text-gray-500"><?php echo e($totalUsers > 0 ? round(($premiumUsers/$totalUsers)*100) : 0); ?>%</span>
-                </div>
-            </div>
-        </div>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  min-height: 100vh;
+  display: flex;
+  overflow-x: hidden;
+}
+
+/* ─── Sidebar ─────────────────────────────────────── */
+.sidebar {
+  width: var(--sidebar-w);
+  min-height: 100vh;
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0; left: 0;
+  z-index: 100;
+  transition: transform .3s ease;
+}
+
+.sidebar-brand {
+  padding: 24px 20px 20px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-icon {
+  width: 36px; height: 36px;
+  background: var(--accent);
+  border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; font-weight: 700; color: #fff;
+  letter-spacing: -1px;
+  box-shadow: 0 0 20px rgba(79,124,255,0.4);
+}
+
+.brand-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -.3px;
+}
+
+.brand-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: 'DM Mono', monospace;
+}
+
+.sidebar-nav {
+  flex: 1;
+  padding: 16px 12px;
+  overflow-y: auto;
+}
+
+.nav-section-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 8px 10px 6px;
+  margin-top: 8px;
+}
+
+.nav-item-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 13.5px;
+  font-weight: 400;
+  text-decoration: none;
+  transition: all .15s ease;
+  margin-bottom: 2px;
+  position: relative;
+}
+
+.nav-item-link:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.nav-item-link.active {
+  background: var(--accent-dim);
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.nav-item-link.active::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 20%; bottom: 20%;
+  width: 3px;
+  background: var(--accent);
+  border-radius: 0 4px 4px 0;
+}
+
+.nav-item-link i {
+  font-size: 16px;
+  width: 18px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.nav-badge {
+  margin-left: auto;
+  background: var(--accent-dim);
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 600;
+  font-family: 'DM Mono', monospace;
+  padding: 2px 7px;
+  border-radius: 20px;
+}
+
+.nav-badge.success { background: var(--success-dim); color: var(--success); }
+
+.sidebar-footer {
+  padding: 16px 12px;
+  border-top: 1px solid var(--border-color);
+}
+
+.user-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background .15s;
+}
+.user-card:hover { background: var(--bg-hover); }
+
+.user-avatar {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), #7c5cfc);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 600; color: #fff;
+  flex-shrink: 0;
+}
+
+.user-name  { font-size: 13px; font-weight: 500; color: var(--text-primary); }
+.user-role  { font-size: 11px; color: var(--text-muted); }
+.user-arrow { margin-left: auto; color: var(--text-muted); font-size: 14px; }
+
+/* ─── Main ─────────────────────────────────────────── */
+.main-wrap {
+  margin-left: var(--sidebar-w);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* ─── Topbar ─────────────────────────────────────────── */
+.topbar {
+  height: 60px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  gap: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.topbar-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.topbar-breadcrumb {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-family: 'DM Mono', monospace;
+}
+
+.topbar-search {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 7px 14px;
+  width: 220px;
+  transition: border-color .2s;
+}
+
+.topbar-search:focus-within {
+  border-color: var(--accent);
+}
+
+.topbar-search input {
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: 'DM Sans', sans-serif;
+  width: 100%;
+}
+
+.topbar-search input::placeholder { color: var(--text-muted); }
+
+.topbar-search i { color: var(--text-muted); font-size: 14px; flex-shrink: 0; }
+
+.topbar-action {
+  width: 36px; height: 36px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-secondary);
+  font-size: 16px;
+  cursor: pointer;
+  transition: all .15s;
+  position: relative;
+  text-decoration: none;
+}
+
+.topbar-action:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+}
+
+.notif-dot {
+  position: absolute;
+  top: 7px; right: 7px;
+  width: 7px; height: 7px;
+  background: var(--danger);
+  border-radius: 50%;
+  border: 1.5px solid var(--bg-surface);
+}
+
+/* ─── Page content ──────────────────────────────────── */
+.page-content {
+  padding: 24px;
+  flex: 1;
+}
+
+.page-header {
+  margin-bottom: 24px;
+}
+
+.page-title {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -.4px;
+}
+
+.page-subtitle {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 3px;
+}
+
+/* ─── Cards ─────────────────────────────────────────── */
+.card-dark {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 22px;
+  transition: border-color .2s;
+}
+
+.card-dark:hover { border-color: var(--border-hover); }
+
+/* ─── Metric cards ──────────────────────────────────── */
+.metric-icon {
+  width: 44px; height: 44px;
+  border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  margin-bottom: 16px;
+}
+
+.metric-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+
+.metric-value {
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -.5px;
+  font-family: 'DM Mono', monospace;
+  line-height: 1;
+  margin-bottom: 12px;
+}
+
+.metric-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.metric-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  font-weight: 500;
+  padding: 3px 9px;
+  border-radius: 20px;
+}
+
+.metric-badge.up   { background: var(--success-dim); color: var(--success); }
+.metric-badge.down { background: var(--danger-dim);  color: var(--danger);  }
+.metric-badge.info { background: var(--info-dim);    color: var(--info);    }
+.metric-badge.warn { background: var(--warning-dim); color: var(--warning); }
+
+.metric-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: 'DM Mono', monospace;
+}
+
+/* ─── Accent top border variant ─────────────────────── */
+.card-accent-top {
+  border-top: 2px solid var(--accent);
+}
+.card-accent-top.success { border-top-color: var(--success); }
+.card-accent-top.warning { border-top-color: var(--warning); }
+.card-accent-top.danger  { border-top-color: var(--danger);  }
+
+/* ─── Section header ────────────────────────────────── */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.section-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -.2px;
+}
+
+.section-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.btn-ghost {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all .15s;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.btn-ghost:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+}
+
+/* ─── Progress bars ─────────────────────────────────── */
+.prog-wrap { margin-bottom: 14px; }
+
+.prog-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 5px;
+}
+
+.prog-label span:last-child {
+  font-family: 'DM Mono', monospace;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.prog-track {
+  height: 5px;
+  background: var(--bg-elevated);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.prog-fill {
+  height: 100%;
+  border-radius: 10px;
+  background: var(--accent);
+  transition: width .6s ease;
+}
+
+.prog-fill.success { background: var(--success); }
+.prog-fill.warning { background: var(--warning); }
+.prog-fill.danger  { background: var(--danger);  }
+.prog-fill.info    { background: var(--info);    }
+
+/* ─── Stat divider row ───────────────────────────────── */
+.stat-row {
+  display: flex;
+  border-top: 1px solid var(--border-color);
+  margin-top: 18px;
+  padding-top: 18px;
+  gap: 0;
+}
+
+.stat-cell {
+  flex: 1;
+  text-align: center;
+  padding: 0 8px;
+}
+
+.stat-cell + .stat-cell {
+  border-left: 1px solid var(--border-color);
+}
+
+.stat-cell-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  margin-bottom: 4px;
+}
+
+.stat-cell-val {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-family: 'DM Mono', monospace;
+}
+
+/* ─── Table ─────────────────────────────────────────── */
+.table-dark-custom {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.table-dark-custom thead th {
+  padding: 10px 14px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
+}
+
+.table-dark-custom tbody td {
+  padding: 13px 14px;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  vertical-align: middle;
+}
+
+.table-dark-custom tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.table-dark-custom tbody tr {
+  transition: background .12s;
+}
+
+.table-dark-custom tbody tr:hover td {
+  background: var(--bg-hover);
+}
+
+/* ─── Status pills ───────────────────────────────────── */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+
+.pill::before {
+  content: '';
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.pill.success { background: var(--success-dim); color: var(--success); }
+.pill.warning { background: var(--warning-dim); color: var(--warning); }
+.pill.danger  { background: var(--danger-dim);  color: var(--danger);  }
+.pill.info    { background: var(--info-dim);     color: var(--info);   }
+.pill.muted   { background: rgba(255,255,255,.06); color: var(--text-muted); }
+
+/* ─── Avatar ─────────────────────────────────────────── */
+.av {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.av-blue   { background: rgba(79,124,255,.18);  color: var(--accent);   }
+.av-green  { background: rgba(34,201,142,.18);  color: var(--success);  }
+.av-yellow { background: rgba(245,166,35,.18);  color: var(--warning);  }
+.av-red    { background: rgba(255,92,106,.18);  color: var(--danger);   }
+.av-cyan   { background: rgba(56,189,248,.18);  color: var(--info);     }
+.av-purple { background: rgba(124,92,252,.18);  color: #7c5cfc;         }
+
+/* ─── Online indicator ───────────────────────────────── */
+.online-dot {
+  display: inline-block;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--success);
+  box-shadow: 0 0 6px var(--success);
+}
+
+/* ─── Rank badge ─────────────────────────────────────── */
+.rank {
+  width: 26px; height: 26px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: 'DM Mono', monospace;
+}
+
+.rank-1 { background: rgba(245,166,35,.2);  color: var(--warning); }
+.rank-2 { background: rgba(139,145,168,.15); color: var(--text-secondary); }
+.rank-3 { background: rgba(205,127,50,.18); color: #cd7f32; }
+.rank-n { background: transparent; color: var(--text-muted); }
+
+/* ─── Sparkline mini bars ────────────────────────────── */
+.spark-wrap {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 40px;
+}
+
+.spark-bar {
+  flex: 1;
+  background: var(--accent);
+  opacity: .45;
+  border-radius: 3px 3px 0 0;
+  transition: opacity .2s;
+}
+
+.spark-bar:hover { opacity: 1; }
+
+/* ─── Activity feed ──────────────────────────────────── */
+.feed-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.feed-item:last-child { border-bottom: none; }
+
+.feed-icon {
+  width: 34px; height: 34px;
+  border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.feed-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+.feed-time {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: 'DM Mono', monospace;
+  margin-top: 2px;
+}
+
+/* ─── Chart containers ───────────────────────────────── */
+.chart-box {
+  min-height: 240px;
+}
+
+/* ─── Animations ─────────────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+.fade-up { animation: fadeUp .4s ease both; }
+.delay-1 { animation-delay: .05s; }
+.delay-2 { animation-delay: .10s; }
+.delay-3 { animation-delay: .15s; }
+.delay-4 { animation-delay: .20s; }
+.delay-5 { animation-delay: .25s; }
+.delay-6 { animation-delay: .30s; }
+
+/* ─── Scrollbar ──────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--bg-hover); border-radius: 10px; }
+
+/* ─── Responsive ─────────────────────────────────────── */
+@media (max-width: 991px) {
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: translateX(0); }
+  .main-wrap { margin-left: 0; }
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════
+     SIDEBAR
+══════════════════════════════════════════════════════ -->
+<aside class="sidebar" id="sidebar">
+
+  <!-- Brand -->
+  <div class="sidebar-brand">
+    <div class="brand-icon">A</div>
+    <div>
+      <div class="brand-name">AdminPanel</div>
+      <div class="brand-sub">v2.0 · dashboard</div>
+    </div>
+  </div>
+
+  <!-- Nav -->
+  <nav class="sidebar-nav">
+
+    <div class="nav-section-label">Asosiy</div>
+
+    <a href="#" class="nav-item-link active">
+      <i class="bi bi-grid-1x2"></i>
+      Dashboard
+      <span class="nav-badge">yangi</span>
+    </a>
+
+    <a href="#" class="nav-item-link">
+      <i class="bi bi-bar-chart-line"></i>
+      Analitika
+    </a>
+
+    <a href="#" class="nav-item-link">
+      <i class="bi bi-receipt"></i>
+      Buyurtmalar
+      <span class="nav-badge success">12</span>
+    </a>
+
+    <a href="#" class="nav-item-link">
+      <i class="bi bi-box-seam"></i>
+      Mahsulotlar
+    </a>
+
+    <div class="nav-section-label" style="margin-top:16px">Boshqaruv</div>
+
+    <a href="#" class="nav-item-link">
+      <i class="bi bi-people"></i>
+      Foydalanuvchilar
+    </a>
+
+    <a href="#" class="nav-item-link">
+      <i class="bi bi-shield-check"></i>
+      Rollar
+    </a>
+
+    <a href="#" class="nav-item-link">
+      <i class="bi bi-bell"></i>
+      Bildirishnomalar
+    </a>
+
+    <div class="nav-section-label" style="margin-top:16px">Tizim</div>
+
+    <a href="#" class="nav-item-link">
+      <i class="bi bi-gear"></i>
+      Sozlamalar
+    </a>
+
+    <a href="#" class="nav-item-link">
+      <i class="bi bi-question-circle"></i>
+      Yordam
+    </a>
+  </nav>
+
+  <!-- Footer user -->
+  <div class="sidebar-footer">
+    <div class="user-card">
+      <div class="user-avatar">AU</div>
+      <div>
+        <div class="user-name">Admin User</div>
+        <div class="user-role">Super Admin</div>
+      </div>
+      <i class="bi bi-three-dots user-arrow"></i>
+    </div>
+  </div>
+</aside>
+
+<!-- ══════════════════════════════════════════════════════
+     MAIN
+══════════════════════════════════════════════════════ -->
+<div class="main-wrap">
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <button class="topbar-action d-lg-none border-0" id="sidebarToggle">
+      <i class="bi bi-list"></i>
+    </button>
+
+    <div>
+      <div class="topbar-title">Dashboard</div>
+      <div class="topbar-breadcrumb">Bosh sahifa / Dashboard</div>
     </div>
 
-    
-    <div class="grid grid-cols-1 gap-5 xl:grid-cols-3">
-
-        
-        <div class="xl:col-span-2 overflow-hidden rounded-2xl border border-gray-200 bg-white px-5 pt-5 pb-5 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6 sm:pt-6">
-            <div class="flex items-center justify-between mb-4">
-                <div>
-                    <h3 class="text-base font-semibold text-gray-800 dark:text-white/90">Oylik daromad</h3>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Oxirgi 6 oy</p>
-                </div>
-                <div class="text-right">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Bu oy</p>
-                    <p class="text-sm font-bold text-brand-500"><?php echo e(number_format($monthRevenue)); ?> UZS</p>
-                </div>
-            </div>
-            <div id="chartMonthlyRevenue" class="min-h-[200px]"></div>
-        </div>
-
-        
-        <div class="rounded-2xl border border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-white/[0.03]">
-            <div class="rounded-2xl bg-white px-5 pb-5 pt-5 dark:bg-gray-900 sm:px-6 sm:pt-6">
-                <div class="mb-4">
-                    <h3 class="text-base font-semibold text-gray-800 dark:text-white/90">Buyurtmalar holati</h3>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Jami: <?php echo e(number_format($totalOrders)); ?> ta</p>
-                </div>
-                <div id="chartOrderStatus" style="min-height:200px"></div>
-            </div>
-            <div class="grid grid-cols-2 gap-3 px-5 py-4 sm:px-6">
-                <?php $__currentLoopData = $orderStatusDist; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $item): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                <div class="flex items-center gap-2">
-                    <span class="h-2.5 w-2.5 shrink-0 rounded-full" style="background:<?php echo e($item['color']); ?>"></span>
-                    <div>
-                        <p class="text-xs text-gray-500 dark:text-gray-400"><?php echo e($item['label']); ?></p>
-                        <p class="text-xs font-semibold text-gray-800 dark:text-white/90"><?php echo e(number_format($item['value'])); ?></p>
-                    </div>
-                </div>
-                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-            </div>
-        </div>
+    <div class="topbar-search">
+      <i class="bi bi-search"></i>
+      <input type="text" placeholder="Qidirish..."/>
     </div>
 
-    
-    <div class="grid grid-cols-1 gap-5 xl:grid-cols-3">
+    <a href="#" class="topbar-action">
+      <i class="bi bi-bell"></i>
+      <span class="notif-dot"></span>
+    </a>
 
-        
-        <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] sm:p-6">
-            <div class="mb-5">
-                <h3 class="text-base font-semibold text-gray-800 dark:text-white/90">Foydalanuvchilar</h3>
-                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Holat bo'yicha</p>
-            </div>
-            <div class="space-y-4">
-                <?php
-                    $userRows = [
-                        ['label' => 'Online (5 daqiqa)',  'count' => $onlineUsers,    'rate' => $totalUsers > 0 ? round($onlineUsers/$totalUsers*100) : 0,    'bar' => 'bg-success-500', 'bg' => 'bg-success-50 dark:bg-success-500/10', 'ic' => 'text-success-500'],
-                        ['label' => 'Faol (FCM token)',   'count' => $activeUsers,    'rate' => $totalUsers > 0 ? round($activeUsers/$totalUsers*100) : 0,    'bar' => 'bg-brand-500',   'bg' => 'bg-brand-50 dark:bg-brand-500/10',   'ic' => 'text-brand-500'],
-                        ['label' => 'Nofaol',             'count' => $inactiveUsers,  'rate' => $totalUsers > 0 ? round($inactiveUsers/$totalUsers*100) : 0,  'bar' => 'bg-gray-300 dark:bg-gray-600',  'bg' => 'bg-gray-50 dark:bg-gray-800', 'ic' => 'text-gray-400'],
-                        ['label' => 'Isolat (30+ kun)',   'count' => $isolatedUsers,  'rate' => $totalUsers > 0 ? round($isolatedUsers/$totalUsers*100) : 0,  'bar' => 'bg-error-500',   'bg' => 'bg-error-50 dark:bg-error-500/10',   'ic' => 'text-error-500'],
-                        ['label' => "Bu hafta qo'shildi",'count' => $newUsersWeek,   'rate' => $totalUsers > 0 ? min(100,round($newUsersWeek/$totalUsers*100)) : 0, 'bar' => 'bg-blue-500', 'bg' => 'bg-blue-50 dark:bg-blue-500/10', 'ic' => 'text-blue-500'],
-                    ];
-                ?>
-                <?php $__currentLoopData = $userRows; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $row): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                <div class="flex items-center justify-between gap-3">
-                    <div class="flex items-center gap-2.5 min-w-0">
-                        <div class="flex items-center justify-center w-7 h-7 <?php echo e($row['bg']); ?> rounded-lg shrink-0">
-                            <svg class="w-3.5 h-3.5 <?php echo e($row['ic']); ?> fill-current" viewBox="0 0 24 24">
-                                <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
-                            </svg>
-                        </div>
-                        <p class="text-xs font-medium text-gray-700 dark:text-gray-300 truncate"><?php echo e($row['label']); ?></p>
-                    </div>
-                    <div class="flex items-center gap-2 shrink-0">
-                        <div class="relative h-1.5 w-20 rounded-full bg-gray-100 dark:bg-gray-800">
-                            <div class="absolute left-0 top-0 h-full rounded-full <?php echo e($row['bar']); ?>" style="width:<?php echo e($row['rate']); ?>%"></div>
-                        </div>
-                        <span class="text-xs font-semibold text-gray-800 dark:text-white/90 w-8 text-right"><?php echo e(number_format($row['count'])); ?></span>
-                    </div>
-                </div>
-                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-            </div>
-            <div class="mt-5 pt-4 border-t border-gray-100 dark:border-gray-800 grid grid-cols-3 gap-2 text-center">
-                <div>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Jami</p>
-                    <p class="text-base font-bold text-gray-800 dark:text-white/90"><?php echo e(number_format($totalUsers)); ?></p>
-                </div>
-                <div>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Premium</p>
-                    <p class="text-base font-bold text-yellow-500"><?php echo e(number_format($premiumUsers)); ?></p>
-                </div>
-                <div>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Bugun yangi</p>
-                    <p class="text-base font-bold text-brand-500">+<?php echo e(number_format($newUsersToday)); ?></p>
-                </div>
-            </div>
+    <a href="#" class="topbar-action">
+      <i class="bi bi-moon"></i>
+    </a>
+
+    <div class="user-avatar" style="width:34px;height:34px;font-size:13px;cursor:pointer">AU</div>
+  </header>
+
+  <!-- Page content -->
+  <main class="page-content">
+
+    <!-- Page header -->
+    <div class="page-header fade-up">
+      <div class="d-flex align-items-center justify-content-between">
+        <div>
+          <h1 class="page-title">Umumiy ko'rinish</h1>
+          <p class="page-subtitle">Bugun, 21 Mart 2026 — Barcha ko'rsatkichlar real vaqtda</p>
         </div>
-
-        
-        <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] sm:p-6">
-            <div class="flex items-center justify-between mb-4">
-                <div>
-                    <h3 class="text-base font-semibold text-gray-800 dark:text-white/90">Hozir online</h3>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Oxirgi 5 daqiqada faol</p>
-                </div>
-                <span class="flex items-center gap-1.5 rounded-full bg-success-50 px-2.5 py-1 text-xs font-semibold text-success-600 dark:bg-success-500/15 dark:text-success-500">
-                    <span class="h-1.5 w-1.5 rounded-full bg-success-500 inline-block animate-pulse"></span>
-                    <?php echo e($onlineUsers); ?> online
-                </span>
-            </div>
-
-            <?php if($onlineUsersList->count() > 0): ?>
-            <div class="space-y-3">
-                <?php $__currentLoopData = $onlineUsersList; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $ou): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                <div class="flex items-center gap-3">
-                    <div class="relative h-9 w-9 shrink-0">
-                        <?php if($ou->avatar): ?>
-                            <img src="<?php echo e($ou->avatar); ?>" class="h-full w-full rounded-full object-cover" />
-                        <?php else: ?>
-                            <div class="h-full w-full rounded-full bg-brand-500 flex items-center justify-center text-xs font-bold text-white">
-                                <?php echo e(strtoupper(substr($ou->name,0,1))); ?><?php echo e(strtoupper(substr($ou->lastname,0,1))); ?>
-
-                            </div>
-                        <?php endif; ?>
-                        <span class="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white bg-success-500 dark:border-gray-900"></span>
-                    </div>
-                    <div class="min-w-0 flex-1">
-                        <p class="text-sm font-medium text-gray-800 dark:text-white/90 truncate"><?php echo e($ou->name); ?> <?php echo e($ou->lastname); ?></p>
-                        <p class="text-xs text-gray-400"><?php echo e(\Carbon\Carbon::parse($ou->last_seen_at)->diffForHumans()); ?></p>
-                    </div>
-                    <a href="<?php echo e(route('admin.users.show', $ou->id)); ?>" class="text-xs text-brand-500 hover:underline shrink-0">Ko'rish</a>
-                </div>
-                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-            </div>
-            <?php else: ?>
-            <div class="py-8 text-center">
-                <p class="text-sm text-gray-400 dark:text-gray-500">Hozir hech kim online emas</p>
-            </div>
-            <?php endif; ?>
-
-            <div class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
-                <div class="flex items-center justify-between text-xs">
-                    <span class="text-error-500 font-medium"><?php echo e($isolatedUsers); ?> ta isolat foydalanuvchi (30+ kun)</span>
-                    <a href="<?php echo e(route('admin.users.index', ['filter' => 'inactive'])); ?>" class="text-brand-500 hover:underline">Ko'rish</a>
-                </div>
-            </div>
+        <div class="d-flex gap-2">
+          <button class="btn-ghost">
+            <i class="bi bi-download"></i> Eksport
+          </button>
+          <button class="btn-ghost" style="background:var(--accent-dim);border-color:var(--accent);color:var(--accent)">
+            <i class="bi bi-plus-lg"></i> Yangi
+          </button>
         </div>
-
-        
-        <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] sm:p-6">
-            <div class="mb-4">
-                <h3 class="text-base font-semibold text-gray-800 dark:text-white/90">To'lov holati</h3>
-                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Buyurtmalar bo'yicha</p>
-            </div>
-            <div id="chartPayment" style="min-height:180px"></div>
-
-            
-            <div class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
-                <p class="mb-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Oxirgi 7 kun</p>
-                <div class="flex items-end justify-between gap-1 h-16">
-                    <?php $__currentLoopData = $dailyOrders; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $day): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                    <?php $maxCount = $dailyOrders->max('count') ?: 1; $pct = round(($day['count']/$maxCount)*100); ?>
-                    <div class="flex flex-col items-center gap-1 flex-1">
-                        <span class="text-xs text-gray-400"><?php echo e($day['count']); ?></span>
-                        <div class="w-full rounded-t-sm bg-brand-500 opacity-80 hover:opacity-100 transition-opacity" style="height: <?php echo e(max(4, $pct * 0.4)); ?>px"></div>
-                        <span class="text-xs text-gray-400 dark:text-gray-500"><?php echo e(substr($day['day'],0,2)); ?></span>
-                    </div>
-                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-                </div>
-            </div>
-        </div>
+      </div>
     </div>
 
-    
-    <div class="grid grid-cols-1 gap-5 xl:grid-cols-2">
+    <!-- ── ROW 1: 4 metric cards ──────────────────────── -->
+    <div class="row g-3 mb-4">
 
-        
-        <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
-            <div class="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-800 sm:px-6">
-                <div>
-                    <h3 class="text-base font-semibold text-gray-800 dark:text-white/90">Top sotuvchi kitoblar</h3>
-                    <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Eng ko'p sotilganlar</p>
-                </div>
-            </div>
-            <?php if($topSellingBooks->count() > 0): ?>
-            <div class="divide-y divide-gray-100 dark:divide-gray-800">
-                <?php $__currentLoopData = $topSellingBooks; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $i => $book): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                <div class="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors sm:px-6">
-                    <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-sm font-bold
-                        <?php echo e($i === 0 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400' :
-                          ($i === 1 ? 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' :
-                          ($i === 2 ? 'bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400' :
-                          'bg-gray-50 text-gray-500 dark:bg-gray-800/50 dark:text-gray-500'))); ?>">
-                        <?php echo e($i + 1); ?>
-
-                    </span>
-                    <div class="h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-gray-100 bg-gray-50 dark:border-gray-800 dark:bg-gray-800">
-                        <?php $imgs = json_decode($book->images ?? '[]', true); ?>
-                        <?php if(is_array($imgs) && count($imgs) > 0): ?>
-                            <img src="<?php echo e($imgs[0]); ?>" alt="<?php echo e($book->name); ?>" class="h-full w-full object-cover" />
-                        <?php else: ?>
-                            <div class="flex h-full w-full items-center justify-center">
-                                <svg class="h-5 w-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13"/>
-                                </svg>
-                            </div>
-                        <?php endif; ?>
-                    </div>
-                    <div class="min-w-0 flex-1">
-                        <p class="text-sm font-medium text-gray-800 dark:text-white/90 truncate"><?php echo e($book->name); ?></p>
-                        <p class="text-xs text-gray-500 dark:text-gray-400"><?php echo e(number_format($book->sold_count)); ?> ta sotildi</p>
-                    </div>
-                    <div class="text-right shrink-0">
-                        <p class="text-sm font-semibold text-gray-800 dark:text-white/90"><?php echo e(number_format($book->total_revenue)); ?></p>
-                        <p class="text-xs text-gray-400">UZS</p>
-                    </div>
-                </div>
-                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-            </div>
-            <?php else: ?>
-            <div class="py-12 text-center">
-                <p class="text-sm text-gray-400 dark:text-gray-500">Ma'lumot yo'q</p>
-            </div>
-            <?php endif; ?>
+      <!-- Daromad -->
+      <div class="col-sm-6 col-xl-3 fade-up delay-1">
+        <div class="card-dark card-accent-top success">
+          <div class="metric-icon" style="background:var(--success-dim);color:var(--success)">
+            <i class="bi bi-currency-dollar"></i>
+          </div>
+          <div class="metric-label">Jami daromad</div>
+          <div class="metric-value">128.5M</div>
+          <div class="metric-footer">
+            <span class="metric-badge up"><i class="bi bi-arrow-up-right"></i> +12.4%</span>
+            <span class="metric-sub">UZS</span>
+          </div>
         </div>
+      </div>
 
-        
-        <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
-            <div class="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-800 sm:px-6">
-                <div>
-                    <h3 class="text-base font-semibold text-gray-800 dark:text-white/90">Top mijozlar</h3>
-                    <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Eng ko'p xarid qilganlar</p>
-                </div>
-            </div>
-            <?php if($topBuyers->count() > 0): ?>
-            <div class="divide-y divide-gray-100 dark:divide-gray-800">
-                <?php $__currentLoopData = $topBuyers; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $i => $buyer): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                <div class="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors sm:px-6">
-                    <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-sm font-bold
-                        <?php echo e($i === 0 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400' :
-                          ($i === 1 ? 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' :
-                          ($i === 2 ? 'bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400' :
-                          'bg-gray-50 text-gray-500 dark:bg-gray-800/50 dark:text-gray-500'))); ?>">
-                        <?php echo e($i + 1); ?>
-
-                    </span>
-                    <div class="relative h-10 w-10 shrink-0 overflow-hidden rounded-full">
-                        <?php if($buyer->user?->avatar): ?>
-                            <img src="<?php echo e($buyer->user->avatar); ?>" alt="<?php echo e($buyer->user->full_name); ?>" class="h-full w-full object-cover" />
-                        <?php else: ?>
-                            <div class="flex h-full w-full items-center justify-center rounded-full bg-brand-500 text-sm font-bold text-white">
-                                <?php echo e(strtoupper(substr($buyer->user?->name ?? 'U', 0, 1))); ?><?php echo e(strtoupper(substr($buyer->user?->lastname ?? '', 0, 1))); ?>
-
-                            </div>
-                        <?php endif; ?>
-                    </div>
-                    <div class="min-w-0 flex-1">
-                        <p class="text-sm font-medium text-gray-800 dark:text-white/90 truncate">
-                            <?php echo e($buyer->user ? $buyer->user->full_name : '#'.$buyer->user_id); ?>
-
-                        </p>
-                        <p class="text-xs text-gray-500 dark:text-gray-400"><?php echo e(number_format($buyer->order_count)); ?> ta buyurtma</p>
-                    </div>
-                    <div class="text-right shrink-0">
-                        <p class="text-sm font-semibold text-success-500"><?php echo e(number_format($buyer->total_spent)); ?></p>
-                        <p class="text-xs text-gray-400">UZS</p>
-                    </div>
-                </div>
-                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-            </div>
-            <?php else: ?>
-            <div class="py-12 text-center">
-                <p class="text-sm text-gray-400 dark:text-gray-500">Ma'lumot yo'q</p>
-            </div>
-            <?php endif; ?>
+      <!-- Buyurtmalar -->
+      <div class="col-sm-6 col-xl-3 fade-up delay-2">
+        <div class="card-dark card-accent-top">
+          <div class="metric-icon" style="background:var(--accent-dim);color:var(--accent)">
+            <i class="bi bi-bag-check"></i>
+          </div>
+          <div class="metric-label">Buyurtmalar</div>
+          <div class="metric-value">3,842</div>
+          <div class="metric-footer">
+            <span class="metric-badge info"><i class="bi bi-arrow-up-right"></i> +48 bugun</span>
+            <span class="metric-sub">ta jami</span>
+          </div>
         </div>
+      </div>
+
+      <!-- Foydalanuvchilar -->
+      <div class="col-sm-6 col-xl-3 fade-up delay-3">
+        <div class="card-dark card-accent-top warning">
+          <div class="metric-icon" style="background:var(--warning-dim);color:var(--warning)">
+            <i class="bi bi-people"></i>
+          </div>
+          <div class="metric-label">Foydalanuvchilar</div>
+          <div class="metric-value">12,074</div>
+          <div class="metric-footer">
+            <span class="metric-badge warn"><i class="bi bi-circle-fill" style="font-size:6px"></i> 142 online</span>
+            <span class="metric-sub">+8 bugun</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Konversiya -->
+      <div class="col-sm-6 col-xl-3 fade-up delay-4">
+        <div class="card-dark card-accent-top danger">
+          <div class="metric-icon" style="background:var(--danger-dim);color:var(--danger)">
+            <i class="bi bi-graph-up-arrow"></i>
+          </div>
+          <div class="metric-label">Yakunlanish</div>
+          <div class="metric-value">64%</div>
+          <div class="metric-footer">
+            <span class="metric-badge up"><i class="bi bi-arrow-up-right"></i> +2.1%</span>
+            <span class="metric-sub">completion</span>
+          </div>
+        </div>
+      </div>
     </div>
 
-    
-    <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
-        <div class="flex flex-col gap-2 border-b border-gray-200 px-5 py-4 dark:border-gray-800 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+    <!-- ── ROW 2: Bar chart + Donut + Activity ────────── -->
+    <div class="row g-3 mb-4">
+
+      <!-- Oylik daromad chart -->
+      <div class="col-xl-7 fade-up delay-2">
+        <div class="card-dark h-100">
+          <div class="section-header">
             <div>
-                <h3 class="text-base font-semibold text-gray-800 dark:text-white/90">So'nggi buyurtmalar</h3>
-                <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Bugun: <?php echo e($todayOrders); ?> ta yangi</p>
+              <div class="section-title">Oylik daromad</div>
+              <div class="section-sub">Oxirgi 6 oy · UZS</div>
             </div>
-            <a href="#" class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]">
-                Barchasi
-            </a>
+            <button class="btn-ghost">
+              <i class="bi bi-three-dots"></i>
+            </button>
+          </div>
+          <div class="chart-box" id="chartRevenue"></div>
         </div>
-        <div class="overflow-x-auto">
-            <table class="w-full min-w-[700px]">
-                <thead>
-                    <tr class="border-b border-gray-100 dark:border-gray-800">
-                        <th class="px-5 py-3 text-left sm:px-6">
-                            <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">#ID</p>
-                        </th>
-                        <th class="px-5 py-3 text-left sm:px-6">
-                            <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Mijoz</p>
-                        </th>
-                        <th class="px-5 py-3 text-left sm:px-6">
-                            <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Summa</p>
-                        </th>
-                        <th class="px-5 py-3 text-left sm:px-6">
-                            <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Mahsulotlar</p>
-                        </th>
-                        <th class="px-5 py-3 text-left sm:px-6">
-                            <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Status</p>
-                        </th>
-                        <th class="px-5 py-3 text-left sm:px-6">
-                            <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Sana</p>
-                        </th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-                    <?php $__empty_1 = true; $__currentLoopData = $recentOrders; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $order): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
-                    <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
-                        <td class="px-5 py-3 sm:px-6">
-                            <span class="text-sm font-medium text-gray-800 dark:text-white/90 flex items-center gap-1">
-                                #<?php echo e($order['id']); ?>
+      </div>
 
-                                <?php if($order['gift']): ?>
-                                <svg class="w-3.5 h-3.5 text-brand-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 11.25v8.25a1.5 1.5 0 01-1.5 1.5H5.25a1.5 1.5 0 01-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 109.375 7.5H12m0-2.625V7.5m0-2.625A2.625 2.625 0 1114.625 7.5H12m0 0V21m-8.625-9.75h18c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125h-18c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"/>
-                                </svg>
-                                <?php endif; ?>
-                            </span>
-                        </td>
-                        <td class="px-5 py-3 sm:px-6">
-                            <div class="flex items-center gap-2.5">
-                                <div class="h-8 w-8 shrink-0 overflow-hidden rounded-full">
-                                    <?php if($order['avatar']): ?>
-                                        <img src="<?php echo e($order['avatar']); ?>" class="h-full w-full object-cover" />
-                                    <?php else: ?>
-                                        <div class="flex h-full w-full items-center justify-center rounded-full bg-brand-100 text-xs font-bold text-brand-600 dark:bg-brand-500/20 dark:text-brand-400">
-                                            <?php echo e(strtoupper(substr($order['customer'],0,1))); ?>
-
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
-                                <p class="text-sm text-gray-800 dark:text-white/90"><?php echo e($order['customer']); ?></p>
-                            </div>
-                        </td>
-                        <td class="px-5 py-3 sm:px-6">
-                            <p class="text-sm font-medium text-gray-700 dark:text-gray-300"><?php echo e($order['amount']); ?></p>
-                        </td>
-                        <td class="px-5 py-3 sm:px-6">
-                            <p class="text-sm text-gray-500 dark:text-gray-400"><?php echo e($order['items_count']); ?> ta</p>
-                        </td>
-                        <td class="px-5 py-3 sm:px-6">
-                            <?php
-                                $statusColors = [
-                                    'success' => 'bg-success-50 text-success-600 dark:bg-success-500/15 dark:text-success-500',
-                                    'warning' => 'bg-warning-50 text-warning-600 dark:bg-warning-500/15 dark:text-orange-400',
-                                    'info'    => 'bg-blue-50 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400',
-                                    'primary' => 'bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-400',
-                                    'error'   => 'bg-error-50 text-error-600 dark:bg-error-500/15 dark:text-error-400',
-                                    'gray'    => 'bg-gray-50 text-gray-600 dark:bg-gray-500/15 dark:text-gray-400',
-                                ];
-                            ?>
-                            <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium <?php echo e($statusColors[$order['color']] ?? $statusColors['gray']); ?>">
-                                <?php echo e($order['status']); ?>
-
-                            </span>
-                        </td>
-                        <td class="px-5 py-3 sm:px-6">
-                            <p class="text-xs text-gray-500 dark:text-gray-400"><?php echo e($order['date']); ?></p>
-                        </td>
-                    </tr>
-                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
-                    <tr>
-                        <td colspan="6" class="px-5 py-10 text-center text-sm text-gray-400">Buyurtmalar yo'q</td>
-                    </tr>
-                    <?php endif; ?>
-                </tbody>
-            </table>
+      <!-- Buyurtma statusi donut -->
+      <div class="col-xl-5 fade-up delay-3">
+        <div class="card-dark h-100">
+          <div class="section-header">
+            <div>
+              <div class="section-title">Buyurtmalar holati</div>
+              <div class="section-sub">Jami: 3,842 ta</div>
+            </div>
+          </div>
+          <div id="chartDonut" style="min-height:200px"></div>
+          <div class="stat-row">
+            <div class="stat-cell">
+              <div class="stat-cell-label">Yetkazildi</div>
+              <div class="stat-cell-val" style="color:var(--success)">2,460</div>
+            </div>
+            <div class="stat-cell">
+              <div class="stat-cell-label">Yo'lda</div>
+              <div class="stat-cell-val" style="color:var(--info)">614</div>
+            </div>
+            <div class="stat-cell">
+              <div class="stat-cell-label">Kutilmoqda</div>
+              <div class="stat-cell-val" style="color:var(--warning)">500</div>
+            </div>
+            <div class="stat-cell">
+              <div class="stat-cell-label">Bekor</div>
+              <div class="stat-cell-val" style="color:var(--danger)">268</div>
+            </div>
+          </div>
         </div>
+      </div>
     </div>
 
+    <!-- ── ROW 3: Foydalanuvchilar + Online + Feed ────── -->
+    <div class="row g-3 mb-4">
+
+      <!-- Foydalanuvchi holatlar -->
+      <div class="col-xl-4 fade-up delay-1">
+        <div class="card-dark h-100">
+          <div class="section-header">
+            <div>
+              <div class="section-title">Foydalanuvchilar</div>
+              <div class="section-sub">Holat taqsimoti</div>
+            </div>
+          </div>
+
+          <div class="prog-wrap">
+            <div class="prog-label">
+              <span>Online (5 daqiqa)</span>
+              <span>142</span>
+            </div>
+            <div class="prog-track">
+              <div class="prog-fill success" style="width:1.2%"></div>
+            </div>
+          </div>
+
+          <div class="prog-wrap">
+            <div class="prog-label">
+              <span>Faol (FCM token)</span>
+              <span>6,640</span>
+            </div>
+            <div class="prog-track">
+              <div class="prog-fill" style="width:55%"></div>
+            </div>
+          </div>
+
+          <div class="prog-wrap">
+            <div class="prog-label">
+              <span>Nofaol</span>
+              <span>5,434</span>
+            </div>
+            <div class="prog-track">
+              <div class="prog-fill info" style="width:45%"></div>
+            </div>
+          </div>
+
+          <div class="prog-wrap">
+            <div class="prog-label">
+              <span>Isolat (30+ kun)</span>
+              <span>2,415</span>
+            </div>
+            <div class="prog-track">
+              <div class="prog-fill danger" style="width:20%"></div>
+            </div>
+          </div>
+
+          <div class="prog-wrap">
+            <div class="prog-label">
+              <span>Bu hafta yangi</span>
+              <span>384</span>
+            </div>
+            <div class="prog-track">
+              <div class="prog-fill warning" style="width:3%"></div>
+            </div>
+          </div>
+
+          <div class="stat-row" style="margin-top:14px;padding-top:14px">
+            <div class="stat-cell">
+              <div class="stat-cell-label">Jami</div>
+              <div class="stat-cell-val">12,074</div>
+            </div>
+            <div class="stat-cell">
+              <div class="stat-cell-label">Premium</div>
+              <div class="stat-cell-val" style="color:var(--warning)">1,230</div>
+            </div>
+            <div class="stat-cell">
+              <div class="stat-cell-label">Bugun</div>
+              <div class="stat-cell-val" style="color:var(--accent)">+8</div>
+            </div>
+          </div>
+
+          <!-- Sparkline -->
+          <div style="margin-top:18px;border-top:1px solid var(--border-color);padding-top:16px">
+            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px">7 kunlik buyurtmalar</div>
+            <div class="spark-wrap">
+              <div class="spark-bar" style="height:40%"></div>
+              <div class="spark-bar" style="height:65%"></div>
+              <div class="spark-bar" style="height:50%"></div>
+              <div class="spark-bar" style="height:80%"></div>
+              <div class="spark-bar" style="height:45%"></div>
+              <div class="spark-bar" style="height:95%"></div>
+              <div class="spark-bar" style="height:60%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Online foydalanuvchilar -->
+      <div class="col-xl-4 fade-up delay-2">
+        <div class="card-dark h-100">
+          <div class="section-header">
+            <div>
+              <div class="section-title">Hozir online</div>
+              <div class="section-sub">Oxirgi 5 daqiqa</div>
+            </div>
+            <span class="metric-badge up" style="font-size:11px">
+              <span class="online-dot"></span> 142
+            </span>
+          </div>
+
+          <div>
+            <!-- user row -->
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border-color)">
+              <div class="av av-blue">AS</div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:13px;font-weight:500;color:var(--text-primary)">Abdulloh Sobirov</div>
+                <div style="font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace">1 daqiqa oldin</div>
+              </div>
+              <span class="online-dot"></span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border-color)">
+              <div class="av av-yellow">MR</div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:13px;font-weight:500;color:var(--text-primary)">Malika Rahimova</div>
+                <div style="font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace">2 daqiqa oldin</div>
+              </div>
+              <span class="online-dot"></span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border-color)">
+              <div class="av av-green">JT</div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:13px;font-weight:500;color:var(--text-primary)">Jasur Toshmatov</div>
+                <div style="font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace">3 daqiqa oldin</div>
+              </div>
+              <span class="online-dot"></span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border-color)">
+              <div class="av av-red">DY</div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:13px;font-weight:500;color:var(--text-primary)">Dilnoza Yusupova</div>
+                <div style="font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace">4 daqiqa oldin</div>
+              </div>
+              <span class="online-dot"></span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 0">
+              <div class="av av-purple">BN</div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:13px;font-weight:500;color:var(--text-primary)">Bekzod Normatov</div>
+                <div style="font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace">5 daqiqa oldin</div>
+              </div>
+              <span class="online-dot"></span>
+            </div>
+          </div>
+
+          <!-- Isolat banner -->
+          <div style="margin-top:16px;padding:12px 14px;background:var(--danger-dim);border:1px solid rgba(255,92,106,.2);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:space-between;gap:10px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <i class="bi bi-exclamation-triangle" style="color:var(--danger);font-size:14px;flex-shrink:0"></i>
+              <span style="font-size:12px;color:var(--danger)">2,415 ta foydalanuvchi 30+ kun ko'rinmagan</span>
+            </div>
+            <a href="#" style="font-size:12px;font-weight:600;color:var(--danger);white-space:nowrap;text-decoration:none">Ko'rish →</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Activity feed -->
+      <div class="col-xl-4 fade-up delay-3">
+        <div class="card-dark h-100">
+          <div class="section-header">
+            <div>
+              <div class="section-title">So'nggi faollik</div>
+              <div class="section-sub">Tizim hodisalari</div>
+            </div>
+            <button class="btn-ghost">Barchasi</button>
+          </div>
+
+          <div class="feed-item">
+            <div class="feed-icon" style="background:var(--success-dim);color:var(--success)">
+              <i class="bi bi-bag-check"></i>
+            </div>
+            <div>
+              <div class="feed-title">Yangi buyurtma #1042 qabul qilindi</div>
+              <div class="feed-time">2 daqiqa oldin · 125,000 UZS</div>
+            </div>
+          </div>
+
+          <div class="feed-item">
+            <div class="feed-icon" style="background:var(--accent-dim);color:var(--accent)">
+              <i class="bi bi-person-plus"></i>
+            </div>
+            <div>
+              <div class="feed-title">Yangi foydalanuvchi ro'yxatdan o'tdi</div>
+              <div class="feed-time">8 daqiqa oldin · Abdulloh S.</div>
+            </div>
+          </div>
+
+          <div class="feed-item">
+            <div class="feed-icon" style="background:var(--warning-dim);color:var(--warning)">
+              <i class="bi bi-exclamation-circle"></i>
+            </div>
+            <div>
+              <div class="feed-title">Buyurtma #1038 bekor qilindi</div>
+              <div class="feed-time">15 daqiqa oldin · 45,000 UZS</div>
+            </div>
+          </div>
+
+          <div class="feed-item">
+            <div class="feed-icon" style="background:var(--success-dim);color:var(--success)">
+              <i class="bi bi-truck"></i>
+            </div>
+            <div>
+              <div class="feed-title">#1036 yetkazildi — Yakunlandi</div>
+              <div class="feed-time">32 daqiqa oldin · Toshkent</div>
+            </div>
+          </div>
+
+          <div class="feed-item">
+            <div class="feed-icon" style="background:var(--info-dim);color:var(--info)">
+              <i class="bi bi-star"></i>
+            </div>
+            <div>
+              <div class="feed-title">Yangi izoh qoldirildi — 5 yulduz</div>
+              <div class="feed-time">1 soat oldin · "Atom odatlar"</div>
+            </div>
+          </div>
+
+          <div class="feed-item">
+            <div class="feed-icon" style="background:var(--danger-dim);color:var(--danger)">
+              <i class="bi bi-shield-x"></i>
+            </div>
+            <div>
+              <div class="feed-title">Muvaffaqiyatsiz kirish urinishi</div>
+              <div class="feed-time">2 soat oldin · IP: 192.168.1.x</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ROW 4: Top kitoblar + Top mijozlar ────────── -->
+    <div class="row g-3 mb-4">
+
+      <!-- Top kitoblar -->
+      <div class="col-xl-6 fade-up delay-1">
+        <div class="card-dark">
+          <div class="section-header">
+            <div>
+              <div class="section-title">Top sotuvchi kitoblar</div>
+              <div class="section-sub">Eng ko'p sotilganlar</div>
+            </div>
+            <button class="btn-ghost">Barchasi</button>
+          </div>
+          <div class="table-responsive">
+            <table class="table-dark-custom">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Kitob</th>
+                  <th>Sotildi</th>
+                  <th style="text-align:right">Daromad</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="rank rank-1">1</span></td>
+                  <td><span style="color:var(--text-primary);font-weight:500">Atom odatlar</span></td>
+                  <td><span class="pill success">842 ta</span></td>
+                  <td style="text-align:right;font-family:'DM Mono',monospace;color:var(--text-primary);font-weight:500">8,420,000 <small style="color:var(--text-muted)">UZS</small></td>
+                </tr>
+                <tr>
+                  <td><span class="rank rank-2">2</span></td>
+                  <td><span style="color:var(--text-primary);font-weight:500">Boylar o'ylaydigan tarzda</span></td>
+                  <td><span class="pill success">631 ta</span></td>
+                  <td style="text-align:right;font-family:'DM Mono',monospace;color:var(--text-primary);font-weight:500">6,310,000 <small style="color:var(--text-muted)">UZS</small></td>
+                </tr>
+                <tr>
+                  <td><span class="rank rank-3">3</span></td>
+                  <td><span style="color:var(--text-primary);font-weight:500">1984</span></td>
+                  <td><span class="pill info">510 ta</span></td>
+                  <td style="text-align:right;font-family:'DM Mono',monospace;color:var(--text-primary);font-weight:500">5,100,000 <small style="color:var(--text-muted)">UZS</small></td>
+                </tr>
+                <tr>
+                  <td><span class="rank rank-n">4</span></td>
+                  <td><span style="color:var(--text-primary);font-weight:500">Don Kixot</span></td>
+                  <td><span class="pill muted">389 ta</span></td>
+                  <td style="text-align:right;font-family:'DM Mono',monospace;color:var(--text-primary);font-weight:500">3,890,000 <small style="color:var(--text-muted)">UZS</small></td>
+                </tr>
+                <tr>
+                  <td><span class="rank rank-n">5</span></td>
+                  <td><span style="color:var(--text-primary);font-weight:500">Kichkina shahzoda</span></td>
+                  <td><span class="pill muted">284 ta</span></td>
+                  <td style="text-align:right;font-family:'DM Mono',monospace;color:var(--text-primary);font-weight:500">2,840,000 <small style="color:var(--text-muted)">UZS</small></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top mijozlar -->
+      <div class="col-xl-6 fade-up delay-2">
+        <div class="card-dark">
+          <div class="section-header">
+            <div>
+              <div class="section-title">Top mijozlar</div>
+              <div class="section-sub">Eng ko'p xarid qilganlar</div>
+            </div>
+            <button class="btn-ghost">Barchasi</button>
+          </div>
+          <div class="table-responsive">
+            <table class="table-dark-custom">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Mijoz</th>
+                  <th>Buyurtma</th>
+                  <th style="text-align:right">Jami xarid</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="rank rank-1">1</span></td>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <div class="av av-blue">AS</div>
+                      <span style="color:var(--text-primary);font-weight:500">A. Sobirov</span>
+                    </div>
+                  </td>
+                  <td><span style="color:var(--text-secondary)">47 ta</span></td>
+                  <td style="text-align:right;font-family:'DM Mono',monospace;font-weight:500;color:var(--success)">4,700,000</td>
+                </tr>
+                <tr>
+                  <td><span class="rank rank-2">2</span></td>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <div class="av av-yellow">MR</div>
+                      <span style="color:var(--text-primary);font-weight:500">M. Rahimova</span>
+                    </div>
+                  </td>
+                  <td><span style="color:var(--text-secondary)">38 ta</span></td>
+                  <td style="text-align:right;font-family:'DM Mono',monospace;font-weight:500;color:var(--success)">3,800,000</td>
+                </tr>
+                <tr>
+                  <td><span class="rank rank-3">3</span></td>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <div class="av av-green">JT</div>
+                      <span style="color:var(--text-primary);font-weight:500">J. Toshmatov</span>
+                    </div>
+                  </td>
+                  <td><span style="color:var(--text-secondary)">29 ta</span></td>
+                  <td style="text-align:right;font-family:'DM Mono',monospace;font-weight:500;color:var(--success)">2,900,000</td>
+                </tr>
+                <tr>
+                  <td><span class="rank rank-n">4</span></td>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <div class="av av-red">DY</div>
+                      <span style="color:var(--text-primary);font-weight:500">D. Yusupova</span>
+                    </div>
+                  </td>
+                  <td><span style="color:var(--text-secondary)">21 ta</span></td>
+                  <td style="text-align:right;font-family:'DM Mono',monospace;font-weight:500;color:var(--success)">2,100,000</td>
+                </tr>
+                <tr>
+                  <td><span class="rank rank-n">5</span></td>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <div class="av av-purple">BN</div>
+                      <span style="color:var(--text-primary);font-weight:500">B. Normatov</span>
+                    </div>
+                  </td>
+                  <td><span style="color:var(--text-secondary)">18 ta</span></td>
+                  <td style="text-align:right;font-family:'DM Mono',monospace;font-weight:500;color:var(--success)">1,800,000</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ROW 5: So'nggi buyurtmalar (full width) ────── -->
+    <div class="row g-3 fade-up delay-1">
+      <div class="col-12">
+        <div class="card-dark">
+          <div class="section-header">
+            <div>
+              <div class="section-title">So'nggi buyurtmalar</div>
+              <div class="section-sub">Bugun: <strong style="color:var(--text-primary)">12</strong> ta yangi buyurtma</div>
+            </div>
+            <div class="d-flex gap-2">
+              <button class="btn-ghost"><i class="bi bi-funnel"></i> Filter</button>
+              <button class="btn-ghost">Barchasi <i class="bi bi-arrow-right"></i></button>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table-dark-custom" style="min-width:680px">
+              <thead>
+                <tr>
+                  <th>#ID</th>
+                  <th>Mijoz</th>
+                  <th>Summa</th>
+                  <th>Mahsulotlar</th>
+                  <th>Status</th>
+                  <th>Sana</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span style="font-family:'DM Mono',monospace;color:var(--accent);font-weight:500">#1042</span></td>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <div class="av av-blue">AS</div>
+                      <span style="color:var(--text-primary);font-weight:500">Abdulloh Sobirov</span>
+                    </div>
+                  </td>
+                  <td><span style="font-family:'DM Mono',monospace;font-weight:500;color:var(--text-primary)">125,000 UZS</span></td>
+                  <td><span style="color:var(--text-muted)">2 ta</span></td>
+                  <td><span class="pill success">Yetkazildi</span></td>
+                  <td><span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--text-muted)">21.03 14:30</span></td>
+                  <td><button class="btn-ghost" style="padding:4px 10px;font-size:11px">Ko'rish</button></td>
+                </tr>
+                <tr>
+                  <td><span style="font-family:'DM Mono',monospace;color:var(--accent);font-weight:500">#1041</span></td>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <div class="av av-yellow">MR</div>
+                      <span style="color:var(--text-primary);font-weight:500">Malika Rahimova</span>
+                    </div>
+                  </td>
+                  <td><span style="font-family:'DM Mono',monospace;font-weight:500;color:var(--text-primary)">89,000 UZS</span></td>
+                  <td><span style="color:var(--text-muted)">1 ta</span></td>
+                  <td><span class="pill warning">Kutilmoqda</span></td>
+                  <td><span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--text-muted)">21.03 13:15</span></td>
+                  <td><button class="btn-ghost" style="padding:4px 10px;font-size:11px">Ko'rish</button></td>
+                </tr>
+                <tr>
+                  <td><span style="font-family:'DM Mono',monospace;color:var(--accent);font-weight:500">#1040</span></td>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <div class="av av-green">JT</div>
+                      <span style="color:var(--text-primary);font-weight:500">Jasur Toshmatov</span>
+                    </div>
+                  </td>
+                  <td><span style="font-family:'DM Mono',monospace;font-weight:500;color:var(--text-primary)">210,000 UZS</span></td>
+                  <td><span style="color:var(--text-muted)">3 ta</span></td>
+                  <td><span class="pill info">Yo'lda</span></td>
+                  <td><span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--text-muted)">21.03 11:40</span></td>
+                  <td><button class="btn-ghost" style="padding:4px 10px;font-size:11px">Ko'rish</button></td>
+                </tr>
+                <tr>
+                  <td><span style="font-family:'DM Mono',monospace;color:var(--accent);font-weight:500">#1039</span></td>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <div class="av av-red">DY</div>
+                      <span style="color:var(--text-primary);font-weight:500">Dilnoza Yusupova</span>
+                    </div>
+                  </td>
+                  <td><span style="font-family:'DM Mono',monospace;font-weight:500;color:var(--text-primary)">45,000 UZS</span></td>
+                  <td><span style="color:var(--text-muted)">1 ta</span></td>
+                  <td><span class="pill danger">Bekor qilindi</span></td>
+                  <td><span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--text-muted)">21.03 10:05</span></td>
+                  <td><button class="btn-ghost" style="padding:4px 10px;font-size:11px">Ko'rish</button></td>
+                </tr>
+                <tr>
+                  <td><span style="font-family:'DM Mono',monospace;color:var(--accent);font-weight:500">#1038</span></td>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <div class="av av-purple">BN</div>
+                      <span style="color:var(--text-primary);font-weight:500">Bekzod Normatov</span>
+                    </div>
+                  </td>
+                  <td><span style="font-family:'DM Mono',monospace;font-weight:500;color:var(--text-primary)">178,000 UZS</span></td>
+                  <td><span style="color:var(--text-muted)">2 ta</span></td>
+                  <td><span class="pill success">Yetkazildi</span></td>
+                  <td><span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--text-muted)">21.03 09:20</span></td>
+                  <td><button class="btn-ghost" style="padding:4px 10px;font-size:11px">Ko'rish</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
 </div>
 
-<?php $__env->startPush('scripts'); ?>
+<!-- Bootstrap JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+
+<!-- ApexCharts -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/apexcharts/3.49.0/apexcharts.min.js"></script>
+
 <script>
-// Oylik daromad grafigi
-(function(){
-    var data = <?php echo json_encode($monthlyRevenue, 15, 512) ?>;
-    new ApexCharts(document.querySelector('#chartMonthlyRevenue'), {
-        series: [{ name: 'Daromad', data: data.map(d => d.total) }],
-        chart: { type: 'bar', height: 200, toolbar: { show: false }, fontFamily: 'inherit' },
-        colors: ['#465FFF'],
-        plotOptions: { bar: { borderRadius: 6, columnWidth: '50%' } },
-        dataLabels: { enabled: false },
-        xaxis: {
-            categories: data.map(d => d.month),
-            axisBorder: { show: false },
-            axisTicks: { show: false },
-            labels: { style: { colors: '#9CA3AF', fontSize: '12px' } }
-        },
-        yaxis: { labels: { style: { colors: '#9CA3AF' }, formatter: v => (v/1000000).toFixed(1)+'M' } },
-        grid: { borderColor: '#F3F4F6', strokeDashArray: 4 },
-        tooltip: { y: { formatter: v => v.toLocaleString() + " UZS" } }
-    }).render();
-})();
+// ── Sidebar toggle (mobile) ──────────────────────────
+document.getElementById('sidebarToggle')?.addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('open');
+});
 
-// Buyurtmalar status donut
-(function(){
-    var items = <?php echo json_encode($orderStatusDist, 15, 512) ?>;
-    new ApexCharts(document.querySelector('#chartOrderStatus'), {
-        series: items.map(i => i.value),
-        labels: items.map(i => i.label),
-        colors: items.map(i => i.color),
-        chart: { type: 'donut', height: 200, toolbar: { show: false }, fontFamily: 'inherit' },
-        legend: { position: 'bottom', fontSize: '12px', labels: { colors: '#6B7280' } },
-        dataLabels: { enabled: false },
-        plotOptions: { pie: { donut: { size: '65%' } } }
-    }).render();
-})();
+const C = {
+  grid:    'rgba(255,255,255,0.05)',
+  label:   '#555c75',
+  accent:  '#4f7cff',
+  success: '#22c98e',
+  warning: '#f5a623',
+  danger:  '#ff5c6a',
+  info:    '#38bdf8',
+};
 
-// To'lov usullari donut
-(function(){
-    var items = <?php echo json_encode($paymentDist, 15, 512) ?>;
-    new ApexCharts(document.querySelector('#chartPayment'), {
-        series: items.map(i => i.value),
-        labels: items.map(i => i.label),
-        colors: items.map(i => i.color),
-        chart: { type: 'donut', height: 180, toolbar: { show: false }, fontFamily: 'inherit' },
-        legend: { position: 'bottom', fontSize: '11px', labels: { colors: '#6B7280' } },
-        dataLabels: { enabled: false },
-        plotOptions: { pie: { donut: { size: '60%' } } }
-    }).render();
-})();
+// ── Oylik daromad bar chart ──────────────────────────
+new ApexCharts(document.querySelector('#chartRevenue'), {
+  series: [{ name: 'Daromad', data: [42, 78, 55, 91, 63, 128] }],
+  chart: {
+    type: 'bar',
+    height: 240,
+    toolbar: { show: false },
+    fontFamily: 'DM Sans, sans-serif',
+    background: 'transparent',
+  },
+  colors: [C.accent],
+  plotOptions: {
+    bar: {
+      borderRadius: 6,
+      columnWidth: '44%',
+      distributed: false,
+    }
+  },
+  dataLabels: { enabled: false },
+  xaxis: {
+    categories: ['Okt', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'],
+    axisBorder: { show: false },
+    axisTicks:  { show: false },
+    labels: { style: { colors: C.label, fontSize: '12px' } },
+  },
+  yaxis: {
+    labels: {
+      style: { colors: C.label, fontSize: '11px' },
+      formatter: v => v + 'M',
+    }
+  },
+  grid: {
+    borderColor: C.grid,
+    strokeDashArray: 5,
+    xaxis: { lines: { show: false } },
+  },
+  tooltip: {
+    theme: 'dark',
+    y: { formatter: v => v + ' mln UZS' },
+  },
+  fill: {
+    type: 'gradient',
+    gradient: {
+      shade: 'dark',
+      type: 'vertical',
+      shadeIntensity: 0.3,
+      gradientToColors: ['#2650cc'],
+      stops: [0, 100],
+    }
+  },
+}).render();
+
+// ── Buyurtmalar donut ────────────────────────────────
+new ApexCharts(document.querySelector('#chartDonut'), {
+  series: [2460, 614, 500, 268],
+  labels: ['Yetkazildi', "Yo'lda", 'Kutilmoqda', 'Bekor'],
+  colors: [C.success, C.info, C.warning, C.danger],
+  chart: {
+    type: 'donut',
+    height: 200,
+    toolbar: { show: false },
+    fontFamily: 'DM Sans, sans-serif',
+    background: 'transparent',
+  },
+  legend: {
+    position: 'bottom',
+    fontSize: '12px',
+    labels: { colors: C.label },
+    markers: { width: 8, height: 8, radius: 4 },
+    itemMargin: { horizontal: 10 },
+  },
+  dataLabels: { enabled: false },
+  plotOptions: {
+    pie: {
+      donut: {
+        size: '74%',
+        labels: {
+          show: true,
+          total: {
+            show: true,
+            label: 'Jami',
+            fontSize: '12px',
+            color: C.label,
+            formatter: () => '3,842',
+          },
+          value: {
+            fontSize: '20px',
+            fontWeight: 600,
+            color: '#eef0f7',
+            fontFamily: 'DM Mono, monospace',
+          }
+        }
+      }
+    }
+  },
+  stroke: { width: 2, colors: ['#181c27'] },
+  tooltip: {
+    theme: 'dark',
+    y: { formatter: v => v.toLocaleString() + ' ta' },
+  },
+}).render();
 </script>
-<?php $__env->stopPush(); ?>
-
-<?php $__env->stopSection(); ?>
-<?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH /var/www/www-root/data/www/kitobchi.com/resources/views/pages/dashboard/ecommerce.blade.php ENDPATH**/ ?>
+</body>
+</html><?php /**PATH /var/www/www-root/data/www/kitobchi.com/resources/views/pages/dashboard/ecommerce.blade.php ENDPATH**/ ?>

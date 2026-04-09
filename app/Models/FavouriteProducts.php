@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class FavouriteProducts extends Model
 {
@@ -13,16 +12,23 @@ class FavouriteProducts extends Model
     protected $fillable = [
         'product_id',
         'user_id',
-        'product_type'
+        'product_type',
+        'variant_id',   // ← yangi ustun (stationery varianti uchun)
     ];
 
     /**
-     * Favourite productning kitob bilan bog'lanishi.
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     * Polymorphic relation — umumiy mahsulot (book yoki stationery)
      */
-    public function book(): BelongsTo
+    public function product()
     {
-        return $this->belongsTo(Books::class, 'product_id');
+        return $this->morphTo('product', 'product_type', 'product_id');
+    }
+
+    /**
+     * Tanlangan stationery varianti
+     */
+    public function variant()
+    {
+        return $this->belongsTo(StationeryVariant::class, 'variant_id');
     }
 }

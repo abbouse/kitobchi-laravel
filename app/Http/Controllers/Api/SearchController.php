@@ -3,210 +3,212 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Traits\HasProductVisibility;
 use App\Models\Books;
 use App\Models\Stationery;
 use App\Models\BookCategories;
 use App\Models\StationeryCategory;
 use App\Models\FavouriteProducts;
+use App\Models\SearchHistory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Cache;
 
 class SearchController extends Controller
 {
-    /**
-     * Transliteratsiya - Lotin ↔ Kirill konvertatsiyasi (Mukammal)
-     */
-    private function transliterate($text)
+    use HasProductVisibility;
+
+    // ─────────────────────────────────────────────
+    // TRANSLITERATION
+    // ─────────────────────────────────────────────
+    private function transliterate(string $text): array
     {
-        // O'zbek lotin-kirill mapping (ikki tomonlama)
         $latinToCyrillic = [
-            'oʻ' => 'ў', 'gʻ' => 'ғ', 'sh' => 'ш', 'ch' => 'ч', 'ng' => 'нг',
-            'yo' => 'ё', 'yu' => 'ю', 'ya' => 'я', 'ts' => 'ц',
-            'o\'' => 'ў', 'g\'' => 'ғ', // Alternative variants
-            'a' => 'а', 'b' => 'б', 'v' => 'в', 'd' => 'д', 'e' => 'е',
-            'j' => 'ж', 'z' => 'з', 'i' => 'и', 'y' => 'й', 'k' => 'к',
-            'l' => 'л', 'm' => 'м', 'n' => 'н', 'o' => 'о', 'p' => 'п',
-            'r' => 'р', 's' => 'с', 't' => 'т', 'u' => 'у', 'f' => 'ф',
-            'x' => 'х', 'h' => 'ҳ', 'q' => 'қ', 'g' => 'г'
+            'oʻ'=>'ў','gʻ'=>'ғ','sh'=>'ш','ch'=>'ч','ng'=>'нг',
+            'yo'=>'ё','yu'=>'ю','ya'=>'я','ts'=>'ц',
+            "o'"=>'ў',"g'"=>'ғ',
+            'a'=>'а','b'=>'б','v'=>'в','d'=>'д','e'=>'е',
+            'j'=>'ж','z'=>'з','i'=>'и','y'=>'й','k'=>'к',
+            'l'=>'л','m'=>'м','n'=>'н','o'=>'о','p'=>'п',
+            'r'=>'р','s'=>'с','t'=>'т','u'=>'у','f'=>'ф',
+            'x'=>'х','h'=>'ҳ','q'=>'қ','g'=>'г',
         ];
 
         $cyrillicToLatin = [
-            'ў' => 'o\'', 'ғ' => 'g\'', 'ш' => 'sh', 'ч' => 'ch', 'нг' => 'ng',
-            'ё' => 'yo', 'ю' => 'yu', 'я' => 'ya', 'ц' => 'ts',
-            'а' => 'a', 'б' => 'b', 'в' => 'v', 'д' => 'd', 'е' => 'e',
-            'ж' => 'j', 'з' => 'z', 'и' => 'i', 'й' => 'y', 'к' => 'k',
-            'л' => 'l', 'м' => 'm', 'н' => 'n', 'о' => 'o', 'п' => 'p',
-            'р' => 'r', 'с' => 's', 'т' => 't', 'у' => 'u', 'ф' => 'f',
-            'х' => 'x', 'ҳ' => 'h', 'қ' => 'q', 'г' => 'g'
+            'ў'=>"o'",'ғ'=>"g'",'ш'=>'sh','ч'=>'ch','нг'=>'ng',
+            'ё'=>'yo','ю'=>'yu','я'=>'ya','ц'=>'ts',
+            'а'=>'a','б'=>'b','в'=>'v','д'=>'d','е'=>'e',
+            'ж'=>'j','з'=>'z','и'=>'i','й'=>'y','к'=>'k',
+            'л'=>'l','м'=>'m','н'=>'n','о'=>'o','п'=>'p',
+            'р'=>'r','с'=>'s','т'=>'t','у'=>'u','ф'=>'f',
+            'х'=>'x','ҳ'=>'h','қ'=>'q','г'=>'g',
         ];
 
-        $text = mb_strtolower($text, 'UTF-8');
+        $text     = mb_strtolower($text, 'UTF-8');
         $variants = [$text];
 
-        // Lotin -> Kirill (uzun pattern birinchi)
         $cyrillic = $text;
         foreach ($latinToCyrillic as $lat => $cyr) {
             $cyrillic = str_replace($lat, $cyr, $cyrillic);
         }
-        if ($cyrillic !== $text) {
-            $variants[] = $cyrillic;
-        }
+        if ($cyrillic !== $text) $variants[] = $cyrillic;
 
-        // Kirill -> Lotin (uzun pattern birinchi)
         $latin = $text;
         foreach ($cyrillicToLatin as $cyr => $lat) {
             $latin = str_replace($cyr, $lat, $latin);
         }
-        if ($latin !== $text) {
-            $variants[] = $latin;
+        if ($latin !== $text) $variants[] = $latin;
+
+        $alt = [];
+        foreach ($variants as $v) {
+            $alt[] = str_replace("o'", 'oʻ', $v);
+            $alt[] = str_replace("g'", 'gʻ', $v);
+            $alt[] = str_replace('oʻ', "o'", $v);
+            $alt[] = str_replace('gʻ', "g'", $v);
         }
 
-        // Alternative o' va g' variantlari
-        $altVariants = [];
-        foreach ($variants as $variant) {
-            $alt1 = str_replace("o'", 'oʻ', $variant);
-            $alt2 = str_replace("g'", 'gʻ', $variant);
-            $alt3 = str_replace('oʻ', "o'", $variant);
-            $alt4 = str_replace('gʻ', "g'", $variant);
-            $altVariants[] = $alt1;
-            $altVariants[] = $alt2;
-            $altVariants[] = $alt3;
-            $altVariants[] = $alt4;
-        }
-
-        return array_unique(array_merge($variants, $altVariants));
+        return array_unique(array_merge($variants, $alt));
     }
 
-    /**
-     * Fuzzy search - typo tolerant qidiruv
-     */
-    private function generateFuzzyVariants($word)
+    private function buildBooleanQuery(array $variants): string
     {
-        if (strlen($word) < 3) {
-            return [$word];
-        }
-
-        $variants = [$word];
-        
-        // 1 harf xato uchun SQL LIKE pattern
-        // Misol: "kitob" -> "k_tob", "ki_ob", "kit_b", "kito_"
-        $len = mb_strlen($word);
-        for ($i = 0; $i < $len; $i++) {
-            $pattern = mb_substr($word, 0, $i) . '_' . mb_substr($word, $i + 1);
-            $variants[] = $pattern;
-        }
-
-        return array_unique($variants);
+        return collect($variants)
+            ->filter(fn($v) => mb_strlen($v) >= 2)
+            ->map(fn($v) => '+' . preg_replace('/[+\-><()"~*@]/', '', $v) . '*')
+            ->unique()
+            ->implode(' ');
     }
 
-    /**
-     * Qidiruv so'zlarini bo'lib tahlil qilish (Mukammal Algoritm)
-     */
-    private function analyzeSearchQuery($query)
+    private function analyzeQuery(string $query): array
     {
-        $query = trim($query);
-        $words = preg_split('/\s+/u', $query);
-        
-        $analyzed = [
-            'original' => $query,
-            'words' => $words,
-            'variants' => [],
-            'fuzzy_variants' => [],
-            'is_short' => strlen($query) < 4,
-            'word_count' => count($words)
-        ];
+        $query    = trim($query);
+        $words    = preg_split('/\s+/u', $query);
+        $variants = [];
 
-        // 1. Har bir so'z uchun transliteratsiya
         foreach ($words as $word) {
-            if (strlen($word) >= 2) {
-                $analyzed['variants'] = array_merge(
-                    $analyzed['variants'],
-                    $this->transliterate($word)
-                );
-                
-                // Fuzzy variants (typo tolerance)
-                $analyzed['fuzzy_variants'] = array_merge(
-                    $analyzed['fuzzy_variants'],
-                    $this->generateFuzzyVariants($word)
-                );
+            if (mb_strlen($word) >= 2) {
+                $variants = array_merge($variants, $this->transliterate($word));
             }
         }
+        $variants = array_merge($variants, $this->transliterate($query));
+        $variants = array_unique($variants);
 
-        // 2. To'liq qidiruv uchun
-        $analyzed['variants'] = array_merge(
-            $analyzed['variants'],
-            $this->transliterate($query)
-        );
-
-        // 3. Takrorlanuvchilarni olib tashlash
-        $analyzed['variants'] = array_unique($analyzed['variants']);
-        $analyzed['fuzzy_variants'] = array_unique($analyzed['fuzzy_variants']);
-
-        // 4. N-gram tokenization (3+ so'zlar uchun)
-        if (count($words) >= 3) {
-            $analyzed['bigrams'] = [];
-            for ($i = 0; $i < count($words) - 1; $i++) {
-                $bigram = $words[$i] . ' ' . $words[$i + 1];
-                $analyzed['bigrams'] = array_merge(
-                    $analyzed['bigrams'],
-                    $this->transliterate($bigram)
-                );
-            }
-        }
-
-        return $analyzed;
+        return [
+            'original' => $query,
+            'boolean'  => $this->buildBooleanQuery($variants),
+            'variants' => $variants,
+        ];
     }
 
     /**
-     * Mahsulotni formatlash - barcha tillarda
+     * LIKE pattern lar — teg qidirish uchun ham ishlatiladi
      */
-    private function formatProduct($product, $user = null)
+    private function buildLikePatterns(string $query): array
+    {
+        $variants = $this->transliterate($query);
+        $patterns = [];
+
+        foreach ($variants as $v) {
+            $patterns[] = $v . '%';
+            $patterns[] = '% ' . $v . '%';
+        }
+
+        return array_unique($patterns);
+    }
+
+    /**
+     * Book teglar: book_tags.tag_name_uz / tag_name_ru / tag_name_en / tag_name_ja
+     */
+    private function applyBookTagFilter($query, array $patterns): object
+    {
+        return $query->whereHas('tags', function ($t) use ($patterns) {
+            $t->where(function ($w) use ($patterns) {
+                foreach ($patterns as $i => $p) {
+                    $method = $i === 0 ? 'where' : 'orWhere';
+                    $w->$method(function ($inner) use ($p) {
+                        $inner->where('tag_name_uz', 'LIKE', $p)
+                              ->orWhere('tag_name_ru', 'LIKE', $p)
+                              ->orWhere('tag_name_en', 'LIKE', $p)
+                              ->orWhere('tag_name_ja', 'LIKE', $p);
+                    });
+                }
+            });
+        });
+    }
+
+    /**
+     * Stationery teglar: stationery_tags.name_uz / name_ru / name_en / name_ja
+     */
+    private function applyStationeryTagFilter($query, array $patterns): object
+    {
+        return $query->whereHas('tags', function ($t) use ($patterns) {
+            $t->where(function ($w) use ($patterns) {
+                foreach ($patterns as $i => $p) {
+                    $method = $i === 0 ? 'where' : 'orWhere';
+                    $w->$method(function ($inner) use ($p) {
+                        $inner->where('name_uz', 'LIKE', $p)
+                              ->orWhere('name_ru', 'LIKE', $p)
+                              ->orWhere('name_en', 'LIKE', $p)
+                              ->orWhere('name_ja', 'LIKE', $p);
+                    });
+                }
+            });
+        });
+    }
+
+    // ─────────────────────────────────────────────
+    // FORMAT PRODUCT
+    // ─────────────────────────────────────────────
+    private function formatProduct($product, $user = null): ?array
     {
         try {
             $isBook = $product instanceof Books;
 
-            // Kategoriya
-            $category = null;
-            if ($product->category) {
-                $category = [
-                    'id'        => $product->category->id ?? null,
-                    'name_uz'   => $product->category->name_uz ?? '',
-                    'name_ru'   => $product->category->name_ru ?? '',
-                    'name_en'   => $product->category->name_en ?? '',
-                    'name_ja'   => $product->category->name_ja ?? '',
-                    'slug'      => $product->category->slug ?? '',
-                    'icon'      => $product->category->icon ?? '',
-                ];
-            }
+            $category = $product->relationLoaded('category') && $product->category
+                ? [
+                    'id'      => $product->category->id,
+                    'name_uz' => $product->category->name_uz ?? '',
+                    'name_ru' => $product->category->name_ru ?? '',
+                    'name_en' => $product->category->name_en ?? '',
+                    'slug'    => $product->category->slug ?? '',
+                    'icon'    => $product->category->icon ?? '',
+                  ]
+                : null;
 
-            // Taglar
+            $seller = $product->relationLoaded('seller') && $product->seller
+                ? [
+                    'seller_id'  => $product->seller->id,
+                    'shop_name'  => $product->seller->shop_name ?? '',
+                    'photo'      => $product->seller->photo ?? '',
+                    'isVerified' => (bool)($product->seller->isVerified ?? false),
+                  ]
+                : null;
+
+            // Tags — barcha tillarda qaytariladi
+            // book_tags: tag_name_uz/ru/en/ja
+            // stationery_tags: name_uz/ru/en/ja
             $tags = [];
             if ($product->relationLoaded('tags') && $product->tags) {
-                $tags = $product->tags->map(function($tag) {
+                $tags = $product->tags->map(function ($tag) use ($isBook) {
+                    if ($isBook) {
+                        return [
+                            'uz' => $tag->tag_name_uz ?? null,
+                            'ru' => $tag->tag_name_ru ?? null,
+                            'en' => $tag->tag_name_en ?? null,
+                            'ja' => $tag->tag_name_ja ?? null,
+                        ];
+                    }
                     return [
-                        'uz' => $tag->tag_name_uz ?? '',
-                        'ru' => $tag->tag_name_ru ?? '',
-                        'en' => $tag->tag_name_en ?? '',
-                        'ja' => $tag->tag_name_ja ?? '',
+                        'uz' => $tag->name_uz ?? null,
+                        'ru' => $tag->name_ru ?? null,
+                        'en' => $tag->name_en ?? null,
+                        'ja' => $tag->name_ja ?? null,
                     ];
-                })->toArray();
+                })->filter()->values()->toArray();
             }
 
-            // Sotuvchi
-            $seller = null;
-            if ($product->relationLoaded('seller') && $product->seller) {
-                $seller = [
-                    'seller_id' => $product->seller->id ?? null,
-                    'shop_name' => $product->seller->shop_name ?? '',
-                    'photo'     => $product->seller->photo ?? '',
-                    'isVerified' => $product->seller?->isVerified ?? false,
-                ];
-            }
-
-            // Favourite tekshirish
             $isFavourite = false;
             if ($user) {
                 $isFavourite = FavouriteProducts::where('user_id', $user->id)
@@ -223,730 +225,914 @@ class SearchController extends Controller
                 'category_id'    => $product->category_id ?? null,
                 'images'         => $product->images ?? [],
                 'description'    => $product->description ?? '',
-                'price'          => (double) ($product->price ?? 0),
-                'count'          => $isBook ? ($product->count ?? 0) : ($product->stock ?? 0),
-                'sales'          => $product->sales ?? 0,
-                'weekly_sales'   => $product->totalSalesWeek ?? 0,
-                'lang'           => $isBook ? ($product->lang ?? "O'zbek") : null,
-                'langType'       => $isBook ? ($product->langType ?? '') : null,
-                'coverType'      => $isBook ? ($product->coverType ?? 'Yumshoq') : null,
-                'year'           => $isBook ? ($product->year ?? date('Y')) : null,
+                'price'          => (float)($product->price ?? 0),
                 'discountPrice'  => $isBook
                     ? ($product->discountPrice ?? null)
                     : ($product->discount_price ?? null),
+                'count'          => $isBook ? $product->count : $product->stock,
+                'sales'          => $product->totalSales ?? 0,
+                'weekly_sales'   => $product->totalSalesWeek ?? 0,
                 'product_type'   => $isBook ? 'book' : 'stationery',
                 'favourite'      => $isFavourite,
                 'category'       => $category,
-                'tags'           => $tags,
                 'seller'         => $seller,
-                'relevance_score' => $product->relevance_score ?? 0,
-                'variants' => !$isBook && $product->relationLoaded('variants')
-                    ? $product->variants->map(function ($variant) {
-                        return [
-                            'id' => $variant->id,
-                            'color_name' => $variant->color_name,
-                            'image' => $variant->image_path ?? null,
-                            'stock' => $variant->stock,
-                        ];
-                    })->toArray()
+                'tags'           => $tags,
+                'variants'       => !$isBook && $product->relationLoaded('variants')
+                    ? $product->variants->map(fn($v) => [
+                        'id'         => $v->id,
+                        'color_name' => $v->color_name,
+                        'image'      => $v->image_path ?? null,
+                        'stock'      => $v->stock,
+                      ])->values()->toArray()
                     : null,
+                'relevance_score'=> (float)($product->relevance_score ?? 0),
             ];
-        } catch (\Exception $e) {
-            Log::error('Format product error: ' . $e->getMessage(), [
-                'product_id' => $product->id ?? null,
-                'trace' => $e->getTraceAsString()
-            ]);
-            
+        } catch (\Throwable $e) {
+            Log::error('formatProduct error', ['id' => $product->id ?? null]);
             return null;
         }
     }
 
-    /**
-     * Universal qidiruv - Mukammal Algoritm
-     * GET /api/search
-     */
-    public function search(Request $request)
+    private function extractResultName(array $formattedItems): ?string
     {
-        try {
-            // Validatsiya
-            $validator = Validator::make($request->all(), [
-                'q'           => 'nullable|string|max:255',
-                'type'        => 'required|string|in:book,stationery,all',
-                'category_id' => 'nullable|integer',
-                'sort'        => 'nullable|string|in:newest,price_asc,price_desc,alpha_asc,alpha_desc,discount,relevance',
-                'page'        => 'nullable|integer|min:1',
-                'min_price'   => 'nullable|numeric|min:0',
-                'max_price'   => 'nullable|numeric|min:0',
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'status'  => 'error',
-                    'message' => 'Validatsiya xatosi',
-                    'errors'  => $validator->errors()
-                ], 422);
-            }
-
-            // Parametrlar
-            $query      = trim($request->query('q', ''));
-            $type       = $request->query('type', 'all');
-            $categoryId = $request->query('category_id');
-            $sort       = $request->query('sort', 'relevance');
-            $page       = max(1, (int) $request->query('page', 1));
-            $perPage    = 20;
-            $minPrice   = $request->query('min_price');
-            $maxPrice   = $request->query('max_price');
-
-            // Agar query < 2 va category yo'q bo'lsa
-            if (strlen($query) < 2 && !$categoryId) {
-                return response()->json([
-                    'status'  => 'success',
-                    'data'    => [],
-                    'pagination' => [
-                        'current_page' => 1,
-                        'last_page'    => 1,
-                        'total'        => 0,
-                        'per_page'     => $perPage,
-                    ],
-                    'query_info' => [
-                        'original' => $query,
-                        'message' => 'Kamida 2 ta belgi kiriting yoki kategoriyani tanlang'
-                    ]
-                ]);
-            }
-
-            // Qidiruv so'zlarini tahlil qilish
-            $analyzed = $this->analyzeSearchQuery($query);
-
-            $user = auth('sanctum')->user();
-            $results = collect();
-
-            // Kitoblar qidiruvi
-            if (in_array($type, ['book', 'all'])) {
-                $books = $this->searchBooks($analyzed, $categoryId, $minPrice, $maxPrice);
-                $results = $results->merge($books);
-            }
-
-            // Kanselyariya qidiruvi
-            if (in_array($type, ['stationery', 'all'])) {
-                $stationery = $this->searchStationery($analyzed, $categoryId, $minPrice, $maxPrice);
-                $results = $results->merge($stationery);
-            }
-
-            // Formatlaash
-            $results = $results->map(fn($p) => $this->formatProduct($p, $user))
-                               ->filter()
-                               ->values();
-
-            // Saralash
-            $results = $this->sortResults($results, $sort);
-
-            // Pagination
-            $total = $results->count();
-            $paginatedItems = $results->slice(($page - 1) * $perPage, $perPage)->values();
-
-            $paginator = new LengthAwarePaginator(
-                $paginatedItems,
-                $total,
-                $perPage,
-                $page,
-                ['path' => $request->url(), 'query' => $request->query()]
-            );
-
-            return response()->json([
-                'status'     => 'success',
-                'data'       => $paginatedItems->toArray(),
-                'pagination' => [
-                    'current_page' => $paginator->currentPage(),
-                    'last_page'    => $paginator->lastPage(),
-                    'total'        => $paginator->total(),
-                    'per_page'     => $paginator->perPage(),
-                ],
-                'query_info' => [
-                    'original' => $analyzed['original'],
-                    'search_variants' => $analyzed['variants'],
-                    'type' => $type,
-                ]
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Search error: ' . $e->getMessage(), [
-                'request' => $request->all(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Server xatosi yuz berdi',
-                'error'   => config('app.debug') ? $e->getMessage() : null
-            ], 500);
-        }
+        $first = collect($formattedItems)->first();
+        if (!$first) return null;
+        return trim($first['name'] ?? '') ?: null;
     }
 
-    /**
-     * Kitoblarni qidirish - Ultra Mukammal Algoritm
-     */
-    private function searchBooks($analyzed, $categoryId = null, $minPrice = null, $maxPrice = null)
-    {
+    // ─────────────────────────────────────────────
+    // HISTORY UPSERT
+    // ─────────────────────────────────────────────
+    private function upsertHistory(
+        Request $request,
+        string  $query,
+        bool    $isDraft,
+        ?string $resultName = null
+    ): void {
         try {
-            $bookQuery = Books::with(['category', 'tags', 'seller'])
-                ->where('is_hidden', 0)
-                ->where('is_approved', 1)
-                ->where('count', '>', 0);
+            $user      = auth('sanctum')->user();
+            $sessionId = $user ? null : $request->header('X-Session-Id');
+            $cleanText = mb_strtolower(trim($query));
 
-            // Seller tekshiruvi
-            $bookQuery->whereHas('seller', function($q) {
-                $q->where('is_hidden', 0)
-                  ->where('status', 'approved')
-                  ->where('parent_id', 0);
-            });
+            if (mb_strlen($cleanText) < 2) return;
 
-            // Qidiruv - Ultra Mukammal Algoritm
-            if (!empty($analyzed['variants'])) {
-                $bookQuery->where(function ($q) use ($analyzed) {
-                    $variants = $analyzed['variants'];
-                    $words = $analyzed['words'];
-                    $fuzzyVariants = $analyzed['fuzzy_variants'] ?? [];
-                    $bigrams = $analyzed['bigrams'] ?? [];
-
-                    // LEVEL 1: Aniq mos kelish (exact match)
-                    foreach ($variants as $variant) {
-                        $q->orWhere(DB::raw('LOWER(name)'), '=', mb_strtolower($variant))
-                          ->orWhere(DB::raw('LOWER(author)'), '=', mb_strtolower($variant));
-                    }
-
-                    // LEVEL 2: Boshidan mos kelish (starts with)
-                    foreach ($variants as $variant) {
-                        $q->orWhere('name', 'LIKE', "{$variant}%")
-                          ->orWhere('author', 'LIKE', "{$variant}%");
-                    }
-
-                    // LEVEL 3: O'rtasida mos kelish (contains)
-                    foreach ($variants as $variant) {
-                        $q->orWhere('name', 'LIKE', "%{$variant}%")
-                          ->orWhere('author', 'LIKE', "%{$variant}%")
-                          ->orWhere('description', 'LIKE', "%{$variant}%");
-                    }
-
-                    // LEVEL 4: Kategoriya (barcha 4 til)
-                    $q->orWhereHas('category', function($c) use ($variants) {
-                        foreach ($variants as $variant) {
-                            $c->orWhere('name_uz', 'LIKE', "%{$variant}%")
-                              ->orWhere('name_ru', 'LIKE', "%{$variant}%")
-                              ->orWhere('name_en', 'LIKE', "%{$variant}%")
-                              ->orWhere('name_ja', 'LIKE', "%{$variant}%");
-                        }
-                    });
-
-                    // LEVEL 5: Taglar (barcha 4 til)
-                    $q->orWhereHas('tags', function($t) use ($variants) {
-                        foreach ($variants as $variant) {
-                            $t->orWhere('tag_name_uz', 'LIKE', "%{$variant}%")
-                              ->orWhere('tag_name_ru', 'LIKE', "%{$variant}%")
-                              ->orWhere('tag_name_en', 'LIKE', "%{$variant}%")
-                              ->orWhere('tag_name_ja', 'LIKE', "%{$variant}%");
-                        }
-                    });
-
-                    // LEVEL 6: Sotuvchi do'kon nomi
-                    $q->orWhereHas('seller', function($s) use ($variants) {
-                        foreach ($variants as $variant) {
-                            $s->where('shop_name', 'LIKE', "%{$variant}%");
-                        }
-                    });
-
-                    // LEVEL 7: Har bir alohida so'z (multi-word search)
-                    foreach ($words as $word) {
-                        if (strlen($word) >= 2) {
-                            $wordVariants = $this->transliterate($word);
-                            foreach ($wordVariants as $wv) {
-                                $q->orWhere('name', 'LIKE', "%{$wv}%")
-                                  ->orWhere('author', 'LIKE', "%{$wv}%")
-                                  ->orWhere('description', 'LIKE', "%{$wv}%");
-                            }
-                        }
-                    }
-
-                    // LEVEL 8: Fuzzy search (typo tolerance)
-                    if (!empty($fuzzyVariants)) {
-                        foreach ($fuzzyVariants as $fuzzy) {
-                            $q->orWhere('name', 'LIKE', str_replace('_', '_', $fuzzy))
-                              ->orWhere('author', 'LIKE', str_replace('_', '_', $fuzzy));
-                        }
-                    }
-
-                    // LEVEL 9: Bigrams (2-so'zli birikmalar)
-                    if (!empty($bigrams)) {
-                        foreach ($bigrams as $bigram) {
-                            $q->orWhere('name', 'LIKE', "%{$bigram}%")
-                              ->orWhere('author', 'LIKE', "%{$bigram}%");
-                        }
-                    }
-                });
-
-                // Relevance Score - Juda Mukammal Hisoblash
-                $original = mb_strtolower($analyzed['original']);
-                $bookQuery->selectRaw("books.*, (
-                    CASE
-                        -- Aniq mos kelish (1000-900)
-                        WHEN LOWER(name) = ? THEN 1000
-                        WHEN LOWER(author) = ? THEN 950
-                        WHEN LOWER(name) LIKE ? THEN 900
-                        WHEN LOWER(author) LIKE ? THEN 850
-                        
-                        -- Boshidan mos kelish (800-700)
-                        WHEN LOWER(name) LIKE ? THEN 800
-                        WHEN LOWER(author) LIKE ? THEN 750
-                        
-                        -- O'rtasida mos kelish (600-400)
-                        WHEN LOWER(name) LIKE ? THEN 600
-                        WHEN LOWER(author) LIKE ? THEN 550
-                        WHEN LOWER(description) LIKE ? THEN 500
-                        
-                        -- Chegirma mavjud bonus (+100)
-                        WHEN discountPrice IS NOT NULL AND discountPrice > 0 THEN 450
-                        
-                        -- Yangi mahsulot bonus (oxirgi 30 kun, +50)
-                        WHEN DATEDIFF(NOW(), created_at) <= 30 THEN 400
-                        
-                        -- Sotuvchi tasdiqlangan bonus (+30)
-                        WHEN EXISTS(
-                            SELECT 1 FROM sellers 
-                            WHERE sellers.id = books.seller_id 
-                            AND sellers.isVerified = 1
-                        ) THEN 370
-                        
-                        -- Default
-                        ELSE 300
-                    END +
-                    -- Haftalik sotuvlar bonusi (0-200)
-                    LEAST(totalSalesWeek * 2, 200) +
-                    -- Umumiy sotuvlar bonusi (0-100)
-                    LEAST(totalSales, 100)
-                ) as relevance_score", [
-                    $original,                    // name exact
-                    $original,                    // author exact
-                    $original,                    // name exact (case-insensitive)
-                    $original,                    // author exact (case-insensitive)
-                    "{$original}%",               // name starts
-                    "{$original}%",               // author starts
-                    "%{$original}%",              // name contains
-                    "%{$original}%",              // author contains
-                    "%{$original}%",              // description contains
-                ]);
+            if ($isDraft) {
+                $existing = SearchHistory::where('text', $cleanText)
+                    ->where('is_draft', true)->first();
+                if ($existing) {
+                    $existing->increment('search_count');
+                    $existing->touch();
+                } else {
+                    SearchHistory::create([
+                        'user_id'      => $user?->id,
+                        'session_id'   => $sessionId,
+                        'text'         => $cleanText,
+                        'result_name'  => null,
+                        'is_draft'     => true,
+                        'search_count' => 1,
+                    ]);
+                }
+                return;
             }
 
-            // Kategoriya filtri
-            if ($categoryId) {
-                $bookQuery->where('category_id', $categoryId);
-            }
-
-            // Narx filtri
-            if ($minPrice !== null) {
-                $bookQuery->where('price', '>=', $minPrice);
-            }
-            if ($maxPrice !== null) {
-                $bookQuery->where('price', '<=', $maxPrice);
-            }
-
-            return $bookQuery->get();
-
-        } catch (\Exception $e) {
-            Log::error('Search books error: ' . $e->getMessage(), [
-                'trace' => $e->getTraceAsString()
-            ]);
-            return collect();
-        }
-    }
-
-    /**
-     * Kanselyariyalarni qidirish - Ultra Mukammal Algoritm
-     */
-    private function searchStationery($analyzed, $categoryId = null, $minPrice = null, $maxPrice = null)
-    {
-        try {
-            $stationeryQuery = Stationery::with(['category', 'tags', 'seller', 'variants'])
-                ->where('is_hidden', 0)
-                ->where('is_approved', 1)
-                ->where('stock', '>', 0);
-
-            // Seller tekshiruvi
-            $stationeryQuery->whereHas('seller', function($q) {
-                $q->where('is_hidden', 0)
-                  ->where('status', 'approved')
-                  ->where('parent_id', 0);
-            });
-
-            // Qidiruv - Ultra Mukammal Algoritm
-            if (!empty($analyzed['variants'])) {
-                $stationeryQuery->where(function ($q) use ($analyzed) {
-                    $variants = $analyzed['variants'];
-                    $words = $analyzed['words'];
-                    $fuzzyVariants = $analyzed['fuzzy_variants'] ?? [];
-                    $bigrams = $analyzed['bigrams'] ?? [];
-
-                    // LEVEL 1: Aniq mos kelish (exact match)
-                    foreach ($variants as $variant) {
-                        $q->orWhere(DB::raw('LOWER(name)'), '=', mb_strtolower($variant))
-                          ->orWhere(DB::raw('LOWER(material)'), '=', mb_strtolower($variant));
-                    }
-
-                    // LEVEL 2: Boshidan mos kelish (starts with)
-                    foreach ($variants as $variant) {
-                        $q->orWhere('name', 'LIKE', "{$variant}%")
-                          ->orWhere('material', 'LIKE', "{$variant}%");
-                    }
-
-                    // LEVEL 3: O'rtasida mos kelish (contains)
-                    foreach ($variants as $variant) {
-                        $q->orWhere('name', 'LIKE', "%{$variant}%")
-                          ->orWhere('material', 'LIKE', "%{$variant}%")
-                          ->orWhere('description', 'LIKE', "%{$variant}%");
-                    }
-
-                    // LEVEL 4: Kategoriya (barcha 4 til)
-                    $q->orWhereHas('category', function($c) use ($variants) {
-                        foreach ($variants as $variant) {
-                            $c->orWhere('name_uz', 'LIKE', "%{$variant}%")
-                              ->orWhere('name_ru', 'LIKE', "%{$variant}%")
-                              ->orWhere('name_en', 'LIKE', "%{$variant}%")
-                              ->orWhere('name_ja', 'LIKE', "%{$variant}%");
-                        }
-                    });
-
-                    // LEVEL 5: Taglar (barcha 4 til)
-                    $q->orWhereHas('tags', function($t) use ($variants) {
-                        foreach ($variants as $variant) {
-                            $t->orWhere('name_uz', 'LIKE', "%{$variant}%")
-                              ->orWhere('name_ru', 'LIKE', "%{$variant}%")
-                              ->orWhere('name_en', 'LIKE', "%{$variant}%")
-                              ->orWhere('name_ja', 'LIKE', "%{$variant}%");
-                        }
-                    });
-
-                    // LEVEL 6: Sotuvchi do'kon nomi
-                    $q->orWhereHas('seller', function($s) use ($variants) {
-                        foreach ($variants as $variant) {
-                            $s->where('shop_name', 'LIKE', "%{$variant}%");
-                        }
-                    });
-
-                    // LEVEL 7: Variant ranglari bo'yicha qidiruv
-                    $q->orWhereHas('variants', function($v) use ($variants) {
-                        foreach ($variants as $variant) {
-                            $v->where('color_name', 'LIKE', "%{$variant}%");
-                        }
-                    });
-
-                    // LEVEL 8: Har bir alohida so'z (multi-word search)
-                    foreach ($words as $word) {
-                        if (strlen($word) >= 2) {
-                            $wordVariants = $this->transliterate($word);
-                            foreach ($wordVariants as $wv) {
-                                $q->orWhere('name', 'LIKE', "%{$wv}%")
-                                  ->orWhere('material', 'LIKE', "%{$wv}%")
-                                  ->orWhere('description', 'LIKE', "%{$wv}%");
-                            }
-                        }
-                    }
-
-                    // LEVEL 9: Fuzzy search (typo tolerance)
-                    if (!empty($fuzzyVariants)) {
-                        foreach ($fuzzyVariants as $fuzzy) {
-                            $q->orWhere('name', 'LIKE', str_replace('_', '_', $fuzzy))
-                              ->orWhere('material', 'LIKE', str_replace('_', '_', $fuzzy));
-                        }
-                    }
-
-                    // LEVEL 10: Bigrams (2-so'zli birikmalar)
-                    if (!empty($bigrams)) {
-                        foreach ($bigrams as $bigram) {
-                            $q->orWhere('name', 'LIKE', "%{$bigram}%")
-                              ->orWhere('material', 'LIKE', "%{$bigram}%");
-                        }
-                    }
-                });
-
-                // Relevance Score - Juda Mukammal Hisoblash
-                $original = mb_strtolower($analyzed['original']);
-                $stationeryQuery->selectRaw("stationeries.*, (
-                    CASE
-                        -- Aniq mos kelish (1000-900)
-                        WHEN LOWER(name) = ? THEN 1000
-                        WHEN LOWER(material) = ? THEN 950
-                        WHEN LOWER(name) LIKE ? THEN 900
-                        WHEN LOWER(material) LIKE ? THEN 850
-                        
-                        -- Boshidan mos kelish (800-700)
-                        WHEN LOWER(name) LIKE ? THEN 800
-                        WHEN LOWER(material) LIKE ? THEN 750
-                        
-                        -- O'rtasida mos kelish (600-400)
-                        WHEN LOWER(name) LIKE ? THEN 600
-                        WHEN LOWER(material) LIKE ? THEN 550
-                        WHEN LOWER(description) LIKE ? THEN 500
-                        
-                        -- Chegirma mavjud bonus (+100)
-                        WHEN discount_price IS NOT NULL AND discount_price > 0 THEN 450
-                        
-                        -- Yangi mahsulot bonus (oxirgi 30 kun, +50)
-                        WHEN DATEDIFF(NOW(), created_at) <= 30 THEN 400
-                        
-                        -- Sotuvchi tasdiqlangan bonus (+30)
-                        WHEN EXISTS(
-                            SELECT 1 FROM sellers 
-                            WHERE sellers.id = stationeries.seller_id 
-                            AND sellers.isVerified = 1
-                        ) THEN 370
-                        
-                        -- Ko'p variantli mahsulot bonusi (+20)
-                        WHEN (
-                            SELECT COUNT(*) FROM stationery_variants 
-                            WHERE stationery_variants.product_id = stationeries.id
-                        ) > 3 THEN 350
-                        
-                        -- Default
-                        ELSE 300
-                    END +
-                    -- Haftalik sotuvlar bonusi (0-200)
-                    LEAST(totalSalesWeek * 2, 200) +
-                    -- Umumiy sotuvlar bonusi (0-100)
-                    LEAST(totalSales, 100)
-                ) as relevance_score", [
-                    $original,                    // name exact
-                    $original,                    // material exact
-                    $original,                    // name exact (case-insensitive)
-                    $original,                    // material exact (case-insensitive)
-                    "{$original}%",               // name starts
-                    "{$original}%",               // material starts
-                    "%{$original}%",              // name contains
-                    "%{$original}%",              // material contains
-                    "%{$original}%",              // description contains
-                ]);
-            }
-
-            // Kategoriya filtri
-            if ($categoryId) {
-                $stationeryQuery->where('category_id', $categoryId);
-            }
-
-            // Narx filtri (discount_price yoki price)
-            if ($minPrice !== null) {
-                $stationeryQuery->where(function($q) use ($minPrice) {
-                    $q->where(function($sq) use ($minPrice) {
-                        $sq->whereNotNull('discount_price')
-                           ->where('discount_price', '>=', $minPrice);
-                    })->orWhere(function($sq) use ($minPrice) {
-                        $sq->whereNull('discount_price')
-                           ->where('price', '>=', $minPrice);
-                    });
-                });
-            }
-            if ($maxPrice !== null) {
-                $stationeryQuery->where(function($q) use ($maxPrice) {
-                    $q->where(function($sq) use ($maxPrice) {
-                        $sq->whereNotNull('discount_price')
-                           ->where('discount_price', '<=', $maxPrice);
-                    })->orWhere(function($sq) use ($maxPrice) {
-                        $sq->whereNull('discount_price')
-                           ->where('price', '<=', $maxPrice);
-                    });
-                });
-            }
-
-            return $stationeryQuery->get();
-
-        } catch (\Exception $e) {
-            Log::error('Search stationery error: ' . $e->getMessage(), [
-                'trace' => $e->getTraceAsString()
-            ]);
-            return collect();
-        }
-    }
-
-    /**
-     * Natijalarni saralash - Mukammal Algoritm
-     */
-    private function sortResults($results, $sort)
-    {
-        try {
-            return match ($sort) {
-                'relevance'  => $results->sortByDesc('relevance_score')->values(),
-                'price_asc'  => $results->sortBy('price')->values(),
-                'price_desc' => $results->sortByDesc('price')->values(),
-                'alpha_asc'  => $results->sortBy(function($p) {
-                    return mb_strtolower($p['name'], 'UTF-8');
-                })->values(),
-                'alpha_desc' => $results->sortByDesc(function($p) {
-                    return mb_strtolower($p['name'], 'UTF-8');
-                })->values(),
-                'discount'   => $results->sortByDesc(function($p) {
-                    $discount = $p['discountPrice'] ?? $p['price'];
-                    return $p['price'] - $discount;
-                })->values(),
-                'popular'    => $results->sortByDesc('weekly_sales')->values(),
-                'newest'     => $results->sortByDesc('id')->values(),
-                default      => $results->sortByDesc('relevance_score')->values(),
-            };
-        } catch (\Exception $e) {
-            Log::error('Sort results error: ' . $e->getMessage());
-            return $results;
-        }
-    }
-
-    /**
-     * Kategoriyalarni olish
-     * GET /api/search/categories
-     */
-    public function allCategories()
-    {
-        try {
-            $bookCategories = BookCategories::where('is_active', 1)
-                ->select('id', 'name_uz', 'name_ru', 'name_en', 'name_ja', 'slug', 'icon')
-                ->orderBy('name_uz')
-                ->get();
-
-            $stationeryCategories = StationeryCategory::where('is_active', 1)
-                ->select('id', 'name_uz', 'name_ru', 'name_en', 'name_ja', 'slug', 'icon')
-                ->orderBy('name_uz')
-                ->get();
-
-            return response()->json([
-                'status' => 'success',
-                'data' => [
-                    'book'       => $bookCategories,
-                    'stationery' => $stationeryCategories,
-                ]
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Get categories error: ' . $e->getMessage());
-            
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Kategoriyalarni yuklashda xato',
-                'error'   => config('app.debug') ? $e->getMessage() : null
-            ], 500);
-        }
-    }
-
-    /**
-     * Ommabop qidiruvlar
-     * GET /api/search/trending
-     */
-    public function trendingSearches()
-    {
-        try {
-            // Bu metodda cache yoki analytics ma'lumotlaridan foydalanamiz
-            // Hozircha static ma'lumot qaytaramiz
-            
-            $trending = [
-                ['query' => 'Dasturlash', 'count' => 1250],
-                ['query' => 'Biznes', 'count' => 980],
-                ['query' => 'Daftar', 'count' => 856],
-                ['query' => 'Qalam', 'count' => 742],
-                ['query' => 'Roman', 'count' => 650],
-            ];
-
-            return response()->json([
-                'status' => 'success',
-                'data' => $trending
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Get trending searches error: ' . $e->getMessage());
-            
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Ommabop qidiruvlarni yuklashda xato'
-            ], 500);
-        }
-    }
-
-    /**
-     * Qidiruv tavsiyalari (autocomplete)
-     * GET /api/search/suggestions
-     */
-    public function suggestions(Request $request)
-    {
-        try {
-            $query = trim($request->query('q', ''));
-            
-            if (strlen($query) < 2) {
-                return response()->json([
-                    'status' => 'success',
-                    'data' => []
-                ]);
-            }
-
-            $analyzed = $this->analyzeSearchQuery($query);
-            $suggestions = [];
-
-            // Kitoblardan tavsiyalar
-            $books = Books::where('is_hidden', 0)
-                ->where('is_approved', 1)
-                ->where('count', '>', 0)
-                ->where(function($q) use ($analyzed) {
-                    foreach ($analyzed['variants'] as $variant) {
-                        $q->orWhere('name', 'LIKE', "{$variant}%")
-                          ->orWhere('author', 'LIKE', "{$variant}%");
-                    }
-                })
-                ->select('name', 'author')
-                ->limit(5)
-                ->get();
-
-            foreach ($books as $book) {
-                $suggestions[] = [
-                    'text' => $book->name,
-                    'type' => 'book'
-                ];
-                if ($book->author) {
-                    $suggestions[] = [
-                        'text' => $book->author,
-                        'type' => 'author'
-                    ];
+            if ($resultName) {
+                $existing = SearchHistory::where('result_name', $resultName)
+                    ->where('is_draft', false)->first();
+                if ($existing) {
+                    $existing->touch();
+                    $this->ensurePersonalHistory($user, $sessionId, $cleanText, $resultName);
+                    return;
                 }
             }
 
-            // Kanselyariyadan tavsiyalar
-            $stationery = Stationery::where('is_hidden', 0)
-                ->where('is_approved', 1)
-                ->where('stock', '>', 0)
-                ->where(function($q) use ($analyzed) {
-                    foreach ($analyzed['variants'] as $variant) {
-                        $q->orWhere('name', 'LIKE', "{$variant}%");
-                    }
-                })
-                ->select('name')
-                ->limit(5)
-                ->get();
+            SearchHistory::create([
+                'user_id'      => $user?->id,
+                'session_id'   => $sessionId,
+                'text'         => $cleanText,
+                'result_name'  => $resultName,
+                'is_draft'     => false,
+                'search_count' => 1,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('upsertHistory error', ['query' => $query, 'error' => $e->getMessage()]);
+        }
+    }
 
-            foreach ($stationery as $item) {
-                $suggestions[] = [
-                    'text' => $item->name,
-                    'type' => 'stationery'
-                ];
+    private function ensurePersonalHistory($user, ?string $sessionId, string $cleanText, string $resultName): void
+    {
+        $q = SearchHistory::where('result_name', $resultName)->where('is_draft', false);
+        if ($user) {
+            $q->where('user_id', $user->id);
+        } else {
+            $q->where('session_id', $sessionId);
+        }
+        if (!$q->exists()) {
+            SearchHistory::create([
+                'user_id'      => $user?->id,
+                'session_id'   => $sessionId,
+                'text'         => $cleanText,
+                'result_name'  => $resultName,
+                'is_draft'     => false,
+                'search_count' => 0,
+            ]);
+        } else {
+            $q->update(['updated_at' => now()]);
+        }
+    }
+
+    // ─────────────────────────────────────────────
+    // MAIN SEARCH
+    // ─────────────────────────────────────────────
+    public function search(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'q'            => 'nullable|string|max:255',
+            'type'         => 'nullable|string|in:book,stationery,all',
+            'category_id'  => 'nullable|integer',
+            'sort'         => 'nullable|string|in:relevance,popular,newest,price_asc,price_desc,alpha_asc,alpha_desc,discount',
+            'page'         => 'nullable|integer|min:1',
+            'min_price'    => 'nullable|numeric|min:0',
+            'max_price'    => 'nullable|numeric|min:0',
+            'save_history' => 'nullable|in:0,1',
+            'draft'        => 'nullable|in:0,1',
+            'seller_id'    => 'nullable|integer',
+            'tag'          => 'nullable|string|max:100',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => 'error', 'errors' => $validator->errors()], 422);
+        }
+
+        $query       = trim($request->query('q', ''));
+        $tag         = trim($request->query('tag', ''));  // ← teg qidirish
+        $type        = $request->query('type', 'all');
+        $categoryId  = $request->query('category_id');
+        $sort        = $request->query('sort', 'relevance');
+        $page        = max(1, (int)$request->query('page', 1));
+        $perPage     = 20;
+        $saveHistory = $request->query('save_history') === '1';
+        $sellerId    = $request->query('seller_id') ? (int)$request->query('seller_id') : null;
+        $forceDraft  = $request->query('draft') === '1';
+        $minPrice    = $request->query('min_price') ? (float)$request->query('min_price') : null;
+        $maxPrice    = $request->query('max_price') ? (float)$request->query('max_price') : null;
+
+        // Qidiruv so'z yoki teg yoki kategoriya bo'lishi kerak
+        if (mb_strlen($query) < 2 && mb_strlen($tag) < 2 && !$categoryId) {
+            return response()->json([
+                'status'     => 'success',
+                'data'       => [],
+                'pagination' => ['has_more' => false],
+            ]);
+        }
+
+        try {
+            $user     = auth('sanctum')->user();
+            $analyzed = mb_strlen($query) >= 2 ? $this->analyzeQuery($query) : null;
+
+            $bookPaginator = null;
+            $statPaginator = null;
+
+            if (in_array($type, ['book', 'all'])) {
+                $bookPaginator = $this->queryBooksSmart(
+                    $analyzed, $tag, $categoryId, $sort,
+                    $page, $perPage, $query, $sellerId, $minPrice, $maxPrice
+                );
+            }
+            if (in_array($type, ['stationery', 'all'])) {
+                $statPaginator = $this->queryStationerySmart(
+                    $analyzed, $tag, $categoryId, $sort,
+                    $page, $perPage, $query, $sellerId, $minPrice, $maxPrice
+                );
             }
 
-            // Takrorlanuvchilarni olib tashlash
-            $suggestions = collect($suggestions)
-                ->unique('text')
-                ->take(10)
+            $items = collect();
+            if ($bookPaginator) {
+                $items = $items->merge(
+                    collect($bookPaginator->items())
+                        ->map(fn($p) => $this->formatProduct($p, $user))
+                );
+            }
+            if ($statPaginator) {
+                $items = $items->merge(
+                    collect($statPaginator->items())
+                        ->map(fn($p) => $this->formatProduct($p, $user))
+                );
+            }
+
+            if ($sort === 'relevance') {
+                $items = $items->sortByDesc('relevance_score')->values();
+            }
+
+            $total         = ($bookPaginator?->total() ?? 0) + ($statPaginator?->total() ?? 0);
+            $hasMore       = ($bookPaginator?->hasMorePages() ?? false)
+                          || ($statPaginator?->hasMorePages() ?? false);
+            $filteredItems = $items->filter()->values();
+
+            // History — faqat matn qidiruv uchun, teg emas
+            if ($saveHistory && mb_strlen($query) >= 2 && $page === 1) {
+                if ($filteredItems->isNotEmpty()) {
+                    $resultName = $this->extractResultName($filteredItems->toArray());
+                    $this->upsertHistory($request, $query, false, $resultName);
+                } else {
+                    $this->upsertHistory($request, $query, true, null);
+                }
+            } elseif ($forceDraft && mb_strlen($query) >= 2) {
+                $this->upsertHistory($request, $query, true, null);
+            }
+
+            return response()->json([
+                'status'     => 'success',
+                'data'       => $filteredItems->toArray(),
+                'pagination' => [
+                    'current_page' => $page,
+                    'per_page'     => $perPage,
+                    'total'        => $total,
+                    'has_more'     => $hasMore,
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Search error', ['query' => $query, 'error' => $e->getMessage()]);
+            return response()->json(['status' => 'error', 'message' => 'Server xatosi'], 500);
+        }
+    }
+
+    // ─────────────────────────────────────────────
+    // SMART QUERIES
+    // ─────────────────────────────────────────────
+
+    /**
+     * Kitoblar uchun smart qidiruv:
+     *   1. Matnli qidiruv (FULLTEXT + LIKE) — name, author, description
+     *   2. Teg qidirish — name_uz/ru/en/ja (har qanday tildan)
+     *   3. Ikkalasi bir vaqtda bo'lishi mumkin (AND mantiq)
+     */
+    private function queryBooksSmart(
+        ?array $analyzed,
+        string $tag,
+        $categoryId,
+        string $sort,
+        int    $page,
+        int    $perPage,
+        string $rawQuery,
+        ?int   $sellerId   = null,
+        ?float $minPrice   = null,
+        ?float $maxPrice   = null
+    ) {
+        $q = $this->visibleBooks(['category', 'seller', 'tags']);
+
+        if ($sellerId) $q->where('seller_id', $sellerId);
+        if ($categoryId) $q->where('category_id', $categoryId);
+        if ($minPrice !== null) $q->where('price', '>=', $minPrice);
+        if ($maxPrice !== null) $q->where('price', '<=', $maxPrice);
+
+        $hasText = $analyzed !== null && !empty($analyzed['boolean']);
+        $hasTag  = mb_strlen($tag) >= 2;
+
+        if ($hasText) {
+            // ── Matnli qidiruv ────────────────────────────────────────
+            $bool       = $analyzed['boolean'];
+            $searchTerm = '%' . mb_strtolower($rawQuery) . '%';
+
+            $hasFulltext = $this->hasFulltextIndex('books', ['name', 'author', 'description']);
+
+            if ($hasFulltext) {
+                $q->where(function ($w) use ($bool, $searchTerm) {
+                    $w->whereRaw(
+                        "MATCH(name, author, description) AGAINST(? IN BOOLEAN MODE)", [$bool]
+                    )->orWhere(fn($or) => $or
+                        ->where('name', 'LIKE', $searchTerm)
+                        ->orWhere('author', 'LIKE', $searchTerm)
+                        ->orWhere('description', 'LIKE', $searchTerm)
+                    );
+                })->selectRaw(
+                    "books.*,
+                     MATCH(name, author, description) AGAINST(? IN BOOLEAN MODE) * 10 +
+                     LEAST(totalSalesWeek * 3, 300) +
+                     LEAST(totalSales, 100) AS relevance_score",
+                    [$bool]
+                );
+            } else {
+                $q->where(fn($w) => $w
+                    ->where('name', 'LIKE', $searchTerm)
+                    ->orWhere('author', 'LIKE', $searchTerm)
+                    ->orWhere('description', 'LIKE', $searchTerm)
+                )->selectRaw(
+                    "books.*,
+                     LEAST(totalSalesWeek * 3, 300) +
+                     LEAST(totalSales, 100) AS relevance_score"
+                );
+            }
+        } else {
+            $q->selectRaw('books.*, 0 AS relevance_score');
+        }
+
+        if ($hasTag) {
+            // ── Teg qidirish — uz/ru/en/ja barcha tillarda ───────────
+            $tagPatterns = $this->buildLikePatterns($tag);
+            $this->applyBookTagFilter($q, $tagPatterns);
+        }
+
+        // Hech qanday qidiruv yo'q bo'lsa (faqat category/seller filter)
+        // → hamma ko'rinuvchi mahsulot
+
+        $this->applySortToQuery($q, $sort, 'book');
+
+        return $q->paginate($perPage, ['*'], 'page', $page);
+    }
+
+    /**
+     * Kantselyariya uchun smart qidiruv:
+     *   1. Matnli qidiruv — name, description, material
+     *   2. Teg qidirish — name_uz/ru/en/ja
+     */
+    private function queryStationerySmart(
+        ?array $analyzed,
+        string $tag,
+        $categoryId,
+        string $sort,
+        int    $page,
+        int    $perPage,
+        string $rawQuery,
+        ?int   $sellerId   = null,
+        ?float $minPrice   = null,
+        ?float $maxPrice   = null
+    ) {
+        $q = $this->visibleStationeries(['category', 'seller', 'tags', 'variants']);
+
+        if ($sellerId) $q->where('seller_id', $sellerId);
+        if ($categoryId) $q->where('category_id', $categoryId);
+        if ($minPrice !== null) $q->where('price', '>=', $minPrice);
+        if ($maxPrice !== null) $q->where('price', '<=', $maxPrice);
+
+        $hasText = $analyzed !== null && !empty($analyzed['boolean']);
+        $hasTag  = mb_strlen($tag) >= 2;
+
+        if ($hasText) {
+            $bool       = $analyzed['boolean'];
+            $searchTerm = '%' . mb_strtolower($rawQuery) . '%';
+
+            // FULLTEXT index mavjudligini tekshiramiz
+            // Agar yo'q bo'lsa — faqat LIKE bilan ishlaymiz
+            $hasFulltext = $this->hasFulltextIndex('stationeries', ['name', 'description', 'material']);
+
+            if ($hasFulltext) {
+                $q->where(function ($w) use ($bool, $searchTerm) {
+                    $w->whereRaw(
+                        "MATCH(name, description, material) AGAINST(? IN BOOLEAN MODE)", [$bool]
+                    )->orWhere(fn($or) => $or
+                        ->where('name', 'LIKE', $searchTerm)
+                        ->orWhere('description', 'LIKE', $searchTerm)
+                        ->orWhere('material', 'LIKE', $searchTerm)
+                    );
+                })->selectRaw(
+                    "stationeries.*,
+                     MATCH(name, description, material) AGAINST(? IN BOOLEAN MODE) * 10 +
+                     LEAST(totalSalesWeek * 3, 300) AS relevance_score",
+                    [$bool]
+                );
+            } else {
+                // FULLTEXT yo'q — faqat LIKE
+                $q->where(fn($w) => $w
+                    ->where('name', 'LIKE', $searchTerm)
+                    ->orWhere('description', 'LIKE', $searchTerm)
+                    ->orWhere('material', 'LIKE', $searchTerm)
+                )->selectRaw(
+                    "stationeries.*,
+                     LEAST(totalSalesWeek * 3, 300) AS relevance_score"
+                );
+            }
+        } else {
+            $q->selectRaw('stationeries.*, 0 AS relevance_score');
+        }
+
+        if ($hasTag) {
+            $tagPatterns = $this->buildLikePatterns($tag);
+            $this->applyStationeryTagFilter($q, $tagPatterns);
+        }
+
+        $this->applySortToQuery($q, $sort, 'stationery');
+
+        return $q->paginate($perPage, ['*'], 'page', $page);
+    }
+
+    // ─────────────────────────────────────────────
+    // SUGGESTIONS
+    // ─────────────────────────────────────────────
+    public function suggestions(Request $request)
+    {
+        $query    = trim($request->query('q', ''));
+        $sellerId = $request->query('seller_id') ? (int)$request->query('seller_id') : null;
+
+        if (mb_strlen($query) < 1) {
+            return response()->json(['status' => 'success', 'data' => []]);
+        }
+
+        $patterns = $this->buildLikePatterns($query);
+        $sugg     = [];
+        $seen     = [];
+
+        // ── Kitoblar: nom + muallif + teglar ─────────────────────────
+        $bookQuery = $this->visibleBooks(['tags'])
+            ->when($sellerId, fn($q) => $q->where('seller_id', $sellerId))
+            ->where(function ($w) use ($patterns) {
+                $w->where(function ($nameAuthor) use ($patterns) {
+                    // Nom va muallif bo'yicha
+                    foreach ($patterns as $i => $p) {
+                        $method = $i === 0 ? 'where' : 'orWhere';
+                        $nameAuthor->$method(function ($inner) use ($p) {
+                            $inner->where('name', 'LIKE', $p)
+                                  ->orWhere('author', 'LIKE', $p);
+                        });
+                    }
+                })->orWhereHas('tags', function ($t) use ($patterns) {
+                    // Teg bo'yicha — book_tags: tag_name_uz/ru/en/ja
+                    $t->where(function ($tw) use ($patterns) {
+                        foreach ($patterns as $i => $p) {
+                            $method = $i === 0 ? 'where' : 'orWhere';
+                            $tw->$method(function ($inner) use ($p) {
+                                $inner->where('tag_name_uz', 'LIKE', $p)
+                                      ->orWhere('tag_name_ru', 'LIKE', $p)
+                                      ->orWhere('tag_name_en', 'LIKE', $p)
+                                      ->orWhere('tag_name_ja', 'LIKE', $p);
+                            });
+                        }
+                    });
+                });
+            })
+            ->select('name', 'author')
+            ->orderByDesc('totalSalesWeek')
+            ->limit(8)
+            ->get();
+
+        foreach ($bookQuery as $b) {
+            $name = trim($b->name ?? '');
+            if ($name && !isset($seen[$name])) {
+                $sugg[]      = ['text' => $name, 'type' => 'book'];
+                $seen[$name] = true;
+            }
+            $author = trim($b->author ?? '');
+            if ($author && !isset($seen[$author])) {
+                $sugg[]        = ['text' => $author, 'type' => 'author'];
+                $seen[$author] = true;
+            }
+        }
+
+        // ── Teglar — alohida suggestion sifatida ────────────────────
+        // Foydalanuvchi tilidan qat'i nazar barcha tillarda qidiradi
+        // va teg nomini original tilida qaytaradi
+        // book_tags: tag_name_uz/ru/en/ja ustunlari
+        // stationery_tags: name_uz/ru/en/ja ustunlari
+        // Ikkalasini UNION qilamiz
+        $tagResults = DB::table('book_tags')
+            ->where(function ($w) use ($patterns) {
+                foreach ($patterns as $i => $p) {
+                    $method = $i === 0 ? 'where' : 'orWhere';
+                    $w->$method(function ($inner) use ($p) {
+                        $inner->where('tag_name_uz', 'LIKE', $p)
+                              ->orWhere('tag_name_ru', 'LIKE', $p)
+                              ->orWhere('tag_name_en', 'LIKE', $p)
+                              ->orWhere('tag_name_ja', 'LIKE', $p);
+                    });
+                }
+            })
+            ->select(
+                'tag_name_uz as name_uz',
+                'tag_name_ru as name_ru',
+                'tag_name_en as name_en',
+                'tag_name_ja as name_ja'
+            )
+            ->distinct()
+            ->limit(5)
+            ->get();
+
+        // Stationery teglarini ham qo'shamiz
+        $statTagResults = DB::table('stationery_tags')
+            ->where(function ($w) use ($patterns) {
+                foreach ($patterns as $i => $p) {
+                    $method = $i === 0 ? 'where' : 'orWhere';
+                    $w->$method(function ($inner) use ($p) {
+                        $inner->where('name_uz', 'LIKE', $p)
+                              ->orWhere('name_ru', 'LIKE', $p)
+                              ->orWhere('name_en', 'LIKE', $p)
+                              ->orWhere('name_ja', 'LIKE', $p);
+                    });
+                }
+            })
+            ->select('name_uz', 'name_ru', 'name_en', 'name_ja')
+            ->distinct()
+            ->limit(5)
+            ->get();
+
+        $allTagResults = $tagResults->merge($statTagResults);
+
+        foreach ($allTagResults as $tag) {
+            // Qaysi tilda moslik bo'lsa shu tilni ko'rsatamiz,
+            // prioritet: uz → en → ru → ja
+            $display = $tag->name_uz
+                ?? $tag->name_en
+                ?? $tag->name_ru
+                ?? $tag->name_ja;
+
+            if ($display && !isset($seen['tag_' . $display])) {
+                $sugg[]                   = ['text' => $display, 'type' => 'tag'];
+                $seen['tag_' . $display]  = true;
+            }
+        }
+
+        // ── Kantselyariya: nom + teglar ───────────────────────────────
+        $statQuery = $this->visibleStationeries(['tags'])
+            ->when($sellerId, fn($q) => $q->where('seller_id', $sellerId))
+            ->where(function ($w) use ($patterns) {
+                $w->where(function ($namePart) use ($patterns) {
+                    foreach ($patterns as $i => $p) {
+                        $method = $i === 0 ? 'where' : 'orWhere';
+                        $namePart->$method('name', 'LIKE', $p);
+                    }
+                })->orWhereHas('tags', function ($t) use ($patterns) {
+                    $t->where(function ($tw) use ($patterns) {
+                        foreach ($patterns as $i => $p) {
+                            $method = $i === 0 ? 'where' : 'orWhere';
+                            $tw->$method(function ($inner) use ($p) {
+                                $inner->where('name_uz', 'LIKE', $p)
+                                      ->orWhere('name_ru', 'LIKE', $p)
+                                      ->orWhere('name_en', 'LIKE', $p)
+                                      ->orWhere('name_ja', 'LIKE', $p);
+                            });
+                        }
+                    });
+                });
+            })
+            ->select('name')
+            ->orderByDesc('totalSalesWeek')
+            ->limit(5)
+            ->get();
+
+        foreach ($statQuery as $s) {
+            $name = trim($s->name ?? '');
+            if ($name && !isset($seen[$name])) {
+                $sugg[]      = ['text' => $name, 'type' => 'stationery'];
+                $seen[$name] = true;
+            }
+        }
+
+        $result = array_slice($sugg, 0, 12);
+
+        if (empty($result) && mb_strlen($query) >= 2) {
+            $this->upsertHistory($request, $query, true, null);
+        }
+
+        return response()->json(['status' => 'success', 'data' => $result]);
+    }
+
+    // ─────────────────────────────────────────────
+    // CATEGORY BY SELLERS
+    // ─────────────────────────────────────────────
+    public function categoryBySellers(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'category_id' => 'required|integer',
+            'type'        => 'nullable|string|in:book,stationery,all',
+            'sort'        => 'nullable|string|in:popular,newest,price_asc,price_desc,alpha_asc,alpha_desc,discount',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => 'error', 'errors' => $validator->errors()], 422);
+        }
+
+        $categoryId = (int)$request->query('category_id');
+        $type       = $request->query('type', 'book');
+        $sort       = $request->query('sort', 'popular');
+        $user       = auth('sanctum')->user();
+
+        try {
+            $sellers = collect();
+
+            if (in_array($type, ['book', 'all'])) {
+                $bookQuery = $this->visibleBooks(['category', 'seller', 'tags'])
+                    ->where('category_id', $categoryId);
+                $this->applySortToQuery($bookQuery, $sort, 'book');
+                $books   = $bookQuery->get();
+                $grouped = $books->groupBy(fn($b) => $b->seller?->id ?? 0);
+
+                foreach ($grouped as $sellerId => $sellerBooks) {
+                    if (!$sellerId) continue;
+                    $sellerInfo = $sellerBooks->first()->seller;
+                    $sellers->push([
+                        'seller_id'    => $sellerInfo->id,
+                        'shop_name'    => $sellerInfo->shop_name ?? '',
+                        'photo'        => $sellerInfo->photo ?? '',
+                        'isVerified'   => (bool)($sellerInfo->isVerified ?? false),
+                        'books'        => $sellerBooks->take(15)
+                            ->map(fn($p) => $this->formatProduct($p, $user))
+                            ->filter()->values()->toArray(),
+                        'stationeries' => [],
+                    ]);
+                }
+            }
+
+            if (in_array($type, ['stationery', 'all'])) {
+                $statQuery = $this->visibleStationeries(['category', 'seller', 'tags', 'variants'])
+                    ->where('category_id', $categoryId);
+                $this->applySortToQuery($statQuery, $sort, 'stationery');
+                $stationeries = $statQuery->get();
+                $grouped      = $stationeries->groupBy(fn($s) => $s->seller?->id ?? 0);
+
+                foreach ($grouped as $sellerId => $sellerStats) {
+                    if (!$sellerId) continue;
+                    $sellerInfo     = $sellerStats->first()->seller;
+                    $existingIndex  = $sellers->search(fn($s) => $s['seller_id'] === $sellerInfo->id);
+                    $formattedStats = $sellerStats->take(15)
+                        ->map(fn($p) => $this->formatProduct($p, $user))
+                        ->filter()->values()->toArray();
+
+                    if ($existingIndex !== false) {
+                        $existing                 = $sellers[$existingIndex];
+                        $existing['stationeries'] = $formattedStats;
+                        $sellers[$existingIndex]  = $existing;
+                    } else {
+                        $sellers->push([
+                            'seller_id'    => $sellerInfo->id,
+                            'shop_name'    => $sellerInfo->shop_name ?? '',
+                            'photo'        => $sellerInfo->photo ?? '',
+                            'isVerified'   => (bool)($sellerInfo->isVerified ?? false),
+                            'books'        => [],
+                            'stationeries' => $formattedStats,
+                        ]);
+                    }
+                }
+            }
+
+            $sorted = $sellers
+                ->filter(fn($s) => !empty($s['books']) || !empty($s['stationeries']))
+                ->sortByDesc(fn($s) =>
+                    collect($s['books'])->sum('weekly_sales') +
+                    collect($s['stationeries'])->sum('weekly_sales')
+                )
                 ->values();
+
+            return response()->json(['status' => 'success', 'data' => $sorted->toArray()]);
+        } catch (\Throwable $e) {
+            Log::error('categoryBySellers error', [
+                'category_id' => $categoryId,
+                'error'       => $e->getMessage(),
+            ]);
+            return response()->json(['status' => 'error', 'message' => 'Server xatosi'], 500);
+        }
+    }
+
+    // ─────────────────────────────────────────────
+    // HISTORY
+    // ─────────────────────────────────────────────
+    public function history(Request $request)
+    {
+        $user      = auth('sanctum')->user();
+        $sessionId = $request->header('X-Session-Id');
+
+        $histories = SearchHistory::when(
+                $user,
+                fn($q) => $q->where('user_id', $user->id),
+                fn($q) => $q->where('session_id', $sessionId)
+            )
+            ->where('is_draft', false)
+            ->orderByDesc('updated_at')
+            ->limit(12)
+            ->get(['text', 'result_name']);
+
+        return response()->json(['status' => 'success', 'data' => $histories]);
+    }
+
+    public function clearHistory(Request $request)
+    {
+        $user      = auth('sanctum')->user();
+        $sessionId = $request->header('X-Session-Id');
+
+        SearchHistory::when(
+            $user,
+            fn($q) => $q->where('user_id', $user->id),
+            fn($q) => $q->where('session_id', $sessionId)
+        )
+        ->where('is_draft', false)
+        ->delete();
+
+        return response()->json(['status' => 'success']);
+    }
+
+    // ─────────────────────────────────────────────
+    // TRENDING
+    // ─────────────────────────────────────────────
+    public function trendingSearches()
+    {
+        $data = Cache::remember('search_trending', now()->addMinutes(30), function () {
+            return SearchHistory::select(
+                    'result_name',
+                    DB::raw('MIN(text) as text'),
+                    DB::raw('SUM(search_count) as total_count'),
+                    DB::raw('MAX(updated_at) as last_searched')
+                )
+                ->where('created_at', '>=', now()->subDays(7))
+                ->where('is_draft', false)
+                ->where('search_count', '>', 0)
+                ->whereNotNull('result_name')
+                ->groupBy('result_name')
+                ->orderByDesc('total_count')
+                ->orderByDesc('last_searched')
+                ->limit(15)
+                ->get();
+        });
+
+        return response()->json(['status' => 'success', 'data' => $data]);
+    }
+
+    // ─────────────────────────────────────────────
+    // DRAFT SEARCHES (admin)
+    // ─────────────────────────────────────────────
+    public function draftSearches(Request $request)
+    {
+        $drafts = SearchHistory::where('is_draft', true)
+            ->select(
+                'text',
+                DB::raw('SUM(search_count) as count'),
+                DB::raw('MAX(updated_at) as last_searched')
+            )
+            ->groupBy('text')
+            ->orderByDesc('count')
+            ->orderByDesc('last_searched')
+            ->paginate(50);
+
+        return response()->json(['status' => 'success', 'data' => $drafts]);
+    }
+
+    // ─────────────────────────────────────────────
+    // RECOMMENDATIONS
+    // ─────────────────────────────────────────────
+    public function recommendations(Request $request)
+    {
+        $user      = auth('sanctum')->user();
+        $sessionId = $request->header('X-Session-Id');
+        $type      = $request->query('type', 'all');
+
+        $recentQueries = SearchHistory::when(
+                $user,
+                fn($q) => $q->where('user_id', $user->id),
+                fn($q) => $q->where('session_id', $sessionId)
+            )
+            ->where('is_draft', false)
+            ->orderByDesc('updated_at')
+            ->limit(6)
+            ->pluck('text')
+            ->unique()
+            ->take(4);
+
+        $books        = collect();
+        $stationeries = collect();
+
+        if ($recentQueries->isEmpty()) {
+            $books        = $this->getPopularBooks(12);
+            $stationeries = $this->getPopularStationeries(8);
+        } else {
+            $combinedQuery = $recentQueries->implode(' ');
+            $analyzed      = $this->analyzeQuery($combinedQuery);
+
+            if (in_array($type, ['book', 'all'])) {
+                $books = $this->visibleBooks(['category', 'seller', 'tags'])
+                    ->where(function ($q) use ($analyzed, $combinedQuery) {
+                        $q->whereRaw(
+                            "MATCH(name, author, description) AGAINST(? IN NATURAL LANGUAGE MODE)",
+                            [$analyzed['boolean']]
+                        )
+                        ->orWhereRaw(
+                            "MATCH(name, author, description) AGAINST(? IN NATURAL LANGUAGE MODE)",
+                            [$combinedQuery]
+                        )
+                        ->orWhere('name', 'LIKE', "%{$combinedQuery}%")
+                        ->orWhere('author', 'LIKE', "%{$combinedQuery}%");
+                    })
+                    ->orderByDesc('totalSalesWeek')
+                    ->limit(14)
+                    ->get();
+            }
+
+            if (in_array($type, ['stationery', 'all'])) {
+                $stationeries = $this->visibleStationeries(['category', 'seller', 'tags', 'variants'])
+                    ->where(function ($q) use ($analyzed, $combinedQuery) {
+                        $q->whereRaw(
+                            "MATCH(name, description, material) AGAINST(? IN NATURAL LANGUAGE MODE)",
+                            [$analyzed['boolean']]
+                        )
+                        ->orWhere('name', 'LIKE', "%{$combinedQuery}%");
+                    })
+                    ->orderByDesc('totalSalesWeek')
+                    ->limit(8)
+                    ->get();
+            }
+        }
+
+        $items = $books->map(fn($p) => $this->formatProduct($p, $user))
+            ->merge($stationeries->map(fn($p) => $this->formatProduct($p, $user)))
+            ->filter()->shuffle()->values();
+
+        if ($items->isEmpty()) {
+            $books        = $this->getPopularBooks(12);
+            $stationeries = $this->getPopularStationeries(8);
+            $items        = $books->map(fn($p) => $this->formatProduct($p, $user))
+                ->merge($stationeries->map(fn($p) => $this->formatProduct($p, $user)))
+                ->filter()->values();
+        }
+
+        return response()->json([
+            'status'   => 'success',
+            'data'     => $items,
+            'based_on' => $recentQueries->isEmpty() ? 'popular' : 'user_history',
+        ]);
+    }
+
+    // ─────────────────────────────────────────────
+    // ALL CATEGORIES
+    // ─────────────────────────────────────────────
+    public function allCategories()
+    {
+        try {
+            $bookCats = BookCategories::where('is_active', 1)
+                ->select('id', 'name_uz', 'name_ru', 'name_en', 'slug', 'icon')
+                ->orderBy('name_uz')
+                ->get();
+
+            $statCats = StationeryCategory::where('is_active', 1)
+                ->select('id', 'name_uz', 'name_ru', 'name_en')
+                ->orderBy('name_uz')
+                ->get();
 
             return response()->json([
                 'status' => 'success',
-                'data' => $suggestions
+                'data'   => ['book' => $bookCats, 'stationery' => $statCats],
             ]);
-
-        } catch (\Exception $e) {
-            Log::error('Get suggestions error: ' . $e->getMessage());
-            
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Tavsiyalarni yuklashda xato'
-            ], 500);
+        } catch (\Throwable $e) {
+            return response()->json(['status' => 'error', 'message' => 'Xato'], 500);
         }
+    }
+
+    // ─────────────────────────────────────────────
+    // SORT HELPER
+    // ─────────────────────────────────────────────
+
+    /**
+     * Jadvalda ma'lum ustunlar uchun FULLTEXT index borligini tekshiradi.
+     * Natija cache da saqlanadi — har so'rovda DB ga urmasin.
+     */
+    private function hasFulltextIndex(string $table, array $columns): bool
+    {
+        $cacheKey = "fulltext_index_{$table}_" . implode('_', $columns);
+        return Cache::remember($cacheKey, now()->addHours(24), function () use ($table, $columns) {
+            try {
+                $indexes = DB::select("SHOW INDEX FROM `{$table}` WHERE Index_type = 'FULLTEXT'");
+                $indexedCols = collect($indexes)->pluck('Column_name')->toArray();
+                foreach ($columns as $col) {
+                    if (!in_array($col, $indexedCols)) return false;
+                }
+                return true;
+            } catch (\Throwable $e) {
+                return false;
+            }
+        });
+    }
+
+    private function applySortToQuery($q, string $sort, string $type): void
+    {
+        if ($sort === 'relevance') {
+            $q->orderByDesc('relevance_score');
+            return;
+        }
+
+        match ($sort) {
+            'price_asc'  => $q->orderBy('price'),
+            'price_desc' => $q->orderByDesc('price'),
+            'alpha_asc'  => $q->orderByRaw('LOWER(name) ASC'),
+            'alpha_desc' => $q->orderByRaw('LOWER(name) DESC'),
+            'newest'     => $q->orderByDesc('id'),
+            'popular'    => $q->orderByDesc('totalSalesWeek'),
+            'discount'   => $type === 'book'
+                ? $q->orderByRaw('IF(discountPrice > 0, price - discountPrice, 0) DESC')
+                : $q->orderByRaw('IF(discount_price > 0, price - discount_price, 0) DESC'),
+            default      => $q->orderByDesc('totalSalesWeek'),
+        };
+    }
+
+    // ─────────────────────────────────────────────
+    // POPULAR HELPERS
+    // ─────────────────────────────────────────────
+    private function getPopularBooks(int $limit = 12)
+    {
+        return $this->visibleBooks(['category', 'seller', 'tags'])
+            ->orderByDesc('totalSalesWeek')
+            ->limit($limit)
+            ->get();
+    }
+
+    private function getPopularStationeries(int $limit = 8)
+    {
+        return $this->visibleStationeries(['category', 'seller', 'tags', 'variants'])
+            ->orderByDesc('totalSalesWeek')
+            ->limit($limit)
+            ->get();
     }
 }

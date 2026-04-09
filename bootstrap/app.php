@@ -8,7 +8,6 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
         api: __DIR__.'/../routes/api.php',
-        // commands: __DIR__.'/../routes/console.php',
         channels: __DIR__.'/../routes/channels.php',
         health: '/up',
     )
@@ -18,11 +17,12 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
-            'api.client' => \App\Http\Middleware\VerifyApiClient::class,
-            'payme'      => \App\Http\Middleware\PaymeMiddleware::class,
+            'api.client'       => \App\Http\Middleware\VerifyApiClient::class,
+            'payme'            => \App\Http\Middleware\PaymeMiddleware::class,
+            'auth.panel'       => \App\Http\Middleware\AuthenticatePanel::class,
+            'panel.permission' => \App\Http\Middleware\PanelPermission::class,
         ]);
 
-        // auth:user guruhidagi har bir so'rovda last_seen_at ni yangilaydi
         $middleware->appendToGroup('api', \App\Http\Middleware\UpdateLastSeen::class);
     })
     ->withExceptions(function (Exceptions $exceptions) {
@@ -30,83 +30,53 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withSchedule(function ($schedule) {
 
-        // ── 0. AI limit reset (00:05 — MySQL tayyor bo'lguncha 5 daqiqa) ─────
-        // ❌ 00:00 edi — server/MySQL restart vaqtiga to'g'ri kelib xato berardi
+        $tz = 'Asia/Tashkent';
+
         $schedule->command('ai:daily-reset')
-            ->dailyAt('00:05')
-            ->timezone('Asia/Tashkent')
-            ->withoutOverlapping()
-            ->runInBackground()
-            ->appendOutputTo(storage_path('logs/ai_reset.log'));
+            ->dailyAt('00:05')->timezone($tz)->withoutOverlapping()->runInBackground();
 
-        // ── 1. To'lanmagan buyurtmalarga eslatma (har 10 daqiqa) ─────────────
         $schedule->command('orders:remind-unpaid')
-            ->everyTenMinutes()
-            ->timezone('Asia/Tashkent')
-            ->appendOutputTo(storage_path('logs/remind_unpaid.log'));
+            ->everyTenMinutes()->timezone($tz);
 
-        // ── 2. To'lanmagan buyurtmalarni bekor qilish ────────────────────────
         $schedule->command('orders:cancel-unpaid')
-            ->everyFiveMinutes()
-            ->timezone('Asia/Tashkent')
-            ->appendOutputTo(storage_path('logs/cancel_unpaid.log'));
+            ->everyFiveMinutes()->timezone($tz);
 
-        // ── 3. Savatcha eslatmalari (kuniga 3 marta) ─────────────────────────
         $schedule->command('cart:remind --time=morning')
-            ->dailyAt('08:00')
-            ->timezone('Asia/Tashkent')
-            ->appendOutputTo(storage_path('logs/cart_remind.log'));
+            ->dailyAt('08:00')->timezone($tz);
 
         $schedule->command('cart:remind --time=afternoon')
-            ->dailyAt('13:00')
-            ->timezone('Asia/Tashkent')
-            ->appendOutputTo(storage_path('logs/cart_remind.log'));
+            ->dailyAt('13:00')->timezone($tz);
 
         $schedule->command('cart:remind --time=evening')
-            ->dailyAt('19:00')
-            ->timezone('Asia/Tashkent')
-            ->appendOutputTo(storage_path('logs/cart_remind.log'));
-
-        // ── 4. Haftalik kitob o'qish eslatmasi (sesh, pay, shan) ─────────────
-        $schedule->command('users:book-remind')
-            ->weeklyOn(2, '10:00')
-            ->timezone('Asia/Tashkent')
-            ->appendOutputTo(storage_path('logs/book_remind.log'));
+            ->dailyAt('19:00')->timezone($tz);
 
         $schedule->command('users:book-remind')
-            ->weeklyOn(4, '17:00')
-            ->timezone('Asia/Tashkent')
-            ->appendOutputTo(storage_path('logs/book_remind.log'));
+            ->weeklyOn(2, '10:00')->timezone($tz);
 
         $schedule->command('users:book-remind')
-            ->weeklyOn(6, '12:00')
-            ->timezone('Asia/Tashkent')
-            ->appendOutputTo(storage_path('logs/book_remind.log'));
+            ->weeklyOn(4, '17:00')->timezone($tz);
 
-        // ── 5. Backup ─────────────────────────────────────────────────────────
-        // ❌ backup:clean 01:10 edi — MySQL restart zonasiga yaqin
+        $schedule->command('users:book-remind')
+            ->weeklyOn(6, '12:00')->timezone($tz);
+
         $schedule->command('backup:clean')
-            ->dailyAt('01:15')
-            ->timezone('Asia/Tashkent');
+            ->dailyAt('01:15')->timezone($tz);
 
-        // backup:run o'zgarmadi — 02:10 xavfsiz vaqt
         $schedule->command('backup:run')
-            ->dailyAt('02:10')
-            ->timezone('Asia/Tashkent');
+            ->dailyAt('02:10')->timezone($tz);
 
-        // ── 6. Vektorlarni qayta qurish ───────────────────────────────────────
-        // ❌ 02:00 edi — backup:run bilan overlap qilardi (ikkalasi og'ir operatsiya)
-        // ✅ 02:30 — backup:run tugagandan keyin boshlanadi
         $schedule->command('vectors:rebuild --force')
-            ->weeklyOn(0, '02:30')
-            ->timezone('Asia/Tashkent')
-            ->appendOutputTo(storage_path('logs/vector_rebuild.log'));
+            ->weeklyOn(0, '02:30')->timezone($tz);
 
-        // ── 7. Queue batch tozalash ───────────────────────────────────────────
-        // ❌ daily() edi — vaqt belgilanmagan, Laravel uni 00:00 da ishlatadi
-        // ✅ 03:00 — barcha og'ir operatsiyalar tugagandan keyin
         $schedule->command('queue:prune-batches --hours=24')
-            ->dailyAt('03:00')
-            ->timezone('Asia/Tashkent');
+            ->dailyAt('03:00')->timezone($tz);
+
+        // ── Gift sertifikatlar: muddati o'tganlarni bekor qilish ─────
+        $schedule->command('gifts:expire')
+            ->dailyAt('02:00')->timezone($tz)->withoutOverlapping();
+
+        // ── Mystery Box: navbat tekshiruvi ────────────────────────────
+        $schedule->command('mystery-box:check-deliveries')
+            ->dailyAt('08:30')->timezone($tz)->withoutOverlapping();
 
     })->create();
