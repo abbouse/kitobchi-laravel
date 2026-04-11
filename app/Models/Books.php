@@ -20,6 +20,7 @@ class Books extends Model
         'images',
         'price',
         'discountPrice',
+        'discountExpiresAt',
         'count',
         'lang',
         'langType',
@@ -36,11 +37,15 @@ class Books extends Model
         'totalSalesWeek',
         'totalRevenueWeek',
         'totalClientsWeek',
-        'vectorData'
+        'vectorData',
+        'recommended',
+        'views',
+        'recommendedExpiresAt'
     ];
     protected $casts = [
     'images' => 'json',
     'status' => 'boolean',
+    'recommended' => 'boolean',
     'vectorData' => 'json',
     ];
     protected $appends = ['first_image'];

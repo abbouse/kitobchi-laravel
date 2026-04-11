@@ -16,6 +16,7 @@ class Stationery extends Model
         'material',
         'price',
         'discount_price',
+        'discountExpiresAt',
         'stock',
         'description',
         'is_hidden',
@@ -28,13 +29,17 @@ class Stationery extends Model
         'totalSalesWeek',
         'totalClientsWeek',
         'totalRevenueWeek',
-        'vectorData'
+        'vectorData',
+        'recommended',
+        'views',
+        'recommendedExpiresAt'
     ];
 
     protected $casts = [
         'images' => 'array',
         'is_hidden' => 'boolean',
         'status' => 'boolean',
+        'recommended' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

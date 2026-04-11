@@ -34,6 +34,8 @@ Route::post('forgot', [SellerAuthController::class, 'forgot']);
         Route::get('products/stationery/categories/{category_id}/tags', [ProductController::class, 'getStationeryTagsForCategory']);
         Route::get('products/categories/{category_id}/tags', [ProductController::class, 'getTagsForCategory']);
         Route::get('products/stat/{product}', [ProductController::class, 'productStatistics']);
+        Route::post('products/generate-description', [ProductController::class, 'generateDescription']);
+        Route::post('products/set-recommended',      [ProductController::class, 'setRecommended']);
         Route::get('gifts/list', [GiftController::class, 'list']);
         Route::post('gifts/create', [GiftController::class, 'create']);
         Route::post('gifts/update/{gift_id}', [GiftController::class, 'update']);
@@ -47,10 +49,10 @@ Route::post('forgot', [SellerAuthController::class, 'forgot']);
         Route::get('transactions/count', [TransactionController::class, 'getTotal']);
         Route::get('transactions/cancel/{transactionId}', [TransactionController::class, 'cancelTransaction']);
         
-    Route::get('target/initial-data', [TargetController::class, 'getInitialTargetData']);
-    Route::post('target/store-forum-post', [TargetController::class, 'storeForumPostAd']);
-    Route::post('target/store-recommendation', [TargetController::class, 'storeRecommendationAd']);
-    Route::post('target/store-home-page-banner', [TargetController::class, 'storeHomePageBannerAd']);
+    Route::get('target/initial',              [TargetController::class, 'getInitialTargetData']);
+    Route::get('target/products',             [TargetController::class, 'getProductList']);
+    Route::post('target/banner',              [TargetController::class, 'storeHomePageBannerAd']);
+    Route::get('target/product-stats/{id}',   [TargetController::class, 'getProductStats']);
         
         Route::get('contests', [ContestsController::class, 'getContests']);
         Route::get('contests/{contestId}', [ContestsController::class, 'getContestDetails']);

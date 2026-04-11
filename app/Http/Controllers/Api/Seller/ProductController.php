@@ -22,7 +22,7 @@ use Illuminate\Support\Facades\Log;
 
 class ProductController extends Controller
 {
-    public function __construct()
+    public function __construct(protected \App\Services\OpenAIService $ai)
     {
         $this->middleware('auth:seller');
     }
@@ -1054,5 +1054,314 @@ public function getStationeryCategories(Request $request)
         'success' => true,
         'data'    => $formattedCategories,
     ], 200);
+}
+
+public function generateDescription(Request $request)
+{
+    $seller = Auth::guard('seller')->user();
+    if (!$seller) {
+        return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+    }
+ 
+    if (!$this->hasProductAccess($seller)) {
+            return response()->json([
+                'success' => false, 
+                'message' => 'Access denied. Categories available only for Owner, Admin, and Product Manager.'
+            ], 403);
+        }
+ 
+    // ── Premium tekshiruvi ────────────────────────────────────────
+    $storeSeller = \App\Models\Seller::find($this->getStoreSellerId($seller));
+    $isPremium   = $storeSeller?->isPremiumShop &&
+        (is_null($storeSeller->isPremiumExpiresAt) ||
+            \Carbon\Carbon::parse($storeSeller->isPremiumExpiresAt)->isFuture());
+ 
+    if (!$isPremium) {
+        return response()->json([
+            'success'          => false,
+            'message'          => "AI tavsif yozish faqat Premium do\'konlar uchun mavjud.",
+            'premium_required' => true,
+        ], 403);
+    }
+ 
+    $validator = Validator::make($request->all(), [
+        'type'      => 'required|string|in:book,stationery',
+        'name'      => 'required|string|max:255',
+        // Book uchun
+        'author'    => 'nullable|string|max:255',
+        'pages'     => 'nullable|integer|min:1',
+        'lang'      => 'nullable|string',
+        'coverType' => 'nullable|string',
+        'year'      => 'nullable|integer',
+        // Stationery uchun
+        'material'  => 'nullable|string|max:255',
+        // Umumiy
+        'category'  => 'nullable|string|max:255',
+        'tags'      => 'nullable|array',
+        'tags.*'    => 'string',
+        'price'     => 'nullable|numeric|min:0',
+    ]);
+ 
+    if ($validator->fails()) {
+        return response()->json([
+            'success' => false,
+            'errors'  => $validator->errors(),
+        ], 422);
+    }
+ 
+    $type = $request->input('type');
+    $isBook = $type === 'book';
+ 
+    // ── Prompt qurish ─────────────────────────────────────────────
+    $tagStr      = implode(', ', $request->input('tags', []));
+    $priceFormatted = $request->filled('price')
+        ? number_format((float)$request->price) . " so'm"
+        : null;
+ 
+    if ($isBook) {
+        $details = collect([
+            "Kitob nomi: {$request->name}",
+            $request->filled('author')    ? "Muallif: {$request->author}"         : null,
+            $request->filled('category')  ? "Kategoriya: {$request->category}"    : null,
+            $request->filled('lang')      ? "Til: {$request->lang}"               : null,
+            $request->filled('coverType') ? "Muqova: {$request->coverType}"       : null,
+            $request->filled('pages')     ? "Sahifalar: {$request->pages} ta"     : null,
+            $request->filled('year')      ? "Yil: {$request->year}"               : null,
+            $tagStr                        ? "Teglar: {$tagStr}"                   : null,
+            $priceFormatted                ? "Narx: {$priceFormatted}"             : null,
+        ])->filter()->implode("\n");
+ 
+        $prompt = <<<EOT
+Sen professional kitob do'koni tavsif yozuvchisisang.
+Quyidagi kitob haqida FAQAT O'ZBEK TILIDA 3-5 jumladan iborat qisqa, jozibali va aniq tavsif yoz.
+ 
+Kitob ma'lumotlari:
+{$details}
+ 
+QOIDALAR:
+- Tavsif xaridor uchun yozilgan bo'lsin (2-chi shaxsda emas, "kitob haqida" formatda)
+- Kitobning asosiy mavzusi va foydasini ko'rsat
+- "Bu kitob..." yoki "Kitobda..." deb boshlash mumkin
+- Emoji ishlatma
+- Maksimal 5 jumla
+- Faqat tavsif matni yoz, boshqa hech narsa yozma
+EOT;
+    } else {
+        $details = collect([
+            "Mahsulot nomi: {$request->name}",
+            $request->filled('material')  ? "Material: {$request->material}"      : null,
+            $request->filled('category')  ? "Kategoriya: {$request->category}"    : null,
+            $tagStr                        ? "Teglar: {$tagStr}"                   : null,
+            $priceFormatted                ? "Narx: {$priceFormatted}"             : null,
+        ])->filter()->implode("\n");
+ 
+        $prompt = <<<EOT
+Sen professional kanselyariya do'koni tavsif yozuvchisisang.
+Quyidagi mahsulot haqida FAQAT O'ZBEK TILIDA 3-5 jumladan iborat qisqa, jozibali va aniq tavsif yoz.
+ 
+Mahsulot ma'lumotlari:
+{$details}
+ 
+QOIDALAR:
+- Tavsif xaridor uchun yozilgan bo'lsin
+- Mahsulotning asosiy xususiyatlari va foydasini ko'rsat
+- "Bu mahsulot..." yoki "Mahsulot..." deb boshlash mumkin
+- Emoji ishlatma
+- Maksimal 5 jumla
+- Faqat tavsif matni yoz, boshqa hech narsa yozma
+EOT;
+    }
+ 
+    // ── AI ga so'rov ──────────────────────────────────────────────
+    try {
+        $description = $this->ai->askSimple($prompt, 300, 0.7);
+        $description = trim($description);
+ 
+        // Agar bo'sh yoki juda qisqa kelsa
+        if (mb_strlen($description) < 20) {
+            return response()->json([
+                'success' => false,
+                'message' => 'AI tavsif yarata olmadi. Yana urinib ko\'ring.',
+            ], 500);
+        }
+ 
+        $this->writeLog(
+            $seller,
+            'AI tavsif yaratdi',
+            "{$request->name} ({$type})"
+        );
+ 
+        return response()->json([
+            'success'     => true,
+            'description' => $description,
+        ]);
+ 
+    } catch (\Throwable $e) {
+        Log::error('generateDescription error', [
+            'seller_id' => $seller->id,
+            'error'     => $e->getMessage(),
+        ]);
+ 
+        return response()->json([
+            'success' => false,
+            'message' => 'AI xizmatida xatolik yuz berdi.',
+        ], 500);
+    }
+}
+ 
+// =========================================================================
+//  RECOMMENDED TOGGLE
+//
+//  POST /api/seller/products/set-recommended
+//
+//  Request:
+//  {
+//    "product_id": 123,
+//    "type": "book",          // 'book' | 'stationery'
+//    "recommended": true,     // true | false
+//    "expires_days": 30       // necha kun amal qilsin (null = abadiy)
+//  }
+//
+//  Response:
+//  {
+//    "success": true,
+//    "recommended": true,
+//    "expires_at": "2026-05-10T00:00:00.000000Z"  // null = abadiy
+//  }
+// =========================================================================
+ 
+/**
+ * ✅ MAHSULOTNI RECOMMENDED QILISH / BEKOR QILISH
+ * Faqat PREMIUM do'kon egalari foydalana oladi.
+ *
+ * POST /api/seller/products/set-recommended
+ */
+public function setRecommended(Request $request)
+{
+    $seller = Auth::guard('seller')->user();
+    if (!$seller) {
+        return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+    }
+ 
+    if (!$this->hasProductAccess($seller)) {
+            return response()->json([
+                'success' => false, 
+                'message' => 'Access denied. Categories available only for Owner, Admin, and Product Manager.'
+            ], 403);
+        }
+ 
+    // ── Premium tekshiruvi ────────────────────────────────────────
+    // Premium ni do'kon egasidan (storeSellerId) olamiz
+    $storeSellerId = $seller->parent_id ?: $seller->id;
+    $storeSeller   = \App\Models\Seller::find($storeSellerId);
+    $isPremium     = $storeSeller?->isPremiumShop &&
+        (is_null($storeSeller->isPremiumExpiresAt) ||
+            \Carbon\Carbon::parse($storeSeller->isPremiumExpiresAt)->isFuture());
+ 
+    if (!$isPremium) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Bu xizmat faqat Premium do\'konlar uchun mavjud.',
+            'premium_required' => true,
+        ], 200);
+    }
+ 
+    $validator = Validator::make($request->all(), [
+        'product_id'  => 'required|integer',
+        'type'        => 'required|string|in:book,stationery',
+        'recommended' => 'required|boolean',
+        'expires_days'=> 'nullable|integer|min:1|max:30',
+    ]);
+ 
+    if ($validator->fails()) {
+        return response()->json([
+            'success' => false,
+            'errors'  => $validator->errors(),
+        ], 422);
+    }
+ 
+    $storeSellerId = $storeSellerId; // yuqorida aniqlangan
+    $type          = $request->input('type');
+    $isRecommended = (bool) $request->input('recommended');
+    $expiresDays   = $request->input('expires_days');
+ 
+    // ── Mahsulotni topish ─────────────────────────────────────────
+    if ($type === 'book') {
+        $product = Books::where('seller_id', $storeSellerId)
+            ->where('id', $request->product_id)
+            ->where('is_hidden', false)
+            ->where('is_approved', 1)
+            ->first();
+    } else {
+        $product = Stationery::where('seller_id', $storeSellerId)
+            ->where('id', $request->product_id)
+            ->where('is_hidden', false)
+            ->where('is_approved', 1)
+            ->first();
+    }
+ 
+    if (!$product) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Mahsulot topilmadi yoki moderatsiyadan o\'tmagan.',
+        ], 404);
+    }
+ 
+    // ── Recommended limit tekshiruvi ──────────────────────────────
+    // Premium do'kon bir vaqtda maksimal 10 ta mahsulotni recommended qila oladi
+    if ($isRecommended) {
+        $activeRecCount = $type === 'book'
+            ? Books::where('seller_id', $storeSellerId)
+                ->where('recommended', true)
+                ->where(fn($q) => $q
+                    ->whereNull('recommendedExpiresAt')
+                    ->orWhere('recommendedExpiresAt', '>', now())
+                )
+                ->where('id', '!=', $product->id)
+                ->count()
+            : Stationery::where('seller_id', $storeSellerId)
+                ->where('recommended', true)
+                ->where(fn($q) => $q
+                    ->whereNull('recommendedExpiresAt')
+                    ->orWhere('recommendedExpiresAt', '>', now())
+                )
+                ->where('id', '!=', $product->id)
+                ->count();
+ 
+        if ($activeRecCount >= 10) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Bir vaqtda maksimal 10 ta mahsulotni recommended qilish mumkin.',
+                'limit'   => 10,
+                'current' => $activeRecCount,
+            ], 422);
+        }
+    }
+ 
+    // ── Yangilash ─────────────────────────────────────────────────
+    $expiresAt = null;
+    if ($isRecommended && $expiresDays) {
+        $expiresAt = now()->addDays($expiresDays);
+    }
+ 
+    $product->update([
+        'recommended'           => $isRecommended,
+        'recommendedExpiresAt'  => $isRecommended ? $expiresAt : null,
+    ]);
+ 
+    $action = $isRecommended
+        ? 'Mahsulotni recommended qildi' . ($expiresAt ? " ({$expiresDays} kun)" : ' (abadiy)')
+        : 'Mahsulotdan recommended olib tashladi';
+ 
+    $this->writeLog($seller, $action, "[{$type}] {$product->name}");
+ 
+    return response()->json([
+        'success'       => true,
+        'recommended'   => $isRecommended,
+        'expires_at'    => $expiresAt?->toISOString(),
+        'message'       => $isRecommended
+            ? "Mahsulot recommended ro'yxatiga qo'shildi."
+            : "Mahsulot recommended ro'yxatidan olib tashlandi.",
+    ]);
 }
 }

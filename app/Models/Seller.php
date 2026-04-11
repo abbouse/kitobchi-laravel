@@ -39,7 +39,7 @@ class Seller extends Authenticatable
         'shop_name', 'firstname', 'lastname',
         'phone_number', 'password', 'photo',
         'region', 'balance', 'rating',
-        'status', 'is_hidden', 'is_verified',
+        'status', 'is_hidden', 'isVerified', 'isPremiumShop', 'isPremiumExpiresAt',
         'activity_types', 'successful_orders',
         'parent_id', 'role', 'staff_status',
         'commission_percent', 'fcm_token',
@@ -51,6 +51,7 @@ class Seller extends Authenticatable
     protected $casts = [
         'isVerified' => 'boolean',
         'isSupport'  => 'boolean',
+        'isPremiumShop' => 'boolean',
         'is_hidden'  => 'boolean',
         'password'   => 'hashed',
     ];

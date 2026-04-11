@@ -16,6 +16,7 @@ Route::prefix('products')->group(function () {
     Route::get('books-by-category', [ProductsController::class, 'booksByCategory']);
     Route::get('recommendation/{col}', [ProductsController::class, 'recommendation']);
     Route::get('{col}', [ProductsController::class, 'index']);
+    Route::get('cart-recommendation', [ProductsController::class, 'cartRecommendation']);
 });
 Route::prefix('search')->group(function () {
     Route::get('/', [SearchController::class, 'search']);
@@ -97,8 +98,9 @@ Route::middleware('auth:user')->group(function () {
     });
     // Sovg'alar
     Route::prefix('gifts')->group(function () {
-        Route::post('select', [GiftsController::class, 'select_gift']);
-        Route::get('{col}', [GiftsController::class, 'index']);
+        Route::get('/',                  [GiftsController::class, 'index']);
+        Route::get('seller/{sellerId}',[GiftsController::class, 'bySeller']);
+        Route::post('select',          [GiftsController::class, 'select_gift']);
     });
     // Sozlamalar va foydalanuvchi yo'llari
     Route::post('settings', [UserController::class, 'settings']);
