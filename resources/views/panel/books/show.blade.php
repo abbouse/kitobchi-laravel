@@ -101,7 +101,7 @@
       <div class="col-md-4 fade-up d1">
         <div class="p-card text-center">
           <div style="font-size:11px;color:var(--p-hint);margin-bottom:4px">Asosiy narx</div>
-          <div style="font-size:20px;font-weight:700;font-family:'DM Mono',monospace;color:var(--p-text)">
+          <div style="font-size:20px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--p-text)">
             {{ number_format($book->price) }}
           </div>
           <div style="font-size:11px;color:var(--p-hint)">UZS</div>
@@ -110,7 +110,7 @@
       <div class="col-md-4 fade-up d2">
         <div class="p-card text-center">
           <div style="font-size:11px;color:var(--p-hint);margin-bottom:4px">Chegirma narxi</div>
-          <div style="font-size:20px;font-weight:700;font-family:'DM Mono',monospace;color:var(--p-success)">
+          <div style="font-size:20px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--p-success)">
             {{ number_format($book->discountPrice ?? 0) }}
           </div>
           <div style="font-size:11px;color:var(--p-hint)">UZS</div>
@@ -119,7 +119,7 @@
       <div class="col-md-4 fade-up d3">
         <div class="p-card text-center">
           <div style="font-size:11px;color:var(--p-hint);margin-bottom:4px">Chegirma %</div>
-          <div style="font-size:20px;font-weight:700;font-family:'DM Mono',monospace;color:var(--p-warning)">
+          <div style="font-size:20px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--p-warning)">
             {{ $book->discount_percent ?? 0 }}%
           </div>
         </div>
@@ -161,7 +161,7 @@
         @foreach($stats as $s)
         <div class="col-6 col-md-3">
           <div style="text-align:center;padding:12px;background:var(--p-elevated);border-radius:8px">
-            <div style="font-size:15px;font-weight:700;font-family:'DM Mono',monospace;color:{{ $s['color'] }}">{{ $s['value'] }}</div>
+            <div style="font-size:15px;font-weight:700;font-family:'JetBrains Mono',monospace;color:{{ $s['color'] }}">{{ $s['value'] }}</div>
             <div style="font-size:11px;color:var(--p-hint);margin-top:3px">{{ $s['label'] }}</div>
           </div>
         </div>

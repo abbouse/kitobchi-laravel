@@ -35,7 +35,7 @@
         <i class="bi {{ $i }}"></i>
       </div>
       <div>
-        <div style="font-size:19px;font-weight:700;font-family:'DM Mono',monospace;
+        <div style="font-size:19px;font-weight:700;font-family:'JetBrains Mono',monospace;
                     color:var(--p-{{ $c }})">{{ $v }}</div>
         <div style="font-size:10px;color:var(--p-hint);text-transform:uppercase;
                     letter-spacing:.07em">{{ $l }}</div>
@@ -115,7 +115,7 @@
         @endphp
         <tr>
           <td>
-            <span style="font-family:'DM Mono',monospace;color:var(--p-accent);font-size:12px">
+            <span style="font-family:'JetBrains Mono',monospace;color:var(--p-accent);font-size:12px">
               #{{ $courier->id }}
             </span>
           </td>
@@ -142,13 +142,13 @@
             </div>
           </td>
 
-          <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--p-muted)">
+          <td style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--p-muted)">
             {{ $courier->phone_number }}
           </td>
 
           <td style="font-size:13px;color:var(--p-muted)">{{ $courier->region }}</td>
 
-          <td style="text-align:right;font-family:'DM Mono',monospace;
+          <td style="text-align:right;font-family:'JetBrains Mono',monospace;
                      font-weight:500;color:var(--p-text)">
             {{ number_format($courier->balance ?? 0) }}
             <span style="font-size:11px;color:var(--p-hint)">UZS</span>
@@ -158,7 +158,7 @@
             <span class="s-pill {{ $stCls }}" style="font-size:11px">{{ $stLbl }}</span>
           </td>
 
-          <td style="font-size:12px;color:var(--p-hint);font-family:'DM Mono',monospace">
+          <td style="font-size:12px;color:var(--p-hint);font-family:'JetBrains Mono',monospace">
             {{ $courier->created_at?->format('d.m.Y') }}
           </td>
 

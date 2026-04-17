@@ -56,9 +56,9 @@
           $full    = $p->usesLimit > 0 && $p->usedCount >= $p->usesLimit;
         @endphp
         <tr>
-          <td style="font-family:'DM Mono',monospace;color:var(--p-accent)">{{ $p->id }}</td>
+          <td style="font-family:'JetBrains Mono',monospace;color:var(--p-accent)">{{ $p->id }}</td>
           <td>
-            <code style="font-family:'DM Mono',monospace;font-size:14px;font-weight:700;
+            <code style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;
                          color:var(--p-text);background:var(--p-elevated);
                          padding:3px 10px;border-radius:6px;letter-spacing:.05em">
               {{ $p->code }}
@@ -69,7 +69,7 @@
               {{ $p->type==='percent' ? 'Foiz (%)' : 'Miqdor (UZS)' }}
             </span>
           </td>
-          <td style="font-family:'DM Mono',monospace;font-weight:700;font-size:14px;color:var(--p-text)">
+          <td style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;color:var(--p-text)">
             {{ $p->type==='percent' ? $p->amount.'%' : number_format($p->amount).' UZS' }}
           </td>
           <td style="font-size:12px;color:var(--p-muted)">
@@ -77,7 +77,7 @@
           </td>
           <td>
             @if($p->usesLimit > 0)
-              <div style="font-family:'DM Mono',monospace;font-size:12px">
+              <div style="font-family:'JetBrains Mono',monospace;font-size:12px">
                 <span style="color:{{ $full?'var(--p-danger)':'var(--p-text)' }}">{{ $p->usedCount }}</span>
                 / {{ $p->usesLimit }}
               </div>

@@ -47,14 +47,14 @@
       <tbody>
         @forelse($categories as $cat)
         <tr>
-          <td style="font-family:'DM Mono',monospace;color:var(--p-accent)">{{ $cat->id }}</td>
+          <td style="font-family:'JetBrains Mono',monospace;color:var(--p-accent)">{{ $cat->id }}</td>
           <td style="font-size:22px;text-align:center">{{ $cat->icon ?? '🗂️' }}</td>
           <td style="font-weight:500;color:var(--p-text)">{{ $cat->name_uz }}</td>
           <td style="color:var(--p-muted)">{{ $cat->name_ru }}</td>
           <td>
             <span class="s-pill accent">{{ number_format($cat->stationeries_count) }} ta</span>
           </td>
-          <td style="font-size:11px;color:var(--p-hint);font-family:'DM Mono',monospace">{{ $cat->slug ?: '—' }}</td>
+          <td style="font-size:11px;color:var(--p-hint);font-family:'JetBrains Mono',monospace">{{ $cat->slug ?: '—' }}</td>
           <td>
             <span class="s-pill {{ $cat->is_active?'success':'muted' }}">
               {{ $cat->is_active?'Aktiv':'Nofaol' }}

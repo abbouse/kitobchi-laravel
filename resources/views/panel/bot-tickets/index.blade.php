@@ -63,7 +63,7 @@
         @forelse($tickets as $ticket)
         @php $st = $statuses[$ticket->status] ?? ['label'=>$ticket->status,'class'=>'ob-p']; @endphp
         <tr>
-          <td style="font-family:'DM Mono',monospace;color:var(--p-accent);font-weight:600">#{{ $ticket->id }}</td>
+          <td style="font-family:'JetBrains Mono',monospace;color:var(--p-accent);font-weight:600">#{{ $ticket->id }}</td>
           <td>
             <div>
               <div style="font-size:13px;font-weight:500;color:var(--p-text)">
@@ -73,7 +73,7 @@
                 <div style="font-size:11px;color:var(--p-hint)">t.me/{{ $ticket->username }}</div>
               @endif
               @if($ticket->user_id)
-                <div style="font-size:10px;color:var(--p-accent);font-family:'DM Mono',monospace">
+                <div style="font-size:10px;color:var(--p-accent);font-family:'JetBrains Mono',monospace">
                   user #{{ $ticket->user_id }}
                 </div>
               @endif

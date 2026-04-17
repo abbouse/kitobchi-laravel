@@ -61,11 +61,11 @@
         @forelse($orders as $order)
         @php $st = $statuses[$order->status] ?? ['label'=>$order->status,'class'=>'ob-p']; @endphp
         <tr>
-          <td style="font-family:'DM Mono',monospace;color:var(--p-accent);font-weight:600">#{{ $order->id }}</td>
+          <td style="font-family:'JetBrains Mono',monospace;color:var(--p-accent);font-weight:600">#{{ $order->id }}</td>
           <td>
             @if($order->order_id)
             <a href="{{ route('panel.orders.show', $order->order_id) }}"
-               style="font-family:'DM Mono',monospace;color:var(--p-info);font-size:12px">
+               style="font-family:'JetBrains Mono',monospace;color:var(--p-info);font-size:12px">
               #{{ $order->order_id }}
             </a>
             @else —
@@ -91,13 +91,13 @@
               <span style="color:var(--p-hint)">{{ $order->user_id ?? '—' }}</span>
             @endif
           </td>
-          <td style="font-family:'DM Mono',monospace;font-weight:600;color:var(--p-text)">
+          <td style="font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--p-text)">
             {{ number_format($order->amount) }}
           </td>
-          <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--p-success)">
+          <td style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--p-success)">
             {{ number_format($order->courierPrice) }}
           </td>
-          <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--p-warning)">
+          <td style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--p-warning)">
             {{ $order->courierBonus > 0 ? '+'.number_format($order->courierBonus) : '—' }}
           </td>
           <td><span class="o-badge {{ $st['class'] }}">{{ $st['label'] }}</span></td>

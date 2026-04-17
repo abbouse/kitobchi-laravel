@@ -94,7 +94,7 @@
         {{-- Tartib raqami --}}
         <div style="width:28px;height:28px;border-radius:7px;background:var(--p-elevated);
                     display:flex;align-items:center;justify-content:center;flex-shrink:0;
-                    font-family:'DM Mono',monospace;font-size:12px;font-weight:600;
+                    font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;
                     color:var(--p-accent)">
           {{ $item->order }}
         </div>

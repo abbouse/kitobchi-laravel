@@ -100,7 +100,7 @@
               ] as [$col, $label, $type, $required])
               <tr>
                 <td>
-                  <code style="font-family:'DM Mono',monospace;font-size:12px;
+                  <code style="font-family:'JetBrains Mono',monospace;font-size:12px;
                                background:var(--p-elevated);padding:2px 8px;
                                border-radius:4px;color:var(--p-accent)">{{ $col }}</code>
                 </td>

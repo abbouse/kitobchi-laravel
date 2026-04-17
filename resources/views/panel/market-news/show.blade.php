@@ -84,7 +84,7 @@
         @if($marketNews->action_id)
         <div style="display:flex;justify-content:space-between;padding:9px 0">
           <span style="font-size:12px;color:var(--p-hint)">Action ID</span>
-          <span style="font-size:13px;font-weight:600;font-family:'DM Mono',monospace;
+          <span style="font-size:13px;font-weight:600;font-family:'JetBrains Mono',monospace;
                        color:var(--p-accent)">#{{ $marketNews->action_id }}</span>
         </div>
         @endif
@@ -194,7 +194,7 @@
             </div>
             <div style="font-size:12px;color:var(--p-hint)">{{ $preview->author }}</div>
             <div style="font-size:13px;font-weight:700;color:var(--p-success);
-                        font-family:'DM Mono',monospace;margin-top:4px">
+                        font-family:'JetBrains Mono',monospace;margin-top:4px">
               {{ number_format($price) }} UZS
             </div>
           </div>

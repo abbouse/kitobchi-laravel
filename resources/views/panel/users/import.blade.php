@@ -67,7 +67,7 @@
               ['balans_uzs','Son','Yo\'q'],
             ] as $col)
             <tr>
-              <td><code style="font-family:'DM Mono',monospace;font-size:12px;color:var(--p-accent)">{{ $col[0] }}</code></td>
+              <td><code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--p-accent)">{{ $col[0] }}</code></td>
               <td style="font-size:12px">{{ $col[1] }}</td>
               <td>
                 @if($col[2] === 'Ha')
@@ -88,7 +88,7 @@
         </div>
         <ul style="font-size:12px;color:var(--p-muted);margin:0;padding-left:16px;line-height:1.8">
           <li>Mavjud telefon raqamlar o'tkazib yuboriladi</li>
-          <li>Yangi foydalanuvchilarga standart parol: <code style="font-family:'DM Mono',monospace">12345678</code></li>
+          <li>Yangi foydalanuvchilarga standart parol: <code style="font-family:'JetBrains Mono',monospace">12345678</code></li>
           <li>Maksimal fayl hajmi: 10MB</li>
         </ul>
       </div>

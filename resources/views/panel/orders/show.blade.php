@@ -196,7 +196,7 @@
                   </div>
                   @endif
                   <div style="font-size:10px;color:var(--p-border);
-                              font-family:'DM Mono',monospace;margin-top:2px">
+                              font-family:'JetBrains Mono',monospace;margin-top:2px">
                     ID: {{ $item['item_id'] ?? '—' }}
                     · {{ strtoupper($item['type'] ?? 'book') }}
                     @if($isGiftItem)
@@ -217,7 +217,7 @@
               @endif
             </td>
 
-            <td style="text-align:right;font-family:'DM Mono',monospace;
+            <td style="text-align:right;font-family:'JetBrains Mono',monospace;
                        font-size:13px;font-weight:500;color:var(--p-text)">
               @if($isGiftItem)
                 <span class="s-pill success" style="font-size:11px">Bepul</span>
@@ -226,12 +226,12 @@
               @endif
             </td>
 
-            <td style="text-align:center;font-family:'DM Mono',monospace;
+            <td style="text-align:center;font-family:'JetBrains Mono',monospace;
                        font-size:13px;color:var(--p-muted)">
               {{ $item['count_item'] ?? 1 }}
             </td>
 
-            <td style="text-align:right;font-family:'DM Mono',monospace;
+            <td style="text-align:right;font-family:'JetBrains Mono',monospace;
                        font-size:14px;font-weight:700;color:var(--p-text)">
               @if(!$isGiftItem)
                 {{ number_format($rowPrice) }}
@@ -280,7 +280,7 @@
             <span class="s-pill warning" style="font-size:10px;margin-left:4px">qaytarildi</span>
           @endif
         </span>
-        <span style="font-family:'DM Mono',monospace;font-weight:600;color:{{ $row['color'] }}">
+        <span style="font-family:'JetBrains Mono',monospace;font-weight:600;color:{{ $row['color'] }}">
           @if($row['free'] ?? false)
             <span class="s-pill success" style="font-size:11px">Bepul</span>
           @else
@@ -294,7 +294,7 @@
       <div style="border-top:2px solid var(--p-border);padding-top:12px;margin-top:8px"
            class="d-flex justify-content-between align-items-center">
         <span style="font-size:15px;font-weight:700;color:var(--p-text)">Umumiy to'lov</span>
-        <span style="font-size:22px;font-weight:800;font-family:'DM Mono',monospace;
+        <span style="font-size:22px;font-weight:800;font-family:'JetBrains Mono',monospace;
                      color:{{ $isCancelled ? 'var(--p-danger)' : 'var(--p-accent)' }}">
           {{ number_format($order->amount) }}
           <span style="font-size:13px;font-weight:500;color:var(--p-hint)">UZS</span>
@@ -344,7 +344,7 @@
           @if(isset($r['link']) && $r['link']==='tel')
             <a href="tel:{{ $r['value'] }}"
                style="font-size:14px;font-weight:600;color:var(--p-accent);
-                      text-decoration:none;font-family:'DM Mono',monospace">
+                      text-decoration:none;font-family:'JetBrains Mono',monospace">
               {{ $r['value'] }}
             </a>
           @else
@@ -394,7 +394,7 @@
           @if(isset($r['link']) && $r['link']==='tel')
             <a href="tel:{{ $r['value'] }}"
                style="font-size:14px;font-weight:600;color:var(--p-info);
-                      text-decoration:none;font-family:'DM Mono',monospace">
+                      text-decoration:none;font-family:'JetBrains Mono',monospace">
               {{ $r['value'] }}
             </a>
           @else
@@ -446,7 +446,7 @@
           {{ $order->user->name }} {{ $order->user->lastname }}
         </div>
         <div style="font-size:12px;color:var(--p-hint);
-                    font-family:'DM Mono',monospace;margin-top:2px">
+                    font-family:'JetBrains Mono',monospace;margin-top:2px">
           {{ $order->user->phone_number }}
         </div>
         <div style="font-size:11px;color:var(--p-hint);margin-top:2px">
@@ -514,7 +514,7 @@
                style="padding:9px 0;border-bottom:1px solid var(--p-border)">
             <span style="font-size:12px;color:var(--p-hint)">{{ $row['label'] }}</span>
             @if($deliveryPrice > 0)
-              <span style="font-size:12px;font-family:'DM Mono',monospace;
+              <span style="font-size:12px;font-family:'JetBrains Mono',monospace;
                            font-weight:600;color:var(--p-text)">
                 {{ number_format($deliveryPrice) }} UZS
               </span>
@@ -528,11 +528,11 @@
                style="padding:9px 0;border-bottom:1px solid var(--p-border)">
             <span style="font-size:12px;color:var(--p-hint)">{{ $row['label'] }}</span>
             <div class="d-flex align-items-center gap-2">
-              <code style="font-family:'DM Mono',monospace;font-size:12px;
+              <code style="font-family:'JetBrains Mono',monospace;font-size:12px;
                            font-weight:700;color:var(--p-accent)">
                 {{ $order->promocode }}
               </code>
-              <span style="font-size:12px;color:var(--p-success);font-family:'DM Mono',monospace">
+              <span style="font-size:12px;color:var(--p-success);font-family:'JetBrains Mono',monospace">
                 -{{ number_format($discountAmount) }}
               </span>
               @if($isCancelled)
@@ -548,7 +548,7 @@
             <span style="font-size:12px;color:var(--p-hint)">{{ $row['label'] }}</span>
             <div class="d-flex align-items-center gap-2">
               <span style="font-size:12px;color:var(--p-info);
-                           font-family:'DM Mono',monospace;font-weight:600">
+                           font-family:'JetBrains Mono',monospace;font-weight:600">
                 -{{ number_format($cashbackAmount) }} UZS
               </span>
               @if($isCancelled)
@@ -563,10 +563,10 @@
                style="padding:9px 0;border-bottom:1px solid var(--p-border)">
             <span style="font-size:12px;color:var(--p-hint)">{{ $row['label'] }}</span>
             <div class="d-flex align-items-center gap-2">
-              <code style="font-family:'DM Mono',monospace;font-size:11px;
+              <code style="font-family:'JetBrains Mono',monospace;font-size:11px;
                            color:var(--p-warning)">#{{ $order->gift_certificate_id }}</code>
               <span style="font-size:12px;color:var(--p-warning);
-                           font-family:'DM Mono',monospace;font-weight:600">
+                           font-family:'JetBrains Mono',monospace;font-weight:600">
                 -{{ number_format($certAmount) }}
               </span>
               @if($isCancelled)
@@ -596,7 +596,7 @@
                 border-radius:10px;display:flex;justify-content:space-between;
                 align-items:center">
       <span style="font-size:13px;font-weight:600;color:var(--p-muted)">Umumiy to'lov</span>
-      <span style="font-size:20px;font-weight:800;font-family:'DM Mono',monospace;
+      <span style="font-size:20px;font-weight:800;font-family:'JetBrains Mono',monospace;
                    color:{{ $isCancelled ? 'var(--p-danger)' : 'var(--p-accent)' }}">
         {{ number_format($order->amount) }}
         <span style="font-size:12px;font-weight:500;color:var(--p-hint)">UZS</span>
@@ -653,19 +653,19 @@
     <div style="padding:4px 0">
       <div class="d-flex justify-content-between" style="padding:7px 0">
         <span style="font-size:12px;color:var(--p-hint)">Kod</span>
-        <code style="font-family:'DM Mono',monospace;font-size:14px;
+        <code style="font-family:'JetBrains Mono',monospace;font-size:14px;
                      font-weight:800;color:var(--p-warning)">{{ $orderCert->code }}</code>
       </div>
       <div class="d-flex justify-content-between" style="padding:7px 0">
         <span style="font-size:12px;color:var(--p-hint)">Nominal</span>
-        <span style="font-family:'DM Mono',monospace;font-size:13px;
+        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;
                      font-weight:600;color:var(--p-text)">
           {{ number_format($orderCert->nominal_uzs) }} UZS
         </span>
       </div>
       <div class="d-flex justify-content-between" style="padding:7px 0">
         <span style="font-size:12px;color:var(--p-hint)">Chegirma</span>
-        <span style="font-family:'DM Mono',monospace;font-size:13px;
+        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;
                      font-weight:600;color:var(--p-warning)">
           -{{ number_format($certAmount) }} UZS
         </span>
@@ -715,13 +715,13 @@
         </button>
       </div>
     </div>
-    <div id="qrMasked" style="font-family:'DM Mono',monospace;font-size:14px;
+    <div id="qrMasked" style="font-family:'JetBrains Mono',monospace;font-size:14px;
                               color:var(--p-muted);letter-spacing:.08em;
                               padding:8px 0">
       {{ str_repeat('•', min(20, strlen($order->qr) - 4)) }}{{ substr($order->qr,-4) }}
     </div>
     <div id="qrFull" style="display:none;padding:10px;background:var(--p-elevated);
-                             border-radius:8px;font-family:'DM Mono',monospace;
+                             border-radius:8px;font-family:'JetBrains Mono',monospace;
                              font-size:12px;color:var(--p-text);font-weight:600;
                              word-break:break-all;line-height:1.7;user-select:all">
       {{ $order->qr }}

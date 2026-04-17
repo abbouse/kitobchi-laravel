@@ -62,7 +62,7 @@
         <div style="font-size:10px;color:var(--p-hint);text-transform:uppercase;letter-spacing:.07em">
           {{ $lbl }}
         </div>
-        <div style="font-size:18px;font-weight:700;font-family:'DM Mono',monospace;
+        <div style="font-size:18px;font-weight:700;font-family:'JetBrains Mono',monospace;
                     color:var(--p-{{ $clr }})">
           {{ $counts[$key] }}
         </div>
@@ -147,7 +147,7 @@
           $entityBal   = $entity->balance ?? 0;
         @endphp
         <tr>
-          <td style="font-family:'DM Mono',monospace;color:var(--p-accent);font-size:12px">
+          <td style="font-family:'JetBrains Mono',monospace;color:var(--p-accent);font-size:12px">
             #{{ $tx->id }}
           </td>
 
@@ -172,7 +172,7 @@
                    style="font-size:12.5px;font-weight:500;color:var(--p-text);text-decoration:none">
                   {{ $entityName }}
                 </a>
-                <div style="font-size:10px;color:var(--p-hint);font-family:'DM Mono',monospace">
+                <div style="font-size:10px;color:var(--p-hint);font-family:'JetBrains Mono',monospace">
                   Balans: {{ number_format($entityBal) }} UZS
                 </div>
               </div>
@@ -184,11 +184,11 @@
             @endif
           </td>
 
-          <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--p-muted)">
+          <td style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--p-muted)">
             {{ $tx->card ? '****'.substr($tx->card,-4) : '—' }}
           </td>
 
-          <td style="text-align:right;font-family:'DM Mono',monospace;
+          <td style="text-align:right;font-family:'JetBrains Mono',monospace;
                      font-weight:600;color:var(--p-text);font-size:13px">
             {{ number_format($tx->amount) }}
           </td>
@@ -206,7 +206,7 @@
             @endif
           </td>
 
-          <td style="text-align:right;font-family:'DM Mono',monospace;
+          <td style="text-align:right;font-family:'JetBrains Mono',monospace;
                      font-weight:700;color:var(--p-success);font-size:13px">
             {{ number_format($tx->netAmount ?? $tx->amount) }}
           </td>
@@ -220,7 +220,7 @@
           </td>
 
           <td style="font-size:11px;color:var(--p-hint);white-space:nowrap;
-                     font-family:'DM Mono',monospace">
+                     font-family:'JetBrains Mono',monospace">
             {{ $tx->created_at?->format('d.m.Y H:i') }}
           </td>
 

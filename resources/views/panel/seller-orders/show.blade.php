@@ -36,11 +36,11 @@
                     {{ $item->type === 'book' ? 'Kitob' : 'Kantselyariya' }}
                   </span>
                 </td>
-                <td style="font-family:'DM Mono',monospace;font-size:13px;color:var(--p-muted)">
+                <td style="font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--p-muted)">
                   {{ number_format($item->price) }} UZS
                 </td>
-                <td style="font-family:'DM Mono',monospace;font-size:13px">{{ $item->quantity }}</td>
-                <td style="font-family:'DM Mono',monospace;font-weight:600;color:var(--p-text)">
+                <td style="font-family:'JetBrains Mono',monospace;font-size:13px">{{ $item->quantity }}</td>
+                <td style="font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--p-text)">
                   {{ number_format($item->price * $item->quantity) }} UZS
                 </td>
               </tr>
@@ -52,7 +52,7 @@
             <tfoot>
               <tr style="border-top:2px solid var(--p-border2)">
                 <td colspan="4" style="text-align:right;font-weight:600;color:var(--p-muted);font-size:13px">Jami:</td>
-                <td style="font-family:'DM Mono',monospace;font-size:15px;font-weight:700;color:var(--p-success)">
+                <td style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:var(--p-success)">
                   {{ number_format($sellerOrder->amount) }} UZS
                 </td>
               </tr>

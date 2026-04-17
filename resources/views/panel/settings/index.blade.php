@@ -36,10 +36,10 @@
                   {{ $d->type === 'courier_service' ? 'Kuryer' : 'Pochta' }}
                 </span>
               </td>
-              <td style="font-family:'DM Mono',monospace;font-size:13px">
+              <td style="font-family:'JetBrains Mono',monospace;font-size:13px">
                 {{ number_format($d->priceKg) }}
               </td>
-              <td style="font-family:'DM Mono',monospace;font-size:12px">
+              <td style="font-family:'JetBrains Mono',monospace;font-size:12px">
                 {{ $d->muddat }} kun
               </td>
               <td style="font-size:12px;color:var(--p-muted)">{{ $d->forCountry }}</td>

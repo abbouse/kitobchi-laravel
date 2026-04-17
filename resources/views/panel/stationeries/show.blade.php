@@ -71,7 +71,7 @@
             <tbody>
               @foreach($stationery->variants as $v)
               <tr>
-                <td style="font-family:'DM Mono',monospace;color:var(--p-accent)">{{ $v->id }}</td>
+                <td style="font-family:'JetBrains Mono',monospace;color:var(--p-accent)">{{ $v->id }}</td>
                 <td style="font-weight:500">{{ $v->color_name }}</td>
                 <td><span class="s-pill {{ $v->stock>0?'success':'danger' }}">{{ $v->stock }} ta</span></td>
                 <td>
@@ -171,7 +171,7 @@
         ] as [$lbl, $val, $clr])
         <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--p-border)">
           <span style="font-size:12px;color:var(--p-hint)">{{ $lbl }}</span>
-          <span style="font-size:13px;font-weight:600;font-family:'DM Mono',monospace;color:var(--p-{{ $clr }})">{{ $val }}</span>
+          <span style="font-size:13px;font-weight:600;font-family:'JetBrains Mono',monospace;color:var(--p-{{ $clr }})">{{ $val }}</span>
         </div>
         @endforeach
       </div>

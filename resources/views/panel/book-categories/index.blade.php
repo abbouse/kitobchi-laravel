@@ -52,7 +52,7 @@
       <tbody>
         @forelse($categories as $cat)
         <tr>
-          <td style="font-family:'DM Mono',monospace;color:var(--p-accent)">{{ $cat->id }}</td>
+          <td style="font-family:'JetBrains Mono',monospace;color:var(--p-accent)">{{ $cat->id }}</td>
           <td style="font-size:22px;text-align:center">{{ $cat->icon ?? '📚' }}</td>
           <td style="font-weight:500;color:var(--p-text)">{{ $cat->name_uz }}</td>
           <td style="color:var(--p-muted)">{{ $cat->name_ru }}</td>

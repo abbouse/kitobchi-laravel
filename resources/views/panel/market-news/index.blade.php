@@ -29,7 +29,7 @@
         <i class="bi {{ $i }}"></i>
       </div>
       <div>
-        <div style="font-size:20px;font-weight:700;font-family:'DM Mono',monospace;color:var(--p-text)">
+        <div style="font-size:20px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--p-text)">
           {{ $v }}
         </div>
         <div style="font-size:10px;color:var(--p-hint);text-transform:uppercase;letter-spacing:.07em">
@@ -73,7 +73,7 @@
           };
         @endphp
         <tr>
-          <td style="font-family:'DM Mono',monospace;color:var(--p-accent);font-size:12px">
+          <td style="font-family:'JetBrains Mono',monospace;color:var(--p-accent);font-size:12px">
             #{{ $item->id }}
           </td>
 
@@ -124,7 +124,7 @@
                 {{ Str::limit($item->book->name, 24) }}
               </a>
             @elseif($item->action_id)
-              <span style="font-size:11px;color:var(--p-hint);font-family:'DM Mono',monospace">
+              <span style="font-size:11px;color:var(--p-hint);font-family:'JetBrains Mono',monospace">
                 #{{ $item->action_id }}
               </span>
             @else
@@ -145,7 +145,7 @@
           </td>
 
           <td style="font-size:11px;color:var(--p-hint);white-space:nowrap;
-                     font-family:'DM Mono',monospace">
+                     font-family:'JetBrains Mono',monospace">
             {{ $item->created_at?->format('d.m.Y') }}
           </td>
 

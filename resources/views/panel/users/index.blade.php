@@ -127,7 +127,7 @@
         @forelse($users as $user)
         <tr>
           <td>
-            <span style="font-family:'DM Mono',monospace;color:var(--p-accent);font-size:12px">#{{ $user->id }}</span>
+            <span style="font-family:'JetBrains Mono',monospace;color:var(--p-accent);font-size:12px">#{{ $user->id }}</span>
           </td>
           <td>
             <div class="d-flex align-items-center gap-2">
@@ -146,13 +146,13 @@
               </div>
             </div>
           </td>
-          <td style="font-family:'DM Mono',monospace;font-size:12px">@if($user->phone_number)
+          <td style="font-family:'JetBrains Mono',monospace;font-size:12px">@if($user->phone_number)
         +{{ preg_replace('/(\d{3})(\d{2})(\d{3})(\d{2})(\d{2})/', '$1 ($2) $3 $4 $5', $user->phone_number) }}
     @else
         —
     @endif</td>
           <td>
-            <span style="font-family:'DM Mono',monospace;font-weight:500;color:var(--p-text)">
+            <span style="font-family:'JetBrains Mono',monospace;font-weight:500;color:var(--p-text)">
               {{ number_format($user->real_balance ?? 0) }}
             </span>
             <span style="font-size:11px;color:var(--p-hint)"> UZS</span>
@@ -171,7 +171,7 @@
               <span class="s-pill danger">Tekshirilmagan</span>
             @endif
           </td>
-          <td style="font-size:12px;color:var(--p-hint);font-family:'DM Mono',monospace">
+          <td style="font-size:12px;color:var(--p-hint);font-family:'JetBrains Mono',monospace">
             {{ $user->created_at?->format('d.m.Y') }}
           </td>
           <td>

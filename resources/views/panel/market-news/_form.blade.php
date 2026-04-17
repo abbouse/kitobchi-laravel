@@ -297,7 +297,7 @@ async function previewAction() {
             ? `<div style="font-size:11px;color:var(--p-warning)">⭐ ${data.rating}</div>`
             : ''}
           ${!isShop && data.price
-            ? `<div style="font-size:12px;color:var(--p-success);font-family:'DM Mono',monospace;font-weight:600">
+            ? `<div style="font-size:12px;color:var(--p-success);font-family:'JetBrains Mono',monospace;font-weight:600">
                  ${Number(data.price).toLocaleString()} UZS
                </div>`
             : ''}

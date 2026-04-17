@@ -23,7 +23,7 @@
                 <input type="text" name="code" id="promoCode"
                        class="p-form-control @error('code') is-invalid @enderror"
                        value="{{ old('code') }}" required
-                       style="text-transform:uppercase;font-family:'DM Mono',monospace;font-weight:700;font-size:15px;letter-spacing:.05em">
+                       style="text-transform:uppercase;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:15px;letter-spacing:.05em">
                 <button type="button" class="btn-p ghost" onclick="generateCode()">
                   <i class="bi bi-arrow-repeat"></i> Yaratish
                 </button>
@@ -33,7 +33,7 @@
             @else
             <div class="col-12">
               <label class="p-label">Kod</label>
-              <code style="display:block;font-family:'DM Mono',monospace;font-size:18px;font-weight:700;
+              <code style="display:block;font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;
                            color:var(--p-accent);background:var(--p-elevated);padding:10px 16px;
                            border-radius:8px;letter-spacing:.08em">{{ $promocode->code }}</code>
             </div>
@@ -101,12 +101,12 @@
         <div class="dash-card-body" style="padding:14px 20px">
           <div class="d-flex gap-3">
             <div style="text-align:center">
-              <div style="font-size:24px;font-weight:700;font-family:'DM Mono',monospace;color:var(--p-warning)">{{ $promocode->usedCount }}</div>
+              <div style="font-size:24px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--p-warning)">{{ $promocode->usedCount }}</div>
               <div style="font-size:10px;color:var(--p-warning);opacity:.7;text-transform:uppercase">Ishlatildi</div>
             </div>
             <div style="width:1px;background:rgba(245,166,35,.2)"></div>
             <div style="text-align:center">
-              <div style="font-size:24px;font-weight:700;font-family:'DM Mono',monospace;color:var(--p-warning)">{{ $promocode->usesLimit ?: '∞' }}</div>
+              <div style="font-size:24px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--p-warning)">{{ $promocode->usesLimit ?: '∞' }}</div>
               <div style="font-size:10px;color:var(--p-warning);opacity:.7;text-transform:uppercase">Limit</div>
             </div>
           </div>

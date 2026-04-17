@@ -97,13 +97,13 @@
                    style="font-size:12.5px;font-weight:500;color:var(--p-text);text-decoration:none">
                   {{ $conv->name }} {{ $conv->lastname }}
                 </a>
-                <div style="font-size:10px;color:var(--p-hint);font-family:'DM Mono',monospace">
+                <div style="font-size:10px;color:var(--p-hint);font-family:'JetBrains Mono',monospace">
                   {{ $conv->phone_number }}
                 </div>
               </div>
             </div>
           </td>
-          <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--p-muted)">
+          <td style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--p-muted)">
             {{ $conv->messages_count ?? '—' }}
           </td>
           <td style="font-size:12px;color:var(--p-muted);max-width:200px;
@@ -111,7 +111,7 @@
             {{ Str::limit($conv->last_message ?? '—', 40) }}
           </td>
           <td style="font-size:11px;color:var(--p-hint);white-space:nowrap;
-                     font-family:'DM Mono',monospace">
+                     font-family:'JetBrains Mono',monospace">
             {{ $conv->last_at
               ? \Carbon\Carbon::parse($conv->last_at)->diffForHumans()
               : '—' }}
@@ -127,7 +127,7 @@
         {{-- Seller tab --}}
         @elseif($tab === 'seller')
         <tr>
-          <td style="font-family:'DM Mono',monospace;color:var(--p-accent);font-size:12px">
+          <td style="font-family:'JetBrains Mono',monospace;color:var(--p-accent);font-size:12px">
             #{{ $conv->id }}
           </td>
           <td>
@@ -149,7 +149,7 @@
             @endif
           </td>
           <td style="font-size:11px;color:var(--p-hint);white-space:nowrap;
-                     font-family:'DM Mono',monospace">
+                     font-family:'JetBrains Mono',monospace">
             {{ $conv->last_message_at
               ? \Carbon\Carbon::parse($conv->last_message_at)->diffForHumans()
               : '—' }}
@@ -165,7 +165,7 @@
         {{-- User-User tab --}}
         @else
         <tr>
-          <td style="font-family:'DM Mono',monospace;color:var(--p-accent);font-size:12px">
+          <td style="font-family:'JetBrains Mono',monospace;color:var(--p-accent);font-size:12px">
             #{{ $conv->id }}
           </td>
           <td>
@@ -189,7 +189,7 @@
             @endif
           </td>
           <td style="font-size:11px;color:var(--p-hint);white-space:nowrap;
-                     font-family:'DM Mono',monospace">
+                     font-family:'JetBrains Mono',monospace">
             {{ $conv->last_message_at
               ? \Carbon\Carbon::parse($conv->last_message_at)->diffForHumans()
               : '—' }}

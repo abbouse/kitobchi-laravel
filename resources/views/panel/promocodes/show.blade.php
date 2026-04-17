@@ -7,7 +7,7 @@
   <div class="col-xl-4">
     <div class="p-card mb-3">
       <div class="dash-card-body" style="text-align:center;padding:30px">
-        <code style="font-family:'DM Mono',monospace;font-size:26px;font-weight:700;
+        <code style="font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:700;
                      color:var(--p-accent);background:var(--p-elevated);
                      padding:12px 24px;border-radius:10px;letter-spacing:.1em;display:inline-block">
           {{ $promocode->code }}
@@ -76,7 +76,7 @@
             <tbody>
               @forelse($histories as $h)
               <tr>
-                <td style="font-family:'DM Mono',monospace;color:var(--p-accent)">{{ $h->id }}</td>
+                <td style="font-family:'JetBrains Mono',monospace;color:var(--p-accent)">{{ $h->id }}</td>
                 <td>
                   @if($h->user)
                   <a href="{{ route('panel.users.show', $h->user_id) }}" style="color:var(--p-text);font-weight:500">
@@ -86,7 +86,7 @@
                     <span style="color:var(--p-hint)">ID: {{ $h->user_id }}</span>
                   @endif
                 </td>
-                <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--p-muted)">{{ $h->user?->phone_number ?? '—' }}</td>
+                <td style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--p-muted)">{{ $h->user?->phone_number ?? '—' }}</td>
                 <td style="font-size:11px;color:var(--p-hint)">{{ \Carbon\Carbon::parse($h->created_at)->format('d.m.Y H:i') }}</td>
               </tr>
               @empty

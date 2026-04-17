@@ -27,7 +27,7 @@
         <i class="bi {{ $i }}"></i>
       </div>
       <div>
-        <div style="font-size:19px;font-weight:700;font-family:'DM Mono',monospace;
+        <div style="font-size:19px;font-weight:700;font-family:'JetBrains Mono',monospace;
                     color:var(--p-{{ $c }})">{{ $v }}</div>
         <div style="font-size:10px;color:var(--p-hint);text-transform:uppercase;
                     letter-spacing:.07em">{{ $l }}</div>
@@ -112,7 +112,7 @@
         @endphp
         <tr>
           <td>
-            <code style="font-family:'DM Mono',monospace;font-size:12px;
+            <code style="font-family:'JetBrains Mono',monospace;font-size:12px;
                          font-weight:600;color:var(--p-accent);
                          background:var(--p-accent-d);padding:2px 8px;border-radius:5px">
               {{ $c->code }}
@@ -125,7 +125,7 @@
                style="font-size:12.5px;color:var(--p-text);text-decoration:none">
               {{ $c->buyer->name }} {{ $c->buyer->lastname }}
             </a>
-            <div style="font-size:10px;color:var(--p-hint);font-family:'DM Mono',monospace">
+            <div style="font-size:10px;color:var(--p-hint);font-family:'JetBrains Mono',monospace">
               {{ $c->buyer->phone_number }}
             </div>
             @else
@@ -143,7 +143,7 @@
             <div style="font-size:12.5px;color:var(--p-muted)">
               {{ $c->recipient_name }}
             </div>
-            <div style="font-size:10px;color:var(--p-hint);font-family:'DM Mono',monospace">
+            <div style="font-size:10px;color:var(--p-hint);font-family:'JetBrains Mono',monospace">
               {{ $c->recipient_phone }}
             </div>
             @else
@@ -151,14 +151,14 @@
             @endif
           </td>
 
-          <td style="text-align:right;font-family:'DM Mono',monospace;
+          <td style="text-align:right;font-family:'JetBrains Mono',monospace;
                      font-weight:700;color:var(--p-success);font-size:13px">
             {{ number_format($c->nominal_uzs) }} UZS
           </td>
 
           <td><span class="s-pill {{ $stCls }}" style="font-size:10px">{{ $stLbl }}</span></td>
 
-          <td style="font-size:11px;color:var(--p-hint);font-family:'DM Mono',monospace;
+          <td style="font-size:11px;color:var(--p-hint);font-family:'JetBrains Mono',monospace;
                      white-space:nowrap">
             {{ $c->created_at?->format('d.m.Y') }}
           </td>
