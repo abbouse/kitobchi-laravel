@@ -98,7 +98,7 @@
             <div style="font-size:14px;font-weight:600;color:var(--p-text)">
               {{ $entityName }}
             </div>
-            <div style="font-size:12px;color:var(--p-hint);font-family:'DM Mono',monospace">
+            <div style="font-size:12px;color:var(--p-hint);font-family:'JetBrains Mono',monospace">
               {{ $entity->phone_number ?? '—' }}
             </div>
           </div>
@@ -124,14 +124,14 @@
         <div style="display:flex;justify-content:space-between;
                     padding:8px 0;border-bottom:1px solid var(--p-border)">
           <span style="font-size:12px;color:var(--p-hint)">Joriy balans</span>
-          <span style="font-size:13px;font-weight:600;font-family:'DM Mono',monospace;
+          <span style="font-size:13px;font-weight:600;font-family:'JetBrains Mono',monospace;
                        color:var(--p-text)">
             {{ number_format($entityBalance) }} UZS
           </span>
         </div>
         <div style="display:flex;justify-content:space-between;padding:8px 0">
           <span style="font-size:12px;color:var(--p-hint)">So'ralgan miqdor</span>
-          <span style="font-size:13px;font-weight:600;font-family:'DM Mono',monospace;
+          <span style="font-size:13px;font-weight:600;font-family:'JetBrains Mono',monospace;
                        color:var(--p-warning)">
             {{ number_format($tx->amount) }} UZS
           </span>
@@ -183,7 +183,7 @@
           <div style="padding:10px 0;border-right:1px solid var(--p-border)">
             <div style="font-size:10px;color:var(--p-hint);text-transform:uppercase;
                         letter-spacing:.07em;margin-bottom:6px">So'ralgan miqdor</div>
-            <div style="font-size:22px;font-weight:700;font-family:'DM Mono',monospace;
+            <div style="font-size:22px;font-weight:700;font-family:'JetBrains Mono',monospace;
                         color:var(--p-text)">
               {{ number_format($tx->amount) }}
             </div>
@@ -193,7 +193,7 @@
           <div style="padding:10px 0;border-right:1px solid var(--p-border)">
             <div style="font-size:10px;color:var(--p-hint);text-transform:uppercase;
                         letter-spacing:.07em;margin-bottom:6px">Komissiya</div>
-            <div style="font-size:22px;font-weight:700;font-family:'DM Mono',monospace;
+            <div style="font-size:22px;font-weight:700;font-family:'JetBrains Mono',monospace;
                         color:var(--p-danger)">
               {{ $tx->commissionPercent ?? 0 }}%
             </div>
@@ -205,7 +205,7 @@
           <div style="padding:10px 0">
             <div style="font-size:10px;color:var(--p-hint);text-transform:uppercase;
                         letter-spacing:.07em;margin-bottom:6px">Toza summa</div>
-            <div style="font-size:22px;font-weight:700;font-family:'DM Mono',monospace;
+            <div style="font-size:22px;font-weight:700;font-family:'JetBrains Mono',monospace;
                         color:var(--p-success)">
               {{ number_format($tx->netAmount ?? $tx->amount) }}
             </div>
@@ -216,7 +216,7 @@
         <div class="row g-3">
           <div class="col-md-6">
             <div style="font-size:11px;color:var(--p-hint);margin-bottom:4px">Karta raqami</div>
-            <div style="font-size:14px;font-weight:600;font-family:'DM Mono',monospace;
+            <div style="font-size:14px;font-weight:600;font-family:'JetBrains Mono',monospace;
                         color:var(--p-text);letter-spacing:.08em">
               @if($tx->card)
                 {{ implode(' ', str_split(
@@ -253,7 +253,7 @@
 
           <div class="col-md-6">
             <div style="font-size:11px;color:var(--p-hint);margin-bottom:4px">ID</div>
-            <div style="font-size:14px;font-weight:600;font-family:'DM Mono',monospace;
+            <div style="font-size:14px;font-weight:600;font-family:'JetBrains Mono',monospace;
                         color:var(--p-accent)">
               #{{ $tx->id }}
             </div>

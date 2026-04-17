@@ -71,7 +71,7 @@
         <i class="bi {{ $icon }}"></i>
       </div>
       <div>
-        <div style="font-size:20px;font-weight:700;font-family:'DM Mono',monospace;
+        <div style="font-size:20px;font-weight:700;font-family:'JetBrains Mono',monospace;
                     color:var(--p-text)">{{ $val }}</div>
         <div style="font-size:11px;color:var(--p-hint);text-transform:uppercase;
                     letter-spacing:.07em">{{ $lbl }}</div>
@@ -135,7 +135,7 @@
       <div style="border-top:1px solid var(--p-border);padding:12px 20px">
         <div style="font-size:10px;color:var(--p-hint);text-transform:uppercase;
                     letter-spacing:.07em;margin-bottom:4px">FCM Token</div>
-        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--p-muted);
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--p-muted);
                     word-break:break-all;background:var(--p-elevated);
                     padding:6px 8px;border-radius:6px">
           {{ Str::limit($courier->fcm_token, 60) }}
@@ -257,7 +257,7 @@
             <tr>
               <td>
                 <a href="{{ route('panel.orders.show', $order->order_id) }}"
-                   style="font-family:'DM Mono',monospace;color:var(--p-accent);font-weight:600">
+                   style="font-family:'JetBrains Mono',monospace;color:var(--p-accent);font-weight:600">
                   #{{ $order->order_id }}
                 </a>
               </td>
@@ -281,11 +281,11 @@
                   <span style="color:var(--p-hint);font-size:12px">#{{ $order->user_id }}</span>
                 @endif
               </td>
-              <td style="font-family:'DM Mono',monospace;font-weight:600;
+              <td style="font-family:'JetBrains Mono',monospace;font-weight:600;
                          font-size:13px;color:var(--p-text)">
                 {{ number_format($order->amount) }}
               </td>
-              <td style="font-family:'DM Mono',monospace;font-size:12px;
+              <td style="font-family:'JetBrains Mono',monospace;font-size:12px;
                          color:var(--p-success);font-weight:600">
                 {{ number_format($order->courierPrice) }}
               </td>
@@ -344,11 +344,11 @@
               $txLbl = match($txS) { 'approved'=>'Tasdiqlangan', 'rejected'=>'Rad etildi', default=>'Kutilmoqda' };
             @endphp
             <tr>
-              <td style="font-family:'DM Mono',monospace;color:var(--p-accent)">#{{ $tx->id }}</td>
-              <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--p-muted)">
+              <td style="font-family:'JetBrains Mono',monospace;color:var(--p-accent)">#{{ $tx->id }}</td>
+              <td style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--p-muted)">
                 {{ $tx->card ? '****'.substr($tx->card, -4) : '—' }}
               </td>
-              <td style="font-family:'DM Mono',monospace;font-weight:600;color:var(--p-text)">
+              <td style="font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--p-text)">
                 {{ number_format($tx->amount) }}
               </td>
               <td style="font-size:12px;color:var(--p-danger)">
@@ -357,7 +357,7 @@
                   <span style="color:var(--p-hint)">({{ number_format($tx->commissionPrice) }})</span>
                 @endif
               </td>
-              <td style="font-family:'DM Mono',monospace;font-weight:600;color:var(--p-success)">
+              <td style="font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--p-success)">
                 {{ number_format($tx->netAmount ?? $tx->amount) }}
               </td>
               <td>

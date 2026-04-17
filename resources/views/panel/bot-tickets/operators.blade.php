@@ -35,7 +35,7 @@
               @if($op->username)
                 <div style="font-size:12px;color:var(--p-hint)">@{{ $op->username }}</div>
               @endif
-              <div style="font-size:11px;color:var(--p-hint);font-family:'DM Mono',monospace">
+              <div style="font-size:11px;color:var(--p-hint);font-family:'JetBrains Mono',monospace">
                 TG: {{ $op->telegram_id }}
               </div>
             </div>
@@ -60,7 +60,7 @@
             ['O\'rt. baho', number_format($op->stats->avg_rating,1), 'warning'],
           ] as [$lbl,$val,$clr])
           <div style="text-align:center;padding:10px 6px;border-right:1px solid var(--p-border)">
-            <div style="font-size:16px;font-weight:700;font-family:'DM Mono',monospace;color:var(--p-{{ $clr }})">{{ $val }}</div>
+            <div style="font-size:16px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--p-{{ $clr }})">{{ $val }}</div>
             <div style="font-size:10px;color:var(--p-hint)">{{ $lbl }}</div>
           </div>
           @endforeach

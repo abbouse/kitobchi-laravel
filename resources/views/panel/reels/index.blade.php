@@ -31,7 +31,7 @@
         @forelse($reels as $reel)
         <tr>
           <td>
-            <span style="font-family:'DM Mono',monospace;font-size:13px;
+            <span style="font-family:'JetBrains Mono',monospace;font-size:13px;
                          color:var(--p-accent);font-weight:600">
               {{ $reel->order }}
             </span>
@@ -59,7 +59,7 @@
           </td>
 
           <td style="font-size:11px;color:var(--p-hint);white-space:nowrap;
-                     font-family:'DM Mono',monospace">
+                     font-family:'JetBrains Mono',monospace">
             {{ $reel->created_at?->format('d.m.Y') }}
           </td>
 

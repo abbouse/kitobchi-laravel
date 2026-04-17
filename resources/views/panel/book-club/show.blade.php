@@ -142,7 +142,7 @@
           <div style="margin-bottom:10px">
             <div style="display:flex;justify-content:space-between;margin-bottom:4px">
               <span style="font-size:13px;color:var(--p-text)">{{ $vote->option_text }}</span>
-              <span style="font-size:12px;font-family:'DM Mono',monospace;color:var(--p-accent)">
+              <span style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--p-accent)">
                 {{ $vCount }} ({{ $pct }}%)
               </span>
             </div>
@@ -164,7 +164,7 @@
           ] as [$icon,$clr,$cnt,$lbl])
           <div style="display:flex;align-items:center;gap:5px">
             <i class="bi {{ $icon }}" style="color:var(--p-{{ $clr }})"></i>
-            <span style="font-size:13px;font-weight:600;font-family:'DM Mono',monospace;color:var(--p-text)">
+            <span style="font-size:13px;font-weight:600;font-family:'JetBrains Mono',monospace;color:var(--p-text)">
               {{ $cnt }}
             </span>
             <span style="font-size:11px;color:var(--p-hint)">{{ $lbl }}</span>
@@ -362,7 +362,7 @@
                       white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block">
               {{ $like->user?->name }} {{ $like->user?->lastname }}
             </a>
-            <span style="font-size:10px;color:var(--p-hint);font-family:'DM Mono',monospace">
+            <span style="font-size:10px;color:var(--p-hint);font-family:'JetBrains Mono',monospace">
               #{{ $like->user_id }}
             </span>
           </div>

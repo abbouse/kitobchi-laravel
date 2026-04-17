@@ -29,7 +29,7 @@
             <i class="bi {{ $t['icon'] }}"></i>
           </div>
           <div>
-            <div style="font-size:18px;font-weight:700;font-family:'DM Mono',monospace;
+            <div style="font-size:18px;font-weight:700;font-family:'JetBrains Mono',monospace;
                         color:var(--p-{{ $t['color'] }})">
               {{ number_format($tokenCounts[$key] ?? 0) }}
             </div>
@@ -102,7 +102,7 @@
                       </div>
                     </div>
                     <span class="s-pill {{ $t['color'] }}" style="font-size:13px;font-weight:700;
-                                font-family:'DM Mono',monospace">
+                                font-family:'JetBrains Mono',monospace">
                       {{ number_format($tokenCounts[$key] ?? 0) }}
                     </span>
                   </label>

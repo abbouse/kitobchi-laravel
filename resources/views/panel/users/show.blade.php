@@ -89,7 +89,7 @@
     <div style="display:flex;flex-direction:column;gap:6px;min-width:200px">
       <div style="display:flex;align-items:center;gap:7px">
         <i class="bi bi-telephone" style="color:var(--p-muted);font-size:12px;width:14px"></i>
-        <span style="font-size:13px;color:var(--p-text);font-family:'DM Mono',monospace">
+        <span style="font-size:13px;color:var(--p-text);font-family:'JetBrains Mono',monospace">
           {{ $user->phone_number ?: '—' }}
         </span>
       </div>
@@ -128,7 +128,7 @@
     @foreach($stripStats as $i => [$icon,$lbl,$val,$clr])
     <div style="flex:1;min-width:80px;padding:10px 12px;text-align:center;
                 {{ $i>0?'border-left:1px solid var(--p-border)':'' }}">
-      <div style="font-size:14px;font-weight:700;font-family:'DM Mono',monospace;
+      <div style="font-size:14px;font-weight:700;font-family:'JetBrains Mono',monospace;
                   color:var(--p-{{ $clr }})">{{ $val }}</div>
       <div style="font-size:9px;color:var(--p-hint);margin-top:2px;text-transform:uppercase;
                   letter-spacing:.06em;display:flex;align-items:center;
@@ -160,7 +160,7 @@
         <div style="display:flex;justify-content:space-between;align-items:center;
                     padding:8px 0;border-bottom:1px solid var(--p-border)">
           <span style="font-size:12px;color:var(--p-hint)">{{ $k }}</span>
-          <span style="font-size:13px;font-weight:600;font-family:'DM Mono',monospace;
+          <span style="font-size:13px;font-weight:600;font-family:'JetBrains Mono',monospace;
                        color:var(--p-{{ $clr }})">{{ $v }}</span>
         </div>
         @endforeach
@@ -273,7 +273,7 @@
             <i class="bi bi-credit-card-2-front" style="font-size:11px;color:#fff;opacity:.85"></i>
           </div>
           <div style="flex:1;min-width:0">
-            <div style="font-size:12px;font-weight:600;font-family:'DM Mono',monospace;
+            <div style="font-size:12px;font-weight:600;font-family:'JetBrains Mono',monospace;
                         color:var(--p-text);letter-spacing:.04em">{{ $masked }}</div>
             <div style="font-size:10px;color:var(--p-hint)">
               {{ \Carbon\Carbon::parse($card->created_at)->format('d.m.Y') }}
@@ -412,10 +412,10 @@
               <tr>
                 <td>
                   <a href="{{ route('panel.orders.show',$order) }}"
-                     style="font-family:'DM Mono',monospace;color:var(--p-accent);
+                     style="font-family:'JetBrains Mono',monospace;color:var(--p-accent);
                             font-weight:600;font-size:12px">#{{ $order->id }}</a>
                 </td>
-                <td style="font-family:'DM Mono',monospace;font-weight:600;
+                <td style="font-family:'JetBrains Mono',monospace;font-weight:600;
                            font-size:13px;color:var(--p-text)">
                   {{ number_format($order->amount) }}
                 </td>
@@ -428,7 +428,7 @@
                   <span class="s-pill {{ $pCls }}" style="font-size:10px">{{ $pLbl }}</span>
                 </td>
                 <td style="font-size:11px;color:var(--p-hint);
-                           font-family:'DM Mono',monospace">
+                           font-family:'JetBrains Mono',monospace">
                   {{ $order->created_at?->format('d.m H:i') }}
                 </td>
                 <td>
@@ -457,7 +457,7 @@
       <div class="p-card fade-up">
         <div class="p-card-header">
           <div class="p-card-title">Savatdagi mahsulotlar</div>
-          <span style="font-size:15px;font-weight:700;font-family:'DM Mono',monospace;
+          <span style="font-size:15px;font-weight:700;font-family:'JetBrains Mono',monospace;
                        color:var(--p-success)">
             {{ number_format($cartTotal) }} UZS
           </span>
@@ -493,12 +493,12 @@
                       white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
               {{ $item->name }}
             </a>
-            <div style="font-size:11px;color:var(--p-hint);font-family:'DM Mono',monospace">
+            <div style="font-size:11px;color:var(--p-hint);font-family:'JetBrains Mono',monospace">
               {{ number_format($item->price) }} × {{ $item->count }}
             </div>
           </div>
           <div style="text-align:right;flex-shrink:0">
-            <div style="font-size:13px;font-weight:700;font-family:'DM Mono',monospace;
+            <div style="font-size:13px;font-weight:700;font-family:'JetBrains Mono',monospace;
                         color:var(--p-text)">{{ number_format($item->subtotal) }}</div>
             <div style="font-size:10px;color:var(--p-hint)">UZS</div>
           </div>
@@ -510,7 +510,7 @@
           <span style="font-size:12px;color:var(--p-hint)">
             {{ $cartItems->count() }} ta mahsulot
           </span>
-          <span style="font-size:15px;font-weight:700;font-family:'DM Mono',monospace;
+          <span style="font-size:15px;font-weight:700;font-family:'JetBrains Mono',monospace;
                        color:var(--p-success)">{{ number_format($cartTotal) }} UZS</span>
         </div>
       </div>
@@ -555,7 +555,7 @@
             @endphp
             <tr>
               <td>
-                <code style="font-family:'DM Mono',monospace;font-size:11px;font-weight:700;
+                <code style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;
                              color:var(--p-accent);background:var(--p-accent-d);
                              padding:2px 7px;border-radius:4px">{{ $cert->code }}</code>
               </td>
@@ -564,7 +564,7 @@
                   {{ $isBuyer ? 'Sotib olgan' : 'Qabul qilgan' }}
                 </span>
               </td>
-              <td style="text-align:right;font-family:'DM Mono',monospace;
+              <td style="text-align:right;font-family:'JetBrains Mono',monospace;
                          font-weight:700;font-size:13px;color:var(--p-success)">
                 {{ number_format($cert->nominal_uzs) }} UZS
               </td>
@@ -572,7 +572,7 @@
                 @if($isBuyer)
                   {{ $cert->recipient_name ?: ($cert->recipient?->name ?? '—') }}
                   @if($cert->recipient_phone)
-                  <div style="font-size:10px;color:var(--p-hint);font-family:'DM Mono',monospace">
+                  <div style="font-size:10px;color:var(--p-hint);font-family:'JetBrains Mono',monospace">
                     {{ $cert->recipient_phone }}
                   </div>
                   @endif
@@ -584,10 +584,10 @@
                 @endif
               </td>
               <td><span class="s-pill {{ $stCls }}" style="font-size:10px">{{ $stLbl }}</span></td>
-              <td style="font-size:11px;color:var(--p-hint);font-family:'DM Mono',monospace">
+              <td style="font-size:11px;color:var(--p-hint);font-family:'JetBrains Mono',monospace">
                 {{ $cert->created_at?->format('d.m.Y') }}
               </td>
-              <td style="font-size:11px;color:var(--p-hint);font-family:'DM Mono',monospace">
+              <td style="font-size:11px;color:var(--p-hint);font-family:'JetBrains Mono',monospace">
                 {{ $cert->used_at?->format('d.m.Y') ?? '—' }}
               </td>
               <td>
@@ -618,14 +618,14 @@
           <div style="font-size:10px;color:var(--p-hint);text-transform:uppercase;letter-spacing:.07em">
             Sotib olgan
           </div>
-          <div style="font-size:15px;font-weight:700;font-family:'DM Mono',monospace;
+          <div style="font-size:15px;font-weight:700;font-family:'JetBrains Mono',monospace;
                       color:var(--p-accent)">{{ $boughtCerts->count() }} ta</div>
         </div>
         <div>
           <div style="font-size:10px;color:var(--p-hint);text-transform:uppercase;letter-spacing:.07em">
             Jami sarflagan
           </div>
-          <div style="font-size:15px;font-weight:700;font-family:'DM Mono',monospace;
+          <div style="font-size:15px;font-weight:700;font-family:'JetBrains Mono',monospace;
                       color:var(--p-text)">{{ number_format($boughtCerts->sum('nominal_uzs')) }} UZS</div>
         </div>
         @endif
@@ -634,7 +634,7 @@
           <div style="font-size:10px;color:var(--p-hint);text-transform:uppercase;letter-spacing:.07em">
             Qabul qilib ishlatdi
           </div>
-          <div style="font-size:15px;font-weight:700;font-family:'DM Mono',monospace;
+          <div style="font-size:15px;font-weight:700;font-family:'JetBrains Mono',monospace;
                       color:var(--p-success)">{{ number_format($receivedUsed->sum('nominal_uzs')) }} UZS</div>
         </div>
         @endif
@@ -681,7 +681,7 @@
                         background:var(--p-{{ $sub->status_color }});
                         width:{{ $sub->progress_pct }}%"></div>
           </div>
-          <span style="font-size:12px;font-family:'DM Mono',monospace;color:var(--p-muted);
+          <span style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--p-muted);
                        white-space:nowrap">
             {{ $sub->delivered_months }}/{{ $sub->total_months }} oy
           </span>
@@ -702,7 +702,7 @@
             <div style="font-size:12.5px;font-weight:500;color:var(--p-text)">
               {{ $addr['fullName'] ?? '—' }}
               @if($addr['phoneNumber'] ?? null)
-              <span style="font-family:'DM Mono',monospace;color:var(--p-hint);font-size:11px">
+              <span style="font-family:'JetBrains Mono',monospace;color:var(--p-hint);font-size:11px">
                 · {{ $addr['phoneNumber'] }}
               </span>
               @endif
@@ -725,7 +725,7 @@
           @foreach($sub->deliveries->sortBy('month_number') as $d)
           <a href="{{ route('panel.mystery-box.subscription',$sub) }}"
              style="display:flex;align-items:center;gap:4px;padding:4px 10px;
-                    border-radius:5px;font-size:11px;font-family:'DM Mono',monospace;
+                    border-radius:5px;font-size:11px;font-family:'JetBrains Mono',monospace;
                     background:var(--p-elevated);border:1px solid var(--p-border);
                     text-decoration:none;
                     color:{{ match($d->status){

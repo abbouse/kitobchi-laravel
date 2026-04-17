@@ -23,7 +23,7 @@
         <label class="p-form-label">App ID</label>
         <div class="d-flex align-items-center gap-2">
           <input type="text" class="p-form-control" value="{{ $apiClient->app_id }}"
-                 readonly style="font-family:'DM Mono',monospace;font-size:13px;
+                 readonly style="font-family:'JetBrains Mono',monospace;font-size:13px;
                                  background:var(--p-elevated);color:var(--p-accent)">
           <button type="button" onclick="copyText('{{ $apiClient->app_id }}')"
                   class="btn-p ghost sm"><i class="bi bi-copy"></i></button>
@@ -36,7 +36,7 @@
         <div class="d-flex align-items-center gap-2">
           <input type="text" id="secretField" class="p-form-control"
                  value="{{ str_repeat('•', 16) }}"
-                 readonly style="font-family:'DM Mono',monospace;font-size:13px;
+                 readonly style="font-family:'JetBrains Mono',monospace;font-size:13px;
                                  background:var(--p-elevated);color:var(--p-muted)">
           <button type="button" onclick="toggleSecret()" class="btn-p ghost sm" id="eyeBtn">
             <i class="bi bi-eye"></i>
@@ -60,7 +60,7 @@
           </span>
         </label>
         <textarea name="abilities" class="p-form-control @error('abilities') border-danger @enderror"
-                  rows="3" style="font-family:'DM Mono',monospace;font-size:13px"
+                  rows="3" style="font-family:'JetBrains Mono',monospace;font-size:13px"
                   placeholder='["read"]'>{{ old('abilities', $apiClient?->abilities) }}</textarea>
         @error('abilities')
           <div style="font-size:11px;color:var(--p-danger);margin-top:4px">{{ $message }}</div>

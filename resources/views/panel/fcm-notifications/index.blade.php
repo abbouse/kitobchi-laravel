@@ -56,7 +56,7 @@
           $t = $targets[$notif->who] ?? ['label'=>$notif->who,'color'=>'muted','icon'=>'bi-bell'];
         @endphp
         <tr>
-          <td style="font-family:'DM Mono',monospace;color:var(--p-accent);font-weight:600">
+          <td style="font-family:'JetBrains Mono',monospace;color:var(--p-accent);font-weight:600">
             #{{ $notif->id }}
           </td>
           <td>
@@ -78,7 +78,7 @@
               {{ $t['label'] }}
             </span>
           </td>
-          <td style="font-size:12px;color:var(--p-hint);white-space:nowrap;font-family:'DM Mono',monospace">
+          <td style="font-size:12px;color:var(--p-hint);white-space:nowrap;font-family:'JetBrains Mono',monospace">
             {{ $notif->created_at?->format('d.m.Y H:i') }}
           </td>
           <td>

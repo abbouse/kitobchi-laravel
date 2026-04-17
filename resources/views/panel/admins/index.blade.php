@@ -33,7 +33,7 @@
       <tbody>
         @forelse($admins as $admin)
         <tr>
-          <td><span style="font-family:'DM Mono',monospace;color:var(--p-accent);font-size:12px">#{{ $admin->id }}</span></td>
+          <td><span style="font-family:'JetBrains Mono',monospace;color:var(--p-accent);font-size:12px">#{{ $admin->id }}</span></td>
           <td>
             <div class="d-flex align-items-center gap-2">
               <div class="av" style="background:linear-gradient(135deg,var(--p-accent),#7c5cfc);color:#fff">

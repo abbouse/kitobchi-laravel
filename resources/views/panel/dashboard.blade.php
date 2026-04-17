@@ -12,7 +12,7 @@
 .kpi-card.cyan::before{background:var(--p-info)}.kpi-card.purple::before{background:#7c5cfc}
 .kpi-card.teal::before{background:#14b8a6}.kpi-card.pink::before{background:#ec4899}
 .kpi-icon{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:19px;margin-bottom:14px;}
-.kpi-value{font-size:26px;font-weight:700;font-family:'DM Mono',monospace;color:var(--p-text);letter-spacing:-.5px;line-height:1;margin-bottom:5px;}
+.kpi-value{font-size:26px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--p-text);letter-spacing:-.5px;line-height:1;margin-bottom:5px;}
 .kpi-label{font-size:11px;color:var(--p-hint);text-transform:uppercase;letter-spacing:.07em;font-weight:500;margin-bottom:12px;}
 .kpi-footer{display:flex;align-items:center;justify-content:space-between;padding-top:12px;border-top:1px solid var(--p-border);font-size:12px;}
 .kpi-change{display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:600;}
@@ -27,7 +27,7 @@
 .dash-prog{margin-bottom:13px;}
 .dash-prog-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;}
 .dash-prog-label{font-size:12px;color:var(--p-muted);}
-.dash-prog-val{font-size:12px;font-weight:600;color:var(--p-text);font-family:'DM Mono',monospace;}
+.dash-prog-val{font-size:12px;font-weight:600;color:var(--p-text);font-family:'JetBrains Mono',monospace;}
 .dash-prog-track{height:5px;background:var(--p-elevated);border-radius:10px;overflow:hidden;}
 .dash-prog-fill{height:100%;border-radius:10px;transition:width .8s cubic-bezier(.4,0,.2,1);}
 .o-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:500;padding:3px 9px;border-radius:20px;}
@@ -40,18 +40,18 @@
 .top-row:last-child{border-bottom:none;}
 .book-thumb{width:36px;height:50px;border-radius:5px;overflow:hidden;background:var(--p-elevated);flex-shrink:0;display:flex;align-items:center;justify-content:center;}
 .book-thumb img{width:100%;height:100%;object-fit:cover;}
-.rank-num{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:'DM Mono',monospace;flex-shrink:0;}
+.rank-num{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;flex-shrink:0;}
 .rn-1{background:rgba(245,166,35,.2);color:var(--p-warning)}.rn-2{background:rgba(139,145,168,.12);color:var(--p-muted)}
 .rn-3{background:rgba(205,127,50,.18);color:#cd7f32}.rn-n{background:transparent;color:var(--p-hint)}
 .stat-grid{display:grid;border-top:1px solid var(--p-border);margin-top:16px;padding-top:16px;}
 .stat-cell{text-align:center;}.stat-cell+.stat-cell{border-left:1px solid var(--p-border);}
-.stat-cell-val{font-size:17px;font-weight:700;font-family:'DM Mono',monospace;color:var(--p-text);}
+.stat-cell-val{font-size:17px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--p-text);}
 .stat-cell-lbl{font-size:10px;color:var(--p-hint);text-transform:uppercase;letter-spacing:.07em;margin-top:2px;}
 .fin-row{display:flex;align-items:center;padding:10px 0;border-bottom:1px solid var(--p-border);}
 .fin-row:last-child{border-bottom:none;}
 .fin-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;margin-right:12px;}
-.fin-val{font-family:'DM Mono',monospace;font-size:13px;font-weight:600;text-align:right;}
-.fin-month{font-size:10px;color:var(--p-hint);text-align:right;margin-top:1px;font-family:'DM Mono',monospace;}
+.fin-val{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;text-align:right;}
+.fin-month{font-size:10px;color:var(--p-hint);text-align:right;margin-top:1px;font-family:'JetBrains Mono',monospace;}
 .alert-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:9px;margin-bottom:8px;font-size:13px;}
 .alert-item:last-child{margin-bottom:0;}
 .alert-item.danger{background:var(--p-danger-d);border:1px solid rgba(255,92,106,.2);color:var(--p-danger);}
@@ -374,7 +374,7 @@
             <div class="d-flex align-items-center gap-2 mb-2">
               <i class="bi {{ $i }}" style="font-size:13px;color:var(--p-{{ $c }});width:16px"></i>
               <span style="flex:1;font-size:12px;color:var(--p-muted)">{{ $l }}</span>
-              <span style="font-size:12px;font-weight:600;font-family:'DM Mono',monospace;color:var(--p-text)">{{ number_format($v/1000) }}K</span>
+              <span style="font-size:12px;font-weight:600;font-family:'JetBrains Mono',monospace;color:var(--p-text)">{{ number_format($v/1000) }}K</span>
               <span class="s-pill {{ $c }}" style="font-size:10px;min-width:36px;text-align:center">{{ $p }}%</span>
             </div>
             @endforeach
@@ -395,7 +395,7 @@
             <div class="d-flex align-items-center gap-2 mb-2">
               <div style="width:10px;height:10px;border-radius:50%;background:var(--p-{{ $c }});flex-shrink:0"></div>
               <div style="flex:1"><div style="font-size:12px;color:var(--p-muted)">{{ $l }}</div><div style="font-size:10px;color:var(--p-hint)">{{ $s }}</div></div>
-              <span style="font-size:13px;font-weight:700;font-family:'DM Mono',monospace;color:var(--p-text)">{{ number_format($v) }}</span>
+              <span style="font-size:13px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--p-text)">{{ number_format($v) }}</span>
             </div>
             @endforeach
             <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--p-border)">
@@ -413,7 +413,7 @@
               @foreach($deliveryTypeSplit->take(3) as $dt)
               <div class="d-flex justify-content-between mb-1" style="font-size:12px">
                 <span style="color:var(--p-muted)">{{ $dt->deliveryType }}</span>
-                <span style="font-family:'DM Mono',monospace;color:var(--p-text);font-weight:600">{{ number_format($dt->cnt) }} ta</span>
+                <span style="font-family:'JetBrains Mono',monospace;color:var(--p-text);font-weight:600">{{ number_format($dt->cnt) }} ta</span>
               </div>
               @endforeach
             </div>
@@ -484,7 +484,7 @@
           </div>
           <div style="flex:1;min-width:0">
             <div style="font-size:13px;font-weight:500;color:var(--p-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ $u->name }} {{ $u->lastname }}</div>
-            <div style="font-size:11px;color:var(--p-hint);font-family:'DM Mono',monospace">{{ $u->last_seen_at ? \Carbon\Carbon::parse($u->last_seen_at)->diffForHumans() : '—' }}</div>
+            <div style="font-size:11px;color:var(--p-hint);font-family:'JetBrains Mono',monospace">{{ $u->last_seen_at ? \Carbon\Carbon::parse($u->last_seen_at)->diffForHumans() : '—' }}</div>
           </div>
           <span class="live-dot"></span>
         </a>
@@ -526,7 +526,7 @@
             </div>
           </div>
           <div style="text-align:right;flex-shrink:0">
-            <div style="font-size:13px;font-weight:700;font-family:'DM Mono',monospace;color:var(--p-text)">{{ number_format($product->sold_count) }}</div>
+            <div style="font-size:13px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--p-text)">{{ number_format($product->sold_count) }}</div>
             <div style="font-size:10px;color:var(--p-hint)">ta</div>
           </div>
         </div>
@@ -611,8 +611,8 @@
                   <span style="font-size:12.5px;font-weight:500;color:var(--p-text)">{{ $buyer->user?$buyer->user->name.' '.$buyer->user->lastname:'ID:'.$buyer->user_id }}</span>
                 </a>
               </td>
-              <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--p-muted)">{{ $buyer->order_count }} ta</td>
-              <td style="text-align:right;font-family:'DM Mono',monospace;font-size:13px;font-weight:700;color:var(--p-success)">{{ number_format($buyer->total_spent/1000) }}K</td>
+              <td style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--p-muted)">{{ $buyer->order_count }} ta</td>
+              <td style="text-align:right;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--p-success)">{{ number_format($buyer->total_spent/1000) }}K</td>
             </tr>
             @empty
             <tr><td colspan="4" style="text-align:center;padding:20px;color:var(--p-hint)">Ma'lumot yo'q</td></tr>
@@ -638,7 +638,7 @@
               @php $bc=match($order['status']){'Yetkazildi'=>'ob-c',"Yo'lda"=>'ob-b','Kutilmoqda'=>'ob-a','Bekor qilindi'=>'ob-f',default=>'ob-p'}; @endphp
               <tr>
                 <td>
-                  <span style="font-family:'DM Mono',monospace;color:var(--p-accent);font-weight:600">#{{ $order['id'] }}</span>
+                  <span style="font-family:'JetBrains Mono',monospace;color:var(--p-accent);font-weight:600">#{{ $order['id'] }}</span>
                   @if($order['gift'])<span>🎁</span>@endif
                 </td>
                 <td>
@@ -649,9 +649,9 @@
                     <span style="font-size:12.5px;font-weight:500;color:var(--p-text)">{{ $order['customer'] }}</span>
                   </div>
                 </td>
-                <td style="font-family:'DM Mono',monospace;font-weight:600;color:var(--p-text);font-size:13px">{{ $order['amount'] }} <span style="font-size:10px;color:var(--p-hint)">UZS</span></td>
+                <td style="font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--p-text);font-size:13px">{{ $order['amount'] }} <span style="font-size:10px;color:var(--p-hint)">UZS</span></td>
                 <td><span class="o-badge {{ $bc }}">{{ $order['status'] }}</span></td>
-                <td style="font-size:11px;color:var(--p-hint);font-family:'DM Mono',monospace;white-space:nowrap">{{ $order['date'] }}</td>
+                <td style="font-size:11px;color:var(--p-hint);font-family:'JetBrains Mono',monospace;white-space:nowrap">{{ $order['date'] }}</td>
                 <td><a href="{{ route('panel.orders.show',$order['id']) }}" class="btn-p ghost sm"><i class="bi bi-eye"></i></a></td>
               </tr>
               @empty
@@ -677,7 +677,7 @@
       <div class="dash-card-body">
         <div style="display:flex;align-items:center;gap:20px">
           <div style="text-align:center">
-            <div style="font-size:36px;font-weight:700;font-family:'DM Mono',monospace;color:var(--p-{{ $color }})">{{ number_format($active) }}</div>
+            <div style="font-size:36px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--p-{{ $color }})">{{ number_format($active) }}</div>
             <div style="font-size:11px;color:var(--p-hint);text-transform:uppercase;letter-spacing:.07em">Faol</div>
           </div>
           <div style="flex:1">
@@ -720,9 +720,9 @@ const C = {
 
 new ApexCharts(document.getElementById('chartRevenue'),{
   series:[{name:'Daromad (mln)',data:{!! $revAmounts !!}}],
-  chart:{type:'bar',height:260,toolbar:{show:false},background:'transparent',fontFamily:'DM Sans, sans-serif',animations:{enabled:true,speed:600}},
+  chart:{type:'bar',height:260,toolbar:{show:false},background:'transparent',fontFamily:'Inter, sans-serif',animations:{enabled:true,speed:600}},
   colors:[C.accent],plotOptions:{bar:{borderRadius:7,columnWidth:'46%',dataLabels:{position:'top'}}},
-  dataLabels:{enabled:true,formatter:v=>v+'M',offsetY:-22,style:{fontSize:'11px',colors:[C.muted],fontFamily:'DM Mono, monospace'}},
+  dataLabels:{enabled:true,formatter:v=>v+'M',offsetY:-22,style:{fontSize:'11px',colors:[C.muted],fontFamily:'JetBrains Mono, monospace'}},
   xaxis:{categories:{!! $revLabels !!},axisBorder:{show:false},axisTicks:{show:false},labels:{style:{colors:C.muted,fontSize:'12px'}}},
   yaxis:{labels:{style:{colors:C.muted,fontSize:'11px'},formatter:v=>v+'M'}},
   grid:{borderColor:C.grid,strokeDashArray:5,xaxis:{lines:{show:false}}},
@@ -733,10 +733,10 @@ new ApexCharts(document.getElementById('chartRevenue'),{
 new ApexCharts(document.getElementById('chartDonut'),{
   series:[{{ $completedOrders }},{{ $onwayOrders }},{{ $pendingOrders }},{{ $cancelledOrders }}],
   labels:['Yetkazildi',"Yo'lda",'Kutilmoqda','Bekor'],colors:[C.success,C.info,C.warning,C.danger],
-  chart:{type:'donut',height:200,toolbar:{show:false},background:'transparent',fontFamily:'DM Sans, sans-serif'},
+  chart:{type:'donut',height:200,toolbar:{show:false},background:'transparent',fontFamily:'Inter, sans-serif'},
   legend:{position:'bottom',fontSize:'12px',labels:{colors:C.muted},markers:{width:8,height:8,radius:4},itemMargin:{horizontal:8}},
   dataLabels:{enabled:false},
-  plotOptions:{pie:{donut:{size:'74%',labels:{show:true,total:{show:true,label:'Jami',fontSize:'12px',color:C.muted,formatter:()=>'{{ number_format($totalOrders) }}'},value:{fontSize:'20px',fontWeight:700,color:C.text,fontFamily:'DM Mono, monospace'}}}}},
+  plotOptions:{pie:{donut:{size:'74%',labels:{show:true,total:{show:true,label:'Jami',fontSize:'12px',color:C.muted,formatter:()=>'{{ number_format($totalOrders) }}'},value:{fontSize:'20px',fontWeight:700,color:C.text,fontFamily:'JetBrains Mono, monospace'}}}}},
   stroke:{width:2,colors:[C.surface]},tooltip:{theme:isDark?'dark':'light'},
 }).render();
 
@@ -752,7 +752,7 @@ new ApexCharts(document.getElementById('chartUserSparkline'),{
 @php $aovLabels=collect($aovMonthly)->pluck('month')->toJson();$aovVals=collect($aovMonthly)->pluck('aov')->toJson(); @endphp
 new ApexCharts(document.getElementById('chartAov'),{
   series:[{name:'AOV',data:{!! $aovVals !!}}],
-  chart:{type:'line',height:130,toolbar:{show:false},background:'transparent',fontFamily:'DM Sans, sans-serif'},
+  chart:{type:'line',height:130,toolbar:{show:false},background:'transparent',fontFamily:'Inter, sans-serif'},
   colors:[C.teal],stroke:{curve:'smooth',width:2.5},
   markers:{size:4,colors:[C.teal],strokeColors:C.surface,strokeWidth:2},
   xaxis:{categories:{!! $aovLabels !!},axisBorder:{show:false},axisTicks:{show:false},labels:{style:{colors:C.muted,fontSize:'11px'}}},

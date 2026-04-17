@@ -30,7 +30,7 @@
         <i class="bi {{ $i }}"></i>
       </div>
       <div>
-        <div style="font-size:20px;font-weight:700;font-family:'DM Mono',monospace;
+        <div style="font-size:20px;font-weight:700;font-family:'JetBrains Mono',monospace;
                     color:var(--p-{{ $c }})">{{ $v }}</div>
         <div style="font-size:10px;color:var(--p-hint);text-transform:uppercase;
                     letter-spacing:.07em">{{ $l }}</div>
@@ -105,7 +105,7 @@
         @endphp
         <tr>
           <td>
-            <span style="font-family:'DM Mono',monospace;color:var(--p-accent);font-size:12px">
+            <span style="font-family:'JetBrains Mono',monospace;color:var(--p-accent);font-size:12px">
               #{{ $seller->id }}
             </span>
           </td>
@@ -132,7 +132,7 @@
               </div>
             </div>
           </td>
-          <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--p-muted)">
+          <td style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--p-muted)">
             {{ $seller->phone_number }}
           </td>
           <td style="font-size:13px;color:var(--p-muted)">{{ $seller->region }}</td>
@@ -142,14 +142,14 @@
                     style="font-size:10px;padding:2px 7px;margin-right:2px">{{ $type }}</span>
             @endforeach
           </td>
-          <td style="font-family:'DM Mono',monospace;font-weight:500;color:var(--p-text)">
+          <td style="font-family:'JetBrains Mono',monospace;font-weight:500;color:var(--p-text)">
             {{ number_format($seller->balance ?? 0) }}
             <span style="font-size:11px;color:var(--p-hint)">UZS</span>
           </td>
           <td>
             <span class="s-pill {{ $stCls }}" style="font-size:11px">{{ $stLbl }}</span>
           </td>
-          <td style="font-family:'DM Mono',monospace;font-size:13px;font-weight:500;
+          <td style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:500;
                      color:var(--p-text)">
             {{ $seller->books_count }}
           </td>

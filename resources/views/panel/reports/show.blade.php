@@ -81,7 +81,7 @@
             <div style="font-size:14px;font-weight:600;color:var(--p-text)">
               {{ $report->user->name }} {{ $report->user->lastname }}
             </div>
-            <div style="font-size:12px;color:var(--p-hint);font-family:'DM Mono',monospace">
+            <div style="font-size:12px;color:var(--p-hint);font-family:'JetBrains Mono',monospace">
               {{ $report->user->phone_number }}
             </div>
           </div>
@@ -200,7 +200,7 @@
           <img src="{{ $reportable->image }}"
                style="max-width:200px;border-radius:8px;display:block;margin-bottom:8px">
           @endif
-          <div style="font-size:10px;color:var(--p-hint);font-family:'DM Mono',monospace">
+          <div style="font-size:10px;color:var(--p-hint);font-family:'JetBrains Mono',monospace">
             User #{{ $reportable->user_id ?? $reportable->sender_id }}
             · {{ \Carbon\Carbon::parse($reportable->created_at)->format('d.m.Y H:i') }}
           </div>
@@ -220,7 +220,7 @@
             {{ $reportable->text }}
           </div>
           @endif
-          <div style="font-size:10px;color:var(--p-hint);font-family:'DM Mono',monospace">
+          <div style="font-size:10px;color:var(--p-hint);font-family:'JetBrains Mono',monospace">
             Post #{{ $reportable->id }}
             · User #{{ $reportable->user_id }}
             · {{ \Carbon\Carbon::parse($reportable->created_at)->format('d.m.Y H:i') }}

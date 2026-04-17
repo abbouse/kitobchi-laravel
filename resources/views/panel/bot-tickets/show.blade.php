@@ -120,7 +120,7 @@
             <div style="font-size:13px;color:var(--p-hint)">t.me/{{ $botTicket->username }}</div>
           @endif
           @if($botTicket->user_id)
-            <div style="font-size:12px;color:var(--p-accent);font-family:'DM Mono',monospace;margin-top:4px">
+            <div style="font-size:12px;color:var(--p-accent);font-family:'JetBrains Mono',monospace;margin-top:4px">
               Telegram ID: {{ $botTicket->user_id }}
             </div>
           @endif

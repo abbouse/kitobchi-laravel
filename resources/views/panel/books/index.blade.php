@@ -88,7 +88,7 @@
       <tbody>
         @forelse($books as $book)
         <tr>
-          <td><span style="font-family:'DM Mono',monospace;color:var(--p-accent);font-size:12px">#{{ $book->id }}</span></td>
+          <td><span style="font-family:'JetBrains Mono',monospace;color:var(--p-accent);font-size:12px">#{{ $book->id }}</span></td>
           <td>
             <div class="d-flex align-items-center gap-2">
               @php $img = is_array($book->images) ? ($book->images[0] ?? null) : null; @endphp
@@ -112,13 +112,13 @@
             <div style="font-size:12px;color:var(--p-text)">{{ $book->seller?->shop_name ?? '—' }}</div>
           </td>
           <td>
-            <div style="font-family:'DM Mono',monospace;font-size:12px;font-weight:500;color:var(--p-text)">{{ number_format($book->price) }}</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500;color:var(--p-text)">{{ number_format($book->price) }}</div>
             @if($book->discountPrice > 0)
-            <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--p-success)">-{{ number_format($book->discountPrice) }}</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--p-success)">-{{ number_format($book->discountPrice) }}</div>
             @endif
           </td>
           <td>
-            <span style="font-family:'DM Mono',monospace;font-size:13px;font-weight:500;color:var(--p-text)">{{ $book->count }}</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:500;color:var(--p-text)">{{ $book->count }}</span>
             <span style="font-size:11px;color:var(--p-hint)"> dona</span>
           </td>
           <td>

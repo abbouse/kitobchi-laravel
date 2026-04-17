@@ -18,7 +18,7 @@
         <i class="bi bi-{{ $icon }}"></i>
       </div>
       <div>
-        <div style="font-size:22px;font-weight:700;font-family:'DM Mono',monospace;color:var(--p-text)">{{ number_format($counts[$key]) }}</div>
+        <div style="font-size:22px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--p-text)">{{ number_format($counts[$key]) }}</div>
         <div style="font-size:11px;color:var(--p-hint);text-transform:uppercase;letter-spacing:.07em">{{ $lbl }}</div>
       </div>
     </div>
@@ -98,7 +98,7 @@
           };
         @endphp
         <tr>
-          <td style="font-family:'DM Mono',monospace;color:var(--p-accent);font-weight:600">{{ $item->id }}</td>
+          <td style="font-family:'JetBrains Mono',monospace;color:var(--p-accent);font-weight:600">{{ $item->id }}</td>
           <td>
             <div class="d-flex align-items-center gap-2">
               <div style="width:36px;height:36px;border-radius:8px;overflow:hidden;background:var(--p-elevated);flex-shrink:0;display:flex;align-items:center;justify-content:center">
@@ -123,7 +123,7 @@
               {{ $item->seller?->shop_name ?? $item->seller_id }}
             </a>
           </td>
-          <td style="font-family:'DM Mono',monospace;font-size:13px;font-weight:600;color:var(--p-text)">
+          <td style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:var(--p-text)">
             {{ number_format($item->price) }}
             @if($item->discount_price)
               <div style="font-size:11px;color:var(--p-danger);text-decoration:line-through">{{ number_format($item->discount_price) }}</div>
@@ -134,7 +134,7 @@
               {{ $item->stock }} ta
             </span>
           </td>
-          <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--p-muted)">{{ number_format($item->totalSales) }}</td>
+          <td style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--p-muted)">{{ number_format($item->totalSales) }}</td>
           <td>
             <div class="d-flex flex-column gap-1">
               <span class="{{ $approvedClass }}">{{ $approvedLabel }}</span>

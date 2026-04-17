@@ -10,7 +10,7 @@
       <i class="bi bi-arrow-left"></i>
     </a>
     <div>
-      <h1 class="page-title" style="font-family:'DM Mono',monospace;letter-spacing:.04em">
+      <h1 class="page-title" style="font-family:'JetBrains Mono',monospace;letter-spacing:.04em">
         {{ $giftCertificate->code }}
       </h1>
       <p class="page-sub">
@@ -89,7 +89,7 @@
           </div>
           <i class="bi bi-gift" style="font-size:22px;color:var(--p-accent)"></i>
         </div>
-        <div style="font-size:26px;font-weight:700;font-family:'DM Mono',monospace;
+        <div style="font-size:26px;font-weight:700;font-family:'JetBrains Mono',monospace;
                     color:var(--p-success);margin-bottom:4px">
           {{ number_format($giftCertificate->nominal_uzs) }}
           <span style="font-size:14px;font-weight:400">UZS</span>
@@ -97,7 +97,7 @@
         <div style="font-size:11px;color:var(--p-muted)">Balans sifatida qo'shiladi</div>
       </div>
       <div style="padding:14px 22px">
-        <div style="font-family:'DM Mono',monospace;font-size:15px;font-weight:700;
+        <div style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;
                     color:var(--p-text);letter-spacing:.1em;margin-bottom:8px">
           {{ $giftCertificate->code }}
         </div>
@@ -123,7 +123,7 @@
                     padding:8px 0;border-bottom:1px solid var(--p-border)">
           <span style="font-size:12px;color:var(--p-hint)">{{ $k }}</span>
           <span style="font-size:12px;font-weight:500;color:var(--p-text);
-                       font-family:'DM Mono',monospace">{{ $v }}</span>
+                       font-family:'JetBrains Mono',monospace">{{ $v }}</span>
         </div>
         @endforeach
 
@@ -176,7 +176,7 @@
                 <div style="font-size:14px;font-weight:600;color:var(--p-text)">
                   {{ $buyer->name }} {{ $buyer->lastname }}
                 </div>
-                <div style="font-size:12px;color:var(--p-hint);font-family:'DM Mono',monospace">
+                <div style="font-size:12px;color:var(--p-hint);font-family:'JetBrains Mono',monospace">
                   {{ $buyer->phone_number }}
                 </div>
               </div>
@@ -227,7 +227,7 @@
                 <div style="font-size:14px;font-weight:600;color:var(--p-text)">
                   {{ $rec->name }} {{ $rec->lastname }}
                 </div>
-                <div style="font-size:12px;color:var(--p-hint);font-family:'DM Mono',monospace">
+                <div style="font-size:12px;color:var(--p-hint);font-family:'JetBrains Mono',monospace">
                   {{ $rec->phone_number }}
                 </div>
               </div>
@@ -248,7 +248,7 @@
                 <div style="font-size:10px;color:var(--p-hint);text-transform:uppercase;
                             letter-spacing:.07em;margin-bottom:2px">{{ $k }}</div>
                 <div style="font-size:13px;font-weight:500;color:var(--p-text);
-                            font-family:'DM Mono',monospace">{{ $v }}</div>
+                            font-family:'JetBrains Mono',monospace">{{ $v }}</div>
               </div>
               @endforeach
               @endif

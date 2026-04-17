@@ -41,7 +41,7 @@
         <i class="bi {{ $i }}"></i>
       </div>
       <div>
-        <div style="font-size:19px;font-weight:700;font-family:'DM Mono',monospace;
+        <div style="font-size:19px;font-weight:700;font-family:'JetBrains Mono',monospace;
                     color:var(--p-{{ $c }})">{{ $v }}</div>
         <div style="font-size:10px;color:var(--p-hint);text-transform:uppercase;
                     letter-spacing:.07em">{{ $l }}</div>
@@ -104,7 +104,7 @@
             && $sub->status === 'active';
         @endphp
         <tr style="{{ $isOverdue ? 'background:var(--p-warning-d)' : '' }}">
-          <td style="font-family:'DM Mono',monospace;color:var(--p-accent);font-size:12px">
+          <td style="font-family:'JetBrains Mono',monospace;color:var(--p-accent);font-size:12px">
             #{{ $sub->id }}
           </td>
 
@@ -114,7 +114,7 @@
                style="font-size:12.5px;font-weight:500;color:var(--p-text);text-decoration:none">
               {{ $sub->user->name }} {{ $sub->user->lastname }}
             </a>
-            <div style="font-size:10px;color:var(--p-hint);font-family:'DM Mono',monospace">
+            <div style="font-size:10px;color:var(--p-hint);font-family:'JetBrains Mono',monospace">
               {{ $sub->user->phone_number }}
             </div>
             @endif
@@ -139,7 +139,7 @@
               {{ $addr['fullAddress'] }}
             </div>
             @if($addr['phoneNumber'] ?? null)
-            <div style="font-size:10px;color:var(--p-hint);font-family:'DM Mono',monospace">
+            <div style="font-size:10px;color:var(--p-hint);font-family:'JetBrains Mono',monospace">
               {{ $addr['phoneNumber'] }}
             </div>
             @endif
@@ -156,7 +156,7 @@
                             border-radius:3px;width:{{ $sub->progress_pct }}%">
                 </div>
               </div>
-              <span style="font-size:11px;color:var(--p-muted);font-family:'DM Mono',monospace;
+              <span style="font-size:11px;color:var(--p-muted);font-family:'JetBrains Mono',monospace;
                            white-space:nowrap">
                 {{ $sub->delivered_months }}/{{ $sub->total_months }}
               </span>
@@ -167,7 +167,7 @@
             @if($sub->next_delivery_at)
             <div style="font-size:12px;font-weight:600;
                         color:{{ $isOverdue ? 'var(--p-danger)' : 'var(--p-text)' }};
-                        font-family:'DM Mono',monospace">
+                        font-family:'JetBrains Mono',monospace">
               {{ $sub->next_delivery_at->format('d.m.Y') }}
             </div>
             <div style="font-size:10px;color:{{ $isOverdue ? 'var(--p-danger)' : 'var(--p-hint)' }}">

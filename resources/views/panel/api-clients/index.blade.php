@@ -29,7 +29,7 @@
         <i class="bi {{ $i }}"></i>
       </div>
       <div>
-        <div style="font-size:20px;font-weight:700;font-family:'DM Mono',monospace;color:var(--p-text)">
+        <div style="font-size:20px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--p-text)">
           {{ $v }}
         </div>
         <div style="font-size:10px;color:var(--p-hint);text-transform:uppercase;letter-spacing:.07em">
@@ -60,7 +60,7 @@
       <tbody>
         @forelse($clients as $c)
         <tr>
-          <td style="font-family:'DM Mono',monospace;color:var(--p-accent)">#{{ $c->id }}</td>
+          <td style="font-family:'JetBrains Mono',monospace;color:var(--p-accent)">#{{ $c->id }}</td>
 
           <td>
             <div style="font-size:13px;font-weight:600;color:var(--p-text)">{{ $c->name }}</div>
@@ -69,7 +69,7 @@
           <td>
             <div class="d-flex align-items-center gap-2">
               <code style="font-size:12px;color:var(--p-accent);background:var(--p-elevated);
-                           padding:3px 8px;border-radius:5px;font-family:'DM Mono',monospace">
+                           padding:3px 8px;border-radius:5px;font-family:'JetBrains Mono',monospace">
                 {{ $c->app_id }}
               </code>
               <button onclick="copyText('{{ $c->app_id }}')"
@@ -83,7 +83,7 @@
             <div class="d-flex align-items-center gap-2">
               <code id="secret-{{ $c->id }}"
                     style="font-size:12px;color:var(--p-muted);background:var(--p-elevated);
-                           padding:3px 8px;border-radius:5px;font-family:'DM Mono',monospace;
+                           padding:3px 8px;border-radius:5px;font-family:'JetBrains Mono',monospace;
                            letter-spacing:.05em">
                 {{ str_repeat('•', 12) }}{{ substr($c->app_secret, -4) }}
               </code>
@@ -125,7 +125,7 @@
           </td>
 
           <td style="font-size:11px;color:var(--p-hint);white-space:nowrap;
-                     font-family:'DM Mono',monospace">
+                     font-family:'JetBrains Mono',monospace">
             {{ $c->created_at?->format('d.m.Y') }}
           </td>
 

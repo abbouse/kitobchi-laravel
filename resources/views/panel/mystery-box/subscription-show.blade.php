@@ -71,7 +71,7 @@
             <div style="font-size:14px;font-weight:600;color:var(--p-text)">
               {{ $subscription->user->name }} {{ $subscription->user->lastname }}
             </div>
-            <div style="font-size:12px;color:var(--p-hint);font-family:'DM Mono',monospace">
+            <div style="font-size:12px;color:var(--p-hint);font-family:'JetBrains Mono',monospace">
               {{ $subscription->user->phone_number }}
             </div>
           </div>
@@ -136,7 +136,7 @@
         <div style="margin-top:14px">
           <div class="d-flex justify-content-between mb-1">
             <span style="font-size:11px;color:var(--p-hint)">Bajarildi</span>
-            <span style="font-size:11px;color:var(--p-muted);font-family:'DM Mono',monospace">
+            <span style="font-size:11px;color:var(--p-muted);font-family:'JetBrains Mono',monospace">
               {{ $subscription->delivered_months }}/{{ $subscription->total_months }}
             </span>
           </div>
@@ -177,7 +177,7 @@
             <div style="width:32px;height:32px;border-radius:8px;flex-shrink:0;
                         background:var(--p-elevated);
                         display:flex;align-items:center;justify-content:center;
-                        font-family:'DM Mono',monospace;font-size:13px;
+                        font-family:'JetBrains Mono',monospace;font-size:13px;
                         font-weight:700;color:var(--p-accent)">
               {{ $delivery->month_number }}
             </div>

@@ -67,7 +67,7 @@
                style="font-size:13px;font-weight:500;color:var(--p-text);text-decoration:none">
               {{ $p1Name }}
             </a>
-            <div style="font-size:10px;color:var(--p-hint);font-family:'DM Mono',monospace">
+            <div style="font-size:10px;color:var(--p-hint);font-family:'JetBrains Mono',monospace">
               {{ $p1Phone }}
             </div>
           </div>
@@ -100,7 +100,7 @@
             <div style="font-size:13px;font-weight:500;color:var(--p-text)">{{ $p2Name }}</div>
             @endif
             @if($p2Phone)
-            <div style="font-size:10px;color:var(--p-hint);font-family:'DM Mono',monospace">
+            <div style="font-size:10px;color:var(--p-hint);font-family:'JetBrains Mono',monospace">
               {{ $p2Phone }}
             </div>
             @endif
@@ -120,7 +120,7 @@
         <div style="display:flex;justify-content:space-between;
                     padding:8px 0;border-bottom:1px solid var(--p-border)">
           <span style="font-size:12px;color:var(--p-hint)">{{ $k }}</span>
-          <span style="font-size:12px;font-weight:600;font-family:'DM Mono',monospace;
+          <span style="font-size:12px;font-weight:600;font-family:'JetBrains Mono',monospace;
                        color:var(--p-text)">{{ $v }}</span>
         </div>
         @endforeach
@@ -199,7 +199,7 @@
               @endif
             </div>
             <div style="font-size:10px;color:var(--p-hint);margin-top:3px;
-                        font-family:'DM Mono',monospace;
+                        font-family:'JetBrains Mono',monospace;
                         {{ $isLeft ? '' : 'text-align:right' }}">
               {{ \Carbon\Carbon::parse($msg->created_at)->format('d.m H:i') }}
               @if($msg->is_read ?? false)

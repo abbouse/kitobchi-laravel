@@ -82,7 +82,7 @@
           };
         @endphp
         <tr>
-          <td style="font-family:'DM Mono',monospace;color:var(--p-accent)">#{{ $r->id }}</td>
+          <td style="font-family:'JetBrains Mono',monospace;color:var(--p-accent)">#{{ $r->id }}</td>
 
           <td>
             @if($r->user)
@@ -102,7 +102,7 @@
                    style="font-size:12.5px;font-weight:500;color:var(--p-text);text-decoration:none">
                   {{ $r->user->name }} {{ $r->user->lastname }}
                 </a>
-                <div style="font-size:10px;color:var(--p-hint);font-family:'DM Mono',monospace">
+                <div style="font-size:10px;color:var(--p-hint);font-family:'JetBrains Mono',monospace">
                   {{ $r->user->phone_number }}
                 </div>
               </div>
@@ -148,7 +148,7 @@
           <td><span class="s-pill {{ $stCls }}" style="font-size:10px">{{ $stLbl }}</span></td>
 
           <td style="font-size:11px;color:var(--p-hint);white-space:nowrap;
-                     font-family:'DM Mono',monospace">
+                     font-family:'JetBrains Mono',monospace">
             {{ \Carbon\Carbon::parse($r->created_at)->format('d.m.Y H:i') }}
           </td>
 

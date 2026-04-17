@@ -22,14 +22,14 @@
             <tbody>
               @forelse($courierOrder->items ?? [] as $item)
               <tr>
-                <td style="font-family:'DM Mono',monospace;color:var(--p-accent)">{{ $item->product_id }}</td>
+                <td style="font-family:'JetBrains Mono',monospace;color:var(--p-accent)">{{ $item->product_id }}</td>
                 <td>
                   <span class="s-pill {{ $item->type==='book'?'accent':'info' }}">
                     {{ $item->type ?? 'book' }}
                   </span>
                 </td>
-                <td style="font-family:'DM Mono',monospace">{{ $item->quantity }}</td>
-                <td style="font-family:'DM Mono',monospace;font-weight:600;color:var(--p-text)">
+                <td style="font-family:'JetBrains Mono',monospace">{{ $item->quantity }}</td>
+                <td style="font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--p-text)">
                   {{ number_format($item->price) }} UZS
                 </td>
                 <td>
@@ -64,7 +64,7 @@
           <div class="col-sm-4">
             <div style="background:var(--p-elevated);border-radius:10px;padding:16px;text-align:center">
               <i class="bi {{ $icon }}" style="font-size:22px;color:var(--p-{{ $clr }});margin-bottom:8px;display:block"></i>
-              <div style="font-size:18px;font-weight:700;font-family:'DM Mono',monospace;color:var(--p-{{ $clr }})">{{ $val }}</div>
+              <div style="font-size:18px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--p-{{ $clr }})">{{ $val }}</div>
               <div style="font-size:11px;color:var(--p-hint);margin-top:4px">{{ $lbl }}</div>
             </div>
           </div>

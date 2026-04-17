@@ -39,7 +39,7 @@
             <div style="font-size:14px;font-weight:600;color:var(--p-text)">
               {{ $conversation->name }} {{ $conversation->lastname }}
             </div>
-            <div style="font-size:12px;color:var(--p-hint);font-family:'DM Mono',monospace">
+            <div style="font-size:12px;color:var(--p-hint);font-family:'JetBrains Mono',monospace">
               {{ $conversation->phone_number }}
             </div>
           </div>
@@ -57,7 +57,7 @@
         <div style="display:flex;justify-content:space-between;
                     padding:8px 0;border-bottom:1px solid var(--p-border)">
           <span style="font-size:12px;color:var(--p-hint)">Jami xabarlar</span>
-          <span style="font-size:12px;font-weight:600;font-family:'DM Mono',monospace;
+          <span style="font-size:12px;font-weight:600;font-family:'JetBrains Mono',monospace;
                        color:var(--p-text)">{{ $messages->total() }} ta</span>
         </div>
         <div style="display:flex;justify-content:space-between;padding:8px 0">
@@ -175,7 +175,7 @@
                   </span>
                   @endif
                   <div style="font-size:10px;color:var(--p-success);font-weight:600;
-                              font-family:'DM Mono',monospace;margin-top:2px">
+                              font-family:'JetBrains Mono',monospace;margin-top:2px">
                     {{ number_format($item->price) }} UZS
                   </div>
                 </div>
@@ -184,7 +184,7 @@
             </div>
             @endif
             <div style="font-size:10px;color:var(--p-hint);margin-top:3px;
-                        font-family:'DM Mono',monospace;
+                        font-family:'JetBrains Mono',monospace;
                         {{ $isUser ? 'text-align:right' : '' }}">
               {{ \Carbon\Carbon::parse($msg->created_at)->format('d.m H:i') }}
             </div>

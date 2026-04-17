@@ -75,7 +75,7 @@
           $expired = $ad->expire_at && $ad->expire_at <= now();
         @endphp
         <tr>
-          <td style="font-family:'DM Mono',monospace;color:var(--p-accent);font-weight:600">#{{ $ad->id }}</td>
+          <td style="font-family:'JetBrains Mono',monospace;color:var(--p-accent);font-weight:600">#{{ $ad->id }}</td>
           <td>
             @if($ad->banner_img)
               <a href="{{ $ad->banner_img }}" target="_blank">
@@ -103,7 +103,7 @@
           <td style="font-size:11px;color:var(--p-hint)">
             {{ $ad->action }} → {{ $ad->product_type }} #{{ $ad->product_id }}
           </td>
-          <td style="font-family:'DM Mono',monospace;font-weight:600;color:var(--p-text)">
+          <td style="font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--p-text)">
             {{ number_format($ad->amount) }}
           </td>
           <td style="font-size:11px;white-space:nowrap">

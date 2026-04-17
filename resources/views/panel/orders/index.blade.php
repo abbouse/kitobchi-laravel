@@ -170,7 +170,7 @@
           {{-- ID --}}
           <td>
             <a href="{{ route('panel.orders.show', $order) }}"
-               style="font-family:'DM Mono',monospace;color:var(--p-accent);
+               style="font-family:'JetBrains Mono',monospace;color:var(--p-accent);
                       font-weight:700;font-size:14px;text-decoration:none">
               #{{ $order->id }}
             </a>
@@ -186,7 +186,7 @@
                 <div style="font-size:13px;font-weight:600;color:var(--p-text);white-space:nowrap">
                   {{ $order->user ? $order->user->name.' '.$order->user->lastname : 'Mehmon' }}
                 </div>
-                <div style="font-size:11px;color:var(--p-hint);font-family:'DM Mono',monospace">
+                <div style="font-size:11px;color:var(--p-hint);font-family:'JetBrains Mono',monospace">
                   {{ $order->user?->phone_number ?? '—' }}
                 </div>
               </div>
@@ -211,7 +211,7 @@
 
           {{-- Summa --}}
           <td>
-            <div style="font-family:'DM Mono',monospace;font-weight:700;
+            <div style="font-family:'JetBrains Mono',monospace;font-weight:700;
                         color:var(--p-text);font-size:14px;white-space:nowrap">
               {{ number_format($order->amount) }}
               <span style="font-size:10px;font-weight:400;color:var(--p-hint)">UZS</span>
@@ -304,7 +304,7 @@
 
           {{-- Sana --}}
           <td style="font-size:11px;color:var(--p-hint);
-                     font-family:'DM Mono',monospace;white-space:nowrap">
+                     font-family:'JetBrains Mono',monospace;white-space:nowrap">
             {{ $order->created_at?->format('d.m') }}<br>
             <span style="font-size:10px">{{ $order->created_at?->format('H:i') }}</span>
           </td>
