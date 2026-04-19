@@ -80,6 +80,9 @@ Route::get('/share/cart/{slug}', function (string $slug) {
         'description' => 'Kitobchi ilovasida bu savatchani ko\'ring',
     ]);
 })->where('slug', '[A-Za-z0-9]+');
+Route::get('/demo', function () {
+    return view('demo');
+})->name('demo');
 
 // Payme checkout redirect
 Route::get('/payment/order/{order_id}', [PaymentController::class, 'payWithPayme']);
