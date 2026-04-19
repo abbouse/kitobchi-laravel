@@ -4,19 +4,45 @@
 
 @section('content')
 
-<div class="d-flex align-items-center justify-content-between mb-3 fade-up">
-  <div class="tab-pills">
-    @foreach(['all'=>'Barchasi','posts'=>'Postlar','reposts'=>'Repostlar'] as $k=>$l)
-    <a href="{{ request()->fullUrlWithQuery(['tab'=>$k,'page'=>1]) }}"
-       class="tab-pill {{ $tab===$k?'active':'' }}">
-      {{ $l }} <span class="tab-badge">{{ $counts[$k] }}</span>
+<x-panel.page-header>
+  <x-slot name="heading">Book Club</x-slot>
+  <x-slot name="meta">Foydalanuvchilar postlari va repostlari</x-slot>
+  <x-slot name="actions">
+    @php
+      try {
+        $ugcPending = \App\Models\BookClubComment::query()
+          ->where('kangaroo_ugc_status', 'pending_admin')
+          ->whereNull('parent_id')
+          ->count()
+          + \App\Models\BookClub::query()
+            ->where('is_deleted', false)
+            ->where('kangaroo_post_ugc_status', 'pending_admin')
+            ->count();
+      } catch (\Exception $e) {
+        $ugcPending = 0;
+      }
+    @endphp
+    <a href="{{ route('panel.book-club.moderation-queue') }}" class="btn-p ghost">
+      <i class="bi bi-shield-exclamation"></i> UGC navbati
+      @if($ugcPending > 0)
+        <span class="tab-badge" style="margin-left:6px">{{ $ugcPending }}</span>
+      @endif
     </a>
-    @endforeach
-  </div>
+  </x-slot>
+</x-panel.page-header>
+
+
+<div class="tab-pills fade-up mb-3">
+  @foreach(['all'=>'Barchasi','posts'=>'Postlar','reposts'=>'Repostlar'] as $k=>$l)
+  <a href="{{ request()->fullUrlWithQuery(['tab'=>$k,'page'=>1]) }}"
+     class="tab-pill {{ $tab===$k?'active':'' }}">
+    {{ $l }} <span class="tab-badge">{{ $counts[$k] }}</span>
+  </a>
+  @endforeach
 </div>
 
 <div class="filter-bar mb-3 fade-up">
-  <form method="GET" class="d-flex flex-wrap gap-2">
+  <form method="GET" class="flex flex-wrap gap-2">
     <input type="hidden" name="tab" value="{{ $tab }}">
     <div class="search-box" style="width:240px;margin-left:0">
       <i class="bi bi-search"></i>
@@ -42,9 +68,9 @@
 
 {{-- 2 ustunli grid: xl dan boshlab 2 ustun, kichikda 1 ustun --}}
 @forelse($posts as $post)
-  @if($loop->first)<div class="row g-3">@endif
+  @if($loop->first)<div class="grid grid-cols-1 md:grid-cols-2 gap-3">@endif
 
-  <div class="col-12 col-xl-6 fade-up">
+  <div class="xl:col-span-6 fade-up">
     @include('panel.book-club._post-card', ['post' => $post, 'showUser' => true])
   </div>
 

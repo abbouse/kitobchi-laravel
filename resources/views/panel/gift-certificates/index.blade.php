@@ -4,23 +4,22 @@
 
 @section('content')
 
-<div class="d-flex align-items-start justify-content-between mb-4 fade-up">
-  <div>
-    <h1 class="page-title">Gift Sertifikatlar</h1>
-    <p class="page-sub">Foydalanuvchilar sotib olgan sovg'a sertifikatlari</p>
-  </div>
-</div>
+<x-panel.page-header>
+  <x-slot name="heading">Gift Sertifikatlar</x-slot>
+  <x-slot name="meta">Foydalanuvchilar sotib olgan sovg'a sertifikatlari</x-slot>
+</x-panel.page-header>
+
 
 {{-- Stats --}}
-<div class="row g-3 mb-4 fade-up">
+<div class="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-4">
   @foreach([
     ['Jami',        $counts['all'],             'accent',  'bi-gift'],
     ['Yuborilgan',  $counts['sent'],             'info',    'bi-send'],
     ['Ishlatilgan', $counts['used'],             'success', 'bi-check-circle'],
     ['Bekor',       $counts['cancelled'],        'danger',  'bi-x-circle'],
   ] as [$l,$v,$c,$i])
-  <div class="col-6 col-xl-3">
-    <div class="p-card d-flex align-items-center gap-3" style="padding:14px">
+  <div class="">
+    <div class="p-card flex items-center gap-3" style="padding:14px">
       <div style="width:36px;height:36px;border-radius:9px;flex-shrink:0;font-size:16px;
                   background:var(--p-{{ $c }}-d,var(--p-elevated));color:var(--p-{{ $c }});
                   display:flex;align-items:center;justify-content:center">
@@ -73,7 +72,7 @@
 
 {{-- Table --}}
 <div class="p-card fade-up">
-  <div class="table-responsive">
+  <div class="table-responsive kc-twrap">
     <table class="p-table">
       <thead>
         <tr>
@@ -164,7 +163,7 @@
           </td>
 
           <td>
-            <div class="d-flex gap-1">
+            <div class="flex gap-1">
               <a href="{{ route('panel.gift-certificates.show',$c) }}"
                  class="btn-p ghost sm"><i class="bi bi-eye"></i></a>
 
@@ -191,7 +190,7 @@
     </table>
   </div>
   @if($certs->hasPages())
-  <div class="d-flex justify-content-between align-items-center px-3 py-2"
+  <div class="flex justify-between items-center px-3 py-2"
        style="border-top:1px solid var(--p-border)">
     <div style="font-size:12px;color:var(--p-hint)">
       {{ $certs->firstItem() }}–{{ $certs->lastItem() }} / {{ $certs->total() }}

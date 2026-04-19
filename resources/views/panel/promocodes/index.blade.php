@@ -4,22 +4,28 @@
 
 @section('content')
 
-<div class="d-flex align-items-center justify-content-between mb-4">
-  <div class="tab-pills">
-    @foreach([['all','Barchasi'],['active','Aktiv'],['expired','Muddati o\'tgan']] as [$k,$l])
-    <a href="{{ request()->fullUrlWithQuery(['tab'=>$k,'page'=>1]) }}"
-       class="tab-pill {{ $tab===$k?'active':'' }}">
-      {{ $l }} <span class="tab-badge">{{ $counts[$k] }}</span>
-    </a>
-    @endforeach
-  </div>
-  <a href="{{ route('panel.promocodes.create') }}" class="btn-p">
-    <i class="bi bi-plus-lg"></i> Yangi promokod
+<x-panel.page-header>
+  <x-slot name="heading">Promokodlar</x-slot>
+  <x-slot name="meta">Chegirma kodlari boshqaruvi</x-slot>
+  <x-slot name="actions">
+    <a href="{{ route('panel.promocodes.create') }}" class="btn-p primary">
+        <i class="bi bi-plus-lg"></i> Yangi promokod
+      </a>
+  </x-slot>
+</x-panel.page-header>
+
+
+<div class="tab-pills fade-up mb-3">
+  @foreach([['all','Barchasi'],['active','Aktiv'],['expired','Muddati o\'tgan']] as [$k,$l])
+  <a href="{{ request()->fullUrlWithQuery(['tab'=>$k,'page'=>1]) }}"
+     class="tab-pill {{ $tab===$k?'active':'' }}">
+    {{ $l }} <span class="tab-badge">{{ $counts[$k] }}</span>
   </a>
+  @endforeach
 </div>
 
 <div class="filter-bar mb-3">
-  <form method="GET" class="d-flex flex-wrap gap-2 align-items-center">
+  <form method="GET" class="flex flex-wrap gap-2 items-center">
     <input type="hidden" name="tab" value="{{ $tab }}">
     <input type="search" name="search" class="p-form-control" placeholder="Kod bo'yicha..."
            value="{{ request('search') }}" style="width:200px">
@@ -28,13 +34,13 @@
       <option value="percent" {{ request('type')==='percent'?'selected':'' }}>Foiz (%)</option>
       <option value="fixed"   {{ request('type')==='fixed'?'selected':'' }}>Miqdor (UZS)</option>
     </select>
-    <button class="btn-p" type="submit"><i class="bi bi-search"></i></button>
+    <button class="btn-p primary" type="submit"><i class="bi bi-search"></i></button>
     <a href="{{ route('panel.promocodes.index') }}" class="btn-p ghost"><i class="bi bi-x"></i></a>
   </form>
 </div>
 
 <div class="p-card p-0">
-  <div class="table-responsive">
+  <div class="table-responsive kc-twrap">
     <table class="p-table">
       <thead>
         <tr>
@@ -103,7 +109,7 @@
             </span>
           </td>
           <td>
-            <div class="d-flex gap-1">
+            <div class="flex gap-1">
               <a href="{{ route('panel.promocodes.show', $p) }}" class="btn-p ghost sm"><i class="bi bi-eye"></i></a>
               <a href="{{ route('panel.promocodes.edit', $p) }}" class="btn-p ghost sm"><i class="bi bi-pencil"></i></a>
               <form method="POST" action="{{ route('panel.promocodes.destroy', $p) }}"

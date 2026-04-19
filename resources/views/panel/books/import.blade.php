@@ -4,20 +4,15 @@
 
 @section('content')
 
-<div class="page-header fade-up d-flex align-items-center gap-3 mb-4">
-  <a href="{{ route('panel.books.index') }}" class="btn-p ghost icon">
-    <i class="bi bi-arrow-left"></i>
-  </a>
-  <div>
-    <h1 class="page-title">Import</h1>
-    <p class="page-sub">Excel yoki CSV fayldan kitoblar import qilish</p>
-  </div>
-</div>
+<x-panel.page-header back-href="{{ route('panel.books.index') }}">
+  <x-slot name="heading">Import</x-slot>
+  <x-slot name="meta">Excel yoki CSV fayldan kitoblar import qilish</x-slot>
+</x-panel.page-header>
 
-<div class="row g-3">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
 
   {{-- Yuklash --}}
-  <div class="col-xl-6 fade-up">
+  <div class="xl:col-span-6 fade-up">
     <div class="p-card">
       <div class="dash-card-head">
         <div class="dash-card-title">Fayl yuklash</div>
@@ -71,14 +66,14 @@
   </div>
 
   {{-- Format qo'llanmasi --}}
-  <div class="col-xl-6 fade-up">
+  <div class="xl:col-span-6 fade-up">
     <div class="p-card">
       <div class="dash-card-head">
         <div class="dash-card-title">Fayl formati</div>
         <div class="dash-card-sub">Birinchi qatordagi sarlavhalar</div>
       </div>
       <div class="dash-card-body">
-        <div class="table-responsive">
+        <div class="table-responsive kc-twrap">
           <table class="p-table">
             <thead>
               <tr>

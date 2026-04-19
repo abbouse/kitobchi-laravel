@@ -4,27 +4,33 @@
 
 @section('content')
 
-<div class="d-flex align-items-center justify-content-between mb-3">
-  <div class="tab-pills">
-    <a href="{{ request()->fullUrlWithQuery(['tab'=>'all','page'=>1]) }}"
-       class="tab-pill {{ $tab==='all'?'active':'' }}">
-      Barchasi <span class="tab-badge">{{ $counts['all'] }}</span>
-    </a>
-    @foreach($statuses as $key => $s)
-    <a href="{{ request()->fullUrlWithQuery(['tab'=>$key,'page'=>1]) }}"
-       class="tab-pill {{ $tab===$key?'active':'' }}">
-      {{ $s['label'] }} <span class="tab-badge">{{ $counts[$key] ?? 0 }}</span>
-    </a>
-    @endforeach
-  </div>
-  <a href="{{ route('panel.bot-tickets.operators') }}" class="btn-p ghost">
-    <i class="bi bi-headset"></i> Operatorlar
+<x-panel.page-header>
+  <x-slot name="heading">Support murojaatlari</x-slot>
+  <x-slot name="meta">Telegram bot orqali kelgan yordam so'rovlari</x-slot>
+  <x-slot name="actions">
+    <a href="{{ route('panel.bot-tickets.operators') }}" class="btn-p ghost">
+        <i class="bi bi-headset"></i> Operatorlar
+      </a>
+  </x-slot>
+</x-panel.page-header>
+
+
+<div class="tab-pills fade-up mb-3">
+  <a href="{{ request()->fullUrlWithQuery(['tab'=>'all','page'=>1]) }}"
+     class="tab-pill {{ $tab==='all'?'active':'' }}">
+    Barchasi <span class="tab-badge">{{ $counts['all'] }}</span>
   </a>
+  @foreach($statuses as $key => $s)
+  <a href="{{ request()->fullUrlWithQuery(['tab'=>$key,'page'=>1]) }}"
+     class="tab-pill {{ $tab===$key?'active':'' }}">
+    {{ $s['label'] }} <span class="tab-badge">{{ $counts[$key] ?? 0 }}</span>
+  </a>
+  @endforeach
 </div>
 
 {{-- Filter --}}
 <div class="filter-bar mb-3">
-  <form method="GET" class="d-flex flex-wrap gap-2">
+  <form method="GET" class="flex flex-wrap gap-2">
     <input type="hidden" name="tab" value="{{ $tab }}">
     <input type="search" name="search" class="p-form-control" placeholder="ID, ism, username..."
            value="{{ request('search') }}" style="width:200px">
@@ -38,14 +44,14 @@
     </select>
     <input type="date" name="date_from" class="p-form-control" value="{{ request('date_from') }}" style="width:145px">
     <input type="date" name="date_to"   class="p-form-control" value="{{ request('date_to') }}"   style="width:145px">
-    <button class="btn-p" type="submit"><i class="bi bi-search"></i></button>
+    <button class="btn-p primary" type="submit"><i class="bi bi-search"></i></button>
     <a href="{{ route('panel.bot-tickets.index',['tab'=>$tab]) }}" class="btn-p ghost"><i class="bi bi-x"></i></a>
   </form>
 </div>
 
 {{-- Table --}}
 <div class="p-card p-0">
-  <div class="table-responsive">
+  <div class="table-responsive kc-twrap">
     <table class="p-table">
       <thead>
         <tr>

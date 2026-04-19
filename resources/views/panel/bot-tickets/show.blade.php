@@ -3,9 +3,16 @@
 @section('page-title', 'Murojaat #'.$botTicket->id)
 
 @section('content')
-<div class="row g-3">
 
-  <div class="col-xl-8">
+<x-panel.page-header back-href="{{ route('panel.bot-tickets.index') }}">
+  <x-slot name="heading">Murojaat #{{ $botTicket->id }}</x-slot>
+  <x-slot name="meta">{{ $botTicket->created_at?->format('d.m.Y H:i') }}</x-slot>
+</x-panel.page-header>
+
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+
+  <div class="xl:col-span-8">
 
     {{-- Birinchi xabar --}}
     <div class="p-card mb-3">
@@ -26,7 +33,7 @@
         <div class="dash-card-sub">{{ $botTicket->attachments->count() }} ta fayl</div>
       </div>
       <div class="dash-card-body">
-        <div class="table-responsive">
+        <div class="table-responsive kc-twrap">
           <table class="p-table">
             <thead>
               <tr><th>Fayl nomi</th><th>Tur</th><th>Hajm</th><th>Yuboruvchi</th></tr>
@@ -60,8 +67,8 @@
       <div class="dash-card-body">
         <form method="POST" action="{{ route('panel.bot-tickets.close', $botTicket) }}">
           @csrf @method('PATCH')
-          <label class="p-label">Yopish sababi (ixtiyoriy)</label>
-          <div class="d-flex gap-2 mt-1">
+          <label class="p-form-label">Yopish sababi (ixtiyoriy)</label>
+          <div class="flex gap-2 mt-1">
             <input type="text" name="close_reason" class="p-form-control flex-fill"
                    placeholder="Muammo hal qilindi..." maxlength="100">
             <button class="btn-p danger">
@@ -84,7 +91,7 @@
 
   </div>
 
-  <div class="col-xl-4">
+  <div class="xl:col-span-4">
 
     {{-- Status --}}
     <div class="p-card mb-3">
@@ -155,8 +162,8 @@
         @if(in_array($botTicket->status, ['queue','active']))
         <form method="POST" action="{{ route('panel.bot-tickets.assign', $botTicket) }}">
           @csrf @method('PATCH')
-          <label class="p-label">{{ $botTicket->operator ? 'Operatorni o\'zgartirish' : 'Operator tayinlash' }}</label>
-          <div class="d-flex gap-2 mt-1">
+          <label class="p-form-label">{{ $botTicket->operator ? 'Operatorni o\'zgartirish' : 'Operator tayinlash' }}</label>
+          <div class="flex gap-2 mt-1">
             <select name="operator_id" class="p-form-control flex-fill">
               <option value="">Tanlang...</option>
               @foreach($operators as $op)

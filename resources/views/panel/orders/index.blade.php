@@ -6,19 +6,20 @@
 @section('content')
 
 {{-- ── Page header ───────────────────────────────────────────────── --}}
-<div class="d-flex align-items-start justify-content-between mb-4 fade-up">
-  <div>
-    <h1 class="page-title">Buyurtmalar</h1>
-    <p class="page-sub">Barcha buyurtmalar ro'yxati</p>
-  </div>
-  <a href="{{ route('panel.orders.export', request()->all()) }}" class="btn-p ghost" style="gap:6px">
-    <i class="bi bi-download"></i> Export
-  </a>
-</div>
+<x-panel.page-header>
+  <x-slot name="heading">Buyurtmalar</x-slot>
+  <x-slot name="meta">Barcha buyurtmalar ro'yxati</x-slot>
+  <x-slot name="actions">
+    <a href="{{ route('panel.orders.export', request()->all()) }}" class="btn-p ghost" style="gap:6px">
+        <i class="bi bi-download"></i> Export
+      </a>
+  </x-slot>
+</x-panel.page-header>
+
 
 {{-- ── Stats ──────────────────────────────────────────────────────── --}}
-<div class="row g-3 mb-4">
-  <div class="col-6 col-xl-3 fade-up d1">
+<div class="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-4">
+  <div class="fade-up">
     <div class="metric-card" style="border-top-color:var(--p-warning)">
       <div class="metric-icon" style="background:var(--p-warning-d);color:var(--p-warning)">
         <i class="bi bi-hourglass-split"></i>
@@ -28,7 +29,7 @@
       <span class="s-pill warning" style="font-size:11px">Yangi buyurtmalar</span>
     </div>
   </div>
-  <div class="col-6 col-xl-3 fade-up d2">
+  <div class="fade-up">
     <div class="metric-card" style="border-top-color:var(--p-info)">
       <div class="metric-icon" style="background:rgba(59,130,246,.12);color:var(--p-info)">
         <i class="bi bi-truck"></i>
@@ -38,7 +39,7 @@
       <span class="s-pill info" style="font-size:11px">Yetkazilmoqda</span>
     </div>
   </div>
-  <div class="col-6 col-xl-3 fade-up d3">
+  <div class="fade-up">
     <div class="metric-card" style="border-top-color:var(--p-success)">
       <div class="metric-icon" style="background:var(--p-success-d);color:var(--p-success)">
         <i class="bi bi-currency-dollar"></i>
@@ -48,7 +49,7 @@
       <span class="s-pill success" style="font-size:11px">{{ $stats['today_count'] }} ta buyurtma</span>
     </div>
   </div>
-  <div class="col-6 col-xl-3 fade-up d4">
+  <div class="fade-up">
     <div class="metric-card" style="border-top-color:var(--p-accent)">
       <div class="metric-icon" style="background:var(--p-accent-d);color:var(--p-accent)">
         <i class="bi bi-graph-up-arrow"></i>
@@ -127,7 +128,7 @@
       <div class="p-card-sub">{{ $orders->total() }} ta natija</div>
     </div>
   </div>
-  <div class="table-responsive">
+  <div class="table-responsive kc-twrap">
     <table class="p-table" style="min-width:900px">
       <thead>
         <tr>
@@ -178,7 +179,7 @@
 
           {{-- Mijoz --}}
           <td>
-            <div class="d-flex align-items-center gap-2">
+            <div class="flex items-center gap-2">
               <div class="av av-blue" style="width:32px;height:32px;font-size:12px;flex-shrink:0">
                 {{ strtoupper(substr($order->user?->name ?? 'U', 0, 1)) }}
               </div>
@@ -249,7 +250,7 @@
 
           {{-- Belgilar --}}
           <td>
-            <div class="d-flex gap-1 flex-wrap">
+            <div class="flex gap-1 flex-wrap">
               @if($order->gift)
               <span class="s-pill accent" style="font-size:10px" title="Sovg'ali">🎁</span>
               @endif
@@ -273,7 +274,7 @@
 
           {{-- Status + dropdown --}}
           <td>
-            <div class="d-flex align-items-center gap-1">
+            <div class="flex items-center gap-1">
               <span class="s-pill {{ $st[0] }}" style="font-size:11px">{{ $st[1] }}</span>
               <div class="dropdown">
                 <button class="btn-p ghost sm p-0"
@@ -333,7 +334,7 @@
 
   {{-- Pagination --}}
   @if($orders->hasPages())
-  <div class="d-flex align-items-center justify-content-between"
+  <div class="flex items-center justify-between"
        style="padding:12px 16px;border-top:1px solid var(--p-border)">
     <div style="font-size:12px;color:var(--p-hint)">
       {{ $orders->firstItem() }}–{{ $orders->lastItem() }} / {{ $orders->total() }} ta

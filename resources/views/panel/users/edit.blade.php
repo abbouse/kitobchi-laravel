@@ -6,15 +6,11 @@
 
 @section('content')
 
-<div class="page-header fade-up d-flex align-items-center gap-3">
-  <a href="{{ isset($user) ? route('panel.users.show', $user) : route('panel.users.index') }}" class="btn-p ghost icon">
-    <i class="bi bi-arrow-left"></i>
-  </a>
-  <div>
-    <h1 class="page-title">{{ isset($user) ? $user->name.' '.$user->lastname : 'Yangi foydalanuvchi' }}</h1>
-    <p class="page-sub">{{ isset($user) ? "ID #$user->id" : "Yangi foydalanuvchi yaratish" }}</p>
-  </div>
-</div>
+<x-panel.page-header back-href="{{ isset($user) ? route('panel.users.show', $user) : route('panel.users.index') }}">
+  <x-slot name="heading">{{ isset($user) ? $user->name.' '.$user->lastname : 'Yangi foydalanuvchi' }}</x-slot>
+  <x-slot name="meta">{{ isset($user) ? "ID #$user->id" : "Yangi foydalanuvchi yaratish" }}</x-slot>
+</x-panel.page-header>
+
 
 <form method="POST"
       action="{{ isset($user) ? route('panel.users.update', $user) : route('panel.users.store') }}"
@@ -22,45 +18,45 @@
   @csrf
   @if(isset($user)) @method('PUT') @endif
 
-  <div class="row g-3">
+  <div class="grid grid-cols-1 xl:grid-cols-12 gap-3">
 
     {{-- ── Asosiy ma'lumotlar ─────────── --}}
-    <div class="col-xl-8 fade-up d1">
+    <div class="xl:col-span-8 fade-up d1">
       <div class="p-card">
         <div class="p-card-header">
           <div class="p-card-title">Asosiy ma'lumotlar</div>
         </div>
 
-        <div class="row g-3">
-          <div class="col-md-6">
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-3">
+          <div class="">
             <label class="p-form-label">Ism <span style="color:var(--p-danger)">*</span></label>
             <input type="text" name="name" class="p-form-control @error('name') border-danger @enderror"
                    value="{{ old('name', $user->name ?? '') }}" required placeholder="Foydalanuvchi ismi">
             @error('name')<div style="font-size:11px;color:var(--p-danger);margin-top:4px">{{ $message }}</div>@enderror
           </div>
-          <div class="col-md-6">
+          <div class="">
             <label class="p-form-label">Familiya</label>
             <input type="text" name="lastname" class="p-form-control"
                    value="{{ old('lastname', $user->lastname ?? '') }}" placeholder="Familiya">
           </div>
-          <div class="col-md-6">
+          <div class="">
             <label class="p-form-label">Telefon raqami <span style="color:var(--p-danger)">*</span></label>
             <input type="text" name="phone_number" class="p-form-control @error('phone_number') border-danger @enderror"
                    value="{{ old('phone_number', $user->phone_number ?? '') }}" placeholder="+998901234567" required>
             @error('phone_number')<div style="font-size:11px;color:var(--p-danger);margin-top:4px">{{ $message }}</div>@enderror
           </div>
-          <div class="col-md-6">
+          <div class="">
             <label class="p-form-label">Email</label>
             <input type="email" name="email" class="p-form-control @error('email') border-danger @enderror"
                    value="{{ old('email', $user->email ?? '') }}" placeholder="email@example.com">
             @error('email')<div style="font-size:11px;color:var(--p-danger);margin-top:4px">{{ $message }}</div>@enderror
           </div>
-          <div class="col-md-6">
+          <div class="">
             <label class="p-form-label">Lavozim / Position</label>
             <input type="text" name="position" class="p-form-control"
                    value="{{ old('position', $user->position ?? '') }}" placeholder="O'quvchi, Yozuvchi...">
           </div>
-          <div class="col-md-6">
+          <div class="">
             <label class="p-form-label">Bio</label>
             <input type="text" name="bio" class="p-form-control"
                    value="{{ old('bio', $user->bio ?? '') }}" placeholder="Qisqa bio">
@@ -70,7 +66,7 @@
     </div>
 
     {{-- ── O'ng panel ──────────────────── --}}
-    <div class="col-xl-4 fade-up d2">
+    <div class="fade-up">
 
       {{-- Avatar --}}
       <div class="p-card mb-3">
@@ -108,7 +104,7 @@
       {{-- Toggle --}}
       <div class="p-card">
         <div class="p-card-title mb-3">Holat va ruxsatlar</div>
-        <div class="d-flex align-items-center justify-content-between mb-3" style="padding:10px;background:var(--p-elevated);border-radius:8px">
+        <div class="flex items-center justify-between mb-3" style="padding:10px;background:var(--p-elevated);border-radius:8px">
           <div>
             <div style="font-size:13px;font-weight:500;color:var(--p-text)">Tasdiqlangan</div>
             <div style="font-size:11px;color:var(--p-hint)">Telefon tasdiqlangan</div>
@@ -118,7 +114,7 @@
                    {{ old('isVerified', $user->isVerified ?? false) ? 'checked' : '' }}>
           </div>
         </div>
-        <div class="d-flex align-items-center justify-content-between" style="padding:10px;background:var(--p-elevated);border-radius:8px">
+        <div class="flex items-center justify-between" style="padding:10px;background:var(--p-elevated);border-radius:8px">
           <div>
             <div style="font-size:13px;font-weight:500;color:var(--p-text)">Premium</div>
             <div style="font-size:11px;color:var(--p-hint)">1 yil muddatga beriladi</div>
@@ -132,8 +128,8 @@
     </div>
 
     {{-- ── Submit ───────────────────────── --}}
-    <div class="col-12 fade-up d3">
-      <div class="d-flex gap-2">
+    <div class=" fade-up d3">
+      <div class="flex gap-2">
         <button type="submit" class="btn-p primary">
           <i class="bi bi-check-lg"></i>
           {{ isset($user) ? 'Saqlash' : 'Yaratish' }}

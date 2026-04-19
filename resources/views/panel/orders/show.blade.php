@@ -37,70 +37,66 @@
 @endphp
 
 {{-- ── Page header ──────────────────────────────────────────────── --}}
-<div class="d-flex align-items-start justify-content-between mb-4 fade-up">
-  <div class="d-flex align-items-center gap-3">
-    <a href="{{ route('panel.orders.index') }}" class="btn-p ghost icon">
-      <i class="bi bi-arrow-left"></i>
-    </a>
-    <div>
-      <div class="d-flex align-items-center gap-2">
-        <h1 class="page-title mb-0">Buyurtma #{{ $order->id }}</h1>
-        <span class="s-pill {{ $st[0] }}">{{ $st[1] }}</span>
-        @if($isGiftToOther)
-          <span class="s-pill info" style="font-size:11px">👤 Boshqasiga sovg'a</span>
-        @endif
-        @if($withPackaging)
-          <span class="s-pill muted" style="font-size:11px">📦 Qadoqlangan</span>
-        @endif
+<x-panel.page-header back-href="{{ route('panel.orders.index') }}">
+  <x-slot name="heading">
+    <div class="flex flex-wrap items-center gap-2">
+      <h1 class="page-title mb-0">Buyurtma #{{ $order->id }}</h1>
+      <span class="s-pill {{ $st[0] }}">{{ $st[1] }}</span>
+      @if($isGiftToOther)
+        <span class="s-pill info" style="font-size:11px">👤 Boshqasiga sovg'a</span>
+      @endif
+      @if($withPackaging)
+        <span class="s-pill muted" style="font-size:11px">📦 Qadoqlangan</span>
+      @endif
+    </div>
+  </x-slot>
+  <x-slot name="meta">
+    <p class="page-sub mt-1">
+      {{ $order->created_at?->format('d.m.Y H:i') }}
+      · {{ $order->deliveryType }}
+      @if($order->user)
+        · {{ $order->user->name }} {{ $order->user->lastname }}
+      @endif
+    </p>
+  </x-slot>
+  <x-slot name="actions">
+    <div class="flex flex-wrap gap-2">
+      @if(!in_array($order->status,['C','F']))
+      <form method="POST" action="{{ route('panel.orders.cancel', $order) }}"
+            onsubmit="return confirm('Buyurtmani bekor qilasizmi?')">
+        @csrf @method('PATCH')
+        <button class="btn-p danger ghost" style="gap:6px">
+          <i class="bi bi-x-circle"></i> Bekor qilish
+        </button>
+      </form>
+      @endif
+      <div class="dropdown">
+        <button class="btn-p ghost" data-bs-toggle="dropdown" style="gap:8px">
+          <i class="bi bi-pencil-square" style="font-size:13px"></i> Status
+          <i class="bi bi-chevron-down" style="font-size:10px"></i>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end"
+            style="background:var(--p-surface);border:1px solid var(--p-border);
+                   border-radius:10px;min-width:170px;padding:6px">
+          @foreach(['A'=>'Kutilmoqda','P'=>'Qadoqlanmoqda','B'=>"Yo'lda",'C'=>'Yetkazildi','F'=>'Bekor'] as $val=>$lbl)
+          <li>
+            <form method="POST" action="{{ route('panel.orders.status', $order) }}">
+              @csrf @method('PATCH')
+              <input type="hidden" name="status" value="{{ $val }}">
+              <button type="submit" class="dropdown-item"
+                      style="color:{{ $val===$order->status?'var(--p-accent)':'var(--p-text)' }};
+                             font-size:13px;padding:8px 14px;border-radius:6px;
+                             background:{{ $val===$order->status?'var(--p-elevated)':'transparent' }}">
+                {{ $val===$order->status?'● ':'○ ' }}{{ $lbl }}
+              </button>
+            </form>
+          </li>
+          @endforeach
+        </ul>
       </div>
-      <p class="page-sub mt-1">
-        {{ $order->created_at?->format('d.m.Y H:i') }}
-        · {{ $order->deliveryType }}
-        @if($order->user)
-          · {{ $order->user->name }} {{ $order->user->lastname }}
-        @endif
-      </p>
     </div>
-  </div>
-
-  <div class="d-flex gap-2">
-    {{-- Bekor qilish --}}
-    @if(!in_array($order->status,['C','F']))
-    <form method="POST" action="{{ route('panel.orders.cancel', $order) }}"
-          onsubmit="return confirm('Buyurtmani bekor qilasizmi?')">
-      @csrf @method('PATCH')
-      <button class="btn-p danger ghost" style="gap:6px">
-        <i class="bi bi-x-circle"></i> Bekor qilish
-      </button>
-    </form>
-    @endif
-    {{-- Status dropdown --}}
-    <div class="dropdown">
-      <button class="btn-p ghost" data-bs-toggle="dropdown" style="gap:8px">
-        <i class="bi bi-pencil-square" style="font-size:13px"></i> Status
-        <i class="bi bi-chevron-down" style="font-size:10px"></i>
-      </button>
-      <ul class="dropdown-menu dropdown-menu-end"
-          style="background:var(--p-surface);border:1px solid var(--p-border);
-                 border-radius:10px;min-width:170px;padding:6px">
-        @foreach(['A'=>'Kutilmoqda','P'=>'Qadoqlanmoqda','B'=>"Yo'lda",'C'=>'Yetkazildi','F'=>'Bekor'] as $val=>$lbl)
-        <li>
-          <form method="POST" action="{{ route('panel.orders.status', $order) }}">
-            @csrf @method('PATCH')
-            <input type="hidden" name="status" value="{{ $val }}">
-            <button type="submit" class="dropdown-item"
-                    style="color:{{ $val===$order->status?'var(--p-accent)':'var(--p-text)' }};
-                           font-size:13px;padding:8px 14px;border-radius:6px;
-                           background:{{ $val===$order->status?'var(--p-elevated)':'transparent' }}">
-              {{ $val===$order->status?'● ':'○ ' }}{{ $lbl }}
-            </button>
-          </form>
-        </li>
-        @endforeach
-      </ul>
-    </div>
-  </div>
-</div>
+  </x-slot>
+</x-panel.page-header>
 
 {{-- ── Alert: bekor qilingan ─────────────────────────────────────── --}}
 @if($isCancelled)
@@ -117,12 +113,12 @@
 </div>
 @endif
 
-<div class="row g-3">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
 
 {{-- ════════════════════════════════════════════════════
      CHAP USTUN
      ════════════════════════════════════════════════════ --}}
-<div class="col-xl-8">
+<div class="xl:col-span-8">
 
   {{-- ── Mahsulotlar ─────────────────────────────────────── --}}
   <div class="p-card mb-3 fade-up d1">
@@ -135,7 +131,7 @@
       </div>
     </div>
 
-    <div class="table-responsive">
+    <div class="table-responsive kc-twrap">
       <table class="p-table">
         <thead>
           <tr>
@@ -158,7 +154,7 @@
             <td style="color:var(--p-hint);font-size:12px">{{ $i + 1 }}</td>
 
             <td>
-              <div class="d-flex align-items-center gap-3">
+              <div class="flex items-center gap-3">
                 {{-- Rasm --}}
                 <div style="width:42px;height:56px;border-radius:6px;overflow:hidden;
                             background:var(--p-elevated);flex-shrink:0;
@@ -272,7 +268,7 @@
       @endphp
 
       @foreach($rows as $row)
-      <div class="d-flex justify-content-between align-items-center mb-2"
+      <div class="flex justify-between items-center mb-2"
            style="font-size:13px">
         <span style="color:var(--p-muted)">
           {{ $row['label'] }}
@@ -292,7 +288,7 @@
 
       {{-- Total line --}}
       <div style="border-top:2px solid var(--p-border);padding-top:12px;margin-top:8px"
-           class="d-flex justify-content-between align-items-center">
+           class="flex justify-between items-center">
         <span style="font-size:15px;font-weight:700;color:var(--p-text)">Umumiy to'lov</span>
         <span style="font-size:22px;font-weight:800;font-family:'JetBrains Mono',monospace;
                      color:{{ $isCancelled ? 'var(--p-danger)' : 'var(--p-accent)' }}">
@@ -313,7 +309,7 @@
   <div class="p-card mb-3 fade-up d2">
     <div class="p-card-header">
       <div class="p-card-title">
-        <i class="bi bi-geo-alt me-1" style="color:var(--p-accent)"></i>
+        <i class="bi bi-geo-alt mr-1" style="color:var(--p-accent)"></i>
         Yetkazish manzili
       </div>
       @if(($addr['lat'] ?? null) && ($addr['lon'] ?? null))
@@ -333,7 +329,7 @@
       @endphp
       @foreach($addrRows as $r)
       @if($r['value'])
-      <div class="d-flex align-items-start gap-3"
+      <div class="flex items-start gap-3"
            style="padding:10px 0;border-bottom:1px solid var(--p-border)">
         <div style="width:32px;height:32px;border-radius:8px;background:var(--p-elevated);
                     display:flex;align-items:center;justify-content:center;flex-shrink:0">
@@ -367,7 +363,7 @@
               background:linear-gradient(135deg,rgba(59,130,246,.04),transparent)">
     <div class="p-card-header">
       <div class="p-card-title" style="color:var(--p-info)">
-        <i class="bi bi-gift me-1"></i> Qabul qiluvchi ma'lumotlari
+        <i class="bi bi-gift mr-1"></i> Qabul qiluvchi ma'lumotlari
       </div>
       <span class="s-pill info" style="font-size:11px">Boshqasiga sovg'a</span>
     </div>
@@ -382,7 +378,7 @@
       @endphp
       @foreach($recipientRows as $r)
       @if($r['value'])
-      <div class="d-flex align-items-center gap-3"
+      <div class="flex items-center gap-3"
            style="padding:10px 0;border-bottom:1px solid var(--p-border)">
         <div style="width:32px;height:32px;border-radius:8px;
                     background:rgba(59,130,246,.1);
@@ -415,13 +411,13 @@
 {{-- ════════════════════════════════════════════════════
      O'NG USTUN
      ════════════════════════════════════════════════════ --}}
-<div class="col-xl-4">
+<div class="xl:col-span-4">
 
   {{-- ── Mijoz ────────────────────────────────────────── --}}
   <div class="p-card mb-3 fade-up d1">
     <div class="p-card-header">
       <div class="p-card-title">
-        <i class="bi bi-person-circle me-1" style="color:var(--p-accent)"></i> Mijoz
+        <i class="bi bi-person-circle mr-1" style="color:var(--p-accent)"></i> Mijoz
       </div>
       @if($order->user)
       <a href="{{ route('panel.users.show', $order->user) }}"
@@ -431,7 +427,7 @@
       @endif
     </div>
     @if($order->user)
-    <div class="d-flex align-items-center gap-3">
+    <div class="flex items-center gap-3">
       <div class="av av-blue"
            style="width:48px;height:48px;font-size:18px;flex-shrink:0;border-radius:14px">
         @if($order->user->avatar)
@@ -463,7 +459,7 @@
   <div class="p-card mb-3 fade-up d2">
     <div class="p-card-header">
       <div class="p-card-title">
-        <i class="bi bi-credit-card me-1" style="color:var(--p-accent)"></i> To'lov
+        <i class="bi bi-credit-card mr-1" style="color:var(--p-accent)"></i> To'lov
       </div>
       <span class="s-pill {{ $pay[0] }}" style="font-size:11px">{{ $pay[1] }}</span>
     </div>
@@ -490,19 +486,19 @@
 
       @if(isset($row['slot']))
         @if($row['slot']==='status')
-          <div class="d-flex justify-content-between align-items-center"
+          <div class="flex justify-between items-center"
                style="padding:9px 0;border-bottom:1px solid var(--p-border)">
             <span style="font-size:12px;color:var(--p-hint)">{{ $row['label'] }}</span>
             <span class="s-pill {{ $st[0] }}" style="font-size:11px">{{ $st[1] }}</span>
           </div>
         @elseif($row['slot']==='payment')
-          <div class="d-flex justify-content-between align-items-center"
+          <div class="flex justify-between items-center"
                style="padding:9px 0;border-bottom:1px solid var(--p-border)">
             <span style="font-size:12px;color:var(--p-hint)">{{ $row['label'] }}</span>
             <span class="s-pill {{ $pay[0] }}" style="font-size:11px">{{ $pay[1] }}</span>
           </div>
         @elseif($row['slot']==='delivery')
-          <div class="d-flex justify-content-between align-items-center"
+          <div class="flex justify-between items-center"
                style="padding:9px 0;border-bottom:1px solid var(--p-border)">
             <span style="font-size:12px;color:var(--p-hint)">{{ $row['label'] }}</span>
             <span style="font-size:12px;font-weight:600;color:var(--p-text)">
@@ -510,7 +506,7 @@
             </span>
           </div>
         @elseif($row['slot']==='delivery_price')
-          <div class="d-flex justify-content-between align-items-center"
+          <div class="flex justify-between items-center"
                style="padding:9px 0;border-bottom:1px solid var(--p-border)">
             <span style="font-size:12px;color:var(--p-hint)">{{ $row['label'] }}</span>
             @if($deliveryPrice > 0)
@@ -524,10 +520,10 @@
           </div>
         @elseif($row['slot']==='promo')
           @if($order->promocode)
-          <div class="d-flex justify-content-between align-items-center"
+          <div class="flex justify-between items-center"
                style="padding:9px 0;border-bottom:1px solid var(--p-border)">
             <span style="font-size:12px;color:var(--p-hint)">{{ $row['label'] }}</span>
-            <div class="d-flex align-items-center gap-2">
+            <div class="flex items-center gap-2">
               <code style="font-family:'JetBrains Mono',monospace;font-size:12px;
                            font-weight:700;color:var(--p-accent)">
                 {{ $order->promocode }}
@@ -543,10 +539,10 @@
           @endif
         @elseif($row['slot']==='cashback')
           @if($cashbackAmount > 0)
-          <div class="d-flex justify-content-between align-items-center"
+          <div class="flex justify-between items-center"
                style="padding:9px 0;border-bottom:1px solid var(--p-border)">
             <span style="font-size:12px;color:var(--p-hint)">{{ $row['label'] }}</span>
-            <div class="d-flex align-items-center gap-2">
+            <div class="flex items-center gap-2">
               <span style="font-size:12px;color:var(--p-info);
                            font-family:'JetBrains Mono',monospace;font-weight:600">
                 -{{ number_format($cashbackAmount) }} UZS
@@ -559,10 +555,10 @@
           @endif
         @elseif($row['slot']==='cert')
           @if($certAmount > 0)
-          <div class="d-flex justify-content-between align-items-center"
+          <div class="flex justify-between items-center"
                style="padding:9px 0;border-bottom:1px solid var(--p-border)">
             <span style="font-size:12px;color:var(--p-hint)">{{ $row['label'] }}</span>
-            <div class="d-flex align-items-center gap-2">
+            <div class="flex items-center gap-2">
               <code style="font-family:'JetBrains Mono',monospace;font-size:11px;
                            color:var(--p-warning)">#{{ $order->gift_certificate_id }}</code>
               <span style="font-size:12px;color:var(--p-warning);
@@ -578,7 +574,7 @@
         @endif
 
       @elseif(isset($row['value']) && $row['value'] !== null)
-        <div class="d-flex justify-content-between align-items-center"
+        <div class="flex justify-between items-center"
              style="padding:9px 0;border-bottom:1px solid var(--p-border)">
           <span style="font-size:12px;color:var(--p-hint)">{{ $row['label'] }}</span>
           @if(isset($row['pill']))
@@ -609,10 +605,10 @@
   <div class="p-card mb-3 fade-up d3">
     <div class="p-card-header">
       <div class="p-card-title">
-        <i class="bi bi-gift me-1" style="color:var(--p-accent)"></i> Sovg'a
+        <i class="bi bi-gift mr-1" style="color:var(--p-accent)"></i> Sovg'a
       </div>
     </div>
-    <div class="d-flex align-items-center gap-3">
+    <div class="flex items-center gap-3">
       <div style="width:48px;height:48px;border-radius:10px;overflow:hidden;
                   background:var(--p-elevated);display:flex;align-items:center;
                   justify-content:center;flex-shrink:0">
@@ -651,19 +647,19 @@
       </span>
     </div>
     <div style="padding:4px 0">
-      <div class="d-flex justify-content-between" style="padding:7px 0">
+      <div class="flex justify-between" style="padding:7px 0">
         <span style="font-size:12px;color:var(--p-hint)">Kod</span>
         <code style="font-family:'JetBrains Mono',monospace;font-size:14px;
                      font-weight:800;color:var(--p-warning)">{{ $orderCert->code }}</code>
       </div>
-      <div class="d-flex justify-content-between" style="padding:7px 0">
+      <div class="flex justify-between" style="padding:7px 0">
         <span style="font-size:12px;color:var(--p-hint)">Nominal</span>
         <span style="font-family:'JetBrains Mono',monospace;font-size:13px;
                      font-weight:600;color:var(--p-text)">
           {{ number_format($orderCert->nominal_uzs) }} UZS
         </span>
       </div>
-      <div class="d-flex justify-content-between" style="padding:7px 0">
+      <div class="flex justify-between" style="padding:7px 0">
         <span style="font-size:12px;color:var(--p-hint)">Chegirma</span>
         <span style="font-family:'JetBrains Mono',monospace;font-size:13px;
                      font-weight:600;color:var(--p-warning)">
@@ -671,7 +667,7 @@
         </span>
       </div>
       @if($orderCert->buyer ?? null)
-      <div class="d-flex justify-content-between" style="padding:7px 0">
+      <div class="flex justify-between" style="padding:7px 0">
         <span style="font-size:12px;color:var(--p-hint)">Sotib olgan</span>
         <span style="font-size:12px;color:var(--p-text);font-weight:500">
           {{ $orderCert->buyer->name ?? '—' }}
@@ -687,7 +683,7 @@
   <div class="p-card mb-3 fade-up d4">
     <div class="p-card-header">
       <div class="p-card-title">
-        <i class="bi bi-chat-quote me-1" style="color:var(--p-accent)"></i> Xaridor tilagi
+        <i class="bi bi-chat-quote mr-1" style="color:var(--p-accent)"></i> Xaridor tilagi
       </div>
     </div>
     <div style="font-size:13px;color:var(--p-muted);font-style:italic;
@@ -703,9 +699,9 @@
   <div class="p-card fade-up d4">
     <div class="p-card-header">
       <div class="p-card-title">
-        <i class="bi bi-qr-code me-1" style="color:var(--p-accent)"></i> QR kod
+        <i class="bi bi-qr-code mr-1" style="color:var(--p-accent)"></i> QR kod
       </div>
-      <div class="d-flex gap-2">
+      <div class="flex gap-2">
         <button onclick="toggleQr()" class="btn-p ghost sm" id="qrToggleBtn">
           <i class="bi bi-eye" id="qrEye"></i>
         </button>

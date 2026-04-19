@@ -4,28 +4,25 @@
 
 @section('content')
 
-<div class="d-flex align-items-center justify-content-between mb-4">
-  <div style="font-size:13px;color:var(--p-hint)">
-    Telegram bot support operatorlari
-  </div>
-  <a href="{{ route('panel.bot-tickets.index') }}" class="btn-p ghost">
-    <i class="bi bi-arrow-left"></i> Murojaatlarga
-  </a>
-</div>
+<x-panel.page-header back-href="{{ route('panel.bot-tickets.index') }}">
+  <x-slot name="heading">Bot operatorlari</x-slot>
+  <x-slot name="meta">Telegram bot support operatorlari</x-slot>
+</x-panel.page-header>
 
-<div class="row g-3">
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
   @forelse($operators as $op)
   @php
     $dotClr = match($op->status) { 'online'=>'success','busy'=>'warning',default=>'muted' };
     $dotLbl = match($op->status) { 'online'=>'Online','busy'=>'Band',default=>'Offline' };
   @endphp
-  <div class="col-sm-6 col-xl-4">
+  <div class="xl:col-span-4">
     <div class="p-card">
       <div class="dash-card-body">
 
         {{-- Header --}}
-        <div class="d-flex align-items-start justify-content-between mb-3">
-          <div class="d-flex align-items-center gap-3">
+        <div class="flex items-start justify-between mb-3">
+          <div class="flex items-center gap-3">
             <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,var(--p-accent),#7c5cfc);
                         display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff;flex-shrink:0">
               {{ strtoupper(substr($op->name ?? $op->username ?? 'O', 0, 1)) }}
@@ -40,7 +37,7 @@
               </div>
             </div>
           </div>
-          <div class="d-flex flex-column align-items-end gap-1">
+          <div class="flex flex-col items-end gap-1">
             <span class="s-pill {{ $op->is_active ? 'success' : 'muted' }}">
               {{ $op->is_active ? 'Faol' : 'Blok' }}
             </span>
@@ -80,7 +77,7 @@
     </div>
   </div>
   @empty
-  <div class="col-12">
+  <div class="">
     <div class="p-card" style="text-align:center;padding:50px;color:var(--p-hint)">
       <i class="bi bi-headset" style="font-size:40px;display:block;margin-bottom:12px"></i>
       Operatorlar yo'q

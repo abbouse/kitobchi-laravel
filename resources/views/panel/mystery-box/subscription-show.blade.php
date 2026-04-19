@@ -6,56 +6,45 @@
 
 @php $addr = is_array($subscription->address) ? $subscription->address : []; @endphp
 
-<div class="d-flex align-items-start justify-content-between mb-4 fade-up">
-  <div class="d-flex align-items-center gap-3">
-    <a href="{{ route('panel.mystery-box.subscriptions') }}" class="btn-p ghost icon">
-      <i class="bi bi-arrow-left"></i>
-    </a>
-    <div>
-      <h1 class="page-title">Obuna #{{ $subscription->id }}</h1>
-      <p class="page-sub" style="display:flex;align-items:center;gap:8px">
-        {{ $subscription->created_at?->format('d.m.Y') }}
-        <span class="s-pill {{ $subscription->status_color }}" style="font-size:11px">
-          {{ $subscription->status_label }}
-        </span>
-      </p>
-    </div>
-  </div>
+<x-panel.page-header back-href="{{ route('panel.mystery-box.subscriptions') }}">
+  <x-slot name="heading">Obuna #{{ $subscription->id }}</x-slot>
+  <x-slot name="actions">
+    <div class="flex gap-2">
+        @if($subscription->status === 'active')
+        <form method="POST" action="{{ route('panel.mystery-box.pause', $subscription) }}">
+          @csrf @method('PATCH')
+          <button class="btn-p ghost"><i class="bi bi-pause-fill"></i> To'xtatish</button>
+        </form>
+        @elseif($subscription->status === 'paused')
+        <form method="POST" action="{{ route('panel.mystery-box.resume', $subscription) }}">
+          @csrf @method('PATCH')
+          <button class="btn-p success"><i class="bi bi-play-fill"></i> Davom ettirish</button>
+        </form>
+        @endif
+    
+        @if(!in_array($subscription->status, ['cancelled','completed']))
+        <form method="POST" action="{{ route('panel.mystery-box.cancel', $subscription) }}"
+              onsubmit="return confirm('Obuna bekor qilinsinmi?')">
+          @csrf @method('PATCH')
+          <button class="btn-p danger ghost"><i class="bi bi-x-lg"></i> Bekor qilish</button>
+        </form>
+        @endif
+      </div>
+  </x-slot>
+</x-panel.page-header>
 
-  <div class="d-flex gap-2">
-    @if($subscription->status === 'active')
-    <form method="POST" action="{{ route('panel.mystery-box.pause', $subscription) }}">
-      @csrf @method('PATCH')
-      <button class="btn-p ghost"><i class="bi bi-pause-fill"></i> To'xtatish</button>
-    </form>
-    @elseif($subscription->status === 'paused')
-    <form method="POST" action="{{ route('panel.mystery-box.resume', $subscription) }}">
-      @csrf @method('PATCH')
-      <button class="btn-p success"><i class="bi bi-play-fill"></i> Davom ettirish</button>
-    </form>
-    @endif
 
-    @if(!in_array($subscription->status, ['cancelled','completed']))
-    <form method="POST" action="{{ route('panel.mystery-box.cancel', $subscription) }}"
-          onsubmit="return confirm('Obuna bekor qilinsinmi?')">
-      @csrf @method('PATCH')
-      <button class="btn-p danger ghost"><i class="bi bi-x-lg"></i> Bekor qilish</button>
-    </form>
-    @endif
-  </div>
-</div>
-
-<div class="row g-3">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
 
   {{-- ── Chap ─────────────────────────────────────────────── --}}
-  <div class="col-xl-4">
+  <div class="xl:col-span-4">
 
     {{-- Foydalanuvchi --}}
     <div class="p-card mb-3 fade-up">
       <div class="p-card-header"><div class="p-card-title">Foydalanuvchi</div></div>
       <div style="padding:14px 18px">
         @if($subscription->user)
-        <div class="d-flex align-items-center gap-3 mb-3">
+        <div class="flex items-center gap-3 mb-3">
           <div style="width:44px;height:44px;border-radius:50%;overflow:hidden;flex-shrink:0;
                       background:linear-gradient(135deg,var(--p-accent),#7c5cfc);
                       display:flex;align-items:center;justify-content:center;
@@ -88,7 +77,7 @@
     <div class="p-card mb-3 fade-up">
       <div class="p-card-header">
         <div class="p-card-title">
-          <i class="bi bi-geo-alt me-1" style="color:var(--p-accent)"></i> Yetkazish manzili
+          <i class="bi bi-geo-alt mr-1" style="color:var(--p-accent)"></i> Yetkazish manzili
         </div>
       </div>
       <div style="padding:14px 18px">
@@ -134,7 +123,7 @@
 
         {{-- Progress --}}
         <div style="margin-top:14px">
-          <div class="d-flex justify-content-between mb-1">
+          <div class="flex justify-between mb-1">
             <span style="font-size:11px;color:var(--p-hint)">Bajarildi</span>
             <span style="font-size:11px;color:var(--p-muted);font-family:'JetBrains Mono',monospace">
               {{ $subscription->delivered_months }}/{{ $subscription->total_months }}
@@ -152,11 +141,11 @@
   </div>
 
   {{-- ── O'ng: Yetkazishlar ───────────────────────────────── --}}
-  <div class="col-xl-8">
+  <div class="xl:col-span-8">
     <div class="p-card fade-up">
       <div class="p-card-header">
         <div class="p-card-title">
-          <i class="bi bi-box-seam me-1" style="color:var(--p-accent)"></i>
+          <i class="bi bi-box-seam mr-1" style="color:var(--p-accent)"></i>
           Oylik yetkazishlar
         </div>
         <span class="s-pill accent" style="font-size:10px">
@@ -172,8 +161,8 @@
           : collect();
       @endphp
       <div style="padding:16px 18px;border-top:1px solid var(--p-border)">
-        <div class="d-flex align-items-start justify-content-between mb-3">
-          <div class="d-flex align-items-center gap-3">
+        <div class="flex items-start justify-between mb-3">
+          <div class="flex items-center gap-3">
             <div style="width:32px;height:32px;border-radius:8px;flex-shrink:0;
                         background:var(--p-elevated);
                         display:flex;align-items:center;justify-content:center;
@@ -203,7 +192,7 @@
 
         {{-- Kitoblar --}}
         @if($books->count())
-        <div class="d-flex flex-wrap gap-2 mb-3">
+        <div class="flex flex-wrap gap-2 mb-3">
           @foreach($books as $book)
           @php
             $imgs = is_array($book->images) ? $book->images : json_decode($book->images??'[]',true);
@@ -243,7 +232,7 @@
               action="{{ route('panel.mystery-box.delivery.prepare', $delivery) }}"
               id="prepForm{{ $delivery->id }}">
           @csrf @method('PATCH')
-          <div class="row g-2 align-items-end">
+          <div class="row g-2 items-end">
             <div class="col">
               <label class="p-form-label">
                 Kitob IDlari (vergul bilan ajrating)
@@ -266,7 +255,7 @@
         </form>
 
         @elseif($delivery->status === 'preparing')
-        <div class="d-flex gap-2">
+        <div class="flex gap-2">
           <form method="POST" action="{{ route('panel.mystery-box.delivery.ship', $delivery) }}">
             @csrf @method('PATCH')
             <button class="btn-p primary">
@@ -293,7 +282,7 @@
         @if($delivery->tracking_note)
         <div style="margin-top:8px;font-size:12px;color:var(--p-muted);
                     background:var(--p-elevated);padding:8px 12px;border-radius:6px">
-          <i class="bi bi-info-circle me-1"></i>{{ $delivery->tracking_note }}
+          <i class="bi bi-info-circle mr-1"></i>{{ $delivery->tracking_note }}
         </div>
         @endif
       </div>

@@ -35,9 +35,17 @@ return [
         ],
     ],
     'payme' => [
-    'id' => env('PAYME_MERCHANT_ID'),
-    'key' => env('PAYME_SUBSCRIBE_PASSWORD'),
-    'endpoint' => env('PAYME_ENDPOINT'),
-],
+        'id' => env('PAYME_MERCHANT_ID'),
+        'key' => env('PAYME_SUBSCRIBE_PASSWORD'),
+        'endpoint' => env('PAYME_ENDPOINT'),
+    ],
+
+    'kangaroo' => [
+        'url' => env('KANGAROO_API_URL', 'https://kangaroo.kitobchi.com'),
+        'key' => env('KANGAROO_API_KEY', ''),
+        'timeout' => (int) env('KANGAROO_HTTP_TIMEOUT', 120),
+        'http_retries' => max(1, (int) env('KANGAROO_HTTP_RETRIES', 3)),
+        'http_retry_delay_ms' => max(50, (int) env('KANGAROO_HTTP_RETRY_DELAY_MS', 250)),
+    ],
 
 ];

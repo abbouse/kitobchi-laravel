@@ -16,10 +16,14 @@ return Application::configure(basePath: dirname(__DIR__))
         ['middleware' => ['api', 'auth:user']],
     )
     ->withMiddleware(function (Middleware $middleware) {
+        $middleware->web(append: [
+            \App\Http\Middleware\SetLandingLocale::class,
+        ]);
+
         $middleware->alias([
-            'api.client'       => \App\Http\Middleware\VerifyApiClient::class,
-            'payme'            => \App\Http\Middleware\PaymeMiddleware::class,
-            'auth.panel'       => \App\Http\Middleware\AuthenticatePanel::class,
+            'api.client' => \App\Http\Middleware\VerifyApiClient::class,
+            'payme' => \App\Http\Middleware\PaymeMiddleware::class,
+            'auth.panel' => \App\Http\Middleware\AuthenticatePanel::class,
             'panel.permission' => \App\Http\Middleware\PanelPermission::class,
         ]);
 
@@ -78,5 +82,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // ── Mystery Box: navbat tekshiruvi ────────────────────────────
         $schedule->command('mystery-box:check-deliveries')
             ->dailyAt('08:30')->timezone($tz)->withoutOverlapping();
+
+        // ── Kangaroo: kitob/kanstovar moderatsiya + book club UGC ─────
+        $schedule->command('kangaroo:sync-content-moderation')
+            ->everyThirtyMinutes()
+            ->timezone($tz)
+            ->withoutOverlapping(25);
 
     })->create();

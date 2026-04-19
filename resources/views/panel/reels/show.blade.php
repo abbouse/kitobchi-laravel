@@ -4,38 +4,32 @@
 
 @section('content')
 
-<div class="d-flex align-items-start justify-content-between mb-4 fade-up">
-  <div class="d-flex align-items-center gap-3">
-    <a href="{{ route('panel.reels.index') }}" class="btn-p ghost icon">
-      <i class="bi bi-arrow-left"></i>
-    </a>
-    <div>
-      <h1 class="page-title">{{ $reel->title }}</h1>
-      <p class="page-sub">
-        Tartib: {{ $reel->order }}
+<x-panel.page-header back-href="{{ route('panel.reels.index') }}">
+  <x-slot name="heading">{{ $reel->title }}</x-slot>
+  <x-slot name="meta">Tartib: {{ $reel->order }}
         · {{ $reel->items->count() }} ta video
-        · Yaratildi: {{ $reel->created_at?->format('d.m.Y') }}
-      </p>
-    </div>
-  </div>
-  <div class="d-flex gap-2">
-    <a href="{{ route('panel.reels.edit', $reel) }}" class="btn-p ghost">
-      <i class="bi bi-pencil"></i> Tahrirlash
-    </a>
-    <form method="POST" action="{{ route('panel.reels.destroy', $reel) }}"
-          onsubmit="return confirm('Reel va BARCHA videolari o\'chirilsinmi?')">
-      @csrf @method('DELETE')
-      <button class="btn-p danger">
-        <i class="bi bi-trash"></i> O'chirish
-      </button>
-    </form>
-  </div>
-</div>
+        · Yaratildi: {{ $reel->created_at?->format('d.m.Y') }}</x-slot>
+  <x-slot name="actions">
+    <div class="flex gap-2">
+        <a href="{{ route('panel.reels.edit', $reel) }}" class="btn-p ghost">
+          <i class="bi bi-pencil"></i> Tahrirlash
+        </a>
+        <form method="POST" action="{{ route('panel.reels.destroy', $reel) }}"
+              onsubmit="return confirm('Reel va BARCHA videolari o\'chirilsinmi?')">
+          @csrf @method('DELETE')
+          <button class="btn-p danger">
+            <i class="bi bi-trash"></i> O'chirish
+          </button>
+        </form>
+      </div>
+  </x-slot>
+</x-panel.page-header>
 
-<div class="row g-3">
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
 
   {{-- ── Chap: Reel info ─────────────────────────── --}}
-  <div class="col-xl-4">
+  <div class="xl:col-span-4">
     <div class="p-card fade-up">
       <div class="p-card-header">
         <div class="p-card-title">Ma'lumotlar</div>
@@ -66,13 +60,13 @@
   </div>
 
   {{-- ── O'ng: Videolar + qo'shish formi ───────────── --}}
-  <div class="col-xl-8">
+  <div class="xl:col-span-8">
 
     {{-- Videolar ro'yxati --}}
     <div class="p-card mb-3 fade-up">
       <div class="p-card-header">
         <div class="p-card-title">
-          <i class="bi bi-play-circle me-1" style="color:var(--p-accent)"></i>
+          <i class="bi bi-play-circle mr-1" style="color:var(--p-accent)"></i>
           Videolar
         </div>
         <span class="s-pill accent" style="font-size:11px">
@@ -151,7 +145,7 @@
     <div class="p-card fade-up">
       <div class="p-card-header">
         <div class="p-card-title">
-          <i class="bi bi-cloud-upload me-1" style="color:var(--p-success)"></i>
+          <i class="bi bi-cloud-upload mr-1" style="color:var(--p-success)"></i>
           Yangi video qo'shish
         </div>
       </div>
@@ -162,9 +156,9 @@
         @csrf
         <div style="padding:0 18px 18px">
 
-          <div class="row g-3 mb-3">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
             {{-- 720p --}}
-            <div class="col-md-4">
+            <div class="md:col-span-4">
               @include('panel.reels._video-upload', [
                 'field' => 'video_720p',
                 'label' => '720p (HD)',
@@ -174,7 +168,7 @@
               ])
             </div>
             {{-- 480p --}}
-            <div class="col-md-4">
+            <div class="md:col-span-4">
               @include('panel.reels._video-upload', [
                 'field' => 'video_480p',
                 'label' => '480p',
@@ -184,7 +178,7 @@
               ])
             </div>
             {{-- 360p --}}
-            <div class="col-md-4">
+            <div class="md:col-span-4">
               @include('panel.reels._video-upload', [
                 'field' => 'video_360p',
                 'label' => '360p',
@@ -195,8 +189,8 @@
             </div>
           </div>
 
-          <div class="row g-3 align-items-end">
-            <div class="col-md-3">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 items-end">
+            <div class="md:col-span-3">
               <label class="p-form-label">
                 Tartib <span style="color:var(--p-danger)">*</span>
               </label>
@@ -204,7 +198,7 @@
                      value="{{ ($reel->items->max('order') ?? 0) + 1 }}"
                      min="1" required>
             </div>
-            <div class="col-md-9">
+            <div class="md:col-span-9">
               {{-- Upload progress --}}
               <div id="uploadProgress" style="display:none;margin-bottom:10px">
                 <div style="font-size:12px;color:var(--p-muted);margin-bottom:5px">
@@ -236,7 +230,7 @@
             z-index:9999;align-items:center;justify-content:center;padding:20px">
   <div style="background:var(--p-surface);border-radius:14px;padding:16px;
               width:100%;max-width:680px;border:1px solid var(--p-border)">
-    <div class="d-flex align-items-center justify-content-between mb-3">
+    <div class="flex items-center justify-between mb-3">
       <div style="font-size:14px;font-weight:600;color:var(--p-text)">Video preview</div>
       <button onclick="closeVideo()"
               style="background:none;border:none;cursor:pointer;

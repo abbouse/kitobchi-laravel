@@ -6,8 +6,8 @@
   <div class="dash-card-body">
 
     {{-- User va meta --}}
-    <div class="d-flex align-items-start justify-content-between mb-3">
-      <div class="d-flex align-items-center gap-3">
+    <div class="flex items-start justify-between mb-3">
+      <div class="flex items-center gap-3">
         @if($showUser && $post->user)
         <a href="{{ route('panel.users.show', $post->user_id) }}"
            style="display:block;width:38px;height:38px;border-radius:50%;overflow:hidden;
@@ -41,7 +41,7 @@
       </div>
 
       {{-- Amallar --}}
-      <div class="d-flex gap-1">
+      <div class="flex gap-1">
         <a href="{{ route('panel.book-club.show', $post) }}" class="btn-p ghost sm">
           <i class="bi bi-eye"></i>
         </a>
@@ -64,7 +64,7 @@
 
     {{-- Rasmlar --}}
     @if($post->images && $post->images->count())
-    <div class="d-flex flex-wrap gap-2 mb-12" style="margin-bottom:12px">
+    <div class="flex flex-wrap gap-2 mb-12" style="margin-bottom:12px">
       @foreach($post->images->take(4) as $img)
       <a href="{{ asset('storage/'.$img->image) }}" target="_blank"
          style="width:80px;height:80px;border-radius:8px;overflow:hidden;display:block;
@@ -92,7 +92,7 @@
     @endif
 
     {{-- Stats --}}
-    <div class="d-flex align-items-center gap-3 mt-2"
+    <div class="flex items-center gap-3 mt-2"
          style="padding-top:10px;border-top:1px solid var(--p-border)">
       <span style="font-size:12px;color:var(--p-muted);display:flex;align-items:center;gap:4px">
         <i class="bi bi-heart" style="color:var(--p-danger)"></i>

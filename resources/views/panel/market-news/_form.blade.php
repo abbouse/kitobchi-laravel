@@ -1,17 +1,17 @@
 {{-- resources/views/panel/market-news/_form.blade.php --}}
 {{-- $marketNews (null = create, object = edit) --}}
 
-<div class="row g-3">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
 
   {{-- ── Chap: asosiy ma'lumotlar ──────────────────── --}}
-  <div class="col-xl-7">
+  <div class="xl:col-span-7">
 
     <div class="p-card mb-3 fade-up">
       <div class="p-card-header"><div class="p-card-title">Asosiy ma'lumotlar</div></div>
       <div style="padding:0 18px 18px">
-        <div class="row g-3">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
 
-          <div class="col-12">
+          <div class="">
             <label class="p-form-label">
               Sarlavha <span style="color:var(--p-danger)">*</span>
             </label>
@@ -23,13 +23,13 @@
             @enderror
           </div>
 
-          <div class="col-12">
+          <div class="">
             <label class="p-form-label">Tavsif</label>
             <textarea name="description" class="p-form-control" rows="3"
                       placeholder="Ixtiyoriy tavsif...">{{ old('description', $marketNews?->description) }}</textarea>
           </div>
 
-          <div class="col-md-6">
+          <div class="">
             <label class="p-form-label">
               Joylashuv <span style="color:var(--p-danger)">*</span>
             </label>
@@ -43,7 +43,7 @@
             </select>
           </div>
 
-          <div class="col-md-6">
+          <div class="">
             <label class="p-form-label">Status</label>
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:6px">
               <input type="hidden" name="status" value="0">
@@ -94,7 +94,7 @@
 
         {{-- action_id input (to_shop / to_product da chiqadi) --}}
         <div id="actionIdBlock" style="{{ old('action', $marketNews?->action ?? 'news') === 'news' ? 'display:none' : '' }}">
-          <div class="d-flex gap-2 align-items-end">
+          <div class="flex gap-2 items-end">
             <div style="flex:1">
               <label class="p-form-label" id="actionIdLabel">
                 ID kiriting
@@ -126,7 +126,7 @@
   </div>
 
   {{-- ── O'ng: rasm ──────────────────────────────────── --}}
-  <div class="col-xl-5">
+  <div class="xl:col-span-5">
     <div class="p-card fade-up">
       <div class="p-card-header"><div class="p-card-title">Banner rasmi</div></div>
       <div style="padding:0 18px 18px">
@@ -188,7 +188,7 @@
 </div>
 
 {{-- Buttons --}}
-<div class="d-flex gap-2 fade-up mt-1">
+<div class="flex gap-2 fade-up mt-1">
   <button type="submit" class="btn-p primary">
     <i class="bi bi-check-lg"></i>
     {{ $marketNews ? 'Saqlash' : 'Yaratish' }}
@@ -259,7 +259,7 @@ async function previewAction() {
         <div style="padding:12px;border-radius:8px;background:var(--p-danger-d);
                     border:1px solid rgba(255,92,106,.2);font-size:13px;
                     color:var(--p-danger)">
-          <i class="bi bi-x-circle me-1"></i>
+          <i class="bi bi-x-circle mr-1"></i>
           ID <strong>${id}</strong> topilmadi
         </div>`;
       return;
@@ -310,7 +310,7 @@ async function previewAction() {
   } catch(e) {
     result.style.display = 'block';
     result.innerHTML = `<div style="color:var(--p-danger);font-size:12px">
-      <i class="bi bi-x-circle me-1"></i>Xatolik yuz berdi</div>`;
+      <i class="bi bi-x-circle mr-1"></i>Xatolik yuz berdi</div>`;
   } finally {
     btn.innerHTML = '<i class="bi bi-search"></i> Tekshirish';
     btn.disabled  = false;

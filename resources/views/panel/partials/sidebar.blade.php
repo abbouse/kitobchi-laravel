@@ -1,330 +1,183 @@
-{{-- ══ Brand ══════════════════════════════════════════════════ --}}
-<div class="sidebar-brand">
-  <div class="brand-icon">K</div>
-  <div class="brand-text">
-    <div class="brand-name">kitobchi.</div>
-    <div class="brand-badge">
-      {{ auth('panel')->user()?->getRoleLabelAttribute() ?? 'admin' }} · v1.0
-    </div>
-  </div>
-</div>
+@php
+  use App\Helpers\TailAdminMenuIcon;
+  $admin = auth('panel')->user();
 
-{{-- ══ Navigation ═════════════════════════════════════════════ --}}
-<nav class="sidebar-nav">
+  $navGroups = [
+    [
+      'label' => 'Asosiy',
+      'items' => [
+        ['label'=>'Dashboard','icon'=>'grid-1x2-fill','route'=>'panel.dashboard','match'=>'panel.dashboard'],
+        $admin?->hasPermission('users') ? ['label'=>'Foydalanuvchilar','icon'=>'people-fill','route'=>'panel.users.index','match'=>'panel.users.*'] : null,
+      ],
+    ],
+    [
+      'label' => 'Mahsulotlar',
+      'guard' => $admin?->hasPermission('books') || $admin?->hasPermission('stationery') || $admin?->hasPermission('settings'),
+      'items' => [
+        $admin?->hasPermission('books')     ? ['label'=>'Kitoblar','icon'=>'book-fill','route'=>'panel.books.index','match'=>'panel.books.*','badge'=>\App\Models\Books::where('is_approved',0)->count()] : null,
+        $admin?->hasPermission('stationery')? ['label'=>'Kanstovar','icon'=>'pencil-fill','route'=>'panel.stationery.index','match'=>'panel.stationery.*','badge'=>\App\Models\Stationery::where('is_approved',0)->count()] : null,
+        $admin?->hasPermission('settings')  ? ['label'=>'Kitob kategoriyalari','icon'=>'tags-fill','route'=>'panel.book-categories.index','match'=>'panel.book-categories.*'] : null,
+        $admin?->hasPermission('settings')  ? ['label'=>'Kanstovar kategoriyalari','icon'=>'tag-fill','route'=>'panel.stationery-categories.index','match'=>'panel.stationery-categories.*'] : null,
+        $admin?->hasPermission('settings')  ? ['label'=>'Reels','icon'=>'play-circle-fill','route'=>'panel.reels.index','match'=>'panel.reels.*'] : null,
+        $admin?->hasPermission('settings')  ? ['label'=>'Market yangiliklari','icon'=>'newspaper','route'=>'panel.market-news.index','match'=>'panel.market-news.*'] : null,
+      ],
+    ],
+    [
+      'label' => 'Buyurtmalar',
+      'guard' => $admin?->hasPermission('orders'),
+      'items' => [
+        $admin?->hasPermission('orders') ? ['label'=>'Buyurtmalar','icon'=>'bag-check-fill','route'=>'panel.orders.index','match'=>'panel.orders.*','badge'=>\App\Models\Sold::where('status','A')->count(),'badgeColor'=>'success'] : null,
+        $admin?->hasPermission('orders') ? ['label'=>'Seller buyurtmalari','icon'=>'shop','route'=>'panel.seller-orders.index','match'=>'panel.seller-orders.*'] : null,
+        $admin?->hasPermission('orders') ? ['label'=>'Kuryer buyurtmalari','icon'=>'truck','route'=>'panel.courier-orders.index','match'=>'panel.courier-orders.*'] : null,
+      ],
+    ],
+    [
+      'label' => 'Biznes',
+      'items' => [
+        $admin?->hasPermission('sellers')  ? ['label'=>'Sotuvchilar','icon'=>'shop-window','route'=>'panel.sellers.index','match'=>'panel.sellers.*','badge'=>\App\Models\Seller::where('status','pending')->count()] : null,
+        $admin?->hasPermission('settings') ? (function(){ try{$c=\App\Models\SellerTransaction::where('status','pending')->count()+\App\Models\CourierTransaction::where('status','pending')->count();}catch(\Exception $e){$c=0;} return ['label'=>'Tranzaksiyalar','icon'=>'arrow-left-right','route'=>'panel.seller-transactions.index','match'=>'panel.seller-transactions.*','badge'=>$c]; })() : null,
+        $admin?->hasPermission('couriers') ? ['label'=>'Kuryerlar','icon'=>'bicycle','route'=>'panel.couriers.index','match'=>'panel.couriers.*'] : null,
+        $admin?->hasPermission('promocodes')? ['label'=>'Promokodlar','icon'=>'ticket-perforated-fill','route'=>'panel.promocodes.index','match'=>'panel.promocodes.*'] : null,
+        $admin?->hasPermission('settings') ? ['label'=>'Reklamalar','icon'=>'megaphone-fill','route'=>'panel.seller-ads.index','match'=>'panel.seller-ads.*','badge'=>\App\Models\SellerAd::where('moderation','pending')->count()] : null,
+      ],
+    ],
+    [
+      'label' => "Sovg'alar",
+      'guard' => $admin?->hasPermission('settings'),
+      'items' => [
+        (function(){ try{$c=\App\Models\GiftCertificate::where('status','pending_payment')->count();}catch(\Exception $e){$c=0;} return ['label'=>'Gift sertifikatlar','icon'=>'gift-fill','route'=>'panel.gift-certificates.index','match'=>'panel.gift-certificates.*','badge'=>$c]; })(),
+        (function(){ try{$c=\App\Models\MysteryBoxSubscription::where('status','active')->where('next_delivery_at','<=',now())->count();}catch(\Exception $e){$c=0;} return ['label'=>'Mystery Box','icon'=>'box-seam-fill','route'=>'panel.mystery-box.subscriptions','match'=>'panel.mystery-box.*','badge'=>$c,'badgeColor'=>'danger']; })(),
+      ],
+    ],
+    [
+      'label' => 'Jamiyat',
+      'guard' => $admin?->hasPermission('settings'),
+      'items' => [
+        (function(){ try{$c=\App\Models\BookClub::where('is_deleted',false)->where('created_at','>=',now()->subDay())->count();}catch(\Exception $e){$c=0;} return ['label'=>'Book Club','icon'=>'chat-quote-fill','route'=>'panel.book-club.index','match'=>'panel.book-club.index|panel.book-club.show|panel.book-club.edit','badge'=>$c,'badgeColor'=>'info']; })(),
+        (function(){ try{$c=\App\Models\BookClubComment::where('kangaroo_ugc_status','pending_admin')->whereNull('parent_id')->count()+\App\Models\BookClub::where('is_deleted',false)->where('kangaroo_post_ugc_status','pending_admin')->count();}catch(\Exception $e){$c=0;} return ['label'=>'UGC navbati','icon'=>'stars','route'=>'panel.book-club.moderation-queue','match'=>'panel.book-club.moderation-queue','badge'=>$c,'badgeColor'=>'warning']; })(),
+        ['label'=>'Chat kuzatuv','icon'=>'chat-dots-fill','route'=>'panel.chats.index','match'=>'panel.chats.*'],
+        (function(){ try{$c=\App\Models\Report::where('status','pending')->count();}catch(\Exception $e){$c=0;} return ['label'=>'Shikoyatlar','icon'=>'flag-fill','route'=>'panel.reports.index','match'=>'panel.reports.*','badge'=>$c,'badgeColor'=>'danger']; })(),
+      ],
+    ],
+    [
+      'label' => 'Tizim',
+      'items' => [
+        $admin?->hasPermission('settings') ? (function(){ $c=\App\Models\BotTicket::where('status','queue')->count(); return ['label'=>'Support','icon'=>'headset','route'=>'panel.bot-tickets.index','match'=>'panel.bot-tickets.*','badge'=>$c,'badgeColor'=>'danger']; })() : null,
+        $admin?->hasPermission('settings') ? ['label'=>'Push bildirishnomalar','icon'=>'bell-fill','route'=>'panel.fcm-notifications.index','match'=>'panel.fcm-notifications.*'] : null,
+        $admin?->hasPermission('settings') ? ['label'=>'Sozlamalar','icon'=>'gear-fill','route'=>'panel.settings.index','match'=>'panel.settings.*'] : null,
+        $admin?->hasPermission('settings') ? ['label'=>'Siyosatlar','icon'=>'file-earmark-text-fill','route'=>'panel.policies.index','match'=>'panel.policies.*'] : null,
+        $admin?->hasPermission('settings') ? ['label'=>'Vakansiyalar','icon'=>'briefcase-fill','route'=>'panel.vacancies.index','match'=>'panel.vacancies.*'] : null,
+        $admin?->hasPermission('settings') ? (function () {
+            try {
+                $c = \App\Models\CareerApplication::where('status', \App\Models\CareerApplication::STATUS_NEW)->count();
+            } catch (\Exception $e) {
+                $c = 0;
+            }
 
-  {{-- ─── Asosiy ───────────────────────────────────────────── --}}
-  <div class="nav-section">Asosiy</div>
+            return ['label' => 'Karyera arizalari', 'icon' => 'envelope-paper-fill', 'route' => 'panel.career-applications.index', 'match' => 'panel.career-applications.*', 'badge' => $c, 'badgeColor' => 'danger'];
+        })() : null,
+        $admin?->hasPermission('admins')   ? ['label'=>'Adminlar','icon'=>'shield-fill-check','route'=>'panel.admins.index','match'=>'panel.admins.*'] : null,
+        $admin?->hasPermission('admins')   ? ['label'=>'API Mijozlar','icon'=>'key-fill','route'=>'panel.api-clients.index','match'=>'panel.api-clients.*'] : null,
+      ],
+    ],
+  ];
+@endphp
 
-  <a href="{{ route('panel.dashboard') }}" title="Dashboard"
-     class="nav-link {{ request()->routeIs('panel.dashboard') ? 'active' : '' }}">
-    <i class="bi bi-grid-1x2-fill"></i>
-    <span class="nav-link-text">Dashboard</span>
-  </a>
+<aside id="sidebar"
+       class="kc-sidebar--brand fixed left-0 top-0 flex h-screen min-h-0 flex-col border-r px-4 text-slate-100 transition-all duration-300 ease-in-out sm:px-5"
+       x-data="{}"
+       :class="{
+         'w-[290px]': $store.sidebar.isExpanded || $store.sidebar.isMobileOpen,
+         'w-[90px]': !$store.sidebar.isExpanded && !$store.sidebar.isMobileOpen,
+         'translate-x-0': $store.sidebar.isMobileOpen,
+         '-translate-x-full xl:translate-x-0': !$store.sidebar.isMobileOpen
+       }">
 
-  @if(auth('panel')->user()?->hasPermission('users'))
-  <a href="{{ route('panel.users.index') }}" title="Foydalanuvchilar"
-     class="nav-link {{ request()->routeIs('panel.users.*') ? 'active' : '' }}">
-    <i class="bi bi-people-fill"></i>
-    <span class="nav-link-text">Foydalanuvchilar</span>
-  </a>
-  @endif
-
-  {{-- ─── Mahsulotlar ──────────────────────────────────────── --}}
-  <div class="nav-section">Mahsulotlar</div>
-
-  @if(auth('panel')->user()?->hasPermission('books'))
-  <a href="{{ route('panel.books.index') }}" title="Kitoblar"
-     class="nav-link {{ request()->routeIs('panel.books.*') ? 'active' : '' }}">
-    <i class="bi bi-book-fill"></i>
-    <span class="nav-link-text">Kitoblar</span>
-    @php $pendingBooks = \App\Models\Books::where('is_approved', 0)->count(); @endphp
-    @if($pendingBooks > 0)
-      <span class="nav-badge warning">{{ $pendingBooks }}</span>
-    @endif
-  </a>
-  @endif
-
-  @if(auth('panel')->user()?->hasPermission('stationery'))
-  <a href="{{ route('panel.stationery.index') }}" title="Kanstovar"
-     class="nav-link {{ request()->routeIs('panel.stationery.*') ? 'active' : '' }}">
-    <i class="bi bi-pencil-fill"></i>
-    <span class="nav-link-text">Kanstovar</span>
-    @php $pendingStat = \App\Models\Stationery::where('is_approved', 0)->count(); @endphp
-    @if($pendingStat > 0)
-      <span class="nav-badge warning">{{ $pendingStat }}</span>
-    @endif
-  </a>
-  @endif
-
-  @if(auth('panel')->user()?->hasPermission('settings'))
-  <a href="{{ route('panel.book-categories.index') }}" title="Kitob kategoriyalari"
-     class="nav-link {{ request()->routeIs('panel.book-categories.*') ? 'active' : '' }}">
-    <i class="bi bi-tags-fill"></i>
-    <span class="nav-link-text">Kitob kategoriyalari</span>
-  </a>
-
-  <a href="{{ route('panel.stationery-categories.index') }}" title="Kanstovar kategoriyalari"
-     class="nav-link {{ request()->routeIs('panel.stationery-categories.*') ? 'active' : '' }}">
-    <i class="bi bi-tag-fill"></i>
-    <span class="nav-link-text">Kanstovar kategoriyalari</span>
-  </a>
-
-  <a href="{{ route('panel.reels.index') }}" title="Reels"
-     class="nav-link {{ request()->routeIs('panel.reels.*') ? 'active' : '' }}">
-    <i class="bi bi-play-circle-fill"></i>
-    <span class="nav-link-text">Reels</span>
-  </a>
-
-  <a href="{{ route('panel.market-news.index') }}" title="Market yangiliklari"
-     class="nav-link {{ request()->routeIs('panel.market-news.*') ? 'active' : '' }}">
-    <i class="bi bi-newspaper"></i>
-    <span class="nav-link-text">Market yangiliklari</span>
-  </a>
-  @endif
-
-  {{-- ─── Buyurtmalar ───────────────────────────────────────── --}}
-  @if(auth('panel')->user()?->hasPermission('orders'))
-  <div class="nav-section">Buyurtmalar</div>
-
-  <a href="{{ route('panel.orders.index') }}" title="Buyurtmalar"
-     class="nav-link {{ request()->routeIs('panel.orders.*') ? 'active' : '' }}">
-    <i class="bi bi-bag-check-fill"></i>
-    <span class="nav-link-text">Buyurtmalar</span>
-    @php $newOrders = \App\Models\Sold::where('status', 'A')->count(); @endphp
-    @if($newOrders > 0)
-      <span class="nav-badge success">{{ $newOrders }}</span>
-    @endif
-  </a>
-
-  <a href="{{ route('panel.seller-orders.index') }}" title="Seller buyurtmalari"
-     class="nav-link {{ request()->routeIs('panel.seller-orders.*') ? 'active' : '' }}">
-    <i class="bi bi-shop"></i>
-    <span class="nav-link-text">Seller buyurtmalari</span>
-  </a>
-
-  <a href="{{ route('panel.courier-orders.index') }}" title="Kuryer buyurtmalari"
-     class="nav-link {{ request()->routeIs('panel.courier-orders.*') ? 'active' : '' }}">
-    <i class="bi bi-truck"></i>
-    <span class="nav-link-text">Kuryer buyurtmalari</span>
-  </a>
-  @endif
-
-  {{-- ─── Biznes ─────────────────────────────────────────────── --}}
-  <div class="nav-section">Biznes</div>
-
-  @if(auth('panel')->user()?->hasPermission('sellers'))
-  <a href="{{ route('panel.sellers.index') }}" title="Sotuvchilar"
-     class="nav-link {{ request()->routeIs('panel.sellers.*') ? 'active' : '' }}">
-    <i class="bi bi-shop-window"></i>
-    <span class="nav-link-text">Sotuvchilar</span>
-    @php $pendingSellers = \App\Models\Seller::where('status', 'pending')->count(); @endphp
-    @if($pendingSellers > 0)
-      <span class="nav-badge warning">{{ $pendingSellers }}</span>
-    @endif
-  </a>
-  @endif
-
-  @if(auth('panel')->user()?->hasPermission('settings'))
-  <a href="{{ route('panel.seller-transactions.index') }}" title="Tranzaksiyalar"
-     class="nav-link {{ request()->routeIs('panel.seller-transactions.*') ? 'active' : '' }}">
-    <i class="bi bi-arrow-left-right"></i>
-    <span class="nav-link-text">Tranzaksiyalar</span>
-    @php
-      try {
-        $pendingTx = \App\Models\SellerTransaction::where('status', 'pending')->count()
-                   + \App\Models\CourierTransaction::where('status', 'pending')->count();
-      } catch(\Exception $e) { $pendingTx = 0; }
-    @endphp
-    @if($pendingTx > 0)
-      <span class="nav-badge warning">{{ $pendingTx }}</span>
-    @endif
-  </a>
-  @endif
-
-  @if(auth('panel')->user()?->hasPermission('couriers'))
-  <a href="{{ route('panel.couriers.index') }}" title="Kuryerlar"
-     class="nav-link {{ request()->routeIs('panel.couriers.*') ? 'active' : '' }}">
-    <i class="bi bi-bicycle"></i>
-    <span class="nav-link-text">Kuryerlar</span>
-  </a>
-  @endif
-
-  @if(auth('panel')->user()?->hasPermission('promocodes'))
-  <a href="{{ route('panel.promocodes.index') }}" title="Promokodlar"
-     class="nav-link {{ request()->routeIs('panel.promocodes.*') ? 'active' : '' }}">
-    <i class="bi bi-ticket-perforated-fill"></i>
-    <span class="nav-link-text">Promokodlar</span>
-  </a>
-  @endif
-
-  @if(auth('panel')->user()?->hasPermission('settings'))
-  <a href="{{ route('panel.seller-ads.index') }}" title="Reklamalar"
-     class="nav-link {{ request()->routeIs('panel.seller-ads.*') ? 'active' : '' }}">
-    <i class="bi bi-megaphone-fill"></i>
-    <span class="nav-link-text">Reklamalar</span>
-    @php $pendingAds = \App\Models\SellerAd::where('moderation', 'pending')->count(); @endphp
-    @if($pendingAds > 0)
-      <span class="nav-badge warning">{{ $pendingAds }}</span>
-    @endif
-  </a>
-  @endif
-
-  {{-- ─── Sovg'alar ───────────────────────────────────────── --}}
-  @if(auth('panel')->user()?->hasPermission('settings'))
-  <div class="nav-section">Sovg'alar</div>
-
-  <a href="{{ route('panel.gift-certificates.index') }}" title="Gift sertifikatlar"
-     class="nav-link {{ request()->routeIs('panel.gift-certificates.*') ? 'active' : '' }}">
-    <i class="bi bi-gift-fill"></i>
-    <span class="nav-link-text">Gift sertifikatlar</span>
-    @php
-      try { $pendingGifts = \App\Models\GiftCertificate::where('status','pending_payment')->count(); }
-      catch(\Exception $e) { $pendingGifts = 0; }
-    @endphp
-    @if($pendingGifts > 0)
-      <span class="nav-badge warning">{{ $pendingGifts }}</span>
-    @endif
-  </a>
-
-  <a href="{{ route('panel.mystery-box.subscriptions') }}" title="Mystery Box"
-     class="nav-link {{ request()->routeIs('panel.mystery-box.*') ? 'active' : '' }}">
-    <i class="bi bi-box-seam-fill"></i>
-    <span class="nav-link-text">Mystery Box</span>
-    @php
-      try { $dueBox = \App\Models\MysteryBoxSubscription::where('status','active')->where('next_delivery_at','<=',now())->count(); }
-      catch(\Exception $e) { $dueBox = 0; }
-    @endphp
-    @if($dueBox > 0)
-      <span class="nav-badge danger">{{ $dueBox }}</span>
-    @endif
-  </a>
-  @endif
-
-  {{-- ─── Jamiyat ─────────────────────────────────────────── --}}
-  @if(auth('panel')->user()?->hasPermission('settings'))
-  <div class="nav-section">Jamiyat</div>
-
-  <a href="{{ route('panel.book-club.index') }}" title="Book Club"
-     class="nav-link {{ request()->routeIs('panel.book-club.*') ? 'active' : '' }}">
-    <i class="bi bi-chat-quote-fill"></i>
-    <span class="nav-link-text">Book Club</span>
-    @php
-      try { $newBcPosts = \App\Models\BookClub::where('is_deleted', false)->where('created_at', '>=', now()->subDay())->count(); }
-      catch(\Exception $e) { $newBcPosts = 0; }
-    @endphp
-    @if($newBcPosts > 0)
-      <span class="nav-badge info">{{ $newBcPosts }}</span>
-    @endif
-  </a>
-
-  <a href="{{ route('panel.chats.index') }}" title="Chat kuzatuv"
-     class="nav-link {{ request()->routeIs('panel.chats.*') ? 'active' : '' }}">
-    <i class="bi bi-chat-dots-fill"></i>
-    <span class="nav-link-text">Chat kuzatuv</span>
-  </a>
-
-  <a href="{{ route('panel.reports.index') }}" title="Shikoyatlar"
-     class="nav-link {{ request()->routeIs('panel.reports.*') ? 'active' : '' }}">
-    <i class="bi bi-flag-fill"></i>
-    <span class="nav-link-text">Shikoyatlar</span>
-    @php
-      try { $pendingReports = \App\Models\Report::where('status', 'pending')->count(); }
-      catch(\Exception $e) { $pendingReports = 0; }
-    @endphp
-    @if($pendingReports > 0)
-      <span class="nav-badge danger">{{ $pendingReports }}</span>
-    @endif
-  </a>
-  @endif
-
-  {{-- ─── Tizim ───────────────────────────────────────────── --}}
-  <div class="nav-section">Tizim</div>
-
-  @if(auth('panel')->user()?->hasPermission('settings'))
-  <a href="{{ route('panel.fcm-notifications.index') }}" title="Push bildirishnomalar"
-     class="nav-link {{ request()->routeIs('panel.fcm-notifications.*') ? 'active' : '' }}">
-    <i class="bi bi-bell-fill"></i>
-    <span class="nav-link-text">Push bildirishnomalar</span>
-  </a>
-
-  <a href="{{ route('panel.bot-tickets.index') }}" title="Support"
-     class="nav-link {{ request()->routeIs('panel.bot-tickets.*') ? 'active' : '' }}">
-    <i class="bi bi-headset"></i>
-    <span class="nav-link-text">Support</span>
-    @php $queueTickets = \App\Models\BotTicket::where('status', 'queue')->count(); @endphp
-    @if($queueTickets > 0)
-      <span class="nav-badge danger">{{ $queueTickets }}</span>
-    @endif
-  </a>
-
-  <a href="{{ route('panel.settings.index') }}" title="Sozlamalar"
-     class="nav-link {{ request()->routeIs('panel.settings.*') ? 'active' : '' }}">
-    <i class="bi bi-gear-fill"></i>
-    <span class="nav-link-text">Sozlamalar</span>
-  </a>
-  @endif
-
-  @if(auth('panel')->user()?->hasPermission('admins'))
-  <a href="{{ route('panel.admins.index') }}" title="Adminlar"
-     class="nav-link {{ request()->routeIs('panel.admins.*') ? 'active' : '' }}">
-    <i class="bi bi-shield-fill-check"></i>
-    <span class="nav-link-text">Adminlar</span>
-  </a>
-
-  <a href="{{ route('panel.api-clients.index') }}" title="API Mijozlar"
-     class="nav-link {{ request()->routeIs('panel.api-clients.*') ? 'active' : '' }}">
-    <i class="bi bi-key-fill"></i>
-    <span class="nav-link-text">API Mijozlar</span>
-  </a>
-  @endif
-
-</nav>
-
-{{-- ══ Footer ══════════════════════════════════════════════ --}}
-@php $admin = auth('panel')->user(); @endphp
-<div class="sidebar-footer">
-
-  <div class="user-popup" id="userPopup">
-    <div class="user-popup-head">
-      <div class="name">{{ $admin?->name }} {{ $admin?->lastname }}</div>
-      <div class="role">{{ $admin?->getRoleLabelAttribute() ?? 'Admin' }}</div>
-    </div>
-    <a href="{{ route('panel.profile') }}">
-      <i class="bi bi-person-fill" style="color:var(--p-accent);font-size:15px"></i>
-      Profil
+  {{-- Logo — keng: oq logo; yig‘ilgan: faqat "k." --}}
+  <div class="kc-sidebar-head flex shrink-0 border-b border-white/10 pt-7 pb-6"
+       :class="(!$store.sidebar.isExpanded && !$store.sidebar.isMobileOpen) ? 'xl:justify-center' : 'justify-start'">
+    <a href="{{ route('panel.dashboard') }}"
+       class="flex min-h-10 items-center justify-center"
+       :class="(!$store.sidebar.isExpanded && !$store.sidebar.isMobileOpen) ? 'w-full' : ''"
+       @click="window.innerWidth < 1280 && $store.sidebar.setMobileOpen(false)">
+      <img x-show="$store.sidebar.isExpanded || $store.sidebar.isMobileOpen"
+           class="sidebar-logo-full h-9 w-auto max-w-[9.5rem] object-contain object-left opacity-[0.95] sm:h-10"
+           src="{{ asset('images/logo/logo_white.png') }}"
+           width="150"
+           height="40"
+           alt="kitobchi" />
+      <span x-show="!$store.sidebar.isExpanded && !$store.sidebar.isMobileOpen"
+            class="kc-sidebar-mark select-none"
+            aria-hidden="true">k.</span>
     </a>
-    <div class="pop-divider"></div>
-    <form method="POST" action="{{ route('panel.logout') }}" style="margin:0">
-      @csrf
-      <button type="submit" style="color:var(--p-danger)">
-        <i class="bi bi-box-arrow-right" style="font-size:15px"></i>
-        Chiqish
-      </button>
-    </form>
   </div>
 
-  <div class="user-pill" id="userPill">
-    <div class="user-av">
-      @if($admin?->avatar)
-        <img src="{{ asset('storage/'.$admin->avatar) }}" alt="{{ $admin?->name }}">
-      @else
-        {{ strtoupper(substr($admin?->name ?? 'A', 0, 1)) }}
-      @endif
-    </div>
-    <div class="user-info">
-      <div class="user-name">{{ $admin?->name ?? 'Admin' }}</div>
-      <div class="user-role">{{ $admin?->getRoleLabelAttribute() ?? 'Admin' }}</div>
-    </div>
-    <form method="POST" action="{{ route('panel.theme') }}"
-          onclick="event.stopPropagation()" style="margin:0">
-      @csrf
-      <input type="hidden" name="theme"
-             value="{{ session('theme','dark') === 'dark' ? 'light' : 'dark' }}">
-      <button type="submit" class="theme-btn"
-              title="{{ session('theme','dark') === 'dark' ? 'Light mode' : 'Dark mode' }}">
-        <i class="bi bi-{{ session('theme','dark') === 'dark' ? 'sun' : 'moon-stars' }}"></i>
-      </button>
-    </form>
-  </div>
+  <nav class="kc-sidebar-nav no-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden overscroll-contain py-4 duration-300 ease-linear">
+      <div class="flex flex-col gap-4">
+        @foreach($navGroups as $group)
+          @php $items = array_values(array_filter($group['items'] ?? [], fn($i) => $i !== null)); @endphp
+          @if(empty($items)) @continue @endif
+          @if(isset($group['guard']) && !$group['guard']) @continue @endif
 
-</div>
+          <div>
+            <h2 class="kc-sidebar-group-title flex items-center"
+                :class="(!$store.sidebar.isExpanded && !$store.sidebar.isMobileOpen) ? 'lg:justify-center' : 'justify-start'">
+              <template x-if="$store.sidebar.isExpanded || $store.sidebar.isMobileOpen">
+                <span class="kc-sidebar-group-label">{{ $group['label'] }}</span>
+              </template>
+              <template x-if="!$store.sidebar.isExpanded && !$store.sidebar.isMobileOpen">
+                <svg class="kc-sidebar-group-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path fill-rule="evenodd" clip-rule="evenodd" d="M5.99915 10.2451C6.96564 10.2451 7.74915 11.0286 7.74915 11.9951V12.0051C7.74915 12.9716 6.96564 13.7551 5.99915 13.7551C5.03265 13.7551 4.24915 12.9716 4.24915 12.0051V11.9951C4.24915 11.0286 5.03265 10.2451 5.99915 10.2451ZM17.9991 10.2451C18.9656 10.2451 19.7491 11.0286 19.7491 11.9951V12.0051C19.7491 12.9716 18.9656 13.7551 17.9991 13.7551C17.0326 13.7551 16.2491 12.9716 16.2491 12.0051V11.9951C16.2491 11.0286 17.0326 10.2451 17.9991 10.2451ZM13.7491 11.9951C13.7491 11.0286 12.9656 10.2451 11.9991 10.2451C11.0326 10.2451 10.2491 11.0286 10.2491 11.9951V12.0051C10.2491 12.9716 11.0326 13.7551 11.9991 13.7551C12.9656 13.7551 13.7491 12.9716 13.7491 12.0051V11.9951Z" fill="currentColor"/>
+                </svg>
+              </template>
+            </h2>
+
+            <ul class="kc-sidebar-group-list flex flex-col">
+              @foreach($items as $item)
+                @php
+                  $isActive  = request()->routeIs($item['match']);
+                  $badge     = $item['badge'] ?? 0;
+                  $badgeColor = $item['badgeColor'] ?? 'warning';
+                  $badgeClass = match($badgeColor) {
+                    'success' => 'ml-auto inline-flex min-h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-success-50 px-1.5 text-[11px] font-semibold text-success-700 dark:bg-success-500/15 dark:text-success-400',
+                    'danger'  => 'ml-auto inline-flex min-h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-error-50 px-1.5 text-[11px] font-semibold text-error-600 dark:bg-error-500/15 dark:text-error-400',
+                    'info'    => 'ml-auto inline-flex min-h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-blue-light-50 px-1.5 text-[11px] font-semibold text-blue-light-700 dark:bg-blue-light-500/15 dark:text-blue-light-400',
+                    default   => 'ml-auto inline-flex min-h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-warning-50 px-1.5 text-[11px] font-semibold text-warning-700 dark:bg-warning-500/15 dark:text-warning-400',
+                  };
+                  $dotColor = match($badgeColor) {
+                    'success' => 'bg-success-500',
+                    'danger'  => 'bg-error-500',
+                    'info'    => 'bg-blue-light-500',
+                    default   => 'bg-warning-500',
+                  };
+                @endphp
+                <li @class(['relative' => $badge > 0])>
+                  <a href="{{ route($item['route']) }}"
+                     class="menu-item group {{ $isActive ? 'menu-item-active' : 'menu-item-inactive' }}"
+                     :class="(!$store.sidebar.isExpanded && !$store.sidebar.isMobileOpen) ? 'xl:justify-center' : 'justify-start'"
+                     @click="window.innerWidth < 1280 && $store.sidebar.setMobileOpen(false)">
+
+                    <span class="{{ $isActive ? 'menu-item-icon-active' : 'menu-item-icon-inactive' }} [&_svg]:shrink-0">
+                      {!! TailAdminMenuIcon::forBi($item['icon']) !!}
+                    </span>
+
+                    <span x-show="$store.sidebar.isExpanded || $store.sidebar.isMobileOpen"
+                          class="menu-item-text flex items-center gap-2">
+                      {{ $item['label'] }}
+                    </span>
+
+                    @if($badge > 0)
+                      <span x-show="$store.sidebar.isExpanded || $store.sidebar.isMobileOpen"
+                            class="{{ $badgeClass }}">{{ $badge > 99 ? '99+' : $badge }}</span>
+                      <span x-show="!$store.sidebar.isExpanded && !$store.sidebar.isMobileOpen"
+                            class="absolute right-0.5 top-1/2 size-2 -translate-y-1/2 rounded-full {{ $dotColor }} ring-2 ring-[#152238] xl:right-1"></span>
+                    @endif
+                  </a>
+                </li>
+              @endforeach
+            </ul>
+          </div>
+        @endforeach
+      </div>
+  </nav>
+</aside>

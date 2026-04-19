@@ -4,25 +4,26 @@
 
 @section('content')
 
-<div class="d-flex align-items-start justify-content-between mb-4 fade-up">
-  <div>
-    <h1 class="page-title">Market Yangiliklari</h1>
-    <p class="page-sub">Marketpleysda ko'rinadigan bannerlar</p>
-  </div>
-  <a href="{{ route('panel.market-news.create') }}" class="btn-p primary">
-    <i class="bi bi-plus-lg"></i> Yangi yangilik
-  </a>
-</div>
+<x-panel.page-header>
+  <x-slot name="heading">Market Yangiliklari</x-slot>
+  <x-slot name="meta">Marketpleysda ko'rinadigan bannerlar</x-slot>
+  <x-slot name="actions">
+    <a href="{{ route('panel.market-news.create') }}" class="btn-p primary">
+        <i class="bi bi-plus-lg"></i> Yangi yangilik
+      </a>
+  </x-slot>
+</x-panel.page-header>
+
 
 {{-- Stats --}}
-<div class="row g-3 mb-4 fade-up">
+<div class="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-4">
   @foreach([
     ['Jami',    $counts['all'],    'accent',  'bi-newspaper'],
     ['Faol',    $counts['active'], 'success', 'bi-check-circle'],
     ['Yangilik',$counts['news'],   'info',    'bi-chat-text'],
   ] as [$l,$v,$c,$i])
   <div class="col-4">
-    <div class="p-card d-flex align-items-center gap-3" style="padding:14px">
+    <div class="p-card flex items-center gap-3" style="padding:14px">
       <div style="width:36px;height:36px;border-radius:9px;flex-shrink:0;font-size:16px;
                   background:var(--p-{{ $c }}-d,var(--p-elevated));color:var(--p-{{ $c }});
                   display:flex;align-items:center;justify-content:center">
@@ -43,7 +44,7 @@
 
 {{-- Table --}}
 <div class="p-card fade-up">
-  <div class="table-responsive">
+  <div class="table-responsive kc-twrap">
     <table class="p-table">
       <thead>
         <tr>
@@ -107,7 +108,7 @@
 
           <td>
             <span class="s-pill {{ $actionColor }}" style="font-size:10px">
-              <i class="bi {{ $actionIcon }} me-1"></i>
+              <i class="bi {{ $actionIcon }} mr-1"></i>
               {{ $item->action_label }}
             </span>
           </td>
@@ -150,7 +151,7 @@
           </td>
 
           <td>
-            <div class="d-flex gap-1">
+            <div class="flex gap-1">
               <a href="{{ route('panel.market-news.show', $item) }}"
                  class="btn-p ghost sm">
                 <i class="bi bi-eye"></i>
@@ -172,7 +173,7 @@
         </tr>
         @empty
         <tr>
-          <td colspan="9" style="text-align:center;padding:48px;color:var(--p-hint)">
+          <td colspan="9" class="p-empty-cell">
             <i class="bi bi-newspaper" style="font-size:32px;display:block;margin-bottom:8px"></i>
             Yangiliklar topilmadi
           </td>
@@ -183,7 +184,7 @@
   </div>
 
   @if($news->hasPages())
-  <div class="d-flex align-items-center justify-content-between px-3 py-2"
+  <div class="flex items-center justify-between px-3 py-2"
        style="border-top:1px solid var(--p-border)">
     <div style="font-size:12px;color:var(--p-hint)">
       {{ $news->firstItem() }}–{{ $news->lastItem() }} / {{ $news->total() }}

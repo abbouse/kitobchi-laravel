@@ -6,16 +6,17 @@
 
 @section('content')
 
-<div class="page-header fade-up d-flex align-items-start justify-content-between">
-  <div>
-    <h1 class="page-title">Kitoblar</h1>
-    <p class="page-sub">Barcha kitoblar moderatsiyasi va boshqaruvi</p>
-  </div>
-  <div class="d-flex gap-2">
-    <a href="{{ route('panel.books.import') }}" class="btn-p ghost"><i class="bi bi-upload"></i> Import</a>
-    <a href="{{ route('panel.books.export', request()->all()) }}" class="btn-p ghost"><i class="bi bi-download"></i> Export</a>
-  </div>
-</div>
+<x-panel.page-header>
+  <x-slot name="heading">Kitoblar</x-slot>
+  <x-slot name="meta">Barcha kitoblar moderatsiyasi va boshqaruvi</x-slot>
+  <x-slot name="actions">
+    <div class="flex gap-2">
+        <a href="{{ route('panel.books.import') }}" class="btn-p ghost"><i class="bi bi-upload"></i> Import</a>
+        <a href="{{ route('panel.books.export', request()->all()) }}" class="btn-p ghost"><i class="bi bi-download"></i> Export</a>
+      </div>
+  </x-slot>
+</x-panel.page-header>
+
 
 {{-- ── Moderatsiya tablari ─────────────── --}}
 <div class="tab-pills fade-up">
@@ -23,7 +24,7 @@
   <a href="{{ route('panel.books.index', array_merge(request()->except('tab','page'), ['tab'=>$key])) }}"
      class="tab-pill {{ $tab === $key ? 'active' : '' }}">
     {{ $label }}
-    <span class="tab-count" style="{{ $tab===$key ? 'background:var(--p-accent);color:#fff' : '' }}">
+    <span class="tab-count">
       {{ $key === 'all' ? array_sum($counts) : ($counts[$key] ?? 0) }}
     </span>
   </a>
@@ -70,7 +71,7 @@
       <div class="p-card-sub">{{ $books->total() }} ta natija</div>
     </div>
   </div>
-  <div class="table-responsive">
+  <div class="table-responsive kc-twrap">
     <table class="p-table">
       <thead>
         <tr>
@@ -90,7 +91,7 @@
         <tr>
           <td><span style="font-family:'JetBrains Mono',monospace;color:var(--p-accent);font-size:12px">#{{ $book->id }}</span></td>
           <td>
-            <div class="d-flex align-items-center gap-2">
+            <div class="flex items-center gap-2">
               @php $img = is_array($book->images) ? ($book->images[0] ?? null) : null; @endphp
               <div style="width:38px;height:52px;border-radius:6px;overflow:hidden;background:var(--p-elevated);flex-shrink:0">
                 @if($img)
@@ -140,7 +141,7 @@
             @endif
           </td>
           <td>
-            <div class="d-flex gap-1">
+            <div class="flex gap-1">
               {{-- Tez moderatsiya --}}
               @if($book->is_approved != 1)
               <form method="POST" action="{{ route('panel.books.moderate', $book) }}">
@@ -174,7 +175,7 @@
   </div>
 
   @if($books->hasPages())
-  <div class="d-flex align-items-center justify-content-between mt-3" style="padding-top:12px;border-top:1px solid var(--p-border)">
+  <div class="flex items-center justify-between mt-3" style="padding-top:12px;border-top:1px solid var(--p-border)">
     <div style="font-size:12px;color:var(--p-hint)">{{ $books->firstItem() }}–{{ $books->lastItem() }} / {{ $books->total() }}</div>
     <div class="p-pagination">
       @if($books->onFirstPage())

@@ -1,5 +1,7 @@
 <?php
+
 namespace App\Models;
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -18,11 +20,15 @@ class BookClub extends Model
         'theme_id',
         'repost',
         'reposted_user_id',
+        'kangaroo_post_star',
+        'kangaroo_post_checked_at',
+        'kangaroo_post_ugc_status',
     ];
 
     protected $casts = [
         'is_deleted' => 'boolean',
-        'repost'     => 'boolean',
+        'repost' => 'boolean',
+        'kangaroo_post_checked_at' => 'datetime',
     ];
 
     // ── Morph map — product_type qiymatlari model klasslarga bog'lanadi ──────

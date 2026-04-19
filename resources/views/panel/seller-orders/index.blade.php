@@ -4,8 +4,14 @@
 
 @section('content')
 
+<x-panel.page-header>
+  <x-slot name="heading">Sotuvchi buyurtmalari</x-slot>
+  <x-slot name="meta">Sotuvchi bo'limlari orqali kelgan buyurtmalar</x-slot>
+</x-panel.page-header>
+
+
 {{-- Tabs --}}
-<div class="tab-pills mb-3">
+<div class="tab-pills fade-up mb-3">
   <a href="{{ request()->fullUrlWithQuery(['tab'=>'all','page'=>1]) }}"
      class="tab-pill {{ $tab==='all'?'active':'' }}">
     Barchasi <span class="tab-badge">{{ $counts['all'] }}</span>
@@ -20,13 +26,13 @@
 
 {{-- Filter --}}
 <div class="filter-bar mb-3">
-  <form method="GET" class="d-flex flex-wrap gap-2 align-items-center">
+  <form method="GET" class="flex flex-wrap gap-2 items-center">
     <input type="hidden" name="tab" value="{{ $tab }}">
     <input type="search" name="search" class="p-form-control" placeholder="ID, buyurtma ID, sotuvchi..."
            value="{{ request('search') }}" style="width:220px">
     <input type="date" name="date_from" class="p-form-control" value="{{ request('date_from') }}" style="width:145px">
     <input type="date" name="date_to"   class="p-form-control" value="{{ request('date_to') }}"   style="width:145px">
-    <button class="btn-p" type="submit"><i class="bi bi-search"></i> Izlash</button>
+    <button class="btn-p primary" type="submit"><i class="bi bi-search"></i> Izlash</button>
     <a href="{{ route('panel.seller-orders.index',['tab'=>$tab]) }}" class="btn-p ghost">
       <i class="bi bi-x"></i>
     </a>
@@ -35,7 +41,7 @@
 
 {{-- Table --}}
 <div class="p-card p-0">
-  <div class="table-responsive">
+  <div class="table-responsive kc-twrap">
     <table class="p-table" style="min-width:800px">
       <thead>
         <tr>

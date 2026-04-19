@@ -3,6 +3,8 @@
 @section('title', 'Premium Obuna Ofertasi')
 
 @section('content')
+<article class="l-doc-card">
+<div class="l-doc-body kc-doc-static">
     <!-- Document Header -->
     <div class="doc-header">
         <h1 class="doc-title">OMMAVIY OFERTA</h1>
@@ -524,4 +526,6 @@
             <p class="signature-text">Elektron shakldagi rozilik</p>
         </div>
     </div>
+</div>
+</article>
 @endsection

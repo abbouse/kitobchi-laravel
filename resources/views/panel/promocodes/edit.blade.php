@@ -3,8 +3,13 @@
 @section('page-title', isset($promocode) ? 'Promokod tahrirlash' : 'Yangi promokod')
 
 @section('content')
-<div class="row justify-content-center">
-  <div class="col-xl-6">
+<div class="kc-page-inner w-full min-w-0">
+    <x-panel.page-header back-href="{{ route('panel.promocodes.index') }}">
+  <x-slot name="heading">{{ isset($promocode) ? $promocode->code : 'Yangi promokod' }}</x-slot>
+  <x-slot name="meta">{{ isset($promocode) ? 'Promokodni tahrirlash' : 'Yangi chegirma kodi yaratish' }}</x-slot>
+</x-panel.page-header>
+
+
     <form method="POST"
       action="{{ isset($promocode) ? route('panel.promocodes.update',$promocode) : route('panel.promocodes.store') }}">
       @csrf
@@ -13,13 +18,13 @@
       <div class="p-card mb-3">
         <div class="dash-card-head"><div class="dash-card-title">Promokod ma'lumotlari</div></div>
         <div class="dash-card-body">
-          <div class="row g-3">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
 
             {{-- Kod --}}
             @if(!isset($promocode))
-            <div class="col-12">
-              <label class="p-label">Kod <span style="color:var(--p-danger)">*</span></label>
-              <div class="d-flex gap-2">
+            <div class="">
+              <label class="p-form-label">Kod <span style="color:var(--p-danger)">*</span></label>
+              <div class="flex gap-2">
                 <input type="text" name="code" id="promoCode"
                        class="p-form-control @error('code') is-invalid @enderror"
                        value="{{ old('code') }}" required
@@ -31,8 +36,8 @@
               @error('code')<div style="font-size:12px;color:var(--p-danger);margin-top:4px">{{ $message }}</div>@enderror
             </div>
             @else
-            <div class="col-12">
-              <label class="p-label">Kod</label>
+            <div class="">
+              <label class="p-form-label">Kod</label>
               <code style="display:block;font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;
                            color:var(--p-accent);background:var(--p-elevated);padding:10px 16px;
                            border-radius:8px;letter-spacing:.08em">{{ $promocode->code }}</code>
@@ -40,8 +45,8 @@
             @endif
 
             {{-- Tur --}}
-            <div class="col-sm-6">
-              <label class="p-label">Chegirma turi <span style="color:var(--p-danger)">*</span></label>
+            <div class="">
+              <label class="p-form-label">Chegirma turi <span style="color:var(--p-danger)">*</span></label>
               <select name="type" id="promoType" class="p-form-control" onchange="updateAmountLabel()">
                 <option value="percent" {{ old('type',$promocode->type??'')=='percent'?'selected':'' }}>Foiz (%)</option>
                 <option value="fixed"   {{ old('type',$promocode->type??'')=='fixed'?'selected':'' }}>Miqdor (UZS)</option>
@@ -49,31 +54,31 @@
             </div>
 
             {{-- Miqdor --}}
-            <div class="col-sm-6">
-              <label class="p-label" id="amountLabel">Chegirma miqdori <span style="color:var(--p-danger)">*</span></label>
+            <div class="">
+              <label class="p-form-label" id="amountLabel">Chegirma miqdori <span style="color:var(--p-danger)">*</span></label>
               <input type="number" name="amount" class="p-form-control @error('amount') is-invalid @enderror"
                      value="{{ old('amount',$promocode->amount??'') }}" min="1" required>
               @error('amount')<div style="font-size:12px;color:var(--p-danger);margin-top:4px">{{ $message }}</div>@enderror
             </div>
 
             {{-- Min buyurtma --}}
-            <div class="col-sm-6">
-              <label class="p-label">Minimal buyurtma (UZS)</label>
+            <div class="">
+              <label class="p-form-label">Minimal buyurtma (UZS)</label>
               <input type="number" name="min_order_amount" class="p-form-control"
                      value="{{ old('min_order_amount',$promocode->min_order_amount??0) }}" min="0">
             </div>
 
             {{-- Limit --}}
-            <div class="col-sm-6">
-              <label class="p-label">Foydalanish limiti</label>
+            <div class="">
+              <label class="p-form-label">Foydalanish limiti</label>
               <input type="number" name="usesLimit" class="p-form-control"
                      value="{{ old('usesLimit',$promocode->usesLimit??0) }}" min="0"
                      placeholder="0 = cheksiz">
             </div>
 
             {{-- Muddat --}}
-            <div class="col-sm-6">
-              <label class="p-label">Amal qilish muddati <span style="color:var(--p-danger)">*</span></label>
+            <div class="">
+              <label class="p-form-label">Amal qilish muddati <span style="color:var(--p-danger)">*</span></label>
               <input type="datetime-local" name="expires_at" class="p-form-control @error('expires_at') is-invalid @enderror"
                      value="{{ old('expires_at', isset($promocode) ? \Carbon\Carbon::parse($promocode->expires_at)->format('Y-m-d\TH:i') : '') }}"
                      required>
@@ -81,8 +86,8 @@
             </div>
 
             {{-- Status --}}
-            <div class="col-sm-6">
-              <label class="p-label">Holat</label>
+            <div class="">
+              <label class="p-form-label">Holat</label>
               <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:8px">
                 <input type="hidden" name="status" value="0">
                 <input type="checkbox" name="status" value="1"
@@ -99,7 +104,7 @@
       @isset($promocode)
       <div class="p-card mb-3" style="background:var(--p-warning-d);border-color:rgba(245,166,35,.2)">
         <div class="dash-card-body" style="padding:14px 20px">
-          <div class="d-flex gap-3">
+          <div class="flex gap-3">
             <div style="text-align:center">
               <div style="font-size:24px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--p-warning)">{{ $promocode->usedCount }}</div>
               <div style="font-size:10px;color:var(--p-warning);opacity:.7;text-transform:uppercase">Ishlatildi</div>
@@ -114,12 +119,11 @@
       </div>
       @endisset
 
-      <div class="d-flex gap-2 justify-content-end">
+      <div class="flex gap-2 justify-end">
         <a href="{{ route('panel.promocodes.index') }}" class="btn-p ghost">Bekor qilish</a>
-        <button type="submit" class="btn-p"><i class="bi bi-check-lg"></i> Saqlash</button>
+        <button type="submit" class="btn-p primary"><i class="bi bi-check-lg"></i> Saqlash</button>
       </div>
     </form>
-  </div>
 </div>
 @endsection
 

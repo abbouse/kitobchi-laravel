@@ -5,14 +5,71 @@ namespace App\Http\Controllers\Panel;
 use App\Http\Controllers\Controller;
 use App\Models\BookClub;
 use App\Models\BookClubComment;
-use App\Models\BookClubLikes;
 use App\Models\BookClubImages;
+use App\Models\BookClubLikes;
 use App\Models\User;
+use App\Support\BookClubUgcSupport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class BookClubController extends Controller
 {
+    // ── Kangaroo: admin navbati (past ishonch / avtomatik baholanmagan) ──
+    public function moderationQueue()
+    {
+        $pendingComments = BookClubComment::query()
+            ->with(['user:id,name,lastname,avatar', 'post:id,text,user_id,product_id,product_type'])
+            ->where('kangaroo_ugc_status', 'pending_admin')
+            ->whereNull('parent_id')
+            ->latest('updated_at')
+            ->limit(100)
+            ->get();
+
+        $pendingPosts = BookClub::query()
+            ->with(['user:id,name,lastname,avatar'])
+            ->where('kangaroo_post_ugc_status', 'pending_admin')
+            ->where('is_deleted', false)
+            ->latest('updated_at')
+            ->limit(60)
+            ->get();
+
+        return view('panel.book-club.moderation-queue', compact('pendingComments', 'pendingPosts'));
+    }
+
+    public function saveCommentUgcScore(Request $request, BookClubComment $comment)
+    {
+        if ($comment->parent_id !== null) {
+            abort(404);
+        }
+        $data = $request->validate([
+            'star' => 'required|numeric|between:1,5',
+        ]);
+        $comment->update([
+            'kangaroo_star_equivalent' => round((float) $data['star'], 2),
+            'kangaroo_ugc_status' => 'admin_scored',
+            'kangaroo_checked_at' => now(),
+        ]);
+        BookClubUgcSupport::recalcPostStarFromComments((int) $comment->post_id);
+        BookClubUgcSupport::recalcProductUgcFromPosts([(int) $comment->post_id]);
+
+        return back()->with('success', 'Izoh bahosi saqlandi.');
+    }
+
+    public function savePostUgcScore(Request $request, BookClub $bookClub)
+    {
+        $data = $request->validate([
+            'star' => 'required|numeric|between:1,5',
+        ]);
+        $bookClub->update([
+            'kangaroo_post_star' => round((float) $data['star'], 2),
+            'kangaroo_post_ugc_status' => 'admin_scored',
+            'kangaroo_post_checked_at' => now(),
+        ]);
+        BookClubUgcSupport::recalcProductUgcFromPosts([(int) $bookClub->id]);
+
+        return back()->with('success', 'Post matni bahosi saqlandi.');
+    }
+
     // ── Post ro'yxati (global) ─────────────────────────────────
     public function index(Request $request)
     {
@@ -23,15 +80,15 @@ class BookClubController extends Controller
 
         $tab = $request->get('tab', 'all');
         match ($tab) {
-            'posts'   => $q->where('repost', false),
+            'posts' => $q->where('repost', false),
             'reposts' => $q->where('repost', true),
-            default   => null,
+            default => null,
         };
 
         if ($s = $request->search) {
-            $q->where(fn($x) => $x
+            $q->where(fn ($x) => $x
                 ->where('text', 'like', "%$s%")
-                ->orWhereHas('user', fn($u) => $u
+                ->orWhereHas('user', fn ($u) => $u
                     ->where('name', 'like', "%$s%")
                     ->orWhere('phone_number', 'like', "%$s%")
                 )
@@ -48,8 +105,8 @@ class BookClubController extends Controller
             ->withQueryString();
 
         $counts = [
-            'all'     => BookClub::where('is_deleted', false)->count(),
-            'posts'   => BookClub::where('is_deleted', false)->where('repost', false)->count(),
+            'all' => BookClub::where('is_deleted', false)->count(),
+            'posts' => BookClub::where('is_deleted', false)->where('repost', false)->count(),
             'reposts' => BookClub::where('is_deleted', false)->where('repost', true)->count(),
         ];
 
@@ -101,8 +158,7 @@ class BookClubController extends Controller
         $repostsCount = $reposters->count();
 
         // Votes
-        $totalVotes = $bookClub->votes->sum(fn($v) =>
-            \DB::table('book_club_voted_users')->where('option_id', $v->id)->count()
+        $totalVotes = $bookClub->votes->sum(fn ($v) => \DB::table('book_club_voted_users')->where('option_id', $v->id)->count()
         );
 
         return view('panel.book-club.show', compact(
@@ -115,6 +171,7 @@ class BookClubController extends Controller
     public function edit(BookClub $bookClub)
     {
         $bookClub->load(['user:id,name,lastname,avatar', 'images', 'votes']);
+
         return view('panel.book-club.edit', compact('bookClub'));
     }
 
@@ -134,6 +191,7 @@ class BookClubController extends Controller
     public function destroy(BookClub $bookClub)
     {
         $bookClub->update(['is_deleted' => true]);
+
         return redirect()->route('panel.book-club.index')
             ->with('success', "Post o'chirildi.");
     }
@@ -143,6 +201,7 @@ class BookClubController extends Controller
     {
         Storage::disk('public')->delete($image->image);
         $image->delete();
+
         return back()->with('success', 'Rasm o\'chirildi.');
     }
 
@@ -152,6 +211,7 @@ class BookClubController extends Controller
         // Javoblarni ham o'chirish
         BookClubComment::where('parent_id', $comment->id)->delete();
         $comment->delete();
+
         return back()->with('success', "Izoh o'chirildi.");
     }
 
@@ -160,6 +220,7 @@ class BookClubController extends Controller
     {
         $request->validate(['content' => 'required|string|max:1000']);
         $comment->update(['content' => $request->content]);
+
         return back()->with('success', 'Izoh yangilandi.');
     }
 
@@ -175,12 +236,12 @@ class BookClubController extends Controller
 
         match ($tab) {
             'reposts' => $q->where('repost', true),
-            default   => $q->where('repost', false),
+            default => $q->where('repost', false),
         };
 
         $posts = $q->latest()->paginate(10, ['*'], 'page')->withQueryString();
 
-        $postsCount   = BookClub::where('user_id', $user->id)->where('is_deleted', false)->where('repost', false)->count();
+        $postsCount = BookClub::where('user_id', $user->id)->where('is_deleted', false)->where('repost', false)->count();
         $repostsCount = BookClub::where('user_id', $user->id)->where('is_deleted', false)->where('repost', true)->count();
 
         return compact('posts', 'postsCount', 'repostsCount', 'tab');

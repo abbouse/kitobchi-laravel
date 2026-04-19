@@ -4,12 +4,11 @@
 
 @section('content')
 
-<div class="d-flex align-items-start justify-content-between mb-4 fade-up">
-  <div>
-    <h1 class="page-title">Shikoyatlar</h1>
-    <p class="page-sub">Foydalanuvchilar yuborgan shikoyatlar</p>
-  </div>
-</div>
+<x-panel.page-header>
+  <x-slot name="heading">Shikoyatlar</x-slot>
+  <x-slot name="meta">Foydalanuvchilar yuborgan shikoyatlar</x-slot>
+</x-panel.page-header>
+
 
 {{-- Tabs --}}
 <div class="tab-pills fade-up mb-3">
@@ -57,7 +56,7 @@
 
 {{-- Table --}}
 <div class="p-card fade-up">
-  <div class="table-responsive">
+  <div class="table-responsive kc-twrap">
     <table class="p-table">
       <thead>
         <tr>
@@ -86,7 +85,7 @@
 
           <td>
             @if($r->user)
-            <div class="d-flex align-items-center gap-2">
+            <div class="flex items-center gap-2">
               <div style="width:28px;height:28px;border-radius:50%;overflow:hidden;flex-shrink:0;
                           background:linear-gradient(135deg,var(--p-accent),#7c5cfc);
                           display:flex;align-items:center;justify-content:center;
@@ -153,7 +152,7 @@
           </td>
 
           <td>
-            <div class="d-flex gap-1 align-items-center">
+            <div class="flex gap-1 items-center">
               <a href="{{ route('panel.reports.show',$r) }}" class="btn-p ghost sm">
                 <i class="bi bi-eye"></i>
               </a>
@@ -210,7 +209,7 @@
     </table>
   </div>
   @if($reports->hasPages())
-  <div class="d-flex align-items-center justify-content-between px-3 py-2"
+  <div class="flex items-center justify-between px-3 py-2"
        style="border-top:1px solid var(--p-border)">
     <div style="font-size:12px;color:var(--p-hint)">
       {{ $reports->firstItem() }}–{{ $reports->lastItem() }} / {{ $reports->total() }}

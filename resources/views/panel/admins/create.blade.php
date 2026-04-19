@@ -3,8 +3,12 @@
 @section('page-title', 'Yangi admin yaratish')
 
 @section('content')
-<div class="row justify-content-center">
-  <div class="col-xl-7">
+<div class="kc-page-inner w-full min-w-0">
+    <x-panel.page-header back-href="{{ route('panel.admins.index') }}">
+  <x-slot name="heading">Yangi admin yaratish</x-slot>
+  <x-slot name="meta">Panel uchun yangi foydalanuvchi qo'shish</x-slot>
+</x-panel.page-header>
+
 
     <form method="POST" action="{{ route('panel.admins.store') }}">
       @csrf
@@ -15,34 +19,34 @@
           <div class="dash-card-title">Admin ma'lumotlari</div>
         </div>
         <div class="dash-card-body">
-          <div class="row g-3">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
 
-            <div class="col-sm-6">
-              <label class="p-label">Ism <span style="color:var(--p-danger)">*</span></label>
+            <div class="">
+              <label class="p-form-label">Ism <span style="color:var(--p-danger)">*</span></label>
               <input type="text" name="name"
                      class="p-form-control @error('name') is-invalid @enderror"
                      value="{{ old('name') }}" required maxlength="100">
               @error('name')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>
 
-            <div class="col-sm-6">
-              <label class="p-label">Email <span style="color:var(--p-danger)">*</span></label>
+            <div class="">
+              <label class="p-form-label">Email <span style="color:var(--p-danger)">*</span></label>
               <input type="email" name="email"
                      class="p-form-control @error('email') is-invalid @enderror"
                      value="{{ old('email') }}" required>
               @error('email')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>
 
-            <div class="col-sm-6">
-              <label class="p-label">Parol <span style="color:var(--p-danger)">*</span></label>
+            <div class="">
+              <label class="p-form-label">Parol <span style="color:var(--p-danger)">*</span></label>
               <input type="password" name="password"
                      class="p-form-control @error('password') is-invalid @enderror"
                      required minlength="8" autocomplete="new-password">
               @error('password')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>
 
-            <div class="col-sm-6">
-              <label class="p-label">Parolni tasdiqlash <span style="color:var(--p-danger)">*</span></label>
+            <div class="">
+              <label class="p-form-label">Parolni tasdiqlash <span style="color:var(--p-danger)">*</span></label>
               <input type="password" name="password_confirmation"
                      class="p-form-control" required autocomplete="new-password">
             </div>
@@ -58,8 +62,8 @@
         </div>
         <div class="dash-card-body">
 
-          <label class="p-label mb-2">Rol <span style="color:var(--p-danger)">*</span></label>
-          <div class="d-flex gap-2 mb-3" id="roleCards">
+          <label class="p-form-label mb-2">Rol <span style="color:var(--p-danger)">*</span></label>
+          <div class="flex gap-2 mb-3" id="roleCards">
             @foreach([
               ['superadmin', 'Superadmin', 'bi-shield-fill-check', 'danger',  'Barcha ruxsatlar'],
               ['admin',      'Admin',      'bi-person-badge',       'accent',  'Ko\'pchilik ruxsatlar'],
@@ -67,7 +71,7 @@
             ] as [$val, $lbl, $icon, $clr, $desc])
             <label style="flex:1;cursor:pointer">
               <input type="radio" name="role" value="{{ $val }}"
-                     class="d-none role-radio"
+                     class="hidden role-radio"
                      {{ old('role','moderator') === $val ? 'checked' : '' }}>
               <div class="role-card" data-role="{{ $val }}"
                    style="border:2px solid var(--p-border);border-radius:10px;
@@ -85,7 +89,7 @@
 
           {{-- Ruxsatlar (superadmin uchun yashirin) --}}
           <div id="permissionsBlock" style="{{ old('role','moderator') === 'superadmin' ? 'display:none' : '' }}">
-            <label class="p-label mb-2">Ruxsatlar</label>
+            <label class="p-form-label mb-2">Ruxsatlar</label>
             @php
               $allPerms = [
                 'users'      => ['Foydalanuvchilar', 'bi-people'],
@@ -100,7 +104,7 @@
               ];
               $oldPerms = old('permissions', []);
             @endphp
-            <div class="d-flex flex-wrap gap-2">
+            <div class="flex flex-wrap gap-2">
               @foreach($allPerms as $perm => [$label, $icon])
               <label style="cursor:pointer;background:var(--p-elevated);
                             border:1px solid var(--p-border);border-radius:8px;
@@ -118,13 +122,13 @@
               <button type="button" onclick="toggleAllPerms(true)"
                       class="btn-p ghost sm">Barchasini belgilash</button>
               <button type="button" onclick="toggleAllPerms(false)"
-                      class="btn-p ghost sm ms-1">Barchasini olib tashlash</button>
+                      class="btn-p ghost sm ml-1">Barchasini olib tashlash</button>
             </div>
           </div>
 
           {{-- Holat --}}
           <div class="mt-3">
-            <label class="p-label">Holat</label>
+            <label class="p-form-label">Holat</label>
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:6px">
               <input type="hidden" name="is_active" value="0">
               <input type="checkbox" name="is_active" value="1" checked
@@ -136,15 +140,13 @@
         </div>
       </div>
 
-      <div class="d-flex gap-2 justify-content-end">
+      <div class="flex gap-2 justify-end">
         <a href="{{ route('panel.admins.index') }}" class="btn-p ghost">Bekor qilish</a>
-        <button type="submit" class="btn-p">
+        <button type="submit" class="btn-p primary">
           <i class="bi bi-person-plus"></i> Admin yaratish
         </button>
       </div>
     </form>
-
-  </div>
 </div>
 @endsection
 

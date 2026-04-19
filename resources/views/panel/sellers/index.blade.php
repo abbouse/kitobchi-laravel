@@ -4,26 +4,27 @@
 
 @section('content')
 
-<div class="d-flex align-items-start justify-content-between mb-4 fade-up">
-  <div>
-    <h1 class="page-title">Sotuvchilar</h1>
-    <p class="page-sub">Do'konlar va sotuvchilar boshqaruvi</p>
-  </div>
-  <a href="{{ route('panel.sellers.export', request()->all()) }}" class="btn-p ghost">
-    <i class="bi bi-download"></i> Export
-  </a>
-</div>
+<x-panel.page-header>
+  <x-slot name="heading">Sotuvchilar</x-slot>
+  <x-slot name="meta">Do'konlar va sotuvchilar boshqaruvi</x-slot>
+  <x-slot name="actions">
+    <a href="{{ route('panel.sellers.export', request()->all()) }}" class="btn-p ghost">
+        <i class="bi bi-download"></i> Export
+      </a>
+  </x-slot>
+</x-panel.page-header>
+
 
 {{-- Stats --}}
-<div class="row g-3 mb-4 fade-up">
+<div class="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-4">
   @foreach([
     ['Kutilmoqda',    $counts['pending'],  'warning', 'bi-hourglass'],
     ['Tasdiqlangan',  $counts['approved'], 'success', 'bi-shop-window'],
     ['Rad etilgan',   $counts['rejected'], 'danger',  'bi-x-circle'],
     ['Jami',          $counts['all'],      'accent',  'bi-grid'],
   ] as [$l,$v,$c,$i])
-  <div class="col-6 col-xl-3">
-    <div class="p-card d-flex align-items-center gap-3" style="padding:14px">
+  <div class="">
+    <div class="p-card flex items-center gap-3" style="padding:14px">
       <div style="width:36px;height:36px;border-radius:9px;flex-shrink:0;font-size:16px;
                   background:var(--p-{{ $c }}-d,var(--p-elevated));color:var(--p-{{ $c }});
                   display:flex;align-items:center;justify-content:center">
@@ -87,7 +88,7 @@
     <div class="p-card-title">Sotuvchilar ro'yxati</div>
     <div class="p-card-sub">{{ $sellers->total() }} ta natija</div>
   </div>
-  <div class="table-responsive">
+  <div class="table-responsive kc-twrap">
     <table class="p-table">
       <thead>
         <tr>
@@ -110,7 +111,7 @@
             </span>
           </td>
           <td>
-            <div class="d-flex align-items-center gap-2">
+            <div class="flex items-center gap-2">
               <div style="width:34px;height:34px;border-radius:8px;overflow:hidden;flex-shrink:0;
                           background:linear-gradient(135deg,var(--p-warning),#f97316);
                           display:flex;align-items:center;justify-content:center;
@@ -154,7 +155,7 @@
             {{ $seller->books_count }}
           </td>
           <td>
-            <div class="d-flex gap-1 align-items-center">
+            <div class="flex gap-1 items-center">
               @if($st !== 'approved')
               <form method="POST" action="{{ route('panel.sellers.approve', $seller) }}">
                 @csrf @method('PATCH')
@@ -193,7 +194,7 @@
   </div>
 
   @if($sellers->hasPages())
-  <div class="d-flex align-items-center justify-content-between px-3 py-2"
+  <div class="flex items-center justify-between px-3 py-2"
        style="border-top:1px solid var(--p-border)">
     <div style="font-size:12px;color:var(--p-hint)">
       {{ $sellers->firstItem() }}–{{ $sellers->lastItem() }} / {{ $sellers->total() }}

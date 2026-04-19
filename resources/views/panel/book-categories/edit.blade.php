@@ -3,8 +3,13 @@
 @section('page-title', isset($bookCategory) ? 'Kategoriyani tahrirlash' : "Yangi kategoriya")
 
 @section('content')
-<div class="row justify-content-center">
-  <div class="col-xl-7">
+<div class="kc-page-inner w-full min-w-0">
+    <x-panel.page-header back-href="{{ route('panel.book-categories.index') }}">
+  <x-slot name="heading">{{ isset($bookCategory) ? $bookCategory->name_uz : 'Yangi kategoriya' }}</x-slot>
+  <x-slot name="meta">{{ isset($bookCategory) ? 'Kategoriyani tahrirlash' : 'Yangi kitob kategoriyasi' }}</x-slot>
+</x-panel.page-header>
+
+
     <form method="POST"
       action="{{ isset($bookCategory) ? route('panel.book-categories.update',$bookCategory) : route('panel.book-categories.store') }}">
       @csrf
@@ -13,11 +18,11 @@
       <div class="p-card mb-3">
         <div class="dash-card-head"><div class="dash-card-title">Asosiy ma'lumotlar</div></div>
         <div class="dash-card-body">
-          <div class="row g-3">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
 
             {{-- Icon emoji --}}
-            <div class="col-12">
-              <label class="p-label">Icon (emoji, 1 ta belgi)</label>
+            <div class="">
+              <label class="p-form-label">Icon (emoji, 1 ta belgi)</label>
               <input type="text" name="icon" class="p-form-control" maxlength="2"
                      value="{{ old('icon', $bookCategory->icon ?? '') }}"
                      style="font-size:24px;width:80px;text-align:center">
@@ -31,8 +36,8 @@
               ['name_en','Inglizcha nomi','EN'],
               ['name_ja','Yaponcha nomi','JA'],
             ] as [$field, $label, $lang])
-            <div class="col-sm-6">
-              <label class="p-label">
+            <div class="">
+              <label class="p-form-label">
                 {{ $label }} <span class="s-pill muted" style="font-size:10px">{{ $lang }}</span>
                 <span style="color:var(--p-danger)">*</span>
               </label>
@@ -43,8 +48,8 @@
             @endforeach
 
             {{-- Status --}}
-            <div class="col-sm-6">
-              <label class="p-label">Holat</label>
+            <div class="">
+              <label class="p-form-label">Holat</label>
               <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:6px">
                 <input type="hidden" name="is_active" value="0">
                 <input type="checkbox" name="is_active" value="1"
@@ -64,7 +69,7 @@
           <div class="dash-card-sub">Kategoriyaga tegishli teglar</div>
         </div>
         <div class="dash-card-body">
-          <div class="d-flex flex-wrap gap-2">
+          <div class="flex flex-wrap gap-2">
             @foreach($tags as $tag)
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer;
                           background:var(--p-elevated);border:1px solid var(--p-border);
@@ -80,11 +85,10 @@
         </div>
       </div>
 
-      <div class="d-flex gap-2 justify-content-end">
+      <div class="flex gap-2 justify-end">
         <a href="{{ route('panel.book-categories.index') }}" class="btn-p ghost">Bekor qilish</a>
-        <button type="submit" class="btn-p"><i class="bi bi-check-lg"></i> Saqlash</button>
+        <button type="submit" class="btn-p primary"><i class="bi bi-check-lg"></i> Saqlash</button>
       </div>
     </form>
-  </div>
 </div>
 @endsection

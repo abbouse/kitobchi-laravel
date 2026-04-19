@@ -3,9 +3,9 @@
 <div class="p-card mb-3 fade-up">
   <div class="p-card-header"><div class="p-card-title">Asosiy ma'lumotlar</div></div>
   <div style="padding:0 18px 18px">
-    <div class="row g-3">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
 
-      <div class="col-12">
+      <div class="">
         <label class="p-form-label">
           Nomi <span style="color:var(--p-danger)">*</span>
         </label>
@@ -19,9 +19,9 @@
 
       {{-- Faqat mavjud mijoz uchun kalitlarni ko'rsatish --}}
       @if($apiClient)
-      <div class="col-md-6">
+      <div class="">
         <label class="p-form-label">App ID</label>
-        <div class="d-flex align-items-center gap-2">
+        <div class="flex items-center gap-2">
           <input type="text" class="p-form-control" value="{{ $apiClient->app_id }}"
                  readonly style="font-family:'JetBrains Mono',monospace;font-size:13px;
                                  background:var(--p-elevated);color:var(--p-accent)">
@@ -31,9 +31,9 @@
         <div style="font-size:11px;color:var(--p-hint);margin-top:4px">Avtomatik — o'zgartirib bo'lmaydi</div>
       </div>
 
-      <div class="col-md-6">
+      <div class="">
         <label class="p-form-label">App Secret</label>
-        <div class="d-flex align-items-center gap-2">
+        <div class="flex items-center gap-2">
           <input type="text" id="secretField" class="p-form-control"
                  value="{{ str_repeat('•', 16) }}"
                  readonly style="font-family:'JetBrains Mono',monospace;font-size:13px;
@@ -52,7 +52,7 @@
       </div>
       @endif
 
-      <div class="col-12">
+      <div class="">
         <label class="p-form-label">
           Huquqlar (JSON array)
           <span style="color:var(--p-hint);font-size:11px;font-weight:400">
@@ -76,7 +76,7 @@
         </div>
       </div>
 
-      <div class="col-12">
+      <div class="">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
           <input type="hidden" name="is_active" value="0">
           <input type="checkbox" name="is_active" value="1"
@@ -91,7 +91,7 @@
   </div>
 </div>
 
-<div class="d-flex gap-2 fade-up">
+<div class="flex gap-2 fade-up">
   <button type="submit" class="btn-p primary">
     <i class="bi bi-check-lg"></i>
     {{ $apiClient ? 'Saqlash' : 'Yaratish' }}

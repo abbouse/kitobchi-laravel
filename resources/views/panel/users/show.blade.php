@@ -7,35 +7,29 @@
 @php $activeSection = request('section', 'orders'); @endphp
 
 {{-- ── Header ──────────────────────────────────────────────── --}}
-<div class="d-flex align-items-start justify-content-between mb-4 fade-up">
-  <div class="d-flex align-items-center gap-3">
-    <a href="{{ route('panel.users.index') }}" class="btn-p ghost icon">
-      <i class="bi bi-arrow-left"></i>
-    </a>
-    <div>
-      <h1 class="page-title">{{ $user->name }} {{ $user->lastname }}</h1>
-      <p class="page-sub">
-        ID: #{{ $user->id }}
+<x-panel.page-header back-href="{{ route('panel.users.index') }}">
+  <x-slot name="heading">{{ $user->name }} {{ $user->lastname }}</x-slot>
+  <x-slot name="meta">ID: #{{ $user->id }}
         · {{ $user->created_at?->format('d.m.Y') }} da qo'shilgan
         @if($user->last_seen_at)
           · {{ \Carbon\Carbon::parse($user->last_seen_at)->diffForHumans() }}
-        @endif
-      </p>
-    </div>
-  </div>
-  <div class="d-flex gap-2 flex-wrap">
-    <form method="POST" action="{{ route('panel.users.toggle-premium', $user) }}">
-      @csrf @method('PATCH')
-      <button class="btn-p {{ $user->is_premium ? 'danger' : 'warning' }} ghost">
-        <i class="bi bi-star{{ $user->is_premium ? '-fill' : '' }}"></i>
-        {{ $user->is_premium ? 'Premium olish' : 'Premium berish' }}
-      </button>
-    </form>
-    <a href="{{ route('panel.users.edit', $user) }}" class="btn-p ghost">
-      <i class="bi bi-pencil"></i> Tahrirlash
-    </a>
-  </div>
-</div>
+        @endif</x-slot>
+  <x-slot name="actions">
+    <div class="flex gap-2 flex-wrap">
+        <form method="POST" action="{{ route('panel.users.toggle-premium', $user) }}">
+          @csrf @method('PATCH')
+          <button class="btn-p {{ $user->is_premium ? 'danger' : 'warning' }} ghost">
+            <i class="bi bi-star{{ $user->is_premium ? '-fill' : '' }}"></i>
+            {{ $user->is_premium ? 'Premium olish' : 'Premium berish' }}
+          </button>
+        </form>
+        <a href="{{ route('panel.users.edit', $user) }}" class="btn-p ghost">
+          <i class="bi bi-pencil"></i> Tahrirlash
+        </a>
+      </div>
+  </x-slot>
+</x-panel.page-header>
+
 
 {{-- ════ PROFIL KARTA (gorizontal, to'liq kenglik) ════════════ --}}
 <div class="p-card mb-3 fade-up">
@@ -141,15 +135,15 @@
 </div>
 
 {{-- ════ ASOSIY: chap info + o'ng tabs ════════════════════════ --}}
-<div class="row g-3">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
 
   {{-- ── CHAP: ixcham info kartalar ─────────────────────────── --}}
-  <div class="col-xl-4">
+  <div class="xl:col-span-4">
 
     {{-- Moliyaviy --}}
     <div class="p-card mb-3 fade-up">
       <div class="p-card-header">
-        <div class="p-card-title"><i class="bi bi-wallet2 me-1"></i>Moliyaviy</div>
+        <div class="p-card-title"><i class="bi bi-wallet2 mr-1"></i>Moliyaviy</div>
       </div>
       <div style="padding:0 18px 8px">
         @foreach([
@@ -171,7 +165,7 @@
     @if($devices && count($devices))
     <div class="p-card mb-3 fade-up">
       <div class="p-card-header">
-        <div class="p-card-title"><i class="bi bi-phone me-1"></i>Qurilmalar</div>
+        <div class="p-card-title"><i class="bi bi-phone mr-1"></i>Qurilmalar</div>
         <span class="s-pill muted" style="font-size:10px">{{ count($devices) }} ta</span>
       </div>
       <div style="padding:0 18px 8px">
@@ -209,7 +203,7 @@
     <div class="p-card mb-3 fade-up">
       <div class="p-card-header">
         <div class="p-card-title">
-          <i class="bi bi-geo-alt me-1" style="color:var(--p-accent)"></i>Manzillar
+          <i class="bi bi-geo-alt mr-1" style="color:var(--p-accent)"></i>Manzillar
         </div>
         <span class="s-pill muted" style="font-size:10px">{{ count($addresses) }} ta</span>
       </div>
@@ -253,7 +247,7 @@
     <div class="p-card mb-3 fade-up">
       <div class="p-card-header">
         <div class="p-card-title">
-          <i class="bi bi-credit-card me-1" style="color:var(--p-accent)"></i>Bank kartalar
+          <i class="bi bi-credit-card mr-1" style="color:var(--p-accent)"></i>Bank kartalar
         </div>
         <span class="s-pill muted" style="font-size:10px">{{ $cards->count() }} ta</span>
       </div>
@@ -298,7 +292,7 @@
     @if($followers->count() || $following->count())
     <div class="p-card fade-up">
       <div class="p-card-header">
-        <div class="p-card-title"><i class="bi bi-people me-1"></i>Ijtimoiy</div>
+        <div class="p-card-title"><i class="bi bi-people mr-1"></i>Ijtimoiy</div>
       </div>
       <div style="padding:12px 18px">
         @if($followers->count())
@@ -357,7 +351,7 @@
   </div>{{-- /col-xl-4 --}}
 
   {{-- ── O'NG: Tabs ──────────────────────────────────────── --}}
-  <div class="col-xl-8">
+  <div class="xl:col-span-8">
 
     <div class="tab-pills fade-up mb-3">
       @foreach([
@@ -396,7 +390,7 @@
             Barchasi <i class="bi bi-arrow-right"></i>
           </a>
         </div>
-        <div class="table-responsive">
+        <div class="table-responsive kc-twrap">
           <table class="p-table">
             <thead>
               <tr><th>#</th><th>Summa</th><th>Status</th><th>To'lov</th><th>Sana</th><th></th></tr>
@@ -521,11 +515,11 @@
     <div class="p-card fade-up">
       <div class="p-card-header">
         <div class="p-card-title">
-          <i class="bi bi-gift me-1" style="color:var(--p-accent)"></i> Gift Sertifikatlar
+          <i class="bi bi-gift mr-1" style="color:var(--p-accent)"></i> Gift Sertifikatlar
         </div>
         <span class="s-pill muted" style="font-size:10px">{{ $giftCertCount }} ta</span>
       </div>
-      <div class="table-responsive">
+      <div class="table-responsive kc-twrap">
         <table class="p-table">
           <thead>
             <tr>
@@ -647,7 +641,7 @@
     <div class="p-card fade-up">
       <div class="p-card-header">
         <div class="p-card-title">
-          <i class="bi bi-box-seam me-1" style="color:var(--p-accent)"></i> Mystery Box obunalari
+          <i class="bi bi-box-seam mr-1" style="color:var(--p-accent)"></i> Mystery Box obunalari
         </div>
         <span class="s-pill muted" style="font-size:10px">{{ $mysterySubCount }} ta</span>
       </div>
@@ -655,7 +649,7 @@
       @forelse($mysterySubs as $sub)
       @php $addr = is_array($sub->address) ? $sub->address : []; @endphp
       <div style="padding:16px 20px;border-top:1px solid var(--p-border)">
-        <div class="d-flex align-items-start justify-content-between mb-3">
+        <div class="flex items-start justify-between mb-3">
           <div>
             <div style="font-size:13px;font-weight:600;color:var(--p-text)">
               {{ $sub->plan?->name_uz ?? '—' }}
@@ -675,7 +669,7 @@
         </div>
 
         {{-- Progress --}}
-        <div class="d-flex align-items-center gap-3 mb-3">
+        <div class="flex items-center gap-3 mb-3">
           <div style="flex:1;height:7px;background:var(--p-elevated);border-radius:4px;overflow:hidden">
             <div style="height:100%;border-radius:4px;
                         background:var(--p-{{ $sub->status_color }});
@@ -758,7 +752,7 @@
     {{-- ─── BOOK CLUB ───────────────────────────────────── --}}
     @elseif($activeSection === 'bookclub')
 
-      <div class="d-flex gap-2 mb-3">
+      <div class="flex gap-2 mb-3">
         @foreach([['posts','Postlar',$bcPostsCount],['reposts','Repostlar',$bcRepostsCount]] as [$k,$l,$cnt])
         <a href="{{ request()->fullUrlWithQuery(['section'=>'bookclub','bc_tab'=>$k]) }}"
            class="btn-p {{ $tab===$k?'':'ghost' }} sm">

@@ -5,16 +5,14 @@
 
 @section('content')
 
-<div class="page-header fade-up d-flex align-items-center gap-3">
-  <a href="{{ route('panel.users.index') }}" class="btn-p ghost icon"><i class="bi bi-arrow-left"></i></a>
-  <div>
-    <h1 class="page-title">Import</h1>
-    <p class="page-sub">Excel yoki CSV fayldan foydalanuvchilar import qilish</p>
-  </div>
-</div>
+<x-panel.page-header back-href="{{ route('panel.users.index') }}">
+  <x-slot name="heading">Import</x-slot>
+  <x-slot name="meta">Excel yoki CSV fayldan foydalanuvchilar import qilish</x-slot>
+</x-panel.page-header>
 
-<div class="row g-3">
-  <div class="col-xl-6 fade-up d1">
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+  <div class="fade-up d1">
     <div class="p-card">
       <div class="p-card-title mb-1">Fayl yuklash</div>
       <div style="font-size:12px;color:var(--p-hint);margin-bottom:20px">
@@ -45,13 +43,13 @@
     </div>
   </div>
 
-  <div class="col-xl-6 fade-up d2">
+  <div class="fade-up d2">
     <div class="p-card">
       <div class="p-card-title mb-3">Fayl formati</div>
       <div style="font-size:13px;color:var(--p-muted);margin-bottom:14px">
         Excel faylning birinchi qatorida quyidagi sarlavhalar bo'lishi kerak:
       </div>
-      <div class="table-responsive">
+      <div class="table-responsive kc-twrap">
         <table class="p-table">
           <thead>
             <tr><th>Ustun nomi</th><th>Ma'lumot turi</th><th>Majburiy</th></tr>
@@ -84,7 +82,7 @@
 
       <div style="margin-top:16px;padding:12px;background:var(--p-elevated);border-radius:8px">
         <div style="font-size:12px;font-weight:500;color:var(--p-text);margin-bottom:6px">
-          <i class="bi bi-info-circle me-1" style="color:var(--p-accent)"></i> Muhim eslatmalar:
+          <i class="bi bi-info-circle mr-1" style="color:var(--p-accent)"></i> Muhim eslatmalar:
         </div>
         <ul style="font-size:12px;color:var(--p-muted);margin:0;padding-left:16px;line-height:1.8">
           <li>Mavjud telefon raqamlar o'tkazib yuboriladi</li>

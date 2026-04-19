@@ -5,13 +5,11 @@
 
 @section('content')
 
-<div class="page-header fade-up d-flex align-items-center gap-3">
-  <a href="{{ route('panel.books.show', $book) }}" class="btn-p ghost icon"><i class="bi bi-arrow-left"></i></a>
-  <div>
-    <h1 class="page-title">{{ $book->name }}</h1>
-    <p class="page-sub">ID: #{{ $book->id }} · {{ $book->author }}</p>
-  </div>
-</div>
+<x-panel.page-header back-href="{{ route('panel.books.show', $book) }}">
+  <x-slot name="heading">{{ $book->name }}</x-slot>
+  <x-slot name="meta">ID: #{{ $book->id }} · {{ $book->author }}</x-slot>
+</x-panel.page-header>
+
 
 {{-- Info: faqat moderatsiya maydoni tahrirlanadi --}}
 <div style="padding:12px 16px;border-radius:10px;background:var(--p-info-d,rgba(56,189,248,0.10));border:1px solid rgba(56,189,248,0.2);font-size:13px;color:var(--p-info,#38bdf8);margin-bottom:20px;display:flex;align-items:center;gap:10px">
@@ -22,38 +20,38 @@
 <form method="POST" action="{{ route('panel.books.update', $book) }}">
   @csrf @method('PUT')
 
-  <div class="row g-3">
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
 
     {{-- ── Chap: Ko'rish ──────────────────────────── --}}
-    <div class="col-xl-7 fade-up d1">
+    <div class="xl:col-span-7 fade-up">
       <div class="p-card h-100">
         <div class="p-card-title mb-3">Kitob ma'lumotlari (faqat ko'rish)</div>
-        <div class="row g-3">
-          <div class="col-md-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div class="">
             <label class="p-form-label">Kitob nomi</label>
             <input type="text" class="p-form-control" value="{{ $book->name }}" disabled>
           </div>
-          <div class="col-md-6">
+          <div class="">
             <label class="p-form-label">Muallif</label>
             <input type="text" class="p-form-control" value="{{ $book->author }}" disabled>
           </div>
-          <div class="col-md-6">
+          <div class="">
             <label class="p-form-label">Kategoriya</label>
             <input type="text" class="p-form-control" value="{{ $book->category?->name_uz ?? '—' }}" disabled>
           </div>
-          <div class="col-md-6">
+          <div class="">
             <label class="p-form-label">Sotuvchi</label>
             <input type="text" class="p-form-control" value="{{ $book->seller?->shop_name ?? '—' }}" disabled>
           </div>
-          <div class="col-md-4">
+          <div class="md:col-span-4">
             <label class="p-form-label">Til</label>
             <input type="text" class="p-form-control" value="{{ $book->lang }}" disabled>
           </div>
-          <div class="col-md-4">
+          <div class="md:col-span-4">
             <label class="p-form-label">Muqova</label>
             <input type="text" class="p-form-control" value="{{ $book->coverType }}" disabled>
           </div>
-          <div class="col-md-4">
+          <div class="md:col-span-4">
             <label class="p-form-label">Sahifalar</label>
             <input type="text" class="p-form-control" value="{{ $book->pages }} bet" disabled>
           </div>
@@ -62,7 +60,7 @@
     </div>
 
     {{-- ── O'ng: Tahrirlash ──────────────────────── --}}
-    <div class="col-xl-5 fade-up d2">
+    <div class="xl:col-span-5 fade-up">
 
       {{-- Narxlar --}}
       <div class="p-card mb-3">
@@ -102,7 +100,7 @@
             <option value="0" {{ !old('status',$book->status)?'selected':'' }}>Ko'rinmaydi</option>
           </select>
         </div>
-        <div class="d-flex align-items-center justify-content-between"
+        <div class="flex items-center justify-between"
              style="padding:10px;background:var(--p-elevated);border-radius:8px">
           <div>
             <div style="font-size:13px;font-weight:500;color:var(--p-text)">Yashirin</div>
@@ -117,8 +115,8 @@
     </div>
 
     {{-- Submit --}}
-    <div class="col-12 fade-up d3">
-      <div class="d-flex gap-2">
+    <div class=" fade-up d3">
+      <div class="flex gap-2">
         <button type="submit" class="btn-p primary"><i class="bi bi-check-lg"></i> Saqlash</button>
         <a href="{{ route('panel.books.show',$book) }}" class="btn-p ghost">Bekor qilish</a>
       </div>

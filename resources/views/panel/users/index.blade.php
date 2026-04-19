@@ -7,27 +7,28 @@
 @section('content')
 
 {{-- ── Page header ──────────────────────────────── --}}
-<div class="page-header fade-up d-flex align-items-start justify-content-between">
-  <div>
-    <h1 class="page-title">Foydalanuvchilar</h1>
-    <p class="page-sub">Barcha ro'yxatdan o'tgan foydalanuvchilar</p>
-  </div>
-  <div class="d-flex gap-2">
-    <a href="{{ route('panel.users.import') }}" class="btn-p ghost">
-      <i class="bi bi-upload"></i> Import
-    </a>
-    <a href="{{ route('panel.users.export', request()->all()) }}" class="btn-p ghost">
-      <i class="bi bi-download"></i> Export
-    </a>
-    <a href="{{ route('panel.users.create') }}" class="btn-p primary">
-      <i class="bi bi-plus-lg"></i> Yangi foydalanuvchi
-    </a>
-  </div>
-</div>
+<x-panel.page-header>
+  <x-slot name="heading">Foydalanuvchilar</x-slot>
+  <x-slot name="meta">Barcha ro'yxatdan o'tgan foydalanuvchilar</x-slot>
+  <x-slot name="actions">
+    <div class="flex gap-2">
+        <a href="{{ route('panel.users.import') }}" class="btn-p ghost">
+          <i class="bi bi-upload"></i> Import
+        </a>
+        <a href="{{ route('panel.users.export', request()->all()) }}" class="btn-p ghost">
+          <i class="bi bi-download"></i> Export
+        </a>
+        <a href="{{ route('panel.users.create') }}" class="btn-p primary">
+          <i class="bi bi-plus-lg"></i> Yangi foydalanuvchi
+        </a>
+      </div>
+  </x-slot>
+</x-panel.page-header>
+
 
 {{-- ── Metric cards ─────────────────────────────── --}}
-<div class="row g-3 mb-4">
-  <div class="col-6 col-xl-3 fade-up d1">
+<div class="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-4">
+  <div class="fade-up">
     <div class="metric-card" style="border-top-color: var(--p-accent)">
       <div class="metric-icon" style="background:var(--p-accent-d);color:var(--p-accent)"><i class="bi bi-people-fill"></i></div>
       <div class="metric-label">Jami</div>
@@ -35,7 +36,7 @@
       <span class="s-pill accent"><i class="bi bi-plus"></i>{{ $stats['today'] }} bugun</span>
     </div>
   </div>
-  <div class="col-6 col-xl-3 fade-up d2">
+  <div class="fade-up">
     <div class="metric-card" style="border-top-color: var(--p-warning)">
       <div class="metric-icon" style="background:var(--p-warning-d);color:var(--p-warning)"><i class="bi bi-star-fill"></i></div>
       <div class="metric-label">Premium</div>
@@ -43,7 +44,7 @@
       <span class="s-pill warning">{{ $stats['total'] > 0 ? round($stats['premium']/$stats['total']*100) : 0 }}% ulushi</span>
     </div>
   </div>
-  <div class="col-6 col-xl-3 fade-up d3">
+  <div class="fade-up">
     <div class="metric-card" style="border-top-color: var(--p-success)">
       <div class="metric-icon" style="background:var(--p-success-d);color:var(--p-success)"><i class="bi bi-circle-fill"></i></div>
       <div class="metric-label">Online</div>
@@ -51,7 +52,7 @@
       <span class="s-pill success">Hozir aktiv</span>
     </div>
   </div>
-  <div class="col-6 col-xl-3 fade-up d4">
+  <div class="fade-up">
     <div class="metric-card" style="border-top-color: var(--p-info)">
       <div class="metric-icon" style="background:var(--p-info-d);color:var(--p-info)"><i class="bi bi-person-plus-fill"></i></div>
       <div class="metric-label">Bugun yangi</div>
@@ -109,7 +110,7 @@
     </div>
   </div>
 
-  <div class="table-responsive">
+  <div class="table-responsive kc-twrap">
     <table class="p-table">
       <thead>
         <tr>
@@ -130,7 +131,7 @@
             <span style="font-family:'JetBrains Mono',monospace;color:var(--p-accent);font-size:12px">#{{ $user->id }}</span>
           </td>
           <td>
-            <div class="d-flex align-items-center gap-2">
+            <div class="flex items-center gap-2">
               <div class="av av-blue">
                 @if($user->avatar)
                   <img src="{{ Storage::url($user->avatar) }}" alt="">
@@ -175,7 +176,7 @@
             {{ $user->created_at?->format('d.m.Y') }}
           </td>
           <td>
-            <div class="d-flex align-items-center gap-1">
+            <div class="flex items-center gap-1">
               <a href="{{ route('panel.users.show', $user) }}" class="btn-p ghost sm" title="Ko'rish">
                 <i class="bi bi-eye"></i>
               </a>
@@ -206,7 +207,7 @@
 
   {{-- Pagination --}}
   @if($users->hasPages())
-  <div class="d-flex align-items-center justify-content-between mt-3" style="padding-top:12px;border-top:1px solid var(--p-border)">
+  <div class="flex items-center justify-between mt-3" style="padding-top:12px;border-top:1px solid var(--p-border)">
     <div style="font-size:12px;color:var(--p-hint)">
       {{ $users->firstItem() }}–{{ $users->lastItem() }} / {{ $users->total() }} ta natija
     </div>

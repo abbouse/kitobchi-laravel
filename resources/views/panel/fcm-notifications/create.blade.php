@@ -3,24 +3,18 @@
 @section('page-title', 'Push bildirishnoma yuborish')
 
 @section('content')
-<div class="row justify-content-center">
-  <div class="col-xl-7">
+<div class="kc-page-inner w-full min-w-0">
+    <x-panel.page-header back-href="{{ route('panel.fcm-notifications.index') }}">
+  <x-slot name="heading">Yangi push xabar</x-slot>
+  <x-slot name="meta">Foydalanuvchilar, sotuvchilar yoki kuryerlarga</x-slot>
+</x-panel.page-header>
 
-    <div class="d-flex align-items-center gap-3 mb-4 fade-up">
-      <a href="{{ route('panel.fcm-notifications.index') }}" class="btn-p ghost icon">
-        <i class="bi bi-arrow-left"></i>
-      </a>
-      <div>
-        <h1 class="page-title">Yangi push xabar</h1>
-        <p class="page-sub">Foydalanuvchilar, sotuvchilar yoki kuryerlarga</p>
-      </div>
-    </div>
 
     {{-- Token count preview --}}
     <div class="row g-2 mb-4 fade-up">
       @foreach($targets as $key => $t)
       <div class="col-4">
-        <div class="p-card d-flex align-items-center gap-3" style="padding:14px"
+        <div class="p-card flex items-center gap-3" style="padding:14px"
              id="preview-{{ $key }}">
           <div style="width:36px;height:36px;border-radius:9px;display:flex;
                       align-items:center;justify-content:center;font-size:16px;
@@ -46,11 +40,11 @@
       <div class="p-card mb-3 fade-up">
         <div class="dash-card-head"><div class="dash-card-title">Xabar ma'lumotlari</div></div>
         <div class="dash-card-body">
-          <div class="row g-3">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
 
             {{-- Sarlavha --}}
-            <div class="col-12">
-              <label class="p-label">Sarlavha <span style="color:var(--p-danger)">*</span></label>
+            <div class="">
+              <label class="p-form-label">Sarlavha <span style="color:var(--p-danger)">*</span></label>
               <input type="text" name="name"
                      class="p-form-control @error('name') is-invalid @enderror"
                      value="{{ old('name') }}" required maxlength="255"
@@ -60,8 +54,8 @@
             </div>
 
             {{-- Matn --}}
-            <div class="col-12">
-              <label class="p-label">Xabar matni <span style="color:var(--p-danger)">*</span></label>
+            <div class="">
+              <label class="p-form-label">Xabar matni <span style="color:var(--p-danger)">*</span></label>
               <textarea name="description" rows="3"
                         class="p-form-control @error('description') is-invalid @enderror"
                         required maxlength="500"
@@ -74,11 +68,11 @@
             </div>
 
             {{-- Qabul qiluvchi --}}
-            <div class="col-12">
-              <label class="p-label mb-2">Qabul qiluvchilar <span style="color:var(--p-danger)">*</span></label>
-              <div class="row g-2">
+            <div class="">
+              <label class="p-form-label mb-2">Qabul qiluvchilar <span style="color:var(--p-danger)">*</span></label>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                 @foreach($targets as $key => $t)
-                <div class="col-12">
+                <div class="">
                   <label style="display:flex;align-items:center;gap:12px;cursor:pointer;
                                 background:var(--p-elevated);border:2px solid var(--p-border);
                                 border-radius:10px;padding:14px 16px;transition:all .15s"
@@ -120,7 +114,7 @@
       <div class="p-card mb-3 fade-up" style="background:var(--p-elevated);border-style:dashed">
         <div class="dash-card-head">
           <div class="dash-card-title" style="font-size:12px;color:var(--p-hint)">
-            <i class="bi bi-phone me-1"></i> Telefon ko'rinishi (preview)
+            <i class="bi bi-phone mr-1"></i> Telefon ko'rinishi (preview)
           </div>
         </div>
         <div class="dash-card-body">
@@ -156,15 +150,13 @@
         </div>
       </div>
 
-      <div class="d-flex gap-2 justify-content-end fade-up">
+      <div class="flex gap-2 justify-end fade-up">
         <a href="{{ route('panel.fcm-notifications.index') }}" class="btn-p ghost">Bekor qilish</a>
-        <button type="submit" class="btn-p" id="submitBtn">
+        <button type="submit" class="btn-p primary" id="submitBtn">
           <i class="bi bi-send-fill"></i> Yuborish
         </button>
       </div>
     </form>
-
-  </div>
 </div>
 @endsection
 

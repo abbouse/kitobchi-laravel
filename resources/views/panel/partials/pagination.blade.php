@@ -1,5 +1,5 @@
 @if($paginator->hasPages())
-<div class="d-flex align-items-center justify-content-between flex-wrap gap-2"
+<div class="flex items-center justify-between flex-wrap gap-2"
      style="padding: 14px 20px; border-top: 1px solid var(--p-border)">
 
   {{-- Info --}}
@@ -12,7 +12,7 @@
   </div>
 
   {{-- Sahifalar --}}
-  <div class="d-flex align-items-center gap-1">
+  <div class="flex items-center gap-1">
 
     {{-- Oldingi --}}
     @if($paginator->onFirstPage())

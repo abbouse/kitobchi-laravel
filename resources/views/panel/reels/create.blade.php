@@ -4,20 +4,15 @@
 
 @section('content')
 
-<div class="d-flex align-items-center gap-3 mb-4 fade-up">
-  <a href="{{ route('panel.reels.index') }}" class="btn-p ghost icon">
-    <i class="bi bi-arrow-left"></i>
-  </a>
-  <h1 class="page-title">Yangi Reel yaratish</h1>
-</div>
+<x-panel.page-header back-href="{{ route('panel.reels.index') }}">
+  <x-slot name="heading">Yangi Reel yaratish</x-slot>
+</x-panel.page-header>
 
-<div class="row justify-content-center">
-  <div class="col-xl-8">
+<div class="kc-page-inner w-full min-w-0">
     <form method="POST" action="{{ route('panel.reels.store') }}">
       @csrf
       @include('panel.reels._form', ['reel' => null])
     </form>
-  </div>
 </div>
 
 @endsection

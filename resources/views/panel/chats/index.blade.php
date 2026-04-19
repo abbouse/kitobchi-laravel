@@ -4,12 +4,11 @@
 
 @section('content')
 
-<div class="d-flex align-items-start justify-content-between mb-4 fade-up">
-  <div>
-    <h1 class="page-title">Chat kuzatuv</h1>
-    <p class="page-sub">Foydalanuvchilar suhbatlari va AI chat tarixi</p>
-  </div>
-</div>
+<x-panel.page-header>
+  <x-slot name="heading">Chat kuzatuv</x-slot>
+  <x-slot name="meta">Foydalanuvchilar suhbatlari va AI chat tarixi</x-slot>
+</x-panel.page-header>
+
 
 {{-- Tabs --}}
 <div class="tab-pills fade-up mb-3">
@@ -45,7 +44,7 @@
 
 {{-- Table --}}
 <div class="p-card fade-up">
-  <div class="table-responsive">
+  <div class="table-responsive kc-twrap">
     <table class="p-table">
       <thead>
         @if($tab === 'ai')
@@ -81,7 +80,7 @@
         @if($tab === 'ai')
         <tr>
           <td>
-            <div class="d-flex align-items-center gap-2">
+            <div class="flex items-center gap-2">
               <div style="width:28px;height:28px;border-radius:50%;overflow:hidden;flex-shrink:0;
                           background:linear-gradient(135deg,var(--p-accent),#7c5cfc);
                           display:flex;align-items:center;justify-content:center;
@@ -142,7 +141,7 @@
             @if($conv->seller_name)
             <a href="{{ route('panel.sellers.show', $conv->seller_id_val) }}"
                style="font-size:12.5px;font-weight:500;color:var(--p-warning);text-decoration:none">
-              <i class="bi bi-shop-window me-1"></i>{{ $conv->seller_name }}
+              <i class="bi bi-shop-window mr-1"></i>{{ $conv->seller_name }}
             </a>
             @else
               <span style="color:var(--p-hint)">—</span>
@@ -216,7 +215,7 @@
   </div>
 
   @if($conversations->hasPages())
-  <div class="d-flex align-items-center justify-content-between px-3 py-2"
+  <div class="flex items-center justify-between px-3 py-2"
        style="border-top:1px solid var(--p-border)">
     <div style="font-size:12px;color:var(--p-hint)">
       {{ $conversations->firstItem() }}–{{ $conversations->lastItem() }}

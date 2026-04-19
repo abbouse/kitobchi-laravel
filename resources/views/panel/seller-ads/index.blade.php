@@ -4,28 +4,34 @@
 
 @section('content')
 
-<div class="d-flex align-items-center justify-content-between mb-3">
-  <div class="tab-pills">
-    @foreach([
-      ['pending','Kutilmoqda','warning'],
-      ['approved','Tasdiqlangan','success'],
-      ['rejected','Rad etilgan','danger'],
-      ['active','Faol','info'],
-      ['expired','Muddati o\'tgan','muted'],
-    ] as [$k,$l,$c])
-    <a href="{{ request()->fullUrlWithQuery(['tab'=>$k,'page'=>1]) }}"
-       class="tab-pill {{ $tab===$k?'active':'' }}">
-      {{ $l }} <span class="tab-badge">{{ $counts[$k] }}</span>
-    </a>
-    @endforeach
-  </div>
-  <a href="{{ route('panel.seller-ads.settings') }}" class="btn-p ghost">
-    <i class="bi bi-gear"></i> Narxlar
+<x-panel.page-header>
+  <x-slot name="heading">Reklamalar</x-slot>
+  <x-slot name="meta">Sotuvchilar reklama bannerlarini moderatsiya</x-slot>
+  <x-slot name="actions">
+    <a href="{{ route('panel.seller-ads.settings') }}" class="btn-p ghost">
+        <i class="bi bi-gear"></i> Narxlar
+      </a>
+  </x-slot>
+</x-panel.page-header>
+
+
+<div class="tab-pills fade-up mb-3">
+  @foreach([
+    ['pending','Kutilmoqda','warning'],
+    ['approved','Tasdiqlangan','success'],
+    ['rejected','Rad etilgan','danger'],
+    ['active','Faol','info'],
+    ['expired','Muddati o\'tgan','muted'],
+  ] as [$k,$l,$c])
+  <a href="{{ request()->fullUrlWithQuery(['tab'=>$k,'page'=>1]) }}"
+     class="tab-pill {{ $tab===$k?'active':'' }}">
+    {{ $l }} <span class="tab-badge">{{ $counts[$k] }}</span>
   </a>
+  @endforeach
 </div>
 
 <div class="filter-bar mb-3">
-  <form method="GET" class="d-flex flex-wrap gap-2">
+  <form method="GET" class="flex flex-wrap gap-2">
     <input type="hidden" name="tab" value="{{ $tab }}">
     <input type="search" name="search" class="p-form-control" placeholder="ID, sotuvchi ID..."
            value="{{ request('search') }}" style="width:200px">
@@ -35,13 +41,13 @@
       <option value="{{ $t }}" {{ request('type')===$t?'selected':'' }}>{{ $t }}</option>
       @endforeach
     </select>
-    <button class="btn-p" type="submit"><i class="bi bi-search"></i></button>
+    <button class="btn-p primary" type="submit"><i class="bi bi-search"></i></button>
     <a href="{{ route('panel.seller-ads.index',['tab'=>$tab]) }}" class="btn-p ghost"><i class="bi bi-x"></i></a>
   </form>
 </div>
 
 <div class="p-card p-0">
-  <div class="table-responsive">
+  <div class="table-responsive kc-twrap">
     <table class="p-table" style="min-width:780px">
       <thead>
         <tr>
@@ -117,7 +123,7 @@
           <td><span class="{{ $modCls }}">{{ $modLbl }}</span></td>
           <td><span class="{{ $payCls }}">{{ $payLbl }}</span></td>
           <td>
-            <div class="d-flex gap-1">
+            <div class="flex gap-1">
               @if($ad->moderation === 'pending')
               <form method="POST" action="{{ route('panel.seller-ads.moderate', $ad) }}">
                 @csrf @method('PATCH')

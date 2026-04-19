@@ -3,6 +3,8 @@
 @section('title', 'Maxfiylik Siyosati')
 
 @section('content')
+<article class="l-doc-card">
+<div class="l-doc-body kc-doc-static">
     <!-- Document Header -->
     <div class="doc-header">
         <h1 class="doc-title">Maxfiylik Siyosati</h1>
@@ -864,3 +866,6 @@
             Ushbu Maxfiylik siyosati yuridik kuchga ega rasmiy hujjat hisoblanadi va "Kitobchi" MChJ tomonidan qo'llaniladigan maxfiylik standartlarini belgilaydi.
         </p>
     </div>
+</div>
+</article>
+@endsection

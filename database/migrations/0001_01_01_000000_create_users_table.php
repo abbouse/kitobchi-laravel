@@ -11,6 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // users, password_reset_tokens, sessions — kitobchi_structure.sql da (0000 migration).
+        if (Schema::hasTable('users')) {
+            return;
+        }
+
         Schema::create('users', function (Blueprint $table) {
             $table->id();
             $table->string('name');

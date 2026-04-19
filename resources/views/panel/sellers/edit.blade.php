@@ -9,30 +9,26 @@
   $curTypes   = $seller->activity_types; // accessor — har doim array
 @endphp
 
-<div class="d-flex align-items-center gap-3 mb-4 fade-up">
-  <a href="{{ route('panel.sellers.show', $seller) }}" class="btn-p ghost icon">
-    <i class="bi bi-arrow-left"></i>
-  </a>
-  <div>
-    <h1 class="page-title">{{ $seller->shop_name }}</h1>
-    <p class="page-sub">ID: #{{ $seller->id }}</p>
-  </div>
-</div>
+<x-panel.page-header back-href="{{ route('panel.sellers.show', $seller) }}">
+  <x-slot name="heading">{{ $seller->shop_name }}</x-slot>
+  <x-slot name="meta">ID: #{{ $seller->id }}</x-slot>
+</x-panel.page-header>
+
 
 <form method="POST" action="{{ route('panel.sellers.update', $seller) }}"
       enctype="multipart/form-data">
   @csrf @method('PUT')
 
-  <div class="row g-3">
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
 
     {{-- ── Asosiy ─────────────────────────────────────────────── --}}
-    <div class="col-xl-8 fade-up">
+    <div class="xl:col-span-8 fade-up">
       <div class="p-card">
         <div class="p-card-header"><div class="p-card-title">Asosiy ma'lumotlar</div></div>
         <div style="padding:0 18px 18px">
-          <div class="row g-3">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
 
-            <div class="col-12">
+            <div class="">
               <label class="p-form-label">Do'kon nomi <span style="color:var(--p-danger)">*</span></label>
               <input type="text" name="shop_name"
                      class="p-form-control @error('shop_name') border-danger @enderror"
@@ -42,19 +38,19 @@
               @enderror
             </div>
 
-            <div class="col-md-6">
+            <div class="">
               <label class="p-form-label">Ism</label>
               <input type="text" name="firstname" class="p-form-control"
                      value="{{ old('firstname', $seller->firstname) }}" placeholder="Ism">
             </div>
 
-            <div class="col-md-6">
+            <div class="">
               <label class="p-form-label">Familiya</label>
               <input type="text" name="lastname" class="p-form-control"
                      value="{{ old('lastname', $seller->lastname) }}" placeholder="Familiya">
             </div>
 
-            <div class="col-md-6">
+            <div class="">
               <label class="p-form-label">Telefon <span style="color:var(--p-danger)">*</span></label>
               <input type="text" name="phone_number"
                      class="p-form-control @error('phone_number') border-danger @enderror"
@@ -64,7 +60,7 @@
               @enderror
             </div>
 
-            <div class="col-md-6">
+            <div class="">
               <label class="p-form-label">Viloyat <span style="color:var(--p-danger)">*</span></label>
               <select name="region" class="p-form-control" required>
                 @foreach([
@@ -80,7 +76,7 @@
               </select>
             </div>
 
-            <div class="col-md-6">
+            <div class="">
               <label class="p-form-label">
                 Yangi parol
                 <span style="color:var(--p-hint);font-size:11px">(ixtiyoriy)</span>
@@ -89,13 +85,13 @@
                      placeholder="Yangi parol..." autocomplete="new-password">
             </div>
 
-            <div class="col-md-6">
+            <div class="">
               <label class="p-form-label">Balans (UZS)</label>
               <input type="number" name="balance" class="p-form-control"
                      value="{{ old('balance', $seller->balance ?? 0) }}" min="0" step="1">
             </div>
 
-            <div class="col-md-6">
+            <div class="">
               <label class="p-form-label">
                 Komissiya foizi (%)
                 <span style="color:var(--p-hint);font-size:11px">— global: {{ \App\Models\CommissionSetting::orderBy('priceFrom')->first()?->percent ?? '—' }}%</span>
@@ -115,7 +111,7 @@
 
             {{-- Hodim uchun rol --}}
             @if(!$isMainShop)
-            <div class="col-md-6">
+            <div class="">
               <label class="p-form-label">Rol</label>
               <select name="role" class="p-form-control">
                 <option value="">Tanlang</option>
@@ -128,7 +124,7 @@
               </select>
             </div>
 
-            <div class="col-md-6">
+            <div class="">
               <label class="p-form-label">Hodim holati</label>
               <select name="staff_status" class="p-form-control">
                 <option value="active"
@@ -145,9 +141,9 @@
 
             {{-- Faoliyat turlari --}}
             @if($isMainShop)
-            <div class="col-12">
+            <div class="">
               <label class="p-form-label">Faoliyat turlari</label>
-              <div class="d-flex gap-3 flex-wrap">
+              <div class="flex gap-3 flex-wrap">
                 @foreach(['Kitob', 'Kanstovar'] as $type)
                 @php
                   $checked = in_array($type, old('activity_types', $curTypes));
@@ -172,7 +168,7 @@
     </div>
 
     {{-- ── O'ng panel ──────────────────────────────────────────── --}}
-    <div class="col-xl-4 fade-up">
+    <div class="xl:col-span-4 fade-up">
 
       {{-- Foto --}}
       <div class="p-card mb-3">
@@ -225,8 +221,8 @@
     </div>
 
     {{-- Submit --}}
-    <div class="col-12 fade-up">
-      <div class="d-flex gap-2">
+    <div class=" fade-up">
+      <div class="flex gap-2">
         <button type="submit" class="btn-p primary">
           <i class="bi bi-check-lg"></i> Saqlash
         </button>

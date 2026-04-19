@@ -3,9 +3,16 @@
 @section('page-title', 'Kuryer buyurtmasi #'.$courierOrder->id)
 
 @section('content')
-<div class="row g-3">
 
-  <div class="col-xl-8">
+<x-panel.page-header back-href="{{ route('panel.courier-orders.index') }}">
+  <x-slot name="heading">Kuryer buyurtmasi #{{ $courierOrder->id }}</x-slot>
+  <x-slot name="meta">{{ $courierOrder->created_at?->format('d.m.Y H:i') }}</x-slot>
+</x-panel.page-header>
+
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+
+  <div class="xl:col-span-8">
 
     {{-- Buyurtma items --}}
     <div class="p-card mb-3">
@@ -14,7 +21,7 @@
         <div class="dash-card-sub">{{ $courierOrder->items?->count() ?? 0 }} ta</div>
       </div>
       <div class="dash-card-body">
-        <div class="table-responsive">
+        <div class="table-responsive kc-twrap">
           <table class="p-table">
             <thead>
               <tr><th>Mahsulot ID</th><th>Tur</th><th>Miqdor</th><th>Narx</th><th>Sotuvchi</th></tr>
@@ -55,13 +62,13 @@
     <div class="p-card mb-3">
       <div class="dash-card-head"><div class="dash-card-title">Moliyaviy tafsilot</div></div>
       <div class="dash-card-body">
-        <div class="row g-3">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
           @foreach([
             ['Buyurtma summasi',  number_format($courierOrder->amount).' UZS',        'text',    'bi-cash'],
             ['Kuryer haqi',       number_format($courierOrder->courierPrice).' UZS',   'success', 'bi-person-check'],
             ['Kuryer bonusi',     $courierOrder->courierBonus > 0 ? '+'.number_format($courierOrder->courierBonus).' UZS' : '—', 'warning', 'bi-gift'],
           ] as [$lbl, $val, $clr, $icon])
-          <div class="col-sm-4">
+          <div class="">
             <div style="background:var(--p-elevated);border-radius:10px;padding:16px;text-align:center">
               <i class="bi {{ $icon }}" style="font-size:22px;color:var(--p-{{ $clr }});margin-bottom:8px;display:block"></i>
               <div style="font-size:18px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--p-{{ $clr }})">{{ $val }}</div>
@@ -75,7 +82,7 @@
 
   </div>
 
-  <div class="col-xl-4">
+  <div class="xl:col-span-4">
 
     {{-- Status --}}
     <div class="p-card mb-3">
@@ -87,8 +94,8 @@
         </div>
         <form method="POST" action="{{ route('panel.courier-orders.status', $courierOrder) }}">
           @csrf @method('PATCH')
-          <label class="p-label">Statusni o'zgartirish</label>
-          <div class="d-flex gap-2 mt-1">
+          <label class="p-form-label">Statusni o'zgartirish</label>
+          <div class="flex gap-2 mt-1">
             <select name="status" class="p-form-control flex-fill">
               @foreach($statuses as $k => $s)
               <option value="{{ $k }}" {{ $courierOrder->status === $k ? 'selected' : '' }}>{{ $s['label'] }}</option>
@@ -105,7 +112,7 @@
       <div class="dash-card-head"><div class="dash-card-title">Kuryer</div></div>
       <div class="dash-card-body">
         @if($courierOrder->courier)
-        <div class="d-flex align-items-center gap-3 mb-3">
+        <div class="flex items-center gap-3 mb-3">
           <div style="width:44px;height:44px;border-radius:50%;background:var(--p-elevated);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden">
             @if($courierOrder->courier->photo)
               <img src="{{ $courierOrder->courier->photo }}" style="width:100%;height:100%;object-fit:cover">
@@ -127,8 +134,8 @@
         @else
         <form method="POST" action="{{ route('panel.courier-orders.assign', $courierOrder) }}">
           @csrf @method('PATCH')
-          <label class="p-label">Kuryer tayinlash</label>
-          <div class="d-flex gap-2 mt-1">
+          <label class="p-form-label">Kuryer tayinlash</label>
+          <div class="flex gap-2 mt-1">
             <select name="courier_id" class="p-form-control flex-fill">
               <option value="">Kuryer tanlang</option>
               @foreach(\App\Models\Courier::where('status',1)->orderBy('first_name')->get() as $c)
@@ -147,7 +154,7 @@
       <div class="dash-card-head"><div class="dash-card-title">Mijoz</div></div>
       <div class="dash-card-body">
         @if($courierOrder->user)
-        <div class="d-flex align-items-center gap-3">
+        <div class="flex items-center gap-3">
           <div style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,var(--p-accent),#7c5cfc);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;flex-shrink:0;overflow:hidden">
             @if($courierOrder->user->avatar)
               <img src="{{ $courierOrder->user->avatar }}" style="width:100%;height:100%;object-fit:cover">

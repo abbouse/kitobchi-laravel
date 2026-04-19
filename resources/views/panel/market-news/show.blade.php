@@ -4,46 +4,34 @@
 
 @section('content')
 
-<div class="d-flex align-items-start justify-content-between mb-4 fade-up">
-  <div class="d-flex align-items-center gap-3">
-    <a href="{{ route('panel.market-news.index') }}" class="btn-p ghost icon">
-      <i class="bi bi-arrow-left"></i>
-    </a>
-    <div>
-      <h1 class="page-title">{{ $marketNews->title }}</h1>
-      <p class="page-sub" style="display:flex;align-items:center;gap:8px">
-        {{ $marketNews->created_at?->format('d.m.Y H:i') }}
-        @if($marketNews->status)
-          <span class="s-pill success" style="font-size:10px">Faol</span>
-        @else
-          <span class="s-pill danger" style="font-size:10px">Nofaol</span>
-        @endif
-      </p>
-    </div>
-  </div>
-  <div class="d-flex gap-2">
-    <form method="POST" action="{{ route('panel.market-news.toggle', $marketNews) }}">
-      @csrf @method('PATCH')
-      <button class="btn-p {{ $marketNews->status ? 'ghost' : 'success' }}">
-        <i class="bi bi-{{ $marketNews->status ? 'pause' : 'play' }}-fill"></i>
-        {{ $marketNews->status ? 'O\'chirish' : 'Faollashtirish' }}
-      </button>
-    </form>
-    <a href="{{ route('panel.market-news.edit', $marketNews) }}" class="btn-p ghost">
-      <i class="bi bi-pencil"></i> Tahrirlash
-    </a>
-    <form method="POST" action="{{ route('panel.market-news.destroy', $marketNews) }}"
-          onsubmit="return confirm('O\'chirilsinmi?')">
-      @csrf @method('DELETE')
-      <button class="btn-p danger"><i class="bi bi-trash"></i></button>
-    </form>
-  </div>
-</div>
+<x-panel.page-header back-href="{{ route('panel.market-news.index') }}">
+  <x-slot name="heading">{{ $marketNews->title }}</x-slot>
+  <x-slot name="actions">
+    <div class="flex gap-2">
+        <form method="POST" action="{{ route('panel.market-news.toggle', $marketNews) }}">
+          @csrf @method('PATCH')
+          <button class="btn-p {{ $marketNews->status ? 'ghost' : 'success' }}">
+            <i class="bi bi-{{ $marketNews->status ? 'pause' : 'play' }}-fill"></i>
+            {{ $marketNews->status ? 'O\'chirish' : 'Faollashtirish' }}
+          </button>
+        </form>
+        <a href="{{ route('panel.market-news.edit', $marketNews) }}" class="btn-p ghost">
+          <i class="bi bi-pencil"></i> Tahrirlash
+        </a>
+        <form method="POST" action="{{ route('panel.market-news.destroy', $marketNews) }}"
+              onsubmit="return confirm('O\'chirilsinmi?')">
+          @csrf @method('DELETE')
+          <button class="btn-p danger"><i class="bi bi-trash"></i></button>
+        </form>
+      </div>
+  </x-slot>
+</x-panel.page-header>
 
-<div class="row g-3">
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
 
   {{-- ── Chap ─────────────────────────────────────── --}}
-  <div class="col-xl-5">
+  <div class="xl:col-span-5">
 
     {{-- Rasm --}}
     @if($marketNews->imgUrl)
@@ -94,7 +82,7 @@
   </div>
 
   {{-- ── O'ng ──────────────────────────────────────── --}}
-  <div class="col-xl-7">
+  <div class="xl:col-span-7">
 
     {{-- Tavsif --}}
     @if($marketNews->description)
@@ -112,10 +100,10 @@
       <div class="p-card-header">
         <div class="p-card-title">
           @if($marketNews->action === 'to_shop')
-            <i class="bi bi-shop-window me-1" style="color:var(--p-warning)"></i>
+            <i class="bi bi-shop-window mr-1" style="color:var(--p-warning)"></i>
             Do'kon preview
           @else
-            <i class="bi bi-book me-1" style="color:var(--p-info)"></i>
+            <i class="bi bi-book mr-1" style="color:var(--p-info)"></i>
             Kitob preview
           @endif
         </div>

@@ -10,61 +10,53 @@
   $stLbl = match($cs) { 'approved'=>'Tasdiqlangan', 'rejected'=>'Rad etildi', default=>'Kutilmoqda' };
 @endphp
 
-<div class="d-flex align-items-start justify-content-between mb-4 fade-up">
-  <div class="d-flex align-items-center gap-3">
-    <a href="{{ route('panel.couriers.index') }}" class="btn-p ghost icon">
-      <i class="bi bi-arrow-left"></i>
-    </a>
-    <div>
-      <h1 class="page-title">{{ $courier->first_name }} {{ $courier->last_name }}</h1>
-      <p class="page-sub" style="display:flex;align-items:center;gap:8px">
-        ID: #{{ $courier->id }}
-        <span class="s-pill {{ $stCls }}" style="font-size:11px">{{ $stLbl }}</span>
-      </p>
-    </div>
-  </div>
-  <div class="d-flex gap-2">
-    @if($cs === 'pending')
-      <form method="POST" action="{{ route('panel.couriers.approve', $courier) }}">
-        @csrf @method('PATCH')
-        <button class="btn-p success"><i class="bi bi-check-lg"></i> Tasdiqlash</button>
-      </form>
-      <form method="POST" action="{{ route('panel.couriers.reject', $courier) }}">
-        @csrf @method('PATCH')
-        <button class="btn-p danger ghost"><i class="bi bi-x-lg"></i> Rad etish</button>
-      </form>
-    @elseif($cs === 'rejected')
-      <form method="POST" action="{{ route('panel.couriers.approve', $courier) }}">
-        @csrf @method('PATCH')
-        <button class="btn-p ghost">
-          <i class="bi bi-arrow-counterclockwise"></i> Qayta tasdiqlash
-        </button>
-      </form>
-    @elseif($cs === 'approved')
-      <form method="POST" action="{{ route('panel.couriers.reject', $courier) }}"
-            onsubmit="return confirm('Kuryerni bloklaysizmi?')">
-        @csrf @method('PATCH')
-        <button class="btn-p danger ghost">
-          <i class="bi bi-slash-circle"></i> Bloklash
-        </button>
-      </form>
-    @endif
-    <a href="{{ route('panel.couriers.edit', $courier) }}" class="btn-p ghost">
-      <i class="bi bi-pencil"></i> Tahrirlash
-    </a>
-  </div>
-</div>
+<x-panel.page-header back-href="{{ route('panel.couriers.index') }}">
+  <x-slot name="heading">{{ $courier->first_name }} {{ $courier->last_name }}</x-slot>
+  <x-slot name="actions">
+    <div class="flex gap-2">
+        @if($cs === 'pending')
+          <form method="POST" action="{{ route('panel.couriers.approve', $courier) }}">
+            @csrf @method('PATCH')
+            <button class="btn-p success"><i class="bi bi-check-lg"></i> Tasdiqlash</button>
+          </form>
+          <form method="POST" action="{{ route('panel.couriers.reject', $courier) }}">
+            @csrf @method('PATCH')
+            <button class="btn-p danger ghost"><i class="bi bi-x-lg"></i> Rad etish</button>
+          </form>
+        @elseif($cs === 'rejected')
+          <form method="POST" action="{{ route('panel.couriers.approve', $courier) }}">
+            @csrf @method('PATCH')
+            <button class="btn-p ghost">
+              <i class="bi bi-arrow-counterclockwise"></i> Qayta tasdiqlash
+            </button>
+          </form>
+        @elseif($cs === 'approved')
+          <form method="POST" action="{{ route('panel.couriers.reject', $courier) }}"
+                onsubmit="return confirm('Kuryerni bloklaysizmi?')">
+            @csrf @method('PATCH')
+            <button class="btn-p danger ghost">
+              <i class="bi bi-slash-circle"></i> Bloklash
+            </button>
+          </form>
+        @endif
+        <a href="{{ route('panel.couriers.edit', $courier) }}" class="btn-p ghost">
+          <i class="bi bi-pencil"></i> Tahrirlash
+        </a>
+      </div>
+  </x-slot>
+</x-panel.page-header>
+
 
 {{-- Stats --}}
-<div class="row g-3 mb-4 fade-up">
+<div class="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-4">
   @foreach([
     [$orderCount,                                  'Buyurtmalar',  'accent',  'bi-bicycle'],
     [number_format($totalEarned/1000).'K UZS',     'Jami topdi',   'success', 'bi-cash-stack'],
     [number_format($pendingPay/1000).'K UZS',      'Kutilmoqda',   'warning', 'bi-hourglass-split'],
     [number_format($courier->balance ?? 0).' UZS', 'Balans',       'info',    'bi-wallet2'],
   ] as [$val,$lbl,$clr,$icon])
-  <div class="col-6 col-xl-3">
-    <div class="p-card d-flex align-items-center gap-3" style="padding:16px">
+  <div class="">
+    <div class="p-card flex items-center gap-3" style="padding:16px">
       <div style="width:40px;height:40px;border-radius:10px;flex-shrink:0;font-size:18px;
                   background:var(--p-{{ $clr }}-d,var(--p-elevated));
                   color:var(--p-{{ $clr }});display:flex;align-items:center;justify-content:center">
@@ -81,10 +73,10 @@
   @endforeach
 </div>
 
-<div class="row g-3">
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-3">
 
   {{-- ── CHAP ─────────────────────────────────────────────────── --}}
-  <div class="col-xl-4">
+  <div class="xl:col-span-4">
 
     <div class="p-card mb-3 fade-up">
       <div style="text-align:center;padding:24px 20px 16px">
@@ -117,7 +109,7 @@
           ['bi-wallet2',   'Balans',     number_format($courier->balance ?? 0).' UZS'],
           ['bi-calendar',  "Qo'shildi", $courier->created_at?->format('d.m.Y')],
         ] as [$icon, $label, $value])
-        <div class="d-flex align-items-start gap-3 mb-3">
+        <div class="flex items-start gap-3 mb-3">
           <div style="width:28px;height:28px;border-radius:7px;background:var(--p-elevated);
                       display:flex;align-items:center;justify-content:center;flex-shrink:0">
             <i class="bi {{ $icon }}" style="font-size:12px;color:var(--p-muted)"></i>
@@ -147,7 +139,7 @@
     @if($devices->count())
     <div class="p-card mb-3 fade-up">
       <div class="p-card-header">
-        <div class="p-card-title"><i class="bi bi-phone me-1"></i> Qurilmalar</div>
+        <div class="p-card-title"><i class="bi bi-phone mr-1"></i> Qurilmalar</div>
         <span class="s-pill muted" style="font-size:10px">{{ $devices->count() }} ta</span>
       </div>
       <div style="padding:0 18px 14px">
@@ -174,14 +166,14 @@
     <div class="p-card fade-up" style="border-color:rgba(255,92,106,.2);background:var(--p-danger-d)">
       <div class="p-card-header">
         <div class="p-card-title" style="color:var(--p-danger)">
-          <i class="bi bi-exclamation-triangle-fill me-1"></i> Ban loglari
+          <i class="bi bi-exclamation-triangle-fill mr-1"></i> Ban loglari
         </div>
       </div>
       <div style="padding:0 18px 14px">
         @foreach($banLogs as $log)
         <div style="padding:10px 0;border-bottom:1px solid rgba(255,92,106,.15);
                     {{ $loop->last ? 'border-bottom:none' : '' }}">
-          <div class="d-flex align-items-center justify-content-between mb-1">
+          <div class="flex items-center justify-between mb-1">
             <span class="s-pill {{ ($log->type ?? '')=='warning' ? 'warning' : 'muted' }}"
                   style="font-size:10px">
               {{ ($log->type ?? '') === 'warning' ? 'Ogohlantirish' : 'Ban' }}
@@ -205,10 +197,10 @@
   </div>
 
   {{-- ── O'NG: Tabs ───────────────────────────────────────────── --}}
-  <div class="col-xl-8">
+  <div class="xl:col-span-8">
 
     @php $activeTab = request('section', 'orders'); @endphp
-    <div class="d-flex gap-2 flex-wrap mb-3 fade-up">
+    <div class="flex gap-2 flex-wrap mb-3 fade-up">
       @foreach([
         ['orders',       'Buyurtmalar',    'bi-bicycle',    $orderCount],
         ['transactions', 'Tranzaksiyalar', 'bi-credit-card', null],
@@ -228,7 +220,7 @@
         <a href="{{ route('panel.courier-orders.index', ['courier_id'=>$courier->id]) }}"
            class="btn-p ghost sm">Barchasi <i class="bi bi-arrow-right"></i></a>
       </div>
-      <div class="table-responsive">
+      <div class="table-responsive kc-twrap">
         <table class="p-table">
           <thead>
             <tr>
@@ -263,7 +255,7 @@
               </td>
               <td>
                 @if($order->user)
-                <div class="d-flex align-items-center gap-2">
+                <div class="flex items-center gap-2">
                   <div style="width:28px;height:28px;border-radius:50%;overflow:hidden;flex-shrink:0;
                               background:linear-gradient(135deg,var(--p-accent),#7c5cfc);
                               display:flex;align-items:center;justify-content:center;
@@ -328,7 +320,7 @@
           </div>
         </div>
       </div>
-      <div class="table-responsive">
+      <div class="table-responsive kc-twrap">
         <table class="p-table">
           <thead>
             <tr>

@@ -1,0 +1,35 @@
+/**
+ * Minimal tokens for legal hub (Popcorn palette) when Webflow bundle is not loaded.
+ */
+:root {
+    --pc-black: #393737;
+    --pc-white: #fff;
+    --pc-grey: #888787;
+    --pc-bg: #f7f7f7;
+    --pc-line: #f0efef;
+}
+
+body.kc-landing *,
+body.kc-landing *::before,
+body.kc-landing *::after {
+    box-sizing: border-box;
+}
+
+body.kc-legal {
+    margin: 0;
+}
+
+.kc-legal {
+    --bg: var(--pc-bg);
+    --surface: var(--pc-white);
+    --border: var(--pc-line);
+    --border2: #e4e2e2;
+    --text: var(--pc-black);
+    --muted: var(--pc-grey);
+    --hint: #a3a2a2;
+    --accent: var(--pc-black);
+    --accent-d: #2a2929;
+    --accent-bg: rgba(57, 55, 55, 0.06);
+    --shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.1);
+}

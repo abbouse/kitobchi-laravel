@@ -5,14 +5,10 @@
 
 @section('content')
 
-<div class="page-header fade-up d-flex align-items-center gap-3">
-  <a href="{{ isset($admin) ? route('panel.admins.show', $admin) : route('panel.admins.index') }}"
-     class="btn-p ghost icon"><i class="bi bi-arrow-left"></i></a>
-  <div>
-    <h1 class="page-title">{{ isset($admin) ? $admin->name : 'Yangi admin' }}</h1>
-    <p class="page-sub">{{ isset($admin) ? "ID #$admin->id · ".$admin->role_label : 'Yangi admin yaratish' }}</p>
-  </div>
-</div>
+<x-panel.page-header back-href="{{ isset($admin) ? route('panel.admins.show', $admin) : route('panel.admins.index') }}">
+  <x-slot name="heading">{{ isset($admin) ? $admin->name : 'Yangi admin' }}</x-slot>
+  <x-slot name="meta">{{ isset($admin) ? "ID #$admin->id · ".$admin->role_label : 'Yangi admin yaratish' }}</x-slot>
+</x-panel.page-header>
 
 @php
 $allPermissions = [
@@ -35,40 +31,40 @@ $currentPerms = $admin->permissions ?? [];
   @csrf
   @if(isset($admin)) @method('PUT') @endif
 
-  <div class="row g-3">
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
 
     {{-- ── Asosiy ─────────────────────── --}}
-    <div class="col-xl-7 fade-up d1">
+    <div class="xl:col-span-7 fade-up">
       <div class="p-card">
         <div class="p-card-title mb-3">Asosiy ma'lumotlar</div>
-        <div class="row g-3">
-          <div class="col-md-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div class="">
             <label class="p-form-label">Ism <span style="color:var(--p-danger)">*</span></label>
             <input type="text" name="name" class="p-form-control @error('name') border-danger @enderror"
                    value="{{ old('name', $admin->name ?? '') }}" required>
             @error('name')<div style="font-size:11px;color:var(--p-danger);margin-top:4px">{{ $message }}</div>@enderror
           </div>
-          <div class="col-md-6">
+          <div class="">
             <label class="p-form-label">Email <span style="color:var(--p-danger)">*</span></label>
             <input type="email" name="email" class="p-form-control @error('email') border-danger @enderror"
                    value="{{ old('email', $admin->email ?? '') }}" required>
             @error('email')<div style="font-size:11px;color:var(--p-danger);margin-top:4px">{{ $message }}</div>@enderror
           </div>
-          <div class="col-md-6">
+          <div class="">
             <label class="p-form-label">Parol {{ isset($admin) ? '(ixtiyoriy)' : '*' }}</label>
             <input type="password" name="password" class="p-form-control"
                    placeholder="{{ isset($admin) ? 'O\'zgartirish uchun to\'ldiring...' : 'Kamida 8 belgi' }}"
                    {{ isset($admin) ? '' : 'required' }}>
           </div>
-          <div class="col-md-6">
+          <div class="">
             <label class="p-form-label">Parolni tasdiqlang</label>
             <input type="password" name="password_confirmation" class="p-form-control" placeholder="Parolni qaytaring">
           </div>
-          <div class="col-12">
+          <div class="">
             <label class="p-form-label">Rol <span style="color:var(--p-danger)">*</span></label>
-            <div class="row g-2" id="roleSelector">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2" id="roleSelector">
               @foreach(['superadmin'=>['Super Admin','Barcha bo\'limlarga cheksiz kirish','danger'],'admin'=>['Admin','Ko\'pgina bo\'limlar boshqaruvi','accent'],'moderator'=>['Moderator','Faqat belgilangan bo\'limlar','warning']] as $val=>[$label,$desc,$color])
-              <div class="col-md-4">
+              <div class="md:col-span-4">
                 <label style="display:block;cursor:pointer">
                   <input type="radio" name="role" value="{{ $val }}"
                          {{ old('role', $admin->role ?? 'moderator') === $val ? 'checked' : '' }}
@@ -87,7 +83,7 @@ $currentPerms = $admin->permissions ?? [];
     </div>
 
     {{-- ── Ruxsatlar ───────────────────── --}}
-    <div class="col-xl-5 fade-up d2">
+    <div class="xl:col-span-5 fade-up">
       <div class="p-card" id="permissionsCard">
         <div class="p-card-title mb-1">Ruxsatlar</div>
         <div style="font-size:12px;color:var(--p-hint);margin-bottom:16px">
@@ -96,9 +92,9 @@ $currentPerms = $admin->permissions ?? [];
 
         <div id="permissionsWrap">
           @foreach($allPermissions as $perm => $info)
-          <div class="d-flex align-items-center justify-content-between mb-3"
+          <div class="flex items-center justify-between mb-3"
                style="padding:10px;background:var(--p-elevated);border-radius:8px">
-            <div class="d-flex align-items-center gap-2">
+            <div class="flex items-center gap-2">
               <i class="bi {{ $info['icon'] }}" style="font-size:14px;color:var(--p-muted)"></i>
               <span style="font-size:13px;color:var(--p-text)">{{ $info['label'] }}</span>
             </div>
@@ -110,7 +106,7 @@ $currentPerms = $admin->permissions ?? [];
           </div>
           @endforeach
 
-          <div class="d-flex gap-2 mt-2">
+          <div class="flex gap-2 mt-2">
             <button type="button" class="btn-p ghost sm" onclick="toggleAllPerms(true)">
               Barchasini belgilash
             </button>
@@ -123,7 +119,7 @@ $currentPerms = $admin->permissions ?? [];
 
       {{-- Holat --}}
       <div class="p-card mt-3">
-        <div class="d-flex align-items-center justify-content-between">
+        <div class="flex items-center justify-between">
           <div>
             <div style="font-size:13px;font-weight:500;color:var(--p-text)">Aktiv</div>
             <div style="font-size:11px;color:var(--p-hint)">Tizimga kira oladi</div>
@@ -137,8 +133,8 @@ $currentPerms = $admin->permissions ?? [];
     </div>
 
     {{-- Submit --}}
-    <div class="col-12 fade-up d3">
-      <div class="d-flex gap-2">
+    <div class=" fade-up d3">
+      <div class="flex gap-2">
         <button type="submit" class="btn-p primary">
           <i class="bi bi-check-lg"></i>
           {{ isset($admin) ? 'Saqlash' : 'Yaratish' }}

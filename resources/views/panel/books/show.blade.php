@@ -5,37 +5,35 @@
 
 @section('content')
 
-<div class="page-header fade-up d-flex align-items-start justify-content-between">
-  <div class="d-flex align-items-center gap-3">
-    <a href="{{ route('panel.books.index') }}" class="btn-p ghost icon"><i class="bi bi-arrow-left"></i></a>
-    <div>
-      <h1 class="page-title">{{ $book->name }}</h1>
-      <p class="page-sub">{{ $book->author }} · ID: #{{ $book->id }}</p>
-    </div>
-  </div>
-  <div class="d-flex gap-2">
-    @if($book->is_approved != 1)
-    <form method="POST" action="{{ route('panel.books.moderate', $book) }}">
-      @csrf @method('PATCH')
-      <input type="hidden" name="is_approved" value="1">
-      <button class="btn-p success"><i class="bi bi-check-lg"></i> Tasdiqlash</button>
-    </form>
-    @endif
-    @if($book->is_approved != 2)
-    <form method="POST" action="{{ route('panel.books.moderate', $book) }}">
-      @csrf @method('PATCH')
-      <input type="hidden" name="is_approved" value="2">
-      <button class="btn-p danger"><i class="bi bi-x-lg"></i> Rad etish</button>
-    </form>
-    @endif
-    <a href="{{ route('panel.books.edit', $book) }}" class="btn-p primary"><i class="bi bi-pencil"></i> Tahrirlash</a>
-  </div>
-</div>
+<x-panel.page-header back-href="{{ route('panel.books.index') }}">
+  <x-slot name="heading">{{ $book->name }}</x-slot>
+  <x-slot name="meta">{{ $book->author }} · ID: #{{ $book->id }}</x-slot>
+  <x-slot name="actions">
+    <div class="flex gap-2">
+        @if($book->is_approved != 1)
+        <form method="POST" action="{{ route('panel.books.moderate', $book) }}">
+          @csrf @method('PATCH')
+          <input type="hidden" name="is_approved" value="1">
+          <button class="btn-p success"><i class="bi bi-check-lg"></i> Tasdiqlash</button>
+        </form>
+        @endif
+        @if($book->is_approved != 2)
+        <form method="POST" action="{{ route('panel.books.moderate', $book) }}">
+          @csrf @method('PATCH')
+          <input type="hidden" name="is_approved" value="2">
+          <button class="btn-p danger"><i class="bi bi-x-lg"></i> Rad etish</button>
+        </form>
+        @endif
+        <a href="{{ route('panel.books.edit', $book) }}" class="btn-p primary"><i class="bi bi-pencil"></i> Tahrirlash</a>
+      </div>
+  </x-slot>
+</x-panel.page-header>
 
-<div class="row g-3">
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
 
   {{-- ── Rasm + asosiy ──────────────── --}}
-  <div class="col-xl-4 fade-up d1">
+  <div class="fade-up">
     <div class="p-card mb-3">
       {{-- Rasmlar --}}
       @php $imgs = is_array($book->images) ? $book->images : []; @endphp
@@ -50,7 +48,7 @@
       @endif
 
       {{-- Holat badges --}}
-      <div class="d-flex flex-wrap gap-2 mb-3">
+      <div class="flex flex-wrap gap-2 mb-3">
         @if($book->is_approved == 1)
           <span class="s-pill success">✓ Tasdiqlangan</span>
         @elseif($book->is_approved == 2)
@@ -70,6 +68,8 @@
         @endif
       </div>
 
+      @include('panel.partials.kangaroo-listing-moderation', ['model' => $book])
+
       {{-- Ma'lumotlar --}}
       @php
         $info = [
@@ -84,7 +84,7 @@
         ];
       @endphp
       @foreach($info as $row)
-      <div class="d-flex justify-content-between align-items-center mb-2"
+      <div class="flex justify-between items-center mb-2"
            style="padding:7px 0;border-bottom:1px solid var(--p-border)">
         <span style="font-size:12px;color:var(--p-hint)">{{ $row['label'] }}</span>
         <span style="font-size:13px;font-weight:500;color:var(--p-text)">{{ $row['value'] }}</span>
@@ -94,11 +94,11 @@
   </div>
 
   {{-- ── O'ng ustun ──────────────────── --}}
-  <div class="col-xl-8">
+  <div class="xl:col-span-8">
 
     {{-- Narx --}}
-    <div class="row g-3 mb-3">
-      <div class="col-md-4 fade-up d1">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+      <div class="md:col-span-4 fade-up d1">
         <div class="p-card text-center">
           <div style="font-size:11px;color:var(--p-hint);margin-bottom:4px">Asosiy narx</div>
           <div style="font-size:20px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--p-text)">
@@ -107,7 +107,7 @@
           <div style="font-size:11px;color:var(--p-hint)">UZS</div>
         </div>
       </div>
-      <div class="col-md-4 fade-up d2">
+      <div class="md:col-span-4 fade-up d2">
         <div class="p-card text-center">
           <div style="font-size:11px;color:var(--p-hint);margin-bottom:4px">Chegirma narxi</div>
           <div style="font-size:20px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--p-success)">
@@ -116,7 +116,7 @@
           <div style="font-size:11px;color:var(--p-hint)">UZS</div>
         </div>
       </div>
-      <div class="col-md-4 fade-up d3">
+      <div class="md:col-span-4 fade-up d3">
         <div class="p-card text-center">
           <div style="font-size:11px;color:var(--p-hint);margin-bottom:4px">Chegirma %</div>
           <div style="font-size:20px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--p-warning)">
@@ -138,7 +138,7 @@
     @if($book->tags->count())
     <div class="p-card mb-3 fade-up d3">
       <div class="p-card-title mb-2">Teglar</div>
-      <div class="d-flex flex-wrap gap-2">
+      <div class="flex flex-wrap gap-2">
         @foreach($book->tags as $tag)
           <span class="s-pill accent" style="font-size:12px">{{ $tag->tag_name_uz ?? $tag->name }}</span>
         @endforeach
@@ -149,7 +149,7 @@
     {{-- Statistika --}}
     <div class="p-card fade-up d3">
       <div class="p-card-title mb-3">Savdo statistikasi</div>
-      <div class="row g-3">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
         @php
           $stats = [
             ['label'=>'Jami sotildi','value'=>number_format($book->totalSales ?? 0).' ta','color'=>'var(--p-accent)'],
@@ -159,7 +159,7 @@
           ];
         @endphp
         @foreach($stats as $s)
-        <div class="col-6 col-md-3">
+        <div class="w-1/2 md:col-span-3">
           <div style="text-align:center;padding:12px;background:var(--p-elevated);border-radius:8px">
             <div style="font-size:15px;font-weight:700;font-family:'JetBrains Mono',monospace;color:{{ $s['color'] }}">{{ $s['value'] }}</div>
             <div style="font-size:11px;color:var(--p-hint);margin-top:3px">{{ $s['label'] }}</div>

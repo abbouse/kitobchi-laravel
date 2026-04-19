@@ -4,77 +4,74 @@
 
 @section('content')
 
-<div class="d-flex align-items-start justify-content-between mb-4 fade-up">
-  <div class="d-flex align-items-center gap-3">
-    <a href="{{ route('panel.gift-certificates.index') }}" class="btn-p ghost icon">
-      <i class="bi bi-arrow-left"></i>
-    </a>
-    <div>
-      <h1 class="page-title" style="font-family:'JetBrains Mono',monospace;letter-spacing:.04em">
-        {{ $giftCertificate->code }}
-      </h1>
-      <p class="page-sub">
-        Yaratildi: {{ $giftCertificate->created_at?->format('d.m.Y H:i') }}
-        @if($giftCertificate->expires_at && $giftCertificate->status === 'sent')
-          · <span style="color:{{ $giftCertificate->is_expired ? 'var(--p-danger)' : 'var(--p-warning)' }}">
-            Muddati: {{ $giftCertificate->expires_at->format('d.m.Y') }}
-            ({{ $giftCertificate->expires_at->diffForHumans() }})
-          </span>
-        @endif
-      </p>
+<x-panel.page-header back-href="{{ route('panel.gift-certificates.index') }}">
+  <x-slot name="heading">
+    <h1 class="page-title font-mono text-lg font-semibold tracking-wide text-gray-800 sm:text-xl dark:text-white/90" style="letter-spacing:0.04em">
+      {{ $giftCertificate->code }}
+    </h1>
+  </x-slot>
+  <x-slot name="meta">
+    <p class="page-sub">
+      Yaratildi: {{ $giftCertificate->created_at?->format('d.m.Y H:i') }}
+      @if($giftCertificate->expires_at && $giftCertificate->status === 'sent')
+        · <span style="color:{{ $giftCertificate->is_expired ? 'var(--p-danger)' : 'var(--p-warning)' }}">
+          Muddati: {{ $giftCertificate->expires_at->format('d.m.Y') }}
+          ({{ $giftCertificate->expires_at->diffForHumans() }})
+        </span>
+      @endif
+    </p>
+  </x-slot>
+  <x-slot name="actions">
+    <div class="flex flex-wrap gap-2">
+      @if(!in_array($giftCertificate->status, ['used','cancelled']))
+      <div class="dropdown">
+        <button class="btn-p ghost" data-bs-toggle="dropdown">
+          <i class="bi bi-chevron-down"></i> Status
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end"
+            style="background:var(--p-surface);border:1px solid var(--p-border);
+                   border-radius:10px;min-width:180px;padding:6px">
+          @foreach([
+            'pending_payment' => 'To\'lov kutilmoqda',
+            'paid'            => 'To\'landi',
+            'sent'            => 'Yuborildi',
+            'used'            => 'Ishlatildi',
+            'cancelled'       => 'Bekor qilindi',
+          ] as $val => $lbl)
+          <li>
+            <form method="POST"
+                  action="{{ route('panel.gift-certificates.status', $giftCertificate) }}">
+              @csrf @method('PATCH')
+              <input type="hidden" name="status" value="{{ $val }}">
+              <button type="submit" class="dropdown-item"
+                      style="font-size:13px;padding:8px 12px;border-radius:6px;
+                             background:{{ $val===$giftCertificate->status?'var(--p-elevated)':'transparent' }};
+                             color:{{ $val==='cancelled'?'var(--p-danger)':($val===$giftCertificate->status?'var(--p-accent)':'var(--p-text)') }}">
+                {{ $val===$giftCertificate->status ? '● ' : '○ ' }}{{ $lbl }}
+              </button>
+            </form>
+          </li>
+          @endforeach
+        </ul>
+      </div>
+
+      <form method="POST"
+            action="{{ route('panel.gift-certificates.cancel', $giftCertificate) }}"
+            onsubmit="return confirm('Bekor qilinsinmi?')">
+        @csrf @method('PATCH')
+        <button class="btn-p danger ghost">
+          <i class="bi bi-x-lg"></i> Bekor qilish
+        </button>
+      </form>
+      @endif
     </div>
-  </div>
+  </x-slot>
+</x-panel.page-header>
 
-  <div class="d-flex gap-2">
-    {{-- Status o'zgartirish --}}
-    @if(!in_array($giftCertificate->status, ['used','cancelled']))
-    <div class="dropdown">
-      <button class="btn-p ghost" data-bs-toggle="dropdown">
-        <i class="bi bi-chevron-down"></i> Status
-      </button>
-      <ul class="dropdown-menu dropdown-menu-end"
-          style="background:var(--p-surface);border:1px solid var(--p-border);
-                 border-radius:10px;min-width:180px;padding:6px">
-        @foreach([
-          'pending_payment' => 'To\'lov kutilmoqda',
-          'paid'            => 'To\'landi',
-          'sent'            => 'Yuborildi',
-          'used'            => 'Ishlatildi',
-          'cancelled'       => 'Bekor qilindi',
-        ] as $val => $lbl)
-        <li>
-          <form method="POST"
-                action="{{ route('panel.gift-certificates.status', $giftCertificate) }}">
-            @csrf @method('PATCH')
-            <input type="hidden" name="status" value="{{ $val }}">
-            <button type="submit" class="dropdown-item"
-                    style="font-size:13px;padding:8px 12px;border-radius:6px;
-                           background:{{ $val===$giftCertificate->status?'var(--p-elevated)':'transparent' }};
-                           color:{{ $val==='cancelled'?'var(--p-danger)':($val===$giftCertificate->status?'var(--p-accent)':'var(--p-text)') }}">
-              {{ $val===$giftCertificate->status ? '● ' : '○ ' }}{{ $lbl }}
-            </button>
-          </form>
-        </li>
-        @endforeach
-      </ul>
-    </div>
-
-    <form method="POST"
-          action="{{ route('panel.gift-certificates.cancel', $giftCertificate) }}"
-          onsubmit="return confirm('Bekor qilinsinmi?')">
-      @csrf @method('PATCH')
-      <button class="btn-p danger ghost">
-        <i class="bi bi-x-lg"></i> Bekor qilish
-      </button>
-    </form>
-    @endif
-  </div>
-</div>
-
-<div class="row g-3">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
 
   {{-- ── Chap: Sertifikat kartasi ─────────────────────────── --}}
-  <div class="col-xl-4">
+  <div class="xl:col-span-4">
 
     {{-- Visual karta --}}
     <div class="p-card mb-3 fade-up" style="overflow:hidden">
@@ -144,15 +141,15 @@
   </div>
 
   {{-- ── O'ng: Sotib olgan + Qabul qilgan ───────────────── --}}
-  <div class="col-xl-8">
-    <div class="row g-3">
+  <div class="xl:col-span-8">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
 
       {{-- Sotib olgan --}}
-      <div class="col-md-6">
+      <div class="">
         <div class="p-card h-100 fade-up">
           <div class="p-card-header">
             <div class="p-card-title">
-              <i class="bi bi-person-fill me-1" style="color:var(--p-info)"></i>
+              <i class="bi bi-person-fill mr-1" style="color:var(--p-info)"></i>
               Sotib olgan
             </div>
             <span class="s-pill info" style="font-size:10px">Buyer</span>
@@ -160,7 +157,7 @@
           <div style="padding:16px 18px">
             @if($giftCertificate->buyer)
             @php $buyer = $giftCertificate->buyer; @endphp
-            <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="flex items-center gap-3 mb-3">
               <div style="width:44px;height:44px;border-radius:50%;overflow:hidden;
                           flex-shrink:0;background:linear-gradient(135deg,var(--p-info),#0ea5e9);
                           display:flex;align-items:center;justify-content:center;
@@ -196,11 +193,11 @@
       </div>
 
       {{-- Qabul qiluvchi --}}
-      <div class="col-md-6">
+      <div class="">
         <div class="p-card h-100 fade-up">
           <div class="p-card-header">
             <div class="p-card-title">
-              <i class="bi bi-gift-fill me-1" style="color:var(--p-success)"></i>
+              <i class="bi bi-gift-fill mr-1" style="color:var(--p-success)"></i>
               Qabul qiluvchi
             </div>
             <span class="s-pill {{ $giftCertificate->recipient ? 'success' : 'muted' }}"
@@ -211,7 +208,7 @@
           <div style="padding:16px 18px">
             @if($giftCertificate->recipient)
             @php $rec = $giftCertificate->recipient; @endphp
-            <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="flex items-center gap-3 mb-3">
               <div style="width:44px;height:44px;border-radius:50%;overflow:hidden;
                           flex-shrink:0;background:linear-gradient(135deg,var(--p-success),#059669);
                           display:flex;align-items:center;justify-content:center;
@@ -257,7 +254,7 @@
               <div style="padding:10px;background:{{ $giftCertificate->is_expired ? 'var(--p-danger-d)' : 'var(--p-warning-d)' }};
                           border-radius:7px;font-size:12px;
                           color:{{ $giftCertificate->is_expired ? 'var(--p-danger)' : 'var(--p-warning)' }}">
-                <i class="bi bi-{{ $giftCertificate->is_expired ? 'x-circle' : 'clock' }} me-1"></i>
+                <i class="bi bi-{{ $giftCertificate->is_expired ? 'x-circle' : 'clock' }} mr-1"></i>
                 @if($giftCertificate->is_expired)
                   Muddati o'tdi — bekor qilinadi
                 @else
@@ -268,7 +265,7 @@
               @elseif($giftCertificate->status === 'pending_payment')
               <div style="padding:10px;background:var(--p-elevated);border-radius:7px;
                           font-size:12px;color:var(--p-hint)">
-                <i class="bi bi-hourglass me-1"></i>
+                <i class="bi bi-hourglass mr-1"></i>
                 To'lov kutilmoqda
               </div>
               @endif

@@ -4,18 +4,19 @@
 
 @section('content')
 
-<div class="d-flex align-items-start justify-content-between mb-4 fade-up">
-  <div>
-    <h1 class="page-title">Reels</h1>
-    <p class="page-sub">Video kolleksiyalar boshqaruvi</p>
-  </div>
-  <a href="{{ route('panel.reels.create') }}" class="btn-p primary">
-    <i class="bi bi-plus-lg"></i> Yangi Reel
-  </a>
-</div>
+<x-panel.page-header>
+  <x-slot name="heading">Reels</x-slot>
+  <x-slot name="meta">Video kolleksiyalar boshqaruvi</x-slot>
+  <x-slot name="actions">
+    <a href="{{ route('panel.reels.create') }}" class="btn-p primary">
+        <i class="bi bi-plus-lg"></i> Yangi Reel
+      </a>
+  </x-slot>
+</x-panel.page-header>
+
 
 <div class="p-card fade-up">
-  <div class="table-responsive">
+  <div class="table-responsive kc-twrap">
     <table class="p-table">
       <thead>
         <tr>
@@ -53,7 +54,7 @@
           <td>
             <span class="s-pill {{ $reel->items_count > 0 ? 'accent' : 'muted' }}"
                   style="font-size:11px">
-              <i class="bi bi-play-circle me-1"></i>
+              <i class="bi bi-play-circle mr-1"></i>
               {{ $reel->items_count }} ta video
             </span>
           </td>
@@ -64,7 +65,7 @@
           </td>
 
           <td>
-            <div class="d-flex gap-1">
+            <div class="flex gap-1">
               <a href="{{ route('panel.reels.show', $reel) }}"
                  class="btn-p ghost sm">
                 <i class="bi bi-eye"></i>
@@ -86,7 +87,7 @@
         </tr>
         @empty
         <tr>
-          <td colspan="6" style="text-align:center;padding:48px;color:var(--p-hint)">
+          <td colspan="6" class="p-empty-cell">
             <i class="bi bi-collection-play"
                style="font-size:32px;display:block;margin-bottom:10px"></i>
             Reels topilmadi
@@ -98,9 +99,8 @@
   </div>
 
   @if($reels->hasPages())
-  <div class="d-flex align-items-center justify-content-between px-3 py-2"
-       style="border-top:1px solid var(--p-border)">
-    <div style="font-size:12px;color:var(--p-hint)">
+  <div class="p-card-footer">
+    <div class="p-card-footer-meta">
       {{ $reels->firstItem() }}–{{ $reels->lastItem() }} / {{ $reels->total() }}
     </div>
     {{ $reels->links('panel.partials.pagination') }}

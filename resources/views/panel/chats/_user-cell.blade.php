@@ -1,5 +1,5 @@
 {{-- resources/views/panel/chats/_user-cell.blade.php --}}
-<div class="d-flex align-items-center gap-2">
+<div class="flex items-center gap-2">
   <div style="width:28px;height:28px;border-radius:50%;overflow:hidden;flex-shrink:0;
               background:linear-gradient(135deg,var(--p-accent),#7c5cfc);
               display:flex;align-items:center;justify-content:center;

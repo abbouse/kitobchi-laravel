@@ -4,9 +4,9 @@
 <div class="p-card mb-3 fade-up">
   <div class="p-card-header"><div class="p-card-title">Ma'lumotlar</div></div>
   <div style="padding:0 18px 18px">
-    <div class="row g-3">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
 
-      <div class="col-12">
+      <div class="">
         <label class="p-form-label">
           Sarlavha <span style="color:var(--p-danger)">*</span>
         </label>
@@ -18,13 +18,13 @@
         @enderror
       </div>
 
-      <div class="col-md-8">
+      <div class="md:col-span-8">
         <label class="p-form-label">Tavsif</label>
         <textarea name="description" class="p-form-control" rows="3"
                   placeholder="Ixtiyoriy tavsif...">{{ old('description', $reel?->description) }}</textarea>
       </div>
 
-      <div class="col-md-4">
+      <div class="md:col-span-4">
         <label class="p-form-label">
           Tartib (order) <span style="color:var(--p-danger)">*</span>
         </label>
@@ -43,7 +43,7 @@
   </div>
 </div>
 
-<div class="d-flex gap-2 fade-up">
+<div class="flex gap-2 fade-up">
   <button type="submit" class="btn-p primary">
     <i class="bi bi-check-lg"></i>
     {{ $reel ? 'Saqlash' : 'Yaratish' }}

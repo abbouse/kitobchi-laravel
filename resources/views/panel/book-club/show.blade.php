@@ -4,44 +4,44 @@
 
 @section('content')
 
-<div class="d-flex align-items-center justify-content-between mb-4 fade-up">
-  <div class="d-flex align-items-center gap-3">
-    <a href="{{ route('panel.book-club.index') }}" class="btn-p ghost icon">
-      <i class="bi bi-arrow-left"></i>
-    </a>
-    <div>
-      <h1 class="page-title">Post #{{ $bookClub->id }}</h1>
-      <p class="page-sub">
-        {{ $bookClub->created_at?->format('d.m.Y H:i') }}
-        @if($bookClub->repost)
-          · <span style="color:var(--p-info)"><i class="bi bi-repeat"></i> Repost</span>
-        @endif
-      </p>
+<x-panel.page-header back-href="{{ route('panel.book-club.index') }}">
+  <x-slot name="heading">Post #{{ $bookClub->id }}</x-slot>
+  <x-slot name="meta">
+    <p class="page-sub">
+      {{ $bookClub->created_at?->format('d.m.Y H:i') }}
+      @if($bookClub->repost)
+        · <span style="color:var(--p-info)"><i class="bi bi-repeat"></i> Repost</span>
+      @endif
+    </p>
+  </x-slot>
+  <x-slot name="actions">
+    <div class="flex flex-wrap gap-2">
+      <a href="{{ route('panel.book-club.moderation-queue') }}" class="btn-p ghost">
+        <i class="bi bi-shield-exclamation"></i> UGC navbati
+      </a>
+      <a href="{{ route('panel.book-club.edit', $bookClub) }}" class="btn-p ghost">
+        <i class="bi bi-pencil"></i> Tahrirlash
+      </a>
+      <form method="POST" action="{{ route('panel.book-club.destroy', $bookClub) }}"
+            onsubmit="return confirm('Post o\'chirilsinmi?')">
+        @csrf @method('DELETE')
+        <button class="btn-p danger ghost"><i class="bi bi-trash"></i> O'chirish</button>
+      </form>
     </div>
-  </div>
-  <div class="d-flex gap-2">
-    <a href="{{ route('panel.book-club.edit', $bookClub) }}" class="btn-p ghost">
-      <i class="bi bi-pencil"></i> Tahrirlash
-    </a>
-    <form method="POST" action="{{ route('panel.book-club.destroy', $bookClub) }}"
-          onsubmit="return confirm('Post o\'chirilsinmi?')">
-      @csrf @method('DELETE')
-      <button class="btn-p danger ghost"><i class="bi bi-trash"></i> O'chirish</button>
-    </form>
-  </div>
-</div>
+  </x-slot>
+</x-panel.page-header>
 
-<div class="row g-3">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
 
   {{-- ════ POST ASOSIY ════════════════════════════════════════ --}}
-  <div class="col-xl-8">
+  <div class="xl:col-span-8">
 
     {{-- Post kartasi --}}
     <div class="p-card mb-3 fade-up">
       <div class="dash-card-body">
 
         {{-- Muallif --}}
-        <div class="d-flex align-items-center gap-3 mb-3">
+        <div class="flex items-center gap-3 mb-3">
           <a href="{{ route('panel.users.show', $bookClub->user_id) }}"
              style="width:48px;height:48px;border-radius:50%;overflow:hidden;flex-shrink:0;
                     background:linear-gradient(135deg,var(--p-accent),#7c5cfc);display:block">
@@ -86,7 +86,7 @@
 
         {{-- Rasmlar --}}
         @if($bookClub->images->count())
-        <div class="d-flex flex-wrap gap-2 mb-4">
+        <div class="flex flex-wrap gap-2 mb-4">
           @foreach($bookClub->images as $img)
           <div style="position:relative">
             <a href="{{ asset('storage/'.$img->image) }}" target="_blank"
@@ -132,7 +132,7 @@
         <div style="background:var(--p-elevated);border-radius:10px;padding:14px;margin-bottom:12px">
           <div style="font-size:12px;color:var(--p-hint);margin-bottom:10px;
                       font-weight:600;text-transform:uppercase;letter-spacing:.07em">
-            <i class="bi bi-bar-chart me-1"></i> So'rovnoma · {{ $totalVotes }} ta ovoz
+            <i class="bi bi-bar-chart mr-1"></i> So'rovnoma · {{ $totalVotes }} ta ovoz
           </div>
           @foreach($bookClub->votes as $vote)
           @php
@@ -152,6 +152,50 @@
             </div>
           </div>
           @endforeach
+        </div>
+        @endif
+
+        {{-- Kangaroo: post matni UGC (bitta blok) --}}
+        @if($bookClub->kangaroo_post_ugc_status || $bookClub->kangaroo_post_star !== null || $bookClub->kangaroo_post_checked_at)
+        <div style="background:var(--p-elevated);border-radius:10px;padding:14px;margin-bottom:12px;border:1px solid var(--p-border)">
+          <div style="font-size:12px;font-weight:600;color:var(--p-hint);margin-bottom:10px;text-transform:uppercase;letter-spacing:.07em">
+            <i class="bi bi-stars mr-1"></i> Kangaroo · post matni
+          </div>
+          <div style="font-size:13px;color:var(--p-text);display:flex;flex-wrap:wrap;gap:12px;margin-bottom:10px">
+            @if($bookClub->kangaroo_post_ugc_status)
+              <span>Holat:
+                @if($bookClub->kangaroo_post_ugc_status === 'pending_admin')
+                  <strong style="color:var(--p-warning)">admin navbati</strong>
+                @elseif($bookClub->kangaroo_post_ugc_status === 'admin_scored')
+                  <strong style="color:var(--p-accent)">admin bahosi</strong>
+                @else
+                  <strong>{{ $bookClub->kangaroo_post_ugc_status }}</strong>
+                @endif
+              </span>
+            @endif
+            @if($bookClub->kangaroo_post_star !== null)
+              <span>Matnga nisbatan baho: <strong>{{ number_format((float) $bookClub->kangaroo_post_star, 2) }}</strong> / 5</span>
+            @endif
+            @if($bookClub->kangaroo_post_checked_at)
+              <span style="color:var(--p-hint)">Tekshirilgan: {{ $bookClub->kangaroo_post_checked_at->format('d.m.Y H:i') }}</span>
+            @endif
+          </div>
+          @if($bookClub->kangaroo_post_ugc_status === 'pending_admin')
+          <form method="POST" action="{{ route('panel.book-club.post-ugc-score', $bookClub) }}" class="flex flex-wrap items-end gap-2">
+            @csrf
+            <label style="font-size:12px;color:var(--p-hint)">Admin bahosi (1–5)</label>
+            <select name="star" class="p-form-control" style="width:88px" required>
+              @for($s = 1; $s <= 5; $s++)
+                <option value="{{ $s }}">{{ $s }} ★</option>
+              @endfor
+            </select>
+            <button type="submit" class="btn-p primary sm"><i class="bi bi-check2"></i> Saqlash</button>
+          </form>
+          @endif
+        </div>
+        @elseif($bookClub->text)
+        <div style="background:var(--p-elevated);border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:12px;color:var(--p-hint)">
+          <i class="bi bi-stars mr-1"></i> Kangaroo tekshiruvi hali yozilmagan (sinxron yoki cron: <code>kangaroo:sync-content-moderation</code>).
         </div>
         @endif
 
@@ -186,7 +230,7 @@
         <div style="padding:16px 20px;border-bottom:1px solid var(--p-border)">
 
           {{-- Izoh --}}
-          <div class="d-flex gap-3">
+          <div class="flex gap-3">
             <a href="{{ route('panel.users.show', $comment->user_id) }}"
                style="width:34px;height:34px;border-radius:50%;overflow:hidden;flex-shrink:0;
                       background:linear-gradient(135deg,var(--p-accent),#7c5cfc);display:block">
@@ -200,7 +244,7 @@
               @endif
             </a>
             <div style="flex:1;min-width:0">
-              <div class="d-flex align-items-start justify-content-between gap-2">
+              <div class="flex items-start justify-between gap-2">
                 <div>
                   <a href="{{ route('panel.users.show', $comment->user_id) }}"
                      style="font-size:13px;font-weight:600;color:var(--p-text);text-decoration:none">
@@ -210,7 +254,7 @@
                     {{ $comment->created_at?->format('d.m.Y H:i') }}
                   </span>
                 </div>
-                <div class="d-flex gap-1">
+                <div class="flex gap-1">
                   {{-- Tahrirlash modal trigger --}}
                   <button class="btn-p ghost sm" title="Tahrirlash"
                           onclick="editComment({{ $comment->id }}, `{{ addslashes($comment->content) }}`)">
@@ -238,6 +282,41 @@
                 @endif
               </div>
 
+              @if($comment->kangaroo_ugc_status || $comment->kangaroo_star_equivalent !== null || $comment->kangaroo_toxicity !== null || $comment->kangaroo_checked_at)
+              <div style="margin-top:10px;padding:10px 12px;background:var(--p-elevated);border-radius:8px;border:1px solid var(--p-border)">
+                <div style="font-size:10px;color:var(--p-hint);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Kangaroo · izoh</div>
+                <div style="font-size:12px;color:var(--p-muted);display:flex;flex-wrap:wrap;gap:10px;margin-bottom:8px">
+                  <span>Holat:
+                    @if($comment->kangaroo_ugc_status === 'pending_admin')
+                      <strong style="color:var(--p-warning)">admin navbati</strong>
+                    @elseif($comment->kangaroo_ugc_status === 'admin_scored')
+                      <strong style="color:var(--p-accent)">admin bahosi</strong>
+                    @else
+                      <strong style="color:var(--p-text)">{{ $comment->kangaroo_ugc_status ?? '—' }}</strong>
+                    @endif
+                  </span>
+                  @if($comment->kangaroo_star_equivalent !== null)
+                    <span>Izohga nisbatan baho: <strong style="color:var(--p-text)">{{ number_format((float) $comment->kangaroo_star_equivalent, 2) }}</strong> / 5</span>
+                  @endif
+                  @if($comment->kangaroo_toxicity !== null)
+                    <span>Toxicity: <strong style="color:var(--p-text)">{{ number_format((float) $comment->kangaroo_toxicity, 3) }}</strong></span>
+                  @endif
+                </div>
+                @if($comment->kangaroo_ugc_status === 'pending_admin')
+                <form method="POST" action="{{ route('panel.book-club.comment.ugc-score', $comment) }}" class="flex flex-wrap items-end gap-2">
+                  @csrf
+                  <label style="font-size:11px;color:var(--p-hint)">Admin bahosi (1–5)</label>
+                  <select name="star" class="p-form-control" style="width:88px" required>
+                    @for($s = 1; $s <= 5; $s++)
+                      <option value="{{ $s }}">{{ $s }} ★</option>
+                    @endfor
+                  </select>
+                  <button type="submit" class="btn-p primary sm"><i class="bi bi-check2"></i> Saqlash</button>
+                </form>
+                @endif
+              </div>
+              @endif
+
               {{-- Javoblar --}}
               @if($comment->replies->count())
               <div style="margin-top:12px;padding-left:16px;border-left:2px solid var(--p-border)">
@@ -256,7 +335,7 @@
                     @endif
                   </a>
                   <div style="flex:1">
-                    <div class="d-flex align-items-center justify-content-between">
+                    <div class="flex items-center justify-between">
                       <div>
                         <a href="{{ route('panel.users.show', $reply->user_id) }}"
                            style="font-size:12px;font-weight:600;color:var(--p-text);text-decoration:none">
@@ -310,7 +389,7 @@
   </div>
 
   {{-- ════ O'NG: Like, Repost, Meta ═════════════════════════ --}}
-  <div class="col-xl-4">
+  <div class="xl:col-span-4">
 
     {{-- Meta --}}
     <div class="p-card mb-3 fade-up">
@@ -336,7 +415,7 @@
     <div class="p-card mb-3 fade-up">
       <div class="dash-card-head">
         <div class="dash-card-title">
-          <i class="bi bi-heart-fill me-1" style="color:var(--p-danger)"></i> Like bosganlar
+          <i class="bi bi-heart-fill mr-1" style="color:var(--p-danger)"></i> Like bosganlar
         </div>
         <span class="s-pill danger">{{ $likesCount }}</span>
       </div>
@@ -387,7 +466,7 @@
     <div class="p-card fade-up">
       <div class="dash-card-head">
         <div class="dash-card-title">
-          <i class="bi bi-repeat me-1" style="color:var(--p-info)"></i> Repost qilganlar
+          <i class="bi bi-repeat mr-1" style="color:var(--p-info)"></i> Repost qilganlar
         </div>
         <span class="s-pill info">{{ $repostsCount }}</span>
       </div>
@@ -435,17 +514,17 @@
   <div style="background:var(--p-surface);border-radius:14px;padding:24px;width:100%;max-width:480px;
               border:1px solid var(--p-border)">
     <div style="font-size:16px;font-weight:600;color:var(--p-text);margin-bottom:16px">
-      <i class="bi bi-pencil me-1"></i> Izohni tahrirlash
+      <i class="bi bi-pencil mr-1"></i> Izohni tahrirlash
     </div>
     <form method="POST" id="editCommentForm">
       @csrf @method('PUT')
       <textarea name="content" id="editCommentContent" rows="4"
                 class="p-form-control" style="width:100%;margin-bottom:12px"
                 required></textarea>
-      <div class="d-flex gap-2 justify-content-end">
+      <div class="flex gap-2 justify-end">
         <button type="button" class="btn-p ghost"
                 onclick="closeEditModal()">Bekor qilish</button>
-        <button type="submit" class="btn-p">
+        <button type="submit" class="btn-p primary">
           <i class="bi bi-check-lg"></i> Saqlash
         </button>
       </div>

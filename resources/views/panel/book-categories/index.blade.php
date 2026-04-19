@@ -7,21 +7,21 @@
 
 @section('content')
 
-<div class="d-flex align-items-center justify-content-between mb-4">
-  <div>
-    <div style="font-size:13px;color:var(--p-hint)">
-      Jami: <strong style="color:var(--p-text)">{{ $stats['total'] }}</strong> ta,
-      Aktiv: <strong style="color:var(--p-success)">{{ $stats['active'] }}</strong> ta
-    </div>
-  </div>
-  <a href="{{ route('panel.book-categories.create') }}" class="btn-p">
-    <i class="bi bi-plus-lg"></i> Yangi kategoriya
-  </a>
-</div>
+<x-panel.page-header>
+  <x-slot name="heading">Kitob kategoriyalari</x-slot>
+  <x-slot name="meta">Jami <strong>{{ $stats['total'] }}</strong> ta &middot;
+      <span style="color:var(--p-success)">{{ $stats['active'] }} ta faol</span></x-slot>
+  <x-slot name="actions">
+    <a href="{{ route('panel.book-categories.create') }}" class="btn-p primary">
+        <i class="bi bi-plus-lg"></i> Yangi kategoriya
+      </a>
+  </x-slot>
+</x-panel.page-header>
+
 
 {{-- Filter --}}
 <div class="filter-bar mb-3">
-  <form method="GET" class="d-flex flex-wrap gap-2 align-items-center">
+  <form method="GET" class="flex flex-wrap gap-2 items-center">
     <input type="search" name="search" class="p-form-control" placeholder="Nom bo'yicha..."
            value="{{ request('search') }}" style="width:220px">
     <select name="status" class="p-form-control" style="width:150px">
@@ -29,13 +29,13 @@
       <option value="1" {{ request('status')==='1'?'selected':'' }}>Aktiv</option>
       <option value="0" {{ request('status')==='0'?'selected':'' }}>Nofaol</option>
     </select>
-    <button class="btn-p" type="submit"><i class="bi bi-search"></i> Izlash</button>
+    <button class="btn-p primary" type="submit"><i class="bi bi-search"></i> Izlash</button>
     <a href="{{ route('panel.book-categories.index') }}" class="btn-p ghost"><i class="bi bi-x"></i></a>
   </form>
 </div>
 
 <div class="p-card p-0">
-  <div class="table-responsive">
+  <div class="table-responsive kc-twrap">
     <table class="p-table">
       <thead>
         <tr>
@@ -68,7 +68,7 @@
             {{ $cat->tags?->pluck('tag_name_uz')->take(3)->implode(', ') ?: '—' }}
           </td>
           <td>
-            <div class="d-flex gap-1">
+            <div class="flex gap-1">
               <a href="{{ route('panel.book-categories.edit', $cat) }}" class="btn-p ghost sm">
                 <i class="bi bi-pencil"></i>
               </a>

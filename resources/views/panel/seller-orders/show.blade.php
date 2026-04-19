@@ -3,10 +3,17 @@
 @section('page-title', 'Buyurtma #'.$sellerOrder->id)
 
 @section('content')
-<div class="row g-3">
+
+<x-panel.page-header back-href="{{ route('panel.seller-orders.index') }}">
+  <x-slot name="heading">Buyurtma #{{ $sellerOrder->id }}</x-slot>
+  <x-slot name="meta">{{ $sellerOrder->created_at?->format('d.m.Y H:i') }}</x-slot>
+</x-panel.page-header>
+
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
 
   {{-- Chap: mahsulotlar + manzil --}}
-  <div class="col-xl-8">
+  <div class="xl:col-span-8">
 
     {{-- Mahsulotlar --}}
     <div class="p-card mb-3">
@@ -15,7 +22,7 @@
         <div class="dash-card-sub">{{ $sellerOrder->items?->count() ?? 0 }} ta pozitsiya</div>
       </div>
       <div class="dash-card-body">
-        <div class="table-responsive">
+        <div class="table-responsive kc-twrap">
           <table class="p-table">
             <thead>
               <tr><th>Mahsulot</th><th>Tur</th><th>Narx</th><th>Miqdor</th><th>Jami</th></tr>
@@ -69,14 +76,14 @@
       <div class="dash-card-head"><div class="dash-card-title">Yetkazish manzili</div></div>
       <div class="dash-card-body">
         @php $addr = is_array($sellerOrder->address) ? $sellerOrder->address : json_decode($sellerOrder->address, true); @endphp
-        <div class="row g-3">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
           @foreach([
             ['To\'liq manzil', data_get($addr,'fullAddress') ?? data_get($addr,'address')],
             ['Viloyat/Shahar', data_get($addr,'city') ?? data_get($addr,'region')],
             ['Koordinat',     data_get($addr,'lat') && data_get($addr,'lon') ? data_get($addr,'lat').', '.data_get($addr,'lon') : null],
           ] as [$k,$v])
           @if($v)
-          <div class="col-sm-6">
+          <div class="">
             <div style="font-size:11px;color:var(--p-hint);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px">{{ $k }}</div>
             <div style="font-size:13px;color:var(--p-text)">{{ $v }}</div>
           </div>
@@ -90,7 +97,7 @@
   </div>
 
   {{-- O'ng: status + shaxslar --}}
-  <div class="col-xl-4">
+  <div class="xl:col-span-4">
 
     {{-- Status boshqaruv --}}
     <div class="p-card mb-3">
@@ -104,8 +111,8 @@
         </div>
         <form method="POST" action="{{ route('panel.seller-orders.status', $sellerOrder) }}">
           @csrf @method('PATCH')
-          <label class="p-label">Statusni o'zgartirish</label>
-          <div class="d-flex gap-2 mt-1">
+          <label class="p-form-label">Statusni o'zgartirish</label>
+          <div class="flex gap-2 mt-1">
             <select name="status" class="p-form-control flex-fill">
               @foreach($statuses as $k => $s)
               <option value="{{ $k }}" {{ $sellerOrder->status == $k ? 'selected' : '' }}>
@@ -124,7 +131,7 @@
       <div class="dash-card-head"><div class="dash-card-title">Sotuvchi</div></div>
       <div class="dash-card-body">
         @if($sellerOrder->seller)
-        <div class="d-flex align-items-center gap-3">
+        <div class="flex items-center gap-3">
           <div style="width:42px;height:42px;border-radius:50%;background:var(--p-elevated);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden">
             @if($sellerOrder->seller->photo)
               <img src="{{ $sellerOrder->seller->photo }}" style="width:100%;height:100%;object-fit:cover">
@@ -151,7 +158,7 @@
       <div class="dash-card-head"><div class="dash-card-title">Mijoz</div></div>
       <div class="dash-card-body">
         @if($sellerOrder->client)
-        <div class="d-flex align-items-center gap-3">
+        <div class="flex items-center gap-3">
           <div style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,var(--p-accent),#7c5cfc);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden">
             @if($sellerOrder->client->avatar)
               <img src="{{ $sellerOrder->client->avatar }}" style="width:100%;height:100%;object-fit:cover">

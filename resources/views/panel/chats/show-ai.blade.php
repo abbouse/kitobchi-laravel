@@ -4,23 +4,17 @@
 
 @section('content')
 
-<div class="d-flex align-items-center gap-3 mb-4 fade-up">
-  <a href="{{ route('panel.chats.index', ['tab'=>'ai']) }}" class="btn-p ghost icon">
-    <i class="bi bi-arrow-left"></i>
-  </a>
-  <div>
-    <h1 class="page-title">AI Chat</h1>
-    <p class="page-sub">
-      {{ $conversation->name }} {{ $conversation->lastname }}
-      · {{ $conversation->phone_number }}
-    </p>
-  </div>
-</div>
+<x-panel.page-header back-href="{{ route('panel.chats.index', ['tab'=>'ai']) }}">
+  <x-slot name="heading">AI Chat</x-slot>
+  <x-slot name="meta">{{ $conversation->name }} {{ $conversation->lastname }}
+      · {{ $conversation->phone_number }}</x-slot>
+</x-panel.page-header>
 
-<div class="row g-3">
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
 
   {{-- Chap: User info --}}
-  <div class="col-xl-3">
+  <div class="xl:col-span-3">
     <div class="p-card mb-3 fade-up">
       <div class="p-card-header"><div class="p-card-title">Foydalanuvchi</div></div>
       <div style="padding:14px 18px">
@@ -73,11 +67,11 @@
   </div>
 
   {{-- O'ng: Xabarlar --}}
-  <div class="col-xl-9">
+  <div class="xl:col-span-9">
     <div class="p-card fade-up">
       <div class="p-card-header">
         <div class="p-card-title">
-          <i class="bi bi-robot me-1" style="color:var(--p-accent)"></i>
+          <i class="bi bi-robot mr-1" style="color:var(--p-accent)"></i>
           AI suhbat tarixi
         </div>
       </div>

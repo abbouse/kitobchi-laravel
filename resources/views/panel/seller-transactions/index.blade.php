@@ -5,15 +5,14 @@
 @section('content')
 
 {{-- ── Header ──────────────────────────────────────── --}}
-<div class="page-header fade-up d-flex align-items-start justify-content-between mb-3">
-  <div>
-    <h1 class="page-title">Tranzaksiyalar</h1>
-    <p class="page-sub">Yechib olish arizalari</p>
-  </div>
-</div>
+<x-panel.page-header>
+  <x-slot name="heading">Tranzaksiyalar</x-slot>
+  <x-slot name="meta">Yechib olish arizalari</x-slot>
+</x-panel.page-header>
+
 
 {{-- ── Segment switcher: Seller | Courier ────────────── --}}
-<div class="d-flex gap-2 mb-4 fade-up">
+<div class="flex gap-2 mb-4 fade-up">
   <a href="{{ request()->fullUrlWithQuery(['segment'=>'seller','tab'=>'pending','page'=>1]) }}"
      class="btn-p {{ $segment==='seller'?'primary':'ghost' }}"
      style="gap:7px">
@@ -43,15 +42,15 @@
 </div>
 
 {{-- ── Stats ───────────────────────────────────────── --}}
-<div class="row g-3 mb-3 fade-up">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3 fade-up">
   @foreach([
     ['pending',  'Kutilmoqda',    'warning', 'bi-hourglass-split', 'pending_amount'],
     ['approved', 'Tasdiqlangan',  'success', 'bi-check-circle',    'approved_amount'],
     ['rejected', 'Rad etilgan',   'danger',  'bi-x-circle',        null],
     ['all',      'Jami',          'muted',   'bi-list-ul',         null],
   ] as [$key, $lbl, $clr, $icon, $amountKey])
-  <div class="col-6 col-xl-3">
-    <div class="p-card d-flex align-items-center gap-3" style="padding:14px">
+  <div class="">
+    <div class="p-card flex items-center gap-3" style="padding:14px">
       <div style="width:38px;height:38px;border-radius:9px;flex-shrink:0;font-size:17px;
                   background:var(--p-{{ $clr }}-d,var(--p-elevated));
                   color:var(--p-{{ $clr }});
@@ -113,7 +112,7 @@
 
 {{-- ── Table ────────────────────────────────────────── --}}
 <div class="p-card fade-up">
-  <div class="table-responsive">
+  <div class="table-responsive kc-twrap">
     <table class="p-table">
       <thead>
         <tr>
@@ -153,7 +152,7 @@
 
           <td>
             @if($entity)
-            <div class="d-flex align-items-center gap-2">
+            <div class="flex items-center gap-2">
               <div style="width:30px;height:30px;border-radius:{{ $segment==='courier'?'50%':'8px' }};
                           overflow:hidden;flex-shrink:0;
                           background:linear-gradient(135deg,
@@ -225,7 +224,7 @@
           </td>
 
           <td>
-            <div class="d-flex gap-1 align-items-center">
+            <div class="flex gap-1 items-center">
 
               {{-- Tasdiqlash (faqat pending) --}}
               @if($tx->status === 'pending')
@@ -275,7 +274,7 @@
   </div>
 
   @if($transactions->hasPages())
-  <div class="d-flex align-items-center justify-content-between px-3 py-2"
+  <div class="flex items-center justify-between px-3 py-2"
        style="border-top:1px solid var(--p-border)">
     <div style="font-size:12px;color:var(--p-hint)">
       {{ $transactions->firstItem() }}–{{ $transactions->lastItem() }}
@@ -293,10 +292,10 @@
   <div style="background:var(--p-surface);border-radius:14px;padding:24px;
               width:100%;max-width:460px;border:1px solid var(--p-border);
               box-shadow:0 20px 60px rgba(0,0,0,.4)">
-    <div class="d-flex align-items-start justify-content-between mb-3">
+    <div class="flex items-start justify-between mb-3">
       <div>
         <div style="font-size:16px;font-weight:600;color:var(--p-text)">
-          <i class="bi bi-x-circle-fill me-1" style="color:var(--p-danger)"></i>
+          <i class="bi bi-x-circle-fill mr-1" style="color:var(--p-danger)"></i>
           Rad etish
         </div>
         <div id="reject-subtitle" style="font-size:12px;color:var(--p-hint);margin-top:3px"></div>
@@ -310,7 +309,7 @@
          style="display:none;padding:10px 12px;background:var(--p-warning-d);
                 border-radius:8px;border:1px solid rgba(245,166,35,.2);
                 margin-bottom:14px;font-size:12px;color:var(--p-warning)">
-      <i class="bi bi-exclamation-triangle-fill me-1"></i>
+      <i class="bi bi-exclamation-triangle-fill mr-1"></i>
       Bu tranzaksiya oldin <strong>tasdiqlangan</strong> edi.
       Rad etilsa <strong><span id="reject-amount"></span> UZS qaytariladi</strong>.
     </div>
@@ -325,7 +324,7 @@
                 style="margin-bottom:14px"
                 placeholder="Karta ma'lumotlari noto'g'ri, hujjat taqdim etilmadi...">
       </textarea>
-      <div class="d-flex gap-2 justify-content-end">
+      <div class="flex gap-2 justify-end">
         <button type="button" onclick="closeReject()" class="btn-p ghost">Bekor</button>
         <button type="submit" class="btn-p danger">
           <i class="bi bi-x-circle"></i> Rad etish

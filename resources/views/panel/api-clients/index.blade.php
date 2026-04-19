@@ -4,25 +4,26 @@
 
 @section('content')
 
-<div class="d-flex align-items-start justify-content-between mb-4 fade-up">
-  <div>
-    <h1 class="page-title">API Mijozlar</h1>
-    <p class="page-sub">Tizimga kirish uchun API kalitlarni boshqarish</p>
-  </div>
-  <a href="{{ route('panel.api-clients.create') }}" class="btn-p primary">
-    <i class="bi bi-plus-lg"></i> Yangi mijoz
-  </a>
-</div>
+<x-panel.page-header>
+  <x-slot name="heading">API Mijozlar</x-slot>
+  <x-slot name="meta">Tizimga kirish uchun API kalitlarni boshqarish</x-slot>
+  <x-slot name="actions">
+    <a href="{{ route('panel.api-clients.create') }}" class="btn-p primary">
+        <i class="bi bi-plus-lg"></i> Yangi mijoz
+      </a>
+  </x-slot>
+</x-panel.page-header>
+
 
 {{-- Stats --}}
-<div class="row g-3 mb-4 fade-up">
+<div class="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-4">
   @foreach([
     [App\Models\ApiClient::count(),             'Jami',     'accent',  'bi-key'],
     [App\Models\ApiClient::where('is_active',1)->count(), 'Faol', 'success', 'bi-check-circle'],
     [App\Models\ApiClient::where('is_active',0)->count(), 'Nofaol','danger','bi-x-circle'],
   ] as [$v,$l,$c,$i])
   <div class="col-4">
-    <div class="p-card d-flex align-items-center gap-3" style="padding:14px">
+    <div class="p-card flex items-center gap-3" style="padding:14px">
       <div style="width:36px;height:36px;border-radius:9px;flex-shrink:0;font-size:16px;
                   background:var(--p-{{ $c }}-d,var(--p-elevated));color:var(--p-{{ $c }});
                   display:flex;align-items:center;justify-content:center">
@@ -43,7 +44,7 @@
 
 {{-- Table --}}
 <div class="p-card fade-up">
-  <div class="table-responsive">
+  <div class="table-responsive kc-twrap">
     <table class="p-table">
       <thead>
         <tr>
@@ -67,7 +68,7 @@
           </td>
 
           <td>
-            <div class="d-flex align-items-center gap-2">
+            <div class="flex items-center gap-2">
               <code style="font-size:12px;color:var(--p-accent);background:var(--p-elevated);
                            padding:3px 8px;border-radius:5px;font-family:'JetBrains Mono',monospace">
                 {{ $c->app_id }}
@@ -80,7 +81,7 @@
           </td>
 
           <td>
-            <div class="d-flex align-items-center gap-2">
+            <div class="flex items-center gap-2">
               <code id="secret-{{ $c->id }}"
                     style="font-size:12px;color:var(--p-muted);background:var(--p-elevated);
                            padding:3px 8px;border-radius:5px;font-family:'JetBrains Mono',monospace;
@@ -104,7 +105,7 @@
                 ? json_decode($c->abilities, true)
                 : (is_array($c->abilities) ? $c->abilities : []);
             @endphp
-            <div class="d-flex flex-wrap gap-1">
+            <div class="flex flex-wrap gap-1">
               @foreach($abilities ?? [] as $ab)
               <span class="s-pill accent" style="font-size:9.5px">{{ $ab }}</span>
               @endforeach
@@ -130,7 +131,7 @@
           </td>
 
           <td>
-            <div class="d-flex gap-1">
+            <div class="flex gap-1">
               <a href="{{ route('panel.api-clients.edit',$c) }}"
                  class="btn-p ghost sm"><i class="bi bi-pencil"></i></a>
 

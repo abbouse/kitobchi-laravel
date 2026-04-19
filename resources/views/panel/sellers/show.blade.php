@@ -11,52 +11,41 @@
   $types = $seller->activity_types; // accessor — har doim array
 @endphp
 
-<div class="d-flex align-items-start justify-content-between mb-4 fade-up">
-  <div class="d-flex align-items-center gap-3">
-    <a href="{{ route('panel.sellers.index') }}" class="btn-p ghost icon">
-      <i class="bi bi-arrow-left"></i>
-    </a>
-    <div>
-      <h1 class="page-title">{{ $seller->shop_name }}</h1>
-      <p class="page-sub" style="display:flex;align-items:center;gap:8px">
-        ID: #{{ $seller->id }}
-        <span class="s-pill {{ $stCls }}" style="font-size:11px">{{ $stLbl }}</span>
-        @if($seller->is_hidden)
-          <span class="s-pill danger" style="font-size:11px">Yashirin</span>
+<x-panel.page-header back-href="{{ route('panel.sellers.index') }}">
+  <x-slot name="heading">{{ $seller->shop_name }}</x-slot>
+  <x-slot name="actions">
+    <div class="flex gap-2 flex-wrap">
+        @if($st !== 'approved')
+        <form method="POST" action="{{ route('panel.sellers.approve', $seller) }}">
+          @csrf @method('PATCH')
+          <button class="btn-p success"><i class="bi bi-check-lg"></i> Tasdiqlash</button>
+        </form>
         @endif
-      </p>
-    </div>
-  </div>
-  <div class="d-flex gap-2 flex-wrap">
-    @if($st !== 'approved')
-    <form method="POST" action="{{ route('panel.sellers.approve', $seller) }}">
-      @csrf @method('PATCH')
-      <button class="btn-p success"><i class="bi bi-check-lg"></i> Tasdiqlash</button>
-    </form>
-    @endif
-    @if($st !== 'rejected')
-    <form method="POST" action="{{ route('panel.sellers.reject', $seller) }}"
-          onsubmit="return confirm('Rad etasizmi?')">
-      @csrf @method('PATCH')
-      <button class="btn-p danger ghost"><i class="bi bi-x-lg"></i> Rad etish</button>
-    </form>
-    @endif
-    <a href="{{ route('panel.sellers.edit', $seller) }}" class="btn-p ghost">
-      <i class="bi bi-pencil"></i> Tahrirlash
-    </a>
-  </div>
-</div>
+        @if($st !== 'rejected')
+        <form method="POST" action="{{ route('panel.sellers.reject', $seller) }}"
+              onsubmit="return confirm('Rad etasizmi?')">
+          @csrf @method('PATCH')
+          <button class="btn-p danger ghost"><i class="bi bi-x-lg"></i> Rad etish</button>
+        </form>
+        @endif
+        <a href="{{ route('panel.sellers.edit', $seller) }}" class="btn-p ghost">
+          <i class="bi bi-pencil"></i> Tahrirlash
+        </a>
+      </div>
+  </x-slot>
+</x-panel.page-header>
+
 
 {{-- Stats --}}
-<div class="row g-3 mb-4 fade-up">
+<div class="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-4">
   @foreach([
     [$seller->books->count(),                          'Kitoblar',    'accent',  'bi-book'],
     [$seller->stationeries->count(),                   'Kanstovar',   'warning', 'bi-pencil-square'],
     [number_format($orderCount),                       'Buyurtmalar', 'success', 'bi-bag-check'],
     [number_format($totalRevenue/1_000_000,1).'M UZS', 'Daromad',     'info',    'bi-graph-up'],
   ] as [$val,$lbl,$clr,$icon])
-  <div class="col-6 col-xl-3">
-    <div class="p-card d-flex align-items-center gap-3" style="padding:16px">
+  <div class="">
+    <div class="p-card flex items-center gap-3" style="padding:16px">
       <div style="width:40px;height:40px;border-radius:10px;flex-shrink:0;font-size:18px;
                   background:var(--p-{{ $clr }}-d,var(--p-elevated));
                   color:var(--p-{{ $clr }});display:flex;align-items:center;justify-content:center">
@@ -73,10 +62,10 @@
   @endforeach
 </div>
 
-<div class="row g-3">
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-3">
 
   {{-- ── CHAP: Profil ─────────────────────────────────────────── --}}
-  <div class="col-xl-4">
+  <div class="xl:col-span-4">
 
     <div class="p-card mb-3 fade-up">
       <div style="text-align:center;padding:24px 20px 16px">
@@ -97,7 +86,7 @@
         <div style="font-size:12px;color:var(--p-hint);margin-top:2px">
           {{ $seller->firstname }} {{ $seller->lastname }}
         </div>
-        <div class="d-flex justify-content-center gap-2 mt-2">
+        <div class="flex justify-center gap-2 mt-2">
           <span class="s-pill {{ $stCls }}" style="font-size:11px">{{ $stLbl }}</span>
           @if($seller->is_hidden)
             <span class="s-pill danger" style="font-size:11px">Yashirin</span>
@@ -115,7 +104,7 @@
           ['bi-percent',     'Komissiya',        ($seller->commission_percent ? $seller->commission_percent.'%' : 'Global')],
           ['bi-calendar',    "Qo'shildi",        $seller->created_at?->format('d.m.Y')],
         ] as [$icon,$label,$value])
-        <div class="d-flex align-items-start gap-3 mb-3">
+        <div class="flex items-start gap-3 mb-3">
           <div style="width:28px;height:28px;border-radius:7px;background:var(--p-elevated);
                       display:flex;align-items:center;justify-content:center;flex-shrink:0">
             <i class="bi {{ $icon }}" style="font-size:12px;color:var(--p-muted)"></i>
@@ -129,7 +118,7 @@
         @endforeach
 
         @if(count($types))
-        <div class="d-flex flex-wrap gap-1 mt-1 pb-2">
+        <div class="flex flex-wrap gap-1 mt-1 pb-2">
           @foreach($types as $type)
             <span class="s-pill accent" style="font-size:11px">{{ $type }}</span>
           @endforeach
@@ -161,7 +150,7 @@
     @if($locations->count())
     <div class="p-card mb-3 fade-up">
       <div class="p-card-header">
-        <div class="p-card-title"><i class="bi bi-geo-alt me-1"></i> Manzillar</div>
+        <div class="p-card-title"><i class="bi bi-geo-alt mr-1"></i> Manzillar</div>
         <span class="s-pill muted" style="font-size:10px">{{ $locations->count() }} ta</span>
       </div>
       <div style="padding:0 18px 14px">
@@ -171,7 +160,7 @@
           <div style="font-size:13px;font-weight:500;color:var(--p-text)">
             {{ $loc->fullAddress }}
             @if($loc->is_main)
-              <span class="s-pill success ms-1" style="font-size:10px">Asosiy</span>
+              <span class="s-pill success ml-1" style="font-size:10px">Asosiy</span>
             @endif
           </div>
           @if($loc->description ?? null)
@@ -191,7 +180,7 @@
          style="border-color:rgba(255,92,106,.2);background:var(--p-danger-d)">
       <div class="p-card-header">
         <div class="p-card-title" style="color:var(--p-danger)">
-          <i class="bi bi-exclamation-triangle-fill me-1"></i> Ban loglari
+          <i class="bi bi-exclamation-triangle-fill mr-1"></i> Ban loglari
         </div>
         <span class="s-pill danger" style="font-size:10px">{{ $banLogs->count() }}</span>
       </div>
@@ -199,7 +188,7 @@
         @foreach($banLogs as $log)
         <div style="padding:9px 0;border-bottom:1px solid rgba(255,92,106,.15);
                     {{ $loop->last ? 'border-bottom:none' : '' }}">
-          <div class="d-flex align-items-center justify-content-between mb-1">
+          <div class="flex items-center justify-between mb-1">
             <span class="s-pill {{ ($log->type ?? '')=='warning' ? 'warning' : 'muted' }}"
                   style="font-size:10px">
               {{ ($log->type ?? '') === 'warning' ? 'Ogohlantirish' : 'Ban' }}
@@ -223,10 +212,10 @@
   </div>
 
   {{-- ── O'NG: Tabs ───────────────────────────────────────────── --}}
-  <div class="col-xl-8">
+  <div class="xl:col-span-8">
 
     @php $activeTab = request('section', 'orders'); @endphp
-    <div class="d-flex gap-2 flex-wrap mb-3 fade-up">
+    <div class="flex gap-2 flex-wrap mb-3 fade-up">
       @foreach([
         ['orders',       'Buyurtmalar',    'bi-bag-check',  $orderCount],
         ['transactions', 'Tranzaksiyalar', 'bi-credit-card', null],
@@ -251,7 +240,7 @@
         <a href="{{ route('panel.seller-orders.index', ['seller_id'=>$seller->id]) }}"
            class="btn-p ghost sm">Barchasi <i class="bi bi-arrow-right"></i></a>
       </div>
-      <div class="table-responsive">
+      <div class="table-responsive kc-twrap">
         <table class="p-table">
           <thead>
             <tr><th>#ID</th><th>Summa</th><th>Yetkazish</th><th>Status</th><th>Sana</th></tr>
@@ -306,7 +295,7 @@
       <div class="p-card-header">
         <div class="p-card-title">Tranzaksiyalar</div>
       </div>
-      <div class="table-responsive">
+      <div class="table-responsive kc-twrap">
         <table class="p-table">
           <thead>
             <tr><th>#</th><th>Miqdor</th><th>Komissiya</th><th>Toza</th><th>Status</th><th>Sana</th></tr>
@@ -361,7 +350,7 @@
         </a>
         @endif
       </div>
-      <div class="table-responsive">
+      <div class="table-responsive kc-twrap">
         <table class="p-table">
           <thead>
             <tr><th>Hodim</th><th>Telefon</th><th>Rol</th><th>Holat</th><th></th></tr>
@@ -375,7 +364,7 @@
             @endphp
             <tr>
               <td>
-                <div class="d-flex align-items-center gap-2">
+                <div class="flex items-center gap-2">
                   <div style="width:30px;height:30px;border-radius:50%;overflow:hidden;flex-shrink:0;
                               background:linear-gradient(135deg,var(--p-accent),#7c5cfc);
                               display:flex;align-items:center;justify-content:center;
@@ -402,7 +391,7 @@
               </td>
               <td><span class="s-pill {{ $mCls }}" style="font-size:11px">{{ $mLbl }}</span></td>
               <td>
-                <div class="d-flex gap-1">
+                <div class="flex gap-1">
                   <form method="POST"
                         action="{{ route('panel.sellers.staff.toggle', $member) }}">
                     @csrf @method('PATCH')
@@ -438,7 +427,7 @@
         <a href="{{ route('panel.seller-ads.index', ['seller_id'=>$seller->id]) }}"
            class="btn-p ghost sm">Barchasi <i class="bi bi-arrow-right"></i></a>
       </div>
-      <div class="table-responsive">
+      <div class="table-responsive kc-twrap">
         <table class="p-table">
           <thead>
             <tr><th>Reklama</th><th>Format</th><th>Moderatsiya</th><th>Muddat</th></tr>

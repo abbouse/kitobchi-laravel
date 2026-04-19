@@ -32,7 +32,12 @@ class Stationery extends Model
         'vectorData',
         'recommended',
         'views',
-        'recommendedExpiresAt'
+        'recommendedExpiresAt',
+        'kangaroo_listing_decision',
+        'kangaroo_listing_score',
+        'kangaroo_listing_checked_at',
+        'kangaroo_listing_issues',
+        'ugc_aggregate_score',
     ];
 
     protected $casts = [
@@ -42,6 +47,8 @@ class Stationery extends Model
         'recommended' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        'kangaroo_listing_issues' => 'array',
+        'kangaroo_listing_checked_at' => 'datetime',
     ];
 
     // Category bilan bog'lanish
@@ -49,22 +56,22 @@ class Stationery extends Model
     {
         return $this->belongsTo(StationeryCategory::class, 'category_id');
     }
-    
+
     public function tags()
-{
-    return $this->belongsToMany(StationeryTag::class, 'stationery_tag_relations', 'stationery_id', 'tag_id');
-}
+    {
+        return $this->belongsToMany(StationeryTag::class, 'stationery_tag_relations', 'stationery_id', 'tag_id');
+    }
 
     // Rang variantlari
     public function variants()
     {
         return $this->hasMany(StationeryVariant::class, 'product_id');
     }
-    
+
     public function seller()
     {
         return $this->belongsTo(Seller::class, 'seller_id')
-        ->select('id', 'shop_name', 'lastname', 'firstname', 'phone_number', 'photo', 'isVerified');
+            ->select('id', 'shop_name', 'lastname', 'firstname', 'phone_number', 'photo', 'isVerified');
     }
 
     // Helper: chegirma foizini hisoblash
@@ -73,6 +80,7 @@ class Stationery extends Model
         if ($this->discount_price > 0 && $this->price > $this->discount_price) {
             return round((($this->price - $this->discount_price) / $this->price) * 100);
         }
+
         return 0;
     }
 }

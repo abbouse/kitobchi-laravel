@@ -3,8 +3,15 @@
 @section('page-title', 'Promokod: '.$promocode->code)
 
 @section('content')
-<div class="row g-3">
-  <div class="col-xl-4">
+
+<x-panel.page-header back-href="{{ route('panel.promocodes.index') }}">
+  <x-slot name="heading">Promokod: {{ $promocode->code }}</x-slot>
+  <x-slot name="meta">ID: #{{ $promocode->id }} · {{ $promocode->created_at?->format('d.m.Y') }}</x-slot>
+</x-panel.page-header>
+
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+  <div class="xl:col-span-4">
     <div class="p-card mb-3">
       <div class="dash-card-body" style="text-align:center;padding:30px">
         <code style="font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:700;
@@ -56,19 +63,19 @@
     </div>
     @endif
 
-    <a href="{{ route('panel.promocodes.edit', $promocode) }}" class="btn-p" style="width:100%;justify-content:center;margin-bottom:8px">
+    <a href="{{ route('panel.promocodes.edit', $promocode) }}" class="btn-p primary" style="width:100%;justify-content:center;margin-bottom:8px">
       <i class="bi bi-pencil"></i> Tahrirlash
     </a>
   </div>
 
-  <div class="col-xl-8">
+  <div class="xl:col-span-8">
     <div class="p-card">
       <div class="dash-card-head">
         <div class="dash-card-title">Foydalanish tarixi</div>
         <div class="dash-card-sub">{{ $histories->total() }} ta foydalanuvchi</div>
       </div>
       <div class="dash-card-body">
-        <div class="table-responsive">
+        <div class="table-responsive kc-twrap">
           <table class="p-table">
             <thead>
               <tr><th>#</th><th>Foydalanuvchi</th><th>Telefon</th><th>Sana</th></tr>

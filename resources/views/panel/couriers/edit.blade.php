@@ -4,18 +4,11 @@
 
 @section('content')
 
-<div class="d-flex align-items-center gap-3 mb-4 fade-up">
-  <a href="{{ isset($courier) ? route('panel.couriers.show', $courier) : route('panel.couriers.index') }}"
-     class="btn-p ghost icon">
-    <i class="bi bi-arrow-left"></i>
-  </a>
-  <div>
-    <h1 class="page-title">
-      {{ isset($courier) ? $courier->first_name.' '.$courier->last_name : 'Yangi kuryer' }}
-    </h1>
-    <p class="page-sub">{{ isset($courier) ? "ID #$courier->id" : "Yangi kuryer qo'shish" }}</p>
-  </div>
-</div>
+<x-panel.page-header back-href="{{ isset($courier) ? route('panel.couriers.show', $courier) : route('panel.couriers.index') }}">
+  <x-slot name="heading">{{ isset($courier) ? $courier->first_name.' '.$courier->last_name : 'Yangi kuryer' }}</x-slot>
+  <x-slot name="meta">{{ isset($courier) ? "ID #$courier->id" : "Yangi kuryer qo'shish" }}</x-slot>
+</x-panel.page-header>
+
 
 <form method="POST"
       action="{{ isset($courier) ? route('panel.couriers.update', $courier) : route('panel.couriers.store') }}"
@@ -23,15 +16,15 @@
   @csrf
   @if(isset($courier)) @method('PUT') @endif
 
-  <div class="row g-3">
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
 
-    <div class="col-xl-8 fade-up">
+    <div class="xl:col-span-8 fade-up">
       <div class="p-card">
         <div class="p-card-header"><div class="p-card-title">Asosiy ma'lumotlar</div></div>
         <div style="padding:0 18px 18px">
-          <div class="row g-3">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
 
-            <div class="col-md-6">
+            <div class="">
               <label class="p-form-label">Ism <span style="color:var(--p-danger)">*</span></label>
               <input type="text" name="first_name"
                      class="p-form-control @error('first_name') border-danger @enderror"
@@ -42,7 +35,7 @@
               @enderror
             </div>
 
-            <div class="col-md-6">
+            <div class="">
               <label class="p-form-label">Familiya <span style="color:var(--p-danger)">*</span></label>
               <input type="text" name="last_name"
                      class="p-form-control @error('last_name') border-danger @enderror"
@@ -53,7 +46,7 @@
               @enderror
             </div>
 
-            <div class="col-md-6">
+            <div class="">
               <label class="p-form-label">Telefon <span style="color:var(--p-danger)">*</span></label>
               <input type="text" name="phone_number"
                      class="p-form-control @error('phone_number') border-danger @enderror"
@@ -64,7 +57,7 @@
               @enderror
             </div>
 
-            <div class="col-md-6">
+            <div class="">
               <label class="p-form-label">Viloyat <span style="color:var(--p-danger)">*</span></label>
               <select name="region"
                       class="p-form-control @error('region') border-danger @enderror"
@@ -86,7 +79,7 @@
               @enderror
             </div>
 
-            <div class="col-md-6">
+            <div class="">
               <label class="p-form-label">
                 Parol
                 @if(isset($courier))
@@ -101,7 +94,7 @@
                      autocomplete="new-password">
             </div>
 
-            <div class="col-md-6">
+            <div class="">
               <label class="p-form-label">Balans (UZS)</label>
               <input type="number" name="balance" class="p-form-control"
                      value="{{ old('balance', $courier->balance ?? 0) }}"
@@ -113,7 +106,7 @@
       </div>
     </div>
 
-    <div class="col-xl-4 fade-up">
+    <div class="xl:col-span-4 fade-up">
 
       {{-- Foto --}}
       <div class="p-card mb-3">
@@ -167,8 +160,8 @@
 
     </div>
 
-    <div class="col-12 fade-up">
-      <div class="d-flex gap-2">
+    <div class=" fade-up">
+      <div class="flex gap-2">
         <button type="submit" class="btn-p primary">
           <i class="bi bi-check-lg"></i>
           {{ isset($courier) ? 'Saqlash' : 'Yaratish' }}

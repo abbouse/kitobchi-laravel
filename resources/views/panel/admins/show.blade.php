@@ -3,15 +3,22 @@
 @section('page-title', $admin->name)
 
 @section('content')
-<div class="row g-3">
+
+<x-panel.page-header back-href="{{ route('panel.admins.index') }}">
+  <x-slot name="heading">{{ $admin->name }}</x-slot>
+  <x-slot name="meta">ID: #{{ $admin->id }} · {{ $admin->getRoleLabelAttribute() }}</x-slot>
+</x-panel.page-header>
+
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
 
   {{-- Chap: ma'lumotlar --}}
-  <div class="col-xl-8">
+  <div class="xl:col-span-8">
 
     <div class="p-card mb-3">
       <div class="dash-card-head">
         <div class="dash-card-title">Admin ma'lumotlari</div>
-        <div class="d-flex gap-2">
+        <div class="flex gap-2">
           <a href="{{ route('panel.admins.edit', $admin) }}" class="btn-p ghost sm">
             <i class="bi bi-pencil"></i> Tahrirlash
           </a>
@@ -27,7 +34,7 @@
         </div>
       </div>
       <div class="dash-card-body">
-        <div class="d-flex align-items-center gap-4 mb-4">
+        <div class="flex items-center gap-4 mb-4">
           <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--p-accent),#7c5cfc);
                       display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;
                       color:#fff;flex-shrink:0;overflow:hidden">
@@ -40,7 +47,7 @@
           <div>
             <div style="font-size:20px;font-weight:700;color:var(--p-text)">{{ $admin->name }}</div>
             <div style="font-size:13px;color:var(--p-hint)">{{ $admin->email }}</div>
-            <div class="d-flex gap-2 mt-2">
+            <div class="flex gap-2 mt-2">
               <span class="s-pill" style="background:rgba({{ $admin->getRoleColorAttribute() ?? '79,124,255' }},.15);color:var(--p-accent)">
                 {{ $admin->getRoleLabelAttribute() }}
               </span>
@@ -51,7 +58,7 @@
           </div>
         </div>
 
-        <div class="row g-3">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
           @foreach([
             ['ID',              '#'.$admin->id],
             ['Email',           $admin->email],
@@ -60,7 +67,7 @@
             ['Oxirgi kirish',   $admin->last_login_at ? \Carbon\Carbon::parse($admin->last_login_at)->format('d.m.Y H:i') : '—'],
             ["Qo'shildi",       $admin->created_at?->format('d.m.Y H:i')],
           ] as [$k, $v])
-          <div class="col-sm-6">
+          <div class="">
             <div style="font-size:11px;color:var(--p-hint);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px">{{ $k }}</div>
             <div style="font-size:14px;font-weight:500;color:var(--p-text)">{{ $v }}</div>
           </div>
@@ -87,11 +94,11 @@
             $allPerms = ['users','books','stationery','orders','sellers','couriers','promocodes','discounts','settings','admins'];
             $adminPerms = $admin->permissions ?? [];
           @endphp
-          <div class="d-flex flex-wrap gap-2">
+          <div class="flex flex-wrap gap-2">
             @foreach($allPerms as $perm)
             <span class="s-pill {{ in_array($perm, $adminPerms) ? 'success' : 'muted' }}"
                   style="font-size:12px;padding:5px 12px">
-              <i class="bi bi-{{ in_array($perm, $adminPerms) ? 'check-circle-fill' : 'x-circle' }} me-1"></i>
+              <i class="bi bi-{{ in_array($perm, $adminPerms) ? 'check-circle-fill' : 'x-circle' }} mr-1"></i>
               {{ $perm }}
             </span>
             @endforeach
@@ -103,11 +110,11 @@
   </div>
 
   {{-- O'ng: tezkor amallar --}}
-  <div class="col-xl-4">
+  <div class="xl:col-span-4">
     <div class="p-card">
       <div class="dash-card-head"><div class="dash-card-title">Amallar</div></div>
-      <div class="dash-card-body d-flex flex-column gap-2">
-        <a href="{{ route('panel.admins.edit', $admin) }}" class="btn-p" style="justify-content:center">
+      <div class="dash-card-body flex flex-col gap-2">
+        <a href="{{ route('panel.admins.edit', $admin) }}" class="btn-p primary" style="justify-content:center">
           <i class="bi bi-pencil"></i> Tahrirlash
         </a>
         @if($admin->id !== auth('panel')->id())

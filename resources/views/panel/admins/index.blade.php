@@ -5,15 +5,16 @@
 
 @section('content')
 
-<div class="page-header fade-up d-flex align-items-start justify-content-between">
-  <div>
-    <h1 class="page-title">Adminlar</h1>
-    <p class="page-sub">Panel foydalanuvchilari va ularning ruxsatlari</p>
-  </div>
-  <a href="{{ route('panel.admins.create') }}" class="btn-p primary">
-    <i class="bi bi-plus-lg"></i> Yangi admin
-  </a>
-</div>
+<x-panel.page-header>
+  <x-slot name="heading">Adminlar</x-slot>
+  <x-slot name="meta">Panel foydalanuvchilari va ularning ruxsatlari</x-slot>
+  <x-slot name="actions">
+    <a href="{{ route('panel.admins.create') }}" class="btn-p primary">
+        <i class="bi bi-plus-lg"></i> Yangi admin
+      </a>
+  </x-slot>
+</x-panel.page-header>
+
 
 <div class="p-card fade-up">
   <div class="p-card-header">
@@ -21,7 +22,7 @@
     <div class="p-card-sub">{{ $admins->total() }} ta admin</div>
   </div>
 
-  <div class="table-responsive">
+  <div class="table-responsive kc-twrap">
     <table class="p-table">
       <thead>
         <tr>
@@ -35,7 +36,7 @@
         <tr>
           <td><span style="font-family:'JetBrains Mono',monospace;color:var(--p-accent);font-size:12px">#{{ $admin->id }}</span></td>
           <td>
-            <div class="d-flex align-items-center gap-2">
+            <div class="flex items-center gap-2">
               <div class="av" style="background:linear-gradient(135deg,var(--p-accent),#7c5cfc);color:#fff">
                 {{ strtoupper(substr($admin->name,0,1)) }}
               </div>
@@ -53,7 +54,7 @@
             @if($admin->isSuperAdmin())
               <span style="font-size:12px;color:var(--p-hint)">Barcha ruxsatlar</span>
             @else
-              <div class="d-flex flex-wrap gap-1">
+              <div class="flex flex-wrap gap-1">
                 @foreach(array_slice($admin->permissions ?? [], 0, 3) as $perm)
                   <span class="s-pill accent" style="font-size:10px;padding:2px 7px">{{ $perm }}</span>
                 @endforeach
@@ -79,7 +80,7 @@
             @endif
           </td>
           <td>
-            <div class="d-flex gap-1">
+            <div class="flex gap-1">
               <a href="{{ route('panel.admins.edit', $admin) }}" class="btn-p ghost sm">
                 <i class="bi bi-pencil"></i>
               </a>
@@ -113,7 +114,7 @@
   </div>
 
   @if($admins->hasPages())
-  <div class="d-flex align-items-center justify-content-between mt-3"
+  <div class="flex items-center justify-between mt-3"
        style="padding-top:12px;border-top:1px solid var(--p-border)">
     <div style="font-size:12px;color:var(--p-hint)">{{ $admins->firstItem() }}–{{ $admins->lastItem() }} / {{ $admins->total() }}</div>
     <div class="p-pagination">

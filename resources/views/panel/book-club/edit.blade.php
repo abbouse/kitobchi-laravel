@@ -3,24 +3,16 @@
 @section('page-title', 'Post tahrirlash')
 
 @section('content')
-<div class="row justify-content-center">
-  <div class="col-xl-7">
-
-    <div class="d-flex align-items-center gap-3 mb-4 fade-up">
-      <a href="{{ route('panel.book-club.show', $bookClub) }}" class="btn-p ghost icon">
-        <i class="bi bi-arrow-left"></i>
-      </a>
-      <div>
-        <h1 class="page-title">Post #{{ $bookClub->id }} tahrirlash</h1>
-        <p class="page-sub">
-          Muallif:
+<div class="kc-page-inner w-full min-w-0">
+    <x-panel.page-header back-href="{{ route('panel.book-club.show', $bookClub) }}">
+  <x-slot name="heading">Post #{{ $bookClub->id }} tahrirlash</x-slot>
+  <x-slot name="meta">Muallif:
           <a href="{{ route('panel.users.show', $bookClub->user_id) }}"
              style="color:var(--p-accent)">
             {{ $bookClub->user?->name }} {{ $bookClub->user?->lastname }}
-          </a>
-        </p>
-      </div>
-    </div>
+          </a></x-slot>
+</x-panel.page-header>
+
 
     <form method="POST" action="{{ route('panel.book-club.update', $bookClub) }}">
       @csrf @method('PUT')
@@ -48,7 +40,7 @@
           <div class="dash-card-sub">O'chirish uchun X bosing</div>
         </div>
         <div class="dash-card-body">
-          <div class="d-flex flex-wrap gap-2">
+          <div class="flex flex-wrap gap-2">
             @foreach($bookClub->images as $img)
             <div style="position:relative">
               <img src="{{ asset('storage/'.$img->image) }}"
@@ -100,16 +92,14 @@
         </div>
       </div>
 
-      <div class="d-flex gap-2 justify-content-end fade-up">
+      <div class="flex gap-2 justify-end fade-up">
         <a href="{{ route('panel.book-club.show', $bookClub) }}" class="btn-p ghost">
           Bekor qilish
         </a>
-        <button type="submit" class="btn-p">
+        <button type="submit" class="btn-p primary">
           <i class="bi bi-check-lg"></i> Saqlash
         </button>
       </div>
     </form>
-
-  </div>
 </div>
 @endsection

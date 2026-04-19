@@ -1,7 +1,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap') layer(base);
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap') layer(base);
 @import 'prismjs/themes/prism.min.css';
 @import 'tailwindcss';
-
+@import './panel-primitives.css';
+@import './kitobchi-panel.css';
+@import './panel-dashboard.css';
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
@@ -9,7 +12,8 @@
 @source '../**/*.js';
 
 
-@custom-variant dark (&:is(.dark *));
+/* html.dark o‘zi va uning avlodlari — dark: utilitalari ishonchli ishlaydi */
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
   --font-*: initial;
@@ -86,6 +90,8 @@
   --color-gray-900: #101828;
   --color-gray-950: #0c111d;
   --color-gray-dark: #1a2231;
+  /* TailAdmin: search / input utilities */
+  --color-dark-900: #101828;
 
   --color-orange-25: #fffaf5;
   --color-orange-50: #fff6ed;
@@ -194,27 +200,32 @@
 }
 
 @utility menu-item {
-  @apply relative flex items-center w-full gap-3 px-3 py-2 font-medium rounded-lg text-theme-sm;
+  @apply relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium leading-snug tracking-tight xl:gap-3.5 xl:px-3.5 xl:py-3 xl:text-[15px];
 }
 
 @utility menu-item-active {
-  @apply bg-brand-50 text-brand-500 dark:bg-brand-500/[0.12] dark:text-brand-400;
+  @apply bg-brand-500/[0.09] text-brand-600 shadow-sm ring-1 ring-brand-500/10 dark:bg-brand-500/[0.12] dark:text-brand-400 dark:shadow-none dark:ring-0;
 }
 
 @utility menu-item-inactive {
-  @apply text-gray-700 hover:bg-gray-100 group-hover:text-gray-700 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-gray-300;
+  @apply text-gray-600 hover:bg-gray-100/90 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-white/[0.06] dark:hover:text-gray-100;
 }
 
 @utility menu-item-icon {
-  @apply text-gray-500 group-hover:text-gray-700 dark:text-gray-400;
+  @apply text-gray-400 group-hover:text-gray-600 dark:text-gray-400;
 }
 
 @utility menu-item-icon-active {
-  @apply text-brand-500 dark:text-brand-400;
+  @apply text-brand-600 dark:text-brand-400;
 }
 
 @utility menu-item-icon-inactive {
-  @apply text-gray-500 group-hover:text-gray-700 dark:text-gray-400 dark:group-hover:text-gray-300;
+  @apply text-gray-400 group-hover:text-gray-600 dark:text-gray-400 dark:group-hover:text-gray-300;
+}
+
+/* TailAdmin sidebar: class="menu-item-text …" — uzun yozuvlar uchun */
+@utility menu-item-text {
+  @apply min-w-0 flex-1 truncate;
 }
 
 @utility menu-item-arrow {
@@ -226,31 +237,19 @@
 }
 
 @utility menu-item-arrow-inactive {
-  @apply text-gray-500 group-hover:text-gray-700 dark:text-gray-400 dark:group-hover:text-gray-300;
+  @apply text-gray-400 group-hover:text-gray-600 dark:text-gray-400 dark:group-hover:text-gray-300;
 }
 
 @utility menu-dropdown-item {
-  @apply relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-theme-sm font-medium;
+  @apply relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium leading-snug xl:px-3.5 xl:py-3 xl:text-[15px];
 }
 
 @utility menu-dropdown-item-active {
-  @apply bg-brand-50 text-brand-500 dark:bg-brand-500/[0.12] dark:text-brand-400;
+  @apply bg-brand-500/[0.09] text-brand-600 ring-1 ring-brand-500/10 dark:bg-brand-500/[0.12] dark:text-brand-400 dark:ring-0;
 }
 
 @utility menu-dropdown-item-inactive {
-  @apply text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/5;
-}
-
-@utility menu-dropdown-item {
-  @apply text-theme-sm relative flex items-center gap-3 rounded-lg px-3 py-2.5 font-medium;
-}
-
-@utility menu-dropdown-item-active {
-  @apply bg-brand-50 text-brand-500 dark:bg-brand-500/[0.12] dark:text-brand-400;
-}
-
-@utility menu-dropdown-item-inactive {
-  @apply text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/5;
+  @apply text-gray-600 hover:bg-gray-100/90 dark:text-gray-300 dark:hover:bg-white/5;
 }
 
 @utility menu-dropdown-badge {

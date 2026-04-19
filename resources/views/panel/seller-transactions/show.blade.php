@@ -19,56 +19,42 @@
 @endphp
 
 {{-- ── Header ──────────────────────────────────────────────── --}}
-<div class="page-header fade-up d-flex align-items-start justify-content-between mb-4">
-  <div class="d-flex align-items-center gap-3">
-    <a href="{{ route('panel.seller-transactions.index') }}?segment={{ $segment }}"
-       class="btn-p ghost icon">
-      <i class="bi bi-arrow-left"></i>
-    </a>
-    <div>
-      <h1 class="page-title">Tranzaksiya #{{ $tx->id }}</h1>
-      <p class="page-sub" style="display:flex;align-items:center;gap:8px">
-        {{ $tx->created_at?->format('d.m.Y H:i') }}
-        <span class="s-pill {{ $stCls }}" style="font-size:11px">{{ $stLbl }}</span>
-        <span class="s-pill {{ $isCourier?'info':'warning' }}" style="font-size:10px">
-          <i class="bi bi-{{ $isCourier?'bicycle':'shop-window' }} me-1"></i>
-          {{ $isCourier?'Kuryer':'Seller' }}
-        </span>
-      </p>
-    </div>
-  </div>
+<x-panel.page-header back-href="{{ route('panel.seller-transactions.index') }}?segment={{ $segment }}">
+  <x-slot name="heading">Tranzaksiya #{{ $tx->id }}</x-slot>
+  <x-slot name="actions">
+    <div class="flex gap-2">
+        @if($tx->status === 'pending')
+        <form method="POST"
+              action="{{ route('panel.seller-transactions.approve', $tx->id) }}"
+              onsubmit="return confirm('Tasdiqlashni xohlaysizmi?\n{{ number_format($tx->amount) }} UZS yechildi.')">
+          @csrf @method('PATCH')
+          <input type="hidden" name="segment" value="{{ $segment }}">
+          <button class="btn-p success">
+            <i class="bi bi-check-lg"></i> Tasdiqlash
+          </button>
+        </form>
+        @endif
+    
+        @if($tx->status !== 'rejected')
+        <button class="btn-p danger"
+                onclick="openReject({{ $tx->id }},
+                  '{{ addslashes($entityName) }}',
+                  {{ $tx->amount }},
+                  '{{ $tx->status }}',
+                  '{{ $segment }}')">
+          <i class="bi bi-x-lg"></i>
+          {{ $tx->status==='approved' ? 'Bekor qilish (qaytarish)' : 'Rad etish' }}
+        </button>
+        @endif
+      </div>
+  </x-slot>
+</x-panel.page-header>
 
-  <div class="d-flex gap-2">
-    @if($tx->status === 'pending')
-    <form method="POST"
-          action="{{ route('panel.seller-transactions.approve', $tx->id) }}"
-          onsubmit="return confirm('Tasdiqlashni xohlaysizmi?\n{{ number_format($tx->amount) }} UZS yechildi.')">
-      @csrf @method('PATCH')
-      <input type="hidden" name="segment" value="{{ $segment }}">
-      <button class="btn-p success">
-        <i class="bi bi-check-lg"></i> Tasdiqlash
-      </button>
-    </form>
-    @endif
 
-    @if($tx->status !== 'rejected')
-    <button class="btn-p danger"
-            onclick="openReject({{ $tx->id }},
-              '{{ addslashes($entityName) }}',
-              {{ $tx->amount }},
-              '{{ $tx->status }}',
-              '{{ $segment }}')">
-      <i class="bi bi-x-lg"></i>
-      {{ $tx->status==='approved' ? 'Bekor qilish (qaytarish)' : 'Rad etish' }}
-    </button>
-    @endif
-  </div>
-</div>
-
-<div class="row g-3">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
 
   {{-- ════ CHAP ════════════════════════════════════════════════ --}}
-  <div class="col-xl-4">
+  <div class="xl:col-span-4">
 
     {{-- Entity info --}}
     <div class="p-card mb-3 fade-up">
@@ -79,7 +65,7 @@
       </div>
       <div style="padding:14px 18px">
         @if($entity)
-        <div class="d-flex align-items-center gap-3 mb-3">
+        <div class="flex items-center gap-3 mb-3">
           <div style="width:46px;height:46px;
                       border-radius:{{ $isCourier?'50%':'10px' }};
                       overflow:hidden;flex-shrink:0;
@@ -155,7 +141,7 @@
          style="background:var(--p-danger-d);border-color:rgba(255,92,106,.2)">
       <div class="p-card-header">
         <div class="p-card-title" style="color:var(--p-danger)">
-          <i class="bi bi-x-circle-fill me-1"></i> Rad etish sababi
+          <i class="bi bi-x-circle-fill mr-1"></i> Rad etish sababi
         </div>
       </div>
       <div style="padding:0 18px 14px;font-size:13px;color:var(--p-muted);line-height:1.6">
@@ -167,7 +153,7 @@
   </div>
 
   {{-- ════ O'NG ═════════════════════════════════════════════════ --}}
-  <div class="col-xl-8">
+  <div class="xl:col-span-8">
 
     {{-- Hisob-kitob --}}
     <div class="p-card mb-3 fade-up">
@@ -213,8 +199,8 @@
           </div>
         </div>
 
-        <div class="row g-3">
-          <div class="col-md-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div class="">
             <div style="font-size:11px;color:var(--p-hint);margin-bottom:4px">Karta raqami</div>
             <div style="font-size:14px;font-weight:600;font-family:'JetBrains Mono',monospace;
                         color:var(--p-text);letter-spacing:.08em">
@@ -229,7 +215,7 @@
             </div>
           </div>
 
-          <div class="col-md-6">
+          <div class="">
             <div style="font-size:11px;color:var(--p-hint);margin-bottom:4px">Ariza vaqti</div>
             <div style="font-size:14px;font-weight:500;color:var(--p-text)">
               {{ $tx->created_at?->format('d.m.Y H:i:s') }}
@@ -240,7 +226,7 @@
           </div>
 
           @if($tx->updated_at && $tx->status !== 'pending')
-          <div class="col-md-6">
+          <div class="">
             <div style="font-size:11px;color:var(--p-hint);margin-bottom:4px">Ko'rib chiqildi</div>
             <div style="font-size:14px;font-weight:500;color:var(--p-text)">
               {{ $tx->updated_at?->format('d.m.Y H:i:s') }}
@@ -251,7 +237,7 @@
           </div>
           @endif
 
-          <div class="col-md-6">
+          <div class="">
             <div style="font-size:11px;color:var(--p-hint);margin-bottom:4px">ID</div>
             <div style="font-size:14px;font-weight:600;font-family:'JetBrains Mono',monospace;
                         color:var(--p-accent)">
@@ -269,12 +255,12 @@
         <div class="p-card-title">Qaror qabul qilish</div>
       </div>
       <div style="padding:0 18px 18px">
-        <div class="row g-3">
-          <div class="col-md-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div class="">
             <div style="background:var(--p-success-d);border:1px solid rgba(34,201,142,.2);
                         border-radius:12px;padding:18px">
               <div style="font-size:14px;font-weight:600;color:var(--p-success);margin-bottom:6px">
-                <i class="bi bi-check-circle-fill me-1"></i> Tasdiqlash
+                <i class="bi bi-check-circle-fill mr-1"></i> Tasdiqlash
               </div>
               <div style="font-size:12px;color:var(--p-muted);margin-bottom:14px;line-height:1.6">
                 Balansdan <strong style="color:var(--p-text)">{{ number_format($tx->amount) }} UZS</strong>
@@ -294,11 +280,11 @@
               </form>
             </div>
           </div>
-          <div class="col-md-6">
+          <div class="">
             <div style="background:var(--p-danger-d);border:1px solid rgba(255,92,106,.2);
                         border-radius:12px;padding:18px">
               <div style="font-size:14px;font-weight:600;color:var(--p-danger);margin-bottom:6px">
-                <i class="bi bi-x-circle-fill me-1"></i> Rad etish
+                <i class="bi bi-x-circle-fill mr-1"></i> Rad etish
               </div>
               <div style="font-size:12px;color:var(--p-muted);margin-bottom:14px;line-height:1.6">
                 Balans <strong style="color:var(--p-text)">o'zgarmaydi</strong>.
@@ -370,10 +356,10 @@
   <div style="background:var(--p-surface);border-radius:14px;padding:24px;
               width:100%;max-width:460px;border:1px solid var(--p-border);
               box-shadow:0 20px 60px rgba(0,0,0,.4)">
-    <div class="d-flex align-items-start justify-content-between mb-3">
+    <div class="flex items-start justify-between mb-3">
       <div>
         <div style="font-size:16px;font-weight:600;color:var(--p-text)">
-          <i class="bi bi-x-circle-fill me-1" style="color:var(--p-danger)"></i>
+          <i class="bi bi-x-circle-fill mr-1" style="color:var(--p-danger)"></i>
           Rad etish
         </div>
         <div id="reject-subtitle"
@@ -388,7 +374,7 @@
          style="display:none;padding:11px 13px;background:var(--p-warning-d);
                 border-radius:9px;border:1px solid rgba(245,166,35,.2);
                 margin-bottom:14px;font-size:12px;color:var(--p-warning)">
-      <i class="bi bi-exclamation-triangle-fill me-1"></i>
+      <i class="bi bi-exclamation-triangle-fill mr-1"></i>
       Oldin <strong>tasdiqlangan</strong> edi.
       Rad etilsa <strong><span id="reject-amount"></span> UZS qaytariladi</strong>.
     </div>
@@ -402,7 +388,7 @@
       <textarea name="rejected_desc" class="p-form-control" rows="3" required
                 style="margin-bottom:14px"
                 placeholder="Karta ma'lumotlari noto'g'ri..."></textarea>
-      <div class="d-flex gap-2 justify-content-end">
+      <div class="flex gap-2 justify-end">
         <button type="button" onclick="closeReject()" class="btn-p ghost">
           Bekor
         </button>

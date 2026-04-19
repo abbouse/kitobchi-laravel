@@ -4,12 +4,9 @@
 @section('page-title', 'Yangi yangilik')
 
 @section('content')
-<div class="d-flex align-items-center gap-3 mb-4 fade-up">
-  <a href="{{ route('panel.market-news.index') }}" class="btn-p ghost icon">
-    <i class="bi bi-arrow-left"></i>
-  </a>
-  <h1 class="page-title">Yangi yangilik yaratish</h1>
-</div>
+<x-panel.page-header back-href="{{ route('panel.market-news.index') }}">
+  <x-slot name="heading">Yangi yangilik yaratish</x-slot>
+</x-panel.page-header>
 
 <form method="POST" action="{{ route('panel.market-news.store') }}"
       enctype="multipart/form-data">

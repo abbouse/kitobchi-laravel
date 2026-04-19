@@ -1,2 +1,0 @@
-<div <?php echo e($attributes->class(['form-hint'])); ?>><?php echo $slot ?? ''; ?></div>
-<?php /**PATH /var/www/www-root/data/www/kitobchi.com/vendor/moonshine/moonshine/src/Laravel/src/Providers/../../../UI/resources/views/components/form/hint.blade.php ENDPATH**/ ?>

@@ -3,15 +3,11 @@
 @section('page-title', 'Yangilik tahrirlash')
 
 @section('content')
-<div class="d-flex align-items-center gap-3 mb-4 fade-up">
-  <a href="{{ route('panel.market-news.show', $marketNews) }}" class="btn-p ghost icon">
-    <i class="bi bi-arrow-left"></i>
-  </a>
-  <div>
-    <h1 class="page-title">{{ $marketNews->title }}</h1>
-    <p class="page-sub">Yangilikni tahrirlash</p>
-  </div>
-</div>
+<x-panel.page-header back-href="{{ route('panel.market-news.show', $marketNews) }}">
+  <x-slot name="heading">{{ $marketNews->title }}</x-slot>
+  <x-slot name="meta">Yangilikni tahrirlash</x-slot>
+</x-panel.page-header>
+
 
 <form method="POST" action="{{ route('panel.market-news.update', $marketNews) }}"
       enctype="multipart/form-data">

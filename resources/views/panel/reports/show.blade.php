@@ -9,64 +9,60 @@
   $stLbl = match($report->status){'reviewed'=>'Ko\'rib chiqilgan','dismissed'=>'Rad etilgan',default=>'Kutilmoqda'};
 @endphp
 
-<div class="d-flex align-items-center justify-content-between mb-4 fade-up">
-  <div class="d-flex align-items-center gap-3">
-    <a href="{{ route('panel.reports.index') }}" class="btn-p ghost icon">
-      <i class="bi bi-arrow-left"></i>
-    </a>
-    <div>
-      <h1 class="page-title">Shikoyat #{{ $report->id }}</h1>
-      <p class="page-sub" style="display:flex;align-items:center;gap:8px">
-        {{ \Carbon\Carbon::parse($report->created_at)->format('d.m.Y H:i') }}
-        <span class="s-pill {{ $stCls }}" style="font-size:11px">{{ $stLbl }}</span>
-      </p>
+<x-panel.page-header back-href="{{ route('panel.reports.index') }}">
+  <x-slot name="heading">Shikoyat #{{ $report->id }}</x-slot>
+  <x-slot name="meta">
+    <p class="page-sub flex flex-wrap items-center gap-2">
+      {{ \Carbon\Carbon::parse($report->created_at)->format('d.m.Y H:i') }}
+      <span class="s-pill {{ $stCls }}" style="font-size:11px">{{ $stLbl }}</span>
+    </p>
+  </x-slot>
+  <x-slot name="actions">
+    <div class="flex flex-wrap gap-2">
+      @if($report->status === 'pending')
+        <form method="POST" action="{{ route('panel.reports.status',$report) }}">
+          @csrf @method('PATCH')
+          <input type="hidden" name="status" value="reviewed">
+          <button class="btn-p success">
+            <i class="bi bi-check-lg"></i> Ko'rildi
+          </button>
+        </form>
+        <form method="POST" action="{{ route('panel.reports.status',$report) }}">
+          @csrf @method('PATCH')
+          <input type="hidden" name="status" value="dismissed">
+          <button class="btn-p ghost">
+            <i class="bi bi-x-lg"></i> Rad etish
+          </button>
+        </form>
+      @else
+        <form method="POST" action="{{ route('panel.reports.status',$report) }}">
+          @csrf @method('PATCH')
+          <input type="hidden" name="status" value="pending">
+          <button class="btn-p ghost" style="color:var(--p-warning)">
+            <i class="bi bi-arrow-counterclockwise"></i> Qayta ochish
+          </button>
+        </form>
+      @endif
+
+      <form method="POST" action="{{ route('panel.reports.destroy',$report) }}"
+            onsubmit="return confirm('O\'chirilsinmi?')">
+        @csrf @method('DELETE')
+        <button class="btn-p danger ghost"><i class="bi bi-trash"></i></button>
+      </form>
     </div>
-  </div>
+  </x-slot>
+</x-panel.page-header>
 
-  <div class="d-flex gap-2">
-    @if($report->status === 'pending')
-      <form method="POST" action="{{ route('panel.reports.status',$report) }}">
-        @csrf @method('PATCH')
-        <input type="hidden" name="status" value="reviewed">
-        <button class="btn-p success">
-          <i class="bi bi-check-lg"></i> Ko'rildi
-        </button>
-      </form>
-      <form method="POST" action="{{ route('panel.reports.status',$report) }}">
-        @csrf @method('PATCH')
-        <input type="hidden" name="status" value="dismissed">
-        <button class="btn-p ghost">
-          <i class="bi bi-x-lg"></i> Rad etish
-        </button>
-      </form>
-    @else
-      <form method="POST" action="{{ route('panel.reports.status',$report) }}">
-        @csrf @method('PATCH')
-        <input type="hidden" name="status" value="pending">
-        <button class="btn-p ghost" style="color:var(--p-warning)">
-          <i class="bi bi-arrow-counterclockwise"></i> Qayta ochish
-        </button>
-      </form>
-    @endif
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
 
-    <form method="POST" action="{{ route('panel.reports.destroy',$report) }}"
-          onsubmit="return confirm('O\'chirilsinmi?')">
-      @csrf @method('DELETE')
-      <button class="btn-p danger ghost"><i class="bi bi-trash"></i></button>
-    </form>
-  </div>
-</div>
-
-<div class="row g-3">
-
-  <div class="col-xl-4">
+  <div class="xl:col-span-4">
 
     {{-- Shikoyatchi --}}
     <div class="p-card mb-3 fade-up">
       <div class="p-card-header"><div class="p-card-title">Shikoyatchi</div></div>
       <div style="padding:14px 18px">
         @if($report->user)
-        <div class="d-flex align-items-center gap-3 mb-3">
+        <div class="flex items-center gap-3 mb-3">
           <div style="width:46px;height:46px;border-radius:50%;overflow:hidden;flex-shrink:0;
                       background:linear-gradient(135deg,var(--p-accent),#7c5cfc);
                       display:flex;align-items:center;justify-content:center;
@@ -123,14 +119,14 @@
     <div class="p-card fade-up" style="border-color:rgba(245,166,35,.3)">
       <div class="p-card-header">
         <div class="p-card-title" style="color:var(--p-warning)">
-          <i class="bi bi-exclamation-triangle-fill me-1"></i>Boshqa shikoyatlar
+          <i class="bi bi-exclamation-triangle-fill mr-1"></i>Boshqa shikoyatlar
         </div>
         <span class="s-pill warning" style="font-size:10px">{{ $otherReports->count() }}</span>
       </div>
       <div style="padding:0 18px 14px">
         @foreach($otherReports as $or)
         <div style="padding:8px 0;border-bottom:1px solid var(--p-border)">
-          <div class="d-flex align-items-center justify-content-between">
+          <div class="flex items-center justify-between">
             <span style="font-size:12px;color:var(--p-text)">{{ $or->reason }}</span>
             <a href="{{ route('panel.reports.show',$or) }}"
                style="font-size:11px;color:var(--p-accent)">Ko'rish</a>
@@ -148,7 +144,7 @@
 
   </div>
 
-  <div class="col-xl-8">
+  <div class="xl:col-span-8">
 
     {{-- Sabab va izoh --}}
     <div class="p-card mb-3 fade-up">
@@ -180,7 +176,7 @@
     <div class="p-card fade-up" style="border-color:rgba(255,92,106,.2)">
       <div class="p-card-header">
         <div class="p-card-title" style="color:var(--p-danger)">
-          <i class="bi bi-flag-fill me-1"></i>Shikoyat qilingan kontent
+          <i class="bi bi-flag-fill mr-1"></i>Shikoyat qilingan kontent
         </div>
         <span class="s-pill danger" style="font-size:10px">
           #{{ $report->reportable_id }}

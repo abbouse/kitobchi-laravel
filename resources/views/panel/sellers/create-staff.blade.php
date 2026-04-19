@@ -4,19 +4,13 @@
 
 @section('content')
 
-<div class="d-flex align-items-center gap-3 mb-4 fade-up">
-  <a href="{{ route('panel.sellers.show', $seller) }}" class="btn-p ghost icon">
-    <i class="bi bi-arrow-left"></i>
-  </a>
-  <div>
-    <h1 class="page-title">Yangi hodim</h1>
-    <p class="page-sub">{{ $seller->shop_name }} uchun</p>
-  </div>
-</div>
+<x-panel.page-header back-href="{{ route('panel.sellers.show', $seller) }}">
+  <x-slot name="heading">Yangi hodim</x-slot>
+  <x-slot name="meta">{{ $seller->shop_name }} uchun</x-slot>
+</x-panel.page-header>
 
-<div class="row justify-content-center">
-  <div class="col-xl-7 fade-up">
 
+<div class="kc-page-inner w-full min-w-0 fade-up">
     <form method="POST"
           action="{{ route('panel.sellers.staff.store', $seller) }}"
           enctype="multipart/form-data">
@@ -25,9 +19,9 @@
       <div class="p-card mb-3">
         <div class="p-card-header"><div class="p-card-title">Hodim ma'lumotlari</div></div>
         <div style="padding:0 18px 18px">
-          <div class="row g-3">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
 
-            <div class="col-md-6">
+            <div class="">
               <label class="p-form-label">Ism <span style="color:var(--p-danger)">*</span></label>
               <input type="text" name="firstname"
                      class="p-form-control @error('firstname') border-danger @enderror"
@@ -37,13 +31,13 @@
               @enderror
             </div>
 
-            <div class="col-md-6">
+            <div class="">
               <label class="p-form-label">Familiya</label>
               <input type="text" name="lastname" class="p-form-control"
                      value="{{ old('lastname') }}" maxlength="100">
             </div>
 
-            <div class="col-md-6">
+            <div class="">
               <label class="p-form-label">Telefon <span style="color:var(--p-danger)">*</span></label>
               <input type="text" name="phone_number"
                      class="p-form-control @error('phone_number') border-danger @enderror"
@@ -53,7 +47,7 @@
               @enderror
             </div>
 
-            <div class="col-md-6">
+            <div class="">
               <label class="p-form-label">Parol <span style="color:var(--p-danger)">*</span></label>
               <input type="password" name="password"
                      class="p-form-control @error('password') border-danger @enderror"
@@ -63,7 +57,7 @@
               @enderror
             </div>
 
-            <div class="col-md-6">
+            <div class="">
               <label class="p-form-label">Rol <span style="color:var(--p-danger)">*</span></label>
               <select name="role" class="p-form-control @error('role') border-danger @enderror"
                       required>
@@ -79,7 +73,7 @@
               @enderror
             </div>
 
-            <div class="col-md-6">
+            <div class="">
               <label class="p-form-label">Holat</label>
               <select name="staff_status" class="p-form-control">
                 <option value="active" {{ old('staff_status','active')==='active' ? 'selected':'' }}>
@@ -91,7 +85,7 @@
               </select>
             </div>
 
-            <div class="col-12">
+            <div class="">
               <label class="p-form-label">Profil rasmi</label>
               <input type="file" name="photo" class="p-form-control" accept="image/*">
               <div style="font-size:11px;color:var(--p-hint);margin-top:4px">JPG, PNG · max 2MB</div>
@@ -126,7 +120,7 @@
         </div>
       </div>
 
-      <div class="d-flex gap-2">
+      <div class="flex gap-2">
         <button type="submit" class="btn-p primary">
           <i class="bi bi-person-plus"></i> Hodim qo'shish
         </button>
@@ -136,7 +130,6 @@
       </div>
 
     </form>
-  </div>
 </div>
 
 @endsection

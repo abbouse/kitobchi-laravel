@@ -1,414 +1,134 @@
-<!DOCTYPE html>
-<html lang="uz" data-bs-theme="{{ session('theme','dark') }}">
-<head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Kirish — kitobchi. Admin</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
-<link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" rel="stylesheet"/>
-<style>
-:root {
-  --bg:       #0c0e14;
-  --surface:  #13161f;
-  --elevated: #1a1e2c;
-  --border:   rgba(255,255,255,0.08);
-  --text:     #e8eaf4;
-  --muted:    #8b91a8;
-  --hint:     #4e5470;
-  --accent:   #5b87ff;
-  --accent-d: rgba(91,135,255,0.14);
-  --danger:   #ff5370;
-  --danger-d: rgba(255,83,112,0.13);
-}
+@extends('panel.layouts.guest')
 
-*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+@section('title', 'Kirish')
 
-body {
-  font-family: 'Inter', sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  overflow: hidden;
-  -webkit-font-smoothing: antialiased;
-}
+@section('content')
+@php
+    $nextTheme = session('theme', 'dark') === 'dark' ? 'light' : 'dark';
+@endphp
 
-/* Animated background */
-.bg-mesh {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  overflow: hidden;
-}
-.bg-mesh::before {
-  content: '';
-  position: absolute;
-  width: 800px; height: 800px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(91,135,255,.12) 0%, transparent 70%);
-  top: -300px; left: -200px;
-  animation: floatA 18s ease-in-out infinite;
-}
-.bg-mesh::after {
-  content: '';
-  position: absolute;
-  width: 600px; height: 600px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(124,92,252,.09) 0%, transparent 70%);
-  bottom: -200px; right: -100px;
-  animation: floatB 22s ease-in-out infinite;
-}
-.bg-dot {
-  position: absolute;
-  width: 500px; height: 500px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(32,201,151,.06) 0%, transparent 70%);
-  top: 60%; left: 60%;
-  animation: floatC 16s ease-in-out infinite;
-}
+<div class="relative flex min-h-screen flex-col justify-center lg:flex-row dark:bg-gray-900">
+    {{-- Chap: forma --}}
+    <div class="relative flex w-full flex-1 flex-col justify-center px-4 py-10 sm:px-6 lg:w-1/2 lg:px-8 xl:px-12">
+        <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_90%_55%_at_50%_-10%,rgba(70,95,255,0.09),transparent_55%)] dark:bg-[radial-gradient(ellipse_90%_50%_at_50%_-8%,rgba(117,146,255,0.12),transparent_58%)]"></div>
+        <div class="relative mx-auto w-full max-w-md">
+            <div class="mb-8 flex items-center justify-between gap-4">
+                <a href="{{ url('/') }}"
+                   class="inline-flex items-center gap-2 text-sm text-gray-500 transition-colors hover:text-gray-800 dark:text-gray-400 dark:hover:text-white/90">
+                    <svg class="stroke-current" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path d="M12.7083 5L7.5 10.2083L12.7083 15.4167" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Saytga qaytish
+                </a>
+                <form method="POST" action="{{ route('panel.theme') }}"
+                      class="inline-flex"
+                      onsubmit="localStorage.setItem('kitobchi_theme', this.querySelector('[name=theme]').value)">
+                    @csrf
+                    <input type="hidden" name="theme" value="{{ $nextTheme }}"/>
+                    <button type="submit"
+                            class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-800 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
+                            title="{{ $nextTheme === 'dark' ? 'Qorong‘i' : 'Yorug‘' }} rejim">
+                        @if(session('theme', 'dark') === 'dark')
+                            <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"/></svg>
+                        @else
+                            <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd"/></svg>
+                        @endif
+                    </button>
+                </form>
+            </div>
 
-/* Grid pattern overlay */
-.bg-grid {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  background-image:
-    linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
-  background-size: 44px 44px;
-}
+            <div class="mb-8">
+                <a href="{{ route('panel.login') }}" class="mb-6 inline-flex items-center gap-3">
+                    <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-500 text-lg font-bold text-white shadow-lg shadow-brand-500/30">K</span>
+                    <span>
+                        <span class="block text-lg font-semibold text-gray-900 dark:text-white">kitobchi.</span>
+                        <span class="text-theme-xs text-gray-500 dark:text-gray-400">Admin boshqaruvi</span>
+                    </span>
+                </a>
+                <h1 class="text-title-sm sm:text-title-md mb-2 font-semibold text-gray-800 dark:text-white/90">
+                    Xush kelibsiz
+                </h1>
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                    Tizimga kirish uchun email va parolingizni kiriting.
+                </p>
+            </div>
 
-@keyframes floatA { 0%,100%{transform:translate(0,0) scale(1)} 33%{transform:translate(60px,-40px) scale(1.05)} 66%{transform:translate(-30px,50px) scale(.98)} }
-@keyframes floatB { 0%,100%{transform:translate(0,0) scale(1)} 40%{transform:translate(-50px,30px) scale(1.06)} 70%{transform:translate(40px,-20px) scale(.96)} }
-@keyframes floatC { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-60px,-40px)} }
+            @if(session('error'))
+                <div class="mb-6 flex gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
+                    <i class="bi bi-exclamation-circle-fill mt-0.5 shrink-0"></i>
+                    <span>{{ session('error') }}</span>
+                </div>
+            @endif
 
-/* Login card */
-.login-wrap {
-  position: relative;
-  z-index: 10;
-  width: 100%;
-  max-width: 420px;
-  padding: 16px;
-  animation: fadeUp .4s cubic-bezier(.4,0,.2,1) both;
-}
+            <form method="POST" action="{{ route('panel.login.post') }}"
+                  class="space-y-5 rounded-2xl border border-gray-200/90 bg-white/90 p-6 shadow-[0_8px_30px_-12px_rgba(16,24,40,0.12)] backdrop-blur-sm sm:p-8 dark:border-gray-800/80 dark:bg-gray-900/75 dark:shadow-[0_12px_40px_-16px_rgba(0,0,0,0.45)]">
+                @csrf
 
-.login-card {
-  background: rgba(19,22,31,0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 20px;
-  padding: 40px 36px;
-  box-shadow: 0 24px 64px rgba(0,0,0,.6), 0 0 0 1px rgba(91,135,255,.05);
-}
+                <div>
+                    <label for="email" class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                        Email <span class="text-error-500">*</span>
+                    </label>
+                    <input type="email" id="email" name="email" value="{{ old('email') }}" required autofocus autocomplete="email"
+                           placeholder="admin@example.com"
+                           class="@error('email') border-error-500 @enderror dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"/>
+                    @error('email')
+                        <p class="mt-1.5 text-xs text-error-500">{{ $message }}</p>
+                    @enderror
+                </div>
 
-/* Brand */
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 32px;
-}
-.brand-icon {
-  width: 44px; height: 44px;
-  background: linear-gradient(135deg, #5b87ff, #7c5cfc);
-  border-radius: 12px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 20px; font-weight: 700; color: #fff;
-  box-shadow: 0 4px 20px rgba(91,135,255,.45), 0 0 0 4px rgba(91,135,255,.12);
-  flex-shrink: 0;
-}
-.brand-main { font-size: 18px; font-weight: 700; color: var(--text); letter-spacing: -.3px; }
-.brand-sub  { font-size: 11px; color: var(--hint); font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
+                <div>
+                    <label for="password" class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+                        Parol <span class="text-error-500">*</span>
+                    </label>
+                    <div x-data="{ showPassword: false }" class="relative">
+                        <input :type="showPassword ? 'text' : 'password'" id="password" name="password" required autocomplete="current-password"
+                               placeholder="Parolingizni kiriting"
+                               class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent py-2.5 pr-11 pl-4 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"/>
+                        <button type="button" @click="showPassword = !showPassword"
+                                class="absolute top-1/2 right-3 z-10 -translate-y-1/2 cursor-pointer rounded p-1 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white/80"
+                                aria-label="Parolni ko‘rsatish">
+                            <svg x-show="!showPassword" class="h-5 w-5 fill-current" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M10.0002 13.8619C7.23361 13.8619 4.86803 12.1372 3.92328 9.70241C4.86804 7.26761 7.23361 5.54297 10.0002 5.54297C12.7667 5.54297 15.1323 7.26762 16.0771 9.70243C15.1323 12.1372 12.7667 13.8619 10.0002 13.8619ZM10.0002 4.04297C6.48191 4.04297 3.49489 6.30917 2.4155 9.4593C2.3615 9.61687 2.3615 9.78794 2.41549 9.94552C3.49488 13.0957 6.48191 15.3619 10.0002 15.3619C13.5184 15.3619 16.5055 13.0957 17.5849 9.94555C17.6389 9.78797 17.6389 9.6169 17.5849 9.45932C16.5055 6.30919 13.5184 4.04297 10.0002 4.04297ZM9.99151 7.84413C8.96527 7.84413 8.13333 8.67606 8.13333 9.70231C8.13333 10.7286 8.96527 11.5605 9.99151 11.5605H10.0064C11.0326 11.5605 11.8646 10.7286 11.8646 9.70231C11.8646 8.67606 11.0326 7.84413 10.0064 7.84413H9.99151Z" fill="currentColor"/></svg>
+                            <svg x-show="showPassword" class="h-5 w-5 fill-current" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M4.63803 3.57709C4.34513 3.2842 3.87026 3.2842 3.57737 3.57709C3.28447 3.86999 3.28447 4.34486 3.57737 4.63775L4.85323 5.91362C3.74609 6.84199 2.89363 8.06395 2.4155 9.45936C2.3615 9.61694 2.3615 9.78801 2.41549 9.94558C3.49488 13.0957 6.48191 15.3619 10.0002 15.3619C11.255 15.3619 12.4422 15.0737 13.4994 14.5598L15.3625 16.4229C15.6554 16.7158 16.1302 16.7158 16.4231 16.4229C16.716 16.13 16.716 15.6551 16.4231 15.3622L4.63803 3.57709ZM12.3608 13.4212L10.4475 11.5079C10.3061 11.5423 10.1584 11.5606 10.0064 11.5606H9.99151C8.96527 11.5606 8.13333 10.7286 8.13333 9.70237C8.13333 9.5461 8.15262 9.39434 8.18895 9.24933L5.91885 6.97923C5.03505 7.69015 4.34057 8.62704 3.92328 9.70247C4.86803 12.1373 7.23361 13.8619 10.0002 13.8619C10.8326 13.8619 11.6287 13.7058 12.3608 13.4212ZM16.0771 9.70249C15.7843 10.4569 15.3552 11.1432 14.8199 11.7311L15.8813 12.7925C16.6329 11.9813 17.2187 11.0143 17.5849 9.94561C17.6389 9.78803 17.6389 9.61696 17.5849 9.45938C16.5055 6.30925 13.5184 4.04303 10.0002 4.04303C9.13525 4.04303 8.30244 4.17999 7.52218 4.43338L8.75139 5.66259C9.1556 5.58413 9.57311 5.54303 10.0002 5.54303C12.7667 5.54303 15.1323 7.26768 16.0771 9.70249Z" fill="currentColor"/></svg>
+                        </button>
+                    </div>
+                </div>
 
-/* Heading */
-.login-heading { margin-bottom: 28px; }
-.login-title   { font-size: 22px; font-weight: 700; color: var(--text); letter-spacing: -.4px; }
-.login-desc    { font-size: 13px; color: var(--muted); margin-top: 5px; }
+                <div class="flex items-center">
+                    <label class="flex cursor-pointer items-center gap-3 text-sm text-gray-700 select-none dark:text-gray-400">
+                        <input type="checkbox" name="remember" value="1" class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500/20 dark:border-gray-600 dark:bg-gray-900"/>
+                        <span>Meni eslab qol</span>
+                    </label>
+                </div>
 
-/* Form elements */
-.field { margin-bottom: 18px; }
-.field-label {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--muted);
-  margin-bottom: 6px;
-  display: block;
-}
-.field-input-wrap { position: relative; }
-.field-icon {
-  position: absolute;
-  left: 13px; top: 50%;
-  transform: translateY(-50%);
-  color: var(--hint);
-  font-size: 14px;
-  pointer-events: none;
-  transition: color .2s;
-}
-.field-input {
-  width: 100%;
-  background: rgba(255,255,255,.04);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 11px 14px 11px 38px;
-  font-size: 13.5px;
-  color: var(--text);
-  font-family: 'Inter', sans-serif;
-  outline: none;
-  transition: border-color .2s, background .2s, box-shadow .2s;
-}
-.field-input:focus {
-  border-color: var(--accent);
-  background: rgba(91,135,255,.05);
-  box-shadow: 0 0 0 3px rgba(91,135,255,.15);
-}
-.field-input:focus ~ .field-icon,
-.field-input-wrap:focus-within .field-icon {
-  color: var(--accent);
-}
-.field-input::placeholder { color: var(--hint); }
-.field-input.has-error { border-color: var(--danger); }
-.field-error { font-size: 11.5px; color: var(--danger); margin-top: 5px; }
+                <button type="submit"
+                        class="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-brand-500 text-sm font-medium text-white shadow-theme-xs transition hover:bg-brand-600 focus:outline-hidden focus:ring-3 focus:ring-brand-500/20">
+                    <i class="bi bi-box-arrow-in-right text-base"></i>
+                    Tizimga kirish
+                </button>
+            </form>
 
-/* Password toggle */
-.pw-toggle {
-  position: absolute;
-  right: 12px; top: 50%;
-  transform: translateY(-50%);
-  color: var(--hint);
-  font-size: 14px;
-  cursor: pointer;
-  padding: 4px;
-  transition: color .15s;
-  background: none; border: none; outline: none;
-}
-.pw-toggle:hover { color: var(--muted); }
-
-.field-input.pw-field { padding-right: 40px; }
-
-/* Remember me */
-.remember-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 24px;
-}
-.remember-check {
-  width: 16px; height: 16px;
-  accent-color: var(--accent);
-  cursor: pointer;
-  flex-shrink: 0;
-}
-.remember-label {
-  font-size: 13px;
-  color: var(--muted);
-  cursor: pointer;
-  user-select: none;
-}
-
-/* Submit button */
-.btn-login {
-  width: 100%;
-  background: linear-gradient(135deg, #5b87ff, #6b5bff);
-  color: #fff;
-  border: none;
-  border-radius: 10px;
-  padding: 12px 20px;
-  font-size: 14px;
-  font-weight: 600;
-  font-family: 'Inter', sans-serif;
-  cursor: pointer;
-  transition: all .2s;
-  box-shadow: 0 4px 18px rgba(91,135,255,.35);
-  position: relative;
-  overflow: hidden;
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-}
-.btn-login:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 24px rgba(91,135,255,.5);
-  background: linear-gradient(135deg, #6b94ff, #7c6bff);
-}
-.btn-login:active { transform: translateY(0); }
-.btn-login::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to bottom, rgba(255,255,255,.08), transparent);
-}
-
-/* Alert */
-.login-alert {
-  padding: 11px 14px;
-  border-radius: 10px;
-  font-size: 13px;
-  margin-bottom: 20px;
-  display: flex; align-items: flex-start; gap: 9px;
-  background: var(--danger-d);
-  color: var(--danger);
-  border: 1px solid rgba(255,83,112,.2);
-  animation: fadeUp .2s ease both;
-}
-
-/* Footer text */
-.login-footer {
-  margin-top: 24px;
-  text-align: center;
-  font-size: 11.5px;
-  color: var(--hint);
-  font-family: 'JetBrains Mono', monospace;
-}
-.login-footer a { color: var(--accent); text-decoration: none; }
-.login-footer a:hover { text-decoration: underline; }
-
-/* Decorative dots */
-.dots {
-  position: fixed;
-  z-index: 1;
-  opacity: .3;
-  pointer-events: none;
-}
-.dots-tl { top: 40px; left: 40px; }
-.dots-br { bottom: 40px; right: 40px; transform: rotate(180deg); }
-.dot-grid {
-  display: grid;
-  grid-template-columns: repeat(6, 10px);
-  gap: 8px;
-}
-.dot-grid span {
-  width: 3px; height: 3px;
-  border-radius: 50%;
-  background: var(--muted);
-  display: block;
-}
-
-/* Animation */
-@keyframes fadeUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
-</style>
-</head>
-<body>
-
-{{-- Background --}}
-<div class="bg-grid"></div>
-<div class="bg-mesh"><div class="bg-dot"></div></div>
-
-{{-- Decorative dots --}}
-<div class="dots dots-tl">
-  <div class="dot-grid">
-    @for($i = 0; $i < 30; $i++)<span></span>@endfor
-  </div>
-</div>
-<div class="dots dots-br">
-  <div class="dot-grid">
-    @for($i = 0; $i < 30; $i++)<span></span>@endfor
-  </div>
-</div>
-
-{{-- Login card --}}
-<div class="login-wrap">
-  <div class="login-card">
-
-    {{-- Brand --}}
-    <div class="brand">
-      <div class="brand-icon">K</div>
-      <div>
-        <div class="brand-main">kitobchi.</div>
-        <div class="brand-sub">Admin boshqaruv tizimi</div>
-      </div>
-    </div>
-
-    {{-- Heading --}}
-    <div class="login-heading">
-      <h1 class="login-title">Xush kelibsiz 👋</h1>
-      <p class="login-desc">Tizimga kirish uchun ma'lumotlaringizni kiriting</p>
-    </div>
-
-    {{-- Error alert --}}
-    @if(session('error'))
-    <div class="login-alert">
-      <i class="bi bi-exclamation-circle-fill" style="flex-shrink:0;font-size:15px;margin-top:1px"></i>
-      <span>{{ session('error') }}</span>
-    </div>
-    @endif
-
-    {{-- Form --}}
-    <form method="POST" action="{{ route('panel.login.post') }}">
-      @csrf
-
-      <div class="field">
-        <label class="field-label" for="email">Email manzil</label>
-        <div class="field-input-wrap">
-          <i class="bi bi-envelope field-icon"></i>
-          <input
-            type="email" id="email" name="email"
-            class="field-input {{ $errors->has('email') ? 'has-error' : '' }}"
-            value="{{ old('email') }}"
-            placeholder="admin@example.com"
-            required autofocus autocomplete="email"
-          />
+            <p class="mt-8 text-center text-theme-xs text-gray-500 dark:text-gray-500">
+                kitobchi.uz · Admin panel
+            </p>
         </div>
-        @error('email')
-          <div class="field-error"><i class="bi bi-exclamation-circle me-1"></i>{{ $message }}</div>
-        @enderror
-      </div>
-
-      <div class="field">
-        <label class="field-label" for="password">Parol</label>
-        <div class="field-input-wrap">
-          <i class="bi bi-lock field-icon"></i>
-          <input
-            type="password" id="password" name="password"
-            class="field-input pw-field"
-            placeholder="••••••••"
-            required autocomplete="current-password"
-          />
-          <button type="button" class="pw-toggle" id="pwToggle" aria-label="Ko'rsatish">
-            <i class="bi bi-eye" id="pwIcon"></i>
-          </button>
-        </div>
-      </div>
-
-      <div class="remember-row">
-        <input type="checkbox" name="remember" id="remember" class="remember-check">
-        <label for="remember" class="remember-label">Meni eslab qol</label>
-      </div>
-
-      <button type="submit" class="btn-login">
-        <i class="bi bi-box-arrow-in-right"></i>
-        Tizimga kirish
-      </button>
-    </form>
-
-    <div class="login-footer">
-      kitobchi.uz · Admin Panel &nbsp;·&nbsp;
-      <a href="{{ route('panel.theme') }}" onclick="event.preventDefault();document.getElementById('themeForm').submit()">
-        <i class="bi bi-circle-half"></i> Rejim
-      </a>
     </div>
 
-  </div>
+    {{-- O‘ng: brend paneli (katta ekran) --}}
+    <div class="relative hidden w-1/2 flex-col justify-between overflow-hidden bg-brand-500 p-10 text-white lg:flex xl:p-14">
+        <div class="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-white/10 blur-3xl"></div>
+        <div class="pointer-events-none absolute -bottom-24 -left-16 h-80 w-80 rounded-full bg-black/10 blur-3xl"></div>
+        <div class="relative z-10">
+            <p class="text-sm font-medium uppercase tracking-wider text-white/80">Boshqaruv paneli</p>
+            <h2 class="mt-4 max-w-md text-3xl font-semibold leading-tight tracking-tight xl:text-4xl">
+                Kitob va buyurtmalarni bir joydan boshqaring
+            </h2>
+            <p class="mt-4 max-w-sm text-sm leading-relaxed text-white/85">
+                Moderatsiya, buyurtmalar, sotuvchilar va tizim sozlamalari — xavfsiz va zamonaviy interfeys.
+            </p>
+        </div>
+        <div class="relative z-10 text-sm text-white/70">
+            © {{ date('Y') }} kitobchi.
+        </div>
+    </div>
 </div>
-
-{{-- Hidden theme form --}}
-<form id="themeForm" method="POST" action="{{ route('panel.theme') }}" style="display:none">
-  @csrf
-  <input type="hidden" name="theme" value="{{ session('theme','dark') === 'dark' ? 'light' : 'dark' }}">
-</form>
-
-<script>
-// Password visibility toggle
-const pwToggle = document.getElementById('pwToggle');
-const pwInput  = document.getElementById('password');
-const pwIcon   = document.getElementById('pwIcon');
-pwToggle?.addEventListener('click', () => {
-  const show = pwInput.type === 'password';
-  pwInput.type = show ? 'text' : 'password';
-  pwIcon.className = show ? 'bi bi-eye-slash' : 'bi bi-eye';
-});
-</script>
-</body>
-</html>
+@endsection

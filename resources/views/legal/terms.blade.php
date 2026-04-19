@@ -78,6 +78,9 @@
         </button>
     </div>
 
+    <article class="l-doc-card">
+    <div class="l-doc-body kc-doc-static">
+
     <!-- UZBEK VERSION -->
     <div class="lang-content active" id="content-uz">
         <!-- Document Header -->
@@ -507,3 +510,45 @@
             <p class="doc-paragraph">
                 <strong>12.2.</strong> Platforma Egasi Shartnoma shartlarini bir tomonlama o'zgartirish huquqiga ega. O'zgarishlar Platformada e'lon qilingan va Foydalanuvchilarga bildirishnoma yuborilganidan keyin 7 kun o'tgach kuchga kiradi.
             </p>
+
+            <p class="doc-paragraph">
+                <strong>12.3.</strong> Savollar va murojaatlar uchun: <a href="mailto:support@kitobchi.uz">support@kitobchi.uz</a>. <a href="{{ route('legal.privacy') }}">Maxfiylik siyosati</a> bilan birga o'qilish tavsiya etiladi.
+            </p>
+        </div>
+    </div>
+
+    <div class="lang-content" id="content-ru">
+        <div class="doc-header">
+            <h1 class="doc-title">Условия использования</h1>
+            <p class="doc-subtitle">Полный текст на узбекском языке. Русская версия в подготовке.</p>
+            <div class="doc-meta">
+                <span class="meta-item">
+                    <i class="fas fa-envelope"></i>
+                    support@kitobchi.uz
+                </span>
+            </div>
+        </div>
+        <p class="doc-paragraph">
+            Чтобы прочитать все разделы (1–12), переключитесь на
+            <a href="#" onclick="switchLanguage('uz'); return false;">o‘zbekcha</a>.
+        </p>
+    </div>
+
+    </div>
+    </article>
+@endsection
+
+@push('scripts')
+<script>
+function switchLanguage(lang) {
+    document.querySelectorAll('.lang-content').forEach(function (el) {
+        el.classList.toggle('active', el.id === 'content-' + lang);
+    });
+    var btnUz = document.getElementById('btn-uz');
+    var btnRu = document.getElementById('btn-ru');
+    if (btnUz) btnUz.classList.toggle('active', lang === 'uz');
+    if (btnRu) btnRu.classList.toggle('active', lang === 'ru');
+    document.documentElement.lang = lang === 'ru' ? 'ru' : 'uz';
+}
+</script>
+@endpush

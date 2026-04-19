@@ -5,13 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use App\Models\CommissionSetting;
 
 class Books extends Model
 {
     use HasFactory;
+
     protected $table = 'books';
+
     protected $fillable = [
         'name',
         'author',
@@ -40,41 +40,54 @@ class Books extends Model
         'vectorData',
         'recommended',
         'views',
-        'recommendedExpiresAt'
+        'recommendedExpiresAt',
+        'kangaroo_listing_decision',
+        'kangaroo_listing_score',
+        'kangaroo_listing_checked_at',
+        'kangaroo_listing_issues',
+        'ugc_aggregate_score',
     ];
+
     protected $casts = [
-    'images' => 'json',
-    'status' => 'boolean',
-    'recommended' => 'boolean',
-    'vectorData' => 'json',
+        'images' => 'json',
+        'status' => 'boolean',
+        'recommended' => 'boolean',
+        'vectorData' => 'json',
+        'kangaroo_listing_issues' => 'array',
+        'kangaroo_listing_checked_at' => 'datetime',
     ];
+
     protected $appends = ['first_image'];
-    
+
     public function category(): BelongsTo
     {
         return $this->belongsTo(BookCategories::class);
     }
+
     public function cartItems()
     {
         return $this->hasMany(MyCart::class, 'book_id');
     }
+
     public function getFirstImageAttribute(): ?string
     {
         $images = $this->images;
 
-        if (empty($images) || !is_array($images)) {
+        if (empty($images) || ! is_array($images)) {
             return null;
         }
 
         return $images[0] ?? null;
     }
-public function tags()
+
+    public function tags()
     {
         return $this->belongsToMany(BookTag::class, 'book_tag_relations', 'book_id', 'tag_id');
     }
+
     public function seller()
     {
         return $this->belongsTo(Seller::class, 'seller_id')
-        ->select('id', 'shop_name', 'lastname', 'firstname', 'phone_number', 'photo', 'isVerified');
+            ->select('id', 'shop_name', 'lastname', 'firstname', 'phone_number', 'photo', 'isVerified');
     }
 }

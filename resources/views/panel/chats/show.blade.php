@@ -23,28 +23,21 @@
     : ($p2Id ? route('panel.users.show', $p2Id) : null);
 @endphp
 
-<div class="d-flex align-items-center gap-3 mb-4 fade-up">
-  <a href="{{ route('panel.chats.index', ['tab' => $isShop ? 'seller' : 'user']) }}"
-     class="btn-p ghost icon">
-    <i class="bi bi-arrow-left"></i>
-  </a>
-  <div>
-    <h1 class="page-title">Suhbat #{{ $conversation->id }}</h1>
-    <p class="page-sub">
-      {{ $p1Name }} ↔
+<x-panel.page-header back-href="{{ route('panel.chats.index', ['tab' => $isShop ? 'seller' : 'user']) }}">
+  <x-slot name="heading">Suhbat #{{ $conversation->id }}</x-slot>
+  <x-slot name="meta">{{ $p1Name }} ↔
       @if($isShop)
-        <i class="bi bi-shop-window me-1"></i>{{ $p2Name }}
+        <i class="bi bi-shop-window mr-1"></i>{{ $p2Name }}
       @else
         {{ $p2Name }}
-      @endif
-    </p>
-  </div>
-</div>
+      @endif</x-slot>
+</x-panel.page-header>
 
-<div class="row g-3">
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
 
   {{-- Chap: Ishtirokchilar --}}
-  <div class="col-xl-3">
+  <div class="xl:col-span-3">
     <div class="p-card mb-3 fade-up">
       <div class="p-card-header"><div class="p-card-title">Ishtirokchilar</div></div>
       <div style="padding:14px 18px">
@@ -93,7 +86,7 @@
             @if($p2Route)
             <a href="{{ $p2Route }}"
                style="font-size:13px;font-weight:500;color:var(--p-text);text-decoration:none">
-              @if($isShop)<i class="bi bi-shop-window me-1" style="color:var(--p-warning)"></i>@endif
+              @if($isShop)<i class="bi bi-shop-window mr-1" style="color:var(--p-warning)"></i>@endif
               {{ $p2Name }}
             </a>
             @else
@@ -129,13 +122,13 @@
   </div>
 
   {{-- Xabarlar --}}
-  <div class="col-xl-9">
+  <div class="xl:col-span-9">
     <div class="p-card fade-up">
       <div class="p-card-header">
         <div class="p-card-title">Xabarlar</div>
         @if(count($reportedIds) > 0)
         <span class="s-pill danger" style="font-size:10px">
-          <i class="bi bi-flag-fill me-1"></i>{{ count($reportedIds) }} shikoyatli
+          <i class="bi bi-flag-fill mr-1"></i>{{ count($reportedIds) }} shikoyatli
         </span>
         @endif
       </div>

@@ -1,11 +1,33 @@
 <?php
+
+use App\Http\Controllers\Api\BookClubCommentController;
+use App\Http\Controllers\Api\BookClubController;
+use App\Http\Controllers\Api\BookClubThemeController;
+use App\Http\Controllers\Api\CardController;
+use App\Http\Controllers\Api\CartController;
+use App\Http\Controllers\Api\ChatBotController;
+use App\Http\Controllers\Api\ChatController;
+use App\Http\Controllers\Api\ContestController;
+use App\Http\Controllers\Api\GiftCertificateController;
+use App\Http\Controllers\Api\GiftsController;
+use App\Http\Controllers\Api\GuestSyncController;
+use App\Http\Controllers\Api\NewsController;
+use App\Http\Controllers\Api\PremiumController;
+use App\Http\Controllers\Api\ProductsController;
+use App\Http\Controllers\Api\PurchaseController;
+use App\Http\Controllers\Api\ReelController;
+use App\Http\Controllers\Api\ReportController;
+use App\Http\Controllers\Api\SearchController;
+use App\Http\Controllers\Api\ShareController;
+use App\Http\Controllers\Api\SharedCartController;
+use App\Http\Controllers\Api\ShopApiController;
+use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\{UserController, NewsController, ProductsController, PurchaseController, SearchController, CartController, BookClubController, BookClubCommentController, BookClubThemeController, GiftsController, ContestController, ReelController, PremiumController, CardController, ChatController, ReportController, ChatBotController, GiftCertificateController, ShopApiController, SharedCartController, ShareController};
 
 // --- Ochiq qismlar ---
 Route::post('payme', [App\Http\Controllers\Api\PaymeController::class, 'index'])->middleware('payme');
-//Route::get('checkToken/{token}', [AuthController::class, 'checkToken']);
-Route::get('user/premium/plans',     [PremiumController::class, 'plans']);
+// Route::get('checkToken/{token}', [AuthController::class, 'checkToken']);
+Route::get('user/premium/plans', [PremiumController::class, 'plans']);
 Route::get('user/update_locale/{locale}', [UserController::class, 'updateLocale']);
 Route::get('counts', [UserController::class, 'getGlobalCounts']);
 Route::get('news', [NewsController::class, 'index']);
@@ -41,38 +63,37 @@ Route::get('shop/info', [ShopApiController::class, 'info']);
 
 Route::prefix('share')->group(function () {
     Route::get('product/{id}', [ShareController::class, 'product']);
-    Route::get('cart/{slug}',  [SharedCartController::class, 'show']);
+    Route::get('cart/{slug}', [SharedCartController::class, 'show']);
 });
 
 // --- Faqat Token bilan kiriladigan qismlar ---
 Route::middleware('auth:user')->group(function () {
-    Route::post('shared-cart/create',            [SharedCartController::class, 'create']);
-    Route::post('shared-cart/{slug}/add-to-cart',[SharedCartController::class, 'addToCart']);
-    Route::get('shared-cart/my',                 [SharedCartController::class, 'myLinks']);
-    Route::delete('shared-cart/{slug}',          [SharedCartController::class, 'destroy']);
-    Route::post('cart_user/guest-sync',      [GuestSyncController::class, 'syncCart']);
+    Route::post('shared-cart/create', [SharedCartController::class, 'create']);
+    Route::post('shared-cart/{slug}/add-to-cart', [SharedCartController::class, 'addToCart']);
+    Route::get('shared-cart/my', [SharedCartController::class, 'myLinks']);
+    Route::delete('shared-cart/{slug}', [SharedCartController::class, 'destroy']);
+    Route::post('cart_user/guest-sync', [GuestSyncController::class, 'syncCart']);
     Route::post('user/favorites/guest-sync', [GuestSyncController::class, 'syncFavorites']);
-    
-    
-    Route::get('user/premium-status',   [PremiumController::class, 'status']);
+
+    Route::get('user/premium-status', [PremiumController::class, 'status']);
     Route::post('user/subscribe-premium', [PremiumController::class, 'subscribe']);
-    Route::post('user/cancel-premium',  [PremiumController::class, 'cancel']);
-    
+    Route::post('user/cancel-premium', [PremiumController::class, 'cancel']);
+
     // To'lov tasdiqlash uchun (webhook yoki callback)
-    //Route::post('payment/confirm-premium', [UserPremiumController::class, 'confirmPayment']);
+    // Route::post('payment/confirm-premium', [UserPremiumController::class, 'confirmPayment']);
     Route::get('cards', [CardController::class, 'index']);
     Route::post('cards', [CardController::class, 'store']);
     Route::post('cards/verify', [CardController::class, 'verify']);
     Route::delete('cards/{id}', [CardController::class, 'destroy']);
-    
-    Route::post('shop/mystery-box/subscribe',     [ShopApiController::class, 'subscribeMysteryBox']);
-    Route::get('shop/mystery-box/subscription/{id}',     [ShopApiController::class, 'subscriptionDetail']);
-    Route::post('shop/mystery-box/update-address',     [ShopApiController::class, 'updateSubscriptionAddress']);
-    
-    Route::post('shop/gift-certificate/buy',      [ShopApiController::class, 'buyCertificate']);
+
+    Route::post('shop/mystery-box/subscribe', [ShopApiController::class, 'subscribeMysteryBox']);
+    Route::get('shop/mystery-box/subscription/{id}', [ShopApiController::class, 'subscriptionDetail']);
+    Route::post('shop/mystery-box/update-address', [ShopApiController::class, 'updateSubscriptionAddress']);
+
+    Route::post('shop/gift-certificate/buy', [ShopApiController::class, 'buyCertificate']);
     Route::post('shop/gift-certificate/activate', [ShopApiController::class, 'activateCertificate']);
     Route::get('gift-certificates', [GiftCertificateController::class, 'index']);
-    
+
     Route::post('report/send', [ReportController::class, 'sendReport']);
     Route::post('/bot/ask', [ChatBotController::class, 'ask']);
     Route::get('/bot/history', [ChatBotController::class, 'history']);
@@ -93,14 +114,14 @@ Route::middleware('auth:user')->group(function () {
         Route::post('comments/{comment_id}/reply', [BookClubCommentController::class, 'reply']);
         Route::delete('comments/delete/{id}', [BookClubCommentController::class, 'destroy']);
         Route::post('follow', [BookClubController::class, 'followUser']);
-    Route::get('notifications', [BookClubController::class, 'getNotifications']);
-    Route::get('notifications/mark-read-bulk', [BookClubController::class, 'readNotifications']);
+        Route::get('notifications', [BookClubController::class, 'getNotifications']);
+        Route::get('notifications/mark-read-bulk', [BookClubController::class, 'readNotifications']);
     });
     // Sovg'alar
     Route::prefix('gifts')->group(function () {
-        Route::get('/',                  [GiftsController::class, 'index']);
-        Route::get('seller/{sellerId}',[GiftsController::class, 'bySeller']);
-        Route::post('select',          [GiftsController::class, 'select_gift']);
+        Route::get('/', [GiftsController::class, 'index']);
+        Route::get('seller/{sellerId}', [GiftsController::class, 'bySeller']);
+        Route::post('select', [GiftsController::class, 'select_gift']);
     });
     // Sozlamalar va foydalanuvchi yo'llari
     Route::post('settings', [UserController::class, 'settings']);
@@ -123,8 +144,8 @@ Route::middleware('auth:user')->group(function () {
         Route::get('details/{order_id}', [PurchaseController::class, 'purchaseDetails']);
         Route::get('cancel/{orderId}', [PurchaseController::class, 'cancelOrder']);
         Route::get('checkPromo', [PurchaseController::class, 'checkPromo']);
-        Route::get('cashback_balance', [UserController::class, 'getCashbackCount']); 
-        Route::get('getCartCheckoutInfo', [PurchaseController::class, 'getCartCheckoutInfo']); 
+        Route::get('cashback_balance', [UserController::class, 'getCashbackCount']);
+        Route::get('getCartCheckoutInfo', [PurchaseController::class, 'getCartCheckoutInfo']);
     });
 
     // Savatcha
@@ -142,17 +163,17 @@ Route::middleware('auth:user')->group(function () {
         Route::get('{cartId}/minus', [CartController::class, 'minus']);
     });
     Route::prefix('conversations')->group(function () {
-    Route::get('/', [ChatController::class, 'getConversations']);
-    Route::get('{id}/messages', [ChatController::class, 'getMessages']);
-    Route::post('{id}/send', [ChatController::class, 'sendMessage']);
-    Route::post('{id}/edit', [ChatController::class, 'editMessage']);
-    Route::post('{id}/delete', [ChatController::class, 'deleteMessage']);
-    Route::post('{id}/hide', [ChatController::class, 'hideConversation']);
-    Route::post('start', [ChatController::class, 'startConversation']);
-    Route::post('{conversationId}/read', [ChatController::class, 'markAsRead']);
-    Route::get('recent-contacts', [ChatController::class, 'getRecentContacts']);
-    Route::get('search', [ChatController::class, 'globalSearch']);
-});
+        Route::get('/', [ChatController::class, 'getConversations']);
+        Route::get('{id}/messages', [ChatController::class, 'getMessages']);
+        Route::post('{id}/send', [ChatController::class, 'sendMessage']);
+        Route::post('{id}/edit', [ChatController::class, 'editMessage']);
+        Route::post('{id}/delete', [ChatController::class, 'deleteMessage']);
+        Route::post('{id}/hide', [ChatController::class, 'hideConversation']);
+        Route::post('start', [ChatController::class, 'startConversation']);
+        Route::post('{conversationId}/read', [ChatController::class, 'markAsRead']);
+        Route::get('recent-contacts', [ChatController::class, 'getRecentContacts']);
+        Route::get('search', [ChatController::class, 'globalSearch']);
+    });
 
     // Boshqa foydalanuvchi yo'llari
     Route::get('notifications', [UserController::class, 'notifications']);

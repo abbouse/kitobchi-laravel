@@ -4,31 +4,32 @@
 
 @section('content')
 
-<div class="d-flex align-items-start justify-content-between mb-4 fade-up">
-  <div>
-    <h1 class="page-title">Kuryerlar</h1>
-    <p class="page-sub">Barcha kuryerlar boshqaruvi</p>
-  </div>
-  <div class="d-flex gap-2">
-    <a href="{{ route('panel.couriers.export', request()->all()) }}" class="btn-p ghost">
-      <i class="bi bi-download"></i> Export
-    </a>
-    <a href="{{ route('panel.couriers.create') }}" class="btn-p primary">
-      <i class="bi bi-plus-lg"></i> Yangi kuryer
-    </a>
-  </div>
-</div>
+<x-panel.page-header>
+  <x-slot name="heading">Kuryerlar</x-slot>
+  <x-slot name="meta">Barcha kuryerlar boshqaruvi</x-slot>
+  <x-slot name="actions">
+    <div class="flex gap-2">
+        <a href="{{ route('panel.couriers.export', request()->all()) }}" class="btn-p ghost">
+          <i class="bi bi-download"></i> Export
+        </a>
+        <a href="{{ route('panel.couriers.create') }}" class="btn-p primary">
+          <i class="bi bi-plus-lg"></i> Yangi kuryer
+        </a>
+      </div>
+  </x-slot>
+</x-panel.page-header>
+
 
 {{-- Stats --}}
-<div class="row g-3 mb-4 fade-up">
+<div class="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-4">
   @foreach([
     ['Jami',        $counts['all'],      'accent',  'bi-bicycle'],
     ['Tasdiqlangan',$counts['approved'], 'success', 'bi-check-circle'],
     ['Kutilmoqda',  $counts['pending'],  'warning', 'bi-hourglass'],
     ['Rad etilgan', $counts['rejected'], 'danger',  'bi-x-circle'],
   ] as [$l,$v,$c,$i])
-  <div class="col-6 col-xl-3">
-    <div class="p-card d-flex align-items-center gap-3" style="padding:14px">
+  <div class="">
+    <div class="p-card flex items-center gap-3" style="padding:14px">
       <div style="width:36px;height:36px;border-radius:9px;flex-shrink:0;font-size:16px;
                   background:var(--p-{{ $c }}-d,var(--p-elevated));color:var(--p-{{ $c }});
                   display:flex;align-items:center;justify-content:center">
@@ -90,7 +91,7 @@
 
 {{-- Table --}}
 <div class="p-card fade-up">
-  <div class="table-responsive">
+  <div class="table-responsive kc-twrap">
     <table class="p-table">
       <thead>
         <tr>
@@ -121,7 +122,7 @@
           </td>
 
           <td>
-            <div class="d-flex align-items-center gap-2">
+            <div class="flex items-center gap-2">
               <div style="width:34px;height:34px;border-radius:50%;overflow:hidden;flex-shrink:0;
                           background:linear-gradient(135deg,#14b8a6,#0d9488);
                           display:flex;align-items:center;justify-content:center;
@@ -163,7 +164,7 @@
           </td>
 
           <td>
-            <div class="d-flex gap-1 align-items-center">
+            <div class="flex gap-1 items-center">
               <a href="{{ route('panel.couriers.show', $courier) }}"
                  class="btn-p ghost sm"><i class="bi bi-eye"></i></a>
               <a href="{{ route('panel.couriers.edit', $courier) }}"
@@ -219,7 +220,7 @@
   </div>
 
   @if($couriers->hasPages())
-  <div class="d-flex align-items-center justify-content-between px-3 py-2"
+  <div class="flex items-center justify-between px-3 py-2"
        style="border-top:1px solid var(--p-border)">
     <div style="font-size:12px;color:var(--p-hint)">
       {{ $couriers->firstItem() }}–{{ $couriers->lastItem() }} / {{ $couriers->total() }}
