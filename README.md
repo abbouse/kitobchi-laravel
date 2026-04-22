@@ -4,6 +4,10 @@
 
 Bu hujjat repoda **o‘rnatish**, **sozlash**, **yo‘llar**, **jadval (scheduler)**, **integratsiyalar** va **papka tuzilmasi** bo‘yicha yo‘riqnoma.
 
+Admin paneldagi statuslar, kodli holatlar va moderatsiya mappinglari uchun alohida reference:
+
+- [docs/admin-status-reference.md](docs/admin-status-reference.md)
+
 ---
 
 ## Texnologiyalar
@@ -82,7 +86,7 @@ kitobchi/
 │   ├── Http/
 │   │   ├── Controllers/
 │   │   │   ├── Api/            # Mobil va tashqi API (User, Seller, Courier, Payme, Webhook, …)
-│   │   │   └── Panel/          # Admin panel (dashboard, kitoblar, buyurtmalar, moderatsiya, …)
+│   │   │   └── A122/           # Admin panel (dashboard, kitoblar, buyurtmalar, moderatsiya, …)
 │   │   └── Middleware/         # locale, Payme, panel auth, API client, ruxsatlar
 │   ├── Models/                 # Eloquent modellar (Books, Orders, Seller, BookClub, …)
 │   ├── Notifications/          # FCM va boshqa bildirishnomalar
@@ -102,7 +106,7 @@ kitobchi/
 │   └── views/                  # Blade: welcome, panel, share, layouts, errors
 ├── routes/
 │   ├── web.php                 # landing, share, to‘lov, legal, careers, panel include
-│   ├── panel.php               # /panel/* admin
+│   ├── a122.php                # /a122/* admin
 │   ├── api.php                 # asosiy API guruhlari + v1 prefiksi
 │   ├── api_user.php            # /api/v1/kitobchi/* foydalanuvchi ilovasi
 │   ├── api_seller.php          # /api/v1/seller/*
@@ -123,8 +127,8 @@ kitobchi/
 
 | Fayl | Vazifa |
 |------|--------|
-| `routes/web.php` | Bosh sahifa (`/`), til almashtirish, `/share/*`, Payme redirectlari, `/payment/*`, `/telegram/webhook`, karyera, huquqiy hujjatlar, `panel.php` ni `require` |
-| `routes/panel.php` | Admin: `/panel/login`, dashboard, foydalanuvchilar, kitob/kanstovar, buyurtmalar, sotuvchilar, kuryerlar, chat, promokodlar, **Book Club moderatsiya navbati**, sozlamalar, … |
+| `routes/web.php` | Bosh sahifa (`/`), til almashtirish, `/share/*`, Payme redirectlari, `/payment/*`, `/telegram/webhook`, karyera, huquqiy hujjatlar, `a122.php` ni `require` |
+| `routes/a122.php` | Admin: login, dashboard, foydalanuvchilar, kitob/kanstovar, buyurtmalar, sotuvchilar, kuryerlar, chat, promokodlar, **Book Club moderatsiya navbati**, sozlamalar, … |
 | `routes/api.php` | Sanctum, SMS, auth, push, loyiha versiyasi, qisqa user endpointlar, so‘ng `Route::prefix('v1')` ostida quyidagilar |
 | `routes/api_user.php` | `POST/GET …` — `/api/v1/kitobchi/...` mobil foydalanuvchi |
 | `routes/api_seller.php` | `/api/v1/seller/...` partner kabineti API |
