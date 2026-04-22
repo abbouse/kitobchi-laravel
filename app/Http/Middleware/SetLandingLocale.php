@@ -11,7 +11,7 @@ class SetLandingLocale
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if ($request->is('panel') || $request->is('panel/*')) {
+        if ($request->is('panel') || $request->is('panel/*') || $request->is('a122') || $request->is('a122/*')) {
             App::setLocale(config('app.locale'));
 
             return $next($request);

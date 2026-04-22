@@ -6,7 +6,7 @@ return [
     'stores' => 'Doʻkonlar',
     'faq' => 'Savollar',
     'careers' => 'Karyera',
-    'legal' => 'Huquqiy',
+    'legal' => 'Hujjatlar',
     'download' => 'Yuklab oling',
     'download_aria' => 'Kitobchi — yuklab olish',
     'menu_aria' => 'Menyu',

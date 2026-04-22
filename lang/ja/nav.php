@@ -6,7 +6,7 @@ return [
     'stores' => '店舗',
     'faq' => 'よくある質問',
     'careers' => '採用',
-    'legal' => '法的情報',
+    'legal' => '資料',
     'download' => 'ダウンロード',
     'download_aria' => 'Kitobchi — アプリをダウンロード',
     'menu_aria' => 'メニュー',

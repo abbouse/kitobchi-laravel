@@ -196,7 +196,7 @@ class OrderService
 
             // ── Bu yerga faqat BIRINCHI marta yetib kelinadi ─────────────
 
-            SellerOrder::where('order_id', $order->id)->update(['status' => 3]);
+            SellerOrder::where('order_id', $order->id)->update(['status' => 4]);
             CourierOrder::where('order_id', $order->id)->update(['status' => 'rejected']);
 
             // ── Mahsulot stoki qaytarish ──────────────────────────────────

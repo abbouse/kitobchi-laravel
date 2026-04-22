@@ -2,9 +2,9 @@
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap') layer(base);
 @import 'prismjs/themes/prism.min.css';
 @import 'tailwindcss';
-@import './panel-primitives.css';
-@import './kitobchi-panel.css';
-@import './panel-dashboard.css';
+@import './a122-primitives.css';
+@import './kitobchi-admin.css';
+@import './a122-dashboard.css';
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';

@@ -1,0 +1,728 @@
+/**
+ * Panel primitives — dizayn tokenlari va asosiy komponentlar (Vite orqali yuklanadi).
+ * `kitobchi-admin.css` bundan keyin import qilinadi.
+ */
+
+.dark, [data-bs-theme="dark"] {
+  --p-bg:        #101828;
+  --p-surface:   rgba(255,255,255,0.03);
+  --p-elevated:  rgba(255,255,255,0.05);
+  --p-input-bg:  #1d2939;
+  --p-hover:     rgba(255,255,255,0.08);
+  --p-border:    #1d2939;
+  --p-border2:   #344054;
+  --p-text:      rgba(255,255,255,0.9);
+  --p-muted:     #98a2b3;
+  --p-hint:      #667085;
+  --p-accent:    #7592ff;
+  --p-accent-d:  rgba(70,95,255,0.12);
+  --p-success:   #32d583;
+  --p-success-d: rgba(18,183,106,0.12);
+  --p-warning:   #fdb022;
+  --p-warning-d: rgba(247,144,9,0.12);
+  --p-danger:    #f97066;
+  --p-danger-d:  rgba(240,68,56,0.12);
+  --p-info:      #36bffa;
+  --p-info-d:    rgba(11,165,236,0.12);
+  --p-shadow:    0px 20px 24px -4px rgba(16,24,40,0.08),0px 8px 8px -4px rgba(16,24,40,0.03);
+  --p-shadow-sm: 0px 4px 8px -2px rgba(16,24,40,0.1),0px 2px 4px -2px rgba(16,24,40,0.06);
+  --p-radius-sm: 8px;
+  --p-radius:    10px;
+  --p-radius-lg: 18px;
+  --p-content-max: 1600px;
+}
+:root, [data-bs-theme="light"] {
+  /* Yumshoq yorug‘ rejim — kamroq qattiq kontrast */
+  --p-bg:        #f3f5f9;
+  --p-surface:   #ffffff;
+  --p-input-bg:  #fcfcfd;
+  --p-elevated:  #eef1f6;
+  --p-hover:     #e8ecf4;
+  --p-border:    #e1e6ef;
+  --p-border2:   #cbd5e6;
+  --p-text:      #364152;
+  --p-muted:     #5c667a;
+  --p-hint:      #8b95a8;
+  --p-accent:    #4f5fff;
+  --p-accent-d:  #e8edff;
+  --p-success:   #0b815a;
+  --p-success-d: #ecfdf5;
+  --p-warning:   #b45309;
+  --p-warning-d: #fff8eb;
+  --p-danger:    #c41f12;
+  --p-danger-d:  #fef2f2;
+  --p-info:      #0b6faa;
+  --p-info-d:    #eff8ff;
+  --p-shadow:    0px 10px 20px -6px rgba(15, 23, 42, 0.06), 0px 3px 8px -2px rgba(15, 23, 42, 0.04);
+  --p-shadow-sm: 0px 1px 2px rgba(15, 23, 42, 0.05), 0px 1px 1px rgba(15, 23, 42, 0.03);
+  --p-radius-sm: 8px;
+  --p-radius:    10px;
+  --p-radius-lg: 18px;
+  --p-content-max: 1600px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Bootstrap reset — prevent Bootstrap from overriding Tailwind
+═══════════════════════════════════════════════════════════════ */
+/* Links: remove underline everywhere */
+a, a:hover, a:focus, a:active { text-decoration: none !important; }
+
+/* Lists: strip Bootstrap's padding-left from all nav/sidebar lists */
+nav ul, nav ol, nav li,
+#sidebar ul, #sidebar ol, #sidebar li,
+header ul, header ol, header li {
+  padding: 0; margin: 0; list-style: none;
+}
+
+/* Headings/paragraphs: strip Bootstrap margins inside cards */
+.p-card h1, .p-card h2, .p-card h3, .p-card h4, .p-card h5, .p-card h6,
+.dash-card h1, .dash-card h2, .dash-card h3, .dash-card h4, .dash-card h5, .dash-card h6 {
+  margin: 0;
+}
+
+/* Buttons: normalize Bootstrap button resets */
+button { font-family: inherit; }
+
+/* Bootstrap modal z-index fix (below our topbar) */
+.modal { z-index: 10000; }
+.modal-backdrop { z-index: 9999; }
+
+/* ═══════════════════════════════════════════════════════════════
+   Page structure
+═══════════════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; }
+
+/* Fon va matn: faqat Tailwind (bg-gray-50 / dark:bg-gray-900) — TailAdmin bilan bir xil */
+body {
+  font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+.page-body { flex: 1; }
+
+/* ═══════════════════════════════════════════════════════════════
+   Page header
+═══════════════════════════════════════════════════════════════ */
+.page-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  margin-bottom: 22px; gap: 14px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--p-border);
+}
+.page-title  { font-size: 21px; font-weight: 700; color: var(--p-text); letter-spacing: -0.02em; line-height: 1.25; }
+.page-sub    { font-size: 13px; color: var(--p-muted); margin-top: 4px; line-height: 1.45; max-width: 52ch; }
+
+/* ═══════════════════════════════════════════════════════════════
+   Card — TailAdmin: rounded-2xl border bg-white dark:bg-white/[0.03]
+═══════════════════════════════════════════════════════════════ */
+.p-card {
+  background: var(--p-surface);
+  border: 1px solid var(--p-border);
+  border-radius: 18px;
+  padding: 22px 22px 20px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  transition: border-color .2s ease, box-shadow .22s ease, transform .22s ease;
+}
+.dark .p-card { box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 8px 24px -6px rgba(0, 0, 0, 0.35); }
+.p-card:hover { border-color: var(--p-border2); box-shadow: var(--p-shadow-sm); transform: translateY(-1px); }
+.dark .p-card:hover { box-shadow: 0 1px 0 rgba(255, 255, 255, 0.05) inset, 0 12px 28px -8px rgba(0, 0, 0, 0.45); }
+.p-card-header, .dash-card-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px;
+}
+.p-card-title, .dash-card-title { font-size: 14px; font-weight: 600; color: var(--p-text); }
+.p-card-sub, .dash-card-sub     { font-size: 12px; color: var(--p-hint); margin-top: 2px; }
+.p-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 10px 16px 12px;
+  border-top: 1px solid var(--p-border);
+  margin-top: 2px;
+}
+.p-card-footer .p-card-footer-meta { font-size: 12px; color: var(--p-hint); }
+.dash-card { background: var(--p-surface); border: 1px solid var(--p-border); border-radius: 16px; overflow: hidden; }
+.dash-card-head { display: flex; align-items: center; justify-content: space-between; padding: 20px 20px 0; margin-bottom: 16px; }
+.dash-card-body { padding: 0 20px 20px; }
+
+/* ═══════════════════════════════════════════════════════════════
+   Metric card
+═══════════════════════════════════════════════════════════════ */
+.metric-card {
+  background: var(--p-surface);
+  border: 1px solid var(--p-border);
+  border-radius: 16px;
+  padding: 20px;
+  border-top-width: 2px;
+  transition: border-color .2s, transform .2s, box-shadow .2s;
+}
+.metric-card:hover { transform: translateY(-2px); box-shadow: var(--p-shadow-sm); }
+.metric-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; margin-bottom: 14px; }
+.metric-label { font-size: 11px; color: var(--p-muted); font-weight: 500; }
+.metric-value { font-size: 28px; font-weight: 700; color: var(--p-text); font-family: 'JetBrains Mono', monospace; letter-spacing: -.5px; margin: 8px 0 10px; line-height: 1; }
+
+/* ═══════════════════════════════════════════════════════════════
+   Status pill — TailAdmin badge pattern
+═══════════════════════════════════════════════════════════════ */
+.s-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 600;
+  padding: 4px 12px; border-radius: 20px;
+}
+.s-pill::before { content:''; width:6px; height:6px; border-radius:50%; background:currentColor; flex-shrink:0; }
+.s-pill.success { background: var(--p-success-d); color: var(--p-success); }
+.s-pill.warning { background: var(--p-warning-d); color: var(--p-warning); }
+.s-pill.danger  { background: var(--p-danger-d);  color: var(--p-danger);  }
+.s-pill.info    { background: var(--p-info-d);     color: var(--p-info);   }
+.s-pill.muted   { background: var(--p-elevated);   color: var(--p-muted);  }
+.s-pill.accent  { background: var(--p-accent-d);   color: var(--p-accent); }
+
+/* ═══════════════════════════════════════════════════════════════
+   Table — TailAdmin style
+═══════════════════════════════════════════════════════════════ */
+.p-table { width:100%; border-collapse:collapse; font-size:13px; }
+.p-table thead th {
+  padding: 12px 16px;
+  font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .06em;
+  color: var(--p-hint);
+  border-bottom: 1px solid var(--p-border);
+  white-space: nowrap;
+  background: var(--p-surface);
+}
+.p-table tbody td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--p-border);
+  color: var(--p-muted);
+  vertical-align: middle;
+  font-size: 14px;
+}
+.p-table tbody tr:last-child td { border-bottom: none; }
+.p-table tbody tr { transition: background .12s; }
+.p-table tbody tr:hover td { background: var(--p-hover); }
+
+/* ═══════════════════════════════════════════════════════════════
+   Avatar
+═══════════════════════════════════════════════════════════════ */
+.av { width:36px; height:36px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:13px; font-weight:600; flex-shrink:0; overflow:hidden; }
+.av img { width:100%; height:100%; object-fit:cover; }
+.av-blue   { background: var(--p-accent-d);   color: var(--p-accent); }
+.av-green  { background: var(--p-success-d);  color: var(--p-success); }
+.av-yellow { background: var(--p-warning-d);  color: var(--p-warning); }
+.av-red    { background: var(--p-danger-d);   color: var(--p-danger); }
+.av-purple { background: rgba(122,90,248,.12); color:#7a5af8; }
+
+/* ═══════════════════════════════════════════════════════════════
+   Buttons — TailAdmin style
+═══════════════════════════════════════════════════════════════ */
+.btn-p {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 16px; border-radius: 8px;
+  font-size: 14px; font-weight: 500;
+  cursor: pointer; border: none; transition: all .15s;
+  text-decoration: none; white-space: nowrap; line-height: 1.4;
+}
+.btn-p.primary { background: var(--p-accent); color: #fff; }
+.btn-p.primary:hover { opacity: 0.9; color: #fff; }
+.btn-p.primary:active { transform: scale(0.98); }
+.btn-p.ghost {
+  background: transparent;
+  border: 1px solid var(--p-border);
+  color: var(--p-muted);
+}
+.btn-p.ghost:hover { background: var(--p-hover); color: var(--p-text); border-color: var(--p-border2); }
+.btn-p.danger  { background: var(--p-danger-d); border: 1px solid transparent; color: var(--p-danger); }
+.btn-p.danger:hover { background: var(--p-danger); color: #fff; }
+.btn-p.success { background: var(--p-success-d); border: 1px solid transparent; color: var(--p-success); }
+.btn-p.success:hover { background: var(--p-success); color: #fff; }
+.btn-p.warning { background: var(--p-warning-d); border: 1px solid transparent; color: var(--p-warning); }
+.btn-p.warning:hover { background: var(--p-warning); color: #fff; }
+.btn-p.sm { padding: 6px 12px; font-size: 12px; border-radius: 6px; }
+.btn-p.icon { padding: 9px; width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center; }
+
+/* ═══════════════════════════════════════════════════════════════
+   Form — TailAdmin style
+═══════════════════════════════════════════════════════════════ */
+.p-form-label { font-size: 13px; font-weight: 500; color: var(--p-text); margin-bottom: 6px; display: block; }
+.p-form-control {
+  width: 100%;
+  background: var(--p-input-bg);
+  border: 1px solid var(--p-border);
+  border-radius: var(--p-radius-sm, 8px);
+  padding: 10px 14px;
+  font-size: 14px;
+  color: var(--p-text);
+  transition: border-color .2s, box-shadow .2s;
+  outline: none;
+  line-height: 1.5;
+}
+.p-form-control:not(textarea) {
+  min-height: 42px;
+}
+.p-form-control:focus {
+  border-color: var(--p-accent);
+  box-shadow: 0 0 0 4px var(--p-accent-d);
+}
+.p-form-control::placeholder { color: var(--p-hint); }
+.p-form-control option { background: var(--p-input-bg); }
+textarea.p-form-control {
+  resize: vertical;
+  min-height: 100px;
+}
+select.p-form-control {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 2.5rem;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.75' d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1rem;
+}
+html.dark #panel-main select.p-form-control {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%2398a2b3' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.75' d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
+}
+select.p-form-control[multiple],
+select.p-form-control[size]:not([size='1']) {
+  background-image: none;
+  padding-right: 14px;
+  min-height: 7.5rem;
+  cursor: default;
+}
+.border-danger { border-color: var(--p-danger) !important; }
+
+/* ═══════════════════════════════════════════════════════════════
+   Bootstrap form-control / form-select → Kitobchi (panel kontenti)
+   Sahifalar `.p-form-control` o‘rniga BS klass ishlatsa ham bir xil ko‘rinish.
+═══════════════════════════════════════════════════════════════ */
+#panel-main .form-control,
+#panel-main .form-select {
+  background-color: var(--p-input-bg) !important;
+  border: 1px solid var(--p-border) !important;
+  border-radius: var(--p-radius-sm, 8px) !important;
+  color: var(--p-text) !important;
+  font-size: 14px;
+  line-height: 1.5;
+  padding: 10px 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.15s ease;
+  box-shadow: none;
+}
+#panel-main .form-control:focus,
+#panel-main .form-select:focus {
+  border-color: var(--p-accent) !important;
+  box-shadow: 0 0 0 4px var(--p-accent-d) !important;
+  color: var(--p-text) !important;
+  outline: 0;
+}
+#panel-main .form-control::placeholder {
+  color: var(--p-hint);
+  opacity: 1;
+}
+#panel-main .form-control:disabled,
+#panel-main .form-select:disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
+}
+#panel-main textarea.form-control {
+  min-height: 100px;
+}
+#panel-main input.form-control:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+#panel-main select.form-select,
+#panel-main select.form-control {
+  min-height: 42px;
+}
+#panel-main select.form-select,
+#panel-main select.form-control {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 2.5rem;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.75' d='M4 6l4 4 4-4'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 0.75rem center !important;
+  background-size: 1rem !important;
+}
+html.dark #panel-main select.form-select,
+html.dark #panel-main select.form-control {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%2398a2b3' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.75' d='M4 6l4 4 4-4'/%3E%3C/svg%3E") !important;
+}
+#panel-main select.form-select[multiple],
+#panel-main select.form-select[size]:not([size='1']),
+#panel-main select.form-control[multiple],
+#panel-main select.form-control[size]:not([size='1']) {
+  background-image: none !important;
+  padding-right: 14px !important;
+  min-height: 7.5rem;
+  cursor: default;
+}
+#panel-main .form-select option,
+#panel-main .form-control option {
+  background-color: var(--p-input-bg);
+  color: var(--p-text);
+}
+#panel-main .form-label,
+#panel-main label.form-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--p-text);
+  margin-bottom: 6px;
+}
+#panel-main .form-text {
+  font-size: 12px;
+  color: var(--p-hint);
+  margin-top: 4px;
+}
+#panel-main .input-group-text {
+  background: var(--p-elevated);
+  border: 1px solid var(--p-border);
+  color: var(--p-muted);
+  font-size: 13px;
+  border-radius: var(--p-radius-sm, 8px);
+}
+#panel-main .input-group > .form-control:focus,
+#panel-main .input-group > .form-select:focus {
+  z-index: 1;
+}
+#panel-main .input-group:not(.input-group-sm):not(.input-group-lg) > :not(:first-child):not(.dropdown-menu) {
+  margin-left: -1px;
+}
+#panel-main .input-group:not(.input-group-sm) > .form-control:not(:first-child),
+#panel-main .input-group:not(.input-group-sm) > .form-select:not(:first-child),
+#panel-main .input-group:not(.input-group-sm) > .input-group-text:not(:first-child) {
+  border-top-left-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+}
+#panel-main .input-group:not(.input-group-sm) > .form-control:not(:last-child),
+#panel-main .input-group:not(.input-group-sm) > .form-select:not(:last-child),
+#panel-main .input-group:not(.input-group-sm) > .input-group-text:not(:last-child) {
+  border-top-right-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+#panel-main .form-check-input {
+  width: 1.1rem;
+  height: 1.1rem;
+  margin-top: 0.15rem;
+  border: 1px solid var(--p-border2);
+  background-color: var(--p-input-bg);
+  cursor: pointer;
+}
+#panel-main .form-check-input:checked {
+  background-color: var(--p-accent);
+  border-color: var(--p-accent);
+}
+#panel-main .form-check-input:focus {
+  border-color: var(--p-accent);
+  box-shadow: 0 0 0 4px var(--p-accent-d);
+}
+#panel-main .form-switch .form-check-input {
+  width: 2.25rem;
+  height: 1.15rem;
+  border-radius: 2rem;
+}
+#panel-main input[type='file'].form-control {
+  padding: 8px 12px;
+  line-height: 1.4;
+}
+#panel-main .form-control-sm,
+#panel-main .form-select-sm {
+  min-height: 36px;
+  padding: 6px 12px;
+  font-size: 13px;
+  border-radius: 6px !important;
+}
+#panel-main select.form-select-sm,
+#panel-main select.form-control.form-control-sm {
+  padding-right: 2.25rem;
+  background-position: right 0.55rem center;
+}
+#panel-main .form-control-lg,
+#panel-main .form-select-lg {
+  min-height: 48px;
+  padding: 12px 16px;
+  font-size: 15px;
+  border-radius: var(--p-radius, 10px) !important;
+}
+#panel-main .form-control.is-invalid:focus,
+#panel-main .form-select.is-invalid:focus {
+  box-shadow: 0 0 0 4px var(--p-danger-d) !important;
+}
+#panel-main .form-control.is-valid:focus,
+#panel-main .form-select.is-valid:focus {
+  border-color: var(--p-success) !important;
+  box-shadow: 0 0 0 4px var(--p-success-d) !important;
+}
+
+/* Bootstrap dropdown — panel kontentida */
+#panel-main .dropdown-menu {
+  padding: 6px;
+  font-size: 14px;
+  border: 1px solid var(--p-border);
+  border-radius: var(--p-radius-sm, 8px);
+  box-shadow: var(--p-shadow-sm);
+  background: var(--p-surface);
+  color: var(--p-text);
+}
+#panel-main .dropdown-item {
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: var(--p-muted);
+  font-weight: 500;
+}
+#panel-main .dropdown-item:hover,
+#panel-main .dropdown-item:focus {
+  background: var(--p-hover);
+  color: var(--p-text);
+}
+#panel-main .dropdown-item.active,
+#panel-main .dropdown-item:active {
+  background: var(--p-accent-d);
+  color: var(--p-accent);
+}
+#panel-main .dropdown-divider {
+  border-color: var(--p-border);
+  margin: 6px 0;
+  opacity: 1;
+}
+
+/* Modallar body ga chiqishi mumkin — admin konteksti */
+html.kc-panel-root .modal .form-control,
+html.kc-panel-root .modal .form-select {
+  background-color: var(--p-input-bg) !important;
+  border: 1px solid var(--p-border) !important;
+  border-radius: var(--p-radius-sm, 8px) !important;
+  color: var(--p-text) !important;
+  font-size: 14px;
+  padding: 10px 14px;
+}
+html.kc-panel-root .modal .form-control:focus,
+html.kc-panel-root .modal .form-select:focus {
+  border-color: var(--p-accent) !important;
+  box-shadow: 0 0 0 4px var(--p-accent-d) !important;
+  outline: 0;
+}
+html.kc-panel-root .modal select.form-select,
+html.kc-panel-root .modal select.form-control {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 2.5rem;
+  min-height: 42px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.75' d='M4 6l4 4 4-4'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 0.75rem center !important;
+  background-size: 1rem !important;
+}
+html.dark.kc-panel-root .modal select.form-select,
+html.dark.kc-panel-root .modal select.form-control {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%2398a2b3' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.75' d='M4 6l4 4 4-4'/%3E%3C/svg%3E") !important;
+}
+html.kc-panel-root .modal .dropdown-menu {
+  border: 1px solid var(--p-border);
+  border-radius: var(--p-radius-sm, 8px);
+  box-shadow: var(--p-shadow-sm);
+  background: var(--p-surface);
+  padding: 6px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Search box
+═══════════════════════════════════════════════════════════════ */
+.search-box {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--p-surface);
+  border: 1px solid var(--p-border);
+  border-radius: 8px;
+  padding: 9px 14px;
+  transition: border-color .2s, box-shadow .2s;
+}
+.search-box:focus-within { border-color: var(--p-accent); box-shadow: 0 0 0 4px var(--p-accent-d); }
+.search-box input { background: none; border: none; outline: none; color: var(--p-text); font-size: 14px; width: 100%; }
+.search-box input::placeholder { color: var(--p-hint); }
+.search-box i { color: var(--p-hint); font-size: 14px; flex-shrink: 0; }
+
+/* ═══════════════════════════════════════════════════════════════
+   Alert
+═══════════════════════════════════════════════════════════════ */
+.p-alert {
+  padding: 14px 16px 14px 14px; border-radius: 12px;
+  font-size: 14px; line-height: 1.45; display: flex; align-items: flex-start; gap: 10px;
+  margin-bottom: 16px;
+  border: 1px solid transparent;
+  border-left-width: 4px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+}
+.p-alert i { margin-top: 2px; flex-shrink: 0; opacity: 0.95; }
+.p-alert.success { background: var(--p-success-d); color: var(--p-success); border-color: rgba(18,183,106,.22); border-left-color: var(--p-success); }
+.p-alert.danger  { background: var(--p-danger-d);  color: var(--p-danger);  border-color: rgba(240,68,56,.22); border-left-color: var(--p-danger); }
+.p-alert.warning { background: var(--p-warning-d); color: var(--p-warning); border-color: rgba(247,144,9,.22); border-left-color: var(--p-warning); }
+.dark .p-alert { box-shadow: 0 4px 14px -4px rgba(0, 0, 0, 0.25); }
+
+/* ═══════════════════════════════════════════════════════════════
+   Filter bar
+═══════════════════════════════════════════════════════════════ */
+.filter-bar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 12px 16px;
+  background: var(--p-surface);
+  border: 1px solid var(--p-border);
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Rank badges
+═══════════════════════════════════════════════════════════════ */
+.rank { width:24px; height:24px; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; font-family:'JetBrains Mono',monospace; }
+.rank-1 { background: var(--p-warning-d); color: var(--p-warning); }
+.rank-2 { background: var(--p-elevated);  color: var(--p-muted); }
+.rank-3 { background: rgba(205,127,50,.15); color:#cd7f32; }
+
+/* ═══════════════════════════════════════════════════════════════
+   Table responsive
+═══════════════════════════════════════════════════════════════ */
+.table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.p-card > .table-responsive.kc-twrap {
+  border: 1px solid var(--p-border);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--p-elevated) 35%, var(--p-surface));
+}
+.dark .p-card > .table-responsive.kc-twrap {
+  background: rgba(255, 255, 255, 0.02);
+}
+.p-card > .p-card-header + .table-responsive.kc-twrap {
+  margin-top: 4px;
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Info / notice boxes
+═══════════════════════════════════════════════════════════════ */
+.p-notice {
+  padding: 12px 16px; border-radius: 10px;
+  font-size: 13px; display: flex; align-items: center; gap: 10px;
+  margin-bottom: 14px;
+}
+.p-notice.info    { background: var(--p-info-d);    border: 1px solid rgba(11,165,236,.2);  color: var(--p-info);    }
+.p-notice.success { background: var(--p-success-d); border: 1px solid rgba(18,183,106,.2);  color: var(--p-success); }
+.p-notice.warning { background: var(--p-warning-d); border: 1px solid rgba(247,144,9,.2);   color: var(--p-warning); }
+.p-notice.danger  { background: var(--p-danger-d);  border: 1px solid rgba(240,68,56,.2);   color: var(--p-danger);  }
+
+/* ═══════════════════════════════════════════════════════════════
+   Detail rows
+═══════════════════════════════════════════════════════════════ */
+.detail-row {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px 0; border-bottom: 1px solid var(--p-border);
+}
+.detail-row:last-child { border-bottom: none; }
+.detail-label { font-size: 12px; color: var(--p-hint); min-width: 140px; padding-top: 1px; font-weight: 500; }
+.detail-value { font-size: 14px; color: var(--p-text); flex: 1; }
+
+/* ═══════════════════════════════════════════════════════════════
+   Checkbox toggle
+═══════════════════════════════════════════════════════════════ */
+.p-checkbox {
+  display: flex; align-items: center; gap: 12px;
+  cursor: pointer; padding: 12px 16px;
+  border-radius: 10px;
+  background: var(--p-surface);
+  border: 1px solid var(--p-border);
+  transition: all .2s;
+}
+.p-checkbox:hover { border-color: var(--p-accent); box-shadow: 0 0 0 3px var(--p-accent-d); }
+.p-checkbox input[type="checkbox"] {
+  width: 18px; height: 18px; accent-color: var(--p-accent); cursor: pointer; flex-shrink: 0;
+}
+.p-checkbox-label { font-size: 14px; color: var(--p-text); font-weight: 500; }
+.p-checkbox-sub   { font-size: 12px; color: var(--p-hint); margin-top: 2px; }
+
+/* ═══════════════════════════════════════════════════════════════
+   Section label
+═══════════════════════════════════════════════════════════════ */
+.p-section-label {
+  font-size: 11px; font-weight: 600; color: var(--p-hint);
+  text-transform: uppercase; letter-spacing: .06em;
+  margin-bottom: 10px; margin-top: 6px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Bootstrap overrides
+═══════════════════════════════════════════════════════════════ */
+.is-invalid,
+.p-form-control.is-invalid          { border-color: var(--p-danger) !important; }
+.is-invalid:focus,
+.p-form-control.is-invalid:focus    { border-color: var(--p-danger) !important; box-shadow: 0 0 0 4px var(--p-danger-d) !important; }
+.invalid-feedback,
+.valid-feedback                     { font-size: 12px; margin-top: 4px; display: block; }
+.invalid-feedback                   { color: var(--p-danger) !important; }
+.valid-feedback                     { color: var(--p-success) !important; }
+
+.text-muted, .text-secondary { color: var(--p-muted) !important; }
+.text-primary   { color: var(--p-accent)   !important; }
+.text-success   { color: var(--p-success)  !important; }
+.text-danger    { color: var(--p-danger)   !important; }
+.text-warning   { color: var(--p-warning)  !important; }
+.text-info      { color: var(--p-info)     !important; }
+.small, small   { font-size: 12px; }
+
+/* ═══════════════════════════════════════════════════════════════
+   Responsive grid helpers
+═══════════════════════════════════════════════════════════════ */
+.g-cols-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+.g-cols-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.g-cols-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+@media (max-width: 767px) {
+  .g-cols-3, .g-cols-4 { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 575px) {
+  .g-cols-2, .g-cols-3, .g-cols-4 { grid-template-columns: 1fr; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Utility helpers
+═══════════════════════════════════════════════════════════════ */
+.mono      { font-family: 'JetBrains Mono', monospace; }
+.text-hint { color: var(--p-hint) !important; }
+.text-p    { color: var(--p-text) !important; }
+.bg-elevated { background: var(--p-elevated); }
+
+/* ═══════════════════════════════════════════════════════════════
+   Scrollbar — TailAdmin thin style
+═══════════════════════════════════════════════════════════════ */
+::-webkit-scrollbar { width:6px; height:6px; }
+::-webkit-scrollbar-track { background: transparent; border-radius: 10px; }
+::-webkit-scrollbar-thumb { background: var(--p-border2); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: var(--p-hint); }
+
+/* ═══════════════════════════════════════════════════════════════
+   Animations
+═══════════════════════════════════════════════════════════════ */
+@keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+.fade-up { animation: fadeUp .3s ease both; }
+.fade-in { animation: fadeIn .25s ease both; }
+.d1 { animation-delay:.05s; } .d2 { animation-delay:.1s; }
+.d3 { animation-delay:.15s; } .d4 { animation-delay:.2s; }
+
+/* ═══════════════════════════════════════════════════════════════
+   Progress bars (dashboard)
+═══════════════════════════════════════════════════════════════ */
+.dash-prog { margin-bottom:14px; }
+.dash-prog-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+.dash-prog-label { font-size:13px; color:var(--p-muted); }
+.dash-prog-val { font-size:13px; font-weight:600; color:var(--p-text); font-family:'JetBrains Mono',monospace; }
+.dash-prog-track { height:6px; background:var(--p-elevated); border-radius:10px; overflow:hidden; }
+.dash-prog-fill { height:100%; border-radius:10px; transition:width .8s cubic-bezier(.4,0,.2,1); }
+.stat-grid { display:grid; border-top:1px solid var(--p-border); margin-top:16px; padding-top:16px; }
+.stat-cell { text-align:center; }
+.stat-cell+.stat-cell { border-left:1px solid var(--p-border); }
+.stat-cell-val { font-size:18px; font-weight:700; font-family:'JetBrains Mono',monospace; color:var(--p-text); }
+.stat-cell-lbl { font-size:11px; color:var(--p-hint); text-transform:uppercase; letter-spacing:.06em; margin-top:3px; }
+
+/* Bootstrap CSS dan keyin: TailAdmin fonlari (gray-50 / gray-900) */
+html:not(.dark) body.bg-gray-50 { background-color: #f3f5f9 !important; }
+html.dark body.bg-gray-900 { background-color: #101828 !important; }
+/* Sidebar fonlari — kitobchi-admin.css (#sidebar.kc-sidebar--brand) */

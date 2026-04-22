@@ -20,7 +20,7 @@ return [
         'highlight2_title' => 'Qulay narxlar',
         'highlight2_text' => 'Doʻkonlarni qiyoslab eng yaxshi taklifni toping.',
         'highlight3_title' => 'Marketpleys',
-        'highlight3_text' => 'Kitob va kanselyariya — tanlang, solishtiring, buyurtma bering.',
+        'highlight3_text' => 'Juda koʻp kitob — tanlang, buyurtma bering.',
         'notice' => '*Batafsil shartlar huquqiy hujjatlarda',
     ],
 

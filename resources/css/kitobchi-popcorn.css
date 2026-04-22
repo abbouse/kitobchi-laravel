@@ -86,42 +86,132 @@
     display: none !important;
 }
 
-/* FAQ: Webflow JS yo‘q — native details */
+/*
+ * FAQ — Popcorn.space (Webflow export) bilan yuzma-yuz:
+ * - `.faq-item` oq karta, 12px radius, oralik 12px
+ * - `.faq-header` Untitled Serif 22px, flex, chevron `#f0efef` → hover/open `#888787`
+ * - `.faq-answer` IX2 o‘rniga: `grid-template-rows` 0fr↔1fr + opacity (zamonaviy brauzerlar)
+ */
+.kc-faq.faq-wrap {
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
 .kc-faq details.faq-item {
-    border-bottom: 1px solid #f0efef;
+    background-color: #fff;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 0 rgba(57, 55, 55, 0.05);
 }
 
-.kc-faq summary.faq-header {
+.kc-faq details.faq-item > summary.faq-header {
     list-style: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    column-gap: 24px;
+    row-gap: 24px;
+    padding: 24px;
     cursor: pointer;
+    user-select: none;
+    letter-spacing: -0.03em;
+    font-family: Untitled Serif, ui-serif, Georgia, serif;
+    font-size: 22px;
+    color: #393737;
 }
 
-.kc-faq summary.faq-header::-webkit-details-marker {
+.kc-faq details.faq-item > summary.faq-header::-webkit-details-marker {
     display: none;
 }
 
-.kc-faq .faq-answer-inner {
-    padding-bottom: 16px;
+.kc-faq details.faq-item > summary.faq-header::marker {
+    content: '';
+}
+
+.kc-faq details.faq-item > summary.faq-header:focus {
+    outline: none;
+}
+
+.kc-faq details.faq-item > summary.faq-header:focus-visible {
+    box-shadow: inset 0 0 0 2px rgba(100, 145, 185, 0.55);
+    border-radius: 12px;
+}
+
+.kc-faq .faq-icon {
+    display: flex;
+    flex-shrink: 0;
+    color: #f0efef;
+    transition:
+        color 0.15s ease,
+        transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.kc-faq summary.faq-header:hover .faq-icon {
+    color: var(--dark-grey, #888787);
+}
+
+.kc-faq details.faq-item[open] > summary.faq-header .faq-icon {
+    color: var(--dark-grey, #888787);
+    transform: rotate(180deg);
+}
+
+.kc-faq details.faq-item > .faq-answer {
+    display: grid;
+    grid-template-rows: 0fr;
+    overflow: hidden;
+    opacity: 0;
+    transition:
+        grid-template-rows 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+        opacity 0.32s ease;
+}
+
+.kc-faq details.faq-item[open] > .faq-answer {
+    grid-template-rows: 1fr;
+    opacity: 1;
+}
+
+.kc-faq details.faq-item > .faq-answer > .faq-answer-inner {
+    min-height: 0;
+    overflow: hidden;
+    color: var(--dark-grey, #888787);
+    letter-spacing: -0.03em;
+    padding-bottom: 24px;
+    padding-left: 24px;
+    padding-right: 24px;
     font-size: 16px;
     line-height: 1.5;
-    color: #888787;
 }
 
-.kc-faq details[open] .faq-answer {
-    height: auto !important;
-    opacity: 1 !important;
+.kc-faq .faq-answer-inner a {
+    text-decoration: underline;
 }
 
-.kc-faq-details summary.faq-header {
-    list-style: none;
+.kc-faq .faq-answer-inner a:hover {
+    color: var(--black, #393737);
 }
 
-.kc-faq-details summary.faq-header::-webkit-details-marker {
-    display: none;
+@media (max-width: 479px) {
+    .kc-faq details.faq-item > summary.faq-header {
+        column-gap: 16px;
+        row-gap: 16px;
+        padding: 20px 16px 20px 20px;
+        font-size: 18px;
+    }
+
+    .kc-faq details.faq-item > .faq-answer > .faq-answer-inner {
+        padding-bottom: 20px;
+        padding-left: 20px;
+        padding-right: 20px;
+    }
 }
 
-.kc-faq-details[open] .faq-icon {
-    transform: rotate(180deg);
+@media (prefers-reduced-motion: reduce) {
+    .kc-faq details.faq-item > .faq-answer,
+    .kc-faq .faq-icon {
+        transition: none;
+    }
 }
 
 .review-card .stars {
@@ -216,7 +306,6 @@
         inset: -5% auto 0% -16% !important;
     }
 
-    /* Bir xil PNG ikkala slotda: mobil “banner” kesimi — to‘liq balandlik emas */
     #business .cta-banner-img-mobile {
         max-height: min(240px, 48vw);
         width: 100%;
@@ -224,7 +313,7 @@
         margin-left: auto;
         margin-right: auto;
         object-fit: cover;
-        object-position: 50% 8%;
+        object-position: 50% 6%;
     }
 }
 
@@ -295,25 +384,30 @@
  * Shriftlar: public/vendor/fonts (Messina Sans).
  */
 
-.footer .footer-logo .svg-embed.cc-logo-icon {
-    display: block;
-    width: 38px;
-    height: 38px;
+/* Footer chapda oq logo (Popcorn chap monogram o‘rniga) */
+.footer .footer-logo .svg-embed.cc-logo-icon.kc-footer-logo-mark {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: auto;
+    height: auto;
+    min-height: 0;
     margin-right: 10px;
 }
 
-.kc-footer-monogram {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    height: 100%;
-    font-family: Messina Sans, sans-serif;
-    font-size: 19px;
-    font-weight: 600;
-    line-height: 1;
-    letter-spacing: -0.04em;
-    color: currentColor;
+.footer .footer-logo .kc-footer-logo-img {
+    display: block;
+    height: 26px;
+    width: auto;
+    max-width: min(132px, 38vw);
+    object-fit: contain;
+}
+
+@media (min-width: 768px) {
+    .footer .footer-logo .kc-footer-logo-img {
+        height: 28px;
+        max-width: 140px;
+    }
 }
 
 /*
@@ -326,12 +420,12 @@
     width: 100%;
     max-width: 100%;
     margin: 0 auto;
-    padding: clamp(2px, 1vw, 10px) 2% 0;
+    padding: clamp(10px, 1.6vw, 20px) 1.5% 0;
     box-sizing: border-box;
     overflow: hidden;
-    height: clamp(78px, 9.8vh, 126px);
+    height: clamp(108px, 12.6vh, 168px);
     position: relative;
-    top: 8px;
+    top: 18px;
 }
 
 .footer-large-logo.kc-footer-mega-wrap .kc-footer-word-svg {
@@ -343,7 +437,7 @@
     flex-shrink: 0;
     margin: 0 auto;
     overflow: visible;
-    transform: translateY(clamp(0px, 0.8vw, 10px)) scale(1.035);
+    transform: translateY(clamp(10px, 1.2vw, 18px)) scale(1.095);
     transform-origin: 50% 0%;
 }
 
@@ -354,13 +448,13 @@
 
 @media (max-width: 767px) {
     .footer-large-logo.kc-footer-mega-wrap {
-        height: clamp(68px, 10.5vw, 102px);
-        padding: clamp(0px, 1vw, 8px) 3% 0;
-        top: 8px;
+        height: clamp(92px, 14.6vw, 126px);
+        padding: clamp(8px, 1.6vw, 14px) 2.5% 0;
+        top: 14px;
     }
 
     .footer-large-logo.kc-footer-mega-wrap .kc-footer-word-svg {
-        transform: translateY(clamp(0px, 1.2vw, 8px)) scale(1.03);
+        transform: translateY(clamp(8px, 1.9vw, 14px)) scale(1.075);
         transform-origin: 50% 0%;
     }
 }
@@ -896,6 +990,103 @@
     gap: 8px;
 }
 
+/*
+ * Popcorn: `.nav` — position:absolute; tepada. `.hero` bo‘lmagan sahifalarda `main` ustidan nav bo‘shlig‘i.
+ * Footer: Webflow bundle `../images/...` bu yerda 404 — tekstura URL ni Popcorn CDN ga almashtiramiz.
+ * Mobil: footer-menu bitta ustun (Webflow kichik ekran qoidasi).
+ */
+body.kc-landing .page-wrapper {
+    position: relative;
+}
+
+body.kc-landing .page-wrapper > main.main:not(:has(> .hero:first-child)) {
+    padding-top: clamp(92px, 21vw, 124px);
+}
+
+@media (min-width: 992px) {
+    body.kc-landing .page-wrapper > main.main:not(:has(> .hero:first-child)) {
+        padding-top: clamp(100px, 11vw, 118px);
+    }
+}
+
+body.kc-landing .footer {
+    background-image:
+        url('https://cdn.prod.website-files.com/66797c2909f9ec0b1ff1a767/667e846c24ba851c63c4d965_dark-noise-2.png'),
+        linear-gradient(#393737, #1b1b1b);
+    background-position: 0 0, 0 0;
+    background-size: 80px 80px, auto;
+}
+
+@media (max-width: 991px) {
+    body.kc-landing .footer {
+        padding-top: 120px;
+    }
+
+    body.kc-landing .footer .footer-menu {
+        grid-template-columns: 1fr;
+        grid-row-gap: 24px;
+        margin-bottom: 32px;
+    }
+
+    body.kc-landing .footer .footer-heading {
+        margin-bottom: 16px;
+    }
+
+    body.kc-landing .footer .footer-link {
+        margin-bottom: 10px;
+    }
+
+    .nav-inner {
+        gap: 6px;
+    }
+
+    .nav-inner .nav-left {
+        flex: 1 1 auto;
+        min-width: 0;
+        gap: 8px;
+    }
+
+    .nav-inner .nav-logo {
+        margin-right: 10px;
+        flex-shrink: 0;
+    }
+
+    .nav-inner .nav-logo img {
+        height: 24px;
+        width: auto;
+        max-width: min(120px, 46vw);
+        object-fit: contain;
+    }
+
+    .nav-inner .nav-right {
+        flex-shrink: 0;
+        gap: 5px;
+    }
+
+    /* Til: faqat bayroq + strelka — logo siqilmasin */
+    .nav-inner .kc-lang .kc-lang__label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+    }
+
+    .nav-inner .kc-lang__surface {
+        padding: 7px 9px;
+        gap: 5px;
+    }
+
+    .nav-inner .kc-lang__chev svg {
+        width: 11px;
+        height: 11px;
+    }
+}
+
 /* Webflow: `.nav-menu { top: 4px }` — yuklab olish shu offsetda; til tanlashni bir qatorga tushirish */
 @media (min-width: 992px) {
     .nav-inner .nav-right > .kc-lang {
@@ -1281,4 +1472,3 @@
     font: inherit;
     text-align: center;
 }
-

@@ -20,7 +20,7 @@ return [
         'highlight2_title' => '見やすい価格',
         'highlight2_text' => '店舗を比較して、お得な提案を見つけられます。',
         'highlight3_title' => 'マーケットプレイス',
-        'highlight3_text' => '書籍と文房具を選び、比較し、注文できます。',
+        'highlight3_text' => '本の品揃えが豊富。選んで注文できます。',
         'notice' => '*詳細な条件は法的文書をご確認ください',
     ],
 

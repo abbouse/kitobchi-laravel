@@ -1,6 +1,7 @@
 import './bootstrap';
 import Alpine from 'alpinejs';
 import ApexCharts from 'apexcharts';
+import 'bootstrap-icons/font/bootstrap-icons.css';
 
 // flatpickr
 import flatpickr from 'flatpickr';

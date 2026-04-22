@@ -1,0 +1,172 @@
+/* ====================================================================
+   Veritas Admin — custom styles (Tailwind ustiga qo'shimcha)
+   ==================================================================== */
+
+:root {
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+html, body { height: 100%; }
+body { background: #eef0f4; }
+.dark body { background: #0b0d12; }
+
+/* ---------- Scrollbar ---------- */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(120, 120, 130, 0.25);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(120, 120, 130, 0.45); }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
+
+/* ---------- Sidebar links ---------- */
+.sidebar-link {
+  transition: background-color .15s ease, color .15s ease, transform .15s ease;
+}
+
+/* ---------- Pill toggle ---------- */
+.pill-toggle { background: #f3f4f7; }
+.dark .pill-toggle { background: #14171f; }
+
+/* ---------- Card / surface ---------- */
+.card {
+  background: #fff;
+  border: 1px solid #f1f2f6;
+  border-radius: 1rem;
+}
+.dark .card {
+  background: #0f1218;
+  border-color: rgba(255,255,255,0.06);
+}
+
+/* ---------- Dashed card variant ---------- */
+.card-dashed {
+  background: #fff;
+  border: 1.5px dashed #d1d5db;
+  border-radius: 1.25rem;
+}
+.dark .card-dashed {
+  background: #0f1218;
+  border-color: rgba(255,255,255,0.10);
+}
+
+/* ---------- Loader / pulse helper ---------- */
+.shimmer {
+  background: linear-gradient(90deg, rgba(0,0,0,0.04) 25%, rgba(0,0,0,0.08) 37%, rgba(0,0,0,0.04) 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease infinite;
+}
+.dark .shimmer {
+  background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 37%, rgba(255,255,255,0.04) 63%);
+  background-size: 400% 100%;
+}
+@keyframes shimmer { 0%{background-position:100% 0} 100%{background-position:-100% 0} }
+
+/* ---------- Status badges ---------- */
+.badge {
+  display: inline-flex; align-items: center; gap: .25rem;
+  padding: .15rem .55rem; border-radius: 999px;
+  font-size: .72rem; font-weight: 600;
+  white-space: nowrap;
+}
+.badge-success { background: #dcfce7; color: #15803d; }
+.badge-warning { background: #fef3c7; color: #b45309; }
+.badge-danger  { background: #fee2e2; color: #b91c1c; }
+.badge-info    { background: #dbeafe; color: #1d4ed8; }
+.badge-muted   { background: #f1f5f9; color: #475569; }
+
+.dark .badge-success { background: rgba(34,197,94,.15);  color: #4ade80; }
+.dark .badge-warning { background: rgba(245,158,11,.15); color: #fbbf24; }
+.dark .badge-danger  { background: rgba(239,68,68,.15);  color: #f87171; }
+.dark .badge-info    { background: rgba(59,130,246,.15); color: #60a5fa; }
+.dark .badge-muted   { background: rgba(148,163,184,.12);color: #cbd5e1; }
+
+/* ---------- Form controls ---------- */
+.input, .select, .textarea {
+  width: 100%;
+  padding: .6rem .85rem;
+  border-radius: .75rem;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  font-size: .875rem;
+  color: #111827;
+  transition: border-color .15s, box-shadow .15s;
+}
+.input:focus, .select:focus, .textarea:focus {
+  outline: none;
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16,185,129,.15);
+}
+.dark .input, .dark .select, .dark .textarea {
+  background: #14171f;
+  border-color: rgba(255,255,255,.08);
+  color: #e5e7eb;
+}
+
+/* ---------- Buttons ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: .4rem; font-weight: 600; font-size: .8125rem;
+  padding: .55rem .9rem; border-radius: .65rem;
+  transition: background-color .15s, color .15s, transform .05s;
+  white-space: nowrap;
+}
+.btn:active { transform: translateY(1px); }
+
+.btn-primary { background: #111827; color: #fff; }
+.btn-primary:hover { background: #000; }
+.dark .btn-primary { background: #fff; color: #111827; }
+.dark .btn-primary:hover { background: #f3f4f6; }
+
+.btn-secondary { background: #fff; color: #374151; border: 1px solid #e5e7eb; }
+.btn-secondary:hover { background: #f9fafb; }
+.dark .btn-secondary { background: #14171f; color: #e5e7eb; border-color: rgba(255,255,255,.08); }
+.dark .btn-secondary:hover { background: #1a1e27; }
+
+.btn-danger { background: #ef4444; color: #fff; }
+.btn-danger:hover { background: #dc2626; }
+
+.btn-ghost { background: transparent; color: #6b7280; }
+.btn-ghost:hover { background: #f3f4f6; color: #111827; }
+.dark .btn-ghost:hover { background: rgba(255,255,255,.05); color: #fff; }
+
+/* ---------- Table ---------- */
+.table-wrap {
+  background: #fff;
+  border: 1px solid #f1f2f6;
+  border-radius: 1rem;
+  overflow: hidden;
+}
+.dark .table-wrap {
+  background: #0f1218;
+  border-color: rgba(255,255,255,0.06);
+}
+.tbl { width: 100%; border-collapse: collapse; font-size: .875rem; }
+.tbl thead th {
+  text-align: left; font-weight: 600;
+  padding: .85rem 1rem;
+  color: #6b7280; font-size: .75rem; text-transform: uppercase; letter-spacing: .04em;
+  border-bottom: 1px solid #f3f4f6;
+}
+.dark .tbl thead th { color: #9ca3af; border-bottom-color: rgba(255,255,255,.05); }
+.tbl tbody td { padding: .9rem 1rem; border-top: 1px solid #f3f4f6; vertical-align: middle; }
+.dark .tbl tbody td { border-top-color: rgba(255,255,255,.05); }
+.tbl tbody tr:hover { background: #fafbfc; }
+.dark .tbl tbody tr:hover { background: rgba(255,255,255,.02); }
+
+/* ---------- Modal animations ---------- */
+[x-cloak] { display: none !important; }
+
+/* ---------- Brand gradient bg ---------- */
+.brand-gradient {
+  background: linear-gradient(135deg, #14b8a6 0%, #10b981 100%);
+}
+.upgrade-card {
+  background:
+    radial-gradient(circle at 90% 10%, rgba(255,255,255,.18), transparent 40%),
+    linear-gradient(135deg, #0f766e 0%, #14b8a6 60%, #10b981 100%);
+}

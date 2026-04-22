@@ -6,7 +6,7 @@ return [
     'stores' => 'Магазины',
     'faq' => 'Вопросы',
     'careers' => 'Карьера',
-    'legal' => 'Правовая информация',
+    'legal' => 'Документы',
     'download' => 'Скачать',
     'download_aria' => 'Kitobchi — скачать приложение',
     'menu_aria' => 'Меню',

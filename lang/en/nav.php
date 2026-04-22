@@ -6,7 +6,7 @@ return [
     'stores' => 'Stores',
     'faq' => 'FAQ',
     'careers' => 'Careers',
-    'legal' => 'Legal',
+    'legal' => 'Documents',
     'download' => 'Download',
     'download_aria' => 'Kitobchi — download the app',
     'menu_aria' => 'Menu',

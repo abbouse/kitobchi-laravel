@@ -14,7 +14,7 @@ class PanelPermission
         $admin = Auth::guard('panel')->user();
 
         if (! $admin) {
-            return redirect()->route('panel.login');
+            return redirect()->route('admin.login');
         }
 
         // Superadmin — hamma joiga kiradi

@@ -19,7 +19,7 @@ class AuthenticatePanel
         // Panel guard orqali tekshirish
         if (! Auth::guard('panel')->check()) {
             return redirect()
-                ->route('panel.login')
+                ->route('admin.login')
                 ->with('error', "Iltimos, tizimga kiring.");
         }
 
@@ -29,7 +29,7 @@ class AuthenticatePanel
         if (! $admin->is_active) {
             Auth::guard('panel')->logout();
             return redirect()
-                ->route('panel.login')
+                ->route('admin.login')
                 ->with('error', "Akkauntingiz bloklangan. Aloqa uchun: admin@kitob.uz");
         }
 

@@ -395,7 +395,7 @@
                                     </svg>
                                 </div>
                             </summary>
-                            <div class="faq-answer" style="height:auto;opacity:1">
+                            <div class="faq-answer">
                                 <div class="faq-answer-inner w-richtext"><p>{{ $item['a'] }}</p></div>
                             </div>
                         </details>

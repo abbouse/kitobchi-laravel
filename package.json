@@ -26,8 +26,10 @@
         "@tailwindcss/vite": "^4.2.1",
         "alpinejs": "^3.15.8",
         "apexcharts": "^5.10.1",
+        "bootstrap-icons": "^1.13.1",
         "flatpickr": "^4.6.13",
         "jsvectormap": "^1.7.0",
+        "lucide": "^1.8.0",
         "prismjs": "^1.30.0"
     }
 }

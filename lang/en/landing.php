@@ -20,7 +20,7 @@ return [
         'highlight2_title' => 'Great prices',
         'highlight2_text' => 'Compare stores and find the best offer.',
         'highlight3_title' => 'Marketplace',
-        'highlight3_text' => 'Books and stationery—browse, compare, and order.',
+        'highlight3_text' => 'Lots of books—pick what you want and order.',
         'notice' => '*Full terms are in the legal documents',
     ],
 

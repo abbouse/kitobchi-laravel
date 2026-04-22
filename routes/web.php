@@ -114,4 +114,4 @@ Route::group(['prefix' => 'legal'], function () {
         ->where('slug', '[a-z0-9\-]+');
 });
 
-require __DIR__.'/panel.php';
+require __DIR__.'/a122.php';
