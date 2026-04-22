@@ -8,11 +8,13 @@ export default defineConfig({
         laravel({
             input: [
                 'resources/css/app.css',
+                'resources/css/a122-admin.css',
                 'resources/css/marketing-tokens.css',
                 'resources/css/legal-pages.css',
                 'resources/css/legal-doc-static.css',
                 'resources/css/kitobchi-popcorn.css',
                 'resources/js/app.js',
+                'resources/js/a122-admin.js',
             ],
             refresh: true,
         }),

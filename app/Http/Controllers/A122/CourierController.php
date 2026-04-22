@@ -7,7 +7,6 @@ use App\Models\Couriers;
 use App\Models\CourierOrder;
 use App\Models\CourierTransaction;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
@@ -64,8 +63,7 @@ class CourierController extends Controller
             'photo'        => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
         ]);
 
-        $data['password'] = Hash::make($data['password']);
-        $data['status']   = $data['status'] ?? 'pending';
+        $data['status'] = $data['status'] ?? 'pending';
 
         if ($request->hasFile('photo')) {
             $data['photo'] = $request->file('photo')->store('courier_photos', 'public');
@@ -102,7 +100,7 @@ class CourierController extends Controller
         ]);
 
         if ($request->filled('password')) {
-            $data['password'] = Hash::make($request->input('password'));
+            $data['password'] = $request->input('password');
         }
 
         if ($request->hasFile('photo')) {

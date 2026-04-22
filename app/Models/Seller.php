@@ -52,6 +52,7 @@ class Seller extends Authenticatable
         'isVerified' => 'boolean',
         'isSupport'  => 'boolean',
         'isPremiumShop' => 'boolean',
+        'isPremiumExpiresAt' => 'datetime',
         'is_hidden'  => 'boolean',
         'password'   => 'hashed',
     ];
@@ -100,5 +101,10 @@ class Seller extends Authenticatable
     {
         return $this->hasMany(ConnectedDevice::class, 'user_id', 'id')
             ->where('user_type', 'seller');
+    }
+
+    public function premiumSubscriptions()
+    {
+        return $this->hasMany(SellerPremiumSubscription::class, 'seller_id');
     }
 }

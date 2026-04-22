@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\Seller\ConversationController;
 use App\Http\Controllers\Api\Seller\GiftController;
 use App\Http\Controllers\Api\Seller\HisobotController;
 use App\Http\Controllers\Api\Seller\OrderController;
+use App\Http\Controllers\Api\Seller\PremiumController;
 use App\Http\Controllers\Api\Seller\ProductController;
 use App\Http\Controllers\Api\Seller\SellerAuthController;
 use App\Http\Controllers\Api\Seller\SellerController;
@@ -60,7 +61,11 @@ Route::middleware('auth:seller')->group(function () {
     Route::post('orders/view-order', [OrderController::class, 'viewOrder']);
     Route::get('orders/orders-count', [OrderController::class, 'ordersCount']);
     Route::get('orders/accept/{id}', [OrderController::class, 'acceptOrder']);
+    Route::get('orders/scan-qr/{qr}', [OrderController::class, 'scanQR']);
     Route::get('orders/toCourier/{qr}', [OrderController::class, 'toCourier']);
+    Route::get('premium/info', [PremiumController::class, 'info']);
+    Route::post('premium/buy', [PremiumController::class, 'buy']);
+    Route::post('premium/cancel', [PremiumController::class, 'cancel']);
 
     Route::get('transactions/latest', [TransactionController::class, 'getTransactions']);
     Route::get('transactions/withdrawal', [TransactionController::class, 'requestWithdrawal']);

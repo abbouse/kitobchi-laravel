@@ -78,6 +78,6 @@ class Couriers extends Authenticatable
 
     public function getIsActiveAttribute(): bool
     {
-        return (int) $this->status === 1;
+        return $this->status === 'approved';
     }
 }

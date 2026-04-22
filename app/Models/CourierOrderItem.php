@@ -26,10 +26,11 @@ class CourierOrderItem extends Model
         ->select('id', 'name', 'author', 'seller_id', 'images');
     }
     public function orderStatus()
-{
-    return $this->hasOne(SellerOrder::class, 'order_id', 'order_id')
-        ->select('status', 'seller_id', 'order_id');
-}
+    {
+        return $this->hasOne(SellerOrder::class, 'order_id', 'order_id')
+            ->where('seller_id', $this->seller_id)
+            ->select('status', 'seller_id', 'order_id');
+    }
 
     public function sellerLocation()
     {

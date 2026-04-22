@@ -14,6 +14,7 @@ use App\Models\BookTag;
 use App\Models\Sold;
 use App\Models\Gifts;
 use App\Models\SellerStaffLog;
+use App\Services\SellerPremiumService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -22,7 +23,10 @@ use Illuminate\Support\Facades\Log;
 
 class ProductController extends Controller
 {
-    public function __construct(protected \App\Services\OpenAIService $ai)
+    public function __construct(
+        protected \App\Services\OpenAIService $ai,
+        protected SellerPremiumService $premiumService
+    )
     {
         $this->middleware('auth:seller');
     }
@@ -758,7 +762,7 @@ public function updateProductStatus(Request $request)
         'category_id' => 'required|integer|exists:book_categories,id',
         'tag_ids' => 'nullable|array',
         'tag_ids.*' => 'integer|exists:book_tags,id',
-        'is_discounted_sale' => 'required|string|in:true,false',
+        'discountExpiresAt' => 'nullable|date',
     ]);
 
     if ($validator->fails()) {
@@ -773,10 +777,6 @@ public function updateProductStatus(Request $request)
     if (!$product) {
         return response()->json(['success' => false, 'message' => 'Mahsulot topilmadi'], 404);
     }
-
-    // ARZONLASHTIRILGAN SAVDO LOGIKASI
-    $isDiscountedSale = $request->input('is_discounted_sale') === 'true';
-    $finalCategoryId = $isDiscountedSale ? 11 : $request->category_id;
 
     // existingImages va deletedImages ni to'g'ri olish
     $existingImages = $request->filled('existingImages')
@@ -856,25 +856,19 @@ public function updateProductStatus(Request $request)
         'coverType' => $request->coverType,
         'price' => $request->price,
         'discountPrice' => $request->discountPrice ?? 0,
+        'discountExpiresAt' => $request->filled('discountExpiresAt') ? $request->discountExpiresAt : null,
         'count' => $request->count,
         'description' => $request->description,
         'images' => $finalImages,
-        'category_id' => $finalCategoryId,
-        'is_discounted_sale' => $isDiscountedSale ? 1 : 0,
-        'is_approved' => '0'
+        'category_id' => $request->category_id,
+        'is_approved' => '0',
     ]);
-    $tagIds = $isDiscountedSale ? [] : ($request->input('tag_ids', []));
-    $product->tags()->sync($tagIds);
-    $logMessage = $isDiscountedSale
-        ? 'Mahsulotni arzonlashtirilgan savdoga qo‘shdi'
-        : 'Mahsulot ma‘lumotlarini yangiladi';
-    $this->writeLog($seller, $logMessage, $product->name);
+    $product->tags()->sync($request->input('tag_ids', []));
+    $this->writeLog($seller, 'Mahsulot ma\'lumotlarini yangiladi', $product->name);
     return response()->json([
         'success' => true,
         'message' => 'Mahsulot muvaffaqiyatli yangilandi',
         'data' => $product->fresh()->load(['category', 'tags']),
-        'is_discounted_sale' => $isDiscountedSale,
-        'category_id' => $finalCategoryId,
     ], 200);
 }
 
@@ -1072,9 +1066,7 @@ public function generateDescription(Request $request)
  
     // ── Premium tekshiruvi ────────────────────────────────────────
     $storeSeller = \App\Models\Seller::find($this->getStoreSellerId($seller));
-    $isPremium   = $storeSeller?->isPremiumShop &&
-        (is_null($storeSeller->isPremiumExpiresAt) ||
-            \Carbon\Carbon::parse($storeSeller->isPremiumExpiresAt)->isFuture());
+    $isPremium = $storeSeller ? $this->premiumService->isSellerPremium($storeSeller) : false;
  
     if (!$isPremium) {
         return response()->json([
@@ -1253,10 +1245,8 @@ public function setRecommended(Request $request)
     // ── Premium tekshiruvi ────────────────────────────────────────
     // Premium ni do'kon egasidan (storeSellerId) olamiz
     $storeSellerId = $seller->parent_id ?: $seller->id;
-    $storeSeller   = \App\Models\Seller::find($storeSellerId);
-    $isPremium     = $storeSeller?->isPremiumShop &&
-        (is_null($storeSeller->isPremiumExpiresAt) ||
-            \Carbon\Carbon::parse($storeSeller->isPremiumExpiresAt)->isFuture());
+    $storeSeller = \App\Models\Seller::find($storeSellerId);
+    $isPremium = $storeSeller ? $this->premiumService->isSellerPremium($storeSeller) : false;
  
     if (!$isPremium) {
         return response()->json([

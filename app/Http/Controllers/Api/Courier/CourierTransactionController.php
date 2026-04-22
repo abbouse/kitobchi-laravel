@@ -5,9 +5,9 @@ namespace App\Http\Controllers\Api\Courier;
 use App\Http\Controllers\Controller;
 use App\Models\CourierTransaction;
 use App\Models\CommissionSetting;
-use App\Models\Courier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class CourierTransactionController extends Controller
 {
@@ -30,32 +30,46 @@ class CourierTransactionController extends Controller
         }
         $commissionSetting = CommissionSetting::where('priceFrom', '<=', $courier->balance)
             ->where('priceTo', '>=', $courier->balance)
+            ->orderBy('priceFrom', 'desc')
             ->first();
         if (!$commissionSetting) {
             return response()->json([
-                'success' => false, 
-                'message' => 'Komissiya sozlamalari topilmadi'
+                'success' => false,
+                'message' => 'Komissiya sozlamalari topilmadi',
             ], 400);
         }
-        $commissionPercent = $commissionSetting->percent;
-        $commissionPrice = ($courier->balance * $commissionPercent) / 100;
-        $netAmount = $courier->balance - $commissionPrice;
-        $transaction = CourierTransaction::create([
-            'courier_id' => $courier->id,
-            'card' => $courier->payment_card,
-            'amount' => $courier->balance,
-            'commissionPercent' => $commissionPercent,
-            'commissionPrice' => $commissionPrice,
-            'netAmount' => $netAmount,
-            'status' => 'pending',
-        ]);
-        $courier->balance = 0;
-        $courier->save();
-        return response()->json([
-            'success' => true,
-            'message' => 'Yechib olish so\'rovi muvaffaqiyatli yuborildi',
-            'transaction_id' => $transaction->id,
-        ], 200);
+
+        try {
+            $transaction = DB::transaction(function () use ($courier, $commissionSetting) {
+                $amount            = $courier->balance;
+                $commissionPercent = $commissionSetting->percent;
+                $commissionPrice   = round(($amount * $commissionPercent) / 100, 2);
+                $netAmount         = round($amount - $commissionPrice, 2);
+
+                $transaction = CourierTransaction::create([
+                    'courier_id'       => $courier->id,
+                    'card'             => $courier->payment_card,
+                    'amount'           => $amount,
+                    'commissionPercent'=> $commissionPercent,
+                    'commissionPrice'  => $commissionPrice,
+                    'netAmount'        => $netAmount,
+                    'status'           => 'pending',
+                ]);
+
+                $courier->balance = 0;
+                $courier->save();
+
+                return $transaction;
+            });
+
+            return response()->json([
+                'success'        => true,
+                'message'        => "Yechib olish so'rovi muvaffaqiyatli yuborildi",
+                'transaction_id' => $transaction->id,
+            ], 200);
+        } catch (\Throwable $th) {
+            return response()->json(['success' => false, 'message' => 'Xatolik: ' . $th->getMessage()], 500);
+        }
     }
 
     public function getTransactions()

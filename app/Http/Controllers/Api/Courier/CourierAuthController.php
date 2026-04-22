@@ -29,41 +29,40 @@ class CourierAuthController extends Controller
                 'message' => 'Telefon raqam yoki parol noto‘g‘ri!'
             ], 401);
         }
-        if ($courier->status != 2) {
-    return response()->json([
-        'status' => 'error',
-        'message' => 'Sizning hisobingiz faol emas. Iltimos, administrator bilan bog‘laning.'
-    ], 403);
-}
+
+        if ($courier->status !== 'approved') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Sizning hisobingiz faol emas. Iltimos, administrator bilan bog\'laning.'
+            ], 403);
+        }
+
         $tokenResult = $courier->createToken('courier-token');
         $plainTextToken = $tokenResult->plainTextToken;
         $hashedToken = hash('sha256', explode('|', $plainTextToken)[1]);
-        
-        $existingDevice = DB::table('connected_devices')
-            ->where('device_id', $request->device_id)
-            ->first();
-            DB::table('connected_devices')->updateOrInsert(
-        ['device_id' => $request->device_id], 
-        [
-            'user_id'     => $courier->id,   // Kuryer ID si
-            'user_type'   => 'courier',      // Turi (ajratish uchun)
-            'token'       => $hashedToken,   // Auth token hash
-            'fcm_token'   => $request->fcm_token, // Text formatda
-            'device_name' => $request->device_name,
-            'platform'    => $request->platform,
-            'updated_at'  => now(),
-            'created_at'  => now(),
-        ]
-    );
 
-    // 4. Tozalash (Eski, faol bo'lmagan tokenlarni o'chirish)
-    $activeTokensInDevices = DB::table('connected_devices')
-        ->where('user_id', $courier->id)
-        ->where('user_type', 'courier')
-        ->pluck('token')
-        ->toArray();
+        DB::table('connected_devices')->updateOrInsert(
+            ['device_id' => $request->device_id],
+            [
+                'user_id' => $courier->id,
+                'user_type' => 'courier',
+                'token' => $hashedToken,
+                'fcm_token' => $request->fcm_token,
+                'device_name' => $request->device_name,
+                'platform' => $request->platform,
+                'updated_at' => now(),
+                'created_at' => now(),
+            ]
+        );
 
-    $courier->tokens()->whereNotIn('token', $activeTokensInDevices)->delete();
+        $activeTokensInDevices = DB::table('connected_devices')
+            ->where('user_id', $courier->id)
+            ->where('user_type', 'courier')
+            ->pluck('token')
+            ->toArray();
+
+        $courier->tokens()->whereNotIn('token', $activeTokensInDevices)->delete();
+
         return response()->json([
             'status' => 'success',
             'message' => 'Tizimga muvaffaqiyatli kirdingiz!',
@@ -87,7 +86,7 @@ class CourierAuthController extends Controller
     ]);
     $existingCourier = Couriers::where('phone_number', $request->phone_number)->first();
     if ($existingCourier) {
-        if ($existingCourier->status > 1) {
+        if ($existingCourier->status === 'approved') {
             return response()->json([
                 'status' => 'error',
                 'message' => "Siz allaqachon ro‘yxatdan o‘tgansiz yoki faol kuryersiz",

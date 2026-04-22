@@ -89,4 +89,9 @@ return Application::configure(basePath: dirname(__DIR__))
             ->timezone($tz)
             ->withoutOverlapping(25);
 
+        $schedule->command('seller-premium:sync-renewals')
+            ->hourly()
+            ->timezone($tz)
+            ->withoutOverlapping();
+
     })->create();

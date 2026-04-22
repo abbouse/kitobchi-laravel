@@ -3,15 +3,12 @@
 namespace App\Http\Controllers\Api\Courier;
 
 use App\Http\Controllers\Controller;
-use App\Models\DeliveryService;
-use App\Models\Sold;
-use App\Models\User;
-use App\Models\Couriers;
 use App\Models\CourierNotification;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Muneebkh2\LaravelFcmNotifications\Facades\LaravelFCM;
+use Illuminate\Support\Str;
 
 class CourierController extends Controller
 {
@@ -79,16 +76,13 @@ class CourierController extends Controller
     }
     public function updateFcm(Request $request)
     {
-    $courier = Auth::guard('courier')->user();
+        $courier = Auth::guard('courier')->user();
         if (!$courier) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
-    if (!$courier) {
-        return response()->json(['status' => 'error', 'message' => "Bunday foydalanuvchi mavjud emas!"], 404);
-    }
         $courier->fcm_token = $request->token;
         $courier->save();
-        return response()->json(['status' => 'success', 'data' => $courier], 201);
+        return response()->json(['success' => true], 200);
     }
     public function notifications(Request $request)
     {
@@ -98,6 +92,7 @@ class CourierController extends Controller
         }
         $notifications = CourierNotification::where('courier_id', $courier->id)
             ->orderBy('created_at', 'desc')
+            ->limit(50)
             ->get();
 
         return response()->json([

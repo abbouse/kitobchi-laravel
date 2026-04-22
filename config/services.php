@@ -47,5 +47,8 @@ return [
         'http_retries' => max(1, (int) env('KANGAROO_HTTP_RETRIES', 3)),
         'http_retry_delay_ms' => max(50, (int) env('KANGAROO_HTTP_RETRY_DELAY_MS', 250)),
     ],
+    'openai' => [
+    'key' => env('OPENAI_API_KEY'),
+],
 
 ];
