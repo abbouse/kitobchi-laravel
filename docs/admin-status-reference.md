@@ -41,30 +41,37 @@ Eslatma:
 
 ## 2. Seller order (`SellerOrder`)
 
-Seller order admin panelida raqamli status bilan yuradi.
+Seller order uchun asosiy haqiqat manbasi seller API oqimi hisoblanadi. Shu oqimga ko'ra seller order raqamli status bilan yuradi.
 
 | Qiymat | Ma'nosi | Admindagi label | Izoh | Manba |
 |---|---|---|---|---|
-| `1` | yangi buyurtma | `Yangi buyurtma` | default admin mapping | `app/Services/AdminOrderStatusSyncService.php` |
-| `2` | qabul qilindi | `Qabul qilindi` | seller tasdiqlagan | shu fayl |
-| `3` | kuryerga berildi | `Kuryerga berildi` | `Sold.status` ni `B` ga yaqinlashtiradi | shu fayl |
+| `0` | to'lov jarayonida | `To'lov jarayonida` | checkout online bo'lsa seller API buni yashirib turadi (`status != 0`) | `app/Http/Controllers/Api/PurchaseController.php`, `app/Http/Controllers/Api/Seller/OrderController.php` |
+| `1` | yangi buyurtma | `Yangi buyurtma` | to'lov tushganidan keyin sellerga kelgan aktiv buyurtma | `app/Services/OrderService.php`, `app/Http/Controllers/Api/Seller/OrderController.php` |
+| `2` | kuryerga berildi | `Kuryerga berildi` | seller QR orqali courierga topshirgan | `app/Http/Controllers/Api/Seller/OrderController.php` |
+| `3` | legacy holat | `Kuryerga berildi (legacy)` | hozirgi seller API ishlatmaydi, eski admin mapping izi | `app/Services/AdminOrderStatusSyncService.php` |
 | `4` | bekor qilindi | `Bekor qilindi` | asosiy order ham cancel bo'ladi | shu fayl |
 
 Muhim legacy nuqta:
 
-- `app/Http/Controllers/Api/PurchaseController.php` ichida seller order yaratilganda online payment holatida `status => 0` yoziladigan joy bor.
-- Admin panel mappingi esa `1..4` bilan ishlaydi.
-- Shu sabab `0` qiymatni legacy yoki pre-payment placeholder deb ko'rish kerak.
+- `0` qiymat legacy emas, real checkout oqimida ishlatiladi.
+- Seller API order list, view va count endpointlari `status != 0` bilan ishlaydi, ya'ni online to'lov hali tushmagan order seller ilovasida ko'rinmaydi.
+- `3` esa aksincha legacy holat bo'lib, seller API ning hozirgi oqimida ishlatilmaydi.
 
 ## 3. Courier order (`CourierOrder`)
 
 | Qiymat | Ma'nosi | Admindagi label | Izoh | Manba |
 |---|---|---|---|---|
 | `pay_process` | to'lov jarayonida | `To'lov jarayonida` | online payment hali tasdiqlanmagan | `app/Services/AdminOrderStatusSyncService.php` |
-| `pending` | kutilmoqda | `Kutilmoqda` | kuryer navbatida | shu fayl |
+| `pending` | kutilmoqda | `Kutilmoqda` | courier API da ham available, ham courier biriktirilgan lekin hali topshirilmagan holat sifatida uchraydi | `app/Http/Controllers/Api/Courier/CourierOrderController.php` |
 | `in_delivery` | yetkazilmoqda | `Yo'lda` | faol delivery | shu fayl |
 | `delivered` | yetkazildi | `Yetkazildi` | tugallangan | shu fayl |
 | `rejected` | bekor qilindi | `Bekor qilindi` | asosiy order cancel bo'lishi mumkin | shu fayl |
+
+Muhim:
+
+- Courier API `confirmOrder()` ichida courier orderga `courier_id` biriktiriladi, lekin `status` hali ham `pending` bo'lib qoladi.
+- `toCustomer()` esa `in_delivery` holatini kutadi.
+- Demak amaldagi kodda `pending -> in_delivery` o'tishi admin/service oqimida bor, courier API oqimida esa bu o'tish to'liq izchil emas.
 
 ## 4. Statuslar o'rtasidagi sinxronizatsiya
 
@@ -74,10 +81,10 @@ Admin panelda order statusini o'zgartirsangiz, boshqa bog'liq orderlar ham sinxr
 
 | `Sold.status` | `SellerOrder.status` |
 |---|---|
-| `A` | `1` |
-| `P` | `2` |
-| `B` | `3` |
-| `C` | `3` |
+| `A` + `paymentStatus = 1` | `0` |
+| `A` / `P` | `1` |
+| `B` | `2` |
+| `C` | `2` |
 | `F` | `4` |
 
 ### Main order -> courier order
@@ -94,9 +101,9 @@ Admin panelda order statusini o'zgartirsangiz, boshqa bog'liq orderlar ham sinxr
 
 | `CourierOrder.status` | `Sold.status` | `SellerOrder.status` |
 |---|---|---|
-| `pending` | `A` | `2` |
-| `in_delivery` | `B` | `3` |
-| `delivered` | `C` | `3` |
+| `pending` | `A` | `1` |
+| `in_delivery` | `B` | `2` |
+| `delivered` | `C` | `2` |
 | `rejected` | cancel | `4` |
 
 Manba: `app/Services/AdminOrderStatusSyncService.php`
@@ -358,3 +365,102 @@ Kelajakda statuslar bilan ishlashni yanada xavfsiz qilish uchun:
 - admin blade ichidagi `match` mappinglarni service/helper ga ko'chirish
 - har bir modul uchun `getStatusLabelAttribute()` va `getStatusColorAttribute()` ni standartlashtirish
 - bu faylni status o'zgargan har bir PR da yangilash
+
+## 20. Client App Verification
+
+Quyidagi bo'lim statuslar backendda qanday saqlanishi bilan emas, mobil ilovalar ularni realda qanday ishlatayotgani bilan tasdiqlangan.
+
+### 20.1 `kitobchi-app` (`../kitobchi-app`)
+
+User app order statuslari `Sold.status` bo'yicha quyidagicha ishlatiladi:
+
+| Qiymat | Appdagi ma'nosi | Manba |
+|---|---|---|
+| `A` | pending | `lib/Pages/ProfilePage/Purchases/ViewPurchase.dart`, `Purchases.dart` |
+| `P` | packing | shu fayllar |
+| `B` | shipped / yo'lda | shu fayllar |
+| `C` | delivered | shu fayllar |
+| `F` | canceled | shu fayllar |
+
+User app ichida:
+
+- `A` va `P` bitta umumiy `in progress` guruhiga birlashtiriladi
+- `paymentStatus == 1 && status == A` bo'lsa alohida to'lov banneri ko'rsatiladi
+
+Xulosa:
+
+- `Sold.status` bo'yicha bizning hozirgi admin mapping user app bilan mos
+- `A` va `P` ni adminda ham ma'nodosh, lekin alohida bosqichlar deb ko'rish to'g'ri
+
+### 20.2 `kitobchibusiness` (`../kitobchibusiness`)
+
+Business app `OrderModel.statusText` ichida quyidagi mapping bor:
+
+| Qiymat | Hozirgi app labeli | Manba |
+|---|---|---|
+| `1` | `Yangi buyurtma` | `lib/models/order_model.dart` |
+| `2` | `Qabul qilindi` | shu fayl |
+| `3` | `Yakunlandi` | shu fayl |
+| `4` | `Bekor qilindi` | shu fayl |
+
+Lekin seller API oqimi bo'yicha real holat:
+
+| Qiymat | Real ma'no |
+|---|---|
+| `0` | to'lov jarayonida |
+| `1` | yangi buyurtma |
+| `2` | kuryerga berildi / courier oldi |
+| `3` | legacy |
+| `4` | bekor qilindi |
+
+Xulosa:
+
+- `kitobchibusiness` ichidagi seller order label mapping eskirgan
+- ayniqsa `2 = Qabul qilindi` va `3 = Yakunlandi` hozirgi backend oqimiga mos emas
+- admin panel endi business appning eski mappingiga emas, seller API ning real oqimiga moslangan
+
+### 20.3 `kitobchiexpress` (`../kitobchiexpress`)
+
+Courier app `CourierOrder.status` bo'yicha:
+
+| Qiymat | Appdagi ma'nosi | Manba |
+|---|---|---|
+| `pending` | `Kutilmoqda` | `lib/screens/order/order_list.dart` |
+| `in_delivery` | `Yetkazilmoqda` | shu fayl |
+| `delivered` | `Yetkazildi` | shu fayl |
+| `rejected` | `Bekor qilindi` | filter labelda shunday | shu fayl |
+
+Courier app ichida yana `item.orderStatus` bo'yicha seller kesimidagi shop status ko'rsatiladi:
+
+| Qiymat | Appdagi ma'nosi | Manba |
+|---|---|---|
+| `1` | `KUTILMOQDA` | `lib/screens/order/order_view.dart` |
+| `2` | `OLINDI` | shu fayl |
+| `3` | `BEKOR QILINDI` | shu fayl |
+
+Muhim tafovutlar:
+
+- Courier app filter `rejected` ishlatadi, lekin `_statusChip()` ichida `cancelled` case bor. Bu app ichida o'zida nomuvofiqlik.
+- Courier API `confirmOrder()` dan keyin `CourierOrder.status` hali `pending` qoladi.
+- Courier app `toCustomer()` oqimi esa `in_delivery` ni kutadi.
+
+Xulosa:
+
+- Admin panelda courier statuslar `pay_process / pending / in_delivery / delivered / rejected` bo'yicha alohida turishi to'g'ri
+- Courier appning `rejected` vs `cancelled` nomuvofiqligi admin mapping emas, client appning o'zidagi tafovut
+
+## 21. Yakuniy Haqiqat Manbasi
+
+Agar bir nechta qatlam bir-biriga zid ko'rinsa, ustuvorlik quyidagicha olinadi:
+
+1. Real API controller oqimi
+2. `OrderService` va status sync service
+3. Client ilovalar ichidagi real ishlatilayotgan status mapping
+4. Admin blade yoki dashboard label mapping
+
+Shu sabab:
+
+- user order uchun `Sold.status` haqiqat manbasi
+- seller order uchun seller API oqimi haqiqat manbasi
+- courier order uchun courier API oqimi va `CourierOrder.status` haqiqat manbasi
+- admin UI faqat shu qatlamlarga moslashishi kerak, aksincha emas

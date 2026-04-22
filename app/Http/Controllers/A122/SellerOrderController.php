@@ -41,7 +41,7 @@ class SellerOrderController extends Controller
         $orders = $q->latest()->paginate(25)->withQueryString();
 
         $counts = ['all' => SellerOrder::count()];
-        foreach ([1, 2, 3, 4] as $s) {
+        foreach (array_keys(AdminOrderStatusSyncService::SELLER_STATUSES) as $s) {
             $counts[$s] = SellerOrder::where('status', $s)->count();
         }
 
@@ -95,7 +95,7 @@ class SellerOrderController extends Controller
 
     public function updateStatus(Request $request, SellerOrder $sellerOrder)
     {
-        $request->validate(['status' => 'required|in:1,2,3,4']);
+        $request->validate(['status' => 'required|in:0,1,2,3,4']);
         $this->statusSync->updateSellerOrder($sellerOrder, (int) $request->status);
         return back()->with('success', 'Holat yangilandi.');
     }

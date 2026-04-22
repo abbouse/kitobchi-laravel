@@ -541,9 +541,10 @@ class DashboardController extends Controller
 
         $sellerCounts = [
             'all' => SellerOrder::count(),
+            'payment_pending' => SellerOrder::where('status', 0)->count(),
             'new' => SellerOrder::where('status', 1)->count(),
-            'accepted' => SellerOrder::where('status', 2)->count(),
-            'handover' => SellerOrder::where('status', 3)->count(),
+            'handover' => SellerOrder::whereIn('status', [2, 3])->count(),
+            'legacy' => SellerOrder::where('status', 3)->count(),
             'cancelled' => SellerOrder::where('status', 4)->count(),
         ];
 
@@ -551,7 +552,7 @@ class DashboardController extends Controller
             'all' => CourierOrder::count(),
             'pay_process' => CourierOrder::where('status', 'pay_process')->count(),
             'pending' => CourierOrder::where('status', 'pending')->count(),
-            'accepted' => CourierOrder::where('status', 'in_delivery')->count(),
+            'in_delivery' => CourierOrder::where('status', 'in_delivery')->count(),
             'delivered' => CourierOrder::where('status', 'delivered')->count(),
             'rejected' => CourierOrder::where('status', 'rejected')->count(),
         ];
@@ -605,9 +606,10 @@ class DashboardController extends Controller
                 'avatar' => $this->assetFromStorage($order->seller?->photo),
                 'amount' => number_format((float) ($order->amount ?? 0), 0, '.', ' '),
                 'status' => match ((int) $order->status) {
+                    0 => "To'lov jarayonida",
                     1 => 'Yangi',
-                    2 => 'Qabul qilindi',
-                    3 => 'Kuryerga berildi',
+                    2 => 'Kuryerga berildi',
+                    3 => "Kuryerga berildi (legacy)",
                     4 => 'Bekor qilindi',
                     default => (string) $order->status,
                 },

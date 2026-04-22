@@ -10,9 +10,10 @@ use Illuminate\Support\Facades\DB;
 class AdminOrderStatusSyncService
 {
     public const SELLER_STATUSES = [
+        0 => ['label' => "To'lov jarayonida", 'badge' => 'badge-muted'],
         1 => ['label' => 'Yangi buyurtma', 'badge' => 'badge-info'],
-        2 => ['label' => 'Qabul qilindi', 'badge' => 'badge-success'],
-        3 => ['label' => 'Kuryerga berildi', 'badge' => 'badge-warning'],
+        2 => ['label' => 'Kuryerga berildi', 'badge' => 'badge-warning'],
+        3 => ['label' => "Kuryerga berildi (legacy)", 'badge' => 'badge-warning'],
         4 => ['label' => 'Bekor qilindi', 'badge' => 'badge-danger'],
     ];
 
@@ -42,7 +43,7 @@ class AdminOrderStatusSyncService
             $order->save();
 
             SellerOrder::where('order_id', $order->id)->update([
-                'status' => $this->mapMainToSeller($status),
+                'status' => $this->mapMainToSeller($status, $order->paymentStatus),
                 'updated_at' => now(),
             ]);
 
@@ -69,8 +70,7 @@ class AdminOrderStatusSyncService
             }
 
             $order->status = match ($status) {
-                3 => 'B',
-                2 => 'P',
+                2, 3 => 'B',
                 default => 'A',
             };
             $order->save();
@@ -116,12 +116,15 @@ class AdminOrderStatusSyncService
         });
     }
 
-    public function mapMainToSeller(string $status): int
+    public function mapMainToSeller(string $status, int|string|null $paymentStatus = null): int
     {
+        if ((int) $paymentStatus === 1 && in_array($status, ['A', 'P'], true)) {
+            return 0;
+        }
+
         return match ($status) {
-            'B', 'C' => 3,
+            'B', 'C' => 2,
             'F' => 4,
-            'P' => 2,
             default => 1,
         };
     }
@@ -143,7 +146,7 @@ class AdminOrderStatusSyncService
     public function mapSellerToCourier(int $status, int|string|null $paymentStatus = null): string
     {
         return match ($status) {
-            3 => 'in_delivery',
+            2, 3 => 'in_delivery',
             4 => 'rejected',
             default => ((int) $paymentStatus === 1 ? 'pay_process' : 'pending'),
         };
@@ -152,9 +155,9 @@ class AdminOrderStatusSyncService
     public function mapCourierToSeller(string $status): int
     {
         return match ($status) {
-            'delivered', 'in_delivery' => 3,
+            'delivered', 'in_delivery' => 2,
             'rejected' => 4,
-            default => 2,
+            default => 1,
         };
     }
 }

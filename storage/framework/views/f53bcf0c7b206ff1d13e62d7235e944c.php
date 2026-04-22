@@ -32,13 +32,10 @@
 
 <div class="flex items-center gap-2 mb-4 flex-wrap">
     <?php
-        $tabs = [
-            'all' => ['label' => 'Barchasi',          'count' => $counts['all'] ?? 0],
-            '1'   => ['label' => 'Yangi',              'count' => $counts[1] ?? 0],
-            '2'   => ['label' => 'Qabul qilindi',      'count' => $counts[2] ?? 0],
-            '3'   => ['label' => 'Kuryerga berildi',   'count' => $counts[3] ?? 0],
-            '4'   => ['label' => 'Bekor qilindi',      'count' => $counts[4] ?? 0],
-        ];
+        $tabs = ['all' => ['label' => 'Barchasi', 'count' => $counts['all'] ?? 0]];
+        foreach ($statuses as $value => $statusItem) {
+            $tabs[(string) $value] = ['label' => $statusItem['label'], 'count' => $counts[$value] ?? 0];
+        }
     ?>
     <?php $__currentLoopData = $tabs; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $key => $tabItem): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
         <a

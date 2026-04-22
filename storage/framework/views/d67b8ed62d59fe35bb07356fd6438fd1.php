@@ -30,6 +30,7 @@
 
 <div class="tab-pills fade-up mb-3">
     <?php $__currentLoopData = [
+        'pay_process' => ["To'lov jarayonida", $counts['pay_process'] ?? 0],
         'pending' => ['Kutilmoqda', $counts['pending'] ?? 0],
         'in_delivery' => ["Yo'lda", $counts['in_delivery'] ?? 0],
         'delivered' => ['Yetkazildi', $counts['delivered'] ?? 0],

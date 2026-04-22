@@ -84,12 +84,14 @@
             <div>
                 <dt class="text-xs text-gray-500 mb-1">Holat</dt>
                 <dd>
-                    @if($statusVal == 1)
+                    @if($statusVal == 0)
+                        <span class="badge badge-muted">{{ $statuses[0]['label'] ?? "To'lov jarayonida" }}</span>
+                    @elseif($statusVal == 1)
                         <span class="badge badge-info">{{ $statuses[1]['label'] ?? 'Yangi' }}</span>
                     @elseif($statusVal == 2)
-                        <span class="badge badge-success">{{ $statuses[2]['label'] ?? 'Qabul qilindi' }}</span>
+                        <span class="badge badge-warning">{{ $statuses[2]['label'] ?? 'Kuryerga berildi' }}</span>
                     @elseif($statusVal == 3)
-                        <span class="badge badge-warning">{{ $statuses[3]['label'] ?? 'Kuryerga berildi' }}</span>
+                        <span class="badge badge-warning">{{ $statuses[3]['label'] ?? "Kuryerga berildi (legacy)" }}</span>
                     @elseif($statusVal == 4)
                         <span class="badge badge-danger">{{ $statuses[4]['label'] ?? 'Bekor qilindi' }}</span>
                     @else
