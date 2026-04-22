@@ -79,7 +79,7 @@
         <div class="live-card__head"><div><div class="live-card__title">Status pulse</div><div class="live-card__sub">Har bir oqim bo'yicha jonli statuslar</div></div></div>
         <div class="live-list">
           <div class="live-row"><div class="live-pill warning">User order</div><div class="live-name">Yangi / Qadoqlanmoqda / Yo'lda</div><div class="live-amount" x-text="`${snapshot.main_counts.new} / ${snapshot.main_counts.packing} / ${snapshot.main_counts.onway}`"></div><div class="live-pill success" x-text="`${snapshot.main_counts.done} yetkazildi`"></div></div>
-          <div class="live-row"><div class="live-pill info">Seller</div><div class="live-name">To'lov / Yangi / Kuryerga berildi</div><div class="live-amount" x-text="`${snapshot.seller_counts.payment_pending} / ${snapshot.seller_counts.new} / ${snapshot.seller_counts.handover}`"></div><div class="live-pill danger" x-text="`${snapshot.seller_counts.cancelled} bekor`"></div></div>
+          <div class="live-row"><div class="live-pill info">Seller</div><div class="live-name">To'lov / Yangi / Qabul / Kuryerga berdi</div><div class="live-amount" x-text="`${snapshot.seller_counts.payment_pending} / ${snapshot.seller_counts.new} / ${snapshot.seller_counts.accepted} / ${snapshot.seller_counts.handover}`"></div><div class="live-pill danger" x-text="`${snapshot.seller_counts.cancelled} bekor`"></div></div>
           <div class="live-row"><div class="live-pill info">Courier</div><div class="live-name">Kutilmoqda / Yo'lda / Yetkazildi</div><div class="live-amount" x-text="`${snapshot.courier_counts.pending} / ${snapshot.courier_counts.in_delivery} / ${snapshot.courier_counts.delivered}`"></div><div class="live-pill danger" x-text="`${snapshot.courier_counts.rejected} bekor`"></div></div>
         </div>
       </div>
@@ -126,6 +126,7 @@
     <div class="live-grid">
       <div class="live-stat"><div class="live-stat__label">To'lov jarayoni</div><div class="live-stat__value" x-text="snapshot.seller_counts.payment_pending"></div><div class="live-stat__sub">Online to'lov hali tushmagan</div></div>
       <div class="live-stat"><div class="live-stat__label">Yangi seller order</div><div class="live-stat__value" x-text="snapshot.seller_counts.new"></div><div class="live-stat__sub">Sellerga tushgan</div></div>
+      <div class="live-stat"><div class="live-stat__label">Do'kon qabul qildi</div><div class="live-stat__value" x-text="snapshot.seller_counts.accepted"></div><div class="live-stat__sub">Tayyorlab qo'yilgan</div></div>
       <div class="live-stat"><div class="live-stat__label">Kuryerga berilgan</div><div class="live-stat__value" x-text="snapshot.seller_counts.handover"></div><div class="live-stat__sub">Topshirilgan</div></div>
       <div class="live-stat"><div class="live-stat__label">Bekor qilingan</div><div class="live-stat__value" x-text="snapshot.seller_counts.cancelled"></div><div class="live-stat__sub">To'xtagan oqim</div></div>
     </div>

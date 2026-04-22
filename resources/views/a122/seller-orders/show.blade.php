@@ -89,9 +89,9 @@
                     @elseif($statusVal == 1)
                         <span class="badge badge-info">{{ $statuses[1]['label'] ?? 'Yangi' }}</span>
                     @elseif($statusVal == 2)
-                        <span class="badge badge-warning">{{ $statuses[2]['label'] ?? 'Kuryerga berildi' }}</span>
+                        <span class="badge badge-warning">{{ $statuses[2]['label'] ?? "Do'kon qabul qildi" }}</span>
                     @elseif($statusVal == 3)
-                        <span class="badge badge-warning">{{ $statuses[3]['label'] ?? "Kuryerga berildi (legacy)" }}</span>
+                        <span class="badge badge-success">{{ $statuses[3]['label'] ?? "Kuryerga berildi" }}</span>
                     @elseif($statusVal == 4)
                         <span class="badge badge-danger">{{ $statuses[4]['label'] ?? 'Bekor qilindi' }}</span>
                     @else

@@ -543,8 +543,8 @@ class DashboardController extends Controller
             'all' => SellerOrder::count(),
             'payment_pending' => SellerOrder::where('status', 0)->count(),
             'new' => SellerOrder::where('status', 1)->count(),
-            'handover' => SellerOrder::whereIn('status', [2, 3])->count(),
-            'legacy' => SellerOrder::where('status', 3)->count(),
+            'accepted' => SellerOrder::where('status', 2)->count(),
+            'handover' => SellerOrder::where('status', 3)->count(),
             'cancelled' => SellerOrder::where('status', 4)->count(),
         ];
 
@@ -608,8 +608,8 @@ class DashboardController extends Controller
                 'status' => match ((int) $order->status) {
                     0 => "To'lov jarayonida",
                     1 => 'Yangi',
-                    2 => 'Kuryerga berildi',
-                    3 => "Kuryerga berildi (legacy)",
+                    2 => "Do'kon qabul qildi",
+                    3 => "Kuryerga berildi",
                     4 => 'Bekor qilindi',
                     default => (string) $order->status,
                 },

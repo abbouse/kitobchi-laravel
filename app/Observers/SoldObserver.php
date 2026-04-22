@@ -146,7 +146,7 @@ class SoldObserver
 
             // ── 8. SellerOrder va CourierOrder ────────────────────────────────
             $sellerCount  = SellerOrder::where('order_id', $order->id)
-                ->update(['status' => 3, 'updated_at' => now()]);
+                ->update(['status' => 4, 'updated_at' => now()]);
 
             $courierCount = CourierOrder::where('order_id', $order->id)
                 ->update(['status' => 'rejected', 'updated_at' => now()]);

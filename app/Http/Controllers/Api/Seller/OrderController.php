@@ -90,12 +90,12 @@ class OrderController extends Controller
     if ($seller->shop_name !== $shopName) {
         return response()->json(['success' => false, 'message' => 'Shop name does not match'], 403);
     }
-    $seller_order = SellerOrder::where('status', 1)
+    $seller_order = SellerOrder::where('status', 2)
         ->where('order_id', $orderId)
         ->where('seller_id', $sellerId)
         ->first();
     if (!$seller_order) {
-        return response()->json(['success' => false, 'message' => 'Order not ready or not found'], 404);
+        return response()->json(['success' => false, 'message' => "Buyurtma avval do'kon tomonidan qabul qilinishi kerak"], 404);
     }
     $sold = Sold::where('id', $orderId)->first();
     if (!$sold) {
@@ -107,10 +107,10 @@ class OrderController extends Controller
     }
     $seller_order->courier_id = $courier->id;
     $seller_order->courierName = $courier->first_name . ' ' . $courier->last_name;
-    $seller_order->status = 2;
+    $seller_order->status = 3;
     $seller_order->save();
     $allSellersDone = SellerOrder::where('order_id', $orderId)
-        ->where('status', '!=', 2)
+        ->where('status', '!=', 3)
         ->doesntExist();
     if ($allSellersDone) {
         $sold->status = 'B';
@@ -126,6 +126,52 @@ class OrderController extends Controller
         'message' => 'Products collected. ' . ($allSellersDone ? 'Order fully sent to courier.' : 'Waiting for other shops...')
     ], 200);
 }
+
+    public function acceptOrder(Request $request, $id)
+    {
+        $seller = Auth::guard('seller')->user();
+        if (!$seller) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        if (!$this->hasOrderAccess($seller)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Access denied. Orders available only for Owner, Admin, and Product Manager.'
+            ], 403);
+        }
+
+        $storeSellerId = $this->getStoreSellerId($seller);
+
+        $sellerOrder = SellerOrder::where('id', $id)
+            ->where('seller_id', $storeSellerId)
+            ->first();
+
+        if (!$sellerOrder) {
+            return response()->json(['success' => false, 'message' => 'Order not found'], 404);
+        }
+
+        if ((int) $sellerOrder->status === 4) {
+            return response()->json(['success' => false, 'message' => 'Bekor qilingan buyurtmani qabul qilib bo‘lmaydi'], 422);
+        }
+
+        if ((int) $sellerOrder->status >= 2) {
+            return response()->json([
+                'success' => true,
+                'message' => "Buyurtma allaqachon do'kon tomonidan qabul qilingan",
+                'data' => ['status' => (int) $sellerOrder->status],
+            ], 200);
+        }
+
+        $sellerOrder->status = 2;
+        $sellerOrder->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => "Buyurtma do'kon tomonidan qabul qilindi",
+            'data' => ['status' => 2],
+        ], 200);
+    }
 
     public function viewOrder(Request $request)
     {

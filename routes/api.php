@@ -121,6 +121,7 @@ Route::prefix('seller')->group(function () {
         Route::get('orders/last-orders', [OrderController::class, 'lastOrders']);
         Route::post('orders/view-order', [OrderController::class, 'viewOrder']);
         Route::get('orders/orders-count', [OrderController::class, 'ordersCount']);
+        Route::get('orders/accept/{id}', [OrderController::class, 'acceptOrder']);
         Route::get('orders/toCourier/{qr}', [OrderController::class, 'toCourier']);
         
         Route::get('transactions/latest', [TransactionController::class, 'getTransactions']);

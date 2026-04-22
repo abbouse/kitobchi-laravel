@@ -44,17 +44,17 @@ class HisobotController extends Controller
         if ($access) {
             // ✅ BARCHA QUERYLARDA $storeSellerId
             $salesCount = SellerOrder::where('seller_id', $storeSellerId)
-                ->where('status', '2')
+                ->where('status', '3')
                 ->count();
 
             $salesPrice = SellerOrder::where('seller_id', $storeSellerId)
-                ->where('status', '2')
+                ->where('status', '3')
                 ->sum('amount');
 
             $sellerBalance = Seller::find($storeSellerId)->balance; // ✅ OWNER BALANCE
 
             $sellerClients = SellerOrder::where('seller_id', $storeSellerId)
-                ->where('status', '2')
+                ->where('status', '3')
                 ->distinct('client_id')
                 ->count('client_id');
 
@@ -66,7 +66,7 @@ class HisobotController extends Controller
                     'seller_id',
                     DB::raw('SUM(amount) as total_sales')
                 )
-                    ->where('status', '2')
+                    ->where('status', '3')
                     ->groupBy('seller_id')
                     ->orderByDesc('total_sales')
                     ->take(5)
@@ -88,7 +88,7 @@ class HisobotController extends Controller
                     DB::raw('SUM(quantity) as total_quantity'),
                     DB::raw('SUM(price * quantity) as total_price')
                 )
-                    ->whereIn('order_id', SellerOrder::where('status', '2')->pluck('id'))
+                    ->whereIn('order_id', SellerOrder::where('status', '3')->pluck('id'))
                     ->groupBy('product_id')
                     ->orderByDesc('total_quantity')
                     ->take(5)
@@ -154,7 +154,7 @@ class HisobotController extends Controller
                 DB::raw("DATE_FORMAT(created_at, '%Y-%m') as month"),
                 DB::raw('SUM(amount) as total_amount')
             )
-                ->where('status', '2')
+                ->where('status', '3')
                 ->where('seller_id', $storeSellerId) // ✅ OWNER ID
                 ->whereYear('created_at', $year)
                 ->groupBy(DB::raw("DATE_FORMAT(created_at, '%Y-%m')"))

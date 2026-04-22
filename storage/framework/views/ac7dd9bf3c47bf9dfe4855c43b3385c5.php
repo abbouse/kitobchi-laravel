@@ -90,9 +90,9 @@
                     <?php elseif($statusVal == 1): ?>
                         <span class="badge badge-info"><?php echo e($statuses[1]['label'] ?? 'Yangi'); ?></span>
                     <?php elseif($statusVal == 2): ?>
-                        <span class="badge badge-warning"><?php echo e($statuses[2]['label'] ?? 'Kuryerga berildi'); ?></span>
+                        <span class="badge badge-warning"><?php echo e($statuses[2]['label'] ?? "Do'kon qabul qildi"); ?></span>
                     <?php elseif($statusVal == 3): ?>
-                        <span class="badge badge-warning"><?php echo e($statuses[3]['label'] ?? "Kuryerga berildi (legacy)"); ?></span>
+                        <span class="badge badge-success"><?php echo e($statuses[3]['label'] ?? "Kuryerga berildi"); ?></span>
                     <?php elseif($statusVal == 4): ?>
                         <span class="badge badge-danger"><?php echo e($statuses[4]['label'] ?? 'Bekor qilindi'); ?></span>
                     <?php else: ?>

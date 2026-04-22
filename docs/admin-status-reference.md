@@ -47,15 +47,15 @@ Seller order uchun asosiy haqiqat manbasi seller API oqimi hisoblanadi. Shu oqim
 |---|---|---|---|---|
 | `0` | to'lov jarayonida | `To'lov jarayonida` | checkout online bo'lsa seller API buni yashirib turadi (`status != 0`) | `app/Http/Controllers/Api/PurchaseController.php`, `app/Http/Controllers/Api/Seller/OrderController.php` |
 | `1` | yangi buyurtma | `Yangi buyurtma` | to'lov tushganidan keyin sellerga kelgan aktiv buyurtma | `app/Services/OrderService.php`, `app/Http/Controllers/Api/Seller/OrderController.php` |
-| `2` | kuryerga berildi | `Kuryerga berildi` | seller QR orqali courierga topshirgan | `app/Http/Controllers/Api/Seller/OrderController.php` |
-| `3` | legacy holat | `Kuryerga berildi (legacy)` | hozirgi seller API ishlatmaydi, eski admin mapping izi | `app/Services/AdminOrderStatusSyncService.php` |
+| `2` | do'kon qabul qildi | `Do'kon qabul qildi` | seller buyurtmani ichki qabul qildi, hali courierga topshirmagan | `app/Http/Controllers/Api/Seller/OrderController.php` |
+| `3` | kuryerga berildi | `Kuryerga berildi` | courier QR skan qilingach seller topshirgan holat | `app/Http/Controllers/Api/Seller/OrderController.php` |
 | `4` | bekor qilindi | `Bekor qilindi` | asosiy order ham cancel bo'ladi | shu fayl |
 
-Muhim legacy nuqta:
+Muhim:
 
 - `0` qiymat legacy emas, real checkout oqimida ishlatiladi.
 - Seller API order list, view va count endpointlari `status != 0` bilan ishlaydi, ya'ni online to'lov hali tushmagan order seller ilovasida ko'rinmaydi.
-- `3` esa aksincha legacy holat bo'lib, seller API ning hozirgi oqimida ishlatilmaydi.
+- Endi seller oqimi `1 -> 2 -> 3` tarzida ishlaydi: yangi buyurtma -> do'kon qabul qildi -> kuryerga berildi.
 
 ## 3. Courier order (`CourierOrder`)
 
@@ -83,8 +83,8 @@ Admin panelda order statusini o'zgartirsangiz, boshqa bog'liq orderlar ham sinxr
 |---|---|
 | `A` + `paymentStatus = 1` | `0` |
 | `A` / `P` | `1` |
-| `B` | `2` |
-| `C` | `2` |
+| `B` | `3` |
+| `C` | `3` |
 | `F` | `4` |
 
 ### Main order -> courier order
@@ -101,9 +101,9 @@ Admin panelda order statusini o'zgartirsangiz, boshqa bog'liq orderlar ham sinxr
 
 | `CourierOrder.status` | `Sold.status` | `SellerOrder.status` |
 |---|---|---|
-| `pending` | `A` | `1` |
-| `in_delivery` | `B` | `2` |
-| `delivered` | `C` | `2` |
+| `pending` | `A` | `2` |
+| `in_delivery` | `B` | `3` |
+| `delivered` | `C` | `3` |
 | `rejected` | cancel | `4` |
 
 Manba: `app/Services/AdminOrderStatusSyncService.php`
@@ -399,8 +399,8 @@ Business app `OrderModel.statusText` ichida quyidagi mapping bor:
 | Qiymat | Hozirgi app labeli | Manba |
 |---|---|---|
 | `1` | `Yangi buyurtma` | `lib/models/order_model.dart` |
-| `2` | `Qabul qilindi` | shu fayl |
-| `3` | `Yakunlandi` | shu fayl |
+| `2` | `Do'kon qabul qildi` | shu fayl |
+| `3` | `Kuryerga berildi` | shu fayl |
 | `4` | `Bekor qilindi` | shu fayl |
 
 Lekin seller API oqimi bo'yicha real holat:
@@ -409,14 +409,14 @@ Lekin seller API oqimi bo'yicha real holat:
 |---|---|
 | `0` | to'lov jarayonida |
 | `1` | yangi buyurtma |
-| `2` | kuryerga berildi / courier oldi |
-| `3` | legacy |
+| `2` | do'kon qabul qildi |
+| `3` | kuryerga berildi |
 | `4` | bekor qilindi |
 
 Xulosa:
 
 - `kitobchibusiness` ichidagi seller order label mapping eskirgan
-- ayniqsa `2 = Qabul qilindi` va `3 = Yakunlandi` hozirgi backend oqimiga mos emas
+- endi business app ham `2 = Do'kon qabul qildi`, `3 = Kuryerga berildi` oqimiga moslangan
 - admin panel endi business appning eski mappingiga emas, seller API ning real oqimiga moslangan
 
 ### 20.3 `kitobchiexpress` (`../kitobchiexpress`)
@@ -435,8 +435,9 @@ Courier app ichida yana `item.orderStatus` bo'yicha seller kesimidagi shop statu
 | Qiymat | Appdagi ma'nosi | Manba |
 |---|---|---|
 | `1` | `KUTILMOQDA` | `lib/screens/order/order_view.dart` |
-| `2` | `OLINDI` | shu fayl |
-| `3` | `BEKOR QILINDI` | shu fayl |
+| `2` | `QABUL QILDI` | shu fayl |
+| `3` | `KURYERGA BERILDI` | shu fayl |
+| `4` | `BEKOR QILINDI` | shu fayl |
 
 Muhim tafovutlar:
 
