@@ -7,9 +7,26 @@
     <a href="{{ route('admin.sellers.index') }}" class="btn btn-secondary flex items-center gap-2">
         <i data-lucide="arrow-left" class="w-4 h-4"></i> Orqaga
     </a>
-    <a href="{{ route('admin.sellers.edit', $seller) }}" class="btn btn-primary flex items-center gap-2">
-        <i data-lucide="pencil" class="w-4 h-4"></i> Tahrirlash
-    </a>
+    <div class="flex items-center gap-2 flex-wrap">
+        @if($seller->status === 'blocked')
+            <form method="POST" action="{{ route('admin.sellers.unblock', $seller) }}" onsubmit="return confirm('Sotuvchini blokdan chiqarmoqchimisiz?')">
+                @csrf
+                @method('PATCH')
+                <button type="submit" class="btn btn-success flex items-center gap-2">
+                    <i data-lucide="unlock" class="w-4 h-4"></i> Blokdan chiqarish
+                </button>
+            </form>
+        @endif
+        <form method="POST" action="{{ route('admin.sellers.reset-password', $seller) }}" onsubmit="return confirm('Yangi parol sotuvchining telefon raqamiga SMS orqali yuborilsinmi?')">
+            @csrf
+            <button type="submit" class="btn btn-warning flex items-center gap-2">
+                <i data-lucide="key-round" class="w-4 h-4"></i> Parolni SMS bilan yangilash
+            </button>
+        </form>
+        <a href="{{ route('admin.sellers.edit', $seller) }}" class="btn btn-primary flex items-center gap-2">
+            <i data-lucide="pencil" class="w-4 h-4"></i> Tahrirlash
+        </a>
+    </div>
 </div>
 
 @if(session('success'))
@@ -51,9 +68,14 @@
                     <span class="badge badge-warning">Kutilmoqda</span>
                 @elseif($seller->status === 'rejected')
                     <span class="badge badge-danger">Rad etilgan</span>
+                @elseif($seller->status === 'blocked')
+                    <span class="badge badge-danger">Bloklangan</span>
                 @else
                     <span class="badge badge-muted">{{ $seller->status }}</span>
                 @endif
+                <span class="badge {{ $warningCount >= 3 ? 'badge-danger' : ($warningCount > 0 ? 'badge-warning' : 'badge-muted') }}">
+                    {{ $warningCount }}/3 ogohlantirish
+                </span>
             </div>
             <p class="text-sm text-gray-500 mt-1">{{ trim($seller->firstname . ' ' . $seller->lastname) }}</p>
             <div class="flex items-center gap-4 mt-2 text-sm text-gray-600 dark:text-gray-400 flex-wrap">
@@ -90,6 +112,55 @@
                     </button>
                 </form>
             @endif
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
+    <div class="card p-5 xl:col-span-2">
+        <div class="flex items-center justify-between gap-3 mb-4 flex-wrap">
+            <div>
+                <h3 class="font-bold text-base">Ogohlantirish yuborish</h3>
+                <p class="text-sm text-gray-500 mt-1">3 ta faol ogohlantirishdan keyin sotuvchi avtomatik bloklanadi.</p>
+            </div>
+            @if($isBlocked)
+                <span class="badge badge-danger">Seller hozir bloklangan</span>
+            @endif
+        </div>
+        <form method="POST" action="{{ route('admin.sellers.warn', $seller) }}" class="grid grid-cols-1 gap-3">
+            @csrf
+            <div>
+                <label class="text-xs text-gray-500 mb-1 block">Sarlavha</label>
+                <input name="title" class="input" maxlength="120" placeholder="Masalan: Qoida buzilishi" value="{{ old('title') }}">
+            </div>
+            <div>
+                <label class="text-xs text-gray-500 mb-1 block">Xabar</label>
+                <textarea name="message" rows="4" class="input" placeholder="Sellerga ko‘rinadigan ogohlantirish matni">{{ old('message') }}</textarea>
+            </div>
+            <div class="flex items-center justify-end">
+                <button type="submit" class="btn btn-warning flex items-center gap-2">
+                    <i data-lucide="triangle-alert" class="w-4 h-4"></i> Ogohlantirish yuborish
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="card p-5">
+        <h3 class="font-bold text-base mb-4">Bloklash holati</h3>
+        <div class="space-y-3 text-sm">
+            <div class="flex items-center justify-between gap-3">
+                <span class="text-gray-500">Do‘kon statusi</span>
+                <span class="badge {{ $isBlocked ? 'badge-danger' : 'badge-success' }}">
+                    {{ $isBlocked ? 'Bloklangan' : 'Faol' }}
+                </span>
+            </div>
+            <div class="flex items-center justify-between gap-3">
+                <span class="text-gray-500">Faol ogohlantirishlar</span>
+                <span class="font-semibold">{{ $warningCount }}/3</span>
+            </div>
+            <div class="rounded-2xl bg-gray-50 dark:bg-white/5 p-4 text-xs text-gray-500">
+                Blokdan chiqarilganda ogohlantirish hisobi qayta boshlanadi. Eski ogohlantirishlar audit uchun tarixda saqlanadi.
+            </div>
         </div>
     </div>
 </div>
@@ -204,6 +275,74 @@
                     </tbody>
                 </table>
             </div>
+        </div>
+    </div>
+</div>
+
+<div class="card p-5 mt-6">
+    <h3 class="font-bold text-base mb-4">Seller loglari</h3>
+    <div class="table-wrap">
+        <div class="overflow-x-auto">
+            <table class="tbl">
+                <thead>
+                    <tr>
+                        <th>Vaqt</th>
+                        <th>Log</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($staffLogs as $log)
+                        <tr>
+                            <td class="text-sm text-gray-500 whitespace-nowrap">
+                                {{ $log->created_at ? $log->created_at->format('d.m.Y H:i') : '—' }}
+                            </td>
+                            <td>{{ $log->text ?? '—' }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="2" class="text-center text-gray-400 py-6">Loglar topilmadi</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card p-5 mt-6">
+    <h3 class="font-bold text-base mb-4">Ogohlantirish va unblock tarixi</h3>
+    <div class="table-wrap">
+        <div class="overflow-x-auto">
+            <table class="tbl">
+                <thead>
+                    <tr>
+                        <th>Vaqt</th>
+                        <th>Turi</th>
+                        <th>Sarlavha</th>
+                        <th>Xabar</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($banLogs as $banLog)
+                        <tr>
+                            <td class="text-sm text-gray-500 whitespace-nowrap">
+                                {{ $banLog->created_at ? $banLog->created_at->format('d.m.Y H:i') : '—' }}
+                            </td>
+                            <td>
+                                <span class="badge {{ $banLog->type === 'warning' ? 'badge-warning' : 'badge-success' }}">
+                                    {{ $banLog->type === 'warning' ? 'Ogohlantirish' : 'Unblock' }}
+                                </span>
+                            </td>
+                            <td>{{ $banLog->title ?? '—' }}</td>
+                            <td class="text-sm text-gray-600 dark:text-gray-300">{{ $banLog->message ?? '—' }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="4" class="text-center text-gray-400 py-6">Ogohlantirishlar tarixi topilmadi</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
         </div>
     </div>
 </div>

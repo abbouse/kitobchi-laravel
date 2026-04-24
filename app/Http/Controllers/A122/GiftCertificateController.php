@@ -16,6 +16,9 @@ class GiftCertificateController extends Controller
         ]);
 
         $tab = $request->get('tab', 'all');
+        if ($tab === 'sent') {
+            $tab = GiftCertificate::STATUS_ACTIVE;
+        }
         if ($tab !== 'all') $q->where('status', $tab);
 
         if ($s = $request->search) {
@@ -31,7 +34,7 @@ class GiftCertificateController extends Controller
         $counts = [
             'all'             => GiftCertificate::count(),
             'pending_payment' => GiftCertificate::where('status', 'pending_payment')->count(),
-            'sent'            => GiftCertificate::where('status', 'sent')->count(),
+            'active'          => GiftCertificate::where('status', GiftCertificate::STATUS_ACTIVE)->count(),
             'used'            => GiftCertificate::where('status', 'used')->count(),
             'cancelled'       => GiftCertificate::where('status', 'cancelled')->count(),
         ];
@@ -47,12 +50,14 @@ class GiftCertificateController extends Controller
 
     public function updateStatus(Request $request, GiftCertificate $giftCertificate)
     {
-        $request->validate(['status' => 'required|in:pending_payment,paid,sent,used,cancelled']);
-        $new = $request->status;
+        $request->validate(['status' => 'required|in:pending_payment,paid,active,sent,used,cancelled']);
+        $new = $request->status === 'sent'
+            ? GiftCertificate::STATUS_ACTIVE
+            : $request->status;
         $giftCertificate->update([
             'status'  => $new,
             'paid_at' => ($new === 'paid' && !$giftCertificate->paid_at) ? now() : $giftCertificate->paid_at,
-            'sent_at' => ($new === 'sent' && !$giftCertificate->sent_at) ? now() : $giftCertificate->sent_at,
+            'sent_at' => ($new === GiftCertificate::STATUS_ACTIVE && !$giftCertificate->sent_at) ? now() : $giftCertificate->sent_at,
             'used_at' => ($new === 'used' && !$giftCertificate->used_at) ? now() : $giftCertificate->used_at,
         ]);
         return back()->with('success', 'Holat yangilandi.');

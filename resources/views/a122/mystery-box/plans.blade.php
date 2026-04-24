@@ -85,6 +85,11 @@
                         rows="2">{{ $plan->description_uz }}</textarea>
             </div>
             <div class="">
+              <label class="p-form-label">Tavsif (RU)</label>
+              <textarea name="description_ru" class="p-form-control"
+                        rows="2">{{ $plan->description_ru }}</textarea>
+            </div>
+            <div class="">
               <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
                 <input type="hidden" name="is_active" value="0">
                 <input type="checkbox" name="is_active" value="1"
@@ -176,6 +181,11 @@
               <label class="p-form-label">Tavsif</label>
               <textarea name="description_uz" class="p-form-control"
                         rows="2" placeholder="Qisqa tavsif..."></textarea>
+            </div>
+            <div class="">
+              <label class="p-form-label">Tavsif (RU)</label>
+              <textarea name="description_ru" class="p-form-control"
+                        rows="2" placeholder="Краткое описание..."></textarea>
             </div>
           </div>
           <button type="submit" class="btn-p primary mt-3" style="width:100%;justify-content:center">

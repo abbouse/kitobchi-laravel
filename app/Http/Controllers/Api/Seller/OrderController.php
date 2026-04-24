@@ -38,6 +38,70 @@ class OrderController extends Controller
         return !$seller->parent_id || in_array($seller->role, [1, 2]);
     }
 
+    private function formatOrderAddress($address): array
+    {
+        if (is_array($address)) {
+            return array_values($address);
+        }
+
+        if (is_string($address)) {
+            $decoded = json_decode($address, true);
+            return is_array($decoded) ? array_values($decoded) : [];
+        }
+
+        return [];
+    }
+
+    private function formatSellerOrderItem($item): array
+    {
+        return [
+            'id' => (int) $item->id,
+            'seller_id' => (int) $item->seller_id,
+            'order_id' => (int) $item->order_id,
+            'product_id' => (int) $item->product_id,
+            'variant_id' => $item->variant_id ? (int) $item->variant_id : null,
+            'type' => (string) $item->type,
+            'quantity' => (int) $item->quantity,
+            'price' => (int) $item->price,
+            'created_at' => optional($item->created_at)?->toISOString(),
+            'updated_at' => optional($item->updated_at)?->toISOString(),
+            'book' => $item->book?->toArray(),
+            'stationery' => $item->stationery?->toArray(),
+            'gift' => $item->gift?->toArray(),
+            'variant' => $item->variant ? [
+                'id' => (int) $item->variant->id,
+                'color_name' => $item->variant->color_name,
+                'image_path' => $item->variant->image_path,
+                'stock' => (int) ($item->variant->stock ?? 0),
+            ] : null,
+        ];
+    }
+
+    private function formatSellerOrder($order): array
+    {
+        $items = collect($order->items ?? [])
+            ->map(fn($item) => $this->formatSellerOrderItem($item))
+            ->values()
+            ->all();
+
+        return [
+            'id' => (int) $order->id,
+            'seller_id' => (int) $order->seller_id,
+            'order_id' => $order->order_id ? (int) $order->order_id : null,
+            'client_id' => $order->client_id ? (int) $order->client_id : null,
+            'courier_id' => $order->courier_id ? (int) $order->courier_id : null,
+            'courierName' => $order->courierName,
+            'amount' => (int) $order->amount,
+            'items_count' => (int) ($order->items_count ?? count($items)),
+            'status' => (int) $order->status,
+            'delivery_type' => $order->delivery_type,
+            'address' => $this->formatOrderAddress($order->address),
+            'items' => $items,
+            'created_at' => optional($order->created_at)?->toISOString(),
+            'updated_at' => optional($order->updated_at)?->toISOString(),
+        ];
+    }
+
     public function lastOrders(Request $request)
 {
     $seller = Auth::guard('seller')->user();
@@ -64,7 +128,7 @@ class OrderController extends Controller
 
     return response()->json([
         'success' => true,
-        'data' => $orders
+        'data' => $orders->map(fn($order) => $this->formatSellerOrder($order))->values(),
     ]);
 }
 
@@ -117,7 +181,7 @@ class OrderController extends Controller
         return response()->json([
             'success' => true,
             'data' => [
-                'order'   => $sellerOrder,
+                'order'   => $this->formatSellerOrder($sellerOrder),
                 'courier' => [
                     'id'   => $courier->id,
                     'name' => $courier->first_name . ' ' . $courier->last_name,
@@ -298,7 +362,7 @@ public function toCourier(Request $request, $qr)
 
         return response()->json([
             'success' => true,
-            'data' => $view,
+            'data' => $this->formatSellerOrder($view),
         ], 200);
     }
 

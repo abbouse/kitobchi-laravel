@@ -2,22 +2,30 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Helpers\NotificationHelper;
 use App\Http\Controllers\Controller;
-use App\Models\{User, Books, Stationery, BookClub, BookClubImages, BookClubLikes, BookClubVotes, BookClubComment, FavouriteProducts, BookClubNotification};
-use App\Jobs\SendBookClubPushNotification;
+use App\Services\BookClubNotificationTextService;
+use App\Models\{User, Books, Stationery, BookClub, BookClubImages, BookClubLikes, BookClubVotes, BookClubComment, FavouriteProducts, BookClubNotification, SharedCart, StationeryVariant};
 use App\Models\Sold;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\{DB, Log, Storage, Auth};
+use Illuminate\Support\Str;
 
 class BookClubController extends Controller
 {
+    public function __construct(
+        private readonly BookClubNotificationTextService $notificationTextService,
+    ) {}
+
     /**
      * Mahsulotni API uchun formatlash
      * product_type = 'order' bo'lsa Sold modelidan olamiz
      */
-    private function formatProduct($product, $user = null, string $productType = 'book')
+    private function formatProduct($product, $user = null, ?string $productType = 'book')
     {
         if (!$product) return null;
+
+        $productType = $productType ?: 'book';
 
         // ── Order ──────────────────────────────────────────────────────────────
         if ($productType === 'order') {
@@ -152,7 +160,7 @@ class BookClubController extends Controller
         ) {
             // ── Mahsulot ma'lumotlari ──────────────────────────────────────────
             if ($post->product_id) {
-                $productType = $post->product_type;
+                $productType = $post->product_type ?: 'book';
 
                 $productObj = match ($productType) {
                     'book'       => $books->get($post->product_id),
@@ -162,6 +170,7 @@ class BookClubController extends Controller
                 };
 
                 $post->product = $this->formatProduct($productObj, $user, $productType);
+                $post->product_type = $productType;
             }
 
             // ── Theme ma'lumotlari ─────────────────────────────────────────────
@@ -208,6 +217,63 @@ class BookClubController extends Controller
         ];
     }
 
+    private function ensureSharedOrderLink(Sold $order, int $userId): SharedCart
+    {
+        $existing = SharedCart::where('order_id', $order->id)
+            ->where('source', 'order')
+            ->latest()
+            ->first();
+
+        if ($existing && !$existing->is_expired && !empty($existing->items)) {
+            return $existing;
+        }
+
+        $items = [];
+
+        foreach (($order->items ?? []) as $orderItem) {
+            if (($orderItem['type'] ?? null) === 'gift') {
+                continue;
+            }
+
+            $productId = $orderItem['item_id'] ?? null;
+            $productType = $orderItem['type'] ?? 'book';
+            $variantId = $orderItem['variant_id'] ?? null;
+
+            $product = $productType === 'book'
+                ? Books::find($productId)
+                : Stationery::find($productId);
+
+            $variant = $variantId ? StationeryVariant::find($variantId) : null;
+            $currentStock = $variant
+                ? ($variant->stock ?? 0)
+                : ($product?->count ?? $product?->stock ?? 0);
+
+            $items[] = [
+                'product_id' => $productId,
+                'product_type' => $productType,
+                'variant_id' => $variantId,
+                'name' => $orderItem['name'] ?? null,
+                'author' => $orderItem['author'] ?? null,
+                'material' => $orderItem['material'] ?? null,
+                'color_name' => $orderItem['color_name'] ?? null,
+                'image' => $orderItem['cover'] ?? null,
+                'price' => $orderItem['item_price'] ?? 0,
+                'quantity' => $orderItem['count_item'] ?? 1,
+                'seller_id' => $orderItem['seller_id'] ?? null,
+                'seller_name' => $orderItem['seller_name'] ?? null,
+                'current_stock' => $currentStock,
+            ];
+        }
+
+        return SharedCart::create([
+            'user_id' => $userId,
+            'slug' => Str::random(12),
+            'items' => $items,
+            'source' => 'order',
+            'order_id' => $order->id,
+        ]);
+    }
+
     /**
      * Asosiy feed
      */
@@ -240,6 +306,54 @@ class BookClubController extends Controller
             ]);
         } catch (\Exception $e) {
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function postsByTheme(Request $request, string $slug)
+    {
+        try {
+            $user = Auth::guard('user')->user();
+            $perPage = (int) $request->input('per_page', 20);
+
+            $theme = \App\Models\BookClubTheme::where('slug', $slug)
+                ->orWhere('name', $slug)
+                ->first();
+
+            if (!$theme) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Mavzu topilmadi',
+                ], 404);
+            }
+
+            $paginatedPosts = BookClub::with($this->postWith())
+                ->where('theme_id', $theme->id)
+                ->where('is_deleted', false)
+                ->orderBy('updated_at', 'DESC')
+                ->paginate($perPage);
+
+            $formattedPosts = $this->attachMetaToPosts(collect($paginatedPosts->items()), $user);
+
+            return response()->json([
+                'status' => 'success',
+                'theme' => [
+                    'id' => $theme->id,
+                    'name' => $theme->name,
+                    'slug' => $theme->slug,
+                    'firework' => $theme->firework,
+                ],
+                'data' => $formattedPosts,
+                'meta' => [
+                    'current_page' => $paginatedPosts->currentPage(),
+                    'last_page' => $paginatedPosts->lastPage(),
+                    'total' => $paginatedPosts->total(),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 500);
         }
     }
 
@@ -362,21 +476,18 @@ class BookClubController extends Controller
 
                     // Order validatsiya — foydalanuvchiga tegishli bo'lishi kerak
                     if ($productType === 'order') {
-                        $orderExists = Sold::where('id', $request->input('product_id'))
+                        $order = Sold::where('id', $request->input('product_id'))
                             ->where('user_id', $user->id)
-                            ->exists();
+                            ->first();
 
-                        if (!$orderExists) {
+                        if (!$order) {
                             return response()->json([
                                 'status'  => 'error',
                                 'message' => 'Bu buyurtma sizga tegishli emas yoki topilmadi',
                             ], 403);
                         }
-                        $slug = Str::random(12);
-        $shared = SharedCart::create([
-            'user_id' => $user->id,
-            'order_id' => $orderId,
-        ]);
+
+                        $this->ensureSharedOrderLink($order, $user->id);
                     }
 
                     $productId = $request->input('product_id');
@@ -506,15 +617,17 @@ class BookClubController extends Controller
 
                     if ($productType !== null) {
                         if ($productType === 'order') {
-                            $orderExists = Sold::where('id', $request->input('product_id'))
+                            $order = Sold::where('id', $request->input('product_id'))
                                 ->where('user_id', $user->id)
-                                ->exists();
-                            if (!$orderExists) {
+                                ->first();
+                            if (!$order) {
                                 return response()->json([
                                     'status'  => 'error',
                                     'message' => 'Bu buyurtma sizga tegishli emas',
                                 ], 403);
                             }
+
+                            $this->ensureSharedOrderLink($order, $user->id);
                         }
                         $updateData['product_id']   = $request->input('product_id');
                         $updateData['product_type'] = $productType;
@@ -613,21 +726,7 @@ class BookClubController extends Controller
                     ->first();
 
                 if ($notification) {
-                    $data = $notification->data;
-                    if (($data['count'] ?? 1) <= 1) {
-                        $notification->delete();
-                    } else {
-                        $data['user_names'] = array_values(array_diff($data['user_names'] ?? [], [$user->name]));
-                        $data['count']      = count($data['user_names']);
-                        if ($data['count'] > 0) {
-                            $data['last_user_name']   = end($data['user_names']);
-                            $lastUser                  = User::where('name', $data['last_user_name'])->first();
-                            $data['last_user_avatar']  = $lastUser?->avatar;
-                            $notification->update(['data' => $data]);
-                        } else {
-                            $notification->delete();
-                        }
-                    }
+                    NotificationHelper::removeActor($notification, (int) $user->id);
                 }
                 $status = 'unliked';
             }
@@ -673,6 +772,8 @@ class BookClubController extends Controller
                 'updated_at' => now(),
             ]);
 
+            $this->sendNotification($post->user_id, $user, 'vote', $post->id);
+
             return response()->json(['status' => 'success']);
         } catch (\Exception $e) {
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
@@ -694,6 +795,10 @@ class BookClubController extends Controller
 
             if ($me->followings()->where('following_id', $target->id)->exists()) {
                 $me->followings()->detach($target->id);
+                BookClubNotification::where('user_id', $target->id)
+                    ->where('group_key', "follow_user_{$me->id}")
+                    ->where('is_read', 0)
+                    ->delete();
                 $status = 'unfollowed';
             } else {
                 $me->followings()->attach($target->id);
@@ -806,39 +911,7 @@ class BookClubController extends Controller
 
     private function sendNotification($receiverId, $sender, $type, $postId = null)
     {
-        if ($receiverId == $sender->id) return;
-
-        $groupKey     = $postId ? "{$type}_post_{$postId}" : "{$type}_user_{$sender->id}";
-        $notification = BookClubNotification::where('user_id', $receiverId)
-            ->where('group_key', $groupKey)
-            ->where('is_read', 0)
-            ->first();
-
-        if ($notification) {
-            $data = $notification->data;
-            if (!in_array($sender->name, $data['user_names'] ?? [])) {
-                $data['count']            = ($data['count'] ?? 1) + 1;
-                $data['user_names'][]     = $sender->name;
-                $data['last_user_name']   = $sender->name;
-                $data['last_user_avatar'] = $sender->avatar;
-                $notification->update(['data' => $data, 'updated_at' => now()]);
-            }
-        } else {
-            BookClubNotification::create([
-                'user_id'   => $receiverId,
-                'type'      => $type,
-                'post_id'   => $postId,
-                'group_key' => $groupKey,
-                'data'      => [
-                    'count'            => 1,
-                    'last_user_name'   => $sender->name,
-                    'last_user_avatar' => $sender->avatar,
-                    'user_names'       => [$sender->name],
-                ],
-            ]);
-        }
-
-        SendBookClubPushNotification::dispatch($notification?->id ?? 0)->delay(now()->addSeconds(2));
+        NotificationHelper::send($receiverId, $sender, $type, $postId);
     }
 
     public function getNotifications(Request $request)
@@ -852,28 +925,81 @@ class BookClubController extends Controller
             $notifications = BookClubNotification::where('user_id', $user->id)
                 ->orderBy('updated_at', 'DESC')
                 ->limit(30)
-                ->get()
-                ->map(function ($n) {
-                    $data  = $n->data;
-                    $name  = $data['last_user_name'] ?? 'Kimdir';
-                    $extra = ($data['count'] ?? 1) - 1;
+                ->get();
 
-                    $text = match ($n->type) {
-                        'like'     => $extra > 0 ? "$name va yana $extra kishi like bosdi" : "$name postga like bosdi",
-                        'new_post' => "$name yangi post qoldirdi",
-                        'follow'   => "$name sizga obuna bo'ldi",
-                        'repost'   => $extra > 0 ? "$name va yana $extra kishi repost qildi" : "$name postni repost qildi",
-                        default    => "Yangi bildirishnoma",
-                    };
+            $actorIds = $notifications
+                ->flatMap(function ($notification) {
+                    $data = $notification->data ?? [];
+                    return collect($data['user_ids'] ?? [])->push($data['last_user_id'] ?? null);
+                })
+                ->filter()
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values();
+
+            $usersById = User::whereIn('id', $actorIds)->get()->keyBy('id');
+
+            $notifications = $notifications->map(function ($n) use ($user, $usersById) {
+                    $data  = $n->data;
+                    $formatted = $this->notificationTextService->format($n, $user->locale ?? 'uz');
+                    $actors = collect($data['actors'] ?? []);
+
+                    if ($actors->isEmpty() && !empty($data['user_ids'])) {
+                        $actors = collect($data['user_ids'])
+                            ->map(fn ($id) => (int) $id)
+                            ->unique()
+                            ->take(8)
+                            ->map(function ($id) use ($usersById, $n) {
+                                $actorUser = $usersById->get($id);
+                                return [
+                                    'user_id' => $id,
+                                    'name' => $actorUser
+                                        ? trim(($actorUser->name ?? '') . ' ' . ($actorUser->lastname ?? ''))
+                                        : null,
+                                    'avatar' => $actorUser?->avatar,
+                                    'acted_at' => optional($n->updated_at)?->toIso8601String(),
+                                ];
+                            })
+                            ->values();
+                    }
+
+                    if ($actors->isEmpty() && !empty($data['last_user_id'])) {
+                        $actors = collect([[
+                            'user_id' => $data['last_user_id'],
+                            'name' => $data['last_user_name'] ?? null,
+                            'avatar' => $data['last_user_avatar'] ?? null,
+                            'acted_at' => optional($n->updated_at)?->toIso8601String(),
+                        ]]);
+                    }
 
                     return [
                         'id'         => $n->id,
                         'type'       => $n->type,
                         'post_id'    => $n->post_id,
-                        'text'       => $text,
+                        'sender_user_id' => $data['last_user_id'] ?? null,
+                        'sender_name' => $data['last_user_name'] ?? null,
+                        'title'      => $formatted['title'],
+                        'text'       => $formatted['body'],
+                        'group_count'=> $formatted['group_count'],
                         'avatar'     => $data['last_user_avatar'] ?? null,
+                        'actors'     => $actors->take(8)->map(function ($actor) use ($user) {
+                            $actedAt = !empty($actor['acted_at'])
+                                ? \Illuminate\Support\Carbon::parse($actor['acted_at'])
+                                : null;
+
+                            return [
+                                'user_id' => $actor['user_id'] ?? null,
+                                'name' => $actor['name'] ?? null,
+                                'avatar' => $actor['avatar'] ?? null,
+                                'acted_at' => $actedAt?->toIso8601String(),
+                                'acted_at_human' => $actedAt?->locale($user->locale ?? 'uz')->diffForHumans(),
+                            ];
+                        })->values(),
                         'is_read'    => $n->is_read,
-                        'created_at' => $n->created_at->diffForHumans(),
+                        'created_at' => optional($n->updated_at)
+                            ?->locale($user->locale ?? 'uz')
+                            ->diffForHumans(),
+                        'created_at_iso' => optional($n->updated_at)?->toIso8601String(),
                     ];
                 });
 
@@ -899,5 +1025,73 @@ class BookClubController extends Controller
         } catch (\Exception $e) {
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
         }
+    }
+
+    public function suggestedUsers(Request $request)
+    {
+        $user = Auth::guard('user')->user();
+        if (!$user) {
+            return response()->json(['status' => 'error', 'message' => 'User not found'], 404);
+        }
+
+        $limit = min(max((int) $request->query('limit', 8), 1), 12);
+        $followingIds = $user->followings()->pluck('users.id');
+        $excludedIds = $followingIds->push($user->id)->unique()->values();
+
+        $mutualSub = DB::table('user_follows')
+            ->select('following_id', DB::raw('COUNT(*) as mutual_count'))
+            ->whereIn('follower_id', $followingIds->isEmpty() ? [0] : $followingIds->all())
+            ->groupBy('following_id');
+
+        $suggested = User::query()
+            ->leftJoinSub($mutualSub, 'mutuals', function ($join) {
+                $join->on('mutuals.following_id', '=', 'users.id');
+            })
+            ->whereNotIn('users.id', $excludedIds->all())
+            ->where(function ($q) {
+                $q->whereNotNull('users.avatar')
+                    ->orWhereNotNull('users.bio')
+                    ->orWhereNotNull('users.position');
+            })
+            ->withCount([
+                'followers',
+                'followings',
+            ])
+            ->select('users.*', DB::raw('COALESCE(mutuals.mutual_count, 0) as mutual_count'))
+            ->orderByDesc('mutual_count')
+            ->orderByDesc('users.last_seen_at')
+            ->orderByDesc('users.id')
+            ->limit($limit)
+            ->get()
+            ->map(function ($suggestedUser) use ($user) {
+                $postsCount = BookClub::where('user_id', $suggestedUser->id)
+                    ->where('is_deleted', false)
+                    ->count();
+
+                return [
+                    'id' => $suggestedUser->id,
+                    'name' => $suggestedUser->name,
+                    'lastname' => $suggestedUser->lastname,
+                    'position' => $suggestedUser->position,
+                    'avatar' => $suggestedUser->avatar,
+                    'bio' => $suggestedUser->bio,
+                    'isVerified' => (bool) $suggestedUser->isVerified,
+                    'isSupport' => (bool) $suggestedUser->isSupport,
+                    'role_emoji' => $suggestedUser->role_emoji,
+                    'role_title' => $suggestedUser->role_title,
+                    'role_place' => $suggestedUser->role_place,
+                    'followers_count' => (int) $suggestedUser->followers_count,
+                    'followings_count' => (int) $suggestedUser->followings_count,
+                    'posts_count' => (int) $postsCount,
+                    'mutual_count' => (int) ($suggestedUser->mutual_count ?? 0),
+                    'is_following' => $user->isFollowing($suggestedUser->id),
+                ];
+            })
+            ->values();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $suggested,
+        ]);
     }
 }

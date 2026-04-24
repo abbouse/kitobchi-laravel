@@ -7,9 +7,17 @@
     <a href="{{ route('admin.couriers.index') }}" class="btn btn-secondary flex items-center gap-2">
         <i data-lucide="arrow-left" class="w-4 h-4"></i> Orqaga
     </a>
-    <a href="{{ route('admin.couriers.edit', $courier) }}" class="btn btn-primary flex items-center gap-2">
-        <i data-lucide="pencil" class="w-4 h-4"></i> Tahrirlash
-    </a>
+    <div class="flex items-center gap-2 flex-wrap">
+        <form method="POST" action="{{ route('admin.couriers.reset-password', $courier) }}" onsubmit="return confirm('Yangi parol kuryerning telefon raqamiga SMS orqali yuborilsinmi?')">
+            @csrf
+            <button type="submit" class="btn btn-warning flex items-center gap-2">
+                <i data-lucide="key-round" class="w-4 h-4"></i> Parolni SMS bilan yangilash
+            </button>
+        </form>
+        <a href="{{ route('admin.couriers.edit', $courier) }}" class="btn btn-primary flex items-center gap-2">
+            <i data-lucide="pencil" class="w-4 h-4"></i> Tahrirlash
+        </a>
+    </div>
 </div>
 
 @if(session('success'))

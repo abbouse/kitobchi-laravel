@@ -18,6 +18,10 @@ use Illuminate\Support\Facades\Log;
 
 class OrderService
 {
+    public function __construct(
+        private readonly CashbackHistoryService $cashbackHistoryService,
+    ) {}
+
     // =========================================================================
     //  STOCK KAMAYTIRISH
     // =========================================================================
@@ -133,13 +137,61 @@ class OrderService
         CourierOrder::where('order_id', $order->id)->update(['status' => 'pending']);
 
         if ($giveCashback) {
-            $cashbackPercent = CashbackSetting::getCashbackPercentage($order->amount);
-            if ($cashbackPercent > 0) {
-                $cashbackAmount = (int)(($order->amount * $cashbackPercent) / 100);
-                $user->increment('cashback', $cashbackAmount);
-                Log::info("Cashback: user#{$user->id} order#{$order->id} +{$cashbackAmount}");
-            }
+            $this->awardCashbackForPaidOrder($order, $user);
         }
+    }
+
+    public function awardCashbackForPaidOrder(Sold $order, ?User $user = null): int
+    {
+        $user ??= $order->user()->first();
+        if (!$user) {
+            return 0;
+        }
+
+        return DB::transaction(function () use ($order, $user) {
+            $lockedOrder = Sold::query()->lockForUpdate()->find($order->id);
+            if (!$lockedOrder) {
+                return 0;
+            }
+
+            if ((int) ($lockedOrder->awarded_cashback_amount ?? 0) > 0 || $lockedOrder->cashback_awarded_at) {
+                return (int) ($lockedOrder->awarded_cashback_amount ?? 0);
+            }
+
+            $cashbackPercent = CashbackSetting::getCashbackPercentage((int) $lockedOrder->amount);
+            if ($cashbackPercent <= 0) {
+                return 0;
+            }
+
+            $cashbackAmount = (int) (($lockedOrder->amount * $cashbackPercent) / 100);
+            if ($cashbackAmount <= 0) {
+                return 0;
+            }
+
+            $balanceBefore = (int) DB::table('users')->where('id', $user->id)->value('cashback');
+            DB::table('users')->where('id', $user->id)->increment('cashback', $cashbackAmount);
+            $balanceAfter = $balanceBefore + $cashbackAmount;
+
+            DB::table('solds')->where('id', $lockedOrder->id)->update([
+                'awarded_cashback_amount' => $cashbackAmount,
+                'cashback_awarded_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            $this->cashbackHistoryService->record(
+                userId: $user->id,
+                action: 'earned',
+                amount: $cashbackAmount,
+                order: $lockedOrder,
+                balanceBefore: $balanceBefore,
+                balanceAfter: $balanceAfter,
+                meta: ['order_amount' => (int) $lockedOrder->amount],
+            );
+
+            Log::info("Cashback: user#{$user->id} order#{$lockedOrder->id} +{$cashbackAmount}");
+
+            return $cashbackAmount;
+        });
     }
 
     // =========================================================================
@@ -161,11 +213,10 @@ class OrderService
         }
 
         if ($strict) {
-            if (now()->gt($order->created_at->addHour())) {
-                return ['ok' => false, 'message' => 'cancel_order_error_expired'];
-            }
+            // paymentStatus=0: naqd (to'lanmagan), paymentStatus=1: karta (to'lanmagan)
+            // paymentStatus=2: to'langan → bekor qilish mumkin emas
             if (!in_array((int)$order->paymentStatus, [0, 1])) {
-                return ['ok' => false, 'message' => 'cancel_order_error_expired'];
+                return ['ok' => false, 'message' => 'cancel_order_error_paid'];
             }
         }
 
@@ -222,9 +273,45 @@ class OrderService
             // withCashback = true faqat karta+cashback ishlatilganda saqlanadi
             // cashbackAmount = qancha ayirilgani
             if ($order->withCashback && (int)$order->cashbackAmount > 0) {
+                $refundAmount = (int) $order->cashbackAmount;
+                $balanceBefore = (int) DB::table('users')->where('id', $order->user_id)->value('cashback');
+
                 DB::table('users')
                     ->where('id', $order->user_id)
-                    ->increment('cashback', (int)$order->cashbackAmount);
+                    ->increment('cashback', $refundAmount);
+
+                $this->cashbackHistoryService->record(
+                    userId: (int) $order->user_id,
+                    action: 'refund',
+                    amount: $refundAmount,
+                    order: $order,
+                    balanceBefore: $balanceBefore,
+                    balanceAfter: $balanceBefore + $refundAmount,
+                );
+            }
+
+            if ((int) ($order->awarded_cashback_amount ?? 0) > 0) {
+                $revokeAmount = (int) $order->awarded_cashback_amount;
+                $balanceBefore = (int) DB::table('users')->where('id', $order->user_id)->value('cashback');
+
+                DB::table('users')
+                    ->where('id', $order->user_id)
+                    ->decrement('cashback', $revokeAmount);
+
+                DB::table('solds')->where('id', $order->id)->update([
+                    'awarded_cashback_amount' => 0,
+                    'cashback_awarded_at' => null,
+                    'updated_at' => now(),
+                ]);
+
+                $this->cashbackHistoryService->record(
+                    userId: (int) $order->user_id,
+                    action: 'revoked',
+                    amount: -$revokeAmount,
+                    order: $order,
+                    balanceBefore: $balanceBefore,
+                    balanceAfter: $balanceBefore - $revokeAmount,
+                );
             }
 
             // ── Gift Sertifikat qaytarish ─────────────────────────────────

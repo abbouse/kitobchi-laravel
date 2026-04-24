@@ -50,5 +50,15 @@ return [
     'openai' => [
     'key' => env('OPENAI_API_KEY'),
 ],
+    'eskiz' => [
+        'email' => env('ESKIZ_EMAIL', 'toordaliev@gmail.com'),
+        'password' => env('ESKIZ_PASSWORD', 'aF6WH2CcaKes30zgLPCZ1MM7CPfPlgCX07HoM8rE'),
+        'from' => env('ESKIZ_FROM', '4546'),
+        'auth_url' => env('ESKIZ_AUTH_URL', 'https://notify.eskiz.uz/api/auth/login'),
+        'sms_url' => env('ESKIZ_SMS_URL', 'https://notify.eskiz.uz/api/message/sms/send'),
+        'callback_url' => env('ESKIZ_CALLBACK_URL'),
+        'connect_timeout' => (int) env('ESKIZ_CONNECT_TIMEOUT', 5),
+        'timeout' => (int) env('ESKIZ_TIMEOUT', 10),
+    ],
 
 ];

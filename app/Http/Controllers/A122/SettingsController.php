@@ -153,4 +153,65 @@ class SettingsController extends Controller
 
         return back()->with('success', "Yetkazish xizmati o'chirildi.");
     }
+
+    public function updateContacts(Request $request)
+    {
+        $request->validate([
+            'kitobchi_phone' => 'nullable|string|max:50',
+            'kitobchi_email' => 'nullable|email|max:100',
+            'business_phone' => 'nullable|string|max:50',
+            'business_email' => 'nullable|email|max:100',
+            'courier_phone'  => 'nullable|string|max:50',
+            'courier_email'  => 'nullable|email|max:100',
+        ]);
+
+        ProjectSetting::first()->update($request->only([
+            'kitobchi_phone', 'kitobchi_email',
+            'business_phone', 'business_email',
+            'courier_phone',  'courier_email',
+        ]));
+
+        return back()->with('success', 'Kontakt ma\'lumotlari yangilandi.');
+    }
+
+    public function updateAppFlags(Request $request)
+    {
+        $request->validate([
+            'packaging_price_small' => 'required|integer|min:0',
+            'packaging_price_large' => 'required|integer|min:0',
+            'packaging_threshold'   => 'required|integer|min:1',
+        ]);
+
+        ProjectSetting::first()->update([
+            'on_premium'            => $request->boolean('on_premium'),
+            'on_reels'              => $request->boolean('on_reels'),
+            'ramadan'               => $request->boolean('ramadan'),
+            'stop_sales'            => $request->boolean('stop_sales'),
+            'packaging_price_small' => $request->packaging_price_small,
+            'packaging_price_large' => $request->packaging_price_large,
+            'packaging_threshold'   => $request->packaging_threshold,
+        ]);
+
+        return back()->with('success', 'App sozlamalari yangilandi.');
+    }
+
+    public function updateTelegram(Request $request)
+    {
+        $request->validate([
+            'telegram_client_id'            => 'nullable|string|max:100',
+            'telegram_redirect_uri_ios'     => 'nullable|string|max:255',
+            'telegram_redirect_uri_android' => 'nullable|string|max:255',
+            'telegram_scopes'               => 'nullable|string|max:255',
+        ]);
+
+        ProjectSetting::first()->update([
+            'telegram_login_enabled'        => $request->boolean('telegram_login_enabled'),
+            'telegram_client_id'            => $request->telegram_client_id,
+            'telegram_redirect_uri_ios'     => $request->telegram_redirect_uri_ios,
+            'telegram_redirect_uri_android' => $request->telegram_redirect_uri_android,
+            'telegram_scopes'               => $request->telegram_scopes ?: 'openid profile phone',
+        ]);
+
+        return back()->with('success', 'Telegram sozlamalari yangilandi.');
+    }
 }

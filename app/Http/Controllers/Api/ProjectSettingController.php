@@ -13,8 +13,42 @@ use Illuminate\Support\Facades\Log;
 class ProjectSettingController extends Controller
 {
     public function getVersions()
-{
-    $version = ProjectSetting::findOrfail(1)->get();
-        return response()->json(['status' => 'success', 'data' => $version], 201);
-}
+    {
+        $s = ProjectSetting::findOrFail(1);
+
+        return response()->json([
+            'status' => 'success',
+            'ok'     => true,
+            'data'   => [[
+                'business_version_ios'     => $s->business_version_ios,
+                'business_version_android' => $s->business_version_android,
+                'courier_version_ios'      => $s->courier_version_ios,
+                'courier_version_android'  => $s->courier_version_android,
+                'market_version_ios'       => $s->market_version_ios,
+                'market_version_android'   => $s->market_version_android,
+                'contacts' => [
+                    'kitobchi' => [
+                        'phone' => $s->kitobchi_phone,
+                        'email' => $s->kitobchi_email,
+                    ],
+                    'business' => [
+                        'phone' => $s->business_phone,
+                        'email' => $s->business_email,
+                    ],
+                    'courier' => [
+                        'phone' => $s->courier_phone,
+                        'email' => $s->courier_email,
+                    ],
+                ],
+                'telegram' => [
+                    'enabled' => (bool) ($s->telegram_login_enabled ?? false),
+                    'client_id' => $s->telegram_client_id,
+                    'redirect_uri' => $s->telegram_redirect_uri,
+                    'redirect_uri_ios' => $s->telegram_redirect_uri_ios,
+                    'redirect_uri_android' => $s->telegram_redirect_uri_android,
+                    'scopes' => $s->telegram_scopes ?: 'openid profile phone',
+                ],
+            ]],
+        ], 200);
+    }
 }

@@ -7,7 +7,7 @@ class MysteryBoxPlan extends Model
 {
     protected $fillable = [
         'name_uz', 'name_ru', 'name_en', 'name_ja', 'months', 'price_uzs',
-        'books_per_month', 'description_uz', 'is_active', 'sort_order',
+        'books_per_month', 'description_uz', 'description_ru', 'description_en', 'description_ja', 'is_active', 'sort_order',
     ];
 
     protected $casts = [

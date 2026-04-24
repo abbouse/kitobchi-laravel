@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class GiftCertificate extends Model
 {
@@ -13,12 +14,13 @@ class GiftCertificate extends Model
     protected $fillable = [
         'buyer_user_id', 'recipient_user_id', 'code',
         'nominal_uzs', 'status', 'message',
-        'paid_at', 'activated_at', 'used_at', 'expires_at',
+        'paid_at', 'sent_at', 'activated_at', 'used_at', 'expires_at',
     ];
 
     protected $casts = [
         'nominal_uzs'  => 'integer',
         'paid_at'      => 'datetime',
+        'sent_at'      => 'datetime',
         'activated_at' => 'datetime',
         'used_at'      => 'datetime',
         'expires_at'   => 'datetime',

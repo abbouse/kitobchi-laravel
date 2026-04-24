@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\Courier\{CourierAuthController, CourierController, 
 
 // Kuryer Login
 Route::post('auth', [CourierAuthController::class, 'auth']);
+Route::post('forgot', [CourierAuthController::class, 'forgot']);
 Route::post('contact-request', [CourierAuthController::class, 'contactRequest']);
 
 // Kuryer funksiyalari

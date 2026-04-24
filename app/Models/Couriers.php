@@ -20,6 +20,8 @@ class Couriers extends Authenticatable
         'photo',
         'phone_number',
         'password',
+        'password_reset_limit',
+        'password_reset_limit_reset_at',
         'fcm_token',
         'balance',
         'total_withdrawal',
@@ -31,6 +33,8 @@ class Couriers extends Authenticatable
 
     protected $casts = [
         'balance' => 'integer',
+        'password_reset_limit' => 'integer',
+        'password_reset_limit_reset_at' => 'datetime',
     ];
 
     // ── Password ───────────────────────────────────────────────────

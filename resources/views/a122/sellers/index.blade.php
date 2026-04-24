@@ -35,6 +35,7 @@
             'pending'  => ['label' => 'Kutilmoqda', 'count' => $counts['pending'] ?? 0],
             'approved' => ['label' => 'Tasdiqlangan', 'count' => $counts['approved'] ?? 0],
             'rejected' => ['label' => 'Rad etilgan', 'count' => $counts['rejected'] ?? 0],
+            'blocked'  => ['label' => 'Bloklangan', 'count' => $counts['blocked'] ?? 0],
             'all'      => ['label' => 'Barchasi', 'count' => $counts['all'] ?? 0],
         ];
     @endphp
@@ -60,6 +61,7 @@
                     <th>Viloyat</th>
                     <th>Kitoblar</th>
                     <th>Buyurtmalar</th>
+                    <th>Ogohlantirish</th>
                     <th>Holat</th>
                     <th class="text-right">Amallar</th>
                 </tr>
@@ -92,25 +94,35 @@
                             <span class="badge badge-muted">{{ $seller->orders_count ?? 0 }}</span>
                         </td>
                         <td>
+                            @php $warningCount = (int) ($seller->active_warning_count ?? 0); @endphp
+                            <span class="badge {{ $warningCount >= 3 ? 'badge-danger' : ($warningCount > 0 ? 'badge-warning' : 'badge-muted') }}">
+                                {{ $warningCount }}/3
+                            </span>
+                        </td>
+                        <td>
                             @if($seller->status === 'approved')
                                 <span class="badge badge-success">Tasdiqlangan</span>
                             @elseif($seller->status === 'pending')
                                 <span class="badge badge-warning">Kutilmoqda</span>
                             @elseif($seller->status === 'rejected')
                                 <span class="badge badge-danger">Rad etilgan</span>
+                            @elseif($seller->status === 'blocked')
+                                <span class="badge badge-danger">Bloklangan</span>
                             @else
                                 <span class="badge badge-muted">{{ $seller->status }}</span>
                             @endif
                         </td>
                         <td>
                             <div class="flex items-center justify-end gap-1 flex-wrap">
-                                <form method="POST" action="{{ route('admin.sellers.approve', $seller) }}">
-                                    @csrf
-                                    @method('PATCH')
-                                    <button type="submit" class="btn-ghost p-2 rounded-lg" title="Tasdiqlash">
-                                        <i data-lucide="badge-check" class="w-4 h-4"></i>
-                                    </button>
-                                </form>
+                                @if($seller->status !== 'approved')
+                                    <form method="POST" action="{{ route('admin.sellers.approve', $seller) }}">
+                                        @csrf
+                                        @method('PATCH')
+                                        <button type="submit" class="btn-ghost p-2 rounded-lg" title="Tasdiqlash">
+                                            <i data-lucide="badge-check" class="w-4 h-4"></i>
+                                        </button>
+                                    </form>
+                                @endif
                                 <form method="POST" action="{{ route('admin.sellers.reject', $seller) }}">
                                     @csrf
                                     @method('PATCH')
@@ -118,6 +130,15 @@
                                         <i data-lucide="badge-x" class="w-4 h-4"></i>
                                     </button>
                                 </form>
+                                @if($seller->status === 'blocked')
+                                    <form method="POST" action="{{ route('admin.sellers.unblock', $seller) }}" onsubmit="return confirm('Sotuvchini blokdan chiqarmoqchimisiz?')">
+                                        @csrf
+                                        @method('PATCH')
+                                        <button type="submit" class="btn-ghost p-2 rounded-lg" title="Blokdan chiqarish">
+                                            <i data-lucide="unlock" class="w-4 h-4"></i>
+                                        </button>
+                                    </form>
+                                @endif
                                 <a href="{{ route('admin.sellers.show', $seller) }}" class="btn-ghost p-2 rounded-lg" title="Ko'rish">
                                     <i data-lucide="eye" class="w-4 h-4"></i>
                                 </a>
@@ -129,7 +150,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="8" class="text-center text-gray-400 py-8">Hech qanday sotuvchi topilmadi</td>
+                        <td colspan="9" class="text-center text-gray-400 py-8">Hech qanday sotuvchi topilmadi</td>
                     </tr>
                 @endforelse
             </tbody>

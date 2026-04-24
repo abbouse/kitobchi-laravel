@@ -7,6 +7,7 @@ use App\Models\Seller;
 use App\Models\SellerNotification;
 use App\Models\SellerStaffLog;
 use App\Models\SellerLocation;
+use App\Services\PasswordResetService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -17,7 +18,7 @@ use Illuminate\Support\Str;
 
 class SellerController extends Controller
 {
-    public function __construct()
+    public function __construct(private readonly PasswordResetService $passwordResetService)
     {
         $this->middleware('auth:seller');
     }
@@ -345,25 +346,26 @@ class SellerController extends Controller
         if (!$seller) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
-        if ($seller->password_reset_limit <= 0) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Xatolik, 1 oyda faqat 3 marotaba parol yangilash mumkin!'
-            ], 403);
-        }
-
-        $randomPassword = Str::random(12);
 
         try {
-            $seller->update([
-                'password' => bcrypt($randomPassword),
-                'password_reset_limit' => $seller->password_reset_limit - 1
-            ]);
+            $this->passwordResetService->ensureHasAttempts($seller);
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 429);
+        }
+
+        $randomPassword = $this->passwordResetService->generatePassword(12);
+
+        try {
+            $remaining = $this->passwordResetService->applyNewPassword($seller, $randomPassword);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Parol muvaffaqiyatli yangilandi',
-                'new_password' => $randomPassword // SMS uchun
+                'new_password' => $randomPassword, // SMS uchun
+                'remaining_attempts' => $remaining,
             ], 200);
         } catch (\Exception $e) {
             Log::error('Parolni yangilashda xato', ['seller_id' => $seller->id, 'error' => $e->getMessage()]);

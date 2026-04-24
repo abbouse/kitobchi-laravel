@@ -8,6 +8,24 @@ use Illuminate\Http\Request;
 
 class ReelController extends Controller
 {
+    private function success(array $payload = [], int $status = 200)
+    {
+        return response()->json(array_merge([
+            'status' => 'success',
+            'ok' => true,
+        ], $payload), $status);
+    }
+
+    private function error(string $message, int $status = 400)
+    {
+        return response()->json([
+            'status' => 'error',
+            'ok' => false,
+            'message' => $message,
+            'error' => $message,
+        ], $status);
+    }
+
     /**
      * Barcha reelslarni ichki videolari bilan birga qaytaradi
      */
@@ -21,24 +39,19 @@ class ReelController extends Controller
 
             // Agar ma'lumot bo'sh bo'lsa
             if ($reels->isEmpty()) {
-                return response()->json([
-                    'ok' => true,
+                return $this->success([
                     'data' => [],
                     'message' => 'Hozircha videolar mavjud emas'
                 ], 200);
             }
 
-            return response()->json([
-                'ok' => true,
+            return $this->success([
                 'data' => $reels,
                 'message' => 'Muvaffaqiyatli yuklandi'
             ], 200);
 
         } catch (\Exception $e) {
-            return response()->json([
-                'ok' => false,
-                'message' => 'Serverda xatolik: ' . $e->getMessage()
-            ], 500);
+            return $this->error('Serverda xatolik: ' . $e->getMessage(), 500);
         }
     }
 
@@ -52,9 +65,9 @@ class ReelController extends Controller
         }])->find($id);
 
         if (!$reel) {
-            return response()->json(['ok' => false, 'message' => 'Topilmadi'], 404);
+            return $this->error('Topilmadi', 404);
         }
 
-        return response()->json(['ok' => true, 'data' => $reel], 200);
+        return $this->success(['data' => $reel], 200);
     }
 }

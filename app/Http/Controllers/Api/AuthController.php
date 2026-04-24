@@ -7,15 +7,86 @@ use App\Models\User;
 use App\Models\MyCart;
 use App\Models\FavouriteProducts;
 use App\Models\Books;
+use App\Models\ProjectSetting;
 use App\Models\Stationery;
+use App\Services\SmsService;
+use App\Services\TelegramOidcService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
 {
+    private const SEND_COOLDOWN_SECONDS = 60;
+    private const SEND_LIMIT_WINDOW_SECONDS = 900;
+    private const SEND_MAX_ATTEMPTS = 5;
+    private const VERIFY_MAX_ATTEMPTS = 5;
+    private const VERIFY_LOCK_SECONDS = 600;
+    private const DEFAULT_TEST_CODE = '222222';
+
+    public function __construct(private readonly SmsService $smsService)
+    {
+    }
+
+    public function telegramConfig(TelegramOidcService $telegramOidcService)
+    {
+        return response()->json([
+            'status' => 'success',
+            'data' => $telegramOidcService->publicConfig(ProjectSetting::first()),
+        ]);
+    }
+
+    /**
+     * Native SDK dan kelgan id_token ni qabul qilib, userni login/register qiladi.
+     * Body: { id_token, device_id?, device_name?, platform?, fcm_token?, guest_cart?, guest_favorites? }
+     */
+    public function telegramLogin(Request $request, TelegramOidcService $telegramOidcService)
+    {
+        $request->validate([
+            'id_token'    => 'required|string',
+            'device_id'   => 'nullable|string|max:255',
+            'device_name' => 'nullable|string|max:255',
+            'platform'    => 'nullable|string|max:50',
+            'fcm_token'   => 'nullable|string|max:255',
+        ]);
+
+        $settings = ProjectSetting::first();
+        if (!($settings?->telegram_login_enabled ?? false)) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => "Telegram login hozircha o‘chiq.",
+            ], 403);
+        }
+
+        try {
+            $claims = $telegramOidcService->validateIdToken(
+                (string) $request->input('id_token'),
+                $telegramOidcService->clientId($settings),
+            );
+
+            $user = DB::transaction(function () use ($claims) {
+                return $this->resolveTelegramUser($claims);
+            });
+
+            if ($request->has('guest_cart') || $request->has('guest_favorites')) {
+                $this->syncGuestData($request, $user);
+            }
+
+            $plainTextToken = $this->issueUserToken($user, $request);
+
+            return $this->successUserResponse($user->fresh(['location']), $plainTextToken);
+        } catch (\Throwable $e) {
+            Log::warning('Telegram auth failed', ['error' => $e->getMessage()]);
+
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Telegram login amalga oshmadi.',
+            ], 422);
+        }
+    }
+
     // ─────────────────────────────────────────────────────────────────
     // STORE — SMS yuborish va kodni tasdiqlash
     // ─────────────────────────────────────────────────────────────────
@@ -24,17 +95,36 @@ class AuthController extends Controller
         $randomString = Str::random(10);
         $phone_number = str_replace([' ', '-'], '', $request->phone_number);
 
+        if (!preg_match('/^\d{12}$/', $phone_number)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => "Telefon raqami noto'g'ri formatda yuborildi",
+            ], 400);
+        }
+
         // ── 1-BOSQICH: SMS yuborish ───────────────────────────────────
         if (strlen($phone_number) == 12 && is_null($request->verifyCode)) {
-            $verifyCode = ($phone_number == '998331234567')
-                ? '222222'
+            if ($limitResponse = $this->ensureCanSendCode($phone_number)) {
+                return $limitResponse;
+            }
+
+            $isTestPhone = $this->isTestPhone($phone_number);
+            $verifyCode = $isTestPhone
+                ? $this->testVerifyCode()
                 : rand(100001, 999999);
 
-            if ($phone_number != '998331234567') {
-                Http::post(route('api.sendSms'), [
-                    'phone' => $phone_number,
-                    'msg'   => "<#> Kitobchi ilovasida tasdiqlash uchun kod: $verifyCode. $randomString",
-                ]);
+            if (!$isTestPhone) {
+                try {
+                    $this->smsService->send(
+                        $phone_number,
+                        "<#> Kitobchi ilovasida tasdiqlash uchun kod: $verifyCode. $randomString"
+                    );
+                } catch (\Throwable $e) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => $e->getMessage(),
+                    ], 503);
+                }
             }
 
             $user = User::where('phone_number', $phone_number)
@@ -51,15 +141,21 @@ class AuthController extends Controller
                 $user->update(['verifyCode' => $verifyCode]);
             }
 
+            $this->recordCodeSend($phone_number);
+
             return response()->json(['status' => 'success', 'message' => 'Kod yuborildi'], 201);
         }
 
         // ── 2-BOSQICH: Kodni tasdiqlash ───────────────────────────────
+        if ($limitResponse = $this->ensureCanVerifyCode($phone_number)) {
+            return $limitResponse;
+        }
+
         $user = User::where('phone_number', $phone_number)
             ->where('isDeleted', 'no')
             ->first();
 
-        if ($user && $user->verifyCode == $request->verifyCode) {
+        if ($user && trim((string) $user->verifyCode) === trim((string) $request->verifyCode)) {
 
             // Token yaratish
             $tokenResult    = $user->createToken('user_token');
@@ -92,6 +188,7 @@ class AuthController extends Controller
             $user->tokens()->whereNotIn('token', $activeTokens)->delete();
 
             $user->update(['verifyCode' => null, 'verified' => 1]);
+            $this->clearVerifyAttemptState($phone_number);
 
             // ── ✅ GUEST DATA SYNC ────────────────────────────────────
             // Token yaratilgandan keyin, response dan oldin
@@ -103,31 +200,287 @@ class AuthController extends Controller
             // ─────────────────────────────────────────────────────────
 
             // cartItemCount ni sync dan keyin qayta hisoblaymiz
-            $cartItemCount = MyCart::where('user_id', $user->id)->sum('count_item');
-
-            return response()->json([
-                'status' => 'success',
-                'data'   => [
-                    'id'                 => $user->id,
-                    'phone_number'       => $user->phone_number,
-                    'name'               => $user->name,
-                    'lastname'           => $user->lastname,
-                    'sex'                => $user->sex,
-                    'token'              => $plainTextToken,
-                    'cartItemCount'      => (int) $cartItemCount,
-                    'photo'              => $user->avatar,
-                    'real_balance'       => $user->real_balance  ?? 0,
-                    'cashback'           => $user->cashback       ?? 0,
-                    'mainAddressID'      => $user->mainAddressID  ?? 0,
-                    'user_main_location' => $user->location->fullAddress ?? '',
-                ],
-            ], 201);
+            return $this->successUserResponse($user->fresh(['location']), $plainTextToken);
         }
+
+        $remainingAttempts = $this->recordFailedVerifyAttempt($phone_number);
 
         return response()->json([
             'status'  => 'error',
             'message' => 'Tekshiruv kodi xato kiritildi',
+            'remaining_attempts' => $remainingAttempts,
         ], 400);
+    }
+
+    private function ensureCanSendCode(string $phoneNumber)
+    {
+        $cooldownKey = $this->smsSendCooldownKey($phoneNumber);
+        $windowKey = $this->smsSendWindowKey($phoneNumber);
+
+        if (Cache::has($cooldownKey)) {
+            $seconds = $this->secondsUntil(Cache::get($cooldownKey));
+
+            return response()->json([
+                'status' => 'error',
+                'message' => "Kodni qayta yuborish uchun {$seconds} soniya kuting",
+                'retry_after' => $seconds,
+            ], 429);
+        }
+
+        $attempts = (int) Cache::get($windowKey, 0);
+        if ($attempts >= self::SEND_MAX_ATTEMPTS) {
+            $seconds = $this->secondsUntil(
+                Cache::get($this->smsSendWindowTimerKey($phoneNumber))
+            );
+
+            return response()->json([
+                'status' => 'error',
+                'message' => "Juda ko'p urinish bo'ldi. {$seconds} soniyadan keyin qayta urinib ko'ring",
+                'retry_after' => $seconds,
+            ], 429);
+        }
+
+        return null;
+    }
+
+    private function recordCodeSend(string $phoneNumber): void
+    {
+        $windowKey = $this->smsSendWindowKey($phoneNumber);
+        $windowTimerKey = $this->smsSendWindowTimerKey($phoneNumber);
+        $cooldownKey = $this->smsSendCooldownKey($phoneNumber);
+        $windowExpiresAt = now()->addSeconds(self::SEND_LIMIT_WINDOW_SECONDS);
+        $cooldownExpiresAt = now()->addSeconds(self::SEND_COOLDOWN_SECONDS);
+
+        $attempts = (int) Cache::get($windowKey, 0);
+        Cache::put($windowKey, $attempts + 1, $windowExpiresAt);
+        Cache::put($windowTimerKey, $windowExpiresAt->timestamp, $windowExpiresAt);
+        Cache::put($cooldownKey, $cooldownExpiresAt->timestamp, $cooldownExpiresAt);
+    }
+
+    private function ensureCanVerifyCode(string $phoneNumber)
+    {
+        $lockKey = $this->verifyLockKey($phoneNumber);
+
+        if (!Cache::has($lockKey)) {
+            return null;
+        }
+
+        $seconds = $this->secondsUntil(Cache::get($lockKey));
+
+        return response()->json([
+            'status' => 'error',
+            'message' => "Ko'p marotaba noto'g'ri kod kiritildi. {$seconds} soniya kutib qayta urinib ko'ring",
+            'retry_after' => $seconds,
+        ], 429);
+    }
+
+    private function recordFailedVerifyAttempt(string $phoneNumber): int
+    {
+        $attemptKey = $this->verifyAttemptKey($phoneNumber);
+        $lockKey = $this->verifyLockKey($phoneNumber);
+        $attempts = (int) Cache::get($attemptKey, 0) + 1;
+        $lockExpiresAt = now()->addSeconds(self::VERIFY_LOCK_SECONDS);
+
+        Cache::put($attemptKey, $attempts, $lockExpiresAt);
+
+        if ($attempts >= self::VERIFY_MAX_ATTEMPTS) {
+            Cache::put($lockKey, $lockExpiresAt->timestamp, $lockExpiresAt);
+            Cache::forget($attemptKey);
+
+            return 0;
+        }
+
+        return max(0, self::VERIFY_MAX_ATTEMPTS - $attempts);
+    }
+
+    private function clearVerifyAttemptState(string $phoneNumber): void
+    {
+        Cache::forget($this->verifyAttemptKey($phoneNumber));
+        Cache::forget($this->verifyLockKey($phoneNumber));
+    }
+
+    private function resolveTelegramUser(array $claims): User
+    {
+        $telegramId = trim((string) ($claims['sub'] ?? $claims['id'] ?? ''));
+        $phone = preg_replace('/\D+/', '', (string) ($claims['phone_number'] ?? ''));
+        $username = $claims['preferred_username'] ?? null;
+        $photo = $claims['picture'] ?? null;
+        [$firstName, $lastName] = $this->splitTelegramName((string) ($claims['name'] ?? ''));
+
+        if ($telegramId === '') {
+            throw new \RuntimeException('Telegram foydalanuvchi identifikatori topilmadi.');
+        }
+
+        $user = User::where('telegram_id', $telegramId)
+            ->where('isDeleted', 'no')
+            ->first();
+
+        if (!$user && $phone !== '') {
+            $user = User::where('phone_number', $phone)
+                ->where('isDeleted', 'no')
+                ->first();
+        }
+
+        if (!$user && $phone === '') {
+            throw new \RuntimeException('Telegram telefon raqami qaytmadi. Iltimos, Telegramda phone ruxsatini bering.');
+        }
+
+        if (!$user) {
+            $user = User::create([
+                'phone_number' => $phone,
+                'password' => Str::random(40),
+                'name' => $firstName ?: null,
+                'lastname' => $lastName ?: null,
+                'verifyCode' => null,
+            ]);
+        }
+
+        $conflictUser = User::where('telegram_id', $telegramId)
+            ->where('id', '!=', $user->id)
+            ->where('isDeleted', 'no')
+            ->exists();
+
+        if ($conflictUser) {
+            throw new \RuntimeException('Bu Telegram akkaunti boshqa foydalanuvchiga ulangan.');
+        }
+
+        $user->forceFill([
+            'telegram_id' => $telegramId,
+            'telegram_username' => $username,
+            'telegram_photo' => $photo,
+            'telegram_connected_at' => now(),
+            'avatar' => $user->avatar ?: $photo,
+            'phone_number' => $user->phone_number ?: $phone,
+            'name' => $user->name ?: $firstName,
+            'lastname' => $user->lastname ?: $lastName,
+        ])->save();
+
+        return $user;
+    }
+
+    private function splitTelegramName(string $fullName): array
+    {
+        $fullName = trim($fullName);
+        if ($fullName === '') {
+            return [null, null];
+        }
+
+        $parts = preg_split('/\s+/', $fullName, 2) ?: [];
+
+        return [
+            $parts[0] ?? null,
+            $parts[1] ?? null,
+        ];
+    }
+
+    private function issueUserToken(User $user, Request $request): string
+    {
+        $tokenResult = $user->createToken('user_token');
+        $plainTextToken = $tokenResult->plainTextToken;
+        $hashedToken = hash('sha256', explode('|', $plainTextToken)[1]);
+
+        if ($request->filled('device_id')) {
+            DB::table('connected_devices')->updateOrInsert(
+                ['device_id' => $request->device_id],
+                [
+                    'user_id' => $user->id,
+                    'user_type' => 'user',
+                    'token' => $hashedToken,
+                    'fcm_token' => $request->fcm_token,
+                    'device_name' => $request->device_name ?? 'Unknown Device',
+                    'platform' => $request->platform ?? 'Unknown',
+                    'updated_at' => now(),
+                    'created_at' => now(),
+                ]
+            );
+        }
+
+        $activeTokens = DB::table('connected_devices')
+            ->where('user_id', $user->id)
+            ->where('user_type', 'user')
+            ->pluck('token')
+            ->toArray();
+
+        $user->tokens()->whereNotIn('token', $activeTokens)->delete();
+
+        return $plainTextToken;
+    }
+
+    private function successUserResponse(User $user, string $plainTextToken)
+    {
+        $cartItemCount = MyCart::where('user_id', $user->id)->sum('count_item');
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'id' => $user->id,
+                'phone_number' => $user->phone_number,
+                'name' => $user->name,
+                'lastname' => $user->lastname,
+                'sex' => $user->sex,
+                'token' => $plainTextToken,
+                'cartItemCount' => (int) $cartItemCount,
+                'photo' => $user->avatar,
+                'real_balance' => $user->real_balance ?? 0,
+                'cashback' => $user->cashback ?? 0,
+                'mainAddressID' => $user->mainAddressID ?? 0,
+                'user_main_location' => $user->location?->fullAddress ?? '',
+            ],
+        ], 201);
+    }
+
+    private function isTestPhone(string $phoneNumber): bool
+    {
+        return in_array($phoneNumber, $this->testPhones(), true);
+    }
+
+    private function testPhones(): array
+    {
+        $phones = explode(',', env('KITOBCHI_TEST_AUTH_PHONES', '998331234567,998333303034'));
+
+        return array_values(array_filter(array_map(
+            static fn ($phone) => preg_replace('/\D+/', '', trim((string) $phone)),
+            $phones
+        )));
+    }
+
+    private function testVerifyCode(): string
+    {
+        return (string) env('KITOBCHI_TEST_AUTH_CODE', self::DEFAULT_TEST_CODE);
+    }
+
+    private function smsSendCooldownKey(string $phoneNumber): string
+    {
+        return "auth:sms:cooldown:{$phoneNumber}";
+    }
+
+    private function smsSendWindowKey(string $phoneNumber): string
+    {
+        return "auth:sms:window:{$phoneNumber}";
+    }
+
+    private function smsSendWindowTimerKey(string $phoneNumber): string
+    {
+        return "auth:sms:window_timer:{$phoneNumber}";
+    }
+
+    private function verifyAttemptKey(string $phoneNumber): string
+    {
+        return "auth:verify:attempts:{$phoneNumber}";
+    }
+
+    private function verifyLockKey(string $phoneNumber): string
+    {
+        return "auth:verify:lock:{$phoneNumber}";
+    }
+
+    private function secondsUntil(mixed $timestamp): int
+    {
+        if (!$timestamp) {
+            return 1;
+        }
+
+        return max(1, (int) $timestamp - now()->timestamp);
     }
 
     // ─────────────────────────────────────────────────────────────────

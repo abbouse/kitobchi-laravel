@@ -6,12 +6,21 @@ use App\Http\Controllers\Controller;
 use App\Models\Couriers;
 use App\Models\CourierOrder;
 use App\Models\CourierTransaction;
+use App\Services\PasswordResetService;
+use App\Services\SmsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use RuntimeException;
 
 class CourierController extends Controller
 {
+    public function __construct(
+        private readonly SmsService $smsService,
+        private readonly PasswordResetService $passwordResetService
+    ) {
+    }
+
     public function index(Request $request)
     {
         $query = Couriers::query();
@@ -129,5 +138,31 @@ class CourierController extends Controller
         if ($courier->photo) Storage::disk('public')->delete($courier->photo);
         $courier->delete();
         return redirect()->route('admin.couriers.index')->with('success', "Kuryer o'chirildi.");
+    }
+
+    public function resetPassword(Couriers $courier)
+    {
+        if ($courier->status !== 'approved') {
+            return back()->with('error', 'Faqat tasdiqlangan kuryer uchun parolni yangilash mumkin.');
+        }
+
+        try {
+            $this->passwordResetService->ensureHasAttempts($courier);
+        } catch (RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        try {
+            $newPassword = $this->passwordResetService->generatePassword();
+            $this->smsService->send(
+                $courier->phone_number,
+                "Kitobchi Express: sizning yangi parolingiz — {$newPassword}"
+            );
+            $remaining = $this->passwordResetService->applyNewPassword($courier, $newPassword);
+
+            return back()->with('success', "Yangi parol SMS orqali yuborildi. Qolgan urinishlar: {$remaining}");
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Parolni SMS orqali yuborishda xatolik yuz berdi.');
+        }
     }
 }

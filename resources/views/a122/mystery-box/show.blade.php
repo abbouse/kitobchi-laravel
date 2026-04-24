@@ -34,7 +34,7 @@
 </x-a122.page-header>
 
 
-<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-3">
 
   {{-- ── Chap ─────────────────────────────────────────────── --}}
   <div class="xl:col-span-4">
@@ -161,8 +161,8 @@
           : collect();
       @endphp
       <div style="padding:16px 18px;border-top:1px solid var(--p-border)">
-        <div class="flex items-start justify-between mb-3">
-          <div class="flex items-center gap-3">
+        <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between mb-3">
+          <div class="flex items-center gap-3 min-w-0">
             <div style="width:32px;height:32px;border-radius:8px;flex-shrink:0;
                         background:var(--p-elevated);
                         display:flex;align-items:center;justify-content:center;
@@ -185,10 +185,38 @@
               @endif
             </div>
           </div>
-          <span class="s-pill {{ $delivery->status_color }}" style="font-size:10px">
+          <span class="s-pill {{ $delivery->status_color }}" style="font-size:10px;width:max-content">
             {{ $delivery->status_label }}
           </span>
         </div>
+
+        @if(in_array($delivery->status, ['pending', 'preparing', 'delivered']))
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;padding:10px 12px;background:var(--p-elevated);border:1px solid var(--p-border);border-radius:10px;flex-wrap:wrap">
+          <div>
+            <div style="font-size:12px;font-weight:700;color:var(--p-text)">
+              {{ $delivery->month_number }}-oy kitoblari
+            </div>
+            <div style="font-size:11px;color:var(--p-hint)">
+              {{ $delivery->status === 'delivered' ? "Yetkazilgan oy tarkibini tahrirlashingiz mumkin" : ($delivery->status === 'preparing' ? "Tanlovni yangilashingiz mumkin" : "Bu oy uchun kitoblarni tanlang") }}
+            </div>
+          </div>
+          @if($delivery->status === 'delivered')
+          <button type="button"
+                  class="btn-p ghost sm"
+                  onclick="toggleMysteryEditor('{{ $delivery->id }}')"
+                  id="editorToggle{{ $delivery->id }}"
+                  aria-expanded="false">
+            <i class="bi bi-chevron-down" id="editorToggleIcon{{ $delivery->id }}"></i>
+            Tarkibni tahrirlash
+          </button>
+          @else
+          <span class="btn-p ghost sm" style="pointer-events:none">
+            <i class="bi bi-pencil-square"></i>
+            {{ $delivery->status === 'preparing' ? "Tahrirlash ochiq" : "Kitob tanlash" }}
+          </span>
+          @endif
+        </div>
+        @endif
 
         {{-- Kitoblar --}}
         @if($books->count())
@@ -226,12 +254,23 @@
         @endif
 
         {{-- Amallar --}}
-        @if($delivery->status === 'pending')
-        {{-- Kitob tanlash formasi --}}
+        @if(in_array($delivery->status, ['pending', 'preparing', 'delivered']))
+        <div id="editorWrap{{ $delivery->id }}" style="{{ $delivery->status === 'delivered' ? 'display:none;' : '' }}">
         <form method="POST"
               action="{{ route('admin.mystery-box.prepare', $delivery) }}"
               id="prepForm{{ $delivery->id }}">
           @csrf @method('PATCH')
+          <div style="margin-bottom:10px;font-size:11px;color:var(--p-hint)">
+            Bu oy uchun {{ $subscription->books_per_month }} ta kitob tanlang. `Aktiv kitoblar` sahifasidan kerakli kitob IDlarini olib, shu yerga vergul bilan kiriting.
+          </div>
+          <div class="flex flex-wrap gap-2 mb-2">
+            <a href="{{ route('admin.books.index', ['tab' => 'active']) }}" target="_blank" class="btn-p ghost sm">
+              <i class="bi bi-book"></i> Aktiv kitoblar
+            </a>
+            <a href="{{ route('admin.books.create') }}" target="_blank" class="btn-p ghost sm">
+              <i class="bi bi-plus-lg"></i> Yangi kitob
+            </a>
+          </div>
           <div class="row g-2 items-end">
             <div class="col">
               <label class="p-form-label">
@@ -239,23 +278,39 @@
               </label>
               <input type="text" name="book_ids_raw" class="p-form-control"
                      placeholder="123, 456, 789"
+                     value="{{ implode(', ', $delivery->book_ids ?? []) }}"
                      oninput="parseBookIds(this,'{{ $delivery->id }}')">
-              <input type="hidden" name="book_ids" id="bookIds{{ $delivery->id }}" value="[]">
+              <div id="selectedBooksHint{{ $delivery->id }}" style="margin-top:6px;font-size:11px;color:var(--p-hint)">
+                {{ count($delivery->book_ids ?? []) }} / {{ $subscription->books_per_month }} ta tanlandi
+              </div>
+              <div id="selectedBooks{{ $delivery->id }}" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:8px">
+                @foreach($books as $book)
+                <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--p-border);border-radius:10px;background:var(--p-elevated);max-width:100%">
+                  <span style="font-family:'JetBrains Mono',monospace;color:var(--p-accent)">#{{ $book->id }}</span>
+                  <span style="font-size:12px;color:var(--p-text);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ $book->name }}{{ $book->author ? ' · '.$book->author : '' }}</span>
+                  <button type="button" onclick="removeMysteryBook({{ $delivery->id }}, {{ $book->id }})" class="btn-p ghost sm" style="margin-left:auto">
+                    <i class="bi bi-x-lg"></i>
+                  </button>
+                </div>
+                @endforeach
+              </div>
+              <input type="hidden" name="book_ids" id="bookIds{{ $delivery->id }}" value='@json(array_values($delivery->book_ids ?? []))'>
             </div>
             <div class="col-auto">
               <input type="text" name="tracking_note" class="p-form-control"
+                     value="{{ $delivery->tracking_note }}"
                      placeholder="Izoh (ixtiyoriy)">
             </div>
             <div class="col-auto">
               <button type="submit" class="btn-p primary">
-                <i class="bi bi-check-lg"></i> Kitoblarni tasdiqlash
+                <i class="bi bi-check-lg"></i> {{ $delivery->status === 'delivered' ? 'Delivered oyni yangilash' : ($delivery->status === 'preparing' ? 'Tanlovni yangilash' : 'Kitoblarni tasdiqlash') }}
               </button>
             </div>
           </div>
         </form>
-
-        @elseif($delivery->status === 'preparing')
-        <div class="flex gap-2">
+        </div>
+        @if($delivery->status === 'preparing')
+        <div class="flex flex-wrap gap-2 mt-2">
           <form method="POST" action="{{ route('admin.mystery-box.ship', $delivery) }}">
             @csrf @method('PATCH')
             <button class="btn-p primary">
@@ -263,6 +318,7 @@
             </button>
           </form>
         </div>
+        @endif
 
         @elseif($delivery->status === 'shipped')
         <form method="POST" action="{{ route('admin.mystery-box.deliver', $delivery) }}">
@@ -300,11 +356,72 @@
 
 @push('scripts')
 <script>
+function toggleMysteryEditor(deliveryId) {
+  const wrap = document.getElementById('editorWrap' + deliveryId);
+  const toggle = document.getElementById('editorToggle' + deliveryId);
+  const icon = document.getElementById('editorToggleIcon' + deliveryId);
+  if (!wrap || !toggle || !icon) return;
+
+  const isHidden = wrap.style.display === 'none';
+  wrap.style.display = isHidden ? 'block' : 'none';
+  toggle.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+  icon.className = isHidden ? 'bi bi-chevron-up' : 'bi bi-chevron-down';
+}
+
+async function renderSelectedMysteryBooks(deliveryId, ids) {
+  const target = document.getElementById('selectedBooks' + deliveryId);
+  if (!target) return;
+
+  if (!ids.length) {
+    target.innerHTML = '';
+    return;
+  }
+
+  target.innerHTML = '<span style="font-size:11px;color:var(--p-hint)">Tanlangan kitoblar yuklanmoqda...</span>';
+
+  try {
+    const url = `{{ route('admin.mystery-box.books.search') }}?ids=${ids.join(',')}`;
+    const res = await fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}});
+    const json = await res.json();
+    const books = Array.isArray(json.data) ? json.data : [];
+
+    target.innerHTML = books.map(book => `
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--p-border);border-radius:10px;background:var(--p-elevated);max-width:100%">
+        <span style="font-family:'JetBrains Mono',monospace;color:var(--p-accent)">#${book.id}</span>
+        <span style="font-size:12px;color:var(--p-text);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${book.name}${book.author ? ' · ' + book.author : ''}</span>
+        <button type="button" onclick="removeMysteryBook(${deliveryId}, ${book.id})" class="btn-p ghost sm" style="margin-left:auto">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+    `).join('');
+  } catch (e) {
+    target.innerHTML = '<span style="font-size:11px;color:var(--p-danger)">Tanlangan kitoblarni yuklab bo\'lmadi</span>';
+  }
+}
+
+function removeMysteryBook(deliveryId, bookId) {
+  const input = document.querySelector(`#prepForm${deliveryId} input[name="book_ids_raw"]`);
+  if (!input) return;
+
+  const ids = input.value.split(',')
+    .map(s => parseInt(s.trim()))
+    .filter(n => !isNaN(n) && n > 0 && n !== bookId);
+
+  input.value = ids.join(', ');
+  parseBookIds(input, deliveryId);
+}
+
 function parseBookIds(input, deliveryId) {
   const ids = input.value.split(',')
     .map(s => parseInt(s.trim()))
     .filter(n => !isNaN(n) && n > 0);
   document.getElementById('bookIds' + deliveryId).value = JSON.stringify(ids);
+  const hint = document.getElementById('selectedBooksHint' + deliveryId);
+  if (hint) {
+    const expected = '{{ $subscription->books_per_month }}';
+    hint.textContent = `${ids.length} / ${expected} ta tanlandi`;
+  }
+  renderSelectedMysteryBooks(deliveryId, ids);
 }
 </script>
 @endpush

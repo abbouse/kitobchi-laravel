@@ -73,13 +73,16 @@ class TargetController extends Controller
 
         $storeSellerId = $this->getStoreSellerId($seller);
 
-        $prices = SellerAdSetting::select('type', 'price')->get();
+        $prices = SellerAdSetting::whereIn('type', ['top_banner', 'center_banner'])
+            ->select('type', 'price')
+            ->get();
         $priceData = [];
         foreach ($prices as $item) {
             $priceData[$item->type] = $item->price;
         }
 
         $latestTargets = SellerAd::where('seller_id', $storeSellerId)
+            ->whereIn('type', ['top_banner', 'center_banner'])
             ->with('product:id,name')
             ->latest('created_at')
             ->take(15)
@@ -88,6 +91,7 @@ class TargetController extends Controller
         return response()->json([
             'success' => true,
             'data'    => [
+                'balance'        => (int) ($seller->balance ?? 0),
                 'prices'         => $priceData,
                 'latest_targets' => $latestTargets,
             ],

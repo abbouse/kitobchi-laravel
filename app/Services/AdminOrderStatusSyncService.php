@@ -30,6 +30,8 @@ class AdminOrderStatusSyncService
     public function updateMainOrder(Sold $order, string $status): void
     {
         DB::transaction(function () use ($order, $status) {
+            $wasPaid = (int) $order->paymentStatus === 2;
+
             if ($status === 'F') {
                 $this->orderService->cancelOrder($order, strict: false);
                 return;
@@ -51,6 +53,10 @@ class AdminOrderStatusSyncService
                 'status' => $this->mapMainToCourier($status, $order->paymentStatus),
                 'updated_at' => now(),
             ]);
+
+            if (!$wasPaid && (int) $order->paymentStatus === 2) {
+                $this->orderService->awardCashbackForPaidOrder($order, $order->user()->first());
+            }
         });
     }
 
@@ -92,6 +98,8 @@ class AdminOrderStatusSyncService
                 return;
             }
 
+            $wasPaid = (int) $order->paymentStatus === 2;
+
             if ($status === 'rejected') {
                 $this->orderService->cancelOrder($order, strict: false);
                 return;
@@ -113,6 +121,10 @@ class AdminOrderStatusSyncService
                 'status' => $this->mapCourierToSeller($status),
                 'updated_at' => now(),
             ]);
+
+            if (!$wasPaid && (int) $order->paymentStatus === 2) {
+                $this->orderService->awardCashbackForPaidOrder($order, $order->user()->first());
+            }
         });
     }
 

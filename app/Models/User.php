@@ -26,6 +26,9 @@ class User extends Authenticatable
         'email',
         'mainAddressID',
         'telegram_id',
+        'telegram_username',
+        'telegram_photo',
+        'telegram_connected_at',
         'phone_number',
         'avatar',
         'status',
@@ -55,7 +58,8 @@ class User extends Authenticatable
         'password' => 'hashed',
         'isVerified' => 'boolean',
         'isSupport' => 'boolean',
-        'firstEdit' => 'boolean'
+        'firstEdit' => 'boolean',
+        'telegram_connected_at' => 'datetime',
     ];
     
     protected static function booted()

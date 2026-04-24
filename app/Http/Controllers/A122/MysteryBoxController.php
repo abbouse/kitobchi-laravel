@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\A122;
 
 use App\Http\Controllers\Controller;
+use App\Models\Books;
 use App\Models\MysteryBoxDelivery;
 use App\Models\MysteryBoxPlan;
 use App\Models\MysteryBoxSubscription;
@@ -11,6 +12,55 @@ use Illuminate\Support\Facades\DB;
 
 class MysteryBoxController extends Controller
 {
+    public function searchBooks(Request $request)
+    {
+        $q = trim((string) $request->get('q', ''));
+        $ids = collect(explode(',', (string) $request->get('ids', '')))
+            ->map(fn ($id) => (int) trim($id))
+            ->filter(fn ($id) => $id > 0)
+            ->values()
+            ->all();
+
+        if ($q === '' && empty($ids)) {
+            return response()->json(['status' => 'success', 'data' => []]);
+        }
+
+        $booksQuery = Books::query()
+            ->where('is_hidden', 0)
+            ->where('is_approved', 1)
+            ->when(!empty($ids), fn ($query) => $query->whereIn('id', $ids))
+            ->when($q !== '', function ($query) use ($q) {
+                $query->where(function ($inner) use ($q) {
+                    $inner->where('name', 'like', "%{$q}%")
+                        ->orWhere('author', 'like', "%{$q}%");
+
+                    if (ctype_digit($q)) {
+                        $inner->orWhere('id', (int) $q);
+                    }
+                });
+            });
+
+        $books = $booksQuery
+            ->orderByDesc('totalSales')
+            ->limit(!empty($ids) ? count($ids) : 12)
+            ->get(['id', 'name', 'author', 'count', 'images']);
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $books->map(function (Books $book) {
+                $images = is_array($book->images) ? $book->images : json_decode($book->images ?? '[]', true);
+
+                return [
+                    'id' => $book->id,
+                    'name' => $book->name,
+                    'author' => $book->author,
+                    'stock' => (int) ($book->count ?? 0),
+                    'image' => $images[0] ?? null,
+                ];
+            })->values(),
+        ]);
+    }
+
     public function index(Request $request)
     {
         $q = MysteryBoxSubscription::with([
@@ -82,6 +132,7 @@ class MysteryBoxController extends Controller
             'books_per_month' => 'required|integer|min:1|max:10',
             'sort_order'      => 'nullable|integer|min:0',
             'description_uz'  => 'nullable|string',
+            'description_ru'  => 'nullable|string',
         ]);
 
         MysteryBoxPlan::create([
@@ -102,6 +153,7 @@ class MysteryBoxController extends Controller
             'books_per_month' => 'required|integer|min:1|max:10',
             'sort_order'      => 'nullable|integer|min:0',
             'description_uz'  => 'nullable|string',
+            'description_ru'  => 'nullable|string',
             'is_active'       => 'nullable|boolean',
         ]);
 
@@ -127,19 +179,25 @@ class MysteryBoxController extends Controller
 
     public function pauseSubscription(MysteryBoxSubscription $subscription)
     {
+        if ($subscription->status !== MysteryBoxSubscription::STATUS_ACTIVE) {
+            return back()->with('error', "Faqat faol obunani to'xtatish mumkin.");
+        }
         $subscription->update(['status' => 'paused']);
         return back()->with('success', "Obuna to'xtatildi.");
     }
 
     public function resumeSubscription(MysteryBoxSubscription $subscription)
     {
+        if ($subscription->status !== MysteryBoxSubscription::STATUS_PAUSED) {
+            return back()->with('error', "Faqat to'xtatilgan obunani davom ettirish mumkin.");
+        }
         $subscription->update(['status' => 'active']);
         return back()->with('success', 'Obuna davom ettirildi.');
     }
 
     public function cancelSubscription(MysteryBoxSubscription $subscription)
     {
-        if ($subscription->status === 'completed') {
+        if (in_array($subscription->status, [MysteryBoxSubscription::STATUS_COMPLETED, MysteryBoxSubscription::STATUS_CANCELLED], true)) {
             return back()->with('error', 'Yakunlangan obuna bekor qilinmaydi.');
         }
         $subscription->update(['status' => 'cancelled', 'cancelled_at' => now()]);
@@ -163,19 +221,44 @@ class MysteryBoxController extends Controller
             return back()->with('error', 'Kamida bitta kitob ID kiriting.');
         }
 
+        if (!in_array($delivery->status, [MysteryBoxDelivery::STATUS_PENDING, MysteryBoxDelivery::STATUS_PREPARING, MysteryBoxDelivery::STATUS_DELIVERED], true)) {
+            return back()->with('error', "Bu yetkazishni hozir tayyorlash mumkin emas.");
+        }
+
+        $subscription = $delivery->subscription;
+        if ($subscription && count($bookIds) !== (int) $subscription->books_per_month) {
+            return back()->with('error', "Aynan {$subscription->books_per_month} ta kitob tanlanishi kerak.");
+        }
+
+        $validBooksCount = \App\Models\Books::whereIn('id', $bookIds)
+            ->where('is_hidden', 0)
+            ->where('is_approved', 1)
+            ->count();
+
+        if ($validBooksCount !== count($bookIds)) {
+            return back()->with('error', 'Kiritilgan kitob IDlar orasida yaroqsizlari bor.');
+        }
+
+        $isDeliveredEdit = $delivery->status === MysteryBoxDelivery::STATUS_DELIVERED;
+
         $delivery->update([
             'book_ids'       => $bookIds,
-            'status'         => MysteryBoxDelivery::STATUS_PREPARING,
+            'status'         => $isDeliveredEdit ? MysteryBoxDelivery::STATUS_DELIVERED : MysteryBoxDelivery::STATUS_PREPARING,
             'tracking_note'  => $request->tracking_note,
-            'prepared_at'    => now(),
+            'prepared_at'    => $isDeliveredEdit ? $delivery->prepared_at : now(),
         ]);
 
-        return back()->with('success', 'Yetkazish tayyorlash bosqichiga o‘tkazildi.');
+        return back()->with('success', $isDeliveredEdit
+            ? 'Yetkazilgan oy tarkibi yangilandi.'
+            : 'Yetkazish tayyorlash bosqichiga o‘tkazildi.');
     }
 
     public function shipDelivery(Request $request, MysteryBoxDelivery $delivery)
     {
         $request->validate(['tracking_note' => 'nullable|string|max:500']);
+        if ($delivery->status !== MysteryBoxDelivery::STATUS_PREPARING) {
+            return back()->with('error', "Faqat tayyorlanayotgan yetkazishni jo'natish mumkin.");
+        }
         $delivery->update([
             'status'        => 'shipped',
             'tracking_note' => $request->tracking_note ?? $delivery->tracking_note,
@@ -186,6 +269,9 @@ class MysteryBoxController extends Controller
 
     public function deliverDelivery(MysteryBoxDelivery $delivery)
     {
+        if ($delivery->status !== MysteryBoxDelivery::STATUS_SHIPPED) {
+            return back()->with('error', "Faqat jo'natilgan yetkazishni yakunlash mumkin.");
+        }
         $sub = $delivery->subscription;
         DB::transaction(function () use ($delivery, $sub) {
             $delivery->update(['status' => 'delivered', 'delivered_at' => now()]);

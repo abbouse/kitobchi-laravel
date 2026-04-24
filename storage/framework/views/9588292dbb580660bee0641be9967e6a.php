@@ -1,2 +1,0 @@
-<div class="text-red-500 mx-2 my-1"><?php echo e($value); ?></div>
-<?php /**PATH /Users/abbos/PROJECTS/MY/kitobchi-server/kitobchi/vendor/nutgram/laravel/resources/views/terminal/fail.blade.php ENDPATH**/ ?>

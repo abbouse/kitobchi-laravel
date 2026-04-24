@@ -141,11 +141,13 @@ class BanLogController extends Controller
             $storeSellerId = $this->getStoreSellerId($seller);
             $unreadCount = SellerBanLog::getUnreadCount($storeSellerId);
             $warningCount = SellerBanLog::getWarningCount($storeSellerId);
+            $storeSeller = Seller::find($storeSellerId);
 
             return response()->json([
                 'success' => true,
                 'unread_count' => $unreadCount,
                 'warning_count' => $warningCount,
+                'is_blocked' => (bool) ($storeSeller?->status === 'blocked'),
             ], 200);
 
         } catch (\Exception $e) {

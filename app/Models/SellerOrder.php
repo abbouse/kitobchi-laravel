@@ -56,7 +56,6 @@ class SellerOrder extends Model
 
     public function items()
     {
-        return $this->hasMany(SellerOrderItem::class, 'order_id', 'order_id')
-            ->where('seller_id', $this->seller_id);
+        return $this->hasMany(SellerOrderItem::class, 'order_id', 'id');
     }
 }

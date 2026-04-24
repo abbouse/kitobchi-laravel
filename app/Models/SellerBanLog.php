@@ -10,6 +10,9 @@ class SellerBanLog extends Model
 {
     use HasFactory, Notifiable;
 
+    public const TYPE_WARNING = 'warning';
+    public const TYPE_UNBAN = 'unban';
+
     protected $table = 'seller_ban_logs';
 
     protected $fillable = [
@@ -62,10 +65,25 @@ class SellerBanLog extends Model
                   ->where('is_read', false)
                   ->count();
     }
+
+    public static function activeWarningsQuery($sellerId)
+    {
+        $lastUnbanAt = self::where('seller_id', $sellerId)
+            ->where('type', self::TYPE_UNBAN)
+            ->max('created_at');
+
+        return self::where('seller_id', $sellerId)
+            ->where('type', self::TYPE_WARNING)
+            ->when($lastUnbanAt, fn ($query) => $query->where('created_at', '>', $lastUnbanAt));
+    }
+
     public static function getWarningCount($sellerId)
     {
-        return self::where('seller_id', $sellerId)
-                  ->where('type', 'warning')
-                  ->count();
+        return self::activeWarningsQuery($sellerId)->count();
+    }
+
+    public static function hasReachedBlockThreshold($sellerId, int $threshold = 3): bool
+    {
+        return self::getWarningCount($sellerId) >= $threshold;
     }
 }

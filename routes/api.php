@@ -20,6 +20,8 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 // Autentifikatsiya yo'llari
 Route::post('auth', [AuthController::class, 'store']);
+Route::get('auth/telegram/config', [AuthController::class, 'telegramConfig']);
+Route::post('auth/telegram/login', [AuthController::class, 'telegramLogin']);
 Route::post('push-notify/send/keywbudcegvc36247c2bc012389ds', [PushController::class, 'sendPush']);
 Route::post('sendSms', [SendSmsController::class, 'sendSms'])->name('api.sendSms');
 Route::get('appversion/check', [ProjectSettingController::class, 'getVersions']);

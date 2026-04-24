@@ -206,6 +206,40 @@ class ProductsController extends Controller
             );
     }
 
+    private function productKey(int|string|null $id, string $type): string
+    {
+        return $type . '_' . $id;
+    }
+
+    private function appendProducts($result, $products)
+    {
+        return $result
+            ->merge($products)
+            ->unique(fn($p) => $this->productKey($p['id'] ?? null, $p['type'] ?? 'book'))
+            ->values();
+    }
+
+    private function resultIdsByType($result, string $type): array
+    {
+        return $result
+            ->filter(fn($item) => ($item['type'] ?? null) === $type)
+            ->pluck('id')
+            ->filter()
+            ->map(fn($id) => (int) $id)
+            ->values()
+            ->all();
+    }
+
+    private function premiumSellerScope($query)
+    {
+        return $query
+            ->where('isPremiumShop', true)
+            ->where(fn($q) => $q
+                ->whereNull('isPremiumExpiresAt')
+                ->orWhere('isPremiumExpiresAt', '>', now())
+            );
+    }
+
     // =========================================================================
     //  1. YANGI MAHSULOTLAR
     //  GET /products/{col}
@@ -338,95 +372,178 @@ class ProductsController extends Controller
     public function cartRecommendation(Request $request)
     {
         $user = Auth::guard('user')->user();
-        if (!$user) {
-            return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
+        $limit = max(12, min((int) $request->query('limit', 18), 24));
+
+        $cartBookCategoryIds = [];
+        $cartStationeryCategoryIds = [];
+        $cartBookIds = [];
+        $cartStationeryIds = [];
+
+        if ($user) {
+            $cartItems = MyCart::where('user_id', $user->id)
+                ->with(['product', 'variant'])
+                ->get();
+
+            $cartBookCategoryIds = $cartItems
+                ->where('product_type', 'book')
+                ->map(fn($item) => $item->product?->category_id)
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
+
+            $cartStationeryCategoryIds = $cartItems
+                ->where('product_type', 'stationery')
+                ->map(fn($item) => $item->product?->category_id)
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
+
+            $cartBookIds = $cartItems
+                ->where('product_type', 'book')
+                ->pluck('product_id')
+                ->filter()
+                ->map(fn($id) => (int) $id)
+                ->values()
+                ->all();
+
+            $cartStationeryIds = $cartItems
+                ->where('product_type', 'stationery')
+                ->pluck('product_id')
+                ->filter()
+                ->map(fn($id) => (int) $id)
+                ->values()
+                ->all();
         }
-
-        $cartItems = MyCart::where('user_id', $user->id)->with('product')->get();
-
-        $cartCategoryIds = $cartItems
-            ->map(fn($c) => $c->product?->category_id)
-            ->filter()->unique()->toArray();
-
-        $cartProductIds = $cartItems
-            ->map(fn($c) => $c->product_id)
-            ->filter()->toArray();
 
         $result = collect();
 
-        // ── A. Cartdagi kategoriyalarda recommended ───────────────
-        if (!empty($cartCategoryIds)) {
-            $simRecBooks = $this->isRecommended($this->bookScope())
-                ->whereIn('category_id', $cartCategoryIds)
-                ->whereNotIn('id', $cartProductIds)
+        $pushBooks = function ($query, int $take) use (&$result, $user, $limit, $cartBookIds) {
+            if ($result->count() >= $limit || $take <= 0) {
+                return;
+            }
+
+            $products = $query
+                ->whereNotIn('id', array_merge($cartBookIds, $this->resultIdsByType($result, 'book')))
                 ->with(['seller', 'category', 'tags'])
-                ->orderByDesc('totalSalesWeek')
-                ->limit(8)
+                ->limit($take)
                 ->get()
                 ->map(fn($b) => $this->formatProduct($b, $user, 'book'));
 
-            $result = $result->merge($simRecBooks);
+            $result = $this->appendProducts($result, $products);
+        };
+
+        $pushStationery = function ($query, int $take) use (&$result, $user, $limit, $cartStationeryIds) {
+            if ($result->count() >= $limit || $take <= 0) {
+                return;
+            }
+
+            $products = $query
+                ->whereNotIn('id', array_merge($cartStationeryIds, $this->resultIdsByType($result, 'stationery')))
+                ->with(['seller', 'category', 'tags', 'variants'])
+                ->limit($take)
+                ->get()
+                ->map(fn($s) => $this->formatProduct($s, $user, 'stationery'));
+
+            $result = $this->appendProducts($result, $products);
+        };
+
+        // 1. Recommended mahsulotlar
+        $pushBooks(
+            $this->isRecommended($this->bookScope())
+                ->orderByDesc('totalSalesWeek')
+                ->orderByDesc('totalSales'),
+            $limit
+        );
+        $pushStationery(
+            $this->isRecommended($this->stationeryScope())
+                ->orderByDesc('totalSalesWeek')
+                ->orderByDesc('totalSales'),
+            max(0, $limit - $result->count())
+        );
+
+        // 2. Premium do'kon mahsulotlari
+        if ($result->count() < $limit) {
+            $need = $limit - $result->count();
+            $pushBooks(
+                $this->bookScope()
+                    ->whereHas('seller', fn($q) => $this->premiumSellerScope($q))
+                    ->orderByDesc('recommended')
+                    ->orderByDesc('totalSalesWeek')
+                    ->orderByDesc('totalSales'),
+                $need
+            );
+            $pushStationery(
+                $this->stationeryScope()
+                    ->whereHas('seller', fn($q) => $this->premiumSellerScope($q))
+                    ->orderByDesc('recommended')
+                    ->orderByDesc('totalSalesWeek')
+                    ->orderByDesc('totalSales'),
+                max(0, $limit - $result->count())
+            );
         }
 
-        // ── B. Cartdagi kategoriyalar (recommended bo'lmasa ham) ──
-        if (!empty($cartCategoryIds)) {
-            $existIds = $result->pluck('id')->toArray();
+        // 3. Cart itemlarga o'xshash mahsulotlar
+        if ($result->count() < $limit && (!empty($cartBookCategoryIds) || !empty($cartStationeryCategoryIds))) {
+            if (!empty($cartBookCategoryIds)) {
+                $pushBooks(
+                    $this->bookScope()
+                        ->whereIn('category_id', $cartBookCategoryIds)
+                        ->orderByDesc('recommended')
+                        ->orderByDesc('totalSalesWeek')
+                        ->orderByDesc('totalSales'),
+                    $limit - $result->count()
+                );
+            }
 
-            $similarBooks = $this->bookScope()
-                ->whereIn('category_id', $cartCategoryIds)
-                ->whereNotIn('id', array_merge($cartProductIds, $existIds))
-                ->with(['seller', 'category', 'tags'])
-                ->orderByDesc('totalSalesWeek')
-                ->limit(10)
-                ->get()
-                ->map(fn($b) => $this->formatProduct($b, $user, 'book'));
-
-            $result = $result->merge($similarBooks);
+            if (!empty($cartStationeryCategoryIds)) {
+                $pushStationery(
+                    $this->stationeryScope()
+                        ->whereIn('category_id', $cartStationeryCategoryIds)
+                        ->orderByDesc('recommended')
+                        ->orderByDesc('totalSalesWeek')
+                        ->orderByDesc('totalSales'),
+                    max(0, $limit - $result->count())
+                );
+            }
         }
 
-        // ── C. Faol chegirmadagi mahsulotlar ──────────────────────
-        $existIds = $result->pluck('id')->toArray();
+        // 4. Statistikasi yuqori trenddagi mahsulotlar
+        if ($result->count() < $limit) {
+            $pushBooks(
+                $this->bookScope()
+                    ->orderByDesc('totalSalesWeek')
+                    ->orderByDesc('totalSales')
+                    ->orderByDesc('views'),
+                $limit - $result->count()
+            );
+            $pushStationery(
+                $this->stationeryScope()
+                    ->orderByDesc('totalSalesWeek')
+                    ->orderByDesc('totalSales')
+                    ->orderByDesc('views'),
+                max(0, $limit - $result->count())
+            );
+        }
 
-        $discountBooks = $this->hasActiveDiscount($this->bookScope(), true)
-            ->whereNotIn('id', array_merge($cartProductIds, $existIds))
-            ->with(['seller', 'category', 'tags'])
-            ->orderByDesc('totalSalesWeek')
-            ->limit(8)
-            ->get()
-            ->map(fn($b) => $this->formatProduct($b, $user, 'book'));
-
-        $discountStats = $this->hasActiveDiscount($this->stationeryScope(), false)
-            ->whereNotIn('id', $existIds)
-            ->with(['seller', 'category', 'tags', 'variants'])
-            ->orderByDesc('totalSalesWeek')
-            ->limit(6)
-            ->get()
-            ->map(fn($s) => $this->formatProduct($s, $user, 'stationery'));
-
-        $result = $result->merge($discountBooks)->merge($discountStats);
-
-        // ── D. Haftalik eng ko'p sotilgan (yetmasa) ───────────────
-        if ($result->count() < 20) {
-            $existIds = $result->pluck('id')->toArray();
-
-            $trendBooks = $this->bookScope()
-                ->whereNotIn('id', array_merge($cartProductIds, $existIds))
-                ->with(['seller', 'category', 'tags'])
-                ->orderByDesc('totalSalesWeek')
-                ->limit(20 - $result->count())
-                ->get()
-                ->map(fn($b) => $this->formatProduct($b, $user, 'book'));
-
-            $result = $result->merge($trendBooks);
+        // 5. Yetmasa random fallback
+        if ($result->count() < $limit) {
+            $pushBooks(
+                $this->bookScope()
+                    ->inRandomOrder(),
+                $limit - $result->count()
+            );
+            $pushStationery(
+                $this->stationeryScope()
+                    ->inRandomOrder(),
+                max(0, $limit - $result->count())
+            );
         }
 
         return response()->json([
             'status' => 'success',
-            'data'   => $result
-                ->unique(fn($p) => $p['type'].'_'.$p['id'])
-                ->shuffle()
-                ->take(20)
-                ->values(),
+            'data' => $result->take($limit)->values(),
         ]);
     }
 

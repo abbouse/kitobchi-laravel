@@ -3,14 +3,23 @@
 namespace App\Http\Controllers\Api\Courier;
 
 use App\Http\Controllers\Controller;
+use App\Services\PasswordResetService;
+use App\Services\SmsService;
 use Illuminate\Http\Request;
 use App\Models\Couriers;
 use App\Models\ConnectedDevice;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 
 class CourierAuthController extends Controller
 {
+    public function __construct(
+        private readonly SmsService $smsService,
+        private readonly PasswordResetService $passwordResetService
+    ) {
+    }
+
     public function auth(Request $request)
     {
         $request->validate([
@@ -111,6 +120,59 @@ class CourierAuthController extends Controller
         'message' => "So‘rov muvaffaqiyatli yuborildi",
     ], 201);
 }
+
+    public function forgot(Request $request)
+    {
+        $request->validate([
+            'phone_number' => 'required|string',
+        ]);
+
+        $cleanedPhone = preg_replace('/[\s\(\)-]/', '', $request->phone_number);
+        $courier = Couriers::where('phone_number', $cleanedPhone)->first();
+
+        if (!$courier) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Telefon raqami topilmadi.',
+            ], 404);
+        }
+
+        if ($courier->status !== 'approved') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Bunday kuryer topilmadi yoki hisob faol emas.',
+            ], 403);
+        }
+
+        try {
+            $this->passwordResetService->ensureHasAttempts($courier);
+        } catch (RuntimeException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 429);
+        }
+
+        try {
+            $newPassword = $this->passwordResetService->generatePassword();
+            $this->smsService->send(
+                $courier->phone_number,
+                "Kitobchi Express: sizning yangi parolingiz — {$newPassword}"
+            );
+            $remaining = $this->passwordResetService->applyNewPassword($courier, $newPassword);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Yangi parol telefon raqamiga SMS tarzida yuborildi.',
+                'remaining_attempts' => $remaining,
+            ], 200);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Parolni tiklashda xatolik yuz berdi. Iltimos, keyinroq qayta urinib ko‘ring.',
+            ], 503);
+        }
+    }
 
     public function logout(Request $request)
     {

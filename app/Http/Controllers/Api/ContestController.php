@@ -12,6 +12,24 @@ use Carbon\Carbon;
 
 class ContestController extends Controller
 {
+    private function success(array $payload = [], int $status = 200)
+    {
+        return response()->json(array_merge([
+            'status' => 'success',
+            'ok' => true,
+        ], $payload), $status);
+    }
+
+    private function error(string $message, int $status = 400)
+    {
+        return response()->json([
+            'status' => 'error',
+            'ok' => false,
+            'message' => $message,
+            'error' => $message,
+        ], $status);
+    }
+
     public function getContest(Request $request, $sellerId)
     {
         $user = Auth::guard('user')->user();
@@ -21,7 +39,7 @@ class ContestController extends Controller
             ->first();
 
         if (!$contest) {
-            return response()->json(['status' => 'error', 'message' => 'Tanlov topilmadi'], 201);
+            return $this->error('Tanlov topilmadi', 404);
         }
 
         $contestParticipant = null;
@@ -45,21 +63,21 @@ class ContestController extends Controller
             'is_me_joined' => $contestParticipant ? true : false
         ];
 
-        return response()->json(['status' => 'success', 'data' => [$data]], 201);
+        return $this->success(['data' => [$data]]);
     }
 
     public function joinToContest(Request $request, SellerContest $contest)
     {
         $user = Auth::guard('user')->user();
         if (!$user) {
-        return response()->json(['status' => 'error', 'message' => 'Autentifikatsiya xatosi'], 401);
-    }
+            return $this->error('Autentifikatsiya xatosi', 401);
+        }
         if (!$contest) {
-            return response()->json(['status' => 'error', 'message' => 'Tanlov topilmadi'], 201);
+            return $this->error('Tanlov topilmadi', 404);
         }
 
         if ($contest->status == 'ended' || $contest->status == 'pending' || optional($contest->end_date)->isPast()) {
-            return response()->json(['status' => 'error', 'message' => 'Tanlov tugagan'], 201);
+            return $this->error('Tanlov tugagan', 400);
         }
 
         $contestParticipant = SellerContestParticipant::where('seller_contest_id', $contest->id)
@@ -67,24 +85,21 @@ class ContestController extends Controller
             ->first();
 
         if ($contestParticipant) {
-            return response()->json(['status' => 'error', 'message' => 'Siz allaqachon ishtirok etgansiz'], 201);
-        }else{
-$contestParticipant = new SellerContestParticipant();
-$contestParticipant->seller_contest_id = $contest->id;
-$contestParticipant->participant_id = $user->id;
-$contestParticipant->save();
+            return $this->error('Siz allaqachon ishtirok etgansiz', 400);
+        } else {
+            $contestParticipant = new SellerContestParticipant();
+            $contestParticipant->seller_contest_id = $contest->id;
+            $contestParticipant->participant_id = $user->id;
+            $contestParticipant->save();
         }
-        return response()->json(['status' => 'success', 'message' => 'Muvaffaqiyatli ishtirok etdingiz'], 201);
+        return $this->success(['message' => 'Muvaffaqiyatli ishtirok etdingiz']);
     }
     
     public function getUserContests(Request $request)
 {
     $user = Auth::guard('user')->user();
     if (!$user) {
-        return response()->json([
-            'status' => 'error',
-            'message' => 'Autentifikatsiya xatosi'
-        ], 401);
+        return $this->error('Autentifikatsiya xatosi', 401);
     }
     $participatedContests = SellerContestParticipant::where('participant_id', $user->id)
         ->with(['contest' => function($q) {
@@ -93,11 +108,10 @@ $contestParticipant->save();
         ->latest()
         ->get();
     if ($participatedContests->isEmpty()) {
-        return response()->json([
-            'status' => 'success',
+        return $this->success([
             'data' => [],
             'message' => 'Siz hali hech qanday tanlovda ishtirok etmagansiz'
-        ], 201);
+        ]);
     }
     $data = $participatedContests->map(function($participant) {
         $contest = $participant->contest;
@@ -134,9 +148,6 @@ $contestParticipant->save();
             'seller_shop_name' => $contest->seller->shop_name ?? null,
         ];
     })->filter()->values();
-    return response()->json([
-        'status' => 'success',
-        'data' => $data
-    ], 201);
+    return $this->success(['data' => $data]);
 }
 }

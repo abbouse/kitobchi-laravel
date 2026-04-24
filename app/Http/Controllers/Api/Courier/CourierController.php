@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Courier;
 
 use App\Http\Controllers\Controller;
 use App\Models\CourierNotification;
+use App\Services\PasswordResetService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
@@ -12,6 +13,9 @@ use Illuminate\Support\Str;
 
 class CourierController extends Controller
 {
+    public function __construct(private readonly PasswordResetService $passwordResetService)
+    {
+    }
     
     public function getDevices(Request $request)
     {
@@ -166,22 +170,24 @@ class CourierController extends Controller
         if (!$courier) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
-        if ($courier->password_reset_limit <= 0) {
+
+        try {
+            $this->passwordResetService->ensureHasAttempts($courier);
+        } catch (\RuntimeException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Xatolik, 1 oyda faqat 3 marotaba parol yangilash mumkin!'
-            ], 403);
+                'message' => $e->getMessage()
+            ], 429);
         }
-        $randomPassword = Str::random(12);
+
+        $randomPassword = $this->passwordResetService->generatePassword(12);
         try {
-            $courier->update([
-                'password' => bcrypt($randomPassword),
-                'password_reset_limit' => $courier->password_reset_limit - 1
-            ]);
+            $remaining = $this->passwordResetService->applyNewPassword($courier, $randomPassword);
             return response()->json([
                 'success' => true,
                 'message' => 'Parol muvaffaqiyatli yangilandi',
-                'new_password' => $randomPassword
+                'new_password' => $randomPassword,
+                'remaining_attempts' => $remaining,
             ], 200);
         } catch (\Exception $e) {
             Log::error('Parolni yangilashda xato', ['courier_id' => $courier->id, 'error' => $e->getMessage()]);

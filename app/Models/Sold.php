@@ -16,6 +16,7 @@ class Sold extends Model
         'gift_certificate_id', 'giftCertAmount',
         'buyerWish', 'promocode', 'discountAmount',
         'withCashback', 'cashbackAmount',
+        'awarded_cashback_amount', 'cashback_awarded_at',
         'deliveryPrice', 'paymentStatus',
         // ── Packaging ─────────────────────────────────────────
         'with_packaging',
@@ -32,6 +33,7 @@ class Sold extends Model
         'address'         => 'array',
         'items'           => 'array',
         'withCashback'    => 'boolean',
+        'cashback_awarded_at' => 'datetime',
         'with_packaging'  => 'boolean',
         'is_gift_to_other'=> 'boolean',
         'packaging_price' => 'integer',

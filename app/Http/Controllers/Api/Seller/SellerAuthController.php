@@ -4,14 +4,24 @@ namespace App\Http\Controllers\Api\Seller;
 
 use App\Http\Controllers\Controller;
 use App\Models\Seller;
+use App\Services\PasswordResetService;
+use App\Services\SmsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Hash;
+use RuntimeException;
 
 class SellerAuthController extends Controller
 {
+    public function __construct(
+        private readonly SmsService $smsService,
+        private readonly PasswordResetService $passwordResetService
+    ) {
+    }
+
     public function register(Request $request)
     {
         $phone_number = $request->input('phone_number');
@@ -63,7 +73,7 @@ class SellerAuthController extends Controller
             'status' => 'pending',
             'role' => 1, // ✅ OWNER = Admin role
             'parent_id' => 0, // ✅ OWNER
-            'password' => Hash::make(rand(111111,999999))
+            'password' => (string) Str::random(10),
         ]);
 
         return response()->json([
@@ -96,6 +106,10 @@ class SellerAuthController extends Controller
 
         $cleaned_phone = preg_replace('/[\s\(\)-]/', '', $request->phone_number);
         $seller = Seller::where('phone_number', $cleaned_phone)->first();
+
+        if ($seller && $seller->status === 'blocked') {
+            return response()->json(['message' => 'Profilingiz admin tomonidan bloklangan. Qo‘llab-quvvatlash bilan bog‘laning.'], 200);
+        }
 
         if (!$seller || $seller->status != 'approved' || !Hash::check($request->password, $seller->password)) {
             return response()->json(['message' => 'Login yoki parol xato yoki profilingiz faol emas'], 200);
@@ -157,21 +171,61 @@ class SellerAuthController extends Controller
 
     public function forgot(Request $request)
     {
+        $request->validate([
+            'phone_number' => 'required|string',
+        ]);
+
         $cleaned_phone = preg_replace('/[\s\(\)-]/', '', $request->phone_number);
         $seller = Seller::where('phone_number', $cleaned_phone)->first();
         
         if (!$seller) {
-            return response()->json(['message' => 'Telefon raqami topilmadi.'], 200);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Telefon raqami topilmadi.',
+            ], 404);
+        }
+
+        if ($seller->status === 'blocked') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Profil admin tomonidan bloklangan. Parolni tiklash mumkin emas.',
+            ], 403);
         }
         
         if ($seller->status !== 'approved') {
-            return response()->json(['message' => 'Bunday foydalanuvchi topilmadi'], 200);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Bunday foydalanuvchi topilmadi',
+            ], 403);
         }
 
-        // ✅ SMS YUBORISH LOGIKASI (keyinroq qo'shiladi)
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Yangi parol telefon raqamiga SMS tarzida yuborildi.',
-        ]);
+        try {
+            $this->passwordResetService->ensureHasAttempts($seller);
+        } catch (RuntimeException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 429);
+        }
+
+        try {
+            $newPassword = $this->passwordResetService->generatePassword();
+            $this->smsService->send(
+                $seller->phone_number,
+                "Kitobchi Business: sizning yangi parolingiz — {$newPassword}"
+            );
+            $remaining = $this->passwordResetService->applyNewPassword($seller, $newPassword);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Yangi parol telefon raqamiga SMS tarzida yuborildi.',
+                'remaining_attempts' => $remaining,
+            ], 200);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Parolni tiklashda xatolik yuz berdi. Iltimos, keyinroq qayta urinib ko‘ring.',
+            ], 503);
+        }
     }
 }

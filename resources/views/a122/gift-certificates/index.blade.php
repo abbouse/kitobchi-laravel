@@ -22,7 +22,7 @@
 <div class="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-4">
   @foreach([
     ['Jami',        $counts['all'],             'accent',  'bi-gift'],
-    ['Yuborilgan',  $counts['sent'],             'info',    'bi-send'],
+    ['Faol',        $counts['active'],          'info',    'bi-send'],
     ['Ishlatilgan', $counts['used'],             'success', 'bi-check-circle'],
     ['Bekor',       $counts['cancelled'],        'danger',  'bi-x-circle'],
   ] as [$l,$v,$c,$i])
@@ -49,7 +49,7 @@
   @foreach([
     'all'             => ['Barchasi',        $counts['all']],
     'pending_payment' => ['Kutilmoqda',       $counts['pending_payment']],
-    'sent'            => ['Yuborilgan',       $counts['sent']],
+    'active'          => ['Faol',             $counts['active']],
     'used'            => ['Ishlatilgan',      $counts['used']],
     'cancelled'       => ['Bekor qilingan',   $counts['cancelled']],
   ] as $k => [$l, $c])
@@ -82,7 +82,7 @@
             'active'           => 'success',
             'used'             => 'muted',
             'paid'             => 'info',
-            'sent'             => 'accent',
+            'sent'             => 'success',
             'cancelled'        => 'danger',
             'payment_cancelled'=> 'danger',
             'pending_payment'  => 'warning',
@@ -92,7 +92,7 @@
             'pending_payment'  => "To'lov kutilmoqda",
             'paid'             => "To'landi",
             'active'           => 'Faol',
-            'sent'             => 'Yuborildi',
+            'sent'             => 'Faol',
             'used'             => 'Ishlatildi',
             'cancelled'        => 'Bekor qilindi',
             'payment_cancelled'=> "To'lovsiz bekor",
@@ -161,7 +161,7 @@
               <form method="POST"
                     action="{{ route('admin.gift-certificates.cancel',$c) }}"
                     onsubmit="return confirm('Bekor qilinsinmi?')">
-                @csrf @method('PATCH')
+                @csrf
                 <button class="btn-p danger sm"><i class="bi bi-x-lg"></i></button>
               </form>
               @endif

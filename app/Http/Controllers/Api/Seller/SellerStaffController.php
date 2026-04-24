@@ -5,17 +5,17 @@ namespace App\Http\Controllers\Api\Seller;
 use App\Http\Controllers\Controller;
 use App\Models\Seller;
 use App\Models\SellerStaffLog;
+use App\Services\SmsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Http;
 
 class SellerStaffController extends Controller
 {
-    public function __construct()
+    public function __construct(private readonly SmsService $smsService)
     {
         $this->middleware('auth:seller');
     }
@@ -322,13 +322,13 @@ class SellerStaffController extends Controller
 
         try {
             $verifyCode = Str::random(8);
+            $this->smsService->send(
+                $staff->phone_number,
+                "Kitobchi Business: sizning yangi parolingiz — $verifyCode"
+            );
             $staff->update([
                 'password' => $verifyCode,
                 'password_reset_limit' => $staff->password_reset_limit - 1,
-            ]);
-            Http::post(route('api.sendSms'), [
-                'phone' => $staff->phone_number,
-                'msg' => "Kitobchi Business: sizning yangi parolingiz — $verifyCode",
             ]);
             SellerStaffLog::create([
                 'seller_staff_id' => $staff->id,

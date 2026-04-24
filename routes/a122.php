@@ -166,6 +166,9 @@ Route::prefix('a122')->name('admin.')->group(function () {
         Route::get('/{seller}',      [SellerController::class, 'show'])->name('show');
         Route::get('/{seller}/edit', [SellerController::class, 'edit'])->name('edit');
         Route::put('/{seller}',      [SellerController::class, 'update'])->name('update');
+        Route::post('/{seller}/reset-password', [SellerController::class, 'resetPassword'])->name('reset-password');
+        Route::post('/{seller}/warn', [SellerController::class, 'warn'])->name('warn');
+        Route::patch('/{seller}/unblock', [SellerController::class, 'unblock'])->name('unblock');
         Route::patch('/{seller}/approve', [SellerController::class, 'approve'])->name('approve');
         Route::patch('/{seller}/reject',  [SellerController::class, 'reject'])->name('reject');
     });
@@ -186,6 +189,7 @@ Route::prefix('a122')->name('admin.')->group(function () {
         Route::get('/{courier}',     [CourierController::class, 'show'])->name('show');
         Route::get('/{courier}/edit', [CourierController::class, 'edit'])->name('edit');
         Route::put('/{courier}',     [CourierController::class, 'update'])->name('update');
+        Route::post('/{courier}/reset-password', [CourierController::class, 'resetPassword'])->name('reset-password');
         Route::patch('/{courier}/approve', [CourierController::class, 'approve'])->name('approve');
         Route::patch('/{courier}/reject',  [CourierController::class, 'reject'])->name('reject');
         Route::delete('/{courier}',  [CourierController::class, 'destroy'])->name('destroy');
@@ -227,6 +231,7 @@ Route::prefix('a122')->name('admin.')->group(function () {
     // ── Mystery Box ────────────────────────────────────────────────
     Route::prefix('mystery-box')->name('mystery-box.')->group(function () {
         Route::get('/',                                  [MysteryBoxController::class, 'index'])->name('index');
+        Route::get('/books/search',                      [MysteryBoxController::class, 'searchBooks'])->name('books.search');
         Route::get('/subscriptions',                     [MysteryBoxController::class, 'subscriptions'])->name('subscriptions');
         Route::get('/plans',                             [MysteryBoxController::class, 'plans'])->name('plans');
         Route::post('/plans',                            [MysteryBoxController::class, 'storePlan'])->name('plans.store');
@@ -361,6 +366,9 @@ Route::prefix('a122')->name('admin.')->group(function () {
             Route::post('/delivery',                           [SettingsController::class, 'storeDelivery'])->name('delivery.store');
             Route::put('/delivery/{deliveryService}',          [SettingsController::class, 'updateDelivery'])->name('delivery.update');
             Route::delete('/delivery/{deliveryService}',       [SettingsController::class, 'destroyDelivery'])->name('delivery.destroy');
+            Route::put('/contacts',                            [SettingsController::class, 'updateContacts'])->name('contacts');
+            Route::put('/app-flags',                           [SettingsController::class, 'updateAppFlags'])->name('app-flags');
+            Route::put('/telegram',                            [SettingsController::class, 'updateTelegram'])->name('telegram');
         });
     });
 });

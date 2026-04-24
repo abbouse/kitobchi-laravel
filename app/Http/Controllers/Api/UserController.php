@@ -12,11 +12,13 @@ use App\Models\UserCard;
 use App\Models\BookClubNotification;
 use App\Models\Conversation;
 use App\Models\Books;
-use App\Models\Stationery;          // ← qo'shildi
+use App\Models\Stationery;
 use App\Models\FavouriteProducts;
 use App\Models\FcmNotifications;
 use App\Models\DeliveryService;
+use App\Models\ProjectSetting;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
@@ -570,8 +572,9 @@ class UserController extends Controller
 
     public function getGlobalCounts(Request $request)
     {
-        $user                = Auth::guard('user')->user();
-        $packagingPrice = 25000;
+        $user   = Auth::guard('user')->user();
+        $cfg    = Cache::remember('project_settings', 300, fn() => ProjectSetting::first());
+
         $personalUnread      = 0;
         $shopUnread          = 0;
         $unreadNotifications = 0;
@@ -583,6 +586,8 @@ class UserController extends Controller
         $giftCertsCount      = 0;
         $giftCertsTotal      = 0;
         $mysteryBoxData      = null;
+
+        $bookItemCount = 0;
 
         if ($user) {
             $personalUnread = Conversation::where('type', 'personal')
@@ -616,31 +621,46 @@ class UserController extends Controller
             $giftCertsCount = $certsQuery->count();
             $giftCertsTotal = (int) $certsQuery->sum('nominal_uzs');
 
-            $sub = \App\Models\MysteryBoxSubscription::where('user_id', $user->id)
-                ->whereIn('status', [
-                    'active','paused',
-                ])
-                ->with('plan:id,name_uz,books_per_month')
-                ->orderByRaw("FIELD(status, 'active', 'paused', 'pending_payment')")
-                ->first();
+            try {
+                $sub = \App\Models\MysteryBoxSubscription::where('user_id', $user->id)
+                    ->whereIn('status', [
+                        'active', 'paused',
+                    ])
+                    ->with('plan:id,name_uz,books_per_month')
+                    ->orderByRaw("FIELD(status, 'active', 'paused', 'pending_payment')")
+                    ->first();
 
-            if ($sub) {
-                $addr = $sub->address;
-                $mysteryBoxData = [
-                    'subscription_id'  => $sub->id,
-                    'status'           => $sub->status,
-                    'plan_name'        => $sub->plan?->name_uz ?? '',
-                    'total_months'     => (int) $sub->total_months,
-                    'delivered_months' => (int) $sub->delivered_months,
-                    'books_per_month'  => (int) $sub->books_per_month,
-                    'next_delivery_at' => $sub->next_delivery_at?->format('d.m.Y'),
-                    'ends_at'          => $sub->ends_at?->format('d.m.Y'),
-                    'has_address'      => !empty($addr['fullAddress'] ?? null),
-                ];
+                if ($sub) {
+                    $addr = is_array($sub->address) ? $sub->address : [];
+                    $mysteryBoxData = [
+                        'subscription_id'  => (int) $sub->id,
+                        'status'           => $sub->status,
+                        'plan_name'        => $sub->plan?->name_uz ?? '',
+                        'total_months'     => (int) ($sub->total_months ?? 0),
+                        'delivered_months' => (int) ($sub->delivered_months ?? 0),
+                        'books_per_month'  => (int) ($sub->books_per_month ?? 0),
+                        'next_delivery_at' => optional($sub->next_delivery_at)?->format('d.m.Y'),
+                        'ends_at'          => optional($sub->ends_at)?->format('d.m.Y'),
+                        'has_address'      => !empty($addr['fullAddress'] ?? null),
+                    ];
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Global counts mystery box block failed', [
+                    'user_id' => $user->id,
+                    'error' => $e->getMessage(),
+                ]);
+                $mysteryBoxData = null;
             }
+
+            $bookItemCount = MyCart::where('user_id', $user->id)
+                ->where('product_type', 'book')
+                ->sum('count_item');
         }
-        $bookItemCount  = MyCart::where('user_id', $user->id)->where('product_type', 'book')->sum('count_item');
-    $packagingPrice = $bookItemCount >= 4 ? 40000 : 25000;
+
+        $threshold      = (int) ($cfg?->packaging_threshold   ?? 4);
+        $priceSmall     = (int) ($cfg?->packaging_price_small ?? 25000);
+        $priceLarge     = (int) ($cfg?->packaging_price_large ?? 40000);
+        $packagingPrice = $bookItemCount >= $threshold ? $priceLarge : $priceSmall;
 
         return response()->json([
             'status' => 'success',
@@ -658,12 +678,12 @@ class UserController extends Controller
                 'mystery_box'              => $mysteryBoxData,
                 'isVerified'               => $user ? (bool) $user->isVerified : false,
                 'isSupport'                => $user ? (bool) $user->isSupport  : false,
-                'onPremium'                => false,
-                'onReels'                  => false,
-                'ramadan'                  => false,
+                'onPremium'                => (bool) ($cfg?->on_premium  ?? false),
+                'onReels'                  => (bool) ($cfg?->on_reels    ?? false),
+                'ramadan'                  => (bool) ($cfg?->ramadan     ?? false),
                 'data_required'            => $user ? (bool) $user->firstEdit  : false,
-                'stopSales'                => false,
-                'packaging_price'           => $packagingPrice,
+                'stopSales'                => (bool) ($cfg?->stop_sales  ?? false),
+                'packaging_price'          => $packagingPrice,
             ],
         ]);
     }

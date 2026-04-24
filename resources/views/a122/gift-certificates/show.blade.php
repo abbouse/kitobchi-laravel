@@ -13,7 +13,7 @@
   <x-slot name="meta">
     <p class="page-sub">
       Yaratildi: {{ $giftCertificate->created_at?->format('d.m.Y H:i') }}
-      @if($giftCertificate->expires_at && $giftCertificate->status === 'sent')
+      @if($giftCertificate->expires_at && $giftCertificate->status === 'active')
         · <span style="color:{{ $giftCertificate->is_expired ? 'var(--p-danger)' : 'var(--p-warning)' }}">
           Muddati: {{ $giftCertificate->expires_at->format('d.m.Y') }}
           ({{ $giftCertificate->expires_at->diffForHumans() }})
@@ -34,7 +34,7 @@
           @foreach([
             'pending_payment' => 'To\'lov kutilmoqda',
             'paid'            => 'To\'landi',
-            'sent'            => 'Yuborildi',
+            'active'          => 'Faollashtirildi',
             'used'            => 'Ishlatildi',
             'cancelled'       => 'Bekor qilindi',
           ] as $val => $lbl)
@@ -58,7 +58,7 @@
       <form method="POST"
             action="{{ route('admin.gift-certificates.cancel', $giftCertificate) }}"
             onsubmit="return confirm('Bekor qilinsinmi?')">
-        @csrf @method('PATCH')
+        @csrf
         <button class="btn-p danger ghost">
           <i class="bi bi-x-lg"></i> Bekor qilish
         </button>
@@ -250,7 +250,7 @@
               @endforeach
               @endif
 
-              @if($giftCertificate->status === 'sent' && $giftCertificate->expires_at)
+              @if($giftCertificate->status === 'active' && $giftCertificate->expires_at)
               <div style="padding:10px;background:{{ $giftCertificate->is_expired ? 'var(--p-danger-d)' : 'var(--p-warning-d)' }};
                           border-radius:7px;font-size:12px;
                           color:{{ $giftCertificate->is_expired ? 'var(--p-danger)' : 'var(--p-warning)' }}">

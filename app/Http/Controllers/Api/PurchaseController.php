@@ -19,6 +19,7 @@ use App\Models\Books;
 use App\Models\Stationery;
 use App\Models\StationeryVariant;
 use App\Services\OrderService;
+use App\Services\CashbackHistoryService;
 use App\Models\GiftCertificate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -29,7 +30,10 @@ use Carbon\Carbon;
 
 class PurchaseController extends Controller
 {
-    public function __construct(private readonly OrderService $orderService) {}
+    public function __construct(
+        private readonly OrderService $orderService,
+        private readonly CashbackHistoryService $cashbackHistoryService,
+    ) {}
 
     // ── Xatolik response ──────────────────────────────────────
     private function err(string $msg, int $code = 400)
@@ -514,6 +518,18 @@ class PurchaseController extends Controller
                 'recipient_address'   => $request->input('recipient_address'),
             ]);
 
+            if ($cashbackUsed > 0) {
+                $balanceAfter = (int) DB::table('users')->where('id', $user->id)->value('cashback');
+                $this->cashbackHistoryService->record(
+                    userId: $user->id,
+                    action: 'spent',
+                    amount: -$cashbackUsed,
+                    order: $purchase,
+                    balanceBefore: $balanceAfter + $cashbackUsed,
+                    balanceAfter: $balanceAfter,
+                );
+            }
+
             // ── Seller orderlar ───────────────────────────────────
             foreach ($groupedBySeller as $sellerId => $items) {
                 $sellerAmount = 0;
@@ -620,9 +636,13 @@ class PurchaseController extends Controller
                 $appliedCert->useInPurchase((int)$certDiscount);
             }
 
-            // ── Naqd to'lov ───────────────────────────────────────
+            // ── Naqd to'lov — seller/courier orderlarni activate qilish ─
+            // handleOrderPaid chaqirilmaydi: paymentStatus=0 qolsin,
+            // mijoz hali to'lamagan (naqd yetkazilganda to'laydi).
+            // Bekor qilish imkoni saqlanib qoladi.
             if ($request->paymentStatus == 0) {
-                $this->orderService->handleOrderPaid($purchase, $user, giveCashback: false);
+                SellerOrder::where('order_id', $purchase->id)->update(['status' => 1]);
+                CourierOrder::where('order_id', $purchase->id)->update(['status' => 'pending']);
             }
 
             // ── Faqat tanlangan cart itemlarni o'chirish ──────────
@@ -662,12 +682,54 @@ class PurchaseController extends Controller
         if (!$user) return $this->err('Foydalanuvchi topilmadi!', 401);
 
         $order = Sold::where('id', $orderId)->where('user_id', $user->id)->first();
-        if (!$order) return $this->err('cancel_order_error', 404);
+        if (!$order) return $this->err('Buyurtma topilmadi!', 404);
 
         $result = $this->orderService->cancelOrder($order, strict: true);
         if (!$result['ok']) return $this->err($result['message'], 400);
 
         return response()->json(['status' => 'success', 'message' => $result['message']]);
+    }
+
+    public function cashbackHistory(Request $request)
+    {
+        $user = Auth::guard('user')->user();
+        if (!$user) return $this->err('Foydalanuvchi topilmadi!', 401);
+
+        $perPage = min(max((int) $request->query('per_page', 20), 1), 50);
+
+        $history = \App\Models\CashbackHistory::query()
+            ->where('user_id', $user->id)
+            ->with(['order:id,qr,status,amount'])
+            ->latest()
+            ->paginate($perPage);
+
+        return response()->json([
+            'status' => 'success',
+            'balance' => (int) ($user->cashback ?? 0),
+            'data' => $history->getCollection()->map(function ($item) {
+                return [
+                    'id' => $item->id,
+                    'action' => $item->action,
+                    'amount' => (int) $item->amount,
+                    'balance_before' => (int) $item->balance_before,
+                    'balance_after' => (int) $item->balance_after,
+                    'order' => $item->order ? [
+                        'id' => $item->order->id,
+                        'qr' => $item->order->qr,
+                        'status' => $item->order->status,
+                        'amount' => (int) $item->order->amount,
+                    ] : null,
+                    'meta' => $item->meta,
+                    'created_at' => optional($item->created_at)?->toIso8601String(),
+                ];
+            })->values(),
+            'meta' => [
+                'current_page' => $history->currentPage(),
+                'last_page' => $history->lastPage(),
+                'per_page' => $history->perPage(),
+                'total' => $history->total(),
+            ],
+        ]);
     }
 
     // =========================================================================

@@ -12,6 +12,24 @@ class CardController extends Controller
 {
     protected $payme;
 
+    private function success(array $payload = [], int $status = 200)
+    {
+        return response()->json(array_merge([
+            'status' => 'success',
+            'ok' => true,
+        ], $payload), $status);
+    }
+
+    private function error(string $message, int $status = 400, array $extra = [])
+    {
+        return response()->json(array_merge([
+            'status' => 'error',
+            'ok' => false,
+            'message' => $message,
+            'error' => $message,
+        ], $extra), $status);
+    }
+
     public function __construct(PaymeService $payme)
     {
         $this->payme = $payme;
@@ -24,54 +42,54 @@ class CardController extends Controller
     {
         $request->validate([
             'number' => 'required|string|size:16',
-            'expire' => 'required|string|size:4', // MMYY formatida, masalan: 0528
+            'expire' => 'required|string|size:4',
         ]);
 
         $user = $request->user();
+        if (!$user) {
+            return $this->error('Unauthorized', 401);
+        }
 
-        // Payme-ga karta yaratish so'rovini yuborish
         $response = $this->payme->request('cards.create', [
             'card' => [
                 'number' => $request->number,
                 'expire' => $request->expire,
             ],
-            'save' => true, // Recurrent to'lovlar uchun tokenni saqlash
+            'save' => true,
         ]);
 
         if (isset($response['error'])) {
-            return response()->json([
-                'ok' => false,
-                'message' => $response['error']['message'] ?? 'Payme xatoligi',
+            return $this->error(
+                $response['error']['message'] ?? 'Payme xatoligi',
+                400,
+                [
                 'error_code' => $response['error']['code'] ?? null
-            ], 400);
+                ]
+            );
         }
 
         $cardData = $response['result']['card'];
 
-        // Bazada ushbu karta mavjudligini tekshiramiz (agar avval qo'shilgan bo'lsa)
-        // Tokenni yangilab qo'yamiz yoki yangi karta ochamiz
         $card = UserCard::updateOrCreate(
             ['card_number' => $cardData['number'], 'user_id' => $user->id],
             [
                 'payme_token' => $cardData['token'],
-                'is_verified' => false, // Hali SMS tasdiqlanmagan
+                'is_verified' => false,
             ]
         );
 
-        // Karta yaratilgach, darhol SMS kod yuboramiz
         $verifyResponse = $this->payme->request('cards.get_verify_code', [
             'token' => $cardData['token']
         ]);
 
         if (isset($verifyResponse['error'])) {
-            return response()->json([
-                'ok' => false,
-                'message' => 'SMS yuborishda xatolik: ' . ($verifyResponse['error']['message'] ?? ''),
-            ], 400);
+            return $this->error(
+                'SMS yuborishda xatolik: ' . ($verifyResponse['error']['message'] ?? ''),
+                400
+            );
         }
 
-        return response()->json([
-            'ok' => true,
+        return $this->success([
             'message' => 'Karta yaratildi va SMS kod yuborildi',
             'data' => [
                 'token' => $cardData['token'],
@@ -87,7 +105,7 @@ class CardController extends Controller
     {
         $request->validate([
             'token' => 'required|string',
-            'code'  => 'required|string|size:6', // Payme test kodlari odatda 6 xonali
+            'code'  => 'required|string|size:6',
         ]);
 
         $response = $this->payme->request('cards.verify', [
@@ -96,18 +114,16 @@ class CardController extends Controller
         ]);
 
         if (isset($response['error'])) {
-            return response()->json([
-                'ok' => false,
-                'message' => 'Tasdiqlash xatosi: ' . ($response['error']['message'] ?? 'Kod noto‘g‘ri'),
-            ], 400);
+            return $this->error(
+                'Tasdiqlash xatosi: ' . ($response['error']['message'] ?? 'Kod noto‘g‘ri'),
+                400
+            );
         }
 
-        // Karta muvaffaqiyatli tasdiqlandi
         UserCard::where('payme_token', $request->token)
             ->update(['is_verified' => true]);
 
-        return response()->json([
-            'ok' => true,
+        return $this->success([
             'message' => 'Karta muvaffaqiyatli tasdiqlandi va bog‘landi',
             'card' => $response['result']['card']
         ]);
@@ -118,12 +134,15 @@ class CardController extends Controller
      */
     public function index(Request $request)
     {
+        if (!$request->user()) {
+            return $this->error('Unauthorized', 401);
+        }
+
         $cards = $request->user()->cards()
             ->where('is_verified', true)
             ->get(['id', 'card_number', 'created_at']);
 
-        return response()->json([
-            'ok' => true,
+        return $this->success([
             'data' => $cards
         ]);
     }
@@ -133,6 +152,10 @@ class CardController extends Controller
      */
     public function destroy(Request $request, $id)
     {
+        if (!$request->user()) {
+            return $this->error('Unauthorized', 401);
+        }
+
         $card = $request->user()->cards()->findOrFail($id);
 
         // Payme-dan ham tokenni o'chirish (ixtiyoriy, lekin tavsiya etiladi)
@@ -142,8 +165,7 @@ class CardController extends Controller
 
         $card->delete();
 
-        return response()->json([
-            'ok' => true,
+        return $this->success([
             'message' => 'Karta o‘chirildi'
         ]);
     }

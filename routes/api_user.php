@@ -37,8 +37,8 @@ Route::prefix('products')->group(function () {
     Route::get('sellers/profile/{id}', [ProductsController::class, 'seller']);
     Route::get('books-by-category', [ProductsController::class, 'booksByCategory']);
     Route::get('recommendation/{col}', [ProductsController::class, 'recommendation']);
-    Route::get('{col}', [ProductsController::class, 'index']);
     Route::get('cart-recommendation', [ProductsController::class, 'cartRecommendation']);
+    Route::get('{col}', [ProductsController::class, 'index']);
 });
 Route::prefix('search')->group(function () {
     Route::get('/', [SearchController::class, 'search']);
@@ -53,10 +53,12 @@ Route::prefix('search')->group(function () {
 Route::get('product_comments/{productId}/{type}', [BookClubController::class, 'getProductPosts']);
 Route::get('book_club', [BookClubController::class, 'index']);
 Route::get('book_club/themes', [BookClubThemeController::class, 'index']);
+Route::get('book_club/themes/{slug}/posts', [BookClubController::class, 'postsByTheme']);
 Route::get('book_club/comments/{post_id}', [BookClubCommentController::class, 'index']);
 Route::get('book_club/comments/{post_id}/replies', [BookClubCommentController::class, 'replies']);
 Route::get('cart_user', [CartController::class, 'index']);
 Route::get('cart_user/count', [CartController::class, 'count']);
+Route::get('shared-order/{orderId}', [SharedCartController::class, 'orderItems']);
 Route::get('contest/{sellerId}', [ContestController::class, 'getContest']);
 Route::get('reels', [ReelController::class, 'index']);
 Route::get('shop/info', [ShopApiController::class, 'info']);
@@ -114,6 +116,7 @@ Route::middleware('auth:user')->group(function () {
         Route::post('comments/{comment_id}/reply', [BookClubCommentController::class, 'reply']);
         Route::delete('comments/delete/{id}', [BookClubCommentController::class, 'destroy']);
         Route::post('follow', [BookClubController::class, 'followUser']);
+        Route::get('suggested-users', [BookClubController::class, 'suggestedUsers']);
         Route::get('notifications', [BookClubController::class, 'getNotifications']);
         Route::get('notifications/mark-read-bulk', [BookClubController::class, 'readNotifications']);
     });
@@ -143,6 +146,7 @@ Route::middleware('auth:user')->group(function () {
         Route::get('list', [PurchaseController::class, 'purchaseList']);
         Route::get('details/{order_id}', [PurchaseController::class, 'purchaseDetails']);
         Route::get('cancel/{orderId}', [PurchaseController::class, 'cancelOrder']);
+        Route::get('cashback-history', [PurchaseController::class, 'cashbackHistory']);
         Route::get('checkPromo', [PurchaseController::class, 'checkPromo']);
         Route::get('cashback_balance', [UserController::class, 'getCashbackCount']);
         Route::get('getCartCheckoutInfo', [PurchaseController::class, 'getCartCheckoutInfo']);

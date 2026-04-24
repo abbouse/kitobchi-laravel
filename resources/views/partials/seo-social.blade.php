@@ -1,6 +1,4 @@
 @php
-    /** @var string $title <title> va og:title uchun (to‘liq qator, brend bilan) */
-    /** @var string $description Meta tavsif (toza matn, ~160 belgi) */
     $canonical = $canonical ?? url()->current();
     $ogType = $ogType ?? 'website';
     $robots = $robots ?? 'index,follow';

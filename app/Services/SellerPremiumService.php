@@ -242,7 +242,7 @@ class SellerPremiumService
     {
         $expiresAt = $subscription?->expires_at;
         $daysLeft = $expiresAt && $expiresAt->isFuture()
-            ? max(0, now()->diffInDays($expiresAt, false))
+            ? max(0, (int) ceil(now()->diffInSeconds($expiresAt, false) / 86400))
             : 0;
 
         $isPremium = (bool) ($seller->isPremiumShop && $expiresAt && $expiresAt->isFuture() && $subscription?->status === SellerPremiumSubscription::STATUS_ACTIVE);

@@ -3,13 +3,30 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Subscription;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
-use Carbon\Carbon;
 
 class PremiumController extends Controller
 {
+    private function success(array $payload = [], int $status = 200)
+    {
+        return response()->json(array_merge([
+            'status' => 'success',
+            'ok' => true,
+        ], $payload), $status);
+    }
+
+    private function error(string $message, int $status = 400, array $extra = [])
+    {
+        return response()->json(array_merge([
+            'status' => 'error',
+            'ok' => false,
+            'message' => $message,
+            'error' => $message,
+        ], $extra), $status);
+    }
     
     public function plans(Request $request)
     {
@@ -22,7 +39,7 @@ class PremiumController extends Controller
             ],
             [
                 'id'           => 'quarterly',
-                'price'        => 70000,
+                'price'        => 75000,
                 'period'       => '3',
                 'is_popular'   => false,
             ],
@@ -33,24 +50,26 @@ class PremiumController extends Controller
                 'is_popular'   => true,
             ],
         ];
-        return response()->json([
-            'ok'   => true,
+        return $this->success([
             'data' => [
                 'plans' => $plans,
                 'currency' => 'uzs',
             ]
         ]);
     }
+
     public function status(Request $request)
     {
         $user = Auth::guard('user')->user();
+        if (!$user) {
+            return $this->error('Unauthorized', 401);
+        }
 
         $isPremium = $user->isPremium();
         $expiry = $user->premium_expires_at?->format('Y-m-d H:i:s');
         $cashback = $user->cashback_rate ?? 1.00;
 
-        return response()->json([
-            'ok' => true,
+        return $this->success([
             'data' => [
                 'is_premium'     => $isPremium,
                 'expiry_date'    => $expiry,
@@ -67,8 +86,10 @@ class PremiumController extends Controller
 
         $plan = $request->input('plan');
         $user = Auth::guard('user')->user();
+        if (!$user) {
+            return $this->error('Unauthorized', 401);
+        }
 
-        // Narxlar (real loyihada config yoki DB dan olish yaxshi)
         $prices = [
             'monthly'   => 29000,
             'quarterly' => 75000,
@@ -83,21 +104,9 @@ class PremiumController extends Controller
 
         $amount = $prices[$plan];
         $durationMonths = $months[$plan];
-
-        // Bu yerda to'lov tizimi integratsiyasi bo'lishi kerak
-        // Masalan Payme, Click, Stripe, Uzum ...
-        // Hozircha oddiy muvaffaqiyatli deb faraz qilamiz va payment_url qaytaramiz
-
-        // Real loyihada:
-        // $payment = Payme::createInvoice($amount, $user, $plan);
-        // $paymentUrl = $payment->redirectUrl;
-
-        // Test uchun:
         $paymentUrl = "https://your-payment-page.com/pay?user={$user->id}&plan=$plan&amount=$amount";
 
-        // Vaqtinchalik subscription yaratish (to'lov tasdiqlangandan keyin faollashtiriladi)
         DB::transaction(function () use ($user, $plan, $durationMonths) {
-            // Eski active subscriptionlarni to'xtatish mumkin (ixtiyoriy)
             $user->activeSubscription()?->update(['status' => 'cancelled']);
 
             Subscription::create([
@@ -105,12 +114,11 @@ class PremiumController extends Controller
                 'plan'        => $plan,
                 'starts_at'   => now(),
                 'expires_at'  => now()->addMonths($durationMonths),
-                'status'      => 'pending',   // to'lovdan keyin active qilinadi
+                'status'      => 'pending',
             ]);
         });
 
-        return response()->json([
-            'ok' => true,
+        return $this->success([
             'data' => [
                 'payment_url' => $paymentUrl,
                 'plan'        => $plan,
@@ -119,19 +127,18 @@ class PremiumController extends Controller
         ]);
     }
 
-    // To'lov muvaffaqiyatli bo'lgandan keyin chaqiriladigan endpoint (webhook yoki callback)
     public function confirmPayment(Request $request)
     {
-        // Bu endpointni to'lov provayderi chaqiradi yoki frontenddan post qilinadi
-        // Xavfsizlik uchun token, signature tekshirish kerak!
-
         $request->validate([
             'user_id' => 'required|exists:users,id',
             'plan'    => 'required|in:monthly,quarterly,yearly',
-            'tx_id'   => 'required',   // transaction id
+            'tx_id'   => 'required',
         ]);
 
         $user = Auth::guard('user')->user(); 
+        if (!$user) {
+            return $this->error('Unauthorized', 401);
+        }
 
         $months = ['monthly' => 1, 'quarterly' => 3, 'yearly' => 12];
         $duration = $months[$request->plan] ?? 1;
@@ -157,12 +164,15 @@ class PremiumController extends Controller
             }
         });
 
-        return response()->json(['ok' => true]);
+        return $this->success();
     }
 
     public function cancel(Request $request)
     {
         $user = Auth::guard('user')->user();
+        if (!$user) {
+            return $this->error('Unauthorized', 401);
+        }
 
         $user->update([
             'is_premium'         => false,
@@ -171,6 +181,6 @@ class PremiumController extends Controller
 
         $user->activeSubscription()?->update(['status' => 'cancelled']);
 
-        return response()->json(['ok' => true, 'message' => 'Obuna bekor qilindi']);
+        return $this->success(['message' => 'Obuna bekor qilindi']);
     }
 }

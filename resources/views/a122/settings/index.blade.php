@@ -11,6 +11,9 @@
 <div class="tab-pills fade-up mb-4">
   @foreach([
     'versions'   => ['bi-phone','App versiyalar'],
+    'contacts'   => ['bi-headset','Kontaktlar'],
+    'app-flags'  => ['bi-toggles','App flaglar'],
+    'telegram'   => ['bi-telegram','Telegram'],
     'commission' => ['bi-percent','Komissiya'],
     'cashback'   => ['bi-cash-stack','Cashback'],
     'delivery'   => ['bi-truck','Yetkazish'],
@@ -92,6 +95,307 @@
         </span>
       </div>
       @endforeach
+    </div>
+  </div>
+</div>
+@endif
+
+{{-- ══ KONTAKTLAR ═══════════════════════════════════════════════════════ --}}
+@if($tab === 'contacts')
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
+  <div class="xl:col-span-7">
+    <div class="p-card">
+      <div class="p-card-header">
+        <div>
+          <div class="p-card-title"><i class="bi bi-headset mr-2" style="color:var(--p-accent)"></i>Ilova kontaktlari</div>
+          <div class="p-card-sub">Call center raqamlari va email manzillar</div>
+        </div>
+      </div>
+      <form method="POST" action="{{ route('admin.settings.contacts') }}">
+        @csrf @method('PUT')
+        <div class="grid grid-cols-1 gap-4">
+          @foreach([
+            ['Kitobchi Market', 'kitobchi', 'bi-bag', 'accent'],
+            ['Kitobchi Business', 'business', 'bi-shop-window', 'warning'],
+            ['Endi Courier', 'courier', 'bi-bicycle', 'info'],
+          ] as [$appName, $key, $icon, $clr])
+          <div style="padding:16px;background:var(--p-elevated);border:1px solid var(--p-border);border-radius:10px">
+            <div class="flex items-center gap-2 mb-3">
+              <i class="bi {{ $icon }}" style="color:var(--p-{{ $clr }});font-size:16px"></i>
+              <span style="font-size:13px;font-weight:700;color:var(--p-text)">{{ $appName }}</span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label class="p-form-label"><i class="bi bi-telephone mr-1"></i>Call center raqami</label>
+                <input type="text" name="{{ $key }}_phone" class="p-form-control"
+                       value="{{ old($key.'_phone', $project?->{$key.'_phone'}) }}"
+                       placeholder="+998 XX XXX XX XX">
+              </div>
+              <div>
+                <label class="p-form-label"><i class="bi bi-envelope mr-1"></i>Email manzil</label>
+                <input type="email" name="{{ $key }}_email" class="p-form-control"
+                       value="{{ old($key.'_email', $project?->{$key.'_email'}) }}"
+                       placeholder="support@example.com">
+              </div>
+            </div>
+          </div>
+          @endforeach
+        </div>
+        <div class="flex justify-end mt-4">
+          <button type="submit" class="btn-p primary"><i class="bi bi-floppy-fill"></i> Saqlash</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="xl:col-span-5">
+    <div class="p-card">
+      <div class="p-card-header">
+        <div class="p-card-title"><i class="bi bi-info-circle mr-2" style="color:var(--p-info)"></i>Hozirgi kontaktlar</div>
+      </div>
+      @foreach([
+        ['Kitobchi telefon',  $project?->kitobchi_phone, 'accent',  'bi-telephone'],
+        ['Kitobchi email',    $project?->kitobchi_email, 'accent',  'bi-envelope'],
+        ['Business telefon',  $project?->business_phone, 'warning', 'bi-telephone'],
+        ['Business email',    $project?->business_email, 'warning', 'bi-envelope'],
+        ['Courier telefon',   $project?->courier_phone,  'info',    'bi-telephone'],
+        ['Courier email',     $project?->courier_email,  'info',    'bi-envelope'],
+      ] as [$lbl, $val, $clr, $ico])
+      <div class="flex items-center justify-between py-2" style="border-bottom:1px solid var(--p-border)">
+        <span class="flex items-center gap-2" style="font-size:13px;color:var(--p-muted)">
+          <i class="bi {{ $ico }}" style="color:var(--p-{{ $clr }})"></i> {{ $lbl }}
+        </span>
+        <span style="font-size:12px;font-weight:600;color:var(--p-text);font-family:'JetBrains Mono',monospace">
+          {{ $val ?? '—' }}
+        </span>
+      </div>
+      @endforeach
+    </div>
+  </div>
+</div>
+@endif
+
+{{-- ══ APP FLAGLAR ══════════════════════════════════════════════════════ --}}
+@if($tab === 'app-flags')
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
+  <div class="xl:col-span-7">
+    <div class="p-card">
+      <div class="p-card-header">
+        <div>
+          <div class="p-card-title"><i class="bi bi-toggles mr-2" style="color:var(--p-accent)"></i>App sozlamalari</div>
+          <div class="p-card-sub">Global flaglar va qadoqlash narxi</div>
+        </div>
+      </div>
+      <form method="POST" action="{{ route('admin.settings.app-flags') }}">
+        @csrf @method('PUT')
+
+        {{-- Flaglar --}}
+        <div style="padding:16px;background:var(--p-elevated);border:1px solid var(--p-border);border-radius:10px;margin-bottom:16px">
+          <div style="font-size:13px;font-weight:700;color:var(--p-text);margin-bottom:12px">
+            <i class="bi bi-toggles mr-2" style="color:var(--p-accent)"></i>Global flaglar
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            @foreach([
+              ['on_premium', 'Premium rejim (onPremium)', 'bi-star-fill', 'warning'],
+              ['on_reels',   'Reels yoqilgan (onReels)',  'bi-play-circle-fill', 'info'],
+              ['ramadan',    'Ramazon rejim (ramadan)',   'bi-moon-stars-fill', 'accent'],
+              ['stop_sales', 'Savdo to\'xtatilgan (stopSales)', 'bi-slash-circle-fill', 'danger'],
+            ] as [$field, $label, $ico, $clr])
+            <label class="p-form-label flex items-center gap-2" style="cursor:pointer;padding:10px;border:1px solid var(--p-border);border-radius:8px">
+              <input type="hidden" name="{{ $field }}" value="0">
+              <input type="checkbox" name="{{ $field }}" value="1"
+                     {{ $project?->{$field} ? 'checked' : '' }}
+                     style="width:16px;height:16px;accent-color:var(--p-{{ $clr }})">
+              <i class="bi {{ $ico }}" style="color:var(--p-{{ $clr }})"></i>
+              <span style="font-size:13px">{{ $label }}</span>
+            </label>
+            @endforeach
+          </div>
+        </div>
+
+        {{-- Qadoqlash narxi --}}
+        <div style="padding:16px;background:var(--p-elevated);border:1px solid var(--p-border);border-radius:10px">
+          <div style="font-size:13px;font-weight:700;color:var(--p-text);margin-bottom:12px">
+            <i class="bi bi-box-seam mr-2" style="color:var(--p-success)"></i>Qadoqlash narxi
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+              <label class="p-form-label">Kichik narx (UZS) *</label>
+              <input type="number" name="packaging_price_small" class="p-form-control" min="0" required
+                     value="{{ old('packaging_price_small', $project?->packaging_price_small ?? 25000) }}"
+                     placeholder="25000">
+              <div style="font-size:11px;color:var(--p-hint);margin-top:4px">Chegara dan oz kitob uchun</div>
+            </div>
+            <div>
+              <label class="p-form-label">Katta narx (UZS) *</label>
+              <input type="number" name="packaging_price_large" class="p-form-control" min="0" required
+                     value="{{ old('packaging_price_large', $project?->packaging_price_large ?? 40000) }}"
+                     placeholder="40000">
+              <div style="font-size:11px;color:var(--p-hint);margin-top:4px">Chegara va undan ko'p kitob uchun</div>
+            </div>
+            <div>
+              <label class="p-form-label">Chegara (ta kitob) *</label>
+              <input type="number" name="packaging_threshold" class="p-form-control" min="1" required
+                     value="{{ old('packaging_threshold', $project?->packaging_threshold ?? 4) }}"
+                     placeholder="4">
+              <div style="font-size:11px;color:var(--p-hint);margin-top:4px">Bu va undan ko'p → katta narx</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex justify-end mt-4">
+          <button type="submit" class="btn-p primary"><i class="bi bi-floppy-fill"></i> Saqlash</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="xl:col-span-5">
+    <div class="p-card">
+      <div class="p-card-header">
+        <div class="p-card-title"><i class="bi bi-info-circle mr-2" style="color:var(--p-info)"></i>Hozirgi holat</div>
+      </div>
+      @foreach([
+        ['onPremium',    $project?->on_premium,  'warning', 'bi-star-fill'],
+        ['onReels',      $project?->on_reels,    'info',    'bi-play-circle-fill'],
+        ['ramadan',      $project?->ramadan,     'accent',  'bi-moon-stars-fill'],
+        ['stopSales',    $project?->stop_sales,  'danger',  'bi-slash-circle-fill'],
+      ] as [$lbl, $val, $clr, $ico])
+      <div class="flex items-center justify-between py-2" style="border-bottom:1px solid var(--p-border)">
+        <span class="flex items-center gap-2" style="font-size:13px;color:var(--p-muted)">
+          <i class="bi {{ $ico }}" style="color:var(--p-{{ $clr }})"></i> {{ $lbl }}
+        </span>
+        @if($val)
+          <span class="s-pill {{ $clr }}" style="font-size:11px"><i class="bi bi-check-lg"></i> Yoqilgan</span>
+        @else
+          <span class="s-pill muted" style="font-size:11px">O'chiq</span>
+        @endif
+      </div>
+      @endforeach
+      <div class="flex items-center justify-between py-2" style="border-bottom:1px solid var(--p-border)">
+        <span style="font-size:13px;color:var(--p-muted)"><i class="bi bi-box-seam mr-1"></i> Kichik qadoqlash</span>
+        <span style="font-size:12px;font-weight:600;font-family:'JetBrains Mono',monospace;color:var(--p-success)">
+          {{ number_format($project?->packaging_price_small ?? 25000) }} UZS
+        </span>
+      </div>
+      <div class="flex items-center justify-between py-2" style="border-bottom:1px solid var(--p-border)">
+        <span style="font-size:13px;color:var(--p-muted)"><i class="bi bi-box-seam mr-1"></i> Katta qadoqlash</span>
+        <span style="font-size:12px;font-weight:600;font-family:'JetBrains Mono',monospace;color:var(--p-success)">
+          {{ number_format($project?->packaging_price_large ?? 40000) }} UZS
+        </span>
+      </div>
+      <div class="flex items-center justify-between py-2">
+        <span style="font-size:13px;color:var(--p-muted)"><i class="bi bi-hash mr-1"></i> Chegara</span>
+        <span style="font-size:12px;font-weight:600;font-family:'JetBrains Mono',monospace;color:var(--p-text)">
+          {{ $project?->packaging_threshold ?? 4 }} ta kitob
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
+@endif
+
+{{-- ══ TELEGRAM ══════════════════════════════════════════════════════════ --}}
+@if($tab === 'telegram')
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
+  <div class="xl:col-span-7">
+    <div class="p-card">
+      <div class="p-card-header">
+        <div>
+          <div class="p-card-title"><i class="bi bi-telegram mr-2" style="color:#229ED9"></i>Telegram Login</div>
+          <div class="p-card-sub">OIDC orqali Telegram autentifikatsiya sozlamalari</div>
+        </div>
+      </div>
+      <form method="POST" action="{{ route('admin.settings.telegram') }}">
+        @csrf @method('PUT')
+
+        <div style="padding:16px;background:var(--p-elevated);border:1px solid var(--p-border);border-radius:10px;margin-bottom:16px">
+          <label class="p-form-label flex items-center gap-2" style="cursor:pointer;padding:10px;border:1px solid var(--p-border);border-radius:8px;margin-bottom:0">
+            <input type="hidden" name="telegram_login_enabled" value="0">
+            <input type="checkbox" name="telegram_login_enabled" value="1"
+                   {{ $project?->telegram_login_enabled ? 'checked' : '' }}
+                   style="width:16px;height:16px;accent-color:#229ED9">
+            <i class="bi bi-power" style="color:#229ED9"></i>
+            <span style="font-size:13px">Telegram login yoqilgan</span>
+          </label>
+        </div>
+
+        <div style="padding:16px;background:var(--p-elevated);border:1px solid var(--p-border);border-radius:10px;margin-bottom:16px">
+          <div style="font-size:13px;font-weight:700;color:var(--p-text);margin-bottom:12px">Sozlamalar</div>
+          <div class="grid grid-cols-1 gap-3">
+            <div>
+              <label class="p-form-label">Client ID</label>
+              <input type="text" name="telegram_client_id" class="p-form-control"
+                     value="{{ old('telegram_client_id', $project?->telegram_client_id) }}"
+                     placeholder="BotFather client id">
+            </div>
+            <div>
+              <label class="p-form-label">iOS Redirect URI</label>
+              <input type="text" name="telegram_redirect_uri_ios" class="p-form-control"
+                     value="{{ old('telegram_redirect_uri_ios', $project?->telegram_redirect_uri_ios ?? 'https://app3206985527-login.tg.dev') }}"
+                     placeholder="https://app3206985527-login.tg.dev">
+              <div style="font-size:11px;color:var(--p-hint);margin-top:4px">iOS Associated Domain orqali universial link</div>
+            </div>
+            <div>
+              <label class="p-form-label">Android Redirect URI</label>
+              <input type="text" name="telegram_redirect_uri_android" class="p-form-control"
+                     value="{{ old('telegram_redirect_uri_android', $project?->telegram_redirect_uri_android ?? 'https://app2854400165-login.tg.dev/tglogin') }}"
+                     placeholder="https://app2854400165-login.tg.dev/tglogin">
+              <div style="font-size:11px;color:var(--p-hint);margin-top:4px">Android App Link orqali deep link</div>
+            </div>
+            <div>
+              <label class="p-form-label">Scopes</label>
+              <input type="text" name="telegram_scopes" class="p-form-control"
+                     value="{{ old('telegram_scopes', $project?->telegram_scopes ?? 'openid profile phone') }}"
+                     placeholder="openid profile phone">
+            </div>
+          </div>
+        </div>
+
+        <div style="font-size:11px;color:var(--p-hint);padding:10px 0">
+          Maxfiy <code>client_secret</code> admin panelda saqlanmaydi. Uni server <code>.env</code> fayliga yozing: <code>TELEGRAM_LOGIN_CLIENT_SECRET=...</code>
+        </div>
+
+        <div class="flex justify-end mt-4">
+          <button type="submit" class="btn-p primary"><i class="bi bi-floppy-fill"></i> Saqlash</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="xl:col-span-5">
+    <div class="p-card">
+      <div class="p-card-header">
+        <div class="p-card-title"><i class="bi bi-info-circle mr-2" style="color:var(--p-info)"></i>Hozirgi holat</div>
+      </div>
+      <div class="flex items-center justify-between py-2" style="border-bottom:1px solid var(--p-border)">
+        <span style="font-size:13px;color:var(--p-muted)"><i class="bi bi-power mr-1" style="color:#229ED9"></i> Holat</span>
+        @if($project?->telegram_login_enabled)
+          <span class="s-pill info" style="font-size:11px"><i class="bi bi-check-lg"></i> Yoqilgan</span>
+        @else
+          <span class="s-pill muted" style="font-size:11px">O'chiq</span>
+        @endif
+      </div>
+      <div class="flex items-center justify-between py-2" style="border-bottom:1px solid var(--p-border)">
+        <span style="font-size:13px;color:var(--p-muted)"><i class="bi bi-key mr-1"></i> Client ID</span>
+        <span style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--p-text)">
+          {{ $project?->telegram_client_id ? substr($project->telegram_client_id, 0, 12).'...' : '—' }}
+        </span>
+      </div>
+      <div class="flex items-center justify-between py-2" style="border-bottom:1px solid var(--p-border)">
+        <span style="font-size:13px;color:var(--p-muted)"><i class="bi bi-apple mr-1"></i> iOS URI</span>
+        <span style="font-size:11px;color:var(--p-muted)">{{ $project?->telegram_redirect_uri_ios ? 'sozlangan' : 'default' }}</span>
+      </div>
+      <div class="flex items-center justify-between py-2" style="border-bottom:1px solid var(--p-border)">
+        <span style="font-size:13px;color:var(--p-muted)"><i class="bi bi-android2 mr-1"></i> Android URI</span>
+        <span style="font-size:11px;color:var(--p-muted)">{{ $project?->telegram_redirect_uri_android ? 'sozlangan' : 'default' }}</span>
+      </div>
+      <div class="flex items-center justify-between py-2">
+        <span style="font-size:13px;color:var(--p-muted)"><i class="bi bi-shield-lock mr-1"></i> Scopes</span>
+        <span style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--p-text)">
+          {{ $project?->telegram_scopes ?? 'openid profile phone' }}
+        </span>
+      </div>
     </div>
   </div>
 </div>

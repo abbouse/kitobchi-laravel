@@ -11,6 +11,32 @@ use Illuminate\Support\Facades\DB;
 
 class ShopApiController extends Controller
 {
+    private function localizedValue($model, string $base, string $locale)
+    {
+        $preferred = data_get($model, "{$base}_{$locale}");
+        if (!empty($preferred)) {
+            return $preferred;
+        }
+
+        return data_get($model, "{$base}_uz")
+            ?? data_get($model, "{$base}_ru")
+            ?? data_get($model, "{$base}_en");
+    }
+
+    private function formatLocationPayload(object $location, object $user): array
+    {
+        return [
+            'fullName'    => trim(($user->name ?? '') . ' ' . ($user->lastname ?? '')),
+            'phoneNumber' => $user->phone_number,
+            'fullAddress' => $location->fullAddress ?? null,
+            'lat'         => $location->lat ?? null,
+            'lon'         => $location->lon ?? null,
+            // old keys for backward compatibility
+            'name'        => trim(($user->name ?? '') . ' ' . ($user->lastname ?? '')),
+            'phone'       => $user->phone_number,
+        ];
+    }
+
     // ── GET /api/shop/info ────────────────────────────────────────────────────
     // Mystery box planlar + gift cert options
     public function info()
@@ -22,12 +48,12 @@ class ShopApiController extends Controller
             ->get()
             ->map(fn($p) => [
                 'id'             => $p->id,
-                'name'           => $locale === 'ru' ? ($p->name_ru ?? $p->name_uz) : $p->name_uz,
+                'name'           => $this->localizedValue($p, 'name', $locale),
                 'months'         => $p->months,
                 'price_uzs'      => $p->price_uzs,
                 'price_per_month'=> $p->price_per_month,
                 'books_per_month'=> $p->books_per_month,
-                'description'    => $locale === 'ru' ? ($p->description_ru ?? $p->description_uz) : $p->description_uz,
+                'description'    => $this->localizedValue($p, 'description', $locale),
                 'is_popular'     => $p->months === 3, // 3 oylik — popular
             ]);
 
@@ -106,6 +132,7 @@ class ShopApiController extends Controller
         $sub = MysteryBoxSubscription::create([
             'user_id'        => $user->id,
             'plan_id'        => $plan->id,
+            'address'        => $this->formatLocationPayload($location, $user),
             'status'         => MysteryBoxSubscription::STATUS_PENDING,
             'total_months'   => $plan->months,
             'books_per_month'=> $plan->books_per_month,
@@ -155,7 +182,7 @@ class ShopApiController extends Controller
 
         $sub = MysteryBoxSubscription::where('id', $id)
             ->where('user_id', $user->id)
-            ->with(['plan:id,name_uz,books_per_month', 'deliveries' => fn($q) => $q->orderBy('month_number')])
+            ->with(['plan:id,name_uz,name_ru,name_en,name_ja,books_per_month', 'deliveries' => fn($q) => $q->orderBy('month_number')])
             ->first();
 
         if (!$sub) {
@@ -167,7 +194,7 @@ class ShopApiController extends Controller
         $data = [
             'id'               => $sub->id,
             'status'           => $sub->status,
-            'plan_name'        => $sub->plan?->name_uz ?? '',
+            'plan_name'        => $this->localizedValue($sub->plan, 'name', $user->locale ?? 'uz') ?? '',
             'total_months'     => $sub->total_months,
             'delivered_months' => $sub->delivered_months,
             'books_per_month'  => $sub->books_per_month,
@@ -190,13 +217,13 @@ class ShopApiController extends Controller
         $past = MysteryBoxSubscription::where('user_id', $user->id)
             ->where('id', '!=', $id)
             ->whereIn('status', ['completed', 'cancelled'])
-            ->with('plan:id,name_uz')
+            ->with('plan:id,name_uz,name_ru,name_en,name_ja')
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(fn($s) => [
                 'id'               => $s->id,
                 'status'           => $s->status,
-                'plan_name'        => $s->plan?->name_uz ?? '',
+                'plan_name'        => $this->localizedValue($s->plan, 'name', $user->locale ?? 'uz') ?? '',
                 'total_months'     => $s->total_months,
                 'delivered_months' => $s->delivered_months,
                 'price_uzs'        => $s->price_uzs,
@@ -239,13 +266,7 @@ class ShopApiController extends Controller
         }
 
         $sub->update([
-            'address' => [
-                'fullAddress' => $location->fullAddress,
-                'lat'         => $location->lat,
-                'lon'         => $location->lon,
-                'phone'       => $user->phone_number,
-                'name'        => trim("{$user->name} {$user->lastname}"),
-            ],
+            'address' => $this->formatLocationPayload($location, $user),
         ]);
 
         return response()->json(['status' => 'success', 'message' => 'Manzil yangilandi']);

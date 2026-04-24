@@ -97,6 +97,7 @@
                 <option value="pending" @selected(old('status', $seller->status) === 'pending')>Kutilmoqda</option>
                 <option value="approved" @selected(old('status', $seller->status) === 'approved')>Tasdiqlangan</option>
                 <option value="rejected" @selected(old('status', $seller->status) === 'rejected')>Rad etilgan</option>
+                <option value="blocked" @selected(old('status', $seller->status) === 'blocked')>Bloklangan</option>
             </select>
         </div>
 

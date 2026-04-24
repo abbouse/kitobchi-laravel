@@ -38,6 +38,7 @@ class Seller extends Authenticatable
     protected $fillable = [
         'shop_name', 'firstname', 'lastname',
         'phone_number', 'password', 'photo',
+        'password_reset_limit', 'password_reset_limit_reset_at',
         'region', 'balance', 'rating',
         'status', 'is_hidden', 'isVerified', 'isPremiumShop', 'isPremiumExpiresAt',
         'activity_types', 'successful_orders',
@@ -54,6 +55,8 @@ class Seller extends Authenticatable
         'isPremiumShop' => 'boolean',
         'isPremiumExpiresAt' => 'datetime',
         'is_hidden'  => 'boolean',
+        'password_reset_limit' => 'integer',
+        'password_reset_limit_reset_at' => 'datetime',
         'password'   => 'hashed',
     ];
 
