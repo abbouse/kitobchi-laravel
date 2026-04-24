@@ -19,3 +19,7 @@
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
 </IfModule>
+
+<Files "apple-app-site-association">
+    Header set Content-Type "application/json"
+</Files>
