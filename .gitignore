@@ -8,6 +8,8 @@
 /storage/framework/views/*
 /storage/*.key
 /storage/pail
+/storage/logs/*.log
+/storage/logs/laravel.log
 /vendor
 .env
 .env.backup
