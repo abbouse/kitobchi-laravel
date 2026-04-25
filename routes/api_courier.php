@@ -9,6 +9,7 @@ Route::post('contact-request', [CourierAuthController::class, 'contactRequest'])
 
 // Kuryer funksiyalari
 Route::middleware('auth:courier')->group(function () {
+    Route::post('logout', [CourierAuthController::class, 'logout']);
     Route::get('devices', [CourierController::class, 'getDevices']);
     Route::post('devices/remove-device', [CourierController::class, 'removeDevice']);
     Route::post('update/password', [CourierController::class, 'updatePassword']);
@@ -32,6 +33,8 @@ Route::middleware('auth:courier')->group(function () {
     Route::get('orders/view/{id}', [CourierOrderController::class, 'showOrder']);
     Route::get('orders/my', [CourierOrderController::class, 'myOrders']);
     Route::post('orders/toCustomer/{qr}', [CourierOrderController::class, 'toCustomer']);
+    // Phase 3: Mijoz javob bermayapti — SLA timerini pauza/resume (toggle).
+    Route::post('orders/{id}/customer-delay', [CourierOrderController::class, 'customerDelay']);
 
     Route::get('profile', [CourierController::class, 'my_data']);
 });

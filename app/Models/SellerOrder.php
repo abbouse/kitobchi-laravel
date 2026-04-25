@@ -19,10 +19,12 @@ class SellerOrder extends Model
         'delivery_type',
         'address',
         'status',
+        'accepted_at',
     ];
 
     protected $casts = [
         'address' => 'array',
+        'accepted_at' => 'datetime',
     ];
 
     // ── Relationships ──────────────────────────────────────────────

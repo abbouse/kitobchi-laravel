@@ -197,21 +197,57 @@ class SettingsController extends Controller
 
     public function updateTelegram(Request $request)
     {
+        $defaultIosRedirect = 'https://app3206985527-login.tg.dev';
+        $defaultAndroidRedirect = 'https://app2854400165-login.tg.dev/tglogin';
+
         $request->validate([
             'telegram_client_id'            => 'nullable|string|max:100',
-            'telegram_redirect_uri_ios'     => 'nullable|string|max:255',
-            'telegram_redirect_uri_android' => 'nullable|string|max:255',
+            'telegram_redirect_uri_ios'     => 'nullable|url|max:255',
+            'telegram_redirect_uri_android' => 'nullable|url|max:255',
             'telegram_scopes'               => 'nullable|string|max:255',
         ]);
+
+        $iosRedirect = $this->sanitizeTelegramRedirect(
+            $request->telegram_redirect_uri_ios,
+            $defaultIosRedirect,
+            false,
+        );
+        $androidRedirect = $this->sanitizeTelegramRedirect(
+            $request->telegram_redirect_uri_android,
+            $defaultAndroidRedirect,
+            true,
+        );
 
         ProjectSetting::first()->update([
             'telegram_login_enabled'        => $request->boolean('telegram_login_enabled'),
             'telegram_client_id'            => $request->telegram_client_id,
-            'telegram_redirect_uri_ios'     => $request->telegram_redirect_uri_ios,
-            'telegram_redirect_uri_android' => $request->telegram_redirect_uri_android,
+            'telegram_redirect_uri_ios'     => $iosRedirect,
+            'telegram_redirect_uri_android' => $androidRedirect,
             'telegram_scopes'               => $request->telegram_scopes ?: 'openid profile phone',
         ]);
 
         return back()->with('success', 'Telegram sozlamalari yangilandi.');
+    }
+
+    private function sanitizeTelegramRedirect(?string $candidate, string $fallback, bool $requireAndroidPath): string
+    {
+        $value = trim((string) ($candidate ?: $fallback));
+        $parts = parse_url($value);
+        $scheme = strtolower((string) ($parts['scheme'] ?? ''));
+        $host = strtolower((string) ($parts['host'] ?? ''));
+        $path = (string) ($parts['path'] ?? '');
+
+        $isTelegramUniversalLink = $scheme === 'https'
+            && str_ends_with($host, '.tg.dev');
+
+        if (!$isTelegramUniversalLink) {
+            return $fallback;
+        }
+
+        if ($requireAndroidPath && $path !== '/tglogin') {
+            return $fallback;
+        }
+
+        return $value;
     }
 }

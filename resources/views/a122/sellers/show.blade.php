@@ -76,6 +76,58 @@
                 <span class="badge {{ $warningCount >= 3 ? 'badge-danger' : ($warningCount > 0 ? 'badge-warning' : 'badge-muted') }}">
                     {{ $warningCount }}/3 ogohlantirish
                 </span>
+                @if($seller->isPremiumShop && $seller->isPremiumExpiresAt && $seller->isPremiumExpiresAt->isFuture())
+                    <span class="badge bg-amber-100 text-amber-700 dark:bg-amber-400/10 dark:text-amber-300 flex items-center gap-1">
+                        <i data-lucide="crown" class="w-3.5 h-3.5"></i>
+                        Premium · {{ $seller->isPremiumExpiresAt->format('Y-m-d') }}
+                    </span>
+                @elseif($seller->isPremiumShop && $seller->isPremiumExpiresAt && $seller->isPremiumExpiresAt->isPast())
+                    <span class="badge bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-400 flex items-center gap-1">
+                        <i data-lucide="crown-off" class="w-3.5 h-3.5"></i>
+                        Premium tugagan
+                    </span>
+                @endif
+                @if($seller->isVerified)
+                    <span class="badge bg-sky-100 text-sky-700 dark:bg-sky-400/10 dark:text-sky-300 flex items-center gap-1">
+                        <i data-lucide="badge-check" class="w-3.5 h-3.5"></i> Verified
+                    </span>
+                @endif
+                {{-- Shartnoma imzolangan/imzolanmagan: tezkor ko'rinish uchun
+                     contract_signed boolean. Sana yo'q bo'lsa ham ishlaydi. --}}
+                @if($seller->contract_signed)
+                    <span class="badge bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 flex items-center gap-1">
+                        <i data-lucide="file-signature" class="w-3.5 h-3.5"></i> Shartnoma imzolangan
+                    </span>
+                @else
+                    <span class="badge bg-gray-200 text-gray-600 dark:bg-white/10 dark:text-gray-400 flex items-center gap-1">
+                        <i data-lucide="file-pen-line" class="w-3.5 h-3.5"></i> Imzolanmagan
+                    </span>
+                @endif
+                @if($seller->contract_expires_at)
+                    @php
+                        $cDays = (int) now()->startOfDay()->diffInDays($seller->contract_expires_at, false);
+                        if ($seller->contract_status === 'terminated') {
+                            $cBadgeCls = 'bg-gray-200 text-gray-600 dark:bg-white/10 dark:text-gray-300';
+                            $cIcon = 'file-x';
+                            $cText = 'Shartnoma to\'xtatilgan';
+                        } elseif ($cDays < 0) {
+                            $cBadgeCls = 'bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-400';
+                            $cIcon = 'file-warning';
+                            $cText = 'Shartnoma tugagan ('.abs($cDays).' kun)';
+                        } elseif ($cDays <= 30) {
+                            $cBadgeCls = 'bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400';
+                            $cIcon = 'clock-alert';
+                            $cText = 'Shartnoma '.$cDays.' kunda tugaydi';
+                        } else {
+                            $cBadgeCls = 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400';
+                            $cIcon = 'file-check';
+                            $cText = 'Shartnoma faol';
+                        }
+                    @endphp
+                    <span class="badge {{ $cBadgeCls }} flex items-center gap-1">
+                        <i data-lucide="{{ $cIcon }}" class="w-3.5 h-3.5"></i> {{ $cText }}
+                    </span>
+                @endif
             </div>
             <p class="text-sm text-gray-500 mt-1">{{ trim($seller->firstname . ' ' . $seller->lastname) }}</p>
             <div class="flex items-center gap-4 mt-2 text-sm text-gray-600 dark:text-gray-400 flex-wrap">
@@ -166,36 +218,309 @@
 </div>
 
 {{-- Stats Cards --}}
-<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-    <div class="card p-5 flex items-center gap-4">
-        <div class="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-500/10 flex items-center justify-center">
-            <i data-lucide="shopping-bag" class="w-6 h-6 text-blue-500"></i>
+<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+    <div class="card p-4 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-500/10 flex items-center justify-center shrink-0">
+            <i data-lucide="shopping-bag" class="w-5 h-5 text-blue-500"></i>
         </div>
-        <div>
-            <p class="text-xs text-gray-500">Jami buyurtmalar</p>
-            <p class="text-2xl font-bold">{{ number_format($orderCount, 0, '.', ' ') }}</p>
+        <div class="min-w-0">
+            <p class="text-[10px] text-gray-500 uppercase tracking-wide">Jami buyurtma</p>
+            <p class="text-xl font-bold leading-tight">{{ number_format($orderCount, 0, '.', ' ') }}</p>
         </div>
     </div>
 
+    <div class="card p-4 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-500/10 flex items-center justify-center shrink-0">
+            <i data-lucide="circle-check" class="w-5 h-5 text-emerald-500"></i>
+        </div>
+        <div class="min-w-0">
+            <p class="text-[10px] text-gray-500 uppercase tracking-wide">Muvaffaqiyatli</p>
+            <p class="text-xl font-bold leading-tight">{{ number_format($seller->successful_orders ?? 0, 0, '.', ' ') }}</p>
+        </div>
+    </div>
+
+    <div class="card p-4 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-500/10 flex items-center justify-center shrink-0">
+            <i data-lucide="banknote" class="w-5 h-5 text-green-500"></i>
+        </div>
+        <div class="min-w-0">
+            <p class="text-[10px] text-gray-500 uppercase tracking-wide">Balans</p>
+            <p class="text-xl font-bold leading-tight">{{ number_format($seller->balance ?? 0, 0, '.', ' ') }}</p>
+            <p class="text-[10px] text-gray-400">UZS</p>
+        </div>
+    </div>
+
+    <div class="card p-4 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-yellow-100 dark:bg-yellow-500/10 flex items-center justify-center shrink-0">
+            <i data-lucide="star" class="w-5 h-5 text-yellow-500"></i>
+        </div>
+        <div class="min-w-0">
+            <p class="text-[10px] text-gray-500 uppercase tracking-wide">Reyting</p>
+            <p class="text-xl font-bold leading-tight">{{ number_format($seller->rating ?? 0, 2) }}</p>
+            <p class="text-[10px] text-gray-400">{{ $seller->total_reviews ?? 0 }} sharh</p>
+        </div>
+    </div>
+
+    <div class="card p-4 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-500/10 flex items-center justify-center shrink-0">
+            <i data-lucide="timer" class="w-5 h-5 text-indigo-500"></i>
+        </div>
+        <div class="min-w-0">
+            <p class="text-[10px] text-gray-500 uppercase tracking-wide">Javob vaqti</p>
+            <p class="text-xl font-bold leading-tight">{{ number_format($seller->response_time_hours ?? 0, 1) }}</p>
+            <p class="text-[10px] text-gray-400">soat</p>
+        </div>
+    </div>
+
+    <div class="card p-4 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-500/10 flex items-center justify-center shrink-0">
+            <i data-lucide="book-open" class="w-5 h-5 text-purple-500"></i>
+        </div>
+        <div class="min-w-0">
+            <p class="text-[10px] text-gray-500 uppercase tracking-wide">Kitoblar</p>
+            <p class="text-xl font-bold leading-tight">{{ $seller->books_count ?? 0 }}</p>
+        </div>
+    </div>
+</div>
+
+{{-- Daromad + premium obuna info bir qatorda --}}
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
     <div class="card p-5 flex items-center gap-4">
         <div class="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-500/10 flex items-center justify-center">
-            <i data-lucide="banknote" class="w-6 h-6 text-green-500"></i>
+            <i data-lucide="trending-up" class="w-6 h-6 text-green-500"></i>
         </div>
-        <div>
-            <p class="text-xs text-gray-500">Jami daromad</p>
-            <p class="text-2xl font-bold">{{ number_format($totalRevenue, 0, '.', ' ') }}</p>
-            <p class="text-xs text-gray-400">UZS</p>
+        <div class="flex-1">
+            <p class="text-xs text-gray-500">Jami daromad (tasdiqlangan yechib olishlar)</p>
+            <p class="text-2xl font-bold">{{ number_format($totalRevenue, 0, '.', ' ') }} <span class="text-sm text-gray-400 font-normal">UZS</span></p>
         </div>
     </div>
-
     <div class="card p-5 flex items-center gap-4">
-        <div class="w-12 h-12 rounded-xl bg-purple-100 dark:bg-purple-500/10 flex items-center justify-center">
-            <i data-lucide="book-open" class="w-6 h-6 text-purple-500"></i>
+        <div class="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-500/10 flex items-center justify-center">
+            <i data-lucide="crown" class="w-6 h-6 text-amber-500"></i>
         </div>
-        <div>
-            <p class="text-xs text-gray-500">Kitoblar</p>
-            <p class="text-2xl font-bold">{{ $seller->books_count ?? 0 }}</p>
+        <div class="flex-1">
+            <p class="text-xs text-gray-500">Premium holati</p>
+            @if($seller->isPremiumShop && $seller->isPremiumExpiresAt && $seller->isPremiumExpiresAt->isFuture())
+                <p class="text-lg font-bold text-amber-600 dark:text-amber-300">Faol</p>
+                <p class="text-xs text-gray-400">
+                    Tugaydi: <span class="font-mono">{{ $seller->isPremiumExpiresAt->format('Y-m-d H:i') }}</span>
+                    ({{ $seller->isPremiumExpiresAt->diffForHumans() }})
+                </p>
+            @else
+                <p class="text-lg font-bold text-gray-400">Yo'q</p>
+                <p class="text-xs text-gray-400">Tahrirlash sahifasidan berish mumkin</p>
+            @endif
         </div>
+    </div>
+</div>
+
+{{-- ══ SHARTNOMA + REKVIZITLAR ════════════════════════════════════════ --}}
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+    {{-- Shartnoma kartochkasi --}}
+    <div class="card p-5">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold text-base flex items-center gap-2">
+                <i data-lucide="file-signature" class="w-5 h-5 text-blue-500"></i>
+                Shartnoma
+            </h3>
+            <a href="{{ route('admin.sellers.edit', $seller) }}#contract" class="text-xs text-blue-500 hover:underline">Tahrirlash</a>
+        </div>
+        @if(empty($seller->contract_number) && empty($seller->contract_expires_at) && !$seller->contract_signed)
+            <p class="text-sm text-gray-400 text-center py-4">Shartnoma ma'lumotlari kiritilmagan.</p>
+        @else
+            <dl class="grid grid-cols-3 gap-y-2 gap-x-3 text-sm">
+                {{-- Imzo holati — eng yuqorida, sana bilmagan holda ham ko'rinadi --}}
+                <dt class="col-span-1 text-gray-500">Imzo holati</dt>
+                <dd class="col-span-2">
+                    @if($seller->contract_signed)
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">
+                            <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i> Imzolangan
+                        </span>
+                    @else
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-gray-200 text-gray-600 dark:bg-white/10 dark:text-gray-400">
+                            <i data-lucide="circle-dashed" class="w-3.5 h-3.5"></i> Imzolanmagan
+                        </span>
+                    @endif
+                </dd>
+                @if($seller->contract_number)
+                    <dt class="col-span-1 text-gray-500">№</dt>
+                    <dd class="col-span-2 font-mono">{{ $seller->contract_number }}</dd>
+                @endif
+                @if($seller->contract_signed_at)
+                    <dt class="col-span-1 text-gray-500">Imzolandi</dt>
+                    <dd class="col-span-2">{{ $seller->contract_signed_at->format('Y-m-d') }}</dd>
+                @endif
+                @if($seller->contract_expires_at)
+                    <dt class="col-span-1 text-gray-500">Tugaydi</dt>
+                    <dd class="col-span-2">
+                        {{ $seller->contract_expires_at->format('Y-m-d') }}
+                        @php $d = (int) now()->startOfDay()->diffInDays($seller->contract_expires_at, false); @endphp
+                        <span class="text-xs {{ $d < 0 ? 'text-red-500' : ($d <= 30 ? 'text-amber-500' : 'text-gray-400') }}">
+                            ({{ $d < 0 ? abs($d).' kun oldin tugagan' : $d.' kun qoldi' }})
+                        </span>
+                    </dd>
+                @endif
+                @if($seller->contract_notes)
+                    <dt class="col-span-3 text-gray-500 mt-1">Izoh</dt>
+                    <dd class="col-span-3 text-gray-600 dark:text-gray-400">{{ $seller->contract_notes }}</dd>
+                @endif
+            </dl>
+            @if($seller->contract_expires_at)
+                <form method="POST" action="{{ route('admin.sellers.contract.extend', $seller) }}" class="mt-3 flex items-center gap-2">
+                    @csrf
+                    @method('PATCH')
+                    <select name="months" class="select h-9 text-xs flex-1">
+                        <option value="3">+3 oy</option>
+                        <option value="6">+6 oy</option>
+                        <option value="12" selected>+12 oy</option>
+                        <option value="24">+24 oy</option>
+                    </select>
+                    <button type="submit" class="btn btn-secondary text-xs flex items-center gap-1 whitespace-nowrap">
+                        <i data-lucide="calendar-plus" class="w-3.5 h-3.5"></i> Uzaytirish
+                    </button>
+                </form>
+            @endif
+        @endif
+    </div>
+
+    {{-- Rekvizitlar kartochkasi (maskalangan) --}}
+    <div class="card p-5">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold text-base flex items-center gap-2">
+                <i data-lucide="landmark" class="w-5 h-5 text-emerald-500"></i>
+                Rekvizitlar
+            </h3>
+            <a href="{{ route('admin.sellers.edit', $seller) }}#legal" class="text-xs text-blue-500 hover:underline">Tahrirlash</a>
+        </div>
+        @php
+            $hasAny = $seller->legal_type || $seller->inn || $seller->bank_account || $seller->payment_card;
+        @endphp
+        @if(!$hasAny)
+            <p class="text-sm text-gray-400 text-center py-4">Rekvizitlar kiritilmagan.</p>
+        @else
+            <dl class="grid grid-cols-3 gap-y-2 gap-x-3 text-sm">
+                @if($seller->legal_type)
+                    <dt class="col-span-1 text-gray-500">Turi</dt>
+                    <dd class="col-span-2">
+                        @switch($seller->legal_type)
+                            @case('individual')   Jismoniy shaxs @break
+                            @case('entrepreneur') Yakka tartibdagi tadbirkor @break
+                            @case('llc')          MChJ @break
+                            @case('jsc')          AJ / OAJ @break
+                            @default              {{ $seller->legal_type }}
+                        @endswitch
+                    </dd>
+                @endif
+                @if($seller->inn)
+                    <dt class="col-span-1 text-gray-500">STIR</dt>
+                    <dd class="col-span-2 font-mono">{{ $seller->inn }}</dd>
+                @endif
+                @if($seller->passport_series || $seller->passport_number)
+                    <dt class="col-span-1 text-gray-500">Pasport</dt>
+                    <dd class="col-span-2 font-mono">{{ $seller->passport_series }} {{ $seller->passport_number }}</dd>
+                @endif
+                @if($seller->bank_name)
+                    <dt class="col-span-1 text-gray-500">Bank</dt>
+                    <dd class="col-span-2">{{ $seller->bank_name }}</dd>
+                @endif
+                @if($seller->bank_account)
+                    <dt class="col-span-1 text-gray-500">Hisob</dt>
+                    <dd class="col-span-2 font-mono">{{ $seller->masked_bank_account }}</dd>
+                @endif
+                @if($seller->bank_mfo)
+                    <dt class="col-span-1 text-gray-500">MFO</dt>
+                    <dd class="col-span-2 font-mono">{{ $seller->bank_mfo }}</dd>
+                @endif
+                @if($seller->payment_card)
+                    <dt class="col-span-1 text-gray-500">Karta</dt>
+                    <dd class="col-span-2 font-mono">{{ $seller->masked_card }}</dd>
+                @endif
+                @if($seller->card_holder)
+                    <dt class="col-span-1 text-gray-500">Egasi</dt>
+                    <dd class="col-span-2">{{ $seller->card_holder }}</dd>
+                @endif
+                @if($seller->legal_address)
+                    <dt class="col-span-3 text-gray-500 mt-1">Manzil</dt>
+                    <dd class="col-span-3">{{ $seller->legal_address }}</dd>
+                @endif
+            </dl>
+        @endif
+    </div>
+</div>
+
+{{-- ══ HUJJATLAR + SHARTNOMA TARIXI ═══════════════════════════════════ --}}
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+    {{-- Hujjatlar --}}
+    <div class="card p-5">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold text-base flex items-center gap-2">
+                <i data-lucide="folder" class="w-5 h-5 text-indigo-500"></i>
+                Hujjatlar ({{ $seller->documents->count() }})
+            </h3>
+            <a href="{{ route('admin.sellers.edit', $seller) }}#documents" class="text-xs text-blue-500 hover:underline">Yuklash / boshqarish</a>
+        </div>
+        @if($seller->documents->isEmpty())
+            <p class="text-sm text-gray-400 text-center py-4">Hujjatlar yuklanmagan.</p>
+        @else
+            <ul class="divide-y divide-gray-100 dark:divide-white/10">
+                @foreach($seller->documents->take(6) as $doc)
+                    <li class="flex items-center gap-3 py-2.5">
+                        <i data-lucide="{{ $doc->type_icon }}" class="w-4 h-4 text-gray-400 flex-shrink-0"></i>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm truncate">{{ $doc->type_label }}@if($doc->original_name) — <span class="text-gray-400">{{ $doc->original_name }}</span>@endif</p>
+                            <p class="text-[10px] text-gray-400">{{ $doc->created_at?->format('Y-m-d H:i') }}</p>
+                        </div>
+                        <a href="{{ $doc->file_url }}" target="_blank" class="text-blue-500 hover:underline text-xs flex items-center gap-1 flex-shrink-0">
+                            <i data-lucide="external-link" class="w-3 h-3"></i> Ochish
+                        </a>
+                    </li>
+                @endforeach
+            </ul>
+            @if($seller->documents->count() > 6)
+                <p class="text-xs text-gray-400 mt-2 text-center">Yana {{ $seller->documents->count() - 6 }} ta hujjat...</p>
+            @endif
+        @endif
+    </div>
+
+    {{-- Shartnoma tarixi --}}
+    <div class="card p-5">
+        <h3 class="font-bold text-base flex items-center gap-2 mb-4">
+            <i data-lucide="history" class="w-5 h-5 text-amber-500"></i>
+            Shartnoma tarixi
+        </h3>
+        @if($seller->contractHistory->isEmpty())
+            <p class="text-sm text-gray-400 text-center py-4">Tarix yo'q.</p>
+        @else
+            <ol class="space-y-2">
+                @foreach($seller->contractHistory->take(8) as $h)
+                    <li class="flex items-start gap-3 text-xs">
+                        <span class="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-{{ $h->action_color }}-100 text-{{ $h->action_color }}-700 dark:bg-{{ $h->action_color }}-500/10 dark:text-{{ $h->action_color }}-400 font-medium flex-shrink-0">
+                            {{ $h->action_label }}
+                        </span>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-gray-700 dark:text-gray-300">
+                                @if($h->old_expires_at && $h->new_expires_at)
+                                    <span class="font-mono">{{ $h->old_expires_at->format('Y-m-d') }}</span>
+                                    →
+                                    <span class="font-mono font-semibold">{{ $h->new_expires_at->format('Y-m-d') }}</span>
+                                @elseif($h->new_expires_at)
+                                    <span class="font-mono">{{ $h->new_expires_at->format('Y-m-d') }}</span>
+                                @endif
+                            </div>
+                            @if($h->notes)
+                                <p class="text-gray-500 mt-0.5 truncate">{{ $h->notes }}</p>
+                            @endif
+                            <p class="text-[10px] text-gray-400 mt-0.5">
+                                {{ $h->created_at?->format('Y-m-d H:i') }}
+                                @if($h->performer)
+                                    · {{ trim($h->performer->name . ' ' . $h->performer->lastname) }}
+                                @endif
+                            </p>
+                        </div>
+                    </li>
+                @endforeach
+            </ol>
+        @endif
     </div>
 </div>
 

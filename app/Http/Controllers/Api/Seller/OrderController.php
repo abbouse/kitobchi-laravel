@@ -251,6 +251,17 @@ public function toCourier(Request $request, $qr)
             $seller_order->status = 3;
             $seller_order->save();
 
+            // Har bir seller o'z ulushi uchun alohida to'lov oladi —
+            // ilgari bu kod `$allSellersDone` bloki ichida bo'lib, ko'p
+            // sellerli buyurtmada faqat oxirgi seller (barchasi status=3
+            // bo'lgandan keyin kuryerga bergan) to'lov olardi, qolganlari
+            // to'lovsiz qolardi. Endi shu seller 'kuryerga berdi' bosganda
+            // uning o'zining ulushi darhol balansga qo'shiladi va
+            // successful_orders hisoblagichi oshiriladi.
+            $storeSeller->balance += $seller_order->amount;
+            $storeSeller->increment('successful_orders');
+            $storeSeller->save();
+
             $allSellersDone = SellerOrder::where('order_id', $orderId)
                 ->where('status', '!=', 3)
                 ->doesntExist();
@@ -259,9 +270,6 @@ public function toCourier(Request $request, $qr)
                 $sold->status = 'B';
                 $sold->updated_at = now();
                 $sold->save();
-
-                $storeSeller->balance += $seller_order->amount;
-                $storeSeller->save();
             }
 
             return response()->json([
@@ -313,8 +321,27 @@ public function toCourier(Request $request, $qr)
             ], 200);
         }
 
-        $sellerOrder->status = 2;
-        $sellerOrder->save();
+        DB::transaction(function () use ($sellerOrder, $storeSellerId) {
+            $sellerOrder->status = 2;
+            // Qabul qilingan vaqtni yozamiz — response_time hisoblash uchun.
+            $sellerOrder->accepted_at = now();
+            $sellerOrder->save();
+
+            // Seller uchun o'rtacha javob vaqtini (soatda) yangilaymiz.
+            // Faqat accepted_at bor buyurtmalar hisobga olinadi — eski
+            // (null accepted_at) buyurtmalar statistikani buzmaydi.
+            $avgHours = SellerOrder::where('seller_id', $storeSellerId)
+                ->whereNotNull('accepted_at')
+                ->selectRaw('AVG(TIMESTAMPDIFF(SECOND, created_at, accepted_at) / 3600) as avg_h')
+                ->value('avg_h');
+
+            if ($avgHours !== null) {
+                // decimal(5,2) — 999.99 soatgacha, shuning uchun cap qo'yamiz.
+                $capped = min(round((float) $avgHours, 2), 999.99);
+                Seller::where('id', $storeSellerId)
+                    ->update(['response_time_hours' => $capped]);
+            }
+        });
 
         return response()->json([
             'success' => true,

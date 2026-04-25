@@ -66,6 +66,16 @@ class AuthController extends Controller
                 $telegramOidcService->clientId($settings),
             );
 
+            // ── O'zbekiston (+998) raqamlari uchun cheklov ─────────────
+            // Faqat 12 raqamli, 998 bilan boshlanadigan UZ raqamlar qabul qilinadi.
+            if (!$this->isUzbekistanTelegramPhone($claims)) {
+                return response()->json([
+                    'status'     => 'error',
+                    'error_code' => 'tg_err_phone_not_uz',
+                    'message'    => "Faqat O'zbekiston raqamlari (+998) qabul qilinadi.",
+                ], 422);
+            }
+
             $user = DB::transaction(function () use ($claims) {
                 return $this->resolveTelegramUser($claims);
             });
@@ -85,6 +95,21 @@ class AuthController extends Controller
                 'message' => 'Telegram login amalga oshmadi.',
             ], 422);
         }
+    }
+
+    /**
+     * Telegram qaytargan claims dan telefonni olib UZ formatga tekshiradi.
+     * UZ raqami: 12 ta raqam, "998" bilan boshlanadi, keyingi 9 ta raqam.
+     */
+    private function isUzbekistanTelegramPhone(array $claims): bool
+    {
+        $phone = preg_replace('/\D+/', '', (string) ($claims['phone_number'] ?? ''));
+
+        if ($phone === '') {
+            return false;
+        }
+
+        return (bool) preg_match('/^998\d{9}$/', $phone);
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -120,10 +145,22 @@ class AuthController extends Controller
                         "<#> Kitobchi ilovasida tasdiqlash uchun kod: $verifyCode. $randomString"
                     );
                 } catch (\Throwable $e) {
-                    return response()->json([
-                        'status' => 'error',
-                        'message' => $e->getMessage(),
-                    ], 503);
+                    // Productiondan tashqari muhitda (local/dev/staging) Eskiz
+                    // bilan ulanish muvaffaqiyatsiz bo'lsa, kodni log'ga yozib
+                    // davom etamiz — shunda dev'lar xato qilmasdan login qila
+                    // oladi. Productionda esa avvalgidek 503 qaytariladi.
+                    if (!app()->environment('production')) {
+                        Log::warning('SMS soft-fail (dev): kod log\'ga yozildi', [
+                            'phone'      => $phone_number,
+                            'verifyCode' => $verifyCode,
+                            'error'      => $e->getMessage(),
+                        ]);
+                    } else {
+                        return response()->json([
+                            'status'  => 'error',
+                            'message' => $e->getMessage(),
+                        ], 503);
+                    }
                 }
             }
 

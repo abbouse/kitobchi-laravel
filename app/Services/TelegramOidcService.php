@@ -23,6 +23,8 @@ use RuntimeException;
 class TelegramOidcService
 {
     private const ISSUER = 'https://oauth.telegram.org';
+    private const DEFAULT_REDIRECT_URI_IOS = 'https://app3206985527-login.tg.dev';
+    private const DEFAULT_REDIRECT_URI_ANDROID = 'https://app2854400165-login.tg.dev/tglogin';
     private const CONFIG_CACHE_KEY = 'telegram_oidc_configuration';
     private const JWKS_CACHE_KEY = 'telegram_oidc_jwks';
 
@@ -35,6 +37,8 @@ class TelegramOidcService
             'client_id' => $this->clientId($settings),
             'scopes'    => $this->scopes($settings),
             'issuer'    => self::ISSUER,
+            'redirect_uri_ios' => $this->redirectUriIos($settings),
+            'redirect_uri_android' => $this->redirectUriAndroid($settings),
         ];
     }
 
@@ -50,6 +54,32 @@ class TelegramOidcService
         $settings ??= ProjectSetting::first();
 
         return trim((string) ($settings?->telegram_scopes ?: 'openid profile phone'));
+    }
+
+    public function redirectUriIos(?ProjectSetting $settings = null): string
+    {
+        $settings ??= ProjectSetting::first();
+
+        return $this->sanitizeRedirectUri(
+            $settings?->telegram_redirect_uri_ios
+            ?: env('TELEGRAM_LOGIN_REDIRECT_URI_IOS')
+            ?: self::DEFAULT_REDIRECT_URI_IOS,
+            self::DEFAULT_REDIRECT_URI_IOS,
+            false,
+        );
+    }
+
+    public function redirectUriAndroid(?ProjectSetting $settings = null): string
+    {
+        $settings ??= ProjectSetting::first();
+
+        return $this->sanitizeRedirectUri(
+            $settings?->telegram_redirect_uri_android
+            ?: env('TELEGRAM_LOGIN_REDIRECT_URI_ANDROID')
+            ?: self::DEFAULT_REDIRECT_URI_ANDROID,
+            self::DEFAULT_REDIRECT_URI_ANDROID,
+            true,
+        );
     }
 
     /**
@@ -112,5 +142,31 @@ class TelegramOidcService
                 ->throw()
                 ->json();
         });
+    }
+
+    private function sanitizeRedirectUri(?string $candidate, string $fallback, bool $requireAndroidPath): string
+    {
+        $value = trim((string) $candidate);
+        if ($value === '') {
+            return $fallback;
+        }
+
+        $parts = parse_url($value);
+        $scheme = strtolower((string) ($parts['scheme'] ?? ''));
+        $host = strtolower((string) ($parts['host'] ?? ''));
+        $path = (string) ($parts['path'] ?? '');
+
+        $isTelegramUniversalLink = $scheme === 'https'
+            && str_ends_with($host, '.tg.dev');
+
+        if (!$isTelegramUniversalLink) {
+            return $fallback;
+        }
+
+        if ($requireAndroidPath && $path !== '/tglogin') {
+            return $fallback;
+        }
+
+        return $value;
     }
 }

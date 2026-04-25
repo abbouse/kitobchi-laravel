@@ -30,19 +30,40 @@ class CourierAuthController extends Controller
             'platform' => 'required|string',
             'fcm_token'    => 'nullable|string',
         ]);
-        $courier = Couriers::where('phone_number', $request->phone_number)->first();
+
+        // Faqat O'zbekiston raqamlarini qabul qilamiz: 998 bilan boshlanib, 12 raqam.
+        $rawPhone = preg_replace('/[\s\(\)\-+]/', '', (string) $request->input('phone_number')) ?? '';
+        if (!preg_match('/^998\d{9}$/', $rawPhone)) {
+            return response()->json([
+                'status'     => 'error',
+                'error_code' => 'courier_phone_not_uz',
+                'message'    => __('courier_api.phone_not_uz'),
+            ], 422);
+        }
+
+        $courier = Couriers::where('phone_number', $rawPhone)->first();
 
         if (!$courier || !Hash::check($request->password, $courier->password)) {
             return response()->json([
-                'status' => 'error',
-                'message' => 'Telefon raqam yoki parol noto‘g‘ri!'
+                'status'     => 'error',
+                'error_code' => 'courier_invalid_credentials',
+                'message'    => __('courier_api.invalid_credentials'),
             ], 401);
+        }
+
+        if ($courier->status === 'blocked') {
+            return response()->json([
+                'status'     => 'error',
+                'error_code' => 'courier_account_blocked',
+                'message'    => __('courier_api.account_blocked'),
+            ], 403);
         }
 
         if ($courier->status !== 'approved') {
             return response()->json([
-                'status' => 'error',
-                'message' => 'Sizning hisobingiz faol emas. Iltimos, administrator bilan bog\'laning.'
+                'status'     => 'error',
+                'error_code' => 'courier_account_inactive',
+                'message'    => __('courier_api.account_inactive'),
             ], 403);
         }
 
@@ -73,53 +94,66 @@ class CourierAuthController extends Controller
         $courier->tokens()->whereNotIn('token', $activeTokensInDevices)->delete();
 
         return response()->json([
-            'status' => 'success',
-            'message' => 'Tizimga muvaffaqiyatli kirdingiz!',
-            'token' => $plainTextToken,
+            'status'  => 'success',
+            'message' => __('courier_api.login_success'),
+            'token'   => $plainTextToken,
             'courier' => [
-                'id' => $courier->id,
-                'first_name' => $courier->first_name,
-                'last_name' => $courier->last_name,
-                'photo' => $courier->photo,
+                'id'           => $courier->id,
+                'first_name'   => $courier->first_name,
+                'last_name'    => $courier->last_name,
+                'photo'        => $courier->photo,
                 'phone_number' => $courier->phone_number,
-                ],
+            ],
         ], 201);
     }
     
     public function contactRequest(Request $request)
-{
-    $request->validate([
-        'phone_number' => 'required|string',
-        'region' => 'required|string',
-        'name' => 'required|string',
-    ]);
-    $existingCourier = Couriers::where('phone_number', $request->phone_number)->first();
-    if ($existingCourier) {
-        if ($existingCourier->status === 'approved') {
-            return response()->json([
-                'status' => 'error',
-                'message' => "Siz allaqachon ro‘yxatdan o‘tgansiz yoki faol kuryersiz",
-            ], 403);
-        }
-        $existingCourier->update([
-            'region' => $request->region,
-            'first_name' => $request->name,
+    {
+        $request->validate([
+            'phone_number' => 'required|string',
+            'region'       => 'required|string',
+            'name'         => 'required|string',
         ]);
+
+        $rawPhone = preg_replace('/[\s\(\)\-+]/', '', (string) $request->input('phone_number')) ?? '';
+        if (!preg_match('/^998\d{9}$/', $rawPhone)) {
+            return response()->json([
+                'status'     => 'error',
+                'error_code' => 'courier_phone_not_uz',
+                'message'    => __('courier_api.phone_not_uz'),
+            ], 422);
+        }
+
+        $existingCourier = Couriers::where('phone_number', $rawPhone)->first();
+        if ($existingCourier) {
+            if ($existingCourier->status === 'approved') {
+                return response()->json([
+                    'status'     => 'error',
+                    'error_code' => 'courier_request_already_sent',
+                    'message'    => __('courier_api.request_already_sent'),
+                ], 403);
+            }
+            $existingCourier->update([
+                'region'     => $request->region,
+                'first_name' => $request->name,
+            ]);
+            return response()->json([
+                'status'  => 'success',
+                'message' => __('courier_api.request_updated'),
+            ], 200);
+        }
+
+        Couriers::create([
+            'phone_number' => $rawPhone,
+            'region'       => $request->region,
+            'first_name'   => $request->name,
+        ]);
+
         return response()->json([
-            'status' => 'success',
-            'message' => "So‘rov ma’lumotlari yangilandi",
-        ], 200);
+            'status'  => 'success',
+            'message' => __('courier_api.request_submitted'),
+        ], 201);
     }
-    Couriers::create([
-        'phone_number' => $request->phone_number,
-        'region' => $request->region,
-        'first_name' => $request->name,
-    ]);
-    return response()->json([
-        'status' => 'success',
-        'message' => "So‘rov muvaffaqiyatli yuborildi",
-    ], 201);
-}
 
     public function forgot(Request $request)
     {
@@ -127,20 +161,38 @@ class CourierAuthController extends Controller
             'phone_number' => 'required|string',
         ]);
 
-        $cleanedPhone = preg_replace('/[\s\(\)-]/', '', $request->phone_number);
+        $cleanedPhone = preg_replace('/[\s\(\)\-+]/', '', (string) $request->input('phone_number')) ?? '';
+        if (!preg_match('/^998\d{9}$/', $cleanedPhone)) {
+            return response()->json([
+                'status'     => 'error',
+                'error_code' => 'courier_phone_not_uz',
+                'message'    => __('courier_api.phone_not_uz'),
+            ], 422);
+        }
+
         $courier = Couriers::where('phone_number', $cleanedPhone)->first();
 
         if (!$courier) {
             return response()->json([
-                'status' => 'error',
-                'message' => 'Telefon raqami topilmadi.',
+                'status'     => 'error',
+                'error_code' => 'courier_phone_not_found',
+                'message'    => __('courier_api.phone_not_found'),
             ], 404);
+        }
+
+        if ($courier->status === 'blocked') {
+            return response()->json([
+                'status'     => 'error',
+                'error_code' => 'courier_account_blocked',
+                'message'    => __('courier_api.account_blocked'),
+            ], 403);
         }
 
         if ($courier->status !== 'approved') {
             return response()->json([
-                'status' => 'error',
-                'message' => 'Bunday kuryer topilmadi yoki hisob faol emas.',
+                'status'     => 'error',
+                'error_code' => 'courier_account_inactive',
+                'message'    => __('courier_api.account_inactive'),
             ], 403);
         }
 
@@ -148,8 +200,9 @@ class CourierAuthController extends Controller
             $this->passwordResetService->ensureHasAttempts($courier);
         } catch (RuntimeException $e) {
             return response()->json([
-                'status' => 'error',
-                'message' => $e->getMessage(),
+                'status'     => 'error',
+                'error_code' => 'courier_reset_too_many',
+                'message'    => __('courier_api.reset_too_many'),
             ], 429);
         }
 
@@ -162,14 +215,15 @@ class CourierAuthController extends Controller
             $remaining = $this->passwordResetService->applyNewPassword($courier, $newPassword);
 
             return response()->json([
-                'status' => 'success',
-                'message' => 'Yangi parol telefon raqamiga SMS tarzida yuborildi.',
+                'status'             => 'success',
+                'message'            => __('courier_api.reset_sms_sent'),
                 'remaining_attempts' => $remaining,
             ], 200);
         } catch (\Throwable $e) {
             return response()->json([
-                'status' => 'error',
-                'message' => 'Parolni tiklashda xatolik yuz berdi. Iltimos, keyinroq qayta urinib ko‘ring.',
+                'status'     => 'error',
+                'error_code' => 'courier_reset_sms_failed',
+                'message'    => __('courier_api.reset_sms_failed'),
             ], 503);
         }
     }
@@ -177,11 +231,36 @@ class CourierAuthController extends Controller
     public function logout(Request $request)
     {
         $user = $request->user();
-        $user->currentAccessToken()->delete();
-        ConnectedDevice::where('token', $request->bearerToken())->delete();
+        if (!$user) {
+            return response()->json([
+                'status'     => 'error',
+                'error_code' => 'unauthenticated',
+                'message'    => __('courier_api.invalid_credentials'),
+            ], 401);
+        }
+
+        // Bearer token'ni hash qilib, `connected_devices` jadvalidagi yozuv bilan
+        // mos qilish uchun. (`personal_access_tokens.token` va
+        // `connected_devices.token` ikkalasi ham hashlangan ko'rinishda saqlanadi.)
+        $bearer = $request->bearerToken();
+        $hashedToken = (is_string($bearer) && str_contains($bearer, '|'))
+            ? hash('sha256', explode('|', $bearer, 2)[1])
+            : ($bearer ? hash('sha256', $bearer) : null);
+
+        // Joriy access token'ni o'chiramiz (Sanctum tarafidagi).
+        $current = $user->currentAccessToken();
+        if ($current) {
+            $current->delete();
+        }
+
+        // Mos `connected_devices` yozuvini ham o'chirib qo'yamiz.
+        if ($hashedToken) {
+            ConnectedDevice::where('token', $hashedToken)->delete();
+        }
+
         return response()->json([
-            'status' => 'success',
-            'message' => 'Siz tizimdan chiqdingiz.'
+            'status'  => 'success',
+            'message' => __('courier_api.logout_success'),
         ]);
     }
 }

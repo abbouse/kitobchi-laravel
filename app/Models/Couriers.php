@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
@@ -14,6 +15,7 @@ class Couriers extends Authenticatable
     protected $table = 'couriers';
 
     protected $fillable = [
+        // ── Asosiy ──────────────────────────────────────────────
         'first_name',
         'last_name',
         'region',
@@ -27,6 +29,25 @@ class Couriers extends Authenticatable
         'total_withdrawal',
         'payment_card',
         'status',
+
+        // ── Transport ───────────────────────────────────────────
+        'transport_type',
+        'vehicle_brand', 'vehicle_model', 'vehicle_color', 'vehicle_plate_number',
+
+        // ── Identifikatsiya ─────────────────────────────────────
+        'inn', 'birthdate',
+        'passport_series', 'passport_number',
+        'passport_issued_by', 'passport_issued_at',
+
+        // ── Haydovchi guvohnomasi ───────────────────────────────
+        'driver_license_number',
+        'driver_license_issued_at', 'driver_license_expires_at',
+
+        // ── Bank/karta egasi va manzil ──────────────────────────
+        'card_holder', 'home_address',
+
+        // ── Verifikatsiya ───────────────────────────────────────
+        'verification_status', 'verified_at', 'verification_notes',
     ];
 
     protected $hidden = ['password', 'remember_token'];
@@ -35,6 +56,12 @@ class Couriers extends Authenticatable
         'balance' => 'integer',
         'password_reset_limit' => 'integer',
         'password_reset_limit_reset_at' => 'datetime',
+
+        'birthdate'                  => 'date',
+        'passport_issued_at'         => 'date',
+        'driver_license_issued_at'   => 'date',
+        'driver_license_expires_at'  => 'date',
+        'verified_at'                => 'datetime',
     ];
 
     // ── Password ───────────────────────────────────────────────────
@@ -73,6 +100,11 @@ class Couriers extends Authenticatable
             ->where('user_type', 'courier');
     }
 
+    public function documents(): HasMany
+    {
+        return $this->hasMany(CourierDocument::class, 'courier_id')->latest();
+    }
+
     // ── Helpers ────────────────────────────────────────────────────
 
     public function getFullNameAttribute(): string
@@ -83,5 +115,72 @@ class Couriers extends Authenticatable
     public function getIsActiveAttribute(): bool
     {
         return $this->status === 'approved';
+    }
+
+    /**
+     * Karta raqamining maskalangan ko'rinishi (xavfsizlik uchun).
+     */
+    public function getMaskedCardAttribute(): ?string
+    {
+        if (empty($this->payment_card)) return null;
+        $card = preg_replace('/\D/', '', $this->payment_card);
+        if (strlen($card) < 4) return $this->payment_card;
+        return '**** **** **** ' . substr($card, -4);
+    }
+
+    /**
+     * Transport turi uchun foydalanuvchi-do'stona yorliq.
+     */
+    public function getTransportLabelAttribute(): string
+    {
+        return match ($this->transport_type) {
+            'foot'       => 'Piyoda',
+            'bicycle'    => 'Velosiped',
+            'motorcycle' => 'Mototsikl',
+            'car'        => 'Avtomobil',
+            default      => 'Piyoda',
+        };
+    }
+
+    public function getTransportIconAttribute(): string
+    {
+        return match ($this->transport_type) {
+            'foot'       => 'footprints',
+            'bicycle'    => 'bike',
+            'motorcycle' => 'bike',
+            'car'        => 'car',
+            default      => 'footprints',
+        };
+    }
+
+    /**
+     * Haydovchi guvohnomasi tugashiga necha kun qolganini hisoblaydi.
+     */
+    public function getLicenseDaysRemainingAttribute(): ?int
+    {
+        if (empty($this->driver_license_expires_at)) return null;
+        return (int) now()->startOfDay()->diffInDays($this->driver_license_expires_at, false);
+    }
+
+    public function getVerificationLabelAttribute(): string
+    {
+        return match ($this->verification_status) {
+            'unverified' => 'Tekshirilmagan',
+            'pending'    => 'Ko\'rib chiqilmoqda',
+            'verified'   => 'Tasdiqlangan',
+            'rejected'   => 'Rad etilgan',
+            default      => 'Tekshirilmagan',
+        };
+    }
+
+    public function getVerificationColorAttribute(): string
+    {
+        return match ($this->verification_status) {
+            'unverified' => 'gray',
+            'pending'    => 'amber',
+            'verified'   => 'emerald',
+            'rejected'   => 'red',
+            default      => 'gray',
+        };
     }
 }

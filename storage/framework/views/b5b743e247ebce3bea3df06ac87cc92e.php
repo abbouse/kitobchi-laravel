@@ -42,6 +42,7 @@
                 'approved' => ['label' => 'Tasdiqlangan','count' => $counts['approved'] ?? 0],
                 'pending'  => ['label' => 'Kutilmoqda',  'count' => $counts['pending']  ?? 0],
                 'rejected' => ['label' => 'Rad etilgan', 'count' => $counts['rejected'] ?? 0],
+                'blocked'  => ['label' => 'Bloklangan',  'count' => $counts['blocked']  ?? 0],
             ];
         ?>
         <?php $__currentLoopData = $tabs; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $key => $tabItem): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
@@ -102,6 +103,10 @@
                                 <span class="badge badge-warning">Kutilmoqda</span>
                             <?php elseif($courier->status === 'rejected'): ?>
                                 <span class="badge badge-danger">Rad etilgan</span>
+                            <?php elseif($courier->status === 'blocked'): ?>
+                                <span class="badge badge-danger flex items-center gap-1">
+                                    <i data-lucide="ban" class="w-3 h-3"></i> Bloklangan
+                                </span>
                             <?php else: ?>
                                 <span class="badge badge-muted"><?php echo e($courier->status ?? '—'); ?></span>
                             <?php endif; ?>

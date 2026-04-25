@@ -75,7 +75,8 @@ class DashboardController extends Controller
             'dash5_u_week', 'dash5_u_active', 'dash5_u_isolated', 'dash5_u_verified',
             'dash5_u_list', 'dash5_u_daily',
             'dash5_s_total', 'dash5_s_pending', 'dash5_s_approved',
-            'dash5_c_total', 'dash5_c_active',
+            'dash5_s_contract_expiring', 'dash5_s_contract_expired', 'dash5_s_contract_unsigned',
+            'dash5_c_total', 'dash5_c_active', 'dash5_c_verification_pending',
             'dash5_gift_total', 'dash5_gift_pending', 'dash5_gift_used',
             'dash5_mystery_active', 'dash5_mystery_due', 'dash5_mystery_due_list',
             'dash5_top_mixed', 'dash5_top_buyers', 'dash5_recent',
@@ -284,6 +285,48 @@ class DashboardController extends Controller
         $totalCouriers = Cache::remember('dash5_c_total', $ttl, fn () => Couriers::count());
         $activeCouriers = Cache::remember('dash5_c_active', $ttl, fn () => Couriers::where('status', 'approved')->count());
 
+        // Verifikatsiyasi kutilayotgan kuryerlar — admin ko'rib chiqishi kerak
+        $couriersPendingVerification = 0;
+        try {
+            $couriersPendingVerification = Cache::remember('dash5_c_verification_pending', $ttl, fn () => Couriers::query()
+                ->where('verification_status', 'pending')
+                ->count()
+            );
+        } catch (\Throwable) {
+            // Migration tushmagan bo'lsa default 0
+        }
+
+        // ── SELLER CONTRACTS ──────────────────────────────────
+        // Yaqinda tugaydigan va allaqachon tugagan shartnomalar — alert va widget
+        // uchun. Migration hali ishga tushmagan bo'lsa ham xato chiqarmaydi.
+        $contractsExpiringCount = 0;
+        $contractsExpiredCount  = 0;
+        $contractsUnsignedCount = 0;
+        try {
+            $contractsExpiringCount = Cache::remember('dash5_s_contract_expiring', $ttl, fn () => Seller::query()
+                ->whereNotNull('contract_expires_at')
+                ->whereDate('contract_expires_at', '>=', now()->toDateString())
+                ->whereDate('contract_expires_at', '<=', now()->addDays(30)->toDateString())
+                ->where('contract_status', '!=', 'terminated')
+                ->count()
+            );
+            $contractsExpiredCount = Cache::remember('dash5_s_contract_expired', $ttl, fn () => Seller::query()
+                ->whereNotNull('contract_expires_at')
+                ->whereDate('contract_expires_at', '<', now()->toDateString())
+                ->where('contract_status', '!=', 'terminated')
+                ->count()
+            );
+            // Tasdiqlangan, lekin shartnomasi imzolanmagan sellerlar — admin
+            // tomonidan qog'oz jarayonini boshlash kerak.
+            $contractsUnsignedCount = Cache::remember('dash5_s_contract_unsigned', $ttl, fn () => Seller::query()
+                ->where('status', 'approved')
+                ->where('contract_signed', false)
+                ->count()
+            );
+        } catch (\Throwable) {
+            // Migration tushmagan bo'lsa default 0
+        }
+
         // ── GIFT CERTIFICATES ─────────────────────────────────
         $giftTotal = $giftPending = $giftUsed = $giftSent = $giftRevenue = $giftExpiringSoon = 0;
         try {
@@ -428,6 +471,27 @@ class DashboardController extends Controller
                 "{$pendingSellers} ta sotuvchi tasdiqlash kutmoqda", route('admin.sellers.index', ['status' => 'pending'])];
         }
 
+        if ($contractsExpiredCount > 0) {
+            $alerts[] = ['danger', 'bi-file-x', 'Shartnomasi tugagan sellerlar',
+                "{$contractsExpiredCount} ta sellerning shartnomasi tugagan — uzaytirish lozim",
+                route('admin.sellers.index', ['contract' => 'expired'])];
+        }
+        if ($contractsExpiringCount > 0) {
+            $alerts[] = ['warning', 'bi-calendar-event', 'Shartnoma tugashi yaqin',
+                "{$contractsExpiringCount} ta seller shartnomasi 30 kun ichida tugaydi",
+                route('admin.sellers.index', ['contract' => 'expiring'])];
+        }
+        if ($contractsUnsignedCount > 0) {
+            $alerts[] = ['warning', 'bi-pencil-square', 'Shartnoma imzolanmagan sellerlar',
+                "{$contractsUnsignedCount} ta tasdiqlangan seller bilan shartnoma hali imzolanmagan",
+                route('admin.sellers.index', ['contract' => 'unsigned'])];
+        }
+        if ($couriersPendingVerification > 0) {
+            $alerts[] = ['warning', 'bi-shield-check', 'Kuryer hujjatlari tekshirilmoqda',
+                "{$couriersPendingVerification} ta kuryerning hujjatlari ko'rib chiqilishi kerak",
+                route('admin.couriers.index', ['verification' => 'pending'])];
+        }
+
         if ($pendingSellerTxCount > 0) {
             $alerts[] = ['warning', 'bi-arrow-left-right', 'Seller to\'lov arizasi',
                 "{$pendingSellerTxCount} ta — ".number_format($pendingSellerPayout).' UZS', route('admin.transactions.index', ['tab' => 'pending'])];
@@ -510,7 +574,8 @@ class DashboardController extends Controller
             'pendingCourierPayout', 'pendingSellerTxCount', 'pendingCourierTxCount',
             'netRevenue', 'monthNetRevenue', 'monthlyFinancial',
             'totalSellers', 'pendingSellers', 'approvedSellers',
-            'totalCouriers', 'activeCouriers',
+            'contractsExpiringCount', 'contractsExpiredCount', 'contractsUnsignedCount',
+            'totalCouriers', 'activeCouriers', 'couriersPendingVerification',
             'giftTotal', 'giftPending', 'giftUsed', 'giftSent', 'giftRevenue', 'giftExpiringSoon',
             'mysteryActive', 'mysteryDueCount', 'mysteryOverdue', 'mysteryPending',
             'mysteryDueSoon', 'mysteryDueToday', 'stalePreparing',

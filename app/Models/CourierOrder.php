@@ -17,6 +17,30 @@ class CourierOrder extends Model
         'amount',
         'courierPrice',
         'courierBonus',
+        // Phase 3 — bonus tizimi
+        'pickup_bonus',
+        'locked_bonus',
+        'final_bonus',
+        'picked_up_at',
+        'sla_deadline',
+        'is_customer_delay',
+        'customer_delay_started_at',
+        'total_delay_seconds',
+        'bonus_threshold_notified',
+        'sla_warning_notified',
+    ];
+
+    protected $casts = [
+        'is_customer_delay'         => 'boolean',
+        'bonus_threshold_notified'  => 'boolean',
+        'sla_warning_notified'      => 'boolean',
+        'picked_up_at'              => 'datetime',
+        'sla_deadline'              => 'datetime',
+        'customer_delay_started_at' => 'datetime',
+        'pickup_bonus'              => 'integer',
+        'locked_bonus'              => 'integer',
+        'final_bonus'               => 'integer',
+        'total_delay_seconds'       => 'integer',
     ];
 
     // ── Relationships ──────────────────────────────────────────────

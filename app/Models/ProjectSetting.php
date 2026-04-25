@@ -20,6 +20,9 @@ class ProjectSetting extends Model
         'on_premium', 'on_reels', 'ramadan', 'stop_sales',
         // Qadoqlash
         'packaging_price_small', 'packaging_price_large', 'packaging_threshold',
+        // Phase 3 — Kuryer bonus tizimi
+        'courier_surge_step', 'courier_surge_max', 'courier_surge_threshold',
+        'courier_sla_minutes', 'courier_penalty_step',
     ];
 
     protected $casts = [
@@ -28,5 +31,10 @@ class ProjectSetting extends Model
         'ramadan'     => 'boolean',
         'stop_sales'  => 'boolean',
         'telegram_login_enabled' => 'boolean',
+        'courier_surge_step'      => 'integer',
+        'courier_surge_max'       => 'integer',
+        'courier_surge_threshold' => 'integer',
+        'courier_sla_minutes'     => 'integer',
+        'courier_penalty_step'    => 'integer',
     ];
 }

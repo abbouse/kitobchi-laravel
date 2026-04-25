@@ -171,6 +171,11 @@ Route::prefix('a122')->name('admin.')->group(function () {
         Route::patch('/{seller}/unblock', [SellerController::class, 'unblock'])->name('unblock');
         Route::patch('/{seller}/approve', [SellerController::class, 'approve'])->name('approve');
         Route::patch('/{seller}/reject',  [SellerController::class, 'reject'])->name('reject');
+
+        // Shartnoma va hujjatlar
+        Route::patch('/{seller}/contract/extend',  [SellerController::class, 'extendContract'])->name('contract.extend');
+        Route::post('/{seller}/documents',          [SellerController::class, 'uploadDocument'])->name('documents.store');
+        Route::delete('/{seller}/documents/{document}', [SellerController::class, 'deleteDocument'])->name('documents.destroy');
     });
 
     // ── Transactions ───────────────────────────────────────────────
@@ -192,7 +197,16 @@ Route::prefix('a122')->name('admin.')->group(function () {
         Route::post('/{courier}/reset-password', [CourierController::class, 'resetPassword'])->name('reset-password');
         Route::patch('/{courier}/approve', [CourierController::class, 'approve'])->name('approve');
         Route::patch('/{courier}/reject',  [CourierController::class, 'reject'])->name('reject');
+
+        // ── Ogohlantirish va blok ──────────────────────────────────
+        Route::post('/{courier}/warn',     [CourierController::class, 'warn'])->name('warn');
+        Route::patch('/{courier}/unblock', [CourierController::class, 'unblock'])->name('unblock');
+
         Route::delete('/{courier}',  [CourierController::class, 'destroy'])->name('destroy');
+
+        // ── Hujjatlar ──────────────────────────────────────────────
+        Route::post('/{courier}/documents',                [CourierController::class, 'uploadDocument'])->name('documents.store');
+        Route::delete('/{courier}/documents/{document}',   [CourierController::class, 'deleteDocument'])->name('documents.destroy');
     });
 
     // ── Promocodes ─────────────────────────────────────────────────

@@ -41,6 +41,7 @@
                 'approved' => ['label' => 'Tasdiqlangan','count' => $counts['approved'] ?? 0],
                 'pending'  => ['label' => 'Kutilmoqda',  'count' => $counts['pending']  ?? 0],
                 'rejected' => ['label' => 'Rad etilgan', 'count' => $counts['rejected'] ?? 0],
+                'blocked'  => ['label' => 'Bloklangan',  'count' => $counts['blocked']  ?? 0],
             ];
         @endphp
         @foreach($tabs as $key => $tabItem)
@@ -99,6 +100,10 @@
                                 <span class="badge badge-warning">Kutilmoqda</span>
                             @elseif($courier->status === 'rejected')
                                 <span class="badge badge-danger">Rad etilgan</span>
+                            @elseif($courier->status === 'blocked')
+                                <span class="badge badge-danger flex items-center gap-1">
+                                    <i data-lucide="ban" class="w-3 h-3"></i> Bloklangan
+                                </span>
                             @else
                                 <span class="badge badge-muted">{{ $courier->status ?? '—' }}</span>
                             @endif

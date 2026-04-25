@@ -28,6 +28,10 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->appendToGroup('api', \App\Http\Middleware\UpdateLastSeen::class);
+
+        // API javoblarini lokalizatsiya: `lang=` query, `X-App-Locale` yoki
+        // `Accept-Language` headerini hisobga oladi. Default — uz.
+        $middleware->prependToGroup('api', \App\Http\Middleware\SetApiLocale::class);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
@@ -93,5 +97,15 @@ return Application::configure(basePath: dirname(__DIR__))
             ->hourly()
             ->timezone($tz)
             ->withoutOverlapping();
+
+        // ── Phase 3: Kuryer bonus tizimi ──────────────────────────────
+        // Har minutda surge bonusini oshirib boradi va SLA-5min ogohlantirish
+        // push xabarlarini yuboradi. withoutOverlapping(2) — agar oldingi run
+        // 1 minutdan oshib ketsa ham yangi run boshlanmaydi (2 min lock).
+        $schedule->command('courier:refresh-bonus')
+            ->everyMinute()
+            ->timezone($tz)
+            ->withoutOverlapping(2)
+            ->runInBackground();
 
     })->create();
