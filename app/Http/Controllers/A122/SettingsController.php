@@ -15,10 +15,18 @@ class SettingsController extends Controller
     {
         $project    = ProjectSetting::first();
         $commission = CommissionSetting::orderBy('priceFrom')->get();
-        $cashback   = CashbackSetting::orderBy('fromUzs')->get();
+        $cashback   = CashbackSetting::orderBy('type')->orderBy('fromUzs')->get();
         $delivery   = DeliveryService::orderBy('name')->get();
 
-        return view('a122.settings.index', compact('project', 'commission', 'cashback', 'delivery'));
+        // Admin sahifasida ikkita guruhga bo'lib ko'rsatish uchun.
+        $cashbackDelivery = $cashback->where('type', CashbackSetting::TYPE_DELIVERY)->values();
+        $cashbackPickup   = $cashback->where('type', CashbackSetting::TYPE_PICKUP)->values();
+
+        return view('a122.settings.index', compact(
+            'project', 'commission', 'cashback',
+            'cashbackDelivery', 'cashbackPickup',
+            'delivery'
+        ));
     }
 
     public function updateVersions(Request $request)
@@ -75,9 +83,15 @@ class SettingsController extends Controller
             'fromUzs'  => 'required|integer|min:0',
             'toUzs'    => 'required|integer|gt:fromUzs',
             'cashback' => 'required|integer|min:0|max:100',
+            'type'     => 'nullable|in:delivery,pickup',
         ]);
 
-        CashbackSetting::create($request->only(['fromUzs', 'toUzs', 'cashback']));
+        CashbackSetting::create([
+            'fromUzs'  => $request->integer('fromUzs'),
+            'toUzs'    => $request->integer('toUzs'),
+            'cashback' => $request->integer('cashback'),
+            'type'     => $request->input('type', CashbackSetting::TYPE_DELIVERY),
+        ]);
 
         return back()->with('success', "Cashback qoidasi qo'shildi.");
     }
@@ -88,9 +102,15 @@ class SettingsController extends Controller
             'fromUzs'  => 'required|integer|min:0',
             'toUzs'    => 'required|integer|gt:fromUzs',
             'cashback' => 'required|integer|min:0|max:100',
+            'type'     => 'nullable|in:delivery,pickup',
         ]);
 
-        $cashbackSetting->update($request->only(['fromUzs', 'toUzs', 'cashback']));
+        $cashbackSetting->update([
+            'fromUzs'  => $request->integer('fromUzs'),
+            'toUzs'    => $request->integer('toUzs'),
+            'cashback' => $request->integer('cashback'),
+            'type'     => $request->input('type', $cashbackSetting->type ?? CashbackSetting::TYPE_DELIVERY),
+        ]);
 
         return back()->with('success', 'Cashback yangilandi.');
     }
@@ -239,13 +259,18 @@ class SettingsController extends Controller
 
         $isTelegramUniversalLink = $scheme === 'https'
             && str_ends_with($host, '.tg.dev');
+        $isSupportedCustomScheme = $scheme === 'kitobchi'
+            && (
+                (!$requireAndroidPath && $host === 'tglogin')
+                || ($requireAndroidPath && $host === 'telegram-login')
+            );
 
-        if (!$isTelegramUniversalLink) {
+        if (!$isTelegramUniversalLink && !$isSupportedCustomScheme) {
             return $fallback;
         }
 
         if ($requireAndroidPath && $path !== '/tglogin') {
-            return $fallback;
+            return $isSupportedCustomScheme ? 'kitobchi://telegram-login' : $fallback;
         }
 
         return $value;

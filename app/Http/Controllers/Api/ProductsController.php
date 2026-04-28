@@ -12,6 +12,7 @@ use App\Models\MyCart;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 class ProductsController extends Controller
@@ -758,6 +759,130 @@ class ProductsController extends Controller
                     'recommended'  => $recommendedStats,
                     'by_category'  => $stationeriesByCategory,
                 ],
+            ],
+        ]);
+    }
+
+    // =========================================================================
+    //  5c. SELLER MAHSULOTI ISBN BO'YICHA — mijoz "do'kon ichida" skaneri uchun
+    //  GET /products/sellers/{sellerId}/by-isbn/{isbn}
+    //
+    //  Faqat shu sotuvchining is_approved + count > 0 kitoblari ichidan
+    //  ISBN bo'yicha mosini topadi. Topilmasa, shu seller'da yo'q deb ham
+    //  alohida xabar berish uchun: 404 ichida `cause: not_in_shop` yoki
+    //  `cause: not_in_database` kelishi mumkin.
+    // =========================================================================
+    public function sellerProductByIsbn(Request $request, $sellerId, string $isbn)
+    {
+        $canonical = Books::normalizeIsbn($isbn);
+        if ($canonical === null) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'ISBN formati noto\'g\'ri.',
+            ], 422);
+        }
+
+        $seller = Seller::where('id', $sellerId)
+            ->where('is_hidden', 0)
+            ->where('parent_id', 0)
+            ->where('status', 'approved')
+            ->first(['id']);
+
+        if (!$seller) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Do\'kon topilmadi.',
+            ], 404);
+        }
+
+        // 1. Shu sellerning mahsuloti
+        $book = Books::query()
+            ->whereIsbn($canonical)
+            ->where('seller_id', $sellerId)
+            ->where('is_approved', 1)
+            ->where('is_hidden', 0)
+            ->where('count', '>', 0)
+            ->with(['category', 'tags', 'seller'])
+            ->first();
+
+        if ($book) {
+            return response()->json([
+                'status' => 'success',
+                'data'   => $this->formatProduct($book, Auth::guard('user')->user(), 'book'),
+            ]);
+        }
+
+        // 2. Bazada bor lekin shu sellerda yo'q?
+        $existsAnywhere = Books::query()
+            ->whereIsbn($canonical)
+            ->where('is_approved', 1)
+            ->where('is_hidden', 0)
+            ->exists();
+
+        return response()->json([
+            'status'  => 'error',
+            'cause'   => $existsAnywhere ? 'not_in_shop' : 'not_in_database',
+            'message' => $existsAnywhere
+                ? "Bu kitob bu do'konda sotilmaydi."
+                : "Bu kitob Kitobchi bazasida yo'q. Sotuvchidan ushbu kitobni qo'shishini so'rang.",
+        ], 404);
+    }
+
+    // =========================================================================
+    //  5b. QR TOKEN ORQALI SELLER QIDIRISH — "Do'kon ichida" rejimi
+    //  GET /products/sellers/by-qr/{token}
+    //
+    //  Mijoz do'konga osib qo'yilgan QR'ni skaner qilganida, app shu endpoint'ga
+    //  murojaat qiladi. Backend tokenga mos sellerni topadi va id + ko'rsatish
+    //  uchun zarur maydonlarni qaytaradi. Keyin Flutter mavjud
+    //  /products/sellers/profile/{id}/{page} ni chaqirib to'liq katalogni
+    //  oladi (in-store mode bayrog'i bilan).
+    // =========================================================================
+    public function sellerByQr(Request $request, string $token)
+    {
+        // Token formatini soft-validate qilamiz: 40 belgi, alfanumerik.
+        // Str::random alfa+digit ishlatadi. Boshqa belgilar kelsa darrov 404.
+        if (!preg_match('/^[A-Za-z0-9]{20,64}$/', $token)) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'QR formati noto\'g\'ri.',
+            ], 422);
+        }
+
+        $seller = Seller::where('qr_token', $token)
+            ->where('is_hidden', 0)
+            ->where('parent_id', 0)
+            ->where('status', 'approved')
+            ->first();
+
+        if (!$seller) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Do\'kon topilmadi yoki QR yangilangan. Iltimos, do\'kondan yangi QR\'ni so\'rang.',
+            ], 404);
+        }
+
+        // Asosiy do'kon manzili (mavjud bo'lsa) — banner uchun.
+        $location = DB::table('seller_locations')
+            ->where('seller_id', $seller->id)
+            ->where('is_main', true)
+            ->first(['id', 'address', 'lat', 'lon']);
+
+        return response()->json([
+            'status' => 'success',
+            'data'   => [
+                'seller' => array_merge(
+                    $this->formatSellerInfo($seller),
+                    [
+                        'location' => $location ? [
+                            'id'      => $location->id,
+                            'address' => $location->address,
+                            'lat'     => $location->lat,
+                            'lon'     => $location->lon,
+                        ] : null,
+                    ]
+                ),
+                'in_store_mode' => true,
             ],
         ]);
     }

@@ -33,7 +33,7 @@ class SmsService
                     'response' => $response->json(),
                 ]);
 
-                throw new RuntimeException('SMS yuborilmadi. Iltimos, keyinroq qayta urinib ko‘ring.');
+                throw new RuntimeException('SMS yuborilmadi. Iltimos, keyinroq qayta urunib ko\'ring.');
             }
 
             $payload = $response->json();

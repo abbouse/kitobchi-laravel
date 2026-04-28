@@ -38,13 +38,43 @@
 
       <div class="lg:col-span-2">
         <label class="p-form-label">Huquqlar</label>
-        <textarea name="abilities" class="p-form-control @error('abilities') border-danger @enderror font-mono text-sm" rows="5" placeholder='["read","orders"]'>{{ old('abilities', $apiClient?->abilities) }}</textarea>
+        <textarea name="abilities" class="p-form-control @error('abilities') border-danger @enderror font-mono text-sm" rows="5" placeholder='["read","orders"]'>{{ old('abilities', isset($apiClient) && is_array($apiClient?->abilities) ? json_encode($apiClient->abilities, JSON_UNESCAPED_SLASHES) : $apiClient?->abilities) }}</textarea>
         @error('abilities')<div class="mt-1 text-xs text-[var(--p-danger)]">{{ $message }}</div>@enderror
         <div class="mt-3 flex flex-wrap gap-2">
           @foreach($abilitySuggestions as $ab)
             <button type="button" onclick="addAbility('{{ $ab }}')" class="btn-p ghost sm">{{ $ab }}</button>
           @endforeach
         </div>
+      </div>
+
+      <div>
+        <label class="p-form-label">Rate limit / soniya</label>
+        <input
+          type="number"
+          min="1"
+          max="10000"
+          name="rate_limit_per_second"
+          class="p-form-control @error('rate_limit_per_second') border-danger @enderror"
+          value="{{ old('rate_limit_per_second', $apiClient?->rate_limit_per_second ?? 8) }}"
+          placeholder="8"
+        >
+        @error('rate_limit_per_second')<div class="mt-1 text-xs text-[var(--p-danger)]">{{ $message }}</div>@enderror
+        <p class="mt-2 text-xs text-[var(--p-hint)]">Bitta client bir soniyada necha so‘rov yubora oladi.</p>
+      </div>
+
+      <div>
+        <label class="p-form-label">Rate limit / daqiqa</label>
+        <input
+          type="number"
+          min="1"
+          max="500000"
+          name="rate_limit_per_minute"
+          class="p-form-control @error('rate_limit_per_minute') border-danger @enderror"
+          value="{{ old('rate_limit_per_minute', $apiClient?->rate_limit_per_minute ?? 240) }}"
+          placeholder="240"
+        >
+        @error('rate_limit_per_minute')<div class="mt-1 text-xs text-[var(--p-danger)]">{{ $message }}</div>@enderror
+        <p class="mt-2 text-xs text-[var(--p-hint)]">Qisqa burst’lardan tashqari umumiy daqiqalik limit.</p>
       </div>
     </div>
   </section>
@@ -75,7 +105,9 @@
       </div>
       <div class="space-y-3 text-sm text-[var(--p-hint)]">
         <p>Huquqlar JSON ko'rinishida saqlanadi. Misol: <code>["read","orders"]</code>.</p>
+        <p><code>read</code> bo'lmasa hozirgi client endpointlari ishlamaydi.</p>
         <p>Secret yangilansa, eski secret darhol ishlamay qoladi.</p>
+        <p>Rate limit har bir client uchun alohida ishlaydi va response headerlarda ham qaytadi.</p>
       </div>
     </section>
   </aside>

@@ -36,7 +36,15 @@ $message = $__bag->first($__errorArgs[0]); ?><p class="text-xs text-rose-500 mt-
 if (isset($__messageOriginal)) { $message = $__messageOriginal; }
 endif;
 unset($__errorArgs, $__bag); ?></div>
-        <div><label class="text-xs font-medium text-gray-500 mb-1 block">Pozitsiya</label><input name="position" value="<?php echo e($val('position')); ?>" class="input"></div>
+        <div>
+          <label class="text-xs font-medium text-gray-500 mb-1 block">Lavozim</label>
+          <select name="position" class="input">
+            <?php ($currentPosition = $val('position')); ?>
+            <option value="">O'quvchi</option>
+            <option value="Moderator" <?php echo e($currentPosition === 'Moderator' ? 'selected' : ''); ?>>Moderator</option>
+            <option value="Administrator" <?php echo e(in_array($currentPosition, ['Administrator', 'Admin'], true) ? 'selected' : ''); ?>>Administrator</option>
+          </select>
+        </div>
       </div>
     </div>
 
@@ -44,6 +52,12 @@ unset($__errorArgs, $__bag); ?></div>
       <h3 class="font-bold flex items-center gap-2"><i data-lucide="settings" class="w-4 h-4 text-emerald-500"></i> Sozlamalar</h3>
       <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="isVerified" value="1" <?php echo e($val('isVerified') ? 'checked' : ''); ?> class="rounded"> Tasdiqlangan foydalanuvchi</label>
       <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="is_premium" value="1" <?php echo e($val('is_premium') ? 'checked' : ''); ?> class="rounded"> Premium</label>
+      <?php if($user && $user->isBlocked()): ?>
+        <div class="rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
+          <div class="font-semibold">Akkaunt bloklangan</div>
+          <div class="mt-1">Muddat: <?php echo e($user->activeBlockLabel()); ?></div>
+        </div>
+      <?php endif; ?>
       <div class="kpi-soft">
         <div class="metric-label">Admin eslatmasi</div>
         <div class="metric-meta mt-2">Telefon va email maydonlari account identifikatori sifatida ishlatiladi. Yangilashda dublikat cheklovlari saqlanadi.</div>

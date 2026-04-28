@@ -35,6 +35,53 @@
 
   {{-- ════ POST ASOSIY ════════════════════════════════════════ --}}
   <div class="xl:col-span-8">
+    <div class="p-card mb-3 fade-up">
+      <div class="dash-card-head">
+        <div class="dash-card-title">Moderatsiya va ogohlantirish</div>
+        <div class="dash-card-sub">{{ $activeWarningCount }} ta faol ogohlantirish</div>
+      </div>
+      <div class="dash-card-body">
+        <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+          <span class="btn-p ghost sm" style="pointer-events:none">
+            <i class="bi bi-person"></i> User #{{ $bookClub->user_id }}
+          </span>
+          <span class="btn-p ghost sm" style="pointer-events:none;border-color:{{ $bookClub->activeWarning ? 'var(--p-warning)' : 'var(--p-border)' }};color:{{ $bookClub->activeWarning ? 'var(--p-warning)' : 'var(--p-hint)' }}">
+            <i class="bi bi-exclamation-triangle"></i>
+            {{ $bookClub->activeWarning ? "Post ogohlantirilgan" : "Ogohlantirish yo'q" }}
+          </span>
+        </div>
+
+        @if($bookClub->activeWarning)
+          <div style="padding:12px 14px;border-radius:12px;background:var(--p-warning-d);border:1px solid rgba(245,166,35,.18);margin-bottom:14px">
+            <div style="font-size:12px;color:var(--p-warning);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">
+              So‘nggi ogohlantirish
+            </div>
+            <div style="font-size:13px;color:var(--p-text);line-height:1.7;white-space:pre-line">{{ $bookClub->activeWarning->note }}</div>
+            <div style="font-size:11px;color:var(--p-hint);margin-top:8px">
+              {{ $bookClub->activeWarning->created_at?->format('d.m.Y H:i') }}
+              @if($bookClub->activeWarning->admin)
+                · {{ $bookClub->activeWarning->admin->name }}
+              @endif
+            </div>
+          </div>
+        @endif
+
+        <form method="POST" action="{{ route('admin.book-club.warn', $bookClub) }}">
+          @csrf
+          <label style="display:block;font-size:12px;color:var(--p-hint);margin-bottom:6px">Admin izohi</label>
+          <textarea name="note" rows="4" class="p-form-control" placeholder="Nega ogohlantirish berilayotganini yozing..." required>{{ old('note', $bookClub->activeWarning?->note) }}</textarea>
+          @error('note')
+            <div style="font-size:12px;color:var(--p-danger);margin-top:6px">{{ $message }}</div>
+          @enderror
+          <div style="display:flex;justify-content:flex-end;margin-top:12px">
+            <button type="submit" class="btn-p warning">
+              <i class="bi bi-exclamation-triangle"></i>
+              {{ $bookClub->activeWarning ? "Ogohlantirishni yangilash" : "Ogohlantirish berish" }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
 
     {{-- Post kartasi --}}
     <div class="p-card mb-3 fade-up">

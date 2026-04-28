@@ -62,6 +62,8 @@ Route::prefix('a122')->name('admin.')->group(function () {
         Route::get('/{user}',        [UserController::class, 'show'])->name('show');
         Route::get('/{user}/edit',   [UserController::class, 'edit'])->name('edit');
         Route::put('/{user}',        [UserController::class, 'update'])->name('update');
+        Route::post('/{user}/block', [UserController::class, 'block'])->name('block');
+        Route::post('/{user}/unblock', [UserController::class, 'unblock'])->name('unblock');
         Route::patch('/{user}/verify', [UserController::class, 'toggleVerify'])->name('verify');
         Route::patch('/{user}/premium', [UserController::class, 'togglePremium'])->name('premium');
         Route::delete('/{user}',     [UserController::class, 'destroy'])->name('destroy');
@@ -172,6 +174,9 @@ Route::prefix('a122')->name('admin.')->group(function () {
         Route::patch('/{seller}/approve', [SellerController::class, 'approve'])->name('approve');
         Route::patch('/{seller}/reject',  [SellerController::class, 'reject'])->name('reject');
 
+        // Do'kon QR — rotate
+        Route::post('/{seller}/qr/rotate', [SellerController::class, 'rotateQr'])->name('qr.rotate');
+
         // Shartnoma va hujjatlar
         Route::patch('/{seller}/contract/extend',  [SellerController::class, 'extendContract'])->name('contract.extend');
         Route::post('/{seller}/documents',          [SellerController::class, 'uploadDocument'])->name('documents.store');
@@ -273,6 +278,7 @@ Route::prefix('a122')->name('admin.')->group(function () {
         Route::delete('/comments/{comment}',  [BookClubController::class, 'deleteComment'])->name('comment.delete');
         Route::get('/{bookClub}/edit',        [BookClubController::class, 'edit'])->name('edit');
         Route::put('/{bookClub}',             [BookClubController::class, 'update'])->name('update');
+        Route::post('/{bookClub}/warn',       [BookClubController::class, 'warn'])->name('warn');
         Route::get('/{bookClub}',             [BookClubController::class, 'show'])->name('show');
         Route::delete('/{bookClub}',          [BookClubController::class, 'destroy'])->name('destroy');
     });
@@ -358,6 +364,9 @@ Route::prefix('a122')->name('admin.')->group(function () {
     // ── API Clients ────────────────────────────────────────────────
     Route::prefix('api-clients')->name('api-clients.')->group(function () {
         Route::get('/',                      [ApiClientController::class, 'index'])->name('index');
+        Route::get('/docs',                  [ApiClientController::class, 'docs'])->name('docs');
+        Route::get('/logs',                  [ApiClientController::class, 'logs'])->name('logs');
+        Route::get('/logs/export',           [ApiClientController::class, 'exportLogs'])->name('logs.export');
         Route::get('/create',                [ApiClientController::class, 'create'])->name('create');
         Route::post('/',                     [ApiClientController::class, 'store'])->name('store');
         Route::get('/{apiClient}/edit',      [ApiClientController::class, 'edit'])->name('edit');

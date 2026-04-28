@@ -4,6 +4,7 @@ namespace App\Observers;
 
 use App\Models\CourierOrder;
 use App\Services\CourierBroadcaster;
+use App\Services\OrderRealtimeService;
 
 /**
  * CourierOrder uchun observer.
@@ -18,7 +19,8 @@ use App\Services\CourierBroadcaster;
 class CourierOrderObserver
 {
     public function __construct(
-        private readonly CourierBroadcaster $broadcaster
+        private readonly CourierBroadcaster $broadcaster,
+        private readonly OrderRealtimeService $realtimeService,
     ) {
     }
 
@@ -26,6 +28,7 @@ class CourierOrderObserver
     {
         if ($this->isAvailableForAllCouriers($order)) {
             $this->broadcaster->notifyNewOrderAvailable($order);
+            $this->realtimeService->broadcastCourierOrderUpdated($order, 'courier_order.available');
         }
     }
 
@@ -39,6 +42,7 @@ class CourierOrderObserver
             && $this->isAvailableForAllCouriers($order)
         ) {
             $this->broadcaster->notifyNewOrderAvailable($order);
+            $this->realtimeService->broadcastCourierOrderUpdated($order, 'courier_order.available');
         }
     }
 

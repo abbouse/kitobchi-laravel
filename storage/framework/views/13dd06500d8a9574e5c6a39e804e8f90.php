@@ -34,6 +34,9 @@
             <?php if($post->is_repost ?? $post->repost): ?>
               · <span style="color:var(--p-info)"><i class="bi bi-repeat"></i> Repost</span>
             <?php endif; ?>
+            <?php if($post->activeWarning): ?>
+              · <span style="color:var(--p-warning)"><i class="bi bi-exclamation-triangle-fill"></i> Ogohlantirilgan</span>
+            <?php endif; ?>
           </div>
         </div>
         <?php else: ?>
@@ -122,4 +125,5 @@
     </div>
 
   </div>
-</div><?php /**PATH /Users/abbos/PROJECTS/MY/kitobchi-server/kitobchi-laravel/resources/views/a122/book-club/_post-card.blade.php ENDPATH**/ ?>
+</div>
+<?php /**PATH /Users/abbos/PROJECTS/MY/kitobchi-server/kitobchi-laravel/resources/views/a122/book-club/_post-card.blade.php ENDPATH**/ ?>

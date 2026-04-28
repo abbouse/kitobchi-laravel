@@ -20,6 +20,8 @@ use App\Models\Stationery;
 use App\Models\StationeryVariant;
 use App\Services\OrderService;
 use App\Services\CashbackHistoryService;
+use App\Services\OrderRealtimeService;
+use App\Services\QrTokenService;
 use App\Models\GiftCertificate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -33,6 +35,8 @@ class PurchaseController extends Controller
     public function __construct(
         private readonly OrderService $orderService,
         private readonly CashbackHistoryService $cashbackHistoryService,
+        private readonly OrderRealtimeService $orderRealtimeService,
+        private readonly QrTokenService $qrTokenService,
     ) {}
 
     // ── Xatolik response ──────────────────────────────────────
@@ -66,6 +70,48 @@ class PurchaseController extends Controller
         if ($product instanceof Books)      return (int)($product->count ?? 0);
         if ($product instanceof Stationery) return (int)($product->stock ?? 0);
         return 0;
+    }
+
+    // ── Defensiv rasm chiqarish ────────────────────────────────
+    // images ustuni JSON cast bilan array bo'lishi kutiladi, lekin DB'da
+    // string yoki null bo'lishi mumkin. Birinchi rasmni xavfsiz olamiz.
+    private function pickFirstImage($images): ?string
+    {
+        if (is_array($images) && !empty($images)) {
+            $first = reset($images);
+            return is_string($first) ? $first : null;
+        }
+        if (is_string($images) && $images !== '') {
+            // ehtimol JSON string sifatida saqlangan
+            $decoded = json_decode($images, true);
+            if (is_array($decoded) && !empty($decoded)) {
+                $first = reset($decoded);
+                return is_string($first) ? $first : null;
+            }
+            return $images; // oddiy URL string holi
+        }
+        return null;
+    }
+
+    // ── Breadcrumb logger ──────────────────────────────────────
+    // buy_book() ichida kerakli bosqichda chaqiriladi. xatolik yuz bersa,
+    // catch'da oxirgi `step` qaysi joyda bo'lganini bilamiz.
+    private function trace(string $step, array $extra = []): void
+    {
+        Log::info("[buy_book] {$step}", $extra);
+    }
+
+    private function applySignedDeliveryQr(Sold $order): Sold
+    {
+        if ($order->status === 'B') {
+            $order->qr = $this->qrTokenService->makeDeliveryToken(
+                (int) $order->id,
+                (int) $order->user_id,
+                $order->courier_id ? (int) $order->courier_id : null,
+            );
+        }
+
+        return $order;
     }
 
     // =========================================================================
@@ -246,6 +292,23 @@ class PurchaseController extends Controller
         $user = Auth::guard('user')->user();
         if (!$user) return $this->err('Foydalanuvchi topilmadi!', 401);
 
+        // ── PRE-FLIGHT TEKSHIRUV (transaction'dan oldin) ──────────────────
+        // Tranzaksiya ichida 500 olishni oldini olish uchun kritik shartlarni
+        // shu yerda toza 400 javobi bilan qaytaramiz.
+        if (empty($user->mainAddressID)) {
+            return $this->err("Yetkazib berish manzilini tanlang.", 400);
+        }
+        $location = DB::table('locations')->where('id', $user->mainAddressID)->first();
+        if (!$location) {
+            return $this->err("Yetkazib berish manzili topilmadi.", 400);
+        }
+        $deliveryService = DeliveryService::find($request->deliveryservice_id);
+        if (!$deliveryService) {
+            return $this->err("Yetkazib berish xizmati topilmadi.", 400);
+        }
+
+        $this->trace('start', ['user_id' => $user->id, 'cart_ids' => $request->input('selected_cart_ids', [])]);
+
         DB::beginTransaction();
         try {
             // ── Cart itemlarni olish ──────────────────────────────
@@ -256,12 +319,11 @@ class PurchaseController extends Controller
             }
             $cartItems = $cartQuery->get();
 
-            $location        = DB::table('locations')->where('id', $user->mainAddressID)->first();
-            $deliveryService = DeliveryService::findOrFail($request->deliveryservice_id);
-
-            if ($cartItems->isEmpty() || !$location) {
-                return $this->err("Ma'lumotlar yetarli emas!", 400);
+            if ($cartItems->isEmpty()) {
+                DB::rollBack();
+                return $this->err("Savatcha bo'sh!", 400);
             }
+            $this->trace('cart_loaded', ['count' => $cartItems->count()]);
 
             // ── Mahsulotlarni tayyorlash ──────────────────────────
             $groupedBySeller  = [];
@@ -291,7 +353,7 @@ class PurchaseController extends Controller
                 $uniqueSellerIds[$sellerId]   = true;
                 $totalSum                    += $price * $qty;
 
-                $image = $variant?->image_path ?? ($product->images[0] ?? null);
+                $image = $variant?->image_path ?? $this->pickFirstImage($product->images);
                 $item  = [
                     'name'       => $product->name,
                     'item_price' => $price,
@@ -324,7 +386,15 @@ class PurchaseController extends Controller
                 ];
             }
 
-            if (empty($allItems)) return $this->err('Savatchada mahsulot topilmadi!', 400);
+            if (empty($allItems)) {
+                DB::rollBack();
+                return $this->err('Savatchada mahsulot topilmadi!', 400);
+            }
+            $this->trace('items_prepared', [
+                'unique_sellers' => count($uniqueSellerIds),
+                'total_items'    => count($allItems),
+                'total_sum'      => $totalSum,
+            ]);
 
             $priceBeforePromo = $totalSum;
 
@@ -454,7 +524,7 @@ class PurchaseController extends Controller
                     'count_item' => 1,
                     'seller_id'  => $gift->seller_id,
                     'type'       => 'gift',
-                    'cover'      => $gift->images[0] ?? null,
+                    'cover'      => $this->pickFirstImage($gift->images),
                 ];
 
                 $productsToUpdate[] = [
@@ -492,78 +562,95 @@ class PurchaseController extends Controller
             ];
 
             // ── Asosiy buyurtma yaratish ──────────────────────────
+            // Defensiv casts — DB columnlari int/tinyint ga (string emas)
+            // mos kelishi kerak. Bo'sh stringlar yoki noto'g'ri tipdan
+            // INSERT'da SQLSTATE xatolari kelmasligi uchun aniq cast qilamiz.
             $purchase = Sold::create([
-                'user_id'             => $user->id,
+                'user_id'             => (int) $user->id,
                 'qr'                  => Str::random(40),
                 'items'               => $allItems,
                 'address'             => [$locationData],
-                'deliveryType'        => $deliveryService->name,
-                'deliveryPrice'       => $deliveryPrice,
-                'paymentStatus'       => $request->paymentStatus ? 1 : 0,
-                'amount'              => $finalPrice,
-                'gift'                => $giftId ?? null,
+                'deliveryType'        => (string) ($deliveryService->name ?? ''),
+                'deliveryPrice'       => (int) $deliveryPrice,
+                'paymentStatus'       => (int) ($request->paymentStatus ? 1 : 0),
+                'amount'              => (int) round($finalPrice),
+                'gift'                => $giftId !== null ? (int) $giftId : null,
                 'buyerWish'           => Str::limit(trim(strip_tags($request->input('buyerWish', ''))), 300),
                 'promocode'           => $appliedPromo,
-                'discountAmount'      => $discountAmount,
-                'withCashback'        => $useCashback && $cashbackUsed > 0,
-                'cashbackAmount'      => $cashbackUsed,
-                'gift_certificate_id' => $appliedCertId,
-                'giftCertAmount'      => $certDiscount,
-                'is_gift_to_other'    => $request->boolean('is_gift_to_other'),
-                'with_packaging'      => $withPackaging,
-                'packaging_price'     => $packagingPrice,
+                'discountAmount'      => (int) $discountAmount,
+                'withCashback'        => (bool) ($useCashback && $cashbackUsed > 0),
+                'cashbackAmount'      => (int) $cashbackUsed,
+                'gift_certificate_id' => $appliedCertId !== null ? (int) $appliedCertId : null,
+                'giftCertAmount'      => (int) $certDiscount,
+                'is_gift_to_other'    => (bool) $request->boolean('is_gift_to_other'),
+                'with_packaging'      => (bool) $withPackaging,
+                'packaging_price'     => (int) $packagingPrice,
                 'recipient_phone'     => $request->input('recipient_phone'),
                 'recipient_name'      => $request->input('recipient_name'),
                 'recipient_region'    => $request->input('recipient_region'),
                 'recipient_address'   => $request->input('recipient_address'),
             ]);
+            $this->trace('sold_created', ['order_id' => $purchase->id, 'amount' => $finalPrice]);
 
             if ($cashbackUsed > 0) {
-                $balanceAfter = (int) DB::table('users')->where('id', $user->id)->value('cashback');
-                $this->cashbackHistoryService->record(
-                    userId: $user->id,
-                    action: 'spent',
-                    amount: -$cashbackUsed,
-                    order: $purchase,
-                    balanceBefore: $balanceAfter + $cashbackUsed,
-                    balanceAfter: $balanceAfter,
-                );
+                // Cashback tarixini yozish ikkinchi darajali — agar shu yerda
+                // xato bo'lsa, butun xaridni rollback qilmaslik kerak. Tarix
+                // yo'qolishi mumkin, lekin asosiy buyurtma saqlanadi.
+                try {
+                    $balanceAfter = (int) DB::table('users')->where('id', $user->id)->value('cashback');
+                    $this->cashbackHistoryService->record(
+                        userId: $user->id,
+                        action: 'spent',
+                        amount: -$cashbackUsed,
+                        order: $purchase,
+                        balanceBefore: $balanceAfter + $cashbackUsed,
+                        balanceAfter: $balanceAfter,
+                    );
+                } catch (\Throwable $cbErr) {
+                    Log::warning('[buy_book] cashback history soft-fail', [
+                        'order_id' => $purchase->id,
+                        'error'    => $cbErr->getMessage(),
+                    ]);
+                }
             }
 
             // ── Seller orderlar ───────────────────────────────────
+            // Har sotuvchi uchun bitta SellerOrder + nechta SellerOrderItem.
+            // Defensiv casts: amount/quantity/price MySQL'da int — float
+            // berilsa strict mode'da xato ehtimoli bor.
             foreach ($groupedBySeller as $sellerId => $items) {
                 $sellerAmount = 0;
                 $sellerOrder  = SellerOrder::create([
-                    'seller_id'     => $sellerId,
-                    'order_id'      => $purchase->id,
-                    'client_id'     => $user->id,
+                    'seller_id'     => (int) $sellerId,
+                    'order_id'      => (int) $purchase->id,
+                    'client_id'     => (int) $user->id,
                     'status'        => $request->paymentStatus == 1 ? 0 : 1,
-                    'delivery_type' => $deliveryService->name,
+                    'delivery_type' => (string) ($deliveryService->name ?? ''),
                     'address'       => [$locationData],
                 ]);
 
                 foreach ($items as $item) {
                     $product       = $item->product;
-                    $qty           = $item->count_item;
+                    $qty           = (int) $item->count_item;
                     $price         = $this->effectivePrice($product);
                     $sellerAmount += $price * $qty;
 
                     SellerOrderItem::create([
-                        'seller_id'  => $sellerId,
-                        'order_id'   => $sellerOrder->id,
-                        'product_id' => $product->id,
-                        'type'       => $item->product_type,
+                        'seller_id'  => (int) $sellerId,
+                        'order_id'   => (int) $sellerOrder->id,
+                        'product_id' => (int) $product->id,
+                        'type'       => (string) $item->product_type,
                         'quantity'   => $qty,
-                        'price'      => $price,
-                        'variant_id' => $item->variant_id ?? null,
+                        'price'      => (int) round($price),
+                        'variant_id' => $item->variant_id ? (int) $item->variant_id : null,
                     ]);
                 }
 
                 if (isset($gift) && $gift && $gift->seller_id != 1 && $gift->seller_id == $sellerId) {
                     SellerOrderItem::create([
-                        'seller_id'  => $sellerId,
-                        'order_id'   => $sellerOrder->id,
-                        'product_id' => $gift->id,
+                        'seller_id'  => (int) $sellerId,
+                        'order_id'   => (int) $sellerOrder->id,
+                        'product_id' => (int) $gift->id,
                         'type'       => 'gift',
                         'quantity'   => 1,
                         'price'      => 0,
@@ -571,22 +658,23 @@ class PurchaseController extends Controller
                     ]);
                 }
 
-                $sellerOrder->update(['amount' => $sellerAmount]);
+                $sellerOrder->update(['amount' => (int) round($sellerAmount)]);
             }
+            $this->trace('seller_orders_created', ['count' => count($groupedBySeller)]);
 
             // ── Courier order ─────────────────────────────────────
             $courierOrder = CourierOrder::create([
                 'courier_id'   => null,
-                'order_id'     => $purchase->id,
-                'user_id'      => $user->id,
-                'amount'       => $totalSum,
+                'order_id'     => (int) $purchase->id,
+                'user_id'      => (int) $user->id,
+                'amount'       => (int) round($totalSum),
                 'status'       => $request->paymentStatus == 1 ? 'pay_process' : 'pending',
-                'courierPrice' => $deliveryPrice,
+                'courierPrice' => (int) $deliveryPrice,
             ]);
 
             foreach ($allItems as $itm) {
-                $itm_type = $itm['type'] ?? '';
-                $itm_sid  = $itm['seller_id'] ?? 1;
+                $itm_type = (string) ($itm['type'] ?? '');
+                $itm_sid  = (int) ($itm['seller_id'] ?? 1);
 
                 if ($itm_type === 'gift' && $itm_sid == 1) continue;
                 if ($itm_type === 'gift' && !isset($groupedBySeller[$itm_sid])) continue;
@@ -601,39 +689,89 @@ class PurchaseController extends Controller
                     continue;
                 }
 
-                CourierOrderItem::create([
-                    'seller_id'          => $itm_sid,
-                    'seller_location_id' => $sellerLocation->id,
-                    'order_id'           => $courierOrder->id,
-                    'type'               => $itm_type,
-                    'product_id'         => $itm['item_id'],
-                    'quantity'           => $itm['count_item'],
-                    'price'              => $itm['item_price'],
-                    'variant_id'         => $itm['variant_id'] ?? null,
-                ]);
+                // Item-darajadagi xato tranzaksiyani tushirmasin —
+                // bittasi muvaffaqiyatsiz bo'lsa ham qolganlari kiritiladi.
+                try {
+                    CourierOrderItem::create([
+                        'seller_id'          => $itm_sid,
+                        'seller_location_id' => (int) $sellerLocation->id,
+                        'order_id'           => (int) $courierOrder->id,
+                        'type'               => $itm_type,
+                        'product_id'         => isset($itm['item_id']) ? (int) $itm['item_id'] : null,
+                        'quantity'           => (int) ($itm['count_item'] ?? 1),
+                        'price'              => (int) round($itm['item_price'] ?? 0),
+                        'variant_id'         => isset($itm['variant_id']) ? (int) $itm['variant_id'] : null,
+                    ]);
+                } catch (\Throwable $itemErr) {
+                    Log::warning('[buy_book] courier_order_item soft-fail', [
+                        'order_id' => $courierOrder->id,
+                        'item'     => $itm,
+                        'error'    => $itemErr->getMessage(),
+                    ]);
+                }
             }
+            $this->trace('courier_order_created', ['order_id' => $courierOrder->id]);
 
             // ── Statistika va stock yangilash ─────────────────────
+            // Stock/stats yangilanishi 500'ga olib kelmasligi uchun har
+            // mahsulot uchun alohida try/catch — bittasi xato bersa
+            // butun tranzaksiya rollback bo'lmasligi uchun (xato faqat
+            // log'ga yoziladi, xarid esa muvaffaqiyatli qoladi).
             foreach ($productsToUpdate as $data) {
-                if ($data['type'] === 'gift') {
-                    $data['product']->increment('totalSales', 1);
-                    $data['product']->increment('totalSalesWeek', 1);
-                    $data['product']->save();
-                    continue;
+                try {
+                    if (($data['type'] ?? null) === 'gift') {
+                        $data['product']->increment('totalSales', 1);
+                        $data['product']->increment('totalSalesWeek', 1);
+                        $data['product']->save();
+                        continue;
+                    }
+                    $this->orderService->decrementStock($data);
+                    $this->orderService->incrementProductStats($data, $purchase->id);
+                } catch (\Throwable $statsErr) {
+                    Log::warning('[buy_book] stock/stats update soft-fail', [
+                        'product_id' => $data['product']?->id ?? null,
+                        'type'       => $data['type'] ?? null,
+                        'error'      => $statsErr->getMessage(),
+                    ]);
                 }
-                $this->orderService->decrementStock($data);
-                $this->orderService->incrementProductStats($data, $purchase->id);
             }
+            $this->trace('stock_updated');
 
             // ── Promokod tarixi ───────────────────────────────────
+            // Xarid muvaffaqiyatli tugagandan keyin promokod tarixi yozilishi
+            // ikkinchi darajali. Massassignment yoki PHP fatal bo'lsa,
+            // tarix yo'qoladi lekin xarid saqlanadi.
             if ($appliedPromoId) {
-                PromocodeHistory::create(['user_id' => $user->id, 'promocode_id' => $appliedPromoId]);
-                DB::table('promocodes')->where('id', $appliedPromoId)->increment('usedCount');
+                try {
+                    PromocodeHistory::create([
+                        'user_id'      => (int) $user->id,
+                        'promocode_id' => (int) $appliedPromoId,
+                    ]);
+                    DB::table('promocodes')->where('id', $appliedPromoId)->increment('usedCount');
+                } catch (\Throwable $promoErr) {
+                    Log::warning('[buy_book] promocode history soft-fail', [
+                        'order_id'      => $purchase->id,
+                        'promocode_id'  => $appliedPromoId,
+                        'error'         => $promoErr->getMessage(),
+                    ]);
+                }
             }
 
             // ── Gift Sertifikat ishlatish ──────────────────────────
+            // Sertifikat ishlatish — ehtimol parallel xaridda allaqachon
+            // ishlatilgan bo'lishi mumkin. Bunday holda butun xaridni
+            // bekor qilmaslik kerak; chegirma allaqachon hisoblangan,
+            // sertifikat statusini yangilashning xatosi log'ga yoziladi.
             if ($appliedCert && $certDiscount > 0) {
-                $appliedCert->useInPurchase((int)$certDiscount);
+                try {
+                    $appliedCert->useInPurchase((int)$certDiscount);
+                } catch (\Throwable $certErr) {
+                    Log::warning('[buy_book] gift cert use soft-fail', [
+                        'order_id'  => $purchase->id,
+                        'cert_id'   => $appliedCert->id ?? null,
+                        'error'     => $certErr->getMessage(),
+                    ]);
+                }
             }
 
             // ── Naqd to'lov — seller/courier orderlarni activate qilish ─
@@ -654,6 +792,14 @@ class PurchaseController extends Controller
 
             DB::commit();
 
+            $freshPurchase = Sold::find($purchase->id);
+            $freshCourierOrder = CourierOrder::where('order_id', $purchase->id)->first();
+            $this->orderRealtimeService->broadcastSoldCreated(
+                $freshPurchase,
+                array_keys($groupedBySeller),
+                $freshCourierOrder,
+            );
+
             return response()->json([
                 'status'         => 'success',
                 'message'        => 'Buyurtma muvaffaqiyatli yaratildi',
@@ -661,15 +807,249 @@ class PurchaseController extends Controller
                 'payment_status' => $purchase->fresh()->paymentStatus,
             ], 201);
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             DB::rollBack();
             Log::error('Purchase failed', [
+                'msg'   => $e->getMessage(),
+                'file'  => $e->getFile(),
+                'line'  => $e->getLine(),
+                'trace' => collect($e->getTrace())->take(5)->all(),
+            ]);
+
+            // Productiondan tashqari muhitda mijozga aniq xato qaytariladi —
+            // shunda Flutter konsolidan to'g'ridan-to'g'ri sabab ko'rinadi.
+            // Productionda umumiy xabar saqlanadi.
+            $payload = ['status' => 'error', 'message' => 'Buyurtma yaratishda xatolik yuz berdi!'];
+            if (!app()->environment('production')) {
+                $payload['debug'] = [
+                    'msg'  => $e->getMessage(),
+                    'file' => basename($e->getFile()),
+                    'line' => $e->getLine(),
+                ];
+            }
+            return response()->json($payload, 500);
+        }
+    }
+
+    // =========================================================================
+    //  IN-STORE BUYURTMA — mijoz do'kondagi QR'ni skanerlab, mahsulotlarni
+    //  o'zi tanlab, joyida Payme orqali to'laydi.
+    //
+    //  POST /api/v1/kitobchi/in-store/buy
+    //  Body:
+    //   - seller_id (required, integer): scan qilingan do'kon
+    //   - items (required, array): [{ book_id, quantity }]
+    //   - promocode (nullable, string)
+    //
+    //  Effekt:
+    //   - Sold qator (deliveryType=pickup, deliveryPrice=0, paymentStatus=1)
+    //   - SellerOrder qator (faqat 1 ta — bitta sotuvchi)
+    //   - CourierOrder yaratilmaydi (mijoz do'konda olib ketadi)
+    //   - Stock decrement va statistika yangilanishi
+    //   - Javobda Payme to'lov URL'i va order_id
+    // =========================================================================
+    public function inStoreBuy(Request $request)
+    {
+        $request->validate([
+            'seller_id'        => 'required|integer|exists:sellers,id',
+            'items'            => 'required|array|min:1',
+            'items.*.book_id'  => 'required|integer|exists:books,id',
+            'items.*.quantity' => 'required|integer|min:1',
+            'promocode'        => 'nullable|string|max:50',
+        ]);
+
+        $user = Auth::guard('user')->user();
+        if (!$user) return $this->err('Foydalanuvchi topilmadi!', 401);
+
+        $sellerId = (int) $request->input('seller_id');
+        $sellerOk = Seller::where('id', $sellerId)
+            ->where('status', 'approved')
+            ->where('is_hidden', 0)
+            ->exists();
+        if (!$sellerOk) return $this->err("Do'kon topilmadi yoki o'chirilgan.", 404);
+
+        DB::beginTransaction();
+        try {
+            $allItems         = [];
+            $totalSum         = 0;
+            $productsToUpdate = [];
+
+            foreach ($request->input('items') as $row) {
+                $bookId   = (int) ($row['book_id'] ?? 0);
+                $quantity = max(1, (int) ($row['quantity'] ?? 0));
+
+                $book = Books::where('id', $bookId)
+                    ->where('seller_id', $sellerId)
+                    ->where('is_approved', 1)
+                    ->where('is_hidden', 0)
+                    ->first();
+
+                if (!$book) {
+                    DB::rollBack();
+                    return $this->err("Bu do'konda mahsulot topilmadi (id={$bookId}).", 404);
+                }
+
+                $stock = (int) ($book->count ?? 0);
+                if ($quantity > $stock) {
+                    DB::rollBack();
+                    return $this->err("{$book->name} uchun yetarli zaxira yo'q! Mavjud: {$stock}", 400);
+                }
+
+                $price     = $this->effectivePrice($book);
+                $totalSum += $price * $quantity;
+
+                $allItems[] = [
+                    'name'       => $book->name,
+                    'item_price' => $price,
+                    'item_id'    => $book->id,
+                    'count_item' => $quantity,
+                    'seller_id'  => $sellerId,
+                    'type'       => 'book',
+                    'cover'      => $book->images[0] ?? null,
+                    'author'     => $book->author,
+                ];
+                $productsToUpdate[] = [
+                    'product'  => $book,
+                    'variant'  => null,
+                    'quantity' => $quantity,
+                    'revenue'  => $price * $quantity,
+                    'user_id'  => $user->id,
+                    'type'     => 'book',
+                ];
+            }
+
+            if (empty($allItems)) {
+                DB::rollBack();
+                return $this->err('Mahsulot tanlanmagan!', 400);
+            }
+
+            // ── Promokod ──────────────────────────────────────────
+            $priceBeforePromo = $totalSum;
+            $discountAmount   = 0;
+            $appliedPromo     = null;
+            $appliedPromoId   = null;
+
+            if ($request->filled('promocode')) {
+                $res = $this->validatePromocode($request->promocode, $user->id, $priceBeforePromo);
+                if (isset($res['error'])) {
+                    DB::rollBack();
+                    return $this->err($res['error']);
+                }
+                $discountAmount = $res['discount'];
+                $appliedPromo   = $res['promo']->code;
+                $appliedPromoId = $res['promo']->id;
+                $totalSum       = max(0, $priceBeforePromo - $discountAmount);
+            }
+
+            $finalPrice = $totalSum; // delivery 0, packaging 0
+
+            // ── Asosiy buyurtma ───────────────────────────────────
+            // address: do'kon ichida xarid — userning shahriy manzili emas,
+            // balki seller_locations'dagi do'kon manzilini saqlaymiz.
+            $sellerLocation = DB::table('seller_locations')
+                ->where('seller_id', $sellerId)
+                ->where('is_main', true)
+                ->first(['address', 'lat', 'lon']);
+
+            $purchase = Sold::create([
+                'user_id'        => $user->id,
+                'qr'             => Str::random(40),
+                'items'          => $allItems,
+                'address'        => [[
+                    'fullName'    => trim("{$user->name} {$user->lastname}"),
+                    'fullAddress' => $sellerLocation->address ?? "Do'kon ichida xarid",
+                    'lat'         => $sellerLocation->lat ?? null,
+                    'lon'         => $sellerLocation->lon ?? null,
+                    'phoneNumber' => $user->phone_number,
+                ]],
+                'deliveryType'   => 'pickup',
+                'deliveryPrice'  => 0,
+                'paymentStatus'  => 1,            // Payme
+                'amount'         => $finalPrice,
+                'promocode'      => $appliedPromo,
+                'discountAmount' => $discountAmount,
+            ]);
+
+            // ── Seller order ─────────────────────────────────────
+            $sellerOrder = SellerOrder::create([
+                'seller_id'     => $sellerId,
+                'order_id'      => $purchase->id,
+                'client_id'     => $user->id,
+                'status'        => 0, // pay_process
+                'delivery_type' => 'pickup',
+                'address'       => [[
+                    'fullAddress' => $sellerLocation->address ?? "Do'kon ichida xarid",
+                ]],
+                'amount'        => $priceBeforePromo,
+            ]);
+
+            foreach ($allItems as $itm) {
+                SellerOrderItem::create([
+                    'seller_id'  => $sellerId,
+                    'order_id'   => $sellerOrder->id,
+                    'product_id' => $itm['item_id'],
+                    'type'       => 'book',
+                    'quantity'   => $itm['count_item'],
+                    'price'      => $itm['item_price'],
+                    'variant_id' => null,
+                ]);
+            }
+
+            // ── Stock + statistika ───────────────────────────────
+            foreach ($productsToUpdate as $data) {
+                $this->orderService->decrementStock($data);
+                $this->orderService->incrementProductStats($data, $purchase->id);
+            }
+
+            // ── Promokod tarixi ──────────────────────────────────
+            if ($appliedPromoId) {
+                PromocodeHistory::create(['user_id' => $user->id, 'promocode_id' => $appliedPromoId]);
+                DB::table('promocodes')->where('id', $appliedPromoId)->increment('usedCount');
+            }
+
+            DB::commit();
+
+            // ── Payme URL — PaymentController::payWithPayme bilan bir xil naqsh ──
+            $paymeUrl = $this->generatePaymeUrl($purchase->id, $finalPrice);
+
+            return response()->json([
+                'status'      => 'success',
+                'order_id'    => $purchase->id,
+                'amount'      => $finalPrice,
+                'payment_url' => $paymeUrl,
+            ], 201);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('In-store purchase failed', [
                 'msg'  => $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
             ]);
-            return $this->err('Buyurtma yaratishda xatolik yuz berdi!', 500);
+            $payload = ['status' => 'error', 'message' => 'Buyurtma yaratishda xatolik yuz berdi!'];
+            if (!app()->environment('production')) {
+                $payload['debug'] = [
+                    'msg'  => $e->getMessage(),
+                    'file' => basename($e->getFile()),
+                    'line' => $e->getLine(),
+                ];
+            }
+            return response()->json($payload, 500);
         }
+    }
+
+    /**
+     * Payme to'lov URL generatsiya — PaymentController'dagi mantiqning
+     * kichik nusxasi (kontroller orasidan dependency bo'lmasligi uchun).
+     */
+    private function generatePaymeUrl(int $orderId, int $amount): string
+    {
+        $merchant = (string) config('services.payme.id', '67988cbfdbc8d1a8dc0d74a7');
+        $callback = "https://kitobchi.com/payment/success/order/{$orderId}";
+        $data     = 'm=' . $merchant
+                  . ';ac.order_id=' . 'NRK-' . $orderId
+                  . ';a=' . ($amount * 100)
+                  . ';c=' . urlencode($callback);
+        return 'https://checkout.paycom.uz/' . base64_encode($data);
     }
 
     // =========================================================================
@@ -792,7 +1172,7 @@ class PurchaseController extends Controller
         $paginated->getCollection()->transform(function ($order) {
             $order->formatted_created_at = Carbon::parse($order->created_at)->isoFormat('D MMMM YYYY, HH:mm');
             $order->formatted_updated_at = Carbon::parse($order->updated_at)->isoFormat('D MMMM YYYY, HH:mm');
-            return $order;
+            return $this->applySignedDeliveryQr($order);
         });
 
         return response()->json([
@@ -817,6 +1197,7 @@ class PurchaseController extends Controller
 
         $order->formatted_created_at = Carbon::parse($order->created_at)->isoFormat('D MMMM YYYY, HH:mm');
         $order->formatted_updated_at = Carbon::parse($order->updated_at)->isoFormat('D MMMM YYYY, HH:mm');
+        $this->applySignedDeliveryQr($order);
 
         return response()->json(['status' => 'success', 'data' => [$order]]);
     }

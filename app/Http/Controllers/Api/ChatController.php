@@ -14,9 +14,14 @@ use Illuminate\Support\Facades\DB;
 use App\Events\ConversationUpdated;
 use App\Events\MessagesRead;
 use App\Jobs\SendMessagePushNotification;
+use App\Services\BookClubModerationService;
 
 class ChatController extends Controller
 {
+    public function __construct(
+        private readonly BookClubModerationService $moderationService,
+    ) {}
+
     // ========== START CONVERSATION ==========
     public function startConversation(Request $request) {
         $user = $request->user(); 
@@ -174,6 +179,13 @@ class ChatController extends Controller
     public function sendMessage(Request $request, $id = null) {
         $user = $request->user(); 
         if (!$user) return response()->json(['status' => 'error'], 401);
+        if ($this->moderationService->isUserBlockedFromWriting((int) $user->id)) {
+            return response()->json([
+                'status' => 'error',
+                'error_code' => 'book_club_user_blocked',
+                'message' => "Boshqalarning xavfsizligi uchun siz Book Club va xabar almashish bo'limida vaqtincha bloklangansiz.",
+            ], 423);
+        }
 
         $conversationId = $id ?? $request->conversation_id;
         $receiverId = $request->receiver_id;

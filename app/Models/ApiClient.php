@@ -19,29 +19,37 @@ class ApiClient extends Model
         'app_secret',
         'abilities',
         'is_active',
+        'rate_limit_per_second',
+        'rate_limit_per_minute',
     ];
 
     protected $casts = [
         'abilities' => 'array',
         'is_active' => 'boolean',
+        'rate_limit_per_second' => 'integer',
+        'rate_limit_per_minute' => 'integer',
     ];
 
-    // Yangi mijoz uchun app_id va app_secret avtomatik yaratish
     protected static function booted()
-{
-    static::creating(function ($apiClient) {
-        $credentials = self::generateCredentials();
-        
-        // Agar qo'lda berilmagan bo'lsa, avtomatik to'ldiradi
-        $apiClient->app_id = $apiClient->app_id ?? $credentials['app_id'];
-        $apiClient->app_secret = $apiClient->app_secret ?? $credentials['app_secret'];
-    });
-}
+    {
+        static::creating(function ($apiClient) {
+            $credentials = self::generateCredentials();
+
+            $apiClient->app_id = $apiClient->app_id ?? $credentials['app_id'];
+            $apiClient->app_secret = $apiClient->app_secret ?? $credentials['app_secret'];
+        });
+    }
+
     public static function generateCredentials(): array
     {
         return [
-            'app_id'     => 'app_' . Str::random(16),
+            'app_id' => 'app_' . Str::random(16),
             'app_secret' => Str::random(48),
         ];
+    }
+
+    public function requestLogs()
+    {
+        return $this->hasMany(ApiClientRequestLog::class, 'api_client_id');
     }
 }

@@ -8,6 +8,8 @@
   <x-slot name="heading">API mijozlar</x-slot>
   <x-slot name="meta">Tashqi ilovalar va servislar uchun App ID, Secret hamda ruxsat darajalari shu modulda boshqariladi.</x-slot>
   <x-slot name="actions">
+    <a href="{{ route('admin.api-clients.logs') }}" class="btn-p ghost">Audit loglar</a>
+    <a href="{{ route('admin.api-clients.docs') }}" class="btn-p ghost">Docs</a>
     <a href="{{ route('admin.api-clients.create') }}" class="btn-p primary">Yangi mijoz</a>
   </x-slot>
 </x-a122.page-header>
@@ -73,6 +75,7 @@
           <th>App ID</th>
           <th>App Secret</th>
           <th>Huquqlar</th>
+          <th>Limit</th>
           <th>Holat</th>
           <th>Yaratildi</th>
           <th></th>
@@ -132,6 +135,11 @@
             </div>
           </td>
 
+          <td style="white-space:nowrap">
+            <div style="font-size:12px;color:var(--p-text)">S: {{ $c->rate_limit_per_second ?? 8 }}</div>
+            <div style="font-size:11px;color:var(--p-hint)">D: {{ $c->rate_limit_per_minute ?? 240 }}</div>
+          </td>
+
           <td>
             <form method="POST"
                   action="{{ route('admin.api-clients.toggle',$c) }}"
@@ -176,7 +184,7 @@
         </tr>
         @empty
         <tr>
-          <td colspan="8" style="text-align:center;padding:40px;color:var(--p-hint)">
+          <td colspan="9" style="text-align:center;padding:40px;color:var(--p-hint)">
             <i class="bi bi-key" style="font-size:28px;display:block;margin-bottom:8px"></i>
             API mijozlar yo'q
           </td>

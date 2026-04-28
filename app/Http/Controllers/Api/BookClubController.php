@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Helpers\NotificationHelper;
 use App\Http\Controllers\Controller;
+use App\Services\BookClubModerationService;
 use App\Services\BookClubNotificationTextService;
 use App\Models\{User, Books, Stationery, BookClub, BookClubImages, BookClubLikes, BookClubVotes, BookClubComment, FavouriteProducts, BookClubNotification, SharedCart, StationeryVariant};
 use App\Models\Sold;
@@ -15,6 +16,7 @@ class BookClubController extends Controller
 {
     public function __construct(
         private readonly BookClubNotificationTextService $notificationTextService,
+        private readonly BookClubModerationService $moderationService,
     ) {}
 
     /**
@@ -198,6 +200,21 @@ class BookClubController extends Controller
             $post->reposted_by_me      = in_array($postKey, $myReposts);
             $post->is_repost           = $post->repost ?? false;
             $post->reposts_count       = $post->repost ? 0 : ($repostCounts[$post->user_id] ?? 0);
+            $post->is_edited           = (int) ($post->edit_count ?? 0) > 0 || !empty($post->edited_at);
+            $post->edited_at           = optional($post->edited_at)?->toIso8601String();
+            $post->edit_count          = (int) ($post->edit_count ?? 0);
+            $viewerCanModerate         = $user ? $user->canModerateCommunity() : false;
+            $lastEditedById            = (int) ($post->last_edited_by_id ?? 0);
+            $editedByOwner             = $lastEditedById > 0 && $lastEditedById === (int) $post->user_id;
+            $editedByModeratorOrAdmin  = $post->lastEditor?->canModerateCommunity() ?? false;
+            $post->show_edited_badge   = $post->is_edited && (
+                $viewerCanModerate ||
+                ($user && (int) $user->id === (int) $post->user_id && $editedByOwner)
+            );
+            $post->edited_by_staff     = $post->is_edited && $editedByModeratorOrAdmin;
+            $post->warning_meta        = $user
+                ? $this->moderationService->warningMetaForPost((int) $post->id, (int) $user->id, (int) $post->user_id)
+                : null;
 
             return $post;
         });
@@ -211,10 +228,77 @@ class BookClubController extends Controller
         return [
             'user:id,name,lastname,position,avatar,isVerified,isSupport,bio,role_emoji,role_title,role_place',
             'originalAuthor:id,name,lastname,position,avatar,isVerified,isSupport,bio,role_emoji,role_title,role_place',
+            'lastEditor:id,position',
             'images',
             'votes',
             'theme:id,name,firework,slug',
+            'activeWarning:id,post_id,user_id,note,is_active,created_at',
         ];
+    }
+
+    private function applyWarningVisibility($query, $user = null)
+    {
+        if ($user && $user->canModerateCommunity()) {
+            return $query;
+        }
+
+        return $query->where(function ($visibilityQuery) use ($user) {
+            $visibilityQuery->whereDoesntHave('activeWarning');
+
+            if ($user) {
+                $visibilityQuery->orWhere('user_id', $user->id);
+            }
+        });
+    }
+
+    private function ensureCanModerate(User $user)
+    {
+        if (!$user->canModerateCommunity()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Bu amal uchun ruxsat yetarli emas',
+            ], 403);
+        }
+
+        return null;
+    }
+
+    private function ensureCanAdministrate(User $user)
+    {
+        if (!$user->isAdministrator()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Bu amal faqat administratorlar uchun',
+            ], 403);
+        }
+
+        return null;
+    }
+
+    private function resolvePostForModeration(int $postId): BookClub
+    {
+        return BookClub::with('user')->findOrFail($postId);
+    }
+
+    private function blockedWriteResponse(User $user)
+    {
+        $payload = $this->moderationService->blockPayloadForUser($user);
+
+        return response()->json([
+            'status' => 'error',
+            'error_code' => 'book_club_user_blocked',
+            'message' => $payload['message'],
+            'data' => $payload,
+        ], 423);
+    }
+
+    private function ensureCanWrite(User $user)
+    {
+        if ($this->moderationService->isUserBlockedFromWriting((int) $user->id)) {
+            return $this->blockedWriteResponse($user);
+        }
+
+        return null;
     }
 
     private function ensureSharedOrderLink(Sold $order, int $userId): SharedCart
@@ -289,6 +373,7 @@ class BookClubController extends Controller
             $paginatedPosts = BookClub::with($this->postWith())
                 ->where('is_deleted', false)
                 ->where('repost', false)
+                ->tap(fn ($query) => $this->applyWarningVisibility($query, $user))
                 ->orderByRaw("CASE WHEN user_id IN ($followingIdsString) THEN 1 ELSE 0 END DESC")
                 ->orderBy('updated_at', 'DESC')
                 ->paginate($perPage);
@@ -329,6 +414,7 @@ class BookClubController extends Controller
             $paginatedPosts = BookClub::with($this->postWith())
                 ->where('theme_id', $theme->id)
                 ->where('is_deleted', false)
+                ->tap(fn ($query) => $this->applyWarningVisibility($query, $user))
                 ->orderBy('updated_at', 'DESC')
                 ->paginate($perPage);
 
@@ -379,6 +465,7 @@ class BookClubController extends Controller
             $allPosts = BookClub::with($this->postWith())
                 ->where('user_id', $user->id)
                 ->where('is_deleted', false)
+                ->tap(fn ($query) => $this->applyWarningVisibility($query, $me && $me->id === $user->id ? $me : null))
                 ->orderBy('created_at', 'DESC')
                 ->get();
 
@@ -433,6 +520,7 @@ class BookClubController extends Controller
                 ->where('product_id', $productId)
                 ->where('product_type', $typeMap[$type])
                 ->where('is_deleted', false)
+                ->tap(fn ($query) => $this->applyWarningVisibility($query, $user))
                 ->orderBy('created_at', 'DESC')
                 ->get();
 
@@ -454,6 +542,9 @@ class BookClubController extends Controller
             $user = Auth::guard('user')->user();
             if (!$user) {
                 return response()->json(['status' => 'error', 'message' => 'User not found'], 404);
+            }
+            if ($blocked = $this->ensureCanWrite($user)) {
+                return $blocked;
             }
 
             return DB::transaction(function () use ($request, $user) {
@@ -575,6 +666,9 @@ class BookClubController extends Controller
             if (!$user) {
                 return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
             }
+            if ($blocked = $this->ensureCanWrite($user)) {
+                return $blocked;
+            }
 
             return DB::transaction(function () use ($request, $user) {
                 $post = BookClub::where('id', $request->post_id)
@@ -635,6 +729,11 @@ class BookClubController extends Controller
                 }
 
                 $post->update($updateData);
+                $post->forceFill([
+                    'edited_at' => now(),
+                    'edit_count' => (int) ($post->edit_count ?? 0) + 1,
+                    'last_edited_by_id' => $user->id,
+                ])->save();
 
                 // ── Rasmlarni o'chirish ────────────────────────────────────────
                 $deletedIds = json_decode($request->input('deleted_image_ids', '[]'), true);
@@ -690,6 +789,141 @@ class BookClubController extends Controller
             Log::error('Update Post Error: ' . $e->getMessage());
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
         }
+    }
+
+    public function moderateWarn(Request $request, int $postId)
+    {
+        $user = Auth::guard('user')->user();
+        if (!$user) {
+            return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
+        }
+        if ($denied = $this->ensureCanModerate($user)) {
+            return $denied;
+        }
+
+        $data = $request->validate([
+            'note' => 'required|string|max:5000',
+        ]);
+
+        $post = $this->resolvePostForModeration($postId);
+
+        if ($post->user_id === $user->id) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'O\'z postingizga warning bera olmaysiz',
+            ], 422);
+        }
+
+        \App\Models\BookClubWarning::updateOrCreate(
+            ['post_id' => $post->id],
+            [
+                'user_id' => $post->user_id,
+                'admin_id' => $user->id,
+                'note' => trim((string) $data['note']),
+                'is_active' => true,
+            ]
+        );
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Post ogohlantirildi',
+            'data' => [
+                'warnings_count' => $this->moderationService->activeWarningCountForUser((int) $post->user_id),
+                'block_threshold' => BookClubModerationService::BLOCK_THRESHOLD,
+            ],
+        ]);
+    }
+
+    public function moderateEdit(Request $request, int $postId)
+    {
+        $user = Auth::guard('user')->user();
+        if (!$user) {
+            return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
+        }
+        if ($denied = $this->ensureCanAdministrate($user)) {
+            return $denied;
+        }
+
+        $data = $request->validate([
+            'text' => 'required|string|max:20000',
+        ]);
+
+        $post = $this->resolvePostForModeration($postId);
+        if ($post->is_deleted) {
+            return response()->json(['status' => 'error', 'message' => 'Post o\'chirilgan'], 400);
+        }
+
+        $post->update([
+            'text' => trim((string) $data['text']),
+            'edited_at' => now(),
+            'edit_count' => (int) ($post->edit_count ?? 0) + 1,
+            'last_edited_by_id' => $user->id,
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Post matni yangilandi',
+            'data' => [
+                'text' => $post->text,
+            ],
+        ]);
+    }
+
+    public function moderateBanUser(Request $request, int $postId)
+    {
+        $user = Auth::guard('user')->user();
+        if (!$user) {
+            return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
+        }
+        if ($denied = $this->ensureCanAdministrate($user)) {
+            return $denied;
+        }
+
+        $data = $request->validate([
+            'block_period' => 'required|in:10_days,1_month,1_year,3_years,forever',
+            'reason' => 'required|string|max:5000',
+        ]);
+
+        $post = $this->resolvePostForModeration($postId);
+        $targetUser = $post->user;
+
+        if (!$targetUser) {
+            return response()->json(['status' => 'error', 'message' => 'Foydalanuvchi topilmadi'], 404);
+        }
+
+        if ($targetUser->id === $user->id) {
+            return response()->json(['status' => 'error', 'message' => 'O\'zingizni bloklay olmaysiz'], 422);
+        }
+
+        $blockedUntil = match ($data['block_period']) {
+            '10_days' => now()->addDays(10),
+            '1_month' => now()->addMonth(),
+            '1_year' => now()->addYear(),
+            '3_years' => now()->addYears(3),
+            'forever' => null,
+        };
+
+        DB::transaction(function () use ($targetUser, $user, $data, $blockedUntil) {
+            $targetUser->forceFill([
+                'status' => 'blocked',
+                'blocked_until' => $blockedUntil,
+                'blocked_at' => now(),
+                'block_reason' => trim((string) $data['reason']),
+                'blocked_by_admin_id' => $user->id,
+            ])->save();
+
+            $targetUser->tokens()->delete();
+
+            DB::table('connected_devices')
+                ->where('user_id', $targetUser->id)
+                ->where('user_type', 'user')
+                ->delete();
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Foydalanuvchi bloklandi',
+        ]);
     }
 
 
@@ -825,6 +1059,9 @@ class BookClubController extends Controller
             $user = Auth::guard('user')->user();
             if (!$user) {
                 return response()->json(['status' => 'error', 'message' => 'User not found'], 404);
+            }
+            if ($blocked = $this->ensureCanWrite($user)) {
+                return $blocked;
             }
 
             $original = BookClub::with(['images', 'votes'])->findOrFail($id);

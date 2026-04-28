@@ -582,6 +582,7 @@ document.getElementById('editCommissionModal').addEventListener('click', functio
         <table class="p-table" data-index-grid>
           <thead>
             <tr>
+              <th>Tur</th>
               <th>Xarid dan (UZS)</th>
               <th>Xarid gacha (UZS)</th>
               <th>Cashback %</th>
@@ -590,7 +591,19 @@ document.getElementById('editCommissionModal').addEventListener('click', functio
           </thead>
           <tbody>
             <?php $__empty_1 = true; $__currentLoopData = $cashback; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $cb): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+            <?php $isPickup = ($cb->type ?? 'delivery') === 'pickup'; ?>
             <tr>
+              <td>
+                <?php if($isPickup): ?>
+                  <span class="s-pill" style="background:#FFE4B3;color:#A66200;font-size:11px;font-weight:700">
+                    <i class="bi bi-shop"></i> Do'kondan (pickup)
+                  </span>
+                <?php else: ?>
+                  <span class="s-pill" style="background:#E0F2FF;color:#0d4a82;font-size:11px;font-weight:700">
+                    <i class="bi bi-truck"></i> Yetkazib berish
+                  </span>
+                <?php endif; ?>
+              </td>
               <td style="font-family:'JetBrains Mono',monospace"><?php echo e(number_format($cb->fromUzs)); ?></td>
               <td style="font-family:'JetBrains Mono',monospace"><?php echo e(number_format($cb->toUzs)); ?></td>
               <td>
@@ -601,7 +614,7 @@ document.getElementById('editCommissionModal').addEventListener('click', functio
               <td>
                 <div class="flex gap-1 justify-end">
                   <button class="btn-p ghost sm"
-                          onclick="openEditCashback(<?php echo e($cb->id); ?>,<?php echo e($cb->fromUzs); ?>,<?php echo e($cb->toUzs); ?>,<?php echo e($cb->cashback); ?>)"
+                          onclick="openEditCashback(<?php echo e($cb->id); ?>,<?php echo e($cb->fromUzs); ?>,<?php echo e($cb->toUzs); ?>,<?php echo e($cb->cashback); ?>,'<?php echo e($cb->type ?? 'delivery'); ?>')"
                           title="Tahrirlash">
                     <i class="bi bi-pencil"></i>
                   </button>
@@ -615,7 +628,7 @@ document.getElementById('editCommissionModal').addEventListener('click', functio
             </tr>
             <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
             <tr>
-              <td colspan="4" style="text-align:center;padding:30px;color:var(--p-hint)">Cashback qoidalari yo'q</td>
+              <td colspan="5" style="text-align:center;padding:30px;color:var(--p-hint)">Cashback qoidalari yo'q</td>
             </tr>
             <?php endif; ?>
           </tbody>
@@ -632,6 +645,13 @@ document.getElementById('editCommissionModal').addEventListener('click', functio
       <form method="POST" action="<?php echo e(route('admin.settings.cashback.store')); ?>">
         <?php echo csrf_field(); ?>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div class="md:col-span-2">
+            <label class="p-form-label">Buyurtma turi *</label>
+            <select name="type" class="p-form-control" required>
+              <option value="delivery">Yetkazib berish (delivery)</option>
+              <option value="pickup">Do'kondan olib ketish (pickup) — Kitob OL!</option>
+            </select>
+          </div>
           <div>
             <label class="p-form-label">Xarid dan (UZS) *</label>
             <input type="number" name="fromUzs" class="p-form-control" min="0" required placeholder="0">
@@ -666,6 +686,13 @@ document.getElementById('editCommissionModal').addEventListener('click', functio
     <form id="editCashbackForm" method="POST">
       <?php echo csrf_field(); ?> <?php echo method_field('PUT'); ?>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div class="md:col-span-2">
+          <label class="p-form-label">Buyurtma turi</label>
+          <select id="ecb_type" name="type" class="p-form-control" required>
+            <option value="delivery">Yetkazib berish (delivery)</option>
+            <option value="pickup">Do'kondan olib ketish (pickup)</option>
+          </select>
+        </div>
         <div>
           <label class="p-form-label">Xarid dan</label>
           <input type="number" id="ecb_fromUzs" name="fromUzs" class="p-form-control" min="0" required>
@@ -688,11 +715,12 @@ document.getElementById('editCommissionModal').addEventListener('click', functio
   </div>
 </div>
 <script>
-function openEditCashback(id, from, to, cb) {
+function openEditCashback(id, from, to, cb, type) {
   document.getElementById('editCashbackForm').action = "<?php echo e(url('a122/settings/cashback')); ?>/" + id;
   document.getElementById('ecb_fromUzs').value  = from;
   document.getElementById('ecb_toUzs').value    = to;
   document.getElementById('ecb_cashback').value = cb;
+  document.getElementById('ecb_type').value     = type || 'delivery';
   document.getElementById('editCashbackModal').style.display = 'flex';
 }
 document.getElementById('editCashbackModal').addEventListener('click', function(e) {

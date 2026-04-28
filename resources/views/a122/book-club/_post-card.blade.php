@@ -31,6 +31,9 @@
             @if($post->is_repost ?? $post->repost)
               · <span style="color:var(--p-info)"><i class="bi bi-repeat"></i> Repost</span>
             @endif
+            @if($post->activeWarning)
+              · <span style="color:var(--p-warning)"><i class="bi bi-exclamation-triangle-fill"></i> Ogohlantirilgan</span>
+            @endif
           </div>
         </div>
         @else

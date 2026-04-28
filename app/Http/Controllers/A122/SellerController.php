@@ -374,6 +374,19 @@ class SellerController extends Controller
         return back()->with('success', 'Sotuvchi rad etildi.');
     }
 
+    /**
+     * Do'kon QR tokenini yangilaydi (eski QR ishlamay qoladi).
+     * Faqat asosiy seller (parent_id = 0) uchun ishlaydi —
+     * staff sellerlar do'kon QR'siga ega emas.
+     */
+    public function rotateQr(Seller $seller)
+    {
+        $store = $this->resolveStoreSeller($seller);
+        $store->rotateQrToken();
+
+        return back()->with('success', 'Do\'kon QR tokeni yangilandi. Eski QR ishlamay qoladi — yangi QR\'ni do\'konga yopishtiring.');
+    }
+
     public function warn(Request $request, Seller $seller)
     {
         $request->validate([

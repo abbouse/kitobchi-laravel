@@ -6,6 +6,8 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Laravel\Sanctum\HasApiTokens;
 
 class Seller extends Authenticatable
@@ -39,6 +41,9 @@ class Seller extends Authenticatable
 
         // ── Manzil ────────────────────────────────────────────────
         'legal_address',
+
+        // ── Do'kon QR (mijoz "Do'kon ichida" rejimi uchun) ───────
+        'qr_token', 'qr_rotated_at',
     ];
 
     protected $hidden = ['password'];
@@ -57,7 +62,61 @@ class Seller extends Authenticatable
         'contract_signed_at'  => 'date',
         'contract_expires_at' => 'date',
         'passport_issued_at'  => 'date',
+
+        'qr_rotated_at'       => 'datetime',
     ];
+
+    /**
+     * Yangi seller yaratilganida avtomatik unique qr_token generatsiya qilamiz.
+     * Backend kafil — admin yoki seed orqali yaratilsa ham token to'ldiriladi.
+     */
+    protected static function booted(): void
+    {
+        static::creating(function (Seller $seller) {
+            if (empty($seller->qr_token)) {
+                $seller->qr_token      = self::generateUniqueQrToken();
+                $seller->qr_rotated_at = now();
+            }
+        });
+    }
+
+    /**
+     * Unique 40-belgili token — collision bo'lsa qayta urinamiz.
+     * Migration'dagi backfill bilan bir xil mantiq.
+     */
+    public static function generateUniqueQrToken(): string
+    {
+        do {
+            $token = Str::random(40);
+            $exists = DB::table('sellers')->where('qr_token', $token)->exists();
+        } while ($exists);
+
+        return $token;
+    }
+
+    /**
+     * QR'ni rotate qilish — admin paneldan chaqiriladi. Eski QR shu daqiqadan
+     * boshlab ishlamay qoladi (chunki by-qr endpoint'i null/eski tokenni rad etadi).
+     */
+    public function rotateQrToken(): string
+    {
+        $this->qr_token      = self::generateUniqueQrToken();
+        $this->qr_rotated_at = now();
+        $this->save();
+
+        return $this->qr_token;
+    }
+
+    /**
+     * Mijoz uchun ko'rsatiladigan to'liq QR URL'i (do'konga osib qo'yiladigan).
+     * App scanner shu URL'ni o'qib, /s/{token} dan tokenni ajratadi.
+     */
+    public function qrUrl(): ?string
+    {
+        if (empty($this->qr_token)) return null;
+        $base = rtrim((string) config('app.qr_base_url', 'https://kitobchi.com'), '/');
+        return "{$base}/s/{$this->qr_token}";
+    }
 
     /**
      * activity_types ni har qanday formatdan xavfsiz array qaytaradi.

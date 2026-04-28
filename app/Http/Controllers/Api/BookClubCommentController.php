@@ -9,9 +9,13 @@ use App\Models\BookClubComment;
 use App\Models\BookClubCommentReply;
 use App\Models\BookClubCommentLike;
 use App\Models\BookClub;
+use App\Services\BookClubModerationService;
 use Illuminate\Support\Facades\Auth;
 
 class BookClubCommentController extends Controller {
+    public function __construct(
+        private readonly BookClubModerationService $moderationService,
+    ) {}
     
     public function index(Request $request, $post_id) {
     // 1. Userni olish (Guest bo'lsa null qaytadi)
@@ -71,6 +75,13 @@ public function replies(Request $request, $comment_id) {
     if (!$user) {
         return response()->json(['status' => 'error', 'message' => "Bunday foydalanuvchi mavjud emas!"], 404);
     }
+        if ($this->moderationService->isUserBlockedFromWriting((int) $user->id)) {
+            return response()->json([
+                'status' => 'error',
+                'error_code' => 'book_club_user_blocked',
+                'message' => "Boshqalarning xavfsizligi uchun siz Book Club va xabar almashish bo'limida vaqtincha bloklangansiz.",
+            ], 423);
+        }
         $comment = BookClubComment::create([
             'post_id' => $request->post_id,
             'user_id' => $user->id,
@@ -100,6 +111,13 @@ public function replies(Request $request, $comment_id) {
 
     if (!$user) {
         return response()->json(['status' => 'error', 'message' => "Bunday foydalanuvchi mavjud emas!"], 404);
+    }
+    if ($this->moderationService->isUserBlockedFromWriting((int) $user->id)) {
+        return response()->json([
+            'status' => 'error',
+            'error_code' => 'book_club_user_blocked',
+            'message' => "Boshqalarning xavfsizligi uchun siz Book Club va xabar almashish bo'limida vaqtincha bloklangansiz.",
+        ], 423);
     }
     $parentComment = BookClubComment::find($comment_id);
     

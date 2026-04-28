@@ -34,6 +34,8 @@ Route::get('news', [NewsController::class, 'index']);
 Route::get('blog', [NewsController::class, 'blog']);
 Route::prefix('products')->group(function () {
     Route::get('sellers/list', [ProductsController::class, 'sellersWithLatestProducts']);
+    Route::get('sellers/by-qr/{token}', [ProductsController::class, 'sellerByQr']);
+    Route::get('sellers/{sellerId}/by-isbn/{isbn}', [ProductsController::class, 'sellerProductByIsbn']);
     Route::get('sellers/profile/{id}', [ProductsController::class, 'seller']);
     Route::get('books-by-category', [ProductsController::class, 'booksByCategory']);
     Route::get('recommendation/{col}', [ProductsController::class, 'recommendation']);
@@ -111,6 +113,9 @@ Route::middleware('auth:user')->group(function () {
         Route::get('get-profile', [BookClubController::class, 'get_profile']);
         Route::post('like', [BookClubController::class, 'like']);
         Route::get('vote/{option}', [BookClubController::class, 'vote']);
+        Route::post('{postId}/moderate/warn', [BookClubController::class, 'moderateWarn']);
+        Route::post('{postId}/moderate/edit', [BookClubController::class, 'moderateEdit']);
+        Route::post('{postId}/moderate/ban-user', [BookClubController::class, 'moderateBanUser']);
         Route::post('comments', [BookClubCommentController::class, 'store']);
         Route::post('like/comment', [BookClubCommentController::class, 'likeComment']);
         Route::post('comments/{comment_id}/reply', [BookClubCommentController::class, 'reply']);
@@ -151,6 +156,9 @@ Route::middleware('auth:user')->group(function () {
         Route::get('cashback_balance', [UserController::class, 'getCashbackCount']);
         Route::get('getCartCheckoutInfo', [PurchaseController::class, 'getCartCheckoutInfo']);
     });
+
+    // "Do'kon ichida" — QR scanlab kelgan mijoz uchun pickup xaridi
+    Route::post('in-store/buy', [PurchaseController::class, 'inStoreBuy']);
 
     // Savatcha
     Route::prefix('cart')->group(function () {

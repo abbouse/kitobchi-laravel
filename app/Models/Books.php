@@ -15,6 +15,7 @@ class Books extends Model
     protected $fillable = [
         'name',
         'author',
+        'isbn',
         'category_id',
         'description',
         'images',
@@ -89,5 +90,36 @@ class Books extends Model
     {
         return $this->belongsTo(Seller::class, 'seller_id')
             ->select('id', 'shop_name', 'lastname', 'firstname', 'phone_number', 'photo', 'isVerified');
+    }
+
+    /**
+     * ISBN'ni kanonik shaklga keltiradi — chiziqlar, bo'shliqlar olib
+     * tashlanadi, faqat raqam va X (ISBN-10 oxiri) qoladi, katta harf.
+     *
+     *   "978-9943-08-123-1"  →  "9789943081231"
+     *   "0 306 40615 2"      →  "0306406152"
+     *   "isbn 0306406152"    →  "0306406152"
+     */
+    public static function normalizeIsbn(?string $raw): ?string
+    {
+        if ($raw === null) return null;
+        $clean = strtoupper(preg_replace('/[^0-9Xx]/', '', $raw) ?? '');
+        if ($clean === '') return null;
+        // Faqat 10 yoki 13 belgili variantni qabul qilamiz, oraliq qiymatlarni kesmaymiz.
+        if (strlen($clean) === 10 || strlen($clean) === 13) return $clean;
+        return null;
+    }
+
+    /**
+     * Query scope: ISBN bo'yicha qidiruv (kanonik shaklga ham,
+     * DB'da chiziq bilan saqlangan variantga ham mos keladi).
+     */
+    public function scopeWhereIsbn($query, string $isbn)
+    {
+        $canonical = self::normalizeIsbn($isbn) ?? $isbn;
+        return $query->where(function ($q) use ($isbn, $canonical) {
+            $q->where('isbn', $canonical)
+              ->orWhere('isbn', $isbn);
+        });
     }
 }

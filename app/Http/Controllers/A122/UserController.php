@@ -27,6 +27,8 @@ class UserController extends Controller
             'pending' => $query->where(fn ($inner) => $inner->where('isVerified', false)->orWhereNull('isVerified')),
             'premium' => $query->where('is_premium', true),
             'buyers' => $query->whereIn('id', $buyersQuery),
+            'blocked' => $query->where('status', 'blocked')
+                ->where(fn ($inner) => $inner->whereNull('blocked_until')->orWhere('blocked_until', '>', now())),
             default => null,
         };
 
@@ -46,6 +48,9 @@ class UserController extends Controller
             'pending' => User::where(fn ($inner) => $inner->where('isVerified', false)->orWhereNull('isVerified'))->count(),
             'premium' => User::where('is_premium', true)->count(),
             'buyers' => (clone $buyersQuery)->count(),
+            'blocked' => User::where('status', 'blocked')
+                ->where(fn ($inner) => $inner->whereNull('blocked_until')->orWhere('blocked_until', '>', now()))
+                ->count(),
         ];
 
         $rows = $users->map(function (User $u) {
@@ -54,7 +59,7 @@ class UserController extends Controller
                 'name' => trim(($u->name ?? '').' '.($u->lastname ?? '')),
                 'email' => $u->email ?: '—',
                 'role' => $u->position ?: 'User',
-                'status' => $u->isVerified ? 'active' : 'pending',
+                'status' => $u->isBlocked() ? 'blocked' : ($u->isVerified ? 'active' : 'pending'),
                 'orders' => 0,
                 'joined' => optional($u->created_at)->format('Y-m-d'),
                 'avatar' => $u->avatar ? asset('storage/'.$u->avatar) : null,
@@ -89,6 +94,17 @@ class UserController extends Controller
 
     public function show(User $user)
     {
+        if ($user->status === 'blocked' && $user->blocked_until && $user->blocked_until->isPast()) {
+            $user->update([
+                'status' => $user->isVerified ? 'active' : 'pending',
+                'blocked_until' => null,
+                'blocked_at' => null,
+                'block_reason' => null,
+                'blocked_by_admin_id' => null,
+            ]);
+            $user->refresh();
+        }
+
         $user->loadCount(['cards', 'devices', 'followers', 'followings']);
 
         $ordersQuery = Sold::query()->where('user_id', $user->id);
@@ -221,5 +237,47 @@ class UserController extends Controller
         ]);
 
         return back()->with('success', $next ? 'Premium yoqildi.' : 'Premium o‘chirildi.');
+    }
+
+    public function block(Request $request, User $user)
+    {
+        $data = $request->validate([
+            'block_period' => 'required|in:10_days,1_month,1_year,3_years,forever',
+            'block_reason' => 'required|string|max:5000',
+        ]);
+
+        $blockedUntil = match ($data['block_period']) {
+            '10_days' => now()->addDays(10),
+            '1_month' => now()->addMonth(),
+            '1_year' => now()->addYear(),
+            '3_years' => now()->addYears(3),
+            'forever' => null,
+        };
+
+        $user->forceFill([
+            'status' => 'blocked',
+            'blocked_until' => $blockedUntil,
+            'blocked_at' => now(),
+            'block_reason' => trim($data['block_reason']),
+            'blocked_by_admin_id' => auth()->id(),
+        ])->save();
+
+        $user->tokens()->delete();
+        ConnectedDevice::where('user_id', $user->id)->where('user_type', 'user')->delete();
+
+        return back()->with('success', 'Foydalanuvchi bloklandi.');
+    }
+
+    public function unblock(User $user)
+    {
+        $user->forceFill([
+            'status' => $user->isVerified ? 'active' : 'pending',
+            'blocked_until' => null,
+            'blocked_at' => null,
+            'block_reason' => null,
+            'blocked_by_admin_id' => null,
+        ])->save();
+
+        return back()->with('success', 'Foydalanuvchi blokdan chiqarildi.');
     }
 }

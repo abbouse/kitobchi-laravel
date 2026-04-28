@@ -62,6 +62,9 @@
               <span class="badge badge-info"><?php echo e(data_get($user,'position','User')); ?></span>
               <span class="badge <?php echo e($user->isVerified ? 'badge-success' : 'badge-warning'); ?>"><?php echo e($user->isVerified ? 'Tasdiqlangan' : 'Tasdiqlanmagan'); ?></span>
               <span class="badge <?php echo e($user->is_premium ? 'badge-warning' : 'badge-muted'); ?>"><?php echo e($user->is_premium ? 'Premium' : 'Standard'); ?></span>
+              <?php if($user->isBlocked()): ?>
+                <span class="badge badge-danger">Bloklangan</span>
+              <?php endif; ?>
               <?php if($user->isSupport): ?>
                 <span class="badge badge-info">Support</span>
               <?php endif; ?>
@@ -168,6 +171,49 @@
     </section>
 
     <section class="card p-5 xl:col-span-8">
+      <div class="mb-5 rounded-3xl border border-[var(--p-border)] bg-[var(--p-elevated)] p-5">
+        <div class="flex items-center justify-between gap-4">
+          <div>
+            <h3 class="text-lg font-black">Akkaunt boshqaruvi</h3>
+            <p class="text-sm text-[var(--p-muted)] mt-1">Bloklangan foydalanuvchining barcha tokenlari o‘chiriladi va keyingi kirish rad etiladi.</p>
+          </div>
+          <?php if($user->isBlocked()): ?>
+            <form method="POST" action="<?php echo e(route('admin.users.unblock', $user)); ?>">
+              <?php echo csrf_field(); ?>
+              <button class="btn-p success"><i class="bi bi-unlock"></i> Blokdan chiqarish</button>
+            </form>
+          <?php endif; ?>
+        </div>
+
+        <?php if($user->isBlocked()): ?>
+          <div class="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+            <div><strong>Muddat:</strong> <?php echo e($user->activeBlockLabel()); ?></div>
+            <div class="mt-2"><strong>Sabab:</strong> <?php echo e($user->block_reason ?: '—'); ?></div>
+          </div>
+        <?php else: ?>
+          <form method="POST" action="<?php echo e(route('admin.users.block', $user)); ?>" class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+            <?php echo csrf_field(); ?>
+            <div>
+              <label class="text-xs font-medium text-gray-500 mb-1 block">Blok muddati</label>
+              <select name="block_period" class="input" required>
+                <option value="10_days">10 kun</option>
+                <option value="1_month">1 oy</option>
+                <option value="1_year">1 yil</option>
+                <option value="3_years">3 yil</option>
+                <option value="forever">Abadiy</option>
+              </select>
+            </div>
+            <div class="md:col-span-2">
+              <label class="text-xs font-medium text-gray-500 mb-1 block">Blok sababi</label>
+              <textarea name="block_reason" rows="4" class="input" required placeholder="Nega bloklanayotganini yozing"></textarea>
+            </div>
+            <div class="md:col-span-2 flex justify-end">
+              <button class="btn-p danger"><i class="bi bi-ban"></i> Akkauntni bloklash</button>
+            </div>
+          </form>
+        <?php endif; ?>
+      </div>
+
       <div class="flex items-center justify-between mb-4">
         <h3 class="text-lg font-black">So‘nggi buyurtmalar</h3>
         <span class="badge badge-info"><?php echo e($stats['orders_count']); ?> ta</span>

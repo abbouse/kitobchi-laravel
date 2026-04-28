@@ -59,7 +59,7 @@ if (isset($message)) { $__messageOriginal = $message; }
 $message = $__bag->first($__errorArgs[0]); ?> border-danger <?php unset($message);
 if (isset($__messageOriginal)) { $message = $__messageOriginal; }
 endif;
-unset($__errorArgs, $__bag); ?> font-mono text-sm" rows="5" placeholder='["read","orders"]'><?php echo e(old('abilities', $apiClient?->abilities)); ?></textarea>
+unset($__errorArgs, $__bag); ?> font-mono text-sm" rows="5" placeholder='["read","orders"]'><?php echo e(old('abilities', isset($apiClient) && is_array($apiClient?->abilities) ? json_encode($apiClient->abilities, JSON_UNESCAPED_SLASHES) : $apiClient?->abilities)); ?></textarea>
         <?php $__errorArgs = ['abilities'];
 $__bag = $errors->getBag($__errorArgs[1] ?? 'default');
 if ($__bag->has($__errorArgs[0])) :
@@ -73,6 +73,64 @@ unset($__errorArgs, $__bag); ?>
             <button type="button" onclick="addAbility('<?php echo e($ab); ?>')" class="btn-p ghost sm"><?php echo e($ab); ?></button>
           <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
         </div>
+      </div>
+
+      <div>
+        <label class="p-form-label">Rate limit / soniya</label>
+        <input
+          type="number"
+          min="1"
+          max="10000"
+          name="rate_limit_per_second"
+          class="p-form-control <?php $__errorArgs = ['rate_limit_per_second'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?> border-danger <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>"
+          value="<?php echo e(old('rate_limit_per_second', $apiClient?->rate_limit_per_second ?? 8)); ?>"
+          placeholder="8"
+        >
+        <?php $__errorArgs = ['rate_limit_per_second'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?><div class="mt-1 text-xs text-[var(--p-danger)]"><?php echo e($message); ?></div><?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+        <p class="mt-2 text-xs text-[var(--p-hint)]">Bitta client bir soniyada necha so‘rov yubora oladi.</p>
+      </div>
+
+      <div>
+        <label class="p-form-label">Rate limit / daqiqa</label>
+        <input
+          type="number"
+          min="1"
+          max="500000"
+          name="rate_limit_per_minute"
+          class="p-form-control <?php $__errorArgs = ['rate_limit_per_minute'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?> border-danger <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>"
+          value="<?php echo e(old('rate_limit_per_minute', $apiClient?->rate_limit_per_minute ?? 240)); ?>"
+          placeholder="240"
+        >
+        <?php $__errorArgs = ['rate_limit_per_minute'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?><div class="mt-1 text-xs text-[var(--p-danger)]"><?php echo e($message); ?></div><?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+        <p class="mt-2 text-xs text-[var(--p-hint)]">Qisqa burst’lardan tashqari umumiy daqiqalik limit.</p>
       </div>
     </div>
   </section>
@@ -103,7 +161,9 @@ unset($__errorArgs, $__bag); ?>
       </div>
       <div class="space-y-3 text-sm text-[var(--p-hint)]">
         <p>Huquqlar JSON ko'rinishida saqlanadi. Misol: <code>["read","orders"]</code>.</p>
+        <p><code>read</code> bo'lmasa hozirgi client endpointlari ishlamaydi.</p>
         <p>Secret yangilansa, eski secret darhol ishlamay qoladi.</p>
+        <p>Rate limit har bir client uchun alohida ishlaydi va response headerlarda ham qaytadi.</p>
       </div>
     </section>
   </aside>

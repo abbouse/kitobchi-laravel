@@ -573,6 +573,28 @@ class UserController extends Controller
     public function getGlobalCounts(Request $request)
     {
         $user   = Auth::guard('user')->user();
+        if ($user && method_exists($user, 'isBlocked') && $user->isBlocked()) {
+            $user->tokens()->delete();
+            DB::table('connected_devices')
+                ->where('user_id', $user->id)
+                ->where('user_type', 'user')
+                ->delete();
+
+            $message = "Sizning akkauntingiz bloklangan.";
+            if ($user->blocked_until) {
+                $message .= ' Blok muddati: ' . $user->blocked_until->format('d.m.Y H:i');
+            } else {
+                $message .= ' Blok muddati: abadiy.';
+            }
+
+            return response()->json([
+                'status' => 'error',
+                'error_code' => 'user_account_blocked',
+                'message' => $message,
+                'blocked_until' => optional($user->blocked_until)?->toIso8601String(),
+                'block_reason' => $user->block_reason,
+            ], 423);
+        }
         $cfg    = Cache::remember('project_settings', 300, fn() => ProjectSetting::first());
 
         $personalUnread      = 0;
@@ -678,6 +700,10 @@ class UserController extends Controller
                 'mystery_box'              => $mysteryBoxData,
                 'isVerified'               => $user ? (bool) $user->isVerified : false,
                 'isSupport'                => $user ? (bool) $user->isSupport  : false,
+                'position'                 => $user?->position ?? "O'quvchi",
+                'role_emoji'               => $user?->role_emoji,
+                'role_title'               => $user?->role_title,
+                'role_place'               => $user?->role_place,
                 'onPremium'                => (bool) ($cfg?->on_premium  ?? false),
                 'onReels'                  => (bool) ($cfg?->on_reels    ?? false),
                 'ramadan'                  => (bool) ($cfg?->ramadan     ?? false),

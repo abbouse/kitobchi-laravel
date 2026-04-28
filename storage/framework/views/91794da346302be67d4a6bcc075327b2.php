@@ -27,6 +27,7 @@
       'pending' => ['Kutilmoqda', $counts['pending'] ?? 0],
       'active' => ['Faol', $counts['active'] ?? 0],
       'premium' => ['Premium', $counts['premium'] ?? 0],
+      'blocked' => ['Bloklangan', $counts['blocked'] ?? 0],
     ]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $key => [$label, $count]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
       <a href="<?php echo e(request()->fullUrlWithQuery(['tab' => $key, 'page' => null])); ?>" class="tab-pill <?php echo e($tab === $key ? 'active' : ''); ?>">
         <?php echo e($label); ?> <span><?php echo e($count); ?></span>
@@ -47,7 +48,7 @@
             <div class="text-xs text-gray-500 break-all"><?php echo e($user->email ?: '—'); ?></div>
             <div class="mt-3 flex flex-wrap items-center gap-2">
               <span class="badge badge-info"><?php echo e($user->position ?: 'User'); ?></span>
-              <span class="badge <?php echo e($user->isVerified ? 'badge-success' : 'badge-warning'); ?>"><?php echo e($user->isVerified ? 'active' : 'pending'); ?></span>
+              <span class="badge <?php echo e($user->isBlocked() ? 'badge-danger' : ($user->isVerified ? 'badge-success' : 'badge-warning')); ?>"><?php echo e($user->isBlocked() ? 'blocked' : ($user->isVerified ? 'active' : 'pending')); ?></span>
               <span class="text-xs text-gray-500"><?php echo e(optional($user->created_at)->format('Y-m-d')); ?></span>
             </div>
           </div>
@@ -86,6 +87,9 @@
               <td>
                 <div class="flex flex-wrap items-center gap-2">
                   <span class="badge <?php echo e($user->isVerified ? 'badge-success' : 'badge-warning'); ?>"><?php echo e($user->isVerified ? 'active' : 'pending'); ?></span>
+                  <?php if($user->isBlocked()): ?>
+                    <span class="badge badge-danger">blocked</span>
+                  <?php endif; ?>
                   <?php if($user->is_premium): ?>
                     <span class="badge badge-info">premium</span>
                   <?php endif; ?>

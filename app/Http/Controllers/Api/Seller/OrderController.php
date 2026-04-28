@@ -8,6 +8,8 @@ use App\Models\Sold;
 use App\Models\SellerOrder;
 use App\Models\Books;
 use App\Models\Couriers;
+use App\Services\OrderRealtimeService;
+use App\Services\QrTokenService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -15,7 +17,10 @@ use Illuminate\Support\Facades\DB;
 
 class OrderController extends Controller
 {
-    public function __construct()
+    public function __construct(
+        private readonly OrderRealtimeService $orderRealtimeService,
+        private readonly QrTokenService $qrTokenService,
+    )
     {
         $this->middleware('auth:seller');
     }
@@ -147,18 +152,17 @@ class OrderController extends Controller
             return response()->json(['success' => false, 'message' => 'Access denied.'], 403);
         }
 
-        // QR format: KC:$sellerId|$shopName|$orderId|$courierId
-        $parts = explode('|', str_replace('KC:', '', $qr));
-        if (count($parts) !== 4) {
+        $parsedQr = $this->parsePickupQr($qr);
+        if (!$parsedQr) {
             return response()->json(['success' => false, 'message' => "Noto'g'ri QR format"], 400);
         }
-        [$sellerId, $shopName, $orderId, $courierId] = $parts;
+        $sellerId = $parsedQr['seller_id'];
+        $orderId = $parsedQr['order_id'];
+        $courierId = $parsedQr['courier_id'];
 
         $storeSellerId = $this->getStoreSellerId($seller);
-        $storeSeller   = Seller::find($storeSellerId);
-
-        if (!$storeSeller || $storeSeller->shop_name !== $shopName) {
-            return response()->json(['success' => false, 'message' => "Do'kon nomi mos kelmadi"], 403);
+        if ((string) $storeSellerId !== (string) $sellerId) {
+            return response()->json(['success' => false, 'message' => "Do'kon mos kelmadi"], 403);
         }
 
         $sellerOrder = SellerOrder::with([
@@ -186,7 +190,7 @@ class OrderController extends Controller
                     'id'   => $courier->id,
                     'name' => $courier->first_name . ' ' . $courier->last_name,
                 ],
-                'qr' => $qr,
+                'qr' => $parsedQr['normalized_qr'],
             ],
         ]);
     }
@@ -203,26 +207,23 @@ public function toCourier(Request $request, $qr)
             'message' => 'Access denied. Orders available only for Owner, Admin, and Product Manager.'
         ], 403);
     }
-    // QR format: KC:$sellerId|$shopName|$orderId|$courierId
-    $parts = explode('|', str_replace('KC:', '', $qr));
-    if (count($parts) !== 4) {
+    $parsedQr = $this->parsePickupQr($qr);
+    if (!$parsedQr) {
         return response()->json(['success' => false, 'message' => 'Invalid QR format'], 400);
     }
-    [$sellerId, $shopName, $orderId, $courierId] = $parts;
+    $sellerId = $parsedQr['seller_id'];
+    $orderId = $parsedQr['order_id'];
+    $courierId = $parsedQr['courier_id'];
 
     $storeSellerId = $this->getStoreSellerId($seller);
     $storeSeller = Seller::find($storeSellerId);
 
-    if (
-        !$storeSeller ||
-        $storeSeller->shop_name !== $shopName ||
-        (string) $storeSellerId !== (string) $sellerId
-    ) {
+    if (!$storeSeller || (string) $storeSellerId !== (string) $sellerId) {
         return response()->json(['success' => false, 'message' => 'Shop name does not match'], 403);
     }
 
     try {
-        return DB::transaction(function () use ($storeSeller, $orderId, $courierId, $storeSellerId) {
+        $response = DB::transaction(function () use ($storeSeller, $orderId, $courierId, $storeSellerId) {
             $seller_order = SellerOrder::whereIn('status', [1, 2])
                 ->where('order_id', $orderId)
                 ->where('seller_id', $storeSellerId)
@@ -277,14 +278,55 @@ public function toCourier(Request $request, $qr)
                 'message' => 'Products collected. ' . ($allSellersDone ? 'Order fully sent to courier.' : 'Waiting for other shops...')
             ], 200);
         });
+
+        $sellerOrder = SellerOrder::where('order_id', $orderId)
+            ->where('seller_id', $storeSellerId)
+            ->first();
+        if ($sellerOrder) {
+            $this->orderRealtimeService->broadcastSellerOrderUpdated($sellerOrder, 'seller_order.handed_to_courier');
+        }
+
+        return $response;
     } catch (\Throwable $th) {
         return response()->json([
             'success' => false,
             'message' => 'Xatolik: ' . $th->getMessage()
         ], 500);
     }
-}
+    }
 
+    private function parsePickupQr(string $qr): ?array
+    {
+        $signed = $this->qrTokenService->parsePickupToken($qr);
+        if ($signed) {
+            return $signed + ['normalized_qr' => $qr];
+        }
+
+        if (!str_starts_with($qr, 'KC:')) {
+            return null;
+        }
+
+        $parts = explode('|', str_replace('KC:', '', $qr));
+        if (count($parts) !== 4) {
+            return null;
+        }
+
+        $sellerId = (int) trim($parts[0]);
+        $shopName = trim($parts[1]);
+        $orderId = (int) trim($parts[2]);
+        $courierId = (int) trim($parts[3]);
+
+        if ($sellerId <= 0 || $orderId <= 0 || $courierId <= 0 || $shopName === '') {
+            return null;
+        }
+
+        return [
+            'seller_id' => $sellerId,
+            'order_id' => $orderId,
+            'courier_id' => $courierId,
+            'normalized_qr' => $qr,
+        ];
+    }
     public function acceptOrder(Request $request, $id)
     {
         $seller = Auth::guard('seller')->user();
@@ -342,6 +384,9 @@ public function toCourier(Request $request, $qr)
                     ->update(['response_time_hours' => $capped]);
             }
         });
+
+        $sellerOrder->refresh();
+        $this->orderRealtimeService->broadcastSellerOrderUpdated($sellerOrder, 'seller_order.accepted');
 
         return response()->json([
             'success' => true,

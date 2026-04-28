@@ -168,6 +168,64 @@
     </div>
 </div>
 
+{{-- ── Do'kon QR — "Do'kon ichida" rejimi uchun ───────────────────── --}}
+@if(!$seller->parent_id && !empty($seller->qr_token))
+@php
+    $qrUrl    = $seller->qrUrl();
+    $qrImgSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=12&data=' . urlencode($qrUrl);
+@endphp
+<div class="card p-5 mb-6">
+    <div class="flex items-start gap-5 flex-wrap">
+        <div class="shrink-0 bg-white p-3 rounded-lg border border-slate-200 dark:border-slate-700">
+            <img src="{{ $qrImgSrc }}" alt="Do'kon QR" width="180" height="180" loading="lazy">
+        </div>
+
+        <div class="flex-1 min-w-[260px]">
+            <div class="flex items-center gap-2 mb-2">
+                <i data-lucide="qr-code" class="w-5 h-5 text-teal-500"></i>
+                <h3 class="text-base font-semibold">Do'kon QR kodi</h3>
+            </div>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">
+                Mijoz do'konga kirib shu QR'ni Kitobchi ilovasi orqali skaner qilsa,
+                "Do'kon ichida" rejimi yoqiladi va faqat shu sotuvchi mahsulotlari ko'rinadi.
+                QR'ni A4 yoki kichikroq formatda chop etib do'konning ko'rinarli joyiga osib qo'ying.
+            </p>
+
+            <dl class="grid grid-cols-3 gap-2 text-xs mb-3">
+                <dt class="text-gray-500">URL</dt>
+                <dd class="col-span-2 font-mono break-all text-gray-700 dark:text-gray-300">{{ $qrUrl }}</dd>
+
+                <dt class="text-gray-500">Token</dt>
+                <dd class="col-span-2 font-mono text-gray-700 dark:text-gray-300">{{ $seller->qr_token }}</dd>
+
+                @if($seller->qr_rotated_at)
+                <dt class="text-gray-500">Yangilangan</dt>
+                <dd class="col-span-2">{{ $seller->qr_rotated_at->format('Y-m-d H:i') }}</dd>
+                @endif
+            </dl>
+
+            <div class="flex items-center gap-2 flex-wrap">
+                <a href="{{ $qrImgSrc }}" target="_blank" rel="noopener"
+                   class="btn btn-outline-primary btn-sm flex items-center gap-1">
+                    <i data-lucide="external-link" class="w-4 h-4"></i> Katta hajmda ochish
+                </a>
+                <a href="{{ str_replace('size=300x300', 'size=600x600', $qrImgSrc) }}" download="kitobchi-shop-{{ $seller->id }}.png"
+                   class="btn btn-outline-secondary btn-sm flex items-center gap-1">
+                    <i data-lucide="download" class="w-4 h-4"></i> Yuklab olish (600px)
+                </a>
+                <form method="POST" action="{{ route('admin.sellers.qr.rotate', $seller) }}"
+                      onsubmit="return confirm('Eski QR ishlamay qoladi. Yangi QR\'ni do\'konga osib qo\'ying. Davom etamizmi?')">
+                    @csrf
+                    <button type="submit" class="btn btn-outline-warning btn-sm flex items-center gap-1">
+                        <i data-lucide="refresh-cw" class="w-4 h-4"></i> QR'ni yangilash
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
+
 <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
     <div class="card p-5 xl:col-span-2">
         <div class="flex items-center justify-between gap-3 mb-4 flex-wrap">

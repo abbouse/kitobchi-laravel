@@ -16,6 +16,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Http\JsonResponse;
 
 class AuthController extends Controller
 {
@@ -79,6 +80,10 @@ class AuthController extends Controller
             $user = DB::transaction(function () use ($claims) {
                 return $this->resolveTelegramUser($claims);
             });
+
+            if ($blocked = $this->blockedUserResponse($user)) {
+                return $blocked;
+            }
 
             if ($request->has('guest_cart') || $request->has('guest_favorites')) {
                 $this->syncGuestData($request, $user);
@@ -145,28 +150,20 @@ class AuthController extends Controller
                         "<#> Kitobchi ilovasida tasdiqlash uchun kod: $verifyCode. $randomString"
                     );
                 } catch (\Throwable $e) {
-                    // Productiondan tashqari muhitda (local/dev/staging) Eskiz
-                    // bilan ulanish muvaffaqiyatsiz bo'lsa, kodni log'ga yozib
-                    // davom etamiz — shunda dev'lar xato qilmasdan login qila
-                    // oladi. Productionda esa avvalgidek 503 qaytariladi.
-                    if (!app()->environment('production')) {
-                        Log::warning('SMS soft-fail (dev): kod log\'ga yozildi', [
-                            'phone'      => $phone_number,
-                            'verifyCode' => $verifyCode,
-                            'error'      => $e->getMessage(),
-                        ]);
-                    } else {
-                        return response()->json([
-                            'status'  => 'error',
-                            'message' => $e->getMessage(),
-                        ], 503);
-                    }
+                    return response()->json([
+                        'status'  => 'error',
+                        'message' => $e->getMessage(),
+                    ], 503);
                 }
             }
 
             $user = User::where('phone_number', $phone_number)
                 ->where('isDeleted', 'no')
                 ->first();
+
+            if ($user && ($blocked = $this->blockedUserResponse($user))) {
+                return $blocked;
+            }
 
             if (!$user) {
                 User::create([
@@ -193,6 +190,9 @@ class AuthController extends Controller
             ->first();
 
         if ($user && trim((string) $user->verifyCode) === trim((string) $request->verifyCode)) {
+            if ($blocked = $this->blockedUserResponse($user)) {
+                return $blocked;
+            }
 
             // Token yaratish
             $tokenResult    = $user->createToken('user_token');
@@ -462,6 +462,12 @@ class AuthController extends Controller
                 'cashback' => $user->cashback ?? 0,
                 'mainAddressID' => $user->mainAddressID ?? 0,
                 'user_main_location' => $user->location?->fullAddress ?? '',
+                'position' => $user->position ?? "O'quvchi",
+                'isVerified' => (bool) $user->isVerified,
+                'isSupport' => (bool) $user->isSupport,
+                'role_emoji' => $user->role_emoji,
+                'role_title' => $user->role_title,
+                'role_place' => $user->role_place,
             ],
         ], 201);
     }
@@ -675,6 +681,15 @@ class AuthController extends Controller
         $user = auth('user')->user();
 
         if ($user) {
+            if ($blocked = $this->blockedUserResponse($user)) {
+                $user->tokens()->delete();
+                DB::table('connected_devices')
+                    ->where('user_id', $user->id)
+                    ->where('user_type', 'user')
+                    ->delete();
+                return $blocked;
+            }
+
             return response()->json([
                 'status'  => 'success',
                 'mode'    => 'user',
@@ -695,5 +710,27 @@ class AuthController extends Controller
             'mode'    => 'unauthorized',
             'message' => 'Token aktual emas!',
         ], 401);
+    }
+
+    private function blockedUserResponse(User $user): ?JsonResponse
+    {
+        if (!$user->isBlocked()) {
+            return null;
+        }
+
+        $message = "Sizning akkauntingiz bloklangan.";
+        if ($user->blocked_until) {
+            $message .= ' Blok muddati: ' . $user->blocked_until->format('d.m.Y H:i');
+        } else {
+            $message .= ' Blok muddati: abadiy.';
+        }
+
+        return response()->json([
+            'status' => 'error',
+            'error_code' => 'user_account_blocked',
+            'message' => $message,
+            'blocked_until' => optional($user->blocked_until)?->toIso8601String(),
+            'block_reason' => $user->block_reason,
+        ], 423);
     }
 }

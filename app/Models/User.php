@@ -39,6 +39,10 @@ class User extends Authenticatable
         'fcm_token',
         'ai_limit',
         'last_seen_at',
+        'blocked_until',
+        'blocked_at',
+        'block_reason',
+        'blocked_by_admin_id',
         'total_seconds_spend',
         'isVerified',
         'isSupport',
@@ -60,7 +64,48 @@ class User extends Authenticatable
         'isSupport' => 'boolean',
         'firstEdit' => 'boolean',
         'telegram_connected_at' => 'datetime',
+        'blocked_until' => 'datetime',
+        'blocked_at' => 'datetime',
     ];
+
+    public function isBlocked(): bool
+    {
+        if ($this->status !== 'blocked') {
+            return false;
+        }
+
+        if ($this->blocked_until === null) {
+            return true;
+        }
+
+        return $this->blocked_until->isFuture();
+    }
+
+    public function activeBlockLabel(): ?string
+    {
+        if (!$this->isBlocked()) {
+            return null;
+        }
+
+        return $this->blocked_until?->format('d.m.Y H:i') ?? 'Abadiy';
+    }
+
+    public function isModerator(): bool
+    {
+        return mb_strtolower(trim((string) $this->position)) === 'moderator';
+    }
+
+    public function isAdministrator(): bool
+    {
+        $position = mb_strtolower(trim((string) $this->position));
+
+        return in_array($position, ['administrator', 'admin'], true);
+    }
+
+    public function canModerateCommunity(): bool
+    {
+        return $this->isModerator() || $this->isAdministrator();
+    }
     
     protected static function booted()
 {

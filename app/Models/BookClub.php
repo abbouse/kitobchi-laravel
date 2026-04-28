@@ -20,6 +20,9 @@ class BookClub extends Model
         'theme_id',
         'repost',
         'reposted_user_id',
+        'edited_at',
+        'edit_count',
+        'last_edited_by_id',
         'kangaroo_post_star',
         'kangaroo_post_checked_at',
         'kangaroo_post_ugc_status',
@@ -28,6 +31,7 @@ class BookClub extends Model
     protected $casts = [
         'is_deleted' => 'boolean',
         'repost' => 'boolean',
+        'edited_at' => 'datetime',
         'kangaroo_post_checked_at' => 'datetime',
     ];
 
@@ -50,6 +54,11 @@ class BookClub extends Model
     public function originalAuthor()
     {
         return $this->belongsTo(User::class, 'reposted_user_id', 'id');
+    }
+
+    public function lastEditor()
+    {
+        return $this->belongsTo(User::class, 'last_edited_by_id', 'id');
     }
 
     // ── Theme ─────────────────────────────────────────────────────────────────
@@ -80,5 +89,17 @@ class BookClub extends Model
     public function comments()
     {
         return $this->hasMany(BookClubComment::class, 'post_id', 'id');
+    }
+
+    public function warnings()
+    {
+        return $this->hasMany(BookClubWarning::class, 'post_id', 'id');
+    }
+
+    public function activeWarning()
+    {
+        return $this->hasOne(BookClubWarning::class, 'post_id', 'id')
+            ->where('is_active', true)
+            ->latestOfMany();
     }
 }

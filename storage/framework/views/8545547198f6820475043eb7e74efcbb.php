@@ -53,6 +53,65 @@
 
   
   <div class="xl:col-span-8">
+    <div class="p-card mb-3 fade-up">
+      <div class="dash-card-head">
+        <div class="dash-card-title">Moderatsiya va ogohlantirish</div>
+        <div class="dash-card-sub"><?php echo e($activeWarningCount); ?> ta faol ogohlantirish</div>
+      </div>
+      <div class="dash-card-body">
+        <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+          <span class="btn-p ghost sm" style="pointer-events:none">
+            <i class="bi bi-person"></i> User #<?php echo e($bookClub->user_id); ?>
+
+          </span>
+          <span class="btn-p ghost sm" style="pointer-events:none;border-color:<?php echo e($bookClub->activeWarning ? 'var(--p-warning)' : 'var(--p-border)'); ?>;color:<?php echo e($bookClub->activeWarning ? 'var(--p-warning)' : 'var(--p-hint)'); ?>">
+            <i class="bi bi-exclamation-triangle"></i>
+            <?php echo e($bookClub->activeWarning ? "Post ogohlantirilgan" : "Ogohlantirish yo'q"); ?>
+
+          </span>
+        </div>
+
+        <?php if($bookClub->activeWarning): ?>
+          <div style="padding:12px 14px;border-radius:12px;background:var(--p-warning-d);border:1px solid rgba(245,166,35,.18);margin-bottom:14px">
+            <div style="font-size:12px;color:var(--p-warning);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">
+              So‘nggi ogohlantirish
+            </div>
+            <div style="font-size:13px;color:var(--p-text);line-height:1.7;white-space:pre-line"><?php echo e($bookClub->activeWarning->note); ?></div>
+            <div style="font-size:11px;color:var(--p-hint);margin-top:8px">
+              <?php echo e($bookClub->activeWarning->created_at?->format('d.m.Y H:i')); ?>
+
+              <?php if($bookClub->activeWarning->admin): ?>
+                · <?php echo e($bookClub->activeWarning->admin->name); ?>
+
+              <?php endif; ?>
+            </div>
+          </div>
+        <?php endif; ?>
+
+        <form method="POST" action="<?php echo e(route('admin.book-club.warn', $bookClub)); ?>">
+          <?php echo csrf_field(); ?>
+          <label style="display:block;font-size:12px;color:var(--p-hint);margin-bottom:6px">Admin izohi</label>
+          <textarea name="note" rows="4" class="p-form-control" placeholder="Nega ogohlantirish berilayotganini yozing..." required><?php echo e(old('note', $bookClub->activeWarning?->note)); ?></textarea>
+          <?php $__errorArgs = ['note'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+            <div style="font-size:12px;color:var(--p-danger);margin-top:6px"><?php echo e($message); ?></div>
+          <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+          <div style="display:flex;justify-content:flex-end;margin-top:12px">
+            <button type="submit" class="btn-p warning">
+              <i class="bi bi-exclamation-triangle"></i>
+              <?php echo e($bookClub->activeWarning ? "Ogohlantirishni yangilash" : "Ogohlantirish berish"); ?>
+
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
 
     
     <div class="p-card mb-3 fade-up">
@@ -594,4 +653,5 @@ document.getElementById('editCommentModal').addEventListener('click', function(e
 });
 </script>
 <?php $__env->stopPush(); ?>
+
 <?php echo $__env->make('a122.layouts.admin', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH /Users/abbos/PROJECTS/MY/kitobchi-server/kitobchi-laravel/resources/views/a122/book-club/show.blade.php ENDPATH**/ ?>

@@ -158,7 +158,16 @@ class OrderService
                 return (int) ($lockedOrder->awarded_cashback_amount ?? 0);
             }
 
-            $cashbackPercent = CashbackSetting::getCashbackPercentage((int) $lockedOrder->amount);
+            // Pickup buyurtmalar uchun cashback alohida tariff'dan keladi.
+            // Sold.deliveryType = 'pickup' bo'lsa shuni ko'rib chiqamiz —
+            // bu "Kitob OL!" QR oqimida yaratilgan in-store xaridi.
+            $cashbackType = strtolower((string) ($lockedOrder->deliveryType ?? '')) === 'pickup'
+                ? CashbackSetting::TYPE_PICKUP
+                : CashbackSetting::TYPE_DELIVERY;
+            $cashbackPercent = CashbackSetting::getCashbackPercentage(
+                (int) $lockedOrder->amount,
+                $cashbackType
+            );
             if ($cashbackPercent <= 0) {
                 return 0;
             }

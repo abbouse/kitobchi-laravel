@@ -28,6 +28,7 @@
       'pending' => ['Kutilmoqda', $counts['pending'] ?? 0],
       'active' => ['Faol', $counts['active'] ?? 0],
       'premium' => ['Premium', $counts['premium'] ?? 0],
+      'blocked' => ['Bloklangan', $counts['blocked'] ?? 0],
     ] as $key => [$label, $count])
       <a href="{{ request()->fullUrlWithQuery(['tab' => $key, 'page' => null]) }}" class="tab-pill {{ $tab === $key ? 'active' : '' }}">
         {{ $label }} <span>{{ $count }}</span>
@@ -48,7 +49,7 @@
             <div class="text-xs text-gray-500 break-all">{{ $user->email ?: '—' }}</div>
             <div class="mt-3 flex flex-wrap items-center gap-2">
               <span class="badge badge-info">{{ $user->position ?: 'User' }}</span>
-              <span class="badge {{ $user->isVerified ? 'badge-success' : 'badge-warning' }}">{{ $user->isVerified ? 'active' : 'pending' }}</span>
+              <span class="badge {{ $user->isBlocked() ? 'badge-danger' : ($user->isVerified ? 'badge-success' : 'badge-warning') }}">{{ $user->isBlocked() ? 'blocked' : ($user->isVerified ? 'active' : 'pending') }}</span>
               <span class="text-xs text-gray-500">{{ optional($user->created_at)->format('Y-m-d') }}</span>
             </div>
           </div>
@@ -87,6 +88,9 @@
               <td>
                 <div class="flex flex-wrap items-center gap-2">
                   <span class="badge {{ $user->isVerified ? 'badge-success' : 'badge-warning' }}">{{ $user->isVerified ? 'active' : 'pending' }}</span>
+                  @if($user->isBlocked())
+                    <span class="badge badge-danger">blocked</span>
+                  @endif
                   @if($user->is_premium)
                     <span class="badge badge-info">premium</span>
                   @endif

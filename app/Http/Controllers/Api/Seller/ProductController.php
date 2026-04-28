@@ -659,6 +659,7 @@ public function updateProductStatus(Request $request)
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'author' => 'required|string|max:255',
+            'isbn' => 'nullable|string|max:20',
             'pages' => 'required|integer|min:1',
             'language' => 'required|string|in:uz,ru,en,qq',
             'languageWrite' => 'required|string|in:cyrillic,latin',
@@ -682,6 +683,10 @@ public function updateProductStatus(Request $request)
             ], 422);
         }
 
+        // ISBN'ni kanonik shaklga keltiramiz; noto'g'ri formatda kelsa null
+        // saqlanadi (ISBN'siz odatdagidek admin tasdig'i kutiladi).
+        $canonicalIsbn = Books::normalizeIsbn($request->input('isbn'));
+
         // Image upload (qisqartirildi)
         $imagePaths = [];
         if ($request->hasFile('images')) {
@@ -694,10 +699,19 @@ public function updateProductStatus(Request $request)
             }
         }
 
+        // Avto-approve: ISBN bor va bazada (boshqa sellerda ham) shu ISBN
+        // YOKI nom+muallif mos kelsa — yangi qator ham tasdiqlangan deb yoziladi.
+        $autoApproved = $this->shouldAutoApprove(
+            $canonicalIsbn,
+            $request->input('name'),
+            $request->input('author')
+        );
+
         $book = Books::create([
             'seller_id' => $storeSellerId,
             'name' => $request->input('name'),
             'author' => $request->input('author'),
+            'isbn' => $canonicalIsbn,
             'pages' => $request->input('pages'),
             'lang' => $request->input('language'),
             'langType' => $request->input('languageWrite'),
@@ -711,6 +725,7 @@ public function updateProductStatus(Request $request)
             'category_id' => $request->input('category_id'),
             'status' => true,
             'is_hidden' => false,
+            'is_approved' => $autoApproved ? 1 : 0,
         ]);
 
         if ($request->has('tag_ids')) {
@@ -718,7 +733,8 @@ public function updateProductStatus(Request $request)
         }
 
         // ✅ LOG YOZISH (FAQAT CREATE UCHUN)
-        $this->writeLog($seller, 'Yangi maxsulot qo\'shdi', $book->name);
+        $logSuffix = $autoApproved ? ' (avto-tasdiqlandi)' : '';
+        $this->writeLog($seller, 'Yangi maxsulot qo\'shdi' . $logSuffix, $book->name);
 
         return response()->json([
             'success' => true,
@@ -748,6 +764,7 @@ public function updateProductStatus(Request $request)
         'id' => 'required|integer',
         'name' => 'required|string|max:255',
         'author' => 'required|string|max:255',
+        'isbn' => 'nullable|string|max:20',
         'pages' => 'required|integer|min:1',
         'language' => 'required|string|in:uz,ru,en,qq',
         'languageWrite' => 'required|string|in:cyrillic,latin',
@@ -846,10 +863,22 @@ public function updateProductStatus(Request $request)
         ], 422);
     }
 
+    // ISBN'ni kanonik shaklga keltiramiz va avto-approve sharti tekshiriladi.
+    // Update'da ham boshlang'ich ID'ni hisobga olmasdan: agar boshqa qatorlarda
+    // mos keluvchi tasdiqlangan kitob bo'lsa — bu o'zgartirish ham approved.
+    $canonicalIsbn = Books::normalizeIsbn($request->input('isbn'));
+    $autoApproved  = $this->shouldAutoApprove(
+        $canonicalIsbn,
+        $request->name,
+        $request->author,
+        excludeBookId: $product->id,
+    );
+
     // Mahsulotni yangilash
     $product->update([
         'name' => $request->name,
         'author' => $request->author,
+        'isbn' => $canonicalIsbn,
         'pages' => $request->pages,
         'lang' => $request->language,
         'langType' => $request->languageWrite,
@@ -861,10 +890,11 @@ public function updateProductStatus(Request $request)
         'description' => $request->description,
         'images' => $finalImages,
         'category_id' => $request->category_id,
-        'is_approved' => '0',
+        'is_approved' => $autoApproved ? 1 : 0,
     ]);
     $product->tags()->sync($request->input('tag_ids', []));
-    $this->writeLog($seller, 'Mahsulot ma\'lumotlarini yangiladi', $product->name);
+    $logSuffix = $autoApproved ? ' (avto-tasdiqlandi)' : '';
+    $this->writeLog($seller, 'Mahsulot ma\'lumotlarini yangiladi' . $logSuffix, $product->name);
     return response()->json([
         'success' => true,
         'message' => 'Mahsulot muvaffaqiyatli yangilandi',
@@ -943,6 +973,156 @@ public function productStatistics(Request $request, $id)
 
     return response()->json(['success' => true, 'data' => [$result]], 200);
 }
+
+    /**
+     * Avto-approve qarori — yangi yoki yangilangan kitobni admin
+     * tasdiqlashisiz darrov nashrga chiqarish mumkinmi?
+     *
+     * Sharti:
+     *  1) ISBN bor va bazada (boshqa sellerda ham) is_approved=1, is_hidden=0
+     *     qator ichida shu ISBN MOS — true.
+     *  2) Aks holda nomi va muallifi case-insensitive trim bilan aynan mos
+     *     keladigan tasdiqlangan kitob bor — true.
+     *  3) Hech biri bajarilmasa — false (admin tasdiqlashi kutiladi).
+     */
+    private function shouldAutoApprove(
+        ?string $canonicalIsbn,
+        string $name,
+        string $author,
+        ?int $excludeBookId = null
+    ): bool {
+        $query = Books::query()
+            ->where('is_approved', 1)
+            ->where('is_hidden', 0);
+
+        if ($excludeBookId) {
+            $query->where('id', '!=', $excludeBookId);
+        }
+
+        // 1-shart: ISBN MOS
+        if ($canonicalIsbn !== null) {
+            $isbnMatch = (clone $query)->whereIsbn($canonicalIsbn)->exists();
+            if ($isbnMatch) return true;
+        }
+
+        // 2-shart: nom + muallif case-insensitive trim mos
+        $normalizedName   = mb_strtolower(trim($name));
+        $normalizedAuthor = mb_strtolower(trim($author));
+        if ($normalizedName === '' || $normalizedAuthor === '') return false;
+
+        return (clone $query)
+            ->whereRaw('LOWER(TRIM(name)) = ?', [$normalizedName])
+            ->whereRaw('LOWER(TRIM(author)) = ?', [$normalizedAuthor])
+            ->exists();
+    }
+
+    /**
+     * ✅ ISBN AUTOFILL — barcode scannerdan keladigan ISBN bo'yicha
+     * mavjud kitobni topib, formaga to'ldiriladigan maydonlarni qaytaradi.
+     *
+     * Mantiq:
+     *  - is_approved = 1 va is_hidden = 0 bo'lgan qatorlardan eng so'nggi
+     *    yangilangan variantni olamiz (har sellerda biroz farqli yozilgan
+     *    bo'lishi mumkin — eng aktivi to'g'ri deb hisoblaymiz).
+     *  - Image va description qaytarilmaydi (har seller o'zinikini qo'yadi).
+     *  - language va languageWrite — Flutter forma kutadigan kalitlarga
+     *    moslashtiriladi: "uz", "ru", "en", "qq" va "cyrillic"/"latin".
+     *  - coverType: "soft"/"hard" ko'rinishida (DB "Yumshoq"/"Qattiq" yoki
+     *    boshqa qiymat bo'lishi mumkin).
+     */
+    public function lookupByIsbn(Request $request, string $isbn)
+    {
+        $seller = Auth::guard('seller')->user();
+        if (!$seller) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        if (!$this->hasProductAccess($seller)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Access denied.',
+            ], 403);
+        }
+
+        $canonical = Books::normalizeIsbn($isbn);
+        if ($canonical === null) {
+            return response()->json([
+                'success' => false,
+                'message' => "ISBN formati noto'g'ri (10 yoki 13 raqam bo'lishi kerak).",
+            ], 422);
+        }
+
+        $book = Books::query()
+            ->whereIsbn($canonical)
+            ->where('is_approved', 1)
+            ->where('is_hidden', 0)
+            ->with('tags:id')
+            ->orderByDesc('updated_at')
+            ->first();
+
+        if (!$book) {
+            return response()->json([
+                'success' => false,
+                'message' => "Bu ISBN Kitobchi bazasida topilmadi. Iltimos, ma'lumotlarni qo'lda to'ldiring.",
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'isbn'          => $canonical,
+                'name'          => $book->name,
+                'author'        => $book->author,
+                'pages'         => (int) ($book->pages ?? 0),
+                'language'      => $this->normalizeLanguageOut($book->lang),
+                'languageWrite' => $this->normalizeLangTypeOut($book->langType),
+                'coverType'     => $this->normalizeCoverTypeOut($book->coverType),
+                'category_id'   => $book->category_id,
+                'tag_ids'       => $book->tags->pluck('id')->values()->all(),
+                'year'          => (int) ($book->year ?? 0),
+            ],
+        ]);
+    }
+
+    /**
+     * DB'da turli xil yozilgan til qiymatlarini Flutter forma kutadigan
+     * uch belgili kodga moslashtiramiz.
+     */
+    private function normalizeLanguageOut(?string $raw): ?string
+    {
+        $v = mb_strtolower(trim((string) $raw));
+        if ($v === '') return null;
+        return match (true) {
+            str_contains($v, 'rus') || $v === 'ru'                         => 'ru',
+            str_contains($v, 'en') || str_contains($v, 'ingl')             => 'en',
+            str_contains($v, 'qq') || str_contains($v, 'qora')             => 'qq',
+            default                                                         => 'uz',
+        };
+    }
+
+    /**
+     * "Lotin"/"Kirill" varianti — DB'da turli yozilgan bo'lishi mumkin.
+     */
+    private function normalizeLangTypeOut(?string $raw): ?string
+    {
+        $v = mb_strtolower(trim((string) $raw));
+        if ($v === '') return null;
+        return str_contains($v, 'kir') || str_contains($v, 'cyr')
+            ? 'cyrillic'
+            : 'latin';
+    }
+
+    /**
+     * "Yumshoq"/"Qattiq" → "soft"/"hard".
+     */
+    private function normalizeCoverTypeOut(?string $raw): ?string
+    {
+        $v = mb_strtolower(trim((string) $raw));
+        if ($v === '') return null;
+        return str_contains($v, 'qat') || str_contains($v, 'hard')
+            ? 'hard'
+            : 'soft';
+    }
 
     /**
      * ✅ VIEW ONLY - LOG YO'Q

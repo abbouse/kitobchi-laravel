@@ -10,6 +10,8 @@ use App\Models\Couriers;
 use App\Models\CourierOrder;
 use App\Models\CourierOrderItem;
 use App\Services\CourierBonusService;
+use App\Services\OrderRealtimeService;
+use App\Services\QrTokenService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -17,7 +19,9 @@ use Illuminate\Support\Facades\DB;
 class CourierOrderController extends Controller
 {
     public function __construct(
-        private readonly CourierBonusService $bonusService
+        private readonly CourierBonusService $bonusService,
+        private readonly OrderRealtimeService $orderRealtimeService,
+        private readonly QrTokenService $qrTokenService,
     ) {
     }
 
@@ -47,6 +51,7 @@ class CourierOrderController extends Controller
                     if ($item->product && $item->product->seller && $item->sellerLocation) {
                         $item->product->seller->location = $item->sellerLocation;
                     }
+                    $item->pickup_qr = $this->buildPickupQrForItem($item, Auth::guard('courier')->id());
                 }
                 return $order;
             });
@@ -88,6 +93,7 @@ class CourierOrderController extends Controller
             if ($item->product && $item->product->seller && $item->sellerLocation) {
                 $item->product->seller->location = $item->sellerLocation;
             }
+            $item->pickup_qr = $this->buildPickupQrForItem($item, $courier->id);
         }
 
         return response()->json([
@@ -105,10 +111,7 @@ class CourierOrderController extends Controller
                 'message' => __('courier_api.unauthorized')
             ], 401);
         }
-        $orderCustomer = Sold::where('status', 'B')
-            ->where('qr', $qr)
-            ->where('courier_id', $courier->id)
-            ->first();
+        $orderCustomer = $this->resolveCustomerOrderByQr($qr, $courier->id);
         if (!$orderCustomer) {
             return response()->json(['success' => false, 'message' => __('courier_api.order_invalid_qr')], 404);
         }
@@ -138,6 +141,9 @@ class CourierOrderController extends Controller
                 $courier->save();
             });
 
+            $order->refresh();
+            $this->orderRealtimeService->broadcastCourierOrderUpdated($order, 'courier_order.delivered');
+
             return response()->json([
                 'success'      => true,
                 'message'      => __('courier_api.order_delivered'),
@@ -158,7 +164,7 @@ class CourierOrderController extends Controller
         }
 
         try {
-            return DB::transaction(function () use ($courier, $id) {
+            $response = DB::transaction(function () use ($courier, $id) {
                 // Lock rows to prevent race condition
                 $order = CourierOrder::where('order_id', $id)
                     ->where('status', 'pending')
@@ -199,6 +205,15 @@ class CourierOrderController extends Controller
                     'sla_deadline' => optional($order->sla_deadline)->toIso8601String(),
                 ], 200);
             });
+
+            $freshOrder = CourierOrder::where('order_id', $id)
+                ->where('courier_id', $courier->id)
+                ->first();
+            if ($freshOrder) {
+                $this->orderRealtimeService->broadcastCourierOrderUpdated($freshOrder, 'courier_order.confirmed');
+            }
+
+            return $response;
         } catch (\Throwable $th) {
             return response()->json(['success' => false, 'message' => 'Xatolik: ' . $th->getMessage()], 500);
         }
@@ -225,6 +240,7 @@ class CourierOrderController extends Controller
                     if ($item->product && $item->product->seller && $item->sellerLocation) {
                         $item->product->seller->location = $item->sellerLocation;
                     }
+                    $item->pickup_qr = $this->buildPickupQrForItem($item, $order->courier_id);
                 }
                 return $order;
             });
@@ -267,6 +283,12 @@ class CourierOrderController extends Controller
 
         $result = $this->bonusService->toggleCustomerDelay($order);
 
+        $order->refresh();
+        $this->orderRealtimeService->broadcastCourierOrderUpdated(
+            $order,
+            $result['paused'] ? 'courier_order.customer_delay_started' : 'courier_order.customer_delay_resumed'
+        );
+
         return response()->json([
             'success'             => true,
             'paused'              => $result['paused'],
@@ -276,5 +298,34 @@ class CourierOrderController extends Controller
             'total_delay_seconds' => $result['total_delay_seconds'],
             'sla_deadline'        => $result['sla_deadline'],
         ], 200);
+    }
+
+    private function buildPickupQrForItem(mixed $item, ?int $courierId): ?string
+    {
+        $sellerId = (int) ($item->product?->seller_id ?? 0);
+        $orderId = (int) ($item->order_id ?? 0);
+
+        if ($sellerId <= 0 || $orderId <= 0 || !$courierId) {
+            return null;
+        }
+
+        return $this->qrTokenService->makePickupToken($sellerId, $orderId, $courierId);
+    }
+
+    private function resolveCustomerOrderByQr(string $qr, int $courierId): ?Sold
+    {
+        $signed = $this->qrTokenService->parseDeliveryToken($qr);
+        if ($signed) {
+            return Sold::where('status', 'B')
+                ->where('id', $signed['sold_id'])
+                ->where('user_id', $signed['user_id'])
+                ->where('courier_id', $courierId)
+                ->first();
+        }
+
+        return Sold::where('status', 'B')
+            ->where('qr', $qr)
+            ->where('courier_id', $courierId)
+            ->first();
     }
 }

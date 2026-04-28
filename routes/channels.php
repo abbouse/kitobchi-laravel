@@ -49,6 +49,24 @@ Broadcast::channel('seller.{sellerId}', function ($user, $sellerId) {
     }
 });
 
+Broadcast::channel('seller-store.{storeId}', function ($user, $storeId) {
+    if ($user instanceof \App\Models\Seller) {
+        return (int) $user->id === (int) $storeId || (int) ($user->parent_id ?? 0) === (int) $storeId;
+    }
+    return false;
+}, ['guards' => ['seller']]);
+
+Broadcast::channel('courier.{courierId}', function ($user, $courierId) {
+    if ($user instanceof \App\Models\Couriers) {
+        return (int) $user->id === (int) $courierId;
+    }
+    return false;
+}, ['guards' => ['courier']]);
+
+Broadcast::channel('courier.feed', function ($user) {
+    return $user instanceof \App\Models\Couriers;
+}, ['guards' => ['courier']]);
+
 // 🔥 GLOBAL ONLINE - Barcha online userlar
 Broadcast::channel('global-online', function ($user) {
     if (Auth::guard('user')->user()) {

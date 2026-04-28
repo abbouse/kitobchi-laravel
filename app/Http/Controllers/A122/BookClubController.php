@@ -7,6 +7,7 @@ use App\Models\BookClub;
 use App\Models\BookClubComment;
 use App\Models\BookClubImages;
 use App\Models\BookClubLikes;
+use App\Models\BookClubWarning;
 use App\Support\BookClubUgcSupport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -15,7 +16,7 @@ class BookClubController extends Controller
 {
     public function index(Request $request)
     {
-        $q = BookClub::with(['user:id,name,lastname,avatar'])->where('is_deleted', false);
+        $q = BookClub::with(['user:id,name,lastname,avatar', 'activeWarning'])->where('is_deleted', false);
 
         $tab = $request->get('tab', 'all');
         match ($tab) {
@@ -59,7 +60,10 @@ class BookClubController extends Controller
             'originalAuthor:id,name,lastname,avatar',
             'images',
             'votes',
+            'activeWarning',
+            'warnings.admin:id,name,email',
         ]);
+        $activeWarningCount = BookClubWarning::active()->where('user_id', $bookClub->user_id)->count();
         $comments = BookClubComment::where('post_id', $bookClub->id)
             ->whereNull('parent_id')
             ->with([
@@ -100,7 +104,8 @@ class BookClubController extends Controller
             'likesCount',
             'reposters',
             'repostsCount',
-            'totalVotes'
+            'totalVotes',
+            'activeWarningCount'
         ));
     }
 
@@ -126,6 +131,34 @@ class BookClubController extends Controller
     {
         $bookClub->update(['is_deleted' => true]);
         return redirect()->route('admin.book-club.index')->with('success', "Post o'chirildi.");
+    }
+
+    public function warn(Request $request, BookClub $bookClub)
+    {
+        $data = $request->validate([
+            'note' => 'required|string|min:5|max:2000',
+        ]);
+
+        $warning = BookClubWarning::active()->where('post_id', $bookClub->id)->first();
+
+        if ($warning) {
+            $warning->update([
+                'note' => $data['note'],
+                'admin_id' => optional(auth('panel')->user())->id,
+            ]);
+
+            return back()->with('success', 'Post ogohlantirish izohi yangilandi.');
+        }
+
+        BookClubWarning::create([
+            'user_id' => $bookClub->user_id,
+            'post_id' => $bookClub->id,
+            'admin_id' => optional(auth('panel')->user())->id,
+            'note' => $data['note'],
+            'is_active' => true,
+        ]);
+
+        return back()->with('success', 'Post ogohlantirildi.');
     }
 
     public function deleteComment(BookClubComment $comment)
