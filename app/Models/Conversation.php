@@ -9,6 +9,10 @@ class Conversation extends Model
     protected $fillable = [
         'type',
         'title',
+        'description',
+        'is_public',
+        'public_username',
+        'invite_token',
         'avatar',
         'created_by_id',
         'user_id',
@@ -17,6 +21,12 @@ class Conversation extends Model
         'last_message_at',
         'hidden_by',
         'messages_hidden_at',
+    ];
+
+    protected $casts = [
+        'is_public' => 'boolean',
+        'last_message_at' => 'datetime',
+        'messages_hidden_at' => 'datetime',
     ];
 
     public function messages()

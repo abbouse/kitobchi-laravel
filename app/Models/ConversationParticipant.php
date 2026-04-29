@@ -33,6 +33,6 @@ class ConversationParticipant extends Model
 
     public function getIsMutedAttribute(): bool
     {
-        return $this->muted_until === null || $this->muted_until->isFuture();
+        return $this->muted_until !== null && $this->muted_until->isFuture();
     }
 }

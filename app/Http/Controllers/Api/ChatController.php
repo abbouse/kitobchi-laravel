@@ -18,8 +18,10 @@ use App\Models\User;
 use App\Services\BookClubModerationService;
 use App\Services\MentionService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class ChatController extends Controller
 {
@@ -98,11 +100,38 @@ class ChatController extends Controller
             ], 423);
         }
 
+        if (is_string($request->input('member_ids'))) {
+            $decoded = json_decode($request->input('member_ids'), true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                $request->merge(['member_ids' => $decoded]);
+            }
+        }
+
         $data = $request->validate([
             'title' => 'required|string|min:2|max:120',
+            'description' => 'nullable|string|max:500',
+            'is_public' => 'nullable|boolean',
+            'public_username' => [
+                'nullable',
+                'string',
+                'min:4',
+                'max:32',
+                'regex:/^[a-zA-Z0-9_\\.]+$/',
+                'unique:conversations,public_username',
+            ],
+            'avatar' => 'nullable|image|max:5120',
             'member_ids' => 'required|array|min:1|max:50',
             'member_ids.*' => 'integer|exists:users,id',
         ]);
+
+        $isPublic = (bool) ($data['is_public'] ?? false);
+        $publicUsername = Str::lower(trim((string) ($data['public_username'] ?? '')));
+        if ($isPublic && $publicUsername === '') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Public guruh uchun username kiritilishi shart.',
+            ], 422);
+        }
 
         $memberIds = collect($data['member_ids'])
             ->map(fn ($id) => (int) $id)
@@ -110,10 +139,20 @@ class ChatController extends Controller
             ->unique()
             ->values();
 
-        $conversation = DB::transaction(function () use ($data, $memberIds, $user) {
+        $conversation = DB::transaction(function () use ($data, $memberIds, $request, $user, $isPublic, $publicUsername) {
+            $avatarPath = null;
+            if ($request->hasFile('avatar')) {
+                $avatarPath = $request->file('avatar')->store('chat_groups', 'public');
+            }
+
             $conversation = Conversation::create([
                 'type' => 'group',
                 'title' => trim((string) $data['title']),
+                'description' => trim((string) ($data['description'] ?? '')) ?: null,
+                'is_public' => $isPublic,
+                'public_username' => $isPublic ? $publicUsername : null,
+                'invite_token' => $isPublic ? null : Str::random(32),
+                'avatar' => $avatarPath,
                 'created_by_id' => $user->id,
                 'user_id' => $user->id,
                 'last_message_at' => now(),
@@ -196,6 +235,10 @@ class ChatController extends Controller
                 'id',
                 'type',
                 'title',
+                'description',
+                'is_public',
+                'public_username',
+                'invite_token',
                 'avatar',
                 'created_by_id',
                 'user_id',
@@ -246,6 +289,54 @@ class ChatController extends Controller
             ->map(fn (Conversation $conversation) => $this->serializeConversationForUser($conversation, (int) $user->id));
 
         return response()->json(['status' => 'success', 'data' => $conversations]);
+    }
+
+    public function getConversationDetails(int $id, Request $request)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['status' => 'error'], 401);
+        }
+
+        $conversation = Conversation::with([
+            'shop',
+            'user',
+            'receiver',
+            'participants.user:id,name,lastname,username,avatar,isVerified,isSupport,position,staff_role,role_emoji,role_title,role_place,last_seen_at',
+        ])->find($id);
+
+        if (!$conversation || !$this->canUserAccessConversation($user, $conversation)) {
+            return response()->json(['status' => 'error', 'message' => 'Ruxsat yo‘q'], 403);
+        }
+
+        $payload = $this->serializeConversationForUser($conversation, (int) $user->id);
+        $payload['participants'] = $conversation->participants
+            ->map(function (ConversationParticipant $participant) {
+                return [
+                    'id' => $participant->user?->id,
+                    'name' => $participant->user?->name,
+                    'lastname' => $participant->user?->lastname,
+                    'username' => $participant->user?->username,
+                    'avatar' => $participant->user?->avatar,
+                    'position' => $participant->user?->position,
+                    'role_emoji' => $participant->user?->role_emoji,
+                    'role_title' => $participant->user?->role_title,
+                    'role_place' => $participant->user?->role_place,
+                    'isVerified' => (bool) ($participant->user?->isVerified ?? false),
+                    'isSupport' => (bool) ($participant->user?->isSupport ?? false),
+                    'role' => $participant->role,
+                    'joined_at' => optional($participant->joined_at)?->toIso8601String(),
+                    'muted_until' => optional($participant->muted_until)?->toIso8601String(),
+                    'last_seen_at' => optional($participant->user?->last_seen_at)?->toIso8601String(),
+                ];
+            })
+            ->values()
+            ->all();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $payload,
+        ]);
     }
 
     public function getMessages($id, Request $request)
@@ -754,6 +845,12 @@ class ChatController extends Controller
             'id' => $conversation->id,
             'type' => $conversation->type,
             'title' => $conversation->title,
+            'description' => $conversation->description,
+            'is_public' => (bool) $conversation->is_public,
+            'public_username' => $conversation->public_username,
+            'invite_token' => $conversation->invite_token,
+            'invite_link' => $conversation->invite_token ? $this->buildGroupInviteLink($conversation->invite_token) : null,
+            'public_link' => $conversation->public_username ? $this->buildPublicGroupLink($conversation->public_username) : null,
             'avatar' => $conversation->avatar,
             'created_by_id' => $conversation->created_by_id,
             'user_id' => $conversation->user_id,
@@ -857,5 +954,15 @@ class ChatController extends Controller
                 'created_at' => optional($message->replyTo->created_at)?->toIso8601String(),
             ] : null,
         ];
+    }
+
+    private function buildGroupInviteLink(string $inviteToken): string
+    {
+        return "kitobchi://group/invite/{$inviteToken}";
+    }
+
+    private function buildPublicGroupLink(string $publicUsername): string
+    {
+        return "kitobchi://group/{$publicUsername}";
     }
 }

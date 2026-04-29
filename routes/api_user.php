@@ -177,6 +177,7 @@ Route::middleware('auth:user')->group(function () {
     });
     Route::prefix('conversations')->group(function () {
         Route::get('/', [ChatController::class, 'getConversations']);
+        Route::get('{id}', [ChatController::class, 'getConversationDetails']);
         Route::get('{id}/messages', [ChatController::class, 'getMessages']);
         Route::post('{id}/send', [ChatController::class, 'sendMessage']);
         Route::post('{id}/edit', [ChatController::class, 'editMessage']);
