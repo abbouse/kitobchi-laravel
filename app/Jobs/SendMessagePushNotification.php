@@ -32,17 +32,25 @@ class SendMessagePushNotification implements ShouldQueue
 
         if (!$message || $message->is_read) return;
 
-        $conversation = $message->conversation;
-        $tokens       = [];
-        $appKey       = 'kitobchi';
-        $senderName   = "Yangi xabar";
-        $senderAvatar = null;
+        $conversation     = $message->conversation;
+        $tokens           = [];
+        $appKey           = 'kitobchi';
+        $senderName       = "Yangi xabar";
+        $senderAvatar     = null;
+        $bodyPrefix       = null; // group push'da "SenderName: " prefix uchun
 
         // 2. Yo'nalishni aniqlash
         if ($conversation->type === 'group') {
+            // Group push'da TITLE = guruh nomi, BODY = "SenderName: message".
+            // Avval senderName guruh title'i o'rnida turardi — bu Telegram
+            // standartiga zid edi, mijoz "Abbos: salom" o'rniga faqat
+            // "Abbos" ko'rardi va guruh ekanligini bilmasdi.
             $sender = User::find($message->sender_id);
-            $senderName = trim(($sender->name ?? '') . ' ' . ($sender->lastname ?? '')) ?: 'Foydalanuvchi';
-            $senderAvatar = $sender->avatar ?? null;
+            $senderFull = trim(($sender->name ?? '') . ' ' . ($sender->lastname ?? '')) ?: 'Foydalanuvchi';
+
+            $senderName   = trim((string) ($conversation->title ?? '')) ?: 'Guruh';
+            $senderAvatar = $conversation->avatar ?? ($sender->avatar ?? null);
+            $bodyPrefix   = $senderFull;
 
             $tokens = $conversation->participants
                 ->filter(function ($participant) use ($message) {
@@ -103,7 +111,7 @@ class SendMessagePushNotification implements ShouldQueue
         if (empty($tokens)) return;
 
         // 4. Push yuborish
-        $this->dispatchPush($appKey, $message, $conversation, $tokens, $senderName, $senderAvatar);
+        $this->dispatchPush($appKey, $message, $conversation, $tokens, $senderName, $senderAvatar, $bodyPrefix);
     }
 
     private function dispatchPush(
@@ -112,12 +120,21 @@ class SendMessagePushNotification implements ShouldQueue
                 $conversation,
         array   $tokens,
         string  $senderName,
-        ?string $senderAvatar
+        ?string $senderAvatar,
+        ?string $bodyPrefix = null
     ): void {
+        // Group push uchun body "SenderName: message" formatida bo'ladi —
+        // shu orqali bildirgi panelida kim yozganligi ko'rinadi va title
+        // guruh nomi bilan to'lib qoladi. Personal/shop chat uchun
+        // bodyPrefix null bo'ladi va body shunchaki message matni bo'ladi.
+        $body = $bodyPrefix !== null && $bodyPrefix !== ''
+            ? "{$bodyPrefix}: {$message->message}"
+            : $message->message;
+
         $pushRequest = new Request([
             'app_key' => $appKey,
             'title'   => $senderName,
-            'body'    => $message->message,
+            'body'    => $body,
             'tokens'  => $tokens,
             'data'    => [
                 'type'             => 'chat',

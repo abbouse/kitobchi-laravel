@@ -7,6 +7,7 @@ use App\Events\MessageDeleted;
 use App\Events\MessageEdited;
 use App\Events\MessageSent;
 use App\Events\MessagesRead;
+use App\Events\UserTyping;
 use App\Http\Controllers\Controller;
 use App\Jobs\SendMessagePushNotification;
 use App\Models\Conversation;
@@ -17,6 +18,7 @@ use App\Models\User;
 use App\Services\BookClubModerationService;
 use App\Services\MentionService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class ChatController extends Controller
@@ -533,6 +535,48 @@ class ChatController extends Controller
         return response()->json(['status' => 'success', 'updated_count' => $updated]);
     }
 
+    /**
+     * Mijoz xabar yozayotganligi haqida real-time signal.
+     *
+     * Frontend har 4 sekundda bir marta chaqiradi (text input change'da).
+     * Bu yerda Cache orqali rate-limit qilinadi: bir foydalanuvchi 4 soniyada
+     * faqat 1 marta broadcast qila oladi (Reverb yuklamasini kamaytirish).
+     *
+     * UserTyping event chat.{conversationId} kanaliga yuboriladi.
+     * Tinglovchi mijozlar timeout 5 sekund qo'yib, undan keyin "yozyapti..."
+     * yozuvini olib tashlaydi.
+     */
+    public function typing($conversationId, Request $request)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['status' => 'error'], 401);
+        }
+
+        $conversation = Conversation::with('participants')->find($conversationId);
+        if (!$conversation || !$this->canUserAccessConversation($user, $conversation)) {
+            return response()->json(['status' => 'error', 'message' => 'Ruxsat yo‘q'], 403);
+        }
+
+        // Throttle: per (user, conversation) — 4 sekundda 1 marta.
+        $cacheKey = "typing:{$conversationId}:{$user->id}";
+        if (Cache::has($cacheKey)) {
+            return response()->json(['status' => 'success', 'throttled' => true]);
+        }
+        Cache::put($cacheKey, 1, 4);
+
+        $name = trim(($user->name ?? '') . ' ' . ($user->lastname ?? '')) ?: 'Foydalanuvchi';
+
+        broadcast(new UserTyping(
+            (int) $conversationId,
+            (int) $user->id,
+            $name,
+            $user->avatar ?? null,
+        ))->toOthers();
+
+        return response()->json(['status' => 'success']);
+    }
+
     public function getRecentContacts(Request $request)
     {
         $user = $request->user();
@@ -746,6 +790,13 @@ class ChatController extends Controller
             return array_merge($payload, [
                 'other_party_name' => $conversation->title ?: 'Group',
                 'participant_count' => $participants->count(),
+                // Header'da "N online" ko'rsatish uchun barcha a'zolar
+                // ID'larini qaytaramiz. Mijoz tarafdagi global online
+                // ro'yxati bilan kesib olib aktiv onlinelarni hisoblaydi.
+                'participant_ids' => $participants->pluck('user_id')
+                    ->map(fn ($id) => (int) $id)
+                    ->values()
+                    ->all(),
                 'participants_preview' => $otherMembers,
                 'is_muted' => $participant ? $participant->is_muted : false,
             ]);

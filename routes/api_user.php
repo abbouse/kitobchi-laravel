@@ -186,6 +186,7 @@ Route::middleware('auth:user')->group(function () {
         Route::post('groups', [ChatController::class, 'createGroup']);
         Route::post('{conversationId}/mute', [ChatController::class, 'updateGroupMute']);
         Route::post('{conversationId}/read', [ChatController::class, 'markAsRead']);
+        Route::post('{conversationId}/typing', [ChatController::class, 'typing']);
         Route::get('recent-contacts', [ChatController::class, 'getRecentContacts']);
         Route::get('search', [ChatController::class, 'globalSearch']);
     });
