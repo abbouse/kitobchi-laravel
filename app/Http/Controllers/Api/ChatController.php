@@ -207,7 +207,9 @@ class ChatController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Ruxsat yo‘q'], 403);
         }
 
-        $participant->muted_until = $data['muted'] ? now()->addYears(50) : null;
+        // MySQL TIMESTAMP may overflow after 2038 on some deployments.
+        // Keep long mute safely within supported range.
+        $participant->muted_until = $data['muted'] ? now()->addYears(10) : null;
         $participant->save();
 
         return response()->json([
@@ -291,11 +293,16 @@ class ChatController extends Controller
         return response()->json(['status' => 'success', 'data' => $conversations]);
     }
 
-    public function getConversationDetails(int $id, Request $request)
+    public function getConversationDetails($id, Request $request)
     {
         $user = $request->user();
         if (!$user) {
             return response()->json(['status' => 'error'], 401);
+        }
+
+        $conversationId = (int) $id;
+        if ($conversationId <= 0) {
+            return response()->json(['status' => 'error', 'message' => 'Noto‘g‘ri suhbat identifikatori'], 422);
         }
 
         $conversation = Conversation::with([
@@ -303,7 +310,7 @@ class ChatController extends Controller
             'user',
             'receiver',
             'participants.user:id,name,lastname,username,avatar,isVerified,isSupport,position,staff_role,role_emoji,role_title,role_place,last_seen_at',
-        ])->find($id);
+        ])->find($conversationId);
 
         if (!$conversation || !$this->canUserAccessConversation($user, $conversation)) {
             return response()->json(['status' => 'error', 'message' => 'Ruxsat yo‘q'], 403);
