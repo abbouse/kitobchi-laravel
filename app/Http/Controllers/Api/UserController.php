@@ -11,6 +11,7 @@ use App\Models\MyCart;
 use App\Models\UserCard;
 use App\Models\BookClubNotification;
 use App\Models\Conversation;
+use App\Models\Message;
 use App\Models\Books;
 use App\Models\Stationery;
 use App\Models\FavouriteProducts;
