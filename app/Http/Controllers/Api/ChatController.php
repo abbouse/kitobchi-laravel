@@ -172,7 +172,29 @@ class ChatController extends Controller
 
             ConversationParticipant::insert($rows);
 
+            $addedMembers = User::query()
+                ->whereIn('id', $memberIds->all())
+                ->where('id', '!=', (int) $user->id)
+                ->get(['name', 'lastname'])
+                ->map(fn (User $member) => trim(($member->name ?? '') . ' ' . ($member->lastname ?? '')))
+                ->filter()
+                ->values();
+
+            $systemText = $addedMembers->isNotEmpty()
+                ? trim(($user->name ?? '') . ' ' . ($user->lastname ?? '')) . " guruhga {$addedMembers->implode(', ')} ni qo'shdi"
+                : trim(($user->name ?? '') . ' ' . ($user->lastname ?? '')) . " guruhni yaratdi";
+
+            $conversation->messages()->create([
+                'sender_id' => $user->id,
+                'sender_type' => 'system',
+                'message' => $systemText,
+                'is_read' => 1,
+                'is_edited' => 0,
+                'is_deleted' => 0,
+            ]);
+
             return $conversation->load([
+                'messages' => fn ($q) => $q->latest()->limit(1),
                 'participants.user:id,name,lastname,username,avatar,isVerified,isSupport,position,staff_role,role_emoji,role_title,role_place',
             ]);
         });
@@ -217,6 +239,71 @@ class ChatController extends Controller
             'data' => [
                 'is_muted' => $data['muted'] === true,
             ],
+        ]);
+    }
+
+    public function updateGroup(Request $request, int $conversationId)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['status' => 'error'], 401);
+        }
+
+        $conversation = Conversation::with('participants')->find($conversationId);
+        if (!$conversation || $conversation->type !== 'group') {
+            return response()->json(['status' => 'error', 'message' => 'Guruh topilmadi'], 404);
+        }
+
+        $participant = $conversation->participants()
+            ->where('user_id', $user->id)
+            ->first();
+
+        if (!$participant || $participant->role !== 'owner') {
+            return response()->json(['status' => 'error', 'message' => 'Faqat guruh egasi tahrir qila oladi'], 403);
+        }
+
+        $data = $request->validate([
+            'title' => 'required|string|min:2|max:120',
+            'description' => 'nullable|string|max:500',
+            'is_public' => 'nullable|boolean',
+            'public_username' => [
+                'nullable',
+                'string',
+                'min:4',
+                'max:32',
+                'regex:/^[a-zA-Z0-9_\\.]+$/',
+                'unique:conversations,public_username,' . $conversation->id,
+            ],
+            'avatar' => 'nullable|image|max:5120',
+        ]);
+
+        $isPublic = (bool) ($data['is_public'] ?? false);
+        $publicUsername = Str::lower(trim((string) ($data['public_username'] ?? '')));
+        if ($isPublic && $publicUsername === '') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Public guruh uchun username kiritilishi shart.',
+            ], 422);
+        }
+
+        if ($request->hasFile('avatar')) {
+            $conversation->avatar = $request->file('avatar')->store('chat_groups', 'public');
+        }
+
+        $conversation->title = trim((string) $data['title']);
+        $conversation->description = trim((string) ($data['description'] ?? '')) ?: null;
+        $conversation->is_public = $isPublic;
+        $conversation->public_username = $isPublic ? $publicUsername : null;
+        $conversation->invite_token = $isPublic ? null : ($conversation->invite_token ?: Str::random(32));
+        $conversation->save();
+
+        $conversation->load([
+            'participants.user:id,name,lastname,username,avatar,isVerified,isSupport,position,staff_role,role_emoji,role_title,role_place',
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $this->serializeConversationForUser($conversation, (int) $user->id),
         ]);
     }
 
@@ -760,9 +847,44 @@ class ChatController extends Controller
                 ];
             });
 
+        $groups = Conversation::query()
+            ->where('type', 'group')
+            ->where('is_public', true)
+            ->where(function ($q) use ($query, $normalizedUsername) {
+                $q->where('title', 'like', "%{$query}%")
+                    ->orWhere('description', 'like', "%{$query}%");
+
+                if ($normalizedUsername) {
+                    $q->orWhere('public_username', 'like', "%{$normalizedUsername}%");
+                }
+            })
+            ->limit(20)
+            ->get()
+            ->map(function (Conversation $group) {
+                return [
+                    'id' => $group->id,
+                    'user_id' => null,
+                    'receiver_id' => null,
+                    'shop_id' => null,
+                    'type' => 'group',
+                    'title' => $group->title,
+                    'description' => $group->description,
+                    'other_party_name' => $group->title,
+                    'avatar' => $group->avatar,
+                    'last_seen_at' => $group->updated_at ?? now()->toDateTimeString(),
+                    'participant_count' => (int) $group->participants()->count(),
+                    'is_public' => true,
+                    'public_username' => $group->public_username,
+                    'public_link' => $group->public_username ? $this->buildPublicGroupLink($group->public_username) : null,
+                    'isVerified' => false,
+                    'isSupport' => false,
+                    'username' => $group->public_username,
+                ];
+            });
+
         return response()->json([
             'status' => 'success',
-            'data' => $users->concat($shops)->values(),
+            'data' => $users->concat($shops)->concat($groups)->values(),
         ]);
     }
 

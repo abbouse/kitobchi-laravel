@@ -177,19 +177,20 @@ Route::middleware('auth:user')->group(function () {
     });
     Route::prefix('conversations')->group(function () {
         Route::get('/', [ChatController::class, 'getConversations']);
+        Route::get('recent-contacts', [ChatController::class, 'getRecentContacts']);
+        Route::get('search', [ChatController::class, 'globalSearch']);
+        Route::post('start', [ChatController::class, 'startConversation']);
+        Route::post('groups', [ChatController::class, 'createGroup']);
         Route::get('{id}', [ChatController::class, 'getConversationDetails']);
         Route::get('{id}/messages', [ChatController::class, 'getMessages']);
         Route::post('{id}/send', [ChatController::class, 'sendMessage']);
         Route::post('{id}/edit', [ChatController::class, 'editMessage']);
         Route::post('{id}/delete', [ChatController::class, 'deleteMessage']);
         Route::post('{id}/hide', [ChatController::class, 'hideConversation']);
-        Route::post('start', [ChatController::class, 'startConversation']);
-        Route::post('groups', [ChatController::class, 'createGroup']);
         Route::post('{conversationId}/mute', [ChatController::class, 'updateGroupMute']);
+        Route::post('{conversationId}/group/update', [ChatController::class, 'updateGroup']);
         Route::post('{conversationId}/read', [ChatController::class, 'markAsRead']);
         Route::post('{conversationId}/typing', [ChatController::class, 'typing']);
-        Route::get('recent-contacts', [ChatController::class, 'getRecentContacts']);
-        Route::get('search', [ChatController::class, 'globalSearch']);
     });
 
     // Boshqa foydalanuvchi yo'llari
