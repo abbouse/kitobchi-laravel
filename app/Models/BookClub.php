@@ -99,6 +99,15 @@ class BookClub extends Model
     public function activeWarning()
     {
         return $this->hasOne(BookClubWarning::class, 'post_id', 'id')
+            ->select([
+                'book_club_warnings.id',
+                'book_club_warnings.post_id',
+                'book_club_warnings.user_id',
+                'book_club_warnings.admin_id',
+                'book_club_warnings.note',
+                'book_club_warnings.is_active',
+                'book_club_warnings.created_at',
+            ])
             ->where('is_active', true)
             ->latestOfMany();
     }

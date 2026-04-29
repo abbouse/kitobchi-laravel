@@ -47,7 +47,10 @@
             <div class="font-semibold text-sm"><?php echo e(trim(($user->name ?? '').' '.($user->lastname ?? '')) ?: '—'); ?></div>
             <div class="text-xs text-gray-500 break-all"><?php echo e($user->email ?: '—'); ?></div>
             <div class="mt-3 flex flex-wrap items-center gap-2">
-              <span class="badge badge-info"><?php echo e($user->position ?: 'User'); ?></span>
+              <span class="badge badge-info"><?php echo e($user->position ?: 'reader'); ?></span>
+              <?php if($user->staff_role): ?>
+                <span class="badge badge-warning"><?php echo e($user->staff_role === 'administrator' ? 'Administrator' : 'Moderator'); ?></span>
+              <?php endif; ?>
               <span class="badge <?php echo e($user->isBlocked() ? 'badge-danger' : ($user->isVerified ? 'badge-success' : 'badge-warning')); ?>"><?php echo e($user->isBlocked() ? 'blocked' : ($user->isVerified ? 'active' : 'pending')); ?></span>
               <span class="text-xs text-gray-500"><?php echo e(optional($user->created_at)->format('Y-m-d')); ?></span>
             </div>
@@ -83,7 +86,12 @@
                   </div>
                 </div>
               </td>
-              <td><span class="badge badge-info"><?php echo e($user->position ?: 'User'); ?></span></td>
+              <td>
+                <span class="badge badge-info"><?php echo e($user->position ?: 'reader'); ?></span>
+                <?php if($user->staff_role): ?>
+                  <span class="badge badge-warning"><?php echo e($user->staff_role === 'administrator' ? 'Administrator' : 'Moderator'); ?></span>
+                <?php endif; ?>
+              </td>
               <td>
                 <div class="flex flex-wrap items-center gap-2">
                   <span class="badge <?php echo e($user->isVerified ? 'badge-success' : 'badge-warning'); ?>"><?php echo e($user->isVerified ? 'active' : 'pending'); ?></span>

@@ -11,17 +11,29 @@ use App\Models\SellerOrder;
 use App\Models\CourierOrder;
 use App\Models\PromocodeHistory;
 use App\Models\User;
+use App\Services\UserPositionService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class SoldObserver
 {
+    public function __construct(
+        private readonly UserPositionService $positionService,
+    ) {}
+
     /**
      * Sold model yangilanganda chaqiriladi.
      * Status F ga o'zgarganda — to'liq rollback bajaradi.
      */
     public function updated(Sold $order): void
     {
+        if ($order->wasChanged('status') && $order->status === 'C' && $order->user_id) {
+            $user = User::find($order->user_id);
+            if ($user) {
+                $this->positionService->evaluateAndPromote($user, 'order_completed');
+            }
+        }
+
         // Faqat status o'zgarganda va yangi qiymat F bo'lganda
         if (!$order->wasChanged('status') || $order->status !== 'F') {
             return;

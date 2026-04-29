@@ -48,7 +48,10 @@
             <div class="font-semibold text-sm">{{ trim(($user->name ?? '').' '.($user->lastname ?? '')) ?: '—' }}</div>
             <div class="text-xs text-gray-500 break-all">{{ $user->email ?: '—' }}</div>
             <div class="mt-3 flex flex-wrap items-center gap-2">
-              <span class="badge badge-info">{{ $user->position ?: 'User' }}</span>
+              <span class="badge badge-info">{{ $user->position ?: 'reader' }}</span>
+              @if($user->staff_role)
+                <span class="badge badge-warning">{{ $user->staff_role === 'administrator' ? 'Administrator' : 'Moderator' }}</span>
+              @endif
               <span class="badge {{ $user->isBlocked() ? 'badge-danger' : ($user->isVerified ? 'badge-success' : 'badge-warning') }}">{{ $user->isBlocked() ? 'blocked' : ($user->isVerified ? 'active' : 'pending') }}</span>
               <span class="text-xs text-gray-500">{{ optional($user->created_at)->format('Y-m-d') }}</span>
             </div>
@@ -84,7 +87,12 @@
                   </div>
                 </div>
               </td>
-              <td><span class="badge badge-info">{{ $user->position ?: 'User' }}</span></td>
+              <td>
+                <span class="badge badge-info">{{ $user->position ?: 'reader' }}</span>
+                @if($user->staff_role)
+                  <span class="badge badge-warning">{{ $user->staff_role === 'administrator' ? 'Administrator' : 'Moderator' }}</span>
+                @endif
+              </td>
               <td>
                 <div class="flex flex-wrap items-center gap-2">
                   <span class="badge {{ $user->isVerified ? 'badge-success' : 'badge-warning' }}">{{ $user->isVerified ? 'active' : 'pending' }}</span>

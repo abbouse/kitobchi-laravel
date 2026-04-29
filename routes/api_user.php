@@ -29,6 +29,7 @@ Route::post('payme', [App\Http\Controllers\Api\PaymeController::class, 'index'])
 // Route::get('checkToken/{token}', [AuthController::class, 'checkToken']);
 Route::get('user/premium/plans', [PremiumController::class, 'plans']);
 Route::get('user/update_locale/{locale}', [UserController::class, 'updateLocale']);
+Route::get('user/by-username/{username}', [UserController::class, 'byUsername']);
 Route::get('counts', [UserController::class, 'getGlobalCounts']);
 Route::get('news', [NewsController::class, 'index']);
 Route::get('blog', [NewsController::class, 'blog']);
@@ -182,6 +183,8 @@ Route::middleware('auth:user')->group(function () {
         Route::post('{id}/delete', [ChatController::class, 'deleteMessage']);
         Route::post('{id}/hide', [ChatController::class, 'hideConversation']);
         Route::post('start', [ChatController::class, 'startConversation']);
+        Route::post('groups', [ChatController::class, 'createGroup']);
+        Route::post('{conversationId}/mute', [ChatController::class, 'updateGroupMute']);
         Route::post('{conversationId}/read', [ChatController::class, 'markAsRead']);
         Route::get('recent-contacts', [ChatController::class, 'getRecentContacts']);
         Route::get('search', [ChatController::class, 'globalSearch']);

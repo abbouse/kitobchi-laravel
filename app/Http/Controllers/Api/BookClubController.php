@@ -6,6 +6,8 @@ use App\Helpers\NotificationHelper;
 use App\Http\Controllers\Controller;
 use App\Services\BookClubModerationService;
 use App\Services\BookClubNotificationTextService;
+use App\Services\MentionService;
+use App\Services\UserPositionService;
 use App\Models\{User, Books, Stationery, BookClub, BookClubImages, BookClubLikes, BookClubVotes, BookClubComment, FavouriteProducts, BookClubNotification, SharedCart, StationeryVariant};
 use App\Models\Sold;
 use Illuminate\Http\Request;
@@ -17,6 +19,8 @@ class BookClubController extends Controller
     public function __construct(
         private readonly BookClubNotificationTextService $notificationTextService,
         private readonly BookClubModerationService $moderationService,
+        private readonly MentionService $mentionService,
+        private readonly UserPositionService $userPositionService,
     ) {}
 
     /**
@@ -226,13 +230,13 @@ class BookClubController extends Controller
     private function postWith(): array
     {
         return [
-            'user:id,name,lastname,position,avatar,isVerified,isSupport,bio,role_emoji,role_title,role_place',
-            'originalAuthor:id,name,lastname,position,avatar,isVerified,isSupport,bio,role_emoji,role_title,role_place',
-            'lastEditor:id,position',
+            'user:id,name,lastname,username,position,staff_role,avatar,isVerified,isSupport,bio,role_emoji,role_title,role_place',
+            'originalAuthor:id,name,lastname,username,position,staff_role,avatar,isVerified,isSupport,bio,role_emoji,role_title,role_place',
+            'lastEditor:id,position,staff_role',
             'images',
             'votes',
             'theme:id,name,firework,slug',
-            'activeWarning:id,post_id,user_id,note,is_active,created_at',
+            'activeWarning',
         ];
     }
 
@@ -479,6 +483,7 @@ class BookClubController extends Controller
                         'id'              => $user->id,
                         'name'            => $user->name,
                         'lastname'        => $user->lastname,
+                        'username'        => $user->username,
                         'position'        => $user->position,
                         'avatar'          => $user->avatar,
                         'followers_count' => $user->followers_count,
@@ -638,6 +643,12 @@ class BookClubController extends Controller
                 }
 
                 $this->notifyFollowers($user, $bookClub->id);
+                $this->mentionService->notifyMentionedUsers(
+                    $this->mentionService->extractMentions($bookClub->text),
+                    $user,
+                    'mention',
+                    (int) $bookClub->id
+                );
 
                 return response()->json(['status' => 'success', 'post_id' => $bookClub->id], 201);
             });
@@ -734,6 +745,12 @@ class BookClubController extends Controller
                     'edit_count' => (int) ($post->edit_count ?? 0) + 1,
                     'last_edited_by_id' => $user->id,
                 ])->save();
+                $this->mentionService->notifyMentionedUsers(
+                    $this->mentionService->extractMentions((string) $post->text),
+                    $user,
+                    'mention',
+                    (int) $post->id
+                );
 
                 // ── Rasmlarni o'chirish ────────────────────────────────────────
                 $deletedIds = json_decode($request->input('deleted_image_ids', '[]'), true);
@@ -1037,6 +1054,8 @@ class BookClubController extends Controller
             } else {
                 $me->followings()->attach($target->id);
                 $this->sendNotification($target->id, $me, 'follow');
+                $this->userPositionService->evaluateAndPromote($target, 'follow_received');
+                $this->userPositionService->evaluateAndPromote($me, 'follow_made');
                 $status = 'followed';
             }
 

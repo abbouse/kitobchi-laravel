@@ -58,7 +58,8 @@ class UserController extends Controller
                 'id' => $u->id,
                 'name' => trim(($u->name ?? '').' '.($u->lastname ?? '')),
                 'email' => $u->email ?: '—',
-                'role' => $u->position ?: 'User',
+                'role' => $u->position ?: 'reader',
+                'staff_role' => $u->staff_role,
                 'status' => $u->isBlocked() ? 'blocked' : ($u->isVerified ? 'active' : 'pending'),
                 'orders' => 0,
                 'joined' => optional($u->created_at)->format('Y-m-d'),
@@ -82,6 +83,7 @@ class UserController extends Controller
             'phone_number' => 'required|string|unique:users,phone_number',
             'email' => 'nullable|email|unique:users,email',
             'position' => 'nullable|string|max:100',
+            'staff_role' => 'nullable|in:moderator,administrator',
             'isVerified' => 'boolean',
             'is_premium' => 'boolean',
         ]);
@@ -206,6 +208,7 @@ class UserController extends Controller
             'phone_number' => ['required', 'string', Rule::unique('users', 'phone_number')->ignore($user->id)],
             'email' => ['nullable', 'email', Rule::unique('users', 'email')->ignore($user->id)],
             'position' => 'nullable|string|max:100',
+            'staff_role' => 'nullable|in:moderator,administrator',
             'isVerified' => 'boolean',
             'is_premium' => 'boolean',
         ]);

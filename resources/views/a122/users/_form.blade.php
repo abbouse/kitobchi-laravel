@@ -16,12 +16,26 @@
         <div><label class="text-xs font-medium text-gray-500 mb-1 block">Email *</label><input name="email" required value="{{ $val('email') }}" class="input">@error('email')<p class="text-xs text-rose-500 mt-1">{{ $message }}</p>@enderror</div>
         <div><label class="text-xs font-medium text-gray-500 mb-1 block">Telefon</label><input name="phone_number" value="{{ $val('phone_number') }}" class="input">@error('phone_number')<p class="text-xs text-rose-500 mt-1">{{ $message }}</p>@enderror</div>
         <div>
-          <label class="text-xs font-medium text-gray-500 mb-1 block">Lavozim</label>
+          <label class="text-xs font-medium text-gray-500 mb-1 block">Foydalanuvchi darajasi</label>
           <select name="position" class="input">
             @php($currentPosition = $val('position'))
-            <option value="">O'quvchi</option>
-            <option value="Moderator" {{ $currentPosition === 'Moderator' ? 'selected' : '' }}>Moderator</option>
-            <option value="Administrator" {{ in_array($currentPosition, ['Administrator', 'Admin'], true) ? 'selected' : '' }}>Administrator</option>
+            <option value="reader" {{ in_array($currentPosition, ['', 'reader', "O'quvchi"], true) ? 'selected' : '' }}>Kitobxon</option>
+            <option value="active_reader" {{ $currentPosition === 'active_reader' ? 'selected' : '' }}>Faol kitobxon</option>
+            <option value="book_lover" {{ $currentPosition === 'book_lover' ? 'selected' : '' }}>Kitob muxlisi</option>
+            <option value="reviewer" {{ $currentPosition === 'reviewer' ? 'selected' : '' }}>Sharhlovchi</option>
+            <option value="collector" {{ $currentPosition === 'collector' ? 'selected' : '' }}>Kitob yig'uvchi</option>
+            <option value="book_club_star" {{ $currentPosition === 'book_club_star' ? 'selected' : '' }}>Book Club yulduzi</option>
+            <option value="market_explorer" {{ $currentPosition === 'market_explorer' ? 'selected' : '' }}>Market kashfiyotchisi</option>
+            <option value="literary_mentor" {{ $currentPosition === 'literary_mentor' ? 'selected' : '' }}>Adabiy yo'lboshchi</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs font-medium text-gray-500 mb-1 block">Moderatsiya roli</label>
+          <select name="staff_role" class="input">
+            @php($currentStaffRole = $val('staff_role'))
+            <option value="">Yo'q</option>
+            <option value="moderator" {{ $currentStaffRole === 'moderator' ? 'selected' : '' }}>Moderator</option>
+            <option value="administrator" {{ $currentStaffRole === 'administrator' ? 'selected' : '' }}>Administrator</option>
           </select>
         </div>
       </div>

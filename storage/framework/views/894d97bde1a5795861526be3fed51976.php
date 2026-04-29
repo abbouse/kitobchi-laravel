@@ -37,12 +37,26 @@ if (isset($__messageOriginal)) { $message = $__messageOriginal; }
 endif;
 unset($__errorArgs, $__bag); ?></div>
         <div>
-          <label class="text-xs font-medium text-gray-500 mb-1 block">Lavozim</label>
+          <label class="text-xs font-medium text-gray-500 mb-1 block">Foydalanuvchi darajasi</label>
           <select name="position" class="input">
             <?php ($currentPosition = $val('position')); ?>
-            <option value="">O'quvchi</option>
-            <option value="Moderator" <?php echo e($currentPosition === 'Moderator' ? 'selected' : ''); ?>>Moderator</option>
-            <option value="Administrator" <?php echo e(in_array($currentPosition, ['Administrator', 'Admin'], true) ? 'selected' : ''); ?>>Administrator</option>
+            <option value="reader" <?php echo e(in_array($currentPosition, ['', 'reader', "O'quvchi"], true) ? 'selected' : ''); ?>>Kitobxon</option>
+            <option value="active_reader" <?php echo e($currentPosition === 'active_reader' ? 'selected' : ''); ?>>Faol kitobxon</option>
+            <option value="book_lover" <?php echo e($currentPosition === 'book_lover' ? 'selected' : ''); ?>>Kitob muxlisi</option>
+            <option value="reviewer" <?php echo e($currentPosition === 'reviewer' ? 'selected' : ''); ?>>Sharhlovchi</option>
+            <option value="collector" <?php echo e($currentPosition === 'collector' ? 'selected' : ''); ?>>Kitob yig'uvchi</option>
+            <option value="book_club_star" <?php echo e($currentPosition === 'book_club_star' ? 'selected' : ''); ?>>Book Club yulduzi</option>
+            <option value="market_explorer" <?php echo e($currentPosition === 'market_explorer' ? 'selected' : ''); ?>>Market kashfiyotchisi</option>
+            <option value="literary_mentor" <?php echo e($currentPosition === 'literary_mentor' ? 'selected' : ''); ?>>Adabiy yo'lboshchi</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs font-medium text-gray-500 mb-1 block">Moderatsiya roli</label>
+          <select name="staff_role" class="input">
+            <?php ($currentStaffRole = $val('staff_role')); ?>
+            <option value="">Yo'q</option>
+            <option value="moderator" <?php echo e($currentStaffRole === 'moderator' ? 'selected' : ''); ?>>Moderator</option>
+            <option value="administrator" <?php echo e($currentStaffRole === 'administrator' ? 'selected' : ''); ?>>Administrator</option>
           </select>
         </div>
       </div>

@@ -27,7 +27,7 @@ class SendMessagePushNotification implements ShouldQueue
     public function handle(): void
     {
         // 1. Eager Loading bilan yuklash
-        $message = Message::with(['conversation.user', 'conversation.shop'])
+        $message = Message::with(['conversation.user', 'conversation.shop', 'conversation.participants.user'])
             ->find($this->messageId);
 
         if (!$message || $message->is_read) return;
@@ -39,7 +39,25 @@ class SendMessagePushNotification implements ShouldQueue
         $senderAvatar = null;
 
         // 2. Yo'nalishni aniqlash
-        if ($conversation->type === 'personal') {
+        if ($conversation->type === 'group') {
+            $sender = User::find($message->sender_id);
+            $senderName = trim(($sender->name ?? '') . ' ' . ($sender->lastname ?? '')) ?: 'Foydalanuvchi';
+            $senderAvatar = $sender->avatar ?? null;
+
+            $tokens = $conversation->participants
+                ->filter(function ($participant) use ($message) {
+                    if ((int) $participant->user_id === (int) $message->sender_id) {
+                        return false;
+                    }
+
+                    return $participant->muted_until === null || $participant->muted_until->isPast();
+                })
+                ->flatMap(fn ($participant) => $participant->user?->devices?->pluck('fcm_token') ?? [])
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
+        } elseif ($conversation->type === 'personal') {
             // ── User <-> User ─────────────────────────────────────────────
             $sender       = User::find($message->sender_id);
             $senderName   = trim(($sender->name ?? '') . ' ' . ($sender->lastname ?? '')) ?: "Foydalanuvchi";

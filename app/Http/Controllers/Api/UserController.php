@@ -18,10 +18,10 @@ use App\Models\FcmNotifications;
 use App\Models\DeliveryService;
 use App\Models\ProjectSetting;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
 
 class UserController extends Controller
@@ -163,9 +163,25 @@ class UserController extends Controller
             return response()->json(['status' => 'error', 'message' => "Bunday foydalanuvchi mavjud emas!"], 404);
         }
 
+        $validator = Validator::make($request->all(), [
+            'username' => 'nullable|string|min:3|max:32|regex:/^[A-Za-z0-9_.]+$/|unique:users,username,' . $user->id,
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $validator->errors()->first(),
+            ], 422);
+        }
+
         if ($request->filled('name'))     $user->name     = $request->name;
         if ($request->filled('lastname')) $user->lastname = $request->lastname;
         if ($request->has('sex'))         $user->sex      = $request->sex;
+        if ($request->has('username')) {
+            $username = mb_strtolower(trim((string) $request->username));
+            $username = ltrim($username, '@');
+            $user->username = $username !== '' ? $username : null;
+        }
 
         if ($request->has('bio')) {
             $user->bio = $request->filled('bio')
@@ -212,7 +228,33 @@ class UserController extends Controller
             );
         }
 
-        return response()->json(['status' => 'success', 'role' => $displayRole], 200);
+        return response()->json([
+            'status' => 'success',
+            'role' => $displayRole,
+            'username' => $user->username,
+        ], 200);
+    }
+
+    public function byUsername(string $username)
+    {
+        $normalized = mb_strtolower(trim(ltrim($username, '@')));
+        if ($normalized === '') {
+            return response()->json(['status' => 'error', 'message' => 'Username topilmadi'], 404);
+        }
+
+        $user = User::query()
+            ->select('id', 'name', 'lastname', 'username', 'avatar', 'position', 'staff_role', 'isVerified', 'isSupport', 'role_emoji', 'role_title', 'role_place')
+            ->where('username', $normalized)
+            ->first();
+
+        if (!$user) {
+            return response()->json(['status' => 'error', 'message' => 'User not found'], 404);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $user,
+        ]);
     }
 
     public function rolePresets(Request $request)
@@ -700,10 +742,30 @@ class UserController extends Controller
                 'mystery_box'              => $mysteryBoxData,
                 'isVerified'               => $user ? (bool) $user->isVerified : false,
                 'isSupport'                => $user ? (bool) $user->isSupport  : false,
-                'position'                 => $user?->position ?? "O'quvchi",
+                'position'                 => $user?->position ?? 'reader',
+                'staff_role'               => $user?->staff_role,
+                'username'                 => $user?->username,
                 'role_emoji'               => $user?->role_emoji,
                 'role_title'               => $user?->role_title,
                 'role_place'               => $user?->role_place,
+                'unread_group_messages'    => $user
+                    ? (int) Conversation::query()
+                        ->where('type', 'group')
+                        ->whereHas('participants', fn ($q) => $q->where('user_id', $user->id))
+                        ->get()
+                        ->sum(function ($conversation) use ($user) {
+                            $participant = $conversation->participants()
+                                ->where('user_id', $user->id)
+                                ->first();
+
+                            return Message::query()
+                                ->where('conversation_id', $conversation->id)
+                                ->where('sender_id', '!=', $user->id)
+                                ->where('is_deleted', 0)
+                                ->when($participant?->last_read_at, fn ($q) => $q->where('created_at', '>', $participant->last_read_at))
+                                ->count();
+                        })
+                    : 0,
                 'onPremium'                => (bool) ($cfg?->on_premium  ?? false),
                 'onReels'                  => (bool) ($cfg?->on_reels    ?? false),
                 'ramadan'                  => (bool) ($cfg?->ramadan     ?? false),

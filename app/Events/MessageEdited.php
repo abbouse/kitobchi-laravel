@@ -15,7 +15,7 @@ class MessageEdited implements ShouldBroadcastNow
     
     public function __construct(Message $message)
     {
-        $this->message = $message->load('replyTo');
+        $this->message = $message->load(['sender', 'replyTo.sender']);
     }
     
     public function broadcastOn(): array
@@ -38,6 +38,9 @@ class MessageEdited implements ShouldBroadcastNow
                 'conversation_id' => $message->conversation_id,
                 'sender_id' => $message->sender_id,
                 'sender_type' => $message->sender_type,
+                'sender_name' => $message->sender instanceof \App\Models\User ? $message->sender->fullname : null,
+                'sender_avatar' => $message->sender instanceof \App\Models\User ? $message->sender->avatar : null,
+                'sender_username' => $message->sender instanceof \App\Models\User ? $message->sender->username : null,
                 'message' => $message->message,
                 'is_read' => $message->is_read ? true : false,
                 'is_edited' => $message->is_edited ? true : false,
@@ -48,6 +51,9 @@ class MessageEdited implements ShouldBroadcastNow
                     'id' => $message->replyTo->id,
                     'conversation_id' => $message->replyTo->conversation_id,
                     'sender_id' => $message->replyTo->sender_id,
+                    'sender_name' => $message->replyTo->sender instanceof \App\Models\User ? $message->replyTo->sender->fullname : null,
+                    'sender_avatar' => $message->replyTo->sender instanceof \App\Models\User ? $message->replyTo->sender->avatar : null,
+                    'sender_username' => $message->replyTo->sender instanceof \App\Models\User ? $message->replyTo->sender->username : null,
                     'message' => $message->replyTo->message,
                     'is_read' => $message->replyTo->is_read ? true : false,
                     'is_edited' => $message->replyTo->is_edited ? true : false,

@@ -47,6 +47,7 @@ class BookClubNotificationTextService
                 'follow' => 'Yangi obuna',
                 'repost' => 'Yangi repost',
                 'new_post' => 'Yangi post',
+                'mention' => 'Siz tilga olindingiz',
             ],
             'ru' => [
                 'like' => 'Новый лайк',
@@ -57,6 +58,7 @@ class BookClubNotificationTextService
                 'follow' => 'Новый подписчик',
                 'repost' => 'Новый репост',
                 'new_post' => 'Новый пост',
+                'mention' => 'Вас упомянули',
             ],
             'en' => [
                 'like' => 'New like',
@@ -67,6 +69,7 @@ class BookClubNotificationTextService
                 'follow' => 'New follower',
                 'repost' => 'New repost',
                 'new_post' => 'New post',
+                'mention' => 'You were mentioned',
             ],
             'ja' => [
                 'like' => '新しいいいね',
@@ -77,6 +80,7 @@ class BookClubNotificationTextService
                 'follow' => '新しいフォロワー',
                 'repost' => '新しいリポスト',
                 'new_post' => '新しい投稿',
+                'mention' => 'メンションされました',
             ],
         ];
 
@@ -97,6 +101,7 @@ class BookClubNotificationTextService
                 'follow' => "{$name} подписался(ась) на вас",
                 'repost' => $many ? "{$name} и ещё {$extra} человек сделали репост вашего поста" : "{$name} сделал(а) репост вашего поста",
                 'new_post' => "{$name} опубликовал(а) новый пост",
+                'mention' => "{$name} упомянул(а) вас",
                 default => "{$name} отправил(а) вам уведомление",
             },
             'en' => match ($type) {
@@ -108,6 +113,7 @@ class BookClubNotificationTextService
                 'follow' => "{$name} followed you",
                 'repost' => $many ? "{$name} and {$extra} others reposted your post" : "{$name} reposted your post",
                 'new_post' => "{$name} shared a new post",
+                'mention' => "{$name} mentioned you",
                 default => "{$name} sent you a notification",
             },
             'ja' => match ($type) {
@@ -119,6 +125,7 @@ class BookClubNotificationTextService
                 'follow' => "{$name}さんがあなたをフォローしました",
                 'repost' => $many ? "{$name}さん他{$extra}人があなたの投稿をリポストしました" : "{$name}さんがあなたの投稿をリポストしました",
                 'new_post' => "{$name}さんが新しい投稿をしました",
+                'mention' => "{$name}さんがあなたにメンションしました",
                 default => "{$name}さんから新しい通知があります",
             },
             default => match ($type) {
@@ -130,6 +137,7 @@ class BookClubNotificationTextService
                 'follow' => "{$name} sizga obuna bo'ldi",
                 'repost' => $many ? "{$name} va yana {$extra} kishi postingizni repost qildi" : "{$name} postingizni repost qildi",
                 'new_post' => "{$name} yangi post qoldirdi",
+                'mention' => "{$name} sizni tilga oldi",
                 default => "{$name} sizga bildirishnoma yubordi",
             },
         };

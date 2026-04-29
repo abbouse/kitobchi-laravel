@@ -40,7 +40,10 @@
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
-              <span class="badge badge-info">{{ data_get($user,'position','User') }}</span>
+              <span class="badge badge-info">{{ data_get($user,'position','reader') }}</span>
+              @if(data_get($user,'staff_role'))
+                <span class="badge badge-warning">{{ data_get($user,'staff_role') === 'administrator' ? 'Administrator' : 'Moderator' }}</span>
+              @endif
               <span class="badge {{ $user->isVerified ? 'badge-success' : 'badge-warning' }}">{{ $user->isVerified ? 'Tasdiqlangan' : 'Tasdiqlanmagan' }}</span>
               <span class="badge {{ $user->is_premium ? 'badge-warning' : 'badge-muted' }}">{{ $user->is_premium ? 'Premium' : 'Standard' }}</span>
               @if($user->isBlocked())

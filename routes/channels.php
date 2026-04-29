@@ -2,7 +2,6 @@
 use Illuminate\Support\Facades\Broadcast;
 use App\Models\Conversation;
 use App\Models\Seller;
-use Illuminate\Support\Facades\Auth;
 
 /*
 |--------------------------------------------------------------------------
@@ -11,7 +10,7 @@ use Illuminate\Support\Facades\Auth;
 */
 
 Broadcast::channel('chat.{conversationId}', function ($user, $conversationId) {
-    $conversation = Conversation::find($conversationId);
+    $conversation = Conversation::with('participants')->find($conversationId);
     if (!$conversation) return false;
 
     // Foydalanuvchi qaysi Guard orqali kelayotganini tekshiramiz
@@ -36,11 +35,17 @@ Broadcast::channel('chat.{conversationId}', function ($user, $conversationId) {
         }
     }
 
+    if ($conversation->type === 'group') {
+        if ($isUser) {
+            return $conversation->participants->contains(fn ($participant) => (int) $participant->user_id === (int) $user->id);
+        }
+    }
+
     return false;
 }, ['guards' => ['user', 'seller']]);
 Broadcast::channel('user.{userId}', function ($user, $userId) {
     return (int) $user->id === (int) $userId;
-});
+}, ['guards' => ['user']]);
 
 // 🔥 SELLER CHANNEL - Do'kon egasi uchun (agar kerak bo'lsa)
 Broadcast::channel('seller.{sellerId}', function ($user, $sellerId) {
@@ -69,13 +74,10 @@ Broadcast::channel('courier.feed', function ($user) {
 
 // 🔥 GLOBAL ONLINE - Barcha online userlar
 Broadcast::channel('global-online', function ($user) {
-    if (Auth::guard('user')->user()) {
-        return [
-            'id' => (string) $user->id,
-        ];
-    }
-    return false;
-});
+    return [
+        'id' => (string) $user->id,
+    ];
+}, ['guards' => ['user']]);
 Broadcast::channel('user.bot.{userId}', function ($user, $userId) {
     return (int) $user->id === (int) $userId;
-});
+}, ['guards' => ['user']]);

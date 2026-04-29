@@ -10,11 +10,13 @@ use App\Models\BookClubCommentReply;
 use App\Models\BookClubCommentLike;
 use App\Models\BookClub;
 use App\Services\BookClubModerationService;
+use App\Services\MentionService;
 use Illuminate\Support\Facades\Auth;
 
 class BookClubCommentController extends Controller {
     public function __construct(
         private readonly BookClubModerationService $moderationService,
+        private readonly MentionService $mentionService,
     ) {}
     
     public function index(Request $request, $post_id) {
@@ -24,7 +26,7 @@ class BookClubCommentController extends Controller {
     // 2. Kommentlarni olish (withCount orqali replies sonini bazaning o'zida hisoblaymiz)
     $comments = BookClubComment::where('post_id', $post_id)
         ->whereNull('parent_id') // parent_id == null degani
-        ->with(['user:id,name,lastname,sex,avatar,position,isVerified,isSupport,role_emoji,role_title,role_place', 'likes'])
+        ->with(['user:id,name,lastname,username,sex,avatar,position,staff_role,isVerified,isSupport,role_emoji,role_title,role_place', 'likes'])
         ->withCount('replies') // Modelda 'replies' relation bo'lishi kerak
         ->orderBy('created_at', 'desc')
         ->get()
@@ -48,7 +50,7 @@ class BookClubCommentController extends Controller {
 public function replies(Request $request, $comment_id) {
     $user = Auth::guard('user')->user();
     $comments = BookClubComment::where('parent_id', $comment_id)
-        ->with(['user:id,name,lastname,sex,avatar,position,isVerified,isSupport,role_emoji,role_title,role_place', 'likes.user:id,name,avatar'])
+        ->with(['user:id,name,lastname,username,sex,avatar,position,staff_role,isVerified,isSupport,role_emoji,role_title,role_place', 'likes.user:id,name,avatar'])
         ->orderBy('created_at', 'desc')
         ->get()
         ->map(function ($comment) use ($user) {
@@ -98,6 +100,14 @@ public function replies(Request $request, $comment_id) {
                 ['comment_id' => $comment->id]
             );
         }
+
+        $this->mentionService->notifyMentionedUsers(
+            $this->mentionService->extractMentions($comment->content),
+            $user,
+            'mention',
+            (int) $comment->post_id,
+            ['comment_id' => $comment->id]
+        );
 
         return response()->json(['status' => 'success', 'data' => $comment], 201);
     }
@@ -149,6 +159,14 @@ public function replies(Request $request, $comment_id) {
             ['comment_id' => $reply->id]
         );
     }
+
+    $this->mentionService->notifyMentionedUsers(
+        $this->mentionService->extractMentions($reply->content),
+        $user,
+        'mention',
+        (int) $reply->post_id,
+        ['comment_id' => $reply->id]
+    );
 
     return response()->json(['status' => 'success', 'data' => $reply], 201);
 }

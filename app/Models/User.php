@@ -17,7 +17,10 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'lastname',
+        'username',
         'position',
+        'position_earned_at',
+        'staff_role',
         'bio',
         'role_emoji',
         'role_title',
@@ -66,6 +69,7 @@ class User extends Authenticatable
         'telegram_connected_at' => 'datetime',
         'blocked_until' => 'datetime',
         'blocked_at' => 'datetime',
+        'position_earned_at' => 'datetime',
     ];
 
     public function isBlocked(): bool
@@ -92,14 +96,12 @@ class User extends Authenticatable
 
     public function isModerator(): bool
     {
-        return mb_strtolower(trim((string) $this->position)) === 'moderator';
+        return mb_strtolower(trim((string) $this->staff_role)) === 'moderator';
     }
 
     public function isAdministrator(): bool
     {
-        $position = mb_strtolower(trim((string) $this->position));
-
-        return in_array($position, ['administrator', 'admin'], true);
+        return mb_strtolower(trim((string) $this->staff_role)) === 'administrator';
     }
 
     public function canModerateCommunity(): bool
@@ -203,9 +205,14 @@ class User extends Authenticatable
 
     return $full ?: 'unknown';
 }
-public function followings()
+    public function followings()
 {
     return $this->belongsToMany(User::class, 'user_follows', 'follower_id', 'following_id');
+}
+
+public function conversationParticipants()
+{
+    return $this->hasMany(ConversationParticipant::class, 'user_id');
 }
 
 // Menga obuna bo'lgan foydalanuvchilar (Followers)

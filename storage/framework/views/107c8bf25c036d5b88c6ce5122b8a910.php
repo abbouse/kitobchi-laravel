@@ -59,7 +59,10 @@
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
-              <span class="badge badge-info"><?php echo e(data_get($user,'position','User')); ?></span>
+              <span class="badge badge-info"><?php echo e(data_get($user,'position','reader')); ?></span>
+              <?php if(data_get($user,'staff_role')): ?>
+                <span class="badge badge-warning"><?php echo e(data_get($user,'staff_role') === 'administrator' ? 'Administrator' : 'Moderator'); ?></span>
+              <?php endif; ?>
               <span class="badge <?php echo e($user->isVerified ? 'badge-success' : 'badge-warning'); ?>"><?php echo e($user->isVerified ? 'Tasdiqlangan' : 'Tasdiqlanmagan'); ?></span>
               <span class="badge <?php echo e($user->is_premium ? 'badge-warning' : 'badge-muted'); ?>"><?php echo e($user->is_premium ? 'Premium' : 'Standard'); ?></span>
               <?php if($user->isBlocked()): ?>

@@ -110,6 +110,8 @@ class NotificationHelper
                 return "new_post_user_{$senderId}"; // Bir kishi bir nechta post yozsa
             case 'follow':
                 return "follow_user_{$senderId}";
+            case 'mention':
+                return "mention_post_{$postId}_user_{$senderId}";
             default:
                 return "general_{$type}_{$senderId}";
         }
