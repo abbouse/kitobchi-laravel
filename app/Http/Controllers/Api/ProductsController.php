@@ -866,7 +866,7 @@ class ProductsController extends Controller
         $location = DB::table('seller_locations')
             ->where('seller_id', $seller->id)
             ->where('is_main', true)
-            ->first(['id', 'address', 'lat', 'lon']);
+            ->first(['id', 'fullAddress', 'lat', 'lon']);
 
         return response()->json([
             'status' => 'success',
@@ -876,7 +876,7 @@ class ProductsController extends Controller
                     [
                         'location' => $location ? [
                             'id'      => $location->id,
-                            'address' => $location->address,
+                            'address' => $location->fullAddress,
                             'lat'     => $location->lat,
                             'lon'     => $location->lon,
                         ] : null,

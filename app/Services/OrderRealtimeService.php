@@ -75,6 +75,11 @@ class OrderRealtimeService
 
         if ($courierOrder->courier_id) {
             $channels[] = "courier.{$courierOrder->courier_id}";
+            // Boshqa kuryerlarning feed'i ham yangilanishi kerak —
+            // bu buyurtma endi available emas, ularning UI'sidan
+            // o'chirilishi uchun signal yuboriladi. Aks holda boshqa
+            // kuryerlar polling kutib turadi (30s).
+            $channels[] = 'courier.feed';
         } elseif ($courierOrder->status === 'pending') {
             $channels[] = 'courier.feed';
         }

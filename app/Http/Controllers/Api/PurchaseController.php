@@ -949,7 +949,7 @@ class PurchaseController extends Controller
             $sellerLocation = DB::table('seller_locations')
                 ->where('seller_id', $sellerId)
                 ->where('is_main', true)
-                ->first(['address', 'lat', 'lon']);
+                ->first(['fullAddress', 'lat', 'lon']);
 
             $purchase = Sold::create([
                 'user_id'        => $user->id,
@@ -957,7 +957,7 @@ class PurchaseController extends Controller
                 'items'          => $allItems,
                 'address'        => [[
                     'fullName'    => trim("{$user->name} {$user->lastname}"),
-                    'fullAddress' => $sellerLocation->address ?? "Do'kon ichida xarid",
+                    'fullAddress' => $sellerLocation->fullAddress ?? "Do'kon ichida xarid",
                     'lat'         => $sellerLocation->lat ?? null,
                     'lon'         => $sellerLocation->lon ?? null,
                     'phoneNumber' => $user->phone_number,

@@ -30,6 +30,7 @@ use App\Http\Controllers\A122\VacancyController;
 use App\Http\Controllers\A122\CareerApplicationController;
 use App\Http\Controllers\A122\AdminController;
 use App\Http\Controllers\A122\ApiClientController;
+use App\Http\Controllers\A122\SearchHistoryController;
 use App\Http\Controllers\A122\SettingsController;
 
 Route::prefix('a122')->name('admin.')->group(function () {
@@ -137,6 +138,11 @@ Route::prefix('a122')->name('admin.')->group(function () {
         Route::put('/{news}',        [MarketNewsController::class, 'update'])->name('update');
         Route::patch('/{news}/toggle', [MarketNewsController::class, 'toggle'])->name('toggle');
         Route::delete('/{news}',     [MarketNewsController::class, 'destroy'])->name('destroy');
+    });
+
+    // ── Search History ─────────────────────────────────────────────
+    Route::prefix('search-history')->name('search-history.')->group(function () {
+        Route::get('/', [SearchHistoryController::class, 'index'])->name('index');
     });
 
     // ── Orders ─────────────────────────────────────────────────────
