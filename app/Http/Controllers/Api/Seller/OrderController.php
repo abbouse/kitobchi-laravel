@@ -88,6 +88,22 @@ class OrderController extends Controller
             ->map(fn($item) => $this->formatSellerOrderItem($item))
             ->values()
             ->all();
+        $address = $this->formatOrderAddress($order->address);
+        $primaryAddress = $address[0] ?? [];
+        $mainLocation = $order->seller?->mainLocation;
+        $isPickup = (string) $order->delivery_type === 'pickup';
+
+        $branch = [
+            'id' => $isPickup
+                ? (isset($primaryAddress['location_id']) ? (int) $primaryAddress['location_id'] : null)
+                : ($mainLocation?->id ? (int) $mainLocation->id : null),
+            'address' => $isPickup
+                ? (($primaryAddress['branch_address'] ?? $primaryAddress['fullAddress'] ?? null))
+                : ($mainLocation?->fullAddress),
+            'is_main' => $isPickup
+                ? (bool) ($primaryAddress['branch_is_main'] ?? false)
+                : true,
+        ];
 
         return [
             'id' => (int) $order->id,
@@ -100,7 +116,8 @@ class OrderController extends Controller
             'items_count' => (int) ($order->items_count ?? count($items)),
             'status' => (int) $order->status,
             'delivery_type' => $order->delivery_type,
-            'address' => $this->formatOrderAddress($order->address),
+            'address' => $address,
+            'branch' => $branch,
             'items' => $items,
             'created_at' => optional($order->created_at)?->toISOString(),
             'updated_at' => optional($order->updated_at)?->toISOString(),
@@ -123,6 +140,7 @@ class OrderController extends Controller
     $orders = Seller::find($storeSellerId)->orders()
         ->where('status', '!=', 0)
         ->with([
+            'seller.mainLocation',
             'items' => fn($q) => $q->where('seller_id', $storeSellerId)
                 ->with(['book', 'stationery', 'gift']),
         ])
@@ -419,6 +437,7 @@ public function toCourier(Request $request, $qr)
             ->where('id', $orderId)
             ->where('status', '!=', 0)
             ->with([
+                'seller.mainLocation',
                 'items' => fn($q) => $q->where('seller_id', $storeSellerId)
                     ->with(['book', 'stationery', 'variant', 'gift']),
             ])

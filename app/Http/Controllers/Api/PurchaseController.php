@@ -852,6 +852,7 @@ class PurchaseController extends Controller
     {
         $request->validate([
             'seller_id'        => 'required|integer|exists:sellers,id',
+            'location_id'      => 'nullable|integer|exists:seller_locations,id',
             'items'            => 'required|array|min:1',
             'items.*.product_id'  => 'required|integer',
             'items.*.type'        => 'required|string|in:book,stationery',
@@ -864,6 +865,7 @@ class PurchaseController extends Controller
         if (!$user) return $this->err('Foydalanuvchi topilmadi!', 401);
 
         $sellerId = (int) $request->input('seller_id');
+        $locationId = $request->filled('location_id') ? (int) $request->input('location_id') : null;
         $sellerOk = Seller::where('id', $sellerId)
             ->where('status', 'approved')
             ->where('is_hidden', 0)
@@ -1011,10 +1013,22 @@ class PurchaseController extends Controller
             // ── Asosiy buyurtma ───────────────────────────────────
             // address: do'kon ichida xarid — userning shahriy manzili emas,
             // balki seller_locations'dagi do'kon manzilini saqlaymiz.
-            $sellerLocation = DB::table('seller_locations')
+            $sellerLocationQuery = DB::table('seller_locations')
                 ->where('seller_id', $sellerId)
-                ->where('is_main', true)
-                ->first(['fullAddress', 'lat', 'lon']);
+                ->where('is_deleted', 0);
+
+            if ($locationId) {
+                $sellerLocationQuery->where('id', $locationId);
+            } else {
+                $sellerLocationQuery->where('is_main', true);
+            }
+
+            $sellerLocation = $sellerLocationQuery->first(['id', 'fullAddress', 'lat', 'lon', 'is_main']);
+
+            if (!$sellerLocation) {
+                DB::rollBack();
+                return $this->err("Filial topilmadi yoki noto'g'ri tanlangan.", 404);
+            }
 
             $purchase = Sold::create([
                 'user_id'        => $user->id,
@@ -1026,6 +1040,9 @@ class PurchaseController extends Controller
                     'lat'         => $sellerLocation->lat ?? null,
                     'lon'         => $sellerLocation->lon ?? null,
                     'phoneNumber' => $user->phone_number,
+                    'location_id' => (int) $sellerLocation->id,
+                    'branch_address' => $sellerLocation->fullAddress ?? "Do'kon ichida xarid",
+                    'branch_is_main' => (bool) ($sellerLocation->is_main ?? false),
                 ]],
                 'deliveryType'   => 'pickup',
                 'deliveryPrice'  => 0,
@@ -1044,6 +1061,9 @@ class PurchaseController extends Controller
                 'delivery_type' => 'pickup',
                 'address'       => [[
                     'fullAddress' => $sellerLocation->fullAddress ?? "Do'kon ichida xarid",
+                    'location_id' => (int) $sellerLocation->id,
+                    'branch_address' => $sellerLocation->fullAddress ?? "Do'kon ichida xarid",
+                    'branch_is_main' => (bool) ($sellerLocation->is_main ?? false),
                 ]],
                 'amount'        => $priceBeforePromo,
             ]);

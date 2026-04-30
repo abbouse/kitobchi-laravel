@@ -70,8 +70,7 @@ class SellerLocation extends Model
             return null;
         }
 
-        $base = rtrim((string) config('app.qr_base_url', 'https://kitobchi.com'), '/');
-        return "{$base}/s/{$this->qr_token}";
+        return "kitobchi://s/{$this->qr_token}";
     }
 
     public function getQrUrlAttribute(): ?string

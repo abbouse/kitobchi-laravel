@@ -3,14 +3,17 @@
 namespace App\Http\Controllers\Api\Seller;
 
 use App\Http\Controllers\Controller;
-use App\Models\SellerOrder;
-use App\Models\User;
-use App\Models\SellerOrderItem;
+use App\Models\Books;
 use App\Models\Seller;
-use App\Models\Books; // ✅ Books import qo'shildi
-use Illuminate\Support\Facades\DB;
+use App\Models\SellerLocation;
+use App\Models\SellerOrder;
+use App\Models\SellerOrderItem;
+use App\Models\Stationery;
+use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class HisobotController extends Controller
 {
@@ -19,117 +22,261 @@ class HisobotController extends Controller
         $this->middleware('auth:seller');
     }
 
-    /**
-     * ✅ OWNER DO'KON ID QAYTARADI
-     */
-    private function getStoreSellerId($seller)
+    private function getStoreSellerId($seller): int
     {
-        return $seller->parent_id ?: $seller->id;
+        return (int) ($seller->parent_id ?: $seller->id);
     }
 
-    public function index()
+    private function hasDashboardAccess($seller): bool
+    {
+        if (!$seller->parent_id) {
+            return true;
+        }
+
+        return in_array((int) $seller->role, [1, 4], true);
+    }
+
+    private function resolvePeriod(Request $request): array
+    {
+        $period = (string) $request->query('period', '30d');
+        $now = now();
+
+        switch ($period) {
+            case '7d':
+                $start = $now->copy()->startOfDay()->subDays(6);
+                $group = 'day';
+                break;
+            case '90d':
+                $start = $now->copy()->startOfDay()->subDays(89);
+                $group = 'week';
+                break;
+            case '1y':
+                $start = $now->copy()->startOfMonth()->subMonths(11);
+                $group = 'month';
+                break;
+            case '30d':
+            default:
+                $period = '30d';
+                $start = $now->copy()->startOfDay()->subDays(29);
+                $group = 'day';
+                break;
+        }
+
+        $end = $now->copy()->endOfDay();
+        $previousEnd = $start->copy()->subSecond();
+        $previousStart = $previousEnd->copy()->subSeconds($end->diffInSeconds($start));
+
+        return [
+            'period' => $period,
+            'start' => $start,
+            'end' => $end,
+            'previous_start' => $previousStart,
+            'previous_end' => $previousEnd,
+            'group' => $group,
+        ];
+    }
+
+    private function baseCompletedOrders(int $storeSellerId, Carbon $start, Carbon $end)
+    {
+        return SellerOrder::query()
+            ->where('seller_id', $storeSellerId)
+            ->where('status', '3')
+            ->whereBetween('created_at', [$start, $end]);
+    }
+
+    private function resolveSellerLocation(int $storeSellerId, ?int $locationId): ?SellerLocation
+    {
+        if (!$locationId) {
+            return null;
+        }
+
+        return SellerLocation::query()
+            ->where('seller_id', $storeSellerId)
+            ->where('is_deleted', false)
+            ->where('id', $locationId)
+            ->first();
+    }
+
+    private function applyBranchFilterToSellerOrders($query, ?SellerLocation $location, string $table = 'seller_orders')
+    {
+        if (!$location) {
+            return $query;
+        }
+
+        $jsonLocationExpr = "CAST(JSON_UNQUOTE(JSON_EXTRACT({$table}.address, '$[0].location_id')) AS UNSIGNED)";
+
+        if ($location->is_main) {
+            return $query->where(function ($inner) use ($table, $jsonLocationExpr, $location) {
+                $inner->where("{$table}.delivery_type", '!=', 'pickup')
+                    ->orWhereNull("{$table}.delivery_type")
+                    ->orWhere(function ($pickup) use ($table, $jsonLocationExpr, $location) {
+                        $pickup->where("{$table}.delivery_type", 'pickup')
+                            ->whereRaw("{$jsonLocationExpr} = ?", [$location->id]);
+                    });
+            });
+        }
+
+        return $query->where("{$table}.delivery_type", 'pickup')
+            ->whereRaw("{$jsonLocationExpr} = ?", [$location->id]);
+    }
+
+    public function index(Request $request)
     {
         $seller = Auth::guard('seller')->user();
         if (!$seller) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
-        $storeSellerId = $this->getStoreSellerId($seller); // ✅ OWNER ID
-        
-        $access = true;
-        if ($seller->parent_id) {
-            $access = in_array($seller->role, [1, 4]);
-        }
+        $storeSellerId = $this->getStoreSellerId($seller);
+        $period = $this->resolvePeriod($request);
+        $selectedLocation = $this->resolveSellerLocation(
+            $storeSellerId,
+            $request->filled('location_id') ? (int) $request->query('location_id') : null
+        );
 
-        if ($access) {
-            // ✅ BARCHA QUERYLARDA $storeSellerId
-            $salesCount = SellerOrder::where('seller_id', $storeSellerId)
-                ->where('status', '3')
-                ->count();
-
-            $salesPrice = SellerOrder::where('seller_id', $storeSellerId)
-                ->where('status', '3')
-                ->sum('amount');
-
-            $sellerBalance = Seller::find($storeSellerId)->balance; // ✅ OWNER BALANCE
-
-            $sellerClients = SellerOrder::where('seller_id', $storeSellerId)
-                ->where('status', '3')
-                ->distinct('client_id')
-                ->count('client_id');
-
-            $kitobchiClients = User::count();
-
-            $topSellers = [];
-            if (!$seller->parent_id || $seller->role == 1) {
-                $topSellers = SellerOrder::select(
-                    'seller_id',
-                    DB::raw('SUM(amount) as total_sales')
-                )
-                    ->where('status', '3')
-                    ->groupBy('seller_id')
-                    ->orderByDesc('total_sales')
-                    ->take(5)
-                    ->get()
-                    ->map(function ($item) {
-                        $sellerInfo = Seller::find($item->seller_id);
-                        return [
-                            'seller_id' => $item->seller_id,
-                            'name' => $sellerInfo->shop_name ?? 'Unknown',
-                            'sales_amount' => (int)$item->total_sales,
-                        ];
-                    });
-            }
-
-            $topProducts = [];
-            if (!$seller->parent_id || in_array($seller->role, [1, 2])) {
-                $topProducts = SellerOrderItem::select(
-                    'product_id',
-                    DB::raw('SUM(quantity) as total_quantity'),
-                    DB::raw('SUM(price * quantity) as total_price')
-                )
-                    ->whereIn('order_id', SellerOrder::where('status', '3')->pluck('id'))
-                    ->groupBy('product_id')
-                    ->orderByDesc('total_quantity')
-                    ->take(5)
-                    ->get()
-                    ->map(function ($product) {
-                        $book = Books::find($product->product_id);
-                        return [
-                            'product_id' => $product->product_id,
-                            'name' => $book->name ?? 'Unknown',
-                            'quantity' => (int)$product->total_quantity,
-                            'total_price' => (int)$product->total_price,
-                        ];
-                    });
-            }
-
+        if (!$this->hasDashboardAccess($seller)) {
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'sales_count' => (int)$salesCount,
-                    'sales_price' => (int)$salesPrice,
-                    'seller_balance' => (int)$sellerBalance,
-                    'seller_clients' => (int)$sellerClients,
-                    'kitobchi_clients' => (int)$kitobchiClients,
-                    'top_sellers' => $topSellers,
-                    'top_products' => $topProducts,
-                ]
-            ], 200);
-        } else {
-            return response()->json([
-                'success' => true,
-                'data' => [
+                    'period' => $period['period'],
                     'sales_count' => 0,
                     'sales_price' => 0,
                     'seller_balance' => 0,
                     'seller_clients' => 0,
                     'kitobchi_clients' => User::count(),
+                    'average_order_value' => 0,
+                    'items_sold' => 0,
+                    'repeat_clients' => 0,
+                    'top_sellers_label' => now()->translatedFormat('F Y'),
                     'top_sellers' => [],
                     'top_products' => [],
-                ]
+                ],
             ], 200);
         }
+
+        $ordersQuery = $this->baseCompletedOrders($storeSellerId, $period['start'], $period['end']);
+        $this->applyBranchFilterToSellerOrders($ordersQuery, $selectedLocation);
+        $salesCount = (clone $ordersQuery)->count();
+        $salesPrice = (int) ((clone $ordersQuery)->sum('amount') ?? 0);
+        $sellerBalance = (int) optional(Seller::find($storeSellerId))->balance;
+        $sellerClients = (clone $ordersQuery)->distinct('client_id')->count('client_id');
+
+        $itemsSold = (int) SellerOrderItem::query()
+            ->join('seller_orders', 'seller_orders.id', '=', 'seller_order_items.order_id')
+            ->where('seller_order_items.seller_id', $storeSellerId)
+            ->where('seller_orders.status', '3')
+            ->whereBetween('seller_orders.created_at', [$period['start'], $period['end']])
+            ->sum('seller_order_items.quantity');
+
+        $repeatClientsQuery = SellerOrder::query()
+            ->where('seller_id', $storeSellerId)
+            ->where('status', '3')
+            ->whereBetween('created_at', [$period['start'], $period['end']])
+            ->select('client_id', DB::raw('COUNT(*) as orders_count'))
+            ->groupBy('client_id');
+        $this->applyBranchFilterToSellerOrders($repeatClientsQuery, $selectedLocation);
+        $repeatClients = (int) $repeatClientsQuery
+            ->having('orders_count', '>', 1)
+            ->get()
+            ->count();
+
+        $monthStart = now()->copy()->startOfMonth();
+        $monthEnd = now()->copy()->endOfDay();
+        $topSellers = SellerOrder::query()
+            ->select('seller_id', DB::raw('SUM(amount) as total_sales'), DB::raw('COUNT(*) as orders_count'))
+            ->where('status', '3')
+            ->whereBetween('created_at', [$monthStart, $monthEnd])
+            ->groupBy('seller_id')
+            ->orderByDesc('total_sales')
+            ->take(10)
+            ->get();
+
+        $sellerIds = $topSellers->pluck('seller_id')->filter()->unique()->values();
+        $sellerMap = Seller::query()
+            ->whereIn('id', $sellerIds)
+            ->get(['id', 'shop_name', 'photo'])
+            ->keyBy('id');
+
+        $topSellersPayload = $topSellers->values()->map(function ($row, $index) use ($sellerMap) {
+            $sellerInfo = $sellerMap->get($row->seller_id);
+
+            return [
+                'seller_id' => (int) $row->seller_id,
+                'name' => $sellerInfo->shop_name ?? 'Unknown',
+                'photo' => $sellerInfo->photo,
+                'sales_amount' => (int) $row->total_sales,
+                'orders_count' => (int) $row->orders_count,
+                'rank' => $index + 1,
+            ];
+        })->all();
+
+        $topProducts = SellerOrderItem::query()
+            ->select(
+                'seller_order_items.product_id',
+                'seller_order_items.type',
+                DB::raw('SUM(seller_order_items.quantity) as total_quantity'),
+                DB::raw('SUM(seller_order_items.price * seller_order_items.quantity) as total_price')
+            )
+            ->join('seller_orders', 'seller_orders.id', '=', 'seller_order_items.order_id')
+            ->where('seller_order_items.seller_id', $storeSellerId)
+            ->where('seller_orders.status', '3')
+            ->whereBetween('seller_orders.created_at', [$period['start'], $period['end']])
+            ->groupBy('seller_order_items.product_id', 'seller_order_items.type');
+        $this->applyBranchFilterToSellerOrders($topProducts, $selectedLocation, 'seller_orders');
+        $topProducts = $topProducts
+            ->orderByDesc('total_quantity')
+            ->take(10)
+            ->get();
+
+        $bookIds = $topProducts->where('type', 'book')->pluck('product_id')->unique()->values();
+        $stationeryIds = $topProducts->where('type', 'stationery')->pluck('product_id')->unique()->values();
+
+        $bookMap = Books::query()
+            ->whereIn('id', $bookIds)
+            ->get(['id', 'name', 'images'])
+            ->keyBy('id');
+        $stationeryMap = Stationery::query()
+            ->whereIn('id', $stationeryIds)
+            ->get(['id', 'name', 'images'])
+            ->keyBy('id');
+
+        $topProductsPayload = $topProducts->values()->map(function ($row, $index) use ($bookMap, $stationeryMap) {
+            $product = $row->type === 'stationery'
+                ? $stationeryMap->get($row->product_id)
+                : $bookMap->get($row->product_id);
+
+            $images = is_array($product?->images) ? $product->images : [];
+
+            return [
+                'product_id' => (int) $row->product_id,
+                'type' => (string) $row->type,
+                'name' => $product->name ?? 'Unknown',
+                'image' => $images[0] ?? null,
+                'quantity' => (int) $row->total_quantity,
+                'total_price' => (int) $row->total_price,
+                'rank' => $index + 1,
+            ];
+        })->all();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'period' => $period['period'],
+                'selected_location_id' => $selectedLocation?->id,
+                'selected_location_address' => $selectedLocation?->fullAddress,
+                'sales_count' => (int) $salesCount,
+                'sales_price' => (int) $salesPrice,
+                'seller_balance' => (int) $sellerBalance,
+                'seller_clients' => (int) $sellerClients,
+                'kitobchi_clients' => (int) User::count(),
+                'average_order_value' => $salesCount > 0 ? (int) round($salesPrice / $salesCount) : 0,
+                'items_sold' => $itemsSold,
+                'repeat_clients' => $repeatClients,
+                'top_sellers_label' => $monthStart->translatedFormat('F Y'),
+                'top_sellers' => $topSellersPayload,
+                'top_products' => $topProductsPayload,
+            ],
+        ], 200);
     }
 
     public function getSalesStats(Request $request)
@@ -139,54 +286,110 @@ class HisobotController extends Controller
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
-        $storeSellerId = $this->getStoreSellerId($seller); // ✅ OWNER ID
-        
-        // ✅ TUZATILDI: Role 1,2,4 ko'radi
-        $access = true;
-        if ($seller->parent_id) {
-            $access = in_array($seller->role, [1, 2, 4]); // Admin, Product Manager, Accountant
+        if (!$this->hasDashboardAccess($seller)) {
+            return response()->json(['success' => true, 'data' => []], 200);
         }
 
-        if ($access) {
-            $year = $request->query('year', date('Y'));
+        $storeSellerId = $this->getStoreSellerId($seller);
+        $period = $this->resolvePeriod($request);
+        $selectedLocation = $this->resolveSellerLocation(
+            $storeSellerId,
+            $request->filled('location_id') ? (int) $request->query('location_id') : null
+        );
+        $data = [];
 
-            $sales = SellerOrder::select(
-                DB::raw("DATE_FORMAT(created_at, '%Y-%m') as month"),
-                DB::raw('SUM(amount) as total_amount')
-            )
+        if ($period['group'] === 'month') {
+            $rows = SellerOrder::query()
+                ->selectRaw("DATE_FORMAT(created_at, '%Y-%m') as bucket_key")
+                ->selectRaw('SUM(amount) as total_amount')
+                ->selectRaw('COUNT(*) as total_orders')
+                ->selectRaw('COUNT(DISTINCT client_id) as total_clients')
+                ->where('seller_id', $storeSellerId)
                 ->where('status', '3')
-                ->where('seller_id', $storeSellerId) // ✅ OWNER ID
-                ->whereYear('created_at', $year)
-                ->groupBy(DB::raw("DATE_FORMAT(created_at, '%Y-%m')"))
-                ->orderBy('month')
-                ->get();
+                ->whereBetween('created_at', [$period['start'], $period['end']])
+                ->groupBy('bucket_key');
+            $this->applyBranchFilterToSellerOrders($rows, $selectedLocation);
+            $rows = $rows->get()
+                ->keyBy('bucket_key');
 
-            $months = [
-                '01' => 'Jan', '02' => 'Feb', '03' => 'Mar', '04' => 'Apr',
-                '05' => 'May', '06' => 'Jun', '07' => 'Jul', '08' => 'Aug',
-                '09' => 'Sep', '10' => 'Oct', '11' => 'Nov', '12' => 'Dec'
-            ];
+            $cursor = $period['start']->copy();
+            while ($cursor <= $period['end']) {
+                $bucketKey = $cursor->format('Y-m');
+                $row = $rows->get($bucketKey);
 
-            $salesData = [];
-            foreach (range(1, 12) as $month) {
-                $monthKey = sprintf('%02d', $month);
-                $monthData = $sales->firstWhere('month', "$year-$monthKey");
-                $salesData[] = [
-                    'time' => "$year-$monthKey-01",
-                    'value' => $monthData ? (int)$monthData->total_amount : 0,
-                    'label' => $months[$monthKey]
+                $data[] = [
+                    'time' => $cursor->copy()->startOfMonth()->toDateString(),
+                    'label' => $cursor->format('M'),
+                    'value' => (int) ($row->total_amount ?? 0),
+                    'orders' => (int) ($row->total_orders ?? 0),
+                    'clients' => (int) ($row->total_clients ?? 0),
                 ];
-            }
 
-            return response()->json([
-                'success' => true,
-                'data' => $salesData
-            ], 200);
+                $cursor->addMonth();
+            }
+        } elseif ($period['group'] === 'week') {
+            $rows = SellerOrder::query()
+                ->selectRaw('YEARWEEK(created_at, 1) as bucket_key')
+                ->selectRaw('SUM(amount) as total_amount')
+                ->selectRaw('COUNT(*) as total_orders')
+                ->selectRaw('COUNT(DISTINCT client_id) as total_clients')
+                ->where('seller_id', $storeSellerId)
+                ->where('status', '3')
+                ->whereBetween('created_at', [$period['start'], $period['end']])
+                ->groupBy('bucket_key');
+            $this->applyBranchFilterToSellerOrders($rows, $selectedLocation);
+            $rows = $rows->get()
+                ->keyBy('bucket_key');
+
+            $cursor = $period['start']->copy()->startOfWeek(Carbon::MONDAY);
+            while ($cursor <= $period['end']) {
+                $bucketKey = (int) $cursor->format('oW');
+                $row = $rows->get($bucketKey);
+
+                $data[] = [
+                    'time' => $cursor->toDateString(),
+                    'label' => $cursor->format('d M'),
+                    'value' => (int) ($row->total_amount ?? 0),
+                    'orders' => (int) ($row->total_orders ?? 0),
+                    'clients' => (int) ($row->total_clients ?? 0),
+                ];
+
+                $cursor->addWeek();
+            }
         } else {
-            return response()->json([
-                'success' => true,
-                'data' => []
-            ], 200);
+            $rows = SellerOrder::query()
+                ->selectRaw('DATE(created_at) as bucket_key')
+                ->selectRaw('SUM(amount) as total_amount')
+                ->selectRaw('COUNT(*) as total_orders')
+                ->selectRaw('COUNT(DISTINCT client_id) as total_clients')
+                ->where('seller_id', $storeSellerId)
+                ->where('status', '3')
+                ->whereBetween('created_at', [$period['start'], $period['end']])
+                ->groupBy('bucket_key');
+            $this->applyBranchFilterToSellerOrders($rows, $selectedLocation);
+            $rows = $rows->get()
+                ->keyBy('bucket_key');
+
+            $cursor = $period['start']->copy();
+            while ($cursor <= $period['end']) {
+                $bucketKey = $cursor->toDateString();
+                $row = $rows->get($bucketKey);
+
+                $data[] = [
+                    'time' => $bucketKey,
+                    'label' => $cursor->format('d M'),
+                    'value' => (int) ($row->total_amount ?? 0),
+                    'orders' => (int) ($row->total_orders ?? 0),
+                    'clients' => (int) ($row->total_clients ?? 0),
+                ];
+
+                $cursor->addDay();
+            }
         }
+
+        return response()->json([
+            'success' => true,
+            'data' => $data,
+        ], 200);
     }
 }
