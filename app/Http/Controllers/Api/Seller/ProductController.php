@@ -267,6 +267,7 @@ public function createStationery(Request $request)
     // 2. Validatsiya
     $validator = Validator::make($request->all(), [
         'name' => 'required|string|max:255',
+        'barcode' => 'nullable|string|max:32',
         'material' => 'nullable|string|max:255',
         'price' => 'required|numeric|min:0',
         'discountPrice' => 'nullable|numeric|min:0',
@@ -303,6 +304,7 @@ public function createStationery(Request $request)
         'seller_id'      => $storeSellerId,
         'category_id'    => $request->category_id,
         'name'           => $request->name,
+        'barcode'        => $this->normalizeBarcode($request->input('barcode')),
         'material'       => $request->material,
         'price'          => $request->price,
         'discount_price' => $request->discountPrice ?? 0,
@@ -376,6 +378,7 @@ public function updateStationery(Request $request)
     $validator = Validator::make($request->all(), [
         'id' => 'required|integer',
         'name' => 'required|string|max:255',
+        'barcode' => 'nullable|string|max:32',
         'material' => 'nullable|string|max:255',
         'price' => 'required|numeric|min:0',
         'discountPrice' => 'nullable|numeric|min:0',
@@ -520,6 +523,7 @@ $variantsToDelete = array_diff($existingVariants, $incomingVariantIds);
     // === ASOSIY MA'LUMOTLARNI YANGILASH ===
     $stationery->update([
         'name' => $request->name,
+        'barcode' => $this->normalizeBarcode($request->input('barcode')),
         'material' => $request->material ?? $stationery->material,
         'price' => $request->price,
         'discount_price' => $request->discountPrice ?? 0,
@@ -1052,20 +1056,44 @@ public function productStatistics(Request $request, $id)
             ], 422);
         }
 
-        $book = Books::query()
+        $books = Books::query()
             ->whereIsbn($canonical)
             ->where('is_approved', 1)
             ->where('is_hidden', 0)
             ->with('tags:id')
             ->orderByDesc('updated_at')
-            ->first();
+            ->get();
 
-        if (!$book) {
+        if ($books->isEmpty()) {
             return response()->json([
                 'success' => false,
                 'message' => "Bu ISBN Kitobchi bazasida topilmadi. Iltimos, ma'lumotlarni qo'lda to'ldiring.",
             ], 404);
         }
+
+        if ($books->count() > 1) {
+            return response()->json([
+                'success'          => true,
+                'multiple_matches' => true,
+                'message'          => "Bu ISBN bo'yicha bir nechta variant topildi. Kerakli kitobni tanlang.",
+                'candidates'       => $books->map(function ($book) use ($canonical) {
+                    return [
+                        'isbn'          => $canonical,
+                        'name'          => $book->name,
+                        'author'        => $book->author,
+                        'pages'         => (int) ($book->pages ?? 0),
+                        'language'      => $this->normalizeLanguageOut($book->lang),
+                        'languageWrite' => $this->normalizeLangTypeOut($book->langType),
+                        'coverType'     => $this->normalizeCoverTypeOut($book->coverType),
+                        'category_id'   => $book->category_id,
+                        'tag_ids'       => $book->tags->pluck('id')->values()->all(),
+                        'year'          => (int) ($book->year ?? 0),
+                    ];
+                })->values(),
+            ]);
+        }
+
+        $book = $books->first();
 
         return response()->json([
             'success' => true,
@@ -1080,6 +1108,55 @@ public function productStatistics(Request $request, $id)
                 'category_id'   => $book->category_id,
                 'tag_ids'       => $book->tags->pluck('id')->values()->all(),
                 'year'          => (int) ($book->year ?? 0),
+            ],
+        ]);
+    }
+
+    public function lookupStationeryByBarcode(Request $request, string $barcode)
+    {
+        $seller = Auth::guard('seller')->user();
+        if (!$seller) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        if (!$this->hasProductAccess($seller)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Access denied.',
+            ], 403);
+        }
+
+        $normalized = $this->normalizeBarcode($barcode);
+        if ($normalized === null) {
+            return response()->json([
+                'success' => false,
+                'message' => "Shtrix-kod formati noto'g'ri.",
+            ], 422);
+        }
+
+        $stationery = Stationery::query()
+            ->where('barcode', $normalized)
+            ->where('is_approved', 1)
+            ->where('is_hidden', 0)
+            ->with('tags:id')
+            ->orderByDesc('updated_at')
+            ->first();
+
+        if (!$stationery) {
+            return response()->json([
+                'success' => false,
+                'message' => "Bu shtrix-kod bazada topilmadi. Mahsulot ma'lumotlarini qo'lda kiriting.",
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'barcode'     => $normalized,
+                'name'        => $stationery->name,
+                'material'    => $stationery->material,
+                'category_id' => $stationery->category_id,
+                'tag_ids'     => $stationery->tags->pluck('id')->values()->all(),
             ],
         ]);
     }
@@ -1122,6 +1199,16 @@ public function productStatistics(Request $request, $id)
         return str_contains($v, 'qat') || str_contains($v, 'hard')
             ? 'hard'
             : 'soft';
+    }
+
+    private function normalizeBarcode(?string $raw): ?string
+    {
+        $clean = preg_replace('/[^0-9]/', '', (string) $raw) ?? '';
+        if ($clean === '') {
+            return null;
+        }
+
+        return strlen($clean) >= 8 && strlen($clean) <= 14 ? $clean : null;
     }
 
     /**

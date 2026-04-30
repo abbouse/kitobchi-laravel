@@ -229,4 +229,40 @@ class SellerLocationController extends Controller
         'data' => $location
     ], 200);
 }
+
+    public function rotateQr(Request $request, $id)
+    {
+        $seller = Auth::guard('seller')->user();
+
+        if (!$seller) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        if (!$this->hasOwnerAccess($seller)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Access denied. Only Owner can manage locations.'
+            ], 403);
+        }
+
+        $location = SellerLocation::where('id', $id)
+            ->where('seller_id', $seller->id)
+            ->where('is_deleted', false)
+            ->first();
+
+        if (!$location) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Location not found.'
+            ], 404);
+        }
+
+        $location->rotateQrToken();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Location QR updated successfully.',
+            'data' => $location->fresh()->load('workdays'),
+        ]);
+    }
 }

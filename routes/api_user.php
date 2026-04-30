@@ -36,6 +36,7 @@ Route::get('blog', [NewsController::class, 'blog']);
 Route::prefix('products')->group(function () {
     Route::get('sellers/list', [ProductsController::class, 'sellersWithLatestProducts']);
     Route::get('sellers/by-qr/{token}', [ProductsController::class, 'sellerByQr']);
+    Route::get('sellers/{sellerId}/by-code/{code}', [ProductsController::class, 'sellerProductByCode']);
     Route::get('sellers/{sellerId}/by-isbn/{isbn}', [ProductsController::class, 'sellerProductByIsbn']);
     Route::get('sellers/profile/{id}', [ProductsController::class, 'seller']);
     Route::get('books-by-category', [ProductsController::class, 'booksByCategory']);

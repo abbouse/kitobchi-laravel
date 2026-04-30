@@ -838,7 +838,7 @@ class PurchaseController extends Controller
     //  POST /api/v1/kitobchi/in-store/buy
     //  Body:
     //   - seller_id (required, integer): scan qilingan do'kon
-    //   - items (required, array): [{ book_id, quantity }]
+    //   - items (required, array): [{ product_id, type, quantity, variant_id? }]
     //   - promocode (nullable, string)
     //
     //  Effekt:
@@ -853,8 +853,10 @@ class PurchaseController extends Controller
         $request->validate([
             'seller_id'        => 'required|integer|exists:sellers,id',
             'items'            => 'required|array|min:1',
-            'items.*.book_id'  => 'required|integer|exists:books,id',
+            'items.*.product_id'  => 'required|integer',
+            'items.*.type'        => 'required|string|in:book,stationery',
             'items.*.quantity' => 'required|integer|min:1',
+            'items.*.variant_id' => 'nullable|integer|exists:stationery_variants,id',
             'promocode'        => 'nullable|string|max:50',
         ]);
 
@@ -875,46 +877,109 @@ class PurchaseController extends Controller
             $productsToUpdate = [];
 
             foreach ($request->input('items') as $row) {
-                $bookId   = (int) ($row['book_id'] ?? 0);
+                $productId = (int) ($row['product_id'] ?? 0);
+                $type = (string) ($row['type'] ?? 'book');
                 $quantity = max(1, (int) ($row['quantity'] ?? 0));
+                $variantId = isset($row['variant_id']) ? (int) $row['variant_id'] : null;
 
-                $book = Books::where('id', $bookId)
+                if ($type === 'book') {
+                    $book = Books::where('id', $productId)
+                        ->where('seller_id', $sellerId)
+                        ->where('is_approved', 1)
+                        ->where('is_hidden', 0)
+                        ->first();
+
+                    if (!$book) {
+                        DB::rollBack();
+                        return $this->err("Bu do'konda mahsulot topilmadi (id={$productId}).", 404);
+                    }
+
+                    $stock = (int) ($book->count ?? 0);
+                    if ($quantity > $stock) {
+                        DB::rollBack();
+                        return $this->err("{$book->name} uchun yetarli zaxira yo'q! Mavjud: {$stock}", 400);
+                    }
+
+                    $price     = $this->effectivePrice($book);
+                    $totalSum += $price * $quantity;
+
+                    $allItems[] = [
+                        'name'       => $book->name,
+                        'item_price' => $price,
+                        'item_id'    => $book->id,
+                        'count_item' => $quantity,
+                        'seller_id'  => $sellerId,
+                        'type'       => 'book',
+                        'variant_id' => null,
+                        'cover'      => $book->images[0] ?? null,
+                        'author'     => $book->author,
+                    ];
+                    $productsToUpdate[] = [
+                        'product'  => $book,
+                        'variant'  => null,
+                        'quantity' => $quantity,
+                        'revenue'  => $price * $quantity,
+                        'user_id'  => $user->id,
+                        'type'     => 'book',
+                    ];
+                    continue;
+                }
+
+                $stationery = \App\Models\Stationery::where('id', $productId)
                     ->where('seller_id', $sellerId)
                     ->where('is_approved', 1)
                     ->where('is_hidden', 0)
+                    ->with('variants')
                     ->first();
 
-                if (!$book) {
+                if (!$stationery) {
                     DB::rollBack();
-                    return $this->err("Bu do'konda mahsulot topilmadi (id={$bookId}).", 404);
+                    return $this->err("Bu do'konda mahsulot topilmadi (id={$productId}).", 404);
                 }
 
-                $stock = (int) ($book->count ?? 0);
+                $variant = null;
+                $stock = (int) ($stationery->stock ?? 0);
+                $cover = $stationery->images[0] ?? null;
+
+                if ($variantId) {
+                    $variant = $stationery->variants->firstWhere('id', $variantId, null);
+                    if (!$variant) {
+                        DB::rollBack();
+                        return $this->err("Kanselyariya varianti topilmadi.", 404);
+                    }
+                    $stock = (int) ($variant->stock ?? 0);
+                    $cover = $variant->image_path ?: $cover;
+                } elseif ($stationery->variants->isNotEmpty()) {
+                    DB::rollBack();
+                    return $this->err("Variantli kanselyariya uchun variant tanlanishi kerak.", 422);
+                }
+
                 if ($quantity > $stock) {
                     DB::rollBack();
-                    return $this->err("{$book->name} uchun yetarli zaxira yo'q! Mavjud: {$stock}", 400);
+                    return $this->err("{$stationery->name} uchun yetarli zaxira yo'q! Mavjud: {$stock}", 400);
                 }
 
-                $price     = $this->effectivePrice($book);
+                $price = $this->effectivePrice($stationery);
                 $totalSum += $price * $quantity;
 
                 $allItems[] = [
-                    'name'       => $book->name,
+                    'name'       => $stationery->name,
                     'item_price' => $price,
-                    'item_id'    => $book->id,
+                    'item_id'    => $stationery->id,
                     'count_item' => $quantity,
                     'seller_id'  => $sellerId,
-                    'type'       => 'book',
-                    'cover'      => $book->images[0] ?? null,
-                    'author'     => $book->author,
+                    'type'       => 'stationery',
+                    'variant_id' => $variant?->id,
+                    'cover'      => $cover,
+                    'author'     => $stationery->material,
                 ];
                 $productsToUpdate[] = [
-                    'product'  => $book,
-                    'variant'  => null,
+                    'product'  => $stationery,
+                    'variant'  => $variant,
                     'quantity' => $quantity,
                     'revenue'  => $price * $quantity,
                     'user_id'  => $user->id,
-                    'type'     => 'book',
+                    'type'     => 'stationery',
                 ];
             }
 
@@ -978,7 +1043,7 @@ class PurchaseController extends Controller
                 'status'        => 0, // pay_process
                 'delivery_type' => 'pickup',
                 'address'       => [[
-                    'fullAddress' => $sellerLocation->address ?? "Do'kon ichida xarid",
+                    'fullAddress' => $sellerLocation->fullAddress ?? "Do'kon ichida xarid",
                 ]],
                 'amount'        => $priceBeforePromo,
             ]);
@@ -988,10 +1053,10 @@ class PurchaseController extends Controller
                     'seller_id'  => $sellerId,
                     'order_id'   => $sellerOrder->id,
                     'product_id' => $itm['item_id'],
-                    'type'       => 'book',
+                    'type'       => $itm['type'],
                     'quantity'   => $itm['count_item'],
                     'price'      => $itm['item_price'],
-                    'variant_id' => null,
+                    'variant_id' => $itm['variant_id'] ?? null,
                 ]);
             }
 

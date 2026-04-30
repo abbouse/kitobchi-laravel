@@ -182,6 +182,7 @@ Route::prefix('a122')->name('admin.')->group(function () {
 
         // Do'kon QR — rotate
         Route::post('/{seller}/qr/rotate', [SellerController::class, 'rotateQr'])->name('qr.rotate');
+        Route::post('/{seller}/locations/{location}/qr/rotate', [SellerController::class, 'rotateLocationQr'])->name('locations.qr.rotate');
 
         // Shartnoma va hujjatlar
         Route::patch('/{seller}/contract/extend',  [SellerController::class, 'extendContract'])->name('contract.extend');

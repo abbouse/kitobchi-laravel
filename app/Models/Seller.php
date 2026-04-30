@@ -42,7 +42,7 @@ class Seller extends Authenticatable
         // ── Manzil ────────────────────────────────────────────────
         'legal_address',
 
-        // ── Do'kon QR (mijoz "Do'kon ichida" rejimi uchun) ───────
+        // ── Legacy seller QR (eski oqim; endi filial QR ishlatiladi) ─
         'qr_token', 'qr_rotated_at',
     ];
 
@@ -203,6 +203,11 @@ class Seller extends Authenticatable
     public function location()
     {
         return $this->hasOne(SellerLocation::class, 'seller_id')->where('is_main', true);
+    }
+
+    public function locations(): HasMany
+    {
+        return $this->hasMany(SellerLocation::class, 'seller_id')->where('is_deleted', false);
     }
 
     public function devices()

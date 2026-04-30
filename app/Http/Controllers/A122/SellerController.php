@@ -7,6 +7,7 @@ use App\Models\Seller;
 use App\Models\SellerBanLog;
 use App\Models\SellerContractHistory;
 use App\Models\SellerDocument;
+use App\Models\SellerLocation;
 use App\Models\SellerOrder;
 use App\Models\SellerStaffLog;
 use App\Models\SellerTransaction;
@@ -108,6 +109,9 @@ class SellerController extends Controller
             'location',
             'documents.uploader',
             'contractHistory.performer',
+        ]);
+        $storeSeller->load([
+            'locations' => fn ($q) => $q->orderByDesc('is_main')->orderBy('id'),
         ]);
         $storeSellerId = $storeSeller->id;
         $sellerIds = Seller::where('id', $storeSellerId)
@@ -385,6 +389,17 @@ class SellerController extends Controller
         $store->rotateQrToken();
 
         return back()->with('success', 'Do\'kon QR tokeni yangilandi. Eski QR ishlamay qoladi — yangi QR\'ni do\'konga yopishtiring.');
+    }
+
+    public function rotateLocationQr(Seller $seller, SellerLocation $location)
+    {
+        $store = $this->resolveStoreSeller($seller);
+
+        abort_unless((int) $location->seller_id === (int) $store->id, 404);
+
+        $location->rotateQrToken();
+
+        return back()->with('success', 'Filial QR tokeni yangilandi. Eski QR ishlamay qoladi.');
     }
 
     public function warn(Request $request, Seller $seller)

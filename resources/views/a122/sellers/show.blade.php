@@ -168,60 +168,87 @@
     </div>
 </div>
 
-{{-- ── Do'kon QR — "Do'kon ichida" rejimi uchun ───────────────────── --}}
-@if(!$seller->parent_id && !empty($seller->qr_token))
-@php
-    $qrUrl    = $seller->qrUrl();
-    $qrImgSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=12&data=' . urlencode($qrUrl);
-@endphp
+{{-- ── Filial QR'lari — "Do'kon ichida" rejimi uchun ───────────────── --}}
+@if(!$seller->parent_id && $storeSeller->locations->isNotEmpty())
 <div class="card p-5 mb-6">
-    <div class="flex items-start gap-5 flex-wrap">
-        <div class="shrink-0 bg-white p-3 rounded-lg border border-slate-200 dark:border-slate-700">
-            <img src="{{ $qrImgSrc }}" alt="Do'kon QR" width="180" height="180" loading="lazy">
-        </div>
-
-        <div class="flex-1 min-w-[260px]">
-            <div class="flex items-center gap-2 mb-2">
+    <div class="flex items-start justify-between gap-4 mb-4 flex-wrap">
+        <div>
+            <div class="flex items-center gap-2 mb-1">
                 <i data-lucide="qr-code" class="w-5 h-5 text-teal-500"></i>
-                <h3 class="text-base font-semibold">Do'kon QR kodi</h3>
+                <h3 class="text-base font-semibold">Filial QR kodlari</h3>
             </div>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">
-                Mijoz do'konga kirib shu QR'ni Kitobchi ilovasi orqali skaner qilsa,
-                "Do'kon ichida" rejimi yoqiladi va faqat shu sotuvchi mahsulotlari ko'rinadi.
-                QR'ni A4 yoki kichikroq formatda chop etib do'konning ko'rinarli joyiga osib qo'ying.
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+                Har bir filial uchun alohida QR ishlatiladi. Mijoz qaysi filialdagi QR'ni skaner qilsa, aynan o'sha filialning "do'kon ichida" rejimi boshlanadi.
+                <span class="font-medium">Asosiy filial</span> belgisi esa faqat kuryerlar borishi kerak bo'lgan default manzilni bildiradi.
             </p>
-
-            <dl class="grid grid-cols-3 gap-2 text-xs mb-3">
-                <dt class="text-gray-500">URL</dt>
-                <dd class="col-span-2 font-mono break-all text-gray-700 dark:text-gray-300">{{ $qrUrl }}</dd>
-
-                <dt class="text-gray-500">Token</dt>
-                <dd class="col-span-2 font-mono text-gray-700 dark:text-gray-300">{{ $seller->qr_token }}</dd>
-
-                @if($seller->qr_rotated_at)
-                <dt class="text-gray-500">Yangilangan</dt>
-                <dd class="col-span-2">{{ $seller->qr_rotated_at->format('Y-m-d H:i') }}</dd>
-                @endif
-            </dl>
-
-            <div class="flex items-center gap-2 flex-wrap">
-                <a href="{{ $qrImgSrc }}" target="_blank" rel="noopener"
-                   class="btn btn-outline-primary btn-sm flex items-center gap-1">
-                    <i data-lucide="external-link" class="w-4 h-4"></i> Katta hajmda ochish
-                </a>
-                <a href="{{ str_replace('size=300x300', 'size=600x600', $qrImgSrc) }}" download="kitobchi-shop-{{ $seller->id }}.png"
-                   class="btn btn-outline-secondary btn-sm flex items-center gap-1">
-                    <i data-lucide="download" class="w-4 h-4"></i> Yuklab olish (600px)
-                </a>
-                <form method="POST" action="{{ route('admin.sellers.qr.rotate', $seller) }}"
-                      onsubmit="return confirm('Eski QR ishlamay qoladi. Yangi QR\'ni do\'konga osib qo\'ying. Davom etamizmi?')">
-                    @csrf
-                    <button type="submit" class="btn btn-outline-warning btn-sm flex items-center gap-1">
-                        <i data-lucide="refresh-cw" class="w-4 h-4"></i> QR'ni yangilash
-                    </button>
-                </form>
-            </div>
         </div>
+    </div>
+
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-5">
+        @foreach($storeSeller->locations as $location)
+            @php
+                $qrUrl = $location->qr_url;
+                $qrImgSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=520x520&margin=22&format=png&ecc=Q&data=' . urlencode($qrUrl);
+            @endphp
+            <div class="rounded-[28px] border border-slate-200 dark:border-slate-700 bg-[radial-gradient(circle_at_top_left,_rgba(20,184,166,0.12),_transparent_42%),linear-gradient(135deg,#ffffff,_#f8fafc)] dark:bg-slate-900 p-5 shadow-sm">
+                <div class="flex items-start gap-4 flex-wrap">
+                    <div class="shrink-0 rounded-[24px] bg-white p-3 border border-slate-200 shadow-sm">
+                        <div class="rounded-2xl overflow-hidden bg-white">
+                            <img src="{{ $qrImgSrc }}" alt="Filial QR" width="170" height="170" loading="lazy">
+                        </div>
+                    </div>
+                    <div class="flex-1 min-w-[250px]">
+                        <div class="flex items-center gap-2 mb-3 flex-wrap">
+                            <span class="badge {{ $location->is_main ? 'badge-warning' : 'badge-secondary' }}">
+                                {{ $location->is_main ? 'Asosiy filial' : 'Filial' }}
+                            </span>
+                            <span class="badge badge-light">ID: {{ $location->id }}</span>
+                            @if($location->is_main)
+                                <span class="badge badge-light">Kuryer default filial</span>
+                            @endif
+                        </div>
+
+                        <p class="text-sm font-semibold text-slate-800 dark:text-slate-100 mb-1 leading-6">
+                            {{ $location->fullAddress }}
+                        </p>
+                        @if($location->description)
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mb-3">{{ $location->description }}</p>
+                        @endif
+
+                        <dl class="grid grid-cols-3 gap-2 text-xs mb-3">
+                            <dt class="text-slate-500">URL</dt>
+                            <dd class="col-span-2 font-mono break-all text-slate-700 dark:text-slate-300">{{ $qrUrl }}</dd>
+
+                            <dt class="text-slate-500">Token</dt>
+                            <dd class="col-span-2 font-mono text-slate-700 dark:text-slate-300">{{ $location->qr_token }}</dd>
+
+                            @if($location->qr_rotated_at)
+                                <dt class="text-slate-500">Yangilangan</dt>
+                                <dd class="col-span-2">{{ $location->qr_rotated_at->format('Y-m-d H:i') }}</dd>
+                            @endif
+                        </dl>
+
+                        <div class="flex items-center gap-2 flex-wrap pt-1">
+                            <a href="{{ $qrImgSrc }}" target="_blank" rel="noopener"
+                               class="btn btn-outline-primary btn-sm flex items-center gap-1">
+                                <i data-lucide="external-link" class="w-4 h-4"></i> Ochish
+                            </a>
+                            <a href="{{ $qrImgSrc }}" download="kitobchi-location-{{ $location->id }}.png"
+                               class="btn btn-outline-secondary btn-sm flex items-center gap-1">
+                                <i data-lucide="download" class="w-4 h-4"></i> Yuklab olish
+                            </a>
+                            <form method="POST" action="{{ route('admin.sellers.locations.qr.rotate', [$storeSeller, $location]) }}"
+                                  onsubmit="return confirm('Eski filial QR ishlamay qoladi. Yangi QR\'ni shu filialga almashtiramizmi?')">
+                                @csrf
+                                <button type="submit" class="btn btn-outline-warning btn-sm flex items-center gap-1">
+                                    <i data-lucide="refresh-cw" class="w-4 h-4"></i> QR'ni yangilash
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endforeach
     </div>
 </div>
 @endif

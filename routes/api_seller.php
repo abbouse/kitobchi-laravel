@@ -43,6 +43,7 @@ Route::middleware('auth:seller')->group(function () {
     Route::post('products/create', [ProductController::class, 'createProduct']);
     Route::post('products/update', [ProductController::class, 'updateProduct']);
     Route::get('products/by-isbn/{isbn}', [ProductController::class, 'lookupByIsbn']);
+    Route::get('products/stationery/by-barcode/{barcode}', [ProductController::class, 'lookupStationeryByBarcode']);
     Route::get('products/categories', [ProductController::class, 'getCategories']);
     Route::post('products/stationery/create', [ProductController::class, 'createStationery']);
     Route::post('products/stationery/update', [ProductController::class, 'updateStationery']);
@@ -104,6 +105,7 @@ Route::middleware('auth:seller')->group(function () {
     Route::post('locations/{id}', [SellerLocationController::class, 'update']);
     Route::get('locations/{id}/delete', [SellerLocationController::class, 'destroy']);
     Route::get('locations/{id}/main', [SellerLocationController::class, 'makeMainLocation']);
+    Route::post('locations/{id}/qr/rotate', [SellerLocationController::class, 'rotateQr']);
 
     Route::prefix('conversations')->group(function () {
         Route::get('/', [ConversationController::class, 'getConversations']);

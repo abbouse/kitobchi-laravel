@@ -7,6 +7,7 @@ use App\Models\Books;
 use App\Models\Stationery;
 use App\Models\BookCategories;
 use App\Models\Seller;
+use App\Models\SellerLocation;
 use App\Models\FavouriteProducts;
 use App\Models\MyCart;
 use Illuminate\Http\Request;
@@ -158,6 +159,27 @@ class ProductsController extends Controller
             'isPremium'       => $this->sellerIsPremium($seller),
             'hasSale'         => $this->sellerHasManyDiscounts($seller->id),
         ];
+    }
+
+    private function formatInStoreIsbnCandidate($book, $user = null): array
+    {
+        return $this->formatProduct($book, $user, 'book');
+    }
+
+    private function normalizeScannedProductCode(string $raw): ?string
+    {
+        $clean = preg_replace('/[^0-9]/', '', trim($raw)) ?? '';
+        if ($clean === '') return null;
+        return strlen($clean) >= 8 && strlen($clean) <= 14 ? $clean : null;
+    }
+
+    private function stationeryHasAvailableStock(Stationery $stationery): bool
+    {
+        if ($stationery->relationLoaded('variants') && $stationery->variants->isNotEmpty()) {
+            return $stationery->variants->contains(fn($variant) => (int) ($variant->stock ?? 0) > 0);
+        }
+
+        return (int) ($stationery->stock ?? 0) > 0;
     }
 
 
@@ -774,11 +796,16 @@ class ProductsController extends Controller
     // =========================================================================
     public function sellerProductByIsbn(Request $request, $sellerId, string $isbn)
     {
-        $canonical = Books::normalizeIsbn($isbn);
-        if ($canonical === null) {
+        return $this->sellerProductByCode($request, $sellerId, $isbn);
+    }
+
+    public function sellerProductByCode(Request $request, $sellerId, string $code)
+    {
+        $normalizedCode = $this->normalizeScannedProductCode($code);
+        if ($normalizedCode === null) {
             return response()->json([
                 'status'  => 'error',
-                'message' => 'ISBN formati noto\'g\'ri.',
+                'message' => 'Shtrix-kod formati noto\'g\'ri.',
             ], 422);
         }
 
@@ -795,36 +822,81 @@ class ProductsController extends Controller
             ], 404);
         }
 
-        // 1. Shu sellerning mahsuloti
-        $book = Books::query()
-            ->whereIsbn($canonical)
+        $booksInSeller = Books::query()
+            ->whereIsbn($normalizedCode)
             ->where('seller_id', $sellerId)
             ->where('is_approved', 1)
             ->where('is_hidden', 0)
-            ->where('count', '>', 0)
             ->with(['category', 'tags', 'seller'])
-            ->first();
+            ->orderByDesc('updated_at')
+            ->get();
 
-        if ($book) {
+        $bookMatches = $booksInSeller->where('count', '>', 0)->values();
+
+        $stationeryInSeller = Stationery::query()
+            ->where('barcode', $normalizedCode)
+            ->where('seller_id', $sellerId)
+            ->where('is_approved', 1)
+            ->where('is_hidden', 0)
+            ->with(['category', 'tags', 'seller', 'variants'])
+            ->orderByDesc('updated_at')
+            ->get();
+
+        $stationeryMatches = $stationeryInSeller
+            ->filter(fn($item) => $this->stationeryHasAvailableStock($item))
+            ->values();
+
+        $matches = collect()
+            ->merge($bookMatches->map(fn($book) => ['type' => 'book', 'model' => $book]))
+            ->merge($stationeryMatches->map(fn($item) => ['type' => 'stationery', 'model' => $item]))
+            ->values();
+
+        if ($matches->count() === 1) {
+            $match = $matches->first();
             return response()->json([
                 'status' => 'success',
-                'data'   => $this->formatProduct($book, Auth::guard('user')->user(), 'book'),
+                'data'   => $this->formatProduct($match['model'], Auth::guard('user')->user(), $match['type']),
             ]);
         }
 
-        // 2. Bazada bor lekin shu sellerda yo'q?
+        if ($matches->count() > 1) {
+            $user = Auth::guard('user')->user();
+
+            return response()->json([
+                'status'           => 'success',
+                'multiple_matches' => true,
+                'message'          => "Bu shtrix-kod bo'yicha bir nechta mahsulot topildi. Kerakli variantni tanlang.",
+                'candidates'       => $matches
+                    ->map(fn($match) => $this->formatProduct($match['model'], $user, $match['type']))
+                    ->values(),
+            ]);
+        }
+
+        if ($booksInSeller->isNotEmpty() || $stationeryInSeller->isNotEmpty()) {
+            return response()->json([
+                'status'  => 'error',
+                'cause'   => 'sold_out',
+                'message' => "Bunday mahsulotdan qolmagan.",
+            ], 404);
+        }
+
         $existsAnywhere = Books::query()
-            ->whereIsbn($canonical)
+            ->whereIsbn($normalizedCode)
             ->where('is_approved', 1)
             ->where('is_hidden', 0)
-            ->exists();
+            ->exists()
+            || Stationery::query()
+                ->where('barcode', $normalizedCode)
+                ->where('is_approved', 1)
+                ->where('is_hidden', 0)
+                ->exists();
 
         return response()->json([
             'status'  => 'error',
             'cause'   => $existsAnywhere ? 'not_in_shop' : 'not_in_database',
             'message' => $existsAnywhere
-                ? "Bu kitob bu do'konda sotilmaydi."
-                : "Bu kitob Kitobchi bazasida yo'q. Sotuvchidan ushbu kitobni qo'shishini so'rang.",
+                ? "Bu mahsulot bu do'konda sotilmaydi."
+                : "Bu mahsulot Kitobchi bazasida yo'q. Sotuvchidan ushbu mahsulotni qo'shishini so'rang.",
         ], 404);
     }
 
@@ -849,24 +921,24 @@ class ProductsController extends Controller
             ], 422);
         }
 
-        $seller = Seller::where('qr_token', $token)
-            ->where('is_hidden', 0)
-            ->where('parent_id', 0)
-            ->where('status', 'approved')
+        $location = SellerLocation::query()
+            ->where('qr_token', $token)
+            ->where('is_deleted', false)
+            ->with(['seller' => function ($query) {
+                $query->where('is_hidden', 0)
+                    ->where('parent_id', 0)
+                    ->where('status', 'approved');
+            }])
             ->first();
 
-        if (!$seller) {
+        if (!$location || !$location->seller) {
             return response()->json([
                 'status'  => 'error',
-                'message' => 'Do\'kon topilmadi yoki QR yangilangan. Iltimos, do\'kondan yangi QR\'ni so\'rang.',
+                'message' => 'Filial topilmadi yoki QR yangilangan. Iltimos, do\'kondan yangi QR\'ni so\'rang.',
             ], 404);
         }
 
-        // Asosiy do'kon manzili (mavjud bo'lsa) — banner uchun.
-        $location = DB::table('seller_locations')
-            ->where('seller_id', $seller->id)
-            ->where('is_main', true)
-            ->first(['id', 'fullAddress', 'lat', 'lon']);
+        $seller = $location->seller;
 
         return response()->json([
             'status' => 'success',
@@ -874,12 +946,14 @@ class ProductsController extends Controller
                 'seller' => array_merge(
                     $this->formatSellerInfo($seller),
                     [
-                        'location' => $location ? [
+                        'location' => [
                             'id'      => $location->id,
                             'address' => $location->fullAddress,
                             'lat'     => $location->lat,
                             'lon'     => $location->lon,
-                        ] : null,
+                            'description' => $location->description,
+                            'is_main' => (bool) $location->is_main,
+                        ],
                     ]
                 ),
                 'in_store_mode' => true,

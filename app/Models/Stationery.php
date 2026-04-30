@@ -13,6 +13,7 @@ class Stationery extends Model
         'seller_id',
         'category_id',
         'name',
+        'barcode',
         'material',
         'price',
         'discount_price',
