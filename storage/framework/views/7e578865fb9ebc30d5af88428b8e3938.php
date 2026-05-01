@@ -33,11 +33,17 @@
 <?php endif; ?>
 
   <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
-    <section class="card p-5 xl:col-span-8">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-black">Buyurtma tarkibi</h3>
-        <span class="badge badge-info"><?php echo e($summary['items_count']); ?> ta mahsulot</span>
+    <section class="a122-section xl:col-span-8">
+      <div class="a122-section-head">
+        <div>
+          <div class="a122-section-head__title">Buyurtma tarkibi</div>
+          <div class="a122-section-head__meta">Buyurtmadagi barcha mahsulotlar, soni va narx bo‘yicha tafsilotlar.</div>
+        </div>
+        <div class="a122-section-head__actions">
+          <span class="badge badge-info"><?php echo e($summary['items_count']); ?> ta mahsulot</span>
+        </div>
       </div>
+      <div class="a122-section-body">
       <div class="table-wrap">
         <table class="tbl">
           <thead><tr><th>Mahsulot</th><th>Tip</th><th>Soni</th><th>Narx</th><th>Jami</th></tr></thead>
@@ -58,11 +64,18 @@
           </tbody>
         </table>
       </div>
+      </div>
     </section>
 
     <section class="xl:col-span-4 space-y-4">
-      <div class="card p-5">
-        <h3 class="text-lg font-black mb-4">Holat boshqaruvi</h3>
+      <div class="a122-section">
+        <div class="a122-section-head">
+          <div>
+            <div class="a122-section-head__title">Holat boshqaruvi</div>
+            <div class="a122-section-head__meta">Buyurtma statusini shu yerdan yangilash mumkin.</div>
+          </div>
+        </div>
+        <div class="a122-section-body">
         <form method="POST" action="<?php echo e(route('admin.orders.status', $order)); ?>" class="space-y-3">
           <?php echo csrf_field(); ?>
           <?php echo method_field('PATCH'); ?>
@@ -75,10 +88,17 @@
           </select>
           <button class="btn-p primary w-full"><i class="bi bi-arrow-repeat"></i> Statusni yangilash</button>
         </form>
+        </div>
       </div>
 
-      <div class="card p-5">
-        <h3 class="text-lg font-black mb-4">Moliyaviy xulosa</h3>
+      <div class="a122-section">
+        <div class="a122-section-head">
+          <div>
+            <div class="a122-section-head__title">Moliyaviy xulosa</div>
+            <div class="a122-section-head__meta">Subtotal, delivery, chegirma va yakuniy summa.</div>
+          </div>
+        </div>
+        <div class="a122-section-body">
         <dl class="space-y-3">
           <div class="flex justify-between gap-3"><dt class="metric-label">Subtotal</dt><dd class="font-semibold"><?php echo e(number_format($summary['subtotal'], 0, '.', ' ')); ?> UZS</dd></div>
           <div class="flex justify-between gap-3"><dt class="metric-label">Yetkazish</dt><dd class="font-semibold"><?php echo e(number_format($summary['delivery'], 0, '.', ' ')); ?> UZS</dd></div>
@@ -86,14 +106,22 @@
           <div class="flex justify-between gap-3"><dt class="metric-label">Cashback</dt><dd class="font-semibold"><?php echo e(number_format($summary['cashback'], 0, '.', ' ')); ?> UZS</dd></div>
           <div class="flex justify-between gap-3 border-t border-[var(--p-border)] pt-3"><dt class="font-bold">Jami</dt><dd class="font-black"><?php echo e(number_format((float)$order->amount, 0, '.', ' ')); ?> UZS</dd></div>
         </dl>
+        </div>
       </div>
 
-      <div class="card p-5">
-        <h3 class="text-lg font-black mb-4">Mijoz ma’lumoti</h3>
+      <div class="a122-section">
+        <div class="a122-section-head">
+          <div>
+            <div class="a122-section-head__title">Mijoz ma’lumoti</div>
+            <div class="a122-section-head__meta">Asosiy aloqa ma’lumotlari va to‘lov holati.</div>
+          </div>
+        </div>
+        <div class="a122-section-body">
         <div class="space-y-2 text-sm">
           <div><span class="metric-label">Ism</span><div class="font-semibold mt-1"><?php echo e($order->user?->full_name ?: 'Mehmon'); ?></div></div>
           <div><span class="metric-label">Telefon</span><div class="font-semibold mt-1"><?php echo e($order->user?->phone_number ?: '—'); ?></div></div>
           <div><span class="metric-label">To‘lov holati</span><div class="font-semibold mt-1"><?php echo e((int)$order->paymentStatus === 2 ? 'To‘langan' : 'Kutilmoqda'); ?></div></div>
+        </div>
         </div>
       </div>
     </section>

@@ -30,12 +30,14 @@
 
 <div class="grid grid-cols-1 gap-3">
 
-  <div class="p-card fade-up">
-    <div class="dash-card-head">
-      <div class="dash-card-title">Post matni (kutilmoqda)</div>
-      <div class="dash-card-sub"><?php echo e($pendingPosts->count()); ?> ta</div>
+  <div class="a122-section fade-up">
+    <div class="a122-section-head">
+      <div>
+        <div class="a122-section-head__title">Post matni (kutilmoqda)</div>
+        <div class="a122-section-head__meta"><?php echo e($pendingPosts->count()); ?> ta post admin bahosini kutmoqda.</div>
+      </div>
     </div>
-    <div class="dash-card-body p-0">
+    <div class="a122-section-body p-0">
       <?php $__empty_1 = true; $__currentLoopData = $pendingPosts; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $row): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
         <div style="padding:16px 20px;border-bottom:1px solid var(--p-border)">
           <div class="flex flex-wrap items-start justify-between gap-3 mb-2">
@@ -87,12 +89,14 @@
     </div>
   </div>
 
-  <div class="p-card fade-up">
-    <div class="dash-card-head">
-      <div class="dash-card-title">Asosiy izohlar (kutilmoqda)</div>
-      <div class="dash-card-sub"><?php echo e($pendingComments->count()); ?> ta</div>
+  <div class="a122-section fade-up">
+    <div class="a122-section-head">
+      <div>
+        <div class="a122-section-head__title">Asosiy izohlar (kutilmoqda)</div>
+        <div class="a122-section-head__meta"><?php echo e($pendingComments->count()); ?> ta izoh admin bahosini kutmoqda.</div>
+      </div>
     </div>
-    <div class="dash-card-body p-0">
+    <div class="a122-section-body p-0">
       <?php $__empty_1 = true; $__currentLoopData = $pendingComments; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $c): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
         <div style="padding:16px 20px;border-bottom:1px solid var(--p-border)">
           <div class="flex flex-wrap items-start justify-between gap-2 mb-2">

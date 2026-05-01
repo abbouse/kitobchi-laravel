@@ -4,16 +4,23 @@
 
 @section('content')
 <div>
-  <div class="flex items-center justify-between gap-3 mb-4 flex-wrap">
+  <x-a122.page-header>
+    <x-slot name="heading">Buyurtmalar</x-slot>
+    <x-slot name="meta">{{ $orders->total() }} ta buyurtma yozuvi topildi.</x-slot>
+  </x-a122.page-header>
+
+  <div class="a122-index-header">
     <div>
-      <h2 class="text-xl font-bold tracking-tight">Buyurtmalar</h2>
-      <p class="text-xs text-gray-500 mt-0.5">{{ $orders->total() }} ta yozuv topildi</p>
+      <div class="a122-index-header__title">Filter va qidiruv</div>
+      <div class="a122-index-header__meta">Buyurtmalarni ID, mijoz yoki status bo‘yicha filtrlash mumkin.</div>
     </div>
-    <form method="GET" class="relative min-w-[220px]">
-      <input type="hidden" name="tab" value="{{ $tab }}">
-      <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-      <input type="text" name="search" value="{{ request('search') }}" placeholder="ID, mijoz, holat..." class="input !pl-9 !py-2 w-full">
-    </form>
+    <div class="a122-index-header__actions">
+      <form method="GET" class="a122-index-search-form">
+        <input type="hidden" name="tab" value="{{ $tab }}">
+        <i data-lucide="search" class="w-4 h-4"></i>
+        <input type="text" name="search" value="{{ request('search') }}" placeholder="ID, mijoz, holat..." class="a122-index-search-input">
+      </form>
+    </div>
   </div>
   <div class="tab-pills fade-up mb-3">
     @foreach([
@@ -68,7 +75,15 @@
     @endforelse
   </div>
 
-  <div class="table-wrap">
+  <div class="a122-section">
+    <div class="a122-section-head">
+      <div>
+        <div class="a122-section-head__title">Buyurtmalar jadvali</div>
+        <div class="a122-section-head__meta">Statusni shu jadvalning o‘zidan boshqarish va buyurtma tafsilotiga tez o‘tish mumkin.</div>
+      </div>
+    </div>
+    <div class="a122-section-body">
+    <div class="table-wrap">
     <div class="overflow-x-auto">
       <table class="tbl" data-index-grid>
         <thead><tr><th>Buyurtma</th><th>Mijoz</th><th>Tovarlar</th><th>Summa</th><th>To'lov</th><th>Holat</th><th>Sana</th><th class="text-right">Amallar</th></tr></thead>
@@ -90,11 +105,11 @@
               };
             @endphp
             <tr>
-              <td>#ORD-{{ $order->id }}</td>
+              <td><span class="font-semibold">#ORD-{{ $order->id }}</span></td>
               <td>{{ trim(($order->user?->name ?? 'Mehmon').' '.($order->user?->lastname ?? '')) }}</td>
               <td>{{ (int) collect($order->items ?? [])->sum('count_item') }}</td>
               <td>{{ number_format((float) $order->amount, 0) }} UZS</td>
-              <td>{{ $paymentLabel }}</td>
+              <td><span class="badge badge-muted">{{ $paymentLabel }}</span></td>
               <td>
                 <form method="POST" action="{{ route('admin.orders.status', $order) }}" class="inline-flex">
                   @csrf
@@ -121,6 +136,8 @@
         </tbody>
       </table>
     </div>
+  </div>
+  </div>
   </div>
 </div>
 @if(isset($orders) && method_exists($orders, 'links'))

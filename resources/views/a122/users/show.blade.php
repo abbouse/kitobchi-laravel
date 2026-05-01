@@ -19,8 +19,8 @@
     </x-slot>
   </x-a122.page-header>
 
-  <section class="card p-0 overflow-hidden">
-    <div class="px-6 py-6 border-b border-[var(--p-border)] bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.16),transparent_34%),radial-gradient(circle_at_top_right,rgba(59,130,246,0.12),transparent_28%),var(--p-surface)]">
+  <section class="a122-section overflow-hidden">
+    <div class="px-6 py-6 border-b border-[var(--p-border)] bg-[var(--p-surface)]">
       <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
         <div class="flex items-center gap-4">
           @if($user->avatar)
@@ -117,11 +117,17 @@
   </section>
 
   <div class="grid grid-cols-1 gap-4 xl:grid-cols-12">
-    <section class="card p-5 xl:col-span-4">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-black">Profil ma’lumotlari</h3>
-        <span class="badge badge-muted">Asosiy</span>
+    <section class="a122-section xl:col-span-4">
+      <div class="a122-section-head">
+        <div>
+          <div class="a122-section-head__title">Profil ma’lumotlari</div>
+          <div class="a122-section-head__meta">Aloqa, premium va asosiy akkaunt atributlari.</div>
+        </div>
+        <div class="a122-section-head__actions">
+          <span class="badge badge-muted">Asosiy</span>
+        </div>
       </div>
+      <div class="a122-section-body">
 
       <div class="data-grid two">
         <div class="data-kv"><dt>Telefon</dt><dd>{{ data_get($user,'phone_number') ?: '—' }}</dd></div>
@@ -152,9 +158,11 @@
           <button class="btn-p danger"><i class="bi bi-trash3"></i> Foydalanuvchini o‘chirish</button>
         </form>
       </div>
+      </div>
     </section>
 
-    <section class="card p-5 xl:col-span-8">
+    <section class="a122-section xl:col-span-8">
+      <div class="a122-section-body">
       <div class="mb-5 rounded-3xl border border-[var(--p-border)] bg-[var(--p-elevated)] p-5">
         <div class="flex items-center justify-between gap-4">
           <div>
@@ -245,11 +253,13 @@
           </tbody>
         </table>
       </div>
+      </div>
     </section>
   </div>
 
   <div class="grid grid-cols-1 gap-4 xl:grid-cols-12">
-    <section class="card p-5 xl:col-span-4">
+    <section class="a122-section xl:col-span-4">
+      <div class="a122-section-body">
       <div class="flex items-center justify-between mb-4">
         <h3 class="text-lg font-black">Kartalar</h3>
         <span class="badge badge-info">{{ $cards->count() }} ta</span>
@@ -270,9 +280,11 @@
           <div class="text-sm text-gray-500">Karta topilmadi.</div>
         @endforelse
       </div>
+      </div>
     </section>
 
-    <section class="card p-5 xl:col-span-4">
+    <section class="a122-section xl:col-span-4">
+      <div class="a122-section-body">
       <div class="flex items-center justify-between mb-4">
         <h3 class="text-lg font-black">Qurilmalar</h3>
         <span class="badge badge-info">{{ $devices->count() }} ta</span>
@@ -295,7 +307,8 @@
       </div>
     </section>
 
-    <section class="card p-5 xl:col-span-4">
+    <section class="a122-section xl:col-span-4">
+      <div class="a122-section-body">
       <div class="flex items-center justify-between mb-4">
         <h3 class="text-lg font-black">Manzillar</h3>
         <span class="badge badge-info">{{ $addresses->count() }} ta</span>
@@ -320,11 +333,13 @@
           <div class="text-sm text-gray-500">Manzillar topilmadi.</div>
         @endforelse
       </div>
+      </div>
     </section>
   </div>
 
   <div class="grid grid-cols-1 gap-4 xl:grid-cols-12">
-    <section class="card p-5 xl:col-span-6">
+    <section class="a122-section xl:col-span-6">
+      <div class="a122-section-body">
       <div class="flex items-center justify-between mb-4">
         <h3 class="text-lg font-black">Followers</h3>
         <span class="badge badge-info">{{ $stats['followers_count'] }} ta</span>
@@ -348,9 +363,11 @@
           <div class="text-sm text-gray-500">Followers topilmadi.</div>
         @endforelse
       </div>
+      </div>
     </section>
 
-    <section class="card p-5 xl:col-span-6">
+    <section class="a122-section xl:col-span-6">
+      <div class="a122-section-body">
       <div class="flex items-center justify-between mb-4">
         <h3 class="text-lg font-black">Following</h3>
         <span class="badge badge-info">{{ $stats['following_count'] }} ta</span>
@@ -374,11 +391,13 @@
           <div class="text-sm text-gray-500">Following topilmadi.</div>
         @endforelse
       </div>
+      </div>
     </section>
   </div>
 
   <div class="grid grid-cols-1 gap-4 xl:grid-cols-12">
-    <section class="card p-5 xl:col-span-7">
+    <section class="a122-section xl:col-span-7">
+      <div class="a122-section-body">
       <div class="flex items-center justify-between mb-4">
         <h3 class="text-lg font-black">Gift sertifikatlar</h3>
         <span class="badge badge-info">{{ $stats['gift_certificates_count'] }} ta</span>
@@ -402,9 +421,11 @@
           </tbody>
         </table>
       </div>
+      </div>
     </section>
 
-    <section class="card p-5 xl:col-span-5">
+    <section class="a122-section xl:col-span-5">
+      <div class="a122-section-body">
       <div class="flex items-center justify-between mb-4">
         <h3 class="text-lg font-black">Mystery Box obunalari</h3>
         <span class="badge badge-info">{{ $mysterySubscriptions->count() }} ta</span>
@@ -445,6 +466,7 @@
         @empty
           <div class="text-sm text-gray-500">Mystery Box obunalari topilmadi.</div>
         @endforelse
+      </div>
       </div>
     </section>
   </div>

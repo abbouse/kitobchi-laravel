@@ -27,22 +27,25 @@
     });
   }
 }" x-init="init()">
-<div class="p-page-header dash-page-header fade-up">
-  <div class="dash-seg-bar" id="dashSegBar" style="flex:1;min-width:0;">
-    <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'main' }" @click="switchTab('main')"><i class="bi bi-grid-1x2"></i><span>Asosiy</span></button>
-    <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'orders' }" @click="switchTab('orders')"><i class="bi bi-bag-check"></i><span>Buyurtmalar</span></button>
-    <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'finance' }" @click="switchTab('finance')"><i class="bi bi-bar-chart-line"></i><span>Moliya</span></button>
-    <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'users' }" @click="switchTab('users')"><i class="bi bi-people"></i><span>Foydalanuvchilar</span></button>
-    <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'catalog' }" @click="switchTab('catalog')"><i class="bi bi-building"></i><span>Biznes</span></button>
-  </div>
-  <div style="flex-shrink:0;">
+<x-a122.page-header class="fade-up">
+  <x-slot name="heading">Dashboard</x-slot>
+  <x-slot name="meta">Asosiy metrikalar, buyurtmalar oqimi va operatsion holat bir joyda.</x-slot>
+  <x-slot name="actions">
     <a href="{{ route('admin.dashboard.live') }}" class="btn-p ghost" target="_blank">
       <i class="bi bi-broadcast-pin"></i> Live monitor
     </a>
     <a href="{{ route('admin.dashboard',['clear_cache'=>1]) }}" class="btn-p ghost">
       <i class="bi bi-arrow-clockwise"></i> Yangilash
     </a>
-  </div>
+  </x-slot>
+</x-a122.page-header>
+
+<div class="dash-seg-bar mb-4 fade-up" id="dashSegBar">
+  <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'main' }" @click="switchTab('main')"><i class="bi bi-grid-1x2"></i><span>Asosiy</span></button>
+  <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'orders' }" @click="switchTab('orders')"><i class="bi bi-bag-check"></i><span>Buyurtmalar</span></button>
+  <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'finance' }" @click="switchTab('finance')"><i class="bi bi-bar-chart-line"></i><span>Moliya</span></button>
+  <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'users' }" @click="switchTab('users')"><i class="bi bi-people"></i><span>Foydalanuvchilar</span></button>
+  <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'catalog' }" @click="switchTab('catalog')"><i class="bi bi-building"></i><span>Biznes</span></button>
 </div>
 
 @php
@@ -65,7 +68,9 @@
 @endphp
 
 {{-- ── HERO STRIP ──────────────────────────────────────────────────────────── --}}
-<div class="dash-hero-strip fade-up mb-4">
+<div class="a122-section fade-up mb-4">
+<div class="a122-section-body p-0">
+<div class="dash-hero-strip">
   <div class="dash-hero-metric">
     <div class="dash-hero-label">GMV (brutto)</div>
     <div class="dash-hero-val">{{ number_format($gmvTotal/1_000_000,1) }}<span class="dash-hero-unit">M</span></div>
@@ -87,10 +92,19 @@
     <div class="dash-hero-sub">Seller + Kuryer arizalar</div>
   </div>
 </div>
+</div>
+</div>
 
 {{-- ── ALERTS ───────────────────────────────────────────────────────────────── --}}
 @if(!empty($alerts))
-<div class="fade-up mb-4">
+<div class="a122-section fade-up mb-4">
+  <div class="a122-section-head">
+    <div>
+      <div class="a122-section-head__title">Diqqat talab qiladigan holatlar</div>
+      <div class="a122-section-head__meta">Moderatsiya, to‘lov va navbatlar bo‘yicha tezkor signal bloklari.</div>
+    </div>
+  </div>
+  <div class="a122-section-body">
   @foreach($alerts as [$color,$icon,$title,$desc,$url])
   <div class="alert-item {{ $color }}">
     <i class="bi {{ $icon }} alert-item__icon"></i>
@@ -99,11 +113,20 @@
   </div>
   @endforeach
 </div>
+</div>
 @endif
 
 {{-- ── QUICK LINKS ──────────────────────────────────────────────────────────── --}}
 @if(count($dashQuick))
-<div class="dash-quick-grid mb-5 fade-up">
+<div class="a122-section mb-5 fade-up">
+  <div class="a122-section-head">
+    <div>
+      <div class="a122-section-head__title">Tezkor bo‘limlar</div>
+      <div class="a122-section-head__meta">Eng ko‘p ishlatiladigan boshqaruv sahifalariga bir bosishda o‘tish.</div>
+    </div>
+  </div>
+  <div class="a122-section-body">
+<div class="dash-quick-grid">
   @foreach($dashQuick as $q)
     <a href="{{ $q[2] }}" class="dash-quick-card">
       <div class="dq-ico" style="background:{{ $q[4] }};color:{{ $q[5] }}"><i class="bi {{ $q[1] }}"></i></div>
@@ -111,6 +134,8 @@
       <span class="dq-hint">{{ $q[3] }}</span>
     </a>
   @endforeach
+</div>
+</div>
 </div>
 @endif
 

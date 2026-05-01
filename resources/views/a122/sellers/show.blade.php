@@ -3,45 +3,34 @@
 @section('page-title', 'Sotuvchi profili')
 
 @section('content')
-<div class="mb-4 flex items-center justify-between flex-wrap gap-2">
-    <a href="{{ route('admin.sellers.index') }}" class="btn btn-secondary flex items-center gap-2">
-        <i data-lucide="arrow-left" class="w-4 h-4"></i> Orqaga
-    </a>
-    <div class="flex items-center gap-2 flex-wrap">
+<x-a122.page-header back-href="{{ route('admin.sellers.index') }}">
+    <x-slot name="heading">{{ $seller->shop_name }}</x-slot>
+    <x-slot name="meta">{{ trim($seller->firstname . ' ' . $seller->lastname) ?: 'Sotuvchi profili' }} · {{ $seller->region ?: 'Hudud ko‘rsatilmagan' }}</x-slot>
+    <x-slot name="actions">
         @if($seller->status === 'blocked')
             <form method="POST" action="{{ route('admin.sellers.unblock', $seller) }}" onsubmit="return confirm('Sotuvchini blokdan chiqarmoqchimisiz?')">
                 @csrf
                 @method('PATCH')
-                <button type="submit" class="btn btn-success flex items-center gap-2">
+                <button type="submit" class="btn-p success flex items-center gap-2">
                     <i data-lucide="unlock" class="w-4 h-4"></i> Blokdan chiqarish
                 </button>
             </form>
         @endif
         <form method="POST" action="{{ route('admin.sellers.reset-password', $seller) }}" onsubmit="return confirm('Yangi parol sotuvchining telefon raqamiga SMS orqali yuborilsinmi?')">
             @csrf
-            <button type="submit" class="btn btn-warning flex items-center gap-2">
+            <button type="submit" class="btn-p ghost flex items-center gap-2">
                 <i data-lucide="key-round" class="w-4 h-4"></i> Parolni SMS bilan yangilash
             </button>
         </form>
-        <a href="{{ route('admin.sellers.edit', $seller) }}" class="btn btn-primary flex items-center gap-2">
+        <a href="{{ route('admin.sellers.edit', $seller) }}" class="btn-p primary flex items-center gap-2">
             <i data-lucide="pencil" class="w-4 h-4"></i> Tahrirlash
         </a>
-    </div>
-</div>
-
-@if(session('success'))
-    <div class="mb-4 rounded-lg bg-green-100 text-green-800 dark:bg-green-500/10 dark:text-green-400 px-4 py-3 text-sm font-medium">
-        {{ session('success') }}
-    </div>
-@endif
-@if(session('error'))
-    <div class="mb-4 rounded-lg bg-red-100 text-red-800 dark:bg-red-500/10 dark:text-red-400 px-4 py-3 text-sm font-medium">
-        {{ session('error') }}
-    </div>
-@endif
+    </x-slot>
+</x-a122.page-header>
 
 {{-- Top Info Card --}}
-<div class="card p-5 mb-6">
+<div class="a122-section mb-6">
+    <div class="a122-section-body">
     <div class="flex flex-col sm:flex-row sm:items-center gap-4">
         {{-- Avatar --}}
         <div class="shrink-0">
@@ -150,40 +139,43 @@
                 <form method="POST" action="{{ route('admin.sellers.approve', $seller) }}">
                     @csrf
                     @method('PATCH')
-                    <button type="submit" class="btn btn-primary flex items-center gap-2">
-                        <i data-lucide="check-circle" class="w-4 h-4"></i> Tasdiqlash
-                    </button>
-                </form>
+                <button type="submit" class="btn-p primary flex items-center gap-2">
+                    <i data-lucide="check-circle" class="w-4 h-4"></i> Tasdiqlash
+                </button>
+            </form>
             @endif
             @if($seller->status !== 'rejected')
                 <form method="POST" action="{{ route('admin.sellers.reject', $seller) }}" onsubmit="return confirm('Sotuvchini rad etishga ishonchingiz komilmi?')">
                     @csrf
                     @method('PATCH')
-                    <button type="submit" class="btn btn-danger flex items-center gap-2">
-                        <i data-lucide="x-circle" class="w-4 h-4"></i> Rad etish
-                    </button>
-                </form>
-            @endif
-        </div>
+                <button type="submit" class="btn-p danger flex items-center gap-2">
+                    <i data-lucide="x-circle" class="w-4 h-4"></i> Rad etish
+                </button>
+            </form>
+        @endif
     </div>
+</div>
+</div>
+</div>
 </div>
 
 {{-- ── Filial QR'lari — "Do'kon ichida" rejimi uchun ───────────────── --}}
 @if(!$seller->parent_id && $storeSeller->locations->isNotEmpty())
-<div class="card p-5 mb-6">
-    <div class="flex items-start justify-between gap-4 mb-4 flex-wrap">
+<div class="a122-section mb-6">
+    <div class="a122-section-head">
         <div>
             <div class="flex items-center gap-2 mb-1">
                 <i data-lucide="qr-code" class="w-5 h-5 text-teal-500"></i>
-                <h3 class="text-base font-semibold">Filial QR kodlari</h3>
+                <div class="a122-section-head__title">Filial QR kodlari</div>
             </div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
+            <div class="a122-section-head__meta max-w-3xl">
                 Har bir filial uchun alohida QR ishlatiladi. Mijoz qaysi filialdagi QR'ni skaner qilsa, aynan o'sha filialning "do'kon ichida" rejimi boshlanadi.
                 <span class="font-medium">Asosiy filial</span> belgisi esa faqat kuryerlar borishi kerak bo'lgan default manzilni bildiradi.
-            </p>
+            </div>
         </div>
     </div>
 
+    <div class="a122-section-body">
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-5">
         @foreach($storeSeller->locations as $location)
             @php
@@ -230,17 +222,17 @@
 
                         <div class="flex items-center gap-2 flex-wrap pt-1">
                             <a href="{{ $qrImgSrc }}" target="_blank" rel="noopener"
-                               class="btn btn-outline-primary btn-sm flex items-center gap-1">
+                               class="btn-p ghost sm flex items-center gap-1">
                                 <i data-lucide="external-link" class="w-4 h-4"></i> Ochish
                             </a>
                             <a href="{{ $qrImgSrc }}" download="kitobchi-location-{{ $location->id }}.png"
-                               class="btn btn-outline-secondary btn-sm flex items-center gap-1">
+                               class="btn-p ghost sm flex items-center gap-1">
                                 <i data-lucide="download" class="w-4 h-4"></i> Yuklab olish
                             </a>
                             <form method="POST" action="{{ route('admin.sellers.locations.qr.rotate', [$storeSeller, $location]) }}"
                                   onsubmit="return confirm('Eski filial QR ishlamay qoladi. Yangi QR\'ni shu filialga almashtiramizmi?')">
                                 @csrf
-                                <button type="submit" class="btn btn-outline-warning btn-sm flex items-center gap-1">
+                                <button type="submit" class="btn-p sm flex items-center gap-1">
                                     <i data-lucide="refresh-cw" class="w-4 h-4"></i> QR'ni yangilash
                                 </button>
                             </form>
@@ -250,20 +242,22 @@
             </div>
         @endforeach
     </div>
+    </div>
 </div>
 @endif
 
 <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
-    <div class="card p-5 xl:col-span-2">
-        <div class="flex items-center justify-between gap-3 mb-4 flex-wrap">
+    <div class="a122-section xl:col-span-2">
+        <div class="a122-section-head">
             <div>
-                <h3 class="font-bold text-base">Ogohlantirish yuborish</h3>
-                <p class="text-sm text-gray-500 mt-1">3 ta faol ogohlantirishdan keyin sotuvchi avtomatik bloklanadi.</p>
+                <div class="a122-section-head__title">Ogohlantirish yuborish</div>
+                <div class="a122-section-head__meta">3 ta faol ogohlantirishdan keyin sotuvchi avtomatik bloklanadi.</div>
             </div>
             @if($isBlocked)
                 <span class="badge badge-danger">Seller hozir bloklangan</span>
             @endif
         </div>
+        <div class="a122-section-body">
         <form method="POST" action="{{ route('admin.sellers.warn', $seller) }}" class="grid grid-cols-1 gap-3">
             @csrf
             <div>
@@ -275,15 +269,22 @@
                 <textarea name="message" rows="4" class="input" placeholder="Sellerga ko‘rinadigan ogohlantirish matni">{{ old('message') }}</textarea>
             </div>
             <div class="flex items-center justify-end">
-                <button type="submit" class="btn btn-warning flex items-center gap-2">
+                <button type="submit" class="btn-p flex items-center gap-2">
                     <i data-lucide="triangle-alert" class="w-4 h-4"></i> Ogohlantirish yuborish
                 </button>
             </div>
         </form>
+        </div>
     </div>
 
-    <div class="card p-5">
-        <h3 class="font-bold text-base mb-4">Bloklash holati</h3>
+    <div class="a122-section">
+        <div class="a122-section-head">
+            <div>
+                <div class="a122-section-head__title">Bloklash holati</div>
+                <div class="a122-section-head__meta">Ogohlantirishlar limiti va joriy blok holati.</div>
+            </div>
+        </div>
+        <div class="a122-section-body">
         <div class="space-y-3 text-sm">
             <div class="flex items-center justify-between gap-3">
                 <span class="text-gray-500">Do‘kon statusi</span>
@@ -295,82 +296,84 @@
                 <span class="text-gray-500">Faol ogohlantirishlar</span>
                 <span class="font-semibold">{{ $warningCount }}/3</span>
             </div>
-            <div class="rounded-2xl bg-gray-50 dark:bg-white/5 p-4 text-xs text-gray-500">
+            <div class="a122-soft-note">
                 Blokdan chiqarilganda ogohlantirish hisobi qayta boshlanadi. Eski ogohlantirishlar audit uchun tarixda saqlanadi.
             </div>
+        </div>
         </div>
     </div>
 </div>
 
 {{-- Stats Cards --}}
-<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-    <div class="card p-4 flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-500/10 flex items-center justify-center shrink-0">
+<div class="a122-stat-grid mb-6">
+    <div class="a122-stat-tile">
+        <div class="a122-stat-tile__icon bg-blue-100 dark:bg-blue-500/10 text-blue-500">
             <i data-lucide="shopping-bag" class="w-5 h-5 text-blue-500"></i>
         </div>
         <div class="min-w-0">
-            <p class="text-[10px] text-gray-500 uppercase tracking-wide">Jami buyurtma</p>
-            <p class="text-xl font-bold leading-tight">{{ number_format($orderCount, 0, '.', ' ') }}</p>
+            <p class="a122-stat-tile__label">Jami buyurtma</p>
+            <p class="a122-stat-tile__value">{{ number_format($orderCount, 0, '.', ' ') }}</p>
         </div>
     </div>
 
-    <div class="card p-4 flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-500/10 flex items-center justify-center shrink-0">
+    <div class="a122-stat-tile">
+        <div class="a122-stat-tile__icon bg-emerald-100 dark:bg-emerald-500/10 text-emerald-500">
             <i data-lucide="circle-check" class="w-5 h-5 text-emerald-500"></i>
         </div>
         <div class="min-w-0">
-            <p class="text-[10px] text-gray-500 uppercase tracking-wide">Muvaffaqiyatli</p>
-            <p class="text-xl font-bold leading-tight">{{ number_format($seller->successful_orders ?? 0, 0, '.', ' ') }}</p>
+            <p class="a122-stat-tile__label">Muvaffaqiyatli</p>
+            <p class="a122-stat-tile__value">{{ number_format($seller->successful_orders ?? 0, 0, '.', ' ') }}</p>
         </div>
     </div>
 
-    <div class="card p-4 flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-500/10 flex items-center justify-center shrink-0">
+    <div class="a122-stat-tile">
+        <div class="a122-stat-tile__icon bg-green-100 dark:bg-green-500/10 text-green-500">
             <i data-lucide="banknote" class="w-5 h-5 text-green-500"></i>
         </div>
         <div class="min-w-0">
-            <p class="text-[10px] text-gray-500 uppercase tracking-wide">Balans</p>
-            <p class="text-xl font-bold leading-tight">{{ number_format($seller->balance ?? 0, 0, '.', ' ') }}</p>
-            <p class="text-[10px] text-gray-400">UZS</p>
+            <p class="a122-stat-tile__label">Balans</p>
+            <p class="a122-stat-tile__value">{{ number_format($seller->balance ?? 0, 0, '.', ' ') }}</p>
+            <p class="a122-stat-tile__meta">UZS</p>
         </div>
     </div>
 
-    <div class="card p-4 flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-yellow-100 dark:bg-yellow-500/10 flex items-center justify-center shrink-0">
+    <div class="a122-stat-tile">
+        <div class="a122-stat-tile__icon bg-yellow-100 dark:bg-yellow-500/10 text-yellow-500">
             <i data-lucide="star" class="w-5 h-5 text-yellow-500"></i>
         </div>
         <div class="min-w-0">
-            <p class="text-[10px] text-gray-500 uppercase tracking-wide">Reyting</p>
-            <p class="text-xl font-bold leading-tight">{{ number_format($seller->rating ?? 0, 2) }}</p>
-            <p class="text-[10px] text-gray-400">{{ $seller->total_reviews ?? 0 }} sharh</p>
+            <p class="a122-stat-tile__label">Reyting</p>
+            <p class="a122-stat-tile__value">{{ number_format($seller->rating ?? 0, 2) }}</p>
+            <p class="a122-stat-tile__meta">{{ $seller->total_reviews ?? 0 }} sharh</p>
         </div>
     </div>
 
-    <div class="card p-4 flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-500/10 flex items-center justify-center shrink-0">
+    <div class="a122-stat-tile">
+        <div class="a122-stat-tile__icon bg-indigo-100 dark:bg-indigo-500/10 text-indigo-500">
             <i data-lucide="timer" class="w-5 h-5 text-indigo-500"></i>
         </div>
         <div class="min-w-0">
-            <p class="text-[10px] text-gray-500 uppercase tracking-wide">Javob vaqti</p>
-            <p class="text-xl font-bold leading-tight">{{ number_format($seller->response_time_hours ?? 0, 1) }}</p>
-            <p class="text-[10px] text-gray-400">soat</p>
+            <p class="a122-stat-tile__label">Javob vaqti</p>
+            <p class="a122-stat-tile__value">{{ number_format($seller->response_time_hours ?? 0, 1) }}</p>
+            <p class="a122-stat-tile__meta">soat</p>
         </div>
     </div>
 
-    <div class="card p-4 flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-500/10 flex items-center justify-center shrink-0">
+    <div class="a122-stat-tile">
+        <div class="a122-stat-tile__icon bg-purple-100 dark:bg-purple-500/10 text-purple-500">
             <i data-lucide="book-open" class="w-5 h-5 text-purple-500"></i>
         </div>
         <div class="min-w-0">
-            <p class="text-[10px] text-gray-500 uppercase tracking-wide">Kitoblar</p>
-            <p class="text-xl font-bold leading-tight">{{ $seller->books_count ?? 0 }}</p>
+            <p class="a122-stat-tile__label">Kitoblar</p>
+            <p class="a122-stat-tile__value">{{ $seller->books_count ?? 0 }}</p>
         </div>
     </div>
 </div>
 
 {{-- Daromad + premium obuna info bir qatorda --}}
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-    <div class="card p-5 flex items-center gap-4">
+    <div class="a122-section">
+        <div class="a122-section-body flex items-center gap-4">
         <div class="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-500/10 flex items-center justify-center">
             <i data-lucide="trending-up" class="w-6 h-6 text-green-500"></i>
         </div>
@@ -378,8 +381,10 @@
             <p class="text-xs text-gray-500">Jami daromad (tasdiqlangan yechib olishlar)</p>
             <p class="text-2xl font-bold">{{ number_format($totalRevenue, 0, '.', ' ') }} <span class="text-sm text-gray-400 font-normal">UZS</span></p>
         </div>
+        </div>
     </div>
-    <div class="card p-5 flex items-center gap-4">
+    <div class="a122-section">
+        <div class="a122-section-body flex items-center gap-4">
         <div class="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-500/10 flex items-center justify-center">
             <i data-lucide="crown" class="w-6 h-6 text-amber-500"></i>
         </div>
@@ -396,24 +401,31 @@
                 <p class="text-xs text-gray-400">Tahrirlash sahifasidan berish mumkin</p>
             @endif
         </div>
+        </div>
     </div>
 </div>
 
 {{-- ══ SHARTNOMA + REKVIZITLAR ════════════════════════════════════════ --}}
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
     {{-- Shartnoma kartochkasi --}}
-    <div class="card p-5">
-        <div class="flex items-center justify-between mb-4">
-            <h3 class="font-bold text-base flex items-center gap-2">
+    <div class="a122-section">
+        <div class="a122-section-head">
+            <div>
+            <div class="a122-section-head__title flex items-center gap-2">
                 <i data-lucide="file-signature" class="w-5 h-5 text-blue-500"></i>
                 Shartnoma
-            </h3>
-            <a href="{{ route('admin.sellers.edit', $seller) }}#contract" class="text-xs text-blue-500 hover:underline">Tahrirlash</a>
+            </div>
+            <div class="a122-section-head__meta">Shartnoma holati, muddati va uzaytirish nazorati.</div>
+            </div>
+            <div class="a122-section-head__actions">
+                <a href="{{ route('admin.sellers.edit', $seller) }}#contract" class="btn-p ghost sm">Tahrirlash</a>
+            </div>
         </div>
+        <div class="a122-section-body">
         @if(empty($seller->contract_number) && empty($seller->contract_expires_at) && !$seller->contract_signed)
             <p class="text-sm text-gray-400 text-center py-4">Shartnoma ma'lumotlari kiritilmagan.</p>
         @else
-            <dl class="grid grid-cols-3 gap-y-2 gap-x-3 text-sm">
+            <dl class="a122-kv">
                 {{-- Imzo holati — eng yuqorida, sana bilmagan holda ham ko'rinadi --}}
                 <dt class="col-span-1 text-gray-500">Imzo holati</dt>
                 <dd class="col-span-2">
@@ -460,30 +472,37 @@
                         <option value="12" selected>+12 oy</option>
                         <option value="24">+24 oy</option>
                     </select>
-                    <button type="submit" class="btn btn-secondary text-xs flex items-center gap-1 whitespace-nowrap">
+                    <button type="submit" class="btn-p ghost sm text-xs flex items-center gap-1 whitespace-nowrap">
                         <i data-lucide="calendar-plus" class="w-3.5 h-3.5"></i> Uzaytirish
                     </button>
                 </form>
             @endif
         @endif
+        </div>
     </div>
 
     {{-- Rekvizitlar kartochkasi (maskalangan) --}}
-    <div class="card p-5">
-        <div class="flex items-center justify-between mb-4">
-            <h3 class="font-bold text-base flex items-center gap-2">
+    <div class="a122-section">
+        <div class="a122-section-head">
+            <div>
+            <div class="a122-section-head__title flex items-center gap-2">
                 <i data-lucide="landmark" class="w-5 h-5 text-emerald-500"></i>
                 Rekvizitlar
-            </h3>
-            <a href="{{ route('admin.sellers.edit', $seller) }}#legal" class="text-xs text-blue-500 hover:underline">Tahrirlash</a>
+            </div>
+            <div class="a122-section-head__meta">Yuridik va to‘lov rekvizitlari, bank va karta ma’lumotlari.</div>
+            </div>
+            <div class="a122-section-head__actions">
+                <a href="{{ route('admin.sellers.edit', $seller) }}#legal" class="btn-p ghost sm">Tahrirlash</a>
+            </div>
         </div>
+        <div class="a122-section-body">
         @php
             $hasAny = $seller->legal_type || $seller->inn || $seller->bank_account || $seller->payment_card;
         @endphp
         @if(!$hasAny)
             <p class="text-sm text-gray-400 text-center py-4">Rekvizitlar kiritilmagan.</p>
         @else
-            <dl class="grid grid-cols-3 gap-y-2 gap-x-3 text-sm">
+            <dl class="a122-kv">
                 @if($seller->legal_type)
                     <dt class="col-span-1 text-gray-500">Turi</dt>
                     <dd class="col-span-2">
@@ -530,20 +549,27 @@
                 @endif
             </dl>
         @endif
+        </div>
     </div>
 </div>
 
 {{-- ══ HUJJATLAR + SHARTNOMA TARIXI ═══════════════════════════════════ --}}
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
     {{-- Hujjatlar --}}
-    <div class="card p-5">
-        <div class="flex items-center justify-between mb-4">
-            <h3 class="font-bold text-base flex items-center gap-2">
+    <div class="a122-section">
+        <div class="a122-section-head">
+            <div>
+            <div class="a122-section-head__title flex items-center gap-2">
                 <i data-lucide="folder" class="w-5 h-5 text-indigo-500"></i>
                 Hujjatlar ({{ $seller->documents->count() }})
-            </h3>
-            <a href="{{ route('admin.sellers.edit', $seller) }}#documents" class="text-xs text-blue-500 hover:underline">Yuklash / boshqarish</a>
+            </div>
+            <div class="a122-section-head__meta">Yuklangan fayllar va sotuvchining tekshiruv hujjatlari.</div>
+            </div>
+            <div class="a122-section-head__actions">
+                <a href="{{ route('admin.sellers.edit', $seller) }}#documents" class="btn-p ghost sm">Yuklash / boshqarish</a>
+            </div>
         </div>
+        <div class="a122-section-body">
         @if($seller->documents->isEmpty())
             <p class="text-sm text-gray-400 text-center py-4">Hujjatlar yuklanmagan.</p>
         @else
@@ -565,14 +591,21 @@
                 <p class="text-xs text-gray-400 mt-2 text-center">Yana {{ $seller->documents->count() - 6 }} ta hujjat...</p>
             @endif
         @endif
+        </div>
     </div>
 
     {{-- Shartnoma tarixi --}}
-    <div class="card p-5">
-        <h3 class="font-bold text-base flex items-center gap-2 mb-4">
+    <div class="a122-section">
+        <div class="a122-section-head">
+            <div>
+        <div class="a122-section-head__title flex items-center gap-2">
             <i data-lucide="history" class="w-5 h-5 text-amber-500"></i>
             Shartnoma tarixi
-        </h3>
+        </div>
+        <div class="a122-section-head__meta">Uzaytirish, to‘xtatish va boshqa harakatlar auditi.</div>
+            </div>
+        </div>
+        <div class="a122-section-body">
         @if($seller->contractHistory->isEmpty())
             <p class="text-sm text-gray-400 text-center py-4">Tarix yo'q.</p>
         @else
@@ -606,13 +639,20 @@
                 @endforeach
             </ol>
         @endif
+        </div>
     </div>
 </div>
 
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
     {{-- Recent Orders --}}
-    <div class="card p-5">
-        <h3 class="font-bold text-base mb-4">So'nggi buyurtmalar</h3>
+    <div class="a122-section">
+        <div class="a122-section-head">
+            <div>
+                <div class="a122-section-head__title">So'nggi buyurtmalar</div>
+                <div class="a122-section-head__meta">Seller bo‘yicha eng oxirgi savdo yozuvlari.</div>
+            </div>
+        </div>
+        <div class="a122-section-body">
         <div class="table-wrap">
             <div class="overflow-x-auto">
                 <table class="tbl">
@@ -641,11 +681,18 @@
                 </table>
             </div>
         </div>
+        </div>
     </div>
 
     {{-- Recent Transactions --}}
-    <div class="card p-5">
-        <h3 class="font-bold text-base mb-4">So'nggi tranzaksiyalar</h3>
+    <div class="a122-section">
+        <div class="a122-section-head">
+            <div>
+                <div class="a122-section-head__title">So'nggi tranzaksiyalar</div>
+                <div class="a122-section-head__meta">To‘lov va balansga ta’sir qilgan oxirgi moliyaviy yozuvlar.</div>
+            </div>
+        </div>
+        <div class="a122-section-body">
         <div class="table-wrap">
             <div class="overflow-x-auto">
                 <table class="tbl">
@@ -686,11 +733,18 @@
                 </table>
             </div>
         </div>
+        </div>
     </div>
 </div>
 
-<div class="card p-5 mt-6">
-    <h3 class="font-bold text-base mb-4">Seller loglari</h3>
+<div class="a122-section mt-6">
+    <div class="a122-section-head">
+        <div>
+            <div class="a122-section-head__title">Seller loglari</div>
+            <div class="a122-section-head__meta">Ichki xodimlar tomonidan yozilgan barcha operatsion izohlar.</div>
+        </div>
+    </div>
+    <div class="a122-section-body">
     <div class="table-wrap">
         <div class="overflow-x-auto">
             <table class="tbl">
@@ -717,10 +771,17 @@
             </table>
         </div>
     </div>
+    </div>
 </div>
 
-<div class="card p-5 mt-6">
-    <h3 class="font-bold text-base mb-4">Ogohlantirish va unblock tarixi</h3>
+<div class="a122-section mt-6">
+    <div class="a122-section-head">
+        <div>
+            <div class="a122-section-head__title">Ogohlantirish va unblock tarixi</div>
+            <div class="a122-section-head__meta">Sellerga yuborilgan warninglar va blokdan chiqarish harakatlari.</div>
+        </div>
+    </div>
+    <div class="a122-section-body">
     <div class="table-wrap">
         <div class="overflow-x-auto">
             <table class="tbl">
@@ -754,6 +815,7 @@
                 </tbody>
             </table>
         </div>
+    </div>
     </div>
 </div>
 @endsection

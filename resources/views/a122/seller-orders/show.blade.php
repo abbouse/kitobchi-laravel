@@ -3,37 +3,38 @@
 @section('page-title', 'Sotuvchi buyurtmasi')
 
 @section('content')
-<div class="mb-4 flex items-center justify-between flex-wrap gap-2">
-    <a href="{{ route('admin.seller-orders.index') }}" class="btn btn-secondary flex items-center gap-2">
-        <i data-lucide="arrow-left" class="w-4 h-4"></i> Orqaga
-    </a>
-</div>
-
-@if(session('success'))
-    <div class="mb-4 rounded-lg bg-green-100 text-green-800 dark:bg-green-500/10 dark:text-green-400 px-4 py-3 text-sm font-medium">
-        {{ session('success') }}
-    </div>
-@endif
-@if(session('error'))
-    <div class="mb-4 rounded-lg bg-red-100 text-red-800 dark:bg-red-500/10 dark:text-red-400 px-4 py-3 text-sm font-medium">
-        {{ session('error') }}
-    </div>
-@endif
-
 @php
     $customerName = trim(($sellerOrder->client?->name ?? '') . ' ' . ($sellerOrder->client?->lastname ?? '')) ?: ($address['fullName'] ?? '—');
     $customerPhone = $sellerOrder->client?->phone_number ?? ($address['phoneNumber'] ?? '—');
     $statusVal = $sellerOrder->status ?? 0;
 @endphp
 
+<x-a122.page-header back-href="{{ route('admin.seller-orders.index') }}">
+    <x-slot name="heading">Seller buyurtma #{{ $sellerOrder->id }}</x-slot>
+    <x-slot name="meta">{{ $sellerOrder->seller->shop_name ?? 'Sotuvchi yo‘q' }} · {{ $customerName }} · {{ $sellerOrder->created_at ? $sellerOrder->created_at->format('d.m.Y H:i') : 'Sana yo‘q' }}</x-slot>
+</x-a122.page-header>
+
+@if(session('success'))
+    <div class="p-alert success mb-4">{{ session('success') }}</div>
+@endif
+@if(session('error'))
+    <div class="p-alert danger mb-4">{{ session('error') }}</div>
+@endif
+
 <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
 
     {{-- Info Card --}}
-    <div class="xl:col-span-2 card p-5">
-        <h3 class="font-bold text-base mb-4 flex items-center gap-2">
-            <i data-lucide="shopping-bag" class="w-5 h-5 text-gray-400"></i>
-            Buyurtma ma'lumotlari
-        </h3>
+    <div class="xl:col-span-2 a122-section">
+        <div class="a122-section-head">
+            <div>
+                <div class="a122-section-head__title flex items-center gap-2">
+                    <i data-lucide="shopping-bag" class="w-5 h-5 text-gray-400"></i>
+                    Buyurtma ma'lumotlari
+                </div>
+                <div class="a122-section-head__meta">Asosiy order, mijoz, summa va yetkazish bo‘yicha tafsilotlar.</div>
+            </div>
+        </div>
+        <div class="a122-section-body">
 
         <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
             <div>
@@ -105,17 +106,24 @@
                 <dd>{{ $address['fullAddress'] ?? 'Manzil kiritilmagan' }}</dd>
             </div>
         </dl>
+        </div>
     </div>
 
     {{-- Status Update --}}
-    <div class="card p-5 h-fit">
-        <h3 class="font-bold text-base mb-4 flex items-center gap-2">
-            <i data-lucide="refresh-cw" class="w-5 h-5 text-gray-400"></i>
-            Holatni o'zgartirish
-        </h3>
+    <div class="a122-section h-fit">
+        <div class="a122-section-head">
+            <div>
+                <div class="a122-section-head__title flex items-center gap-2">
+                    <i data-lucide="refresh-cw" class="w-5 h-5 text-gray-400"></i>
+                    Holatni o'zgartirish
+                </div>
+                <div class="a122-section-head__meta">Seller order statusini shu blokdan yangilash mumkin.</div>
+            </div>
+        </div>
+        <div class="a122-section-body">
 
         @if($errors->any())
-            <div class="mb-3 rounded-lg bg-red-100 text-red-800 dark:bg-red-500/10 dark:text-red-400 px-3 py-2 text-xs">
+            <div class="mb-3 p-alert danger text-xs">
                 <ul class="list-disc list-inside space-y-1">
                     @foreach($errors->all() as $error)
                         <li>{{ $error }}</li>
@@ -139,19 +147,26 @@
                 </select>
             </div>
 
-            <button type="submit" class="btn btn-primary w-full flex items-center justify-center gap-2">
+            <button type="submit" class="btn-p primary w-full flex items-center justify-center gap-2">
                 <i data-lucide="save" class="w-4 h-4"></i> Saqlash
             </button>
         </form>
+        </div>
     </div>
 
 </div>
 
-<div class="mt-6 card p-5">
-    <h3 class="font-bold text-base mb-4 flex items-center gap-2">
-        <i data-lucide="package-search" class="w-5 h-5 text-gray-400"></i>
-        Sotuvchiga tegishli mahsulotlar
-    </h3>
+<div class="mt-6 a122-section">
+    <div class="a122-section-head">
+        <div>
+            <div class="a122-section-head__title flex items-center gap-2">
+                <i data-lucide="package-search" class="w-5 h-5 text-gray-400"></i>
+                Sotuvchiga tegishli mahsulotlar
+            </div>
+            <div class="a122-section-head__meta">Aynan shu sellerga biriktirilgan order itemlari va summalari.</div>
+        </div>
+    </div>
+    <div class="a122-section-body">
 
     @if($items->isEmpty())
         <div class="text-sm text-gray-500">Bu buyurtma uchun sotuvchiga tegishli mahsulotlar topilmadi.</div>
@@ -186,5 +201,6 @@
             </table>
         </div>
     @endif
+    </div>
 </div>
 @endsection

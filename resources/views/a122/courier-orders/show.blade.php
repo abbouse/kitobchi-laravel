@@ -3,31 +3,32 @@
 @section('page-title', 'Kuryer buyurtmasi')
 
 @section('content')
-<div class="mb-4">
-    <a href="{{ route('admin.courier-orders.index') }}" class="btn btn-secondary flex items-center gap-2 w-fit">
-        <i data-lucide="arrow-left" class="w-4 h-4"></i> Orqaga
-    </a>
-</div>
-
 @if(session('success'))
-    <div class="mb-4 rounded-lg bg-green-100 text-green-800 dark:bg-green-500/10 dark:text-green-400 px-4 py-3 text-sm font-medium">
-        {{ session('success') }}
-    </div>
+    <div class="p-alert success mb-4">{{ session('success') }}</div>
 @endif
 @if(session('error'))
-    <div class="mb-4 rounded-lg bg-red-100 text-red-800 dark:bg-red-500/10 dark:text-red-400 px-4 py-3 text-sm font-medium">
-        {{ session('error') }}
-    </div>
+    <div class="p-alert danger mb-4">{{ session('error') }}</div>
 @endif
+
+<x-a122.page-header back-href="{{ route('admin.courier-orders.index') }}">
+    <x-slot name="heading">Kuryer buyurtmasi #{{ $courierOrder->id }}</x-slot>
+    <x-slot name="meta">{{ trim(($courierOrder->courier->first_name ?? '') . ' ' . ($courierOrder->courier->last_name ?? '')) ?: 'Kuryer yo‘q' }} · {{ $courierOrder->created_at ? $courierOrder->created_at->format('d.m.Y H:i') : 'Sana yo‘q' }}</x-slot>
+</x-a122.page-header>
 
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
     {{-- Kuryer ma'lumotlari --}}
-    <div class="card p-5">
-        <h3 class="font-bold text-base mb-4 flex items-center gap-2">
-            <i data-lucide="bike" class="w-5 h-5 text-gray-400"></i>
-            Kuryer ma'lumotlari
-        </h3>
+    <div class="a122-section">
+        <div class="a122-section-head">
+            <div>
+                <div class="a122-section-head__title flex items-center gap-2">
+                    <i data-lucide="bike" class="w-5 h-5 text-gray-400"></i>
+                    Kuryer ma'lumotlari
+                </div>
+                <div class="a122-section-head__meta">Biriktirilgan kuryerning profil va aloqa ma’lumotlari.</div>
+            </div>
+        </div>
+        <div class="a122-section-body">
         @if($courierOrder->courier)
             <div class="flex items-center gap-4 mb-4">
                 @if($courierOrder->courier->photo)
@@ -72,14 +73,21 @@
         @else
             <p class="text-gray-400 text-sm">Kuryer ma'lumotlari mavjud emas</p>
         @endif
+        </div>
     </div>
 
     {{-- Buyurtma ma'lumotlari --}}
-    <div class="card p-5">
-        <h3 class="font-bold text-base mb-4 flex items-center gap-2">
-            <i data-lucide="package" class="w-5 h-5 text-gray-400"></i>
-            Buyurtma ma'lumotlari
-        </h3>
+    <div class="a122-section">
+        <div class="a122-section-head">
+            <div>
+                <div class="a122-section-head__title flex items-center gap-2">
+                    <i data-lucide="package" class="w-5 h-5 text-gray-400"></i>
+                    Buyurtma ma'lumotlari
+                </div>
+                <div class="a122-section-head__meta">Kuryerga tushgan orderning foydalanuvchi, manzil va summa tafsilotlari.</div>
+            </div>
+        </div>
+        <div class="a122-section-body">
         <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-4 text-sm">
             <div>
                 <dt class="text-xs text-gray-500 mb-1">Buyurtma ID</dt>
@@ -138,6 +146,7 @@
             </div>
             @endif
         </dl>
+        </div>
     </div>
 
 </div>

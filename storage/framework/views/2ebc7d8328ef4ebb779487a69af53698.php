@@ -2,39 +2,56 @@
 <?php $__env->startSection('page-title', 'Sotuvchi buyurtmasi'); ?>
 
 <?php $__env->startSection('content'); ?>
-<div class="mb-4 flex items-center justify-between flex-wrap gap-2">
-    <a href="<?php echo e(route('admin.seller-orders.index')); ?>" class="btn btn-secondary flex items-center gap-2">
-        <i data-lucide="arrow-left" class="w-4 h-4"></i> Orqaga
-    </a>
-</div>
-
-<?php if(session('success')): ?>
-    <div class="mb-4 rounded-lg bg-green-100 text-green-800 dark:bg-green-500/10 dark:text-green-400 px-4 py-3 text-sm font-medium">
-        <?php echo e(session('success')); ?>
-
-    </div>
-<?php endif; ?>
-<?php if(session('error')): ?>
-    <div class="mb-4 rounded-lg bg-red-100 text-red-800 dark:bg-red-500/10 dark:text-red-400 px-4 py-3 text-sm font-medium">
-        <?php echo e(session('error')); ?>
-
-    </div>
-<?php endif; ?>
-
 <?php
     $customerName = trim(($sellerOrder->client?->name ?? '') . ' ' . ($sellerOrder->client?->lastname ?? '')) ?: ($address['fullName'] ?? '—');
     $customerPhone = $sellerOrder->client?->phone_number ?? ($address['phoneNumber'] ?? '—');
     $statusVal = $sellerOrder->status ?? 0;
 ?>
 
+<?php if (isset($component)) { $__componentOriginal0c1345684b2d774f43a544669f5684b0 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal0c1345684b2d774f43a544669f5684b0 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.a122.page-header','data' => ['backHref' => ''.e(route('admin.seller-orders.index')).'']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('a122.page-header'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['back-href' => ''.e(route('admin.seller-orders.index')).'']); ?>
+     <?php $__env->slot('heading', null, []); ?> Seller buyurtma #<?php echo e($sellerOrder->id); ?> <?php $__env->endSlot(); ?>
+     <?php $__env->slot('meta', null, []); ?> <?php echo e($sellerOrder->seller->shop_name ?? 'Sotuvchi yo‘q'); ?> · <?php echo e($customerName); ?> · <?php echo e($sellerOrder->created_at ? $sellerOrder->created_at->format('d.m.Y H:i') : 'Sana yo‘q'); ?> <?php $__env->endSlot(); ?>
+ <?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal0c1345684b2d774f43a544669f5684b0)): ?>
+<?php $attributes = $__attributesOriginal0c1345684b2d774f43a544669f5684b0; ?>
+<?php unset($__attributesOriginal0c1345684b2d774f43a544669f5684b0); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal0c1345684b2d774f43a544669f5684b0)): ?>
+<?php $component = $__componentOriginal0c1345684b2d774f43a544669f5684b0; ?>
+<?php unset($__componentOriginal0c1345684b2d774f43a544669f5684b0); ?>
+<?php endif; ?>
+
+<?php if(session('success')): ?>
+    <div class="p-alert success mb-4"><?php echo e(session('success')); ?></div>
+<?php endif; ?>
+<?php if(session('error')): ?>
+    <div class="p-alert danger mb-4"><?php echo e(session('error')); ?></div>
+<?php endif; ?>
+
 <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
 
     
-    <div class="xl:col-span-2 card p-5">
-        <h3 class="font-bold text-base mb-4 flex items-center gap-2">
-            <i data-lucide="shopping-bag" class="w-5 h-5 text-gray-400"></i>
-            Buyurtma ma'lumotlari
-        </h3>
+    <div class="xl:col-span-2 a122-section">
+        <div class="a122-section-head">
+            <div>
+                <div class="a122-section-head__title flex items-center gap-2">
+                    <i data-lucide="shopping-bag" class="w-5 h-5 text-gray-400"></i>
+                    Buyurtma ma'lumotlari
+                </div>
+                <div class="a122-section-head__meta">Asosiy order, mijoz, summa va yetkazish bo‘yicha tafsilotlar.</div>
+            </div>
+        </div>
+        <div class="a122-section-body">
 
         <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
             <div>
@@ -106,17 +123,24 @@
                 <dd><?php echo e($address['fullAddress'] ?? 'Manzil kiritilmagan'); ?></dd>
             </div>
         </dl>
+        </div>
     </div>
 
     
-    <div class="card p-5 h-fit">
-        <h3 class="font-bold text-base mb-4 flex items-center gap-2">
-            <i data-lucide="refresh-cw" class="w-5 h-5 text-gray-400"></i>
-            Holatni o'zgartirish
-        </h3>
+    <div class="a122-section h-fit">
+        <div class="a122-section-head">
+            <div>
+                <div class="a122-section-head__title flex items-center gap-2">
+                    <i data-lucide="refresh-cw" class="w-5 h-5 text-gray-400"></i>
+                    Holatni o'zgartirish
+                </div>
+                <div class="a122-section-head__meta">Seller order statusini shu blokdan yangilash mumkin.</div>
+            </div>
+        </div>
+        <div class="a122-section-body">
 
         <?php if($errors->any()): ?>
-            <div class="mb-3 rounded-lg bg-red-100 text-red-800 dark:bg-red-500/10 dark:text-red-400 px-3 py-2 text-xs">
+            <div class="mb-3 p-alert danger text-xs">
                 <ul class="list-disc list-inside space-y-1">
                     <?php $__currentLoopData = $errors->all(); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $error): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                         <li><?php echo e($error); ?></li>
@@ -141,19 +165,26 @@
                 </select>
             </div>
 
-            <button type="submit" class="btn btn-primary w-full flex items-center justify-center gap-2">
+            <button type="submit" class="btn-p primary w-full flex items-center justify-center gap-2">
                 <i data-lucide="save" class="w-4 h-4"></i> Saqlash
             </button>
         </form>
+        </div>
     </div>
 
 </div>
 
-<div class="mt-6 card p-5">
-    <h3 class="font-bold text-base mb-4 flex items-center gap-2">
-        <i data-lucide="package-search" class="w-5 h-5 text-gray-400"></i>
-        Sotuvchiga tegishli mahsulotlar
-    </h3>
+<div class="mt-6 a122-section">
+    <div class="a122-section-head">
+        <div>
+            <div class="a122-section-head__title flex items-center gap-2">
+                <i data-lucide="package-search" class="w-5 h-5 text-gray-400"></i>
+                Sotuvchiga tegishli mahsulotlar
+            </div>
+            <div class="a122-section-head__meta">Aynan shu sellerga biriktirilgan order itemlari va summalari.</div>
+        </div>
+    </div>
+    <div class="a122-section-body">
 
     <?php if($items->isEmpty()): ?>
         <div class="text-sm text-gray-500">Bu buyurtma uchun sotuvchiga tegishli mahsulotlar topilmadi.</div>
@@ -188,6 +219,7 @@
             </table>
         </div>
     <?php endif; ?>
+    </div>
 </div>
 <?php $__env->stopSection(); ?>
 

@@ -2,8 +2,8 @@
 
 <?php $showUser = $showUser ?? true; ?>
 
-<div class="p-card fade-up" style="height:100%">
-  <div class="dash-card-body">
+<div class="a122-section fade-up" style="height:100%">
+  <div class="a122-section-body">
 
     
     <div class="flex items-start justify-between mb-3">

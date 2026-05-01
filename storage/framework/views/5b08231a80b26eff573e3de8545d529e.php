@@ -55,20 +55,20 @@
 <?php unset($__componentOriginal0c1345684b2d774f43a544669f5684b0); ?>
 <?php endif; ?>
 
-<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4 mb-4 fade-up">
+<div class="a122-stat-grid mb-4 fade-up">
   <?php $__currentLoopData = [
     [$counts['all'] ?? 0, 'Jami postlar', 'accent', 'bi-chat-square-text'],
     [$counts['posts'] ?? 0, 'Asl postlar', 'info', 'bi-pencil-square'],
     [$counts['reposts'] ?? 0, 'Repostlar', 'warning', 'bi-arrow-repeat'],
     [$ugcPending ?? 0, 'UGC navbat', 'success', 'bi-shield-exclamation'],
   ]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$value, $label, $tone, $icon]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-    <div class="p-card flex items-center gap-3" style="padding:14px">
-      <div style="width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:var(--p-<?php echo e($tone); ?>-d,var(--p-elevated));color:var(--p-<?php echo e($tone); ?>)">
+    <div class="a122-stat-tile">
+      <div class="a122-stat-tile__icon" style="background:var(--p-<?php echo e($tone); ?>-d,var(--p-elevated));color:var(--p-<?php echo e($tone); ?>)">
         <i class="bi <?php echo e($icon); ?>"></i>
       </div>
       <div>
-        <div style="font-size:22px;font-weight:700;color:var(--p-text)"><?php echo e($value); ?></div>
-        <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--p-hint)"><?php echo e($label); ?></div>
+        <div class="a122-stat-tile__value"><?php echo e($value); ?></div>
+        <div class="a122-stat-tile__label"><?php echo e($label); ?></div>
       </div>
     </div>
   <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
@@ -93,6 +93,14 @@
   </div>
 </div>
 
+<div class="a122-section fade-up">
+  <div class="a122-section-head">
+    <div>
+      <div class="a122-section-head__title">Postlar oqimi</div>
+      <div class="a122-section-head__meta">List yoki grid ko‘rinishda moderatsiya qilish va tezkor boshqarish mumkin.</div>
+    </div>
+  </div>
+  <div class="a122-section-body">
 <?php $__empty_1 = true; $__currentLoopData = $posts; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $post): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
   <?php if($loop->first): ?>
   <div class="grid gap-3"
@@ -110,6 +118,8 @@
   Postlar topilmadi
 </div>
 <?php endif; ?>
+</div>
+</div>
 
 <div class="mt-3">
   <?php echo e($posts->links('a122.partials.pagination')); ?>

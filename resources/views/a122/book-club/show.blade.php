@@ -35,12 +35,14 @@
 
   {{-- ════ POST ASOSIY ════════════════════════════════════════ --}}
   <div class="xl:col-span-8">
-    <div class="p-card mb-3 fade-up">
-      <div class="dash-card-head">
-        <div class="dash-card-title">Moderatsiya va ogohlantirish</div>
-        <div class="dash-card-sub">{{ $activeWarningCount }} ta faol ogohlantirish</div>
+    <div class="a122-section mb-3 fade-up">
+      <div class="a122-section-head">
+        <div>
+          <div class="a122-section-head__title">Moderatsiya va ogohlantirish</div>
+          <div class="a122-section-head__meta">{{ $activeWarningCount }} ta faol ogohlantirish mavjud.</div>
+        </div>
       </div>
-      <div class="dash-card-body">
+      <div class="a122-section-body">
         <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px">
           <span class="btn-p ghost sm" style="pointer-events:none">
             <i class="bi bi-person"></i> User #{{ $bookClub->user_id }}
@@ -84,8 +86,8 @@
     </div>
 
     {{-- Post kartasi --}}
-    <div class="p-card mb-3 fade-up">
-      <div class="dash-card-body">
+    <div class="a122-section mb-3 fade-up">
+      <div class="a122-section-body">
 
         {{-- Muallif --}}
         <div class="flex items-center gap-3 mb-3">
@@ -266,12 +268,14 @@
     </div>
 
     {{-- ── Izohlar ─────────────────────────────────────────── --}}
-    <div class="p-card fade-up">
-      <div class="dash-card-head">
-        <div class="dash-card-title">Izohlar</div>
-        <div class="dash-card-sub">{{ $comments->total() }} ta</div>
+    <div class="a122-section fade-up">
+      <div class="a122-section-head">
+        <div>
+          <div class="a122-section-head__title">Izohlar</div>
+          <div class="a122-section-head__meta">{{ $comments->total() }} ta izoh va javoblar oqimi.</div>
+        </div>
       </div>
-      <div class="dash-card-body p-0">
+      <div class="a122-section-body p-0">
 
         @forelse($comments as $comment)
         <div style="padding:16px 20px;border-bottom:1px solid var(--p-border)">

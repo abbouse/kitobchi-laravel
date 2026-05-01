@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="csrf-token" content="<?php echo e(csrf_token()); ?>" />
-  <title><?php echo $__env->yieldContent('title', 'Dashboard'); ?> — Veritas Admin</title>
+  <title><?php echo $__env->yieldContent('title', 'Dashboard'); ?> — Kitobchi Admin</title>
   <style>[x-cloak]{display:none!important}</style>
   <script>
     (function () {
@@ -33,10 +33,12 @@
     <div class="flex-1 min-w-0 flex flex-col">
       <?php echo $__env->make('a122.partials.topbar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
       <main class="flex-1 px-4 sm:px-6 lg:px-8 py-6">
+        <div class="mx-auto w-full max-w-[1680px] space-y-4">
         <?php echo $__env->yieldContent('content'); ?>
+        </div>
       </main>
       <footer class="px-6 py-4 text-center text-xs text-gray-400 dark:text-gray-600 border-t border-gray-100/70 dark:border-white/5">
-        © <?php echo e(date('Y')); ?> Veritas Admin. Barcha huquqlar himoyalangan.
+        © <?php echo e(date('Y')); ?> Kitobchi Admin. Barcha huquqlar himoyalangan.
       </footer>
     </div>
   </div>

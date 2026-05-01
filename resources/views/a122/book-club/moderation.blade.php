@@ -13,12 +13,14 @@
 
 <div class="grid grid-cols-1 gap-3">
 
-  <div class="p-card fade-up">
-    <div class="dash-card-head">
-      <div class="dash-card-title">Post matni (kutilmoqda)</div>
-      <div class="dash-card-sub">{{ $pendingPosts->count() }} ta</div>
+  <div class="a122-section fade-up">
+    <div class="a122-section-head">
+      <div>
+        <div class="a122-section-head__title">Post matni (kutilmoqda)</div>
+        <div class="a122-section-head__meta">{{ $pendingPosts->count() }} ta post admin bahosini kutmoqda.</div>
+      </div>
     </div>
-    <div class="dash-card-body p-0">
+    <div class="a122-section-body p-0">
       @forelse($pendingPosts as $row)
         <div style="padding:16px 20px;border-bottom:1px solid var(--p-border)">
           <div class="flex flex-wrap items-start justify-between gap-3 mb-2">
@@ -66,12 +68,14 @@
     </div>
   </div>
 
-  <div class="p-card fade-up">
-    <div class="dash-card-head">
-      <div class="dash-card-title">Asosiy izohlar (kutilmoqda)</div>
-      <div class="dash-card-sub">{{ $pendingComments->count() }} ta</div>
+  <div class="a122-section fade-up">
+    <div class="a122-section-head">
+      <div>
+        <div class="a122-section-head__title">Asosiy izohlar (kutilmoqda)</div>
+        <div class="a122-section-head__meta">{{ $pendingComments->count() }} ta izoh admin bahosini kutmoqda.</div>
+      </div>
     </div>
-    <div class="dash-card-body p-0">
+    <div class="a122-section-body p-0">
       @forelse($pendingComments as $c)
         <div style="padding:16px 20px;border-bottom:1px solid var(--p-border)">
           <div class="flex flex-wrap items-start justify-between gap-2 mb-2">

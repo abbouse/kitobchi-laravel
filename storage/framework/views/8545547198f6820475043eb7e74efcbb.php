@@ -53,12 +53,14 @@
 
   
   <div class="xl:col-span-8">
-    <div class="p-card mb-3 fade-up">
-      <div class="dash-card-head">
-        <div class="dash-card-title">Moderatsiya va ogohlantirish</div>
-        <div class="dash-card-sub"><?php echo e($activeWarningCount); ?> ta faol ogohlantirish</div>
+    <div class="a122-section mb-3 fade-up">
+      <div class="a122-section-head">
+        <div>
+          <div class="a122-section-head__title">Moderatsiya va ogohlantirish</div>
+          <div class="a122-section-head__meta"><?php echo e($activeWarningCount); ?> ta faol ogohlantirish mavjud.</div>
+        </div>
       </div>
-      <div class="dash-card-body">
+      <div class="a122-section-body">
         <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px">
           <span class="btn-p ghost sm" style="pointer-events:none">
             <i class="bi bi-person"></i> User #<?php echo e($bookClub->user_id); ?>
@@ -114,8 +116,8 @@ unset($__errorArgs, $__bag); ?>
     </div>
 
     
-    <div class="p-card mb-3 fade-up">
-      <div class="dash-card-body">
+    <div class="a122-section mb-3 fade-up">
+      <div class="a122-section-body">
 
         
         <div class="flex items-center gap-3 mb-3">
@@ -303,12 +305,14 @@ unset($__errorArgs, $__bag); ?>
     </div>
 
     
-    <div class="p-card fade-up">
-      <div class="dash-card-head">
-        <div class="dash-card-title">Izohlar</div>
-        <div class="dash-card-sub"><?php echo e($comments->total()); ?> ta</div>
+    <div class="a122-section fade-up">
+      <div class="a122-section-head">
+        <div>
+          <div class="a122-section-head__title">Izohlar</div>
+          <div class="a122-section-head__meta"><?php echo e($comments->total()); ?> ta izoh va javoblar oqimi.</div>
+        </div>
       </div>
-      <div class="dash-card-body p-0">
+      <div class="a122-section-body p-0">
 
         <?php $__empty_1 = true; $__currentLoopData = $comments; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $comment): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
         <div style="padding:16px 20px;border-bottom:1px solid var(--p-border)">

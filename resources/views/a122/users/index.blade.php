@@ -4,21 +4,28 @@
 
 @section('content')
 <div>
-  <div class="flex items-center justify-between gap-3 mb-4 flex-wrap">
-    <div>
-      <h2 class="text-xl font-bold tracking-tight">Foydalanuvchilar</h2>
-      <p class="text-xs text-gray-500 mt-0.5">{{ $users->total() }} ta yozuv topildi</p>
-    </div>
-    <div class="flex items-center gap-2 flex-wrap">
-      <form method="GET" class="relative min-w-[220px]">
-        <input type="hidden" name="tab" value="{{ $tab }}">
-        <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-        <input type="text" name="search" value="{{ request('search') }}" placeholder="Ism, email yoki rol bo'yicha qidirish..." class="input !pl-9 !py-2 w-full">
-      </form>
-      <a href="{{ route('admin.users.create') }}" class="btn btn-primary">
+  <x-a122.page-header>
+    <x-slot name="heading">Foydalanuvchilar</x-slot>
+    <x-slot name="meta">{{ $users->total() }} ta foydalanuvchi yozuvi topildi.</x-slot>
+    <x-slot name="actions">
+      <a href="{{ route('admin.users.create') }}" class="btn-p primary">
         <i data-lucide="plus" class="w-4 h-4"></i>
         <span>Qo‘shish</span>
       </a>
+    </x-slot>
+  </x-a122.page-header>
+
+  <div class="a122-index-header">
+    <div>
+      <div class="a122-index-header__title">Filter va qidiruv</div>
+      <div class="a122-index-header__meta">Status, segment va rol bo‘yicha foydalanuvchilarni tez topish uchun.</div>
+    </div>
+    <div class="a122-index-header__actions">
+      <form method="GET" class="a122-index-search-form">
+        <input type="hidden" name="tab" value="{{ $tab }}">
+        <i data-lucide="search" class="w-4 h-4"></i>
+        <input type="text" name="search" value="{{ request('search') }}" placeholder="Ism, email yoki rol bo'yicha qidirish..." class="a122-index-search-input">
+      </form>
     </div>
   </div>
   <div class="tab-pills fade-up mb-3">
@@ -67,7 +74,15 @@
     @endforelse
   </div>
 
-  <div class="table-wrap">
+  <div class="a122-section">
+    <div class="a122-section-head">
+      <div>
+        <div class="a122-section-head__title">Foydalanuvchilar jadvali</div>
+        <div class="a122-section-head__meta">Verifikatsiya, premium va profil boshqaruvi shu jadvaldan tez bajariladi.</div>
+      </div>
+    </div>
+    <div class="a122-section-body">
+    <div class="table-wrap">
     <div class="overflow-x-auto">
       <table class="tbl" data-index-grid>
         <thead><tr><th>Foydalanuvchi</th><th>Rol</th><th>Status</th><th>Qo'shilgan</th><th class="text-right">Amallar</th></tr></thead>
@@ -132,6 +147,8 @@
         </tbody>
       </table>
     </div>
+  </div>
+  </div>
   </div>
 </div>
 @if(isset($users) && method_exists($users, 'links'))

@@ -1023,7 +1023,7 @@ class ProductsController extends Controller
         return response()->json([
             'status' => 'success',
             'data' => [
-                'views' => (int) ($product->views + 1),
+                'views' => (int) ($product->views ?? 0),
                 'recommendation_active' => $recommendationActive,
             ],
         ]);

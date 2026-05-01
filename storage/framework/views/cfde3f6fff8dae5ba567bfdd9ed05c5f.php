@@ -26,22 +26,43 @@
     });
   }
 }" x-init="init()">
-<div class="p-page-header dash-page-header fade-up">
-  <div class="dash-seg-bar" id="dashSegBar" style="flex:1;min-width:0;">
-    <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'main' }" @click="switchTab('main')"><i class="bi bi-grid-1x2"></i><span>Asosiy</span></button>
-    <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'orders' }" @click="switchTab('orders')"><i class="bi bi-bag-check"></i><span>Buyurtmalar</span></button>
-    <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'finance' }" @click="switchTab('finance')"><i class="bi bi-bar-chart-line"></i><span>Moliya</span></button>
-    <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'users' }" @click="switchTab('users')"><i class="bi bi-people"></i><span>Foydalanuvchilar</span></button>
-    <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'catalog' }" @click="switchTab('catalog')"><i class="bi bi-building"></i><span>Biznes</span></button>
-  </div>
-  <div style="flex-shrink:0;">
+<?php if (isset($component)) { $__componentOriginal0c1345684b2d774f43a544669f5684b0 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal0c1345684b2d774f43a544669f5684b0 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.a122.page-header','data' => ['class' => 'fade-up']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('a122.page-header'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['class' => 'fade-up']); ?>
+   <?php $__env->slot('heading', null, []); ?> Dashboard <?php $__env->endSlot(); ?>
+   <?php $__env->slot('meta', null, []); ?> Asosiy metrikalar, buyurtmalar oqimi va operatsion holat bir joyda. <?php $__env->endSlot(); ?>
+   <?php $__env->slot('actions', null, []); ?> 
     <a href="<?php echo e(route('admin.dashboard.live')); ?>" class="btn-p ghost" target="_blank">
       <i class="bi bi-broadcast-pin"></i> Live monitor
     </a>
     <a href="<?php echo e(route('admin.dashboard',['clear_cache'=>1])); ?>" class="btn-p ghost">
       <i class="bi bi-arrow-clockwise"></i> Yangilash
     </a>
-  </div>
+   <?php $__env->endSlot(); ?>
+ <?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal0c1345684b2d774f43a544669f5684b0)): ?>
+<?php $attributes = $__attributesOriginal0c1345684b2d774f43a544669f5684b0; ?>
+<?php unset($__attributesOriginal0c1345684b2d774f43a544669f5684b0); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal0c1345684b2d774f43a544669f5684b0)): ?>
+<?php $component = $__componentOriginal0c1345684b2d774f43a544669f5684b0; ?>
+<?php unset($__componentOriginal0c1345684b2d774f43a544669f5684b0); ?>
+<?php endif; ?>
+
+<div class="dash-seg-bar mb-4 fade-up" id="dashSegBar">
+  <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'main' }" @click="switchTab('main')"><i class="bi bi-grid-1x2"></i><span>Asosiy</span></button>
+  <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'orders' }" @click="switchTab('orders')"><i class="bi bi-bag-check"></i><span>Buyurtmalar</span></button>
+  <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'finance' }" @click="switchTab('finance')"><i class="bi bi-bar-chart-line"></i><span>Moliya</span></button>
+  <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'users' }" @click="switchTab('users')"><i class="bi bi-people"></i><span>Foydalanuvchilar</span></button>
+  <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'catalog' }" @click="switchTab('catalog')"><i class="bi bi-building"></i><span>Biznes</span></button>
 </div>
 
 <?php
@@ -64,7 +85,9 @@
 ?>
 
 
-<div class="dash-hero-strip fade-up mb-4">
+<div class="a122-section fade-up mb-4">
+<div class="a122-section-body p-0">
+<div class="dash-hero-strip">
   <div class="dash-hero-metric">
     <div class="dash-hero-label">GMV (brutto)</div>
     <div class="dash-hero-val"><?php echo e(number_format($gmvTotal/1_000_000,1)); ?><span class="dash-hero-unit">M</span></div>
@@ -86,10 +109,19 @@
     <div class="dash-hero-sub">Seller + Kuryer arizalar</div>
   </div>
 </div>
+</div>
+</div>
 
 
 <?php if(!empty($alerts)): ?>
-<div class="fade-up mb-4">
+<div class="a122-section fade-up mb-4">
+  <div class="a122-section-head">
+    <div>
+      <div class="a122-section-head__title">Diqqat talab qiladigan holatlar</div>
+      <div class="a122-section-head__meta">Moderatsiya, to‘lov va navbatlar bo‘yicha tezkor signal bloklari.</div>
+    </div>
+  </div>
+  <div class="a122-section-body">
   <?php $__currentLoopData = $alerts; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$color,$icon,$title,$desc,$url]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
   <div class="alert-item <?php echo e($color); ?>">
     <i class="bi <?php echo e($icon); ?> alert-item__icon"></i>
@@ -98,11 +130,20 @@
   </div>
   <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
 </div>
+</div>
 <?php endif; ?>
 
 
 <?php if(count($dashQuick)): ?>
-<div class="dash-quick-grid mb-5 fade-up">
+<div class="a122-section mb-5 fade-up">
+  <div class="a122-section-head">
+    <div>
+      <div class="a122-section-head__title">Tezkor bo‘limlar</div>
+      <div class="a122-section-head__meta">Eng ko‘p ishlatiladigan boshqaruv sahifalariga bir bosishda o‘tish.</div>
+    </div>
+  </div>
+  <div class="a122-section-body">
+<div class="dash-quick-grid">
   <?php $__currentLoopData = $dashQuick; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $q): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
     <a href="<?php echo e($q[2]); ?>" class="dash-quick-card">
       <div class="dq-ico" style="background:<?php echo e($q[4]); ?>;color:<?php echo e($q[5]); ?>"><i class="bi <?php echo e($q[1]); ?>"></i></div>
@@ -110,6 +151,8 @@
       <span class="dq-hint"><?php echo e($q[3]); ?></span>
     </a>
   <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+</div>
+</div>
 </div>
 <?php endif; ?>
 

@@ -2,33 +2,50 @@
 <?php $__env->startSection('page-title', 'Kuryer buyurtmasi'); ?>
 
 <?php $__env->startSection('content'); ?>
-<div class="mb-4">
-    <a href="<?php echo e(route('admin.courier-orders.index')); ?>" class="btn btn-secondary flex items-center gap-2 w-fit">
-        <i data-lucide="arrow-left" class="w-4 h-4"></i> Orqaga
-    </a>
-</div>
-
 <?php if(session('success')): ?>
-    <div class="mb-4 rounded-lg bg-green-100 text-green-800 dark:bg-green-500/10 dark:text-green-400 px-4 py-3 text-sm font-medium">
-        <?php echo e(session('success')); ?>
-
-    </div>
+    <div class="p-alert success mb-4"><?php echo e(session('success')); ?></div>
 <?php endif; ?>
 <?php if(session('error')): ?>
-    <div class="mb-4 rounded-lg bg-red-100 text-red-800 dark:bg-red-500/10 dark:text-red-400 px-4 py-3 text-sm font-medium">
-        <?php echo e(session('error')); ?>
+    <div class="p-alert danger mb-4"><?php echo e(session('error')); ?></div>
+<?php endif; ?>
 
-    </div>
+<?php if (isset($component)) { $__componentOriginal0c1345684b2d774f43a544669f5684b0 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal0c1345684b2d774f43a544669f5684b0 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.a122.page-header','data' => ['backHref' => ''.e(route('admin.courier-orders.index')).'']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('a122.page-header'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['back-href' => ''.e(route('admin.courier-orders.index')).'']); ?>
+     <?php $__env->slot('heading', null, []); ?> Kuryer buyurtmasi #<?php echo e($courierOrder->id); ?> <?php $__env->endSlot(); ?>
+     <?php $__env->slot('meta', null, []); ?> <?php echo e(trim(($courierOrder->courier->first_name ?? '') . ' ' . ($courierOrder->courier->last_name ?? '')) ?: 'Kuryer yo‘q'); ?> · <?php echo e($courierOrder->created_at ? $courierOrder->created_at->format('d.m.Y H:i') : 'Sana yo‘q'); ?> <?php $__env->endSlot(); ?>
+ <?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal0c1345684b2d774f43a544669f5684b0)): ?>
+<?php $attributes = $__attributesOriginal0c1345684b2d774f43a544669f5684b0; ?>
+<?php unset($__attributesOriginal0c1345684b2d774f43a544669f5684b0); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal0c1345684b2d774f43a544669f5684b0)): ?>
+<?php $component = $__componentOriginal0c1345684b2d774f43a544669f5684b0; ?>
+<?php unset($__componentOriginal0c1345684b2d774f43a544669f5684b0); ?>
 <?php endif; ?>
 
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
     
-    <div class="card p-5">
-        <h3 class="font-bold text-base mb-4 flex items-center gap-2">
-            <i data-lucide="bike" class="w-5 h-5 text-gray-400"></i>
-            Kuryer ma'lumotlari
-        </h3>
+    <div class="a122-section">
+        <div class="a122-section-head">
+            <div>
+                <div class="a122-section-head__title flex items-center gap-2">
+                    <i data-lucide="bike" class="w-5 h-5 text-gray-400"></i>
+                    Kuryer ma'lumotlari
+                </div>
+                <div class="a122-section-head__meta">Biriktirilgan kuryerning profil va aloqa ma’lumotlari.</div>
+            </div>
+        </div>
+        <div class="a122-section-body">
         <?php if($courierOrder->courier): ?>
             <div class="flex items-center gap-4 mb-4">
                 <?php if($courierOrder->courier->photo): ?>
@@ -75,14 +92,21 @@
         <?php else: ?>
             <p class="text-gray-400 text-sm">Kuryer ma'lumotlari mavjud emas</p>
         <?php endif; ?>
+        </div>
     </div>
 
     
-    <div class="card p-5">
-        <h3 class="font-bold text-base mb-4 flex items-center gap-2">
-            <i data-lucide="package" class="w-5 h-5 text-gray-400"></i>
-            Buyurtma ma'lumotlari
-        </h3>
+    <div class="a122-section">
+        <div class="a122-section-head">
+            <div>
+                <div class="a122-section-head__title flex items-center gap-2">
+                    <i data-lucide="package" class="w-5 h-5 text-gray-400"></i>
+                    Buyurtma ma'lumotlari
+                </div>
+                <div class="a122-section-head__meta">Kuryerga tushgan orderning foydalanuvchi, manzil va summa tafsilotlari.</div>
+            </div>
+        </div>
+        <div class="a122-section-body">
         <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-4 text-sm">
             <div>
                 <dt class="text-xs text-gray-500 mb-1">Buyurtma ID</dt>
@@ -141,6 +165,7 @@
             </div>
             <?php endif; ?>
         </dl>
+        </div>
     </div>
 
 </div>

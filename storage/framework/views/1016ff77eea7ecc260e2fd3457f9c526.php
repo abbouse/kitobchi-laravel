@@ -2,47 +2,52 @@
 <?php $__env->startSection('page-title', 'Sotuvchi profili'); ?>
 
 <?php $__env->startSection('content'); ?>
-<div class="mb-4 flex items-center justify-between flex-wrap gap-2">
-    <a href="<?php echo e(route('admin.sellers.index')); ?>" class="btn btn-secondary flex items-center gap-2">
-        <i data-lucide="arrow-left" class="w-4 h-4"></i> Orqaga
-    </a>
-    <div class="flex items-center gap-2 flex-wrap">
+<?php if (isset($component)) { $__componentOriginal0c1345684b2d774f43a544669f5684b0 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal0c1345684b2d774f43a544669f5684b0 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.a122.page-header','data' => ['backHref' => ''.e(route('admin.sellers.index')).'']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('a122.page-header'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['back-href' => ''.e(route('admin.sellers.index')).'']); ?>
+     <?php $__env->slot('heading', null, []); ?> <?php echo e($seller->shop_name); ?> <?php $__env->endSlot(); ?>
+     <?php $__env->slot('meta', null, []); ?> <?php echo e(trim($seller->firstname . ' ' . $seller->lastname) ?: 'Sotuvchi profili'); ?> · <?php echo e($seller->region ?: 'Hudud ko‘rsatilmagan'); ?> <?php $__env->endSlot(); ?>
+     <?php $__env->slot('actions', null, []); ?> 
         <?php if($seller->status === 'blocked'): ?>
             <form method="POST" action="<?php echo e(route('admin.sellers.unblock', $seller)); ?>" onsubmit="return confirm('Sotuvchini blokdan chiqarmoqchimisiz?')">
                 <?php echo csrf_field(); ?>
                 <?php echo method_field('PATCH'); ?>
-                <button type="submit" class="btn btn-success flex items-center gap-2">
+                <button type="submit" class="btn-p success flex items-center gap-2">
                     <i data-lucide="unlock" class="w-4 h-4"></i> Blokdan chiqarish
                 </button>
             </form>
         <?php endif; ?>
         <form method="POST" action="<?php echo e(route('admin.sellers.reset-password', $seller)); ?>" onsubmit="return confirm('Yangi parol sotuvchining telefon raqamiga SMS orqali yuborilsinmi?')">
             <?php echo csrf_field(); ?>
-            <button type="submit" class="btn btn-warning flex items-center gap-2">
+            <button type="submit" class="btn-p ghost flex items-center gap-2">
                 <i data-lucide="key-round" class="w-4 h-4"></i> Parolni SMS bilan yangilash
             </button>
         </form>
-        <a href="<?php echo e(route('admin.sellers.edit', $seller)); ?>" class="btn btn-primary flex items-center gap-2">
+        <a href="<?php echo e(route('admin.sellers.edit', $seller)); ?>" class="btn-p primary flex items-center gap-2">
             <i data-lucide="pencil" class="w-4 h-4"></i> Tahrirlash
         </a>
-    </div>
-</div>
-
-<?php if(session('success')): ?>
-    <div class="mb-4 rounded-lg bg-green-100 text-green-800 dark:bg-green-500/10 dark:text-green-400 px-4 py-3 text-sm font-medium">
-        <?php echo e(session('success')); ?>
-
-    </div>
+     <?php $__env->endSlot(); ?>
+ <?php echo $__env->renderComponent(); ?>
 <?php endif; ?>
-<?php if(session('error')): ?>
-    <div class="mb-4 rounded-lg bg-red-100 text-red-800 dark:bg-red-500/10 dark:text-red-400 px-4 py-3 text-sm font-medium">
-        <?php echo e(session('error')); ?>
-
-    </div>
+<?php if (isset($__attributesOriginal0c1345684b2d774f43a544669f5684b0)): ?>
+<?php $attributes = $__attributesOriginal0c1345684b2d774f43a544669f5684b0; ?>
+<?php unset($__attributesOriginal0c1345684b2d774f43a544669f5684b0); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal0c1345684b2d774f43a544669f5684b0)): ?>
+<?php $component = $__componentOriginal0c1345684b2d774f43a544669f5684b0; ?>
+<?php unset($__componentOriginal0c1345684b2d774f43a544669f5684b0); ?>
 <?php endif; ?>
 
 
-<div class="card p-5 mb-6">
+<div class="a122-section mb-6">
+    <div class="a122-section-body">
     <div class="flex flex-col sm:flex-row sm:items-center gap-4">
         
         <div class="shrink-0">
@@ -155,93 +160,127 @@
                 <form method="POST" action="<?php echo e(route('admin.sellers.approve', $seller)); ?>">
                     <?php echo csrf_field(); ?>
                     <?php echo method_field('PATCH'); ?>
-                    <button type="submit" class="btn btn-primary flex items-center gap-2">
-                        <i data-lucide="check-circle" class="w-4 h-4"></i> Tasdiqlash
-                    </button>
-                </form>
+                <button type="submit" class="btn-p primary flex items-center gap-2">
+                    <i data-lucide="check-circle" class="w-4 h-4"></i> Tasdiqlash
+                </button>
+            </form>
             <?php endif; ?>
             <?php if($seller->status !== 'rejected'): ?>
                 <form method="POST" action="<?php echo e(route('admin.sellers.reject', $seller)); ?>" onsubmit="return confirm('Sotuvchini rad etishga ishonchingiz komilmi?')">
                     <?php echo csrf_field(); ?>
                     <?php echo method_field('PATCH'); ?>
-                    <button type="submit" class="btn btn-danger flex items-center gap-2">
-                        <i data-lucide="x-circle" class="w-4 h-4"></i> Rad etish
-                    </button>
-                </form>
-            <?php endif; ?>
-        </div>
+                <button type="submit" class="btn-p danger flex items-center gap-2">
+                    <i data-lucide="x-circle" class="w-4 h-4"></i> Rad etish
+                </button>
+            </form>
+        <?php endif; ?>
     </div>
+</div>
+</div>
+</div>
 </div>
 
 
-<?php if(!$seller->parent_id && !empty($seller->qr_token)): ?>
-<?php
-    $qrUrl    = $seller->qrUrl();
-    $qrImgSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=12&data=' . urlencode($qrUrl);
-?>
-<div class="card p-5 mb-6">
-    <div class="flex items-start gap-5 flex-wrap">
-        <div class="shrink-0 bg-white p-3 rounded-lg border border-slate-200 dark:border-slate-700">
-            <img src="<?php echo e($qrImgSrc); ?>" alt="Do'kon QR" width="180" height="180" loading="lazy">
-        </div>
-
-        <div class="flex-1 min-w-[260px]">
-            <div class="flex items-center gap-2 mb-2">
+<?php if(!$seller->parent_id && $storeSeller->locations->isNotEmpty()): ?>
+<div class="a122-section mb-6">
+    <div class="a122-section-head">
+        <div>
+            <div class="flex items-center gap-2 mb-1">
                 <i data-lucide="qr-code" class="w-5 h-5 text-teal-500"></i>
-                <h3 class="text-base font-semibold">Do'kon QR kodi</h3>
+                <div class="a122-section-head__title">Filial QR kodlari</div>
             </div>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">
-                Mijoz do'konga kirib shu QR'ni Kitobchi ilovasi orqali skaner qilsa,
-                "Do'kon ichida" rejimi yoqiladi va faqat shu sotuvchi mahsulotlari ko'rinadi.
-                QR'ni A4 yoki kichikroq formatda chop etib do'konning ko'rinarli joyiga osib qo'ying.
-            </p>
-
-            <dl class="grid grid-cols-3 gap-2 text-xs mb-3">
-                <dt class="text-gray-500">URL</dt>
-                <dd class="col-span-2 font-mono break-all text-gray-700 dark:text-gray-300"><?php echo e($qrUrl); ?></dd>
-
-                <dt class="text-gray-500">Token</dt>
-                <dd class="col-span-2 font-mono text-gray-700 dark:text-gray-300"><?php echo e($seller->qr_token); ?></dd>
-
-                <?php if($seller->qr_rotated_at): ?>
-                <dt class="text-gray-500">Yangilangan</dt>
-                <dd class="col-span-2"><?php echo e($seller->qr_rotated_at->format('Y-m-d H:i')); ?></dd>
-                <?php endif; ?>
-            </dl>
-
-            <div class="flex items-center gap-2 flex-wrap">
-                <a href="<?php echo e($qrImgSrc); ?>" target="_blank" rel="noopener"
-                   class="btn btn-outline-primary btn-sm flex items-center gap-1">
-                    <i data-lucide="external-link" class="w-4 h-4"></i> Katta hajmda ochish
-                </a>
-                <a href="<?php echo e(str_replace('size=300x300', 'size=600x600', $qrImgSrc)); ?>" download="kitobchi-shop-<?php echo e($seller->id); ?>.png"
-                   class="btn btn-outline-secondary btn-sm flex items-center gap-1">
-                    <i data-lucide="download" class="w-4 h-4"></i> Yuklab olish (600px)
-                </a>
-                <form method="POST" action="<?php echo e(route('admin.sellers.qr.rotate', $seller)); ?>"
-                      onsubmit="return confirm('Eski QR ishlamay qoladi. Yangi QR\'ni do\'konga osib qo\'ying. Davom etamizmi?')">
-                    <?php echo csrf_field(); ?>
-                    <button type="submit" class="btn btn-outline-warning btn-sm flex items-center gap-1">
-                        <i data-lucide="refresh-cw" class="w-4 h-4"></i> QR'ni yangilash
-                    </button>
-                </form>
+            <div class="a122-section-head__meta max-w-3xl">
+                Har bir filial uchun alohida QR ishlatiladi. Mijoz qaysi filialdagi QR'ni skaner qilsa, aynan o'sha filialning "do'kon ichida" rejimi boshlanadi.
+                <span class="font-medium">Asosiy filial</span> belgisi esa faqat kuryerlar borishi kerak bo'lgan default manzilni bildiradi.
             </div>
         </div>
+    </div>
+
+    <div class="a122-section-body">
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-5">
+        <?php $__currentLoopData = $storeSeller->locations; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $location): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+            <?php
+                $qrUrl = $location->qr_url;
+                $qrImgSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=520x520&margin=22&format=png&ecc=Q&data=' . urlencode($qrUrl);
+            ?>
+            <div class="rounded-[28px] border border-slate-200 dark:border-slate-700 bg-[radial-gradient(circle_at_top_left,_rgba(20,184,166,0.12),_transparent_42%),linear-gradient(135deg,#ffffff,_#f8fafc)] dark:bg-slate-900 p-5 shadow-sm">
+                <div class="flex items-start gap-4 flex-wrap">
+                    <div class="shrink-0 rounded-[24px] bg-white p-3 border border-slate-200 shadow-sm">
+                        <div class="rounded-2xl overflow-hidden bg-white">
+                            <img src="<?php echo e($qrImgSrc); ?>" alt="Filial QR" width="170" height="170" loading="lazy">
+                        </div>
+                    </div>
+                    <div class="flex-1 min-w-[250px]">
+                        <div class="flex items-center gap-2 mb-3 flex-wrap">
+                            <span class="badge <?php echo e($location->is_main ? 'badge-warning' : 'badge-secondary'); ?>">
+                                <?php echo e($location->is_main ? 'Asosiy filial' : 'Filial'); ?>
+
+                            </span>
+                            <span class="badge badge-light">ID: <?php echo e($location->id); ?></span>
+                            <?php if($location->is_main): ?>
+                                <span class="badge badge-light">Kuryer default filial</span>
+                            <?php endif; ?>
+                        </div>
+
+                        <p class="text-sm font-semibold text-slate-800 dark:text-slate-100 mb-1 leading-6">
+                            <?php echo e($location->fullAddress); ?>
+
+                        </p>
+                        <?php if($location->description): ?>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mb-3"><?php echo e($location->description); ?></p>
+                        <?php endif; ?>
+
+                        <dl class="grid grid-cols-3 gap-2 text-xs mb-3">
+                            <dt class="text-slate-500">URL</dt>
+                            <dd class="col-span-2 font-mono break-all text-slate-700 dark:text-slate-300"><?php echo e($qrUrl); ?></dd>
+
+                            <dt class="text-slate-500">Token</dt>
+                            <dd class="col-span-2 font-mono text-slate-700 dark:text-slate-300"><?php echo e($location->qr_token); ?></dd>
+
+                            <?php if($location->qr_rotated_at): ?>
+                                <dt class="text-slate-500">Yangilangan</dt>
+                                <dd class="col-span-2"><?php echo e($location->qr_rotated_at->format('Y-m-d H:i')); ?></dd>
+                            <?php endif; ?>
+                        </dl>
+
+                        <div class="flex items-center gap-2 flex-wrap pt-1">
+                            <a href="<?php echo e($qrImgSrc); ?>" target="_blank" rel="noopener"
+                               class="btn-p ghost sm flex items-center gap-1">
+                                <i data-lucide="external-link" class="w-4 h-4"></i> Ochish
+                            </a>
+                            <a href="<?php echo e($qrImgSrc); ?>" download="kitobchi-location-<?php echo e($location->id); ?>.png"
+                               class="btn-p ghost sm flex items-center gap-1">
+                                <i data-lucide="download" class="w-4 h-4"></i> Yuklab olish
+                            </a>
+                            <form method="POST" action="<?php echo e(route('admin.sellers.locations.qr.rotate', [$storeSeller, $location])); ?>"
+                                  onsubmit="return confirm('Eski filial QR ishlamay qoladi. Yangi QR\'ni shu filialga almashtiramizmi?')">
+                                <?php echo csrf_field(); ?>
+                                <button type="submit" class="btn-p sm flex items-center gap-1">
+                                    <i data-lucide="refresh-cw" class="w-4 h-4"></i> QR'ni yangilash
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+    </div>
     </div>
 </div>
 <?php endif; ?>
 
 <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
-    <div class="card p-5 xl:col-span-2">
-        <div class="flex items-center justify-between gap-3 mb-4 flex-wrap">
+    <div class="a122-section xl:col-span-2">
+        <div class="a122-section-head">
             <div>
-                <h3 class="font-bold text-base">Ogohlantirish yuborish</h3>
-                <p class="text-sm text-gray-500 mt-1">3 ta faol ogohlantirishdan keyin sotuvchi avtomatik bloklanadi.</p>
+                <div class="a122-section-head__title">Ogohlantirish yuborish</div>
+                <div class="a122-section-head__meta">3 ta faol ogohlantirishdan keyin sotuvchi avtomatik bloklanadi.</div>
             </div>
             <?php if($isBlocked): ?>
                 <span class="badge badge-danger">Seller hozir bloklangan</span>
             <?php endif; ?>
         </div>
+        <div class="a122-section-body">
         <form method="POST" action="<?php echo e(route('admin.sellers.warn', $seller)); ?>" class="grid grid-cols-1 gap-3">
             <?php echo csrf_field(); ?>
             <div>
@@ -253,15 +292,22 @@
                 <textarea name="message" rows="4" class="input" placeholder="Sellerga ko‘rinadigan ogohlantirish matni"><?php echo e(old('message')); ?></textarea>
             </div>
             <div class="flex items-center justify-end">
-                <button type="submit" class="btn btn-warning flex items-center gap-2">
+                <button type="submit" class="btn-p flex items-center gap-2">
                     <i data-lucide="triangle-alert" class="w-4 h-4"></i> Ogohlantirish yuborish
                 </button>
             </div>
         </form>
+        </div>
     </div>
 
-    <div class="card p-5">
-        <h3 class="font-bold text-base mb-4">Bloklash holati</h3>
+    <div class="a122-section">
+        <div class="a122-section-head">
+            <div>
+                <div class="a122-section-head__title">Bloklash holati</div>
+                <div class="a122-section-head__meta">Ogohlantirishlar limiti va joriy blok holati.</div>
+            </div>
+        </div>
+        <div class="a122-section-body">
         <div class="space-y-3 text-sm">
             <div class="flex items-center justify-between gap-3">
                 <span class="text-gray-500">Do‘kon statusi</span>
@@ -274,82 +320,84 @@
                 <span class="text-gray-500">Faol ogohlantirishlar</span>
                 <span class="font-semibold"><?php echo e($warningCount); ?>/3</span>
             </div>
-            <div class="rounded-2xl bg-gray-50 dark:bg-white/5 p-4 text-xs text-gray-500">
+            <div class="a122-soft-note">
                 Blokdan chiqarilganda ogohlantirish hisobi qayta boshlanadi. Eski ogohlantirishlar audit uchun tarixda saqlanadi.
             </div>
+        </div>
         </div>
     </div>
 </div>
 
 
-<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-    <div class="card p-4 flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-500/10 flex items-center justify-center shrink-0">
+<div class="a122-stat-grid mb-6">
+    <div class="a122-stat-tile">
+        <div class="a122-stat-tile__icon bg-blue-100 dark:bg-blue-500/10 text-blue-500">
             <i data-lucide="shopping-bag" class="w-5 h-5 text-blue-500"></i>
         </div>
         <div class="min-w-0">
-            <p class="text-[10px] text-gray-500 uppercase tracking-wide">Jami buyurtma</p>
-            <p class="text-xl font-bold leading-tight"><?php echo e(number_format($orderCount, 0, '.', ' ')); ?></p>
+            <p class="a122-stat-tile__label">Jami buyurtma</p>
+            <p class="a122-stat-tile__value"><?php echo e(number_format($orderCount, 0, '.', ' ')); ?></p>
         </div>
     </div>
 
-    <div class="card p-4 flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-500/10 flex items-center justify-center shrink-0">
+    <div class="a122-stat-tile">
+        <div class="a122-stat-tile__icon bg-emerald-100 dark:bg-emerald-500/10 text-emerald-500">
             <i data-lucide="circle-check" class="w-5 h-5 text-emerald-500"></i>
         </div>
         <div class="min-w-0">
-            <p class="text-[10px] text-gray-500 uppercase tracking-wide">Muvaffaqiyatli</p>
-            <p class="text-xl font-bold leading-tight"><?php echo e(number_format($seller->successful_orders ?? 0, 0, '.', ' ')); ?></p>
+            <p class="a122-stat-tile__label">Muvaffaqiyatli</p>
+            <p class="a122-stat-tile__value"><?php echo e(number_format($seller->successful_orders ?? 0, 0, '.', ' ')); ?></p>
         </div>
     </div>
 
-    <div class="card p-4 flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-500/10 flex items-center justify-center shrink-0">
+    <div class="a122-stat-tile">
+        <div class="a122-stat-tile__icon bg-green-100 dark:bg-green-500/10 text-green-500">
             <i data-lucide="banknote" class="w-5 h-5 text-green-500"></i>
         </div>
         <div class="min-w-0">
-            <p class="text-[10px] text-gray-500 uppercase tracking-wide">Balans</p>
-            <p class="text-xl font-bold leading-tight"><?php echo e(number_format($seller->balance ?? 0, 0, '.', ' ')); ?></p>
-            <p class="text-[10px] text-gray-400">UZS</p>
+            <p class="a122-stat-tile__label">Balans</p>
+            <p class="a122-stat-tile__value"><?php echo e(number_format($seller->balance ?? 0, 0, '.', ' ')); ?></p>
+            <p class="a122-stat-tile__meta">UZS</p>
         </div>
     </div>
 
-    <div class="card p-4 flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-yellow-100 dark:bg-yellow-500/10 flex items-center justify-center shrink-0">
+    <div class="a122-stat-tile">
+        <div class="a122-stat-tile__icon bg-yellow-100 dark:bg-yellow-500/10 text-yellow-500">
             <i data-lucide="star" class="w-5 h-5 text-yellow-500"></i>
         </div>
         <div class="min-w-0">
-            <p class="text-[10px] text-gray-500 uppercase tracking-wide">Reyting</p>
-            <p class="text-xl font-bold leading-tight"><?php echo e(number_format($seller->rating ?? 0, 2)); ?></p>
-            <p class="text-[10px] text-gray-400"><?php echo e($seller->total_reviews ?? 0); ?> sharh</p>
+            <p class="a122-stat-tile__label">Reyting</p>
+            <p class="a122-stat-tile__value"><?php echo e(number_format($seller->rating ?? 0, 2)); ?></p>
+            <p class="a122-stat-tile__meta"><?php echo e($seller->total_reviews ?? 0); ?> sharh</p>
         </div>
     </div>
 
-    <div class="card p-4 flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-500/10 flex items-center justify-center shrink-0">
+    <div class="a122-stat-tile">
+        <div class="a122-stat-tile__icon bg-indigo-100 dark:bg-indigo-500/10 text-indigo-500">
             <i data-lucide="timer" class="w-5 h-5 text-indigo-500"></i>
         </div>
         <div class="min-w-0">
-            <p class="text-[10px] text-gray-500 uppercase tracking-wide">Javob vaqti</p>
-            <p class="text-xl font-bold leading-tight"><?php echo e(number_format($seller->response_time_hours ?? 0, 1)); ?></p>
-            <p class="text-[10px] text-gray-400">soat</p>
+            <p class="a122-stat-tile__label">Javob vaqti</p>
+            <p class="a122-stat-tile__value"><?php echo e(number_format($seller->response_time_hours ?? 0, 1)); ?></p>
+            <p class="a122-stat-tile__meta">soat</p>
         </div>
     </div>
 
-    <div class="card p-4 flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-500/10 flex items-center justify-center shrink-0">
+    <div class="a122-stat-tile">
+        <div class="a122-stat-tile__icon bg-purple-100 dark:bg-purple-500/10 text-purple-500">
             <i data-lucide="book-open" class="w-5 h-5 text-purple-500"></i>
         </div>
         <div class="min-w-0">
-            <p class="text-[10px] text-gray-500 uppercase tracking-wide">Kitoblar</p>
-            <p class="text-xl font-bold leading-tight"><?php echo e($seller->books_count ?? 0); ?></p>
+            <p class="a122-stat-tile__label">Kitoblar</p>
+            <p class="a122-stat-tile__value"><?php echo e($seller->books_count ?? 0); ?></p>
         </div>
     </div>
 </div>
 
 
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-    <div class="card p-5 flex items-center gap-4">
+    <div class="a122-section">
+        <div class="a122-section-body flex items-center gap-4">
         <div class="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-500/10 flex items-center justify-center">
             <i data-lucide="trending-up" class="w-6 h-6 text-green-500"></i>
         </div>
@@ -357,8 +405,10 @@
             <p class="text-xs text-gray-500">Jami daromad (tasdiqlangan yechib olishlar)</p>
             <p class="text-2xl font-bold"><?php echo e(number_format($totalRevenue, 0, '.', ' ')); ?> <span class="text-sm text-gray-400 font-normal">UZS</span></p>
         </div>
+        </div>
     </div>
-    <div class="card p-5 flex items-center gap-4">
+    <div class="a122-section">
+        <div class="a122-section-body flex items-center gap-4">
         <div class="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-500/10 flex items-center justify-center">
             <i data-lucide="crown" class="w-6 h-6 text-amber-500"></i>
         </div>
@@ -375,24 +425,31 @@
                 <p class="text-xs text-gray-400">Tahrirlash sahifasidan berish mumkin</p>
             <?php endif; ?>
         </div>
+        </div>
     </div>
 </div>
 
 
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
     
-    <div class="card p-5">
-        <div class="flex items-center justify-between mb-4">
-            <h3 class="font-bold text-base flex items-center gap-2">
+    <div class="a122-section">
+        <div class="a122-section-head">
+            <div>
+            <div class="a122-section-head__title flex items-center gap-2">
                 <i data-lucide="file-signature" class="w-5 h-5 text-blue-500"></i>
                 Shartnoma
-            </h3>
-            <a href="<?php echo e(route('admin.sellers.edit', $seller)); ?>#contract" class="text-xs text-blue-500 hover:underline">Tahrirlash</a>
+            </div>
+            <div class="a122-section-head__meta">Shartnoma holati, muddati va uzaytirish nazorati.</div>
+            </div>
+            <div class="a122-section-head__actions">
+                <a href="<?php echo e(route('admin.sellers.edit', $seller)); ?>#contract" class="btn-p ghost sm">Tahrirlash</a>
+            </div>
         </div>
+        <div class="a122-section-body">
         <?php if(empty($seller->contract_number) && empty($seller->contract_expires_at) && !$seller->contract_signed): ?>
             <p class="text-sm text-gray-400 text-center py-4">Shartnoma ma'lumotlari kiritilmagan.</p>
         <?php else: ?>
-            <dl class="grid grid-cols-3 gap-y-2 gap-x-3 text-sm">
+            <dl class="a122-kv">
                 
                 <dt class="col-span-1 text-gray-500">Imzo holati</dt>
                 <dd class="col-span-2">
@@ -440,30 +497,37 @@
                         <option value="12" selected>+12 oy</option>
                         <option value="24">+24 oy</option>
                     </select>
-                    <button type="submit" class="btn btn-secondary text-xs flex items-center gap-1 whitespace-nowrap">
+                    <button type="submit" class="btn-p ghost sm text-xs flex items-center gap-1 whitespace-nowrap">
                         <i data-lucide="calendar-plus" class="w-3.5 h-3.5"></i> Uzaytirish
                     </button>
                 </form>
             <?php endif; ?>
         <?php endif; ?>
+        </div>
     </div>
 
     
-    <div class="card p-5">
-        <div class="flex items-center justify-between mb-4">
-            <h3 class="font-bold text-base flex items-center gap-2">
+    <div class="a122-section">
+        <div class="a122-section-head">
+            <div>
+            <div class="a122-section-head__title flex items-center gap-2">
                 <i data-lucide="landmark" class="w-5 h-5 text-emerald-500"></i>
                 Rekvizitlar
-            </h3>
-            <a href="<?php echo e(route('admin.sellers.edit', $seller)); ?>#legal" class="text-xs text-blue-500 hover:underline">Tahrirlash</a>
+            </div>
+            <div class="a122-section-head__meta">Yuridik va to‘lov rekvizitlari, bank va karta ma’lumotlari.</div>
+            </div>
+            <div class="a122-section-head__actions">
+                <a href="<?php echo e(route('admin.sellers.edit', $seller)); ?>#legal" class="btn-p ghost sm">Tahrirlash</a>
+            </div>
         </div>
+        <div class="a122-section-body">
         <?php
             $hasAny = $seller->legal_type || $seller->inn || $seller->bank_account || $seller->payment_card;
         ?>
         <?php if(!$hasAny): ?>
             <p class="text-sm text-gray-400 text-center py-4">Rekvizitlar kiritilmagan.</p>
         <?php else: ?>
-            <dl class="grid grid-cols-3 gap-y-2 gap-x-3 text-sm">
+            <dl class="a122-kv">
                 <?php if($seller->legal_type): ?>
                     <dt class="col-span-1 text-gray-500">Turi</dt>
                     <dd class="col-span-2">
@@ -511,20 +575,27 @@
                 <?php endif; ?>
             </dl>
         <?php endif; ?>
+        </div>
     </div>
 </div>
 
 
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
     
-    <div class="card p-5">
-        <div class="flex items-center justify-between mb-4">
-            <h3 class="font-bold text-base flex items-center gap-2">
+    <div class="a122-section">
+        <div class="a122-section-head">
+            <div>
+            <div class="a122-section-head__title flex items-center gap-2">
                 <i data-lucide="folder" class="w-5 h-5 text-indigo-500"></i>
                 Hujjatlar (<?php echo e($seller->documents->count()); ?>)
-            </h3>
-            <a href="<?php echo e(route('admin.sellers.edit', $seller)); ?>#documents" class="text-xs text-blue-500 hover:underline">Yuklash / boshqarish</a>
+            </div>
+            <div class="a122-section-head__meta">Yuklangan fayllar va sotuvchining tekshiruv hujjatlari.</div>
+            </div>
+            <div class="a122-section-head__actions">
+                <a href="<?php echo e(route('admin.sellers.edit', $seller)); ?>#documents" class="btn-p ghost sm">Yuklash / boshqarish</a>
+            </div>
         </div>
+        <div class="a122-section-body">
         <?php if($seller->documents->isEmpty()): ?>
             <p class="text-sm text-gray-400 text-center py-4">Hujjatlar yuklanmagan.</p>
         <?php else: ?>
@@ -546,14 +617,21 @@
                 <p class="text-xs text-gray-400 mt-2 text-center">Yana <?php echo e($seller->documents->count() - 6); ?> ta hujjat...</p>
             <?php endif; ?>
         <?php endif; ?>
+        </div>
     </div>
 
     
-    <div class="card p-5">
-        <h3 class="font-bold text-base flex items-center gap-2 mb-4">
+    <div class="a122-section">
+        <div class="a122-section-head">
+            <div>
+        <div class="a122-section-head__title flex items-center gap-2">
             <i data-lucide="history" class="w-5 h-5 text-amber-500"></i>
             Shartnoma tarixi
-        </h3>
+        </div>
+        <div class="a122-section-head__meta">Uzaytirish, to‘xtatish va boshqa harakatlar auditi.</div>
+            </div>
+        </div>
+        <div class="a122-section-body">
         <?php if($seller->contractHistory->isEmpty()): ?>
             <p class="text-sm text-gray-400 text-center py-4">Tarix yo'q.</p>
         <?php else: ?>
@@ -590,13 +668,20 @@
                 <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
             </ol>
         <?php endif; ?>
+        </div>
     </div>
 </div>
 
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
     
-    <div class="card p-5">
-        <h3 class="font-bold text-base mb-4">So'nggi buyurtmalar</h3>
+    <div class="a122-section">
+        <div class="a122-section-head">
+            <div>
+                <div class="a122-section-head__title">So'nggi buyurtmalar</div>
+                <div class="a122-section-head__meta">Seller bo‘yicha eng oxirgi savdo yozuvlari.</div>
+            </div>
+        </div>
+        <div class="a122-section-body">
         <div class="table-wrap">
             <div class="overflow-x-auto">
                 <table class="tbl">
@@ -626,11 +711,18 @@
                 </table>
             </div>
         </div>
+        </div>
     </div>
 
     
-    <div class="card p-5">
-        <h3 class="font-bold text-base mb-4">So'nggi tranzaksiyalar</h3>
+    <div class="a122-section">
+        <div class="a122-section-head">
+            <div>
+                <div class="a122-section-head__title">So'nggi tranzaksiyalar</div>
+                <div class="a122-section-head__meta">To‘lov va balansga ta’sir qilgan oxirgi moliyaviy yozuvlar.</div>
+            </div>
+        </div>
+        <div class="a122-section-body">
         <div class="table-wrap">
             <div class="overflow-x-auto">
                 <table class="tbl">
@@ -672,11 +764,18 @@
                 </table>
             </div>
         </div>
+        </div>
     </div>
 </div>
 
-<div class="card p-5 mt-6">
-    <h3 class="font-bold text-base mb-4">Seller loglari</h3>
+<div class="a122-section mt-6">
+    <div class="a122-section-head">
+        <div>
+            <div class="a122-section-head__title">Seller loglari</div>
+            <div class="a122-section-head__meta">Ichki xodimlar tomonidan yozilgan barcha operatsion izohlar.</div>
+        </div>
+    </div>
+    <div class="a122-section-body">
     <div class="table-wrap">
         <div class="overflow-x-auto">
             <table class="tbl">
@@ -704,10 +803,17 @@
             </table>
         </div>
     </div>
+    </div>
 </div>
 
-<div class="card p-5 mt-6">
-    <h3 class="font-bold text-base mb-4">Ogohlantirish va unblock tarixi</h3>
+<div class="a122-section mt-6">
+    <div class="a122-section-head">
+        <div>
+            <div class="a122-section-head__title">Ogohlantirish va unblock tarixi</div>
+            <div class="a122-section-head__meta">Sellerga yuborilgan warninglar va blokdan chiqarish harakatlari.</div>
+        </div>
+    </div>
+    <div class="a122-section-body">
     <div class="table-wrap">
         <div class="overflow-x-auto">
             <table class="tbl">
@@ -743,6 +849,7 @@
                 </tbody>
             </table>
         </div>
+    </div>
     </div>
 </div>
 <?php $__env->stopSection(); ?>

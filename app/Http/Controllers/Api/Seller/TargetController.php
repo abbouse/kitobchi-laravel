@@ -10,6 +10,7 @@ use App\Models\SellerStaffLog;
 use App\Models\Books;
 use App\Models\Stationery;
 use App\Models\MyCart;
+use App\Models\ProductViewLog;
 use App\Models\FavouriteProducts;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -284,6 +285,11 @@ class TargetController extends Controller
         // ── Ko'rishlar ─────────────────────────────────────────────
         // Books va Stationery modelida 'views' ustuni bo'lishi kerak
         $views = (int) ($product->views ?? 0);
+        $recommendedViews = (int) ProductViewLog::query()
+            ->where('product_id', $product->id)
+            ->where('product_type', $type)
+            ->where('recommendation_active', true)
+            ->count();
 
         return response()->json([
             'success' => true,
@@ -292,6 +298,7 @@ class TargetController extends Controller
                 'type'                    => $type,
                 'name'                    => $product->name,
                 'views'                   => $views,
+                'recommended_views'       => $recommendedViews,
                 'in_carts'                => $inCarts,
                 'in_favourites'           => $inFavourites,
                 'recommended'             => $isRecommended,

@@ -3,14 +3,30 @@
 namespace App\Http\Controllers\A122;
 
 use App\Http\Controllers\Controller;
+use App\Models\Seller;
 use App\Models\SellerOrder;
 use App\Models\Sold;
 use App\Models\Stationery;
 use App\Models\StationeryCategory;
+use App\Models\StationeryVariant;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class StationeryController extends Controller
 {
+    private function parseImagesText(?string $raw): array
+    {
+        if (! is_string($raw) || trim($raw) === '') {
+            return [];
+        }
+
+        return collect(preg_split('/[\r\n,]+/', $raw) ?: [])
+            ->map(fn ($item) => trim((string) $item))
+            ->filter()
+            ->values()
+            ->all();
+    }
+
     public function index(Request $request)
     {
         $query = Stationery::with('category');
@@ -54,30 +70,61 @@ class StationeryController extends Controller
     public function create()
     {
         $categories = StationeryCategory::orderBy('name_uz')->get();
+        $sellers = Seller::query()
+            ->select('id', 'shop_name')
+            ->whereNotNull('shop_name')
+            ->orderBy('shop_name')
+            ->get();
 
-        return view('a122.stationery.create', compact('categories'));
+        return view('a122.stationery.create', compact('categories', 'sellers'));
     }
 
     public function store(Request $request)
     {
         $data = $request->validate([
             'name' => 'required|string|max:255',
+            'seller_id' => 'nullable|exists:sellers,id',
+            'barcode' => 'nullable|string|max:32',
             'material' => 'nullable|string|max:255',
             'category_id' => 'required|exists:stationery_categories,id',
             'description' => 'nullable|string|max:3000',
             'price' => 'required|numeric|min:0',
             'discount_price' => 'nullable|numeric|min:0',
+            'discountExpiresAt' => 'nullable|date',
             'stock' => 'required|integer|min:0',
             'is_approved' => 'nullable|in:0,1,2',
             'status' => 'nullable|boolean',
             'recommended' => 'nullable|boolean',
+            'recommendedExpiresAt' => 'nullable|date',
+            'is_hidden' => 'nullable|boolean',
+            'images_text' => 'nullable|string',
+            'images.*' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:10240',
+            'variant_id.*' => 'nullable|integer|exists:stationery_variants,id',
+            'variant_color_name.*' => 'nullable|string|max:100',
+            'variant_stock.*' => 'nullable|integer|min:0',
+            'variant_image_existing.*' => 'nullable|string|max:1000',
+            'variant_image.*' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:10240',
         ]);
 
+        $images = $this->parseImagesText($request->input('images_text'));
+        if ($request->hasFile('images')) {
+            foreach ($request->file('images') as $index => $image) {
+                if (! $image->isValid()) {
+                    continue;
+                }
+                $filename = time() . "_admin_stationery_{$index}." . $image->getClientOriginalExtension();
+                $images[] = $image->storeAs('stationery', $filename, 'public');
+            }
+        }
+
+        $data['images'] = array_values(array_unique($images));
         $data['status'] = $request->boolean('status', true);
         $data['recommended'] = $request->boolean('recommended', false);
+        $data['is_hidden'] = $request->boolean('is_hidden', false);
         $data['is_approved'] = $data['is_approved'] ?? 1;
 
         $item = Stationery::create($data);
+        $this->syncVariants($request, $item);
 
         return redirect()->route('admin.stationery.show', $item->id)->with('success', 'Kanstovar yaratildi.');
     }
@@ -110,34 +157,128 @@ class StationeryController extends Controller
 
     public function edit(int $id)
     {
-        $item = Stationery::findOrFail($id);
+        $item = Stationery::with('variants')->findOrFail($id);
         $categories = StationeryCategory::orderBy('name_uz')->get();
+        $sellers = Seller::query()
+            ->select('id', 'shop_name')
+            ->whereNotNull('shop_name')
+            ->orderBy('shop_name')
+            ->get();
 
-        return view('a122.stationery.edit', compact('item', 'categories'));
+        return view('a122.stationery.edit', compact('item', 'categories', 'sellers'));
     }
 
     public function update(Request $request, int $id)
     {
-        $item = Stationery::findOrFail($id);
+        $item = Stationery::with('variants')->findOrFail($id);
         $data = $request->validate([
             'name' => 'required|string|max:255',
+            'seller_id' => 'nullable|exists:sellers,id',
+            'barcode' => 'nullable|string|max:32',
             'material' => 'nullable|string|max:255',
             'category_id' => 'required|exists:stationery_categories,id',
             'description' => 'nullable|string|max:3000',
             'price' => 'required|numeric|min:0',
             'discount_price' => 'nullable|numeric|min:0',
+            'discountExpiresAt' => 'nullable|date',
             'stock' => 'required|integer|min:0',
             'is_approved' => 'nullable|in:0,1,2',
             'status' => 'nullable|boolean',
             'recommended' => 'nullable|boolean',
+            'recommendedExpiresAt' => 'nullable|date',
+            'is_hidden' => 'nullable|boolean',
+            'images_text' => 'nullable|string',
+            'images.*' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:10240',
+            'variant_id.*' => 'nullable|integer|exists:stationery_variants,id',
+            'variant_color_name.*' => 'nullable|string|max:100',
+            'variant_stock.*' => 'nullable|integer|min:0',
+            'variant_image_existing.*' => 'nullable|string|max:1000',
+            'variant_image.*' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:10240',
         ]);
 
-        $data['status'] = $request->boolean('status', false);
+        $existingImages = $this->parseImagesText($request->input('images_text'));
+        $currentImages = is_array($item->images) ? $item->images : [];
+        $deletedImages = array_diff($currentImages, $existingImages);
+        foreach ($deletedImages as $image) {
+            if (is_string($image) && ! str_starts_with($image, 'http')) {
+                Storage::disk('public')->delete($image);
+            }
+        }
+
+        $images = $existingImages;
+        if ($request->hasFile('images')) {
+            foreach ($request->file('images') as $index => $image) {
+                if (! $image->isValid()) {
+                    continue;
+                }
+                $filename = time() . "_admin_stationery_{$index}." . $image->getClientOriginalExtension();
+                $images[] = $image->storeAs('stationery', $filename, 'public');
+            }
+        }
+
+        $data['images'] = array_values(array_unique($images));
+        $data['status'] = $request->boolean('status', true);
         $data['recommended'] = $request->boolean('recommended', false);
+        $data['is_hidden'] = $request->boolean('is_hidden', false);
 
         $item->update($data);
+        $this->syncVariants($request, $item);
 
         return redirect()->route('admin.stationery.show', $item->id)->with('success', 'Kanstovar yangilandi.');
+    }
+
+    private function syncVariants(Request $request, Stationery $item): void
+    {
+        $variantIds = (array) $request->input('variant_id', []);
+        $variantNames = (array) $request->input('variant_color_name', []);
+        $variantStocks = (array) $request->input('variant_stock', []);
+        $variantExistingImages = (array) $request->input('variant_image_existing', []);
+        $variantUploadedImages = $request->file('variant_image', []);
+
+        $incomingIds = [];
+        foreach ($variantNames as $index => $name) {
+            $name = trim((string) $name);
+            $stock = $variantStocks[$index] ?? null;
+            if ($name === '' && ($stock === null || $stock === '')) {
+                continue;
+            }
+
+            $variantId = $variantIds[$index] ?? null;
+            $imagePath = trim((string) ($variantExistingImages[$index] ?? ''));
+            $uploaded = $variantUploadedImages[$index] ?? null;
+            if ($uploaded && $uploaded->isValid()) {
+                if ($imagePath !== '' && ! str_starts_with($imagePath, 'http')) {
+                    Storage::disk('public')->delete($imagePath);
+                }
+                $filename = time() . "_admin_variant_{$index}." . $uploaded->getClientOriginalExtension();
+                $imagePath = $uploaded->storeAs('stationery/variants', $filename, 'public');
+            }
+
+            $payload = [
+                'color_name' => $name,
+                'stock' => (int) $stock,
+                'image_path' => $imagePath !== '' ? $imagePath : null,
+            ];
+
+            if ($variantId) {
+                $variant = $item->variants->firstWhere('id', (int) $variantId);
+                if ($variant) {
+                    $variant->update($payload);
+                    $incomingIds[] = (int) $variant->id;
+                }
+            } else {
+                $created = $item->variants()->create($payload);
+                $incomingIds[] = (int) $created->id;
+            }
+        }
+
+        $toDelete = $item->variants()->whereNotIn('id', $incomingIds ?: [0])->get();
+        foreach ($toDelete as $variant) {
+            if ($variant->image_path && ! str_starts_with($variant->image_path, 'http')) {
+                Storage::disk('public')->delete($variant->image_path);
+            }
+            $variant->delete();
+        }
     }
 
     public function moderate(Request $request, int $id)

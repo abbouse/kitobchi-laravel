@@ -2,8 +2,8 @@
 {{-- $post, $showUser (default: true) --}}
 @php $showUser = $showUser ?? true; @endphp
 
-<div class="p-card fade-up" style="height:100%">
-  <div class="dash-card-body">
+<div class="a122-section fade-up" style="height:100%">
+  <div class="a122-section-body">
 
     {{-- User va meta --}}
     <div class="flex items-start justify-between mb-3">

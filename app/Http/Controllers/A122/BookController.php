@@ -5,12 +5,27 @@ namespace App\Http\Controllers\A122;
 use App\Http\Controllers\Controller;
 use App\Models\BookCategories;
 use App\Models\Books;
+use App\Models\Seller;
 use App\Models\SellerOrder;
 use App\Models\Sold;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class BookController extends Controller
 {
+    private function parseImagesText(?string $raw): array
+    {
+        if (! is_string($raw) || trim($raw) === '') {
+            return [];
+        }
+
+        return collect(preg_split('/[\r\n,]+/', $raw) ?: [])
+            ->map(fn ($item) => trim((string) $item))
+            ->filter()
+            ->values()
+            ->all();
+    }
+
     public function index(Request $request)
     {
         $query = Books::with(['category']);
@@ -57,22 +72,59 @@ class BookController extends Controller
     public function create()
     {
         $categories = BookCategories::orderBy('name_uz')->get();
-        return view('a122.books.create', compact('categories'));
+        $sellers = Seller::query()
+            ->select('id', 'shop_name')
+            ->whereNotNull('shop_name')
+            ->orderBy('shop_name')
+            ->get();
+
+        return view('a122.books.create', compact('categories', 'sellers'));
     }
 
     public function store(Request $request)
     {
         $data = $request->validate([
             'name' => 'required|string|max:255',
-            'author' => 'required|string|max:100',
+            'author' => 'required|string|max:255',
+            'isbn' => 'nullable|string|max:20',
             'category_id' => 'required|exists:book_categories,id',
-            'description' => 'nullable|string|max:1000',
+            'seller_id' => 'nullable|exists:sellers,id',
+            'description' => 'nullable|string|max:3000',
             'price' => 'required|numeric|min:0',
+            'discountPrice' => 'nullable|numeric|min:0',
+            'discountExpiresAt' => 'nullable|date',
             'count' => 'required|integer|min:0',
+            'lang' => 'nullable|string|max:10',
+            'langType' => 'nullable|string|max:40',
+            'coverType' => 'nullable|string|max:40',
+            'year' => 'nullable|integer|min:0|max:2100',
+            'pages' => 'nullable|integer|min:0',
             'status' => 'nullable|boolean',
+            'is_hidden' => 'nullable|boolean',
+            'recommended' => 'nullable|boolean',
+            'recommendedExpiresAt' => 'nullable|date',
+            'images_text' => 'nullable|string',
+            'images.*' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:10240',
         ]);
-        $data['is_approved'] = 1;
-        $data['status'] = (bool)($data['status'] ?? true);
+
+        $images = $this->parseImagesText($request->input('images_text'));
+        if ($request->hasFile('images')) {
+            foreach ($request->file('images') as $index => $image) {
+                if (! $image->isValid()) {
+                    continue;
+                }
+                $filename = time() . "_admin_book_{$index}." . $image->getClientOriginalExtension();
+                $images[] = $image->storeAs('books', $filename, 'public');
+            }
+        }
+
+        $data['isbn'] = Books::normalizeIsbn($request->input('isbn'));
+        $data['images'] = array_values(array_unique($images));
+        $data['is_approved'] = (int) ($request->input('is_approved', 1));
+        $data['status'] = $request->boolean('status', true);
+        $data['is_hidden'] = $request->boolean('is_hidden', false);
+        $data['recommended'] = $request->boolean('recommended', false);
+
         $book = Books::create($data);
         return redirect()->route('admin.books.show', $book)->with('success', 'Yangi kitob yaratildi.');
     }
@@ -106,22 +158,68 @@ class BookController extends Controller
     public function edit(Books $book)
     {
         $categories = BookCategories::orderBy('name_uz')->get();
-        return view('a122.books.edit', compact('book', 'categories'));
+        $sellers = Seller::query()
+            ->select('id', 'shop_name')
+            ->whereNotNull('shop_name')
+            ->orderBy('shop_name')
+            ->get();
+
+        return view('a122.books.edit', compact('book', 'categories', 'sellers'));
     }
 
     public function update(Request $request, Books $book)
     {
         $data = $request->validate([
             'name' => 'required|string|max:255',
-            'author' => 'required|string|max:100',
+            'author' => 'required|string|max:255',
+            'isbn' => 'nullable|string|max:20',
             'category_id' => 'required|exists:book_categories,id',
-            'description' => 'nullable|string|max:1000',
+            'seller_id' => 'nullable|exists:sellers,id',
+            'description' => 'nullable|string|max:3000',
             'price' => 'required|numeric|min:0',
+            'discountPrice' => 'nullable|numeric|min:0',
+            'discountExpiresAt' => 'nullable|date',
             'count' => 'required|integer|min:0',
+            'lang' => 'nullable|string|max:10',
+            'langType' => 'nullable|string|max:40',
+            'coverType' => 'nullable|string|max:40',
+            'year' => 'nullable|integer|min:0|max:2100',
+            'pages' => 'nullable|integer|min:0',
             'status' => 'nullable|boolean',
+            'is_hidden' => 'nullable|boolean',
+            'recommended' => 'nullable|boolean',
+            'recommendedExpiresAt' => 'nullable|date',
             'is_approved' => 'nullable|in:0,1,2',
+            'images_text' => 'nullable|string',
+            'images.*' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:10240',
         ]);
-        $data['status'] = (bool)($data['status'] ?? true);
+
+        $existingImages = $this->parseImagesText($request->input('images_text'));
+        $currentImages = is_array($book->images) ? $book->images : (json_decode((string) $book->images, true) ?: []);
+        $deletedImages = array_diff($currentImages, $existingImages);
+        foreach ($deletedImages as $image) {
+            if (is_string($image) && ! str_starts_with($image, 'http')) {
+                Storage::disk('public')->delete($image);
+            }
+        }
+
+        $images = $existingImages;
+        if ($request->hasFile('images')) {
+            foreach ($request->file('images') as $index => $image) {
+                if (! $image->isValid()) {
+                    continue;
+                }
+                $filename = time() . "_admin_book_{$index}." . $image->getClientOriginalExtension();
+                $images[] = $image->storeAs('books', $filename, 'public');
+            }
+        }
+
+        $data['isbn'] = Books::normalizeIsbn($request->input('isbn'));
+        $data['images'] = array_values(array_unique($images));
+        $data['status'] = $request->boolean('status', true);
+        $data['is_hidden'] = $request->boolean('is_hidden', false);
+        $data['recommended'] = $request->boolean('recommended', false);
+
         $book->update($data);
         return redirect()->route('admin.books.show', $book)->with('success', "Kitob yangilandi.");
     }

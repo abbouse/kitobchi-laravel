@@ -3,16 +3,41 @@
 
 <?php $__env->startSection('content'); ?>
 <div>
-  <div class="flex items-center justify-between gap-3 mb-4 flex-wrap">
+  <?php if (isset($component)) { $__componentOriginal0c1345684b2d774f43a544669f5684b0 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal0c1345684b2d774f43a544669f5684b0 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.a122.page-header','data' => []] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('a122.page-header'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes([]); ?>
+     <?php $__env->slot('heading', null, []); ?> Buyurtmalar <?php $__env->endSlot(); ?>
+     <?php $__env->slot('meta', null, []); ?> <?php echo e($orders->total()); ?> ta buyurtma yozuvi topildi. <?php $__env->endSlot(); ?>
+   <?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal0c1345684b2d774f43a544669f5684b0)): ?>
+<?php $attributes = $__attributesOriginal0c1345684b2d774f43a544669f5684b0; ?>
+<?php unset($__attributesOriginal0c1345684b2d774f43a544669f5684b0); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal0c1345684b2d774f43a544669f5684b0)): ?>
+<?php $component = $__componentOriginal0c1345684b2d774f43a544669f5684b0; ?>
+<?php unset($__componentOriginal0c1345684b2d774f43a544669f5684b0); ?>
+<?php endif; ?>
+
+  <div class="a122-index-header">
     <div>
-      <h2 class="text-xl font-bold tracking-tight">Buyurtmalar</h2>
-      <p class="text-xs text-gray-500 mt-0.5"><?php echo e($orders->total()); ?> ta yozuv topildi</p>
+      <div class="a122-index-header__title">Filter va qidiruv</div>
+      <div class="a122-index-header__meta">Buyurtmalarni ID, mijoz yoki status bo‘yicha filtrlash mumkin.</div>
     </div>
-    <form method="GET" class="relative min-w-[220px]">
-      <input type="hidden" name="tab" value="<?php echo e($tab); ?>">
-      <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-      <input type="text" name="search" value="<?php echo e(request('search')); ?>" placeholder="ID, mijoz, holat..." class="input !pl-9 !py-2 w-full">
-    </form>
+    <div class="a122-index-header__actions">
+      <form method="GET" class="a122-index-search-form">
+        <input type="hidden" name="tab" value="<?php echo e($tab); ?>">
+        <i data-lucide="search" class="w-4 h-4"></i>
+        <input type="text" name="search" value="<?php echo e(request('search')); ?>" placeholder="ID, mijoz, holat..." class="a122-index-search-input">
+      </form>
+    </div>
   </div>
   <div class="tab-pills fade-up mb-3">
     <?php $__currentLoopData = [
@@ -67,7 +92,15 @@
     <?php endif; ?>
   </div>
 
-  <div class="table-wrap">
+  <div class="a122-section">
+    <div class="a122-section-head">
+      <div>
+        <div class="a122-section-head__title">Buyurtmalar jadvali</div>
+        <div class="a122-section-head__meta">Statusni shu jadvalning o‘zidan boshqarish va buyurtma tafsilotiga tez o‘tish mumkin.</div>
+      </div>
+    </div>
+    <div class="a122-section-body">
+    <div class="table-wrap">
     <div class="overflow-x-auto">
       <table class="tbl" data-index-grid>
         <thead><tr><th>Buyurtma</th><th>Mijoz</th><th>Tovarlar</th><th>Summa</th><th>To'lov</th><th>Holat</th><th>Sana</th><th class="text-right">Amallar</th></tr></thead>
@@ -89,11 +122,11 @@
               };
             ?>
             <tr>
-              <td>#ORD-<?php echo e($order->id); ?></td>
+              <td><span class="font-semibold">#ORD-<?php echo e($order->id); ?></span></td>
               <td><?php echo e(trim(($order->user?->name ?? 'Mehmon').' '.($order->user?->lastname ?? ''))); ?></td>
               <td><?php echo e((int) collect($order->items ?? [])->sum('count_item')); ?></td>
               <td><?php echo e(number_format((float) $order->amount, 0)); ?> UZS</td>
-              <td><?php echo e($paymentLabel); ?></td>
+              <td><span class="badge badge-muted"><?php echo e($paymentLabel); ?></span></td>
               <td>
                 <form method="POST" action="<?php echo e(route('admin.orders.status', $order)); ?>" class="inline-flex">
                   <?php echo csrf_field(); ?>
@@ -120,6 +153,8 @@
         </tbody>
       </table>
     </div>
+  </div>
+  </div>
   </div>
 </div>
 <?php if(isset($orders) && method_exists($orders, 'links')): ?>

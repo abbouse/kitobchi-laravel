@@ -1,5 +1,21 @@
 <header class="sticky top-0 z-30 topbar-shell">
-  <?php ($panelAdmin = auth('panel')->user()); ?>
+  <?php($panelAdmin = auth('panel')->user())
+  @php
+    $quickLinks = [
+      ['label' => 'Dashboard', 'href' => route('admin.dashboard')],
+      ['label' => 'Foydalanuvchilar', 'href' => route('admin.users.index')],
+      ['label' => 'Kitoblar', 'href' => route('admin.books.index')],
+      ['label' => 'Kanstovar', 'href' => route('admin.stationery.index')],
+      ['label' => 'Sotuvchilar', 'href' => route('admin.sellers.index')],
+      ['label' => 'Buyurtmalar', 'href' => route('admin.orders.index')],
+      ['label' => 'Seller buyurtmalari', 'href' => route('admin.seller-orders.index')],
+      ['label' => 'Kuryer buyurtmalari', 'href' => route('admin.courier-orders.index')],
+      ['label' => 'Book Club', 'href' => route('admin.book-club.index')],
+      ['label' => 'Qidiruv tarixi', 'href' => route('admin.search-history.index')],
+      ['label' => 'API mijozlar', 'href' => route('admin.api-clients.index')],
+      ['label' => 'Sozlamalar', 'href' => route('admin.settings.index')],
+    ];
+  ?>
   <div class="flex items-center gap-3 px-4 sm:px-6 lg:px-8 min-h-[4.5rem]">
     <button
       type="button"
@@ -16,10 +32,15 @@
     </div>
 
     <div class="hidden md:flex flex-1 max-w-md mx-4">
-      <div class="relative w-full topbar-search">
+      <form class="relative w-full topbar-search" onsubmit="event.preventDefault();const input=this.querySelector('input');const option=[...document.querySelectorAll('#a122-quick-nav-list option')].find(o=>o.value===input.value);if(option?.dataset?.href){window.location=option.dataset.href;}">
         <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2"></i>
-        <input type="text" placeholder="Modul, user, buyurtma yoki ID qidiring..." />
-      </div>
+        <input type="text" list="a122-quick-nav-list" placeholder="Bo'limga o'tish uchun yozing..." />
+        <datalist id="a122-quick-nav-list">
+          <?php $__currentLoopData = $quickLinks; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $link): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+            <option value="<?php echo e($link['label']); ?>" data-href="<?php echo e($link['href']); ?>"></option>
+          <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+        </datalist>
+      </form>
     </div>
 
     <div class="ml-auto flex items-center justify-end gap-3">

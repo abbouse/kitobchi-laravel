@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="csrf-token" content="{{ csrf_token() }}" />
-  <title>@yield('title', 'Dashboard') — Veritas Admin</title>
+  <title>@yield('title', 'Dashboard') — Kitobchi Admin</title>
   <style>[x-cloak]{display:none!important}</style>
   <script>
     (function () {
@@ -33,10 +33,12 @@
     <div class="flex-1 min-w-0 flex flex-col">
       @include('a122.partials.topbar')
       <main class="flex-1 px-4 sm:px-6 lg:px-8 py-6">
+        <div class="mx-auto w-full max-w-[1680px] space-y-4">
         @yield('content')
+        </div>
       </main>
       <footer class="px-6 py-4 text-center text-xs text-gray-400 dark:text-gray-600 border-t border-gray-100/70 dark:border-white/5">
-        © {{ date('Y') }} Veritas Admin. Barcha huquqlar himoyalangan.
+        © {{ date('Y') }} Kitobchi Admin. Barcha huquqlar himoyalangan.
       </footer>
     </div>
   </div>

@@ -38,20 +38,20 @@
   </x-slot>
 </x-a122.page-header>
 
-<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4 mb-4 fade-up">
+<div class="a122-stat-grid mb-4 fade-up">
   @foreach([
     [$counts['all'] ?? 0, 'Jami postlar', 'accent', 'bi-chat-square-text'],
     [$counts['posts'] ?? 0, 'Asl postlar', 'info', 'bi-pencil-square'],
     [$counts['reposts'] ?? 0, 'Repostlar', 'warning', 'bi-arrow-repeat'],
     [$ugcPending ?? 0, 'UGC navbat', 'success', 'bi-shield-exclamation'],
   ] as [$value, $label, $tone, $icon])
-    <div class="p-card flex items-center gap-3" style="padding:14px">
-      <div style="width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:var(--p-{{ $tone }}-d,var(--p-elevated));color:var(--p-{{ $tone }})">
+    <div class="a122-stat-tile">
+      <div class="a122-stat-tile__icon" style="background:var(--p-{{ $tone }}-d,var(--p-elevated));color:var(--p-{{ $tone }})">
         <i class="bi {{ $icon }}"></i>
       </div>
       <div>
-        <div style="font-size:22px;font-weight:700;color:var(--p-text)">{{ $value }}</div>
-        <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--p-hint)">{{ $label }}</div>
+        <div class="a122-stat-tile__value">{{ $value }}</div>
+        <div class="a122-stat-tile__label">{{ $label }}</div>
       </div>
     </div>
   @endforeach
@@ -76,6 +76,14 @@
   </div>
 </div>
 
+<div class="a122-section fade-up">
+  <div class="a122-section-head">
+    <div>
+      <div class="a122-section-head__title">Postlar oqimi</div>
+      <div class="a122-section-head__meta">List yoki grid ko‘rinishda moderatsiya qilish va tezkor boshqarish mumkin.</div>
+    </div>
+  </div>
+  <div class="a122-section-body">
 @forelse($posts as $post)
   @if($loop->first)
   <div class="grid gap-3"
@@ -93,6 +101,8 @@
   Postlar topilmadi
 </div>
 @endforelse
+</div>
+</div>
 
 <div class="mt-3">
   {{ $posts->links('a122.partials.pagination') }}
