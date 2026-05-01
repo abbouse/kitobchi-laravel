@@ -42,6 +42,7 @@ Route::prefix('products')->group(function () {
     Route::get('books-by-category', [ProductsController::class, 'booksByCategory']);
     Route::get('recommendation/{col}', [ProductsController::class, 'recommendation']);
     Route::get('cart-recommendation', [ProductsController::class, 'cartRecommendation']);
+    Route::post('{type}/{id}/view', [ProductsController::class, 'trackView']);
     Route::get('{col}', [ProductsController::class, 'index']);
 });
 Route::prefix('search')->group(function () {

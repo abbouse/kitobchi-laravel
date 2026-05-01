@@ -10,6 +10,7 @@ use App\Models\SellerOrder;
 use App\Models\SellerOrderItem;
 use App\Models\Stationery;
 use App\Models\User;
+use App\Models\ProductViewLog;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -147,6 +148,8 @@ class HisobotController extends Controller
                     'average_order_value' => 0,
                     'items_sold' => 0,
                     'repeat_clients' => 0,
+                    'total_views' => 0,
+                    'recommended_views' => 0,
                     'top_sellers_label' => now()->translatedFormat('F Y'),
                     'top_sellers' => [],
                     'top_products' => [],
@@ -178,6 +181,15 @@ class HisobotController extends Controller
         $repeatClients = (int) $repeatClientsQuery
             ->having('orders_count', '>', 1)
             ->get()
+            ->count();
+
+        $viewLogsQuery = ProductViewLog::query()
+            ->where('seller_id', $storeSellerId)
+            ->whereBetween('created_at', [$period['start'], $period['end']]);
+
+        $totalViews = (int) (clone $viewLogsQuery)->count();
+        $recommendedViews = (int) (clone $viewLogsQuery)
+            ->where('recommendation_active', true)
             ->count();
 
         $monthStart = now()->copy()->startOfMonth();
@@ -272,6 +284,8 @@ class HisobotController extends Controller
                 'average_order_value' => $salesCount > 0 ? (int) round($salesPrice / $salesCount) : 0,
                 'items_sold' => $itemsSold,
                 'repeat_clients' => $repeatClients,
+                'total_views' => $totalViews,
+                'recommended_views' => $recommendedViews,
                 'top_sellers_label' => $monthStart->translatedFormat('F Y'),
                 'top_sellers' => $topSellersPayload,
                 'top_products' => $topProductsPayload,
@@ -298,6 +312,16 @@ class HisobotController extends Controller
         );
         $data = [];
 
+        $viewRows = ProductViewLog::query()
+            ->selectRaw('DATE(created_at) as bucket_key')
+            ->selectRaw('COUNT(*) as total_views')
+            ->selectRaw('SUM(CASE WHEN recommendation_active = 1 THEN 1 ELSE 0 END) as total_recommended_views')
+            ->where('seller_id', $storeSellerId)
+            ->whereBetween('created_at', [$period['start'], $period['end']])
+            ->groupBy('bucket_key')
+            ->get()
+            ->keyBy('bucket_key');
+
         if ($period['group'] === 'month') {
             $rows = SellerOrder::query()
                 ->selectRaw("DATE_FORMAT(created_at, '%Y-%m') as bucket_key")
@@ -316,6 +340,9 @@ class HisobotController extends Controller
             while ($cursor <= $period['end']) {
                 $bucketKey = $cursor->format('Y-m');
                 $row = $rows->get($bucketKey);
+                $viewStats = $viewRows
+                    ->filter(fn($_, $key) => str_starts_with((string) $key, $bucketKey))
+                    ->values();
 
                 $data[] = [
                     'time' => $cursor->copy()->startOfMonth()->toDateString(),
@@ -323,6 +350,8 @@ class HisobotController extends Controller
                     'value' => (int) ($row->total_amount ?? 0),
                     'orders' => (int) ($row->total_orders ?? 0),
                     'clients' => (int) ($row->total_clients ?? 0),
+                    'views' => (int) $viewStats->sum('total_views'),
+                    'recommended_views' => (int) $viewStats->sum('total_recommended_views'),
                 ];
 
                 $cursor->addMonth();
@@ -345,6 +374,11 @@ class HisobotController extends Controller
             while ($cursor <= $period['end']) {
                 $bucketKey = (int) $cursor->format('oW');
                 $row = $rows->get($bucketKey);
+                $weekStart = $cursor->copy()->startOfWeek(Carbon::MONDAY)->toDateString();
+                $weekEnd = $cursor->copy()->endOfWeek(Carbon::SUNDAY)->toDateString();
+                $viewStats = $viewRows
+                    ->filter(fn($_, $key) => $key >= $weekStart && $key <= $weekEnd)
+                    ->values();
 
                 $data[] = [
                     'time' => $cursor->toDateString(),
@@ -352,6 +386,8 @@ class HisobotController extends Controller
                     'value' => (int) ($row->total_amount ?? 0),
                     'orders' => (int) ($row->total_orders ?? 0),
                     'clients' => (int) ($row->total_clients ?? 0),
+                    'views' => (int) $viewStats->sum('total_views'),
+                    'recommended_views' => (int) $viewStats->sum('total_recommended_views'),
                 ];
 
                 $cursor->addWeek();
@@ -374,6 +410,7 @@ class HisobotController extends Controller
             while ($cursor <= $period['end']) {
                 $bucketKey = $cursor->toDateString();
                 $row = $rows->get($bucketKey);
+                $viewRow = $viewRows->get($bucketKey);
 
                 $data[] = [
                     'time' => $bucketKey,
@@ -381,6 +418,8 @@ class HisobotController extends Controller
                     'value' => (int) ($row->total_amount ?? 0),
                     'orders' => (int) ($row->total_orders ?? 0),
                     'clients' => (int) ($row->total_clients ?? 0),
+                    'views' => (int) ($viewRow->total_views ?? 0),
+                    'recommended_views' => (int) ($viewRow->total_recommended_views ?? 0),
                 ];
 
                 $cursor->addDay();

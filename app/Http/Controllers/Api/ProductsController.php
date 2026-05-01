@@ -10,6 +10,7 @@ use App\Models\Seller;
 use App\Models\SellerLocation;
 use App\Models\FavouriteProducts;
 use App\Models\MyCart;
+use App\Models\ProductViewLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
@@ -215,6 +216,19 @@ class ProductsController extends Controller
                 ->whereNull('recommendedExpiresAt')
                 ->orWhere('recommendedExpiresAt', '>', now())
             );
+    }
+
+    private function isRecommendationActiveForProduct($product): bool
+    {
+        if (!($product->recommended ?? false)) {
+            return false;
+        }
+
+        if (empty($product->recommendedExpiresAt)) {
+            return true;
+        }
+
+        return Carbon::parse($product->recommendedExpiresAt)->isFuture();
     }
 
     // ── Faol chegirma scope ───────────────────────────────────────
@@ -957,6 +971,60 @@ class ProductsController extends Controller
                     ]
                 ),
                 'in_store_mode' => true,
+            ],
+        ]);
+    }
+
+    public function trackView(Request $request, string $type, int $id)
+    {
+        $type = strtolower(trim($type));
+        if (!in_array($type, ['book', 'stationery'], true)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Mahsulot turi noto‘g‘ri.',
+            ], 422);
+        }
+
+        $product = $type === 'book'
+            ? Books::query()
+                ->where('id', $id)
+                ->where('is_hidden', 0)
+                ->where('is_approved', 1)
+                ->first()
+            : Stationery::query()
+                ->where('id', $id)
+                ->where('is_hidden', 0)
+                ->where('is_approved', 1)
+                ->first();
+
+        if (!$product || !(int) ($product->seller_id ?? 0)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Mahsulot topilmadi.',
+            ], 404);
+        }
+
+        $recommendationActive = $this->isRecommendationActiveForProduct($product);
+
+        ProductViewLog::query()->create([
+            'seller_id' => (int) $product->seller_id,
+            'product_id' => (int) $product->id,
+            'product_type' => $type,
+            'user_id' => optional(Auth::guard('user')->user())->id,
+            'recommendation_active' => $recommendationActive,
+            'device_id' => $request->header('X-Device-Id'),
+            'session_id' => $request->header('X-Session-Id'),
+            'ip_address' => $request->ip(),
+            'user_agent' => substr((string) $request->userAgent(), 0, 255),
+        ]);
+
+        $product->increment('views');
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'views' => (int) ($product->views + 1),
+                'recommendation_active' => $recommendationActive,
             ],
         ]);
     }

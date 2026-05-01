@@ -90,7 +90,7 @@ class OrderController extends Controller
             ->all();
         $address = $this->formatOrderAddress($order->address);
         $primaryAddress = $address[0] ?? [];
-        $mainLocation = $order->seller?->mainLocation;
+        $mainLocation = $order->seller?->location;
         $isPickup = (string) $order->delivery_type === 'pickup';
 
         $branch = [
@@ -140,7 +140,7 @@ class OrderController extends Controller
     $orders = Seller::find($storeSellerId)->orders()
         ->where('status', '!=', 0)
         ->with([
-            'seller.mainLocation',
+            'seller.location',
             'items' => fn($q) => $q->where('seller_id', $storeSellerId)
                 ->with(['book', 'stationery', 'gift']),
         ])
@@ -437,7 +437,7 @@ public function toCourier(Request $request, $qr)
             ->where('id', $orderId)
             ->where('status', '!=', 0)
             ->with([
-                'seller.mainLocation',
+                'seller.location',
                 'items' => fn($q) => $q->where('seller_id', $storeSellerId)
                     ->with(['book', 'stationery', 'variant', 'gift']),
             ])
