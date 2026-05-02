@@ -201,13 +201,33 @@ unset($__errorArgs, $__bag); ?>
           <div style="font-size:11px;color:var(--p-hint);margin-bottom:6px;text-transform:uppercase;letter-spacing:.07em">
             Bog'liq mahsulot
           </div>
-          <div style="display:flex;align-items:center;gap:8px">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
             <i class="bi bi-<?php echo e($bookClub->product_type === 'book' ? 'book' : 'pencil-square'); ?>"
                style="color:var(--p-accent);font-size:16px"></i>
-            <span style="font-size:13px;font-weight:500;color:var(--p-text)">
-              <?php echo e(ucfirst($bookClub->product_type)); ?> ID: #<?php echo e($bookClub->product_id); ?>
+            <?php if($relatedProduct): ?>
+              <a href="<?php echo e($bookClub->product_type === 'book' ? route('admin.books.show', $relatedProduct) : route('admin.stationery.show', $relatedProduct)); ?>"
+                 style="font-size:13px;font-weight:600;color:var(--p-text);text-decoration:none">
+                <?php echo e($relatedProduct->name); ?>
 
-            </span>
+              </a>
+              <span style="font-size:11px;color:var(--p-hint)">#<?php echo e($bookClub->product_id); ?></span>
+              <?php if($bookClub->product_type === 'book' && $relatedProduct->author): ?>
+                <span style="font-size:11px;color:var(--p-hint)">· <?php echo e($relatedProduct->author); ?></span>
+              <?php endif; ?>
+              <?php if($relatedProduct->seller): ?>
+                <span style="font-size:11px;color:var(--p-hint)">·</span>
+                <a href="<?php echo e(route('admin.sellers.show', $relatedProduct->seller)); ?>"
+                   style="font-size:11px;color:var(--p-info);font-weight:600;text-decoration:none">
+                  <?php echo e($relatedProduct->seller->shop_name); ?>
+
+                </a>
+              <?php endif; ?>
+            <?php else: ?>
+              <span style="font-size:13px;font-weight:500;color:var(--p-text)">
+                <?php echo e(ucfirst($bookClub->product_type)); ?> ID: #<?php echo e($bookClub->product_id); ?>
+
+              </span>
+            <?php endif; ?>
           </div>
         </div>
         <?php endif; ?>
@@ -499,6 +519,7 @@ unset($__errorArgs, $__bag); ?>
           ['Yaratildi',    $bookClub->created_at?->format('d.m.Y H:i')],
           ['Mahsulot tur', $bookClub->product_type ? ucfirst($bookClub->product_type) : '—'],
           ['Mahsulot ID',  $bookClub->product_id ? '#'.$bookClub->product_id : '—'],
+          ['Muallif user', '#'.$bookClub->user_id],
         ]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$k,$v]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
         <div style="display:flex;justify-content:space-between;padding:8px 0;
                     border-bottom:1px solid var(--p-border)">

@@ -33,14 +33,45 @@
       @endif</x-slot>
 </x-a122.page-header>
 
+<section class="a122-section mb-4">
+  <div class="a122-section-body">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div class="kpi-soft">
+        <div class="metric-label">Suhbat turi</div>
+        <div class="metric-value text-xl">{{ $isShop ? 'User ↔ Shop' : 'Direct' }}</div>
+        <div class="metric-meta">Kanal tipi</div>
+      </div>
+      <div class="kpi-soft">
+        <div class="metric-label">Jami xabarlar</div>
+        <div class="metric-value text-xl">{{ number_format($messages->total()) }}</div>
+        <div class="metric-meta">Paginated oqim</div>
+      </div>
+      <div class="kpi-soft">
+        <div class="metric-label">Shikoyatlar</div>
+        <div class="metric-value text-xl">{{ number_format(count($reportedIds)) }}</div>
+        <div class="metric-meta">Flag qilingan xabarlar</div>
+      </div>
+      <div class="kpi-soft">
+        <div class="metric-label">Yangilangan</div>
+        <div class="metric-value text-xl">{{ optional($conversation->updated_at)->format('d.m') ?: '—' }}</div>
+        <div class="metric-meta">{{ optional($conversation->updated_at)->format('H:i') ?: 'Vaqt yo‘q' }}</div>
+      </div>
+    </div>
+  </div>
+</section>
 
 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
 
   {{-- Chap: Ishtirokchilar --}}
   <div class="xl:col-span-3">
-    <div class="p-card mb-3 fade-up">
-      <div class="p-card-header"><div class="p-card-title">Ishtirokchilar</div></div>
-      <div style="padding:14px 18px">
+    <div class="a122-section mb-3 fade-up">
+      <div class="a122-section-head">
+        <div>
+          <div class="a122-section-head__title">Ishtirokchilar</div>
+          <div class="a122-section-head__meta">Profilga o‘tish, aloqa va chat tomonlari.</div>
+        </div>
+      </div>
+      <div class="a122-section-body">
 
         {{-- Ishtirokchi 1 --}}
         <div style="display:flex;align-items:center;gap:10px;padding:10px 0;
@@ -103,12 +134,18 @@
     </div>
 
     {{-- Statistika --}}
-    <div class="p-card fade-up">
-      <div class="p-card-header"><div class="p-card-title">Statistika</div></div>
-      <div style="padding:0 18px 14px">
+    <div class="a122-section fade-up">
+      <div class="a122-section-head">
+        <div>
+          <div class="a122-section-head__title">Statistika</div>
+          <div class="a122-section-head__meta">Suhbat oqimining tezkor nazorat ko‘rsatkichlari.</div>
+        </div>
+      </div>
+      <div class="a122-section-body">
         @foreach([
           ['Jami xabarlar',     $messages->total()],
           ['Shikoyatli xabar',  count($reportedIds).' ta'],
+          ['So‘nggi yangilanish', optional($conversation->updated_at)->format('d.m.Y H:i') ?: '—'],
         ] as [$k,$v])
         <div style="display:flex;justify-content:space-between;
                     padding:8px 0;border-bottom:1px solid var(--p-border)">
@@ -123,9 +160,12 @@
 
   {{-- Xabarlar --}}
   <div class="xl:col-span-9">
-    <div class="p-card fade-up">
-      <div class="p-card-header">
-        <div class="p-card-title">Xabarlar</div>
+    <div class="a122-section fade-up">
+      <div class="a122-section-head">
+        <div>
+          <div class="a122-section-head__title">Xabarlar</div>
+          <div class="a122-section-head__meta">Suhbat oqimi, media va flag qilingan bubble’lar bilan.</div>
+        </div>
         @if(count($reportedIds) > 0)
         <span class="s-pill danger" style="font-size:10px">
           <i class="bi bi-flag-fill mr-1"></i>{{ count($reportedIds) }} shikoyatli

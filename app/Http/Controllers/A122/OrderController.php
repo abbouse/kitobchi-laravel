@@ -4,6 +4,9 @@ namespace App\Http\Controllers\A122;
 
 use App\Http\Controllers\Controller;
 use App\Models\Books;
+use App\Models\CourierOrder;
+use App\Models\Couriers;
+use App\Models\SellerOrder;
 use App\Models\Sold;
 use App\Models\Stationery;
 use App\Services\AdminOrderStatusSyncService;
@@ -78,7 +81,7 @@ class OrderController extends Controller
 
     public function show(Sold $order)
     {
-        $order->load('user');
+        $order->load(['user', 'certificate']);
         $items = collect($order->items ?? [])->map(function ($item) {
             $type = $item['type'] ?? 'book';
             $product = match ($type) {
@@ -95,8 +98,35 @@ class OrderController extends Controller
             'discount' => (float) ($order->discountAmount ?? 0),
             'cashback' => (float) ($order->cashbackAmount ?? 0),
         ];
+        $address = collect($order->address ?? [])->values();
+        $primaryAddress = $address->first() ?? [];
 
-        return view('a122.orders.show', compact('order', 'items', 'summary'));
+        $sellerOrders = SellerOrder::with(['seller:id,shop_name', 'courier:id,first_name,last_name,phone_number'])
+            ->where('order_id', $order->id)
+            ->latest('id')
+            ->get();
+
+        $courierOrder = CourierOrder::with(['courier:id,first_name,last_name,phone_number,photo,region', 'user:id,name,lastname,phone_number'])
+            ->where('order_id', $order->id)
+            ->latest('id')
+            ->first();
+
+        $assignedCourier = $courierOrder?->courier;
+        if (!$assignedCourier && !empty($order->courier_id)) {
+            $assignedCourier = Couriers::select('id', 'first_name', 'last_name', 'phone_number', 'photo', 'region')
+                ->find($order->courier_id);
+        }
+
+        return view('a122.orders.show', compact(
+            'order',
+            'items',
+            'summary',
+            'address',
+            'primaryAddress',
+            'sellerOrders',
+            'courierOrder',
+            'assignedCourier',
+        ));
     }
 
     public function updateStatus(Request $request, Sold $order)

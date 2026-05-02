@@ -15,6 +15,33 @@
     <x-slot name="meta">{{ trim(($courierOrder->courier->first_name ?? '') . ' ' . ($courierOrder->courier->last_name ?? '')) ?: 'Kuryer yo‘q' }} · {{ $courierOrder->created_at ? $courierOrder->created_at->format('d.m.Y H:i') : 'Sana yo‘q' }}</x-slot>
 </x-a122.page-header>
 
+<section class="a122-section mb-4">
+    <div class="a122-section-body">
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div class="kpi-soft">
+                <div class="metric-label">Joriy holat</div>
+                <div class="metric-value text-xl">{{ $statuses[$courierOrder->status]['label'] ?? ($courierOrder->status ?: '—') }}</div>
+                <div class="metric-meta">Courier bosqichi</div>
+            </div>
+            <div class="kpi-soft">
+                <div class="metric-label">Summa</div>
+                <div class="metric-value text-xl">{{ number_format((float)($courierOrder->amount ?? $courierOrder->total ?? 0), 0, '.', ' ') }}</div>
+                <div class="metric-meta">UZS</div>
+            </div>
+            <div class="kpi-soft">
+                <div class="metric-label">Kuryer</div>
+                <div class="metric-value text-xl">{{ $courierOrder->courier ? 'Biriktirilgan' : 'Yo‘q' }}</div>
+                <div class="metric-meta">{{ $courierOrder->courier?->region ?: 'Hudud yo‘q' }}</div>
+            </div>
+            <div class="kpi-soft">
+                <div class="metric-label">Sana</div>
+                <div class="metric-value text-xl">{{ optional($courierOrder->created_at)->format('d.m') ?: '—' }}</div>
+                <div class="metric-meta">{{ optional($courierOrder->created_at)->format('H:i') ?: 'Vaqt yo‘q' }}</div>
+            </div>
+        </div>
+    </div>
+</section>
+
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
     {{-- Kuryer ma'lumotlari --}}
@@ -44,7 +71,9 @@
                 @endif
                 <div>
                     <div class="font-bold text-base">
-                        {{ trim(($courierOrder->courier->first_name ?? '') . ' ' . ($courierOrder->courier->last_name ?? '')) ?: '—' }}
+                        <a href="{{ route('admin.couriers.show', $courierOrder->courier) }}" class="text-[var(--p-accent)] hover:underline">
+                            {{ trim(($courierOrder->courier->first_name ?? '') . ' ' . ($courierOrder->courier->last_name ?? '')) ?: '—' }}
+                        </a>
                     </div>
                     <div class="text-sm text-gray-500">{{ $courierOrder->courier->phone_number ?? $courierOrder->courier->phone ?? '—' }}</div>
                 </div>
@@ -110,7 +139,11 @@
                 <dt class="text-xs text-gray-500 mb-1">Foydalanuvchi</dt>
                 <dd>
                     @if($courierOrder->user)
-                        <div class="font-medium">{{ trim(($courierOrder->user->first_name ?? $courierOrder->user->name ?? '') . ' ' . ($courierOrder->user->last_name ?? '')) ?: '—' }}</div>
+                        <div class="font-medium">
+                            <a href="{{ route('admin.users.show', $courierOrder->user) }}" class="text-[var(--p-accent)] hover:underline">
+                                {{ trim(($courierOrder->user->first_name ?? $courierOrder->user->name ?? '') . ' ' . ($courierOrder->user->last_name ?? '')) ?: '—' }}
+                            </a>
+                        </div>
                         @if($courierOrder->user->phone_number ?? $courierOrder->user->phone)
                             <div class="text-xs text-gray-500">{{ $courierOrder->user->phone_number ?? $courierOrder->user->phone }}</div>
                         @endif

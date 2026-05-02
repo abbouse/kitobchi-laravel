@@ -474,41 +474,109 @@
     </div>
 </div>
 
-{{-- Recent Orders --}}
-<div class="card p-5">
-    <h3 class="font-bold text-base mb-4">So'nggi buyurtmalar</h3>
-    <div class="table-wrap">
-        <div class="overflow-x-auto">
-            <table class="tbl">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Foydalanuvchi</th>
-                        <th>Sana</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($recentOrders as $order)
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div class="card p-5">
+        <h3 class="font-bold text-base mb-4">So'nggi buyurtmalar</h3>
+        <div class="table-wrap">
+            <div class="overflow-x-auto">
+                <table class="tbl">
+                    <thead>
                         <tr>
-                            <td class="text-gray-500 text-sm">#{{ $order->id }}</td>
-                            <td>
-                                @if($order->user)
-                                    {{ trim(($order->user->first_name ?? $order->user->name ?? '') . ' ' . ($order->user->last_name ?? '')) ?: '—' }}
-                                @else
-                                    <span class="text-gray-400">—</span>
-                                @endif
-                            </td>
-                            <td class="text-sm text-gray-500">
-                                {{ $order->created_at ? $order->created_at->format('d.m.Y H:i') : '—' }}
-                            </td>
+                            <th>Courier-order</th>
+                            <th>Foydalanuvchi</th>
+                            <th>To'lov</th>
+                            <th>Holat</th>
                         </tr>
-                    @empty
+                    </thead>
+                    <tbody>
+                        @forelse($recentOrders as $order)
+                            @php
+                                $paymentLabel = match ((int) data_get($order, 'order.paymentStatus')) {
+                                    2 => 'Karta',
+                                    1 => 'Tasdiq kutilmoqda',
+                                    0 => 'Naqd',
+                                    default => '—',
+                                };
+                                $statusLabel = match ((string) data_get($order, 'order.status')) {
+                                    'A', 'P' => 'Kutilmoqda',
+                                    'B' => "Yo'lda",
+                                    'C' => 'Yetkazildi',
+                                    'F' => 'Bekor qilingan',
+                                    default => (string) ($order->status ?: '—'),
+                                };
+                            @endphp
+                            <tr>
+                                <td class="text-sm">
+                                    <a href="{{ route('admin.courier-orders.show', $order) }}" class="font-semibold text-[var(--p-accent)] hover:underline">#{{ $order->id }}</a>
+                                    @if($order->order_id)
+                                        <div class="text-xs text-[var(--p-muted)] mt-1">
+                                            Order: <a href="{{ route('admin.orders.show', $order->order_id) }}" class="hover:underline">#{{ $order->order_id }}</a>
+                                        </div>
+                                    @endif
+                                </td>
+                                <td>
+                                    @if($order->user)
+                                        <a href="{{ route('admin.users.show', $order->user_id) }}" class="font-semibold hover:underline">
+                                            {{ trim(($order->user->name ?? '').' '.($order->user->lastname ?? '')) ?: 'Foydalanuvchi' }}
+                                        </a>
+                                        <div class="text-xs text-[var(--p-muted)] mt-1">{{ $order->user->phone_number ?: 'Telefon yo‘q' }}</div>
+                                    @else
+                                        <span class="text-gray-400">—</span>
+                                    @endif
+                                </td>
+                                <td class="text-sm text-[var(--p-muted)]">{{ $paymentLabel }}</td>
+                                <td><span class="badge badge-muted">{{ $statusLabel }}</span></td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="4" class="text-center text-gray-400 py-6">Buyurtmalar yo'q</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card p-5">
+        <h3 class="font-bold text-base mb-4">So'nggi tranzaksiyalar</h3>
+        <div class="table-wrap">
+            <div class="overflow-x-auto">
+                <table class="tbl">
+                    <thead>
                         <tr>
-                            <td colspan="3" class="text-center text-gray-400 py-6">Buyurtmalar yo'q</td>
+                            <th>ID</th>
+                            <th>Net</th>
+                            <th>Holat</th>
+                            <th>Sana</th>
                         </tr>
-                    @endforelse
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @forelse($recentTransactions as $tx)
+                            <tr>
+                                <td class="text-gray-500 text-sm">#{{ $tx->id }}</td>
+                                <td class="font-semibold">{{ number_format((float) ($tx->netAmount ?? $tx->amount ?? 0), 0, '.', ' ') }} UZS</td>
+                                <td>
+                                    @if(in_array($tx->status, ['success', 'completed', 'approved']))
+                                        <span class="badge badge-success">Muvaffaqiyatli</span>
+                                    @elseif(in_array($tx->status, ['pending', 'processing']))
+                                        <span class="badge badge-warning">Kutilmoqda</span>
+                                    @elseif(in_array($tx->status, ['failed', 'rejected', 'cancelled']))
+                                        <span class="badge badge-danger">Rad etilgan</span>
+                                    @else
+                                        <span class="badge badge-muted">{{ $tx->status ?? '—' }}</span>
+                                    @endif
+                                </td>
+                                <td class="text-sm text-gray-500">{{ $tx->created_at ? $tx->created_at->format('d.m.Y H:i') : '—' }}</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="4" class="text-center text-gray-400 py-6">Tranzaksiyalar yo'q</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>

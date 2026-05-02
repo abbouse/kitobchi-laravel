@@ -8,6 +8,8 @@ use App\Models\BookClubComment;
 use App\Models\BookClubImages;
 use App\Models\BookClubLikes;
 use App\Models\BookClubWarning;
+use App\Models\Books;
+use App\Models\Stationery;
 use App\Support\BookClubUgcSupport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -97,6 +99,17 @@ class BookClubController extends Controller
 
         $totalVotes = $bookClub->votes->sum(fn ($vote) => \DB::table('book_club_voted_users')->where('option_id', $vote->id)->count());
 
+        $relatedProduct = null;
+        if ($bookClub->product_id && $bookClub->product_type === 'book') {
+            $relatedProduct = Books::with('seller')
+                ->select('id', 'name', 'author', 'seller_id')
+                ->find($bookClub->product_id);
+        } elseif ($bookClub->product_id && $bookClub->product_type === 'stationery') {
+            $relatedProduct = Stationery::with('seller')
+                ->select('id', 'name', 'seller_id')
+                ->find($bookClub->product_id);
+        }
+
         return view('a122.book-club.show', compact(
             'bookClub',
             'comments',
@@ -105,7 +118,8 @@ class BookClubController extends Controller
             'reposters',
             'repostsCount',
             'totalVotes',
-            'activeWarningCount'
+            'activeWarningCount',
+            'relatedProduct'
         ));
     }
 

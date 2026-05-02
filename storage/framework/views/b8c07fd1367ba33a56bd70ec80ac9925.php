@@ -32,6 +32,33 @@
 <?php unset($__componentOriginal0c1345684b2d774f43a544669f5684b0); ?>
 <?php endif; ?>
 
+<section class="a122-section mb-4">
+    <div class="a122-section-body">
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div class="kpi-soft">
+                <div class="metric-label">Joriy holat</div>
+                <div class="metric-value text-xl"><?php echo e($statuses[$courierOrder->status]['label'] ?? ($courierOrder->status ?: '—')); ?></div>
+                <div class="metric-meta">Courier bosqichi</div>
+            </div>
+            <div class="kpi-soft">
+                <div class="metric-label">Summa</div>
+                <div class="metric-value text-xl"><?php echo e(number_format((float)($courierOrder->amount ?? $courierOrder->total ?? 0), 0, '.', ' ')); ?></div>
+                <div class="metric-meta">UZS</div>
+            </div>
+            <div class="kpi-soft">
+                <div class="metric-label">Kuryer</div>
+                <div class="metric-value text-xl"><?php echo e($courierOrder->courier ? 'Biriktirilgan' : 'Yo‘q'); ?></div>
+                <div class="metric-meta"><?php echo e($courierOrder->courier?->region ?: 'Hudud yo‘q'); ?></div>
+            </div>
+            <div class="kpi-soft">
+                <div class="metric-label">Sana</div>
+                <div class="metric-value text-xl"><?php echo e(optional($courierOrder->created_at)->format('d.m') ?: '—'); ?></div>
+                <div class="metric-meta"><?php echo e(optional($courierOrder->created_at)->format('H:i') ?: 'Vaqt yo‘q'); ?></div>
+            </div>
+        </div>
+    </div>
+</section>
+
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
     
@@ -62,8 +89,10 @@
                 <?php endif; ?>
                 <div>
                     <div class="font-bold text-base">
-                        <?php echo e(trim(($courierOrder->courier->first_name ?? '') . ' ' . ($courierOrder->courier->last_name ?? '')) ?: '—'); ?>
+                        <a href="<?php echo e(route('admin.couriers.show', $courierOrder->courier)); ?>" class="text-[var(--p-accent)] hover:underline">
+                            <?php echo e(trim(($courierOrder->courier->first_name ?? '') . ' ' . ($courierOrder->courier->last_name ?? '')) ?: '—'); ?>
 
+                        </a>
                     </div>
                     <div class="text-sm text-gray-500"><?php echo e($courierOrder->courier->phone_number ?? $courierOrder->courier->phone ?? '—'); ?></div>
                 </div>
@@ -129,7 +158,12 @@
                 <dt class="text-xs text-gray-500 mb-1">Foydalanuvchi</dt>
                 <dd>
                     <?php if($courierOrder->user): ?>
-                        <div class="font-medium"><?php echo e(trim(($courierOrder->user->first_name ?? $courierOrder->user->name ?? '') . ' ' . ($courierOrder->user->last_name ?? '')) ?: '—'); ?></div>
+                        <div class="font-medium">
+                            <a href="<?php echo e(route('admin.users.show', $courierOrder->user)); ?>" class="text-[var(--p-accent)] hover:underline">
+                                <?php echo e(trim(($courierOrder->user->first_name ?? $courierOrder->user->name ?? '') . ' ' . ($courierOrder->user->last_name ?? '')) ?: '—'); ?>
+
+                            </a>
+                        </div>
                         <?php if($courierOrder->user->phone_number ?? $courierOrder->user->phone): ?>
                             <div class="text-xs text-gray-500"><?php echo e($courierOrder->user->phone_number ?? $courierOrder->user->phone); ?></div>
                         <?php endif; ?>

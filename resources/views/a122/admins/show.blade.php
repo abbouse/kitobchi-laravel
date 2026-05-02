@@ -3,12 +3,42 @@
 @section('page-title', $admin->name)
 
 @section('content')
+@php
+  $adminPerms = $admin->permissions ?? [];
+  $allPerms = ['users','books','stationery','orders','sellers','couriers','promocodes','discounts','settings','admins'];
+@endphp
 
 <x-a122.page-header back-href="{{ route('admin.admins.index') }}">
   <x-slot name="heading">{{ $admin->name }}</x-slot>
   <x-slot name="meta">ID: #{{ $admin->id }} · {{ $admin->getRoleLabelAttribute() }}</x-slot>
 </x-a122.page-header>
 
+<section class="a122-section mb-4">
+  <div class="a122-section-body">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div class="kpi-soft">
+        <div class="metric-label">Rol</div>
+        <div class="metric-value text-xl">{{ $admin->getRoleLabelAttribute() }}</div>
+        <div class="metric-meta">Panel darajasi</div>
+      </div>
+      <div class="kpi-soft">
+        <div class="metric-label">Holat</div>
+        <div class="metric-value text-xl">{{ $admin->is_active ? 'Faol' : 'Bloklangan' }}</div>
+        <div class="metric-meta">Session kirishi</div>
+      </div>
+      <div class="kpi-soft">
+        <div class="metric-label">Ruxsatlar</div>
+        <div class="metric-value text-xl">{{ $admin->isSuperAdmin() ? 'All' : count($adminPerms) }}</div>
+        <div class="metric-meta">{{ $admin->isSuperAdmin() ? 'Superadmin' : 'Biriktirilgan modul' }}</div>
+      </div>
+      <div class="kpi-soft">
+        <div class="metric-label">Oxirgi kirish</div>
+        <div class="metric-value text-xl">{{ $admin->last_login_at ? \Carbon\Carbon::parse($admin->last_login_at)->format('d.m') : '—' }}</div>
+        <div class="metric-meta">{{ $admin->last_login_at ? \Carbon\Carbon::parse($admin->last_login_at)->format('H:i') : 'Vaqt yo‘q' }}</div>
+      </div>
+    </div>
+  </div>
+</section>
 
 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
 
@@ -90,10 +120,6 @@
             </div>
           </div>
         @else
-          @php
-            $allPerms = ['users','books','stationery','orders','sellers','couriers','promocodes','discounts','settings','admins'];
-            $adminPerms = $admin->permissions ?? [];
-          @endphp
           <div class="flex flex-wrap gap-2">
             @foreach($allPerms as $perm)
             <span class="s-pill {{ in_array($perm, $adminPerms) ? 'success' : 'muted' }}"

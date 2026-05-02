@@ -3,9 +3,13 @@
 @section('page-title', 'Karyera #'.$careerApplication->id)
 
 @section('content')
+@php
+    $messageCount = $careerApplication->messages->count();
+    $applicationTypeLabel = $careerApplication->type === \App\Models\CareerApplication::TYPE_INQUIRY ? 'Ochiq murojaat' : 'Vakansiya arizasi';
+@endphp
 <x-a122.page-header back-href="{{ route('admin.job-applications.index') }}">
     <x-slot name="heading">Ariza #{{ $careerApplication->id }}</x-slot>
-    <x-slot name="meta">{{ $careerApplication->created_at?->format('d.m.Y H:i') }} · {{ $careerApplication->type === \App\Models\CareerApplication::TYPE_INQUIRY ? 'Ochiq murojaat' : 'Vakansiya arizasi' }}</x-slot>
+    <x-slot name="meta">{{ $careerApplication->created_at?->format('d.m.Y H:i') }} · {{ $applicationTypeLabel }}</x-slot>
     <x-slot name="actions">
         @if($careerApplication->cv_path)
             <a href="{{ route('admin.job-applications.cv', $careerApplication) }}" class="btn-p ghost">
@@ -14,6 +18,33 @@
         @endif
     </x-slot>
 </x-a122.page-header>
+
+<section class="a122-section mb-4">
+    <div class="a122-section-body">
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div class="kpi-soft">
+                <div class="metric-label">Ariza turi</div>
+                <div class="metric-value text-xl">{{ $applicationTypeLabel }}</div>
+                <div class="metric-meta">Kanal tipi</div>
+            </div>
+            <div class="kpi-soft">
+                <div class="metric-label">Status</div>
+                <div class="metric-value text-xl">{{ $statuses[$careerApplication->status]['label'] ?? $careerApplication->status }}</div>
+                <div class="metric-meta">Joriy bosqich</div>
+            </div>
+            <div class="kpi-soft">
+                <div class="metric-label">Xabarlar</div>
+                <div class="metric-value text-xl">{{ number_format($messageCount) }}</div>
+                <div class="metric-meta">Ichki tarix</div>
+            </div>
+            <div class="kpi-soft">
+                <div class="metric-label">CV</div>
+                <div class="metric-value text-xl">{{ $careerApplication->cv_path ? 'Bor' : 'Yo‘q' }}</div>
+                <div class="metric-meta">Fayl mavjudligi</div>
+            </div>
+        </div>
+    </div>
+</section>
 
 @if(session('success'))
     <div class="mb-3 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-200">{{ session('success') }}</div>

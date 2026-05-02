@@ -71,6 +71,33 @@
 <?php unset($__componentOriginal0c1345684b2d774f43a544669f5684b0); ?>
 <?php endif; ?>
 
+<section class="a122-section mb-4">
+  <div class="a122-section-body">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div class="kpi-soft">
+        <div class="metric-label">Holat</div>
+        <div class="metric-value text-xl"><?php echo e($stLbl); ?></div>
+        <div class="metric-meta">Moderatsiya bosqichi</div>
+      </div>
+      <div class="kpi-soft">
+        <div class="metric-label">Tur</div>
+        <div class="metric-value text-xl"><?php echo e($report->reportable_type === 'conversation_message' ? 'Chat' : ($report->reportable_type === 'book_club' ? 'Book Club' : 'Other')); ?></div>
+        <div class="metric-meta">Report category</div>
+      </div>
+      <div class="kpi-soft">
+        <div class="metric-label">Qo‘shimcha reportlar</div>
+        <div class="metric-value text-xl"><?php echo e(number_format($otherReports->count())); ?></div>
+        <div class="metric-meta">Shu obyekt bo‘yicha</div>
+      </div>
+      <div class="kpi-soft">
+        <div class="metric-label">Yaratilgan</div>
+        <div class="metric-value text-xl"><?php echo e(\Carbon\Carbon::parse($report->created_at)->format('d.m')); ?></div>
+        <div class="metric-meta"><?php echo e(\Carbon\Carbon::parse($report->created_at)->format('H:i')); ?></div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
 
   <div class="xl:col-span-4">
@@ -276,4 +303,5 @@
 </div>
 
 <?php $__env->stopSection(); ?>
+
 <?php echo $__env->make('a122.layouts.admin', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH /Users/abbos/PROJECTS/MY/kitobchi-server/kitobchi-laravel/resources/views/a122/complaints/show.blade.php ENDPATH**/ ?>

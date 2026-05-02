@@ -1,0 +1,534 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Kitobchi Admin — Pastel theme
+   Loaded after a122-admin.css. Overrides design tokens and component skins
+   to give the panel a warm, hand-finished feel (cream gradient page,
+   peach/lavender/lilac/pink tinted cards, soft layered shadows, friendlier
+   type). Structure of the markup is untouched.
+   --------------------------------------------------------------------------- */
+
+/* 1. Tokens ─────────────────────────────────────────────────────────────── */
+:root,
+[data-bs-theme="light"] {
+  /* warm cream page, pulled from the screenshot's background blush */
+  --p-bg:           #faf3ec;
+  --p-bg-glow-1:    #fbe6d6;   /* peach pool top-left */
+  --p-bg-glow-2:    #f6dce6;   /* pink pool bottom-right */
+  --p-bg-glow-3:    #ece2f7;   /* lilac pool center-right */
+
+  /* surfaces — slightly warmer than pure white so they sit on the cream page */
+  --p-surface:        #fffaf3;
+  --p-surface-strong: #ffffff;
+  --p-elevated:       #fbf1e7;
+  --p-elevated-2:     #f3e6db;
+
+  /* borders + dividers: hairline, warm */
+  --p-border:   rgba(120, 70, 40, 0.08);
+  --p-border2:  rgba(120, 70, 40, 0.16);
+  --p-hover:    rgba(120, 70, 40, 0.04);
+
+  /* type — chocolate-warm rather than slate */
+  --p-text:   #3a2a1f;
+  --p-muted:  #6e5849;
+  --p-hint:   #9b8678;
+
+  /* accent: dusty rose (think the lilac/rose chip) */
+  --p-accent:    #b87ca8;
+  --p-accent-2:  #cf9ec3;
+  --p-accent-d:  rgba(184, 124, 168, 0.14);
+
+  /* state colors — desaturated, jewelry-box palette */
+  --p-success:   #6f9f73;       /* sage */
+  --p-success-d: rgba(111, 159, 115, 0.14);
+  --p-warning:   #c98a4b;       /* amber tea */
+  --p-warning-d: rgba(201, 138, 75, 0.16);
+  --p-danger:    #c97373;       /* dusty terracotta */
+  --p-danger-d:  rgba(201, 115, 115, 0.14);
+  --p-info:      #7e95c4;       /* powder blue */
+  --p-info-d:    rgba(126, 149, 196, 0.16);
+
+  --p-solid:          #3a2a1f;
+  --p-solid-contrast: #fffaf3;
+  --p-solid-shadow:   0 14px 30px rgba(120, 70, 40, 0.18);
+
+  /* layered, soft, not-too-clean shadow — closer to printed paper than glass */
+  --p-shadow:    0 14px 28px -16px rgba(120, 70, 40, 0.18),
+                 0 4px 14px -8px rgba(120, 70, 40, 0.10);
+  --p-shadow-sm: 0 2px 8px -4px rgba(120, 70, 40, 0.12),
+                 0 1px 2px rgba(120, 70, 40, 0.05);
+
+  /* slightly larger, asymmetric-friendly radii */
+  --p-radius-sm: 10px;
+  --p-radius:    16px;
+  --p-radius-lg: 22px;
+
+  /* extra tints used by the pastel skin */
+  --tint-peach:     #fbe2c8;
+  --tint-peach-i:   #b76b3a;   /* ink that reads on peach */
+  --tint-lavender:  #d6dcf3;
+  --tint-lavender-i:#3f4d8a;
+  --tint-lilac:     #e3d4f0;
+  --tint-lilac-i:   #6a4790;
+  --tint-rose:      #f7c8c0;
+  --tint-rose-i:    #a04a44;
+  --tint-pink:      #f1bfd8;
+  --tint-pink-i:    #92366d;
+  --tint-mint:      #cfe6d0;
+  --tint-mint-i:    #3f7349;
+  --tint-cream:     #fff1dc;
+  --tint-cream-i:   #8a5a26;
+}
+
+/* dark mode: keep the warm spirit but darken */
+.dark,
+[data-bs-theme="dark"] {
+  --p-bg:        #1c1614;
+  --p-surface:   #25201d;
+  --p-surface-strong: #2d2724;
+  --p-elevated:  #2c2522;
+  --p-elevated-2:#352d29;
+  --p-border:    rgba(255, 230, 210, 0.06);
+  --p-border2:   rgba(255, 230, 210, 0.14);
+  --p-hover:     rgba(255, 230, 210, 0.06);
+  --p-text:      #f4ece2;
+  --p-muted:     #c4b5a6;
+  --p-hint:      #948374;
+  --p-accent:    #d6a4c6;
+  --p-accent-d:  rgba(214, 164, 198, 0.16);
+  --p-success:   #8fc090;
+  --p-success-d: rgba(143, 192, 144, 0.18);
+  --p-warning:   #e1a674;
+  --p-warning-d: rgba(225, 166, 116, 0.18);
+  --p-danger:    #e29a9a;
+  --p-danger-d:  rgba(226, 154, 154, 0.18);
+  --p-info:      #a3b3da;
+  --p-info-d:    rgba(163, 179, 218, 0.18);
+}
+
+/* 2. Page background — three soft pools blended into cream ────────────── */
+body {
+  font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+  color: var(--p-text);
+  background:
+    radial-gradient(1100px 700px at 8% -6%,  var(--p-bg-glow-1), transparent 60%),
+    radial-gradient(900px  600px at 95% 18%, var(--p-bg-glow-3), transparent 60%),
+    radial-gradient(900px  700px at 60% 110%, var(--p-bg-glow-2), transparent 60%),
+    var(--p-bg);
+  background-attachment: fixed;
+}
+.dark body {
+  background:
+    radial-gradient(900px 600px at 8% -6%,  rgba(120, 70, 40, 0.18), transparent 60%),
+    radial-gradient(900px 600px at 95% 18%, rgba(80, 60, 100, 0.18), transparent 60%),
+    var(--p-bg);
+  background-attachment: fixed;
+}
+
+/* 3. Sidebar + topbar — soft cream chrome ─────────────────────────────── */
+.a122-sidebar {
+  background: linear-gradient(180deg,
+    rgba(255, 250, 243, 0.92),
+    rgba(252, 240, 226, 0.92));
+  border-right: 1px solid var(--p-border) !important;
+  backdrop-filter: blur(6px);
+}
+.dark .a122-sidebar {
+  background: linear-gradient(180deg, #25201d, #1f1a17);
+}
+.sidebar-group-title {
+  color: var(--p-hint) !important;
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.14em !important;
+  font-size: 10.5px;
+}
+.sidebar-link {
+  border-radius: 14px;
+  color: var(--p-muted);
+  padding-block: 0.55rem;
+}
+.sidebar-link:hover {
+  background: var(--p-hover);
+  color: var(--p-text);
+}
+.sidebar-link.is-active,
+.sidebar-link[aria-current="page"] {
+  background: var(--p-accent-d);
+  color: var(--p-text);
+}
+.sidebar-link.is-active .sidebar-link__iconwrap,
+.sidebar-link[aria-current="page"] .sidebar-link__iconwrap {
+  background: var(--p-accent);
+  color: var(--p-solid-contrast);
+}
+.sidebar-link__iconwrap {
+  background: var(--p-elevated);
+  color: var(--p-muted);
+}
+.sidebar-brand-mini {
+  background: var(--tint-peach);
+  color: var(--tint-peach-i);
+}
+
+/* topbar */
+header.a122-topbar,
+.a122-topbar,
+[data-topbar] {
+  background: rgba(255, 250, 243, 0.78) !important;
+  border-bottom: 1px solid var(--p-border) !important;
+  backdrop-filter: blur(8px);
+}
+
+/* 4. Page header ──────────────────────────────────────────────────────── */
+.page-header { border-bottom: 1px dashed var(--p-border2); }
+.page-title  { letter-spacing: -0.012em; }
+
+/* 5. Section + card surfaces ──────────────────────────────────────────── */
+.a122-section,
+.dash-card,
+.p-card,
+.metric-card,
+.fin-card,
+.biz-stat-card {
+  background: var(--p-surface) !important;
+  border: 1px solid var(--p-border) !important;
+  border-radius: var(--p-radius-lg) !important;
+  box-shadow: var(--p-shadow-sm) !important;
+}
+.a122-section:hover,
+.dash-card:hover,
+.p-card:hover {
+  box-shadow: var(--p-shadow) !important;
+  border-color: var(--p-border2) !important;
+  transform: none;
+}
+
+.a122-section-head,
+.dash-card-head,
+.p-card-header {
+  border-bottom: 1px solid transparent;
+}
+.a122-section-head__title,
+.dash-card-title,
+.p-card-title {
+  font-weight: 600;
+  color: var(--p-text);
+  letter-spacing: -0.005em;
+}
+.a122-section-head__meta,
+.dash-card-sub,
+.p-card-sub {
+  color: var(--p-hint);
+}
+
+/* 6. Hero strip — turn the four metrics into pastel tinted tiles ─────── */
+.dash-hero-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  padding: 18px;
+  background: transparent;
+}
+.dash-hero-metric {
+  border-radius: 18px;
+  padding: 18px 20px 16px;
+  background: var(--tint-peach);
+  color: var(--tint-peach-i);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5),
+              0 6px 14px -10px rgba(120, 70, 40, 0.18);
+  position: relative;
+  overflow: hidden;
+}
+.dash-hero-metric::after {
+  content: "";
+  position: absolute;
+  inset: auto -30px -30px auto;
+  width: 110px; height: 110px;
+  background: radial-gradient(closest-side, rgba(255, 255, 255, 0.5), transparent);
+  pointer-events: none;
+}
+.dash-hero-strip > .dash-hero-metric:nth-child(2) {
+  background: var(--tint-lavender); color: var(--tint-lavender-i);
+}
+.dash-hero-strip > .dash-hero-metric:nth-child(3) {
+  background: var(--tint-lilac);    color: var(--tint-lilac-i);
+}
+.dash-hero-strip > .dash-hero-metric:nth-child(4) {
+  background: var(--tint-mint);     color: var(--tint-mint-i);
+}
+.dash-hero-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: none;       /* friendlier than uppercase */
+  letter-spacing: 0;
+  opacity: 0.85;
+  margin-bottom: 6px;
+}
+.dash-hero-val {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  font-family: 'Outfit', 'Inter', sans-serif;   /* drop the mono for headline numbers */
+}
+.dash-hero-unit {
+  font-size: 18px;
+  font-weight: 600;
+  margin-left: 2px;
+  opacity: 0.75;
+}
+.dash-hero-sub {
+  margin-top: 8px;
+  font-size: 12px;
+  opacity: 0.78;
+}
+.dash-hero-val--warn { color: var(--tint-rose-i); }
+
+/* 7. Insight pills — gentler, rounded, no harsh stripes ──────────────── */
+.dash-insight-pill {
+  background: var(--p-surface) !important;
+  border: 1px solid var(--p-border) !important;
+  border-radius: 16px !important;
+  padding: 14px 16px !important;
+  box-shadow: var(--p-shadow-sm);
+}
+.dash-insight-pill::before {
+  width: 6px !important;
+  border-radius: 999px !important;
+  opacity: 0.85;
+}
+.dash-insight-pill .dip-lbl {
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  color: var(--p-muted) !important;
+  font-weight: 500 !important;
+}
+.dash-insight-pill .dip-val {
+  font-family: 'Outfit', 'Inter', sans-serif !important;
+  color: var(--p-text) !important;
+  font-size: 22px !important;
+}
+.dip-success::before { background: var(--p-success); }
+.dip-warning::before { background: var(--p-warning); }
+.dip-info::before    { background: var(--p-info); }
+.dip-accent::before  { background: var(--p-accent); }
+
+/* 8. KPI cards — tinted by their icon variant ────────────────────────── */
+.kpi-card {
+  background: var(--p-surface) !important;
+  border: 1px solid var(--p-border) !important;
+  border-radius: 20px !important;
+  padding: 20px !important;
+  box-shadow: var(--p-shadow-sm);
+  transition: box-shadow .25s ease, transform .25s ease;
+}
+.kpi-card::before { display: none !important; }   /* drop the neon top stripe */
+.kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--p-shadow);
+}
+.kpi-icon {
+  border-radius: 14px !important;
+  width: 44px !important; height: 44px !important;
+}
+.kpi-icon--success { background: var(--tint-mint)    !important; color: var(--tint-mint-i)    !important; }
+.kpi-icon--accent  { background: var(--tint-lavender)!important; color: var(--tint-lavender-i)!important; }
+.kpi-icon--info    { background: var(--tint-lavender)!important; color: var(--tint-lavender-i)!important; }
+.kpi-icon--warning { background: var(--tint-peach)   !important; color: var(--tint-peach-i)   !important; }
+.kpi-icon--gift    { background: var(--tint-pink)    !important; color: var(--tint-pink-i)    !important; }
+.kpi-icon--teal    { background: var(--tint-mint)    !important; color: var(--tint-mint-i)    !important; }
+
+.kpi-value {
+  font-family: 'Outfit', 'Inter', sans-serif !important;
+  letter-spacing: -0.018em !important;
+}
+.kpi-label { color: var(--p-muted) !important; }
+.kpi-change.up      { background: var(--tint-mint);   color: var(--tint-mint-i);   border-radius: 999px; padding: 3px 10px; }
+.kpi-change.down    { background: var(--tint-rose);   color: var(--tint-rose-i);   border-radius: 999px; padding: 3px 10px; }
+.kpi-change.neutral { background: var(--p-elevated);  color: var(--p-muted);       border-radius: 999px; padding: 3px 10px; }
+
+/* progress tracks */
+.dash-prog-track,
+.user-prog-bar,
+.biz-prog-track {
+  background: var(--p-elevated-2) !important;
+  border-radius: 999px !important;
+}
+.dash-prog-fill,
+.user-prog-fill,
+.biz-prog-fill {
+  border-radius: 999px !important;
+}
+
+/* 9. Quick links grid ─────────────────────────────────────────────────── */
+.dash-quick-card {
+  background: var(--p-surface) !important;
+  border: 1px solid var(--p-border) !important;
+  border-radius: 18px !important;
+  box-shadow: var(--p-shadow-sm);
+  transition: box-shadow .25s ease, transform .25s ease, border-color .25s ease;
+}
+.dash-quick-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--p-shadow);
+  border-color: var(--p-border2) !important;
+}
+.dash-quick-card .dq-ico {
+  border-radius: 14px !important;
+}
+
+/* 10. Status pills, badges ───────────────────────────────────────────── */
+.s-pill {
+  border-radius: 999px;
+  font-weight: 500;
+}
+.o-badge {
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.o-badge.ob-c  { background: var(--tint-mint);     color: var(--tint-mint-i); }
+.o-badge.ob-b  { background: var(--tint-lavender); color: var(--tint-lavender-i); }
+.o-badge.ob-pk { background: var(--tint-cream);    color: var(--tint-cream-i); }
+.o-badge.ob-a  { background: var(--tint-peach);    color: var(--tint-peach-i); }
+.o-badge.ob-f  { background: var(--tint-rose);     color: var(--tint-rose-i); }
+
+/* 11. Buttons ─────────────────────────────────────────────────────────── */
+.btn-p {
+  border-radius: 999px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0;
+}
+.btn-p.ghost {
+  background: var(--p-elevated) !important;
+  border: 1px solid var(--p-border) !important;
+  color: var(--p-text) !important;
+}
+.btn-p.ghost:hover {
+  background: var(--p-elevated-2) !important;
+}
+.btn-p.primary,
+.btn-p:not(.ghost):not(.danger) {
+  background: var(--p-accent) !important;
+  color: var(--p-solid-contrast) !important;
+  border: none !important;
+}
+
+/* 12. Tabs / segmented control ────────────────────────────────────────── */
+.dash-seg-bar {
+  background: var(--p-surface);
+  border: 1px solid var(--p-border);
+  border-radius: 999px;
+  padding: 5px;
+  display: inline-flex;
+  gap: 2px;
+  box-shadow: var(--p-shadow-sm);
+}
+.dash-seg-btn {
+  border-radius: 999px !important;
+  padding: 8px 16px;
+  color: var(--p-muted);
+  font-weight: 500;
+  background: transparent;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background .2s, color .2s;
+}
+.dash-seg-btn:hover { color: var(--p-text); }
+.dash-seg-btn.active {
+  background: var(--p-accent);
+  color: var(--p-solid-contrast);
+  box-shadow: 0 4px 12px -4px rgba(184, 124, 168, 0.45);
+}
+
+/* 13. Alerts — softer ─────────────────────────────────────────────────── */
+.alert-item {
+  border-radius: 14px !important;
+  border: 1px solid var(--p-border) !important;
+  background: var(--p-elevated) !important;
+}
+.alert-item.warning { background: var(--tint-peach) !important; color: var(--tint-peach-i) !important; }
+.alert-item.danger  { background: var(--tint-rose)  !important; color: var(--tint-rose-i)  !important; }
+.alert-item.info    { background: var(--tint-lavender) !important; color: var(--tint-lavender-i) !important; }
+
+/* 14. Tables — quieter rows ──────────────────────────────────────────── */
+.p-table thead th {
+  background: transparent !important;
+  color: var(--p-hint) !important;
+  border-bottom: 1px solid var(--p-border) !important;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  font-weight: 600;
+}
+.p-table tbody td {
+  border-bottom: 1px dashed var(--p-border) !important;
+  color: var(--p-text) !important;
+}
+.p-table tbody tr:hover { background: var(--p-hover) !important; }
+
+/* 15. Avatars ─────────────────────────────────────────────────────────── */
+.d-av {
+  border-radius: 14px;
+  background: var(--tint-lavender);
+  color: var(--tint-lavender-i);
+  font-weight: 600;
+}
+.d-av--accent { background: var(--tint-lilac);    color: var(--tint-lilac-i); }
+.d-av--teal   { background: var(--tint-mint);     color: var(--tint-mint-i); }
+.d-av img     { border-radius: 14px; }
+
+/* 16. Recent orders / list rows ──────────────────────────────────────── */
+.ro-row,
+.dash-row-link,
+.top-row,
+.top-buyer-row {
+  border-radius: 14px;
+  border: 1px solid transparent !important;
+  transition: background .2s, border-color .2s;
+}
+.ro-row:hover,
+.dash-row-link:hover,
+.top-row:hover,
+.top-buyer-row:hover {
+  background: var(--p-hover) !important;
+  border-color: var(--p-border) !important;
+}
+
+/* 17. Live dot ────────────────────────────────────────────────────────── */
+.live-dot {
+  background: var(--p-success);
+  box-shadow: 0 0 0 4px rgba(111, 159, 115, 0.18);
+}
+
+/* 18. Footer ──────────────────────────────────────────────────────────── */
+footer {
+  border-top: 1px dashed var(--p-border) !important;
+  background: transparent !important;
+  color: var(--p-hint) !important;
+}
+
+/* 19. Tiny human touches: subtle paper grain on the page ─────────────── */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.35;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.55  0 0 0 0 0.42  0 0 0 0 0.30  0 0 0 0.06 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+.dark body::before { mix-blend-mode: screen; opacity: 0.18; }
+
+/* keep content above the grain */
+#a122-shell { position: relative; z-index: 1; }
+
+/* 20. Reduce visual noise from focus rings on rounded controls ────────── */
+.btn-p:focus-visible,
+.dash-seg-btn:focus-visible,
+.sidebar-link:focus-visible {
+  outline: 2px solid var(--p-accent);
+  outline-offset: 2px;
+}

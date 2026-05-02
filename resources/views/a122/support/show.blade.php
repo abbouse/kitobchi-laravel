@@ -3,23 +3,56 @@
 @section('page-title', 'Murojaat #'.$botTicket->id)
 
 @section('content')
+@php
+  $st = $statuses[$botTicket->status] ?? ['label' => $botTicket->status, 'class' => 'ob-p'];
+@endphp
 
 <x-a122.page-header back-href="{{ route('admin.support.index') }}">
   <x-slot name="heading">Murojaat #{{ $botTicket->id }}</x-slot>
   <x-slot name="meta">{{ $botTicket->created_at?->format('d.m.Y H:i') }}</x-slot>
 </x-a122.page-header>
 
+<section class="a122-section mb-4">
+  <div class="a122-section-body">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div class="kpi-soft">
+        <div class="metric-label">Holat</div>
+        <div class="metric-value text-xl">{{ $st['label'] }}</div>
+        <div class="metric-meta">Joriy support bosqichi</div>
+      </div>
+      <div class="kpi-soft">
+        <div class="metric-label">Ilovalar</div>
+        <div class="metric-value text-xl">{{ $botTicket->attachments?->count() ?? 0 }}</div>
+        <div class="metric-meta">Fayl biriktirilgan</div>
+      </div>
+      <div class="kpi-soft">
+        <div class="metric-label">Baholash</div>
+        <div class="metric-value text-xl">{{ $botTicket->rating ?: '—' }}</div>
+        <div class="metric-meta">5 ballik tizim</div>
+      </div>
+      <div class="kpi-soft">
+        <div class="metric-label">Operator</div>
+        <div class="metric-value text-xl">{{ $botTicket->operator?->name ? \Illuminate\Support\Str::limit($botTicket->operator->name, 14) : '—' }}</div>
+        <div class="metric-meta">{{ $botTicket->operator ? 'Biriktirilgan' : 'Tayinlanmagan' }}</div>
+      </div>
+    </div>
+  </div>
+</section>
 
 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
 
   <div class="xl:col-span-8">
 
     {{-- Birinchi xabar --}}
-    <div class="p-card mb-3">
-      <div class="dash-card-head"><div class="dash-card-title">Murojaat mazmuni</div></div>
-      <div class="dash-card-body">
-        <div style="background:var(--p-elevated);border-radius:10px;padding:16px;font-size:14px;
-                    color:var(--p-text);line-height:1.7;border-left:3px solid var(--p-accent)">
+    <div class="a122-section mb-3">
+      <div class="a122-section-head">
+        <div>
+          <div class="a122-section-head__title">Murojaat mazmuni</div>
+          <div class="a122-section-head__meta">Foydalanuvchidan kelgan boshlang‘ich murojaat matni.</div>
+        </div>
+      </div>
+      <div class="a122-section-body">
+        <div class="rounded-2xl border border-[var(--p-border)] bg-[var(--p-elevated)] px-4 py-4 text-sm leading-7 text-[var(--p-text)]">
           {{ $botTicket->first_msg ?: 'Xabar yo\'q' }}
         </div>
       </div>
@@ -27,12 +60,14 @@
 
     {{-- Ilovalar --}}
     @if($botTicket->attachments && $botTicket->attachments->count())
-    <div class="p-card mb-3">
-      <div class="dash-card-head">
-        <div class="dash-card-title">Ilovalar</div>
-        <div class="dash-card-sub">{{ $botTicket->attachments->count() }} ta fayl</div>
+    <div class="a122-section mb-3">
+      <div class="a122-section-head">
+        <div>
+          <div class="a122-section-head__title">Ilovalar</div>
+          <div class="a122-section-head__meta">{{ $botTicket->attachments->count() }} ta biriktirma, tur va yuboruvchi bilan.</div>
+        </div>
       </div>
-      <div class="dash-card-body">
+      <div class="a122-section-body">
         <div class="table-responsive kc-twrap">
           <table class="p-table">
             <thead>
@@ -62,9 +97,14 @@
 
     {{-- Yopish --}}
     @if(in_array($botTicket->status, ['queue','active']))
-    <div class="p-card mb-3">
-      <div class="dash-card-head"><div class="dash-card-title">Murojaatni yopish</div></div>
-      <div class="dash-card-body">
+    <div class="a122-section mb-3">
+      <div class="a122-section-head">
+        <div>
+          <div class="a122-section-head__title">Murojaatni yopish</div>
+          <div class="a122-section-head__meta">Yakunlash sababi bilan ticketni operatsion yopish.</div>
+        </div>
+      </div>
+      <div class="a122-section-body">
         <form method="POST" action="{{ route('admin.support.close', $botTicket) }}">
           @csrf @method('PATCH')
           <label class="p-form-label">Yopish sababi (ixtiyoriy)</label>
@@ -81,10 +121,10 @@
     @endif
 
     @if($botTicket->close_reason)
-    <div class="p-card" style="background:var(--p-danger-d);border-color:rgba(255,92,106,.2)">
-      <div class="dash-card-body" style="padding:14px 20px">
-        <div style="font-size:12px;color:var(--p-danger);margin-bottom:4px">YOPISH SABABI</div>
-        <div style="font-size:13px;color:var(--p-text)">{{ $botTicket->close_reason }}</div>
+    <div class="a122-section border-[rgba(255,92,106,.24)] bg-[var(--p-danger-d)]">
+      <div class="a122-section-body">
+        <div class="text-xs font-bold tracking-[0.14em] text-[var(--p-danger)] uppercase mb-1">Yopish sababi</div>
+        <div class="text-sm text-[var(--p-text)]">{{ $botTicket->close_reason }}</div>
       </div>
     </div>
     @endif
@@ -94,10 +134,14 @@
   <div class="xl:col-span-4">
 
     {{-- Status --}}
-    <div class="p-card mb-3">
-      <div class="dash-card-head"><div class="dash-card-title">Holat</div></div>
-      <div class="dash-card-body">
-        @php $st = $statuses[$botTicket->status] ?? ['label'=>$botTicket->status,'class'=>'ob-p']; @endphp
+    <div class="a122-section mb-3">
+      <div class="a122-section-head">
+        <div>
+          <div class="a122-section-head__title">Holat</div>
+          <div class="a122-section-head__meta">Support oqimidagi status va foydalanuvchi bahosi.</div>
+        </div>
+      </div>
+      <div class="a122-section-body">
         <span class="o-badge {{ $st['class'] }}" style="font-size:13px;padding:6px 14px">{{ $st['label'] }}</span>
 
         @if($botTicket->rating)
@@ -118,9 +162,14 @@
     </div>
 
     {{-- Foydalanuvchi --}}
-    <div class="p-card mb-3">
-      <div class="dash-card-head"><div class="dash-card-title">Murojaat egasi</div></div>
-      <div class="dash-card-body">
+    <div class="a122-section mb-3">
+      <div class="a122-section-head">
+        <div>
+          <div class="a122-section-head__title">Murojaat egasi</div>
+          <div class="a122-section-head__meta">Telegram identifikatori va user qidiruvga tez o‘tish.</div>
+        </div>
+      </div>
+      <div class="a122-section-body">
         <div style="margin-bottom:12px">
           <div style="font-size:15px;font-weight:600;color:var(--p-text)">{{ $botTicket->name ?: 'Noma\'lum' }}</div>
           @if($botTicket->username)
@@ -142,9 +191,14 @@
     </div>
 
     {{-- Operator --}}
-    <div class="p-card mb-3">
-      <div class="dash-card-head"><div class="dash-card-title">Operator</div></div>
-      <div class="dash-card-body">
+    <div class="a122-section mb-3">
+      <div class="a122-section-head">
+        <div>
+          <div class="a122-section-head__title">Operator</div>
+          <div class="a122-section-head__meta">Mas’ul xodimni biriktirish yoki almashtirish.</div>
+        </div>
+      </div>
+      <div class="a122-section-body">
         @if($botTicket->operator)
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
             <div style="width:8px;height:8px;border-radius:50%;background:var(--p-{{ $botTicket->operator->status==='online'?'success':($botTicket->operator->status==='busy'?'warning':'muted') }});flex-shrink:0"></div>
@@ -181,8 +235,14 @@
     </div>
 
     {{-- Meta --}}
-    <div class="p-card">
-      <div class="dash-card-body">
+    <div class="a122-section">
+      <div class="a122-section-head">
+        <div>
+          <div class="a122-section-head__title">Timeline</div>
+          <div class="a122-section-head__meta">Ticketning yaratilish va o‘zgarish vaqt nuqtalari.</div>
+        </div>
+      </div>
+      <div class="a122-section-body">
         @foreach([
           ['ID',         '#'.$botTicket->id],
           ['Yaratildi',  $botTicket->created_at?->format('d.m.Y H:i')],

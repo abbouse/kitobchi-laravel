@@ -18,13 +18,13 @@
     })();
   </script>
 
-  <?php echo app('Illuminate\Foundation\Vite')(['resources/css/app.css', 'resources/js/app.js', 'resources/css/a122-admin.css', 'resources/js/a122-admin.js']); ?>
+  <?php echo app('Illuminate\Foundation\Vite')(['resources/css/app.css', 'resources/js/app.js', 'resources/css/a122-admin.css', 'resources/css/kitobchi-pastel.css', 'resources/js/a122-admin.js']); ?>
   <script src="https://cdn.jsdelivr.net/npm/apexcharts@3/dist/apexcharts.min.js"></script>
 
   <?php echo $__env->yieldPushContent('styles'); ?>
   <?php echo $__env->yieldPushContent('head'); ?>
 </head>
-<body class="text-gray-900 dark:text-gray-100 antialiased overflow-x-hidden">
+<body class="a122-admin-body text-gray-900 dark:text-gray-100 antialiased overflow-x-hidden">
   <div
     id="a122-shell"
     data-sidebar-shell
@@ -32,13 +32,16 @@
     <?php echo $__env->make('a122.partials.sidebar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
     <div class="flex-1 min-w-0 flex flex-col">
       <?php echo $__env->make('a122.partials.topbar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
-      <main class="flex-1 px-4 sm:px-6 lg:px-8 py-6">
-        <div class="mx-auto w-full max-w-[1680px] space-y-4">
+      <main class="a122-main flex-1 px-4 sm:px-6 lg:px-8 py-6">
+        <div class="mx-auto w-full max-w-[1720px] space-y-5">
         <?php echo $__env->yieldContent('content'); ?>
         </div>
       </main>
-      <footer class="px-6 py-4 text-center text-xs text-gray-400 dark:text-gray-600 border-t border-gray-100/70 dark:border-white/5">
-        © <?php echo e(date('Y')); ?> Kitobchi Admin. Barcha huquqlar himoyalangan.
+      <footer class="a122-footer px-6 py-4 text-xs">
+        <div class="mx-auto flex w-full max-w-[1720px] items-center justify-between gap-3 flex-wrap">
+          <span>© <?php echo e(date('Y')); ?> Kitobchi Admin</span>
+          <span>A122 control workspace</span>
+        </div>
       </footer>
     </div>
   </div>

@@ -1,6 +1,9 @@
 <?php $__env->startSection('title', $news->title); ?>
 
 <?php $__env->startSection('content'); ?>
+<?php
+    $newsStatus = $news->status ? 'Faol' : 'Yashirin';
+?>
 <?php if (isset($component)) { $__componentOriginal0c1345684b2d774f43a544669f5684b0 = $component; } ?>
 <?php if (isset($attributes)) { $__attributesOriginal0c1345684b2d774f43a544669f5684b0 = $attributes; } ?>
 <?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.a122.page-header','data' => ['backHref' => ''.e(route('admin.news.index')).'']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
@@ -44,6 +47,33 @@
 <?php $component = $__componentOriginal0c1345684b2d774f43a544669f5684b0; ?>
 <?php unset($__componentOriginal0c1345684b2d774f43a544669f5684b0); ?>
 <?php endif; ?>
+
+<section class="a122-section mb-4">
+    <div class="a122-section-body">
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div class="kpi-soft">
+                <div class="metric-label">Holat</div>
+                <div class="metric-value text-xl"><?php echo e($newsStatus); ?></div>
+                <div class="metric-meta">Foydalanuvchiga ko‘rinishi</div>
+            </div>
+            <div class="kpi-soft">
+                <div class="metric-label">Action</div>
+                <div class="metric-value text-xl"><?php echo e($news->action_label); ?></div>
+                <div class="metric-meta"><?php echo e($news->action ?: 'Action yo‘q'); ?></div>
+            </div>
+            <div class="kpi-soft">
+                <div class="metric-label">Target ID</div>
+                <div class="metric-value text-xl"><?php echo e($news->action_id ?: '—'); ?></div>
+                <div class="metric-meta">Bog‘langan obyekt</div>
+            </div>
+            <div class="kpi-soft">
+                <div class="metric-label">Yangilangan</div>
+                <div class="metric-value text-xl"><?php echo e($news->updated_at?->format('d.m') ?: '—'); ?></div>
+                <div class="metric-meta"><?php echo e($news->updated_at?->format('H:i') ?: 'Vaqt yo‘q'); ?></div>
+            </div>
+        </div>
+    </div>
+</section>
 
 <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
     <div class="xl:col-span-8 space-y-4">

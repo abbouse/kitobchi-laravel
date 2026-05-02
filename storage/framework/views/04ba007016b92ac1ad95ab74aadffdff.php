@@ -1,6 +1,10 @@
 <?php $__env->startSection('title', "Reklama #{$ad->id}"); ?>
 
 <?php $__env->startSection('content'); ?>
+<?php
+    $adModeration = $ad->moderation ?: 'pending';
+    $adPayment = $ad->paymentStatus ?: 'pending';
+?>
 <?php if (isset($component)) { $__componentOriginal0c1345684b2d774f43a544669f5684b0 = $component; } ?>
 <?php if (isset($attributes)) { $__attributesOriginal0c1345684b2d774f43a544669f5684b0 = $attributes; } ?>
 <?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.a122.page-header','data' => ['backHref' => ''.e(route('admin.ads.index')).'']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
@@ -39,6 +43,33 @@
 <?php $component = $__componentOriginal0c1345684b2d774f43a544669f5684b0; ?>
 <?php unset($__componentOriginal0c1345684b2d774f43a544669f5684b0); ?>
 <?php endif; ?>
+
+<section class="a122-section mb-4">
+    <div class="a122-section-body">
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div class="kpi-soft">
+                <div class="metric-label">Moderatsiya</div>
+                <div class="metric-value text-xl"><?php echo e(ucfirst($adModeration)); ?></div>
+                <div class="metric-meta">Admin review holati</div>
+            </div>
+            <div class="kpi-soft">
+                <div class="metric-label">To‘lov</div>
+                <div class="metric-value text-xl"><?php echo e(ucfirst($adPayment)); ?></div>
+                <div class="metric-meta">Payment bosqichi</div>
+            </div>
+            <div class="kpi-soft">
+                <div class="metric-label">Budjet</div>
+                <div class="metric-value text-xl"><?php echo e(number_format((int) $ad->amount)); ?></div>
+                <div class="metric-meta">UZS</div>
+            </div>
+            <div class="kpi-soft">
+                <div class="metric-label">Muddat</div>
+                <div class="metric-value text-xl"><?php echo e($ad->days ?: '—'); ?></div>
+                <div class="metric-meta">Kun</div>
+            </div>
+        </div>
+    </div>
+</section>
 
 <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
     <div class="xl:col-span-8 space-y-4">

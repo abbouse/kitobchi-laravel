@@ -38,6 +38,33 @@
     <div class="p-alert danger mb-4"><?php echo e(session('error')); ?></div>
 <?php endif; ?>
 
+<section class="a122-section mb-4">
+    <div class="a122-section-body">
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div class="kpi-soft">
+                <div class="metric-label">Seller summasi</div>
+                <div class="metric-value text-xl"><?php echo e(number_format((float) ($sellerOrder->amount ?? 0), 0, '.', ' ')); ?></div>
+                <div class="metric-meta">UZS</div>
+            </div>
+            <div class="kpi-soft">
+                <div class="metric-label">Mahsulotlar</div>
+                <div class="metric-value text-xl"><?php echo e(number_format($summary['items_count'])); ?></div>
+                <div class="metric-meta">Seller itemlari</div>
+            </div>
+            <div class="kpi-soft">
+                <div class="metric-label">Yetkazish turi</div>
+                <div class="metric-value text-xl"><?php echo e($summary['delivery_type']); ?></div>
+                <div class="metric-meta">Fulfillment yo‘li</div>
+            </div>
+            <div class="kpi-soft">
+                <div class="metric-label">Holat</div>
+                <div class="metric-value text-xl"><?php echo e($statuses[$statusVal]['label'] ?? $statusVal); ?></div>
+                <div class="metric-meta">Joriy seller bosqichi</div>
+            </div>
+        </div>
+    </div>
+</section>
+
 <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
 
     
@@ -66,12 +93,20 @@
 
             <div>
                 <dt class="text-xs text-gray-500 mb-1">Asosiy buyurtma</dt>
-                <dd class="font-semibold">#<?php echo e($sellerOrder->order_id); ?></dd>
+                <dd class="font-semibold">
+                    <a href="<?php echo e(route('admin.orders.show', $sellerOrder->order_id)); ?>" class="text-[var(--p-accent)] hover:underline">#<?php echo e($sellerOrder->order_id); ?></a>
+                </dd>
             </div>
 
             <div>
                 <dt class="text-xs text-gray-500 mb-1">Sotuvchi</dt>
-                <dd class="font-semibold"><?php echo e($sellerOrder->seller->shop_name ?? '—'); ?></dd>
+                <dd class="font-semibold">
+                    <?php if($sellerOrder->seller): ?>
+                        <a href="<?php echo e(route('admin.sellers.show', $sellerOrder->seller)); ?>" class="text-[var(--p-accent)] hover:underline"><?php echo e($sellerOrder->seller->shop_name); ?></a>
+                    <?php else: ?>
+                        —
+                    <?php endif; ?>
+                </dd>
             </div>
 
             <div>
@@ -81,7 +116,14 @@
 
             <div>
                 <dt class="text-xs text-gray-500 mb-1">Mijoz ismi</dt>
-                <dd><?php echo e($customerName); ?></dd>
+                <dd>
+                    <?php if($sellerOrder->client): ?>
+                        <a href="<?php echo e(route('admin.users.show', $sellerOrder->client)); ?>" class="text-[var(--p-accent)] hover:underline"><?php echo e($customerName); ?></a>
+                    <?php else: ?>
+                        <?php echo e($customerName); ?>
+
+                    <?php endif; ?>
+                </dd>
             </div>
 
             <div>

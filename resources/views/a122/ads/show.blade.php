@@ -2,6 +2,10 @@
 @section('title', "Reklama #{$ad->id}")
 
 @section('content')
+@php
+    $adModeration = $ad->moderation ?: 'pending';
+    $adPayment = $ad->paymentStatus ?: 'pending';
+@endphp
 <x-a122.page-header back-href="{{ route('admin.ads.index') }}">
     <x-slot name="heading">Reklama #{{ $ad->id }}</x-slot>
     <x-slot name="meta">Banner, bog'langan obyekt va moderatsiya holati</x-slot>
@@ -22,6 +26,33 @@
         @endif
     </x-slot>
 </x-a122.page-header>
+
+<section class="a122-section mb-4">
+    <div class="a122-section-body">
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div class="kpi-soft">
+                <div class="metric-label">Moderatsiya</div>
+                <div class="metric-value text-xl">{{ ucfirst($adModeration) }}</div>
+                <div class="metric-meta">Admin review holati</div>
+            </div>
+            <div class="kpi-soft">
+                <div class="metric-label">To‘lov</div>
+                <div class="metric-value text-xl">{{ ucfirst($adPayment) }}</div>
+                <div class="metric-meta">Payment bosqichi</div>
+            </div>
+            <div class="kpi-soft">
+                <div class="metric-label">Budjet</div>
+                <div class="metric-value text-xl">{{ number_format((int) $ad->amount) }}</div>
+                <div class="metric-meta">UZS</div>
+            </div>
+            <div class="kpi-soft">
+                <div class="metric-label">Muddat</div>
+                <div class="metric-value text-xl">{{ $ad->days ?: '—' }}</div>
+                <div class="metric-meta">Kun</div>
+            </div>
+        </div>
+    </div>
+</section>
 
 <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
     <div class="xl:col-span-8 space-y-4">

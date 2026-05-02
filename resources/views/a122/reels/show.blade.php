@@ -3,6 +3,33 @@
 @section('page-title', 'Reel: ' . $reel->title)
 
 @section('content')
+<section class="a122-section mb-4">
+    <div class="a122-section-body">
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div class="kpi-soft">
+                <div class="metric-label">Reel nomi</div>
+                <div class="metric-value text-xl">{{ \Illuminate\Support\Str::limit($reel->title, 14) }}</div>
+                <div class="metric-meta">Kontent seti</div>
+            </div>
+            <div class="kpi-soft">
+                <div class="metric-label">Elementlar</div>
+                <div class="metric-value text-xl">{{ number_format($reel->items->count()) }}</div>
+                <div class="metric-meta">Video birikmalari</div>
+            </div>
+            <div class="kpi-soft">
+                <div class="metric-label">Tartib</div>
+                <div class="metric-value text-xl">{{ $reel->order }}</div>
+                <div class="metric-meta">Feed joylashuvi</div>
+            </div>
+            <div class="kpi-soft">
+                <div class="metric-label">Yaratilgan</div>
+                <div class="metric-value text-xl">{{ optional($reel->created_at)->format('d.m') ?: '—' }}</div>
+                <div class="metric-meta">{{ optional($reel->created_at)->format('H:i') ?: 'Vaqt yo‘q' }}</div>
+            </div>
+        </div>
+    </div>
+</section>
+
 <div class="mb-4 flex items-center justify-between">
     <a href="{{ route('admin.reels.index') }}" class="btn btn-secondary flex items-center gap-2">
         <i data-lucide="arrow-left" class="w-4 h-4"></i> Orqaga

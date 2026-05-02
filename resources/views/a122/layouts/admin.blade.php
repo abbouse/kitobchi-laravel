@@ -18,13 +18,13 @@
     })();
   </script>
 
-  @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/css/a122-admin.css', 'resources/js/a122-admin.js'])
+  @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/css/a122-admin.css', 'resources/css/kitobchi-pastel.css', 'resources/js/a122-admin.js'])
   <script src="https://cdn.jsdelivr.net/npm/apexcharts@3/dist/apexcharts.min.js"></script>
 
   @stack('styles')
   @stack('head')
 </head>
-<body class="text-gray-900 dark:text-gray-100 antialiased overflow-x-hidden">
+<body class="a122-admin-body text-gray-900 dark:text-gray-100 antialiased overflow-x-hidden">
   <div
     id="a122-shell"
     data-sidebar-shell
@@ -32,13 +32,16 @@
     @include('a122.partials.sidebar')
     <div class="flex-1 min-w-0 flex flex-col">
       @include('a122.partials.topbar')
-      <main class="flex-1 px-4 sm:px-6 lg:px-8 py-6">
-        <div class="mx-auto w-full max-w-[1680px] space-y-4">
+      <main class="a122-main flex-1 px-4 sm:px-6 lg:px-8 py-6">
+        <div class="mx-auto w-full max-w-[1720px] space-y-5">
         @yield('content')
         </div>
       </main>
-      <footer class="px-6 py-4 text-center text-xs text-gray-400 dark:text-gray-600 border-t border-gray-100/70 dark:border-white/5">
-        © {{ date('Y') }} Kitobchi Admin. Barcha huquqlar himoyalangan.
+      <footer class="a122-footer px-6 py-4 text-xs">
+        <div class="mx-auto flex w-full max-w-[1720px] items-center justify-between gap-3 flex-wrap">
+          <span>© {{ date('Y') }} Kitobchi Admin</span>
+          <span>A122 control workspace</span>
+        </div>
       </footer>
     </div>
   </div>

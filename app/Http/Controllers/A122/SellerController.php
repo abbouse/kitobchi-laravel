@@ -117,10 +117,23 @@ class SellerController extends Controller
         $sellerIds = Seller::where('id', $storeSellerId)
             ->orWhere('parent_id', $storeSellerId)
             ->pluck('id');
-        $orderCount   = SellerOrder::where('seller_id', $seller->id)->count();
-        $totalRevenue = SellerTransaction::where('seller_id', $seller->id)->where('status', 'approved')->sum('amount');
-        $recentOrders = SellerOrder::where('seller_id', $seller->id)->latest()->take(8)->get();
-        $transactions = SellerTransaction::where('seller_id', $seller->id)->latest()->take(8)->get();
+        $orderCount = SellerOrder::whereIn('seller_id', $sellerIds)->count();
+        $totalRevenue = SellerTransaction::whereIn('seller_id', $sellerIds)
+            ->where('status', 'approved')
+            ->sum('amount');
+        $recentOrders = SellerOrder::with([
+                'user:id,name,lastname,phone_number',
+                'seller:id,shop_name,parent_id',
+                'order:id,status,paymentStatus,deliveryType',
+            ])
+            ->whereIn('seller_id', $sellerIds)
+            ->latest()
+            ->take(8)
+            ->get();
+        $transactions = SellerTransaction::whereIn('seller_id', $sellerIds)
+            ->latest()
+            ->take(8)
+            ->get();
         $staffLogs = SellerStaffLog::whereIn('seller_staff_id', $sellerIds)
             ->latest()
             ->take(50)

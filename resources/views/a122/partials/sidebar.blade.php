@@ -46,6 +46,10 @@
   $current = request()->route() ? request()->route()->getName() : '';
 @endphp
 
+@php
+  $panelAdmin = auth('panel')->user();
+@endphp
+
 <div id="a122-sidebar-overlay" data-sidebar-overlay class="fixed inset-0 bg-slate-950/56 backdrop-blur-sm z-40 lg:hidden hidden"></div>
 
 <aside
@@ -72,16 +76,25 @@
         </div>
 
         <div class="space-y-0.5 mt-0.5">
-          @foreach($g['items'] as $it)
+          @foreach ($g['items'] as $it)
             @php
-              $href = \Illuminate\Support\Facades\Route::has($it['route']) ? route($it['route']) : '#';
-              $active = str_starts_with($current, preg_replace('/\.index$/', '', $it['route']));
+              $href = \Illuminate\Support\Facades\Route::has($it['route'])
+                ? route($it['route'])
+                : '#';
+              $routePrefix = preg_replace('/\.index$/', '', $it['route']);
+              $active = str_starts_with($current, $routePrefix);
+              $itemClasses = $active
+                ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900 shadow-sm'
+                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white';
             @endphp
-            <a href="{{ $href }}"
-               data-sidebar-link
-               data-label="{{ $it['label'] }}"
-               title="{{ $it['label'] }}"
-               class="sidebar-link group flex items-center gap-3 px-3 py-[0.42rem] rounded-xl text-sm font-medium {{ $active ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900 shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white' }}">
+            <a
+              href="{{ $href }}"
+              data-sidebar-link
+              data-label="{{ $it['label'] }}"
+              title="{{ $it['label'] }}"
+              class="sidebar-link group flex items-center gap-3 px-3 py-[0.42rem] rounded-xl text-sm font-medium {{ $itemClasses }}"
+            >
+              <span class="sidebar-link__rail {{ $active ? 'is-active' : '' }}"></span>
               <span class="sidebar-link__iconwrap">
                 <i data-lucide="{{ $it['icon'] }}" class="w-[17px] h-[17px] shrink-0"></i>
               </span>
@@ -92,4 +105,10 @@
       </div>
     @endforeach
   </nav>
+
+  <div class="sidebar-foot">
+    <div class="sidebar-foot__label">Workspace</div>
+    <div class="sidebar-foot__title">A122 Admin</div>
+    <div class="sidebar-foot__meta">{{ $panelAdmin?->name ?? 'Admin' }} · secure panel</div>
+  </div>
 </aside>

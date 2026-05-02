@@ -46,6 +46,10 @@
   $current = request()->route() ? request()->route()->getName() : '';
 ?>
 
+<?php
+  $panelAdmin = auth('panel')->user();
+?>
+
 <div id="a122-sidebar-overlay" data-sidebar-overlay class="fixed inset-0 bg-slate-950/56 backdrop-blur-sm z-40 lg:hidden hidden"></div>
 
 <aside
@@ -75,14 +79,23 @@
         <div class="space-y-0.5 mt-0.5">
           <?php $__currentLoopData = $g['items']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $it): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
             <?php
-              $href = \Illuminate\Support\Facades\Route::has($it['route']) ? route($it['route']) : '#';
-              $active = str_starts_with($current, preg_replace('/\.index$/', '', $it['route']));
+              $href = \Illuminate\Support\Facades\Route::has($it['route'])
+                ? route($it['route'])
+                : '#';
+              $routePrefix = preg_replace('/\.index$/', '', $it['route']);
+              $active = str_starts_with($current, $routePrefix);
+              $itemClasses = $active
+                ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900 shadow-sm'
+                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white';
             ?>
-            <a href="<?php echo e($href); ?>"
-               data-sidebar-link
-               data-label="<?php echo e($it['label']); ?>"
-               title="<?php echo e($it['label']); ?>"
-               class="sidebar-link group flex items-center gap-3 px-3 py-[0.42rem] rounded-xl text-sm font-medium <?php echo e($active ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900 shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white'); ?>">
+            <a
+              href="<?php echo e($href); ?>"
+              data-sidebar-link
+              data-label="<?php echo e($it['label']); ?>"
+              title="<?php echo e($it['label']); ?>"
+              class="sidebar-link group flex items-center gap-3 px-3 py-[0.42rem] rounded-xl text-sm font-medium <?php echo e($itemClasses); ?>"
+            >
+              <span class="sidebar-link__rail <?php echo e($active ? 'is-active' : ''); ?>"></span>
               <span class="sidebar-link__iconwrap">
                 <i data-lucide="<?php echo e($it['icon']); ?>" class="w-[17px] h-[17px] shrink-0"></i>
               </span>
@@ -93,5 +106,11 @@
       </div>
     <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
   </nav>
+
+  <div class="sidebar-foot">
+    <div class="sidebar-foot__label">Workspace</div>
+    <div class="sidebar-foot__title">A122 Admin</div>
+    <div class="sidebar-foot__meta"><?php echo e($panelAdmin?->name ?? 'Admin'); ?> · secure panel</div>
+  </div>
 </aside>
 <?php /**PATH /Users/abbos/PROJECTS/MY/kitobchi-server/kitobchi-laravel/resources/views/a122/partials/sidebar.blade.php ENDPATH**/ ?>

@@ -486,43 +486,110 @@
     </div>
 </div>
 
-
-<div class="card p-5">
-    <h3 class="font-bold text-base mb-4">So'nggi buyurtmalar</h3>
-    <div class="table-wrap">
-        <div class="overflow-x-auto">
-            <table class="tbl">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Foydalanuvchi</th>
-                        <th>Sana</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php $__empty_1 = true; $__currentLoopData = $recentOrders; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $order): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div class="card p-5">
+        <h3 class="font-bold text-base mb-4">So'nggi buyurtmalar</h3>
+        <div class="table-wrap">
+            <div class="overflow-x-auto">
+                <table class="tbl">
+                    <thead>
                         <tr>
-                            <td class="text-gray-500 text-sm">#<?php echo e($order->id); ?></td>
-                            <td>
-                                <?php if($order->user): ?>
-                                    <?php echo e(trim(($order->user->first_name ?? $order->user->name ?? '') . ' ' . ($order->user->last_name ?? '')) ?: '—'); ?>
-
-                                <?php else: ?>
-                                    <span class="text-gray-400">—</span>
-                                <?php endif; ?>
-                            </td>
-                            <td class="text-sm text-gray-500">
-                                <?php echo e($order->created_at ? $order->created_at->format('d.m.Y H:i') : '—'); ?>
-
-                            </td>
+                            <th>Courier-order</th>
+                            <th>Foydalanuvchi</th>
+                            <th>To'lov</th>
+                            <th>Holat</th>
                         </tr>
-                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
+                    </thead>
+                    <tbody>
+                        <?php $__empty_1 = true; $__currentLoopData = $recentOrders; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $order): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+                            <?php
+                                $paymentLabel = match ((int) data_get($order, 'order.paymentStatus')) {
+                                    2 => 'Karta',
+                                    1 => 'Tasdiq kutilmoqda',
+                                    0 => 'Naqd',
+                                    default => '—',
+                                };
+                                $statusLabel = match ((string) data_get($order, 'order.status')) {
+                                    'A', 'P' => 'Kutilmoqda',
+                                    'B' => "Yo'lda",
+                                    'C' => 'Yetkazildi',
+                                    'F' => 'Bekor qilingan',
+                                    default => (string) ($order->status ?: '—'),
+                                };
+                            ?>
+                            <tr>
+                                <td class="text-sm">
+                                    <a href="<?php echo e(route('admin.courier-orders.show', $order)); ?>" class="font-semibold text-[var(--p-accent)] hover:underline">#<?php echo e($order->id); ?></a>
+                                    <?php if($order->order_id): ?>
+                                        <div class="text-xs text-[var(--p-muted)] mt-1">
+                                            Order: <a href="<?php echo e(route('admin.orders.show', $order->order_id)); ?>" class="hover:underline">#<?php echo e($order->order_id); ?></a>
+                                        </div>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <?php if($order->user): ?>
+                                        <a href="<?php echo e(route('admin.users.show', $order->user_id)); ?>" class="font-semibold hover:underline">
+                                            <?php echo e(trim(($order->user->name ?? '').' '.($order->user->lastname ?? '')) ?: 'Foydalanuvchi'); ?>
+
+                                        </a>
+                                        <div class="text-xs text-[var(--p-muted)] mt-1"><?php echo e($order->user->phone_number ?: 'Telefon yo‘q'); ?></div>
+                                    <?php else: ?>
+                                        <span class="text-gray-400">—</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="text-sm text-[var(--p-muted)]"><?php echo e($paymentLabel); ?></td>
+                                <td><span class="badge badge-muted"><?php echo e($statusLabel); ?></span></td>
+                            </tr>
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
+                            <tr>
+                                <td colspan="4" class="text-center text-gray-400 py-6">Buyurtmalar yo'q</td>
+                            </tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card p-5">
+        <h3 class="font-bold text-base mb-4">So'nggi tranzaksiyalar</h3>
+        <div class="table-wrap">
+            <div class="overflow-x-auto">
+                <table class="tbl">
+                    <thead>
                         <tr>
-                            <td colspan="3" class="text-center text-gray-400 py-6">Buyurtmalar yo'q</td>
+                            <th>ID</th>
+                            <th>Net</th>
+                            <th>Holat</th>
+                            <th>Sana</th>
                         </tr>
-                    <?php endif; ?>
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        <?php $__empty_1 = true; $__currentLoopData = $recentTransactions; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $tx): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+                            <tr>
+                                <td class="text-gray-500 text-sm">#<?php echo e($tx->id); ?></td>
+                                <td class="font-semibold"><?php echo e(number_format((float) ($tx->netAmount ?? $tx->amount ?? 0), 0, '.', ' ')); ?> UZS</td>
+                                <td>
+                                    <?php if(in_array($tx->status, ['success', 'completed', 'approved'])): ?>
+                                        <span class="badge badge-success">Muvaffaqiyatli</span>
+                                    <?php elseif(in_array($tx->status, ['pending', 'processing'])): ?>
+                                        <span class="badge badge-warning">Kutilmoqda</span>
+                                    <?php elseif(in_array($tx->status, ['failed', 'rejected', 'cancelled'])): ?>
+                                        <span class="badge badge-danger">Rad etilgan</span>
+                                    <?php else: ?>
+                                        <span class="badge badge-muted"><?php echo e($tx->status ?? '—'); ?></span>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="text-sm text-gray-500"><?php echo e($tx->created_at ? $tx->created_at->format('d.m.Y H:i') : '—'); ?></td>
+                            </tr>
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
+                            <tr>
+                                <td colspan="4" class="text-center text-gray-400 py-6">Tranzaksiyalar yo'q</td>
+                            </tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>

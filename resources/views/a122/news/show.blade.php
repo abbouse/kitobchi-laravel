@@ -2,6 +2,9 @@
 @section('title', $news->title)
 
 @section('content')
+@php
+    $newsStatus = $news->status ? 'Faol' : 'Yashirin';
+@endphp
 <x-a122.page-header back-href="{{ route('admin.news.index') }}">
     <x-slot name="heading">{{ $news->title }}</x-slot>
     <x-slot name="meta">Bozor yangiligi, banner va target action tafsilotlari</x-slot>
@@ -26,6 +29,33 @@
         </form>
     </x-slot>
 </x-a122.page-header>
+
+<section class="a122-section mb-4">
+    <div class="a122-section-body">
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div class="kpi-soft">
+                <div class="metric-label">Holat</div>
+                <div class="metric-value text-xl">{{ $newsStatus }}</div>
+                <div class="metric-meta">Foydalanuvchiga ko‘rinishi</div>
+            </div>
+            <div class="kpi-soft">
+                <div class="metric-label">Action</div>
+                <div class="metric-value text-xl">{{ $news->action_label }}</div>
+                <div class="metric-meta">{{ $news->action ?: 'Action yo‘q' }}</div>
+            </div>
+            <div class="kpi-soft">
+                <div class="metric-label">Target ID</div>
+                <div class="metric-value text-xl">{{ $news->action_id ?: '—' }}</div>
+                <div class="metric-meta">Bog‘langan obyekt</div>
+            </div>
+            <div class="kpi-soft">
+                <div class="metric-label">Yangilangan</div>
+                <div class="metric-value text-xl">{{ $news->updated_at?->format('d.m') ?: '—' }}</div>
+                <div class="metric-meta">{{ $news->updated_at?->format('H:i') ?: 'Vaqt yo‘q' }}</div>
+            </div>
+        </div>
+    </div>
+</section>
 
 <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
     <div class="xl:col-span-8 space-y-4">

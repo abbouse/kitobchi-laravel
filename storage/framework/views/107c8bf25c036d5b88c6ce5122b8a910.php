@@ -7,6 +7,12 @@
   $spentSeconds = (int) (data_get($user, 'total_seconds_spent') ?? data_get($user, 'total_seconds_spend') ?? 0);
   $spentHours = $spentSeconds > 0 ? number_format($spentSeconds / 3600, 1) : '0';
   $mainAddressId = (int) data_get($user, 'mainAddressID', 0);
+  $mainAddress = $addresses->firstWhere('id', $mainAddressId) ?? $addresses->first();
+  $staffRoleLabel = match ((string) data_get($user, 'staff_role')) {
+    'administrator' => 'Administrator',
+    'moderator' => 'Moderator',
+    default => '—',
+  };
 ?>
 
 <div class="space-y-6">
@@ -151,8 +157,10 @@
       <div class="data-grid two">
         <div class="data-kv"><dt>Telefon</dt><dd><?php echo e(data_get($user,'phone_number') ?: '—'); ?></dd></div>
         <div class="data-kv"><dt>Email</dt><dd><?php echo e(data_get($user,'email') ?: '—'); ?></dd></div>
+        <div class="data-kv"><dt>Username</dt><dd><?php echo e(data_get($user,'username') ? '@'.data_get($user,'username') : '—'); ?></dd></div>
         <div class="data-kv"><dt>Telegram ID</dt><dd><?php echo e(data_get($user,'telegram_id') ?: '—'); ?></dd></div>
         <div class="data-kv"><dt>Til</dt><dd><?php echo e(data_get($user,'locale') ?: 'uz'); ?></dd></div>
+        <div class="data-kv"><dt>Staff roli</dt><dd><?php echo e($staffRoleLabel); ?></dd></div>
         <div class="data-kv"><dt>Premium</dt><dd><?php echo e($user->is_premium ? 'Faol' : 'Yo‘q'); ?></dd></div>
         <div class="data-kv"><dt>Premium muddati</dt><dd><?php echo e(optional(data_get($user,'premium_until'))->format('d.m.Y H:i') ?: '—'); ?></dd></div>
         <div class="data-kv"><dt>AI limiti</dt><dd><?php echo e(number_format((int) data_get($user,'ai_limit', 0))); ?></dd></div>
@@ -161,6 +169,8 @@
         <div class="data-kv"><dt>Spent time</dt><dd><?php echo e(number_format($spentSeconds)); ?> sec</dd></div>
         <div class="data-kv"><dt>Balans</dt><dd><?php echo e(number_format((float) data_get($user,'real_balance',0), 0, '.', ' ')); ?> UZS</dd></div>
         <div class="data-kv"><dt>Cashback</dt><dd><?php echo e(number_format((float) data_get($user,'cashback',0), 0, '.', ' ')); ?> UZS</dd></div>
+        <div class="data-kv"><dt>Asosiy manzil</dt><dd><?php echo e(data_get($mainAddress, 'fullAddress') ?: '—'); ?></dd></div>
+        <div class="data-kv"><dt>Blok holati</dt><dd><?php echo e($user->isBlocked() ? $user->activeBlockLabel() : 'Faol'); ?></dd></div>
       </div>
 
       <?php if(data_get($user,'bio')): ?>

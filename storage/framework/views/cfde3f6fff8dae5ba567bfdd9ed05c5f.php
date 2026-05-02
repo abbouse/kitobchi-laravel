@@ -26,45 +26,6 @@
     });
   }
 }" x-init="init()">
-<?php if (isset($component)) { $__componentOriginal0c1345684b2d774f43a544669f5684b0 = $component; } ?>
-<?php if (isset($attributes)) { $__attributesOriginal0c1345684b2d774f43a544669f5684b0 = $attributes; } ?>
-<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.a122.page-header','data' => ['class' => 'fade-up']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
-<?php $component->withName('a122.page-header'); ?>
-<?php if ($component->shouldRender()): ?>
-<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
-<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
-<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
-<?php endif; ?>
-<?php $component->withAttributes(['class' => 'fade-up']); ?>
-   <?php $__env->slot('heading', null, []); ?> Dashboard <?php $__env->endSlot(); ?>
-   <?php $__env->slot('meta', null, []); ?> Asosiy metrikalar, buyurtmalar oqimi va operatsion holat bir joyda. <?php $__env->endSlot(); ?>
-   <?php $__env->slot('actions', null, []); ?> 
-    <a href="<?php echo e(route('admin.dashboard.live')); ?>" class="btn-p ghost" target="_blank">
-      <i class="bi bi-broadcast-pin"></i> Live monitor
-    </a>
-    <a href="<?php echo e(route('admin.dashboard',['clear_cache'=>1])); ?>" class="btn-p ghost">
-      <i class="bi bi-arrow-clockwise"></i> Yangilash
-    </a>
-   <?php $__env->endSlot(); ?>
- <?php echo $__env->renderComponent(); ?>
-<?php endif; ?>
-<?php if (isset($__attributesOriginal0c1345684b2d774f43a544669f5684b0)): ?>
-<?php $attributes = $__attributesOriginal0c1345684b2d774f43a544669f5684b0; ?>
-<?php unset($__attributesOriginal0c1345684b2d774f43a544669f5684b0); ?>
-<?php endif; ?>
-<?php if (isset($__componentOriginal0c1345684b2d774f43a544669f5684b0)): ?>
-<?php $component = $__componentOriginal0c1345684b2d774f43a544669f5684b0; ?>
-<?php unset($__componentOriginal0c1345684b2d774f43a544669f5684b0); ?>
-<?php endif; ?>
-
-<div class="dash-seg-bar mb-4 fade-up" id="dashSegBar">
-  <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'main' }" @click="switchTab('main')"><i class="bi bi-grid-1x2"></i><span>Asosiy</span></button>
-  <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'orders' }" @click="switchTab('orders')"><i class="bi bi-bag-check"></i><span>Buyurtmalar</span></button>
-  <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'finance' }" @click="switchTab('finance')"><i class="bi bi-bar-chart-line"></i><span>Moliya</span></button>
-  <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'users' }" @click="switchTab('users')"><i class="bi bi-people"></i><span>Foydalanuvchilar</span></button>
-  <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'catalog' }" @click="switchTab('catalog')"><i class="bi bi-building"></i><span>Biznes</span></button>
-</div>
-
 <?php
   $dashAdmin = $admin ?? auth('panel')->user();
   $dashQuick = [];
@@ -84,77 +45,130 @@
   }
 ?>
 
+<section class="a122-dash-hero-v2 fade-up">
+  <div class="a122-dash-hero-v2__main">
+    <div class="a122-dash-eyebrow">A122 control room</div>
+    <div class="a122-dash-eyebrow-row">
+      <span class="a122-dash-kicker">Bugungi fokus</span>
+      <span class="a122-dash-kicker a122-dash-kicker--muted"><?php echo e(now()->format('d.m.Y')); ?></span>
+    </div>
+    <h1 class="a122-dash-hero-v2__title">Operatsiyalar, moliya va moderatsiya bitta nazorat sahifasida.</h1>
+    <p class="a122-dash-hero-v2__desc">
+      Bugungi oqim, kutilayotgan navbatlar va boshqaruv signallari shu yerda jamlangan. Asosiy maqsad tez o‘qish, tez saralash va ortiqcha yurmasdan qaror qilish.
+    </p>
 
-<div class="a122-section fade-up mb-4">
-<div class="a122-section-body p-0">
-<div class="dash-hero-strip">
-  <div class="dash-hero-metric">
-    <div class="dash-hero-label">GMV (brutto)</div>
-    <div class="dash-hero-val"><?php echo e(number_format($gmvTotal/1_000_000,1)); ?><span class="dash-hero-unit">M</span></div>
-    <div class="dash-hero-sub">Bu oy <?php echo e(number_format($gmvMonth/1_000_000,1)); ?>M UZS</div>
-  </div>
-  <div class="dash-hero-metric">
-    <div class="dash-hero-label">To'langan daromad</div>
-    <div class="dash-hero-val"><?php echo e(number_format($totalRevenue/1_000_000,1)); ?><span class="dash-hero-unit">M</span></div>
-    <div class="dash-hero-sub">Bugun +<?php echo e(number_format($todayRevenue/1000)); ?>K UZS</div>
-  </div>
-  <div class="dash-hero-metric">
-    <div class="dash-hero-label">Aktiv buyurtmalar</div>
-    <div class="dash-hero-val"><?php echo e(number_format($pendingOrders+$packingOrders+$onwayOrders)); ?></div>
-    <div class="dash-hero-sub"><span class="live-dot live-dot--xs"></span>&ensp;<?php echo e(number_format($onlineUsers)); ?> online</div>
-  </div>
-  <div class="dash-hero-metric">
-    <div class="dash-hero-label">Kutilayotgan to'lovlar</div>
-    <div class="dash-hero-val <?php echo e(($pendingSellerTxCount+$pendingCourierTxCount)>0?'dash-hero-val--warn':''); ?>"><?php echo e(number_format($pendingSellerTxCount+$pendingCourierTxCount)); ?></div>
-    <div class="dash-hero-sub">Seller + Kuryer arizalar</div>
-  </div>
-</div>
-</div>
-</div>
+    <div class="a122-dash-hero-v2__actions">
+      <a href="<?php echo e(route('admin.dashboard.live')); ?>" class="btn-p primary" target="_blank">
+        <i class="bi bi-broadcast-pin"></i> Live monitor
+      </a>
+      <a href="<?php echo e(route('admin.dashboard',['clear_cache'=>1])); ?>" class="btn-p ghost">
+        <i class="bi bi-arrow-clockwise"></i> Yangilash
+      </a>
+    </div>
 
+    <div class="a122-dash-signal-row">
+      <div class="a122-dash-signal">
+        <span class="a122-dash-signal__label">Aktiv buyurtmalar</span>
+        <span class="a122-dash-signal__value"><?php echo e(number_format($pendingOrders+$packingOrders+$onwayOrders)); ?></span>
+      </div>
+      <div class="a122-dash-signal">
+        <span class="a122-dash-signal__label">Online foydalanuvchilar</span>
+        <span class="a122-dash-signal__value"><?php echo e(number_format($onlineUsers)); ?></span>
+      </div>
+      <div class="a122-dash-signal">
+        <span class="a122-dash-signal__label">Kutilayotgan payout</span>
+        <span class="a122-dash-signal__value"><?php echo e(number_format($pendingSellerTxCount+$pendingCourierTxCount)); ?></span>
+      </div>
+    </div>
+
+    <div class="a122-dash-focus-grid">
+      <div class="a122-dash-focus-card">
+        <div class="a122-dash-focus-card__label">Tezkor tekshiruv</div>
+        <div class="a122-dash-focus-card__value"><?php echo e(number_format($pendingOrders + $pendingSellers)); ?></div>
+        <div class="a122-dash-focus-card__meta">Buyurtma va seller navbatlari</div>
+      </div>
+      <div class="a122-dash-focus-card">
+        <div class="a122-dash-focus-card__label">Support oqimi</div>
+        <div class="a122-dash-focus-card__value"><?php echo e(number_format(($complaintsPending ?? 0) + ($openSupportCount ?? 0))); ?></div>
+        <div class="a122-dash-focus-card__meta">Shikoyat va murojaatlar</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="a122-dash-hero-v2__rail">
+    <div class="a122-dash-rail-grid">
+      <div class="a122-dash-rail-card">
+        <div class="a122-dash-rail-card__label">GMV</div>
+        <div class="a122-dash-rail-card__value"><?php echo e(number_format($gmvTotal/1_000_000,1)); ?>M</div>
+        <div class="a122-dash-rail-card__meta">Bu oy <?php echo e(number_format($gmvMonth/1_000_000,1)); ?>M UZS</div>
+      </div>
+      <div class="a122-dash-rail-card">
+        <div class="a122-dash-rail-card__label">To‘langan daromad</div>
+        <div class="a122-dash-rail-card__value"><?php echo e(number_format($totalRevenue/1_000_000,1)); ?>M</div>
+        <div class="a122-dash-rail-card__meta">Bugun +<?php echo e(number_format($todayRevenue/1000)); ?>K UZS</div>
+      </div>
+      <div class="a122-dash-rail-card">
+        <div class="a122-dash-rail-card__label">Yangi foydalanuvchilar</div>
+        <div class="a122-dash-rail-card__value"><?php echo e(number_format($newUsersToday)); ?></div>
+        <div class="a122-dash-rail-card__meta">Kunlik o‘sish</div>
+      </div>
+      <div class="a122-dash-rail-card">
+        <div class="a122-dash-rail-card__label">Pending sellers</div>
+        <div class="a122-dash-rail-card__value"><?php echo e(number_format($pendingSellers)); ?></div>
+        <div class="a122-dash-rail-card__meta">Ko‘rib chiqish kerak</div>
+      </div>
+    </div>
+  </div>
+</section>
 
 <?php if(!empty($alerts)): ?>
-<div class="a122-section fade-up mb-4">
-  <div class="a122-section-head">
-    <div>
-      <div class="a122-section-head__title">Diqqat talab qiladigan holatlar</div>
-      <div class="a122-section-head__meta">Moderatsiya, to‘lov va navbatlar bo‘yicha tezkor signal bloklari.</div>
-    </div>
-  </div>
-  <div class="a122-section-body">
+<section class="a122-dash-alert-strip fade-up">
   <?php $__currentLoopData = $alerts; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$color,$icon,$title,$desc,$url]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-  <div class="alert-item <?php echo e($color); ?>">
-    <i class="bi <?php echo e($icon); ?> alert-item__icon"></i>
-    <div class="alert-item__body"><span class="alert-item__title"><?php echo e($title); ?>:</span> <?php echo e($desc); ?></div>
-    <a href="<?php echo e($url); ?>" class="alert-item__link">Ko'rish →</a>
-  </div>
-  <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-</div>
-</div>
-<?php endif; ?>
-
-
-<?php if(count($dashQuick)): ?>
-<div class="a122-section mb-5 fade-up">
-  <div class="a122-section-head">
-    <div>
-      <div class="a122-section-head__title">Tezkor bo‘limlar</div>
-      <div class="a122-section-head__meta">Eng ko‘p ishlatiladigan boshqaruv sahifalariga bir bosishda o‘tish.</div>
-    </div>
-  </div>
-  <div class="a122-section-body">
-<div class="dash-quick-grid">
-  <?php $__currentLoopData = $dashQuick; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $q): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-    <a href="<?php echo e($q[2]); ?>" class="dash-quick-card">
-      <div class="dq-ico" style="background:<?php echo e($q[4]); ?>;color:<?php echo e($q[5]); ?>"><i class="bi <?php echo e($q[1]); ?>"></i></div>
-      <span class="dq-lbl"><?php echo e($q[0]); ?></span>
-      <span class="dq-hint"><?php echo e($q[3]); ?></span>
+    <a href="<?php echo e($url); ?>" class="a122-dash-alert-chip is-<?php echo e($color); ?>">
+      <i class="bi <?php echo e($icon); ?>"></i>
+      <span class="a122-dash-alert-chip__title"><?php echo e($title); ?></span>
+      <span class="a122-dash-alert-chip__desc"><?php echo e($desc); ?></span>
     </a>
   <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-</div>
-</div>
-</div>
+</section>
 <?php endif; ?>
+
+<?php if(count($dashQuick)): ?>
+<section class="a122-dash-shortcuts fade-up">
+  <div class="a122-dash-shortcuts__head">
+    <div>
+      <div class="a122-dash-shortcuts__title">Tezkor bo‘limlar</div>
+      <div class="a122-dash-shortcuts__meta">Adminning eng ko‘p ishlatiladigan ish yo‘llari.</div>
+    </div>
+  </div>
+  <div class="a122-dash-shortcuts__grid">
+    <?php $__currentLoopData = $dashQuick; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $q): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+      <a href="<?php echo e($q[2]); ?>" class="a122-dash-shortcut">
+        <div class="a122-dash-shortcut__icon" style="background:<?php echo e($q[4]); ?>;color:<?php echo e($q[5]); ?>">
+          <i class="bi <?php echo e($q[1]); ?>"></i>
+        </div>
+        <div class="a122-dash-shortcut__body">
+          <div class="a122-dash-shortcut__label"><?php echo e($q[0]); ?></div>
+          <div class="a122-dash-shortcut__hint"><?php echo e($q[3]); ?></div>
+        </div>
+        <div class="a122-dash-shortcut__tail">
+          <i class="bi bi-arrow-up-right"></i>
+        </div>
+      </a>
+    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+  </div>
+</section>
+<?php endif; ?>
+
+<div class="a122-dash-tabshell fade-up">
+  <div class="dash-seg-bar" id="dashSegBar">
+    <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'main' }" @click="switchTab('main')"><i class="bi bi-grid-1x2"></i><span>Asosiy</span></button>
+    <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'orders' }" @click="switchTab('orders')"><i class="bi bi-bag-check"></i><span>Buyurtmalar</span></button>
+    <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'finance' }" @click="switchTab('finance')"><i class="bi bi-bar-chart-line"></i><span>Moliya</span></button>
+    <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'users' }" @click="switchTab('users')"><i class="bi bi-people"></i><span>Foydalanuvchilar</span></button>
+    <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'catalog' }" @click="switchTab('catalog')"><i class="bi bi-building"></i><span>Biznes</span></button>
+  </div>
+</div>
 
 
 

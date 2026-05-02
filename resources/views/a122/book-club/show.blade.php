@@ -166,12 +166,30 @@
           <div style="font-size:11px;color:var(--p-hint);margin-bottom:6px;text-transform:uppercase;letter-spacing:.07em">
             Bog'liq mahsulot
           </div>
-          <div style="display:flex;align-items:center;gap:8px">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
             <i class="bi bi-{{ $bookClub->product_type === 'book' ? 'book' : 'pencil-square' }}"
                style="color:var(--p-accent);font-size:16px"></i>
-            <span style="font-size:13px;font-weight:500;color:var(--p-text)">
-              {{ ucfirst($bookClub->product_type) }} ID: #{{ $bookClub->product_id }}
-            </span>
+            @if($relatedProduct)
+              <a href="{{ $bookClub->product_type === 'book' ? route('admin.books.show', $relatedProduct) : route('admin.stationery.show', $relatedProduct) }}"
+                 style="font-size:13px;font-weight:600;color:var(--p-text);text-decoration:none">
+                {{ $relatedProduct->name }}
+              </a>
+              <span style="font-size:11px;color:var(--p-hint)">#{{ $bookClub->product_id }}</span>
+              @if($bookClub->product_type === 'book' && $relatedProduct->author)
+                <span style="font-size:11px;color:var(--p-hint)">· {{ $relatedProduct->author }}</span>
+              @endif
+              @if($relatedProduct->seller)
+                <span style="font-size:11px;color:var(--p-hint)">·</span>
+                <a href="{{ route('admin.sellers.show', $relatedProduct->seller) }}"
+                   style="font-size:11px;color:var(--p-info);font-weight:600;text-decoration:none">
+                  {{ $relatedProduct->seller->shop_name }}
+                </a>
+              @endif
+            @else
+              <span style="font-size:13px;font-weight:500;color:var(--p-text)">
+                {{ ucfirst($bookClub->product_type) }} ID: #{{ $bookClub->product_id }}
+              </span>
+            @endif
           </div>
         </div>
         @endif
@@ -452,6 +470,7 @@
           ['Yaratildi',    $bookClub->created_at?->format('d.m.Y H:i')],
           ['Mahsulot tur', $bookClub->product_type ? ucfirst($bookClub->product_type) : '—'],
           ['Mahsulot ID',  $bookClub->product_id ? '#'.$bookClub->product_id : '—'],
+          ['Muallif user', '#'.$bookClub->user_id],
         ] as [$k,$v])
         <div style="display:flex;justify-content:space-between;padding:8px 0;
                     border-bottom:1px solid var(--p-border)">

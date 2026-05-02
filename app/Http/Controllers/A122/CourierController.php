@@ -109,8 +109,18 @@ class CourierController extends Controller
         $orderCount  = CourierOrder::where('courier_id', $courier->id)->count();
         $totalEarned = CourierTransaction::where('courier_id', $courier->id)
             ->where('status', 'approved')->sum('netAmount');
-        $recentOrders = CourierOrder::with('user')
-            ->where('courier_id', $courier->id)->latest()->take(8)->get();
+        $recentOrders = CourierOrder::with([
+                'user:id,name,lastname,phone_number',
+                'order:id,status,paymentStatus,deliveryType,amount',
+            ])
+            ->where('courier_id', $courier->id)
+            ->latest()
+            ->take(8)
+            ->get();
+        $recentTransactions = CourierTransaction::where('courier_id', $courier->id)
+            ->latest()
+            ->take(8)
+            ->get();
 
         $banLogs      = CourierBanLog::where('courier_id', $courier->id)
             ->latest()->take(50)->get();
@@ -118,7 +128,7 @@ class CourierController extends Controller
 
         return view('a122.couriers.show', compact(
             'courier', 'orderCount', 'totalEarned', 'recentOrders',
-            'banLogs', 'warningCount'
+            'recentTransactions', 'banLogs', 'warningCount'
         ));
     }
 

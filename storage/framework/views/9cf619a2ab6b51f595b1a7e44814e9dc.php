@@ -89,6 +89,33 @@
 <?php unset($__componentOriginal0c1345684b2d774f43a544669f5684b0); ?>
 <?php endif; ?>
 
+<section class="a122-section mb-4">
+  <div class="a122-section-body">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div class="kpi-soft">
+        <div class="metric-label">Nominal</div>
+        <div class="metric-value text-xl"><?php echo e(number_format($giftCertificate->nominal_uzs)); ?></div>
+        <div class="metric-meta">UZS</div>
+      </div>
+      <div class="kpi-soft">
+        <div class="metric-label">Holat</div>
+        <div class="metric-value text-xl"><?php echo e($giftCertificate->status_label); ?></div>
+        <div class="metric-meta">Joriy lifecycle</div>
+      </div>
+      <div class="kpi-soft">
+        <div class="metric-label">Buyer</div>
+        <div class="metric-value text-xl"><?php echo e($giftCertificate->buyer ? 'Bor' : '—'); ?></div>
+        <div class="metric-meta">Sotib olgan user</div>
+      </div>
+      <div class="kpi-soft">
+        <div class="metric-label">Recipient</div>
+        <div class="metric-value text-xl"><?php echo e($giftCertificate->recipient ? 'Bor' : 'Kutilmoqda'); ?></div>
+        <div class="metric-meta">Qabul qiluvchi</div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
 
   

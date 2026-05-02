@@ -2,6 +2,10 @@
 <?php $__env->startSection('page-title', 'Karyera #'.$careerApplication->id); ?>
 
 <?php $__env->startSection('content'); ?>
+<?php
+    $messageCount = $careerApplication->messages->count();
+    $applicationTypeLabel = $careerApplication->type === \App\Models\CareerApplication::TYPE_INQUIRY ? 'Ochiq murojaat' : 'Vakansiya arizasi';
+?>
 <?php if (isset($component)) { $__componentOriginal0c1345684b2d774f43a544669f5684b0 = $component; } ?>
 <?php if (isset($attributes)) { $__attributesOriginal0c1345684b2d774f43a544669f5684b0 = $attributes; } ?>
 <?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.a122.page-header','data' => ['backHref' => ''.e(route('admin.job-applications.index')).'']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
@@ -13,7 +17,7 @@
 <?php endif; ?>
 <?php $component->withAttributes(['back-href' => ''.e(route('admin.job-applications.index')).'']); ?>
      <?php $__env->slot('heading', null, []); ?> Ariza #<?php echo e($careerApplication->id); ?> <?php $__env->endSlot(); ?>
-     <?php $__env->slot('meta', null, []); ?> <?php echo e($careerApplication->created_at?->format('d.m.Y H:i')); ?> · <?php echo e($careerApplication->type === \App\Models\CareerApplication::TYPE_INQUIRY ? 'Ochiq murojaat' : 'Vakansiya arizasi'); ?> <?php $__env->endSlot(); ?>
+     <?php $__env->slot('meta', null, []); ?> <?php echo e($careerApplication->created_at?->format('d.m.Y H:i')); ?> · <?php echo e($applicationTypeLabel); ?> <?php $__env->endSlot(); ?>
      <?php $__env->slot('actions', null, []); ?> 
         <?php if($careerApplication->cv_path): ?>
             <a href="<?php echo e(route('admin.job-applications.cv', $careerApplication)); ?>" class="btn-p ghost">
@@ -31,6 +35,33 @@
 <?php $component = $__componentOriginal0c1345684b2d774f43a544669f5684b0; ?>
 <?php unset($__componentOriginal0c1345684b2d774f43a544669f5684b0); ?>
 <?php endif; ?>
+
+<section class="a122-section mb-4">
+    <div class="a122-section-body">
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div class="kpi-soft">
+                <div class="metric-label">Ariza turi</div>
+                <div class="metric-value text-xl"><?php echo e($applicationTypeLabel); ?></div>
+                <div class="metric-meta">Kanal tipi</div>
+            </div>
+            <div class="kpi-soft">
+                <div class="metric-label">Status</div>
+                <div class="metric-value text-xl"><?php echo e($statuses[$careerApplication->status]['label'] ?? $careerApplication->status); ?></div>
+                <div class="metric-meta">Joriy bosqich</div>
+            </div>
+            <div class="kpi-soft">
+                <div class="metric-label">Xabarlar</div>
+                <div class="metric-value text-xl"><?php echo e(number_format($messageCount)); ?></div>
+                <div class="metric-meta">Ichki tarix</div>
+            </div>
+            <div class="kpi-soft">
+                <div class="metric-label">CV</div>
+                <div class="metric-value text-xl"><?php echo e($careerApplication->cv_path ? 'Bor' : 'Yo‘q'); ?></div>
+                <div class="metric-meta">Fayl mavjudligi</div>
+            </div>
+        </div>
+    </div>
+</section>
 
 <?php if(session('success')): ?>
     <div class="mb-3 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-200"><?php echo e(session('success')); ?></div>

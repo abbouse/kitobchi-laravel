@@ -27,27 +27,6 @@
     });
   }
 }" x-init="init()">
-<x-a122.page-header class="fade-up">
-  <x-slot name="heading">Dashboard</x-slot>
-  <x-slot name="meta">Asosiy metrikalar, buyurtmalar oqimi va operatsion holat bir joyda.</x-slot>
-  <x-slot name="actions">
-    <a href="{{ route('admin.dashboard.live') }}" class="btn-p ghost" target="_blank">
-      <i class="bi bi-broadcast-pin"></i> Live monitor
-    </a>
-    <a href="{{ route('admin.dashboard',['clear_cache'=>1]) }}" class="btn-p ghost">
-      <i class="bi bi-arrow-clockwise"></i> Yangilash
-    </a>
-  </x-slot>
-</x-a122.page-header>
-
-<div class="dash-seg-bar mb-4 fade-up" id="dashSegBar">
-  <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'main' }" @click="switchTab('main')"><i class="bi bi-grid-1x2"></i><span>Asosiy</span></button>
-  <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'orders' }" @click="switchTab('orders')"><i class="bi bi-bag-check"></i><span>Buyurtmalar</span></button>
-  <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'finance' }" @click="switchTab('finance')"><i class="bi bi-bar-chart-line"></i><span>Moliya</span></button>
-  <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'users' }" @click="switchTab('users')"><i class="bi bi-people"></i><span>Foydalanuvchilar</span></button>
-  <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'catalog' }" @click="switchTab('catalog')"><i class="bi bi-building"></i><span>Biznes</span></button>
-</div>
-
 @php
   $dashAdmin = $admin ?? auth('panel')->user();
   $dashQuick = [];
@@ -67,77 +46,130 @@
   }
 @endphp
 
-{{-- ── HERO STRIP ──────────────────────────────────────────────────────────── --}}
-<div class="a122-section fade-up mb-4">
-<div class="a122-section-body p-0">
-<div class="dash-hero-strip">
-  <div class="dash-hero-metric">
-    <div class="dash-hero-label">GMV (brutto)</div>
-    <div class="dash-hero-val">{{ number_format($gmvTotal/1_000_000,1) }}<span class="dash-hero-unit">M</span></div>
-    <div class="dash-hero-sub">Bu oy {{ number_format($gmvMonth/1_000_000,1) }}M UZS</div>
-  </div>
-  <div class="dash-hero-metric">
-    <div class="dash-hero-label">To'langan daromad</div>
-    <div class="dash-hero-val">{{ number_format($totalRevenue/1_000_000,1) }}<span class="dash-hero-unit">M</span></div>
-    <div class="dash-hero-sub">Bugun +{{ number_format($todayRevenue/1000) }}K UZS</div>
-  </div>
-  <div class="dash-hero-metric">
-    <div class="dash-hero-label">Aktiv buyurtmalar</div>
-    <div class="dash-hero-val">{{ number_format($pendingOrders+$packingOrders+$onwayOrders) }}</div>
-    <div class="dash-hero-sub"><span class="live-dot live-dot--xs"></span>&ensp;{{ number_format($onlineUsers) }} online</div>
-  </div>
-  <div class="dash-hero-metric">
-    <div class="dash-hero-label">Kutilayotgan to'lovlar</div>
-    <div class="dash-hero-val {{ ($pendingSellerTxCount+$pendingCourierTxCount)>0?'dash-hero-val--warn':'' }}">{{ number_format($pendingSellerTxCount+$pendingCourierTxCount) }}</div>
-    <div class="dash-hero-sub">Seller + Kuryer arizalar</div>
-  </div>
-</div>
-</div>
-</div>
+<section class="a122-dash-hero-v2 fade-up">
+  <div class="a122-dash-hero-v2__main">
+    <div class="a122-dash-eyebrow">A122 control room</div>
+    <div class="a122-dash-eyebrow-row">
+      <span class="a122-dash-kicker">Bugungi fokus</span>
+      <span class="a122-dash-kicker a122-dash-kicker--muted">{{ now()->format('d.m.Y') }}</span>
+    </div>
+    <h1 class="a122-dash-hero-v2__title">Operatsiyalar, moliya va moderatsiya bitta nazorat sahifasida.</h1>
+    <p class="a122-dash-hero-v2__desc">
+      Bugungi oqim, kutilayotgan navbatlar va boshqaruv signallari shu yerda jamlangan. Asosiy maqsad tez o‘qish, tez saralash va ortiqcha yurmasdan qaror qilish.
+    </p>
 
-{{-- ── ALERTS ───────────────────────────────────────────────────────────────── --}}
+    <div class="a122-dash-hero-v2__actions">
+      <a href="{{ route('admin.dashboard.live') }}" class="btn-p primary" target="_blank">
+        <i class="bi bi-broadcast-pin"></i> Live monitor
+      </a>
+      <a href="{{ route('admin.dashboard',['clear_cache'=>1]) }}" class="btn-p ghost">
+        <i class="bi bi-arrow-clockwise"></i> Yangilash
+      </a>
+    </div>
+
+    <div class="a122-dash-signal-row">
+      <div class="a122-dash-signal">
+        <span class="a122-dash-signal__label">Aktiv buyurtmalar</span>
+        <span class="a122-dash-signal__value">{{ number_format($pendingOrders+$packingOrders+$onwayOrders) }}</span>
+      </div>
+      <div class="a122-dash-signal">
+        <span class="a122-dash-signal__label">Online foydalanuvchilar</span>
+        <span class="a122-dash-signal__value">{{ number_format($onlineUsers) }}</span>
+      </div>
+      <div class="a122-dash-signal">
+        <span class="a122-dash-signal__label">Kutilayotgan payout</span>
+        <span class="a122-dash-signal__value">{{ number_format($pendingSellerTxCount+$pendingCourierTxCount) }}</span>
+      </div>
+    </div>
+
+    <div class="a122-dash-focus-grid">
+      <div class="a122-dash-focus-card">
+        <div class="a122-dash-focus-card__label">Tezkor tekshiruv</div>
+        <div class="a122-dash-focus-card__value">{{ number_format($pendingOrders + $pendingSellers) }}</div>
+        <div class="a122-dash-focus-card__meta">Buyurtma va seller navbatlari</div>
+      </div>
+      <div class="a122-dash-focus-card">
+        <div class="a122-dash-focus-card__label">Support oqimi</div>
+        <div class="a122-dash-focus-card__value">{{ number_format(($complaintsPending ?? 0) + ($openSupportCount ?? 0)) }}</div>
+        <div class="a122-dash-focus-card__meta">Shikoyat va murojaatlar</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="a122-dash-hero-v2__rail">
+    <div class="a122-dash-rail-grid">
+      <div class="a122-dash-rail-card">
+        <div class="a122-dash-rail-card__label">GMV</div>
+        <div class="a122-dash-rail-card__value">{{ number_format($gmvTotal/1_000_000,1) }}M</div>
+        <div class="a122-dash-rail-card__meta">Bu oy {{ number_format($gmvMonth/1_000_000,1) }}M UZS</div>
+      </div>
+      <div class="a122-dash-rail-card">
+        <div class="a122-dash-rail-card__label">To‘langan daromad</div>
+        <div class="a122-dash-rail-card__value">{{ number_format($totalRevenue/1_000_000,1) }}M</div>
+        <div class="a122-dash-rail-card__meta">Bugun +{{ number_format($todayRevenue/1000) }}K UZS</div>
+      </div>
+      <div class="a122-dash-rail-card">
+        <div class="a122-dash-rail-card__label">Yangi foydalanuvchilar</div>
+        <div class="a122-dash-rail-card__value">{{ number_format($newUsersToday) }}</div>
+        <div class="a122-dash-rail-card__meta">Kunlik o‘sish</div>
+      </div>
+      <div class="a122-dash-rail-card">
+        <div class="a122-dash-rail-card__label">Pending sellers</div>
+        <div class="a122-dash-rail-card__value">{{ number_format($pendingSellers) }}</div>
+        <div class="a122-dash-rail-card__meta">Ko‘rib chiqish kerak</div>
+      </div>
+    </div>
+  </div>
+</section>
+
 @if(!empty($alerts))
-<div class="a122-section fade-up mb-4">
-  <div class="a122-section-head">
-    <div>
-      <div class="a122-section-head__title">Diqqat talab qiladigan holatlar</div>
-      <div class="a122-section-head__meta">Moderatsiya, to‘lov va navbatlar bo‘yicha tezkor signal bloklari.</div>
-    </div>
-  </div>
-  <div class="a122-section-body">
+<section class="a122-dash-alert-strip fade-up">
   @foreach($alerts as [$color,$icon,$title,$desc,$url])
-  <div class="alert-item {{ $color }}">
-    <i class="bi {{ $icon }} alert-item__icon"></i>
-    <div class="alert-item__body"><span class="alert-item__title">{{ $title }}:</span> {{ $desc }}</div>
-    <a href="{{ $url }}" class="alert-item__link">Ko'rish →</a>
-  </div>
-  @endforeach
-</div>
-</div>
-@endif
-
-{{-- ── QUICK LINKS ──────────────────────────────────────────────────────────── --}}
-@if(count($dashQuick))
-<div class="a122-section mb-5 fade-up">
-  <div class="a122-section-head">
-    <div>
-      <div class="a122-section-head__title">Tezkor bo‘limlar</div>
-      <div class="a122-section-head__meta">Eng ko‘p ishlatiladigan boshqaruv sahifalariga bir bosishda o‘tish.</div>
-    </div>
-  </div>
-  <div class="a122-section-body">
-<div class="dash-quick-grid">
-  @foreach($dashQuick as $q)
-    <a href="{{ $q[2] }}" class="dash-quick-card">
-      <div class="dq-ico" style="background:{{ $q[4] }};color:{{ $q[5] }}"><i class="bi {{ $q[1] }}"></i></div>
-      <span class="dq-lbl">{{ $q[0] }}</span>
-      <span class="dq-hint">{{ $q[3] }}</span>
+    <a href="{{ $url }}" class="a122-dash-alert-chip is-{{ $color }}">
+      <i class="bi {{ $icon }}"></i>
+      <span class="a122-dash-alert-chip__title">{{ $title }}</span>
+      <span class="a122-dash-alert-chip__desc">{{ $desc }}</span>
     </a>
   @endforeach
-</div>
-</div>
-</div>
+</section>
 @endif
+
+@if(count($dashQuick))
+<section class="a122-dash-shortcuts fade-up">
+  <div class="a122-dash-shortcuts__head">
+    <div>
+      <div class="a122-dash-shortcuts__title">Tezkor bo‘limlar</div>
+      <div class="a122-dash-shortcuts__meta">Adminning eng ko‘p ishlatiladigan ish yo‘llari.</div>
+    </div>
+  </div>
+  <div class="a122-dash-shortcuts__grid">
+    @foreach($dashQuick as $q)
+      <a href="{{ $q[2] }}" class="a122-dash-shortcut">
+        <div class="a122-dash-shortcut__icon" style="background:{{ $q[4] }};color:{{ $q[5] }}">
+          <i class="bi {{ $q[1] }}"></i>
+        </div>
+        <div class="a122-dash-shortcut__body">
+          <div class="a122-dash-shortcut__label">{{ $q[0] }}</div>
+          <div class="a122-dash-shortcut__hint">{{ $q[3] }}</div>
+        </div>
+        <div class="a122-dash-shortcut__tail">
+          <i class="bi bi-arrow-up-right"></i>
+        </div>
+      </a>
+    @endforeach
+  </div>
+</section>
+@endif
+
+<div class="a122-dash-tabshell fade-up">
+  <div class="dash-seg-bar" id="dashSegBar">
+    <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'main' }" @click="switchTab('main')"><i class="bi bi-grid-1x2"></i><span>Asosiy</span></button>
+    <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'orders' }" @click="switchTab('orders')"><i class="bi bi-bag-check"></i><span>Buyurtmalar</span></button>
+    <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'finance' }" @click="switchTab('finance')"><i class="bi bi-bar-chart-line"></i><span>Moliya</span></button>
+    <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'users' }" @click="switchTab('users')"><i class="bi bi-people"></i><span>Foydalanuvchilar</span></button>
+    <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'catalog' }" @click="switchTab('catalog')"><i class="bi bi-building"></i><span>Biznes</span></button>
+  </div>
+</div>
 
 
 {{-- ══════════════════════════════════════════════════════════════════════════ --}}

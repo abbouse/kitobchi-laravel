@@ -1,6 +1,6 @@
 <header class="sticky top-0 z-30 topbar-shell">
-  <?php($panelAdmin = auth('panel')->user())
-  @php
+  <?php
+  $panelAdmin = auth('panel')->user();
     $quickLinks = [
       ['label' => 'Dashboard', 'href' => route('admin.dashboard')],
       ['label' => 'Foydalanuvchilar', 'href' => route('admin.users.index')],
@@ -26,15 +26,18 @@
       <i data-lucide="menu" class="w-5 h-5"></i>
     </button>
 
-    <div class="min-w-0">
-      <div class="topbar-subtitle hidden sm:block">A122 marketplace admin</div>
+    <div class="min-w-0 topbar-heading">
+      <div class="topbar-subtitle hidden sm:flex items-center gap-2">
+        <span class="topbar-subtitle__dot"></span>
+        <span>A122 operational workspace</span>
+      </div>
       <h1 class="topbar-title"><?php echo $__env->yieldContent('page-title', 'Dashboard'); ?></h1>
     </div>
 
     <div class="hidden md:flex flex-1 max-w-md mx-4">
       <form class="relative w-full topbar-search" onsubmit="event.preventDefault();const input=this.querySelector('input');const option=[...document.querySelectorAll('#a122-quick-nav-list option')].find(o=>o.value===input.value);if(option?.dataset?.href){window.location=option.dataset.href;}">
         <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2"></i>
-        <input type="text" list="a122-quick-nav-list" placeholder="Bo'limga o'tish uchun yozing..." />
+        <input type="text" list="a122-quick-nav-list" placeholder="Tezkor o'tish..." />
         <datalist id="a122-quick-nav-list">
           <?php $__currentLoopData = $quickLinks; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $link): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
             <option value="<?php echo e($link['label']); ?>" data-href="<?php echo e($link['href']); ?>"></option>

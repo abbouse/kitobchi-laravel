@@ -2,6 +2,10 @@
 <?php $__env->startSection('page-title', $admin->name); ?>
 
 <?php $__env->startSection('content'); ?>
+<?php
+  $adminPerms = $admin->permissions ?? [];
+  $allPerms = ['users','books','stationery','orders','sellers','couriers','promocodes','discounts','settings','admins'];
+?>
 
 <?php if (isset($component)) { $__componentOriginal0c1345684b2d774f43a544669f5684b0 = $component; } ?>
 <?php if (isset($attributes)) { $__attributesOriginal0c1345684b2d774f43a544669f5684b0 = $attributes; } ?>
@@ -26,6 +30,32 @@
 <?php unset($__componentOriginal0c1345684b2d774f43a544669f5684b0); ?>
 <?php endif; ?>
 
+<section class="a122-section mb-4">
+  <div class="a122-section-body">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div class="kpi-soft">
+        <div class="metric-label">Rol</div>
+        <div class="metric-value text-xl"><?php echo e($admin->getRoleLabelAttribute()); ?></div>
+        <div class="metric-meta">Panel darajasi</div>
+      </div>
+      <div class="kpi-soft">
+        <div class="metric-label">Holat</div>
+        <div class="metric-value text-xl"><?php echo e($admin->is_active ? 'Faol' : 'Bloklangan'); ?></div>
+        <div class="metric-meta">Session kirishi</div>
+      </div>
+      <div class="kpi-soft">
+        <div class="metric-label">Ruxsatlar</div>
+        <div class="metric-value text-xl"><?php echo e($admin->isSuperAdmin() ? 'All' : count($adminPerms)); ?></div>
+        <div class="metric-meta"><?php echo e($admin->isSuperAdmin() ? 'Superadmin' : 'Biriktirilgan modul'); ?></div>
+      </div>
+      <div class="kpi-soft">
+        <div class="metric-label">Oxirgi kirish</div>
+        <div class="metric-value text-xl"><?php echo e($admin->last_login_at ? \Carbon\Carbon::parse($admin->last_login_at)->format('d.m') : '—'); ?></div>
+        <div class="metric-meta"><?php echo e($admin->last_login_at ? \Carbon\Carbon::parse($admin->last_login_at)->format('H:i') : 'Vaqt yo‘q'); ?></div>
+      </div>
+    </div>
+  </div>
+</section>
 
 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
 
@@ -111,10 +141,6 @@
             </div>
           </div>
         <?php else: ?>
-          <?php
-            $allPerms = ['users','books','stationery','orders','sellers','couriers','promocodes','discounts','settings','admins'];
-            $adminPerms = $admin->permissions ?? [];
-          ?>
           <div class="flex flex-wrap gap-2">
             <?php $__currentLoopData = $allPerms; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $perm): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
             <span class="s-pill <?php echo e(in_array($perm, $adminPerms) ? 'success' : 'muted'); ?>"
@@ -165,4 +191,5 @@
 
 </div>
 <?php $__env->stopSection(); ?>
+
 <?php echo $__env->make('a122.layouts.admin', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH /Users/abbos/PROJECTS/MY/kitobchi-server/kitobchi-laravel/resources/views/a122/admins/show.blade.php ENDPATH**/ ?>

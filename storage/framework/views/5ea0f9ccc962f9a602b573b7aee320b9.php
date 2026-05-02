@@ -3,6 +3,12 @@
 
 <?php $__env->startSection('content'); ?>
 <div class="space-y-6">
+  <?php
+    $bookStatusLabel = $book->status ? 'Faol' : 'Nofaol';
+    $approvalLabel = $book->is_approved == 1 ? 'Tasdiqlangan' : ($book->is_approved == 2 ? 'Rad etilgan' : 'Moderatsiyada');
+    $discountActive = $book->discountPrice && (!$book->discountExpiresAt || \Illuminate\Support\Carbon::parse($book->discountExpiresAt)->isFuture());
+    $recommendationActive = $book->recommended && (!$book->recommendedExpiresAt || \Illuminate\Support\Carbon::parse($book->recommendedExpiresAt)->isFuture());
+  ?>
   <?php if (isset($component)) { $__componentOriginal0c1345684b2d774f43a544669f5684b0 = $component; } ?>
 <?php if (isset($attributes)) { $__attributesOriginal0c1345684b2d774f43a544669f5684b0 = $attributes; } ?>
 <?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.a122.page-header','data' => ['backHref' => ''.e(route('admin.books.index')).'']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
@@ -31,6 +37,33 @@
 
   <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
     <div class="xl:col-span-8 space-y-4">
+      <section class="a122-section">
+        <div class="a122-section-body">
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div class="kpi-soft">
+              <div class="metric-label">Joriy narx</div>
+              <div class="metric-value text-xl"><?php echo e(number_format((float) $book->price, 0, '.', ' ')); ?></div>
+              <div class="metric-meta">UZS</div>
+            </div>
+            <div class="kpi-soft">
+              <div class="metric-label">Ombordagi soni</div>
+              <div class="metric-value text-xl"><?php echo e(number_format((int) ($book->count ?? 0))); ?></div>
+              <div class="metric-meta">Dona</div>
+            </div>
+            <div class="kpi-soft">
+              <div class="metric-label">Ko‘rishlar</div>
+              <div class="metric-value text-xl"><?php echo e(number_format((int) ($book->views ?? 0))); ?></div>
+              <div class="metric-meta">Jami trafik</div>
+            </div>
+            <div class="kpi-soft">
+              <div class="metric-label">Sotilgan</div>
+              <div class="metric-value text-xl"><?php echo e(number_format((int) ($book->totalSales ?? 0))); ?></div>
+              <div class="metric-meta">Buyurtma itemlari</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section class="card p-5">
         <div class="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] gap-5">
           <div class="space-y-3">
@@ -57,22 +90,42 @@
           <div class="space-y-4">
             <div class="flex items-center gap-2 flex-wrap">
               <span class="badge <?php echo e($book->is_approved == 1 ? 'badge-success' : ($book->is_approved == 2 ? 'badge-danger' : 'badge-warning')); ?>">
-                <?php echo e($book->is_approved == 1 ? 'Tasdiqlangan' : ($book->is_approved == 2 ? 'Rad etilgan' : 'Moderatsiyada')); ?>
+                <?php echo e($approvalLabel); ?>
 
               </span>
-              <span class="badge <?php echo e($book->status ? 'badge-info' : 'badge-muted'); ?>"><?php echo e($book->status ? 'Faol' : 'Nofaol'); ?></span>
+              <span class="badge <?php echo e($book->status ? 'badge-info' : 'badge-muted'); ?>"><?php echo e($bookStatusLabel); ?></span>
+              <span class="badge <?php echo e($book->is_hidden ? 'badge-danger' : 'badge-success'); ?>"><?php echo e($book->is_hidden ? 'Yashirin' : 'Ko‘rinadi'); ?></span>
               <?php if($book->recommended): ?>
                 <span class="badge badge-warning">Recommended</span>
+              <?php endif; ?>
+              <?php if($discountActive): ?>
+                <span class="badge badge-success">Chegirma faol</span>
+              <?php endif; ?>
+              <?php if($recommendationActive): ?>
+                <span class="badge badge-info">Recommendation faol</span>
               <?php endif; ?>
             </div>
 
             <div class="data-grid two">
-              <div class="data-kv"><dt>Sotuvchi</dt><dd><?php echo e($book->seller?->shop_name ?: 'Ichki katalog'); ?></dd></div>
+              <div class="data-kv">
+                <dt>Sotuvchi</dt>
+                <dd>
+                  <?php if($book->seller): ?>
+                    <a href="<?php echo e(route('admin.sellers.show', $book->seller)); ?>" class="font-semibold text-[var(--p-accent)] hover:underline"><?php echo e($book->seller->shop_name); ?></a>
+                  <?php else: ?>
+                    Ichki katalog
+                  <?php endif; ?>
+                </dd>
+              </div>
               <div class="data-kv"><dt>Kategoriya</dt><dd><?php echo e($book->category?->name_uz ?: '—'); ?></dd></div>
+              <div class="data-kv"><dt>ISBN</dt><dd><?php echo e($book->isbn ?: '—'); ?></dd></div>
+              <div class="data-kv"><dt>Til / yozuv</dt><dd><?php echo e($book->lang ?: '—'); ?><?php echo e($book->langType ? ' · '.$book->langType : ''); ?></dd></div>
               <div class="data-kv"><dt>Narx</dt><dd><?php echo e(number_format((float)$book->price, 0, '.', ' ')); ?> UZS</dd></div>
               <div class="data-kv"><dt>Chegirma narxi</dt><dd><?php echo e($book->discountPrice ? number_format((float)$book->discountPrice, 0, '.', ' ') . ' UZS' : '—'); ?></dd></div>
               <div class="data-kv"><dt>Ombor</dt><dd><?php echo e(number_format((int)($book->count ?? 0))); ?> ta</dd></div>
               <div class="data-kv"><dt>Ko‘rishlar</dt><dd><?php echo e(number_format((int)($book->views ?? 0))); ?></dd></div>
+              <div class="data-kv"><dt>Muqova / sahifa</dt><dd><?php echo e($book->coverType ?: '—'); ?><?php echo e($book->pages ? ' · '.$book->pages.' sahifa' : ''); ?></dd></div>
+              <div class="data-kv"><dt>Nashr yili</dt><dd><?php echo e($book->year ?: '—'); ?></dd></div>
             </div>
 
             <div class="content-prose">
@@ -115,17 +168,45 @@
     </div>
 
     <div class="xl:col-span-4 space-y-4">
-      <section class="card p-5">
-        <h3 class="text-lg font-black">Texnik ma’lumot</h3>
-        <dl class="space-y-3 mt-4">
-          <div><dt class="metric-label">Til</dt><dd class="font-semibold mt-1"><?php echo e($book->lang ?: '—'); ?></dd></div>
-          <div><dt class="metric-label">Muqova</dt><dd class="font-semibold mt-1"><?php echo e($book->coverType ?: '—'); ?></dd></div>
-          <div><dt class="metric-label">Sahifalar</dt><dd class="font-semibold mt-1"><?php echo e($book->pages ?: '—'); ?></dd></div>
-          <div><dt class="metric-label">Yil</dt><dd class="font-semibold mt-1"><?php echo e($book->year ?: '—'); ?></dd></div>
-          <div><dt class="metric-label">Kangaroo score</dt><dd class="font-semibold mt-1"><?php echo e($book->kangaroo_listing_score ?: '—'); ?></dd></div>
-          <div><dt class="metric-label">UGC score</dt><dd class="font-semibold mt-1"><?php echo e($book->ugc_aggregate_score ?: '—'); ?></dd></div>
-          <div><dt class="metric-label">Yaratilgan</dt><dd class="font-semibold mt-1"><?php echo e(optional($book->created_at)->format('d.m.Y H:i') ?: '—'); ?></dd></div>
-        </dl>
+      <section class="a122-section">
+        <div class="a122-section-head">
+          <div>
+            <div class="a122-section-head__title">Admin nazorati</div>
+            <div class="a122-section-head__meta">Moderatsiya, ko‘rinish va promotion parametrlari.</div>
+          </div>
+        </div>
+        <div class="a122-section-body">
+          <div class="data-grid">
+            <div class="data-kv"><dt>Moderatsiya</dt><dd><?php echo e($approvalLabel); ?></dd></div>
+            <div class="data-kv"><dt>Marketplace holati</dt><dd><?php echo e($bookStatusLabel); ?></dd></div>
+            <div class="data-kv"><dt>Visibility</dt><dd><?php echo e($book->is_hidden ? 'Yashirin' : 'Ochiq'); ?></dd></div>
+            <div class="data-kv"><dt>Chegirma muddati</dt><dd><?php echo e(optional($book->discountExpiresAt)->format('d.m.Y H:i') ?: '—'); ?></dd></div>
+            <div class="data-kv"><dt>Recommendation muddati</dt><dd><?php echo e(optional($book->recommendedExpiresAt)->format('d.m.Y H:i') ?: '—'); ?></dd></div>
+            <div class="data-kv"><dt>Media soni</dt><dd><?php echo e($images->count()); ?> ta</dd></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="a122-section">
+        <div class="a122-section-head">
+          <div>
+            <div class="a122-section-head__title">Texnik ma’lumot</div>
+            <div class="a122-section-head__meta">Katalog sifati va texnik atributlar.</div>
+          </div>
+        </div>
+        <div class="a122-section-body">
+          <dl class="space-y-3">
+            <div><dt class="metric-label">Til</dt><dd class="font-semibold mt-1"><?php echo e($book->lang ?: '—'); ?></dd></div>
+            <div><dt class="metric-label">Yozuv turi</dt><dd class="font-semibold mt-1"><?php echo e($book->langType ?: '—'); ?></dd></div>
+            <div><dt class="metric-label">Muqova</dt><dd class="font-semibold mt-1"><?php echo e($book->coverType ?: '—'); ?></dd></div>
+            <div><dt class="metric-label">Sahifalar</dt><dd class="font-semibold mt-1"><?php echo e($book->pages ?: '—'); ?></dd></div>
+            <div><dt class="metric-label">Yil</dt><dd class="font-semibold mt-1"><?php echo e($book->year ?: '—'); ?></dd></div>
+            <div><dt class="metric-label">Kangaroo score</dt><dd class="font-semibold mt-1"><?php echo e($book->kangaroo_listing_score ?: '—'); ?></dd></div>
+            <div><dt class="metric-label">UGC score</dt><dd class="font-semibold mt-1"><?php echo e($book->ugc_aggregate_score ?: '—'); ?></dd></div>
+            <div><dt class="metric-label">Yaratilgan</dt><dd class="font-semibold mt-1"><?php echo e(optional($book->created_at)->format('d.m.Y H:i') ?: '—'); ?></dd></div>
+            <div><dt class="metric-label">Yangilangan</dt><dd class="font-semibold mt-1"><?php echo e(optional($book->updated_at)->format('d.m.Y H:i') ?: '—'); ?></dd></div>
+          </dl>
+        </div>
       </section>
 
       <section class="card p-5">

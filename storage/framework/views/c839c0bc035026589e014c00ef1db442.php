@@ -128,11 +128,15 @@
       <div style="padding:0 18px 14px">
         <?php $__currentLoopData = [
           ['Tarif',       $subscription->plan?->name_uz ?? '—'],
+          ['Holat',       $subscription->status_label],
+          ['To‘langan',   $subscription->paid_at?->format('d.m.Y H:i') ?? '—'],
           ['Muddat',      $subscription->total_months.' oy'],
           ['Har oyda',    $subscription->books_per_month.' ta kitob'],
           ['To\'lov',     number_format($subscription->price_uzs).' UZS'],
           ['Boshlandi',   $subscription->started_at?->format('d.m.Y') ?? '—'],
+          ['Keyingi yetkazish', $subscription->next_delivery_at?->format('d.m.Y') ?? '—'],
           ['Tugaydi',     $subscription->ends_at?->format('d.m.Y') ?? '—'],
+          ['Qoldi',       $subscription->remaining_months.' oy'],
         ]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$k,$v]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
         <div style="display:flex;justify-content:space-between;
                     padding:8px 0;border-bottom:1px solid var(--p-border)">

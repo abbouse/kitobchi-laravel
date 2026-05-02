@@ -658,23 +658,56 @@
                 <table class="tbl">
                     <thead>
                         <tr>
-                            <th>ID</th>
+                            <th>Seller-order</th>
+                            <th>Mijoz</th>
+                            <th>Yo'nalish</th>
                             <th>Summa</th>
+                            <th>Holat</th>
                             <th>Sana</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($recentOrders as $order)
+                            @php
+                                $deliveryType = match ((string) ($order->delivery_type ?? data_get($order, 'order.deliveryType'))) {
+                                    'pickup' => "Do'kondan olib ketish",
+                                    'courier', '1' => 'Kuryer',
+                                    '2' => "Do'kondan olib ketish",
+                                    default => 'Standart',
+                                };
+                                $orderStatus = match ((string) ($order->status ?? data_get($order, 'order.status'))) {
+                                    'accepted', 'B' => 'Jarayonda',
+                                    'delivered', 'C' => 'Yakunlangan',
+                                    'cancelled', 'F' => 'Bekor qilingan',
+                                    'A', 'P', 'pending' => 'Kutilmoqda',
+                                    default => (string) ($order->status ?? data_get($order, 'order.status') ?? '—'),
+                                };
+                            @endphp
                             <tr>
-                                <td class="text-gray-500 text-sm">#{{ $order->id }}</td>
+                                <td class="text-sm">
+                                    <a href="{{ route('admin.seller-orders.show', $order) }}" class="font-semibold text-[var(--p-accent)] hover:underline">#{{ $order->id }}</a>
+                                    <div class="text-xs text-[var(--p-muted)] mt-1">{{ data_get($order, 'seller.shop_name') ?: $seller->shop_name }}</div>
+                                </td>
+                                <td>
+                                    @if($order->user)
+                                        <a href="{{ route('admin.users.show', $order->user_id) }}" class="font-semibold hover:underline">
+                                            {{ trim(($order->user->name ?? '').' '.($order->user->lastname ?? '')) ?: 'Foydalanuvchi' }}
+                                        </a>
+                                        <div class="text-xs text-[var(--p-muted)] mt-1">{{ $order->user->phone_number ?: 'Telefon yo‘q' }}</div>
+                                    @else
+                                        <span class="text-gray-400">—</span>
+                                    @endif
+                                </td>
+                                <td class="text-sm text-[var(--p-muted)]">{{ $deliveryType }}</td>
                                 <td class="font-semibold">{{ number_format((float)($order->amount ?? $order->total ?? 0), 0, '.', ' ') }} UZS</td>
+                                <td><span class="badge badge-muted">{{ $orderStatus }}</span></td>
                                 <td class="text-sm text-gray-500">
-                                    {{ $order->created_at ? $order->created_at->format('d.m.Y') : '—' }}
+                                    {{ $order->created_at ? $order->created_at->format('d.m.Y H:i') : '—' }}
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="3" class="text-center text-gray-400 py-6">Buyurtmalar yo'q</td>
+                                <td colspan="6" class="text-center text-gray-400 py-6">Buyurtmalar yo'q</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -707,7 +740,9 @@
                     <tbody>
                         @forelse($transactions as $tx)
                             <tr>
-                                <td class="text-gray-500 text-sm">#{{ $tx->id }}</td>
+                                <td class="text-gray-500 text-sm">
+                                    <a href="{{ route('admin.transactions.show', $tx) }}" class="font-semibold text-[var(--p-accent)] hover:underline">#{{ $tx->id }}</a>
+                                </td>
                                 <td class="font-semibold">{{ number_format((float)($tx->amount ?? 0), 0, '.', ' ') }} UZS</td>
                                 <td>
                                     @if(in_array($tx->status, ['success', 'completed', 'approved']))
