@@ -6,6 +6,12 @@
 @php
   $adminPerms = $admin->permissions ?? [];
   $allPerms = ['users','books','stationery','orders','sellers','couriers','promocodes','discounts','settings','admins'];
+  $rolePillClass = match($admin->role) {
+    'superadmin' => 'danger',
+    'admin' => 'accent',
+    'moderator' => 'warning',
+    default => 'muted',
+  };
 @endphp
 
 <x-a122.page-header back-href="{{ route('admin.admins.index') }}">
@@ -33,8 +39,8 @@
       </div>
       <div class="kpi-soft">
         <div class="metric-label">Oxirgi kirish</div>
-        <div class="metric-value text-xl">{{ $admin->last_login_at ? \Carbon\Carbon::parse($admin->last_login_at)->format('d.m') : '—' }}</div>
-        <div class="metric-meta">{{ $admin->last_login_at ? \Carbon\Carbon::parse($admin->last_login_at)->format('H:i') : 'Vaqt yo‘q' }}</div>
+        <div class="metric-value text-xl">{{ $admin->last_login_at ? $admin->last_login_at->format('d.m') : '—' }}</div>
+        <div class="metric-meta">{{ $admin->last_login_at ? $admin->last_login_at->format('H:i') : 'Vaqt yo‘q' }}</div>
       </div>
     </div>
   </div>
@@ -78,7 +84,7 @@
             <div style="font-size:20px;font-weight:700;color:var(--p-text)">{{ $admin->name }}</div>
             <div style="font-size:13px;color:var(--p-hint)">{{ $admin->email }}</div>
             <div class="flex gap-2 mt-2">
-              <span class="s-pill" style="background:rgba({{ $admin->getRoleColorAttribute() ?? '79,124,255' }},.15);color:var(--p-accent)">
+              <span class="s-pill {{ $rolePillClass }}">
                 {{ $admin->getRoleLabelAttribute() }}
               </span>
               <span class="s-pill {{ $admin->is_active ? 'success' : 'danger' }}">
@@ -94,7 +100,7 @@
             ['Email',           $admin->email],
             ['Rol',             $admin->getRoleLabelAttribute()],
             ['Oxirgi IP',       $admin->last_ip ?? '—'],
-            ['Oxirgi kirish',   $admin->last_login_at ? \Carbon\Carbon::parse($admin->last_login_at)->format('d.m.Y H:i') : '—'],
+            ['Oxirgi kirish',   $admin->last_login_at ? $admin->last_login_at->format('d.m.Y H:i') : '—'],
             ["Qo'shildi",       $admin->created_at?->format('d.m.Y H:i')],
           ] as [$k, $v])
           <div class="">

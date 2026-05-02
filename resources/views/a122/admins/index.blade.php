@@ -107,6 +107,9 @@
           </td>
           <td>
             <div class="flex gap-1">
+              <a href="{{ route('admin.admins.show', $admin) }}" class="btn-p ghost sm" title="Ko'rish">
+                <i class="bi bi-eye"></i>
+              </a>
               <a href="{{ route('admin.admins.edit', $admin) }}" class="btn-p ghost sm">
                 <i class="bi bi-pencil"></i>
               </a>

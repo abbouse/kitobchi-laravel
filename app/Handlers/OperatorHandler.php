@@ -339,6 +339,7 @@ class OperatorHandler
 
         SessionService::updateTicket($ticketId, ['status' => SessionService::STATUS_QUEUE, 'operator_id' => null]);
         SessionService::setOperatorStatus($cid, SessionService::OP_ONLINE);
+        SessionService::saveSystemMessage($ticketId, "Operator ticketni navbatga qaytardi.");
         $bot->answerCallbackQuery(text: "Murojaat navbatga qaytarildi");
         $bot->sendMessage("🔄 Ticket #$ticketId navbatga qaytarildi.", chat_id: $cid);
         UserHandler::dispatchTicket($bot, (array) $ticket);
@@ -371,7 +372,7 @@ class OperatorHandler
 
         $userId = (int) $ticket->user_id;
 
-        // Ilovani saqlash
+        self::saveMessage($message, (int) $ticket->id, 'operator', $cid);
         self::saveAttachment($message, $ticket->id, 'operator');
 
         try {
@@ -391,6 +392,7 @@ class OperatorHandler
 
         SessionService::assignOperator($ticketId, $opId);
         $ticket = SessionService::getTicket($ticketId);
+        SessionService::saveSystemMessage($ticketId, "Operator ticketni qabul qildi.");
 
         $userDisplay = SessionService::formatUser($ticket->name, $ticket->username, $ticket->user_id);
 
@@ -439,6 +441,7 @@ class OperatorHandler
         $attText  = $attCount > 0 ? "\n📎 $attCount ta ilova saqlangan (/history $ticketId)" : "";
 
         SessionService::closeTicket($ticketId, 'operator_closed');
+        SessionService::saveSystemMessage($ticketId, "Ticket operator tomonidan yopildi.");
         $opId = (int) $ticket->operator_id;
 
         $bot->sendMessage("✅ Ticket #$ticketId yopildi.{$attText}", chat_id: $opId, parse_mode: 'HTML');
@@ -483,6 +486,40 @@ class OperatorHandler
         if ($fileId) {
             SessionService::saveAttachment($ticketId, $fileId, $fileType, $sentBy, $fileName, $fileSize);
         }
+    }
+
+    private static function saveMessage(
+        \SergiX44\Nutgram\Telegram\Types\Message\Message $message,
+        int $ticketId,
+        string $sentBy,
+        int $operatorId
+    ): void {
+        $body = $message->text ?? $message->caption;
+        $type = 'text';
+
+        if ($message->photo) {
+            $type = 'photo';
+            $body = $body ?: '[photo]';
+        } elseif ($message->document) {
+            $type = 'document';
+            $body = $body ?: ('[document] '.($message->document->file_name ?? ''));
+        } elseif ($message->voice) {
+            $type = 'voice';
+            $body = $body ?: '[voice]';
+        } elseif ($message->video) {
+            $type = 'video';
+            $body = $body ?: '[video]';
+        }
+
+        SessionService::saveMessage(
+            ticketId: $ticketId,
+            sentBy: $sentBy,
+            message: $body,
+            messageType: $type,
+            operatorId: $operatorId,
+            telegramActorId: $operatorId,
+            telegramMessageId: $message->message_id ?? null
+        );
     }
 
     private static function notifyOtherOperators(Nutgram $bot, object $ticket, int $takenByOpId): void

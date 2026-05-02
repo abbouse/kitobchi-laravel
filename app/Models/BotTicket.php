@@ -8,13 +8,36 @@ use Illuminate\Database\Eloquent\Model;
 class BotTicket extends Model
 {
     use HasFactory;
+
+    protected $fillable = [
+        'user_id',
+        'username',
+        'name',
+        'operator_id',
+        'status',
+        'first_msg',
+        'rating',
+        'close_reason',
+        'closed_at',
+    ];
+
+    protected $casts = [
+        'closed_at' => 'datetime',
+        'rating' => 'integer',
+    ];
     
     public function operator()
     {
         return $this->belongsTo(BotOperator::class, 'operator_id', 'telegram_id');
     }
+
     public function attachments()
     {
-        return $this->belongsTo(BotTicketAttachment::class, 'ticket_id', 'id');
+        return $this->hasMany(BotTicketAttachment::class, 'ticket_id')->latest('id');
+    }
+
+    public function messages()
+    {
+        return $this->hasMany(BotTicketMessage::class, 'ticket_id')->orderBy('created_at');
     }
 }

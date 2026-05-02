@@ -47,6 +47,11 @@ class AdminController extends Controller
         return view('a122.admins.edit');
     }
 
+    public function show(Admin $admin)
+    {
+        return view('a122.admins.show', compact('admin'));
+    }
+
     public function store(Request $request)
     {
         $data = $request->validate([

@@ -4,6 +4,7 @@
 <?php $__env->startSection('content'); ?>
 <?php
   $st = $statuses[$botTicket->status] ?? ['label' => $botTicket->status, 'class' => 'ob-p'];
+  $messageCount = $botTicket->messages->count();
 ?>
 
 <?php if (isset($component)) { $__componentOriginal0c1345684b2d774f43a544669f5684b0 = $component; } ?>
@@ -38,9 +39,9 @@
         <div class="metric-meta">Joriy support bosqichi</div>
       </div>
       <div class="kpi-soft">
-        <div class="metric-label">Ilovalar</div>
-        <div class="metric-value text-xl"><?php echo e($botTicket->attachments?->count() ?? 0); ?></div>
-        <div class="metric-meta">Fayl biriktirilgan</div>
+        <div class="metric-label">Tarix</div>
+        <div class="metric-value text-xl"><?php echo e($messageCount); ?></div>
+        <div class="metric-meta">Saqlangan xabarlar</div>
       </div>
       <div class="kpi-soft">
         <div class="metric-label">Baholash</div>
@@ -64,15 +65,64 @@
     <div class="a122-section mb-3">
       <div class="a122-section-head">
         <div>
-          <div class="a122-section-head__title">Murojaat mazmuni</div>
-          <div class="a122-section-head__meta">Foydalanuvchidan kelgan boshlang‘ich murojaat matni.</div>
+          <div class="a122-section-head__title">Suhbat tarixi</div>
+          <div class="a122-section-head__meta">Foydalanuvchi, operator, admin va tizim bo‘yicha to‘liq tarix.</div>
         </div>
       </div>
       <div class="a122-section-body">
-        <div class="rounded-2xl border border-[var(--p-border)] bg-[var(--p-elevated)] px-4 py-4 text-sm leading-7 text-[var(--p-text)]">
-          <?php echo e($botTicket->first_msg ?: 'Xabar yo\'q'); ?>
-
+        <div class="space-y-3">
+          <?php $__empty_1 = true; $__currentLoopData = $botTicket->messages; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $msg): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+            <?php
+              $isUser = $msg->sent_by === 'user';
+              $isAdmin = $msg->sent_by === 'admin';
+              $isOperator = $msg->sent_by === 'operator';
+              $isSystem = $msg->sent_by === 'system';
+              $bubbleClass = $isUser ? 'bg-[var(--p-elevated)] border-[var(--p-border)]' : ($isSystem ? 'bg-[var(--p-warning-d)] border-[rgba(245,166,35,.18)]' : 'bg-[var(--p-accent-soft)] border-[rgba(88,101,242,.12)]');
+              $title = $isUser ? 'Foydalanuvchi' : ($isAdmin ? ('Admin · '.($msg->admin?->name ?: '')) : ($isOperator ? ('Operator · '.($msg->operator?->name ?: $msg->operator_id)) : 'Tizim'));
+            ?>
+            <div class="rounded-2xl border <?php echo e($bubbleClass); ?> px-4 py-3">
+              <div class="flex items-center justify-between gap-3 mb-2">
+                <div class="text-xs font-bold tracking-[0.08em] uppercase text-[var(--p-hint)]"><?php echo e(trim($title)); ?></div>
+                <div class="text-xs text-[var(--p-hint)]"><?php echo e($msg->created_at?->format('d.m.Y H:i')); ?></div>
+              </div>
+              <div class="text-sm leading-7 text-[var(--p-text)] whitespace-pre-line"><?php echo e($msg->message ?: '—'); ?></div>
+              <div class="mt-2 flex items-center gap-2 text-[11px] text-[var(--p-hint)]">
+                <span><?php echo e(strtoupper($msg->message_type)); ?></span>
+                <?php if($msg->sent_by === 'admin'): ?>
+                  <span>·</span>
+                  <span class="<?php echo e($msg->is_delivered ? 'text-emerald-600' : 'text-rose-600'); ?>"><?php echo e($msg->is_delivered ? 'Yuborilgan' : 'Yuborilmadi'); ?></span>
+                <?php endif; ?>
+                <?php if($msg->delivery_error): ?>
+                  <span>·</span>
+                  <span class="text-rose-600"><?php echo e($msg->delivery_error); ?></span>
+                <?php endif; ?>
+              </div>
+            </div>
+          <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
+            <div class="rounded-2xl border border-[var(--p-border)] bg-[var(--p-elevated)] px-4 py-4 text-sm text-[var(--p-muted)]">
+              History hali yozilmagan.
+            </div>
+          <?php endif; ?>
         </div>
+      </div>
+    </div>
+
+    <div class="a122-section mb-3">
+      <div class="a122-section-head">
+        <div>
+          <div class="a122-section-head__title">Admin javobi</div>
+          <div class="a122-section-head__meta">Admin paneldan foydalanuvchiga bevosita xabar yuborish.</div>
+        </div>
+      </div>
+      <div class="a122-section-body">
+        <form method="POST" action="<?php echo e(route('admin.support.reply', $botTicket)); ?>">
+          <?php echo csrf_field(); ?>
+          <label class="p-form-label">Javob matni</label>
+          <textarea name="message" rows="5" class="p-form-control" placeholder="Foydalanuvchiga yuboriladigan javob..." required><?php echo e(old('message')); ?></textarea>
+          <div class="flex justify-end mt-3">
+            <button class="btn-p primary"><i class="bi bi-send"></i> Xabar yuborish</button>
+          </div>
+        </form>
       </div>
     </div>
 
@@ -243,7 +293,7 @@
             <select name="operator_id" class="p-form-control flex-fill">
               <option value="">Tanlang...</option>
               <?php $__currentLoopData = $operators; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $op): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-              <option value="<?php echo e($op->id); ?>" <?php echo e($botTicket->operator_id===$op->id?'selected':''); ?>>
+              <option value="<?php echo e($op->id); ?>" <?php echo e((int) $botTicket->operator_id === (int) $op->telegram_id ? 'selected' : ''); ?>>
                 <?php echo e($op->name ?? $op->username); ?>
 
                 (<?php echo e($op->status); ?>)

@@ -315,6 +315,7 @@ Route::prefix('a122')->name('admin.')->group(function () {
         Route::get('/',          [SupportController::class, 'index'])->name('index');
         Route::get('/{ticket}',  [SupportController::class, 'show'])->name('show');
         Route::patch('/{ticket}/assign', [SupportController::class, 'assign'])->name('assign');
+        Route::post('/{ticket}/reply', [SupportController::class, 'reply'])->name('reply');
         Route::patch('/{ticket}/close', [SupportController::class, 'close'])->name('close');
     });
 
@@ -362,6 +363,7 @@ Route::prefix('a122')->name('admin.')->group(function () {
         Route::get('/',            [AdminController::class, 'index'])->name('index');
         Route::get('/create',      [AdminController::class, 'create'])->name('create');
         Route::post('/',           [AdminController::class, 'store'])->name('store');
+        Route::get('/{admin}',     [AdminController::class, 'show'])->name('show');
         Route::get('/{admin}/edit', [AdminController::class, 'edit'])->name('edit');
         Route::put('/{admin}',     [AdminController::class, 'update'])->name('update');
         Route::patch('/{admin}/toggle', [AdminController::class, 'toggle'])->name('toggle');

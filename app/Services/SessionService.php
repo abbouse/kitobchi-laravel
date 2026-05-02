@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Models\BotTicketMessage;
 
 class SessionService
 {
@@ -40,6 +41,16 @@ class SessionService
                 Log::info("[SessionService] ticket muvaffaqiyatli yaratildi", ['ticket_id' => $ticket->id, 'user_id' => $userId]);
             } else {
                 Log::error("[SessionService] ticket yaratildi lekin topilmadi", ['attempted_id' => $id]);
+            }
+
+            if ($ticket) {
+                self::saveMessage(
+                    ticketId: (int) $ticket->id,
+                    sentBy: 'user',
+                    message: $firstMessage,
+                    messageType: 'text',
+                    telegramActorId: $userId
+                );
             }
 
             return $ticket ?: (object) ['id' => $id, 'error' => 'topilmadi'];
@@ -185,6 +196,42 @@ class SessionService
             'type'      => $fileType,
             'sent_by'   => $sentBy,
         ]);
+    }
+
+    public static function saveMessage(
+        int $ticketId,
+        string $sentBy,
+        ?string $message,
+        string $messageType = 'text',
+        ?int $operatorId = null,
+        ?int $adminId = null,
+        ?int $telegramActorId = null,
+        ?int $telegramMessageId = null,
+        bool $isDelivered = true,
+        ?string $deliveryError = null
+    ): BotTicketMessage {
+        return BotTicketMessage::create([
+            'ticket_id' => $ticketId,
+            'sent_by' => $sentBy,
+            'operator_id' => $operatorId,
+            'admin_id' => $adminId,
+            'telegram_actor_id' => $telegramActorId,
+            'message_type' => $messageType,
+            'message' => $message ? mb_substr($message, 0, 5000) : null,
+            'telegram_message_id' => $telegramMessageId,
+            'is_delivered' => $isDelivered,
+            'delivery_error' => $deliveryError,
+        ]);
+    }
+
+    public static function saveSystemMessage(int $ticketId, string $message): BotTicketMessage
+    {
+        return self::saveMessage(
+            ticketId: $ticketId,
+            sentBy: 'system',
+            message: $message,
+            messageType: 'system'
+        );
     }
 
     /**

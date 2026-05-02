@@ -5,7 +5,9 @@ namespace App\Http\Controllers\A122;
 use App\Http\Controllers\Controller;
 use App\Models\BotOperator;
 use App\Models\BotTicket;
+use App\Services\SessionService;
 use Illuminate\Http\Request;
+use SergiX44\Nutgram\Nutgram;
 
 class SupportController extends Controller
 {
@@ -62,7 +64,7 @@ class SupportController extends Controller
     public function show(BotTicket $ticket)
     {
         $botTicket = $ticket;
-        $botTicket->load(['operator', 'attachments']);
+        $botTicket->load(['operator', 'attachments', 'messages.admin', 'messages.operator']);
         $operators = BotOperator::where('is_active', 1)->orderBy('name')->get();
         $statuses = self::STATUSES;
 
@@ -72,11 +74,14 @@ class SupportController extends Controller
     public function assign(Request $request, BotTicket $ticket)
     {
         $request->validate(['operator_id' => 'required|exists:bot_operators,id']);
+        $operator = BotOperator::query()->findOrFail((int) $request->operator_id);
 
         $ticket->update([
-            'operator_id' => $request->operator_id,
+            'operator_id' => $operator->telegram_id,
             'status' => 'active',
         ]);
+        $operatorLabel = $operator->name ?: ($operator->username ? '@'.$operator->username : (string) $operator->telegram_id);
+        SessionService::saveSystemMessage($ticket->id, "Operator tayinlandi: {$operatorLabel}");
 
         return back()->with('success', 'Operator tayinlandi.');
     }
@@ -88,7 +93,47 @@ class SupportController extends Controller
             'closed_at' => now(),
             'close_reason' => request('close_reason'),
         ]);
+        SessionService::saveSystemMessage(
+            $ticket->id,
+            'Ticket admin paneldan yopildi'.(request('close_reason') ? ': '.request('close_reason') : '.')
+        );
 
         return back()->with('success', "Ticket yopildi.");
+    }
+
+    public function reply(Request $request, BotTicket $ticket, Nutgram $bot)
+    {
+        $data = $request->validate([
+            'message' => 'required|string|max:5000',
+        ]);
+
+        $admin = auth('panel')->user();
+
+        $msg = SessionService::saveMessage(
+            ticketId: $ticket->id,
+            sentBy: 'admin',
+            message: $data['message'],
+            messageType: 'text',
+            adminId: $admin?->id,
+            isDelivered: false
+        );
+
+        try {
+            $bot->sendMessage($data['message'], chat_id: (int) $ticket->user_id);
+
+            $msg->update(['is_delivered' => true, 'delivery_error' => null]);
+            $ticket->update([
+                'status' => in_array($ticket->status, ['closed', 'rated']) ? 'active' : $ticket->status,
+                'updated_at' => now(),
+            ]);
+
+            return back()->with('success', 'Javob foydalanuvchiga yuborildi.');
+        } catch (\Throwable $e) {
+            $msg->update([
+                'delivery_error' => $e->getMessage(),
+            ]);
+
+            return back()->with('error', 'Javobni yuborib bo‘lmadi: '.$e->getMessage());
+        }
     }
 }

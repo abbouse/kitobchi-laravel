@@ -136,6 +136,7 @@ class UserHandler
             $pos = SessionService::getQueuePosition($ticket->id);
             $bot->sendMessage("📨 Xabaringiz qabul qilindi. Navbatda: {$pos}-o'rinda ⏳");
 
+            self::saveMessage($message, (int) $ticket->id, 'user', $cid);
             self::saveAttachment($message, $ticket->id, 'user');
 
             Log::info("[User] queue'da xabar forward qilinmoqda", ['ticket_id' => $ticket->id]);
@@ -156,6 +157,7 @@ class UserHandler
 
         // Faol suhbat — ilovani saqlash + operatorga nusxalash
         $opId = (int) $ticket->operator_id;
+        self::saveMessage($message, (int) $ticket->id, 'user', $cid);
         self::saveAttachment($message, $ticket->id, 'user');
 
         Log::info("[User] faol suhbatda xabar operatorga yuborilmoqda", ['ticket_id' => $ticket->id, 'to_op' => $opId]);
@@ -318,5 +320,38 @@ class UserHandler
         if ($fileId) {
             SessionService::saveAttachment($ticketId, $fileId, $fileType, $sentBy, $fileName, $fileSize);
         }
+    }
+
+    private static function saveMessage(
+        \SergiX44\Nutgram\Telegram\Types\Message\Message $message,
+        int $ticketId,
+        string $sentBy,
+        int $telegramActorId
+    ): void {
+        $body = $message->text ?? $message->caption;
+        $type = 'text';
+
+        if ($message->photo) {
+            $type = 'photo';
+            $body = $body ?: '[photo]';
+        } elseif ($message->document) {
+            $type = 'document';
+            $body = $body ?: ('[document] '.($message->document->file_name ?? ''));
+        } elseif ($message->voice) {
+            $type = 'voice';
+            $body = $body ?: '[voice]';
+        } elseif ($message->video) {
+            $type = 'video';
+            $body = $body ?: '[video]';
+        }
+
+        SessionService::saveMessage(
+            ticketId: $ticketId,
+            sentBy: $sentBy,
+            message: $body,
+            messageType: $type,
+            telegramActorId: $telegramActorId,
+            telegramMessageId: $message->message_id ?? null
+        );
     }
 }
