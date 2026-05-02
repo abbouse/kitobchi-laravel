@@ -20,7 +20,7 @@ class SupportController extends Controller
 
     public function index(Request $request)
     {
-        $q = BotTicket::with(['operator']);
+        $q = BotTicket::with(['operator', 'latestMessage'])->withCount('messages');
 
         $tab = $request->get('tab', 'queue');
         if ($tab !== 'all') {

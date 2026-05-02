@@ -40,4 +40,9 @@ class BotTicket extends Model
     {
         return $this->hasMany(BotTicketMessage::class, 'ticket_id')->orderBy('created_at');
     }
+
+    public function latestMessage()
+    {
+        return $this->hasOne(BotTicketMessage::class, 'ticket_id')->latestOfMany();
+    }
 }

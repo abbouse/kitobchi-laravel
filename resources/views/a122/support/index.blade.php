@@ -34,94 +34,169 @@
     <div class="a122-index-header__title">Murojaatlar ro'yxati</div>
     <div class="a122-index-header__meta">{{ $tickets->total() }} ta support ticket yuklandi</div>
   </div>
+  <div class="a122-index-header__actions">
+    <form method="GET" class="a122-index-search-form">
+      <input type="hidden" name="tab" value="{{ $tab }}">
+      <i class="bi bi-search"></i>
+      <input
+        type="search"
+        name="search"
+        value="{{ request('search') }}"
+        placeholder="Ism, username, telegram ID yoki ticket #"
+      >
+    </form>
+  </div>
 </div>
 
-{{-- Table --}}
-<div class="p-card p-0">
-  <div class="table-responsive kc-twrap">
-    <table class="p-table" data-index-grid>
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Foydalanuvchi</th>
-          <th>Birinchi xabar</th>
-          <th>Operator</th>
-          <th>Status</th>
-          <th>Baho</th>
-          <th>Sana</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        @forelse($tickets as $ticket)
-        @php $st = $statuses[$ticket->status] ?? ['label'=>$ticket->status,'class'=>'ob-p']; @endphp
-        <tr>
-          <td style="font-family:'JetBrains Mono',monospace;color:var(--p-accent);font-weight:600">#{{ $ticket->id }}</td>
-          <td>
-            <div>
-              <div style="font-size:13px;font-weight:500;color:var(--p-text)">
-                {{ $ticket->name ?: 'Noma\'lum' }}
-              </div>
-              @if($ticket->username)
-                <div style="font-size:11px;color:var(--p-hint)">t.me/{{ $ticket->username }}</div>
-              @endif
-              @if($ticket->user_id)
-                <div style="font-size:10px;color:var(--p-accent);font-family:'JetBrains Mono',monospace">
-                  user #{{ $ticket->user_id }}
+<div class="tab-pills fade-up mb-3">
+  @foreach([
+    'queue' => ['Navbatda', $counts['queue'] ?? 0],
+    'active' => ['Aktiv', $counts['active'] ?? 0],
+    'closed' => ['Yopilgan', $counts['closed'] ?? 0],
+    'rated' => ['Baholangan', $counts['rated'] ?? 0],
+    'all' => ['Barchasi', $counts['all'] ?? 0],
+  ] as $key => [$label, $count])
+    <a href="{{ request()->fullUrlWithQuery(['tab' => $key, 'page' => null]) }}" class="tab-pill {{ $tab === $key ? 'active' : '' }}">
+      {{ $label }} <span>{{ $count }}</span>
+    </a>
+  @endforeach
+</div>
+
+<div class="a122-section mb-3">
+  <div class="a122-section-body">
+    <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-3">
+      <input type="hidden" name="tab" value="{{ $tab }}">
+      <div>
+        <label class="p-form-label">Operator</label>
+        <select name="operator_id" class="p-form-control">
+          <option value="">Barchasi</option>
+          @foreach($operators as $operator)
+            <option value="{{ $operator->telegram_id }}" @selected((string) request('operator_id') === (string) $operator->telegram_id)>
+              {{ $operator->name ?: ($operator->username ? '@'.$operator->username : $operator->telegram_id) }}
+            </option>
+          @endforeach
+        </select>
+      </div>
+      <div>
+        <label class="p-form-label">Boshlanish sanasi</label>
+        <input type="date" name="date_from" value="{{ request('date_from') }}" class="p-form-control">
+      </div>
+      <div>
+        <label class="p-form-label">Tugash sanasi</label>
+        <input type="date" name="date_to" value="{{ request('date_to') }}" class="p-form-control">
+      </div>
+      <div class="flex items-end gap-2">
+        <button class="btn-p primary flex-1"><i class="bi bi-funnel"></i> Filtrlash</button>
+        <a href="{{ route('admin.support.index', ['tab' => $tab]) }}" class="btn-p ghost">Tozalash</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="a122-section">
+  <div class="a122-section-head">
+    <div>
+      <div class="a122-section-head__title">Support inbox</div>
+      <div class="a122-section-head__meta">Aktiv yozishmalar, oxirgi javob va tarix shu yerda ko‘rinadi.</div>
+    </div>
+  </div>
+  <div class="a122-section-body">
+    <div class="a122-compact-list">
+      @forelse($tickets as $ticket)
+        @php
+          $st = $statuses[$ticket->status] ?? ['label'=>$ticket->status,'class'=>'ob-p'];
+          $lastMessage = $ticket->latestMessage;
+          $lastActorClass = $lastMessage?->sent_by === 'user'
+            ? 'muted'
+            : ($lastMessage?->sent_by === 'admin'
+              ? 'accent'
+              : ($lastMessage?->sent_by === 'operator' ? 'warning' : 'success'));
+          $lastActorLabel = $lastMessage?->sent_by === 'user'
+            ? 'Foydalanuvchi'
+            : ($lastMessage?->sent_by === 'admin'
+              ? 'Admin'
+              : ($lastMessage?->sent_by === 'operator' ? 'Operator' : 'Tizim'));
+        @endphp
+        <div class="a122-compact-list__item" style="padding:18px 0">
+          <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+            <div class="flex items-start gap-3 min-w-0 flex-1">
+              @include('a122.partials.avatar', [
+                'name' => $ticket->name ?: 'Noma\'lum',
+                'image' => null,
+                'class' => 'av'
+              ])
+              <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-2 mb-1">
+                  <a href="{{ route('admin.support.show', $ticket) }}" class="a122-compact-list__title" style="text-decoration:none">
+                    {{ $ticket->name ?: 'Noma\'lum foydalanuvchi' }}
+                  </a>
+                  <span class="s-pill muted" style="font-size:10px;padding:3px 8px">#{{ $ticket->id }}</span>
+                  <span class="o-badge {{ $st['class'] }}">{{ $st['label'] }}</span>
+                  <span class="s-pill muted" style="font-size:10px;padding:3px 8px">{{ $ticket->messages_count ?? 0 }} ta xabar</span>
                 </div>
-              @endif
-            </div>
-          </td>
-          <td style="max-width:200px">
-            <div style="font-size:12px;color:var(--p-muted);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">
-              {{ $ticket->first_msg ?: '—' }}
-            </div>
-          </td>
-          <td>
-            @if($ticket->operator)
-              <div style="display:flex;align-items:center;gap:6px">
-                <div style="width:6px;height:6px;border-radius:50%;background:var(--p-{{ $ticket->operator->status==='online'?'success':($ticket->operator->status==='busy'?'warning':'muted') }})"></div>
-                <span style="font-size:13px;color:var(--p-text)">{{ $ticket->operator->name ?? $ticket->operator->username }}</span>
+
+                <div class="a122-compact-list__sub" style="margin-bottom:8px">
+                  @if($ticket->username)
+                    <span>t.me/{{ $ticket->username }}</span>
+                    <span>·</span>
+                  @endif
+                  <span>Telegram ID: {{ $ticket->user_id ?: '—' }}</span>
+                  @if($ticket->created_at)
+                    <span>·</span>
+                    <span>{{ $ticket->created_at->format('d.m.Y H:i') }}</span>
+                  @endif
+                </div>
+
+                <div style="font-size:13px;line-height:1.65;color:var(--p-text);margin-bottom:10px">
+                  {{ \Illuminate\Support\Str::limit($lastMessage?->message ?: $ticket->first_msg ?: 'Murojaat matni yo‘q', 220) }}
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2">
+                  @if($lastMessage)
+                    <span class="s-pill {{ $lastActorClass }}" style="font-size:10px;padding:3px 8px">{{ $lastActorLabel }}</span>
+                    <span style="font-size:11px;color:var(--p-hint)">{{ strtoupper($lastMessage->message_type) }}</span>
+                    <span style="font-size:11px;color:var(--p-hint)">· {{ $lastMessage->created_at?->format('d.m H:i') }}</span>
+                  @else
+                    <span style="font-size:11px;color:var(--p-hint)">Yozishma tarixi hali yo‘q</span>
+                  @endif
+
+                  @if($ticket->operator)
+                    <span class="s-pill accent" style="font-size:10px;padding:3px 8px">
+                      Operator: {{ $ticket->operator->name ?? ($ticket->operator->username ? '@'.$ticket->operator->username : $ticket->operator->telegram_id) }}
+                    </span>
+                  @elseif($ticket->status === 'queue')
+                    <span class="s-pill warning" style="font-size:10px;padding:3px 8px">Operator tayinlanmagan</span>
+                  @endif
+
+                  @if($ticket->rating)
+                    <span class="s-pill success" style="font-size:10px;padding:3px 8px">Baho: {{ $ticket->rating }}/5</span>
+                  @endif
+                </div>
               </div>
-            @elseif($ticket->status === 'queue')
-              <span style="font-size:12px;color:var(--p-warning)">Tayinlanmagan</span>
-            @else
-              <span style="color:var(--p-hint)">—</span>
-            @endif
-          </td>
-          <td><span class="o-badge {{ $st['class'] }}">{{ $st['label'] }}</span></td>
-          <td>
-            @if($ticket->rating)
-              <div style="display:flex;align-items:center;gap:2px">
-                @for($i=1;$i<=5;$i++)
-                  <i class="bi bi-star{{ $i<=$ticket->rating?'-fill':'' }}"
-                     style="font-size:12px;color:{{ $i<=$ticket->rating?'var(--p-warning)':'var(--p-border)' }}"></i>
-                @endfor
-              </div>
-            @else
-              <span style="color:var(--p-hint)">—</span>
-            @endif
-          </td>
-          <td style="font-size:11px;color:var(--p-hint);white-space:nowrap">
-            {{ $ticket->created_at?->format('d.m H:i') }}
-          </td>
-          <td>
-            <a href="{{ route('admin.support.show', $ticket) }}" class="btn-p ghost sm">
-              <i class="bi bi-eye"></i>
-            </a>
-          </td>
-        </tr>
-        @empty
-        <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--p-hint)">
+            </div>
+
+            <div class="flex items-center gap-2 shrink-0">
+              <a href="{{ route('admin.support.show', $ticket) }}" class="btn-p ghost sm">
+                <i class="bi bi-clock-history"></i>
+                <span>History</span>
+              </a>
+              <a href="{{ route('admin.support.show', $ticket) }}" class="btn-p primary sm">
+                <i class="bi bi-chat-left-text"></i>
+                <span>Chatni ochish</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      @empty
+        <div style="text-align:center;padding:40px;color:var(--p-hint)">
           <i class="bi bi-chat-square-text" style="font-size:32px;display:block;margin-bottom:8px"></i>
           Murojaatlar topilmadi
-        </td></tr>
-        @endforelse
-      </tbody>
-    </table>
+        </div>
+      @endforelse
+    </div>
   </div>
   @if($tickets->hasPages())
-  {{ $tickets->links('a122.partials.pagination') }}
+    {{ $tickets->links('a122.partials.pagination') }}
   @endif
 </div>
 @endsection

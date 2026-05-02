@@ -13,7 +13,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withBroadcasting(
         '/broadcasting/auth',
-        ['middleware' => ['api', 'auth:user']],
+        ['middleware' => ['api', 'auth:user,seller,courier']],
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->web(append: [
