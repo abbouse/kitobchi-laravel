@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\Log;
-use OpenAI;
 
 class OpenAIService
 {
@@ -13,9 +12,13 @@ class OpenAIService
 
     public function __construct()
     {
-        $this->client = OpenAI::client(
-            config('openai.api_key') ?? env('OPENAI_API_KEY')
-        );
+        $apiKey = (string) config('services.openai.key', '');
+
+        if ($apiKey === '') {
+            throw new \RuntimeException('OpenAI API key is not configured. Expected config("services.openai.key").');
+        }
+
+        $this->client = \OpenAI::client($apiKey);
     }
 
     // ─── Oddiy matn ─────────────────────────────────────────────────────────

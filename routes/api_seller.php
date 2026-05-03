@@ -87,9 +87,9 @@ Route::middleware('auth:seller')->group(function () {
     Route::post('contests/{contestId}/end', [ContestsController::class, 'endContest']);
     Route::get('contests/{contestId}', [ContestsController::class, 'deleteContest']);
 
-    Route::get('ban-logs', [BanLogController::class, 'index'])->name('index_banlog');
-    Route::get('ban-logs/{id}/read', [BanLogController::class, 'markAsRead'])->name('markAsRead_banlog');
-    Route::get('ban-logs/counts', [BanLogController::class, 'getCounts'])->name('counts_banlog');
+    Route::get('ban-logs', [BanLogController::class, 'index'])->name('seller.index_banlog');
+    Route::get('ban-logs/{id}/read', [BanLogController::class, 'markAsRead'])->name('seller.markAsRead_banlog');
+    Route::get('ban-logs/counts', [BanLogController::class, 'getCounts'])->name('seller.counts_banlog');
 
     Route::get('statistics/data', [HisobotController::class, 'index'])->name('sales_data_index');
     Route::get('statistics/sales_chart_data', [HisobotController::class, 'getSalesStats'])->name('saleschart_data');

@@ -24,9 +24,9 @@ Route::middleware('auth:courier')->group(function () {
     Route::get('transactions/count', [CourierTransactionController::class, 'getTotal']);
     Route::post('transactions/cancel', [CourierTransactionController::class, 'cancelTransaction']);
 
-    Route::get('ban-logs', [CourierBanLogController::class, 'index'])->name('index_banlog');
-    Route::get('ban-logs/counts', [CourierBanLogController::class, 'getCounts'])->name('counts_banlog');
-    Route::post('ban-logs/{id}/read', [CourierBanLogController::class, 'markAsRead'])->name('markAsRead_banlog');
+    Route::get('ban-logs', [CourierBanLogController::class, 'index'])->name('courier.index_banlog');
+    Route::get('ban-logs/counts', [CourierBanLogController::class, 'getCounts'])->name('courier.counts_banlog');
+    Route::post('ban-logs/{id}/read', [CourierBanLogController::class, 'markAsRead'])->name('courier.markAsRead_banlog');
 
     Route::get('orders/available', [CourierOrderController::class, 'getAvailableOrders']);
     Route::post('orders/confirm/{id}', [CourierOrderController::class, 'confirmOrder']);
