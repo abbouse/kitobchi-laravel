@@ -215,6 +215,27 @@ class SettingsController extends Controller
         return back()->with('success', 'App sozlamalari yangilandi.');
     }
 
+    public function updateCourierBonus(Request $request)
+    {
+        $request->validate([
+            'courier_surge_step' => 'required|integer|min:0',
+            'courier_surge_max' => 'required|integer|min:0',
+            'courier_surge_threshold' => 'required|integer|min:0',
+            'courier_sla_minutes' => 'required|integer|min:1',
+            'courier_penalty_step' => 'required|integer|min:0',
+        ]);
+
+        ProjectSetting::first()->update([
+            'courier_surge_step' => $request->integer('courier_surge_step'),
+            'courier_surge_max' => $request->integer('courier_surge_max'),
+            'courier_surge_threshold' => $request->integer('courier_surge_threshold'),
+            'courier_sla_minutes' => $request->integer('courier_sla_minutes'),
+            'courier_penalty_step' => $request->integer('courier_penalty_step'),
+        ]);
+
+        return back()->with('success', 'Kuryer bonus sozlamalari yangilandi.');
+    }
+
     public function updateTelegram(Request $request)
     {
         $defaultIosRedirect = 'https://app3206985527-login.tg.dev';

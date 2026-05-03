@@ -49,6 +49,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('orders:cancel-unpaid')
             ->everyFiveMinutes()->timezone($tz);
 
+        $schedule->command('cashback:release-pending')
+            ->everyTenMinutes()->timezone($tz)->withoutOverlapping();
+
         $schedule->command('cart:remind --time=morning')
             ->dailyAt('08:00')->timezone($tz);
 

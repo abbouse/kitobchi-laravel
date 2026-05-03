@@ -37,6 +37,7 @@ class PaymeController extends Controller
             case "CheckTransaction":        return $this->checkTransaction($req);
             case "PerformTransaction":      return $this->performTransaction($req);
             case "CancelTransaction":       return $this->cancelTransaction($req);
+            case "SetFiscalData":           return $this->setFiscalData($req);
             case "GetStatement":            return $this->getStatement($req);
             case "ChangePassword":          return $this->changePasswordError($req);
             default: return response()->json(['error' => 'Method not supported'], 400);
@@ -445,6 +446,87 @@ class PaymeController extends Controller
     private function changePasswordError($req)
     {
         return $this->err($req->input('id'), -32504, "Недостаточно привилегий для выполнения метода");
+    }
+
+    private function setFiscalData(Request $req)
+    {
+        $params = $req->input('params');
+
+        if (!is_array($params)) {
+            return response()->json([
+                'error' => [
+                    'code' => -32602,
+                    'message' => 'params is required',
+                ],
+            ]);
+        }
+
+        $paymeId = trim((string) ($params['id'] ?? ''));
+        if ($paymeId === '') {
+            return response()->json([
+                'error' => [
+                    'code' => -32602,
+                    'message' => 'id is required',
+                ],
+            ]);
+        }
+
+        $type = strtoupper(trim((string) ($params['type'] ?? '')));
+        if (!in_array($type, ['PERFORM', 'CANCEL'], true)) {
+            return response()->json([
+                'error' => [
+                    'code' => -32602,
+                    'message' => 'type must be PERFORM or CANCEL',
+                ],
+            ]);
+        }
+
+        $fiscalData = $params['fiscal_data'] ?? null;
+        if (!is_array($fiscalData)) {
+            return response()->json([
+                'error' => [
+                    'code' => -32602,
+                    'message' => 'fiscal_data must be an object',
+                ],
+            ]);
+        }
+
+        $tx = Transaction::where('paycom_transaction_id', $paymeId)->first();
+        if (!$tx) {
+            return response()->json([
+                'error' => [
+                    'code' => -32001,
+                    'message' => 'Чек с таким id не найден',
+                ],
+            ]);
+        }
+
+        $normalized = [
+            'receipt_id' => isset($fiscalData['receipt_id']) ? (string) $fiscalData['receipt_id'] : null,
+            'status_code' => isset($fiscalData['status_code']) ? (int) $fiscalData['status_code'] : null,
+            'message' => isset($fiscalData['message']) ? (string) $fiscalData['message'] : null,
+            'terminal_id' => isset($fiscalData['terminal_id']) ? (string) $fiscalData['terminal_id'] : null,
+            'fiscal_sign' => isset($fiscalData['fiscal_sign']) ? (string) $fiscalData['fiscal_sign'] : null,
+            'qr_code_url' => isset($fiscalData['qr_code_url']) ? (string) $fiscalData['qr_code_url'] : null,
+            'date' => isset($fiscalData['date']) ? (string) $fiscalData['date'] : null,
+        ];
+
+        $field = $type === 'CANCEL' ? 'cancel_fiscal_data' : 'perform_fiscal_data';
+        $tx->forceFill([$field => $normalized])->save();
+
+        Log::info('[Payme] SetFiscalData accepted', [
+            'payme_id' => $paymeId,
+            'transaction_id' => $tx->id,
+            'type' => $type,
+            'status_code' => $normalized['status_code'],
+            'receipt_id' => $normalized['receipt_id'],
+        ]);
+
+        return response()->json([
+            'result' => [
+                'success' => true,
+            ],
+        ]);
     }
 
     private function err($id, int $code, $message)

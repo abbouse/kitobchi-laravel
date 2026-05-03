@@ -6,6 +6,9 @@ use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
+use App\Models\Couriers;
+use App\Models\Seller;
+use App\Models\User;
 
 class MessageEdited implements ShouldBroadcastNow
 {
@@ -38,9 +41,9 @@ class MessageEdited implements ShouldBroadcastNow
                 'conversation_id' => $message->conversation_id,
                 'sender_id' => $message->sender_id,
                 'sender_type' => $message->sender_type,
-                'sender_name' => $message->sender instanceof \App\Models\User ? $message->sender->fullname : null,
-                'sender_avatar' => $message->sender instanceof \App\Models\User ? $message->sender->avatar : null,
-                'sender_username' => $message->sender instanceof \App\Models\User ? $message->sender->username : null,
+                'sender_name' => $this->senderName($message->sender),
+                'sender_avatar' => $this->senderAvatar($message->sender),
+                'sender_username' => $message->sender instanceof User ? $message->sender->username : null,
                 'message' => $message->message,
                 'is_read' => $message->is_read ? true : false,
                 'is_edited' => $message->is_edited ? true : false,
@@ -51,9 +54,9 @@ class MessageEdited implements ShouldBroadcastNow
                     'id' => $message->replyTo->id,
                     'conversation_id' => $message->replyTo->conversation_id,
                     'sender_id' => $message->replyTo->sender_id,
-                    'sender_name' => $message->replyTo->sender instanceof \App\Models\User ? $message->replyTo->sender->fullname : null,
-                    'sender_avatar' => $message->replyTo->sender instanceof \App\Models\User ? $message->replyTo->sender->avatar : null,
-                    'sender_username' => $message->replyTo->sender instanceof \App\Models\User ? $message->replyTo->sender->username : null,
+                    'sender_name' => $this->senderName($message->replyTo->sender),
+                    'sender_avatar' => $this->senderAvatar($message->replyTo->sender),
+                    'sender_username' => $message->replyTo->sender instanceof User ? $message->replyTo->sender->username : null,
                     'message' => $message->replyTo->message,
                     'is_read' => $message->replyTo->is_read ? true : false,
                     'is_edited' => $message->replyTo->is_edited ? true : false,
@@ -62,5 +65,25 @@ class MessageEdited implements ShouldBroadcastNow
                 ] : null,
             ]
         ];
+    }
+
+    private function senderName(mixed $sender): ?string
+    {
+        return match (true) {
+            $sender instanceof User => $sender->fullname,
+            $sender instanceof Couriers => $sender->full_name,
+            $sender instanceof Seller => $sender->shop_name,
+            default => null,
+        };
+    }
+
+    private function senderAvatar(mixed $sender): ?string
+    {
+        return match (true) {
+            $sender instanceof User => $sender->avatar,
+            $sender instanceof Couriers => $sender->photo,
+            $sender instanceof Seller => $sender->photo,
+            default => null,
+        };
     }
 }

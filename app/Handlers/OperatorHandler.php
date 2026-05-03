@@ -3,6 +3,7 @@
 namespace App\Handlers;
 
 use App\Services\SessionService;
+use App\Services\SupportChatBridgeService;
 use Illuminate\Support\Facades\Log;
 use SergiX44\Nutgram\Nutgram;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardButton;
@@ -370,6 +371,13 @@ class OperatorHandler
             return;
         }
 
+        if ($ticket->source_type === 'shop_chat' && $ticket->source_conversation_id) {
+            $body = $message->text ?? $message->caption ?? '[media]';
+            self::saveAttachment($message, $ticket->id, 'operator');
+            app(SupportChatBridgeService::class)->sendReplyToConversation($ticket, $body, $cid);
+            return;
+        }
+
         $userId = (int) $ticket->user_id;
 
         self::saveMessage($message, (int) $ticket->id, 'operator', $cid);
@@ -424,7 +432,9 @@ class OperatorHandler
         $text .= "\n/history {$ticketId} — Ilovalarni ko'rish\n/end — Yopish";
 
         $bot->sendMessage($text, chat_id: $opId, parse_mode: 'HTML', reply_markup: $keyboard);
-        $bot->sendMessage("🟢 Operator siz bilan bog'landi! Xabar yuboring.", chat_id: $ticket->user_id);
+        if ($ticket->source_type !== 'shop_chat') {
+            $bot->sendMessage("🟢 Operator siz bilan bog'landi! Xabar yuboring.", chat_id: $ticket->user_id);
+        }
 
         Log::info("[Operator] ticket qabul qilindi va bildirildi");
     }
@@ -445,7 +455,9 @@ class OperatorHandler
         $opId = (int) $ticket->operator_id;
 
         $bot->sendMessage("✅ Ticket #$ticketId yopildi.{$attText}", chat_id: $opId, parse_mode: 'HTML');
-        UserHandler::sendRatingRequest($bot, (int) $ticket->user_id, $ticketId);
+        if ($ticket->source_type !== 'shop_chat') {
+            UserHandler::sendRatingRequest($bot, (int) $ticket->user_id, $ticketId);
+        }
 
         Log::info("[Operator] ticket yopildi va baholash so'raldi");
     }

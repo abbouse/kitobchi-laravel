@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Couriers;
+use App\Models\Sold;
 
 class Conversation extends Model
 {
@@ -18,6 +20,8 @@ class Conversation extends Model
         'user_id',
         'receiver_id',
         'shop_id',
+        'courier_id',
+        'order_id',
         'last_message_at',
         'hidden_by',
         'messages_hidden_at',
@@ -48,10 +52,21 @@ class Conversation extends Model
     {
         return $this->belongsTo(Seller::class, 'shop_id');
     }
+
     public function shopOwner()
-{
-    return $this->belongsTo(Seller::class, 'shop_id');
-}
+    {
+        return $this->belongsTo(Seller::class, 'shop_id');
+    }
+
+    public function courier()
+    {
+        return $this->belongsTo(Couriers::class, 'courier_id');
+    }
+
+    public function order()
+    {
+        return $this->belongsTo(Sold::class, 'order_id');
+    }
 
     public function creator()
     {

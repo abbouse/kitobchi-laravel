@@ -84,8 +84,27 @@ class CourierController extends Controller
         if (!$courier) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
-        $courier->fcm_token = $request->token;
-        $courier->save();
+        $request->validate([
+            'fcm_token' => 'required|string',
+            'device_id' => 'required|string',
+        ]);
+
+        DB::table('connected_devices')->updateOrInsert(
+            [
+                'user_id' => $courier->id,
+                'user_type' => 'courier',
+                'device_id' => $request->device_id,
+            ],
+            [
+                'token' => optional($courier->currentAccessToken())->token,
+                'fcm_token' => $request->fcm_token,
+                'device_name' => $request->input('device_name', 'Unknown Device'),
+                'platform' => $request->input('platform', 'Unknown'),
+                'updated_at' => now(),
+                'created_at' => now(),
+            ]
+        );
+
         return response()->json(['success' => true], 200);
     }
     public function notifications(Request $request)

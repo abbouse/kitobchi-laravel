@@ -38,6 +38,13 @@
       : null;
     $isGiftToOther = (bool) ($order->is_gift_to_other ?? false);
     $packagingPrice = (int) ($order->packaging_price ?? 0);
+    $isInstore = (bool) ($order->is_instore ?? false);
+    $cashbackReadyAt = $order->cashback_ready_at;
+    $cashbackAwardedAt = $order->cashback_awarded_at;
+    $cashbackNotifiedAt = $order->cashback_notified_at;
+    $cashbackFlowLabel = $isInstore
+      ? "In-store — darhol"
+      : 'Oddiy buyurtma — 7 kundan keyin';
   ?>
   <?php if (isset($component)) { $__componentOriginal0c1345684b2d774f43a544669f5684b0 = $component; } ?>
 <?php if (isset($attributes)) { $__attributesOriginal0c1345684b2d774f43a544669f5684b0 = $attributes; } ?>
@@ -189,6 +196,10 @@
           <div class="flex justify-between gap-3"><dt class="metric-label">Qadoqlash</dt><dd class="font-semibold"><?php echo e(number_format($packagingPrice, 0, '.', ' ')); ?> UZS</dd></div>
           <div class="flex justify-between gap-3"><dt class="metric-label">Chegirma</dt><dd class="font-semibold"><?php echo e(number_format($summary['discount'], 0, '.', ' ')); ?> UZS</dd></div>
           <div class="flex justify-between gap-3"><dt class="metric-label">Cashback</dt><dd class="font-semibold"><?php echo e(number_format($summary['cashback'], 0, '.', ' ')); ?> UZS</dd></div>
+          <div class="flex justify-between gap-3"><dt class="metric-label">Cashback oqimi</dt><dd class="font-semibold"><?php echo e($cashbackFlowLabel); ?></dd></div>
+          <div class="flex justify-between gap-3"><dt class="metric-label">Cashback tayyor vaqti</dt><dd class="font-semibold"><?php echo e($cashbackReadyAt?->format('d.m.Y H:i') ?: '—'); ?></dd></div>
+          <div class="flex justify-between gap-3"><dt class="metric-label">Cashback tushgan vaqt</dt><dd class="font-semibold"><?php echo e($cashbackAwardedAt?->format('d.m.Y H:i') ?: '—'); ?></dd></div>
+          <div class="flex justify-between gap-3"><dt class="metric-label">Cashback push</dt><dd class="font-semibold"><?php echo e($cashbackNotifiedAt?->format('d.m.Y H:i') ?: '—'); ?></dd></div>
           <div class="flex justify-between gap-3"><dt class="metric-label">Promokod</dt><dd class="font-semibold"><?php echo e($order->promocode ?: '—'); ?></dd></div>
           <div class="flex justify-between gap-3"><dt class="metric-label">Gift sertifikat</dt><dd class="font-semibold"><?php echo e($order->gift_certificate_id ? '#'.$order->gift_certificate_id : '—'); ?></dd></div>
           <div class="flex justify-between gap-3 border-t border-[var(--p-border)] pt-3"><dt class="font-bold">Jami</dt><dd class="font-black"><?php echo e(number_format((float)$order->amount, 0, '.', ' ')); ?> UZS</dd></div>
@@ -282,6 +293,7 @@
           <div><span class="metric-label">Telefon</span><div class="font-semibold mt-1"><?php echo e($order->user?->phone_number ?: '—'); ?></div></div>
           <div><span class="metric-label">To‘lov turi</span><div class="font-semibold mt-1"><?php echo e($paymentMethodLabel); ?></div></div>
           <div><span class="metric-label">To‘lov holati</span><div class="font-semibold mt-1"><?php echo e($paymentLabel); ?></div></div>
+          <div><span class="metric-label">In-store buyurtmami</span><div class="font-semibold mt-1"><?php echo e($isInstore ? 'Ha' : "Yo'q"); ?></div></div>
           <div><span class="metric-label">Buyurtma statusi</span><div class="font-semibold mt-1"><?php echo e($orderStatusLabel); ?></div></div>
           <div><span class="metric-label">Gift buyurtmami</span><div class="font-semibold mt-1"><?php echo e($isGiftToOther ? 'Ha' : "Yo'q"); ?></div></div>
           <?php if($isGiftToOther): ?>

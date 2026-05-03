@@ -31,6 +31,7 @@
     'versions'   => ['bi-phone','App versiyalar'],
     'contacts'   => ['bi-headset','Kontaktlar'],
     'app-flags'  => ['bi-toggles','App flaglar'],
+    'courier-bonus' => ['bi-bicycle','Kuryer bonus'],
     'telegram'   => ['bi-telegram','Telegram'],
     'commission' => ['bi-percent','Komissiya'],
     'cashback'   => ['bi-cash-stack','Cashback'],
@@ -314,6 +315,80 @@
           <?php echo e($project?->packaging_threshold ?? 4); ?> ta kitob
         </span>
       </div>
+    </div>
+  </div>
+</div>
+<?php endif; ?>
+
+
+<?php if($tab === 'courier-bonus'): ?>
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
+  <div class="xl:col-span-7">
+    <div class="p-card">
+      <div class="p-card-header">
+        <div>
+          <div class="p-card-title"><i class="bi bi-bicycle mr-2" style="color:var(--p-info)"></i>Kuryer bonus tizimi</div>
+          <div class="p-card-sub">Surge bonus, trigger threshold va SLA penalty parametrlari.</div>
+        </div>
+      </div>
+      <form method="POST" action="<?php echo e(route('admin.settings.courier-bonus')); ?>">
+        <?php echo csrf_field(); ?> <?php echo method_field('PUT'); ?>
+        <div style="padding:16px;background:var(--p-elevated);border:1px solid var(--p-border);border-radius:10px">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label class="p-form-label">Har minut qo‘shiladigan bonus</label>
+              <input type="number" name="courier_surge_step" class="p-form-control" min="0"
+                     value="<?php echo e(old('courier_surge_step', $project?->courier_surge_step ?? 500)); ?>">
+            </div>
+            <div>
+              <label class="p-form-label">Maksimal surge bonus</label>
+              <input type="number" name="courier_surge_max" class="p-form-control" min="0"
+                     value="<?php echo e(old('courier_surge_max', $project?->courier_surge_max ?? 10000)); ?>">
+            </div>
+            <div>
+              <label class="p-form-label">Push trigger threshold</label>
+              <input type="number" name="courier_surge_threshold" class="p-form-control" min="0"
+                     value="<?php echo e(old('courier_surge_threshold', $project?->courier_surge_threshold ?? 5000)); ?>">
+            </div>
+            <div>
+              <label class="p-form-label">SLA daqiqa</label>
+              <input type="number" name="courier_sla_minutes" class="p-form-control" min="1"
+                     value="<?php echo e(old('courier_sla_minutes', $project?->courier_sla_minutes ?? 45)); ?>">
+            </div>
+            <div class="md:col-span-2">
+              <label class="p-form-label">Kechikish penaltisi (har minut)</label>
+              <input type="number" name="courier_penalty_step" class="p-form-control" min="0"
+                     value="<?php echo e(old('courier_penalty_step', $project?->courier_penalty_step ?? 300)); ?>">
+            </div>
+          </div>
+        </div>
+        <div class="flex justify-end mt-4">
+          <button type="submit" class="btn-p primary"><i class="bi bi-floppy-fill"></i> Saqlash</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="xl:col-span-5">
+    <div class="p-card">
+      <div class="p-card-header">
+        <div class="p-card-title"><i class="bi bi-activity mr-2" style="color:var(--p-warning)"></i>Joriy konfiguratsiya</div>
+      </div>
+      <?php $__currentLoopData = [
+        ['Har minut bonus', $project?->courier_surge_step ?? 500, 'so\'m'],
+        ['Max surge', $project?->courier_surge_max ?? 10000, 'so\'m'],
+        ['Threshold', $project?->courier_surge_threshold ?? 5000, 'so\'m'],
+        ['SLA', $project?->courier_sla_minutes ?? 45, 'minut'],
+        ['Penalty', $project?->courier_penalty_step ?? 300, 'so\'m/min'],
+      ]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$lbl, $val, $suffix]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+      <div class="flex items-center justify-between py-2" style="border-bottom:1px solid var(--p-border)">
+        <span style="font-size:13px;color:var(--p-muted)"><?php echo e($lbl); ?></span>
+        <span style="font-size:12px;font-weight:600;font-family:'JetBrains Mono',monospace;color:var(--p-text)">
+          <?php echo e(number_format((int) $val)); ?> <?php echo e($suffix); ?>
+
+        </span>
+      </div>
+      <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
     </div>
   </div>
 </div>

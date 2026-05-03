@@ -10,21 +10,28 @@ class Transaction extends Model
 {
     use HasFactory;
     protected $fillable = [
-    'paycom_transaction_id',
-    'paycom_time',
-    'paycom_time_datetime',
-    'create_time',
-    'perform_time',
-    'cancel_time',
-    'amount',
-    'payment_type',
-    'state',
-    'reason',
-    'receivers',
-    'order_id',
-    'payable_id',
-    'perform_time_unix',
-];
+        'paycom_transaction_id',
+        'paycom_time',
+        'paycom_time_datetime',
+        'create_time',
+        'perform_time',
+        'cancel_time',
+        'amount',
+        'payment_type',
+        'state',
+        'reason',
+        'receivers',
+        'order_id',
+        'payable_id',
+        'perform_time_unix',
+        'perform_fiscal_data',
+        'cancel_fiscal_data',
+    ];
+
+    protected $casts = [
+        'perform_fiscal_data' => 'array',
+        'cancel_fiscal_data' => 'array',
+    ];
     public static function getTransactionsByTimeRange($from, $to)
     {
         return self::whereBetween('paycom_time', [$from, $to])

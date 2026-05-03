@@ -10,6 +10,7 @@ use App\Models\Couriers;
 use App\Models\CourierOrder;
 use App\Models\CourierOrderItem;
 use App\Services\CourierBonusService;
+use App\Services\OrderService;
 use App\Services\OrderRealtimeService;
 use App\Services\QrTokenService;
 use Illuminate\Support\Facades\Auth;
@@ -20,6 +21,7 @@ class CourierOrderController extends Controller
 {
     public function __construct(
         private readonly CourierBonusService $bonusService,
+        private readonly OrderService $orderService,
         private readonly OrderRealtimeService $orderRealtimeService,
         private readonly QrTokenService $qrTokenService,
     ) {
@@ -143,6 +145,7 @@ class CourierOrderController extends Controller
 
             $order->refresh();
             $this->orderRealtimeService->broadcastCourierOrderUpdated($order, 'courier_order.delivered');
+            $this->orderService->processCashbackAfterOrderMutation($orderCustomer, $orderCustomer->user()->first());
 
             return response()->json([
                 'success'      => true,
@@ -165,6 +168,19 @@ class CourierOrderController extends Controller
 
         try {
             $response = DB::transaction(function () use ($courier, $id) {
+                $activeOrdersCount = CourierOrder::query()
+                    ->where('courier_id', $courier->id)
+                    ->where('status', 'in_delivery')
+                    ->lockForUpdate()
+                    ->count();
+
+                if ($activeOrdersCount >= 3) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => "Sizda faol buyurtmalar soni 3 taga yetgan. Avval ulardan birini yakunlang.",
+                    ], 422);
+                }
+
                 // Lock rows to prevent race condition
                 $order = CourierOrder::where('order_id', $id)
                     ->where('status', 'pending')

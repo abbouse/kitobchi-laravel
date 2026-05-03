@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\BotOperator;
 use App\Models\BotTicket;
 use App\Services\SessionService;
+use App\Services\SupportChatBridgeService;
 use Illuminate\Http\Request;
 use SergiX44\Nutgram\Nutgram;
 
@@ -101,7 +102,7 @@ class SupportController extends Controller
         return back()->with('success', "Ticket yopildi.");
     }
 
-    public function reply(Request $request, BotTicket $ticket, Nutgram $bot)
+    public function reply(Request $request, BotTicket $ticket, Nutgram $bot, SupportChatBridgeService $supportChatBridgeService)
     {
         $data = $request->validate([
             'message' => 'required|string|max:5000',
@@ -109,29 +110,34 @@ class SupportController extends Controller
 
         $admin = auth('panel')->user();
 
-        $msg = SessionService::saveMessage(
-            ticketId: $ticket->id,
-            sentBy: 'admin',
-            message: $data['message'],
-            messageType: 'text',
-            adminId: $admin?->id,
-            isDelivered: false
-        );
-
         try {
-            $bot->sendMessage($data['message'], chat_id: (int) $ticket->user_id);
+            if ($ticket->source_type === 'shop_chat' && $ticket->source_conversation_id) {
+                $supportChatBridgeService->sendReplyToConversation($ticket, $data['message'], null, $admin?->id);
+                return back()->with('success', 'Javob foydalanuvchiga yuborildi.');
+            } else {
+                $msg = SessionService::saveMessage(
+                    ticketId: $ticket->id,
+                    sentBy: 'admin',
+                    message: $data['message'],
+                    messageType: 'text',
+                    adminId: $admin?->id,
+                    isDelivered: false
+                );
+                $bot->sendMessage($data['message'], chat_id: (int) $ticket->user_id);
+                $msg->update(['is_delivered' => true, 'delivery_error' => null]);
+                $ticket->update([
+                    'status' => in_array($ticket->status, ['closed', 'rated']) ? 'active' : $ticket->status,
+                    'updated_at' => now(),
+                ]);
 
-            $msg->update(['is_delivered' => true, 'delivery_error' => null]);
-            $ticket->update([
-                'status' => in_array($ticket->status, ['closed', 'rated']) ? 'active' : $ticket->status,
-                'updated_at' => now(),
-            ]);
-
-            return back()->with('success', 'Javob foydalanuvchiga yuborildi.');
+                return back()->with('success', 'Javob foydalanuvchiga yuborildi.');
+            }
         } catch (\Throwable $e) {
-            $msg->update([
-                'delivery_error' => $e->getMessage(),
-            ]);
+            if (isset($msg)) {
+                $msg->update([
+                    'delivery_error' => $e->getMessage(),
+                ]);
+            }
 
             return back()->with('error', 'Javobni yuborib bo‘lmadi: '.$e->getMessage());
         }

@@ -18,6 +18,7 @@ use App\Models\PromocodeHistory;
 use App\Models\Books;
 use App\Models\Stationery;
 use App\Models\StationeryVariant;
+use App\Models\Transaction;
 use App\Services\OrderService;
 use App\Services\CashbackHistoryService;
 use App\Services\OrderRealtimeService;
@@ -1045,6 +1046,7 @@ class PurchaseController extends Controller
                     'branch_is_main' => (bool) ($sellerLocation->is_main ?? false),
                 ]],
                 'deliveryType'   => 'pickup',
+                'is_instore'     => true,
                 'deliveryPrice'  => 0,
                 'paymentStatus'  => 1,            // Payme
                 'amount'         => $finalPrice,
@@ -1283,7 +1285,28 @@ class PurchaseController extends Controller
         $order->formatted_created_at = Carbon::parse($order->created_at)->isoFormat('D MMMM YYYY, HH:mm');
         $order->formatted_updated_at = Carbon::parse($order->updated_at)->isoFormat('D MMMM YYYY, HH:mm');
         $this->applySignedDeliveryQr($order);
+        $this->appendFiscalReceiptMeta($order);
 
         return response()->json(['status' => 'success', 'data' => [$order]]);
+    }
+
+    private function appendFiscalReceiptMeta(Sold $order): void
+    {
+        $transaction = Transaction::query()
+            ->where('payment_type', 'order')
+            ->where('order_id', $order->id)
+            ->where('state', 2)
+            ->latest('id')
+            ->first(['perform_fiscal_data', 'cancel_fiscal_data']);
+
+        $perform = is_array($transaction?->perform_fiscal_data) ? $transaction->perform_fiscal_data : [];
+        $cancel = is_array($transaction?->cancel_fiscal_data) ? $transaction->cancel_fiscal_data : [];
+
+        $order->has_payment_receipt = filled($perform['qr_code_url'] ?? null);
+        $order->payment_receipt_url = $perform['qr_code_url'] ?? null;
+        $order->payment_receipt_fiscal_sign = $perform['fiscal_sign'] ?? null;
+        $order->payment_receipt_terminal_id = $perform['terminal_id'] ?? null;
+        $order->payment_receipt_date = $perform['date'] ?? null;
+        $order->payment_cancel_receipt_url = $cancel['qr_code_url'] ?? null;
     }
 }

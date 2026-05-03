@@ -4,8 +4,13 @@ namespace App\Http\Controllers\Api\Seller;
 
 use App\Http\Controllers\Controller;
 use App\Models\Seller;
+use App\Models\SellerAd;
+use App\Models\SellerBanLog;
+use App\Models\SellerContest;
 use App\Models\SellerNotification;
 use App\Models\SellerStaffLog;
+use App\Models\SellerTransaction;
+use App\Models\Message;
 use App\Models\SellerLocation;
 use App\Services\PasswordResetService;
 use Illuminate\Http\Request;
@@ -277,6 +282,58 @@ class SellerController extends Controller
         ], 200);
     }
 
+    public function menuBadgeSummary(Request $request)
+    {
+        $seller = Auth::guard('seller')->user();
+        if (!$seller) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $storeSellerId = $this->getStoreSellerId($seller);
+
+        $messagesUnread = Message::query()
+            ->join('conversations', 'conversations.id', '=', 'messages.conversation_id')
+            ->where('conversations.type', 'shop')
+            ->where('conversations.shop_id', $storeSellerId)
+            ->where('messages.sender_type', '!=', Seller::class)
+            ->where('messages.is_read', false)
+            ->where('messages.is_deleted', false)
+            ->count();
+
+        $warningsUnread = SellerBanLog::getUnreadCount($storeSellerId);
+        $transactionsPending = SellerTransaction::query()
+            ->where('seller_id', $storeSellerId)
+            ->where('status', 'pending')
+            ->count();
+        $eventsPending = SellerContest::query()
+            ->where('seller_id', $storeSellerId)
+            ->where('status', 'pending')
+            ->count();
+        $adsPending = SellerAd::query()
+            ->where('seller_id', $storeSellerId)
+            ->where(function ($q) {
+                $q->where('moderation', 'pending')
+                    ->orWhere('paymentStatus', 'pending');
+            })
+            ->count();
+        $notificationsUnread = SellerNotification::query()
+            ->where('seller_id', $storeSellerId)
+            ->where('isRead', false)
+            ->count();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'messages' => (int) $messagesUnread,
+                'warnings' => (int) $warningsUnread,
+                'transactions' => (int) $transactionsPending,
+                'events' => (int) $eventsPending,
+                'ads' => (int) $adsPending,
+                'notifications' => (int) $notificationsUnread,
+            ],
+        ], 200);
+    }
+
     public function updateProfile(Request $request)
     {
         $seller = Auth::guard('seller')->user();
@@ -400,6 +457,22 @@ class SellerController extends Controller
             'message' => "Bildirishnoma manzili yangilandi",
         ]);
     }
+    DB::table('connected_devices')->updateOrInsert(
+        [
+            'user_id' => $seller->id,
+            'user_type' => 'seller',
+            'device_id' => $request->device_id,
+        ],
+        [
+            'token' => optional($seller->currentAccessToken())->token,
+            'fcm_token' => $request->fcm_token,
+            'device_name' => $request->input('device_name', 'Unknown Device'),
+            'platform' => $request->input('platform', 'Unknown'),
+            'updated_at' => now(),
+            'created_at' => now(),
+        ]
+    );
+
     return response()->json([
         'status'  => 'success',
         'message' => "Qurilma yaratildi va token saqlandi",

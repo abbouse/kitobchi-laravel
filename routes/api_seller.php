@@ -32,6 +32,7 @@ Route::middleware('auth:seller')->group(function () {
     Route::post('devices/remove-device', [SellerController::class, 'removeDevice']);
     Route::get('notifications', [SellerController::class, 'notifications']);
     Route::get('notifications/count', [SellerController::class, 'notificationsCount']);
+    Route::get('menu/badge-summary', [SellerController::class, 'menuBadgeSummary']);
     Route::post('notifications/read', [SellerController::class, 'markAsRead']);
     Route::post('notifications/read-all', [SellerController::class, 'markAllAsRead']);
 
@@ -64,7 +65,7 @@ Route::middleware('auth:seller')->group(function () {
     Route::get('orders/orders-count', [OrderController::class, 'ordersCount']);
     Route::get('orders/accept/{id}', [OrderController::class, 'acceptOrder']);
     Route::get('orders/scan-qr/{qr}', [OrderController::class, 'scanQR']);
-    Route::get('orders/toCourier/{qr}', [OrderController::class, 'toCourier']);
+    Route::post('orders/toCourier/{qr}', [OrderController::class, 'toCourier']);
     Route::get('premium/info', [PremiumController::class, 'info']);
     Route::post('premium/buy', [PremiumController::class, 'buy']);
     Route::post('premium/cancel', [PremiumController::class, 'cancel']);

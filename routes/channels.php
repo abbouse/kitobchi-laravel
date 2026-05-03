@@ -16,6 +16,7 @@ Broadcast::channel('chat.{conversationId}', function ($user, $conversationId) {
     // Foydalanuvchi qaysi Guard orqali kelayotganini tekshiramiz
     $isUser = $user instanceof \App\Models\User;
     $isSeller = $user instanceof \App\Models\Seller;
+    $isCourier = $user instanceof \App\Models\Couriers;
 
     // 1. Agar suhbat DO'KON bilan bo'lsa
     if ($conversation->type === 'shop') {
@@ -41,8 +42,17 @@ Broadcast::channel('chat.{conversationId}', function ($user, $conversationId) {
         }
     }
 
+    if ($conversation->type === 'courier') {
+        if ($isUser) {
+            return (int) $user->id === (int) $conversation->user_id;
+        }
+        if ($isCourier) {
+            return (int) $user->id === (int) $conversation->courier_id;
+        }
+    }
+
     return false;
-}, ['guards' => ['user', 'seller']]);
+}, ['guards' => ['user', 'seller', 'courier']]);
 Broadcast::channel('user.{userId}', function ($user, $userId) {
     return (int) $user->id === (int) $userId;
 }, ['guards' => ['user']]);

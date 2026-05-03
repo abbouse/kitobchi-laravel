@@ -12,11 +12,14 @@ use App\Http\Controllers\Controller;
 use App\Jobs\SendMessagePushNotification;
 use App\Models\Conversation;
 use App\Models\ConversationParticipant;
+use App\Models\Couriers;
 use App\Models\Message;
 use App\Models\Seller;
+use App\Models\Sold;
 use App\Models\User;
 use App\Services\BookClubModerationService;
 use App\Services\MentionService;
+use App\Services\SupportChatBridgeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Cache;
@@ -28,6 +31,7 @@ class ChatController extends Controller
     public function __construct(
         private readonly BookClubModerationService $moderationService,
         private readonly MentionService $mentionService,
+        private readonly SupportChatBridgeService $supportChatBridgeService,
     ) {}
 
     public function startConversation(Request $request)
@@ -38,18 +42,45 @@ class ChatController extends Controller
         }
 
         $type = $request->input('type');
-        if (!in_array($type, ['personal', 'shop'], true)) {
+        if (!in_array($type, ['personal', 'shop', 'courier'], true)) {
             return response()->json(['status' => 'error', 'message' => 'Noto‘g‘ri chat turi'], 422);
         }
 
         $receiverId = $type === 'personal' ? (int) $request->input('receiver_id') : null;
         $shopId = $type === 'shop' ? (int) $request->input('shop_id') : null;
+        $orderId = $type === 'courier' ? (int) $request->input('order_id') : null;
+        $courierId = null;
+
+        if ($type === 'courier') {
+            $order = Sold::query()
+                ->where('id', $orderId)
+                ->where('user_id', $user->id)
+                ->first();
+
+            if (!$order) {
+                return response()->json(['status' => 'error', 'message' => 'Buyurtma topilmadi'], 404);
+            }
+
+            if (in_array((string) $order->status, ['C', 'F'], true)) {
+                return response()->json(['status' => 'error', 'message' => 'Yozishma yopilgan'], 423);
+            }
+
+            if ((string) $order->deliveryType === 'pickup' || (bool) ($order->is_instore ?? false)) {
+                return response()->json(['status' => 'error', 'message' => 'Bu buyurtma kuryer orqali emas'], 422);
+            }
+
+            $courierId = (int) ($order->courier_id ?? 0);
+            if ($courierId <= 0) {
+                return response()->json(['status' => 'error', 'message' => 'Kuryer hali biriktirilmagan'], 422);
+            }
+        }
 
         $conversation = Conversation::query()
             ->where('type', $type)
             ->where('user_id', $user->id)
             ->when($type === 'personal', fn ($q) => $q->where('receiver_id', $receiverId))
             ->when($type === 'shop', fn ($q) => $q->where('shop_id', $shopId))
+            ->when($type === 'courier', fn ($q) => $q->where('courier_id', $courierId)->where('order_id', $orderId))
             ->first();
 
         if (!$conversation && $type === 'personal') {
@@ -65,6 +96,8 @@ class ChatController extends Controller
                 'user_id' => $user->id,
                 'receiver_id' => $receiverId,
                 'shop_id' => $shopId,
+                'courier_id' => $courierId,
+                'order_id' => $orderId,
                 'type' => $type,
                 'last_message_at' => now(),
                 'hidden_by' => $type === 'shop' ? json_encode([$user->id, $shopId]) : null,
@@ -81,7 +114,9 @@ class ChatController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'data' => $conversation->id,
+            'data' => $type === 'courier'
+                ? $this->serializeConversationForUser($conversation->loadMissing(['courier', 'order']), (int) $user->id)
+                : $conversation->id,
         ]);
     }
 
@@ -315,7 +350,7 @@ class ChatController extends Controller
         }
 
         $type = $request->query('type', 'personal');
-        if (!in_array($type, ['personal', 'shop', 'group'], true)) {
+        if (!in_array($type, ['personal', 'shop', 'group', 'courier'], true)) {
             return response()->json(['status' => 'error', 'message' => 'Noto‘g‘ri chat turi'], 422);
         }
 
@@ -333,6 +368,8 @@ class ChatController extends Controller
                 'user_id',
                 'receiver_id',
                 'shop_id',
+                'courier_id',
+                'order_id',
                 'last_message_at',
                 'hidden_by',
             ])
@@ -345,6 +382,7 @@ class ChatController extends Controller
             ])
             ->with([
                 'shop',
+                'courier',
                 'user',
                 'receiver',
                 'participants.user:id,name,lastname,username,avatar,isVerified,isSupport,position,staff_role,role_emoji,role_title,role_place',
@@ -359,6 +397,11 @@ class ChatController extends Controller
                 if ($type === 'shop') {
                     $query->where('user_id', $user->id)
                         ->orWhereHas('shop', fn ($sq) => $sq->where('user_id', $user->id));
+                    return;
+                }
+
+                if ($type === 'courier') {
+                    $query->where('user_id', $user->id);
                     return;
                 }
 
@@ -521,6 +564,9 @@ class ChatController extends Controller
                     if (!$this->canUserAccessConversation($user, $conversation)) {
                         abort(403, 'Ruxsat yo‘q');
                     }
+                    if ($this->isConversationClosed($conversation)) {
+                        abort(423, 'Yozishma yopilgan');
+                    }
                 } elseif ($type === 'group') {
                     abort(404, 'Guruh topilmadi');
                 } elseif ($type === 'shop' && $shopId) {
@@ -529,6 +575,8 @@ class ChatController extends Controller
                         ->where('shop_id', $shopId)
                         ->where('type', 'shop')
                         ->first();
+                } elseif ($type === 'courier') {
+                    abort(422, 'Kuryer chatini buyurtma ichidan oching.');
                 } elseif ($receiverId) {
                     $conversation = Conversation::query()
                         ->where('type', 'personal')
@@ -594,6 +642,13 @@ class ChatController extends Controller
             });
 
             broadcast(new MessageSent($result['message']))->toOthers();
+
+            if (
+                $result['message']->conversation?->type === 'shop'
+                && (int) ($result['message']->conversation?->shop_id ?? 0) === 1
+            ) {
+                $this->supportChatBridgeService->syncUserMessageFromConversation($result['message']);
+            }
 
             return response()->json([
                 'status' => 'success',
@@ -709,7 +764,11 @@ class ChatController extends Controller
 
         $updated = Message::query()
             ->where('conversation_id', $conversationId)
-            ->where('sender_id', '!=', $user->id)
+            ->when(
+                $conversation->type === 'courier',
+                fn ($q) => $q->where('sender_type', '!=', User::class),
+                fn ($q) => $q->where('sender_id', '!=', $user->id),
+            )
             ->where('is_read', false)
             ->update(['is_read' => true]);
 
@@ -913,6 +972,16 @@ class ChatController extends Controller
             return;
         }
 
+        if ($conversation->type === 'courier') {
+            if ((int) $conversation->user_id > 0) {
+                broadcast(new ConversationUpdated($conversation, (int) $conversation->user_id, 'user'));
+            }
+            if ((int) ($conversation->courier_id ?? 0) > 0) {
+                broadcast(new ConversationUpdated($conversation, (int) $conversation->courier_id, 'courier'));
+            }
+            return;
+        }
+
         $shopId = (int) DB::table('sellers')->where('id', $conversation->shop_id)->value('id');
         if ($shopId > 0) {
             broadcast(new ConversationUpdated($conversation, $shopId, 'seller'));
@@ -929,6 +998,10 @@ class ChatController extends Controller
         if ($conversation->type === 'shop') {
             return (int) $conversation->user_id === (int) $user->id
                 || $conversation->shop?->user_id === (int) $user->id;
+        }
+
+        if ($conversation->type === 'courier') {
+            return (int) $conversation->user_id === (int) $user->id;
         }
 
         return $conversation->participants()
@@ -954,6 +1027,22 @@ class ChatController extends Controller
             return (int) $query->count();
         }
 
+        if ($conversation->type === 'shop') {
+            return (int) Message::query()
+                ->where('conversation_id', $conversation->id)
+                ->where('sender_type', '!=', User::class)
+                ->where('is_read', false)
+                ->count();
+        }
+
+        if ($conversation->type === 'courier') {
+            return (int) Message::query()
+                ->where('conversation_id', $conversation->id)
+                ->where('sender_type', '!=', User::class)
+                ->where('is_read', false)
+                ->count();
+        }
+
         return (int) Message::query()
             ->where('conversation_id', $conversation->id)
             ->where('sender_id', '!=', $userId)
@@ -965,6 +1054,8 @@ class ChatController extends Controller
     {
         $conversation->loadMissing([
             'shop',
+            'courier',
+            'order',
             'user',
             'receiver',
             'participants.user:id,name,lastname,username,avatar,isVerified,isSupport,position,staff_role,role_emoji,role_title,role_place',
@@ -985,6 +1076,8 @@ class ChatController extends Controller
             'user_id' => $conversation->user_id,
             'receiver_id' => $conversation->receiver_id,
             'shop_id' => $conversation->shop_id,
+            'courier_id' => $conversation->courier_id,
+            'order_id' => $conversation->order_id,
             'last_message_at' => optional($conversation->last_message_at)?->toIso8601String() ?? $conversation->last_message_at,
             'last_message' => $conversation->last_message,
             'unread_count' => $this->unreadCountForUser($conversation, $userId),
@@ -1037,6 +1130,15 @@ class ChatController extends Controller
             ]);
         }
 
+        if ($conversation->type === 'courier') {
+            return array_merge($payload, [
+                'other_party_name' => $conversation->courier?->full_name ?? 'Kuryer',
+                'avatar' => $conversation->courier?->photo,
+                'isVerified' => true,
+                'isSupport' => false,
+            ]);
+        }
+
         $otherUser = (int) $conversation->user_id === $userId
             ? $conversation->receiver
             : $conversation->user;
@@ -1060,8 +1162,8 @@ class ChatController extends Controller
             'conversation_id' => $message->conversation_id,
             'sender_id' => $message->sender_id,
             'sender_type' => $message->sender_type,
-            'sender_name' => $message->sender instanceof User ? $message->sender->fullname : null,
-            'sender_avatar' => $message->sender instanceof User ? $message->sender->avatar : null,
+            'sender_name' => $this->senderName($message->sender),
+            'sender_avatar' => $this->senderAvatar($message->sender),
             'sender_username' => $message->sender instanceof User ? $message->sender->username : null,
             'message' => $message->message,
             'is_read' => (bool) $message->is_read,
@@ -1073,8 +1175,8 @@ class ChatController extends Controller
                 'id' => $message->replyTo->id,
                 'conversation_id' => $message->replyTo->conversation_id,
                 'sender_id' => $message->replyTo->sender_id,
-                'sender_name' => $message->replyTo->sender instanceof User ? $message->replyTo->sender->fullname : null,
-                'sender_avatar' => $message->replyTo->sender instanceof User ? $message->replyTo->sender->avatar : null,
+                'sender_name' => $this->senderName($message->replyTo->sender),
+                'sender_avatar' => $this->senderAvatar($message->replyTo->sender),
                 'sender_username' => $message->replyTo->sender instanceof User ? $message->replyTo->sender->username : null,
                 'message' => $message->replyTo->message,
                 'is_read' => (bool) $message->replyTo->is_read,
@@ -1083,6 +1185,38 @@ class ChatController extends Controller
                 'created_at' => optional($message->replyTo->created_at)?->toIso8601String(),
             ] : null,
         ];
+    }
+
+    private function senderName(mixed $sender): ?string
+    {
+        return match (true) {
+            $sender instanceof User => $sender->fullname,
+            $sender instanceof Couriers => $sender->full_name,
+            $sender instanceof Seller => $sender->shop_name,
+            default => null,
+        };
+    }
+
+    private function senderAvatar(mixed $sender): ?string
+    {
+        return match (true) {
+            $sender instanceof User => $sender->avatar,
+            $sender instanceof Couriers => $sender->photo,
+            $sender instanceof Seller => $sender->photo,
+            default => null,
+        };
+    }
+
+    protected function isConversationClosed(Conversation $conversation): bool
+    {
+        if ($conversation->type !== 'courier' || !$conversation->order_id) {
+            return false;
+        }
+
+        $status = (string) ($conversation->order?->status
+            ?? Sold::query()->where('id', $conversation->order_id)->value('status'));
+
+        return in_array($status, ['C', 'F'], true);
     }
 
     private function buildGroupInviteLink(string $inviteToken): string

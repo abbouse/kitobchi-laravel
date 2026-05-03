@@ -54,8 +54,8 @@ class AdminOrderStatusSyncService
                 'updated_at' => now(),
             ]);
 
-            if (!$wasPaid && (int) $order->paymentStatus === 2) {
-                $this->orderService->awardCashbackForPaidOrder($order, $order->user()->first());
+            if ((int) $order->paymentStatus === 2) {
+                $this->orderService->processCashbackAfterOrderMutation($order, $order->user()->first());
             }
         });
     }
@@ -122,8 +122,8 @@ class AdminOrderStatusSyncService
                 'updated_at' => now(),
             ]);
 
-            if (!$wasPaid && (int) $order->paymentStatus === 2) {
-                $this->orderService->awardCashbackForPaidOrder($order, $order->user()->first());
+            if ((int) $order->paymentStatus === 2) {
+                $this->orderService->processCashbackAfterOrderMutation($order, $order->user()->first());
             }
         });
     }

@@ -1,6 +1,6 @@
 <?php
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\Courier\{CourierAuthController, CourierController, CourierOrderController, CourierTransactionController, CourierBanLogController};
+use App\Http\Controllers\Api\Courier\{ConversationController, CourierAuthController, CourierController, CourierOrderController, CourierTransactionController, CourierBanLogController};
 
 // Kuryer Login
 Route::post('auth', [CourierAuthController::class, 'auth']);
@@ -35,6 +35,13 @@ Route::middleware('auth:courier')->group(function () {
     Route::post('orders/toCustomer/{qr}', [CourierOrderController::class, 'toCustomer']);
     // Phase 3: Mijoz javob bermayapti — SLA timerini pauza/resume (toggle).
     Route::post('orders/{id}/customer-delay', [CourierOrderController::class, 'customerDelay']);
+    Route::prefix('conversations')->group(function () {
+        Route::get('', [ConversationController::class, 'index']);
+        Route::post('order/{orderId}/start', [ConversationController::class, 'startForOrder']);
+        Route::get('{id}/messages', [ConversationController::class, 'getMessages']);
+        Route::post('{id}/send', [ConversationController::class, 'sendMessage']);
+        Route::post('{id}/read', [ConversationController::class, 'markAsRead']);
+    });
 
     Route::get('profile', [CourierController::class, 'my_data']);
 });

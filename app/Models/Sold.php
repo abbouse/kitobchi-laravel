@@ -15,8 +15,10 @@ class Sold extends Model
         'amount', 'status', 'address', 'qr', 'gift',
         'gift_certificate_id', 'giftCertAmount',
         'buyerWish', 'promocode', 'discountAmount',
+        'is_instore',
         'withCashback', 'cashbackAmount',
         'awarded_cashback_amount', 'cashback_awarded_at',
+        'cashback_ready_at', 'cashback_notified_at',
         'deliveryPrice', 'paymentStatus',
         // ── Packaging ─────────────────────────────────────────
         'with_packaging',
@@ -32,8 +34,11 @@ class Sold extends Model
     protected $casts = [
         'address'         => 'array',
         'items'           => 'array',
+        'is_instore'      => 'boolean',
         'withCashback'    => 'boolean',
         'cashback_awarded_at' => 'datetime',
+        'cashback_ready_at' => 'datetime',
+        'cashback_notified_at' => 'datetime',
         'with_packaging'  => 'boolean',
         'is_gift_to_other'=> 'boolean',
         'packaging_price' => 'integer',

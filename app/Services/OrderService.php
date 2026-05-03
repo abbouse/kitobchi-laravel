@@ -13,6 +13,7 @@ use App\Models\CashbackSetting;
 use App\Models\PromocodeHistory;
 use App\Models\User;
 use App\Models\GiftCertificate;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -20,6 +21,7 @@ class OrderService
 {
     public function __construct(
         private readonly CashbackHistoryService $cashbackHistoryService,
+        private readonly CashbackNotificationService $cashbackNotificationService,
     ) {}
 
     // =========================================================================
@@ -137,18 +139,72 @@ class OrderService
         CourierOrder::where('order_id', $order->id)->update(['status' => 'pending']);
 
         if ($giveCashback) {
-            $this->awardCashbackForPaidOrder($order, $user);
+            $this->processCashbackAfterOrderMutation($order, $user);
         }
     }
 
-    public function awardCashbackForPaidOrder(Sold $order, ?User $user = null): int
+    public function processCashbackAfterOrderMutation(Sold $order, ?User $user = null): int
+    {
+        $order->refresh();
+
+        if ((int) $order->paymentStatus !== 2) {
+            return 0;
+        }
+
+        if ((bool) ($order->is_instore ?? false)) {
+            return $this->awardCashbackForPaidOrder($order, $user, notify: true);
+        }
+
+        if ((string) $order->status === 'C') {
+            $this->scheduleCashbackRelease($order);
+        }
+
+        return 0;
+    }
+
+    public function scheduleCashbackRelease(Sold $order, ?CarbonInterface $from = null): void
+    {
+        DB::transaction(function () use ($order, $from) {
+            $lockedOrder = Sold::query()->lockForUpdate()->find($order->id);
+            if (!$lockedOrder) {
+                return;
+            }
+
+            if ((bool) ($lockedOrder->is_instore ?? false)) {
+                return;
+            }
+
+            if ((int) $lockedOrder->paymentStatus !== 2 || (string) $lockedOrder->status !== 'C') {
+                return;
+            }
+
+            if ((int) ($lockedOrder->awarded_cashback_amount ?? 0) > 0 || $lockedOrder->cashback_awarded_at) {
+                return;
+            }
+
+            if ($lockedOrder->cashback_ready_at) {
+                return;
+            }
+
+            $readyAt = ($from ?? now())->copy()->addDays(7);
+            $lockedOrder->cashback_ready_at = $readyAt;
+            $lockedOrder->save();
+        });
+    }
+
+    public function releaseScheduledCashback(Sold $order, ?User $user = null, bool $notify = true): int
+    {
+        return $this->awardCashbackForPaidOrder($order, $user, notify: $notify);
+    }
+
+    public function awardCashbackForPaidOrder(Sold $order, ?User $user = null, bool $notify = false): int
     {
         $user ??= $order->user()->first();
         if (!$user) {
             return 0;
         }
 
-        return DB::transaction(function () use ($order, $user) {
+        return DB::transaction(function () use ($order, $user, $notify) {
             $lockedOrder = Sold::query()->lockForUpdate()->find($order->id);
             if (!$lockedOrder) {
                 return 0;
@@ -158,10 +214,9 @@ class OrderService
                 return (int) ($lockedOrder->awarded_cashback_amount ?? 0);
             }
 
-            // Pickup buyurtmalar uchun cashback alohida tariff'dan keladi.
-            // Sold.deliveryType = 'pickup' bo'lsa shuni ko'rib chiqamiz —
-            // bu "Kitob OL!" QR oqimida yaratilgan in-store xaridi.
-            $cashbackType = strtolower((string) ($lockedOrder->deliveryType ?? '')) === 'pickup'
+            // In-store xaridlar uchun pickup cashback alohida ishlaydi.
+            // Oddiy delivery yoki oddiy pickup buyurtmalar esa delivery tariffidan yuradi.
+            $cashbackType = (bool) ($lockedOrder->is_instore ?? false)
                 ? CashbackSetting::TYPE_PICKUP
                 : CashbackSetting::TYPE_DELIVERY;
             $cashbackPercent = CashbackSetting::getCashbackPercentage(
@@ -184,6 +239,7 @@ class OrderService
             DB::table('solds')->where('id', $lockedOrder->id)->update([
                 'awarded_cashback_amount' => $cashbackAmount,
                 'cashback_awarded_at' => now(),
+                'cashback_ready_at' => null,
                 'updated_at' => now(),
             ]);
 
@@ -198,6 +254,18 @@ class OrderService
             );
 
             Log::info("Cashback: user#{$user->id} order#{$lockedOrder->id} +{$cashbackAmount}");
+
+            if ($notify && $this->cashbackNotificationService->sendAwarded(
+                $user,
+                $lockedOrder,
+                $cashbackAmount,
+                (bool) ($lockedOrder->is_instore ?? false),
+            )) {
+                DB::table('solds')->where('id', $lockedOrder->id)->update([
+                    'cashback_notified_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
 
             return $cashbackAmount;
         });
@@ -246,6 +314,8 @@ class OrderService
                 ->update([
                     'status'        => 'F',
                     'paymentStatus' => 3,
+                    'cashback_ready_at' => null,
+                    'cashback_notified_at' => null,
                     'updated_at'    => now(),
                 ]);
 
@@ -310,6 +380,8 @@ class OrderService
                 DB::table('solds')->where('id', $order->id)->update([
                     'awarded_cashback_amount' => 0,
                     'cashback_awarded_at' => null,
+                    'cashback_ready_at' => null,
+                    'cashback_notified_at' => null,
                     'updated_at' => now(),
                 ]);
 

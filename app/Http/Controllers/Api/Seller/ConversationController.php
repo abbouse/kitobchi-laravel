@@ -61,16 +61,16 @@ public function getConversations(Request $request) {
     if (!$seller) return response()->json(['status' => 'error'], 401);
 
     $sellerId = $seller->id;
+    $storeSellerId = $this->getStoreSellerId($seller);
 
     $conversations = Conversation::query()
         ->select('id', 'user_id', 'shop_id', 'type', 'last_message_at', 'hidden_by')
         // Faqat ushbu sellerga tegishli "shop" turidagi suhbatlarni olamiz
         ->where('type', 'shop')
-        ->where('shop_id', $sellerId) 
-        ->withCount(['messages as unread_count' => function($q) use ($sellerId) {
+        ->where('shop_id', $storeSellerId) 
+        ->withCount(['messages as unread_count' => function($q) {
             // Seller yubormagan va o'qilmagan xabarlar soni
-            $q->where('sender_id', '!=', $sellerId)
-              ->where('sender_type', '!=', Seller::class)
+            $q->where('sender_type', '!=', Seller::class)
               ->where('is_read', 0);
         }])
         ->addSelect([
@@ -85,10 +85,10 @@ public function getConversations(Request $request) {
         ->get();
 
     // 🔥 Backend filtering: hidden_by (Seller o'zi yashirgan bo'lsa chiqarmaydi)
-    $conversations = $conversations->filter(function($conv) use ($sellerId) {
+    $conversations = $conversations->filter(function($conv) use ($sellerId, $storeSellerId) {
         if (!$conv->hidden_by) return true;
         $hiddenBy = json_decode($conv->hidden_by, true);
-        return !is_array($hiddenBy) || !in_array($sellerId, $hiddenBy);
+        return !is_array($hiddenBy) || (!in_array($sellerId, $hiddenBy) && !in_array($storeSellerId, $hiddenBy));
     })->values();
 
     $conversations->transform(function ($conv) {
@@ -113,6 +113,10 @@ public function getConversations(Request $request) {
 
         $userId = $seller->id;
         $conversation = Conversation::find($id);
+        $storeSellerId = $this->getStoreSellerId($seller);
+        if (!$conversation || (int) $conversation->shop_id !== (int) $storeSellerId) {
+            return response()->json(['status' => 'error', 'message' => 'Ruxsat yo\'q'], 403);
+        }
 
         $messages = Message::where('conversation_id', $id)
             ->with('replyTo')
@@ -173,6 +177,10 @@ public function getConversations(Request $request) {
 
             if (!$conversation) {
                 throw new \Exception("Seller birinchi bo'lib suhbat boshlay olmaydi.");
+            }
+
+            if ((int) $conversation->shop_id !== (int) $this->getStoreSellerId($seller)) {
+                throw new \Exception("Ruxsat berilmagan.");
             }
 
             // 2. Bu suhbat haqiqatdan ham shu do'konnikimi?
@@ -274,7 +282,7 @@ public function getConversations(Request $request) {
 
     // 3. Authorization - Eng muhim joyi!
     // Suhbatdagi shop_id tizimga kirgan sellerning IDsi bilan bir xilmi?
-    if ((int)$conversation->shop_id !== (int)$authSeller->id) {
+    if ((int)$conversation->shop_id !== (int)$this->getStoreSellerId($authSeller)) {
         return response()->json(['status' => 'error', 'message' => 'Ruxsat yo\'q'], 403);
     }
 
@@ -299,8 +307,13 @@ public function getConversations(Request $request) {
         $seller = Auth::guard('seller')->user();
         if (!$seller) return response()->json(['status' => 'error'], 401);
 
+        $conversation = Conversation::find($conversationId);
+        if (!$conversation || (int) $conversation->shop_id !== (int) $this->getStoreSellerId($seller)) {
+            return response()->json(['status' => 'error', 'message' => 'Ruxsat yo\'q'], 403);
+        }
+
         $updated = Message::where('conversation_id', $conversationId)
-            ->where('sender_id', '!=', $seller->id)
+            ->where('sender_type', '!=', Seller::class)
             ->where('is_read', false)
             ->update(['is_read' => true]);
 

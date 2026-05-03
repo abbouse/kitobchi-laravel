@@ -10,6 +10,7 @@ use Illuminate\Queue\SerializesModels;
 use App\Models\Seller;
 use App\Models\Message;
 use App\Models\User;
+use App\Models\Couriers;
 
 class ConversationUpdated implements ShouldBroadcastNow
 {
@@ -31,9 +32,11 @@ class ConversationUpdated implements ShouldBroadcastNow
 
     public function broadcastOn(): array
     {
-        $channel = $this->targetGuard === 'seller'
-            ? 'seller.' . $this->forUserId
-            : 'user.' . $this->forUserId;
+        $channel = match ($this->targetGuard) {
+            'seller' => 'seller-store.' . $this->forUserId,
+            'courier' => 'courier.' . $this->forUserId,
+            default => 'user.' . $this->forUserId,
+        };
 
         return [new PrivateChannel($channel)];
     }
@@ -99,14 +102,37 @@ class ConversationUpdated implements ShouldBroadcastNow
             ]
         ];
     } elseif ($conversation->type === 'shop' && $conversation->shop_id) {
-        $seller = Seller::find($conversation->shop_id);
-        $otherPartyName = $seller?->shop_name ?? 'Do‘kon';
-        $isVerified = $seller?->isVerified ?? false;
-        $isSupport = $seller?->id == 1 ? true : false;
-        $avatar = $seller?->photo;
-        $lastSeenAt = null;
-        // Do'kon bo'lsa, sotuvchining (user) statusini olish kerak bo'lishi mumkin
-        // Agar Seller modelida user_id bo'lsa: $otherUser = $seller->user;
+        if ($this->targetGuard === 'seller') {
+            $otherUser = User::find($conversation->user_id);
+            $otherPartyName = $otherUser?->fullname ?? 'Foydalanuvchi';
+            $isVerified = $otherUser?->isVerified ?? false;
+            $isSupport = $otherUser?->isSupport ?? false;
+            $avatar = $otherUser?->avatar;
+            $lastSeenAt = $otherUser?->last_seen_at;
+        } else {
+            $seller = Seller::find($conversation->shop_id);
+            $otherPartyName = $seller?->shop_name ?? 'Do‘kon';
+            $isVerified = $seller?->isVerified ?? false;
+            $isSupport = $seller?->id == 1 ? true : false;
+            $avatar = $seller?->photo;
+            $lastSeenAt = null;
+        }
+    } elseif ($conversation->type === 'courier' && $conversation->courier_id) {
+        if ($this->targetGuard === 'courier') {
+            $otherUser = User::find($conversation->user_id);
+            $otherPartyName = $otherUser?->fullname ?? 'Mijoz';
+            $isVerified = $otherUser?->isVerified ?? false;
+            $isSupport = $otherUser?->isSupport ?? false;
+            $avatar = $otherUser?->avatar;
+            $lastSeenAt = $otherUser?->last_seen_at;
+        } else {
+            $courier = Couriers::find($conversation->courier_id);
+            $otherPartyName = $courier?->full_name ?? 'Kuryer';
+            $isVerified = true;
+            $isSupport = false;
+            $avatar = $courier?->photo;
+            $lastSeenAt = null;
+        }
     } else {
         // Shaxsiy chat: Kim qabul qiluvchi bo'lsa, o'shani topamiz
         $otherId = ($conversation->user_id == $forUserId) 
@@ -122,10 +148,18 @@ class ConversationUpdated implements ShouldBroadcastNow
     }
 
     // 2. Unread count (Sizning kodingiz)
-    $unreadCount = Message::where('conversation_id', $conversation->id)
-        ->where('sender_id', '!=', $forUserId)
-        ->where('is_read', false)
-        ->count();
+    $unreadQuery = Message::where('conversation_id', $conversation->id)
+        ->where('is_read', false);
+
+    if ($conversation->type === 'shop') {
+        $unreadQuery->where('sender_type', '!=', $this->targetGuard === 'seller' ? Seller::class : User::class);
+    } elseif ($conversation->type === 'courier') {
+        $unreadQuery->where('sender_type', '!=', $this->targetGuard === 'courier' ? Couriers::class : User::class);
+    } else {
+        $unreadQuery->where('sender_id', '!=', $forUserId);
+    }
+
+    $unreadCount = $unreadQuery->count();
 
     $lastMessage = $conversation->messages->first();
 
@@ -136,6 +170,8 @@ class ConversationUpdated implements ShouldBroadcastNow
             'user_id' => $conversation->user_id,
             'receiver_id' => $conversation->receiver_id,
             'shop_id' => $conversation->shop_id,
+            'courier_id' => $conversation->courier_id,
+            'order_id' => $conversation->order_id,
             'last_message_at' => $conversation->last_message_at,
             'other_party_name' => $otherPartyName,
             'last_message' => $lastMessage?->message ?? null,

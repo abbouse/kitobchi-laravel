@@ -11,6 +11,8 @@ class BotTicket extends Model
 
     protected $fillable = [
         'user_id',
+        'source_type',
+        'source_conversation_id',
         'username',
         'name',
         'operator_id',
@@ -24,6 +26,7 @@ class BotTicket extends Model
     protected $casts = [
         'closed_at' => 'datetime',
         'rating' => 'integer',
+        'source_conversation_id' => 'integer',
     ];
     
     public function operator()

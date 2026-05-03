@@ -400,6 +400,7 @@ Route::prefix('a122')->name('admin.')->group(function () {
             Route::delete('/delivery/{deliveryService}',       [SettingsController::class, 'destroyDelivery'])->name('delivery.destroy');
             Route::put('/contacts',                            [SettingsController::class, 'updateContacts'])->name('contacts');
             Route::put('/app-flags',                           [SettingsController::class, 'updateAppFlags'])->name('app-flags');
+            Route::put('/courier-bonus',                       [SettingsController::class, 'updateCourierBonus'])->name('courier-bonus');
             Route::put('/telegram',                            [SettingsController::class, 'updateTelegram'])->name('telegram');
         });
     });
