@@ -238,8 +238,8 @@ class SettingsController extends Controller
 
     public function updateTelegram(Request $request)
     {
-        $defaultIosRedirect = 'https://app3206985527-login.tg.dev';
-        $defaultAndroidRedirect = 'https://app2854400165-login.tg.dev/tglogin';
+        $defaultIosRedirect = 'https://app8515375616-login.tg.dev';
+        $defaultAndroidRedirect = 'https://app8515375616-login.tg.dev';
 
         $request->validate([
             'telegram_client_id'            => 'nullable|string|max:100',
@@ -288,10 +288,6 @@ class SettingsController extends Controller
 
         if (!$isTelegramUniversalLink && !$isSupportedCustomScheme) {
             return $fallback;
-        }
-
-        if ($requireAndroidPath && $path !== '/tglogin') {
-            return $isSupportedCustomScheme ? 'kitobchi://telegram-login' : $fallback;
         }
 
         return $value;

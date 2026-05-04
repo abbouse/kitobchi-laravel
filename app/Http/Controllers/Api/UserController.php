@@ -312,11 +312,27 @@ class UserController extends Controller
         if (!$user) {
             return response()->json(['status' => 'error', 'message' => "Bunday foydalanuvchi mavjud emas!"], 201);
         }
+        $validated = $request->validate([
+            'lat' => ['required', 'numeric'],
+            'lon' => ['required', 'numeric'],
+            'fullAddress' => ['required', 'string', 'max:1000'],
+            'countryCode' => ['nullable', 'string', 'max:8'],
+            'regionSlug' => ['nullable', 'string', 'max:100'],
+        ]);
+
+        $countryCode = strtoupper((string) ($validated['countryCode'] ?? ''));
+        if ($countryCode !== 'UZ') {
+            return response()->json([
+                'status' => 'error',
+                'message' => "Hozircha faqat O'zbekiston ichidagi manzillar qabul qilinadi.",
+            ], 422);
+        }
+
         $location            = new Locations();
         $location->user_id   = $user->id;
-        $location->lat       = $request->lat;
-        $location->lon       = $request->lon;
-        $location->fullAddress = $request->fullAddress;
+        $location->lat       = $validated['lat'];
+        $location->lon       = $validated['lon'];
+        $location->fullAddress = $validated['fullAddress'];
         $location->save();
         $user->update(['mainAddressID' => $location->id]);
         return response()->json(['status' => 'success', 'location_id' => $location->id], 201);

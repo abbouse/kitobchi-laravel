@@ -9,6 +9,8 @@
   $spentHours = $spentSeconds > 0 ? number_format($spentSeconds / 3600, 1) : '0';
   $mainAddressId = (int) data_get($user, 'mainAddressID', 0);
   $mainAddress = $addresses->firstWhere('id', $mainAddressId) ?? $addresses->first();
+  $verifyToken = data_get($user, 'verifyCode');
+  $isActivated = blank($verifyToken);
   $staffRoleLabel = match ((string) data_get($user, 'staff_role')) {
     'administrator' => 'Administrator',
     'moderator' => 'Moderator',
@@ -142,6 +144,8 @@
         <div class="data-kv"><dt>Telegram ID</dt><dd>{{ data_get($user,'telegram_id') ?: '—' }}</dd></div>
         <div class="data-kv"><dt>Til</dt><dd>{{ data_get($user,'locale') ?: 'uz' }}</dd></div>
         <div class="data-kv"><dt>Staff roli</dt><dd>{{ $staffRoleLabel }}</dd></div>
+        <div class="data-kv"><dt>Aktivlashtirish holati</dt><dd>{{ $isActivated ? 'Profilga kirgan / aktivlashtirilgan' : 'Tasdiqlash kutilmoqda' }}</dd></div>
+        <div class="data-kv"><dt>verifyToken</dt><dd>{{ $verifyToken ?: 'null' }}</dd></div>
         <div class="data-kv"><dt>Premium</dt><dd>{{ $user->is_premium ? 'Faol' : 'Yo‘q' }}</dd></div>
         <div class="data-kv"><dt>Premium muddati</dt><dd>{{ optional(data_get($user,'premium_until'))->format('d.m.Y H:i') ?: '—' }}</dd></div>
         <div class="data-kv"><dt>AI limiti</dt><dd>{{ number_format((int) data_get($user,'ai_limit', 0)) }}</dd></div>
