@@ -27,6 +27,26 @@ use Illuminate\Support\Facades\Auth;
 
 class UserController extends Controller
 {
+    private function isUzbekistanAddress(?string $address): bool
+    {
+        $normalized = mb_strtolower(trim((string) $address));
+
+        if ($normalized === '') {
+            return false;
+        }
+
+        return str_contains($normalized, 'uzbekiston')
+            || str_contains($normalized, 'uzbekistan')
+            || str_contains($normalized, 'узбекистан');
+    }
+
+    private function isWithinUzbekistanBounds(float $lat, float $lon): bool
+    {
+        return $lat >= 37.0
+            && $lat <= 45.7
+            && $lon >= 55.9
+            && $lon <= 73.3;
+    }
 
     // ════════════════════════════════════════════════════════════════════
     // HELPERS
@@ -320,8 +340,15 @@ class UserController extends Controller
             'regionSlug' => ['nullable', 'string', 'max:100'],
         ]);
 
+        $lat = (float) $validated['lat'];
+        $lon = (float) $validated['lon'];
+        $fullAddress = trim((string) $validated['fullAddress']);
         $countryCode = strtoupper((string) ($validated['countryCode'] ?? ''));
-        if ($countryCode !== 'UZ') {
+        $isWithinUzbekistan = $countryCode === 'UZ'
+            || $this->isUzbekistanAddress($fullAddress)
+            || $this->isWithinUzbekistanBounds($lat, $lon);
+
+        if (!$isWithinUzbekistan) {
             return response()->json([
                 'status' => 'error',
                 'message' => "Hozircha faqat O'zbekiston ichidagi manzillar qabul qilinadi.",
@@ -330,9 +357,9 @@ class UserController extends Controller
 
         $location            = new Locations();
         $location->user_id   = $user->id;
-        $location->lat       = $validated['lat'];
-        $location->lon       = $validated['lon'];
-        $location->fullAddress = $validated['fullAddress'];
+        $location->lat       = $lat;
+        $location->lon       = $lon;
+        $location->fullAddress = $fullAddress;
         $location->save();
         $user->update(['mainAddressID' => $location->id]);
         return response()->json(['status' => 'success', 'location_id' => $location->id], 201);

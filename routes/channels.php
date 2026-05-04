@@ -71,15 +71,19 @@ Broadcast::channel('seller-store.{storeId}', function ($user, $storeId) {
     return false;
 }, ['guards' => ['seller']]);
 
+Broadcast::channel('courier.feed', function ($user) {
+    // Bu kanal umumiy courier feed uchun. Guard allaqachon `courier` bilan
+    // autentifikatsiyadan o'tgan bo'ladi, shuning uchun bu yerda faqat haqiqiy
+    // model/id borligini tekshirish kifoya. `instanceof` ba'zi muhitlarda
+    // serialize/proxy holatlari sabab ortiqcha qat'iy bo'lib qolishi mumkin.
+    return !empty($user?->id);
+}, ['guards' => ['courier']]);
+
 Broadcast::channel('courier.{courierId}', function ($user, $courierId) {
     if ($user instanceof \App\Models\Couriers) {
         return (int) $user->id === (int) $courierId;
     }
     return false;
-}, ['guards' => ['courier']]);
-
-Broadcast::channel('courier.feed', function ($user) {
-    return $user instanceof \App\Models\Couriers;
 }, ['guards' => ['courier']]);
 
 // 🔥 GLOBAL ONLINE - Barcha online userlar

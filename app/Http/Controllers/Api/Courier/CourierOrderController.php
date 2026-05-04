@@ -16,6 +16,7 @@ use App\Services\QrTokenService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class CourierOrderController extends Controller
 {
@@ -37,8 +38,20 @@ class CourierOrderController extends Controller
             ], 401);
         }
 
-        $orders = CourierOrder::where('status', 'pending')
+        $orders = CourierOrder::query()
             ->whereNull('courier_id')
+            ->where(function ($query) {
+                $query->where('status', 'pending')
+                    // Ba'zi eski yoki callbackdan keyin sync bo'lmay qolgan
+                    // buyurtmalar `pay_process`da qolib ketgan bo'lishi mumkin.
+                    // Agar underlying Sold allaqachon to'langan bo'lsa
+                    // (`paymentStatus = 2`), kuryerga uni available sifatida
+                    // ko'rsatamiz.
+                    ->orWhere(function ($q) {
+                        $q->where('status', 'pay_process')
+                            ->whereHas('order', fn ($order) => $order->where('paymentStatus', 2));
+                    });
+            })
             ->with([
                 'paymentStatus',
                 'items.product',
@@ -49,6 +62,9 @@ class CourierOrderController extends Controller
             ->latest()
             ->get()
             ->map(function ($order) {
+                if ($order->status === 'pay_process' && (int) ($order->paymentStatus?->paymentStatus ?? 0) === 2) {
+                    $order->status = 'pending';
+                }
                 foreach ($order->items as $item) {
                     if ($item->product && $item->product->seller && $item->sellerLocation) {
                         $item->product->seller->location = $item->sellerLocation;
@@ -57,6 +73,13 @@ class CourierOrderController extends Controller
                 }
                 return $order;
             });
+
+        Log::info('Courier available orders fetched', [
+            'courier_id' => $courier->id,
+            'count' => $orders->count(),
+            'order_ids' => $orders->pluck('order_id')->values()->all(),
+            'statuses' => $orders->pluck('status')->values()->all(),
+        ]);
 
         return response()->json([
             'success' => true,

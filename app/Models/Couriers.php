@@ -6,6 +6,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\HasApiTokens;
 
 class Couriers extends Authenticatable
@@ -67,7 +68,24 @@ class Couriers extends Authenticatable
     // ── Password ───────────────────────────────────────────────────
     public function setPasswordAttribute($value)
     {
-        $this->attributes['password'] = bcrypt($value);
+        if ($value === null || $value === '') {
+            $this->attributes['password'] = $value;
+            return;
+        }
+
+        $stringValue = (string) $value;
+
+        // Plain password kelsa hash qilamiz, allaqachon hash bo'lgan qiymatni
+        // esa yana hash qilib yubormaymiz.
+        $this->attributes['password'] = Hash::needsRehash($stringValue)
+            ? bcrypt($stringValue)
+            : $stringValue;
+    }
+
+    public function setPhoneNumberAttribute($value)
+    {
+        $digits = preg_replace('/\D+/', '', (string) $value) ?? '';
+        $this->attributes['phone_number'] = $digits;
     }
 
     // ── Relationships ──────────────────────────────────────────────

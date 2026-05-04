@@ -10,6 +10,7 @@ use App\Models\Couriers;
 use App\Models\ConnectedDevice;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 class CourierAuthController extends Controller
@@ -18,6 +19,17 @@ class CourierAuthController extends Controller
         private readonly SmsService $smsService,
         private readonly PasswordResetService $passwordResetService
     ) {
+    }
+
+    private function findCourierByNormalizedPhone(string $phone): ?Couriers
+    {
+        return Couriers::query()
+            ->where('phone_number', $phone)
+            ->orWhereRaw(
+                "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phone_number, '+', ''), ' ', ''), '(', ''), ')', ''), '-', '') = ?",
+                [$phone]
+            )
+            ->first();
     }
 
     public function auth(Request $request)
@@ -41,9 +53,21 @@ class CourierAuthController extends Controller
             ], 422);
         }
 
-        $courier = Couriers::where('phone_number', $rawPhone)->first();
+        $courier = $this->findCourierByNormalizedPhone($rawPhone);
+        $passwordMatches = $courier
+            ? Hash::check((string) $request->password, (string) $courier->password)
+            : false;
 
-        if (!$courier || !Hash::check($request->password, $courier->password)) {
+        if (!$courier || !$passwordMatches) {
+            Log::warning('Courier auth failed', [
+                'phone_number' => $rawPhone,
+                'courier_found' => (bool) $courier,
+                'courier_id' => $courier?->id,
+                'courier_status' => $courier?->status,
+                'password_match' => $passwordMatches,
+                'device_id' => (string) $request->input('device_id'),
+                'platform' => (string) $request->input('platform'),
+            ]);
             return response()->json([
                 'status'     => 'error',
                 'error_code' => 'courier_invalid_credentials',
@@ -124,7 +148,7 @@ class CourierAuthController extends Controller
             ], 422);
         }
 
-        $existingCourier = Couriers::where('phone_number', $rawPhone)->first();
+        $existingCourier = $this->findCourierByNormalizedPhone($rawPhone);
         if ($existingCourier) {
             if ($existingCourier->status === 'approved') {
                 return response()->json([
@@ -170,7 +194,7 @@ class CourierAuthController extends Controller
             ], 422);
         }
 
-        $courier = Couriers::where('phone_number', $cleanedPhone)->first();
+        $courier = $this->findCourierByNormalizedPhone($cleanedPhone);
 
         if (!$courier) {
             return response()->json([
