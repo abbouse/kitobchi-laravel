@@ -43,8 +43,8 @@ class ProjectSettingController extends Controller
                 'telegram' => [
                     'enabled' => (bool) ($s->telegram_login_enabled ?? false),
                     'client_id' => $s->telegram_client_id,
-                    'redirect_uri_ios' => $s->telegram_redirect_uri_ios ?: 'https://app8515375616-login.tg.dev',
-                    'redirect_uri_android' => $s->telegram_redirect_uri_android ?: 'https://app8515375616-login.tg.dev',
+                    'redirect_uri_ios' => $s->telegram_redirect_uri_ios ?: 'kitobchi://tglogin',
+                    'redirect_uri_android' => $s->telegram_redirect_uri_android ?: 'https://app2234481912-login.tg.dev',
                     'scopes' => $s->telegram_scopes ?: 'openid profile phone',
                 ],
             ]],
