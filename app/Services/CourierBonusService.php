@@ -35,6 +35,10 @@ use Illuminate\Support\Facades\Log;
  */
 class CourierBonusService
 {
+    public const MAX_CUSTOMER_DELAY_COUNT = 3;
+    public const MAX_CUSTOMER_DELAY_SECONDS = 900;
+    public const MAX_SINGLE_CUSTOMER_DELAY_SECONDS = 300;
+
     private const DEFAULT_SURGE_STEP      = 500;
     private const DEFAULT_SURGE_MAX       = 10000;
     private const DEFAULT_SURGE_THRESHOLD = 5000;
@@ -166,7 +170,12 @@ class CourierBonusService
         // hisoblab total_delay_seconds ga qo'shamiz (ya'ni delivery payti pause
         // tugagan deb qabul qilamiz).
         if ($order->is_customer_delay && $order->customer_delay_started_at) {
-            $delayElapsed = $now->diffInSeconds(Carbon::parse($order->customer_delay_started_at));
+            $startedAt = Carbon::parse($order->customer_delay_started_at);
+            $delayElapsed = $startedAt->greaterThan($now)
+                ? 0
+                : $startedAt->diffInSeconds($now);
+            $remainingBudget = max(0, self::MAX_CUSTOMER_DELAY_SECONDS - (int) $order->total_delay_seconds);
+            $delayElapsed = min($delayElapsed, self::MAX_SINGLE_CUSTOMER_DELAY_SECONDS, $remainingBudget);
             $order->total_delay_seconds = (int) $order->total_delay_seconds + $delayElapsed;
             $order->is_customer_delay = false;
             $order->customer_delay_started_at = null;
@@ -209,14 +218,42 @@ class CourierBonusService
         $now = Carbon::now();
 
         if (!$order->is_customer_delay) {
+            if ((int) $order->customer_delay_count >= self::MAX_CUSTOMER_DELAY_COUNT) {
+                return [
+                    'success'             => false,
+                    'paused'              => false,
+                    'total_delay_seconds' => (int) $order->total_delay_seconds,
+                    'customer_delay_count'=> (int) $order->customer_delay_count,
+                    'remaining_delay_seconds' => max(0, self::MAX_CUSTOMER_DELAY_SECONDS - (int) $order->total_delay_seconds),
+                    'message'             => __('courier_api.customer_delay_limit_reached'),
+                    'sla_deadline'        => optional($order->sla_deadline)->toIso8601String(),
+                ];
+            }
+
+            if ((int) $order->total_delay_seconds >= self::MAX_CUSTOMER_DELAY_SECONDS) {
+                return [
+                    'success'             => false,
+                    'paused'              => false,
+                    'total_delay_seconds' => (int) $order->total_delay_seconds,
+                    'customer_delay_count'=> (int) $order->customer_delay_count,
+                    'remaining_delay_seconds' => 0,
+                    'message'             => __('courier_api.customer_delay_limit_reached'),
+                    'sla_deadline'        => optional($order->sla_deadline)->toIso8601String(),
+                ];
+            }
+
             // PAUSE
             $order->is_customer_delay = true;
             $order->customer_delay_started_at = $now;
+            $order->customer_delay_count = (int) $order->customer_delay_count + 1;
             $order->save();
 
             return [
+                'success'             => true,
                 'paused'              => true,
                 'total_delay_seconds' => (int) $order->total_delay_seconds,
+                'customer_delay_count'=> (int) $order->customer_delay_count,
+                'remaining_delay_seconds' => max(0, self::MAX_CUSTOMER_DELAY_SECONDS - (int) $order->total_delay_seconds),
                 'sla_deadline'        => optional($order->sla_deadline)->toIso8601String(),
             ];
         }
@@ -224,8 +261,14 @@ class CourierBonusService
         // RESUME
         $delayElapsed = 0;
         if ($order->customer_delay_started_at) {
-            $delayElapsed = $now->diffInSeconds(Carbon::parse($order->customer_delay_started_at));
+            $startedAt = Carbon::parse($order->customer_delay_started_at);
+            $delayElapsed = $startedAt->greaterThan($now)
+                ? 0
+                : $startedAt->diffInSeconds($now);
         }
+
+        $remainingBudget = max(0, self::MAX_CUSTOMER_DELAY_SECONDS - (int) $order->total_delay_seconds);
+        $delayElapsed = min($delayElapsed, self::MAX_SINGLE_CUSTOMER_DELAY_SECONDS, $remainingBudget);
 
         $order->total_delay_seconds = (int) $order->total_delay_seconds + $delayElapsed;
         $order->is_customer_delay = false;
@@ -240,8 +283,11 @@ class CourierBonusService
         $order->save();
 
         return [
+            'success'             => true,
             'paused'              => false,
             'total_delay_seconds' => (int) $order->total_delay_seconds,
+            'customer_delay_count'=> (int) $order->customer_delay_count,
+            'remaining_delay_seconds' => max(0, self::MAX_CUSTOMER_DELAY_SECONDS - (int) $order->total_delay_seconds),
             'sla_deadline'        => optional($order->sla_deadline)->toIso8601String(),
         ];
     }

@@ -19,8 +19,6 @@
   </script>
 
   <?php echo app('Illuminate\Foundation\Vite')(['resources/css/app.css', 'resources/js/app.js', 'resources/css/a122-admin.css', 'resources/css/kitobchi-pastel.css', 'resources/js/a122-admin.js']); ?>
-  <script src="https://cdn.jsdelivr.net/npm/apexcharts@3/dist/apexcharts.min.js"></script>
-
   <?php echo $__env->yieldPushContent('styles'); ?>
   <?php echo $__env->yieldPushContent('head'); ?>
 </head>

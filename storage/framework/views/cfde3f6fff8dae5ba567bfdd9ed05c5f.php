@@ -900,6 +900,19 @@ const revData = {
   today: { labels:['Bugun'], data:[<?php echo e(round($todayRevenue/1_000_000,2)); ?>], formatter:v=>v+'M' },
 };
 
+function _getApex() {
+  if (window.ApexCharts) return window.ApexCharts;
+  console.error('ApexCharts not available');
+  return null;
+}
+
+function _setChartFallback(hostId, message = "Chart yuklanmadi") {
+  const host = document.getElementById(hostId);
+  if (!host) return null;
+  host.innerHTML = `<div class="dash-empty"><i class="bi bi-bar-chart-line dash-empty__ico"></i>${message}</div>`;
+  return host;
+}
+
 // ── Tab system ───────────────────────────────────────────────────────────────
 const _tabInitialized = { main: true };
 function _initTab(tab) {
@@ -909,8 +922,24 @@ function _initTab(tab) {
 }
 
 // ── Orders tab ───────────────────────────────────────────────────────────────
+let _ordersWeekChart = null;
+let _revenueWeekChart = null;
+let _orderDonutChart = null;
 function _initOrderCharts() {
-  new ApexCharts(document.getElementById('chartOrdersWeek'), {
+  const Apex = _getApex();
+  if (!Apex) {
+    _setChartFallback('chartOrdersWeek');
+    _setChartFallback('chartRevenueWeek');
+    _setChartFallback('chartDonut');
+    return;
+  }
+
+  const ordersWeekHost = document.getElementById('chartOrdersWeek');
+  const revenueWeekHost = document.getElementById('chartRevenueWeek');
+  const donutHost = document.getElementById('chartDonut');
+  if (!ordersWeekHost || !revenueWeekHost || !donutHost) return;
+
+  const ordersWeekOptions = {
     series:[{name:'Buyurtmalar',data:<?php echo $ordWeekCounts; ?>}],
     chart:{type:'area',height:220,toolbar:{show:false},background:'transparent',fontFamily:'Inter,sans-serif',animations:{enabled:true,speed:450}},
     colors:[C.accent],stroke:{curve:'smooth',width:2.5},
@@ -921,9 +950,16 @@ function _initOrderCharts() {
     grid:{borderColor:C.grid,strokeDashArray:4,xaxis:{lines:{show:false}}},
     markers:{size:0,hover:{size:5}},
     tooltip:{theme:isDark?'dark':'light',y:{formatter:v=>v+' ta'}},
-  }).render();
+  };
 
-  new ApexCharts(document.getElementById('chartRevenueWeek'), {
+  if (_ordersWeekChart) {
+    _ordersWeekChart.updateOptions(ordersWeekOptions, true, true);
+  } else {
+    _ordersWeekChart = new Apex(ordersWeekHost, ordersWeekOptions);
+    _ordersWeekChart.render();
+  }
+
+  const revenueWeekOptions = {
     series:[{name:'Daromad',data:<?php echo $weekAmounts; ?>}],
     chart:{type:'area',height:220,toolbar:{show:false},background:'transparent',fontFamily:'Inter,sans-serif',animations:{enabled:true,speed:450}},
     colors:[C.success],stroke:{curve:'smooth',width:2.5},
@@ -934,9 +970,16 @@ function _initOrderCharts() {
     grid:{borderColor:C.grid,strokeDashArray:4,xaxis:{lines:{show:false}}},
     markers:{size:0,hover:{size:5}},
     tooltip:{theme:isDark?'dark':'light',y:{formatter:v=>v+' mln UZS'}},
-  }).render();
+  };
 
-  new ApexCharts(document.getElementById('chartDonut'), {
+  if (_revenueWeekChart) {
+    _revenueWeekChart.updateOptions(revenueWeekOptions, true, true);
+  } else {
+    _revenueWeekChart = new Apex(revenueWeekHost, revenueWeekOptions);
+    _revenueWeekChart.render();
+  }
+
+  const donutOptions = {
     series:[<?php echo e($completedOrders); ?>,<?php echo e($onwayOrders); ?>,<?php echo e($packingOrders); ?>,<?php echo e($pendingOrders); ?>,<?php echo e($cancelledOrders); ?>],
     labels:['Yetkazildi',"Yo'lda",'Qadoqlanmoqda','Kutilmoqda','Bekor'],
     colors:[C.success,C.info,C.accent,C.warning,C.danger],
@@ -946,19 +989,44 @@ function _initOrderCharts() {
     plotOptions:{pie:{donut:{size:'74%',labels:{show:true,total:{show:true,label:'Jami',fontSize:'12px',color:C.muted,formatter:()=>'<?php echo e(number_format($totalOrders)); ?>'},value:{fontSize:'20px',fontWeight:700,color:C.text,fontFamily:'JetBrains Mono,monospace'}}}}}},
     stroke:{width:2,colors:[C.surface]},
     tooltip:{theme:isDark?'dark':'light'},
-  }).render();
+  };
+
+  if (_orderDonutChart) {
+    _orderDonutChart.updateOptions(donutOptions, true, true);
+  } else {
+    _orderDonutChart = new Apex(donutHost, donutOptions);
+    _orderDonutChart.render();
+  }
+
+  setTimeout(() => window.dispatchEvent(new Event('resize')), 60);
 }
 
 // ── Finance tab ──────────────────────────────────────────────────────────────
 let _revChart = null;
 let _salesGeoChart = null;
+let _aovChart = null;
+let _typePieChart = null;
+let _buyersChart = null;
 const salesGeoState = {
   selected: <?php echo json_encode($salesGeoDefaultCountry, 15, 512) ?>,
   countries: <?php echo json_encode($salesGeoCountries, 15, 512) ?>,
   regions: <?php echo json_encode($salesGeoRegionsByCountry, 15, 512) ?>,
 };
 function _initFinanceCharts() {
-  _revChart = new ApexCharts(document.getElementById('chartRevenue'), {
+  const Apex = _getApex();
+  if (!Apex) {
+    _setChartFallback('chartRevenue');
+    _setChartFallback('chartAov');
+    _setChartFallback('chartTypePie');
+    _setChartFallback('chartBuyers');
+    _setChartFallback('chartSalesGeo');
+    return;
+  }
+
+  const revenueHost = document.getElementById('chartRevenue');
+  if (!revenueHost) return;
+
+  const revenueOptions = {
     series:[{name:'Daromad',data:revData.month.data}],
     chart:{type:'bar',height:288,toolbar:{show:false},background:'transparent',fontFamily:'Inter,sans-serif',animations:{enabled:true,speed:500}},
     colors:[C.accent],
@@ -969,12 +1037,22 @@ function _initFinanceCharts() {
     grid:{borderColor:C.grid,strokeDashArray:5,xaxis:{lines:{show:false}}},
     tooltip:{theme:isDark?'dark':'light',y:{formatter:v=>v+' mln UZS'}},
     fill:{type:'gradient',gradient:{shade:'dark',type:'vertical',gradientToColors:['#2650cc'],stops:[0,100]}},
-  });
-  _revChart.render();
+  };
+
+  if (_revChart) {
+    _revChart.updateOptions(revenueOptions, true, true);
+  } else {
+    _revChart = new Apex(revenueHost, revenueOptions);
+    _revChart.render();
+  }
 
   <?php if($isSuperAdmin): ?>
   <?php $aovLabels=collect($aovMonthly)->pluck('month')->toJson();$aovVals=collect($aovMonthly)->pluck('aov')->toJson(); ?>
-  new ApexCharts(document.getElementById('chartAov'), {
+  const aovHost = document.getElementById('chartAov');
+  const typePieHost = document.getElementById('chartTypePie');
+  const buyersHost = document.getElementById('chartBuyers');
+
+  const aovOptions = {
     series:[{name:'AOV',data:<?php echo $aovVals; ?>}],
     chart:{type:'line',height:130,toolbar:{show:false},background:'transparent',fontFamily:'Inter,sans-serif'},
     colors:[C.teal],stroke:{curve:'smooth',width:2.5},
@@ -983,37 +1061,67 @@ function _initFinanceCharts() {
     yaxis:{labels:{style:{colors:C.muted,fontSize:'10px'},formatter:v=>Math.round(v/1000)+'K'}},
     grid:{borderColor:C.grid,strokeDashArray:4},
     tooltip:{theme:isDark?'dark':'light',y:{formatter:v=>Number(v).toLocaleString()+' UZS'}},
-  }).render();
+  };
+  if (aovHost) {
+    if (_aovChart) {
+      _aovChart.updateOptions(aovOptions, true, true);
+    } else {
+      _aovChart = new Apex(aovHost, aovOptions);
+      _aovChart.render();
+    }
+  }
 
-  new ApexCharts(document.getElementById('chartTypePie'), {
+  const typePieOptions = {
     series:[<?php echo e($revenueByType['book']); ?>,<?php echo e($revenueByType['stationery']); ?>],
     labels:['Kitoblar','Kanstovar'],colors:[C.accent,C.warning],
     chart:{type:'donut',height:120,toolbar:{show:false},background:'transparent'},
     dataLabels:{enabled:false},legend:{show:false},stroke:{width:2,colors:[C.surface]},
     plotOptions:{pie:{donut:{size:'65%'}}},
     tooltip:{theme:isDark?'dark':'light',y:{formatter:v=>Math.round(v/1000)+'K UZS'}},
-  }).render();
+  };
+  if (typePieHost) {
+    if (_typePieChart) {
+      _typePieChart.updateOptions(typePieOptions, true, true);
+    } else {
+      _typePieChart = new Apex(typePieHost, typePieOptions);
+      _typePieChart.render();
+    }
+  }
 
-  new ApexCharts(document.getElementById('chartBuyers'), {
+  const buyersOptions = {
     series:[<?php echo e($newBuyersMonth); ?>,<?php echo e($repeatBuyersMonth); ?>],
     labels:['Yangi','Takroriy'],colors:[C.success,C.accent],
     chart:{type:'donut',height:120,toolbar:{show:false},background:'transparent'},
     dataLabels:{enabled:false},legend:{show:false},stroke:{width:2,colors:[C.surface]},
     plotOptions:{pie:{donut:{size:'65%'}}},
     tooltip:{theme:isDark?'dark':'light',y:{formatter:v=>v+' ta'}},
-  }).render();
+  };
+  if (buyersHost) {
+    if (_buyersChart) {
+      _buyersChart.updateOptions(buyersOptions, true, true);
+    } else {
+      _buyersChart = new Apex(buyersHost, buyersOptions);
+      _buyersChart.render();
+    }
+  }
   <?php endif; ?>
 
   _initSalesGeoChart();
+  setTimeout(() => window.dispatchEvent(new Event('resize')), 60);
 }
 
 function _initSalesGeoChart() {
+  const Apex = _getApex();
   const host = document.getElementById('chartSalesGeo');
   if (!host || !salesGeoState.selected) return;
+  if (!Apex) {
+    _setChartFallback('chartSalesGeo');
+    return;
+  }
 
   const regions = salesGeoState.regions[salesGeoState.selected] || [];
   const categories = regions.map(r => r.label);
-  const revenueData = regions.map(r => Number((r.revenue || 0) / 1000000).toFixed(2));
+  const revenueData = regions.map(r => Number(((r.revenue || 0) / 1000000).toFixed(2)));
 
   if (_salesGeoChart) {
     _salesGeoChart.updateOptions({
@@ -1021,7 +1129,7 @@ function _initSalesGeoChart() {
       xaxis:{categories},
     });
   } else {
-    _salesGeoChart = new ApexCharts(host, {
+    _salesGeoChart = new Apex(host, {
       series:[{name:'Sotuv', data: revenueData}],
       chart:{type:'bar',height:220,toolbar:{show:false},background:'transparent',fontFamily:'Inter,sans-serif'},
       colors:[C.accent],
@@ -1095,15 +1203,29 @@ function switchSalesGeoCountry(btn, countryKey) {
 }
 
 // ── Users tab ────────────────────────────────────────────────────────────────
+let _userSparkChart = null;
 function _initUserCharts() {
+  const Apex = _getApex();
+  if (!Apex) {
+    _setChartFallback('chartUserSparkline');
+    return;
+  }
+  const host = document.getElementById('chartUserSparkline');
+  if (!host) return;
   <?php $sparkDays=collect($dailyNewUsers)->pluck('day')->toJson();$sparkCounts=collect($dailyNewUsers)->pluck('count')->toJson(); ?>
-  new ApexCharts(document.getElementById('chartUserSparkline'), {
+  const sparkOptions = {
     series:[{name:'Yangi user',data:<?php echo $sparkCounts; ?>}],
     chart:{type:'bar',height:60,sparkline:{enabled:true},background:'transparent'},
     colors:[C.accent],plotOptions:{bar:{borderRadius:3,columnWidth:'60%'}},
     xaxis:{categories:<?php echo $sparkDays; ?>},
     tooltip:{theme:isDark?'dark':'light',y:{formatter:v=>v+' ta'}},
-  }).render();
+  };
+  if (_userSparkChart) {
+    _userSparkChart.updateOptions(sparkOptions, true, true);
+  } else {
+    _userSparkChart = new Apex(host, sparkOptions);
+    _userSparkChart.render();
+  }
 }
 
 // ── Period toggle ────────────────────────────────────────────────────────────

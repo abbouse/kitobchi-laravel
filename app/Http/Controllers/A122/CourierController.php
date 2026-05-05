@@ -112,11 +112,24 @@ class CourierController extends Controller
         $recentOrders = CourierOrder::with([
                 'user:id,name,lastname,phone_number',
                 'order:id,status,paymentStatus,deliveryType,amount',
+                'items.product.seller',
+                'items.sellerLocation',
+                'customer.location',
             ])
             ->where('courier_id', $courier->id)
             ->latest()
             ->take(8)
             ->get();
+        $activeOrders = CourierOrder::with([
+                'items.product.seller',
+                'items.sellerLocation',
+                'customer.location',
+            ])
+            ->where('courier_id', $courier->id)
+            ->where('status', 'in_delivery')
+            ->latest()
+            ->get()
+            ->map(fn (CourierOrder $order) => $this->attachRouteMeta($order, $courier));
         $recentTransactions = CourierTransaction::where('courier_id', $courier->id)
             ->latest()
             ->take(8)
@@ -128,8 +141,109 @@ class CourierController extends Controller
 
         return view('a122.couriers.show', compact(
             'courier', 'orderCount', 'totalEarned', 'recentOrders',
-            'recentTransactions', 'banLogs', 'warningCount'
+            'recentTransactions', 'banLogs', 'warningCount', 'activeOrders'
         ));
+    }
+
+    private function attachRouteMeta(CourierOrder $order, Couriers $courier): CourierOrder
+    {
+        $shops = [];
+        foreach ($order->items as $item) {
+            $lat = (float) data_get($item, 'sellerLocation.lat', 0);
+            $lon = (float) data_get($item, 'sellerLocation.lon', 0);
+            $sellerId = (int) ($item->seller_id ?? data_get($item, 'product.seller_id', 0));
+
+            if ($sellerId <= 0 || ($lat == 0.0 && $lon == 0.0)) {
+                continue;
+            }
+
+            $shops[$sellerId] = [
+                'seller_id' => $sellerId,
+                'name' => data_get($item, 'product.seller.shop_name') ?: "Do'kon #{$sellerId}",
+                'lat' => $lat,
+                'lon' => $lon,
+                'address' => data_get($item, 'sellerLocation.fullAddress') ?: data_get($item, 'product.seller.location.fullAddress'),
+                'type' => 'shop',
+            ];
+        }
+
+        $courierLat = (float) ($courier->current_lat ?? 0);
+        $courierLon = (float) ($courier->current_lon ?? 0);
+        $currentLat = $courierLat;
+        $currentLon = $courierLon;
+        $remaining = array_values($shops);
+        $routePoints = [];
+
+        while (!empty($remaining)) {
+            if ($currentLat == 0.0 && $currentLon == 0.0) {
+                $next = array_shift($remaining);
+                if ($next) {
+                    $routePoints[] = $next;
+                    $currentLat = (float) $next['lat'];
+                    $currentLon = (float) $next['lon'];
+                }
+                continue;
+            }
+
+            usort($remaining, function ($a, $b) use ($currentLat, $currentLon) {
+                return $this->geoDistance($currentLat, $currentLon, (float) $a['lat'], (float) $a['lon'])
+                    <=> $this->geoDistance($currentLat, $currentLon, (float) $b['lat'], (float) $b['lon']);
+            });
+
+            $next = array_shift($remaining);
+            if ($next) {
+                $routePoints[] = $next;
+                $currentLat = (float) $next['lat'];
+                $currentLon = (float) $next['lon'];
+            }
+        }
+
+        $customerLat = (float) data_get($order, 'customer.location.lat', 0);
+        $customerLon = (float) data_get($order, 'customer.location.lon', 0);
+        if (!($customerLat == 0.0 && $customerLon == 0.0)) {
+            $routePoints[] = [
+                'seller_id' => null,
+                'name' => trim((data_get($order, 'customer.name', '') . ' ' . data_get($order, 'customer.lastname', ''))) ?: 'Mijoz',
+                'lat' => $customerLat,
+                'lon' => $customerLon,
+                'address' => data_get($order, 'customer.location.fullAddress'),
+                'type' => 'customer',
+            ];
+        }
+
+        $totalDistanceKm = 0.0;
+        $fromLat = $courierLat;
+        $fromLon = $courierLon;
+        foreach ($routePoints as $point) {
+            $pointLat = (float) ($point['lat'] ?? 0);
+            $pointLon = (float) ($point['lon'] ?? 0);
+            if (!($fromLat == 0.0 && $fromLon == 0.0)) {
+                $totalDistanceKm += $this->geoDistance($fromLat, $fromLon, $pointLat, $pointLon);
+            }
+            $fromLat = $pointLat;
+            $fromLon = $pointLon;
+        }
+
+        $order->route_points = $routePoints;
+        $order->route_distance_km = round($totalDistanceKm, 2);
+
+        return $order;
+    }
+
+    private function geoDistance(float $lat1, float $lon1, float $lat2, float $lon2): float
+    {
+        if (($lat1 == 0.0 && $lon1 == 0.0) || ($lat2 == 0.0 && $lon2 == 0.0)) {
+            return 0.0;
+        }
+
+        $earthRadius = 6371;
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLon = deg2rad($lon2 - $lon1);
+        $a = sin($dLat / 2) ** 2
+            + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLon / 2) ** 2;
+        $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
+
+        return $earthRadius * $c;
     }
 
     public function edit(Couriers $courier)

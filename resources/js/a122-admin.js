@@ -1,4 +1,9 @@
 import { createIcons, icons } from 'lucide';
+import ApexCharts from 'apexcharts';
+
+if (!window.ApexCharts) {
+  window.ApexCharts = ApexCharts;
+}
 
 (function () {
   const saved = localStorage.getItem('a122-theme') || localStorage.getItem('theme');

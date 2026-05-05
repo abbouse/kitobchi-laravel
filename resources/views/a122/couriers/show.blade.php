@@ -202,6 +202,103 @@
     </div>
 </div>
 
+@php
+    $courierLat = (float) ($courier->current_lat ?? 0);
+    $courierLon = (float) ($courier->current_lon ?? 0);
+    $hasCourierLocation = !($courierLat == 0.0 && $courierLon == 0.0);
+    $courierStaticMap = $hasCourierLocation
+        ? 'https://static-maps.yandex.ru/1.x/?lang=ru_RU&size=650,280&z=13&l=map&pt='.$courierLon.','.$courierLat.',pm2blm'
+        : null;
+@endphp
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+    <div class="card p-5">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold text-base flex items-center gap-2">
+                <i data-lucide="map-pinned" class="w-5 h-5 text-blue-500"></i>
+                Hozirgi joylashuv
+            </h3>
+            @if($courier->location_updated_at)
+                <span class="text-xs text-gray-400">{{ $courier->location_updated_at->format('d.m.Y H:i') }}</span>
+            @endif
+        </div>
+        @if($hasCourierLocation)
+            <div class="overflow-hidden rounded-2xl border border-gray-200 dark:border-white/10">
+                <img src="{{ $courierStaticMap }}" alt="Courier location map" class="w-full h-64 object-cover">
+            </div>
+            <div class="mt-3 text-sm text-gray-600 dark:text-gray-400">
+                {{ number_format($courierLat, 6) }}, {{ number_format($courierLon, 6) }}
+            </div>
+        @else
+            <div class="rounded-xl border border-dashed border-gray-300 dark:border-white/10 px-4 py-10 text-sm text-gray-400 text-center">
+                Kuryerning joriy lokatsiyasi hali kelmagan.
+            </div>
+        @endif
+    </div>
+
+    <div class="card p-5">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold text-base flex items-center gap-2">
+                <i data-lucide="route" class="w-5 h-5 text-emerald-500"></i>
+                Aktiv yo‘nalishlar
+            </h3>
+            <span class="text-xs text-gray-400">{{ $activeOrders->count() }} ta aktiv</span>
+        </div>
+        @if($activeOrders->isEmpty())
+            <div class="rounded-xl border border-dashed border-gray-300 dark:border-white/10 px-4 py-10 text-sm text-gray-400 text-center">
+                Aktiv buyurtmalar yo‘q.
+            </div>
+        @else
+            <div class="space-y-4">
+                @foreach($activeOrders as $activeOrder)
+                    @php
+                        $routePoints = collect($activeOrder->route_points ?? []);
+                        $firstPoint = $routePoints->first();
+                        $lastPoint = $routePoints->last();
+                        $pins = [];
+                        if ($hasCourierLocation) {
+                            $pins[] = $courierLon.','.$courierLat.',pm2blm';
+                        }
+                        foreach($routePoints as $point) {
+                            $pins[] = ((float) ($point['lon'] ?? 0)).','.((float) ($point['lat'] ?? 0)).','.($point['type'] === 'customer' ? 'pm2grm' : 'pm2orm');
+                        }
+                        $routeMap = !empty($pins)
+                            ? 'https://static-maps.yandex.ru/1.x/?lang=ru_RU&size=650,240&z=11&l=map&pt='.implode('~', $pins)
+                            : null;
+                    @endphp
+                    <div class="rounded-2xl border border-gray-200 dark:border-white/10 p-4">
+                        <div class="flex items-start justify-between gap-3 mb-3">
+                            <div>
+                                <div class="font-semibold text-slate-900 dark:text-white">Order #{{ $activeOrder->order_id }}</div>
+                                <div class="text-xs text-gray-500">{{ number_format($activeOrder->route_distance_km ?? 0, 2) }} km route</div>
+                            </div>
+                            <a href="{{ route('admin.courier-orders.show', $activeOrder) }}" class="text-xs text-[var(--p-accent)] hover:underline">Ochish</a>
+                        </div>
+                        @if($routeMap)
+                            <div class="overflow-hidden rounded-xl border border-gray-200 dark:border-white/10 mb-3">
+                                <img src="{{ $routeMap }}" alt="Courier route map" class="w-full h-52 object-cover">
+                            </div>
+                        @endif
+                        <div class="space-y-2 text-sm">
+                            @foreach($routePoints as $idx => $point)
+                                <div class="flex items-start gap-2">
+                                    <span class="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full {{ ($point['type'] ?? 'shop') === 'customer' ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700' }}">{{ $idx + 1 }}</span>
+                                    <div class="min-w-0">
+                                        <div class="font-medium text-slate-900 dark:text-white">{{ $point['name'] ?? 'Nuqta' }}</div>
+                                        @if(!empty($point['address']))
+                                            <div class="text-xs text-gray-500 truncate">{{ $point['address'] }}</div>
+                                        @endif
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        @endif
+    </div>
+</div>
+
 {{-- ══ TRANSPORT + KARTA + HUJJATLAR ════════════════════════════════ --}}
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
     {{-- Transport va karta kartochkasi --}}

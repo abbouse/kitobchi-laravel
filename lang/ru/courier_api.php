@@ -44,4 +44,5 @@ return [
     'customer_delay_marked'      => 'Клиент не отвечает — таймер приостановлен.',
     'customer_delay_resumed'     => 'Пауза снята, таймер возобновлён.',
     'customer_delay_invalid'     => 'Для этого заказа пауза недоступна.',
+    'customer_delay_limit_reached' => 'Лимит пауз исчерпан. Для этого заказа пауза больше недоступна.',
 ];

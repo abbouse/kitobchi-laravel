@@ -45,7 +45,7 @@ class Couriers extends Authenticatable
         'driver_license_issued_at', 'driver_license_expires_at',
 
         // ── Bank/karta egasi va manzil ──────────────────────────
-        'card_holder', 'home_address',
+        'card_holder', 'home_address', 'current_lat', 'current_lon', 'location_updated_at',
 
         // ── Verifikatsiya ───────────────────────────────────────
         'verification_status', 'verified_at', 'verification_notes',
@@ -63,6 +63,9 @@ class Couriers extends Authenticatable
         'driver_license_issued_at'   => 'date',
         'driver_license_expires_at'  => 'date',
         'verified_at'                => 'datetime',
+        'current_lat'                => 'float',
+        'current_lon'                => 'float',
+        'location_updated_at'        => 'datetime',
     ];
 
     // ── Password ───────────────────────────────────────────────────

@@ -107,6 +107,26 @@ class CourierController extends Controller
 
         return response()->json(['success' => true], 200);
     }
+
+    public function updateLocation(Request $request)
+    {
+        $courier = Auth::guard('courier')->user();
+        if (!$courier) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $request->validate([
+            'lat' => 'required|numeric|between:-90,90',
+            'lon' => 'required|numeric|between:-180,180',
+        ]);
+
+        $courier->current_lat = (float) $request->lat;
+        $courier->current_lon = (float) $request->lon;
+        $courier->location_updated_at = now();
+        $courier->save();
+
+        return response()->json(['success' => true], 200);
+    }
     public function notifications(Request $request)
     {
         $courier = Auth::guard('courier')->user();

@@ -14,6 +14,7 @@ Route::middleware('auth:courier')->group(function () {
     Route::post('devices/remove-device', [CourierController::class, 'removeDevice']);
     Route::post('update/password', [CourierController::class, 'updatePassword']);
     Route::post('update/fcm', [CourierController::class, 'updateFcm']);
+    Route::post('update/location', [CourierController::class, 'updateLocation']);
     Route::get('notifications', [CourierController::class, 'notifications']);
     Route::get('notifications/count', [CourierController::class, 'notificationsCount']);
     Route::post('notifications/read', [CourierController::class, 'markAsRead']);

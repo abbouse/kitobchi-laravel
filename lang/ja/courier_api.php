@@ -44,4 +44,5 @@ return [
     'customer_delay_marked'      => 'お客様と連絡が取れません — タイマーを一時停止しました。',
     'customer_delay_resumed'     => '一時停止を解除しました。タイマーを再開します。',
     'customer_delay_invalid'     => 'この注文では一時停止は利用できません。',
+    'customer_delay_limit_reached' => '一時停止の上限に達しました。この注文はこれ以上一時停止できません。',
 ];

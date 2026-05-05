@@ -696,7 +696,7 @@ class PurchaseController extends Controller
                     CourierOrderItem::create([
                         'seller_id'          => $itm_sid,
                         'seller_location_id' => (int) $sellerLocation->id,
-                        'order_id'           => (int) $courierOrder->id,
+                        'order_id'           => (int) $purchase->id,
                         'type'               => $itm_type,
                         'product_id'         => isset($itm['item_id']) ? (int) $itm['item_id'] : null,
                         'quantity'           => (int) ($itm['count_item'] ?? 1),

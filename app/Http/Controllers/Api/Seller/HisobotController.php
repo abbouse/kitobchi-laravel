@@ -37,7 +37,7 @@ class HisobotController extends Controller
         return in_array((int) $seller->role, [1, 4], true);
     }
 
-    private function resolvePeriod(Request $request): array
+    private function resolvePeriod(Request $request, ?Seller $storeSeller = null): array
     {
         $period = (string) $request->query('period', '30d');
         $now = now();
@@ -47,11 +47,14 @@ class HisobotController extends Controller
                 $start = $now->copy()->startOfDay()->subDays(6);
                 $group = 'day';
                 break;
+            case '6m':
             case '90d':
-                $start = $now->copy()->startOfDay()->subDays(89);
-                $group = 'week';
+                $period = '6m';
+                $start = $now->copy()->startOfMonth()->subMonths(5);
+                $group = 'month';
                 break;
             case '1y':
+                $period = '1y';
                 $start = $now->copy()->startOfMonth()->subMonths(11);
                 $group = 'month';
                 break;
@@ -63,7 +66,18 @@ class HisobotController extends Controller
                 break;
         }
 
+        $storeStartedAt = $storeSeller?->created_at
+            ? Carbon::parse($storeSeller->created_at)->startOfDay()
+            : null;
+
+        if ($storeStartedAt && $start->lt($storeStartedAt)) {
+            $start = $storeStartedAt->copy();
+        }
+
         $end = $now->copy()->endOfDay();
+        if ($storeStartedAt && $end->lt($start)) {
+            $end = $start->copy()->endOfDay();
+        }
         $previousEnd = $start->copy()->subSecond();
         $previousStart = $previousEnd->copy()->subSeconds($end->diffInSeconds($start));
 
@@ -129,7 +143,8 @@ class HisobotController extends Controller
         }
 
         $storeSellerId = $this->getStoreSellerId($seller);
-        $period = $this->resolvePeriod($request);
+        $storeSeller = Seller::query()->find($storeSellerId);
+        $period = $this->resolvePeriod($request, $storeSeller);
         $selectedLocation = $this->resolveSellerLocation(
             $storeSellerId,
             $request->filled('location_id') ? (int) $request->query('location_id') : null
@@ -305,7 +320,8 @@ class HisobotController extends Controller
         }
 
         $storeSellerId = $this->getStoreSellerId($seller);
-        $period = $this->resolvePeriod($request);
+        $storeSeller = Seller::query()->find($storeSellerId);
+        $period = $this->resolvePeriod($request, $storeSeller);
         $selectedLocation = $this->resolveSellerLocation(
             $storeSellerId,
             $request->filled('location_id') ? (int) $request->query('location_id') : null
@@ -346,7 +362,7 @@ class HisobotController extends Controller
 
                 $data[] = [
                     'time' => $cursor->copy()->startOfMonth()->toDateString(),
-                    'label' => $cursor->format('M'),
+                    'label' => $cursor->translatedFormat('M'),
                     'value' => (int) ($row->total_amount ?? 0),
                     'orders' => (int) ($row->total_orders ?? 0),
                     'clients' => (int) ($row->total_clients ?? 0),
@@ -382,7 +398,7 @@ class HisobotController extends Controller
 
                 $data[] = [
                     'time' => $cursor->toDateString(),
-                    'label' => $cursor->format('d M'),
+                    'label' => $cursor->translatedFormat('j M'),
                     'value' => (int) ($row->total_amount ?? 0),
                     'orders' => (int) ($row->total_orders ?? 0),
                     'clients' => (int) ($row->total_clients ?? 0),
@@ -414,7 +430,7 @@ class HisobotController extends Controller
 
                 $data[] = [
                     'time' => $bucketKey,
-                    'label' => $cursor->format('d M'),
+                    'label' => $cursor->translatedFormat('j M'),
                     'value' => (int) ($row->total_amount ?? 0),
                     'orders' => (int) ($row->total_orders ?? 0),
                     'clients' => (int) ($row->total_clients ?? 0),

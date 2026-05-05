@@ -19,8 +19,6 @@
   </script>
 
   @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/css/a122-admin.css', 'resources/css/kitobchi-pastel.css', 'resources/js/a122-admin.js'])
-  <script src="https://cdn.jsdelivr.net/npm/apexcharts@3/dist/apexcharts.min.js"></script>
-
   @stack('styles')
   @stack('head')
 </head>

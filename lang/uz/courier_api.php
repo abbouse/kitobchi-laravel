@@ -44,4 +44,5 @@ return [
     'customer_delay_marked'      => 'Mijoz javob bermayapti — hisoblagich pauza qilindi.',
     'customer_delay_resumed'     => 'Pauza tugatildi, hisoblagich davom etyapti.',
     'customer_delay_invalid'     => 'Bu buyurtma uchun pauza qo\'llanmaydi.',
+    'customer_delay_limit_reached' => 'Pause limiti tugadi. Bu buyurtmada endi pauza qilib bo‘lmaydi.',
 ];

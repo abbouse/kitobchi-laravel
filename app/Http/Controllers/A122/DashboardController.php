@@ -109,16 +109,6 @@ class DashboardController extends Controller
         $regionLabel = null;
 
         foreach ($catalog as $key => $country) {
-            foreach ($normalizedTexts as $text) {
-                foreach ($country['aliases'] as $alias) {
-                    if (str_contains($text, $this->normalizeGeoText($alias))) {
-                        $countryKey = $key;
-                        $countryLabel = $country['label'];
-                        break 3;
-                    }
-                }
-            }
-
             foreach ($country['regions'] as $rKey => $region) {
                 foreach ($normalizedTexts as $text) {
                     foreach ($region['aliases'] as $alias) {
@@ -127,8 +117,18 @@ class DashboardController extends Controller
                             $countryLabel = $country['label'];
                             $regionKey = $rKey;
                             $regionLabel = $region['label'];
-                            break 4;
+                            break 3;
                         }
+                    }
+                }
+            }
+
+            foreach ($normalizedTexts as $text) {
+                foreach ($country['aliases'] as $alias) {
+                    if (str_contains($text, $this->normalizeGeoText($alias))) {
+                        $countryKey = $key;
+                        $countryLabel = $country['label'];
+                        break 2;
                     }
                 }
             }

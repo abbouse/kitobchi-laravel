@@ -44,4 +44,5 @@ return [
     'customer_delay_marked'      => 'Customer is unreachable — timer paused.',
     'customer_delay_resumed'     => 'Pause cleared, timer resumed.',
     'customer_delay_invalid'     => 'Pause is not available for this order.',
+    'customer_delay_limit_reached' => 'Pause limit reached. This order can no longer be paused.',
 ];

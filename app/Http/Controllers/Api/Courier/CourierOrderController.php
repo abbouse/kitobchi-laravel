@@ -9,6 +9,7 @@ use App\Models\Seller;
 use App\Models\Couriers;
 use App\Models\CourierOrder;
 use App\Models\CourierOrderItem;
+use App\Models\SellerOrder;
 use App\Services\CourierBonusService;
 use App\Services\OrderService;
 use App\Services\OrderRealtimeService;
@@ -54,7 +55,7 @@ class CourierOrderController extends Controller
             })
             ->with([
                 'paymentStatus',
-                'items.product',
+                'items.product.seller',
                 'items.orderStatus',
                 'items.sellerLocation.workdays',
                 'customer.location'
@@ -65,13 +66,7 @@ class CourierOrderController extends Controller
                 if ($order->status === 'pay_process' && (int) ($order->paymentStatus?->paymentStatus ?? 0) === 2) {
                     $order->status = 'pending';
                 }
-                foreach ($order->items as $item) {
-                    if ($item->product && $item->product->seller && $item->sellerLocation) {
-                        $item->product->seller->location = $item->sellerLocation;
-                    }
-                    $item->pickup_qr = $this->buildPickupQrForItem($item, Auth::guard('courier')->id());
-                }
-                return $order;
+                return $this->hydrateCourierOrderItems($order, Auth::guard('courier')->id());
             });
 
         Log::info('Courier available orders fetched', [
@@ -100,7 +95,7 @@ class CourierOrderController extends Controller
             ->where('courier_id', $courier->id)
             ->with([
                 'paymentStatus',
-                'items.product',
+                'items.product.seller',
                 'items.orderStatus',
                 'items.sellerLocation.workdays',
                 'customer.location'
@@ -114,12 +109,7 @@ class CourierOrderController extends Controller
             ], 404);
         }
 
-        foreach ($show->items as $item) {
-            if ($item->product && $item->product->seller && $item->sellerLocation) {
-                $item->product->seller->location = $item->sellerLocation;
-            }
-            $item->pickup_qr = $this->buildPickupQrForItem($item, $courier->id);
-        }
+        $show = $this->hydrateCourierOrderItems($show, $courier->id);
 
         return response()->json([
             'success' => true,
@@ -275,13 +265,7 @@ class CourierOrderController extends Controller
             ->latest()
             ->get()
             ->map(function ($order) {
-                foreach ($order->items as $item) {
-                    if ($item->product && $item->product->seller && $item->sellerLocation) {
-                        $item->product->seller->location = $item->sellerLocation;
-                    }
-                    $item->pickup_qr = $this->buildPickupQrForItem($item, $order->courier_id);
-                }
-                return $order;
+                return $this->hydrateCourierOrderItems($order, $order->courier_id);
             });
         return response()->json([
             'success' => true,
@@ -322,6 +306,18 @@ class CourierOrderController extends Controller
 
         $result = $this->bonusService->toggleCustomerDelay($order);
 
+        if (($result['success'] ?? true) === false) {
+            return response()->json([
+                'success' => false,
+                'paused' => false,
+                'message' => $result['message'] ?? __('courier_api.customer_delay_limit_reached'),
+                'total_delay_seconds' => $result['total_delay_seconds'] ?? (int) $order->total_delay_seconds,
+                'customer_delay_count' => $result['customer_delay_count'] ?? (int) $order->customer_delay_count,
+                'remaining_delay_seconds' => $result['remaining_delay_seconds'] ?? 0,
+                'sla_deadline' => $result['sla_deadline'] ?? optional($order->sla_deadline)->toIso8601String(),
+            ], 422);
+        }
+
         $order->refresh();
         $this->orderRealtimeService->broadcastCourierOrderUpdated(
             $order,
@@ -335,14 +331,59 @@ class CourierOrderController extends Controller
                 ? __('courier_api.customer_delay_marked')
                 : __('courier_api.customer_delay_resumed'),
             'total_delay_seconds' => $result['total_delay_seconds'],
+            'customer_delay_count'=> $result['customer_delay_count'] ?? (int) $order->customer_delay_count,
+            'remaining_delay_seconds' => $result['remaining_delay_seconds'] ?? 0,
             'sla_deadline'        => $result['sla_deadline'],
         ], 200);
     }
 
-    private function buildPickupQrForItem(mixed $item, ?int $courierId): ?string
+    private function hydrateCourierOrderItems(CourierOrder $order, ?int $courierId): CourierOrder
+    {
+        $items = $order->items;
+
+        // Eski yozuvlarda courier_order_items.order_id noto'g'ri courier_orders.id
+        // bilan saqlanib qolgan. Yangi yozuvlar Sold id bilan ishlaydi.
+        // Shuning uchun agar asosiy relation bo'sh bo'lsa, legacy fallback qilamiz.
+        if ($items->isEmpty()) {
+            $items = CourierOrderItem::query()
+                ->where('order_id', $order->id)
+                ->with([
+                    'product.seller',
+                    'orderStatus',
+                    'sellerLocation.workdays',
+                ])
+                ->get();
+
+            $order->setRelation('items', $items);
+        }
+
+        $sellerStatuses = SellerOrder::query()
+            ->where('order_id', $order->order_id)
+            ->whereIn('seller_id', $items->pluck('seller_id')->filter()->unique()->values())
+            ->select('id', 'status', 'seller_id', 'order_id', 'courier_id', 'courierName')
+            ->get()
+            ->keyBy(fn ($sellerOrder) => (string) $sellerOrder->seller_id);
+
+        foreach ($items as $item) {
+            if ($item->seller_id) {
+                $item->setRelation(
+                    'orderStatus',
+                    $sellerStatuses->get((string) $item->seller_id)
+                );
+            }
+            if ($item->product && $item->product->seller && $item->sellerLocation) {
+                $item->product->seller->location = $item->sellerLocation;
+            }
+            $item->pickup_qr = $this->buildPickupQrForItem($item, $courierId, $order->order_id);
+        }
+
+        return $order;
+    }
+
+    private function buildPickupQrForItem(mixed $item, ?int $courierId, ?int $soldOrderId = null): ?string
     {
         $sellerId = (int) ($item->product?->seller_id ?? 0);
-        $orderId = (int) ($item->order_id ?? 0);
+        $orderId = (int) ($soldOrderId ?? $item->order_id ?? 0);
 
         if ($sellerId <= 0 || $orderId <= 0 || !$courierId) {
             return null;

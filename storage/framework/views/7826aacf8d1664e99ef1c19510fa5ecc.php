@@ -152,6 +152,11 @@
             <div class="data-kv">
               <dt><?php echo e($variant->color_name ?? $variant->name ?? ('Variant #'.$variant->id)); ?></dt>
               <dd><?php echo e(number_format((float) ($variant->price ?? 0), 0, '.', ' ')); ?> UZS · stock <?php echo e(number_format((int) ($variant->stock ?? 0))); ?></dd>
+              <?php if($variant->image_url): ?>
+                <div class="mt-3 w-16 h-16 rounded-2xl overflow-hidden border border-[var(--p-border)] bg-[var(--p-elevated)]">
+                  <img src="<?php echo e($variant->image_url); ?>" alt="<?php echo e($variant->color_name ?? $variant->name ?? ('Variant #'.$variant->id)); ?>" class="w-full h-full object-cover" loading="lazy">
+                </div>
+              <?php endif; ?>
               <?php if($variant->image_path): ?>
                 <div class="mt-2 text-xs text-[var(--p-muted)] font-mono truncate"><?php echo e($variant->image_path); ?></div>
               <?php endif; ?>
