@@ -10,6 +10,7 @@ use App\Services\MentionService;
 use App\Services\UserPositionService;
 use App\Models\{User, Books, Stationery, BookClub, BookClubImages, BookClubLikes, BookClubVotes, BookClubComment, FavouriteProducts, BookClubNotification, SharedCart, StationeryVariant};
 use App\Models\Sold;
+use App\Support\ProductPayloadFormatter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\{DB, Log, Storage, Auth};
 use Illuminate\Support\Str;
@@ -47,44 +48,11 @@ class BookClubController extends Controller
         }
 
         // ── Kitob yoki kantselyariya ────────────────────────────────────────────
-        $isBook = $product instanceof Books;
-
-        return [
-            'id'              => $product->id,
-            'name'            => $product->name ?? null,
-            'author'          => $isBook ? ($product->author ?? null) : null,
-            'material'        => !$isBook ? ($product->material ?? null) : null,
-            'category_id'     => $product->category_id ?? null,
-            'images'          => is_array($product->images) ? $product->images : json_decode($product->images ?? '[]', true),
-            'description'     => $product->description ?? null,
-            'price'           => $product->price ?? 0,
-            'count'           => $isBook ? ($product->count ?? 0) : ($product->stock ?? 0),
-            'sales'           => $product->totalSales ?? 0,
-            'weekly_sales'    => $product->totalSalesWeek ?? 0,
-            'lang'            => $isBook ? ($product->lang ?? 'O\'zbek') : null,
-            'langType'        => $isBook ? ($product->langType ?? '') : null,
-            'coverType'       => $isBook ? ($product->coverType ?? 'Yumshoq') : null,
-            'year'            => $isBook ? ($product->year ?? now()->year) : null,
-            'discountPrice'   => $isBook ? ($product->discountPrice ?? null) : ($product->discount_price ?? null),
-            'product_type'    => $isBook ? 'book' : 'stationery',
-            'favourite'       => $user ? FavouriteProducts::where('user_id', $user->id)
-                ->where('product_id', $product->id)->exists() : false,
-            'category'        => $product->category->title ?? null,
-            'tags'            => ($product->tags ?? collect())->map(function ($tag) {
-                return [
-                    'uz' => $tag->tag_name_uz ?? $tag->name_uz ?? null,
-                    'ru' => $tag->tag_name_ru ?? $tag->name_ru ?? null,
-                    'en' => $tag->tag_name_en ?? $tag->name_en ?? null,
-                    'ja' => $tag->tag_name_ja ?? $tag->name_ja ?? null,
-                ];
-            })->filter()->values(),
-            'seller'          => [
-                'seller_id'   => $product->seller->id ?? null,
-                'shop_name'   => $product->seller->shop_name ?? null,
-                'photo'       => $product->seller->photo ?? null,
-                'isVerified'  => $product->seller->isVerified ?? null,
-            ],
-        ];
+        return ProductPayloadFormatter::format($product, [
+            'user' => $user,
+            'type' => $productType === 'stationery' ? 'stationery' : 'book',
+            'category_format' => 'title',
+        ]);
     }
 
     /**

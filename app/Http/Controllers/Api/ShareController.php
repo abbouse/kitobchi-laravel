@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Books;
 use App\Models\Stationery;
 use App\Models\FavouriteProducts;
+use App\Support\ProductPayloadFormatter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -55,57 +56,10 @@ class ShareController extends Controller
 
     private function formatProduct($product, string $type, bool $isFavourite): array
     {
-        $isBook = $type === 'book';
-
-        $base = [
-            'id'            => $product->id,
-            'type'          => $type,
-            'name'          => $product->name,
-            'description'   => $product->description ?? null,
-            'images'        => $product->images ?? [],
-            'price'         => $product->price,
-            'discountPrice' => $isBook
-                ? ($product->discountPrice ?? $product->price)
-                : ($product->discount_price ?? $product->price),
-            'count'         => $isBook ? $product->count : $product->stock,
-            'sales'         => $product->totalSales ?? 0,
-            'weekly_sales'  => $product->totalSalesWeek ?? 0,
-            'favourite'     => $isFavourite,
-            'category_id'   => $product->category_id,
-            'category'      => $product->category?->title ?? null,
-            'seller'        => [
-                'seller_id' => $product->seller?->id,
-                'shop_name' => $product->seller?->shop_name,
-                'photo'     => $product->seller?->photo,
-                'is_verified' => $product->seller?->is_verified ?? false,
-            ],
-            'tags' => $product->tags->map(fn($t) => [
-                'uz' => $t->tag_name_uz ?? $t->name_uz ?? null,
-                'ru' => $t->tag_name_ru ?? $t->name_ru ?? null,
-                'en' => $t->tag_name_en ?? $t->name_en ?? null,
-            ])->filter()->values(),
-        ];
-
-        if ($isBook) {
-            $base += [
-                'author'    => $product->author ?? null,
-                'lang'      => $product->lang ?? null,
-                'langType'  => $product->langType ?? null,
-                'coverType' => $product->coverType ?? null,
-                'year'      => $product->year ?? null,
-            ];
-        } else {
-            $base += [
-                'material' => $product->material ?? null,
-                'variants' => $product->variants->map(fn($v) => [
-                    'id'         => $v->id,
-                    'color_name' => $v->color_name,
-                    'image'      => $v->image_path ?? null,
-                    'stock'      => $v->stock,
-                ])->values(),
-            ];
-        }
-
-        return $base;
+        return ProductPayloadFormatter::format($product, [
+            'type' => $type,
+            'favourite' => $isFavourite,
+            'category_format' => 'title',
+        ]);
     }
 }

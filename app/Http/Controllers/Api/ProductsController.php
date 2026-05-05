@@ -11,6 +11,8 @@ use App\Models\SellerLocation;
 use App\Models\FavouriteProducts;
 use App\Models\MyCart;
 use App\Models\ProductViewLog;
+use App\Support\ProductImageUrls;
+use App\Support\ProductPayloadFormatter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
@@ -46,59 +48,19 @@ class ProductsController extends Controller
             }
         }
 
-        return [
-            'id'                 => $product->id,
-            'type'               => $isBook ? 'book' : 'stationery',
-            'name'               => $product->name,
-            'author'             => $isBook ? ($product->author ?? null) : null,
-            'material'           => $isBook ? null : ($product->material ?? null),
-            'category_id'        => $product->category_id,
-            'images'             => $product->images ?? [],
-            'description'        => $product->description ?? null,
-            'price'              => $product->price,
-            'discountPrice'      => $isBook
-                ? ($product->discountPrice ?? $product->price)
-                : ($product->discount_price ?? $product->price),
-            'discountExpiresAt'  => $discountExpiresAt, // null = abadiy, ISO = muddatli
-            'count'              => $isBook ? $product->count : $product->stock,
-            'sales'              => $product->totalSales ?? 0,
-            'weekly_sales'       => $product->totalSalesWeek ?? 0,
-            'recommended'        => (bool)($product->recommended ?? false),
-            'lang'               => $isBook ? ($product->lang ?? "O'zbek") : null,
-            'langType'           => $isBook ? ($product->langType ?? '') : null,
-            'coverType'          => $isBook ? ($product->coverType ?? 'Yumshoq') : null,
-            'year'               => $isBook ? ($product->year ?? now()->year) : null,
-            'favourite'          => $user
-                ? FavouriteProducts::where('user_id', $user->id)
-                    ->where('product_id', $product->id)
-                    ->where('product_type', $isBook ? 'book' : 'stationery')
-                    ->exists()
-                : false,
-            'category'           => $product->category?->title ?? null,
-            'tags'               => $product->relationLoaded('tags')
-                ? $product->tags->map(fn($tag) => [
-                    'uz' => $tag->tag_name_uz ?? $tag->name_uz ?? null,
-                    'ru' => $tag->tag_name_ru ?? $tag->name_ru ?? null,
-                    'en' => $tag->tag_name_en ?? $tag->name_en ?? null,
-                  ])->filter()->values()
-                : [],
-            'seller'             => [
-                'seller_id'   => $product->seller?->id,
-                'shop_name'   => $product->seller?->shop_name,
-                'photo'       => $product->seller?->photo,
-                'isVerified'  => $product->seller?->isVerified,
-                'isPremium'   => $this->sellerIsPremium($product->seller),
-                'hasSale'     => $this->sellerHasManyDiscounts($product->seller?->id),
+        return ProductPayloadFormatter::format($product, [
+            'user' => $user,
+            'type' => $isBook ? 'book' : 'stationery',
+            'category_format' => 'title',
+            'extra' => [
+                'discountExpiresAt' => $discountExpiresAt,
+                'recommended' => (bool) ($product->recommended ?? false),
             ],
-            'variants'           => !$isBook && $product->relationLoaded('variants')
-                ? $product->variants->map(fn($v) => [
-                    'id'         => $v->id,
-                    'color_name' => $v->color_name,
-                    'image'      => $v->image_path ?? null,
-                    'stock'      => $v->stock,
-                  ])
-                : null,
-        ];
+            'seller_extra' => [
+                'isPremium' => $this->sellerIsPremium($product->seller),
+                'hasSale' => $this->sellerHasManyDiscounts($product->seller?->id),
+            ],
+        ]);
     }
 
     // ── Do'kon premium ekanligini tekshirish ─────────────────────

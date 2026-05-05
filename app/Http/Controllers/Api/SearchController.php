@@ -9,6 +9,8 @@ use App\Models\Stationery;
 use App\Models\BookCategories;
 use App\Models\StationeryCategory;
 use App\Models\FavouriteProducts;
+use App\Support\ProductImageUrls;
+use App\Support\ProductPayloadFormatter;
 use App\Models\SearchHistory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -165,88 +167,14 @@ class SearchController extends Controller
     {
         try {
             $isBook = $product instanceof Books;
-
-            $category = $product->relationLoaded('category') && $product->category
-                ? [
-                    'id'      => $product->category->id,
-                    'name_uz' => $product->category->name_uz ?? '',
-                    'name_ru' => $product->category->name_ru ?? '',
-                    'name_en' => $product->category->name_en ?? '',
-                    'slug'    => $product->category->slug ?? '',
-                    'icon'    => $product->category->icon ?? '',
-                  ]
-                : null;
-
-            $seller = $product->relationLoaded('seller') && $product->seller
-                ? [
-                    'seller_id'  => $product->seller->id,
-                    'shop_name'  => $product->seller->shop_name ?? '',
-                    'photo'      => $product->seller->photo ?? '',
-                    'isVerified' => (bool)($product->seller->isVerified ?? false),
-                  ]
-                : null;
-
-            // Tags — barcha tillarda qaytariladi
-            // book_tags: tag_name_uz/ru/en/ja
-            // stationery_tags: name_uz/ru/en/ja
-            $tags = [];
-            if ($product->relationLoaded('tags') && $product->tags) {
-                $tags = $product->tags->map(function ($tag) use ($isBook) {
-                    if ($isBook) {
-                        return [
-                            'uz' => $tag->tag_name_uz ?? null,
-                            'ru' => $tag->tag_name_ru ?? null,
-                            'en' => $tag->tag_name_en ?? null,
-                            'ja' => $tag->tag_name_ja ?? null,
-                        ];
-                    }
-                    return [
-                        'uz' => $tag->name_uz ?? null,
-                        'ru' => $tag->name_ru ?? null,
-                        'en' => $tag->name_en ?? null,
-                        'ja' => $tag->name_ja ?? null,
-                    ];
-                })->filter()->values()->toArray();
-            }
-
-            $isFavourite = false;
-            if ($user) {
-                $isFavourite = FavouriteProducts::where('user_id', $user->id)
-                    ->where('product_id', $product->id)
-                    ->where('product_type', $isBook ? 'book' : 'stationery')
-                    ->exists();
-            }
-
-            return [
-                'id'             => $product->id,
-                'name'           => $product->name ?? '',
-                'author'         => $isBook ? ($product->author ?? '') : null,
-                'material'       => !$isBook ? ($product->material ?? '') : null,
-                'category_id'    => $product->category_id ?? null,
-                'images'         => $product->images ?? [],
-                'description'    => $product->description ?? '',
-                'price'          => (float)($product->price ?? 0),
-                'discountPrice'  => $isBook
-                    ? ($product->discountPrice ?? null)
-                    : ($product->discount_price ?? null),
-                'count'          => $isBook ? $product->count : $product->stock,
-                'sales'          => $product->totalSales ?? 0,
-                'weekly_sales'   => $product->totalSalesWeek ?? 0,
-                'product_type'   => $isBook ? 'book' : 'stationery',
-                'favourite'      => $isFavourite,
-                'category'       => $category,
-                'seller'         => $seller,
-                'tags'           => $tags,
-                'variants'       => !$isBook && $product->relationLoaded('variants')
-                    ? $product->variants->map(fn($v) => [
-                        'id'         => $v->id,
-                        'color_name' => $v->color_name,
-                        'image'      => $v->image_path ?? null,
-                        'stock'      => $v->stock,
-                      ])->values()->toArray()
-                    : null,
-                'relevance_score'=> (float)($product->relevance_score ?? 0),
-            ];
+            return ProductPayloadFormatter::format($product, [
+                'user' => $user,
+                'type' => $isBook ? 'book' : 'stationery',
+                'category_format' => 'object',
+                'extra' => [
+                    'relevance_score' => (float) ($product->relevance_score ?? 0),
+                ],
+            ]);
         } catch (\Throwable $e) {
             Log::error('formatProduct error', ['id' => $product->id ?? null]);
             return null;

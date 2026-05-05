@@ -17,6 +17,7 @@ use App\Models\{
 };
 use App\Services\OpenAIService;
 use App\Events\BotMessageSent;
+use App\Support\ProductPayloadFormatter;
 
 class ChatBotController extends Controller
 {
@@ -1140,62 +1141,14 @@ EOT;
 
     private function formatProduct($product, string $type, $user = null): array
     {
-        return $type === 'stationery'
-            ? $this->formatStationery($product, $user)
-            : $this->formatBook($product, $user);
-    }
-
-    private function formatBook($book, $user = null): array
-    {
-        return [
-            'id'            => $book->id,
-            'type'          => 'book',
-            'name'          => $book->name,
-            'author'        => $book->author,
-            'category'      => $book->category?->name_uz,
-            'images'        => $book->images,
-            'description'   => $book->description,
-            'price'         => $book->price,
-            'discountPrice' => $book->discountPrice,
-            'count'         => $book->count,
-            'sales'         => $book->totalSales ?? 0,
-            'weekly_sales'  => $book->totalSalesWeek ?? 0,
-            'lang'          => $book->lang ?? "O'zbek",
-            'langType'      => $book->langType ?? '',
-            'coverType'     => $book->coverType ?? 'Yumshoq',
-            'year'          => $book->year ?? now()->year,
-            'favourite'     => $user
-                ? FavouriteProducts::where('user_id', $user->id)->where('product_id', $book->id)->exists()
-                : false,
-            'tags'   => $book->tags->map(fn($t) => [
-                'uz' => $t->tag_name_uz,
-                'ru' => $t->tag_name_ru,
-                'en' => $t->tag_name_en,
-            ]),
-            'seller' => $this->sellerInfo($book->seller),
-        ];
-    }
-
-    private function formatStationery($item, $user = null): array
-    {
-        return [
-            'id'            => $item->id,
-            'type'          => 'stationery',
-            'name'          => $item->name,
-            'category'      => $item->category?->name ?? $item->category?->name_uz,
-            'images'        => $item->images,
-            'description'   => $item->description,
-            'price'         => $item->price,
-            'discountPrice' => $item->discount_price,
-            'stock'         => $item->stock,
-            'material'      => $item->material,
-            'sales'         => $item->totalSales ?? 0,
-            'weekly_sales'  => $item->totalSalesWeek ?? 0,
-            'tags'   => $item->tags->map(fn($t) => [
-                'uz' => $t->tag_name_uz ?? $t->name ?? '',
-            ]),
-            'seller' => $this->sellerInfo($item->seller),
-        ];
+        return ProductPayloadFormatter::format($product, [
+            'user' => $user,
+            'type' => $type === 'stationery' ? 'stationery' : 'book',
+            'category_format' => 'title',
+            'seller_extra' => [
+                'rating' => $product->seller?->rating ?? 0,
+            ],
+        ]);
     }
 
     private function sellerInfo($seller): array

@@ -24,6 +24,8 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
+use App\Support\ProductImageUrls;
+use App\Support\ProductPayloadFormatter;
 
 class UserController extends Controller
 {
@@ -57,57 +59,11 @@ class UserController extends Controller
      */
     private function formatProduct($product, $user = null, $type = 'book')
     {
-        $isBook = $type === 'book';
-
-        return [
-            'id'            => $product->id,
-            'type'          => $isBook ? 'book' : 'stationery',
-            'name'          => $product->name,
-            'author'        => $isBook ? ($product->author ?? null) : null,
-            'material'      => $isBook ? null : ($product->material ?? null),
-            'category_id'   => $product->category_id,
-            'images'        => $product->images ?? [],
-            'description'   => $product->description ?? null,
-            'price'         => $product->price,
-            'discountPrice' => $isBook
-                ? ($product->discountPrice ?? $product->price)
-                : ($product->discount_price ?? $product->price),
-            'count'         => $isBook ? $product->count : $product->stock,
-            'sales'         => $product->totalSales ?? 0,
-            'weekly_sales'  => $product->totalSalesWeek ?? 0,
-            'lang'          => $isBook ? ($product->lang ?? "O'zbek") : null,
-            'langType'      => $isBook ? ($product->langType ?? '') : null,
-            'coverType'     => $isBook ? ($product->coverType ?? 'Yumshoq') : null,
-            'year'          => $isBook ? ($product->year ?? now()->year) : null,
-            'favourite'     => $user
-                ? FavouriteProducts::where('user_id', $user->id)
-                    ->where('product_id', $product->id)
-                    ->where('product_type', $isBook ? 'book' : 'stationery')
-                    ->exists()
-                : false,
-            'category'      => $product->category?->title ?? null,
-            'tags'          => $product->relationLoaded('tags')
-                ? $product->tags->map(fn($tag) => [
-                    'uz' => $tag->tag_name_uz ?? $tag->name_uz ?? null,
-                    'ru' => $tag->tag_name_ru ?? $tag->name_ru ?? null,
-                    'en' => $tag->tag_name_en ?? $tag->name_en ?? null,
-                ])->filter()->values()
-                : [],
-            'seller'        => [
-                'seller_id'  => $product->seller?->id,
-                'shop_name'  => $product->seller?->shop_name,
-                'photo'      => $product->seller?->photo,
-                'isVerified' => $product->seller?->isVerified,
-            ],
-            'variants'      => !$isBook && $product->relationLoaded('variants')
-                ? $product->variants->map(fn($v) => [
-                    'id'         => $v->id,
-                    'color_name' => $v->color_name,
-                    'image'      => $v->image_path ?? null,
-                    'stock'      => $v->stock,
-                ])
-                : null,
-        ];
+        return ProductPayloadFormatter::format($product, [
+            'user' => $user,
+            'type' => $type,
+            'category_format' => 'title',
+        ]);
     }
 
     // ════════════════════════════════════════════════════════════════════
