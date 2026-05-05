@@ -8,6 +8,7 @@ use App\Models\Books;
 use App\Models\Seller;
 use App\Models\SellerOrder;
 use App\Models\Sold;
+use App\Support\ProductImageUrls;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -132,7 +133,11 @@ class BookController extends Controller
     public function show(Books $book)
     {
         $book->load(['category', 'seller']);
-        $images = collect($book->images ?? [])->filter()->values();
+        $images = collect($book->images ?? [])
+            ->filter(fn ($image) => is_string($image) && trim($image) !== '')
+            ->map(fn (string $image) => ProductImageUrls::originalUrl($image))
+            ->filter()
+            ->values();
         $sellerOrders = $book->seller_id
             ? SellerOrder::query()
                 ->with(['client:id,name,lastname,phone_number'])

@@ -134,6 +134,11 @@
             <div class="data-kv">
               <dt>{{ $variant->color_name ?? $variant->name ?? ('Variant #'.$variant->id) }}</dt>
               <dd>{{ number_format((float) ($variant->price ?? 0), 0, '.', ' ') }} UZS · stock {{ number_format((int) ($variant->stock ?? 0)) }}</dd>
+              @if($variant->image_url)
+                <div class="mt-3 w-16 h-16 rounded-2xl overflow-hidden border border-[var(--p-border)] bg-[var(--p-elevated)]">
+                  <img src="{{ $variant->image_url }}" alt="{{ $variant->color_name ?? $variant->name ?? ('Variant #'.$variant->id) }}" class="w-full h-full object-cover" loading="lazy">
+                </div>
+              @endif
               @if($variant->image_path)
                 <div class="mt-2 text-xs text-[var(--p-muted)] font-mono truncate">{{ $variant->image_path }}</div>
               @endif

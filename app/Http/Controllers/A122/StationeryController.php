@@ -9,6 +9,7 @@ use App\Models\Sold;
 use App\Models\Stationery;
 use App\Models\StationeryCategory;
 use App\Models\StationeryVariant;
+use App\Support\ProductImageUrls;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -132,7 +133,15 @@ class StationeryController extends Controller
     public function show(int $id)
     {
         $item = Stationery::with(['category', 'seller', 'variants'])->findOrFail($id);
-        $images = collect($item->images ?? [])->filter()->values();
+        $images = collect($item->images ?? [])
+            ->filter(fn ($image) => is_string($image) && trim($image) !== '')
+            ->map(fn (string $image) => ProductImageUrls::originalUrl($image))
+            ->filter()
+            ->values();
+        $item->variants->transform(function (StationeryVariant $variant) {
+            $variant->image_url = ProductImageUrls::originalUrl($variant->image_path);
+            return $variant;
+        });
         $sellerOrders = $item->seller_id
             ? SellerOrder::query()
                 ->with(['client:id,name,lastname,phone_number'])

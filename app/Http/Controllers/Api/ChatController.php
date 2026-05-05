@@ -114,9 +114,10 @@ class ChatController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'data' => $type === 'courier'
-                ? $this->serializeConversationForUser($conversation->loadMissing(['courier', 'order']), (int) $user->id)
-                : $conversation->id,
+            'data' => $this->serializeConversationForUser(
+                $conversation->loadMissing(['shop', 'courier', 'order', 'user', 'receiver']),
+                (int) $user->id
+            ),
         ]);
     }
 
@@ -437,6 +438,8 @@ class ChatController extends Controller
 
         $conversation = Conversation::with([
             'shop',
+            'courier',
+            'order',
             'user',
             'receiver',
             'participants.user:id,name,lastname,username,avatar,isVerified,isSupport,position,staff_role,role_emoji,role_title,role_place,last_seen_at',
