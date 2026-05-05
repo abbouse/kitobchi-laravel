@@ -14,6 +14,7 @@ use App\Models\BookTag;
 use App\Models\Sold;
 use App\Models\Gifts;
 use App\Models\SellerStaffLog;
+use App\Support\ProductImageVariantGenerator;
 use App\Services\SellerPremiumService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -296,6 +297,7 @@ public function createStationery(Request $request)
             $filename = time() . "_main_{$index}." . $image->getClientOriginalExtension();
             $path = $image->storeAs('stationery', $filename, 'public');
             $imagePaths[] = $path;
+            ProductImageVariantGenerator::generateForPath($path);
         }
     }
 
@@ -336,6 +338,7 @@ public function createStationery(Request $request)
                 if ($file->isValid()) {
                     $filename = time() . "_var_" . uniqid() . '.' . $file->getClientOriginalExtension();
                     $variantImagePath = $file->storeAs('stationery/variants', $filename, 'public');
+                    ProductImageVariantGenerator::generateForPath($variantImagePath);
                 }
             }
 
@@ -426,6 +429,7 @@ $deletedImages = array_diff($currentImagesInDb, $existingImages);
 
 foreach ($deletedImages as $img) {
     Storage::disk('public')->delete($img);
+    ProductImageVariantGenerator::deleteForPath($img);
 }
 
 // Tartiblangan existing rasmlar + yangi yuklanganlar
@@ -437,6 +441,7 @@ if ($request->hasFile('images')) {
             $filename = time() . "_main_{$index}_" . uniqid() . "." . $image->getClientOriginalExtension();
             $path = $image->storeAs('stationery', $filename, 'public');
             $finalImages[] = $path;
+            ProductImageVariantGenerator::generateForPath($path);
         }
     }
 }
@@ -469,6 +474,7 @@ $variantsToDelete = array_diff($existingVariants, $incomingVariantIds);
     ->each(function ($variant) {
         if ($variant->image_path) {
             Storage::disk('public')->delete($variant->image_path);
+            ProductImageVariantGenerator::deleteForPath($variant->image_path);
         }
         $variant->delete();
     });
@@ -484,6 +490,7 @@ $variantsToDelete = array_diff($existingVariants, $incomingVariantIds);
     $vFile = $vData['image'];
     $vFilename = time() . "_var_" . uniqid() . "." . $vFile->getClientOriginalExtension();
     $variantImagePath = $vFile->storeAs('stationery/variants', $vFilename, 'public');
+    ProductImageVariantGenerator::generateForPath($variantImagePath);
 }
 
 
@@ -499,6 +506,7 @@ $variantsToDelete = array_diff($existingVariants, $incomingVariantIds);
                     if ($variantImagePath) {
                         if ($variant->image_path) {
                             Storage::disk('public')->delete($variant->image_path);
+                            ProductImageVariantGenerator::deleteForPath($variant->image_path);
                         }
                         $updateData['image_path'] = $variantImagePath;
                     }
@@ -698,7 +706,9 @@ public function updateProductStatus(Request $request)
                 if ($image->isValid()) {
                     $filename = time() . '_' . $index . '.' . $image->getClientOriginalExtension();
                     $path = Storage::disk('public')->putFileAs('books', $image, $filename);
-                    $imagePaths[] = str_replace('public/', '', $path);
+                    $normalizedPath = str_replace('public/', '', $path);
+                    $imagePaths[] = $normalizedPath;
+                    ProductImageVariantGenerator::generateForPath($normalizedPath);
                 }
             }
         }
@@ -825,6 +835,7 @@ public function updateProductStatus(Request $request)
         if (is_string($image) && in_array($image, $currentImages)) {
             try {
                 Storage::disk('public')->delete($image);
+                ProductImageVariantGenerator::deleteForPath($image);
             } catch (\Exception $e) {
                 Log::error('Rasm o‘chirishda xato', [
                     'image' => $image,
@@ -846,6 +857,7 @@ public function updateProductStatus(Request $request)
                     $filename = time() . "_{$index}." . $image->getClientOriginalExtension();
                     $path = $image->storeAs('books', $filename, 'public'); // books/filename.jpg
                     $finalImages[] = $path; // oxiriga qo'shamiz
+                    ProductImageVariantGenerator::generateForPath($path);
                 } catch (\Exception $e) {
                     Log::error('Yangi rasm saqlashda xato', [
                         'index' => $index,

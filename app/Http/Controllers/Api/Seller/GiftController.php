@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Seller;
 use App\Http\Controllers\Controller;
 use App\Models\Gifts;
 use App\Models\SellerStaffLog;
+use App\Support\ProductImageVariantGenerator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -133,6 +134,7 @@ class GiftController extends Controller
         foreach ($currentImages as $path) {
             if (!in_array($path, $existingImages) && Storage::disk('public')->exists($path)) {
                 Storage::disk('public')->delete($path);
+                ProductImageVariantGenerator::deleteForPath($path);
             }
         }
 
@@ -157,7 +159,9 @@ class GiftController extends Controller
     {
         $paths = [];
         foreach ($files as $file) {
-            $paths[] = $file->store('gifts', 'public');
+            $path = $file->store('gifts', 'public');
+            $paths[] = $path;
+            ProductImageVariantGenerator::generateForPath($path);
         }
         return $paths;
     }
@@ -187,6 +191,7 @@ class GiftController extends Controller
         foreach ($images as $path) {
             if (Storage::disk('public')->exists($path)) {
                 Storage::disk('public')->delete($path);
+                ProductImageVariantGenerator::deleteForPath($path);
             }
         }
 

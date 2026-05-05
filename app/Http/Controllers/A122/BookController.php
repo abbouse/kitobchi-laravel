@@ -9,6 +9,7 @@ use App\Models\Seller;
 use App\Models\SellerOrder;
 use App\Models\Sold;
 use App\Support\ProductImageUrls;
+use App\Support\ProductImageVariantGenerator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -115,7 +116,9 @@ class BookController extends Controller
                     continue;
                 }
                 $filename = time() . "_admin_book_{$index}." . $image->getClientOriginalExtension();
-                $images[] = $image->storeAs('books', $filename, 'public');
+                $path = $image->storeAs('books', $filename, 'public');
+                $images[] = $path;
+                ProductImageVariantGenerator::generateForPath($path);
             }
         }
 
@@ -205,6 +208,7 @@ class BookController extends Controller
         foreach ($deletedImages as $image) {
             if (is_string($image) && ! str_starts_with($image, 'http')) {
                 Storage::disk('public')->delete($image);
+                ProductImageVariantGenerator::deleteForPath($image);
             }
         }
 
@@ -215,7 +219,9 @@ class BookController extends Controller
                     continue;
                 }
                 $filename = time() . "_admin_book_{$index}." . $image->getClientOriginalExtension();
-                $images[] = $image->storeAs('books', $filename, 'public');
+                $path = $image->storeAs('books', $filename, 'public');
+                $images[] = $path;
+                ProductImageVariantGenerator::generateForPath($path);
             }
         }
 

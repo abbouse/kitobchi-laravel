@@ -55,27 +55,7 @@ class ProductImageUrls
 
     private static function candidateVariantPaths(string $path, string $variant): array
     {
-        $trimmed = ltrim($path, '/');
-        $dir = pathinfo($trimmed, PATHINFO_DIRNAME);
-        $filename = pathinfo($trimmed, PATHINFO_FILENAME);
-        $extension = pathinfo($trimmed, PATHINFO_EXTENSION);
-
-        $dir = $dir === '.' ? '' : $dir;
-        $prefix = $dir !== '' ? $dir . '/' : '';
-
-        $candidates = [
-            "{$prefix}variants/{$variant}_{$filename}.webp",
-            "{$prefix}variants/{$variant}_{$filename}.jpg",
-            "{$prefix}variants/{$variant}_{$filename}.jpeg",
-            "{$prefix}variants/{$variant}_{$filename}.png",
-        ];
-
-        if ($extension !== '') {
-            $candidates[] = "{$prefix}variants/{$variant}_{$filename}.{$extension}";
-            $candidates[] = "{$prefix}{$variant}_{$filename}.{$extension}";
-        }
-
-        return array_values(array_unique($candidates));
+        return ProductImageVariantGenerator::candidateVariantPaths($path, $variant);
     }
 
     private static function isExternal(string $path): bool

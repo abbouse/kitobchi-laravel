@@ -10,6 +10,7 @@ use App\Models\Stationery;
 use App\Models\StationeryCategory;
 use App\Models\StationeryVariant;
 use App\Support\ProductImageUrls;
+use App\Support\ProductImageVariantGenerator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -114,7 +115,9 @@ class StationeryController extends Controller
                     continue;
                 }
                 $filename = time() . "_admin_stationery_{$index}." . $image->getClientOriginalExtension();
-                $images[] = $image->storeAs('stationery', $filename, 'public');
+                $path = $image->storeAs('stationery', $filename, 'public');
+                $images[] = $path;
+                ProductImageVariantGenerator::generateForPath($path);
             }
         }
 
@@ -211,6 +214,7 @@ class StationeryController extends Controller
         foreach ($deletedImages as $image) {
             if (is_string($image) && ! str_starts_with($image, 'http')) {
                 Storage::disk('public')->delete($image);
+                ProductImageVariantGenerator::deleteForPath($image);
             }
         }
 
@@ -221,7 +225,9 @@ class StationeryController extends Controller
                     continue;
                 }
                 $filename = time() . "_admin_stationery_{$index}." . $image->getClientOriginalExtension();
-                $images[] = $image->storeAs('stationery', $filename, 'public');
+                $path = $image->storeAs('stationery', $filename, 'public');
+                $images[] = $path;
+                ProductImageVariantGenerator::generateForPath($path);
             }
         }
 
@@ -258,9 +264,11 @@ class StationeryController extends Controller
             if ($uploaded && $uploaded->isValid()) {
                 if ($imagePath !== '' && ! str_starts_with($imagePath, 'http')) {
                     Storage::disk('public')->delete($imagePath);
+                    ProductImageVariantGenerator::deleteForPath($imagePath);
                 }
                 $filename = time() . "_admin_variant_{$index}." . $uploaded->getClientOriginalExtension();
                 $imagePath = $uploaded->storeAs('stationery/variants', $filename, 'public');
+                ProductImageVariantGenerator::generateForPath($imagePath);
             }
 
             $payload = [
@@ -285,6 +293,7 @@ class StationeryController extends Controller
         foreach ($toDelete as $variant) {
             if ($variant->image_path && ! str_starts_with($variant->image_path, 'http')) {
                 Storage::disk('public')->delete($variant->image_path);
+                ProductImageVariantGenerator::deleteForPath($variant->image_path);
             }
             $variant->delete();
         }

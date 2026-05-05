@@ -5,8 +5,8 @@ namespace App\Console\Commands;
 use App\Models\Books;
 use App\Models\Gifts;
 use App\Models\Stationery;
+use App\Support\ProductImageVariantGenerator;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Storage;
 
 class GenerateProductImageVariants extends Command
 {
@@ -62,93 +62,11 @@ class GenerateProductImageVariants extends Command
                     }
 
                     $processed++;
-                    $generated += $this->generateForPath($image);
+                    $generated += ProductImageVariantGenerator::generateForPath($image);
                 }
             }
         });
 
         $this->line("{$label}: checked {$processed} images, generated {$generated} variants.");
-    }
-
-    private function generateForPath(string $path): int
-    {
-        $path = ltrim($path, '/');
-        if (!Storage::disk('public')->exists($path)) {
-            return 0;
-        }
-
-        $absolutePath = Storage::disk('public')->path($path);
-        $binary = @file_get_contents($absolutePath);
-        if ($binary === false) {
-            return 0;
-        }
-
-        $source = @imagecreatefromstring($binary);
-        if (!$source) {
-            return 0;
-        }
-
-        $width = imagesx($source);
-        $height = imagesy($source);
-        if ($width < 1 || $height < 1) {
-            imagedestroy($source);
-            return 0;
-        }
-
-        $generated = 0;
-        foreach (['thumb' => 480, 'medium' => 1200] as $variant => $targetWidth) {
-            $variantPath = $this->variantPath($path, $variant);
-            if (Storage::disk('public')->exists($variantPath)) {
-                continue;
-            }
-
-            $newWidth = min($targetWidth, $width);
-            $newHeight = (int) round(($height / $width) * $newWidth);
-            $canvas = imagecreatetruecolor($newWidth, $newHeight);
-            imagealphablending($canvas, false);
-            imagesavealpha($canvas, true);
-            $transparent = imagecolorallocatealpha($canvas, 0, 0, 0, 127);
-            imagefilledrectangle($canvas, 0, 0, $newWidth, $newHeight, $transparent);
-
-            imagecopyresampled(
-                $canvas,
-                $source,
-                0,
-                0,
-                0,
-                0,
-                $newWidth,
-                $newHeight,
-                $width,
-                $height
-            );
-
-            $variantAbsolutePath = Storage::disk('public')->path($variantPath);
-            $variantDir = dirname($variantAbsolutePath);
-            if (!is_dir($variantDir)) {
-                @mkdir($variantDir, 0775, true);
-            }
-
-            if (function_exists('imagewebp')) {
-                @imagewebp($canvas, $variantAbsolutePath, 82);
-            }
-
-            imagedestroy($canvas);
-            $generated++;
-        }
-
-        imagedestroy($source);
-
-        return $generated;
-    }
-
-    private function variantPath(string $path, string $variant): string
-    {
-        $dir = pathinfo($path, PATHINFO_DIRNAME);
-        $filename = pathinfo($path, PATHINFO_FILENAME);
-        $dir = $dir === '.' ? '' : $dir;
-        $prefix = $dir !== '' ? $dir . '/' : '';
-
-        return "{$prefix}variants/{$variant}_{$filename}.webp";
     }
 }
