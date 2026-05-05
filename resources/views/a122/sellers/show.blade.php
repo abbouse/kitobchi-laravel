@@ -34,17 +34,11 @@
     <div class="flex flex-col sm:flex-row sm:items-center gap-4">
         {{-- Avatar --}}
         <div class="shrink-0">
-            @if($seller->photo)
-                <img
-                    src="{{ Str::startsWith($seller->photo, 'http') ? $seller->photo : asset('storage/' . $seller->photo) }}"
-                    alt="{{ $seller->shop_name }}"
-                    class="w-20 h-20 rounded-full object-cover ring-4 ring-emerald-100 dark:ring-emerald-500/20"
-                >
-            @else
-                <div class="w-20 h-20 rounded-full bg-gray-200 dark:bg-white/10 flex items-center justify-center text-2xl font-bold text-gray-500 dark:text-gray-300">
-                    {{ strtoupper(substr($seller->shop_name ?? 'S', 0, 1)) }}
-                </div>
-            @endif
+            @include('a122.partials.avatar', [
+                'name' => $seller->shop_name,
+                'image' => $seller->photo,
+                'class' => 'w-20 h-20 rounded-full text-2xl font-bold ring-4 ring-emerald-100 dark:ring-emerald-500/20',
+            ])
         </div>
 
         {{-- Main Info --}}

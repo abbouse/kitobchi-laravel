@@ -18,9 +18,9 @@ use App\Http\Controllers\Api\Seller\TransactionController;
 use Illuminate\Support\Facades\Route;
 
 // Ochiq yo'llar (Login/Registratsiya)
-Route::post('login', [SellerAuthController::class, 'login']);
-Route::post('contact', [SellerAuthController::class, 'register']);
-Route::post('forgot', [SellerAuthController::class, 'forgot']);
+Route::post('login', [SellerAuthController::class, 'login'])->middleware('throttle:auth-seller');
+Route::post('contact', [SellerAuthController::class, 'register'])->middleware('throttle:registration-light');
+Route::post('forgot', [SellerAuthController::class, 'forgot'])->middleware('throttle:password-recovery');
 
 // Avtorizatsiyadan o'tgan sotuvchilar
 Route::middleware('auth:seller')->group(function () {

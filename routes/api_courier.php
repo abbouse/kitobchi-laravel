@@ -3,9 +3,9 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Courier\{ConversationController, CourierAuthController, CourierController, CourierOrderController, CourierTransactionController, CourierBanLogController};
 
 // Kuryer Login
-Route::post('auth', [CourierAuthController::class, 'auth']);
-Route::post('forgot', [CourierAuthController::class, 'forgot']);
-Route::post('contact-request', [CourierAuthController::class, 'contactRequest']);
+Route::post('auth', [CourierAuthController::class, 'auth'])->middleware('throttle:auth-courier');
+Route::post('forgot', [CourierAuthController::class, 'forgot'])->middleware('throttle:password-recovery');
+Route::post('contact-request', [CourierAuthController::class, 'contactRequest'])->middleware('throttle:registration-light');
 
 // Kuryer funksiyalari
 Route::middleware('auth:courier')->group(function () {

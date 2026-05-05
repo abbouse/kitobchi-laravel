@@ -432,15 +432,15 @@
             <div>
               <label class="p-form-label">iOS Redirect URI</label>
               <input type="text" name="telegram_redirect_uri_ios" class="p-form-control"
-                     value="<?php echo e(old('telegram_redirect_uri_ios', $project?->telegram_redirect_uri_ios ?? 'https://app8515375616-login.tg.dev')); ?>"
-                     placeholder="https://app8515375616-login.tg.dev">
-              <div style="font-size:11px;color:var(--p-hint);margin-top:4px">iOS universal link. Custom scheme emas, aynan Telegram bergan HTTPS redirect bo'lishi kerak.</div>
+                     value="<?php echo e(old('telegram_redirect_uri_ios', $project?->telegram_redirect_uri_ios ?? 'kitobchi://tglogin')); ?>"
+                     placeholder="kitobchi://tglogin">
+              <div style="font-size:11px;color:var(--p-hint);margin-top:4px">iOS uchun hozir custom scheme ishlatiladi. Bu SceneDelegate / universal link noaniqligidan ko'ra barqarorroq.</div>
             </div>
             <div>
               <label class="p-form-label">Android Redirect URI</label>
               <input type="text" name="telegram_redirect_uri_android" class="p-form-control"
-                     value="<?php echo e(old('telegram_redirect_uri_android', $project?->telegram_redirect_uri_android ?? 'https://app8515375616-login.tg.dev')); ?>"
-                     placeholder="https://app8515375616-login.tg.dev">
+                     value="<?php echo e(old('telegram_redirect_uri_android', $project?->telegram_redirect_uri_android ?? 'https://app2234481912-login.tg.dev')); ?>"
+                     placeholder="https://app2234481912-login.tg.dev">
               <div style="font-size:11px;color:var(--p-hint);margin-top:4px">Android App Link. `kitobchi://telegram-auth` bu yer uchun noto'g'ri.</div>
             </div>
             <div>
@@ -456,7 +456,7 @@
           Maxfiy <code>client_secret</code> admin panelda saqlanmaydi. Uni server <code>.env</code> fayliga yozing: <code>TELEGRAM_LOGIN_CLIENT_SECRET=...</code>
         </div>
         <div style="font-size:11px;color:var(--p-muted);padding:0 0 10px 0">
-          To'g'ri qiymatlar: iOS <code>https://app8515375616-login.tg.dev</code>, Android <code>https://app8515375616-login.tg.dev</code>.
+          To'g'ri qiymatlar: iOS <code>kitobchi://tglogin</code>, Android <code>https://app2234481912-login.tg.dev</code>.
         </div>
 
         <div class="flex justify-end mt-4">

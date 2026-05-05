@@ -162,6 +162,22 @@ class ProductsController extends Controller
         ];
     }
 
+    private function sellerCategoryPayload($category, $products, int $page, int $perPage, int $total): array
+    {
+        return [
+            'category_id' => $category?->id ?? 0,
+            'name_uz'     => $category?->name_uz ?? '',
+            'name_ru'     => $category?->name_ru ?? '',
+            'name_en'     => $category?->name_en ?? '',
+            'name_ja'     => $category?->name_ja ?? '',
+            'products'    => $products,
+            'page'        => $page,
+            'per_page'    => $perPage,
+            'total'       => $total,
+            'has_more'    => ($page * $perPage) < $total,
+        ];
+    }
+
     private function formatInStoreIsbnCandidate($book, $user = null): array
     {
         return $this->formatProduct($book, $user, 'book');
@@ -684,6 +700,7 @@ class ProductsController extends Controller
     public function seller(Request $request, $id)
     {
         $user = Auth::guard('user')->user();
+        $perPage = 15;
 
         $seller = Seller::where('id', $id)
             ->where('is_hidden', 0)
@@ -702,19 +719,19 @@ class ProductsController extends Controller
         // Chegirmali kitoblar (muddati o'tmagan)
         $discountedBooks = $this->hasActiveDiscount($baseBookQ(), true)
             ->orderByRaw('(price - discountPrice) DESC')
-            ->limit(15)->get()
+            ->limit($perPage)->get()
             ->map(fn($b) => $this->formatProduct($b, $user, 'book'));
 
         // Trend kitoblar
         $trendingBooks = $baseBookQ()
             ->orderByDesc('totalSalesWeek')->orderByDesc('totalSales')
-            ->limit(15)->get()
+            ->limit($perPage)->get()
             ->map(fn($b) => $this->formatProduct($b, $user, 'book'));
 
         // Recommended kitoblar (muddati o'tmagan)
         $recommendedBooks = $this->isRecommended($baseBookQ())
             ->orderByDesc('totalSalesWeek')
-            ->limit(15)->get()
+            ->limit($perPage)->get()
             ->map(fn($b) => $this->formatProduct($b, $user, 'book'));
 
         // Kategoriya bo'yicha kitoblar
@@ -724,37 +741,38 @@ class ProductsController extends Controller
 
         $booksByCategory = [];
         foreach ($bookCategoryIds as $catId) {
-            $catBooks = $baseBookQ()->where('category_id', $catId)
-                ->orderByDesc('totalSalesWeek')->limit(15)->get();
+            $catQuery = $baseBookQ()->where('category_id', $catId)
+                ->orderByDesc('totalSalesWeek')->orderByDesc('totalSales');
+            $catTotal = (clone $catQuery)->count();
+            $catBooks = $catQuery->limit($perPage)->get();
             if ($catBooks->isEmpty()) continue;
             $category = $catBooks->first()->category;
             if (!$category) continue;
-            $booksByCategory[] = [
-                'category_id' => $catId,
-                'name_uz'     => $category->name_uz ?? '',
-                'name_ru'     => $category->name_ru ?? '',
-                'name_en'     => $category->name_en ?? '',
-                'name_ja'     => $category->name_ja ?? '',
-                'products'    => $catBooks->map(fn($b) => $this->formatProduct($b, $user, 'book'))->values(),
-            ];
+            $booksByCategory[] = $this->sellerCategoryPayload(
+                $category,
+                $catBooks->map(fn($b) => $this->formatProduct($b, $user, 'book'))->values()->toArray(),
+                1,
+                $perPage,
+                $catTotal,
+            );
         }
 
         // Chegirmali stationery (muddati o'tmagan)
         $discountedStats = $this->hasActiveDiscount($baseStatQ(), false)
             ->orderByRaw('(price - discount_price) DESC')
-            ->limit(15)->get()
+            ->limit($perPage)->get()
             ->map(fn($s) => $this->formatProduct($s, $user, 'stationery'));
 
         // Trend stationery
         $trendingStats = $baseStatQ()
             ->orderByDesc('totalSalesWeek')->orderByDesc('totalSales')
-            ->limit(15)->get()
+            ->limit($perPage)->get()
             ->map(fn($s) => $this->formatProduct($s, $user, 'stationery'));
 
         // Recommended stationery
         $recommendedStats = $this->isRecommended($baseStatQ())
             ->orderByDesc('totalSalesWeek')
-            ->limit(15)->get()
+            ->limit($perPage)->get()
             ->map(fn($s) => $this->formatProduct($s, $user, 'stationery'));
 
         // Kategoriya bo'yicha stationery
@@ -764,25 +782,39 @@ class ProductsController extends Controller
 
         $stationeriesByCategory = [];
         foreach ($statCategoryIds as $catId) {
-            $catStats = $baseStatQ()->where('category_id', $catId)
-                ->orderByDesc('totalSalesWeek')->limit(15)->get();
+            $catQuery = $baseStatQ()->where('category_id', $catId)
+                ->orderByDesc('totalSalesWeek')->orderByDesc('totalSales');
+            $catTotal = (clone $catQuery)->count();
+            $catStats = $catQuery->limit($perPage)->get();
             if ($catStats->isEmpty()) continue;
             $category = $catStats->first()->category;
             if (!$category) continue;
-            $stationeriesByCategory[] = [
-                'category_id' => $catId,
-                'name_uz'     => $category->name_uz ?? '',
-                'name_ru'     => $category->name_ru ?? '',
-                'name_en'     => $category->name_en ?? '',
-                'name_ja'     => $category->name_ja ?? '',
-                'products'    => $catStats->map(fn($s) => $this->formatProduct($s, $user, 'stationery'))->values(),
-            ];
+            $stationeriesByCategory[] = $this->sellerCategoryPayload(
+                $category,
+                $catStats->map(fn($s) => $this->formatProduct($s, $user, 'stationery'))->values()->toArray(),
+                1,
+                $perPage,
+                $catTotal,
+            );
         }
+
+        $bookCount = Books::where('seller_id', $id)
+            ->where('is_hidden', 0)->where('is_approved', 1)->where('count', '>', 0)
+            ->count();
+        $stationeryCount = Stationery::where('seller_id', $id)
+            ->where('is_hidden', 0)->where('is_approved', 1)->where('stock', '>', 0)
+            ->count();
 
         return response()->json([
             'status' => 'success',
             'data'   => [
-                'seller' => $this->formatSellerInfo($seller),
+                'seller' => array_merge($this->formatSellerInfo($seller), [
+                    'summary' => [
+                        'books_count' => $bookCount,
+                        'stationeries_count' => $stationeryCount,
+                        'total_products' => $bookCount + $stationeryCount,
+                    ],
+                ]),
                 'books' => [
                     'discounted'   => $discountedBooks,
                     'trending'     => $trendingBooks,
@@ -795,6 +827,78 @@ class ProductsController extends Controller
                     'recommended'  => $recommendedStats,
                     'by_category'  => $stationeriesByCategory,
                 ],
+            ],
+        ]);
+    }
+
+    public function sellerCategoryProducts(Request $request, $id)
+    {
+        $user = Auth::guard('user')->user();
+        $type = strtolower((string) $request->query('type', 'book'));
+        $categoryId = (int) $request->query('category_id');
+        $page = max(1, (int) $request->query('page', 1));
+        $perPage = max(1, min(15, (int) $request->query('per_page', 15)));
+
+        if (!in_array($type, ['book', 'stationery'], true) || $categoryId <= 0) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Noto\'g\'ri parametrlar.',
+            ], 422);
+        }
+
+        $seller = Seller::where('id', $id)
+            ->where('is_hidden', 0)
+            ->where('parent_id', 0)
+            ->where('status', 'approved')
+            ->firstOrFail();
+
+        if ($type === 'book') {
+            $query = Books::where('seller_id', $seller->id)
+                ->where('category_id', $categoryId)
+                ->where('is_hidden', 0)
+                ->where('is_approved', 1)
+                ->where('count', '>', 0)
+                ->with(['category', 'tags', 'seller'])
+                ->orderByDesc('totalSalesWeek')
+                ->orderByDesc('totalSales');
+        } else {
+            $query = Stationery::where('seller_id', $seller->id)
+                ->where('category_id', $categoryId)
+                ->where('is_hidden', 0)
+                ->where('is_approved', 1)
+                ->where('stock', '>', 0)
+                ->with(['category', 'tags', 'variants', 'seller'])
+                ->orderByDesc('totalSalesWeek')
+                ->orderByDesc('totalSales');
+        }
+
+        $total = (clone $query)->count();
+        $items = $query->forPage($page, $perPage)->get();
+
+        if ($items->isEmpty()) {
+            return response()->json([
+                'status' => 'success',
+                'data' => [
+                    'products' => [],
+                    'page' => $page,
+                    'per_page' => $perPage,
+                    'total' => $total,
+                    'has_more' => false,
+                ],
+            ]);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'products' => $items
+                    ->map(fn($item) => $this->formatProduct($item, $user, $type))
+                    ->values()
+                    ->toArray(),
+                'page' => $page,
+                'per_page' => $perPage,
+                'total' => $total,
+                'has_more' => ($page * $perPage) < $total,
             ],
         ]);
     }

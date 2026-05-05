@@ -31,6 +31,121 @@ class DashboardController extends Controller
 
     private const TTL_HOT = 60;
 
+    private function salesGeoCatalog(): array
+    {
+        return [
+            'uzbekistan' => [
+                'label' => "O'zbekiston",
+                'aliases' => [
+                    "o'zbekiston", 'ozbekiston', 'uzbekistan', 'узбекистан', 'uzbekiston',
+                ],
+                'regions' => [
+                    'tashkent_city' => ['label' => 'Toshkent shahri', 'aliases' => ['toshkent shahri', 'tashkent city', 'город ташкент', 'г ташкент']],
+                    'tashkent_region' => ['label' => 'Toshkent viloyati', 'aliases' => ['toshkent viloyati', 'tashkent region', 'ташкентская область', 'toshkent tumani emas']],
+                    'andijan' => ['label' => 'Andijon viloyati', 'aliases' => ['andijon', 'andijan', 'андижан']],
+                    'fergana' => ['label' => "Farg'ona viloyati", 'aliases' => ["farg'ona", 'fargona', 'fergana', 'фергана']],
+                    'namangan' => ['label' => 'Namangan viloyati', 'aliases' => ['namangan', 'наманган']],
+                    'samarqand' => ['label' => 'Samarqand viloyati', 'aliases' => ['samarqand', 'samarkand', 'самарканд']],
+                    'bukhara' => ['label' => 'Buxoro viloyati', 'aliases' => ['buxoro', 'bukhara', 'бухара']],
+                    'khorezm' => ['label' => 'Xorazm viloyati', 'aliases' => ['xorazm', 'khorezm', 'хорезм']],
+                    'navoiy' => ['label' => 'Navoiy viloyati', 'aliases' => ['navoiy', 'navoi', 'навои']],
+                    'jizzakh' => ['label' => 'Jizzax viloyati', 'aliases' => ['jizzax', 'jizzakh', 'джизак']],
+                    'sirdaryo' => ['label' => 'Sirdaryo viloyati', 'aliases' => ['sirdaryo', 'syrdarya', 'сырдарья']],
+                    'surxondaryo' => ['label' => 'Surxondaryo viloyati', 'aliases' => ['surxondaryo', 'surkhandarya', 'сурхандарья']],
+                    'qashqadaryo' => ['label' => 'Qashqadaryo viloyati', 'aliases' => ['qashqadaryo', 'kashkadarya', 'кашкадарья']],
+                    'qarakalpakstan' => ['label' => "Qoraqalpog'iston Respublikasi", 'aliases' => ["qoraqalpog'iston", 'qoraqalpogiston', 'karakalpakstan', 'каракалпакстан', 'nukus']],
+                ],
+            ],
+        ];
+    }
+
+    private function normalizeGeoText(?string $value): string
+    {
+        $value = mb_strtolower(trim((string) $value));
+        $value = str_replace(["’", "`", "ʻ", "ʼ"], "'", $value);
+        $value = preg_replace('/[^\p{L}\p{N}\s\']+/u', ' ', $value) ?? '';
+        $value = preg_replace('/\s+/u', ' ', $value) ?? '';
+
+        return trim($value);
+    }
+
+    private function detectSalesGeoFromOrder(Sold $order): ?array
+    {
+        $catalog = $this->salesGeoCatalog();
+        $texts = [];
+
+        if (is_array($order->address)) {
+            foreach ($order->address as $chunk) {
+                if (!is_array($chunk)) {
+                    continue;
+                }
+                foreach (['fullAddress', 'branch_address', 'address', 'region', 'city'] as $field) {
+                    $value = $chunk[$field] ?? null;
+                    if (is_string($value) && trim($value) !== '') {
+                        $texts[] = $value;
+                    }
+                }
+            }
+        }
+
+        foreach ([$order->recipient_region, $order->recipient_address] as $value) {
+            if (is_string($value) && trim($value) !== '') {
+                $texts[] = $value;
+            }
+        }
+
+        $normalizedTexts = array_values(array_filter(array_map(
+            fn ($text) => $this->normalizeGeoText($text),
+            $texts
+        )));
+
+        if (empty($normalizedTexts)) {
+            return null;
+        }
+
+        $countryKey = null;
+        $countryLabel = null;
+        $regionKey = null;
+        $regionLabel = null;
+
+        foreach ($catalog as $key => $country) {
+            foreach ($normalizedTexts as $text) {
+                foreach ($country['aliases'] as $alias) {
+                    if (str_contains($text, $this->normalizeGeoText($alias))) {
+                        $countryKey = $key;
+                        $countryLabel = $country['label'];
+                        break 3;
+                    }
+                }
+            }
+
+            foreach ($country['regions'] as $rKey => $region) {
+                foreach ($normalizedTexts as $text) {
+                    foreach ($region['aliases'] as $alias) {
+                        if (str_contains($text, $this->normalizeGeoText($alias))) {
+                            $countryKey = $key;
+                            $countryLabel = $country['label'];
+                            $regionKey = $rKey;
+                            $regionLabel = $region['label'];
+                            break 4;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!$countryKey) {
+            return null;
+        }
+
+        return [
+            'country_key' => $countryKey,
+            'country_label' => $countryLabel,
+            'region_key' => $regionKey,
+            'region_label' => $regionLabel,
+        ];
+    }
+
     public function index(Request $request)
     {
         if ($request->has('clear_cache')) {
@@ -69,6 +184,7 @@ class DashboardController extends Controller
             'dash5_ord_total', 'dash5_ord_today', 'dash5_ord_week',
             'dash5_ord_C', 'dash5_ord_A', 'dash5_ord_B', 'dash5_ord_F',
             'dash5_daily_ord', 'dash5_daily_rev', 'dash5_monthly', 'dash5_monthly_fin',
+            'dash5_sales_geo',
             'dash5_fin_delivery', 'dash5_fin_promo', 'dash5_fin_cashback',
             'dash5_fin_comm', 'dash5_fin_courier',
             'dash5_u_total', 'dash5_u_premium', 'dash5_u_online', 'dash5_u_today',
@@ -275,6 +391,80 @@ class DashboardController extends Controller
                 fn () => (int) MysteryBoxSubscription::whereIn('status', ['active', 'completed'])->sum('price_uzs'));
             $mysteryRevMonth = (int) MysteryBoxSubscription::whereIn('status', ['active', 'completed'])
                 ->whereMonth('created_at', now()->month)->sum('price_uzs');
+        } catch (\Throwable) {
+        }
+
+        // ── SALES GEO ANALYTICS ─────────────────────────────────
+        $salesGeoCountries = [];
+        $salesGeoRegionsByCountry = [];
+        $salesGeoDefaultCountry = null;
+        try {
+            $salesGeo = Cache::remember('dash5_sales_geo', $ttl, function () {
+                $countries = [];
+                $regionsByCountry = [];
+
+                Sold::query()
+                    ->where('paymentStatus', 2)
+                    ->select('id', 'amount', 'address', 'recipient_region', 'recipient_address')
+                    ->orderBy('id')
+                    ->chunk(300, function ($orders) use (&$countries, &$regionsByCountry) {
+                        foreach ($orders as $order) {
+                            $geo = $this->detectSalesGeoFromOrder($order);
+                            if (!$geo) {
+                                continue;
+                            }
+
+                            $countryKey = $geo['country_key'];
+                            $regionKey = $geo['region_key'];
+                            $amount = (float) ($order->amount ?? 0);
+
+                            if (!isset($countries[$countryKey])) {
+                                $countries[$countryKey] = [
+                                    'key' => $countryKey,
+                                    'label' => $geo['country_label'],
+                                    'orders' => 0,
+                                    'revenue' => 0,
+                                    'regions_count' => 0,
+                                ];
+                            }
+
+                            $countries[$countryKey]['orders']++;
+                            $countries[$countryKey]['revenue'] += $amount;
+
+                            if ($regionKey && $geo['region_label']) {
+                                if (!isset($regionsByCountry[$countryKey][$regionKey])) {
+                                    $regionsByCountry[$countryKey][$regionKey] = [
+                                        'key' => $regionKey,
+                                        'label' => $geo['region_label'],
+                                        'orders' => 0,
+                                        'revenue' => 0,
+                                    ];
+                                }
+
+                                $regionsByCountry[$countryKey][$regionKey]['orders']++;
+                                $regionsByCountry[$countryKey][$regionKey]['revenue'] += $amount;
+                            }
+                        }
+                    });
+
+                foreach ($regionsByCountry as $countryKey => &$regions) {
+                    uasort($regions, fn ($a, $b) => $b['revenue'] <=> $a['revenue']);
+                    $countries[$countryKey]['regions_count'] = count($regions);
+                    $regions = array_values($regions);
+                }
+                unset($regions);
+
+                uasort($countries, fn ($a, $b) => $b['revenue'] <=> $a['revenue']);
+
+                return [
+                    'countries' => array_values($countries),
+                    'regions' => $regionsByCountry,
+                ];
+            });
+
+            $salesGeoCountries = $salesGeo['countries'] ?? [];
+            $salesGeoRegionsByCountry = $salesGeo['regions'] ?? [];
+            $salesGeoDefaultCountry = $salesGeoCountries[0]['key'] ?? null;
         } catch (\Throwable) {
         }
 
@@ -586,6 +776,7 @@ class DashboardController extends Controller
             'giftUsedInOrders', 'giftUsedMonthOrders',
             'repeatBuyersMonth', 'newBuyersMonth', 'avgCommissionPct',
             'aovMonthly', 'deliveryTypeSplit', 'revenueByType',
+            'salesGeoCountries', 'salesGeoRegionsByCountry', 'salesGeoDefaultCountry',
             'platformProfit', 'platformProfitMonth',
             'kangarooHumanReviewBooks', 'kangarooHumanReviewStationery', 'kangarooUgcAdminQueue'
         );

@@ -48,14 +48,11 @@
     <div class="px-6 py-6 border-b border-[var(--p-border)] bg-[var(--p-surface)]">
       <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
         <div class="flex items-center gap-4">
-          <?php if($user->avatar): ?>
-            <img src="<?php echo e(asset('storage/'.$user->avatar)); ?>" class="w-24 h-24 rounded-[28px] object-cover ring-4 ring-white/50 dark:ring-white/10 shadow-xl" alt="<?php echo e($fullName); ?>">
-          <?php else: ?>
-            <div class="w-24 h-24 rounded-[28px] flex items-center justify-center text-3xl font-black text-white shadow-xl bg-[linear-gradient(135deg,#10b981,#2563eb)]">
-              <?php echo e(strtoupper(substr((string) data_get($user,'name','U'), 0, 1))); ?>
-
-            </div>
-          <?php endif; ?>
+          <?php echo $__env->make('a122.partials.avatar', [
+            'name' => $fullName,
+            'image' => $user->avatar,
+            'class' => 'w-24 h-24 rounded-[28px] text-3xl font-black shadow-xl ring-4 ring-white/50 dark:ring-white/10',
+          ], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
 
           <div class="space-y-3">
             <div>

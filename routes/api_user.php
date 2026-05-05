@@ -39,6 +39,7 @@ Route::prefix('products')->group(function () {
     Route::get('sellers/{sellerId}/by-code/{code}', [ProductsController::class, 'sellerProductByCode']);
     Route::get('sellers/{sellerId}/by-isbn/{isbn}', [ProductsController::class, 'sellerProductByIsbn']);
     Route::get('sellers/profile/{id}', [ProductsController::class, 'seller']);
+    Route::get('sellers/profile/{id}/category-products', [ProductsController::class, 'sellerCategoryProducts']);
     Route::get('books-by-category', [ProductsController::class, 'booksByCategory']);
     Route::get('recommendation/{col}', [ProductsController::class, 'recommendation']);
     Route::get('cart-recommendation', [ProductsController::class, 'cartRecommendation']);

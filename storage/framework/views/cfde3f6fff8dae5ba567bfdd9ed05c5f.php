@@ -599,6 +599,43 @@
         </div>
       </div>
       <?php endif; ?>
+
+      <?php if(count($salesGeoCountries)): ?>
+      <div class="dash-card">
+        <div class="dash-card-head">
+          <div>
+            <div class="dash-card-title">Hududlar bo‘yicha sotuvlar</div>
+            <div class="dash-card-sub">Davlatni tanlang, sotuv bo‘lgan viloyatlar avtomatik chiqadi</div>
+          </div>
+        </div>
+        <div class="dash-card-body pt-0">
+          <div class="period-toggle mb-3" id="salesGeoCountryToggle">
+            <?php $__currentLoopData = $salesGeoCountries; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $country): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+              <button
+                class="period-btn <?php echo e($salesGeoDefaultCountry === $country['key'] ? 'active' : ''); ?>"
+                data-country="<?php echo e($country['key']); ?>"
+                onclick="switchSalesGeoCountry(this,'<?php echo e($country['key']); ?>')"
+              >
+                <?php echo e($country['label']); ?>
+
+              </button>
+            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+          </div>
+
+          <div class="grid grid-cols-1 gap-4 xl:grid-cols-12">
+            <div class="xl:col-span-8">
+              <div class="dash-chart-surface">
+                <div id="chartSalesGeo" class="dash-chart-host dash-chart-host--220"></div>
+              </div>
+            </div>
+            <div class="xl:col-span-4">
+              <div id="salesGeoCountrySummary" class="grid grid-cols-2 gap-3 mb-3"></div>
+              <div id="salesGeoRegionList" class="space-y-2"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <?php endif; ?>
     </div>
   </div>
   <?php else: ?>
@@ -914,6 +951,12 @@ function _initOrderCharts() {
 
 // ── Finance tab ──────────────────────────────────────────────────────────────
 let _revChart = null;
+let _salesGeoChart = null;
+const salesGeoState = {
+  selected: <?php echo json_encode($salesGeoDefaultCountry, 15, 512) ?>,
+  countries: <?php echo json_encode($salesGeoCountries, 15, 512) ?>,
+  regions: <?php echo json_encode($salesGeoRegionsByCountry, 15, 512) ?>,
+};
 function _initFinanceCharts() {
   _revChart = new ApexCharts(document.getElementById('chartRevenue'), {
     series:[{name:'Daromad',data:revData.month.data}],
@@ -960,6 +1003,95 @@ function _initFinanceCharts() {
     tooltip:{theme:isDark?'dark':'light',y:{formatter:v=>v+' ta'}},
   }).render();
   <?php endif; ?>
+
+  _initSalesGeoChart();
+}
+
+function _initSalesGeoChart() {
+  const host = document.getElementById('chartSalesGeo');
+  if (!host || !salesGeoState.selected) return;
+
+  const regions = salesGeoState.regions[salesGeoState.selected] || [];
+  const categories = regions.map(r => r.label);
+  const revenueData = regions.map(r => Number((r.revenue || 0) / 1000000).toFixed(2));
+
+  if (_salesGeoChart) {
+    _salesGeoChart.updateOptions({
+      series:[{name:'Sotuv', data: revenueData}],
+      xaxis:{categories},
+    });
+  } else {
+    _salesGeoChart = new ApexCharts(host, {
+      series:[{name:'Sotuv', data: revenueData}],
+      chart:{type:'bar',height:220,toolbar:{show:false},background:'transparent',fontFamily:'Inter,sans-serif'},
+      colors:[C.accent],
+      plotOptions:{bar:{horizontal:true,borderRadius:7,barHeight:'58%'}},
+      dataLabels:{enabled:false},
+      xaxis:{
+        categories,
+        labels:{style:{colors:C.muted,fontSize:'11px'},formatter:v=>v+'M'},
+        axisBorder:{show:false},
+        axisTicks:{show:false},
+      },
+      yaxis:{labels:{style:{colors:C.text,fontSize:'12px'}}},
+      grid:{borderColor:C.grid,strokeDashArray:4},
+      tooltip:{theme:isDark?'dark':'light',y:{formatter:v=>v+' mln UZS'}},
+    });
+    _salesGeoChart.render();
+  }
+
+  _renderSalesGeoSide();
+}
+
+function _renderSalesGeoSide() {
+  const summaryHost = document.getElementById('salesGeoCountrySummary');
+  const listHost = document.getElementById('salesGeoRegionList');
+  if (!summaryHost || !listHost || !salesGeoState.selected) return;
+
+  const country = (salesGeoState.countries || []).find(c => c.key === salesGeoState.selected);
+  const regions = salesGeoState.regions[salesGeoState.selected] || [];
+
+  if (!country) {
+    summaryHost.innerHTML = '';
+    listHost.innerHTML = '';
+    return;
+  }
+
+  summaryHost.innerHTML = `
+    <div class="rounded-[18px] border border-slate-200 bg-slate-50 px-3 py-3">
+      <div class="text-[11px] uppercase tracking-[0.14em] text-slate-500">Buyurtmalar</div>
+      <div class="mt-1 text-lg font-semibold text-slate-900">${Number(country.orders || 0).toLocaleString()}</div>
+    </div>
+    <div class="rounded-[18px] border border-slate-200 bg-slate-50 px-3 py-3">
+      <div class="text-[11px] uppercase tracking-[0.14em] text-slate-500">Viloyatlar</div>
+      <div class="mt-1 text-lg font-semibold text-slate-900">${Number(country.regions_count || 0).toLocaleString()}</div>
+    </div>
+  `;
+
+  listHost.innerHTML = regions.map((region, index) => {
+    const amount = Number(region.revenue || 0);
+    return `
+      <div class="rounded-[18px] border border-slate-200 bg-white px-3 py-3">
+        <div class="flex items-center justify-between gap-3">
+          <div class="min-w-0">
+            <div class="text-sm font-semibold text-slate-900 truncate">${index + 1}. ${region.label}</div>
+            <div class="text-xs text-slate-500">${Number(region.orders || 0).toLocaleString()} ta buyurtma</div>
+          </div>
+          <div class="text-right">
+            <div class="text-sm font-semibold text-slate-900">${Math.round(amount / 1000).toLocaleString()}K</div>
+            <div class="text-[11px] text-slate-500">UZS</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function switchSalesGeoCountry(btn, countryKey) {
+  document.querySelectorAll('#salesGeoCountryToggle .period-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  salesGeoState.selected = countryKey;
+  _initSalesGeoChart();
 }
 
 // ── Users tab ────────────────────────────────────────────────────────────────

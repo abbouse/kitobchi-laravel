@@ -37,7 +37,7 @@ Route::prefix('a122')->name('admin.')->group(function () {
 
     // ── Auth ───────────────────────────────────────────────────────
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-    Route::post('/login', [AuthController::class, 'login'])->name('login.post');
+    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:auth-panel')->name('login.post');
     Route::post('/theme', function (\Illuminate\Http\Request $req) {
         $theme = $req->input('theme', 'dark');
         session(['theme' => in_array($theme, ['light', 'dark'], true) ? $theme : 'dark']);

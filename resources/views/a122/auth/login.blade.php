@@ -2,33 +2,64 @@
 
 @section('title', 'Kirish')
 
+@push('styles')
+<style>
+  .a122-login-body {
+    background:
+      radial-gradient(circle at top left, rgba(28, 176, 154, 0.12), transparent 28%),
+      radial-gradient(circle at bottom right, rgba(245, 188, 91, 0.09), transparent 26%),
+      var(--p-bg);
+  }
+</style>
+@endpush
+
 @section('content')
 <section class="a122-login-shell">
   <div class="a122-login-grid">
     <div class="a122-login-brand">
+      <div class="a122-login-brand__halo a122-login-brand__halo--mint"></div>
+      <div class="a122-login-brand__halo a122-login-brand__halo--gold"></div>
+
       <a href="{{ url('/') }}" class="a122-login-brand__back">
         <i data-lucide="arrow-left" class="w-4 h-4"></i>
         Saytga qaytish
       </a>
 
       <div class="a122-login-brand__content">
-        <div class="a122-login-badge">Kitobdan katta sherik yo'q</div>
-        <h1 class="a122-login-brand__title">Har bir yaxshi kun</h1>
-        <p class="a122-login-brand__desc">yaxshi fikr bilan boshlanadi, yaxshi fikr esa ko‘pincha bir sahifadan tug‘iladi.</p>
+        <div class="a122-login-badge">
+          <span class="a122-login-badge__dot"></span>
+          A122 operational workspace
+        </div>
+        <h1 class="a122-login-brand__title">Kitobchi boshqaruv markazi</h1>
+        <p class="a122-login-brand__desc">Buyurtmalar, sellerlar, support va moliyaviy oqimlarni bitta tinch, aniq va nazoratga qulay ish muhitida boshqaring.</p>
 
         <div class="a122-login-brand__stats">
           <div class="a122-login-stat">
-            <div class="a122-login-stat__value">Sokinlik</div>
-            <div class="a122-login-stat__label">shoshmasdan, aniq qaror qilish uchun</div>
+            <div class="a122-login-stat__icon">
+              <i data-lucide="shopping-bag" class="w-4 h-4"></i>
+            </div>
+            <div class="a122-login-stat__value">Buyurtmalar nazorati</div>
+            <div class="a122-login-stat__label">to‘lov, yetkazish va holat o‘zgarishlari bir qarashda ko‘rinadi</div>
           </div>
           <div class="a122-login-stat">
-            <div class="a122-login-stat__value">Fikr</div>
-            <div class="a122-login-stat__label">har bir sahifa yangi nuqtai nazar beradi</div>
+            <div class="a122-login-stat__icon">
+              <i data-lucide="store" class="w-4 h-4"></i>
+            </div>
+            <div class="a122-login-stat__value">Seller va filiallar</div>
+            <div class="a122-login-stat__label">katalog, filial va ichki operatsiya bir xil ritmda boshqariladi</div>
           </div>
           <div class="a122-login-stat">
-            <div class="a122-login-stat__value">Ilhom</div>
-            <div class="a122-login-stat__label">bugungi ishni ma’noli davom ettirish uchun</div>
+            <div class="a122-login-stat__icon">
+              <i data-lucide="messages-square" class="w-4 h-4"></i>
+            </div>
+            <div class="a122-login-stat__value">Support va moderatsiya</div>
+            <div class="a122-login-stat__label">mijoz bilan aloqa, shikoyat va community oqimi bir joyda jamlanadi</div>
           </div>
+        </div>
+
+        <div class="a122-login-brand__notice">
+          <div class="a122-login-brand__notice-title">Ichki boshqaruv paneli</div>
+          <p>Faqat vakolatli administratorlar uchun. Kirishdan keyin dashboard, moliya, book club va operatsion oqimlar yagona ish maydonida ochiladi.</p>
         </div>
       </div>
     </div>
@@ -42,7 +73,7 @@
             <span class="theme-icon-dark"><i data-lucide="moon-star" class="w-4.5 h-4.5"></i></span>
           </button>
         </div>
-        <p class="a122-login-sub">Panelga kirish uchun email va parolni kiriting.</p>
+        <p class="a122-login-sub">A122 paneliga kirish uchun ishchi email va parolni kiriting. Sessiya xavfsiz tarzda faqat ichki boshqaruv oqimlari uchun ochiladi.</p>
       </div>
 
       @if(session('error'))
@@ -91,7 +122,10 @@
         </button>
       </form>
 
-      <div class="a122-login-footer">© {{ date('Y') }} Kitobchi ecosystems</div>
+      <div class="a122-login-footer">
+        <span>© {{ date('Y') }} Kitobchi ecosystems</span>
+        <span>Operational access only</span>
+      </div>
     </div>
   </div>
 </section>

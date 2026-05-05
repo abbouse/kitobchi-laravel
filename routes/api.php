@@ -19,11 +19,11 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 // Autentifikatsiya yo'llari
-Route::post('auth', [AuthController::class, 'store']);
+Route::post('auth', [AuthController::class, 'store'])->middleware('throttle:auth-user');
 Route::get('auth/telegram/config', [AuthController::class, 'telegramConfig']);
-Route::post('auth/telegram/login', [AuthController::class, 'telegramLogin']);
+Route::post('auth/telegram/login', [AuthController::class, 'telegramLogin'])->middleware('throttle:auth-telegram');
 Route::post('push-notify/send/keywbudcegvc36247c2bc012389ds', [PushController::class, 'sendPush']);
-Route::post('sendSms', [SendSmsController::class, 'sendSms'])->name('api.sendSms');
+Route::post('sendSms', [SendSmsController::class, 'sendSms'])->middleware('throttle:send-sms')->name('api.sendSms');
 Route::get('appversion/check', [ProjectSettingController::class, 'getVersions']);
 Route::post('hook', WebhookController::class);
 Route::post('payme', [App\Http\Controllers\Api\PaymeController::class, 'index'])->middleware('payme');

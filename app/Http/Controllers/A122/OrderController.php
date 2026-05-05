@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Books;
 use App\Models\CourierOrder;
 use App\Models\Couriers;
+use App\Models\Gifts;
+use App\Models\Seller;
 use App\Models\SellerOrder;
 use App\Models\Sold;
 use App\Models\Stationery;
@@ -86,9 +88,29 @@ class OrderController extends Controller
             $type = $item['type'] ?? 'book';
             $product = match ($type) {
                 'stationery' => Stationery::find($item['item_id'] ?? 0),
+                'gift' => Gifts::find($item['item_id'] ?? 0),
                 default => Books::find($item['item_id'] ?? 0),
             };
+            $seller = null;
+            $sellerId = (int) ($item['seller_id'] ?? 0);
+            if ($sellerId > 0) {
+                $seller = Seller::select('id', 'shop_name', 'photo')->find($sellerId);
+            }
+            if (!$seller && $product?->relationLoaded('seller')) {
+                $seller = $product->seller;
+            }
+            if (!$seller && method_exists($product, 'seller')) {
+                $seller = $product->seller()->first(['id', 'shop_name', 'photo']);
+            }
+
+            $item['seller'] = $seller;
             $item['product'] = $product;
+            $item['image'] = $this->resolveItemImage($product);
+            $item['type_label'] = match ($type) {
+                'stationery' => 'Kanselyariya',
+                'gift' => 'Gift',
+                default => 'Kitob',
+            };
             return $item;
         });
         $summary = [
@@ -127,6 +149,27 @@ class OrderController extends Controller
             'courierOrder',
             'assignedCourier',
         ));
+    }
+
+    private function resolveItemImage($product): ?string
+    {
+        if (!$product) {
+            return null;
+        }
+
+        if (property_exists($product, 'first_image') || isset($product->first_image)) {
+            $firstImage = $product->first_image;
+            if (is_string($firstImage) && $firstImage !== '') {
+                return $firstImage;
+            }
+        }
+
+        $images = $product->images ?? null;
+        if (is_array($images) && !empty($images[0]) && is_string($images[0])) {
+            return $images[0];
+        }
+
+        return null;
     }
 
     public function updateStatus(Request $request, Sold $order)

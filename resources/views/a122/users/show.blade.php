@@ -31,13 +31,11 @@
     <div class="px-6 py-6 border-b border-[var(--p-border)] bg-[var(--p-surface)]">
       <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
         <div class="flex items-center gap-4">
-          @if($user->avatar)
-            <img src="{{ asset('storage/'.$user->avatar) }}" class="w-24 h-24 rounded-[28px] object-cover ring-4 ring-white/50 dark:ring-white/10 shadow-xl" alt="{{ $fullName }}">
-          @else
-            <div class="w-24 h-24 rounded-[28px] flex items-center justify-center text-3xl font-black text-white shadow-xl bg-[linear-gradient(135deg,#10b981,#2563eb)]">
-              {{ strtoupper(substr((string) data_get($user,'name','U'), 0, 1)) }}
-            </div>
-          @endif
+          @include('a122.partials.avatar', [
+            'name' => $fullName,
+            'image' => $user->avatar,
+            'class' => 'w-24 h-24 rounded-[28px] text-3xl font-black shadow-xl ring-4 ring-white/50 dark:ring-white/10',
+          ])
 
           <div class="space-y-3">
             <div>

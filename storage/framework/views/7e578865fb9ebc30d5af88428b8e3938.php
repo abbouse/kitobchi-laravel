@@ -122,31 +122,59 @@
               <?php
                 $qty = (int)($it['count_item'] ?? $it['count'] ?? 1);
                 $price = (float)($it['item_price'] ?? $it['price'] ?? 0);
+                $imageValue = trim((string) ($it['image'] ?? ''));
+                $imageUrl = $imageValue === '' ? null : (
+                  str_starts_with($imageValue, 'http://')
+                  || str_starts_with($imageValue, 'https://')
+                  || str_starts_with($imageValue, 'data:')
+                  || str_starts_with($imageValue, '/storage/')
+                  || str_starts_with($imageValue, '/')
+                    ? $imageValue
+                    : asset('storage/' . ltrim($imageValue, '/'))
+                );
               ?>
               <tr>
                 <td>
-                  <?php if(($it['type'] ?? 'book') === 'stationery' && !empty($it['product'])): ?>
-                    <a href="<?php echo e(route('admin.stationery.show', $it['product'])); ?>" class="font-semibold text-[var(--p-accent)] hover:underline">
-                      <?php echo e($it['name'] ?? ($it['product']->name ?? '—')); ?>
-
-                    </a>
-                  <?php elseif(!empty($it['product'])): ?>
-                    <a href="<?php echo e(route('admin.books.show', $it['product'])); ?>" class="font-semibold text-[var(--p-accent)] hover:underline">
-                      <?php echo e($it['name'] ?? ($it['product']->name ?? '—')); ?>
-
-                    </a>
-                  <?php else: ?>
-                    <?php echo e($it['name'] ?? '—'); ?>
-
-                  <?php endif; ?>
-                  <?php if(!empty($it['product']?->seller)): ?>
-                    <div class="text-xs text-[var(--p-hint)] mt-1">
-                      Do‘kon:
-                      <a href="<?php echo e(route('admin.sellers.show', $it['product']->seller)); ?>" class="text-[var(--p-accent)] hover:underline"><?php echo e($it['product']->seller->shop_name); ?></a>
+                  <div class="flex items-start gap-3">
+                    <div class="w-12 h-12 rounded-2xl overflow-hidden border border-[var(--p-border)] bg-[var(--p-elevated)] shrink-0">
+                      <?php if($imageUrl): ?>
+                        <img src="<?php echo e($imageUrl); ?>" alt="<?php echo e($it['name'] ?? ($it['product']->name ?? 'Mahsulot')); ?>" class="w-full h-full object-cover" loading="lazy">
+                      <?php else: ?>
+                        <div class="w-full h-full flex items-center justify-center text-[var(--p-muted)]">
+                          <i class="bi bi-box-seam"></i>
+                        </div>
+                      <?php endif; ?>
                     </div>
-                  <?php endif; ?>
+                    <div class="min-w-0">
+                      <?php if(($it['type'] ?? 'book') === 'stationery' && !empty($it['product'])): ?>
+                        <a href="<?php echo e(route('admin.stationery.show', $it['product'])); ?>" class="font-semibold text-[var(--p-accent)] hover:underline">
+                          <?php echo e($it['name'] ?? ($it['product']->name ?? '—')); ?>
+
+                        </a>
+                      <?php elseif(($it['type'] ?? 'book') === 'gift'): ?>
+                        <span class="font-semibold text-[var(--p-text)]">
+                          <?php echo e($it['name'] ?? ($it['product']->name ?? '—')); ?>
+
+                        </span>
+                      <?php elseif(!empty($it['product'])): ?>
+                        <a href="<?php echo e(route('admin.books.show', $it['product'])); ?>" class="font-semibold text-[var(--p-accent)] hover:underline">
+                          <?php echo e($it['name'] ?? ($it['product']->name ?? '—')); ?>
+
+                        </a>
+                      <?php else: ?>
+                        <?php echo e($it['name'] ?? '—'); ?>
+
+                      <?php endif; ?>
+                      <?php if(!empty($it['seller'])): ?>
+                        <div class="text-xs text-[var(--p-hint)] mt-1">
+                          Do‘kon:
+                          <a href="<?php echo e(route('admin.sellers.show', $it['seller'])); ?>" class="text-[var(--p-accent)] hover:underline"><?php echo e($it['seller']->shop_name); ?></a>
+                        </div>
+                      <?php endif; ?>
+                    </div>
+                  </div>
                 </td>
-                <td><?php echo e($it['type'] ?? 'book'); ?></td>
+                <td><?php echo e($it['type_label'] ?? ($it['type'] ?? 'book')); ?></td>
                 <td><?php echo e($qty); ?></td>
                 <td><?php echo e(number_format($price, 0, '.', ' ')); ?> UZS</td>
                 <td><?php echo e(number_format($qty * $price, 0, '.', ' ')); ?> UZS</td>
@@ -282,11 +310,16 @@
         <div class="space-y-2 text-sm">
           <div>
             <span class="metric-label">Ism</span>
-            <div class="font-semibold mt-1">
+            <div class="font-semibold mt-2 flex items-center gap-3">
               <?php if($order->user): ?>
+                <?php echo $__env->make('a122.partials.avatar', [
+                  'name' => $order->user->full_name ?: 'Foydalanuvchi',
+                  'image' => $order->user->avatar,
+                  'class' => 'w-10 h-10 rounded-2xl text-xs',
+                ], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
                 <a href="<?php echo e(route('admin.users.show', $order->user)); ?>" class="text-[var(--p-accent)] hover:underline"><?php echo e($order->user->full_name ?: 'Foydalanuvchi'); ?></a>
               <?php else: ?>
-                Mehmon
+                <span>Mehmon</span>
               <?php endif; ?>
             </div>
           </div>
@@ -327,7 +360,12 @@
               <?php if($assignedCourier): ?>
                 <div>
                   <span class="metric-label">Biriktirilgan kuryer</span>
-                  <div class="font-semibold mt-1">
+                  <div class="font-semibold mt-2 flex items-center gap-3">
+                    <?php echo $__env->make('a122.partials.avatar', [
+                      'name' => trim(($assignedCourier->first_name ?? '').' '.($assignedCourier->last_name ?? '')) ?: 'Kuryer',
+                      'image' => $assignedCourier->photo,
+                      'class' => 'w-10 h-10 rounded-2xl text-xs',
+                    ], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
                     <a href="<?php echo e(route('admin.couriers.show', $assignedCourier)); ?>" class="text-[var(--p-accent)] hover:underline"><?php echo e(trim(($assignedCourier->first_name ?? '').' '.($assignedCourier->last_name ?? '')) ?: 'Kuryer'); ?></a>
                   </div>
                 </div>
