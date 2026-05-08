@@ -613,7 +613,7 @@
                                 </td>
                                 <td>
                                     @if($order->user)
-                                        <a href="{{ route('admin.users.show', $order->user_id) }}" class="font-semibold hover:underline">
+                                        <a href="{{ route('admin.users.show', $order->user) }}" class="font-semibold hover:underline">
                                             {{ trim(($order->user->name ?? '').' '.($order->user->lastname ?? '')) ?: 'Foydalanuvchi' }}
                                         </a>
                                         <div class="text-xs text-[var(--p-muted)] mt-1">{{ $order->user->phone_number ?: 'Telefon yo‘q' }}</div>

@@ -28,7 +28,6 @@
     ]],
     ['title' => 'JAMIYAT','items' => [
       ['label'=>'Book Club','route'=>'admin.book-club.index','icon'=>'messages-square'],
-      ['label'=>'UGC navbati','route'=>'admin.ugc.index','icon'=>'sparkles'],
       ['label'=>'Chat kuzatuv','route'=>'admin.chats.index','icon'=>'message-square'],
       ['label'=>'Shikoyatlar','route'=>'admin.complaints.index','icon'=>'flag'],
     ]],

@@ -696,7 +696,7 @@ class DashboardController extends Controller
         ])
         );
 
-        // ── Kangaroo (mahsulot + UGC inson navbati) ───────────
+        // ── Kangaroo (faqat mahsulot listing moderatsiyasi) ────
         try {
             $kangarooHumanReviewBooks = Cache::remember('dash5_k_hreview_books', $hot, fn () => Books::query()
                 ->where('is_approved', 0)
@@ -710,18 +710,9 @@ class DashboardController extends Controller
                 ->where('status', 1)
                 ->where('kangaroo_listing_decision', 'human_review')
                 ->count());
-            $kangarooUgcAdminQueue = Cache::remember('dash5_k_ugc_admin', $hot, fn () => BookClubComment::query()
-                ->whereNull('parent_id')
-                ->where('kangaroo_ugc_status', 'pending_admin')
-                ->count()
-                + BookClub::query()
-                    ->where('is_deleted', 0)
-                    ->where('kangaroo_post_ugc_status', 'pending_admin')
-                    ->count());
         } catch (\Throwable) {
             $kangarooHumanReviewBooks = 0;
             $kangarooHumanReviewStationery = 0;
-            $kangarooUgcAdminQueue = 0;
         }
 
         // ── ALERTS ────────────────────────────────────────────
@@ -819,10 +810,6 @@ class DashboardController extends Controller
             $alerts[] = ['warning', 'bi-pencil-square', 'Kangaroo: kanstovar (inson)',
                 "{$kangarooHumanReviewStationery} ta mahsulot Kangaroo human_review — qo‘lda tasdiqlash", route('admin.stationery.index')];
         }
-        if ($kangarooUgcAdminQueue > 0) {
-            $alerts[] = ['warning', 'bi-stars', 'Kangaroo: UGC navbati',
-                "{$kangarooUgcAdminQueue} ta post yoki izoh admin bahosini kutmoqda", route('admin.book-club.moderation-queue')];
-        }
 
         return compact(
             'totalUsers', 'premiumUsers', 'activeUsers', 'inactiveUsers',
@@ -855,7 +842,7 @@ class DashboardController extends Controller
             'aovMonthly', 'deliveryTypeSplit', 'revenueByType',
             'salesGeoCountries', 'salesGeoRegionsByCountry', 'salesGeoDefaultCountry',
             'platformProfit', 'platformProfitMonth',
-            'kangarooHumanReviewBooks', 'kangarooHumanReviewStationery', 'kangarooUgcAdminQueue'
+            'kangarooHumanReviewBooks', 'kangarooHumanReviewStationery'
         );
     }
 

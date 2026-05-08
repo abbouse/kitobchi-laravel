@@ -201,8 +201,8 @@
             <div><dt class="metric-label">Muqova</dt><dd class="font-semibold mt-1"><?php echo e($book->coverType ?: '—'); ?></dd></div>
             <div><dt class="metric-label">Sahifalar</dt><dd class="font-semibold mt-1"><?php echo e($book->pages ?: '—'); ?></dd></div>
             <div><dt class="metric-label">Yil</dt><dd class="font-semibold mt-1"><?php echo e($book->year ?: '—'); ?></dd></div>
-            <div><dt class="metric-label">Kangaroo score</dt><dd class="font-semibold mt-1"><?php echo e($book->kangaroo_listing_score ?: '—'); ?></dd></div>
-            <div><dt class="metric-label">UGC score</dt><dd class="font-semibold mt-1"><?php echo e($book->ugc_aggregate_score ?: '—'); ?></dd></div>
+            <div><dt class="metric-label">Kangaroo listing bahosi</dt><dd class="font-semibold mt-1"><?php echo e($book->kangaroo_listing_score ?: '—'); ?></dd></div>
+            <div><dt class="metric-label">AI sharh bahosi</dt><dd class="font-semibold mt-1"><?php echo e($book->ugc_aggregate_score ?: '—'); ?></dd></div>
             <div><dt class="metric-label">Yaratilgan</dt><dd class="font-semibold mt-1"><?php echo e(optional($book->created_at)->format('d.m.Y H:i') ?: '—'); ?></dd></div>
             <div><dt class="metric-label">Yangilangan</dt><dd class="font-semibold mt-1"><?php echo e(optional($book->updated_at)->format('d.m.Y H:i') ?: '—'); ?></dd></div>
           </dl>

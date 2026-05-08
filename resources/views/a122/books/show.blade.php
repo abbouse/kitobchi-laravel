@@ -182,8 +182,8 @@
             <div><dt class="metric-label">Muqova</dt><dd class="font-semibold mt-1">{{ $book->coverType ?: '—' }}</dd></div>
             <div><dt class="metric-label">Sahifalar</dt><dd class="font-semibold mt-1">{{ $book->pages ?: '—' }}</dd></div>
             <div><dt class="metric-label">Yil</dt><dd class="font-semibold mt-1">{{ $book->year ?: '—' }}</dd></div>
-            <div><dt class="metric-label">Kangaroo score</dt><dd class="font-semibold mt-1">{{ $book->kangaroo_listing_score ?: '—' }}</dd></div>
-            <div><dt class="metric-label">UGC score</dt><dd class="font-semibold mt-1">{{ $book->ugc_aggregate_score ?: '—' }}</dd></div>
+            <div><dt class="metric-label">Kangaroo listing bahosi</dt><dd class="font-semibold mt-1">{{ $book->kangaroo_listing_score ?: '—' }}</dd></div>
+            <div><dt class="metric-label">AI sharh bahosi</dt><dd class="font-semibold mt-1">{{ $book->ugc_aggregate_score ?: '—' }}</dd></div>
             <div><dt class="metric-label">Yaratilgan</dt><dd class="font-semibold mt-1">{{ optional($book->created_at)->format('d.m.Y H:i') ?: '—' }}</dd></div>
             <div><dt class="metric-label">Yangilangan</dt><dd class="font-semibold mt-1">{{ optional($book->updated_at)->format('d.m.Y H:i') ?: '—' }}</dd></div>
           </dl>

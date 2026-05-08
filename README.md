@@ -1,6 +1,6 @@
 # Kitobchi (Laravel)
 
-**Kitobchi** — kitob va kanstovar marketplace uchun Laravel 11 backend: mobil ilova API (foydalanuvchi, sotuvchi, kuryer), admin panel, to‘lovlar (Payme), push (FCM), Telegram-bot, AI (Google Gemini), kontent moderatsiyasi (tashqi **Kangaroo** xizmati), Book Club, savat, buyurtmalar, kontent va boshqalar.
+**Kitobchi** — kitob va kanstovar marketplace uchun Laravel 11 backend: mobil ilova API (foydalanuvchi, sotuvchi, kuryer), admin panel, to‘lovlar (Payme), push (FCM), Telegram-bot, AI (Google Gemini va OpenAI), mahsulot listing moderatsiyasi (tashqi **Kangaroo** xizmati), Book Club, savat, buyurtmalar, kontent va boshqalar.
 
 Bu hujjat repoda **o‘rnatish**, **sozlash**, **yo‘llar**, **jadval (scheduler)**, **integratsiyalar** va **papka tuzilmasi** bo‘yicha yo‘riqnoma.
 
@@ -137,7 +137,7 @@ kitobchi/
 | Fayl | Vazifa |
 |------|--------|
 | `routes/web.php` | Bosh sahifa (`/`), til almashtirish, `/share/*`, Payme redirectlari, `/payment/*`, `/telegram/webhook`, karyera, huquqiy hujjatlar, `a122.php` ni `require` |
-| `routes/a122.php` | Admin: login, dashboard, foydalanuvchilar, kitob/kanstovar, buyurtmalar, sotuvchilar, kuryerlar, chat, promokodlar, **Book Club moderatsiya navbati**, sozlamalar, … |
+| `routes/a122.php` | Admin: login, dashboard, foydalanuvchilar, kitob/kanstovar, buyurtmalar, sotuvchilar, kuryerlar, chat, promokodlar, Book Club, sozlamalar, … |
 | `routes/api.php` | Sanctum, SMS, auth, push, loyiha versiyasi, qisqa user endpointlar, so‘ng `Route::prefix('v1')` ostida quyidagilar |
 | `routes/api_user.php` | `POST/GET …` — `/api/v1/kitobchi/...` mobil foydalanuvchi |
 | `routes/api_seller.php` | `/api/v1/seller/...` partner kabineti API |
@@ -192,7 +192,7 @@ Asosiy namuna: **`.env.example`**. Quyida Kitobchi uchun muhim guruhlar (to‘li
 |-------------|--------|
 | `KANGAROO_API_URL` | Masalan `https://kangaroo.example.com` |
 | `KANGAROO_API_KEY` | Kangaroo serveridagi `API_SECRET_KEY` bilan **bir xil** (`X-Kangaroo-Key`) |
-| `KANGAROO_LISTING_AUTO_APPLY` | `true` bo‘lsa Kangaroo qarorlari to‘g‘ridan-to‘g‘ri `is_approved` ga yoziladi (**ehtiyot bilan**) |
+| `KANGAROO_LISTING_AUTO_APPLY` | `true` bo‘lsa Kangaroo listing qarorlari to‘g‘ridan-to‘g‘ri `is_approved` ga yoziladi (**ehtiyot bilan**) |
 | `KANGAROO_HTTP_TIMEOUT`, `KANGAROO_HTTP_RETRIES`, `KANGAROO_HTTP_RETRY_DELAY_MS` | HTTP qayta urinish |
 
 ### Firebase va FCM
@@ -206,9 +206,91 @@ Asosiy namuna: **`.env.example`**. Quyida Kitobchi uchun muhim guruhlar (to‘li
 - `GEMINI_API_KEY`
 - Ixtiyoriy: `GEMINI_BASE_URL`, `GEMINI_REQUEST_TIMEOUT`, `GEMINI_TIMEOUT`, `GEMINI_CACHE_TTL` (`config/gemini.php`)
 
-### OpenAI (chatbot / boshqa servislar)
+### OpenAI (chatbot / Book Club AI baholash / boshqa servislar)
 
 - `OPENAI_API_KEY` — `App\Services\OpenAIService` (`config('openai.api_key')` bo‘lsa, u ustunlik qiladi)
+
+---
+
+## Book Club AI baholash
+
+Book Club uchun eski qo‘lda `UGC navbati` oqimi olib tashlangan. Endi post va izohlar batch usulida **OpenAI** orqali baholanadi, kommentlar esa haftalik moderatsiyadan ham o‘tadi.
+
+### Qanday ishlaydi
+
+- Yangi post yozilganda: `book_club.ai_post_status = pending`
+- Yangi izoh yoki reply yozilganda: `book_club_comments.ai_status = pending`
+- Scheduler kuniga 2 marta post va izohlarni OpenAI orqali baholaydi
+- Scheduler haftasiga 1 marta Book Club kommentlarini so'kinish, spam va reklama bo'yicha moderatsiya qiladi
+- Mahsulotga bog‘langan **Book Club postlari** haftasiga bir marta yig‘ilib, mahsulotning `ugc_aggregate_score` qiymati qayta hisoblanadi
+
+### Maydonlar
+
+`book_club`
+- `ai_post_score`
+- `ai_post_checked_at`
+- `ai_post_status`
+- `ai_post_note`
+- `ai_post_model`
+
+`book_club_comments`
+- `ai_score`
+- `ai_checked_at`
+- `ai_status`
+- `ai_note`
+- `ai_model`
+- `is_hidden_by_ai`
+- `ai_moderation_status`
+- `ai_moderated_at`
+- `ai_moderation_note`
+- `ai_moderation_model`
+
+`books` / `stationeries`
+- `ugc_aggregate_score`
+- `ugc_reviews_count`
+- `ugc_last_scored_at`
+
+### Baholash mezoni
+
+AI 1–5 oralig‘ida baho beradi:
+
+- `1` — spam, haqorat, zararli yoki butunlay befoyda
+- `2` — juda sust yoki mavzuga deyarli yordam bermaydi
+- `3` — oddiy, qabul qilsa bo‘ladi
+- `4` — foydali va mavzuga hissa qo‘shadi
+- `5` — juda foydali, aniq va ishonchli
+
+Mahsulot UGC reytingi esa AI baholagan productga bog‘langan Book Club postlaridan **Bayesian weighted average** usuli bilan hisoblanadi. Yaqin 30–90 kundagi sharhlarga biroz yuqoriroq og‘irlik beriladi.
+
+### Reklama va nomaqbul kommentlar siyosati
+
+Kommentlarda quyidagilar yashiriladi:
+
+- so'kinish, haqorat, kamsitish, tahdid
+- pornografik yoki ochiq jinsiy mazmun
+- spam va takroriy flood
+- tashqi savdo yoki trafik yig'ish: telefon, Telegram, Instagram, WhatsApp, link, promo-kod, narx bilan sotuvga chaqirish
+- firibgarlik, noqonuniy xizmat yoki xavfli takliflar
+
+Oddiy tajriba, shaxsiy tavsiya yoki product haqida tabiiy fikr esa yashirilmaydi.
+
+### Artisan buyruqlar
+
+```bash
+php artisan openai:score-book-club-content
+php artisan openai:score-book-club-content --all=1
+php artisan openai:moderate-book-club-comments
+php artisan openai:moderate-book-club-comments --all=1
+php artisan products:refresh-ugc-ratings
+```
+
+### Scheduler
+
+`bootstrap/app.php` ichida:
+
+- `openai:score-book-club-content` — kuniga 2 marta
+- `products:refresh-ugc-ratings` — haftasiga 1 marta
+- `kangaroo:sync-content-moderation` — endi faqat listing moderatsiyasi
 
 ### SMS (Eskiz)
 

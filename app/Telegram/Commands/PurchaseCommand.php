@@ -80,7 +80,7 @@ class PurchaseCommand extends Command
             $purchase->items = $items;
             $purchase->amount = $finalPrice;
             $purchase->address = [$locationData];
-            $purchase->deliveryType = $decodedData['location']['selectedRegion'] == "Toshkent shahri" ? "Kuryer" : "Uzpost";
+            $purchase->deliveryType = $decodedData['location']['selectedRegion'] == "Toshkent shahri" ? "delivery" : "postal";
             $purchase->paymentStatus = $decodedData['location']['payment'] == 'naqd' ? '0' : '1';
             $purchase->deliveryPrice = $deliveryPrice;
             $purchase->save();

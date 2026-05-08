@@ -25,9 +25,6 @@
    <?php $__env->endSlot(); ?>
    <?php $__env->slot('actions', null, []); ?> 
     <div class="flex flex-wrap gap-2">
-      <a href="<?php echo e(route('admin.book-club.moderation-queue')); ?>" class="btn-p ghost">
-        <i class="bi bi-shield-exclamation"></i> UGC navbati
-      </a>
       <a href="<?php echo e(route('admin.book-club.edit', $bookClub)); ?>" class="btn-p ghost">
         <i class="bi bi-pencil"></i> Tahrirlash
       </a>
@@ -150,7 +147,7 @@ unset($__errorArgs, $__bag); ?>
           <div style="margin-left:auto;font-size:12px;color:var(--p-info);display:flex;align-items:center;gap:6px">
             <i class="bi bi-repeat"></i>
             <span>Repost:
-              <a href="<?php echo e(route('admin.users.show', $bookClub->reposted_user_id)); ?>"
+              <a href="<?php echo e(route('admin.users.show', $bookClub->originalAuthor)); ?>"
                  style="color:var(--p-info);font-weight:600">
                 <?php echo e($bookClub->originalAuthor->name); ?>
 
@@ -261,46 +258,42 @@ unset($__errorArgs, $__bag); ?>
         <?php endif; ?>
 
         
-        <?php if($bookClub->kangaroo_post_ugc_status || $bookClub->kangaroo_post_star !== null || $bookClub->kangaroo_post_checked_at): ?>
+        <?php if($bookClub->ai_post_status || $bookClub->ai_post_score !== null || $bookClub->ai_post_checked_at): ?>
         <div style="background:var(--p-elevated);border-radius:10px;padding:14px;margin-bottom:12px;border:1px solid var(--p-border)">
           <div style="font-size:12px;font-weight:600;color:var(--p-hint);margin-bottom:10px;text-transform:uppercase;letter-spacing:.07em">
-            <i class="bi bi-stars mr-1"></i> Kangaroo · post matni
+            <i class="bi bi-stars mr-1"></i> AI · post bahosi
           </div>
           <div style="font-size:13px;color:var(--p-text);display:flex;flex-wrap:wrap;gap:12px;margin-bottom:10px">
-            <?php if($bookClub->kangaroo_post_ugc_status): ?>
+            <?php if($bookClub->ai_post_status): ?>
               <span>Holat:
-                <?php if($bookClub->kangaroo_post_ugc_status === 'pending_admin'): ?>
-                  <strong style="color:var(--p-warning)">admin navbati</strong>
-                <?php elseif($bookClub->kangaroo_post_ugc_status === 'admin_scored'): ?>
-                  <strong style="color:var(--p-accent)">admin bahosi</strong>
+                <?php if($bookClub->ai_post_status === 'pending'): ?>
+                  <strong style="color:var(--p-warning)">navbatda</strong>
+                <?php elseif($bookClub->ai_post_status === 'scored'): ?>
+                  <strong style="color:var(--p-accent)">baholangan</strong>
+                <?php elseif($bookClub->ai_post_status === 'failed'): ?>
+                  <strong style="color:var(--p-danger)">xatolik</strong>
                 <?php else: ?>
-                  <strong><?php echo e($bookClub->kangaroo_post_ugc_status); ?></strong>
+                  <strong><?php echo e($bookClub->ai_post_status); ?></strong>
                 <?php endif; ?>
               </span>
             <?php endif; ?>
-            <?php if($bookClub->kangaroo_post_star !== null): ?>
-              <span>Matnga nisbatan baho: <strong><?php echo e(number_format((float) $bookClub->kangaroo_post_star, 2)); ?></strong> / 5</span>
+            <?php if($bookClub->ai_post_score !== null): ?>
+              <span>Matn sifati bahosi: <strong><?php echo e(number_format((float) $bookClub->ai_post_score, 2)); ?></strong> / 5</span>
             <?php endif; ?>
-            <?php if($bookClub->kangaroo_post_checked_at): ?>
-              <span style="color:var(--p-hint)">Tekshirilgan: <?php echo e($bookClub->kangaroo_post_checked_at->format('d.m.Y H:i')); ?></span>
+            <?php if($bookClub->ai_post_checked_at): ?>
+              <span style="color:var(--p-hint)">Tekshirilgan: <?php echo e($bookClub->ai_post_checked_at->format('d.m.Y H:i')); ?></span>
+            <?php endif; ?>
+            <?php if($bookClub->ai_post_model): ?>
+              <span style="color:var(--p-hint)">Model: <?php echo e($bookClub->ai_post_model); ?></span>
             <?php endif; ?>
           </div>
-          <?php if($bookClub->kangaroo_post_ugc_status === 'pending_admin'): ?>
-          <form method="POST" action="<?php echo e(route('admin.book-club.post-ugc-score', $bookClub)); ?>" class="flex flex-wrap items-end gap-2">
-            <?php echo csrf_field(); ?>
-            <label style="font-size:12px;color:var(--p-hint)">Admin bahosi (1–5)</label>
-            <select name="star" class="p-form-control" style="width:88px" required>
-              <?php for($s = 1; $s <= 5; $s++): ?>
-                <option value="<?php echo e($s); ?>"><?php echo e($s); ?> ★</option>
-              <?php endfor; ?>
-            </select>
-            <button type="submit" class="btn-p primary sm"><i class="bi bi-check2"></i> Saqlash</button>
-          </form>
+          <?php if($bookClub->ai_post_note): ?>
+            <div style="font-size:12px;color:var(--p-muted)"><?php echo e($bookClub->ai_post_note); ?></div>
           <?php endif; ?>
         </div>
         <?php elseif($bookClub->text): ?>
         <div style="background:var(--p-elevated);border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:12px;color:var(--p-hint)">
-          <i class="bi bi-stars mr-1"></i> Kangaroo tekshiruvi hali yozilmagan (sinxron yoki cron: <code>kangaroo:sync-content-moderation</code>).
+          <i class="bi bi-stars mr-1"></i> AI bahosi hali yozilmagan (cron: <code>openai:score-book-club-content</code>).
         </div>
         <?php endif; ?>
 
@@ -394,37 +387,30 @@ unset($__errorArgs, $__bag); ?>
                 <?php endif; ?>
               </div>
 
-              <?php if($comment->kangaroo_ugc_status || $comment->kangaroo_star_equivalent !== null || $comment->kangaroo_toxicity !== null || $comment->kangaroo_checked_at): ?>
+              <?php if($comment->ai_status || $comment->ai_score !== null || $comment->ai_checked_at): ?>
               <div style="margin-top:10px;padding:10px 12px;background:var(--p-elevated);border-radius:8px;border:1px solid var(--p-border)">
-                <div style="font-size:10px;color:var(--p-hint);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Kangaroo · izoh</div>
+                <div style="font-size:10px;color:var(--p-hint);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">AI · izoh bahosi</div>
                 <div style="font-size:12px;color:var(--p-muted);display:flex;flex-wrap:wrap;gap:10px;margin-bottom:8px">
                   <span>Holat:
-                    <?php if($comment->kangaroo_ugc_status === 'pending_admin'): ?>
-                      <strong style="color:var(--p-warning)">admin navbati</strong>
-                    <?php elseif($comment->kangaroo_ugc_status === 'admin_scored'): ?>
-                      <strong style="color:var(--p-accent)">admin bahosi</strong>
+                    <?php if($comment->ai_status === 'pending'): ?>
+                      <strong style="color:var(--p-warning)">navbatda</strong>
+                    <?php elseif($comment->ai_status === 'scored'): ?>
+                      <strong style="color:var(--p-accent)">baholangan</strong>
+                    <?php elseif($comment->ai_status === 'failed'): ?>
+                      <strong style="color:var(--p-danger)">xatolik</strong>
                     <?php else: ?>
-                      <strong style="color:var(--p-text)"><?php echo e($comment->kangaroo_ugc_status ?? '—'); ?></strong>
+                      <strong style="color:var(--p-text)"><?php echo e($comment->ai_status ?? '—'); ?></strong>
                     <?php endif; ?>
                   </span>
-                  <?php if($comment->kangaroo_star_equivalent !== null): ?>
-                    <span>Izohga nisbatan baho: <strong style="color:var(--p-text)"><?php echo e(number_format((float) $comment->kangaroo_star_equivalent, 2)); ?></strong> / 5</span>
+                  <?php if($comment->ai_score !== null): ?>
+                    <span>Izoh sifati bahosi: <strong style="color:var(--p-text)"><?php echo e(number_format((float) $comment->ai_score, 2)); ?></strong> / 5</span>
                   <?php endif; ?>
-                  <?php if($comment->kangaroo_toxicity !== null): ?>
-                    <span>Toxicity: <strong style="color:var(--p-text)"><?php echo e(number_format((float) $comment->kangaroo_toxicity, 3)); ?></strong></span>
+                  <?php if($comment->ai_checked_at): ?>
+                    <span>Tekshirilgan: <strong style="color:var(--p-text)"><?php echo e($comment->ai_checked_at->format('d.m.Y H:i')); ?></strong></span>
                   <?php endif; ?>
                 </div>
-                <?php if($comment->kangaroo_ugc_status === 'pending_admin'): ?>
-                <form method="POST" action="<?php echo e(route('admin.book-club.comment.ugc-score', $comment)); ?>" class="flex flex-wrap items-end gap-2">
-                  <?php echo csrf_field(); ?>
-                  <label style="font-size:11px;color:var(--p-hint)">Admin bahosi (1–5)</label>
-                  <select name="star" class="p-form-control" style="width:88px" required>
-                    <?php for($s = 1; $s <= 5; $s++): ?>
-                      <option value="<?php echo e($s); ?>"><?php echo e($s); ?> ★</option>
-                    <?php endfor; ?>
-                  </select>
-                  <button type="submit" class="btn-p primary sm"><i class="bi bi-check2"></i> Saqlash</button>
-                </form>
+                <?php if($comment->ai_note): ?>
+                  <div style="font-size:12px;color:var(--p-muted)"><?php echo e($comment->ai_note); ?></div>
                 <?php endif; ?>
               </div>
               <?php endif; ?>

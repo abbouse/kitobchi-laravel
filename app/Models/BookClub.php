@@ -23,6 +23,11 @@ class BookClub extends Model
         'edited_at',
         'edit_count',
         'last_edited_by_id',
+        'ai_post_score',
+        'ai_post_checked_at',
+        'ai_post_status',
+        'ai_post_note',
+        'ai_post_model',
         'kangaroo_post_star',
         'kangaroo_post_checked_at',
         'kangaroo_post_ugc_status',
@@ -32,6 +37,7 @@ class BookClub extends Model
         'is_deleted' => 'boolean',
         'repost' => 'boolean',
         'edited_at' => 'datetime',
+        'ai_post_checked_at' => 'datetime',
         'kangaroo_post_checked_at' => 'datetime',
     ];
 

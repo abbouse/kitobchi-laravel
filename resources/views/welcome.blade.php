@@ -337,7 +337,7 @@
                     @if($landingUgcReviews->isNotEmpty())
                         @foreach($landingUgcReviews as $ugcPost)
                             @php
-                                $stars   = (int) round($ugcPost->kangaroo_post_star ?? 5);
+                                $stars   = (int) round($ugcPost->ai_post_score ?? $ugcPost->kangaroo_post_star ?? 5);
                                 $stars   = max(1, min(5, $stars));
                                 $excerpt = mb_strtolower(mb_substr(trim($ugcPost->text), 0, 1))
                                            . mb_substr(trim($ugcPost->text), 1);

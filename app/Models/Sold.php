@@ -9,6 +9,7 @@ use App\Enums\PostalReturnStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Str;
 
 class Sold extends Model
 {
@@ -62,6 +63,38 @@ class Sold extends Model
         return $value ?: OrderStatusCode::fromLegacy($this->attributes['status'] ?? null)->value;
     }
 
+    public static function normalizeDeliveryTypeValue(mixed $value): string
+    {
+        $deliveryType = Str::of((string) $value)->lower()->squish()->value();
+
+        if ($deliveryType === '') {
+            return 'delivery';
+        }
+
+        if (in_array($deliveryType, ['pickup', 'instore', 'in_store', 'store_pickup'], true)) {
+            return 'pickup';
+        }
+
+        if (in_array($deliveryType, ['postal', 'mail_service', 'uzpost'], true)) {
+            return 'postal';
+        }
+
+        if (str_contains($deliveryType, 'pochta') || str_contains($deliveryType, 'mail') || str_contains($deliveryType, 'post')) {
+            return 'postal';
+        }
+
+        if (in_array($deliveryType, ['delivery', 'courier_service', 'courier', 'kuryer'], true)) {
+            return 'delivery';
+        }
+
+        return $deliveryType;
+    }
+
+    public function getDeliveryTypeAttribute(?string $value): string
+    {
+        return self::normalizeDeliveryTypeValue($value);
+    }
+
     public function getPaymentStatusCodeAttribute(?string $value): string
     {
         return $value ?: PaymentStatusCode::fromLegacy($this->attributes['paymentStatus'] ?? null)->value;
@@ -86,7 +119,7 @@ class Sold extends Model
     public function isPostalResendSource(): bool
     {
         return $this->postal_return_status === PostalReturnStatus::RETURNED_TO_SENDER->value
-            && (string) $this->deliveryType === 'postal'
+            && $this->deliveryType === 'postal'
             && empty($this->resend_replacement_order_id);
     }
 

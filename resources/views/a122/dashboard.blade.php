@@ -49,8 +49,6 @@
   if ($dashAdmin?->hasPermission('stationery')){ $ks=(int)($kangarooHumanReviewStationery??0); $dashQuick[] = ['Kanstovar','bi-pencil-square',route('admin.stationery.index'),$ks>0?$ks.' ta Kangaroo navbati':'Mahsulotlar','rgba(247,144,9,.12)','var(--p-warning)']; }
   if ($dashAdmin?->hasPermission('sellers'))   { $dashQuick[] = ['Sotuvchilar','bi-shop-window',route('admin.sellers.index'),$pendingSellers>0?$pendingSellers.' ariza':'Do\'konlar','rgba(124,92,252,.12)','#7c5cfc']; }
   if ($dashAdmin?->hasPermission('settings')) {
-    $kUgc=(int)($kangarooUgcAdminQueue??0);
-    if ($kUgc>0) { $dashQuick[] = ['UGC (Kangaroo)','bi-stars',route('admin.book-club.moderation-queue'),$kUgc.' ta admin navbati','rgba(247,144,9,.18)','var(--p-warning)']; }
     $pendingPay=($pendingSellerTxCount??0)+($pendingCourierTxCount??0);
     $dashQuick[] = ['Tranzaksiyalar','bi-arrow-left-right',route('admin.transactions.index'),$pendingPay>0?$pendingPay.' kutilayotgan':'Hisob-kitoblar','rgba(70,95,255,.1)','var(--p-accent)'];
     $dashQuick[] = ['Shikoyatlar','bi-flag-fill',route('admin.complaints.index'),'Moderatsiya','rgba(240,68,56,.1)','var(--p-danger)'];
@@ -752,20 +750,27 @@
         </div>
         <div class="dash-card-body">
           @forelse($topBuyers as $i => $buyer)
-          <a href="{{ route('admin.users.show',$buyer->user_id) }}" class="top-buyer-row">
+          @php $topBuyerHref = $buyer->user ? route('admin.users.show', $buyer->user) : null; @endphp
+          <div class="top-buyer-row">
             <span class="rank-num {{ $i===0?'rn-1':($i===1?'rn-2':($i===2?'rn-3':'rn-n')) }}">{{ $i+1 }}</span>
             <div class="d-av d-av--accent">
               @php $av = $resolveImg($buyer->user?->avatar); @endphp @if($av)<img src="{{ $av }}" alt="">@else{{ strtoupper(substr($buyer->user?->name??'U',0,1)) }}@endif
             </div>
             <div class="top-buyer-body">
-              <div class="dash-row-title--md">{{ $buyer->user?$buyer->user->name.' '.$buyer->user->lastname:'ID:'.$buyer->user_id }}</div>
+              <div class="dash-row-title--md">
+                @if($topBuyerHref)
+                  <a href="{{ $topBuyerHref }}" class="hover:underline">{{ $buyer->user ? $buyer->user->name.' '.$buyer->user->lastname : 'ID:'.$buyer->user_id }}</a>
+                @else
+                  {{ $buyer->user ? $buyer->user->name.' '.$buyer->user->lastname : 'ID:'.$buyer->user_id }}
+                @endif
+              </div>
               <div class="top-row-rev-hint">{{ $buyer->order_count }} ta buyurtma</div>
             </div>
             <div class="top-buyer-spend">
               <div class="top-buyer-amount">{{ number_format($buyer->total_spent/1000) }}K</div>
               <div class="top-row-count-hint">UZS</div>
             </div>
-          </a>
+          </div>
           @empty
           <div class="dash-empty"><i class="bi bi-person-x dash-empty__ico"></i>Ma'lumot yo'q</div>
           @endforelse

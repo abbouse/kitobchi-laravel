@@ -7,6 +7,8 @@
   @php
     $currentOrderStatus = $order->status_code ?? $order->status;
     $currentPaymentStatus = $order->payment_status_code ?? $order->paymentStatus;
+    $normalizedDeliveryType = (string) ($order->deliveryType ?? 'delivery');
+    $isPostalDelivery = $normalizedDeliveryType === 'postal';
 
     $orderStatusLabel = match ($currentOrderStatus) {
       'pending', 'A' => 'Kutilmoqda',
@@ -42,11 +44,10 @@
       default => 'Noma’lum to‘lov turi',
     };
 
-    $deliveryTypeLabel = match ((string) ($order->deliveryType ?? '')) {
+    $deliveryTypeLabel = match ($normalizedDeliveryType) {
       'pickup' => "Do'kondan olib ketish",
       'postal' => 'Pochta orqali',
-      '' => 'Yetkazib berish',
-      default => (string) $order->deliveryType,
+      default => 'Yetkazib berish',
     };
 
     $primaryAddress = collect($order->address ?? [])->first() ?? [];
@@ -123,7 +124,7 @@
         <span class="{{ $orderStatusBadge }}">{{ $orderStatusLabel }}</span>
         <span class="{{ $paymentBadge }}">{{ $paymentLabel }}</span>
         <span class="badge badge-info">{{ $deliveryTypeLabel }}</span>
-        @if(($order->deliveryType ?? '') === 'postal')
+        @if($isPostalDelivery)
           <span class="{{ $postalReturnBadge }}">{{ $postalReturnLabel }}</span>
         @endif
         @if($isGiftToOther)
@@ -179,7 +180,7 @@
           <div class="text-sm text-[var(--p-hint)] mt-1">
             @if(!empty($order->resend_replacement_order_id))
               Yangi buyurtma: #ORD-{{ $order->resend_replacement_order_id }}
-            @elseif(($order->deliveryType ?? '') === 'postal')
+            @elseif($isPostalDelivery)
               Qayta yuborish hali ochilmagan
             @else
               Pochta oqimi yo‘q
@@ -284,7 +285,7 @@
             <div class="flex flex-wrap gap-2 mt-3">
               <span class="{{ $orderStatusBadge }}">{{ $orderStatusLabel }}</span>
               <span class="{{ $paymentBadge }}">{{ $paymentLabel }}</span>
-              @if(($order->deliveryType ?? '') === 'postal')
+              @if($isPostalDelivery)
                 <span class="{{ $postalReturnBadge }}">{{ $postalReturnLabel }}</span>
               @endif
             </div>
@@ -303,7 +304,7 @@
             <button class="btn-p primary w-full"><i class="bi bi-arrow-repeat"></i> Holatni yangilash</button>
           </form>
 
-          @if(($order->deliveryType ?? '') === 'postal')
+          @if($isPostalDelivery)
             <form method="POST" action="{{ route('admin.orders.postal-return', $order) }}" class="space-y-3 pt-4 mt-4 border-t border-[var(--p-border)]">
               @csrf
               @method('PATCH')

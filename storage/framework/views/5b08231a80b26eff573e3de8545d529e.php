@@ -22,28 +22,6 @@
 <?php $component->withAttributes([]); ?>
    <?php $__env->slot('heading', null, []); ?> Book Club <?php $__env->endSlot(); ?>
    <?php $__env->slot('meta', null, []); ?> Foydalanuvchilar postlari va repostlari <?php $__env->endSlot(); ?>
-   <?php $__env->slot('actions', null, []); ?> 
-    <?php
-      try {
-        $ugcPending = \App\Models\BookClubComment::query()
-          ->where('kangaroo_ugc_status', 'pending_admin')
-          ->whereNull('parent_id')
-          ->count()
-          + \App\Models\BookClub::query()
-            ->where('is_deleted', false)
-            ->where('kangaroo_post_ugc_status', 'pending_admin')
-            ->count();
-      } catch (\Exception $e) {
-        $ugcPending = 0;
-      }
-    ?>
-    <a href="<?php echo e(route('admin.book-club.moderation-queue')); ?>" class="btn-p ghost">
-      <i class="bi bi-shield-exclamation"></i> UGC navbati
-      <?php if($ugcPending > 0): ?>
-        <span class="tab-badge" style="margin-left:6px"><?php echo e($ugcPending); ?></span>
-      <?php endif; ?>
-    </a>
-   <?php $__env->endSlot(); ?>
  <?php echo $__env->renderComponent(); ?>
 <?php endif; ?>
 <?php if (isset($__attributesOriginal0c1345684b2d774f43a544669f5684b0)): ?>
@@ -60,7 +38,7 @@
     [$counts['all'] ?? 0, 'Jami postlar', 'accent', 'bi-chat-square-text'],
     [$counts['posts'] ?? 0, 'Asl postlar', 'info', 'bi-pencil-square'],
     [$counts['reposts'] ?? 0, 'Repostlar', 'warning', 'bi-arrow-repeat'],
-    [$ugcPending ?? 0, 'UGC navbat', 'success', 'bi-shield-exclamation'],
+    [$posts->total() ?? 0, 'Ko‘rinayotgan postlar', 'success', 'bi-stars'],
   ]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$value, $label, $tone, $icon]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
     <div class="a122-stat-tile">
       <div class="a122-stat-tile__icon" style="background:var(--p-<?php echo e($tone); ?>-d,var(--p-elevated));color:var(--p-<?php echo e($tone); ?>)">

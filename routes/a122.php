@@ -277,12 +277,6 @@ Route::prefix('a122')->name('admin.')->group(function () {
     // ── Book Club ──────────────────────────────────────────────────
     Route::prefix('book-club')->name('book-club.')->group(function () {
         Route::get('/',                       [BookClubController::class, 'index'])->name('index');
-        Route::get('/moderation',             [BookClubController::class, 'moderationQueue'])->name('moderation');
-        Route::get('/moderation-queue',       [BookClubController::class, 'moderationQueue'])->name('moderation-queue');
-        Route::post('/{bookClub}/post-ugc-score', [BookClubController::class, 'savePostUgcScore'])->name('post-ugc-score');
-        Route::post('/bulk-post-ugc-score',   [BookClubController::class, 'saveBulkPostUgcScore'])->name('bulk-post-ugc-score');
-        Route::post('/comments/{comment}/ugc-score', [BookClubController::class, 'saveCommentUgcScore'])->name('comment.ugc-score');
-        Route::post('/bulk-comment-ugc-score', [BookClubController::class, 'saveBulkCommentUgcScore'])->name('bulk-comment.ugc-score');
         Route::delete('/images/{image}',      [BookClubController::class, 'deleteImage'])->name('image.delete');
         Route::patch('/comments/{comment}',   [BookClubController::class, 'updateComment'])->name('comment.update');
         Route::delete('/comments/{comment}',  [BookClubController::class, 'deleteComment'])->name('comment.delete');
@@ -291,11 +285,6 @@ Route::prefix('a122')->name('admin.')->group(function () {
         Route::post('/{bookClub}/warn',       [BookClubController::class, 'warn'])->name('warn');
         Route::get('/{bookClub}',             [BookClubController::class, 'show'])->name('show');
         Route::delete('/{bookClub}',          [BookClubController::class, 'destroy'])->name('destroy');
-    });
-
-    // ── UGC (Book Club alias) ──────────────────────────────────────
-    Route::prefix('ugc')->name('ugc.')->group(function () {
-        Route::get('/', [BookClubController::class, 'moderationQueue'])->name('index');
     });
 
     // ── Chats ──────────────────────────────────────────────────────

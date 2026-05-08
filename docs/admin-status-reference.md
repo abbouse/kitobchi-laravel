@@ -311,21 +311,25 @@ Hozir show sahifasida explicit ishlatilayotgan turlar:
 | `conversation_message` | chat xabari | `app/Http/Controllers/A122/ComplaintController.php` |
 | `book_club` | book club posti | shu fayl |
 
-## 16. Book Club moderatsiyasi
+## 16. Book Club AI baholash
 
-### Post UGC status (`BookClub.kangaroo_post_ugc_status`)
+Qo'lda `UGC navbati` olib tashlangan. Endi Book Club post va izohlari batch usulida OpenAI orqali baholanadi.
 
-| Qiymat | Ma'nosi | Manba |
-|---|---|---|
-| `pending_admin` | admin bahosini kutmoqda | `app/Http/Controllers/A122/BookClubController.php`, `resources/views/a122/book-club/show.blade.php` |
-| `admin_scored` | admin baholab bo'lgan | shu fayllar |
-
-### Comment UGC status (`BookClubComment.kangaroo_ugc_status`)
+### Post AI status (`BookClub.ai_post_status`)
 
 | Qiymat | Ma'nosi | Manba |
 |---|---|---|
-| `pending_admin` | admin bahosini kutmoqda | `app/Http/Controllers/A122/BookClubController.php`, `resources/views/a122/book-club/show.blade.php` |
-| `admin_scored` | admin baholab bo'lgan | shu fayllar |
+| `pending` | AI qayta baholashi kutilmoqda | `app/Http/Controllers/Api/BookClubController.php`, `app/Http/Controllers/A122/BookClubController.php` |
+| `scored` | AI baholash tugagan | `app/Services/BookClubAiScoringService.php` |
+| `failed` | AI baholash vaqtincha muvaffaqiyatsiz tugagan | `app/Services/BookClubAiScoringService.php` |
+
+### Comment AI status (`BookClubComment.ai_status`)
+
+| Qiymat | Ma'nosi | Manba |
+|---|---|---|
+| `pending` | AI qayta baholashi kutilmoqda | `app/Http/Controllers/Api/BookClubCommentController.php`, `app/Http/Controllers/A122/BookClubController.php` |
+| `scored` | AI baholash tugagan | `app/Services/BookClubAiScoringService.php` |
+| `failed` | AI baholash vaqtincha muvaffaqiyatsiz tugagan | `app/Services/BookClubAiScoringService.php` |
 
 Qo'shimcha maydonlar:
 

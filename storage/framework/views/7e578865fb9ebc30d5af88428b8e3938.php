@@ -6,6 +6,8 @@
   <?php
     $currentOrderStatus = $order->status_code ?? $order->status;
     $currentPaymentStatus = $order->payment_status_code ?? $order->paymentStatus;
+    $normalizedDeliveryType = (string) ($order->deliveryType ?? 'delivery');
+    $isPostalDelivery = $normalizedDeliveryType === 'postal';
 
     $orderStatusLabel = match ($currentOrderStatus) {
       'pending', 'A' => 'Kutilmoqda',
@@ -41,11 +43,10 @@
       default => 'Noma’lum to‘lov turi',
     };
 
-    $deliveryTypeLabel = match ((string) ($order->deliveryType ?? '')) {
+    $deliveryTypeLabel = match ($normalizedDeliveryType) {
       'pickup' => "Do'kondan olib ketish",
       'postal' => 'Pochta orqali',
-      '' => 'Yetkazib berish',
-      default => (string) $order->deliveryType,
+      default => 'Yetkazib berish',
     };
 
     $primaryAddress = collect($order->address ?? [])->first() ?? [];
@@ -140,7 +141,7 @@
         <span class="<?php echo e($orderStatusBadge); ?>"><?php echo e($orderStatusLabel); ?></span>
         <span class="<?php echo e($paymentBadge); ?>"><?php echo e($paymentLabel); ?></span>
         <span class="badge badge-info"><?php echo e($deliveryTypeLabel); ?></span>
-        <?php if(($order->deliveryType ?? '') === 'postal'): ?>
+        <?php if($isPostalDelivery): ?>
           <span class="<?php echo e($postalReturnBadge); ?>"><?php echo e($postalReturnLabel); ?></span>
         <?php endif; ?>
         <?php if($isGiftToOther): ?>
@@ -197,7 +198,7 @@
             <?php if(!empty($order->resend_replacement_order_id)): ?>
               Yangi buyurtma: #ORD-<?php echo e($order->resend_replacement_order_id); ?>
 
-            <?php elseif(($order->deliveryType ?? '') === 'postal'): ?>
+            <?php elseif($isPostalDelivery): ?>
               Qayta yuborish hali ochilmagan
             <?php else: ?>
               Pochta oqimi yo‘q
@@ -306,7 +307,7 @@
             <div class="flex flex-wrap gap-2 mt-3">
               <span class="<?php echo e($orderStatusBadge); ?>"><?php echo e($orderStatusLabel); ?></span>
               <span class="<?php echo e($paymentBadge); ?>"><?php echo e($paymentLabel); ?></span>
-              <?php if(($order->deliveryType ?? '') === 'postal'): ?>
+              <?php if($isPostalDelivery): ?>
                 <span class="<?php echo e($postalReturnBadge); ?>"><?php echo e($postalReturnLabel); ?></span>
               <?php endif; ?>
             </div>
@@ -325,7 +326,7 @@
             <button class="btn-p primary w-full"><i class="bi bi-arrow-repeat"></i> Holatni yangilash</button>
           </form>
 
-          <?php if(($order->deliveryType ?? '') === 'postal'): ?>
+          <?php if($isPostalDelivery): ?>
             <form method="POST" action="<?php echo e(route('admin.orders.postal-return', $order)); ?>" class="space-y-3 pt-4 mt-4 border-t border-[var(--p-border)]">
               <?php echo csrf_field(); ?>
               <?php echo method_field('PATCH'); ?>

@@ -19,6 +19,11 @@ class BookClubCommentController extends Controller {
         private readonly MentionService $mentionService,
     ) {}
     
+    private function visibleCommentContent(BookClubComment $comment): string
+    {
+        return $comment->is_hidden_by_ai ? '' : (string) $comment->content;
+    }
+
     public function index(Request $request, $post_id) {
     // 1. Userni olish (Guest bo'lsa null qaytadi)
     $user = Auth::guard('user')->user();
@@ -34,13 +39,15 @@ class BookClubCommentController extends Controller {
             return [
                 'id'         => $comment->id,
                 'post_id'    => $comment->post_id,
-                'content'    => $comment->content,
+                'content'    => $this->visibleCommentContent($comment),
                 'created_at' => $comment->created_at,
                 'user'       => $comment->user,
                 'likes'      => $comment->likes->count(),
                 // Xavfsiz tekshiruv:
                 'liked'      => $user ? $comment->likes->contains('user_id', $user->id) : false,
                 'replies_count' => $comment->replies_count, // withCount dan keladi
+                'is_hidden'  => (bool) $comment->is_hidden_by_ai,
+                'ai_moderation_status' => $comment->ai_moderation_status,
             ];
         });
 
@@ -57,17 +64,19 @@ public function replies(Request $request, $comment_id) {
             return [
                 'id' => $comment->id,
                 'post_id' => $comment->post_id,
-                'parent_id' => $comment->post_id,
-                'content' => $comment->content,
+                'parent_id' => $comment->parent_id,
+                'content' => $this->visibleCommentContent($comment),
                 'created_at' => $comment->created_at,
                 'user' => $comment->user,
                 'likes' => $comment->likes->count(),
                 'liked' => $user ? $comment->likes->contains('user_id', $user->id) : false,
                 'replies_count' => BookClubComment::where('parent_id', $comment->id)->count(),
+                'is_hidden' => (bool) $comment->is_hidden_by_ai,
+                'ai_moderation_status' => $comment->ai_moderation_status,
             ];
         });
 
-    return response()->json(['status' => 'success', 'data' => $comments], 201);
+    return response()->json(['status' => 'success', 'data' => $comments], 200);
 }
 
     public function store(Request $request) {
@@ -87,7 +96,17 @@ public function replies(Request $request, $comment_id) {
         $comment = BookClubComment::create([
             'post_id' => $request->post_id,
             'user_id' => $user->id,
-            'content' => $request->content
+            'content' => $request->content,
+            'ai_status' => 'pending',
+            'ai_score' => null,
+            'ai_checked_at' => null,
+            'ai_note' => null,
+            'ai_model' => null,
+            'is_hidden_by_ai' => false,
+            'ai_moderation_status' => 'pending',
+            'ai_moderated_at' => null,
+            'ai_moderation_note' => null,
+            'ai_moderation_model' => null,
         ]);
 
         $post = BookClub::find($request->post_id);
@@ -138,7 +157,17 @@ public function replies(Request $request, $comment_id) {
         'post_id' => $parentComment->post_id,
         'parent_id' => $comment_id,
         'user_id' => $user->id,
-        'content' => $request->content
+        'content' => $request->content,
+        'ai_status' => 'pending',
+        'ai_score' => null,
+        'ai_checked_at' => null,
+        'ai_note' => null,
+        'ai_model' => null,
+        'is_hidden_by_ai' => false,
+        'ai_moderation_status' => 'pending',
+        'ai_moderated_at' => null,
+        'ai_moderation_note' => null,
+        'ai_moderation_model' => null,
     ]);
 
     NotificationHelper::send(

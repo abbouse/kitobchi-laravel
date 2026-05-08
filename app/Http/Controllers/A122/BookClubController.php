@@ -10,7 +10,6 @@ use App\Models\BookClubLikes;
 use App\Models\BookClubWarning;
 use App\Models\Books;
 use App\Models\Stationery;
-use App\Support\BookClubUgcSupport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -49,10 +48,7 @@ class BookClubController extends Controller
             'reposts' => BookClub::where('is_deleted', false)->where('repost', true)->count(),
         ];
 
-        $pendingComments = BookClubComment::where('kangaroo_ugc_status', 'pending_admin')
-            ->whereNull('parent_id')->count();
-
-        return view('a122.book-club.index', compact('posts', 'counts', 'tab', 'pendingComments'));
+        return view('a122.book-club.index', compact('posts', 'counts', 'tab'));
     }
 
     public function show(BookClub $bookClub)
@@ -136,7 +132,14 @@ class BookClubController extends Controller
             'text' => 'required|string|max:2000',
         ]);
 
-        $bookClub->update(['text' => $request->text]);
+        $bookClub->update([
+            'text' => $request->text,
+            'ai_post_status' => 'pending',
+            'ai_post_score' => null,
+            'ai_post_checked_at' => null,
+            'ai_post_note' => null,
+            'ai_post_model' => null,
+        ]);
 
         return redirect()->route('admin.book-club.show', $bookClub)->with('success', 'Post yangilandi.');
     }
@@ -188,7 +191,14 @@ class BookClubController extends Controller
             'content' => 'required|string|max:1000',
         ]);
 
-        $comment->update(['content' => $request->content]);
+        $comment->update([
+            'content' => $request->content,
+            'ai_status' => 'pending',
+            'ai_score' => null,
+            'ai_checked_at' => null,
+            'ai_note' => null,
+            'ai_model' => null,
+        ]);
 
         return back()->with('success', 'Izoh yangilandi.');
     }
@@ -199,131 +209,5 @@ class BookClubController extends Controller
         $image->delete();
 
         return back()->with('success', "Rasm o'chirildi.");
-    }
-
-    public function moderationQueue()
-    {
-        $pendingComments = BookClubComment::with([
-                'user:id,name,lastname,avatar',
-                'post:id,text,user_id,product_id,product_type',
-                'parent:id,content,user_id',
-                'parent.user:id,name,lastname,avatar',
-            ])
-            ->where('kangaroo_ugc_status', 'pending_admin')
-            ->latest('updated_at')
-            ->paginate(50);
-
-        $pendingPosts = BookClub::with(['user:id,name,lastname,avatar'])
-            ->where('kangaroo_post_ugc_status', 'pending_admin')
-            ->where('is_deleted', false)
-            ->latest('updated_at')
-            ->paginate(30);
-
-        return view('a122.book-club.moderation', compact('pendingComments', 'pendingPosts'));
-    }
-
-    public function saveCommentUgcScore(Request $request, BookClubComment $comment)
-    {
-        $data = $request->validate([
-            'star' => 'required|numeric|between:1,5',
-        ]);
-
-        $comment->update([
-            'kangaroo_star_equivalent' => round((float) $data['star'], 2),
-            'kangaroo_ugc_status' => 'admin_scored',
-            'kangaroo_checked_at' => now(),
-        ]);
-
-        if ($comment->parent_id === null) {
-            BookClubUgcSupport::recalcPostStarFromComments((int) $comment->post_id);
-            BookClubUgcSupport::recalcProductUgcFromPosts([(int) $comment->post_id]);
-        }
-
-        return back()->with('success', 'Izoh bahosi saqlandi.');
-    }
-
-    public function savePostUgcScore(Request $request, BookClub $bookClub)
-    {
-        $data = $request->validate([
-            'star' => 'required|numeric|between:1,5',
-        ]);
-
-        $bookClub->update([
-            'kangaroo_post_star' => round((float) $data['star'], 2),
-            'kangaroo_post_ugc_status' => 'admin_scored',
-            'kangaroo_post_checked_at' => now(),
-        ]);
-
-        BookClubUgcSupport::recalcProductUgcFromPosts([(int) $bookClub->id]);
-
-        return back()->with('success', 'Post matni bahosi saqlandi.');
-    }
-
-    public function saveBulkPostUgcScore(Request $request)
-    {
-        $data = $request->validate([
-            'post_ids' => 'required|array|min:1',
-            'post_ids.*' => 'integer|exists:book_club,id',
-            'star' => 'required|numeric|between:1,5',
-        ]);
-
-        $star = round((float) $data['star'], 2);
-        $postIds = array_values(array_unique(array_map('intval', $data['post_ids'])));
-
-        BookClub::query()
-            ->whereIn('id', $postIds)
-            ->update([
-                'kangaroo_post_star' => $star,
-                'kangaroo_post_ugc_status' => 'admin_scored',
-                'kangaroo_post_checked_at' => now(),
-            ]);
-
-        BookClubUgcSupport::recalcProductUgcFromPosts($postIds);
-
-        return back()->with('success', count($postIds).' ta post baholandi.');
-    }
-
-    public function saveBulkCommentUgcScore(Request $request)
-    {
-        $data = $request->validate([
-            'comment_ids' => 'required|array|min:1',
-            'comment_ids.*' => 'integer|exists:book_club_comments,id',
-            'star' => 'required|numeric|between:1,5',
-        ]);
-
-        $star = round((float) $data['star'], 2);
-        $commentIds = array_values(array_unique(array_map('intval', $data['comment_ids'])));
-
-        $comments = BookClubComment::query()
-            ->whereIn('id', $commentIds)
-            ->get(['id', 'post_id', 'parent_id']);
-
-        if ($comments->isEmpty()) {
-            return back()->with('error', 'Tanlangan izohlar topilmadi.');
-        }
-
-        BookClubComment::query()
-            ->whereIn('id', $comments->pluck('id'))
-            ->update([
-                'kangaroo_star_equivalent' => $star,
-                'kangaroo_ugc_status' => 'admin_scored',
-                'kangaroo_checked_at' => now(),
-            ]);
-
-        $topLevelPostIds = $comments
-            ->whereNull('parent_id')
-            ->pluck('post_id')
-            ->map(fn ($id) => (int) $id)
-            ->filter()
-            ->unique()
-            ->values()
-            ->all();
-
-        foreach ($topLevelPostIds as $postId) {
-            BookClubUgcSupport::recalcPostStarFromComments($postId);
-        }
-        BookClubUgcSupport::recalcProductUgcFromPosts($topLevelPostIds);
-
-        return back()->with('success', count($commentIds).' ta izoh baholandi.');
     }
 }

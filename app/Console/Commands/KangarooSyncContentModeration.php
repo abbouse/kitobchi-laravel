@@ -2,21 +2,18 @@
 
 namespace App\Console\Commands;
 
-use App\Models\BookClub;
-use App\Models\BookClubComment;
 use App\Models\Books;
 use App\Models\Stationery;
 use App\Services\Kangaroo\KangarooKitobchiModerationClient;
-use App\Support\BookClubUgcSupport;
 use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
 class KangarooSyncContentModeration extends Command
 {
-    protected $signature = 'kangaroo:sync-content-moderation {--listings=1} {--ugc=1}';
+    protected $signature = 'kangaroo:sync-content-moderation {--listings=1}';
 
-    protected $description = 'Kangaroo: listing moderatsiyasi va book club UGC baholari (30 daqiqada scheduler)';
+    protected $description = 'Kangaroo: faqat kitob va kanstovar listing moderatsiyasi';
 
     public function handle(KangarooKitobchiModerationClient $client): int
     {
@@ -25,9 +22,6 @@ class KangarooSyncContentModeration extends Command
         try {
             if ((bool) $this->option('listings')) {
                 $this->syncListings($client, $autoApply);
-            }
-            if ((bool) $this->option('ugc')) {
-                $this->syncUgc($client);
             }
         } catch (\Throwable $e) {
             $this->error($e->getMessage());
@@ -232,147 +226,5 @@ class KangarooSyncContentModeration extends Command
         }
 
         $modelClass::query()->where('id', $id)->update($update);
-    }
-
-    private function syncUgc(KangarooKitobchiModerationClient $client): void
-    {
-        $comments = BookClubComment::query()
-            ->whereNull('parent_id')
-            ->where(function ($q) {
-                $q->where(function ($a) {
-                    $a->whereNull('kangaroo_checked_at');
-                })->orWhere(function ($a) {
-                    $a->whereColumn('updated_at', '>', 'kangaroo_checked_at')
-                        ->whereNotIn('kangaroo_ugc_status', ['pending_admin', 'admin_scored']);
-                });
-            })
-            ->orderByDesc('updated_at')
-            ->limit(80)
-            ->get(['id', 'post_id', 'content']);
-
-        $posts = BookClub::query()
-            ->where('is_deleted', 0)
-            ->where(function ($q) {
-                $q->where(function ($a) {
-                    $a->whereNull('kangaroo_post_checked_at');
-                })->orWhere(function ($a) {
-                    $a->whereColumn('updated_at', '>', 'kangaroo_post_checked_at')
-                        ->whereNotIn('kangaroo_post_ugc_status', ['pending_admin', 'admin_scored']);
-                });
-            })
-            ->orderByDesc('updated_at')
-            ->limit(40)
-            ->get(['id', 'text']);
-
-        if ($comments->isEmpty() && $posts->isEmpty()) {
-            $this->info('UGC: navbat bo‘sh.');
-
-            return;
-        }
-
-        try {
-            $resp = $client->moderateUgc(
-                $posts->map(fn ($p) => ['id' => $p->id, 'text' => $p->text])->values()->all(),
-                $comments->map(fn ($c) => ['id' => $c->id, 'post_id' => $c->post_id, 'content' => $c->content])->values()->all(),
-            );
-        } catch (\Throwable $e) {
-            Log::warning('Kangaroo UGC: API xato — pending_admin', ['message' => $e->getMessage()]);
-            $this->warn('UGC: Kangaroo javob bermadi — '.$e->getMessage().' (admin navbatiga).');
-            $this->markUgcPendingAdmin($comments, $posts);
-
-            return;
-        }
-
-        $touchedPostIds = [];
-
-        foreach ($resp['book_club_comments'] ?? [] as $row) {
-            $cid = (int) ($row['id'] ?? 0);
-            if ($cid <= 0) {
-                continue;
-            }
-            $needs = ! empty($row['needs_admin_review']);
-            BookClubComment::query()->where('id', $cid)->update([
-                'kangaroo_star_equivalent' => $needs ? null : ($row['star_equivalent'] ?? null),
-                'kangaroo_toxicity' => $row['toxicity'] ?? null,
-                'kangaroo_ugc_status' => $needs ? 'pending_admin' : 'auto_scored',
-                'kangaroo_checked_at' => now(),
-            ]);
-            $touchedPostIds[] = (int) ($row['post_id'] ?? 0);
-        }
-
-        foreach ($resp['book_club_posts'] ?? [] as $row) {
-            $pid = (int) ($row['id'] ?? 0);
-            if ($pid <= 0) {
-                continue;
-            }
-            $needs = ! empty($row['needs_admin_review']);
-            BookClub::query()->where('id', $pid)->update([
-                'kangaroo_post_star' => $needs ? null : ($row['star_equivalent'] ?? null),
-                'kangaroo_post_ugc_status' => $needs ? 'pending_admin' : 'auto_scored',
-                'kangaroo_post_checked_at' => now(),
-            ]);
-            $touchedPostIds[] = $pid;
-        }
-
-        $returnedCids = collect($resp['book_club_comments'] ?? [])->pluck('id')->map(fn ($v) => (int) $v)->filter()->all();
-        foreach ($comments as $c) {
-            if (! in_array((int) $c->id, $returnedCids, true)) {
-                BookClubComment::query()->where('id', $c->id)->update([
-                    'kangaroo_star_equivalent' => null,
-                    'kangaroo_toxicity' => null,
-                    'kangaroo_ugc_status' => 'pending_admin',
-                    'kangaroo_checked_at' => now(),
-                ]);
-                $touchedPostIds[] = (int) $c->post_id;
-            }
-        }
-
-        $returnedPids = collect($resp['book_club_posts'] ?? [])->pluck('id')->map(fn ($v) => (int) $v)->filter()->all();
-        foreach ($posts as $p) {
-            if (! in_array((int) $p->id, $returnedPids, true)) {
-                BookClub::query()->where('id', $p->id)->update([
-                    'kangaroo_post_star' => null,
-                    'kangaroo_post_ugc_status' => 'pending_admin',
-                    'kangaroo_post_checked_at' => now(),
-                ]);
-                $touchedPostIds[] = (int) $p->id;
-            }
-        }
-
-        $touchedPostIds = array_values(array_unique(array_filter($touchedPostIds)));
-
-        foreach ($touchedPostIds as $postId) {
-            if ($postId <= 0) {
-                continue;
-            }
-            BookClubUgcSupport::recalcPostStarFromComments($postId);
-        }
-
-        BookClubUgcSupport::recalcProductUgcFromPosts($touchedPostIds);
-
-        $this->info('UGC: post '.$posts->count().', izoh '.$comments->count().' jarayonlandi.');
-    }
-
-    /**
-     * @param  \Illuminate\Support\Collection<int, BookClubComment>  $comments
-     * @param  \Illuminate\Support\Collection<int, BookClub>  $posts
-     */
-    private function markUgcPendingAdmin(Collection $comments, Collection $posts): void
-    {
-        foreach ($comments as $c) {
-            BookClubComment::query()->where('id', $c->id)->update([
-                'kangaroo_star_equivalent' => null,
-                'kangaroo_toxicity' => null,
-                'kangaroo_ugc_status' => 'pending_admin',
-                'kangaroo_checked_at' => now(),
-            ]);
-        }
-        foreach ($posts as $p) {
-            BookClub::query()->where('id', $p->id)->update([
-                'kangaroo_post_star' => null,
-                'kangaroo_post_ugc_status' => 'pending_admin',
-                'kangaroo_post_checked_at' => now(),
-            ]);
-        }
     }
 }

@@ -48,8 +48,6 @@
   if ($dashAdmin?->hasPermission('stationery')){ $ks=(int)($kangarooHumanReviewStationery??0); $dashQuick[] = ['Kanstovar','bi-pencil-square',route('admin.stationery.index'),$ks>0?$ks.' ta Kangaroo navbati':'Mahsulotlar','rgba(247,144,9,.12)','var(--p-warning)']; }
   if ($dashAdmin?->hasPermission('sellers'))   { $dashQuick[] = ['Sotuvchilar','bi-shop-window',route('admin.sellers.index'),$pendingSellers>0?$pendingSellers.' ariza':'Do\'konlar','rgba(124,92,252,.12)','#7c5cfc']; }
   if ($dashAdmin?->hasPermission('settings')) {
-    $kUgc=(int)($kangarooUgcAdminQueue??0);
-    if ($kUgc>0) { $dashQuick[] = ['UGC (Kangaroo)','bi-stars',route('admin.book-club.moderation-queue'),$kUgc.' ta admin navbati','rgba(247,144,9,.18)','var(--p-warning)']; }
     $pendingPay=($pendingSellerTxCount??0)+($pendingCourierTxCount??0);
     $dashQuick[] = ['Tranzaksiyalar','bi-arrow-left-right',route('admin.transactions.index'),$pendingPay>0?$pendingPay.' kutilayotgan':'Hisob-kitoblar','rgba(70,95,255,.1)','var(--p-accent)'];
     $dashQuick[] = ['Shikoyatlar','bi-flag-fill',route('admin.complaints.index'),'Moderatsiya','rgba(240,68,56,.1)','var(--p-danger)'];
@@ -752,20 +750,28 @@
         </div>
         <div class="dash-card-body">
           <?php $__empty_1 = true; $__currentLoopData = $topBuyers; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $i => $buyer): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
-          <a href="<?php echo e(route('admin.users.show',$buyer->user_id)); ?>" class="top-buyer-row">
+          <?php $topBuyerHref = $buyer->user ? route('admin.users.show', $buyer->user) : null; ?>
+          <div class="top-buyer-row">
             <span class="rank-num <?php echo e($i===0?'rn-1':($i===1?'rn-2':($i===2?'rn-3':'rn-n'))); ?>"><?php echo e($i+1); ?></span>
             <div class="d-av d-av--accent">
               <?php $av = $resolveImg($buyer->user?->avatar); ?> <?php if($av): ?><img src="<?php echo e($av); ?>" alt=""><?php else: ?><?php echo e(strtoupper(substr($buyer->user?->name??'U',0,1))); ?><?php endif; ?>
             </div>
             <div class="top-buyer-body">
-              <div class="dash-row-title--md"><?php echo e($buyer->user?$buyer->user->name.' '.$buyer->user->lastname:'ID:'.$buyer->user_id); ?></div>
+              <div class="dash-row-title--md">
+                <?php if($topBuyerHref): ?>
+                  <a href="<?php echo e($topBuyerHref); ?>" class="hover:underline"><?php echo e($buyer->user ? $buyer->user->name.' '.$buyer->user->lastname : 'ID:'.$buyer->user_id); ?></a>
+                <?php else: ?>
+                  <?php echo e($buyer->user ? $buyer->user->name.' '.$buyer->user->lastname : 'ID:'.$buyer->user_id); ?>
+
+                <?php endif; ?>
+              </div>
               <div class="top-row-rev-hint"><?php echo e($buyer->order_count); ?> ta buyurtma</div>
             </div>
             <div class="top-buyer-spend">
               <div class="top-buyer-amount"><?php echo e(number_format($buyer->total_spent/1000)); ?>K</div>
               <div class="top-row-count-hint">UZS</div>
             </div>
-          </a>
+          </div>
           <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
           <div class="dash-empty"><i class="bi bi-person-x dash-empty__ico"></i>Ma'lumot yo'q</div>
           <?php endif; ?>

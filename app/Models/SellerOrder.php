@@ -34,6 +34,11 @@ class SellerOrder extends Model
         return $value ?: SellerOrderStatusCode::fromLegacy($this->attributes['status'] ?? null)->value;
     }
 
+    public function getDeliveryTypeAttribute(?string $value): string
+    {
+        return Sold::normalizeDeliveryTypeValue($value);
+    }
+
     // ── Relationships ──────────────────────────────────────────────
 
     public function seller()

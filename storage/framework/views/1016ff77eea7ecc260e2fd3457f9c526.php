@@ -712,7 +712,7 @@
                                 </td>
                                 <td>
                                     <?php if($order->user): ?>
-                                        <a href="<?php echo e(route('admin.users.show', $order->user_id)); ?>" class="font-semibold hover:underline">
+                                        <a href="<?php echo e(route('admin.users.show', $order->user)); ?>" class="font-semibold hover:underline">
                                             <?php echo e(trim(($order->user->name ?? '').' '.($order->user->lastname ?? '')) ?: 'Foydalanuvchi'); ?>
 
                                         </a>

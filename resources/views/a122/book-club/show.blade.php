@@ -16,9 +16,6 @@
   </x-slot>
   <x-slot name="actions">
     <div class="flex flex-wrap gap-2">
-      <a href="{{ route('admin.book-club.moderation-queue') }}" class="btn-p ghost">
-        <i class="bi bi-shield-exclamation"></i> UGC navbati
-      </a>
       <a href="{{ route('admin.book-club.edit', $bookClub) }}" class="btn-p ghost">
         <i class="bi bi-pencil"></i> Tahrirlash
       </a>
@@ -117,7 +114,7 @@
           <div style="margin-left:auto;font-size:12px;color:var(--p-info);display:flex;align-items:center;gap:6px">
             <i class="bi bi-repeat"></i>
             <span>Repost:
-              <a href="{{ route('admin.users.show', $bookClub->reposted_user_id) }}"
+              <a href="{{ route('admin.users.show', $bookClub->originalAuthor) }}"
                  style="color:var(--p-info);font-weight:600">
                 {{ $bookClub->originalAuthor->name }}
               </a>
@@ -222,47 +219,43 @@
         </div>
         @endif
 
-        {{-- Kangaroo: post matni UGC (bitta blok) --}}
-        @if($bookClub->kangaroo_post_ugc_status || $bookClub->kangaroo_post_star !== null || $bookClub->kangaroo_post_checked_at)
+        {{-- AI: post matni bahosi --}}
+        @if($bookClub->ai_post_status || $bookClub->ai_post_score !== null || $bookClub->ai_post_checked_at)
         <div style="background:var(--p-elevated);border-radius:10px;padding:14px;margin-bottom:12px;border:1px solid var(--p-border)">
           <div style="font-size:12px;font-weight:600;color:var(--p-hint);margin-bottom:10px;text-transform:uppercase;letter-spacing:.07em">
-            <i class="bi bi-stars mr-1"></i> Kangaroo · post matni
+            <i class="bi bi-stars mr-1"></i> AI · post bahosi
           </div>
           <div style="font-size:13px;color:var(--p-text);display:flex;flex-wrap:wrap;gap:12px;margin-bottom:10px">
-            @if($bookClub->kangaroo_post_ugc_status)
+            @if($bookClub->ai_post_status)
               <span>Holat:
-                @if($bookClub->kangaroo_post_ugc_status === 'pending_admin')
-                  <strong style="color:var(--p-warning)">admin navbati</strong>
-                @elseif($bookClub->kangaroo_post_ugc_status === 'admin_scored')
-                  <strong style="color:var(--p-accent)">admin bahosi</strong>
+                @if($bookClub->ai_post_status === 'pending')
+                  <strong style="color:var(--p-warning)">navbatda</strong>
+                @elseif($bookClub->ai_post_status === 'scored')
+                  <strong style="color:var(--p-accent)">baholangan</strong>
+                @elseif($bookClub->ai_post_status === 'failed')
+                  <strong style="color:var(--p-danger)">xatolik</strong>
                 @else
-                  <strong>{{ $bookClub->kangaroo_post_ugc_status }}</strong>
+                  <strong>{{ $bookClub->ai_post_status }}</strong>
                 @endif
               </span>
             @endif
-            @if($bookClub->kangaroo_post_star !== null)
-              <span>Matnga nisbatan baho: <strong>{{ number_format((float) $bookClub->kangaroo_post_star, 2) }}</strong> / 5</span>
+            @if($bookClub->ai_post_score !== null)
+              <span>Matn sifati bahosi: <strong>{{ number_format((float) $bookClub->ai_post_score, 2) }}</strong> / 5</span>
             @endif
-            @if($bookClub->kangaroo_post_checked_at)
-              <span style="color:var(--p-hint)">Tekshirilgan: {{ $bookClub->kangaroo_post_checked_at->format('d.m.Y H:i') }}</span>
+            @if($bookClub->ai_post_checked_at)
+              <span style="color:var(--p-hint)">Tekshirilgan: {{ $bookClub->ai_post_checked_at->format('d.m.Y H:i') }}</span>
+            @endif
+            @if($bookClub->ai_post_model)
+              <span style="color:var(--p-hint)">Model: {{ $bookClub->ai_post_model }}</span>
             @endif
           </div>
-          @if($bookClub->kangaroo_post_ugc_status === 'pending_admin')
-          <form method="POST" action="{{ route('admin.book-club.post-ugc-score', $bookClub) }}" class="flex flex-wrap items-end gap-2">
-            @csrf
-            <label style="font-size:12px;color:var(--p-hint)">Admin bahosi (1–5)</label>
-            <select name="star" class="p-form-control" style="width:88px" required>
-              @for($s = 1; $s <= 5; $s++)
-                <option value="{{ $s }}">{{ $s }} ★</option>
-              @endfor
-            </select>
-            <button type="submit" class="btn-p primary sm"><i class="bi bi-check2"></i> Saqlash</button>
-          </form>
+          @if($bookClub->ai_post_note)
+            <div style="font-size:12px;color:var(--p-muted)">{{ $bookClub->ai_post_note }}</div>
           @endif
         </div>
         @elseif($bookClub->text)
         <div style="background:var(--p-elevated);border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:12px;color:var(--p-hint)">
-          <i class="bi bi-stars mr-1"></i> Kangaroo tekshiruvi hali yozilmagan (sinxron yoki cron: <code>kangaroo:sync-content-moderation</code>).
+          <i class="bi bi-stars mr-1"></i> AI bahosi hali yozilmagan (cron: <code>openai:score-book-club-content</code>).
         </div>
         @endif
 
@@ -351,37 +344,30 @@
                 @endif
               </div>
 
-              @if($comment->kangaroo_ugc_status || $comment->kangaroo_star_equivalent !== null || $comment->kangaroo_toxicity !== null || $comment->kangaroo_checked_at)
+              @if($comment->ai_status || $comment->ai_score !== null || $comment->ai_checked_at)
               <div style="margin-top:10px;padding:10px 12px;background:var(--p-elevated);border-radius:8px;border:1px solid var(--p-border)">
-                <div style="font-size:10px;color:var(--p-hint);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Kangaroo · izoh</div>
+                <div style="font-size:10px;color:var(--p-hint);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">AI · izoh bahosi</div>
                 <div style="font-size:12px;color:var(--p-muted);display:flex;flex-wrap:wrap;gap:10px;margin-bottom:8px">
                   <span>Holat:
-                    @if($comment->kangaroo_ugc_status === 'pending_admin')
-                      <strong style="color:var(--p-warning)">admin navbati</strong>
-                    @elseif($comment->kangaroo_ugc_status === 'admin_scored')
-                      <strong style="color:var(--p-accent)">admin bahosi</strong>
+                    @if($comment->ai_status === 'pending')
+                      <strong style="color:var(--p-warning)">navbatda</strong>
+                    @elseif($comment->ai_status === 'scored')
+                      <strong style="color:var(--p-accent)">baholangan</strong>
+                    @elseif($comment->ai_status === 'failed')
+                      <strong style="color:var(--p-danger)">xatolik</strong>
                     @else
-                      <strong style="color:var(--p-text)">{{ $comment->kangaroo_ugc_status ?? '—' }}</strong>
+                      <strong style="color:var(--p-text)">{{ $comment->ai_status ?? '—' }}</strong>
                     @endif
                   </span>
-                  @if($comment->kangaroo_star_equivalent !== null)
-                    <span>Izohga nisbatan baho: <strong style="color:var(--p-text)">{{ number_format((float) $comment->kangaroo_star_equivalent, 2) }}</strong> / 5</span>
+                  @if($comment->ai_score !== null)
+                    <span>Izoh sifati bahosi: <strong style="color:var(--p-text)">{{ number_format((float) $comment->ai_score, 2) }}</strong> / 5</span>
                   @endif
-                  @if($comment->kangaroo_toxicity !== null)
-                    <span>Toxicity: <strong style="color:var(--p-text)">{{ number_format((float) $comment->kangaroo_toxicity, 3) }}</strong></span>
+                  @if($comment->ai_checked_at)
+                    <span>Tekshirilgan: <strong style="color:var(--p-text)">{{ $comment->ai_checked_at->format('d.m.Y H:i') }}</strong></span>
                   @endif
                 </div>
-                @if($comment->kangaroo_ugc_status === 'pending_admin')
-                <form method="POST" action="{{ route('admin.book-club.comment.ugc-score', $comment) }}" class="flex flex-wrap items-end gap-2">
-                  @csrf
-                  <label style="font-size:11px;color:var(--p-hint)">Admin bahosi (1–5)</label>
-                  <select name="star" class="p-form-control" style="width:88px" required>
-                    @for($s = 1; $s <= 5; $s++)
-                      <option value="{{ $s }}">{{ $s }} ★</option>
-                    @endfor
-                  </select>
-                  <button type="submit" class="btn-p primary sm"><i class="bi bi-check2"></i> Saqlash</button>
-                </form>
+                @if($comment->ai_note)
+                  <div style="font-size:12px;color:var(--p-muted)">{{ $comment->ai_note }}</div>
                 @endif
               </div>
               @endif

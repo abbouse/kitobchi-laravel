@@ -579,6 +579,11 @@ class BookClubController extends Controller
                     'product_id'   => $productId,
                     'product_type' => $productType,
                     'theme_id'     => $themeId,
+                    'ai_post_status' => 'pending',
+                    'ai_post_score' => null,
+                    'ai_post_checked_at' => null,
+                    'ai_post_note' => null,
+                    'ai_post_model' => null,
                 ]);
 
                 // ── Rasmlar ───────────────────────────────────────────────────
@@ -712,6 +717,11 @@ class BookClubController extends Controller
                     'edited_at' => now(),
                     'edit_count' => (int) ($post->edit_count ?? 0) + 1,
                     'last_edited_by_id' => $user->id,
+                    'ai_post_status' => 'pending',
+                    'ai_post_score' => null,
+                    'ai_post_checked_at' => null,
+                    'ai_post_note' => null,
+                    'ai_post_model' => null,
                 ])->save();
                 $this->mentionService->notifyMentionedUsers(
                     $this->mentionService->extractMentions((string) $post->text),

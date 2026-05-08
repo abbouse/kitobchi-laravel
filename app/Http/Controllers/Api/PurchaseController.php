@@ -109,6 +109,17 @@ class PurchaseController extends Controller
         Log::info("[buy_book] {$step}", $extra);
     }
 
+    private function resolveDeliveryType(?DeliveryService $deliveryService): string
+    {
+        $serviceType = (string) ($deliveryService->type ?? '');
+
+        return match ($serviceType) {
+            'mail_service' => 'postal',
+            'courier_service' => 'delivery',
+            default => Sold::normalizeDeliveryTypeValue($deliveryService->name ?? ''),
+        };
+    }
+
     private function applySignedDeliveryQr(Sold $order): Sold
     {
         if ($order->status === 'B') {
@@ -573,12 +584,14 @@ class PurchaseController extends Controller
             // Defensiv casts — DB columnlari int/tinyint ga (string emas)
             // mos kelishi kerak. Bo'sh stringlar yoki noto'g'ri tipdan
             // INSERT'da SQLSTATE xatolari kelmasligi uchun aniq cast qilamiz.
+            $normalizedDeliveryType = $this->resolveDeliveryType($deliveryService);
+
             $purchase = Sold::create([
                 'user_id'             => (int) $user->id,
                 'qr'                  => Str::random(40),
                 'items'               => $allItems,
                 'address'             => [$locationData],
-                'deliveryType'        => (string) ($deliveryService->name ?? ''),
+                'deliveryType'        => $normalizedDeliveryType,
                 'deliveryPrice'       => (int) $deliveryPrice,
                 'paymentStatus'       => $request->paymentStatus
                     ? PaymentStatusCode::CARD_PENDING->legacy()
@@ -645,7 +658,7 @@ class PurchaseController extends Controller
                     'status_code'   => $request->paymentStatus == 1
                         ? SellerOrderStatusCode::PAYMENT_PENDING->value
                         : SellerOrderStatusCode::NEW->value,
-                    'delivery_type' => (string) ($deliveryService->name ?? ''),
+                    'delivery_type' => $normalizedDeliveryType,
                     'address'       => [$locationData],
                 ]);
 

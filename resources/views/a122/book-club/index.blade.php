@@ -14,28 +14,6 @@
 <x-a122.page-header>
   <x-slot name="heading">Book Club</x-slot>
   <x-slot name="meta">Foydalanuvchilar postlari va repostlari</x-slot>
-  <x-slot name="actions">
-    @php
-      try {
-        $ugcPending = \App\Models\BookClubComment::query()
-          ->where('kangaroo_ugc_status', 'pending_admin')
-          ->whereNull('parent_id')
-          ->count()
-          + \App\Models\BookClub::query()
-            ->where('is_deleted', false)
-            ->where('kangaroo_post_ugc_status', 'pending_admin')
-            ->count();
-      } catch (\Exception $e) {
-        $ugcPending = 0;
-      }
-    @endphp
-    <a href="{{ route('admin.book-club.moderation-queue') }}" class="btn-p ghost">
-      <i class="bi bi-shield-exclamation"></i> UGC navbati
-      @if($ugcPending > 0)
-        <span class="tab-badge" style="margin-left:6px">{{ $ugcPending }}</span>
-      @endif
-    </a>
-  </x-slot>
 </x-a122.page-header>
 
 <div class="a122-stat-grid mb-4 fade-up">
@@ -43,7 +21,7 @@
     [$counts['all'] ?? 0, 'Jami postlar', 'accent', 'bi-chat-square-text'],
     [$counts['posts'] ?? 0, 'Asl postlar', 'info', 'bi-pencil-square'],
     [$counts['reposts'] ?? 0, 'Repostlar', 'warning', 'bi-arrow-repeat'],
-    [$ugcPending ?? 0, 'UGC navbat', 'success', 'bi-shield-exclamation'],
+    [$posts->total() ?? 0, 'Ko‘rinayotgan postlar', 'success', 'bi-stars'],
   ] as [$value, $label, $tone, $icon])
     <div class="a122-stat-tile">
       <div class="a122-stat-tile__icon" style="background:var(--p-{{ $tone }}-d,var(--p-elevated));color:var(--p-{{ $tone }})">

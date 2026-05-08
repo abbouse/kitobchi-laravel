@@ -39,6 +39,8 @@ class Stationery extends Model
         'kangaroo_listing_checked_at',
         'kangaroo_listing_issues',
         'ugc_aggregate_score',
+        'ugc_reviews_count',
+        'ugc_last_scored_at',
     ];
 
     protected $casts = [
@@ -50,6 +52,7 @@ class Stationery extends Model
         'updated_at' => 'datetime',
         'kangaroo_listing_issues' => 'array',
         'kangaroo_listing_checked_at' => 'datetime',
+        'ugc_last_scored_at' => 'datetime',
     ];
 
     // Category bilan bog'lanish
