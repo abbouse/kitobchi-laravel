@@ -11,6 +11,7 @@ use App\Models\SellerLocation;
 use App\Models\SellerOrder;
 use App\Models\SellerStaffLog;
 use App\Models\SellerTransaction;
+use App\Services\SellerOrderSettlementService;
 use App\Services\PasswordResetService;
 use App\Services\SmsService;
 use Illuminate\Http\Request;
@@ -120,7 +121,9 @@ class SellerController extends Controller
         $orderCount = SellerOrder::whereIn('seller_id', $sellerIds)->count();
         $totalRevenue = SellerTransaction::whereIn('seller_id', $sellerIds)
             ->where('status', 'approved')
-            ->sum('amount');
+            ->where('type', 'income')
+            ->where('category', SellerOrderSettlementService::CATEGORY_ORDER_SALE)
+            ->sum('netAmount');
         $recentOrders = SellerOrder::with([
                 'user:id,name,lastname,phone_number',
                 'seller:id,shop_name,parent_id',
@@ -166,11 +169,12 @@ class SellerController extends Controller
             'balance'            => 'nullable|numeric|min:0',
             'commission_percent' => 'nullable|integer|min:0|max:100',
             'photo'              => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'password'           => 'nullable|string|min:6|max:255',
 
             // ── Premium ───────────────────────────────────────────
             // Premium berish — toggle + sana. Toggle off bo'lsa sana e'tiborsiz.
             'isPremiumShop'      => 'nullable|boolean',
-            'isPremiumExpiresAt' => 'nullable|date|after:now',
+            'isPremiumExpiresAt' => 'nullable|date',
 
             // ── Shartnoma ─────────────────────────────────────────
             'contract_number'     => 'nullable|string|max:50',
@@ -211,7 +215,7 @@ class SellerController extends Controller
         if ($isPremium) {
             // Toggle yoqilgan bo'lsa, sana majburiy.
             $request->validate([
-                'isPremiumExpiresAt' => 'required|date|after:now',
+                'isPremiumExpiresAt' => 'required|date',
             ]);
             $data['isPremiumExpiresAt'] = $request->input('isPremiumExpiresAt');
         } else {

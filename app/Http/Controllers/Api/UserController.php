@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\OrderStatusCode;
 use App\Http\Controllers\Controller;
 use App\Models\Locations;
 use App\Models\User;
@@ -672,7 +673,15 @@ class UserController extends Controller
                 ->where('is_read', false)->count();
 
             $cartItems      = MyCart::where('user_id', $user->id)->sum('count_item');
-            $orderCount     = Sold::where('status', '!=', 'F')->where('user_id', $user->id)->count();
+            $orderCount     = Sold::where('user_id', $user->id)
+                ->where(function ($query) {
+                    $query->where('status_code', '!=', OrderStatusCode::CANCELLED->value)
+                        ->orWhere(function ($fallback) {
+                            $fallback->whereNull('status_code')
+                                ->where('status', '!=', OrderStatusCode::CANCELLED->legacy());
+                        });
+                })
+                ->count();
             $favouriteCount = FavouriteProducts::where('user_id', $user->id)->count();
             $selectedLocation = Locations::where('user_id', $user->id)
                 ->where('id', $user->mainAddressID)->where('isDeleted', false)->exists();

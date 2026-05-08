@@ -610,7 +610,7 @@ function editComment(id, content) {
   const modal = document.getElementById('editCommentModal');
   document.getElementById('editCommentContent').value = content;
   document.getElementById('editCommentForm').action =
-    `/panel/book-club/comments/${id}`;
+    `{{ url('a122/book-club/comments') }}/${id}`;
   modal.style.display = 'flex';
 }
 

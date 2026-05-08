@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\PaymentStatusCode;
 use App\Http\Controllers\Controller;
 use App\Models\Sold;
 use App\Models\User;
@@ -99,7 +100,8 @@ class PaymeController extends Controller
 
         // Status tekshiruvi
         $ok = match($payable['type']) {
-            'order'            => (int) $payable['model']->paymentStatus === 1,
+            'order'            => ($payable['model']->payment_status_code ?? null) === PaymentStatusCode::CARD_PENDING->value
+                || (int) $payable['model']->paymentStatus === PaymentStatusCode::CARD_PENDING->legacy(),
             'gift_certificate' => $payable['model']->status === 'pending_payment',
             'mystery_box'      => $payable['model']->status === 'pending_payment',
             default            => false,

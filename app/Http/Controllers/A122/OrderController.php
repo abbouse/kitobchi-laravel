@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers\A122;
 
+use App\Enums\OrderStatusCode;
+use App\Enums\PaymentStatusCode;
+use App\Enums\PostalReturnStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Books;
 use App\Models\CourierOrder;
@@ -9,10 +12,14 @@ use App\Models\Couriers;
 use App\Models\Gifts;
 use App\Models\Seller;
 use App\Models\SellerOrder;
+use App\Models\SellerTransaction;
 use App\Models\Sold;
 use App\Models\Stationery;
 use App\Services\AdminOrderStatusSyncService;
 use App\Services\OrderService;
+use App\Services\OrderStatusPushService;
+use App\Services\PostalResendService;
+use App\Services\SellerOrderSettlementService;
 use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\OrdersExport;
@@ -22,19 +29,33 @@ class OrderController extends Controller
     public function __construct(
         private readonly OrderService $orderService,
         private readonly AdminOrderStatusSyncService $statusSync,
+        private readonly OrderStatusPushService $orderStatusPushService,
+        private readonly PostalResendService $postalResendService,
     ) {}
 
     public function index(Request $request)
     {
         $query = Sold::with('user:id,name,lastname');
         $tab = $request->input('tab', 'pending');
+        $applyOrderStatus = function ($builder, OrderStatusCode ...$statuses) {
+            $values = array_map(fn (OrderStatusCode $status) => $status->value, $statuses);
+            $legacyValues = array_map(fn (OrderStatusCode $status) => $status->legacy(), $statuses);
+
+            $builder->where(function ($query) use ($values, $legacyValues) {
+                $query->whereIn('status_code', $values)
+                    ->orWhere(function ($fallback) use ($legacyValues) {
+                        $fallback->whereNull('status_code')
+                            ->whereIn('status', $legacyValues);
+                    });
+            });
+        };
 
         match ($tab) {
-            'shipped' => $query->where('status', 'B'),
-            'paid' => $query->where('status', 'C'),
-            'cancelled' => $query->where('status', 'F'),
+            'shipped' => $applyOrderStatus($query, OrderStatusCode::IN_DELIVERY),
+            'paid' => $applyOrderStatus($query, OrderStatusCode::DELIVERED),
+            'cancelled' => $applyOrderStatus($query, OrderStatusCode::CANCELLED, OrderStatusCode::RETURNED),
             'all' => null,
-            default => $query->whereIn('status', ['A', 'P']),
+            default => $applyOrderStatus($query, OrderStatusCode::PENDING, OrderStatusCode::PACKING),
         };
 
         if ($search = $request->input('search')) {
@@ -46,20 +67,45 @@ class OrderController extends Controller
         $orders = $query->latest()->paginate(20)->withQueryString();
         $counts = [
             'all' => Sold::count(),
-            'pending' => Sold::whereIn('status', ['A', 'P'])->count(),
-            'shipped' => Sold::where('status', 'B')->count(),
-            'paid' => Sold::where('status', 'C')->count(),
-            'cancelled' => Sold::where('status', 'F')->count(),
+            'pending' => Sold::where(function ($query) {
+                $query->whereIn('status_code', [OrderStatusCode::PENDING->value, OrderStatusCode::PACKING->value])
+                    ->orWhere(function ($fallback) {
+                        $fallback->whereNull('status_code')
+                            ->whereIn('status', [OrderStatusCode::PENDING->legacy(), OrderStatusCode::PACKING->legacy()]);
+                    });
+            })->count(),
+            'shipped' => Sold::where(function ($query) {
+                $query->where('status_code', OrderStatusCode::IN_DELIVERY->value)
+                    ->orWhere(function ($fallback) {
+                        $fallback->whereNull('status_code')
+                            ->where('status', OrderStatusCode::IN_DELIVERY->legacy());
+                    });
+            })->count(),
+            'paid' => Sold::where(function ($query) {
+                $query->where('status_code', OrderStatusCode::DELIVERED->value)
+                    ->orWhere(function ($fallback) {
+                        $fallback->whereNull('status_code')
+                            ->where('status', OrderStatusCode::DELIVERED->legacy());
+                    });
+            })->count(),
+            'cancelled' => Sold::where(function ($query) {
+                $query->whereIn('status_code', [OrderStatusCode::CANCELLED->value, OrderStatusCode::RETURNED->value])
+                    ->orWhere(function ($fallback) {
+                        $fallback->whereNull('status_code')
+                            ->where('status', OrderStatusCode::CANCELLED->legacy());
+                    });
+            })->count(),
         ];
 
         $rows = $orders->map(function (Sold $o) {
-            $status = match ((string) $o->status) {
-                'A', 'P' => 'pending',
-                'B' => 'shipped',
-                'C' => 'paid',
-                'F' => 'cancelled',
+            $status = match ((string) ($o->status_code ?? $o->status)) {
+                'A', 'P', 'pending', 'packing' => 'pending',
+                'B', 'in_delivery' => 'shipped',
+                'C', 'delivered' => 'paid',
+                'F', 'cancelled', 'returned' => 'cancelled',
                 default => 'pending',
             };
+            $paymentStatus = PaymentStatusCode::fromLegacy($o->payment_status_code ?? $o->paymentStatus);
 
             return [
                 'id' => '#ORD-'.$o->id,
@@ -68,11 +114,11 @@ class OrderController extends Controller
                 'total' => number_format((float) $o->amount, 0).' UZS',
                 'status' => $status,
                 'date' => optional($o->created_at)->format('Y-m-d'),
-                'payment' => match ((int) $o->paymentStatus) {
-                    2 => 'Paid',
-                    1 => 'Card',
-                    0 => 'Cash',
-                    default => 'Other',
+                'payment' => match ($paymentStatus) {
+                    PaymentStatusCode::PAID => "To‘langan",
+                    PaymentStatusCode::CARD_PENDING => 'Karta kutilmoqda',
+                    PaymentStatusCode::CASH_PENDING => 'Naqd kutilmoqda',
+                    PaymentStatusCode::CANCELLED => 'To‘lov bekor qilingan',
                 },
                 'raw_id' => $o->id,
             ];
@@ -108,7 +154,7 @@ class OrderController extends Controller
             $item['image'] = $this->resolveItemImage($product);
             $item['type_label'] = match ($type) {
                 'stationery' => 'Kanselyariya',
-                'gift' => 'Gift',
+                'gift' => 'Sovg‘a',
                 default => 'Kitob',
             };
             return $item;
@@ -120,6 +166,9 @@ class OrderController extends Controller
             'discount' => (float) ($order->discountAmount ?? 0),
             'cashback' => (float) ($order->cashbackAmount ?? 0),
         ];
+        $order->status_code = $order->status_code;
+        $order->payment_status_code = $order->payment_status_code;
+        $order->postal_return_status = $order->postal_return_status;
         $address = collect($order->address ?? [])->values();
         $primaryAddress = $address->first() ?? [];
 
@@ -127,6 +176,91 @@ class OrderController extends Controller
             ->where('order_id', $order->id)
             ->latest('id')
             ->get();
+
+        $sellerTransactions = SellerTransaction::query()
+            ->where('order_id', $order->id)
+            ->whereIn('category', [
+                SellerOrderSettlementService::CATEGORY_ORDER_SALE,
+                SellerOrderSettlementService::CATEGORY_ORDER_REVERSAL,
+            ])
+            ->orderBy('id')
+            ->get();
+
+        $sellerSettlements = [];
+        $settlementOverview = [
+            'gross' => 0,
+            'commission' => 0,
+            'net' => 0,
+            'reversed_net' => 0,
+            'current_net' => 0,
+            'sale_count' => 0,
+            'reversal_count' => 0,
+            'status' => 'pending',
+            'label' => 'Hisob-kitob kutilmoqda',
+        ];
+
+        foreach ($sellerOrders as $sellerOrder) {
+            $transactions = $sellerTransactions
+                ->where('seller_order_id', $sellerOrder->id)
+                ->values();
+
+            $saleTransactions = $transactions
+                ->where('category', SellerOrderSettlementService::CATEGORY_ORDER_SALE)
+                ->where('status', SellerTransaction::STATUS_APPROVED)
+                ->values();
+            $reversalTransactions = $transactions
+                ->where('category', SellerOrderSettlementService::CATEGORY_ORDER_REVERSAL)
+                ->where('status', SellerTransaction::STATUS_APPROVED)
+                ->values();
+
+            $gross = (int) $saleTransactions->sum('amount');
+            $commission = (int) $saleTransactions->sum('commissionPrice');
+            $net = (int) $saleTransactions->sum('netAmount');
+            $reversedNet = (int) $reversalTransactions->sum('netAmount');
+            $currentNet = $net - $reversedNet;
+            $saleCount = $saleTransactions->count();
+            $reversalCount = $reversalTransactions->count();
+
+            $status = 'pending';
+            $label = 'Hisob-kitob kutilmoqda';
+            if ($saleCount > 0 && $currentNet > 0) {
+                $status = 'settled';
+                $label = "Sellerga tushgan";
+            } elseif ($saleCount > 0 && $currentNet <= 0) {
+                $status = 'reversed';
+                $label = 'Hisob-kitob qaytarilgan';
+            }
+
+            $sellerSettlements[$sellerOrder->id] = [
+                'gross' => $gross,
+                'commission' => $commission,
+                'net' => $net,
+                'reversed_net' => $reversedNet,
+                'current_net' => $currentNet,
+                'sale_count' => $saleCount,
+                'reversal_count' => $reversalCount,
+                'status' => $status,
+                'label' => $label,
+                'latest_sale_at' => $saleTransactions->last()?->created_at,
+                'latest_reversal_at' => $reversalTransactions->last()?->created_at,
+            ];
+
+            $settlementOverview['gross'] += $gross;
+            $settlementOverview['commission'] += $commission;
+            $settlementOverview['net'] += $net;
+            $settlementOverview['reversed_net'] += $reversedNet;
+            $settlementOverview['sale_count'] += $saleCount;
+            $settlementOverview['reversal_count'] += $reversalCount;
+        }
+
+        $settlementOverview['current_net'] = $settlementOverview['net'] - $settlementOverview['reversed_net'];
+        if ($settlementOverview['sale_count'] > 0 && $settlementOverview['current_net'] > 0) {
+            $settlementOverview['status'] = 'settled';
+            $settlementOverview['label'] = "Sellerga tushgan";
+        } elseif ($settlementOverview['sale_count'] > 0 && $settlementOverview['current_net'] <= 0) {
+            $settlementOverview['status'] = 'reversed';
+            $settlementOverview['label'] = 'Hisob-kitob qaytarilgan';
+        }
 
         $courierOrder = CourierOrder::with(['courier:id,first_name,last_name,phone_number,photo,region', 'user:id,name,lastname,phone_number'])
             ->where('order_id', $order->id)
@@ -146,6 +280,8 @@ class OrderController extends Controller
             'address',
             'primaryAddress',
             'sellerOrders',
+            'sellerSettlements',
+            'settlementOverview',
             'courierOrder',
             'assignedCourier',
         ));
@@ -179,12 +315,36 @@ class OrderController extends Controller
         return back()->with('success', "Buyurtma holati yangilandi.");
     }
 
+    public function markPostalReturned(Request $request, Sold $order)
+    {
+        $request->validate([
+            'postal_return_fee' => 'required|integer|min:0|max:1000000',
+            'postal_return_note' => 'nullable|string|max:1000',
+        ]);
+
+        try {
+            $this->postalResendService->markReturnedToSender(
+                $order,
+                (int) $request->input('postal_return_fee'),
+                $request->input('postal_return_note'),
+            );
+
+            return back()->with('success', "Buyurtma pochta qaytimi sifatida belgilandi.");
+        } catch (\Throwable $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
     public function adminCancel(Request $request, Sold $order)
     {
         if (in_array($order->status, ['C', 'F'])) {
             return back()->with('error', "Yetkazilgan yoki bekor qilingan buyurtmani bekor qilib bo'lmaydi.");
         }
+        $previousStatus = (string) $order->status;
         $result = $this->orderService->cancelOrder($order, strict: false);
+        if (($result['ok'] ?? false) === true) {
+            $this->orderStatusPushService->sendForTransition($order->fresh(), $previousStatus, 'F');
+        }
         return back()->with($result['ok'] ? 'success' : 'error', $result['ok'] ? "Buyurtma bekor qilindi." : $result['message']);
     }
 

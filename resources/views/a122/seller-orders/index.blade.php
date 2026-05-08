@@ -71,6 +71,7 @@
                         $itemsCount = collect($order->order?->items ?? [])->filter(fn ($item) => (int) ($item['seller_id'] ?? 0) === (int) $order->seller_id)->sum(fn ($item) => (int) ($item['count_item'] ?? 1));
                         $orderAmount = (float) ($order->amount ?? 0);
                     @endphp
+                    @php($statusCode = $order->status_code ?? \App\Enums\SellerOrderStatusCode::fromLegacy($order->status ?? 1)->value)
                     <tr>
                         <td class="text-gray-500 text-sm">
                             <div>#{{ $order->id }}</div>
@@ -94,7 +95,7 @@
                                 @method('PATCH')
                                 <select name="status" class="a122-inline-status" onchange="this.form.submit()">
                                     @foreach($statuses as $value => $statusItem)
-                                        <option value="{{ $value }}" @selected((int) ($order->status ?? 0) === (int) $value)>{{ $statusItem['label'] }}</option>
+                                        <option value="{{ $value }}" @selected($statusCode === $value)>{{ $statusItem['label'] }}</option>
                                     @endforeach
                                 </select>
                             </form>

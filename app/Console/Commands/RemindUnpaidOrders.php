@@ -3,6 +3,8 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
+use App\Enums\OrderStatusCode;
+use App\Enums\PaymentStatusCode;
 use App\Models\Sold;
 use App\Models\User;
 use Carbon\Carbon;
@@ -123,8 +125,20 @@ class RemindUnpaidOrders extends Command
         // (1 soatdan oshgach CancelUnpaidOrders bekor qiladi)
         $oneHourAgo = Carbon::now()->subHour();
 
-        $unpaidOrders = Sold::where('paymentStatus', 1)
-            ->where('status', 'A')
+        $unpaidOrders = Sold::where(function ($query) {
+                $query->where('payment_status_code', PaymentStatusCode::CARD_PENDING->value)
+                    ->orWhere(function ($fallback) {
+                        $fallback->whereNull('payment_status_code')
+                            ->where('paymentStatus', PaymentStatusCode::CARD_PENDING->legacy());
+                    });
+            })
+            ->where(function ($query) {
+                $query->where('status_code', OrderStatusCode::PENDING->value)
+                    ->orWhere(function ($fallback) {
+                        $fallback->whereNull('status_code')
+                            ->where('status', OrderStatusCode::PENDING->legacy());
+                    });
+            })
             ->where('created_at', '>=', $oneHourAgo)
             ->get();
 
@@ -160,8 +174,8 @@ class RemindUnpaidOrders extends Command
             }
 
             // Til aniqlash
-            $lang = in_array($user->lang ?? 'uz', ['uz', 'ru', 'en', 'ja'])
-                ? ($user->lang ?? 'uz')
+            $lang = in_array($user->locale ?? 'uz', ['uz', 'ru', 'en', 'ja'])
+                ? ($user->locale ?? 'uz')
                 : 'uz';
 
             $msgs  = self::REMINDERS[$lang][$msgIndex];

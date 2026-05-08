@@ -2,6 +2,11 @@
 
 namespace App\Services;
 
+use App\Enums\CourierOrderStatusCode;
+use App\Enums\OrderKind;
+use App\Enums\OrderStatusCode;
+use App\Enums\PaymentStatusCode;
+use App\Enums\SellerOrderStatusCode;
 use App\Models\Sold;
 use App\Models\SellerOrder;
 use App\Models\CourierOrder;
@@ -22,6 +27,7 @@ class OrderService
     public function __construct(
         private readonly CashbackHistoryService $cashbackHistoryService,
         private readonly CashbackNotificationService $cashbackNotificationService,
+        private readonly PostalResendService $postalResendService,
     ) {}
 
     // =========================================================================
@@ -134,9 +140,38 @@ class OrderService
 
     public function handleOrderPaid(Sold $order, User $user, bool $giveCashback = true): void
     {
-        $order->update(['paymentStatus' => 2]);
-        SellerOrder::where('order_id', $order->id)->update(['status' => 1]);
-        CourierOrder::where('order_id', $order->id)->update(['status' => 'pending']);
+        $payload = [
+            'paymentStatus' => PaymentStatusCode::PAID->legacy(),
+            'payment_status_code' => PaymentStatusCode::PAID->value,
+        ];
+        if ($order->status_code === OrderStatusCode::DELIVERED->value && !$order->completed_at) {
+            $payload['completed_at'] = now();
+        }
+
+        $order->update($payload);
+        if ($order->order_kind === OrderKind::POSTAL_RESEND->value) {
+            $this->postalResendService->activatePaidResendOrder($order->fresh());
+        } else {
+            SellerOrder::where('order_id', $order->id)
+                ->where(function ($query) {
+                    $query->where('status', SellerOrderStatusCode::PAYMENT_PENDING->legacy())
+                        ->orWhere('status_code', SellerOrderStatusCode::PAYMENT_PENDING->value);
+                })
+                ->update([
+                    'status' => SellerOrderStatusCode::NEW->legacy(),
+                    'status_code' => SellerOrderStatusCode::NEW->value,
+                ]);
+
+            CourierOrder::where('order_id', $order->id)
+                ->where(function ($query) {
+                    $query->where('status', CourierOrderStatusCode::PAYMENT_PENDING->legacy())
+                        ->orWhere('status_code', CourierOrderStatusCode::PAYMENT_PENDING->value);
+                })
+                ->update([
+                    'status' => CourierOrderStatusCode::PENDING->legacy(),
+                    'status_code' => CourierOrderStatusCode::PENDING->value,
+                ]);
+        }
 
         if ($giveCashback) {
             $this->processCashbackAfterOrderMutation($order, $user);
@@ -147,7 +182,11 @@ class OrderService
     {
         $order->refresh();
 
-        if ((int) $order->paymentStatus !== 2) {
+        if ($order->order_kind === OrderKind::POSTAL_RESEND->value) {
+            return 0;
+        }
+
+        if ($order->payment_status_code !== PaymentStatusCode::PAID->value) {
             return 0;
         }
 
@@ -155,8 +194,8 @@ class OrderService
             return $this->awardCashbackForPaidOrder($order, $user, notify: true);
         }
 
-        if ((string) $order->status === 'C') {
-            $this->scheduleCashbackRelease($order);
+        if ($order->status_code === OrderStatusCode::DELIVERED->value) {
+            $this->scheduleCashbackRelease($order, $order->completed_at);
         }
 
         return 0;
@@ -174,7 +213,8 @@ class OrderService
                 return;
             }
 
-            if ((int) $lockedOrder->paymentStatus !== 2 || (string) $lockedOrder->status !== 'C') {
+            if ($lockedOrder->payment_status_code !== PaymentStatusCode::PAID->value
+                || $lockedOrder->status_code !== OrderStatusCode::DELIVERED->value) {
                 return;
             }
 
@@ -285,14 +325,17 @@ class OrderService
     public function cancelOrder(Sold $order, bool $strict = true): array
     {
         // Tez tekshiruv (DB ga bormaydi)
-        if ($order->status === 'F') {
+        if ($order->status_code === OrderStatusCode::CANCELLED->value) {
             return ['ok' => false, 'message' => 'Buyurtma allaqachon bekor qilingan.'];
         }
 
         if ($strict) {
             // paymentStatus=0: naqd (to'lanmagan), paymentStatus=1: karta (to'lanmagan)
             // paymentStatus=2: to'langan → bekor qilish mumkin emas
-            if (!in_array((int)$order->paymentStatus, [0, 1])) {
+            if (!in_array($order->payment_status_code, [
+                PaymentStatusCode::CASH_PENDING->value,
+                PaymentStatusCode::CARD_PENDING->value,
+            ], true)) {
                 return ['ok' => false, 'message' => 'cancel_order_error_paid'];
             }
         }
@@ -312,8 +355,10 @@ class OrderService
                 ->where('id',     $order->id)
                 ->where('status', '!=', 'F')
                 ->update([
-                    'status'        => 'F',
-                    'paymentStatus' => 3,
+                    'status'        => OrderStatusCode::CANCELLED->legacy(),
+                    'status_code'   => OrderStatusCode::CANCELLED->value,
+                    'paymentStatus' => PaymentStatusCode::CANCELLED->legacy(),
+                    'payment_status_code' => PaymentStatusCode::CANCELLED->value,
                     'cashback_ready_at' => null,
                     'cashback_notified_at' => null,
                     'updated_at'    => now(),
@@ -326,8 +371,14 @@ class OrderService
 
             // ── Bu yerga faqat BIRINCHI marta yetib kelinadi ─────────────
 
-            SellerOrder::where('order_id', $order->id)->update(['status' => 4]);
-            CourierOrder::where('order_id', $order->id)->update(['status' => 'rejected']);
+            SellerOrder::where('order_id', $order->id)->update([
+                'status' => SellerOrderStatusCode::CANCELLED->legacy(),
+                'status_code' => SellerOrderStatusCode::CANCELLED->value,
+            ]);
+            CourierOrder::where('order_id', $order->id)->update([
+                'status' => CourierOrderStatusCode::CANCELLED->legacy(),
+                'status_code' => CourierOrderStatusCode::CANCELLED->value,
+            ]);
 
             // ── Mahsulot stoki qaytarish ──────────────────────────────────
             foreach ($order->items ?? [] as $item) {

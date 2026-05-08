@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers\Api\Courier;
 
+use App\Enums\CourierOrderStatusCode;
+use App\Enums\OrderStatusCode;
+use App\Enums\PaymentStatusCode;
 use App\Http\Controllers\Controller;
 use App\Models\Sold;
 use App\Models\User;
@@ -12,6 +15,7 @@ use App\Models\CourierOrderItem;
 use App\Models\SellerOrder;
 use App\Services\CourierBonusService;
 use App\Services\OrderService;
+use App\Services\OrderStatusPushService;
 use App\Services\OrderRealtimeService;
 use App\Services\QrTokenService;
 use Illuminate\Support\Facades\Auth;
@@ -26,6 +30,7 @@ class CourierOrderController extends Controller
         private readonly OrderService $orderService,
         private readonly OrderRealtimeService $orderRealtimeService,
         private readonly QrTokenService $qrTokenService,
+        private readonly OrderStatusPushService $orderStatusPushService,
     ) {
     }
 
@@ -42,15 +47,31 @@ class CourierOrderController extends Controller
         $orders = CourierOrder::query()
             ->whereNull('courier_id')
             ->where(function ($query) {
-                $query->where('status', 'pending')
+                $query->where('status_code', CourierOrderStatusCode::PENDING->value)
+                    ->orWhere(function ($fallback) {
+                        $fallback->whereNull('status_code')
+                            ->where('status', CourierOrderStatusCode::PENDING->legacy());
+                    })
                     // Ba'zi eski yoki callbackdan keyin sync bo'lmay qolgan
                     // buyurtmalar `pay_process`da qolib ketgan bo'lishi mumkin.
                     // Agar underlying Sold allaqachon to'langan bo'lsa
                     // (`paymentStatus = 2`), kuryerga uni available sifatida
                     // ko'rsatamiz.
                     ->orWhere(function ($q) {
-                        $q->where('status', 'pay_process')
-                            ->whereHas('order', fn ($order) => $order->where('paymentStatus', 2));
+                        $q->where(function ($pendingQuery) {
+                                $pendingQuery->where('status_code', CourierOrderStatusCode::PAYMENT_PENDING->value)
+                                    ->orWhere(function ($fallback) {
+                                        $fallback->whereNull('status_code')
+                                            ->where('status', CourierOrderStatusCode::PAYMENT_PENDING->legacy());
+                                    });
+                            })
+                            ->whereHas('order', fn ($order) => $order->where(function ($paidQuery) {
+                                $paidQuery->where('payment_status_code', PaymentStatusCode::PAID->value)
+                                    ->orWhere(function ($fallback) {
+                                        $fallback->whereNull('payment_status_code')
+                                            ->where('paymentStatus', PaymentStatusCode::PAID->legacy());
+                                    });
+                            }));
                     });
             })
             ->with([
@@ -63,9 +84,12 @@ class CourierOrderController extends Controller
             ->latest()
             ->get()
             ->map(function ($order) {
-                if ($order->status === 'pay_process' && (int) ($order->paymentStatus?->paymentStatus ?? 0) === 2) {
-                    $order->status = 'pending';
+                if ($order->status_code === CourierOrderStatusCode::PAYMENT_PENDING->value
+                    && ($order->paymentStatus?->payment_status_code ?? null) === PaymentStatusCode::PAID->value) {
+                    $order->status = CourierOrderStatusCode::PENDING->legacy();
+                    $order->status_code = CourierOrderStatusCode::PENDING->value;
                 }
+                $this->bonusService->normalizeBonusState($order);
                 return $this->hydrateCourierOrderItems($order, Auth::guard('courier')->id());
             });
 
@@ -110,6 +134,7 @@ class CourierOrderController extends Controller
         }
 
         $show = $this->hydrateCourierOrderItems($show, $courier->id);
+        $this->bonusService->normalizeBonusState($show);
 
         return response()->json([
             'success' => true,
@@ -140,20 +165,30 @@ class CourierOrderController extends Controller
         try {
             $finalBonus = 0;
             DB::transaction(function () use ($order, $orderCustomer, $courier, &$finalBonus) {
+                $previousStatus = (string) $orderCustomer->status;
                 // Phase 3: SLA penaltyni hisoblab final_bonus ni yozamiz.
                 // computeFinalBonus() bonusni courierBonus va final_bonus ustunlariga
                 // yozadi va sla_deadline ni mijoz pause bilan to'g'rilaydi.
                 $finalBonus = $this->bonusService->computeFinalBonus($order);
 
-                $order->status = 'delivered';
+                $order->status = CourierOrderStatusCode::DELIVERED->legacy();
+                $order->status_code = CourierOrderStatusCode::DELIVERED->value;
                 $order->save();
 
-                $orderCustomer->status = 'C';
+                $orderCustomer->status = OrderStatusCode::DELIVERED->legacy();
+                $orderCustomer->status_code = OrderStatusCode::DELIVERED->value;
+                if ($orderCustomer->payment_status_code !== PaymentStatusCode::PAID->value) {
+                    $orderCustomer->paymentStatus = PaymentStatusCode::PAID->legacy();
+                    $orderCustomer->payment_status_code = PaymentStatusCode::PAID->value;
+                }
+                $orderCustomer->completed_at ??= now();
                 $orderCustomer->save();
 
                 // courier balansiga: asosiy yetkazib berish narxi + yakuniy bonus.
                 $courier->balance += ((int) $order->courierPrice + $finalBonus);
                 $courier->save();
+
+                DB::afterCommit(fn () => $this->orderStatusPushService->sendForTransition($orderCustomer->fresh(), $previousStatus, 'C'));
             });
 
             $order->refresh();
@@ -215,11 +250,13 @@ class CourierOrderController extends Controller
 
                 $sold->courier_id   = $courier->id;
                 $sold->courierName  = $courier->first_name . ' ' . $courier->last_name;
-                $sold->status       = 'P';
+                $sold->status       = OrderStatusCode::PACKING->legacy();
+                $sold->status_code  = OrderStatusCode::PACKING->value;
                 $sold->save();
 
                 $order->courier_id = $courier->id;
-                $order->status     = 'in_delivery';
+                $order->status     = CourierOrderStatusCode::IN_DELIVERY->legacy();
+                $order->status_code = CourierOrderStatusCode::IN_DELIVERY->value;
                 $order->save();
 
                 // Phase 3: pickup_bonus ni qulflash + SLA boshlash.
@@ -262,9 +299,17 @@ class CourierOrderController extends Controller
                 'items.sellerLocation.workdays',
                 'customer.location'
             ])
-            ->latest()
+            ->orderByRaw("
+                CASE
+                    WHEN status IN ('in_delivery', 'pending') THEN 0
+                    WHEN status = 'delivered' THEN 1
+                    ELSE 2
+                END
+            ")
+            ->orderByDesc('updated_at')
             ->get()
             ->map(function ($order) {
+                $this->bonusService->normalizeBonusState($order);
                 return $this->hydrateCourierOrderItems($order, $order->courier_id);
             });
         return response()->json([
@@ -364,6 +409,12 @@ class CourierOrderController extends Controller
             ->get()
             ->keyBy(fn ($sellerOrder) => (string) $sellerOrder->seller_id);
 
+        $sellers = Seller::query()
+            ->whereIn('id', $items->pluck('seller_id')->filter()->unique()->values())
+            ->select('id', 'shop_name', 'lastname', 'firstname', 'phone_number', 'photo', 'isVerified')
+            ->get()
+            ->keyBy(fn ($seller) => (string) $seller->id);
+
         foreach ($items as $item) {
             if ($item->seller_id) {
                 $item->setRelation(
@@ -371,9 +422,14 @@ class CourierOrderController extends Controller
                     $sellerStatuses->get((string) $item->seller_id)
                 );
             }
-            if ($item->product && $item->product->seller && $item->sellerLocation) {
-                $item->product->seller->location = $item->sellerLocation;
+            $seller = $sellers->get((string) $item->seller_id);
+            if ($seller && $item->sellerLocation) {
+                $seller->location = $item->sellerLocation;
             }
+            if ($item->product && $seller) {
+                $item->product->setRelation('seller', $seller);
+            }
+            $item->setRelation('seller', $seller);
             $item->pickup_qr = $this->buildPickupQrForItem($item, $courierId, $order->order_id);
         }
 
@@ -396,14 +452,26 @@ class CourierOrderController extends Controller
     {
         $signed = $this->qrTokenService->parseDeliveryToken($qr);
         if ($signed) {
-            return Sold::where('status', 'B')
+            return Sold::where(function ($query) {
+                    $query->where('status_code', OrderStatusCode::IN_DELIVERY->value)
+                        ->orWhere(function ($fallback) {
+                            $fallback->whereNull('status_code')
+                                ->where('status', OrderStatusCode::IN_DELIVERY->legacy());
+                        });
+                })
                 ->where('id', $signed['sold_id'])
                 ->where('user_id', $signed['user_id'])
                 ->where('courier_id', $courierId)
                 ->first();
         }
 
-        return Sold::where('status', 'B')
+        return Sold::where(function ($query) {
+                $query->where('status_code', OrderStatusCode::IN_DELIVERY->value)
+                    ->orWhere(function ($fallback) {
+                        $fallback->whereNull('status_code')
+                            ->where('status', OrderStatusCode::IN_DELIVERY->legacy());
+                    });
+            })
             ->where('qr', $qr)
             ->where('courier_id', $courierId)
             ->first();

@@ -43,4 +43,9 @@ class BookClubComment extends Model
     {
         return $this->hasMany(BookClubComment::class, 'parent_id');
     }
+
+    public function parent()
+    {
+        return $this->belongsTo(BookClubComment::class, 'parent_id');
+    }
 }

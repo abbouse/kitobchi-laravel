@@ -8,6 +8,15 @@ Admin paneldagi statuslar, kodli holatlar va moderatsiya mappinglari uchun alohi
 
 - [docs/admin-status-reference.md](docs/admin-status-reference.md)
 
+Order lifecycle uchun yangi kanonik string enum qatlamlari:
+
+- `solds.status_code`
+- `solds.payment_status_code`
+- `seller_orders.status_code`
+- `courier_orders.status_code`
+
+Eski `status` / `paymentStatus` ustunlari hali compatibility uchun saqlanadi, lekin yangi development shu `*_code` ustunlariga qarashi kerak.
+
 ---
 
 ## Texnologiyalar
@@ -265,6 +274,99 @@ Rejalashtirilgan vazifalar (`bootstrap/app.php`):
 | `gifts:expire` | Har kuni 02:00 |
 | `mystery-box:check-deliveries` | Har kuni 08:30 |
 | `kangaroo:sync-content-moderation` | Har 30 daqiqa (25 daqiqa `withoutOverlapping`) |
+
+---
+
+## Order Status Codes
+
+Marketplace order oqimida endi 4 ta kanonik status tili bor:
+
+### Main order: `solds.status_code`
+
+| Code | Ma’nosi | Legacy |
+|------|---------|--------|
+| `pending` | Buyurtma yaratildi, navbatda | `A` |
+| `packing` | Seller qabul qildi / tayyorlanyapti | `P` |
+| `in_delivery` | Yo‘lda | `B` |
+| `delivered` | Yetkazildi | `C` |
+| `cancelled` | Bekor qilindi | `F` |
+| `returned` | Pochta qaytarib yuborgan | `F` legacy bilan birga |
+
+### Payment: `solds.payment_status_code`
+
+| Code | Ma’nosi | Legacy |
+|------|---------|--------|
+| `cash_pending` | Naqd, hali yopilmagan | `0` |
+| `card_pending` | Karta/Payme, hali tasdiqlanmagan | `1` |
+| `paid` | To‘langan | `2` |
+| `cancelled` | To‘lov bekor / rad | `3` |
+
+### Seller order: `seller_orders.status_code`
+
+| Code | Ma’nosi | Legacy |
+|------|---------|--------|
+| `payment_pending` | To‘lov kutilmoqda | `0` |
+| `new` | Yangi buyurtma | `1` |
+| `accepted` | Do‘kon qabul qildi | `2` |
+| `handed_to_courier` | Kuryerga berildi | `3` |
+| `cancelled` | Bekor qilindi | `4` |
+
+### Courier order: `courier_orders.status_code`
+
+| Code | Ma’nosi | Legacy |
+|------|---------|--------|
+| `payment_pending` | To‘lov tasdiq kutmoqda | `pay_process` |
+| `pending` | Kuryerga chiqishi mumkin | `pending` |
+| `in_delivery` | Kuryerda yo‘lda | `in_delivery` |
+| `delivered` | Yetkazildi | `delivered` |
+| `cancelled` | Bekor qilindi | `rejected` |
+| `returned` | Pochta qaytimi / markazga qaytgan | `returned` |
+
+### Canonical qoida
+
+- Yangi backend logika `*_code` ustunlarini `source of truth` deb oladi.
+- Legacy ustunlar (`status`, `paymentStatus`) rollout davrida eski app buildlar sinmasligi uchun saqlanadi.
+- Yangi API payloadlarda iloji boricha `status_code` va `payment_status_code` ham qaytariladi.
+
+## Status Backfill
+
+Yangi `*_code` ustunlarini eski yozuvlar bilan to‘ldirish uchun:
+
+```bash
+php artisan migrate
+php artisan orders:migrate-status-codes --dry-run
+php artisan orders:migrate-status-codes
+```
+
+`--dry-run` preview uchun, real yozmaydi.
+
+## Postal Return / Resend Flow
+
+Pochta orqali yuborilgan buyurtma qaytib kelsa:
+
+1. Admin order detail ichida `Pochta qaytgan deb belgilash` formi orqali qayta yuborish narxini (`postal_return_fee`) va izohni kiritadi.
+2. Original order:
+   - `status_code = returned`
+   - `postal_return_status = returned_to_sender`
+   - `postal_return_fee` saqlanadi
+3. Customer purchase detail sahifasida `Buyurtmani qayta yuborish` CTA ko‘rinadi.
+4. User bosganda penalty/to‘lov uchun alohida resend order yaratiladi:
+   - `order_kind = postal_resend`
+   - `resend_source_order_id = original_order_id`
+   - `amount = postal_return_fee`
+   - `payment_status_code = card_pending`
+5. Payme muvaffaqiyatli tugagach resend child order avtomatik:
+   - seller tarafda `handed_to_courier`
+   - courier tarafda `pending`
+   - main order tarafda `in_delivery`
+   holatiga o‘tadi.
+6. Seller settlement resend child orderlar uchun qayta ishlamaydi; bu oqim faqat logistika re-dispatch uchun.
+
+Bu yondashuv bilan:
+
+- sellerga ikkinchi marta daromad yozilmaydi
+- courier uchun yangi logistika vazifa yaratiladi
+- customer uchun qayta yuborish fee alohida va tushunarli bo‘ladi
 
 ---
 

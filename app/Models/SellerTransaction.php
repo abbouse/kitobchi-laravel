@@ -13,17 +13,25 @@ class SellerTransaction extends Model
 
     protected $fillable = [
         'seller_id',
+        'order_id',
+        'seller_order_id',
         'card',
+        'type',
+        'category',
         'amount',
         'commissionPercent',
         'commissionPrice',
         'netAmount',
         'status',
         'rejected_desc',
+        'description',
     ];
 
     protected $casts = [
+        'order_id' => 'integer',
+        'seller_order_id' => 'integer',
         'amount'          => 'integer',
+        'commissionPercent' => 'integer',
         'commissionPrice' => 'integer',
         'netAmount'       => 'integer',
         'created_at'      => 'datetime',

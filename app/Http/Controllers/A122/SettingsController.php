@@ -13,7 +13,7 @@ class SettingsController extends Controller
 {
     public function index()
     {
-        $project    = ProjectSetting::first();
+        $project    = $this->projectSettings();
         $commission = CommissionSetting::orderBy('priceFrom')->get();
         $cashback   = CashbackSetting::orderBy('type')->orderBy('fromUzs')->get();
         $delivery   = DeliveryService::orderBy('name')->get();
@@ -40,7 +40,7 @@ class SettingsController extends Controller
             'market_version_android'   => 'required|string|max:20',
         ]);
 
-        ProjectSetting::first()->update($request->only([
+        $this->projectSettings()->update($request->only([
             'business_version_ios', 'business_version_android',
             'courier_version_ios',  'courier_version_android',
             'market_version_ios',   'market_version_android',
@@ -185,7 +185,7 @@ class SettingsController extends Controller
             'courier_email'  => 'nullable|email|max:100',
         ]);
 
-        ProjectSetting::first()->update($request->only([
+        $this->projectSettings()->update($request->only([
             'kitobchi_phone', 'kitobchi_email',
             'business_phone', 'business_email',
             'courier_phone',  'courier_email',
@@ -202,7 +202,7 @@ class SettingsController extends Controller
             'packaging_threshold'   => 'required|integer|min:1',
         ]);
 
-        ProjectSetting::first()->update([
+        $this->projectSettings()->update([
             'on_premium'            => $request->boolean('on_premium'),
             'on_reels'              => $request->boolean('on_reels'),
             'ramadan'               => $request->boolean('ramadan'),
@@ -218,17 +218,20 @@ class SettingsController extends Controller
     public function updateCourierBonus(Request $request)
     {
         $request->validate([
-            'courier_surge_step' => 'required|integer|min:0',
-            'courier_surge_max' => 'required|integer|min:0',
-            'courier_surge_threshold' => 'required|integer|min:0',
-            'courier_sla_minutes' => 'required|integer|min:1',
-            'courier_penalty_step' => 'required|integer|min:0',
+            'courier_surge_step' => 'required|integer|min:0|max:5000',
+            'courier_surge_max' => 'required|integer|min:0|max:50000',
+            'courier_surge_threshold' => 'required|integer|min:0|max:50000',
+            'courier_sla_minutes' => 'required|integer|min:1|max:180',
+            'courier_penalty_step' => 'required|integer|min:0|max:10000',
         ]);
 
-        ProjectSetting::first()->update([
+        $surgeMax = $request->integer('courier_surge_max');
+        $surgeThreshold = min($request->integer('courier_surge_threshold'), $surgeMax);
+
+        $this->projectSettings()->update([
             'courier_surge_step' => $request->integer('courier_surge_step'),
-            'courier_surge_max' => $request->integer('courier_surge_max'),
-            'courier_surge_threshold' => $request->integer('courier_surge_threshold'),
+            'courier_surge_max' => $surgeMax,
+            'courier_surge_threshold' => $surgeThreshold,
             'courier_sla_minutes' => $request->integer('courier_sla_minutes'),
             'courier_penalty_step' => $request->integer('courier_penalty_step'),
         ]);
@@ -243,8 +246,8 @@ class SettingsController extends Controller
 
         $request->validate([
             'telegram_client_id'            => 'nullable|string|max:100',
-            'telegram_redirect_uri_ios'     => 'nullable|url|max:255',
-            'telegram_redirect_uri_android' => 'nullable|url|max:255',
+            'telegram_redirect_uri_ios'     => 'nullable|string|max:255',
+            'telegram_redirect_uri_android' => 'nullable|string|max:255',
             'telegram_scopes'               => 'nullable|string|max:255',
         ]);
 
@@ -259,7 +262,7 @@ class SettingsController extends Controller
             true,
         );
 
-        ProjectSetting::first()->update([
+        $this->projectSettings()->update([
             'telegram_login_enabled'        => $request->boolean('telegram_login_enabled'),
             'telegram_client_id'            => $request->telegram_client_id,
             'telegram_redirect_uri_ios'     => $iosRedirect,
@@ -293,5 +296,10 @@ class SettingsController extends Controller
         }
 
         return $value;
+    }
+
+    private function projectSettings(): ProjectSetting
+    {
+        return ProjectSetting::query()->firstOrCreate([]);
     }
 }

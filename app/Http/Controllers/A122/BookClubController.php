@@ -203,9 +203,13 @@ class BookClubController extends Controller
 
     public function moderationQueue()
     {
-        $pendingComments = BookClubComment::with(['user:id,name,lastname,avatar', 'post:id,text,user_id,product_id,product_type'])
+        $pendingComments = BookClubComment::with([
+                'user:id,name,lastname,avatar',
+                'post:id,text,user_id,product_id,product_type',
+                'parent:id,content,user_id',
+                'parent.user:id,name,lastname,avatar',
+            ])
             ->where('kangaroo_ugc_status', 'pending_admin')
-            ->whereNull('parent_id')
             ->latest('updated_at')
             ->paginate(50);
 
@@ -220,8 +224,6 @@ class BookClubController extends Controller
 
     public function saveCommentUgcScore(Request $request, BookClubComment $comment)
     {
-        abort_if($comment->parent_id !== null, 404);
-
         $data = $request->validate([
             'star' => 'required|numeric|between:1,5',
         ]);
@@ -232,8 +234,10 @@ class BookClubController extends Controller
             'kangaroo_checked_at' => now(),
         ]);
 
-        BookClubUgcSupport::recalcPostStarFromComments((int) $comment->post_id);
-        BookClubUgcSupport::recalcProductUgcFromPosts([(int) $comment->post_id]);
+        if ($comment->parent_id === null) {
+            BookClubUgcSupport::recalcPostStarFromComments((int) $comment->post_id);
+            BookClubUgcSupport::recalcProductUgcFromPosts([(int) $comment->post_id]);
+        }
 
         return back()->with('success', 'Izoh bahosi saqlandi.');
     }
@@ -253,5 +257,73 @@ class BookClubController extends Controller
         BookClubUgcSupport::recalcProductUgcFromPosts([(int) $bookClub->id]);
 
         return back()->with('success', 'Post matni bahosi saqlandi.');
+    }
+
+    public function saveBulkPostUgcScore(Request $request)
+    {
+        $data = $request->validate([
+            'post_ids' => 'required|array|min:1',
+            'post_ids.*' => 'integer|exists:book_club,id',
+            'star' => 'required|numeric|between:1,5',
+        ]);
+
+        $star = round((float) $data['star'], 2);
+        $postIds = array_values(array_unique(array_map('intval', $data['post_ids'])));
+
+        BookClub::query()
+            ->whereIn('id', $postIds)
+            ->update([
+                'kangaroo_post_star' => $star,
+                'kangaroo_post_ugc_status' => 'admin_scored',
+                'kangaroo_post_checked_at' => now(),
+            ]);
+
+        BookClubUgcSupport::recalcProductUgcFromPosts($postIds);
+
+        return back()->with('success', count($postIds).' ta post baholandi.');
+    }
+
+    public function saveBulkCommentUgcScore(Request $request)
+    {
+        $data = $request->validate([
+            'comment_ids' => 'required|array|min:1',
+            'comment_ids.*' => 'integer|exists:book_club_comments,id',
+            'star' => 'required|numeric|between:1,5',
+        ]);
+
+        $star = round((float) $data['star'], 2);
+        $commentIds = array_values(array_unique(array_map('intval', $data['comment_ids'])));
+
+        $comments = BookClubComment::query()
+            ->whereIn('id', $commentIds)
+            ->get(['id', 'post_id', 'parent_id']);
+
+        if ($comments->isEmpty()) {
+            return back()->with('error', 'Tanlangan izohlar topilmadi.');
+        }
+
+        BookClubComment::query()
+            ->whereIn('id', $comments->pluck('id'))
+            ->update([
+                'kangaroo_star_equivalent' => $star,
+                'kangaroo_ugc_status' => 'admin_scored',
+                'kangaroo_checked_at' => now(),
+            ]);
+
+        $topLevelPostIds = $comments
+            ->whereNull('parent_id')
+            ->pluck('post_id')
+            ->map(fn ($id) => (int) $id)
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        foreach ($topLevelPostIds as $postId) {
+            BookClubUgcSupport::recalcPostStarFromComments($postId);
+        }
+        BookClubUgcSupport::recalcProductUgcFromPosts($topLevelPostIds);
+
+        return back()->with('success', count($commentIds).' ta izoh baholandi.');
     }
 }

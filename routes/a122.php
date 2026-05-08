@@ -150,6 +150,7 @@ Route::prefix('a122')->name('admin.')->group(function () {
         Route::get('/',                  [OrderController::class, 'index'])->name('index');
         Route::get('/{order}',           [OrderController::class, 'show'])->name('show');
         Route::patch('/{order}/status',  [OrderController::class, 'updateStatus'])->name('status');
+        Route::patch('/{order}/postal-return', [OrderController::class, 'markPostalReturned'])->name('postal-return');
         Route::post('/{order}/cancel',   [OrderController::class, 'adminCancel'])->name('cancel');
         Route::get('/export',            [OrderController::class, 'export'])->name('export');
     });
@@ -279,7 +280,9 @@ Route::prefix('a122')->name('admin.')->group(function () {
         Route::get('/moderation',             [BookClubController::class, 'moderationQueue'])->name('moderation');
         Route::get('/moderation-queue',       [BookClubController::class, 'moderationQueue'])->name('moderation-queue');
         Route::post('/{bookClub}/post-ugc-score', [BookClubController::class, 'savePostUgcScore'])->name('post-ugc-score');
+        Route::post('/bulk-post-ugc-score',   [BookClubController::class, 'saveBulkPostUgcScore'])->name('bulk-post-ugc-score');
         Route::post('/comments/{comment}/ugc-score', [BookClubController::class, 'saveCommentUgcScore'])->name('comment.ugc-score');
+        Route::post('/bulk-comment-ugc-score', [BookClubController::class, 'saveBulkCommentUgcScore'])->name('bulk-comment.ugc-score');
         Route::delete('/images/{image}',      [BookClubController::class, 'deleteImage'])->name('image.delete');
         Route::patch('/comments/{comment}',   [BookClubController::class, 'updateComment'])->name('comment.update');
         Route::delete('/comments/{comment}',  [BookClubController::class, 'deleteComment'])->name('comment.delete');

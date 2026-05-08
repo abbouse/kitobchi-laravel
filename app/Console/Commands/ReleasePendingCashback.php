@@ -3,6 +3,8 @@
 namespace App\Console\Commands;
 
 use App\Models\Sold;
+use App\Enums\OrderStatusCode;
+use App\Enums\PaymentStatusCode;
 use App\Models\User;
 use App\Services\CashbackNotificationService;
 use App\Services\OrderService;
@@ -26,8 +28,20 @@ class ReleasePendingCashback extends Command
     public function handle(): int
     {
         $orders = Sold::query()
-            ->where('paymentStatus', 2)
-            ->where('status', 'C')
+            ->where(function ($query) {
+                $query->where('payment_status_code', PaymentStatusCode::PAID->value)
+                    ->orWhere(function ($fallback) {
+                        $fallback->whereNull('payment_status_code')
+                            ->where('paymentStatus', PaymentStatusCode::PAID->legacy());
+                    });
+            })
+            ->where(function ($query) {
+                $query->where('status_code', OrderStatusCode::DELIVERED->value)
+                    ->orWhere(function ($fallback) {
+                        $fallback->whereNull('status_code')
+                            ->where('status', OrderStatusCode::DELIVERED->legacy());
+                    });
+            })
             ->where('is_instore', false)
             ->whereNotNull('cashback_ready_at')
             ->where('cashback_ready_at', '<=', now())

@@ -17,8 +17,12 @@ use Illuminate\Support\Facades\Log;
  *
  * 2) Post-acceptance PENALTY
  *    Kuryer qabul qilganda `lockBonusOnAccept()` chaqiriladi: hozirgi
- *    pickup_bonus snapshotga olinadi (locked_bonus), picked_up_at = now,
- *    sla_deadline = now + sla_minutes.
+ *    pickup_bonus snapshotga olinadi (locked_bonus).
+ *
+ *    Muhim: marketplace oqimida SLA kuryer "buyurtmani oldi" degan
+ *    confirmation paytidan emas, barcha do'konlar buyurtmani kuryerga berib
+ *    bo'lgach boshlanishi kerak. Shu sabab picked_up_at / sla_deadline
+ *    `startSlaOnPickupReady()` da o'rnatiladi.
  *
  *    Yetkazib berilganda `computeFinalBonus()` chaqiriladi: agar
  *    delivered_at <= sla_deadline → final_bonus = locked_bonus (penalty yo'q).
@@ -38,6 +42,10 @@ class CourierBonusService
     public const MAX_CUSTOMER_DELAY_COUNT = 3;
     public const MAX_CUSTOMER_DELAY_SECONDS = 900;
     public const MAX_SINGLE_CUSTOMER_DELAY_SECONDS = 300;
+    public const MAX_SURGE_STEP = 5000;
+    public const MAX_SURGE_MAX = 50000;
+    public const MAX_PENALTY_STEP = 10000;
+    public const MAX_SLA_MINUTES = 180;
 
     private const DEFAULT_SURGE_STEP      = 500;
     private const DEFAULT_SURGE_MAX       = 10000;
@@ -55,13 +63,51 @@ class CourierBonusService
         }
         $s = $this->cachedSettings;
 
+        $surgeStep = max(0, min((int) ($s->courier_surge_step ?? self::DEFAULT_SURGE_STEP), self::MAX_SURGE_STEP));
+        $surgeMax = max(0, min((int) ($s->courier_surge_max ?? self::DEFAULT_SURGE_MAX), self::MAX_SURGE_MAX));
+        $surgeThreshold = max(0, min((int) ($s->courier_surge_threshold ?? self::DEFAULT_SURGE_THRESHOLD), $surgeMax));
+        $slaMinutes = max(1, min((int) ($s->courier_sla_minutes ?? self::DEFAULT_SLA_MINUTES), self::MAX_SLA_MINUTES));
+        $penaltyStep = max(0, min((int) ($s->courier_penalty_step ?? self::DEFAULT_PENALTY_STEP), self::MAX_PENALTY_STEP));
+
         return [
-            'surge_step'      => (int) ($s->courier_surge_step      ?? self::DEFAULT_SURGE_STEP),
-            'surge_max'       => (int) ($s->courier_surge_max       ?? self::DEFAULT_SURGE_MAX),
-            'surge_threshold' => (int) ($s->courier_surge_threshold ?? self::DEFAULT_SURGE_THRESHOLD),
-            'sla_minutes'     => (int) ($s->courier_sla_minutes     ?? self::DEFAULT_SLA_MINUTES),
-            'penalty_step'    => (int) ($s->courier_penalty_step    ?? self::DEFAULT_PENALTY_STEP),
+            'surge_step'      => $surgeStep,
+            'surge_max'       => $surgeMax,
+            'surge_threshold' => $surgeThreshold,
+            'sla_minutes'     => $slaMinutes,
+            'penalty_step'    => $penaltyStep,
         ];
+    }
+
+    public function normalizeBonusState(CourierOrder $order, bool $persist = true): CourierOrder
+    {
+        $cfg = $this->settings();
+
+        $pickup = max(0, min((int) ($order->pickup_bonus ?? 0), $cfg['surge_max']));
+        $locked = $order->locked_bonus === null
+            ? null
+            : max(0, min((int) $order->locked_bonus, $cfg['surge_max']));
+        $final = $order->final_bonus === null
+            ? null
+            : max(0, min((int) $order->final_bonus, $cfg['surge_max']));
+
+        if ($order->status === 'pending' && !$order->courier_id) {
+            $displayBonus = $pickup;
+        } elseif ($order->status === 'in_delivery') {
+            $displayBonus = $locked ?? $pickup;
+        } else {
+            $displayBonus = $final ?? $locked ?? 0;
+        }
+
+        $order->pickup_bonus = $pickup;
+        $order->locked_bonus = $locked;
+        $order->final_bonus = $final;
+        $order->courierBonus = max(0, min((int) $displayBonus, $cfg['surge_max']));
+
+        if ($persist && $order->isDirty(['pickup_bonus', 'locked_bonus', 'final_bonus', 'courierBonus'])) {
+            $order->save();
+        }
+
+        return $order;
     }
 
     // =========================================================================
@@ -89,6 +135,7 @@ class CourierBonusService
             ->get();
 
         foreach ($orders as $order) {
+            $this->normalizeBonusState($order, false);
             $oldBonus = (int) $order->pickup_bonus;
             $newBonus = min($oldBonus + $cfg['surge_step'], $cfg['surge_max']);
 
@@ -97,6 +144,7 @@ class CourierBonusService
             }
 
             $order->pickup_bonus = $newBonus;
+            $order->courierBonus = $newBonus;
 
             // Threshold o'tdi (oldin past, endi yuqori) — push flag tekshirish.
             $crossedNow = ($oldBonus < $cfg['surge_threshold'])
@@ -124,18 +172,40 @@ class CourierBonusService
 
     /**
      * Kuryer buyurtmani qabul qilganda chaqiriladi (CourierOrderController@confirmOrder).
-     * locked_bonus, picked_up_at, sla_deadline ni o'rnatadi.
+     * Bu bosqichda faqat bonusni "lock" qilamiz. SLA hali boshlanmaydi.
      */
     public function lockBonusOnAccept(CourierOrder $order): void
     {
+        $this->normalizeBonusState($order, false);
+        $order->locked_bonus = (int) $order->pickup_bonus;
+        $order->courierBonus = (int) $order->locked_bonus;
+        $order->final_bonus = null;
+        $order->save();
+    }
+
+    /**
+     * Barcha do'konlar kuryerga topshirib bo'lgach SLA ni boshlaydi.
+     * Idempotent: bir marta boshlangan bo'lsa qayta yozmaydi.
+     */
+    public function startSlaOnPickupReady(CourierOrder $order): void
+    {
+        $this->normalizeBonusState($order, false);
+        if ($order->picked_up_at && $order->sla_deadline) {
+            return;
+        }
+
         $cfg = $this->settings();
         $now = Carbon::now();
 
-        $order->locked_bonus = (int) $order->pickup_bonus;
-        $order->picked_up_at = $now;
-        $order->sla_deadline = $now->copy()->addMinutes($cfg['sla_minutes']);
-        // bonus_threshold_notified ni qayta yoqib qo'yamiz, chunki post-acceptance
-        // bosqichida yangi xabarlarni alohida flaglar boshqaradi.
+        if (!$order->locked_bonus) {
+            $order->locked_bonus = (int) $order->pickup_bonus;
+        }
+
+        $order->courierBonus = (int) $order->locked_bonus;
+
+        $order->picked_up_at = $order->picked_up_at ?: $now;
+        $order->sla_deadline = $order->sla_deadline ?: $now->copy()->addMinutes($cfg['sla_minutes']);
+        $order->sla_warning_notified = false;
         $order->save();
     }
 
@@ -153,12 +223,14 @@ class CourierBonusService
     public function computeFinalBonus(CourierOrder $order): int
     {
         $cfg = $this->settings();
+        $this->normalizeBonusState($order, false);
 
         $locked = (int) ($order->locked_bonus ?? 0);
 
         if (!$order->sla_deadline) {
-            // Eski yozuv (locked_bonus o'rnatilmagan) — bonus 0 deb hisoblaymiz.
+            // SLA hali boshlanmagan yoki eski yozuv — lock qilingan bonusni saqlab qolamiz.
             $order->final_bonus = $locked;
+            $order->courierBonus = $locked;
             $order->save();
             return $locked;
         }
@@ -216,6 +288,18 @@ class CourierBonusService
     public function toggleCustomerDelay(CourierOrder $order): array
     {
         $now = Carbon::now();
+
+        if (!$order->picked_up_at || !$order->sla_deadline) {
+            return [
+                'success'             => false,
+                'paused'              => false,
+                'total_delay_seconds' => (int) $order->total_delay_seconds,
+                'customer_delay_count'=> (int) $order->customer_delay_count,
+                'remaining_delay_seconds' => max(0, self::MAX_CUSTOMER_DELAY_SECONDS - (int) $order->total_delay_seconds),
+                'message'             => __('courier_api.customer_delay_invalid'),
+                'sla_deadline'        => optional($order->sla_deadline)->toIso8601String(),
+            ];
+        }
 
         if (!$order->is_customer_delay) {
             if ((int) $order->customer_delay_count >= self::MAX_CUSTOMER_DELAY_COUNT) {

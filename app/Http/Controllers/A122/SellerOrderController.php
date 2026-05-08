@@ -7,6 +7,7 @@ use App\Models\Books;
 use App\Models\SellerOrder;
 use App\Models\Stationery;
 use App\Services\AdminOrderStatusSyncService;
+use App\Enums\SellerOrderStatusCode;
 use Illuminate\Http\Request;
 
 class SellerOrderController extends Controller
@@ -18,8 +19,15 @@ class SellerOrderController extends Controller
         $q = SellerOrder::with(['seller:id,shop_name,firstname,lastname,phone_number,photo', 'client:id,name,lastname,phone_number,avatar', 'courier:id,first_name,last_name,phone_number', 'order:id,user_id,amount,status,paymentStatus,deliveryPrice,items,address,created_at']);
 
         $tab = $request->get('tab', 'all');
-        if ($tab !== 'all' && is_numeric($tab)) {
-            $q->where('status', $tab);
+        if ($tab !== 'all') {
+            $statusCode = SellerOrderStatusCode::fromLegacy($tab)->value;
+            $q->where(function ($query) use ($statusCode) {
+                $query->where('status_code', $statusCode)
+                    ->orWhere(function ($fallback) use ($statusCode) {
+                        $fallback->whereNull('status_code')
+                            ->where('status', SellerOrderStatusCode::fromLegacy($statusCode)->legacy());
+                    });
+            });
         }
 
         if ($s = $request->search) {
@@ -42,7 +50,13 @@ class SellerOrderController extends Controller
 
         $counts = ['all' => SellerOrder::count()];
         foreach (array_keys(AdminOrderStatusSyncService::SELLER_STATUSES) as $s) {
-            $counts[$s] = SellerOrder::where('status', $s)->count();
+            $counts[$s] = SellerOrder::where(function ($query) use ($s) {
+                $query->where('status_code', $s)
+                    ->orWhere(function ($fallback) use ($s) {
+                        $fallback->whereNull('status_code')
+                            ->where('status', SellerOrderStatusCode::fromLegacy($s)->legacy());
+                    });
+            })->count();
         }
 
         $statuses = AdminOrderStatusSyncService::SELLER_STATUSES;
@@ -95,8 +109,8 @@ class SellerOrderController extends Controller
 
     public function updateStatus(Request $request, SellerOrder $sellerOrder)
     {
-        $request->validate(['status' => 'required|in:0,1,2,3,4']);
-        $this->statusSync->updateSellerOrder($sellerOrder, (int) $request->status);
+        $request->validate(['status' => 'required|in:payment_pending,new,accepted,handed_to_courier,cancelled,0,1,2,3,4']);
+        $this->statusSync->updateSellerOrder($sellerOrder, (string) $request->status);
         return back()->with('success', 'Holat yangilandi.');
     }
 }

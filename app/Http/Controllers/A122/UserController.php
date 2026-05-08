@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\A122;
 
+use App\Enums\PaymentStatusCode;
 use App\Http\Controllers\Controller;
 use App\Models\ConnectedDevice;
 use App\Models\GiftCertificate;
@@ -168,10 +169,18 @@ class UserController extends Controller
             ->take(6)
             ->get();
 
+        $paidOrdersQuery = (clone $ordersQuery)->where(function ($query) {
+            $query->where('payment_status_code', PaymentStatusCode::PAID->value)
+                ->orWhere(function ($fallback) {
+                    $fallback->whereNull('payment_status_code')
+                        ->where('paymentStatus', PaymentStatusCode::PAID->legacy());
+                });
+        });
+
         $stats = [
             'orders_count' => (clone $ordersQuery)->count(),
-            'paid_orders_count' => (clone $ordersQuery)->where('paymentStatus', 2)->count(),
-            'total_spent' => (float) (clone $ordersQuery)->where('paymentStatus', 2)->sum('amount'),
+            'paid_orders_count' => (clone $paidOrdersQuery)->count(),
+            'total_spent' => (float) (clone $paidOrdersQuery)->sum('amount'),
             'cards_count' => $user->cards_count ?? 0,
             'devices_count' => $user->devices_count ?? 0,
             'addresses_count' => $addresses->count(),

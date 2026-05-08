@@ -1025,7 +1025,7 @@ document.getElementById('editCashbackModal').addEventListener('click', function(
 </div>
 <script>
 function openEditDelivery(id, name, type, priceKg, muddat, forCountry, capital, freePriceFrom, status) {
-  document.getElementById('editDeliveryForm').action = "<?php echo e(url('panel/settings/delivery')); ?>/" + id;
+  document.getElementById('editDeliveryForm').action = "<?php echo e(url('a122/settings/delivery')); ?>/" + id;
   document.getElementById('ed_name').value          = name;
   document.getElementById('ed_type').value          = type;
   document.getElementById('ed_priceKg').value       = priceKg;

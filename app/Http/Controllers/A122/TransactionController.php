@@ -4,13 +4,31 @@ namespace App\Http\Controllers\A122;
 
 use App\Http\Controllers\Controller;
 use App\Models\SellerTransaction;
+use App\Models\Seller;
+use App\Services\SellerOrderSettlementService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class TransactionController extends Controller
 {
+    private function isReviewableTransaction(SellerTransaction $transaction): bool
+    {
+        return $transaction->category === null
+            || $transaction->category === SellerOrderSettlementService::CATEGORY_WITHDRAWAL;
+    }
+
+    private function payoutQuery()
+    {
+        return SellerTransaction::query()
+            ->where(function ($query) {
+                $query->whereNull('category')
+                    ->orWhere('category', SellerOrderSettlementService::CATEGORY_WITHDRAWAL);
+            });
+    }
+
     public function index(Request $request)
     {
-        $q = SellerTransaction::with(['seller:id,shop_name,phone_number']);
+        $q = $this->payoutQuery()->with(['seller:id,shop_name,phone_number']);
 
         $tab = $request->get('tab', 'all');
         if ($tab !== 'all') $q->where('status', $tab);
@@ -32,10 +50,10 @@ class TransactionController extends Controller
         $transactions = $q->latest()->paginate(25)->withQueryString();
 
         $counts = [
-            'all'      => SellerTransaction::count(),
-            'pending'  => SellerTransaction::where('status', 'pending')->count(),
-            'approved' => SellerTransaction::where('status', 'approved')->count(),
-            'rejected' => SellerTransaction::where('status', 'rejected')->count(),
+            'all'      => (clone $this->payoutQuery())->count(),
+            'pending'  => (clone $this->payoutQuery())->where('status', 'pending')->count(),
+            'approved' => (clone $this->payoutQuery())->where('status', 'approved')->count(),
+            'rejected' => (clone $this->payoutQuery())->where('status', 'rejected')->count(),
         ];
 
         return view('a122.transactions.index', compact('transactions', 'counts', 'tab'));
@@ -44,9 +62,9 @@ class TransactionController extends Controller
     public function show(SellerTransaction $transaction)
     {
         $transaction->load('seller');
+        $baseSellerQuery = $this->payoutQuery()->where('seller_id', $transaction->seller_id);
         $sellerTransactions = $transaction->seller_id
-            ? SellerTransaction::query()
-                ->where('seller_id', $transaction->seller_id)
+            ? (clone $baseSellerQuery)
                 ->whereKeyNot($transaction->id)
                 ->latest()
                 ->take(6)
@@ -54,9 +72,9 @@ class TransactionController extends Controller
             : collect();
         $sellerTotals = $transaction->seller_id
             ? [
-                'approved_count' => SellerTransaction::where('seller_id', $transaction->seller_id)->where('status', 'approved')->count(),
-                'approved_sum' => (float) SellerTransaction::where('seller_id', $transaction->seller_id)->where('status', 'approved')->sum('amount'),
-                'pending_sum' => (float) SellerTransaction::where('seller_id', $transaction->seller_id)->where('status', 'pending')->sum('amount'),
+                'approved_count' => (clone $baseSellerQuery)->where('status', 'approved')->count(),
+                'approved_sum' => (float) (clone $baseSellerQuery)->where('status', 'approved')->sum('netAmount'),
+                'pending_sum' => (float) (clone $baseSellerQuery)->where('status', 'pending')->sum('netAmount'),
             ]
             : ['approved_count' => 0, 'approved_sum' => 0, 'pending_sum' => 0];
 
@@ -65,13 +83,57 @@ class TransactionController extends Controller
 
     public function approve(SellerTransaction $transaction)
     {
-        $transaction->update(['status' => 'approved', 'approved_at' => now()]);
+        if (!$this->isReviewableTransaction($transaction)) {
+            return back()->with('error', "Bu tranzaksiya qo'lda tasdiqlanmaydi.");
+        }
+
+        if ($transaction->status !== 'pending') {
+            return back()->with('error', "Faqat kutilayotgan tranzaksiyani tasdiqlash mumkin.");
+        }
+
+        DB::transaction(function () use ($transaction) {
+            $lockedTransaction = SellerTransaction::query()->lockForUpdate()->find($transaction->id);
+            if (!$lockedTransaction || $lockedTransaction->status !== 'pending') {
+                return;
+            }
+
+            $seller = Seller::query()->lockForUpdate()->find($lockedTransaction->seller_id);
+            $lockedTransaction->update(['status' => 'approved']);
+
+            if ($seller) {
+                $seller->total_withdrawal = (int) $seller->total_withdrawal + (int) ($lockedTransaction->netAmount ?? 0);
+                $seller->save();
+            }
+        });
+
         return back()->with('success', "To'lov tasdiqlandi.");
     }
 
     public function reject(SellerTransaction $transaction)
     {
-        $transaction->update(['status' => 'rejected']);
+        if (!$this->isReviewableTransaction($transaction)) {
+            return back()->with('error', "Bu tranzaksiya qo'lda rad etilmaydi.");
+        }
+
+        if ($transaction->status !== 'pending') {
+            return back()->with('error', "Faqat kutilayotgan tranzaksiyani rad etish mumkin.");
+        }
+
+        DB::transaction(function () use ($transaction) {
+            $lockedTransaction = SellerTransaction::query()->lockForUpdate()->find($transaction->id);
+            if (!$lockedTransaction || $lockedTransaction->status !== 'pending') {
+                return;
+            }
+
+            $seller = Seller::query()->lockForUpdate()->find($lockedTransaction->seller_id);
+            $lockedTransaction->update(['status' => 'rejected']);
+
+            if ($seller) {
+                $seller->balance = (int) $seller->balance + (int) $lockedTransaction->amount;
+                $seller->save();
+            }
+        });
+
         return back()->with('success', "To'lov rad etildi.");
     }
 }

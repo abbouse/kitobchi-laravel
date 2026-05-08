@@ -405,8 +405,8 @@ class WeeklyBookRemind extends Command
     private function sendPush(User $user, int $msgIndex): bool
     {
         try {
-            $lang = in_array($user->lang ?? 'uz', ['uz', 'ru', 'en', 'ja'])
-                ? ($user->lang ?? 'uz')
+            $lang = in_array($user->locale ?? 'uz', ['uz', 'ru', 'en', 'ja'])
+                ? ($user->locale ?? 'uz')
                 : 'uz';
 
             $msg   = self::MESSAGES[$lang][$msgIndex];

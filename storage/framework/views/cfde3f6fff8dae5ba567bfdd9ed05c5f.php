@@ -3,13 +3,26 @@
 
 <?php $__env->startSection('content'); ?>
 
+<?php
+  // Mirrors DashboardController::assetFromStorage so raw DB filenames render
+  // as proper URLs in <img src> instead of 404-ing as bare paths.
+  $resolveImg = function ($value) {
+      $v = trim((string) $value);
+      if ($v === '') return null;
+      if (str_starts_with($v, 'http://') || str_starts_with($v, 'https://') || str_starts_with($v, '/')) {
+          return $v;
+      }
+      return asset('storage/' . ltrim($v, '/'));
+  };
+?>
+
 <div x-data="{
   tab: localStorage.getItem('a122-dash-tab') || 'main',
   init() {
     this.$nextTick(() => {
       if (this.tab !== 'main' && !_tabInitialized[this.tab]) {
         _tabInitialized[this.tab] = true;
-        setTimeout(() => _initTab(this.tab), 80);
+        setTimeout(() => _ensureTabInit(this.tab), 80);
       }
     });
   },
@@ -19,7 +32,7 @@
     this.$nextTick(() => {
       if (!_tabInitialized[tab]) {
         _tabInitialized[tab] = true;
-        setTimeout(() => _initTab(tab), 80);
+        setTimeout(() => _ensureTabInit(tab), 80);
       } else {
         setTimeout(() => window.dispatchEvent(new Event('resize')), 30);
       }
@@ -375,7 +388,7 @@
             <div class="ro-row">
               <div class="ro-id"><span class="p-mono-id">#<?php echo e($order['id']); ?></span><?php if($order['gift']): ?><span class="ro-gift">🎁</span><?php endif; ?></div>
               <div class="ro-customer">
-                <div class="d-av d-av--accent d-av--sm-text"><?php if($order['avatar']): ?><img src="<?php echo e($order['avatar']); ?>"><?php else: ?><?php echo e(strtoupper(substr($order['customer'],0,1))); ?><?php endif; ?></div>
+                <div class="d-av d-av--accent d-av--sm-text"><?php $av = $resolveImg($order['avatar'] ?? null); ?> <?php if($av): ?><img src="<?php echo e($av); ?>" alt=""><?php else: ?><?php echo e(strtoupper(substr($order['customer'],0,1))); ?><?php endif; ?></div>
                 <span class="ro-name"><?php echo e($order['customer']); ?></span>
               </div>
               <div class="ro-amount"><?php echo e($order['amount']); ?> <span class="p-currency-suffix">UZS</span></div>
@@ -712,7 +725,7 @@
           <?php $__empty_1 = true; $__currentLoopData = $onlineUsersList; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $u): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
           <a href="<?php echo e(route('admin.users.show',$u->id)); ?>" class="dash-row-link">
             <div class="d-av d-av--accent">
-              <?php if($u->avatar): ?><img src="<?php echo e($u->avatar); ?>"><?php else: ?><?php echo e(strtoupper(substr($u->name??'U',0,1))); ?><?php endif; ?>
+              <?php $av = $resolveImg($u->avatar ?? null); ?> <?php if($av): ?><img src="<?php echo e($av); ?>" alt=""><?php else: ?><?php echo e(strtoupper(substr($u->name??'U',0,1))); ?><?php endif; ?>
             </div>
             <div class="dash-row-main">
               <div class="dash-row-title"><?php echo e($u->name); ?> <?php echo e($u->lastname); ?></div>
@@ -742,7 +755,7 @@
           <a href="<?php echo e(route('admin.users.show',$buyer->user_id)); ?>" class="top-buyer-row">
             <span class="rank-num <?php echo e($i===0?'rn-1':($i===1?'rn-2':($i===2?'rn-3':'rn-n'))); ?>"><?php echo e($i+1); ?></span>
             <div class="d-av d-av--accent">
-              <?php if($buyer->user?->avatar): ?><img src="<?php echo e($buyer->user->avatar); ?>"><?php else: ?><?php echo e(strtoupper(substr($buyer->user?->name??'U',0,1))); ?><?php endif; ?>
+              <?php $av = $resolveImg($buyer->user?->avatar); ?> <?php if($av): ?><img src="<?php echo e($av); ?>" alt=""><?php else: ?><?php echo e(strtoupper(substr($buyer->user?->name??'U',0,1))); ?><?php endif; ?>
             </div>
             <div class="top-buyer-body">
               <div class="dash-row-title--md"><?php echo e($buyer->user?$buyer->user->name.' '.$buyer->user->lastname:'ID:'.$buyer->user_id); ?></div>
@@ -778,7 +791,7 @@
         </div>
         <div class="dash-card-body">
           <?php $__empty_1 = true; $__currentLoopData = $topMixedProducts; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $i => $product): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
-          <?php $imgs=is_array($product->images)?$product->images:json_decode($product->images??'[]',true);$img=$imgs[0]??null; ?>
+          <?php $imgs=is_array($product->images)?$product->images:json_decode($product->images??'[]',true);$img=$resolveImg($imgs[0] ?? null); ?>
           <div class="top-row">
             <span class="rank-num <?php echo e($i===0?'rn-1':($i===1?'rn-2':($i===2?'rn-3':'rn-n'))); ?>"><?php echo e($i+1); ?></span>
             <div class="book-thumb">
@@ -915,6 +928,39 @@ function _setChartFallback(hostId, message = "Chart yuklanmadi") {
 
 // ── Tab system ───────────────────────────────────────────────────────────────
 const _tabInitialized = { main: true };
+const _tabInitAttempts = {};
+const _chartTabs = new Set(['orders', 'finance', 'users']);
+
+function _canInitChartTab(tab) {
+  return !_chartTabs.has(tab) || !!window.ApexCharts;
+}
+
+function _scheduleTabInit(tab, attempt = 0) {
+  if (!_chartTabs.has(tab)) return;
+  const nextAttempt = attempt + 1;
+  if (nextAttempt > 20) {
+    console.error(`dashboard tab init timeout: ${tab}`);
+    return;
+  }
+
+  _tabInitAttempts[tab] = nextAttempt;
+  setTimeout(() => {
+    if (!_canInitChartTab(tab)) {
+      _scheduleTabInit(tab, nextAttempt);
+      return;
+    }
+    _initTab(tab);
+  }, 120);
+}
+
+function _ensureTabInit(tab) {
+  if (_canInitChartTab(tab)) {
+    _initTab(tab);
+    return;
+  }
+  _scheduleTabInit(tab, _tabInitAttempts[tab] || 0);
+}
+
 function _initTab(tab) {
   if (tab === 'orders')  { try { _initOrderCharts();  } catch(e) { console.error('orders chart:', e); } }
   if (tab === 'finance') { try { _initFinanceCharts(); } catch(e) { console.error('finance chart:', e); } }
@@ -986,7 +1032,29 @@ function _initOrderCharts() {
     chart:{type:'donut',height:212,toolbar:{show:false},background:'transparent',fontFamily:'Inter,sans-serif'},
     legend:{position:'bottom',fontSize:'12px',labels:{colors:C.muted},markers:{width:8,height:8,radius:4},itemMargin:{horizontal:8}},
     dataLabels:{enabled:false},
-    plotOptions:{pie:{donut:{size:'74%',labels:{show:true,total:{show:true,label:'Jami',fontSize:'12px',color:C.muted,formatter:()=>'<?php echo e(number_format($totalOrders)); ?>'},value:{fontSize:'20px',fontWeight:700,color:C.text,fontFamily:'JetBrains Mono,monospace'}}}}}},
+    plotOptions:{
+      pie:{
+        donut:{
+          size:'74%',
+          labels:{
+            show:true,
+            total:{
+              show:true,
+              label:'Jami',
+              fontSize:'12px',
+              color:C.muted,
+              formatter:()=>'<?php echo e(number_format($totalOrders)); ?>'
+            },
+            value:{
+              fontSize:'20px',
+              fontWeight:700,
+              color:C.text,
+              fontFamily:'JetBrains Mono,monospace'
+            }
+          }
+        }
+      }
+    },
     stroke:{width:2,colors:[C.surface]},
     tooltip:{theme:isDark?'dark':'light'},
   };
@@ -1234,6 +1302,7 @@ function switchRevPeriod(btn, period) {
   btn.classList.add('active');
   if (!_revChart) return;
   const d = revData[period];
+  if (!d) return;
   _revChart.updateOptions({
     series:[{name:'Daromad',data:d.data}],
     xaxis:{categories:d.labels},
@@ -1241,6 +1310,22 @@ function switchRevPeriod(btn, period) {
     yaxis:{labels:{formatter:d.formatter}},
   });
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+  const activeTab = localStorage.getItem('a122-dash-tab') || 'main';
+  if (_chartTabs.has(activeTab)) {
+    _tabInitialized[activeTab] = true;
+    _ensureTabInit(activeTab);
+  }
+});
+
+window.addEventListener('a122:charts-ready', () => {
+  const activeTab = localStorage.getItem('a122-dash-tab') || 'main';
+  if (_chartTabs.has(activeTab)) {
+    _tabInitialized[activeTab] = true;
+    _ensureTabInit(activeTab);
+  }
+});
 </script>
 <?php $__env->stopPush(); ?>
 

@@ -55,18 +55,21 @@
   <div class="hidden">
     <?php $__empty_1 = true; $__currentLoopData = $orders; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $order): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
       <?php
-        $statusLabel = match ((string) $order->status) {
-          'A', 'P' => 'pending',
-          'B' => 'shipped',
-          'C' => 'paid',
-          'F' => 'cancelled',
-          default => 'pending',
+        $statusLabel = match ((string) ($order->status_code ?? $order->status)) {
+          'A', 'pending' => 'Kutilmoqda',
+          'P', 'packing' => 'Qadoqlanmoqda',
+          'B', 'in_delivery' => "Yo'lda",
+          'C', 'delivered' => 'Yakunlangan',
+          'returned' => 'Qaytgan',
+          'F', 'cancelled' => 'Bekor qilingan',
+          default => 'Kutilmoqda',
         };
-        $paymentLabel = match ((int) $order->paymentStatus) {
-          2 => 'Paid',
-          1 => 'Card',
-          0 => 'Cash',
-          default => 'Other',
+        $paymentLabel = match ((string) ($order->payment_status_code ?? $order->paymentStatus)) {
+          '2', 'paid' => "To'langan",
+          '1', 'card_pending', 'pending' => 'Karta kutilmoqda',
+          '0', 'cash_pending' => 'Naqd kutilmoqda',
+          '3', 'cancelled', 'rejected' => "To'lov bekor qilingan",
+          default => 'Noma’lum',
         };
       ?>
       <div class="card p-4">
@@ -75,7 +78,7 @@
             <div class="font-semibold">#ORD-<?php echo e($order->id); ?></div>
             <div class="text-xs text-gray-500"><?php echo e(trim(($order->user?->name ?? 'Mehmon').' '.($order->user?->lastname ?? ''))); ?></div>
           </div>
-          <span class="badge <?php echo e($statusLabel === 'paid' ? 'badge-success' : ($statusLabel === 'pending' ? 'badge-warning' : ($statusLabel === 'shipped' ? 'badge-info' : 'badge-danger'))); ?>"><?php echo e($statusLabel); ?></span>
+          <span class="badge <?php echo e($statusLabel === 'Yakunlangan' ? 'badge-success' : (in_array($statusLabel, ['Kutilmoqda','Qadoqlanmoqda']) ? 'badge-warning' : (in_array($statusLabel, ["Yo'lda",'Qaytgan']) ? 'badge-info' : 'badge-danger'))); ?>"><?php echo e($statusLabel); ?></span>
         </div>
         <div class="grid grid-cols-2 gap-3 mt-4 text-sm">
           <div><div class="text-xs text-gray-500">Tovarlar</div><div><?php echo e((int) collect($order->items ?? [])->sum('count_item')); ?> ta</div></div>
@@ -107,18 +110,21 @@
         <tbody>
           <?php $__empty_1 = true; $__currentLoopData = $orders; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $order): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
             <?php
-              $statusLabel = match ((string) $order->status) {
-                'A', 'P' => 'pending',
-                'B' => 'shipped',
-                'C' => 'paid',
-                'F' => 'cancelled',
-                default => 'pending',
+              $statusLabel = match ((string) ($order->status_code ?? $order->status)) {
+                'A', 'pending' => 'Kutilmoqda',
+                'P', 'packing' => 'Qadoqlanmoqda',
+                'B', 'in_delivery' => "Yo'lda",
+                'C', 'delivered' => 'Yakunlangan',
+                'returned' => 'Qaytgan',
+                'F', 'cancelled' => 'Bekor qilingan',
+                default => 'Kutilmoqda',
               };
-              $paymentLabel = match ((int) $order->paymentStatus) {
-                2 => 'Paid',
-                1 => 'Card',
-                0 => 'Cash',
-                default => 'Other',
+              $paymentLabel = match ((string) ($order->payment_status_code ?? $order->paymentStatus)) {
+                '2', 'paid' => "To'langan",
+                '1', 'card_pending', 'pending' => 'Karta kutilmoqda',
+                '0', 'cash_pending' => 'Naqd kutilmoqda',
+                '3', 'cancelled', 'rejected' => "To'lov bekor qilingan",
+                default => 'Noma’lum',
               };
             ?>
             <tr>
@@ -132,11 +138,11 @@
                   <?php echo csrf_field(); ?>
                   <?php echo method_field('PATCH'); ?>
                   <select name="status" class="a122-inline-status" onchange="this.form.submit()">
-                    <option value="A" <?php if($order->status === 'A'): echo 'selected'; endif; ?>>Yangi</option>
-                    <option value="P" <?php if($order->status === 'P'): echo 'selected'; endif; ?>>Qadoqlanmoqda</option>
-                    <option value="B" <?php if($order->status === 'B'): echo 'selected'; endif; ?>>Yo'lda</option>
-                    <option value="C" <?php if($order->status === 'C'): echo 'selected'; endif; ?>>Yakunlangan</option>
-                    <option value="F" <?php if($order->status === 'F'): echo 'selected'; endif; ?>>Bekor qilingan</option>
+                    <option value="A" <?php if(in_array(($order->status_code ?? $order->status), ['A','pending'], true)): echo 'selected'; endif; ?>>Kutilmoqda</option>
+                    <option value="P" <?php if(in_array(($order->status_code ?? $order->status), ['P','packing'], true)): echo 'selected'; endif; ?>>Qadoqlanmoqda</option>
+                    <option value="B" <?php if(in_array(($order->status_code ?? $order->status), ['B','in_delivery'], true)): echo 'selected'; endif; ?>>Yo'lda</option>
+                    <option value="C" <?php if(in_array(($order->status_code ?? $order->status), ['C','delivered'], true)): echo 'selected'; endif; ?>>Yetkazildi</option>
+                    <option value="F" <?php if(in_array(($order->status_code ?? $order->status), ['F','cancelled','returned'], true)): echo 'selected'; endif; ?>>Bekor qilingan</option>
                   </select>
                 </form>
               </td>

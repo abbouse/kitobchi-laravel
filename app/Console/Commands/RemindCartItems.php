@@ -122,8 +122,8 @@ class RemindCartItems extends Command
     private function sendCartPush(User $user, int $cartCount, string $timeSlot): bool
     {
         try {
-            $lang = in_array($user->lang ?? 'uz', ['uz', 'ru', 'en', 'ja'])
-                ? ($user->lang ?? 'uz') : 'uz';
+            $lang = in_array($user->locale ?? 'uz', ['uz', 'ru', 'en', 'ja'])
+                ? ($user->locale ?? 'uz') : 'uz';
 
             $msgs  = self::REMINDERS[$timeSlot][$lang];
             $title = str_replace('{count}', $cartCount, $msgs['title']);

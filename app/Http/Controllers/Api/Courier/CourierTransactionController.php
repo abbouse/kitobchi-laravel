@@ -22,33 +22,43 @@ class CourierTransactionController extends Controller
         if (!$courier) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
-        if ($courier->balance <= 0) {
-            return response()->json([
-                'success' => false, 
-                'message' => 'Yechib olish uchun balans yetarli emas'
-            ], 400);
-        }
-        $commissionSetting = CommissionSetting::where('priceFrom', '<=', $courier->balance)
-            ->where('priceTo', '>=', $courier->balance)
-            ->orderBy('priceFrom', 'desc')
-            ->first();
-        if (!$commissionSetting) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Komissiya sozlamalari topilmadi',
-            ], 400);
-        }
-
         try {
-            $transaction = DB::transaction(function () use ($courier, $commissionSetting) {
-                $amount            = $courier->balance;
+            $transaction = DB::transaction(function () use ($courier) {
+                $lockedCourier = \App\Models\Couriers::query()->lockForUpdate()->find($courier->id);
+                if (!$lockedCourier || (int) $lockedCourier->balance <= 0) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Yechib olish uchun balans yetarli emas'
+                    ], 400);
+                }
+
+                if (empty($lockedCourier->payment_card)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Avval to‘lov kartasini kiriting'
+                    ], 400);
+                }
+
+                $amount = (int) $lockedCourier->balance;
+                $commissionSetting = CommissionSetting::where('priceFrom', '<=', $amount)
+                    ->where('priceTo', '>=', $amount)
+                    ->orderBy('priceFrom', 'desc')
+                    ->first();
+
+                if (!$commissionSetting) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Komissiya sozlamalari topilmadi',
+                    ], 400);
+                }
+
                 $commissionPercent = $commissionSetting->percent;
-                $commissionPrice   = round(($amount * $commissionPercent) / 100, 2);
-                $netAmount         = round($amount - $commissionPrice, 2);
+                $commissionPrice   = (int) round(($amount * $commissionPercent) / 100);
+                $netAmount         = max(0, $amount - $commissionPrice);
 
                 $transaction = CourierTransaction::create([
-                    'courier_id'       => $courier->id,
-                    'card'             => $courier->payment_card,
+                    'courier_id'       => $lockedCourier->id,
+                    'card'             => $lockedCourier->payment_card,
                     'amount'           => $amount,
                     'commissionPercent'=> $commissionPercent,
                     'commissionPrice'  => $commissionPrice,
@@ -56,11 +66,15 @@ class CourierTransactionController extends Controller
                     'status'           => 'pending',
                 ]);
 
-                $courier->balance = 0;
-                $courier->save();
+                $lockedCourier->balance = 0;
+                $lockedCourier->save();
 
                 return $transaction;
             });
+
+            if ($transaction instanceof \Illuminate\Http\JsonResponse) {
+                return $transaction;
+            }
 
             return response()->json([
                 'success'        => true,
@@ -116,27 +130,45 @@ class CourierTransactionController extends Controller
                 'message' => 'Tranzaksiya ID si kiritilmadi'
             ], 400);
         }
-        $transaction = CourierTransaction::where('courier_id', $courier->id)
-            ->where('id', $transactionId)
-            ->where('status', 'pending')
-            ->first();
-        if (!$transaction) {
+        $restoredBalance = DB::transaction(function () use ($courier, $transactionId) {
+            $lockedTransaction = CourierTransaction::query()
+                ->where('courier_id', $courier->id)
+                ->where('id', $transactionId)
+                ->where('status', 'pending')
+                ->lockForUpdate()
+                ->first();
+
+            if (!$lockedTransaction) {
+                return null;
+            }
+
+            $lockedCourier = \App\Models\Couriers::query()->lockForUpdate()->find($courier->id);
+            if (!$lockedCourier) {
+                return null;
+            }
+
+            $lockedTransaction->update([
+                'status' => 'rejected',
+                'rejected_desc' => "Kuryer tomonidan ariza qayta ishlash jarayonida bekor qilindi, pullar hisobga qaytarildi."
+            ]);
+
+            $lockedCourier->balance = (int) $lockedCourier->balance + (int) $lockedTransaction->amount;
+            $lockedCourier->save();
+
+            return (int) $lockedCourier->balance;
+        });
+
+        if ($restoredBalance === null) {
             return response()->json([
-                'success' => false, 
+                'success' => false,
                 'message' => '#'.$transactionId.' Tranzaksiya topilmadi yoki bekor qilinishi mumkin emas'
             ], 404);
         }
-        $transaction->update([
-            'status' => 'rejected',
-            'rejected_desc' => "Sotuvchi tomonidan ariza qayta ishlash jarayonida bekor qilindi, pullar hisobga qaytarildi."
-        ]);
-        $oldBalance = $courier->balance;
-        $courier->balance += $transaction->amount;
-        $courier->save();
+
         return response()->json([
             'success' => true,
             'message' => 'Tranzaksiya muvaffaqiyatli bekor qilindi',
-            'transaction_id' => $transaction->id,
+            'transaction_id' => $transactionId,
         ], 200);
     }
 }

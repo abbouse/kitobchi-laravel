@@ -6,7 +6,8 @@
 @php
     $customerName = trim(($sellerOrder->client?->name ?? '') . ' ' . ($sellerOrder->client?->lastname ?? '')) ?: ($address['fullName'] ?? '—');
     $customerPhone = $sellerOrder->client?->phone_number ?? ($address['phoneNumber'] ?? '—');
-    $statusVal = $sellerOrder->status ?? 0;
+    $statusVal = $sellerOrder->status_code ?? \App\Enums\SellerOrderStatusCode::fromLegacy($sellerOrder->status ?? 1)->value;
+    $statusMeta = $statuses[$statusVal] ?? ['label' => $statusVal, 'badge' => 'badge-muted'];
 @endphp
 
 <x-a122.page-header back-href="{{ route('admin.seller-orders.index') }}">
@@ -41,7 +42,7 @@
             </div>
             <div class="kpi-soft">
                 <div class="metric-label">Holat</div>
-                <div class="metric-value text-xl">{{ $statuses[$statusVal]['label'] ?? $statusVal }}</div>
+                <div class="metric-value text-xl">{{ $statusMeta['label'] }}</div>
                 <div class="metric-meta">Joriy seller bosqichi</div>
             </div>
         </div>
@@ -126,19 +127,7 @@
             <div>
                 <dt class="text-xs text-gray-500 mb-1">Holat</dt>
                 <dd>
-                    @if($statusVal == 0)
-                        <span class="badge badge-muted">{{ $statuses[0]['label'] ?? "To'lov jarayonida" }}</span>
-                    @elseif($statusVal == 1)
-                        <span class="badge badge-info">{{ $statuses[1]['label'] ?? 'Yangi' }}</span>
-                    @elseif($statusVal == 2)
-                        <span class="badge badge-warning">{{ $statuses[2]['label'] ?? "Do'kon qabul qildi" }}</span>
-                    @elseif($statusVal == 3)
-                        <span class="badge badge-success">{{ $statuses[3]['label'] ?? "Kuryerga berildi" }}</span>
-                    @elseif($statusVal == 4)
-                        <span class="badge badge-danger">{{ $statuses[4]['label'] ?? 'Bekor qilindi' }}</span>
-                    @else
-                        <span class="badge badge-muted">{{ $statusVal }}</span>
-                    @endif
+                    <span class="badge {{ $statusMeta['badge'] }}">{{ $statusMeta['label'] }}</span>
                 </dd>
             </div>
 
@@ -181,7 +170,7 @@
                 <label class="text-xs text-gray-500 mb-1 block">Yangi holat</label>
                 <select name="status" class="select">
                     @foreach($statuses as $value => $status)
-                        <option value="{{ $value }}" @selected(($sellerOrder->status ?? '') == $value)>
+                        <option value="{{ $value }}" @selected($statusVal === $value)>
                             {{ $status['label'] }}
                         </option>
                     @endforeach

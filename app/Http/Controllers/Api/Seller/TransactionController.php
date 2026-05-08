@@ -9,6 +9,7 @@ use App\Models\Seller;
 use App\Models\SellerStaffLog; // ✅ LOG MODEL
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class TransactionController extends Controller
 {
@@ -45,6 +46,19 @@ class TransactionController extends Controller
         ]);
     }
 
+    private function resolveCommissionPercent(Seller $storeSeller, int $amount): ?int
+    {
+        if ($storeSeller->commission_percent !== null) {
+            return max(0, min(100, (int) $storeSeller->commission_percent));
+        }
+
+        $commissionSetting = CommissionSetting::where('priceFrom', '<=', $amount)
+            ->where('priceTo', '>=', $amount)
+            ->first();
+
+        return $commissionSetting ? (int) $commissionSetting->percent : null;
+    }
+
     public function requestWithdrawal()
     {
         $seller = Auth::guard('seller')->user();
@@ -60,43 +74,50 @@ class TransactionController extends Controller
         }
 
         $storeSellerId = $this->getStoreSellerId($seller);
-        $storeSeller = Seller::find($storeSellerId);
-        if ($storeSeller->balance <= 0) {
-            return response()->json([
-                'success' => false, 
-                'message' => 'Yechib olish uchun balans yetarli emas'
-            ], 400);
+        $transaction = DB::transaction(function () use ($storeSellerId, $seller) {
+            $storeSeller = Seller::query()->lockForUpdate()->find($storeSellerId);
+            if (!$storeSeller || (int) $storeSeller->balance <= 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Yechib olish uchun balans yetarli emas'
+                ], 400);
+            }
+
+            if (empty($storeSeller->payment_card)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Avval to‘lov kartasini kiriting'
+                ], 400);
+            }
+
+            $amount = (int) $storeSeller->balance;
+
+            $transaction = SellerTransaction::create([
+                'seller_id' => $storeSellerId,
+                'card' => $storeSeller->payment_card,
+                'type' => 'expense',
+                'category' => \App\Services\SellerOrderSettlementService::CATEGORY_WITHDRAWAL,
+                'amount' => $amount,
+                'commissionPercent' => 0,
+                'commissionPrice' => 0,
+                'netAmount' => $amount,
+                'status' => 'pending',
+                'description' => "Balansdan yechish so'rovi",
+            ]);
+
+            $storeSeller->balance = 0;
+            $storeSeller->save();
+
+            $this->writeLog($seller, 'Pul yechib olish so\'rovi yubordi',
+                "Miqdor: {$amount} UZS, Tranzaksiya: #{$transaction->id}"
+            );
+
+            return $transaction;
+        });
+
+        if ($transaction instanceof \Illuminate\Http\JsonResponse) {
+            return $transaction;
         }
-
-        $commissionSetting = CommissionSetting::where('priceFrom', '<=', $storeSeller->balance)
-            ->where('priceTo', '>=', $storeSeller->balance)
-            ->first();
-
-        if (!$commissionSetting) {
-            return response()->json([
-                'success' => false, 
-                'message' => 'Komissiya sozlamalari topilmadi'
-            ], 400);
-        }
-
-        $commissionPercent = $commissionSetting->percent;
-        $commissionPrice = ($storeSeller->balance * $commissionPercent) / 100;
-        $netAmount = $storeSeller->balance - $commissionPrice;
-
-        $transaction = SellerTransaction::create([
-            'seller_id' => $storeSellerId,
-            'card' => $storeSeller->payment_card,
-            'amount' => $storeSeller->balance,
-            'commissionPercent' => $commissionPercent,
-            'commissionPrice' => $commissionPrice,
-            'netAmount' => $netAmount,
-            'status' => 'pending',
-        ]);
-        $storeSeller->balance = 0;
-        $storeSeller->save();
-        $this->writeLog($seller, 'Pul yechib olish so\'rovi yubordi', 
-            "Miqdor: {$storeSeller->balance} UZS, Komissiya: {$commissionPercent}%, Tranzaksiya: #{$transaction->id}"
-        );
 
         return response()->json([
             'success' => true,
@@ -148,7 +169,7 @@ class TransactionController extends Controller
         ], 200);
     }
 
-    public function cancelTransaction(Request $request)
+    public function cancelTransaction(Request $request, ?int $transactionId = null)
     {
         $seller = Auth::guard('seller')->user();
         if (!$seller) {
@@ -162,7 +183,7 @@ class TransactionController extends Controller
             ], 403);
         }
 
-        $transactionId = $request->input('transaction_id');
+        $transactionId = $transactionId ?: (int) $request->input('transaction_id');
         if (!$transactionId) {
             return response()->json([
                 'success' => false, 
@@ -182,17 +203,36 @@ class TransactionController extends Controller
                 'message' => '#'.$transactionId.' Tranzaksiya topilmadi yoki bekor qilinishi mumkin emas'
             ], 404);
         }
-        $transaction->update([
-            'status' => 'rejected',
-            'rejected_desc' => "Sotuvchi tomonidan ariza qayta ishlash jarayonida bekor qilindi, pullar hisobga qaytarildi."
-        ]);
-        $storeSeller = Seller::find($storeSellerId);
-        $oldBalance = $storeSeller->balance;
-        $storeSeller->balance += $transaction->amount;
-        $storeSeller->save();
-        $this->writeLog($seller, 'Tranzaksiyani bekor qildi', 
-            "#{$transactionId} | Miqdor: {$transaction->amount} UZS | Balans: {$oldBalance} → {$storeSeller->balance} UZS"
-        );
+        $restoredBalance = DB::transaction(function () use ($storeSellerId, $transaction, $seller, $transactionId) {
+            $lockedTransaction = SellerTransaction::query()->lockForUpdate()->find($transaction->id);
+            $storeSeller = Seller::query()->lockForUpdate()->find($storeSellerId);
+
+            if (!$lockedTransaction || $lockedTransaction->status !== 'pending' || !$storeSeller) {
+                return null;
+            }
+
+            $lockedTransaction->update([
+                'status' => 'rejected',
+                'rejected_desc' => "Sotuvchi tomonidan ariza qayta ishlash jarayonida bekor qilindi, pullar hisobga qaytarildi."
+            ]);
+
+            $oldBalance = (int) $storeSeller->balance;
+            $storeSeller->balance = $oldBalance + (int) $lockedTransaction->amount;
+            $storeSeller->save();
+
+            $this->writeLog($seller, 'Tranzaksiyani bekor qildi',
+                "#{$transactionId} | Miqdor: {$lockedTransaction->amount} UZS | Balans: {$oldBalance} → {$storeSeller->balance} UZS"
+            );
+
+            return (int) $storeSeller->balance;
+        });
+
+        if ($restoredBalance === null) {
+            return response()->json([
+                'success' => false,
+                'message' => '#'.$transactionId.' Tranzaksiya topilmadi yoki bekor qilinishi mumkin emas'
+            ], 404);
+        }
 
         return response()->json([
             'success' => true,

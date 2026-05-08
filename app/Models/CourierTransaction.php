@@ -21,6 +21,10 @@ class CourierTransaction extends Model
     ];
 
     protected $casts = [
+        'amount' => 'integer',
+        'commissionPercent' => 'integer',
+        'commissionPrice' => 'integer',
+        'netAmount' => 'integer',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

@@ -1,9 +1,11 @@
 import { createIcons, icons } from 'lucide';
-import ApexCharts from 'apexcharts';
+import ApexCharts from 'apexcharts/dist/apexcharts.common.js';
 
 if (!window.ApexCharts) {
   window.ApexCharts = ApexCharts;
 }
+
+window.dispatchEvent(new CustomEvent('a122:charts-ready'));
 
 (function () {
   const saved = localStorage.getItem('a122-theme') || localStorage.getItem('theme');

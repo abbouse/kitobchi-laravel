@@ -34,8 +34,20 @@ class GetLocationCommand extends Command
 
         if ($bot->message()->location) {
             $purchase = Sold::where('user_id', $user->id)
-                ->where('status', 'A')
-                ->whereIn('paymentStatus', ['0', '1'])
+                ->where(function ($query) {
+                    $query->where('status_code', 'pending')
+                        ->orWhere(function ($fallback) {
+                            $fallback->whereNull('status_code')
+                                ->where('status', 'A');
+                        });
+                })
+                ->where(function ($query) {
+                    $query->whereIn('payment_status_code', ['cash_pending', 'card_pending'])
+                        ->orWhere(function ($fallback) {
+                            $fallback->whereNull('payment_status_code')
+                                ->whereIn('paymentStatus', ['0', '1']);
+                        });
+                })
                 ->where('telegram_message_id', null)
                 ->latest()
                 ->first();
@@ -61,9 +73,9 @@ class GetLocationCommand extends Command
             $message .= "🚚 Yetkazib berish: " . number_format($purchase->deliveryPrice, 0, ',', ' ') . " so‘m\n";
             $message .= "   Yetkazish usuli: " . $purchase->deliveryType . " orqali\n";
             $message .= "💳 Umumiy summa: *" . number_format($purchase->amount, 0, ',', ' ') . " so‘m*";
-            $purchase->paymentStatus == 0 ? $message .= "   To'lov turi: Yetkazilganida to'lanadi" : null;
+            $purchase->payment_status_code === 'cash_pending' ? $message .= "   To'lov turi: Yetkazilganida to'lanadi" : null;
 
-            $purchase->paymentStatus == 0 ? $bot->sendMessage(
+            $purchase->payment_status_code === 'cash_pending' ? $bot->sendMessage(
                 text: $message,
                 parse_mode: 'markdown',
             ) : $bot->sendMessage(
@@ -71,14 +83,16 @@ class GetLocationCommand extends Command
                 parse_mode: 'markdown',
                 reply_markup: InlineKeyboardMarkup::make()
                     ->addRow(
-                        InlineKeyboardButton::make('💳 To‘lov qilish', url: 'https://bilim24.uz/payment/' . $purchase->id)
+                        InlineKeyboardButton::make('💳 To‘lov qilish', url: 'https://kitobchi.com/payment/' . $purchase->id)
                     )
             );
             
             
             
             $forwardedMessage = $bot->forwardMessage($groupChatId, $bot->chatId(), $bot->messageId());
-            $messageGroup = $purchase->paymentStatus == 1 ? "💸 To'lov: *❌ Qilinmadi*\n" : "💸 To'lov: *⚠️Yetkazilganida qilinadi*\n";
+            $messageGroup = $purchase->payment_status_code === 'card_pending'
+                ? "💸 To'lov: *❌ Qilinmadi*\n"
+                : "💸 To'lov: *⚠️Yetkazilganida qilinadi*\n";
             $messageGroup .= "🆔 ID: `".$purchase->id."`\n\n";
             foreach ($purchase->items as $item) { 
                 $messageGroup .= "📖 *" . $item['name'] . "*\n";
@@ -104,7 +118,9 @@ class GetLocationCommand extends Command
             $purchase->save();
 
 
-            $mess = $purchase->paymentStatus == 1 ? "⏱️ {$purchase->id}-sonli buyurtmangizga 10 daqiqa ichida to'lov qilmasangiz avtomatik tarzda bekor qilinadi." : "Buyurtma qabul qilindi, siz bilan operatorlar bog'lanishadi.";
+            $mess = $purchase->payment_status_code === 'card_pending'
+                ? "⏱️ {$purchase->id}-sonli buyurtmangizga 10 daqiqa ichida to'lov qilmasangiz avtomatik tarzda bekor qilinadi."
+                : "Buyurtma qabul qilindi, siz bilan operatorlar bog'lanishadi.";
             $bot->sendMessage(
                 text: $mess,
                 reply_markup: ReplyKeyboardMarkup::make(

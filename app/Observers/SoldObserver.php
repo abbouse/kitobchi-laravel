@@ -2,6 +2,10 @@
 
 namespace App\Observers;
 
+use App\Enums\CourierOrderStatusCode;
+use App\Enums\OrderStatusCode;
+use App\Enums\PaymentStatusCode;
+use App\Enums\SellerOrderStatusCode;
 use App\Models\Sold;
 use App\Models\Books;
 use App\Models\Stationery;
@@ -11,6 +15,7 @@ use App\Models\SellerOrder;
 use App\Models\CourierOrder;
 use App\Models\PromocodeHistory;
 use App\Models\User;
+use App\Services\SellerOrderSettlementService;
 use App\Services\UserPositionService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -19,6 +24,7 @@ class SoldObserver
 {
     public function __construct(
         private readonly UserPositionService $positionService,
+        private readonly SellerOrderSettlementService $sellerOrderSettlementService,
     ) {}
 
     /**
@@ -27,7 +33,47 @@ class SoldObserver
      */
     public function updated(Sold $order): void
     {
-        if ($order->wasChanged('status') && $order->status === 'C' && $order->user_id) {
+        $statusChanged = $order->wasChanged('status');
+        $paymentStatusChanged = $order->wasChanged('paymentStatus');
+        $previousStatus = (string) $order->getOriginal('status');
+        $previousPaymentStatus = (int) $order->getOriginal('paymentStatus');
+        $currentStatusCode = $order->status_code;
+        $currentPaymentStatusCode = $order->payment_status_code;
+        $previousStatusCode = OrderStatusCode::fromLegacy($previousStatus)->value;
+        $previousPaymentStatusCode = PaymentStatusCode::fromLegacy($previousPaymentStatus)->value;
+        $currentCompletedPaid = $currentStatusCode === OrderStatusCode::DELIVERED->value
+            && $currentPaymentStatusCode === PaymentStatusCode::PAID->value;
+        $previousCompletedPaid = $previousStatusCode === OrderStatusCode::DELIVERED->value
+            && $previousPaymentStatusCode === PaymentStatusCode::PAID->value;
+        $dbCompletedAt = $order->getAttribute('completed_at');
+        $completionTimestamp = now();
+
+        if ($currentCompletedPaid && !$dbCompletedAt) {
+            DB::table('solds')
+                ->where('id', $order->id)
+                ->whereNull('completed_at')
+                ->update(['completed_at' => $completionTimestamp]);
+            $order->forceFill(['completed_at' => $completionTimestamp]);
+        } elseif (!$currentCompletedPaid && $dbCompletedAt) {
+            DB::table('solds')
+                ->where('id', $order->id)
+                ->whereNotNull('completed_at')
+                ->update(['completed_at' => null]);
+            $order->forceFill(['completed_at' => null]);
+        }
+
+        if (($statusChanged || $paymentStatusChanged) && !$previousCompletedPaid && $currentCompletedPaid) {
+            $this->sellerOrderSettlementService->settleCompletedOrder($order);
+        }
+
+        if (($statusChanged || $paymentStatusChanged) && $previousCompletedPaid && !$currentCompletedPaid) {
+            $this->sellerOrderSettlementService->reverseCompletedOrderSettlement(
+                $order,
+                "old_status={$previousStatusCode}, old_payment={$previousPaymentStatusCode}, new_status={$currentStatusCode}, new_payment={$currentPaymentStatusCode}"
+            );
+        }
+
+        if (($statusChanged || $paymentStatusChanged) && !$previousCompletedPaid && $currentCompletedPaid && $order->user_id) {
             $user = User::find($order->user_id);
             if ($user) {
                 $this->positionService->evaluateAndPromote($user, 'order_completed');
@@ -35,13 +81,12 @@ class SoldObserver
         }
 
         // Faqat status o'zgarganda va yangi qiymat F bo'lganda
-        if (!$order->wasChanged('status') || $order->status !== 'F') {
+        if (!$order->wasChanged('status') || $currentStatusCode !== OrderStatusCode::CANCELLED->value) {
             return;
         }
 
         // Oldingi status ham F bo'lsa — ikki marta rollback qilmaymiz
-        $previousStatus = $order->getOriginal('status');
-        if ($previousStatus === 'F') {
+        if ($previousStatusCode === OrderStatusCode::CANCELLED->value) {
             Log::info("SoldObserver: order #{$order->id} was already F, skip.");
             return;
         }
@@ -54,7 +99,11 @@ class SoldObserver
             // ── 1. paymentStatus = 3 ──────────────────────────────────────────
             DB::table('solds')
                 ->where('id', $order->id)
-                ->update(['paymentStatus' => 3, 'updated_at' => now()]);
+                ->update([
+                    'paymentStatus' => PaymentStatusCode::CANCELLED->legacy(),
+                    'payment_status_code' => PaymentStatusCode::CANCELLED->value,
+                    'updated_at' => now(),
+                ]);
 
             // ── 2. Mahsulot stocklari ─────────────────────────────────────────
             foreach ($order->items ?? [] as $item) {
@@ -158,10 +207,18 @@ class SoldObserver
 
             // ── 8. SellerOrder va CourierOrder ────────────────────────────────
             $sellerCount  = SellerOrder::where('order_id', $order->id)
-                ->update(['status' => 4, 'updated_at' => now()]);
+                ->update([
+                    'status' => SellerOrderStatusCode::CANCELLED->legacy(),
+                    'status_code' => SellerOrderStatusCode::CANCELLED->value,
+                    'updated_at' => now(),
+                ]);
 
             $courierCount = CourierOrder::where('order_id', $order->id)
-                ->update(['status' => 'rejected', 'updated_at' => now()]);
+                ->update([
+                    'status' => CourierOrderStatusCode::CANCELLED->legacy(),
+                    'status_code' => CourierOrderStatusCode::CANCELLED->value,
+                    'updated_at' => now(),
+                ]);
 
             Log::info("SoldObserver: seller_orders={$sellerCount}, courier_orders={$courierCount} updated for #{$order->id}");
 

@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Api\Seller;
 
+use App\Enums\OrderStatusCode;
+use App\Enums\PaymentStatusCode;
 use App\Http\Controllers\Controller;
 use App\Models\Books;
 use App\Models\Seller;
@@ -93,10 +95,33 @@ class HisobotController extends Controller
 
     private function baseCompletedOrders(int $storeSellerId, Carbon $start, Carbon $end)
     {
-        return SellerOrder::query()
+        $query = SellerOrder::query()
+            ->join('solds', 'solds.id', '=', 'seller_orders.order_id')
             ->where('seller_id', $storeSellerId)
-            ->where('status', '3')
-            ->whereBetween('created_at', [$start, $end]);
+            ->whereNotNull('solds.completed_at')
+            ->whereBetween('solds.completed_at', [$start, $end]);
+        $this->applyCompletedPaidSoldFilter($query);
+
+        return $query;
+    }
+
+    private function applyCompletedPaidSoldFilter($query, string $table = 'solds')
+    {
+        return $query
+            ->where(function ($statusQuery) use ($table) {
+                $statusQuery->where("{$table}.status_code", OrderStatusCode::DELIVERED->value)
+                    ->orWhere(function ($fallback) use ($table) {
+                        $fallback->whereNull("{$table}.status_code")
+                            ->where("{$table}.status", OrderStatusCode::DELIVERED->legacy());
+                    });
+            })
+            ->where(function ($paymentQuery) use ($table) {
+                $paymentQuery->where("{$table}.payment_status_code", PaymentStatusCode::PAID->value)
+                    ->orWhere(function ($fallback) use ($table) {
+                        $fallback->whereNull("{$table}.payment_status_code")
+                            ->where("{$table}.paymentStatus", PaymentStatusCode::PAID->legacy());
+                    });
+            });
     }
 
     private function resolveSellerLocation(int $storeSellerId, ?int $locationId): ?SellerLocation
@@ -181,17 +206,21 @@ class HisobotController extends Controller
 
         $itemsSold = (int) SellerOrderItem::query()
             ->join('seller_orders', 'seller_orders.id', '=', 'seller_order_items.order_id')
+            ->join('solds', 'solds.id', '=', 'seller_orders.order_id')
             ->where('seller_order_items.seller_id', $storeSellerId)
-            ->where('seller_orders.status', '3')
-            ->whereBetween('seller_orders.created_at', [$period['start'], $period['end']])
+            ->whereNotNull('solds.completed_at')
+            ->whereBetween('solds.completed_at', [$period['start'], $period['end']])
+            ->tap(fn ($query) => $this->applyCompletedPaidSoldFilter($query))
             ->sum('seller_order_items.quantity');
 
         $repeatClientsQuery = SellerOrder::query()
+            ->join('solds', 'solds.id', '=', 'seller_orders.order_id')
             ->where('seller_id', $storeSellerId)
-            ->where('status', '3')
-            ->whereBetween('created_at', [$period['start'], $period['end']])
-            ->select('client_id', DB::raw('COUNT(*) as orders_count'))
-            ->groupBy('client_id');
+            ->whereNotNull('solds.completed_at')
+            ->whereBetween('solds.completed_at', [$period['start'], $period['end']])
+            ->select('seller_orders.client_id', DB::raw('COUNT(*) as orders_count'))
+            ->groupBy('seller_orders.client_id');
+        $this->applyCompletedPaidSoldFilter($repeatClientsQuery);
         $this->applyBranchFilterToSellerOrders($repeatClientsQuery, $selectedLocation);
         $repeatClients = (int) $repeatClientsQuery
             ->having('orders_count', '>', 1)
@@ -210,10 +239,12 @@ class HisobotController extends Controller
         $monthStart = now()->copy()->startOfMonth();
         $monthEnd = now()->copy()->endOfDay();
         $topSellers = SellerOrder::query()
-            ->select('seller_id', DB::raw('SUM(amount) as total_sales'), DB::raw('COUNT(*) as orders_count'))
-            ->where('status', '3')
-            ->whereBetween('created_at', [$monthStart, $monthEnd])
-            ->groupBy('seller_id')
+            ->join('solds', 'solds.id', '=', 'seller_orders.order_id')
+            ->select('seller_orders.seller_id', DB::raw('SUM(seller_orders.amount) as total_sales'), DB::raw('COUNT(*) as orders_count'))
+            ->whereNotNull('solds.completed_at')
+            ->whereBetween('solds.completed_at', [$monthStart, $monthEnd])
+            ->groupBy('seller_orders.seller_id')
+            ->tap(fn ($query) => $this->applyCompletedPaidSoldFilter($query))
             ->orderByDesc('total_sales')
             ->take(10)
             ->get();
@@ -245,10 +276,12 @@ class HisobotController extends Controller
                 DB::raw('SUM(seller_order_items.price * seller_order_items.quantity) as total_price')
             )
             ->join('seller_orders', 'seller_orders.id', '=', 'seller_order_items.order_id')
+            ->join('solds', 'solds.id', '=', 'seller_orders.order_id')
             ->where('seller_order_items.seller_id', $storeSellerId)
-            ->where('seller_orders.status', '3')
-            ->whereBetween('seller_orders.created_at', [$period['start'], $period['end']])
+            ->whereNotNull('solds.completed_at')
+            ->whereBetween('solds.completed_at', [$period['start'], $period['end']])
             ->groupBy('seller_order_items.product_id', 'seller_order_items.type');
+        $this->applyCompletedPaidSoldFilter($topProducts);
         $this->applyBranchFilterToSellerOrders($topProducts, $selectedLocation, 'seller_orders');
         $topProducts = $topProducts
             ->orderByDesc('total_quantity')
@@ -340,14 +373,16 @@ class HisobotController extends Controller
 
         if ($period['group'] === 'month') {
             $rows = SellerOrder::query()
-                ->selectRaw("DATE_FORMAT(created_at, '%Y-%m') as bucket_key")
-                ->selectRaw('SUM(amount) as total_amount')
+                ->join('solds', 'solds.id', '=', 'seller_orders.order_id')
+                ->selectRaw("DATE_FORMAT(solds.completed_at, '%Y-%m') as bucket_key")
+                ->selectRaw('SUM(seller_orders.amount) as total_amount')
                 ->selectRaw('COUNT(*) as total_orders')
-                ->selectRaw('COUNT(DISTINCT client_id) as total_clients')
-                ->where('seller_id', $storeSellerId)
-                ->where('status', '3')
-                ->whereBetween('created_at', [$period['start'], $period['end']])
+                ->selectRaw('COUNT(DISTINCT seller_orders.client_id) as total_clients')
+                ->where('seller_orders.seller_id', $storeSellerId)
+                ->whereNotNull('solds.completed_at')
+                ->whereBetween('solds.completed_at', [$period['start'], $period['end']])
                 ->groupBy('bucket_key');
+            $this->applyCompletedPaidSoldFilter($rows);
             $this->applyBranchFilterToSellerOrders($rows, $selectedLocation);
             $rows = $rows->get()
                 ->keyBy('bucket_key');
@@ -374,14 +409,16 @@ class HisobotController extends Controller
             }
         } elseif ($period['group'] === 'week') {
             $rows = SellerOrder::query()
-                ->selectRaw('YEARWEEK(created_at, 1) as bucket_key')
-                ->selectRaw('SUM(amount) as total_amount')
+                ->join('solds', 'solds.id', '=', 'seller_orders.order_id')
+                ->selectRaw('YEARWEEK(solds.completed_at, 1) as bucket_key')
+                ->selectRaw('SUM(seller_orders.amount) as total_amount')
                 ->selectRaw('COUNT(*) as total_orders')
-                ->selectRaw('COUNT(DISTINCT client_id) as total_clients')
-                ->where('seller_id', $storeSellerId)
-                ->where('status', '3')
-                ->whereBetween('created_at', [$period['start'], $period['end']])
+                ->selectRaw('COUNT(DISTINCT seller_orders.client_id) as total_clients')
+                ->where('seller_orders.seller_id', $storeSellerId)
+                ->whereNotNull('solds.completed_at')
+                ->whereBetween('solds.completed_at', [$period['start'], $period['end']])
                 ->groupBy('bucket_key');
+            $this->applyCompletedPaidSoldFilter($rows);
             $this->applyBranchFilterToSellerOrders($rows, $selectedLocation);
             $rows = $rows->get()
                 ->keyBy('bucket_key');
@@ -410,14 +447,16 @@ class HisobotController extends Controller
             }
         } else {
             $rows = SellerOrder::query()
-                ->selectRaw('DATE(created_at) as bucket_key')
-                ->selectRaw('SUM(amount) as total_amount')
+                ->join('solds', 'solds.id', '=', 'seller_orders.order_id')
+                ->selectRaw('DATE(solds.completed_at) as bucket_key')
+                ->selectRaw('SUM(seller_orders.amount) as total_amount')
                 ->selectRaw('COUNT(*) as total_orders')
-                ->selectRaw('COUNT(DISTINCT client_id) as total_clients')
-                ->where('seller_id', $storeSellerId)
-                ->where('status', '3')
-                ->whereBetween('created_at', [$period['start'], $period['end']])
+                ->selectRaw('COUNT(DISTINCT seller_orders.client_id) as total_clients')
+                ->where('seller_orders.seller_id', $storeSellerId)
+                ->whereNotNull('solds.completed_at')
+                ->whereBetween('solds.completed_at', [$period['start'], $period['end']])
                 ->groupBy('bucket_key');
+            $this->applyCompletedPaidSoldFilter($rows);
             $this->applyBranchFilterToSellerOrders($rows, $selectedLocation);
             $rows = $rows->get()
                 ->keyBy('bucket_key');

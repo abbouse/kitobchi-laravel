@@ -2,6 +2,7 @@
 
 namespace App\Telegram\Commands;
 
+use App\Enums\OrderStatusCode;
 use SergiX44\Nutgram\Handlers\Type\Command;
 use SergiX44\Nutgram\Nutgram;
 use App\Models\User;
@@ -22,15 +23,33 @@ class MyPurchasesCommand extends Command
             return;
         }
         $purchases = Sold::where('user_id', $user->id)
-            ->where('status', '!=', 'F')
+            ->where(function ($query) {
+                $query->where('status_code', '!=', OrderStatusCode::CANCELLED->value)
+                    ->orWhere(function ($fallback) {
+                        $fallback->whereNull('status_code')
+                            ->where('status', '!=', OrderStatusCode::CANCELLED->legacy());
+                    });
+            })
             ->orderBy('id', 'desc')
             ->limit(3)
             ->get();
         $purchasesCount = Sold::where('user_id', $user->id)
-            ->where('status', '!=', 'F')
+            ->where(function ($query) {
+                $query->where('status_code', '!=', OrderStatusCode::CANCELLED->value)
+                    ->orWhere(function ($fallback) {
+                        $fallback->whereNull('status_code')
+                            ->where('status', '!=', OrderStatusCode::CANCELLED->legacy());
+                    });
+            })
             ->count();
         $totalAmount = Sold::where('user_id', $user->id)
-            ->where('status', '!=', 'F')
+            ->where(function ($query) {
+                $query->where('status_code', '!=', OrderStatusCode::CANCELLED->value)
+                    ->orWhere(function ($fallback) {
+                        $fallback->whereNull('status_code')
+                            ->where('status', '!=', OrderStatusCode::CANCELLED->legacy());
+                    });
+            })
             ->sum('amount'); 
         if ($purchases->isEmpty()) {
             $bot->sendMessage("❌ Sizda hali hech qanday mahsulot mavjud emas.");
@@ -46,7 +65,7 @@ class MyPurchasesCommand extends Command
             $purchaseText .= "🆔 *Buyurtma raqami:* " . $purchase->id . "\n";
             $purchaseText .= "📅 *Sana:* " . $purchase->created_at->format('d.m.Y, H:i') . "\n";
             $purchaseText .= "📦 *Mahsulotlar ({$totalQuantity} ta):* " . number_format($purchase->amount, 0, ',', ' ') . " UZS\n";
-            $purchaseText .= "🚚 *Status:* " . $this->getStatusText($purchase->status);
+            $purchaseText .= "🚚 *Status:* " . $this->getStatusText($purchase->status_code ?? $purchase->status);
         }
         
             $bot->sendMessage(
@@ -56,10 +75,12 @@ class MyPurchasesCommand extends Command
     private function getStatusText($status): string
     {
         return match ($status) {
-            'A' => 'Tayyorlanmoqda',
-            'B' => 'Yo\'lda',
-            'C' => 'Yetkazildi',
-            'F' => 'Bekor qilindi',
+            'pending', 'A' => 'Kutilmoqda',
+            'packing', 'P' => 'Qadoqlanmoqda',
+            'in_delivery', 'B' => 'Yo\'lda',
+            'delivered', 'C' => 'Yetkazildi',
+            'returned' => 'Pochta qaytargan',
+            'cancelled', 'F' => 'Bekor qilindi',
             default => 'Noma’lum',
         };
     }

@@ -217,7 +217,7 @@ class DashboardExportService
     private function getFinancialSummary($dateFrom, $dateTo)
     {
         $totalRevenue = Sold::whereBetween('created_at', [$dateFrom, $dateTo])
-            ->where('paymentStatus', 'paid')
+            ->where('paymentStatus', 2)
             ->sum('amount');
 
         $totalOrders = Sold::whereBetween('created_at', [$dateFrom, $dateTo])->count();
@@ -229,9 +229,9 @@ class DashboardExportService
             'Buyurtmalar Soni' => $totalOrders,
             'O\'rtacha Savdo' => number_format($avgOrderValue) . ' so\'m',
             'To\'langan' => Sold::whereBetween('created_at', [$dateFrom, $dateTo])
-                ->where('paymentStatus', 'paid')->count(),
+                ->where('paymentStatus', 2)->count(),
             'Kutilmoqda' => Sold::whereBetween('created_at', [$dateFrom, $dateTo])
-                ->where('paymentStatus', 'pending')->count(),
+                ->where('paymentStatus', 1)->count(),
         ];
     }
 
@@ -258,9 +258,10 @@ class DashboardExportService
     {
         return match($status) {
             'A' => 'Kutilmoqda',
-            'B' => 'Jarayonda',
+            'P' => 'Qadoqlanmoqda',
+            'B' => 'Yo\'lda',
             'C' => 'Yakunlandi',
-            'D' => 'Bekor qilindi',
+            'F' => 'Bekor qilindi',
             default => 'Noma\'lum',
         };
     }
@@ -268,9 +269,10 @@ class DashboardExportService
     private function getPaymentStatusName($status)
     {
         return match($status) {
-            'paid' => 'To\'langan',
-            'pending' => 'Kutilmoqda',
-            'cancelled' => 'Bekor qilindi',
+            2, '2' => 'To\'langan',
+            1, '1' => 'Kutilmoqda',
+            0, '0' => 'Naqd',
+            3, '3' => 'Bekor qilingan',
             default => 'Noma\'lum',
         };
     }

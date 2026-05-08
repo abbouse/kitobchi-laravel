@@ -38,18 +38,21 @@
   <div class="hidden">
     @forelse($orders as $order)
       @php
-        $statusLabel = match ((string) $order->status) {
-          'A', 'P' => 'pending',
-          'B' => 'shipped',
-          'C' => 'paid',
-          'F' => 'cancelled',
-          default => 'pending',
+        $statusLabel = match ((string) ($order->status_code ?? $order->status)) {
+          'A', 'pending' => 'Kutilmoqda',
+          'P', 'packing' => 'Qadoqlanmoqda',
+          'B', 'in_delivery' => "Yo'lda",
+          'C', 'delivered' => 'Yakunlangan',
+          'returned' => 'Qaytgan',
+          'F', 'cancelled' => 'Bekor qilingan',
+          default => 'Kutilmoqda',
         };
-        $paymentLabel = match ((int) $order->paymentStatus) {
-          2 => 'Paid',
-          1 => 'Card',
-          0 => 'Cash',
-          default => 'Other',
+        $paymentLabel = match ((string) ($order->payment_status_code ?? $order->paymentStatus)) {
+          '2', 'paid' => "To'langan",
+          '1', 'card_pending', 'pending' => 'Karta kutilmoqda',
+          '0', 'cash_pending' => 'Naqd kutilmoqda',
+          '3', 'cancelled', 'rejected' => "To'lov bekor qilingan",
+          default => 'Noma’lum',
         };
       @endphp
       <div class="card p-4">
@@ -58,7 +61,7 @@
             <div class="font-semibold">#ORD-{{ $order->id }}</div>
             <div class="text-xs text-gray-500">{{ trim(($order->user?->name ?? 'Mehmon').' '.($order->user?->lastname ?? '')) }}</div>
           </div>
-          <span class="badge {{ $statusLabel === 'paid' ? 'badge-success' : ($statusLabel === 'pending' ? 'badge-warning' : ($statusLabel === 'shipped' ? 'badge-info' : 'badge-danger')) }}">{{ $statusLabel }}</span>
+          <span class="badge {{ $statusLabel === 'Yakunlangan' ? 'badge-success' : (in_array($statusLabel, ['Kutilmoqda','Qadoqlanmoqda']) ? 'badge-warning' : (in_array($statusLabel, ["Yo'lda",'Qaytgan']) ? 'badge-info' : 'badge-danger')) }}">{{ $statusLabel }}</span>
         </div>
         <div class="grid grid-cols-2 gap-3 mt-4 text-sm">
           <div><div class="text-xs text-gray-500">Tovarlar</div><div>{{ (int) collect($order->items ?? [])->sum('count_item') }} ta</div></div>
@@ -90,18 +93,21 @@
         <tbody>
           @forelse($orders as $order)
             @php
-              $statusLabel = match ((string) $order->status) {
-                'A', 'P' => 'pending',
-                'B' => 'shipped',
-                'C' => 'paid',
-                'F' => 'cancelled',
-                default => 'pending',
+              $statusLabel = match ((string) ($order->status_code ?? $order->status)) {
+                'A', 'pending' => 'Kutilmoqda',
+                'P', 'packing' => 'Qadoqlanmoqda',
+                'B', 'in_delivery' => "Yo'lda",
+                'C', 'delivered' => 'Yakunlangan',
+                'returned' => 'Qaytgan',
+                'F', 'cancelled' => 'Bekor qilingan',
+                default => 'Kutilmoqda',
               };
-              $paymentLabel = match ((int) $order->paymentStatus) {
-                2 => 'Paid',
-                1 => 'Card',
-                0 => 'Cash',
-                default => 'Other',
+              $paymentLabel = match ((string) ($order->payment_status_code ?? $order->paymentStatus)) {
+                '2', 'paid' => "To'langan",
+                '1', 'card_pending', 'pending' => 'Karta kutilmoqda',
+                '0', 'cash_pending' => 'Naqd kutilmoqda',
+                '3', 'cancelled', 'rejected' => "To'lov bekor qilingan",
+                default => 'Noma’lum',
               };
             @endphp
             <tr>
@@ -115,11 +121,11 @@
                   @csrf
                   @method('PATCH')
                   <select name="status" class="a122-inline-status" onchange="this.form.submit()">
-                    <option value="A" @selected($order->status === 'A')>Yangi</option>
-                    <option value="P" @selected($order->status === 'P')>Qadoqlanmoqda</option>
-                    <option value="B" @selected($order->status === 'B')>Yo'lda</option>
-                    <option value="C" @selected($order->status === 'C')>Yakunlangan</option>
-                    <option value="F" @selected($order->status === 'F')>Bekor qilingan</option>
+                    <option value="A" @selected(in_array(($order->status_code ?? $order->status), ['A','pending'], true))>Kutilmoqda</option>
+                    <option value="P" @selected(in_array(($order->status_code ?? $order->status), ['P','packing'], true))>Qadoqlanmoqda</option>
+                    <option value="B" @selected(in_array(($order->status_code ?? $order->status), ['B','in_delivery'], true))>Yo'lda</option>
+                    <option value="C" @selected(in_array(($order->status_code ?? $order->status), ['C','delivered'], true))>Yetkazildi</option>
+                    <option value="F" @selected(in_array(($order->status_code ?? $order->status), ['F','cancelled','returned'], true))>Bekor qilingan</option>
                   </select>
                 </form>
               </td>

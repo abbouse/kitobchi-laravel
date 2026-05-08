@@ -5,7 +5,8 @@
 <?php
     $customerName = trim(($sellerOrder->client?->name ?? '') . ' ' . ($sellerOrder->client?->lastname ?? '')) ?: ($address['fullName'] ?? '—');
     $customerPhone = $sellerOrder->client?->phone_number ?? ($address['phoneNumber'] ?? '—');
-    $statusVal = $sellerOrder->status ?? 0;
+    $statusVal = $sellerOrder->status_code ?? \App\Enums\SellerOrderStatusCode::fromLegacy($sellerOrder->status ?? 1)->value;
+    $statusMeta = $statuses[$statusVal] ?? ['label' => $statusVal, 'badge' => 'badge-muted'];
 ?>
 
 <?php if (isset($component)) { $__componentOriginal0c1345684b2d774f43a544669f5684b0 = $component; } ?>
@@ -58,7 +59,7 @@
             </div>
             <div class="kpi-soft">
                 <div class="metric-label">Holat</div>
-                <div class="metric-value text-xl"><?php echo e($statuses[$statusVal]['label'] ?? $statusVal); ?></div>
+                <div class="metric-value text-xl"><?php echo e($statusMeta['label']); ?></div>
                 <div class="metric-meta">Joriy seller bosqichi</div>
             </div>
         </div>
@@ -144,19 +145,7 @@
             <div>
                 <dt class="text-xs text-gray-500 mb-1">Holat</dt>
                 <dd>
-                    <?php if($statusVal == 0): ?>
-                        <span class="badge badge-muted"><?php echo e($statuses[0]['label'] ?? "To'lov jarayonida"); ?></span>
-                    <?php elseif($statusVal == 1): ?>
-                        <span class="badge badge-info"><?php echo e($statuses[1]['label'] ?? 'Yangi'); ?></span>
-                    <?php elseif($statusVal == 2): ?>
-                        <span class="badge badge-warning"><?php echo e($statuses[2]['label'] ?? "Do'kon qabul qildi"); ?></span>
-                    <?php elseif($statusVal == 3): ?>
-                        <span class="badge badge-success"><?php echo e($statuses[3]['label'] ?? "Kuryerga berildi"); ?></span>
-                    <?php elseif($statusVal == 4): ?>
-                        <span class="badge badge-danger"><?php echo e($statuses[4]['label'] ?? 'Bekor qilindi'); ?></span>
-                    <?php else: ?>
-                        <span class="badge badge-muted"><?php echo e($statusVal); ?></span>
-                    <?php endif; ?>
+                    <span class="badge <?php echo e($statusMeta['badge']); ?>"><?php echo e($statusMeta['label']); ?></span>
                 </dd>
             </div>
 
@@ -199,7 +188,7 @@
                 <label class="text-xs text-gray-500 mb-1 block">Yangi holat</label>
                 <select name="status" class="select">
                     <?php $__currentLoopData = $statuses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $value => $status): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                        <option value="<?php echo e($value); ?>" <?php if(($sellerOrder->status ?? '') == $value): echo 'selected'; endif; ?>>
+                        <option value="<?php echo e($value); ?>" <?php if($statusVal === $value): echo 'selected'; endif; ?>>
                             <?php echo e($status['label']); ?>
 
                         </option>

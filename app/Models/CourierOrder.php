@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\CourierOrderStatusCode;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -14,6 +15,7 @@ class CourierOrder extends Model
         'order_id',
         'user_id',
         'status',
+        'status_code',
         'amount',
         'courierPrice',
         'courierBonus',
@@ -44,6 +46,11 @@ class CourierOrder extends Model
         'final_bonus'               => 'integer',
         'total_delay_seconds'       => 'integer',
     ];
+
+    public function getStatusCodeAttribute(?string $value): string
+    {
+        return $value ?: CourierOrderStatusCode::fromLegacy($this->attributes['status'] ?? null)->value;
+    }
 
     // ── Relationships ──────────────────────────────────────────────
 

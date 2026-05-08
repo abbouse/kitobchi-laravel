@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\SellerOrderStatusCode;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -19,6 +20,7 @@ class SellerOrder extends Model
         'delivery_type',
         'address',
         'status',
+        'status_code',
         'accepted_at',
     ];
 
@@ -26,6 +28,11 @@ class SellerOrder extends Model
         'address' => 'array',
         'accepted_at' => 'datetime',
     ];
+
+    public function getStatusCodeAttribute(?string $value): string
+    {
+        return $value ?: SellerOrderStatusCode::fromLegacy($this->attributes['status'] ?? null)->value;
+    }
 
     // ── Relationships ──────────────────────────────────────────────
 

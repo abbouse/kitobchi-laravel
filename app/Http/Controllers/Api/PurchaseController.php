@@ -2,6 +2,11 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\CourierOrderStatusCode;
+use App\Enums\OrderStatusCode;
+use App\Enums\PaymentStatusCode;
+use App\Enums\PostalReturnStatus;
+use App\Enums\SellerOrderStatusCode;
 use App\Http\Controllers\Controller;
 use App\Models\Locations;
 use App\Models\User;
@@ -22,6 +27,7 @@ use App\Models\Transaction;
 use App\Services\OrderService;
 use App\Services\CashbackHistoryService;
 use App\Services\OrderRealtimeService;
+use App\Services\PostalResendService;
 use App\Services\QrTokenService;
 use App\Models\GiftCertificate;
 use Illuminate\Http\Request;
@@ -37,6 +43,7 @@ class PurchaseController extends Controller
         private readonly OrderService $orderService,
         private readonly CashbackHistoryService $cashbackHistoryService,
         private readonly OrderRealtimeService $orderRealtimeService,
+        private readonly PostalResendService $postalResendService,
         private readonly QrTokenService $qrTokenService,
     ) {}
 
@@ -573,8 +580,15 @@ class PurchaseController extends Controller
                 'address'             => [$locationData],
                 'deliveryType'        => (string) ($deliveryService->name ?? ''),
                 'deliveryPrice'       => (int) $deliveryPrice,
-                'paymentStatus'       => (int) ($request->paymentStatus ? 1 : 0),
+                'paymentStatus'       => $request->paymentStatus
+                    ? PaymentStatusCode::CARD_PENDING->legacy()
+                    : PaymentStatusCode::CASH_PENDING->legacy(),
+                'payment_status_code' => $request->paymentStatus
+                    ? PaymentStatusCode::CARD_PENDING->value
+                    : PaymentStatusCode::CASH_PENDING->value,
                 'amount'              => (int) round($finalPrice),
+                'status'              => OrderStatusCode::PENDING->legacy(),
+                'status_code'         => OrderStatusCode::PENDING->value,
                 'gift'                => $giftId !== null ? (int) $giftId : null,
                 'buyerWish'           => Str::limit(trim(strip_tags($request->input('buyerWish', ''))), 300),
                 'promocode'           => $appliedPromo,
@@ -625,7 +639,12 @@ class PurchaseController extends Controller
                     'seller_id'     => (int) $sellerId,
                     'order_id'      => (int) $purchase->id,
                     'client_id'     => (int) $user->id,
-                    'status'        => $request->paymentStatus == 1 ? 0 : 1,
+                    'status'        => $request->paymentStatus == 1
+                        ? SellerOrderStatusCode::PAYMENT_PENDING->legacy()
+                        : SellerOrderStatusCode::NEW->legacy(),
+                    'status_code'   => $request->paymentStatus == 1
+                        ? SellerOrderStatusCode::PAYMENT_PENDING->value
+                        : SellerOrderStatusCode::NEW->value,
                     'delivery_type' => (string) ($deliveryService->name ?? ''),
                     'address'       => [$locationData],
                 ]);
@@ -669,8 +688,17 @@ class PurchaseController extends Controller
                 'order_id'     => (int) $purchase->id,
                 'user_id'      => (int) $user->id,
                 'amount'       => (int) round($totalSum),
-                'status'       => $request->paymentStatus == 1 ? 'pay_process' : 'pending',
+                'status'       => $request->paymentStatus == 1
+                    ? CourierOrderStatusCode::PAYMENT_PENDING->legacy()
+                    : CourierOrderStatusCode::PENDING->legacy(),
+                'status_code'  => $request->paymentStatus == 1
+                    ? CourierOrderStatusCode::PAYMENT_PENDING->value
+                    : CourierOrderStatusCode::PENDING->value,
                 'courierPrice' => (int) $deliveryPrice,
+                'courierBonus' => 0,
+                'pickup_bonus' => 0,
+                'locked_bonus' => null,
+                'final_bonus' => null,
             ]);
 
             foreach ($allItems as $itm) {
@@ -780,8 +808,14 @@ class PurchaseController extends Controller
             // mijoz hali to'lamagan (naqd yetkazilganda to'laydi).
             // Bekor qilish imkoni saqlanib qoladi.
             if ($request->paymentStatus == 0) {
-                SellerOrder::where('order_id', $purchase->id)->update(['status' => 1]);
-                CourierOrder::where('order_id', $purchase->id)->update(['status' => 'pending']);
+                SellerOrder::where('order_id', $purchase->id)->update([
+                    'status' => SellerOrderStatusCode::NEW->legacy(),
+                    'status_code' => SellerOrderStatusCode::NEW->value,
+                ]);
+                CourierOrder::where('order_id', $purchase->id)->update([
+                    'status' => CourierOrderStatusCode::PENDING->legacy(),
+                    'status_code' => CourierOrderStatusCode::PENDING->value,
+                ]);
             }
 
             // ── Faqat tanlangan cart itemlarni o'chirish ──────────
@@ -1241,7 +1275,7 @@ class PurchaseController extends Controller
         if (!$user) return $this->err('Foydalanuvchi topilmadi!', 401);
 
         $request->validate([
-            'status'   => 'nullable|string|in:A,P,B,C,F',
+            'status'   => 'nullable|string|in:A,P,B,C,F,progress,pending,packing,in_delivery,delivered,cancelled,returned',
             'from'     => 'nullable|date_format:Y-m-d',
             'to'       => 'nullable|date_format:Y-m-d|after_or_equal:from',
             'per_page' => 'nullable|integer|min:1|max:100',
@@ -1249,7 +1283,26 @@ class PurchaseController extends Controller
 
         $query = Sold::where('user_id', $user->id);
 
-        if ($request->filled('status')) $query->where('status', $request->status);
+        if ($request->filled('status')) {
+            if ($request->status === 'progress') {
+                $query->where(function ($statusQuery) {
+                    $statusQuery->whereIn('status_code', ['pending', 'packing'])
+                        ->orWhere(function ($fallback) {
+                            $fallback->whereNull('status_code')
+                                ->whereIn('status', ['A', 'P']);
+                        });
+                });
+            } else {
+                $statusCode = OrderStatusCode::fromLegacy($request->status);
+                $query->where(function ($statusQuery) use ($statusCode) {
+                    $statusQuery->where('status_code', $statusCode->value)
+                        ->orWhere(function ($fallback) use ($statusCode) {
+                            $fallback->whereNull('status_code')
+                                ->where('status', $statusCode->legacy());
+                        });
+                });
+            }
+        }
         if ($request->filled('from'))   $query->whereDate('created_at', '>=', $request->from);
         if ($request->filled('to'))     $query->whereDate('created_at', '<=', $request->to);
 
@@ -1259,6 +1312,7 @@ class PurchaseController extends Controller
         $paginated->getCollection()->transform(function ($order) {
             $order->formatted_created_at = Carbon::parse($order->created_at)->isoFormat('D MMMM YYYY, HH:mm');
             $order->formatted_updated_at = Carbon::parse($order->updated_at)->isoFormat('D MMMM YYYY, HH:mm');
+            $this->appendOrderStatusMeta($order);
             return $this->applySignedDeliveryQr($order);
         });
 
@@ -1284,10 +1338,50 @@ class PurchaseController extends Controller
 
         $order->formatted_created_at = Carbon::parse($order->created_at)->isoFormat('D MMMM YYYY, HH:mm');
         $order->formatted_updated_at = Carbon::parse($order->updated_at)->isoFormat('D MMMM YYYY, HH:mm');
+        $this->appendOrderStatusMeta($order);
         $this->applySignedDeliveryQr($order);
         $this->appendFiscalReceiptMeta($order);
 
         return response()->json(['status' => 'success', 'data' => [$order]]);
+    }
+
+    public function createPostalResend(Request $request, int $order_id)
+    {
+        $user = Auth::guard('user')->user();
+        if (!$user) {
+            return $this->err('Foydalanuvchi topilmadi!', 401);
+        }
+
+        $order = Sold::where('user_id', $user->id)->where('id', $order_id)->first();
+        if (!$order) {
+            return $this->err('Buyurtma topilmadi!', 404);
+        }
+
+        try {
+            $resendOrder = $this->postalResendService->createResendOrder($order, $user);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => "Qayta yuborish uchun yangi buyurtma yaratildi.",
+                'data' => [
+                    'order_id' => $resendOrder->id,
+                    'payment_url' => $this->generatePaymeUrl($resendOrder->id, (int) $resendOrder->amount),
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            return $this->err($e->getMessage(), 422);
+        }
+    }
+
+    private function appendOrderStatusMeta(Sold $order): void
+    {
+        $order->status_code = $order->status_code;
+        $order->payment_status_code = $order->payment_status_code;
+        $order->postal_return_status = $order->postal_return_status;
+        $order->can_postal_resend = $order->isPostalResendSource();
+        $order->postal_resend_fee = (int) ($order->postal_return_fee ?? 0);
+        $order->postal_return_note = $order->postal_return_note;
+        $order->resend_replacement_order_id = $order->resend_replacement_order_id;
     }
 
     private function appendFiscalReceiptMeta(Sold $order): void

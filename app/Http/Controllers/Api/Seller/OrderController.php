@@ -2,12 +2,18 @@
 
 namespace App\Http\Controllers\Api\Seller;
 
+use App\Enums\OrderStatusCode;
+use App\Enums\SellerOrderStatusCode;
 use App\Http\Controllers\Controller;
 use App\Models\Seller;
 use App\Models\Sold;
 use App\Models\SellerOrder;
 use App\Models\Books;
 use App\Models\Couriers;
+use App\Models\CourierOrder;
+use App\Services\AdminOrderStatusSyncService;
+use App\Services\CourierBonusService;
+use App\Services\OrderStatusPushService;
 use App\Services\OrderRealtimeService;
 use App\Services\QrTokenService;
 use Illuminate\Http\Request;
@@ -18,8 +24,11 @@ use Illuminate\Support\Facades\DB;
 class OrderController extends Controller
 {
     public function __construct(
+        private readonly CourierBonusService $courierBonusService,
+        private readonly AdminOrderStatusSyncService $statusSync,
         private readonly OrderRealtimeService $orderRealtimeService,
         private readonly QrTokenService $qrTokenService,
+        private readonly OrderStatusPushService $orderStatusPushService,
     )
     {
         $this->middleware('auth:seller');
@@ -41,6 +50,20 @@ class OrderController extends Controller
         // parent_id = NULL → OWNER → FULL ACCESS
         // parent_id mavjud + role=1 yoki 2 → ACCESS
         return !$seller->parent_id || in_array($seller->role, [1, 2]);
+    }
+
+    private function applySellerStatusFilter($query, SellerOrderStatusCode ...$statuses)
+    {
+        $values = array_map(fn (SellerOrderStatusCode $status) => $status->value, $statuses);
+        $legacyValues = array_map(fn (SellerOrderStatusCode $status) => $status->legacy(), $statuses);
+
+        return $query->where(function ($statusQuery) use ($values, $legacyValues) {
+            $statusQuery->whereIn('status_code', $values)
+                ->orWhere(function ($fallback) use ($legacyValues) {
+                    $fallback->whereNull('status_code')
+                        ->whereIn('status', $legacyValues);
+                });
+        });
     }
 
     private function formatOrderAddress($address): array
@@ -114,7 +137,8 @@ class OrderController extends Controller
             'courierName' => $order->courierName,
             'amount' => (int) $order->amount,
             'items_count' => (int) ($order->items_count ?? count($items)),
-            'status' => (int) $order->status,
+            'status' => $order->status_code ?? SellerOrderStatusCode::fromLegacy($order->status)->value,
+            'status_code' => $order->status_code,
             'delivery_type' => $order->delivery_type,
             'address' => $address,
             'branch' => $branch,
@@ -125,35 +149,74 @@ class OrderController extends Controller
     }
 
     public function lastOrders(Request $request)
-{
-    $seller = Auth::guard('seller')->user();
+    {
+        $seller = Auth::guard('seller')->user();
 
-    if (!$this->hasOrderAccess($seller)) {
+        if (!$this->hasOrderAccess($seller)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Access denied'
+            ], 403);
+        }
+
+        $storeSellerId = $this->getStoreSellerId($seller);
+        $scope = (string) $request->query('scope', '');
+        $statusFilter = (string) $request->query('status', 'all');
+
+        $query = Seller::find($storeSellerId)->orders()
+            ->where(function ($statusQuery) {
+                $statusQuery->where('status_code', '!=', SellerOrderStatusCode::PAYMENT_PENDING->value)
+                    ->orWhere(function ($fallback) {
+                        $fallback->whereNull('status_code')
+                            ->where('status', '!=', SellerOrderStatusCode::PAYMENT_PENDING->legacy());
+                    });
+            })
+            ->with([
+                'seller.location',
+                'items' => fn($q) => $q->where('seller_id', $storeSellerId)
+                    ->with(['book', 'stationery', 'gift']),
+            ])
+            ->withCount(['items' => fn($q) => $q->where('seller_id', $storeSellerId)]);
+
+        if ($scope === 'home') {
+            $this->applySellerStatusFilter(
+                $query,
+                SellerOrderStatusCode::ACCEPTED,
+                SellerOrderStatusCode::HANDED_TO_COURIER,
+            );
+        } else {
+            $query->when($statusFilter !== 'all', function ($q) use ($statusFilter) {
+                $map = [
+                    'new' => SellerOrderStatusCode::NEW,
+                    'accepted' => SellerOrderStatusCode::ACCEPTED,
+                    'handed' => SellerOrderStatusCode::HANDED_TO_COURIER,
+                    'cancelled' => SellerOrderStatusCode::CANCELLED,
+                ];
+
+                if (array_key_exists($statusFilter, $map)) {
+                    $this->applySellerStatusFilter($q, $map[$statusFilter]);
+                }
+            });
+        }
+
+        $orders = $query
+            ->orderByRaw("
+                CASE
+                    WHEN COALESCE(status_code, '') IN ('accepted', 'handed_to_courier') OR (status_code IS NULL AND status IN (2, 3)) THEN 0
+                    WHEN COALESCE(status_code, '') = 'new' OR (status_code IS NULL AND status = 1) THEN 1
+                    WHEN COALESCE(status_code, '') = 'cancelled' OR (status_code IS NULL AND status = 4) THEN 2
+                    ELSE 3
+                END
+            ")
+            ->orderByDesc('created_at')
+            ->limit($scope === 'home' ? 20 : 100)
+            ->get();
+
         return response()->json([
-            'success' => false,
-            'message' => 'Access denied'
-        ], 403);
+            'success' => true,
+            'data' => $orders->map(fn($order) => $this->formatSellerOrder($order))->values(),
+        ]);
     }
-
-    $storeSellerId = $this->getStoreSellerId($seller);
-
-    $orders = Seller::find($storeSellerId)->orders()
-        ->where('status', '!=', 0)
-        ->with([
-            'seller.location',
-            'items' => fn($q) => $q->where('seller_id', $storeSellerId)
-                ->with(['book', 'stationery', 'gift']),
-        ])
-        ->withCount(['items' => fn($q) => $q->where('seller_id', $storeSellerId)])
-        ->orderByDesc('created_at')
-        ->limit(20)
-        ->get();
-
-    return response()->json([
-        'success' => true,
-        'data' => $orders->map(fn($order) => $this->formatSellerOrder($order))->values(),
-    ]);
-}
 
     
     /**
@@ -233,20 +296,24 @@ public function toCourier(Request $request, $qr)
     $orderId = $parsedQr['order_id'];
     $courierId = $parsedQr['courier_id'];
 
-    $storeSellerId = $this->getStoreSellerId($seller);
-    $storeSeller = Seller::find($storeSellerId);
+        $storeSellerId = $this->getStoreSellerId($seller);
+        $storeSeller = Seller::find($storeSellerId);
 
     if (!$storeSeller || (string) $storeSellerId !== (string) $sellerId) {
         return response()->json(['success' => false, 'message' => 'Shop name does not match'], 403);
     }
 
-    try {
+        try {
         $response = DB::transaction(function () use ($storeSeller, $orderId, $courierId, $storeSellerId) {
-            $seller_order = SellerOrder::whereIn('status', [1, 2])
-                ->where('order_id', $orderId)
+            $sellerOrderQuery = SellerOrder::where('order_id', $orderId)
                 ->where('seller_id', $storeSellerId)
-                ->lockForUpdate()
-                ->first();
+                ->lockForUpdate();
+            $this->applySellerStatusFilter(
+                $sellerOrderQuery,
+                SellerOrderStatusCode::NEW,
+                SellerOrderStatusCode::ACCEPTED,
+            );
+            $seller_order = $sellerOrderQuery->first();
 
             if (!$seller_order) {
                 return response()->json([
@@ -267,28 +334,37 @@ public function toCourier(Request $request, $qr)
 
             $seller_order->courier_id = $courier->id;
             $seller_order->courierName = $courier->first_name . ' ' . $courier->last_name;
-            $seller_order->status = 3;
+            $seller_order->status = SellerOrderStatusCode::HANDED_TO_COURIER->legacy();
+            $seller_order->status_code = SellerOrderStatusCode::HANDED_TO_COURIER->value;
             $seller_order->save();
 
-            // Har bir seller o'z ulushi uchun alohida to'lov oladi —
-            // ilgari bu kod `$allSellersDone` bloki ichida bo'lib, ko'p
-            // sellerli buyurtmada faqat oxirgi seller (barchasi status=3
-            // bo'lgandan keyin kuryerga bergan) to'lov olardi, qolganlari
-            // to'lovsiz qolardi. Endi shu seller 'kuryerga berdi' bosganda
-            // uning o'zining ulushi darhol balansga qo'shiladi va
-            // successful_orders hisoblagichi oshiriladi.
-            $storeSeller->balance += $seller_order->amount;
-            $storeSeller->increment('successful_orders');
-            $storeSeller->save();
-
             $allSellersDone = SellerOrder::where('order_id', $orderId)
-                ->where('status', '!=', 3)
+                ->where(function ($query) {
+                    $query->where('status_code', '!=', SellerOrderStatusCode::HANDED_TO_COURIER->value)
+                        ->orWhere(function ($fallback) {
+                            $fallback->whereNull('status_code')
+                                ->where('status', '!=', SellerOrderStatusCode::HANDED_TO_COURIER->legacy());
+                        });
+                })
                 ->doesntExist();
 
             if ($allSellersDone) {
-                $sold->status = 'B';
+                $previousStatus = (string) $sold->status;
+                $sold->status = OrderStatusCode::IN_DELIVERY->legacy();
+                $sold->status_code = OrderStatusCode::IN_DELIVERY->value;
                 $sold->updated_at = now();
                 $sold->save();
+
+                $courierOrder = CourierOrder::where('order_id', $orderId)
+                    ->where('courier_id', $courierId)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($courierOrder) {
+                    $this->courierBonusService->startSlaOnPickupReady($courierOrder);
+                }
+
+                DB::afterCommit(fn () => $this->orderStatusPushService->sendForTransition($sold->fresh(), $previousStatus, 'B'));
             }
 
             return response()->json([
@@ -369,20 +445,33 @@ public function toCourier(Request $request, $qr)
             return response()->json(['success' => false, 'message' => 'Order not found'], 404);
         }
 
-        if ((int) $sellerOrder->status === 4) {
+        $statusCode = $sellerOrder->status_code ?? SellerOrderStatusCode::fromLegacy($sellerOrder->status)->value;
+
+        if ($statusCode === SellerOrderStatusCode::CANCELLED->value) {
             return response()->json(['success' => false, 'message' => 'Bekor qilingan buyurtmani qabul qilib bo‘lmaydi'], 422);
         }
 
-        if ((int) $sellerOrder->status >= 2) {
+        if ($statusCode === SellerOrderStatusCode::PAYMENT_PENDING->value) {
+            return response()->json([
+                'success' => false,
+                'message' => "To'lov tasdiqlanmaguncha buyurtmani qabul qilib bo'lmaydi",
+            ], 422);
+        }
+
+        if (in_array($statusCode, [
+            SellerOrderStatusCode::ACCEPTED->value,
+            SellerOrderStatusCode::HANDED_TO_COURIER->value,
+        ], true)) {
             return response()->json([
                 'success' => true,
                 'message' => "Buyurtma allaqachon do'kon tomonidan qabul qilingan",
-                'data' => ['status' => (int) $sellerOrder->status],
+                'data' => ['status' => $statusCode, 'status_code' => $statusCode],
             ], 200);
         }
 
         DB::transaction(function () use ($sellerOrder, $storeSellerId) {
-            $sellerOrder->status = 2;
+            $sellerOrder->status = SellerOrderStatusCode::ACCEPTED->legacy();
+            $sellerOrder->status_code = SellerOrderStatusCode::ACCEPTED->value;
             // Qabul qilingan vaqtni yozamiz — response_time hisoblash uchun.
             $sellerOrder->accepted_at = now();
             $sellerOrder->save();
@@ -403,13 +492,14 @@ public function toCourier(Request $request, $qr)
             }
         });
 
+        $this->statusSync->updateSellerOrder($sellerOrder->fresh(), 2);
         $sellerOrder->refresh();
         $this->orderRealtimeService->broadcastSellerOrderUpdated($sellerOrder, 'seller_order.accepted');
 
         return response()->json([
             'success' => true,
             'message' => "Buyurtma do'kon tomonidan qabul qilindi",
-            'data' => ['status' => 2],
+            'data' => ['status' => SellerOrderStatusCode::ACCEPTED->value, 'status_code' => SellerOrderStatusCode::ACCEPTED->value],
         ], 200);
     }
 
@@ -435,7 +525,13 @@ public function toCourier(Request $request, $qr)
         // ✅ OWNER DO'KONI ORDERI
         $view = Seller::find($storeSellerId)->orders()
             ->where('id', $orderId)
-            ->where('status', '!=', 0)
+            ->where(function ($statusQuery) {
+                $statusQuery->where('status_code', '!=', SellerOrderStatusCode::PAYMENT_PENDING->value)
+                    ->orWhere(function ($fallback) {
+                        $fallback->whereNull('status_code')
+                            ->where('status', '!=', SellerOrderStatusCode::PAYMENT_PENDING->legacy());
+                    });
+            })
             ->with([
                 'seller.location',
                 'items' => fn($q) => $q->where('seller_id', $storeSellerId)
@@ -476,7 +572,13 @@ public function toCourier(Request $request, $qr)
 
         // ✅ OWNER DO'KONI ORDER SONI
         $count = Seller::find($storeSellerId)->orders()
-            ->where('status', '!=', 0)
+            ->where(function ($statusQuery) {
+                $statusQuery->where('status_code', '!=', SellerOrderStatusCode::PAYMENT_PENDING->value)
+                    ->orWhere(function ($fallback) {
+                        $fallback->whereNull('status_code')
+                            ->where('status', '!=', SellerOrderStatusCode::PAYMENT_PENDING->legacy());
+                    });
+            })
             ->count();
 
         return response()->json([

@@ -1,6 +1,6 @@
 import './bootstrap';
 import Alpine from 'alpinejs';
-import ApexCharts from 'apexcharts';
+import ApexCharts from 'apexcharts/dist/apexcharts.common.js';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 
 // flatpickr
@@ -12,7 +12,14 @@ import { Calendar } from '@fullcalendar/core';
 
 
 window.Alpine = Alpine;
-window.ApexCharts = ApexCharts;
+// Don't clobber an ApexCharts already on window — the admin layout loads
+// ApexCharts v3 from CDN BEFORE this module runs (CDN script is sync, this
+// module is deferred). The inline dashboard chart code is written for v3's
+// API and crashes inside v5's renderer (t.put / Paper.node errors) if v5
+// from npm overwrites it. The guard mirrors what a122-admin.js does.
+if (!window.ApexCharts) {
+    window.ApexCharts = ApexCharts;
+}
 window.flatpickr = flatpickr;
 window.FullCalendar = Calendar;
 

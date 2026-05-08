@@ -2,6 +2,10 @@
 
 namespace App\Services;
 
+use App\Enums\CourierOrderStatusCode;
+use App\Enums\OrderStatusCode;
+use App\Enums\PaymentStatusCode;
+use App\Enums\SellerOrderStatusCode;
 use App\Models\CourierOrder;
 use App\Models\SellerOrder;
 use App\Models\Sold;
@@ -10,166 +14,235 @@ use Illuminate\Support\Facades\DB;
 class AdminOrderStatusSyncService
 {
     public const SELLER_STATUSES = [
-        0 => ['label' => "To'lov jarayonida", 'badge' => 'badge-muted'],
-        1 => ['label' => 'Yangi buyurtma', 'badge' => 'badge-info'],
-        2 => ['label' => "Do'kon qabul qildi", 'badge' => 'badge-warning'],
-        3 => ['label' => "Kuryerga berildi", 'badge' => 'badge-success'],
-        4 => ['label' => 'Bekor qilindi', 'badge' => 'badge-danger'],
+        'payment_pending' => ['label' => "To'lov jarayonida", 'badge' => 'badge-muted'],
+        'new' => ['label' => 'Yangi buyurtma', 'badge' => 'badge-info'],
+        'accepted' => ['label' => "Do'kon qabul qildi", 'badge' => 'badge-warning'],
+        'handed_to_courier' => ['label' => "Kuryerga berildi", 'badge' => 'badge-success'],
+        'cancelled' => ['label' => 'Bekor qilindi', 'badge' => 'badge-danger'],
     ];
 
     public const COURIER_STATUSES = [
-        'pay_process' => ['label' => "To'lov jarayonida", 'badge' => 'badge-muted'],
+        'payment_pending' => ['label' => "To'lov jarayonida", 'badge' => 'badge-muted'],
         'pending' => ['label' => 'Kutilmoqda', 'badge' => 'badge-info'],
         'in_delivery' => ['label' => "Yo'lda", 'badge' => 'badge-warning'],
         'delivered' => ['label' => 'Yetkazildi', 'badge' => 'badge-success'],
-        'rejected' => ['label' => 'Bekor qilindi', 'badge' => 'badge-danger'],
+        'cancelled' => ['label' => 'Bekor qilindi', 'badge' => 'badge-danger'],
+        'returned' => ['label' => 'Qaytgan', 'badge' => 'badge-danger'],
     ];
 
-    public function __construct(private readonly OrderService $orderService) {}
+    public function __construct(
+        private readonly OrderService $orderService,
+        private readonly OrderStatusPushService $orderStatusPushService,
+    ) {}
 
     public function updateMainOrder(Sold $order, string $status): void
     {
         DB::transaction(function () use ($order, $status) {
-            $wasPaid = (int) $order->paymentStatus === 2;
+            $previousStatus = (string) $order->status;
 
             if ($status === 'F') {
                 $this->orderService->cancelOrder($order, strict: false);
+                DB::afterCommit(fn () => $this->orderStatusPushService->sendForTransition($order->fresh(), $previousStatus, 'F'));
                 return;
             }
 
-            if ($status === 'C' && (int) $order->paymentStatus !== 2) {
-                $order->paymentStatus = 2;
+            $statusCode = OrderStatusCode::fromLegacy($status);
+
+            if ($statusCode === OrderStatusCode::DELIVERED && $order->payment_status_code !== PaymentStatusCode::PAID->value) {
+                $order->paymentStatus = PaymentStatusCode::PAID->legacy();
+                $order->payment_status_code = PaymentStatusCode::PAID->value;
             }
 
-            $order->status = $status;
+            $order->status = $statusCode->legacy();
+            $order->status_code = $statusCode->value;
+            $this->syncCompletionState($order);
             $order->save();
 
             SellerOrder::where('order_id', $order->id)->update([
-                'status' => $this->mapMainToSeller($status, $order->paymentStatus),
+                'status' => $this->mapMainToSeller($statusCode->value, $order->payment_status_code)->legacy(),
+                'status_code' => $this->mapMainToSeller($statusCode->value, $order->payment_status_code)->value,
                 'updated_at' => now(),
             ]);
 
             CourierOrder::where('order_id', $order->id)->update([
-                'status' => $this->mapMainToCourier($status, $order->paymentStatus),
+                'status' => $this->mapMainToCourier($statusCode->value, $order->payment_status_code)->legacy(),
+                'status_code' => $this->mapMainToCourier($statusCode->value, $order->payment_status_code)->value,
                 'updated_at' => now(),
             ]);
 
-            if ((int) $order->paymentStatus === 2) {
+            if ($order->payment_status_code === PaymentStatusCode::PAID->value) {
                 $this->orderService->processCashbackAfterOrderMutation($order, $order->user()->first());
             }
+
+            DB::afterCommit(fn () => $this->orderStatusPushService->sendForTransition($order->fresh(), $previousStatus, $statusCode->legacy()));
         });
     }
 
-    public function updateSellerOrder(SellerOrder $sellerOrder, int $status): void
+    public function updateSellerOrder(SellerOrder $sellerOrder, int|string $status): void
     {
         DB::transaction(function () use ($sellerOrder, $status) {
-            $sellerOrder->update(['status' => $status]);
+            $statusCode = SellerOrderStatusCode::fromLegacy($status);
+            $sellerOrder->update([
+                'status' => $statusCode->legacy(),
+                'status_code' => $statusCode->value,
+            ]);
 
             $order = $sellerOrder->order()->first();
             if (!$order) {
                 return;
             }
 
-            if ($status === 4) {
+            if ($statusCode === SellerOrderStatusCode::CANCELLED) {
+                $previousStatus = (string) $order->status;
                 $this->orderService->cancelOrder($order, strict: false);
+                DB::afterCommit(fn () => $this->orderStatusPushService->sendForTransition($order->fresh(), $previousStatus, 'F'));
                 return;
             }
 
-            $order->status = match ($status) {
-                3 => 'B',
-                default => 'A',
+            $previousStatus = (string) $order->status;
+            $order->status_code = match ($statusCode) {
+                SellerOrderStatusCode::HANDED_TO_COURIER => OrderStatusCode::IN_DELIVERY->value,
+                SellerOrderStatusCode::ACCEPTED => OrderStatusCode::PACKING->value,
+                default => OrderStatusCode::PENDING->value,
             };
+            $order->status = OrderStatusCode::from($order->status_code)->legacy();
+            $this->syncCompletionState($order);
             $order->save();
 
             CourierOrder::where('order_id', $order->id)->update([
-                'status' => $this->mapSellerToCourier($status, $order->paymentStatus),
+                'status' => $this->mapSellerToCourier($statusCode->value, $order->payment_status_code)->legacy(),
+                'status_code' => $this->mapSellerToCourier($statusCode->value, $order->payment_status_code)->value,
                 'updated_at' => now(),
             ]);
+
+            DB::afterCommit(fn () => $this->orderStatusPushService->sendForTransition($order->fresh(), $previousStatus, (string) $order->status));
         });
     }
 
     public function updateCourierOrder(CourierOrder $courierOrder, string $status): void
     {
         DB::transaction(function () use ($courierOrder, $status) {
-            $courierOrder->update(['status' => $status]);
+            $statusCode = CourierOrderStatusCode::fromLegacy($status);
+            $courierOrder->update([
+                'status' => $statusCode->legacy(),
+                'status_code' => $statusCode->value,
+            ]);
 
             $order = $courierOrder->order()->first();
             if (!$order) {
                 return;
             }
 
-            $wasPaid = (int) $order->paymentStatus === 2;
+            $previousStatus = (string) $order->status;
 
-            if ($status === 'rejected') {
+            if ($statusCode === CourierOrderStatusCode::CANCELLED) {
                 $this->orderService->cancelOrder($order, strict: false);
+                DB::afterCommit(fn () => $this->orderStatusPushService->sendForTransition($order->fresh(), $previousStatus, 'F'));
                 return;
             }
 
-            $order->status = match ($status) {
-                'delivered' => 'C',
-                'in_delivery' => 'B',
-                default => 'A',
+            $order->status_code = match ($statusCode) {
+                CourierOrderStatusCode::DELIVERED => OrderStatusCode::DELIVERED->value,
+                CourierOrderStatusCode::IN_DELIVERY => OrderStatusCode::IN_DELIVERY->value,
+                CourierOrderStatusCode::RETURNED => OrderStatusCode::RETURNED->value,
+                default => OrderStatusCode::PENDING->value,
             };
+            $order->status = OrderStatusCode::from($order->status_code)->legacy();
 
-            if ($status === 'delivered' && (int) $order->paymentStatus !== 2) {
-                $order->paymentStatus = 2;
+            if ($statusCode === CourierOrderStatusCode::DELIVERED && $order->payment_status_code !== PaymentStatusCode::PAID->value) {
+                $order->paymentStatus = PaymentStatusCode::PAID->legacy();
+                $order->payment_status_code = PaymentStatusCode::PAID->value;
             }
 
+            $this->syncCompletionState($order);
             $order->save();
 
             SellerOrder::where('order_id', $order->id)->update([
-                'status' => $this->mapCourierToSeller($status),
+                'status' => $this->mapCourierToSeller($statusCode->value)->legacy(),
+                'status_code' => $this->mapCourierToSeller($statusCode->value)->value,
                 'updated_at' => now(),
             ]);
 
-            if ((int) $order->paymentStatus === 2) {
+            if ($order->payment_status_code === PaymentStatusCode::PAID->value) {
                 $this->orderService->processCashbackAfterOrderMutation($order, $order->user()->first());
             }
+
+            DB::afterCommit(fn () => $this->orderStatusPushService->sendForTransition($order->fresh(), $previousStatus, (string) $order->status));
         });
     }
 
-    public function mapMainToSeller(string $status, int|string|null $paymentStatus = null): int
+    public function mapMainToSeller(string $status, int|string|null $paymentStatus = null): SellerOrderStatusCode
     {
-        if ((int) $paymentStatus === 1 && in_array($status, ['A', 'P'], true)) {
-            return 0;
+        $statusCode = OrderStatusCode::fromLegacy($status)->value;
+        $paymentCode = PaymentStatusCode::fromLegacy($paymentStatus)->value;
+
+        if ($paymentCode === PaymentStatusCode::CARD_PENDING->value
+            && in_array($statusCode, [OrderStatusCode::PENDING->value, OrderStatusCode::PACKING->value], true)) {
+            return SellerOrderStatusCode::PAYMENT_PENDING;
         }
 
-        return match ($status) {
-            'B', 'C' => 3,
-            'F' => 4,
-            default => 1,
+        return match ($statusCode) {
+            'packing' => SellerOrderStatusCode::ACCEPTED,
+            'in_delivery', 'delivered', 'returned' => SellerOrderStatusCode::HANDED_TO_COURIER,
+            'cancelled' => SellerOrderStatusCode::CANCELLED,
+            default => SellerOrderStatusCode::NEW,
         };
     }
 
-    public function mapMainToCourier(string $status, int|string|null $paymentStatus = null): string
+    public function mapMainToCourier(string $status, int|string|null $paymentStatus = null): CourierOrderStatusCode
     {
-        if ((int) $paymentStatus === 1 && in_array($status, ['A', 'P'], true)) {
-            return 'pay_process';
+        $statusCode = OrderStatusCode::fromLegacy($status)->value;
+        $paymentCode = PaymentStatusCode::fromLegacy($paymentStatus)->value;
+
+        if ($paymentCode === PaymentStatusCode::CARD_PENDING->value
+            && in_array($statusCode, [OrderStatusCode::PENDING->value, OrderStatusCode::PACKING->value], true)) {
+            return CourierOrderStatusCode::PAYMENT_PENDING;
         }
 
-        return match ($status) {
-            'B' => 'in_delivery',
-            'C' => 'delivered',
-            'F' => 'rejected',
-            default => 'pending',
+        return match ($statusCode) {
+            'in_delivery' => CourierOrderStatusCode::IN_DELIVERY,
+            'delivered' => CourierOrderStatusCode::DELIVERED,
+            'returned' => CourierOrderStatusCode::RETURNED,
+            'cancelled' => CourierOrderStatusCode::CANCELLED,
+            default => CourierOrderStatusCode::PENDING,
         };
     }
 
-    public function mapSellerToCourier(int $status, int|string|null $paymentStatus = null): string
+    public function mapSellerToCourier(int|string $status, int|string|null $paymentStatus = null): CourierOrderStatusCode
     {
-        return match ($status) {
-            3 => 'in_delivery',
-            4 => 'rejected',
-            default => ((int) $paymentStatus === 1 ? 'pay_process' : 'pending'),
+        $statusCode = SellerOrderStatusCode::fromLegacy($status);
+        $paymentCode = PaymentStatusCode::fromLegacy($paymentStatus)->value;
+
+        return match ($statusCode) {
+            SellerOrderStatusCode::HANDED_TO_COURIER => CourierOrderStatusCode::IN_DELIVERY,
+            SellerOrderStatusCode::CANCELLED => CourierOrderStatusCode::CANCELLED,
+            default => ($paymentCode === PaymentStatusCode::CARD_PENDING->value
+                ? CourierOrderStatusCode::PAYMENT_PENDING
+                : CourierOrderStatusCode::PENDING),
         };
     }
 
-    public function mapCourierToSeller(string $status): int
+    public function mapCourierToSeller(string $status): SellerOrderStatusCode
     {
-        return match ($status) {
-            'delivered', 'in_delivery' => 3,
-            'rejected' => 4,
-            default => 2,
+        return match (CourierOrderStatusCode::fromLegacy($status)) {
+            CourierOrderStatusCode::DELIVERED,
+            CourierOrderStatusCode::IN_DELIVERY,
+            CourierOrderStatusCode::RETURNED => SellerOrderStatusCode::HANDED_TO_COURIER,
+            CourierOrderStatusCode::CANCELLED => SellerOrderStatusCode::CANCELLED,
+            default => SellerOrderStatusCode::ACCEPTED,
         };
+    }
+
+    private function syncCompletionState(Sold $order): void
+    {
+        $isCompletedPaid = $order->status_code === OrderStatusCode::DELIVERED->value
+            && $order->payment_status_code === PaymentStatusCode::PAID->value;
+
+        if ($isCompletedPaid) {
+            $order->completed_at ??= now();
+            return;
+        }
+
+        $order->completed_at = null;
     }
 }

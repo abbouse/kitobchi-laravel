@@ -73,6 +73,7 @@
                         $itemsCount = collect($order->order?->items ?? [])->filter(fn ($item) => (int) ($item['seller_id'] ?? 0) === (int) $order->seller_id)->sum(fn ($item) => (int) ($item['count_item'] ?? 1));
                         $orderAmount = (float) ($order->amount ?? 0);
                     ?>
+                    <?php ($statusCode = $order->status_code ?? \App\Enums\SellerOrderStatusCode::fromLegacy($order->status ?? 1)->value); ?>
                     <tr>
                         <td class="text-gray-500 text-sm">
                             <div>#<?php echo e($order->id); ?></div>
@@ -96,7 +97,7 @@
                                 <?php echo method_field('PATCH'); ?>
                                 <select name="status" class="a122-inline-status" onchange="this.form.submit()">
                                     <?php $__currentLoopData = $statuses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $value => $statusItem): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                                        <option value="<?php echo e($value); ?>" <?php if((int) ($order->status ?? 0) === (int) $value): echo 'selected'; endif; ?>><?php echo e($statusItem['label']); ?></option>
+                                        <option value="<?php echo e($value); ?>" <?php if($statusCode === $value): echo 'selected'; endif; ?>><?php echo e($statusItem['label']); ?></option>
                                     <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                 </select>
                             </form>
