@@ -115,6 +115,7 @@ Route::middleware('auth:user')->group(function () {
         Route::post('new', [BookClubController::class, 'new_post']);
         Route::post('new_comment', [BookClubController::class, 'new_book_post']);
         Route::get('get-profile', [BookClubController::class, 'get_profile']);
+        Route::get('profile-posts', [BookClubController::class, 'getProfilePosts']);
         Route::post('like', [BookClubController::class, 'like']);
         Route::get('vote/{option}', [BookClubController::class, 'vote']);
         Route::post('{postId}/moderate/warn', [BookClubController::class, 'moderateWarn']);

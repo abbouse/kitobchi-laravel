@@ -223,6 +223,75 @@ class BookClubController extends Controller
         });
     }
 
+    private function applySmartFeedRanking($query, array $followingIds): object
+    {
+        $followingIdsString = implode(',', array_map('intval', array_unique(array_merge($followingIds, [0]))));
+        $likesCountSql = "(SELECT COUNT(*) FROM book_club_likes WHERE book_club_likes.post_id = book_club.id)";
+        $topLevelCommentsCountSql = "(SELECT COUNT(*) FROM book_club_comments WHERE book_club_comments.post_id = book_club.id AND book_club_comments.parent_id IS NULL)";
+        $votesCountSql = "(SELECT COUNT(*) FROM book_club_voted_users AS voted INNER JOIN book_club_votes AS votes ON votes.id = voted.option_id WHERE votes.post_id = book_club.id)";
+        $repostsCountSql = "(SELECT COUNT(*) FROM book_club AS reposts WHERE reposts.reposted_user_id = book_club.user_id AND reposts.repost = 1 AND reposts.is_deleted = 0)";
+
+        return $query
+            ->select('book_club.*')
+            ->selectRaw("$likesCountSql AS likes_count")
+            ->selectRaw("$topLevelCommentsCountSql AS top_level_comments_count")
+            ->selectRaw("$votesCountSql AS votes_count")
+            ->selectRaw("$repostsCountSql AS reposts_count")
+            ->selectRaw("
+                (
+                    CASE WHEN book_club.user_id IN ($followingIdsString) THEN 5.0 ELSE 0 END
+                    + CASE
+                        WHEN book_club.created_at >= NOW() - INTERVAL 1 DAY THEN 5.0
+                        WHEN book_club.created_at >= NOW() - INTERVAL 3 DAY THEN 3.0
+                        WHEN book_club.created_at >= NOW() - INTERVAL 7 DAY THEN 1.5
+                        ELSE 0
+                      END
+                    + LEAST(COALESCE(book_club.ai_post_score, 3), 5) * 0.8
+                    + LOG(1 + GREATEST(($likesCountSql), 0)) * 1.15
+                    + LOG(1 + GREATEST(($topLevelCommentsCountSql), 0)) * 1.55
+                    + LOG(1 + GREATEST(($votesCountSql), 0)) * 1.25
+                    + LOG(1 + GREATEST(($repostsCountSql), 0)) * 1.45
+                    + CASE WHEN book_club.product_id IS NOT NULL THEN 0.35 ELSE 0 END
+                    + CASE WHEN CHAR_LENGTH(COALESCE(book_club.text, '')) >= 80 THEN 0.25 ELSE 0 END
+                ) AS feed_score
+            ")
+            ->orderByDesc('feed_score')
+            ->orderBy('updated_at', 'DESC');
+    }
+
+    private function diversifyFeedPage($posts)
+    {
+        $pool = collect($posts)->values()->all();
+        $ordered = [];
+        $lastUserId = null;
+        $streak = 0;
+
+        while (!empty($pool)) {
+            $pickIndex = null;
+
+            foreach ($pool as $index => $post) {
+                if ($lastUserId === null || (int) $post->user_id !== (int) $lastUserId || $streak < 2) {
+                    $pickIndex = $index;
+                    break;
+                }
+            }
+
+            $pickIndex ??= 0;
+            $picked = $pool[$pickIndex];
+            array_splice($pool, $pickIndex, 1);
+            $ordered[] = $picked;
+
+            if ((int) $picked->user_id === (int) $lastUserId) {
+                $streak++;
+            } else {
+                $lastUserId = (int) $picked->user_id;
+                $streak = 1;
+            }
+        }
+
+        return collect($ordered);
+    }
+
     private function ensureCanModerate(User $user)
     {
         if (!$user->canModerateCommunity()) {
@@ -339,18 +408,17 @@ class BookClubController extends Controller
             $user    = Auth::guard('user')->user();
             $perPage = $request->input('per_page', 15);
 
-            $followingIds       = $user ? $user->followings()->pluck('users.id')->toArray() : [];
-            $followingIdsString = implode(',', array_merge($followingIds, [0]));
+            $followingIds = $user ? $user->followings()->pluck('users.id')->toArray() : [];
 
             $paginatedPosts = BookClub::with($this->postWith())
                 ->where('is_deleted', false)
                 ->where('repost', false)
                 ->tap(fn ($query) => $this->applyWarningVisibility($query, $user))
-                ->orderByRaw("CASE WHEN user_id IN ($followingIdsString) THEN 1 ELSE 0 END DESC")
-                ->orderBy('updated_at', 'DESC')
+                ->tap(fn ($query) => $this->applySmartFeedRanking($query, $followingIds))
                 ->paginate($perPage);
 
-            $formattedPosts = $this->attachMetaToPosts(collect($paginatedPosts->items()), $user);
+            $rankedItems = $this->diversifyFeedPage(collect($paginatedPosts->items()));
+            $formattedPosts = $this->attachMetaToPosts($rankedItems, $user);
 
             return response()->json([
                 'status' => 'success',
@@ -423,6 +491,7 @@ class BookClubController extends Controller
         try {
             $me           = Auth::guard('user')->user();
             $targetUserId = $request->input('user_id') ?? ($me ? $me->id : null);
+            $summaryOnly  = $request->boolean('summary_only');
 
             if (!$targetUserId) {
                 return response()->json(['status' => 'error', 'message' => 'User ID required'], 400);
@@ -434,15 +503,30 @@ class BookClubController extends Controller
                 return response()->json(['status' => 'error', 'message' => 'User not found'], 404);
             }
 
-            $allPosts = BookClub::with($this->postWith())
+            $basePostsQuery = BookClub::query()
                 ->where('user_id', $user->id)
                 ->where('is_deleted', false)
-                ->tap(fn ($query) => $this->applyWarningVisibility($query, $me && $me->id === $user->id ? $me : null))
-                ->orderBy('created_at', 'DESC')
-                ->get();
+                ->tap(fn ($query) => $this->applyWarningVisibility($query, $me && $me->id === $user->id ? $me : null));
 
-            $formattedOriginal = $this->attachMetaToPosts($allPosts->where('repost', false), $me);
-            $formattedReposts  = $this->attachMetaToPosts($allPosts->where('repost', true), $me);
+            $originalCount = (clone $basePostsQuery)->where('repost', false)->count();
+            $repostsCount = (clone $basePostsQuery)->where('repost', true)->count();
+
+            $formattedOriginal = collect();
+            $formattedReposts = collect();
+
+            if (!$summaryOnly) {
+                $allPosts = BookClub::with($this->postWith())
+                    ->where('user_id', $user->id)
+                    ->where('is_deleted', false)
+                    ->tap(fn ($query) => $this->applyWarningVisibility($query, $me && $me->id === $user->id ? $me : null))
+                    ->orderBy('created_at', 'DESC')
+                    ->get();
+
+                $originalPosts = $allPosts->where('repost', false)->values();
+                $reposts = $allPosts->where('repost', true)->values();
+                $formattedOriginal = $this->attachMetaToPosts($originalPosts, $me);
+                $formattedReposts  = $this->attachMetaToPosts($reposts, $me);
+            }
 
             return response()->json([
                 'status' => 'success',
@@ -456,7 +540,8 @@ class BookClubController extends Controller
                         'avatar'          => $user->avatar,
                         'followers_count' => $user->followers_count,
                         'following_count' => $user->followings_count,
-                        'posts_count'     => $allPosts->count(),
+                        'posts_count'     => $originalCount,
+                        'reposts_count'   => $repostsCount,
                         'is_following'    => $me ? $me->followings()->where('following_id', $user->id)->exists() : false,
                         'is_me'           => $me ? ($me->id == $user->id) : false,
                         'isVerified'      => $user->isVerified,
@@ -468,6 +553,52 @@ class BookClubController extends Controller
                     ],
                     'posts'   => $formattedOriginal,
                     'reposts' => $formattedReposts,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function getProfilePosts(Request $request)
+    {
+        try {
+            $me           = Auth::guard('user')->user();
+            $targetUserId = $request->input('user_id') ?? ($me ? $me->id : null);
+            $segment      = $request->input('segment', 'posts');
+            $perPage      = max(1, min((int) $request->input('per_page', 12), 30));
+
+            if (!$targetUserId) {
+                return response()->json(['status' => 'error', 'message' => 'User ID required'], 400);
+            }
+
+            if (!in_array($segment, ['posts', 'reposts'], true)) {
+                return response()->json(['status' => 'error', 'message' => 'Segment noto\'g\'ri'], 400);
+            }
+
+            $targetUser = User::find($targetUserId);
+            if (!$targetUser) {
+                return response()->json(['status' => 'error', 'message' => 'User not found'], 404);
+            }
+
+            $paginatedPosts = BookClub::with($this->postWith())
+                ->where('user_id', $targetUser->id)
+                ->where('is_deleted', false)
+                ->where('repost', $segment === 'reposts')
+                ->tap(fn ($query) => $this->applyWarningVisibility($query, $me && $me->id === $targetUser->id ? $me : null))
+                ->orderBy('created_at', 'DESC')
+                ->paginate($perPage);
+
+            $formattedPosts = $this->attachMetaToPosts(collect($paginatedPosts->items()), $me);
+
+            return response()->json([
+                'status' => 'success',
+                'segment' => $segment,
+                'data' => $formattedPosts,
+                'meta' => [
+                    'current_page' => $paginatedPosts->currentPage(),
+                    'last_page' => $paginatedPosts->lastPage(),
+                    'total' => $paginatedPosts->total(),
                 ],
             ]);
         } catch (\Exception $e) {

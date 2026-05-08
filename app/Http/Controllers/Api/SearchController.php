@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 
 class SearchController extends Controller
 {
@@ -118,6 +119,321 @@ class SearchController extends Controller
         }
 
         return array_unique($patterns);
+    }
+
+    private function canonicalFuzzyText(string $text): string
+    {
+        $text = mb_strtolower(trim($text), 'UTF-8');
+        $text = str_replace(['ʼ', '`', '‘', '’', 'ʻ', 'ʼ'], "'", $text);
+
+        $variants = $this->transliterate($text);
+        $latin = collect($variants)->first(function ($variant) {
+            return !preg_match('/\p{Cyrillic}/u', $variant);
+        }) ?? $text;
+
+        $latin = str_replace(
+            ["o'", "g'", 'oʻ', 'gʻ'],
+            ['o', 'g', 'o', 'g'],
+            $latin
+        );
+
+        $latin = preg_replace('/[^a-z0-9\s]+/u', ' ', $latin) ?? $latin;
+        $latin = preg_replace('/\s+/u', ' ', trim($latin)) ?? trim($latin);
+
+        return $latin;
+    }
+
+    private function squeezeRepeats(string $text): string
+    {
+        return preg_replace('/(.)\1+/u', '$1', $text) ?? $text;
+    }
+
+    private function tokenSimilarity(string $left, string $right): float
+    {
+        if ($left === '' || $right === '') {
+            return 0.0;
+        }
+
+        if ($left === $right) {
+            return 1.0;
+        }
+
+        $distance = levenshtein($left, $right);
+        $maxLen = max(strlen($left), strlen($right), 1);
+
+        return max(0.0, 1 - ($distance / $maxLen));
+    }
+
+    private function fuzzySimilarityScore(string $query, string $candidate): float
+    {
+        $queryNorm = $this->canonicalFuzzyText($query);
+        $candidateNorm = $this->canonicalFuzzyText($candidate);
+
+        if ($queryNorm === '' || $candidateNorm === '') {
+            return 0.0;
+        }
+
+        $queryFlat = str_replace(' ', '', $queryNorm);
+        $candidateFlat = str_replace(' ', '', $candidateNorm);
+        $queryNoRepeat = $this->squeezeRepeats($queryFlat);
+        $candidateNoRepeat = $this->squeezeRepeats($candidateFlat);
+
+        $baseScore = max(
+            $this->tokenSimilarity($queryFlat, $candidateFlat),
+            $this->tokenSimilarity($queryNoRepeat, $candidateNoRepeat)
+        );
+
+        $queryTokens = array_values(array_filter(explode(' ', $queryNorm)));
+        $candidateTokens = array_values(array_filter(explode(' ', $candidateNorm)));
+        $tokenScores = [];
+
+        foreach ($queryTokens as $queryToken) {
+            $best = 0.0;
+            foreach ($candidateTokens as $candidateToken) {
+                $best = max(
+                    $best,
+                    $this->tokenSimilarity($queryToken, $candidateToken),
+                    $this->tokenSimilarity(
+                        $this->squeezeRepeats($queryToken),
+                        $this->squeezeRepeats($candidateToken)
+                    )
+                );
+            }
+            $tokenScores[] = $best;
+        }
+
+        $tokenAverage = empty($tokenScores)
+            ? 0.0
+            : array_sum($tokenScores) / count($tokenScores);
+
+        $containsBonus = str_contains($candidateNorm, $queryNorm) || str_contains($queryNorm, $candidateNorm)
+            ? 0.08
+            : 0.0;
+        $prefixBonus = !empty($queryTokens) && !empty($candidateTokens) &&
+                Str::startsWith($candidateTokens[0], $queryTokens[0][0] ?? '')
+            ? 0.03
+            : 0.0;
+
+        return min(1.0, ($baseScore * 0.58) + ($tokenAverage * 0.34) + $containsBonus + $prefixBonus);
+    }
+
+    private function genericSearchIntent(string $query): ?string
+    {
+        $normalized = $this->canonicalFuzzyText($query);
+        if ($normalized === '') {
+            return null;
+        }
+
+        $aliases = [
+            'book' => ['kitob', 'kitoblar', 'book', 'books'],
+            'stationery' => ['kantselyariya', 'kanselyariya', 'stationery', 'office'],
+        ];
+
+        $bestType = null;
+        $bestScore = 0.0;
+
+        foreach ($aliases as $type => $words) {
+            foreach ($words as $word) {
+                $score = $this->fuzzySimilarityScore($normalized, $word);
+                if ($score > $bestScore) {
+                    $bestScore = $score;
+                    $bestType = $type;
+                }
+            }
+        }
+
+        return $bestScore >= 0.82 ? $bestType : null;
+    }
+
+    private function getBookFuzzyCorpus(
+        ?int $sellerId = null,
+        $categoryId = null,
+        ?float $minPrice = null,
+        ?float $maxPrice = null
+    ) {
+        $cacheKey = 'search_fuzzy_books_' . md5(json_encode([$sellerId, $categoryId, $minPrice, $maxPrice]));
+
+        return Cache::remember($cacheKey, now()->addMinutes(30), function () use ($sellerId, $categoryId, $minPrice, $maxPrice) {
+            return $this->visibleBooks([])
+                ->when($sellerId, fn ($q) => $q->where('seller_id', $sellerId))
+                ->when($categoryId, fn ($q) => $q->where('category_id', $categoryId))
+                ->when($minPrice !== null, fn ($q) => $q->where('price', '>=', $minPrice))
+                ->when($maxPrice !== null, fn ($q) => $q->where('price', '<=', $maxPrice))
+                ->select('id', 'name', 'author', 'totalSalesWeek', 'totalSales')
+                ->orderByDesc('totalSalesWeek')
+                ->orderByDesc('totalSales')
+                ->limit(2500)
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'id' => (int) $item->id,
+                        'type' => 'book',
+                        'display_name' => trim((string) $item->name),
+                        'label' => trim(($item->name ?? '') . ' ' . ($item->author ?? '')),
+                        'popularity' => (int) (($item->totalSalesWeek ?? 0) * 3 + ($item->totalSales ?? 0)),
+                    ];
+                });
+        });
+    }
+
+    private function getStationeryFuzzyCorpus(
+        ?int $sellerId = null,
+        $categoryId = null,
+        ?float $minPrice = null,
+        ?float $maxPrice = null
+    ) {
+        $cacheKey = 'search_fuzzy_stationery_' . md5(json_encode([$sellerId, $categoryId, $minPrice, $maxPrice]));
+
+        return Cache::remember($cacheKey, now()->addMinutes(30), function () use ($sellerId, $categoryId, $minPrice, $maxPrice) {
+            return $this->visibleStationeries([])
+                ->when($sellerId, fn ($q) => $q->where('seller_id', $sellerId))
+                ->when($categoryId, fn ($q) => $q->where('category_id', $categoryId))
+                ->when($minPrice !== null, fn ($q) => $q->where('price', '>=', $minPrice))
+                ->when($maxPrice !== null, fn ($q) => $q->where('price', '<=', $maxPrice))
+                ->select('id', 'name', 'material', 'totalSalesWeek', 'totalSales')
+                ->orderByDesc('totalSalesWeek')
+                ->orderByDesc('totalSales')
+                ->limit(2500)
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'id' => (int) $item->id,
+                        'type' => 'stationery',
+                        'display_name' => trim((string) $item->name),
+                        'label' => trim(($item->name ?? '') . ' ' . ($item->material ?? '')),
+                        'popularity' => (int) (($item->totalSalesWeek ?? 0) * 3 + ($item->totalSales ?? 0)),
+                    ];
+                });
+        });
+    }
+
+    private function rankFuzzyCorpus(string $query, $corpus, int $limit = 12): array
+    {
+        $ranked = collect($corpus)
+            ->map(function ($item) use ($query) {
+                $score = $this->fuzzySimilarityScore($query, $item['label'] ?? $item['display_name'] ?? '');
+                $item['fuzzy_score'] = min(1.0, $score + min(((int) ($item['popularity'] ?? 0)) / 5000, 0.06));
+                return $item;
+            })
+            ->filter(fn ($item) => ($item['fuzzy_score'] ?? 0) >= 0.60)
+            ->sortByDesc('fuzzy_score')
+            ->take($limit)
+            ->values();
+
+        $top = $ranked->first();
+
+        return [
+            'items' => $ranked,
+            'did_you_mean' => ($top['fuzzy_score'] ?? 0) >= 0.74 ? ($top['display_name'] ?? null) : null,
+        ];
+    }
+
+    private function fuzzyFallbackSearch(
+        string $query,
+        string $type,
+        ?int $sellerId = null,
+        $categoryId = null,
+        ?float $minPrice = null,
+        ?float $maxPrice = null
+    ): array {
+        $intent = $this->genericSearchIntent($query);
+
+        if ($intent === 'book' && in_array($type, ['book', 'all'], true)) {
+            $items = $this->getPopularBooks(12)
+                ->map(function ($product) {
+                    $product->relevance_score = 45;
+                    return $product;
+                });
+
+            return [
+                'items' => $items,
+                'did_you_mean' => 'kitob',
+                'search_mode' => 'generic_fuzzy_books',
+            ];
+        }
+
+        if ($intent === 'stationery' && in_array($type, ['stationery', 'all'], true)) {
+            $items = $this->getPopularStationeries(12)
+                ->map(function ($product) {
+                    $product->relevance_score = 45;
+                    return $product;
+                });
+
+            return [
+                'items' => $items,
+                'did_you_mean' => 'kantselyariya',
+                'search_mode' => 'generic_fuzzy_stationery',
+            ];
+        }
+
+        $candidates = collect();
+        $didYouMean = null;
+
+        if (in_array($type, ['book', 'all'], true)) {
+            $bookRanked = $this->rankFuzzyCorpus(
+                $query,
+                $this->getBookFuzzyCorpus($sellerId, $categoryId, $minPrice, $maxPrice)
+            );
+
+            $didYouMean ??= $bookRanked['did_you_mean'];
+            $candidates = $candidates->merge($bookRanked['items']);
+        }
+
+        if (in_array($type, ['stationery', 'all'], true)) {
+            $statRanked = $this->rankFuzzyCorpus(
+                $query,
+                $this->getStationeryFuzzyCorpus($sellerId, $categoryId, $minPrice, $maxPrice)
+            );
+
+            $didYouMean ??= $statRanked['did_you_mean'];
+            $candidates = $candidates->merge($statRanked['items']);
+        }
+
+        $candidates = $candidates
+            ->sortByDesc('fuzzy_score')
+            ->take(12)
+            ->values();
+
+        $bookIds = $candidates->where('type', 'book')->pluck('id')->values();
+        $statIds = $candidates->where('type', 'stationery')->pluck('id')->values();
+        $scores = $candidates->mapWithKeys(fn ($item) => [
+            $item['type'] . ':' . $item['id'] => $item['fuzzy_score']
+        ]);
+
+        $books = collect();
+        $stationeries = collect();
+
+        if ($bookIds->isNotEmpty()) {
+            $books = $this->visibleBooks(['category', 'seller', 'tags'])
+                ->whereIn('id', $bookIds)
+                ->get()
+                ->sortBy(fn ($item) => $bookIds->search($item->id))
+                ->values()
+                ->map(function ($item) use ($scores) {
+                    $item->relevance_score = round(($scores['book:' . $item->id] ?? 0) * 100, 2);
+                    return $item;
+                });
+        }
+
+        if ($statIds->isNotEmpty()) {
+            $stationeries = $this->visibleStationeries(['category', 'seller', 'tags', 'variants'])
+                ->whereIn('id', $statIds)
+                ->get()
+                ->sortBy(fn ($item) => $statIds->search($item->id))
+                ->values()
+                ->map(function ($item) use ($scores) {
+                    $item->relevance_score = round(($scores['stationery:' . $item->id] ?? 0) * 100, 2);
+                    return $item;
+                });
+        }
+
+        return [
+            'items' => $books->merge($stationeries)
+                ->sortByDesc(fn ($item) => $item->relevance_score ?? 0)
+                ->values(),
+            'did_you_mean' => $didYouMean,
+            'search_mode' => 'fuzzy_fallback',
+        ];
     }
 
     /**
@@ -316,6 +632,8 @@ class SearchController extends Controller
         try {
             $user     = auth('sanctum')->user();
             $analyzed = mb_strlen($query) >= 2 ? $this->analyzeQuery($query) : null;
+            $didYouMean = null;
+            $searchMode = 'default';
 
             $bookPaginator = null;
             $statPaginator = null;
@@ -356,6 +674,31 @@ class SearchController extends Controller
                           || ($statPaginator?->hasMorePages() ?? false);
             $filteredItems = $items->filter()->values();
 
+            if ($filteredItems->isEmpty() && mb_strlen($query) >= 3) {
+                $fuzzyFallback = $this->fuzzyFallbackSearch(
+                    $query,
+                    $type,
+                    $sellerId,
+                    $categoryId,
+                    $minPrice,
+                    $maxPrice
+                );
+
+                $didYouMean = $fuzzyFallback['did_you_mean'] ?? null;
+                $searchMode = $fuzzyFallback['search_mode'] ?? 'default';
+
+                $fallbackItems = collect($fuzzyFallback['items'] ?? [])
+                    ->map(fn($p) => $this->formatProduct($p, $user))
+                    ->filter()
+                    ->values();
+
+                if ($fallbackItems->isNotEmpty()) {
+                    $filteredItems = $fallbackItems;
+                    $total = $fallbackItems->count();
+                    $hasMore = false;
+                }
+            }
+
             // History — faqat matn qidiruv uchun, teg emas
             if ($saveHistory && mb_strlen($query) >= 2 && $page === 1) {
                 if ($filteredItems->isNotEmpty()) {
@@ -371,6 +714,8 @@ class SearchController extends Controller
             return response()->json([
                 'status'     => 'success',
                 'data'       => $filteredItems->toArray(),
+                'did_you_mean' => $didYouMean,
+                'search_mode' => $searchMode,
                 'pagination' => [
                     'current_page' => $page,
                     'per_page'     => $perPage,
@@ -852,15 +1197,18 @@ class SearchController extends Controller
     {
         $data = Cache::remember('search_trending', now()->addMinutes(30), function () {
             return SearchHistory::select(
-                    'result_name',
+                    DB::raw("NULLIF(result_name, '') as result_name"),
                     DB::raw('MIN(text) as text'),
                     DB::raw('SUM(search_count) as total_count'),
                     DB::raw('MAX(updated_at) as last_searched')
                 )
-                ->where('created_at', '>=', now()->subDays(7))
+                ->where('updated_at', '>=', now()->subDays(7))
                 ->where('is_draft', false)
                 ->where('search_count', '>', 0)
-                ->whereNotNull('result_name')
+                ->where(function ($query) {
+                    $query->whereNotNull('result_name')
+                        ->orWhereNotNull('text');
+                })
                 ->groupBy('result_name')
                 ->orderByDesc('total_count')
                 ->orderByDesc('last_searched')
