@@ -150,6 +150,9 @@ class ProductPayloadFormatter
             'seller_id' => $seller?->id,
             'shop_name' => $seller?->shop_name,
             'photo' => $seller?->photo,
+            'rating' => (float) ($seller?->rating ?? 0),
+            'rating_reviews_count' => (int) ($seller?->rating_reviews_count ?? 0),
+            'reputation_score' => (float) ($seller?->reputation_score ?? 0),
             'isVerified' => $seller?->isVerified ?? false,
             'is_verified' => $seller?->isVerified ?? false,
         ];

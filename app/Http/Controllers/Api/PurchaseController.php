@@ -29,6 +29,7 @@ use App\Services\CashbackHistoryService;
 use App\Services\OrderRealtimeService;
 use App\Services\PostalResendService;
 use App\Services\QrTokenService;
+use App\Services\UserReputationService;
 use App\Models\GiftCertificate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -45,6 +46,7 @@ class PurchaseController extends Controller
         private readonly OrderRealtimeService $orderRealtimeService,
         private readonly PostalResendService $postalResendService,
         private readonly QrTokenService $qrTokenService,
+        private readonly UserReputationService $userReputationService,
     ) {}
 
     // ── Xatolik response ──────────────────────────────────────
@@ -174,6 +176,8 @@ class PurchaseController extends Controller
     {
         $user = Auth::guard('user')->user();
         if (!$user) return $this->err('Foydalanuvchi topilmadi!', 401);
+        $this->userReputationService->recalculateUser($user);
+        $user->refresh();
 
         $location = DB::table('locations')->where('id', $user->mainAddressID)->first();
         if (!$location) return $this->err("Asosiy manzilni belgilang!", 400);
@@ -235,6 +239,14 @@ class PurchaseController extends Controller
                 'seller_count'       => $sellerCount,
                 'price_before_promo' => $totalSum,
                 'cashback_balance'   => (int)($user->cashback ?? 0),
+            ],
+            'user_reputation' => [
+                'score' => round((float) ($user->reputation_score ?? UserReputationService::BASELINE_SCORE), 2),
+                'cash_on_delivery_allowed' => (bool) ($user->cash_on_delivery_allowed ?? true),
+                'cod_return_strikes' => (int) ($user->cod_return_strikes ?? 0),
+                'cash_on_delivery_block_reason' => ($user->cash_on_delivery_allowed ?? true)
+                    ? null
+                    : "Avvalgi naqd buyurtma qaytib kelgani uchun hozircha naqd to'lov yopilgan.",
             ],
             'active_certificates' => GiftCertificate::where('recipient_user_id', $user->id)
                 ->where('status', GiftCertificate::STATUS_ACTIVE)
@@ -324,6 +336,23 @@ class PurchaseController extends Controller
         $deliveryService = DeliveryService::find($request->deliveryservice_id);
         if (!$deliveryService) {
             return $this->err("Yetkazib berish xizmati topilmadi.", 400);
+        }
+
+        if ((int) $request->paymentStatus === 0) {
+            $this->userReputationService->recalculateUser($user);
+            $user->refresh();
+
+            if (!$user->canUseCashOnDelivery()) {
+                return response()->json([
+                    'status' => 'error',
+                    'error_code' => 'cash_on_delivery_blocked',
+                    'message' => "Avvalgi naqd buyurtma qaytib kelgani uchun hozircha naqd to'lovdan foydalana olmaysiz.",
+                    'data' => [
+                        'reputation_score' => round((float) ($user->reputation_score ?? UserReputationService::BASELINE_SCORE), 2),
+                        'cod_return_strikes' => (int) ($user->cod_return_strikes ?? 0),
+                    ],
+                ], 422);
+            }
         }
 
         $this->trace('start', ['user_id' => $user->id, 'cart_ids' => $request->input('selected_cart_ids', [])]);

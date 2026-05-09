@@ -25,6 +25,7 @@ class BookClub extends Model
         'last_edited_by_id',
         'ai_post_score',
         'ai_post_checked_at',
+        'ai_post_feedback_notified_at',
         'ai_post_status',
         'ai_post_note',
         'ai_post_model',
@@ -38,6 +39,7 @@ class BookClub extends Model
         'repost' => 'boolean',
         'edited_at' => 'datetime',
         'ai_post_checked_at' => 'datetime',
+        'ai_post_feedback_notified_at' => 'datetime',
         'kangaroo_post_checked_at' => 'datetime',
     ];
 

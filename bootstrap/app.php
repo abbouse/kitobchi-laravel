@@ -116,6 +116,18 @@ return Application::configure(basePath: dirname(__DIR__))
             ->timezone($tz)
             ->withoutOverlapping();
 
+        // ── Seller reputatsiyasi — har tong qayta hisoblanadi ─────────
+        $schedule->command('sellers:recalculate-reputation')
+            ->dailyAt('04:50')
+            ->timezone($tz)
+            ->withoutOverlapping();
+
+        // ── User reputatsiyasi va COD ishonchi — har tong qayta hisob ──────
+        $schedule->command('users:recalculate-reputation')
+            ->dailyAt('05:05')
+            ->timezone($tz)
+            ->withoutOverlapping();
+
         $schedule->command('seller-premium:sync-renewals')
             ->hourly()
             ->timezone($tz)

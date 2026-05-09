@@ -46,6 +46,10 @@ class User extends Authenticatable
         'blocked_at',
         'block_reason',
         'blocked_by_admin_id',
+        'reputation_score',
+        'cash_on_delivery_allowed',
+        'cod_return_strikes',
+        'reputation_last_calculated_at',
         'total_seconds_spend',
         'isVerified',
         'isSupport',
@@ -70,6 +74,10 @@ class User extends Authenticatable
         'blocked_until' => 'datetime',
         'blocked_at' => 'datetime',
         'position_earned_at' => 'datetime',
+        'reputation_score' => 'decimal:2',
+        'cash_on_delivery_allowed' => 'boolean',
+        'cod_return_strikes' => 'integer',
+        'reputation_last_calculated_at' => 'datetime',
     ];
 
     public function isBlocked(): bool
@@ -107,6 +115,11 @@ class User extends Authenticatable
     public function canModerateCommunity(): bool
     {
         return $this->isModerator() || $this->isAdministrator();
+    }
+
+    public function canUseCashOnDelivery(): bool
+    {
+        return (bool) ($this->cash_on_delivery_allowed ?? true);
     }
     
     protected static function booted()

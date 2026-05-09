@@ -16,6 +16,8 @@ class BookClubAiScoringService
 
     public function __construct(
         private readonly OpenAIService $openAIService,
+        private readonly BookClubModerationService $moderationService,
+        private readonly ProductReviewFeedbackPushService $productReviewFeedbackPushService,
     ) {
     }
 
@@ -35,7 +37,16 @@ class BookClubAiScoringService
             })
             ->orderByDesc('updated_at')
             ->limit($postLimit)
-            ->get(['id', 'text']);
+            ->get([
+                'id',
+                'user_id',
+                'product_id',
+                'product_type',
+                'text',
+                'is_deleted',
+                'updated_at',
+                'ai_post_feedback_notified_at',
+            ]);
 
         $comments = BookClubComment::query()
             ->when(!$full, function ($query) {
@@ -112,13 +123,32 @@ TXT
                     continue;
                 }
 
+                $score = $this->clampScore((float) $row['score']);
+                $aiNote = Str::limit(trim((string) ($row['note'] ?? '')), 255, '');
+
                 BookClub::query()->whereKey($post->id)->update([
-                    'ai_post_score' => $this->clampScore((float) $row['score']),
+                    'ai_post_score' => $score,
                     'ai_post_status' => 'scored',
-                    'ai_post_note' => Str::limit(trim((string) ($row['note'] ?? '')), 255, ''),
+                    'ai_post_note' => $aiNote,
                     'ai_post_model' => self::MODEL_NAME,
                     'ai_post_checked_at' => now(),
                 ]);
+
+                $post->forceFill([
+                    'ai_post_score' => $score,
+                    'ai_post_note' => $aiNote,
+                    'ai_post_status' => 'scored',
+                ]);
+
+                $this->moderationService->syncAiWarningForPost($post, $score, $aiNote);
+
+                if ($this->shouldSendProductFeedbackPush($post)) {
+                    if ($this->productReviewFeedbackPushService->sendForPost($post, $score)) {
+                        BookClub::query()->whereKey($post->id)->update([
+                            'ai_post_feedback_notified_at' => now(),
+                        ]);
+                    }
+                }
             }
         });
     }
@@ -210,5 +240,19 @@ TXT
     private function clampScore(float $score): float
     {
         return round(max(1, min(5, $score)), 2);
+    }
+
+    private function shouldSendProductFeedbackPush(BookClub $post): bool
+    {
+        if (!$post->product_id || !in_array((string) $post->product_type, ['book', 'stationery'], true)) {
+            return false;
+        }
+
+        $notifiedAt = $post->ai_post_feedback_notified_at;
+        if ($notifiedAt === null) {
+            return true;
+        }
+
+        return $post->updated_at && $post->updated_at->gt($notifiedAt);
     }
 }

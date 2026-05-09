@@ -1158,6 +1158,8 @@ EOT;
             'shop_name'  => $seller?->shop_name,
             'photo'      => $seller?->photo,
             'rating'     => $seller?->rating ?? 0,
+            'rating_reviews_count' => $seller?->rating_reviews_count ?? 0,
+            'reputation_score' => $seller?->reputation_score ?? 0,
             'isVerified' => $seller?->isVerified ?? false,
         ];
     }
@@ -1285,6 +1287,10 @@ EOT;
     private function calculateSellerScore($seller): float
     {
         if (!$seller || $seller->status !== 'approved' || $seller->is_hidden) return 0.1;
+
+        if (($seller->reputation_score ?? 0) > 0) {
+            return min(max(((float) $seller->reputation_score) / 100, 0.1), 1.0);
+        }
 
         $score  = 0.0;
         $score += (($seller->rating ?? 0) / 5) * 0.35;

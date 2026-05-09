@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Enums\OrderStatusCode;
+use App\Enums\PaymentStatusCode;
 use App\Http\Controllers\Controller;
 use App\Models\Locations;
 use App\Models\User;
@@ -30,6 +31,8 @@ use App\Support\ProductPayloadFormatter;
 
 class UserController extends Controller
 {
+    private const ACTIVE_HOME_ORDER_LIMIT = 4;
+
     private function isUzbekistanAddress(?string $address): bool
     {
         $normalized = mb_strtolower(trim((string) $address));
@@ -65,6 +68,67 @@ class UserController extends Controller
             'type' => $type,
             'category_format' => 'title',
         ]);
+    }
+
+    private function activeOrdersBaseQuery(User $user)
+    {
+        return Sold::query()
+            ->where('user_id', $user->id)
+            ->where(function ($query) {
+                $query->whereIn('status_code', [
+                    OrderStatusCode::PENDING->value,
+                    OrderStatusCode::PACKING->value,
+                    OrderStatusCode::IN_DELIVERY->value,
+                ])->orWhere(function ($fallback) {
+                    $fallback->whereNull('status_code')
+                        ->whereIn('status', [
+                            OrderStatusCode::PENDING->legacy(),
+                            OrderStatusCode::PACKING->legacy(),
+                            OrderStatusCode::IN_DELIVERY->legacy(),
+                        ]);
+                });
+            });
+    }
+
+    private function orderStatusLabelForHome(Sold $order): string
+    {
+        $paymentCode = $order->payment_status_code;
+        $statusCode = $order->status_code;
+
+        if ($paymentCode === PaymentStatusCode::CARD_PENDING->value) {
+            return "To'lovi kutilmoqda";
+        }
+
+        return match ($statusCode) {
+            OrderStatusCode::PENDING->value => 'Kutilmoqda',
+            OrderStatusCode::PACKING->value => "Qadoqlanmoqda",
+            OrderStatusCode::IN_DELIVERY->value => "Yo'lda",
+            default => 'Jarayonda',
+        };
+    }
+
+    private function formatHomeOrderPreview(Sold $order): array
+    {
+        $items = collect($order->items ?? [])->map(function ($item) {
+            return [
+                'name' => $item['name'] ?? null,
+                'cover' => $item['cover'] ?? null,
+                'type' => $item['type'] ?? null,
+                'count_item' => (int) ($item['count_item'] ?? 0),
+            ];
+        })->values()->all();
+
+        return [
+            'id' => (int) $order->id,
+            'status' => $order->status,
+            'status_code' => $order->status_code,
+            'paymentStatus' => (int) $order->paymentStatus,
+            'payment_status_code' => $order->payment_status_code,
+            'status_label' => $this->orderStatusLabelForHome($order),
+            'amount' => (int) ($order->amount ?? 0),
+            'formatted_created_at' => optional($order->created_at)?->format('d.m.Y HH:mm'),
+            'items' => $items,
+        ];
     }
 
     // ════════════════════════════════════════════════════════════════════
@@ -651,6 +715,7 @@ class UserController extends Controller
         $giftCertsCount      = 0;
         $giftCertsTotal      = 0;
         $mysteryBoxData      = null;
+        $activeOrders        = [];
 
         $bookItemCount = 0;
 
@@ -673,15 +738,15 @@ class UserController extends Controller
                 ->where('is_read', false)->count();
 
             $cartItems      = MyCart::where('user_id', $user->id)->sum('count_item');
-            $orderCount     = Sold::where('user_id', $user->id)
-                ->where(function ($query) {
-                    $query->where('status_code', '!=', OrderStatusCode::CANCELLED->value)
-                        ->orWhere(function ($fallback) {
-                            $fallback->whereNull('status_code')
-                                ->where('status', '!=', OrderStatusCode::CANCELLED->legacy());
-                        });
-                })
-                ->count();
+            $activeOrdersQuery = $this->activeOrdersBaseQuery($user);
+            $orderCount = (clone $activeOrdersQuery)->count();
+            $activeOrders = (clone $activeOrdersQuery)
+                ->latest()
+                ->limit(self::ACTIVE_HOME_ORDER_LIMIT)
+                ->get()
+                ->map(fn (Sold $order) => $this->formatHomeOrderPreview($order))
+                ->values()
+                ->all();
             $favouriteCount = FavouriteProducts::where('user_id', $user->id)->count();
             $selectedLocation = Locations::where('user_id', $user->id)
                 ->where('id', $user->mainAddressID)->where('isDeleted', false)->exists();
@@ -743,6 +808,7 @@ class UserController extends Controller
                 'unread_shop_messages'     => (int) $shopUnread,
                 'cart_items'               => (int) $cartItems,
                 'pending_orders'           => (int) $orderCount,
+                'active_orders'            => $activeOrders,
                 'favourites_count'         => (int) $favouriteCount,
                 'selected_location'        => (bool) $selectedLocation,
                 'cards'                    => (int) $cards,
@@ -757,6 +823,9 @@ class UserController extends Controller
                 'role_emoji'               => $user?->role_emoji,
                 'role_title'               => $user?->role_title,
                 'role_place'               => $user?->role_place,
+                'reputation_score'         => $user ? round((float) ($user->reputation_score ?? 82), 2) : 82.0,
+                'cash_on_delivery_allowed' => $user ? (bool) ($user->cash_on_delivery_allowed ?? true) : true,
+                'cod_return_strikes'       => $user ? (int) ($user->cod_return_strikes ?? 0) : 0,
                 'unread_group_messages'    => $user
                     ? (int) Conversation::query()
                         ->where('type', 'group')

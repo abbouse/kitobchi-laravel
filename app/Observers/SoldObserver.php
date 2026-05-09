@@ -16,6 +16,7 @@ use App\Models\CourierOrder;
 use App\Models\PromocodeHistory;
 use App\Models\User;
 use App\Services\SellerOrderSettlementService;
+use App\Services\UserReputationService;
 use App\Services\UserPositionService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -25,6 +26,7 @@ class SoldObserver
     public function __construct(
         private readonly UserPositionService $positionService,
         private readonly SellerOrderSettlementService $sellerOrderSettlementService,
+        private readonly UserReputationService $userReputationService,
     ) {}
 
     /**
@@ -77,6 +79,13 @@ class SoldObserver
             $user = User::find($order->user_id);
             if ($user) {
                 $this->positionService->evaluateAndPromote($user, 'order_completed');
+            }
+        }
+
+        if (($statusChanged || $paymentStatusChanged) && $order->user_id) {
+            $user = User::find($order->user_id);
+            if ($user) {
+                $this->userReputationService->recalculateUser($user);
             }
         }
 
