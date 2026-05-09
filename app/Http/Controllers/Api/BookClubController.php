@@ -55,6 +55,31 @@ class BookClubController extends Controller
         ]);
     }
 
+    private function loadLinkedProductModel(?string $productType, $productId, User $user)
+    {
+        if (!$productType || !$productId) {
+            return null;
+        }
+
+        return match ($productType) {
+            'book' => Books::with(['category', 'tags', 'seller'])->find($productId),
+            'stationery' => Stationery::with(['category', 'tags', 'seller'])->find($productId),
+            'order' => Sold::where('id', $productId)->where('user_id', $user->id)->first(['id', 'amount', 'items', 'status']),
+            default => null,
+        };
+    }
+
+    private function buildProductSnapshot(?string $productType, $productId, User $user): ?array
+    {
+        $product = $this->loadLinkedProductModel($productType, $productId, $user);
+
+        if (!$product) {
+            return null;
+        }
+
+        return $this->formatProduct($product, null, $productType);
+    }
+
     /**
      * Postlarga qo'shimcha ma'lumotlar qo'shish
      */
@@ -134,7 +159,15 @@ class BookClubController extends Controller
         ) {
             // ── Mahsulot ma'lumotlari ──────────────────────────────────────────
             if ($post->product_id) {
-                $productType = $post->product_type ?: 'book';
+                $productType = in_array($post->product_type, ['book', 'stationery', 'order'], true)
+                    ? $post->product_type
+                    : null;
+
+                if ($productType === null) {
+                    $post->product = null;
+                    $post->product_type = null;
+                    return $post;
+                }
 
                 $productObj = match ($productType) {
                     'book'       => $books->get($post->product_id),
@@ -143,7 +176,8 @@ class BookClubController extends Controller
                     default      => null,
                 };
 
-                $post->product = $this->formatProduct($productObj, $user, $productType);
+                $post->product = $this->formatProduct($productObj, $user, $productType)
+                    ?? (is_array($post->product_snapshot) ? $post->product_snapshot : null);
                 $post->product_type = $productType;
             }
 
@@ -709,6 +743,7 @@ class BookClubController extends Controller
                     'text'         => $request->input('post_text', ''),
                     'product_id'   => $productId,
                     'product_type' => $productType,
+                    'product_snapshot' => $this->buildProductSnapshot($productType, $productId, $user),
                     'theme_id'     => $themeId,
                     'ai_post_status' => 'pending',
                     'ai_post_score' => null,
@@ -816,6 +851,7 @@ class BookClubController extends Controller
                 if ($request->boolean('clear_product')) {
                     $updateData['product_id']   = null;
                     $updateData['product_type'] = null;
+                    $updateData['product_snapshot'] = null;
                 } elseif ($request->filled('product_type') && $request->filled('product_id')) {
                     $productType = match ($request->input('product_type')) {
                         'book'       => 'book',
@@ -840,6 +876,11 @@ class BookClubController extends Controller
                         }
                         $updateData['product_id']   = $request->input('product_id');
                         $updateData['product_type'] = $productType;
+                        $updateData['product_snapshot'] = $this->buildProductSnapshot(
+                            $productType,
+                            $request->input('product_id'),
+                            $user
+                        );
                     }
                 }
 
@@ -886,7 +927,35 @@ class BookClubController extends Controller
                 }
 
                 // ── Mavjud voting o'zgartirish ────────────────────────────────
+                $pollVotesCount = DB::table('book_club_voted_users')
+                    ->where('post_id', $post->id)
+                    ->count();
                 $updatedVotes = json_decode($request->input('updated_votes', '[]'), true);
+                $deletedVoteIds = json_decode($request->input('deleted_vote_ids', '[]'), true);
+                $newVotes = json_decode($request->input('new_vote_options', '[]'), true);
+                $hasPollMutation = !empty($updatedVotes) || !empty($deletedVoteIds) || !empty($newVotes);
+
+                if ($hasPollMutation && $pollVotesCount > 0) {
+                    throw new \RuntimeException("Bu so'rovnomaga ovoz berilgan, variantlarni o'zgartirib bo'lmaydi");
+                }
+
+                if ($hasPollMutation) {
+                    $finalUpdatedCount = collect($updatedVotes ?? [])
+                        ->filter(fn ($vote) => !empty(trim((string) ($vote['text'] ?? ''))))
+                        ->count();
+                    $finalNewCount = collect($newVotes ?? [])
+                        ->filter(fn ($text) => !empty(trim((string) $text)))
+                        ->count();
+                    $finalVotesCount = $finalUpdatedCount + $finalNewCount;
+
+                    if ($finalVotesCount === 1) {
+                        return response()->json([
+                            'status' => 'error',
+                            'message' => "So'rovnomada kamida 2 ta variant qolishi kerak",
+                        ], 422);
+                    }
+                }
+
                 if (!empty($updatedVotes)) {
                     foreach ($updatedVotes as $vData) {
                         BookClubVotes::where('id', $vData['id'] ?? 0)
@@ -895,8 +964,13 @@ class BookClubController extends Controller
                     }
                 }
 
+                if (!empty($deletedVoteIds)) {
+                    BookClubVotes::where('post_id', $post->id)
+                        ->whereIn('id', $deletedVoteIds)
+                        ->delete();
+                }
+
                 // ── Yangi voting variantlari ──────────────────────────────────
-                $newVotes = json_decode($request->input('new_vote_options', '[]'), true);
                 if (!empty($newVotes)) {
                     foreach ($newVotes as $text) {
                         if (!empty(trim($text))) {
@@ -1115,13 +1189,30 @@ class BookClubController extends Controller
                 return response()->json(['status' => 'error', 'message' => 'Post o\'chirilgan'], 400);
             }
 
-            $alreadyVoted = DB::table('book_club_voted_users')
+            $existingVote = DB::table('book_club_voted_users')
                 ->where('user_id', $user->id)
                 ->where('post_id', $post->id)
-                ->exists();
+                ->first();
 
-            if ($alreadyVoted) {
-                return response()->json(['status' => 'error', 'message' => 'Siz ushbu so\'rovnomada qatnashib bo\'lgansiz'], 400);
+            if ($existingVote && (int) $existingVote->option_id === (int) $optionId) {
+                DB::table('book_club_voted_users')
+                    ->where('user_id', $user->id)
+                    ->where('post_id', $post->id)
+                    ->delete();
+
+                return response()->json(['status' => 'success', 'action' => 'unvoted']);
+            }
+
+            if ($existingVote) {
+                DB::table('book_club_voted_users')
+                    ->where('user_id', $user->id)
+                    ->where('post_id', $post->id)
+                    ->update([
+                        'option_id' => $optionId,
+                        'updated_at' => now(),
+                    ]);
+
+                return response()->json(['status' => 'success', 'action' => 'switched']);
             }
 
             DB::table('book_club_voted_users')->insert([
@@ -1134,7 +1225,7 @@ class BookClubController extends Controller
 
             $this->sendNotification($post->user_id, $user, 'vote', $post->id);
 
-            return response()->json(['status' => 'success']);
+            return response()->json(['status' => 'success', 'action' => 'voted']);
         } catch (\Exception $e) {
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
         }
@@ -1204,6 +1295,7 @@ class BookClubController extends Controller
                     'text'             => $original->text,
                     'product_id'       => $original->product_id,
                     'product_type'     => $original->product_type,
+                    'product_snapshot' => $original->product_snapshot,
                     'theme_id'         => $original->theme_id,
                     'repost'           => true,
                     'reposted_user_id' => $original->user_id,

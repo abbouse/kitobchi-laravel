@@ -67,12 +67,30 @@ class OrderService
         $quantity  = $item['count_item'];
 
         if ($type === 'book') {
-            Books::where('id', $productId)->increment('count', $quantity);
+            $product = Books::query()->lockForUpdate()->find($productId);
+            if (!$product) {
+                return;
+            }
+
+            $product->count = (int) ($product->count ?? 0) + (int) $quantity;
+            $product->save();
         } elseif ($type === 'stationery') {
             if ($variantId) {
-                StationeryVariant::where('id', $variantId)->increment('stock', $quantity);
+                $variant = StationeryVariant::query()->lockForUpdate()->find($variantId);
+                if (!$variant) {
+                    return;
+                }
+
+                $variant->stock = (int) ($variant->stock ?? 0) + (int) $quantity;
+                $variant->save();
             } else {
-                Stationery::where('id', $productId)->increment('stock', $quantity);
+                $product = Stationery::query()->lockForUpdate()->find($productId);
+                if (!$product) {
+                    return;
+                }
+
+                $product->stock = (int) ($product->stock ?? 0) + (int) $quantity;
+                $product->save();
             }
         }
     }

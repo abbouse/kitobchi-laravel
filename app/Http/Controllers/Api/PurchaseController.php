@@ -650,25 +650,15 @@ class PurchaseController extends Controller
             $this->trace('sold_created', ['order_id' => $purchase->id, 'amount' => $finalPrice]);
 
             if ($cashbackUsed > 0) {
-                // Cashback tarixini yozish ikkinchi darajali — agar shu yerda
-                // xato bo'lsa, butun xaridni rollback qilmaslik kerak. Tarix
-                // yo'qolishi mumkin, lekin asosiy buyurtma saqlanadi.
-                try {
-                    $balanceAfter = (int) DB::table('users')->where('id', $user->id)->value('cashback');
-                    $this->cashbackHistoryService->record(
-                        userId: $user->id,
-                        action: 'spent',
-                        amount: -$cashbackUsed,
-                        order: $purchase,
-                        balanceBefore: $balanceAfter + $cashbackUsed,
-                        balanceAfter: $balanceAfter,
-                    );
-                } catch (\Throwable $cbErr) {
-                    Log::warning('[buy_book] cashback history soft-fail', [
-                        'order_id' => $purchase->id,
-                        'error'    => $cbErr->getMessage(),
-                    ]);
-                }
+                $balanceAfter = (int) DB::table('users')->where('id', $user->id)->value('cashback');
+                $this->cashbackHistoryService->record(
+                    userId: $user->id,
+                    action: 'spent',
+                    amount: -$cashbackUsed,
+                    order: $purchase,
+                    balanceBefore: $balanceAfter + $cashbackUsed,
+                    balanceAfter: $balanceAfter,
+                );
             }
 
             // ── Seller orderlar ───────────────────────────────────
@@ -756,93 +746,47 @@ class PurchaseController extends Controller
                     ->first();
 
                 if (!$sellerLocation) {
-                    Log::warning("Seller location not found for seller_id: {$itm_sid}");
-                    continue;
+                    throw new \RuntimeException("Seller location not found for seller_id: {$itm_sid}");
                 }
 
-                // Item-darajadagi xato tranzaksiyani tushirmasin —
-                // bittasi muvaffaqiyatsiz bo'lsa ham qolganlari kiritiladi.
-                try {
-                    CourierOrderItem::create([
-                        'seller_id'          => $itm_sid,
-                        'seller_location_id' => (int) $sellerLocation->id,
-                        'order_id'           => (int) $purchase->id,
-                        'type'               => $itm_type,
-                        'product_id'         => isset($itm['item_id']) ? (int) $itm['item_id'] : null,
-                        'quantity'           => (int) ($itm['count_item'] ?? 1),
-                        'price'              => (int) round($itm['item_price'] ?? 0),
-                        'variant_id'         => isset($itm['variant_id']) ? (int) $itm['variant_id'] : null,
-                    ]);
-                } catch (\Throwable $itemErr) {
-                    Log::warning('[buy_book] courier_order_item soft-fail', [
-                        'order_id' => $courierOrder->id,
-                        'item'     => $itm,
-                        'error'    => $itemErr->getMessage(),
-                    ]);
-                }
+                CourierOrderItem::create([
+                    'seller_id'          => $itm_sid,
+                    'seller_location_id' => (int) $sellerLocation->id,
+                    'order_id'           => (int) $purchase->id,
+                    'type'               => $itm_type,
+                    'product_id'         => isset($itm['item_id']) ? (int) $itm['item_id'] : null,
+                    'quantity'           => (int) ($itm['count_item'] ?? 1),
+                    'price'              => (int) round($itm['item_price'] ?? 0),
+                    'variant_id'         => isset($itm['variant_id']) ? (int) $itm['variant_id'] : null,
+                ]);
             }
             $this->trace('courier_order_created', ['order_id' => $courierOrder->id]);
 
             // ── Statistika va stock yangilash ─────────────────────
-            // Stock/stats yangilanishi 500'ga olib kelmasligi uchun har
-            // mahsulot uchun alohida try/catch — bittasi xato bersa
-            // butun tranzaksiya rollback bo'lmasligi uchun (xato faqat
-            // log'ga yoziladi, xarid esa muvaffaqiyatli qoladi).
             foreach ($productsToUpdate as $data) {
-                try {
-                    if (($data['type'] ?? null) === 'gift') {
-                        $data['product']->increment('totalSales', 1);
-                        $data['product']->increment('totalSalesWeek', 1);
-                        $data['product']->save();
-                        continue;
-                    }
-                    $this->orderService->decrementStock($data);
-                    $this->orderService->incrementProductStats($data, $purchase->id);
-                } catch (\Throwable $statsErr) {
-                    Log::warning('[buy_book] stock/stats update soft-fail', [
-                        'product_id' => $data['product']?->id ?? null,
-                        'type'       => $data['type'] ?? null,
-                        'error'      => $statsErr->getMessage(),
-                    ]);
+                if (($data['type'] ?? null) === 'gift') {
+                    $data['product']->increment('totalSales', 1);
+                    $data['product']->increment('totalSalesWeek', 1);
+                    $data['product']->save();
+                    continue;
                 }
+                $this->orderService->decrementStock($data);
+                $this->orderService->incrementProductStats($data, $purchase->id);
             }
             $this->trace('stock_updated');
 
             // ── Promokod tarixi ───────────────────────────────────
-            // Xarid muvaffaqiyatli tugagandan keyin promokod tarixi yozilishi
-            // ikkinchi darajali. Massassignment yoki PHP fatal bo'lsa,
-            // tarix yo'qoladi lekin xarid saqlanadi.
             if ($appliedPromoId) {
-                try {
-                    PromocodeHistory::create([
-                        'user_id'      => (int) $user->id,
-                        'promocode_id' => (int) $appliedPromoId,
-                    ]);
-                    DB::table('promocodes')->where('id', $appliedPromoId)->increment('usedCount');
-                } catch (\Throwable $promoErr) {
-                    Log::warning('[buy_book] promocode history soft-fail', [
-                        'order_id'      => $purchase->id,
-                        'promocode_id'  => $appliedPromoId,
-                        'error'         => $promoErr->getMessage(),
-                    ]);
-                }
+                PromocodeHistory::create([
+                    'user_id'      => (int) $user->id,
+                    'promocode_id' => (int) $appliedPromoId,
+                ]);
+                DB::table('promocodes')->where('id', $appliedPromoId)->increment('usedCount');
             }
 
             // ── Gift Sertifikat ishlatish ──────────────────────────
-            // Sertifikat ishlatish — ehtimol parallel xaridda allaqachon
-            // ishlatilgan bo'lishi mumkin. Bunday holda butun xaridni
-            // bekor qilmaslik kerak; chegirma allaqachon hisoblangan,
-            // sertifikat statusini yangilashning xatosi log'ga yoziladi.
             if ($appliedCert && $certDiscount > 0) {
-                try {
-                    $appliedCert->useInPurchase((int)$certDiscount);
-                } catch (\Throwable $certErr) {
-                    Log::warning('[buy_book] gift cert use soft-fail', [
-                        'order_id'  => $purchase->id,
-                        'cert_id'   => $appliedCert->id ?? null,
-                        'error'     => $certErr->getMessage(),
-                    ]);
-                }
+                $appliedCert->useInPurchase((int)$certDiscount);
             }
 
             // ── Naqd to'lov — seller/courier orderlarni activate qilish ─

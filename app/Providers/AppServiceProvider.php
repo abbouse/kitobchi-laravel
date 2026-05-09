@@ -7,6 +7,9 @@ use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
+use App\Models\Books;
+use App\Models\Stationery;
+use App\Models\StationeryVariant;
 use App\Models\Sold;
 use App\Models\CourierOrder;
 use App\Models\BookClub;
@@ -14,8 +17,11 @@ use App\Models\BookClubComment;
 use App\Models\BookClubLikes;
 use App\Models\BookClubCommentLike;
 use App\Models\FavouriteProducts;
+use App\Observers\BookStockObserver;
 use App\Observers\SoldObserver;
 use App\Observers\CourierOrderObserver;
+use App\Observers\StationeryStockObserver;
+use App\Observers\StationeryVariantStockObserver;
 use App\Observers\UserProgressObserver;
 
 class AppServiceProvider extends ServiceProvider
@@ -39,6 +45,10 @@ class AppServiceProvider extends ServiceProvider
             'book' => \App\Models\Books::class,
             'stationery' => \App\Models\Stationery::class,
         ]);
+
+        Books::observe(BookStockObserver::class);
+        Stationery::observe(StationeryStockObserver::class);
+        StationeryVariant::observe(StationeryVariantStockObserver::class);
         Sold::observe(SoldObserver::class);
 
         // Yangi `pending` CourierOrder paydo bo'lganda barcha kuryerlarga FCM yuboramiz

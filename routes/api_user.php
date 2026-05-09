@@ -98,6 +98,8 @@ Route::middleware('auth:user')->group(function () {
     Route::get('shop/mystery-box/subscription/{id}', [ShopApiController::class, 'subscriptionDetail']);
     Route::post('shop/mystery-box/update-address', [ShopApiController::class, 'updateSubscriptionAddress']);
 
+    Route::post('products/{type}/{id}/stock-alert', [ProductsController::class, 'subscribeStockAlert']);
+
     Route::post('shop/gift-certificate/buy', [ShopApiController::class, 'buyCertificate']);
     Route::post('shop/gift-certificate/activate', [ShopApiController::class, 'activateCertificate']);
     Route::get('gift-certificates', [GiftCertificateController::class, 'index']);

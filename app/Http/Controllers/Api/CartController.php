@@ -141,13 +141,9 @@ class CartController extends Controller
         ? $currentCount + 1                     // Mahsulot sahifasidan → +1
         : $request->new_count_item;             // Savat sahifasidan → to‘liq yangi son
 
-    // Stock tekshiruvi — har ikkala holatda ham
-    if ($newCount > $availableStock) {
-        return response()->json([
-            'status'  => 'error',
-            'message' => "Yetarli zaxira mavjud emas. Mavjud: $availableStock ta"
-        ], 400);
-    }
+    // Stock tekshiruvi — server hech qachon mavjud zaxiradan oshiq qabul qilmaydi.
+    // Agar client ketma-ket bosib yuborsa ham, shu yerda max stockka clamp qilamiz.
+    $newCount = min($newCount, $availableStock);
 
     // Agar newCount 0 bo‘lsa — cart itemni o‘chirish (ixtiyoriy, agar xohlasangiz)
     if ($newCount <= 0) {
@@ -176,9 +172,13 @@ class CartController extends Controller
 
     return response()->json([
         'status'  => 'success',
+        'message' => $newCount >= $availableStock
+            ? "Maksimal mavjud miqdor: $availableStock ta"
+            : null,
         'data'    => [
             'quantity' => $newCount,
-            'cart_id'  => $updatedCartItem->id
+            'cart_id'  => $updatedCartItem->id,
+            'available_stock' => $availableStock,
         ]
     ]);
 }

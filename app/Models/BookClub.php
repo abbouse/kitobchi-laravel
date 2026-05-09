@@ -15,6 +15,7 @@ class BookClub extends Model
         'user_id',
         'product_id',
         'product_type',
+        'product_snapshot',
         'text',
         'is_deleted',
         'theme_id',
@@ -37,6 +38,7 @@ class BookClub extends Model
     protected $casts = [
         'is_deleted' => 'boolean',
         'repost' => 'boolean',
+        'product_snapshot' => 'array',
         'edited_at' => 'datetime',
         'ai_post_checked_at' => 'datetime',
         'ai_post_feedback_notified_at' => 'datetime',

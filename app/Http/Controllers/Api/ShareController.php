@@ -12,6 +12,28 @@ use Illuminate\Support\Facades\Auth;
 
 class ShareController extends Controller
 {
+    private function publicBookScope()
+    {
+        return Books::query()
+            ->where('is_hidden', 0)
+            ->where('is_approved', 1)
+            ->whereHas('seller', fn($q) => $q
+                ->where('is_hidden', 0)
+                ->where('status', 'approved')
+                ->where('parent_id', 0));
+    }
+
+    private function publicStationeryScope()
+    {
+        return Stationery::query()
+            ->where('is_hidden', 0)
+            ->where('is_approved', 1)
+            ->whereHas('seller', fn($q) => $q
+                ->where('is_hidden', 0)
+                ->where('status', 'approved')
+                ->where('parent_id', 0));
+    }
+
     private function err(string $msg, int $code = 404)
     {
         return response()->json(['status' => 'error', 'message' => $msg], $code);
@@ -25,10 +47,12 @@ class ShareController extends Controller
         $user = Auth::guard('user')->user(); // null bo'lishi mumkin
 
         if ($type === 'book') {
-            $product = Books::with(['seller', 'category', 'tags'])
+            $product = $this->publicBookScope()
+                ->with(['seller', 'category', 'tags'])
                 ->find($id);
         } else {
-            $product = Stationery::with(['seller', 'category', 'tags', 'variants'])
+            $product = $this->publicStationeryScope()
+                ->with(['seller', 'category', 'tags', 'variants'])
                 ->find($id);
         }
 

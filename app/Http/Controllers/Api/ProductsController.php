@@ -8,9 +8,11 @@ use App\Models\Stationery;
 use App\Models\BookCategories;
 use App\Models\Seller;
 use App\Models\SellerLocation;
+use App\Models\StationeryVariant;
 use App\Models\FavouriteProducts;
 use App\Models\MyCart;
 use App\Models\ProductViewLog;
+use App\Services\ProductStockAlertService;
 use App\Support\ProductImageUrls;
 use App\Support\ProductPayloadFormatter;
 use Illuminate\Http\Request;
@@ -184,6 +186,26 @@ class ProductsController extends Controller
     {
         return Stationery::where('stock', '>', 0)
             ->where('is_hidden', 0)
+            ->where('is_approved', 1)
+            ->whereHas('seller', fn($q) => $q
+                ->where('is_hidden', 0)
+                ->where('status', 'approved')
+                ->where('parent_id', 0));
+    }
+
+    private function publicBookDetailScope()
+    {
+        return Books::where('is_hidden', 0)
+            ->where('is_approved', 1)
+            ->whereHas('seller', fn($q) => $q
+                ->where('is_hidden', 0)
+                ->where('status', 'approved')
+                ->where('parent_id', 0));
+    }
+
+    private function publicStationeryDetailScope()
+    {
+        return Stationery::where('is_hidden', 0)
             ->where('is_approved', 1)
             ->whereHas('seller', fn($q) => $q
                 ->where('is_hidden', 0)
@@ -1044,6 +1066,113 @@ class ProductsController extends Controller
                 ),
                 'in_store_mode' => true,
             ],
+        ]);
+    }
+
+    public function subscribeStockAlert(
+        Request $request,
+        string $type,
+        int $id,
+        ProductStockAlertService $stockAlertService
+    ) {
+        $user = Auth::guard('user')->user();
+        if (!$user) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Avval tizimga kiring.',
+            ], 401);
+        }
+
+        if (!in_array($type, ['book', 'stationery'], true)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Mahsulot turi noto‘g‘ri.',
+            ], 422);
+        }
+
+        $validated = $request->validate([
+            'variant_id' => 'nullable|integer|exists:stationery_variants,id',
+        ]);
+
+        if ($type === 'book') {
+            $product = $this->publicBookDetailScope()->find($id);
+            if (!$product) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Mahsulot topilmadi.',
+                ], 404);
+            }
+
+            if ((int) ($product->count ?? 0) > 0) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Bu mahsulot hozir mavjud.',
+                ], 422);
+            }
+
+            $result = $stockAlertService->subscribe($user, 'book', $product->id);
+
+            return response()->json([
+                'status' => 'success',
+                'created' => (bool) $result['created'],
+            ]);
+        }
+
+        $product = $this->publicStationeryDetailScope()
+            ->with('variants')
+            ->find($id);
+
+        if (!$product) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Mahsulot topilmadi.',
+            ], 404);
+        }
+
+        $variantId = isset($validated['variant_id']) ? (int) $validated['variant_id'] : null;
+        if ($variantId) {
+            $variant = StationeryVariant::query()
+                ->where('product_id', $product->id)
+                ->find($variantId);
+
+            if (!$variant) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Variant topilmadi.',
+                ], 422);
+            }
+
+            if ((int) ($variant->stock ?? 0) > 0) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Bu variant hozir mavjud.',
+                ], 422);
+            }
+
+            $result = $stockAlertService->subscribe($user, 'stationery', $product->id, $variant->id);
+
+            return response()->json([
+                'status' => 'success',
+                'created' => (bool) $result['created'],
+            ]);
+        }
+
+        $hasAnyVariantInStock = $product->variants->contains(
+            fn($variant) => (int) ($variant->stock ?? 0) > 0
+        );
+
+        if ((int) ($product->stock ?? 0) > 0 || $hasAnyVariantInStock) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Bu mahsulot hozir mavjud.',
+            ], 422);
+        }
+
+        $result = $stockAlertService->subscribe($user, 'stationery', $product->id);
+
+        return response()->json([
+            'status' => 'success',
+            'created' => (bool) $result['created'],
         ]);
     }
 
