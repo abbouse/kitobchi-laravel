@@ -128,6 +128,11 @@ return Application::configure(basePath: dirname(__DIR__))
             ->timezone($tz)
             ->withoutOverlapping();
 
+        $schedule->command('products:send-review-prompts')
+            ->twiceDaily(11, 18)
+            ->timezone($tz)
+            ->withoutOverlapping();
+
         $schedule->command('seller-premium:sync-renewals')
             ->hourly()
             ->timezone($tz)

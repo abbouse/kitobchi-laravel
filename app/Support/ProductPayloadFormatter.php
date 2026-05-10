@@ -22,6 +22,8 @@ class ProductPayloadFormatter
             : self::resolveFavourite($product, $user, $type);
 
         $imageUrls = ProductImageUrls::build($product->images ?? []);
+        $mode = $options['mode'] ?? 'card';
+        $isDetail = $mode === 'detail';
 
         $payload = [
             'id' => $product->id,
@@ -35,7 +37,6 @@ class ProductPayloadFormatter
             'image_urls' => $imageUrls['original'],
             'medium_images' => $imageUrls['medium'],
             'thumb_images' => $imageUrls['thumb'],
-            'description' => $product->description ?? null,
             'price' => $product->price ?? 0,
             'discountPrice' => $isBook
                 ? ($product->discountPrice ?? $product->price ?? 0)
@@ -44,10 +45,6 @@ class ProductPayloadFormatter
             'stock' => $isBook ? ($product->count ?? 0) : ($product->stock ?? 0),
             'sales' => $product->totalSales ?? 0,
             'weekly_sales' => $product->totalSalesWeek ?? 0,
-            'lang' => $isBook ? ($product->lang ?? "O'zbek") : null,
-            'langType' => $isBook ? ($product->langType ?? '') : null,
-            'coverType' => $isBook ? ($product->coverType ?? 'Yumshoq') : null,
-            'year' => $isBook ? ($product->year ?? now()->year) : null,
             'ugc_aggregate_score' => (float) ($product->ugc_aggregate_score ?? 0),
             'ugc_reviews_count' => (int) ($product->ugc_reviews_count ?? 0),
             'ugc_last_scored_at' => optional($product->ugc_last_scored_at)?->toIso8601String(),
@@ -57,7 +54,15 @@ class ProductPayloadFormatter
             'seller' => self::formatSeller($product),
         ];
 
-        if (($options['include_variants'] ?? true) && !$isBook) {
+        if ($isDetail) {
+            $payload['description'] = $product->description ?? null;
+            $payload['lang'] = $isBook ? ($product->lang ?? "O'zbek") : null;
+            $payload['langType'] = $isBook ? ($product->langType ?? '') : null;
+            $payload['coverType'] = $isBook ? ($product->coverType ?? 'Yumshoq') : null;
+            $payload['year'] = $isBook ? ($product->year ?? now()->year) : null;
+        }
+
+        if (($options['include_variants'] ?? $isDetail) && !$isBook) {
             $payload['variants'] = self::formatVariants($product);
         }
 

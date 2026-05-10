@@ -327,18 +327,29 @@
       </div>
       <div class="space-y-3">
         @forelse($addresses as $address)
+          @php
+            $addressText = $address->fullAddress ?: 'Manzil kiritilmagan';
+            $encodedAddress = rawurlencode($addressText);
+            $googleMapsUrl = ($address->lat && $address->lon)
+              ? ('https://www.google.com/maps?q=' . $address->lat . ',' . $address->lon)
+              : ('https://www.google.com/maps/search/?api=1&query=' . $encodedAddress);
+            $yandexMapsUrl = ($address->lat && $address->lon)
+              ? ('https://yandex.uz/maps/?pt=' . $address->lon . ',' . $address->lat . '&z=16&l=map')
+              : ('https://yandex.uz/maps/?text=' . $encodedAddress);
+          @endphp
           <div class="rounded-2xl border border-[var(--p-border)] bg-[var(--p-elevated)] p-4">
             <div class="flex items-start justify-between gap-3">
-              <div class="text-sm leading-6">{{ $address->fullAddress ?: 'Manzil kiritilmagan' }}</div>
+              <div class="text-sm leading-6">{{ $addressText }}</div>
               @if((int) $address->id === $mainAddressId)
                 <span class="badge badge-success">Asosiy</span>
               @endif
             </div>
-            <div class="mt-3 flex items-center justify-between text-xs text-[var(--p-muted)]">
+            <div class="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-[var(--p-muted)]">
               <span>{{ optional($address->created_at)->format('d.m.Y H:i') ?: 'Sana yo‘q' }}</span>
-              @if($address->lat && $address->lon)
-                <a href="https://maps.yandex.uz/?text={{ $address->lat }}+{{ $address->lon }}&z=16" target="_blank" class="text-[var(--p-accent)] font-semibold">Xaritada ko‘rish</a>
-              @endif
+              <div class="flex flex-wrap gap-2">
+                <a href="{{ $yandexMapsUrl }}" target="_blank" rel="noopener noreferrer" class="text-[var(--p-accent)] font-semibold">Yandex Maps</a>
+                <a href="{{ $googleMapsUrl }}" target="_blank" rel="noopener noreferrer" class="text-[var(--p-accent)] font-semibold">Google Maps</a>
+              </div>
             </div>
           </div>
         @empty

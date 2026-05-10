@@ -55,6 +55,15 @@
       ?? $primaryAddress['branch_address']
       ?? $order->recipient_address
       ?? 'Manzil kiritilmagan';
+    $addressLat = $primaryAddress['lat'] ?? null;
+    $addressLon = $primaryAddress['lon'] ?? null;
+    $encodedAddress = rawurlencode($fullAddress);
+    $googleMapsUrl = ($addressLat !== null && $addressLon !== null)
+      ? ('https://www.google.com/maps?q=' . $addressLat . ',' . $addressLon)
+      : ('https://www.google.com/maps/search/?api=1&query=' . $encodedAddress);
+    $yandexMapsUrl = ($addressLat !== null && $addressLon !== null)
+      ? ('https://yandex.uz/maps/?pt=' . $addressLon . ',' . $addressLat . '&z=16&l=map')
+      : ('https://yandex.uz/maps/?text=' . $encodedAddress);
     $branchLabel = !empty($primaryAddress['location_id'])
       ? ('Filial #' . $primaryAddress['location_id'])
       : null;
@@ -360,6 +369,17 @@
             <div><span class="metric-label">Telefon</span><div class="font-semibold mt-1">{{ $order->user?->phone_number ?: '—' }}</div></div>
             <div><span class="metric-label">Yetkazish turi</span><div class="font-semibold mt-1">{{ $deliveryTypeLabel }}</div></div>
             <div><span class="metric-label">Asosiy manzil</span><div class="font-semibold mt-1">{{ $fullAddress }}</div></div>
+            <div>
+              <span class="metric-label">Xaritada ochish</span>
+              <div class="mt-2 flex flex-wrap gap-2">
+                <a href="{{ $yandexMapsUrl }}" target="_blank" rel="noopener noreferrer" class="btn-ghost rounded-xl px-3 py-2 text-xs font-semibold">
+                  <i class="bi bi-geo-alt"></i> Yandex Maps
+                </a>
+                <a href="{{ $googleMapsUrl }}" target="_blank" rel="noopener noreferrer" class="btn-ghost rounded-xl px-3 py-2 text-xs font-semibold">
+                  <i class="bi bi-map"></i> Google Maps
+                </a>
+              </div>
+            </div>
             @if($branchLabel)
               <div><span class="metric-label">Filial</span><div class="font-semibold mt-1">{{ $branchLabel }}{{ !empty($primaryAddress['branch_is_main']) ? ' · asosiy filial' : '' }}</div></div>
             @endif

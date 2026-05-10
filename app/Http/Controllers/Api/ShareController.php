@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Books;
+use App\Models\BookClub;
+use App\Models\BookClubLikes;
 use App\Models\Stationery;
 use App\Models\FavouriteProducts;
 use App\Support\ProductPayloadFormatter;
@@ -80,10 +82,73 @@ class ShareController extends Controller
 
     private function formatProduct($product, string $type, bool $isFavourite): array
     {
+        $user = Auth::guard('user')->user();
+
         return ProductPayloadFormatter::format($product, [
             'type' => $type,
             'favourite' => $isFavourite,
+            'mode' => 'detail',
             'category_format' => 'title',
+            'extra' => [
+                'ugc_reviews_preview' => $this->buildReviewPreview(
+                    (int) $product->id,
+                    $type,
+                    $user?->id,
+                ),
+            ],
         ]);
+    }
+
+    private function buildReviewPreview(int $productId, string $type, ?int $userId): array
+    {
+        $posts = BookClub::query()
+            ->where('product_id', $productId)
+            ->where('product_type', $type)
+            ->where('is_deleted', false)
+            ->with([
+                'user:id,name,lastname,avatar,isVerified,isSupport,role_emoji,role_title,role_place',
+            ])
+            ->withCount(['likes', 'comments'])
+            ->latest()
+            ->take(3)
+            ->get();
+
+        if ($posts->isEmpty()) {
+            return [];
+        }
+
+        $likedPostIds = $userId
+            ? BookClubLikes::where('user_id', $userId)
+                ->whereIn('post_id', $posts->pluck('id'))
+                ->pluck('post_id')
+                ->all()
+            : [];
+
+        $likedMap = array_flip($likedPostIds);
+
+        return $posts->map(function (BookClub $post) use ($likedMap) {
+            return [
+                'id' => $post->id,
+                'text' => $post->text,
+                'created_at' => optional($post->created_at)?->toIso8601String(),
+                'likes_count' => (int) ($post->likes_count ?? 0),
+                'comments_count' => (int) ($post->comments_count ?? 0),
+                'liked_by_me' => isset($likedMap[$post->id]),
+                'ai_post_score' => $post->ai_post_score !== null
+                    ? (float) $post->ai_post_score
+                    : null,
+                'user' => $post->user ? [
+                    'id' => $post->user->id,
+                    'name' => $post->user->name,
+                    'lastname' => $post->user->lastname,
+                    'avatar' => $post->user->avatar,
+                    'isVerified' => (bool) ($post->user->isVerified ?? false),
+                    'isSupport' => (bool) ($post->user->isSupport ?? false),
+                    'role_emoji' => $post->user->role_emoji,
+                    'role_title' => $post->user->role_title,
+                    'role_place' => $post->user->role_place,
+                ] : null,
+            ];
+        })->values()->toArray();
     }
 }

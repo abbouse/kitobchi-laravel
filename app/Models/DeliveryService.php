@@ -36,14 +36,4 @@ class DeliveryService extends Model
     {
         return $query->where('forCountry', $country);
     }
-
-    // ── Toshkent uchun (capital=true ham, false ham) ───────────────────
-    // ── Viloyat uchun (faqat capital=false) ───────────────────────────
-    public function scopeForRegion($query, bool $isTashkent)
-    {
-        if (!$isTashkent) {
-            $query->where('capital', false);
-        }
-        return $query;
-    }
 }

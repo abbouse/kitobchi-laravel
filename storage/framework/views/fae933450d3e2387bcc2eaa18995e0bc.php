@@ -35,7 +35,6 @@
     'telegram'   => ['bi-telegram','Telegram'],
     'commission' => ['bi-percent','Komissiya'],
     'cashback'   => ['bi-cash-stack','Cashback'],
-    'delivery'   => ['bi-truck','Yetkazish'],
   ]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $key => [$icon, $label]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
   <a href="<?php echo e(route('admin.settings.index', ['tab'=>$key])); ?>"
      class="tab-pill <?php echo e($tab===$key ? 'active' : ''); ?>">

@@ -20,6 +20,7 @@
     ['title' => 'BIZNES','items' => [
       ['label'=>'Sotuvchilar','route'=>'admin.sellers.index','icon'=>'store'],
       ['label'=>'Tranzaksiyalar','route'=>'admin.transactions.index','icon'=>'arrow-left-right'],
+      ['label'=>'Logistika','route'=>'admin.logistics.index','icon'=>'map'],
       ['label'=>'Kuryerlar','route'=>'admin.couriers.index','icon'=>'bike'],
       ['label'=>'Promokodlar','route'=>'admin.promocodes.index','icon'=>'badge-percent'],
       ['label'=>'Reklamalar','route'=>'admin.ads.index','icon'=>'megaphone'],

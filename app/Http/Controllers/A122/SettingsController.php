@@ -11,8 +11,12 @@ use Illuminate\Http\Request;
 
 class SettingsController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        if ($request->input('tab') === 'delivery') {
+            return redirect()->route('admin.logistics.index');
+        }
+
         $project    = $this->projectSettings();
         $commission = CommissionSetting::orderBy('priceFrom')->get();
         $cashback   = CashbackSetting::orderBy('type')->orderBy('fromUzs')->get();

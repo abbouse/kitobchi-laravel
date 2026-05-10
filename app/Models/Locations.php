@@ -14,6 +14,11 @@ class Locations extends Model
         'lat',
         'lon',
         'fullAddress',
+        'country_code',
+        'region_slug',
+        'region_name',
+        'district_name',
+        'city_name',
         'phone_number',
         'isDeleted'
     ];

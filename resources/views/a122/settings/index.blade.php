@@ -17,7 +17,6 @@
     'telegram'   => ['bi-telegram','Telegram'],
     'commission' => ['bi-percent','Komissiya'],
     'cashback'   => ['bi-cash-stack','Cashback'],
-    'delivery'   => ['bi-truck','Yetkazish'],
   ] as $key => [$icon, $label])
   <a href="{{ route('admin.settings.index', ['tab'=>$key]) }}"
      class="tab-pill {{ $tab===$key ? 'active' : '' }}">

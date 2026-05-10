@@ -20,6 +20,7 @@ use App\Models\FavouriteProducts;
 use App\Models\FcmNotifications;
 use App\Models\DeliveryService;
 use App\Models\ProjectSetting;
+use App\Services\DeliveryZoneResolverService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Cache;
@@ -32,6 +33,10 @@ use App\Support\ProductPayloadFormatter;
 class UserController extends Controller
 {
     private const ACTIVE_HOME_ORDER_LIMIT = 4;
+
+    public function __construct(
+        private readonly DeliveryZoneResolverService $deliveryZoneResolverService,
+    ) {}
 
     private function isUzbekistanAddress(?string $address): bool
     {
@@ -359,6 +364,9 @@ class UserController extends Controller
             'fullAddress' => ['required', 'string', 'max:1000'],
             'countryCode' => ['nullable', 'string', 'max:8'],
             'regionSlug' => ['nullable', 'string', 'max:100'],
+            'regionName' => ['nullable', 'string', 'max:150'],
+            'districtName' => ['nullable', 'string', 'max:150'],
+            'cityName' => ['nullable', 'string', 'max:150'],
         ]);
 
         $lat = (float) $validated['lat'];
@@ -369,10 +377,13 @@ class UserController extends Controller
             || $this->isUzbekistanAddress($fullAddress)
             || $this->isWithinUzbekistanBounds($lat, $lon);
 
-        if (!$isWithinUzbekistan) {
+        $isSupportedCountry = $countryCode !== ''
+            && $this->deliveryZoneResolverService->isCountrySupported($countryCode);
+
+        if (!$isWithinUzbekistan && !$isSupportedCountry) {
             return response()->json([
                 'status' => 'error',
-                'message' => "Hozircha faqat O'zbekiston ichidagi manzillar qabul qilinadi.",
+                'message' => "Hozircha bu hudud uchun logistika hali yoqilmagan.",
             ], 422);
         }
 
@@ -381,6 +392,11 @@ class UserController extends Controller
         $location->lat       = $lat;
         $location->lon       = $lon;
         $location->fullAddress = $fullAddress;
+        $location->country_code = $countryCode !== '' ? $countryCode : ($isWithinUzbekistan ? 'UZ' : null);
+        $location->region_slug = $validated['regionSlug'] ?? null;
+        $location->region_name = $validated['regionName'] ?? null;
+        $location->district_name = $validated['districtName'] ?? null;
+        $location->city_name = $validated['cityName'] ?? null;
         $location->save();
         $user->update(['mainAddressID' => $location->id]);
         return response()->json(['status' => 'success', 'location_id' => $location->id], 201);

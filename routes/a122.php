@@ -32,6 +32,7 @@ use App\Http\Controllers\A122\AdminController;
 use App\Http\Controllers\A122\ApiClientController;
 use App\Http\Controllers\A122\SearchHistoryController;
 use App\Http\Controllers\A122\SettingsController;
+use App\Http\Controllers\A122\LogisticsController;
 
 Route::prefix('a122')->name('admin.')->group(function () {
 
@@ -197,6 +198,14 @@ Route::prefix('a122')->name('admin.')->group(function () {
         Route::get('/{transaction}',             [TransactionController::class, 'show'])->name('show');
         Route::patch('/{transaction}/approve',   [TransactionController::class, 'approve'])->name('approve');
         Route::patch('/{transaction}/reject',    [TransactionController::class, 'reject'])->name('reject');
+    });
+
+    // ── Logistics ─────────────────────────────────────────────────
+    Route::prefix('logistics')->name('logistics.')->group(function () {
+        Route::get('/', [LogisticsController::class, 'index'])->name('index');
+        Route::post('/', [LogisticsController::class, 'store'])->name('store');
+        Route::put('/{logistic}', [LogisticsController::class, 'update'])->name('update');
+        Route::delete('/{logistic}', [LogisticsController::class, 'destroy'])->name('destroy');
     });
 
     // ── Couriers ───────────────────────────────────────────────────

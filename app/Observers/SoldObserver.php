@@ -16,6 +16,7 @@ use App\Models\CourierOrder;
 use App\Models\PromocodeHistory;
 use App\Models\User;
 use App\Services\SellerOrderSettlementService;
+use App\Services\ProductReviewPromptService;
 use App\Services\UserReputationService;
 use App\Services\UserPositionService;
 use Illuminate\Support\Facades\DB;
@@ -26,6 +27,7 @@ class SoldObserver
     public function __construct(
         private readonly UserPositionService $positionService,
         private readonly SellerOrderSettlementService $sellerOrderSettlementService,
+        private readonly ProductReviewPromptService $productReviewPromptService,
         private readonly UserReputationService $userReputationService,
     ) {}
 
@@ -66,6 +68,7 @@ class SoldObserver
 
         if (($statusChanged || $paymentStatusChanged) && !$previousCompletedPaid && $currentCompletedPaid) {
             $this->sellerOrderSettlementService->settleCompletedOrder($order);
+            $this->productReviewPromptService->scheduleForCompletedOrder($order->fresh());
         }
 
         if (($statusChanged || $paymentStatusChanged) && $previousCompletedPaid && !$currentCompletedPaid) {
@@ -73,6 +76,7 @@ class SoldObserver
                 $order,
                 "old_status={$previousStatusCode}, old_payment={$previousPaymentStatusCode}, new_status={$currentStatusCode}, new_payment={$currentPaymentStatusCode}"
             );
+            $this->productReviewPromptService->closeForOrder($order->fresh(), 'order_reverted');
         }
 
         if (($statusChanged || $paymentStatusChanged) && !$previousCompletedPaid && $currentCompletedPaid && $order->user_id) {

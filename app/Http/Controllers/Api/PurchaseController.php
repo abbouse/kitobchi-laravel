@@ -29,6 +29,7 @@ use App\Services\CashbackHistoryService;
 use App\Services\OrderRealtimeService;
 use App\Services\PostalResendService;
 use App\Services\QrTokenService;
+use App\Services\DeliveryZoneResolverService;
 use App\Services\UserReputationService;
 use App\Models\GiftCertificate;
 use Illuminate\Http\Request;
@@ -46,6 +47,7 @@ class PurchaseController extends Controller
         private readonly OrderRealtimeService $orderRealtimeService,
         private readonly PostalResendService $postalResendService,
         private readonly QrTokenService $qrTokenService,
+        private readonly DeliveryZoneResolverService $deliveryZoneResolverService,
         private readonly UserReputationService $userReputationService,
     ) {}
 
@@ -120,6 +122,11 @@ class PurchaseController extends Controller
             'courier_service' => 'delivery',
             default => Sold::normalizeDeliveryTypeValue($deliveryService->name ?? ''),
         };
+    }
+
+    private function resolveDeliveryOffers(object $location, int $sellerCount, float|int $cartTotal)
+    {
+        return $this->deliveryZoneResolverService->resolveOffers($location, $sellerCount, $cartTotal);
     }
 
     private function applySignedDeliveryQr(Sold $order): Sold
@@ -203,29 +210,7 @@ class PurchaseController extends Controller
 
         $sellerCount = count($sellers);
 
-        $isTashkent = str_contains(mb_strtolower($location->fullAddress), 'toshkent')
-                   || str_contains(mb_strtolower($location->fullAddress), 'ташкент');
-
-        $services = DeliveryService::active()
-            ->forCountry('uzbekistan')
-            ->forRegion($isTashkent)
-            ->get()
-            ->map(function ($svc) use ($totalSum, $sellerCount) {
-                $base  = $svc->priceKg;
-                $price = $base + ($base * 0.5 * max(0, $sellerCount - 1));
-                $final = $totalSum >= $svc->freePriceFrom ? 0 : $price;
-                return [
-                    'id'               => $svc->id,
-                    'name'             => $svc->name,
-                    'type'             => $svc->type,
-                    'muddat'           => $svc->muddat,
-                    'priceKg'          => $svc->priceKg,
-                    'freePriceFrom'    => $svc->freePriceFrom,
-                    'is_free'          => $final == 0,
-                    'calculated_price' => $final,
-                    'capital'          => $svc->capital,
-                ];
-            });
+        $services = $this->resolveDeliveryOffers($location, $sellerCount, $totalSum);
 
         return response()->json(['status' => 'success', 'data' => [
             'location' => [
@@ -233,6 +218,9 @@ class PurchaseController extends Controller
                 'lat'         => $location->lat,
                 'lon'         => $location->lon,
                 'fullAddress' => $location->fullAddress,
+                'fullName'    => trim(($user->name ?? '') . ' ' . ($user->lastname ?? '')),
+                'phoneNumber' => $user->phone_number,
+                'country_code' => $location->country_code,
             ],
             'cart_info' => [
                 'items_count'        => $cartItems->sum('count_item'),
@@ -445,6 +433,23 @@ class PurchaseController extends Controller
             ]);
 
             $priceBeforePromo = $totalSum;
+            $sellerCount = count($uniqueSellerIds);
+            $selectedDeliveryOffer = $this->deliveryZoneResolverService->resolveSelectedOffer(
+                $location,
+                $sellerCount,
+                $priceBeforePromo,
+                (int) $deliveryService->id,
+            );
+
+            if (!$selectedDeliveryOffer) {
+                DB::rollBack();
+                return $this->err("Tanlangan manzil uchun bu yetkazish xizmati mavjud emas.", 422);
+            }
+
+            if ((int) $request->paymentStatus === 0 && !($selectedDeliveryOffer['cod_allowed'] ?? true)) {
+                DB::rollBack();
+                return $this->err("Bu hudud uchun naqd to'lov o'chirilgan. Iltimos, karta orqali to'lang.", 422);
+            }
 
             // ── Promokod ──────────────────────────────────────────
             $discountAmount = 0;
@@ -464,10 +469,7 @@ class PurchaseController extends Controller
             }
 
             // ── Yetkazish narxi ───────────────────────────────────
-            $sellerCount   = count($uniqueSellerIds);
-            $basePrice     = $deliveryService->priceKg;
-            $calcDelivery  = $basePrice + ($basePrice * 0.5 * max(0, $sellerCount - 1));
-            $deliveryPrice = $priceBeforePromo >= $deliveryService->freePriceFrom ? 0 : (int)$calcDelivery;
+            $deliveryPrice = (int) ($selectedDeliveryOffer['calculated_price'] ?? 0);
 
             // ── Cashback ──────────────────────────────────────────
             $amountBeforeCashback = $totalSum + $deliveryPrice;
@@ -606,6 +608,7 @@ class PurchaseController extends Controller
                 'fullAddress' => $location->fullAddress,
                 'lat'         => $location->lat,
                 'lon'         => $location->lon,
+                'country_code'=> $location->country_code,
                 'phoneNumber' => $user->phone_number,
             ];
 
@@ -622,6 +625,19 @@ class PurchaseController extends Controller
                 'address'             => [$locationData],
                 'deliveryType'        => $normalizedDeliveryType,
                 'deliveryPrice'       => (int) $deliveryPrice,
+                'delivery_zone_rule_id' => (int) ($selectedDeliveryOffer['zone_rule_id'] ?? 0) ?: null,
+                'delivery_rule_snapshot' => [
+                    'service_id' => (int) $deliveryService->id,
+                    'service_name' => $deliveryService->name,
+                    'service_type' => $deliveryService->type,
+                    'zone_rule_id' => (int) ($selectedDeliveryOffer['zone_rule_id'] ?? 0),
+                    'zone_name' => $selectedDeliveryOffer['zone_name'] ?? null,
+                    'zone_scope' => $selectedDeliveryOffer['zone_scope'] ?? null,
+                    'country_code' => $selectedDeliveryOffer['country_code'] ?? $location->country_code,
+                    'calculated_price' => (int) $deliveryPrice,
+                    'cod_allowed' => (bool) ($selectedDeliveryOffer['cod_allowed'] ?? true),
+                    'eta_days' => (int) ($selectedDeliveryOffer['muddat'] ?? 0),
+                ],
                 'paymentStatus'       => $request->paymentStatus
                     ? PaymentStatusCode::CARD_PENDING->legacy()
                     : PaymentStatusCode::CASH_PENDING->legacy(),
@@ -1245,12 +1261,11 @@ class PurchaseController extends Controller
         if (!$user) return $this->err('Unauthorized', 401);
 
         $location   = DB::table('locations')->where('id', $user->mainAddressID)->first();
-        $isTashkent = str_contains(mb_strtolower($location?->fullAddress ?? ''), 'toshkent');
+        if (!$location) {
+            return $this->err('Asosiy manzil belgilanmagan!', 400);
+        }
 
-        $services = DeliveryService::active()
-            ->forCountry('uzbekistan')
-            ->forRegion($isTashkent)
-            ->get();
+        $services = $this->resolveDeliveryOffers($location, 1, 0);
 
         return response()->json(['status' => 'success', 'data' => $services]);
     }

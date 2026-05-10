@@ -53,6 +53,44 @@ class ProductsController extends Controller
         return ProductPayloadFormatter::format($product, [
             'user' => $user,
             'type' => $isBook ? 'book' : 'stationery',
+            'mode' => 'card',
+            'category_format' => 'title',
+            'extra' => [
+                'discountExpiresAt' => $discountExpiresAt,
+                'recommended' => (bool) ($product->recommended ?? false),
+            ],
+            'seller_extra' => [
+                'isPremium' => $this->sellerIsPremium($product->seller),
+                'hasSale' => $this->sellerHasManyDiscounts($product->seller?->id),
+            ],
+        ]);
+    }
+
+    private function formatProductDetail($product, $user = null, string $type = 'book'): array
+    {
+        $isBook = $type === 'book';
+
+        $discountExpiresAt = null;
+        if ($isBook) {
+            $dp = $product->discountPrice ?? 0;
+            if ($dp > 0) {
+                $discountExpiresAt = $product->discountExpiresAt
+                    ? Carbon::parse($product->discountExpiresAt)->toISOString()
+                    : null;
+            }
+        } else {
+            $dp = $product->discount_price ?? 0;
+            if ($dp > 0) {
+                $discountExpiresAt = $product->discountExpiresAt
+                    ? Carbon::parse($product->discountExpiresAt)->toISOString()
+                    : null;
+            }
+        }
+
+        return ProductPayloadFormatter::format($product, [
+            'user' => $user,
+            'type' => $isBook ? 'book' : 'stationery',
+            'mode' => 'detail',
             'category_format' => 'title',
             'extra' => [
                 'discountExpiresAt' => $discountExpiresAt,
@@ -963,7 +1001,7 @@ class ProductsController extends Controller
             $match = $matches->first();
             return response()->json([
                 'status' => 'success',
-                'data'   => $this->formatProduct($match['model'], Auth::guard('user')->user(), $match['type']),
+                'data'   => $this->formatProductDetail($match['model'], Auth::guard('user')->user(), $match['type']),
             ]);
         }
 
@@ -975,7 +1013,7 @@ class ProductsController extends Controller
                 'multiple_matches' => true,
                 'message'          => "Bu shtrix-kod bo'yicha bir nechta mahsulot topildi. Kerakli variantni tanlang.",
                 'candidates'       => $matches
-                    ->map(fn($match) => $this->formatProduct($match['model'], $user, $match['type']))
+                    ->map(fn($match) => $this->formatProductDetail($match['model'], $user, $match['type']))
                     ->values(),
             ]);
         }

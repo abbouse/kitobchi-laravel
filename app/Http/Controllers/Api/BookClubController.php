@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Services\BookClubModerationService;
 use App\Services\BookClubNotificationTextService;
 use App\Services\MentionService;
+use App\Services\ProductReviewPromptService;
 use App\Services\UserPositionService;
 use App\Models\{User, Books, Stationery, BookClub, BookClubImages, BookClubLikes, BookClubVotes, BookClubComment, FavouriteProducts, BookClubNotification, SharedCart, StationeryVariant};
 use App\Models\Sold;
@@ -21,6 +22,7 @@ class BookClubController extends Controller
         private readonly BookClubNotificationTextService $notificationTextService,
         private readonly BookClubModerationService $moderationService,
         private readonly MentionService $mentionService,
+        private readonly ProductReviewPromptService $productReviewPromptService,
         private readonly UserPositionService $userPositionService,
     ) {}
 
@@ -788,6 +790,7 @@ class BookClubController extends Controller
                     'mention',
                     (int) $bookClub->id
                 );
+                $this->productReviewPromptService->markReviewedByPost($bookClub->fresh());
 
                 return response()->json(['status' => 'success', 'post_id' => $bookClub->id], 201);
             });
@@ -901,6 +904,7 @@ class BookClubController extends Controller
                     'mention',
                     (int) $post->id
                 );
+                $this->productReviewPromptService->markReviewedByPost($post->fresh());
 
                 // ── Rasmlarni o'chirish ────────────────────────────────────────
                 $deletedIds = json_decode($request->input('deleted_image_ids', '[]'), true);
