@@ -184,10 +184,6 @@ class CourierOrderController extends Controller
                 $orderCustomer->completed_at ??= now();
                 $orderCustomer->save();
 
-                // courier balansiga: asosiy yetkazib berish narxi + yakuniy bonus.
-                $courier->balance += ((int) $order->courierPrice + $finalBonus);
-                $courier->save();
-
                 DB::afterCommit(fn () => $this->orderStatusPushService->sendForTransition($orderCustomer->fresh(), $previousStatus, 'C'));
             });
 

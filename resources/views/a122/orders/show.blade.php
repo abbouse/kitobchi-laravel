@@ -69,6 +69,7 @@
       : null;
 
     $isGiftToOther = (bool) ($order->is_gift_to_other ?? false);
+    $withPackaging = (bool) ($order->with_packaging ?? false);
     $packagingPrice = (int) ($order->packaging_price ?? 0);
     $isInstore = (bool) ($order->is_instore ?? false);
     $cashbackReadyAt = $order->cashback_ready_at;
@@ -138,6 +139,9 @@
         @endif
         @if($isGiftToOther)
           <span class="badge badge-info">Sovg‘a buyurtma</span>
+        @endif
+        @if($withPackaging)
+          <span class="badge badge-warning">Qadoqlash xizmati olingan</span>
         @endif
         @if($isInstore)
           <span class="badge badge-warning">Do‘kon ichida rasmiylashtirilgan</span>
@@ -390,6 +394,10 @@
             <div><span class="metric-label">Mijoz istagi</span><div class="font-semibold mt-1">{{ $order->buyerWish ?: '—' }}</div></div>
             <div><span class="metric-label">To‘lov turi</span><div class="font-semibold mt-1">{{ $paymentMethodLabel }}</div></div>
             <div><span class="metric-label">To‘lov holati</span><div class="font-semibold mt-1">{{ $paymentLabel }}</div></div>
+            <div><span class="metric-label">Qadoqlash xizmati</span><div class="font-semibold mt-1">{{ $withPackaging ? 'Ha' : 'Yo‘q' }}</div></div>
+            @if($withPackaging)
+              <div><span class="metric-label">Qadoqlash narxi</span><div class="font-semibold mt-1">{{ number_format($packagingPrice, 0, '.', ' ') }} UZS</div></div>
+            @endif
 
             @if($isGiftToOther)
               <div class="pt-3 border-t border-[var(--p-border)] space-y-3">

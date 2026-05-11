@@ -17,10 +17,27 @@ class LogisticsController extends Controller
     public function index(Request $request)
     {
         $services = DeliveryService::orderBy('name')->get();
-        $rules = DeliveryZoneRule::with('deliveryService')
+        $rulesQuery = DeliveryZoneRule::with('deliveryService');
+        $codFilter = (string) $request->query('cod_filter', '');
+
+        if ($codFilter === 'on') {
+            $rulesQuery->where('cod_allowed', true);
+        } elseif ($codFilter === 'off') {
+            $rulesQuery->where('cod_allowed', false);
+        }
+
+        $rules = $rulesQuery
             ->orderByDesc('priority')
             ->orderBy('zone_name')
             ->get();
+
+        $codEnabledRulesCount = DeliveryZoneRule::query()
+            ->active()
+            ->where('cod_allowed', true)
+            ->whereHas('deliveryService', fn ($query) => $query
+                ->where('status', true)
+                ->where('type', 'courier_service'))
+            ->count();
 
         $preview = null;
         if ($request->filled('preview_lat') && $request->filled('preview_lon')) {
@@ -52,7 +69,13 @@ class LogisticsController extends Controller
             ];
         }
 
-        return view('a122.logistics.index', compact('services', 'rules', 'preview'));
+        return view('a122.logistics.index', compact(
+            'services',
+            'rules',
+            'preview',
+            'codFilter',
+            'codEnabledRulesCount',
+        ));
     }
 
     public function store(Request $request)

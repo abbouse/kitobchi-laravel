@@ -21,7 +21,7 @@
 
   <section class="a122-section">
     <div class="a122-section-body">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
         <div class="kpi-soft">
           <div class="metric-label">Qoidalar soni</div>
           <div class="metric-value text-2xl">{{ $rules->count() }}</div>
@@ -33,6 +33,10 @@
         <div class="kpi-soft">
           <div class="metric-label">Mamlakatlar</div>
           <div class="metric-value text-2xl">{{ $rules->pluck('country_code')->filter()->unique()->count() }}</div>
+        </div>
+        <div class="kpi-soft">
+          <div class="metric-label">COD yoqilgan hududlar</div>
+          <div class="metric-value text-2xl">{{ $codEnabledRulesCount }}</div>
         </div>
       </div>
       <div class="mt-4 rounded-3xl border border-[var(--p-border)] bg-[var(--p-elevated)] p-4 text-sm leading-6 text-[var(--p-muted)]">
@@ -50,6 +54,21 @@
         </div>
       </div>
       <div class="a122-section-body">
+        <form method="GET" action="{{ route('admin.logistics.index') }}" class="mb-4 flex flex-wrap items-center gap-3">
+          <select name="cod_filter" class="p-form-control max-w-[220px]">
+            <option value="" {{ $codFilter === '' ? 'selected' : '' }}>Barcha hududlar</option>
+            <option value="on" {{ $codFilter === 'on' ? 'selected' : '' }}>Faqat COD yoqilgan</option>
+            <option value="off" {{ $codFilter === 'off' ? 'selected' : '' }}>Faqat COD o‘chiq</option>
+          </select>
+          <button class="btn-p ghost" type="submit">
+            <i class="bi bi-funnel"></i> Filtrlash
+          </button>
+          @if($codFilter !== '')
+            <a href="{{ route('admin.logistics.index') }}" class="btn-p ghost">
+              <i class="bi bi-x-lg"></i> Tozalash
+            </a>
+          @endif
+        </form>
         <div class="table-wrap">
           <table class="tbl">
             <thead>
@@ -80,6 +99,11 @@
                       @if($rule->district_name) · {{ $rule->district_name }} @endif
                       @if($rule->city_name) · {{ $rule->city_name }} @endif
                     </div>
+                    @if($rule->cod_allowed)
+                      <div class="mt-2">
+                        <span class="badge badge-success">COD faol</span>
+                      </div>
+                    @endif
                   </td>
                   <td>
                     <div class="font-semibold">{{ $service?->name ?: '—' }}</div>
@@ -95,7 +119,11 @@
                     <div class="font-semibold">{{ number_format((int) $effectiveBase, 0, '.', ' ') }} UZS</div>
                     <div class="text-xs text-[var(--p-hint)] mt-1">{{ $effectiveEta }} kun · +{{ rtrim(rtrim(number_format((float) $rule->additional_seller_percent, 2, '.', ''), '0'), '.') }}%</div>
                   </td>
-                  <td><span class="badge {{ $rule->cod_allowed ? 'badge-success' : 'badge-danger' }}">{{ $rule->cod_allowed ? 'Yoqilgan' : 'O‘chiq' }}</span></td>
+                  <td>
+                    <span class="badge {{ $rule->cod_allowed ? 'badge-success' : 'badge-danger' }}">
+                      {{ $rule->cod_allowed ? 'Yoqilgan' : 'O‘chiq' }}
+                    </span>
+                  </td>
                   <td>{{ $rule->priority }}</td>
                   <td><span class="badge {{ $rule->is_active ? 'badge-success' : 'badge-muted' }}">{{ $rule->is_active ? 'Faol' : 'O‘chiq' }}</span></td>
                   <td class="text-right">

@@ -46,6 +46,10 @@ class BookClubCommentController extends Controller {
 
     private function serializeComment(BookClubComment $comment, ?User $viewer = null, array $extra = []): array
     {
+        $replyTarget = $comment->replyToUser;
+        $liveReplyUsername = trim((string) ($replyTarget?->username ?? ''));
+        $liveReplyName = trim((string) ($replyTarget?->name ?? ''));
+
         return array_merge([
             'id' => $comment->id,
             'post_id' => $comment->post_id,
@@ -58,6 +62,13 @@ class BookClubCommentController extends Controller {
             'replies_count' => (int) ($comment->replies_count ?? 0),
             'is_hidden' => (bool) $comment->is_hidden_by_ai,
             'ai_moderation_status' => $comment->ai_moderation_status,
+            'reply_to_user' => $comment->reply_to_user_id
+                ? [
+                    'id' => $comment->reply_to_user_id ? (int) $comment->reply_to_user_id : null,
+                    'username' => $liveReplyUsername !== '' ? $liveReplyUsername : null,
+                    'display_name' => $liveReplyName !== '' ? $liveReplyName : null,
+                ]
+                : null,
         ], $extra);
     }
 
@@ -110,6 +121,7 @@ class BookClubCommentController extends Controller {
                 'user' => fn ($query) => $query
                     ->select($this->commentUserSelect())
                     ->withCount('followers'),
+                'replyToUser' => fn ($query) => $query->select(['id', 'name', 'username']),
             ])
             ->withCount('replies');
 
@@ -124,6 +136,57 @@ class BookClubCommentController extends Controller {
                 ->orderByDesc('smart_rank')
                 ->orderByDesc('likes_count')
                 ->orderBy('book_club_comments.created_at'),
+        };
+    }
+
+    private function rankedTopLevelCommentsQuery(int $postId, array $followingIds, int $postOwnerId, string $sort = 'interesting')
+    {
+        $followingIdsString = implode(',', array_map('intval', $followingIds ?: [0]));
+        $likesCountSql = "(SELECT COUNT(*) FROM book_club_comment_likes WHERE book_club_comment_likes.comment_id = book_club_comments.id)";
+        $followersCountSql = "(SELECT COUNT(*) FROM user_follows WHERE user_follows.following_id = book_club_comments.user_id)";
+        $repliesCountSql = "(SELECT COUNT(*) FROM book_club_comments child_comments WHERE child_comments.parent_id = book_club_comments.id)";
+
+        $scoreSql = "
+            (
+                CASE WHEN book_club_comments.user_id = {$postOwnerId} THEN 85 ELSE 0 END +
+                CASE WHEN users.isSupport = 1 THEN 95 ELSE 0 END +
+                CASE WHEN users.isVerified = 1 THEN 70 ELSE 0 END +
+                CASE WHEN book_club_comments.user_id IN ({$followingIdsString}) THEN 85 ELSE 0 END +
+                LEAST(42, ({$followersCountSql}) / 25) +
+                LEAST(24, ({$likesCountSql}) * 2) +
+                LEAST(18, ({$repliesCountSql}) * 3) +
+                CASE WHEN book_club_comments.created_at >= DATE_SUB(NOW(), INTERVAL 12 HOUR) THEN 8 ELSE 0 END
+            )
+        ";
+
+        $query = BookClubComment::query()
+            ->where('book_club_comments.post_id', $postId)
+            ->whereNull('book_club_comments.parent_id')
+            ->leftJoin('users', 'users.id', '=', 'book_club_comments.user_id')
+            ->select('book_club_comments.*')
+            ->selectRaw("{$likesCountSql} as likes_count")
+            ->selectRaw("{$scoreSql} as smart_rank")
+            ->with([
+                'user' => fn ($query) => $query
+                    ->select($this->commentUserSelect())
+                    ->withCount('followers'),
+                'replyToUser' => fn ($query) => $query->select(['id', 'name', 'username']),
+                'likes',
+            ])
+            ->withCount('replies');
+
+        return match ($this->normalizeReplySort($sort)) {
+            'newest' => $query
+                ->orderByDesc('book_club_comments.created_at')
+                ->orderByDesc('book_club_comments.id'),
+            'oldest' => $query
+                ->orderBy('book_club_comments.created_at')
+                ->orderBy('book_club_comments.id'),
+            default => $query
+                ->orderByDesc('smart_rank')
+                ->orderByDesc('likes_count')
+                ->orderByDesc('replies_count')
+                ->orderByDesc('book_club_comments.created_at'),
         };
     }
 
@@ -163,22 +226,26 @@ class BookClubCommentController extends Controller {
         ];
     }
 
-    public function index(Request $request, $post_id) {
+public function index(Request $request, $post_id) {
     $user = Auth::guard('user')->user();
     $followingIds = $this->viewerFollowingIds($user);
     $post = BookClub::select('id', 'user_id')->find($post_id);
     $replySort = $this->normalizeReplySort($request->query('reply_sort'));
+    $offset = max(0, (int) $request->query('offset', 0));
+    $limit = min(30, max(1, (int) $request->query('limit', 24)));
 
-    $comments = BookClubComment::where('post_id', $post_id)
-        ->whereNull('parent_id')
-        ->with([
-            'user' => fn ($query) => $query
-                ->select($this->commentUserSelect())
-                ->withCount('followers'),
-            'likes',
-        ])
-        ->withCount('replies')
-        ->orderBy('created_at', 'desc')
+    $query = $this->rankedTopLevelCommentsQuery(
+        (int) $post_id,
+        $followingIds,
+        (int) ($post?->user_id ?? 0),
+        $replySort,
+    );
+
+    $total = (clone $query)->count(DB::raw('distinct book_club_comments.id'));
+
+    $comments = (clone $query)
+        ->skip($offset)
+        ->take($limit)
         ->get()
         ->map(function ($comment) use ($user, $followingIds, $post, $replySort) {
             $preview = ((int) ($comment->replies_count ?? 0) > 0)
@@ -192,11 +259,20 @@ class BookClubCommentController extends Controller {
             return $this->serializeComment($comment, $user, $preview);
         });
 
+    $shown = $offset + $comments->count();
+    $remaining = max(0, $total - $shown);
+
     return response()->json([
         'status' => 'success',
         'data' => $comments,
         'meta' => [
             'reply_sort' => $replySort,
+            'offset' => $offset,
+            'limit' => $limit,
+            'total' => $total,
+            'remaining_count' => $remaining,
+            'next_offset' => $remaining > 0 ? $shown : null,
+            'has_more' => $remaining > 0,
         ],
     ], 200);
 }
@@ -299,6 +375,7 @@ public function replies(Request $request, $comment_id) {
     public function reply(Request $request, $comment_id) {
     $request->validate([
         'content' => 'required',
+        'reply_to_user_id' => 'nullable|integer|exists:users,id',
     ]);
 
     $user = Auth::guard('user')->user();
@@ -318,11 +395,14 @@ public function replies(Request $request, $comment_id) {
     if (!$parentComment) {
         return response()->json(['status' => 'error', 'message' => "Javob berilayotgan comment topilmadi!"], 404);
     }
+    $replyToUserId = $request->filled('reply_to_user_id') ? (int) $request->reply_to_user_id : null;
+
     $reply = BookClubComment::create([
         'post_id' => $parentComment->post_id,
         'parent_id' => $comment_id,
         'user_id' => $user->id,
         'content' => $request->content,
+        'reply_to_user_id' => $replyToUserId,
         'ai_status' => 'pending',
         'ai_score' => null,
         'ai_checked_at' => null,
@@ -342,6 +422,16 @@ public function replies(Request $request, $comment_id) {
         $parentComment->post_id,
         ['comment_id' => $parentComment->id]
     );
+
+    if ($replyToUserId && $replyToUserId !== (int) $parentComment->user_id && $replyToUserId !== (int) $user->id) {
+        NotificationHelper::send(
+            $replyToUserId,
+            $user,
+            'reply',
+            $parentComment->post_id,
+            ['comment_id' => $reply->id]
+        );
+    }
 
     $post = BookClub::find($parentComment->post_id);
     if ($post && $post->user_id !== $parentComment->user_id) {

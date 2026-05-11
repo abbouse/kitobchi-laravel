@@ -59,6 +59,7 @@ class DeliveryZoneResolverService
                 /** @var DeliveryZoneRule $rule */
                 $rule = $group->first();
                 $service = $rule->deliveryService;
+                $codAllowed = $service->type === 'courier_service' && (bool) $rule->cod_allowed;
                 $basePrice = (int) ($rule->base_price ?? $service->priceKg ?? 0);
                 $sellerMultiplier = max(0, $sellerCount - 1);
                 $additionalPercent = (float) ($rule->additional_seller_percent ?? 50);
@@ -76,7 +77,7 @@ class DeliveryZoneResolverService
                     'is_free' => $finalPrice === 0,
                     'calculated_price' => $finalPrice,
                     'capital' => (bool) ($service->capital ?? false),
-                    'cod_allowed' => (bool) $rule->cod_allowed,
+                    'cod_allowed' => $codAllowed,
                     'zone_rule_id' => (int) $rule->id,
                     'zone_name' => $rule->zone_name,
                     'zone_scope' => $rule->scope,

@@ -14,6 +14,7 @@ class BookClubComment extends Model
         'user_id',
         'content',
         'parent_id',
+        'reply_to_user_id',
         'ai_score',
         'ai_checked_at',
         'ai_status',
@@ -60,5 +61,10 @@ class BookClubComment extends Model
     public function parent()
     {
         return $this->belongsTo(BookClubComment::class, 'parent_id');
+    }
+
+    public function replyToUser()
+    {
+        return $this->belongsTo(User::class, 'reply_to_user_id');
     }
 }

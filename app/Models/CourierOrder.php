@@ -23,6 +23,8 @@ class CourierOrder extends Model
         'pickup_bonus',
         'locked_bonus',
         'final_bonus',
+        'settled_amount',
+        'settled_at',
         'picked_up_at',
         'sla_deadline',
         'is_customer_delay',
@@ -44,6 +46,8 @@ class CourierOrder extends Model
         'pickup_bonus'              => 'integer',
         'locked_bonus'              => 'integer',
         'final_bonus'               => 'integer',
+        'settled_amount'            => 'integer',
+        'settled_at'                => 'datetime',
         'total_delay_seconds'       => 'integer',
     ];
 

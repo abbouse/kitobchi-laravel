@@ -1339,6 +1339,7 @@ class PurchaseController extends Controller
 
         $order->formatted_created_at = Carbon::parse($order->created_at)->isoFormat('D MMMM YYYY, HH:mm');
         $order->formatted_updated_at = Carbon::parse($order->updated_at)->isoFormat('D MMMM YYYY, HH:mm');
+        $this->appendOrderSellerMeta($order);
         $this->appendOrderStatusMeta($order);
         $this->applySignedDeliveryQr($order);
         $this->appendFiscalReceiptMeta($order);
@@ -1383,6 +1384,39 @@ class PurchaseController extends Controller
         $order->postal_resend_fee = (int) ($order->postal_return_fee ?? 0);
         $order->postal_return_note = $order->postal_return_note;
         $order->resend_replacement_order_id = $order->resend_replacement_order_id;
+    }
+
+    private function appendOrderSellerMeta(Sold $order): void
+    {
+        $items = collect($order->items ?? []);
+        $sellerIds = $items->pluck('seller_id')
+            ->filter(fn ($id) => (int) $id > 0)
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        if ($sellerIds->isEmpty()) {
+            return;
+        }
+
+        $sellers = Seller::query()
+            ->whereIn('id', $sellerIds)
+            ->get(['id', 'shop_name', 'photo'])
+            ->keyBy('id');
+
+        $order->items = $items->map(function ($item) use ($sellers) {
+            if (!is_array($item)) {
+                return $item;
+            }
+
+            $seller = $sellers->get((int) ($item['seller_id'] ?? 0));
+            if ($seller) {
+                $item['seller_name'] = $item['seller_name'] ?? $seller->shop_name;
+                $item['seller_avatar'] = $item['seller_avatar'] ?? $seller->photo;
+            }
+
+            return $item;
+        })->values()->all();
     }
 
     private function appendFiscalReceiptMeta(Sold $order): void

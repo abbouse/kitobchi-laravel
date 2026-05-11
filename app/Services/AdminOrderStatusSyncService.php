@@ -58,15 +58,17 @@ class AdminOrderStatusSyncService
             $this->syncCompletionState($order);
             $order->save();
 
+            $sellerStatus = $this->mapMainToSeller($statusCode->value, $order->payment_status_code);
             SellerOrder::where('order_id', $order->id)->update([
-                'status' => $this->mapMainToSeller($statusCode->value, $order->payment_status_code)->legacy(),
-                'status_code' => $this->mapMainToSeller($statusCode->value, $order->payment_status_code)->value,
+                'status' => $sellerStatus->legacy(),
+                'status_code' => $sellerStatus->value,
                 'updated_at' => now(),
             ]);
 
+            $courierStatus = $this->resolveCourierStatusForMainOrder($order, $statusCode->value);
             CourierOrder::where('order_id', $order->id)->update([
-                'status' => $this->mapMainToCourier($statusCode->value, $order->payment_status_code)->legacy(),
-                'status_code' => $this->mapMainToCourier($statusCode->value, $order->payment_status_code)->value,
+                'status' => $courierStatus->legacy(),
+                'status_code' => $courierStatus->value,
                 'updated_at' => now(),
             ]);
 
@@ -109,9 +111,10 @@ class AdminOrderStatusSyncService
             $this->syncCompletionState($order);
             $order->save();
 
+            $courierStatus = $this->resolveCourierStatusForSellerUpdate($order, $statusCode);
             CourierOrder::where('order_id', $order->id)->update([
-                'status' => $this->mapSellerToCourier($statusCode->value, $order->payment_status_code)->legacy(),
-                'status_code' => $this->mapSellerToCourier($statusCode->value, $order->payment_status_code)->value,
+                'status' => $courierStatus->legacy(),
+                'status_code' => $courierStatus->value,
                 'updated_at' => now(),
             ]);
 
@@ -215,6 +218,54 @@ class AdminOrderStatusSyncService
 
         return match ($statusCode) {
             SellerOrderStatusCode::HANDED_TO_COURIER => CourierOrderStatusCode::IN_DELIVERY,
+            SellerOrderStatusCode::CANCELLED => CourierOrderStatusCode::CANCELLED,
+            default => ($paymentCode === PaymentStatusCode::CARD_PENDING->value
+                ? CourierOrderStatusCode::PAYMENT_PENDING
+                : CourierOrderStatusCode::PENDING),
+        };
+    }
+
+    private function resolveCourierStatusForMainOrder(Sold $order, string $status): CourierOrderStatusCode
+    {
+        $statusCode = OrderStatusCode::fromLegacy($status)->value;
+        $paymentCode = PaymentStatusCode::fromLegacy($order->payment_status_code)->value;
+        $hasCourier = (int) ($order->courier_id ?? 0) > 0;
+
+        if ($statusCode === OrderStatusCode::PENDING->value) {
+            return $paymentCode === PaymentStatusCode::CARD_PENDING->value
+                ? CourierOrderStatusCode::PAYMENT_PENDING
+                : CourierOrderStatusCode::PENDING;
+        }
+
+        if (!$hasCourier && in_array($statusCode, [
+            OrderStatusCode::PACKING->value,
+            OrderStatusCode::IN_DELIVERY->value,
+        ], true)) {
+            return CourierOrderStatusCode::CANCELLED;
+        }
+
+        return match ($statusCode) {
+            OrderStatusCode::PACKING->value,
+            OrderStatusCode::IN_DELIVERY->value => CourierOrderStatusCode::IN_DELIVERY,
+            OrderStatusCode::DELIVERED->value => CourierOrderStatusCode::DELIVERED,
+            OrderStatusCode::RETURNED->value => CourierOrderStatusCode::RETURNED,
+            OrderStatusCode::CANCELLED->value => CourierOrderStatusCode::CANCELLED,
+            default => CourierOrderStatusCode::PENDING,
+        };
+    }
+
+    private function resolveCourierStatusForSellerUpdate(Sold $order, SellerOrderStatusCode $statusCode): CourierOrderStatusCode
+    {
+        $paymentCode = PaymentStatusCode::fromLegacy($order->payment_status_code)->value;
+        $hasCourier = (int) ($order->courier_id ?? 0) > 0;
+
+        return match ($statusCode) {
+            SellerOrderStatusCode::HANDED_TO_COURIER => $hasCourier
+                ? CourierOrderStatusCode::IN_DELIVERY
+                : CourierOrderStatusCode::CANCELLED,
+            SellerOrderStatusCode::ACCEPTED => $hasCourier
+                ? CourierOrderStatusCode::IN_DELIVERY
+                : CourierOrderStatusCode::CANCELLED,
             SellerOrderStatusCode::CANCELLED => CourierOrderStatusCode::CANCELLED,
             default => ($paymentCode === PaymentStatusCode::CARD_PENDING->value
                 ? CourierOrderStatusCode::PAYMENT_PENDING

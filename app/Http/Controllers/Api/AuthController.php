@@ -338,7 +338,7 @@ class AuthController extends Controller
 
     private function resolveTelegramUser(array $claims): User
     {
-        $telegramId = trim((string) ($claims['sub'] ?? $claims['id'] ?? ''));
+        $telegramId = $this->extractTelegramId($claims);
         $phone = preg_replace('/\D+/', '', (string) ($claims['phone_number'] ?? ''));
         $username = $claims['preferred_username'] ?? null;
         $photo = $claims['picture'] ?? null;
@@ -393,6 +393,29 @@ class AuthController extends Controller
         ])->save();
 
         return $user;
+    }
+
+    private function extractTelegramId(array $claims): string
+    {
+        $candidates = [
+            $claims['id'] ?? null,
+            $claims['telegram_id'] ?? null,
+            $claims['user_id'] ?? null,
+            $claims['sub'] ?? null,
+        ];
+
+        foreach ($candidates as $candidate) {
+            $value = trim((string) ($candidate ?? ''));
+            if ($value === '') {
+                continue;
+            }
+
+            if (preg_match('/^\d+$/', $value) === 1) {
+                return $value;
+            }
+        }
+
+        return trim((string) ($claims['sub'] ?? $claims['id'] ?? ''));
     }
 
     private function splitTelegramName(string $fullName): array
