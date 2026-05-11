@@ -543,7 +543,9 @@ class SearchController extends Controller
                 $existing = SearchHistory::where('result_name', $resultName)
                     ->where('is_draft', false)->first();
                 if ($existing) {
+                    $existing->increment('search_count');
                     $existing->touch();
+                    Cache::forget('search_trending');
                     $this->ensurePersonalHistory($user, $sessionId, $cleanText, $resultName);
                     return;
                 }
@@ -557,6 +559,7 @@ class SearchController extends Controller
                 'is_draft'     => false,
                 'search_count' => 1,
             ]);
+            Cache::forget('search_trending');
         } catch (\Throwable $e) {
             Log::error('upsertHistory error', ['query' => $query, 'error' => $e->getMessage()]);
         }

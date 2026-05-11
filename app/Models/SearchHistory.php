@@ -7,7 +7,16 @@ use App\Models\User;
 
 class SearchHistory extends Model
 {
-    protected $fillable = ['user_id', 'session_id', 'result_count', 'result_name', 'result_type', 'text', 'is_draft'];
+    protected $fillable = [
+        'user_id',
+        'session_id',
+        'result_count',
+        'result_name',
+        'result_type',
+        'text',
+        'is_draft',
+        'search_count',
+    ];
     
     protected $casts = [
         'is_draft' => 'boolean'
