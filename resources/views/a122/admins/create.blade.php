@@ -97,6 +97,7 @@
                 'stationery' => ['Kanstovar',        'bi-pencil-square'],
                 'orders'     => ['Buyurtmalar',      'bi-bag-check'],
                 'sellers'    => ['Sotuvchilar',      'bi-shop-window'],
+                'hubs'       => ['Hublar',           'bi-box-seam'],
                 'couriers'   => ['Kuryerlar',        'bi-bicycle'],
                 'promocodes' => ['Promokodlar',      'bi-ticket-perforated'],
                 'settings'   => ['Sozlamalar',       'bi-gear'],

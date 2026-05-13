@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\A122;
 
+use App\Enums\FulfillmentMode;
 use App\Enums\OrderStatusCode;
 use App\Enums\PaymentStatusCode;
 use App\Enums\PostalReturnStatus;
@@ -10,12 +11,16 @@ use App\Models\Books;
 use App\Models\CourierOrder;
 use App\Models\Couriers;
 use App\Models\Gifts;
+use App\Models\Hub;
+use App\Models\OrderFulfillment;
 use App\Models\Seller;
 use App\Models\SellerOrder;
 use App\Models\SellerTransaction;
 use App\Models\Sold;
 use App\Models\Stationery;
+use App\Services\FulfillmentAdminOverrideService;
 use App\Services\AdminOrderStatusSyncService;
+use App\Services\HubPrintViewService;
 use App\Services\OrderService;
 use App\Services\OrderStatusPushService;
 use App\Services\PostalResendService;
@@ -31,6 +36,8 @@ class OrderController extends Controller
         private readonly AdminOrderStatusSyncService $statusSync,
         private readonly OrderStatusPushService $orderStatusPushService,
         private readonly PostalResendService $postalResendService,
+        private readonly FulfillmentAdminOverrideService $fulfillmentAdminOverrideService,
+        private readonly HubPrintViewService $hubPrintViewService,
     ) {}
 
     public function index(Request $request)
@@ -129,7 +136,23 @@ class OrderController extends Controller
 
     public function show(Sold $order)
     {
-        $order->load(['user', 'certificate']);
+        $order->load(['user', 'certificate', 'fulfillment.hub']);
+        $activeHubs = Hub::query()
+            ->where('is_active', true)
+            ->orderBy('priority')
+            ->orderByDesc('is_primary')
+            ->orderBy('name')
+            ->get(['id', 'name', 'code', 'city_name', 'country_code', 'priority']);
+        $fulfillmentModes = collect(FulfillmentMode::cases())
+            ->map(fn (FulfillmentMode $mode) => [
+                'value' => $mode->value,
+                'label' => match ($mode) {
+                    FulfillmentMode::HUB_BASED => 'Hub-based fulfillment',
+                    FulfillmentMode::DIRECT_COURIER => "Direct courier (seller → mijoz)",
+                    FulfillmentMode::POSTAL_ONLY_VIA_HUB => 'Hub → pochta',
+                    FulfillmentMode::PICKUP_ONLY => 'Pickup only',
+                },
+            ]);
         $items = collect($order->items ?? [])->map(function ($item) {
             $type = $item['type'] ?? 'book';
             $product = match ($type) {
@@ -275,6 +298,8 @@ class OrderController extends Controller
 
         return view('a122.orders.show', compact(
             'order',
+            'activeHubs',
+            'fulfillmentModes',
             'items',
             'summary',
             'address',
@@ -285,6 +310,34 @@ class OrderController extends Controller
             'courierOrder',
             'assignedCourier',
         ));
+    }
+
+    public function printLabel(Sold $order)
+    {
+        $order->loadMissing(['user', 'fulfillment.hub']);
+        /** @var OrderFulfillment|null $fulfillment */
+        $fulfillment = $order->fulfillment;
+        abort_if(! $fulfillment, 404, 'Fulfillment topilmadi.');
+
+        return view('a122.hubs.print.label', [
+            'order' => $order,
+            'fulfillment' => $fulfillment,
+            'label' => $this->hubPrintViewService->labelData($fulfillment),
+        ]);
+    }
+
+    public function printReceipt(Sold $order)
+    {
+        $order->loadMissing(['user', 'fulfillment.hub']);
+        /** @var OrderFulfillment|null $fulfillment */
+        $fulfillment = $order->fulfillment;
+        abort_if(! $fulfillment, 404, 'Fulfillment topilmadi.');
+
+        return view('a122.hubs.print.receipt', [
+            'order' => $order,
+            'fulfillment' => $fulfillment,
+            'receipt' => $this->hubPrintViewService->receiptData($fulfillment),
+        ]);
     }
 
     private function resolveItemImage($product): ?string
@@ -313,6 +366,55 @@ class OrderController extends Controller
         $request->validate(['status' => 'required|in:A,P,B,C,F']);
         $this->statusSync->updateMainOrder($order, (string) $request->input('status'));
         return back()->with('success', "Buyurtma holati yangilandi.");
+    }
+
+    public function switchFulfillmentMode(Request $request, Sold $order)
+    {
+        $request->validate([
+            'target_mode' => 'required|string|in:' . implode(',', array_map(
+                static fn (FulfillmentMode $mode) => $mode->value,
+                FulfillmentMode::cases(),
+            )),
+            'hub_id' => 'nullable|integer|exists:hubs,id',
+            'override_note' => 'nullable|string|max:1000',
+        ]);
+
+        try {
+            $targetMode = FulfillmentMode::from((string) $request->input('target_mode'));
+            $targetHub = $request->filled('hub_id') ? Hub::findOrFail((int) $request->input('hub_id')) : null;
+
+            $this->fulfillmentAdminOverrideService->switchMode(
+                $order,
+                $targetMode,
+                $targetHub,
+                $request->input('override_note'),
+            );
+
+            return back()->with('success', "Fulfillment mode yangilandi.");
+        } catch (\Throwable $e) {
+            return back()->with('error', $e->getMessage() ?: "Fulfillment mode’ni almashtirib bo'lmadi.");
+        }
+    }
+
+    public function rerouteHub(Request $request, Sold $order)
+    {
+        $request->validate([
+            'hub_id' => 'required|integer|exists:hubs,id',
+            'reroute_note' => 'nullable|string|max:1000',
+        ]);
+
+        try {
+            $targetHub = Hub::findOrFail((int) $request->input('hub_id'));
+            $this->fulfillmentAdminOverrideService->rerouteHub(
+                $order,
+                $targetHub,
+                $request->input('reroute_note'),
+            );
+
+            return back()->with('success', "Mas’ul hub yangilandi.");
+        } catch (\Throwable $e) {
+            return back()->with('error', $e->getMessage() ?: "Hub reroute qilib bo'lmadi.");
+        }
     }
 
     public function markPostalReturned(Request $request, Sold $order)

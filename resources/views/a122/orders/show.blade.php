@@ -75,6 +75,32 @@
     $cashbackReadyAt = $order->cashback_ready_at;
     $cashbackAwardedAt = $order->cashback_awarded_at;
     $cashbackNotifiedAt = $order->cashback_notified_at;
+    $fulfillment = $order->fulfillment;
+    $fulfillmentModeLabel = match ($fulfillment?->fulfillment_mode) {
+      'direct_courier' => "Kuryer: seller → mijoz",
+      'postal_only_via_hub' => 'Hub → pochta oqimi',
+      'pickup_only' => "Olib ketish / ichki pickup",
+      'hub_based' => 'Hub-based fulfillment',
+      default => 'Legacy / hali biriktirilmagan',
+    };
+    $fulfillmentStatusLabel = match ($fulfillment?->status_code) {
+      'awaiting_seller_prep' => 'Seller tayyorlamoqda',
+      'ready_for_pickup' => 'Olib ketishga tayyor',
+      'picked_from_seller' => 'Sellerdan olingan',
+      'arrived_at_hub' => 'Hubga yetib kelgan',
+      'qc_checked' => 'QC tekshirildi',
+      'packed' => 'Qadoqlandi',
+      'labeled' => 'Etiketka yopildi',
+      'dispatched_to_post' => 'Pochtaga topshirilgan',
+      'assigned_last_mile' => 'Last-mile biriktirilgan',
+      'out_for_delivery' => 'Yetkazib berishga chiqqan',
+      'delivered' => 'Fulfillment yakunlangan',
+      'returned' => 'Qaytgan',
+      'cancelled' => 'Bekor qilingan',
+      default => 'Hali ochilmagan',
+    };
+    $lastModeSwitch = collect(data_get($fulfillment?->meta ?? [], 'mode_switch_log', []))->last();
+    $lastHubReroute = collect(data_get($fulfillment?->meta ?? [], 'hub_reroute_log', []))->last();
 
     $postalReturnStatus = $order->postal_return_status ?? 'none';
     $postalReturnLabel = match ($postalReturnStatus) {
@@ -198,6 +224,160 @@
             @else
               Pochta oqimi yo‘q
             @endif
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-4 rounded-3xl border border-[var(--p-border)] bg-[var(--p-elevated)] p-4">
+        <div class="flex flex-wrap items-center gap-2">
+          <div class="text-sm font-semibold">Fulfillment routing</div>
+          <button type="button" class="order-help-trigger inline-flex h-5 w-5 items-center justify-center rounded-full border border-[var(--p-border)] text-[11px] font-bold text-[var(--p-muted)]" data-help-target="fulfillment-routing-help">?</button>
+          <div id="fulfillment-routing-help" class="order-help-popover hidden max-w-xs rounded-2xl border border-[var(--p-border)] bg-white p-3 text-xs leading-5 text-[var(--p-text)] shadow-xl">
+            Order yaratilganda tizim qaysi mode bilan ishlashini shu yerda qotiradi: hub-based, direct courier yoki postal oqim. Hub, seller va courier app’lar keyingi bosqichlarda aynan shu routing qarorga qarab ishlaydi.
+          </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 mt-3 text-sm">
+          <div>
+            <div class="metric-label">Mode</div>
+            <div class="font-semibold mt-1">{{ $fulfillmentModeLabel }}</div>
+          </div>
+          <div>
+            <div class="metric-label">Fulfillment holati</div>
+            <div class="font-semibold mt-1">{{ $fulfillmentStatusLabel }}</div>
+          </div>
+          <div>
+            <div class="metric-label">Mas’ul hub</div>
+            <div class="font-semibold mt-1">{{ $fulfillment?->hub?->name ?: 'Hub yo‘q / direct' }}</div>
+          </div>
+          <div>
+            <div class="metric-label">COD</div>
+            <div class="font-semibold mt-1">
+              @if($fulfillment?->is_cod)
+                Ha · {{ number_format((int) ($fulfillment->cash_collect_amount ?? 0), 0, '.', ' ') }} UZS
+              @else
+                Yo‘q
+              @endif
+            </div>
+          </div>
+        </div>
+        @if($fulfillment)
+          <div class="mt-4 flex flex-wrap gap-2">
+            <a href="{{ route('admin.orders.print.label', $order) }}" target="_blank" class="btn-p ghost">
+              <i class="bi bi-printer"></i> 48x80 label
+            </a>
+            <a href="{{ route('admin.orders.print.receipt', $order) }}" target="_blank" class="btn-p ghost">
+              <i class="bi bi-receipt"></i> Receipt / packing slip
+            </a>
+          </div>
+        @endif
+        @if($lastModeSwitch || $lastHubReroute)
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3 text-xs">
+            @if($lastModeSwitch)
+              <div class="rounded-2xl border border-[var(--p-border)] bg-[var(--p-surface)] p-3 text-[var(--p-hint)]">
+                <div class="font-semibold text-[var(--p-text)]">Oxirgi mode switch</div>
+                <div class="mt-1">
+                  {{ data_get($lastModeSwitch, 'admin_name') ?: 'Admin' }} ·
+                  {{ \Illuminate\Support\Carbon::parse(data_get($lastModeSwitch, 'at'))->format('d.m.Y H:i') }}
+                </div>
+                <div class="mt-1">Mode: {{ data_get($lastModeSwitch, 'target_mode') }}</div>
+                @if(data_get($lastModeSwitch, 'hub_name'))
+                  <div class="mt-1">Hub: {{ data_get($lastModeSwitch, 'hub_name') }}</div>
+                @endif
+                @if(data_get($lastModeSwitch, 'note'))
+                  <div class="mt-1">{{ data_get($lastModeSwitch, 'note') }}</div>
+                @endif
+              </div>
+            @endif
+            @if($lastHubReroute)
+              <div class="rounded-2xl border border-[var(--p-border)] bg-[var(--p-surface)] p-3 text-[var(--p-hint)]">
+                <div class="font-semibold text-[var(--p-text)]">Oxirgi hub reroute</div>
+                <div class="mt-1">
+                  {{ data_get($lastHubReroute, 'admin_name') ?: 'Admin' }} ·
+                  {{ \Illuminate\Support\Carbon::parse(data_get($lastHubReroute, 'at'))->format('d.m.Y H:i') }}
+                </div>
+                <div class="mt-1">Hub: {{ data_get($lastHubReroute, 'hub_name') ?: '—' }}</div>
+                @if(data_get($lastHubReroute, 'note'))
+                  <div class="mt-1">{{ data_get($lastHubReroute, 'note') }}</div>
+                @endif
+              </div>
+            @endif
+          </div>
+        @endif
+
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-3 mt-4">
+          <div class="rounded-3xl border border-[var(--p-border)] bg-white p-4">
+            <div class="flex flex-wrap items-center gap-2">
+              <div class="text-sm font-semibold">Fulfillment mode almashtirish</div>
+              <button type="button" class="order-help-trigger inline-flex h-5 w-5 items-center justify-center rounded-full border border-[var(--p-border)] text-[11px] font-bold text-[var(--p-muted)]" data-help-target="mode-switch-help">?</button>
+              <div id="mode-switch-help" class="order-help-popover hidden max-w-xs rounded-2xl border border-[var(--p-border)] bg-white p-3 text-xs leading-5 text-[var(--p-text)] shadow-xl">
+                Bu action orderni hub-based oqimdan direct courier oqimiga yoki aksincha o‘tkazadi. Tizim kech bosqichlarga o‘tgan, kuryer biriktirilgan yoki qadoqlash boshlangan orderlarda bu amaliyotni bloklaydi.
+              </div>
+            </div>
+            <form method="POST" action="{{ route('admin.orders.switch-mode', $order) }}" class="space-y-3 mt-3">
+              @csrf
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <label class="space-y-1">
+                  <span class="metric-label">Yangi mode</span>
+                  <select name="target_mode" class="w-full rounded-2xl border border-[var(--p-border)] bg-[var(--p-surface)] px-3 py-2 text-sm js-fulfillment-mode-select">
+                    @foreach($fulfillmentModes as $modeOption)
+                      <option value="{{ $modeOption['value'] }}" @selected(($fulfillment?->fulfillment_mode ?? old('target_mode')) === $modeOption['value'])>
+                        {{ $modeOption['label'] }}
+                      </option>
+                    @endforeach
+                  </select>
+                </label>
+                <label class="space-y-1 js-fulfillment-hub-wrap">
+                  <span class="metric-label">Target hub</span>
+                  <select name="hub_id" class="w-full rounded-2xl border border-[var(--p-border)] bg-[var(--p-surface)] px-3 py-2 text-sm">
+                    <option value="">Auto tanlash</option>
+                    @foreach($activeHubs as $hub)
+                      <option value="{{ $hub->id }}" @selected(($fulfillment?->hub_id ?? old('hub_id')) === $hub->id)>
+                        {{ $hub->name }} @if($hub->code)({{ $hub->code }})@endif @if($hub->city_name) · {{ $hub->city_name }} @endif
+                      </option>
+                    @endforeach
+                  </select>
+                </label>
+              </div>
+              <label class="space-y-1 block">
+                <span class="metric-label">Izoh</span>
+                <textarea name="override_note" rows="2" class="w-full rounded-2xl border border-[var(--p-border)] bg-[var(--p-surface)] px-3 py-2 text-sm" placeholder="Nega mode almashtirilayotgani haqida qisqa izoh">{{ old('override_note') }}</textarea>
+              </label>
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <div class="text-xs text-[var(--p-hint)]">Hub kerak bo‘lgan mode’larda target hub bo‘sh qolsa tizim o‘zi mos hub tanlaydi.</div>
+                <button type="submit" class="btn-p primary">Mode’ni yangilash</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="rounded-3xl border border-[var(--p-border)] bg-white p-4">
+            <div class="flex flex-wrap items-center gap-2">
+              <div class="text-sm font-semibold">Mas’ul hubni reroute qilish</div>
+              <button type="button" class="order-help-trigger inline-flex h-5 w-5 items-center justify-center rounded-full border border-[var(--p-border)] text-[11px] font-bold text-[var(--p-muted)]" data-help-target="hub-reroute-help">?</button>
+              <div id="hub-reroute-help" class="order-help-popover hidden max-w-xs rounded-2xl border border-[var(--p-border)] bg-white p-3 text-xs leading-5 text-[var(--p-text)] shadow-xl">
+                Reroute faqat hub orqali yuradigan orderlarda va sellerdan olib ketish tugamagan bosqichlarda ishlaydi. Shu bilan noto‘g‘ri hubga ketayotgan orderni xavfsiz boshqa markazga burish mumkin.
+              </div>
+            </div>
+            <form method="POST" action="{{ route('admin.orders.reroute-hub', $order) }}" class="space-y-3 mt-3">
+              @csrf
+              <label class="space-y-1 block">
+                <span class="metric-label">Yangi mas’ul hub</span>
+                <select name="hub_id" class="w-full rounded-2xl border border-[var(--p-border)] bg-[var(--p-surface)] px-3 py-2 text-sm">
+                  @foreach($activeHubs as $hub)
+                    <option value="{{ $hub->id }}" @selected(($fulfillment?->hub_id ?? old('hub_id')) === $hub->id)>
+                      {{ $hub->name }} @if($hub->code)({{ $hub->code }})@endif @if($hub->city_name) · {{ $hub->city_name }} @endif
+                    </option>
+                  @endforeach
+                </select>
+              </label>
+              <label class="space-y-1 block">
+                <span class="metric-label">Reroute izohi</span>
+                <textarea name="reroute_note" rows="2" class="w-full rounded-2xl border border-[var(--p-border)] bg-[var(--p-surface)] px-3 py-2 text-sm" placeholder="Masalan: hub yuklamasi yuqori, mijozga yaqin hub tanlandi">{{ old('reroute_note') }}</textarea>
+              </label>
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <div class="text-xs text-[var(--p-hint)]">Direct courier orderlarda bu forma ishlamaydi, backend guard xatoni to‘xtatadi.</div>
+                <button type="submit" class="btn-p ghost">Hub’ni yangilash</button>
+              </div>
+            </form>
           </div>
         </div>
       </div>
@@ -604,4 +784,50 @@
     </section>
   </div>
 </div>
+<script>
+document.addEventListener('click', function (event) {
+  const trigger = event.target.closest('.order-help-trigger');
+  const popovers = document.querySelectorAll('.order-help-popover');
+
+  if (!trigger) {
+    popovers.forEach((popover) => popover.classList.add('hidden'));
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+
+  const targetId = trigger.getAttribute('data-help-target');
+  const popover = document.getElementById(targetId);
+  if (!popover) return;
+
+  const shouldOpen = popover.classList.contains('hidden');
+  popovers.forEach((item) => item.classList.add('hidden'));
+  if (!shouldOpen) return;
+
+  const rect = trigger.getBoundingClientRect();
+  popover.classList.remove('hidden');
+  popover.style.position = 'fixed';
+  popover.style.left = Math.min(window.innerWidth - popover.offsetWidth - 16, rect.left - 8) + 'px';
+  popover.style.top = (rect.bottom + 8) + 'px';
+  popover.style.zIndex = '60';
+});
+
+function syncFulfillmentHubVisibility() {
+  const modeSelect = document.querySelector('.js-fulfillment-mode-select');
+  const hubWrap = document.querySelector('.js-fulfillment-hub-wrap');
+  if (!modeSelect || !hubWrap) return;
+
+  const requiresHub = ['hub_based', 'postal_only_via_hub'].includes(modeSelect.value);
+  hubWrap.style.display = requiresHub ? '' : 'none';
+}
+
+document.addEventListener('change', function (event) {
+  if (event.target.matches('.js-fulfillment-mode-select')) {
+    syncFulfillmentHubVisibility();
+  }
+});
+
+syncFulfillmentHubVisibility();
+</script>
 @endsection

@@ -34,6 +34,7 @@ $allPermissions = [
     'stationery'  => ['icon'=>'bi-pencil-square',  'label'=>'Kanstovar'],
     'orders'      => ['icon'=>'bi-bag-check',      'label'=>'Buyurtmalar'],
     'sellers'     => ['icon'=>'bi-shop-window',    'label'=>'Sotuvchilar'],
+    'hubs'        => ['icon'=>'bi-box-seam',       'label'=>'Hublar'],
     'couriers'    => ['icon'=>'bi-bicycle',        'label'=>'Kuryerlar'],
     'promocodes'  => ['icon'=>'bi-ticket-perforated','label'=>'Promokodlar'],
     'discounts'   => ['icon'=>'bi-percent',        'label'=>'Chegirmalar'],
@@ -237,4 +238,5 @@ function toggleAllPerms(state) {
 <?php $__env->stopPush(); ?>
 
 <?php $__env->stopSection(); ?>
+
 <?php echo $__env->make('a122.layouts.admin', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH /Users/abbos/PROJECTS/MY/kitobchi-server/kitobchi-laravel/resources/views/a122/admins/edit.blade.php ENDPATH**/ ?>

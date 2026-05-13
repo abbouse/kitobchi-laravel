@@ -15,9 +15,20 @@ class UserCard extends Model
      */
     protected $fillable = [
         'user_id',
+        'provider',
+        'provider_card_id',
+        'card_name',
         'card_number',
+        'expire_date',
+        'phone_number',
+        'vendor',
+        'processing',
         'payme_token',
         'is_verified',
+        'is_default',
+        'is_temporary',
+        'pending_order_id',
+        'provider_meta',
     ];
 
     /**
@@ -25,8 +36,11 @@ class UserCard extends Model
      */
     protected $casts = [
         'is_verified' => 'boolean',
+        'is_default' => 'boolean',
+        'is_temporary' => 'boolean',
+        'provider_meta' => 'array',
         // Payme tokenini bazada shifrlangan holda saqlash juda muhim!
-        'payme_token' => 'encrypted', 
+        'payme_token' => 'encrypted',
     ];
 
     /**
@@ -43,5 +57,10 @@ class UserCard extends Model
     public function scopeVerified($query)
     {
         return $query->where('is_verified', true);
+    }
+
+    public function getMaskedNumberAttribute(): string
+    {
+        return (string) ($this->card_number ?? '');
     }
 }

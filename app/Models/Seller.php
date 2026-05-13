@@ -234,4 +234,14 @@ class Seller extends Authenticatable
     {
         return $this->hasMany(SellerContractHistory::class, 'seller_id')->latest('created_at');
     }
+
+    public function hubStaffRoles()
+    {
+        return $this->morphMany(HubStaff::class, 'staffable');
+    }
+
+    public function courierTasks()
+    {
+        return $this->hasMany(CourierTask::class, 'seller_id');
+    }
 }

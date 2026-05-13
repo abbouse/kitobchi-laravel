@@ -7,6 +7,10 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
+        if (Schema::hasTable('delivery_zone_rules')) {
+            return;
+        }
+
         Schema::create('delivery_zone_rules', function (Blueprint $table) {
             $table->id();
             $table->string('zone_name');
@@ -18,7 +22,7 @@ return new class extends Migration {
             $table->decimal('center_lat', 10, 7)->nullable();
             $table->decimal('center_lon', 10, 7)->nullable();
             $table->decimal('radius_km', 8, 2)->nullable();
-            $table->foreignId('delivery_service_id')->constrained('delivery_services')->cascadeOnDelete();
+            $table->unsignedInteger('delivery_service_id');
             $table->integer('priority')->default(100);
             $table->integer('base_price')->nullable();
             $table->decimal('additional_seller_percent', 6, 2)->default(50);

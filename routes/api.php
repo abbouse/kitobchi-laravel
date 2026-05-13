@@ -34,5 +34,6 @@ Route::prefix('v1')->group(function () {
     Route::prefix('kitobchi')->group(base_path('routes/api_user.php')); 
     Route::prefix('seller')->group(base_path('routes/api_seller.php'));
     Route::prefix('courier')->group(base_path('routes/api_courier.php'));
+    Route::prefix('hub')->group(base_path('routes/api_hub.php'));
 
 });

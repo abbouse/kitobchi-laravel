@@ -163,6 +163,7 @@ unset($__errorArgs, $__bag); ?>
                 'stationery' => ['Kanstovar',        'bi-pencil-square'],
                 'orders'     => ['Buyurtmalar',      'bi-bag-check'],
                 'sellers'    => ['Sotuvchilar',      'bi-shop-window'],
+                'hubs'       => ['Hublar',           'bi-box-seam'],
                 'couriers'   => ['Kuryerlar',        'bi-bicycle'],
                 'promocodes' => ['Promokodlar',      'bi-ticket-perforated'],
                 'settings'   => ['Sozlamalar',       'bi-gear'],
@@ -241,4 +242,5 @@ function toggleAllPerms(state) {
 }
 </script>
 <?php $__env->stopPush(); ?>
+
 <?php echo $__env->make('a122.layouts.admin', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH /Users/abbos/PROJECTS/MY/kitobchi-server/kitobchi-laravel/resources/views/a122/admins/create.blade.php ENDPATH**/ ?>

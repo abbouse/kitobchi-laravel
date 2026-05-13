@@ -33,6 +33,7 @@ use App\Http\Controllers\A122\ApiClientController;
 use App\Http\Controllers\A122\SearchHistoryController;
 use App\Http\Controllers\A122\SettingsController;
 use App\Http\Controllers\A122\LogisticsController;
+use App\Http\Controllers\A122\HubController;
 
 Route::prefix('a122')->name('admin.')->group(function () {
 
@@ -150,7 +151,11 @@ Route::prefix('a122')->name('admin.')->group(function () {
     Route::prefix('orders')->name('orders.')->group(function () {
         Route::get('/',                  [OrderController::class, 'index'])->name('index');
         Route::get('/{order}',           [OrderController::class, 'show'])->name('show');
+        Route::get('/{order}/print/label', [OrderController::class, 'printLabel'])->name('print.label');
+        Route::get('/{order}/print/receipt', [OrderController::class, 'printReceipt'])->name('print.receipt');
         Route::patch('/{order}/status',  [OrderController::class, 'updateStatus'])->name('status');
+        Route::post('/{order}/fulfillment/switch-mode', [OrderController::class, 'switchFulfillmentMode'])->name('switch-mode');
+        Route::post('/{order}/fulfillment/reroute-hub', [OrderController::class, 'rerouteHub'])->name('reroute-hub');
         Route::patch('/{order}/postal-return', [OrderController::class, 'markPostalReturned'])->name('postal-return');
         Route::post('/{order}/cancel',   [OrderController::class, 'adminCancel'])->name('cancel');
         Route::get('/export',            [OrderController::class, 'export'])->name('export');
@@ -206,6 +211,18 @@ Route::prefix('a122')->name('admin.')->group(function () {
         Route::post('/', [LogisticsController::class, 'store'])->name('store');
         Route::put('/{logistic}', [LogisticsController::class, 'update'])->name('update');
         Route::delete('/{logistic}', [LogisticsController::class, 'destroy'])->name('destroy');
+    });
+
+    // ── Hubs ──────────────────────────────────────────────────────
+    Route::prefix('hubs')->name('hubs.')->group(function () {
+        Route::get('/', [HubController::class, 'index'])->name('index');
+        Route::post('/', [HubController::class, 'store'])->name('store');
+        Route::put('/{hub}', [HubController::class, 'update'])->name('update');
+        Route::delete('/{hub}', [HubController::class, 'destroy'])->name('destroy');
+        Route::post('/staff', [HubController::class, 'storeStaff'])->name('staff.store');
+        Route::put('/staff/{staff}', [HubController::class, 'updateStaff'])->name('staff.update');
+        Route::post('/staff/{staff}/reset-password', [HubController::class, 'resetStaffPassword'])->name('staff.reset-password');
+        Route::patch('/staff/{staff}/toggle', [HubController::class, 'toggleStaff'])->name('staff.toggle');
     });
 
     // ── Couriers ───────────────────────────────────────────────────

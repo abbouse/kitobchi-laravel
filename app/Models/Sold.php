@@ -149,4 +149,14 @@ class Sold extends Model
     {
         return $this->belongsTo(self::class, 'resend_replacement_order_id');
     }
+
+    public function fulfillment()
+    {
+        return $this->hasOne(OrderFulfillment::class, 'order_id');
+    }
+
+    public function courierTasks()
+    {
+        return $this->hasMany(CourierTask::class, 'order_id');
+    }
 }

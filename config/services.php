@@ -39,6 +39,11 @@ return [
         'key' => env('PAYME_SUBSCRIBE_PASSWORD'),
         'endpoint' => env('PAYME_ENDPOINT'),
     ],
+    'paylov' => [
+        'base_url' => rtrim(env('PAYLOV_BASE_URL', 'https://paylov.uz'), '/'),
+        'access_token' => env('PAYLOV_ACCESS_TOKEN'),
+        'merchant_id' => env('PAYLOV_MERCHANT_ID'),
+    ],
 
     'kangaroo' => [
         'url' => env('KANGAROO_API_URL', 'https://kangaroo.kitobchi.com'),

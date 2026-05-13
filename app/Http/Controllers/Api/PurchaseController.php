@@ -30,8 +30,13 @@ use App\Services\OrderRealtimeService;
 use App\Services\PostalResendService;
 use App\Services\QrTokenService;
 use App\Services\DeliveryZoneResolverService;
+use App\Services\FulfillmentRoutingService;
+use App\Services\CourierTaskOrchestratorService;
+use App\Services\PaylovOrderPaymentService;
 use App\Services\UserReputationService;
+use App\Enums\FulfillmentMode;
 use App\Models\GiftCertificate;
+use App\Models\UserCard;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -48,7 +53,10 @@ class PurchaseController extends Controller
         private readonly PostalResendService $postalResendService,
         private readonly QrTokenService $qrTokenService,
         private readonly DeliveryZoneResolverService $deliveryZoneResolverService,
+        private readonly FulfillmentRoutingService $fulfillmentRoutingService,
+        private readonly CourierTaskOrchestratorService $courierTaskOrchestratorService,
         private readonly UserReputationService $userReputationService,
+        private readonly PaylovOrderPaymentService $paylovOrderPaymentService,
     ) {}
 
     // ── Xatolik response ──────────────────────────────────────
@@ -665,6 +673,37 @@ class PurchaseController extends Controller
             ]);
             $this->trace('sold_created', ['order_id' => $purchase->id, 'amount' => $finalPrice]);
 
+            $routingDecision = $this->fulfillmentRoutingService->decide(
+                buyerLocation: $location,
+                deliveryService: $deliveryService,
+                selectedDeliveryOffer: $selectedDeliveryOffer,
+                sellerCount: $sellerCount,
+                withPackaging: (bool) $withPackaging,
+                isCashOnDelivery: (int) $request->paymentStatus === 0,
+                cashCollectAmount: (int) round($finalPrice),
+            );
+
+            if (
+                in_array($routingDecision['mode'], [FulfillmentMode::HUB_BASED, FulfillmentMode::POSTAL_ONLY_VIA_HUB], true)
+                && !$routingDecision['hub']
+            ) {
+                DB::rollBack();
+                return $this->err("Bu buyurtma uchun mos hub topilmadi. Iltimos, logistika sozlamalarini tekshiring.", 422);
+            }
+
+            $fulfillment = $this->fulfillmentRoutingService->createForOrder(
+                order: $purchase,
+                routingDecision: $routingDecision,
+                deliveryService: $deliveryService,
+                deliveryZoneRuleId: (int) ($selectedDeliveryOffer['zone_rule_id'] ?? 0) ?: null,
+            );
+            $this->trace('fulfillment_created', [
+                'order_id' => $purchase->id,
+                'fulfillment_id' => $fulfillment->id,
+                'mode' => $routingDecision['mode']->value,
+                'hub_id' => $routingDecision['hub']?->id,
+            ]);
+
             if ($cashbackUsed > 0) {
                 $balanceAfter = (int) DB::table('users')->where('id', $user->id)->value('cashback');
                 $this->cashbackHistoryService->record(
@@ -777,6 +816,9 @@ class PurchaseController extends Controller
                 ]);
             }
             $this->trace('courier_order_created', ['order_id' => $courierOrder->id]);
+
+            $this->courierTaskOrchestratorService->ensureTasksForOrder($purchase);
+            $this->trace('courier_tasks_created', ['order_id' => $purchase->id]);
 
             // ── Statistika va stock yangilash ─────────────────────
             foreach ($productsToUpdate as $data) {
@@ -1345,6 +1387,46 @@ class PurchaseController extends Controller
         $this->appendFiscalReceiptMeta($order);
 
         return response()->json(['status' => 'success', 'data' => [$order]]);
+    }
+
+    public function payPendingOrderWithSavedCard(Request $request, int $order_id)
+    {
+        $request->validate([
+            'card_id' => 'required|integer|min:1',
+        ]);
+
+        $user = Auth::guard('user')->user();
+        if (!$user) {
+            return $this->err('Foydalanuvchi topilmadi!', 401);
+        }
+
+        $order = Sold::where('user_id', $user->id)->where('id', $order_id)->first();
+        if (!$order) {
+            return $this->err('Buyurtma topilmadi!', 404);
+        }
+
+        /** @var UserCard|null $card */
+        $card = $user->cards()
+            ->where('id', (int) $request->card_id)
+            ->where('is_verified', true)
+            ->first();
+
+        if (!$card) {
+            return $this->err('Karta topilmadi!', 404);
+        }
+
+        try {
+            $payment = $this->paylovOrderPaymentService->payPendingOrder($order, $user, $card);
+            $this->appendFiscalReceiptMeta($order->fresh());
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'To‘lov muvaffaqiyatli qabul qilindi.',
+                'data' => $payment,
+            ]);
+        } catch (\Throwable $e) {
+            return $this->err($e->getMessage(), 422);
+        }
     }
 
     public function createPostalResend(Request $request, int $order_id)

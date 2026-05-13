@@ -10,6 +10,10 @@ class Transaction extends Model
 {
     use HasFactory;
     protected $fillable = [
+        'owner_id',
+        'provider',
+        'provider_transaction_id',
+        'provider_card_id',
         'paycom_transaction_id',
         'paycom_time',
         'paycom_time_datetime',
@@ -26,11 +30,13 @@ class Transaction extends Model
         'perform_time_unix',
         'perform_fiscal_data',
         'cancel_fiscal_data',
+        'provider_response',
     ];
 
     protected $casts = [
         'perform_fiscal_data' => 'array',
         'cancel_fiscal_data' => 'array',
+        'provider_response' => 'array',
     ];
     public static function getTransactionsByTimeRange($from, $to)
     {

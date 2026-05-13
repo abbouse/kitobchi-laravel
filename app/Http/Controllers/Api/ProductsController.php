@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Traits\HasProductVisibility;
 use App\Models\Books;
 use App\Models\Stationery;
 use App\Models\BookCategories;
@@ -23,6 +24,8 @@ use Carbon\Carbon;
 
 class ProductsController extends Controller
 {
+    use HasProductVisibility;
+
     // =========================================================================
     //  HELPERS
     // =========================================================================
@@ -210,45 +213,23 @@ class ProductsController extends Controller
 
     private function bookScope()
     {
-        return Books::where('count', '>', 0)
-            ->where('is_hidden', 0)
-            ->where('is_approved', 1)
-            ->whereHas('seller', fn($q) => $q
-                ->where('is_hidden', 0)
-                ->where('status', 'approved')
-                ->where('parent_id', 0));
+        return $this->visibleBooks();
     }
 
     // ── Stationery uchun base scope ───────────────────────────────
     private function stationeryScope()
     {
-        return Stationery::where('stock', '>', 0)
-            ->where('is_hidden', 0)
-            ->where('is_approved', 1)
-            ->whereHas('seller', fn($q) => $q
-                ->where('is_hidden', 0)
-                ->where('status', 'approved')
-                ->where('parent_id', 0));
+        return $this->visibleStationeries();
     }
 
     private function publicBookDetailScope()
     {
-        return Books::where('is_hidden', 0)
-            ->where('is_approved', 1)
-            ->whereHas('seller', fn($q) => $q
-                ->where('is_hidden', 0)
-                ->where('status', 'approved')
-                ->where('parent_id', 0));
+        return $this->visibleBooks();
     }
 
     private function publicStationeryDetailScope()
     {
-        return Stationery::where('is_hidden', 0)
-            ->where('is_approved', 1)
-            ->whereHas('seller', fn($q) => $q
-                ->where('is_hidden', 0)
-                ->where('status', 'approved')
-                ->where('parent_id', 0));
+        return $this->visibleStationeries();
     }
 
     // ── Recommended scope (hozir amal qilayotgan) ─────────────────
@@ -737,11 +718,11 @@ class ProductsController extends Controller
             ->firstOrFail();
 
         $baseBookQ = fn() => Books::where('seller_id', $id)
-            ->where('is_hidden', 0)->where('is_approved', 1)->where('count', '>', 0)
+            ->where('status', true)->where('is_hidden', 0)->where('is_approved', 1)
             ->with(['category', 'tags', 'seller']);
 
         $baseStatQ = fn() => Stationery::where('seller_id', $id)
-            ->where('is_hidden', 0)->where('is_approved', 1)->where('stock', '>', 0)
+            ->where('status', true)->where('is_hidden', 0)->where('is_approved', 1)
             ->with(['category', 'tags', 'variants', 'seller']);
 
         // Chegirmali kitoblar (muddati o'tmagan)
@@ -764,7 +745,7 @@ class ProductsController extends Controller
 
         // Kategoriya bo'yicha kitoblar
         $bookCategoryIds = Books::where('seller_id', $id)
-            ->where('is_hidden', 0)->where('is_approved', 1)->where('count', '>', 0)
+            ->where('status', true)->where('is_hidden', 0)->where('is_approved', 1)
             ->whereNotNull('category_id')->distinct()->pluck('category_id');
 
         $booksByCategory = [];
@@ -805,7 +786,7 @@ class ProductsController extends Controller
 
         // Kategoriya bo'yicha stationery
         $statCategoryIds = Stationery::where('seller_id', $id)
-            ->where('is_hidden', 0)->where('is_approved', 1)->where('stock', '>', 0)
+            ->where('status', true)->where('is_hidden', 0)->where('is_approved', 1)
             ->whereNotNull('category_id')->distinct()->pluck('category_id');
 
         $stationeriesByCategory = [];
@@ -827,10 +808,10 @@ class ProductsController extends Controller
         }
 
         $bookCount = Books::where('seller_id', $id)
-            ->where('is_hidden', 0)->where('is_approved', 1)->where('count', '>', 0)
+            ->where('status', true)->where('is_hidden', 0)->where('is_approved', 1)
             ->count();
         $stationeryCount = Stationery::where('seller_id', $id)
-            ->where('is_hidden', 0)->where('is_approved', 1)->where('stock', '>', 0)
+            ->where('status', true)->where('is_hidden', 0)->where('is_approved', 1)
             ->count();
 
         return response()->json([
@@ -883,18 +864,18 @@ class ProductsController extends Controller
         if ($type === 'book') {
             $query = Books::where('seller_id', $seller->id)
                 ->where('category_id', $categoryId)
+                ->where('status', true)
                 ->where('is_hidden', 0)
                 ->where('is_approved', 1)
-                ->where('count', '>', 0)
                 ->with(['category', 'tags', 'seller'])
                 ->orderByDesc('totalSalesWeek')
                 ->orderByDesc('totalSales');
         } else {
             $query = Stationery::where('seller_id', $seller->id)
                 ->where('category_id', $categoryId)
+                ->where('status', true)
                 ->where('is_hidden', 0)
                 ->where('is_approved', 1)
-                ->where('stock', '>', 0)
                 ->with(['category', 'tags', 'variants', 'seller'])
                 ->orderByDesc('totalSalesWeek')
                 ->orderByDesc('totalSales');
@@ -1225,16 +1206,8 @@ class ProductsController extends Controller
         }
 
         $product = $type === 'book'
-            ? Books::query()
-                ->where('id', $id)
-                ->where('is_hidden', 0)
-                ->where('is_approved', 1)
-                ->first()
-            : Stationery::query()
-                ->where('id', $id)
-                ->where('is_hidden', 0)
-                ->where('is_approved', 1)
-                ->first();
+            ? $this->publicBookDetailScope()->find($id)
+            : $this->publicStationeryDetailScope()->find($id);
 
         if (!$product || !(int) ($product->seller_id ?? 0)) {
             return response()->json([
@@ -1281,17 +1254,17 @@ class ProductsController extends Controller
             ->where('status', 'approved')
             ->where(fn($q) => $q
                 ->whereHas('books', fn($b) => $b
-                    ->where('count', '>', 0)->where('is_hidden', 0)->where('is_approved', 1))
+                    ->where('status', true)->where('is_hidden', 0)->where('is_approved', 1))
                 ->orWhereHas('stationeries', fn($s) => $s
-                    ->where('stock', '>', 0)->where('is_hidden', 0)->where('is_approved', 1))
+                    ->where('status', true)->where('is_hidden', 0)->where('is_approved', 1))
             )
             ->with([
                 'books' => fn($q) => $q
-                    ->where('count', '>', 0)->where('is_hidden', 0)->where('is_approved', 1)
+                    ->where('status', true)->where('is_hidden', 0)->where('is_approved', 1)
                     ->latest('created_at')->take(20)
                     ->with(['category', 'tags', 'seller']),
                 'stationeries' => fn($q) => $q
-                    ->where('stock', '>', 0)->where('is_hidden', 0)->where('is_approved', 1)
+                    ->where('status', true)->where('is_hidden', 0)->where('is_approved', 1)
                     ->latest('created_at')->take(20)
                     ->with(['category', 'tags', 'variants', 'seller']),
             ])

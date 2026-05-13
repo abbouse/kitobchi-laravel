@@ -200,9 +200,11 @@ class HisobotController extends Controller
         $ordersQuery = $this->baseCompletedOrders($storeSellerId, $period['start'], $period['end']);
         $this->applyBranchFilterToSellerOrders($ordersQuery, $selectedLocation);
         $salesCount = (clone $ordersQuery)->count();
-        $salesPrice = (int) ((clone $ordersQuery)->sum('amount') ?? 0);
+        $salesPrice = (int) ((clone $ordersQuery)->sum('seller_orders.amount') ?? 0);
         $sellerBalance = (int) optional(Seller::find($storeSellerId))->balance;
-        $sellerClients = (clone $ordersQuery)->distinct('client_id')->count('client_id');
+        $sellerClients = (clone $ordersQuery)
+            ->distinct('seller_orders.client_id')
+            ->count('seller_orders.client_id');
 
         $itemsSold = (int) SellerOrderItem::query()
             ->join('seller_orders', 'seller_orders.id', '=', 'seller_order_items.order_id')
@@ -246,6 +248,8 @@ class HisobotController extends Controller
             ->groupBy('seller_orders.seller_id')
             ->tap(fn ($query) => $this->applyCompletedPaidSoldFilter($query))
             ->orderByDesc('total_sales')
+            ->orderByDesc('orders_count')
+            ->orderBy('seller_orders.seller_id')
             ->take(10)
             ->get();
 

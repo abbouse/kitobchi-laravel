@@ -23,6 +23,14 @@ return [
             'driver'   => 'sanctum',
             'provider' => 'couriers',
         ],
+        'hub' => [
+            'driver'   => 'sanctum',
+            'provider' => 'hub_staff',
+        ],
+        'hub_web' => [
+            'driver'   => 'session',
+            'provider' => 'hub_staff',
+        ],
 
         // ✅ Panel admin guard (session based)
         'panel' => [
@@ -43,6 +51,10 @@ return [
         'couriers' => [
             'driver' => 'eloquent',
             'model'  => App\Models\Couriers::class,
+        ],
+        'hub_staff' => [
+            'driver' => 'eloquent',
+            'model'  => App\Models\HubStaff::class,
         ],
 
         // ✅ Admin provider

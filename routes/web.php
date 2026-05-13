@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\CareersController;
+use App\Http\Controllers\HubDesk\AuthController as HubDeskAuthController;
+use App\Http\Controllers\HubDesk\DeskController as HubDeskDeskController;
 use App\Http\Controllers\LegalController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\PaymentController;
@@ -112,6 +114,21 @@ Route::group(['prefix' => 'legal'], function () {
     Route::get('/all', [LegalController::class, 'index']);
     Route::get('/{slug}', [LegalController::class, 'show'])->name('legal.policy')
         ->where('slug', '[a-z0-9\-]+');
+});
+
+Route::prefix('hub-desk')->name('hubdesk.')->group(function () {
+    Route::middleware('guest:hub_web')->group(function () {
+        Route::get('/login', [HubDeskAuthController::class, 'showLogin'])->name('login');
+        Route::post('/login', [HubDeskAuthController::class, 'login'])->middleware('throttle:auth-panel')->name('login.post');
+    });
+
+    Route::middleware('auth.hubdesk')->group(function () {
+        Route::post('/logout', [HubDeskAuthController::class, 'logout'])->name('logout');
+        Route::get('/', [HubDeskDeskController::class, 'index'])->name('index');
+        Route::get('/fulfillments/{fulfillment}', [HubDeskDeskController::class, 'show'])->name('show');
+        Route::get('/fulfillments/{fulfillment}/print/label', [HubDeskDeskController::class, 'printLabel'])->name('print.label');
+        Route::get('/fulfillments/{fulfillment}/print/receipt', [HubDeskDeskController::class, 'printReceipt'])->name('print.receipt');
+    });
 });
 
 require __DIR__.'/a122.php';

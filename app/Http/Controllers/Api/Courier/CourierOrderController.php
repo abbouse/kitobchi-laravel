@@ -18,6 +18,8 @@ use App\Services\OrderService;
 use App\Services\OrderStatusPushService;
 use App\Services\OrderRealtimeService;
 use App\Services\QrTokenService;
+use App\Services\CourierTaskOrchestratorService;
+use App\Services\CourierCashOnDeliveryCapacityService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -31,6 +33,8 @@ class CourierOrderController extends Controller
         private readonly OrderRealtimeService $orderRealtimeService,
         private readonly QrTokenService $qrTokenService,
         private readonly OrderStatusPushService $orderStatusPushService,
+        private readonly CourierTaskOrchestratorService $courierTaskOrchestratorService,
+        private readonly CourierCashOnDeliveryCapacityService $courierCashOnDeliveryCapacityService,
     ) {
     }
 
@@ -83,12 +87,41 @@ class CourierOrderController extends Controller
             ])
             ->latest()
             ->get()
-            ->map(function ($order) {
+            ->filter(function ($order) use ($courier) {
+                $orderModel = $order->order()->first();
+                if (!$orderModel) {
+                    return false;
+                }
+
+                $tasks = $this->courierTaskOrchestratorService->ensureTasksForOrder($orderModel)
+                    ->filter(fn ($task) => $task->courier_id === null && $task->status_code === 'assigned');
+
+                if ($tasks->isEmpty()) {
+                    return false;
+                }
+
+                $codExposure = (int) $tasks
+                    ->filter(fn ($task) => $task->is_cod)
+                    ->sum(fn ($task) => (int) ($task->cash_collect_amount ?? 0));
+
+                return $codExposure === 0
+                    || $this->courierCashOnDeliveryCapacityService->canTakeCashOrder($courier, $codExposure);
+            })
+            ->map(function ($order) use ($courier) {
                 if ($order->status_code === CourierOrderStatusCode::PAYMENT_PENDING->value
                     && ($order->paymentStatus?->payment_status_code ?? null) === PaymentStatusCode::PAID->value) {
                     $order->status = CourierOrderStatusCode::PENDING->legacy();
                     $order->status_code = CourierOrderStatusCode::PENDING->value;
                 }
+                $taskSummary = $this->buildTaskSummary($order->order()->first(), null);
+                $order->task_leg = $taskSummary['task_leg'];
+                $order->fulfillment_mode = $taskSummary['fulfillment_mode'];
+                $order->cash_collect_amount = $taskSummary['cash_collect_amount'];
+                $order->is_cod = $taskSummary['is_cod'];
+                $order->task_pickup_address = $taskSummary['pickup_address'];
+                $order->task_dropoff_address = $taskSummary['dropoff_address'];
+                $order->hub = $taskSummary['hub'];
+                $order->available_collateral = $this->courierCashOnDeliveryCapacityService->availableCollateral($courier);
                 $this->bonusService->normalizeBonusState($order);
                 return $this->hydrateCourierOrderItems($order, Auth::guard('courier')->id());
             });
@@ -134,6 +167,15 @@ class CourierOrderController extends Controller
         }
 
         $show = $this->hydrateCourierOrderItems($show, $courier->id);
+        $taskSummary = $this->buildTaskSummary($show->order()->first(), $courier->id);
+        $show->task_leg = $taskSummary['task_leg'];
+        $show->fulfillment_mode = $taskSummary['fulfillment_mode'];
+        $show->cash_collect_amount = $taskSummary['cash_collect_amount'];
+        $show->is_cod = $taskSummary['is_cod'];
+        $show->task_pickup_address = $taskSummary['pickup_address'];
+        $show->task_dropoff_address = $taskSummary['dropoff_address'];
+        $show->hub = $taskSummary['hub'];
+        $show->available_collateral = $this->courierCashOnDeliveryCapacityService->availableCollateral($courier);
         $this->bonusService->normalizeBonusState($show);
 
         return response()->json([
@@ -183,6 +225,7 @@ class CourierOrderController extends Controller
                 }
                 $orderCustomer->completed_at ??= now();
                 $orderCustomer->save();
+                $this->courierTaskOrchestratorService->markDeliveredToCustomer($orderCustomer, $courier->id);
 
                 DB::afterCommit(fn () => $this->orderStatusPushService->sendForTransition($orderCustomer->fresh(), $previousStatus, 'C'));
             });
@@ -199,7 +242,8 @@ class CourierOrderController extends Controller
                 'courierPrice' => (int) $order->courierPrice,
             ], 200);
         } catch (\Throwable $th) {
-            return response()->json(['success' => false, 'message' => 'Xatolik: ' . $th->getMessage()], 500);
+            $code = $th instanceof \RuntimeException ? 422 : 500;
+            return response()->json(['success' => false, 'message' => 'Xatolik: ' . $th->getMessage()], $code);
         }
     }
 
@@ -244,6 +288,8 @@ class CourierOrderController extends Controller
                     ], 404);
                 }
 
+                $this->courierTaskOrchestratorService->acceptAvailableTasksForCourier($sold, $courier);
+
                 $sold->courier_id   = $courier->id;
                 $sold->courierName  = $courier->first_name . ' ' . $courier->last_name;
                 $sold->status       = OrderStatusCode::PACKING->legacy();
@@ -277,7 +323,8 @@ class CourierOrderController extends Controller
 
             return $response;
         } catch (\Throwable $th) {
-            return response()->json(['success' => false, 'message' => 'Xatolik: ' . $th->getMessage()], 500);
+            $code = $th instanceof \RuntimeException ? 422 : 500;
+            return response()->json(['success' => false, 'message' => 'Xatolik: ' . $th->getMessage()], $code);
         }
     }
 
@@ -304,7 +351,16 @@ class CourierOrderController extends Controller
             ")
             ->orderByDesc('updated_at')
             ->get()
-            ->map(function ($order) {
+            ->map(function ($order) use ($courier) {
+                $taskSummary = $this->buildTaskSummary($order->order()->first(), $courier->id);
+                $order->task_leg = $taskSummary['task_leg'];
+                $order->fulfillment_mode = $taskSummary['fulfillment_mode'];
+                $order->cash_collect_amount = $taskSummary['cash_collect_amount'];
+                $order->is_cod = $taskSummary['is_cod'];
+                $order->task_pickup_address = $taskSummary['pickup_address'];
+                $order->task_dropoff_address = $taskSummary['dropoff_address'];
+                $order->hub = $taskSummary['hub'];
+                $order->available_collateral = $this->courierCashOnDeliveryCapacityService->availableCollateral($courier);
                 $this->bonusService->normalizeBonusState($order);
                 return $this->hydrateCourierOrderItems($order, $order->courier_id);
             });
@@ -470,6 +526,83 @@ class CourierOrderController extends Controller
             })
             ->where('qr', $qr)
             ->where('courier_id', $courierId)
+            ->first();
+    }
+
+    private function buildTaskSummary(?Sold $order, ?int $courierId): array
+    {
+        if (!$order) {
+            return [
+                'task_leg' => null,
+                'fulfillment_mode' => null,
+                'cash_collect_amount' => 0,
+                'is_cod' => false,
+                'pickup_address' => null,
+                'dropoff_address' => null,
+                'hub' => null,
+            ];
+        }
+
+        $order->loadMissing('fulfillment.hub', 'courierTasks');
+        $tasks = $order->courierTasks;
+        if ($tasks->isEmpty()) {
+            $tasks = $this->courierTaskOrchestratorService->ensureTasksForOrder($order);
+        }
+        if ($courierId) {
+            $tasks = $tasks->where('courier_id', $courierId);
+        }
+
+        $activeTask = $this->pickPreferredTask($tasks, $courierId);
+
+        return [
+            'task_leg' => $activeTask?->leg,
+            'fulfillment_mode' => $order->fulfillment?->fulfillment_mode,
+            'cash_collect_amount' => (int) ($activeTask?->cash_collect_amount ?? $order->fulfillment?->cash_collect_amount ?? 0),
+            'is_cod' => (bool) ($activeTask?->is_cod ?? $order->fulfillment?->is_cod ?? false),
+            'pickup_address' => $activeTask?->pickup_address,
+            'dropoff_address' => $activeTask?->dropoff_address,
+            'hub' => $order->fulfillment?->hub?->only(['id', 'name', 'code', 'address', 'lat', 'lon']),
+        ];
+    }
+
+    private function pickPreferredTask(\Illuminate\Support\Collection $tasks, ?int $courierId): ?CourierTask
+    {
+        if ($tasks->isEmpty()) {
+            return null;
+        }
+
+        if ($courierId === null) {
+            $availableTask = $tasks
+                ->whereNull('courier_id')
+                ->first(fn (CourierTask $task) => $task->status_code === CourierTaskStatusCode::ASSIGNED->value);
+
+            if ($availableTask) {
+                return $availableTask;
+            }
+        }
+
+        $priority = [
+            CourierTaskStatusCode::ASSIGNED->value => 10,
+            CourierTaskStatusCode::ACCEPTED->value => 20,
+            CourierTaskStatusCode::ARRIVED_AT_PICKUP->value => 30,
+            CourierTaskStatusCode::PICKED_UP->value => 40,
+            CourierTaskStatusCode::DROPPED_OFF->value => 50,
+            CourierTaskStatusCode::COMPLETED->value => 60,
+            CourierTaskStatusCode::FAILED->value => 70,
+            CourierTaskStatusCode::CANCELLED->value => 80,
+        ];
+
+        return $tasks
+            ->sort(function (CourierTask $a, CourierTask $b) use ($priority) {
+                $aPriority = $priority[$a->status_code] ?? 999;
+                $bPriority = $priority[$b->status_code] ?? 999;
+
+                if ($aPriority === $bPriority) {
+                    return (int) $b->id <=> (int) $a->id;
+                }
+
+                return $aPriority <=> $bPriority;
+            })
             ->first();
     }
 }

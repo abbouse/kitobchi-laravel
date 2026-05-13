@@ -86,4 +86,9 @@ class Admin extends Authenticatable
             default      => 'muted',
         };
     }
+
+    public function hubStaffRoles()
+    {
+        return $this->morphMany(HubStaff::class, 'staffable');
+    }
 }

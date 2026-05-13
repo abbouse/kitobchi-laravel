@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Enums\CourierOrderStatusCode;
+use App\Enums\FulfillmentMode;
+use App\Enums\FulfillmentStatusCode;
 use App\Enums\OrderStatusCode;
 use App\Enums\PaymentStatusCode;
 use App\Enums\SellerOrderStatusCode;
@@ -57,6 +59,7 @@ class AdminOrderStatusSyncService
             $order->status_code = $statusCode->value;
             $this->syncCompletionState($order);
             $order->save();
+            $this->syncFulfillmentFromMainStatus($order, $statusCode->value);
 
             $sellerStatus = $this->mapMainToSeller($statusCode->value, $order->payment_status_code);
             SellerOrder::where('order_id', $order->id)->update([
@@ -110,6 +113,7 @@ class AdminOrderStatusSyncService
             $order->status = OrderStatusCode::from($order->status_code)->legacy();
             $this->syncCompletionState($order);
             $order->save();
+            $this->syncFulfillmentFromSellerStatus($order, $statusCode);
 
             $courierStatus = $this->resolveCourierStatusForSellerUpdate($order, $statusCode);
             CourierOrder::where('order_id', $order->id)->update([
@@ -159,6 +163,7 @@ class AdminOrderStatusSyncService
 
             $this->syncCompletionState($order);
             $order->save();
+            $this->syncFulfillmentFromCourierStatus($order, $statusCode);
 
             SellerOrder::where('order_id', $order->id)->update([
                 'status' => $this->mapCourierToSeller($statusCode->value)->legacy(),
@@ -295,5 +300,59 @@ class AdminOrderStatusSyncService
         }
 
         $order->completed_at = null;
+    }
+
+    private function syncFulfillmentFromMainStatus(Sold $order, string $status): void
+    {
+        $fulfillment = $order->fulfillment()->first();
+        if (!$fulfillment) {
+            return;
+        }
+
+        $fulfillment->status_code = match ($status) {
+            OrderStatusCode::DELIVERED->value => FulfillmentStatusCode::DELIVERED->value,
+            OrderStatusCode::RETURNED->value => FulfillmentStatusCode::RETURNED->value,
+            OrderStatusCode::CANCELLED->value => FulfillmentStatusCode::CANCELLED->value,
+            OrderStatusCode::IN_DELIVERY->value => $fulfillment->fulfillment_mode === FulfillmentMode::DIRECT_COURIER->value
+                ? FulfillmentStatusCode::OUT_FOR_DELIVERY->value
+                : FulfillmentStatusCode::ASSIGNED_LAST_MILE->value,
+            default => $fulfillment->status_code,
+        };
+        $fulfillment->save();
+    }
+
+    private function syncFulfillmentFromSellerStatus(Sold $order, SellerOrderStatusCode $statusCode): void
+    {
+        $fulfillment = $order->fulfillment()->first();
+        if (!$fulfillment) {
+            return;
+        }
+
+        $fulfillment->status_code = match ($statusCode) {
+            SellerOrderStatusCode::ACCEPTED => FulfillmentStatusCode::AWAITING_SELLER_PREP->value,
+            SellerOrderStatusCode::HANDED_TO_COURIER => $fulfillment->fulfillment_mode === FulfillmentMode::DIRECT_COURIER->value
+                ? FulfillmentStatusCode::OUT_FOR_DELIVERY->value
+                : FulfillmentStatusCode::PICKED_FROM_SELLER->value,
+            SellerOrderStatusCode::CANCELLED => FulfillmentStatusCode::CANCELLED->value,
+            default => $fulfillment->status_code,
+        };
+        $fulfillment->save();
+    }
+
+    private function syncFulfillmentFromCourierStatus(Sold $order, CourierOrderStatusCode $statusCode): void
+    {
+        $fulfillment = $order->fulfillment()->first();
+        if (!$fulfillment) {
+            return;
+        }
+
+        $fulfillment->status_code = match ($statusCode) {
+            CourierOrderStatusCode::IN_DELIVERY => FulfillmentStatusCode::OUT_FOR_DELIVERY->value,
+            CourierOrderStatusCode::DELIVERED => FulfillmentStatusCode::DELIVERED->value,
+            CourierOrderStatusCode::RETURNED => FulfillmentStatusCode::RETURNED->value,
+            CourierOrderStatusCode::CANCELLED => FulfillmentStatusCode::CANCELLED->value,
+            default => $fulfillment->status_code,
+        };
+        $fulfillment->save();
     }
 }

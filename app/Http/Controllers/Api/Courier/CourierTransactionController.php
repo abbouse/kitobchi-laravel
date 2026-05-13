@@ -5,13 +5,16 @@ namespace App\Http\Controllers\Api\Courier;
 use App\Http\Controllers\Controller;
 use App\Models\CourierTransaction;
 use App\Models\CommissionSetting;
+use App\Services\CourierCashOnDeliveryCapacityService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class CourierTransactionController extends Controller
 {
-    public function __construct()
+    public function __construct(
+        private readonly CourierCashOnDeliveryCapacityService $courierCashOnDeliveryCapacityService,
+    )
     {
         $this->middleware('auth:courier');
     }
@@ -25,7 +28,11 @@ class CourierTransactionController extends Controller
         try {
             $transaction = DB::transaction(function () use ($courier) {
                 $lockedCourier = \App\Models\Couriers::query()->lockForUpdate()->find($courier->id);
-                if (!$lockedCourier || (int) $lockedCourier->balance <= 0) {
+                $withdrawable = $lockedCourier
+                    ? $this->courierCashOnDeliveryCapacityService->withdrawableBalance($lockedCourier)
+                    : 0;
+
+                if (!$lockedCourier || $withdrawable <= 0) {
                     return response()->json([
                         'success' => false,
                         'message' => 'Yechib olish uchun balans yetarli emas'
@@ -39,7 +46,7 @@ class CourierTransactionController extends Controller
                     ], 400);
                 }
 
-                $amount = (int) $lockedCourier->balance;
+                $amount = (int) $withdrawable;
                 $commissionSetting = CommissionSetting::where('priceFrom', '<=', $amount)
                     ->where('priceTo', '>=', $amount)
                     ->orderBy('priceFrom', 'desc')
@@ -66,7 +73,7 @@ class CourierTransactionController extends Controller
                     'status'           => 'pending',
                 ]);
 
-                $lockedCourier->balance = 0;
+                $lockedCourier->balance = max(0, (int) $lockedCourier->balance - $amount);
                 $lockedCourier->save();
 
                 return $transaction;
@@ -112,7 +119,9 @@ class CourierTransactionController extends Controller
             'success' => true,
             'data' => [
                 'total_paid' => (int) $courier->total_withdrawal,
-                'balance' => (int) $courier->balance
+                'balance' => (int) $courier->balance,
+                'cod_reserved_amount' => (int) ($courier->cod_reserved_amount ?? 0),
+                'withdrawable_balance' => $this->courierCashOnDeliveryCapacityService->withdrawableBalance($courier),
             ]
         ], 200);
     }

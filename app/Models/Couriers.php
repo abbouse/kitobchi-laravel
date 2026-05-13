@@ -27,6 +27,7 @@ class Couriers extends Authenticatable
         'password_reset_limit_reset_at',
         'fcm_token',
         'balance',
+        'cod_reserved_amount',
         'total_withdrawal',
         'payment_card',
         'status',
@@ -55,6 +56,7 @@ class Couriers extends Authenticatable
 
     protected $casts = [
         'balance' => 'integer',
+        'cod_reserved_amount' => 'integer',
         'password_reset_limit' => 'integer',
         'password_reset_limit_reset_at' => 'datetime',
 
@@ -124,6 +126,16 @@ class Couriers extends Authenticatable
     public function documents(): HasMany
     {
         return $this->hasMany(CourierDocument::class, 'courier_id')->latest();
+    }
+
+    public function hubStaffRoles()
+    {
+        return $this->morphMany(HubStaff::class, 'staffable');
+    }
+
+    public function courierTasks()
+    {
+        return $this->hasMany(CourierTask::class, 'courier_id');
     }
 
     // ── Helpers ────────────────────────────────────────────────────

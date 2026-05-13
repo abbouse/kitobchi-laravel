@@ -2,15 +2,23 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\PaymentStatusCode;
 use App\Http\Controllers\Controller;
+use App\Models\Sold;
 use App\Models\UserCard;
-use App\Services\PaymeService;
+use App\Services\PaylovOrderPaymentService;
+use App\Services\PaylovService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use RuntimeException;
 
 class CardController extends Controller
 {
-    protected $payme;
+    public function __construct(
+        private readonly PaylovOrderPaymentService $paylovOrderPaymentService,
+    ) {
+    }
 
     private function success(array $payload = [], int $status = 200)
     {
@@ -30,19 +38,35 @@ class CardController extends Controller
         ], $extra), $status);
     }
 
-    public function __construct(PaymeService $payme)
+    public function index(Request $request)
     {
-        $this->payme = $payme;
+        $user = $request->user();
+        if (!$user) {
+            return $this->error('Unauthorized', 401);
+        }
+
+        $cards = $user->cards()
+            ->where('is_verified', true)
+            ->where(function ($query) {
+                $query->whereNull('is_temporary')
+                    ->orWhere('is_temporary', false);
+            })
+            ->orderByDesc('is_default')
+            ->latest('id')
+            ->get()
+            ->map(fn (UserCard $card) => $this->serializeCard($card))
+            ->values();
+
+        return $this->success(['data' => $cards]);
     }
 
-    /**
-     * 1. Karta yaratish va SMS yuborish
-     */
     public function store(Request $request)
     {
         $request->validate([
             'number' => 'required|string|size:16',
             'expire' => 'required|string|size:4',
+            'remember_card' => 'sometimes|boolean',
+            'order_id' => 'sometimes|integer|min:1',
         ]);
 
         $user = $request->user();
@@ -50,123 +74,238 @@ class CardController extends Controller
             return $this->error('Unauthorized', 401);
         }
 
-        $response = $this->payme->request('cards.create', [
-            'card' => [
-                'number' => $request->number,
-                'expire' => $request->expire,
-            ],
-            'save' => true,
-        ]);
+        $rememberCard = (bool) $request->boolean('remember_card', true);
+        $orderId = $request->integer('order_id') ?: null;
 
-        if (isset($response['error'])) {
-            return $this->error(
-                $response['error']['message'] ?? 'Payme xatoligi',
-                400,
-                [
-                'error_code' => $response['error']['code'] ?? null
-                ]
-            );
+        if ($orderId) {
+            $order = Sold::query()
+                ->where('id', $orderId)
+                ->where('user_id', $user->id)
+                ->first();
+
+            if (!$order) {
+                return $this->error('Buyurtma topilmadi.', 404);
+            }
+
+            if ($order->payment_status_code !== PaymentStatusCode::CARD_PENDING->value) {
+                return $this->error('Bu buyurtma karta to‘lovini kutmayapti.');
+            }
         }
 
-        $cardData = $response['result']['card'];
+        try {
+            $response = PaylovService::make()->createUserCard(
+                (string) $user->id,
+                $request->string('number')->toString(),
+                $request->string('expire')->toString(),
+                $user->phone_number,
+            );
 
-        $card = UserCard::updateOrCreate(
-            ['card_number' => $cardData['number'], 'user_id' => $user->id],
-            [
-                'payme_token' => $cardData['token'],
+            $result = $response['result'] ?? [];
+            $providerCardId = (string) ($result['cid'] ?? '');
+            if ($providerCardId === '') {
+                throw new RuntimeException('Paylov card id qaytarmadi.');
+            }
+
+            $card = UserCard::create([
+                'user_id' => $user->id,
+                'provider' => 'paylov',
+                'provider_card_id' => $providerCardId,
+                'card_number' => $this->maskCardNumber($request->string('number')->toString()),
+                'expire_date' => $request->string('expire')->toString(),
+                'phone_number' => $result['otpSentPhone'] ?? $user->phone_number,
                 'is_verified' => false,
-            ]
-        );
+                'is_default' => false,
+                'is_temporary' => !$rememberCard,
+                'pending_order_id' => $orderId,
+                'provider_meta' => [
+                    'create' => $response,
+                ],
+            ]);
 
-        $verifyResponse = $this->payme->request('cards.get_verify_code', [
-            'token' => $cardData['token']
-        ]);
+            return $this->success([
+                'message' => 'Karta qo‘shildi. Endi SMS kodni kiriting.',
+                'data' => [
+                    'token' => (string) $card->id,
+                    'verification_id' => (string) $card->id,
+                    'provider_card_id' => $providerCardId,
+                    'number' => $card->card_number,
+                    'otp_sent_phone' => $result['otpSentPhone'] ?? null,
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('[Paylov] Card create failed', [
+                'user_id' => $user->id,
+                'message' => $e->getMessage(),
+            ]);
 
-        if (isset($verifyResponse['error'])) {
-            return $this->error(
-                'SMS yuborishda xatolik: ' . ($verifyResponse['error']['message'] ?? ''),
-                400
-            );
+            return $this->error($e->getMessage(), 422);
         }
-
-        return $this->success([
-            'message' => 'Karta yaratildi va SMS kod yuborildi',
-            'data' => [
-                'token' => $cardData['token'],
-                'number' => $cardData['number']
-            ]
-        ]);
     }
 
-    /**
-     * 2. SMS kodni tasdiqlash
-     */
     public function verify(Request $request)
     {
         $request->validate([
-            'token' => 'required|string',
-            'code'  => 'required|string|size:6',
+            'token' => 'required_without:verification_id|string',
+            'verification_id' => 'required_without:token|string',
+            'code' => 'required|string|size:6',
+            'card_name' => 'sometimes|string|max:120',
         ]);
 
-        $response = $this->payme->request('cards.verify', [
-            'token' => $request->token,
-            'code'  => $request->code,
-        ]);
-
-        if (isset($response['error'])) {
-            return $this->error(
-                'Tasdiqlash xatosi: ' . ($response['error']['message'] ?? 'Kod noto‘g‘ri'),
-                400
-            );
-        }
-
-        UserCard::where('payme_token', $request->token)
-            ->update(['is_verified' => true]);
-
-        return $this->success([
-            'message' => 'Karta muvaffaqiyatli tasdiqlandi va bog‘landi',
-            'card' => $response['result']['card']
-        ]);
-    }
-
-    /**
-     * 3. Foydalanuvchining bog'langan kartalarini ko'rish
-     */
-    public function index(Request $request)
-    {
-        if (!$request->user()) {
+        $user = $request->user();
+        if (!$user) {
             return $this->error('Unauthorized', 401);
         }
 
-        $cards = $request->user()->cards()
-            ->where('is_verified', true)
-            ->get(['id', 'card_number', 'created_at']);
+        $verificationId = (int) ($request->verification_id ?? $request->token);
 
-        return $this->success([
-            'data' => $cards
-        ]);
+        $card = $user->cards()->find($verificationId);
+        if (!$card) {
+            return $this->error('Karta tasdiqlash sessiyasi topilmadi.', 404);
+        }
+
+        try {
+            $confirm = PaylovService::make()->confirmUserCard(
+                (string) $card->provider_card_id,
+                $request->string('code')->toString(),
+                $request->string('card_name')->toString() ?: null,
+            );
+
+            $result = $confirm['result'] ?? [];
+            $card->fill([
+                'is_verified' => true,
+                'card_name' => $result['cardName'] ?? ($card->card_name ?: null),
+                'vendor' => $result['vendor'] ?? ($card->vendor ?: null),
+                'processing' => $result['processing'] ?? ($card->processing ?: null),
+                'provider_meta' => array_merge($card->provider_meta ?? [], [
+                    'confirm' => $confirm,
+                ]),
+            ]);
+
+            if (!$card->is_temporary && !$user->cards()->where('is_default', true)->exists()) {
+                $card->is_default = true;
+            }
+
+            $paymentPayload = null;
+            if ($card->pending_order_id) {
+                $order = Sold::query()
+                    ->where('id', $card->pending_order_id)
+                    ->where('user_id', $user->id)
+                    ->first();
+
+                if (!$order) {
+                    throw new RuntimeException('To‘lov uchun buyurtma topilmadi.');
+                }
+
+                $paymentPayload = $this->paylovOrderPaymentService->payPendingOrder($order, $user, $card);
+            }
+
+            $card->pending_order_id = null;
+            $card->save();
+
+            if ($card->is_temporary) {
+                try {
+                    PaylovService::make()->deleteUserCard((string) $card->provider_card_id);
+                } catch (\Throwable $e) {
+                    Log::warning('[Paylov] Temporary card delete failed', [
+                        'card_id' => $card->id,
+                        'provider_card_id' => $card->provider_card_id,
+                        'message' => $e->getMessage(),
+                    ]);
+                }
+
+                $card->delete();
+            }
+
+            return $this->success([
+                'message' => $paymentPayload !== null
+                    ? 'To‘lov muvaffaqiyatli qabul qilindi.'
+                    : 'Karta muvaffaqiyatli tasdiqlandi va bog‘landi.',
+                'card' => $this->serializeCard($card),
+                'payment' => $paymentPayload,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('[Paylov] Card verify failed', [
+                'user_id' => $user->id,
+                'card_id' => $card->id,
+                'message' => $e->getMessage(),
+            ]);
+
+            return $this->error($e->getMessage(), 422);
+        }
     }
 
-    /**
-     * 4. Kartani o'chirish
-     */
     public function destroy(Request $request, $id)
     {
-        if (!$request->user()) {
+        $user = $request->user();
+        if (!$user) {
             return $this->error('Unauthorized', 401);
         }
 
-        $card = $request->user()->cards()->findOrFail($id);
+        /** @var UserCard|null $card */
+        $card = $user->cards()->find($id);
+        if (!$card) {
+            return $this->error('Karta topilmadi.', 404);
+        }
 
-        // Payme-dan ham tokenni o'chirish (ixtiyoriy, lekin tavsiya etiladi)
-        $this->payme->request('cards.remove', [
-            'token' => $card->payme_token
-        ]);
+        try {
+            if ($card->provider === 'paylov' && filled($card->provider_card_id)) {
+                PaylovService::make()->deleteUserCard((string) $card->provider_card_id);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('[Paylov] Card remote delete failed', [
+                'user_id' => $user->id,
+                'card_id' => $card->id,
+                'message' => $e->getMessage(),
+            ]);
+        }
 
-        $card->delete();
+        DB::transaction(function () use ($card, $user) {
+            $wasDefault = (bool) $card->is_default;
+            $card->delete();
+
+            if ($wasDefault) {
+                $nextDefault = $user->cards()
+                    ->where('is_verified', true)
+                    ->latest('id')
+                    ->first();
+
+                if ($nextDefault) {
+                    $nextDefault->update(['is_default' => true]);
+                }
+            }
+        });
 
         return $this->success([
-            'message' => 'Karta o‘chirildi'
+            'message' => 'Karta o‘chirildi',
         ]);
+    }
+
+    private function serializeCard(UserCard $card): array
+    {
+        return [
+            'id' => $card->id,
+            'provider' => $card->provider,
+            'provider_card_id' => $card->provider_card_id,
+            'card_number' => $card->card_number,
+            'masked_number' => $card->card_number,
+            'card_name' => $card->card_name,
+            'expire_date' => $card->expire_date,
+            'vendor' => $card->vendor,
+            'processing' => $card->processing,
+            'is_default' => (bool) $card->is_default,
+            'created_at' => optional($card->created_at)?->toIso8601String(),
+        ];
+    }
+
+    private function maskCardNumber(string $number): string
+    {
+        $digits = preg_replace('/\D+/', '', $number) ?? '';
+        if (strlen($digits) < 12) {
+            return $digits;
+        }
+
+        return substr($digits, 0, 6)
+            . str_repeat('*', max(0, strlen($digits) - 10))
+            . substr($digits, -4);
     }
 }

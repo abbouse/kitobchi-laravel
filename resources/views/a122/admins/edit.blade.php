@@ -17,6 +17,7 @@ $allPermissions = [
     'stationery'  => ['icon'=>'bi-pencil-square',  'label'=>'Kanstovar'],
     'orders'      => ['icon'=>'bi-bag-check',      'label'=>'Buyurtmalar'],
     'sellers'     => ['icon'=>'bi-shop-window',    'label'=>'Sotuvchilar'],
+    'hubs'        => ['icon'=>'bi-box-seam',       'label'=>'Hublar'],
     'couriers'    => ['icon'=>'bi-bicycle',        'label'=>'Kuryerlar'],
     'promocodes'  => ['icon'=>'bi-ticket-perforated','label'=>'Promokodlar'],
     'discounts'   => ['icon'=>'bi-percent',        'label'=>'Chegirmalar'],

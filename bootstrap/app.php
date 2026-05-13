@@ -24,6 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'api.client' => \App\Http\Middleware\VerifyApiClient::class,
             'payme' => \App\Http\Middleware\PaymeMiddleware::class,
             'auth.panel' => \App\Http\Middleware\AuthenticatePanel::class,
+            'auth.hubdesk' => \App\Http\Middleware\AuthenticateHubDesk::class,
             'panel.permission' => \App\Http\Middleware\PanelPermission::class,
         ]);
 

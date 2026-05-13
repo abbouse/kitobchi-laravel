@@ -3,10 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Books;
+use App\Traits\HasProductVisibility;
 use App\Models\BookClub;
 use App\Models\BookClubLikes;
-use App\Models\Stationery;
 use App\Models\FavouriteProducts;
 use App\Support\ProductPayloadFormatter;
 use Illuminate\Http\Request;
@@ -14,26 +13,16 @@ use Illuminate\Support\Facades\Auth;
 
 class ShareController extends Controller
 {
+    use HasProductVisibility;
+
     private function publicBookScope()
     {
-        return Books::query()
-            ->where('is_hidden', 0)
-            ->where('is_approved', 1)
-            ->whereHas('seller', fn($q) => $q
-                ->where('is_hidden', 0)
-                ->where('status', 'approved')
-                ->where('parent_id', 0));
+        return $this->visibleBooks();
     }
 
     private function publicStationeryScope()
     {
-        return Stationery::query()
-            ->where('is_hidden', 0)
-            ->where('is_approved', 1)
-            ->whereHas('seller', fn($q) => $q
-                ->where('is_hidden', 0)
-                ->where('status', 'approved')
-                ->where('parent_id', 0));
+        return $this->visibleStationeries();
     }
 
     private function err(string $msg, int $code = 404)

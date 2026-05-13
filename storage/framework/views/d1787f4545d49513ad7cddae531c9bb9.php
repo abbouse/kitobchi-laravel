@@ -4,7 +4,7 @@
 <?php $__env->startSection('content'); ?>
 <?php
   $adminPerms = $admin->permissions ?? [];
-  $allPerms = ['users','books','stationery','orders','sellers','couriers','promocodes','discounts','settings','admins'];
+  $allPerms = ['users','books','stationery','orders','sellers','hubs','couriers','promocodes','discounts','settings','admins'];
   $rolePillClass = match($admin->role) {
     'superadmin' => 'danger',
     'admin' => 'accent',

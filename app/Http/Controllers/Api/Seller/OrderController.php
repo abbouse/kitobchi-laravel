@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Seller;
 
 use App\Enums\OrderStatusCode;
 use App\Enums\SellerOrderStatusCode;
+use App\Enums\FulfillmentMode;
 use App\Http\Controllers\Controller;
 use App\Models\Seller;
 use App\Models\Sold;
@@ -11,11 +12,13 @@ use App\Models\SellerOrder;
 use App\Models\Books;
 use App\Models\Couriers;
 use App\Models\CourierOrder;
+use App\Models\OrderFulfillment;
 use App\Services\AdminOrderStatusSyncService;
 use App\Services\CourierBonusService;
 use App\Services\OrderStatusPushService;
 use App\Services\OrderRealtimeService;
 use App\Services\QrTokenService;
+use App\Services\CourierTaskOrchestratorService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -29,6 +32,7 @@ class OrderController extends Controller
         private readonly OrderRealtimeService $orderRealtimeService,
         private readonly QrTokenService $qrTokenService,
         private readonly OrderStatusPushService $orderStatusPushService,
+        private readonly CourierTaskOrchestratorService $courierTaskOrchestratorService,
     )
     {
         $this->middleware('auth:seller');
@@ -105,6 +109,66 @@ class OrderController extends Controller
         ];
     }
 
+    private function resolveMainOrderStatus($order): ?string
+    {
+        $mainOrder = $order->order;
+        if (!$mainOrder) {
+            return null;
+        }
+
+        return $mainOrder->status_code ?? OrderStatusCode::fromLegacy($mainOrder->status)->value;
+    }
+
+    private function resolveLifecycleStatus($order): string
+    {
+        $sellerStatus = $order->status_code ?? SellerOrderStatusCode::fromLegacy($order->status)->value;
+        $mainStatus = $this->resolveMainOrderStatus($order);
+
+        if ($sellerStatus === SellerOrderStatusCode::CANCELLED->value || $mainStatus === OrderStatusCode::CANCELLED->value) {
+            return 'cancelled';
+        }
+
+        if ($mainStatus === OrderStatusCode::RETURNED->value) {
+            return 'returned';
+        }
+
+        if ($mainStatus === OrderStatusCode::DELIVERED->value) {
+            return 'delivered';
+        }
+
+        if ($mainStatus === OrderStatusCode::IN_DELIVERY->value) {
+            return 'in_delivery';
+        }
+
+        return $sellerStatus;
+    }
+
+    private function buildFulfillmentHint(?OrderFulfillment $fulfillment): ?string
+    {
+        if (!$fulfillment) {
+            return null;
+        }
+
+        $hubName = $fulfillment->hub?->name ?: 'Hub';
+
+        return match ($fulfillment->status_code) {
+            'awaiting_seller_prep' => "Buyurtma tayyorlanmoqda",
+            'ready_for_pickup' => "Kuryer {$hubName} uchun olib ketadi",
+            'picked_from_seller' => "Buyurtma {$hubName}ga olib ketilmoqda",
+            'arrived_at_hub' => "{$hubName} buyurtmani qabul qildi",
+            'qc_checked' => "{$hubName}da tekshiruv tugadi",
+            'packed' => "{$hubName}da qadoqlanmoqda",
+            'labeled' => "{$hubName} etiketka yopishtirdi",
+            'dispatched_to_post' => "{$hubName} pochtaga topshirdi",
+            'assigned_last_mile' => "{$hubName} mijozga yuborishni boshladi",
+            'out_for_delivery' => "Buyurtma mijozga olib borilmoqda",
+            'delivered' => "Buyurtma mijozga topshirildi",
+            'returned' => "Buyurtma qaytdi",
+            'cancelled' => "Buyurtma bekor qilindi",
+            default => null,
+        };
+    }
+
     private function formatSellerOrder($order): array
     {
         $items = collect($order->items ?? [])
@@ -128,6 +192,9 @@ class OrderController extends Controller
                 : true,
         ];
 
+        $fulfillment = $order->order?->fulfillment;
+        $lifecycleStatus = $this->resolveLifecycleStatus($order);
+
         return [
             'id' => (int) $order->id,
             'seller_id' => (int) $order->seller_id,
@@ -139,7 +206,13 @@ class OrderController extends Controller
             'items_count' => (int) ($order->items_count ?? count($items)),
             'status' => $order->status_code ?? SellerOrderStatusCode::fromLegacy($order->status)->value,
             'status_code' => $order->status_code,
+            'main_order_status' => $this->resolveMainOrderStatus($order),
+            'lifecycle_status' => $lifecycleStatus,
             'delivery_type' => $order->delivery_type,
+            'fulfillment_mode' => $fulfillment?->fulfillment_mode,
+            'fulfillment_status' => $fulfillment?->status_code,
+            'fulfillment_hint' => $this->buildFulfillmentHint($fulfillment),
+            'hub' => $fulfillment?->hub?->only(['id', 'name', 'code']),
             'address' => $address,
             'branch' => $branch,
             'items' => $items,
@@ -173,6 +246,7 @@ class OrderController extends Controller
             })
             ->with([
                 'seller.location',
+                'order.fulfillment.hub:id,name,code',
                 'items' => fn($q) => $q->where('seller_id', $storeSellerId)
                     ->with(['book', 'stationery', 'gift']),
             ])
@@ -193,7 +267,23 @@ class OrderController extends Controller
                     'cancelled' => SellerOrderStatusCode::CANCELLED,
                 ];
 
-                if (array_key_exists($statusFilter, $map)) {
+                if ($statusFilter === 'delivered') {
+                    $q->whereHas('order', function ($orderQuery) {
+                        $orderQuery->where('status_code', OrderStatusCode::DELIVERED->value)
+                            ->orWhere(function ($fallback) {
+                                $fallback->whereNull('status_code')
+                                    ->where('status', OrderStatusCode::DELIVERED->legacy());
+                            });
+                    });
+                } elseif ($statusFilter === 'returned') {
+                    $q->whereHas('order', function ($orderQuery) {
+                        $orderQuery->where('status_code', OrderStatusCode::RETURNED->value)
+                            ->orWhere(function ($fallback) {
+                                $fallback->whereNull('status_code')
+                                    ->where('status', OrderStatusCode::RETURNED->legacy());
+                            });
+                    });
+                } elseif (array_key_exists($statusFilter, $map)) {
                     $this->applySellerStatusFilter($q, $map[$statusFilter]);
                 }
             });
@@ -348,10 +438,25 @@ public function toCourier(Request $request, $qr)
                 })
                 ->doesntExist();
 
+            $this->courierTaskOrchestratorService->markSellerHandover(
+                order: $sold,
+                sellerId: $storeSellerId,
+                courierId: $courier->id,
+            );
+
+            $sold->loadMissing('fulfillment');
+            $fulfillmentMode = $sold->fulfillment?->fulfillment_mode;
+
             if ($allSellersDone) {
                 $previousStatus = (string) $sold->status;
-                $sold->status = OrderStatusCode::IN_DELIVERY->legacy();
-                $sold->status_code = OrderStatusCode::IN_DELIVERY->value;
+
+                if ($fulfillmentMode === FulfillmentMode::DIRECT_COURIER->value) {
+                    $sold->status = OrderStatusCode::IN_DELIVERY->legacy();
+                    $sold->status_code = OrderStatusCode::IN_DELIVERY->value;
+                } else {
+                    $sold->status = OrderStatusCode::PACKING->legacy();
+                    $sold->status_code = OrderStatusCode::PACKING->value;
+                }
                 $sold->updated_at = now();
                 $sold->save();
 
@@ -360,11 +465,15 @@ public function toCourier(Request $request, $qr)
                     ->lockForUpdate()
                     ->first();
 
-                if ($courierOrder) {
+                if ($courierOrder && $fulfillmentMode === FulfillmentMode::DIRECT_COURIER->value) {
                     $this->courierBonusService->startSlaOnPickupReady($courierOrder);
                 }
 
-                DB::afterCommit(fn () => $this->orderStatusPushService->sendForTransition($sold->fresh(), $previousStatus, 'B'));
+                DB::afterCommit(fn () => $this->orderStatusPushService->sendForTransition(
+                    $sold->fresh(),
+                    $previousStatus,
+                    $fulfillmentMode === FulfillmentMode::DIRECT_COURIER->value ? 'B' : 'P'
+                ));
             }
 
             return response()->json([
@@ -534,6 +643,7 @@ public function toCourier(Request $request, $qr)
             })
             ->with([
                 'seller.location',
+                'order.fulfillment.hub:id,name,code',
                 'items' => fn($q) => $q->where('seller_id', $storeSellerId)
                     ->with(['book', 'stationery', 'variant', 'gift']),
             ])
