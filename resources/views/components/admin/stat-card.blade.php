@@ -17,15 +17,17 @@
   ][$tone] ?? ['bg' => 'var(--kc-primary-soft)', 'color' => 'var(--kc-primary)'];
 @endphp
 
-<div {{ $attributes->merge(['class' => 'kc-stat-card']) }}>
-  <div class="d-flex align-items-start justify-content-between gap-3">
-    <div class="kc-stat-card__icon" style="background:{{ $toneMap['bg'] }};color:{{ $toneMap['color'] }}">
-      <i class="bi bi-{{ $icon }}"></i>
+<div {{ $attributes->merge(['class' => 'card border-0 shadow-sm rounded-4 h-100']) }}>
+  <div class="card-body p-4">
+    <div class="d-flex align-items-start justify-content-between gap-3">
+      <div class="d-inline-flex align-items-center justify-content-center rounded-4 flex-shrink-0" style="width:3rem;height:3rem;background:{{ $toneMap['bg'] }};color:{{ $toneMap['color'] }}">
+        <i class="bi bi-{{ $icon }}"></i>
+      </div>
     </div>
+    <div class="small text-secondary mt-4">{{ $label }}</div>
+    <div class="h3 mb-0 mt-1 text-dark fw-bold font-monospace">{!! $value !!}</div>
+    @if($meta)
+      <div class="small text-secondary mt-2">{{ $meta }}</div>
+    @endif
   </div>
-  <div class="kc-stat-card__label">{{ $label }}</div>
-  <div class="kc-stat-card__value kc-mono">{!! $value !!}</div>
-  @if($meta)
-    <div class="kc-stat-card__meta">{{ $meta }}</div>
-  @endif
 </div>

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\UserCard;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -80,6 +81,77 @@ class PaylovService
         return $this->delete('/merchant/userCard/deleteUserCard/', [
             'userCardId' => $userCardId,
         ]);
+    }
+
+    public function getSingleCard(string $cardId): array
+    {
+        return $this->get('/merchant/userCard/getCard/' . trim($cardId) . '/');
+    }
+
+    public function syncUserCard(UserCard $card): array
+    {
+        if (blank($card->provider_card_id)) {
+            throw new RuntimeException('card_not_found');
+        }
+
+        $response = $this->getSingleCard((string) $card->provider_card_id);
+        $payload = $response['result']['card'] ?? [];
+        $meta = $card->provider_meta ?? [];
+        $meta['single_card'] = $response;
+        $meta['single_card_fetched_at'] = now()->toIso8601String();
+
+        $card->fill([
+            'card_name' => $payload['cardName'] ?? ($card->card_name ?: null),
+            'card_number' => $payload['number'] ?? ($card->card_number ?: null),
+            'expire_date' => $this->normalizeExpireToDisplay(
+                (string) ($payload['expireDate'] ?? $card->expire_date ?? '')
+            ),
+            'vendor' => $payload['vendor'] ?? ($card->vendor ?: null),
+            'processing' => $payload['processing'] ?? ($card->processing ?: null),
+            'provider_meta' => $meta,
+        ]);
+        $card->save();
+
+        return $response;
+    }
+
+    public function cardPaymentState(UserCard $card, bool $refresh = true): array
+    {
+        if ($refresh) {
+            $this->syncUserCard($card);
+            $card->refresh();
+        }
+
+        $singleCard = $card->provider_meta['single_card']['result']['card'] ?? [];
+        $status = $singleCard['status']['result'] ?? [];
+        $statusMessage = (string) ($status['status_message'] ?? '');
+        $isActive = (bool) ($status['is_active'] ?? true);
+        $smsInfo = array_key_exists('sms_info', $status) ? (bool) $status['sms_info'] : null;
+        $isExpired = $this->isDisplayExpireExpired((string) ($card->expire_date ?? ''));
+
+        $errorCode = null;
+        if ($isExpired) {
+            $errorCode = 'card_expired';
+        } elseif (!$isActive) {
+            $errorCode = 'card_not_active';
+        }
+
+        return [
+            'is_active' => $isActive,
+            'is_expired' => $isExpired,
+            'sms_info' => $smsInfo,
+            'status_message' => $statusMessage,
+            'error_code' => $errorCode,
+            'can_pay' => $errorCode === null,
+        ];
+    }
+
+    public function ensureCardReadyForPayment(UserCard $card): void
+    {
+        $state = $this->cardPaymentState($card, true);
+        if (!$state['can_pay']) {
+            throw new RuntimeException((string) $state['error_code']);
+        }
     }
 
     public function createReceipt(string $userId, int $amount, array $account = []): array
@@ -282,5 +354,35 @@ class PaylovService
         return mb_substr($trimmed, 0, 6)
             . str_repeat('*', max(0, mb_strlen($trimmed) - 10))
             . mb_substr($trimmed, -4);
+    }
+
+    private function normalizeExpireToDisplay(string $expireDate): string
+    {
+        $digits = preg_replace('/\D+/', '', $expireDate) ?? '';
+        if (strlen($digits) !== 4) {
+            return $expireDate;
+        }
+
+        return substr($digits, 2, 2) . substr($digits, 0, 2);
+    }
+
+    private function isDisplayExpireExpired(string $expireDate): bool
+    {
+        $digits = preg_replace('/\D+/', '', $expireDate) ?? '';
+        if (strlen($digits) !== 4) {
+            return false;
+        }
+
+        $month = (int) substr($digits, 0, 2);
+        $year = (int) substr($digits, 2, 2);
+        if ($month < 1 || $month > 12) {
+            return false;
+        }
+
+        $fullYear = 2000 + $year;
+        $expiryBoundary = now()->copy()->startOfMonth();
+        $cardExpiryMonth = now()->setDate($fullYear, $month, 1)->addMonth();
+
+        return $cardExpiryMonth->lte($expiryBoundary);
     }
 }

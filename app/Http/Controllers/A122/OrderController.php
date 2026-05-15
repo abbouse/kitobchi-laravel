@@ -18,6 +18,8 @@ use App\Models\SellerOrder;
 use App\Models\SellerTransaction;
 use App\Models\Sold;
 use App\Models\Stationery;
+use App\Models\Transaction;
+use App\Models\UserCard;
 use App\Services\FulfillmentAdminOverrideService;
 use App\Services\AdminOrderStatusSyncService;
 use App\Services\HubPrintViewService;
@@ -199,6 +201,29 @@ class OrderController extends Controller
             ->where('order_id', $order->id)
             ->latest('id')
             ->get();
+
+        $paymentTransaction = Transaction::query()
+            ->where('order_id', $order->id)
+            ->where('payment_type', 'order')
+            ->latest('id')
+            ->first();
+
+        $paymentCard = null;
+        if ($paymentTransaction && filled($paymentTransaction->provider_card_id)) {
+            $paymentCard = UserCard::query()
+                ->where('provider_card_id', $paymentTransaction->provider_card_id)
+                ->first();
+        }
+
+        $paymentCardSnapshot = data_get($paymentTransaction?->provider_response, 'card_snapshot', []);
+        $paymentCardView = [
+            'provider' => $paymentTransaction?->provider,
+            'provider_card_id' => $paymentTransaction?->provider_card_id,
+            'masked_number' => $paymentCard?->card_number ?: ($paymentCardSnapshot['masked_number'] ?? null),
+            'vendor' => $paymentCard?->vendor ?: ($paymentCardSnapshot['vendor'] ?? null),
+            'card_name' => $paymentCard?->card_name ?: ($paymentCardSnapshot['card_name'] ?? null),
+            'phone_number' => $paymentCard?->phone_number ?: ($paymentCardSnapshot['phone_number'] ?? null),
+        ];
 
         $sellerTransactions = SellerTransaction::query()
             ->where('order_id', $order->id)

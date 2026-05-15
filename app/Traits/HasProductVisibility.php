@@ -32,7 +32,10 @@ trait HasProductVisibility
         return fn($s) => $s
             ->where('status', 'approved')
             ->where('is_hidden', false)
-            ->where('parent_id', 0);
+            ->where(function ($q) {
+                $q->whereNull('parent_id')
+                    ->orWhere('parent_id', 0);
+            });
     }
 
     /**

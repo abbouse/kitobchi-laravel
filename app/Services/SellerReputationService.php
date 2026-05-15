@@ -20,7 +20,10 @@ class SellerReputationService
         $count = 0;
 
         ($query ?? Seller::query()
-            ->where('parent_id', 0)
+            ->where(function ($q) {
+                $q->whereNull('parent_id')
+                    ->orWhere('parent_id', 0);
+            })
             ->where('status', 'approved'))
             ->orderBy('id')
             ->chunkById(100, function ($sellers) use (&$count, $persist) {

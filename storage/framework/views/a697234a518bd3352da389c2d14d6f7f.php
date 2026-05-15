@@ -63,7 +63,7 @@
           </span>
           <span class="kc-sidebar__brand-copy">
             <span class="kc-sidebar__brand-title d-block">Kitobchi Admin</span>
-            <span class="kc-sidebar__brand-subtitle d-block">Bootstrap operations panel</span>
+            <span class="kc-sidebar__brand-subtitle d-block">Tabler-inspired operations panel</span>
           </span>
         </a>
         <button type="button" data-sidebar-close class="btn btn-sm btn-outline-light border-0 d-lg-none">
@@ -101,7 +101,7 @@
       <div class="kc-sidebar__workspace">
         <div class="kc-sidebar__workspace-label">Workspace</div>
         <div class="kc-sidebar__workspace-title">A122 Admin</div>
-        <div class="kc-sidebar__workspace-meta"><?php echo e($panelAdmin?->name ?? 'Admin'); ?> · secure operations</div>
+        <div class="kc-sidebar__workspace-meta"><?php echo e($panelAdmin?->name ?? 'Admin'); ?> · clean operations flow</div>
       </div>
     </div>
   </div>

@@ -38,10 +38,18 @@
       default => 'badge badge-warning',
     };
     $paymentMethodLabel = match ($currentPaymentStatus) {
-      'paid', 'card_pending', 2, 1 => 'Karta / Payme',
+      'paid', 'card_pending', 2, 1 => 'Karta / Paylov',
       'cash_pending', 0 => 'Naqd',
       default => 'Noma’lum to‘lov turi',
     };
+    $paymentCardLabel = trim(collect([
+      $paymentCardView['vendor'] ?? null,
+      $paymentCardView['masked_number'] ?? null,
+    ])->filter()->implode(' · '));
+    $paymentCardMeta = trim(collect([
+      $paymentCardView['card_name'] ?? null,
+      $paymentCardView['phone_number'] ?? null,
+    ])->filter()->implode(' · '));
 
     $deliveryTypeLabel = match ($normalizedDeliveryType) {
       'pickup' => "Do'kondan olib ketish",
@@ -209,9 +217,27 @@
         <div class="kpi-soft">
           <div class="metric-label">To‘lov</div>
           <div class="metric-value text-xl"><?php echo e($paymentMethodLabel); ?></div>
-          <div class="metric-meta"><?php echo e($paymentLabel); ?></div>
+          <div class="metric-meta">
+            <?php echo e($paymentLabel); ?>
+
+            <?php if($paymentCardLabel): ?>
+              · <?php echo e($paymentCardLabel); ?>
+
+            <?php endif; ?>
+          </div>
         </div>
       </div>
+
+      <?php if($paymentCardLabel): ?>
+        <div class="mt-4 rounded-3xl border border-[var(--p-border)] bg-[var(--p-elevated)] p-4">
+          <div class="metric-label">To‘lov qilingan karta</div>
+          <div class="font-semibold mt-1"><?php echo e($paymentCardLabel); ?></div>
+          <div class="text-sm text-[var(--p-hint)] mt-1">
+            <?php echo e($paymentCardMeta ?: ($paymentCardView['provider_card_id'] ? 'Provider card ID: ' . $paymentCardView['provider_card_id'] : 'Kartadan to‘lov olingan')); ?>
+
+          </div>
+        </div>
+      <?php endif; ?>
 
       <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 mt-4">
         <div class="rounded-3xl border border-[var(--p-border)] bg-[var(--p-elevated)] p-4">

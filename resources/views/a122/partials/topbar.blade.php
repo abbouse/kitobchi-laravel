@@ -19,7 +19,7 @@
         type="button"
         data-sidebar-toggle
         aria-expanded="true"
-        class="btn btn-light border kc-topbar__menu"
+        class="btn btn-white shadow-sm border kc-topbar__menu"
         aria-label="Menyu">
         <i class="bi bi-list fs-5"></i>
       </button>
@@ -32,7 +32,7 @@
       <div class="kc-topbar__search d-none d-lg-block w-100">
         <form class="kc-search" onsubmit="event.preventDefault();const input=this.querySelector('input');const option=[...document.querySelectorAll('#a122-quick-nav-list option')].find(o=>o.value===input.value);if(option?.dataset?.href){window.location=option.dataset.href;}">
           <i class="bi bi-search kc-search__icon"></i>
-          <input type="text" list="a122-quick-nav-list" class="form-control" placeholder="Tezkor o‘tish..." />
+          <input type="text" list="a122-quick-nav-list" class="form-control" placeholder="Bo‘lim, sahifa yoki oqim qidiring..." />
           <datalist id="a122-quick-nav-list">
             @foreach ($quickLinks as $link)
               <option value="{{ $link['label'] }}" data-href="{{ $link['href'] }}"></option>
@@ -41,7 +41,7 @@
         </form>
       </div>
 
-      <button data-theme-toggle class="btn btn-light border kc-topbar__action d-none d-sm-inline-flex align-items-center px-3" aria-label="Tema almashtirish">
+      <button data-theme-toggle class="btn btn-white shadow-sm border kc-topbar__action d-none d-sm-inline-flex align-items-center px-3" aria-label="Tema almashtirish">
         <i class="bi bi-circle-half me-2"></i>
         <span class="small fw-semibold">Theme</span>
       </button>

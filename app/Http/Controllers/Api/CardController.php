@@ -53,7 +53,11 @@ class CardController extends Controller
             })
             ->orderByDesc('is_default')
             ->latest('id')
-            ->get()
+            ->get();
+
+        $this->refreshStoredCardsState($cards);
+
+        $cards = $cards
             ->map(fn (UserCard $card) => $this->serializeCard($card))
             ->values();
 
@@ -223,6 +227,28 @@ class CardController extends Controller
                 ]),
             ]);
 
+            $paylov = PaylovService::make();
+            $paylov->syncUserCard($card);
+            $cardState = $paylov->cardPaymentState($card, false);
+
+            if (!$cardState['can_pay']) {
+                try {
+                    $paylov->deleteUserCard((string) $card->provider_card_id);
+                } catch (\Throwable $e) {
+                    Log::warning('[Paylov] Invalid card cleanup failed', [
+                        'card_id' => $card->id,
+                        'provider_card_id' => $card->provider_card_id,
+                        'message' => $e->getMessage(),
+                    ]);
+                }
+
+                $card->delete();
+
+                return $this->error((string) $cardState['error_code'], 422, [
+                    'error_code' => $cardState['error_code'],
+                ]);
+            }
+
             if (!$card->is_temporary && !$user->cards()->where('is_default', true)->exists()) {
                 $card->is_default = true;
             }
@@ -299,6 +325,10 @@ class CardController extends Controller
                 'card_id' => $card->id,
                 'message' => $e->getMessage(),
             ]);
+
+            return $this->error('Kartani Paylov tomondan o‘chirib bo‘lmadi. Iltimos, qayta urinib ko‘ring.', 422, [
+                'error_code' => 'card_remote_delete_failed',
+            ]);
         }
 
         DB::transaction(function () use ($card, $user) {
@@ -324,6 +354,8 @@ class CardController extends Controller
 
     private function serializeCard(UserCard $card): array
     {
+        $state = PaylovService::make()->cardPaymentState($card, false);
+
         return [
             'id' => $card->id,
             'provider' => $card->provider,
@@ -334,6 +366,11 @@ class CardController extends Controller
             'expire_date' => $card->expire_date,
             'vendor' => $card->vendor,
             'processing' => $card->processing,
+            'is_active' => $state['is_active'],
+            'is_expired' => $state['is_expired'],
+            'sms_info' => $state['sms_info'],
+            'status_message' => $state['status_message'],
+            'payment_error_code' => $state['error_code'],
             'is_default' => (bool) $card->is_default,
             'created_at' => optional($card->created_at)?->toIso8601String(),
         ];
@@ -367,5 +404,46 @@ class CardController extends Controller
             ->where('created_at', '>=', now()->subMinutes(15))
             ->latest('id')
             ->first();
+    }
+
+    private function refreshStoredCardsState($cards): void
+    {
+        foreach ($cards as $card) {
+            if (!$card instanceof UserCard) {
+                continue;
+            }
+
+            if ($card->provider !== 'paylov' || blank($card->provider_card_id)) {
+                continue;
+            }
+
+            if (!$this->shouldRefreshCardState($card)) {
+                continue;
+            }
+
+            try {
+                PaylovService::make()->syncUserCard($card);
+            } catch (\Throwable $e) {
+                Log::warning('[Paylov] Card state refresh failed', [
+                    'card_id' => $card->id,
+                    'provider_card_id' => $card->provider_card_id,
+                    'message' => $e->getMessage(),
+                ]);
+            }
+        }
+    }
+
+    private function shouldRefreshCardState(UserCard $card): bool
+    {
+        $fetchedAt = data_get($card->provider_meta, 'single_card_fetched_at');
+        if (!is_string($fetchedAt) || trim($fetchedAt) === '') {
+            return true;
+        }
+
+        try {
+            return now()->diffInMinutes($fetchedAt) >= 15;
+        } catch (\Throwable) {
+            return true;
+        }
     }
 }

@@ -301,19 +301,22 @@ public function createStationery(Request $request)
         }
     }
 
+    $normalizedBarcode = $this->normalizeBarcode($request->input('barcode'));
+    $autoApproved = $this->shouldAutoApproveStationery($normalizedBarcode);
+
     // 4. Mahsulotni yaratish
     $stationery = Stationery::create([
         'seller_id'      => $storeSellerId,
         'category_id'    => $request->category_id,
         'name'           => $request->name,
-        'barcode'        => $this->normalizeBarcode($request->input('barcode')),
+        'barcode'        => $normalizedBarcode,
         'material'       => $request->material,
         'price'          => $request->price,
         'discount_price' => $request->discountPrice ?? 0,
         'stock'          => $request->stock,
         'description'    => $request->description,
         'images'         => $imagePaths,
-        'is_approved'    => 0,
+        'is_approved'    => $autoApproved ? 1 : 0,
     ]);
 
     // 5. Taglarni bog'lash
@@ -350,7 +353,8 @@ public function createStationery(Request $request)
         }
     }
 
-    $this->writeLog($seller, 'Yangi kanselyariya mahsuloti qo‘shdi', $stationery->name);
+    $logSuffix = $autoApproved ? ' (avto-tasdiqlandi)' : '';
+    $this->writeLog($seller, 'Yangi kanselyariya mahsuloti qo‘shdi' . $logSuffix, $stationery->name);
 
     return response()->json([
         'success' => true,
@@ -528,10 +532,21 @@ $variantsToDelete = array_diff($existingVariants, $incomingVariantIds);
     $tagIds = $request->input('tag_ids', []);
     $stationery->tags()->sync($tagIds);
 
+    $normalizedBarcode = $this->normalizeBarcode($request->input('barcode'));
+    $sensitiveChanged = $this->stationerySensitiveFieldsChanged(
+        $stationery,
+        [
+            'name' => $request->name,
+            'description' => $request->description,
+            'images' => $finalImages,
+        ]
+    );
+    $autoApproved = !$sensitiveChanged;
+
     // === ASOSIY MA'LUMOTLARNI YANGILASH ===
     $stationery->update([
         'name' => $request->name,
-        'barcode' => $this->normalizeBarcode($request->input('barcode')),
+        'barcode' => $normalizedBarcode,
         'material' => $request->material ?? $stationery->material,
         'price' => $request->price,
         'discount_price' => $request->discountPrice ?? 0,
@@ -539,11 +554,12 @@ $variantsToDelete = array_diff($existingVariants, $incomingVariantIds);
         'description' => $request->description,
         'images' => $finalImages,
         'category_id' => $request->category_id,
-        'is_approved' => 0, // Moderatsiyaga qaytadi
+        'is_approved' => $autoApproved ? 1 : 0,
     ]);
 
     // Log yozish
-    $this->writeLog($seller, 'Kanselyariya mahsulotini tahrirladi', $stationery->name);
+    $logSuffix = $autoApproved ? ' (avto-tasdiqlandi)' : ' (moderatsiyaga yuborildi)';
+    $this->writeLog($seller, 'Kanselyariya mahsulotini tahrirladi' . $logSuffix, $stationery->name);
 
     return response()->json([
         'success' => true,
@@ -879,16 +895,20 @@ public function updateProductStatus(Request $request)
         ], 422);
     }
 
-    // ISBN'ni kanonik shaklga keltiramiz va avto-approve sharti tekshiriladi.
-    // Update'da ham boshlang'ich ID'ni hisobga olmasdan: agar boshqa qatorlarda
-    // mos keluvchi tasdiqlangan kitob bo'lsa — bu o'zgartirish ham approved.
+    // Book update qoidasi:
+    // - name / author / description / images o'zgarsa → moderatsiya
+    // - qolgan fieldlar o'zgarsa → auto-approve
     $canonicalIsbn = Books::normalizeIsbn($request->input('isbn'));
-    $autoApproved  = $this->shouldAutoApprove(
-        $canonicalIsbn,
-        $request->name,
-        $request->author,
-        excludeBookId: $product->id,
+    $sensitiveChanged = $this->bookSensitiveFieldsChanged(
+        $product,
+        [
+            'name' => $request->name,
+            'author' => $request->author,
+            'description' => $request->description,
+            'images' => $finalImages,
+        ]
     );
+    $autoApproved = !$sensitiveChanged;
 
     // Mahsulotni yangilash
     $product->update([
@@ -909,7 +929,7 @@ public function updateProductStatus(Request $request)
         'is_approved' => $autoApproved ? 1 : 0,
     ]);
     $product->tags()->sync($request->input('tag_ids', []));
-    $logSuffix = $autoApproved ? ' (avto-tasdiqlandi)' : '';
+    $logSuffix = $autoApproved ? ' (avto-tasdiqlandi)' : ' (moderatsiyaga yuborildi)';
     $this->writeLog($seller, 'Mahsulot ma\'lumotlarini yangiladi' . $logSuffix, $product->name);
     return response()->json([
         'success' => true,
@@ -1030,6 +1050,53 @@ public function productStatistics(Request $request, $id)
             ->whereRaw('LOWER(TRIM(name)) = ?', [$normalizedName])
             ->whereRaw('LOWER(TRIM(author)) = ?', [$normalizedAuthor])
             ->exists();
+    }
+
+    private function shouldAutoApproveStationery(?string $normalizedBarcode, ?int $excludeId = null): bool
+    {
+        if ($normalizedBarcode === null || trim($normalizedBarcode) === '') {
+            return false;
+        }
+
+        $query = Stationery::query()
+            ->where('is_approved', 1)
+            ->where('is_hidden', 0)
+            ->where('barcode', $normalizedBarcode);
+
+        if ($excludeId) {
+            $query->where('id', '!=', $excludeId);
+        }
+
+        return $query->exists();
+    }
+
+    private function bookSensitiveFieldsChanged(Books $product, array $incoming): bool
+    {
+        return $this->normalizedText($product->name) !== $this->normalizedText((string) ($incoming['name'] ?? ''))
+            || $this->normalizedText($product->author) !== $this->normalizedText((string) ($incoming['author'] ?? ''))
+            || $this->normalizedText($product->description) !== $this->normalizedText((string) ($incoming['description'] ?? ''))
+            || $this->normalizedImages($product->images ?? []) !== $this->normalizedImages($incoming['images'] ?? []);
+    }
+
+    private function stationerySensitiveFieldsChanged(Stationery $product, array $incoming): bool
+    {
+        return $this->normalizedText($product->name) !== $this->normalizedText((string) ($incoming['name'] ?? ''))
+            || $this->normalizedText($product->description) !== $this->normalizedText((string) ($incoming['description'] ?? ''))
+            || $this->normalizedImages($product->images ?? []) !== $this->normalizedImages($incoming['images'] ?? []);
+    }
+
+    private function normalizedText(?string $value): string
+    {
+        return preg_replace('/\s+/u', ' ', mb_strtolower(trim((string) $value))) ?? '';
+    }
+
+    private function normalizedImages($images): array
+    {
+        $list = is_array($images) ? $images : (json_decode((string) $images, true) ?: []);
+        $list = array_values(array_filter(array_map(fn ($item) => trim((string) $item), $list)));
+        sort($list);
+
+        return $list;
     }
 
     /**

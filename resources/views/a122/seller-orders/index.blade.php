@@ -1,127 +1,178 @@
 @extends('a122.layouts.admin')
 @section('title', 'Sotuvchi buyurtmalari')
 @section('page-title', 'Sotuvchi buyurtmalari')
+@section('page-eyebrow', 'Seller fulfillment')
 
 @section('content')
-@if(session('success'))
-    <div class="mb-4 rounded-lg bg-green-100 text-green-800 dark:bg-green-500/10 dark:text-green-400 px-4 py-3 text-sm font-medium">
-        {{ session('success') }}
-    </div>
-@endif
-@if(session('error'))
-    <div class="mb-4 rounded-lg bg-red-100 text-red-800 dark:bg-red-500/10 dark:text-red-400 px-4 py-3 text-sm font-medium">
-        {{ session('error') }}
-    </div>
-@endif
+@php
+    $tabs = ['all' => ['label' => 'Barchasi', 'count' => $counts['all'] ?? 0]];
+    foreach ($statuses as $value => $statusItem) {
+        $tabs[(string) $value] = ['label' => $statusItem['label'], 'count' => $counts[$value] ?? 0];
+    }
 
-<div class="a122-index-header">
-    <div>
-        <div class="a122-index-header__title">Sotuvchi buyurtmalari</div>
-        <div class="a122-index-header__meta">{{ $orders->total() }} ta buyurtma topildi</div>
-    </div>
-    <div class="a122-index-header__actions">
-        <form method="GET" class="a122-index-search-form">
-            <input type="hidden" name="tab" value="{{ request('tab', 'all') }}">
-            <i class="bi bi-search"></i>
-            <input type="search" name="search" value="{{ request('search') }}" placeholder="ID, sotuvchi yoki mijoz bo‘yicha qidiring">
-        </form>
-    </div>
-</div>
+    $statusBadgeClass = function (string $badge): string {
+        return match ($badge) {
+            'badge-success' => 'text-bg-success-subtle border border-success-subtle text-success-emphasis',
+            'badge-danger' => 'text-bg-danger-subtle border border-danger-subtle text-danger-emphasis',
+            'badge-warning' => 'text-bg-warning-subtle border border-warning-subtle text-warning-emphasis',
+            'badge-info' => 'text-bg-primary-subtle border border-primary-subtle text-primary-emphasis',
+            default => 'text-bg-light border',
+        };
+    };
+@endphp
 
-{{-- Tabs --}}
-<div class="flex items-center gap-2 mb-4 flex-wrap">
-    @php
-        $tabs = ['all' => ['label' => 'Barchasi', 'count' => $counts['all'] ?? 0]];
-        foreach ($statuses as $value => $statusItem) {
-            $tabs[(string) $value] = ['label' => $statusItem['label'], 'count' => $counts[$value] ?? 0];
-        }
-    @endphp
-    @foreach($tabs as $key => $tabItem)
-        <a
-            href="{{ request()->fullUrlWithQuery(['tab' => $key]) }}"
-            class="btn {{ $tab == $key ? 'btn-primary' : 'btn-secondary' }} flex items-center gap-2 text-sm"
-        >
-            {{ $tabItem['label'] }}
-            <span class="badge {{ $tab == $key ? 'badge-info' : 'badge-muted' }}">{{ $tabItem['count'] }}</span>
+<div class="d-flex flex-column gap-4">
+    <x-admin.page-header
+        eyebrow="Seller fulfillment"
+        title="Sotuvchi buyurtmalari"
+        subtitle="Seller kesimida yig‘ilgan fulfillment navbati, status o‘zgarishlari va tezkor operatsion boshqaruv shu jadvalda yuradi.">
+        <a href="{{ route('admin.orders.index') }}" class="btn btn-outline-secondary rounded-pill px-4">
+            <i class="bi bi-arrow-left me-2"></i>Asosiy buyurtmalar
         </a>
-    @endforeach
-</div>
+    </x-admin.page-header>
 
-<div class="table-wrap">
-    <div class="overflow-x-auto">
-        <table class="tbl" data-index-grid>
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Sotuvchi</th>
-                    <th>Mijoz</th>
-                    <th>Summa</th>
-                    <th>Holat</th>
-                    <th>Sana</th>
-                    <th class="text-right">Amallar</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($orders as $order)
-                    @php
-                        $customerName = trim(($order->client?->name ?? '') . ' ' . ($order->client?->lastname ?? ''));
-                        $address = collect($order->order?->address ?? [])->first();
-                        $fallbackName = $address['fullName'] ?? '—';
-                        $customerPhone = $order->client?->phone_number ?? ($address['phoneNumber'] ?? '—');
-                        $itemsCount = collect($order->order?->items ?? [])->filter(fn ($item) => (int) ($item['seller_id'] ?? 0) === (int) $order->seller_id)->sum(fn ($item) => (int) ($item['count_item'] ?? 1));
-                        $orderAmount = (float) ($order->amount ?? 0);
-                    @endphp
-                    @php($statusCode = $order->status_code ?? \App\Enums\SellerOrderStatusCode::fromLegacy($order->status ?? 1)->value)
-                    <tr>
-                        <td class="text-gray-500 text-sm">
-                            <div>#{{ $order->id }}</div>
-                            <div class="text-[11px] text-gray-400">ORD #{{ $order->order_id }}</div>
-                        </td>
-                        <td>
-                            <div class="font-semibold">{{ $order->seller->shop_name ?? '—' }}</div>
-                            <div class="text-xs text-gray-500">{{ trim(($order->seller->firstname ?? '') . ' ' . ($order->seller->lastname ?? '')) ?: 'Sotuvchi' }}</div>
-                        </td>
-                        <td>
-                            <div class="font-medium">{{ $customerName ?: $fallbackName }}</div>
-                            <div class="text-xs text-gray-500">{{ $customerPhone }}</div>
-                        </td>
-                        <td class="font-semibold text-sm whitespace-nowrap">
-                            <div>{{ number_format($orderAmount, 0, '.', ' ') }} UZS</div>
-                            <div class="text-xs text-gray-500">{{ $itemsCount }} ta mahsulot</div>
-                        </td>
-                        <td>
-                            <form method="POST" action="{{ route('admin.seller-orders.status', $order) }}" class="inline-flex">
-                                @csrf
-                                @method('PATCH')
-                                <select name="status" class="a122-inline-status" onchange="this.form.submit()">
-                                    @foreach($statuses as $value => $statusItem)
-                                        <option value="{{ $value }}" @selected($statusCode === $value)>{{ $statusItem['label'] }}</option>
-                                    @endforeach
-                                </select>
-                            </form>
-                        </td>
-                        <td class="text-sm text-gray-500 whitespace-nowrap">
-                            {{ $order->created_at ? $order->created_at->format('d.m.Y H:i') : '—' }}
-                        </td>
-                        <td>
-                            <div class="flex items-center justify-end gap-1 flex-wrap">
-                                <a href="{{ route('admin.seller-orders.show', $order) }}" class="btn-ghost p-2 rounded-lg" title="Ko'rish">
-                                    <i data-lucide="eye" class="w-4 h-4"></i>
-                                </a>
-                            </div>
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="7" class="text-center text-gray-400 py-8">Hech qanday buyurtma topilmadi</td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
+    @if(session('success'))
+        <div class="alert alert-success border-0 shadow-sm rounded-4 mb-0">{{ session('success') }}</div>
+    @endif
+    @if(session('error'))
+        <div class="alert alert-danger border-0 shadow-sm rounded-4 mb-0">{{ session('error') }}</div>
+    @endif
+
+    <div class="row g-3">
+        <div class="col-12 col-md-6 col-xl-3">
+            <x-admin.stat-card
+                label="Jami seller orderlar"
+                :value="number_format($counts['all'] ?? 0)"
+                meta="Seller kesimida yaratilgan barcha fulfillment yozuvlari"
+                icon="box-seam"
+                tone="dark" />
+        </div>
+        @foreach($statuses as $value => $statusItem)
+            <div class="col-12 col-md-6 col-xl-3">
+                <x-admin.stat-card
+                    :label="$statusItem['label']"
+                    :value="number_format($counts[$value] ?? 0)"
+                    meta="Joriy seller order bosqichidagi yozuvlar"
+                    icon="diagram-3"
+                    :tone="match($statusItem['badge']) {
+                        'badge-success' => 'success',
+                        'badge-danger' => 'danger',
+                        'badge-warning' => 'warning',
+                        'badge-info' => 'info',
+                        default => 'primary',
+                    }" />
+            </div>
+        @endforeach
     </div>
-</div>
 
-@if($orders->hasPages())
-    <div class="mt-4">{{ $orders->links('a122.partials.pagination') }}</div>
-@endif
+    <x-admin.section-card title="Filter va qidiruv" meta="Seller, mijoz yoki order ID bo‘yicha kerakli yozuvni tez topish mumkin.">
+        <div class="row g-3 align-items-center">
+            <div class="col-12 col-xl-5">
+                <form method="GET" class="position-relative">
+                    <input type="hidden" name="tab" value="{{ request('tab', 'all') }}">
+                    <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-secondary"></i>
+                    <input
+                        type="search"
+                        name="search"
+                        value="{{ request('search') }}"
+                        placeholder="ID, sotuvchi yoki mijoz bo‘yicha qidiring"
+                        class="form-control rounded-pill ps-5">
+                </form>
+            </div>
+            <div class="col-12 col-xl-7">
+                <div class="nav nav-pills gap-2 justify-content-xl-end">
+                    @foreach($tabs as $key => $tabItem)
+                        <a
+                            href="{{ request()->fullUrlWithQuery(['tab' => $key, 'page' => null]) }}"
+                            class="nav-link {{ (string) $tab === (string) $key ? 'active' : '' }}">
+                            {{ $tabItem['label'] }}
+                            <span class="badge rounded-pill text-bg-light ms-2 font-monospace">{{ number_format($tabItem['count']) }}</span>
+                        </a>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+    </x-admin.section-card>
+
+    <x-admin.section-card title="Seller orderlar jadvali" :meta="$orders->total() . ' ta yozuv topildi.'">
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Sotuvchi</th>
+                        <th>Mijoz</th>
+                        <th>Summa</th>
+                        <th>Holat</th>
+                        <th>Sana</th>
+                        <th class="text-end">Amallar</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($orders as $order)
+                        @php
+                            $customerName = trim(($order->client?->name ?? '') . ' ' . ($order->client?->lastname ?? ''));
+                            $address = collect($order->order?->address ?? [])->first();
+                            $fallbackName = $address['fullName'] ?? '—';
+                            $customerPhone = $order->client?->phone_number ?? ($address['phoneNumber'] ?? '—');
+                            $itemsCount = collect($order->order?->items ?? [])->filter(fn ($item) => (int) ($item['seller_id'] ?? 0) === (int) $order->seller_id)->sum(fn ($item) => (int) ($item['count_item'] ?? 1));
+                            $orderAmount = (float) ($order->amount ?? 0);
+                            $statusCode = $order->status_code ?? \App\Enums\SellerOrderStatusCode::fromLegacy($order->status ?? 1)->value;
+                            $statusMeta = $statuses[$statusCode] ?? ['label' => $statusCode, 'badge' => 'badge-muted'];
+                        @endphp
+                        <tr>
+                            <td>
+                                <div class="fw-bold">#{{ $order->id }}</div>
+                                <div class="small text-secondary">ORD #{{ $order->order_id }}</div>
+                            </td>
+                            <td>
+                                <div class="fw-semibold">{{ $order->seller->shop_name ?? '—' }}</div>
+                                <div class="small text-secondary">{{ trim(($order->seller->firstname ?? '') . ' ' . ($order->seller->lastname ?? '')) ?: 'Sotuvchi' }}</div>
+                            </td>
+                            <td>
+                                <div class="fw-semibold">{{ $customerName ?: $fallbackName }}</div>
+                                <div class="small text-secondary">{{ $customerPhone }}</div>
+                            </td>
+                            <td>
+                                <div class="fw-semibold font-monospace">{{ number_format($orderAmount, 0, '.', ' ') }} UZS</div>
+                                <div class="small text-secondary">{{ $itemsCount }} ta mahsulot</div>
+                            </td>
+                            <td>
+                                <div class="d-flex flex-wrap gap-2 align-items-center">
+                                    <span class="badge rounded-pill {{ $statusBadgeClass($statusMeta['badge']) }}">{{ $statusMeta['label'] }}</span>
+                                    <form method="POST" action="{{ route('admin.seller-orders.status', $order) }}">
+                                        @csrf
+                                        @method('PATCH')
+                                        <select name="status" class="form-select form-select-sm rounded-pill" onchange="this.form.submit()">
+                                            @foreach($statuses as $value => $statusItem)
+                                                <option value="{{ $value }}" @selected($statusCode === $value)>{{ $statusItem['label'] }}</option>
+                                            @endforeach
+                                        </select>
+                                    </form>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="fw-semibold">{{ $order->created_at ? $order->created_at->format('d.m.Y') : '—' }}</div>
+                                <div class="small text-secondary">{{ $order->created_at ? $order->created_at->format('H:i') : '—' }}</div>
+                            </td>
+                            <td class="text-end">
+                                <a href="{{ route('admin.seller-orders.show', $order) }}" class="btn btn-sm btn-dark rounded-pill px-3">
+                                    <i class="bi bi-eye me-1"></i>Ko‘rish
+                                </a>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-secondary">Hech qanday buyurtma topilmadi.</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </x-admin.section-card>
+
+    @if($orders->hasPages())
+        <div>{{ $orders->links('a122.partials.pagination') }}</div>
+    @endif
+</div>
 @endsection

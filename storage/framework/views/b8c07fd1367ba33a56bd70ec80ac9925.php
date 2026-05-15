@@ -1,207 +1,243 @@
 <?php $__env->startSection('title', 'Kuryer buyurtmasi #' . $courierOrder->id); ?>
 <?php $__env->startSection('page-title', 'Kuryer buyurtmasi'); ?>
+<?php $__env->startSection('page-eyebrow', 'Last-mile operations'); ?>
 
 <?php $__env->startSection('content'); ?>
-<?php if(session('success')): ?>
-    <div class="p-alert success mb-4"><?php echo e(session('success')); ?></div>
-<?php endif; ?>
-<?php if(session('error')): ?>
-    <div class="p-alert danger mb-4"><?php echo e(session('error')); ?></div>
-<?php endif; ?>
+<?php
+    $statusKey = (string) ($courierOrder->status ?? '');
+    $statusLabel = $statuses[$statusKey]['label'] ?? ($statusKey ?: '—');
+    $statusBadgeClass = match ($statusKey) {
+        'delivered' => 'text-bg-success-subtle border border-success-subtle text-success-emphasis',
+        'pending', 'pay_process' => 'text-bg-warning-subtle border border-warning-subtle text-warning-emphasis',
+        'in_delivery' => 'text-bg-primary-subtle border border-primary-subtle text-primary-emphasis',
+        'rejected' => 'text-bg-danger-subtle border border-danger-subtle text-danger-emphasis',
+        default => 'text-bg-light border',
+    };
+?>
 
-<?php if (isset($component)) { $__componentOriginal0c1345684b2d774f43a544669f5684b0 = $component; } ?>
-<?php if (isset($attributes)) { $__attributesOriginal0c1345684b2d774f43a544669f5684b0 = $attributes; } ?>
-<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.a122.page-header','data' => ['backHref' => ''.e(route('admin.courier-orders.index')).'']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
-<?php $component->withName('a122.page-header'); ?>
+<div class="d-flex flex-column gap-4">
+    <?php if (isset($component)) { $__componentOriginalcb19cb35a534439097b02b8af91726ee = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginalcb19cb35a534439097b02b8af91726ee = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.admin.page-header','data' => ['eyebrow' => 'Last-mile operations','title' => 'Kuryer buyurtmasi #' . $courierOrder->id,'subtitle' => (trim(($courierOrder->courier->first_name ?? '') . ' ' . ($courierOrder->courier->last_name ?? '')) ?: 'Kuryer yo‘q') . ' · ' . ($courierOrder->created_at ? $courierOrder->created_at->format('d.m.Y H:i') : 'Sana yo‘q')]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('admin.page-header'); ?>
 <?php if ($component->shouldRender()): ?>
 <?php $__env->startComponent($component->resolveView(), $component->data()); ?>
 <?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
 <?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
 <?php endif; ?>
-<?php $component->withAttributes(['back-href' => ''.e(route('admin.courier-orders.index')).'']); ?>
-     <?php $__env->slot('heading', null, []); ?> Kuryer buyurtmasi #<?php echo e($courierOrder->id); ?> <?php $__env->endSlot(); ?>
-     <?php $__env->slot('meta', null, []); ?> <?php echo e(trim(($courierOrder->courier->first_name ?? '') . ' ' . ($courierOrder->courier->last_name ?? '')) ?: 'Kuryer yo‘q'); ?> · <?php echo e($courierOrder->created_at ? $courierOrder->created_at->format('d.m.Y H:i') : 'Sana yo‘q'); ?> <?php $__env->endSlot(); ?>
- <?php echo $__env->renderComponent(); ?>
+<?php $component->withAttributes(['eyebrow' => 'Last-mile operations','title' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute('Kuryer buyurtmasi #' . $courierOrder->id),'subtitle' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute((trim(($courierOrder->courier->first_name ?? '') . ' ' . ($courierOrder->courier->last_name ?? '')) ?: 'Kuryer yo‘q') . ' · ' . ($courierOrder->created_at ? $courierOrder->created_at->format('d.m.Y H:i') : 'Sana yo‘q'))]); ?>
+        <a href="<?php echo e(route('admin.courier-orders.index')); ?>" class="btn btn-outline-secondary rounded-pill px-4">
+            <i class="bi bi-arrow-left me-2"></i>Ro‘yxatga qaytish
+        </a>
+     <?php echo $__env->renderComponent(); ?>
 <?php endif; ?>
-<?php if (isset($__attributesOriginal0c1345684b2d774f43a544669f5684b0)): ?>
-<?php $attributes = $__attributesOriginal0c1345684b2d774f43a544669f5684b0; ?>
-<?php unset($__attributesOriginal0c1345684b2d774f43a544669f5684b0); ?>
+<?php if (isset($__attributesOriginalcb19cb35a534439097b02b8af91726ee)): ?>
+<?php $attributes = $__attributesOriginalcb19cb35a534439097b02b8af91726ee; ?>
+<?php unset($__attributesOriginalcb19cb35a534439097b02b8af91726ee); ?>
 <?php endif; ?>
-<?php if (isset($__componentOriginal0c1345684b2d774f43a544669f5684b0)): ?>
-<?php $component = $__componentOriginal0c1345684b2d774f43a544669f5684b0; ?>
-<?php unset($__componentOriginal0c1345684b2d774f43a544669f5684b0); ?>
+<?php if (isset($__componentOriginalcb19cb35a534439097b02b8af91726ee)): ?>
+<?php $component = $__componentOriginalcb19cb35a534439097b02b8af91726ee; ?>
+<?php unset($__componentOriginalcb19cb35a534439097b02b8af91726ee); ?>
 <?php endif; ?>
 
-<section class="a122-section mb-4">
-    <div class="a122-section-body">
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <div class="kpi-soft">
-                <div class="metric-label">Joriy holat</div>
-                <div class="metric-value text-xl"><?php echo e($statuses[$courierOrder->status]['label'] ?? ($courierOrder->status ?: '—')); ?></div>
-                <div class="metric-meta">Courier bosqichi</div>
-            </div>
-            <div class="kpi-soft">
-                <div class="metric-label">Summa</div>
-                <div class="metric-value text-xl"><?php echo e(number_format((float)($courierOrder->amount ?? $courierOrder->total ?? 0), 0, '.', ' ')); ?></div>
-                <div class="metric-meta">UZS</div>
-            </div>
-            <div class="kpi-soft">
-                <div class="metric-label">Kuryer</div>
-                <div class="metric-value text-xl"><?php echo e($courierOrder->courier ? 'Biriktirilgan' : 'Yo‘q'); ?></div>
-                <div class="metric-meta"><?php echo e($courierOrder->courier?->region ?: 'Hudud yo‘q'); ?></div>
-            </div>
-            <div class="kpi-soft">
-                <div class="metric-label">Sana</div>
-                <div class="metric-value text-xl"><?php echo e(optional($courierOrder->created_at)->format('d.m') ?: '—'); ?></div>
-                <div class="metric-meta"><?php echo e(optional($courierOrder->created_at)->format('H:i') ?: 'Vaqt yo‘q'); ?></div>
-            </div>
-        </div>
+    <?php if(session('success')): ?>
+        <div class="alert alert-success border-0 shadow-sm rounded-4 mb-0"><?php echo e(session('success')); ?></div>
+    <?php endif; ?>
+    <?php if(session('error')): ?>
+        <div class="alert alert-danger border-0 shadow-sm rounded-4 mb-0"><?php echo e(session('error')); ?></div>
+    <?php endif; ?>
+
+    <div class="row g-3">
+        <div class="col-12 col-md-6 col-xl-3"><?php if (isset($component)) { $__componentOriginal3c3cb599308b2d9971dae437d0b6bab6 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.admin.stat-card','data' => ['label' => 'Joriy holat','value' => $statusLabel,'meta' => 'Courier bosqichi','icon' => 'truck','tone' => 'primary']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('admin.stat-card'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['label' => 'Joriy holat','value' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($statusLabel),'meta' => 'Courier bosqichi','icon' => 'truck','tone' => 'primary']); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6)): ?>
+<?php $attributes = $__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6; ?>
+<?php unset($__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal3c3cb599308b2d9971dae437d0b6bab6)): ?>
+<?php $component = $__componentOriginal3c3cb599308b2d9971dae437d0b6bab6; ?>
+<?php unset($__componentOriginal3c3cb599308b2d9971dae437d0b6bab6); ?>
+<?php endif; ?></div>
+        <div class="col-12 col-md-6 col-xl-3"><?php if (isset($component)) { $__componentOriginal3c3cb599308b2d9971dae437d0b6bab6 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.admin.stat-card','data' => ['label' => 'Summa','value' => number_format((float)($courierOrder->amount ?? $courierOrder->total ?? 0), 0, '.', ' ') . ' UZS','meta' => 'Yetkazish yozuvi summasi','icon' => 'cash-coin','tone' => 'success']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('admin.stat-card'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['label' => 'Summa','value' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute(number_format((float)($courierOrder->amount ?? $courierOrder->total ?? 0), 0, '.', ' ') . ' UZS'),'meta' => 'Yetkazish yozuvi summasi','icon' => 'cash-coin','tone' => 'success']); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6)): ?>
+<?php $attributes = $__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6; ?>
+<?php unset($__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal3c3cb599308b2d9971dae437d0b6bab6)): ?>
+<?php $component = $__componentOriginal3c3cb599308b2d9971dae437d0b6bab6; ?>
+<?php unset($__componentOriginal3c3cb599308b2d9971dae437d0b6bab6); ?>
+<?php endif; ?></div>
+        <div class="col-12 col-md-6 col-xl-3"><?php if (isset($component)) { $__componentOriginal3c3cb599308b2d9971dae437d0b6bab6 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.admin.stat-card','data' => ['label' => 'Kuryer','value' => $courierOrder->courier ? 'Biriktirilgan' : 'Yo‘q','meta' => $courierOrder->courier?->region ?: 'Hudud yo‘q','icon' => 'person-badge','tone' => 'info']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('admin.stat-card'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['label' => 'Kuryer','value' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($courierOrder->courier ? 'Biriktirilgan' : 'Yo‘q'),'meta' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($courierOrder->courier?->region ?: 'Hudud yo‘q'),'icon' => 'person-badge','tone' => 'info']); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6)): ?>
+<?php $attributes = $__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6; ?>
+<?php unset($__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal3c3cb599308b2d9971dae437d0b6bab6)): ?>
+<?php $component = $__componentOriginal3c3cb599308b2d9971dae437d0b6bab6; ?>
+<?php unset($__componentOriginal3c3cb599308b2d9971dae437d0b6bab6); ?>
+<?php endif; ?></div>
+        <div class="col-12 col-md-6 col-xl-3"><?php if (isset($component)) { $__componentOriginal3c3cb599308b2d9971dae437d0b6bab6 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.admin.stat-card','data' => ['label' => 'Sana','value' => optional($courierOrder->created_at)->format('d.m') ?: '—','meta' => optional($courierOrder->created_at)->format('H:i') ?: 'Vaqt yo‘q','icon' => 'calendar-event','tone' => 'warning']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('admin.stat-card'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['label' => 'Sana','value' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute(optional($courierOrder->created_at)->format('d.m') ?: '—'),'meta' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute(optional($courierOrder->created_at)->format('H:i') ?: 'Vaqt yo‘q'),'icon' => 'calendar-event','tone' => 'warning']); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6)): ?>
+<?php $attributes = $__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6; ?>
+<?php unset($__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal3c3cb599308b2d9971dae437d0b6bab6)): ?>
+<?php $component = $__componentOriginal3c3cb599308b2d9971dae437d0b6bab6; ?>
+<?php unset($__componentOriginal3c3cb599308b2d9971dae437d0b6bab6); ?>
+<?php endif; ?></div>
     </div>
-</section>
 
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-    
-    <div class="a122-section">
-        <div class="a122-section-head">
-            <div>
-                <div class="a122-section-head__title flex items-center gap-2">
-                    <i data-lucide="bike" class="w-5 h-5 text-gray-400"></i>
-                    Kuryer ma'lumotlari
-                </div>
-                <div class="a122-section-head__meta">Biriktirilgan kuryerning profil va aloqa ma’lumotlari.</div>
-            </div>
-        </div>
-        <div class="a122-section-body">
-        <?php if($courierOrder->courier): ?>
-            <div class="flex items-center gap-4 mb-4">
-                <?php if($courierOrder->courier->photo): ?>
-                    <img
-                        src="<?php echo e(Str::startsWith($courierOrder->courier->photo, 'http') ? $courierOrder->courier->photo : asset('storage/' . $courierOrder->courier->photo)); ?>"
-                        alt="Kuryer"
-                        class="w-14 h-14 rounded-full object-cover ring-4 ring-blue-100 dark:ring-blue-500/20"
-                    >
-                <?php else: ?>
-                    <div class="w-14 h-14 rounded-full bg-gray-200 dark:bg-white/10 flex items-center justify-center text-xl font-bold text-gray-500 dark:text-gray-300">
-                        <?php echo e(strtoupper(substr($courierOrder->courier->first_name ?? 'K', 0, 1))); ?>
-
-                    </div>
-                <?php endif; ?>
-                <div>
-                    <div class="font-bold text-base">
-                        <a href="<?php echo e(route('admin.couriers.show', $courierOrder->courier)); ?>" class="text-[var(--p-accent)] hover:underline">
-                            <?php echo e(trim(($courierOrder->courier->first_name ?? '') . ' ' . ($courierOrder->courier->last_name ?? '')) ?: '—'); ?>
-
-                        </a>
-                    </div>
-                    <div class="text-sm text-gray-500"><?php echo e($courierOrder->courier->phone_number ?? $courierOrder->courier->phone ?? '—'); ?></div>
-                </div>
-            </div>
-            <dl class="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-                <div>
-                    <dt class="text-xs text-gray-500 mb-1">Viloyat</dt>
-                    <dd><?php echo e($courierOrder->courier->region ?? '—'); ?></dd>
-                </div>
-                <div>
-                    <dt class="text-xs text-gray-500 mb-1">Holat</dt>
-                    <dd>
-                        <?php $cs = $courierOrder->courier->status ?? ''; ?>
-                        <?php if($cs === 'approved'): ?>
-                            <span class="badge badge-success">Tasdiqlangan</span>
-                        <?php elseif($cs === 'pending'): ?>
-                            <span class="badge badge-warning">Kutilmoqda</span>
-                        <?php elseif($cs === 'rejected'): ?>
-                            <span class="badge badge-danger">Rad etilgan</span>
+    <div class="row g-4">
+        <div class="col-12 col-lg-6">
+            <?php if (isset($component)) { $__componentOriginal6c55ae2c9251ebabe977f3f2190280eb = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal6c55ae2c9251ebabe977f3f2190280eb = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.admin.section-card','data' => ['title' => 'Kuryer ma\'lumotlari','meta' => 'Biriktirilgan kuryerning profil va aloqa ma’lumotlari.']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('admin.section-card'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['title' => 'Kuryer ma\'lumotlari','meta' => 'Biriktirilgan kuryerning profil va aloqa ma’lumotlari.']); ?>
+                <?php if($courierOrder->courier): ?>
+                    <div class="d-flex align-items-center gap-3 mb-4">
+                        <?php if($courierOrder->courier->photo): ?>
+                            <img
+                                src="<?php echo e(Str::startsWith($courierOrder->courier->photo, 'http') ? $courierOrder->courier->photo : asset('storage/' . $courierOrder->courier->photo)); ?>"
+                                alt="Kuryer"
+                                class="rounded-circle object-fit-cover"
+                                width="56"
+                                height="56">
                         <?php else: ?>
-                            <span class="badge badge-muted"><?php echo e($cs ?: '—'); ?></span>
+                            <div class="rounded-circle bg-light d-flex align-items-center justify-content-center fw-bold text-secondary" style="width:56px;height:56px;">
+                                <?php echo e(strtoupper(substr($courierOrder->courier->first_name ?? 'K', 0, 1))); ?>
+
+                            </div>
                         <?php endif; ?>
-                    </dd>
-                </div>
-            </dl>
-        <?php else: ?>
-            <p class="text-gray-400 text-sm">Kuryer ma'lumotlari mavjud emas</p>
-        <?php endif; ?>
-        </div>
-    </div>
+                        <div>
+                            <div class="fw-bold">
+                                <a href="<?php echo e(route('admin.couriers.show', $courierOrder->courier)); ?>" class="link-success text-decoration-none">
+                                    <?php echo e(trim(($courierOrder->courier->first_name ?? '') . ' ' . ($courierOrder->courier->last_name ?? '')) ?: '—'); ?>
 
-    
-    <div class="a122-section">
-        <div class="a122-section-head">
-            <div>
-                <div class="a122-section-head__title flex items-center gap-2">
-                    <i data-lucide="package" class="w-5 h-5 text-gray-400"></i>
-                    Buyurtma ma'lumotlari
-                </div>
-                <div class="a122-section-head__meta">Kuryerga tushgan orderning foydalanuvchi, manzil va summa tafsilotlari.</div>
-            </div>
-        </div>
-        <div class="a122-section-body">
-        <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-4 text-sm">
-            <div>
-                <dt class="text-xs text-gray-500 mb-1">Buyurtma ID</dt>
-                <dd class="font-semibold">#<?php echo e($courierOrder->id); ?></dd>
-            </div>
-
-            <div>
-                <dt class="text-xs text-gray-500 mb-1">Holat</dt>
-                <dd>
-                    <?php $status = $courierOrder->status ?? ''; ?>
-                    <?php if(isset($statuses[$status])): ?>
-                        <span class="badge <?php echo e($statuses[$status]['badge']); ?>"><?php echo e($statuses[$status]['label']); ?></span>
-                    <?php else: ?>
-                        <span class="badge badge-muted"><?php echo e($status ?: '—'); ?></span>
-                    <?php endif; ?>
-                </dd>
-            </div>
-
-            <div>
-                <dt class="text-xs text-gray-500 mb-1">Foydalanuvchi</dt>
-                <dd>
-                    <?php if($courierOrder->user): ?>
-                        <div class="font-medium">
-                            <a href="<?php echo e(route('admin.users.show', $courierOrder->user)); ?>" class="text-[var(--p-accent)] hover:underline">
-                                <?php echo e(trim(($courierOrder->user->first_name ?? $courierOrder->user->name ?? '') . ' ' . ($courierOrder->user->last_name ?? '')) ?: '—'); ?>
-
-                            </a>
+                                </a>
+                            </div>
+                            <div class="small text-secondary"><?php echo e($courierOrder->courier->phone_number ?? $courierOrder->courier->phone ?? '—'); ?></div>
                         </div>
-                        <?php if($courierOrder->user->phone_number ?? $courierOrder->user->phone): ?>
-                            <div class="text-xs text-gray-500"><?php echo e($courierOrder->user->phone_number ?? $courierOrder->user->phone); ?></div>
-                        <?php endif; ?>
-                    <?php else: ?>
-                        <span class="text-gray-400">—</span>
+                    </div>
+
+                    <div class="row g-4 small">
+                        <div class="col-sm-6"><div class="text-secondary mb-1">Viloyat</div><div><?php echo e($courierOrder->courier->region ?? '—'); ?></div></div>
+                        <div class="col-sm-6"><div class="text-secondary mb-1">Holat</div><div><?php echo e($courierOrder->courier->status ?? '—'); ?></div></div>
+                    </div>
+                <?php else: ?>
+                    <div class="text-secondary">Kuryer ma'lumotlari mavjud emas.</div>
+                <?php endif; ?>
+             <?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal6c55ae2c9251ebabe977f3f2190280eb)): ?>
+<?php $attributes = $__attributesOriginal6c55ae2c9251ebabe977f3f2190280eb; ?>
+<?php unset($__attributesOriginal6c55ae2c9251ebabe977f3f2190280eb); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal6c55ae2c9251ebabe977f3f2190280eb)): ?>
+<?php $component = $__componentOriginal6c55ae2c9251ebabe977f3f2190280eb; ?>
+<?php unset($__componentOriginal6c55ae2c9251ebabe977f3f2190280eb); ?>
+<?php endif; ?>
+        </div>
+
+        <div class="col-12 col-lg-6">
+            <?php if (isset($component)) { $__componentOriginal6c55ae2c9251ebabe977f3f2190280eb = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal6c55ae2c9251ebabe977f3f2190280eb = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.admin.section-card','data' => ['title' => 'Buyurtma ma\'lumotlari','meta' => 'Kuryerga tushgan orderning foydalanuvchi, manzil va summa tafsilotlari.']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('admin.section-card'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['title' => 'Buyurtma ma\'lumotlari','meta' => 'Kuryerga tushgan orderning foydalanuvchi, manzil va summa tafsilotlari.']); ?>
+                <div class="row g-4 small">
+                    <div class="col-sm-6"><div class="text-secondary mb-1">Buyurtma ID</div><div class="fw-semibold">#<?php echo e($courierOrder->id); ?></div></div>
+                    <div class="col-sm-6"><div class="text-secondary mb-1">Holat</div><div><span class="badge rounded-pill <?php echo e($statusBadgeClass); ?>"><?php echo e($statusLabel); ?></span></div></div>
+                    <div class="col-sm-6">
+                        <div class="text-secondary mb-1">Foydalanuvchi</div>
+                        <div>
+                            <?php if($courierOrder->user): ?>
+                                <a href="<?php echo e(route('admin.users.show', $courierOrder->user)); ?>" class="link-success text-decoration-none fw-semibold">
+                                    <?php echo e(trim(($courierOrder->user->first_name ?? $courierOrder->user->name ?? '') . ' ' . ($courierOrder->user->last_name ?? '')) ?: '—'); ?>
+
+                                </a>
+                                <div class="small text-secondary"><?php echo e($courierOrder->user->phone_number ?? $courierOrder->user->phone ?? 'Telefon yo‘q'); ?></div>
+                            <?php else: ?>
+                                <span class="text-secondary">—</span>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    <div class="col-sm-6"><div class="text-secondary mb-1">Sana</div><div><?php echo e($courierOrder->created_at ? $courierOrder->created_at->format('d.m.Y H:i') : '—'); ?></div></div>
+                    <?php if($courierOrder->address ?? $courierOrder->delivery_address): ?>
+                        <div class="col-12"><div class="text-secondary mb-1">Manzil</div><div><?php echo e($courierOrder->address ?? $courierOrder->delivery_address); ?></div></div>
                     <?php endif; ?>
-                </dd>
-            </div>
-
-            <div>
-                <dt class="text-xs text-gray-500 mb-1">Sana</dt>
-                <dd><?php echo e($courierOrder->created_at ? $courierOrder->created_at->format('d.m.Y H:i') : '—'); ?></dd>
-            </div>
-
-            <?php if($courierOrder->address ?? $courierOrder->delivery_address): ?>
-            <div class="sm:col-span-2">
-                <dt class="text-xs text-gray-500 mb-1">Manzil</dt>
-                <dd><?php echo e($courierOrder->address ?? $courierOrder->delivery_address); ?></dd>
-            </div>
-            <?php endif; ?>
-
-            <?php if($courierOrder->amount ?? $courierOrder->total): ?>
-            <div>
-                <dt class="text-xs text-gray-500 mb-1">Summa</dt>
-                <dd class="font-bold text-base"><?php echo e(number_format((float)($courierOrder->amount ?? $courierOrder->total ?? 0), 0, '.', ' ')); ?> UZS</dd>
-            </div>
-            <?php endif; ?>
-
-            <?php if($courierOrder->note ?? $courierOrder->comment): ?>
-            <div class="sm:col-span-2">
-                <dt class="text-xs text-gray-500 mb-1">Izoh</dt>
-                <dd class="text-gray-600 dark:text-gray-300"><?php echo e($courierOrder->note ?? $courierOrder->comment); ?></dd>
-            </div>
-            <?php endif; ?>
-        </dl>
+                    <?php if($courierOrder->amount ?? $courierOrder->total): ?>
+                        <div class="col-sm-6"><div class="text-secondary mb-1">Summa</div><div class="fw-bold fs-5"><?php echo e(number_format((float)($courierOrder->amount ?? $courierOrder->total ?? 0), 0, '.', ' ')); ?> UZS</div></div>
+                    <?php endif; ?>
+                    <?php if($courierOrder->note ?? $courierOrder->comment): ?>
+                        <div class="col-12"><div class="text-secondary mb-1">Izoh</div><div><?php echo e($courierOrder->note ?? $courierOrder->comment); ?></div></div>
+                    <?php endif; ?>
+                </div>
+             <?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal6c55ae2c9251ebabe977f3f2190280eb)): ?>
+<?php $attributes = $__attributesOriginal6c55ae2c9251ebabe977f3f2190280eb; ?>
+<?php unset($__attributesOriginal6c55ae2c9251ebabe977f3f2190280eb); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal6c55ae2c9251ebabe977f3f2190280eb)): ?>
+<?php $component = $__componentOriginal6c55ae2c9251ebabe977f3f2190280eb; ?>
+<?php unset($__componentOriginal6c55ae2c9251ebabe977f3f2190280eb); ?>
+<?php endif; ?>
         </div>
     </div>
-
 </div>
 <?php $__env->stopSection(); ?>
 

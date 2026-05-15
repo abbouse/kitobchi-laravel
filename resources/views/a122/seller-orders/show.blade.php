@@ -1,6 +1,7 @@
 @extends('a122.layouts.admin')
 @section('title', 'Buyurtma #' . $sellerOrder->id)
 @section('page-title', 'Sotuvchi buyurtmasi')
+@section('page-eyebrow', 'Seller fulfillment')
 
 @section('content')
 @php
@@ -8,229 +9,132 @@
     $customerPhone = $sellerOrder->client?->phone_number ?? ($address['phoneNumber'] ?? '—');
     $statusVal = $sellerOrder->status_code ?? \App\Enums\SellerOrderStatusCode::fromLegacy($sellerOrder->status ?? 1)->value;
     $statusMeta = $statuses[$statusVal] ?? ['label' => $statusVal, 'badge' => 'badge-muted'];
+    $statusBadgeClass = match ($statusMeta['badge']) {
+        'badge-success' => 'text-bg-success-subtle border border-success-subtle text-success-emphasis',
+        'badge-danger' => 'text-bg-danger-subtle border border-danger-subtle text-danger-emphasis',
+        'badge-warning' => 'text-bg-warning-subtle border border-warning-subtle text-warning-emphasis',
+        'badge-info' => 'text-bg-primary-subtle border border-primary-subtle text-primary-emphasis',
+        default => 'text-bg-light border',
+    };
 @endphp
 
-<x-a122.page-header back-href="{{ route('admin.seller-orders.index') }}">
-    <x-slot name="heading">Seller buyurtma #{{ $sellerOrder->id }}</x-slot>
-    <x-slot name="meta">{{ $sellerOrder->seller->shop_name ?? 'Sotuvchi yo‘q' }} · {{ $customerName }} · {{ $sellerOrder->created_at ? $sellerOrder->created_at->format('d.m.Y H:i') : 'Sana yo‘q' }}</x-slot>
-</x-a122.page-header>
+<div class="d-flex flex-column gap-4">
+    <x-admin.page-header
+        eyebrow="Seller fulfillment"
+        :title="'Seller buyurtma #' . $sellerOrder->id"
+        :subtitle="($sellerOrder->seller->shop_name ?? 'Sotuvchi yo‘q') . ' · ' . $customerName . ' · ' . ($sellerOrder->created_at ? $sellerOrder->created_at->format('d.m.Y H:i') : 'Sana yo‘q')">
+        <a href="{{ route('admin.seller-orders.index') }}" class="btn btn-outline-secondary rounded-pill px-4">
+            <i class="bi bi-arrow-left me-2"></i>Ro‘yxatga qaytish
+        </a>
+    </x-admin.page-header>
 
-@if(session('success'))
-    <div class="p-alert success mb-4">{{ session('success') }}</div>
-@endif
-@if(session('error'))
-    <div class="p-alert danger mb-4">{{ session('error') }}</div>
-@endif
+    @if(session('success'))
+        <div class="alert alert-success border-0 shadow-sm rounded-4 mb-0">{{ session('success') }}</div>
+    @endif
+    @if(session('error'))
+        <div class="alert alert-danger border-0 shadow-sm rounded-4 mb-0">{{ session('error') }}</div>
+    @endif
 
-<section class="a122-section mb-4">
-    <div class="a122-section-body">
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <div class="kpi-soft">
-                <div class="metric-label">Seller summasi</div>
-                <div class="metric-value text-xl">{{ number_format((float) ($sellerOrder->amount ?? 0), 0, '.', ' ') }}</div>
-                <div class="metric-meta">UZS</div>
-            </div>
-            <div class="kpi-soft">
-                <div class="metric-label">Mahsulotlar</div>
-                <div class="metric-value text-xl">{{ number_format($summary['items_count']) }}</div>
-                <div class="metric-meta">Seller itemlari</div>
-            </div>
-            <div class="kpi-soft">
-                <div class="metric-label">Yetkazish turi</div>
-                <div class="metric-value text-xl">{{ $summary['delivery_type'] }}</div>
-                <div class="metric-meta">Fulfillment yo‘li</div>
-            </div>
-            <div class="kpi-soft">
-                <div class="metric-label">Holat</div>
-                <div class="metric-value text-xl">{{ $statusMeta['label'] }}</div>
-                <div class="metric-meta">Joriy seller bosqichi</div>
-            </div>
+    <div class="row g-3">
+        <div class="col-12 col-md-6 col-xl-3">
+            <x-admin.stat-card label="Seller summasi" :value="number_format((float) ($sellerOrder->amount ?? 0), 0, '.', ' ') . ' UZS'" meta="Sellerga tegishli payout qismi" icon="cash-coin" tone="success" />
         </div>
-    </div>
-</section>
-
-<div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
-
-    {{-- Info Card --}}
-    <div class="xl:col-span-2 a122-section">
-        <div class="a122-section-head">
-            <div>
-                <div class="a122-section-head__title flex items-center gap-2">
-                    <i data-lucide="shopping-bag" class="w-5 h-5 text-gray-400"></i>
-                    Buyurtma ma'lumotlari
-                </div>
-                <div class="a122-section-head__meta">Asosiy order, mijoz, summa va yetkazish bo‘yicha tafsilotlar.</div>
-            </div>
+        <div class="col-12 col-md-6 col-xl-3">
+            <x-admin.stat-card label="Mahsulotlar" :value="number_format($summary['items_count'])" meta="Seller itemlari" icon="box-seam" tone="info" />
         </div>
-        <div class="a122-section-body">
-
-        <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
-            <div>
-                <dt class="text-xs text-gray-500 mb-1">Buyurtma ID</dt>
-                <dd class="font-semibold">#{{ $sellerOrder->id }}</dd>
-            </div>
-
-            <div>
-                <dt class="text-xs text-gray-500 mb-1">Sana</dt>
-                <dd>{{ $sellerOrder->created_at ? $sellerOrder->created_at->format('d.m.Y H:i') : '—' }}</dd>
-            </div>
-
-            <div>
-                <dt class="text-xs text-gray-500 mb-1">Asosiy buyurtma</dt>
-                <dd class="font-semibold">
-                    <a href="{{ route('admin.orders.show', $sellerOrder->order_id) }}" class="text-[var(--p-accent)] hover:underline">#{{ $sellerOrder->order_id }}</a>
-                </dd>
-            </div>
-
-            <div>
-                <dt class="text-xs text-gray-500 mb-1">Sotuvchi</dt>
-                <dd class="font-semibold">
-                    @if($sellerOrder->seller)
-                        <a href="{{ route('admin.sellers.show', $sellerOrder->seller) }}" class="text-[var(--p-accent)] hover:underline">{{ $sellerOrder->seller->shop_name }}</a>
-                    @else
-                        —
-                    @endif
-                </dd>
-            </div>
-
-            <div>
-                <dt class="text-xs text-gray-500 mb-1">Summa</dt>
-                <dd class="font-bold text-lg">{{ number_format((float) ($sellerOrder->amount ?? 0), 0, '.', ' ') }} UZS</dd>
-            </div>
-
-            <div>
-                <dt class="text-xs text-gray-500 mb-1">Mijoz ismi</dt>
-                <dd>
-                    @if($sellerOrder->client)
-                        <a href="{{ route('admin.users.show', $sellerOrder->client) }}" class="text-[var(--p-accent)] hover:underline">{{ $customerName }}</a>
-                    @else
-                        {{ $customerName }}
-                    @endif
-                </dd>
-            </div>
-
-            <div>
-                <dt class="text-xs text-gray-500 mb-1">Mijoz telefoni</dt>
-                <dd>{{ $customerPhone }}</dd>
-            </div>
-
-            <div>
-                <dt class="text-xs text-gray-500 mb-1">Yetkazib berish turi</dt>
-                <dd>{{ $summary['delivery_type'] }}</dd>
-            </div>
-
-            <div>
-                <dt class="text-xs text-gray-500 mb-1">Mahsulotlar soni</dt>
-                <dd>{{ $summary['items_count'] }} ta</dd>
-            </div>
-
-            <div>
-                <dt class="text-xs text-gray-500 mb-1">Holat</dt>
-                <dd>
-                    <span class="badge {{ $statusMeta['badge'] }}">{{ $statusMeta['label'] }}</span>
-                </dd>
-            </div>
-
-            <div class="sm:col-span-2">
-                <dt class="text-xs text-gray-500 mb-1">Manzil</dt>
-                <dd>{{ $address['fullAddress'] ?? 'Manzil kiritilmagan' }}</dd>
-            </div>
-        </dl>
+        <div class="col-12 col-md-6 col-xl-3">
+            <x-admin.stat-card label="Yetkazish turi" :value="$summary['delivery_type']" meta="Fulfillment yo‘li" icon="truck" tone="warning" />
+        </div>
+        <div class="col-12 col-md-6 col-xl-3">
+            <x-admin.stat-card label="Holat" :value="$statusMeta['label']" meta="Joriy seller bosqichi" icon="diagram-3" tone="primary" />
         </div>
     </div>
 
-    {{-- Status Update --}}
-    <div class="a122-section h-fit">
-        <div class="a122-section-head">
-            <div>
-                <div class="a122-section-head__title flex items-center gap-2">
-                    <i data-lucide="refresh-cw" class="w-5 h-5 text-gray-400"></i>
-                    Holatni o'zgartirish
+    <div class="row g-4">
+        <div class="col-12 col-xl-8">
+            <x-admin.section-card title="Buyurtma ma'lumotlari" meta="Asosiy order, mijoz, summa va yetkazish bo‘yicha tafsilotlar.">
+                <div class="row g-4 small">
+                    <div class="col-sm-6"><div class="text-secondary mb-1">Buyurtma ID</div><div class="fw-semibold">#{{ $sellerOrder->id }}</div></div>
+                    <div class="col-sm-6"><div class="text-secondary mb-1">Sana</div><div>{{ $sellerOrder->created_at ? $sellerOrder->created_at->format('d.m.Y H:i') : '—' }}</div></div>
+                    <div class="col-sm-6"><div class="text-secondary mb-1">Asosiy buyurtma</div><div class="fw-semibold"><a href="{{ route('admin.orders.show', $sellerOrder->order_id) }}" class="link-success text-decoration-none">#{{ $sellerOrder->order_id }}</a></div></div>
+                    <div class="col-sm-6"><div class="text-secondary mb-1">Sotuvchi</div><div class="fw-semibold">@if($sellerOrder->seller)<a href="{{ route('admin.sellers.show', $sellerOrder->seller) }}" class="link-success text-decoration-none">{{ $sellerOrder->seller->shop_name }}</a>@else—@endif</div></div>
+                    <div class="col-sm-6"><div class="text-secondary mb-1">Summa</div><div class="fw-bold fs-5">{{ number_format((float) ($sellerOrder->amount ?? 0), 0, '.', ' ') }} UZS</div></div>
+                    <div class="col-sm-6"><div class="text-secondary mb-1">Mijoz</div><div>@if($sellerOrder->client)<a href="{{ route('admin.users.show', $sellerOrder->client) }}" class="link-success text-decoration-none">{{ $customerName }}</a>@else{{ $customerName }}@endif</div></div>
+                    <div class="col-sm-6"><div class="text-secondary mb-1">Telefon</div><div>{{ $customerPhone }}</div></div>
+                    <div class="col-sm-6"><div class="text-secondary mb-1">Yetkazib berish turi</div><div>{{ $summary['delivery_type'] }}</div></div>
+                    <div class="col-sm-6"><div class="text-secondary mb-1">Mahsulotlar soni</div><div>{{ $summary['items_count'] }} ta</div></div>
+                    <div class="col-sm-6"><div class="text-secondary mb-1">Holat</div><div><span class="badge rounded-pill {{ $statusBadgeClass }}">{{ $statusMeta['label'] }}</span></div></div>
+                    <div class="col-12"><div class="text-secondary mb-1">Manzil</div><div>{{ $address['fullAddress'] ?? 'Manzil kiritilmagan' }}</div></div>
                 </div>
-                <div class="a122-section-head__meta">Seller order statusini shu blokdan yangilash mumkin.</div>
-            </div>
+            </x-admin.section-card>
         </div>
-        <div class="a122-section-body">
 
-        @if($errors->any())
-            <div class="mb-3 p-alert danger text-xs">
-                <ul class="list-disc list-inside space-y-1">
-                    @foreach($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
+        <div class="col-12 col-xl-4">
+            <x-admin.section-card title="Holatni o'zgartirish" meta="Seller order statusini shu blokdan yangilash mumkin.">
+                @if($errors->any())
+                    <div class="alert alert-danger rounded-4 small">
+                        <ul class="mb-0 ps-3">
+                            @foreach($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+
+                <form method="POST" action="{{ route('admin.seller-orders.status', $sellerOrder) }}" class="d-grid gap-3">
+                    @csrf
+                    @method('PATCH')
+                    <div>
+                        <label class="form-label">Yangi holat</label>
+                        <select name="status" class="form-select">
+                            @foreach($statuses as $value => $status)
+                                <option value="{{ $value }}" @selected($statusVal === $value)>{{ $status['label'] }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary rounded-pill">
+                        <i class="bi bi-floppy me-2"></i>Saqlash
+                    </button>
+                </form>
+            </x-admin.section-card>
+        </div>
+    </div>
+
+    <x-admin.section-card title="Sotuvchiga tegishli mahsulotlar" meta="Aynan shu sellerga biriktirilgan order itemlari va summalari.">
+        @if($items->isEmpty())
+            <div class="text-secondary">Bu buyurtma uchun sotuvchiga tegishli mahsulotlar topilmadi.</div>
+        @else
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Mahsulot</th>
+                            <th>Turi</th>
+                            <th>Miqdor</th>
+                            <th>Narx</th>
+                            <th>Jami</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($items as $item)
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold">{{ $item['name'] }}</div>
+                                    @if(!empty($item['author']))
+                                        <div class="small text-secondary">{{ $item['author'] }}</div>
+                                    @endif
+                                </td>
+                                <td>{{ $item['type'] }}</td>
+                                <td class="font-monospace">{{ number_format((int) ($item['count_item'] ?? 1)) }}</td>
+                                <td class="font-monospace">{{ number_format((float) ($item['price'] ?? 0), 0, '.', ' ') }} UZS</td>
+                                <td class="fw-semibold font-monospace">{{ number_format((float) (($item['price'] ?? 0) * ($item['count_item'] ?? 1)), 0, '.', ' ') }} UZS</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
         @endif
-
-        <form method="POST" action="{{ route('admin.seller-orders.status', $sellerOrder) }}">
-            @csrf
-            @method('PATCH')
-
-            <div class="mb-4">
-                <label class="text-xs text-gray-500 mb-1 block">Yangi holat</label>
-                <select name="status" class="select">
-                    @foreach($statuses as $value => $status)
-                        <option value="{{ $value }}" @selected($statusVal === $value)>
-                            {{ $status['label'] }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-
-            <button type="submit" class="btn-p primary w-full flex items-center justify-center gap-2">
-                <i data-lucide="save" class="w-4 h-4"></i> Saqlash
-            </button>
-        </form>
-        </div>
-    </div>
-
-</div>
-
-<div class="mt-6 a122-section">
-    <div class="a122-section-head">
-        <div>
-            <div class="a122-section-head__title flex items-center gap-2">
-                <i data-lucide="package-search" class="w-5 h-5 text-gray-400"></i>
-                Sotuvchiga tegishli mahsulotlar
-            </div>
-            <div class="a122-section-head__meta">Aynan shu sellerga biriktirilgan order itemlari va summalari.</div>
-        </div>
-    </div>
-    <div class="a122-section-body">
-
-    @if($items->isEmpty())
-        <div class="text-sm text-gray-500">Bu buyurtma uchun sotuvchiga tegishli mahsulotlar topilmadi.</div>
-    @else
-        <div class="overflow-x-auto">
-            <table class="tbl">
-                <thead>
-                    <tr>
-                        <th>Mahsulot</th>
-                        <th>Turi</th>
-                        <th>Miqdor</th>
-                        <th>Narx</th>
-                        <th>Jami</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($items as $item)
-                        <tr>
-                            <td>
-                                <div class="font-semibold">{{ $item['name'] }}</div>
-                                @if(!empty($item['author']))
-                                    <div class="text-xs text-gray-500">{{ $item['author'] }}</div>
-                                @endif
-                            </td>
-                            <td class="capitalize">{{ $item['type'] }}</td>
-                            <td>{{ $item['quantity'] }}</td>
-                            <td>{{ number_format((float) $item['price'], 0, '.', ' ') }} UZS</td>
-                            <td class="font-semibold">{{ number_format((float) $item['price'] * (int) $item['quantity'], 0, '.', ' ') }} UZS</td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        </div>
-    @endif
-    </div>
+    </x-admin.section-card>
 </div>
 @endsection

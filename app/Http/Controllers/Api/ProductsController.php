@@ -713,7 +713,10 @@ class ProductsController extends Controller
 
         $seller = Seller::where('id', $id)
             ->where('is_hidden', 0)
-            ->where('parent_id', 0)
+            ->where(function ($q) {
+                $q->whereNull('parent_id')
+                    ->orWhere('parent_id', 0);
+            })
             ->where('status', 'approved')
             ->firstOrFail();
 
@@ -857,7 +860,10 @@ class ProductsController extends Controller
 
         $seller = Seller::where('id', $id)
             ->where('is_hidden', 0)
-            ->where('parent_id', 0)
+            ->where(function ($q) {
+                $q->whereNull('parent_id')
+                    ->orWhere('parent_id', 0);
+            })
             ->where('status', 'approved')
             ->firstOrFail();
 
@@ -938,7 +944,10 @@ class ProductsController extends Controller
 
         $seller = Seller::where('id', $sellerId)
             ->where('is_hidden', 0)
-            ->where('parent_id', 0)
+            ->where(function ($q) {
+                $q->whereNull('parent_id')
+                    ->orWhere('parent_id', 0);
+            })
             ->where('status', 'approved')
             ->first(['id']);
 
@@ -1053,7 +1062,10 @@ class ProductsController extends Controller
             ->where('is_deleted', false)
             ->with(['seller' => function ($query) {
                 $query->where('is_hidden', 0)
-                    ->where('parent_id', 0)
+                    ->where(function ($q) {
+                        $q->whereNull('parent_id')
+                            ->orWhere('parent_id', 0);
+                    })
                     ->where('status', 'approved');
             }])
             ->first();
@@ -1250,7 +1262,10 @@ class ProductsController extends Controller
         $user = Auth::guard('user')->user();
 
         $sellers = Seller::where('is_hidden', 0)
-            ->where('parent_id', 0)
+            ->where(function ($q) {
+                $q->whereNull('parent_id')
+                    ->orWhere('parent_id', 0);
+            })
             ->where('status', 'approved')
             ->where(fn($q) => $q
                 ->whereHas('books', fn($b) => $b

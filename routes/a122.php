@@ -69,6 +69,7 @@ Route::prefix('a122')->name('admin.')->group(function () {
         Route::post('/{user}/unblock', [UserController::class, 'unblock'])->name('unblock');
         Route::patch('/{user}/verify', [UserController::class, 'toggleVerify'])->name('verify');
         Route::patch('/{user}/premium', [UserController::class, 'togglePremium'])->name('premium');
+        Route::delete('/{user}/cards/{card}', [UserController::class, 'destroyCard'])->name('cards.destroy');
         Route::delete('/{user}',     [UserController::class, 'destroy'])->name('destroy');
     });
 

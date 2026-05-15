@@ -1,58 +1,61 @@
 @if($paginator->hasPages())
-<div class="a122-pagination">
-  <div class="a122-pagination__meta">
-    <span style="color:var(--p-text);font-weight:500">{{ number_format($paginator->firstItem()) }}</span>
-    –
-    <span style="color:var(--p-text);font-weight:500">{{ number_format($paginator->lastItem()) }}</span>
-    /
-    {{ number_format($paginator->total()) }} ta natija
+  @php
+    $current = $paginator->currentPage();
+    $last = $paginator->lastPage();
+    $from = max(1, $current - 2);
+    $to = min($last, $current + 2);
+  @endphp
+
+  <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+    <div class="small text-secondary">
+      <span class="fw-semibold text-dark">{{ number_format($paginator->firstItem()) }}</span>
+      –
+      <span class="fw-semibold text-dark">{{ number_format($paginator->lastItem()) }}</span>
+      / {{ number_format($paginator->total()) }} ta natija
+    </div>
+
+    <nav aria-label="Pagination">
+      <ul class="pagination pagination-sm mb-0">
+        <li class="page-item {{ $paginator->onFirstPage() ? 'disabled' : '' }}">
+          <a class="page-link rounded-pill px-3" href="{{ $paginator->onFirstPage() ? '#' : $paginator->previousPageUrl() }}" tabindex="{{ $paginator->onFirstPage() ? '-1' : '0' }}">
+            <i class="bi bi-chevron-left"></i>
+          </a>
+        </li>
+
+        @if($from > 1)
+          <li class="page-item">
+            <a class="page-link rounded-pill px-3" href="{{ $paginator->url(1) }}">1</a>
+          </li>
+          @if($from > 2)
+            <li class="page-item disabled"><span class="page-link rounded-pill px-3">…</span></li>
+          @endif
+        @endif
+
+        @foreach(range($from, $to) as $page)
+          <li class="page-item {{ $page === $current ? 'active' : '' }}">
+            @if($page === $current)
+              <span class="page-link rounded-pill px-3">{{ $page }}</span>
+            @else
+              <a class="page-link rounded-pill px-3" href="{{ $paginator->url($page) }}">{{ $page }}</a>
+            @endif
+          </li>
+        @endforeach
+
+        @if($to < $last)
+          @if($to < $last - 1)
+            <li class="page-item disabled"><span class="page-link rounded-pill px-3">…</span></li>
+          @endif
+          <li class="page-item">
+            <a class="page-link rounded-pill px-3" href="{{ $paginator->url($last) }}">{{ $last }}</a>
+          </li>
+        @endif
+
+        <li class="page-item {{ $paginator->hasMorePages() ? '' : 'disabled' }}">
+          <a class="page-link rounded-pill px-3" href="{{ $paginator->hasMorePages() ? $paginator->nextPageUrl() : '#' }}" tabindex="{{ $paginator->hasMorePages() ? '0' : '-1' }}">
+            <i class="bi bi-chevron-right"></i>
+          </a>
+        </li>
+      </ul>
+    </nav>
   </div>
-
-  <div class="a122-pagination__pages">
-    @if($paginator->onFirstPage())
-      <span class="a122-page-btn disabled"><i class="bi bi-chevron-left"></i></span>
-    @else
-      <a href="{{ $paginator->previousPageUrl() }}" class="a122-page-btn">
-        <i class="bi bi-chevron-left"></i>
-      </a>
-    @endif
-
-    @php
-      $current = $paginator->currentPage();
-      $last = $paginator->lastPage();
-      $from = max(1, $current - 2);
-      $to = min($last, $current + 2);
-    @endphp
-
-    @if($from > 1)
-      <a href="{{ $paginator->url(1) }}" class="a122-page-btn">1</a>
-      @if($from > 2)
-        <span class="a122-page-btn disabled" style="cursor:default">…</span>
-      @endif
-    @endif
-
-    @foreach(range($from, $to) as $page)
-      @if($page === $current)
-        <span class="a122-page-btn active">{{ $page }}</span>
-      @else
-        <a href="{{ $paginator->url($page) }}" class="a122-page-btn">{{ $page }}</a>
-      @endif
-    @endforeach
-
-    @if($to < $last)
-      @if($to < $last - 1)
-        <span class="a122-page-btn disabled" style="cursor:default">…</span>
-      @endif
-      <a href="{{ $paginator->url($last) }}" class="a122-page-btn">{{ $last }}</a>
-    @endif
-
-    @if($paginator->hasMorePages())
-      <a href="{{ $paginator->nextPageUrl() }}" class="a122-page-btn">
-        <i class="bi bi-chevron-right"></i>
-      </a>
-    @else
-      <span class="a122-page-btn disabled"><i class="bi bi-chevron-right"></i></span>
-    @endif
-  </div>
-</div>
 @endif

@@ -281,10 +281,33 @@
           <div class="rounded-2xl border border-[var(--p-border)] bg-[var(--p-elevated)] p-4">
             <div class="flex items-start justify-between gap-3">
               <div>
-                <div class="text-sm font-semibold tracking-[0.18em] uppercase text-[var(--p-muted)]">Card</div>
-                <div class="mt-2 text-lg font-black">**** **** **** {{ substr((string) $card->card_number, -4) ?: '****' }}</div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <div class="text-sm font-semibold tracking-[0.18em] uppercase text-[var(--p-muted)]">{{ strtoupper($card->vendor ?: $card->processing ?: 'Card') }}</div>
+                  @if($card->is_default)
+                    <span class="badge badge-info">Asosiy</span>
+                  @endif
+                  @if($card->is_temporary)
+                    <span class="badge badge-warning">Temporary</span>
+                  @endif
+                </div>
+                <div class="mt-2 text-lg font-black">{{ $card->card_number ?: '**** **** **** ****' }}</div>
+                <div class="mt-2 text-xs text-[var(--p-muted)]">
+                  {{ $card->card_name ?: 'Nom berilmagan' }} · {{ $card->expire_date ?: 'Muddat yo‘q' }}
+                </div>
+                @if($card->phone_number)
+                  <div class="mt-1 text-xs text-[var(--p-muted)]">{{ $card->phone_number }}</div>
+                @endif
               </div>
-              <span class="badge {{ $card->is_verified ? 'badge-success' : 'badge-warning' }}">{{ $card->is_verified ? 'Tasdiqlangan' : 'Kutilmoqda' }}</span>
+              <div class="flex flex-col items-end gap-2">
+                <span class="badge {{ $card->is_verified ? 'badge-success' : 'badge-warning' }}">{{ $card->is_verified ? 'Tasdiqlangan' : 'Kutilmoqda' }}</span>
+                <form method="POST" action="{{ route('admin.users.cards.destroy', [$user, $card]) }}" onsubmit="return confirm('Kartani Paylov va tizimdan o‘chirasizmi?')">
+                  @csrf
+                  @method('DELETE')
+                  <button class="btn-ghost p-2 rounded-lg text-rose-600" title="Kartani o‘chirish">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+              </div>
             </div>
             <div class="text-xs text-[var(--p-muted)] mt-3">{{ optional($card->created_at)->format('d.m.Y H:i') ?: 'Sana yo‘q' }}</div>
           </div>

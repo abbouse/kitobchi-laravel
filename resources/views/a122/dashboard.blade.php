@@ -188,9 +188,10 @@
     </div>
   </div>
 
-  <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-6 xl:gap-3 fade-up">
+  <div class="row g-3 row-cols-1 row-cols-md-2 row-cols-xl-3 row-cols-xxl-6 fade-up">
 
-    <div class="kpi-card">
+    <div class="col">
+    <div class="kpi-card h-100">
       <div class="flex items-start justify-between">
         <div class="kpi-icon kpi-icon--success"><i class="bi bi-graph-up-arrow"></i></div>
         <span class="kpi-change up"><i class="bi bi-arrow-up-short kpi-change-ico"></i> Bugun: {{ number_format($todayRevenue/1000) }}K</span>
@@ -204,8 +205,10 @@
         <span class="kpi-foot-mono">{{ number_format($monthRevenue/1_000_000,1) }}M</span>
       </div>
     </div>
+    </div>
 
-    <div class="kpi-card">
+    <div class="col">
+    <div class="kpi-card h-100">
       <div class="flex items-start justify-between">
         <div class="kpi-icon kpi-icon--accent"><i class="bi bi-bag-check"></i></div>
         <span class="kpi-change up"><i class="bi bi-plus kpi-change-ico"></i> {{ $todayOrders }} bugun</span>
@@ -219,8 +222,10 @@
         <span class="kpi-foot-danger"><i class="bi bi-x-circle kpi-footer-ico"></i> {{ $cancelledOrders }}</span>
       </div>
     </div>
+    </div>
 
-    <div class="kpi-card">
+    <div class="col">
+    <div class="kpi-card h-100">
       <div class="flex items-start justify-between">
         <div class="kpi-icon kpi-icon--info"><i class="bi bi-patch-check"></i></div>
         <span class="kpi-change {{ $completionRate>=70?'up':'neutral' }}">{{ $completionRate }}%</span>
@@ -238,8 +243,10 @@
         <span class="kpi-foot-hint-xs">{{ $cancellationRate }}% bekor</span>
       </div>
     </div>
+    </div>
 
-    <div class="kpi-card">
+    <div class="col">
+    <div class="kpi-card h-100">
       <div class="flex items-start justify-between">
         <div class="kpi-icon kpi-icon--warning"><i class="bi bi-people"></i></div>
         <span class="kpi-change up"><span class="live-dot live-dot--xs"></span>{{ $onlineUsers }} online</span>
@@ -253,8 +260,10 @@
         <span class="kpi-foot-mono kpi-foot-mono--success">+{{ $newUsersToday }}</span>
       </div>
     </div>
+    </div>
 
-    <div class="kpi-card">
+    <div class="col">
+    <div class="kpi-card h-100">
       <div class="flex items-start justify-between">
         <div class="kpi-icon kpi-icon--gift"><i class="bi bi-gift"></i></div>
         <span class="kpi-change {{ $giftUsed>0?'up':'neutral' }}"><i class="bi bi-check-circle kpi-change-ico-sm"></i> {{ $giftUsed }} ishlatildi</span>
@@ -272,8 +281,10 @@
         @endif
       </div>
     </div>
+    </div>
 
-    <div class="kpi-card">
+    <div class="col">
+    <div class="kpi-card h-100">
       <div class="flex items-start justify-between">
         <div class="kpi-icon kpi-icon--teal"><i class="bi bi-box-seam"></i></div>
         @if($mysteryDueCount>0)
@@ -291,6 +302,7 @@
         <span class="kpi-foot-hint-sm">{{ $mysteryPending }} kutmoqda</span>
       </div>
     </div>
+    </div>
 
   </div>
 </div>
@@ -300,8 +312,9 @@
 {{-- ══════════════════════════════════════════════════════════════════════════ --}}
 <div class="dash-tab-panel" id="dash-panel-orders" x-show="tab === 'orders'" x-cloak>
 
-  <div class="grid grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-4 mb-4 fade-up">
-    <div class="dash-card">
+  <div class="row g-3 mb-4 fade-up">
+    <div class="col-12 col-lg-6">
+    <div class="dash-card h-100">
       <div class="dash-card-head">
         <div>
           <div class="dash-card-title">Buyurtmalar — 7 kun</div>
@@ -313,7 +326,9 @@
         <div class="dash-chart-surface"><div id="chartOrdersWeek" class="dash-chart-host dash-chart-host--220"></div></div>
       </div>
     </div>
-    <div class="dash-card">
+    </div>
+    <div class="col-12 col-lg-6">
+    <div class="dash-card h-100">
       <div class="dash-card-head">
         <div>
           <div class="dash-card-title">Daromad — 7 kun</div>
@@ -324,11 +339,12 @@
         <div class="dash-chart-surface"><div id="chartRevenueWeek" class="dash-chart-host dash-chart-host--220"></div></div>
       </div>
     </div>
+    </div>
   </div>
 
-  <div class="grid grid-cols-1 xl:grid-cols-12 gap-4 mb-4">
-    <div class="xl:col-span-4 fade-up">
-      <div class="dash-card" style="height:100%">
+  <div class="row g-4 mb-4">
+    <div class="col-12 col-xl-4 fade-up">
+      <div class="dash-card h-100">
         <div class="dash-card-head">
           <div class="dash-card-title">Holat bo'yicha</div>
           <div class="dash-card-sub">Jami {{ number_format($totalOrders) }} ta</div>
@@ -348,8 +364,8 @@
       </div>
     </div>
 
-    <div class="xl:col-span-8 fade-up">
-      <div class="dash-card">
+    <div class="col-12 col-xl-8 fade-up">
+      <div class="dash-card h-100">
         <div class="dash-card-head">
           <div>
             <div class="dash-card-title">So'nggi buyurtmalar</div>
@@ -398,8 +414,9 @@
       <a href="{{ route('admin.mystery-box.subscriptions',['tab'=>'active']) }}" class="btn-p ghost sm">Barchasi</a>
     </div>
     <div class="dash-card-body">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-1">
+      <div class="row g-2 row-cols-1 row-cols-md-2">
         @foreach($mysteryDueToday->take(4) as $sub)
+        <div class="col">
         <a href="{{ route('admin.mystery-box.subscription',$sub) }}" class="dash-row-link">
           <div class="d-av d-av--teal">{{ strtoupper(substr($sub->user?->name??'M',0,1)) }}</div>
           <div class="dash-row-main">
@@ -408,8 +425,10 @@
           </div>
           <span class="s-pill danger s-pill--dash-tight">Navbatda</span>
         </a>
+        </div>
         @endforeach
         @foreach($mysteryDueSoon->take(4) as $sub)
+        <div class="col">
         <a href="{{ route('admin.mystery-box.subscription',$sub) }}" class="dash-row-link dash-row-link--compact">
           <div class="d-av d-av--teal">{{ strtoupper(substr($sub->user?->name??'M',0,1)) }}</div>
           <div class="dash-row-main">
@@ -417,6 +436,7 @@
             <div class="dash-row-meta--2xs">{{ $sub->next_delivery_at?->format('d.m.Y') }}</div>
           </div>
         </a>
+        </div>
         @endforeach
       </div>
     </div>
@@ -469,8 +489,8 @@
     ];
   @endphp
 
-  <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
-    <div class="xl:col-span-5 fade-up">
+  <div class="row g-4">
+    <div class="col-12 col-xl-5 fade-up">
       <div class="fin-card">
         <div class="fin-section">
           <div class="fin-section-label fin-section-label--income"><i class="bi bi-arrow-up-circle-fill"></i> Daromadlar</div>
@@ -523,7 +543,7 @@
       </div>
     </div>
 
-    <div class="xl:col-span-7 fade-up flex flex-col gap-4">
+    <div class="col-12 col-xl-7 fade-up d-flex flex-column gap-4">
       <div class="dash-card">
         <div class="dash-card-head">
           <div class="dash-card-title">AOV dinamikasi</div>
@@ -531,8 +551,9 @@
         </div>
         <div class="dash-card-body"><div id="chartAov" class="dash-chart-host dash-chart-host--130"></div></div>
       </div>
-      <div class="grid grid-cols-2 gap-4">
-        <div class="dash-card">
+      <div class="row g-4 row-cols-1 row-cols-md-2">
+        <div class="col">
+        <div class="dash-card h-100">
           <div class="dash-card-head">
             <div class="dash-card-title">Mahsulot turi</div>
             <div class="dash-card-sub">Daromad ulushi</div>
@@ -550,7 +571,9 @@
             @endforeach
           </div>
         </div>
-        <div class="dash-card">
+        </div>
+        <div class="col">
+        <div class="dash-card h-100">
           <div class="dash-card-head">
             <div class="dash-card-title">Xaridorlar (bu oy)</div>
             <div class="dash-card-sub">Yangi vs Takroriy</div>
@@ -573,6 +596,7 @@
               <div class="dash-prog-track"><div class="dash-prog-fill" style="width:{{ $repeatPct }}%;background:var(--p-accent)"></div></div>
             </div>
           </div>
+        </div>
         </div>
       </div>
       @if($deliveryTypeSplit->count())
@@ -610,14 +634,14 @@
             @endforeach
           </div>
 
-          <div class="grid grid-cols-1 gap-4 xl:grid-cols-12">
-            <div class="xl:col-span-8">
+          <div class="row g-4">
+            <div class="col-12 col-xl-8">
               <div class="dash-chart-surface">
                 <div id="chartSalesGeo" class="dash-chart-host dash-chart-host--220"></div>
               </div>
             </div>
-            <div class="xl:col-span-4">
-              <div id="salesGeoCountrySummary" class="grid grid-cols-2 gap-3 mb-3"></div>
+            <div class="col-12 col-xl-4">
+              <div id="salesGeoCountrySummary" class="row row-cols-2 g-3 mb-3"></div>
               <div id="salesGeoRegionList" class="space-y-2"></div>
             </div>
           </div>
@@ -637,10 +661,10 @@
 {{-- ══════════════════════════════════════════════════════════════════════════ --}}
 <div class="dash-tab-panel" id="dash-panel-users" x-show="tab === 'users'" x-cloak>
 
-  <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
+  <div class="row g-4">
 
-    <div class="xl:col-span-4 fade-up">
-      <div class="dash-card" style="height:100%">
+    <div class="col-12 col-xl-4 fade-up">
+      <div class="dash-card h-100">
         <div class="dash-card-head">
           <div>
             <div class="dash-card-title">Foydalanuvchilar holati</div>
@@ -688,8 +712,8 @@
       </div>
     </div>
 
-    <div class="xl:col-span-4 fade-up">
-      <div class="dash-card" style="height:100%">
+    <div class="col-12 col-xl-4 fade-up">
+      <div class="dash-card h-100">
         <div class="dash-card-head">
           <div>
             <div class="dash-card-title">Hozir online</div>
@@ -716,8 +740,8 @@
       </div>
     </div>
 
-    <div class="xl:col-span-4 fade-up">
-      <div class="dash-card" style="height:100%">
+    <div class="col-12 col-xl-4 fade-up">
+      <div class="dash-card h-100">
         <div class="dash-card-head">
           <div>
             <div class="dash-card-title">Top mijozlar</div>
@@ -763,10 +787,10 @@
 {{-- ══════════════════════════════════════════════════════════════════════════ --}}
 <div class="dash-tab-panel" id="dash-panel-catalog" x-show="tab === 'catalog'" x-cloak>
 
-  <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
+  <div class="row g-4">
 
-    <div class="xl:col-span-7 fade-up">
-      <div class="dash-card" style="height:100%">
+    <div class="col-12 col-xl-7 fade-up">
+      <div class="dash-card h-100">
         <div class="dash-card-head">
           <div class="dash-card-title">Top mahsulotlar</div>
           <div class="dash-card-sub">Eng ko'p sotilganlar</div>
@@ -798,7 +822,7 @@
       </div>
     </div>
 
-    <div class="xl:col-span-5 fade-up flex flex-col gap-4">
+    <div class="col-12 col-xl-5 fade-up d-flex flex-column gap-4">
       <div class="biz-stat-card biz-stat-card--success">
         <div class="biz-stat-head">
           <div class="biz-stat-ico biz-stat-ico--success"><i class="bi bi-shop-window"></i></div>

@@ -41,6 +41,7 @@ class PaylovOrderPaymentService
         }
 
         $paylov = PaylovService::make();
+        $paylov->ensureCardReadyForPayment($card);
 
         $receipt = $paylov->createReceipt(
             (string) $user->id,
@@ -76,6 +77,7 @@ class PaylovOrderPaymentService
                     'create' => $receipt,
                     'pay' => $payResponse,
                     'status' => $statusResponse,
+                    'card_snapshot' => $this->cardSnapshot($card),
                 ],
             ]);
 
@@ -109,6 +111,7 @@ class PaylovOrderPaymentService
                 'provider_response' => [
                     'create' => $receipt,
                     'error' => $e->getMessage(),
+                    'card_snapshot' => $this->cardSnapshot($card),
                 ],
             ]);
 
@@ -142,7 +145,10 @@ class PaylovOrderPaymentService
             'provider' => 'paylov',
             'provider_transaction_id' => $transactionId,
             'provider_card_id' => $card->provider_card_id,
-            'provider_response' => $receipt,
+            'provider_response' => [
+                'create' => $receipt,
+                'card_snapshot' => $this->cardSnapshot($card),
+            ],
             'receivers' => [],
         ]);
 
@@ -197,5 +203,16 @@ class PaylovOrderPaymentService
             : [];
 
         return $this->transactionColumns;
+    }
+
+    private function cardSnapshot(UserCard $card): array
+    {
+        return [
+            'masked_number' => $card->card_number,
+            'vendor' => $card->vendor,
+            'card_name' => $card->card_name,
+            'phone_number' => $card->phone_number,
+            'provider_card_id' => $card->provider_card_id,
+        ];
     }
 }

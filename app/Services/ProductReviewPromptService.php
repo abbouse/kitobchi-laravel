@@ -110,7 +110,10 @@ class ProductReviewPromptService
                 ->whereHas('seller', fn ($q) => $q
                     ->where('is_hidden', 0)
                     ->where('status', 'approved')
-                    ->where('parent_id', 0))
+                    ->where(function ($sellerQ) {
+                        $sellerQ->whereNull('parent_id')
+                            ->orWhere('parent_id', 0);
+                    }))
                 ->exists(),
             'stationery' => Stationery::query()
                 ->whereKey($productId)
@@ -119,7 +122,10 @@ class ProductReviewPromptService
                 ->whereHas('seller', fn ($q) => $q
                     ->where('is_hidden', 0)
                     ->where('status', 'approved')
-                    ->where('parent_id', 0))
+                    ->where(function ($sellerQ) {
+                        $sellerQ->whereNull('parent_id')
+                            ->orWhere('parent_id', 0);
+                    }))
                 ->exists(),
             default => false,
         };

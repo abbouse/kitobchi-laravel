@@ -299,10 +299,34 @@
           <div class="rounded-2xl border border-[var(--p-border)] bg-[var(--p-elevated)] p-4">
             <div class="flex items-start justify-between gap-3">
               <div>
-                <div class="text-sm font-semibold tracking-[0.18em] uppercase text-[var(--p-muted)]">Card</div>
-                <div class="mt-2 text-lg font-black">**** **** **** <?php echo e(substr((string) $card->card_number, -4) ?: '****'); ?></div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <div class="text-sm font-semibold tracking-[0.18em] uppercase text-[var(--p-muted)]"><?php echo e(strtoupper($card->vendor ?: $card->processing ?: 'Card')); ?></div>
+                  <?php if($card->is_default): ?>
+                    <span class="badge badge-info">Asosiy</span>
+                  <?php endif; ?>
+                  <?php if($card->is_temporary): ?>
+                    <span class="badge badge-warning">Temporary</span>
+                  <?php endif; ?>
+                </div>
+                <div class="mt-2 text-lg font-black"><?php echo e($card->card_number ?: '**** **** **** ****'); ?></div>
+                <div class="mt-2 text-xs text-[var(--p-muted)]">
+                  <?php echo e($card->card_name ?: 'Nom berilmagan'); ?> · <?php echo e($card->expire_date ?: 'Muddat yo‘q'); ?>
+
+                </div>
+                <?php if($card->phone_number): ?>
+                  <div class="mt-1 text-xs text-[var(--p-muted)]"><?php echo e($card->phone_number); ?></div>
+                <?php endif; ?>
               </div>
-              <span class="badge <?php echo e($card->is_verified ? 'badge-success' : 'badge-warning'); ?>"><?php echo e($card->is_verified ? 'Tasdiqlangan' : 'Kutilmoqda'); ?></span>
+              <div class="flex flex-col items-end gap-2">
+                <span class="badge <?php echo e($card->is_verified ? 'badge-success' : 'badge-warning'); ?>"><?php echo e($card->is_verified ? 'Tasdiqlangan' : 'Kutilmoqda'); ?></span>
+                <form method="POST" action="<?php echo e(route('admin.users.cards.destroy', [$user, $card])); ?>" onsubmit="return confirm('Kartani Paylov va tizimdan o‘chirasizmi?')">
+                  <?php echo csrf_field(); ?>
+                  <?php echo method_field('DELETE'); ?>
+                  <button class="btn-ghost p-2 rounded-lg text-rose-600" title="Kartani o‘chirish">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+              </div>
             </div>
             <div class="text-xs text-[var(--p-muted)] mt-3"><?php echo e(optional($card->created_at)->format('d.m.Y H:i') ?: 'Sana yo‘q'); ?></div>
           </div>

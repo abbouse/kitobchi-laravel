@@ -92,6 +92,7 @@ class PaylovPayablePaymentService
         }
 
         $paylov = PaylovService::make();
+        $paylov->ensureCardReadyForPayment($card);
 
         $receipt = $paylov->createReceipt(
             (string) $user->id,

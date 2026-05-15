@@ -10,9 +10,11 @@ use App\Models\MysteryBoxSubscription;
 use App\Models\Sold;
 use App\Models\UserCard;
 use App\Models\User;
+use App\Services\PaylovService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
 class UserController extends Controller
@@ -231,6 +233,47 @@ class UserController extends Controller
     {
         $user->delete();
         return redirect()->route('admin.users.index')->with('success', "Foydalanuvchi o'chirildi.");
+    }
+
+    public function destroyCard(User $user, UserCard $card)
+    {
+        if ((int) $card->user_id !== (int) $user->id) {
+            abort(404);
+        }
+
+        try {
+            if ($card->provider === 'paylov' && filled($card->provider_card_id)) {
+                PaylovService::make()->deleteUserCard((string) $card->provider_card_id);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('[A122] Admin card remote delete failed', [
+                'user_id' => $user->id,
+                'card_id' => $card->id,
+                'provider_card_id' => $card->provider_card_id,
+                'message' => $e->getMessage(),
+            ]);
+
+            return back()->with('error', 'Kartani Paylov tomondan o‘chirib bo‘lmadi. Iltimos, qayta urinib ko‘ring.');
+        }
+
+        DB::transaction(function () use ($card, $user) {
+            $wasDefault = (bool) $card->is_default;
+            $card->delete();
+
+            if ($wasDefault) {
+                $nextDefault = UserCard::query()
+                    ->where('user_id', $user->id)
+                    ->where('is_verified', true)
+                    ->latest('id')
+                    ->first();
+
+                if ($nextDefault) {
+                    $nextDefault->update(['is_default' => true]);
+                }
+            }
+        });
+
+        return back()->with('success', 'Karta Paylov va tizimdan o‘chirildi.');
     }
 
     public function toggleVerify(User $user)

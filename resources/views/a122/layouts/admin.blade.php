@@ -46,7 +46,7 @@
         <div class="container-fluid px-3 px-lg-4 px-xxl-5 py-3">
           <div class="mx-auto d-flex flex-wrap align-items-center justify-content-between gap-2 small text-secondary" style="max-width: 1760px;">
             <span>© {{ date('Y') }} Kitobchi Admin</span>
-            <span>Bootstrap operations workspace</span>
+            <span>Tabler-inspired Bootstrap workspace</span>
           </div>
         </div>
       </footer>
