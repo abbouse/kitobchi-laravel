@@ -9,6 +9,7 @@ use App\Models\UserCard;
 use App\Services\PaylovOrderPaymentService;
 use App\Services\PaylovService;
 use Illuminate\Http\Request;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
@@ -82,6 +83,18 @@ class CardController extends Controller
         $orderId = $request->integer('order_id') ?: null;
         $rawNumber = $request->string('number')->toString();
         $maskedNumber = $this->maskCardNumber($rawNumber);
+        $expire = $request->string('expire')->toString();
+        $fingerprint = $this->fingerprintCardNumber($rawNumber);
+
+        if ($this->userAlreadyHasCard($user->id, $fingerprint, $maskedNumber, $expire)) {
+            return $this->error('Bu karta allaqachon ulangan.', 422, [
+                'error_code' => 'card_exists',
+            ]);
+        }
+
+        if ($this->isCardLinkedToAnotherAccount($user->id, $fingerprint, $maskedNumber, $expire)) {
+            return $this->cardAlreadyLinkedElsewhereError();
+        }
 
         if ($orderId) {
             $order = Sold::query()
@@ -113,7 +126,6 @@ class CardController extends Controller
                 ]);
             }
 
-            $expire = $request->string('expire')->toString();
             $normalizedExpire = mb_substr($expire, 2, 2) . mb_substr($expire, 0, 2);
 
             $response = PaylovService::make()->createUserCard(
@@ -137,6 +149,7 @@ class CardController extends Controller
                 ],
                 [
                     'card_number' => $maskedNumber,
+                    'card_fingerprint' => $fingerprint,
                     'expire_date' => $expire,
                     'phone_number' => $result['otpSentPhone'] ?? $user->phone_number,
                     'token' => '',
@@ -161,6 +174,10 @@ class CardController extends Controller
                 ],
             ]);
         } catch (\Throwable $e) {
+            if ($e instanceof QueryException && $this->isCardFingerprintConflict($e)) {
+                return $this->cardAlreadyLinkedElsewhereError();
+            }
+
             if (str_contains($e->getMessage(), 'otp_code_already_sent')) {
                 $existingPending = $this->findPendingPaylovCard($user->id, $maskedNumber, $orderId);
                 if ($existingPending) {
@@ -210,6 +227,30 @@ class CardController extends Controller
         }
 
         try {
+            if ($this->isCardLinkedToAnotherAccount(
+                $user->id,
+                $card->card_fingerprint,
+                (string) $card->card_number,
+                (string) $card->expire_date,
+                $card->id,
+            )) {
+                try {
+                    if (filled($card->provider_card_id)) {
+                        PaylovService::make()->deleteUserCard((string) $card->provider_card_id);
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning('[Paylov] Duplicate card cleanup failed', [
+                        'card_id' => $card->id,
+                        'provider_card_id' => $card->provider_card_id,
+                        'message' => $e->getMessage(),
+                    ]);
+                }
+
+                $card->delete();
+
+                return $this->cardAlreadyLinkedElsewhereError();
+            }
+
             $confirm = PaylovService::make()->confirmUserCard(
                 (string) $card->provider_card_id,
                 $request->string('code')->toString(),
@@ -220,6 +261,7 @@ class CardController extends Controller
             $card->fill([
                 'is_verified' => true,
                 'card_name' => $result['cardName'] ?? ($card->card_name ?: null),
+                'card_fingerprint' => $card->card_fingerprint,
                 'vendor' => $result['vendor'] ?? ($card->vendor ?: null),
                 'processing' => $result['processing'] ?? ($card->processing ?: null),
                 'provider_meta' => array_merge($card->provider_meta ?? [], [
@@ -247,6 +289,28 @@ class CardController extends Controller
                 return $this->error((string) $cardState['error_code'], 422, [
                     'error_code' => $cardState['error_code'],
                 ]);
+            }
+
+            if ($this->isCardLinkedToAnotherAccount(
+                $user->id,
+                $card->card_fingerprint,
+                (string) $card->card_number,
+                (string) $card->expire_date,
+                $card->id,
+            )) {
+                try {
+                    $paylov->deleteUserCard((string) $card->provider_card_id);
+                } catch (\Throwable $e) {
+                    Log::warning('[Paylov] Duplicate card post-confirm cleanup failed', [
+                        'card_id' => $card->id,
+                        'provider_card_id' => $card->provider_card_id,
+                        'message' => $e->getMessage(),
+                    ]);
+                }
+
+                $card->delete();
+
+                return $this->cardAlreadyLinkedElsewhereError();
             }
 
             if (!$card->is_temporary && !$user->cards()->where('is_default', true)->exists()) {
@@ -390,6 +454,13 @@ class CardController extends Controller
             . substr($digits, -4);
     }
 
+    private function fingerprintCardNumber(string $number): string
+    {
+        $digits = preg_replace('/\D+/', '', $number) ?? '';
+
+        return hash_hmac('sha256', $digits, (string) config('app.key'));
+    }
+
     private function findPendingPaylovCard(int $userId, string $maskedNumber, ?int $orderId): ?UserCard
     {
         return UserCard::query()
@@ -406,6 +477,75 @@ class CardController extends Controller
             ->where('created_at', '>=', now()->subMinutes(15))
             ->latest('id')
             ->first();
+    }
+
+    private function isCardLinkedToAnotherAccount(
+        int $userId,
+        ?string $fingerprint,
+        string $maskedNumber,
+        string $expireDate,
+        ?int $ignoreCardId = null,
+    ): bool {
+        return UserCard::query()
+            ->where('user_id', '!=', $userId)
+            ->when($ignoreCardId !== null, fn ($query) => $query->where('id', '!=', $ignoreCardId))
+            ->where(function ($query) use ($fingerprint, $maskedNumber, $expireDate) {
+                if (filled($fingerprint)) {
+                    $query->where('card_fingerprint', $fingerprint)
+                        ->orWhere(function ($legacyQuery) use ($maskedNumber, $expireDate) {
+                            $legacyQuery->where('card_number', $maskedNumber)
+                                ->where('expire_date', $expireDate);
+                        });
+
+                    return;
+                }
+
+                $query->where('card_number', $maskedNumber)
+                    ->where('expire_date', $expireDate);
+            })
+            ->exists();
+    }
+
+    private function userAlreadyHasCard(
+        int $userId,
+        ?string $fingerprint,
+        string $maskedNumber,
+        string $expireDate,
+    ): bool {
+        return UserCard::query()
+            ->where('user_id', $userId)
+            ->where('is_verified', true)
+            ->where(function ($query) use ($fingerprint, $maskedNumber, $expireDate) {
+                if (filled($fingerprint)) {
+                    $query->where('card_fingerprint', $fingerprint)
+                        ->orWhere(function ($legacyQuery) use ($maskedNumber, $expireDate) {
+                            $legacyQuery->where('card_number', $maskedNumber)
+                                ->where('expire_date', $expireDate);
+                        });
+
+                    return;
+                }
+
+                $query->where('card_number', $maskedNumber)
+                    ->where('expire_date', $expireDate);
+            })
+            ->exists();
+    }
+
+    private function cardAlreadyLinkedElsewhereError()
+    {
+        return $this->error('Bu karta boshqa akkauntga bog‘langan.', 409, [
+            'error_code' => 'card_attached_to_another_account',
+        ]);
+    }
+
+    private function isCardFingerprintConflict(QueryException $e): bool
+    {
+        $message = mb_strtolower($e->getMessage());
+
+        return str_contains($message, 'card_fingerprint')
+            || str_contains($message, 'user_cards_card_fingerprint_unique')
+            || ($e->getCode() === '23000' && str_contains($message, 'duplicate'));
     }
 
     private function refreshStoredCardsState($cards): void
@@ -470,6 +610,14 @@ class CardController extends Controller
 
             if (str_contains($normalized, 'humo')) {
                 return 'humo';
+            }
+
+            if (str_contains($normalized, 'visa')) {
+                return 'visa';
+            }
+
+            if (str_contains($normalized, 'mastercard') || str_contains($normalized, 'master card')) {
+                return 'mastercard';
             }
         }
 

@@ -93,9 +93,17 @@ class SearchController extends Controller
         foreach ($words as $word) {
             if (mb_strlen($word) >= 2) {
                 $variants = array_merge($variants, $this->transliterate($word));
+                $squeezedWord = $this->squeezeRepeats($word);
+                if ($squeezedWord !== $word && mb_strlen($squeezedWord) >= 2) {
+                    $variants = array_merge($variants, $this->transliterate($squeezedWord));
+                }
             }
         }
         $variants = array_merge($variants, $this->transliterate($query));
+        $squeezedQuery = $this->squeezeRepeats($query);
+        if ($squeezedQuery !== $query && mb_strlen($squeezedQuery) >= 2) {
+            $variants = array_merge($variants, $this->transliterate($squeezedQuery));
+        }
         $variants = array_unique($variants);
 
         return [
@@ -242,7 +250,7 @@ class SearchController extends Controller
             }
         }
 
-        return $bestScore >= 0.82 ? $bestType : null;
+        return $bestScore >= 0.76 ? $bestType : null;
     }
 
     private function getBookFuzzyCorpus(
@@ -315,7 +323,7 @@ class SearchController extends Controller
                 $item['fuzzy_score'] = min(1.0, $score + min(((int) ($item['popularity'] ?? 0)) / 5000, 0.06));
                 return $item;
             })
-            ->filter(fn ($item) => ($item['fuzzy_score'] ?? 0) >= 0.60)
+            ->filter(fn ($item) => ($item['fuzzy_score'] ?? 0) >= 0.56)
             ->sortByDesc('fuzzy_score')
             ->take($limit)
             ->values();
@@ -324,7 +332,7 @@ class SearchController extends Controller
 
         return [
             'items' => $ranked,
-            'did_you_mean' => ($top['fuzzy_score'] ?? 0) >= 0.74 ? ($top['display_name'] ?? null) : null,
+            'did_you_mean' => ($top['fuzzy_score'] ?? 0) >= 0.68 ? ($top['display_name'] ?? null) : null,
         ];
     }
 
@@ -677,7 +685,7 @@ class SearchController extends Controller
                           || ($statPaginator?->hasMorePages() ?? false);
             $filteredItems = $items->filter()->values();
 
-            if ($filteredItems->isEmpty() && mb_strlen($query) >= 3) {
+            if ($filteredItems->count() < 4 && mb_strlen($query) >= 3) {
                 $fuzzyFallback = $this->fuzzyFallbackSearch(
                     $query,
                     $type,
@@ -696,9 +704,27 @@ class SearchController extends Controller
                     ->values();
 
                 if ($fallbackItems->isNotEmpty()) {
-                    $filteredItems = $fallbackItems;
-                    $total = $fallbackItems->count();
-                    $hasMore = false;
+                    if ($filteredItems->isEmpty()) {
+                        $filteredItems = $fallbackItems;
+                        $total = $fallbackItems->count();
+                        $hasMore = false;
+                    } else {
+                        $existingKeys = $filteredItems
+                            ->map(fn ($item) => ($item['type'] ?? '') . ':' . ($item['id'] ?? ''))
+                            ->all();
+
+                        $filteredItems = $filteredItems
+                            ->merge(
+                                $fallbackItems->filter(function ($item) use ($existingKeys) {
+                                    $key = ($item['type'] ?? '') . ':' . ($item['id'] ?? '');
+                                    return !in_array($key, $existingKeys, true);
+                                })
+                            )
+                            ->take(max($perPage, 12))
+                            ->values();
+
+                        $total = max($total, $filteredItems->count());
+                    }
                 }
             }
 
@@ -1215,7 +1241,7 @@ class SearchController extends Controller
                 ->groupBy('result_name')
                 ->orderByDesc('total_count')
                 ->orderByDesc('last_searched')
-                ->limit(15)
+                ->limit(5)
                 ->get();
         });
 

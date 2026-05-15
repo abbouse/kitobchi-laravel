@@ -17,6 +17,7 @@ class UserCard extends Model
         'user_id',
         'provider',
         'provider_card_id',
+        'card_fingerprint',
         'card_name',
         'card_number',
         'expire_date',

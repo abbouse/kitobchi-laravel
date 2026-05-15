@@ -6,9 +6,24 @@ use Illuminate\Support\Facades\Storage;
 
 class ProductImageUrls
 {
-    public static function build(?array $images): array
+    public static function build($images): array
     {
-        $images = collect($images ?? [])
+        if (is_string($images)) {
+            $decoded = json_decode($images, true);
+            if (is_array($decoded)) {
+                $images = $decoded;
+            } elseif (trim($images) !== '') {
+                $images = [$images];
+            } else {
+                $images = [];
+            }
+        }
+
+        if (!is_array($images)) {
+            $images = [];
+        }
+
+        $images = collect($images)
             ->filter(fn ($image) => is_string($image) && trim($image) !== '')
             ->values();
 

@@ -21,7 +21,8 @@ class ProductPayloadFormatter
             ? (bool) $options['favourite']
             : self::resolveFavourite($product, $user, $type);
 
-        $imageUrls = ProductImageUrls::build($product->images ?? []);
+        $normalizedImages = self::normalizeImages($product->images ?? []);
+        $imageUrls = ProductImageUrls::build($normalizedImages);
         $mode = $options['mode'] ?? 'card';
         $isDetail = $mode === 'detail';
 
@@ -33,7 +34,7 @@ class ProductPayloadFormatter
             'author' => $isBook ? ($product->author ?? null) : null,
             'material' => $isBook ? null : ($product->material ?? null),
             'category_id' => $product->category_id ?? null,
-            'images' => self::normalizeImages($product->images ?? []),
+            'images' => $normalizedImages,
             'image_urls' => $imageUrls['original'],
             'medium_images' => $imageUrls['medium'],
             'thumb_images' => $imageUrls['thumb'],
@@ -100,6 +101,8 @@ class ProductPayloadFormatter
             if (is_array($decoded)) {
                 return array_values(array_filter($decoded));
             }
+
+            return [trim($images)];
         }
 
         return [];
