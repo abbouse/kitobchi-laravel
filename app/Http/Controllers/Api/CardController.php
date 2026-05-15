@@ -135,7 +135,7 @@ class CardController extends Controller
                     'card_number' => $maskedNumber,
                     'expire_date' => $expire,
                     'phone_number' => $result['otpSentPhone'] ?? $user->phone_number,
-                    'payme_token' => '',
+                    'token' => '',
                     'is_verified' => false,
                     'is_default' => false,
                     'is_temporary' => !$rememberCard,

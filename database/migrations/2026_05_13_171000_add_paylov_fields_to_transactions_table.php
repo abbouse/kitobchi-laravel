@@ -17,7 +17,7 @@ return new class extends Migration
                 $table->unsignedBigInteger('owner_id')->nullable()->after('order_id');
             }
             if (!Schema::hasColumn('transactions', 'provider')) {
-                $table->string('provider', 24)->default('payme')->after('owner_id');
+                $table->string('provider', 24)->default('paylov')->after('owner_id');
             }
             if (!Schema::hasColumn('transactions', 'provider_transaction_id')) {
                 $table->string('provider_transaction_id')->nullable()->after('provider');

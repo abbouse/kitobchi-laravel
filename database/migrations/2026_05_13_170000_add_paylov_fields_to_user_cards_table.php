@@ -14,7 +14,7 @@ return new class extends Migration
 
         Schema::table('user_cards', function (Blueprint $table) {
             if (!Schema::hasColumn('user_cards', 'provider')) {
-                $table->string('provider', 24)->default('payme')->after('user_id');
+                $table->string('provider', 24)->default('paylov')->after('user_id');
             }
             if (!Schema::hasColumn('user_cards', 'provider_card_id')) {
                 $table->string('provider_card_id')->nullable()->after('provider');

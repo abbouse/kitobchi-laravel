@@ -912,7 +912,7 @@ class PurchaseController extends Controller
 
     // =========================================================================
     //  IN-STORE BUYURTMA — mijoz do'kondagi QR'ni skanerlab, mahsulotlarni
-    //  o'zi tanlab, joyida Payme orqali to'laydi.
+    //  o'zi tanlaydi. To'lov keyin ilova ichidagi saved-card oqimida tugallanadi.
     //
     //  POST /api/v1/kitobchi/in-store/buy
     //  Body:
@@ -925,7 +925,7 @@ class PurchaseController extends Controller
     //   - SellerOrder qator (faqat 1 ta — bitta sotuvchi)
     //   - CourierOrder yaratilmaydi (mijoz do'konda olib ketadi)
     //   - Stock decrement va statistika yangilanishi
-    //   - Javobda Payme to'lov URL'i va order_id
+    //   - Javobda order_id
     // =========================================================================
     public function inStoreBuy(Request $request)
     {
@@ -1126,7 +1126,7 @@ class PurchaseController extends Controller
                 'deliveryType'   => 'pickup',
                 'is_instore'     => true,
                 'deliveryPrice'  => 0,
-                'paymentStatus'  => 1,            // Payme
+                'paymentStatus'  => 1,
                 'amount'         => $finalPrice,
                 'promocode'      => $appliedPromo,
                 'discountAmount' => $discountAmount,
@@ -1174,14 +1174,10 @@ class PurchaseController extends Controller
 
             DB::commit();
 
-            // ── Payme URL — PaymentController::payWithPayme bilan bir xil naqsh ──
-            $paymeUrl = $this->generatePaymeUrl($purchase->id, $finalPrice);
-
             return response()->json([
-                'status'      => 'success',
-                'order_id'    => $purchase->id,
-                'amount'      => $finalPrice,
-                'payment_url' => $paymeUrl,
+                'status'   => 'success',
+                'order_id' => $purchase->id,
+                'amount'   => $finalPrice,
             ], 201);
         } catch (\Throwable $e) {
             DB::rollBack();
@@ -1200,21 +1196,6 @@ class PurchaseController extends Controller
             }
             return response()->json($payload, 500);
         }
-    }
-
-    /**
-     * Payme to'lov URL generatsiya — PaymentController'dagi mantiqning
-     * kichik nusxasi (kontroller orasidan dependency bo'lmasligi uchun).
-     */
-    private function generatePaymeUrl(int $orderId, int $amount): string
-    {
-        $merchant = (string) config('services.payme.id', '67988cbfdbc8d1a8dc0d74a7');
-        $callback = "https://kitobchi.com/payment/success/order/{$orderId}";
-        $data     = 'm=' . $merchant
-                  . ';ac.order_id=' . 'NRK-' . $orderId
-                  . ';a=' . ($amount * 100)
-                  . ';c=' . urlencode($callback);
-        return 'https://checkout.paycom.uz/' . base64_encode($data);
     }
 
     // =========================================================================
@@ -1449,7 +1430,6 @@ class PurchaseController extends Controller
                 'message' => "Qayta yuborish uchun yangi buyurtma yaratildi.",
                 'data' => [
                     'order_id' => $resendOrder->id,
-                    'payment_url' => $this->generatePaymeUrl($resendOrder->id, (int) $resendOrder->amount),
                 ],
             ]);
         } catch (\Throwable $e) {

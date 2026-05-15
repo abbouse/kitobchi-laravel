@@ -23,7 +23,7 @@ class UserCard extends Model
         'phone_number',
         'vendor',
         'processing',
-        'payme_token',
+        'token',
         'is_verified',
         'is_default',
         'is_temporary',
@@ -39,8 +39,8 @@ class UserCard extends Model
         'is_default' => 'boolean',
         'is_temporary' => 'boolean',
         'provider_meta' => 'array',
-        // Payme tokenini bazada shifrlangan holda saqlash juda muhim!
-        'payme_token' => 'encrypted',
+        // Provider tokeni bazada shifrlangan holda saqlanadi.
+        'token' => 'encrypted',
     ];
 
     /**

@@ -25,7 +25,6 @@ use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
 
 // --- Ochiq qismlar ---
-Route::post('payme', [App\Http\Controllers\Api\PaymeController::class, 'index'])->middleware('payme');
 // Route::get('checkToken/{token}', [AuthController::class, 'checkToken']);
 Route::get('user/premium/plans', [PremiumController::class, 'plans']);
 Route::get('user/update_locale/{locale}', [UserController::class, 'updateLocale']);
@@ -95,12 +94,14 @@ Route::middleware('auth:user')->group(function () {
     Route::delete('cards/{id}', [CardController::class, 'destroy']);
 
     Route::post('shop/mystery-box/subscribe', [ShopApiController::class, 'subscribeMysteryBox']);
+    Route::post('shop/mystery-box/{id}/pay-with-card', [ShopApiController::class, 'payMysteryBoxWithSavedCard']);
     Route::get('shop/mystery-box/subscription/{id}', [ShopApiController::class, 'subscriptionDetail']);
     Route::post('shop/mystery-box/update-address', [ShopApiController::class, 'updateSubscriptionAddress']);
 
     Route::post('products/{type}/{id}/stock-alert', [ProductsController::class, 'subscribeStockAlert']);
 
     Route::post('shop/gift-certificate/buy', [ShopApiController::class, 'buyCertificate']);
+    Route::post('shop/gift-certificate/{id}/pay-with-card', [ShopApiController::class, 'payGiftCertificateWithSavedCard']);
     Route::post('shop/gift-certificate/activate', [ShopApiController::class, 'activateCertificate']);
     Route::get('gift-certificates', [GiftCertificateController::class, 'index']);
 

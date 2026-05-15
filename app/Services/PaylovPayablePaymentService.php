@@ -2,40 +2,91 @@
 
 namespace App\Services;
 
-use App\Enums\PaymentStatusCode;
-use App\Models\Kirim;
-use App\Models\Sold;
+use App\Models\GiftCertificate;
+use App\Models\MysteryBoxSubscription;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\UserCard;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use RuntimeException;
 
-class PaylovOrderPaymentService
+class PaylovPayablePaymentService
 {
     private ?array $transactionColumns = null;
 
     public function __construct(
-        private readonly OrderService $orderService,
+        private readonly GiftCertService $giftCertService,
+        private readonly MysteryBoxService $mysteryBoxService,
     ) {
     }
 
-    public function payPendingOrder(Sold $order, User $user, UserCard $card): array
-    {
-        if ((int) $order->user_id !== (int) $user->id) {
-            throw new RuntimeException('Buyurtma sizga tegishli emas.');
+    public function payPendingGiftCertificate(
+        GiftCertificate $certificate,
+        User $user,
+        UserCard $card,
+    ): array {
+        if ((int) $certificate->buyer_user_id !== (int) $user->id) {
+            throw new RuntimeException('Sertifikat sizga tegishli emas.');
         }
 
-        if ($order->payment_status_code !== PaymentStatusCode::CARD_PENDING->value) {
-            throw new RuntimeException('Bu buyurtma karta bilan to‘lovni kutmayapti.');
+        if ($certificate->status !== GiftCertificate::STATUS_PENDING) {
+            throw new RuntimeException('Bu sertifikat to‘lovni kutmayapti.');
         }
 
-        if ((int) $order->paymentStatus === PaymentStatusCode::PAID->legacy()) {
-            throw new RuntimeException('Buyurtma allaqachon to‘langan.');
+        return $this->payPending(
+            payable: $certificate,
+            user: $user,
+            card: $card,
+            amount: (int) $certificate->nominal_uzs,
+            paymentType: 'gift_certificate',
+            account: [
+                'gift_certificate_id' => 'GFT-' . $certificate->id,
+            ],
+            onSuccess: fn (int $id) => $this->giftCertService->activate($id),
+        );
+    }
+
+    public function payPendingMysteryBox(
+        MysteryBoxSubscription $subscription,
+        User $user,
+        UserCard $card,
+    ): array {
+        if ((int) $subscription->user_id !== (int) $user->id) {
+            throw new RuntimeException('Obuna sizga tegishli emas.');
         }
 
+        if ($subscription->status !== MysteryBoxSubscription::STATUS_PENDING) {
+            throw new RuntimeException('Bu obuna to‘lovni kutmayapti.');
+        }
+
+        return $this->payPending(
+            payable: $subscription,
+            user: $user,
+            card: $card,
+            amount: (int) $subscription->price_uzs,
+            paymentType: 'mystery_box',
+            account: [
+                'subscription_id' => 'MBX-' . $subscription->id,
+            ],
+            onSuccess: fn (int $id) => $this->mysteryBoxService->activate($id),
+        );
+    }
+
+    /**
+     * @param callable(int):bool $onSuccess
+     */
+    private function payPending(
+        Model $payable,
+        User $user,
+        UserCard $card,
+        int $amount,
+        string $paymentType,
+        array $account,
+        callable $onSuccess,
+    ): array {
         if (!$card->is_verified || blank($card->provider_card_id)) {
             throw new RuntimeException('Tasdiqlanmagan karta bilan to‘lab bo‘lmaydi.');
         }
@@ -44,11 +95,10 @@ class PaylovOrderPaymentService
 
         $receipt = $paylov->createReceipt(
             (string) $user->id,
-            (int) $order->amount,
-            [
-                'order_id' => 'NRK-' . $order->id,
+            $amount,
+            array_merge($account, [
                 'merchant_id' => $paylov->merchantId(),
-            ],
+            ]),
         );
 
         $transactionId = (string) ($receipt['result']['transactionId'] ?? '');
@@ -57,11 +107,13 @@ class PaylovOrderPaymentService
         }
 
         $transaction = $this->createPendingTransaction(
-            $order,
-            $user,
-            $card,
-            $transactionId,
-            $receipt,
+            payable: $payable,
+            user: $user,
+            card: $card,
+            amount: $amount,
+            paymentType: $paymentType,
+            transactionId: $transactionId,
+            receipt: $receipt,
         );
 
         try {
@@ -79,23 +131,10 @@ class PaylovOrderPaymentService
                 ],
             ]);
 
-            DB::transaction(function () use ($order, $user) {
-                $freshOrder = Sold::query()->lockForUpdate()->find($order->id);
-                if (!$freshOrder) {
-                    throw new RuntimeException('Buyurtma topilmadi.');
-                }
-
-                if ((int) $freshOrder->paymentStatus !== PaymentStatusCode::PAID->legacy()) {
-                    $this->orderService->handleOrderPaid($freshOrder, $user);
-
-                    Kirim::create([
-                        'user_id' => $freshOrder->user_id,
-                        'order_id' => $freshOrder->id,
-                        'paymentStatus' => PaymentStatusCode::PAID->legacy(),
-                        'amount' => $freshOrder->amount,
-                    ]);
-                }
-            });
+            $activated = $onSuccess((int) $payable->getKey());
+            if (!$activated) {
+                throw new RuntimeException('To‘lov qabul qilindi, lekin ichki aktivatsiya muvaffaqiyatsiz tugadi.');
+            }
 
             return [
                 'transaction_id' => $transactionId,
@@ -112,8 +151,9 @@ class PaylovOrderPaymentService
                 ],
             ]);
 
-            Log::warning('[Paylov] Order payment failed', [
-                'order_id' => $order->id,
+            Log::warning('[Paylov] Payable payment failed', [
+                'payment_type' => $paymentType,
+                'payable_id' => $payable->getKey(),
                 'transaction_id' => $transactionId,
                 'message' => $e->getMessage(),
             ]);
@@ -123,22 +163,22 @@ class PaylovOrderPaymentService
     }
 
     private function createPendingTransaction(
-        Sold $order,
+        Model $payable,
         User $user,
         UserCard $card,
+        int $amount,
+        string $paymentType,
         string $transactionId,
         array $receipt,
     ): Transaction {
         $payload = $this->filterTransactionPayload([
             'owner_id' => $user->id,
-            'order_id' => $order->id,
-            'amount' => $order->amount,
-            'payment_type' => 'order',
+            'order_id' => (int) $payable->getKey(),
+            'payable_id' => (int) $payable->getKey(),
+            'amount' => $amount,
+            'payment_type' => $paymentType,
             'state' => 1,
             'create_time' => now()->format('Y-m-d H:i:s'),
-            // Legacy jadval faqat payme ustunlarini bilishi mumkin.
-            'paycom_transaction_id' => $transactionId,
-            'paycom_time_datetime' => now()->format('Y-m-d H:i:s'),
             'provider' => 'paylov',
             'provider_transaction_id' => $transactionId,
             'provider_card_id' => $card->provider_card_id,

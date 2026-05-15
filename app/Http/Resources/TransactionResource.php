@@ -14,19 +14,24 @@ class TransactionResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $providerTransactionId = $this->provider_transaction_id ?: $this->paycom_transaction_id;
+        $createTime = $this->perform_time_unix ?: $this->paycom_time;
+
         return [
-            'id' => $this->paycom_transaction_id,
-            'time' => $this->paycom_time,
+            'id' => $providerTransactionId,
+            'provider' => $this->provider ?: 'paylov',
+            'time' => $createTime,
             'amount' => $this->amount,
             'account' => [
                 'order_id' => $this->order_id,
+                'payment_type' => $this->payment_type,
             ],
-            'create_time' => intval($this->paycom_time),
+            'create_time' => intval($createTime),
             'perform_time' => intval($this->perform_time_unix),
-            'cancel_time' => intval($this->cancel_time) ?? 0,
+            'cancel_time' => intval($this->cancel_time ?? 0),
             'transaction' => $this->id,
             'state' => $this->state,
             'reason' => $this->reason
-        ];;
+        ];
     }
 }

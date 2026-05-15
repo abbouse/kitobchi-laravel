@@ -17,13 +17,10 @@ class GiftCertificateController extends Controller
 
     // =========================================================================
     //  GET /api/gift-certificates
-    //  Faqat userni o'z sertifikatlari:
+    //  User ko'radigan sertifikatlar:
     //    - recipient_user_id = user.id  (o'zi uchun yoki birovdan sovg'a olgan)
-    //  Ko'rsatilmaydi:
-    //    - pending_payment  (to'lov qilinmagan)
-    //    - payment_cancelled (to'lovsiz bekor)
-    //    - cancelled        (bekor qilingan)
-    //    - buyer_user_id = user.id AND recipient != user.id (boshqaga sovg'a qilgan)
+    //    - buyer_user_id = user.id AND status = pending_payment
+    //      (to'lov tugallanmagan, qayta to'lash uchun)
     // =========================================================================
 
     public function index(Request $request)
@@ -31,21 +28,33 @@ class GiftCertificateController extends Controller
         $user = Auth::guard('user')->user();
         if (!$user) return $this->err('Unauthorized', 401);
 
-        $certs = GiftCertificate::where('recipient_user_id', $user->id)
-            ->whereNotIn('status', [
-                'pending_payment',   // to'lov kutilmoqda
-                'payment_cancelled', // to'lovsiz bekor
-                'cancelled',         // bekor qilingan
-            ])
+        $certs = GiftCertificate::query()
+            ->where(function ($query) use ($user) {
+                $query
+                    ->where(function ($mine) use ($user) {
+                        $mine->where('recipient_user_id', $user->id)
+                            ->whereNotIn('status', [
+                                'payment_cancelled',
+                                'cancelled',
+                            ]);
+                    })
+                    ->orWhere(function ($pending) use ($user) {
+                        $pending->where('buyer_user_id', $user->id)
+                            ->where('status', 'pending_payment');
+                    });
+            })
             ->orderByRaw("
                 CASE status
-                    WHEN 'active' THEN 1
-                    WHEN 'paid'   THEN 2
-                    WHEN 'used'   THEN 3
-                    ELSE 4
+                    WHEN 'pending_payment' THEN 1
+                    WHEN 'payment_cancelled' THEN 2
+                    WHEN 'active' THEN 3
+                    WHEN 'paid'   THEN 4
+                    WHEN 'used'   THEN 5
+                    ELSE 6
                 END
             ")
             ->orderBy('created_at', 'desc')
+            ->with(['buyer:id,name,lastname', 'recipient:id,name,lastname'])
             ->get();
 
         $data = $certs->map(function (GiftCertificate $cert) use ($user) {
@@ -78,6 +87,9 @@ class GiftCertificateController extends Controller
                 'status_label'    => $cert->status_label,
                 'is_expired'      => (bool) $cert->is_expired,
                 'is_gifted'       => $cert->buyer_user_id !== $user->id, // birovdan sovg'a kelgan
+                'is_gifted_by_me' => $cert->buyer_user_id === $user->id
+                    && $cert->recipient_user_id
+                    && $cert->recipient_user_id !== $user->id,
 
                 // Nominal
                 'nominal_uzs'     => (int) $cert->nominal_uzs,
@@ -89,6 +101,8 @@ class GiftCertificateController extends Controller
                 'expires_at'      => $cert->expires_at?->format('d.m.Y'),
                 'used_at'         => $cert->used_at?->format('d.m.Y H:i'),
                 'gift_message'    => $cert->message ?: null,
+                'buyer_name'      => trim(($cert->buyer?->name ?? '') . ' ' . ($cert->buyer?->lastname ?? '')) ?: null,
+                'recipient_name'  => trim(($cert->recipient?->name ?? '') . ' ' . ($cert->recipient?->lastname ?? '')) ?: null,
 
                 // Tarix
                 'history'         => $history,

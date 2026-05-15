@@ -5,12 +5,19 @@ use App\Http\Controllers\Controller;
 use App\Models\MysteryBoxPlan;
 use App\Models\GiftCertificate;
 use App\Models\MysteryBoxSubscription;
+use App\Models\UserCard;
+use App\Services\PaylovPayablePaymentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class ShopApiController extends Controller
 {
+    public function __construct(
+        private readonly PaylovPayablePaymentService $paylovPayablePaymentService,
+    ) {
+    }
+
     private function localizedValue($model, string $base, string $locale)
     {
         $preferred = data_get($model, "{$base}_{$locale}");
@@ -73,7 +80,7 @@ class ShopApiController extends Controller
     }
 
     // ── POST /api/shop/gift-certificate/buy ───────────────────────────────────
-    // Gift cert sotib olish (Payme orqali to'lov — payment_type: gift_certificate)
+    // Gift cert yaratish. To'lov saved-card oqimida alohida yakunlanadi.
     public function buyCertificate(Request $request)
     {
         $user = Auth::guard('user')->user();
@@ -107,7 +114,7 @@ class ShopApiController extends Controller
     }
 
     // ── POST /api/shop/mystery-box/subscribe ──────────────────────────────────
-    // Mystery box obuna qilish
+    // Mystery box obuna yaratish. To'lov saved-card oqimida alohida yakunlanadi.
     public function subscribeMysteryBox(Request $request)
     {
         $user = Auth::guard('user')->user();
@@ -144,6 +151,90 @@ class ShopApiController extends Controller
             'subscription_id'=> $sub->id,
             'amount_uzs' => $sub->price_uzs,
         ], 201);
+    }
+
+    public function payGiftCertificateWithSavedCard(Request $request, int $certId)
+    {
+        $request->validate([
+            'card_id' => 'required|integer|min:1',
+        ]);
+
+        $user = Auth::guard('user')->user();
+        if (!$user) {
+            return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
+        }
+
+        $cert = GiftCertificate::where('id', $certId)
+            ->where('buyer_user_id', $user->id)
+            ->first();
+
+        if (!$cert) {
+            return response()->json(['status' => 'error', 'message' => 'Sertifikat topilmadi'], 404);
+        }
+
+        /** @var UserCard|null $card */
+        $card = $user->cards()
+            ->where('id', (int) $request->card_id)
+            ->where('is_verified', true)
+            ->first();
+
+        if (!$card) {
+            return response()->json(['status' => 'error', 'message' => 'Karta topilmadi'], 404);
+        }
+
+        try {
+            $payment = $this->paylovPayablePaymentService->payPendingGiftCertificate($cert, $user, $card);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Sertifikat uchun to‘lov muvaffaqiyatli qabul qilindi.',
+                'data' => $payment,
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 422);
+        }
+    }
+
+    public function payMysteryBoxWithSavedCard(Request $request, int $id)
+    {
+        $request->validate([
+            'card_id' => 'required|integer|min:1',
+        ]);
+
+        $user = Auth::guard('user')->user();
+        if (!$user) {
+            return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
+        }
+
+        $subscription = MysteryBoxSubscription::where('id', $id)
+            ->where('user_id', $user->id)
+            ->first();
+
+        if (!$subscription) {
+            return response()->json(['status' => 'error', 'message' => 'Obuna topilmadi'], 404);
+        }
+
+        /** @var UserCard|null $card */
+        $card = $user->cards()
+            ->where('id', (int) $request->card_id)
+            ->where('is_verified', true)
+            ->first();
+
+        if (!$card) {
+            return response()->json(['status' => 'error', 'message' => 'Karta topilmadi'], 404);
+        }
+
+        try {
+            $payment = $this->paylovPayablePaymentService->payPendingMysteryBox($subscription, $user, $card);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Obuna uchun to‘lov muvaffaqiyatli qabul qilindi.',
+                'data' => $payment,
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 422);
+        }
     }
 
     // ── POST /api/shop/gift-certificate/activate ──────────────────────────────

@@ -5,7 +5,6 @@ use App\Http\Controllers\HubDesk\AuthController as HubDeskAuthController;
 use App\Http\Controllers\HubDesk\DeskController as HubDeskDeskController;
 use App\Http\Controllers\LegalController;
 use App\Http\Controllers\LocaleController;
-use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\TelegramWebhookController;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Route;
@@ -86,18 +85,6 @@ Route::get('/demo', function () {
     return view('demo');
 })->name('demo');
 
-// Payme checkout redirect
-Route::get('/payment/order/{order_id}', [PaymentController::class, 'payWithPayme']);
-Route::get('/payment/gift-cert/{cert_id}', [PaymentController::class, 'payGiftCert']);
-Route::get('/payment/mystery-box/{sub_id}', [PaymentController::class, 'payMysteryBox']);
-
-// Success callback (deep link)
-Route::get('/payment/success/order/{id}', [PaymentController::class, 'successOrder']);
-Route::get('/payment/success/gift-cert/{id}', [PaymentController::class, 'successGiftCert']);
-Route::get('/payment/success/mystery-box/{id}', [PaymentController::class, 'successMysteryBox']);
-
-Route::get('/api/v1/kitobchi/payment/{order_id}', [PaymentController::class, 'payWithPayme'])->name('payme.redirect');
-Route::get('/payment/success/{order_id}', [PaymentController::class, 'redirectToApp'])->name('success.redirect');
 Route::post('/telegram/webhook', TelegramWebhookController::class)->withoutMiddleware(['web', \App\Http\Middleware\VerifyCsrfToken::class]);
 
 Route::get('/careers', [CareersController::class, 'index'])->name('careers.index');

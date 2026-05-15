@@ -26,7 +26,6 @@ Route::post('push-notify/send/keywbudcegvc36247c2bc012389ds', [PushController::c
 Route::post('sendSms', [SendSmsController::class, 'sendSms'])->middleware('throttle:send-sms')->name('api.sendSms');
 Route::get('appversion/check', [ProjectSettingController::class, 'getVersions']);
 Route::post('hook', WebhookController::class);
-Route::post('payme', [App\Http\Controllers\Api\PaymeController::class, 'index'])->middleware('payme');
 Route::get('update_locale', [UserController::class, 'updateLocale']);
 Route::get('counts', [UserController::class, 'getGlobalCounts']);
 Route::prefix('v1')->group(function () {

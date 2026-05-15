@@ -34,11 +34,6 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
-    'payme' => [
-        'id' => env('PAYME_MERCHANT_ID'),
-        'key' => env('PAYME_SUBSCRIBE_PASSWORD'),
-        'endpoint' => env('PAYME_ENDPOINT'),
-    ],
     'paylov' => [
         'base_url' => rtrim(env('PAYLOV_BASE_URL', 'https://paylov.uz'), '/'),
         'access_token' => env('PAYLOV_ACCESS_TOKEN'),
