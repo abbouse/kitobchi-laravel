@@ -1,97 +1,91 @@
-<header class="sticky top-0 z-30 topbar-shell">
-  <?php
+<?php
   $panelAdmin = auth('panel')->user();
-    $quickLinks = [
-      ['label' => 'Dashboard', 'href' => route('admin.dashboard')],
-      ['label' => 'Foydalanuvchilar', 'href' => route('admin.users.index')],
-      ['label' => 'Kitoblar', 'href' => route('admin.books.index')],
-      ['label' => 'Kanstovar', 'href' => route('admin.stationery.index')],
-      ['label' => 'Sotuvchilar', 'href' => route('admin.sellers.index')],
-      ['label' => 'Buyurtmalar', 'href' => route('admin.orders.index')],
-      ['label' => 'Seller buyurtmalari', 'href' => route('admin.seller-orders.index')],
-      ['label' => 'Kuryer buyurtmalari', 'href' => route('admin.courier-orders.index')],
-      ['label' => 'Book Club', 'href' => route('admin.book-club.index')],
-      ['label' => 'Qidiruv tarixi', 'href' => route('admin.search-history.index')],
-      ['label' => 'API mijozlar', 'href' => route('admin.api-clients.index')],
-      ['label' => 'Sozlamalar', 'href' => route('admin.settings.index')],
-    ];
-  ?>
-  <div class="flex items-center gap-3 px-4 sm:px-6 lg:px-8 min-h-[4.5rem]">
-    <button
-      type="button"
-      data-sidebar-toggle
-      aria-expanded="true"
-      class="topbar-icon-btn -ml-2"
-      aria-label="Menyu">
-      <i data-lucide="menu" class="w-5 h-5"></i>
-    </button>
+  $quickLinks = [
+    ['label' => 'Dashboard', 'href' => route('admin.dashboard')],
+    ['label' => 'Foydalanuvchilar', 'href' => route('admin.users.index')],
+    ['label' => 'Kitoblar', 'href' => route('admin.books.index')],
+    ['label' => 'Kanstovar', 'href' => route('admin.stationery.index')],
+    ['label' => 'Sotuvchilar', 'href' => route('admin.sellers.index')],
+    ['label' => 'Buyurtmalar', 'href' => route('admin.orders.index')],
+    ['label' => 'Support', 'href' => route('admin.support.index')],
+    ['label' => 'Sozlamalar', 'href' => route('admin.settings.index')],
+  ];
+?>
 
-    <div class="min-w-0 topbar-heading">
-      <div class="topbar-subtitle hidden sm:flex items-center gap-2">
-        <span class="topbar-subtitle__dot"></span>
-        <span>A122 operational workspace</span>
-      </div>
-      <h1 class="topbar-title"><?php echo $__env->yieldContent('page-title', 'Dashboard'); ?></h1>
-    </div>
-
-    <div class="hidden md:flex flex-1 max-w-md mx-4">
-      <form class="relative w-full topbar-search" onsubmit="event.preventDefault();const input=this.querySelector('input');const option=[...document.querySelectorAll('#a122-quick-nav-list option')].find(o=>o.value===input.value);if(option?.dataset?.href){window.location=option.dataset.href;}">
-        <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2"></i>
-        <input type="text" list="a122-quick-nav-list" placeholder="Tezkor o'tish..." />
-        <datalist id="a122-quick-nav-list">
-          <?php $__currentLoopData = $quickLinks; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $link): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-            <option value="<?php echo e($link['label']); ?>" data-href="<?php echo e($link['href']); ?>"></option>
-          <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-        </datalist>
-      </form>
-    </div>
-
-    <div class="ml-auto flex items-center justify-end gap-3">
-      <button data-theme-toggle class="topbar-theme-btn" aria-label="Tema almashtirish" title="Light / Dark mode">
-        <span class="theme-icon-light">
-          <i data-lucide="sun-medium" class="w-4.5 h-4.5"></i>
-        </span>
-        <span class="theme-icon-dark">
-          <i data-lucide="moon-star" class="w-4.5 h-4.5"></i>
-        </span>
-        <span class="theme-label">Theme</span>
+<header class="kc-topbar">
+  <div class="container-fluid px-3 px-lg-4 px-xxl-5">
+    <div class="kc-topbar__inner d-flex align-items-center gap-3">
+      <button
+        type="button"
+        data-sidebar-toggle
+        aria-expanded="true"
+        class="btn btn-light border kc-topbar__menu"
+        aria-label="Menyu">
+        <i class="bi bi-list fs-5"></i>
       </button>
 
-      <div class="relative" x-data="{ open: false }" @click.away="open = false">
-        <button type="button" @click="open = !open" class="topbar-user topbar-user--button" :aria-expanded="open.toString()" aria-haspopup="true">
+      <div class="flex-grow-1 min-w-0">
+        <div class="kc-topbar__eyebrow"><?php echo $__env->yieldContent('page-eyebrow', 'A122 control room'); ?></div>
+        <div class="kc-topbar__title text-truncate"><?php echo $__env->yieldContent('page-title', 'Dashboard'); ?></div>
+      </div>
+
+      <div class="kc-topbar__search d-none d-lg-block w-100">
+        <form class="kc-search" onsubmit="event.preventDefault();const input=this.querySelector('input');const option=[...document.querySelectorAll('#a122-quick-nav-list option')].find(o=>o.value===input.value);if(option?.dataset?.href){window.location=option.dataset.href;}">
+          <i class="bi bi-search kc-search__icon"></i>
+          <input type="text" list="a122-quick-nav-list" class="form-control" placeholder="Tezkor o‘tish..." />
+          <datalist id="a122-quick-nav-list">
+            <?php $__currentLoopData = $quickLinks; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $link): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+              <option value="<?php echo e($link['label']); ?>" data-href="<?php echo e($link['href']); ?>"></option>
+            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+          </datalist>
+        </form>
+      </div>
+
+      <button data-theme-toggle class="btn btn-light border kc-topbar__action d-none d-sm-inline-flex align-items-center px-3" aria-label="Tema almashtirish">
+        <i class="bi bi-circle-half me-2"></i>
+        <span class="small fw-semibold">Theme</span>
+      </button>
+
+      <div class="dropdown">
+        <button
+          class="btn kc-topbar__user dropdown-toggle d-inline-flex align-items-center gap-2"
+          type="button"
+          data-bs-toggle="dropdown"
+          aria-expanded="false">
           <?php echo $__env->make('a122.partials.avatar', [
             'name' => $panelAdmin?->name ?? 'Admin',
             'image' => $panelAdmin?->avatar,
-            'class' => 'topbar-user__avatar',
+            'class' => 'kc-topbar__user-avatar',
           ], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
-          <div class="topbar-user__meta">
-            <div class="topbar-user__name"><?php echo e($panelAdmin?->name ?? 'Admin'); ?></div>
-            <div class="topbar-user__role"><?php echo e($panelAdmin?->role_label ?? 'Panel user'); ?></div>
-          </div>
-          <i data-lucide="chevron-down" class="w-4 h-4 text-[var(--p-hint)] hidden sm:block"></i>
+          <span class="text-start d-none d-md-inline-block">
+            <span class="d-block fw-semibold text-dark"><?php echo e($panelAdmin?->name ?? 'Admin'); ?></span>
+            <span class="d-block small text-secondary"><?php echo e($panelAdmin?->role_label ?? 'Panel user'); ?></span>
+          </span>
         </button>
-
-        <div x-show="open" x-transition.origin.top.right x-cloak class="topbar-dropdown">
-          <div class="topbar-dropdown__head">
-            <div class="topbar-dropdown__name"><?php echo e($panelAdmin?->name ?? 'Admin'); ?></div>
-            <div class="topbar-dropdown__email"><?php echo e($panelAdmin?->email ?? 'email yo‘q'); ?></div>
-          </div>
-
+        <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-4 p-2">
+          <li class="px-2 py-2 border-bottom">
+            <div class="fw-semibold"><?php echo e($panelAdmin?->name ?? 'Admin'); ?></div>
+            <div class="small text-secondary"><?php echo e($panelAdmin?->email ?? 'email yo‘q'); ?></div>
+          </li>
           <?php if($panelAdmin): ?>
-            <a href="<?php echo e(route('admin.admins.edit', $panelAdmin)); ?>" class="topbar-dropdown__item" @click="open = false">
-              <i data-lucide="user-cog" class="w-4 h-4"></i>
-              Admin sozlamalari
-            </a>
+            <li>
+              <a href="<?php echo e(route('admin.admins.edit', $panelAdmin)); ?>" class="dropdown-item rounded-3 py-2">
+                <i class="bi bi-person-gear me-2"></i>
+                Admin sozlamalari
+              </a>
+            </li>
           <?php endif; ?>
-
-          <form method="POST" action="<?php echo e(route('admin.logout')); ?>" class="pt-2 mt-2 border-t border-[var(--p-border)]">
-            <?php echo csrf_field(); ?>
-            <button type="submit" class="topbar-dropdown__item topbar-dropdown__item--danger">
-              <i data-lucide="log-out" class="w-4 h-4"></i>
-              Logout
-            </button>
-          </form>
-        </div>
+          <li><hr class="dropdown-divider my-2"></li>
+          <li>
+            <form method="POST" action="<?php echo e(route('admin.logout')); ?>">
+              <?php echo csrf_field(); ?>
+              <button type="submit" class="dropdown-item rounded-3 py-2 text-danger">
+                <i class="bi bi-box-arrow-right me-2"></i>
+                Logout
+              </button>
+            </form>
+          </li>
+        </ul>
       </div>
     </div>
   </div>

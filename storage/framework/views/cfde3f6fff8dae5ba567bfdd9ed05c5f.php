@@ -56,128 +56,194 @@
   }
 ?>
 
-<section class="a122-dash-hero-v2 fade-up">
-  <div class="a122-dash-hero-v2__main">
-    <div class="a122-dash-eyebrow">A122 control room</div>
-    <div class="a122-dash-eyebrow-row">
-      <span class="a122-dash-kicker">Bugungi fokus</span>
-      <span class="a122-dash-kicker a122-dash-kicker--muted"><?php echo e(now()->format('d.m.Y')); ?></span>
-    </div>
-    <h1 class="a122-dash-hero-v2__title">Operatsiyalar, moliya va moderatsiya bitta nazorat sahifasida.</h1>
-    <p class="a122-dash-hero-v2__desc">
-      Bugungi oqim, kutilayotgan navbatlar va boshqaruv signallari shu yerda jamlangan. Asosiy maqsad tez o‘qish, tez saralash va ortiqcha yurmasdan qaror qilish.
-    </p>
-
-    <div class="a122-dash-hero-v2__actions">
-      <a href="<?php echo e(route('admin.dashboard.live')); ?>" class="btn-p primary" target="_blank">
-        <i class="bi bi-broadcast-pin"></i> Live monitor
-      </a>
-      <a href="<?php echo e(route('admin.dashboard',['clear_cache'=>1])); ?>" class="btn-p ghost">
-        <i class="bi bi-arrow-clockwise"></i> Yangilash
-      </a>
-    </div>
-
-    <div class="a122-dash-signal-row">
-      <div class="a122-dash-signal">
-        <span class="a122-dash-signal__label">Aktiv buyurtmalar</span>
-        <span class="a122-dash-signal__value"><?php echo e(number_format($pendingOrders+$packingOrders+$onwayOrders)); ?></span>
-      </div>
-      <div class="a122-dash-signal">
-        <span class="a122-dash-signal__label">Online foydalanuvchilar</span>
-        <span class="a122-dash-signal__value"><?php echo e(number_format($onlineUsers)); ?></span>
-      </div>
-      <div class="a122-dash-signal">
-        <span class="a122-dash-signal__label">Kutilayotgan payout</span>
-        <span class="a122-dash-signal__value"><?php echo e(number_format($pendingSellerTxCount+$pendingCourierTxCount)); ?></span>
-      </div>
-    </div>
-
-    <div class="a122-dash-focus-grid">
-      <div class="a122-dash-focus-card">
-        <div class="a122-dash-focus-card__label">Tezkor tekshiruv</div>
-        <div class="a122-dash-focus-card__value"><?php echo e(number_format($pendingOrders + $pendingSellers)); ?></div>
-        <div class="a122-dash-focus-card__meta">Buyurtma va seller navbatlari</div>
-      </div>
-      <div class="a122-dash-focus-card">
-        <div class="a122-dash-focus-card__label">Support oqimi</div>
-        <div class="a122-dash-focus-card__value"><?php echo e(number_format(($complaintsPending ?? 0) + ($openSupportCount ?? 0))); ?></div>
-        <div class="a122-dash-focus-card__meta">Shikoyat va murojaatlar</div>
-      </div>
-    </div>
-  </div>
-
-  <div class="a122-dash-hero-v2__rail">
-    <div class="a122-dash-rail-grid">
-      <div class="a122-dash-rail-card">
-        <div class="a122-dash-rail-card__label">GMV</div>
-        <div class="a122-dash-rail-card__value"><?php echo e(number_format($gmvTotal/1_000_000,1)); ?>M</div>
-        <div class="a122-dash-rail-card__meta">Bu oy <?php echo e(number_format($gmvMonth/1_000_000,1)); ?>M UZS</div>
-      </div>
-      <div class="a122-dash-rail-card">
-        <div class="a122-dash-rail-card__label">To‘langan daromad</div>
-        <div class="a122-dash-rail-card__value"><?php echo e(number_format($totalRevenue/1_000_000,1)); ?>M</div>
-        <div class="a122-dash-rail-card__meta">Bugun +<?php echo e(number_format($todayRevenue/1000)); ?>K UZS</div>
-      </div>
-      <div class="a122-dash-rail-card">
-        <div class="a122-dash-rail-card__label">Yangi foydalanuvchilar</div>
-        <div class="a122-dash-rail-card__value"><?php echo e(number_format($newUsersToday)); ?></div>
-        <div class="a122-dash-rail-card__meta">Kunlik o‘sish</div>
-      </div>
-      <div class="a122-dash-rail-card">
-        <div class="a122-dash-rail-card__label">Pending sellers</div>
-        <div class="a122-dash-rail-card__value"><?php echo e(number_format($pendingSellers)); ?></div>
-        <div class="a122-dash-rail-card__meta">Ko‘rib chiqish kerak</div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<?php if(!empty($alerts)): ?>
-<section class="a122-dash-alert-strip fade-up">
-  <?php $__currentLoopData = $alerts; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$color,$icon,$title,$desc,$url]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-    <a href="<?php echo e($url); ?>" class="a122-dash-alert-chip is-<?php echo e($color); ?>">
-      <i class="bi <?php echo e($icon); ?>"></i>
-      <span class="a122-dash-alert-chip__title"><?php echo e($title); ?></span>
-      <span class="a122-dash-alert-chip__desc"><?php echo e($desc); ?></span>
+<div class="d-flex flex-column gap-4 mb-4">
+  <?php if (isset($component)) { $__componentOriginalcb19cb35a534439097b02b8af91726ee = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginalcb19cb35a534439097b02b8af91726ee = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.admin.page-header','data' => ['eyebrow' => 'A122 control room','title' => 'Operatsiyalar, moliya va moderatsiya bitta nazorat sahifasida','subtitle' => 'Bugungi oqim, kutilayotgan navbatlar va muhim signal bloklari shu yerga yig‘ildi. Maqsad: tez o‘qish, tez saralash va ortiqcha yurmasdan qaror qilish.']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('admin.page-header'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['eyebrow' => 'A122 control room','title' => 'Operatsiyalar, moliya va moderatsiya bitta nazorat sahifasida','subtitle' => 'Bugungi oqim, kutilayotgan navbatlar va muhim signal bloklari shu yerga yig‘ildi. Maqsad: tez o‘qish, tez saralash va ortiqcha yurmasdan qaror qilish.']); ?>
+    <a href="<?php echo e(route('admin.dashboard.live')); ?>" class="btn btn-dark rounded-pill px-4" target="_blank">
+      <i class="bi bi-broadcast-pin me-2"></i>Live monitor
     </a>
-  <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-</section>
+    <a href="<?php echo e(route('admin.dashboard',['clear_cache'=>1])); ?>" class="btn btn-outline-secondary rounded-pill px-4">
+      <i class="bi bi-arrow-clockwise me-2"></i>Yangilash
+    </a>
+   <?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginalcb19cb35a534439097b02b8af91726ee)): ?>
+<?php $attributes = $__attributesOriginalcb19cb35a534439097b02b8af91726ee; ?>
+<?php unset($__attributesOriginalcb19cb35a534439097b02b8af91726ee); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginalcb19cb35a534439097b02b8af91726ee)): ?>
+<?php $component = $__componentOriginalcb19cb35a534439097b02b8af91726ee; ?>
+<?php unset($__componentOriginalcb19cb35a534439097b02b8af91726ee); ?>
 <?php endif; ?>
 
-<?php if(count($dashQuick)): ?>
-<section class="a122-dash-shortcuts fade-up">
-  <div class="a122-dash-shortcuts__head">
-    <div>
-      <div class="a122-dash-shortcuts__title">Tezkor bo‘limlar</div>
-      <div class="a122-dash-shortcuts__meta">Adminning eng ko‘p ishlatiladigan ish yo‘llari.</div>
+  <div class="row g-3">
+    <div class="col-12 col-md-6 col-xl-3">
+      <?php if (isset($component)) { $__componentOriginal3c3cb599308b2d9971dae437d0b6bab6 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.admin.stat-card','data' => ['label' => 'Aktiv buyurtmalar','value' => number_format($pendingOrders + $packingOrders + $onwayOrders),'meta' => 'Kutilayotgan, qadoqlanayotgan va yo‘ldagi buyurtmalar','icon' => 'bag-check','tone' => 'primary']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('admin.stat-card'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['label' => 'Aktiv buyurtmalar','value' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute(number_format($pendingOrders + $packingOrders + $onwayOrders)),'meta' => 'Kutilayotgan, qadoqlanayotgan va yo‘ldagi buyurtmalar','icon' => 'bag-check','tone' => 'primary']); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6)): ?>
+<?php $attributes = $__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6; ?>
+<?php unset($__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal3c3cb599308b2d9971dae437d0b6bab6)): ?>
+<?php $component = $__componentOriginal3c3cb599308b2d9971dae437d0b6bab6; ?>
+<?php unset($__componentOriginal3c3cb599308b2d9971dae437d0b6bab6); ?>
+<?php endif; ?>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <?php if (isset($component)) { $__componentOriginal3c3cb599308b2d9971dae437d0b6bab6 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.admin.stat-card','data' => ['label' => 'Online foydalanuvchilar','value' => number_format($onlineUsers),'meta' => 'Hozir ilova ichida faol bo‘lgan foydalanuvchilar','icon' => 'wifi','tone' => 'info']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('admin.stat-card'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['label' => 'Online foydalanuvchilar','value' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute(number_format($onlineUsers)),'meta' => 'Hozir ilova ichida faol bo‘lgan foydalanuvchilar','icon' => 'wifi','tone' => 'info']); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6)): ?>
+<?php $attributes = $__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6; ?>
+<?php unset($__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal3c3cb599308b2d9971dae437d0b6bab6)): ?>
+<?php $component = $__componentOriginal3c3cb599308b2d9971dae437d0b6bab6; ?>
+<?php unset($__componentOriginal3c3cb599308b2d9971dae437d0b6bab6); ?>
+<?php endif; ?>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <?php if (isset($component)) { $__componentOriginal3c3cb599308b2d9971dae437d0b6bab6 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.admin.stat-card','data' => ['label' => 'Kutilayotgan payout','value' => number_format($pendingSellerTxCount + $pendingCourierTxCount),'meta' => 'Seller va kuryer payout navbatlari','icon' => 'cash-stack','tone' => 'warning']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('admin.stat-card'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['label' => 'Kutilayotgan payout','value' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute(number_format($pendingSellerTxCount + $pendingCourierTxCount)),'meta' => 'Seller va kuryer payout navbatlari','icon' => 'cash-stack','tone' => 'warning']); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6)): ?>
+<?php $attributes = $__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6; ?>
+<?php unset($__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal3c3cb599308b2d9971dae437d0b6bab6)): ?>
+<?php $component = $__componentOriginal3c3cb599308b2d9971dae437d0b6bab6; ?>
+<?php unset($__componentOriginal3c3cb599308b2d9971dae437d0b6bab6); ?>
+<?php endif; ?>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <?php if (isset($component)) { $__componentOriginal3c3cb599308b2d9971dae437d0b6bab6 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.admin.stat-card','data' => ['label' => 'Bugungi daromad','value' => number_format($todayRevenue / 1000000, 2) . '<span class=&quot;fs-5 text-secondary ms-1&quot;>M</span>','meta' => 'Kunlik paid revenue','icon' => 'graph-up-arrow','tone' => 'success']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('admin.stat-card'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['label' => 'Bugungi daromad','value' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute(number_format($todayRevenue / 1000000, 2) . '<span class=&quot;fs-5 text-secondary ms-1&quot;>M</span>'),'meta' => 'Kunlik paid revenue','icon' => 'graph-up-arrow','tone' => 'success']); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6)): ?>
+<?php $attributes = $__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6; ?>
+<?php unset($__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal3c3cb599308b2d9971dae437d0b6bab6)): ?>
+<?php $component = $__componentOriginal3c3cb599308b2d9971dae437d0b6bab6; ?>
+<?php unset($__componentOriginal3c3cb599308b2d9971dae437d0b6bab6); ?>
+<?php endif; ?>
     </div>
   </div>
-  <div class="a122-dash-shortcuts__grid">
-    <?php $__currentLoopData = $dashQuick; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $q): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-      <a href="<?php echo e($q[2]); ?>" class="a122-dash-shortcut">
-        <div class="a122-dash-shortcut__icon" style="background:<?php echo e($q[4]); ?>;color:<?php echo e($q[5]); ?>">
-          <i class="bi <?php echo e($q[1]); ?>"></i>
-        </div>
-        <div class="a122-dash-shortcut__body">
-          <div class="a122-dash-shortcut__label"><?php echo e($q[0]); ?></div>
-          <div class="a122-dash-shortcut__hint"><?php echo e($q[3]); ?></div>
-        </div>
-        <div class="a122-dash-shortcut__tail">
-          <i class="bi bi-arrow-up-right"></i>
-        </div>
-      </a>
-    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-  </div>
-</section>
-<?php endif; ?>
 
-<div class="a122-dash-tabshell fade-up">
-  <div class="dash-seg-bar" id="dashSegBar">
-    <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'main' }" @click="switchTab('main')"><i class="bi bi-grid-1x2"></i><span>Asosiy</span></button>
-    <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'orders' }" @click="switchTab('orders')"><i class="bi bi-bag-check"></i><span>Buyurtmalar</span></button>
-    <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'finance' }" @click="switchTab('finance')"><i class="bi bi-bar-chart-line"></i><span>Moliya</span></button>
-    <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'users' }" @click="switchTab('users')"><i class="bi bi-people"></i><span>Foydalanuvchilar</span></button>
-    <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'catalog' }" @click="switchTab('catalog')"><i class="bi bi-building"></i><span>Biznes</span></button>
+  <?php if(!empty($alerts)): ?>
+    <div class="row g-3">
+      <?php $__currentLoopData = $alerts; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$color,$icon,$title,$desc,$url]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+        <?php
+          $class = match($color) {
+            'danger' => 'alert-danger',
+            'warning' => 'alert-warning',
+            'success' => 'alert-success',
+            'info' => 'alert-primary',
+            default => 'alert-secondary',
+          };
+        ?>
+        <div class="col-12 col-xl-6">
+          <a href="<?php echo e($url); ?>" class="alert <?php echo e($class); ?> kc-alert-card d-flex align-items-start gap-3 mb-0 text-decoration-none">
+            <i class="bi <?php echo e($icon); ?> fs-4"></i>
+            <span>
+              <span class="d-block fw-bold text-dark"><?php echo e($title); ?></span>
+              <span class="d-block small text-dark-emphasis"><?php echo e($desc); ?></span>
+            </span>
+          </a>
+        </div>
+      <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+    </div>
+  <?php endif; ?>
+
+  <?php if(count($dashQuick)): ?>
+    <?php if (isset($component)) { $__componentOriginal6c55ae2c9251ebabe977f3f2190280eb = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal6c55ae2c9251ebabe977f3f2190280eb = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.admin.section-card','data' => ['title' => 'Tezkor bo‘limlar','meta' => 'Adminning eng ko‘p ishlatiladigan ish yo‘llari.']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('admin.section-card'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['title' => 'Tezkor bo‘limlar','meta' => 'Adminning eng ko‘p ishlatiladigan ish yo‘llari.']); ?>
+      <div class="row g-3">
+        <?php $__currentLoopData = $dashQuick; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $q): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+          <div class="col-12 col-md-6 col-xl-3">
+            <a href="<?php echo e($q[2]); ?>" class="kc-quick-link">
+              <span class="kc-quick-link__icon" style="background:<?php echo e($q[4]); ?>;color:<?php echo e($q[5]); ?>">
+                <i class="bi <?php echo e($q[1]); ?>"></i>
+              </span>
+              <div class="kc-quick-link__title"><?php echo e($q[0]); ?></div>
+              <div class="kc-quick-link__meta"><?php echo e($q[3]); ?></div>
+            </a>
+          </div>
+        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+      </div>
+     <?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal6c55ae2c9251ebabe977f3f2190280eb)): ?>
+<?php $attributes = $__attributesOriginal6c55ae2c9251ebabe977f3f2190280eb; ?>
+<?php unset($__attributesOriginal6c55ae2c9251ebabe977f3f2190280eb); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal6c55ae2c9251ebabe977f3f2190280eb)): ?>
+<?php $component = $__componentOriginal6c55ae2c9251ebabe977f3f2190280eb; ?>
+<?php unset($__componentOriginal6c55ae2c9251ebabe977f3f2190280eb); ?>
+<?php endif; ?>
+  <?php endif; ?>
+
+  <div class="kc-tab-card p-3">
+    <div class="nav nav-pills flex-wrap" id="dashSegBar">
+      <button type="button" class="nav-link" :class="{ 'active': tab === 'main' }" @click="switchTab('main')"><i class="bi bi-grid-1x2 me-2"></i>Asosiy</button>
+      <button type="button" class="nav-link" :class="{ 'active': tab === 'orders' }" @click="switchTab('orders')"><i class="bi bi-bag-check me-2"></i>Buyurtmalar</button>
+      <button type="button" class="nav-link" :class="{ 'active': tab === 'finance' }" @click="switchTab('finance')"><i class="bi bi-bar-chart-line me-2"></i>Moliya</button>
+      <button type="button" class="nav-link" :class="{ 'active': tab === 'users' }" @click="switchTab('users')"><i class="bi bi-people me-2"></i>Foydalanuvchilar</button>
+      <button type="button" class="nav-link" :class="{ 'active': tab === 'catalog' }" @click="switchTab('catalog')"><i class="bi bi-building me-2"></i>Biznes</button>
+    </div>
   </div>
 </div>
 

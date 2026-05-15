@@ -6,6 +6,11 @@
   <meta name="csrf-token" content="<?php echo e(csrf_token()); ?>" />
   <title><?php echo $__env->yieldContent('title', 'Dashboard'); ?> — Kitobchi Admin</title>
   <style>[x-cloak]{display:none!important}</style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
   <script>
     (function () {
       const saved = localStorage.getItem('a122-theme') || localStorage.getItem('theme');
@@ -18,27 +23,31 @@
     })();
   </script>
 
-  <?php echo app('Illuminate\Foundation\Vite')(['resources/css/app.css', 'resources/js/app.js', 'resources/css/a122-admin.css', 'resources/css/kitobchi-pastel.css', 'resources/js/a122-admin.js']); ?>
+  <?php echo app('Illuminate\Foundation\Vite')(['resources/css/app.css', 'resources/js/app.js', 'resources/css/a122-admin.css', 'resources/css/a122-bootstrap-admin.css', 'resources/css/kitobchi-pastel.css', 'resources/js/a122-admin.js']); ?>
   <?php echo $__env->yieldPushContent('styles'); ?>
   <?php echo $__env->yieldPushContent('head'); ?>
 </head>
-<body class="a122-admin-body text-gray-900 dark:text-gray-100 antialiased overflow-x-hidden">
+<body class="kc-admin-body overflow-x-hidden">
   <div
     id="a122-shell"
     data-sidebar-shell
-    class="min-h-screen a122-shell sidebar-expanded">
+    class="kc-shell d-flex sidebar-expanded">
     <?php echo $__env->make('a122.partials.sidebar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
-    <div class="flex-1 min-w-0 flex flex-col">
+    <div class="kc-main flex-grow-1 d-flex flex-column min-vh-100">
       <?php echo $__env->make('a122.partials.topbar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
-      <main class="a122-main flex-1 px-4 sm:px-6 lg:px-8 py-6">
-        <div class="mx-auto w-full max-w-[1720px] space-y-5">
-        <?php echo $__env->yieldContent('content'); ?>
+      <main class="kc-content flex-grow-1">
+        <div class="container-fluid px-3 px-lg-4 px-xxl-5">
+          <div class="mx-auto" style="max-width: 1760px;">
+            <?php echo $__env->yieldContent('content'); ?>
+          </div>
         </div>
       </main>
-      <footer class="a122-footer px-6 py-4 text-xs">
-        <div class="mx-auto flex w-full max-w-[1720px] items-center justify-between gap-3 flex-wrap">
-          <span>© <?php echo e(date('Y')); ?> Kitobchi Admin</span>
-          <span>A122 control workspace</span>
+      <footer class="border-top bg-white bg-opacity-75">
+        <div class="container-fluid px-3 px-lg-4 px-xxl-5 py-3">
+          <div class="mx-auto d-flex flex-wrap align-items-center justify-content-between gap-2 small text-secondary" style="max-width: 1760px;">
+            <span>© <?php echo e(date('Y')); ?> Kitobchi Admin</span>
+            <span>Bootstrap operations workspace</span>
+          </div>
         </div>
       </footer>
     </div>

@@ -57,128 +57,105 @@
   }
 @endphp
 
-<section class="a122-dash-hero-v2 fade-up">
-  <div class="a122-dash-hero-v2__main">
-    <div class="a122-dash-eyebrow">A122 control room</div>
-    <div class="a122-dash-eyebrow-row">
-      <span class="a122-dash-kicker">Bugungi fokus</span>
-      <span class="a122-dash-kicker a122-dash-kicker--muted">{{ now()->format('d.m.Y') }}</span>
-    </div>
-    <h1 class="a122-dash-hero-v2__title">Operatsiyalar, moliya va moderatsiya bitta nazorat sahifasida.</h1>
-    <p class="a122-dash-hero-v2__desc">
-      Bugungi oqim, kutilayotgan navbatlar va boshqaruv signallari shu yerda jamlangan. Asosiy maqsad tez o‘qish, tez saralash va ortiqcha yurmasdan qaror qilish.
-    </p>
-
-    <div class="a122-dash-hero-v2__actions">
-      <a href="{{ route('admin.dashboard.live') }}" class="btn-p primary" target="_blank">
-        <i class="bi bi-broadcast-pin"></i> Live monitor
-      </a>
-      <a href="{{ route('admin.dashboard',['clear_cache'=>1]) }}" class="btn-p ghost">
-        <i class="bi bi-arrow-clockwise"></i> Yangilash
-      </a>
-    </div>
-
-    <div class="a122-dash-signal-row">
-      <div class="a122-dash-signal">
-        <span class="a122-dash-signal__label">Aktiv buyurtmalar</span>
-        <span class="a122-dash-signal__value">{{ number_format($pendingOrders+$packingOrders+$onwayOrders) }}</span>
-      </div>
-      <div class="a122-dash-signal">
-        <span class="a122-dash-signal__label">Online foydalanuvchilar</span>
-        <span class="a122-dash-signal__value">{{ number_format($onlineUsers) }}</span>
-      </div>
-      <div class="a122-dash-signal">
-        <span class="a122-dash-signal__label">Kutilayotgan payout</span>
-        <span class="a122-dash-signal__value">{{ number_format($pendingSellerTxCount+$pendingCourierTxCount) }}</span>
-      </div>
-    </div>
-
-    <div class="a122-dash-focus-grid">
-      <div class="a122-dash-focus-card">
-        <div class="a122-dash-focus-card__label">Tezkor tekshiruv</div>
-        <div class="a122-dash-focus-card__value">{{ number_format($pendingOrders + $pendingSellers) }}</div>
-        <div class="a122-dash-focus-card__meta">Buyurtma va seller navbatlari</div>
-      </div>
-      <div class="a122-dash-focus-card">
-        <div class="a122-dash-focus-card__label">Support oqimi</div>
-        <div class="a122-dash-focus-card__value">{{ number_format(($complaintsPending ?? 0) + ($openSupportCount ?? 0)) }}</div>
-        <div class="a122-dash-focus-card__meta">Shikoyat va murojaatlar</div>
-      </div>
-    </div>
-  </div>
-
-  <div class="a122-dash-hero-v2__rail">
-    <div class="a122-dash-rail-grid">
-      <div class="a122-dash-rail-card">
-        <div class="a122-dash-rail-card__label">GMV</div>
-        <div class="a122-dash-rail-card__value">{{ number_format($gmvTotal/1_000_000,1) }}M</div>
-        <div class="a122-dash-rail-card__meta">Bu oy {{ number_format($gmvMonth/1_000_000,1) }}M UZS</div>
-      </div>
-      <div class="a122-dash-rail-card">
-        <div class="a122-dash-rail-card__label">To‘langan daromad</div>
-        <div class="a122-dash-rail-card__value">{{ number_format($totalRevenue/1_000_000,1) }}M</div>
-        <div class="a122-dash-rail-card__meta">Bugun +{{ number_format($todayRevenue/1000) }}K UZS</div>
-      </div>
-      <div class="a122-dash-rail-card">
-        <div class="a122-dash-rail-card__label">Yangi foydalanuvchilar</div>
-        <div class="a122-dash-rail-card__value">{{ number_format($newUsersToday) }}</div>
-        <div class="a122-dash-rail-card__meta">Kunlik o‘sish</div>
-      </div>
-      <div class="a122-dash-rail-card">
-        <div class="a122-dash-rail-card__label">Pending sellers</div>
-        <div class="a122-dash-rail-card__value">{{ number_format($pendingSellers) }}</div>
-        <div class="a122-dash-rail-card__meta">Ko‘rib chiqish kerak</div>
-      </div>
-    </div>
-  </div>
-</section>
-
-@if(!empty($alerts))
-<section class="a122-dash-alert-strip fade-up">
-  @foreach($alerts as [$color,$icon,$title,$desc,$url])
-    <a href="{{ $url }}" class="a122-dash-alert-chip is-{{ $color }}">
-      <i class="bi {{ $icon }}"></i>
-      <span class="a122-dash-alert-chip__title">{{ $title }}</span>
-      <span class="a122-dash-alert-chip__desc">{{ $desc }}</span>
+<div class="d-flex flex-column gap-4 mb-4">
+  <x-admin.page-header
+    eyebrow="A122 control room"
+    title="Operatsiyalar, moliya va moderatsiya bitta nazorat sahifasida"
+    subtitle="Bugungi oqim, kutilayotgan navbatlar va muhim signal bloklari shu yerga yig‘ildi. Maqsad: tez o‘qish, tez saralash va ortiqcha yurmasdan qaror qilish.">
+    <a href="{{ route('admin.dashboard.live') }}" class="btn btn-dark rounded-pill px-4" target="_blank">
+      <i class="bi bi-broadcast-pin me-2"></i>Live monitor
     </a>
-  @endforeach
-</section>
-@endif
+    <a href="{{ route('admin.dashboard',['clear_cache'=>1]) }}" class="btn btn-outline-secondary rounded-pill px-4">
+      <i class="bi bi-arrow-clockwise me-2"></i>Yangilash
+    </a>
+  </x-admin.page-header>
 
-@if(count($dashQuick))
-<section class="a122-dash-shortcuts fade-up">
-  <div class="a122-dash-shortcuts__head">
-    <div>
-      <div class="a122-dash-shortcuts__title">Tezkor bo‘limlar</div>
-      <div class="a122-dash-shortcuts__meta">Adminning eng ko‘p ishlatiladigan ish yo‘llari.</div>
+  <div class="row g-3">
+    <div class="col-12 col-md-6 col-xl-3">
+      <x-admin.stat-card
+        label="Aktiv buyurtmalar"
+        :value="number_format($pendingOrders + $packingOrders + $onwayOrders)"
+        meta="Kutilayotgan, qadoqlanayotgan va yo‘ldagi buyurtmalar"
+        icon="bag-check"
+        tone="primary" />
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <x-admin.stat-card
+        label="Online foydalanuvchilar"
+        :value="number_format($onlineUsers)"
+        meta="Hozir ilova ichida faol bo‘lgan foydalanuvchilar"
+        icon="wifi"
+        tone="info" />
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <x-admin.stat-card
+        label="Kutilayotgan payout"
+        :value="number_format($pendingSellerTxCount + $pendingCourierTxCount)"
+        meta="Seller va kuryer payout navbatlari"
+        icon="cash-stack"
+        tone="warning" />
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <x-admin.stat-card
+        label="Bugungi daromad"
+        :value="number_format($todayRevenue / 1000000, 2) . '<span class=&quot;fs-5 text-secondary ms-1&quot;>M</span>'"
+        meta="Kunlik paid revenue"
+        icon="graph-up-arrow"
+        tone="success" />
     </div>
   </div>
-  <div class="a122-dash-shortcuts__grid">
-    @foreach($dashQuick as $q)
-      <a href="{{ $q[2] }}" class="a122-dash-shortcut">
-        <div class="a122-dash-shortcut__icon" style="background:{{ $q[4] }};color:{{ $q[5] }}">
-          <i class="bi {{ $q[1] }}"></i>
-        </div>
-        <div class="a122-dash-shortcut__body">
-          <div class="a122-dash-shortcut__label">{{ $q[0] }}</div>
-          <div class="a122-dash-shortcut__hint">{{ $q[3] }}</div>
-        </div>
-        <div class="a122-dash-shortcut__tail">
-          <i class="bi bi-arrow-up-right"></i>
-        </div>
-      </a>
-    @endforeach
-  </div>
-</section>
-@endif
 
-<div class="a122-dash-tabshell fade-up">
-  <div class="dash-seg-bar" id="dashSegBar">
-    <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'main' }" @click="switchTab('main')"><i class="bi bi-grid-1x2"></i><span>Asosiy</span></button>
-    <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'orders' }" @click="switchTab('orders')"><i class="bi bi-bag-check"></i><span>Buyurtmalar</span></button>
-    <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'finance' }" @click="switchTab('finance')"><i class="bi bi-bar-chart-line"></i><span>Moliya</span></button>
-    <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'users' }" @click="switchTab('users')"><i class="bi bi-people"></i><span>Foydalanuvchilar</span></button>
-    <button type="button" class="dash-seg-btn" :class="{ 'active': tab === 'catalog' }" @click="switchTab('catalog')"><i class="bi bi-building"></i><span>Biznes</span></button>
+  @if(!empty($alerts))
+    <div class="row g-3">
+      @foreach($alerts as [$color,$icon,$title,$desc,$url])
+        @php
+          $class = match($color) {
+            'danger' => 'alert-danger',
+            'warning' => 'alert-warning',
+            'success' => 'alert-success',
+            'info' => 'alert-primary',
+            default => 'alert-secondary',
+          };
+        @endphp
+        <div class="col-12 col-xl-6">
+          <a href="{{ $url }}" class="alert {{ $class }} kc-alert-card d-flex align-items-start gap-3 mb-0 text-decoration-none">
+            <i class="bi {{ $icon }} fs-4"></i>
+            <span>
+              <span class="d-block fw-bold text-dark">{{ $title }}</span>
+              <span class="d-block small text-dark-emphasis">{{ $desc }}</span>
+            </span>
+          </a>
+        </div>
+      @endforeach
+    </div>
+  @endif
+
+  @if(count($dashQuick))
+    <x-admin.section-card title="Tezkor bo‘limlar" meta="Adminning eng ko‘p ishlatiladigan ish yo‘llari.">
+      <div class="row g-3">
+        @foreach($dashQuick as $q)
+          <div class="col-12 col-md-6 col-xl-3">
+            <a href="{{ $q[2] }}" class="kc-quick-link">
+              <span class="kc-quick-link__icon" style="background:{{ $q[4] }};color:{{ $q[5] }}">
+                <i class="bi {{ $q[1] }}"></i>
+              </span>
+              <div class="kc-quick-link__title">{{ $q[0] }}</div>
+              <div class="kc-quick-link__meta">{{ $q[3] }}</div>
+            </a>
+          </div>
+        @endforeach
+      </div>
+    </x-admin.section-card>
+  @endif
+
+  <div class="kc-tab-card p-3">
+    <div class="nav nav-pills flex-wrap" id="dashSegBar">
+      <button type="button" class="nav-link" :class="{ 'active': tab === 'main' }" @click="switchTab('main')"><i class="bi bi-grid-1x2 me-2"></i>Asosiy</button>
+      <button type="button" class="nav-link" :class="{ 'active': tab === 'orders' }" @click="switchTab('orders')"><i class="bi bi-bag-check me-2"></i>Buyurtmalar</button>
+      <button type="button" class="nav-link" :class="{ 'active': tab === 'finance' }" @click="switchTab('finance')"><i class="bi bi-bar-chart-line me-2"></i>Moliya</button>
+      <button type="button" class="nav-link" :class="{ 'active': tab === 'users' }" @click="switchTab('users')"><i class="bi bi-people me-2"></i>Foydalanuvchilar</button>
+      <button type="button" class="nav-link" :class="{ 'active': tab === 'catalog' }" @click="switchTab('catalog')"><i class="bi bi-building me-2"></i>Biznes</button>
+    </div>
   </div>
 </div>
 

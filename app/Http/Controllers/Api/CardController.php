@@ -76,6 +76,8 @@ class CardController extends Controller
 
         $rememberCard = (bool) $request->boolean('remember_card', true);
         $orderId = $request->integer('order_id') ?: null;
+        $rawNumber = $request->string('number')->toString();
+        $maskedNumber = $this->maskCardNumber($rawNumber);
 
         if ($orderId) {
             $order = Sold::query()
@@ -93,11 +95,28 @@ class CardController extends Controller
         }
 
         try {
+            $existingPending = $this->findPendingPaylovCard($user->id, $maskedNumber, $orderId);
+            if ($existingPending) {
+                return $this->success([
+                    'message' => 'Bu karta uchun SMS kod allaqachon yuborilgan. Avvalgi kodni kiriting.',
+                    'data' => [
+                        'token' => (string) $existingPending->id,
+                        'verification_id' => (string) $existingPending->id,
+                        'provider_card_id' => (string) $existingPending->provider_card_id,
+                        'number' => $existingPending->card_number,
+                        'otp_sent_phone' => $existingPending->phone_number,
+                    ],
+                ]);
+            }
+
+            $expire = $request->string('expire')->toString();
+            $normalizedExpire = mb_substr($expire, 2, 2) . mb_substr($expire, 0, 2);
+
             $response = PaylovService::make()->createUserCard(
                 (string) $user->id,
-                $request->string('number')->toString(),
-                $request->string('expire')->toString(),
-                $user->phone_number,
+                $rawNumber,
+                $normalizedExpire,
+                null,
             );
 
             $result = $response['result'] ?? [];
@@ -106,21 +125,26 @@ class CardController extends Controller
                 throw new RuntimeException('Paylov card id qaytarmadi.');
             }
 
-            $card = UserCard::create([
-                'user_id' => $user->id,
-                'provider' => 'paylov',
-                'provider_card_id' => $providerCardId,
-                'card_number' => $this->maskCardNumber($request->string('number')->toString()),
-                'expire_date' => $request->string('expire')->toString(),
-                'phone_number' => $result['otpSentPhone'] ?? $user->phone_number,
-                'is_verified' => false,
-                'is_default' => false,
-                'is_temporary' => !$rememberCard,
-                'pending_order_id' => $orderId,
-                'provider_meta' => [
-                    'create' => $response,
+            $card = UserCard::updateOrCreate(
+                [
+                    'user_id' => $user->id,
+                    'provider' => 'paylov',
+                    'provider_card_id' => $providerCardId,
                 ],
-            ]);
+                [
+                    'card_number' => $maskedNumber,
+                    'expire_date' => $expire,
+                    'phone_number' => $result['otpSentPhone'] ?? $user->phone_number,
+                    'payme_token' => '',
+                    'is_verified' => false,
+                    'is_default' => false,
+                    'is_temporary' => !$rememberCard,
+                    'pending_order_id' => $orderId,
+                    'provider_meta' => [
+                        'create' => $response,
+                    ],
+                ],
+            );
 
             return $this->success([
                 'message' => 'Karta qo‘shildi. Endi SMS kodni kiriting.',
@@ -133,6 +157,24 @@ class CardController extends Controller
                 ],
             ]);
         } catch (\Throwable $e) {
+            if (str_contains($e->getMessage(), 'otp_code_already_sent')) {
+                $existingPending = $this->findPendingPaylovCard($user->id, $maskedNumber, $orderId);
+                if ($existingPending) {
+                    return $this->success([
+                        'message' => 'Bu karta uchun SMS kod allaqachon yuborilgan. Avvalgi kodni kiriting.',
+                        'data' => [
+                            'token' => (string) $existingPending->id,
+                            'verification_id' => (string) $existingPending->id,
+                            'provider_card_id' => (string) $existingPending->provider_card_id,
+                            'number' => $existingPending->card_number,
+                            'otp_sent_phone' => $existingPending->phone_number,
+                        ],
+                    ]);
+                }
+
+                return $this->error('Bu karta uchun SMS kod allaqachon yuborilgan. Bir ozdan keyin qayta urinib ko‘ring.', 429);
+            }
+
             Log::warning('[Paylov] Card create failed', [
                 'user_id' => $user->id,
                 'message' => $e->getMessage(),
@@ -307,5 +349,23 @@ class CardController extends Controller
         return substr($digits, 0, 6)
             . str_repeat('*', max(0, strlen($digits) - 10))
             . substr($digits, -4);
+    }
+
+    private function findPendingPaylovCard(int $userId, string $maskedNumber, ?int $orderId): ?UserCard
+    {
+        return UserCard::query()
+            ->where('user_id', $userId)
+            ->where('provider', 'paylov')
+            ->where('is_verified', false)
+            ->where('card_number', $maskedNumber)
+            ->when(
+                $orderId !== null,
+                fn ($query) => $query->where('pending_order_id', $orderId),
+                fn ($query) => $query->whereNull('pending_order_id'),
+            )
+            ->whereNotNull('provider_card_id')
+            ->where('created_at', '>=', now()->subMinutes(15))
+            ->latest('id')
+            ->first();
     }
 }

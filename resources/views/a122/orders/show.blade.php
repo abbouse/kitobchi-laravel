@@ -3,7 +3,7 @@
 @section('page-title', 'Buyurtma tafsiloti')
 
 @section('content')
-<div class="space-y-6">
+<div class="d-flex flex-column gap-4">
   @php
     $currentOrderStatus = $order->status_code ?? $order->status;
     $currentPaymentStatus = $order->payment_status_code ?? $order->paymentStatus;
@@ -143,16 +143,18 @@
     };
   @endphp
 
-  <x-a122.page-header back-href="{{ route('admin.orders.index') }}">
-    <x-slot name="heading">#ORD-{{ $order->id }}</x-slot>
-    <x-slot name="meta">{{ $order->user?->full_name ?: 'Mehmon foydalanuvchi' }} · {{ optional($order->created_at)->format('d.m.Y H:i') }}</x-slot>
-    <x-slot name="actions">
-      <form method="POST" action="{{ route('admin.orders.cancel', $order) }}" onsubmit="return confirm('Buyurtmani bekor qilasizmi?')">
-        @csrf
-        <button class="btn-p danger"><i class="bi bi-x-circle"></i> Bekor qilish</button>
-      </form>
-    </x-slot>
-  </x-a122.page-header>
+  <x-admin.page-header
+    eyebrow="Order detail"
+    title="#ORD-{{ $order->id }}"
+    subtitle="{{ $order->user?->full_name ?: 'Mehmon foydalanuvchi' }} · {{ optional($order->created_at)->format('d.m.Y H:i') }}">
+    <a href="{{ route('admin.orders.index') }}" class="btn btn-outline-secondary rounded-pill px-4">
+      <i class="bi bi-arrow-left me-2"></i>Ro‘yxatga qaytish
+    </a>
+    <form method="POST" action="{{ route('admin.orders.cancel', $order) }}" onsubmit="return confirm('Buyurtmani bekor qilasizmi?')">
+      @csrf
+      <button class="btn btn-danger rounded-pill px-4"><i class="bi bi-x-circle me-2"></i>Bekor qilish</button>
+    </form>
+  </x-admin.page-header>
 
   <section class="a122-section">
     <div class="a122-section-body">

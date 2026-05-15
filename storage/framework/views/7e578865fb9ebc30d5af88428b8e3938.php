@@ -2,7 +2,7 @@
 <?php $__env->startSection('page-title', 'Buyurtma tafsiloti'); ?>
 
 <?php $__env->startSection('content'); ?>
-<div class="space-y-6">
+<div class="d-flex flex-column gap-4">
   <?php
     $currentOrderStatus = $order->status_code ?? $order->status;
     $currentPaymentStatus = $order->payment_status_code ?? $order->paymentStatus;
@@ -142,33 +142,32 @@
     };
   ?>
 
-  <?php if (isset($component)) { $__componentOriginal0c1345684b2d774f43a544669f5684b0 = $component; } ?>
-<?php if (isset($attributes)) { $__attributesOriginal0c1345684b2d774f43a544669f5684b0 = $attributes; } ?>
-<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.a122.page-header','data' => ['backHref' => ''.e(route('admin.orders.index')).'']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
-<?php $component->withName('a122.page-header'); ?>
+  <?php if (isset($component)) { $__componentOriginalcb19cb35a534439097b02b8af91726ee = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginalcb19cb35a534439097b02b8af91726ee = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.admin.page-header','data' => ['eyebrow' => 'Order detail','title' => '#ORD-'.e($order->id).'','subtitle' => ''.e($order->user?->full_name ?: 'Mehmon foydalanuvchi').' · '.e(optional($order->created_at)->format('d.m.Y H:i')).'']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('admin.page-header'); ?>
 <?php if ($component->shouldRender()): ?>
 <?php $__env->startComponent($component->resolveView(), $component->data()); ?>
 <?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
 <?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
 <?php endif; ?>
-<?php $component->withAttributes(['back-href' => ''.e(route('admin.orders.index')).'']); ?>
-     <?php $__env->slot('heading', null, []); ?> #ORD-<?php echo e($order->id); ?> <?php $__env->endSlot(); ?>
-     <?php $__env->slot('meta', null, []); ?> <?php echo e($order->user?->full_name ?: 'Mehmon foydalanuvchi'); ?> · <?php echo e(optional($order->created_at)->format('d.m.Y H:i')); ?> <?php $__env->endSlot(); ?>
-     <?php $__env->slot('actions', null, []); ?> 
-      <form method="POST" action="<?php echo e(route('admin.orders.cancel', $order)); ?>" onsubmit="return confirm('Buyurtmani bekor qilasizmi?')">
-        <?php echo csrf_field(); ?>
-        <button class="btn-p danger"><i class="bi bi-x-circle"></i> Bekor qilish</button>
-      </form>
-     <?php $__env->endSlot(); ?>
+<?php $component->withAttributes(['eyebrow' => 'Order detail','title' => '#ORD-'.e($order->id).'','subtitle' => ''.e($order->user?->full_name ?: 'Mehmon foydalanuvchi').' · '.e(optional($order->created_at)->format('d.m.Y H:i')).'']); ?>
+    <a href="<?php echo e(route('admin.orders.index')); ?>" class="btn btn-outline-secondary rounded-pill px-4">
+      <i class="bi bi-arrow-left me-2"></i>Ro‘yxatga qaytish
+    </a>
+    <form method="POST" action="<?php echo e(route('admin.orders.cancel', $order)); ?>" onsubmit="return confirm('Buyurtmani bekor qilasizmi?')">
+      <?php echo csrf_field(); ?>
+      <button class="btn btn-danger rounded-pill px-4"><i class="bi bi-x-circle me-2"></i>Bekor qilish</button>
+    </form>
    <?php echo $__env->renderComponent(); ?>
 <?php endif; ?>
-<?php if (isset($__attributesOriginal0c1345684b2d774f43a544669f5684b0)): ?>
-<?php $attributes = $__attributesOriginal0c1345684b2d774f43a544669f5684b0; ?>
-<?php unset($__attributesOriginal0c1345684b2d774f43a544669f5684b0); ?>
+<?php if (isset($__attributesOriginalcb19cb35a534439097b02b8af91726ee)): ?>
+<?php $attributes = $__attributesOriginalcb19cb35a534439097b02b8af91726ee; ?>
+<?php unset($__attributesOriginalcb19cb35a534439097b02b8af91726ee); ?>
 <?php endif; ?>
-<?php if (isset($__componentOriginal0c1345684b2d774f43a544669f5684b0)): ?>
-<?php $component = $__componentOriginal0c1345684b2d774f43a544669f5684b0; ?>
-<?php unset($__componentOriginal0c1345684b2d774f43a544669f5684b0); ?>
+<?php if (isset($__componentOriginalcb19cb35a534439097b02b8af91726ee)): ?>
+<?php $component = $__componentOriginalcb19cb35a534439097b02b8af91726ee; ?>
+<?php unset($__componentOriginalcb19cb35a534439097b02b8af91726ee); ?>
 <?php endif; ?>
 
   <section class="a122-section">

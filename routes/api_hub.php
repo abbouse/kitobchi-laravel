@@ -13,9 +13,12 @@ Route::middleware('auth:hub')->group(function () {
     Route::get('dashboard', [HubFulfillmentController::class, 'dashboard']);
     Route::get('queues/{queue}', [HubFulfillmentController::class, 'queue'])
         ->whereIn('queue', ['inbound', 'qc', 'packing', 'dispatch']);
+    Route::get('exceptions', [HubFulfillmentController::class, 'exceptions']);
+    Route::get('activity', [HubFulfillmentController::class, 'activity']);
     Route::get('scan', [HubFulfillmentController::class, 'scan']);
     Route::get('fulfillments/{fulfillment}', [HubFulfillmentController::class, 'show']);
     Route::get('fulfillments/{fulfillment}/print-payload', [HubFulfillmentController::class, 'printPayload']);
+    Route::post('fulfillments/{fulfillment}/mark-print', [HubFulfillmentController::class, 'markPrint']);
     Route::post('fulfillments/{fulfillment}/arrive', [HubFulfillmentController::class, 'arrive']);
     Route::post('fulfillments/{fulfillment}/qc', [HubFulfillmentController::class, 'qc']);
     Route::post('fulfillments/{fulfillment}/pack', [HubFulfillmentController::class, 'pack']);

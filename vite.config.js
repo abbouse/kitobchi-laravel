@@ -9,7 +9,9 @@ export default defineConfig({
             input: [
                 'resources/css/app.css',
                 'resources/css/a122-admin.css',
+                'resources/css/a122-bootstrap-admin.css',
                 'resources/css/kitobchi-pastel.css',
+                'resources/css/kitobchi-hubdesk.css',
                 'resources/css/marketing-tokens.css',
                 'resources/css/legal-pages.css',
                 'resources/css/legal-doc-static.css',

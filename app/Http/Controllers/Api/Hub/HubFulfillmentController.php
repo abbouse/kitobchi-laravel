@@ -112,6 +112,146 @@ class HubFulfillmentController extends Controller
         ]);
     }
 
+    public function exceptions(Request $request)
+    {
+        $staff = $this->staff($request);
+        if (
+            !$this->hubRoleAccessService->can($staff, 'queue.exception.report')
+            && !$this->hubRoleAccessService->can($staff, 'queue.exception.resolve')
+        ) {
+            return response()->json(['status' => 'error', 'message' => 'Exception markazi sizga ruxsat etilmagan.'], 403);
+        }
+
+        $state = (string) $request->string('state', 'open');
+        $rows = $this->baseQuery($staff->hub_id)
+            ->whereNotNull('meta->exception->code')
+            ->when($state === 'open', function ($query) {
+                $query->whereNull('meta->exception->resolved_at');
+            })
+            ->when($state === 'resolved', function ($query) {
+                $query->whereNotNull('meta->exception->resolved_at');
+            })
+            ->when($request->filled('q'), function ($query) use ($request) {
+                $search = trim((string) $request->string('q'));
+                $query->where(function ($scoped) use ($search) {
+                    $scoped->where('order_id', 'like', '%' . $search . '%')
+                        ->orWhere('label_code', 'like', '%' . $search . '%')
+                        ->orWhere('postal_tracking_number', 'like', '%' . $search . '%')
+                        ->orWhereHas('order.user', function ($userQuery) use ($search) {
+                            $userQuery->where('name', 'like', '%' . $search . '%')
+                                ->orWhere('lastname', 'like', '%' . $search . '%')
+                                ->orWhere('phone_number', 'like', '%' . $search . '%');
+                        });
+                });
+            })
+            ->latest('updated_at')
+            ->paginate((int) min(50, max(10, (int) $request->input('limit', 20))))
+            ->through(fn (OrderFulfillment $fulfillment) => $this->serializeFulfillment($fulfillment));
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $rows,
+            'filters' => [
+                'q' => (string) $request->string('q'),
+                'state' => $state,
+            ],
+        ]);
+    }
+
+    public function activity(Request $request)
+    {
+        $staff = $this->staff($request);
+        if (!$this->hubRoleAccessService->can($staff, 'dashboard.view')) {
+            return response()->json(['status' => 'error', 'message' => 'Activity markazi sizga ruxsat etilmagan.'], 403);
+        }
+
+        $windowDays = (int) min(30, max(1, (int) $request->input('days', 7)));
+        $fulfillments = $this->baseQuery($staff->hub_id)
+            ->where('updated_at', '>=', now()->subDays($windowDays))
+            ->latest('updated_at')
+            ->limit(300)
+            ->get();
+
+        $summary = [];
+        $events = [];
+
+        foreach ($fulfillments as $fulfillment) {
+            $timeline = collect(Arr::get($fulfillment->meta ?? [], 'timeline', []))
+                ->filter(fn ($row) => is_array($row) && !empty($row['at']) && is_array($row['actor'] ?? null));
+
+            foreach ($timeline as $row) {
+                $actor = $row['actor'];
+                $actorId = (int) ($actor['id'] ?? 0);
+                $code = (string) ($row['code'] ?? '');
+                if ($actorId <= 0 || $code === '') {
+                    continue;
+                }
+
+                $summary[$actorId] ??= [
+                    'staff_id' => $actorId,
+                    'name' => (string) ($actor['name'] ?? ''),
+                    'role' => (string) ($actor['role'] ?? ''),
+                    'actions_count' => 0,
+                    'exception_reports' => 0,
+                    'exception_resolves' => 0,
+                    'label_prints' => 0,
+                    'receipt_prints' => 0,
+                    'last_action_at' => null,
+                ];
+
+                $summary[$actorId]['actions_count']++;
+                $summary[$actorId]['last_action_at'] = $row['at'];
+
+                if ($code === 'exception_reported') {
+                    $summary[$actorId]['exception_reports']++;
+                }
+                if ($code === 'exception_resolved') {
+                    $summary[$actorId]['exception_resolves']++;
+                }
+                if ($code === 'label_printed') {
+                    $summary[$actorId]['label_prints']++;
+                }
+                if ($code === 'receipt_printed') {
+                    $summary[$actorId]['receipt_prints']++;
+                }
+
+                $events[] = [
+                    'code' => $code,
+                    'title' => (string) ($row['title'] ?? ''),
+                    'at' => (string) ($row['at'] ?? ''),
+                    'note' => (string) ($row['note'] ?? ''),
+                    'order_id' => $fulfillment->order_id,
+                    'actor' => [
+                        'id' => $actorId,
+                        'name' => (string) ($actor['name'] ?? ''),
+                        'role' => (string) ($actor['role'] ?? ''),
+                    ],
+                ];
+            }
+        }
+
+        $operators = collect($summary)
+            ->sortByDesc(fn ($row) => [$row['actions_count'], $row['label_prints'] + $row['receipt_prints']])
+            ->values()
+            ->take(12)
+            ->all();
+
+        $recentEvents = collect($events)
+            ->sortByDesc('at')
+            ->values()
+            ->take(40)
+            ->all();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'window_days' => $windowDays,
+                'operators' => $operators,
+                'events' => $recentEvents,
+            ],
+        ]);
+    }
+
     public function scan(Request $request)
     {
         $staff = $this->staff($request);
@@ -214,6 +354,57 @@ class HubFulfillmentController extends Controller
                     'generated_at' => now()->toIso8601String(),
                 ],
             ],
+        ]);
+    }
+
+    public function markPrint(Request $request, OrderFulfillment $fulfillment)
+    {
+        $staff = $this->staff($request);
+        if ($response = $this->ensureSameHub($staff, $fulfillment)) {
+            return $response;
+        }
+
+        $validated = $request->validate([
+            'type' => ['required', Rule::in(['label', 'receipt'])],
+            'reason' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $permission = $validated['type'] === 'label' ? 'print.label' : 'print.receipt';
+        if (!$this->hubRoleAccessService->can($staff, $permission)) {
+            return response()->json(['status' => 'error', 'message' => 'Print sizga ruxsat etilmagan.'], 403);
+        }
+
+        $meta = $fulfillment->meta ?? [];
+        $prints = collect(Arr::get($meta, 'prints', []))
+            ->filter(fn ($row) => is_array($row))
+            ->values()
+            ->all();
+
+        $prints[] = [
+            'type' => $validated['type'],
+            'reason' => trim((string) ($validated['reason'] ?? '')),
+            'printed_at' => now()->toIso8601String(),
+            'actor' => [
+                'id' => $staff->id,
+                'name' => $staff->full_name,
+                'role' => $staff->role,
+            ],
+        ];
+
+        Arr::set($meta, 'prints', $prints);
+        $fulfillment->meta = $meta;
+        $this->appendTimeline(
+            $fulfillment,
+            $staff,
+            $validated['type'] === 'label' ? 'label_printed' : 'receipt_printed',
+            $validated['type'] === 'label' ? 'Etiketka chop etildi' : 'Packing slip chop etildi',
+            ['note' => trim((string) ($validated['reason'] ?? ''))]
+        );
+        $fulfillment->save();
+
+        return response()->json([
+            'status' => 'success',
+            'fulfillment' => $this->serializeFulfillment($fulfillment->fresh()),
         ]);
     }
 
@@ -514,6 +705,10 @@ class HubFulfillmentController extends Controller
             ],
             'timeline' => $this->buildTimeline($fulfillment),
             'exception' => is_array($exception) ? $exception : null,
+            'prints' => collect(Arr::get($fulfillment->meta ?? [], 'prints', []))
+                ->filter(fn ($row) => is_array($row))
+                ->values()
+                ->all(),
             'order' => $order ? [
                 'id' => $order->id,
                 'amount' => (int) $order->amount,
@@ -605,6 +800,16 @@ class HubFulfillmentController extends Controller
         $total = (int) (clone $base)->count();
         $codCount = (int) (clone $base)->where('is_cod', true)->count();
         $exceptionCount = (int) (clone $base)->whereNotNull('meta->exception->code')->count();
+        $recent = (clone $base)->get();
+        $labelPrints = 0;
+        $receiptPrints = 0;
+
+        foreach ($recent as $fulfillment) {
+            $prints = collect(Arr::get($fulfillment->meta ?? [], 'prints', []))
+                ->filter(fn ($row) => is_array($row));
+            $labelPrints += $prints->where('type', 'label')->count();
+            $receiptPrints += $prints->where('type', 'receipt')->count();
+        }
 
         return [
             'window_days' => 7,
@@ -613,6 +818,8 @@ class HubFulfillmentController extends Controller
             'avg_dispatch_minutes' => $avgDispatchMinutes,
             'cod_share_percent' => $total > 0 ? (int) round(($codCount / $total) * 100) : 0,
             'exception_rate_percent' => $total > 0 ? (int) round(($exceptionCount / $total) * 100) : 0,
+            'label_prints' => $labelPrints,
+            'receipt_prints' => $receiptPrints,
         ];
     }
 }

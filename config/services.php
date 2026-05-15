@@ -42,6 +42,10 @@ return [
     'paylov' => [
         'base_url' => rtrim(env('PAYLOV_BASE_URL', 'https://paylov.uz'), '/'),
         'access_token' => env('PAYLOV_ACCESS_TOKEN'),
+        'consumer_key' => env('PAYLOV_CONSUMER_KEY'),
+        'consumer_secret' => env('PAYLOV_CONSUMER_SECRET'),
+        'username' => env('PAYLOV_USERNAME'),
+        'password' => env('PAYLOV_PASSWORD'),
         'merchant_id' => env('PAYLOV_MERCHANT_ID'),
     ],
 
