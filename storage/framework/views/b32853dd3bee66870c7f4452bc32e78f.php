@@ -23,7 +23,7 @@
     })();
   </script>
 
-  <?php echo app('Illuminate\Foundation\Vite')(['resources/css/app.css', 'resources/js/app.js', 'resources/css/a122-admin.css', 'resources/css/a122-bootstrap-admin.css', 'resources/css/kitobchi-pastel.css', 'resources/js/a122-admin.js']); ?>
+  <?php echo app('Illuminate\Foundation\Vite')(['resources/css/app.css', 'resources/js/app.js', 'resources/css/a122-admin.css', 'resources/css/a122-bootstrap-admin.css', 'resources/js/a122-admin.js']); ?>
   <?php echo $__env->yieldPushContent('styles'); ?>
   <?php echo $__env->yieldPushContent('head'); ?>
 </head>

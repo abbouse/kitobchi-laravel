@@ -128,12 +128,15 @@ class PaylovService
         $isActive = (bool) ($status['is_active'] ?? true);
         $smsInfo = array_key_exists('sms_info', $status) ? (bool) $status['sms_info'] : null;
         $isExpired = $this->isDisplayExpireExpired((string) ($card->expire_date ?? ''));
+        $remoteUserId = isset($singleCard['userId']) ? (string) $singleCard['userId'] : null;
 
         $errorCode = null;
         if ($isExpired) {
             $errorCode = 'card_expired';
         } elseif (!$isActive) {
             $errorCode = 'card_not_active';
+        } elseif ($remoteUserId !== null && $remoteUserId !== '' && (string) $card->user_id !== $remoteUserId) {
+            $errorCode = 'card_not_match';
         }
 
         return [
@@ -141,6 +144,7 @@ class PaylovService
             'is_expired' => $isExpired,
             'sms_info' => $smsInfo,
             'status_message' => $statusMessage,
+            'remote_user_id' => $remoteUserId,
             'error_code' => $errorCode,
             'can_pay' => $errorCode === null,
         ];

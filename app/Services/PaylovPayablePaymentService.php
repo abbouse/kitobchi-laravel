@@ -87,6 +87,10 @@ class PaylovPayablePaymentService
         array $account,
         callable $onSuccess,
     ): array {
+        if ((int) $card->user_id !== (int) $user->id) {
+            throw new RuntimeException('Bu karta sizga tegishli emas.');
+        }
+
         if (!$card->is_verified || blank($card->provider_card_id)) {
             throw new RuntimeException('Tasdiqlanmagan karta bilan to‘lab bo‘lmaydi.');
         }

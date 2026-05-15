@@ -28,6 +28,10 @@ class PaylovOrderPaymentService
             throw new RuntimeException('Buyurtma sizga tegishli emas.');
         }
 
+        if ((int) $card->user_id !== (int) $user->id) {
+            throw new RuntimeException('Bu karta sizga tegishli emas.');
+        }
+
         if ($order->payment_status_code !== PaymentStatusCode::CARD_PENDING->value) {
             throw new RuntimeException('Bu buyurtma karta bilan to‘lovni kutmayapti.');
         }

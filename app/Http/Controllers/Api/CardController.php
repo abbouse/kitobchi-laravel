@@ -355,6 +355,7 @@ class CardController extends Controller
     private function serializeCard(UserCard $card): array
     {
         $state = PaylovService::make()->cardPaymentState($card, false);
+        $brandType = $this->resolveBrandType($card);
 
         return [
             'id' => $card->id,
@@ -366,6 +367,7 @@ class CardController extends Controller
             'expire_date' => $card->expire_date,
             'vendor' => $card->vendor,
             'processing' => $card->processing,
+            'brand_type' => $brandType,
             'is_active' => $state['is_active'],
             'is_expired' => $state['is_expired'],
             'sms_info' => $state['sms_info'],
@@ -445,5 +447,32 @@ class CardController extends Controller
         } catch (\Throwable) {
             return true;
         }
+    }
+
+    private function resolveBrandType(UserCard $card): ?string
+    {
+        $signals = [
+            (string) ($card->vendor ?? ''),
+            (string) ($card->processing ?? ''),
+            (string) data_get($card->provider_meta, 'single_card.result.card.vendor', ''),
+            (string) data_get($card->provider_meta, 'single_card.result.card.processing', ''),
+        ];
+
+        foreach ($signals as $signal) {
+            $normalized = mb_strtolower(trim($signal));
+            if ($normalized === '') {
+                continue;
+            }
+
+            if (str_contains($normalized, 'uzcard')) {
+                return 'uzcard';
+            }
+
+            if (str_contains($normalized, 'humo')) {
+                return 'humo';
+            }
+        }
+
+        return null;
     }
 }

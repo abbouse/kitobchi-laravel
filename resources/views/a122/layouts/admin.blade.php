@@ -23,7 +23,7 @@
     })();
   </script>
 
-  @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/css/a122-admin.css', 'resources/css/a122-bootstrap-admin.css', 'resources/css/kitobchi-pastel.css', 'resources/js/a122-admin.js'])
+  @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/css/a122-admin.css', 'resources/css/a122-bootstrap-admin.css', 'resources/js/a122-admin.js'])
   @stack('styles')
   @stack('head')
 </head>
