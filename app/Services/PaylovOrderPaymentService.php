@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Enums\PaymentStatusCode;
-use App\Models\Kirim;
 use App\Models\Sold;
 use App\Models\Transaction;
 use App\Models\User;
@@ -37,7 +36,7 @@ class PaylovOrderPaymentService
         }
 
         if ((int) $order->paymentStatus === PaymentStatusCode::PAID->legacy()) {
-            throw new RuntimeException('Buyurtma allaqachon to‘langan.');
+            return $this->buildAlreadyPaidResponse($order);
         }
 
         if (!$card->is_verified || blank($card->provider_card_id)) {
@@ -46,6 +45,10 @@ class PaylovOrderPaymentService
 
         $paylov = PaylovService::make();
         $paylov->ensureCardReadyForPayment($card);
+
+        if ($reconciled = $this->reconcileExistingSuccessfulPayment($order, $user, $paylov)) {
+            return $reconciled;
+        }
 
         $receipt = $paylov->createReceipt(
             (string) $user->id,
@@ -69,51 +72,82 @@ class PaylovOrderPaymentService
             $receipt,
         );
 
+        $payResponse = null;
+        $statusResponse = null;
+
         try {
             $payResponse = $paylov->payReceipt($transactionId, $card->provider_card_id, (string) $user->id);
             $statusResponse = $paylov->getTransactions($transactionId);
 
-            $this->updateTransaction($transaction, [
-                'state' => 2,
-                'perform_time' => now()->format('Y-m-d H:i:s'),
-                'perform_time_unix' => time(),
-                'provider_response' => [
-                    'create' => $receipt,
-                    'pay' => $payResponse,
-                    'status' => $statusResponse,
-                    'card_snapshot' => $this->cardSnapshot($card),
-                ],
-            ]);
+            return $this->finalizeSuccessfulPayment(
+                order: $order,
+                user: $user,
+                card: $card,
+                transaction: $transaction,
+                transactionId: $transactionId,
+                receipt: $receipt,
+                payResponse: $payResponse,
+                statusResponse: $statusResponse,
+            );
+        } catch (\Throwable $e) {
+            $remotePaidDetected = false;
 
-            DB::transaction(function () use ($order, $user) {
-                $freshOrder = Sold::query()->lockForUpdate()->find($order->id);
-                if (!$freshOrder) {
-                    throw new RuntimeException('Buyurtma topilmadi.');
-                }
+            if ($transactionId !== '' && $this->canAttemptReconcile($payResponse, $statusResponse)) {
+                try {
+                    $freshStatusResponse = is_array($statusResponse) && $statusResponse !== []
+                        ? $statusResponse
+                        : $paylov->getTransactions($transactionId);
 
-                if ((int) $freshOrder->paymentStatus !== PaymentStatusCode::PAID->legacy()) {
-                    $this->orderService->handleOrderPaid($freshOrder, $user);
+                    if ($this->remoteTransactionLooksPaid($freshStatusResponse, $payResponse)) {
+                        $remotePaidDetected = true;
 
-                    Kirim::create([
-                        'user_id' => $freshOrder->user_id,
-                        'order_id' => $freshOrder->id,
-                        'paymentStatus' => PaymentStatusCode::PAID->legacy(),
-                        'amount' => $freshOrder->amount,
+                        return $this->finalizeSuccessfulPayment(
+                            order: $order,
+                            user: $user,
+                            card: $card,
+                            transaction: $transaction,
+                            transactionId: $transactionId,
+                            receipt: $receipt,
+                            payResponse: $payResponse,
+                            statusResponse: $freshStatusResponse,
+                            localFinalizeError: $e->getMessage(),
+                        );
+                    }
+                } catch (\Throwable $reconcileException) {
+                    Log::warning('[Paylov] Order payment reconcile attempt failed', [
+                        'order_id' => $order->id,
+                        'transaction_id' => $transactionId,
+                        'message' => $reconcileException->getMessage(),
                     ]);
                 }
-            });
+            }
 
-            return [
-                'transaction_id' => $transactionId,
-                'transaction' => $statusResponse['result']['transactions'][0] ?? ($payResponse['result'] ?? []),
-            ];
-        } catch (\Throwable $e) {
+            if ($remotePaidDetected) {
+                $this->updateTransaction($transaction, [
+                    'state' => 2,
+                    'perform_time' => now()->format('Y-m-d H:i:s'),
+                    'perform_time_unix' => time(),
+                    'provider_response' => [
+                        'create' => $receipt,
+                        'pay' => $payResponse,
+                        'status' => $statusResponse,
+                        'error' => $e->getMessage(),
+                        'needs_reconciliation' => true,
+                        'card_snapshot' => $this->cardSnapshot($card),
+                    ],
+                ]);
+
+                throw new RuntimeException('To‘lov qabul qilindi, lekin buyurtma tasdiqlanishi biroz kechikmoqda. Iltimos, sahifani yangilang yoki birozdan keyin qayta urinib ko‘ring.');
+            }
+
             $this->updateTransaction($transaction, [
                 'state' => -1,
                 'reason' => 0,
                 'cancel_time' => (string) intval(round(microtime(true) * 1000)),
                 'provider_response' => [
                     'create' => $receipt,
+                    'pay' => $payResponse,
+                    'status' => $statusResponse,
                     'error' => $e->getMessage(),
                     'card_snapshot' => $this->cardSnapshot($card),
                 ],
@@ -127,6 +161,168 @@ class PaylovOrderPaymentService
 
             throw $e;
         }
+    }
+
+    private function reconcileExistingSuccessfulPayment(
+        Sold $order,
+        User $user,
+        PaylovService $paylov,
+    ): ?array {
+        $transaction = Transaction::query()
+            ->where('owner_id', $user->id)
+            ->where('order_id', $order->id)
+            ->where('payment_type', 'order')
+            ->where('provider', 'paylov')
+            ->latest('id')
+            ->first();
+
+        if (!$transaction || blank($transaction->provider_transaction_id)) {
+            return null;
+        }
+
+        if ((int) $order->paymentStatus === PaymentStatusCode::PAID->legacy()) {
+            return $this->buildPaymentResponse(
+                (string) $transaction->provider_transaction_id,
+                $transaction->provider_response['status'] ?? [],
+                $transaction->provider_response['pay'] ?? [],
+            );
+        }
+
+        $statusResponse = $paylov->getTransactions((string) $transaction->provider_transaction_id);
+        if (!$this->remoteTransactionLooksPaid($statusResponse)) {
+            return null;
+        }
+
+        $cardSnapshot = $transaction->provider_response['card_snapshot'] ?? [];
+        $payResponse = $transaction->provider_response['pay'] ?? [];
+        $receipt = $transaction->provider_response['create'] ?? [];
+
+        $card = new UserCard([
+            'card_number' => $cardSnapshot['masked_number'] ?? null,
+            'vendor' => $cardSnapshot['vendor'] ?? null,
+            'card_name' => $cardSnapshot['card_name'] ?? null,
+            'phone_number' => $cardSnapshot['phone_number'] ?? null,
+            'provider_card_id' => $cardSnapshot['provider_card_id'] ?? null,
+        ]);
+
+        return $this->finalizeSuccessfulPayment(
+            order: $order,
+            user: $user,
+            card: $card,
+            transaction: $transaction,
+            transactionId: (string) $transaction->provider_transaction_id,
+            receipt: is_array($receipt) ? $receipt : [],
+            payResponse: is_array($payResponse) ? $payResponse : [],
+            statusResponse: $statusResponse,
+            localFinalizeError: 'Recovered from previously charged pending order.',
+        );
+    }
+
+    private function finalizeSuccessfulPayment(
+        Sold $order,
+        User $user,
+        UserCard $card,
+        Transaction $transaction,
+        string $transactionId,
+        array $receipt,
+        ?array $payResponse,
+        array $statusResponse,
+        ?string $localFinalizeError = null,
+    ): array {
+        $providerResponse = [
+            'create' => $receipt,
+            'pay' => $payResponse,
+            'status' => $statusResponse,
+            'card_snapshot' => $this->cardSnapshot($card),
+        ];
+
+        if ($localFinalizeError) {
+            $providerResponse['local_finalize_error'] = $localFinalizeError;
+        }
+
+        $this->updateTransaction($transaction, [
+            'state' => 2,
+            'perform_time' => now()->format('Y-m-d H:i:s'),
+            'perform_time_unix' => time(),
+            'provider_response' => $providerResponse,
+        ]);
+
+        DB::transaction(function () use ($order, $user) {
+            $freshOrder = Sold::query()->lockForUpdate()->find($order->id);
+            if (!$freshOrder) {
+                throw new RuntimeException('Buyurtma topilmadi.');
+            }
+
+            if ((int) $freshOrder->paymentStatus !== PaymentStatusCode::PAID->legacy()) {
+                $this->orderService->handleOrderPaid($freshOrder, $user);
+            }
+        });
+
+        return $this->buildPaymentResponse($transactionId, $statusResponse, $payResponse ?? []);
+    }
+
+    private function canAttemptReconcile(?array $payResponse, ?array $statusResponse): bool
+    {
+        return (is_array($payResponse) && $payResponse !== [])
+            || (is_array($statusResponse) && $statusResponse !== []);
+    }
+
+    private function remoteTransactionLooksPaid(array $statusResponse, ?array $payResponse = null): bool
+    {
+        $transaction = data_get($statusResponse, 'result.transactions.0', []);
+        $state = data_get($transaction, 'state');
+        if (in_array((string) $state, ['2', 'paid', 'success', 'performed', 'completed'], true)) {
+            return true;
+        }
+
+        $statusCandidates = [
+            data_get($transaction, 'status'),
+            data_get($transaction, 'status_code'),
+            data_get($transaction, 'result.status'),
+            data_get($transaction, 'transactionStatus'),
+        ];
+
+        foreach ($statusCandidates as $candidate) {
+            $normalized = strtolower(trim((string) $candidate));
+            if (in_array($normalized, ['paid', 'success', 'succeeded', 'performed', 'completed'], true)) {
+                return true;
+            }
+        }
+
+        if (is_array($payResponse) && $payResponse !== [] && empty($payResponse['error']) && $transaction === []) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private function buildPaymentResponse(string $transactionId, array $statusResponse = [], array $payResponse = []): array
+    {
+        return [
+            'transaction_id' => $transactionId,
+            'transaction' => data_get($statusResponse, 'result.transactions.0')
+                ?? ($payResponse['result'] ?? []),
+        ];
+    }
+
+    private function buildAlreadyPaidResponse(Sold $order): array
+    {
+        $transaction = Transaction::query()
+            ->where('order_id', $order->id)
+            ->where('payment_type', 'order')
+            ->where('provider', 'paylov')
+            ->latest('id')
+            ->first();
+
+        $providerResponse = is_array($transaction?->provider_response)
+            ? $transaction->provider_response
+            : [];
+
+        return $this->buildPaymentResponse(
+            (string) ($transaction?->provider_transaction_id ?? $transaction?->paycom_transaction_id ?? ''),
+            is_array($providerResponse['status'] ?? null) ? $providerResponse['status'] : [],
+            is_array($providerResponse['pay'] ?? null) ? $providerResponse['pay'] : [],
+        );
     }
 
     private function createPendingTransaction(
