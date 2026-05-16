@@ -13,13 +13,14 @@
       'pending', 'A' => 'Kutilmoqda',
       'packing', 'P' => 'Qadoqlanmoqda',
       'in_delivery', 'B' => "Yo'lda",
-      'delivered', 'C' => 'Yetkazildi',
+      'delivered', 'C' => 'Yetib bordi',
+      'customer_received', 'D' => 'Mijoz qabul qildi',
       'returned' => 'Pochta qaytargan',
       'cancelled', 'F' => 'Bekor qilingan',
       default => $currentOrderStatus ?: '—',
     };
     $orderStatusBadge = match ($currentOrderStatus) {
-      'delivered', 'C' => 'badge badge-success',
+      'delivered', 'C', 'customer_received', 'D' => 'badge badge-success',
       'returned', 'cancelled', 'F' => 'badge badge-danger',
       'packing', 'P' => 'badge badge-warning',
       default => 'badge badge-info',
@@ -101,7 +102,7 @@
       'dispatched_to_post' => 'Pochtaga topshirilgan',
       'assigned_last_mile' => 'Last-mile biriktirilgan',
       'out_for_delivery' => 'Yetkazib berishga chiqqan',
-      'delivered' => 'Fulfillment yakunlangan',
+      'delivered' => 'Yetkazish nuqtasiga yetib borgan',
       'returned' => 'Qaytgan',
       'cancelled' => 'Bekor qilingan',
       default => 'Hali ochilmagan',
@@ -142,7 +143,8 @@
         'pending' => 'Kutilmoqda',
         'accepted' => 'Qabul qilingan',
         'in_delivery' => "Yo'lda",
-        'delivered' => 'Yetkazilgan',
+        'delivered' => 'Yetib bordi',
+        'customer_received' => 'Mijoz qabul qildi',
         'returned' => 'Qaytgan',
         'cancelled', 'rejected' => 'Bekor qilingan',
         default => $status ?: '—',
@@ -546,7 +548,8 @@
               <option value="A" <?php if(in_array($currentOrderStatus, ['pending', 'A'], true)): echo 'selected'; endif; ?>>Kutilmoqda</option>
               <option value="P" <?php if(in_array($currentOrderStatus, ['packing', 'P'], true)): echo 'selected'; endif; ?>>Qadoqlanmoqda</option>
               <option value="B" <?php if(in_array($currentOrderStatus, ['in_delivery', 'B'], true)): echo 'selected'; endif; ?>>Yo‘lda</option>
-              <option value="C" <?php if(in_array($currentOrderStatus, ['delivered', 'C'], true)): echo 'selected'; endif; ?>>Yetkazildi</option>
+              <option value="C" <?php if(in_array($currentOrderStatus, ['delivered', 'C'], true)): echo 'selected'; endif; ?>>Yetib bordi</option>
+              <option value="D" <?php if(in_array($currentOrderStatus, ['customer_received', 'D'], true)): echo 'selected'; endif; ?>>Mijoz qabul qildi</option>
               <option value="F" <?php if(in_array($currentOrderStatus, ['cancelled', 'returned', 'F'], true)): echo 'selected'; endif; ?>>Bekor qilingan</option>
             </select>
             <button class="btn-p primary w-full"><i class="bi bi-arrow-repeat"></i> Holatni yangilash</button>

@@ -597,7 +597,8 @@
                                 $statusLabel = match ((string) data_get($order, 'order.status')) {
                                     'A', 'P' => 'Kutilmoqda',
                                     'B' => "Yo'lda",
-                                    'C' => 'Yetkazildi',
+                                    'C' => 'Yetib bordi',
+                                    'D' => 'Mijoz qabul qildi',
                                     'F' => 'Bekor qilingan',
                                     default => (string) ($order->status ?: '—'),
                                 };

@@ -18,7 +18,8 @@
       'A', 'pending' => 'Kutilmoqda',
       'P', 'packing' => 'Qadoqlanmoqda',
       'B', 'in_delivery' => "Yo'lda",
-      'C', 'delivered' => 'Yakunlangan',
+      'C', 'delivered' => 'Yetib bordi',
+      'D', 'customer_received' => 'Mijoz qabul qildi',
       'returned' => 'Qaytgan',
       'F', 'cancelled' => 'Bekor qilingan',
       default => 'Kutilmoqda',
@@ -37,7 +38,7 @@
 
   $statusBadgeClass = function ($label) {
     return match ($label) {
-      'Yakunlangan' => 'text-bg-success-subtle border border-success-subtle text-success-emphasis',
+      'Yetib bordi', 'Mijoz qabul qildi' => 'text-bg-success-subtle border border-success-subtle text-success-emphasis',
       'Kutilmoqda', 'Qadoqlanmoqda' => 'text-bg-warning-subtle border border-warning-subtle text-warning-emphasis',
       "Yo'lda", 'Qaytgan' => 'text-bg-primary-subtle border border-primary-subtle text-primary-emphasis',
       'Bekor qilingan' => 'text-bg-danger-subtle border border-danger-subtle text-danger-emphasis',
@@ -166,7 +167,8 @@
                       <option value="A" @selected(in_array(($order->status_code ?? $order->status), ['A','pending'], true))>Kutilmoqda</option>
                       <option value="P" @selected(in_array(($order->status_code ?? $order->status), ['P','packing'], true))>Qadoqlanmoqda</option>
                       <option value="B" @selected(in_array(($order->status_code ?? $order->status), ['B','in_delivery'], true))>Yo'lda</option>
-                      <option value="C" @selected(in_array(($order->status_code ?? $order->status), ['C','delivered'], true))>Yetkazildi</option>
+                      <option value="C" @selected(in_array(($order->status_code ?? $order->status), ['C','delivered'], true))>Yetib bordi</option>
+                      <option value="D" @selected(in_array(($order->status_code ?? $order->status), ['D','customer_received'], true))>Mijoz qabul qildi</option>
                       <option value="F" @selected(in_array(($order->status_code ?? $order->status), ['F','cancelled','returned'], true))>Bekor qilingan</option>
                     </select>
                   </form>

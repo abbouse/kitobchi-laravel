@@ -1662,6 +1662,7 @@ class PurchaseController extends Controller
         $order->formatted_updated_at = Carbon::parse($order->updated_at)->isoFormat('D MMMM YYYY, HH:mm');
         $this->appendOrderSellerMeta($order);
         $this->appendOrderStatusMeta($order);
+        $this->appendDeliveryProgressMeta($order);
         $this->applySignedDeliveryQr($order);
         $this->appendFiscalReceiptMeta($order);
 
@@ -1799,5 +1800,156 @@ class PurchaseController extends Controller
         $order->payment_receipt_terminal_id = $perform['terminal_id'] ?? null;
         $order->payment_receipt_date = $perform['date'] ?? null;
         $order->payment_cancel_receipt_url = $cancel['qr_code_url'] ?? null;
+    }
+
+    private function appendDeliveryProgressMeta(Sold $order): void
+    {
+        $order->loadMissing([
+            'fulfillment.hub:id,name,code',
+        ]);
+
+        $order->delivery_progress = $this->buildDeliveryProgress($order);
+    }
+
+    private function buildDeliveryProgress(Sold $order): array
+    {
+        $deliveryFlow = match ($order->deliveryType) {
+            'postal' => 'postal',
+            'pickup', 'instore' => 'pickup',
+            default => 'courier',
+        };
+
+        $fulfillment = $order->fulfillment;
+        $timeline = [];
+        $seen = [];
+
+        $push = static function (
+            array &$timeline,
+            array &$seen,
+            string $code,
+            string $step,
+            ?string $at,
+            array $extra = [],
+        ): void {
+            if (!$at) {
+                return;
+            }
+
+            $key = $code . '|' . $at;
+            if (isset($seen[$key])) {
+                return;
+            }
+
+            $timeline[] = array_filter(array_merge([
+                'code' => $code,
+                'step' => $step,
+                'at' => $at,
+            ], $extra), static fn ($value) => $value !== null);
+
+            $seen[$key] = true;
+        };
+
+        $push(
+            $timeline,
+            $seen,
+            'order_created',
+            'ordered',
+            optional($order->created_at)?->toIso8601String()
+        );
+
+        if ($fulfillment) {
+            $push($timeline, $seen, 'ready_for_pickup', 'packing', optional($fulfillment->ready_for_pickup_at)?->toIso8601String());
+            $push($timeline, $seen, 'arrived_at_hub', 'packing', optional($fulfillment->arrived_at_hub_at)?->toIso8601String());
+            $push($timeline, $seen, 'qc_checked', 'packing', optional($fulfillment->qc_checked_at)?->toIso8601String());
+            $push($timeline, $seen, 'packed', 'packing', optional($fulfillment->packed_at)?->toIso8601String());
+            $push($timeline, $seen, 'labeled', 'packing', optional($fulfillment->labeled_at)?->toIso8601String());
+
+            $push($timeline, $seen, 'picked_from_seller', 'in_transit', optional($fulfillment->picked_from_seller_at)?->toIso8601String());
+            $push($timeline, $seen, 'dispatched_to_post', 'in_transit', optional($fulfillment->dispatched_to_post_at)?->toIso8601String());
+
+            $push($timeline, $seen, 'assigned_last_mile', 'handoff', optional($fulfillment->assigned_last_mile_at)?->toIso8601String());
+            $push($timeline, $seen, 'out_for_delivery', 'handoff', optional($fulfillment->out_for_delivery_at)?->toIso8601String());
+            $push($timeline, $seen, 'delivered', $deliveryFlow === 'postal' ? 'handoff' : 'received', optional($fulfillment->delivered_at)?->toIso8601String());
+
+            foreach ((array) data_get($fulfillment->meta, 'timeline', []) as $row) {
+                if (!is_array($row) || empty($row['code']) || empty($row['at'])) {
+                    continue;
+                }
+
+                $code = (string) $row['code'];
+                $step = match ($code) {
+                    'ready_for_pickup', 'arrived_at_hub', 'qc_checked', 'packed', 'labeled' => 'packing',
+                    'picked_from_seller', 'dispatched_to_post' => 'in_transit',
+                    'assigned_last_mile', 'out_for_delivery', 'delivered' => $deliveryFlow === 'postal' && $code === 'delivered'
+                        ? 'handoff'
+                        : ($code === 'delivered' ? 'received' : 'handoff'),
+                    default => null,
+                };
+
+                if (!$step) {
+                    continue;
+                }
+
+                $push($timeline, $seen, $code, $step, (string) $row['at']);
+            }
+        }
+
+        if ($order->status_code === OrderStatusCode::CUSTOMER_RECEIVED->value) {
+            $push(
+                $timeline,
+                $seen,
+                'customer_received',
+                'received',
+                optional($order->completed_at ?? $order->updated_at)?->toIso8601String()
+            );
+        }
+
+        usort($timeline, static fn (array $a, array $b) => strcmp((string) ($a['at'] ?? ''), (string) ($b['at'] ?? '')));
+
+        return [
+            'delivery_flow' => $deliveryFlow,
+            'fulfillment_status' => $fulfillment?->status_code,
+            'hub_name' => $fulfillment?->hub?->name,
+            'active_step' => $this->resolveDeliveryProgressActiveStep($order, $fulfillment, $deliveryFlow),
+            'timeline' => array_values($timeline),
+        ];
+    }
+
+    private function resolveDeliveryProgressActiveStep(Sold $order, $fulfillment, string $deliveryFlow): string
+    {
+        $statusCode = $order->status_code;
+        $paymentStatusCode = $order->payment_status_code;
+        $fulfillmentStatus = $fulfillment?->status_code;
+
+        if ($statusCode === OrderStatusCode::CUSTOMER_RECEIVED->value) {
+            return 'received';
+        }
+
+        if ($deliveryFlow === 'postal' && $statusCode === OrderStatusCode::DELIVERED->value) {
+            return 'handoff';
+        }
+
+        if ($deliveryFlow !== 'postal' && $statusCode === OrderStatusCode::DELIVERED->value) {
+            return 'received';
+        }
+
+        if (in_array($fulfillmentStatus, ['assigned_last_mile', 'out_for_delivery'], true)) {
+            return 'handoff';
+        }
+
+        if (in_array($fulfillmentStatus, ['picked_from_seller', 'dispatched_to_post'], true) || $statusCode === OrderStatusCode::IN_DELIVERY->value) {
+            return 'in_transit';
+        }
+
+        if (in_array($fulfillmentStatus, ['ready_for_pickup', 'arrived_at_hub', 'qc_checked', 'packed', 'labeled'], true)
+            || $statusCode === OrderStatusCode::PACKING->value) {
+            return 'packing';
+        }
+
+        if ($paymentStatusCode === PaymentStatusCode::CARD_PENDING->value && $statusCode === OrderStatusCode::PENDING->value) {
+            return 'ordered';
+        }
+
+        return 'ordered';
     }
 }

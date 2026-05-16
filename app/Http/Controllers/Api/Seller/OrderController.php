@@ -274,10 +274,16 @@ class OrderController extends Controller
 
                 if ($statusFilter === 'delivered') {
                     $q->whereHas('order', function ($orderQuery) {
-                        $orderQuery->where('status_code', OrderStatusCode::DELIVERED->value)
+                        $orderQuery->whereIn('status_code', [
+                            OrderStatusCode::DELIVERED->value,
+                            OrderStatusCode::CUSTOMER_RECEIVED->value,
+                        ])
                             ->orWhere(function ($fallback) {
                                 $fallback->whereNull('status_code')
-                                    ->where('status', OrderStatusCode::DELIVERED->legacy());
+                                    ->whereIn('status', [
+                                        OrderStatusCode::DELIVERED->legacy(),
+                                        OrderStatusCode::CUSTOMER_RECEIVED->legacy(),
+                                    ]);
                             });
                     });
                 } elseif ($statusFilter === 'returned') {

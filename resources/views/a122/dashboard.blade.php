@@ -321,7 +321,7 @@
         <div class="card-body pt-0 px-4 pb-4">
           <div id="chartDonut" style="min-height:210px;"></div>
           <div class="row g-2 row-cols-5 mt-2 text-center">
-            @foreach([['Yetkazildi',$completedOrders,'success'],["Yo'lda",$onwayOrders,'info'],['Qadoqda',$packingOrders,'primary'],['Kutilmoqda',$pendingOrders,'warning'],['Bekor',$cancelledOrders,'danger']] as [$l,$v,$c])
+            @foreach([['Mijoz qabul qildi',$completedOrders,'success'],["Yo'lda",$onwayOrders,'info'],['Qadoqda',$packingOrders,'primary'],['Kutilmoqda',$pendingOrders,'warning'],['Bekor',$cancelledOrders,'danger']] as [$l,$v,$c])
               <div class="col">
                 <div class="fw-bold text-{{ $c }}-emphasis font-monospace">{{ number_format($v) }}</div>
                 <div class="small text-secondary text-truncate">{{ $l }}</div>
@@ -347,7 +347,8 @@
         <div class="card-body p-0">
           @php
             $statusToneMap = [
-              'Yetkazildi'    => 'success',
+              'Yetib bordi'   => 'info',
+              'Mijoz qabul qildi' => 'success',
               "Yo'lda"        => 'info',
               'Qadoqlanmoqda' => 'primary',
               'Kutilmoqda'    => 'warning',
@@ -1115,7 +1116,7 @@ function _initOrderCharts() {
 
   const donutOptions = {
     series:[{{ $completedOrders }},{{ $onwayOrders }},{{ $packingOrders }},{{ $pendingOrders }},{{ $cancelledOrders }}],
-    labels:['Yetkazildi',"Yo'lda",'Qadoqlanmoqda','Kutilmoqda','Bekor'],
+    labels:['Mijoz qabul qildi',"Yo'lda",'Qadoqlanmoqda','Kutilmoqda','Bekor'],
     colors:[C.success,C.info,C.accent,C.warning,C.danger],
     chart:{type:'donut',height:212,toolbar:{show:false},background:'transparent',fontFamily:'Inter,sans-serif'},
     legend:{position:'bottom',fontSize:'12px',labels:{colors:C.muted},markers:{width:8,height:8,radius:4},itemMargin:{horizontal:8}},

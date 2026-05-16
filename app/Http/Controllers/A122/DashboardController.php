@@ -268,19 +268,19 @@ class DashboardController extends Controller
                             ->where('paymentStatus', PaymentStatusCode::PAID->legacy());
                     });
             });
-        $deliveredCourierOrders = fn () => DB::table('courier_orders')
+        $completedCourierOrders = fn () => DB::table('courier_orders')
             ->where(function ($query) {
-                $query->where('status_code', CourierOrderStatusCode::DELIVERED->value)
+                $query->where('status_code', CourierOrderStatusCode::CUSTOMER_RECEIVED->value)
                     ->orWhere(function ($fallback) {
                         $fallback->whereNull('status_code')
-                            ->where('status', CourierOrderStatusCode::DELIVERED->legacy());
+                            ->where('status', CourierOrderStatusCode::CUSTOMER_RECEIVED->legacy());
                     });
             });
 
         $totalOrders = Cache::remember('dash5_ord_total', $ttl, fn () => Sold::count());
         $todayOrders = Cache::remember('dash5_ord_today', $hot, fn () => Sold::whereDate('created_at', today())->count());
         $weekOrders = Cache::remember('dash5_ord_week', $ttl, fn () => Sold::where('created_at', '>=', now()->startOfWeek())->count());
-        $completedOrders = Cache::remember('dash5_ord_C', $ttl, fn () => $ordersByStatus(OrderStatusCode::DELIVERED)->count());
+        $completedOrders = Cache::remember('dash5_ord_D', $ttl, fn () => Sold::whereNotNull('completed_at')->count());
         $pendingOrders   = Cache::remember('dash5_ord_A', $hot, fn () => $ordersByStatus(OrderStatusCode::PENDING)->count());
         $packingOrders   = Cache::remember('dash5_ord_P', $ttl, fn () => $ordersByStatus(OrderStatusCode::PACKING)->count());
         $onwayOrders     = Cache::remember('dash5_ord_B', $ttl, fn () => $ordersByStatus(OrderStatusCode::IN_DELIVERY)->count());
@@ -322,8 +322,8 @@ class DashboardController extends Controller
         $totalCommissionEarned = Cache::remember('dash5_fin_comm', $ttl, fn () => (int) $this->sellerOrderIncomeQuery()->where('status', 'approved')->sum('commissionPrice'));
         $monthCommissionEarned = (int) $this->sellerOrderIncomeQuery()->where('status', 'approved')->whereMonth('created_at', now()->month)->sum('commissionPrice');
         $pendingCommission = (int) $this->sellerOrderIncomeQuery()->where('status', 'pending')->sum('commissionPrice');
-        $totalCourierPayout = Cache::remember('dash5_fin_courier', $ttl, fn () => (int) $deliveredCourierOrders()->sum('courierPrice'));
-        $monthCourierPayout = (int) $deliveredCourierOrders()->whereMonth('created_at', now()->month)->sum('courierPrice');
+        $totalCourierPayout = Cache::remember('dash5_fin_courier', $ttl, fn () => (int) $completedCourierOrders()->sum('courierPrice'));
+        $monthCourierPayout = (int) $completedCourierOrders()->whereMonth('created_at', now()->month)->sum('courierPrice');
         $totalSellerPayout = Cache::remember('dash5_fin_seller_pay', $ttl, fn () => (int) $this->sellerPayoutQuery()->where('status', 'approved')->sum('netAmount'));
         $monthSellerPayout = (int) $this->sellerPayoutQuery()->where('status', 'approved')->whereMonth('created_at', now()->month)->sum('netAmount');
         $pendingSellerPayout = (int) $this->sellerPayoutQuery()->where('status', 'pending')->sum('netAmount');
@@ -333,7 +333,7 @@ class DashboardController extends Controller
         $netRevenue = $totalRevenue - $totalPromoDiscount - $totalCashbackPaid - $totalCourierPayout + $totalDeliveryIncome;
         $monthNetRevenue = $monthRevenue - $monthPromoDiscount - $monthCashbackPaid - $monthCourierPayout + $monthDeliveryIncome;
 
-        $monthlyFinancial = Cache::remember('dash5_monthly_fin', $ttl, fn () => collect(range(5, 0))->map(function ($i) use ($paidOrders, $deliveredCourierOrders) {
+        $monthlyFinancial = Cache::remember('dash5_monthly_fin', $ttl, fn () => collect(range(5, 0))->map(function ($i) use ($paidOrders, $completedCourierOrders) {
             $m = now()->subMonths($i);
             $mo = $m->month;
             $yr = $m->year;
@@ -342,7 +342,7 @@ class DashboardController extends Controller
             $cash = (int) $paidOrders()->whereMonth('created_at', $mo)->whereYear('created_at', $yr)->sum('cashbackAmount');
             $del = (int) $paidOrders()->whereMonth('created_at', $mo)->whereYear('created_at', $yr)->sum('deliveryPrice');
             $comm = (int) SellerTransaction::where('status', 'approved')->whereMonth('created_at', $mo)->whereYear('created_at', $yr)->sum('commissionPrice');
-            $cour = (int) $deliveredCourierOrders()->whereMonth('created_at', $mo)->whereYear('created_at', $yr)->sum('courierPrice');
+            $cour = (int) $completedCourierOrders()->whereMonth('created_at', $mo)->whereYear('created_at', $yr)->sum('courierPrice');
 
             return ['month' => $m->format('M'), 'revenue' => $rev, 'cost' => $promo + $cash + $cour, 'commission' => $comm + $del, 'net' => $rev - $promo - $cash - $cour + $del];
         })
@@ -683,7 +683,8 @@ class DashboardController extends Controller
             'avatar' => $o->user?->avatar,
             'amount' => number_format($o->amount),
             'status' => match ($o->status_code ?? $o->status) {
-                'delivered', 'C' => 'Yetkazildi',
+                'delivered', 'C' => 'Yetib bordi',
+                'customer_received', 'D' => 'Mijoz qabul qildi',
                 'pending', 'A' => 'Kutilmoqda',
                 'packing', 'P' => 'Qadoqlanmoqda',
                 'in_delivery', 'B' => "Yo'lda",
@@ -879,7 +880,8 @@ class DashboardController extends Controller
             'new' => $mainStatusCount(OrderStatusCode::PENDING),
             'packing' => $mainStatusCount(OrderStatusCode::PACKING),
             'onway' => $mainStatusCount(OrderStatusCode::IN_DELIVERY),
-            'done' => $mainStatusCount(OrderStatusCode::DELIVERED),
+            'arrived' => $mainStatusCount(OrderStatusCode::DELIVERED),
+            'done' => Sold::whereNotNull('completed_at')->count(),
             'cancelled' => $mainStatusCount(OrderStatusCode::CANCELLED),
         ];
 
@@ -898,6 +900,7 @@ class DashboardController extends Controller
             'pending' => $courierStatusCount(CourierOrderStatusCode::PENDING),
             'in_delivery' => $courierStatusCount(CourierOrderStatusCode::IN_DELIVERY),
             'delivered' => $courierStatusCount(CourierOrderStatusCode::DELIVERED),
+            'customer_received' => $courierStatusCount(CourierOrderStatusCode::CUSTOMER_RECEIVED),
             'rejected' => $courierStatusCount(CourierOrderStatusCode::CANCELLED),
         ];
 
@@ -928,7 +931,8 @@ class DashboardController extends Controller
                     'pending' => 'Yangi',
                     'packing' => 'Qadoqlanmoqda',
                     'in_delivery' => "Yo'lda",
-                    'delivered' => 'Yetkazildi',
+                    'delivered' => 'Yetib bordi',
+                    'customer_received' => 'Mijoz qabul qildi',
                     'cancelled' => 'Bekor qilindi',
                     'returned' => 'Qaytgan',
                     default => (string) ($order->status_code ?? $order->status),
@@ -979,7 +983,8 @@ class DashboardController extends Controller
                     'payment_pending' => "To'lov jarayonida",
                     'pending' => 'Kutilmoqda',
                     'in_delivery' => "Yo'lda",
-                    'delivered' => 'Yetkazildi',
+                    'delivered' => 'Yetib bordi',
+                    'customer_received' => 'Mijoz qabul qildi',
                     'cancelled' => 'Bekor qilindi',
                     'returned' => 'Qaytgan',
                     default => (string) ($order->status_code ?? $order->status),

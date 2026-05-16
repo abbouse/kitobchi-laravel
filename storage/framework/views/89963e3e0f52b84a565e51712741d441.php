@@ -34,9 +34,9 @@
       <div class="live-card">
         <div class="live-card__head"><div><div class="live-card__title">Status pulse</div><div class="live-card__sub">Har bir oqim bo'yicha jonli statuslar</div></div></div>
         <div class="live-list">
-          <div class="live-row"><div class="live-pill warning">User order</div><div class="live-name">Yangi / Qadoqlanmoqda / Yo'lda</div><div class="live-amount" x-text="`${snapshot.main_counts.new} / ${snapshot.main_counts.packing} / ${snapshot.main_counts.onway}`"></div><div class="live-pill success" x-text="`${snapshot.main_counts.done} yetkazildi`"></div></div>
+          <div class="live-row"><div class="live-pill warning">User order</div><div class="live-name">Yangi / Qadoqlanmoqda / Yo'lda</div><div class="live-amount" x-text="`${snapshot.main_counts.new} / ${snapshot.main_counts.packing} / ${snapshot.main_counts.onway}`"></div><div class="live-pill success" x-text="`${snapshot.main_counts.done} qabul qilindi`"></div></div>
           <div class="live-row"><div class="live-pill info">Seller</div><div class="live-name">To'lov / Yangi / Qabul / Kuryerga berdi</div><div class="live-amount" x-text="`${snapshot.seller_counts.payment_pending} / ${snapshot.seller_counts.new} / ${snapshot.seller_counts.accepted} / ${snapshot.seller_counts.handover}`"></div><div class="live-pill danger" x-text="`${snapshot.seller_counts.cancelled} bekor`"></div></div>
-          <div class="live-row"><div class="live-pill info">Courier</div><div class="live-name">Kutilmoqda / Yo'lda / Yetkazildi</div><div class="live-amount" x-text="`${snapshot.courier_counts.pending} / ${snapshot.courier_counts.in_delivery} / ${snapshot.courier_counts.delivered}`"></div><div class="live-pill danger" x-text="`${snapshot.courier_counts.rejected} bekor`"></div></div>
+          <div class="live-row"><div class="live-pill info">Courier</div><div class="live-name">Kutilmoqda / Yo'lda / Yetib bordi / Mijoz qabul qildi</div><div class="live-amount" x-text="`${snapshot.courier_counts.pending} / ${snapshot.courier_counts.in_delivery} / ${snapshot.courier_counts.delivered} / ${snapshot.courier_counts.customer_received}`"></div><div class="live-pill danger" x-text="`${snapshot.courier_counts.rejected} bekor`"></div></div>
         </div>
       </div>
       <div class="live-card">
@@ -61,7 +61,7 @@
       <div class="live-stat"><div class="live-stat__label">Yangi</div><div class="live-stat__value" x-text="snapshot.main_counts.new"></div><div class="live-stat__sub">Admin nazoratida</div></div>
       <div class="live-stat"><div class="live-stat__label">Qadoqlanmoqda</div><div class="live-stat__value" x-text="snapshot.main_counts.packing"></div><div class="live-stat__sub">Seller tayyorlayapti</div></div>
       <div class="live-stat"><div class="live-stat__label">Yo'lda</div><div class="live-stat__value" x-text="snapshot.main_counts.onway"></div><div class="live-stat__sub">Courier oqimida</div></div>
-      <div class="live-stat"><div class="live-stat__label">Yetkazildi</div><div class="live-stat__value" x-text="snapshot.main_counts.done"></div><div class="live-stat__sub">Yakunlangan</div></div>
+      <div class="live-stat"><div class="live-stat__label">Mijoz qabul qildi</div><div class="live-stat__value" x-text="snapshot.main_counts.done"></div><div class="live-stat__sub">Yakunlangan</div></div>
     </div>
     <div class="live-card">
       <div class="live-card__head"><div><div class="live-card__title">So'nggi user buyurtmalari</div><div class="live-card__sub">Status o'zgarishini kuzatish uchun</div></div></div>
@@ -106,7 +106,7 @@
       <div class="live-stat"><div class="live-stat__label">To'lov jarayoni</div><div class="live-stat__value" x-text="snapshot.courier_counts.pay_process"></div><div class="live-stat__sub">Hali dispatch bo'lmagan</div></div>
       <div class="live-stat"><div class="live-stat__label">Kutilmoqda</div><div class="live-stat__value" x-text="snapshot.courier_counts.pending"></div><div class="live-stat__sub">Kuryer hali olmagan</div></div>
       <div class="live-stat"><div class="live-stat__label">Yo'lda</div><div class="live-stat__value" x-text="snapshot.courier_counts.in_delivery"></div><div class="live-stat__sub">Courier oqimida</div></div>
-      <div class="live-stat"><div class="live-stat__label">Yetkazgan</div><div class="live-stat__value" x-text="snapshot.courier_counts.delivered"></div><div class="live-stat__sub">Yakunlangan</div></div>
+      <div class="live-stat"><div class="live-stat__label">Mijoz qabul qildi</div><div class="live-stat__value" x-text="snapshot.courier_counts.customer_received"></div><div class="live-stat__sub">Yakunlangan</div></div>
     </div>
     <div class="live-card">
       <div class="live-card__head"><div><div class="live-card__title">So'nggi courier orderlar</div><div class="live-card__sub">Kuryer qabul qilgan va yetkazgan oqim</div></div></div>
@@ -128,7 +128,7 @@
       <div class="live-stat"><div class="live-stat__label">Online userlar</div><div class="live-stat__value" x-text="snapshot.online_users_count"></div><div class="live-stat__sub">Jonli ko'rinayotganlar</div></div>
       <div class="live-stat"><div class="live-stat__label">User buyurtmalar</div><div class="live-stat__value" x-text="snapshot.main_counts.all"></div><div class="live-stat__sub">Umumiy xaridlar</div></div>
       <div class="live-stat"><div class="live-stat__label">Faol user order</div><div class="live-stat__value" x-text="snapshot.main_counts.new + snapshot.main_counts.packing + snapshot.main_counts.onway"></div><div class="live-stat__sub">Hozir jarayonda</div></div>
-      <div class="live-stat"><div class="live-stat__label">Yetkazilgan</div><div class="live-stat__value" x-text="snapshot.main_counts.done"></div><div class="live-stat__sub">Mijozga yetgan</div></div>
+      <div class="live-stat"><div class="live-stat__label">Mijoz qabul qilgan</div><div class="live-stat__value" x-text="snapshot.main_counts.done"></div><div class="live-stat__sub">Yakunlangan buyurtmalar</div></div>
     </div>
     <div class="live-card">
       <div class="live-card__head"><div><div class="live-card__title">Online foydalanuvchilar</div><div class="live-card__sub">Real-time kuzatuv oynasi</div></div></div>

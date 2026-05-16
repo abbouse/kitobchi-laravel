@@ -410,7 +410,7 @@
         <div class="card-body pt-0 px-4 pb-4">
           <div id="chartDonut" style="min-height:210px;"></div>
           <div class="row g-2 row-cols-5 mt-2 text-center">
-            <?php $__currentLoopData = [['Yetkazildi',$completedOrders,'success'],["Yo'lda",$onwayOrders,'info'],['Qadoqda',$packingOrders,'primary'],['Kutilmoqda',$pendingOrders,'warning'],['Bekor',$cancelledOrders,'danger']]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$l,$v,$c]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+            <?php $__currentLoopData = [['Mijoz qabul qildi',$completedOrders,'success'],["Yo'lda",$onwayOrders,'info'],['Qadoqda',$packingOrders,'primary'],['Kutilmoqda',$pendingOrders,'warning'],['Bekor',$cancelledOrders,'danger']]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$l,$v,$c]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
               <div class="col">
                 <div class="fw-bold text-<?php echo e($c); ?>-emphasis font-monospace"><?php echo e(number_format($v)); ?></div>
                 <div class="small text-secondary text-truncate"><?php echo e($l); ?></div>
@@ -436,7 +436,8 @@
         <div class="card-body p-0">
           <?php
             $statusToneMap = [
-              'Yetkazildi'    => 'success',
+              'Yetib bordi'   => 'info',
+              'Mijoz qabul qildi' => 'success',
               "Yo'lda"        => 'info',
               'Qadoqlanmoqda' => 'primary',
               'Kutilmoqda'    => 'warning',
@@ -1211,7 +1212,7 @@ function _initOrderCharts() {
 
   const donutOptions = {
     series:[<?php echo e($completedOrders); ?>,<?php echo e($onwayOrders); ?>,<?php echo e($packingOrders); ?>,<?php echo e($pendingOrders); ?>,<?php echo e($cancelledOrders); ?>],
-    labels:['Yetkazildi',"Yo'lda",'Qadoqlanmoqda','Kutilmoqda','Bekor'],
+    labels:['Mijoz qabul qildi',"Yo'lda",'Qadoqlanmoqda','Kutilmoqda','Bekor'],
     colors:[C.success,C.info,C.accent,C.warning,C.danger],
     chart:{type:'donut',height:212,toolbar:{show:false},background:'transparent',fontFamily:'Inter,sans-serif'},
     legend:{position:'bottom',fontSize:'12px',labels:{colors:C.muted},markers:{width:8,height:8,radius:4},itemMargin:{horizontal:8}},

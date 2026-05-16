@@ -33,11 +33,12 @@ class ReconcileLegacySellerCredits extends Command
             ->where(function ($query) {
                 $query->whereNotIn('solds.status_code', [
                     OrderStatusCode::DELIVERED->value,
+                    OrderStatusCode::CUSTOMER_RECEIVED->value,
                     OrderStatusCode::CANCELLED->value,
                     OrderStatusCode::RETURNED->value,
                 ])->orWhere(function ($fallback) {
                     $fallback->whereNull('solds.status_code')
-                        ->whereNotIn('solds.status', ['C', 'F']);
+                        ->whereNotIn('solds.status', ['C', 'D', 'F']);
                 });
             })
             ->where('seller_orders.amount', '>', 0)

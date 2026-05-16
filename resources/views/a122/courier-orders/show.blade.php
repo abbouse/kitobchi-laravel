@@ -8,7 +8,7 @@
     $statusKey = (string) ($courierOrder->status ?? '');
     $statusLabel = $statuses[$statusKey]['label'] ?? ($statusKey ?: '—');
     $statusBadgeClass = match ($statusKey) {
-        'delivered' => 'text-bg-success-subtle border border-success-subtle text-success-emphasis',
+        'delivered', 'customer_received' => 'text-bg-success-subtle border border-success-subtle text-success-emphasis',
         'pending', 'pay_process' => 'text-bg-warning-subtle border border-warning-subtle text-warning-emphasis',
         'in_delivery' => 'text-bg-primary-subtle border border-primary-subtle text-primary-emphasis',
         'rejected' => 'text-bg-danger-subtle border border-danger-subtle text-danger-emphasis',

@@ -165,13 +165,7 @@ class SellerReputationService
         return SellerOrder::query()
             ->join('solds', 'solds.id', '=', 'seller_orders.order_id')
             ->where('seller_orders.seller_id', $seller->id)
-            ->where(function ($query) {
-                $query->where('solds.status_code', OrderStatusCode::DELIVERED->value)
-                    ->orWhere(function ($fallback) {
-                        $fallback->whereNull('solds.status_code')
-                            ->where('solds.status', 'C');
-                    });
-            })
+            ->whereNotNull('solds.completed_at')
             ->where(function ($query) {
                 $query->where('solds.payment_status_code', PaymentStatusCode::PAID->value)
                     ->orWhere(function ($fallback) {

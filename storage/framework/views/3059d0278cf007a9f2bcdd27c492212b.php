@@ -8,14 +8,15 @@
         'pay_process' => ["To'lov jarayonida", $counts['pay_process'] ?? 0],
         'pending' => ['Kutilmoqda', $counts['pending'] ?? 0],
         'in_delivery' => ["Yo'lda", $counts['in_delivery'] ?? 0],
-        'delivered' => ['Yetkazildi', $counts['delivered'] ?? 0],
+        'delivered' => ['Yetib bordi', $counts['delivered'] ?? 0],
+        'customer_received' => ['Mijoz qabul qildi', $counts['customer_received'] ?? 0],
         'rejected' => ['Bekor qilingan', $counts['rejected'] ?? 0],
         'all' => ['Barchasi', $counts['all'] ?? 0],
     ];
 
     $statusBadgeClass = function (string $key): string {
         return match ($key) {
-            'delivered' => 'text-bg-success-subtle border border-success-subtle text-success-emphasis',
+            'delivered', 'customer_received' => 'text-bg-success-subtle border border-success-subtle text-success-emphasis',
             'pending', 'pay_process' => 'text-bg-warning-subtle border border-warning-subtle text-warning-emphasis',
             'in_delivery' => 'text-bg-primary-subtle border border-primary-subtle text-primary-emphasis',
             'rejected' => 'text-bg-danger-subtle border border-danger-subtle text-danger-emphasis',
@@ -62,7 +63,7 @@
                 <?php if (isset($component)) { $__componentOriginal3c3cb599308b2d9971dae437d0b6bab6 = $component; } ?>
 <?php if (isset($attributes)) { $__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6 = $attributes; } ?>
 <?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.admin.stat-card','data' => ['label' => $label,'value' => number_format($count),'meta' => 'Kuryer navbatidagi yozuvlar','icon' => 'truck','tone' => match($key) {
-                        'delivered' => 'success',
+                        'delivered', 'customer_received' => 'success',
                         'pending', 'pay_process' => 'warning',
                         'in_delivery' => 'info',
                         'rejected' => 'danger',
@@ -75,7 +76,7 @@
 <?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
 <?php endif; ?>
 <?php $component->withAttributes(['label' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($label),'value' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute(number_format($count)),'meta' => 'Kuryer navbatidagi yozuvlar','icon' => 'truck','tone' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute(match($key) {
-                        'delivered' => 'success',
+                        'delivered', 'customer_received' => 'success',
                         'pending', 'pay_process' => 'warning',
                         'in_delivery' => 'info',
                         'rejected' => 'danger',

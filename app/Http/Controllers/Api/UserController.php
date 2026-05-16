@@ -119,7 +119,7 @@ class UserController extends Controller
         $statusCode = $order->status_code;
 
         if ($paymentCode === PaymentStatusCode::CARD_PENDING->value) {
-            return "To'lovi kutilmoqda";
+            return "To'lov kutilmoqda";
         }
 
         return match ($statusCode) {
@@ -167,6 +167,7 @@ class UserController extends Controller
             'status_label' => $this->orderStatusLabelForHome($order),
             'amount' => (int) ($order->amount ?? 0),
             'deliveryType' => $order->deliveryType,
+            'created_at' => $order->created_at?->toIso8601String(),
             'formatted_created_at' => optional($order->created_at)?->format('d.m.Y HH:mm'),
             'expected_delivery_at' => $expectedDeliveryAt?->toIso8601String(),
             'is_delivery_delayed' => $order->isDeliveryDelayed(),

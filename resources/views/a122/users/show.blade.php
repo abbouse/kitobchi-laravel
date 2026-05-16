@@ -232,14 +232,15 @@
                 $statusLabel = match ((string) $order->status) {
                   'A', 'P' => 'Kutilmoqda',
                   'B' => 'Yo‘lda',
-                  'C' => 'Yetkazildi',
+                  'C' => 'Yetib bordi',
+                  'D' => 'Mijoz qabul qildi',
                   'F' => 'Bekor',
                   default => 'Noma’lum',
                 };
                 $statusColor = match ((string) $order->status) {
                   'A', 'P' => 'warning',
                   'B' => 'info',
-                  'C' => 'success',
+                  'C', 'D' => 'success',
                   'F' => 'danger',
                   default => 'muted',
                 };

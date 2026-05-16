@@ -27,7 +27,7 @@ class AdminOrderStatusSyncService
         'payment_pending' => ['label' => "To'lov jarayonida", 'badge' => 'badge-muted'],
         'pending' => ['label' => 'Kutilmoqda', 'badge' => 'badge-info'],
         'in_delivery' => ['label' => "Yo'lda", 'badge' => 'badge-warning'],
-        'delivered' => ['label' => 'Yetkazildi', 'badge' => 'badge-success'],
+        'delivered' => ['label' => 'Yetib bordi', 'badge' => 'badge-success'],
         'customer_received' => ['label' => 'Mijoz qabul qildi', 'badge' => 'badge-success'],
         'cancelled' => ['label' => 'Bekor qilindi', 'badge' => 'badge-danger'],
         'returned' => ['label' => 'Qaytgan', 'badge' => 'badge-danger'],

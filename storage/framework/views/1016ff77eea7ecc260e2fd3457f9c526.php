@@ -699,7 +699,8 @@
                                 };
                                 $orderStatus = match ((string) ($order->status ?? data_get($order, 'order.status'))) {
                                     'accepted', 'B' => 'Jarayonda',
-                                    'delivered', 'C' => 'Yakunlangan',
+                                    'delivered', 'C' => 'Yetib bordi',
+                                    'customer_received', 'D' => 'Mijoz qabul qildi',
                                     'cancelled', 'F' => 'Bekor qilingan',
                                     'A', 'P', 'pending' => 'Kutilmoqda',
                                     default => (string) ($order->status ?? data_get($order, 'order.status') ?? '—'),
