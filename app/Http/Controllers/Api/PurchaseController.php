@@ -1303,7 +1303,13 @@ class PurchaseController extends Controller
             'from'     => 'nullable|date_format:Y-m-d',
             'to'       => 'nullable|date_format:Y-m-d|after_or_equal:from',
             'per_page' => 'nullable|integer|min:1|max:100',
+            'grouped'  => 'nullable|boolean',
+            'section'  => 'nullable|string|in:progress,in_delivery,delivered,cancelled',
         ]);
+
+        if ($request->boolean('grouped') && !$request->filled('status')) {
+            return $this->purchaseListGrouped($request, $user);
+        }
 
         $query = Sold::where('user_id', $user->id);
 
@@ -1350,6 +1356,124 @@ class PurchaseController extends Controller
                 'total'        => $paginated->total(),
             ],
         ]);
+    }
+
+    private function purchaseListGrouped(Request $request, User $user)
+    {
+        $perPage = (int) $request->input('per_page', 3);
+        $perPage = max(1, min(12, $perPage));
+
+        $section = trim((string) $request->input('section', ''));
+        if ($section !== '') {
+            $page = max(1, (int) $request->input('page', 1));
+            $paginator = $this->buildPurchaseSectionQuery($user, $request, $section)
+                ->latest()
+                ->paginate($perPage, ['*'], 'page', $page);
+
+            $this->transformPurchasePaginator($paginator);
+
+            return response()->json([
+                'status' => 'success',
+                'section' => $section,
+                'data' => $paginator->items(),
+                'meta' => [
+                    'current_page' => $paginator->currentPage(),
+                    'last_page' => $paginator->lastPage(),
+                    'per_page' => $paginator->perPage(),
+                    'total' => $paginator->total(),
+                    'has_more' => $paginator->hasMorePages(),
+                ],
+            ]);
+        }
+
+        $sections = [];
+        foreach (['progress', 'in_delivery', 'delivered', 'cancelled'] as $sectionKey) {
+            $paginator = $this->buildPurchaseSectionQuery($user, $request, $sectionKey)
+                ->latest()
+                ->paginate($perPage, ['*'], $sectionKey . '_page', 1);
+
+            $this->transformPurchasePaginator($paginator);
+
+            if (count($paginator->items()) === 0) {
+                continue;
+            }
+
+            $sections[$sectionKey] = [
+                'data' => $paginator->items(),
+                'meta' => [
+                    'current_page' => $paginator->currentPage(),
+                    'last_page' => $paginator->lastPage(),
+                    'per_page' => $paginator->perPage(),
+                    'total' => $paginator->total(),
+                    'has_more' => $paginator->hasMorePages(),
+                ],
+            ];
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'sections' => $sections,
+        ]);
+    }
+
+    private function buildPurchaseSectionQuery(User $user, Request $request, string $sectionKey)
+    {
+        $query = Sold::query()->where('user_id', $user->id);
+        $this->applyPurchaseDateFilters($query, $request);
+
+        return match ($sectionKey) {
+            'progress' => $query->where(function ($statusQuery) {
+                $statusQuery->whereIn('status_code', ['pending', 'packing'])
+                    ->orWhere(function ($fallback) {
+                        $fallback->whereNull('status_code')
+                            ->whereIn('status', ['A', 'P']);
+                    });
+            }),
+            'in_delivery' => $query->where(function ($statusQuery) {
+                $statusQuery->where('status_code', 'in_delivery')
+                    ->orWhere(function ($fallback) {
+                        $fallback->whereNull('status_code')
+                            ->where('status', 'B');
+                    });
+            }),
+            'delivered' => $query->where(function ($statusQuery) {
+                $statusQuery->where('status_code', 'delivered')
+                    ->orWhere(function ($fallback) {
+                        $fallback->whereNull('status_code')
+                            ->where('status', 'C');
+                    });
+            }),
+            'cancelled' => $query->where(function ($statusQuery) {
+                $statusQuery->whereIn('status_code', ['cancelled', 'returned'])
+                    ->orWhere(function ($fallback) {
+                        $fallback->whereNull('status_code')
+                            ->whereIn('status', ['F', 'R']);
+                    });
+            }),
+            default => $query,
+        };
+    }
+
+    private function applyPurchaseDateFilters($query, Request $request): void
+    {
+        if ($request->filled('from')) {
+            $query->whereDate('created_at', '>=', $request->from);
+        }
+
+        if ($request->filled('to')) {
+            $query->whereDate('created_at', '<=', $request->to);
+        }
+    }
+
+    private function transformPurchasePaginator($paginator): void
+    {
+        $paginator->getCollection()->transform(function ($order) {
+            $order->formatted_created_at = Carbon::parse($order->created_at)->isoFormat('D MMMM YYYY, HH:mm');
+            $order->formatted_updated_at = Carbon::parse($order->updated_at)->isoFormat('D MMMM YYYY, HH:mm');
+            $this->appendOrderSellerMeta($order);
+            $this->appendOrderStatusMeta($order);
+            return $this->applySignedDeliveryQr($order);
+        });
     }
 
     public function purchaseDetails(Request $request, $order_id)
