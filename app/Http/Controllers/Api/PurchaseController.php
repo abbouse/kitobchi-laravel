@@ -34,6 +34,7 @@ use App\Services\FulfillmentRoutingService;
 use App\Services\CourierTaskOrchestratorService;
 use App\Services\PaylovOrderPaymentService;
 use App\Services\UserReputationService;
+use App\Services\ProductReviewPromptService;
 use App\Enums\FulfillmentMode;
 use App\Models\GiftCertificate;
 use App\Models\UserCard;
@@ -57,6 +58,7 @@ class PurchaseController extends Controller
         private readonly CourierTaskOrchestratorService $courierTaskOrchestratorService,
         private readonly UserReputationService $userReputationService,
         private readonly PaylovOrderPaymentService $paylovOrderPaymentService,
+        private readonly ProductReviewPromptService $productReviewPromptService,
     ) {}
 
     // ── Xatolik response ──────────────────────────────────────
@@ -1302,10 +1304,21 @@ class PurchaseController extends Controller
             'status'   => 'nullable|string|in:A,P,B,C,F,progress,pending,packing,in_delivery,delivered,cancelled,returned',
             'from'     => 'nullable|date_format:Y-m-d',
             'to'       => 'nullable|date_format:Y-m-d|after_or_equal:from',
+            'year'     => 'nullable|integer|min:2000|max:2100',
+            'month'    => 'nullable|integer|min:1|max:12',
+            'periods_selected' => 'nullable|string',
             'per_page' => 'nullable|integer|min:1|max:100',
             'grouped'  => 'nullable|boolean',
+            'periods'  => 'nullable|boolean',
             'section'  => 'nullable|string|in:progress,in_delivery,delivered,cancelled',
         ]);
+
+        if ($request->boolean('periods')) {
+            return response()->json([
+                'status' => 'success',
+                'periods' => $this->availablePurchasePeriods($user),
+            ]);
+        }
 
         if ($request->boolean('grouped') && !$request->filled('status')) {
             return $this->purchaseListGrouped($request, $user);
@@ -1413,6 +1426,7 @@ class PurchaseController extends Controller
         return response()->json([
             'status' => 'success',
             'sections' => $sections,
+            'review_prompt_items' => $this->buildReviewPromptProducts($user),
         ]);
     }
 
@@ -1456,6 +1470,46 @@ class PurchaseController extends Controller
 
     private function applyPurchaseDateFilters($query, Request $request): void
     {
+        if ($request->filled('periods_selected')) {
+            $pairs = collect(explode(',', (string) $request->periods_selected))
+                ->map(fn ($value) => trim($value))
+                ->filter()
+                ->map(function ($value) {
+                    if (!preg_match('/^(\d{4})-(\d{2})$/', $value, $m)) {
+                        return null;
+                    }
+
+                    $year = (int) $m[1];
+                    $month = (int) $m[2];
+
+                    if ($year < 2000 || $year > 2100 || $month < 1 || $month > 12) {
+                        return null;
+                    }
+
+                    return ['year' => $year, 'month' => $month];
+                })
+                ->filter()
+                ->values();
+
+            if ($pairs->isNotEmpty()) {
+                $query->where(function ($periodQuery) use ($pairs) {
+                    foreach ($pairs as $pair) {
+                        $periodQuery->orWhere(function ($single) use ($pair) {
+                            $single->whereYear('created_at', $pair['year'])
+                                ->whereMonth('created_at', $pair['month']);
+                        });
+                    }
+                });
+                return;
+            }
+        }
+
+        if ($request->filled('year') && $request->filled('month')) {
+            $query->whereYear('created_at', (int) $request->year)
+                ->whereMonth('created_at', (int) $request->month);
+            return;
+        }
+
         if ($request->filled('from')) {
             $query->whereDate('created_at', '>=', $request->from);
         }
@@ -1463,6 +1517,24 @@ class PurchaseController extends Controller
         if ($request->filled('to')) {
             $query->whereDate('created_at', '<=', $request->to);
         }
+    }
+
+    private function availablePurchasePeriods(User $user): array
+    {
+        return Sold::query()
+            ->where('user_id', $user->id)
+            ->selectRaw('YEAR(created_at) as year_value, MONTH(created_at) as month_value, MAX(created_at) as latest_created_at')
+            ->groupByRaw('YEAR(created_at), MONTH(created_at)')
+            ->orderByDesc('year_value')
+            ->orderByDesc('month_value')
+            ->get()
+            ->map(fn ($row) => [
+                'year' => (int) $row->year_value,
+                'month' => (int) $row->month_value,
+                'latest_created_at' => $row->latest_created_at,
+            ])
+            ->values()
+            ->all();
     }
 
     private function transformPurchasePaginator($paginator): void
@@ -1474,6 +1546,114 @@ class PurchaseController extends Controller
             $this->appendOrderStatusMeta($order);
             return $this->applySignedDeliveryQr($order);
         });
+    }
+
+    private function buildReviewPromptProducts(User $user, int $limit = 20): array
+    {
+        $unique = [];
+        $bookIds = [];
+        $stationeryIds = [];
+
+        $orders = Sold::query()
+            ->where('user_id', $user->id)
+            ->where(function ($query) {
+                $query->where('status_code', OrderStatusCode::DELIVERED->value)
+                    ->orWhere(function ($fallback) {
+                        $fallback->whereNull('status_code')
+                            ->where('status', OrderStatusCode::DELIVERED->legacy());
+                    });
+            })
+            ->where(function ($query) {
+                $query->where('payment_status_code', PaymentStatusCode::PAID->value)
+                    ->orWhere(function ($fallback) {
+                        $fallback->whereNull('payment_status_code')
+                            ->where('paymentStatus', PaymentStatusCode::PAID->legacy());
+                    });
+            })
+            ->latest('completed_at')
+            ->limit(120)
+            ->get(['id', 'items', 'completed_at']);
+
+        foreach ($orders as $order) {
+            foreach (collect($order->items ?? []) as $item) {
+                $type = (string) ($item['type'] ?? '');
+                $productId = (int) ($item['item_id'] ?? 0);
+
+                if (!in_array($type, ['book', 'stationery'], true) || $productId <= 0) {
+                    continue;
+                }
+
+                $key = $type . '_' . $productId;
+                if (isset($unique[$key])) {
+                    continue;
+                }
+
+                if ($this->productReviewPromptService->hasReviewedProduct($user->id, $productId, $type)) {
+                    continue;
+                }
+
+                if (!$this->productReviewPromptService->isProductStillPublic($productId, $type)) {
+                    continue;
+                }
+
+                $unique[$key] = [
+                    'product_id' => $productId,
+                    'product_type' => $type,
+                ];
+
+                if ($type === 'book') {
+                    $bookIds[] = $productId;
+                } else {
+                    $stationeryIds[] = $productId;
+                }
+
+                if (count($unique) >= $limit) {
+                    break 2;
+                }
+            }
+        }
+
+        if (empty($unique)) {
+            return [];
+        }
+
+        $books = Books::query()
+            ->with(['category', 'tags', 'seller'])
+            ->whereIn('id', array_values(array_unique($bookIds)))
+            ->get()
+            ->keyBy('id');
+
+        $stationeries = Stationery::query()
+            ->with(['category', 'tags', 'seller'])
+            ->whereIn('id', array_values(array_unique($stationeryIds)))
+            ->get()
+            ->keyBy('id');
+
+        $payload = [];
+
+        foreach ($unique as $item) {
+            $type = $item['product_type'];
+            $productId = $item['product_id'];
+            $product = $type === 'book'
+                ? $books->get($productId)
+                : $stationeries->get($productId);
+
+            if (!$product) {
+                continue;
+            }
+
+            $formatted = ProductPayloadFormatter::format($product, [
+                'user' => $user,
+                'type' => $type,
+                'category_format' => 'title',
+            ]);
+
+            if ($formatted) {
+                $payload[] = $formatted;
+            }
+        }
+
+        return $payload;
     }
 
     public function purchaseDetails(Request $request, $order_id)

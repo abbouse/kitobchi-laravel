@@ -124,6 +124,20 @@ class UserController extends Controller
             ];
         })->values()->all();
 
+        $address = collect($order->address ?? [])->map(function ($addr) {
+            if (!is_array($addr)) {
+                return null;
+            }
+
+            return [
+                'fullAddress' => $addr['fullAddress'] ?? $addr['branch_address'] ?? null,
+                'fullName' => $addr['fullName'] ?? $addr['contact_name'] ?? null,
+                'phoneNumber' => $addr['phoneNumber'] ?? $addr['phone_number'] ?? null,
+                'lat' => $addr['lat'] ?? null,
+                'lon' => $addr['lon'] ?? null,
+            ];
+        })->filter()->values()->all();
+
         return [
             'id' => (int) $order->id,
             'status' => $order->status,
@@ -133,6 +147,7 @@ class UserController extends Controller
             'status_label' => $this->orderStatusLabelForHome($order),
             'amount' => (int) ($order->amount ?? 0),
             'formatted_created_at' => optional($order->created_at)?->format('d.m.Y HH:mm'),
+            'address' => $address,
             'items' => $items,
         ];
     }
