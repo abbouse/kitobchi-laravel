@@ -159,6 +159,7 @@ Route::prefix('a122')->name('admin.')->group(function () {
         Route::post('/{order}/fulfillment/reroute-hub', [OrderController::class, 'rerouteHub'])->name('reroute-hub');
         Route::patch('/{order}/postal-return', [OrderController::class, 'markPostalReturned'])->name('postal-return');
         Route::post('/{order}/cancel',   [OrderController::class, 'adminCancel'])->name('cancel');
+        Route::post('/{order}/refund-cancel', [OrderController::class, 'refundAndCancel'])->name('refund-cancel');
         Route::get('/export',            [OrderController::class, 'export'])->name('export');
     });
 

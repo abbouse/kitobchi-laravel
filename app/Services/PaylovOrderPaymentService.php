@@ -18,6 +18,7 @@ class PaylovOrderPaymentService
 
     public function __construct(
         private readonly OrderService $orderService,
+        private readonly OrderStatusPushService $orderStatusPushService,
     ) {
     }
 
@@ -229,6 +230,7 @@ class PaylovOrderPaymentService
         array $statusResponse,
         ?string $localFinalizeError = null,
     ): array {
+        $orderWasRecovered = false;
         $providerResponse = [
             'create' => $receipt,
             'pay' => $payResponse,
@@ -247,7 +249,7 @@ class PaylovOrderPaymentService
             'provider_response' => $providerResponse,
         ]);
 
-        DB::transaction(function () use ($order, $user) {
+        DB::transaction(function () use ($order, $user, &$orderWasRecovered) {
             $freshOrder = Sold::query()->lockForUpdate()->find($order->id);
             if (!$freshOrder) {
                 throw new RuntimeException('Buyurtma topilmadi.');
@@ -255,8 +257,13 @@ class PaylovOrderPaymentService
 
             if ((int) $freshOrder->paymentStatus !== PaymentStatusCode::PAID->legacy()) {
                 $this->orderService->handleOrderPaid($freshOrder, $user);
+                $orderWasRecovered = true;
             }
         });
+
+        if ($orderWasRecovered && $localFinalizeError !== null) {
+            $this->orderStatusPushService->sendRecoveredPaymentNotice($order->fresh());
+        }
 
         return $this->buildPaymentResponse($transactionId, $statusResponse, $payResponse ?? []);
     }

@@ -20,6 +20,7 @@ use App\Models\Sold;
 use App\Models\Stationery;
 use App\Models\Transaction;
 use App\Models\UserCard;
+use App\Services\AdminPaidOrderRefundService;
 use App\Services\FulfillmentAdminOverrideService;
 use App\Services\AdminOrderStatusSyncService;
 use App\Services\HubPrintViewService;
@@ -28,6 +29,8 @@ use App\Services\OrderStatusPushService;
 use App\Services\PostalResendService;
 use App\Services\SellerOrderSettlementService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\OrdersExport;
 
@@ -40,6 +43,7 @@ class OrderController extends Controller
         private readonly PostalResendService $postalResendService,
         private readonly FulfillmentAdminOverrideService $fulfillmentAdminOverrideService,
         private readonly HubPrintViewService $hubPrintViewService,
+        private readonly AdminPaidOrderRefundService $adminPaidOrderRefundService,
     ) {}
 
     public function index(Request $request)
@@ -321,6 +325,24 @@ class OrderController extends Controller
                 ->find($order->courier_id);
         }
 
+        $panelAdmin = Auth::guard('panel')->user();
+        $canRefundPayment = $panelAdmin?->isSuperAdmin()
+            && ($paymentTransaction?->provider === 'paylov')
+            && in_array((string) ($order->payment_status_code ?? $order->paymentStatus), [
+                PaymentStatusCode::PAID->value,
+                (string) PaymentStatusCode::PAID->legacy(),
+            ], true)
+            && !in_array((string) ($order->status_code ?? $order->status), [
+                OrderStatusCode::CANCELLED->value,
+                OrderStatusCode::CANCELLED->legacy(),
+            ], true);
+
+        $refundConfirmationPhrase = null;
+        if ($canRefundPayment) {
+            $refundConfirmationPhrase = $this->makeRefundConfirmationPhrase();
+            session()->put("admin.order_refund_phrase.{$order->id}", $refundConfirmationPhrase);
+        }
+
         return view('a122.orders.show', compact(
             'order',
             'activeHubs',
@@ -334,6 +356,10 @@ class OrderController extends Controller
             'settlementOverview',
             'courierOrder',
             'assignedCourier',
+            'paymentTransaction',
+            'paymentCardView',
+            'canRefundPayment',
+            'refundConfirmationPhrase',
         ));
     }
 
@@ -473,6 +499,43 @@ class OrderController extends Controller
             $this->orderStatusPushService->sendForTransition($order->fresh(), $previousStatus, 'F');
         }
         return back()->with($result['ok'] ? 'success' : 'error', $result['ok'] ? "Buyurtma bekor qilindi." : $result['message']);
+    }
+
+    public function refundAndCancel(Request $request, Sold $order)
+    {
+        $admin = Auth::guard('panel')->user();
+        if (!$admin || !$admin->isSuperAdmin()) {
+            return back()->with('error', 'Bu amal faqat superadmin uchun ruxsat etilgan.');
+        }
+
+        $request->validate([
+            'confirmation_phrase' => 'required|string|max:64',
+            'reason' => 'nullable|string|max:255',
+        ]);
+
+        $expectedPhrase = (string) session()->get("admin.order_refund_phrase.{$order->id}", '');
+        session()->forget("admin.order_refund_phrase.{$order->id}");
+
+        if ($expectedPhrase === '' || !hash_equals($expectedPhrase, trim((string) $request->input('confirmation_phrase')))) {
+            return back()->with('error', 'Tasdiqlash matni noto‘g‘ri kiritildi.');
+        }
+
+        try {
+            $this->adminPaidOrderRefundService->refundAndCancelOrder(
+                $order,
+                $admin,
+                $request->filled('reason') ? (string) $request->input('reason') : null,
+            );
+
+            return back()->with('success', 'Pul qaytarildi va buyurtma bekor qilindi.');
+        } catch (\Throwable $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
+    private function makeRefundConfirmationPhrase(): string
+    {
+        return 'QAYTAR-' . Str::upper(Str::random(3)) . '-' . random_int(10, 99);
     }
 
     public function export(Request $request)

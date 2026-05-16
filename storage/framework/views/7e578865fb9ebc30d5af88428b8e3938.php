@@ -163,6 +163,11 @@
     <a href="<?php echo e(route('admin.orders.index')); ?>" class="btn btn-outline-secondary rounded-pill px-4">
       <i class="bi bi-arrow-left me-2"></i>Ro‘yxatga qaytish
     </a>
+    <?php if(!empty($canRefundPayment)): ?>
+      <button type="button" class="btn btn-dark rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#refundCancelModal">
+        <i class="bi bi-arrow-counterclockwise me-2"></i>To‘lovni qaytarish
+      </button>
+    <?php endif; ?>
     <form method="POST" action="<?php echo e(route('admin.orders.cancel', $order)); ?>" onsubmit="return confirm('Buyurtmani bekor qilasizmi?')">
       <?php echo csrf_field(); ?>
       <button class="btn btn-danger rounded-pill px-4"><i class="bi bi-x-circle me-2"></i>Bekor qilish</button>
@@ -840,6 +845,69 @@
     </section>
   </div>
 </div>
+<?php if(!empty($canRefundPayment) && !empty($refundConfirmationPhrase)): ?>
+<div class="modal fade" id="refundCancelModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 rounded-4 shadow-lg">
+      <div class="modal-body p-4 p-md-5">
+        <div class="d-flex align-items-start justify-content-between gap-3 mb-4">
+          <div>
+            <div class="text-uppercase small text-secondary fw-semibold">Superadmin only</div>
+            <h5 class="mb-1">Pulni qaytarish va buyurtmani bekor qilish</h5>
+            <p class="text-secondary mb-0">Bu amal userga refund qiladi, buyurtma hamda seller va kuryer oqimlarini bekor qiladi.</p>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="rounded-4 border border-danger-subtle bg-danger-subtle p-3 mb-4">
+          <div class="fw-semibold text-danger-emphasis mb-2">Tasdiqlash matni</div>
+          <div
+            id="refundConfirmationPhrase"
+            class="fw-bold fs-4 text-danger-emphasis"
+            style="letter-spacing:.18em; user-select:none; -webkit-user-select:none;"
+            oncopy="return false"
+            oncut="return false"
+            oncontextmenu="return false"
+          ><?php echo e($refundConfirmationPhrase); ?></div>
+          <div class="small text-danger-emphasis opacity-75 mt-2">Uni qo‘lda kiriting. Copy-paste bilan emas.</div>
+        </div>
+
+        <form method="POST" action="<?php echo e(route('admin.orders.refund-cancel', $order)); ?>">
+          <?php echo csrf_field(); ?>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Tasdiqlash matni</label>
+            <input
+              type="text"
+              name="confirmation_phrase"
+              class="form-control form-control-lg rounded-4"
+              autocomplete="off"
+              autocapitalize="characters"
+              spellcheck="false"
+              required
+            >
+          </div>
+          <div class="mb-4">
+            <label class="form-label fw-semibold">Izoh</label>
+            <input
+              type="text"
+              name="reason"
+              class="form-control rounded-4"
+              maxlength="255"
+              placeholder="Masalan: paylov refund + tizimiy xato"
+            >
+          </div>
+          <div class="d-flex gap-2 justify-content-end">
+            <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Yopish</button>
+            <button type="submit" class="btn btn-danger rounded-pill px-4">
+              <i class="bi bi-shield-lock me-2"></i>Refundni tasdiqlash
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+<?php endif; ?>
 <script>
 document.addEventListener('click', function (event) {
   const trigger = event.target.closest('.order-help-trigger');
@@ -885,6 +953,17 @@ document.addEventListener('change', function (event) {
 });
 
 syncFulfillmentHubVisibility();
+
+const refundPhrase = document.getElementById('refundConfirmationPhrase');
+if (refundPhrase) {
+  ['copy', 'cut', 'dragstart', 'selectstart'].forEach((eventName) => {
+    refundPhrase.addEventListener(eventName, (event) => event.preventDefault());
+  });
+}
+
+document.querySelectorAll('input[name="confirmation_phrase"]').forEach((input) => {
+  input.addEventListener('paste', (event) => event.preventDefault());
+});
 </script>
 <?php $__env->stopSection(); ?>
 

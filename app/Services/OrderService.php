@@ -28,6 +28,10 @@ class OrderService
         private readonly CashbackHistoryService $cashbackHistoryService,
         private readonly CashbackNotificationService $cashbackNotificationService,
         private readonly PostalResendService $postalResendService,
+        private readonly SellerOrderSettlementService $sellerOrderSettlementService,
+        private readonly CourierOrderSettlementService $courierOrderSettlementService,
+        private readonly ProductReviewPromptService $productReviewPromptService,
+        private readonly UserReputationService $userReputationService,
     ) {}
 
     // =========================================================================
@@ -342,6 +346,10 @@ class OrderService
 
     public function cancelOrder(Sold $order, bool $strict = true): array
     {
+        $previousCompletedPaid = $order->status_code === OrderStatusCode::DELIVERED->value
+            && $order->payment_status_code === PaymentStatusCode::PAID->value;
+        $didCancel = false;
+
         // Tez tekshiruv (DB ga bormaydi)
         if ($order->status_code === OrderStatusCode::CANCELLED->value) {
             return ['ok' => false, 'message' => 'Buyurtma allaqachon bekor qilingan.'];
@@ -358,7 +366,7 @@ class OrderService
             }
         }
 
-        DB::transaction(function () use ($order) {
+        DB::transaction(function () use ($order, &$didCancel) {
 
             // ── STATUS UPDATE — bu butun logikaning kaliti ────────────────
             //
@@ -386,6 +394,8 @@ class OrderService
             if ($affected === 0) {
                 return; // Transaction commit, lekin hech narsa o'zgarmadi
             }
+
+            $didCancel = true;
 
             // ── Bu yerga faqat BIRINCHI marta yetib kelinadi ─────────────
 
@@ -514,10 +524,25 @@ class OrderService
             }
         });
 
-        // Local instance yangilansin
-        $order->status        = 'F';
-        $order->paymentStatus = 3;
+        if (!$didCancel) {
+            return ['ok' => false, 'message' => 'Buyurtma allaqachon bekor qilingan.'];
+        }
 
-        return ['ok' => true, 'message' => 'order_canceled'];
+        if ($previousCompletedPaid) {
+            $reason = "order_cancelled_after_paid: order={$order->id}";
+            $freshOrder = $order->fresh() ?? $order;
+            $this->sellerOrderSettlementService->reverseCompletedOrderSettlement($freshOrder, $reason);
+            $this->courierOrderSettlementService->reverseCompletedOrderSettlement($freshOrder, $reason);
+            $this->productReviewPromptService->closeForOrder($freshOrder, 'order_cancelled_after_refund');
+        }
+
+        if ($order->user_id) {
+            $user = User::find($order->user_id);
+            if ($user) {
+                $this->userReputationService->recalculateUser($user);
+            }
+        }
+
+        return ['ok' => true, 'message' => "Buyurtma bekor qilindi."];
     }
 }

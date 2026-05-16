@@ -183,6 +183,13 @@ class PaylovService
         ]);
     }
 
+    public function cancelPayment(string $transactionId): array
+    {
+        return $this->post('/merchant/payment/cancel/', [
+            'transactionId' => $transactionId,
+        ]);
+    }
+
     private function post(string $path, array $payload): array
     {
         return $this->send('post', $path, $payload);

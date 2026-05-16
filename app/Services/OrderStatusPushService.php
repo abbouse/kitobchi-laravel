@@ -88,6 +88,25 @@ class OrderStatusPushService
         ],
     ];
 
+    private const RECOVERED_PAYMENT_MESSAGES = [
+        'uz' => [
+            'title' => 'Uzr, to‘lovingizni hozir tasdiqladik',
+            'body' => "To‘lov oldinroq qabul qilingan ekan. Endi buyurtmangiz muvaffaqiyatli tasdiqlandi 🙏",
+        ],
+        'ru' => [
+            'title' => 'Извините, мы только что подтвердили оплату',
+            'body' => 'Оплата прошла чуть раньше. Сейчас заказ успешно подтверждён 🙏',
+        ],
+        'en' => [
+            'title' => 'Sorry, your payment has just been confirmed',
+            'body' => 'Your payment had already gone through. We have now confirmed your order successfully 🙏',
+        ],
+        'ja' => [
+            'title' => 'お支払いを確認しました',
+            'body' => 'お支払いは先に完了していました。ご注文を正常に確定しました 🙏',
+        ],
+    ];
+
     public function sendForTransition(Sold $order, ?string $previousStatus, string $newStatus): void
     {
         if ($previousStatus === $newStatus || $this->visibleStateKey($previousStatus) === $this->visibleStateKey($newStatus)) {
@@ -131,6 +150,44 @@ class OrderStatusPushService
             'from' => $previousStatus,
             'to' => $newStatus,
             'is_regression' => $isRegression,
+            'tokens' => $tokens->count(),
+            'result' => $result,
+        ]);
+    }
+
+    public function sendRecoveredPaymentNotice(Sold $order): void
+    {
+        $user = $order->user()->first(['id', 'locale']);
+        if (!$user) {
+            return;
+        }
+
+        $tokens = $this->tokensForUser($user->id);
+        if ($tokens->isEmpty()) {
+            return;
+        }
+
+        $locale = $this->resolveLocale($user->locale ?? null);
+        $template = self::RECOVERED_PAYMENT_MESSAGES[$locale];
+
+        $payload = [
+            'type' => 'order_payment_recovered',
+            'order_id' => (string) $order->id,
+            'status' => (string) ($order->status_code ?? $order->status ?? ''),
+            'payment_status' => (string) ($order->payment_status_code ?? $order->paymentStatus ?? ''),
+        ];
+
+        $result = (new FCMService('kitobchi'))->send(
+            $tokens->all(),
+            $template['title'],
+            $template['body'],
+            $payload,
+        );
+
+        Log::info('Recovered payment push sent', [
+            'order_id' => $order->id,
+            'user_id' => $user->id,
+            'locale' => $locale,
             'tokens' => $tokens->count(),
             'result' => $result,
         ]);
