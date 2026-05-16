@@ -1,16 +1,5 @@
 <?php $__env->startSection('title', 'Kirish'); ?>
 
-<?php $__env->startPush('styles'); ?>
-<style>
-  .a122-login-body {
-    background:
-      radial-gradient(circle at top left, rgba(28, 176, 154, 0.12), transparent 28%),
-      radial-gradient(circle at bottom right, rgba(245, 188, 91, 0.09), transparent 26%),
-      var(--p-bg);
-  }
-</style>
-<?php $__env->stopPush(); ?>
-
 <?php $__env->startSection('content'); ?>
 <section class="a122-login-shell">
   <div class="a122-login-grid">
@@ -64,7 +53,7 @@
 
     <div class="a122-login-card-wrap">
       <div class="a122-login-copy">
-        <div class="flex items-center justify-between gap-3">
+        <div class="kc-auth-titlebar">
           <h2 class="a122-login-title">Tizimga kirish</h2>
           <button data-theme-toggle class="topbar-theme-btn" aria-label="Tema almashtirish" title="Light / Dark mode">
             <span class="theme-icon-light"><i data-lucide="sun-medium" class="w-4.5 h-4.5"></i></span>
@@ -96,7 +85,7 @@
 $__bag = $errors->getBag($__errorArgs[1] ?? 'default');
 if ($__bag->has($__errorArgs[0])) :
 if (isset($message)) { $__messageOriginal = $message; }
-$message = $__bag->first($__errorArgs[0]); ?> border-red-500 <?php unset($message);
+$message = $__bag->first($__errorArgs[0]); ?> is-invalid <?php unset($message);
 if (isset($__messageOriginal)) { $message = $__messageOriginal; }
 endif;
 unset($__errorArgs, $__bag); ?>">
@@ -114,7 +103,7 @@ unset($__errorArgs, $__bag); ?>
 
         <div x-data="{ showPassword: false }">
           <label for="password" class="p-form-label">Parol</label>
-          <div class="relative">
+          <div class="position-relative">
             <input :type="showPassword ? 'text' : 'password'" id="password" name="password" required autocomplete="current-password" placeholder="Parolingizni kiriting" class="p-form-control pr-11">
             <button type="button" @click="showPassword = !showPassword" class="a122-password-toggle" aria-label="Parolni ko‘rsatish">
               <i x-show="!showPassword" data-lucide="eye" class="w-4 h-4"></i>

@@ -161,619 +161,677 @@
 
 
 {{-- ══════════════════════════════════════════════════════════════════════════ --}}
-{{-- TAB 1: ASOSIY — KPI + Insight pills                                      --}}
+{{-- TAB 1: ASOSIY — KPI + Insight pills (pure Bootstrap)                     --}}
 {{-- ══════════════════════════════════════════════════════════════════════════ --}}
-<div class="dash-tab-panel" id="dash-panel-main" x-show="tab === 'main'" x-cloak>
+<div x-show="tab === 'main'" x-cloak>
 
-  <div class="dash-insight-grid mb-4 fade-up">
-    <div class="dash-insight-pill dip-success">
-      <div class="dip-lbl">Bugungi daromad</div>
-      <div class="dip-val">{{ number_format($todayRevenue/1_000_000,2) }}<span class="dip-val-unit"> M</span></div>
-    </div>
-    <div class="dash-insight-pill">
-      <div class="dip-lbl">Bugun buyurtma</div>
-      <div class="dip-val">{{ number_format($todayOrders) }}<span class="dip-val-unit"> ta</span></div>
-    </div>
-    <div class="dash-insight-pill dip-accent">
-      <div class="dip-lbl">Hafta daromad</div>
-      <div class="dip-val">{{ number_format($weekRevenue/1_000_000,2) }}<span class="dip-val-unit"> M</span></div>
-    </div>
-    <div class="dash-insight-pill dip-info">
-      <div class="dip-lbl">Hafta buyurtma</div>
-      <div class="dip-val">{{ number_format($weekOrders) }}<span class="dip-val-unit"> ta</span></div>
-    </div>
-    <div class="dash-insight-pill dip-warning">
-      <div class="dip-lbl">Kutilmoqda</div>
-      <div class="dip-val">{{ number_format($pendingOrders) }}<span class="dip-val-unit"> ta</span></div>
-    </div>
-  </div>
-
-  <div class="row g-3 row-cols-1 row-cols-md-2 row-cols-xl-3 row-cols-xxl-6 fade-up">
-
-    <div class="col">
-    <div class="kpi-card h-100">
-      <div class="flex items-start justify-between">
-        <div class="kpi-icon kpi-icon--success"><i class="bi bi-graph-up-arrow"></i></div>
-        <span class="kpi-change up"><i class="bi bi-arrow-up-short kpi-change-ico"></i> Bugun: {{ number_format($todayRevenue/1000) }}K</span>
-      </div>
-      <div class="kpi-stack">
-        <div class="kpi-label">Jami daromad</div>
-        <div class="kpi-value">{{ number_format($totalRevenue/1_000_000,1) }}<span class="kpi-value-unit"> M UZS</span></div>
-      </div>
-      <div class="kpi-footer">
-        <span class="kpi-foot-muted">Bu oy</span>
-        <span class="kpi-foot-mono">{{ number_format($monthRevenue/1_000_000,1) }}M</span>
-      </div>
-    </div>
-    </div>
-
-    <div class="col">
-    <div class="kpi-card h-100">
-      <div class="flex items-start justify-between">
-        <div class="kpi-icon kpi-icon--accent"><i class="bi bi-bag-check"></i></div>
-        <span class="kpi-change up"><i class="bi bi-plus kpi-change-ico"></i> {{ $todayOrders }} bugun</span>
-      </div>
-      <div class="kpi-stack">
-        <div class="kpi-label">Buyurtmalar</div>
-        <div class="kpi-value">{{ number_format($totalOrders) }}</div>
-      </div>
-      <div class="kpi-footer">
-        <span class="kpi-foot-warn"><i class="bi bi-clock kpi-footer-ico"></i> {{ $pendingOrders }} kutmoqda</span>
-        <span class="kpi-foot-danger"><i class="bi bi-x-circle kpi-footer-ico"></i> {{ $cancelledOrders }}</span>
-      </div>
-    </div>
-    </div>
-
-    <div class="col">
-    <div class="kpi-card h-100">
-      <div class="flex items-start justify-between">
-        <div class="kpi-icon kpi-icon--info"><i class="bi bi-patch-check"></i></div>
-        <span class="kpi-change {{ $completionRate>=70?'up':'neutral' }}">{{ $completionRate }}%</span>
-      </div>
-      <div class="kpi-stack">
-        <div class="kpi-label">Yakunlanish</div>
-        <div class="kpi-value">{{ number_format($completedOrders) }}</div>
-      </div>
-      <div class="kpi-footer">
-        <div class="kpi-prog-cell">
-          <div class="dash-prog-track dash-prog-track--thin">
-            <div class="dash-prog-fill" style="width:{{ $completionRate }}%;background:var(--p-info)"></div>
+  {{-- Insight pills: tonally tinted Bootstrap cards --}}
+  <div class="row g-3 mb-4 row-cols-2 row-cols-md-3 row-cols-xl-5">
+    @php
+      $insightPills = [
+        ['Bugungi daromad', number_format($todayRevenue/1_000_000,2), 'M',  'success'],
+        ['Bugun buyurtma',  number_format($todayOrders),              'ta', 'secondary'],
+        ['Hafta daromad',   number_format($weekRevenue/1_000_000,2),  'M',  'primary'],
+        ['Hafta buyurtma',  number_format($weekOrders),               'ta', 'info'],
+        ['Kutilmoqda',      number_format($pendingOrders),            'ta', 'warning'],
+      ];
+    @endphp
+    @foreach($insightPills as [$lbl, $val, $unit, $tone])
+      <div class="col">
+        <div class="card border-0 shadow-sm rounded-4 h-100 bg-{{ $tone }}-subtle">
+          <div class="card-body p-3">
+            <div class="small fw-semibold text-{{ $tone }}-emphasis text-uppercase" style="letter-spacing:.08em;">{{ $lbl }}</div>
+            <div class="h4 mb-0 mt-2 fw-bold text-dark font-monospace">{{ $val }}<span class="ms-1 fs-6 text-secondary fw-normal">{{ $unit }}</span></div>
           </div>
         </div>
-        <span class="kpi-foot-hint-xs">{{ $cancellationRate }}% bekor</span>
       </div>
-    </div>
-    </div>
+    @endforeach
+  </div>
 
-    <div class="col">
-    <div class="kpi-card h-100">
-      <div class="flex items-start justify-between">
-        <div class="kpi-icon kpi-icon--warning"><i class="bi bi-people"></i></div>
-        <span class="kpi-change up"><span class="live-dot live-dot--xs"></span>{{ $onlineUsers }} online</span>
+  {{-- 6 KPI cards: standard Bootstrap card with icon + value + footer --}}
+  @php
+    $kpiCards = [
+      [
+        'icon' => 'bi-graph-up-arrow', 'tone' => 'success',
+        'badge_tone' => 'success', 'badge_label' => 'Bugun: '.number_format($todayRevenue/1000).'K',
+        'label' => 'Jami daromad',
+        'value' => number_format($totalRevenue/1_000_000,1), 'unit' => 'M UZS',
+        'footer_left' => 'Bu oy', 'footer_right' => number_format($monthRevenue/1_000_000,1).'M',
+      ],
+      [
+        'icon' => 'bi-bag-check', 'tone' => 'primary',
+        'badge_tone' => 'success', 'badge_label' => $todayOrders.' bugun',
+        'label' => 'Buyurtmalar',
+        'value' => number_format($totalOrders), 'unit' => '',
+        'footer_left' => $pendingOrders.' kutmoqda', 'footer_left_tone' => 'warning',
+        'footer_right' => $cancelledOrders.' bekor', 'footer_right_tone' => 'danger',
+      ],
+      [
+        'icon' => 'bi-patch-check', 'tone' => 'info',
+        'badge_tone' => $completionRate >= 70 ? 'success' : 'secondary', 'badge_label' => $completionRate.'%',
+        'label' => 'Yakunlanish',
+        'value' => number_format($completedOrders), 'unit' => '',
+        'progress' => $completionRate, 'progress_tone' => 'info',
+        'footer_right' => $cancellationRate.'% bekor', 'footer_right_tone' => 'secondary',
+      ],
+      [
+        'icon' => 'bi-people', 'tone' => 'warning',
+        'badge_tone' => 'success', 'badge_label' => $onlineUsers.' online',
+        'label' => 'Foydalanuvchilar',
+        'value' => number_format($totalUsers), 'unit' => '',
+        'footer_left' => 'Bugun yangi', 'footer_right' => '+'.$newUsersToday, 'footer_right_tone' => 'success',
+      ],
+      [
+        'icon' => 'bi-gift', 'tone' => 'danger',
+        'badge_tone' => $giftUsed > 0 ? 'success' : 'secondary', 'badge_label' => $giftUsed.' ishlatildi',
+        'label' => 'Gift Sertifikat',
+        'value' => number_format($giftTotal), 'unit' => '',
+        'footer_left' => 'Faol',
+        'footer_right' => $giftPending > 0 ? $giftPending.' kutmoqda' : (string) $giftSent,
+        'footer_right_tone' => $giftPending > 0 ? 'warning' : 'secondary',
+      ],
+      [
+        'icon' => 'bi-box-seam', 'tone' => 'dark',
+        'badge_tone' => $mysteryDueCount > 0 ? 'danger' : 'secondary',
+        'badge_label' => $mysteryDueCount > 0 ? $mysteryDueCount.' navbat' : "Navbat yo'q",
+        'label' => 'Mystery Box',
+        'value' => number_format($mysteryActive), 'unit' => '',
+        'footer_left' => 'Faol obuna', 'footer_right' => $mysteryPending.' kutmoqda', 'footer_right_tone' => 'secondary',
+      ],
+    ];
+  @endphp
+  <div class="row g-3 row-cols-1 row-cols-md-2 row-cols-xl-3 row-cols-xxl-6">
+    @foreach($kpiCards as $k)
+      <div class="col">
+        <div class="card border-0 shadow-sm rounded-4 h-100">
+          <div class="card-body d-flex flex-column gap-3">
+            <div class="d-flex align-items-start justify-content-between gap-2">
+              <span class="d-inline-flex align-items-center justify-content-center rounded-3 bg-{{ $k['tone'] }}-subtle text-{{ $k['tone'] }}-emphasis" style="width:2.75rem;height:2.75rem;font-size:1.25rem;">
+                <i class="bi {{ $k['icon'] }}"></i>
+              </span>
+              <span class="badge rounded-pill text-bg-{{ $k['badge_tone'] }}-subtle text-{{ $k['badge_tone'] }}-emphasis fw-semibold">
+                {{ $k['badge_label'] }}
+              </span>
+            </div>
+            <div>
+              <div class="small text-secondary">{{ $k['label'] }}</div>
+              <div class="h3 mb-0 mt-1 fw-bold text-dark font-monospace">{{ $k['value'] }}<span class="ms-1 fs-6 text-secondary fw-normal">{{ $k['unit'] }}</span></div>
+            </div>
+            <div class="mt-auto">
+              @if(isset($k['progress']))
+                <div class="progress mb-2" role="progressbar" style="height:.35rem;">
+                  <div class="progress-bar bg-{{ $k['progress_tone'] }}" style="width:{{ $k['progress'] }}%"></div>
+                </div>
+              @endif
+              <div class="d-flex justify-content-between small">
+                <span class="text-{{ $k['footer_left_tone'] ?? 'secondary' }}">{{ $k['footer_left'] ?? '' }}</span>
+                <span class="font-monospace fw-semibold text-{{ $k['footer_right_tone'] ?? 'dark' }}">{{ $k['footer_right'] ?? '' }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="kpi-stack">
-        <div class="kpi-label">Foydalanuvchilar</div>
-        <div class="kpi-value">{{ number_format($totalUsers) }}</div>
-      </div>
-      <div class="kpi-footer">
-        <span class="kpi-foot-muted">Bugun yangi</span>
-        <span class="kpi-foot-mono kpi-foot-mono--success">+{{ $newUsersToday }}</span>
-      </div>
-    </div>
-    </div>
-
-    <div class="col">
-    <div class="kpi-card h-100">
-      <div class="flex items-start justify-between">
-        <div class="kpi-icon kpi-icon--gift"><i class="bi bi-gift"></i></div>
-        <span class="kpi-change {{ $giftUsed>0?'up':'neutral' }}"><i class="bi bi-check-circle kpi-change-ico-sm"></i> {{ $giftUsed }} ishlatildi</span>
-      </div>
-      <div class="kpi-stack">
-        <div class="kpi-label">Gift Sertifikat</div>
-        <div class="kpi-value">{{ number_format($giftTotal) }}</div>
-      </div>
-      <div class="kpi-footer">
-        <span class="kpi-foot-muted">Faol</span>
-        @if($giftPending>0)
-          <span class="kpi-foot-warn-strong">{{ $giftPending }} kutmoqda</span>
-        @else
-          <span class="kpi-foot-mono">{{ $giftSent }}</span>
-        @endif
-      </div>
-    </div>
-    </div>
-
-    <div class="col">
-    <div class="kpi-card h-100">
-      <div class="flex items-start justify-between">
-        <div class="kpi-icon kpi-icon--teal"><i class="bi bi-box-seam"></i></div>
-        @if($mysteryDueCount>0)
-          <span class="kpi-change down"><i class="bi bi-exclamation-triangle kpi-change-ico-sm"></i> {{ $mysteryDueCount }} navbat</span>
-        @else
-          <span class="kpi-change neutral">Navbat yo'q</span>
-        @endif
-      </div>
-      <div class="kpi-stack">
-        <div class="kpi-label">Mystery Box</div>
-        <div class="kpi-value">{{ number_format($mysteryActive) }}</div>
-      </div>
-      <div class="kpi-footer">
-        <span class="kpi-foot-muted">Faol obuna</span>
-        <span class="kpi-foot-hint-sm">{{ $mysteryPending }} kutmoqda</span>
-      </div>
-    </div>
-    </div>
-
+    @endforeach
   </div>
 </div>
 
 {{-- ══════════════════════════════════════════════════════════════════════════ --}}
-{{-- TAB 2: BUYURTMALAR — Charts + Donut + So'nggi buyurtmalar                --}}
+{{-- TAB 2: BUYURTMALAR (pure Bootstrap)                                       --}}
 {{-- ══════════════════════════════════════════════════════════════════════════ --}}
-<div class="dash-tab-panel" id="dash-panel-orders" x-show="tab === 'orders'" x-cloak>
+<div x-show="tab === 'orders'" x-cloak>
 
-  <div class="row g-3 mb-4 fade-up">
+  <div class="row g-3 mb-4">
     <div class="col-12 col-lg-6">
-    <div class="dash-card h-100">
-      <div class="dash-card-head">
-        <div>
-          <div class="dash-card-title">Buyurtmalar — 7 kun</div>
-          <div class="dash-card-sub">Soni bo'yicha</div>
+      <div class="card border-0 shadow-sm rounded-4 h-100">
+        <div class="card-header bg-white border-bottom-0 px-4 pt-4 pb-2 d-flex align-items-start justify-content-between gap-3">
+          <div>
+            <h3 class="h6 fw-semibold mb-1 text-dark">Buyurtmalar — 7 kun</h3>
+            <div class="small text-secondary">Soni bo'yicha</div>
+          </div>
+          <a href="{{ route('admin.orders.index') }}" class="btn btn-sm btn-light border rounded-pill">
+            Ro'yxat <i class="bi bi-arrow-right ms-1"></i>
+          </a>
         </div>
-        <a href="{{ route('admin.orders.index') }}" class="btn-p ghost sm">Ro'yxat <i class="bi bi-arrow-right"></i></a>
-      </div>
-      <div class="dash-card-body pt-0">
-        <div class="dash-chart-surface"><div id="chartOrdersWeek" class="dash-chart-host dash-chart-host--220"></div></div>
-      </div>
-    </div>
-    </div>
-    <div class="col-12 col-lg-6">
-    <div class="dash-card h-100">
-      <div class="dash-card-head">
-        <div>
-          <div class="dash-card-title">Daromad — 7 kun</div>
-          <div class="dash-card-sub">Mln UZS (to'langan)</div>
+        <div class="card-body pt-0 px-4 pb-4">
+          <div id="chartOrdersWeek" style="min-height:220px;"></div>
         </div>
       </div>
-      <div class="dash-card-body pt-0">
-        <div class="dash-chart-surface"><div id="chartRevenueWeek" class="dash-chart-host dash-chart-host--220"></div></div>
-      </div>
     </div>
+    <div class="col-12 col-lg-6">
+      <div class="card border-0 shadow-sm rounded-4 h-100">
+        <div class="card-header bg-white border-bottom-0 px-4 pt-4 pb-2">
+          <h3 class="h6 fw-semibold mb-1 text-dark">Daromad — 7 kun</h3>
+          <div class="small text-secondary">Mln UZS (to'langan)</div>
+        </div>
+        <div class="card-body pt-0 px-4 pb-4">
+          <div id="chartRevenueWeek" style="min-height:220px;"></div>
+        </div>
+      </div>
     </div>
   </div>
 
-  <div class="row g-4 mb-4">
-    <div class="col-12 col-xl-4 fade-up">
-      <div class="dash-card h-100">
-        <div class="dash-card-head">
-          <div class="dash-card-title">Holat bo'yicha</div>
-          <div class="dash-card-sub">Jami {{ number_format($totalOrders) }} ta</div>
+  <div class="row g-3 mb-4">
+    {{-- Status donut --}}
+    <div class="col-12 col-xl-4">
+      <div class="card border-0 shadow-sm rounded-4 h-100">
+        <div class="card-header bg-white border-bottom-0 px-4 pt-4 pb-2">
+          <h3 class="h6 fw-semibold mb-1 text-dark">Holat bo'yicha</h3>
+          <div class="small text-secondary">Jami {{ number_format($totalOrders) }} ta</div>
         </div>
-        <div class="dash-card-body pt-0">
-          <div class="dash-chart-surface"><div id="chartDonut" class="dash-chart-host dash-chart-host--210"></div></div>
-          <div class="donut-stat-row">
-            @foreach([['Yetkazildi',$completedOrders,'success'],["Yo'lda",$onwayOrders,'info'],['Qadoqda',$packingOrders,'accent'],['Kutilmoqda',$pendingOrders,'warning'],['Bekor',$cancelledOrders,'danger']] as $idx => [$l,$v,$c])
-            @if($idx>0)<div class="stat-divider"></div>@endif
-            <div class="stat-cell donut-stat-cell">
-              <div class="stat-cell-val" style="color:var(--p-{{ $c }})">{{ number_format($v) }}</div>
-              <div class="stat-cell-lbl">{{ $l }}</div>
-            </div>
+        <div class="card-body pt-0 px-4 pb-4">
+          <div id="chartDonut" style="min-height:210px;"></div>
+          <div class="row g-2 row-cols-5 mt-2 text-center">
+            @foreach([['Yetkazildi',$completedOrders,'success'],["Yo'lda",$onwayOrders,'info'],['Qadoqda',$packingOrders,'primary'],['Kutilmoqda',$pendingOrders,'warning'],['Bekor',$cancelledOrders,'danger']] as [$l,$v,$c])
+              <div class="col">
+                <div class="fw-bold text-{{ $c }}-emphasis font-monospace">{{ number_format($v) }}</div>
+                <div class="small text-secondary text-truncate">{{ $l }}</div>
+              </div>
             @endforeach
           </div>
         </div>
       </div>
     </div>
 
-    <div class="col-12 col-xl-8 fade-up">
-      <div class="dash-card h-100">
-        <div class="dash-card-head">
+    {{-- Recent orders list --}}
+    <div class="col-12 col-xl-8">
+      <div class="card border-0 shadow-sm rounded-4 h-100">
+        <div class="card-header bg-white border-bottom-0 px-4 pt-4 pb-2 d-flex align-items-start justify-content-between gap-3">
           <div>
-            <div class="dash-card-title">So'nggi buyurtmalar</div>
-            <div class="dash-card-sub">Oxirgi 10 ta</div>
+            <h3 class="h6 fw-semibold mb-1 text-dark">So'nggi buyurtmalar</h3>
+            <div class="small text-secondary">Oxirgi 10 ta</div>
           </div>
-          <a href="{{ route('admin.orders.index') }}" class="btn-p ghost sm">Barchasi <i class="bi bi-arrow-right"></i></a>
+          <a href="{{ route('admin.orders.index') }}" class="btn btn-sm btn-light border rounded-pill">
+            Barchasi <i class="bi bi-arrow-right ms-1"></i>
+          </a>
         </div>
-        <div class="dash-card-body p-0">
-          <div class="recent-orders-wrap">
-            @forelse($recentOrders as $order)
-            @php $bc=match($order['status']){'Yetkazildi'=>'ob-c',"Yo'lda"=>'ob-b','Qadoqlanmoqda'=>'ob-pk','Kutilmoqda'=>'ob-a','Bekor qilindi'=>'ob-f',default=>'ob-p'}; @endphp
-            <div class="ro-row">
-              <div class="ro-id"><span class="p-mono-id">#{{ $order['id'] }}</span>@if($order['gift'])<span class="ro-gift">🎁</span>@endif</div>
-              <div class="ro-customer">
-                <div class="d-av d-av--accent d-av--sm-text">@php $av = $resolveImg($order['avatar'] ?? null); @endphp @if($av)<img src="{{ $av }}" alt="">@else{{ strtoupper(substr($order['customer'],0,1)) }}@endif</div>
-                <span class="ro-name">{{ $order['customer'] }}</span>
+        <div class="card-body p-0">
+          @php
+            $statusToneMap = [
+              'Yetkazildi'    => 'success',
+              "Yo'lda"        => 'info',
+              'Qadoqlanmoqda' => 'primary',
+              'Kutilmoqda'    => 'warning',
+              'Bekor qilindi' => 'danger',
+            ];
+          @endphp
+          @forelse($recentOrders as $order)
+            @php $bs = $statusToneMap[$order['status']] ?? 'secondary'; @endphp
+            <div class="d-flex align-items-center gap-3 px-4 py-3 {{ !$loop->last ? 'border-bottom' : '' }}">
+              <span class="font-monospace fw-semibold text-dark">#{{ $order['id'] }}</span>
+              @if($order['gift'])<span title="Sovg'a">🎁</span>@endif
+              <div class="d-flex align-items-center gap-2 flex-grow-1 min-w-0">
+                @php $av = $resolveImg($order['avatar'] ?? null); @endphp
+                @if($av)
+                  <img src="{{ $av }}" alt="" class="rounded-circle border" style="width:32px;height:32px;object-fit:cover;">
+                @else
+                  <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-primary-subtle text-primary-emphasis fw-bold" style="width:32px;height:32px;">
+                    {{ strtoupper(substr($order['customer'],0,1)) }}
+                  </span>
+                @endif
+                <span class="text-truncate fw-medium">{{ $order['customer'] }}</span>
               </div>
-              <div class="ro-amount">{{ $order['amount'] }} <span class="p-currency-suffix">UZS</span></div>
-              <div class="ro-status"><span class="o-badge {{ $bc }}">{{ $order['status'] }}</span></div>
-              <div class="ro-date">{{ $order['date'] }}</div>
-              <div class="ro-action"><a href="{{ route('admin.orders.show',$order['id']) }}" class="btn-p ghost sm"><i class="bi bi-arrow-right"></i></a></div>
+              <div class="text-end fw-semibold text-nowrap font-monospace small">{{ $order['amount'] }} <span class="text-secondary fw-normal">UZS</span></div>
+              <span class="badge rounded-pill text-bg-{{ $bs }}-subtle text-{{ $bs }}-emphasis fw-semibold">{{ $order['status'] }}</span>
+              <span class="small text-secondary text-nowrap d-none d-md-inline">{{ $order['date'] }}</span>
+              <a href="{{ route('admin.orders.show',$order['id']) }}" class="btn btn-sm btn-outline-secondary rounded-circle" style="width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;padding:0;">
+                <i class="bi bi-arrow-right"></i>
+              </a>
             </div>
-            @empty
-            <div class="dash-empty"><i class="bi bi-bag-x dash-empty__ico"></i>Buyurtmalar yo'q</div>
-            @endforelse
-          </div>
+          @empty
+            <div class="text-center text-secondary py-5">
+              <i class="bi bi-bag-x display-6 d-block mb-2 text-secondary opacity-50"></i>
+              Buyurtmalar yo'q
+            </div>
+          @endforelse
         </div>
       </div>
     </div>
   </div>
 
+  {{-- Mystery Box queue --}}
   @php $hasMysteryQueue = $mysteryDueToday->count() || $mysteryDueSoon->count(); @endphp
   @if($hasMysteryQueue)
-  <div class="dash-card fade-up">
-    <div class="dash-card-head">
-      <div>
-        <div class="dash-card-title"><i class="bi bi-box-seam mr-1 {{ $mysteryDueCount>0?'dash-title-ico--danger':'dash-title-ico--accent' }}"></i>Mystery Box navbati</div>
-        <div class="dash-card-sub">
-          @if($mysteryDueCount>0)
-            <span class="dash-sub-danger">{{ $mysteryDueCount }} ta kechikdi</span>
-          @else
-            {{ $mysteryDueSoon->count() }} ta 7 kun ichida
-          @endif
+    <div class="card border-0 shadow-sm rounded-4">
+      <div class="card-header bg-white border-bottom-0 px-4 pt-4 pb-2 d-flex align-items-start justify-content-between gap-3">
+        <div>
+          <h3 class="h6 fw-semibold mb-1 text-dark">
+            <i class="bi bi-box-seam me-2 text-{{ $mysteryDueCount > 0 ? 'danger' : 'primary' }}"></i>Mystery Box navbati
+          </h3>
+          <div class="small text-secondary">
+            @if($mysteryDueCount > 0)
+              <span class="text-danger fw-semibold">{{ $mysteryDueCount }} ta kechikdi</span>
+            @else
+              {{ $mysteryDueSoon->count() }} ta 7 kun ichida
+            @endif
+          </div>
+        </div>
+        <a href="{{ route('admin.mystery-box.subscriptions',['tab'=>'active']) }}" class="btn btn-sm btn-light border rounded-pill">Barchasi</a>
+      </div>
+      <div class="card-body px-4 pb-4">
+        <div class="row g-2 row-cols-1 row-cols-md-2">
+          @foreach($mysteryDueToday->take(4) as $sub)
+            <div class="col">
+              <a href="{{ route('admin.mystery-box.subscription',$sub) }}" class="d-flex align-items-center gap-3 p-3 rounded-3 border bg-white text-decoration-none">
+                <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-success-subtle text-success-emphasis fw-bold flex-shrink-0" style="width:36px;height:36px;">
+                  {{ strtoupper(substr($sub->user?->name??'M',0,1)) }}
+                </span>
+                <div class="flex-grow-1 min-w-0">
+                  <div class="fw-semibold text-dark text-truncate">{{ $sub->user?->name }} {{ $sub->user?->lastname }}</div>
+                  <div class="small text-secondary text-truncate">{{ $sub->plan?->name_uz }} · {{ $sub->next_delivery_at?->diffForHumans() }}</div>
+                </div>
+                <span class="badge rounded-pill text-bg-danger-subtle text-danger-emphasis fw-semibold">Navbatda</span>
+              </a>
+            </div>
+          @endforeach
+          @foreach($mysteryDueSoon->take(4) as $sub)
+            <div class="col">
+              <a href="{{ route('admin.mystery-box.subscription',$sub) }}" class="d-flex align-items-center gap-3 p-3 rounded-3 border bg-white text-decoration-none">
+                <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-success-subtle text-success-emphasis fw-bold flex-shrink-0" style="width:36px;height:36px;">
+                  {{ strtoupper(substr($sub->user?->name??'M',0,1)) }}
+                </span>
+                <div class="flex-grow-1 min-w-0">
+                  <div class="fw-semibold text-dark text-truncate small">{{ $sub->user?->name }} {{ $sub->user?->lastname }}</div>
+                  <div class="small text-secondary">{{ $sub->next_delivery_at?->format('d.m.Y') }}</div>
+                </div>
+              </a>
+            </div>
+          @endforeach
         </div>
       </div>
-      <a href="{{ route('admin.mystery-box.subscriptions',['tab'=>'active']) }}" class="btn-p ghost sm">Barchasi</a>
     </div>
-    <div class="dash-card-body">
-      <div class="row g-2 row-cols-1 row-cols-md-2">
-        @foreach($mysteryDueToday->take(4) as $sub)
-        <div class="col">
-        <a href="{{ route('admin.mystery-box.subscription',$sub) }}" class="dash-row-link">
-          <div class="d-av d-av--teal">{{ strtoupper(substr($sub->user?->name??'M',0,1)) }}</div>
-          <div class="dash-row-main">
-            <div class="dash-row-title--md">{{ $sub->user?->name }} {{ $sub->user?->lastname }}</div>
-            <div class="dash-row-meta--plain">{{ $sub->plan?->name_uz }} · {{ $sub->next_delivery_at?->diffForHumans() }}</div>
-          </div>
-          <span class="s-pill danger s-pill--dash-tight">Navbatda</span>
-        </a>
-        </div>
-        @endforeach
-        @foreach($mysteryDueSoon->take(4) as $sub)
-        <div class="col">
-        <a href="{{ route('admin.mystery-box.subscription',$sub) }}" class="dash-row-link dash-row-link--compact">
-          <div class="d-av d-av--teal">{{ strtoupper(substr($sub->user?->name??'M',0,1)) }}</div>
-          <div class="dash-row-main">
-            <div class="dash-row-title--sm">{{ $sub->user?->name }} {{ $sub->user?->lastname }}</div>
-            <div class="dash-row-meta--2xs">{{ $sub->next_delivery_at?->format('d.m.Y') }}</div>
-          </div>
-        </a>
-        </div>
-        @endforeach
-      </div>
-    </div>
-  </div>
   @endif
 
 </div>
 
 {{-- ══════════════════════════════════════════════════════════════════════════ --}}
-{{-- TAB 3: MOLIYA — Revenue chart + Financial report (superadmin)            --}}
+{{-- TAB 3: MOLIYA (pure Bootstrap)                                            --}}
 {{-- ══════════════════════════════════════════════════════════════════════════ --}}
-<div class="dash-tab-panel" id="dash-panel-finance" x-show="tab === 'finance'" x-cloak>
+<div x-show="tab === 'finance'" x-cloak>
 
-  <div class="dash-card mb-4 fade-up">
-    <div class="dash-card-head">
+  {{-- Revenue chart with period toggle (Bootstrap btn-group) --}}
+  <div class="card border-0 shadow-sm rounded-4 mb-4">
+    <div class="card-header bg-white border-bottom-0 px-4 pt-4 pb-2 d-flex flex-wrap align-items-start justify-content-between gap-3">
       <div>
-        <div class="dash-card-title">Daromad dinamikasi</div>
-        <div class="dash-card-sub">Oy / Hafta / Bugun · mln UZS</div>
+        <h3 class="h6 fw-semibold mb-1 text-dark">Daromad dinamikasi</h3>
+        <div class="small text-secondary">Oy / Hafta / Bugun · mln UZS</div>
       </div>
-      <div class="flex items-center gap-2">
-        <div class="period-toggle" id="revPeriodToggle">
-          <button class="period-btn active" data-period="month" onclick="switchRevPeriod(this,'month')">Oy</button>
-          <button class="period-btn" data-period="week" onclick="switchRevPeriod(this,'week')">Hafta</button>
-          <button class="period-btn" data-period="today" onclick="switchRevPeriod(this,'today')">Bugun</button>
+      <div class="d-flex align-items-center gap-2">
+        <div class="btn-group btn-group-sm" role="group" id="revPeriodToggle">
+          <button type="button" class="btn btn-primary"          data-period="month" onclick="switchRevPeriod(this,'month')">Oy</button>
+          <button type="button" class="btn btn-outline-secondary" data-period="week"  onclick="switchRevPeriod(this,'week')">Hafta</button>
+          <button type="button" class="btn btn-outline-secondary" data-period="today" onclick="switchRevPeriod(this,'today')">Bugun</button>
         </div>
-        <a href="{{ route('admin.orders.index') }}" class="btn-p ghost sm">Buyurtmalar <i class="bi bi-arrow-right"></i></a>
+        <a href="{{ route('admin.orders.index') }}" class="btn btn-sm btn-light border rounded-pill">
+          Buyurtmalar <i class="bi bi-arrow-right ms-1"></i>
+        </a>
       </div>
     </div>
-    <div class="dash-card-body pt-0">
-      <div class="dash-chart-surface"><div id="chartRevenue" class="dash-chart-host dash-chart-host--288"></div></div>
+    <div class="card-body pt-0 px-4 pb-4">
+      <div id="chartRevenue" style="min-height:288px;"></div>
     </div>
   </div>
 
   @if($isSuperAdmin)
-  @php
-    $finRows = [
-      ['accent','bi-activity','GMV (brutto)','Barcha buyurtmalar',$gmvTotal,$gmvMonth],
-      ['success','bi-check-circle',"To'langan daromad",'paymentStatus = 2',$totalRevenue,$monthRevenue],
-      ['info','bi-truck','Yetkazish','Delivery fee',$totalDeliveryIncome,$monthDeliveryIncome],
-      ['purple','bi-percent','Seller komissiya',"O'rtacha {$avgCommissionPct}%",$totalCommissionEarned,$monthCommissionEarned],
-      ['teal','bi-box-seam','Mystery Box','Faol + yakunlangan',$mysteryRevTotal,$mysteryRevMonth],
-      ['pink','bi-gift','Gift Sertifikat','Ishlatilgan: '.number_format($giftUsedInOrders/1000).'K',$giftRevenue,0],
-    ];
-    $finCosts = [
-      ['danger','bi-ticket-perforated','Promokod',"{$promoOrdersCount} ta buyurtmada",$totalPromoDiscount,$monthPromoDiscount],
-      ['warning','bi-cash-stack','Cashback','Foydalanuvchilarga qaytarildi',$totalCashbackPaid,$monthCashbackPaid],
-      ['muted','bi-shop-window','Seller payout','Kutilmoqda: '.number_format($pendingSellerPayout/1000).'K',$totalSellerPayout,$monthSellerPayout],
-      ['muted','bi-bicycle','Kuryer payout','Kutilmoqda: '.number_format($pendingCourierPayout/1000).'K',$totalCourierPayout,$monthCourierPayout],
-      ['danger','bi-x-circle','Bekor yo\'qotish','status=F',$cancelledRevLoss,$cancelledMonthLoss],
-    ];
-  @endphp
+    @php
+      $finRows = [
+        ['primary','bi-activity','GMV (brutto)','Barcha buyurtmalar',$gmvTotal,$gmvMonth],
+        ['success','bi-check-circle',"To'langan daromad",'paymentStatus = 2',$totalRevenue,$monthRevenue],
+        ['info','bi-truck','Yetkazish','Delivery fee',$totalDeliveryIncome,$monthDeliveryIncome],
+        ['primary','bi-percent','Seller komissiya',"O'rtacha {$avgCommissionPct}%",$totalCommissionEarned,$monthCommissionEarned],
+        ['success','bi-box-seam','Mystery Box','Faol + yakunlangan',$mysteryRevTotal,$mysteryRevMonth],
+        ['danger','bi-gift','Gift Sertifikat','Ishlatilgan: '.number_format($giftUsedInOrders/1000).'K',$giftRevenue,0],
+      ];
+      $finCosts = [
+        ['danger','bi-ticket-perforated','Promokod',"{$promoOrdersCount} ta buyurtmada",$totalPromoDiscount,$monthPromoDiscount],
+        ['warning','bi-cash-stack','Cashback','Foydalanuvchilarga qaytarildi',$totalCashbackPaid,$monthCashbackPaid],
+        ['secondary','bi-shop-window','Seller payout','Kutilmoqda: '.number_format($pendingSellerPayout/1000).'K',$totalSellerPayout,$monthSellerPayout],
+        ['secondary','bi-bicycle','Kuryer payout','Kutilmoqda: '.number_format($pendingCourierPayout/1000).'K',$totalCourierPayout,$monthCourierPayout],
+        ['danger','bi-x-circle','Bekor yo\'qotish','status=F',$cancelledRevLoss,$cancelledMonthLoss],
+      ];
+    @endphp
 
-  <div class="row g-4">
-    <div class="col-12 col-xl-5 fade-up">
-      <div class="fin-card">
-        <div class="fin-section">
-          <div class="fin-section-label fin-section-label--income"><i class="bi bi-arrow-up-circle-fill"></i> Daromadlar</div>
-          @foreach($finRows as [$clr,$ico,$lbl,$sub,$total,$month])
-          @php
-            $bg=match($clr){'purple'=>'rgba(124,92,252,.13)','teal'=>'rgba(20,184,166,.11)','pink'=>'rgba(236,72,153,.1)',default=>"var(--p-{$clr}-d)"};
-            $clrVal=match($clr){'purple'=>'#7c5cfc','teal'=>'#14b8a6','pink'=>'#ec4899',default=>"var(--p-{$clr})"};
-          @endphp
-          <div class="fin2-row">
-            <div class="fin2-ico" style="background:{{ $bg }};color:{{ $clrVal }}"><i class="bi {{ $ico }}"></i></div>
-            <div class="fin2-body">
-              <div class="fin2-name">{{ $lbl }}</div>
-              <div class="fin2-sub">{{ $sub }}</div>
+    <div class="row g-3">
+      {{-- Income + Cost + Profit summary --}}
+      <div class="col-12 col-xl-5">
+        <div class="card border-0 shadow-sm rounded-4 h-100">
+          <div class="card-body p-0">
+            {{-- Income section --}}
+            <div class="px-4 pt-4 pb-3">
+              <h4 class="h6 fw-semibold text-success-emphasis mb-3">
+                <i class="bi bi-arrow-up-circle-fill me-1"></i> Daromadlar
+              </h4>
+              @foreach($finRows as [$tone,$ico,$lbl,$sub,$total,$month])
+                <div class="d-flex align-items-center gap-3 py-2 {{ !$loop->last ? 'border-bottom' : '' }}">
+                  <span class="d-inline-flex align-items-center justify-content-center rounded-3 bg-{{ $tone }}-subtle text-{{ $tone }}-emphasis flex-shrink-0" style="width:2.25rem;height:2.25rem;">
+                    <i class="bi {{ $ico }}"></i>
+                  </span>
+                  <div class="flex-grow-1 min-w-0">
+                    <div class="fw-semibold text-dark text-truncate">{{ $lbl }}</div>
+                    <div class="small text-secondary text-truncate">{{ $sub }}</div>
+                  </div>
+                  <div class="text-end">
+                    <div class="fw-bold text-{{ $tone }}-emphasis font-monospace">{{ number_format($total/1_000_000,1) }}<span class="small text-secondary fw-normal">M</span></div>
+                    @if($month > 0)<div class="small text-secondary font-monospace">{{ number_format($month/1000) }}K / oy</div>@endif
+                  </div>
+                </div>
+              @endforeach
             </div>
-            <div class="fin2-nums">
-              <div class="fin2-total" style="color:{{ $clrVal }}">{{ number_format($total/1_000_000,1) }}<span class="fin2-unit">M</span></div>
-              @if($month>0)<div class="fin2-month">{{ number_format($month/1000) }}K / oy</div>@endif
+            {{-- Cost section --}}
+            <div class="px-4 py-3 bg-light border-top border-bottom">
+              <h4 class="h6 fw-semibold text-danger-emphasis mb-3">
+                <i class="bi bi-arrow-down-circle-fill me-1"></i> Chiqimlar
+              </h4>
+              @foreach($finCosts as [$tone,$ico,$lbl,$sub,$total,$month])
+                <div class="d-flex align-items-center gap-3 py-2 {{ !$loop->last ? 'border-bottom' : '' }}">
+                  <span class="d-inline-flex align-items-center justify-content-center rounded-3 bg-{{ $tone }}-subtle text-{{ $tone }}-emphasis flex-shrink-0" style="width:2.25rem;height:2.25rem;">
+                    <i class="bi {{ $ico }}"></i>
+                  </span>
+                  <div class="flex-grow-1 min-w-0">
+                    <div class="fw-semibold text-dark text-truncate">{{ $lbl }}</div>
+                    <div class="small text-secondary text-truncate">{{ $sub }}</div>
+                  </div>
+                  <div class="text-end">
+                    <div class="fw-bold text-danger-emphasis font-monospace">−{{ number_format($total/1_000_000,1) }}<span class="small text-secondary fw-normal">M</span></div>
+                    @if($month > 0)<div class="small text-secondary font-monospace">{{ number_format($month/1000) }}K / oy</div>@endif
+                  </div>
+                </div>
+              @endforeach
             </div>
-          </div>
-          @endforeach
-        </div>
-        <div class="fin-section fin-section--cost">
-          <div class="fin-section-label fin-section-label--cost"><i class="bi bi-arrow-down-circle-fill"></i> Chiqimlar</div>
-          @foreach($finCosts as [$clr,$ico,$lbl,$sub,$total,$month])
-          @php $costBg=$clr==='muted'?'var(--p-elevated)':"var(--p-{$clr}-d)"; @endphp
-          <div class="fin2-row">
-            <div class="fin2-ico" style="background:{{ $costBg }};color:var(--p-{{ $clr }})"><i class="bi {{ $ico }}"></i></div>
-            <div class="fin2-body">
-              <div class="fin2-name fin2-name--cost">{{ $lbl }}</div>
-              <div class="fin2-sub">{{ $sub }}</div>
-            </div>
-            <div class="fin2-nums">
-              <div class="fin2-total fin2-total--cost">−{{ number_format($total/1_000_000,1) }}<span class="fin2-unit">M</span></div>
-              @if($month>0)<div class="fin2-month">{{ number_format($month/1000) }}K / oy</div>@endif
-            </div>
-          </div>
-          @endforeach
-        </div>
-        <div class="fin-profit-row">
-          <div class="fin-profit-ico"><i class="bi bi-stars"></i></div>
-          <div class="fin-profit-body">
-            <div class="fin-profit-label">Platform sof foyda</div>
-            <div class="fin-profit-sub">Komissiya + Yetkazish − Chiqimlar</div>
-          </div>
-          <div class="fin-profit-val">
-            <div class="fin-profit-num">{{ number_format($platformProfit/1_000_000,2) }}<span class="fin2-unit"> M</span></div>
-            <div class="fin2-month">Bu oy: {{ number_format($platformProfitMonth/1000) }}K</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-12 col-xl-7 fade-up d-flex flex-column gap-4">
-      <div class="dash-card">
-        <div class="dash-card-head">
-          <div class="dash-card-title">AOV dinamikasi</div>
-          <div class="dash-card-sub">Joriy: {{ number_format($avgOrderValue) }} UZS · Komissiya: {{ $avgCommissionPct }}%</div>
-        </div>
-        <div class="dash-card-body"><div id="chartAov" class="dash-chart-host dash-chart-host--130"></div></div>
-      </div>
-      <div class="row g-4 row-cols-1 row-cols-md-2">
-        <div class="col">
-        <div class="dash-card h-100">
-          <div class="dash-card-head">
-            <div class="dash-card-title">Mahsulot turi</div>
-            <div class="dash-card-sub">Daromad ulushi</div>
-          </div>
-          <div class="dash-card-body">
-            @php $typeTotal=max(1,$revenueByType['book']+$revenueByType['stationery']);$bookPct=round($revenueByType['book']/$typeTotal*100,1);$statPct=round($revenueByType['stationery']/$typeTotal*100,1); @endphp
-            <div id="chartTypePie" class="dash-chart-host dash-chart-host--120"></div>
-            @foreach([['Kitoblar',$revenueByType['book'],'accent','bi-book',$bookPct],['Kanstovar',$revenueByType['stationery'],'warning','bi-pencil-square',$statPct]] as [$l,$v,$c,$i,$p])
-            <div class="type-legend-row">
-              <i class="bi {{ $i }} type-legend-ico type-legend-ico--{{ $c }}"></i>
-              <span class="type-legend-label">{{ $l }}</span>
-              <span class="type-legend-val">{{ number_format($v/1000) }}K</span>
-              <span class="s-pill {{ $c }} type-legend-pill">{{ $p }}%</span>
-            </div>
-            @endforeach
-          </div>
-        </div>
-        </div>
-        <div class="col">
-        <div class="dash-card h-100">
-          <div class="dash-card-head">
-            <div class="dash-card-title">Xaridorlar (bu oy)</div>
-            <div class="dash-card-sub">Yangi vs Takroriy</div>
-          </div>
-          <div class="dash-card-body">
-            @php $totalB=max(1,$repeatBuyersMonth+$newBuyersMonth);$repeatPct=$totalB>1?round($repeatBuyersMonth/$totalB*100):0; @endphp
-            <div id="chartBuyers" class="dash-chart-host dash-chart-host--120"></div>
-            @foreach([['Yangi',$newBuyersMonth,'success','1 marta'],['Takroriy',$repeatBuyersMonth,'accent','2+ marta']] as [$l,$v,$c,$s])
-            <div class="buyer-legend-row">
-              <div class="buyer-legend-dot buyer-legend-dot--{{ $c }}"></div>
-              <div class="buyer-legend-stack">
-                <div class="buyer-legend-name">{{ $l }}</div>
-                <div class="buyer-legend-sub">{{ $s }}</div>
+            {{-- Profit row --}}
+            <div class="d-flex align-items-center gap-3 px-4 py-3 bg-primary-subtle">
+              <span class="d-inline-flex align-items-center justify-content-center rounded-3 bg-primary text-white flex-shrink-0" style="width:2.5rem;height:2.5rem;">
+                <i class="bi bi-stars"></i>
+              </span>
+              <div class="flex-grow-1 min-w-0">
+                <div class="fw-bold text-primary-emphasis">Platform sof foyda</div>
+                <div class="small text-primary-emphasis opacity-75">Komissiya + Yetkazish − Chiqimlar</div>
               </div>
-              <span class="buyer-legend-count">{{ number_format($v) }}</span>
-            </div>
-            @endforeach
-            <div class="dash-tile-divider">
-              <div class="dash-repeat-head"><span>Qayta qaytish</span><span class="dash-repeat-pct">{{ $repeatPct }}%</span></div>
-              <div class="dash-prog-track"><div class="dash-prog-fill" style="width:{{ $repeatPct }}%;background:var(--p-accent)"></div></div>
-            </div>
-          </div>
-        </div>
-        </div>
-      </div>
-      @if($deliveryTypeSplit->count())
-      <div class="dash-card">
-        <div class="dash-card-head"><div class="dash-card-title">Yetkazish turlari</div></div>
-        <div class="dash-card-body">
-          @foreach($deliveryTypeSplit->take(5) as $dt)
-          <div class="dash-delivery-line">
-            <span class="dash-delivery-name">{{ $dt->deliveryType }}</span>
-            <span class="dash-delivery-val">{{ number_format($dt->cnt) }} ta</span>
-          </div>
-          @endforeach
-        </div>
-      </div>
-      @endif
-
-      @if(count($salesGeoCountries))
-      <div class="dash-card">
-        <div class="dash-card-head">
-          <div>
-            <div class="dash-card-title">Hududlar bo‘yicha sotuvlar</div>
-            <div class="dash-card-sub">Davlatni tanlang, sotuv bo‘lgan viloyatlar avtomatik chiqadi</div>
-          </div>
-        </div>
-        <div class="dash-card-body pt-0">
-          <div class="period-toggle mb-3" id="salesGeoCountryToggle">
-            @foreach($salesGeoCountries as $country)
-              <button
-                class="period-btn {{ $salesGeoDefaultCountry === $country['key'] ? 'active' : '' }}"
-                data-country="{{ $country['key'] }}"
-                onclick="switchSalesGeoCountry(this,'{{ $country['key'] }}')"
-              >
-                {{ $country['label'] }}
-              </button>
-            @endforeach
-          </div>
-
-          <div class="row g-4">
-            <div class="col-12 col-xl-8">
-              <div class="dash-chart-surface">
-                <div id="chartSalesGeo" class="dash-chart-host dash-chart-host--220"></div>
+              <div class="text-end">
+                <div class="h5 mb-0 fw-bold text-primary-emphasis font-monospace">{{ number_format($platformProfit/1_000_000,2) }}<span class="small text-secondary fw-normal"> M</span></div>
+                <div class="small text-primary-emphasis font-monospace">Bu oy: {{ number_format($platformProfitMonth/1000) }}K</div>
               </div>
             </div>
-            <div class="col-12 col-xl-4">
-              <div id="salesGeoCountrySummary" class="row row-cols-2 g-3 mb-3"></div>
-              <div id="salesGeoRegionList" class="space-y-2"></div>
-            </div>
           </div>
         </div>
       </div>
-      @endif
+
+      <div class="col-12 col-xl-7 d-flex flex-column gap-3">
+        {{-- AOV chart --}}
+        <div class="card border-0 shadow-sm rounded-4">
+          <div class="card-header bg-white border-bottom-0 px-4 pt-4 pb-2">
+            <h3 class="h6 fw-semibold mb-1 text-dark">AOV dinamikasi</h3>
+            <div class="small text-secondary">Joriy: {{ number_format($avgOrderValue) }} UZS · Komissiya: {{ $avgCommissionPct }}%</div>
+          </div>
+          <div class="card-body pt-0 px-4 pb-4">
+            <div id="chartAov" style="min-height:130px;"></div>
+          </div>
+        </div>
+
+        {{-- Mahsulot turi + Xaridorlar --}}
+        <div class="row g-3 row-cols-1 row-cols-md-2">
+          <div class="col">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+              <div class="card-header bg-white border-bottom-0 px-4 pt-4 pb-2">
+                <h3 class="h6 fw-semibold mb-1 text-dark">Mahsulot turi</h3>
+                <div class="small text-secondary">Daromad ulushi</div>
+              </div>
+              <div class="card-body pt-0 px-4 pb-4">
+                @php
+                  $typeTotal = max(1, $revenueByType['book'] + $revenueByType['stationery']);
+                  $bookPct = round($revenueByType['book']/$typeTotal*100, 1);
+                  $statPct = round($revenueByType['stationery']/$typeTotal*100, 1);
+                @endphp
+                <div id="chartTypePie" style="min-height:120px;"></div>
+                @foreach([['Kitoblar',$revenueByType['book'],'primary','bi-book',$bookPct],['Kanstovar',$revenueByType['stationery'],'warning','bi-pencil-square',$statPct]] as [$l,$v,$c,$i,$p])
+                  <div class="d-flex align-items-center gap-2 py-2 {{ !$loop->last ? 'border-bottom' : '' }}">
+                    <i class="bi {{ $i }} text-{{ $c }}-emphasis"></i>
+                    <span class="text-dark fw-medium flex-grow-1">{{ $l }}</span>
+                    <span class="small text-secondary font-monospace">{{ number_format($v/1000) }}K</span>
+                    <span class="badge rounded-pill text-bg-{{ $c }}-subtle text-{{ $c }}-emphasis fw-semibold">{{ $p }}%</span>
+                  </div>
+                @endforeach
+              </div>
+            </div>
+          </div>
+          <div class="col">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+              <div class="card-header bg-white border-bottom-0 px-4 pt-4 pb-2">
+                <h3 class="h6 fw-semibold mb-1 text-dark">Xaridorlar (bu oy)</h3>
+                <div class="small text-secondary">Yangi vs Takroriy</div>
+              </div>
+              <div class="card-body pt-0 px-4 pb-4">
+                @php
+                  $totalB = max(1, $repeatBuyersMonth + $newBuyersMonth);
+                  $repeatPct = $totalB > 1 ? round($repeatBuyersMonth/$totalB*100) : 0;
+                @endphp
+                <div id="chartBuyers" style="min-height:120px;"></div>
+                @foreach([['Yangi',$newBuyersMonth,'success','1 marta'],['Takroriy',$repeatBuyersMonth,'primary','2+ marta']] as [$l,$v,$c,$s])
+                  <div class="d-flex align-items-center gap-2 py-2 {{ !$loop->last ? 'border-bottom' : '' }}">
+                    <span class="rounded-circle bg-{{ $c }} d-inline-block" style="width:.625rem;height:.625rem;"></span>
+                    <div class="flex-grow-1">
+                      <div class="fw-medium text-dark small">{{ $l }}</div>
+                      <div class="text-secondary" style="font-size:.7rem;">{{ $s }}</div>
+                    </div>
+                    <span class="fw-semibold text-dark font-monospace">{{ number_format($v) }}</span>
+                  </div>
+                @endforeach
+                <div class="mt-2 pt-2 border-top">
+                  <div class="d-flex align-items-center justify-content-between mb-1">
+                    <span class="small text-secondary">Qayta qaytish</span>
+                    <span class="fw-bold text-primary-emphasis font-monospace">{{ $repeatPct }}%</span>
+                  </div>
+                  <div class="progress" role="progressbar" style="height:.4rem;">
+                    <div class="progress-bar bg-primary" style="width:{{ $repeatPct }}%"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        @if($deliveryTypeSplit->count())
+          <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-header bg-white border-bottom-0 px-4 pt-4 pb-2">
+              <h3 class="h6 fw-semibold mb-0 text-dark">Yetkazish turlari</h3>
+            </div>
+            <div class="card-body pt-0 px-4 pb-3">
+              @foreach($deliveryTypeSplit->take(5) as $dt)
+                <div class="d-flex justify-content-between align-items-center py-2 {{ !$loop->last ? 'border-bottom' : '' }}">
+                  <span class="text-dark fw-medium">{{ $dt->deliveryType }}</span>
+                  <span class="text-secondary font-monospace fw-semibold">{{ number_format($dt->cnt) }} ta</span>
+                </div>
+              @endforeach
+            </div>
+          </div>
+        @endif
+
+        @if(count($salesGeoCountries))
+          <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-header bg-white border-bottom-0 px-4 pt-4 pb-2">
+              <h3 class="h6 fw-semibold mb-1 text-dark">Hududlar bo‘yicha sotuvlar</h3>
+              <div class="small text-secondary">Davlatni tanlang, sotuv bo‘lgan viloyatlar avtomatik chiqadi</div>
+            </div>
+            <div class="card-body pt-0 px-4 pb-4">
+              <div class="btn-group btn-group-sm mb-3" role="group" id="salesGeoCountryToggle">
+                @foreach($salesGeoCountries as $country)
+                  <button type="button"
+                          class="btn {{ $salesGeoDefaultCountry === $country['key'] ? 'btn-primary' : 'btn-outline-secondary' }}"
+                          data-country="{{ $country['key'] }}"
+                          onclick="switchSalesGeoCountry(this,'{{ $country['key'] }}')">
+                    {{ $country['label'] }}
+                  </button>
+                @endforeach
+              </div>
+              <div class="row g-3">
+                <div class="col-12 col-xl-8">
+                  <div id="chartSalesGeo" style="min-height:220px;"></div>
+                </div>
+                <div class="col-12 col-xl-4">
+                  <div id="salesGeoCountrySummary" class="row row-cols-2 g-2 mb-3"></div>
+                  <div id="salesGeoRegionList" class="d-flex flex-column gap-2"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        @endif
+      </div>
     </div>
-  </div>
   @else
-  <div class="dash-empty"><i class="bi bi-lock dash-empty__ico"></i>Moliyaviy hisobot faqat superadmin uchun</div>
+    <div class="card border-0 shadow-sm rounded-4 text-center py-5">
+      <div class="card-body">
+        <i class="bi bi-lock display-6 d-block mb-2 text-secondary opacity-50"></i>
+        <div class="text-secondary">Moliyaviy hisobot faqat superadmin uchun</div>
+      </div>
+    </div>
   @endif
 
 </div>
 
 {{-- ══════════════════════════════════════════════════════════════════════════ --}}
-{{-- TAB 4: FOYDALANUVCHILAR — Holat + Online + Top mijozlar                  --}}
+{{-- TAB 4: FOYDALANUVCHILAR (pure Bootstrap)                                  --}}
 {{-- ══════════════════════════════════════════════════════════════════════════ --}}
-<div class="dash-tab-panel" id="dash-panel-users" x-show="tab === 'users'" x-cloak>
+<div x-show="tab === 'users'" x-cloak>
+  <div class="row g-3">
 
-  <div class="row g-4">
-
-    <div class="col-12 col-xl-4 fade-up">
-      <div class="dash-card h-100">
-        <div class="dash-card-head">
+    {{-- User stats with progress bars --}}
+    <div class="col-12 col-xl-4">
+      <div class="card border-0 shadow-sm rounded-4 h-100">
+        <div class="card-header bg-white border-bottom-0 px-4 pt-4 pb-2 d-flex align-items-start justify-content-between gap-2">
           <div>
-            <div class="dash-card-title">Foydalanuvchilar holati</div>
-            <div class="dash-card-sub">{{ number_format($totalUsers) }} ta jami ro'yxatda</div>
+            <h3 class="h6 fw-semibold mb-1 text-dark">Foydalanuvchilar holati</h3>
+            <div class="small text-secondary">{{ number_format($totalUsers) }} ta jami ro'yxatda</div>
           </div>
-          <a href="{{ route('admin.users.index') }}" class="btn-p ghost sm">Barchasi <i class="bi bi-arrow-right"></i></a>
+          <a href="{{ route('admin.users.index') }}" class="btn btn-sm btn-light border rounded-pill">
+            Barchasi <i class="bi bi-arrow-right ms-1"></i>
+          </a>
         </div>
-        <div class="dash-card-body">
-          <div class="user-mini-strip">
-            @foreach([[$totalUsers,'Jami','text'],[$onlineUsers,'Online','success'],[$premiumUsers,'Premium','warning'],[$newUsersToday,'+Bugun','accent']] as [$v,$l,$c])
-            <div class="user-mini-cell">
-              <div class="user-mini-val" style="color:var(--p-{{ $c }})">{{ number_format($v) }}</div>
-              <div class="user-mini-lbl">{{ $l }}</div>
-            </div>
+        <div class="card-body pt-0 px-4 pb-4">
+          {{-- Quick stat strip --}}
+          <div class="row g-2 row-cols-4 mb-3 text-center">
+            @foreach([[$totalUsers,'Jami','dark'],[$onlineUsers,'Online','success'],[$premiumUsers,'Premium','warning'],[$newUsersToday,'+Bugun','primary']] as [$v,$l,$c])
+              <div class="col">
+                <div class="fw-bold text-{{ $c }}-emphasis font-monospace">{{ number_format($v) }}</div>
+                <div class="small text-secondary">{{ $l }}</div>
+              </div>
             @endforeach
           </div>
-          <div class="mt-3">
-            @foreach([['Online (5 min)',$onlineUsers,'success'],['Aktiv (FCM)',$activeUsers,'accent'],['Premium',$premiumUsers,'warning'],['Tasdiqlangan',$verifiedUsers,'info'],['Izolyat (30+ kun)',$isolatedUsers,'danger']] as [$l,$v,$c])
-            <div class="user-prog-row">
-              <div class="user-prog-left">
-                <span class="user-prog-dot" style="background:var(--p-{{ $c }})"></span>
-                <span class="user-prog-lbl">{{ $l }}</span>
+          {{-- Progress rows --}}
+          @foreach([['Online (5 min)',$onlineUsers,'success'],['Aktiv (FCM)',$activeUsers,'primary'],['Premium',$premiumUsers,'warning'],['Tasdiqlangan',$verifiedUsers,'info'],['Izolyat (30+ kun)',$isolatedUsers,'danger']] as [$l,$v,$c])
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <span class="rounded-circle bg-{{ $c }} d-inline-block flex-shrink-0" style="width:.5rem;height:.5rem;"></span>
+              <span class="small text-dark fw-medium" style="min-width:9rem;">{{ $l }}</span>
+              <div class="progress flex-grow-1" role="progressbar" style="height:.4rem;">
+                <div class="progress-bar bg-{{ $c }}" style="width:{{ $totalUsers>0?min(round($v/$totalUsers*100),100):0 }}%"></div>
               </div>
-              <div class="user-prog-mid">
-                <div class="user-prog-bar">
-                  <div class="user-prog-fill" style="width:{{ $totalUsers>0?min(round($v/$totalUsers*100),100):0 }}%;background:var(--p-{{ $c }})"></div>
-                </div>
-              </div>
-              <span class="user-prog-val">{{ number_format($v) }}</span>
+              <span class="small fw-semibold text-dark font-monospace">{{ number_format($v) }}</span>
             </div>
-            @endforeach
+          @endforeach
+
+          <div class="mt-3 pt-3 border-top">
+            <div class="small text-secondary mb-1">Yangi userlar — 7 kun</div>
+            <div id="chartUserSparkline" style="min-height:60px;"></div>
           </div>
-          <div class="user-sparkline-block">
-            <div class="sparkline-cap">Yangi userlar — 7 kun</div>
-            <div id="chartUserSparkline" class="dash-chart-host dash-chart-host--60"></div>
-          </div>
-          @if($isolatedUsers>0)
-          <div class="alert-item danger alert-item--mt alert-item--compact">
-            <i class="bi bi-person-x alert-item__i--shrink"></i>
-            <span>{{ number_format($isolatedUsers) }} ta user 30+ kun yo'q</span>
-            <a href="{{ route('admin.users.index') }}" class="alert-item__link">Ko'rish →</a>
-          </div>
+
+          @if($isolatedUsers > 0)
+            <a href="{{ route('admin.users.index') }}" class="alert alert-danger d-flex align-items-center gap-2 mb-0 mt-3 small text-decoration-none">
+              <i class="bi bi-person-x"></i>
+              <span class="flex-grow-1">{{ number_format($isolatedUsers) }} ta user 30+ kun yo'q</span>
+              <span class="fw-semibold">Ko'rish →</span>
+            </a>
           @endif
         </div>
       </div>
     </div>
 
-    <div class="col-12 col-xl-4 fade-up">
-      <div class="dash-card h-100">
-        <div class="dash-card-head">
-          <div>
-            <div class="dash-card-title">Hozir online</div>
-            <div class="dash-card-sub dash-card-sub--row"><span class="live-dot"></span>&ensp;{{ $onlineUsers }} nafar</div>
+    {{-- Online users list --}}
+    <div class="col-12 col-xl-4">
+      <div class="card border-0 shadow-sm rounded-4 h-100">
+        <div class="card-header bg-white border-bottom-0 px-4 pt-4 pb-2">
+          <h3 class="h6 fw-semibold mb-1 text-dark">Hozir online</h3>
+          <div class="small text-success-emphasis d-flex align-items-center gap-2">
+            <span class="rounded-circle bg-success d-inline-block" style="width:.5rem;height:.5rem;"></span>
+            {{ $onlineUsers }} nafar
           </div>
         </div>
-        <div class="dash-card-body">
-          @forelse($onlineUsersList as $u)
-          <a href="{{ route('admin.users.show',$u->id) }}" class="dash-row-link">
-            <div class="d-av d-av--accent">
-              @php $av = $resolveImg($u->avatar ?? null); @endphp @if($av)<img src="{{ $av }}" alt="">@else{{ strtoupper(substr($u->name??'U',0,1)) }}@endif
-            </div>
-            <div class="dash-row-main">
-              <div class="dash-row-title">{{ $u->name }} {{ $u->lastname }}</div>
-              <div class="dash-row-meta">{{ $u->last_seen_at ? \Carbon\Carbon::parse($u->last_seen_at)->diffForHumans() : '—' }}</div>
-            </div>
-            <span class="live-dot"></span>
-          </a>
-          @empty
-          <div class="dash-empty"><i class="bi bi-wifi-off dash-empty__ico"></i>Hozir hech kim online emas</div>
-          @endforelse
-          <a href="{{ route('admin.users.index') }}" class="btn-p ghost btn-p-block-dash mt-3">Barcha foydalanuvchilar <i class="bi bi-arrow-right ml-1"></i></a>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-12 col-xl-4 fade-up">
-      <div class="dash-card h-100">
-        <div class="dash-card-head">
-          <div>
-            <div class="dash-card-title">Top mijozlar</div>
-            <div class="dash-card-sub">Eng ko'p xarid qilganlar</div>
-          </div>
-          <a href="{{ route('admin.users.index') }}" class="btn-p ghost sm">Barchasi</a>
-        </div>
-        <div class="dash-card-body">
-          @forelse($topBuyers as $i => $buyer)
-          @php $topBuyerHref = $buyer->user ? route('admin.users.show', $buyer->user) : null; @endphp
-          <div class="top-buyer-row">
-            <span class="rank-num {{ $i===0?'rn-1':($i===1?'rn-2':($i===2?'rn-3':'rn-n')) }}">{{ $i+1 }}</span>
-            <div class="d-av d-av--accent">
-              @php $av = $resolveImg($buyer->user?->avatar); @endphp @if($av)<img src="{{ $av }}" alt="">@else{{ strtoupper(substr($buyer->user?->name??'U',0,1)) }}@endif
-            </div>
-            <div class="top-buyer-body">
-              <div class="dash-row-title--md">
-                @if($topBuyerHref)
-                  <a href="{{ $topBuyerHref }}" class="hover:underline">{{ $buyer->user ? $buyer->user->name.' '.$buyer->user->lastname : 'ID:'.$buyer->user_id }}</a>
+        <div class="card-body pt-0 px-3 pb-3">
+          <div class="d-flex flex-column gap-1">
+            @forelse($onlineUsersList as $u)
+              <a href="{{ route('admin.users.show',$u->id) }}" class="d-flex align-items-center gap-3 px-2 py-2 rounded-3 text-decoration-none hover-bg-light">
+                @php $av = $resolveImg($u->avatar ?? null); @endphp
+                @if($av)
+                  <img src="{{ $av }}" alt="" class="rounded-circle border flex-shrink-0" style="width:36px;height:36px;object-fit:cover;">
                 @else
-                  {{ $buyer->user ? $buyer->user->name.' '.$buyer->user->lastname : 'ID:'.$buyer->user_id }}
+                  <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-primary-subtle text-primary-emphasis fw-bold flex-shrink-0" style="width:36px;height:36px;">
+                    {{ strtoupper(substr($u->name??'U',0,1)) }}
+                  </span>
                 @endif
+                <div class="flex-grow-1 min-w-0">
+                  <div class="fw-semibold text-dark text-truncate">{{ $u->name }} {{ $u->lastname }}</div>
+                  <div class="small text-secondary text-truncate">{{ $u->last_seen_at ? \Carbon\Carbon::parse($u->last_seen_at)->diffForHumans() : '—' }}</div>
+                </div>
+                <span class="rounded-circle bg-success d-inline-block" style="width:.5rem;height:.5rem;"></span>
+              </a>
+            @empty
+              <div class="text-center text-secondary py-5">
+                <i class="bi bi-wifi-off display-6 d-block mb-2 opacity-50"></i>
+                Hozir hech kim online emas
               </div>
-              <div class="top-row-rev-hint">{{ $buyer->order_count }} ta buyurtma</div>
-            </div>
-            <div class="top-buyer-spend">
-              <div class="top-buyer-amount">{{ number_format($buyer->total_spent/1000) }}K</div>
-              <div class="top-row-count-hint">UZS</div>
-            </div>
+            @endforelse
           </div>
+          <a href="{{ route('admin.users.index') }}" class="btn btn-light border rounded-pill w-100 mt-3">
+            Barcha foydalanuvchilar <i class="bi bi-arrow-right ms-1"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    {{-- Top buyers --}}
+    <div class="col-12 col-xl-4">
+      <div class="card border-0 shadow-sm rounded-4 h-100">
+        <div class="card-header bg-white border-bottom-0 px-4 pt-4 pb-2 d-flex align-items-start justify-content-between gap-2">
+          <div>
+            <h3 class="h6 fw-semibold mb-1 text-dark">Top mijozlar</h3>
+            <div class="small text-secondary">Eng ko'p xarid qilganlar</div>
+          </div>
+          <a href="{{ route('admin.users.index') }}" class="btn btn-sm btn-light border rounded-pill">Barchasi</a>
+        </div>
+        <div class="card-body pt-0 px-3 pb-3">
+          @forelse($topBuyers as $i => $buyer)
+            @php
+              $topBuyerHref = $buyer->user ? route('admin.users.show', $buyer->user) : null;
+              $rankTone = $i === 0 ? 'warning' : ($i === 1 ? 'secondary' : ($i === 2 ? 'danger' : 'light'));
+              $rankBorder = $i < 3 ? '' : 'border';
+            @endphp
+            <div class="d-flex align-items-center gap-2 px-2 py-2 rounded-3">
+              <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-{{ $rankTone }}-subtle text-{{ $rankTone }}-emphasis fw-bold flex-shrink-0 {{ $rankBorder }}" style="width:24px;height:24px;font-size:.75rem;">{{ $i+1 }}</span>
+              @php $av = $resolveImg($buyer->user?->avatar); @endphp
+              @if($av)
+                <img src="{{ $av }}" alt="" class="rounded-circle border flex-shrink-0" style="width:32px;height:32px;object-fit:cover;">
+              @else
+                <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-primary-subtle text-primary-emphasis fw-bold flex-shrink-0" style="width:32px;height:32px;">
+                  {{ strtoupper(substr($buyer->user?->name??'U',0,1)) }}
+                </span>
+              @endif
+              <div class="flex-grow-1 min-w-0">
+                <div class="fw-semibold text-dark text-truncate small">
+                  @if($topBuyerHref)
+                    <a href="{{ $topBuyerHref }}" class="text-decoration-none text-dark">{{ $buyer->user ? $buyer->user->name.' '.$buyer->user->lastname : 'ID:'.$buyer->user_id }}</a>
+                  @else
+                    {{ $buyer->user ? $buyer->user->name.' '.$buyer->user->lastname : 'ID:'.$buyer->user_id }}
+                  @endif
+                </div>
+                <div class="text-secondary" style="font-size:.7rem;">{{ $buyer->order_count }} ta buyurtma</div>
+              </div>
+              <div class="text-end">
+                <div class="fw-bold text-dark font-monospace small">{{ number_format($buyer->total_spent/1000) }}K</div>
+                <div class="text-secondary" style="font-size:.65rem;">UZS</div>
+              </div>
+            </div>
           @empty
-          <div class="dash-empty"><i class="bi bi-person-x dash-empty__ico"></i>Ma'lumot yo'q</div>
+            <div class="text-center text-secondary py-5">
+              <i class="bi bi-person-x display-6 d-block mb-2 opacity-50"></i>
+              Ma'lumot yo'q
+            </div>
           @endforelse
         </div>
       </div>
@@ -783,111 +841,135 @@
 </div>
 
 {{-- ══════════════════════════════════════════════════════════════════════════ --}}
-{{-- TAB 5: BIZNES — Top mahsulotlar + Sotuvchilar + Kuryerlar                --}}
+{{-- TAB 5: BIZNES (pure Bootstrap)                                            --}}
 {{-- ══════════════════════════════════════════════════════════════════════════ --}}
-<div class="dash-tab-panel" id="dash-panel-catalog" x-show="tab === 'catalog'" x-cloak>
+<div x-show="tab === 'catalog'" x-cloak>
+  <div class="row g-3">
 
-  <div class="row g-4">
-
-    <div class="col-12 col-xl-7 fade-up">
-      <div class="dash-card h-100">
-        <div class="dash-card-head">
-          <div class="dash-card-title">Top mahsulotlar</div>
-          <div class="dash-card-sub">Eng ko'p sotilganlar</div>
+    {{-- Top products --}}
+    <div class="col-12 col-xl-7">
+      <div class="card border-0 shadow-sm rounded-4 h-100">
+        <div class="card-header bg-white border-bottom-0 px-4 pt-4 pb-2">
+          <h3 class="h6 fw-semibold mb-1 text-dark">Top mahsulotlar</h3>
+          <div class="small text-secondary">Eng ko'p sotilganlar</div>
         </div>
-        <div class="dash-card-body">
+        <div class="card-body pt-0 px-3 pb-3">
           @forelse($topMixedProducts as $i => $product)
-          @php $imgs=is_array($product->images)?$product->images:json_decode($product->images??'[]',true);$img=$resolveImg($imgs[0] ?? null); @endphp
-          <div class="top-row">
-            <span class="rank-num {{ $i===0?'rn-1':($i===1?'rn-2':($i===2?'rn-3':'rn-n')) }}">{{ $i+1 }}</span>
-            <div class="book-thumb">
-              @if($img)<img src="{{ $img }}">@else<i class="bi bi-{{ $product->_type==='stationery'?'box':'book' }}"></i>@endif
-            </div>
-            <div class="top-row-body">
-              <div class="dash-row-title--md">{{ $product->name }}</div>
-              <div class="top-row-meta-row">
-                <span class="s-pill {{ $product->_type==='stationery'?'warning':'info' }} s-pill--dash-xs">{{ $product->_type==='stationery'?'Kanstovar':'Kitob' }}</span>
-                <span class="top-row-rev-hint">{{ number_format($product->total_revenue/1000) }}K rev.</span>
+            @php
+              $imgs = is_array($product->images) ? $product->images : json_decode($product->images ?? '[]', true);
+              $img  = $resolveImg($imgs[0] ?? null);
+              $rankTone = $i === 0 ? 'warning' : ($i === 1 ? 'secondary' : ($i === 2 ? 'danger' : 'light'));
+              $rankBorder = $i < 3 ? '' : 'border';
+              $typeTone = $product->_type === 'stationery' ? 'warning' : 'info';
+              $typeLabel = $product->_type === 'stationery' ? 'Kanstovar' : 'Kitob';
+            @endphp
+            <div class="d-flex align-items-center gap-3 px-2 py-2 {{ !$loop->last ? 'border-bottom' : '' }}">
+              <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-{{ $rankTone }}-subtle text-{{ $rankTone }}-emphasis fw-bold flex-shrink-0 {{ $rankBorder }}" style="width:28px;height:28px;font-size:.8rem;">{{ $i+1 }}</span>
+              <span class="rounded-3 bg-light d-inline-flex align-items-center justify-content-center overflow-hidden border flex-shrink-0" style="width:48px;height:48px;">
+                @if($img)
+                  <img src="{{ $img }}" alt="" style="width:100%;height:100%;object-fit:cover;">
+                @else
+                  <i class="bi bi-{{ $product->_type === 'stationery' ? 'box' : 'book' }} text-secondary"></i>
+                @endif
+              </span>
+              <div class="flex-grow-1 min-w-0">
+                <div class="fw-semibold text-dark text-truncate">{{ $product->name }}</div>
+                <div class="d-flex align-items-center gap-2 small">
+                  <span class="badge rounded-pill text-bg-{{ $typeTone }}-subtle text-{{ $typeTone }}-emphasis fw-semibold">{{ $typeLabel }}</span>
+                  <span class="text-secondary font-monospace">{{ number_format($product->total_revenue/1000) }}K rev.</span>
+                </div>
+              </div>
+              <div class="text-end">
+                <div class="fw-bold text-dark font-monospace">{{ number_format($product->sold_count) }}</div>
+                <div class="text-secondary small">dona</div>
               </div>
             </div>
-            <div class="top-row-count">
-              <div class="top-row-count-val">{{ number_format($product->sold_count) }}</div>
-              <div class="top-row-count-hint">dona</div>
-            </div>
-          </div>
           @empty
-          <div class="dash-empty"><i class="bi bi-box dash-empty__ico"></i>Ma'lumot yo'q</div>
+            <div class="text-center text-secondary py-5">
+              <i class="bi bi-box display-6 d-block mb-2 opacity-50"></i>
+              Ma'lumot yo'q
+            </div>
           @endforelse
         </div>
       </div>
     </div>
 
-    <div class="col-12 col-xl-5 fade-up d-flex flex-column gap-4">
-      <div class="biz-stat-card biz-stat-card--success">
-        <div class="biz-stat-head">
-          <div class="biz-stat-ico biz-stat-ico--success"><i class="bi bi-shop-window"></i></div>
-          <div>
-            <div class="biz-stat-title">Sotuvchilar</div>
-            <div class="biz-stat-sub">Do'konlar platformada</div>
+    {{-- Sellers + Couriers stat cards --}}
+    <div class="col-12 col-xl-5 d-flex flex-column gap-3">
+      @php
+        $bizCards = [
+          [
+            'title' => 'Sotuvchilar',
+            'sub'   => "Do'konlar platformada",
+            'icon'  => 'bi-shop-window',
+            'tone'  => 'success',
+            'href'  => route('admin.sellers.index'),
+            'nums'  => [[$approvedSellers,'Faol','success'],[$totalSellers,'Jami','dark'],[$pendingSellers,'Ariza','warning']],
+            'rate'  => $totalSellers > 0 ? round($approvedSellers/$totalSellers*100) : 0,
+            'alert' => $pendingSellers > 0
+                ? ['warning','bi-clock', "{$pendingSellers} ta yangi ariza", route('admin.sellers.index',['tab'=>'pending'])]
+                : null,
+          ],
+          [
+            'title' => 'Kuryerlar',
+            'sub'   => 'Faol yetkazuvchilar',
+            'icon'  => 'bi-bicycle',
+            'tone'  => 'info',
+            'href'  => route('admin.couriers.index'),
+            'nums'  => [[$activeCouriers,'Faol','info'],[$totalCouriers,'Jami','dark'],[0,'Navbatda','secondary']],
+            'rate'  => $totalCouriers > 0 ? round($activeCouriers/$totalCouriers*100) : 0,
+            'alert' => null,
+          ],
+        ];
+      @endphp
+      @foreach($bizCards as $b)
+        <div class="card border-0 shadow-sm rounded-4">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-center gap-3 mb-3">
+              <span class="d-inline-flex align-items-center justify-content-center rounded-3 bg-{{ $b['tone'] }}-subtle text-{{ $b['tone'] }}-emphasis flex-shrink-0" style="width:2.75rem;height:2.75rem;font-size:1.25rem;">
+                <i class="bi {{ $b['icon'] }}"></i>
+              </span>
+              <div class="flex-grow-1">
+                <h3 class="h6 mb-1 fw-semibold text-dark">{{ $b['title'] }}</h3>
+                <div class="small text-secondary">{{ $b['sub'] }}</div>
+              </div>
+              <a href="{{ $b['href'] }}" class="btn btn-sm btn-light border rounded-pill">
+                Ko'rish <i class="bi bi-arrow-right ms-1"></i>
+              </a>
+            </div>
+            <div class="row g-2 row-cols-3 text-center mb-3">
+              @foreach($b['nums'] as [$v,$l,$c])
+                <div class="col">
+                  <div class="fw-bold text-{{ $c }}-emphasis font-monospace fs-5">{{ number_format($v) }}</div>
+                  <div class="small text-secondary">{{ $l }}</div>
+                </div>
+              @endforeach
+            </div>
+            <div>
+              <div class="d-flex justify-content-between small mb-1">
+                <span class="text-secondary">Faollik darajasi</span>
+                <span class="fw-semibold text-dark">{{ $b['rate'] }}%</span>
+              </div>
+              <div class="progress" role="progressbar" style="height:.4rem;">
+                <div class="progress-bar bg-{{ $b['tone'] }}" style="width:{{ $b['rate'] }}%"></div>
+              </div>
+            </div>
+            @if($b['alert'])
+              @php [$t, $ic, $msg, $h] = $b['alert']; @endphp
+              <a href="{{ $h }}" class="alert alert-{{ $t }} d-flex align-items-center gap-2 mb-0 mt-3 small text-decoration-none">
+                <i class="bi {{ $ic }}"></i>
+                <span class="flex-grow-1">{{ $msg }}</span>
+                <span class="fw-semibold">Ko'rish →</span>
+              </a>
+            @endif
           </div>
-          <a href="{{ route('admin.sellers.index') }}" class="btn-p ghost sm ml-auto">Ko'rish <i class="bi bi-arrow-right"></i></a>
         </div>
-        <div class="biz-stat-nums">
-          @foreach([[$approvedSellers,'Faol','success'],[$totalSellers,'Jami','text'],[$pendingSellers,'Ariza','warning']] as [$v,$l,$c])
-          <div class="biz-num-cell">
-            <div class="biz-num-val" style="color:var(--p-{{ $c }})">{{ number_format($v) }}</div>
-            <div class="biz-num-lbl">{{ $l }}</div>
-          </div>
-          @endforeach
-        </div>
-        <div class="biz-stat-bar-wrap">
-          <div class="biz-stat-bar-label">
-            <span>Faollik darajasi</span>
-            <span>{{ $totalSellers>0?round($approvedSellers/$totalSellers*100):0 }}%</span>
-          </div>
-          <div class="biz-prog-track">
-            <div class="biz-prog-fill biz-prog-fill--success" style="width:{{ $totalSellers>0?round($approvedSellers/$totalSellers*100):0 }}%"></div>
-          </div>
-        </div>
-        @if($pendingSellers>0)
-        <div class="alert-item warning alert-item--compact mt-2">
-          <i class="bi bi-clock"></i><span>{{ $pendingSellers }} ta yangi ariza</span>
-          <a href="{{ route('admin.sellers.index',['tab'=>'pending']) }}" class="alert-item__link">Ko'rish →</a>
-        </div>
-        @endif
-      </div>
-
-      <div class="biz-stat-card biz-stat-card--info">
-        <div class="biz-stat-head">
-          <div class="biz-stat-ico biz-stat-ico--info"><i class="bi bi-bicycle"></i></div>
-          <div>
-            <div class="biz-stat-title">Kuryerlar</div>
-            <div class="biz-stat-sub">Faol yetkazuvchilar</div>
-          </div>
-          <a href="{{ route('admin.couriers.index') }}" class="btn-p ghost sm ml-auto">Ko'rish <i class="bi bi-arrow-right"></i></a>
-        </div>
-        <div class="biz-stat-nums">
-          @foreach([[$activeCouriers,'Faol','info'],[$totalCouriers,'Jami','text'],[0,'Navbatda','muted']] as [$v,$l,$c])
-          <div class="biz-num-cell">
-            <div class="biz-num-val" style="color:var(--p-{{ $c }})">{{ number_format($v) }}</div>
-            <div class="biz-num-lbl">{{ $l }}</div>
-          </div>
-          @endforeach
-        </div>
-        <div class="biz-stat-bar-wrap">
-          <div class="biz-stat-bar-label">
-            <span>Faollik darajasi</span>
-            <span>{{ $totalCouriers>0?round($activeCouriers/$totalCouriers*100):0 }}%</span>
-          </div>
-          <div class="biz-prog-track">
-            <div class="biz-prog-fill biz-prog-fill--info" style="width:{{ $totalCouriers>0?round($activeCouriers/$totalCouriers*100):0 }}%"></div>
-          </div>
-        </div>
-      </div>
+      @endforeach
     </div>
 
   </div>
 </div>
+
 </div>
 
 @endsection
@@ -1240,28 +1322,32 @@ function _renderSalesGeoSide() {
   }
 
   summaryHost.innerHTML = `
-    <div class="rounded-[18px] border border-slate-200 bg-slate-50 px-3 py-3">
-      <div class="text-[11px] uppercase tracking-[0.14em] text-slate-500">Buyurtmalar</div>
-      <div class="mt-1 text-lg font-semibold text-slate-900">${Number(country.orders || 0).toLocaleString()}</div>
+    <div class="col">
+      <div class="rounded-3 border bg-light px-3 py-3">
+        <div class="small text-secondary text-uppercase" style="letter-spacing:.12em;font-size:.7rem;">Buyurtmalar</div>
+        <div class="mt-1 h5 mb-0 fw-semibold text-dark font-monospace">${Number(country.orders || 0).toLocaleString()}</div>
+      </div>
     </div>
-    <div class="rounded-[18px] border border-slate-200 bg-slate-50 px-3 py-3">
-      <div class="text-[11px] uppercase tracking-[0.14em] text-slate-500">Viloyatlar</div>
-      <div class="mt-1 text-lg font-semibold text-slate-900">${Number(country.regions_count || 0).toLocaleString()}</div>
+    <div class="col">
+      <div class="rounded-3 border bg-light px-3 py-3">
+        <div class="small text-secondary text-uppercase" style="letter-spacing:.12em;font-size:.7rem;">Viloyatlar</div>
+        <div class="mt-1 h5 mb-0 fw-semibold text-dark font-monospace">${Number(country.regions_count || 0).toLocaleString()}</div>
+      </div>
     </div>
   `;
 
   listHost.innerHTML = regions.map((region, index) => {
     const amount = Number(region.revenue || 0);
     return `
-      <div class="rounded-[18px] border border-slate-200 bg-white px-3 py-3">
-        <div class="flex items-center justify-between gap-3">
+      <div class="rounded-3 border bg-white px-3 py-2">
+        <div class="d-flex align-items-center justify-content-between gap-3">
           <div class="min-w-0">
-            <div class="text-sm font-semibold text-slate-900 truncate">${index + 1}. ${region.label}</div>
-            <div class="text-xs text-slate-500">${Number(region.orders || 0).toLocaleString()} ta buyurtma</div>
+            <div class="small fw-semibold text-dark text-truncate">${index + 1}. ${region.label}</div>
+            <div class="text-secondary" style="font-size:.7rem;">${Number(region.orders || 0).toLocaleString()} ta buyurtma</div>
           </div>
-          <div class="text-right">
-            <div class="text-sm font-semibold text-slate-900">${Math.round(amount / 1000).toLocaleString()}K</div>
-            <div class="text-[11px] text-slate-500">UZS</div>
+          <div class="text-end">
+            <div class="small fw-semibold text-dark font-monospace">${Math.round(amount / 1000).toLocaleString()}K</div>
+            <div class="text-secondary" style="font-size:.65rem;">UZS</div>
           </div>
         </div>
       </div>

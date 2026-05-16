@@ -251,284 +251,286 @@
 
 
 
-<div class="dash-tab-panel" id="dash-panel-main" x-show="tab === 'main'" x-cloak>
+<div x-show="tab === 'main'" x-cloak>
 
-  <div class="dash-insight-grid mb-4 fade-up">
-    <div class="dash-insight-pill dip-success">
-      <div class="dip-lbl">Bugungi daromad</div>
-      <div class="dip-val"><?php echo e(number_format($todayRevenue/1_000_000,2)); ?><span class="dip-val-unit"> M</span></div>
-    </div>
-    <div class="dash-insight-pill">
-      <div class="dip-lbl">Bugun buyurtma</div>
-      <div class="dip-val"><?php echo e(number_format($todayOrders)); ?><span class="dip-val-unit"> ta</span></div>
-    </div>
-    <div class="dash-insight-pill dip-accent">
-      <div class="dip-lbl">Hafta daromad</div>
-      <div class="dip-val"><?php echo e(number_format($weekRevenue/1_000_000,2)); ?><span class="dip-val-unit"> M</span></div>
-    </div>
-    <div class="dash-insight-pill dip-info">
-      <div class="dip-lbl">Hafta buyurtma</div>
-      <div class="dip-val"><?php echo e(number_format($weekOrders)); ?><span class="dip-val-unit"> ta</span></div>
-    </div>
-    <div class="dash-insight-pill dip-warning">
-      <div class="dip-lbl">Kutilmoqda</div>
-      <div class="dip-val"><?php echo e(number_format($pendingOrders)); ?><span class="dip-val-unit"> ta</span></div>
-    </div>
-  </div>
-
-  <div class="row g-3 row-cols-1 row-cols-md-2 row-cols-xl-3 row-cols-xxl-6 fade-up">
-
-    <div class="col">
-    <div class="kpi-card h-100">
-      <div class="flex items-start justify-between">
-        <div class="kpi-icon kpi-icon--success"><i class="bi bi-graph-up-arrow"></i></div>
-        <span class="kpi-change up"><i class="bi bi-arrow-up-short kpi-change-ico"></i> Bugun: <?php echo e(number_format($todayRevenue/1000)); ?>K</span>
-      </div>
-      <div class="kpi-stack">
-        <div class="kpi-label">Jami daromad</div>
-        <div class="kpi-value"><?php echo e(number_format($totalRevenue/1_000_000,1)); ?><span class="kpi-value-unit"> M UZS</span></div>
-      </div>
-      <div class="kpi-footer">
-        <span class="kpi-foot-muted">Bu oy</span>
-        <span class="kpi-foot-mono"><?php echo e(number_format($monthRevenue/1_000_000,1)); ?>M</span>
-      </div>
-    </div>
-    </div>
-
-    <div class="col">
-    <div class="kpi-card h-100">
-      <div class="flex items-start justify-between">
-        <div class="kpi-icon kpi-icon--accent"><i class="bi bi-bag-check"></i></div>
-        <span class="kpi-change up"><i class="bi bi-plus kpi-change-ico"></i> <?php echo e($todayOrders); ?> bugun</span>
-      </div>
-      <div class="kpi-stack">
-        <div class="kpi-label">Buyurtmalar</div>
-        <div class="kpi-value"><?php echo e(number_format($totalOrders)); ?></div>
-      </div>
-      <div class="kpi-footer">
-        <span class="kpi-foot-warn"><i class="bi bi-clock kpi-footer-ico"></i> <?php echo e($pendingOrders); ?> kutmoqda</span>
-        <span class="kpi-foot-danger"><i class="bi bi-x-circle kpi-footer-ico"></i> <?php echo e($cancelledOrders); ?></span>
-      </div>
-    </div>
-    </div>
-
-    <div class="col">
-    <div class="kpi-card h-100">
-      <div class="flex items-start justify-between">
-        <div class="kpi-icon kpi-icon--info"><i class="bi bi-patch-check"></i></div>
-        <span class="kpi-change <?php echo e($completionRate>=70?'up':'neutral'); ?>"><?php echo e($completionRate); ?>%</span>
-      </div>
-      <div class="kpi-stack">
-        <div class="kpi-label">Yakunlanish</div>
-        <div class="kpi-value"><?php echo e(number_format($completedOrders)); ?></div>
-      </div>
-      <div class="kpi-footer">
-        <div class="kpi-prog-cell">
-          <div class="dash-prog-track dash-prog-track--thin">
-            <div class="dash-prog-fill" style="width:<?php echo e($completionRate); ?>%;background:var(--p-info)"></div>
+  
+  <div class="row g-3 mb-4 row-cols-2 row-cols-md-3 row-cols-xl-5">
+    <?php
+      $insightPills = [
+        ['Bugungi daromad', number_format($todayRevenue/1_000_000,2), 'M',  'success'],
+        ['Bugun buyurtma',  number_format($todayOrders),              'ta', 'secondary'],
+        ['Hafta daromad',   number_format($weekRevenue/1_000_000,2),  'M',  'primary'],
+        ['Hafta buyurtma',  number_format($weekOrders),               'ta', 'info'],
+        ['Kutilmoqda',      number_format($pendingOrders),            'ta', 'warning'],
+      ];
+    ?>
+    <?php $__currentLoopData = $insightPills; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$lbl, $val, $unit, $tone]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+      <div class="col">
+        <div class="card border-0 shadow-sm rounded-4 h-100 bg-<?php echo e($tone); ?>-subtle">
+          <div class="card-body p-3">
+            <div class="small fw-semibold text-<?php echo e($tone); ?>-emphasis text-uppercase" style="letter-spacing:.08em;"><?php echo e($lbl); ?></div>
+            <div class="h4 mb-0 mt-2 fw-bold text-dark font-monospace"><?php echo e($val); ?><span class="ms-1 fs-6 text-secondary fw-normal"><?php echo e($unit); ?></span></div>
           </div>
         </div>
-        <span class="kpi-foot-hint-xs"><?php echo e($cancellationRate); ?>% bekor</span>
       </div>
-    </div>
-    </div>
+    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+  </div>
 
-    <div class="col">
-    <div class="kpi-card h-100">
-      <div class="flex items-start justify-between">
-        <div class="kpi-icon kpi-icon--warning"><i class="bi bi-people"></i></div>
-        <span class="kpi-change up"><span class="live-dot live-dot--xs"></span><?php echo e($onlineUsers); ?> online</span>
-      </div>
-      <div class="kpi-stack">
-        <div class="kpi-label">Foydalanuvchilar</div>
-        <div class="kpi-value"><?php echo e(number_format($totalUsers)); ?></div>
-      </div>
-      <div class="kpi-footer">
-        <span class="kpi-foot-muted">Bugun yangi</span>
-        <span class="kpi-foot-mono kpi-foot-mono--success">+<?php echo e($newUsersToday); ?></span>
-      </div>
-    </div>
-    </div>
+  
+  <?php
+    $kpiCards = [
+      [
+        'icon' => 'bi-graph-up-arrow', 'tone' => 'success',
+        'badge_tone' => 'success', 'badge_label' => 'Bugun: '.number_format($todayRevenue/1000).'K',
+        'label' => 'Jami daromad',
+        'value' => number_format($totalRevenue/1_000_000,1), 'unit' => 'M UZS',
+        'footer_left' => 'Bu oy', 'footer_right' => number_format($monthRevenue/1_000_000,1).'M',
+      ],
+      [
+        'icon' => 'bi-bag-check', 'tone' => 'primary',
+        'badge_tone' => 'success', 'badge_label' => $todayOrders.' bugun',
+        'label' => 'Buyurtmalar',
+        'value' => number_format($totalOrders), 'unit' => '',
+        'footer_left' => $pendingOrders.' kutmoqda', 'footer_left_tone' => 'warning',
+        'footer_right' => $cancelledOrders.' bekor', 'footer_right_tone' => 'danger',
+      ],
+      [
+        'icon' => 'bi-patch-check', 'tone' => 'info',
+        'badge_tone' => $completionRate >= 70 ? 'success' : 'secondary', 'badge_label' => $completionRate.'%',
+        'label' => 'Yakunlanish',
+        'value' => number_format($completedOrders), 'unit' => '',
+        'progress' => $completionRate, 'progress_tone' => 'info',
+        'footer_right' => $cancellationRate.'% bekor', 'footer_right_tone' => 'secondary',
+      ],
+      [
+        'icon' => 'bi-people', 'tone' => 'warning',
+        'badge_tone' => 'success', 'badge_label' => $onlineUsers.' online',
+        'label' => 'Foydalanuvchilar',
+        'value' => number_format($totalUsers), 'unit' => '',
+        'footer_left' => 'Bugun yangi', 'footer_right' => '+'.$newUsersToday, 'footer_right_tone' => 'success',
+      ],
+      [
+        'icon' => 'bi-gift', 'tone' => 'danger',
+        'badge_tone' => $giftUsed > 0 ? 'success' : 'secondary', 'badge_label' => $giftUsed.' ishlatildi',
+        'label' => 'Gift Sertifikat',
+        'value' => number_format($giftTotal), 'unit' => '',
+        'footer_left' => 'Faol',
+        'footer_right' => $giftPending > 0 ? $giftPending.' kutmoqda' : (string) $giftSent,
+        'footer_right_tone' => $giftPending > 0 ? 'warning' : 'secondary',
+      ],
+      [
+        'icon' => 'bi-box-seam', 'tone' => 'dark',
+        'badge_tone' => $mysteryDueCount > 0 ? 'danger' : 'secondary',
+        'badge_label' => $mysteryDueCount > 0 ? $mysteryDueCount.' navbat' : "Navbat yo'q",
+        'label' => 'Mystery Box',
+        'value' => number_format($mysteryActive), 'unit' => '',
+        'footer_left' => 'Faol obuna', 'footer_right' => $mysteryPending.' kutmoqda', 'footer_right_tone' => 'secondary',
+      ],
+    ];
+  ?>
+  <div class="row g-3 row-cols-1 row-cols-md-2 row-cols-xl-3 row-cols-xxl-6">
+    <?php $__currentLoopData = $kpiCards; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $k): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+      <div class="col">
+        <div class="card border-0 shadow-sm rounded-4 h-100">
+          <div class="card-body d-flex flex-column gap-3">
+            <div class="d-flex align-items-start justify-content-between gap-2">
+              <span class="d-inline-flex align-items-center justify-content-center rounded-3 bg-<?php echo e($k['tone']); ?>-subtle text-<?php echo e($k['tone']); ?>-emphasis" style="width:2.75rem;height:2.75rem;font-size:1.25rem;">
+                <i class="bi <?php echo e($k['icon']); ?>"></i>
+              </span>
+              <span class="badge rounded-pill text-bg-<?php echo e($k['badge_tone']); ?>-subtle text-<?php echo e($k['badge_tone']); ?>-emphasis fw-semibold">
+                <?php echo e($k['badge_label']); ?>
 
-    <div class="col">
-    <div class="kpi-card h-100">
-      <div class="flex items-start justify-between">
-        <div class="kpi-icon kpi-icon--gift"><i class="bi bi-gift"></i></div>
-        <span class="kpi-change <?php echo e($giftUsed>0?'up':'neutral'); ?>"><i class="bi bi-check-circle kpi-change-ico-sm"></i> <?php echo e($giftUsed); ?> ishlatildi</span>
+              </span>
+            </div>
+            <div>
+              <div class="small text-secondary"><?php echo e($k['label']); ?></div>
+              <div class="h3 mb-0 mt-1 fw-bold text-dark font-monospace"><?php echo e($k['value']); ?><span class="ms-1 fs-6 text-secondary fw-normal"><?php echo e($k['unit']); ?></span></div>
+            </div>
+            <div class="mt-auto">
+              <?php if(isset($k['progress'])): ?>
+                <div class="progress mb-2" role="progressbar" style="height:.35rem;">
+                  <div class="progress-bar bg-<?php echo e($k['progress_tone']); ?>" style="width:<?php echo e($k['progress']); ?>%"></div>
+                </div>
+              <?php endif; ?>
+              <div class="d-flex justify-content-between small">
+                <span class="text-<?php echo e($k['footer_left_tone'] ?? 'secondary'); ?>"><?php echo e($k['footer_left'] ?? ''); ?></span>
+                <span class="font-monospace fw-semibold text-<?php echo e($k['footer_right_tone'] ?? 'dark'); ?>"><?php echo e($k['footer_right'] ?? ''); ?></span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="kpi-stack">
-        <div class="kpi-label">Gift Sertifikat</div>
-        <div class="kpi-value"><?php echo e(number_format($giftTotal)); ?></div>
-      </div>
-      <div class="kpi-footer">
-        <span class="kpi-foot-muted">Faol</span>
-        <?php if($giftPending>0): ?>
-          <span class="kpi-foot-warn-strong"><?php echo e($giftPending); ?> kutmoqda</span>
-        <?php else: ?>
-          <span class="kpi-foot-mono"><?php echo e($giftSent); ?></span>
-        <?php endif; ?>
-      </div>
-    </div>
-    </div>
-
-    <div class="col">
-    <div class="kpi-card h-100">
-      <div class="flex items-start justify-between">
-        <div class="kpi-icon kpi-icon--teal"><i class="bi bi-box-seam"></i></div>
-        <?php if($mysteryDueCount>0): ?>
-          <span class="kpi-change down"><i class="bi bi-exclamation-triangle kpi-change-ico-sm"></i> <?php echo e($mysteryDueCount); ?> navbat</span>
-        <?php else: ?>
-          <span class="kpi-change neutral">Navbat yo'q</span>
-        <?php endif; ?>
-      </div>
-      <div class="kpi-stack">
-        <div class="kpi-label">Mystery Box</div>
-        <div class="kpi-value"><?php echo e(number_format($mysteryActive)); ?></div>
-      </div>
-      <div class="kpi-footer">
-        <span class="kpi-foot-muted">Faol obuna</span>
-        <span class="kpi-foot-hint-sm"><?php echo e($mysteryPending); ?> kutmoqda</span>
-      </div>
-    </div>
-    </div>
-
+    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
   </div>
 </div>
 
 
 
 
-<div class="dash-tab-panel" id="dash-panel-orders" x-show="tab === 'orders'" x-cloak>
+<div x-show="tab === 'orders'" x-cloak>
 
-  <div class="row g-3 mb-4 fade-up">
+  <div class="row g-3 mb-4">
     <div class="col-12 col-lg-6">
-    <div class="dash-card h-100">
-      <div class="dash-card-head">
-        <div>
-          <div class="dash-card-title">Buyurtmalar — 7 kun</div>
-          <div class="dash-card-sub">Soni bo'yicha</div>
+      <div class="card border-0 shadow-sm rounded-4 h-100">
+        <div class="card-header bg-white border-bottom-0 px-4 pt-4 pb-2 d-flex align-items-start justify-content-between gap-3">
+          <div>
+            <h3 class="h6 fw-semibold mb-1 text-dark">Buyurtmalar — 7 kun</h3>
+            <div class="small text-secondary">Soni bo'yicha</div>
+          </div>
+          <a href="<?php echo e(route('admin.orders.index')); ?>" class="btn btn-sm btn-light border rounded-pill">
+            Ro'yxat <i class="bi bi-arrow-right ms-1"></i>
+          </a>
         </div>
-        <a href="<?php echo e(route('admin.orders.index')); ?>" class="btn-p ghost sm">Ro'yxat <i class="bi bi-arrow-right"></i></a>
-      </div>
-      <div class="dash-card-body pt-0">
-        <div class="dash-chart-surface"><div id="chartOrdersWeek" class="dash-chart-host dash-chart-host--220"></div></div>
-      </div>
-    </div>
-    </div>
-    <div class="col-12 col-lg-6">
-    <div class="dash-card h-100">
-      <div class="dash-card-head">
-        <div>
-          <div class="dash-card-title">Daromad — 7 kun</div>
-          <div class="dash-card-sub">Mln UZS (to'langan)</div>
+        <div class="card-body pt-0 px-4 pb-4">
+          <div id="chartOrdersWeek" style="min-height:220px;"></div>
         </div>
       </div>
-      <div class="dash-card-body pt-0">
-        <div class="dash-chart-surface"><div id="chartRevenueWeek" class="dash-chart-host dash-chart-host--220"></div></div>
-      </div>
     </div>
+    <div class="col-12 col-lg-6">
+      <div class="card border-0 shadow-sm rounded-4 h-100">
+        <div class="card-header bg-white border-bottom-0 px-4 pt-4 pb-2">
+          <h3 class="h6 fw-semibold mb-1 text-dark">Daromad — 7 kun</h3>
+          <div class="small text-secondary">Mln UZS (to'langan)</div>
+        </div>
+        <div class="card-body pt-0 px-4 pb-4">
+          <div id="chartRevenueWeek" style="min-height:220px;"></div>
+        </div>
+      </div>
     </div>
   </div>
 
-  <div class="row g-4 mb-4">
-    <div class="col-12 col-xl-4 fade-up">
-      <div class="dash-card h-100">
-        <div class="dash-card-head">
-          <div class="dash-card-title">Holat bo'yicha</div>
-          <div class="dash-card-sub">Jami <?php echo e(number_format($totalOrders)); ?> ta</div>
+  <div class="row g-3 mb-4">
+    
+    <div class="col-12 col-xl-4">
+      <div class="card border-0 shadow-sm rounded-4 h-100">
+        <div class="card-header bg-white border-bottom-0 px-4 pt-4 pb-2">
+          <h3 class="h6 fw-semibold mb-1 text-dark">Holat bo'yicha</h3>
+          <div class="small text-secondary">Jami <?php echo e(number_format($totalOrders)); ?> ta</div>
         </div>
-        <div class="dash-card-body pt-0">
-          <div class="dash-chart-surface"><div id="chartDonut" class="dash-chart-host dash-chart-host--210"></div></div>
-          <div class="donut-stat-row">
-            <?php $__currentLoopData = [['Yetkazildi',$completedOrders,'success'],["Yo'lda",$onwayOrders,'info'],['Qadoqda',$packingOrders,'accent'],['Kutilmoqda',$pendingOrders,'warning'],['Bekor',$cancelledOrders,'danger']]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $idx => [$l,$v,$c]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-            <?php if($idx>0): ?><div class="stat-divider"></div><?php endif; ?>
-            <div class="stat-cell donut-stat-cell">
-              <div class="stat-cell-val" style="color:var(--p-<?php echo e($c); ?>)"><?php echo e(number_format($v)); ?></div>
-              <div class="stat-cell-lbl"><?php echo e($l); ?></div>
-            </div>
+        <div class="card-body pt-0 px-4 pb-4">
+          <div id="chartDonut" style="min-height:210px;"></div>
+          <div class="row g-2 row-cols-5 mt-2 text-center">
+            <?php $__currentLoopData = [['Yetkazildi',$completedOrders,'success'],["Yo'lda",$onwayOrders,'info'],['Qadoqda',$packingOrders,'primary'],['Kutilmoqda',$pendingOrders,'warning'],['Bekor',$cancelledOrders,'danger']]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$l,$v,$c]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+              <div class="col">
+                <div class="fw-bold text-<?php echo e($c); ?>-emphasis font-monospace"><?php echo e(number_format($v)); ?></div>
+                <div class="small text-secondary text-truncate"><?php echo e($l); ?></div>
+              </div>
             <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="col-12 col-xl-8 fade-up">
-      <div class="dash-card h-100">
-        <div class="dash-card-head">
+    
+    <div class="col-12 col-xl-8">
+      <div class="card border-0 shadow-sm rounded-4 h-100">
+        <div class="card-header bg-white border-bottom-0 px-4 pt-4 pb-2 d-flex align-items-start justify-content-between gap-3">
           <div>
-            <div class="dash-card-title">So'nggi buyurtmalar</div>
-            <div class="dash-card-sub">Oxirgi 10 ta</div>
+            <h3 class="h6 fw-semibold mb-1 text-dark">So'nggi buyurtmalar</h3>
+            <div class="small text-secondary">Oxirgi 10 ta</div>
           </div>
-          <a href="<?php echo e(route('admin.orders.index')); ?>" class="btn-p ghost sm">Barchasi <i class="bi bi-arrow-right"></i></a>
+          <a href="<?php echo e(route('admin.orders.index')); ?>" class="btn btn-sm btn-light border rounded-pill">
+            Barchasi <i class="bi bi-arrow-right ms-1"></i>
+          </a>
         </div>
-        <div class="dash-card-body p-0">
-          <div class="recent-orders-wrap">
-            <?php $__empty_1 = true; $__currentLoopData = $recentOrders; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $order): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
-            <?php $bc=match($order['status']){'Yetkazildi'=>'ob-c',"Yo'lda"=>'ob-b','Qadoqlanmoqda'=>'ob-pk','Kutilmoqda'=>'ob-a','Bekor qilindi'=>'ob-f',default=>'ob-p'}; ?>
-            <div class="ro-row">
-              <div class="ro-id"><span class="p-mono-id">#<?php echo e($order['id']); ?></span><?php if($order['gift']): ?><span class="ro-gift">🎁</span><?php endif; ?></div>
-              <div class="ro-customer">
-                <div class="d-av d-av--accent d-av--sm-text"><?php $av = $resolveImg($order['avatar'] ?? null); ?> <?php if($av): ?><img src="<?php echo e($av); ?>" alt=""><?php else: ?><?php echo e(strtoupper(substr($order['customer'],0,1))); ?><?php endif; ?></div>
-                <span class="ro-name"><?php echo e($order['customer']); ?></span>
+        <div class="card-body p-0">
+          <?php
+            $statusToneMap = [
+              'Yetkazildi'    => 'success',
+              "Yo'lda"        => 'info',
+              'Qadoqlanmoqda' => 'primary',
+              'Kutilmoqda'    => 'warning',
+              'Bekor qilindi' => 'danger',
+            ];
+          ?>
+          <?php $__empty_1 = true; $__currentLoopData = $recentOrders; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $order): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+            <?php $bs = $statusToneMap[$order['status']] ?? 'secondary'; ?>
+            <div class="d-flex align-items-center gap-3 px-4 py-3 <?php echo e(!$loop->last ? 'border-bottom' : ''); ?>">
+              <span class="font-monospace fw-semibold text-dark">#<?php echo e($order['id']); ?></span>
+              <?php if($order['gift']): ?><span title="Sovg'a">🎁</span><?php endif; ?>
+              <div class="d-flex align-items-center gap-2 flex-grow-1 min-w-0">
+                <?php $av = $resolveImg($order['avatar'] ?? null); ?>
+                <?php if($av): ?>
+                  <img src="<?php echo e($av); ?>" alt="" class="rounded-circle border" style="width:32px;height:32px;object-fit:cover;">
+                <?php else: ?>
+                  <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-primary-subtle text-primary-emphasis fw-bold" style="width:32px;height:32px;">
+                    <?php echo e(strtoupper(substr($order['customer'],0,1))); ?>
+
+                  </span>
+                <?php endif; ?>
+                <span class="text-truncate fw-medium"><?php echo e($order['customer']); ?></span>
               </div>
-              <div class="ro-amount"><?php echo e($order['amount']); ?> <span class="p-currency-suffix">UZS</span></div>
-              <div class="ro-status"><span class="o-badge <?php echo e($bc); ?>"><?php echo e($order['status']); ?></span></div>
-              <div class="ro-date"><?php echo e($order['date']); ?></div>
-              <div class="ro-action"><a href="<?php echo e(route('admin.orders.show',$order['id'])); ?>" class="btn-p ghost sm"><i class="bi bi-arrow-right"></i></a></div>
+              <div class="text-end fw-semibold text-nowrap font-monospace small"><?php echo e($order['amount']); ?> <span class="text-secondary fw-normal">UZS</span></div>
+              <span class="badge rounded-pill text-bg-<?php echo e($bs); ?>-subtle text-<?php echo e($bs); ?>-emphasis fw-semibold"><?php echo e($order['status']); ?></span>
+              <span class="small text-secondary text-nowrap d-none d-md-inline"><?php echo e($order['date']); ?></span>
+              <a href="<?php echo e(route('admin.orders.show',$order['id'])); ?>" class="btn btn-sm btn-outline-secondary rounded-circle" style="width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;padding:0;">
+                <i class="bi bi-arrow-right"></i>
+              </a>
             </div>
-            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
-            <div class="dash-empty"><i class="bi bi-bag-x dash-empty__ico"></i>Buyurtmalar yo'q</div>
-            <?php endif; ?>
-          </div>
+          <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
+            <div class="text-center text-secondary py-5">
+              <i class="bi bi-bag-x display-6 d-block mb-2 text-secondary opacity-50"></i>
+              Buyurtmalar yo'q
+            </div>
+          <?php endif; ?>
         </div>
       </div>
     </div>
   </div>
 
+  
   <?php $hasMysteryQueue = $mysteryDueToday->count() || $mysteryDueSoon->count(); ?>
   <?php if($hasMysteryQueue): ?>
-  <div class="dash-card fade-up">
-    <div class="dash-card-head">
-      <div>
-        <div class="dash-card-title"><i class="bi bi-box-seam mr-1 <?php echo e($mysteryDueCount>0?'dash-title-ico--danger':'dash-title-ico--accent'); ?>"></i>Mystery Box navbati</div>
-        <div class="dash-card-sub">
-          <?php if($mysteryDueCount>0): ?>
-            <span class="dash-sub-danger"><?php echo e($mysteryDueCount); ?> ta kechikdi</span>
-          <?php else: ?>
-            <?php echo e($mysteryDueSoon->count()); ?> ta 7 kun ichida
-          <?php endif; ?>
+    <div class="card border-0 shadow-sm rounded-4">
+      <div class="card-header bg-white border-bottom-0 px-4 pt-4 pb-2 d-flex align-items-start justify-content-between gap-3">
+        <div>
+          <h3 class="h6 fw-semibold mb-1 text-dark">
+            <i class="bi bi-box-seam me-2 text-<?php echo e($mysteryDueCount > 0 ? 'danger' : 'primary'); ?>"></i>Mystery Box navbati
+          </h3>
+          <div class="small text-secondary">
+            <?php if($mysteryDueCount > 0): ?>
+              <span class="text-danger fw-semibold"><?php echo e($mysteryDueCount); ?> ta kechikdi</span>
+            <?php else: ?>
+              <?php echo e($mysteryDueSoon->count()); ?> ta 7 kun ichida
+            <?php endif; ?>
+          </div>
+        </div>
+        <a href="<?php echo e(route('admin.mystery-box.subscriptions',['tab'=>'active'])); ?>" class="btn btn-sm btn-light border rounded-pill">Barchasi</a>
+      </div>
+      <div class="card-body px-4 pb-4">
+        <div class="row g-2 row-cols-1 row-cols-md-2">
+          <?php $__currentLoopData = $mysteryDueToday->take(4); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $sub): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+            <div class="col">
+              <a href="<?php echo e(route('admin.mystery-box.subscription',$sub)); ?>" class="d-flex align-items-center gap-3 p-3 rounded-3 border bg-white text-decoration-none">
+                <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-success-subtle text-success-emphasis fw-bold flex-shrink-0" style="width:36px;height:36px;">
+                  <?php echo e(strtoupper(substr($sub->user?->name??'M',0,1))); ?>
+
+                </span>
+                <div class="flex-grow-1 min-w-0">
+                  <div class="fw-semibold text-dark text-truncate"><?php echo e($sub->user?->name); ?> <?php echo e($sub->user?->lastname); ?></div>
+                  <div class="small text-secondary text-truncate"><?php echo e($sub->plan?->name_uz); ?> · <?php echo e($sub->next_delivery_at?->diffForHumans()); ?></div>
+                </div>
+                <span class="badge rounded-pill text-bg-danger-subtle text-danger-emphasis fw-semibold">Navbatda</span>
+              </a>
+            </div>
+          <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+          <?php $__currentLoopData = $mysteryDueSoon->take(4); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $sub): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+            <div class="col">
+              <a href="<?php echo e(route('admin.mystery-box.subscription',$sub)); ?>" class="d-flex align-items-center gap-3 p-3 rounded-3 border bg-white text-decoration-none">
+                <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-success-subtle text-success-emphasis fw-bold flex-shrink-0" style="width:36px;height:36px;">
+                  <?php echo e(strtoupper(substr($sub->user?->name??'M',0,1))); ?>
+
+                </span>
+                <div class="flex-grow-1 min-w-0">
+                  <div class="fw-semibold text-dark text-truncate small"><?php echo e($sub->user?->name); ?> <?php echo e($sub->user?->lastname); ?></div>
+                  <div class="small text-secondary"><?php echo e($sub->next_delivery_at?->format('d.m.Y')); ?></div>
+                </div>
+              </a>
+            </div>
+          <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
         </div>
       </div>
-      <a href="<?php echo e(route('admin.mystery-box.subscriptions',['tab'=>'active'])); ?>" class="btn-p ghost sm">Barchasi</a>
     </div>
-    <div class="dash-card-body">
-      <div class="row g-2 row-cols-1 row-cols-md-2">
-        <?php $__currentLoopData = $mysteryDueToday->take(4); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $sub): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-        <div class="col">
-        <a href="<?php echo e(route('admin.mystery-box.subscription',$sub)); ?>" class="dash-row-link">
-          <div class="d-av d-av--teal"><?php echo e(strtoupper(substr($sub->user?->name??'M',0,1))); ?></div>
-          <div class="dash-row-main">
-            <div class="dash-row-title--md"><?php echo e($sub->user?->name); ?> <?php echo e($sub->user?->lastname); ?></div>
-            <div class="dash-row-meta--plain"><?php echo e($sub->plan?->name_uz); ?> · <?php echo e($sub->next_delivery_at?->diffForHumans()); ?></div>
-          </div>
-          <span class="s-pill danger s-pill--dash-tight">Navbatda</span>
-        </a>
-        </div>
-        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-        <?php $__currentLoopData = $mysteryDueSoon->take(4); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $sub): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-        <div class="col">
-        <a href="<?php echo e(route('admin.mystery-box.subscription',$sub)); ?>" class="dash-row-link dash-row-link--compact">
-          <div class="d-av d-av--teal"><?php echo e(strtoupper(substr($sub->user?->name??'M',0,1))); ?></div>
-          <div class="dash-row-main">
-            <div class="dash-row-title--sm"><?php echo e($sub->user?->name); ?> <?php echo e($sub->user?->lastname); ?></div>
-            <div class="dash-row-meta--2xs"><?php echo e($sub->next_delivery_at?->format('d.m.Y')); ?></div>
-          </div>
-        </a>
-        </div>
-        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-      </div>
-    </div>
-  </div>
   <?php endif; ?>
 
 </div>
@@ -536,211 +538,244 @@
 
 
 
-<div class="dash-tab-panel" id="dash-panel-finance" x-show="tab === 'finance'" x-cloak>
+<div x-show="tab === 'finance'" x-cloak>
 
-  <div class="dash-card mb-4 fade-up">
-    <div class="dash-card-head">
+  
+  <div class="card border-0 shadow-sm rounded-4 mb-4">
+    <div class="card-header bg-white border-bottom-0 px-4 pt-4 pb-2 d-flex flex-wrap align-items-start justify-content-between gap-3">
       <div>
-        <div class="dash-card-title">Daromad dinamikasi</div>
-        <div class="dash-card-sub">Oy / Hafta / Bugun · mln UZS</div>
+        <h3 class="h6 fw-semibold mb-1 text-dark">Daromad dinamikasi</h3>
+        <div class="small text-secondary">Oy / Hafta / Bugun · mln UZS</div>
       </div>
-      <div class="flex items-center gap-2">
-        <div class="period-toggle" id="revPeriodToggle">
-          <button class="period-btn active" data-period="month" onclick="switchRevPeriod(this,'month')">Oy</button>
-          <button class="period-btn" data-period="week" onclick="switchRevPeriod(this,'week')">Hafta</button>
-          <button class="period-btn" data-period="today" onclick="switchRevPeriod(this,'today')">Bugun</button>
+      <div class="d-flex align-items-center gap-2">
+        <div class="btn-group btn-group-sm" role="group" id="revPeriodToggle">
+          <button type="button" class="btn btn-primary"          data-period="month" onclick="switchRevPeriod(this,'month')">Oy</button>
+          <button type="button" class="btn btn-outline-secondary" data-period="week"  onclick="switchRevPeriod(this,'week')">Hafta</button>
+          <button type="button" class="btn btn-outline-secondary" data-period="today" onclick="switchRevPeriod(this,'today')">Bugun</button>
         </div>
-        <a href="<?php echo e(route('admin.orders.index')); ?>" class="btn-p ghost sm">Buyurtmalar <i class="bi bi-arrow-right"></i></a>
+        <a href="<?php echo e(route('admin.orders.index')); ?>" class="btn btn-sm btn-light border rounded-pill">
+          Buyurtmalar <i class="bi bi-arrow-right ms-1"></i>
+        </a>
       </div>
     </div>
-    <div class="dash-card-body pt-0">
-      <div class="dash-chart-surface"><div id="chartRevenue" class="dash-chart-host dash-chart-host--288"></div></div>
+    <div class="card-body pt-0 px-4 pb-4">
+      <div id="chartRevenue" style="min-height:288px;"></div>
     </div>
   </div>
 
   <?php if($isSuperAdmin): ?>
-  <?php
-    $finRows = [
-      ['accent','bi-activity','GMV (brutto)','Barcha buyurtmalar',$gmvTotal,$gmvMonth],
-      ['success','bi-check-circle',"To'langan daromad",'paymentStatus = 2',$totalRevenue,$monthRevenue],
-      ['info','bi-truck','Yetkazish','Delivery fee',$totalDeliveryIncome,$monthDeliveryIncome],
-      ['purple','bi-percent','Seller komissiya',"O'rtacha {$avgCommissionPct}%",$totalCommissionEarned,$monthCommissionEarned],
-      ['teal','bi-box-seam','Mystery Box','Faol + yakunlangan',$mysteryRevTotal,$mysteryRevMonth],
-      ['pink','bi-gift','Gift Sertifikat','Ishlatilgan: '.number_format($giftUsedInOrders/1000).'K',$giftRevenue,0],
-    ];
-    $finCosts = [
-      ['danger','bi-ticket-perforated','Promokod',"{$promoOrdersCount} ta buyurtmada",$totalPromoDiscount,$monthPromoDiscount],
-      ['warning','bi-cash-stack','Cashback','Foydalanuvchilarga qaytarildi',$totalCashbackPaid,$monthCashbackPaid],
-      ['muted','bi-shop-window','Seller payout','Kutilmoqda: '.number_format($pendingSellerPayout/1000).'K',$totalSellerPayout,$monthSellerPayout],
-      ['muted','bi-bicycle','Kuryer payout','Kutilmoqda: '.number_format($pendingCourierPayout/1000).'K',$totalCourierPayout,$monthCourierPayout],
-      ['danger','bi-x-circle','Bekor yo\'qotish','status=F',$cancelledRevLoss,$cancelledMonthLoss],
-    ];
-  ?>
+    <?php
+      $finRows = [
+        ['primary','bi-activity','GMV (brutto)','Barcha buyurtmalar',$gmvTotal,$gmvMonth],
+        ['success','bi-check-circle',"To'langan daromad",'paymentStatus = 2',$totalRevenue,$monthRevenue],
+        ['info','bi-truck','Yetkazish','Delivery fee',$totalDeliveryIncome,$monthDeliveryIncome],
+        ['primary','bi-percent','Seller komissiya',"O'rtacha {$avgCommissionPct}%",$totalCommissionEarned,$monthCommissionEarned],
+        ['success','bi-box-seam','Mystery Box','Faol + yakunlangan',$mysteryRevTotal,$mysteryRevMonth],
+        ['danger','bi-gift','Gift Sertifikat','Ishlatilgan: '.number_format($giftUsedInOrders/1000).'K',$giftRevenue,0],
+      ];
+      $finCosts = [
+        ['danger','bi-ticket-perforated','Promokod',"{$promoOrdersCount} ta buyurtmada",$totalPromoDiscount,$monthPromoDiscount],
+        ['warning','bi-cash-stack','Cashback','Foydalanuvchilarga qaytarildi',$totalCashbackPaid,$monthCashbackPaid],
+        ['secondary','bi-shop-window','Seller payout','Kutilmoqda: '.number_format($pendingSellerPayout/1000).'K',$totalSellerPayout,$monthSellerPayout],
+        ['secondary','bi-bicycle','Kuryer payout','Kutilmoqda: '.number_format($pendingCourierPayout/1000).'K',$totalCourierPayout,$monthCourierPayout],
+        ['danger','bi-x-circle','Bekor yo\'qotish','status=F',$cancelledRevLoss,$cancelledMonthLoss],
+      ];
+    ?>
 
-  <div class="row g-4">
-    <div class="col-12 col-xl-5 fade-up">
-      <div class="fin-card">
-        <div class="fin-section">
-          <div class="fin-section-label fin-section-label--income"><i class="bi bi-arrow-up-circle-fill"></i> Daromadlar</div>
-          <?php $__currentLoopData = $finRows; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$clr,$ico,$lbl,$sub,$total,$month]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-          <?php
-            $bg=match($clr){'purple'=>'rgba(124,92,252,.13)','teal'=>'rgba(20,184,166,.11)','pink'=>'rgba(236,72,153,.1)',default=>"var(--p-{$clr}-d)"};
-            $clrVal=match($clr){'purple'=>'#7c5cfc','teal'=>'#14b8a6','pink'=>'#ec4899',default=>"var(--p-{$clr})"};
-          ?>
-          <div class="fin2-row">
-            <div class="fin2-ico" style="background:<?php echo e($bg); ?>;color:<?php echo e($clrVal); ?>"><i class="bi <?php echo e($ico); ?>"></i></div>
-            <div class="fin2-body">
-              <div class="fin2-name"><?php echo e($lbl); ?></div>
-              <div class="fin2-sub"><?php echo e($sub); ?></div>
+    <div class="row g-3">
+      
+      <div class="col-12 col-xl-5">
+        <div class="card border-0 shadow-sm rounded-4 h-100">
+          <div class="card-body p-0">
+            
+            <div class="px-4 pt-4 pb-3">
+              <h4 class="h6 fw-semibold text-success-emphasis mb-3">
+                <i class="bi bi-arrow-up-circle-fill me-1"></i> Daromadlar
+              </h4>
+              <?php $__currentLoopData = $finRows; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$tone,$ico,$lbl,$sub,$total,$month]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                <div class="d-flex align-items-center gap-3 py-2 <?php echo e(!$loop->last ? 'border-bottom' : ''); ?>">
+                  <span class="d-inline-flex align-items-center justify-content-center rounded-3 bg-<?php echo e($tone); ?>-subtle text-<?php echo e($tone); ?>-emphasis flex-shrink-0" style="width:2.25rem;height:2.25rem;">
+                    <i class="bi <?php echo e($ico); ?>"></i>
+                  </span>
+                  <div class="flex-grow-1 min-w-0">
+                    <div class="fw-semibold text-dark text-truncate"><?php echo e($lbl); ?></div>
+                    <div class="small text-secondary text-truncate"><?php echo e($sub); ?></div>
+                  </div>
+                  <div class="text-end">
+                    <div class="fw-bold text-<?php echo e($tone); ?>-emphasis font-monospace"><?php echo e(number_format($total/1_000_000,1)); ?><span class="small text-secondary fw-normal">M</span></div>
+                    <?php if($month > 0): ?><div class="small text-secondary font-monospace"><?php echo e(number_format($month/1000)); ?>K / oy</div><?php endif; ?>
+                  </div>
+                </div>
+              <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
             </div>
-            <div class="fin2-nums">
-              <div class="fin2-total" style="color:<?php echo e($clrVal); ?>"><?php echo e(number_format($total/1_000_000,1)); ?><span class="fin2-unit">M</span></div>
-              <?php if($month>0): ?><div class="fin2-month"><?php echo e(number_format($month/1000)); ?>K / oy</div><?php endif; ?>
+            
+            <div class="px-4 py-3 bg-light border-top border-bottom">
+              <h4 class="h6 fw-semibold text-danger-emphasis mb-3">
+                <i class="bi bi-arrow-down-circle-fill me-1"></i> Chiqimlar
+              </h4>
+              <?php $__currentLoopData = $finCosts; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$tone,$ico,$lbl,$sub,$total,$month]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                <div class="d-flex align-items-center gap-3 py-2 <?php echo e(!$loop->last ? 'border-bottom' : ''); ?>">
+                  <span class="d-inline-flex align-items-center justify-content-center rounded-3 bg-<?php echo e($tone); ?>-subtle text-<?php echo e($tone); ?>-emphasis flex-shrink-0" style="width:2.25rem;height:2.25rem;">
+                    <i class="bi <?php echo e($ico); ?>"></i>
+                  </span>
+                  <div class="flex-grow-1 min-w-0">
+                    <div class="fw-semibold text-dark text-truncate"><?php echo e($lbl); ?></div>
+                    <div class="small text-secondary text-truncate"><?php echo e($sub); ?></div>
+                  </div>
+                  <div class="text-end">
+                    <div class="fw-bold text-danger-emphasis font-monospace">−<?php echo e(number_format($total/1_000_000,1)); ?><span class="small text-secondary fw-normal">M</span></div>
+                    <?php if($month > 0): ?><div class="small text-secondary font-monospace"><?php echo e(number_format($month/1000)); ?>K / oy</div><?php endif; ?>
+                  </div>
+                </div>
+              <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
             </div>
-          </div>
-          <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-        </div>
-        <div class="fin-section fin-section--cost">
-          <div class="fin-section-label fin-section-label--cost"><i class="bi bi-arrow-down-circle-fill"></i> Chiqimlar</div>
-          <?php $__currentLoopData = $finCosts; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$clr,$ico,$lbl,$sub,$total,$month]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-          <?php $costBg=$clr==='muted'?'var(--p-elevated)':"var(--p-{$clr}-d)"; ?>
-          <div class="fin2-row">
-            <div class="fin2-ico" style="background:<?php echo e($costBg); ?>;color:var(--p-<?php echo e($clr); ?>)"><i class="bi <?php echo e($ico); ?>"></i></div>
-            <div class="fin2-body">
-              <div class="fin2-name fin2-name--cost"><?php echo e($lbl); ?></div>
-              <div class="fin2-sub"><?php echo e($sub); ?></div>
-            </div>
-            <div class="fin2-nums">
-              <div class="fin2-total fin2-total--cost">−<?php echo e(number_format($total/1_000_000,1)); ?><span class="fin2-unit">M</span></div>
-              <?php if($month>0): ?><div class="fin2-month"><?php echo e(number_format($month/1000)); ?>K / oy</div><?php endif; ?>
-            </div>
-          </div>
-          <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-        </div>
-        <div class="fin-profit-row">
-          <div class="fin-profit-ico"><i class="bi bi-stars"></i></div>
-          <div class="fin-profit-body">
-            <div class="fin-profit-label">Platform sof foyda</div>
-            <div class="fin-profit-sub">Komissiya + Yetkazish − Chiqimlar</div>
-          </div>
-          <div class="fin-profit-val">
-            <div class="fin-profit-num"><?php echo e(number_format($platformProfit/1_000_000,2)); ?><span class="fin2-unit"> M</span></div>
-            <div class="fin2-month">Bu oy: <?php echo e(number_format($platformProfitMonth/1000)); ?>K</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-12 col-xl-7 fade-up d-flex flex-column gap-4">
-      <div class="dash-card">
-        <div class="dash-card-head">
-          <div class="dash-card-title">AOV dinamikasi</div>
-          <div class="dash-card-sub">Joriy: <?php echo e(number_format($avgOrderValue)); ?> UZS · Komissiya: <?php echo e($avgCommissionPct); ?>%</div>
-        </div>
-        <div class="dash-card-body"><div id="chartAov" class="dash-chart-host dash-chart-host--130"></div></div>
-      </div>
-      <div class="row g-4 row-cols-1 row-cols-md-2">
-        <div class="col">
-        <div class="dash-card h-100">
-          <div class="dash-card-head">
-            <div class="dash-card-title">Mahsulot turi</div>
-            <div class="dash-card-sub">Daromad ulushi</div>
-          </div>
-          <div class="dash-card-body">
-            <?php $typeTotal=max(1,$revenueByType['book']+$revenueByType['stationery']);$bookPct=round($revenueByType['book']/$typeTotal*100,1);$statPct=round($revenueByType['stationery']/$typeTotal*100,1); ?>
-            <div id="chartTypePie" class="dash-chart-host dash-chart-host--120"></div>
-            <?php $__currentLoopData = [['Kitoblar',$revenueByType['book'],'accent','bi-book',$bookPct],['Kanstovar',$revenueByType['stationery'],'warning','bi-pencil-square',$statPct]]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$l,$v,$c,$i,$p]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-            <div class="type-legend-row">
-              <i class="bi <?php echo e($i); ?> type-legend-ico type-legend-ico--<?php echo e($c); ?>"></i>
-              <span class="type-legend-label"><?php echo e($l); ?></span>
-              <span class="type-legend-val"><?php echo e(number_format($v/1000)); ?>K</span>
-              <span class="s-pill <?php echo e($c); ?> type-legend-pill"><?php echo e($p); ?>%</span>
-            </div>
-            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-          </div>
-        </div>
-        </div>
-        <div class="col">
-        <div class="dash-card h-100">
-          <div class="dash-card-head">
-            <div class="dash-card-title">Xaridorlar (bu oy)</div>
-            <div class="dash-card-sub">Yangi vs Takroriy</div>
-          </div>
-          <div class="dash-card-body">
-            <?php $totalB=max(1,$repeatBuyersMonth+$newBuyersMonth);$repeatPct=$totalB>1?round($repeatBuyersMonth/$totalB*100):0; ?>
-            <div id="chartBuyers" class="dash-chart-host dash-chart-host--120"></div>
-            <?php $__currentLoopData = [['Yangi',$newBuyersMonth,'success','1 marta'],['Takroriy',$repeatBuyersMonth,'accent','2+ marta']]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$l,$v,$c,$s]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-            <div class="buyer-legend-row">
-              <div class="buyer-legend-dot buyer-legend-dot--<?php echo e($c); ?>"></div>
-              <div class="buyer-legend-stack">
-                <div class="buyer-legend-name"><?php echo e($l); ?></div>
-                <div class="buyer-legend-sub"><?php echo e($s); ?></div>
+            
+            <div class="d-flex align-items-center gap-3 px-4 py-3 bg-primary-subtle">
+              <span class="d-inline-flex align-items-center justify-content-center rounded-3 bg-primary text-white flex-shrink-0" style="width:2.5rem;height:2.5rem;">
+                <i class="bi bi-stars"></i>
+              </span>
+              <div class="flex-grow-1 min-w-0">
+                <div class="fw-bold text-primary-emphasis">Platform sof foyda</div>
+                <div class="small text-primary-emphasis opacity-75">Komissiya + Yetkazish − Chiqimlar</div>
               </div>
-              <span class="buyer-legend-count"><?php echo e(number_format($v)); ?></span>
-            </div>
-            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-            <div class="dash-tile-divider">
-              <div class="dash-repeat-head"><span>Qayta qaytish</span><span class="dash-repeat-pct"><?php echo e($repeatPct); ?>%</span></div>
-              <div class="dash-prog-track"><div class="dash-prog-fill" style="width:<?php echo e($repeatPct); ?>%;background:var(--p-accent)"></div></div>
-            </div>
-          </div>
-        </div>
-        </div>
-      </div>
-      <?php if($deliveryTypeSplit->count()): ?>
-      <div class="dash-card">
-        <div class="dash-card-head"><div class="dash-card-title">Yetkazish turlari</div></div>
-        <div class="dash-card-body">
-          <?php $__currentLoopData = $deliveryTypeSplit->take(5); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $dt): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-          <div class="dash-delivery-line">
-            <span class="dash-delivery-name"><?php echo e($dt->deliveryType); ?></span>
-            <span class="dash-delivery-val"><?php echo e(number_format($dt->cnt)); ?> ta</span>
-          </div>
-          <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-        </div>
-      </div>
-      <?php endif; ?>
-
-      <?php if(count($salesGeoCountries)): ?>
-      <div class="dash-card">
-        <div class="dash-card-head">
-          <div>
-            <div class="dash-card-title">Hududlar bo‘yicha sotuvlar</div>
-            <div class="dash-card-sub">Davlatni tanlang, sotuv bo‘lgan viloyatlar avtomatik chiqadi</div>
-          </div>
-        </div>
-        <div class="dash-card-body pt-0">
-          <div class="period-toggle mb-3" id="salesGeoCountryToggle">
-            <?php $__currentLoopData = $salesGeoCountries; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $country): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-              <button
-                class="period-btn <?php echo e($salesGeoDefaultCountry === $country['key'] ? 'active' : ''); ?>"
-                data-country="<?php echo e($country['key']); ?>"
-                onclick="switchSalesGeoCountry(this,'<?php echo e($country['key']); ?>')"
-              >
-                <?php echo e($country['label']); ?>
-
-              </button>
-            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-          </div>
-
-          <div class="row g-4">
-            <div class="col-12 col-xl-8">
-              <div class="dash-chart-surface">
-                <div id="chartSalesGeo" class="dash-chart-host dash-chart-host--220"></div>
+              <div class="text-end">
+                <div class="h5 mb-0 fw-bold text-primary-emphasis font-monospace"><?php echo e(number_format($platformProfit/1_000_000,2)); ?><span class="small text-secondary fw-normal"> M</span></div>
+                <div class="small text-primary-emphasis font-monospace">Bu oy: <?php echo e(number_format($platformProfitMonth/1000)); ?>K</div>
               </div>
             </div>
-            <div class="col-12 col-xl-4">
-              <div id="salesGeoCountrySummary" class="row row-cols-2 g-3 mb-3"></div>
-              <div id="salesGeoRegionList" class="space-y-2"></div>
-            </div>
           </div>
         </div>
       </div>
-      <?php endif; ?>
+
+      <div class="col-12 col-xl-7 d-flex flex-column gap-3">
+        
+        <div class="card border-0 shadow-sm rounded-4">
+          <div class="card-header bg-white border-bottom-0 px-4 pt-4 pb-2">
+            <h3 class="h6 fw-semibold mb-1 text-dark">AOV dinamikasi</h3>
+            <div class="small text-secondary">Joriy: <?php echo e(number_format($avgOrderValue)); ?> UZS · Komissiya: <?php echo e($avgCommissionPct); ?>%</div>
+          </div>
+          <div class="card-body pt-0 px-4 pb-4">
+            <div id="chartAov" style="min-height:130px;"></div>
+          </div>
+        </div>
+
+        
+        <div class="row g-3 row-cols-1 row-cols-md-2">
+          <div class="col">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+              <div class="card-header bg-white border-bottom-0 px-4 pt-4 pb-2">
+                <h3 class="h6 fw-semibold mb-1 text-dark">Mahsulot turi</h3>
+                <div class="small text-secondary">Daromad ulushi</div>
+              </div>
+              <div class="card-body pt-0 px-4 pb-4">
+                <?php
+                  $typeTotal = max(1, $revenueByType['book'] + $revenueByType['stationery']);
+                  $bookPct = round($revenueByType['book']/$typeTotal*100, 1);
+                  $statPct = round($revenueByType['stationery']/$typeTotal*100, 1);
+                ?>
+                <div id="chartTypePie" style="min-height:120px;"></div>
+                <?php $__currentLoopData = [['Kitoblar',$revenueByType['book'],'primary','bi-book',$bookPct],['Kanstovar',$revenueByType['stationery'],'warning','bi-pencil-square',$statPct]]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$l,$v,$c,$i,$p]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                  <div class="d-flex align-items-center gap-2 py-2 <?php echo e(!$loop->last ? 'border-bottom' : ''); ?>">
+                    <i class="bi <?php echo e($i); ?> text-<?php echo e($c); ?>-emphasis"></i>
+                    <span class="text-dark fw-medium flex-grow-1"><?php echo e($l); ?></span>
+                    <span class="small text-secondary font-monospace"><?php echo e(number_format($v/1000)); ?>K</span>
+                    <span class="badge rounded-pill text-bg-<?php echo e($c); ?>-subtle text-<?php echo e($c); ?>-emphasis fw-semibold"><?php echo e($p); ?>%</span>
+                  </div>
+                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+              </div>
+            </div>
+          </div>
+          <div class="col">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+              <div class="card-header bg-white border-bottom-0 px-4 pt-4 pb-2">
+                <h3 class="h6 fw-semibold mb-1 text-dark">Xaridorlar (bu oy)</h3>
+                <div class="small text-secondary">Yangi vs Takroriy</div>
+              </div>
+              <div class="card-body pt-0 px-4 pb-4">
+                <?php
+                  $totalB = max(1, $repeatBuyersMonth + $newBuyersMonth);
+                  $repeatPct = $totalB > 1 ? round($repeatBuyersMonth/$totalB*100) : 0;
+                ?>
+                <div id="chartBuyers" style="min-height:120px;"></div>
+                <?php $__currentLoopData = [['Yangi',$newBuyersMonth,'success','1 marta'],['Takroriy',$repeatBuyersMonth,'primary','2+ marta']]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$l,$v,$c,$s]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                  <div class="d-flex align-items-center gap-2 py-2 <?php echo e(!$loop->last ? 'border-bottom' : ''); ?>">
+                    <span class="rounded-circle bg-<?php echo e($c); ?> d-inline-block" style="width:.625rem;height:.625rem;"></span>
+                    <div class="flex-grow-1">
+                      <div class="fw-medium text-dark small"><?php echo e($l); ?></div>
+                      <div class="text-secondary" style="font-size:.7rem;"><?php echo e($s); ?></div>
+                    </div>
+                    <span class="fw-semibold text-dark font-monospace"><?php echo e(number_format($v)); ?></span>
+                  </div>
+                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                <div class="mt-2 pt-2 border-top">
+                  <div class="d-flex align-items-center justify-content-between mb-1">
+                    <span class="small text-secondary">Qayta qaytish</span>
+                    <span class="fw-bold text-primary-emphasis font-monospace"><?php echo e($repeatPct); ?>%</span>
+                  </div>
+                  <div class="progress" role="progressbar" style="height:.4rem;">
+                    <div class="progress-bar bg-primary" style="width:<?php echo e($repeatPct); ?>%"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <?php if($deliveryTypeSplit->count()): ?>
+          <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-header bg-white border-bottom-0 px-4 pt-4 pb-2">
+              <h3 class="h6 fw-semibold mb-0 text-dark">Yetkazish turlari</h3>
+            </div>
+            <div class="card-body pt-0 px-4 pb-3">
+              <?php $__currentLoopData = $deliveryTypeSplit->take(5); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $dt): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                <div class="d-flex justify-content-between align-items-center py-2 <?php echo e(!$loop->last ? 'border-bottom' : ''); ?>">
+                  <span class="text-dark fw-medium"><?php echo e($dt->deliveryType); ?></span>
+                  <span class="text-secondary font-monospace fw-semibold"><?php echo e(number_format($dt->cnt)); ?> ta</span>
+                </div>
+              <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+            </div>
+          </div>
+        <?php endif; ?>
+
+        <?php if(count($salesGeoCountries)): ?>
+          <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-header bg-white border-bottom-0 px-4 pt-4 pb-2">
+              <h3 class="h6 fw-semibold mb-1 text-dark">Hududlar bo‘yicha sotuvlar</h3>
+              <div class="small text-secondary">Davlatni tanlang, sotuv bo‘lgan viloyatlar avtomatik chiqadi</div>
+            </div>
+            <div class="card-body pt-0 px-4 pb-4">
+              <div class="btn-group btn-group-sm mb-3" role="group" id="salesGeoCountryToggle">
+                <?php $__currentLoopData = $salesGeoCountries; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $country): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                  <button type="button"
+                          class="btn <?php echo e($salesGeoDefaultCountry === $country['key'] ? 'btn-primary' : 'btn-outline-secondary'); ?>"
+                          data-country="<?php echo e($country['key']); ?>"
+                          onclick="switchSalesGeoCountry(this,'<?php echo e($country['key']); ?>')">
+                    <?php echo e($country['label']); ?>
+
+                  </button>
+                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+              </div>
+              <div class="row g-3">
+                <div class="col-12 col-xl-8">
+                  <div id="chartSalesGeo" style="min-height:220px;"></div>
+                </div>
+                <div class="col-12 col-xl-4">
+                  <div id="salesGeoCountrySummary" class="row row-cols-2 g-2 mb-3"></div>
+                  <div id="salesGeoRegionList" class="d-flex flex-column gap-2"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        <?php endif; ?>
+      </div>
     </div>
-  </div>
   <?php else: ?>
-  <div class="dash-empty"><i class="bi bi-lock dash-empty__ico"></i>Moliyaviy hisobot faqat superadmin uchun</div>
+    <div class="card border-0 shadow-sm rounded-4 text-center py-5">
+      <div class="card-body">
+        <i class="bi bi-lock display-6 d-block mb-2 text-secondary opacity-50"></i>
+        <div class="text-secondary">Moliyaviy hisobot faqat superadmin uchun</div>
+      </div>
+    </div>
   <?php endif; ?>
 
 </div>
@@ -748,236 +783,289 @@
 
 
 
-<div class="dash-tab-panel" id="dash-panel-users" x-show="tab === 'users'" x-cloak>
+<div x-show="tab === 'users'" x-cloak>
+  <div class="row g-3">
 
-  <div class="row g-4">
-
-    <div class="col-12 col-xl-4 fade-up">
-      <div class="dash-card h-100">
-        <div class="dash-card-head">
+    
+    <div class="col-12 col-xl-4">
+      <div class="card border-0 shadow-sm rounded-4 h-100">
+        <div class="card-header bg-white border-bottom-0 px-4 pt-4 pb-2 d-flex align-items-start justify-content-between gap-2">
           <div>
-            <div class="dash-card-title">Foydalanuvchilar holati</div>
-            <div class="dash-card-sub"><?php echo e(number_format($totalUsers)); ?> ta jami ro'yxatda</div>
+            <h3 class="h6 fw-semibold mb-1 text-dark">Foydalanuvchilar holati</h3>
+            <div class="small text-secondary"><?php echo e(number_format($totalUsers)); ?> ta jami ro'yxatda</div>
           </div>
-          <a href="<?php echo e(route('admin.users.index')); ?>" class="btn-p ghost sm">Barchasi <i class="bi bi-arrow-right"></i></a>
+          <a href="<?php echo e(route('admin.users.index')); ?>" class="btn btn-sm btn-light border rounded-pill">
+            Barchasi <i class="bi bi-arrow-right ms-1"></i>
+          </a>
         </div>
-        <div class="dash-card-body">
-          <div class="user-mini-strip">
-            <?php $__currentLoopData = [[$totalUsers,'Jami','text'],[$onlineUsers,'Online','success'],[$premiumUsers,'Premium','warning'],[$newUsersToday,'+Bugun','accent']]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$v,$l,$c]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-            <div class="user-mini-cell">
-              <div class="user-mini-val" style="color:var(--p-<?php echo e($c); ?>)"><?php echo e(number_format($v)); ?></div>
-              <div class="user-mini-lbl"><?php echo e($l); ?></div>
-            </div>
+        <div class="card-body pt-0 px-4 pb-4">
+          
+          <div class="row g-2 row-cols-4 mb-3 text-center">
+            <?php $__currentLoopData = [[$totalUsers,'Jami','dark'],[$onlineUsers,'Online','success'],[$premiumUsers,'Premium','warning'],[$newUsersToday,'+Bugun','primary']]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$v,$l,$c]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+              <div class="col">
+                <div class="fw-bold text-<?php echo e($c); ?>-emphasis font-monospace"><?php echo e(number_format($v)); ?></div>
+                <div class="small text-secondary"><?php echo e($l); ?></div>
+              </div>
             <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
           </div>
-          <div class="mt-3">
-            <?php $__currentLoopData = [['Online (5 min)',$onlineUsers,'success'],['Aktiv (FCM)',$activeUsers,'accent'],['Premium',$premiumUsers,'warning'],['Tasdiqlangan',$verifiedUsers,'info'],['Izolyat (30+ kun)',$isolatedUsers,'danger']]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$l,$v,$c]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-            <div class="user-prog-row">
-              <div class="user-prog-left">
-                <span class="user-prog-dot" style="background:var(--p-<?php echo e($c); ?>)"></span>
-                <span class="user-prog-lbl"><?php echo e($l); ?></span>
+          
+          <?php $__currentLoopData = [['Online (5 min)',$onlineUsers,'success'],['Aktiv (FCM)',$activeUsers,'primary'],['Premium',$premiumUsers,'warning'],['Tasdiqlangan',$verifiedUsers,'info'],['Izolyat (30+ kun)',$isolatedUsers,'danger']]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$l,$v,$c]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <span class="rounded-circle bg-<?php echo e($c); ?> d-inline-block flex-shrink-0" style="width:.5rem;height:.5rem;"></span>
+              <span class="small text-dark fw-medium" style="min-width:9rem;"><?php echo e($l); ?></span>
+              <div class="progress flex-grow-1" role="progressbar" style="height:.4rem;">
+                <div class="progress-bar bg-<?php echo e($c); ?>" style="width:<?php echo e($totalUsers>0?min(round($v/$totalUsers*100),100):0); ?>%"></div>
               </div>
-              <div class="user-prog-mid">
-                <div class="user-prog-bar">
-                  <div class="user-prog-fill" style="width:<?php echo e($totalUsers>0?min(round($v/$totalUsers*100),100):0); ?>%;background:var(--p-<?php echo e($c); ?>)"></div>
+              <span class="small fw-semibold text-dark font-monospace"><?php echo e(number_format($v)); ?></span>
+            </div>
+          <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+
+          <div class="mt-3 pt-3 border-top">
+            <div class="small text-secondary mb-1">Yangi userlar — 7 kun</div>
+            <div id="chartUserSparkline" style="min-height:60px;"></div>
+          </div>
+
+          <?php if($isolatedUsers > 0): ?>
+            <a href="<?php echo e(route('admin.users.index')); ?>" class="alert alert-danger d-flex align-items-center gap-2 mb-0 mt-3 small text-decoration-none">
+              <i class="bi bi-person-x"></i>
+              <span class="flex-grow-1"><?php echo e(number_format($isolatedUsers)); ?> ta user 30+ kun yo'q</span>
+              <span class="fw-semibold">Ko'rish →</span>
+            </a>
+          <?php endif; ?>
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="col-12 col-xl-4">
+      <div class="card border-0 shadow-sm rounded-4 h-100">
+        <div class="card-header bg-white border-bottom-0 px-4 pt-4 pb-2">
+          <h3 class="h6 fw-semibold mb-1 text-dark">Hozir online</h3>
+          <div class="small text-success-emphasis d-flex align-items-center gap-2">
+            <span class="rounded-circle bg-success d-inline-block" style="width:.5rem;height:.5rem;"></span>
+            <?php echo e($onlineUsers); ?> nafar
+          </div>
+        </div>
+        <div class="card-body pt-0 px-3 pb-3">
+          <div class="d-flex flex-column gap-1">
+            <?php $__empty_1 = true; $__currentLoopData = $onlineUsersList; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $u): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+              <a href="<?php echo e(route('admin.users.show',$u->id)); ?>" class="d-flex align-items-center gap-3 px-2 py-2 rounded-3 text-decoration-none hover-bg-light">
+                <?php $av = $resolveImg($u->avatar ?? null); ?>
+                <?php if($av): ?>
+                  <img src="<?php echo e($av); ?>" alt="" class="rounded-circle border flex-shrink-0" style="width:36px;height:36px;object-fit:cover;">
+                <?php else: ?>
+                  <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-primary-subtle text-primary-emphasis fw-bold flex-shrink-0" style="width:36px;height:36px;">
+                    <?php echo e(strtoupper(substr($u->name??'U',0,1))); ?>
+
+                  </span>
+                <?php endif; ?>
+                <div class="flex-grow-1 min-w-0">
+                  <div class="fw-semibold text-dark text-truncate"><?php echo e($u->name); ?> <?php echo e($u->lastname); ?></div>
+                  <div class="small text-secondary text-truncate"><?php echo e($u->last_seen_at ? \Carbon\Carbon::parse($u->last_seen_at)->diffForHumans() : '—'); ?></div>
+                </div>
+                <span class="rounded-circle bg-success d-inline-block" style="width:.5rem;height:.5rem;"></span>
+              </a>
+            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
+              <div class="text-center text-secondary py-5">
+                <i class="bi bi-wifi-off display-6 d-block mb-2 opacity-50"></i>
+                Hozir hech kim online emas
+              </div>
+            <?php endif; ?>
+          </div>
+          <a href="<?php echo e(route('admin.users.index')); ?>" class="btn btn-light border rounded-pill w-100 mt-3">
+            Barcha foydalanuvchilar <i class="bi bi-arrow-right ms-1"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="col-12 col-xl-4">
+      <div class="card border-0 shadow-sm rounded-4 h-100">
+        <div class="card-header bg-white border-bottom-0 px-4 pt-4 pb-2 d-flex align-items-start justify-content-between gap-2">
+          <div>
+            <h3 class="h6 fw-semibold mb-1 text-dark">Top mijozlar</h3>
+            <div class="small text-secondary">Eng ko'p xarid qilganlar</div>
+          </div>
+          <a href="<?php echo e(route('admin.users.index')); ?>" class="btn btn-sm btn-light border rounded-pill">Barchasi</a>
+        </div>
+        <div class="card-body pt-0 px-3 pb-3">
+          <?php $__empty_1 = true; $__currentLoopData = $topBuyers; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $i => $buyer): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+            <?php
+              $topBuyerHref = $buyer->user ? route('admin.users.show', $buyer->user) : null;
+              $rankTone = $i === 0 ? 'warning' : ($i === 1 ? 'secondary' : ($i === 2 ? 'danger' : 'light'));
+              $rankBorder = $i < 3 ? '' : 'border';
+            ?>
+            <div class="d-flex align-items-center gap-2 px-2 py-2 rounded-3">
+              <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-<?php echo e($rankTone); ?>-subtle text-<?php echo e($rankTone); ?>-emphasis fw-bold flex-shrink-0 <?php echo e($rankBorder); ?>" style="width:24px;height:24px;font-size:.75rem;"><?php echo e($i+1); ?></span>
+              <?php $av = $resolveImg($buyer->user?->avatar); ?>
+              <?php if($av): ?>
+                <img src="<?php echo e($av); ?>" alt="" class="rounded-circle border flex-shrink-0" style="width:32px;height:32px;object-fit:cover;">
+              <?php else: ?>
+                <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-primary-subtle text-primary-emphasis fw-bold flex-shrink-0" style="width:32px;height:32px;">
+                  <?php echo e(strtoupper(substr($buyer->user?->name??'U',0,1))); ?>
+
+                </span>
+              <?php endif; ?>
+              <div class="flex-grow-1 min-w-0">
+                <div class="fw-semibold text-dark text-truncate small">
+                  <?php if($topBuyerHref): ?>
+                    <a href="<?php echo e($topBuyerHref); ?>" class="text-decoration-none text-dark"><?php echo e($buyer->user ? $buyer->user->name.' '.$buyer->user->lastname : 'ID:'.$buyer->user_id); ?></a>
+                  <?php else: ?>
+                    <?php echo e($buyer->user ? $buyer->user->name.' '.$buyer->user->lastname : 'ID:'.$buyer->user_id); ?>
+
+                  <?php endif; ?>
+                </div>
+                <div class="text-secondary" style="font-size:.7rem;"><?php echo e($buyer->order_count); ?> ta buyurtma</div>
+              </div>
+              <div class="text-end">
+                <div class="fw-bold text-dark font-monospace small"><?php echo e(number_format($buyer->total_spent/1000)); ?>K</div>
+                <div class="text-secondary" style="font-size:.65rem;">UZS</div>
+              </div>
+            </div>
+          <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
+            <div class="text-center text-secondary py-5">
+              <i class="bi bi-person-x display-6 d-block mb-2 opacity-50"></i>
+              Ma'lumot yo'q
+            </div>
+          <?php endif; ?>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+
+
+<div x-show="tab === 'catalog'" x-cloak>
+  <div class="row g-3">
+
+    
+    <div class="col-12 col-xl-7">
+      <div class="card border-0 shadow-sm rounded-4 h-100">
+        <div class="card-header bg-white border-bottom-0 px-4 pt-4 pb-2">
+          <h3 class="h6 fw-semibold mb-1 text-dark">Top mahsulotlar</h3>
+          <div class="small text-secondary">Eng ko'p sotilganlar</div>
+        </div>
+        <div class="card-body pt-0 px-3 pb-3">
+          <?php $__empty_1 = true; $__currentLoopData = $topMixedProducts; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $i => $product): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+            <?php
+              $imgs = is_array($product->images) ? $product->images : json_decode($product->images ?? '[]', true);
+              $img  = $resolveImg($imgs[0] ?? null);
+              $rankTone = $i === 0 ? 'warning' : ($i === 1 ? 'secondary' : ($i === 2 ? 'danger' : 'light'));
+              $rankBorder = $i < 3 ? '' : 'border';
+              $typeTone = $product->_type === 'stationery' ? 'warning' : 'info';
+              $typeLabel = $product->_type === 'stationery' ? 'Kanstovar' : 'Kitob';
+            ?>
+            <div class="d-flex align-items-center gap-3 px-2 py-2 <?php echo e(!$loop->last ? 'border-bottom' : ''); ?>">
+              <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-<?php echo e($rankTone); ?>-subtle text-<?php echo e($rankTone); ?>-emphasis fw-bold flex-shrink-0 <?php echo e($rankBorder); ?>" style="width:28px;height:28px;font-size:.8rem;"><?php echo e($i+1); ?></span>
+              <span class="rounded-3 bg-light d-inline-flex align-items-center justify-content-center overflow-hidden border flex-shrink-0" style="width:48px;height:48px;">
+                <?php if($img): ?>
+                  <img src="<?php echo e($img); ?>" alt="" style="width:100%;height:100%;object-fit:cover;">
+                <?php else: ?>
+                  <i class="bi bi-<?php echo e($product->_type === 'stationery' ? 'box' : 'book'); ?> text-secondary"></i>
+                <?php endif; ?>
+              </span>
+              <div class="flex-grow-1 min-w-0">
+                <div class="fw-semibold text-dark text-truncate"><?php echo e($product->name); ?></div>
+                <div class="d-flex align-items-center gap-2 small">
+                  <span class="badge rounded-pill text-bg-<?php echo e($typeTone); ?>-subtle text-<?php echo e($typeTone); ?>-emphasis fw-semibold"><?php echo e($typeLabel); ?></span>
+                  <span class="text-secondary font-monospace"><?php echo e(number_format($product->total_revenue/1000)); ?>K rev.</span>
                 </div>
               </div>
-              <span class="user-prog-val"><?php echo e(number_format($v)); ?></span>
-            </div>
-            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-          </div>
-          <div class="user-sparkline-block">
-            <div class="sparkline-cap">Yangi userlar — 7 kun</div>
-            <div id="chartUserSparkline" class="dash-chart-host dash-chart-host--60"></div>
-          </div>
-          <?php if($isolatedUsers>0): ?>
-          <div class="alert-item danger alert-item--mt alert-item--compact">
-            <i class="bi bi-person-x alert-item__i--shrink"></i>
-            <span><?php echo e(number_format($isolatedUsers)); ?> ta user 30+ kun yo'q</span>
-            <a href="<?php echo e(route('admin.users.index')); ?>" class="alert-item__link">Ko'rish →</a>
-          </div>
-          <?php endif; ?>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-12 col-xl-4 fade-up">
-      <div class="dash-card h-100">
-        <div class="dash-card-head">
-          <div>
-            <div class="dash-card-title">Hozir online</div>
-            <div class="dash-card-sub dash-card-sub--row"><span class="live-dot"></span>&ensp;<?php echo e($onlineUsers); ?> nafar</div>
-          </div>
-        </div>
-        <div class="dash-card-body">
-          <?php $__empty_1 = true; $__currentLoopData = $onlineUsersList; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $u): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
-          <a href="<?php echo e(route('admin.users.show',$u->id)); ?>" class="dash-row-link">
-            <div class="d-av d-av--accent">
-              <?php $av = $resolveImg($u->avatar ?? null); ?> <?php if($av): ?><img src="<?php echo e($av); ?>" alt=""><?php else: ?><?php echo e(strtoupper(substr($u->name??'U',0,1))); ?><?php endif; ?>
-            </div>
-            <div class="dash-row-main">
-              <div class="dash-row-title"><?php echo e($u->name); ?> <?php echo e($u->lastname); ?></div>
-              <div class="dash-row-meta"><?php echo e($u->last_seen_at ? \Carbon\Carbon::parse($u->last_seen_at)->diffForHumans() : '—'); ?></div>
-            </div>
-            <span class="live-dot"></span>
-          </a>
-          <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
-          <div class="dash-empty"><i class="bi bi-wifi-off dash-empty__ico"></i>Hozir hech kim online emas</div>
-          <?php endif; ?>
-          <a href="<?php echo e(route('admin.users.index')); ?>" class="btn-p ghost btn-p-block-dash mt-3">Barcha foydalanuvchilar <i class="bi bi-arrow-right ml-1"></i></a>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-12 col-xl-4 fade-up">
-      <div class="dash-card h-100">
-        <div class="dash-card-head">
-          <div>
-            <div class="dash-card-title">Top mijozlar</div>
-            <div class="dash-card-sub">Eng ko'p xarid qilganlar</div>
-          </div>
-          <a href="<?php echo e(route('admin.users.index')); ?>" class="btn-p ghost sm">Barchasi</a>
-        </div>
-        <div class="dash-card-body">
-          <?php $__empty_1 = true; $__currentLoopData = $topBuyers; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $i => $buyer): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
-          <?php $topBuyerHref = $buyer->user ? route('admin.users.show', $buyer->user) : null; ?>
-          <div class="top-buyer-row">
-            <span class="rank-num <?php echo e($i===0?'rn-1':($i===1?'rn-2':($i===2?'rn-3':'rn-n'))); ?>"><?php echo e($i+1); ?></span>
-            <div class="d-av d-av--accent">
-              <?php $av = $resolveImg($buyer->user?->avatar); ?> <?php if($av): ?><img src="<?php echo e($av); ?>" alt=""><?php else: ?><?php echo e(strtoupper(substr($buyer->user?->name??'U',0,1))); ?><?php endif; ?>
-            </div>
-            <div class="top-buyer-body">
-              <div class="dash-row-title--md">
-                <?php if($topBuyerHref): ?>
-                  <a href="<?php echo e($topBuyerHref); ?>" class="hover:underline"><?php echo e($buyer->user ? $buyer->user->name.' '.$buyer->user->lastname : 'ID:'.$buyer->user_id); ?></a>
-                <?php else: ?>
-                  <?php echo e($buyer->user ? $buyer->user->name.' '.$buyer->user->lastname : 'ID:'.$buyer->user_id); ?>
-
-                <?php endif; ?>
+              <div class="text-end">
+                <div class="fw-bold text-dark font-monospace"><?php echo e(number_format($product->sold_count)); ?></div>
+                <div class="text-secondary small">dona</div>
               </div>
-              <div class="top-row-rev-hint"><?php echo e($buyer->order_count); ?> ta buyurtma</div>
             </div>
-            <div class="top-buyer-spend">
-              <div class="top-buyer-amount"><?php echo e(number_format($buyer->total_spent/1000)); ?>K</div>
-              <div class="top-row-count-hint">UZS</div>
-            </div>
-          </div>
           <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
-          <div class="dash-empty"><i class="bi bi-person-x dash-empty__ico"></i>Ma'lumot yo'q</div>
+            <div class="text-center text-secondary py-5">
+              <i class="bi bi-box display-6 d-block mb-2 opacity-50"></i>
+              Ma'lumot yo'q
+            </div>
           <?php endif; ?>
         </div>
       </div>
+    </div>
+
+    
+    <div class="col-12 col-xl-5 d-flex flex-column gap-3">
+      <?php
+        $bizCards = [
+          [
+            'title' => 'Sotuvchilar',
+            'sub'   => "Do'konlar platformada",
+            'icon'  => 'bi-shop-window',
+            'tone'  => 'success',
+            'href'  => route('admin.sellers.index'),
+            'nums'  => [[$approvedSellers,'Faol','success'],[$totalSellers,'Jami','dark'],[$pendingSellers,'Ariza','warning']],
+            'rate'  => $totalSellers > 0 ? round($approvedSellers/$totalSellers*100) : 0,
+            'alert' => $pendingSellers > 0
+                ? ['warning','bi-clock', "{$pendingSellers} ta yangi ariza", route('admin.sellers.index',['tab'=>'pending'])]
+                : null,
+          ],
+          [
+            'title' => 'Kuryerlar',
+            'sub'   => 'Faol yetkazuvchilar',
+            'icon'  => 'bi-bicycle',
+            'tone'  => 'info',
+            'href'  => route('admin.couriers.index'),
+            'nums'  => [[$activeCouriers,'Faol','info'],[$totalCouriers,'Jami','dark'],[0,'Navbatda','secondary']],
+            'rate'  => $totalCouriers > 0 ? round($activeCouriers/$totalCouriers*100) : 0,
+            'alert' => null,
+          ],
+        ];
+      ?>
+      <?php $__currentLoopData = $bizCards; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $b): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+        <div class="card border-0 shadow-sm rounded-4">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-center gap-3 mb-3">
+              <span class="d-inline-flex align-items-center justify-content-center rounded-3 bg-<?php echo e($b['tone']); ?>-subtle text-<?php echo e($b['tone']); ?>-emphasis flex-shrink-0" style="width:2.75rem;height:2.75rem;font-size:1.25rem;">
+                <i class="bi <?php echo e($b['icon']); ?>"></i>
+              </span>
+              <div class="flex-grow-1">
+                <h3 class="h6 mb-1 fw-semibold text-dark"><?php echo e($b['title']); ?></h3>
+                <div class="small text-secondary"><?php echo e($b['sub']); ?></div>
+              </div>
+              <a href="<?php echo e($b['href']); ?>" class="btn btn-sm btn-light border rounded-pill">
+                Ko'rish <i class="bi bi-arrow-right ms-1"></i>
+              </a>
+            </div>
+            <div class="row g-2 row-cols-3 text-center mb-3">
+              <?php $__currentLoopData = $b['nums']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$v,$l,$c]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                <div class="col">
+                  <div class="fw-bold text-<?php echo e($c); ?>-emphasis font-monospace fs-5"><?php echo e(number_format($v)); ?></div>
+                  <div class="small text-secondary"><?php echo e($l); ?></div>
+                </div>
+              <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+            </div>
+            <div>
+              <div class="d-flex justify-content-between small mb-1">
+                <span class="text-secondary">Faollik darajasi</span>
+                <span class="fw-semibold text-dark"><?php echo e($b['rate']); ?>%</span>
+              </div>
+              <div class="progress" role="progressbar" style="height:.4rem;">
+                <div class="progress-bar bg-<?php echo e($b['tone']); ?>" style="width:<?php echo e($b['rate']); ?>%"></div>
+              </div>
+            </div>
+            <?php if($b['alert']): ?>
+              <?php [$t, $ic, $msg, $h] = $b['alert']; ?>
+              <a href="<?php echo e($h); ?>" class="alert alert-<?php echo e($t); ?> d-flex align-items-center gap-2 mb-0 mt-3 small text-decoration-none">
+                <i class="bi <?php echo e($ic); ?>"></i>
+                <span class="flex-grow-1"><?php echo e($msg); ?></span>
+                <span class="fw-semibold">Ko'rish →</span>
+              </a>
+            <?php endif; ?>
+          </div>
+        </div>
+      <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
     </div>
 
   </div>
 </div>
 
-
-
-
-<div class="dash-tab-panel" id="dash-panel-catalog" x-show="tab === 'catalog'" x-cloak>
-
-  <div class="row g-4">
-
-    <div class="col-12 col-xl-7 fade-up">
-      <div class="dash-card h-100">
-        <div class="dash-card-head">
-          <div class="dash-card-title">Top mahsulotlar</div>
-          <div class="dash-card-sub">Eng ko'p sotilganlar</div>
-        </div>
-        <div class="dash-card-body">
-          <?php $__empty_1 = true; $__currentLoopData = $topMixedProducts; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $i => $product): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
-          <?php $imgs=is_array($product->images)?$product->images:json_decode($product->images??'[]',true);$img=$resolveImg($imgs[0] ?? null); ?>
-          <div class="top-row">
-            <span class="rank-num <?php echo e($i===0?'rn-1':($i===1?'rn-2':($i===2?'rn-3':'rn-n'))); ?>"><?php echo e($i+1); ?></span>
-            <div class="book-thumb">
-              <?php if($img): ?><img src="<?php echo e($img); ?>"><?php else: ?><i class="bi bi-<?php echo e($product->_type==='stationery'?'box':'book'); ?>"></i><?php endif; ?>
-            </div>
-            <div class="top-row-body">
-              <div class="dash-row-title--md"><?php echo e($product->name); ?></div>
-              <div class="top-row-meta-row">
-                <span class="s-pill <?php echo e($product->_type==='stationery'?'warning':'info'); ?> s-pill--dash-xs"><?php echo e($product->_type==='stationery'?'Kanstovar':'Kitob'); ?></span>
-                <span class="top-row-rev-hint"><?php echo e(number_format($product->total_revenue/1000)); ?>K rev.</span>
-              </div>
-            </div>
-            <div class="top-row-count">
-              <div class="top-row-count-val"><?php echo e(number_format($product->sold_count)); ?></div>
-              <div class="top-row-count-hint">dona</div>
-            </div>
-          </div>
-          <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
-          <div class="dash-empty"><i class="bi bi-box dash-empty__ico"></i>Ma'lumot yo'q</div>
-          <?php endif; ?>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-12 col-xl-5 fade-up d-flex flex-column gap-4">
-      <div class="biz-stat-card biz-stat-card--success">
-        <div class="biz-stat-head">
-          <div class="biz-stat-ico biz-stat-ico--success"><i class="bi bi-shop-window"></i></div>
-          <div>
-            <div class="biz-stat-title">Sotuvchilar</div>
-            <div class="biz-stat-sub">Do'konlar platformada</div>
-          </div>
-          <a href="<?php echo e(route('admin.sellers.index')); ?>" class="btn-p ghost sm ml-auto">Ko'rish <i class="bi bi-arrow-right"></i></a>
-        </div>
-        <div class="biz-stat-nums">
-          <?php $__currentLoopData = [[$approvedSellers,'Faol','success'],[$totalSellers,'Jami','text'],[$pendingSellers,'Ariza','warning']]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$v,$l,$c]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-          <div class="biz-num-cell">
-            <div class="biz-num-val" style="color:var(--p-<?php echo e($c); ?>)"><?php echo e(number_format($v)); ?></div>
-            <div class="biz-num-lbl"><?php echo e($l); ?></div>
-          </div>
-          <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-        </div>
-        <div class="biz-stat-bar-wrap">
-          <div class="biz-stat-bar-label">
-            <span>Faollik darajasi</span>
-            <span><?php echo e($totalSellers>0?round($approvedSellers/$totalSellers*100):0); ?>%</span>
-          </div>
-          <div class="biz-prog-track">
-            <div class="biz-prog-fill biz-prog-fill--success" style="width:<?php echo e($totalSellers>0?round($approvedSellers/$totalSellers*100):0); ?>%"></div>
-          </div>
-        </div>
-        <?php if($pendingSellers>0): ?>
-        <div class="alert-item warning alert-item--compact mt-2">
-          <i class="bi bi-clock"></i><span><?php echo e($pendingSellers); ?> ta yangi ariza</span>
-          <a href="<?php echo e(route('admin.sellers.index',['tab'=>'pending'])); ?>" class="alert-item__link">Ko'rish →</a>
-        </div>
-        <?php endif; ?>
-      </div>
-
-      <div class="biz-stat-card biz-stat-card--info">
-        <div class="biz-stat-head">
-          <div class="biz-stat-ico biz-stat-ico--info"><i class="bi bi-bicycle"></i></div>
-          <div>
-            <div class="biz-stat-title">Kuryerlar</div>
-            <div class="biz-stat-sub">Faol yetkazuvchilar</div>
-          </div>
-          <a href="<?php echo e(route('admin.couriers.index')); ?>" class="btn-p ghost sm ml-auto">Ko'rish <i class="bi bi-arrow-right"></i></a>
-        </div>
-        <div class="biz-stat-nums">
-          <?php $__currentLoopData = [[$activeCouriers,'Faol','info'],[$totalCouriers,'Jami','text'],[0,'Navbatda','muted']]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$v,$l,$c]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-          <div class="biz-num-cell">
-            <div class="biz-num-val" style="color:var(--p-<?php echo e($c); ?>)"><?php echo e(number_format($v)); ?></div>
-            <div class="biz-num-lbl"><?php echo e($l); ?></div>
-          </div>
-          <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-        </div>
-        <div class="biz-stat-bar-wrap">
-          <div class="biz-stat-bar-label">
-            <span>Faollik darajasi</span>
-            <span><?php echo e($totalCouriers>0?round($activeCouriers/$totalCouriers*100):0); ?>%</span>
-          </div>
-          <div class="biz-prog-track">
-            <div class="biz-prog-fill biz-prog-fill--info" style="width:<?php echo e($totalCouriers>0?round($activeCouriers/$totalCouriers*100):0); ?>%"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-  </div>
-</div>
 </div>
 
 <?php $__env->stopSection(); ?>
@@ -1330,28 +1418,32 @@ function _renderSalesGeoSide() {
   }
 
   summaryHost.innerHTML = `
-    <div class="rounded-[18px] border border-slate-200 bg-slate-50 px-3 py-3">
-      <div class="text-[11px] uppercase tracking-[0.14em] text-slate-500">Buyurtmalar</div>
-      <div class="mt-1 text-lg font-semibold text-slate-900">${Number(country.orders || 0).toLocaleString()}</div>
+    <div class="col">
+      <div class="rounded-3 border bg-light px-3 py-3">
+        <div class="small text-secondary text-uppercase" style="letter-spacing:.12em;font-size:.7rem;">Buyurtmalar</div>
+        <div class="mt-1 h5 mb-0 fw-semibold text-dark font-monospace">${Number(country.orders || 0).toLocaleString()}</div>
+      </div>
     </div>
-    <div class="rounded-[18px] border border-slate-200 bg-slate-50 px-3 py-3">
-      <div class="text-[11px] uppercase tracking-[0.14em] text-slate-500">Viloyatlar</div>
-      <div class="mt-1 text-lg font-semibold text-slate-900">${Number(country.regions_count || 0).toLocaleString()}</div>
+    <div class="col">
+      <div class="rounded-3 border bg-light px-3 py-3">
+        <div class="small text-secondary text-uppercase" style="letter-spacing:.12em;font-size:.7rem;">Viloyatlar</div>
+        <div class="mt-1 h5 mb-0 fw-semibold text-dark font-monospace">${Number(country.regions_count || 0).toLocaleString()}</div>
+      </div>
     </div>
   `;
 
   listHost.innerHTML = regions.map((region, index) => {
     const amount = Number(region.revenue || 0);
     return `
-      <div class="rounded-[18px] border border-slate-200 bg-white px-3 py-3">
-        <div class="flex items-center justify-between gap-3">
+      <div class="rounded-3 border bg-white px-3 py-2">
+        <div class="d-flex align-items-center justify-content-between gap-3">
           <div class="min-w-0">
-            <div class="text-sm font-semibold text-slate-900 truncate">${index + 1}. ${region.label}</div>
-            <div class="text-xs text-slate-500">${Number(region.orders || 0).toLocaleString()} ta buyurtma</div>
+            <div class="small fw-semibold text-dark text-truncate">${index + 1}. ${region.label}</div>
+            <div class="text-secondary" style="font-size:.7rem;">${Number(region.orders || 0).toLocaleString()} ta buyurtma</div>
           </div>
-          <div class="text-right">
-            <div class="text-sm font-semibold text-slate-900">${Math.round(amount / 1000).toLocaleString()}K</div>
-            <div class="text-[11px] text-slate-500">UZS</div>
+          <div class="text-end">
+            <div class="small fw-semibold text-dark font-monospace">${Math.round(amount / 1000).toLocaleString()}K</div>
+            <div class="text-secondary" style="font-size:.65rem;">UZS</div>
           </div>
         </div>
       </div>

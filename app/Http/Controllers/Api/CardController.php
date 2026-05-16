@@ -127,13 +127,12 @@ class CardController extends Controller
             }
 
             $normalizedExpire = mb_substr($expire, 2, 2) . mb_substr($expire, 0, 2);
-            $userPhoneNumber = $this->normalizeUserPhoneForPaylov($user->phone_number);
 
             $response = PaylovService::make()->createUserCard(
                 (string) $user->id,
                 $rawNumber,
                 $normalizedExpire,
-                $userPhoneNumber,
+                null,
             );
 
             $result = $response['result'] ?? [];
@@ -152,7 +151,7 @@ class CardController extends Controller
                     'card_number' => $maskedNumber,
                     'card_fingerprint' => $fingerprint,
                     'expire_date' => $expire,
-                    'phone_number' => $result['otpSentPhone'] ?? $userPhoneNumber ?? $user->phone_number,
+                    'phone_number' => $result['otpSentPhone'] ?? $user->phone_number,
                     'token' => '',
                     'is_verified' => false,
                     'is_default' => false,
@@ -460,24 +459,6 @@ class CardController extends Controller
         $digits = preg_replace('/\D+/', '', $number) ?? '';
 
         return hash_hmac('sha256', $digits, (string) config('app.key'));
-    }
-
-    private function normalizeUserPhoneForPaylov(?string $phone): ?string
-    {
-        $digits = preg_replace('/\D+/', '', (string) $phone) ?? '';
-        if ($digits === '') {
-            return null;
-        }
-
-        if (strlen($digits) === 9) {
-            return '+998' . $digits;
-        }
-
-        if (strlen($digits) === 12 && str_starts_with($digits, '998')) {
-            return '+' . $digits;
-        }
-
-        return null;
     }
 
     private function findPendingPaylovCard(int $userId, string $maskedNumber, ?int $orderId): ?UserCard

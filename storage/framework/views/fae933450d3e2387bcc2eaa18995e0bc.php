@@ -26,22 +26,24 @@
 <?php endif; ?>
 
 
-<div class="tab-pills fade-up mb-4">
-  <?php $__currentLoopData = [
-    'versions'   => ['bi-phone','App versiyalar'],
-    'contacts'   => ['bi-headset','Kontaktlar'],
-    'app-flags'  => ['bi-toggles','App flaglar'],
-    'courier-bonus' => ['bi-bicycle','Kuryer bonus'],
-    'telegram'   => ['bi-telegram','Telegram'],
-    'commission' => ['bi-percent','Komissiya'],
-    'cashback'   => ['bi-cash-stack','Cashback'],
-  ]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $key => [$icon, $label]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-  <a href="<?php echo e(route('admin.settings.index', ['tab'=>$key])); ?>"
-     class="tab-pill <?php echo e($tab===$key ? 'active' : ''); ?>">
-    <i class="bi <?php echo e($icon); ?>"></i> <?php echo e($label); ?>
+<div class="kc-settings-tabs mb-4">
+  <div class="nav nav-pills flex-wrap">
+    <?php $__currentLoopData = [
+      'versions'   => ['bi-phone','App versiyalar'],
+      'contacts'   => ['bi-headset','Kontaktlar'],
+      'app-flags'  => ['bi-toggles','App flaglar'],
+      'courier-bonus' => ['bi-bicycle','Kuryer bonus'],
+      'telegram'   => ['bi-telegram','Telegram'],
+      'commission' => ['bi-percent','Komissiya'],
+      'cashback'   => ['bi-cash-stack','Cashback'],
+    ]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $key => [$icon, $label]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+    <a href="<?php echo e(route('admin.settings.index', ['tab'=>$key])); ?>"
+       class="nav-link <?php echo e($tab===$key ? 'active' : ''); ?>">
+      <i class="bi <?php echo e($icon); ?>"></i> <?php echo e($label); ?>
 
-  </a>
-  <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+    </a>
+    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+  </div>
 </div>
 
 
@@ -64,10 +66,10 @@
             ['Market App','market','bi-bag','accent'],
           ]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$appName, $key, $icon, $clr]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
           <div>
-            <div style="padding:14px;background:var(--p-elevated);border:1px solid var(--p-border);border-radius:10px">
-              <div class="flex items-center gap-2" style="margin-bottom:10px">
+            <div class="kc-settings-panel kc-settings-panel--compact">
+              <div class="d-flex align-items-center gap-2 mb-3">
                 <i class="bi <?php echo e($icon); ?>" style="color:var(--p-<?php echo e($clr); ?>);font-size:15px"></i>
-                <span style="font-size:13px;font-weight:600;color:var(--p-text)"><?php echo e($appName); ?></span>
+                <span class="fw-semibold small text-body"><?php echo e($appName); ?></span>
               </div>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <div>
@@ -107,9 +109,9 @@
         ['Market iOS', $project?->market_version_ios, 'accent'],
         ['Market Android', $project?->market_version_android, 'accent'],
       ]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$lbl, $val, $clr]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-      <div class="flex items-center justify-between py-2" style="border-bottom:1px solid var(--p-border)">
-        <span style="font-size:13px;color:var(--p-muted)"><?php echo e($lbl); ?></span>
-        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:var(--p-<?php echo e($clr); ?>)">
+      <div class="kc-settings-row">
+        <span class="kc-settings-key"><?php echo e($lbl); ?></span>
+        <span class="kc-settings-value kc-mono" style="color:var(--p-<?php echo e($clr); ?>)">
           <?php echo e($val ?? '—'); ?>
 
         </span>
@@ -139,10 +141,10 @@
             ['Kitobchi Business', 'business', 'bi-shop-window', 'warning'],
             ['Endi Courier', 'courier', 'bi-bicycle', 'info'],
           ]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$appName, $key, $icon, $clr]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-          <div style="padding:16px;background:var(--p-elevated);border:1px solid var(--p-border);border-radius:10px">
-            <div class="flex items-center gap-2 mb-3">
+          <div class="kc-settings-panel">
+            <div class="d-flex align-items-center gap-2 mb-3">
               <i class="bi <?php echo e($icon); ?>" style="color:var(--p-<?php echo e($clr); ?>);font-size:16px"></i>
-              <span style="font-size:13px;font-weight:700;color:var(--p-text)"><?php echo e($appName); ?></span>
+              <span class="fw-semibold small text-body"><?php echo e($appName); ?></span>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
@@ -181,12 +183,12 @@
         ['Courier telefon',   $project?->courier_phone,  'info',    'bi-telephone'],
         ['Courier email',     $project?->courier_email,  'info',    'bi-envelope'],
       ]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$lbl, $val, $clr, $ico]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-      <div class="flex items-center justify-between py-2" style="border-bottom:1px solid var(--p-border)">
-        <span class="flex items-center gap-2" style="font-size:13px;color:var(--p-muted)">
+      <div class="kc-settings-row">
+        <span class="kc-settings-key">
           <i class="bi <?php echo e($ico); ?>" style="color:var(--p-<?php echo e($clr); ?>)"></i> <?php echo e($lbl); ?>
 
         </span>
-        <span style="font-size:12px;font-weight:600;color:var(--p-text);font-family:'JetBrains Mono',monospace">
+        <span class="kc-settings-value kc-mono">
           <?php echo e($val ?? '—'); ?>
 
         </span>
@@ -212,8 +214,8 @@
         <?php echo csrf_field(); ?> <?php echo method_field('PUT'); ?>
 
         
-        <div style="padding:16px;background:var(--p-elevated);border:1px solid var(--p-border);border-radius:10px;margin-bottom:16px">
-          <div style="font-size:13px;font-weight:700;color:var(--p-text);margin-bottom:12px">
+        <div class="kc-settings-panel mb-3">
+          <div class="kc-settings-block-title">
             <i class="bi bi-toggles mr-2" style="color:var(--p-accent)"></i>Global flaglar
           </div>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -223,22 +225,22 @@
               ['ramadan',    'Ramazon rejim (ramadan)',   'bi-moon-stars-fill', 'accent'],
               ['stop_sales', 'Savdo to\'xtatilgan (stopSales)', 'bi-slash-circle-fill', 'danger'],
             ]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$field, $label, $ico, $clr]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-            <label class="p-form-label flex items-center gap-2" style="cursor:pointer;padding:10px;border:1px solid var(--p-border);border-radius:8px">
+            <label class="kc-settings-check">
               <input type="hidden" name="<?php echo e($field); ?>" value="0">
               <input type="checkbox" name="<?php echo e($field); ?>" value="1"
                      <?php echo e($project?->{$field} ? 'checked' : ''); ?>
 
                      style="width:16px;height:16px;accent-color:var(--p-<?php echo e($clr); ?>)">
               <i class="bi <?php echo e($ico); ?>" style="color:var(--p-<?php echo e($clr); ?>)"></i>
-              <span style="font-size:13px"><?php echo e($label); ?></span>
+              <span class="small"><?php echo e($label); ?></span>
             </label>
             <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
           </div>
         </div>
 
         
-        <div style="padding:16px;background:var(--p-elevated);border:1px solid var(--p-border);border-radius:10px">
-          <div style="font-size:13px;font-weight:700;color:var(--p-text);margin-bottom:12px">
+        <div class="kc-settings-panel">
+          <div class="kc-settings-block-title">
             <i class="bi bi-box-seam mr-2" style="color:var(--p-success)"></i>Qadoqlash narxi
           </div>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -247,21 +249,21 @@
               <input type="number" name="packaging_price_small" class="p-form-control" min="0" required
                      value="<?php echo e(old('packaging_price_small', $project?->packaging_price_small ?? 25000)); ?>"
                      placeholder="25000">
-              <div style="font-size:11px;color:var(--p-hint);margin-top:4px">Chegara dan oz kitob uchun</div>
+              <div class="kc-settings-note">Chegara dan oz kitob uchun</div>
             </div>
             <div>
               <label class="p-form-label">Katta narx (UZS) *</label>
               <input type="number" name="packaging_price_large" class="p-form-control" min="0" required
                      value="<?php echo e(old('packaging_price_large', $project?->packaging_price_large ?? 40000)); ?>"
                      placeholder="40000">
-              <div style="font-size:11px;color:var(--p-hint);margin-top:4px">Chegara va undan ko'p kitob uchun</div>
+              <div class="kc-settings-note">Chegara va undan ko'p kitob uchun</div>
             </div>
             <div>
               <label class="p-form-label">Chegara (ta kitob) *</label>
               <input type="number" name="packaging_threshold" class="p-form-control" min="1" required
                      value="<?php echo e(old('packaging_threshold', $project?->packaging_threshold ?? 4)); ?>"
                      placeholder="4">
-              <div style="font-size:11px;color:var(--p-hint);margin-top:4px">Bu va undan ko'p → katta narx</div>
+              <div class="kc-settings-note">Bu va undan ko'p → katta narx</div>
             </div>
           </div>
         </div>
@@ -284,8 +286,8 @@
         ['ramadan',      $project?->ramadan,     'accent',  'bi-moon-stars-fill'],
         ['stopSales',    $project?->stop_sales,  'danger',  'bi-slash-circle-fill'],
       ]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$lbl, $val, $clr, $ico]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-      <div class="flex items-center justify-between py-2" style="border-bottom:1px solid var(--p-border)">
-        <span class="flex items-center gap-2" style="font-size:13px;color:var(--p-muted)">
+      <div class="kc-settings-row">
+        <span class="kc-settings-key">
           <i class="bi <?php echo e($ico); ?>" style="color:var(--p-<?php echo e($clr); ?>)"></i> <?php echo e($lbl); ?>
 
         </span>
@@ -296,21 +298,21 @@
         <?php endif; ?>
       </div>
       <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-      <div class="flex items-center justify-between py-2" style="border-bottom:1px solid var(--p-border)">
-        <span style="font-size:13px;color:var(--p-muted)"><i class="bi bi-box-seam mr-1"></i> Kichik qadoqlash</span>
-        <span style="font-size:12px;font-weight:600;font-family:'JetBrains Mono',monospace;color:var(--p-success)">
+      <div class="kc-settings-row">
+        <span class="kc-settings-key"><i class="bi bi-box-seam mr-1"></i> Kichik qadoqlash</span>
+        <span class="kc-settings-value kc-mono" style="color:var(--p-success)">
           <?php echo e(number_format($project?->packaging_price_small ?? 25000)); ?> UZS
         </span>
       </div>
-      <div class="flex items-center justify-between py-2" style="border-bottom:1px solid var(--p-border)">
-        <span style="font-size:13px;color:var(--p-muted)"><i class="bi bi-box-seam mr-1"></i> Katta qadoqlash</span>
-        <span style="font-size:12px;font-weight:600;font-family:'JetBrains Mono',monospace;color:var(--p-success)">
+      <div class="kc-settings-row">
+        <span class="kc-settings-key"><i class="bi bi-box-seam mr-1"></i> Katta qadoqlash</span>
+        <span class="kc-settings-value kc-mono" style="color:var(--p-success)">
           <?php echo e(number_format($project?->packaging_price_large ?? 40000)); ?> UZS
         </span>
       </div>
-      <div class="flex items-center justify-between py-2">
-        <span style="font-size:13px;color:var(--p-muted)"><i class="bi bi-hash mr-1"></i> Chegara</span>
-        <span style="font-size:12px;font-weight:600;font-family:'JetBrains Mono',monospace;color:var(--p-text)">
+      <div class="kc-settings-row">
+        <span class="kc-settings-key"><i class="bi bi-hash mr-1"></i> Chegara</span>
+        <span class="kc-settings-value kc-mono">
           <?php echo e($project?->packaging_threshold ?? 4); ?> ta kitob
         </span>
       </div>
@@ -332,7 +334,7 @@
       </div>
       <form method="POST" action="<?php echo e(route('admin.settings.courier-bonus')); ?>">
         <?php echo csrf_field(); ?> <?php echo method_field('PUT'); ?>
-        <div style="padding:16px;background:var(--p-elevated);border:1px solid var(--p-border);border-radius:10px">
+        <div class="kc-settings-panel">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label class="p-form-label">Har minut qo‘shiladigan bonus</label>
@@ -380,9 +382,9 @@
         ['SLA', $project?->courier_sla_minutes ?? 45, 'minut'],
         ['Penalty', $project?->courier_penalty_step ?? 300, 'so\'m/min'],
       ]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$lbl, $val, $suffix]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-      <div class="flex items-center justify-between py-2" style="border-bottom:1px solid var(--p-border)">
-        <span style="font-size:13px;color:var(--p-muted)"><?php echo e($lbl); ?></span>
-        <span style="font-size:12px;font-weight:600;font-family:'JetBrains Mono',monospace;color:var(--p-text)">
+      <div class="kc-settings-row">
+        <span class="kc-settings-key"><?php echo e($lbl); ?></span>
+        <span class="kc-settings-value kc-mono">
           <?php echo e(number_format((int) $val)); ?> <?php echo e($suffix); ?>
 
         </span>
@@ -407,20 +409,20 @@
       <form method="POST" action="<?php echo e(route('admin.settings.telegram')); ?>">
         <?php echo csrf_field(); ?> <?php echo method_field('PUT'); ?>
 
-        <div style="padding:16px;background:var(--p-elevated);border:1px solid var(--p-border);border-radius:10px;margin-bottom:16px">
-          <label class="p-form-label flex items-center gap-2" style="cursor:pointer;padding:10px;border:1px solid var(--p-border);border-radius:8px;margin-bottom:0">
+        <div class="kc-settings-panel mb-3">
+          <label class="kc-settings-check">
             <input type="hidden" name="telegram_login_enabled" value="0">
             <input type="checkbox" name="telegram_login_enabled" value="1"
                    <?php echo e($project?->telegram_login_enabled ? 'checked' : ''); ?>
 
                    style="width:16px;height:16px;accent-color:#229ED9">
             <i class="bi bi-power" style="color:#229ED9"></i>
-            <span style="font-size:13px">Telegram login yoqilgan</span>
+            <span class="small">Telegram login yoqilgan</span>
           </label>
         </div>
 
-        <div style="padding:16px;background:var(--p-elevated);border:1px solid var(--p-border);border-radius:10px;margin-bottom:16px">
-          <div style="font-size:13px;font-weight:700;color:var(--p-text);margin-bottom:12px">Sozlamalar</div>
+        <div class="kc-settings-panel mb-3">
+          <div class="kc-settings-block-title">Sozlamalar</div>
           <div class="grid grid-cols-1 gap-3">
             <div>
               <label class="p-form-label">Client ID</label>
@@ -433,14 +435,14 @@
               <input type="text" name="telegram_redirect_uri_ios" class="p-form-control"
                      value="<?php echo e(old('telegram_redirect_uri_ios', $project?->telegram_redirect_uri_ios ?? 'kitobchi://tglogin')); ?>"
                      placeholder="kitobchi://tglogin">
-              <div style="font-size:11px;color:var(--p-hint);margin-top:4px">iOS uchun hozir custom scheme ishlatiladi. Bu SceneDelegate / universal link noaniqligidan ko'ra barqarorroq.</div>
+              <div class="kc-settings-note">iOS uchun hozir custom scheme ishlatiladi. Bu SceneDelegate / universal link noaniqligidan ko'ra barqarorroq.</div>
             </div>
             <div>
               <label class="p-form-label">Android Redirect URI</label>
               <input type="text" name="telegram_redirect_uri_android" class="p-form-control"
                      value="<?php echo e(old('telegram_redirect_uri_android', $project?->telegram_redirect_uri_android ?? 'https://app2234481912-login.tg.dev')); ?>"
                      placeholder="https://app2234481912-login.tg.dev">
-              <div style="font-size:11px;color:var(--p-hint);margin-top:4px">Android App Link. `kitobchi://telegram-auth` bu yer uchun noto'g'ri.</div>
+              <div class="kc-settings-note">Android App Link. `kitobchi://telegram-auth` bu yer uchun noto'g'ri.</div>
             </div>
             <div>
               <label class="p-form-label">Scopes</label>
@@ -451,10 +453,10 @@
           </div>
         </div>
 
-        <div style="font-size:11px;color:var(--p-hint);padding:10px 0">
+        <div class="kc-settings-note py-2">
           Maxfiy <code>client_secret</code> admin panelda saqlanmaydi. Uni server <code>.env</code> fayliga yozing: <code>TELEGRAM_LOGIN_CLIENT_SECRET=...</code>
         </div>
-        <div style="font-size:11px;color:var(--p-muted);padding:0 0 10px 0">
+        <div class="kc-settings-note pb-2">
           To'g'ri qiymatlar: iOS <code>kitobchi://tglogin</code>, Android <code>https://app2234481912-login.tg.dev</code>.
         </div>
 
@@ -470,32 +472,32 @@
       <div class="p-card-header">
         <div class="p-card-title"><i class="bi bi-info-circle mr-2" style="color:var(--p-info)"></i>Hozirgi holat</div>
       </div>
-      <div class="flex items-center justify-between py-2" style="border-bottom:1px solid var(--p-border)">
-        <span style="font-size:13px;color:var(--p-muted)"><i class="bi bi-power mr-1" style="color:#229ED9"></i> Holat</span>
+      <div class="kc-settings-row">
+        <span class="kc-settings-key"><i class="bi bi-power mr-1" style="color:#229ED9"></i> Holat</span>
         <?php if($project?->telegram_login_enabled): ?>
           <span class="s-pill info" style="font-size:11px"><i class="bi bi-check-lg"></i> Yoqilgan</span>
         <?php else: ?>
           <span class="s-pill muted" style="font-size:11px">O'chiq</span>
         <?php endif; ?>
       </div>
-      <div class="flex items-center justify-between py-2" style="border-bottom:1px solid var(--p-border)">
-        <span style="font-size:13px;color:var(--p-muted)"><i class="bi bi-key mr-1"></i> Client ID</span>
-        <span style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--p-text)">
+      <div class="kc-settings-row">
+        <span class="kc-settings-key"><i class="bi bi-key mr-1"></i> Client ID</span>
+        <span class="kc-settings-value kc-mono">
           <?php echo e($project?->telegram_client_id ? substr($project->telegram_client_id, 0, 12).'...' : '—'); ?>
 
         </span>
       </div>
-      <div class="flex items-center justify-between py-2" style="border-bottom:1px solid var(--p-border)">
-        <span style="font-size:13px;color:var(--p-muted)"><i class="bi bi-apple mr-1"></i> iOS URI</span>
-        <span style="font-size:11px;color:var(--p-muted)"><?php echo e($project?->telegram_redirect_uri_ios ? 'sozlangan' : 'default'); ?></span>
+      <div class="kc-settings-row">
+        <span class="kc-settings-key"><i class="bi bi-apple mr-1"></i> iOS URI</span>
+        <span class="kc-settings-value"><?php echo e($project?->telegram_redirect_uri_ios ? 'sozlangan' : 'default'); ?></span>
       </div>
-      <div class="flex items-center justify-between py-2" style="border-bottom:1px solid var(--p-border)">
-        <span style="font-size:13px;color:var(--p-muted)"><i class="bi bi-android2 mr-1"></i> Android URI</span>
-        <span style="font-size:11px;color:var(--p-muted)"><?php echo e($project?->telegram_redirect_uri_android ? 'sozlangan' : 'default'); ?></span>
+      <div class="kc-settings-row">
+        <span class="kc-settings-key"><i class="bi bi-android2 mr-1"></i> Android URI</span>
+        <span class="kc-settings-value"><?php echo e($project?->telegram_redirect_uri_android ? 'sozlangan' : 'default'); ?></span>
       </div>
-      <div class="flex items-center justify-between py-2">
-        <span style="font-size:13px;color:var(--p-muted)"><i class="bi bi-shield-lock mr-1"></i> Scopes</span>
-        <span style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--p-text)">
+      <div class="kc-settings-row">
+        <span class="kc-settings-key"><i class="bi bi-shield-lock mr-1"></i> Scopes</span>
+        <span class="kc-settings-value kc-mono">
           <?php echo e($project?->telegram_scopes ?? 'openid profile phone'); ?>
 
         </span>

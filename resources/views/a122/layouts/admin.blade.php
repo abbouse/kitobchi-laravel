@@ -37,14 +37,14 @@
       @include('a122.partials.topbar')
       <main class="kc-content flex-grow-1">
         <div class="container-fluid px-3 px-lg-4 px-xxl-5">
-          <div class="mx-auto" style="max-width: 1760px;">
+          <div class="mx-auto kc-shell-width">
             @yield('content')
           </div>
         </div>
       </main>
       <footer class="border-top bg-white bg-opacity-75">
         <div class="container-fluid px-3 px-lg-4 px-xxl-5 py-3">
-          <div class="mx-auto d-flex flex-wrap align-items-center justify-content-between gap-2 small text-secondary" style="max-width: 1760px;">
+          <div class="mx-auto kc-shell-width d-flex flex-wrap align-items-center justify-content-between gap-2 small text-secondary">
             <span>© {{ date('Y') }} Kitobchi Admin</span>
             <span>Tabler-inspired Bootstrap workspace</span>
           </div>

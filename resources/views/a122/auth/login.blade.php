@@ -2,17 +2,6 @@
 
 @section('title', 'Kirish')
 
-@push('styles')
-<style>
-  .a122-login-body {
-    background:
-      radial-gradient(circle at top left, rgba(28, 176, 154, 0.12), transparent 28%),
-      radial-gradient(circle at bottom right, rgba(245, 188, 91, 0.09), transparent 26%),
-      var(--p-bg);
-  }
-</style>
-@endpush
-
 @section('content')
 <section class="a122-login-shell">
   <div class="a122-login-grid">
@@ -66,7 +55,7 @@
 
     <div class="a122-login-card-wrap">
       <div class="a122-login-copy">
-        <div class="flex items-center justify-between gap-3">
+        <div class="kc-auth-titlebar">
           <h2 class="a122-login-title">Tizimga kirish</h2>
           <button data-theme-toggle class="topbar-theme-btn" aria-label="Tema almashtirish" title="Light / Dark mode">
             <span class="theme-icon-light"><i data-lucide="sun-medium" class="w-4.5 h-4.5"></i></span>
@@ -94,7 +83,7 @@
         @csrf
         <div>
           <label for="email" class="p-form-label">Email</label>
-          <input type="email" id="email" name="email" value="{{ old('email') }}" required autofocus autocomplete="email" placeholder="admin@example.com" class="p-form-control @error('email') border-red-500 @enderror">
+          <input type="email" id="email" name="email" value="{{ old('email') }}" required autofocus autocomplete="email" placeholder="admin@example.com" class="p-form-control @error('email') is-invalid @enderror">
           @error('email')
             <div class="invalid-feedback">{{ $message }}</div>
           @enderror
@@ -102,7 +91,7 @@
 
         <div x-data="{ showPassword: false }">
           <label for="password" class="p-form-label">Parol</label>
-          <div class="relative">
+          <div class="position-relative">
             <input :type="showPassword ? 'text' : 'password'" id="password" name="password" required autocomplete="current-password" placeholder="Parolingizni kiriting" class="p-form-control pr-11">
             <button type="button" @click="showPassword = !showPassword" class="a122-password-toggle" aria-label="Parolni ko‘rsatish">
               <i x-show="!showPassword" data-lucide="eye" class="w-4 h-4"></i>
