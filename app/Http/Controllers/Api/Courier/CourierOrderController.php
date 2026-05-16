@@ -213,12 +213,12 @@ class CourierOrderController extends Controller
                 // yozadi va sla_deadline ni mijoz pause bilan to'g'rilaydi.
                 $finalBonus = $this->bonusService->computeFinalBonus($order);
 
-                $order->status = CourierOrderStatusCode::DELIVERED->legacy();
-                $order->status_code = CourierOrderStatusCode::DELIVERED->value;
+                $order->status = CourierOrderStatusCode::CUSTOMER_RECEIVED->legacy();
+                $order->status_code = CourierOrderStatusCode::CUSTOMER_RECEIVED->value;
                 $order->save();
 
-                $orderCustomer->status = OrderStatusCode::DELIVERED->legacy();
-                $orderCustomer->status_code = OrderStatusCode::DELIVERED->value;
+                $orderCustomer->status = OrderStatusCode::CUSTOMER_RECEIVED->legacy();
+                $orderCustomer->status_code = OrderStatusCode::CUSTOMER_RECEIVED->value;
                 if ($orderCustomer->payment_status_code !== PaymentStatusCode::PAID->value) {
                     $orderCustomer->paymentStatus = PaymentStatusCode::PAID->legacy();
                     $orderCustomer->payment_status_code = PaymentStatusCode::PAID->value;
@@ -227,11 +227,11 @@ class CourierOrderController extends Controller
                 $orderCustomer->save();
                 $this->courierTaskOrchestratorService->markDeliveredToCustomer($orderCustomer, $courier->id);
 
-                DB::afterCommit(fn () => $this->orderStatusPushService->sendForTransition($orderCustomer->fresh(), $previousStatus, 'C'));
+                DB::afterCommit(fn () => $this->orderStatusPushService->sendForTransition($orderCustomer->fresh(), $previousStatus, 'D'));
             });
 
             $order->refresh();
-            $this->orderRealtimeService->broadcastCourierOrderUpdated($order, 'courier_order.delivered');
+            $this->orderRealtimeService->broadcastCourierOrderUpdated($order, 'courier_order.customer_received');
             $this->orderService->processCashbackAfterOrderMutation($orderCustomer, $orderCustomer->user()->first());
 
             return response()->json([

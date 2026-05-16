@@ -139,13 +139,6 @@ class ProductReviewPromptService
             ->whereNotNull('completed_at')
             ->where('completed_at', '>=', $since)
             ->where(function ($query) {
-                $query->where('status_code', OrderStatusCode::DELIVERED->value)
-                    ->orWhere(function ($fallback) {
-                        $fallback->whereNull('status_code')
-                            ->where('status', OrderStatusCode::DELIVERED->legacy());
-                    });
-            })
-            ->where(function ($query) {
                 $query->where('payment_status_code', PaymentStatusCode::PAID->value)
                     ->orWhere(function ($fallback) {
                         $fallback->whereNull('payment_status_code')

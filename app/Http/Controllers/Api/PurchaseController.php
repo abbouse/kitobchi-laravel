@@ -1301,7 +1301,7 @@ class PurchaseController extends Controller
         if (!$user) return $this->err('Foydalanuvchi topilmadi!', 401);
 
         $request->validate([
-            'status'   => 'nullable|string|in:A,P,B,C,F,progress,pending,packing,in_delivery,delivered,cancelled,returned',
+            'status'   => 'nullable|string|in:A,P,B,C,D,F,progress,pending,packing,in_delivery,delivered,customer_received,cancelled,returned',
             'from'     => 'nullable|date_format:Y-m-d',
             'to'       => 'nullable|date_format:Y-m-d|after_or_equal:from',
             'year'     => 'nullable|integer|min:2000|max:2100',
@@ -1451,10 +1451,10 @@ class PurchaseController extends Controller
                     });
             }),
             'delivered' => $query->where(function ($statusQuery) {
-                $statusQuery->where('status_code', 'delivered')
+                $statusQuery->whereIn('status_code', ['delivered', 'customer_received'])
                     ->orWhere(function ($fallback) {
                         $fallback->whereNull('status_code')
-                            ->where('status', 'C');
+                            ->whereIn('status', ['C', 'D']);
                     });
             }),
             'cancelled' => $query->where(function ($statusQuery) {
@@ -1556,13 +1556,7 @@ class PurchaseController extends Controller
 
         $orders = Sold::query()
             ->where('user_id', $user->id)
-            ->where(function ($query) {
-                $query->where('status_code', OrderStatusCode::DELIVERED->value)
-                    ->orWhere(function ($fallback) {
-                        $fallback->whereNull('status_code')
-                            ->where('status', OrderStatusCode::DELIVERED->legacy());
-                    });
-            })
+            ->whereNotNull('completed_at')
             ->where(function ($query) {
                 $query->where('payment_status_code', PaymentStatusCode::PAID->value)
                     ->orWhere(function ($fallback) {
@@ -1750,6 +1744,8 @@ class PurchaseController extends Controller
         $order->postal_resend_fee = (int) ($order->postal_return_fee ?? 0);
         $order->postal_return_note = $order->postal_return_note;
         $order->resend_replacement_order_id = $order->resend_replacement_order_id;
+        $order->expected_delivery_at = $order->estimatedDeliveryAt()?->toIso8601String();
+        $order->is_delivery_delayed = $order->isDeliveryDelayed();
     }
 
     private function appendOrderSellerMeta(Sold $order): void

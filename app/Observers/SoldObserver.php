@@ -47,10 +47,16 @@ class SoldObserver
         $currentPaymentStatusCode = $order->payment_status_code;
         $previousStatusCode = OrderStatusCode::fromLegacy($previousStatus)->value;
         $previousPaymentStatusCode = PaymentStatusCode::fromLegacy($previousPaymentStatus)->value;
-        $currentCompletedPaid = $currentStatusCode === OrderStatusCode::DELIVERED->value
-            && $currentPaymentStatusCode === PaymentStatusCode::PAID->value;
-        $previousCompletedPaid = $previousStatusCode === OrderStatusCode::DELIVERED->value
-            && $previousPaymentStatusCode === PaymentStatusCode::PAID->value;
+        $currentCompletedPaid = Sold::isCompletedPaidState(
+            $currentStatusCode,
+            $currentPaymentStatusCode,
+            $order->deliveryType,
+        );
+        $previousCompletedPaid = Sold::isCompletedPaidState(
+            $previousStatusCode,
+            $previousPaymentStatusCode,
+            $order->getOriginal('deliveryType') ?? $order->deliveryType,
+        );
         $dbCompletedAt = $order->getAttribute('completed_at');
         $completionTimestamp = now();
 

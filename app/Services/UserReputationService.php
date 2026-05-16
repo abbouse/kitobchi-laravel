@@ -176,13 +176,7 @@ class UserReputationService
     {
         return Sold::query()
             ->where('user_id', $user->id)
-            ->where(function ($query) {
-                $query->where('status_code', OrderStatusCode::DELIVERED->value)
-                    ->orWhere(function ($fallback) {
-                        $fallback->whereNull('status_code')
-                            ->where('status', OrderStatusCode::DELIVERED->legacy());
-                    });
-            })
+            ->whereNotNull('completed_at')
             ->where(function ($query) {
                 $query->where('payment_status_code', PaymentStatusCode::PAID->value)
                     ->orWhere(function ($fallback) {

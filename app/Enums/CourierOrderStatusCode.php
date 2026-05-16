@@ -8,6 +8,7 @@ enum CourierOrderStatusCode: string
     case PENDING = 'pending';
     case IN_DELIVERY = 'in_delivery';
     case DELIVERED = 'delivered';
+    case CUSTOMER_RECEIVED = 'customer_received';
     case CANCELLED = 'cancelled';
     case RETURNED = 'returned';
 
@@ -18,6 +19,7 @@ enum CourierOrderStatusCode: string
             'pending' => self::PENDING,
             'in_delivery' => self::IN_DELIVERY,
             'delivered' => self::DELIVERED,
+            'customer_received' => self::CUSTOMER_RECEIVED,
             'rejected', 'cancelled' => self::CANCELLED,
             'returned' => self::RETURNED,
             default => self::PENDING,
@@ -31,6 +33,7 @@ enum CourierOrderStatusCode: string
             self::PENDING => 'pending',
             self::IN_DELIVERY => 'in_delivery',
             self::DELIVERED => 'delivered',
+            self::CUSTOMER_RECEIVED => 'customer_received',
             self::CANCELLED => 'rejected',
             self::RETURNED => 'returned',
         };

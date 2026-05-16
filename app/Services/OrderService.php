@@ -166,7 +166,7 @@ class OrderService
             'paymentStatus' => PaymentStatusCode::PAID->legacy(),
             'payment_status_code' => PaymentStatusCode::PAID->value,
         ];
-        if ($order->status_code === OrderStatusCode::DELIVERED->value && !$order->completed_at) {
+        if ($order->isCompletedAndPaid() && !$order->completed_at) {
             $payload['completed_at'] = now();
         }
 
@@ -216,7 +216,7 @@ class OrderService
             return $this->awardCashbackForPaidOrder($order, $user, notify: true);
         }
 
-        if ($order->status_code === OrderStatusCode::DELIVERED->value) {
+        if ($order->isCompletedAndPaid()) {
             $this->scheduleCashbackRelease($order, $order->completed_at);
         }
 
@@ -235,8 +235,7 @@ class OrderService
                 return;
             }
 
-            if ($lockedOrder->payment_status_code !== PaymentStatusCode::PAID->value
-                || $lockedOrder->status_code !== OrderStatusCode::DELIVERED->value) {
+            if (!$lockedOrder->isCompletedAndPaid()) {
                 return;
             }
 
@@ -346,8 +345,7 @@ class OrderService
 
     public function cancelOrder(Sold $order, bool $strict = true): array
     {
-        $previousCompletedPaid = $order->status_code === OrderStatusCode::DELIVERED->value
-            && $order->payment_status_code === PaymentStatusCode::PAID->value;
+        $previousCompletedPaid = $order->isCompletedAndPaid();
         $didCancel = false;
 
         // Tez tekshiruv (DB ga bormaydi)

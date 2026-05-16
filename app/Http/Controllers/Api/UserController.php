@@ -80,17 +80,34 @@ class UserController extends Controller
     {
         return Sold::query()
             ->where('user_id', $user->id)
+            ->whereNull('completed_at')
             ->where(function ($query) {
                 $query->whereIn('status_code', [
                     OrderStatusCode::PENDING->value,
                     OrderStatusCode::PACKING->value,
                     OrderStatusCode::IN_DELIVERY->value,
+                    OrderStatusCode::DELIVERED->value,
                 ])->orWhere(function ($fallback) {
                     $fallback->whereNull('status_code')
                         ->whereIn('status', [
                             OrderStatusCode::PENDING->legacy(),
                             OrderStatusCode::PACKING->legacy(),
                             OrderStatusCode::IN_DELIVERY->legacy(),
+                            OrderStatusCode::DELIVERED->legacy(),
+                        ]);
+                });
+            })
+            ->where(function ($query) {
+                $query->whereNotIn('status_code', [
+                    OrderStatusCode::CANCELLED->value,
+                    OrderStatusCode::RETURNED->value,
+                    OrderStatusCode::CUSTOMER_RECEIVED->value,
+                ])->orWhere(function ($fallback) {
+                    $fallback->whereNull('status_code')
+                        ->whereNotIn('status', [
+                            OrderStatusCode::CANCELLED->legacy(),
+                            OrderStatusCode::RETURNED->legacy(),
+                            OrderStatusCode::CUSTOMER_RECEIVED->legacy(),
                         ]);
                 });
             });
@@ -109,12 +126,15 @@ class UserController extends Controller
             OrderStatusCode::PENDING->value => 'Kutilmoqda',
             OrderStatusCode::PACKING->value => "Qadoqlanmoqda",
             OrderStatusCode::IN_DELIVERY->value => "Yo'lda",
+            OrderStatusCode::DELIVERED->value => "Yetib bordi",
+            OrderStatusCode::CUSTOMER_RECEIVED->value => "Mijoz qabul qildi",
             default => 'Jarayonda',
         };
     }
 
     private function formatHomeOrderPreview(Sold $order): array
     {
+        $expectedDeliveryAt = $order->estimatedDeliveryAt();
         $items = collect($order->items ?? [])->map(function ($item) {
             return [
                 'name' => $item['name'] ?? null,
@@ -146,8 +166,13 @@ class UserController extends Controller
             'payment_status_code' => $order->payment_status_code,
             'status_label' => $this->orderStatusLabelForHome($order),
             'amount' => (int) ($order->amount ?? 0),
+            'deliveryType' => $order->deliveryType,
             'formatted_created_at' => optional($order->created_at)?->format('d.m.Y HH:mm'),
+            'expected_delivery_at' => $expectedDeliveryAt?->toIso8601String(),
+            'is_delivery_delayed' => $order->isDeliveryDelayed(),
             'address' => $address,
+            'recipient_region' => $order->recipient_region,
+            'recipient_address' => $order->recipient_address,
             'items' => $items,
         ];
     }

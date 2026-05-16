@@ -16,7 +16,8 @@ class OrderStatusPushService
         'P' => 2,
         'B' => 3,
         'C' => 4,
-        'F' => 5,
+        'D' => 5,
+        'F' => 6,
     ];
 
     private const STATUS_LABELS = [
@@ -25,6 +26,7 @@ class OrderStatusPushService
             'P' => "Qadoqlanmoqda",
             'B' => "Yo'lda",
             'C' => 'Yetkazildi',
+            'D' => 'Mijoz qabul qildi',
             'F' => 'Bekor qilindi',
         ],
         'ru' => [
@@ -32,6 +34,7 @@ class OrderStatusPushService
             'P' => 'Собирается',
             'B' => 'В пути',
             'C' => 'Доставлен',
+            'D' => 'Получен клиентом',
             'F' => 'Отменён',
         ],
         'en' => [
@@ -39,6 +42,7 @@ class OrderStatusPushService
             'P' => 'Packing',
             'B' => 'On the way',
             'C' => 'Delivered',
+            'D' => 'Received by customer',
             'F' => 'Cancelled',
         ],
         'ja' => [
@@ -46,6 +50,7 @@ class OrderStatusPushService
             'P' => '梱包中',
             'B' => '配送中',
             'C' => '配達完了',
+            'D' => '受け取り済み',
             'F' => 'キャンセルされました',
         ],
     ];
@@ -241,7 +246,8 @@ class OrderStatusPushService
             'A' => 'pending',
             'P' => 'packing',
             'B' => 'shipping',
-            'C' => 'done',
+            'C' => 'delivered',
+            'D' => 'done',
             'F' => 'cancelled',
             default => null,
         };

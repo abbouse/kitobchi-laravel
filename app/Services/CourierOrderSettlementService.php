@@ -23,8 +23,7 @@ class CourierOrderSettlementService
             return;
         }
 
-        if ($order->status_code !== OrderStatusCode::DELIVERED->value
-            || $order->payment_status_code !== PaymentStatusCode::PAID->value
+        if (!$order->isCompletedAndPaid()
             || (int) ($order->courier_id ?? 0) <= 0) {
             return;
         }
@@ -44,9 +43,9 @@ class CourierOrderSettlementService
                 return;
             }
 
-            if ($courierOrder->status_code !== \App\Enums\CourierOrderStatusCode::DELIVERED->value) {
-                $courierOrder->status = \App\Enums\CourierOrderStatusCode::DELIVERED->legacy();
-                $courierOrder->status_code = \App\Enums\CourierOrderStatusCode::DELIVERED->value;
+            if ($courierOrder->status_code !== \App\Enums\CourierOrderStatusCode::CUSTOMER_RECEIVED->value) {
+                $courierOrder->status = \App\Enums\CourierOrderStatusCode::CUSTOMER_RECEIVED->legacy();
+                $courierOrder->status_code = \App\Enums\CourierOrderStatusCode::CUSTOMER_RECEIVED->value;
             }
 
             $finalBonus = $courierOrder->final_bonus;

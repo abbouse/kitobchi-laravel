@@ -65,7 +65,7 @@ class OrderController extends Controller
 
         match ($tab) {
             'shipped' => $applyOrderStatus($query, OrderStatusCode::IN_DELIVERY),
-            'paid' => $applyOrderStatus($query, OrderStatusCode::DELIVERED),
+            'paid' => $applyOrderStatus($query, OrderStatusCode::DELIVERED, OrderStatusCode::CUSTOMER_RECEIVED),
             'cancelled' => $applyOrderStatus($query, OrderStatusCode::CANCELLED, OrderStatusCode::RETURNED),
             'all' => null,
             default => $applyOrderStatus($query, OrderStatusCode::PENDING, OrderStatusCode::PACKING),
@@ -95,10 +95,10 @@ class OrderController extends Controller
                     });
             })->count(),
             'paid' => Sold::where(function ($query) {
-                $query->where('status_code', OrderStatusCode::DELIVERED->value)
+                $query->whereIn('status_code', [OrderStatusCode::DELIVERED->value, OrderStatusCode::CUSTOMER_RECEIVED->value])
                     ->orWhere(function ($fallback) {
                         $fallback->whereNull('status_code')
-                            ->where('status', OrderStatusCode::DELIVERED->legacy());
+                            ->whereIn('status', [OrderStatusCode::DELIVERED->legacy(), OrderStatusCode::CUSTOMER_RECEIVED->legacy()]);
                     });
             })->count(),
             'cancelled' => Sold::where(function ($query) {
@@ -114,7 +114,7 @@ class OrderController extends Controller
             $status = match ((string) ($o->status_code ?? $o->status)) {
                 'A', 'P', 'pending', 'packing' => 'pending',
                 'B', 'in_delivery' => 'shipped',
-                'C', 'delivered' => 'paid',
+                'C', 'D', 'delivered', 'customer_received' => 'paid',
                 'F', 'cancelled', 'returned' => 'cancelled',
                 default => 'pending',
             };
@@ -414,7 +414,7 @@ class OrderController extends Controller
 
     public function updateStatus(Request $request, Sold $order)
     {
-        $request->validate(['status' => 'required|in:A,P,B,C,F']);
+        $request->validate(['status' => 'required|in:A,P,B,C,D,F']);
         $this->statusSync->updateMainOrder($order, (string) $request->input('status'));
         return back()->with('success', "Buyurtma holati yangilandi.");
     }

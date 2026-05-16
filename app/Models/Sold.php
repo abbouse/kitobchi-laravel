@@ -6,6 +6,7 @@ use App\Enums\OrderKind;
 use App\Enums\OrderStatusCode;
 use App\Enums\PaymentStatusCode;
 use App\Enums\PostalReturnStatus;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -112,10 +113,77 @@ class Sold extends Model
         return $value ?: PostalReturnStatus::NONE->value;
     }
 
+    public static function isCustomerCompletedState(string|int|null $statusCode, mixed $deliveryType = null): bool
+    {
+        $normalizedStatus = OrderStatusCode::fromLegacy($statusCode)->value;
+        $normalizedDeliveryType = self::normalizeDeliveryTypeValue($deliveryType);
+
+        if ($normalizedStatus === OrderStatusCode::CUSTOMER_RECEIVED->value) {
+            return true;
+        }
+
+        if ($normalizedStatus === OrderStatusCode::DELIVERED->value) {
+            return $normalizedDeliveryType !== 'postal';
+        }
+
+        return false;
+    }
+
+    public static function isCompletedPaidState(
+        string|int|null $statusCode,
+        string|int|null $paymentStatusCode,
+        mixed $deliveryType = null,
+    ): bool {
+        return self::isCustomerCompletedState($statusCode, $deliveryType)
+            && PaymentStatusCode::fromLegacy($paymentStatusCode)->value === PaymentStatusCode::PAID->value;
+    }
+
     public function isCompletedAndPaid(): bool
     {
-        return $this->status_code === OrderStatusCode::DELIVERED->value
-            && $this->payment_status_code === PaymentStatusCode::PAID->value;
+        return self::isCompletedPaidState(
+            $this->status_code,
+            $this->payment_status_code,
+            $this->deliveryType,
+        );
+    }
+
+    public function estimatedDeliveryAt(): ?Carbon
+    {
+        if (!$this->created_at) {
+            return null;
+        }
+
+        $etaDays = (int) data_get($this->delivery_rule_snapshot, 'eta_days', -1);
+        if ($etaDays < 0) {
+            $etaDays = match ($this->deliveryType) {
+                'pickup', 'instore' => 0,
+                'postal' => 3,
+                default => 1,
+            };
+        }
+
+        return $this->created_at->copy()->addDays(max(0, $etaDays));
+    }
+
+    public function isDeliveryDelayed(): bool
+    {
+        $eta = $this->estimatedDeliveryAt();
+        if (!$eta) {
+            return false;
+        }
+
+        if (in_array($this->status_code, [
+            OrderStatusCode::CANCELLED->value,
+            OrderStatusCode::RETURNED->value,
+        ], true)) {
+            return false;
+        }
+
+        if (self::isCustomerCompletedState($this->status_code, $this->deliveryType)) {
+            return false;
+        }
+
+        return now()->greaterThan($eta);
     }
 
     public function isPostalResendSource(): bool

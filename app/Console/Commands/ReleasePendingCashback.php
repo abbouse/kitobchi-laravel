@@ -35,13 +35,7 @@ class ReleasePendingCashback extends Command
                             ->where('paymentStatus', PaymentStatusCode::PAID->legacy());
                     });
             })
-            ->where(function ($query) {
-                $query->where('status_code', OrderStatusCode::DELIVERED->value)
-                    ->orWhere(function ($fallback) {
-                        $fallback->whereNull('status_code')
-                            ->where('status', OrderStatusCode::DELIVERED->legacy());
-                    });
-            })
+            ->whereNotNull('completed_at')
             ->where('is_instore', false)
             ->whereNotNull('cashback_ready_at')
             ->where('cashback_ready_at', '<=', now())

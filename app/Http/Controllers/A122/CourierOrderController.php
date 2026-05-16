@@ -60,7 +60,7 @@ class CourierOrderController extends Controller
     public function updateStatus(Request $request, CourierOrder $courierOrder)
     {
         $request->validate([
-            'status' => 'required|in:pay_process,pending,in_delivery,delivered,rejected',
+            'status' => 'required|in:pay_process,pending,in_delivery,delivered,customer_received,rejected',
         ]);
 
         $this->statusSync->updateCourierOrder($courierOrder, (string) $request->status);

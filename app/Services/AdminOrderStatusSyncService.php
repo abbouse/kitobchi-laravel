@@ -28,6 +28,7 @@ class AdminOrderStatusSyncService
         'pending' => ['label' => 'Kutilmoqda', 'badge' => 'badge-info'],
         'in_delivery' => ['label' => "Yo'lda", 'badge' => 'badge-warning'],
         'delivered' => ['label' => 'Yetkazildi', 'badge' => 'badge-success'],
+        'customer_received' => ['label' => 'Mijoz qabul qildi', 'badge' => 'badge-success'],
         'cancelled' => ['label' => 'Bekor qilindi', 'badge' => 'badge-danger'],
         'returned' => ['label' => 'Qaytgan', 'badge' => 'badge-danger'],
     ];
@@ -50,7 +51,8 @@ class AdminOrderStatusSyncService
 
             $statusCode = OrderStatusCode::fromLegacy($status);
 
-            if ($statusCode === OrderStatusCode::DELIVERED && $order->payment_status_code !== PaymentStatusCode::PAID->value) {
+            if (in_array($statusCode, [OrderStatusCode::DELIVERED, OrderStatusCode::CUSTOMER_RECEIVED], true)
+                && $order->payment_status_code !== PaymentStatusCode::PAID->value) {
                 $order->paymentStatus = PaymentStatusCode::PAID->legacy();
                 $order->payment_status_code = PaymentStatusCode::PAID->value;
             }
@@ -150,13 +152,15 @@ class AdminOrderStatusSyncService
 
             $order->status_code = match ($statusCode) {
                 CourierOrderStatusCode::DELIVERED => OrderStatusCode::DELIVERED->value,
+                CourierOrderStatusCode::CUSTOMER_RECEIVED => OrderStatusCode::CUSTOMER_RECEIVED->value,
                 CourierOrderStatusCode::IN_DELIVERY => OrderStatusCode::IN_DELIVERY->value,
                 CourierOrderStatusCode::RETURNED => OrderStatusCode::RETURNED->value,
                 default => OrderStatusCode::PENDING->value,
             };
             $order->status = OrderStatusCode::from($order->status_code)->legacy();
 
-            if ($statusCode === CourierOrderStatusCode::DELIVERED && $order->payment_status_code !== PaymentStatusCode::PAID->value) {
+            if (in_array($statusCode, [CourierOrderStatusCode::DELIVERED, CourierOrderStatusCode::CUSTOMER_RECEIVED], true)
+                && $order->payment_status_code !== PaymentStatusCode::PAID->value) {
                 $order->paymentStatus = PaymentStatusCode::PAID->legacy();
                 $order->payment_status_code = PaymentStatusCode::PAID->value;
             }
@@ -191,7 +195,7 @@ class AdminOrderStatusSyncService
 
         return match ($statusCode) {
             'packing' => SellerOrderStatusCode::ACCEPTED,
-            'in_delivery', 'delivered', 'returned' => SellerOrderStatusCode::HANDED_TO_COURIER,
+            'in_delivery', 'delivered', 'customer_received', 'returned' => SellerOrderStatusCode::HANDED_TO_COURIER,
             'cancelled' => SellerOrderStatusCode::CANCELLED,
             default => SellerOrderStatusCode::NEW,
         };
@@ -210,6 +214,7 @@ class AdminOrderStatusSyncService
         return match ($statusCode) {
             'in_delivery' => CourierOrderStatusCode::IN_DELIVERY,
             'delivered' => CourierOrderStatusCode::DELIVERED,
+            'customer_received' => CourierOrderStatusCode::CUSTOMER_RECEIVED,
             'returned' => CourierOrderStatusCode::RETURNED,
             'cancelled' => CourierOrderStatusCode::CANCELLED,
             default => CourierOrderStatusCode::PENDING,
@@ -253,6 +258,7 @@ class AdminOrderStatusSyncService
             OrderStatusCode::PACKING->value,
             OrderStatusCode::IN_DELIVERY->value => CourierOrderStatusCode::IN_DELIVERY,
             OrderStatusCode::DELIVERED->value => CourierOrderStatusCode::DELIVERED,
+            OrderStatusCode::CUSTOMER_RECEIVED->value => CourierOrderStatusCode::CUSTOMER_RECEIVED,
             OrderStatusCode::RETURNED->value => CourierOrderStatusCode::RETURNED,
             OrderStatusCode::CANCELLED->value => CourierOrderStatusCode::CANCELLED,
             default => CourierOrderStatusCode::PENDING,
@@ -282,6 +288,7 @@ class AdminOrderStatusSyncService
     {
         return match (CourierOrderStatusCode::fromLegacy($status)) {
             CourierOrderStatusCode::DELIVERED,
+            CourierOrderStatusCode::CUSTOMER_RECEIVED,
             CourierOrderStatusCode::IN_DELIVERY,
             CourierOrderStatusCode::RETURNED => SellerOrderStatusCode::HANDED_TO_COURIER,
             CourierOrderStatusCode::CANCELLED => SellerOrderStatusCode::CANCELLED,
@@ -291,8 +298,7 @@ class AdminOrderStatusSyncService
 
     private function syncCompletionState(Sold $order): void
     {
-        $isCompletedPaid = $order->status_code === OrderStatusCode::DELIVERED->value
-            && $order->payment_status_code === PaymentStatusCode::PAID->value;
+        $isCompletedPaid = $order->isCompletedAndPaid();
 
         if ($isCompletedPaid) {
             $order->completed_at ??= now();
@@ -311,6 +317,7 @@ class AdminOrderStatusSyncService
 
         $fulfillment->status_code = match ($status) {
             OrderStatusCode::DELIVERED->value => FulfillmentStatusCode::DELIVERED->value,
+            OrderStatusCode::CUSTOMER_RECEIVED->value => FulfillmentStatusCode::DELIVERED->value,
             OrderStatusCode::RETURNED->value => FulfillmentStatusCode::RETURNED->value,
             OrderStatusCode::CANCELLED->value => FulfillmentStatusCode::CANCELLED->value,
             OrderStatusCode::IN_DELIVERY->value => $fulfillment->fulfillment_mode === FulfillmentMode::DIRECT_COURIER->value
@@ -349,6 +356,7 @@ class AdminOrderStatusSyncService
         $fulfillment->status_code = match ($statusCode) {
             CourierOrderStatusCode::IN_DELIVERY => FulfillmentStatusCode::OUT_FOR_DELIVERY->value,
             CourierOrderStatusCode::DELIVERED => FulfillmentStatusCode::DELIVERED->value,
+            CourierOrderStatusCode::CUSTOMER_RECEIVED => FulfillmentStatusCode::DELIVERED->value,
             CourierOrderStatusCode::RETURNED => FulfillmentStatusCode::RETURNED->value,
             CourierOrderStatusCode::CANCELLED => FulfillmentStatusCode::CANCELLED->value,
             default => $fulfillment->status_code,

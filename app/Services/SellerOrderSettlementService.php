@@ -27,8 +27,7 @@ class SellerOrderSettlementService
             return;
         }
 
-        if ($order->status_code !== OrderStatusCode::DELIVERED->value
-            || $order->payment_status_code !== PaymentStatusCode::PAID->value) {
+        if (!$order->isCompletedAndPaid()) {
             return;
         }
 

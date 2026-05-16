@@ -136,6 +136,10 @@ class OrderController extends Controller
             return 'delivered';
         }
 
+        if ($mainStatus === OrderStatusCode::CUSTOMER_RECEIVED->value) {
+            return 'customer_received';
+        }
+
         if ($mainStatus === OrderStatusCode::IN_DELIVERY->value) {
             return 'in_delivery';
         }
@@ -162,7 +166,8 @@ class OrderController extends Controller
             'dispatched_to_post' => "{$hubName} pochtaga topshirdi",
             'assigned_last_mile' => "{$hubName} mijozga yuborishni boshladi",
             'out_for_delivery' => "Buyurtma mijozga olib borilmoqda",
-            'delivered' => "Buyurtma mijozga topshirildi",
+            'delivered' => "Buyurtma yetkazish nuqtasiga yetib bordi",
+            'customer_received' => "Mijoz buyurtmani qabul qildi",
             'returned' => "Buyurtma qaytdi",
             'cancelled' => "Buyurtma bekor qilindi",
             default => null,
