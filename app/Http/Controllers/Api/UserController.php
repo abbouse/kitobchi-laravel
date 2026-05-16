@@ -27,6 +27,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use App\Support\ProductImageUrls;
 use App\Support\ProductPayloadFormatter;
 
@@ -185,6 +186,8 @@ class UserController extends Controller
         $request->validate([
             'fcm_token' => 'required|string',
             'device_id' => 'required|string',
+            'device_name' => 'nullable|string|max:255',
+            'platform' => 'nullable|string|max:50',
         ]);
 
         $user = Auth::guard('user')->user();
@@ -192,15 +195,46 @@ class UserController extends Controller
             return response()->json(['status' => 'error', 'message' => "Sessiya muddati tugagan!"], 401);
         }
 
-        $updated = DB::table('connected_devices')
+        $deviceName = Str::limit(trim((string) $request->input('device_name', '')), 64, '');
+        $platform = Str::limit(trim((string) $request->input('platform', '')), 64, '');
+        $now = now();
+
+        $query = DB::table('connected_devices')
             ->where('user_id', $user->id)
             ->where('user_type', 'user')
-            ->where('device_id', $request->device_id)
-            ->update(['fcm_token' => $request->fcm_token, 'updated_at' => now()]);
+            ->where('device_id', $request->device_id);
 
-        return $updated
-            ? response()->json(['status' => 'success', 'message' => "Bildirishnoma manzili yangilandi"], 200)
-            : response()->json(['status' => 'error', 'message' => "Qurilma topilmadi!"], 404);
+        $payload = [
+            'fcm_token' => $request->fcm_token,
+            'token' => $user->currentAccessToken()?->token,
+            'updated_at' => $now,
+        ];
+
+        if ($deviceName !== '') {
+            $payload['device_name'] = $deviceName;
+        }
+
+        if ($platform !== '') {
+            $payload['platform'] = $platform;
+        }
+
+        if ($query->exists()) {
+            $query->update($payload);
+        } else {
+            DB::table('connected_devices')->insert([
+                'user_id' => $user->id,
+                'user_type' => 'user',
+                'device_id' => $request->device_id,
+                'device_name' => $deviceName !== '' ? $deviceName : 'Unknown Device',
+                'platform' => $platform !== '' ? $platform : 'unknown',
+                'fcm_token' => $request->fcm_token,
+                'token' => $user->currentAccessToken()?->token,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+        }
+
+        return response()->json(['status' => 'success', 'message' => "Bildirishnoma manzili yangilandi"], 200);
     }
 
     public function settings(Request $request)
@@ -632,6 +666,16 @@ class UserController extends Controller
             $user->increment('total_seconds_spent', $request->session_duration);
         }
         $user->update(['last_seen_at' => now()]);
+
+        $deviceId = trim((string) $request->header('X-Device-Id', ''));
+        if ($deviceId !== '' && $deviceId !== 'unknown_device') {
+            DB::table('connected_devices')
+                ->where('user_id', $user->id)
+                ->where('user_type', 'user')
+                ->where('device_id', $deviceId)
+                ->update(['updated_at' => now()]);
+        }
+
         return response()->json(['status' => 'success']);
     }
 
@@ -654,7 +698,7 @@ class UserController extends Controller
         $devices = DB::table('connected_devices')
             ->where('user_id', $user->id)
             ->where('user_type', 'user')
-            ->select('id', 'device_id', 'device_name', 'platform', 'updated_at')
+            ->selectRaw('id, device_id, device_name, platform, COALESCE(updated_at, created_at) as updated_at')
             ->orderBy('updated_at', 'desc')
             ->get();
 
@@ -671,6 +715,7 @@ class UserController extends Controller
         $device = DB::table('connected_devices')
             ->where('id', $id)
             ->where('user_id', $user->id)
+            ->where('user_type', 'user')
             ->first();
 
         if (!$device) {

@@ -208,8 +208,8 @@ class AuthController extends Controller
                         'user_type'   => 'user',
                         'token'       => $hashedToken,
                         'fcm_token'   => $request->fcm_token,
-                        'device_name' => $request->device_name ?? 'Unknown Device',
-                        'platform'    => $request->platform   ?? 'Unknown',
+                        'device_name' => Str::limit(trim((string) ($request->device_name ?? 'Unknown Device')), 64, ''),
+                        'platform'    => Str::limit(trim((string) ($request->platform ?? 'Unknown')), 64, ''),
                         'updated_at'  => now(),
                         'created_at'  => now(),
                     ]
@@ -447,8 +447,8 @@ class AuthController extends Controller
                     'user_type' => 'user',
                     'token' => $hashedToken,
                     'fcm_token' => $request->fcm_token,
-                    'device_name' => $request->device_name ?? 'Unknown Device',
-                    'platform' => $request->platform ?? 'Unknown',
+                    'device_name' => Str::limit(trim((string) ($request->device_name ?? 'Unknown Device')), 64, ''),
+                    'platform' => Str::limit(trim((string) ($request->platform ?? 'Unknown')), 64, ''),
                     'updated_at' => now(),
                     'created_at' => now(),
                 ]
