@@ -109,10 +109,16 @@ class HisobotController extends Controller
     {
         return $query
             ->where(function ($statusQuery) use ($table) {
-                $statusQuery->where("{$table}.status_code", OrderStatusCode::DELIVERED->value)
+                $statusQuery->whereIn("{$table}.status_code", [
+                    OrderStatusCode::DELIVERED->value,
+                    OrderStatusCode::CUSTOMER_RECEIVED->value,
+                ])
                     ->orWhere(function ($fallback) use ($table) {
                         $fallback->whereNull("{$table}.status_code")
-                            ->where("{$table}.status", OrderStatusCode::DELIVERED->legacy());
+                            ->whereIn("{$table}.status", [
+                                OrderStatusCode::DELIVERED->legacy(),
+                                OrderStatusCode::CUSTOMER_RECEIVED->legacy(),
+                            ]);
                     });
             })
             ->where(function ($paymentQuery) use ($table) {

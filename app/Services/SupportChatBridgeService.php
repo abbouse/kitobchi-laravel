@@ -11,15 +11,21 @@ use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Seller;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use SergiX44\Nutgram\Nutgram;
 
 class SupportChatBridgeService
 {
     public function shouldBridgeConversation(?Conversation $conversation): bool
     {
-        return (bool) $conversation
-            && $conversation->type === 'shop'
-            && (int) $conversation->shop_id === 1;
+        if (!$conversation || $conversation->type !== 'shop' || !(int) $conversation->shop_id) {
+            return false;
+        }
+
+        $conversation->loadMissing('shop');
+        $shop = $conversation->shop;
+
+        return (bool) $shop && ((bool) ($shop->isSupport ?? false) || (int) $shop->id === 1);
     }
 
     public function syncUserMessageFromConversation(Message $message): void
@@ -74,12 +80,12 @@ class SupportChatBridgeService
 
     public function sendReplyToConversation(BotTicket $ticket, string $body, ?int $operatorTelegramId = null, ?int $adminId = null): Message
     {
-        $conversation = Conversation::query()->find($ticket->source_conversation_id);
+        $conversation = Conversation::query()->with('shop')->find($ticket->source_conversation_id);
         if (!$this->shouldBridgeConversation($conversation)) {
             throw new \RuntimeException('Support chat conversation topilmadi.');
         }
 
-        $senderSeller = Seller::query()->find(1);
+        $senderSeller = $conversation->shop;
         if (!$senderSeller) {
             throw new \RuntimeException('Support seller topilmadi.');
         }
@@ -115,12 +121,58 @@ class SupportChatBridgeService
             'updated_at' => now(),
         ]);
 
-        SendMessagePushNotification::dispatch($message->id)->delay(now()->addSeconds(2));
-        broadcast(new MessageSent($message->load('replyTo')));
-        broadcast(new ConversationUpdated($conversation->fresh(), (int) $conversation->user_id, 'user'));
-        broadcast(new ConversationUpdated($conversation->fresh(), 1, 'seller'));
+        try {
+            SendMessagePushNotification::dispatch($message->id)->delay(now()->addSeconds(2));
+        } catch (\Throwable $e) {
+            Log::warning('Support chat push yuborishda xato', [
+                'ticket_id' => $ticket->id,
+                'conversation_id' => $conversation->id,
+                'message_id' => $message->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        $freshConversation = $conversation->fresh();
+        $this->safeBroadcast(
+            event: new MessageSent($message->load('replyTo')),
+            context: [
+                'ticket_id' => $ticket->id,
+                'conversation_id' => $conversation->id,
+                'message_id' => $message->id,
+                'event' => 'MessageSent',
+            ]
+        );
+        $this->safeBroadcast(
+            event: new ConversationUpdated($freshConversation, (int) $conversation->user_id, 'user'),
+            context: [
+                'ticket_id' => $ticket->id,
+                'conversation_id' => $conversation->id,
+                'target' => 'user',
+                'target_id' => (int) $conversation->user_id,
+            ]
+        );
+        $this->safeBroadcast(
+            event: new ConversationUpdated($freshConversation, (int) $conversation->shop_id, 'seller'),
+            context: [
+                'ticket_id' => $ticket->id,
+                'conversation_id' => $conversation->id,
+                'target' => 'seller',
+                'target_id' => (int) $conversation->shop_id,
+            ]
+        );
 
         return $message;
+    }
+
+    private function safeBroadcast(object $event, array $context = []): void
+    {
+        try {
+            broadcast($event);
+        } catch (\Throwable $e) {
+            Log::warning('Support chat broadcast xatosi', array_merge($context, [
+                'error' => $e->getMessage(),
+            ]));
+        }
     }
 
     private function findOrCreateTicket(Conversation $conversation, Message $message): BotTicket

@@ -345,7 +345,7 @@ class CourierOrderController extends Controller
             ->orderByRaw("
                 CASE
                     WHEN status IN ('in_delivery', 'pending') THEN 0
-                    WHEN status = 'delivered' THEN 1
+                    WHEN status IN ('delivered', 'customer_received') THEN 1
                     ELSE 2
                 END
             ")

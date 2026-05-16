@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\OrderStatusCode;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -534,7 +535,19 @@ class ChatBotController extends Controller
         // Xaridlar tarixi
         if ($factors['purchase_history']['enabled']) {
             $orderCount = Sold::where('user_id', $user->id)
-                ->whereIn('status', ['delivered', 'completed'])
+                ->where(function ($query) {
+                    $query->whereIn('status_code', [
+                        OrderStatusCode::DELIVERED->value,
+                        OrderStatusCode::CUSTOMER_RECEIVED->value,
+                    ])->orWhere(function ($fallback) {
+                        $fallback->whereNull('status_code')
+                            ->whereIn('status', [
+                                OrderStatusCode::DELIVERED->legacy(),
+                                OrderStatusCode::CUSTOMER_RECEIVED->legacy(),
+                                'completed',
+                            ]);
+                    });
+                })
                 ->count();
 
             $pct = match (true) {
