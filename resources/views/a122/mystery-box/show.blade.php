@@ -21,6 +21,15 @@
           <button class="btn-p success"><i class="bi bi-play-fill"></i> Davom ettirish</button>
         </form>
         @endif
+
+        @if(!in_array($subscription->status, ['cancelled','completed'], true))
+        <form method="POST" action="{{ route('admin.mystery-box.rebuild-schedule', $subscription) }}"
+              onsubmit="return confirm('Auto-taqsimotni qayta qurilsinmi? Manual tanlangan, hali jo‘natilmagan oylar ham auto-balansga qaytadi.')">
+          @csrf @method('PATCH')
+          <input type="hidden" name="override_manual" value="1">
+          <button class="btn-p ghost"><i class="bi bi-magic"></i> Auto qayta taqsimlash</button>
+        </form>
+        @endif
     
         @if(!in_array($subscription->status, ['cancelled','completed']))
         <form method="POST" action="{{ route('admin.mystery-box.cancel', $subscription) }}"
@@ -262,6 +271,17 @@
 
         @if(!$isFinalDelivery)
         <div id="editorWrap{{ $delivery->id }}" style="{{ $editorOpen ? '' : 'display:none;' }}">
+          <div class="flex flex-wrap gap-2 mb-3">
+            <form method="POST"
+                  action="{{ route('admin.mystery-box.deliveries.rebalance', $delivery) }}"
+                  onsubmit="return confirm('{{ $delivery->month_number }}-oy uchun auto-balans qayta qurilsinmi? Hozirgi manual tanlov auto tanlovga almashtiriladi.')">
+              @csrf @method('PATCH')
+              <button class="btn-p ghost sm">
+                <i class="bi bi-stars"></i> Shu oy uchun auto-balans
+              </button>
+            </form>
+          </div>
+
           <form method="POST"
                 action="{{ route('admin.mystery-box.deliveries.settings', $delivery) }}"
                 class="row g-2 items-end"

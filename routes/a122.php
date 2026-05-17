@@ -298,8 +298,10 @@ Route::prefix('a122')->name('admin.')->group(function () {
         Route::patch('/{subscription}/pause',            [MysteryBoxController::class, 'pauseSubscription'])->name('pause');
         Route::patch('/{subscription}/resume',           [MysteryBoxController::class, 'resumeSubscription'])->name('resume');
         Route::patch('/{subscription}/cancel',           [MysteryBoxController::class, 'cancelSubscription'])->name('cancel');
+        Route::patch('/{subscription}/rebuild-schedule', [MysteryBoxController::class, 'rebuildSubscriptionSchedule'])->name('rebuild-schedule');
         Route::patch('/deliveries/{delivery}/settings',  [MysteryBoxController::class, 'updateDeliverySettings'])->name('deliveries.settings');
         Route::patch('/deliveries/{delivery}/status',    [MysteryBoxController::class, 'updateDeliveryStatus'])->name('deliveries.status');
+        Route::patch('/deliveries/{delivery}/rebalance', [MysteryBoxController::class, 'rebalanceDelivery'])->name('deliveries.rebalance');
         Route::patch('/deliveries/{delivery}/prepare',   [MysteryBoxController::class, 'prepareDelivery'])->name('prepare');
         Route::patch('/deliveries/{delivery}/ship',      [MysteryBoxController::class, 'shipDelivery'])->name('ship');
         Route::patch('/deliveries/{delivery}/deliver',   [MysteryBoxController::class, 'deliverDelivery'])->name('deliver');

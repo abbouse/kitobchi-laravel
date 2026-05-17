@@ -269,6 +269,31 @@ class MysteryBoxController extends Controller
         return back()->with('success', 'Obuna bekor qilindi.');
     }
 
+    public function rebuildSubscriptionSchedule(Request $request, MysteryBoxSubscription $subscription)
+    {
+        try {
+            $this->mysteryBoxService->rebuildSchedule(
+                $subscription,
+                $request->boolean('override_manual', true),
+            );
+        } catch (\Throwable $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'Obuna bo‘yicha auto-taqsimot qayta qurildi.');
+    }
+
+    public function rebalanceDelivery(MysteryBoxDelivery $delivery)
+    {
+        try {
+            $this->mysteryBoxService->rebuildDeliverySelection($delivery, true);
+        } catch (\Throwable $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', "{$delivery->month_number}-oy uchun auto-balans qayta qurildi.");
+    }
+
     public function prepareDelivery(Request $request, MysteryBoxDelivery $delivery)
     {
         $request->validate([

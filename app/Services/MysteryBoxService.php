@@ -101,6 +101,104 @@ class MysteryBoxService
         return $affected > 0;
     }
 
+    public function rebuildSchedule(MysteryBoxSubscription $subscription, bool $overrideManual = false): MysteryBoxSubscription
+    {
+        return DB::transaction(function () use ($subscription, $overrideManual) {
+            /** @var MysteryBoxSubscription $lockedSubscription */
+            $lockedSubscription = MysteryBoxSubscription::query()
+                ->with(['plan', 'deliveries'])
+                ->lockForUpdate()
+                ->findOrFail($subscription->id);
+
+            $mutableStatuses = [
+                MysteryBoxDelivery::STATUS_PENDING,
+                MysteryBoxDelivery::STATUS_PREPARING,
+                MysteryBoxDelivery::STATUS_READY_TO_SHIP,
+            ];
+
+            foreach ($lockedSubscription->deliveries as $delivery) {
+                if (!in_array($delivery->status, $mutableStatuses, true)) {
+                    continue;
+                }
+
+                if ($overrideManual || $delivery->selection_mode !== 'manual') {
+                    $delivery->forceFill([
+                        'book_ids' => [],
+                        'selection_mode' => 'auto',
+                        'selection_meta' => array_merge(
+                            is_array($delivery->selection_meta) ? $delivery->selection_meta : [],
+                            [
+                                'selection_mode' => 'auto',
+                                'rebalanced_at' => now()->toIso8601String(),
+                                'rebalanced_scope' => 'subscription',
+                            ],
+                        ),
+                    ])->save();
+                }
+            }
+
+            $lockedSubscription->forceFill([
+                'assignment_meta' => array_merge(
+                    is_array($lockedSubscription->assignment_meta) ? $lockedSubscription->assignment_meta : [],
+                    [
+                        'schedule_rebuilt_at' => now()->toIso8601String(),
+                        'schedule_rebuilt_override_manual' => $overrideManual,
+                    ],
+                ),
+            ])->save();
+
+            $this->ensureDeliverySchedule($lockedSubscription->fresh(['plan', 'deliveries']));
+
+            return $this->syncSubscriptionProgress($lockedSubscription->fresh(['plan', 'deliveries']));
+        });
+    }
+
+    public function rebuildDeliverySelection(MysteryBoxDelivery $delivery, bool $overrideManual = true): MysteryBoxDelivery
+    {
+        return DB::transaction(function () use ($delivery, $overrideManual) {
+            /** @var MysteryBoxDelivery $lockedDelivery */
+            $lockedDelivery = MysteryBoxDelivery::query()
+                ->with('subscription.plan', 'subscription.deliveries')
+                ->lockForUpdate()
+                ->findOrFail($delivery->id);
+
+            if ($lockedDelivery->is_final) {
+                throw new RuntimeException('Yakunlangan oy uchun auto-taqsimotni qayta qurib bo‘lmaydi.');
+            }
+
+            $mutableStatuses = [
+                MysteryBoxDelivery::STATUS_PENDING,
+                MysteryBoxDelivery::STATUS_PREPARING,
+                MysteryBoxDelivery::STATUS_READY_TO_SHIP,
+            ];
+
+            if (!in_array($lockedDelivery->status, $mutableStatuses, true)) {
+                throw new RuntimeException('Faqat tayyorlash bosqichigacha bo‘lgan oylar qayta balanslanadi.');
+            }
+
+            if ($overrideManual || $lockedDelivery->selection_mode !== 'manual') {
+                $lockedDelivery->forceFill([
+                    'book_ids' => [],
+                    'selection_mode' => 'auto',
+                    'selection_meta' => array_merge(
+                        is_array($lockedDelivery->selection_meta) ? $lockedDelivery->selection_meta : [],
+                        [
+                            'selection_mode' => 'auto',
+                            'rebalanced_at' => now()->toIso8601String(),
+                            'rebalanced_scope' => 'delivery',
+                        ],
+                    ),
+                ])->save();
+            }
+
+            $subscription = $lockedDelivery->subscription->fresh(['plan', 'deliveries']);
+            $this->ensureDeliverySchedule($subscription);
+            $this->syncSubscriptionProgress($subscription->fresh(['plan', 'deliveries']));
+
+            return $lockedDelivery->fresh('subscription');
+        });
+    }
+
     public function ensureDeliverySchedule(MysteryBoxSubscription $subscription): void
     {
         $subscription->loadMissing(['plan', 'deliveries']);

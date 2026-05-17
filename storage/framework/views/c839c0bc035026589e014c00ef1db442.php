@@ -29,6 +29,15 @@
           <button class="btn-p success"><i class="bi bi-play-fill"></i> Davom ettirish</button>
         </form>
         <?php endif; ?>
+
+        <?php if(!in_array($subscription->status, ['cancelled','completed'], true)): ?>
+        <form method="POST" action="<?php echo e(route('admin.mystery-box.rebuild-schedule', $subscription)); ?>"
+              onsubmit="return confirm('Auto-taqsimotni qayta qurilsinmi? Manual tanlangan, hali jo‘natilmagan oylar ham auto-balansga qaytadi.')">
+          <?php echo csrf_field(); ?> <?php echo method_field('PATCH'); ?>
+          <input type="hidden" name="override_manual" value="1">
+          <button class="btn-p ghost"><i class="bi bi-magic"></i> Auto qayta taqsimlash</button>
+        </form>
+        <?php endif; ?>
     
         <?php if(!in_array($subscription->status, ['cancelled','completed'])): ?>
         <form method="POST" action="<?php echo e(route('admin.mystery-box.cancel', $subscription)); ?>"
@@ -290,6 +299,17 @@
 
         <?php if(!$isFinalDelivery): ?>
         <div id="editorWrap<?php echo e($delivery->id); ?>" style="<?php echo e($editorOpen ? '' : 'display:none;'); ?>">
+          <div class="flex flex-wrap gap-2 mb-3">
+            <form method="POST"
+                  action="<?php echo e(route('admin.mystery-box.deliveries.rebalance', $delivery)); ?>"
+                  onsubmit="return confirm('<?php echo e($delivery->month_number); ?>-oy uchun auto-balans qayta qurilsinmi? Hozirgi manual tanlov auto tanlovga almashtiriladi.')">
+              <?php echo csrf_field(); ?> <?php echo method_field('PATCH'); ?>
+              <button class="btn-p ghost sm">
+                <i class="bi bi-stars"></i> Shu oy uchun auto-balans
+              </button>
+            </form>
+          </div>
+
           <form method="POST"
                 action="<?php echo e(route('admin.mystery-box.deliveries.settings', $delivery)); ?>"
                 class="row g-2 items-end"
