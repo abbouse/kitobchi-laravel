@@ -268,27 +268,37 @@ class CourierTaskOrchestratorService
         int $cashCollectAmount,
         int $feeAmount = 0,
     ): CourierTask {
-        return CourierTask::query()->firstOrCreate(
-            [
-                'order_id' => $order->id,
-                'fulfillment_id' => $fulfillment->id,
-                'seller_id' => $sellerId,
-                'leg' => $leg->value,
-            ],
-            [
-                'hub_id' => $fulfillment->hub_id,
-                'status_code' => CourierTaskStatusCode::ASSIGNED->value,
-                'pickup_address' => $pickupAddress,
-                'dropoff_address' => $dropoffAddress,
-                'is_cod' => $isCod,
-                'cash_collect_amount' => $isCod ? $cashCollectAmount : 0,
-                'fee_amount' => $feeAmount,
-                'assigned_at' => now(),
-                'meta' => [
-                    'generated_from_fulfillment' => true,
-                ],
-            ]
-        );
+        $task = CourierTask::query()->firstOrNew([
+            'order_id' => $order->id,
+            'fulfillment_id' => $fulfillment->id,
+            'seller_id' => $sellerId,
+            'leg' => $leg->value,
+        ]);
+
+        $task->hub_id = $fulfillment->hub_id;
+        $task->pickup_address = $pickupAddress;
+        $task->dropoff_address = $dropoffAddress;
+        $task->is_cod = $isCod;
+        $task->cash_collect_amount = $isCod ? $cashCollectAmount : 0;
+        $task->fee_amount = $feeAmount;
+        $task->meta = array_merge($task->meta ?? [], [
+            'generated_from_fulfillment' => true,
+        ]);
+
+        if (!$task->exists || $task->status_code === CourierTaskStatusCode::CANCELLED->value) {
+            $task->courier_id = null;
+            $task->status_code = CourierTaskStatusCode::ASSIGNED->value;
+            $task->assigned_at = now();
+            $task->accepted_at = null;
+            $task->arrived_at_pickup_at = null;
+            $task->picked_up_at = null;
+            $task->dropped_off_at = null;
+            $task->completed_at = null;
+        }
+
+        $task->save();
+
+        return $task;
     }
 
     private function normalizeAddress(mixed $address): ?array

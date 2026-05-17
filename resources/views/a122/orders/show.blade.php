@@ -818,9 +818,9 @@
   </div>
 </div>
 @if(!empty($canRefundPayment) && !empty($refundConfirmationPhrase))
-<div class="modal fade" id="refundCancelModal" tabindex="-1" aria-hidden="true" style="z-index: 2000;">
-  <div class="modal-dialog modal-dialog-centered" style="position: relative; z-index: 2001;">
-    <div class="modal-content border-0 rounded-4 shadow-lg" style="position: relative; z-index: 2002;">
+<div class="modal fade" id="refundCancelModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 rounded-4 shadow-lg">
       <div class="modal-body p-4 p-md-5">
         <div class="d-flex align-items-start justify-content-between gap-3 mb-4">
           <div>

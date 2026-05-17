@@ -171,9 +171,6 @@ class FulfillmentAdminOverrideService
         }
 
         if (in_array($fulfillment->status_code, [
-            FulfillmentStatusCode::DISPATCHED_TO_POST->value,
-            FulfillmentStatusCode::ASSIGNED_LAST_MILE->value,
-            FulfillmentStatusCode::OUT_FOR_DELIVERY->value,
             FulfillmentStatusCode::DELIVERED->value,
             FulfillmentStatusCode::RETURNED->value,
             FulfillmentStatusCode::CANCELLED->value,
@@ -199,6 +196,9 @@ class FulfillmentAdminOverrideService
             FulfillmentStatusCode::QC_CHECKED->value,
             FulfillmentStatusCode::PACKED->value,
             FulfillmentStatusCode::LABELED->value,
+            FulfillmentStatusCode::DISPATCHED_TO_POST->value,
+            FulfillmentStatusCode::ASSIGNED_LAST_MILE->value,
+            FulfillmentStatusCode::OUT_FOR_DELIVERY->value,
         ], true)) {
             throw new \RuntimeException("Bu bosqichda hub reroute qilib bo'lmaydi.");
         }
