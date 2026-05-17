@@ -836,12 +836,9 @@
           <div
             id="refundConfirmationPhrase"
             class="fw-bold fs-4 text-danger-emphasis"
-            style="letter-spacing:.18em; user-select:none; -webkit-user-select:none;"
-            oncopy="return false"
-            oncut="return false"
-            oncontextmenu="return false"
+            style="letter-spacing:.18em;"
           >{{ $refundConfirmationPhrase }}</div>
-          <div class="small text-danger-emphasis opacity-75 mt-2">Uni qo‘lda kiriting. Copy-paste bilan emas.</div>
+          <div class="small text-danger-emphasis opacity-75 mt-2">Quyidagi tasdiqlash matnini kiriting.</div>
         </div>
 
         <form method="POST" action="{{ route('admin.orders.refund-cancel', $order) }}">
@@ -925,17 +922,6 @@ document.addEventListener('change', function (event) {
 });
 
 syncFulfillmentHubVisibility();
-
-const refundPhrase = document.getElementById('refundConfirmationPhrase');
-if (refundPhrase) {
-  ['copy', 'cut', 'dragstart', 'selectstart'].forEach((eventName) => {
-    refundPhrase.addEventListener(eventName, (event) => event.preventDefault());
-  });
-}
-
-document.querySelectorAll('input[name="confirmation_phrase"]').forEach((input) => {
-  input.addEventListener('paste', (event) => event.preventDefault());
-});
 
 const refundModal = document.getElementById('refundCancelModal');
 if (refundModal) {

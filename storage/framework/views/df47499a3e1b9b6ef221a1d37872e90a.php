@@ -9,6 +9,9 @@
     <div class="a122-index-header__meta"><?php echo e($subs->total()); ?> ta obuna topildi</div>
   </div>
   <div class="a122-index-header__actions">
+    <a href="<?php echo e(route('admin.mystery-box.plans')); ?>" class="btn-p ghost">
+      <i class="bi bi-sliders"></i> Tariflar
+    </a>
     <form method="GET" class="a122-index-search-form">
       <input type="hidden" name="tab" value="<?php echo e($tab); ?>">
       <i class="bi bi-search"></i>

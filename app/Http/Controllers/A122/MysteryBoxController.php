@@ -178,16 +178,23 @@ class MysteryBoxController extends Controller
         $data = $request->validate([
             'name_uz'         => 'required|string|max:255',
             'name_ru'         => 'nullable|string|max:255',
+            'name_en'         => 'nullable|string|max:255',
+            'name_ja'         => 'nullable|string|max:255',
             'months'          => 'required|integer|in:1,3,6,12',
             'price_uzs'       => 'required|integer|min:1000',
             'books_per_month' => 'required|integer|min:1|max:10',
             'sort_order'      => 'nullable|integer|min:0',
             'description_uz'  => 'nullable|string',
             'description_ru'  => 'nullable|string',
+            'description_en'  => 'nullable|string',
+            'description_ja'  => 'nullable|string',
         ]);
 
         MysteryBoxPlan::create([
             ...$data,
+            'name_ru' => $data['name_ru'] ?? $data['name_uz'],
+            'name_en' => $data['name_en'] ?? $data['name_uz'],
+            'name_ja' => $data['name_ja'] ?? $data['name_uz'],
             'is_active' => true,
             'sort_order' => $data['sort_order'] ?? 0,
         ]);
@@ -200,16 +207,23 @@ class MysteryBoxController extends Controller
         $data = $request->validate([
             'name_uz'         => 'required|string|max:255',
             'name_ru'         => 'nullable|string|max:255',
+            'name_en'         => 'nullable|string|max:255',
+            'name_ja'         => 'nullable|string|max:255',
             'price_uzs'       => 'required|integer|min:1000',
             'books_per_month' => 'required|integer|min:1|max:10',
             'sort_order'      => 'nullable|integer|min:0',
             'description_uz'  => 'nullable|string',
             'description_ru'  => 'nullable|string',
+            'description_en'  => 'nullable|string',
+            'description_ja'  => 'nullable|string',
             'is_active'       => 'nullable|boolean',
         ]);
 
         $plan->update([
             ...$data,
+            'name_ru' => $data['name_ru'] ?? $data['name_uz'],
+            'name_en' => $data['name_en'] ?? $data['name_uz'],
+            'name_ja' => $data['name_ja'] ?? $data['name_uz'],
             'is_active' => $request->boolean('is_active'),
             'sort_order' => $data['sort_order'] ?? 0,
         ]);

@@ -27,6 +27,12 @@
           @if($plan->name_ru)
           <div style="font-size:11px;color:var(--p-hint)">{{ $plan->name_ru }}</div>
           @endif
+          @if($plan->name_en)
+          <div style="font-size:11px;color:var(--p-hint)">{{ $plan->name_en }}</div>
+          @endif
+          @if($plan->name_ja)
+          <div style="font-size:11px;color:var(--p-hint)">{{ $plan->name_ja }}</div>
+          @endif
         </div>
         <div class="flex items-center gap-2">
           <span class="s-pill {{ $plan->is_active ? 'success' : 'muted' }}" style="font-size:10px">
@@ -51,6 +57,16 @@
               <label class="p-form-label">Nomi (RU)</label>
               <input type="text" name="name_ru" class="p-form-control"
                      value="{{ $plan->name_ru }}">
+            </div>
+            <div class="">
+              <label class="p-form-label">Nomi (EN)</label>
+              <input type="text" name="name_en" class="p-form-control"
+                     value="{{ $plan->name_en }}">
+            </div>
+            <div class="">
+              <label class="p-form-label">Nomi (JA)</label>
+              <input type="text" name="name_ja" class="p-form-control"
+                     value="{{ $plan->name_ja }}">
             </div>
             <div class="md:col-span-3">
               <label class="p-form-label">Muddat (oy)</label>
@@ -88,6 +104,16 @@
               <label class="p-form-label">Tavsif (RU)</label>
               <textarea name="description_ru" class="p-form-control"
                         rows="2">{{ $plan->description_ru }}</textarea>
+            </div>
+            <div class="">
+              <label class="p-form-label">Tavsif (EN)</label>
+              <textarea name="description_en" class="p-form-control"
+                        rows="2">{{ $plan->description_en }}</textarea>
+            </div>
+            <div class="">
+              <label class="p-form-label">Tavsif (JA)</label>
+              <textarea name="description_ja" class="p-form-control"
+                        rows="2">{{ $plan->description_ja }}</textarea>
             </div>
             <div class="">
               <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
@@ -153,6 +179,16 @@
               <input type="text" name="name_ru" class="p-form-control"
                      placeholder="Masalan: Подписка на 3 месяца">
             </div>
+            <div class="">
+              <label class="p-form-label">Nomi (EN)</label>
+              <input type="text" name="name_en" class="p-form-control"
+                     placeholder="For example: 3-month subscription">
+            </div>
+            <div class="">
+              <label class="p-form-label">Nomi (JA)</label>
+              <input type="text" name="name_ja" class="p-form-control"
+                     placeholder="例: 3か月プラン">
+            </div>
             <div class="w-1/2">
               <label class="p-form-label">Muddat (oy) *</label>
               <select name="months" class="p-form-control" required>
@@ -186,6 +222,16 @@
               <label class="p-form-label">Tavsif (RU)</label>
               <textarea name="description_ru" class="p-form-control"
                         rows="2" placeholder="Краткое описание..."></textarea>
+            </div>
+            <div class="">
+              <label class="p-form-label">Tavsif (EN)</label>
+              <textarea name="description_en" class="p-form-control"
+                        rows="2" placeholder="Short description..."></textarea>
+            </div>
+            <div class="">
+              <label class="p-form-label">Tavsif (JA)</label>
+              <textarea name="description_ja" class="p-form-control"
+                        rows="2" placeholder="簡単な説明..."></textarea>
             </div>
           </div>
           <button type="submit" class="btn-p primary mt-3" style="width:100%;justify-content:center">
