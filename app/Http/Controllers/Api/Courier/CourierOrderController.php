@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api\Courier;
 
 use App\Enums\CourierOrderStatusCode;
+use App\Enums\CourierTaskStatusCode;
 use App\Enums\OrderStatusCode;
 use App\Enums\PaymentStatusCode;
 use App\Http\Controllers\Controller;
+use App\Models\CourierTask;
 use App\Models\Sold;
 use App\Models\User;
 use App\Models\Seller;
@@ -122,7 +124,7 @@ class CourierOrderController extends Controller
                 $order->task_dropoff_address = $taskSummary['dropoff_address'];
                 $order->hub = $taskSummary['hub'];
                 $order->available_collateral = $this->courierCashOnDeliveryCapacityService->availableCollateral($courier);
-                $this->bonusService->normalizeBonusState($order);
+                $this->bonusService->normalizeBonusState($order, false);
                 return $this->hydrateCourierOrderItems($order, Auth::guard('courier')->id());
             });
 
@@ -176,7 +178,7 @@ class CourierOrderController extends Controller
         $show->task_dropoff_address = $taskSummary['dropoff_address'];
         $show->hub = $taskSummary['hub'];
         $show->available_collateral = $this->courierCashOnDeliveryCapacityService->availableCollateral($courier);
-        $this->bonusService->normalizeBonusState($show);
+        $this->bonusService->normalizeBonusState($show, false);
 
         return response()->json([
             'success' => true,
@@ -361,7 +363,7 @@ class CourierOrderController extends Controller
                 $order->task_dropoff_address = $taskSummary['dropoff_address'];
                 $order->hub = $taskSummary['hub'];
                 $order->available_collateral = $this->courierCashOnDeliveryCapacityService->availableCollateral($courier);
-                $this->bonusService->normalizeBonusState($order);
+                $this->bonusService->normalizeBonusState($order, false);
                 return $this->hydrateCourierOrderItems($order, $order->courier_id);
             });
         return response()->json([

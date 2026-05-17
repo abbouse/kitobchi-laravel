@@ -153,7 +153,7 @@ class OrderController extends Controller
             ->map(fn (FulfillmentMode $mode) => [
                 'value' => $mode->value,
                 'label' => match ($mode) {
-                    FulfillmentMode::HUB_BASED => 'Hub-based fulfillment',
+                    FulfillmentMode::HUB_BASED => 'Hub orqali kuryer yetkazuvi',
                     FulfillmentMode::DIRECT_COURIER => "Direct courier (seller → mijoz)",
                     FulfillmentMode::POSTAL_ONLY_VIA_HUB => 'Hub → pochta',
                     FulfillmentMode::PICKUP_ONLY => 'Pickup only',

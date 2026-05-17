@@ -88,7 +88,7 @@
       'direct_courier' => "Kuryer: seller → mijoz",
       'postal_only_via_hub' => 'Hub → pochta oqimi',
       'pickup_only' => "Olib ketish / ichki pickup",
-      'hub_based' => 'Hub-based fulfillment',
+      'hub_based' => 'Hub orqali kuryer yetkazuvi',
       default => 'Legacy / hali biriktirilmagan',
     };
     $fulfillmentStatusLabel = match ($fulfillment?->status_code) {
@@ -362,7 +362,7 @@
               <div class="text-sm font-semibold">Fulfillment mode almashtirish</div>
               <button type="button" class="order-help-trigger inline-flex h-5 w-5 items-center justify-center rounded-full border border-[var(--p-border)] text-[11px] font-bold text-[var(--p-muted)]" data-help-target="mode-switch-help">?</button>
               <div id="mode-switch-help" class="order-help-popover hidden max-w-xs rounded-2xl border border-[var(--p-border)] bg-white p-3 text-xs leading-5 text-[var(--p-text)] shadow-xl">
-                Bu action orderni hub-based oqimdan direct courier oqimiga yoki aksincha o‘tkazadi. Tizim kech bosqichlarga o‘tgan, kuryer biriktirilgan yoki qadoqlash boshlangan orderlarda bu amaliyotni bloklaydi.
+                Bu action orderni hub orqali kuryer yetkazuviga, direct courier oqimiga yoki pochta oqimiga o‘tkazadi. Tizim kech bosqichlarga o‘tgan, kuryer biriktirilgan yoki qadoqlash boshlangan orderlarda bu amaliyotni bloklaydi.
               </div>
             </div>
             <form method="POST" action="<?php echo e(route('admin.orders.switch-mode', $order)); ?>" class="space-y-3 mt-3">
@@ -849,9 +849,9 @@
   </div>
 </div>
 <?php if(!empty($canRefundPayment) && !empty($refundConfirmationPhrase)): ?>
-<div class="modal fade" id="refundCancelModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content border-0 rounded-4 shadow-lg">
+<div class="modal fade" id="refundCancelModal" tabindex="-1" aria-hidden="true" style="z-index: 2000;">
+  <div class="modal-dialog modal-dialog-centered" style="position: relative; z-index: 2001;">
+    <div class="modal-content border-0 rounded-4 shadow-lg" style="position: relative; z-index: 2002;">
       <div class="modal-body p-4 p-md-5">
         <div class="d-flex align-items-start justify-content-between gap-3 mb-4">
           <div>
@@ -967,6 +967,15 @@ if (refundPhrase) {
 document.querySelectorAll('input[name="confirmation_phrase"]').forEach((input) => {
   input.addEventListener('paste', (event) => event.preventDefault());
 });
+
+const refundModal = document.getElementById('refundCancelModal');
+if (refundModal) {
+  refundModal.addEventListener('show.bs.modal', () => {
+    document.querySelectorAll('.order-help-popover').forEach((popover) => {
+      popover.classList.add('hidden');
+    });
+  });
+}
 </script>
 <?php $__env->stopSection(); ?>
 

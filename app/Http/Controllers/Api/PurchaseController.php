@@ -681,6 +681,7 @@ class PurchaseController extends Controller
                 selectedDeliveryOffer: $selectedDeliveryOffer,
                 sellerCount: $sellerCount,
                 withPackaging: (bool) $withPackaging,
+                containsBooks: $bookItemCount > 0,
                 isCashOnDelivery: (int) $request->paymentStatus === 0,
                 cashCollectAmount: (int) round($finalPrice),
             );

@@ -20,11 +20,12 @@ class FulfillmentRoutingService
         array $selectedDeliveryOffer,
         int $sellerCount,
         bool $withPackaging,
+        bool $containsBooks,
         bool $isCashOnDelivery,
         int $cashCollectAmount,
     ): array {
         $deliveryType = Sold::normalizeDeliveryTypeValue($deliveryService->type ?: $deliveryService->name);
-        $mode = $this->decideMode($deliveryType, $sellerCount, $withPackaging);
+        $mode = $this->decideMode($deliveryType, $sellerCount, $withPackaging, $containsBooks);
         $hub = $this->hubAssignmentService->assignForOrder($buyerLocation, $mode);
 
         $firstMileMode = match ($mode) {
@@ -51,6 +52,7 @@ class FulfillmentRoutingService
                 'delivery_type' => $deliveryType,
                 'seller_count' => $sellerCount,
                 'with_packaging' => $withPackaging,
+                'contains_books' => $containsBooks,
                 'zone_rule_id' => (int) ($selectedDeliveryOffer['zone_rule_id'] ?? 0) ?: null,
                 'zone_name' => $selectedDeliveryOffer['zone_name'] ?? null,
                 'zone_scope' => $selectedDeliveryOffer['zone_scope'] ?? null,
@@ -89,7 +91,12 @@ class FulfillmentRoutingService
         ]);
     }
 
-    private function decideMode(string $deliveryType, int $sellerCount, bool $withPackaging): FulfillmentMode
+    private function decideMode(
+        string $deliveryType,
+        int $sellerCount,
+        bool $withPackaging,
+        bool $containsBooks,
+    ): FulfillmentMode
     {
         if ($deliveryType === 'pickup') {
             return FulfillmentMode::PICKUP_ONLY;
@@ -99,7 +106,7 @@ class FulfillmentRoutingService
             return FulfillmentMode::POSTAL_ONLY_VIA_HUB;
         }
 
-        if ($sellerCount > 1 || $withPackaging) {
+        if ($sellerCount > 1 || $withPackaging || $containsBooks) {
             return FulfillmentMode::HUB_BASED;
         }
 
