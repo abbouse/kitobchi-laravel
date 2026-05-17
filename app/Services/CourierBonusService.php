@@ -55,6 +55,21 @@ class CourierBonusService
 
     private ?ProjectSetting $cachedSettings = null;
 
+    private function persistOrderState(CourierOrder $order, array $attributes): void
+    {
+        CourierOrder::query()
+            ->whereKey($order->id)
+            ->update(array_merge($attributes, [
+                'updated_at' => now(),
+            ]));
+
+        foreach ($attributes as $key => $value) {
+            $order->setAttribute($key, $value);
+        }
+
+        $order->syncOriginal();
+    }
+
     /** Sozlamalar — har request uchun bir marta o'qiymiz. */
     public function settings(): array
     {
@@ -104,7 +119,12 @@ class CourierBonusService
         $order->courierBonus = max(0, min((int) $displayBonus, $cfg['surge_max']));
 
         if ($persist && $order->isDirty(['pickup_bonus', 'locked_bonus', 'final_bonus', 'courierBonus'])) {
-            $order->save();
+            $this->persistOrderState($order, [
+                'pickup_bonus' => $order->pickup_bonus,
+                'locked_bonus' => $order->locked_bonus,
+                'final_bonus' => $order->final_bonus,
+                'courierBonus' => $order->courierBonus,
+            ]);
         }
 
         return $order;
@@ -156,7 +176,11 @@ class CourierBonusService
                 $thresholdCrossed[] = $order;
             }
 
-            $order->save();
+            $this->persistOrderState($order, [
+                'pickup_bonus' => $order->pickup_bonus,
+                'courierBonus' => $order->courierBonus,
+                'bonus_threshold_notified' => $order->bonus_threshold_notified,
+            ]);
             $ticked++;
         }
 
@@ -180,7 +204,11 @@ class CourierBonusService
         $order->locked_bonus = (int) $order->pickup_bonus;
         $order->courierBonus = (int) $order->locked_bonus;
         $order->final_bonus = null;
-        $order->save();
+        $this->persistOrderState($order, [
+            'locked_bonus' => $order->locked_bonus,
+            'courierBonus' => $order->courierBonus,
+            'final_bonus' => $order->final_bonus,
+        ]);
     }
 
     /**
@@ -206,7 +234,13 @@ class CourierBonusService
         $order->picked_up_at = $order->picked_up_at ?: $now;
         $order->sla_deadline = $order->sla_deadline ?: $now->copy()->addMinutes($cfg['sla_minutes']);
         $order->sla_warning_notified = false;
-        $order->save();
+        $this->persistOrderState($order, [
+            'locked_bonus' => $order->locked_bonus,
+            'courierBonus' => $order->courierBonus,
+            'picked_up_at' => $order->picked_up_at,
+            'sla_deadline' => $order->sla_deadline,
+            'sla_warning_notified' => $order->sla_warning_notified,
+        ]);
     }
 
     // =========================================================================
@@ -231,7 +265,10 @@ class CourierBonusService
             // SLA hali boshlanmagan yoki eski yozuv — lock qilingan bonusni saqlab qolamiz.
             $order->final_bonus = $locked;
             $order->courierBonus = $locked;
-            $order->save();
+            $this->persistOrderState($order, [
+                'final_bonus' => $order->final_bonus,
+                'courierBonus' => $order->courierBonus,
+            ]);
             return $locked;
         }
 
@@ -269,7 +306,14 @@ class CourierBonusService
         // courierBonus ustunini ham yangilab ketamiz — eski kod (admin panel,
         // hisobotlar) bu ustundan o'qishi mumkin.
         $order->courierBonus = $final;
-        $order->save();
+        $this->persistOrderState($order, [
+            'total_delay_seconds' => $order->total_delay_seconds,
+            'is_customer_delay' => $order->is_customer_delay,
+            'customer_delay_started_at' => $order->customer_delay_started_at,
+            'sla_deadline' => $order->sla_deadline,
+            'final_bonus' => $order->final_bonus,
+            'courierBonus' => $order->courierBonus,
+        ]);
 
         return $final;
     }
@@ -330,7 +374,11 @@ class CourierBonusService
             $order->is_customer_delay = true;
             $order->customer_delay_started_at = $now;
             $order->customer_delay_count = (int) $order->customer_delay_count + 1;
-            $order->save();
+            $this->persistOrderState($order, [
+                'is_customer_delay' => $order->is_customer_delay,
+                'customer_delay_started_at' => $order->customer_delay_started_at,
+                'customer_delay_count' => $order->customer_delay_count,
+            ]);
 
             return [
                 'success'             => true,
@@ -364,7 +412,12 @@ class CourierBonusService
             $order->sla_deadline = Carbon::parse($order->sla_deadline)->addSeconds($delayElapsed);
         }
 
-        $order->save();
+        $this->persistOrderState($order, [
+            'total_delay_seconds' => $order->total_delay_seconds,
+            'is_customer_delay' => $order->is_customer_delay,
+            'customer_delay_started_at' => $order->customer_delay_started_at,
+            'sla_deadline' => $order->sla_deadline,
+        ]);
 
         return [
             'success'             => true,

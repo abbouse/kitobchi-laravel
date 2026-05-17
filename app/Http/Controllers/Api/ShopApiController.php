@@ -4,12 +4,15 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\MysteryBoxPlan;
 use App\Models\GiftCertificate;
+use App\Models\MysteryBoxDelivery;
 use App\Models\MysteryBoxSubscription;
+use App\Models\ProjectSetting;
 use App\Models\UserCard;
 use App\Services\PaylovPayablePaymentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class ShopApiController extends Controller
 {
@@ -44,6 +47,22 @@ class ShopApiController extends Controller
         ];
     }
 
+    private function giftCertificateOptions(): array
+    {
+        $settings = ProjectSetting::query()->first();
+        $raw = $settings?->gift_certificate_options;
+
+        $options = collect(is_array($raw) ? $raw : [])
+            ->map(fn ($value) => (int) $value)
+            ->filter(fn (int $value) => $value >= 1000)
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
+
+        return !empty($options) ? $options : [300000, 500000, 1000000];
+    }
+
     // ── GET /api/shop/info ────────────────────────────────────────────────────
     // Mystery box planlar + gift cert options
     public function info()
@@ -72,7 +91,7 @@ class ShopApiController extends Controller
                     // Features Flutter tomonida hardcode — bu yerda faqat planlar
                 ],
                 'gift_certificate' => [
-                    'options' => [300000, 500000, 1000000],
+                    'options' => $this->giftCertificateOptions(),
                     // Features Flutter tomonida hardcode — bu yerda faqat narxlar
                 ],
             ],
@@ -87,7 +106,7 @@ class ShopApiController extends Controller
         if (!$user) return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
 
         $request->validate([
-            'nominal_uzs' => 'required|integer|in:300000,500000,1000000',
+            'nominal_uzs' => ['required', 'integer', Rule::in($this->giftCertificateOptions())],
             'for_self'    => 'required|boolean',
             // Faqat do'stga sovg'a qilinganda message keladi
             'message'     => 'nullable|string|max:200',
@@ -122,6 +141,7 @@ class ShopApiController extends Controller
 
         $request->validate([
             'plan_id' => 'required|integer|exists:mystery_box_plans,id',
+            'dispatch_type' => 'nullable|in:courier,postal,pickup',
         ]);
 
         $plan = MysteryBoxPlan::where('id', $request->plan_id)
@@ -140,6 +160,7 @@ class ShopApiController extends Controller
             'user_id'        => $user->id,
             'plan_id'        => $plan->id,
             'address'        => $this->formatLocationPayload($location, $user),
+            'preferred_dispatch_type' => $request->input('dispatch_type', MysteryBoxDelivery::DISPATCH_COURIER),
             'status'         => MysteryBoxSubscription::STATUS_PENDING,
             'total_months'   => $plan->months,
             'books_per_month'=> $plan->books_per_month,
@@ -293,14 +314,24 @@ class ShopApiController extends Controller
             'started_at'       => $sub->started_at?->format('d.m.Y'),
             'ends_at'          => $sub->ends_at?->format('d.m.Y'),
             'next_delivery_at' => $sub->next_delivery_at?->format('d.m.Y'),
+            'preferred_dispatch_type' => $sub->preferred_dispatch_type,
             'has_address'      => !empty($addr['fullAddress'] ?? null),
             'deliveries'       => $sub->deliveries->map(fn($d) => [
                 'month_number'  => $d->month_number,
                 'status'        => $d->status,
+                'status_label'  => $d->status_label,
+                'dispatch_type' => $d->dispatch_type,
+                'dispatch_label' => $d->dispatch_type_label,
                 'tracking_note' => $d->tracking_note,
+                'planned_for_date' => optional($d->planned_for_date)?->format('d.m.Y'),
                 'prepared_at'   => $d->prepared_at?->format('d.m.Y'),
+                'ready_at'      => $d->ready_at?->format('d.m.Y'),
                 'shipped_at'    => $d->shipped_at?->format('d.m.Y'),
+                'arrived_to_post_at' => $d->arrived_to_post_at?->format('d.m.Y H:i'),
+                'out_for_delivery_at' => $d->out_for_delivery_at?->format('d.m.Y H:i'),
                 'delivered_at'  => $d->delivered_at?->format('d.m.Y H:i'),
+                'customer_received_at' => $d->customer_received_at?->format('d.m.Y H:i'),
+                'is_final' => $d->is_final,
             ])->values(),
         ];
 

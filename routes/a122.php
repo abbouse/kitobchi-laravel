@@ -278,6 +278,7 @@ Route::prefix('a122')->name('admin.')->group(function () {
     // ── Gift Certificates ──────────────────────────────────────────
     Route::prefix('gift-certificates')->name('gift-certificates.')->group(function () {
         Route::get('/',                          [GiftCertificateController::class, 'index'])->name('index');
+        Route::put('/options',                   [GiftCertificateController::class, 'updateOptions'])->name('options');
         Route::get('/{giftCertificate}',         [GiftCertificateController::class, 'show'])->name('show');
         Route::patch('/{giftCertificate}/status',[GiftCertificateController::class, 'updateStatus'])->name('status');
         Route::post('/{giftCertificate}/cancel', [GiftCertificateController::class, 'cancel'])->name('cancel');
@@ -297,6 +298,8 @@ Route::prefix('a122')->name('admin.')->group(function () {
         Route::patch('/{subscription}/pause',            [MysteryBoxController::class, 'pauseSubscription'])->name('pause');
         Route::patch('/{subscription}/resume',           [MysteryBoxController::class, 'resumeSubscription'])->name('resume');
         Route::patch('/{subscription}/cancel',           [MysteryBoxController::class, 'cancelSubscription'])->name('cancel');
+        Route::patch('/deliveries/{delivery}/settings',  [MysteryBoxController::class, 'updateDeliverySettings'])->name('deliveries.settings');
+        Route::patch('/deliveries/{delivery}/status',    [MysteryBoxController::class, 'updateDeliveryStatus'])->name('deliveries.status');
         Route::patch('/deliveries/{delivery}/prepare',   [MysteryBoxController::class, 'prepareDelivery'])->name('prepare');
         Route::patch('/deliveries/{delivery}/ship',      [MysteryBoxController::class, 'shipDelivery'])->name('ship');
         Route::patch('/deliveries/{delivery}/deliver',   [MysteryBoxController::class, 'deliverDelivery'])->name('deliver');

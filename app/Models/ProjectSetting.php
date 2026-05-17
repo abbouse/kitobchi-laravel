@@ -20,6 +20,8 @@ class ProjectSetting extends Model
         'on_premium', 'on_reels', 'ramadan', 'stop_sales',
         // Qadoqlash
         'packaging_price_small', 'packaging_price_large', 'packaging_threshold',
+        // Gift certificate
+        'gift_certificate_options',
         // Phase 3 — Kuryer bonus tizimi
         'courier_surge_step', 'courier_surge_max', 'courier_surge_threshold',
         'courier_sla_minutes', 'courier_penalty_step',
@@ -31,6 +33,7 @@ class ProjectSetting extends Model
         'ramadan'     => 'boolean',
         'stop_sales'  => 'boolean',
         'telegram_login_enabled' => 'boolean',
+        'gift_certificate_options' => 'array',
         'courier_surge_step'      => 'integer',
         'courier_surge_max'       => 'integer',
         'courier_surge_threshold' => 'integer',

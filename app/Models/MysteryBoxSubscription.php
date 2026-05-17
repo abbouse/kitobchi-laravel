@@ -7,10 +7,10 @@ class MysteryBoxSubscription extends Model
 {
 
     protected $fillable = [
-        'user_id', 'plan_id', 'address', 'status',
+        'user_id', 'plan_id', 'address', 'preferred_dispatch_type', 'status',
         'total_months', 'books_per_month', 'price_uzs',
         'delivered_months', 'next_delivery_at',
-        'paid_at', 'started_at', 'ends_at', 'cancelled_at',
+        'paid_at', 'started_at', 'ends_at', 'cancelled_at', 'assignment_meta',
     ];
 
     protected $casts = [
@@ -24,6 +24,7 @@ class MysteryBoxSubscription extends Model
         'ends_at'          => 'datetime',
         'cancelled_at'     => 'datetime',
         'next_delivery_at' => 'datetime',
+        'assignment_meta'  => 'array',
     ];
 
     const STATUS_PENDING   = 'pending_payment';
@@ -43,7 +44,7 @@ class MysteryBoxSubscription extends Model
     public function currentDelivery()
     {
         return $this->hasOne(MysteryBoxDelivery::class, 'subscription_id')
-            ->where('status', '!=', 'delivered')
+            ->whereNotIn('status', MysteryBoxDelivery::FINAL_STATUSES)
             ->orderBy('month_number');
     }
 
@@ -88,7 +89,11 @@ class MysteryBoxSubscription extends Model
 
         return $this->deliveries()->create([
             'month_number' => $this->delivered_months + 1,
-            'status'       => 'pending',
+            'dispatch_type' => $this->preferred_dispatch_type ?: MysteryBoxDelivery::DISPATCH_COURIER,
+            'status'       => MysteryBoxDelivery::STATUS_PENDING,
+            'planned_for_date' => optional($this->started_at)->copy()
+                ?->addMonths(max(0, $this->delivered_months))
+                ?->toDateString(),
         ]);
     }
 }

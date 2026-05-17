@@ -25,7 +25,7 @@ class FulfillmentAdminOverrideService
     public function switchMode(Sold $order, FulfillmentMode $targetMode, ?Hub $targetHub = null, ?string $note = null): OrderFulfillment
     {
         return DB::transaction(function () use ($order, $targetMode, $targetHub, $note) {
-            $admin = Auth::guard('admin')->user();
+            $admin = Auth::guard('panel')->user();
             /** @var Sold $lockedOrder */
             $lockedOrder = Sold::query()->lockForUpdate()->findOrFail($order->id);
             /** @var OrderFulfillment $fulfillment */
@@ -48,6 +48,7 @@ class FulfillmentAdminOverrideService
                 : ($targetMode === FulfillmentMode::POSTAL_ONLY_VIA_HUB ? 'postal' : 'delivery');
 
             $lockedOrder->deliveryType = $deliveryType;
+            $lockedOrder->courier_id = null;
             $lockedOrder->save();
 
             $fulfillment->fulfillment_mode = $targetMode->value;
@@ -101,7 +102,7 @@ class FulfillmentAdminOverrideService
     public function rerouteHub(Sold $order, Hub $targetHub, ?string $note = null): OrderFulfillment
     {
         return DB::transaction(function () use ($order, $targetHub, $note) {
-            $admin = Auth::guard('admin')->user();
+            $admin = Auth::guard('panel')->user();
             /** @var Sold $lockedOrder */
             $lockedOrder = Sold::query()->lockForUpdate()->findOrFail($order->id);
             /** @var OrderFulfillment $fulfillment */
@@ -169,13 +170,7 @@ class FulfillmentAdminOverrideService
             throw new \RuntimeException("Buyurtma allaqachon shu mode’da.");
         }
 
-        if ((int) ($order->courier_id ?? 0) > 0 || $this->hasAssignedCourierTask($fulfillment)) {
-            throw new \RuntimeException("Kuryer biriktirilgan buyurtmada mode almashtirib bo'lmaydi.");
-        }
-
         if (in_array($fulfillment->status_code, [
-            FulfillmentStatusCode::PACKED->value,
-            FulfillmentStatusCode::LABELED->value,
             FulfillmentStatusCode::DISPATCHED_TO_POST->value,
             FulfillmentStatusCode::ASSIGNED_LAST_MILE->value,
             FulfillmentStatusCode::OUT_FOR_DELIVERY->value,
@@ -189,10 +184,6 @@ class FulfillmentAdminOverrideService
 
     private function guardReroute(Sold $order, OrderFulfillment $fulfillment): void
     {
-        if ((int) ($order->courier_id ?? 0) > 0 || $this->hasAssignedCourierTask($fulfillment)) {
-            throw new \RuntimeException("Kuryer biriktirilgan buyurtmada hubni almashtirib bo'lmaydi.");
-        }
-
         if (!in_array($fulfillment->fulfillment_mode, [
             FulfillmentMode::HUB_BASED->value,
             FulfillmentMode::POSTAL_ONLY_VIA_HUB->value,
@@ -204,6 +195,10 @@ class FulfillmentAdminOverrideService
             FulfillmentStatusCode::AWAITING_SELLER_PREP->value,
             FulfillmentStatusCode::READY_FOR_PICKUP->value,
             FulfillmentStatusCode::PICKED_FROM_SELLER->value,
+            FulfillmentStatusCode::ARRIVED_AT_HUB->value,
+            FulfillmentStatusCode::QC_CHECKED->value,
+            FulfillmentStatusCode::PACKED->value,
+            FulfillmentStatusCode::LABELED->value,
         ], true)) {
             throw new \RuntimeException("Bu bosqichda hub reroute qilib bo'lmaydi.");
         }

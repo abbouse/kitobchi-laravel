@@ -500,31 +500,31 @@
       </div>
       <div class="card-body px-4 pb-4">
         <div class="row g-2 row-cols-1 row-cols-md-2">
-          <?php $__currentLoopData = $mysteryDueToday->take(4); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $sub): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+          <?php $__currentLoopData = $mysteryDueToday->take(4); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $delivery): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
             <div class="col">
-              <a href="<?php echo e(route('admin.mystery-box.subscription',$sub)); ?>" class="d-flex align-items-center gap-3 p-3 rounded-3 border bg-white text-decoration-none">
-                <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-success-subtle text-success-emphasis fw-bold flex-shrink-0" style="width:36px;height:36px;">
-                  <?php echo e(strtoupper(substr($sub->user?->name??'M',0,1))); ?>
+              <a href="<?php echo e(route('admin.mystery-box.subscription',$delivery->subscription_id)); ?>" class="d-flex align-items-center gap-3 p-3 rounded-3 border bg-white text-decoration-none">
+                <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-danger-subtle text-danger-emphasis fw-bold flex-shrink-0" style="width:36px;height:36px;">
+                  <?php echo e($delivery->month_number); ?>
 
                 </span>
                 <div class="flex-grow-1 min-w-0">
-                  <div class="fw-semibold text-dark text-truncate"><?php echo e($sub->user?->name); ?> <?php echo e($sub->user?->lastname); ?></div>
-                  <div class="small text-secondary text-truncate"><?php echo e($sub->plan?->name_uz); ?> · <?php echo e($sub->next_delivery_at?->diffForHumans()); ?></div>
+                  <div class="fw-semibold text-dark text-truncate"><?php echo e($delivery->subscription?->user?->name); ?> <?php echo e($delivery->subscription?->user?->lastname); ?></div>
+                  <div class="small text-secondary text-truncate"><?php echo e($delivery->subscription?->plan?->name_uz); ?> · <?php echo e($delivery->dispatch_type_label); ?> · <?php echo e(optional($delivery->planned_for_date)->format('d.m.Y')); ?></div>
                 </div>
-                <span class="badge rounded-pill text-bg-danger-subtle text-danger-emphasis fw-semibold">Navbatda</span>
+                <span class="badge rounded-pill text-bg-danger-subtle text-danger-emphasis fw-semibold"><?php echo e($delivery->status_label); ?></span>
               </a>
             </div>
           <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-          <?php $__currentLoopData = $mysteryDueSoon->take(4); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $sub): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+          <?php $__currentLoopData = $mysteryDueSoon->take(4); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $delivery): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
             <div class="col">
-              <a href="<?php echo e(route('admin.mystery-box.subscription',$sub)); ?>" class="d-flex align-items-center gap-3 p-3 rounded-3 border bg-white text-decoration-none">
+              <a href="<?php echo e(route('admin.mystery-box.subscription',$delivery->subscription_id)); ?>" class="d-flex align-items-center gap-3 p-3 rounded-3 border bg-white text-decoration-none">
                 <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-success-subtle text-success-emphasis fw-bold flex-shrink-0" style="width:36px;height:36px;">
-                  <?php echo e(strtoupper(substr($sub->user?->name??'M',0,1))); ?>
+                  <?php echo e($delivery->month_number); ?>
 
                 </span>
                 <div class="flex-grow-1 min-w-0">
-                  <div class="fw-semibold text-dark text-truncate small"><?php echo e($sub->user?->name); ?> <?php echo e($sub->user?->lastname); ?></div>
-                  <div class="small text-secondary"><?php echo e($sub->next_delivery_at?->format('d.m.Y')); ?></div>
+                  <div class="fw-semibold text-dark text-truncate small"><?php echo e($delivery->subscription?->user?->name); ?> <?php echo e($delivery->subscription?->user?->lastname); ?></div>
+                  <div class="small text-secondary"><?php echo e(optional($delivery->planned_for_date)->format('d.m.Y')); ?> · <?php echo e($delivery->dispatch_type_label); ?></div>
                 </div>
               </a>
             </div>

@@ -7,11 +7,17 @@ use App\Models\Books;
 use App\Models\MysteryBoxDelivery;
 use App\Models\MysteryBoxPlan;
 use App\Models\MysteryBoxSubscription;
+use App\Services\MysteryBoxService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class MysteryBoxController extends Controller
 {
+    public function __construct(
+        private readonly MysteryBoxService $mysteryBoxService,
+    ) {
+    }
+
     public function searchBooks(Request $request)
     {
         $q = trim((string) $request->get('q', ''));
@@ -89,14 +95,22 @@ class MysteryBoxController extends Controller
         ];
 
         $plans = MysteryBoxPlan::orderBy('sort_order')->get();
-        $dueToday = MysteryBoxSubscription::where('status', 'active')
-            ->whereDate('next_delivery_at', today())
-            ->count();
-        $dueWeek = MysteryBoxSubscription::where('status', 'active')
-            ->whereBetween('next_delivery_at', [today(), today()->addDays(7)])
+        $opsDueNow = $this->mysteryBoxService->opsQueueQuery()
+            ->with(['subscription.user:id,name,lastname,phone_number', 'subscription.plan:id,name_uz'])
+            ->take(8)
+            ->get();
+
+        $dueToday = MysteryBoxDelivery::query()
+            ->whereNotIn('status', MysteryBoxDelivery::FINAL_STATUSES)
+            ->whereDate('planned_for_date', '<=', today())
             ->count();
 
-        return view('a122.mystery-box.index', compact('subs', 'counts', 'tab', 'plans', 'dueToday', 'dueWeek'));
+        $dueWeek = MysteryBoxDelivery::query()
+            ->whereNotIn('status', MysteryBoxDelivery::FINAL_STATUSES)
+            ->whereBetween('planned_for_date', [today(), today()->addDays(7)])
+            ->count();
+
+        return view('a122.mystery-box.index', compact('subs', 'counts', 'tab', 'plans', 'dueToday', 'dueWeek', 'opsDueNow'));
     }
 
     public function subscriptions(Request $request)
@@ -106,8 +120,45 @@ class MysteryBoxController extends Controller
 
     public function show(MysteryBoxSubscription $subscription)
     {
-        $subscription->load(['user', 'plan', 'deliveries']);
-        return view('a122.mystery-box.show', compact('subscription'));
+        $this->mysteryBoxService->ensureDeliverySchedule($subscription->fresh(['plan', 'deliveries']));
+        $subscription = $this->mysteryBoxService->syncSubscriptionProgress($subscription->fresh(['user', 'plan', 'deliveries']));
+
+        $dispatchOptions = [
+            MysteryBoxDelivery::DISPATCH_COURIER => 'Kuryer',
+            MysteryBoxDelivery::DISPATCH_POSTAL => 'Pochta',
+            MysteryBoxDelivery::DISPATCH_PICKUP => 'Pickup',
+        ];
+
+        $statusOptions = [
+            MysteryBoxDelivery::DISPATCH_COURIER => [
+                MysteryBoxDelivery::STATUS_PENDING => 'Kutilmoqda',
+                MysteryBoxDelivery::STATUS_PREPARING => 'Tayyorlanmoqda',
+                MysteryBoxDelivery::STATUS_READY_TO_SHIP => 'Jo\'natishga tayyor',
+                MysteryBoxDelivery::STATUS_SHIPPED => 'Jo\'natildi',
+                MysteryBoxDelivery::STATUS_OUT_FOR_DELIVERY => 'Kuryer yo\'lda',
+                MysteryBoxDelivery::STATUS_CUSTOMER_RECEIVED => 'Mijoz qabul qildi',
+                MysteryBoxDelivery::STATUS_CANCELLED => 'Bekor qilindi',
+            ],
+            MysteryBoxDelivery::DISPATCH_POSTAL => [
+                MysteryBoxDelivery::STATUS_PENDING => 'Kutilmoqda',
+                MysteryBoxDelivery::STATUS_PREPARING => 'Tayyorlanmoqda',
+                MysteryBoxDelivery::STATUS_READY_TO_SHIP => 'Jo\'natishga tayyor',
+                MysteryBoxDelivery::STATUS_SHIPPED => 'Jo\'natildi',
+                MysteryBoxDelivery::STATUS_ARRIVED_TO_POST => 'Pochtaga yetib bordi',
+                MysteryBoxDelivery::STATUS_CUSTOMER_RECEIVED => 'Mijoz qabul qildi',
+                MysteryBoxDelivery::STATUS_CANCELLED => 'Bekor qilindi',
+            ],
+            MysteryBoxDelivery::DISPATCH_PICKUP => [
+                MysteryBoxDelivery::STATUS_PENDING => 'Kutilmoqda',
+                MysteryBoxDelivery::STATUS_PREPARING => 'Tayyorlanmoqda',
+                MysteryBoxDelivery::STATUS_READY_TO_SHIP => 'Jo\'natishga tayyor',
+                MysteryBoxDelivery::STATUS_DELIVERED => 'Olib ketishga tayyor',
+                MysteryBoxDelivery::STATUS_CUSTOMER_RECEIVED => 'Mijoz qabul qildi',
+                MysteryBoxDelivery::STATUS_CANCELLED => 'Bekor qilindi',
+            ],
+        ];
+
+        return view('a122.mystery-box.show', compact('subscription', 'dispatchOptions', 'statusOptions'));
     }
 
     public function subscription(MysteryBoxSubscription $subscription)
@@ -221,7 +272,7 @@ class MysteryBoxController extends Controller
             return back()->with('error', 'Kamida bitta kitob ID kiriting.');
         }
 
-        if (!in_array($delivery->status, [MysteryBoxDelivery::STATUS_PENDING, MysteryBoxDelivery::STATUS_PREPARING, MysteryBoxDelivery::STATUS_DELIVERED], true)) {
+        if (in_array($delivery->status, MysteryBoxDelivery::FINAL_STATUSES, true)) {
             return back()->with('error', "Bu yetkazishni hozir tayyorlash mumkin emas.");
         }
 
@@ -239,51 +290,104 @@ class MysteryBoxController extends Controller
             return back()->with('error', 'Kiritilgan kitob IDlar orasida yaroqsizlari bor.');
         }
 
-        $isDeliveredEdit = $delivery->status === MysteryBoxDelivery::STATUS_DELIVERED;
-
         $delivery->update([
             'book_ids'       => $bookIds,
-            'status'         => $isDeliveredEdit ? MysteryBoxDelivery::STATUS_DELIVERED : MysteryBoxDelivery::STATUS_PREPARING,
+            'selection_mode' => 'manual',
+            'status'         => $delivery->status === MysteryBoxDelivery::STATUS_PENDING
+                ? MysteryBoxDelivery::STATUS_PREPARING
+                : $delivery->status,
             'tracking_note'  => $request->tracking_note,
-            'prepared_at'    => $isDeliveredEdit ? $delivery->prepared_at : now(),
+            'prepared_at'    => $delivery->prepared_at ?? now(),
+            'selection_meta' => array_merge(
+                is_array($delivery->selection_meta) ? $delivery->selection_meta : [],
+                [
+                    'selection_mode' => 'manual',
+                    'manual_updated_at' => now()->toIso8601String(),
+                ]
+            ),
         ]);
 
-        return back()->with('success', $isDeliveredEdit
-            ? 'Yetkazilgan oy tarkibi yangilandi.'
-            : 'Yetkazish tayyorlash bosqichiga o‘tkazildi.');
+        $this->mysteryBoxService->syncSubscriptionProgress($delivery->subscription()->firstOrFail());
+
+        return back()->with('success', 'Oy tarkibi saqlandi.');
+    }
+
+    public function updateDeliverySettings(Request $request, MysteryBoxDelivery $delivery)
+    {
+        $data = $request->validate([
+            'dispatch_type' => 'required|in:courier,postal,pickup',
+            'planned_for_date' => 'nullable|date',
+            'tracking_note' => 'nullable|string|max:500',
+        ]);
+
+        if (in_array($delivery->status, MysteryBoxDelivery::FINAL_STATUSES, true)) {
+            return back()->with('error', 'Yakunlangan oy sozlamasini o‘zgartirib bo‘lmaydi.');
+        }
+
+        $delivery->update([
+            'dispatch_type' => $data['dispatch_type'],
+            'planned_for_date' => $data['planned_for_date'] ?: $delivery->planned_for_date,
+            'tracking_note' => $data['tracking_note'] ?? $delivery->tracking_note,
+        ]);
+
+        $subscription = $delivery->subscription()->first();
+        if ($subscription) {
+            $subscription->update([
+                'preferred_dispatch_type' => $data['dispatch_type'],
+            ]);
+
+            $subscription->deliveries()
+                ->where('month_number', '>', $delivery->month_number)
+                ->whereIn('status', [
+                    MysteryBoxDelivery::STATUS_PENDING,
+                    MysteryBoxDelivery::STATUS_PREPARING,
+                    MysteryBoxDelivery::STATUS_READY_TO_SHIP,
+                ])
+                ->update(['dispatch_type' => $data['dispatch_type']]);
+        }
+
+        $this->mysteryBoxService->syncSubscriptionProgress($delivery->subscription()->firstOrFail());
+
+        return back()->with('success', 'Yetkazish sozlamalari yangilandi.');
+    }
+
+    public function updateDeliveryStatus(Request $request, MysteryBoxDelivery $delivery)
+    {
+        $data = $request->validate([
+            'status' => 'required|string',
+            'tracking_note' => 'nullable|string|max:500',
+        ]);
+
+        try {
+            $this->mysteryBoxService->transitionDelivery(
+                $delivery,
+                $data['status'],
+                $data['tracking_note'] ?? null,
+            );
+        } catch (\Throwable $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'Delivery status yangilandi.');
     }
 
     public function shipDelivery(Request $request, MysteryBoxDelivery $delivery)
     {
-        $request->validate(['tracking_note' => 'nullable|string|max:500']);
-        if ($delivery->status !== MysteryBoxDelivery::STATUS_PREPARING) {
-            return back()->with('error', "Faqat tayyorlanayotgan yetkazishni jo'natish mumkin.");
-        }
-        $delivery->update([
-            'status'        => 'shipped',
-            'tracking_note' => $request->tracking_note ?? $delivery->tracking_note,
-            'shipped_at'    => now(),
-        ]);
-        return back()->with('success', "Jo'natildi deb belgilandi.");
+        $request->merge(['status' => MysteryBoxDelivery::STATUS_SHIPPED]);
+
+        return $this->updateDeliveryStatus($request, $delivery);
     }
 
     public function deliverDelivery(MysteryBoxDelivery $delivery)
     {
-        if ($delivery->status !== MysteryBoxDelivery::STATUS_SHIPPED) {
-            return back()->with('error', "Faqat jo'natilgan yetkazishni yakunlash mumkin.");
-        }
-        $sub = $delivery->subscription;
-        DB::transaction(function () use ($delivery, $sub) {
-            $delivery->update(['status' => 'delivered', 'delivered_at' => now()]);
-            $sub->increment('delivered_months');
-            $sub->refresh();
-            if ($sub->delivered_months >= $sub->total_months) {
-                $sub->update(['status' => 'completed', 'next_delivery_at' => null]);
-            } else {
-                $sub->update(['next_delivery_at' => now()->addMonth()]);
-                $sub->createNextDelivery();
-            }
-        });
-        return back()->with('success', 'Yetkazildi. Keyingi oy navbatga qo\'yildi.');
+        $target = match ($delivery->dispatch_type) {
+            MysteryBoxDelivery::DISPATCH_COURIER => MysteryBoxDelivery::STATUS_CUSTOMER_RECEIVED,
+            MysteryBoxDelivery::DISPATCH_POSTAL => MysteryBoxDelivery::STATUS_ARRIVED_TO_POST,
+            default => MysteryBoxDelivery::STATUS_DELIVERED,
+        };
+
+        request()->merge(['status' => $target]);
+
+        return $this->updateDeliveryStatus(request(), $delivery);
     }
 }

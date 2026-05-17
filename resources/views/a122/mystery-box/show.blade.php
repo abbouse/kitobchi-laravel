@@ -163,6 +163,9 @@
           ? \App\Models\Books::whereIn('id', $delivery->book_ids)
               ->select('id','name','author','images')->get()
           : collect();
+        $deliveryStatusOptions = $statusOptions[$delivery->dispatch_type] ?? [];
+        $isFinalDelivery = in_array($delivery->status, \App\Models\MysteryBoxDelivery::FINAL_STATUSES, true);
+        $editorOpen = in_array($delivery->status, ['pending', 'preparing', 'ready_to_ship'], true);
       @endphp
       <div style="padding:16px 18px;border-top:1px solid var(--p-border)">
         <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between mb-3">
@@ -178,7 +181,14 @@
               <div style="font-size:13px;font-weight:600;color:var(--p-text)">
                 {{ $delivery->month_number }}-oy
               </div>
-              @if($delivery->shipped_at)
+              <div style="font-size:11px;color:var(--p-hint)">
+                {{ $delivery->dispatch_type_label }} · Reja: {{ optional($delivery->planned_for_date)->format('d.m.Y') ?? '—' }}
+              </div>
+              @if($delivery->customer_received_at)
+              <div style="font-size:11px;color:var(--p-success)">
+                Mijoz qabul qildi: {{ $delivery->customer_received_at->format('d.m.Y H:i') }}
+              </div>
+              @elseif($delivery->shipped_at)
               <div style="font-size:11px;color:var(--p-hint)">
                 Jo'natildi: {{ $delivery->shipped_at->format('d.m.Y') }}
               </div>
@@ -194,35 +204,28 @@
           </span>
         </div>
 
-        @if(in_array($delivery->status, ['pending', 'preparing', 'delivered']))
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;padding:10px 12px;background:var(--p-elevated);border:1px solid var(--p-border);border-radius:10px;flex-wrap:wrap">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px;padding:10px 12px;background:var(--p-elevated);border:1px solid var(--p-border);border-radius:10px;flex-wrap:wrap">
           <div>
             <div style="font-size:12px;font-weight:700;color:var(--p-text)">
               {{ $delivery->month_number }}-oy kitoblari
             </div>
             <div style="font-size:11px;color:var(--p-hint)">
-              {{ $delivery->status === 'delivered' ? "Yetkazilgan oy tarkibini tahrirlashingiz mumkin" : ($delivery->status === 'preparing' ? "Tanlovni yangilashingiz mumkin" : "Bu oy uchun kitoblarni tanlang") }}
+              {{ $delivery->selection_mode === 'manual' ? 'Admin tanlovi saqlangan' : 'Avtomatik balanslangan tanlov qo‘yilgan' }}
+              · {{ count($delivery->book_ids ?? []) }} / {{ $subscription->books_per_month }} ta
             </div>
           </div>
-          @if($delivery->status === 'delivered')
+          @if(!$isFinalDelivery)
           <button type="button"
                   class="btn-p ghost sm"
                   onclick="toggleMysteryEditor('{{ $delivery->id }}')"
                   id="editorToggle{{ $delivery->id }}"
-                  aria-expanded="false">
-            <i class="bi bi-chevron-down" id="editorToggleIcon{{ $delivery->id }}"></i>
-            Tarkibni tahrirlash
+                  aria-expanded="{{ $editorOpen ? 'true' : 'false' }}">
+            <i class="bi {{ $editorOpen ? 'bi-chevron-up' : 'bi-chevron-down' }}" id="editorToggleIcon{{ $delivery->id }}"></i>
+            Delivery boshqaruvi
           </button>
-          @else
-          <span class="btn-p ghost sm" style="pointer-events:none">
-            <i class="bi bi-pencil-square"></i>
-            {{ $delivery->status === 'preparing' ? "Tahrirlash ochiq" : "Kitob tanlash" }}
-          </span>
           @endif
         </div>
-        @endif
 
-        {{-- Kitoblar --}}
         @if($books->count())
         <div class="flex flex-wrap gap-2 mb-3">
           @foreach($books as $book)
@@ -257,85 +260,119 @@
         </div>
         @endif
 
-        {{-- Amallar --}}
-        @if(in_array($delivery->status, ['pending', 'preparing', 'delivered']))
-        <div id="editorWrap{{ $delivery->id }}" style="{{ $delivery->status === 'delivered' ? 'display:none;' : '' }}">
-        <form method="POST"
-              action="{{ route('admin.mystery-box.prepare', $delivery) }}"
-              id="prepForm{{ $delivery->id }}">
-          @csrf @method('PATCH')
-          <div style="margin-bottom:10px;font-size:11px;color:var(--p-hint)">
-            Bu oy uchun {{ $subscription->books_per_month }} ta kitob tanlang. `Aktiv kitoblar` sahifasidan kerakli kitob IDlarini olib, shu yerga vergul bilan kiriting.
-          </div>
-          <div class="flex flex-wrap gap-2 mb-2">
-            <a href="{{ route('admin.books.index', ['tab' => 'active']) }}" target="_blank" class="btn-p ghost sm">
-              <i class="bi bi-book"></i> Aktiv kitoblar
-            </a>
-            <a href="{{ route('admin.books.create') }}" target="_blank" class="btn-p ghost sm">
-              <i class="bi bi-plus-lg"></i> Yangi kitob
-            </a>
-          </div>
-          <div class="row g-2 items-end">
-            <div class="col">
-              <label class="p-form-label">
-                Kitob IDlari (vergul bilan ajrating)
-              </label>
-              <input type="text" name="book_ids_raw" class="p-form-control"
-                     placeholder="123, 456, 789"
-                     value="{{ implode(', ', $delivery->book_ids ?? []) }}"
-                     oninput="parseBookIds(this,'{{ $delivery->id }}')">
-              <div id="selectedBooksHint{{ $delivery->id }}" style="margin-top:6px;font-size:11px;color:var(--p-hint)">
-                {{ count($delivery->book_ids ?? []) }} / {{ $subscription->books_per_month }} ta tanlandi
-              </div>
-              <div id="selectedBooks{{ $delivery->id }}" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:8px">
-                @foreach($books as $book)
-                <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--p-border);border-radius:10px;background:var(--p-elevated);max-width:100%">
-                  <span style="font-family:'JetBrains Mono',monospace;color:var(--p-accent)">#{{ $book->id }}</span>
-                  <span style="font-size:12px;color:var(--p-text);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ $book->name }}{{ $book->author ? ' · '.$book->author : '' }}</span>
-                  <button type="button" onclick="removeMysteryBook({{ $delivery->id }}, {{ $book->id }})" class="btn-p ghost sm" style="margin-left:auto">
-                    <i class="bi bi-x-lg"></i>
-                  </button>
-                </div>
+        @if(!$isFinalDelivery)
+        <div id="editorWrap{{ $delivery->id }}" style="{{ $editorOpen ? '' : 'display:none;' }}">
+          <form method="POST"
+                action="{{ route('admin.mystery-box.deliveries.settings', $delivery) }}"
+                class="row g-2 items-end"
+                style="margin-bottom:12px">
+            @csrf @method('PATCH')
+            <div class="col-md-3">
+              <label class="p-form-label">Yetkazish turi</label>
+              <select name="dispatch_type" class="p-form-control">
+                @foreach($dispatchOptions as $dispatchKey => $dispatchLabel)
+                <option value="{{ $dispatchKey }}" @selected($delivery->dispatch_type === $dispatchKey)>{{ $dispatchLabel }}</option>
                 @endforeach
-              </div>
-              <input type="hidden" name="book_ids" id="bookIds{{ $delivery->id }}" value='@json(array_values($delivery->book_ids ?? []))'>
+              </select>
             </div>
-            <div class="col-auto">
-              <input type="text" name="tracking_note" class="p-form-control"
+            <div class="col-md-3">
+              <label class="p-form-label">Rejalashtirilgan sana</label>
+              <input type="date"
+                     name="planned_for_date"
+                     class="p-form-control"
+                     value="{{ optional($delivery->planned_for_date)->format('Y-m-d') }}">
+            </div>
+            <div class="col-md-4">
+              <label class="p-form-label">Operatsion izoh</label>
+              <input type="text"
+                     name="tracking_note"
+                     class="p-form-control"
                      value="{{ $delivery->tracking_note }}"
-                     placeholder="Izoh (ixtiyoriy)">
+                     placeholder="Kuryer, pochta ID yoki pickup note">
             </div>
-            <div class="col-auto">
-              <button type="submit" class="btn-p primary">
-                <i class="bi bi-check-lg"></i> {{ $delivery->status === 'delivered' ? 'Delivered oyni yangilash' : ($delivery->status === 'preparing' ? 'Tanlovni yangilash' : 'Kitoblarni tasdiqlash') }}
+            <div class="col-md-2">
+              <button type="submit" class="btn-p ghost" style="width:100%;justify-content:center">
+                <i class="bi bi-sliders"></i> Sozlash
               </button>
             </div>
-          </div>
-        </form>
-        </div>
-        @if($delivery->status === 'preparing')
-        <div class="flex flex-wrap gap-2 mt-2">
-          <form method="POST" action="{{ route('admin.mystery-box.ship', $delivery) }}">
-            @csrf @method('PATCH')
-            <button class="btn-p primary">
-              <i class="bi bi-truck"></i> Jo'natildi
-            </button>
           </form>
+
+          <form method="POST"
+                action="{{ route('admin.mystery-box.prepare', $delivery) }}"
+                id="prepForm{{ $delivery->id }}">
+            @csrf @method('PATCH')
+            <div style="margin-bottom:10px;font-size:11px;color:var(--p-hint)">
+              Bu oy uchun {{ $subscription->books_per_month }} ta kitob tanlang. Manual edit shu oyning avtomatik tanlovini admin tanloviga aylantiradi.
+            </div>
+            <div class="flex flex-wrap gap-2 mb-2">
+              <a href="{{ route('admin.books.index', ['tab' => 'active']) }}" target="_blank" class="btn-p ghost sm">
+                <i class="bi bi-book"></i> Aktiv kitoblar
+              </a>
+              <a href="{{ route('admin.books.create') }}" target="_blank" class="btn-p ghost sm">
+                <i class="bi bi-plus-lg"></i> Yangi kitob
+              </a>
+            </div>
+            <div class="row g-2 items-end">
+              <div class="col">
+                <label class="p-form-label">Kitob IDlari (vergul bilan ajrating)</label>
+                <input type="text" name="book_ids_raw" class="p-form-control"
+                       placeholder="123, 456, 789"
+                       value="{{ implode(', ', $delivery->book_ids ?? []) }}"
+                       oninput="parseBookIds(this,'{{ $delivery->id }}')">
+                <div id="selectedBooksHint{{ $delivery->id }}" style="margin-top:6px;font-size:11px;color:var(--p-hint)">
+                  {{ count($delivery->book_ids ?? []) }} / {{ $subscription->books_per_month }} ta tanlandi
+                </div>
+                <div id="selectedBooks{{ $delivery->id }}" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:8px">
+                  @foreach($books as $book)
+                  <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--p-border);border-radius:10px;background:var(--p-elevated);max-width:100%">
+                    <span style="font-family:'JetBrains Mono',monospace;color:var(--p-accent)">#{{ $book->id }}</span>
+                    <span style="font-size:12px;color:var(--p-text);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ $book->name }}{{ $book->author ? ' · '.$book->author : '' }}</span>
+                    <button type="button" onclick="removeMysteryBook({{ $delivery->id }}, {{ $book->id }})" class="btn-p ghost sm" style="margin-left:auto">
+                      <i class="bi bi-x-lg"></i>
+                    </button>
+                  </div>
+                  @endforeach
+                </div>
+                <input type="hidden" name="book_ids" id="bookIds{{ $delivery->id }}" value='@json(array_values($delivery->book_ids ?? []))'>
+              </div>
+              <div class="col-auto">
+                <input type="text" name="tracking_note" class="p-form-control"
+                       value="{{ $delivery->tracking_note }}"
+                       placeholder="Izoh (ixtiyoriy)">
+              </div>
+              <div class="col-auto">
+                <button type="submit" class="btn-p primary">
+                  <i class="bi bi-check-lg"></i> Kitoblarni saqlash
+                </button>
+              </div>
+            </div>
+          </form>
+
+          <div style="margin-top:12px">
+            <div style="font-size:11px;color:var(--p-hint);margin-bottom:8px">
+              Courier, postal va pickup oqimlari alohida yuradi. Final status hammasida `Mijoz qabul qildi`.
+            </div>
+            <div class="flex flex-wrap gap-2">
+              @foreach($deliveryStatusOptions as $statusKey => $statusLabel)
+              <form method="POST" action="{{ route('admin.mystery-box.deliveries.status', $delivery) }}">
+                @csrf @method('PATCH')
+                <input type="hidden" name="status" value="{{ $statusKey }}">
+                <input type="hidden" name="tracking_note" value="{{ $delivery->tracking_note }}">
+                <button class="btn-p {{ $delivery->status === $statusKey ? 'primary' : 'ghost' }} sm">
+                  <i class="bi {{ $delivery->status === $statusKey ? 'bi-check2-circle' : 'bi-arrow-right-short' }}"></i>
+                  {{ $statusLabel }}
+                </button>
+              </form>
+              @endforeach
+            </div>
+          </div>
         </div>
-        @endif
-
-        @elseif($delivery->status === 'shipped')
-        <form method="POST" action="{{ route('admin.mystery-box.deliver', $delivery) }}">
-          @csrf @method('PATCH')
-          <button class="btn-p success">
-            <i class="bi bi-check-circle"></i> Yetkazildi
-          </button>
-        </form>
-
-        @elseif($delivery->status === 'delivered')
-        <div style="font-size:12px;color:var(--p-success);display:flex;align-items:center;gap:6px">
-          <i class="bi bi-check-circle-fill"></i>
-          {{ $delivery->delivered_at?->format('d.m.Y') }} da yetkazildi
+        @else
+        <div style="font-size:12px;color:{{ $delivery->status === \App\Models\MysteryBoxDelivery::STATUS_CUSTOMER_RECEIVED ? 'var(--p-success)' : 'var(--p-danger)' }};display:flex;align-items:center;gap:6px">
+          <i class="bi {{ $delivery->status === \App\Models\MysteryBoxDelivery::STATUS_CUSTOMER_RECEIVED ? 'bi-check-circle-fill' : 'bi-x-octagon-fill' }}"></i>
+          {{ $delivery->status === \App\Models\MysteryBoxDelivery::STATUS_CUSTOMER_RECEIVED
+              ? (($delivery->customer_received_at?->format('d.m.Y H:i')) ? $delivery->customer_received_at->format('d.m.Y H:i').' da mijoz qabul qildi' : 'Mijoz qabul qildi')
+              : 'Bu oy bekor qilingan' }}
         </div>
         @endif
 

@@ -29,6 +29,39 @@
 </div>
 @endif
 
+@if(isset($opsDueNow) && $opsDueNow->count())
+<div class="p-card fade-up mb-3">
+  <div class="p-card-header">
+    <div class="p-card-title">
+      <i class="bi bi-box-seam" style="color:var(--p-danger)"></i>
+      Jo'natish navbati
+    </div>
+    <span class="s-pill danger" style="font-size:10px">{{ $opsDueNow->count() }} ta</span>
+  </div>
+  <div style="padding:14px 18px;display:grid;gap:10px">
+    @foreach($opsDueNow as $delivery)
+    <a href="{{ route('admin.mystery-box.show', $delivery->subscription_id) }}"
+       style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid var(--p-border);border-radius:14px;background:var(--p-elevated);text-decoration:none">
+      <div style="min-width:0">
+        <div style="font-size:12px;font-weight:700;color:var(--p-text)">
+          #{{ $delivery->subscription_id }} · {{ $delivery->month_number }}-oy
+        </div>
+        <div style="font-size:11px;color:var(--p-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+          {{ $delivery->subscription?->user?->name }} {{ $delivery->subscription?->user?->lastname }}
+        </div>
+        <div style="font-size:10px;color:var(--p-hint)">
+          {{ $delivery->dispatch_type_label }} · {{ optional($delivery->planned_for_date)->format('d.m.Y') ?? '—' }}
+        </div>
+      </div>
+      <span class="s-pill {{ $delivery->status_color }}" style="font-size:10px;white-space:nowrap">
+        {{ $delivery->status_label }}
+      </span>
+    </a>
+    @endforeach
+  </div>
+</div>
+@endif
+
 {{-- Stats --}}
 <div class="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-4">
   @foreach([

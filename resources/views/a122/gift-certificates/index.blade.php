@@ -18,6 +18,58 @@
   </div>
 </div>
 
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-3 mb-4">
+  <div class="xl:col-span-7">
+    <div class="p-card">
+      <div class="p-card-header">
+        <div>
+          <div class="p-card-title">Gift sertifikat tariflari</div>
+          <div class="p-card-sub">Foydalanuvchiga sotuvda ko‘rinadigan nominal variantlar.</div>
+        </div>
+      </div>
+      <form method="POST" action="{{ route('admin.gift-certificates.options') }}" style="padding:0 18px 18px">
+        @csrf
+        @method('PUT')
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+          @for($i = 0; $i < 4; $i++)
+            <div>
+              <label class="p-form-label">Variant {{ $i + 1 }}</label>
+              <input
+                type="number"
+                name="options[]"
+                class="p-form-control"
+                min="1000"
+                step="1000"
+                value="{{ old("options.$i", $giftCertificateOptions[$i] ?? '') }}"
+                placeholder="300000">
+            </div>
+          @endfor
+        </div>
+        <div style="font-size:12px;color:var(--p-hint);margin-top:10px">
+          Bo‘sh qoldirilgan maydonlar saqlanmaydi, takrorlar avtomatik tozalanadi.
+        </div>
+        <div class="flex justify-end mt-3">
+          <button type="submit" class="btn-p primary">
+            <i class="bi bi-floppy-fill"></i> Tariflarni saqlash
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <div class="xl:col-span-5">
+    <div class="p-card">
+      <div class="p-card-header">
+        <div class="p-card-title">Faol nominal variantlar</div>
+      </div>
+      <div style="padding:0 18px 18px;display:flex;flex-wrap:wrap;gap:8px">
+        @foreach($giftCertificateOptions as $amount)
+          <span class="s-pill accent">{{ number_format($amount) }} UZS</span>
+        @endforeach
+      </div>
+    </div>
+  </div>
+</div>
+
 {{-- Stats --}}
 <div class="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-4">
   @foreach([

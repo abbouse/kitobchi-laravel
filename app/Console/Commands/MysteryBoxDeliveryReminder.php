@@ -3,14 +3,20 @@ namespace App\Console\Commands;
 
 use App\Models\MysteryBoxSubscription;
 use App\Models\MysteryBoxDelivery;
+use App\Services\MysteryBoxService;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
 
 class MysteryBoxDeliveryReminder extends Command
 {
     protected $signature   = 'mystery-box:check-deliveries
                               {--dry-run : Haqiqatda o\'zgartirmaydi, faqat ko\'rsatadi}';
-    protected $description = 'Navbati kelgan Mystery Box obunalarini tekshiradi va delivery record yaratadi';
+    protected $description = 'Navbati kelgan Mystery Box obunalarini tekshiradi va operations queue holatini yangilaydi';
+
+    public function __construct(
+        private readonly MysteryBoxService $mysteryBoxService,
+    ) {
+        parent::__construct();
+    }
 
     public function handle(): void
     {
@@ -44,15 +50,8 @@ class MysteryBoxDeliveryReminder extends Command
             ];
 
             if (!$dryRun) {
-                // Pending delivery record mavjud emas bo'lsa yaratamiz
-                $exists = MysteryBoxDelivery::where('subscription_id', $sub->id)
-                    ->where('status', '!=', MysteryBoxDelivery::STATUS_DELIVERED)
-                    ->exists();
-
-                if (!$exists && $sub->delivered_months < $sub->total_months) {
-                    $sub->createNextDelivery();
-                    $this->line("  [+] Delivery record yaratildi: sub #{$sub->id}");
-                }
+                $this->mysteryBoxService->ensureDeliverySchedule($sub);
+                $this->mysteryBoxService->syncSubscriptionProgress($sub->fresh('deliveries'));
             }
         }
 

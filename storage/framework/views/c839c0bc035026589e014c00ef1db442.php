@@ -184,6 +184,9 @@
           ? \App\Models\Books::whereIn('id', $delivery->book_ids)
               ->select('id','name','author','images')->get()
           : collect();
+        $deliveryStatusOptions = $statusOptions[$delivery->dispatch_type] ?? [];
+        $isFinalDelivery = in_array($delivery->status, \App\Models\MysteryBoxDelivery::FINAL_STATUSES, true);
+        $editorOpen = in_array($delivery->status, ['pending', 'preparing', 'ready_to_ship'], true);
       ?>
       <div style="padding:16px 18px;border-top:1px solid var(--p-border)">
         <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between mb-3">
@@ -200,7 +203,16 @@
               <div style="font-size:13px;font-weight:600;color:var(--p-text)">
                 <?php echo e($delivery->month_number); ?>-oy
               </div>
-              <?php if($delivery->shipped_at): ?>
+              <div style="font-size:11px;color:var(--p-hint)">
+                <?php echo e($delivery->dispatch_type_label); ?> · Reja: <?php echo e(optional($delivery->planned_for_date)->format('d.m.Y') ?? '—'); ?>
+
+              </div>
+              <?php if($delivery->customer_received_at): ?>
+              <div style="font-size:11px;color:var(--p-success)">
+                Mijoz qabul qildi: <?php echo e($delivery->customer_received_at->format('d.m.Y H:i')); ?>
+
+              </div>
+              <?php elseif($delivery->shipped_at): ?>
               <div style="font-size:11px;color:var(--p-hint)">
                 Jo'natildi: <?php echo e($delivery->shipped_at->format('d.m.Y')); ?>
 
@@ -219,37 +231,29 @@
           </span>
         </div>
 
-        <?php if(in_array($delivery->status, ['pending', 'preparing', 'delivered'])): ?>
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;padding:10px 12px;background:var(--p-elevated);border:1px solid var(--p-border);border-radius:10px;flex-wrap:wrap">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px;padding:10px 12px;background:var(--p-elevated);border:1px solid var(--p-border);border-radius:10px;flex-wrap:wrap">
           <div>
             <div style="font-size:12px;font-weight:700;color:var(--p-text)">
               <?php echo e($delivery->month_number); ?>-oy kitoblari
             </div>
             <div style="font-size:11px;color:var(--p-hint)">
-              <?php echo e($delivery->status === 'delivered' ? "Yetkazilgan oy tarkibini tahrirlashingiz mumkin" : ($delivery->status === 'preparing' ? "Tanlovni yangilashingiz mumkin" : "Bu oy uchun kitoblarni tanlang")); ?>
+              <?php echo e($delivery->selection_mode === 'manual' ? 'Admin tanlovi saqlangan' : 'Avtomatik balanslangan tanlov qo‘yilgan'); ?>
 
+              · <?php echo e(count($delivery->book_ids ?? [])); ?> / <?php echo e($subscription->books_per_month); ?> ta
             </div>
           </div>
-          <?php if($delivery->status === 'delivered'): ?>
+          <?php if(!$isFinalDelivery): ?>
           <button type="button"
                   class="btn-p ghost sm"
                   onclick="toggleMysteryEditor('<?php echo e($delivery->id); ?>')"
                   id="editorToggle<?php echo e($delivery->id); ?>"
-                  aria-expanded="false">
-            <i class="bi bi-chevron-down" id="editorToggleIcon<?php echo e($delivery->id); ?>"></i>
-            Tarkibni tahrirlash
+                  aria-expanded="<?php echo e($editorOpen ? 'true' : 'false'); ?>">
+            <i class="bi <?php echo e($editorOpen ? 'bi-chevron-up' : 'bi-chevron-down'); ?>" id="editorToggleIcon<?php echo e($delivery->id); ?>"></i>
+            Delivery boshqaruvi
           </button>
-          <?php else: ?>
-          <span class="btn-p ghost sm" style="pointer-events:none">
-            <i class="bi bi-pencil-square"></i>
-            <?php echo e($delivery->status === 'preparing' ? "Tahrirlash ochiq" : "Kitob tanlash"); ?>
-
-          </span>
           <?php endif; ?>
         </div>
-        <?php endif; ?>
 
-        
         <?php if($books->count()): ?>
         <div class="flex flex-wrap gap-2 mb-3">
           <?php $__currentLoopData = $books; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $book): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
@@ -284,86 +288,121 @@
         </div>
         <?php endif; ?>
 
-        
-        <?php if(in_array($delivery->status, ['pending', 'preparing', 'delivered'])): ?>
-        <div id="editorWrap<?php echo e($delivery->id); ?>" style="<?php echo e($delivery->status === 'delivered' ? 'display:none;' : ''); ?>">
-        <form method="POST"
-              action="<?php echo e(route('admin.mystery-box.prepare', $delivery)); ?>"
-              id="prepForm<?php echo e($delivery->id); ?>">
-          <?php echo csrf_field(); ?> <?php echo method_field('PATCH'); ?>
-          <div style="margin-bottom:10px;font-size:11px;color:var(--p-hint)">
-            Bu oy uchun <?php echo e($subscription->books_per_month); ?> ta kitob tanlang. `Aktiv kitoblar` sahifasidan kerakli kitob IDlarini olib, shu yerga vergul bilan kiriting.
-          </div>
-          <div class="flex flex-wrap gap-2 mb-2">
-            <a href="<?php echo e(route('admin.books.index', ['tab' => 'active'])); ?>" target="_blank" class="btn-p ghost sm">
-              <i class="bi bi-book"></i> Aktiv kitoblar
-            </a>
-            <a href="<?php echo e(route('admin.books.create')); ?>" target="_blank" class="btn-p ghost sm">
-              <i class="bi bi-plus-lg"></i> Yangi kitob
-            </a>
-          </div>
-          <div class="row g-2 items-end">
-            <div class="col">
-              <label class="p-form-label">
-                Kitob IDlari (vergul bilan ajrating)
-              </label>
-              <input type="text" name="book_ids_raw" class="p-form-control"
-                     placeholder="123, 456, 789"
-                     value="<?php echo e(implode(', ', $delivery->book_ids ?? [])); ?>"
-                     oninput="parseBookIds(this,'<?php echo e($delivery->id); ?>')">
-              <div id="selectedBooksHint<?php echo e($delivery->id); ?>" style="margin-top:6px;font-size:11px;color:var(--p-hint)">
-                <?php echo e(count($delivery->book_ids ?? [])); ?> / <?php echo e($subscription->books_per_month); ?> ta tanlandi
-              </div>
-              <div id="selectedBooks<?php echo e($delivery->id); ?>" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:8px">
-                <?php $__currentLoopData = $books; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $book): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--p-border);border-radius:10px;background:var(--p-elevated);max-width:100%">
-                  <span style="font-family:'JetBrains Mono',monospace;color:var(--p-accent)">#<?php echo e($book->id); ?></span>
-                  <span style="font-size:12px;color:var(--p-text);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><?php echo e($book->name); ?><?php echo e($book->author ? ' · '.$book->author : ''); ?></span>
-                  <button type="button" onclick="removeMysteryBook(<?php echo e($delivery->id); ?>, <?php echo e($book->id); ?>)" class="btn-p ghost sm" style="margin-left:auto">
-                    <i class="bi bi-x-lg"></i>
-                  </button>
-                </div>
+        <?php if(!$isFinalDelivery): ?>
+        <div id="editorWrap<?php echo e($delivery->id); ?>" style="<?php echo e($editorOpen ? '' : 'display:none;'); ?>">
+          <form method="POST"
+                action="<?php echo e(route('admin.mystery-box.deliveries.settings', $delivery)); ?>"
+                class="row g-2 items-end"
+                style="margin-bottom:12px">
+            <?php echo csrf_field(); ?> <?php echo method_field('PATCH'); ?>
+            <div class="col-md-3">
+              <label class="p-form-label">Yetkazish turi</label>
+              <select name="dispatch_type" class="p-form-control">
+                <?php $__currentLoopData = $dispatchOptions; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $dispatchKey => $dispatchLabel): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                <option value="<?php echo e($dispatchKey); ?>" <?php if($delivery->dispatch_type === $dispatchKey): echo 'selected'; endif; ?>><?php echo e($dispatchLabel); ?></option>
                 <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-              </div>
-              <input type="hidden" name="book_ids" id="bookIds<?php echo e($delivery->id); ?>" value='<?php echo json_encode(array_values($delivery->book_ids ?? []), 15, 512) ?>'>
+              </select>
             </div>
-            <div class="col-auto">
-              <input type="text" name="tracking_note" class="p-form-control"
+            <div class="col-md-3">
+              <label class="p-form-label">Rejalashtirilgan sana</label>
+              <input type="date"
+                     name="planned_for_date"
+                     class="p-form-control"
+                     value="<?php echo e(optional($delivery->planned_for_date)->format('Y-m-d')); ?>">
+            </div>
+            <div class="col-md-4">
+              <label class="p-form-label">Operatsion izoh</label>
+              <input type="text"
+                     name="tracking_note"
+                     class="p-form-control"
                      value="<?php echo e($delivery->tracking_note); ?>"
-                     placeholder="Izoh (ixtiyoriy)">
+                     placeholder="Kuryer, pochta ID yoki pickup note">
             </div>
-            <div class="col-auto">
-              <button type="submit" class="btn-p primary">
-                <i class="bi bi-check-lg"></i> <?php echo e($delivery->status === 'delivered' ? 'Delivered oyni yangilash' : ($delivery->status === 'preparing' ? 'Tanlovni yangilash' : 'Kitoblarni tasdiqlash')); ?>
-
+            <div class="col-md-2">
+              <button type="submit" class="btn-p ghost" style="width:100%;justify-content:center">
+                <i class="bi bi-sliders"></i> Sozlash
               </button>
             </div>
-          </div>
-        </form>
-        </div>
-        <?php if($delivery->status === 'preparing'): ?>
-        <div class="flex flex-wrap gap-2 mt-2">
-          <form method="POST" action="<?php echo e(route('admin.mystery-box.ship', $delivery)); ?>">
-            <?php echo csrf_field(); ?> <?php echo method_field('PATCH'); ?>
-            <button class="btn-p primary">
-              <i class="bi bi-truck"></i> Jo'natildi
-            </button>
           </form>
+
+          <form method="POST"
+                action="<?php echo e(route('admin.mystery-box.prepare', $delivery)); ?>"
+                id="prepForm<?php echo e($delivery->id); ?>">
+            <?php echo csrf_field(); ?> <?php echo method_field('PATCH'); ?>
+            <div style="margin-bottom:10px;font-size:11px;color:var(--p-hint)">
+              Bu oy uchun <?php echo e($subscription->books_per_month); ?> ta kitob tanlang. Manual edit shu oyning avtomatik tanlovini admin tanloviga aylantiradi.
+            </div>
+            <div class="flex flex-wrap gap-2 mb-2">
+              <a href="<?php echo e(route('admin.books.index', ['tab' => 'active'])); ?>" target="_blank" class="btn-p ghost sm">
+                <i class="bi bi-book"></i> Aktiv kitoblar
+              </a>
+              <a href="<?php echo e(route('admin.books.create')); ?>" target="_blank" class="btn-p ghost sm">
+                <i class="bi bi-plus-lg"></i> Yangi kitob
+              </a>
+            </div>
+            <div class="row g-2 items-end">
+              <div class="col">
+                <label class="p-form-label">Kitob IDlari (vergul bilan ajrating)</label>
+                <input type="text" name="book_ids_raw" class="p-form-control"
+                       placeholder="123, 456, 789"
+                       value="<?php echo e(implode(', ', $delivery->book_ids ?? [])); ?>"
+                       oninput="parseBookIds(this,'<?php echo e($delivery->id); ?>')">
+                <div id="selectedBooksHint<?php echo e($delivery->id); ?>" style="margin-top:6px;font-size:11px;color:var(--p-hint)">
+                  <?php echo e(count($delivery->book_ids ?? [])); ?> / <?php echo e($subscription->books_per_month); ?> ta tanlandi
+                </div>
+                <div id="selectedBooks<?php echo e($delivery->id); ?>" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:8px">
+                  <?php $__currentLoopData = $books; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $book): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                  <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--p-border);border-radius:10px;background:var(--p-elevated);max-width:100%">
+                    <span style="font-family:'JetBrains Mono',monospace;color:var(--p-accent)">#<?php echo e($book->id); ?></span>
+                    <span style="font-size:12px;color:var(--p-text);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><?php echo e($book->name); ?><?php echo e($book->author ? ' · '.$book->author : ''); ?></span>
+                    <button type="button" onclick="removeMysteryBook(<?php echo e($delivery->id); ?>, <?php echo e($book->id); ?>)" class="btn-p ghost sm" style="margin-left:auto">
+                      <i class="bi bi-x-lg"></i>
+                    </button>
+                  </div>
+                  <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                </div>
+                <input type="hidden" name="book_ids" id="bookIds<?php echo e($delivery->id); ?>" value='<?php echo json_encode(array_values($delivery->book_ids ?? []), 15, 512) ?>'>
+              </div>
+              <div class="col-auto">
+                <input type="text" name="tracking_note" class="p-form-control"
+                       value="<?php echo e($delivery->tracking_note); ?>"
+                       placeholder="Izoh (ixtiyoriy)">
+              </div>
+              <div class="col-auto">
+                <button type="submit" class="btn-p primary">
+                  <i class="bi bi-check-lg"></i> Kitoblarni saqlash
+                </button>
+              </div>
+            </div>
+          </form>
+
+          <div style="margin-top:12px">
+            <div style="font-size:11px;color:var(--p-hint);margin-bottom:8px">
+              Courier, postal va pickup oqimlari alohida yuradi. Final status hammasida `Mijoz qabul qildi`.
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <?php $__currentLoopData = $deliveryStatusOptions; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $statusKey => $statusLabel): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+              <form method="POST" action="<?php echo e(route('admin.mystery-box.deliveries.status', $delivery)); ?>">
+                <?php echo csrf_field(); ?> <?php echo method_field('PATCH'); ?>
+                <input type="hidden" name="status" value="<?php echo e($statusKey); ?>">
+                <input type="hidden" name="tracking_note" value="<?php echo e($delivery->tracking_note); ?>">
+                <button class="btn-p <?php echo e($delivery->status === $statusKey ? 'primary' : 'ghost'); ?> sm">
+                  <i class="bi <?php echo e($delivery->status === $statusKey ? 'bi-check2-circle' : 'bi-arrow-right-short'); ?>"></i>
+                  <?php echo e($statusLabel); ?>
+
+                </button>
+              </form>
+              <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+            </div>
+          </div>
         </div>
-        <?php endif; ?>
+        <?php else: ?>
+        <div style="font-size:12px;color:<?php echo e($delivery->status === \App\Models\MysteryBoxDelivery::STATUS_CUSTOMER_RECEIVED ? 'var(--p-success)' : 'var(--p-danger)'); ?>;display:flex;align-items:center;gap:6px">
+          <i class="bi <?php echo e($delivery->status === \App\Models\MysteryBoxDelivery::STATUS_CUSTOMER_RECEIVED ? 'bi-check-circle-fill' : 'bi-x-octagon-fill'); ?>"></i>
+          <?php echo e($delivery->status === \App\Models\MysteryBoxDelivery::STATUS_CUSTOMER_RECEIVED
+              ? (($delivery->customer_received_at?->format('d.m.Y H:i')) ? $delivery->customer_received_at->format('d.m.Y H:i').' da mijoz qabul qildi' : 'Mijoz qabul qildi')
+              : 'Bu oy bekor qilingan'); ?>
 
-        <?php elseif($delivery->status === 'shipped'): ?>
-        <form method="POST" action="<?php echo e(route('admin.mystery-box.deliver', $delivery)); ?>">
-          <?php echo csrf_field(); ?> <?php echo method_field('PATCH'); ?>
-          <button class="btn-p success">
-            <i class="bi bi-check-circle"></i> Yetkazildi
-          </button>
-        </form>
-
-        <?php elseif($delivery->status === 'delivered'): ?>
-        <div style="font-size:12px;color:var(--p-success);display:flex;align-items:center;gap:6px">
-          <i class="bi bi-check-circle-fill"></i>
-          <?php echo e($delivery->delivered_at?->format('d.m.Y')); ?> da yetkazildi
         </div>
         <?php endif; ?>
 

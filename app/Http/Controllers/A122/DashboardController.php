@@ -595,19 +595,27 @@ class DashboardController extends Controller
         $mysteryDueSoon = $mysteryDueToday = collect();
         try {
             $mysteryActive = Cache::remember('dash5_mystery_active', $ttl, fn () => MysteryBoxSubscription::where('status', 'active')->count());
-            $mysteryDueCount = Cache::remember('dash5_mystery_due', $hot, fn () => MysteryBoxSubscription::where('status', 'active')->where('next_delivery_at', '<=', now())->count());
-            $mysteryOverdue = MysteryBoxSubscription::where('status', 'active')->where('next_delivery_at', '<=', now()->subDays(3))->count();
+            $mysteryDueCount = Cache::remember('dash5_mystery_due', $hot, fn () => MysteryBoxDelivery::query()
+                ->whereNotIn('status', MysteryBoxDelivery::FINAL_STATUSES)
+                ->whereDate('planned_for_date', '<=', now()->toDateString())
+                ->count());
+            $mysteryOverdue = MysteryBoxDelivery::query()
+                ->whereNotIn('status', MysteryBoxDelivery::FINAL_STATUSES)
+                ->whereDate('planned_for_date', '<=', now()->subDays(3)->toDateString())
+                ->count();
             $mysteryPending = MysteryBoxSubscription::where('status', 'pending_payment')->count();
-            $stalePreparing = MysteryBoxDelivery::where('status', 'preparing')->where('prepared_at', '<=', now()->subDays(2))->count();
-            $mysteryDueSoon = MysteryBoxSubscription::with('user:id,name,lastname,phone_number')
-                ->where('status', 'active')
-                ->whereBetween('next_delivery_at', [now(), now()->addDays(7)])
-                ->orderBy('next_delivery_at')->take(6)->get();
+            $stalePreparing = MysteryBoxDelivery::whereIn('status', [MysteryBoxDelivery::STATUS_PREPARING, MysteryBoxDelivery::STATUS_READY_TO_SHIP])
+                ->where('prepared_at', '<=', now()->subDays(2))
+                ->count();
+            $mysteryDueSoon = MysteryBoxDelivery::with(['subscription.user:id,name,lastname,phone_number', 'subscription.plan:id,name_uz'])
+                ->whereNotIn('status', MysteryBoxDelivery::FINAL_STATUSES)
+                ->whereBetween('planned_for_date', [now()->toDateString(), now()->addDays(7)->toDateString()])
+                ->orderBy('planned_for_date')->take(6)->get();
             $mysteryDueToday = Cache::remember('dash5_mystery_due_list', $hot,
-                fn () => MysteryBoxSubscription::with(['user:id,name,lastname,phone_number', 'plan:id,name_uz'])
-                    ->where('status', 'active')
-                    ->where('next_delivery_at', '<=', now())
-                    ->orderBy('next_delivery_at')->take(8)->get()
+                fn () => MysteryBoxDelivery::with(['subscription.user:id,name,lastname,phone_number', 'subscription.plan:id,name_uz'])
+                    ->whereNotIn('status', MysteryBoxDelivery::FINAL_STATUSES)
+                    ->whereDate('planned_for_date', '<=', now()->toDateString())
+                    ->orderBy('planned_for_date')->take(8)->get()
             );
         } catch (\Throwable) {
         }

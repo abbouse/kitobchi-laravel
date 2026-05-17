@@ -410,29 +410,29 @@
       </div>
       <div class="card-body px-4 pb-4">
         <div class="row g-2 row-cols-1 row-cols-md-2">
-          @foreach($mysteryDueToday->take(4) as $sub)
+          @foreach($mysteryDueToday->take(4) as $delivery)
             <div class="col">
-              <a href="{{ route('admin.mystery-box.subscription',$sub) }}" class="d-flex align-items-center gap-3 p-3 rounded-3 border bg-white text-decoration-none">
-                <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-success-subtle text-success-emphasis fw-bold flex-shrink-0" style="width:36px;height:36px;">
-                  {{ strtoupper(substr($sub->user?->name??'M',0,1)) }}
+              <a href="{{ route('admin.mystery-box.subscription',$delivery->subscription_id) }}" class="d-flex align-items-center gap-3 p-3 rounded-3 border bg-white text-decoration-none">
+                <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-danger-subtle text-danger-emphasis fw-bold flex-shrink-0" style="width:36px;height:36px;">
+                  {{ $delivery->month_number }}
                 </span>
                 <div class="flex-grow-1 min-w-0">
-                  <div class="fw-semibold text-dark text-truncate">{{ $sub->user?->name }} {{ $sub->user?->lastname }}</div>
-                  <div class="small text-secondary text-truncate">{{ $sub->plan?->name_uz }} · {{ $sub->next_delivery_at?->diffForHumans() }}</div>
+                  <div class="fw-semibold text-dark text-truncate">{{ $delivery->subscription?->user?->name }} {{ $delivery->subscription?->user?->lastname }}</div>
+                  <div class="small text-secondary text-truncate">{{ $delivery->subscription?->plan?->name_uz }} · {{ $delivery->dispatch_type_label }} · {{ optional($delivery->planned_for_date)->format('d.m.Y') }}</div>
                 </div>
-                <span class="badge rounded-pill text-bg-danger-subtle text-danger-emphasis fw-semibold">Navbatda</span>
+                <span class="badge rounded-pill text-bg-danger-subtle text-danger-emphasis fw-semibold">{{ $delivery->status_label }}</span>
               </a>
             </div>
           @endforeach
-          @foreach($mysteryDueSoon->take(4) as $sub)
+          @foreach($mysteryDueSoon->take(4) as $delivery)
             <div class="col">
-              <a href="{{ route('admin.mystery-box.subscription',$sub) }}" class="d-flex align-items-center gap-3 p-3 rounded-3 border bg-white text-decoration-none">
+              <a href="{{ route('admin.mystery-box.subscription',$delivery->subscription_id) }}" class="d-flex align-items-center gap-3 p-3 rounded-3 border bg-white text-decoration-none">
                 <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-success-subtle text-success-emphasis fw-bold flex-shrink-0" style="width:36px;height:36px;">
-                  {{ strtoupper(substr($sub->user?->name??'M',0,1)) }}
+                  {{ $delivery->month_number }}
                 </span>
                 <div class="flex-grow-1 min-w-0">
-                  <div class="fw-semibold text-dark text-truncate small">{{ $sub->user?->name }} {{ $sub->user?->lastname }}</div>
-                  <div class="small text-secondary">{{ $sub->next_delivery_at?->format('d.m.Y') }}</div>
+                  <div class="fw-semibold text-dark text-truncate small">{{ $delivery->subscription?->user?->name }} {{ $delivery->subscription?->user?->lastname }}</div>
+                  <div class="small text-secondary">{{ optional($delivery->planned_for_date)->format('d.m.Y') }} · {{ $delivery->dispatch_type_label }}</div>
                 </div>
               </a>
             </div>

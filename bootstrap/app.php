@@ -88,9 +88,15 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('gifts:expire')
             ->dailyAt('02:00')->timezone($tz)->withoutOverlapping();
 
-        // ── Mystery Box: navbat tekshiruvi ────────────────────────────
+        // ── Mystery Box: navbat va monthly shipment queue tekshiruvi ──
         $schedule->command('mystery-box:check-deliveries')
-            ->dailyAt('08:30')->timezone($tz)->withoutOverlapping();
+            ->everyTenMinutes()->timezone($tz)->withoutOverlapping();
+
+        // ── Pending gift/mystery payments: 30 daqiqadan keyin bekor qilish ──
+        $schedule->command('shop:cleanup-pending-special-payments --minutes=30')
+            ->everyTenMinutes()
+            ->timezone($tz)
+            ->withoutOverlapping();
 
         // ── Kangaroo: faqat listing moderatsiyasi ─────────────────────
         $schedule->command('kangaroo:sync-content-moderation')
