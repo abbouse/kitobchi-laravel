@@ -245,8 +245,8 @@ class SettingsController extends Controller
 
     public function updateTelegram(Request $request)
     {
-        $defaultIosRedirect = 'kitobchi://tglogin';
-        $defaultAndroidRedirect = 'https://app2234481912-login.tg.dev';
+        $defaultIosRedirect = 'https://app3206985527-login.tg.dev';
+        $defaultAndroidRedirect = 'https://app2854400165-login.tg.dev/tglogin';
 
         $request->validate([
             'telegram_client_id'            => 'nullable|string|max:100',

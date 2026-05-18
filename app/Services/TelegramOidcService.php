@@ -23,8 +23,8 @@ use RuntimeException;
 class TelegramOidcService
 {
     private const ISSUER = 'https://oauth.telegram.org';
-    private const DEFAULT_REDIRECT_URI_IOS = 'kitobchi://tglogin';
-    private const DEFAULT_REDIRECT_URI_ANDROID = 'https://app2234481912-login.tg.dev';
+    private const DEFAULT_REDIRECT_URI_IOS = 'https://app3206985527-login.tg.dev';
+    private const DEFAULT_REDIRECT_URI_ANDROID = 'https://app2854400165-login.tg.dev/tglogin';
     private const DEBUG_REDIRECT_URI_IOS = 'kitobchi://tglogin';
     private const DEBUG_REDIRECT_URI_ANDROID = 'kitobchi://telegram-login';
     private const CONFIG_CACHE_KEY = 'telegram_oidc_configuration';
@@ -164,11 +164,14 @@ class TelegramOidcService
                 || ($requireAndroidPath && $host === 'telegram-login')
             );
 
-        $isTelegramUniversalLink = $requireAndroidPath
-            && $scheme === 'https'
+        $isTelegramUniversalLink = $scheme === 'https'
             && str_ends_with($host, '.tg.dev');
 
         if (!$isTelegramUniversalLink && !$isSupportedCustomScheme) {
+            return $fallback;
+        }
+
+        if ($requireAndroidPath && $isTelegramUniversalLink && $path === '') {
             return $fallback;
         }
 
