@@ -15,7 +15,7 @@
       document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
     })();
   </script>
-  @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/css/a122-admin.css', 'resources/js/a122-admin.js'])
+  @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/css/a122-admin.css', 'resources/css/a122-bootstrap-admin.css', 'resources/js/a122-admin.js'])
   @stack('styles')
 </head>
 <body class="min-h-screen bg-[var(--p-bg)] text-gray-900 dark:text-gray-100 antialiased">

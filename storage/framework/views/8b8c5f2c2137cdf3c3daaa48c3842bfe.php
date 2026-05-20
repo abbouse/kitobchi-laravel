@@ -5,6 +5,7 @@
 <?php
   $isActive = $promocode->status && $promocode->expires_at > now();
   $usesLimit = (int) ($promocode->usesLimit ?? 0);
+  $perUserLimit = (int) ($promocode->per_user_limit ?? 1);
   $usedCount = (int) ($promocode->usedCount ?? 0);
   $remaining = $usesLimit > 0 ? max($usesLimit - $usedCount, 0) : null;
   $pct = $usesLimit > 0 ? min(round($usedCount / $usesLimit * 100), 100) : null;
@@ -42,6 +43,14 @@
         <div class="metric-meta"><?php echo e($promocode->type === 'percent' ? $promocode->amount.'%' : number_format($promocode->amount).' UZS'); ?></div>
       </div>
       <div class="kpi-soft">
+        <div class="metric-label">Maks. chegirma</div>
+        <div class="metric-value text-xl">
+          <?php echo e($promocode->type === 'percent' ? ($promocode->max_discount_amount ? number_format($promocode->max_discount_amount) . ' UZS' : 'Cheksiz') : '—'); ?>
+
+        </div>
+        <div class="metric-meta"><?php echo e($promocode->type === 'percent' ? 'Foizli chegirma limiti' : 'Faqat foizli turda ishlaydi'); ?></div>
+      </div>
+      <div class="kpi-soft">
         <div class="metric-label">Ishlatilgan</div>
         <div class="metric-value text-xl"><?php echo e(number_format($usedCount)); ?></div>
         <div class="metric-meta">Jami foydalanish</div>
@@ -50,6 +59,11 @@
         <div class="metric-label">Qolgan limit</div>
         <div class="metric-value text-xl"><?php echo e($remaining !== null ? number_format($remaining) : '∞'); ?></div>
         <div class="metric-meta"><?php echo e($usesLimit > 0 ? 'Cheklangan' : 'Cheksiz'); ?></div>
+      </div>
+      <div class="kpi-soft">
+        <div class="metric-label">User limiti</div>
+        <div class="metric-value text-xl"><?php echo e($perUserLimit > 0 ? number_format($perUserLimit) : '∞'); ?></div>
+        <div class="metric-meta">Bir foydalanuvchi uchun maksimal ishlatish</div>
       </div>
       <div class="kpi-soft">
         <div class="metric-label">Holat</div>
@@ -88,8 +102,10 @@
         <?php $__currentLoopData = [
           ['Tur',       $promocode->type === 'percent' ? 'Foiz (%)' : 'Miqdor (UZS)'],
           ['Chegirma',  $promocode->type === 'percent' ? $promocode->amount.'%' : number_format($promocode->amount).' UZS'],
+          ['Maks. chegirma', $promocode->type === 'percent' ? ($promocode->max_discount_amount ? number_format($promocode->max_discount_amount).' UZS' : 'Cheksiz') : '—'],
           ['Min. buyurtma', $promocode->min_order_amount > 0 ? number_format($promocode->min_order_amount).' UZS' : '—'],
-          ['Limit',     $promocode->usesLimit ?: 'Cheksiz'],
+          ['Jami limit',     $promocode->usesLimit ?: 'Cheksiz'],
+          ['Bir user limiti', $perUserLimit ?: 'Cheksiz'],
           ['Ishlatildi', $promocode->usedCount.' marta'],
           ['Muddat',    \Carbon\Carbon::parse($promocode->expires_at)->format('d.m.Y H:i')],
           ["Qo'shildi", $promocode->created_at?->format('d.m.Y H:i')],

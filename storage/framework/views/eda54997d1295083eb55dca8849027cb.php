@@ -80,7 +80,7 @@ unset($__errorArgs, $__bag); ?>
               <label class="p-form-label">Chegirma turi <span style="color:var(--p-danger)">*</span></label>
               <select name="type" id="promoType" class="p-form-control" onchange="updateAmountLabel()">
                 <option value="percent" <?php echo e(old('type',$promocode->type??'')=='percent'?'selected':''); ?>>Foiz (%)</option>
-                <option value="fixed"   <?php echo e(old('type',$promocode->type??'')=='fixed'?'selected':''); ?>>Miqdor (UZS)</option>
+                <option value="fixed"   <?php echo e(in_array(old('type',$promocode->type??''), ['fixed','uzs'], true) ? 'selected' : ''); ?>>Miqdor (UZS)</option>
               </select>
             </div>
 
@@ -106,6 +106,36 @@ endif;
 unset($__errorArgs, $__bag); ?>
             </div>
 
+            <div class="">
+              <label class="p-form-label" id="maxDiscountLabel">Maksimal chegirma summasi (UZS)</label>
+              <input
+                type="number"
+                name="max_discount_amount"
+                id="maxDiscountAmount"
+                class="p-form-control <?php $__errorArgs = ['max_discount_amount'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?> is-invalid <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>"
+                value="<?php echo e(old('max_discount_amount', $promocode->max_discount_amount ?? '')); ?>"
+                min="0"
+                placeholder="Foizli promokod uchun ixtiyoriy limit">
+              <div id="maxDiscountHint" style="font-size:12px;color:var(--p-hint);margin-top:4px">
+                Foizli promokodda chegirma shu summadan oshmaydi.
+              </div>
+              <?php $__errorArgs = ['max_discount_amount'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?><div style="font-size:12px;color:var(--p-danger);margin-top:4px"><?php echo e($message); ?></div><?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+            </div>
+
             
             <div class="">
               <label class="p-form-label">Minimal buyurtma (UZS)</label>
@@ -113,9 +143,19 @@ unset($__errorArgs, $__bag); ?>
                      value="<?php echo e(old('min_order_amount',$promocode->min_order_amount??0)); ?>" min="0">
             </div>
 
+            <div class="">
+              <label class="p-form-label">Bir user uchun limit</label>
+              <input type="number" name="per_user_limit" class="p-form-control"
+                     value="<?php echo e(old('per_user_limit',$promocode->per_user_limit ?? 1)); ?>" min="0"
+                     placeholder="1 = faqat bir marta, 0 = cheksiz">
+              <div style="font-size:12px;color:var(--p-hint);margin-top:4px">
+                Har bir foydalanuvchi bu promokoddan necha marta foydalana olishini belgilang.
+              </div>
+            </div>
+
             
             <div class="">
-              <label class="p-form-label">Foydalanish limiti</label>
+              <label class="p-form-label">Jami foydalanish limiti</label>
               <input type="number" name="usesLimit" class="p-form-control"
                      value="<?php echo e(old('usesLimit',$promocode->usesLimit??0)); ?>" min="0"
                      placeholder="0 = cheksiz">
@@ -172,7 +212,12 @@ unset($__errorArgs, $__bag); ?>
             <div style="width:1px;background:rgba(245,166,35,.2)"></div>
             <div style="text-align:center">
               <div style="font-size:24px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--p-warning)"><?php echo e($promocode->usesLimit ?: '∞'); ?></div>
-              <div style="font-size:10px;color:var(--p-warning);opacity:.7;text-transform:uppercase">Limit</div>
+              <div style="font-size:10px;color:var(--p-warning);opacity:.7;text-transform:uppercase">Jami limit</div>
+            </div>
+            <div style="width:1px;background:rgba(245,166,35,.2)"></div>
+            <div style="text-align:center">
+              <div style="font-size:24px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--p-warning)"><?php echo e(($promocode->per_user_limit ?? 1) ?: '∞'); ?></div>
+              <div style="font-size:10px;color:var(--p-warning);opacity:.7;text-transform:uppercase">User limiti</div>
             </div>
           </div>
         </div>
@@ -198,11 +243,25 @@ function generateCode() {
 
 function updateAmountLabel() {
   const type = document.getElementById('promoType').value;
-  document.getElementById('amountLabel').textContent = type === 'percent'
+  const amountLabel = document.getElementById('amountLabel');
+  const maxDiscountInput = document.getElementById('maxDiscountAmount');
+  const maxDiscountLabel = document.getElementById('maxDiscountLabel');
+  const maxDiscountHint = document.getElementById('maxDiscountHint');
+
+  amountLabel.textContent = type === 'percent'
     ? 'Chegirma foizi (%) *'
     : 'Chegirma miqdori (UZS) *';
+
+  const enabled = type === 'percent';
+  maxDiscountInput.disabled = !enabled;
+  maxDiscountInput.style.background = enabled ? '' : 'var(--p-elevated)';
+  maxDiscountLabel.style.opacity = enabled ? '1' : '.55';
+  maxDiscountHint.textContent = enabled
+    ? 'Foizli promokodda chegirma shu summadan oshmaydi.'
+    : 'Miqdorli promokodda bu maydon ishlatilmaydi.';
 }
 updateAmountLabel();
 </script>
 <?php $__env->stopPush(); ?>
+
 <?php echo $__env->make('a122.layouts.admin', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH /Users/abbos/PROJECTS/MY/kitobchi-server/kitobchi-laravel/resources/views/a122/promocodes/edit.blade.php ENDPATH**/ ?>

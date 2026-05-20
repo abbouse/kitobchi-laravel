@@ -49,7 +49,7 @@
               <label class="p-form-label">Chegirma turi <span style="color:var(--p-danger)">*</span></label>
               <select name="type" id="promoType" class="p-form-control" onchange="updateAmountLabel()">
                 <option value="percent" {{ old('type',$promocode->type??'')=='percent'?'selected':'' }}>Foiz (%)</option>
-                <option value="fixed"   {{ old('type',$promocode->type??'')=='fixed'?'selected':'' }}>Miqdor (UZS)</option>
+                <option value="fixed"   {{ in_array(old('type',$promocode->type??''), ['fixed','uzs'], true) ? 'selected' : '' }}>Miqdor (UZS)</option>
               </select>
             </div>
 
@@ -61,6 +61,22 @@
               @error('amount')<div style="font-size:12px;color:var(--p-danger);margin-top:4px">{{ $message }}</div>@enderror
             </div>
 
+            <div class="">
+              <label class="p-form-label" id="maxDiscountLabel">Maksimal chegirma summasi (UZS)</label>
+              <input
+                type="number"
+                name="max_discount_amount"
+                id="maxDiscountAmount"
+                class="p-form-control @error('max_discount_amount') is-invalid @enderror"
+                value="{{ old('max_discount_amount', $promocode->max_discount_amount ?? '') }}"
+                min="0"
+                placeholder="Foizli promokod uchun ixtiyoriy limit">
+              <div id="maxDiscountHint" style="font-size:12px;color:var(--p-hint);margin-top:4px">
+                Foizli promokodda chegirma shu summadan oshmaydi.
+              </div>
+              @error('max_discount_amount')<div style="font-size:12px;color:var(--p-danger);margin-top:4px">{{ $message }}</div>@enderror
+            </div>
+
             {{-- Min buyurtma --}}
             <div class="">
               <label class="p-form-label">Minimal buyurtma (UZS)</label>
@@ -68,9 +84,19 @@
                      value="{{ old('min_order_amount',$promocode->min_order_amount??0) }}" min="0">
             </div>
 
+            <div class="">
+              <label class="p-form-label">Bir user uchun limit</label>
+              <input type="number" name="per_user_limit" class="p-form-control"
+                     value="{{ old('per_user_limit',$promocode->per_user_limit ?? 1) }}" min="0"
+                     placeholder="1 = faqat bir marta, 0 = cheksiz">
+              <div style="font-size:12px;color:var(--p-hint);margin-top:4px">
+                Har bir foydalanuvchi bu promokoddan necha marta foydalana olishini belgilang.
+              </div>
+            </div>
+
             {{-- Limit --}}
             <div class="">
-              <label class="p-form-label">Foydalanish limiti</label>
+              <label class="p-form-label">Jami foydalanish limiti</label>
               <input type="number" name="usesLimit" class="p-form-control"
                      value="{{ old('usesLimit',$promocode->usesLimit??0) }}" min="0"
                      placeholder="0 = cheksiz">
@@ -112,7 +138,12 @@
             <div style="width:1px;background:rgba(245,166,35,.2)"></div>
             <div style="text-align:center">
               <div style="font-size:24px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--p-warning)">{{ $promocode->usesLimit ?: '∞' }}</div>
-              <div style="font-size:10px;color:var(--p-warning);opacity:.7;text-transform:uppercase">Limit</div>
+              <div style="font-size:10px;color:var(--p-warning);opacity:.7;text-transform:uppercase">Jami limit</div>
+            </div>
+            <div style="width:1px;background:rgba(245,166,35,.2)"></div>
+            <div style="text-align:center">
+              <div style="font-size:24px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--p-warning)">{{ ($promocode->per_user_limit ?? 1) ?: '∞' }}</div>
+              <div style="font-size:10px;color:var(--p-warning);opacity:.7;text-transform:uppercase">User limiti</div>
             </div>
           </div>
         </div>
@@ -138,9 +169,22 @@ function generateCode() {
 
 function updateAmountLabel() {
   const type = document.getElementById('promoType').value;
-  document.getElementById('amountLabel').textContent = type === 'percent'
+  const amountLabel = document.getElementById('amountLabel');
+  const maxDiscountInput = document.getElementById('maxDiscountAmount');
+  const maxDiscountLabel = document.getElementById('maxDiscountLabel');
+  const maxDiscountHint = document.getElementById('maxDiscountHint');
+
+  amountLabel.textContent = type === 'percent'
     ? 'Chegirma foizi (%) *'
     : 'Chegirma miqdori (UZS) *';
+
+  const enabled = type === 'percent';
+  maxDiscountInput.disabled = !enabled;
+  maxDiscountInput.style.background = enabled ? '' : 'var(--p-elevated)';
+  maxDiscountLabel.style.opacity = enabled ? '1' : '.55';
+  maxDiscountHint.textContent = enabled
+    ? 'Foizli promokodda chegirma shu summadan oshmaydi.'
+    : 'Miqdorli promokodda bu maydon ishlatilmaydi.';
 }
 updateAmountLabel();
 </script>

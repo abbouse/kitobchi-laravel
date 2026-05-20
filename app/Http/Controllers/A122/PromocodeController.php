@@ -47,7 +47,9 @@ class PromocodeController extends Controller
             'code'             => 'required|string|max:255|unique:promocodes,code',
             'type'             => 'required|in:percent,fixed',
             'amount'           => 'required|integer|min:1',
+            'max_discount_amount' => 'nullable|integer|min:0',
             'min_order_amount' => 'nullable|integer|min:0',
+            'per_user_limit'   => 'nullable|integer|min:0',
             'usesLimit'        => 'nullable|integer|min:0',
             'expires_at'       => 'required|date|after:now',
             'status'           => 'required|boolean',
@@ -57,7 +59,11 @@ class PromocodeController extends Controller
             'code'             => strtoupper($request->code),
             'type'             => $request->type,
             'amount'           => $request->amount,
+            'max_discount_amount' => $request->type === 'percent'
+                ? ($request->filled('max_discount_amount') ? (int) $request->max_discount_amount : null)
+                : null,
             'min_order_amount' => $request->min_order_amount ?? 0,
+            'per_user_limit'   => $request->filled('per_user_limit') ? (int) $request->per_user_limit : 1,
             'usesLimit'        => $request->usesLimit ?? 0,
             'usedCount'        => 0,
             'status'           => $request->status,
@@ -86,13 +92,26 @@ class PromocodeController extends Controller
         $request->validate([
             'type'             => 'required|in:percent,fixed',
             'amount'           => 'required|integer|min:1',
+            'max_discount_amount' => 'nullable|integer|min:0',
             'min_order_amount' => 'nullable|integer|min:0',
+            'per_user_limit'   => 'nullable|integer|min:0',
             'usesLimit'        => 'nullable|integer|min:0',
             'expires_at'       => 'required|date',
             'status'           => 'required|boolean',
         ]);
 
-        $promocode->update($request->only('type', 'amount', 'min_order_amount', 'usesLimit', 'expires_at', 'status'));
+        $promocode->update([
+            'type' => $request->type,
+            'amount' => $request->amount,
+            'max_discount_amount' => $request->type === 'percent'
+                ? ($request->filled('max_discount_amount') ? (int) $request->max_discount_amount : null)
+                : null,
+            'min_order_amount' => $request->min_order_amount ?? 0,
+            'per_user_limit' => $request->filled('per_user_limit') ? (int) $request->per_user_limit : 1,
+            'usesLimit' => $request->usesLimit ?? 0,
+            'expires_at' => $request->expires_at,
+            'status' => $request->status,
+        ]);
         return back()->with('success', 'Promokod yangilandi.');
     }
 

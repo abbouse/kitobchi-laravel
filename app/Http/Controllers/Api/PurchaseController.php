@@ -163,22 +163,38 @@ class PurchaseController extends Controller
 
         if (!$promo)                                    return ['error' => 'Promokod topilmadi!'];
         if ($promo->status != 1)                        return ['error' => 'Promokod faol emas!'];
-        if ($promo->usedCount >= $promo->usesLimit)     return ['error' => 'Promokod limiti tugagan!'];
+        if ((int) ($promo->usesLimit ?? 0) > 0 && (int) ($promo->usedCount ?? 0) >= (int) $promo->usesLimit)
+                                                        return ['error' => 'Promokod limiti tugagan!'];
         if ($promo->expires_at && now()->gt($promo->expires_at))
                                                         return ['error' => 'Promokod muddati tugagan!'];
         if (!is_null($promo->user_id) && (int)$promo->user_id !== $userId)
                                                         return ['error' => 'Bu promokod sizga tegishli emas!'];
 
-        $used = PromocodeHistory::where('user_id', $userId)
-            ->where('promocode_id', $promo->id)->exists();
-        if ($used) return ['error' => 'Siz bu promokoddan allaqachon foydalangansiz!'];
+        $usedCountByUser = PromocodeHistory::where('user_id', $userId)
+            ->where('promocode_id', $promo->id)
+            ->count();
+        $perUserLimit = (int) ($promo->per_user_limit ?? 1);
+        if ($perUserLimit > 0 && $usedCountByUser >= $perUserLimit) {
+            return ['error' => $perUserLimit === 1
+                ? 'Siz bu promokoddan allaqachon foydalangansiz!'
+                : "Siz bu promokoddan maksimal {$perUserLimit} marta foydalana olasiz."];
+        }
 
         if ($promo->min_order_amount && $total < $promo->min_order_amount)
             return ['error' => "Promokod {$promo->min_order_amount} so'mdan yuqori buyurtmalarga amal qiladi."];
 
         $discount = match ($promo->type) {
-            'uzs'     => (int) min($promo->amount, $total),
-            'percent' => (int) round(($promo->amount / 100) * $total),
+            'uzs', 'fixed' => (int) min($promo->amount, $total),
+            'percent' => (function () use ($promo, $total) {
+                $percentDiscount = (int) round(($promo->amount / 100) * $total);
+                $maxDiscount = (int) ($promo->max_discount_amount ?? 0);
+
+                if ($maxDiscount > 0) {
+                    return min($percentDiscount, $maxDiscount);
+                }
+
+                return $percentDiscount;
+            })(),
             default   => 0,
         };
 

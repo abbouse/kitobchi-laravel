@@ -433,16 +433,16 @@
             <div>
               <label class="p-form-label">iOS Redirect URI</label>
               <input type="text" name="telegram_redirect_uri_ios" class="p-form-control"
-                     value="<?php echo e(old('telegram_redirect_uri_ios', $project?->telegram_redirect_uri_ios ?? 'kitobchi://tglogin')); ?>"
-                     placeholder="kitobchi://tglogin">
-              <div class="kc-settings-note">iOS uchun hozir custom scheme ishlatiladi. Bu SceneDelegate / universal link noaniqligidan ko'ra barqarorroq.</div>
+                     value="<?php echo e(old('telegram_redirect_uri_ios', $project?->telegram_redirect_uri_ios ?? 'https://app3206985527-login.tg.dev')); ?>"
+                     placeholder="https://app3206985527-login.tg.dev">
+              <div class="kc-settings-note">iOS uchun Telegram bergan <code>https://app...-login.tg.dev</code> redirect ishlatiladi. Xcode'da Associated Domains ham shu host bilan mos bo'lishi shart.</div>
             </div>
             <div>
               <label class="p-form-label">Android Redirect URI</label>
               <input type="text" name="telegram_redirect_uri_android" class="p-form-control"
-                     value="<?php echo e(old('telegram_redirect_uri_android', $project?->telegram_redirect_uri_android ?? 'https://app2234481912-login.tg.dev')); ?>"
-                     placeholder="https://app2234481912-login.tg.dev">
-              <div class="kc-settings-note">Android App Link. `kitobchi://telegram-auth` bu yer uchun noto'g'ri.</div>
+                     value="<?php echo e(old('telegram_redirect_uri_android', $project?->telegram_redirect_uri_android ?? 'https://app2854400165-login.tg.dev/tglogin')); ?>"
+                     placeholder="https://app2854400165-login.tg.dev/tglogin">
+              <div class="kc-settings-note">Android App Link hosti AndroidManifest bilan aynan bir xil bo'lishi kerak.</div>
             </div>
             <div>
               <label class="p-form-label">Scopes</label>
@@ -457,7 +457,7 @@
           Maxfiy <code>client_secret</code> admin panelda saqlanmaydi. Uni server <code>.env</code> fayliga yozing: <code>TELEGRAM_LOGIN_CLIENT_SECRET=...</code>
         </div>
         <div class="kc-settings-note pb-2">
-          To'g'ri qiymatlar: iOS <code>kitobchi://tglogin</code>, Android <code>https://app2234481912-login.tg.dev</code>.
+          To'g'ri qiymatlar: iOS <code>https://app3206985527-login.tg.dev</code>, Android <code>https://app2854400165-login.tg.dev/tglogin</code>.
         </div>
 
         <div class="flex justify-end mt-4">

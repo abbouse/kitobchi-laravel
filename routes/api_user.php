@@ -25,7 +25,6 @@ use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
 
 // --- Ochiq qismlar ---
-// Route::get('checkToken/{token}', [AuthController::class, 'checkToken']);
 Route::get('user/premium/plans', [PremiumController::class, 'plans']);
 Route::get('user/update_locale/{locale}', [UserController::class, 'updateLocale']);
 Route::get('user/by-username/{username}', [UserController::class, 'byUsername']);
@@ -61,6 +60,8 @@ Route::get('book_club/themes', [BookClubThemeController::class, 'index']);
 Route::get('book_club/themes/{slug}/posts', [BookClubController::class, 'postsByTheme']);
 Route::get('book_club/comments/{post_id}', [BookClubCommentController::class, 'index']);
 Route::get('book_club/comments/{post_id}/replies', [BookClubCommentController::class, 'replies']);
+Route::get('book_club/get-profile', [BookClubController::class, 'get_profile']);
+Route::get('book_club/profile-posts', [BookClubController::class, 'getProfilePosts']);
 Route::get('cart_user', [CartController::class, 'index']);
 Route::get('cart_user/count', [CartController::class, 'count']);
 Route::get('shared-order/{orderId}', [SharedCartController::class, 'orderItems']);
@@ -117,8 +118,6 @@ Route::middleware('auth:user')->group(function () {
         Route::post('update_post', [BookClubController::class, 'update_post']);
         Route::post('new', [BookClubController::class, 'new_post']);
         Route::post('new_comment', [BookClubController::class, 'new_book_post']);
-        Route::get('get-profile', [BookClubController::class, 'get_profile']);
-        Route::get('profile-posts', [BookClubController::class, 'getProfilePosts']);
         Route::post('like', [BookClubController::class, 'like']);
         Route::get('vote/{option}', [BookClubController::class, 'vote']);
         Route::post('{postId}/moderate/warn', [BookClubController::class, 'moderateWarn']);
