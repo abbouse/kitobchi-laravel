@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Seller;
 
 use App\Enums\OrderStatusCode;
+use App\Enums\PaymentStatusCode;
 use App\Enums\SellerOrderStatusCode;
 use App\Enums\FulfillmentMode;
 use App\Http\Controllers\Controller;
@@ -68,6 +69,37 @@ class OrderController extends Controller
                         ->whereIn('status', $legacyValues);
                 });
         });
+    }
+
+    private function applyVisibleSellerOrdersScope($query)
+    {
+        return $query
+            ->where(function ($statusQuery) {
+                $statusQuery->whereNotIn('status_code', [
+                    SellerOrderStatusCode::PAYMENT_PENDING->value,
+                    'pending',
+                ])->orWhere(function ($fallback) {
+                    $fallback->whereNull('status_code')
+                        ->whereNotIn('status', [
+                            SellerOrderStatusCode::PAYMENT_PENDING->legacy(),
+                            SellerOrderStatusCode::PAYMENT_PENDING->value,
+                            'pending',
+                        ]);
+                });
+            })
+            ->whereHas('order', function ($paymentQuery) {
+                $paymentQuery->where(function ($stateQuery) {
+                    $stateQuery->where('payment_status_code', '!=', PaymentStatusCode::CARD_PENDING->value)
+                        ->orWhere(function ($fallback) {
+                            $fallback->whereNull('payment_status_code')
+                                ->whereNotIn('paymentStatus', [
+                                    PaymentStatusCode::CARD_PENDING->legacy(),
+                                    PaymentStatusCode::CARD_PENDING->value,
+                                    'pending',
+                                ]);
+                        });
+                });
+            });
     }
 
     private function formatOrderAddress($address): array
@@ -241,14 +273,9 @@ class OrderController extends Controller
         $scope = (string) $request->query('scope', '');
         $statusFilter = (string) $request->query('status', 'all');
 
-        $query = Seller::find($storeSellerId)->orders()
-            ->where(function ($statusQuery) {
-                $statusQuery->where('status_code', '!=', SellerOrderStatusCode::PAYMENT_PENDING->value)
-                    ->orWhere(function ($fallback) {
-                        $fallback->whereNull('status_code')
-                            ->where('status', '!=', SellerOrderStatusCode::PAYMENT_PENDING->legacy());
-                    });
-            })
+        $query = $this->applyVisibleSellerOrdersScope(
+            Seller::find($storeSellerId)->orders()
+        )
             ->with([
                 'seller.location',
                 'order.fulfillment.hub:id,name,code',
@@ -643,15 +670,10 @@ public function toCourier(Request $request, $qr)
         $storeSellerId = $this->getStoreSellerId($seller); // ✅ OWNER ID
 
         // ✅ OWNER DO'KONI ORDERI
-        $view = Seller::find($storeSellerId)->orders()
+        $view = $this->applyVisibleSellerOrdersScope(
+            Seller::find($storeSellerId)->orders()
+        )
             ->where('id', $orderId)
-            ->where(function ($statusQuery) {
-                $statusQuery->where('status_code', '!=', SellerOrderStatusCode::PAYMENT_PENDING->value)
-                    ->orWhere(function ($fallback) {
-                        $fallback->whereNull('status_code')
-                            ->where('status', '!=', SellerOrderStatusCode::PAYMENT_PENDING->legacy());
-                    });
-            })
             ->with([
                 'seller.location',
                 'order.fulfillment.hub:id,name,code',
@@ -692,14 +714,9 @@ public function toCourier(Request $request, $qr)
         $storeSellerId = $this->getStoreSellerId($seller); // ✅ OWNER ID
 
         // ✅ OWNER DO'KONI ORDER SONI
-        $count = Seller::find($storeSellerId)->orders()
-            ->where(function ($statusQuery) {
-                $statusQuery->where('status_code', '!=', SellerOrderStatusCode::PAYMENT_PENDING->value)
-                    ->orWhere(function ($fallback) {
-                        $fallback->whereNull('status_code')
-                            ->where('status', '!=', SellerOrderStatusCode::PAYMENT_PENDING->legacy());
-                    });
-            })
+        $count = $this->applyVisibleSellerOrdersScope(
+            Seller::find($storeSellerId)->orders()
+        )
             ->count();
 
         return response()->json([

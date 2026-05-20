@@ -290,7 +290,7 @@ class CourierTaskOrchestratorService
             $task->status_code = CourierTaskStatusCode::ASSIGNED->value;
             $task->assigned_at = now();
             $task->accepted_at = null;
-            $task->arrived_at_pickup_at = null;
+            $task->arrived_at = null;
             $task->picked_up_at = null;
             $task->dropped_off_at = null;
             $task->completed_at = null;
