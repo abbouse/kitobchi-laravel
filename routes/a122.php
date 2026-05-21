@@ -34,6 +34,7 @@ use App\Http\Controllers\A122\SearchHistoryController;
 use App\Http\Controllers\A122\SettingsController;
 use App\Http\Controllers\A122\LogisticsController;
 use App\Http\Controllers\A122\HubController;
+use App\Http\Controllers\A122\ParserController;
 
 Route::prefix('a122')->name('admin.')->group(function () {
 
@@ -82,6 +83,15 @@ Route::prefix('a122')->name('admin.')->group(function () {
         Route::get('/{book}/edit',           [BookController::class, 'edit'])->name('edit');
         Route::put('/{book}',                [BookController::class, 'update'])->name('update');
         Route::patch('/{book}/moderate',     [BookController::class, 'moderate'])->name('moderate');
+    });
+
+    // ── Parsers ────────────────────────────────────────────────────
+    Route::prefix('parsers')->name('parsers.')->group(function () {
+        Route::get('/', [ParserController::class, 'index'])->name('index');
+        Route::get('/book-uz', [ParserController::class, 'bookUz'])->name('book-uz');
+        Route::post('/book-uz/sync', [ParserController::class, 'syncBookUz'])->name('book-uz.sync');
+        Route::post('/book-uz/import-selected', [ParserController::class, 'importBookUzSelected'])->name('book-uz.import-selected');
+        Route::post('/book-uz/{item}/import', [ParserController::class, 'importBookUzItem'])->name('book-uz.import-item');
     });
 
     // ── Stationery ─────────────────────────────────────────────────
