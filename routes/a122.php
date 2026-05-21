@@ -36,6 +36,7 @@ use App\Http\Controllers\A122\LogisticsController;
 use App\Http\Controllers\A122\HubController;
 use App\Http\Controllers\A122\ParserController;
 use App\Http\Controllers\A122\PublisherController;
+use App\Http\Controllers\A122\BloggerController;
 
 Route::prefix('a122')->name('admin.')->group(function () {
 
@@ -93,6 +94,24 @@ Route::prefix('a122')->name('admin.')->group(function () {
         Route::get('/{publisher}/edit', [PublisherController::class, 'edit'])->name('edit');
         Route::put('/{publisher}', [PublisherController::class, 'update'])->name('update');
         Route::delete('/{publisher}', [PublisherController::class, 'destroy'])->name('destroy');
+    });
+
+    Route::prefix('bloggers')->name('bloggers.')->group(function () {
+        Route::get('/', [BloggerController::class, 'index'])->name('index');
+        Route::get('/create', [BloggerController::class, 'create'])->name('create');
+        Route::post('/', [BloggerController::class, 'store'])->name('store');
+        Route::get('/{blogger}', [BloggerController::class, 'show'])->name('show');
+        Route::get('/{blogger}/edit', [BloggerController::class, 'edit'])->name('edit');
+        Route::put('/{blogger}', [BloggerController::class, 'update'])->name('update');
+        Route::delete('/{blogger}', [BloggerController::class, 'destroy'])->name('destroy');
+
+        Route::post('/{blogger}/shipments', [BloggerController::class, 'storeShipment'])->name('shipments.store');
+        Route::get('/{blogger}/shipments/{shipment}/edit', [BloggerController::class, 'editShipment'])->name('shipments.edit');
+        Route::put('/{blogger}/shipments/{shipment}', [BloggerController::class, 'updateShipment'])->name('shipments.update');
+        Route::delete('/{blogger}/shipments/{shipment}', [BloggerController::class, 'destroyShipment'])->name('shipments.destroy');
+        Route::patch('/{blogger}/shipments/{shipment}/delivered', [BloggerController::class, 'markShipmentDelivered'])->name('shipments.delivered');
+        Route::patch('/{blogger}/shipments/{shipment}/pending', [BloggerController::class, 'markShipmentPending'])->name('shipments.pending');
+        Route::get('/{blogger}/shipments/{shipment}/print', [BloggerController::class, 'printShipment'])->name('shipments.print');
     });
 
     // ── Parsers ────────────────────────────────────────────────────

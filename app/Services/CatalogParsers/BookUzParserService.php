@@ -24,6 +24,7 @@ class BookUzParserService
     public const PROVIDER = 'book_uz';
     public const SELLER_ID = 55;
     private const BASE_URL = 'https://book.uz';
+    private const USER_API_BASE_URL = 'https://backend.book.uz/user-api';
 
     public function syncCatalog(?int $limit = null, ?string $singleUrl = null): array
     {
@@ -232,7 +233,11 @@ class BookUzParserService
 
     private function discoverProductUrls(?int $limit = null): array
     {
-        $urls = $this->discoverViaSitemaps();
+        $urls = $this->discoverViaCatalogApi($limit);
+
+        if (empty($urls)) {
+            $urls = $this->discoverViaSitemaps();
+        }
 
         if (empty($urls)) {
             $urls = $this->discoverViaCatalogCrawl($limit);
@@ -264,6 +269,73 @@ class BookUzParserService
         }
 
         return array_values(array_unique($bookUrls));
+    }
+
+    private function discoverViaCatalogApi(?int $limit = null): array
+    {
+        $page = 1;
+        $urls = [];
+        $perPage = $limit !== null
+            ? max(1, min(100, $limit))
+            : 36;
+
+        while (true) {
+            try {
+                $response = $this->http()->get(self::USER_API_BASE_URL . '/book', [
+                    'page' => $page,
+                    'limit' => $perPage,
+                ]);
+
+                if (! $response->successful()) {
+                    break;
+                }
+
+                $payload = $response->json();
+                $items = collect(data_get($payload, 'data.data', []));
+            } catch (\Throwable) {
+                break;
+            }
+
+            if ($items->isEmpty()) {
+                break;
+            }
+
+            $beforeCount = count(array_unique($urls));
+
+            $batchUrls = $items
+                ->map(fn ($item) => $this->catalogItemToProductUrl(is_array($item) ? $item : []))
+                ->filter()
+                ->values()
+                ->all();
+
+            if (empty($batchUrls)) {
+                break;
+            }
+
+            $urls = array_merge($urls, $batchUrls);
+            $afterCount = count(array_unique($urls));
+
+            if ($afterCount === $beforeCount) {
+                break;
+            }
+
+            if ($limit !== null && $afterCount >= $limit) {
+                break;
+            }
+
+            $total = (int) (data_get($payload, 'data.total') ?? data_get($payload, 'data.count') ?? 0);
+            if ($total > 0 && $page * $perPage >= $total) {
+                break;
+            }
+
+            $page++;
+
+            if ($page > 300) {
+                break;
+            }
+        }
+
+        return array_values(array_unique($urls));
     }
 
     private function discoverSitemapsFromRobots(): array
@@ -442,6 +514,16 @@ class BookUzParserService
             ->unique()
             ->values()
             ->all();
+    }
+
+    private function catalogItemToProductUrl(array $item): ?string
+    {
+        $slug = trim((string) ($item['link'] ?? ''));
+        if ($slug === '') {
+            return null;
+        }
+
+        return $this->sanitizeProductUrl(self::BASE_URL . '/books/details/' . ltrim($slug, '/'));
     }
 
     private function sanitizeProductUrl(?string $url): ?string

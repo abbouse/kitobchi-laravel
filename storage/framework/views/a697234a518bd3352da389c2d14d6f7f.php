@@ -25,6 +25,7 @@
     ]],
     ['title' => 'Biznes', 'items' => [
       ['label' => 'Sotuvchilar', 'route' => 'admin.sellers.index', 'icon' => 'shop'],
+      ['label' => 'Hamkor blogerlar', 'route' => 'admin.bloggers.index', 'icon' => 'stars'],
       ['label' => 'Promokodlar', 'route' => 'admin.promocodes.index', 'icon' => 'ticket-perforated'],
       ['label' => 'Reklamalar', 'route' => 'admin.ads.index', 'icon' => 'megaphone'],
       ['label' => 'Gift sertifikatlar', 'route' => 'admin.gift-certificates.index', 'icon' => 'gift'],
