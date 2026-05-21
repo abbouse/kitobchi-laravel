@@ -83,6 +83,13 @@ class ParserController extends Controller
             'in_stock' => CatalogParserItem::query()->where('provider', BookUzParserService::PROVIDER)->where('in_stock', true)->count(),
             'out_of_stock' => CatalogParserItem::query()->where('provider', BookUzParserService::PROVIDER)->where('in_stock', false)->count(),
             'imported' => CatalogParserItem::query()->where('provider', BookUzParserService::PROVIDER)->whereNotNull('imported_book_id')->count(),
+            'existing' => CatalogParserItem::query()
+                ->where('provider', BookUzParserService::PROVIDER)
+                ->where(function ($builder) {
+                    $builder->whereNotNull('imported_book_id')
+                        ->orWhereNotNull('matched_book_id');
+                })
+                ->count(),
             'last_synced_at' => CatalogParserItem::query()->where('provider', BookUzParserService::PROVIDER)->max('last_synced_at'),
         ];
 

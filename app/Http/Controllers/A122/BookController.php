@@ -90,6 +90,7 @@ class BookController extends Controller
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'author' => 'required|string|max:255',
+            'translator' => 'nullable|string|max:255',
             'isbn' => 'nullable|string|max:20',
             'category_id' => 'required|exists:book_categories,id',
             'publisher_id' => 'nullable|exists:publishers,id',
@@ -184,6 +185,7 @@ class BookController extends Controller
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'author' => 'required|string|max:255',
+            'translator' => 'nullable|string|max:255',
             'isbn' => 'nullable|string|max:20',
             'category_id' => 'required|exists:book_categories,id',
             'publisher_id' => 'nullable|exists:publishers,id',

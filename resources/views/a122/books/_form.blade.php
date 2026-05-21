@@ -30,6 +30,7 @@
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div><label class="p-form-label">Nomi</label><input name="name" class="p-form-control" required value="{{ $value('name') }}"></div>
         <div><label class="p-form-label">Muallif</label><input name="author" class="p-form-control" required value="{{ $value('author') }}"></div>
+        <div><label class="p-form-label">Tarjimon</label><input name="translator" class="p-form-control" value="{{ $value('translator') }}"></div>
         <div><label class="p-form-label">ISBN</label><input name="isbn" class="p-form-control" value="{{ $value('isbn') }}"></div>
         <div><label class="p-form-label">Sotuvchi</label><select name="seller_id" class="p-form-control"><option value="">Ichki katalog</option>@foreach($sellers as $seller)<option value="{{ $seller->id }}" @selected((string)$value('seller_id') === (string)$seller->id)>{{ $seller->shop_name }}</option>@endforeach</select></div>
         <div><label class="p-form-label">Kategoriya</label><select name="category_id" class="p-form-control" required>@foreach($categories as $category)<option value="{{ $category->id }}" @selected((string)$value('category_id') === (string)$category->id)>{{ $category->name_uz }}</option>@endforeach</select></div>

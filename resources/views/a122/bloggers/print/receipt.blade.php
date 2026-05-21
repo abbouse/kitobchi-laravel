@@ -29,9 +29,8 @@
     .dot { width: 3.2mm; flex: 0 0 3.2mm; font-size: 8px; font-weight: 700; color: #111827; }
     .item-name { min-width: 0; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; }
     .more { margin-top: .3mm; font-size: 8px; font-weight: 700; color: #374151; }
-    .footer { border: 1px solid #111827; border-radius: 3px; padding: 1.35mm 1.8mm 1.5mm; min-height: 8.6mm; display: flex; flex-direction: column; justify-content: center; }
-    .time { font-size: 7.6px; color: #4b5563; text-transform: uppercase; line-height: 1.05; text-align: center; }
-    .message { margin-top: .65mm; text-align: center; font-size: 10.4px; line-height: 1.1; font-weight: 800; color: #374151; }
+    .footer { border: 1px solid #111827; border-radius: 3px; padding: 1.55mm 1.8mm 1.7mm; min-height: 8.9mm; display: flex; align-items: center; justify-content: center; }
+    .message { text-align: center; font-size: 10.6px; line-height: 1.12; font-weight: 800; color: #374151; }
   </style>
 </head>
 <body onload="window.print()">
@@ -39,7 +38,7 @@
     <div class="row">
       <div class="code">{{ $receipt['shipment_number'] }}</div>
       <div class="status">
-        <div class="status__title">{{ $receipt['status_label'] }}</div>
+        <div class="status__title">{{ $receipt['prepared_label'] }}</div>
         <div class="status__sub">{{ mb_strtoupper($receipt['scheduled_at_pretty'] ?: '—') }}</div>
       </div>
     </div>
@@ -74,7 +73,6 @@
     </div>
 
     <div class="footer">
-      <div class="time">{{ $receipt['printed_at_label'] }}: {{ $receipt['scheduled_at_raw'] }}</div>
       <div class="message">{{ $receipt['message'] }}</div>
     </div>
   </div>

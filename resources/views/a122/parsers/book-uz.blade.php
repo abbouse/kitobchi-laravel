@@ -60,6 +60,12 @@
     </div>
     <div class="col-6 col-xl-3">
       <div class="parser-kpi">
+        <div class="parser-kpi__label">Bizda mavjud</div>
+        <div class="parser-kpi__value">{{ number_format($stats['existing']) }}</div>
+      </div>
+    </div>
+    <div class="col-6 col-xl-3">
+      <div class="parser-kpi">
         <div class="parser-kpi__label">Stock bor</div>
         <div class="parser-kpi__value">{{ number_format($stats['in_stock']) }}</div>
       </div>

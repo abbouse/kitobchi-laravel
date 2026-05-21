@@ -112,7 +112,7 @@ class BookUzParserService
 
             if ($book) {
                 $normalizedIsbn = $this->normalizeNumericIsbn($item->isbn);
-                $book->update([
+                $updatePayload = [
                     'isbn' => $normalizedIsbn,
                     'publisher_id' => $publisherId,
                     'vectorData' => array_merge($existingVectorData, [
@@ -125,7 +125,13 @@ class BookUzParserService
                             'matched_via_parser' => true,
                         ],
                     ]),
-                ]);
+                ];
+
+                if (blank($book->translator) && filled($item->translator)) {
+                    $updatePayload['translator'] = $item->translator;
+                }
+
+                $book->update($updatePayload);
 
                 $item->forceFill([
                     'matched_book_id' => $book->id,
@@ -142,6 +148,7 @@ class BookUzParserService
             $payload = [
                 'name' => $item->title ?: 'Nomsiz kitob',
                 'author' => $item->author ?: 'Nomaʼlum muallif',
+                'translator' => $item->translator,
                 'isbn' => $this->normalizeNumericIsbn($item->isbn),
                 'category_id' => $category->id,
                 'seller_id' => $seller->id,
@@ -977,6 +984,10 @@ class BookUzParserService
 
         if (Str::startsWith($url, '//')) {
             return 'https:' . $url;
+        }
+
+        if (Str::startsWith($url, ['img/', '/img/'])) {
+            return rtrim(self::USER_API_BASE_URL, '/') . '/' . ltrim($url, '/');
         }
 
         return rtrim(self::BASE_URL, '/') . '/' . ltrim($url, '/');
