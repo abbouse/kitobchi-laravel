@@ -12,11 +12,9 @@
     .row { display: flex; align-items: flex-start; justify-content: space-between; gap: 2mm; }
     .order { font-size: 13px; font-weight: 700; line-height: 1.1; }
     .hub { display: flex; justify-content: flex-end; }
-    .hub-note { display: inline-flex; align-items: center; gap: 1.6mm; max-width: 31mm; text-align: left; }
-    .hub-note__heart { font-size: 14px; line-height: 1; }
-    .hub-note__text { font-size: 8.8px; color: #4b5563; line-height: 1.15; }
-    .meta { font-size: 9px; color: #374151; line-height: 1.2; }
-    .meta-muted { color: #6b7280; }
+    .hub-note { max-width: 31mm; text-align: right; }
+    .hub-note__title { font-size: 9.5px; font-weight: 700; color: #111827; line-height: 1.1; }
+    .hub-note__sub { margin-top: .8mm; font-size: 8.5px; color: #4b5563; line-height: 1.15; }
     .name { font-size: 12px; font-weight: 700; line-height: 1.15; }
     .phone { font-size: 10px; line-height: 1.15; }
     .address { flex: 1; border: 1px solid #111827; border-radius: 3px; padding: 2mm; font-size: 10px; line-height: 1.2; min-height: 13mm; }
@@ -25,7 +23,8 @@
     .label { display: block; font-size: 8px; color: #4b5563; margin-bottom: 1mm; text-transform: uppercase; }
     .value { font-size: 10px; font-weight: 700; line-height: 1.15; }
     .hint { font-size: 8.5px; color: #4b5563; margin-top: .8mm; line-height: 1.15; }
-    .qr { margin-top: auto; display: flex; align-items: center; justify-content: flex-start; min-height: 1mm; }
+    .qr { margin-top: auto; display: flex; align-items: center; justify-content: center; min-height: 1mm; }
+    .center-note { font-size: 11px; color: #374151; line-height: 1.22; text-align: center; font-weight: 800; }
   </style>
 </head>
 <body onload="window.print()">
@@ -34,15 +33,10 @@
       <div class="order">{{ $label['order_number'] }}</div>
       <div class="hub">
         <div class="hub-note">
-          <span class="hub-note__heart">♥</span>
-          <span class="hub-note__text">{{ $label['delight_message'] }}</span>
+          <div class="hub-note__title">{{ $label['meta_hub_name'] }}</div>
+          <div class="hub-note__sub">{{ $label['delivery_type_label'] }}</div>
         </div>
       </div>
-    </div>
-
-    <div class="meta">
-      {{ $label['delivery_type_label'] }} ·
-      <span class="meta-muted">{{ $label['meta_hub_name'] }}</span>
     </div>
 
     <div>
@@ -69,6 +63,7 @@
     </div>
 
     <div class="qr">
+      <div class="center-note">{{ $label['delight_message'] }}</div>
     </div>
   </div>
 </body>
