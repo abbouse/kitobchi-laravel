@@ -3,7 +3,7 @@
 @section('page-title', 'book.uz Parser')
 
 @php
-  $selectedCategoryId = (string) request('category_id', old('category_id', $categories->first()?->id));
+  $selectedCategoryId = (string) request('category_id', old('category_id', ''));
 @endphp
 
 @section('content')
@@ -72,12 +72,8 @@
         <input type="number" name="limit" class="form-control" min="1" max="5000" placeholder="200">
       </div>
       <div class="col-6 col-xl-3">
-        <label class="form-label">Import kategoriya</label>
-        <select name="category_id" form="bulk-import-form" class="form-select">
-          @foreach($categories as $category)
-            <option value="{{ $category->id }}" @selected($selectedCategoryId === (string) $category->id)>{{ $category->name_uz }}</option>
-          @endforeach
-        </select>
+        <label class="form-label">Birinchi yuklash limiti</label>
+        <div class="small text-secondary">Bo‘sh sahifa ilk kirishda o‘zi boshlang‘ich katalogni olib keladi.</div>
       </div>
       <div class="col-12 col-xl-3 d-flex gap-2">
         <button type="submit" class="btn btn-dark flex-fill">
@@ -109,14 +105,6 @@
           <option value="no" @selected(request('imported') === 'no')>Qilinmagan</option>
         </select>
       </div>
-      <div class="col-6 col-lg-2">
-        <label class="form-label">Kategoriya</label>
-        <select name="category_id" class="form-select">
-          @foreach($categories as $category)
-            <option value="{{ $category->id }}" @selected($selectedCategoryId === (string) $category->id)>{{ $category->name_uz }}</option>
-          @endforeach
-        </select>
-      </div>
       <div class="col-6 col-lg-2 d-flex gap-2">
         <button class="btn btn-outline-secondary flex-fill">
           <i class="bi bi-funnel me-2"></i>Filter
@@ -132,10 +120,19 @@
           <h2 class="h5 mb-1">Topilgan kitoblar</h2>
           <p class="text-secondary mb-0">Har bir kitob uchun barcha asosiy metadata, stock holati va rasm preview ko‘rinadi.</p>
         </div>
-        <div class="d-flex flex-wrap gap-2">
+        <div class="d-flex flex-wrap gap-2 align-items-end">
+          <div class="parser-import-category">
+            <label class="form-label mb-2">Bazaga qo‘shish kategoriyasi</label>
+            <select id="parser-import-category" name="category_id" class="form-select">
+              <option value="">Avval kategoriyani tanlang</option>
+              @foreach($categories as $category)
+                <option value="{{ $category->id }}" @selected($selectedCategoryId === (string) $category->id)>{{ $category->name_uz }}</option>
+              @endforeach
+            </select>
+          </div>
           <button type="button" class="btn btn-outline-secondary" onclick="toggleAllParserRows(true)">Barchasini tanlash</button>
           <button type="button" class="btn btn-outline-secondary" onclick="toggleAllParserRows(false)">Tanlovni tozalash</button>
-          <button type="submit" class="btn btn-dark">
+          <button type="submit" class="btn btn-dark js-parser-import-submit">
             <i class="bi bi-download me-2"></i>Tanlanganlarni bazaga qo‘shish
           </button>
         </div>
@@ -177,7 +174,12 @@
                 <div class="parser-price-row mb-3">
                   <div class="parser-price-row__price">{{ number_format((int) ($item->price_uzs ?? 0), 0, ',', ' ') }} so‘m</div>
                   @if($item->rating_value)
-                    <div class="parser-price-row__meta">⭐ {{ $item->rating_value }} @if($item->rating_count !== null) · {{ $item->rating_count }} ta@endif</div>
+                    <div class="parser-price-row__meta">
+                      ⭐ {{ $item->rating_value }}
+                      @if($item->rating_count !== null)
+                        <span>· {{ $item->rating_count }} ta</span>
+                      @endif
+                    </div>
                   @endif
                 </div>
 
@@ -257,8 +259,8 @@
                     </a>
                     <form method="POST" action="{{ route('admin.parsers.book-uz.import-item', $item) }}">
                       @csrf
-                      <input type="hidden" name="category_id" value="{{ $selectedCategoryId }}">
-                      <button type="submit" class="btn btn-dark btn-sm">
+                      <input type="hidden" name="category_id" value="{{ $selectedCategoryId }}" class="js-parser-category-hidden">
+                      <button type="submit" class="btn btn-dark btn-sm js-parser-import-submit">
                         <i class="bi bi-download me-1"></i>{{ $item->imported_book_id ? 'Qayta import' : 'Bazaga qo‘shish' }}
                       </button>
                     </form>
@@ -449,12 +451,18 @@
     line-height: 1.6;
     font-size: .95rem;
   }
+  .parser-import-category {
+    min-width: 260px;
+  }
   @media (max-width: 991.98px) {
     .parser-item-card {
       grid-template-columns: 1fr;
     }
     .parser-item-card__image {
       max-width: 220px;
+    }
+    .parser-import-category {
+      min-width: 100%;
     }
   }
 </style>
@@ -467,5 +475,26 @@
       node.checked = checked;
     });
   }
+
+  (function () {
+    const categorySelect = document.getElementById('parser-import-category');
+    if (!categorySelect) return;
+
+    const syncImportState = () => {
+      const value = categorySelect.value || '';
+
+      document.querySelectorAll('.js-parser-category-hidden').forEach((input) => {
+        input.value = value;
+      });
+
+      document.querySelectorAll('.js-parser-import-submit').forEach((button) => {
+        button.disabled = value === '';
+        button.classList.toggle('disabled', value === '');
+      });
+    };
+
+    categorySelect.addEventListener('change', syncImportState);
+    syncImportState();
+  })();
 </script>
 @endpush

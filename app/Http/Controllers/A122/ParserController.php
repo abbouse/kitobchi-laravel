@@ -38,6 +38,15 @@ class ParserController extends Controller
 
     public function bookUz(Request $request)
     {
+        $shouldAutoSync = ! $request->filled('search')
+            && ! $request->filled('stock')
+            && ! $request->filled('imported')
+            && CatalogParserItem::query()->where('provider', BookUzParserService::PROVIDER)->doesntExist();
+
+        if ($shouldAutoSync) {
+            $this->bookUzParserService->syncCatalog(120, null);
+        }
+
         $query = CatalogParserItem::query()
             ->where('provider', BookUzParserService::PROVIDER)
             ->with([
