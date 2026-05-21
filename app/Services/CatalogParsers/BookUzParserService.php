@@ -633,39 +633,6 @@ class BookUzParserService
             ],
         ];
 
-        if (
-            $sourceUrl
-            && ($payload['author'] === null || $payload['publisher'] === null || $payload['description'] === null)
-        ) {
-            try {
-                $detailPayload = $this->parseBookPage($sourceUrl);
-                $payload = array_merge($detailPayload, array_filter([
-                    'source_url' => $payload['source_url'] ?: ($detailPayload['source_url'] ?? null),
-                    'external_id' => $payload['external_id'] ?: $detailPayload['external_id'],
-                    'title' => $payload['title'] ?: $detailPayload['title'],
-                    'author' => $payload['author'] ?: $detailPayload['author'],
-                    'isbn' => $payload['isbn'] ?: $detailPayload['isbn'],
-                    'source_category' => $payload['source_category'] ?: $detailPayload['source_category'],
-                    'publisher' => $payload['publisher'] ?: $detailPayload['publisher'],
-                    'translator' => $payload['translator'] ?: $detailPayload['translator'],
-                    'language' => $payload['language'] ?: $detailPayload['language'],
-                    'script' => $payload['script'] ?: $detailPayload['script'],
-                    'cover_type' => $payload['cover_type'] ?: $detailPayload['cover_type'],
-                    'year' => $payload['year'] ?: $detailPayload['year'],
-                    'pages' => $payload['pages'] ?: $detailPayload['pages'],
-                    'price_uzs' => $payload['price_uzs'] ?: $detailPayload['price_uzs'],
-                    'rating_value' => $payload['rating_value'] ?: $detailPayload['rating_value'],
-                    'rating_count' => $payload['rating_count'] ?: $detailPayload['rating_count'],
-                    'in_stock' => $payload['in_stock'] || $detailPayload['in_stock'],
-                    'remote_image_urls' => ! empty($payload['remote_image_urls']) ? $payload['remote_image_urls'] : $detailPayload['remote_image_urls'],
-                    'description' => $payload['description'] ?: $detailPayload['description'],
-                    'payload' => array_merge($payload['payload'] ?? [], ['detail' => $detailPayload['payload'] ?? []]),
-                ], fn ($value) => $value !== null));
-            } catch (\Throwable) {
-                // Detail sahifa bo'sh yoki beqaror bo'lsa ham API payload bilan davom etamiz.
-            }
-        }
-
         return $payload;
     }
 
