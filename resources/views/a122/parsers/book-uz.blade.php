@@ -8,6 +8,27 @@
 
 @section('content')
 <div class="d-flex flex-column gap-4">
+  @if(session('success') || session('warning') || session('parser_errors'))
+    <section class="d-flex flex-column gap-3">
+      @if(session('success'))
+        <div class="alert alert-success border-0 shadow-sm rounded-4 mb-0">{{ session('success') }}</div>
+      @endif
+      @if(session('warning'))
+        <div class="alert alert-warning border-0 shadow-sm rounded-4 mb-0">{{ session('warning') }}</div>
+      @endif
+      @if(session('parser_errors'))
+        <div class="alert alert-danger border-0 shadow-sm rounded-4 mb-0">
+          <div class="fw-semibold mb-2">Parser xatolari</div>
+          <ul class="mb-0 ps-3">
+            @foreach((array) session('parser_errors') as $parserError)
+              <li>{{ $parserError }}</li>
+            @endforeach
+          </ul>
+        </div>
+      @endif
+    </section>
+  @endif
+
   <section class="p-card parser-hero">
     <div class="d-flex flex-wrap align-items-start justify-content-between gap-3">
       <div>

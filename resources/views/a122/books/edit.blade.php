@@ -12,6 +12,7 @@
   @include('a122.books._form', [
     'book' => $book,
     'categories' => $categories,
+    'publishers' => $publishers,
     'sellers' => $sellers,
     'action' => route('admin.books.update', $book),
     'method' => 'PUT',

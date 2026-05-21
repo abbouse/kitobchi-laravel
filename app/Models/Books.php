@@ -30,6 +30,7 @@ class Books extends Model
         'pages',
         'status',
         'seller_id',
+        'publisher_id',
         'is_hidden',
         'is_approved',
         'totalSales',
@@ -93,6 +94,11 @@ class Books extends Model
     {
         return $this->belongsTo(Seller::class, 'seller_id')
             ->select('id', 'shop_name', 'lastname', 'firstname', 'phone_number', 'photo', 'isVerified');
+    }
+
+    public function publisher(): BelongsTo
+    {
+        return $this->belongsTo(Publisher::class, 'publisher_id');
     }
 
     /**

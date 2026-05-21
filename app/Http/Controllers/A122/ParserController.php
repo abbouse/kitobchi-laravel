@@ -109,7 +109,24 @@ class ParserController extends Controller
             $validated['source_url'] ?? null,
         );
 
-        return back()->with('success', "book.uz katalogi yangilandi: {$result['synced']} ta muvaffaqiyatli, {$result['failed']} ta xato.");
+        $redirect = back()->with(
+            'success',
+            "book.uz katalogi yangilandi: {$result['synced']} ta muvaffaqiyatli, {$result['failed']} ta xato."
+        );
+
+        if (($result['requested'] ?? 0) === 0) {
+            return $redirect->with('warning', 'Book.uz dan mahsulot linklari topilmadi. Crawl yoki sitemap qayta tekshirildi, lekin hech narsa olinmadi.');
+        }
+
+        if (($result['failed'] ?? 0) > 0) {
+            $previewErrors = array_slice($result['errors'] ?? [], 0, 5);
+
+            return $redirect
+                ->with('warning', 'Ayrim mahsulotlar o‘qilmadi. Pastda birinchi xatolar ko‘rsatilgan.')
+                ->with('parser_errors', $previewErrors);
+        }
+
+        return $redirect;
     }
 
     public function importBookUzItem(Request $request, CatalogParserItem $item)

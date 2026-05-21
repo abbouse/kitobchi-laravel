@@ -6,6 +6,7 @@ use App\Models\BookCategories;
 use App\Models\BookTag;
 use App\Models\Books;
 use App\Models\CatalogParserItem;
+use App\Models\Publisher;
 use App\Models\Seller;
 use App\Services\OpenAIService;
 use App\Support\ProductImageVariantGenerator;
@@ -109,6 +110,7 @@ class BookUzParserService
             $book = $item->imported_book_id
                 ? Books::query()->find($item->imported_book_id)
                 : null;
+            $publisherId = $this->resolvePublisherId($item->publisher);
 
             if (! $book && $item->matched_book_id) {
                 $book = Books::query()->find($item->matched_book_id);
@@ -130,6 +132,7 @@ class BookUzParserService
                 $normalizedIsbn = $this->normalizeNumericIsbn($item->isbn);
                 $book->update([
                     'isbn' => $normalizedIsbn,
+                    'publisher_id' => $publisherId,
                     'vectorData' => array_merge($existingVectorData, [
                         'parser' => [
                             'provider' => self::PROVIDER,
@@ -160,6 +163,7 @@ class BookUzParserService
                 'isbn' => $this->normalizeNumericIsbn($item->isbn),
                 'category_id' => $category->id,
                 'seller_id' => $seller->id,
+                'publisher_id' => $publisherId,
                 'description' => $description,
                 'images' => $images,
                 'price' => (int) ($item->price_uzs ?? 0),
@@ -354,27 +358,26 @@ class BookUzParserService
         $productUrls = [];
 
         while (true) {
-            try {
-                $url = self::BASE_URL . '/books?page=' . $page;
-                $response = $this->http()->get($url);
-                if (! $response->successful()) {
-                    break;
-                }
-                $html = $response->body();
-            } catch (\Throwable) {
+            $html = $this->fetchCatalogPageHtml($page);
+            if ($html === null) {
                 break;
             }
 
-            preg_match_all('~https://book\.uz/books/details/[^"\'\s<]+~i', $html, $matches);
-            $found = collect($matches[0] ?? [])->unique()->values()->all();
+            $found = $this->extractProductUrlsFromHtml($html);
 
             if (empty($found)) {
                 break;
             }
 
+            $beforeCount = count(array_unique($productUrls));
             $productUrls = array_merge($productUrls, $found);
+            $afterCount = count(array_unique($productUrls));
 
-            if ($limit !== null && count(array_unique($productUrls)) >= $limit) {
+            if ($afterCount === $beforeCount) {
+                break;
+            }
+
+            if ($limit !== null && $afterCount >= $limit) {
                 break;
             }
 
@@ -386,6 +389,76 @@ class BookUzParserService
         }
 
         return array_values(array_unique($productUrls));
+    }
+
+    private function fetchCatalogPageHtml(int $page): ?string
+    {
+        $candidates = $page === 1
+            ? [
+                self::BASE_URL . '/books',
+                self::BASE_URL . '/books?page=1',
+            ]
+            : [
+                self::BASE_URL . '/books?page=' . $page,
+            ];
+
+        foreach ($candidates as $url) {
+            try {
+                $response = $this->http()->get($url);
+                if (! $response->successful()) {
+                    continue;
+                }
+
+                $html = trim((string) $response->body());
+                if ($html !== '') {
+                    return $html;
+                }
+            } catch (\Throwable) {
+                continue;
+            }
+        }
+
+        return null;
+    }
+
+    private function extractProductUrlsFromHtml(string $html): array
+    {
+        $urls = [];
+        $xpath = $this->makeXPath($html);
+
+        foreach ($xpath->query("//a[@href]/@href | //*[@data-href]/@data-href") ?? [] as $node) {
+            $value = trim((string) $node->nodeValue);
+            if ($value !== '' && preg_match('~(?:https?://book\.uz)?/books/details/~i', $value)) {
+                $urls[] = $value;
+            }
+        }
+
+        preg_match_all('~(?:https?://book\.uz)?/books/details/[^"\'\s<)]+~i', $html, $matches);
+        $urls = array_merge($urls, $matches[0] ?? []);
+
+        return collect($urls)
+            ->map(fn ($url) => $this->sanitizeProductUrl($this->absoluteUrl((string) $url)))
+            ->filter(fn ($url) => is_string($url) && str_contains($url, '/books/details/'))
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    private function sanitizeProductUrl(?string $url): ?string
+    {
+        if (! is_string($url) || trim($url) === '') {
+            return null;
+        }
+
+        $parts = parse_url($url);
+        if (! is_array($parts) || empty($parts['path'])) {
+            return $url;
+        }
+
+        $scheme = $parts['scheme'] ?? 'https';
+        $host = $parts['host'] ?? parse_url(self::BASE_URL, PHP_URL_HOST);
+
+        return $scheme . '://' . $host . $parts['path'];
     }
 
     private function parseBookPage(string $url): array
@@ -726,6 +799,26 @@ class BookUzParserService
         }
 
         return array_values(array_unique($paths));
+    }
+
+    private function resolvePublisherId(?string $name): ?int
+    {
+        $name = trim((string) $name);
+        if ($name === '') {
+            return null;
+        }
+
+        $publisher = Publisher::query()
+            ->whereRaw('LOWER(name) = ?', [mb_strtolower($name)])
+            ->first();
+
+        if ($publisher) {
+            return (int) $publisher->id;
+        }
+
+        return (int) Publisher::query()->create([
+            'name' => $name,
+        ])->id;
     }
 
     private function buildImportDescription(CatalogParserItem $item): string

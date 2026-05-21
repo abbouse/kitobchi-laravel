@@ -29,6 +29,7 @@
   <?php echo $__env->make('a122.books._form', [
     'book' => null,
     'categories' => $categories,
+    'publishers' => $publishers,
     'sellers' => $sellers,
     'action' => route('admin.books.store'),
     'method' => 'POST',

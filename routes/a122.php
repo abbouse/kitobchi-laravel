@@ -35,6 +35,7 @@ use App\Http\Controllers\A122\SettingsController;
 use App\Http\Controllers\A122\LogisticsController;
 use App\Http\Controllers\A122\HubController;
 use App\Http\Controllers\A122\ParserController;
+use App\Http\Controllers\A122\PublisherController;
 
 Route::prefix('a122')->name('admin.')->group(function () {
 
@@ -83,6 +84,15 @@ Route::prefix('a122')->name('admin.')->group(function () {
         Route::get('/{book}/edit',           [BookController::class, 'edit'])->name('edit');
         Route::put('/{book}',                [BookController::class, 'update'])->name('update');
         Route::patch('/{book}/moderate',     [BookController::class, 'moderate'])->name('moderate');
+    });
+
+    Route::prefix('publishers')->name('publishers.')->group(function () {
+        Route::get('/', [PublisherController::class, 'index'])->name('index');
+        Route::get('/create', [PublisherController::class, 'create'])->name('create');
+        Route::post('/', [PublisherController::class, 'store'])->name('store');
+        Route::get('/{publisher}/edit', [PublisherController::class, 'edit'])->name('edit');
+        Route::put('/{publisher}', [PublisherController::class, 'update'])->name('update');
+        Route::delete('/{publisher}', [PublisherController::class, 'destroy'])->name('destroy');
     });
 
     // ── Parsers ────────────────────────────────────────────────────

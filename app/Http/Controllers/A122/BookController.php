@@ -5,6 +5,7 @@ namespace App\Http\Controllers\A122;
 use App\Http\Controllers\Controller;
 use App\Models\BookCategories;
 use App\Models\Books;
+use App\Models\Publisher;
 use App\Models\Seller;
 use App\Models\SellerOrder;
 use App\Models\Sold;
@@ -30,7 +31,7 @@ class BookController extends Controller
 
     public function index(Request $request)
     {
-        $query = Books::with(['category']);
+        $query = Books::with(['category', 'publisher']);
         $tab = $request->input('tab', 'pending');
 
         match ($tab) {
@@ -74,13 +75,14 @@ class BookController extends Controller
     public function create()
     {
         $categories = BookCategories::orderBy('name_uz')->get();
+        $publishers = Publisher::query()->orderBy('name')->get(['id', 'name']);
         $sellers = Seller::query()
             ->select('id', 'shop_name')
             ->whereNotNull('shop_name')
             ->orderBy('shop_name')
             ->get();
 
-        return view('a122.books.create', compact('categories', 'sellers'));
+        return view('a122.books.create', compact('categories', 'publishers', 'sellers'));
     }
 
     public function store(Request $request)
@@ -90,6 +92,7 @@ class BookController extends Controller
             'author' => 'required|string|max:255',
             'isbn' => 'nullable|string|max:20',
             'category_id' => 'required|exists:book_categories,id',
+            'publisher_id' => 'nullable|exists:publishers,id',
             'seller_id' => 'nullable|exists:sellers,id',
             'description' => 'nullable|string|max:3000',
             'price' => 'required|numeric|min:0',
@@ -135,7 +138,7 @@ class BookController extends Controller
 
     public function show(Books $book)
     {
-        $book->load(['category', 'seller']);
+        $book->load(['category', 'seller', 'publisher']);
         $images = collect($book->images ?? [])
             ->filter(fn ($image) => is_string($image) && trim($image) !== '')
             ->map(fn (string $image) => ProductImageUrls::originalUrl($image))
@@ -166,13 +169,14 @@ class BookController extends Controller
     public function edit(Books $book)
     {
         $categories = BookCategories::orderBy('name_uz')->get();
+        $publishers = Publisher::query()->orderBy('name')->get(['id', 'name']);
         $sellers = Seller::query()
             ->select('id', 'shop_name')
             ->whereNotNull('shop_name')
             ->orderBy('shop_name')
             ->get();
 
-        return view('a122.books.edit', compact('book', 'categories', 'sellers'));
+        return view('a122.books.edit', compact('book', 'categories', 'publishers', 'sellers'));
     }
 
     public function update(Request $request, Books $book)
@@ -182,6 +186,7 @@ class BookController extends Controller
             'author' => 'required|string|max:255',
             'isbn' => 'nullable|string|max:20',
             'category_id' => 'required|exists:book_categories,id',
+            'publisher_id' => 'nullable|exists:publishers,id',
             'seller_id' => 'nullable|exists:sellers,id',
             'description' => 'nullable|string|max:3000',
             'price' => 'required|numeric|min:0',
