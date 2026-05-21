@@ -30,72 +30,53 @@ class BookUzParserService
     {
         @set_time_limit(0);
 
-        $urls = $singleUrl
-            ? [trim($singleUrl)]
-            : $this->discoverProductUrls($limit);
-
         $synced = 0;
         $failed = 0;
         $errors = [];
+        $requested = 0;
 
-        foreach ($urls as $url) {
+        if ($singleUrl) {
+            $requested = 1;
+
             try {
-                $payload = $this->parseBookPage($url);
-                $normalizedTitle = $this->normalizeComparableText($payload['title'] ?? null);
-                $normalizedAuthor = $this->normalizeComparableText($payload['author'] ?? null);
-                $matchedBook = $this->findExistingSellerBook($payload);
-                $categorySuggestion = $this->suggestCategory($payload);
-                $tagSuggestion = $this->suggestTags($payload, $categorySuggestion['category_id'] ?? null);
-
-                CatalogParserItem::query()->updateOrCreate(
-                    ['source_url' => $url],
-                    [
-                        'provider' => self::PROVIDER,
-                        'external_id' => $payload['external_id'],
-                        'title' => $payload['title'],
-                        'author' => $payload['author'],
-                        'isbn' => $payload['isbn'],
-                        'normalized_title' => $normalizedTitle,
-                        'normalized_author' => $normalizedAuthor,
-                        'source_category' => $payload['source_category'],
-                        'publisher' => $payload['publisher'],
-                        'translator' => $payload['translator'],
-                        'language' => $payload['language'],
-                        'script' => $payload['script'],
-                        'cover_type' => $payload['cover_type'],
-                        'year' => $payload['year'],
-                        'pages' => $payload['pages'],
-                        'price_uzs' => $payload['price_uzs'],
-                        'rating_value' => $payload['rating_value'],
-                        'rating_count' => $payload['rating_count'],
-                        'in_stock' => $payload['in_stock'],
-                        'primary_image_url' => Arr::first($payload['remote_image_urls']),
-                        'remote_image_urls' => $payload['remote_image_urls'],
-                        'description' => $payload['description'],
-                        'payload' => $payload['payload'],
-                        'matched_book_id' => $matchedBook['book']?->id,
-                        'match_confidence' => $matchedBook['confidence'],
-                        'match_reason' => $matchedBook['reason'],
-                        'suggested_category_id' => $categorySuggestion['category_id'],
-                        'suggested_category_name' => $categorySuggestion['category_name'],
-                        'category_ai_payload' => $categorySuggestion,
-                        'suggested_tag_ids' => $tagSuggestion['tag_ids'],
-                        'suggested_tag_names' => $tagSuggestion['tag_names'],
-                        'tags_ai_payload' => $tagSuggestion,
-                        'last_synced_at' => now(),
-                        'last_import_error' => null,
-                    ]
-                );
-
+                $this->syncParsedPayload($this->parseBookPage(trim($singleUrl)));
                 $synced++;
             } catch (\Throwable $e) {
                 $failed++;
-                $errors[] = $url . ' — ' . $e->getMessage();
+                $errors[] = trim($singleUrl) . ' — ' . $e->getMessage();
+            }
+        } else {
+            $catalogItems = $this->discoverCatalogEntriesViaApi($limit);
+            $requested = count($catalogItems);
+
+            if ($catalogItems !== []) {
+                foreach ($catalogItems as $catalogItem) {
+                    try {
+                        $this->syncParsedPayload($this->buildPayloadFromCatalogApiItem($catalogItem));
+                        $synced++;
+                    } catch (\Throwable $e) {
+                        $failed++;
+                        $errors[] = ($catalogItem['link'] ?? $catalogItem['_id'] ?? 'catalog-item') . ' — ' . $e->getMessage();
+                    }
+                }
+            } else {
+                $urls = $this->discoverProductUrls($limit);
+                $requested = count($urls);
+
+                foreach ($urls as $url) {
+                    try {
+                        $this->syncParsedPayload($this->parseBookPage($url));
+                        $synced++;
+                    } catch (\Throwable $e) {
+                        $failed++;
+                        $errors[] = $url . ' — ' . $e->getMessage();
+                    }
+                }
             }
         }
 
         return [
-            'requested' => count($urls),
+            'requested' => $requested,
             'synced' => $synced,
             'failed' => $failed,
             'errors' => $errors,
@@ -231,6 +212,60 @@ class BookUzParserService
         return compact('imported', 'failed', 'errors');
     }
 
+    private function syncParsedPayload(array $payload): void
+    {
+        $sourceUrl = trim((string) ($payload['source_url'] ?? ''));
+        if ($sourceUrl === '') {
+            throw new \RuntimeException('Mahsulot source_url aniqlanmadi.');
+        }
+
+        $normalizedTitle = $this->normalizeComparableText($payload['title'] ?? null);
+        $normalizedAuthor = $this->normalizeComparableText($payload['author'] ?? null);
+        $matchedBook = $this->findExistingSellerBook($payload);
+        $categorySuggestion = $this->suggestCategory($payload);
+        $tagSuggestion = $this->suggestTags($payload, $categorySuggestion['category_id'] ?? null);
+
+        CatalogParserItem::query()->updateOrCreate(
+            ['source_url' => $sourceUrl],
+            [
+                'provider' => self::PROVIDER,
+                'external_id' => $payload['external_id'],
+                'title' => $payload['title'],
+                'author' => $payload['author'],
+                'isbn' => $payload['isbn'],
+                'normalized_title' => $normalizedTitle,
+                'normalized_author' => $normalizedAuthor,
+                'source_category' => $payload['source_category'],
+                'publisher' => $payload['publisher'],
+                'translator' => $payload['translator'],
+                'language' => $payload['language'],
+                'script' => $payload['script'],
+                'cover_type' => $payload['cover_type'],
+                'year' => $payload['year'],
+                'pages' => $payload['pages'],
+                'price_uzs' => $payload['price_uzs'],
+                'rating_value' => $payload['rating_value'],
+                'rating_count' => $payload['rating_count'],
+                'in_stock' => $payload['in_stock'],
+                'primary_image_url' => Arr::first($payload['remote_image_urls']),
+                'remote_image_urls' => $payload['remote_image_urls'],
+                'description' => $payload['description'],
+                'payload' => $payload['payload'],
+                'matched_book_id' => $matchedBook['book']?->id,
+                'match_confidence' => $matchedBook['confidence'],
+                'match_reason' => $matchedBook['reason'],
+                'suggested_category_id' => $categorySuggestion['category_id'],
+                'suggested_category_name' => $categorySuggestion['category_name'],
+                'category_ai_payload' => $categorySuggestion,
+                'suggested_tag_ids' => $tagSuggestion['tag_ids'],
+                'suggested_tag_names' => $tagSuggestion['tag_names'],
+                'tags_ai_payload' => $tagSuggestion,
+                'last_synced_at' => now(),
+                'last_import_error' => null,
+            ]
+        );
+    }
+
     private function discoverProductUrls(?int $limit = null): array
     {
         $urls = $this->discoverViaCatalogApi($limit);
@@ -271,56 +306,35 @@ class BookUzParserService
         return array_values(array_unique($bookUrls));
     }
 
-    private function discoverViaCatalogApi(?int $limit = null): array
+    private function discoverCatalogEntriesViaApi(?int $limit = null): array
     {
         $page = 1;
-        $urls = [];
-        $perPage = $limit !== null
-            ? max(1, min(100, $limit))
-            : 36;
+        $entries = [];
+        $perPage = $limit !== null ? max(1, min(100, $limit)) : 36;
 
         while (true) {
-            try {
-                $response = $this->http()->get(self::USER_API_BASE_URL . '/book', [
-                    'page' => $page,
-                    'limit' => $perPage,
-                ]);
+            $payload = $this->fetchJson(self::USER_API_BASE_URL . '/book', [
+                'page' => $page,
+                'limit' => $perPage,
+            ]);
 
-                if (! $response->successful()) {
-                    break;
-                }
-
-                $payload = $response->json();
-                $items = collect(data_get($payload, 'data.data', []));
-            } catch (\Throwable) {
+            if (! is_array($payload)) {
                 break;
             }
+
+            $items = collect(data_get($payload, 'data.data', []))
+                ->filter(fn ($item) => is_array($item))
+                ->values();
 
             if ($items->isEmpty()) {
                 break;
             }
 
-            $beforeCount = count(array_unique($urls));
-
-            $batchUrls = $items
-                ->map(fn ($item) => $this->catalogItemToProductUrl(is_array($item) ? $item : []))
-                ->filter()
-                ->values()
-                ->all();
-
-            if (empty($batchUrls)) {
-                break;
-            }
-
-            $urls = array_merge($urls, $batchUrls);
-            $afterCount = count(array_unique($urls));
-
-            if ($afterCount === $beforeCount) {
-                break;
-            }
-
-            if ($limit !== null && $afterCount >= $limit) {
-                break;
+            foreach ($items as $item) {
+                $entries[] = $item;
+                if ($limit !== null && count($entries) >= $limit) {
+                    break 2;
+                }
             }
 
             $total = (int) (data_get($payload, 'data.total') ?? data_get($payload, 'data.count') ?? 0);
@@ -329,24 +343,33 @@ class BookUzParserService
             }
 
             $page++;
-
             if ($page > 300) {
                 break;
             }
         }
 
-        return array_values(array_unique($urls));
+        return $entries;
+    }
+
+    private function discoverViaCatalogApi(?int $limit = null): array
+    {
+        return collect($this->discoverCatalogEntriesViaApi($limit))
+            ->map(fn ($item) => $this->catalogItemToProductUrl(is_array($item) ? $item : []))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
     }
 
     private function discoverSitemapsFromRobots(): array
     {
         try {
-            $response = $this->http()->get(self::BASE_URL . '/robots.txt');
-            if (! $response->successful()) {
+            $body = $this->fetchText(self::BASE_URL . '/robots.txt');
+            if (! is_string($body) || trim($body) === '') {
                 return [];
             }
 
-            preg_match_all('/^Sitemap:\s*(.+)$/mi', $response->body(), $matches);
+            preg_match_all('/^Sitemap:\s*(.+)$/mi', $body, $matches);
 
             return collect($matches[1] ?? [])
                 ->map(fn ($url) => trim((string) $url))
@@ -366,12 +389,12 @@ class BookUzParserService
         $visited[$url] = true;
 
         try {
-            $response = $this->http()->get($url);
-            if (! $response->successful()) {
+            $body = $this->fetchText($url);
+            if (! is_string($body) || trim($body) === '') {
                 return [];
             }
 
-            $xml = @simplexml_load_string($response->body());
+            $xml = @simplexml_load_string($body);
             if (! $xml) {
                 return [];
             }
@@ -476,12 +499,7 @@ class BookUzParserService
 
         foreach ($candidates as $url) {
             try {
-                $response = $this->http()->get($url);
-                if (! $response->successful()) {
-                    continue;
-                }
-
-                $html = trim((string) $response->body());
+                $html = trim((string) $this->fetchText($url));
                 if ($html !== '') {
                     return $html;
                 }
@@ -543,14 +561,133 @@ class BookUzParserService
         return $scheme . '://' . $host . $parts['path'];
     }
 
-    private function parseBookPage(string $url): array
+    private function buildPayloadFromCatalogApiItem(array $item): array
     {
-        $response = $this->http()->get($url);
-        if (! $response->successful()) {
-            throw new \RuntimeException('Sahifa olinmadi: HTTP ' . $response->status());
+        $sourceUrl = $this->catalogItemToProductUrl($item);
+        $genres = collect($item['genres'] ?? [])
+            ->map(function ($genre) {
+                if (is_array($genre)) {
+                    return trim((string) ($genre['name'] ?? $genre['title'] ?? $genre['name_uz'] ?? ''));
+                }
+
+                return trim((string) $genre);
+            })
+            ->filter()
+            ->values()
+            ->all();
+
+        $images = collect(array_merge(
+            Arr::wrap($item['imgUrl'] ?? null),
+            Arr::wrap($item['additionalImgs'] ?? [])
+        ))
+            ->map(fn ($url) => $this->absoluteUrl((string) $url))
+            ->filter()
+            ->unique()
+            ->take(8)
+            ->values()
+            ->all();
+
+        $payload = [
+            'source_url' => $sourceUrl,
+            'external_id' => $this->cleanField((string) ($item['_id'] ?? $item['id'] ?? $item['link'] ?? '')),
+            'title' => $this->cleanField($item['name'] ?? $item['title'] ?? null),
+            'author' => $this->extractAuthorFromCatalogItem($item),
+            'isbn' => $this->cleanField($item['barcode'] ?? $item['isbn'] ?? null),
+            'source_category' => $this->cleanField($genres[0] ?? null),
+            'publisher' => $this->cleanField($item['publisher'] ?? $item['publisherName'] ?? $item['publishingHouse'] ?? null),
+            'translator' => $this->cleanField($item['translator'] ?? null),
+            'language' => $this->cleanField($item['language'] ?? null),
+            'script' => $this->cleanField($item['contentLanguage'] ?? null),
+            'cover_type' => $this->cleanField($item['cover'] ?? null),
+            'year' => $this->toInt($item['year'] ?? null),
+            'pages' => $this->toInt($item['numberOfPage'] ?? $item['pages'] ?? null),
+            'price_uzs' => $this->toInt($item['bookPrice'] ?? $item['price'] ?? null),
+            'rating_value' => is_numeric($item['rating'] ?? null) ? round((float) $item['rating'], 2) : null,
+            'rating_count' => $this->toInt($item['rateCount'] ?? $item['ratingCount'] ?? null),
+            'in_stock' => ((int) ($item['stockCount'] ?? 0)) > 0,
+            'remote_image_urls' => $images,
+            'description' => $this->cleanField($item['description'] ?? $item['shortDescription'] ?? $item['annotation'] ?? null),
+            'payload' => [
+                'api' => $item,
+                'genres' => $genres,
+            ],
+        ];
+
+        if (
+            $sourceUrl
+            && ($payload['author'] === null || $payload['publisher'] === null || $payload['description'] === null)
+        ) {
+            try {
+                $detailPayload = $this->parseBookPage($sourceUrl);
+                $payload = array_merge($detailPayload, array_filter([
+                    'source_url' => $payload['source_url'] ?: ($detailPayload['source_url'] ?? null),
+                    'external_id' => $payload['external_id'] ?: $detailPayload['external_id'],
+                    'title' => $payload['title'] ?: $detailPayload['title'],
+                    'author' => $payload['author'] ?: $detailPayload['author'],
+                    'isbn' => $payload['isbn'] ?: $detailPayload['isbn'],
+                    'source_category' => $payload['source_category'] ?: $detailPayload['source_category'],
+                    'publisher' => $payload['publisher'] ?: $detailPayload['publisher'],
+                    'translator' => $payload['translator'] ?: $detailPayload['translator'],
+                    'language' => $payload['language'] ?: $detailPayload['language'],
+                    'script' => $payload['script'] ?: $detailPayload['script'],
+                    'cover_type' => $payload['cover_type'] ?: $detailPayload['cover_type'],
+                    'year' => $payload['year'] ?: $detailPayload['year'],
+                    'pages' => $payload['pages'] ?: $detailPayload['pages'],
+                    'price_uzs' => $payload['price_uzs'] ?: $detailPayload['price_uzs'],
+                    'rating_value' => $payload['rating_value'] ?: $detailPayload['rating_value'],
+                    'rating_count' => $payload['rating_count'] ?: $detailPayload['rating_count'],
+                    'in_stock' => $payload['in_stock'] || $detailPayload['in_stock'],
+                    'remote_image_urls' => ! empty($payload['remote_image_urls']) ? $payload['remote_image_urls'] : $detailPayload['remote_image_urls'],
+                    'description' => $payload['description'] ?: $detailPayload['description'],
+                    'payload' => array_merge($payload['payload'] ?? [], ['detail' => $detailPayload['payload'] ?? []]),
+                ], fn ($value) => $value !== null));
+            } catch (\Throwable) {
+                // Detail sahifa bo'sh yoki beqaror bo'lsa ham API payload bilan davom etamiz.
+            }
         }
 
-        $html = $response->body();
+        return $payload;
+    }
+
+    private function extractAuthorFromCatalogItem(array $item): ?string
+    {
+        $author = $item['author'] ?? $item['authors'] ?? null;
+
+        if (is_string($author)) {
+            return $this->cleanField($author);
+        }
+
+        if (is_array($author)) {
+            $names = collect($author)
+                ->map(function ($entry) {
+                    if (is_string($entry)) {
+                        return trim($entry);
+                    }
+
+                    if (is_array($entry)) {
+                        return trim((string) ($entry['name'] ?? $entry['fullName'] ?? $entry['title'] ?? ''));
+                    }
+
+                    return null;
+                })
+                ->filter()
+                ->values()
+                ->all();
+
+            return $this->cleanField(implode(', ', $names));
+        }
+
+        return null;
+    }
+
+    private function parseBookPage(string $url): array
+    {
+        $response = $this->fetchResponse($url);
+        if ($response === null || ($response['status'] ?? 0) >= 400) {
+            throw new \RuntimeException('Sahifa olinmadi: HTTP ' . ($response['status'] ?? 0));
+        }
+
+        $html = (string) ($response['body'] ?? '');
         $xpath = $this->makeXPath($html);
         $jsonLd = $this->extractJsonLdBlocks($html);
         $productLd = $this->firstProductJsonLd($jsonLd);
@@ -591,6 +728,7 @@ class BookUzParserService
         $sourceCategory = $this->extractBreadcrumbCategory($xpath, $jsonLd);
 
         return [
+            'source_url' => $url,
             'external_id' => Str::afterLast(parse_url($url, PHP_URL_PATH) ?: $url, '/'),
             'title' => $title,
             'author' => $this->cleanField($specs['author'] ?? Arr::get($productLd, 'author.name') ?? Arr::get($productLd, 'author')),
@@ -863,16 +1001,16 @@ class BookUzParserService
 
         foreach (array_slice($item->remote_image_urls ?? [], 0, 8) as $index => $url) {
             try {
-                $response = $this->http()->get($url);
-                if (! $response->successful() || $response->body() === '') {
+                $response = $this->fetchResponse($url, [], true);
+                if ($response === null || ($response['status'] ?? 0) >= 400 || ($response['body'] ?? '') === '') {
                     continue;
                 }
 
-                $contentType = (string) $response->header('Content-Type');
+                $contentType = (string) (($response['headers']['content-type'][0] ?? '') ?: '');
                 $extension = $this->guessImageExtension($url, $contentType);
                 $filename = 'books/parser_' . $item->id . '_' . ($index + 1) . '_' . Str::random(8) . '.' . $extension;
 
-                Storage::disk('public')->put($filename, $response->body());
+                Storage::disk('public')->put($filename, $response['body']);
                 ProductImageVariantGenerator::generateForPath($filename);
                 $paths[] = $filename;
             } catch (\Throwable) {
@@ -1343,6 +1481,105 @@ class BookUzParserService
 
         $parts = explode("'", $value);
         return "concat('" . implode("', \"'\", '", $parts) . "')";
+    }
+
+    private function fetchJson(string $url, array $query = []): ?array
+    {
+        $response = $this->fetchResponse($url, $query);
+        if ($response === null || ($response['status'] ?? 0) >= 400) {
+            return null;
+        }
+
+        $decoded = json_decode((string) ($response['body'] ?? ''), true);
+        return is_array($decoded) ? $decoded : null;
+    }
+
+    private function fetchText(string $url, array $query = []): ?string
+    {
+        $response = $this->fetchResponse($url, $query);
+        if ($response === null || ($response['status'] ?? 0) >= 400) {
+            return null;
+        }
+
+        $body = (string) ($response['body'] ?? '');
+        return $body !== '' ? $body : null;
+    }
+
+    private function fetchResponse(string $url, array $query = [], bool $binary = false): ?array
+    {
+        if (function_exists('curl_init')) {
+            return $this->fetchResponseViaCurl($url, $query, $binary);
+        }
+
+        try {
+            $response = $this->http()->get($url, $query);
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return [
+            'status' => $response->status(),
+            'body' => $response->body(),
+            'headers' => array_change_key_case($response->headers(), CASE_LOWER),
+        ];
+    }
+
+    private function fetchResponseViaCurl(string $url, array $query = [], bool $binary = false): ?array
+    {
+        $fullUrl = $query === [] ? $url : $url . (str_contains($url, '?') ? '&' : '?') . http_build_query($query);
+        $headers = [
+            'User-Agent: Mozilla/5.0 (compatible; KitobchiParser/1.0; +https://kitobchi.com)',
+            'Accept-Language: uz,en;q=0.9,ru;q=0.8',
+        ];
+
+        $attempts = 3;
+        for ($attempt = 1; $attempt <= $attempts; $attempt++) {
+            $responseHeaders = [];
+            $ch = curl_init($fullUrl);
+
+            if ($ch === false) {
+                return null;
+            }
+
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_CONNECTTIMEOUT => 10,
+                CURLOPT_TIMEOUT => 25,
+                CURLOPT_HTTPHEADER => $headers,
+                CURLOPT_ENCODING => '',
+                CURLOPT_SSL_VERIFYPEER => true,
+                CURLOPT_SSL_VERIFYHOST => 2,
+                CURLOPT_HEADERFUNCTION => static function ($curl, $headerLine) use (&$responseHeaders) {
+                    $length = strlen($headerLine);
+                    $header = explode(':', $headerLine, 2);
+                    if (count($header) === 2) {
+                        $name = strtolower(trim($header[0]));
+                        $value = trim($header[1]);
+                        $responseHeaders[$name] ??= [];
+                        $responseHeaders[$name][] = $value;
+                    }
+                    return $length;
+                },
+            ]);
+
+            $body = curl_exec($ch);
+            $status = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+            $errorNo = curl_errno($ch);
+            curl_close($ch);
+
+            if ($errorNo === 0 && $body !== false && $status > 0) {
+                return [
+                    'status' => $status,
+                    'body' => $body,
+                    'headers' => $responseHeaders,
+                ];
+            }
+
+            usleep(350000);
+        }
+
+        return null;
     }
 
     private function http()

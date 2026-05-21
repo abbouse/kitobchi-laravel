@@ -14,6 +14,12 @@ class BloggerShipmentPrintService
         $shipment->loadMissing(['blogger', 'items']);
         $blogger = $shipment->blogger;
         $locale = $this->resolveLocale($forcedLocale);
+        $socialLinks = $this->formatSocialLinks($blogger?->socialLinks() ?? []);
+        $items = $shipment->items->values()->map(fn ($item, $index) => [
+            'index' => $index + 1,
+            'name' => $item->name,
+        ])->all();
+        $itemsPreview = collect($items)->take(3)->values()->all();
 
         return [
             'shipment_number' => '#BLG-' . $shipment->id,
@@ -27,11 +33,13 @@ class BloggerShipmentPrintService
             'blogger_name' => $blogger?->full_name ?: $this->text($locale, 'blogger_fallback'),
             'phone' => $this->formatPhone($blogger?->phone_number),
             'address' => trim((string) $blogger?->address) ?: '—',
-            'social_links' => $this->formatSocialLinks($blogger?->socialLinks() ?? []),
-            'items' => $shipment->items->values()->map(fn ($item, $index) => [
-                'index' => $index + 1,
-                'name' => $item->name,
-            ])->all(),
+            'social_links' => $socialLinks,
+            'social_primary' => isset($socialLinks[0])
+                ? ($socialLinks[0]['label'] . ': ' . $socialLinks[0]['value'])
+                : null,
+            'items' => $items,
+            'items_preview' => $itemsPreview,
+            'items_remaining' => max(0, count($items) - count($itemsPreview)),
             'status_label' => $shipment->status === BloggerShipment::STATUS_DELIVERED
                 ? $this->text($locale, 'status_delivered')
                 : $this->text($locale, 'status_pending'),
