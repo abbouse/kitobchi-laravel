@@ -92,7 +92,7 @@ class ParserController extends Controller
     public function syncBookUz(Request $request)
     {
         $validated = $request->validate([
-            'limit' => ['nullable', 'integer', 'min:1', 'max:5000'],
+            'limit' => ['nullable', 'integer', 'min:1', 'max:50000'],
             'source_url' => ['nullable', 'url'],
         ]);
 

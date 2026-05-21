@@ -586,6 +586,12 @@ class BookUzParserService
             ->take(8)
             ->values()
             ->all();
+        $tags = collect($item['tags'] ?? [])
+            ->map(fn ($tag) => trim((string) $tag))
+            ->filter()
+            ->values()
+            ->all();
+        $descriptionText = $this->normalizeRichText($item['description'] ?? $item['shortDescription'] ?? $item['annotation'] ?? null);
 
         $payload = [
             'source_url' => $sourceUrl,
@@ -606,10 +612,24 @@ class BookUzParserService
             'rating_count' => $this->toInt($item['rateCount'] ?? $item['ratingCount'] ?? null),
             'in_stock' => ((int) ($item['stockCount'] ?? 0)) > 0,
             'remote_image_urls' => $images,
-            'description' => $this->cleanField($item['description'] ?? $item['shortDescription'] ?? $item['annotation'] ?? null),
+            'description' => $descriptionText,
             'payload' => [
-                'api' => $item,
                 'genres' => $genres,
+                'tags' => $tags,
+                'source_meta' => [
+                    'api_id' => $item['_id'] ?? null,
+                    'link' => $item['link'] ?? null,
+                    'state' => $item['state'] ?? null,
+                    'type' => $item['type'] ?? null,
+                    'label' => $item['label'] ?? null,
+                    'paper_format' => $item['paperFormat'] ?? null,
+                    'is_available' => $item['isAvailable'] ?? null,
+                    'available_count' => $item['availableCount'] ?? null,
+                    'stock_count' => $item['stockCount'] ?? null,
+                    'views_count' => $item['viewsCount'] ?? null,
+                    'total_sold' => $item['totalSold'] ?? null,
+                    'has_discount' => $item['hasDiscount'] ?? null,
+                ],
             ],
         ];
 
@@ -1224,6 +1244,8 @@ class BookUzParserService
                             'title' => $payload['title'] ?? null,
                             'author' => $payload['author'] ?? null,
                             'source_category' => $payload['source_category'] ?? null,
+                            'genres' => data_get($payload, 'payload.genres', []),
+                            'tags' => data_get($payload, 'payload.tags', []),
                             'description' => Str::limit((string) ($payload['description'] ?? ''), 700, ''),
                         ],
                         'categories' => $categoryList,
@@ -1337,6 +1359,8 @@ class BookUzParserService
                             'title' => $payload['title'] ?? null,
                             'author' => $payload['author'] ?? null,
                             'source_category' => $payload['source_category'] ?? null,
+                            'genres' => data_get($payload, 'payload.genres', []),
+                            'tags' => data_get($payload, 'payload.tags', []),
                             'description' => Str::limit((string) ($payload['description'] ?? ''), 700, ''),
                         ],
                         'category' => [
@@ -1423,10 +1447,65 @@ class BookUzParserService
         return (int) $clean;
     }
 
-    private function cleanField(?string $value): ?string
+    private function cleanField(mixed $value): ?string
     {
+        if (is_array($value)) {
+            $value = collect($value)
+                ->map(function ($item) {
+                    if (is_scalar($item)) {
+                        return trim((string) $item);
+                    }
+
+                    if (is_array($item)) {
+                        foreach (['name', 'title', 'value', 'label', 'text'] as $key) {
+                            if (isset($item[$key]) && is_scalar($item[$key])) {
+                                return trim((string) $item[$key]);
+                            }
+                        }
+                    }
+
+                    return null;
+                })
+                ->filter()
+                ->implode(', ');
+        }
+
         $value = trim((string) $value);
         return $value === '' ? null : Str::limit($value, 255, '');
+    }
+
+    private function normalizeRichText(mixed $value): ?string
+    {
+        if (is_array($value)) {
+            $text = collect($value)
+                ->map(function ($item) {
+                    if (is_string($item)) {
+                        return trim($item);
+                    }
+
+                    if (is_array($item)) {
+                        $chunk = trim((string) ($item['value'] ?? $item['text'] ?? $item['name'] ?? ''));
+                        if ($chunk === '') {
+                            return null;
+                        }
+
+                        return ! empty($item['newLine']) ? ("\n" . $chunk) : $chunk;
+                    }
+
+                    return null;
+                })
+                ->filter()
+                ->implode(' ');
+
+            $text = preg_replace("/[ \t]+\n/u", "\n", $text ?? '') ?? '';
+            $text = preg_replace("/\n{2,}/u", "\n", $text) ?? '';
+            $text = trim($text);
+
+            return $text === '' ? null : Str::limit($text, 5000, '');
+        }
+
+        $text = trim((string) $value);
+        return $text === '' ? null : Str::limit($text, 5000, '');
     }
 
     private function normalizeNumericIsbn(?string $raw): ?string
