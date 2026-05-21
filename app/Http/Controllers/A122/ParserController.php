@@ -38,15 +38,6 @@ class ParserController extends Controller
 
     public function bookUz(Request $request)
     {
-        $shouldAutoSync = ! $request->filled('search')
-            && ! $request->filled('stock')
-            && ! $request->filled('imported')
-            && CatalogParserItem::query()->where('provider', BookUzParserService::PROVIDER)->doesntExist();
-
-        if ($shouldAutoSync) {
-            $this->bookUzParserService->syncCatalog(120, null);
-        }
-
         $query = CatalogParserItem::query()
             ->where('provider', BookUzParserService::PROVIDER)
             ->with([
@@ -92,6 +83,7 @@ class ParserController extends Controller
             'in_stock' => CatalogParserItem::query()->where('provider', BookUzParserService::PROVIDER)->where('in_stock', true)->count(),
             'out_of_stock' => CatalogParserItem::query()->where('provider', BookUzParserService::PROVIDER)->where('in_stock', false)->count(),
             'imported' => CatalogParserItem::query()->where('provider', BookUzParserService::PROVIDER)->whereNotNull('imported_book_id')->count(),
+            'last_synced_at' => CatalogParserItem::query()->where('provider', BookUzParserService::PROVIDER)->max('last_synced_at'),
         ];
 
         return view('a122.parsers.book-uz', compact('items', 'categories', 'seller', 'stats'));

@@ -122,6 +122,12 @@ return Application::configure(basePath: dirname(__DIR__))
             ->timezone($tz)
             ->withoutOverlapping();
 
+        $schedule->command('parser:sync-book-uz')
+            ->weeklyOn(0, '05:10')
+            ->timezone($tz)
+            ->withoutOverlapping()
+            ->runInBackground();
+
         // ── Seller reputatsiyasi — har tong qayta hisoblanadi ─────────
         $schedule->command('sellers:recalculate-reputation')
             ->dailyAt('04:50')

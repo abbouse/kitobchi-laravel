@@ -36,9 +36,12 @@
           <span class="badge rounded-pill text-bg-dark">book.uz</span>
           <span class="badge rounded-pill text-bg-light">Seller #{{ $seller?->id ?? 55 }}</span>
           <span class="badge rounded-pill text-bg-light">{{ $seller?->shop_name ?? 'Seller topilmadi' }}</span>
+          @if($stats['last_synced_at'])
+            <span class="badge rounded-pill text-bg-light">So‘nggi sync: {{ \Illuminate\Support\Carbon::parse($stats['last_synced_at'])->format('d.m.Y H:i') }}</span>
+          @endif
         </div>
         <h1 class="p-page-title mb-2">book.uz katalog parseri</h1>
-        <p class="p-page-subtitle mb-0">Book.uz dagi barcha kitoblarni, stock yo‘qlari bilan birga ko‘rib chiqing. Rasmlar lokalga olinadi, mahsulotlar seller <strong>55</strong> nomidan bazaga qo‘shiladi.</p>
+        <p class="p-page-subtitle mb-0">Book.uz dagi barcha kitoblarni, stock yo‘qlari bilan birga ko‘rib chiqing. Rasmlar lokalga olinadi, mahsulotlar seller <strong>55</strong> nomidan bazaga qo‘shiladi. Parser sahifasi endi faqat bazadagi cache’ni ko‘rsatadi, haftalik sync alohida scheduler bilan yuradi.</p>
       </div>
       <div class="d-flex flex-wrap gap-2">
         <a href="{{ route('admin.parsers.index') }}" class="btn btn-outline-secondary">
@@ -79,7 +82,7 @@
     <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
       <div>
         <h2 class="h5 mb-1">Katalogni yangilash</h2>
-        <p class="text-secondary mb-0">To‘liq katalog yoki bitta link bo‘yicha sinov import. Sitemaptan topa olsa, barcha mahsulot URLlari olinadi.</p>
+        <p class="text-secondary mb-0">To‘liq katalog yoki bitta link bo‘yicha sinov import. To‘liq weekly sync fonda yuradi, bu tugma esa admin qo‘lda yangilashi uchun qoldirilgan.</p>
       </div>
     </div>
     <form method="POST" action="{{ route('admin.parsers.book-uz.sync') }}" class="row g-3 align-items-end">
@@ -94,7 +97,7 @@
       </div>
       <div class="col-6 col-xl-3">
         <label class="form-label">Birinchi yuklash limiti</label>
-        <div class="small text-secondary">Bo‘sh sahifa ilk kirishda o‘zi boshlang‘ich katalogni olib keladi.</div>
+        <div class="small text-secondary">Sahifa o‘zi sync boshlamaydi. Ilk to‘ldirish uchun limit bilan yoki scheduler orqali yuklang.</div>
       </div>
       <div class="col-12 col-xl-3 d-flex gap-2">
         <button type="submit" class="btn btn-dark flex-fill">
