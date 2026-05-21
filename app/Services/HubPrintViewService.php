@@ -47,6 +47,7 @@ class HubPrintViewService
             'created_at' => optional($order?->created_at)?->format('d.m.Y H:i'),
             'created_at_pretty' => $this->formatPrettyDateTime($order?->created_at),
             'delivery_type' => (string) ($order?->deliveryType ?? 'delivery'),
+            'delivery_type_label' => $this->resolveDeliveryTypeLabel((string) ($order?->deliveryType ?? 'delivery')),
             'total_amount' => (int) round((float) ($order?->amount ?? 0)),
             'meta_hub_name' => $fulfillment->hub?->name ?: 'Hub aniqlanmagan',
             'delight_message' => $this->resolveReceiptDelightMessage($fulfillment),
@@ -142,5 +143,14 @@ class HubPrintViewService
         $index = ((int) $fulfillment->order_id) % count($variants);
 
         return $variants[$index];
+    }
+
+    private function resolveDeliveryTypeLabel(string $deliveryType): string
+    {
+        return match (strtolower(trim($deliveryType))) {
+            'postal', 'mail_service', 'uzpost', 'pochta' => 'Pochta orqali',
+            'pickup', 'instore', 'in_store', 'store_pickup' => 'O‘zi olib ketish',
+            default => 'Kuryer orqali',
+        };
     }
 }

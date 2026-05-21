@@ -11,7 +11,10 @@
     .sheet { width: 80mm; height: 48mm; padding: 3mm; display: flex; flex-direction: column; gap: 2mm; }
     .row { display: flex; align-items: flex-start; justify-content: space-between; gap: 2mm; }
     .order { font-size: 13px; font-weight: 700; line-height: 1.1; }
-    .hub { font-size: 9px; color: #4b5563; text-align: right; }
+    .hub { display: flex; justify-content: flex-end; }
+    .hub-note { display: inline-flex; align-items: center; gap: 1.6mm; max-width: 31mm; text-align: left; }
+    .hub-note__heart { font-size: 14px; line-height: 1; }
+    .hub-note__text { font-size: 8.8px; color: #4b5563; line-height: 1.15; }
     .meta { font-size: 9px; color: #374151; line-height: 1.2; }
     .meta-muted { color: #6b7280; }
     .name { font-size: 12px; font-weight: 700; line-height: 1.15; }
@@ -22,8 +25,7 @@
     .label { display: block; font-size: 8px; color: #4b5563; margin-bottom: 1mm; text-transform: uppercase; }
     .value { font-size: 10px; font-weight: 700; line-height: 1.15; }
     .hint { font-size: 8.5px; color: #4b5563; margin-top: .8mm; line-height: 1.15; }
-    .qr { margin-top: auto; display: flex; align-items: center; justify-content: center; }
-    .heart-note { font-size: 8.5px; color: #4b5563; line-height: 1.15; text-align: center; }
+    .qr { margin-top: auto; display: flex; align-items: center; justify-content: flex-start; min-height: 1mm; }
   </style>
 </head>
 <body onload="window.print()">
@@ -31,13 +33,15 @@
     <div class="row">
       <div class="order">{{ $label['order_number'] }}</div>
       <div class="hub">
-        <div>♥ {{ $label['delight_message'] }}</div>
-        <div>{{ $label['created_at'] ?: '—' }}</div>
+        <div class="hub-note">
+          <span class="hub-note__heart">♥</span>
+          <span class="hub-note__text">{{ $label['delight_message'] }}</span>
+        </div>
       </div>
     </div>
 
     <div class="meta">
-      {{ $label['delivery_type'] === 'postal' ? 'Postal oqim' : 'Courier oqim' }} ·
+      {{ $label['delivery_type_label'] }} ·
       <span class="meta-muted">{{ $label['meta_hub_name'] }}</span>
     </div>
 
@@ -65,7 +69,6 @@
     </div>
 
     <div class="qr">
-      <div class="heart-note">♥ Xaridingiz uchun rahmat!</div>
     </div>
   </div>
 </body>
