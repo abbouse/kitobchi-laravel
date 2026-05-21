@@ -142,7 +142,8 @@
       </div>
 
       <div class="row g-4">
-        @forelse($items as $item)
+        @if($items->count())
+          @foreach($items as $item)
           <div class="col-12 col-xxl-6">
             <article class="parser-item-card h-100">
               <div class="parser-item-card__media">
@@ -266,7 +267,8 @@
               </div>
             </article>
           </div>
-        @empty
+          @endforeach
+        @else
           <div class="col-12">
             <div class="p-empty-state">
               <div class="p-empty-state__icon"><i class="bi bi-search"></i></div>
@@ -274,7 +276,7 @@
               <p>Avval book.uz katalogini yangilang yoki filterlarni bo‘shating.</p>
             </div>
           </div>
-        @endforelse
+        @endif
       </div>
     </form>
   </section>
