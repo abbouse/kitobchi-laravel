@@ -35,14 +35,14 @@
           <button type="button" :class="{ active: tab === 'users' }" @click="switchTab('users')">Online userlar</button>
         </div>
         <div class="live-actions__buttons">
-          <button type="button" class="btn btn-outline-secondary rounded-pill px-3" @click="toggleFullscreen()"><i class="bi bi-fullscreen me-1"></i>Full screen</button>
-          <a href="{{ route('admin.dashboard') }}" class="btn btn-dark rounded-pill px-3"><i class="bi bi-arrow-left me-1"></i>Dashboard</a>
+          <button type="button" class="live-action-btn live-action-btn--ghost" @click="toggleFullscreen()"><i class="bi bi-fullscreen"></i><span>Full screen</span></button>
+          <a href="{{ route('admin.dashboard') }}" class="live-action-btn live-action-btn--dark"><i class="bi bi-arrow-left"></i><span>Dashboard</span></a>
         </div>
       </div>
     </div>
   </div>
 
-  <section class="live-section" :class="{ 'is-active': tab === 'overview' }">
+  <section class="live-section" x-cloak :class="{ 'is-active': tab === 'overview' }">
     <div class="live-grid live-grid--hero">
       <div class="live-stat live-stat--accent">
         <div class="live-stat__label">Asosiy buyurtmalar</div>
@@ -135,12 +135,14 @@
                 <template x-if="user.avatar"><img :src="user.avatar" alt=""></template>
                 <template x-if="!user.avatar"><span x-text="user.name.charAt(0)"></span></template>
               </div>
-              <div>
+              <div class="live-row__main">
                 <div class="live-name" x-text="user.name"></div>
                 <div class="live-hint" x-text="user.last_seen"></div>
               </div>
-              <div class="live-pill success">Online</div>
-              <a class="btn btn-outline-secondary btn-sm rounded-pill px-3" :href="`${userBaseUrl}/${user.id}`">Ochish</a>
+              <div class="live-row__aside">
+                <div class="live-pill success">Online</div>
+                <a class="live-mini-btn" :href="`${userBaseUrl}/${user.id}`">Ochish</a>
+              </div>
             </div>
           </template>
           <div class="live-empty" x-show="!snapshot.online_users.length">Hozircha online user topilmadi.</div>
@@ -149,7 +151,7 @@
     </div>
   </section>
 
-  <section class="live-section" :class="{ 'is-active': tab === 'orders' }">
+  <section class="live-section" x-cloak :class="{ 'is-active': tab === 'orders' }">
     <div class="live-section-head">
       <div>
         <div class="live-card__eyebrow">Orders monitor</div>
@@ -172,12 +174,14 @@
               <template x-if="order.avatar"><img :src="order.avatar" alt=""></template>
               <template x-if="!order.avatar"><span x-text="order.customer.charAt(0)"></span></template>
             </div>
-            <div>
+            <div class="live-row__main">
               <div class="live-name" x-text="`#${order.id} · ${order.customer}`"></div>
               <div class="live-hint" x-text="order.updated_at"></div>
             </div>
-            <div class="live-amount" x-text="`${order.amount} UZS`"></div>
-            <div class="live-pill info" x-text="order.status"></div>
+            <div class="live-row__aside">
+              <div class="live-amount" x-text="`${order.amount} UZS`"></div>
+              <div class="live-pill info" x-text="order.status"></div>
+            </div>
           </div>
         </template>
         <div class="live-empty" x-show="!snapshot.recent_orders.length">So'nggi user buyurtmalari hozircha topilmadi.</div>
@@ -185,7 +189,7 @@
     </div>
   </section>
 
-  <section class="live-section" :class="{ 'is-active': tab === 'seller' }">
+  <section class="live-section" x-cloak :class="{ 'is-active': tab === 'seller' }">
     <div class="live-section-head">
       <div>
         <div class="live-card__eyebrow">Seller operations</div>
@@ -208,12 +212,14 @@
               <template x-if="order.avatar"><img :src="order.avatar" alt=""></template>
               <template x-if="!order.avatar"><span x-text="order.seller.charAt(0)"></span></template>
             </div>
-            <div>
+            <div class="live-row__main">
               <div class="live-name" x-text="`#${order.id} · ${order.seller}`"></div>
               <div class="live-hint" x-text="order.customer"></div>
             </div>
-            <div class="live-amount" x-text="`${order.amount} UZS`"></div>
-            <div class="live-pill warning" x-text="order.status"></div>
+            <div class="live-row__aside">
+              <div class="live-amount" x-text="`${order.amount} UZS`"></div>
+              <div class="live-pill warning" x-text="order.status"></div>
+            </div>
           </div>
         </template>
         <div class="live-empty" x-show="!snapshot.recent_seller_orders.length">Seller oqimida so'nggi orderlar topilmadi.</div>
@@ -221,7 +227,7 @@
     </div>
   </section>
 
-  <section class="live-section" :class="{ 'is-active': tab === 'courier' }">
+  <section class="live-section" x-cloak :class="{ 'is-active': tab === 'courier' }">
     <div class="live-section-head">
       <div>
         <div class="live-card__eyebrow">Courier control</div>
@@ -244,12 +250,14 @@
               <template x-if="order.avatar"><img :src="order.avatar" alt=""></template>
               <template x-if="!order.avatar"><span x-text="order.courier.charAt(0)"></span></template>
             </div>
-            <div>
+            <div class="live-row__main">
               <div class="live-name" x-text="`#${order.id} · ${order.courier}`"></div>
               <div class="live-hint" x-text="order.customer"></div>
             </div>
-            <div class="live-amount" x-text="`${order.amount} UZS`"></div>
-            <div class="live-pill success" x-text="order.status"></div>
+            <div class="live-row__aside">
+              <div class="live-amount" x-text="`${order.amount} UZS`"></div>
+              <div class="live-pill success" x-text="order.status"></div>
+            </div>
           </div>
         </template>
         <div class="live-empty" x-show="!snapshot.recent_courier_orders.length">Courier oqimida yangi yozuv topilmadi.</div>
@@ -257,7 +265,7 @@
     </div>
   </section>
 
-  <section class="live-section" :class="{ 'is-active': tab === 'users' }">
+  <section class="live-section" x-cloak :class="{ 'is-active': tab === 'users' }">
     <div class="live-section-head">
       <div>
         <div class="live-card__eyebrow">Online audience</div>
@@ -280,12 +288,14 @@
               <template x-if="user.avatar"><img :src="user.avatar" alt=""></template>
               <template x-if="!user.avatar"><span x-text="user.name.charAt(0)"></span></template>
             </div>
-            <div>
+            <div class="live-row__main">
               <div class="live-name" x-text="user.name"></div>
               <div class="live-hint" x-text="user.last_seen"></div>
             </div>
-            <div class="live-pill success">Online</div>
-            <a class="btn btn-outline-secondary btn-sm rounded-pill px-3" :href="`${userBaseUrl}/${user.id}`">Profil</a>
+            <div class="live-row__aside">
+              <div class="live-pill success">Online</div>
+              <a class="live-mini-btn" :href="`${userBaseUrl}/${user.id}`">Profil</a>
+            </div>
           </div>
         </template>
         <div class="live-empty" x-show="!snapshot.online_users.length">Online foydalanuvchi hozircha yo'q.</div>

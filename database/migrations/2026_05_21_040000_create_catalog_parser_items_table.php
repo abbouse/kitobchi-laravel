@@ -34,13 +34,15 @@ return new class extends Migration
             $table->json('remote_image_urls')->nullable();
             $table->longText('description')->nullable();
             $table->json('payload')->nullable();
-            $table->foreignId('matched_book_id')->nullable()->constrained('books')->nullOnDelete();
+            // Legacy product tables in production may use non-bigint IDs,
+            // so we keep parser references soft and index-only here.
+            $table->unsignedInteger('matched_book_id')->nullable()->index();
             $table->unsignedSmallInteger('match_confidence')->nullable();
             $table->string('match_reason')->nullable();
-            $table->foreignId('suggested_category_id')->nullable()->constrained('book_categories')->nullOnDelete();
+            $table->unsignedInteger('suggested_category_id')->nullable()->index();
             $table->string('suggested_category_name')->nullable();
             $table->json('category_ai_payload')->nullable();
-            $table->foreignId('imported_book_id')->nullable()->constrained('books')->nullOnDelete();
+            $table->unsignedInteger('imported_book_id')->nullable()->index();
             $table->timestamp('last_synced_at')->nullable()->index();
             $table->timestamp('imported_at')->nullable();
             $table->text('last_import_error')->nullable();
