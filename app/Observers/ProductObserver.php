@@ -9,7 +9,7 @@ class BooksObserver
     public function saved(Books $book)
     {
         // Muhim maydonlar o'zgarganda vektorni yangilaymiz
-        if ($book->isDirty(['name', 'author', 'description', 'category_id', 'lang', 'year'])) {
+        if ($book->isDirty(['name', 'author', 'author_id', 'description', 'category_id', 'lang', 'year'])) {
             
             $service = new GeminiService();
 

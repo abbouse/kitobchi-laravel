@@ -14,6 +14,7 @@ use App\Models\BookTag;
 use App\Models\Sold;
 use App\Models\Gifts;
 use App\Models\SellerStaffLog;
+use App\Services\AuthorDirectoryService;
 use App\Support\ProductImageVariantGenerator;
 use App\Services\SellerPremiumService;
 use Illuminate\Http\Request;
@@ -26,7 +27,8 @@ class ProductController extends Controller
 {
     public function __construct(
         protected \App\Services\OpenAIService $ai,
-        protected SellerPremiumService $premiumService
+        protected SellerPremiumService $premiumService,
+        protected AuthorDirectoryService $authorDirectory
     )
     {
         $this->middleware('auth:seller');
@@ -736,11 +738,13 @@ public function updateProductStatus(Request $request)
             $request->input('name'),
             $request->input('author')
         );
+        $author = $this->authorDirectory->resolveOrCreateByName($request->input('author'));
 
         $book = Books::create([
             'seller_id' => $storeSellerId,
             'name' => $request->input('name'),
-            'author' => $request->input('author'),
+            'author' => $author?->name ?: $request->input('author'),
+            'author_id' => $author?->id,
             'isbn' => $canonicalIsbn,
             'pages' => $request->input('pages'),
             'lang' => $request->input('language'),
@@ -909,11 +913,13 @@ public function updateProductStatus(Request $request)
         ]
     );
     $autoApproved = !$sensitiveChanged;
+    $author = $this->authorDirectory->resolveOrCreateByName($request->author);
 
     // Mahsulotni yangilash
     $product->update([
         'name' => $request->name,
-        'author' => $request->author,
+        'author' => $author?->name ?: $request->author,
+        'author_id' => $author?->id,
         'isbn' => $canonicalIsbn,
         'pages' => $request->pages,
         'lang' => $request->language,

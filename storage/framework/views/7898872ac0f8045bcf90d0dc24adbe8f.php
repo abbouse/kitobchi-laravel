@@ -41,7 +41,7 @@
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
             <div class="font-semibold"><?php echo e($book->name); ?></div>
-            <div class="text-xs text-gray-500"><?php echo e($book->author ?: '—'); ?></div>
+            <div class="text-xs text-gray-500"><?php echo e($book->authorProfile?->name ?: ($book->author ?: '—')); ?></div>
           </div>
           <span class="badge <?php echo e($statusLabel === 'active' ? 'badge-success' : ($statusLabel === 'pending' ? 'badge-warning' : 'badge-danger')); ?>"><?php echo e($statusLabel); ?></span>
         </div>
@@ -71,7 +71,7 @@
               $statusLabel = (int) ($book->is_approved ?? 0) === 1 ? 'active' : ((int) ($book->is_approved ?? 0) === 2 ? 'banned' : 'pending');
             ?>
             <tr>
-              <td><div class="font-semibold"><?php echo e($book->name); ?></div><div class="text-xs text-gray-500"><?php echo e($book->author ?: '—'); ?></div></td>
+              <td><div class="font-semibold"><?php echo e($book->name); ?></div><div class="text-xs text-gray-500"><?php echo e($book->authorProfile?->name ?: ($book->author ?: '—')); ?></div></td>
               <td><?php echo e($book->category?->name_uz ?: '—'); ?></td>
               <td><?php echo e(number_format((float) $book->price, 0)); ?> UZS</td>
               <td><?php echo e((int) ($book->count ?? 0)); ?></td>

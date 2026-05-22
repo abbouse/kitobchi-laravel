@@ -263,11 +263,12 @@ class SearchController extends Controller
 
         return Cache::remember($cacheKey, now()->addMinutes(30), function () use ($sellerId, $categoryId, $minPrice, $maxPrice) {
             return $this->visibleBooks([])
+                ->with('authorProfile:id,name')
                 ->when($sellerId, fn ($q) => $q->where('seller_id', $sellerId))
                 ->when($categoryId, fn ($q) => $q->where('category_id', $categoryId))
                 ->when($minPrice !== null, fn ($q) => $q->where('price', '>=', $minPrice))
                 ->when($maxPrice !== null, fn ($q) => $q->where('price', '<=', $maxPrice))
-                ->select('id', 'name', 'author', 'totalSalesWeek', 'totalSales')
+                ->select('id', 'name', 'author_id', 'totalSalesWeek', 'totalSales')
                 ->orderByDesc('totalSalesWeek')
                 ->orderByDesc('totalSales')
                 ->limit(2500)
@@ -795,20 +796,25 @@ class SearchController extends Controller
             $bool       = $analyzed['boolean'];
             $searchTerm = '%' . mb_strtolower($rawQuery) . '%';
 
-            $hasFulltext = $this->hasFulltextIndex('books', ['name', 'author', 'description']);
+            $authorColumnAvailable = Books::hasAuthorColumn();
+            $fulltextColumns = $authorColumnAvailable
+                ? ['name', 'author', 'description']
+                : ['name', 'description'];
+            $matchColumnsSql = implode(', ', $fulltextColumns);
+            $hasFulltext = $this->hasFulltextIndex('books', $fulltextColumns);
 
             if ($hasFulltext) {
-                $q->where(function ($w) use ($bool, $searchTerm) {
+                $q->where(function ($w) use ($bool, $searchTerm, $matchColumnsSql) {
                     $w->whereRaw(
-                        "MATCH(name, author, description) AGAINST(? IN BOOLEAN MODE)", [$bool]
+                        "MATCH({$matchColumnsSql}) AGAINST(? IN BOOLEAN MODE)", [$bool]
                     )->orWhere(fn($or) => $or
                         ->where('name', 'LIKE', $searchTerm)
-                        ->orWhere('author', 'LIKE', $searchTerm)
+                        ->orWhereHas('authorProfile', fn ($authorQuery) => $authorQuery->where('name', 'LIKE', $searchTerm))
                         ->orWhere('description', 'LIKE', $searchTerm)
                     );
                 })->selectRaw(
                     "books.*,
-                     MATCH(name, author, description) AGAINST(? IN BOOLEAN MODE) * 10 +
+                     MATCH({$matchColumnsSql}) AGAINST(? IN BOOLEAN MODE) * 10 +
                      LEAST(totalSalesWeek * 3, 300) +
                      LEAST(totalSales, 100) AS relevance_score",
                     [$bool]
@@ -816,7 +822,7 @@ class SearchController extends Controller
             } else {
                 $q->where(fn($w) => $w
                     ->where('name', 'LIKE', $searchTerm)
-                    ->orWhere('author', 'LIKE', $searchTerm)
+                    ->orWhereHas('authorProfile', fn ($authorQuery) => $authorQuery->where('name', 'LIKE', $searchTerm))
                     ->orWhere('description', 'LIKE', $searchTerm)
                 )->selectRaw(
                     "books.*,
@@ -935,6 +941,7 @@ class SearchController extends Controller
 
         // ── Kitoblar: nom + muallif + teglar ─────────────────────────
         $bookQuery = $this->visibleBooks(['tags'])
+            ->with('authorProfile:id,name')
             ->when($sellerId, fn($q) => $q->where('seller_id', $sellerId))
             ->where(function ($w) use ($patterns) {
                 $w->where(function ($nameAuthor) use ($patterns) {
@@ -943,7 +950,7 @@ class SearchController extends Controller
                         $method = $i === 0 ? 'where' : 'orWhere';
                         $nameAuthor->$method(function ($inner) use ($p) {
                             $inner->where('name', 'LIKE', $p)
-                                  ->orWhere('author', 'LIKE', $p);
+                                  ->orWhereHas('authorProfile', fn ($authorQuery) => $authorQuery->where('name', 'LIKE', $p));
                         });
                     }
                 })->orWhereHas('tags', function ($t) use ($patterns) {
@@ -961,7 +968,7 @@ class SearchController extends Controller
                     });
                 });
             })
-            ->select('name', 'author')
+            ->select('name', 'author_id')
             ->orderByDesc('totalSalesWeek')
             ->limit(8)
             ->get();
@@ -1301,16 +1308,28 @@ class SearchController extends Controller
             if (in_array($type, ['book', 'all'])) {
                 $books = $this->visibleBooks(['category', 'seller', 'tags'])
                     ->where(function ($q) use ($analyzed, $combinedQuery) {
-                        $q->whereRaw(
-                            "MATCH(name, author, description) AGAINST(? IN NATURAL LANGUAGE MODE)",
-                            [$analyzed['boolean']]
-                        )
-                        ->orWhereRaw(
-                            "MATCH(name, author, description) AGAINST(? IN NATURAL LANGUAGE MODE)",
-                            [$combinedQuery]
-                        )
-                        ->orWhere('name', 'LIKE', "%{$combinedQuery}%")
-                        ->orWhere('author', 'LIKE', "%{$combinedQuery}%");
+                        if (Books::hasAuthorColumn()) {
+                            $q->whereRaw(
+                                "MATCH(name, author, description) AGAINST(? IN NATURAL LANGUAGE MODE)",
+                                [$analyzed['boolean']]
+                            )
+                            ->orWhereRaw(
+                                "MATCH(name, author, description) AGAINST(? IN NATURAL LANGUAGE MODE)",
+                                [$combinedQuery]
+                            );
+                        } else {
+                            $q->whereRaw(
+                                "MATCH(name, description) AGAINST(? IN NATURAL LANGUAGE MODE)",
+                                [$analyzed['boolean']]
+                            )
+                            ->orWhereRaw(
+                                "MATCH(name, description) AGAINST(? IN NATURAL LANGUAGE MODE)",
+                                [$combinedQuery]
+                            );
+                        }
+
+                        $q->orWhere('name', 'LIKE', "%{$combinedQuery}%")
+                          ->orWhereHas('authorProfile', fn ($authorQuery) => $authorQuery->where('name', 'LIKE', "%{$combinedQuery}%"));
                     })
                     ->orderByDesc('totalSalesWeek')
                     ->limit(14)

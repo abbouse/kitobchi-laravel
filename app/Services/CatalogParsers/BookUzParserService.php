@@ -8,6 +8,7 @@ use App\Models\Books;
 use App\Models\CatalogParserItem;
 use App\Models\Publisher;
 use App\Models\Seller;
+use App\Services\AuthorDirectoryService;
 use App\Services\OpenAIService;
 use App\Support\ProductImageVariantGenerator;
 use DOMDocument;
@@ -105,12 +106,14 @@ class BookUzParserService
                 ? Books::query()->find($item->imported_book_id)
                 : null;
             $publisherId = $this->resolvePublisherId($item->publisher);
+            $author = $this->resolveAuthor($item->author);
 
             Log::info('[book_uz_import] resolved_context', [
                 'parser_item_id' => $item->id,
                 'category_id' => $category->id,
                 'seller_id' => $seller->id,
                 'publisher_id' => $publisherId,
+                'author_id' => $author?->id,
             ]);
 
             if (! $book && $item->matched_book_id) {
@@ -161,6 +164,14 @@ class BookUzParserService
                     $updatePayload['translator'] = $item->translator;
                 }
 
+                if ($this->booksTableHasColumn('author_id')) {
+                    $updatePayload['author_id'] = $author?->id;
+                }
+
+                if ($author?->name) {
+                    $updatePayload['author'] = $author->name;
+                }
+
                 $book->update($updatePayload);
 
                 $item->forceFill([
@@ -182,7 +193,7 @@ class BookUzParserService
 
             $payload = [
                 'name' => $item->title ?: 'Nomsiz kitob',
-                'author' => $item->author ?: 'Nomaʼlum muallif',
+                'author' => $author?->name ?: ($item->author ?: 'Nomaʼlum muallif'),
                 'isbn' => $this->normalizeNumericIsbn($item->isbn),
                 'category_id' => $category->id,
                 'seller_id' => $seller->id,
@@ -218,6 +229,10 @@ class BookUzParserService
 
             if ($this->booksTableHasColumn('publisher_id')) {
                 $payload['publisher_id'] = $publisherId;
+            }
+
+            if ($this->booksTableHasColumn('author_id')) {
+                $payload['author_id'] = $author?->id;
             }
 
             if ($book) {
@@ -315,6 +330,11 @@ class BookUzParserService
         throw new \RuntimeException('Bu kitob uchun import kategoriyasi topilmadi. AI tavsiyasi yo‘q yoki ichki kategoriya bilan moslashmadi.');
     }
 
+    private function resolveAuthor(?string $name): ?\App\Models\Author
+    {
+        return app(AuthorDirectoryService::class)->resolveOrCreateByName($name);
+    }
+
     private function booksTableHasColumn(string $column): bool
     {
         if ($this->booksTableColumns === null) {
@@ -330,6 +350,10 @@ class BookUzParserService
         if ($sourceUrl === '') {
             throw new \RuntimeException('Mahsulot source_url aniqlanmadi.');
         }
+
+        $authorResolution = $this->resolvePayloadAuthor($payload);
+        $payload['author'] = $authorResolution['author'];
+        $payload['payload']['author_resolution'] = $authorResolution;
 
         $normalizedTitle = $this->normalizeComparableText($payload['title'] ?? null);
         $normalizedAuthor = $this->normalizeComparableText($payload['author'] ?? null);
@@ -376,6 +400,66 @@ class BookUzParserService
                 'last_import_error' => null,
             ]
         );
+    }
+
+    private function resolvePayloadAuthor(array $payload): array
+    {
+        $author = $this->cleanField($payload['author'] ?? null);
+        if ($author) {
+            return [
+                'author' => $author,
+                'method' => 'catalog',
+                'reason' => 'catalog_author_found',
+            ];
+        }
+
+        try {
+            /** @var OpenAIService $ai */
+            $ai = app(OpenAIService::class);
+
+            $result = $ai->askJsonWithMessages([
+                [
+                    'role' => 'system',
+                    'content' => "Sen kitob katalogi uchun ehtiyotkor muallif aniqlovchi bo'lasan. Faqat JSON qaytar. Agar metadata ichida muallifni ishonch bilan aniqlab bo'lmasa, author_name ni null qil. Taxminiy yoki uydirma muallif qaytarma.",
+                ],
+                [
+                    'role' => 'user',
+                    'content' => json_encode([
+                        'task' => 'Infer the most likely author for this book only if the metadata clearly supports it.',
+                        'book' => [
+                            'title' => $payload['title'] ?? null,
+                            'description' => Str::limit((string) ($payload['description'] ?? ''), 900, ''),
+                            'source_category' => $payload['source_category'] ?? null,
+                            'publisher' => $payload['publisher'] ?? null,
+                            'translator' => $payload['translator'] ?? null,
+                            'language' => $payload['language'] ?? null,
+                            'genres' => data_get($payload, 'payload.genres', []),
+                            'tags' => data_get($payload, 'payload.tags', []),
+                            'source_url' => $payload['source_url'] ?? null,
+                        ],
+                        'output_schema' => [
+                            'author_name' => 'string|null',
+                            'reason' => 'string',
+                        ],
+                    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                ],
+            ], 300, 0.1);
+
+            $author = $this->cleanField($result['author_name'] ?? null);
+
+            return [
+                'author' => $author,
+                'method' => $author ? 'ai' : 'fallback',
+                'reason' => $result['reason'] ?? ($author ? 'ai_author_detected' : 'ai_author_missing'),
+                'raw' => $result,
+            ];
+        } catch (\Throwable) {
+            return [
+                'author' => null,
+                'method' => 'fallback',
+                'reason' => 'ai_failed',
+            ];
+        }
     }
 
     private function discoverProductUrls(?int $limit = null): array

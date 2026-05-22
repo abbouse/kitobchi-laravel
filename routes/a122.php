@@ -35,6 +35,7 @@ use App\Http\Controllers\A122\SettingsController;
 use App\Http\Controllers\A122\LogisticsController;
 use App\Http\Controllers\A122\HubController;
 use App\Http\Controllers\A122\ParserController;
+use App\Http\Controllers\A122\AuthorController;
 use App\Http\Controllers\A122\PublisherController;
 use App\Http\Controllers\A122\BloggerController;
 
@@ -94,6 +95,17 @@ Route::prefix('a122')->name('admin.')->group(function () {
         Route::get('/{publisher}/edit', [PublisherController::class, 'edit'])->name('edit');
         Route::put('/{publisher}', [PublisherController::class, 'update'])->name('update');
         Route::delete('/{publisher}', [PublisherController::class, 'destroy'])->name('destroy');
+    });
+
+    Route::prefix('authors')->name('authors.')->group(function () {
+        Route::get('/', [AuthorController::class, 'index'])->name('index');
+        Route::get('/create', [AuthorController::class, 'create'])->name('create');
+        Route::post('/', [AuthorController::class, 'store'])->name('store');
+        Route::get('/{author}/edit', [AuthorController::class, 'edit'])->name('edit');
+        Route::put('/{author}', [AuthorController::class, 'update'])->name('update');
+        Route::delete('/{author}', [AuthorController::class, 'destroy'])->name('destroy');
+        Route::post('/sync-book-uz', [AuthorController::class, 'syncBookUz'])->name('sync-book-uz');
+        Route::post('/backfill-books', [AuthorController::class, 'backfillBooks'])->name('backfill-books');
     });
 
     Route::prefix('bloggers')->name('bloggers.')->group(function () {

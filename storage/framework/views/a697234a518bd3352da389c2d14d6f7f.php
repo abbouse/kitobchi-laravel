@@ -6,6 +6,7 @@
     ]],
     ['title' => 'Katalog', 'items' => [
       ['label' => 'Kitoblar', 'route' => 'admin.books.index', 'icon' => 'book'],
+      ['label' => 'Mualliflar', 'route' => 'admin.authors.index', 'icon' => 'pen'],
       ['label' => 'Nashriyotlar', 'route' => 'admin.publishers.index', 'icon' => 'building'],
       ['label' => 'Parser', 'route' => 'admin.parsers.index', 'icon' => 'database-down'],
       ['label' => 'Kanstovar', 'route' => 'admin.stationery.index', 'icon' => 'pencil-square'],

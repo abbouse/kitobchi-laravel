@@ -197,6 +197,13 @@
                     </div>
                     <h3 class="h5 mb-1">{{ $item->title ?: 'Nomsiz' }}</h3>
                     <div class="text-secondary small">{{ $item->author ?: 'Muallif ko‘rsatilmagan' }}</div>
+                    @if(data_get($item->payload, 'author_resolution.method'))
+                      <div class="mt-1">
+                        <span class="badge rounded-pill text-bg-light border">
+                          Muallif: {{ strtoupper((string) data_get($item->payload, 'author_resolution.method')) }}
+                        </span>
+                      </div>
+                    @endif
                   </div>
                   <label class="form-check mt-1">
                     <input class="form-check-input parser-item-checkbox" type="checkbox" name="item_ids[]" value="{{ $item->id }}" form="bulk-import-form">

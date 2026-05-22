@@ -373,12 +373,12 @@ class ChatBotController extends Controller
             ->where('is_hidden', 0)
             ->whereNotNull('vectorData')
             ->whereHas('seller', fn($s) => $s->where('status', 'approved')->where('is_hidden', 0))
-            ->with(['category', 'seller', 'tags']);
+            ->with(['category', 'seller', 'tags', 'authorProfile']);
 
         if (!$fallback) {
             if ($filters['category_id'])      $q->where('category_id', $filters['category_id']);
             if (!empty($filters['tag_ids']))  $q->whereHas('tags', fn($t) => $t->whereIn('book_tags.id', $filters['tag_ids']));
-            if ($filters['author'])           $q->where('author', 'LIKE', "%{$filters['author']}%");
+            if ($filters['author'])           $q->whereHas('authorProfile', fn($authorQuery) => $authorQuery->where('name', 'LIKE', "%{$filters['author']}%"));
             if ($filters['lang'])             $q->where('lang', $filters['lang']);
             if ($filters['price_range'])      $q->whereBetween('price', $filters['price_range']);
 

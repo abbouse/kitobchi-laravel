@@ -20,7 +20,7 @@
 <?php endif; ?>
 <?php $component->withAttributes(['back-href' => ''.e(route('admin.books.index')).'']); ?>
      <?php $__env->slot('heading', null, []); ?> <?php echo e($book->name); ?> <?php $__env->endSlot(); ?>
-     <?php $__env->slot('meta', null, []); ?> <?php echo e($book->author ?: 'Muallif ko‘rsatilmagan'); ?><?php echo e($book->translator ? ' · Tarjimon: '.$book->translator : ''); ?> · <?php echo e($book->category?->name_uz ?: 'Kategoriya yo‘q'); ?><?php echo e($book->publisher?->name ? ' · '.$book->publisher->name : ''); ?> <?php $__env->endSlot(); ?>
+     <?php $__env->slot('meta', null, []); ?> <?php echo e($book->authorProfile?->name ?: ($book->author ?: 'Muallif ko‘rsatilmagan')); ?><?php echo e($book->translator ? ' · Tarjimon: '.$book->translator : ''); ?> · <?php echo e($book->category?->name_uz ?: 'Kategoriya yo‘q'); ?><?php echo e($book->publisher?->name ? ' · '.$book->publisher->name : ''); ?> <?php $__env->endSlot(); ?>
      <?php $__env->slot('actions', null, []); ?> 
       <a href="<?php echo e(route('admin.books.edit', $book)); ?>" class="btn-p primary"><i class="bi bi-pencil-square"></i> Tahrirlash</a>
      <?php $__env->endSlot(); ?>

@@ -44,10 +44,9 @@ trait HasProductVisibility
     protected function visibleBooks(array $with = []): \Illuminate\Database\Eloquent\Builder
     {
         $q = Books::query();
+        $with = array_values(array_unique(array_merge($with, ['authorProfile'])));
 
-        if (!empty($with)) {
-            $q->with($with);
-        }
+        $q->with($with);
 
         return $q
             ->where('status', true)

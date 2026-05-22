@@ -12,7 +12,7 @@
   @endphp
   <x-a122.page-header back-href="{{ route('admin.books.index') }}">
     <x-slot name="heading">{{ $book->name }}</x-slot>
-    <x-slot name="meta">{{ $book->author ?: 'Muallif ko‘rsatilmagan' }}{{ $book->translator ? ' · Tarjimon: '.$book->translator : '' }} · {{ $book->category?->name_uz ?: 'Kategoriya yo‘q' }}{{ $book->publisher?->name ? ' · '.$book->publisher->name : '' }}</x-slot>
+    <x-slot name="meta">{{ $book->authorProfile?->name ?: ($book->author ?: 'Muallif ko‘rsatilmagan') }}{{ $book->translator ? ' · Tarjimon: '.$book->translator : '' }} · {{ $book->category?->name_uz ?: 'Kategoriya yo‘q' }}{{ $book->publisher?->name ? ' · '.$book->publisher->name : '' }}</x-slot>
     <x-slot name="actions">
       <a href="{{ route('admin.books.edit', $book) }}" class="btn-p primary"><i class="bi bi-pencil-square"></i> Tahrirlash</a>
     </x-slot>

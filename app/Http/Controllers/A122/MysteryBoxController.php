@@ -32,13 +32,14 @@ class MysteryBoxController extends Controller
         }
 
         $booksQuery = Books::query()
+            ->with('authorProfile:id,name')
             ->where('is_hidden', 0)
             ->where('is_approved', 1)
             ->when(!empty($ids), fn ($query) => $query->whereIn('id', $ids))
             ->when($q !== '', function ($query) use ($q) {
                 $query->where(function ($inner) use ($q) {
                     $inner->where('name', 'like', "%{$q}%")
-                        ->orWhere('author', 'like', "%{$q}%");
+                        ->orWhereHas('authorProfile', fn ($authorQuery) => $authorQuery->where('name', 'like', "%{$q}%"));
 
                     if (ctype_digit($q)) {
                         $inner->orWhere('id', (int) $q);
@@ -49,7 +50,7 @@ class MysteryBoxController extends Controller
         $books = $booksQuery
             ->orderByDesc('totalSales')
             ->limit(!empty($ids) ? count($ids) : 12)
-            ->get(['id', 'name', 'author', 'count', 'images']);
+            ->get(['id', 'name', 'author_id', 'count', 'images']);
 
         return response()->json([
             'status' => 'success',

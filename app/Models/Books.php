@@ -5,16 +5,20 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Schema;
 
 class Books extends Model
 {
     use HasFactory;
+
+    protected static ?bool $hasAuthorColumnCache = null;
 
     protected $table = 'books';
 
     protected $fillable = [
         'name',
         'author',
+        'author_id',
         'translator',
         'isbn',
         'category_id',
@@ -100,6 +104,44 @@ class Books extends Model
     public function publisher(): BelongsTo
     {
         return $this->belongsTo(Publisher::class, 'publisher_id');
+    }
+
+    public function authorProfile(): BelongsTo
+    {
+        return $this->belongsTo(Author::class, 'author_id');
+    }
+
+    public static function hasAuthorColumn(): bool
+    {
+        if (self::$hasAuthorColumnCache === null) {
+            self::$hasAuthorColumnCache = Schema::hasColumn('books', 'author');
+        }
+
+        return self::$hasAuthorColumnCache;
+    }
+
+    public function getAuthorAttribute($value): ?string
+    {
+        $related = $this->relationLoaded('authorProfile')
+            ? $this->getRelation('authorProfile')
+            : $this->authorProfile;
+
+        if ($related?->name) {
+            return $related->name;
+        }
+
+        $raw = is_string($value) ? trim($value) : '';
+        return $raw !== '' ? $raw : null;
+    }
+
+    public function setAuthorAttribute($value): void
+    {
+        if (! self::hasAuthorColumn()) {
+            return;
+        }
+
+        $raw = trim((string) $value);
+        $this->attributes['author'] = $raw !== '' ? $raw : null;
     }
 
     /**

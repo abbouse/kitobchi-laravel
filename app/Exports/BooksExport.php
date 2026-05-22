@@ -13,10 +13,12 @@ class BooksExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSiz
  
     public function query()
     {
-        $q = Books::with(['category','seller']);
+        $q = Books::with(['category','seller', 'authorProfile']);
         if (!empty($this->filters['search'])) {
             $s = $this->filters['search'];
-            $q->where(fn($x) => $x->where('name','like',"%$s%")->orWhere('author','like',"%$s%"));
+            $q->where(fn($x) => $x
+                ->where('name','like',"%$s%")
+                ->orWhereHas('authorProfile', fn ($authorQuery) => $authorQuery->where('name', 'like', "%$s%")));
         }
         if (!empty($this->filters['tab']) && $this->filters['tab'] !== 'all') {
             $map = ['pending'=>0,'approved'=>1,'rejected'=>2];

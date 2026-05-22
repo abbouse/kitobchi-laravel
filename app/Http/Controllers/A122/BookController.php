@@ -9,6 +9,7 @@ use App\Models\Publisher;
 use App\Models\Seller;
 use App\Models\SellerOrder;
 use App\Models\Sold;
+use App\Services\AuthorDirectoryService;
 use App\Support\ProductImageUrls;
 use App\Support\ProductImageVariantGenerator;
 use Illuminate\Http\Request;
@@ -16,6 +17,11 @@ use Illuminate\Support\Facades\Storage;
 
 class BookController extends Controller
 {
+    public function __construct(
+        protected AuthorDirectoryService $authorDirectory
+    ) {
+    }
+
     private function parseImagesText(?string $raw): array
     {
         if (! is_string($raw) || trim($raw) === '') {
@@ -31,7 +37,7 @@ class BookController extends Controller
 
     public function index(Request $request)
     {
-        $query = Books::with(['category', 'publisher']);
+        $query = Books::with(['category', 'publisher', 'authorProfile']);
         $tab = $request->input('tab', 'pending');
 
         match ($tab) {
@@ -44,7 +50,7 @@ class BookController extends Controller
         if ($search = $request->input('search')) {
             $query->where(fn ($q) => $q
                 ->where('name', 'like', "%{$search}%")
-                ->orWhere('author', 'like', "%{$search}%")
+                ->orWhereHas('authorProfile', fn ($authorQuery) => $authorQuery->where('name', 'like', "%{$search}%"))
                 ->orWhere('id', $search));
         }
 
@@ -60,7 +66,7 @@ class BookController extends Controller
             return [
                 'id' => $b->id,
                 'title' => $b->name,
-                'author' => $b->author ?: '—',
+                'author' => $b->authorProfile?->name ?: ($b->author ?: '—'),
                 'category' => $b->category?->name_uz ?: '—',
                 'price' => number_format((float) $b->price, 0).' UZS',
                 'stock' => (int) ($b->count ?? 0),
@@ -132,6 +138,9 @@ class BookController extends Controller
         $data['status'] = $request->boolean('status', true);
         $data['is_hidden'] = $request->boolean('is_hidden', false);
         $data['recommended'] = $request->boolean('recommended', false);
+        $author = $this->authorDirectory->resolveOrCreateByName($request->input('author'));
+        $data['author_id'] = $author?->id;
+        $data['author'] = $author?->name ?: trim((string) $request->input('author'));
 
         $book = Books::create($data);
         return redirect()->route('admin.books.show', $book)->with('success', 'Yangi kitob yaratildi.');
@@ -139,7 +148,7 @@ class BookController extends Controller
 
     public function show(Books $book)
     {
-        $book->load(['category', 'seller', 'publisher']);
+        $book->load(['category', 'seller', 'publisher', 'authorProfile']);
         $images = collect($book->images ?? [])
             ->filter(fn ($image) => is_string($image) && trim($image) !== '')
             ->map(fn (string $image) => ProductImageUrls::originalUrl($image))
@@ -237,6 +246,9 @@ class BookController extends Controller
         $data['status'] = $request->boolean('status', true);
         $data['is_hidden'] = $request->boolean('is_hidden', false);
         $data['recommended'] = $request->boolean('recommended', false);
+        $author = $this->authorDirectory->resolveOrCreateByName($request->input('author'));
+        $data['author_id'] = $author?->id;
+        $data['author'] = $author?->name ?: trim((string) $request->input('author'));
 
         $book->update($data);
         return redirect()->route('admin.books.show', $book)->with('success', "Kitob yangilandi.");
