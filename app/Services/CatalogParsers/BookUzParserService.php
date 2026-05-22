@@ -16,6 +16,8 @@ use DOMXPath;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -25,6 +27,7 @@ class BookUzParserService
     public const SELLER_ID = 55;
     private const BASE_URL = 'https://book.uz';
     private const USER_API_BASE_URL = 'https://backend.book.uz/user-api';
+    private ?array $booksTableColumns = null;
 
     public function syncCatalog(?int $limit = null, ?string $singleUrl = null): array
     {
@@ -83,16 +86,32 @@ class BookUzParserService
         ];
     }
 
-    public function importItem(CatalogParserItem $item, int $categoryId): Books
+    public function importItem(CatalogParserItem $item, ?int $categoryId = null): Books
     {
+        Log::info('[book_uz_import] start', [
+            'parser_item_id' => $item->id,
+            'title' => $item->title,
+            'requested_category_id' => $categoryId,
+            'suggested_category_id' => $item->suggested_category_id,
+            'matched_book_id' => $item->matched_book_id,
+            'imported_book_id' => $item->imported_book_id,
+        ]);
+
         $seller = Seller::query()->findOrFail(self::SELLER_ID);
-        $category = BookCategories::query()->findOrFail($categoryId);
+        $category = $this->resolveImportCategory($item, $categoryId);
 
         return DB::transaction(function () use ($item, $seller, $category) {
             $book = $item->imported_book_id
                 ? Books::query()->find($item->imported_book_id)
                 : null;
             $publisherId = $this->resolvePublisherId($item->publisher);
+
+            Log::info('[book_uz_import] resolved_context', [
+                'parser_item_id' => $item->id,
+                'category_id' => $category->id,
+                'seller_id' => $seller->id,
+                'publisher_id' => $publisherId,
+            ]);
 
             if (! $book && $item->matched_book_id) {
                 $book = Books::query()->find($item->matched_book_id);
@@ -110,11 +129,18 @@ class BookUzParserService
             $description = $this->buildImportDescription($item);
             $existingVectorData = is_array($book?->vectorData) ? $book->vectorData : [];
 
+            Log::info('[book_uz_import] payload_ready', [
+                'parser_item_id' => $item->id,
+                'resolved_book_id' => $book?->id,
+                'images_count' => count($images),
+                'has_translator' => filled($item->translator),
+                'has_publisher' => filled($item->publisher),
+            ]);
+
             if ($book) {
                 $normalizedIsbn = $this->normalizeNumericIsbn($item->isbn);
                 $updatePayload = [
                     'isbn' => $normalizedIsbn,
-                    'publisher_id' => $publisherId,
                     'vectorData' => array_merge($existingVectorData, [
                         'parser' => [
                             'provider' => self::PROVIDER,
@@ -127,7 +153,11 @@ class BookUzParserService
                     ]),
                 ];
 
-                if (blank($book->translator) && filled($item->translator)) {
+                if ($this->booksTableHasColumn('publisher_id')) {
+                    $updatePayload['publisher_id'] = $publisherId;
+                }
+
+                if ($this->booksTableHasColumn('translator') && blank($book->translator) && filled($item->translator)) {
                     $updatePayload['translator'] = $item->translator;
                 }
 
@@ -142,17 +172,20 @@ class BookUzParserService
 
                 $this->attachSuggestedTags($book, $item);
 
+                Log::info('[book_uz_import] existing_book_updated', [
+                    'parser_item_id' => $item->id,
+                    'book_id' => $book->id,
+                ]);
+
                 return $book;
             }
 
             $payload = [
                 'name' => $item->title ?: 'Nomsiz kitob',
                 'author' => $item->author ?: 'Nomaʼlum muallif',
-                'translator' => $item->translator,
                 'isbn' => $this->normalizeNumericIsbn($item->isbn),
                 'category_id' => $category->id,
                 'seller_id' => $seller->id,
-                'publisher_id' => $publisherId,
                 'description' => $description,
                 'images' => $images,
                 'price' => (int) ($item->price_uzs ?? 0),
@@ -179,6 +212,14 @@ class BookUzParserService
                 ]),
             ];
 
+            if ($this->booksTableHasColumn('translator')) {
+                $payload['translator'] = $item->translator;
+            }
+
+            if ($this->booksTableHasColumn('publisher_id')) {
+                $payload['publisher_id'] = $publisherId;
+            }
+
             if ($book) {
                 $book->update($payload);
             } else {
@@ -193,11 +234,16 @@ class BookUzParserService
                 'last_import_error' => null,
             ])->save();
 
+            Log::info('[book_uz_import] created', [
+                'parser_item_id' => $item->id,
+                'book_id' => $book->id,
+            ]);
+
             return $book;
         });
     }
 
-    public function importMany(iterable $items, int $categoryId): array
+    public function importMany(iterable $items, ?int $categoryId = null): array
     {
         $imported = 0;
         $failed = 0;
@@ -217,6 +263,65 @@ class BookUzParserService
         }
 
         return compact('imported', 'failed', 'errors');
+    }
+
+    private function resolveImportCategory(CatalogParserItem $item, ?int $categoryId = null): BookCategories
+    {
+        if ($categoryId) {
+            return BookCategories::query()->findOrFail($categoryId);
+        }
+
+        if ($item->suggested_category_id) {
+            $suggested = BookCategories::query()->find($item->suggested_category_id);
+            if ($suggested) {
+                return $suggested;
+            }
+        }
+
+        $sourceCategory = $this->cleanField($item->source_category);
+        $normalizedSourceCategory = $this->normalizeComparableText($sourceCategory);
+
+        if ($normalizedSourceCategory) {
+            $matched = BookCategories::query()
+                ->where('is_active', true)
+                ->get(['id', 'name_uz', 'name_ru', 'name_en', 'name_ja'])
+                ->first(function ($candidate) use ($normalizedSourceCategory) {
+                    $names = array_filter([
+                        $candidate->name_uz,
+                        $candidate->name_ru,
+                        $candidate->name_en,
+                        $candidate->name_ja,
+                    ]);
+
+                    foreach ($names as $name) {
+                        $normalizedName = $this->normalizeComparableText($name);
+                        if ($normalizedName && (
+                            $normalizedName === $normalizedSourceCategory
+                            || str_contains($normalizedSourceCategory, $normalizedName)
+                            || str_contains($normalizedName, $normalizedSourceCategory)
+                        )) {
+                            return true;
+                        }
+                    }
+
+                    return false;
+                });
+
+            if ($matched) {
+                return BookCategories::query()->findOrFail($matched->id);
+            }
+        }
+
+        throw new \RuntimeException('Bu kitob uchun import kategoriyasi topilmadi. AI tavsiyasi yo‘q yoki ichki kategoriya bilan moslashmadi.');
+    }
+
+    private function booksTableHasColumn(string $column): bool
+    {
+        if ($this->booksTableColumns === null) {
+            $this->booksTableColumns = Schema::getColumnListing('books');
+        }
+
+        return in_array($column, $this->booksTableColumns, true);
     }
 
     private function syncParsedPayload(array $payload): void

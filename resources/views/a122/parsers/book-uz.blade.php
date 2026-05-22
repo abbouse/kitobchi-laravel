@@ -144,17 +144,16 @@
 
     <form id="bulk-import-form" method="POST" action="{{ route('admin.parsers.book-uz.import-selected') }}">
       @csrf
-      <input type="hidden" name="category_id" value="{{ $selectedCategoryId }}">
       <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
         <div>
           <h2 class="h5 mb-1">Topilgan kitoblar</h2>
-          <p class="text-secondary mb-0">Har bir kitob uchun barcha asosiy metadata, stock holati va rasm preview ko‘rinadi.</p>
+          <p class="text-secondary mb-0">Har bir kitob uchun barcha asosiy metadata, stock holati va rasm preview ko‘rinadi. Import paytida AI tavsiya qilgan kategoriya avtomatik ishlaydi, select esa faqat override uchun.</p>
         </div>
         <div class="d-flex flex-wrap gap-2 align-items-end">
           <div class="parser-import-category">
-            <label class="form-label mb-2">Bazaga qo‘shish kategoriyasi</label>
+            <label class="form-label mb-2">Kategoriya override</label>
             <select id="parser-import-category" name="category_id" class="form-select">
-              <option value="">Avval kategoriyani tanlang</option>
+              <option value="">AI tavsiya qilgan kategoriyani ishlatish</option>
               @foreach($categories as $category)
                 <option value="{{ $category->id }}" @selected($selectedCategoryId === (string) $category->id)>{{ $category->name_uz }}</option>
               @endforeach
@@ -244,6 +243,13 @@
 
                 @if($item->description)
                   <p class="parser-description">{{ \Illuminate\Support\Str::limit($item->description, 220) }}</p>
+                @endif
+
+                @if($item->last_import_error)
+                  <div class="alert alert-danger border-0 rounded-4 py-2 px-3 mt-3 mb-0">
+                    <div class="fw-semibold small mb-1">So‘nggi import xatosi</div>
+                    <div class="small">{{ \Illuminate\Support\Str::limit($item->last_import_error, 260) }}</div>
+                  </div>
                 @endif
 
                 @if($item->matchedBook || $item->importedBook)
@@ -515,11 +521,6 @@
 
       document.querySelectorAll('.js-parser-category-hidden').forEach((input) => {
         input.value = value;
-      });
-
-      document.querySelectorAll('.js-parser-import-submit').forEach((button) => {
-        button.disabled = value === '';
-        button.classList.toggle('disabled', value === '');
       });
     };
 

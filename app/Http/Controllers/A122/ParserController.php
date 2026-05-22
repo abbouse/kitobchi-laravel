@@ -133,10 +133,20 @@ class ParserController extends Controller
         abort_unless($item->provider === BookUzParserService::PROVIDER, 404);
 
         $validated = $request->validate([
-            'category_id' => ['required', 'integer', 'exists:book_categories,id'],
+            'category_id' => ['nullable', 'integer', 'exists:book_categories,id'],
         ]);
 
-        $book = $this->bookUzParserService->importItem($item, (int) $validated['category_id']);
+        try {
+            $book = $this->bookUzParserService->importItem($item, isset($validated['category_id']) ? (int) $validated['category_id'] : null);
+        } catch (\Throwable $e) {
+            $item->forceFill([
+                'last_import_error' => \Illuminate\Support\Str::limit($e->getMessage(), 65000),
+            ])->save();
+
+            return back()
+                ->with('warning', 'Mahsulotni bazaga qo‘shishda xatolik bo‘ldi.')
+                ->with('parser_errors', [$item->title . ' — ' . $e->getMessage()]);
+        }
 
         return back()->with('success', "Mahsulot bazaga qo‘shildi: #{$book->id} {$book->name}");
     }
@@ -144,7 +154,7 @@ class ParserController extends Controller
     public function importBookUzSelected(Request $request)
     {
         $validated = $request->validate([
-            'category_id' => ['required', 'integer', 'exists:book_categories,id'],
+            'category_id' => ['nullable', 'integer', 'exists:book_categories,id'],
             'item_ids' => ['required', 'array', 'min:1'],
             'item_ids.*' => ['integer'],
         ]);
@@ -154,11 +164,19 @@ class ParserController extends Controller
             ->whereIn('id', $validated['item_ids'])
             ->get();
 
-        $result = $this->bookUzParserService->importMany($items, (int) $validated['category_id']);
+        $result = $this->bookUzParserService->importMany($items, isset($validated['category_id']) ? (int) $validated['category_id'] : null);
 
-        return back()->with(
+        $redirect = back()->with(
             'success',
             "Tanlangan mahsulotlar import qilindi: {$result['imported']} ta muvaffaqiyatli, {$result['failed']} ta xato."
         );
+
+        if (($result['failed'] ?? 0) > 0) {
+            return $redirect
+                ->with('warning', 'Tanlangan mahsulotlarning ayrimlari import bo‘lmadi.')
+                ->with('parser_errors', array_slice($result['errors'] ?? [], 0, 5));
+        }
+
+        return $redirect;
     }
 }
