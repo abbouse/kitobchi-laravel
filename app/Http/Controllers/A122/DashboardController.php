@@ -705,24 +705,8 @@ class DashboardController extends Controller
         ])
         );
 
-        // ── Kangaroo (faqat mahsulot listing moderatsiyasi) ────
-        try {
-            $kangarooHumanReviewBooks = Cache::remember('dash5_k_hreview_books', $hot, fn () => Books::query()
-                ->where('is_approved', 0)
-                ->where('is_hidden', 0)
-                ->where('status', 1)
-                ->where('kangaroo_listing_decision', 'human_review')
-                ->count());
-            $kangarooHumanReviewStationery = Cache::remember('dash5_k_hreview_stat', $hot, fn () => Stationery::query()
-                ->where('is_approved', 0)
-                ->where('is_hidden', 0)
-                ->where('status', 1)
-                ->where('kangaroo_listing_decision', 'human_review')
-                ->count());
-        } catch (\Throwable) {
-            $kangarooHumanReviewBooks = 0;
-            $kangarooHumanReviewStationery = 0;
-        }
+        $kangarooHumanReviewBooks = 0;
+        $kangarooHumanReviewStationery = 0;
 
         // ── ALERTS ────────────────────────────────────────────
         // [color, icon, title, description, url]
@@ -811,15 +795,6 @@ class DashboardController extends Controller
         } catch (\Throwable) {
         }
 
-        if ($kangarooHumanReviewBooks > 0) {
-            $alerts[] = ['warning', 'bi-book', 'Kangaroo: kitoblar (inson)',
-                "{$kangarooHumanReviewBooks} ta kitob Kangaroo human_review — qo‘lda tasdiqlash", route('admin.books.index')];
-        }
-        if ($kangarooHumanReviewStationery > 0) {
-            $alerts[] = ['warning', 'bi-pencil-square', 'Kangaroo: kanstovar (inson)',
-                "{$kangarooHumanReviewStationery} ta mahsulot Kangaroo human_review — qo‘lda tasdiqlash", route('admin.stationery.index')];
-        }
-
         return compact(
             'totalUsers', 'premiumUsers', 'activeUsers', 'inactiveUsers',
             'onlineUsers', 'newUsersToday', 'newUsersWeek', 'newUsersMonth',
@@ -850,8 +825,7 @@ class DashboardController extends Controller
             'repeatBuyersMonth', 'newBuyersMonth', 'avgCommissionPct',
             'aovMonthly', 'deliveryTypeSplit', 'revenueByType',
             'salesGeoCountries', 'salesGeoRegionsByCountry', 'salesGeoDefaultCountry',
-            'platformProfit', 'platformProfitMonth',
-            'kangarooHumanReviewBooks', 'kangarooHumanReviewStationery'
+            'platformProfit', 'platformProfitMonth'
         );
     }
 

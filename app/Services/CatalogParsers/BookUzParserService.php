@@ -189,14 +189,14 @@ class BookUzParserService
                 'description' => $description,
                 'images' => $images,
                 'price' => (int) ($item->price_uzs ?? 0),
-                'discountPrice' => null,
+                'discountPrice' => 0,
                 'discountExpiresAt' => null,
                 'count' => $item->in_stock ? 1 : 0,
-                'lang' => $this->normalizeLanguageCode($item->language),
-                'langType' => $item->script,
-                'coverType' => $item->cover_type,
-                'year' => $item->year,
-                'pages' => $item->pages,
+                'lang' => $this->normalizeImportLanguage($item->language),
+                'langType' => $this->normalizeImportScript($item->script),
+                'coverType' => $this->normalizeImportCoverType($item->cover_type),
+                'year' => $this->normalizeImportYear($item->year),
+                'pages' => $this->normalizeImportPages($item->pages),
                 'status' => true,
                 'is_hidden' => false,
                 'is_approved' => 1,
@@ -704,19 +704,26 @@ class BookUzParserService
             ->values()
             ->all();
         $descriptionText = $this->normalizeRichText($item['description'] ?? $item['shortDescription'] ?? $item['annotation'] ?? null);
+        $title = $this->extractCatalogTextValue($item['name'] ?? $item['title'] ?? null, ['name', 'title', 'value', 'text']);
+        $author = $this->extractAuthorFromCatalogItem($item);
+        $publisher = $this->extractCatalogTextValue($item['publisher'] ?? $item['publisherName'] ?? $item['publishingHouse'] ?? null, ['name', 'title', 'value', 'label']);
+        $translator = $this->extractCatalogTextValue($item['translator'] ?? null, ['fullName', 'name', 'title', 'value']);
+        $language = $this->extractCatalogTextValue($item['language'] ?? null, ['name', 'title', 'value']);
+        $script = $this->extractCatalogTextValue($item['contentLanguage'] ?? null, ['name', 'title', 'value']);
+        $coverType = $this->extractCatalogTextValue($item['cover'] ?? null, ['name', 'title', 'value']);
 
         $payload = [
             'source_url' => $sourceUrl,
             'external_id' => $this->cleanField((string) ($item['_id'] ?? $item['id'] ?? $item['link'] ?? '')),
-            'title' => $this->cleanField($item['name'] ?? $item['title'] ?? null),
-            'author' => $this->extractAuthorFromCatalogItem($item),
+            'title' => $title ?: $this->fallbackTitleFromSlug($item['link'] ?? null),
+            'author' => $author,
             'isbn' => $this->cleanField($item['barcode'] ?? $item['isbn'] ?? null),
             'source_category' => $this->cleanField($genres[0] ?? null),
-            'publisher' => $this->cleanField($item['publisher'] ?? $item['publisherName'] ?? $item['publishingHouse'] ?? null),
-            'translator' => $this->cleanField($item['translator'] ?? null),
-            'language' => $this->cleanField($item['language'] ?? null),
-            'script' => $this->cleanField($item['contentLanguage'] ?? null),
-            'cover_type' => $this->cleanField($item['cover'] ?? null),
+            'publisher' => $publisher,
+            'translator' => $translator,
+            'language' => $language,
+            'script' => $script,
+            'cover_type' => $coverType,
             'year' => $this->toInt($item['year'] ?? null),
             'pages' => $this->toInt($item['numberOfPage'] ?? $item['pages'] ?? null),
             'price_uzs' => $this->toInt($item['bookPrice'] ?? $item['price'] ?? null),
@@ -753,18 +760,22 @@ class BookUzParserService
         $author = $item['author'] ?? $item['authors'] ?? null;
 
         if (is_string($author)) {
-            return $this->cleanField($author);
+            return $this->sanitizeCatalogScalar($author);
+        }
+
+        if (is_array($author) && Arr::isAssoc($author)) {
+            return $this->extractCatalogTextValue($author, ['fullName', 'name', 'title', 'value']);
         }
 
         if (is_array($author)) {
             $names = collect($author)
                 ->map(function ($entry) {
                     if (is_string($entry)) {
-                        return trim($entry);
+                        return $this->sanitizeCatalogScalar($entry);
                     }
 
                     if (is_array($entry)) {
-                        return trim((string) ($entry['name'] ?? $entry['fullName'] ?? $entry['title'] ?? ''));
+                        return $this->extractCatalogTextValue($entry, ['fullName', 'name', 'title', 'value']);
                     }
 
                     return null;
@@ -777,6 +788,76 @@ class BookUzParserService
         }
 
         return null;
+    }
+
+    private function extractCatalogTextValue(mixed $value, array $preferredKeys = ['name', 'title', 'value', 'label', 'text']): ?string
+    {
+        if (is_string($value) || is_numeric($value)) {
+            return $this->sanitizeCatalogScalar((string) $value);
+        }
+
+        if (is_array($value)) {
+            if (Arr::isAssoc($value)) {
+                foreach ($preferredKeys as $key) {
+                    if (isset($value[$key]) && (is_string($value[$key]) || is_numeric($value[$key]))) {
+                        return $this->sanitizeCatalogScalar((string) $value[$key]);
+                    }
+                }
+            }
+
+            $chunks = collect($value)
+                ->map(fn ($entry) => $this->extractCatalogTextValue($entry, $preferredKeys))
+                ->filter()
+                ->values()
+                ->all();
+
+            return $chunks !== [] ? $this->cleanField(implode(', ', $chunks)) : null;
+        }
+
+        return null;
+    }
+
+    private function sanitizeCatalogScalar(?string $value): ?string
+    {
+        $value = trim((string) $value);
+        if ($value === '') {
+            return null;
+        }
+
+        $badFragments = [
+            '"_id":',
+            'parentNode.insertBefore',
+            'document.scripts',
+            'k.src = r',
+            'imgUrl',
+            'dateOfbirth',
+            'dateOfdeath',
+            'fullName',
+            '"link":',
+            '"description":[',
+        ];
+
+        foreach ($badFragments as $fragment) {
+            if (str_contains($value, $fragment)) {
+                return null;
+            }
+        }
+
+        if (str_contains($value, '{') || str_contains($value, '}')) {
+            return null;
+        }
+
+        return Str::limit($value, 255, '');
+    }
+
+    private function fallbackTitleFromSlug(?string $slug): ?string
+    {
+        $slug = trim((string) $slug);
+        if ($slug === '') {
+            return null;
+        }
+
+        return Str::title(str_replace('-', ' ', $slug));
     }
 
     private function parseBookPage(string $url): array
@@ -1494,6 +1575,55 @@ class BookUzParserService
             str_contains($value, 'ja') || str_contains($value, 'yapon') => 'ja',
             default => Str::limit($value, 10, ''),
         };
+    }
+
+    private function normalizeImportLanguage(?string $language): string
+    {
+        $normalized = $this->normalizeLanguageCode($language);
+
+        return in_array($normalized, ['uz', 'ru', 'en', 'qq'], true)
+            ? $normalized
+            : 'uz';
+    }
+
+    private function normalizeImportScript(?string $script): string
+    {
+        $value = Str::lower(trim((string) $script));
+
+        return match (true) {
+            $value === '' => 'latin',
+            str_contains($value, 'kir') || str_contains($value, 'cyr') => 'cyrillic',
+            default => 'latin',
+        };
+    }
+
+    private function normalizeImportCoverType(?string $coverType): string
+    {
+        $value = Str::lower(trim((string) $coverType));
+
+        return match (true) {
+            $value === '' => 'soft',
+            str_contains($value, 'hard') || str_contains($value, 'qattiq') => 'hard',
+            default => 'soft',
+        };
+    }
+
+    private function normalizeImportYear(mixed $year): int
+    {
+        $normalizedYear = $this->toInt($year);
+
+        return ($normalizedYear && $normalizedYear > 0)
+            ? $normalizedYear
+            : 2025;
+    }
+
+    private function normalizeImportPages(mixed $pages): int
+    {
+        $normalizedPages = $this->toInt($pages);
+
+        return ($normalizedPages && $normalizedPages > 0)
+            ? $normalizedPages
+            : 1;
     }
 
     private function guessImageExtension(string $url, string $contentType): string

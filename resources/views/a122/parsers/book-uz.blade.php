@@ -144,6 +144,9 @@
 
     <form id="bulk-import-form" method="POST" action="{{ route('admin.parsers.book-uz.import-selected') }}">
       @csrf
+    </form>
+
+    <div>
       <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
         <div>
           <h2 class="h5 mb-1">Topilgan kitoblar</h2>
@@ -152,7 +155,7 @@
         <div class="d-flex flex-wrap gap-2 align-items-end">
           <div class="parser-import-category">
             <label class="form-label mb-2">Kategoriya override</label>
-            <select id="parser-import-category" name="category_id" class="form-select">
+            <select id="parser-import-category" name="category_id" class="form-select" form="bulk-import-form">
               <option value="">AI tavsiya qilgan kategoriyani ishlatish</option>
               @foreach($categories as $category)
                 <option value="{{ $category->id }}" @selected($selectedCategoryId === (string) $category->id)>{{ $category->name_uz }}</option>
@@ -161,7 +164,7 @@
           </div>
           <button type="button" class="btn btn-outline-secondary" onclick="toggleAllParserRows(true)">Barchasini tanlash</button>
           <button type="button" class="btn btn-outline-secondary" onclick="toggleAllParserRows(false)">Tanlovni tozalash</button>
-          <button type="submit" class="btn btn-dark js-parser-import-submit">
+          <button type="submit" class="btn btn-dark js-parser-import-submit" form="bulk-import-form">
             <i class="bi bi-download me-2"></i>Tanlanganlarni bazaga qo‘shish
           </button>
         </div>
@@ -196,7 +199,7 @@
                     <div class="text-secondary small">{{ $item->author ?: 'Muallif ko‘rsatilmagan' }}</div>
                   </div>
                   <label class="form-check mt-1">
-                    <input class="form-check-input parser-item-checkbox" type="checkbox" name="item_ids[]" value="{{ $item->id }}">
+                    <input class="form-check-input parser-item-checkbox" type="checkbox" name="item_ids[]" value="{{ $item->id }}" form="bulk-import-form">
                   </label>
                 </div>
 
@@ -316,7 +319,7 @@
           </div>
         @endif
       </div>
-    </form>
+    </div>
   </section>
 
   @if(method_exists($items, 'links'))

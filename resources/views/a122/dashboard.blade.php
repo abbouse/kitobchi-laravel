@@ -45,8 +45,8 @@
   $dashQuick = [];
   if ($dashAdmin?->hasPermission('orders'))    { $dashQuick[] = ['Buyurtmalar','bi-bag-check-fill',route('admin.orders.index'),$pendingOrders>0?$pendingOrders.' ta kutilmoqda':'Barcha statuslar','rgba(70,95,255,.12)','var(--p-accent)']; }
   if ($dashAdmin?->hasPermission('users'))     { $dashQuick[] = ['Foydalanuvchilar','bi-people-fill',route('admin.users.index'),number_format($totalUsers).' ro\'yxatda','rgba(18,183,106,.12)','var(--p-success)']; }
-  if ($dashAdmin?->hasPermission('books'))     { $kb=(int)($kangarooHumanReviewBooks??0); $dashQuick[] = ['Kitoblar','bi-book-fill',route('admin.books.index'),$kb>0?$kb.' ta Kangaroo navbati':'Katalog','rgba(11,111,168,.12)','var(--p-info)']; }
-  if ($dashAdmin?->hasPermission('stationery')){ $ks=(int)($kangarooHumanReviewStationery??0); $dashQuick[] = ['Kanstovar','bi-pencil-square',route('admin.stationery.index'),$ks>0?$ks.' ta Kangaroo navbati':'Mahsulotlar','rgba(247,144,9,.12)','var(--p-warning)']; }
+  if ($dashAdmin?->hasPermission('books'))     { $dashQuick[] = ['Kitoblar','bi-book-fill',route('admin.books.index'),'Katalog','rgba(11,111,168,.12)','var(--p-info)']; }
+  if ($dashAdmin?->hasPermission('stationery')){ $dashQuick[] = ['Kanstovar','bi-pencil-square',route('admin.stationery.index'),'Mahsulotlar','rgba(247,144,9,.12)','var(--p-warning)']; }
   if ($dashAdmin?->hasPermission('sellers'))   { $dashQuick[] = ['Sotuvchilar','bi-shop-window',route('admin.sellers.index'),$pendingSellers>0?$pendingSellers.' ariza':'Do\'konlar','rgba(124,92,252,.12)','#7c5cfc']; }
   if ($dashAdmin?->hasPermission('settings')) {
     $pendingPay=($pendingSellerTxCount??0)+($pendingCourierTxCount??0);
