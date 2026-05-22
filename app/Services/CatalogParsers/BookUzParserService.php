@@ -106,7 +106,8 @@ class BookUzParserService
                 ? Books::query()->find($item->imported_book_id)
                 : null;
             $publisherId = $this->resolvePublisherId($item->publisher);
-            $author = $this->resolveAuthor($item->author);
+            $resolvedAuthorName = $this->resolveAuthorNameForImport($item);
+            $author = $this->resolveAuthor($resolvedAuthorName);
 
             Log::info('[book_uz_import] resolved_context', [
                 'parser_item_id' => $item->id,
@@ -136,6 +137,7 @@ class BookUzParserService
                 'parser_item_id' => $item->id,
                 'resolved_book_id' => $book?->id,
                 'images_count' => count($images),
+                'resolved_author_name' => $resolvedAuthorName,
                 'has_translator' => filled($item->translator),
                 'has_publisher' => filled($item->publisher),
             ]);
@@ -193,7 +195,7 @@ class BookUzParserService
 
             $payload = [
                 'name' => $item->title ?: 'Nomsiz kitob',
-                'author' => $author?->name ?: ($item->author ?: 'Nomaʼlum muallif'),
+                'author' => $author?->name ?: ($resolvedAuthorName ?: 'Nomaʼlum muallif'),
                 'isbn' => $this->normalizeNumericIsbn($item->isbn),
                 'category_id' => $category->id,
                 'seller_id' => $seller->id,
@@ -333,6 +335,50 @@ class BookUzParserService
     private function resolveAuthor(?string $name): ?\App\Models\Author
     {
         return app(AuthorDirectoryService::class)->resolveOrCreateByName($name);
+    }
+
+    private function resolveAuthorNameForImport(CatalogParserItem $item): ?string
+    {
+        $direct = $this->cleanField($item->author);
+        if ($direct) {
+            return $direct;
+        }
+
+        $fromPayload = $this->cleanField(data_get($item->payload, 'author_resolution.author'));
+        if ($fromPayload) {
+            $item->forceFill(['author' => $fromPayload])->save();
+            return $fromPayload;
+        }
+
+        $resolution = $this->resolvePayloadAuthor($this->payloadFromParserItem($item));
+        $resolved = $this->cleanField($resolution['author'] ?? null);
+
+        if ($resolved) {
+            $payload = is_array($item->payload) ? $item->payload : [];
+            $payload['author_resolution'] = $resolution;
+            $item->forceFill([
+                'author' => $resolved,
+                'normalized_author' => $this->normalizeComparableText($resolved),
+                'payload' => $payload,
+            ])->save();
+        }
+
+        return $resolved;
+    }
+
+    private function payloadFromParserItem(CatalogParserItem $item): array
+    {
+        return [
+            'title' => $item->title,
+            'author' => $item->author,
+            'source_category' => $item->source_category,
+            'publisher' => $item->publisher,
+            'translator' => $item->translator,
+            'language' => $item->language,
+            'description' => $item->description,
+            'source_url' => $item->source_url,
+            'payload' => is_array($item->payload) ? $item->payload : [],
+        ];
     }
 
     private function booksTableHasColumn(string $column): bool
@@ -1311,16 +1357,7 @@ class BookUzParserService
 
     private function buildImportDescription(CatalogParserItem $item): string
     {
-        $chunks = array_filter([
-            trim((string) $item->description),
-            $item->publisher ? 'Nashriyot: ' . $item->publisher : null,
-            $item->translator ? 'Tarjimon: ' . $item->translator : null,
-            $item->language ? 'Til: ' . $item->language : null,
-            $item->script ? 'Yozuv: ' . $item->script : null,
-            $item->source_url ? 'Manba: ' . $item->source_url : null,
-        ]);
-
-        return implode("\n\n", $chunks);
+        return trim((string) $item->description);
     }
 
     private function attachSuggestedTags(Books $book, CatalogParserItem $item): void
