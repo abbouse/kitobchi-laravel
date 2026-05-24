@@ -145,6 +145,10 @@
     <form id="bulk-import-form" method="POST" action="{{ route('admin.parsers.book-uz.import-selected') }}">
       @csrf
     </form>
+    <form id="bulk-import-stock-form" method="POST" action="{{ route('admin.parsers.book-uz.import-all-stock') }}">
+      @csrf
+      <input type="hidden" name="category_id" value="{{ $selectedCategoryId }}">
+    </form>
 
     <div>
       <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
@@ -155,7 +159,7 @@
         <div class="d-flex flex-wrap gap-2 align-items-end">
           <div class="parser-import-category">
             <label class="form-label mb-2">Kategoriya override</label>
-            <select id="parser-import-category" name="category_id" class="form-select" form="bulk-import-form">
+            <select id="parser-import-category" name="category_id" class="form-select" form="bulk-import-form" onchange="syncParserCategoryOverride(this.value)">
               <option value="">AI tavsiya qilgan kategoriyani ishlatish</option>
               @foreach($categories as $category)
                 <option value="{{ $category->id }}" @selected($selectedCategoryId === (string) $category->id)>{{ $category->name_uz }}</option>
@@ -164,6 +168,9 @@
           </div>
           <button type="button" class="btn btn-outline-secondary" onclick="toggleAllParserRows(true)">Barchasini tanlash</button>
           <button type="button" class="btn btn-outline-secondary" onclick="toggleAllParserRows(false)">Tanlovni tozalash</button>
+          <button type="submit" class="btn btn-success" form="bulk-import-stock-form">
+            <i class="bi bi-lightning-charge me-2"></i>Stock borlarning hammasini qo‘shish
+          </button>
           <button type="submit" class="btn btn-dark js-parser-import-submit" form="bulk-import-form">
             <i class="bi bi-download me-2"></i>Tanlanganlarni bazaga qo‘shish
           </button>
@@ -334,6 +341,17 @@
   @endif
 </div>
 @endsection
+
+@push('scripts')
+<script>
+  function syncParserCategoryOverride(value) {
+    const stockFormField = document.querySelector('#bulk-import-stock-form input[name="category_id"]');
+    if (stockFormField) {
+      stockFormField.value = value || '';
+    }
+  }
+</script>
+@endpush
 
 @push('styles')
 <style>

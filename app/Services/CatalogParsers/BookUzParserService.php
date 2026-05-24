@@ -144,37 +144,11 @@ class BookUzParserService
 
             if ($book) {
                 $normalizedIsbn = $this->normalizeNumericIsbn($item->isbn);
-                $updatePayload = [
-                    'isbn' => $normalizedIsbn,
-                    'vectorData' => array_merge($existingVectorData, [
-                        'parser' => [
-                            'provider' => self::PROVIDER,
-                            'source_url' => $item->source_url,
-                            'publisher' => $item->publisher,
-                            'translator' => $item->translator,
-                            'source_category' => $item->source_category,
-                            'matched_via_parser' => true,
-                        ],
-                    ]),
-                ];
-
-                if ($this->booksTableHasColumn('publisher_id')) {
-                    $updatePayload['publisher_id'] = $publisherId;
+                if ($normalizedIsbn) {
+                    $book->update([
+                        'isbn' => $normalizedIsbn,
+                    ]);
                 }
-
-                if ($this->booksTableHasColumn('translator') && blank($book->translator) && filled($item->translator)) {
-                    $updatePayload['translator'] = $item->translator;
-                }
-
-                if ($this->booksTableHasColumn('author_id')) {
-                    $updatePayload['author_id'] = $author?->id;
-                }
-
-                if ($author?->name) {
-                    $updatePayload['author'] = $author->name;
-                }
-
-                $book->update($updatePayload);
 
                 $item->forceFill([
                     'matched_book_id' => $book->id,

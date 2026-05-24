@@ -132,6 +132,7 @@ Route::prefix('a122')->name('admin.')->group(function () {
         Route::get('/book-uz', [ParserController::class, 'bookUz'])->name('book-uz');
         Route::post('/book-uz/sync', [ParserController::class, 'syncBookUz'])->name('book-uz.sync');
         Route::post('/book-uz/import-selected', [ParserController::class, 'importBookUzSelected'])->name('book-uz.import-selected');
+        Route::post('/book-uz/import-all-stock', [ParserController::class, 'importBookUzAllStock'])->name('book-uz.import-all-stock');
         Route::post('/book-uz/{item}/import', [ParserController::class, 'importBookUzItem'])->name('book-uz.import-item');
     });
 

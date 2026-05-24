@@ -179,4 +179,40 @@ class ParserController extends Controller
 
         return $redirect;
     }
+
+    public function importBookUzAllStock(Request $request)
+    {
+        $validated = $request->validate([
+            'category_id' => ['nullable', 'integer', 'exists:book_categories,id'],
+        ]);
+
+        $items = CatalogParserItem::query()
+            ->where('provider', BookUzParserService::PROVIDER)
+            ->where('in_stock', true)
+            ->orderByRaw('CASE WHEN COALESCE(imported_book_id, matched_book_id) IS NULL THEN 0 ELSE 1 END ASC')
+            ->orderByDesc('last_synced_at')
+            ->get();
+
+        if ($items->isEmpty()) {
+            return back()->with('warning', 'Import uchun stock bor mahsulot topilmadi.');
+        }
+
+        $result = $this->bookUzParserService->importMany(
+            $items,
+            isset($validated['category_id']) ? (int) $validated['category_id'] : null
+        );
+
+        $redirect = back()->with(
+            'success',
+            "Stock bor mahsulotlar import qilindi: {$result['imported']} ta muvaffaqiyatli, {$result['failed']} ta xato."
+        );
+
+        if (($result['failed'] ?? 0) > 0) {
+            return $redirect
+                ->with('warning', 'Stock bor mahsulotlarning ayrimlari import bo‘lmadi.')
+                ->with('parser_errors', array_slice($result['errors'] ?? [], 0, 5));
+        }
+
+        return $redirect;
+    }
 }
