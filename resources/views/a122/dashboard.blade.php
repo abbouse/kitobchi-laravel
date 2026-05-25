@@ -97,9 +97,9 @@
     </div>
     <div class="col-12 col-md-6 col-xl-3">
       <x-admin.stat-card
-        label="Bugungi daromad"
+        label="Bugungi to'langan aylanma"
         :value="number_format($todayRevenue / 1000000, 2) . '<span class=&quot;fs-5 text-secondary ms-1&quot;>M</span>'"
-        meta="Kunlik paid revenue"
+        meta="Faqat to'langan buyurtmalar summasi"
         icon="graph-up-arrow"
         tone="success" />
     </div>
@@ -476,7 +476,7 @@
     @php
       $finRows = [
         ['primary','bi-activity','GMV (brutto)','Barcha buyurtmalar',$gmvTotal,$gmvMonth],
-        ['success','bi-check-circle',"To'langan daromad",'paymentStatus = 2',$totalRevenue,$monthRevenue],
+        ['success','bi-check-circle',"To'langan aylanma",'paymentStatus = paid',$totalRevenue,$monthRevenue],
         ['info','bi-truck','Yetkazish','Delivery fee',$totalDeliveryIncome,$monthDeliveryIncome],
         ['primary','bi-percent','Seller komissiya',"O'rtacha {$avgCommissionPct}%",$totalCommissionEarned,$monthCommissionEarned],
         ['success','bi-box-seam','Mystery Box','Faol + yakunlangan',$mysteryRevTotal,$mysteryRevMonth],
@@ -485,7 +485,7 @@
       $finCosts = [
         ['danger','bi-ticket-perforated','Promokod',"{$promoOrdersCount} ta buyurtmada",$totalPromoDiscount,$monthPromoDiscount],
         ['warning','bi-cash-stack','Cashback','Foydalanuvchilarga qaytarildi',$totalCashbackPaid,$monthCashbackPaid],
-        ['secondary','bi-shop-window','Seller payout','Kutilmoqda: '.number_format($pendingSellerPayout/1000).'K',$totalSellerPayout,$monthSellerPayout],
+        ['secondary','bi-shop-window','Seller bank payout','Kutilmoqda: '.number_format($pendingSellerPayout/1000).'K',$totalSellerPayout,$monthSellerPayout],
         ['secondary','bi-bicycle','Kuryer payout','Kutilmoqda: '.number_format($pendingCourierPayout/1000).'K',$totalCourierPayout,$monthCourierPayout],
         ['danger','bi-x-circle','Bekor yo\'qotish','status=F',$cancelledRevLoss,$cancelledMonthLoss],
       ];
@@ -545,7 +545,7 @@
               </span>
               <div class="flex-grow-1 min-w-0">
                 <div class="fw-bold text-primary-emphasis">Platform sof foyda</div>
-                <div class="small text-primary-emphasis opacity-75">Komissiya + Yetkazish − Chiqimlar</div>
+                <div class="small text-primary-emphasis opacity-75">Komissiya + Yetkazish − Promo − Cashback − Kuryer</div>
               </div>
               <div class="text-end">
                 <div class="h5 mb-0 fw-bold text-primary-emphasis font-monospace">{{ number_format($platformProfit/1_000_000,2) }}<span class="small text-secondary fw-normal"> M</span></div>

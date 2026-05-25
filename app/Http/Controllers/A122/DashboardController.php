@@ -202,13 +202,14 @@ class DashboardController extends Controller
         return [
             'dash5_rev_total', 'dash5_rev_today', 'dash5_rev_month', 'dash5_rev_week',
             'dash5_ord_total', 'dash5_ord_today', 'dash5_ord_week',
-            'dash5_ord_C', 'dash5_ord_A', 'dash5_ord_B', 'dash5_ord_F',
+            'dash5_ord_D', 'dash5_ord_A', 'dash5_ord_P', 'dash5_ord_B', 'dash5_ord_F',
             'dash5_daily_ord', 'dash5_daily_rev', 'dash5_monthly', 'dash5_monthly_fin',
             'dash5_sales_geo',
             'dash5_fin_delivery', 'dash5_fin_promo', 'dash5_fin_cashback',
             'dash5_fin_comm', 'dash5_fin_courier',
             'dash5_u_total', 'dash5_u_premium', 'dash5_u_online', 'dash5_u_today',
-            'dash5_u_week', 'dash5_u_active', 'dash5_u_isolated', 'dash5_u_verified',
+            'dash5_u_week', 'dash5_u_month', 'dash5_u_active', 'dash5_u_inactive',
+            'dash5_u_isolated', 'dash5_u_verified',
             'dash5_u_list', 'dash5_u_daily',
             'dash5_s_total', 'dash5_s_pending', 'dash5_s_approved',
             'dash5_s_contract_expiring', 'dash5_s_contract_expired', 'dash5_s_contract_unsigned',
@@ -217,6 +218,9 @@ class DashboardController extends Controller
             'dash5_mystery_active', 'dash5_mystery_due', 'dash5_mystery_due_list',
             'dash5_top_mixed', 'dash5_top_buyers', 'dash5_recent',
             'dash5_fin_seller_pay', 'dash5_fin_courier_pay',
+            'dash5_gmv_total', 'dash5_cancel_loss', 'dash5_repeat', 'dash5_new_buyers',
+            'dash5_avg_comm_pct', 'dash5_aov_monthly', 'dash5_delivery_split',
+            'dash5_type_rev', 'dash5_mystery_rev',
             'dash5_k_hreview_books', 'dash5_k_hreview_stat', 'dash5_k_ugc_admin',
         ];
     }
@@ -432,9 +436,9 @@ class DashboardController extends Controller
             });
 
             $platformProfit = $totalCommissionEarned + $totalDeliveryIncome
-                                 - $totalCashbackPaid - $totalCourierPayout;
+                                 - $totalPromoDiscount - $totalCashbackPaid - $totalCourierPayout;
             $platformProfitMonth = $monthCommissionEarned + $monthDeliveryIncome
-                                 - $monthCashbackPaid - $monthCourierPayout;
+                                 - $monthPromoDiscount - $monthCashbackPaid - $monthCourierPayout;
         } catch (\Throwable $e) {
             // Jadvallar hali migrate qilinmagan bo'lsa default qiymatlar ishlatiladi
         }
