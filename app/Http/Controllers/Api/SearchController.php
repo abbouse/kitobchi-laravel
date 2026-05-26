@@ -75,6 +75,60 @@ class SearchController extends Controller
         return array_unique(array_merge($variants, $alt));
     }
 
+    private function expandLooseVariants(array $variants): array
+    {
+        $rules = [
+            ['q', 'k'],
+            ['k', 'q'],
+            ['x', 'h'],
+            ['h', 'x'],
+            ['w', 'v'],
+            ['v', 'w'],
+            ['c', 'k'],
+            ['ts', 's'],
+            ['yo', 'o'],
+            ['yu', 'u'],
+            ['ya', 'a'],
+            ["o'", 'o'],
+            ['oʻ', 'o'],
+            ["g'", 'g'],
+            ['gʻ', 'g'],
+        ];
+
+        $expanded = [];
+
+        foreach ($variants as $variant) {
+            $expanded[] = $variant;
+
+            foreach ($rules as [$from, $to]) {
+                if (str_contains($variant, $from)) {
+                    $expanded[] = str_replace($from, $to, $variant);
+                }
+            }
+        }
+
+        return array_values(array_unique(array_filter($expanded)));
+    }
+
+    private function buildSearchVariants(string $text): array
+    {
+        $text = trim($text);
+        if ($text === '') {
+            return [];
+        }
+
+        $variants = $this->transliterate($text);
+        $variants = array_merge($variants, $this->expandLooseVariants($variants));
+
+        $squeezed = $this->squeezeRepeats($text);
+        if ($squeezed !== $text && mb_strlen($squeezed) >= 2) {
+            $squeezedVariants = $this->transliterate($squeezed);
+            $variants = array_merge($variants, $squeezedVariants, $this->expandLooseVariants($squeezedVariants));
+        }
+
+        return array_values(array_unique(array_filter($variants)));
+    }
+
     private function buildBooleanQuery(array $variants): string
     {
         return collect($variants)
@@ -92,18 +146,10 @@ class SearchController extends Controller
 
         foreach ($words as $word) {
             if (mb_strlen($word) >= 2) {
-                $variants = array_merge($variants, $this->transliterate($word));
-                $squeezedWord = $this->squeezeRepeats($word);
-                if ($squeezedWord !== $word && mb_strlen($squeezedWord) >= 2) {
-                    $variants = array_merge($variants, $this->transliterate($squeezedWord));
-                }
+                $variants = array_merge($variants, $this->buildSearchVariants($word));
             }
         }
-        $variants = array_merge($variants, $this->transliterate($query));
-        $squeezedQuery = $this->squeezeRepeats($query);
-        if ($squeezedQuery !== $query && mb_strlen($squeezedQuery) >= 2) {
-            $variants = array_merge($variants, $this->transliterate($squeezedQuery));
-        }
+        $variants = array_merge($variants, $this->buildSearchVariants($query));
         $variants = array_unique($variants);
 
         return [
@@ -118,12 +164,13 @@ class SearchController extends Controller
      */
     private function buildLikePatterns(string $query): array
     {
-        $variants = $this->transliterate($query);
+        $variants = $this->buildSearchVariants($query);
         $patterns = [];
 
         foreach ($variants as $v) {
             $patterns[] = $v . '%';
             $patterns[] = '% ' . $v . '%';
+            $patterns[] = '%' . $v . '%';
         }
 
         return array_unique($patterns);
@@ -142,6 +189,18 @@ class SearchController extends Controller
         $latin = str_replace(
             ["o'", "g'", 'oʻ', 'gʻ'],
             ['o', 'g', 'o', 'g'],
+            $latin
+        );
+
+        $latin = str_replace(
+            ['yo', 'yu', 'ya', 'ts'],
+            ['o', 'u', 'a', 's'],
+            $latin
+        );
+
+        $latin = str_replace(
+            ['q', 'x', 'w', 'c'],
+            ['k', 'h', 'v', 'k'],
             $latin
         );
 
@@ -274,11 +333,12 @@ class SearchController extends Controller
                 ->limit(2500)
                 ->get()
                 ->map(function ($item) {
+                    $authorName = trim((string) ($item->authorProfile->name ?? $item->author ?? ''));
                     return [
                         'id' => (int) $item->id,
                         'type' => 'book',
                         'display_name' => trim((string) $item->name),
-                        'label' => trim(($item->name ?? '') . ' ' . ($item->author ?? '')),
+                        'label' => trim(($item->name ?? '') . ' ' . $authorName),
                         'popularity' => (int) (($item->totalSalesWeek ?? 0) * 3 + ($item->totalSales ?? 0)),
                     ];
                 });
@@ -794,7 +854,7 @@ class SearchController extends Controller
         if ($hasText) {
             // ── Matnli qidiruv ────────────────────────────────────────
             $bool       = $analyzed['boolean'];
-            $searchTerm = '%' . mb_strtolower($rawQuery) . '%';
+            $searchPatterns = $this->buildLikePatterns($rawQuery);
 
             $authorColumnAvailable = Books::hasAuthorColumn();
             $fulltextColumns = $authorColumnAvailable
@@ -804,14 +864,19 @@ class SearchController extends Controller
             $hasFulltext = $this->hasFulltextIndex('books', $fulltextColumns);
 
             if ($hasFulltext) {
-                $q->where(function ($w) use ($bool, $searchTerm, $matchColumnsSql) {
+                $q->where(function ($w) use ($bool, $searchPatterns, $matchColumnsSql) {
                     $w->whereRaw(
                         "MATCH({$matchColumnsSql}) AGAINST(? IN BOOLEAN MODE)", [$bool]
-                    )->orWhere(fn($or) => $or
-                        ->where('name', 'LIKE', $searchTerm)
-                        ->orWhereHas('authorProfile', fn ($authorQuery) => $authorQuery->where('name', 'LIKE', $searchTerm))
-                        ->orWhere('description', 'LIKE', $searchTerm)
-                    );
+                    )->orWhere(function ($or) use ($searchPatterns) {
+                        foreach ($searchPatterns as $i => $pattern) {
+                            $method = $i === 0 ? 'where' : 'orWhere';
+                            $or->$method(function ($inner) use ($pattern) {
+                                $inner->where('name', 'LIKE', $pattern)
+                                      ->orWhereHas('authorProfile', fn ($authorQuery) => $authorQuery->where('name', 'LIKE', $pattern))
+                                      ->orWhere('description', 'LIKE', $pattern);
+                            });
+                        }
+                    });
                 })->selectRaw(
                     "books.*,
                      MATCH({$matchColumnsSql}) AGAINST(? IN BOOLEAN MODE) * 10 +
@@ -820,11 +885,16 @@ class SearchController extends Controller
                     [$bool]
                 );
             } else {
-                $q->where(fn($w) => $w
-                    ->where('name', 'LIKE', $searchTerm)
-                    ->orWhereHas('authorProfile', fn ($authorQuery) => $authorQuery->where('name', 'LIKE', $searchTerm))
-                    ->orWhere('description', 'LIKE', $searchTerm)
-                )->selectRaw(
+                $q->where(function ($w) use ($searchPatterns) {
+                    foreach ($searchPatterns as $i => $pattern) {
+                        $method = $i === 0 ? 'where' : 'orWhere';
+                        $w->$method(function ($inner) use ($pattern) {
+                            $inner->where('name', 'LIKE', $pattern)
+                                  ->orWhereHas('authorProfile', fn ($authorQuery) => $authorQuery->where('name', 'LIKE', $pattern))
+                                  ->orWhere('description', 'LIKE', $pattern);
+                        });
+                    }
+                })->selectRaw(
                     "books.*,
                      LEAST(totalSalesWeek * 3, 300) +
                      LEAST(totalSales, 100) AS relevance_score"
@@ -877,21 +947,26 @@ class SearchController extends Controller
 
         if ($hasText) {
             $bool       = $analyzed['boolean'];
-            $searchTerm = '%' . mb_strtolower($rawQuery) . '%';
+            $searchPatterns = $this->buildLikePatterns($rawQuery);
 
             // FULLTEXT index mavjudligini tekshiramiz
             // Agar yo'q bo'lsa — faqat LIKE bilan ishlaymiz
             $hasFulltext = $this->hasFulltextIndex('stationeries', ['name', 'description', 'material']);
 
             if ($hasFulltext) {
-                $q->where(function ($w) use ($bool, $searchTerm) {
+                $q->where(function ($w) use ($bool, $searchPatterns) {
                     $w->whereRaw(
                         "MATCH(name, description, material) AGAINST(? IN BOOLEAN MODE)", [$bool]
-                    )->orWhere(fn($or) => $or
-                        ->where('name', 'LIKE', $searchTerm)
-                        ->orWhere('description', 'LIKE', $searchTerm)
-                        ->orWhere('material', 'LIKE', $searchTerm)
-                    );
+                    )->orWhere(function ($or) use ($searchPatterns) {
+                        foreach ($searchPatterns as $i => $pattern) {
+                            $method = $i === 0 ? 'where' : 'orWhere';
+                            $or->$method(function ($inner) use ($pattern) {
+                                $inner->where('name', 'LIKE', $pattern)
+                                      ->orWhere('description', 'LIKE', $pattern)
+                                      ->orWhere('material', 'LIKE', $pattern);
+                            });
+                        }
+                    });
                 })->selectRaw(
                     "stationeries.*,
                      MATCH(name, description, material) AGAINST(? IN BOOLEAN MODE) * 10 +
@@ -900,11 +975,16 @@ class SearchController extends Controller
                 );
             } else {
                 // FULLTEXT yo'q — faqat LIKE
-                $q->where(fn($w) => $w
-                    ->where('name', 'LIKE', $searchTerm)
-                    ->orWhere('description', 'LIKE', $searchTerm)
-                    ->orWhere('material', 'LIKE', $searchTerm)
-                )->selectRaw(
+                $q->where(function ($w) use ($searchPatterns) {
+                    foreach ($searchPatterns as $i => $pattern) {
+                        $method = $i === 0 ? 'where' : 'orWhere';
+                        $w->$method(function ($inner) use ($pattern) {
+                            $inner->where('name', 'LIKE', $pattern)
+                                  ->orWhere('description', 'LIKE', $pattern)
+                                  ->orWhere('material', 'LIKE', $pattern);
+                        });
+                    }
+                })->selectRaw(
                     "stationeries.*,
                      LEAST(totalSalesWeek * 3, 300) AS relevance_score"
                 );
