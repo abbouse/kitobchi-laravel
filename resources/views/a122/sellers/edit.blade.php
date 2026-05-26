@@ -299,32 +299,63 @@
 
     {{-- ─────────────────────────────────── TAB 5: PREMIUM ───────────── --}}
     <section data-seller-panel="premium" class="card p-5 hidden">
-        <div class="p-4 rounded-lg border border-amber-200 bg-amber-50/60 dark:bg-amber-400/5 dark:border-amber-400/20">
-            <div class="flex items-start gap-3">
-                <input type="checkbox" name="isPremiumShop" id="isPremiumShop" value="1"
-                       class="mt-1 w-4 h-4 rounded border-amber-300 text-amber-500 focus:ring-amber-400"
-                       {{ old('isPremiumShop', $seller->isPremiumShop) ? 'checked' : '' }}
-                       onchange="document.getElementById('premiumExpiryWrap').classList.toggle('hidden', !this.checked)">
-                <div class="flex-1">
-                    <label for="isPremiumShop" class="block text-sm font-semibold text-amber-700 dark:text-amber-300 cursor-pointer">
-                        Premium Shop
-                    </label>
-                    <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-                        Admin tomonidan qo'lda berilgan premium. Balans kamaymaydi, to'lov tarixi yaratilmaydi.
-                        SellerPremiumSubscription yozuvlari alohida boshqariladi — bu yerdagi sana faqat sellers.isPremiumExpiresAt ga yoziladi.
-                    </p>
-                </div>
+        <div class="p-4 rounded-lg border border-amber-200 bg-amber-50/60 dark:bg-amber-400/5 dark:border-amber-400/20 space-y-4">
+            <div>
+                <div class="text-sm font-semibold text-amber-700 dark:text-amber-300">Premium obuna</div>
+                <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                    Admin endi premiumni ilovadagi planlar bilan bir xil beradi. Berilgan plan seller uchun haqiqiy subscription yaratadi yoki amaldagini uzaytiradi.
+                </p>
             </div>
 
-            <div id="premiumExpiryWrap" class="mt-3 {{ old('isPremiumShop', $seller->isPremiumShop) ? '' : 'hidden' }}">
-                <label class="text-xs text-gray-500 mb-1 block">Premium tugash sanasi <span class="text-red-500">*</span></label>
-                <input name="isPremiumExpiresAt" type="datetime-local" class="input"
-                       value="{{ old('isPremiumExpiresAt', optional($seller->isPremiumExpiresAt)->format('Y-m-d\TH:i')) }}">
-                @if($seller->isPremiumExpiresAt)
-                    <p class="text-[10px] text-gray-400 mt-1">
-                        Hozirgi tugash: <span class="font-mono">{{ $seller->isPremiumExpiresAt->format('Y-m-d H:i') }}</span>
-                    </p>
-                @endif
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="rounded-xl border border-amber-200/70 dark:border-amber-400/20 bg-white/80 dark:bg-white/5 p-4">
+                    <div class="text-xs uppercase tracking-wide text-gray-500 mb-2">Hozirgi holat</div>
+                    @if(($premiumState['is_premium'] ?? false) && !empty($premiumState['premium_expires_at']))
+                        <div class="text-lg font-semibold text-amber-600 dark:text-amber-300">Faol premium</div>
+                        <div class="text-xs text-gray-500 mt-1">
+                            Plan: <span class="font-medium">{{ $premiumState['subscription_plan'] ?? 'manual' }}</span>
+                        </div>
+                        <div class="text-xs text-gray-500 mt-1">
+                            Tugaydi:
+                            <span class="font-mono">
+                                {{ \Illuminate\Support\Carbon::parse($premiumState['premium_expires_at'])->format('Y-m-d H:i') }}
+                            </span>
+                        </div>
+                        <div class="text-xs text-gray-500 mt-1">
+                            Qoldi: {{ $premiumState['premium_days_left'] ?? 0 }} kun
+                        </div>
+                    @else
+                        <div class="text-lg font-semibold text-gray-500">Premium yo'q</div>
+                        <div class="text-xs text-gray-500 mt-1">Seller hozir faol premium obunada emas.</div>
+                    @endif
+                </div>
+
+                <div class="rounded-xl border border-amber-200/70 dark:border-amber-400/20 bg-white/80 dark:bg-white/5 p-4 space-y-3">
+                    <div>
+                        <label class="text-xs text-gray-500 mb-1 block">Admin premium action</label>
+                        <select name="premium_action" id="premiumActionSelect" class="select"
+                                onchange="document.getElementById('premiumPlanWrap').classList.toggle('hidden', this.value !== 'grant')">
+                            <option value="keep" @selected(old('premium_action', 'keep') === 'keep')>O'zgartirmaslik</option>
+                            <option value="grant" @selected(old('premium_action') === 'grant')>Plan bo'yicha premium berish</option>
+                            <option value="revoke" @selected(old('premium_action') === 'revoke')>Premiumni o'chirish</option>
+                        </select>
+                    </div>
+
+                    <div id="premiumPlanWrap" class="{{ old('premium_action') === 'grant' ? '' : 'hidden' }}">
+                        <label class="text-xs text-gray-500 mb-1 block">Premium plan <span class="text-red-500">*</span></label>
+                        <select name="premium_plan" class="select">
+                            <option value="">Planni tanlang</option>
+                            @foreach($premiumPlans as $plan)
+                                <option value="{{ $plan['type'] }}" @selected(old('premium_plan') === $plan['type'])>
+                                    {{ $plan['label'] }} · {{ number_format($plan['price'], 0, '.', ' ') }} UZS
+                                </option>
+                            @endforeach
+                        </select>
+                        <p class="text-[10px] text-gray-400 mt-1">
+                            Bu action seller uchun active subscription yaratadi yoki amaldagi obunani uzaytiradi.
+                        </p>
+                    </div>
+                </div>
             </div>
         </div>
     </section>

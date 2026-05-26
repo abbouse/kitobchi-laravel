@@ -320,27 +320,55 @@ class ChatBotController extends Controller
             ], 'text', null, $lang);
         }
 
-        $queryVec = $this->ai->getVector($text);
+        $queryVec = [];
+        try {
+            $queryVec = $this->ai->getVector($text);
+        } catch (\Throwable $e) {
+            Log::warning('ChatBot query embedding failed', [
+                'user_id' => $user->id,
+                'message' => $e->getMessage(),
+            ]);
+        }
 
-        $scored = $results->map(function ($item) use ($queryVec) {
+        $safeResults = $results->filter(function ($item) {
+            return is_object($item) && filled($item->id);
+        })->values();
+
+        $scored = $safeResults->map(function ($item) use ($queryVec, $user) {
             $vec = [];
-            if (!empty($item->vectorData)) {
-                $decoded = is_string($item->vectorData)
-                    ? json_decode($item->vectorData, true)
-                    : $item->vectorData;
-                $vec = is_array($decoded) ? $decoded : [];
+
+            try {
+                if (!empty($item->vectorData)) {
+                    $decoded = is_string($item->vectorData)
+                        ? json_decode($item->vectorData, true)
+                        : $item->vectorData;
+                    $vec = is_array($decoded) ? $decoded : [];
+                }
+
+                $similarityScore = (!empty($queryVec) && !empty($vec))
+                    ? $this->ai->calculateSimilarity($queryVec, $vec)
+                    : 0.0;
+
+                $item->_score = (
+                    $similarityScore                                    * 0.55 +
+                    $this->calculateSellerScore($item->seller ?? null)  * 0.25 +
+                    min(((int) ($item->totalSales ?? 0)) / 300, 1.0)    * 0.12 +
+                    (random_int(80, 120) / 100)                         * 0.08
+                );
+            } catch (\Throwable $e) {
+                Log::warning('ChatBot item scoring failed', [
+                    'user_id' => $user->id,
+                    'product_id' => $item->id ?? null,
+                    'product_type' => $item->_type ?? null,
+                    'message' => $e->getMessage(),
+                ]);
+
+                $item->_score = (
+                    $this->calculateSellerScore($item->seller ?? null) * 0.55 +
+                    min(((int) ($item->totalSales ?? 0)) / 300, 1.0)   * 0.35 +
+                    0.10
+                );
             }
-
-            $similarityScore = !empty($vec)
-                ? $this->ai->calculateSimilarity($queryVec, $vec)
-                : 0.0;
-
-            $item->_score = (
-                $similarityScore                                    * 0.55 +
-                $this->calculateSellerScore($item->seller)          * 0.25 +
-                min(($item->totalSales ?? 0) / 300, 1.0)            * 0.12 +
-                (mt_rand(80, 120) / 100)                            * 0.08
-            );
 
             return $item;
         })->sortByDesc('_score')->values();
@@ -369,10 +397,9 @@ class ChatBotController extends Controller
         $tags       = BookTag::all();
         $filters    = $this->extractBookFilters($text, $categories, $tags);
 
-        $q = Books::where('is_approved', 1)
-            ->where('is_hidden', 0)
-            ->whereNotNull('vectorData')
-            ->whereHas('seller', fn($s) => $s->where('status', 'approved')->where('is_hidden', 0))
+        $q = Books::query()
+            ->activeForVector()
+            ->vectorReady()
             ->with(['category', 'seller', 'tags', 'authorProfile']);
 
         if (!$fallback) {
@@ -402,10 +429,9 @@ class ChatBotController extends Controller
         $tags       = StationeryTag::all();
         $filters    = $this->extractStationeryFilters($text, $categories, $tags);
 
-        $q = Stationery::where('is_approved', 1)
-            ->where('is_hidden', 0)
-            ->whereNotNull('vectorData')
-            ->whereHas('seller', fn($s) => $s->where('status', 'approved')->where('is_hidden', 0))
+        $q = Stationery::query()
+            ->activeForVector()
+            ->vectorReady()
             ->with(['category', 'seller', 'tags']);
 
         if (!$fallback) {
@@ -1376,7 +1402,10 @@ EOT;
             ? ($product->discount_price ?: $product->price)
             : ($product->discountPrice  ?: $product->price);
 
-        $tagStr = $product->tags->map(fn($t) => $t->tag_name_uz ?? $t->name ?? '')->filter()->implode(', ');
+        $tagStr = collect($product->tags ?? [])
+            ->map(fn($t) => $t->tag_name_uz ?? $t->name ?? '')
+            ->filter()
+            ->implode(', ');
         $extra  = $type === 'book'
             ? " | Muallif:{$product->author}"
             : " | Material:{$product->material}";

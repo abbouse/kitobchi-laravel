@@ -2,6 +2,631 @@
 @section('title', 'Dashboard')
 @section('page-title', 'Dashboard')
 
+@push('styles')
+<style>
+  [x-cloak] { display: none !important; }
+
+  .dash-shell {
+    --dash-ink: #0f172a;
+    --dash-copy: #475569;
+    --dash-muted: #94a3b8;
+    --dash-line: rgba(15, 23, 42, 0.08);
+    --dash-line-strong: rgba(15, 23, 42, 0.12);
+    --dash-surface: rgba(255, 255, 255, 0.92);
+    --dash-surface-soft: rgba(248, 250, 252, 0.86);
+    --dash-shadow: 0 22px 50px rgba(15, 23, 42, 0.08);
+    position: relative;
+    padding: 4px 0 28px;
+  }
+
+  .dash-shell::before {
+    content: "";
+    position: absolute;
+    inset: -24px -18px auto;
+    height: 320px;
+    border-radius: 36px;
+    background:
+      radial-gradient(circle at 0% 0%, rgba(37, 99, 235, 0.16), transparent 34%),
+      radial-gradient(circle at 100% 0%, rgba(14, 165, 233, 0.14), transparent 28%),
+      linear-gradient(180deg, rgba(248, 250, 252, 0.96), rgba(244, 247, 251, 0));
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .dash-stage,
+  .dash-shell > div[x-show] {
+    position: relative;
+    z-index: 1;
+  }
+
+  .dash-stage {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    margin-bottom: 20px;
+  }
+
+  .dash-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(340px, 0.9fr);
+    gap: 18px;
+    padding: 24px;
+    border-radius: 32px;
+    border: 1px solid var(--dash-line);
+    background:
+      radial-gradient(circle at top left, rgba(37, 99, 235, 0.16), transparent 28%),
+      radial-gradient(circle at 85% 14%, rgba(16, 185, 129, 0.10), transparent 20%),
+      linear-gradient(180deg, rgba(255,255,255,.96), rgba(247,250,252,.94));
+    box-shadow: var(--dash-shadow);
+    overflow: hidden;
+  }
+
+  .dash-hero__eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 36px;
+    padding: 0 14px;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.05);
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+  }
+
+  .dash-hero__eyebrow::before {
+    content: "";
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: #22c55e;
+    box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.12);
+  }
+
+  .dash-hero__title {
+    margin-top: 18px;
+    color: var(--dash-ink);
+    font-size: clamp(2rem, 2.6vw, 3rem);
+    font-weight: 900;
+    line-height: .98;
+    letter-spacing: -0.06em;
+    max-width: 16ch;
+  }
+
+  .dash-hero__subtitle {
+    margin-top: 12px;
+    max-width: 62ch;
+    color: var(--dash-copy);
+    font-size: .98rem;
+    line-height: 1.8;
+  }
+
+  .dash-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 18px;
+  }
+
+  .dash-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 40px;
+    padding: 0 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(15, 23, 42, 0.06);
+    background: rgba(255, 255, 255, 0.96);
+    color: var(--dash-ink);
+    font-size: .83rem;
+    font-weight: 700;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+  }
+
+  .dash-chip i { color: #2563eb; }
+
+  .dash-hero__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 18px;
+  }
+
+  .dash-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 0 18px;
+    border-radius: 999px;
+    border: 1px solid var(--dash-line-strong);
+    text-decoration: none;
+    font-size: .85rem;
+    font-weight: 800;
+    transition: transform .16s ease, box-shadow .16s ease, background-color .16s ease;
+  }
+
+  .dash-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 14px 24px rgba(15, 23, 42, 0.10);
+  }
+
+  .dash-btn--dark {
+    background: #0f172a;
+    border-color: #0f172a;
+    color: #fff;
+  }
+
+  .dash-btn--light {
+    background: rgba(255,255,255,.88);
+    color: var(--dash-ink);
+  }
+
+  .dash-hero-side {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .dash-status-box {
+    padding: 20px;
+    border-radius: 28px;
+    background:
+      radial-gradient(circle at top right, rgba(34, 197, 94, 0.16), transparent 28%),
+      linear-gradient(180deg, #0f172a 0%, #16243b 100%);
+    color: #fff;
+    box-shadow: 0 24px 54px rgba(15, 23, 42, 0.18);
+  }
+
+  .dash-status-box__label {
+    color: rgba(255,255,255,.65);
+    font-size: .72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .12em;
+  }
+
+  .dash-status-box__value {
+    margin-top: 10px;
+    font-size: 2.1rem;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -0.07em;
+  }
+
+  .dash-status-box__meta {
+    margin-top: 10px;
+    font-size: .88rem;
+    line-height: 1.65;
+    color: rgba(255,255,255,.82);
+  }
+
+  .dash-side-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .dash-side-stat {
+    padding: 16px;
+    border-radius: 22px;
+    border: 1px solid var(--dash-line);
+    background: rgba(255,255,255,.9);
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.05);
+  }
+
+  .dash-side-stat__label {
+    color: var(--dash-muted);
+    font-size: .72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .12em;
+  }
+
+  .dash-side-stat__value {
+    margin-top: 8px;
+    color: var(--dash-ink);
+    font-size: 1.45rem;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -0.05em;
+  }
+
+  .dash-side-stat__meta {
+    margin-top: 6px;
+    color: var(--dash-copy);
+    font-size: .78rem;
+    line-height: 1.5;
+  }
+
+  .dash-metric-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .dash-metric-card {
+    position: relative;
+    overflow: hidden;
+    padding: 18px;
+    border-radius: 26px;
+    border: 1px solid var(--dash-line);
+    background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(248,250,252,.92));
+    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.06);
+  }
+
+  .dash-metric-card::after {
+    content: "";
+    position: absolute;
+    inset: auto -16px -40px auto;
+    width: 120px;
+    height: 120px;
+    border-radius: 999px;
+    background: var(--metric-glow, rgba(37, 99, 235, 0.12));
+    pointer-events: none;
+  }
+
+  .dash-metric-card__top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .dash-metric-card__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 18px;
+    font-size: 1.15rem;
+    color: var(--metric-color, #2563eb);
+    background: var(--metric-bg, rgba(37, 99, 235, 0.10));
+  }
+
+  .dash-metric-card__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 28px;
+    padding: 0 10px;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.05);
+    color: #64748b;
+    font-size: .72rem;
+    font-weight: 800;
+  }
+
+  .dash-metric-card__label {
+    margin-top: 18px;
+    color: #64748b;
+    font-size: .78rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .12em;
+  }
+
+  .dash-metric-card__value {
+    margin-top: 8px;
+    color: var(--dash-ink);
+    font-size: 2rem;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -0.06em;
+  }
+
+  .dash-metric-card__meta {
+    margin-top: 8px;
+    color: var(--dash-copy);
+    font-size: .82rem;
+    line-height: 1.6;
+    min-height: 2.8em;
+  }
+
+  .dash-metric-card__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(15, 23, 42, 0.06);
+    color: #475569;
+    font-size: .78rem;
+  }
+
+  .dash-metric-card__footer strong {
+    color: var(--dash-ink);
+    font-weight: 800;
+  }
+
+  .dash-signal-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .dash-shell .kc-alert-card,
+  .dash-signal {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 18px;
+    border-radius: 24px;
+    border: 1px solid var(--dash-line);
+    background: rgba(255,255,255,.92);
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.05);
+    text-decoration: none;
+  }
+
+  .dash-signal__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 46px;
+    border-radius: 16px;
+    flex-shrink: 0;
+    font-size: 1.05rem;
+  }
+
+  .dash-signal__eyebrow {
+    color: var(--dash-muted);
+    font-size: .7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .12em;
+  }
+
+  .dash-signal__title {
+    margin-top: 4px;
+    color: var(--dash-ink);
+    font-size: 1rem;
+    font-weight: 800;
+    line-height: 1.35;
+  }
+
+  .dash-signal__meta {
+    margin-top: 6px;
+    color: var(--dash-copy);
+    font-size: .84rem;
+    line-height: 1.6;
+  }
+
+  .dash-surface,
+  .dash-shell .kc-tab-card,
+  .dash-shell .a122-section,
+  .dash-shell .card {
+    border: 1px solid var(--dash-line);
+    border-radius: 28px !important;
+    background: var(--dash-surface);
+    box-shadow: 0 18px 42px rgba(15, 23, 42, 0.06);
+    backdrop-filter: blur(12px);
+  }
+
+  .dash-surface {
+    padding: 18px;
+  }
+
+  .dash-panel-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+
+  .dash-panel-head__eyebrow {
+    color: var(--dash-muted);
+    font-size: .72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .12em;
+  }
+
+  .dash-panel-head__title {
+    margin-top: 2px;
+    color: var(--dash-ink);
+    font-size: 1.1rem;
+    font-weight: 800;
+    line-height: 1.25;
+  }
+
+  .dash-panel-head__meta {
+    margin-top: 5px;
+    color: var(--dash-copy);
+    font-size: .84rem;
+    line-height: 1.6;
+  }
+
+  .dash-quick-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .dash-shell .kc-quick-link {
+    height: 100%;
+    min-height: 152px;
+    padding: 18px;
+    border-radius: 24px;
+    border: 1px solid rgba(15, 23, 42, 0.06);
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.98), rgba(248,250,252,.90));
+    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.05);
+    transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+  }
+
+  .dash-shell .kc-quick-link:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 24px 42px rgba(15, 23, 42, 0.10);
+    border-color: rgba(37, 99, 235, 0.14);
+  }
+
+  .dash-shell .kc-quick-link__icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 18px;
+    font-size: 1.15rem;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.42);
+  }
+
+  .dash-shell .kc-quick-link__title {
+    margin-top: 18px;
+    color: var(--dash-ink);
+    font-size: .98rem;
+    font-weight: 800;
+  }
+
+  .dash-shell .kc-quick-link__meta {
+    margin-top: 8px;
+    color: var(--dash-copy);
+    font-size: .82rem;
+    line-height: 1.6;
+  }
+
+  .dash-shell .kc-tab-card {
+    padding: 8px !important;
+    background: rgba(255,255,255,.78);
+  }
+
+  #dashSegBar {
+    gap: 8px;
+  }
+
+  #dashSegBar .nav-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 48px;
+    padding: 0 16px;
+    border-radius: 16px;
+    color: #64748b;
+    font-size: .84rem;
+    font-weight: 800;
+    transition: all .16s ease;
+  }
+
+  #dashSegBar .nav-link.active {
+    background: #0f172a;
+    color: #fff;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.05), 0 10px 22px rgba(15, 23, 42, 0.16);
+  }
+
+  .dash-shell .card {
+    overflow: hidden;
+  }
+
+  .dash-shell .card-header {
+    background: transparent !important;
+    border-bottom: 0 !important;
+    padding: 1.35rem 1.35rem .45rem !important;
+  }
+
+  .dash-shell .card-body {
+    padding: 0 1.35rem 1.35rem !important;
+  }
+
+  .dash-shell .card-header .btn,
+  .dash-shell .card-body .btn,
+  .dash-shell .a122-section .btn {
+    border-radius: 999px !important;
+  }
+
+  .dash-shell .progress {
+    background: rgba(148, 163, 184, 0.16);
+    border-radius: 999px;
+  }
+
+  .dash-shell .table-wrap,
+  .dash-shell .overflow-x-auto {
+    border-radius: 22px;
+  }
+
+  .dash-shell .alert {
+    border-radius: 22px;
+  }
+
+  .dash-shell .hover-bg-light:hover {
+    background: rgba(248, 250, 252, 0.95);
+  }
+
+  .dash-shell .dash-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 160px;
+    color: var(--dash-muted);
+    font-size: .88rem;
+    font-weight: 700;
+    border: 1px dashed rgba(148, 163, 184, 0.35);
+    border-radius: 22px;
+    background: rgba(248,250,252,.7);
+  }
+
+  .dash-shell .dash-empty__ico {
+    font-size: 1rem;
+  }
+
+  @media (max-width: 1399px) {
+    .dash-metric-grid,
+    .dash-quick-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 1199px) {
+    .dash-hero {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 767px) {
+    .dash-shell::before {
+      inset: -10px -10px auto;
+      height: 240px;
+      border-radius: 24px;
+    }
+
+    .dash-stage {
+      gap: 14px;
+    }
+
+    .dash-hero {
+      padding: 18px;
+      border-radius: 24px;
+    }
+
+    .dash-hero__title {
+      max-width: none;
+      font-size: 1.85rem;
+    }
+
+    .dash-metric-grid,
+    .dash-signal-grid,
+    .dash-side-grid,
+    .dash-quick-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .dash-shell .kc-tab-card {
+      overflow-x: auto;
+    }
+
+    #dashSegBar {
+      flex-wrap: nowrap;
+      min-width: max-content;
+    }
+  }
+</style>
+@endpush
+
 @section('content')
 
 @php
@@ -17,7 +642,7 @@
   };
 @endphp
 
-<div x-data="{
+<div class="dash-shell" x-data="{
   tab: localStorage.getItem('a122-dash-tab') || 'main',
   init() {
     this.$nextTick(() => {
@@ -57,98 +682,205 @@
   }
 @endphp
 
-<div class="d-flex flex-column gap-4 mb-4">
-  <x-admin.page-header
-    eyebrow="A122 control room"
-    title="Operatsiyalar, moliya va moderatsiya bitta nazorat sahifasida"
-    subtitle="Bugungi oqim, kutilayotgan navbatlar va muhim signal bloklari shu yerga yig‘ildi. Maqsad: tez o‘qish, tez saralash va ortiqcha yurmasdan qaror qilish.">
-    <a href="{{ route('admin.dashboard.live') }}" class="btn btn-dark rounded-pill px-4" target="_blank">
-      <i class="bi bi-broadcast-pin me-2"></i>Live monitor
-    </a>
-    <a href="{{ route('admin.dashboard',['clear_cache'=>1]) }}" class="btn btn-outline-secondary rounded-pill px-4">
-      <i class="bi bi-arrow-clockwise me-2"></i>Yangilash
-    </a>
-  </x-admin.page-header>
+@php
+  $dashMoment = now()->hour < 12 ? 'Xayrli tong' : (now()->hour < 18 ? 'Xayrli kun' : 'Xayrli kech');
+  $opsLoad = $pendingOrders + $packingOrders + $onwayOrders;
+  $payoutQueue = $pendingSellerTxCount + $pendingCourierTxCount;
+  $dashFocusTitle = $pendingOrders > 0
+      ? "{$pendingOrders} ta buyurtma admin e'tiborini kutmoqda"
+      : ($payoutQueue > 0
+          ? "{$payoutQueue} ta payout navbati yig‘ilib turibdi"
+          : "Tizim barqaror, jiddiy bottleneck ko‘rinmayapti");
+  $dashFocusMeta = $pendingOrders > 0
+      ? "Eng tez foyda beradigan action: buyurtma oqimini bo‘shatish, qadoq va yo‘ldagi navbatni pasaytirish."
+      : ($payoutQueue > 0
+          ? "Moliya oqimida navbat bor. Seller va kuryer payoutlarini bir marta ko‘zdan kechirish foydali bo‘ladi."
+          : "Bugungi snapshot sog‘lom ko‘rinmoqda. Endi ko‘proq trend, foyda va foydalanuvchi xulqiga e’tibor qaratish mumkin.");
+  $completionTone = $completionRate >= 75 ? 'success' : ($completionRate >= 55 ? 'warning' : 'danger');
+  $heroChips = [
+      ['bi-bag-check', number_format($todayOrders) . " ta bugungi buyurtma"],
+      ['bi-people', number_format($newUsersToday) . " ta yangi user"],
+      ['bi-patch-check', $completionRate . "% yakunlanish"],
+      ['bi-shop-window', number_format($approvedSellers) . " ta faol do‘kon"],
+  ];
+  $topMetrics = [
+      [
+          'icon' => 'bi-bag-check',
+          'color' => '#2563eb',
+          'bg' => 'rgba(37, 99, 235, 0.10)',
+          'glow' => 'rgba(37, 99, 235, 0.14)',
+          'badge' => number_format($pendingOrders) . " kutilmoqda",
+          'label' => 'Aktiv buyurtmalar',
+          'value' => number_format($opsLoad),
+          'meta' => "Qadoqlanayotgan va yo‘ldagi oqim ham shu yerda jamlangan.",
+          'footer_left' => "Yo'lda: " . number_format($onwayOrders),
+          'footer_right' => "Qadoq: " . number_format($packingOrders),
+      ],
+      [
+          'icon' => 'bi-wifi',
+          'color' => '#0284c7',
+          'bg' => 'rgba(2, 132, 199, 0.10)',
+          'glow' => 'rgba(2, 132, 199, 0.14)',
+          'badge' => '+' . number_format($newUsersToday) . ' bugun',
+          'label' => 'Online foydalanuvchilar',
+          'value' => number_format($onlineUsers),
+          'meta' => "So‘nggi 5 daqiqada ilova ichida faol bo‘lgan userlar.",
+          'footer_left' => "Premium: " . number_format($premiumUsers),
+          'footer_right' => "Tasdiqlangan: " . number_format($verifiedUsers),
+      ],
+      [
+          'icon' => 'bi-cash-coin',
+          'color' => '#d97706',
+          'bg' => 'rgba(217, 119, 6, 0.10)',
+          'glow' => 'rgba(217, 119, 6, 0.14)',
+          'badge' => number_format($payoutQueue) . ' navbat',
+          'label' => 'Kutilayotgan payout',
+          'value' => number_format($payoutQueue),
+          'meta' => "Seller va kuryer hisob-kitoblari kechikmasligi uchun shu blok eng muhimlaridan biri.",
+          'footer_left' => "Seller: " . number_format($pendingSellerTxCount),
+          'footer_right' => "Kuryer: " . number_format($pendingCourierTxCount),
+      ],
+      [
+          'icon' => 'bi-graph-up-arrow',
+          'color' => '#16a34a',
+          'bg' => 'rgba(22, 163, 74, 0.10)',
+          'glow' => 'rgba(22, 163, 74, 0.14)',
+          'badge' => number_format($weekRevenue / 1000000, 1) . 'M hafta',
+          'label' => "Bugungi to'langan aylanma",
+          'value' => number_format($todayRevenue / 1000000, 2) . 'M',
+          'meta' => "Faqat paid bo‘lgan buyurtmalar summasi. Real oqim kayfiyatini shu yaxshi ko‘rsatadi.",
+          'footer_left' => "AOV: " . number_format($avgOrderValue),
+          'footer_right' => "Profit: " . number_format($platformProfitMonth / 1000) . 'K',
+      ],
+  ];
+@endphp
 
-  <div class="row g-3">
-    <div class="col-12 col-md-6 col-xl-3">
-      <x-admin.stat-card
-        label="Aktiv buyurtmalar"
-        :value="number_format($pendingOrders + $packingOrders + $onwayOrders)"
-        meta="Kutilayotgan, qadoqlanayotgan va yo‘ldagi buyurtmalar"
-        icon="bag-check"
-        tone="primary" />
+<div class="dash-stage">
+  <section class="dash-hero">
+    <div>
+      <span class="dash-hero__eyebrow">A122 control room</span>
+      <div class="dash-hero__title">{{ $dashMoment }}, jamoa. Bugungi operatsion manzara shu yerda.</div>
+      <div class="dash-hero__subtitle">
+        Dashboard endi faqat raqamlar ombori emas, balki qayerga birinchi qarash kerakligini aytib beradigan boshqaruv paneli.
+        Buyurtma oqimi, foydalanuvchi ritmi, payout navbati va biznes signal bir sahifada, ortiqcha stresssiz o‘qiladi.
+      </div>
+
+      <div class="dash-chip-row">
+        @foreach($heroChips as [$icon, $text])
+          <span class="dash-chip"><i class="bi {{ $icon }}"></i>{{ $text }}</span>
+        @endforeach
+      </div>
+
+      <div class="dash-hero__actions">
+        <a href="{{ route('admin.dashboard.live') }}" class="dash-btn dash-btn--dark" target="_blank">
+          <i class="bi bi-broadcast-pin"></i> Live monitor
+        </a>
+        <a href="{{ route('admin.dashboard',['clear_cache'=>1]) }}" class="dash-btn dash-btn--light">
+          <i class="bi bi-arrow-clockwise"></i> Snapshotni yangilash
+        </a>
+      </div>
     </div>
-    <div class="col-12 col-md-6 col-xl-3">
-      <x-admin.stat-card
-        label="Online foydalanuvchilar"
-        :value="number_format($onlineUsers)"
-        meta="Hozir ilova ichida faol bo‘lgan foydalanuvchilar"
-        icon="wifi"
-        tone="info" />
+
+    <div class="dash-hero-side">
+      <div class="dash-status-box">
+        <div class="dash-status-box__label">Bugungi fokus</div>
+        <div class="dash-status-box__value">{{ $dashFocusTitle }}</div>
+        <div class="dash-status-box__meta">{{ $dashFocusMeta }}</div>
+      </div>
+
+      <div class="dash-side-grid">
+        <div class="dash-side-stat">
+          <div class="dash-side-stat__label">Yakunlanish</div>
+          <div class="dash-side-stat__value">{{ $completionRate }}%</div>
+          <div class="dash-side-stat__meta">Mijoz qabul qildi statusiga yetib borgan buyurtmalar ulushi.</div>
+        </div>
+        <div class="dash-side-stat">
+          <div class="dash-side-stat__label">Seller navbati</div>
+          <div class="dash-side-stat__value">{{ number_format($pendingSellers) }}</div>
+          <div class="dash-side-stat__meta">Tasdiq yoki ko‘rib chiqishni kutayotgan do‘kon arizalari.</div>
+        </div>
+        <div class="dash-side-stat">
+          <div class="dash-side-stat__label">Haftalik aylanma</div>
+          <div class="dash-side-stat__value">{{ number_format($weekRevenue / 1000000, 1) }}M</div>
+          <div class="dash-side-stat__meta">Joriy hafta paid oqimining tez o‘qiladigan snapshoti.</div>
+        </div>
+        <div class="dash-side-stat">
+          <div class="dash-side-stat__label">Izolyat userlar</div>
+          <div class="dash-side-stat__value">{{ number_format($isolatedUsers) }}</div>
+          <div class="dash-side-stat__meta">30+ kun faol bo‘lmagan userlar segmenti.</div>
+        </div>
+      </div>
     </div>
-    <div class="col-12 col-md-6 col-xl-3">
-      <x-admin.stat-card
-        label="Kutilayotgan payout"
-        :value="number_format($pendingSellerTxCount + $pendingCourierTxCount)"
-        meta="Seller va kuryer payout navbatlari"
-        icon="cash-stack"
-        tone="warning" />
-    </div>
-    <div class="col-12 col-md-6 col-xl-3">
-      <x-admin.stat-card
-        label="Bugungi to'langan aylanma"
-        :value="number_format($todayRevenue / 1000000, 2) . '<span class=&quot;fs-5 text-secondary ms-1&quot;>M</span>'"
-        meta="Faqat to'langan buyurtmalar summasi"
-        icon="graph-up-arrow"
-        tone="success" />
-    </div>
+  </section>
+
+  <div class="dash-metric-grid">
+    @foreach($topMetrics as $metric)
+      <article class="dash-metric-card" style="--metric-color:{{ $metric['color'] }};--metric-bg:{{ $metric['bg'] }};--metric-glow:{{ $metric['glow'] }};">
+        <div class="dash-metric-card__top">
+          <span class="dash-metric-card__icon"><i class="bi {{ $metric['icon'] }}"></i></span>
+          <span class="dash-metric-card__badge">{{ $metric['badge'] }}</span>
+        </div>
+        <div class="dash-metric-card__label">{{ $metric['label'] }}</div>
+        <div class="dash-metric-card__value">{{ $metric['value'] }}</div>
+        <div class="dash-metric-card__meta">{{ $metric['meta'] }}</div>
+        <div class="dash-metric-card__footer">
+          <span>{{ $metric['footer_left'] }}</span>
+          <strong>{{ $metric['footer_right'] }}</strong>
+        </div>
+      </article>
+    @endforeach
   </div>
 
   @if(!empty($alerts))
-    <div class="row g-3">
+    <div class="dash-signal-grid">
       @foreach($alerts as [$color,$icon,$title,$desc,$url])
         @php
-          $class = match($color) {
-            'danger' => 'alert-danger',
-            'warning' => 'alert-warning',
-            'success' => 'alert-success',
-            'info' => 'alert-primary',
-            default => 'alert-secondary',
+          $signal = match($color) {
+            'danger' => ['rgba(239, 68, 68, 0.12)', '#dc2626', 'Kritik signal'],
+            'warning' => ['rgba(245, 158, 11, 0.14)', '#d97706', 'Diqqat kerak'],
+            'success' => ['rgba(34, 197, 94, 0.12)', '#16a34a', 'Yaxshi holat'],
+            'info' => ['rgba(37, 99, 235, 0.12)', '#2563eb', 'Operatsion signal'],
+            default => ['rgba(100, 116, 139, 0.14)', '#64748b', 'Signal'],
           };
         @endphp
-        <div class="col-12 col-xl-6">
-          <a href="{{ $url }}" class="alert {{ $class }} kc-alert-card d-flex align-items-start gap-3 mb-0 text-decoration-none">
-            <i class="bi {{ $icon }} fs-4"></i>
-            <span>
-              <span class="d-block fw-bold text-dark">{{ $title }}</span>
-              <span class="d-block small text-dark-emphasis">{{ $desc }}</span>
-            </span>
-          </a>
-        </div>
+        <a href="{{ $url }}" class="dash-signal">
+          <span class="dash-signal__icon" style="background:{{ $signal[0] }};color:{{ $signal[1] }}">
+            <i class="bi {{ $icon }}"></i>
+          </span>
+          <span>
+            <span class="dash-signal__eyebrow">{{ $signal[2] }}</span>
+            <span class="dash-signal__title d-block">{{ $title }}</span>
+            <span class="dash-signal__meta d-block">{{ $desc }}</span>
+          </span>
+        </a>
       @endforeach
     </div>
   @endif
 
   @if(count($dashQuick))
-    <x-admin.section-card title="Tezkor bo‘limlar" meta="Adminning eng ko‘p ishlatiladigan ish yo‘llari.">
-      <div class="row g-3">
+    <section class="dash-surface">
+      <div class="dash-panel-head">
+        <div>
+          <div class="dash-panel-head__eyebrow">Quick actions</div>
+          <div class="dash-panel-head__title">Eng ko‘p ishlatiladigan yo‘llar shu yerda</div>
+          <div class="dash-panel-head__meta">Operator miyasi chalg‘imasligi uchun adminning eng issiq bo‘limlari alohida ajratildi.</div>
+        </div>
+      </div>
+      <div class="dash-quick-grid">
         @foreach($dashQuick as $q)
-          <div class="col-12 col-md-6 col-xl-3">
-            <a href="{{ $q[2] }}" class="kc-quick-link">
-              <span class="kc-quick-link__icon" style="background:{{ $q[4] }};color:{{ $q[5] }}">
-                <i class="bi {{ $q[1] }}"></i>
-              </span>
-              <div class="kc-quick-link__title">{{ $q[0] }}</div>
-              <div class="kc-quick-link__meta">{{ $q[3] }}</div>
-            </a>
-          </div>
+          <a href="{{ $q[2] }}" class="kc-quick-link">
+            <span class="kc-quick-link__icon" style="background:{{ $q[4] }};color:{{ $q[5] }}">
+              <i class="bi {{ $q[1] }}"></i>
+            </span>
+            <div class="kc-quick-link__title">{{ $q[0] }}</div>
+            <div class="kc-quick-link__meta">{{ $q[3] }}</div>
+          </a>
         @endforeach
       </div>
-    </x-admin.section-card>
+    </section>
   @endif
 
-  <div class="kc-tab-card p-3">
+  <div class="kc-tab-card">
     <div class="nav nav-pills flex-wrap" id="dashSegBar">
       <button type="button" class="nav-link" :class="{ 'active': tab === 'main' }" @click="switchTab('main')"><i class="bi bi-grid-1x2 me-2"></i>Asosiy</button>
       <button type="button" class="nav-link" :class="{ 'active': tab === 'orders' }" @click="switchTab('orders')"><i class="bi bi-bag-check me-2"></i>Buyurtmalar</button>

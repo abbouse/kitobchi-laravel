@@ -20,6 +20,7 @@ use App\Models\FavouriteProducts;
 use App\Observers\BookStockObserver;
 use App\Observers\SoldObserver;
 use App\Observers\CourierOrderObserver;
+use App\Observers\ProductObserver;
 use App\Observers\StationeryStockObserver;
 use App\Observers\StationeryVariantStockObserver;
 use App\Observers\UserProgressObserver;
@@ -46,7 +47,9 @@ class AppServiceProvider extends ServiceProvider
             'stationery' => \App\Models\Stationery::class,
         ]);
 
+        Books::observe(ProductObserver::class);
         Books::observe(BookStockObserver::class);
+        Stationery::observe(ProductObserver::class);
         Stationery::observe(StationeryStockObserver::class);
         StationeryVariant::observe(StationeryVariantStockObserver::class);
         Sold::observe(SoldObserver::class);

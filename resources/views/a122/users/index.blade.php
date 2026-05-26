@@ -32,6 +32,7 @@
     @foreach([
       'all' => ['Barchasi', $counts['all'] ?? 0],
       'buyers' => ['Xarid qilganlar', $counts['buyers'] ?? 0],
+      'with_cards' => ['Karta ulanganlar', $counts['with_cards'] ?? 0],
       'pending' => ['Kutilmoqda', $counts['pending'] ?? 0],
       'active' => ['Faol', $counts['active'] ?? 0],
       'premium' => ['Premium', $counts['premium'] ?? 0],

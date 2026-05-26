@@ -2,115 +2,52 @@
 
 namespace App\Console\Commands;
 
+use App\Services\ProductVectorService;
 use Illuminate\Console\Command;
-use App\Models\Books;
-use App\Models\Stationery;
-use App\Services\OpenAIService;
 
-/**
- * Barcha kitob va kanselyariyalar uchun vektorni qayta hisoblash.
- *
- * Ishlatish:
- *   php artisan vectors:rebuild           -- ikkalasini
- *   php artisan vectors:rebuild --type=book
- *   php artisan vectors:rebuild --type=stationery
- *   php artisan vectors:rebuild --force   -- barchasi (mavjud vector bo'lsa ham)
- */
 class RebuildVectors extends Command
 {
-    protected $signature   = 'vectors:rebuild {--type=all} {--force}';
-    protected $description = 'Kitob va kanselyariya vectorlarini qayta hisoblaydi';
+    protected $signature = 'vectors:rebuild {--type=all : book|stationery|all} {--force : Active mahsulotlarning hammasini qayta vector qiladi} {--limit=120 : Bir yurishda nechta mahsulotni sync qilish}';
 
-    public function __construct(protected OpenAIService $ai)
-    {
+    protected $description = 'Faol mahsulotlar uchun vectorData yaratadi, nofaol mahsulotlardagi vectorData ni tozalaydi';
+
+    public function __construct(
+        private readonly ProductVectorService $vectorService,
+    ) {
         parent::__construct();
     }
 
     public function handle(): int
     {
-        $type  = $this->option('type');
-        $force = $this->option('force');
+        $type = strtolower((string) $this->option('type'));
+        $force = (bool) $this->option('force');
+        $limit = max(0, (int) $this->option('limit'));
 
-        if (in_array($type, ['all', 'book'])) {
-            $this->rebuildBooks($force);
-        }
-        if (in_array($type, ['all', 'stationery'])) {
-            $this->rebuildStationery($force);
-        }
+        $types = match ($type) {
+            'all' => ['book', 'stationery'],
+            'book', 'books' => ['book'],
+            'stationery', 'stationeries' => ['stationery'],
+            default => null,
+        };
 
-        $this->info('✅ Vektorlar yangilandi!');
-        return 0;
-    }
-
-    private function rebuildBooks(bool $force): void
-    {
-        $query = Books::with(['category', 'seller', 'tags'])
-            ->where('is_approved', 1);
-
-        if (!$force) {
-            $query->whereNull('vectorData');
+        if ($types === null) {
+            $this->error("Noto'g'ri type: {$type}. book | stationery | all ishlating.");
+            return self::INVALID;
         }
 
-        $books = $query->get();
-        $bar   = $this->output->createProgressBar($books->count());
-        $this->info("📚 Kitoblar: {$books->count()} ta");
+        foreach ($types as $vectorType) {
+            $result = $this->vectorService->rebuildType($vectorType, $force, $limit);
 
-        foreach ($books as $book) {
-            $text = $this->ai->buildProductEmbedText([
-                'name'          => $book->name,
-                'author'        => $book->author,
-                'category'      => $book->category?->name_uz,
-                'tags'          => $book->tags->pluck('tag_name_uz')->toArray(),
-                'shop_name'     => $book->seller?->shop_name,
-                'description'   => $book->description,
-                'totalSales'    => $book->totalSales,
-                'totalSalesWeek'=> $book->totalSalesWeek,
-            ]);
-
-            $vector = $this->ai->getVector($text);
-            $book->update(['vectorData' => $vector]);
-            $bar->advance();
-
-            // Rate limit uchun kichik kutish
-            usleep(200_000); // 0.2 soniya
+            $this->info(sprintf(
+                '%s: %d ta sync, %d ta inactive vector tozalandi.',
+                $vectorType === 'book' ? 'Books' : 'Stationery',
+                $result['synced'],
+                $result['cleared'],
+            ));
         }
 
-        $bar->finish();
-        $this->newLine();
-    }
+        $this->info('Vector oqimi yakunlandi.');
 
-    private function rebuildStationery(bool $force): void
-    {
-        $query = Stationery::with(['category', 'seller', 'tags'])
-            ->where('is_approved', 1);
-
-        if (!$force) {
-            $query->whereNull('vectorData');
-        }
-
-        $items = $query->get();
-        $bar   = $this->output->createProgressBar($items->count());
-        $this->info("🖊  Kanselyariya: {$items->count()} ta");
-
-        foreach ($items as $item) {
-            $text = $this->ai->buildProductEmbedText([
-                'name'          => $item->name,
-                'category'      => $item->category?->name ?? $item->category?->name_uz,
-                'tags'          => $item->tags->pluck('name_uz')->toArray(),
-                'shop_name'     => $item->seller?->shop_name,
-                'description'   => $item->description,
-                'totalSales'    => $item->totalSales,
-                'totalSalesWeek'=> $item->totalSalesWeek,
-            ]);
-
-            $vector = $this->ai->getVector($text);
-            $item->update(['vectorData' => $vector]);
-            $bar->advance();
-
-            usleep(200_000);
-        }
-
-        $bar->finish();
-        $this->newLine();
+        return self::SUCCESS;
     }
 }

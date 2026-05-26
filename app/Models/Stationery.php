@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 class Stationery extends Model
@@ -48,6 +49,7 @@ class Stationery extends Model
         'is_hidden' => 'boolean',
         'status' => 'boolean',
         'recommended' => 'boolean',
+        'vectorData' => 'json',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'kangaroo_listing_issues' => 'array',
@@ -75,7 +77,35 @@ class Stationery extends Model
     public function seller()
     {
         return $this->belongsTo(Seller::class, 'seller_id')
-            ->select('id', 'shop_name', 'lastname', 'firstname', 'phone_number', 'photo', 'isVerified');
+            ->select('id', 'shop_name', 'lastname', 'firstname', 'phone_number', 'photo', 'isVerified', 'status', 'is_hidden');
+    }
+
+    public function scopeActiveForVector(Builder $query): Builder
+    {
+        return $query
+            ->where('status', true)
+            ->where('is_approved', 1)
+            ->where('is_hidden', 0)
+            ->where('stock', '>', 0)
+            ->whereHas('seller', fn (Builder $sellerQuery) => $sellerQuery
+                ->where('status', 'approved')
+                ->where('is_hidden', 0));
+    }
+
+    public function scopeVectorReady(Builder $query): Builder
+    {
+        return $query
+            ->whereNotNull('vectorData')
+            ->whereRaw('JSON_LENGTH(vectorData) = 1536');
+    }
+
+    public function scopeVectorNeedsSync(Builder $query): Builder
+    {
+        return $query->where(function (Builder $innerQuery) {
+            $innerQuery
+                ->whereNull('vectorData')
+                ->orWhereRaw('JSON_LENGTH(vectorData) <> 1536');
+        });
     }
 
     // Helper: chegirma foizini hisoblash

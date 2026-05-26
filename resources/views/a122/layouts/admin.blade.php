@@ -33,23 +33,25 @@
     data-sidebar-shell
     class="kc-shell d-flex sidebar-expanded">
     @include('a122.partials.sidebar')
-    <div class="kc-main flex-grow-1 d-flex flex-column min-vh-100">
+    <div class="kc-main flex-grow-1 d-flex flex-column">
       @include('a122.partials.topbar')
-      <main class="kc-content flex-grow-1">
-        <div class="container-fluid px-3 px-lg-4 px-xxl-5">
-          <div class="mx-auto kc-shell-width">
-            @yield('content')
+      <div class="kc-main__viewport flex-grow-1 d-flex flex-column">
+        <main class="kc-content flex-grow-1">
+          <div class="container-fluid px-3 px-lg-4 px-xxl-5">
+            <div class="mx-auto kc-shell-width">
+              @yield('content')
+            </div>
           </div>
-        </div>
-      </main>
-      <footer class="border-top bg-white bg-opacity-75">
-        <div class="container-fluid px-3 px-lg-4 px-xxl-5 py-3">
-          <div class="mx-auto kc-shell-width d-flex flex-wrap align-items-center justify-content-between gap-2 small text-secondary">
-            <span>© {{ date('Y') }} Kitobchi Admin</span>
-            <span>Tabler-inspired Bootstrap workspace</span>
+        </main>
+        <footer class="kc-footer border-top bg-white bg-opacity-75">
+          <div class="container-fluid px-3 px-lg-4 px-xxl-5 py-3">
+            <div class="mx-auto kc-shell-width d-flex flex-wrap align-items-center justify-content-between gap-2 small text-secondary">
+              <span>© {{ date('Y') }} Kitobchi Admin</span>
+              <span>Calm, human-centered operations workspace</span>
+            </div>
           </div>
-        </div>
-      </footer>
+        </footer>
+      </div>
     </div>
   </div>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>

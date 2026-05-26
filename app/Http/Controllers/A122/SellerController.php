@@ -11,6 +11,7 @@ use App\Models\SellerLocation;
 use App\Models\SellerOrder;
 use App\Models\SellerStaffLog;
 use App\Models\SellerTransaction;
+use App\Services\SellerPremiumService;
 use App\Services\SellerOrderSettlementService;
 use App\Services\PasswordResetService;
 use App\Services\SmsService;
@@ -26,7 +27,8 @@ class SellerController extends Controller
 {
     public function __construct(
         private readonly SmsService $smsService,
-        private readonly PasswordResetService $passwordResetService
+        private readonly PasswordResetService $passwordResetService,
+        private readonly SellerPremiumService $premiumService,
     ) {
     }
 
@@ -153,7 +155,11 @@ class SellerController extends Controller
 
     public function edit(Seller $seller)
     {
-        return view('a122.sellers.edit', compact('seller'));
+        $storeSeller = $this->resolveStoreSeller($seller);
+        $premiumPlans = $this->premiumService->plans();
+        $premiumState = $this->premiumService->syncSeller($storeSeller);
+
+        return view('a122.sellers.edit', compact('seller', 'storeSeller', 'premiumPlans', 'premiumState'));
     }
 
     public function update(Request $request, Seller $seller)
@@ -172,9 +178,8 @@ class SellerController extends Controller
             'password'           => 'nullable|string|min:6|max:255',
 
             // ── Premium ───────────────────────────────────────────
-            // Premium berish — toggle + sana. Toggle off bo'lsa sana e'tiborsiz.
-            'isPremiumShop'      => 'nullable|boolean',
-            'isPremiumExpiresAt' => 'nullable|date',
+            'premium_action'     => 'nullable|string|in:keep,revoke,grant',
+            'premium_plan'       => 'nullable|string|in:monthly,quarterly,yearly',
 
             // ── Shartnoma ─────────────────────────────────────────
             'contract_number'     => 'nullable|string|max:50',
@@ -204,24 +209,17 @@ class SellerController extends Controller
             'legal_address'       => 'nullable|string|max:255',
         ]);
 
-        // Checkbox'lar form'da yuborilmasa request'da yo'q — shu sababli
-        // ularni aniq bool ko'rinishiga keltiramiz va premium toggle
-        // bo'yicha expires_at'ni muvofiqlashtiramiz.
-        $isPremium = $request->boolean('isPremiumShop');
-        $data['isPremiumShop'] = $isPremium;
-
         // Shartnoma imzolangan toggle — checkbox: yuborilmasa false.
         $data['contract_signed'] = $request->boolean('contract_signed');
-        if ($isPremium) {
-            // Toggle yoqilgan bo'lsa, sana majburiy.
+
+        $premiumAction = $request->input('premium_action', 'keep');
+        if ($premiumAction === 'grant') {
             $request->validate([
-                'isPremiumExpiresAt' => 'required|date',
+                'premium_plan' => 'required|string|in:monthly,quarterly,yearly',
             ]);
-            $data['isPremiumExpiresAt'] = $request->input('isPremiumExpiresAt');
-        } else {
-            // Toggle o'chirilsa, sanani ham tozalaymiz.
-            $data['isPremiumExpiresAt'] = null;
         }
+
+        unset($data['premium_action'], $data['premium_plan']);
 
         if ($request->filled('password')) {
             $data['password'] = $request->input('password');
@@ -253,8 +251,16 @@ class SellerController extends Controller
                         || $oldStatus !== $newStatus
                         || $oldSigned !== $newSigned;
 
-        DB::transaction(function () use ($seller, $data, $contractChanged, $oldExpiry, $newExpiry, $oldNumber, $newNumber, $oldStatus, $newStatus, $oldSigned, $newSigned) {
+        $storeSeller = $this->resolveStoreSeller($seller);
+
+        DB::transaction(function () use ($seller, $storeSeller, $data, $premiumAction, $request, $contractChanged, $oldExpiry, $newExpiry, $oldNumber, $newNumber, $oldStatus, $newStatus, $oldSigned, $newSigned) {
             $seller->update($data);
+
+            if ($premiumAction === 'grant') {
+                $this->premiumService->grantByAdmin($storeSeller, (string) $request->input('premium_plan'));
+            } elseif ($premiumAction === 'revoke') {
+                $this->premiumService->revokeByAdmin($storeSeller);
+            }
 
             if ($contractChanged) {
                 $action = $this->determineContractAction($oldExpiry, $newExpiry, $oldNumber, $newNumber, $oldStatus, $newStatus);

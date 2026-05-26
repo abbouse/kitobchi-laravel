@@ -49,6 +49,13 @@
 
   $current = request()->route()?->getName() ?? '';
   $panelAdmin = auth('panel')->user();
+  $nowHour = now()->hour;
+  $focusTitle = $nowHour < 11 ? 'Kun boshlandi' : ($nowHour < 18 ? 'Ish ritmi yuqori' : 'Kun yakuni nazorati');
+  $focusCopy = $nowHour < 11
+    ? 'Orders, support va seller oqimini xotirjam ritmda ko‘zdan kechiring.'
+    : ($nowHour < 18
+      ? 'Faol oqimlar eng ko‘p shu paytda yig‘iladi, signal va queue’larni kuzatib boring.'
+      : 'Yopilishdan oldin kechki moderatsiya va qolgan operatsiyalarni tekshirib chiqing.');
 @endphp
 
 <div id="a122-sidebar-overlay" data-sidebar-overlay class="kc-sidebar-overlay d-none d-lg-none"></div>
@@ -67,12 +74,18 @@
           </span>
           <span class="kc-sidebar__brand-copy">
             <span class="kc-sidebar__brand-title d-block">Kitobchi Admin</span>
-            <span class="kc-sidebar__brand-subtitle d-block">Tabler-inspired operations panel</span>
+            <span class="kc-sidebar__brand-subtitle d-block">Human-centered control room</span>
           </span>
         </a>
         <button type="button" data-sidebar-close class="btn btn-sm btn-outline-light border-0 d-lg-none">
           <i class="bi bi-x-lg"></i>
         </button>
+      </div>
+
+      <div class="kc-sidebar__insight">
+        <div class="kc-sidebar__insight-kicker">Bugungi fokus</div>
+        <div class="kc-sidebar__insight-title">{{ $focusTitle }}</div>
+        <p class="kc-sidebar__insight-copy">{{ $focusCopy }}</p>
       </div>
     </div>
 
@@ -104,8 +117,8 @@
     <div class="kc-sidebar__footer">
       <div class="kc-sidebar__workspace">
         <div class="kc-sidebar__workspace-label">Workspace</div>
-        <div class="kc-sidebar__workspace-title">A122 Admin</div>
-        <div class="kc-sidebar__workspace-meta">{{ $panelAdmin?->name ?? 'Admin' }} · clean operations flow</div>
+        <div class="kc-sidebar__workspace-title">{{ $panelAdmin?->name ?? 'Admin' }}</div>
+        <div class="kc-sidebar__workspace-meta">A122 control room · sokin va aniq boshqaruv oqimi</div>
       </div>
     </div>
   </div>

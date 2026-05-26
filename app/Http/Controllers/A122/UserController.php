@@ -30,6 +30,7 @@ class UserController extends Controller
             'pending' => $query->where(fn ($inner) => $inner->where('isVerified', false)->orWhereNull('isVerified')),
             'premium' => $query->where('is_premium', true),
             'buyers' => $query->whereIn('id', $buyersQuery),
+            'with_cards' => $query->whereHas('cards'),
             'blocked' => $query->where('status', 'blocked')
                 ->where(fn ($inner) => $inner->whereNull('blocked_until')->orWhere('blocked_until', '>', now())),
             default => null,
@@ -51,6 +52,7 @@ class UserController extends Controller
             'pending' => User::where(fn ($inner) => $inner->where('isVerified', false)->orWhereNull('isVerified'))->count(),
             'premium' => User::where('is_premium', true)->count(),
             'buyers' => (clone $buyersQuery)->count(),
+            'with_cards' => User::whereHas('cards')->count(),
             'blocked' => User::where('status', 'blocked')
                 ->where(fn ($inner) => $inner->whereNull('blocked_until')->orWhere('blocked_until', '>', now()))
                 ->count(),

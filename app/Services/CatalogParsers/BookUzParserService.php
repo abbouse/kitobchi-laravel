@@ -131,8 +131,6 @@ class BookUzParserService
 
             $images = $this->downloadImages($item);
             $description = $this->buildImportDescription($item);
-            $existingVectorData = is_array($book?->vectorData) ? $book->vectorData : [];
-
             Log::info('[book_uz_import] payload_ready', [
                 'parser_item_id' => $item->id,
                 'resolved_book_id' => $book?->id,
@@ -188,15 +186,6 @@ class BookUzParserService
                 'is_hidden' => false,
                 'is_approved' => 1,
                 'recommended' => false,
-                'vectorData' => array_merge($existingVectorData, [
-                    'parser' => [
-                        'provider' => self::PROVIDER,
-                        'source_url' => $item->source_url,
-                        'publisher' => $item->publisher,
-                        'translator' => $item->translator,
-                        'source_category' => $item->source_category,
-                    ],
-                ]),
             ];
 
             if ($this->booksTableHasColumn('translator')) {

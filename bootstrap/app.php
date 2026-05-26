@@ -78,8 +78,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('backup:run')
             ->dailyAt('02:10')->timezone($tz);
 
-        $schedule->command('vectors:rebuild --force')
-            ->weeklyOn(0, '02:30')->timezone($tz);
+        $schedule->command('vectors:rebuild --type=all --limit=120')
+            ->everyTenMinutes()
+            ->timezone($tz)
+            ->withoutOverlapping(9)
+            ->runInBackground();
 
         $schedule->command('queue:prune-batches --hours=24')
             ->dailyAt('03:00')->timezone($tz);

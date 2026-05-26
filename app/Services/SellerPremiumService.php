@@ -43,14 +43,23 @@ class SellerPremiumService
     public function syncSeller(Seller $seller): array
     {
         $subscription = $this->currentSubscription($seller);
+        $directPremiumActive = $this->hasDirectPremiumAccess($seller);
 
         if (!$subscription) {
-            $this->deactivateSeller($seller);
+            if (!$directPremiumActive) {
+                $this->deactivateSeller($seller);
+                $seller->refresh();
+            }
+
             return $this->snapshot($seller, null);
         }
 
         if ($subscription->status !== SellerPremiumSubscription::STATUS_ACTIVE) {
-            $this->deactivateSeller($seller);
+            if (!$directPremiumActive) {
+                $this->deactivateSeller($seller);
+                $seller->refresh();
+            }
+
             return $this->snapshot($seller, $subscription);
         }
 
@@ -68,7 +77,11 @@ class SellerPremiumService
                     'status' => SellerPremiumSubscription::STATUS_CANCELLED,
                     'cancelled_at' => now(),
                 ]);
-                $this->deactivateSeller($seller);
+
+                if (!$this->hasDirectPremiumAccess($seller)) {
+                    $this->deactivateSeller($seller);
+                }
+
                 return $this->snapshot($seller, $subscription->fresh());
             }
 
@@ -78,7 +91,11 @@ class SellerPremiumService
                     'stop_reason' => 'insufficient_balance',
                     'stopped_at' => now(),
                 ]);
-                $this->deactivateSeller($seller);
+
+                if (!$this->hasDirectPremiumAccess($seller)) {
+                    $this->deactivateSeller($seller);
+                }
+
                 return $this->snapshot($seller, $subscription->fresh());
             }
 
@@ -166,6 +183,96 @@ class SellerPremiumService
         });
     }
 
+    public function grantByAdmin(Seller $seller, string $planKey): array
+    {
+        $plan = self::PLANS[$planKey] ?? null;
+        if (!$plan) {
+            abort(422, 'Noto‘g‘ri premium tarif.');
+        }
+
+        return DB::transaction(function () use ($seller, $plan, $planKey) {
+            $seller->refresh();
+            $subscription = $this->currentSubscription($seller);
+
+            if ($subscription && $subscription->status === SellerPremiumSubscription::STATUS_ACTIVE && $subscription->expires_at && $subscription->expires_at->isFuture()) {
+                $newExpiry = $subscription->expires_at->copy()->addMonths((int) $plan['months']);
+                $subscription->update([
+                    'plan' => $planKey,
+                    'duration_months' => $plan['months'],
+                    'price_uzs' => $plan['price'],
+                    'expires_at' => $newExpiry,
+                    'auto_renew' => true,
+                    'cancel_at_period_end' => false,
+                    'cancel_requested_at' => null,
+                    'cancelled_at' => null,
+                    'status' => SellerPremiumSubscription::STATUS_ACTIVE,
+                    'stop_reason' => null,
+                    'stopped_at' => null,
+                    'last_renewed_at' => now(),
+                ]);
+            } else {
+                if ($subscription && $subscription->status !== SellerPremiumSubscription::STATUS_ACTIVE) {
+                    $subscription->update([
+                        'status' => SellerPremiumSubscription::STATUS_CANCELLED,
+                        'cancelled_at' => now(),
+                        'auto_renew' => false,
+                        'cancel_at_period_end' => true,
+                        'stop_reason' => 'replaced_by_admin_grant',
+                    ]);
+                }
+
+                $subscription = SellerPremiumSubscription::create([
+                    'seller_id' => $seller->id,
+                    'plan' => $planKey,
+                    'duration_months' => $plan['months'],
+                    'price_uzs' => $plan['price'],
+                    'status' => SellerPremiumSubscription::STATUS_ACTIVE,
+                    'auto_renew' => true,
+                    'cancel_at_period_end' => false,
+                    'started_at' => now(),
+                    'expires_at' => now()->addMonths((int) $plan['months']),
+                    'last_renewed_at' => now(),
+                ]);
+            }
+
+            $this->activateSellerUntil($seller, $subscription->expires_at);
+
+            return [
+                'success' => true,
+                'message' => 'Premium admin tomonidan muvaffaqiyatli berildi.',
+                'data' => $this->snapshot($seller->fresh(), $subscription->fresh()),
+            ];
+        });
+    }
+
+    public function revokeByAdmin(Seller $seller): array
+    {
+        return DB::transaction(function () use ($seller) {
+            $seller->refresh();
+            $subscription = $this->currentSubscription($seller);
+
+            if ($subscription) {
+                $subscription->update([
+                    'status' => SellerPremiumSubscription::STATUS_CANCELLED,
+                    'auto_renew' => false,
+                    'cancel_at_period_end' => true,
+                    'cancel_requested_at' => now(),
+                    'cancelled_at' => now(),
+                    'stop_reason' => 'revoked_by_admin',
+                    'stopped_at' => now(),
+                ]);
+            }
+
+            $this->deactivateSeller($seller);
+
+            return [
+                'success' => true,
+                'message' => 'Premium admin tomonidan o‘chirildi.',
+                'data' => $this->snapshot($seller->fresh(), $subscription?->fresh()),
+            ];
+        });
+    }
+
     public function cancelAtPeriodEnd(Seller $seller): array
     {
         $subscription = $this->currentSubscription($seller);
@@ -222,6 +329,19 @@ class SellerPremiumService
         return (bool) ($state['is_premium'] ?? false);
     }
 
+    private function hasDirectPremiumAccess(Seller $seller): bool
+    {
+        if (!(bool) $seller->isPremiumShop) {
+            return false;
+        }
+
+        if (!$seller->isPremiumExpiresAt) {
+            return true;
+        }
+
+        return $seller->isPremiumExpiresAt->isFuture();
+    }
+
     private function activateSellerUntil(Seller $seller, ?Carbon $expiresAt): void
     {
         $seller->forceFill([
@@ -240,12 +360,20 @@ class SellerPremiumService
 
     private function snapshot(Seller $seller, ?SellerPremiumSubscription $subscription): array
     {
-        $expiresAt = $subscription?->expires_at;
+        $subscriptionActive = (bool) (
+            $subscription?->status === SellerPremiumSubscription::STATUS_ACTIVE
+            && $subscription?->expires_at
+            && $subscription->expires_at->isFuture()
+        );
+        $directPremiumActive = $this->hasDirectPremiumAccess($seller);
+        $expiresAt = $subscriptionActive
+            ? $subscription?->expires_at
+            : $seller->isPremiumExpiresAt;
         $daysLeft = $expiresAt && $expiresAt->isFuture()
             ? max(0, (int) ceil(now()->diffInSeconds($expiresAt, false) / 86400))
             : 0;
 
-        $isPremium = (bool) ($seller->isPremiumShop && $expiresAt && $expiresAt->isFuture() && $subscription?->status === SellerPremiumSubscription::STATUS_ACTIVE);
+        $isPremium = $subscriptionActive || $directPremiumActive;
 
         return [
             'balance' => (int) ($seller->balance ?? 0),
