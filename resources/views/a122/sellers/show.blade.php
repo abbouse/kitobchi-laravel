@@ -3,6 +3,37 @@
 @section('page-title', 'Sotuvchi profili')
 
 @section('content')
+@php
+    $safeFormatDate = function ($value, string $format = 'Y-m-d') {
+        return rescue(function () use ($value, $format) {
+            if (blank($value)) {
+                return null;
+            }
+
+            return \Illuminate\Support\Carbon::parse($value)->format($format);
+        }, null, false);
+    };
+
+    $safeDiffForHumans = function ($value) {
+        return rescue(function () use ($value) {
+            if (blank($value)) {
+                return null;
+            }
+
+            return \Illuminate\Support\Carbon::parse($value)->diffForHumans();
+        }, null, false);
+    };
+
+    $safeDayDiff = function ($value) {
+        return rescue(function () use ($value) {
+            if (blank($value)) {
+                return null;
+            }
+
+            return (int) now()->startOfDay()->diffInDays(\Illuminate\Support\Carbon::parse($value), false);
+        }, null, false);
+    };
+@endphp
 <x-a122.page-header back-href="{{ route('admin.sellers.index') }}">
     <x-slot name="heading">{{ $seller->shop_name }}</x-slot>
     <x-slot name="meta">{{ trim($seller->firstname . ' ' . $seller->lastname) ?: 'Sotuvchi profili' }} · {{ $seller->region ?: 'Hudud ko‘rsatilmagan' }}</x-slot>
@@ -62,7 +93,7 @@
                 @if(($premiumState['is_premium'] ?? false) && !empty($premiumState['premium_expires_at']))
                     <span class="badge bg-amber-100 text-amber-700 dark:bg-amber-400/10 dark:text-amber-300 flex items-center gap-1">
                         <i data-lucide="crown" class="w-3.5 h-3.5"></i>
-                        Premium · {{ \Illuminate\Support\Carbon::parse($premiumState['premium_expires_at'])->format('Y-m-d') }}
+                        Premium · {{ $safeFormatDate($premiumState['premium_expires_at'], 'Y-m-d') ?? '—' }}
                     </span>
                 @elseif(!empty($premiumState['premium_expires_at']))
                     <span class="badge bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-400 flex items-center gap-1">
@@ -88,7 +119,8 @@
                 @endif
                 @if($seller->contract_expires_at)
                     @php
-                        $cDays = (int) now()->startOfDay()->diffInDays($seller->contract_expires_at, false);
+                        $cDays = $safeDayDiff($seller->getRawOriginal('contract_expires_at'));
+                        $cDays ??= 0;
                         if ($seller->contract_status === 'terminated') {
                             $cBadgeCls = 'bg-gray-200 text-gray-600 dark:bg-white/10 dark:text-gray-300';
                             $cIcon = 'file-x';
@@ -207,9 +239,9 @@
                             <dt class="text-slate-500">Token</dt>
                             <dd class="col-span-2 font-mono text-slate-700 dark:text-slate-300">{{ $location->qr_token }}</dd>
 
-                            @if($location->qr_rotated_at)
+                            @if($location->getRawOriginal('qr_rotated_at'))
                                 <dt class="text-slate-500">Yangilangan</dt>
-                                <dd class="col-span-2">{{ $location->qr_rotated_at->format('Y-m-d H:i') }}</dd>
+                                <dd class="col-span-2">{{ $safeFormatDate($location->getRawOriginal('qr_rotated_at'), 'Y-m-d H:i') ?? '—' }}</dd>
                             @endif
                         </dl>
 
@@ -386,8 +418,10 @@
             @if(($premiumState['is_premium'] ?? false) && !empty($premiumState['premium_expires_at']))
                 <p class="text-lg font-bold text-amber-600 dark:text-amber-300">Faol</p>
                 <p class="text-xs text-gray-400">
-                    Tugaydi: <span class="font-mono">{{ \Illuminate\Support\Carbon::parse($premiumState['premium_expires_at'])->format('Y-m-d H:i') }}</span>
-                    ({{ \Illuminate\Support\Carbon::parse($premiumState['premium_expires_at'])->diffForHumans() }})
+                    Tugaydi: <span class="font-mono">{{ $safeFormatDate($premiumState['premium_expires_at'], 'Y-m-d H:i') ?? '—' }}</span>
+                    @if($safeDiffForHumans($premiumState['premium_expires_at']))
+                        ({{ $safeDiffForHumans($premiumState['premium_expires_at']) }})
+                    @endif
                 </p>
             @else
                 <p class="text-lg font-bold text-gray-400">Yo'q</p>
@@ -436,15 +470,15 @@
                     <dt class="col-span-1 text-gray-500">№</dt>
                     <dd class="col-span-2 font-mono">{{ $seller->contract_number }}</dd>
                 @endif
-                @if($seller->contract_signed_at)
+                @if($seller->getRawOriginal('contract_signed_at'))
                     <dt class="col-span-1 text-gray-500">Imzolandi</dt>
-                    <dd class="col-span-2">{{ $seller->contract_signed_at->format('Y-m-d') }}</dd>
+                    <dd class="col-span-2">{{ $safeFormatDate($seller->getRawOriginal('contract_signed_at')) ?? '—' }}</dd>
                 @endif
-                @if($seller->contract_expires_at)
+                @if($seller->getRawOriginal('contract_expires_at'))
                     <dt class="col-span-1 text-gray-500">Tugaydi</dt>
                     <dd class="col-span-2">
-                        {{ $seller->contract_expires_at->format('Y-m-d') }}
-                        @php $d = (int) now()->startOfDay()->diffInDays($seller->contract_expires_at, false); @endphp
+                        {{ $safeFormatDate($seller->getRawOriginal('contract_expires_at')) ?? '—' }}
+                        @php $d = $safeDayDiff($seller->getRawOriginal('contract_expires_at')) ?? 0; @endphp
                         <span class="text-xs {{ $d < 0 ? 'text-red-500' : ($d <= 30 ? 'text-amber-500' : 'text-gray-400') }}">
                             ({{ $d < 0 ? abs($d).' kun oldin tugagan' : $d.' kun qoldi' }})
                         </span>
@@ -455,7 +489,7 @@
                     <dd class="col-span-3 text-gray-600 dark:text-gray-400">{{ $seller->contract_notes }}</dd>
                 @endif
             </dl>
-            @if($seller->contract_expires_at)
+            @if($seller->getRawOriginal('contract_expires_at'))
                 <form method="POST" action="{{ route('admin.sellers.contract.extend', $seller) }}" class="mt-3 flex items-center gap-2">
                     @csrf
                     @method('PATCH')
@@ -572,7 +606,7 @@
                         <i data-lucide="{{ $doc->type_icon }}" class="w-4 h-4 text-gray-400 flex-shrink-0"></i>
                         <div class="flex-1 min-w-0">
                             <p class="text-sm truncate">{{ $doc->type_label }}@if($doc->original_name) — <span class="text-gray-400">{{ $doc->original_name }}</span>@endif</p>
-                            <p class="text-[10px] text-gray-400">{{ $doc->created_at?->format('Y-m-d H:i') }}</p>
+                            <p class="text-[10px] text-gray-400">{{ $safeFormatDate($doc->getRawOriginal('created_at'), 'Y-m-d H:i') ?? '—' }}</p>
                         </div>
                         @if($doc->file_url)
                             <a href="{{ $doc->file_url }}" target="_blank" class="text-blue-500 hover:underline text-xs flex items-center gap-1 flex-shrink-0">
@@ -628,7 +662,7 @@
                                 <p class="text-gray-500 mt-0.5 truncate">{{ $h->notes }}</p>
                             @endif
                             <p class="text-[10px] text-gray-400 mt-0.5">
-                                {{ $h->created_at?->format('Y-m-d H:i') }}
+                                {{ $safeFormatDate($h->getRawOriginal('created_at'), 'Y-m-d H:i') ?? '—' }}
                                 @if($h->performer)
                                     · {{ trim($h->performer->name . ' ' . $h->performer->lastname) }}
                                 @endif
@@ -702,7 +736,7 @@
                                 <td class="font-semibold">{{ number_format((float)($order->amount ?? $order->total ?? 0), 0, '.', ' ') }} UZS</td>
                                 <td><span class="badge badge-muted">{{ $orderStatus }}</span></td>
                                 <td class="text-sm text-gray-500">
-                                    {{ $order->created_at ? $order->created_at->format('d.m.Y H:i') : '—' }}
+                                {{ $safeFormatDate($order->getRawOriginal('created_at'), 'd.m.Y H:i') ?? '—' }}
                                 </td>
                             </tr>
                         @empty
@@ -756,7 +790,7 @@
                                     @endif
                                 </td>
                                 <td class="text-sm text-gray-500">
-                                    {{ $tx->created_at ? $tx->created_at->format('d.m.Y') : '—' }}
+                                    {{ $safeFormatDate($tx->getRawOriginal('created_at'), 'd.m.Y') ?? '—' }}
                                 </td>
                             </tr>
                         @empty
@@ -793,7 +827,7 @@
                     @forelse($staffLogs as $log)
                         <tr>
                             <td class="text-sm text-gray-500 whitespace-nowrap">
-                                {{ $log->created_at ? $log->created_at->format('d.m.Y H:i') : '—' }}
+                                {{ $safeFormatDate($log->getRawOriginal('created_at'), 'd.m.Y H:i') ?? '—' }}
                             </td>
                             <td>{{ $log->text ?? '—' }}</td>
                         </tr>
@@ -832,7 +866,7 @@
                     @forelse($banLogs as $banLog)
                         <tr>
                             <td class="text-sm text-gray-500 whitespace-nowrap">
-                                {{ $banLog->created_at ? $banLog->created_at->format('d.m.Y H:i') : '—' }}
+                                {{ $safeFormatDate($banLog->getRawOriginal('created_at'), 'd.m.Y H:i') ?? '—' }}
                             </td>
                             <td>
                                 <span class="badge {{ $banLog->type === 'warning' ? 'badge-warning' : 'badge-success' }}">
