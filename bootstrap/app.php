@@ -103,12 +103,6 @@ return Application::configure(basePath: dirname(__DIR__))
             ->timezone($tz)
             ->withoutOverlapping();
 
-        // ── Kangaroo: faqat listing moderatsiyasi ─────────────────────
-        $schedule->command('kangaroo:sync-content-moderation')
-            ->everyThirtyMinutes()
-            ->timezone($tz)
-            ->withoutOverlapping(25);
-
         // ── Book Club AI baholash — kuniga 2 marta ───────────────────
         $schedule->command('openai:score-book-club-content')
             ->twiceDaily(9, 21)
@@ -118,12 +112,6 @@ return Application::configure(basePath: dirname(__DIR__))
         // ── Book Club komment moderatsiyasi — haftalik ───────────────
         $schedule->command('openai:moderate-book-club-comments --all=1')
             ->weeklyOn(0, '03:30')
-            ->timezone($tz)
-            ->withoutOverlapping();
-
-        // ── Mahsulot UGC reytinglari — haftalik qayta hisob ───────────
-        $schedule->command('products:refresh-ugc-ratings')
-            ->weeklyOn(0, '04:30')
             ->timezone($tz)
             ->withoutOverlapping();
 

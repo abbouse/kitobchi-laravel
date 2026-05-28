@@ -112,7 +112,7 @@
                     </span>
                 @endif
             </div>
-            <p class="text-sm text-gray-500 mt-1">{{ trim($seller->firstname . ' ' . $seller->lastname) }}</p>
+            <p class="text-sm text-gray-500 mt-1">{{ trim(($seller->firstname ?? '') . ' ' . ($seller->lastname ?? '')) }}</p>
             <div class="flex items-center gap-4 mt-2 text-sm text-gray-600 dark:text-gray-400 flex-wrap">
                 @if($seller->phone_number)
                     <span class="flex items-center gap-1">
@@ -133,24 +133,23 @@
                 <form method="POST" action="{{ route('admin.sellers.approve', $seller) }}">
                     @csrf
                     @method('PATCH')
-                <button type="submit" class="btn-p primary flex items-center gap-2">
-                    <i data-lucide="check-circle" class="w-4 h-4"></i> Tasdiqlash
-                </button>
-            </form>
+                    <button type="submit" class="btn-p primary flex items-center gap-2">
+                        <i data-lucide="check-circle" class="w-4 h-4"></i> Tasdiqlash
+                    </button>
+                </form>
             @endif
             @if($seller->status !== 'rejected')
                 <form method="POST" action="{{ route('admin.sellers.reject', $seller) }}" onsubmit="return confirm('Sotuvchini rad etishga ishonchingiz komilmi?')">
                     @csrf
                     @method('PATCH')
-                <button type="submit" class="btn-p danger flex items-center gap-2">
-                    <i data-lucide="x-circle" class="w-4 h-4"></i> Rad etish
-                </button>
-            </form>
-        @endif
+                    <button type="submit" class="btn-p danger flex items-center gap-2">
+                        <i data-lucide="x-circle" class="w-4 h-4"></i> Rad etish
+                    </button>
+                </form>
+            @endif
+        </div>
     </div>
-</div>
-</div>
-</div>
+    </div>
 </div>
 
 {{-- ── Filial QR'lari — "Do'kon ichida" rejimi uchun ───────────────── --}}
@@ -338,7 +337,7 @@
         <div class="min-w-0">
             <p class="a122-stat-tile__label">Reyting</p>
             <p class="a122-stat-tile__value">{{ number_format($seller->rating ?? 0, 2) }}</p>
-            <p class="a122-stat-tile__meta">{{ $seller->total_reviews ?? 0 }} sharh</p>
+            <p class="a122-stat-tile__meta">{{ $seller->rating_reviews_count ?? 0 }} sharh</p>
         </div>
     </div>
 
@@ -575,9 +574,15 @@
                             <p class="text-sm truncate">{{ $doc->type_label }}@if($doc->original_name) — <span class="text-gray-400">{{ $doc->original_name }}</span>@endif</p>
                             <p class="text-[10px] text-gray-400">{{ $doc->created_at?->format('Y-m-d H:i') }}</p>
                         </div>
-                        <a href="{{ $doc->file_url }}" target="_blank" class="text-blue-500 hover:underline text-xs flex items-center gap-1 flex-shrink-0">
-                            <i data-lucide="external-link" class="w-3 h-3"></i> Ochish
-                        </a>
+                        @if($doc->file_url)
+                            <a href="{{ $doc->file_url }}" target="_blank" class="text-blue-500 hover:underline text-xs flex items-center gap-1 flex-shrink-0">
+                                <i data-lucide="external-link" class="w-3 h-3"></i> Ochish
+                            </a>
+                        @else
+                            <span class="text-gray-400 text-xs flex items-center gap-1 flex-shrink-0">
+                                <i data-lucide="file-x" class="w-3 h-3"></i> Fayl yo'q
+                            </span>
+                        @endif
                     </li>
                 @endforeach
             </ul>

@@ -19,6 +19,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use RuntimeException;
@@ -107,50 +108,135 @@ class SellerController extends Controller
     public function show(Seller $seller)
     {
         $storeSeller = $this->resolveStoreSeller($seller);
-        $storeSeller->loadCount('books')->load([
-            'books',
-            'location',
-            'documents.uploader',
-            'contractHistory.performer',
-            'locations' => fn ($q) => $q->orderByDesc('is_main')->orderBy('id'),
-        ]);
+        $storeSeller->loadCount('books');
+
+        $this->safeLoadSellerShowRelations($storeSeller);
+
         $seller = $storeSeller;
         $storeSellerId = $storeSeller->id;
         $sellerIds = Seller::where('id', $storeSellerId)
             ->orWhere('parent_id', $storeSellerId)
             ->pluck('id');
         $premiumState = $this->premiumService->syncSeller($storeSeller);
-        $orderCount = SellerOrder::whereIn('seller_id', $sellerIds)->count();
-        $totalRevenue = SellerTransaction::whereIn('seller_id', $sellerIds)
-            ->where('status', 'approved')
-            ->where('type', 'income')
-            ->where('category', SellerOrderSettlementService::CATEGORY_ORDER_SALE)
-            ->sum('netAmount');
-        $recentOrders = SellerOrder::with([
-                'user:id,name,lastname,phone_number',
-                'seller:id,shop_name,parent_id',
-                'order:id,status,paymentStatus,deliveryType',
-            ])
-            ->whereIn('seller_id', $sellerIds)
-            ->latest()
-            ->take(8)
-            ->get();
-        $transactions = SellerTransaction::whereIn('seller_id', $sellerIds)
-            ->latest()
-            ->take(8)
-            ->get();
-        $staffLogs = SellerStaffLog::whereIn('seller_staff_id', $sellerIds)
-            ->latest()
-            ->take(50)
-            ->get();
-        $banLogs = SellerBanLog::where('seller_id', $storeSellerId)
-            ->latest()
-            ->take(50)
-            ->get();
-        $warningCount = SellerBanLog::getWarningCount($storeSellerId);
+        $orderCount = $this->safeSellerShowValue(
+            'order_count',
+            $storeSellerId,
+            fn () => SellerOrder::whereIn('seller_id', $sellerIds)->count(),
+            0,
+        );
+        $totalRevenue = $this->safeSellerShowValue(
+            'total_revenue',
+            $storeSellerId,
+            fn () => SellerTransaction::whereIn('seller_id', $sellerIds)
+                ->where('status', 'approved')
+                ->where('type', 'income')
+                ->where('category', SellerOrderSettlementService::CATEGORY_ORDER_SALE)
+                ->sum('netAmount'),
+            0,
+        );
+        $recentOrders = $this->safeSellerShowValue(
+            'recent_orders',
+            $storeSellerId,
+            fn () => SellerOrder::with([
+                    'user:id,name,lastname,phone_number',
+                    'seller:id,shop_name,parent_id',
+                    'order:id,status,paymentStatus,deliveryType',
+                ])
+                ->whereIn('seller_id', $sellerIds)
+                ->latest()
+                ->take(8)
+                ->get(),
+            collect(),
+        );
+        $transactions = $this->safeSellerShowValue(
+            'transactions',
+            $storeSellerId,
+            fn () => SellerTransaction::whereIn('seller_id', $sellerIds)
+                ->latest()
+                ->take(8)
+                ->get(),
+            collect(),
+        );
+        $staffLogs = $this->safeSellerShowValue(
+            'staff_logs',
+            $storeSellerId,
+            fn () => SellerStaffLog::whereIn('seller_staff_id', $sellerIds)
+                ->latest()
+                ->take(50)
+                ->get(),
+            collect(),
+        );
+        $banLogs = $this->safeSellerShowValue(
+            'ban_logs',
+            $storeSellerId,
+            fn () => SellerBanLog::where('seller_id', $storeSellerId)
+                ->latest()
+                ->take(50)
+                ->get(),
+            collect(),
+        );
+        $warningCount = $this->safeSellerShowValue(
+            'warning_count',
+            $storeSellerId,
+            fn () => SellerBanLog::getWarningCount($storeSellerId),
+            0,
+        );
         $isBlocked = $storeSeller->status === 'blocked';
 
         return view('a122.sellers.show', compact('seller', 'storeSeller', 'premiumState', 'orderCount', 'totalRevenue', 'recentOrders', 'transactions', 'staffLogs', 'banLogs', 'warningCount', 'isBlocked'));
+    }
+
+    private function safeLoadSellerShowRelations(Seller $seller): void
+    {
+        try {
+            $seller->load('books');
+        } catch (\Throwable $e) {
+            Log::warning('admin.sellers.show.relation_failed', ['seller_id' => $seller->id, 'relation' => 'books', 'message' => $e->getMessage()]);
+            $seller->setRelation('books', collect());
+        }
+
+        try {
+            $seller->load('location');
+        } catch (\Throwable $e) {
+            Log::warning('admin.sellers.show.relation_failed', ['seller_id' => $seller->id, 'relation' => 'location', 'message' => $e->getMessage()]);
+            $seller->setRelation('location', null);
+        }
+
+        try {
+            $seller->load(['locations' => fn ($q) => $q->orderByDesc('is_main')->orderBy('id')]);
+        } catch (\Throwable $e) {
+            Log::warning('admin.sellers.show.relation_failed', ['seller_id' => $seller->id, 'relation' => 'locations', 'message' => $e->getMessage()]);
+            $seller->setRelation('locations', collect());
+        }
+
+        try {
+            $seller->load('documents.uploader');
+        } catch (\Throwable $e) {
+            Log::warning('admin.sellers.show.relation_failed', ['seller_id' => $seller->id, 'relation' => 'documents', 'message' => $e->getMessage()]);
+            $seller->setRelation('documents', collect());
+        }
+
+        try {
+            $seller->load('contractHistory.performer');
+        } catch (\Throwable $e) {
+            Log::warning('admin.sellers.show.relation_failed', ['seller_id' => $seller->id, 'relation' => 'contractHistory', 'message' => $e->getMessage()]);
+            $seller->setRelation('contractHistory', collect());
+        }
+    }
+
+    private function safeSellerShowValue(string $key, int $sellerId, callable $resolver, mixed $fallback): mixed
+    {
+        try {
+            return $resolver();
+        } catch (\Throwable $e) {
+            Log::warning('admin.sellers.show.block_failed', [
+                'seller_id' => $sellerId,
+                'block' => $key,
+                'message' => $e->getMessage(),
+            ]);
+
+            return $fallback;
+        }
     }
 
     public function edit(Seller $seller)

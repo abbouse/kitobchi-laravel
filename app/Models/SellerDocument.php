@@ -32,12 +32,19 @@ class SellerDocument extends Model
      * Frontend'da ko'rsatish uchun full URL. Agar file_path http bilan boshlansa
      * (ya'ni tashqi havola), o'zini qaytaradi.
      */
-    public function getFileUrlAttribute(): string
+    public function getFileUrlAttribute(): ?string
     {
-        if (str_starts_with($this->file_path, 'http')) {
-            return $this->file_path;
+        $path = is_string($this->file_path) ? trim($this->file_path) : '';
+
+        if ($path === '') {
+            return null;
         }
-        return asset('storage/' . ltrim($this->file_path, '/'));
+
+        if (str_starts_with($path, 'http')) {
+            return $path;
+        }
+
+        return asset('storage/' . ltrim($path, '/'));
     }
 
     /**
