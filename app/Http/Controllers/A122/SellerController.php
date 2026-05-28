@@ -107,19 +107,19 @@ class SellerController extends Controller
     public function show(Seller $seller)
     {
         $storeSeller = $this->resolveStoreSeller($seller);
-        $seller->loadCount('books')->load([
+        $storeSeller->loadCount('books')->load([
             'books',
             'location',
             'documents.uploader',
             'contractHistory.performer',
-        ]);
-        $storeSeller->load([
             'locations' => fn ($q) => $q->orderByDesc('is_main')->orderBy('id'),
         ]);
+        $seller = $storeSeller;
         $storeSellerId = $storeSeller->id;
         $sellerIds = Seller::where('id', $storeSellerId)
             ->orWhere('parent_id', $storeSellerId)
             ->pluck('id');
+        $premiumState = $this->premiumService->syncSeller($storeSeller);
         $orderCount = SellerOrder::whereIn('seller_id', $sellerIds)->count();
         $totalRevenue = SellerTransaction::whereIn('seller_id', $sellerIds)
             ->where('status', 'approved')
@@ -150,7 +150,7 @@ class SellerController extends Controller
         $warningCount = SellerBanLog::getWarningCount($storeSellerId);
         $isBlocked = $storeSeller->status === 'blocked';
 
-        return view('a122.sellers.show', compact('seller', 'storeSeller', 'orderCount', 'totalRevenue', 'recentOrders', 'transactions', 'staffLogs', 'banLogs', 'warningCount', 'isBlocked'));
+        return view('a122.sellers.show', compact('seller', 'storeSeller', 'premiumState', 'orderCount', 'totalRevenue', 'recentOrders', 'transactions', 'staffLogs', 'banLogs', 'warningCount', 'isBlocked'));
     }
 
     public function edit(Seller $seller)

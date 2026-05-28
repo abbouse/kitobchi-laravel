@@ -54,14 +54,16 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('cashback:release-pending')
             ->everyTenMinutes()->timezone($tz)->withoutOverlapping();
 
-        $schedule->command('cart:remind --time=morning')
-            ->dailyAt('08:00')->timezone($tz);
+        foreach ([1, 3, 5] as $cartReminderDay) {
+            $schedule->command('cart:remind --time=morning')
+                ->weeklyOn($cartReminderDay, '08:00')->timezone($tz);
 
-        $schedule->command('cart:remind --time=afternoon')
-            ->dailyAt('13:00')->timezone($tz);
+            $schedule->command('cart:remind --time=afternoon')
+                ->weeklyOn($cartReminderDay, '13:00')->timezone($tz);
 
-        $schedule->command('cart:remind --time=evening')
-            ->dailyAt('19:00')->timezone($tz);
+            $schedule->command('cart:remind --time=evening')
+                ->weeklyOn($cartReminderDay, '19:00')->timezone($tz);
+        }
 
         $schedule->command('users:book-remind')
             ->weeklyOn(2, '10:00')->timezone($tz);
