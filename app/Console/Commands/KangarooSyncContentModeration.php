@@ -8,6 +8,7 @@ use App\Services\Kangaroo\KangarooKitobchiModerationClient;
 use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class KangarooSyncContentModeration extends Command
 {
@@ -35,6 +36,14 @@ class KangarooSyncContentModeration extends Command
 
     private function syncListings(KangarooKitobchiModerationClient $client, bool $autoApply): void
     {
+        if (!$this->hasListingModerationColumns('books') || !$this->hasListingModerationColumns('stationery')) {
+            $message = 'Kangaroo listing ustunlari hali migratsiya qilinmagan. `php artisan migrate`dan keyin qayta urinib ko‘ring.';
+            $this->warn($message);
+            Log::warning('kangaroo:sync-content-moderation-skipped', ['message' => $message]);
+
+            return;
+        }
+
         $books = Books::query()
             ->where('is_approved', 0)
             ->where('is_hidden', 0)
@@ -124,6 +133,22 @@ class KangarooSyncContentModeration extends Command
         }
 
         $this->info('Listing: kitob '.$books->count().', kanstovar '.$stationeries->count().' jarayonlandi.');
+    }
+
+    private function hasListingModerationColumns(string $table): bool
+    {
+        foreach ([
+            'kangaroo_listing_decision',
+            'kangaroo_listing_score',
+            'kangaroo_listing_checked_at',
+            'kangaroo_listing_issues',
+        ] as $column) {
+            if (!Schema::hasColumn($table, $column)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**

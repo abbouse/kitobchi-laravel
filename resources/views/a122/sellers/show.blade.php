@@ -59,12 +59,12 @@
                 <span class="badge {{ $warningCount >= 3 ? 'badge-danger' : ($warningCount > 0 ? 'badge-warning' : 'badge-muted') }}">
                     {{ $warningCount }}/3 ogohlantirish
                 </span>
-                @if(($premiumState['is_premium'] ?? false) && !empty($premiumState['expires_at']))
+                @if(($premiumState['is_premium'] ?? false) && !empty($premiumState['premium_expires_at']))
                     <span class="badge bg-amber-100 text-amber-700 dark:bg-amber-400/10 dark:text-amber-300 flex items-center gap-1">
                         <i data-lucide="crown" class="w-3.5 h-3.5"></i>
-                        Premium · {{ \Illuminate\Support\Carbon::parse($premiumState['expires_at'])->format('Y-m-d') }}
+                        Premium · {{ \Illuminate\Support\Carbon::parse($premiumState['premium_expires_at'])->format('Y-m-d') }}
                     </span>
-                @elseif(!empty($premiumState['expires_at']))
+                @elseif(!empty($premiumState['premium_expires_at']))
                     <span class="badge bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-400 flex items-center gap-1">
                         <i data-lucide="crown-off" class="w-3.5 h-3.5"></i>
                         Premium tugagan
@@ -384,11 +384,11 @@
         </div>
         <div class="flex-1">
             <p class="text-xs text-gray-500">Premium holati</p>
-            @if(($premiumState['is_premium'] ?? false) && !empty($premiumState['expires_at']))
+            @if(($premiumState['is_premium'] ?? false) && !empty($premiumState['premium_expires_at']))
                 <p class="text-lg font-bold text-amber-600 dark:text-amber-300">Faol</p>
                 <p class="text-xs text-gray-400">
-                    Tugaydi: <span class="font-mono">{{ \Illuminate\Support\Carbon::parse($premiumState['expires_at'])->format('Y-m-d H:i') }}</span>
-                    ({{ \Illuminate\Support\Carbon::parse($premiumState['expires_at'])->diffForHumans() }})
+                    Tugaydi: <span class="font-mono">{{ \Illuminate\Support\Carbon::parse($premiumState['premium_expires_at'])->format('Y-m-d H:i') }}</span>
+                    ({{ \Illuminate\Support\Carbon::parse($premiumState['premium_expires_at'])->diffForHumans() }})
                 </p>
             @else
                 <p class="text-lg font-bold text-gray-400">Yo'q</p>
