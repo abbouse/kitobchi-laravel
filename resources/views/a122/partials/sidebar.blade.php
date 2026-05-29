@@ -1,38 +1,39 @@
 @php
   $groups = [
-    ['title' => 'Asosiy', 'items' => [
+    ['title' => 'Main menu', 'items' => [
       ['label' => 'Dashboard', 'route' => 'admin.dashboard', 'icon' => 'speedometer2'],
+      ['label' => 'Buyurtmalar', 'route' => 'admin.orders.index', 'icon' => 'cart3'],
       ['label' => 'Foydalanuvchilar', 'route' => 'admin.users.index', 'icon' => 'people'],
+      ['label' => 'Promokodlar', 'route' => 'admin.promocodes.index', 'icon' => 'ticket-perforated'],
+      ['label' => 'Kitob kategoriyalari', 'route' => 'admin.book-categories.index', 'icon' => 'collection'],
+      ['label' => 'Tranzaksiyalar', 'route' => 'admin.transactions.index', 'icon' => 'credit-card'],
+      ['label' => 'Sotuvchilar', 'route' => 'admin.sellers.index', 'icon' => 'shop'],
     ]],
-    ['title' => 'Katalog', 'items' => [
+    ['title' => 'Product', 'items' => [
+      ['label' => 'Yangi kitob', 'route' => 'admin.books.create', 'icon' => 'plus-circle'],
       ['label' => 'Kitoblar', 'route' => 'admin.books.index', 'icon' => 'book'],
+      ['label' => 'Kanstovar', 'route' => 'admin.stationery.index', 'icon' => 'pencil-square'],
       ['label' => 'Mualliflar', 'route' => 'admin.authors.index', 'icon' => 'pen'],
       ['label' => 'Nashriyotlar', 'route' => 'admin.publishers.index', 'icon' => 'building'],
       ['label' => 'Parser', 'route' => 'admin.parsers.index', 'icon' => 'database-down'],
-      ['label' => 'Kanstovar', 'route' => 'admin.stationery.index', 'icon' => 'pencil-square'],
-      ['label' => 'Kitob kategoriyalari', 'route' => 'admin.book-categories.index', 'icon' => 'collection'],
       ['label' => 'Kanstovar kategoriyalari', 'route' => 'admin.stationery-categories.index', 'icon' => 'tags'],
       ['label' => 'Reels', 'route' => 'admin.reels.index', 'icon' => 'camera-reels'],
       ['label' => 'Market yangiliklari', 'route' => 'admin.news.index', 'icon' => 'newspaper'],
     ]],
-    ['title' => 'Operatsiya', 'items' => [
-      ['label' => 'Buyurtmalar', 'route' => 'admin.orders.index', 'icon' => 'bag-check'],
+    ['title' => 'Operations', 'items' => [
       ['label' => 'Seller buyurtmalari', 'route' => 'admin.seller-orders.index', 'icon' => 'box-seam'],
       ['label' => 'Kuryer buyurtmalari', 'route' => 'admin.courier-orders.index', 'icon' => 'truck'],
       ['label' => 'Logistika', 'route' => 'admin.logistics.index', 'icon' => 'map'],
       ['label' => 'Hublar', 'route' => 'admin.hubs.index', 'icon' => 'buildings'],
       ['label' => 'Kuryerlar', 'route' => 'admin.couriers.index', 'icon' => 'bicycle'],
-      ['label' => 'Tranzaksiyalar', 'route' => 'admin.transactions.index', 'icon' => 'cash-stack'],
     ]],
-    ['title' => 'Biznes', 'items' => [
-      ['label' => 'Sotuvchilar', 'route' => 'admin.sellers.index', 'icon' => 'shop'],
+    ['title' => 'Business', 'items' => [
       ['label' => 'Hamkor blogerlar', 'route' => 'admin.bloggers.index', 'icon' => 'stars'],
-      ['label' => 'Promokodlar', 'route' => 'admin.promocodes.index', 'icon' => 'ticket-perforated'],
       ['label' => 'Reklamalar', 'route' => 'admin.ads.index', 'icon' => 'megaphone'],
       ['label' => 'Gift sertifikatlar', 'route' => 'admin.gift-certificates.index', 'icon' => 'gift'],
       ['label' => 'Mystery Box', 'route' => 'admin.mystery-box.index', 'icon' => 'box2-heart'],
     ]],
-    ['title' => 'Jamoa va tizim', 'items' => [
+    ['title' => 'Admin', 'items' => [
       ['label' => 'Book Club', 'route' => 'admin.book-club.index', 'icon' => 'chat-left-dots'],
       ['label' => 'Chat kuzatuv', 'route' => 'admin.chats.index', 'icon' => 'chat-square-text'],
       ['label' => 'Shikoyatlar', 'route' => 'admin.complaints.index', 'icon' => 'flag'],
@@ -66,8 +67,8 @@
             <i class="bi bi-grid"></i>
           </span>
           <span class="kc-sidebar__brand-copy">
-            <span class="kc-sidebar__brand-title d-block">Kitobchi Admin</span>
-            <span class="kc-sidebar__brand-subtitle d-block">Operational workspace</span>
+            <span class="kc-sidebar__brand-title d-block">Kitobchi</span>
+            <span class="kc-sidebar__brand-subtitle d-block">Admin Dashboard</span>
           </span>
         </a>
         <div class="d-flex align-items-center gap-2">
@@ -108,10 +109,14 @@
 
     <div class="kc-sidebar__footer">
       <div class="kc-sidebar__workspace">
-        <div class="kc-sidebar__workspace-label">Panel</div>
+        <div class="kc-sidebar__workspace-label">Signed in</div>
         <div class="kc-sidebar__workspace-title">{{ $panelAdmin?->name ?? 'Admin' }}</div>
         <div class="kc-sidebar__workspace-meta">{{ $panelAdmin?->role_label ?? 'Administrator' }}</div>
       </div>
+      <a href="{{ url('/') }}" class="kc-sidebar__shop-link" target="_blank" rel="noopener">
+        <span><i class="bi bi-box-arrow-up-right"></i></span>
+        <span>Kitobchi shop</span>
+      </a>
     </div>
   </div>
 </aside>
