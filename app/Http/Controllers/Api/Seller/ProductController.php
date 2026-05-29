@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api\Seller;
 
 use App\Http\Controllers\Controller;
+use App\Models\Author;
 use App\Models\Books;
 use App\Models\BookCategories;
+use App\Models\Publisher;
 use App\Models\Stationery;
 use App\Models\StationeryCategory;
 use App\Models\StatyioneryTag;
@@ -84,7 +86,7 @@ class ProductController extends Controller
         $storeSellerId = $this->getStoreSellerId($seller);
         $books = Seller::find($storeSellerId)->books()
             ->where('is_hidden', false)
-            ->with(['category', 'tags'])
+            ->with(['category', 'tags', 'publisher:id,name'])
             ->latest('updated_at')
             ->limit(250)
             ->get();
@@ -160,7 +162,7 @@ public function lastProductsBS(Request $request)
     // Asosiy querylar
     $booksQuery = Seller::find($storeSellerId)->books()
         ->where('is_hidden', false)
-        ->with(['category', 'tags']);
+        ->with(['category', 'tags', 'publisher:id,name']);
 
     $stationeryQuery = Seller::find($storeSellerId)->stationeries()
         ->where('is_hidden', false)
@@ -241,6 +243,76 @@ public function lastProductsBS(Request $request)
         return response()->json([
             'success' => true,
             'products' => $count,
+        ], 200);
+    }
+
+    public function getAuthorSuggestions(Request $request)
+    {
+        $seller = Auth::guard('seller')->user();
+        if (!$seller) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        if (!$this->hasProductAccess($seller)) {
+            return response()->json(['success' => false, 'message' => 'Access denied.'], 403);
+        }
+
+        $query = trim((string) $request->input('q', ''));
+        if ($query === '') {
+            return response()->json(['success' => true, 'data' => []], 200);
+        }
+
+        $authors = Author::query()
+            ->select('id', 'name')
+            ->where('name', 'like', '%' . $query . '%')
+            ->orderByRaw('CASE WHEN name LIKE ? THEN 0 ELSE 1 END', [$query . '%'])
+            ->orderBy('name')
+            ->limit(12)
+            ->get()
+            ->map(fn (Author $author) => [
+                'id' => $author->id,
+                'name' => $author->name,
+            ])
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'data' => $authors,
+        ], 200);
+    }
+
+    public function getPublisherSuggestions(Request $request)
+    {
+        $seller = Auth::guard('seller')->user();
+        if (!$seller) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        if (!$this->hasProductAccess($seller)) {
+            return response()->json(['success' => false, 'message' => 'Access denied.'], 403);
+        }
+
+        $query = trim((string) $request->input('q', ''));
+        if ($query === '') {
+            return response()->json(['success' => true, 'data' => []], 200);
+        }
+
+        $publishers = Publisher::query()
+            ->select('id', 'name')
+            ->where('name', 'like', '%' . $query . '%')
+            ->orderByRaw('CASE WHEN name LIKE ? THEN 0 ELSE 1 END', [$query . '%'])
+            ->orderBy('name')
+            ->limit(12)
+            ->get()
+            ->map(fn (Publisher $publisher) => [
+                'id' => $publisher->id,
+                'name' => $publisher->name,
+            ])
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'data' => $publishers,
         ], 200);
     }
     
@@ -689,6 +761,8 @@ public function updateProductStatus(Request $request)
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'author' => 'required|string|max:255',
+            'translator' => 'nullable|string|max:255',
+            'publisher_id' => 'nullable|integer|exists:publishers,id',
             'isbn' => 'nullable|string|max:20',
             'pages' => 'required|integer|min:1',
             'language' => 'required|string|in:uz,ru,en,qq',
@@ -745,6 +819,8 @@ public function updateProductStatus(Request $request)
             'name' => $request->input('name'),
             'author' => $author?->name ?: $request->input('author'),
             'author_id' => $author?->id,
+            'translator' => $request->input('translator'),
+            'publisher_id' => $request->input('publisher_id'),
             'isbn' => $canonicalIsbn,
             'pages' => $request->input('pages'),
             'lang' => $request->input('language'),
@@ -798,6 +874,8 @@ public function updateProductStatus(Request $request)
         'id' => 'required|integer',
         'name' => 'required|string|max:255',
         'author' => 'required|string|max:255',
+        'translator' => 'nullable|string|max:255',
+        'publisher_id' => 'nullable|integer|exists:publishers,id',
         'isbn' => 'nullable|string|max:20',
         'pages' => 'required|integer|min:1',
         'language' => 'required|string|in:uz,ru,en,qq',
@@ -920,6 +998,8 @@ public function updateProductStatus(Request $request)
         'name' => $request->name,
         'author' => $author?->name ?: $request->author,
         'author_id' => $author?->id,
+        'translator' => $request->translator,
+        'publisher_id' => $request->publisher_id,
         'isbn' => $canonicalIsbn,
         'pages' => $request->pages,
         'lang' => $request->language,
@@ -1145,7 +1225,7 @@ public function productStatistics(Request $request, $id)
             ->whereIsbn($canonical)
             ->where('is_approved', 1)
             ->where('is_hidden', 0)
-            ->with('tags:id')
+            ->with(['tags:id', 'publisher:id,name'])
             ->orderByDesc('updated_at')
             ->get();
 
@@ -1166,11 +1246,14 @@ public function productStatistics(Request $request, $id)
                         'isbn'          => $canonical,
                         'name'          => $book->name,
                         'author'        => $book->author,
+                        'translator'    => $book->translator,
                         'pages'         => (int) ($book->pages ?? 0),
                         'language'      => $this->normalizeLanguageOut($book->lang),
                         'languageWrite' => $this->normalizeLangTypeOut($book->langType),
                         'coverType'     => $this->normalizeCoverTypeOut($book->coverType),
                         'category_id'   => $book->category_id,
+                        'publisher_id'  => $book->publisher_id,
+                        'publisher_name'=> $book->publisher?->name,
                         'tag_ids'       => $book->tags->pluck('id')->values()->all(),
                         'year'          => (int) ($book->year ?? 0),
                     ];
@@ -1186,11 +1269,14 @@ public function productStatistics(Request $request, $id)
                 'isbn'          => $canonical,
                 'name'          => $book->name,
                 'author'        => $book->author,
+                'translator'    => $book->translator,
                 'pages'         => (int) ($book->pages ?? 0),
                 'language'      => $this->normalizeLanguageOut($book->lang),
                 'languageWrite' => $this->normalizeLangTypeOut($book->langType),
                 'coverType'     => $this->normalizeCoverTypeOut($book->coverType),
                 'category_id'   => $book->category_id,
+                'publisher_id'  => $book->publisher_id,
+                'publisher_name'=> $book->publisher?->name,
                 'tag_ids'       => $book->tags->pluck('id')->values()->all(),
                 'year'          => (int) ($book->year ?? 0),
             ],
