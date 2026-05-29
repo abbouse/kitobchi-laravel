@@ -31,7 +31,7 @@
 <?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
 <?php endif; ?>
 <?php $component->withAttributes(['eyebrow' => 'Seller fulfillment','title' => 'Sotuvchi buyurtmalari','subtitle' => 'Seller kesimida yig‘ilgan fulfillment navbati, status o‘zgarishlari va tezkor operatsion boshqaruv shu jadvalda yuradi.']); ?>
-        <a href="<?php echo e(route('admin.orders.index')); ?>" class="btn btn-outline-secondary rounded-pill px-4">
+        <a href="<?php echo e(route('admin.orders.index')); ?>" class="btn-p ghost">
             <i class="bi bi-arrow-left me-2"></i>Asosiy buyurtmalar
         </a>
      <?php echo $__env->renderComponent(); ?>
@@ -125,15 +125,15 @@
 <?php $component->withAttributes(['title' => 'Filter va qidiruv','meta' => 'Seller, mijoz yoki order ID bo‘yicha kerakli yozuvni tez topish mumkin.']); ?>
         <div class="row g-3 align-items-center">
             <div class="col-12 col-xl-5">
-                <form method="GET" class="position-relative">
+                <form method="GET" class="kc-search">
                     <input type="hidden" name="tab" value="<?php echo e(request('tab', 'all')); ?>">
-                    <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-secondary"></i>
+                    <i class="bi bi-search kc-search__icon"></i>
                     <input
                         type="search"
                         name="search"
                         value="<?php echo e(request('search')); ?>"
                         placeholder="ID, sotuvchi yoki mijoz bo‘yicha qidiring"
-                        class="form-control rounded-pill ps-5">
+                        class="form-control">
                 </form>
             </div>
             <div class="col-12 col-xl-7">
@@ -171,7 +171,7 @@
 <?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
 <?php endif; ?>
 <?php $component->withAttributes(['title' => 'Seller orderlar jadvali','meta' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($orders->total() . ' ta yozuv topildi.')]); ?>
-        <div class="table-responsive">
+        <div class="table-responsive kc-table-shell">
             <table class="table align-middle">
                 <thead class="table-light">
                     <tr>
@@ -232,7 +232,7 @@
                                 <div class="small text-secondary"><?php echo e($order->created_at ? $order->created_at->format('H:i') : '—'); ?></div>
                             </td>
                             <td class="text-end">
-                                <a href="<?php echo e(route('admin.seller-orders.show', $order)); ?>" class="btn btn-sm btn-dark rounded-pill px-3">
+                                <a href="<?php echo e(route('admin.seller-orders.show', $order)); ?>" class="btn-p primary sm">
                                     <i class="bi bi-eye me-1"></i>Ko‘rish
                                 </a>
                             </td>

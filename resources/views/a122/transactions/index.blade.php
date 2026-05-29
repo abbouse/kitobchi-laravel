@@ -27,7 +27,7 @@
         eyebrow="Payout operations"
         title="Tranzaksiyalar ro‘yxati"
         subtitle="Seller payout yozuvlari, tasdiqlash navbati va moliyaviy oqim holatlari shu bo‘limda boshqariladi.">
-        <a href="{{ route('admin.sellers.index') }}" class="btn btn-outline-secondary rounded-pill px-4">
+        <a href="{{ route('admin.sellers.index') }}" class="btn-p ghost">
             <i class="bi bi-shop me-2"></i>Sotuvchilar
         </a>
     </x-admin.page-header>
@@ -60,15 +60,15 @@
     <x-admin.section-card title="Filter va qidiruv" meta="ID, seller yoki summa bo‘yicha kerakli payout yozuvini toping.">
         <div class="row g-3 align-items-center">
             <div class="col-12 col-xl-5">
-                <form method="GET" class="position-relative">
+                <form method="GET" class="kc-search">
                     <input type="hidden" name="tab" value="{{ request('tab', 'pending') }}">
-                    <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-secondary"></i>
+                    <i class="bi bi-search kc-search__icon"></i>
                     <input
                         type="search"
                         name="search"
                         value="{{ request('search') }}"
                         placeholder="ID, sotuvchi yoki summa bo‘yicha qidiring"
-                        class="form-control rounded-pill ps-5">
+                        class="form-control">
                 </form>
             </div>
             <div class="col-12 col-xl-7">
@@ -87,7 +87,7 @@
     </x-admin.section-card>
 
     <x-admin.section-card title="Tranzaksiyalar jadvali" :meta="$transactions->total() . ' ta tranzaksiya topildi.'">
-        <div class="table-responsive">
+        <div class="table-responsive kc-table-shell">
             <table class="table align-middle">
                 <thead class="table-light">
                     <tr>
@@ -118,19 +118,19 @@
                                         <form method="POST" action="{{ route('admin.transactions.approve', $transaction) }}">
                                             @csrf
                                             @method('PATCH')
-                                            <button type="submit" class="btn btn-sm btn-outline-success rounded-pill px-3">
+                                            <button type="submit" class="btn-p success sm">
                                                 <i class="bi bi-check2-circle me-1"></i>Tasdiqlash
                                             </button>
                                         </form>
                                         <form method="POST" action="{{ route('admin.transactions.reject', $transaction) }}">
                                             @csrf
                                             @method('PATCH')
-                                            <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3">
+                                            <button type="submit" class="btn-p danger sm">
                                                 <i class="bi bi-x-circle me-1"></i>Rad etish
                                             </button>
                                         </form>
                                     @endif
-                                    <a href="{{ route('admin.transactions.show', $transaction) }}" class="btn btn-sm btn-dark rounded-pill px-3">
+                                    <a href="{{ route('admin.transactions.show', $transaction) }}" class="btn-p primary sm">
                                         <i class="bi bi-eye me-1"></i>Ko‘rish
                                     </a>
                                 </div>

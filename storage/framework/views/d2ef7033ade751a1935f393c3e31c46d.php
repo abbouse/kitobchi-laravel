@@ -57,7 +57,7 @@
 <?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
 <?php endif; ?>
 <?php $component->withAttributes(['eyebrow' => 'Order operations','title' => 'Buyurtmalar','subtitle' => 'Mijoz buyurtmalarini status, to‘lov va vaqt bo‘yicha boshqarish uchun markaziy navbat. List sahifaning o‘zidan qidirish, filtrlash va tezkor detailga o‘tish mumkin.']); ?>
-    <a href="<?php echo e(route('admin.dashboard')); ?>" class="btn btn-outline-secondary rounded-pill px-4">
+    <a href="<?php echo e(route('admin.dashboard')); ?>" class="btn-p ghost">
       <i class="bi bi-arrow-left me-2"></i>Dashboard
     </a>
    <?php echo $__env->renderComponent(); ?>
@@ -277,7 +277,7 @@
                 <div class="small text-secondary"><?php echo e(optional($order->created_at)->format('H:i')); ?></div>
               </td>
               <td class="text-end">
-                <a href="<?php echo e(route('admin.orders.show', $order)); ?>" class="btn btn-sm btn-dark rounded-pill px-3">
+                <a href="<?php echo e(route('admin.orders.show', $order)); ?>" class="btn-p primary sm">
                   <i class="bi bi-eye me-1"></i>Ko‘rish
                 </a>
               </td>

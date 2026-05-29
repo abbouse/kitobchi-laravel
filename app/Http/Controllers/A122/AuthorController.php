@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Author;
 use App\Models\Books;
 use App\Services\AuthorDirectoryService;
+use App\Services\OpenAIService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
@@ -31,6 +33,19 @@ class AuthorController extends Controller
             'total' => Author::query()->count(),
             'with_image' => Author::query()->whereNotNull('image')->where('image', '!=', '')->count(),
             'linked_books' => Books::query()->whereNotNull('author_id')->count(),
+            'ai_candidates' => Author::query()
+                ->where(function ($query) {
+                    $query->whereNull('image')->orWhere('image', '');
+                })
+                ->where(function ($query) {
+                    $query->where('name', 'not regexp', '[,/&;+]')
+                        ->where('name', 'not like', '% va %')
+                        ->where('name', 'not like', '% and %')
+                        ->where('name', 'not like', '% feat %')
+                        ->where('name', 'not like', '% ft %')
+                        ->where('name', 'not like', '% x %');
+                })
+                ->count(),
         ];
 
         return view('a122.authors.index', compact('authors', 'stats'));
@@ -53,7 +68,23 @@ class AuthorController extends Controller
 
     public function edit(Author $author)
     {
+        $author->loadCount('books');
+
         return view('a122.authors.edit', compact('author'));
+    }
+
+    public function generateImagePrompt(Author $author)
+    {
+        if (! $author->needs_ai_portrait) {
+            return back()->with('error', 'Bu muallif uchun AI portret talab qilinmaydi. Ko‘p muallifli kartalarda default avatar yetarli.');
+        }
+
+        $prompt = $this->buildAuthorImagePrompt($author);
+
+        return redirect()
+            ->route('admin.authors.edit', $author)
+            ->with('success', 'ChatGPT uchun rasm prompti tayyorlandi.')
+            ->with('author_ai_prompt', $prompt);
     }
 
     public function update(Request $request, Author $author)
@@ -152,5 +183,42 @@ class AuthorController extends Controller
 
         $image = trim((string) ($fallback ?? ''));
         return $image === '' ? null : $image;
+    }
+
+    private function buildAuthorImagePrompt(Author $author): string
+    {
+        $fallback = $this->fallbackAuthorImagePrompt($author);
+
+        try {
+            /** @var OpenAIService $ai */
+            $ai = app(OpenAIService::class);
+
+            $prompt = trim($ai->askSimpleWithMessages([
+                [
+                    'role' => 'system',
+                    'content' => "You write concise image-generation prompts for realistic author portraits. Return only the prompt text in English. No markdown, no explanation.",
+                ],
+                [
+                    'role' => 'user',
+                    'content' => "Create a premium image prompt for a bookstore admin panel portrait. Author name: {$author->name}. Requirements: photorealistic editorial portrait, neutral studio background, centered composition, soft natural lighting, respectful and culturally neutral styling, no text, no watermark, shoulders-up, 1:1 framing, suitable for an online book catalog. If the person is not globally well-known, still write a tasteful generic author portrait prompt anchored to the provided name without inventing biography details.",
+                ],
+            ], 180, 0.4));
+
+            if ($prompt !== '' && ! str_contains($prompt, 'Kechirasiz')) {
+                return $prompt;
+            }
+        } catch (\Throwable $e) {
+            Log::warning('author.ai_image_prompt_failed', [
+                'author_id' => $author->id,
+                'message' => $e->getMessage(),
+            ]);
+        }
+
+        return $fallback;
+    }
+
+    private function fallbackAuthorImagePrompt(Author $author): string
+    {
+        return "Photorealistic editorial portrait of author {$author->name}, shoulders-up, centered composition, soft natural studio lighting, clean neutral background, calm confident expression, realistic skin texture, high detail, bookstore catalog profile image, square 1:1 crop, no text, no watermark.";
     }
 }

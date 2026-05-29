@@ -25,6 +25,41 @@
     </form>
 </x-admin.page-header>
 
+<div class="row g-3 mb-4">
+    <div class="col-12 col-md-6 col-xl-3">
+        <x-admin.stat-card
+            label="Kutilayotgan sellerlar"
+            :value="number_format($counts['pending'] ?? 0)"
+            meta="Moderatsiya yoki hujjat tekshiruvini kutayotgan do‘konlar"
+            icon="hourglass-split"
+            tone="warning" />
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+        <x-admin.stat-card
+            label="Tasdiqlangan"
+            :value="number_format($counts['approved'] ?? 0)"
+            meta="Savdoga chiqqan va faol ishlayotgan sellerlar"
+            icon="shop"
+            tone="success" />
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+        <x-admin.stat-card
+            label="Rad etilgan"
+            :value="number_format($counts['rejected'] ?? 0)"
+            meta="Qayta ko‘rib chiqish yoki tuzatish kutayotgan arizalar"
+            icon="x-octagon"
+            tone="danger" />
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+        <x-admin.stat-card
+            label="Bloklangan"
+            :value="number_format($counts['blocked'] ?? 0)"
+            meta="Policy yoki ogohlantirish sabab cheklangan do‘konlar"
+            icon="shield-lock"
+            tone="info" />
+    </div>
+</div>
+
 <div class="kc-filter-card mb-4">
     <div class="nav nav-pills flex-wrap">
     @php
@@ -48,7 +83,7 @@
 </div>
 </div>
 
-<x-admin.section-card>
+<x-admin.section-card title="Sotuvchilar jadvali" :meta="$sellers->total() . ' ta seller yozuvi topildi.'">
     <div class="table-responsive kc-table-shell">
         <table class="table table-hover align-middle mb-0">
             <thead>
@@ -79,6 +114,9 @@
                                     <div class="fw-semibold text-truncate">{{ $seller->shop_name }}</div>
                                     @if($seller->firstname || $seller->lastname)
                                         <div class="small text-secondary text-truncate">{{ trim($seller->firstname . ' ' . $seller->lastname) }}</div>
+                                    @endif
+                                    @if($seller->district || $seller->address)
+                                        <div class="small text-secondary text-truncate">{{ $seller->district ?: $seller->address }}</div>
                                     @endif
                                 </div>
                             </div>

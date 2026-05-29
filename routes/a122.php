@@ -102,6 +102,7 @@ Route::prefix('a122')->name('admin.')->group(function () {
         Route::get('/create', [AuthorController::class, 'create'])->name('create');
         Route::post('/', [AuthorController::class, 'store'])->name('store');
         Route::get('/{author}/edit', [AuthorController::class, 'edit'])->name('edit');
+        Route::post('/{author}/generate-image-prompt', [AuthorController::class, 'generateImagePrompt'])->name('generate-image-prompt');
         Route::put('/{author}', [AuthorController::class, 'update'])->name('update');
         Route::delete('/{author}', [AuthorController::class, 'destroy'])->name('destroy');
         Route::post('/sync-book-uz', [AuthorController::class, 'syncBookUz'])->name('sync-book-uz');

@@ -1,117 +1,156 @@
 @extends('a122.layouts.admin')
 @section('title', 'Mualliflar')
 @section('page-title', 'Mualliflar')
+@section('page-eyebrow', 'Author directory')
 
 @section('content')
-<div class="space-y-6">
-  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-    <div>
-      <h2 class="text-xl font-bold">Mualliflar</h2>
-      <p class="text-xs text-gray-500 mt-0.5">Book.uz dan bir marta olib, ichki kitoblar bilan bog‘lanadigan yagona author bazasi.</p>
-    </div>
-    <div class="flex flex-wrap items-center gap-2">
-      <form method="GET" class="relative">
-        <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-        <input name="search" value="{{ request('search') }}" placeholder="Muallif qidirish..." class="input !pl-9 !py-2 w-64">
-      </form>
-      <form method="POST" action="{{ route('admin.authors.sync-book-uz') }}">
-        @csrf
-        <button class="btn btn-secondary">
-          <i data-lucide="refresh-cw" class="w-4 h-4"></i> Book.uz sync
-        </button>
-      </form>
-      <form method="POST" action="{{ route('admin.authors.backfill-books') }}">
-        @csrf
-        <button class="btn btn-secondary">
-          <i data-lucide="link-2" class="w-4 h-4"></i> Eski kitoblarni ulash
-        </button>
-      </form>
-      <a href="{{ route('admin.authors.create') }}" class="btn btn-primary">
-        <i data-lucide="plus" class="w-4 h-4"></i> Qo'shish
-      </a>
-    </div>
-  </div>
+<div class="d-flex flex-column gap-4">
+  <x-admin.page-header
+    eyebrow="Author directory"
+    title="Mualliflar"
+    subtitle="Ichki kitob katalogiga ulangan yagona mualliflar bazasi. Rasm, source va bog‘langan kitoblar shu bo‘limda boshqariladi.">
+    <form method="GET" class="kc-search flex-grow-1" style="max-width: 24rem;">
+      <i class="bi bi-search kc-search__icon"></i>
+      <input name="search" value="{{ request('search') }}" placeholder="Muallif qidirish..." class="form-control">
+    </form>
+    <form method="POST" action="{{ route('admin.authors.sync-book-uz') }}">
+      @csrf
+      <button class="btn-p ghost">
+        <i class="bi bi-arrow-repeat"></i>
+        <span>Book.uz sync</span>
+      </button>
+    </form>
+    <form method="POST" action="{{ route('admin.authors.backfill-books') }}">
+      @csrf
+      <button class="btn-p ghost">
+        <i class="bi bi-link-45deg"></i>
+        <span>Eski kitoblarni ulash</span>
+      </button>
+    </form>
+    <a href="{{ route('admin.authors.create') }}" class="btn-p primary">
+      <i class="bi bi-plus-lg"></i>
+      <span>Qo‘shish</span>
+    </a>
+  </x-admin.page-header>
 
   @if(session('success'))
-    <div class="px-4 py-3 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-sm flex items-center gap-2">
-      <i data-lucide="check-circle" class="w-4 h-4"></i> {{ session('success') }}
-    </div>
+    <div class="alert alert-success kc-flash mb-0">{{ session('success') }}</div>
   @endif
   @if(session('error'))
-    <div class="px-4 py-3 rounded-xl bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 text-sm flex items-center gap-2">
-      <i data-lucide="alert-circle" class="w-4 h-4"></i> {{ session('error') }}
-    </div>
+    <div class="alert alert-danger kc-flash mb-0">{{ session('error') }}</div>
   @endif
 
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-    <div class="card p-5">
-      <div class="text-xs text-gray-500">Jami muallif</div>
-      <div class="text-2xl font-black mt-2">{{ number_format($stats['total']) }}</div>
+  <div class="row g-3">
+    <div class="col-12 col-md-6 col-xl-3">
+      <x-admin.stat-card
+        label="Jami muallif"
+        :value="number_format($stats['total'])"
+        meta="Katalog ichidagi barcha author profile yozuvlari"
+        icon="pen"
+        tone="primary" />
     </div>
-    <div class="card p-5">
-      <div class="text-xs text-gray-500">Rasmli kartalar</div>
-      <div class="text-2xl font-black mt-2">{{ number_format($stats['with_image']) }}</div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <x-admin.stat-card
+        label="Rasmli kartalar"
+        :value="number_format($stats['with_image'])"
+        meta="Real upload yoki tashqi URL bilan to‘ldirilgan author kartalar"
+        icon="image"
+        tone="success" />
     </div>
-    <div class="card p-5">
-      <div class="text-xs text-gray-500">Bog‘langan kitoblar</div>
-      <div class="text-2xl font-black mt-2">{{ number_format($stats['linked_books']) }}</div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <x-admin.stat-card
+        label="AI nomzodlar"
+        :value="number_format($stats['ai_candidates'])"
+        meta="Single-author va hali real rasm qo‘yilmagan kartalar"
+        icon="stars"
+        tone="warning" />
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <x-admin.stat-card
+        label="Bog‘langan kitoblar"
+        :value="number_format($stats['linked_books'])"
+        meta="Author relation orqali muallifga biriktirilgan books yozuvlari"
+        icon="book"
+        tone="info" />
     </div>
   </div>
 
-  <div class="table-wrap">
-    <div class="overflow-x-auto">
-      <table class="tbl" data-index-grid>
-        <thead>
+  <x-admin.section-card title="Mualliflar jadvali" :meta="$authors->total() . ' ta author yozuvi topildi.'">
+    <div class="kc-table-shell table-responsive">
+      <table class="table align-middle mb-0">
+        <thead class="table-light">
           <tr>
             <th>ID</th>
-            <th>Rasm</th>
+            <th>Preview</th>
             <th>Muallif</th>
             <th>Kitoblar</th>
+            <th>Holat</th>
             <th>Manba</th>
-            <th class="text-right">Amallar</th>
+            <th class="text-end">Amallar</th>
           </tr>
         </thead>
         <tbody>
           @forelse($authors as $author)
             <tr>
-              <td class="text-gray-500 text-xs">{{ $author->id }}</td>
+              <td class="small text-secondary">#{{ $author->id }}</td>
               <td>
-                <div class="w-14 h-14 rounded-2xl overflow-hidden border border-[var(--p-border)] bg-[var(--p-elevated)] flex items-center justify-center">
-                  @if($author->image_url)
-                    <img src="{{ $author->image_url }}" alt="{{ $author->name }}" class="w-full h-full object-cover">
-                  @else
-                    <i data-lucide="pen-tool" class="w-5 h-5 text-gray-400"></i>
-                  @endif
+                <div style="width:72px;height:72px;" class="rounded-4 overflow-hidden border bg-light d-flex align-items-center justify-content-center">
+                  <img src="{{ $author->display_image_url }}" alt="{{ $author->name }}" class="w-100 h-100 object-fit-cover">
                 </div>
               </td>
               <td>
-                <div class="font-semibold">{{ $author->name }}</div>
-                <div class="mt-1 d-flex flex-wrap align-items-center gap-2">
+                <div class="fw-semibold">{{ $author->name }}</div>
+                <div class="small text-secondary mt-1">
                   @if($author->external_id)
-                    <span class="badge rounded-pill text-bg-light border">Book.uz</span>
-                    <span class="text-xs text-gray-500">{{ $author->external_id }}</span>
+                    Book.uz ID: {{ $author->external_id }}
                   @else
-                    <span class="badge rounded-pill text-bg-light border">Manual</span>
+                    Manual author card
                   @endif
                 </div>
               </td>
-              <td><span class="font-semibold">{{ $author->books_count }}</span></td>
+              <td>
+                <span class="badge rounded-pill text-bg-light border">{{ number_format($author->books_count) }} ta</span>
+              </td>
+              <td>
+                <div class="d-flex flex-wrap gap-2">
+                  @if($author->image_url)
+                    <span class="badge rounded-pill text-bg-success-subtle border border-success-subtle text-success-emphasis">Rasm bor</span>
+                  @else
+                    <span class="badge rounded-pill text-bg-light border">Default avatar</span>
+                  @endif
+
+                  @if($author->has_multiple_authors)
+                    <span class="badge rounded-pill text-bg-secondary">Ko‘p muallif</span>
+                  @elseif($author->needs_ai_portrait)
+                    <span class="badge rounded-pill text-bg-warning-subtle border border-warning-subtle text-warning-emphasis">AI mos</span>
+                  @endif
+                </div>
+              </td>
               <td>
                 @if($author->source_url)
-                  <a href="{{ $author->source_url }}" target="_blank" rel="noopener" class="text-sm text-blue-600 hover:underline">Book.uz</a>
+                  <a href="{{ $author->source_url }}" target="_blank" rel="noopener" class="text-decoration-none">Source</a>
                 @else
-                  <span class="text-gray-400 text-sm">—</span>
+                  <span class="small text-secondary">—</span>
                 @endif
               </td>
-              <td>
-                <div class="flex items-center justify-end gap-1">
-                  <a href="{{ route('admin.authors.edit', $author) }}" class="btn-ghost p-2 rounded-lg">
-                    <i data-lucide="pencil" class="w-4 h-4"></i>
+              <td class="text-end">
+                <div class="d-inline-flex flex-wrap align-items-center justify-content-end gap-1">
+                  @if($author->needs_ai_portrait)
+                    <form method="POST" action="{{ route('admin.authors.generate-image-prompt', $author) }}">
+                      @csrf
+                      <button type="submit" class="btn btn-sm btn-light border kc-table-action" title="AI prompt yaratish">
+                        <i class="bi bi-stars"></i>
+                      </button>
+                    </form>
+                  @endif
+                  <a href="{{ route('admin.authors.edit', $author) }}" class="btn btn-sm btn-light border kc-table-action" title="Tahrirlash">
+                    <i class="bi bi-pencil"></i>
                   </a>
                   <form method="POST" action="{{ route('admin.authors.destroy', $author) }}" onsubmit="return confirm('Muallifni o\\'chirishni tasdiqlaysizmi?')">
-                    @csrf @method('DELETE')
-                    <button class="btn-ghost p-2 rounded-lg text-rose-500">
-                      <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    @csrf
+                    @method('DELETE')
+                    <button class="btn btn-sm btn-light border kc-table-action text-danger" title="O‘chirish">
+                      <i class="bi bi-trash3"></i>
                     </button>
                   </form>
                 </div>
@@ -119,16 +158,13 @@
             </tr>
           @empty
             <tr>
-              <td colspan="6" class="text-center py-10 text-gray-400">
-                <i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 text-gray-300"></i>
-                Hali mualliflar qo‘shilmagan
-              </td>
+              <td colspan="7" class="text-center py-5 text-secondary">Hali mualliflar qo‘shilmagan.</td>
             </tr>
           @endforelse
         </tbody>
       </table>
     </div>
-  </div>
+  </x-admin.section-card>
 
   <div>{{ $authors->links('a122.partials.pagination') }}</div>
 </div>

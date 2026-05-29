@@ -41,6 +41,97 @@
 <?php unset($__componentOriginalcb19cb35a534439097b02b8af91726ee); ?>
 <?php endif; ?>
 
+<div class="row g-3 mb-4">
+    <div class="col-12 col-md-6 col-xl-3">
+        <?php if (isset($component)) { $__componentOriginal3c3cb599308b2d9971dae437d0b6bab6 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.admin.stat-card','data' => ['label' => 'Kutilayotgan sellerlar','value' => number_format($counts['pending'] ?? 0),'meta' => 'Moderatsiya yoki hujjat tekshiruvini kutayotgan do‘konlar','icon' => 'hourglass-split','tone' => 'warning']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('admin.stat-card'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['label' => 'Kutilayotgan sellerlar','value' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute(number_format($counts['pending'] ?? 0)),'meta' => 'Moderatsiya yoki hujjat tekshiruvini kutayotgan do‘konlar','icon' => 'hourglass-split','tone' => 'warning']); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6)): ?>
+<?php $attributes = $__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6; ?>
+<?php unset($__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal3c3cb599308b2d9971dae437d0b6bab6)): ?>
+<?php $component = $__componentOriginal3c3cb599308b2d9971dae437d0b6bab6; ?>
+<?php unset($__componentOriginal3c3cb599308b2d9971dae437d0b6bab6); ?>
+<?php endif; ?>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+        <?php if (isset($component)) { $__componentOriginal3c3cb599308b2d9971dae437d0b6bab6 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.admin.stat-card','data' => ['label' => 'Tasdiqlangan','value' => number_format($counts['approved'] ?? 0),'meta' => 'Savdoga chiqqan va faol ishlayotgan sellerlar','icon' => 'shop','tone' => 'success']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('admin.stat-card'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['label' => 'Tasdiqlangan','value' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute(number_format($counts['approved'] ?? 0)),'meta' => 'Savdoga chiqqan va faol ishlayotgan sellerlar','icon' => 'shop','tone' => 'success']); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6)): ?>
+<?php $attributes = $__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6; ?>
+<?php unset($__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal3c3cb599308b2d9971dae437d0b6bab6)): ?>
+<?php $component = $__componentOriginal3c3cb599308b2d9971dae437d0b6bab6; ?>
+<?php unset($__componentOriginal3c3cb599308b2d9971dae437d0b6bab6); ?>
+<?php endif; ?>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+        <?php if (isset($component)) { $__componentOriginal3c3cb599308b2d9971dae437d0b6bab6 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.admin.stat-card','data' => ['label' => 'Rad etilgan','value' => number_format($counts['rejected'] ?? 0),'meta' => 'Qayta ko‘rib chiqish yoki tuzatish kutayotgan arizalar','icon' => 'x-octagon','tone' => 'danger']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('admin.stat-card'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['label' => 'Rad etilgan','value' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute(number_format($counts['rejected'] ?? 0)),'meta' => 'Qayta ko‘rib chiqish yoki tuzatish kutayotgan arizalar','icon' => 'x-octagon','tone' => 'danger']); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6)): ?>
+<?php $attributes = $__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6; ?>
+<?php unset($__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal3c3cb599308b2d9971dae437d0b6bab6)): ?>
+<?php $component = $__componentOriginal3c3cb599308b2d9971dae437d0b6bab6; ?>
+<?php unset($__componentOriginal3c3cb599308b2d9971dae437d0b6bab6); ?>
+<?php endif; ?>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+        <?php if (isset($component)) { $__componentOriginal3c3cb599308b2d9971dae437d0b6bab6 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.admin.stat-card','data' => ['label' => 'Bloklangan','value' => number_format($counts['blocked'] ?? 0),'meta' => 'Policy yoki ogohlantirish sabab cheklangan do‘konlar','icon' => 'shield-lock','tone' => 'info']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('admin.stat-card'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['label' => 'Bloklangan','value' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute(number_format($counts['blocked'] ?? 0)),'meta' => 'Policy yoki ogohlantirish sabab cheklangan do‘konlar','icon' => 'shield-lock','tone' => 'info']); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6)): ?>
+<?php $attributes = $__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6; ?>
+<?php unset($__attributesOriginal3c3cb599308b2d9971dae437d0b6bab6); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal3c3cb599308b2d9971dae437d0b6bab6)): ?>
+<?php $component = $__componentOriginal3c3cb599308b2d9971dae437d0b6bab6; ?>
+<?php unset($__componentOriginal3c3cb599308b2d9971dae437d0b6bab6); ?>
+<?php endif; ?>
+    </div>
+</div>
+
 <div class="kc-filter-card mb-4">
     <div class="nav nav-pills flex-wrap">
     <?php
@@ -67,14 +158,14 @@
 
 <?php if (isset($component)) { $__componentOriginal6c55ae2c9251ebabe977f3f2190280eb = $component; } ?>
 <?php if (isset($attributes)) { $__attributesOriginal6c55ae2c9251ebabe977f3f2190280eb = $attributes; } ?>
-<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.admin.section-card','data' => []] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.admin.section-card','data' => ['title' => 'Sotuvchilar jadvali','meta' => $sellers->total() . ' ta seller yozuvi topildi.']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
 <?php $component->withName('admin.section-card'); ?>
 <?php if ($component->shouldRender()): ?>
 <?php $__env->startComponent($component->resolveView(), $component->data()); ?>
 <?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
 <?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
 <?php endif; ?>
-<?php $component->withAttributes([]); ?>
+<?php $component->withAttributes(['title' => 'Sotuvchilar jadvali','meta' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($sellers->total() . ' ta seller yozuvi topildi.')]); ?>
     <div class="table-responsive kc-table-shell">
         <table class="table table-hover align-middle mb-0">
             <thead>
@@ -105,6 +196,9 @@
                                     <div class="fw-semibold text-truncate"><?php echo e($seller->shop_name); ?></div>
                                     <?php if($seller->firstname || $seller->lastname): ?>
                                         <div class="small text-secondary text-truncate"><?php echo e(trim($seller->firstname . ' ' . $seller->lastname)); ?></div>
+                                    <?php endif; ?>
+                                    <?php if($seller->district || $seller->address): ?>
+                                        <div class="small text-secondary text-truncate"><?php echo e($seller->district ?: $seller->address); ?></div>
                                     <?php endif; ?>
                                 </div>
                             </div>

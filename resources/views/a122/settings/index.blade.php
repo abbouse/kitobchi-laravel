@@ -1,14 +1,208 @@
 @extends('a122.layouts.admin')
 @section('title', 'Sozlamalar')
 
+@push('styles')
+<style>
+  .settings-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .settings-shell .kc-page-header {
+    border-radius: 2rem;
+    padding: 1.5rem 1.65rem;
+  }
+
+  .settings-tabs-bar {
+    display: flex;
+    gap: .75rem;
+    flex-wrap: wrap;
+    padding: .85rem;
+    border-radius: 1.65rem;
+    border: 1px solid #e6ebf2;
+    background: rgba(255,255,255,.98);
+    box-shadow: 0 14px 36px rgba(31,41,55,.05);
+  }
+
+  .settings-tabs-bar .nav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: .55rem;
+    min-height: 2.85rem;
+    padding: 0 1rem;
+    border-radius: 1rem;
+    color: #6f7890;
+    font-size: .84rem;
+    font-weight: 800;
+    border: 1px solid transparent;
+    transition: .18s ease;
+  }
+
+  .settings-tabs-bar .nav-link:hover {
+    color: #202631;
+    background: #f8f9fd;
+    border-color: #e6ebf2;
+  }
+
+  .settings-tabs-bar .nav-link.active {
+    background: #5b7cfa;
+    color: #fff;
+    box-shadow: 0 14px 26px rgba(91,124,250,.22);
+  }
+
+  .settings-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(320px, .8fr);
+    gap: 1rem;
+  }
+
+  .settings-main-card,
+  .settings-aside-card {
+    border: 1px solid #e6ebf2;
+    border-radius: 2rem;
+    background: rgba(255,255,255,.98);
+    box-shadow: 0 16px 40px rgba(31,41,55,.05);
+    overflow: hidden;
+  }
+
+  .settings-main-card .p-card-header,
+  .settings-aside-card .p-card-header {
+    padding: 1.35rem 1.5rem 0;
+  }
+
+  .settings-main-card form,
+  .settings-aside-card > div:not(.p-card-header) {
+    padding: 0 1.5rem 1.5rem;
+  }
+
+  .settings-block {
+    padding: 1.1rem;
+    border-radius: 1.4rem;
+    border: 1px solid #edf1f7;
+    background: #fafbfe;
+  }
+
+  .settings-block + .settings-block {
+    margin-top: .9rem;
+  }
+
+  .settings-block__head {
+    display: flex;
+    align-items: center;
+    gap: .65rem;
+    margin-bottom: .9rem;
+    color: #202631;
+    font-size: .9rem;
+    font-weight: 800;
+  }
+
+  .settings-field-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .9rem;
+  }
+
+  .settings-field-grid--three {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .settings-shell .p-form-label {
+    margin-bottom: .5rem;
+    color: #8c95a6 !important;
+    font-size: .72rem !important;
+    letter-spacing: .12em;
+  }
+
+  .settings-shell .p-form-control {
+    min-height: 3.15rem;
+    border-radius: 1rem !important;
+    background: #fff !important;
+  }
+
+  .settings-shell textarea.p-form-control {
+    min-height: 9rem;
+  }
+
+  .settings-savebar {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 1rem;
+  }
+
+  .settings-shell .btn-p.primary {
+    min-width: 10rem;
+    min-height: 3rem;
+    border-radius: 1rem !important;
+    background: #5b7cfa !important;
+    border-color: #5b7cfa !important;
+    box-shadow: 0 14px 28px rgba(91,124,250,.24);
+  }
+
+  .settings-shell .kc-settings-row {
+    padding-inline: 1.2rem;
+    min-height: 4rem;
+  }
+
+  .settings-shell .kc-settings-row + .kc-settings-row {
+    border-top: 1px solid #edf1f7;
+  }
+
+  .settings-shell .kc-settings-row:last-child {
+    border-bottom: 0;
+  }
+
+  .settings-shell .kc-settings-value {
+    font-size: .86rem;
+  }
+
+  .settings-shell .kc-settings-panel,
+  .settings-shell .kc-settings-panel--compact {
+    padding: 1rem;
+    border-radius: 1.25rem;
+    border: 1px solid #edf1f7;
+    background: #fafbfe;
+  }
+
+  .settings-shell .kc-settings-check {
+    min-height: 3.25rem;
+    border-radius: 1rem;
+    border-color: #e6ebf2;
+    background: #fff;
+  }
+
+  @media (max-width: 1199px) {
+    .settings-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 767px) {
+    .settings-main-card .p-card-header,
+    .settings-aside-card .p-card-header,
+    .settings-main-card form,
+    .settings-aside-card > div:not(.p-card-header) {
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+
+    .settings-field-grid,
+    .settings-field-grid--three {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+@endpush
+
 @section('content')
 
 @php $tab = request('tab', 'versions'); @endphp
 
-<x-a122.page-header title="Sozlamalar" subtitle="Tizim konfiguratsiyasi va sozlamalari"/>
+<div class="settings-shell">
+<x-a122.page-header title="Sozlamalar" subtitle="Tizim konfiguratsiyasi, app versiyalari va operatsion flaglar bitta toza boshqaruv yuzasida jamlangan."/>
 
 {{-- Tabs --}}
-<div class="kc-settings-tabs mb-4">
+<div class="settings-tabs-bar">
   <div class="nav nav-pills flex-wrap">
     @foreach([
       'versions'   => ['bi-phone','App versiyalar'],
@@ -29,9 +223,9 @@
 
 {{-- ══ APP VERSIYALAR ══════════════════════════════════════════════════════ --}}
 @if($tab === 'versions')
-<div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
-  <div class="xl:col-span-7">
-    <div class="p-card">
+<div class="settings-grid">
+  <div>
+    <div class="p-card settings-main-card">
       <div class="p-card-header">
         <div>
           <div class="p-card-title"><i class="bi bi-phone mr-2" style="color:var(--p-accent)"></i>App versiyalari</div>
@@ -40,14 +234,14 @@
       </div>
       <form method="POST" action="{{ route('admin.settings.versions') }}">
         @csrf @method('PUT')
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div class="settings-field-grid">
           @foreach([
             ['Kitobchi Business','business','bi-shop-window','warning'],
             ['Kuryer App','courier','bi-bicycle','info'],
             ['Market App','market','bi-bag','accent'],
           ] as [$appName, $key, $icon, $clr])
           <div>
-            <div class="kc-settings-panel kc-settings-panel--compact">
+            <div class="settings-block">
               <div class="d-flex align-items-center gap-2 mb-3">
                 <i class="bi {{ $icon }}" style="color:var(--p-{{ $clr }});font-size:15px"></i>
                 <span class="fw-semibold small text-body">{{ $appName }}</span>
@@ -70,15 +264,15 @@
           </div>
           @endforeach
         </div>
-        <div class="flex justify-end mt-4">
+        <div class="settings-savebar">
           <button type="submit" class="btn-p primary"><i class="bi bi-floppy-fill"></i> Saqlash</button>
         </div>
       </form>
     </div>
   </div>
 
-  <div class="xl:col-span-5">
-    <div class="p-card">
+  <div>
+    <div class="p-card settings-aside-card">
       <div class="p-card-header">
         <div class="p-card-title"><i class="bi bi-info-circle mr-2" style="color:var(--p-info)"></i>Hozirgi versiyalar</div>
       </div>
@@ -104,9 +298,9 @@
 
 {{-- ══ KONTAKTLAR ═══════════════════════════════════════════════════════ --}}
 @if($tab === 'contacts')
-<div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
-  <div class="xl:col-span-7">
-    <div class="p-card">
+<div class="settings-grid">
+  <div>
+    <div class="p-card settings-main-card">
       <div class="p-card-header">
         <div>
           <div class="p-card-title"><i class="bi bi-headset mr-2" style="color:var(--p-accent)"></i>Ilova kontaktlari</div>
@@ -121,7 +315,7 @@
             ['Kitobchi Business', 'business', 'bi-shop-window', 'warning'],
             ['Endi Courier', 'courier', 'bi-bicycle', 'info'],
           ] as [$appName, $key, $icon, $clr])
-          <div class="kc-settings-panel">
+          <div class="settings-block">
             <div class="d-flex align-items-center gap-2 mb-3">
               <i class="bi {{ $icon }}" style="color:var(--p-{{ $clr }});font-size:16px"></i>
               <span class="fw-semibold small text-body">{{ $appName }}</span>
@@ -143,15 +337,15 @@
           </div>
           @endforeach
         </div>
-        <div class="flex justify-end mt-4">
+        <div class="settings-savebar">
           <button type="submit" class="btn-p primary"><i class="bi bi-floppy-fill"></i> Saqlash</button>
         </div>
       </form>
     </div>
   </div>
 
-  <div class="xl:col-span-5">
-    <div class="p-card">
+  <div>
+    <div class="p-card settings-aside-card">
       <div class="p-card-header">
         <div class="p-card-title"><i class="bi bi-info-circle mr-2" style="color:var(--p-info)"></i>Hozirgi kontaktlar</div>
       </div>
@@ -179,9 +373,9 @@
 
 {{-- ══ APP FLAGLAR ══════════════════════════════════════════════════════ --}}
 @if($tab === 'app-flags')
-<div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
-  <div class="xl:col-span-7">
-    <div class="p-card">
+<div class="settings-grid">
+  <div>
+    <div class="p-card settings-main-card">
       <div class="p-card-header">
         <div>
           <div class="p-card-title"><i class="bi bi-toggles mr-2" style="color:var(--p-accent)"></i>App sozlamalari</div>
@@ -192,8 +386,8 @@
         @csrf @method('PUT')
 
         {{-- Flaglar --}}
-        <div class="kc-settings-panel mb-3">
-          <div class="kc-settings-block-title">
+        <div class="settings-block mb-3">
+          <div class="settings-block__head">
             <i class="bi bi-toggles mr-2" style="color:var(--p-accent)"></i>Global flaglar
           </div>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -216,11 +410,11 @@
         </div>
 
         {{-- Qadoqlash narxi --}}
-        <div class="kc-settings-panel">
-          <div class="kc-settings-block-title">
+        <div class="settings-block">
+          <div class="settings-block__head">
             <i class="bi bi-box-seam mr-2" style="color:var(--p-success)"></i>Qadoqlash narxi
           </div>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div class="settings-field-grid settings-field-grid--three">
             <div>
               <label class="p-form-label">Kichik narx (UZS) *</label>
               <input type="number" name="packaging_price_small" class="p-form-control" min="0" required
@@ -245,15 +439,15 @@
           </div>
         </div>
 
-        <div class="flex justify-end mt-4">
+        <div class="settings-savebar">
           <button type="submit" class="btn-p primary"><i class="bi bi-floppy-fill"></i> Saqlash</button>
         </div>
       </form>
     </div>
   </div>
 
-  <div class="xl:col-span-5">
-    <div class="p-card">
+  <div>
+    <div class="p-card settings-aside-card">
       <div class="p-card-header">
         <div class="p-card-title"><i class="bi bi-info-circle mr-2" style="color:var(--p-info)"></i>Hozirgi holat</div>
       </div>
@@ -1013,4 +1207,5 @@ document.getElementById('editDeliveryModal').addEventListener('click', function(
 </script>
 @endif
 
+</div>
 @endsection

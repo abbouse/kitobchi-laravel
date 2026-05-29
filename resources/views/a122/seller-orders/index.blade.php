@@ -26,7 +26,7 @@
         eyebrow="Seller fulfillment"
         title="Sotuvchi buyurtmalari"
         subtitle="Seller kesimida yig‘ilgan fulfillment navbati, status o‘zgarishlari va tezkor operatsion boshqaruv shu jadvalda yuradi.">
-        <a href="{{ route('admin.orders.index') }}" class="btn btn-outline-secondary rounded-pill px-4">
+        <a href="{{ route('admin.orders.index') }}" class="btn-p ghost">
             <i class="bi bi-arrow-left me-2"></i>Asosiy buyurtmalar
         </a>
     </x-admin.page-header>
@@ -68,15 +68,15 @@
     <x-admin.section-card title="Filter va qidiruv" meta="Seller, mijoz yoki order ID bo‘yicha kerakli yozuvni tez topish mumkin.">
         <div class="row g-3 align-items-center">
             <div class="col-12 col-xl-5">
-                <form method="GET" class="position-relative">
+                <form method="GET" class="kc-search">
                     <input type="hidden" name="tab" value="{{ request('tab', 'all') }}">
-                    <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-secondary"></i>
+                    <i class="bi bi-search kc-search__icon"></i>
                     <input
                         type="search"
                         name="search"
                         value="{{ request('search') }}"
                         placeholder="ID, sotuvchi yoki mijoz bo‘yicha qidiring"
-                        class="form-control rounded-pill ps-5">
+                        class="form-control">
                 </form>
             </div>
             <div class="col-12 col-xl-7">
@@ -95,7 +95,7 @@
     </x-admin.section-card>
 
     <x-admin.section-card title="Seller orderlar jadvali" :meta="$orders->total() . ' ta yozuv topildi.'">
-        <div class="table-responsive">
+        <div class="table-responsive kc-table-shell">
             <table class="table align-middle">
                 <thead class="table-light">
                     <tr>
@@ -156,7 +156,7 @@
                                 <div class="small text-secondary">{{ $order->created_at ? $order->created_at->format('H:i') : '—' }}</div>
                             </td>
                             <td class="text-end">
-                                <a href="{{ route('admin.seller-orders.show', $order) }}" class="btn btn-sm btn-dark rounded-pill px-3">
+                                <a href="{{ route('admin.seller-orders.show', $order) }}" class="btn-p primary sm">
                                     <i class="bi bi-eye me-1"></i>Ko‘rish
                                 </a>
                             </td>
