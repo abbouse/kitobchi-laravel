@@ -34,6 +34,31 @@
         }, null, false);
     };
 @endphp
+
+@if(!empty($debugMode))
+    <div class="a122-section mb-6 border border-amber-300 bg-amber-50">
+        <div class="a122-section-body">
+            <div class="flex items-center gap-2 mb-3 text-amber-800">
+                <i data-lucide="bug" class="w-4 h-4"></i>
+                <strong>Seller show debug mode</strong>
+            </div>
+
+            @if(empty($debugIssues))
+                <p class="text-sm text-amber-700">Controller darajasida xato ushlanmadi. Muammo layout/frontend yoki PHP-FPM tomonda bo‘lishi mumkin.</p>
+            @else
+                <div class="space-y-2">
+                    @foreach($debugIssues as $issue)
+                        <div class="rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm text-slate-700">
+                            <div class="font-semibold">{{ $issue['type'] ?? 'issue' }}: {{ $issue['key'] ?? 'unknown' }}</div>
+                            <div class="mt-1 text-slate-600">{{ $issue['message'] ?? 'No message' }}</div>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+        </div>
+    </div>
+@endif
+
 <x-a122.page-header back-href="{{ route('admin.sellers.index') }}">
     <x-slot name="heading">{{ $seller->shop_name }}</x-slot>
     <x-slot name="meta">{{ trim($seller->firstname . ' ' . $seller->lastname) ?: 'Sotuvchi profili' }} · {{ $seller->region ?: 'Hudud ko‘rsatilmagan' }}</x-slot>

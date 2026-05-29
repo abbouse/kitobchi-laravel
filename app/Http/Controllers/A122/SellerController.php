@@ -105,15 +105,17 @@ class SellerController extends Controller
         return view('a122.sellers.index', compact('sellers', 'counts', 'tab'));
     }
 
-    public function show(Seller $seller)
+    public function show(Request $request, Seller $seller)
     {
         $originalSellerId = $seller->id;
+        $debugMode = $request->boolean('debug_sections');
+        $debugIssues = [];
 
         try {
             $storeSeller = $this->resolveStoreSeller($seller);
             $storeSeller->loadCount('books');
 
-            $this->safeLoadSellerShowRelations($storeSeller);
+            $this->safeLoadSellerShowRelations($storeSeller, $debugIssues);
 
             $seller = $storeSeller;
             $storeSellerId = $storeSeller->id;
@@ -126,6 +128,7 @@ class SellerController extends Controller
                 $storeSellerId,
                 fn () => SellerOrder::whereIn('seller_id', $sellerIds)->count(),
                 0,
+                $debugIssues,
             );
             $totalRevenue = $this->safeSellerShowValue(
                 'total_revenue',
@@ -136,6 +139,7 @@ class SellerController extends Controller
                     ->where('category', SellerOrderSettlementService::CATEGORY_ORDER_SALE)
                     ->sum('netAmount'),
                 0,
+                $debugIssues,
             );
             $recentOrders = $this->safeSellerShowValue(
                 'recent_orders',
@@ -150,6 +154,7 @@ class SellerController extends Controller
                     ->take(8)
                     ->get(),
                 collect(),
+                $debugIssues,
             );
             $transactions = $this->safeSellerShowValue(
                 'transactions',
@@ -159,6 +164,7 @@ class SellerController extends Controller
                     ->take(8)
                     ->get(),
                 collect(),
+                $debugIssues,
             );
             $staffLogs = $this->safeSellerShowValue(
                 'staff_logs',
@@ -168,6 +174,7 @@ class SellerController extends Controller
                     ->take(50)
                     ->get(),
                 collect(),
+                $debugIssues,
             );
             $banLogs = $this->safeSellerShowValue(
                 'ban_logs',
@@ -177,16 +184,18 @@ class SellerController extends Controller
                     ->take(50)
                     ->get(),
                 collect(),
+                $debugIssues,
             );
             $warningCount = $this->safeSellerShowValue(
                 'warning_count',
                 $storeSellerId,
                 fn () => SellerBanLog::getWarningCount($storeSellerId),
                 0,
+                $debugIssues,
             );
             $isBlocked = $storeSeller->status === 'blocked';
 
-            $view = view('a122.sellers.show', compact('seller', 'storeSeller', 'premiumState', 'orderCount', 'totalRevenue', 'recentOrders', 'transactions', 'staffLogs', 'banLogs', 'warningCount', 'isBlocked'));
+            $view = view('a122.sellers.show', compact('seller', 'storeSeller', 'premiumState', 'orderCount', 'totalRevenue', 'recentOrders', 'transactions', 'staffLogs', 'banLogs', 'warningCount', 'isBlocked', 'debugMode', 'debugIssues'));
 
             return response($view->render());
         } catch (\Throwable $e) {
@@ -198,18 +207,27 @@ class SellerController extends Controller
                 'trace' => $e->getTraceAsString(),
             ]);
 
+            if ($debugMode) {
+                return response(
+                    "<pre>Seller show failed\n\nMessage: {$e->getMessage()}\nFile: {$e->getFile()}:{$e->getLine()}</pre>",
+                    500,
+                    ['Content-Type' => 'text/html; charset=UTF-8'],
+                );
+            }
+
             return redirect()
                 ->route('admin.sellers.index')
                 ->with('error', "Seller profilini ochishda xatolik: {$e->getMessage()}");
         }
     }
 
-    private function safeLoadSellerShowRelations(Seller $seller): void
+    private function safeLoadSellerShowRelations(Seller $seller, array &$debugIssues = []): void
     {
         try {
             $seller->load('books');
         } catch (\Throwable $e) {
             Log::warning('admin.sellers.show.relation_failed', ['seller_id' => $seller->id, 'relation' => 'books', 'message' => $e->getMessage()]);
+            $debugIssues[] = ['type' => 'relation', 'key' => 'books', 'message' => $e->getMessage()];
             $seller->setRelation('books', collect());
         }
 
@@ -217,6 +235,7 @@ class SellerController extends Controller
             $seller->load('location');
         } catch (\Throwable $e) {
             Log::warning('admin.sellers.show.relation_failed', ['seller_id' => $seller->id, 'relation' => 'location', 'message' => $e->getMessage()]);
+            $debugIssues[] = ['type' => 'relation', 'key' => 'location', 'message' => $e->getMessage()];
             $seller->setRelation('location', null);
         }
 
@@ -224,6 +243,7 @@ class SellerController extends Controller
             $seller->load(['locations' => fn ($q) => $q->orderByDesc('is_main')->orderBy('id')]);
         } catch (\Throwable $e) {
             Log::warning('admin.sellers.show.relation_failed', ['seller_id' => $seller->id, 'relation' => 'locations', 'message' => $e->getMessage()]);
+            $debugIssues[] = ['type' => 'relation', 'key' => 'locations', 'message' => $e->getMessage()];
             $seller->setRelation('locations', collect());
         }
 
@@ -231,6 +251,7 @@ class SellerController extends Controller
             $seller->load('documents.uploader');
         } catch (\Throwable $e) {
             Log::warning('admin.sellers.show.relation_failed', ['seller_id' => $seller->id, 'relation' => 'documents', 'message' => $e->getMessage()]);
+            $debugIssues[] = ['type' => 'relation', 'key' => 'documents', 'message' => $e->getMessage()];
             $seller->setRelation('documents', collect());
         }
 
@@ -238,11 +259,12 @@ class SellerController extends Controller
             $seller->load('contractHistory.performer');
         } catch (\Throwable $e) {
             Log::warning('admin.sellers.show.relation_failed', ['seller_id' => $seller->id, 'relation' => 'contractHistory', 'message' => $e->getMessage()]);
+            $debugIssues[] = ['type' => 'relation', 'key' => 'contractHistory', 'message' => $e->getMessage()];
             $seller->setRelation('contractHistory', collect());
         }
     }
 
-    private function safeSellerShowValue(string $key, int $sellerId, callable $resolver, mixed $fallback): mixed
+    private function safeSellerShowValue(string $key, int $sellerId, callable $resolver, mixed $fallback, array &$debugIssues = []): mixed
     {
         try {
             return $resolver();
@@ -252,6 +274,7 @@ class SellerController extends Controller
                 'block' => $key,
                 'message' => $e->getMessage(),
             ]);
+            $debugIssues[] = ['type' => 'block', 'key' => $key, 'message' => $e->getMessage()];
 
             return $fallback;
         }
