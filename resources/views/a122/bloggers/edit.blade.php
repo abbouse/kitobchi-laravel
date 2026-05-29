@@ -49,12 +49,14 @@
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
         <div>
-          <label class="block text-xs font-semibold text-gray-500 mb-1">Instagram linki</label>
-          <input name="instagram_url" value="{{ old('instagram_url', $blogger->instagram_url ?? '') }}" class="input" placeholder="https://instagram.com/...">
+          <label class="block text-xs font-semibold text-gray-500 mb-1">Instagram</label>
+          <input name="instagram_url" value="{{ old('instagram_url', $blogger->instagram_url ?? '') }}" class="input" placeholder="@username yoki https://instagram.com/...">
+          <p class="mt-1 text-xs text-gray-400">Username yoki to‘liq link yozishingiz mumkin.</p>
         </div>
         <div>
-          <label class="block text-xs font-semibold text-gray-500 mb-1">Telegram linki</label>
-          <input name="telegram_url" value="{{ old('telegram_url', $blogger->telegram_url ?? '') }}" class="input" placeholder="https://t.me/...">
+          <label class="block text-xs font-semibold text-gray-500 mb-1">Telegram</label>
+          <input name="telegram_url" value="{{ old('telegram_url', $blogger->telegram_url ?? '') }}" class="input" placeholder="@username yoki https://t.me/...">
+          <p class="mt-1 text-xs text-gray-400">Username yoki to‘liq link yozishingiz mumkin.</p>
         </div>
         <div>
           <label class="block text-xs font-semibold text-gray-500 mb-1">YouTube linki</label>

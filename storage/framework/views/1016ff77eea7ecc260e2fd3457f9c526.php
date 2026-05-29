@@ -230,7 +230,7 @@
 </div>
 
 
-<?php if(!$seller->parent_id && $storeSeller->locations->isNotEmpty()): ?>
+<?php if(!$seller->parent_id && $locations->count() > 0): ?>
 <div class="a122-section mb-6">
     <div class="a122-section-head">
         <div>
@@ -247,7 +247,7 @@
 
     <div class="a122-section-body">
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-5">
-        <?php $__currentLoopData = $storeSeller->locations; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $location): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+        <?php $__currentLoopData = $locations; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $location): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
             <?php
                 $qrUrl = $location->qr_url;
                 $qrImgSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=520x520&margin=22&format=png&ecc=Q&data=' . urlencode($qrUrl);
@@ -314,6 +314,12 @@
             </div>
         <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
     </div>
+    <?php if($locations->hasPages()): ?>
+        <div class="mt-4">
+            <?php echo e($locations->links()); ?>
+
+        </div>
+    <?php endif; ?>
     </div>
 </div>
 <?php endif; ?>
@@ -638,7 +644,7 @@
             <div>
             <div class="a122-section-head__title flex items-center gap-2">
                 <i data-lucide="folder" class="w-5 h-5 text-indigo-500"></i>
-                Hujjatlar (<?php echo e($seller->documents->count()); ?>)
+                Hujjatlar (<?php echo e($documents->total()); ?>)
             </div>
             <div class="a122-section-head__meta">Yuklangan fayllar va sotuvchining tekshiruv hujjatlari.</div>
             </div>
@@ -647,11 +653,11 @@
             </div>
         </div>
         <div class="a122-section-body">
-        <?php if($seller->documents->isEmpty()): ?>
+        <?php if($documents->isEmpty()): ?>
             <p class="text-sm text-gray-400 text-center py-4">Hujjatlar yuklanmagan.</p>
         <?php else: ?>
             <ul class="divide-y divide-gray-100 dark:divide-white/10">
-                <?php $__currentLoopData = $seller->documents->take(6); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $doc): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                <?php $__currentLoopData = $documents; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $doc): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                     <li class="flex items-center gap-3 py-2.5">
                         <i data-lucide="<?php echo e($doc->type_icon); ?>" class="w-4 h-4 text-gray-400 flex-shrink-0"></i>
                         <div class="flex-1 min-w-0">
@@ -670,8 +676,11 @@
                     </li>
                 <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
             </ul>
-            <?php if($seller->documents->count() > 6): ?>
-                <p class="text-xs text-gray-400 mt-2 text-center">Yana <?php echo e($seller->documents->count() - 6); ?> ta hujjat...</p>
+            <?php if($documents->hasPages()): ?>
+                <div class="mt-4">
+                    <?php echo e($documents->links()); ?>
+
+                </div>
             <?php endif; ?>
         <?php endif; ?>
         </div>
@@ -689,11 +698,11 @@
             </div>
         </div>
         <div class="a122-section-body">
-        <?php if($seller->contractHistory->isEmpty()): ?>
+        <?php if($contractHistory->isEmpty()): ?>
             <p class="text-sm text-gray-400 text-center py-4">Tarix yo'q.</p>
         <?php else: ?>
             <ol class="space-y-2">
-                <?php $__currentLoopData = $seller->contractHistory->take(8); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $h): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                <?php $__currentLoopData = $contractHistory; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $h): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                     <li class="flex items-start gap-3 text-xs">
                         <span class="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-<?php echo e($h->action_color); ?>-100 text-<?php echo e($h->action_color); ?>-700 dark:bg-<?php echo e($h->action_color); ?>-500/10 dark:text-<?php echo e($h->action_color); ?>-400 font-medium flex-shrink-0">
                             <?php echo e($h->action_label); ?>
@@ -724,6 +733,12 @@
                     </li>
                 <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
             </ol>
+            <?php if($contractHistory->hasPages()): ?>
+                <div class="mt-4">
+                    <?php echo e($contractHistory->links()); ?>
+
+                </div>
+            <?php endif; ?>
         <?php endif; ?>
         </div>
     </div>
@@ -803,6 +818,12 @@
                 </table>
             </div>
         </div>
+        <?php if($recentOrders->hasPages()): ?>
+            <div class="mt-4">
+                <?php echo e($recentOrders->links()); ?>
+
+            </div>
+        <?php endif; ?>
         </div>
     </div>
 
@@ -858,6 +879,12 @@
                 </table>
             </div>
         </div>
+        <?php if($transactions->hasPages()): ?>
+            <div class="mt-4">
+                <?php echo e($transactions->links()); ?>
+
+            </div>
+        <?php endif; ?>
         </div>
     </div>
 </div>
@@ -897,6 +924,12 @@
             </table>
         </div>
     </div>
+    <?php if($staffLogs->hasPages()): ?>
+        <div class="mt-4">
+            <?php echo e($staffLogs->links()); ?>
+
+        </div>
+    <?php endif; ?>
     </div>
 </div>
 
@@ -944,6 +977,12 @@
             </table>
         </div>
     </div>
+    <?php if($banLogs->hasPages()): ?>
+        <div class="mt-4">
+            <?php echo e($banLogs->links()); ?>
+
+        </div>
+    <?php endif; ?>
     </div>
 </div>
 <?php $__env->stopSection(); ?>

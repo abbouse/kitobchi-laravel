@@ -8,6 +8,7 @@ use App\Models\BloggerShipment;
 use App\Services\BloggerShipmentPrintService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class BloggerController extends Controller
@@ -199,17 +200,40 @@ class BloggerController extends Controller
 
     private function validatedData(Request $request): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'first_name' => ['required', 'string', 'max:120'],
             'last_name' => ['nullable', 'string', 'max:120'],
             'phone_number' => ['nullable', 'string', 'max:50'],
             'address' => ['nullable', 'string', 'max:1000'],
-            'instagram_url' => ['nullable', 'url', 'max:255'],
-            'telegram_url' => ['nullable', 'url', 'max:255'],
+            'instagram_url' => ['nullable', 'string', 'max:255'],
+            'telegram_url' => ['nullable', 'string', 'max:255'],
             'youtube_url' => ['nullable', 'url', 'max:255'],
             'tiktok_url' => ['nullable', 'url', 'max:255'],
             'active_until' => ['required', 'date'],
         ]);
+
+        $data['instagram_url'] = $this->normalizeSocialLink($data['instagram_url'] ?? null, 'https://instagram.com/');
+        $data['telegram_url'] = $this->normalizeSocialLink($data['telegram_url'] ?? null, 'https://t.me/');
+
+        return $data;
+    }
+
+    private function normalizeSocialLink(?string $value, string $baseUrl): ?string
+    {
+        $value = trim((string) $value);
+        if ($value === '') {
+            return null;
+        }
+
+        if (Str::startsWith($value, ['http://', 'https://'])) {
+            return $value;
+        }
+
+        if (Str::startsWith($value, ['www.', 'instagram.com/', 't.me/'])) {
+            return 'https://' . ltrim($value, '/');
+        }
+
+        return rtrim($baseUrl, '/') . '/' . ltrim($value, '@/');
     }
 
     private function parseShipmentItems(string $text): array

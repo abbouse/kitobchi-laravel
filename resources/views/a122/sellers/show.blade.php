@@ -210,7 +210,7 @@
 </div>
 
 {{-- ── Filial QR'lari — "Do'kon ichida" rejimi uchun ───────────────── --}}
-@if(!$seller->parent_id && $storeSeller->locations->isNotEmpty())
+@if(!$seller->parent_id && $locations->count() > 0)
 <div class="a122-section mb-6">
     <div class="a122-section-head">
         <div>
@@ -227,7 +227,7 @@
 
     <div class="a122-section-body">
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-5">
-        @foreach($storeSeller->locations as $location)
+        @foreach($locations as $location)
             @php
                 $qrUrl = $location->qr_url;
                 $qrImgSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=520x520&margin=22&format=png&ecc=Q&data=' . urlencode($qrUrl);
@@ -292,6 +292,11 @@
             </div>
         @endforeach
     </div>
+    @if($locations->hasPages())
+        <div class="mt-4">
+            {{ $locations->links() }}
+        </div>
+    @endif
     </div>
 </div>
 @endif
@@ -613,7 +618,7 @@
             <div>
             <div class="a122-section-head__title flex items-center gap-2">
                 <i data-lucide="folder" class="w-5 h-5 text-indigo-500"></i>
-                Hujjatlar ({{ $seller->documents->count() }})
+                Hujjatlar ({{ $documents->total() }})
             </div>
             <div class="a122-section-head__meta">Yuklangan fayllar va sotuvchining tekshiruv hujjatlari.</div>
             </div>
@@ -622,11 +627,11 @@
             </div>
         </div>
         <div class="a122-section-body">
-        @if($seller->documents->isEmpty())
+        @if($documents->isEmpty())
             <p class="text-sm text-gray-400 text-center py-4">Hujjatlar yuklanmagan.</p>
         @else
             <ul class="divide-y divide-gray-100 dark:divide-white/10">
-                @foreach($seller->documents->take(6) as $doc)
+                @foreach($documents as $doc)
                     <li class="flex items-center gap-3 py-2.5">
                         <i data-lucide="{{ $doc->type_icon }}" class="w-4 h-4 text-gray-400 flex-shrink-0"></i>
                         <div class="flex-1 min-w-0">
@@ -645,8 +650,10 @@
                     </li>
                 @endforeach
             </ul>
-            @if($seller->documents->count() > 6)
-                <p class="text-xs text-gray-400 mt-2 text-center">Yana {{ $seller->documents->count() - 6 }} ta hujjat...</p>
+            @if($documents->hasPages())
+                <div class="mt-4">
+                    {{ $documents->links() }}
+                </div>
             @endif
         @endif
         </div>
@@ -664,11 +671,11 @@
             </div>
         </div>
         <div class="a122-section-body">
-        @if($seller->contractHistory->isEmpty())
+        @if($contractHistory->isEmpty())
             <p class="text-sm text-gray-400 text-center py-4">Tarix yo'q.</p>
         @else
             <ol class="space-y-2">
-                @foreach($seller->contractHistory->take(8) as $h)
+                @foreach($contractHistory as $h)
                     <li class="flex items-start gap-3 text-xs">
                         <span class="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-{{ $h->action_color }}-100 text-{{ $h->action_color }}-700 dark:bg-{{ $h->action_color }}-500/10 dark:text-{{ $h->action_color }}-400 font-medium flex-shrink-0">
                             {{ $h->action_label }}
@@ -696,6 +703,11 @@
                     </li>
                 @endforeach
             </ol>
+            @if($contractHistory->hasPages())
+                <div class="mt-4">
+                    {{ $contractHistory->links() }}
+                </div>
+            @endif
         @endif
         </div>
     </div>
@@ -773,6 +785,11 @@
                 </table>
             </div>
         </div>
+        @if($recentOrders->hasPages())
+            <div class="mt-4">
+                {{ $recentOrders->links() }}
+            </div>
+        @endif
         </div>
     </div>
 
@@ -827,6 +844,11 @@
                 </table>
             </div>
         </div>
+        @if($transactions->hasPages())
+            <div class="mt-4">
+                {{ $transactions->links() }}
+            </div>
+        @endif
         </div>
     </div>
 </div>
@@ -865,6 +887,11 @@
             </table>
         </div>
     </div>
+    @if($staffLogs->hasPages())
+        <div class="mt-4">
+            {{ $staffLogs->links() }}
+        </div>
+    @endif
     </div>
 </div>
 
@@ -910,6 +937,11 @@
             </table>
         </div>
     </div>
+    @if($banLogs->hasPages())
+        <div class="mt-4">
+            {{ $banLogs->links() }}
+        </div>
+    @endif
     </div>
 </div>
 @endsection

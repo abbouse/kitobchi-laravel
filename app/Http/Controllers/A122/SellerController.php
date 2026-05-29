@@ -16,6 +16,7 @@ use App\Services\SellerOrderSettlementService;
 use App\Services\PasswordResetService;
 use App\Services\SmsService;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -116,8 +117,6 @@ class SellerController extends Controller
             $storeSeller = $this->resolveStoreSeller($seller);
             $storeSeller->loadCount('books');
 
-            $this->safeLoadSellerShowRelations($storeSeller, $debugIssues);
-
             $seller = $storeSeller;
             $storeSellerId = $storeSeller->id;
             $sellerIds = Seller::where('id', $storeSellerId)
@@ -142,6 +141,39 @@ class SellerController extends Controller
                 0,
                 $debugIssues,
             );
+            $locations = $this->safeSellerShowValue(
+                'locations',
+                $storeSellerId,
+                fn () => $storeSeller->locations()
+                    ->orderByDesc('is_main')
+                    ->orderBy('id')
+                    ->paginate(6, ['*'], 'locations_page')
+                    ->withQueryString(),
+                $this->emptySellerShowPaginator($request, 'locations_page', 6),
+                $debugIssues,
+            );
+            $documents = $this->safeSellerShowValue(
+                'documents',
+                $storeSellerId,
+                fn () => $storeSeller->documents()
+                    ->with('uploader:id,name,lastname')
+                    ->latest()
+                    ->paginate(8, ['*'], 'documents_page')
+                    ->withQueryString(),
+                $this->emptySellerShowPaginator($request, 'documents_page', 8),
+                $debugIssues,
+            );
+            $contractHistory = $this->safeSellerShowValue(
+                'contract_history',
+                $storeSellerId,
+                fn () => $storeSeller->contractHistory()
+                    ->with('performer:id,name,lastname')
+                    ->latest('created_at')
+                    ->paginate(8, ['*'], 'contract_history_page')
+                    ->withQueryString(),
+                $this->emptySellerShowPaginator($request, 'contract_history_page', 8),
+                $debugIssues,
+            );
             $recentOrders = $this->safeSellerShowValue(
                 'recent_orders',
                 $storeSellerId,
@@ -152,9 +184,9 @@ class SellerController extends Controller
                     ])
                     ->whereIn('seller_id', $sellerIds)
                     ->latest()
-                    ->take(8)
-                    ->get(),
-                collect(),
+                    ->paginate(10, ['*'], 'orders_page')
+                    ->withQueryString(),
+                $this->emptySellerShowPaginator($request, 'orders_page', 10),
                 $debugIssues,
             );
             $transactions = $this->safeSellerShowValue(
@@ -162,9 +194,9 @@ class SellerController extends Controller
                 $storeSellerId,
                 fn () => SellerTransaction::whereIn('seller_id', $sellerIds)
                     ->latest()
-                    ->take(8)
-                    ->get(),
-                collect(),
+                    ->paginate(10, ['*'], 'transactions_page')
+                    ->withQueryString(),
+                $this->emptySellerShowPaginator($request, 'transactions_page', 10),
                 $debugIssues,
             );
             $staffLogs = $this->safeSellerShowValue(
@@ -172,9 +204,9 @@ class SellerController extends Controller
                 $storeSellerId,
                 fn () => SellerStaffLog::whereIn('seller_staff_id', $sellerIds)
                     ->latest()
-                    ->take(50)
-                    ->get(),
-                collect(),
+                    ->paginate(20, ['*'], 'staff_logs_page')
+                    ->withQueryString(),
+                $this->emptySellerShowPaginator($request, 'staff_logs_page', 20),
                 $debugIssues,
             );
             $banLogs = $this->safeSellerShowValue(
@@ -182,9 +214,9 @@ class SellerController extends Controller
                 $storeSellerId,
                 fn () => SellerBanLog::where('seller_id', $storeSellerId)
                     ->latest()
-                    ->take(50)
-                    ->get(),
-                collect(),
+                    ->paginate(20, ['*'], 'ban_logs_page')
+                    ->withQueryString(),
+                $this->emptySellerShowPaginator($request, 'ban_logs_page', 20),
                 $debugIssues,
             );
             $warningCount = $this->safeSellerShowValue(
@@ -218,18 +250,24 @@ class SellerController extends Controller
                     ],
                     'counts' => [
                         'books_count' => $seller->books_count,
-                        'books_loaded' => $seller->relationLoaded('books') ? $seller->books->count() : null,
-                        'locations_loaded' => $seller->relationLoaded('locations') ? $seller->locations->count() : null,
-                        'documents_loaded' => $seller->relationLoaded('documents') ? $seller->documents->count() : null,
-                        'contract_history_loaded' => $seller->relationLoaded('contractHistory') ? $seller->contractHistory->count() : null,
-                        'recent_orders' => $recentOrders instanceof \Illuminate\Support\Collection ? $recentOrders->count() : 0,
-                        'transactions' => $transactions instanceof \Illuminate\Support\Collection ? $transactions->count() : 0,
-                        'staff_logs' => $staffLogs instanceof \Illuminate\Support\Collection ? $staffLogs->count() : 0,
-                        'ban_logs' => $banLogs instanceof \Illuminate\Support\Collection ? $banLogs->count() : 0,
+                        'locations_page_items' => $locations->count(),
+                        'locations_total' => $locations->total(),
+                        'documents_page_items' => $documents->count(),
+                        'documents_total' => $documents->total(),
+                        'contract_history_page_items' => $contractHistory->count(),
+                        'contract_history_total' => $contractHistory->total(),
+                        'recent_orders_page_items' => $recentOrders->count(),
+                        'recent_orders_total' => $recentOrders->total(),
+                        'transactions_page_items' => $transactions->count(),
+                        'transactions_total' => $transactions->total(),
+                        'staff_logs_page_items' => $staffLogs->count(),
+                        'staff_logs_total' => $staffLogs->total(),
+                        'ban_logs_page_items' => $banLogs->count(),
+                        'ban_logs_total' => $banLogs->total(),
                         'warning_count' => $warningCount,
                     ],
                     'samples' => [
-                        'first_location' => $seller->relationLoaded('locations') ? optional($seller->locations->first(), function ($location) {
+                        'first_location' => optional($locations->items()[0] ?? null, function ($location) {
                             return [
                                 'id' => $location->id,
                                 'fullAddress' => $location->fullAddress,
@@ -237,8 +275,8 @@ class SellerController extends Controller
                                 'qr_token' => $location->qr_token,
                                 'qr_rotated_at_raw' => $location->getRawOriginal('qr_rotated_at'),
                             ];
-                        }) : null,
-                        'first_document' => $seller->relationLoaded('documents') ? optional($seller->documents->first(), function ($document) {
+                        }),
+                        'first_document' => optional($documents->items()[0] ?? null, function ($document) {
                             return [
                                 'id' => $document->id,
                                 'type' => $document->type,
@@ -246,8 +284,8 @@ class SellerController extends Controller
                                 'original_name' => $document->original_name,
                                 'created_at_raw' => $document->getRawOriginal('created_at'),
                             ];
-                        }) : null,
-                        'first_contract_history' => $seller->relationLoaded('contractHistory') ? optional($seller->contractHistory->first(), function ($history) {
+                        }),
+                        'first_contract_history' => optional($contractHistory->items()[0] ?? null, function ($history) {
                             return [
                                 'id' => $history->id,
                                 'action' => $history->action,
@@ -255,13 +293,30 @@ class SellerController extends Controller
                                 'new_expires_at_raw' => $history->getRawOriginal('new_expires_at'),
                                 'created_at_raw' => $history->getRawOriginal('created_at'),
                             ];
-                        }) : null,
+                        }),
                     ],
                     'debug_issues' => $debugIssues,
                 ]);
             }
 
-            $view = view('a122.sellers.show', compact('seller', 'storeSeller', 'premiumState', 'orderCount', 'totalRevenue', 'recentOrders', 'transactions', 'staffLogs', 'banLogs', 'warningCount', 'isBlocked', 'debugMode', 'debugIssues'));
+            $view = view('a122.sellers.show', compact(
+                'seller',
+                'storeSeller',
+                'premiumState',
+                'orderCount',
+                'totalRevenue',
+                'locations',
+                'documents',
+                'contractHistory',
+                'recentOrders',
+                'transactions',
+                'staffLogs',
+                'banLogs',
+                'warningCount',
+                'isBlocked',
+                'debugMode',
+                'debugIssues'
+            ));
 
             return response($view->render());
         } catch (\Throwable $e) {
@@ -287,47 +342,19 @@ class SellerController extends Controller
         }
     }
 
-    private function safeLoadSellerShowRelations(Seller $seller, array &$debugIssues = []): void
+    private function emptySellerShowPaginator(Request $request, string $pageName, int $perPage): LengthAwarePaginator
     {
-        try {
-            $seller->load('books');
-        } catch (\Throwable $e) {
-            Log::warning('admin.sellers.show.relation_failed', ['seller_id' => $seller->id, 'relation' => 'books', 'message' => $e->getMessage()]);
-            $debugIssues[] = ['type' => 'relation', 'key' => 'books', 'message' => $e->getMessage()];
-            $seller->setRelation('books', collect());
-        }
-
-        try {
-            $seller->load('location');
-        } catch (\Throwable $e) {
-            Log::warning('admin.sellers.show.relation_failed', ['seller_id' => $seller->id, 'relation' => 'location', 'message' => $e->getMessage()]);
-            $debugIssues[] = ['type' => 'relation', 'key' => 'location', 'message' => $e->getMessage()];
-            $seller->setRelation('location', null);
-        }
-
-        try {
-            $seller->load(['locations' => fn ($q) => $q->orderByDesc('is_main')->orderBy('id')]);
-        } catch (\Throwable $e) {
-            Log::warning('admin.sellers.show.relation_failed', ['seller_id' => $seller->id, 'relation' => 'locations', 'message' => $e->getMessage()]);
-            $debugIssues[] = ['type' => 'relation', 'key' => 'locations', 'message' => $e->getMessage()];
-            $seller->setRelation('locations', collect());
-        }
-
-        try {
-            $seller->load('documents.uploader');
-        } catch (\Throwable $e) {
-            Log::warning('admin.sellers.show.relation_failed', ['seller_id' => $seller->id, 'relation' => 'documents', 'message' => $e->getMessage()]);
-            $debugIssues[] = ['type' => 'relation', 'key' => 'documents', 'message' => $e->getMessage()];
-            $seller->setRelation('documents', collect());
-        }
-
-        try {
-            $seller->load('contractHistory.performer');
-        } catch (\Throwable $e) {
-            Log::warning('admin.sellers.show.relation_failed', ['seller_id' => $seller->id, 'relation' => 'contractHistory', 'message' => $e->getMessage()]);
-            $debugIssues[] = ['type' => 'relation', 'key' => 'contractHistory', 'message' => $e->getMessage()];
-            $seller->setRelation('contractHistory', collect());
-        }
+        return new LengthAwarePaginator(
+            collect(),
+            0,
+            $perPage,
+            max(1, (int) $request->query($pageName, 1)),
+            [
+                'path' => $request->url(),
+                'pageName' => $pageName,
+                'query' => $request->query(),
+            ],
+        );
     }
 
     private function safeSellerShowValue(string $key, int $sellerId, callable $resolver, mixed $fallback, array &$debugIssues = []): mixed
