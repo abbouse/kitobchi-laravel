@@ -32,7 +32,7 @@
       <div class="kc-topbar__search flex-grow-1">
         <form class="kc-search" onsubmit="event.preventDefault();const input=this.querySelector('input');const option=[...document.querySelectorAll('#a122-quick-nav-list option')].find(o=>o.value===input.value);if(option?.dataset?.href){window.location=option.dataset.href;}">
           <i class="bi bi-search kc-search__icon"></i>
-          <input type="text" list="a122-quick-nav-list" class="form-control" placeholder="Search" />
+          <input type="text" list="a122-quick-nav-list" class="form-control" placeholder="Qidiruv yoki tezkor o‘tish" />
           <datalist id="a122-quick-nav-list">
             <?php $__currentLoopData = $quickLinks; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $link): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
               <option value="<?php echo e($link['label']); ?>" data-href="<?php echo e($link['href']); ?>"></option>
@@ -46,7 +46,7 @@
       </a>
 
       <button data-theme-toggle class="kc-topbar__icon-btn d-none d-sm-inline-flex" aria-label="Tema almashtirish">
-        <i class="bi bi-circle-half"></i>
+        <i class="bi bi-moon-stars"></i>
       </button>
 
       <div class="dropdown">

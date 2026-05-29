@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="uz" class="">
+<html lang="uz" class="kc-panel-root">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />

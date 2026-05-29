@@ -10,7 +10,6 @@
       ['label' => 'Sotuvchilar', 'route' => 'admin.sellers.index', 'icon' => 'shop'],
     ]],
     ['title' => 'Product', 'items' => [
-      ['label' => 'Yangi kitob', 'route' => 'admin.books.create', 'icon' => 'plus-circle'],
       ['label' => 'Kitoblar', 'route' => 'admin.books.index', 'icon' => 'book'],
       ['label' => 'Kanstovar', 'route' => 'admin.stationery.index', 'icon' => 'pencil-square'],
       ['label' => 'Mualliflar', 'route' => 'admin.authors.index', 'icon' => 'pen'],
