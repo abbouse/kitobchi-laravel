@@ -109,6 +109,7 @@ class SellerController extends Controller
     {
         $originalSellerId = $seller->id;
         $debugMode = $request->boolean('debug_sections');
+        $rawDebug = $request->boolean('raw_debug');
         $debugIssues = [];
 
         try {
@@ -194,6 +195,71 @@ class SellerController extends Controller
                 $debugIssues,
             );
             $isBlocked = $storeSeller->status === 'blocked';
+
+            if ($debugMode && $rawDebug) {
+                return response()->json([
+                    'ok' => true,
+                    'seller' => [
+                        'requested_id' => $originalSellerId,
+                        'store_seller_id' => $storeSellerId,
+                        'shop_name' => $seller->shop_name,
+                        'status' => $seller->status,
+                        'parent_id' => $seller->parent_id,
+                        'phone_number' => $seller->phone_number,
+                        'region' => $seller->region,
+                        'contract_number' => $seller->contract_number,
+                        'contract_signed_raw' => $seller->getRawOriginal('contract_signed'),
+                        'contract_signed_at_raw' => $seller->getRawOriginal('contract_signed_at'),
+                        'contract_expires_at_raw' => $seller->getRawOriginal('contract_expires_at'),
+                        'premium_expires_at' => $premiumState['premium_expires_at'] ?? null,
+                        'rating' => $seller->rating,
+                        'rating_reviews_count' => $seller->rating_reviews_count,
+                        'response_time_hours' => $seller->response_time_hours,
+                    ],
+                    'counts' => [
+                        'books_count' => $seller->books_count,
+                        'books_loaded' => $seller->relationLoaded('books') ? $seller->books->count() : null,
+                        'locations_loaded' => $seller->relationLoaded('locations') ? $seller->locations->count() : null,
+                        'documents_loaded' => $seller->relationLoaded('documents') ? $seller->documents->count() : null,
+                        'contract_history_loaded' => $seller->relationLoaded('contractHistory') ? $seller->contractHistory->count() : null,
+                        'recent_orders' => $recentOrders instanceof \Illuminate\Support\Collection ? $recentOrders->count() : 0,
+                        'transactions' => $transactions instanceof \Illuminate\Support\Collection ? $transactions->count() : 0,
+                        'staff_logs' => $staffLogs instanceof \Illuminate\Support\Collection ? $staffLogs->count() : 0,
+                        'ban_logs' => $banLogs instanceof \Illuminate\Support\Collection ? $banLogs->count() : 0,
+                        'warning_count' => $warningCount,
+                    ],
+                    'samples' => [
+                        'first_location' => $seller->relationLoaded('locations') ? optional($seller->locations->first(), function ($location) {
+                            return [
+                                'id' => $location->id,
+                                'fullAddress' => $location->fullAddress,
+                                'description' => $location->description,
+                                'qr_token' => $location->qr_token,
+                                'qr_rotated_at_raw' => $location->getRawOriginal('qr_rotated_at'),
+                            ];
+                        }) : null,
+                        'first_document' => $seller->relationLoaded('documents') ? optional($seller->documents->first(), function ($document) {
+                            return [
+                                'id' => $document->id,
+                                'type' => $document->type,
+                                'file_path' => $document->file_path,
+                                'original_name' => $document->original_name,
+                                'created_at_raw' => $document->getRawOriginal('created_at'),
+                            ];
+                        }) : null,
+                        'first_contract_history' => $seller->relationLoaded('contractHistory') ? optional($seller->contractHistory->first(), function ($history) {
+                            return [
+                                'id' => $history->id,
+                                'action' => $history->action,
+                                'old_expires_at_raw' => $history->getRawOriginal('old_expires_at'),
+                                'new_expires_at_raw' => $history->getRawOriginal('new_expires_at'),
+                                'created_at_raw' => $history->getRawOriginal('created_at'),
+                            ];
+                        }) : null,
+                    ],
+                    'debug_issues' => $debugIssues,
+                ]);
+            }
 
             $view = view('a122.sellers.show', compact('seller', 'storeSeller', 'premiumState', 'orderCount', 'totalRevenue', 'recentOrders', 'transactions', 'staffLogs', 'banLogs', 'warningCount', 'isBlocked', 'debugMode', 'debugIssues'));
 
