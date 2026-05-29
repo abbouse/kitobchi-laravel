@@ -34,30 +34,6 @@
     };
 ?>
 
-<?php if(!empty($debugMode)): ?>
-    <div class="a122-section mb-6 border border-amber-300 bg-amber-50">
-        <div class="a122-section-body">
-            <div class="flex items-center gap-2 mb-3 text-amber-800">
-                <i data-lucide="bug" class="w-4 h-4"></i>
-                <strong>Seller show debug mode</strong>
-            </div>
-
-            <?php if(empty($debugIssues)): ?>
-                <p class="text-sm text-amber-700">Controller darajasida xato ushlanmadi. Muammo layout/frontend yoki PHP-FPM tomonda bo‘lishi mumkin.</p>
-            <?php else: ?>
-                <div class="space-y-2">
-                    <?php $__currentLoopData = $debugIssues; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $issue): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                        <div class="rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm text-slate-700">
-                            <div class="font-semibold"><?php echo e($issue['type'] ?? 'issue'); ?>: <?php echo e($issue['key'] ?? 'unknown'); ?></div>
-                            <div class="mt-1 text-slate-600"><?php echo e($issue['message'] ?? 'No message'); ?></div>
-                        </div>
-                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-                </div>
-            <?php endif; ?>
-        </div>
-    </div>
-<?php endif; ?>
-
 <?php if (isset($component)) { $__componentOriginal0c1345684b2d774f43a544669f5684b0 = $component; } ?>
 <?php if (isset($attributes)) { $__attributesOriginal0c1345684b2d774f43a544669f5684b0 = $attributes; } ?>
 <?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.a122.page-header','data' => ['backHref' => ''.e(route('admin.sellers.index')).'']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>

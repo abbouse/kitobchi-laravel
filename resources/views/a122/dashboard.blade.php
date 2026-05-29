@@ -7,14 +7,14 @@
   [x-cloak] { display: none !important; }
 
   .dash-shell {
-    --dash-ink: #0f172a;
-    --dash-copy: #475569;
-    --dash-muted: #94a3b8;
-    --dash-line: rgba(15, 23, 42, 0.08);
-    --dash-line-strong: rgba(15, 23, 42, 0.12);
-    --dash-surface: rgba(255, 255, 255, 0.92);
-    --dash-surface-soft: rgba(248, 250, 252, 0.86);
-    --dash-shadow: 0 22px 50px rgba(15, 23, 42, 0.08);
+    --dash-ink: #202631;
+    --dash-copy: #6f7890;
+    --dash-muted: #a0a8b8;
+    --dash-line: rgba(148, 163, 184, 0.18);
+    --dash-line-strong: rgba(148, 163, 184, 0.26);
+    --dash-surface: rgba(255, 255, 255, 0.98);
+    --dash-surface-soft: #f8f9fd;
+    --dash-shadow: 0 18px 48px rgba(31, 41, 55, 0.06);
     position: relative;
     padding: 4px 0 28px;
   }
@@ -26,9 +26,8 @@
     height: 320px;
     border-radius: 36px;
     background:
-      radial-gradient(circle at 0% 0%, rgba(37, 99, 235, 0.16), transparent 34%),
-      radial-gradient(circle at 100% 0%, rgba(14, 165, 233, 0.14), transparent 28%),
-      linear-gradient(180deg, rgba(248, 250, 252, 0.96), rgba(244, 247, 251, 0));
+      radial-gradient(circle at 0% 0%, rgba(91, 124, 250, 0.12), transparent 30%),
+      linear-gradient(180deg, rgba(248, 249, 253, 0.98), rgba(245, 246, 250, 0));
     pointer-events: none;
     z-index: 0;
   }
@@ -53,10 +52,7 @@
     padding: 24px;
     border-radius: 32px;
     border: 1px solid var(--dash-line);
-    background:
-      radial-gradient(circle at top left, rgba(37, 99, 235, 0.16), transparent 28%),
-      radial-gradient(circle at 85% 14%, rgba(16, 185, 129, 0.10), transparent 20%),
-      linear-gradient(180deg, rgba(255,255,255,.96), rgba(247,250,252,.94));
+    background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(248,249,253,.96));
     box-shadow: var(--dash-shadow);
     overflow: hidden;
   }
@@ -81,8 +77,8 @@
     width: 10px;
     height: 10px;
     border-radius: 999px;
-    background: #22c55e;
-    box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.12);
+    background: #5b7cfa;
+    box-shadow: 0 0 0 6px rgba(91, 124, 250, 0.12);
   }
 
   .dash-hero__title {
@@ -155,8 +151,8 @@
   }
 
   .dash-btn--dark {
-    background: #0f172a;
-    border-color: #0f172a;
+    background: #5b7cfa;
+    border-color: #5b7cfa;
     color: #fff;
   }
 
@@ -175,10 +171,10 @@
     padding: 20px;
     border-radius: 28px;
     background:
-      radial-gradient(circle at top right, rgba(34, 197, 94, 0.16), transparent 28%),
-      linear-gradient(180deg, #0f172a 0%, #16243b 100%);
+      radial-gradient(circle at top right, rgba(255,255,255,0.08), transparent 28%),
+      linear-gradient(180deg, #5b7cfa 0%, #4e70ee 100%);
     color: #fff;
-    box-shadow: 0 24px 54px rgba(15, 23, 42, 0.18);
+    box-shadow: 0 24px 54px rgba(91, 124, 250, 0.18);
   }
 
   .dash-status-box__label {

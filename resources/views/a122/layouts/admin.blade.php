@@ -47,7 +47,7 @@
           <div class="container-fluid px-3 px-lg-4 px-xxl-5 py-3">
             <div class="mx-auto kc-shell-width d-flex flex-wrap align-items-center justify-content-between gap-2 small text-secondary">
               <span>© {{ date('Y') }} Kitobchi Admin</span>
-              <span>Calm, human-centered operations workspace</span>
+              <span>Operational dashboard workspace</span>
             </div>
           </div>
         </footer>

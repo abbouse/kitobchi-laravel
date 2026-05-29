@@ -24,15 +24,15 @@
         <i class="bi bi-list fs-5"></i>
       </button>
 
-      <div class="flex-grow-1 min-w-0">
+      <div class="kc-topbar__titleblock min-w-0">
         <div class="kc-topbar__eyebrow"><?php echo $__env->yieldContent('page-eyebrow', 'A122 control room'); ?></div>
         <div class="kc-topbar__title text-truncate"><?php echo $__env->yieldContent('page-title', 'Dashboard'); ?></div>
       </div>
 
-      <div class="kc-topbar__search d-none d-lg-block w-100">
+      <div class="kc-topbar__search flex-grow-1">
         <form class="kc-search" onsubmit="event.preventDefault();const input=this.querySelector('input');const option=[...document.querySelectorAll('#a122-quick-nav-list option')].find(o=>o.value===input.value);if(option?.dataset?.href){window.location=option.dataset.href;}">
           <i class="bi bi-search kc-search__icon"></i>
-          <input type="text" list="a122-quick-nav-list" class="form-control" placeholder="Bo‘lim, sahifa yoki oqim qidiring..." />
+          <input type="text" list="a122-quick-nav-list" class="form-control" placeholder="Search" />
           <datalist id="a122-quick-nav-list">
             <?php $__currentLoopData = $quickLinks; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $link): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
               <option value="<?php echo e($link['label']); ?>" data-href="<?php echo e($link['href']); ?>"></option>
@@ -41,9 +41,12 @@
         </form>
       </div>
 
-      <button data-theme-toggle class="btn btn-white shadow-sm border kc-topbar__action d-none d-sm-inline-flex align-items-center px-3" aria-label="Tema almashtirish">
-        <i class="bi bi-circle-half me-2"></i>
-        <span class="small fw-semibold">Theme</span>
+      <a href="<?php echo e(route('admin.support.index')); ?>" class="kc-topbar__icon-btn d-none d-sm-inline-flex" aria-label="Support">
+        <i class="bi bi-bell"></i>
+      </a>
+
+      <button data-theme-toggle class="kc-topbar__icon-btn d-none d-sm-inline-flex" aria-label="Tema almashtirish">
+        <i class="bi bi-circle-half"></i>
       </button>
 
       <div class="dropdown">
@@ -57,7 +60,7 @@
             'image' => $panelAdmin?->avatar,
             'class' => 'kc-topbar__user-avatar',
           ], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
-          <span class="text-start d-none d-md-inline-block">
+          <span class="text-start d-none d-lg-inline-block">
             <span class="d-block fw-semibold text-dark"><?php echo e($panelAdmin?->name ?? 'Admin'); ?></span>
             <span class="d-block small text-secondary"><?php echo e($panelAdmin?->role_label ?? 'Panel user'); ?></span>
           </span>

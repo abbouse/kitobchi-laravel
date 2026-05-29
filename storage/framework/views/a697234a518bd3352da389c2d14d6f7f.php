@@ -49,13 +49,6 @@
 
   $current = request()->route()?->getName() ?? '';
   $panelAdmin = auth('panel')->user();
-  $nowHour = now()->hour;
-  $focusTitle = $nowHour < 11 ? 'Kun boshlandi' : ($nowHour < 18 ? 'Ish ritmi yuqori' : 'Kun yakuni nazorati');
-  $focusCopy = $nowHour < 11
-    ? 'Orders, support va seller oqimini xotirjam ritmda ko‘zdan kechiring.'
-    : ($nowHour < 18
-      ? 'Faol oqimlar eng ko‘p shu paytda yig‘iladi, signal va queue’larni kuzatib boring.'
-      : 'Yopilishdan oldin kechki moderatsiya va qolgan operatsiyalarni tekshirib chiqing.');
 ?>
 
 <div id="a122-sidebar-overlay" data-sidebar-overlay class="kc-sidebar-overlay d-none d-lg-none"></div>
@@ -70,22 +63,21 @@
       <div class="d-flex align-items-start justify-content-between gap-2">
         <a href="<?php echo e(route('admin.dashboard')); ?>" class="kc-sidebar__brand-link">
           <span class="kc-sidebar__brand-mark">
-            <i class="bi bi-grid-1x2-fill"></i>
+            <i class="bi bi-grid"></i>
           </span>
           <span class="kc-sidebar__brand-copy">
             <span class="kc-sidebar__brand-title d-block">Kitobchi Admin</span>
-            <span class="kc-sidebar__brand-subtitle d-block">Human-centered control room</span>
+            <span class="kc-sidebar__brand-subtitle d-block">Operational workspace</span>
           </span>
         </a>
-        <button type="button" data-sidebar-close class="btn btn-sm btn-outline-light border-0 d-lg-none">
+        <div class="d-flex align-items-center gap-2">
+          <button type="button" data-sidebar-toggle class="kc-sidebar__collapse d-none d-lg-inline-flex" aria-label="Sidebarni yig‘ish yoki ochish">
+            <i class="bi bi-layout-sidebar-inset"></i>
+          </button>
+          <button type="button" data-sidebar-close class="btn btn-sm btn-outline-light border-0 d-lg-none">
           <i class="bi bi-x-lg"></i>
-        </button>
-      </div>
-
-      <div class="kc-sidebar__insight">
-        <div class="kc-sidebar__insight-kicker">Bugungi fokus</div>
-        <div class="kc-sidebar__insight-title"><?php echo e($focusTitle); ?></div>
-        <p class="kc-sidebar__insight-copy"><?php echo e($focusCopy); ?></p>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -116,9 +108,9 @@
 
     <div class="kc-sidebar__footer">
       <div class="kc-sidebar__workspace">
-        <div class="kc-sidebar__workspace-label">Workspace</div>
+        <div class="kc-sidebar__workspace-label">Panel</div>
         <div class="kc-sidebar__workspace-title"><?php echo e($panelAdmin?->name ?? 'Admin'); ?></div>
-        <div class="kc-sidebar__workspace-meta">A122 control room · sokin va aniq boshqaruv oqimi</div>
+        <div class="kc-sidebar__workspace-meta"><?php echo e($panelAdmin?->role_label ?? 'Administrator'); ?></div>
       </div>
     </div>
   </div>

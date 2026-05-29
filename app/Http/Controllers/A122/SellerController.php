@@ -109,9 +109,6 @@ class SellerController extends Controller
     public function show(Request $request, Seller $seller)
     {
         $originalSellerId = $seller->id;
-        $debugMode = $request->boolean('debug_sections');
-        $rawDebug = $request->boolean('raw_debug');
-        $debugIssues = [];
 
         try {
             $storeSeller = $this->resolveStoreSeller($seller);
@@ -128,7 +125,6 @@ class SellerController extends Controller
                 $storeSellerId,
                 fn () => SellerOrder::whereIn('seller_id', $sellerIds)->count(),
                 0,
-                $debugIssues,
             );
             $totalRevenue = $this->safeSellerShowValue(
                 'total_revenue',
@@ -139,7 +135,6 @@ class SellerController extends Controller
                     ->where('category', SellerOrderSettlementService::CATEGORY_ORDER_SALE)
                     ->sum('netAmount'),
                 0,
-                $debugIssues,
             );
             $locations = $this->safeSellerShowValue(
                 'locations',
@@ -150,7 +145,6 @@ class SellerController extends Controller
                     ->paginate(6, ['*'], 'locations_page')
                     ->withQueryString(),
                 $this->emptySellerShowPaginator($request, 'locations_page', 6),
-                $debugIssues,
             );
             $documents = $this->safeSellerShowValue(
                 'documents',
@@ -161,7 +155,6 @@ class SellerController extends Controller
                     ->paginate(8, ['*'], 'documents_page')
                     ->withQueryString(),
                 $this->emptySellerShowPaginator($request, 'documents_page', 8),
-                $debugIssues,
             );
             $contractHistory = $this->safeSellerShowValue(
                 'contract_history',
@@ -172,7 +165,6 @@ class SellerController extends Controller
                     ->paginate(8, ['*'], 'contract_history_page')
                     ->withQueryString(),
                 $this->emptySellerShowPaginator($request, 'contract_history_page', 8),
-                $debugIssues,
             );
             $recentOrders = $this->safeSellerShowValue(
                 'recent_orders',
@@ -187,7 +179,6 @@ class SellerController extends Controller
                     ->paginate(10, ['*'], 'orders_page')
                     ->withQueryString(),
                 $this->emptySellerShowPaginator($request, 'orders_page', 10),
-                $debugIssues,
             );
             $transactions = $this->safeSellerShowValue(
                 'transactions',
@@ -197,7 +188,6 @@ class SellerController extends Controller
                     ->paginate(10, ['*'], 'transactions_page')
                     ->withQueryString(),
                 $this->emptySellerShowPaginator($request, 'transactions_page', 10),
-                $debugIssues,
             );
             $staffLogs = $this->safeSellerShowValue(
                 'staff_logs',
@@ -207,7 +197,6 @@ class SellerController extends Controller
                     ->paginate(20, ['*'], 'staff_logs_page')
                     ->withQueryString(),
                 $this->emptySellerShowPaginator($request, 'staff_logs_page', 20),
-                $debugIssues,
             );
             $banLogs = $this->safeSellerShowValue(
                 'ban_logs',
@@ -217,87 +206,14 @@ class SellerController extends Controller
                     ->paginate(20, ['*'], 'ban_logs_page')
                     ->withQueryString(),
                 $this->emptySellerShowPaginator($request, 'ban_logs_page', 20),
-                $debugIssues,
             );
             $warningCount = $this->safeSellerShowValue(
                 'warning_count',
                 $storeSellerId,
                 fn () => SellerBanLog::getWarningCount($storeSellerId),
                 0,
-                $debugIssues,
             );
             $isBlocked = $storeSeller->status === 'blocked';
-
-            if ($debugMode && $rawDebug) {
-                return response()->json([
-                    'ok' => true,
-                    'seller' => [
-                        'requested_id' => $originalSellerId,
-                        'store_seller_id' => $storeSellerId,
-                        'shop_name' => $seller->shop_name,
-                        'status' => $seller->status,
-                        'parent_id' => $seller->parent_id,
-                        'phone_number' => $seller->phone_number,
-                        'region' => $seller->region,
-                        'contract_number' => $seller->contract_number,
-                        'contract_signed_raw' => $seller->getRawOriginal('contract_signed'),
-                        'contract_signed_at_raw' => $seller->getRawOriginal('contract_signed_at'),
-                        'contract_expires_at_raw' => $seller->getRawOriginal('contract_expires_at'),
-                        'premium_expires_at' => $premiumState['premium_expires_at'] ?? null,
-                        'rating' => $seller->rating,
-                        'rating_reviews_count' => $seller->rating_reviews_count,
-                        'response_time_hours' => $seller->response_time_hours,
-                    ],
-                    'counts' => [
-                        'books_count' => $seller->books_count,
-                        'locations_page_items' => $locations->count(),
-                        'locations_total' => $locations->total(),
-                        'documents_page_items' => $documents->count(),
-                        'documents_total' => $documents->total(),
-                        'contract_history_page_items' => $contractHistory->count(),
-                        'contract_history_total' => $contractHistory->total(),
-                        'recent_orders_page_items' => $recentOrders->count(),
-                        'recent_orders_total' => $recentOrders->total(),
-                        'transactions_page_items' => $transactions->count(),
-                        'transactions_total' => $transactions->total(),
-                        'staff_logs_page_items' => $staffLogs->count(),
-                        'staff_logs_total' => $staffLogs->total(),
-                        'ban_logs_page_items' => $banLogs->count(),
-                        'ban_logs_total' => $banLogs->total(),
-                        'warning_count' => $warningCount,
-                    ],
-                    'samples' => [
-                        'first_location' => optional($locations->items()[0] ?? null, function ($location) {
-                            return [
-                                'id' => $location->id,
-                                'fullAddress' => $location->fullAddress,
-                                'description' => $location->description,
-                                'qr_token' => $location->qr_token,
-                                'qr_rotated_at_raw' => $location->getRawOriginal('qr_rotated_at'),
-                            ];
-                        }),
-                        'first_document' => optional($documents->items()[0] ?? null, function ($document) {
-                            return [
-                                'id' => $document->id,
-                                'type' => $document->type,
-                                'file_path' => $document->file_path,
-                                'original_name' => $document->original_name,
-                                'created_at_raw' => $document->getRawOriginal('created_at'),
-                            ];
-                        }),
-                        'first_contract_history' => optional($contractHistory->items()[0] ?? null, function ($history) {
-                            return [
-                                'id' => $history->id,
-                                'action' => $history->action,
-                                'old_expires_at_raw' => $history->getRawOriginal('old_expires_at'),
-                                'new_expires_at_raw' => $history->getRawOriginal('new_expires_at'),
-                                'created_at_raw' => $history->getRawOriginal('created_at'),
-                            ];
-                        }),
-                    ],
-                    'debug_issues' => $debugIssues,
-                ]);
-            }
 
             $view = view('a122.sellers.show', compact(
                 'seller',
@@ -313,9 +229,7 @@ class SellerController extends Controller
                 'staffLogs',
                 'banLogs',
                 'warningCount',
-                'isBlocked',
-                'debugMode',
-                'debugIssues'
+                'isBlocked'
             ));
 
             return response($view->render());
@@ -327,14 +241,6 @@ class SellerController extends Controller
                 'line' => $e->getLine(),
                 'trace' => $e->getTraceAsString(),
             ]);
-
-            if ($debugMode) {
-                return response(
-                    "<pre>Seller show failed\n\nMessage: {$e->getMessage()}\nFile: {$e->getFile()}:{$e->getLine()}</pre>",
-                    500,
-                    ['Content-Type' => 'text/html; charset=UTF-8'],
-                );
-            }
 
             return redirect()
                 ->route('admin.sellers.index')
@@ -357,7 +263,7 @@ class SellerController extends Controller
         );
     }
 
-    private function safeSellerShowValue(string $key, int $sellerId, callable $resolver, mixed $fallback, array &$debugIssues = []): mixed
+    private function safeSellerShowValue(string $key, int $sellerId, callable $resolver, mixed $fallback): mixed
     {
         try {
             return $resolver();
@@ -367,7 +273,6 @@ class SellerController extends Controller
                 'block' => $key,
                 'message' => $e->getMessage(),
             ]);
-            $debugIssues[] = ['type' => 'block', 'key' => $key, 'message' => $e->getMessage()];
 
             return $fallback;
         }
