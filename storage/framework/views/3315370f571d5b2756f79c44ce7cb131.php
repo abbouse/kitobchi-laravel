@@ -2,133 +2,145 @@
 <?php $__env->startSection('page-title', 'Promokodlar'); ?>
 
 <?php $__env->startSection('content'); ?>
-
-<div class="a122-index-header">
-  <div>
-    <div class="a122-index-header__title">Promokodlar ro'yxati</div>
-    <div class="a122-index-header__meta"><?php echo e($promocodes->total()); ?> ta promokod topildi</div>
-  </div>
-  <div class="a122-index-header__actions">
-    <form method="GET" class="a122-index-search-form">
+<div class="d-flex flex-column gap-4">
+  <?php if (isset($component)) { $__componentOriginalcb19cb35a534439097b02b8af91726ee = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginalcb19cb35a534439097b02b8af91726ee = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.admin.page-header','data' => ['eyebrow' => 'Commerce','title' => 'Promokodlar','subtitle' => ''.e($promocodes->total()).' ta yozuv']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('admin.page-header'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['eyebrow' => 'Commerce','title' => 'Promokodlar','subtitle' => ''.e($promocodes->total()).' ta yozuv']); ?>
+    <form method="GET" class="kc-search flex-grow-1" style="max-width: 24rem;">
       <input type="hidden" name="tab" value="<?php echo e($tab); ?>">
-      <i class="bi bi-search"></i>
-      <input type="search" name="search" value="<?php echo e(request('search')); ?>" placeholder="Kod yoki ID bo'yicha qidiring">
+      <i class="bi bi-search kc-search__icon"></i>
+      <input type="search" name="search" value="<?php echo e(request('search')); ?>" placeholder="Kod yoki ID" class="form-control">
     </form>
     <a href="<?php echo e(route('admin.promocodes.create')); ?>" class="btn-p primary">
-      <i class="bi bi-plus-lg"></i> Yangi promokod
+      <i class="bi bi-plus-lg"></i>
+      <span>Qo‘shish</span>
     </a>
+   <?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginalcb19cb35a534439097b02b8af91726ee)): ?>
+<?php $attributes = $__attributesOriginalcb19cb35a534439097b02b8af91726ee; ?>
+<?php unset($__attributesOriginalcb19cb35a534439097b02b8af91726ee); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginalcb19cb35a534439097b02b8af91726ee)): ?>
+<?php $component = $__componentOriginalcb19cb35a534439097b02b8af91726ee; ?>
+<?php unset($__componentOriginalcb19cb35a534439097b02b8af91726ee); ?>
+<?php endif; ?>
+
+  <div class="kc-filter-card">
+    <div class="nav nav-pills flex-wrap">
+      <?php $__currentLoopData = [['all', 'Barchasi'], ['active', 'Faol'], ['expired', 'Muddati o‘tgan']]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$key, $label]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+        <a href="<?php echo e(request()->fullUrlWithQuery(['tab' => $key, 'page' => null])); ?>" class="nav-link <?php echo e($tab === $key ? 'active' : ''); ?>">
+          <?php echo e($label); ?>
+
+          <span class="badge rounded-pill <?php echo e($tab === $key ? 'text-bg-light' : 'text-bg-secondary'); ?>"><?php echo e(number_format($counts[$key] ?? 0)); ?></span>
+        </a>
+      <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+    </div>
   </div>
-</div>
 
-<div class="tab-pills fade-up mb-3">
-  <?php $__currentLoopData = [['all','Barchasi'],['active','Aktiv'],['expired','Muddati o\'tgan']]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$k,$l]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-  <a href="<?php echo e(request()->fullUrlWithQuery(['tab'=>$k,'page'=>1])); ?>"
-     class="tab-pill <?php echo e($tab===$k?'active':''); ?>">
-    <?php echo e($l); ?> <span class="tab-badge"><?php echo e($counts[$k]); ?></span>
-  </a>
-  <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-</div>
+  <?php if (isset($component)) { $__componentOriginal6c55ae2c9251ebabe977f3f2190280eb = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal6c55ae2c9251ebabe977f3f2190280eb = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.admin.section-card','data' => ['title' => 'Promokodlar jadvali','meta' => $promocodes->total() . ' ta yozuv']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('admin.section-card'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['title' => 'Promokodlar jadvali','meta' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($promocodes->total() . ' ta yozuv')]); ?>
+    <div class="kc-table-shell table-responsive">
+      <table class="table align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>ID</th>
+            <th>Kod</th>
+            <th>Tur</th>
+            <th>Miqdor</th>
+            <th>Min. buyurtma</th>
+            <th>Limit</th>
+            <th>Muddat</th>
+            <th>Status</th>
+            <th class="text-end">Amallar</th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php $__empty_1 = true; $__currentLoopData = $promocodes; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $promo): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+            <?php
+              $expired = $promo->expires_at <= now();
+              $full = $promo->usesLimit > 0 && $promo->usedCount >= $promo->usesLimit;
+              $isActive = $promo->status && !$expired && !$full;
+            ?>
+            <tr>
+              <td class="text-secondary">#<?php echo e($promo->id); ?></td>
+              <td><code class="kc-inline-code"><?php echo e($promo->code); ?></code></td>
+              <td>
+                <span class="badge rounded-pill <?php echo e($promo->type === 'percent' ? 'text-bg-info-subtle border border-info-subtle text-info-emphasis' : 'text-bg-primary-subtle border border-primary-subtle text-primary-emphasis'); ?>">
+                  <?php echo e($promo->type === 'percent' ? 'Foiz' : 'Miqdor'); ?>
 
-<div class="p-card p-0">
-  <div class="table-responsive kc-twrap">
-    <table class="p-table" data-index-grid>
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Kod</th>
-          <th>Tur</th>
-          <th>Miqdor</th>
-          <th>Min. buyurtma</th>
-          <th>Limit / Ishlatildi</th>
-          <th>Muddat</th>
-          <th>Status</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        <?php $__empty_1 = true; $__currentLoopData = $promocodes; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $p): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
-        <?php
-          $expired = $p->expires_at <= now();
-          $full    = $p->usesLimit > 0 && $p->usedCount >= $p->usesLimit;
-        ?>
-        <tr>
-          <td style="font-family:'JetBrains Mono',monospace;color:var(--p-accent)"><?php echo e($p->id); ?></td>
-          <td>
-            <code style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;
-                         color:var(--p-text);background:var(--p-elevated);
-                         padding:3px 10px;border-radius:6px;letter-spacing:.05em">
-              <?php echo e($p->code); ?>
+                </span>
+              </td>
+              <td class="fw-semibold"><?php echo e($promo->type === 'percent' ? $promo->amount . '%' : number_format($promo->amount) . ' UZS'); ?></td>
+              <td class="text-secondary"><?php echo e($promo->min_order_amount > 0 ? number_format($promo->min_order_amount) . ' UZS' : '—'); ?></td>
+              <td>
+                <?php if($promo->usesLimit > 0): ?>
+                  <span class="<?php echo e($full ? 'text-danger' : ''); ?>"><?php echo e($promo->usedCount); ?></span> / <?php echo e($promo->usesLimit); ?>
 
-            </code>
-          </td>
-          <td>
-            <span class="s-pill <?php echo e($p->type==='percent'?'info':'accent'); ?>">
-              <?php echo e($p->type==='percent' ? 'Foiz (%)' : 'Miqdor (UZS)'); ?>
+                <?php else: ?>
+                  <span class="text-secondary"><?php echo e($promo->usedCount); ?> / ∞</span>
+                <?php endif; ?>
+              </td>
+              <td class="<?php echo e($expired ? 'text-danger' : 'text-secondary'); ?> text-nowrap"><?php echo e(\Carbon\Carbon::parse($promo->expires_at)->format('d.m.Y H:i')); ?></td>
+              <td>
+                <?php if($isActive): ?>
+                  <span class="badge rounded-pill text-bg-success-subtle border border-success-subtle text-success-emphasis">Faol</span>
+                <?php else: ?>
+                  <span class="badge rounded-pill text-bg-secondary">Nofaol</span>
+                <?php endif; ?>
+              </td>
+              <td class="text-end">
+                <div class="d-inline-flex align-items-center justify-content-end gap-1">
+                  <a href="<?php echo e(route('admin.promocodes.show', $promo)); ?>" class="btn btn-sm btn-light border kc-table-action" title="Ko‘rish">
+                    <i class="bi bi-eye"></i>
+                  </a>
+                  <a href="<?php echo e(route('admin.promocodes.edit', $promo)); ?>" class="btn btn-sm btn-light border kc-table-action" title="Tahrirlash">
+                    <i class="bi bi-pencil"></i>
+                  </a>
+                  <form method="POST" action="<?php echo e(route('admin.promocodes.destroy', $promo)); ?>" onsubmit="return confirm('O‘chirilsinmi?')">
+                    <?php echo csrf_field(); ?>
+                    <?php echo method_field('DELETE'); ?>
+                    <button class="btn btn-sm btn-light border kc-table-action text-danger" title="O‘chirish">
+                      <i class="bi bi-trash3"></i>
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
+            <tr><td colspan="9" class="text-center py-5 text-secondary">Promokod topilmadi.</td></tr>
+          <?php endif; ?>
+        </tbody>
+      </table>
+    </div>
+   <?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal6c55ae2c9251ebabe977f3f2190280eb)): ?>
+<?php $attributes = $__attributesOriginal6c55ae2c9251ebabe977f3f2190280eb; ?>
+<?php unset($__attributesOriginal6c55ae2c9251ebabe977f3f2190280eb); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal6c55ae2c9251ebabe977f3f2190280eb)): ?>
+<?php $component = $__componentOriginal6c55ae2c9251ebabe977f3f2190280eb; ?>
+<?php unset($__componentOriginal6c55ae2c9251ebabe977f3f2190280eb); ?>
+<?php endif; ?>
 
-            </span>
-          </td>
-          <td style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;color:var(--p-text)">
-            <?php echo e($p->type==='percent' ? $p->amount.'%' : number_format($p->amount).' UZS'); ?>
-
-          </td>
-          <td style="font-size:12px;color:var(--p-muted)">
-            <?php echo e($p->min_order_amount > 0 ? number_format($p->min_order_amount).' UZS' : '—'); ?>
-
-          </td>
-          <td>
-            <?php if($p->usesLimit > 0): ?>
-              <div style="font-family:'JetBrains Mono',monospace;font-size:12px">
-                <span style="color:<?php echo e($full?'var(--p-danger)':'var(--p-text)'); ?>"><?php echo e($p->usedCount); ?></span>
-                / <?php echo e($p->usesLimit); ?>
-
-              </div>
-              <div class="dash-prog-track" style="margin-top:4px">
-                <div class="dash-prog-fill" style="width:<?php echo e(min(round($p->usedCount/$p->usesLimit*100),100)); ?>%;
-                     background:<?php echo e($full?'var(--p-danger)':'var(--p-accent)'); ?>"></div>
-              </div>
-            <?php else: ?>
-              <span style="font-size:12px;color:var(--p-hint)"><?php echo e($p->usedCount); ?> / ∞</span>
-            <?php endif; ?>
-          </td>
-          <td style="font-size:12px;white-space:nowrap">
-            <span style="color:<?php echo e($expired?'var(--p-danger)':'var(--p-muted)'); ?>">
-              <?php echo e(\Carbon\Carbon::parse($p->expires_at)->format('d.m.Y H:i')); ?>
-
-            </span>
-            <?php if($expired): ?>
-              <div style="font-size:10px;color:var(--p-danger)">Muddati o'tgan</div>
-            <?php endif; ?>
-          </td>
-          <td>
-            <span class="s-pill <?php echo e($p->status && !$expired && !$full ? 'success' : 'muted'); ?>">
-              <?php echo e($p->status && !$expired && !$full ? 'Aktiv' : 'Nofaol'); ?>
-
-            </span>
-          </td>
-          <td>
-            <div class="flex gap-1">
-              <a href="<?php echo e(route('admin.promocodes.show', $p)); ?>" class="btn-p ghost sm"><i class="bi bi-eye"></i></a>
-              <a href="<?php echo e(route('admin.promocodes.edit', $p)); ?>" class="btn-p ghost sm"><i class="bi bi-pencil"></i></a>
-              <form method="POST" action="<?php echo e(route('admin.promocodes.destroy', $p)); ?>"
-                    onsubmit="return confirm('O\'chirilsinmi?')">
-                <?php echo csrf_field(); ?> <?php echo method_field('DELETE'); ?>
-                <button class="btn-p danger sm"><i class="bi bi-trash"></i></button>
-              </form>
-            </div>
-          </td>
-        </tr>
-        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
-        <tr><td colspan="9" style="text-align:center;padding:40px;color:var(--p-hint)">
-          <i class="bi bi-ticket-perforated" style="font-size:32px;display:block;margin-bottom:8px"></i>
-          Promokodlar topilmadi
-        </td></tr>
-        <?php endif; ?>
-      </tbody>
-    </table>
-  </div>
   <?php if($promocodes->hasPages()): ?>
-  <?php echo e($promocodes->links('a122.partials.pagination')); ?>
-
+    <div><?php echo e($promocodes->links('a122.partials.pagination')); ?></div>
   <?php endif; ?>
 </div>
 <?php $__env->stopSection(); ?>

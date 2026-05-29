@@ -3,104 +3,87 @@
 @section('page-title', 'Nashriyotlar')
 
 @section('content')
-<div class="space-y-6">
-  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-    <div>
-      <h2 class="text-xl font-bold">Nashriyotlar</h2>
-      <p class="text-xs text-gray-500 mt-0.5">Kitoblarni yagona publisher bazasiga bog‘lash uchun ro‘yxat.</p>
-    </div>
-    <div class="flex items-center gap-2">
-      <form method="GET" class="relative">
-        <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-        <input name="search" value="{{ request('search') }}" placeholder="Nashriyot qidirish..." class="input !pl-9 !py-2 w-64">
-      </form>
-      <a href="{{ route('admin.publishers.create') }}" class="btn btn-primary">
-        <i data-lucide="plus" class="w-4 h-4"></i> Qo'shish
-      </a>
-    </div>
-  </div>
+<div class="d-flex flex-column gap-4">
+  <x-admin.page-header eyebrow="Catalog" title="Nashriyotlar" subtitle="{{ number_format($stats['total']) }} ta yozuv">
+    <form method="GET" class="kc-search flex-grow-1" style="max-width: 22rem;">
+      <i class="bi bi-search kc-search__icon"></i>
+      <input name="search" value="{{ request('search') }}" placeholder="Nashriyot qidirish" class="form-control">
+    </form>
+    <a href="{{ route('admin.publishers.create') }}" class="btn-p primary">
+      <i class="bi bi-plus-lg"></i>
+      <span>Qo‘shish</span>
+    </a>
+  </x-admin.page-header>
 
   @if(session('success'))
-    <div class="px-4 py-3 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-sm flex items-center gap-2">
-      <i data-lucide="check-circle" class="w-4 h-4"></i> {{ session('success') }}
-    </div>
+    <div class="alert alert-success kc-flash mb-0">{{ session('success') }}</div>
   @endif
   @if(session('error'))
-    <div class="px-4 py-3 rounded-xl bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 text-sm flex items-center gap-2">
-      <i data-lucide="alert-circle" class="w-4 h-4"></i> {{ session('error') }}
-    </div>
+    <div class="alert alert-danger kc-flash mb-0">{{ session('error') }}</div>
   @endif
 
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-    <div class="card p-5">
-      <div class="text-xs text-gray-500">Jami nashriyot</div>
-      <div class="text-2xl font-black mt-2">{{ number_format($stats['total']) }}</div>
+  <div class="row g-3">
+    <div class="col-12 col-md-4">
+      <x-admin.stat-card label="Jami nashriyot" :value="number_format($stats['total'])" icon="building" tone="primary" />
     </div>
-    <div class="card p-5">
-      <div class="text-xs text-gray-500">Rasmli kartalar</div>
-      <div class="text-2xl font-black mt-2">{{ number_format($stats['with_image']) }}</div>
+    <div class="col-12 col-md-4">
+      <x-admin.stat-card label="Rasmli kartalar" :value="number_format($stats['with_image'])" icon="image" tone="success" />
     </div>
-    <div class="card p-5">
-      <div class="text-xs text-gray-500">Bog‘langan kitoblar</div>
-      <div class="text-2xl font-black mt-2">{{ number_format($stats['linked_books']) }}</div>
+    <div class="col-12 col-md-4">
+      <x-admin.stat-card label="Bog‘langan kitoblar" :value="number_format($stats['linked_books'])" icon="book" tone="info" />
     </div>
   </div>
 
-  <div class="table-wrap">
-    <div class="overflow-x-auto">
-      <table class="tbl" data-index-grid>
-        <thead>
+  <x-admin.section-card title="Nashriyotlar jadvali" :meta="$publishers->total() . ' ta yozuv'">
+    <div class="kc-table-shell table-responsive">
+      <table class="table align-middle mb-0">
+        <thead class="table-light">
           <tr>
             <th>ID</th>
             <th>Rasm</th>
             <th>Nomi</th>
             <th>Kitoblar</th>
             <th>Yangilangan</th>
-            <th class="text-right">Amallar</th>
+            <th class="text-end">Amallar</th>
           </tr>
         </thead>
         <tbody>
           @forelse($publishers as $publisher)
             <tr>
-              <td class="text-gray-500 text-xs">{{ $publisher->id }}</td>
+              <td class="small text-secondary">#{{ $publisher->id }}</td>
               <td>
-                <div class="w-14 h-14 rounded-2xl overflow-hidden border border-[var(--p-border)] bg-[var(--p-elevated)] flex items-center justify-center">
+                <div style="width:56px;height:56px;" class="rounded-4 overflow-hidden border bg-light d-flex align-items-center justify-content-center">
                   @if($publisher->image_url)
-                    <img src="{{ $publisher->image_url }}" alt="{{ $publisher->name }}" class="w-full h-full object-cover">
+                    <img src="{{ $publisher->image_url }}" alt="{{ $publisher->name }}" class="w-100 h-100 object-fit-cover">
                   @else
-                    <i data-lucide="building-2" class="w-5 h-5 text-gray-400"></i>
+                    <i class="bi bi-building text-secondary"></i>
                   @endif
                 </div>
               </td>
-              <td class="font-semibold">{{ $publisher->name }}</td>
-              <td><span class="font-semibold">{{ $publisher->books_count }}</span></td>
-              <td class="text-gray-500">{{ optional($publisher->updated_at)->format('d.m.Y H:i') ?: '—' }}</td>
-              <td>
-                <div class="flex items-center justify-end gap-1">
-                  <a href="{{ route('admin.publishers.edit', $publisher) }}" class="btn-ghost p-2 rounded-lg">
-                    <i data-lucide="pencil" class="w-4 h-4"></i>
+              <td class="fw-semibold">{{ $publisher->name }}</td>
+              <td><span class="badge rounded-pill text-bg-light border">{{ number_format($publisher->books_count) }}</span></td>
+              <td class="text-secondary">{{ optional($publisher->updated_at)->format('d.m.Y H:i') ?: '—' }}</td>
+              <td class="text-end">
+                <div class="d-inline-flex align-items-center justify-content-end gap-1">
+                  <a href="{{ route('admin.publishers.edit', $publisher) }}" class="btn btn-sm btn-light border kc-table-action" title="Tahrirlash">
+                    <i class="bi bi-pencil"></i>
                   </a>
                   <form method="POST" action="{{ route('admin.publishers.destroy', $publisher) }}" onsubmit="return confirm('Nashriyotni o\\'chirishni tasdiqlaysizmi?')">
                     @csrf @method('DELETE')
-                    <button class="btn-ghost p-2 rounded-lg text-rose-500">
-                      <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    <button class="btn btn-sm btn-light border kc-table-action text-danger" title="O‘chirish">
+                      <i class="bi bi-trash3"></i>
                     </button>
                   </form>
                 </div>
               </td>
             </tr>
           @empty
-            <tr>
-              <td colspan="6" class="text-center py-10 text-gray-400">
-                <i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 text-gray-300"></i>
-                Hali nashriyotlar qo‘shilmagan
-              </td>
-            </tr>
+            <tr><td colspan="6" class="text-center py-5 text-secondary">Hali nashriyotlar qo‘shilmagan.</td></tr>
           @endforelse
         </tbody>
       </table>
     </div>
-  </div>
+  </x-admin.section-card>
 
   <div>{{ $publishers->links('a122.partials.pagination') }}</div>
 </div>

@@ -2,151 +2,155 @@
 <?php $__env->startSection('page-title', 'Karyera arizalari'); ?>
 
 <?php $__env->startSection('content'); ?>
-<?php if (isset($component)) { $__componentOriginal0c1345684b2d774f43a544669f5684b0 = $component; } ?>
-<?php if (isset($attributes)) { $__attributesOriginal0c1345684b2d774f43a544669f5684b0 = $attributes; } ?>
-<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.a122.page-header','data' => []] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
-<?php $component->withName('a122.page-header'); ?>
+<div class="d-flex flex-column gap-4">
+  <?php if (isset($component)) { $__componentOriginalcb19cb35a534439097b02b8af91726ee = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginalcb19cb35a534439097b02b8af91726ee = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.admin.page-header','data' => ['eyebrow' => 'Content','title' => 'Karyera arizalari','subtitle' => ''.e($applications->total()).' ta yozuv']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('admin.page-header'); ?>
 <?php if ($component->shouldRender()): ?>
 <?php $__env->startComponent($component->resolveView(), $component->data()); ?>
 <?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
 <?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
 <?php endif; ?>
-<?php $component->withAttributes([]); ?>
-     <?php $__env->slot('heading', null, []); ?> Karyera arizalari <?php $__env->endSlot(); ?>
-     <?php $__env->slot('meta', null, []); ?> Vakansiya bo'yicha kelgan nomzodlar va umumiy murojaatlar shu yerda bir xil standartda ko'rinadi. <?php $__env->endSlot(); ?>
- <?php echo $__env->renderComponent(); ?>
+<?php $component->withAttributes(['eyebrow' => 'Content','title' => 'Karyera arizalari','subtitle' => ''.e($applications->total()).' ta yozuv']); ?>
+    <form method="GET" class="kc-search flex-grow-1" style="max-width: 28rem;">
+      <input type="hidden" name="tab" value="<?php echo e($tab); ?>">
+      <i class="bi bi-search kc-search__icon"></i>
+      <input type="search" name="search" value="<?php echo e(request('search')); ?>" placeholder="ID, ism, email yoki Telegram" class="form-control">
+    </form>
+    <?php if(request('search')): ?>
+      <a href="<?php echo e(route('admin.job-applications.index', ['tab' => $tab])); ?>" class="btn btn-light border">Tozalash</a>
+    <?php endif; ?>
+   <?php echo $__env->renderComponent(); ?>
 <?php endif; ?>
-<?php if (isset($__attributesOriginal0c1345684b2d774f43a544669f5684b0)): ?>
-<?php $attributes = $__attributesOriginal0c1345684b2d774f43a544669f5684b0; ?>
-<?php unset($__attributesOriginal0c1345684b2d774f43a544669f5684b0); ?>
+<?php if (isset($__attributesOriginalcb19cb35a534439097b02b8af91726ee)): ?>
+<?php $attributes = $__attributesOriginalcb19cb35a534439097b02b8af91726ee; ?>
+<?php unset($__attributesOriginalcb19cb35a534439097b02b8af91726ee); ?>
 <?php endif; ?>
-<?php if (isset($__componentOriginal0c1345684b2d774f43a544669f5684b0)): ?>
-<?php $component = $__componentOriginal0c1345684b2d774f43a544669f5684b0; ?>
-<?php unset($__componentOriginal0c1345684b2d774f43a544669f5684b0); ?>
+<?php if (isset($__componentOriginalcb19cb35a534439097b02b8af91726ee)): ?>
+<?php $component = $__componentOriginalcb19cb35a534439097b02b8af91726ee; ?>
+<?php unset($__componentOriginalcb19cb35a534439097b02b8af91726ee); ?>
 <?php endif; ?>
 
-<?php if(session('success')): ?>
-    <div class="mb-3 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-200"><?php echo e(session('success')); ?></div>
-<?php endif; ?>
-<?php if(session('error')): ?>
-    <div class="mb-3 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm text-red-200"><?php echo e(session('error')); ?></div>
-<?php endif; ?>
+  <?php if(session('success')): ?>
+    <div class="alert alert-success border-0 mb-0"><?php echo e(session('success')); ?></div>
+  <?php endif; ?>
+  <?php if(session('error')): ?>
+    <div class="alert alert-danger border-0 mb-0"><?php echo e(session('error')); ?></div>
+  <?php endif; ?>
 
-<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4 mb-4">
+  <div class="row g-3">
     <?php $__currentLoopData = [
-        [$counts['all'], 'Jami ariza', 'accent', 'bi-briefcase'],
-        [$counts['vacancy'], 'Vakansiya', 'info', 'bi-person-workspace'],
-        [$counts['inquiry'], 'Ochiq murojaat', 'warning', 'bi-chat-square-text'],
-        [$counts['new'], 'Yangi', 'success', 'bi-stars'],
-    ]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$value, $label, $tone, $icon]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-        <div class="p-card flex items-center gap-3" style="padding:14px">
-            <div style="width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:var(--p-<?php echo e($tone); ?>-d,var(--p-elevated));color:var(--p-<?php echo e($tone); ?>)">
-                <i class="bi <?php echo e($icon); ?>"></i>
-            </div>
-            <div>
-                <div style="font-size:22px;font-weight:700;color:var(--p-text)"><?php echo e($value); ?></div>
-                <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--p-hint)"><?php echo e($label); ?></div>
-            </div>
+      [$counts['all'], 'Jami', 'bi-briefcase', 'primary'],
+      [$counts['vacancy'], 'Vakansiya', 'bi-person-workspace', 'info'],
+      [$counts['inquiry'], 'Murojaat', 'bi-chat-square-text', 'warning'],
+      [$counts['new'], 'Yangi', 'bi-stars', 'success'],
+    ]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$value, $label, $icon, $tone]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+      <div class="col-6 col-xl-3">
+        <div class="a122-stat-tile h-100">
+          <div class="a122-stat-tile__icon bg-<?php echo e($tone); ?>-subtle text-<?php echo e($tone); ?>">
+            <i class="bi <?php echo e($icon); ?>"></i>
+          </div>
+          <div>
+            <div class="a122-stat-tile__value"><?php echo e(number_format($value)); ?></div>
+            <div class="a122-stat-tile__label"><?php echo e($label); ?></div>
+          </div>
         </div>
+      </div>
     <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-</div>
+  </div>
 
-<div class="tab-pills fade-up mb-3">
-    <a href="<?php echo e(request()->fullUrlWithQuery(['tab' => 'all', 'page' => 1])); ?>"
-       class="tab-pill <?php echo e($tab === 'all' ? 'active' : ''); ?>">
-        Barchasi <span class="tab-badge"><?php echo e($counts['all']); ?></span>
-    </a>
-    <a href="<?php echo e(request()->fullUrlWithQuery(['tab' => 'vacancy', 'page' => 1])); ?>"
-       class="tab-pill <?php echo e($tab === 'vacancy' ? 'active' : ''); ?>">
-        Vakansiya <span class="tab-badge"><?php echo e($counts['vacancy']); ?></span>
-    </a>
-    <a href="<?php echo e(request()->fullUrlWithQuery(['tab' => 'inquiry', 'page' => 1])); ?>"
-       class="tab-pill <?php echo e($tab === 'inquiry' ? 'active' : ''); ?>">
-        Ochiq murojaat <span class="tab-badge"><?php echo e($counts['inquiry']); ?></span>
-    </a>
-</div>
+  <div class="kc-filter-card">
+    <div class="nav nav-pills flex-wrap">
+      <?php $__currentLoopData = [
+        'all' => ['Barchasi', $counts['all']],
+        'vacancy' => ['Vakansiya', $counts['vacancy']],
+        'inquiry' => ['Murojaat', $counts['inquiry']],
+      ]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $key => [$label, $count]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+        <a href="<?php echo e(request()->fullUrlWithQuery(['tab' => $key, 'page' => null])); ?>" class="nav-link <?php echo e($tab === $key ? 'active' : ''); ?>">
+          <?php echo e($label); ?>
 
-<div class="a122-index-header">
-    <div>
-        <div class="a122-index-header__title">Arizalar ro'yxati</div>
-        <div class="a122-index-header__meta"><?php echo e($applications->total()); ?> ta ariza topildi</div>
+          <span class="badge rounded-pill <?php echo e($tab === $key ? 'text-bg-light' : 'text-bg-secondary'); ?>"><?php echo e(number_format($count)); ?></span>
+        </a>
+      <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
     </div>
-    <div class="a122-index-header__actions">
-        <form method="GET" class="a122-index-search-form">
-            <input type="hidden" name="tab" value="<?php echo e($tab); ?>">
-            <i class="bi bi-search"></i>
-            <input type="search" name="search" value="<?php echo e(request('search')); ?>" placeholder="ID, ism, email yoki Telegram bo'yicha qidiring">
-        </form>
-        <?php if(request('search')): ?>
-            <a href="<?php echo e(route('admin.job-applications.index', ['tab' => $tab])); ?>" class="btn-p ghost">Tozalash</a>
-        <?php endif; ?>
+  </div>
+
+  <?php if (isset($component)) { $__componentOriginal6c55ae2c9251ebabe977f3f2190280eb = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal6c55ae2c9251ebabe977f3f2190280eb = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.admin.section-card','data' => ['title' => 'Arizalar jadvali','meta' => $applications->total() . ' ta yozuv']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('admin.section-card'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['title' => 'Arizalar jadvali','meta' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($applications->total() . ' ta yozuv')]); ?>
+    <div class="kc-table-shell table-responsive">
+      <table class="table align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>ID</th>
+            <th>Turi</th>
+            <th>Lavozim</th>
+            <th>Ism</th>
+            <th>Email</th>
+            <th>Telegram</th>
+            <th>Holat</th>
+            <th>Sana</th>
+            <th class="text-end">Amallar</th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php $__empty_1 = true; $__currentLoopData = $applications; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $row): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+            <tr>
+              <td class="text-secondary">#<?php echo e($row->id); ?></td>
+              <td>
+                <span class="badge rounded-pill <?php echo e($row->type === \App\Models\CareerApplication::TYPE_INQUIRY ? 'text-bg-secondary' : 'text-bg-info-subtle border border-info-subtle text-info-emphasis'); ?>">
+                  <?php echo e($row->type === \App\Models\CareerApplication::TYPE_INQUIRY ? 'Murojaat' : 'Vakansiya'); ?>
+
+                </span>
+              </td>
+              <td class="fw-semibold"><?php echo e($row->vacancy?->title ?? '—'); ?></td>
+              <td><?php echo e($row->full_name); ?></td>
+              <td class="text-secondary"><?php echo e($row->email); ?></td>
+              <td class="text-secondary"><?php echo e($row->telegram_username ? '@' . $row->telegram_username : '—'); ?></td>
+              <td>
+                <form method="POST" action="<?php echo e(route('admin.job-applications.status', $row)); ?>">
+                  <?php echo csrf_field(); ?>
+                  <?php echo method_field('PATCH'); ?>
+                  <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <?php $__currentLoopData = $statuses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $key => $status): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                      <option value="<?php echo e($key); ?>" <?php echo e($row->status === $key ? 'selected' : ''); ?>><?php echo e($status['label']); ?></option>
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                  </select>
+                </form>
+              </td>
+              <td class="text-secondary text-nowrap"><?php echo e($row->created_at?->format('d.m.Y H:i')); ?></td>
+              <td class="text-end">
+                <a href="<?php echo e(route('admin.job-applications.show', $row)); ?>" class="btn btn-sm btn-light border kc-table-action" title="Ko‘rish">
+                  <i class="bi bi-eye"></i>
+                </a>
+              </td>
+            </tr>
+          <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
+            <tr><td colspan="9" class="text-center py-5 text-secondary">Ariza topilmadi.</td></tr>
+          <?php endif; ?>
+        </tbody>
+      </table>
     </div>
-</div>
+   <?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal6c55ae2c9251ebabe977f3f2190280eb)): ?>
+<?php $attributes = $__attributesOriginal6c55ae2c9251ebabe977f3f2190280eb; ?>
+<?php unset($__attributesOriginal6c55ae2c9251ebabe977f3f2190280eb); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal6c55ae2c9251ebabe977f3f2190280eb)): ?>
+<?php $component = $__componentOriginal6c55ae2c9251ebabe977f3f2190280eb; ?>
+<?php unset($__componentOriginal6c55ae2c9251ebabe977f3f2190280eb); ?>
+<?php endif; ?>
 
-<div class="p-card p-0">
-    <div class="table-responsive kc-twrap">
-        <table class="p-table" data-index-grid>
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>Turi</th>
-                    <th>Lavozim / —</th>
-                    <th>Ism</th>
-                    <th>Email</th>
-                    <th>Telegram</th>
-                    <th>Holat</th>
-                    <th>Sana</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php $__empty_1 = true; $__currentLoopData = $applications; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $row): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
-                    <?php
-                        $st = $statuses[$row->status] ?? ['label' => $row->status, 'class' => 'ob-p'];
-                    ?>
-                    <tr>
-                        <td class="p-td-id">#<?php echo e($row->id); ?></td>
-                        <td>
-                            <span class="s-pill <?php echo e($row->type === \App\Models\CareerApplication::TYPE_INQUIRY ? 'muted' : 'accent'); ?>">
-                                <?php echo e($row->type === \App\Models\CareerApplication::TYPE_INQUIRY ? 'Murojaat' : 'Vakansiya'); ?>
-
-                            </span>
-                        </td>
-                        <td class="p-td-max p-td-title"><?php echo e($row->vacancy?->title ?? '—'); ?></td>
-                        <td class="p-td-strong"><?php echo e($row->full_name); ?></td>
-                        <td class="p-td-muted"><?php echo e($row->email); ?></td>
-                        <td class="p-td-hint"><?php echo e($row->telegram_username ? '@'.$row->telegram_username : '—'); ?></td>
-                        <td>
-                            <form method="POST" action="<?php echo e(route('admin.job-applications.status', $row)); ?>" class="inline-flex">
-                                <?php echo csrf_field(); ?>
-                                <?php echo method_field('PATCH'); ?>
-                                <select name="status" class="status-select status-select--compact" onchange="this.form.submit()">
-                                    <?php $__currentLoopData = $statuses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $key => $status): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                                        <option value="<?php echo e($key); ?>" <?php echo e($row->status === $key ? 'selected' : ''); ?>><?php echo e($status['label']); ?></option>
-                                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-                                </select>
-                            </form>
-                        </td>
-                        <td class="p-td-hint"><?php echo e($row->created_at?->format('d.m.Y H:i')); ?></td>
-                        <td>
-                            <a href="<?php echo e(route('admin.job-applications.show', $row)); ?>" class="btn-p ghost sm">
-                                <i class="bi bi-eye"></i>
-                            </a>
-                        </td>
-                    </tr>
-                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
-                    <tr>
-                        <td colspan="9" class="py-8 text-center text-[var(--p-hint)]">Hozircha ariza yo‘q.</td>
-                    </tr>
-                <?php endif; ?>
-            </tbody>
-        </table>
-    </div>
-</div>
-
-<div class="mt-3">
-    <?php echo e($applications->links('a122.partials.pagination')); ?>
-
+  <div><?php echo e($applications->links('a122.partials.pagination')); ?></div>
 </div>
 <?php $__env->stopSection(); ?>
 

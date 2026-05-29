@@ -40,8 +40,57 @@
   .dash-stage {
     display: flex;
     flex-direction: column;
-    gap: 18px;
-    margin-bottom: 20px;
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+
+  .dash-ops-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 18px;
+    border: 1px solid var(--dash-line);
+    border-radius: 18px;
+    background: var(--dash-surface);
+    box-shadow: var(--dash-shadow);
+  }
+
+  .dash-ops-header__title {
+    margin: 0;
+    color: var(--dash-ink);
+    font-size: 1.35rem;
+    font-weight: 850;
+    line-height: 1.2;
+  }
+
+  .dash-ops-header__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .dash-ops-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 30px;
+    padding: 0 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(15, 23, 42, 0.06);
+    background: rgba(15, 23, 42, 0.035);
+    color: var(--dash-copy);
+    font-size: .78rem;
+    font-weight: 750;
+  }
+
+  .dash-ops-header__actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-shrink: 0;
   }
 
   .dash-hero {
@@ -686,13 +735,8 @@
       : ($payoutQueue > 0
           ? "{$payoutQueue} ta payout navbati yig‘ilib turibdi"
           : "Tizim barqaror, jiddiy bottleneck ko‘rinmayapti");
-  $dashFocusMeta = $pendingOrders > 0
-      ? "Eng tez foyda beradigan action: buyurtma oqimini bo‘shatish, qadoq va yo‘ldagi navbatni pasaytirish."
-      : ($payoutQueue > 0
-          ? "Moliya oqimida navbat bor. Seller va kuryer payoutlarini bir marta ko‘zdan kechirish foydali bo‘ladi."
-          : "Bugungi snapshot sog‘lom ko‘rinmoqda. Endi ko‘proq trend, foyda va foydalanuvchi xulqiga e’tibor qaratish mumkin.");
   $completionTone = $completionRate >= 75 ? 'success' : ($completionRate >= 55 ? 'warning' : 'danger');
-  $heroChips = [
+  $opsHeaderPills = [
       ['bi-bag-check', number_format($todayOrders) . " ta bugungi buyurtma"],
       ['bi-people', number_format($newUsersToday) . " ta yangi user"],
       ['bi-patch-check', $completionRate . "% yakunlanish"],
@@ -707,7 +751,7 @@
           'badge' => number_format($pendingOrders) . " kutilmoqda",
           'label' => 'Aktiv buyurtmalar',
           'value' => number_format($opsLoad),
-          'meta' => "Qadoqlanayotgan va yo‘ldagi oqim ham shu yerda jamlangan.",
+          'meta' => "Qadoq va yo‘ldagi oqim.",
           'footer_left' => "Yo'lda: " . number_format($onwayOrders),
           'footer_right' => "Qadoq: " . number_format($packingOrders),
       ],
@@ -719,7 +763,7 @@
           'badge' => '+' . number_format($newUsersToday) . ' bugun',
           'label' => 'Online foydalanuvchilar',
           'value' => number_format($onlineUsers),
-          'meta' => "So‘nggi 5 daqiqada ilova ichida faol bo‘lgan userlar.",
+          'meta' => "So‘nggi 5 daqiqa.",
           'footer_left' => "Premium: " . number_format($premiumUsers),
           'footer_right' => "Tasdiqlangan: " . number_format($verifiedUsers),
       ],
@@ -731,7 +775,7 @@
           'badge' => number_format($payoutQueue) . ' navbat',
           'label' => 'Kutilayotgan payout',
           'value' => number_format($payoutQueue),
-          'meta' => "Seller va kuryer hisob-kitoblari kechikmasligi uchun shu blok eng muhimlaridan biri.",
+          'meta' => "Seller va kuryer navbati.",
           'footer_left' => "Seller: " . number_format($pendingSellerTxCount),
           'footer_right' => "Kuryer: " . number_format($pendingCourierTxCount),
       ],
@@ -743,7 +787,7 @@
           'badge' => number_format($weekRevenue / 1000000, 1) . 'M hafta',
           'label' => "Bugungi to'langan aylanma",
           'value' => number_format($todayRevenue / 1000000, 2) . 'M',
-          'meta' => "Faqat paid bo‘lgan buyurtmalar summasi. Real oqim kayfiyatini shu yaxshi ko‘rsatadi.",
+          'meta' => "Paid buyurtmalar summasi.",
           'footer_left' => "AOV: " . number_format($avgOrderValue),
           'footer_right' => "Profit: " . number_format($platformProfitMonth / 1000) . 'K',
       ],
@@ -751,60 +795,22 @@
 ?>
 
 <div class="dash-stage">
-  <section class="dash-hero">
+  <section class="dash-ops-header">
     <div>
-      <span class="dash-hero__eyebrow">A122 control room</span>
-      <div class="dash-hero__title"><?php echo e($dashMoment); ?>, jamoa. Bugungi operatsion manzara shu yerda.</div>
-      <div class="dash-hero__subtitle">
-        Dashboard endi faqat raqamlar ombori emas, balki qayerga birinchi qarash kerakligini aytib beradigan boshqaruv paneli.
-        Buyurtma oqimi, foydalanuvchi ritmi, payout navbati va biznes signal bir sahifada, ortiqcha stresssiz o‘qiladi.
-      </div>
-
-      <div class="dash-chip-row">
-        <?php $__currentLoopData = $heroChips; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$icon, $text]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-          <span class="dash-chip"><i class="bi <?php echo e($icon); ?>"></i><?php echo e($text); ?></span>
+      <h2 class="dash-ops-header__title">Dashboard</h2>
+      <div class="dash-ops-header__meta">
+        <?php $__currentLoopData = $opsHeaderPills; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$icon, $text]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+          <span class="dash-ops-pill"><i class="bi <?php echo e($icon); ?>"></i><?php echo e($text); ?></span>
         <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
       </div>
-
-      <div class="dash-hero__actions">
-        <a href="<?php echo e(route('admin.dashboard.live')); ?>" class="dash-btn dash-btn--dark" target="_blank">
-          <i class="bi bi-broadcast-pin"></i> Live monitor
-        </a>
-        <a href="<?php echo e(route('admin.dashboard',['clear_cache'=>1])); ?>" class="dash-btn dash-btn--light">
-          <i class="bi bi-arrow-clockwise"></i> Snapshotni yangilash
-        </a>
-      </div>
     </div>
-
-    <div class="dash-hero-side">
-      <div class="dash-status-box">
-        <div class="dash-status-box__label">Bugungi fokus</div>
-        <div class="dash-status-box__value"><?php echo e($dashFocusTitle); ?></div>
-        <div class="dash-status-box__meta"><?php echo e($dashFocusMeta); ?></div>
-      </div>
-
-      <div class="dash-side-grid">
-        <div class="dash-side-stat">
-          <div class="dash-side-stat__label">Yakunlanish</div>
-          <div class="dash-side-stat__value"><?php echo e($completionRate); ?>%</div>
-          <div class="dash-side-stat__meta">Mijoz qabul qildi statusiga yetib borgan buyurtmalar ulushi.</div>
-        </div>
-        <div class="dash-side-stat">
-          <div class="dash-side-stat__label">Seller navbati</div>
-          <div class="dash-side-stat__value"><?php echo e(number_format($pendingSellers)); ?></div>
-          <div class="dash-side-stat__meta">Tasdiq yoki ko‘rib chiqishni kutayotgan do‘kon arizalari.</div>
-        </div>
-        <div class="dash-side-stat">
-          <div class="dash-side-stat__label">Haftalik aylanma</div>
-          <div class="dash-side-stat__value"><?php echo e(number_format($weekRevenue / 1000000, 1)); ?>M</div>
-          <div class="dash-side-stat__meta">Joriy hafta paid oqimining tez o‘qiladigan snapshoti.</div>
-        </div>
-        <div class="dash-side-stat">
-          <div class="dash-side-stat__label">Izolyat userlar</div>
-          <div class="dash-side-stat__value"><?php echo e(number_format($isolatedUsers)); ?></div>
-          <div class="dash-side-stat__meta">30+ kun faol bo‘lmagan userlar segmenti.</div>
-        </div>
-      </div>
+    <div class="dash-ops-header__actions">
+      <a href="<?php echo e(route('admin.dashboard.live')); ?>" class="dash-btn dash-btn--dark" target="_blank">
+        <i class="bi bi-broadcast-pin"></i> Live
+      </a>
+      <a href="<?php echo e(route('admin.dashboard',['clear_cache'=>1])); ?>" class="dash-btn dash-btn--light">
+        <i class="bi bi-arrow-clockwise"></i> Yangilash
+      </a>
     </div>
   </section>
 
@@ -854,11 +860,10 @@
 
   <?php if(count($dashQuick)): ?>
     <section class="dash-surface">
-      <div class="dash-panel-head">
+          <div class="dash-panel-head">
         <div>
           <div class="dash-panel-head__eyebrow">Quick actions</div>
-          <div class="dash-panel-head__title">Eng ko‘p ishlatiladigan yo‘llar shu yerda</div>
-          <div class="dash-panel-head__meta">Operator miyasi chalg‘imasligi uchun adminning eng issiq bo‘limlari alohida ajratildi.</div>
+          <div class="dash-panel-head__title">Tezkor bo‘limlar</div>
         </div>
       </div>
       <div class="dash-quick-grid">

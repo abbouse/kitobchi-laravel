@@ -98,7 +98,7 @@
                 title="{{ $item['label'] }}"
                 class="nav-link {{ $active ? 'active' : '' }}">
                 <span class="kc-sidebar__icon"><i class="bi bi-{{ $item['icon'] }}"></i></span>
-                <span class="text-truncate">{{ $item['label'] }}</span>
+                <span class="kc-sidebar__label">{{ $item['label'] }}</span>
               </a>
             @endforeach
           </nav>

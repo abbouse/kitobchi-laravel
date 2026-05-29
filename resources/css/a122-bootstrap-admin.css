@@ -632,6 +632,38 @@ body.a122-login-body {
   border-radius: 999px;
 }
 
+.kc-inline-code {
+  display: inline-flex;
+  align-items: center;
+  max-width: 14rem;
+  padding: 0.25rem 0.55rem;
+  overflow: hidden;
+  border: 1px solid var(--kc-border);
+  border-radius: 0.5rem;
+  background: var(--kc-surface-soft);
+  color: var(--kc-accent);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kc-copy-toast {
+  position: fixed;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  z-index: 9999;
+  border: 1px solid var(--kc-border);
+  border-radius: 0.75rem;
+  background: var(--kc-surface);
+  box-shadow: var(--kc-shadow-lg);
+  color: var(--kc-success);
+  font-size: 0.85rem;
+  font-weight: 800;
+  padding: 0.65rem 0.9rem;
+}
+
 .kc-list-shell {
   display: grid;
   gap: 0.95rem;
@@ -3635,4 +3667,67 @@ body.kc-admin-body {
 .dark .kc-admin-body .btn-p.primary,
 .dark .kc-admin-body .btn-p.success {
   color: #fff !important;
+}
+
+/* Phase 1 shell correction: readable sidebar, no horizontal menu scroll */
+.kc-sidebar {
+  width: 292px !important;
+  min-width: 292px !important;
+  max-width: 292px;
+  overflow-x: hidden;
+}
+
+.kc-sidebar__surface,
+.kc-sidebar__scroll,
+.kc-sidebar__nav,
+.kc-sidebar__group {
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+.kc-sidebar__nav .nav-link {
+  align-items: flex-start;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.kc-sidebar__label {
+  display: -webkit-box;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  color: inherit;
+  line-height: 1.25;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.kc-sidebar__icon {
+  margin-top: 0.02rem;
+}
+
+.kc-sidebar__workspace-title,
+.kc-sidebar__workspace-meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (min-width: 992px) {
+  .kc-shell.sidebar-collapsed .kc-sidebar {
+    width: 84px !important;
+    min-width: 84px !important;
+    max-width: 84px;
+  }
+
+  .kc-shell.sidebar-collapsed .kc-sidebar__label,
+  .kc-shell.sidebar-collapsed .kc-sidebar__shop-link span:last-child {
+    display: none !important;
+  }
+
+  .kc-shell.sidebar-collapsed .kc-sidebar__nav .nav-link {
+    align-items: center;
+  }
 }

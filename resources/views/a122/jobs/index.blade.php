@@ -3,125 +3,114 @@
 @section('page-title', 'Vakansiyalar')
 
 @section('content')
-<x-a122.page-header>
-    <x-slot name="heading">Vakansiyalar</x-slot>
-    <x-slot name="meta">Ommaviy sahifa: <a href="{{ route('careers.index') }}" target="_blank" rel="noopener" class="text-[var(--p-accent)]">/careers</a></x-slot>
-</x-a122.page-header>
+<div class="d-flex flex-column gap-4">
+  <x-admin.page-header eyebrow="Content" title="Vakansiyalar" subtitle="{{ $vacancies->total() }} ta yozuv">
+    <form method="GET" class="kc-search flex-grow-1" style="max-width: 26rem;">
+      <input type="hidden" name="tab" value="{{ $tab }}">
+      <i class="bi bi-search kc-search__icon"></i>
+      <input type="search" name="search" value="{{ request('search') }}" placeholder="Lavozim, joy yoki tur" class="form-control">
+    </form>
+    <a href="{{ route('careers.index') }}" target="_blank" rel="noopener" class="btn btn-light border">Careers</a>
+    <a href="{{ route('admin.jobs.create') }}" class="btn-p primary">
+      <i class="bi bi-plus-lg"></i>
+      <span>Qo‘shish</span>
+    </a>
+  </x-admin.page-header>
 
-<div class="a122-index-header">
-    <div>
-        <div class="a122-index-header__title">Vakansiyalar ro‘yxati</div>
-        <div class="a122-index-header__meta">{{ $vacancies->total() }} ta e’lon topildi</div>
-    </div>
-    <div class="a122-index-header__actions">
-        <form method="GET" class="a122-index-search-form">
-            <input type="hidden" name="tab" value="{{ $tab }}">
-            <i class="bi bi-search"></i>
-            <input type="search" name="search" value="{{ request('search') }}" placeholder="Lavozim, joylashuv yoki tur bo‘yicha qidiring">
-        </form>
-        <a href="{{ route('admin.jobs.create') }}" class="btn-p primary">
-            <i class="bi bi-plus-lg"></i> Yangi vakansiya
-        </a>
-    </div>
-</div>
+  @if(session('success'))
+    <div class="alert alert-success border-0 mb-0">{{ session('success') }}</div>
+  @endif
 
-<div class="tab-pills fade-up mb-3">
-    @foreach([
+  <div class="kc-filter-card">
+    <div class="nav nav-pills flex-wrap">
+      @foreach([
         'active' => ['Faol', $counts['active'] ?? 0],
         'inactive' => ['Yashirin', $counts['inactive'] ?? 0],
         'all' => ['Barchasi', $counts['all'] ?? 0],
-    ] as $key => [$label, $count])
-        <a href="{{ request()->fullUrlWithQuery(['tab' => $key, 'page' => null]) }}" class="tab-pill {{ $tab === $key ? 'active' : '' }}">
-            {{ $label }} <span>{{ $count }}</span>
+      ] as $key => [$label, $count])
+        <a href="{{ request()->fullUrlWithQuery(['tab' => $key, 'page' => null]) }}" class="nav-link {{ $tab === $key ? 'active' : '' }}">
+          {{ $label }}
+          <span class="badge rounded-pill {{ $tab === $key ? 'text-bg-light' : 'text-bg-secondary' }}">{{ number_format($count) }}</span>
         </a>
-    @endforeach
-</div>
-
-@if(session('success'))
-    <div class="mb-3 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-200">
-        {{ session('success') }}
+      @endforeach
     </div>
-@endif
+  </div>
 
-<div class="p-card p-0">
-    <div class="table-responsive kc-twrap">
-        <table class="p-table" data-index-grid>
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th class="w-10"></th>
-                    <th>Nomi</th>
-                    <th>Turi</th>
-                    <th>Joy</th>
-                    <th>Tartib</th>
-                    <th>Holat</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($vacancies as $row)
-                    @php
-                        $ic = $row->resolvedIcon();
-                        $bi = match ($ic) {
-                            'code' => 'code-slash',
-                            'palette' => 'palette-fill',
-                            'shop' => 'shop',
-                            'megaphone' => 'megaphone-fill',
-                            'people' => 'people-fill',
-                            'chart' => 'graph-up-arrow',
-                            default => 'briefcase-fill',
-                        };
-                    @endphp
-                    <tr>
-                        <td class="p-td-id">{{ $row->id }}</td>
-                        <td class="text-center text-slate-400" title="{{ \App\Models\Vacancy::iconOptions()[$ic] ?? '' }}">
-                            <i class="bi bi-{{ $bi }}"></i>
-                        </td>
-                        <td class="p-td-strong">{{ $row->title }}</td>
-                        <td class="p-td-muted">{{ $row->contract_type ?: '—' }}</td>
-                        <td class="p-td-muted">{{ $row->location ?: '—' }}</td>
-                        <td>{{ $row->sort_order }}</td>
-                        <td>
-                            <span class="s-pill {{ $row->is_active ? 'success' : 'muted' }}">
-                                {{ $row->is_active ? 'Faol' : 'Yashirin' }}
-                            </span>
-                        </td>
-                        <td>
-                            <div class="flex gap-1">
-                                <a href="{{ route('admin.jobs.edit', $row) }}" class="btn-p ghost sm">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
-                                <form method="POST" action="{{ route('admin.jobs.toggle', $row) }}" class="inline">
-                                    @csrf
-                                    @method('PATCH')
-                                    <button type="submit" class="btn-p ghost sm" title="Ko‘rinishni almashtirish">
-                                        <i class="bi bi-{{ $row->is_active ? 'eye-slash' : 'eye' }}"></i>
-                                    </button>
-                                </form>
-                                <form method="POST" action="{{ route('admin.jobs.destroy', $row) }}"
-                                      class="inline" onsubmit="return confirm('O‘chirilsinmi?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn-p ghost sm text-red-400">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="8" class="text-center py-8 text-[var(--p-hint)]">
-                            Hozircha vakansiya yo‘q. «Yangi vakansiya» tugmasidan qo‘shing.
-                        </td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
+  <x-admin.section-card title="Vakansiyalar jadvali" :meta="$vacancies->total() . ' ta yozuv'">
+    <div class="kc-table-shell table-responsive">
+      <table class="table align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>ID</th>
+            <th></th>
+            <th>Nomi</th>
+            <th>Turi</th>
+            <th>Joy</th>
+            <th>Tartib</th>
+            <th>Holat</th>
+            <th class="text-end">Amallar</th>
+          </tr>
+        </thead>
+        <tbody>
+          @forelse($vacancies as $row)
+            @php
+              $icon = $row->resolvedIcon();
+              $bi = match ($icon) {
+                'code' => 'code-slash',
+                'palette' => 'palette-fill',
+                'shop' => 'shop',
+                'megaphone' => 'megaphone-fill',
+                'people' => 'people-fill',
+                'chart' => 'graph-up-arrow',
+                default => 'briefcase-fill',
+              };
+            @endphp
+            <tr>
+              <td class="text-secondary">#{{ $row->id }}</td>
+              <td class="text-secondary" title="{{ \App\Models\Vacancy::iconOptions()[$icon] ?? '' }}"><i class="bi bi-{{ $bi }}"></i></td>
+              <td class="fw-semibold">{{ $row->title }}</td>
+              <td class="text-secondary">{{ $row->contract_type ?: '—' }}</td>
+              <td class="text-secondary">{{ $row->location ?: '—' }}</td>
+              <td>{{ $row->sort_order }}</td>
+              <td>
+                @if($row->is_active)
+                  <span class="badge rounded-pill text-bg-success-subtle border border-success-subtle text-success-emphasis">Faol</span>
+                @else
+                  <span class="badge rounded-pill text-bg-secondary">Yashirin</span>
+                @endif
+              </td>
+              <td class="text-end">
+                <div class="d-inline-flex align-items-center justify-content-end gap-1">
+                  <a href="{{ route('admin.jobs.edit', $row) }}" class="btn btn-sm btn-light border kc-table-action" title="Tahrirlash">
+                    <i class="bi bi-pencil"></i>
+                  </a>
+                  <form method="POST" action="{{ route('admin.jobs.toggle', $row) }}">
+                    @csrf
+                    @method('PATCH')
+                    <button type="submit" class="btn btn-sm btn-light border kc-table-action" title="Ko‘rinishni almashtirish">
+                      <i class="bi bi-{{ $row->is_active ? 'eye-slash' : 'eye' }}"></i>
+                    </button>
+                  </form>
+                  <form method="POST" action="{{ route('admin.jobs.destroy', $row) }}" onsubmit="return confirm('O‘chirilsinmi?');">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="btn btn-sm btn-light border kc-table-action text-danger" title="O‘chirish">
+                      <i class="bi bi-trash3"></i>
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          @empty
+            <tr><td colspan="8" class="text-center py-5 text-secondary">Vakansiya topilmadi.</td></tr>
+          @endforelse
+        </tbody>
+      </table>
     </div>
-</div>
+  </x-admin.section-card>
 
-@if($vacancies->hasPages())
-    <div class="mt-4">{{ $vacancies->links('a122.partials.pagination') }}</div>
-@endif
+  @if($vacancies->hasPages())
+    <div>{{ $vacancies->links('a122.partials.pagination') }}</div>
+  @endif
+</div>
 @endsection

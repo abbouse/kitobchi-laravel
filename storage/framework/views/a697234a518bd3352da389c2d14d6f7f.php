@@ -98,7 +98,7 @@
                 title="<?php echo e($item['label']); ?>"
                 class="nav-link <?php echo e($active ? 'active' : ''); ?>">
                 <span class="kc-sidebar__icon"><i class="bi bi-<?php echo e($item['icon']); ?>"></i></span>
-                <span class="text-truncate"><?php echo e($item['label']); ?></span>
+                <span class="kc-sidebar__label"><?php echo e($item['label']); ?></span>
               </a>
             <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
           </nav>

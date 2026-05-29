@@ -3,125 +3,106 @@
 @section('page-title', 'Promokodlar')
 
 @section('content')
-
-<div class="a122-index-header">
-  <div>
-    <div class="a122-index-header__title">Promokodlar ro'yxati</div>
-    <div class="a122-index-header__meta">{{ $promocodes->total() }} ta promokod topildi</div>
-  </div>
-  <div class="a122-index-header__actions">
-    <form method="GET" class="a122-index-search-form">
+<div class="d-flex flex-column gap-4">
+  <x-admin.page-header eyebrow="Commerce" title="Promokodlar" subtitle="{{ $promocodes->total() }} ta yozuv">
+    <form method="GET" class="kc-search flex-grow-1" style="max-width: 24rem;">
       <input type="hidden" name="tab" value="{{ $tab }}">
-      <i class="bi bi-search"></i>
-      <input type="search" name="search" value="{{ request('search') }}" placeholder="Kod yoki ID bo'yicha qidiring">
+      <i class="bi bi-search kc-search__icon"></i>
+      <input type="search" name="search" value="{{ request('search') }}" placeholder="Kod yoki ID" class="form-control">
     </form>
     <a href="{{ route('admin.promocodes.create') }}" class="btn-p primary">
-      <i class="bi bi-plus-lg"></i> Yangi promokod
+      <i class="bi bi-plus-lg"></i>
+      <span>Qo‘shish</span>
     </a>
-  </div>
-</div>
+  </x-admin.page-header>
 
-<div class="tab-pills fade-up mb-3">
-  @foreach([['all','Barchasi'],['active','Aktiv'],['expired','Muddati o\'tgan']] as [$k,$l])
-  <a href="{{ request()->fullUrlWithQuery(['tab'=>$k,'page'=>1]) }}"
-     class="tab-pill {{ $tab===$k?'active':'' }}">
-    {{ $l }} <span class="tab-badge">{{ $counts[$k] }}</span>
-  </a>
-  @endforeach
-</div>
-
-<div class="p-card p-0">
-  <div class="table-responsive kc-twrap">
-    <table class="p-table" data-index-grid>
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Kod</th>
-          <th>Tur</th>
-          <th>Miqdor</th>
-          <th>Min. buyurtma</th>
-          <th>Limit / Ishlatildi</th>
-          <th>Muddat</th>
-          <th>Status</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        @forelse($promocodes as $p)
-        @php
-          $expired = $p->expires_at <= now();
-          $full    = $p->usesLimit > 0 && $p->usedCount >= $p->usesLimit;
-        @endphp
-        <tr>
-          <td style="font-family:'JetBrains Mono',monospace;color:var(--p-accent)">{{ $p->id }}</td>
-          <td>
-            <code style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;
-                         color:var(--p-text);background:var(--p-elevated);
-                         padding:3px 10px;border-radius:6px;letter-spacing:.05em">
-              {{ $p->code }}
-            </code>
-          </td>
-          <td>
-            <span class="s-pill {{ $p->type==='percent'?'info':'accent' }}">
-              {{ $p->type==='percent' ? 'Foiz (%)' : 'Miqdor (UZS)' }}
-            </span>
-          </td>
-          <td style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;color:var(--p-text)">
-            {{ $p->type==='percent' ? $p->amount.'%' : number_format($p->amount).' UZS' }}
-          </td>
-          <td style="font-size:12px;color:var(--p-muted)">
-            {{ $p->min_order_amount > 0 ? number_format($p->min_order_amount).' UZS' : '—' }}
-          </td>
-          <td>
-            @if($p->usesLimit > 0)
-              <div style="font-family:'JetBrains Mono',monospace;font-size:12px">
-                <span style="color:{{ $full?'var(--p-danger)':'var(--p-text)' }}">{{ $p->usedCount }}</span>
-                / {{ $p->usesLimit }}
-              </div>
-              <div class="dash-prog-track" style="margin-top:4px">
-                <div class="dash-prog-fill" style="width:{{ min(round($p->usedCount/$p->usesLimit*100),100) }}%;
-                     background:{{ $full?'var(--p-danger)':'var(--p-accent)' }}"></div>
-              </div>
-            @else
-              <span style="font-size:12px;color:var(--p-hint)">{{ $p->usedCount }} / ∞</span>
-            @endif
-          </td>
-          <td style="font-size:12px;white-space:nowrap">
-            <span style="color:{{ $expired?'var(--p-danger)':'var(--p-muted)' }}">
-              {{ \Carbon\Carbon::parse($p->expires_at)->format('d.m.Y H:i') }}
-            </span>
-            @if($expired)
-              <div style="font-size:10px;color:var(--p-danger)">Muddati o'tgan</div>
-            @endif
-          </td>
-          <td>
-            <span class="s-pill {{ $p->status && !$expired && !$full ? 'success' : 'muted' }}">
-              {{ $p->status && !$expired && !$full ? 'Aktiv' : 'Nofaol' }}
-            </span>
-          </td>
-          <td>
-            <div class="flex gap-1">
-              <a href="{{ route('admin.promocodes.show', $p) }}" class="btn-p ghost sm"><i class="bi bi-eye"></i></a>
-              <a href="{{ route('admin.promocodes.edit', $p) }}" class="btn-p ghost sm"><i class="bi bi-pencil"></i></a>
-              <form method="POST" action="{{ route('admin.promocodes.destroy', $p) }}"
-                    onsubmit="return confirm('O\'chirilsinmi?')">
-                @csrf @method('DELETE')
-                <button class="btn-p danger sm"><i class="bi bi-trash"></i></button>
-              </form>
-            </div>
-          </td>
-        </tr>
-        @empty
-        <tr><td colspan="9" style="text-align:center;padding:40px;color:var(--p-hint)">
-          <i class="bi bi-ticket-perforated" style="font-size:32px;display:block;margin-bottom:8px"></i>
-          Promokodlar topilmadi
-        </td></tr>
-        @endforelse
-      </tbody>
-    </table>
+  <div class="kc-filter-card">
+    <div class="nav nav-pills flex-wrap">
+      @foreach([['all', 'Barchasi'], ['active', 'Faol'], ['expired', 'Muddati o‘tgan']] as [$key, $label])
+        <a href="{{ request()->fullUrlWithQuery(['tab' => $key, 'page' => null]) }}" class="nav-link {{ $tab === $key ? 'active' : '' }}">
+          {{ $label }}
+          <span class="badge rounded-pill {{ $tab === $key ? 'text-bg-light' : 'text-bg-secondary' }}">{{ number_format($counts[$key] ?? 0) }}</span>
+        </a>
+      @endforeach
+    </div>
   </div>
+
+  <x-admin.section-card title="Promokodlar jadvali" :meta="$promocodes->total() . ' ta yozuv'">
+    <div class="kc-table-shell table-responsive">
+      <table class="table align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>ID</th>
+            <th>Kod</th>
+            <th>Tur</th>
+            <th>Miqdor</th>
+            <th>Min. buyurtma</th>
+            <th>Limit</th>
+            <th>Muddat</th>
+            <th>Status</th>
+            <th class="text-end">Amallar</th>
+          </tr>
+        </thead>
+        <tbody>
+          @forelse($promocodes as $promo)
+            @php
+              $expired = $promo->expires_at <= now();
+              $full = $promo->usesLimit > 0 && $promo->usedCount >= $promo->usesLimit;
+              $isActive = $promo->status && !$expired && !$full;
+            @endphp
+            <tr>
+              <td class="text-secondary">#{{ $promo->id }}</td>
+              <td><code class="kc-inline-code">{{ $promo->code }}</code></td>
+              <td>
+                <span class="badge rounded-pill {{ $promo->type === 'percent' ? 'text-bg-info-subtle border border-info-subtle text-info-emphasis' : 'text-bg-primary-subtle border border-primary-subtle text-primary-emphasis' }}">
+                  {{ $promo->type === 'percent' ? 'Foiz' : 'Miqdor' }}
+                </span>
+              </td>
+              <td class="fw-semibold">{{ $promo->type === 'percent' ? $promo->amount . '%' : number_format($promo->amount) . ' UZS' }}</td>
+              <td class="text-secondary">{{ $promo->min_order_amount > 0 ? number_format($promo->min_order_amount) . ' UZS' : '—' }}</td>
+              <td>
+                @if($promo->usesLimit > 0)
+                  <span class="{{ $full ? 'text-danger' : '' }}">{{ $promo->usedCount }}</span> / {{ $promo->usesLimit }}
+                @else
+                  <span class="text-secondary">{{ $promo->usedCount }} / ∞</span>
+                @endif
+              </td>
+              <td class="{{ $expired ? 'text-danger' : 'text-secondary' }} text-nowrap">{{ \Carbon\Carbon::parse($promo->expires_at)->format('d.m.Y H:i') }}</td>
+              <td>
+                @if($isActive)
+                  <span class="badge rounded-pill text-bg-success-subtle border border-success-subtle text-success-emphasis">Faol</span>
+                @else
+                  <span class="badge rounded-pill text-bg-secondary">Nofaol</span>
+                @endif
+              </td>
+              <td class="text-end">
+                <div class="d-inline-flex align-items-center justify-content-end gap-1">
+                  <a href="{{ route('admin.promocodes.show', $promo) }}" class="btn btn-sm btn-light border kc-table-action" title="Ko‘rish">
+                    <i class="bi bi-eye"></i>
+                  </a>
+                  <a href="{{ route('admin.promocodes.edit', $promo) }}" class="btn btn-sm btn-light border kc-table-action" title="Tahrirlash">
+                    <i class="bi bi-pencil"></i>
+                  </a>
+                  <form method="POST" action="{{ route('admin.promocodes.destroy', $promo) }}" onsubmit="return confirm('O‘chirilsinmi?')">
+                    @csrf
+                    @method('DELETE')
+                    <button class="btn btn-sm btn-light border kc-table-action text-danger" title="O‘chirish">
+                      <i class="bi bi-trash3"></i>
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          @empty
+            <tr><td colspan="9" class="text-center py-5 text-secondary">Promokod topilmadi.</td></tr>
+          @endforelse
+        </tbody>
+      </table>
+    </div>
+  </x-admin.section-card>
+
   @if($promocodes->hasPages())
-  {{ $promocodes->links('a122.partials.pagination') }}
+    <div>{{ $promocodes->links('a122.partials.pagination') }}</div>
   @endif
 </div>
 @endsection

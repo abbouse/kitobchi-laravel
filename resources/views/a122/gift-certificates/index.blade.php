@@ -1,245 +1,183 @@
 @extends('a122.layouts.admin')
-@section('title', 'Gift Sertifikatlar')
-@section('page-title', 'Gift Sertifikatlar')
+@section('title', 'Gift sertifikatlar')
+@section('page-title', 'Gift sertifikatlar')
 
 @section('content')
-
-<div class="a122-index-header">
-  <div>
-    <div class="a122-index-header__title">Gift sertifikatlar</div>
-    <div class="a122-index-header__meta">{{ $certs->total() }} ta sertifikat topildi</div>
-  </div>
-  <div class="a122-index-header__actions">
-    <form method="GET" class="a122-index-search-form">
+<div class="d-flex flex-column gap-4">
+  <x-admin.page-header eyebrow="Commerce" title="Gift sertifikatlar" subtitle="{{ $certs->total() }} ta yozuv">
+    <form method="GET" class="kc-search flex-grow-1" style="max-width: 26rem;">
       <input type="hidden" name="tab" value="{{ $tab }}">
-      <i class="bi bi-search"></i>
-      <input type="search" name="search" value="{{ request('search') }}" placeholder="Kod, telefon yoki ism bo'yicha qidiring">
+      <i class="bi bi-search kc-search__icon"></i>
+      <input type="search" name="search" value="{{ request('search') }}" placeholder="Kod, telefon yoki ism" class="form-control">
     </form>
-  </div>
-</div>
+  </x-admin.page-header>
 
-<div class="grid grid-cols-1 xl:grid-cols-12 gap-3 mb-4">
-  <div class="xl:col-span-7">
-    <div class="p-card">
-      <div class="p-card-header">
-        <div>
-          <div class="p-card-title">Gift sertifikat tariflari</div>
-          <div class="p-card-sub">Foydalanuvchiga sotuvda ko‘rinadigan nominal variantlar.</div>
-        </div>
-      </div>
-      <form method="POST" action="{{ route('admin.gift-certificates.options') }}" style="padding:0 18px 18px">
-        @csrf
-        @method('PUT')
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+  <div class="row g-3">
+    <div class="col-12 col-xl-7">
+      <x-admin.section-card title="Tariflar" meta="Nominal variantlar">
+        <form method="POST" action="{{ route('admin.gift-certificates.options') }}" class="row g-3">
+          @csrf
+          @method('PUT')
           @for($i = 0; $i < 4; $i++)
-            <div>
-              <label class="p-form-label">Variant {{ $i + 1 }}</label>
+            <div class="col-12 col-md-3">
+              <label class="form-label">Variant {{ $i + 1 }}</label>
               <input
                 type="number"
                 name="options[]"
-                class="p-form-control"
+                class="form-control"
                 min="1000"
                 step="1000"
                 value="{{ old("options.$i", $giftCertificateOptions[$i] ?? '') }}"
                 placeholder="300000">
             </div>
           @endfor
+          <div class="col-12 d-flex justify-content-end">
+            <button type="submit" class="btn-p primary">
+              <i class="bi bi-floppy"></i>
+              <span>Saqlash</span>
+            </button>
+          </div>
+        </form>
+      </x-admin.section-card>
+    </div>
+    <div class="col-12 col-xl-5">
+      <x-admin.section-card title="Faol nominal" meta="{{ count($giftCertificateOptions) }} ta variant">
+        <div class="d-flex flex-wrap gap-2">
+          @forelse($giftCertificateOptions as $amount)
+            <span class="badge rounded-pill text-bg-info-subtle border border-info-subtle text-info-emphasis">{{ number_format($amount) }} UZS</span>
+          @empty
+            <span class="text-secondary">Variant yo‘q.</span>
+          @endforelse
         </div>
-        <div style="font-size:12px;color:var(--p-hint);margin-top:10px">
-          Bo‘sh qoldirilgan maydonlar saqlanmaydi, takrorlar avtomatik tozalanadi.
-        </div>
-        <div class="flex justify-end mt-3">
-          <button type="submit" class="btn-p primary">
-            <i class="bi bi-floppy-fill"></i> Tariflarni saqlash
-          </button>
-        </div>
-      </form>
+      </x-admin.section-card>
     </div>
   </div>
-  <div class="xl:col-span-5">
-    <div class="p-card">
-      <div class="p-card-header">
-        <div class="p-card-title">Faol nominal variantlar</div>
+
+  <div class="row g-3">
+    @foreach([
+      ['Jami', $counts['all'] ?? 0, 'bi-gift', 'primary'],
+      ['Faol', $counts['active'] ?? 0, 'bi-send', 'info'],
+      ['Ishlatilgan', $counts['used'] ?? 0, 'bi-check-circle', 'success'],
+      ['Bekor', $counts['cancelled'] ?? 0, 'bi-x-circle', 'danger'],
+    ] as [$label, $value, $icon, $tone])
+      <div class="col-6 col-xl-3">
+        <div class="a122-stat-tile h-100">
+          <div class="a122-stat-tile__icon bg-{{ $tone }}-subtle text-{{ $tone }}">
+            <i class="bi {{ $icon }}"></i>
+          </div>
+          <div>
+            <div class="a122-stat-tile__value">{{ number_format($value) }}</div>
+            <div class="a122-stat-tile__label">{{ $label }}</div>
+          </div>
+        </div>
       </div>
-      <div style="padding:0 18px 18px;display:flex;flex-wrap:wrap;gap:8px">
-        @foreach($giftCertificateOptions as $amount)
-          <span class="s-pill accent">{{ number_format($amount) }} UZS</span>
-        @endforeach
-      </div>
+    @endforeach
+  </div>
+
+  <div class="kc-filter-card">
+    <div class="nav nav-pills flex-wrap">
+      @foreach([
+        'all' => ['Barchasi', $counts['all'] ?? 0],
+        'pending_payment' => ['Kutilmoqda', $counts['pending_payment'] ?? 0],
+        'active' => ['Faol', $counts['active'] ?? 0],
+        'used' => ['Ishlatilgan', $counts['used'] ?? 0],
+        'cancelled' => ['Bekor qilingan', $counts['cancelled'] ?? 0],
+      ] as $key => [$label, $count])
+        <a href="{{ request()->fullUrlWithQuery(['tab' => $key, 'page' => null]) }}" class="nav-link {{ $tab === $key ? 'active' : '' }}">
+          {{ $label }}
+          <span class="badge rounded-pill {{ $tab === $key ? 'text-bg-light' : 'text-bg-secondary' }}">{{ number_format($count) }}</span>
+        </a>
+      @endforeach
     </div>
   </div>
-</div>
 
-{{-- Stats --}}
-<div class="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-4">
-  @foreach([
-    ['Jami',        $counts['all'],             'accent',  'bi-gift'],
-    ['Faol',        $counts['active'],          'info',    'bi-send'],
-    ['Ishlatilgan', $counts['used'],             'success', 'bi-check-circle'],
-    ['Bekor',       $counts['cancelled'],        'danger',  'bi-x-circle'],
-  ] as [$l,$v,$c,$i])
-  <div class="">
-    <div class="p-card flex items-center gap-3" style="padding:14px">
-      <div style="width:36px;height:36px;border-radius:9px;flex-shrink:0;font-size:16px;
-                  background:var(--p-{{ $c }}-d,var(--p-elevated));color:var(--p-{{ $c }});
-                  display:flex;align-items:center;justify-content:center">
-        <i class="bi {{ $i }}"></i>
-      </div>
-      <div>
-        <div style="font-size:19px;font-weight:700;font-family:'JetBrains Mono',monospace;
-                    color:var(--p-{{ $c }})">{{ $v }}</div>
-        <div style="font-size:10px;color:var(--p-hint);text-transform:uppercase;
-                    letter-spacing:.07em">{{ $l }}</div>
-      </div>
+  <x-admin.section-card title="Sertifikatlar jadvali" :meta="$certs->total() . ' ta yozuv'">
+    <div class="kc-table-shell table-responsive">
+      <table class="table align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Kod</th>
+            <th>Sotib olgan</th>
+            <th>Qabul qiluvchi</th>
+            <th class="text-end">Miqdor</th>
+            <th>Holat</th>
+            <th>Sana</th>
+            <th class="text-end">Amallar</th>
+          </tr>
+        </thead>
+        <tbody>
+          @forelse($certs as $cert)
+            @php
+              $statusClass = match($cert->status) {
+                'active', 'sent' => 'text-bg-success-subtle border border-success-subtle text-success-emphasis',
+                'used' => 'text-bg-secondary',
+                'paid' => 'text-bg-info-subtle border border-info-subtle text-info-emphasis',
+                'cancelled', 'payment_cancelled' => 'text-bg-danger-subtle border border-danger-subtle text-danger-emphasis',
+                default => 'text-bg-warning-subtle border border-warning-subtle text-warning-emphasis',
+              };
+              $statusLabel = match($cert->status) {
+                'pending_payment' => 'To‘lov kutilmoqda',
+                'paid' => 'To‘landi',
+                'active', 'sent' => 'Faol',
+                'used' => 'Ishlatildi',
+                'cancelled' => 'Bekor qilindi',
+                'payment_cancelled' => 'To‘lovsiz bekor',
+                default => $cert->status,
+              };
+            @endphp
+            <tr>
+              <td><code class="kc-inline-code">{{ $cert->code }}</code></td>
+              <td>
+                @if($cert->buyer)
+                  <a href="{{ route('admin.users.show', $cert->buyer_user_id) }}" class="fw-semibold text-decoration-none">
+                    {{ $cert->buyer->name }} {{ $cert->buyer->lastname }}
+                  </a>
+                  <div class="small text-secondary">{{ $cert->buyer->phone_number }}</div>
+                @else
+                  <span class="text-secondary">—</span>
+                @endif
+              </td>
+              <td>
+                @if($cert->recipient)
+                  <a href="{{ route('admin.users.show', $cert->recipient_user_id) }}" class="fw-semibold text-decoration-none">
+                    {{ $cert->recipient->name }}
+                  </a>
+                @elseif($cert->recipient_name || $cert->recipient_phone)
+                  <div>{{ $cert->recipient_name ?: '—' }}</div>
+                  <div class="small text-secondary">{{ $cert->recipient_phone }}</div>
+                @else
+                  <span class="text-secondary">—</span>
+                @endif
+              </td>
+              <td class="text-end fw-semibold">{{ number_format($cert->nominal_uzs) }} UZS</td>
+              <td><span class="badge rounded-pill {{ $statusClass }}">{{ $statusLabel }}</span></td>
+              <td class="text-secondary text-nowrap">{{ $cert->created_at?->format('d.m.Y') }}</td>
+              <td class="text-end">
+                <div class="d-inline-flex align-items-center justify-content-end gap-1">
+                  <a href="{{ route('admin.gift-certificates.show', $cert) }}" class="btn btn-sm btn-light border kc-table-action" title="Ko‘rish">
+                    <i class="bi bi-eye"></i>
+                  </a>
+                  @if(!in_array($cert->status, ['used', 'cancelled']))
+                    <form method="POST" action="{{ route('admin.gift-certificates.cancel', $cert) }}" onsubmit="return confirm('Bekor qilinsinmi?')">
+                      @csrf
+                      <button class="btn btn-sm btn-light border kc-table-action text-danger" title="Bekor qilish">
+                        <i class="bi bi-x-lg"></i>
+                      </button>
+                    </form>
+                  @endif
+                </div>
+              </td>
+            </tr>
+          @empty
+            <tr><td colspan="7" class="text-center py-5 text-secondary">Sertifikat topilmadi.</td></tr>
+          @endforelse
+        </tbody>
+      </table>
     </div>
-  </div>
-  @endforeach
-</div>
+  </x-admin.section-card>
 
-{{-- Tabs --}}
-<div class="tab-pills fade-up mb-3">
-  @foreach([
-    'all'             => ['Barchasi',        $counts['all']],
-    'pending_payment' => ['Kutilmoqda',       $counts['pending_payment']],
-    'active'          => ['Faol',             $counts['active']],
-    'used'            => ['Ishlatilgan',      $counts['used']],
-    'cancelled'       => ['Bekor qilingan',   $counts['cancelled']],
-  ] as $k => [$l, $c])
-  <a href="{{ request()->fullUrlWithQuery(['tab'=>$k,'page'=>1]) }}"
-     class="tab-pill {{ $tab===$k?'active':'' }}">
-    {{ $l }} <span class="tab-count">{{ $c }}</span>
-  </a>
-  @endforeach
-</div>
-
-{{-- Table --}}
-<div class="p-card fade-up">
-  <div class="table-responsive kc-twrap">
-    <table class="p-table" data-index-grid>
-      <thead>
-        <tr>
-          <th>Kod</th>
-          <th>Sotib olgan</th>
-          <th>Qabul qiluvchi</th>
-          <th style="text-align:right">Miqdor</th>
-          <th>Holat</th>
-          <th>Sana</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        @forelse($certs as $c)
-        @php
-          $stCls = match($c->status){
-            'active'           => 'success',
-            'used'             => 'muted',
-            'paid'             => 'info',
-            'sent'             => 'success',
-            'cancelled'        => 'danger',
-            'payment_cancelled'=> 'danger',
-            'pending_payment'  => 'warning',
-            default            => 'warning',
-          };
-          $stLbl = match($c->status){
-            'pending_payment'  => "To'lov kutilmoqda",
-            'paid'             => "To'landi",
-            'active'           => 'Faol',
-            'sent'             => 'Faol',
-            'used'             => 'Ishlatildi',
-            'cancelled'        => 'Bekor qilindi',
-            'payment_cancelled'=> "To'lovsiz bekor",
-            default            => $c->status,   // ← 'default' emas, default keyword
-          };
-        @endphp
-        <tr>
-          <td>
-            <code style="font-family:'JetBrains Mono',monospace;font-size:12px;
-                         font-weight:600;color:var(--p-accent);
-                         background:var(--p-accent-d);padding:2px 8px;border-radius:5px">
-              {{ $c->code }}
-            </code>
-          </td>
-
-          <td>
-            @if($c->buyer)
-            <a href="{{ route('admin.users.show',$c->buyer_user_id) }}"
-               style="font-size:12.5px;color:var(--p-text);text-decoration:none">
-              {{ $c->buyer->name }} {{ $c->buyer->lastname }}
-            </a>
-            <div style="font-size:10px;color:var(--p-hint);font-family:'JetBrains Mono',monospace">
-              {{ $c->buyer->phone_number }}
-            </div>
-            @else
-              <span style="color:var(--p-hint)">—</span>
-            @endif
-          </td>
-
-          <td>
-            @if($c->recipient)
-            <a href="{{ route('admin.users.show',$c->recipient_user_id) }}"
-               style="font-size:12.5px;color:var(--p-text);text-decoration:none">
-              {{ $c->recipient->name }}
-            </a>
-            @elseif($c->recipient_name || $c->recipient_phone)
-            <div style="font-size:12.5px;color:var(--p-muted)">
-              {{ $c->recipient_name }}
-            </div>
-            <div style="font-size:10px;color:var(--p-hint);font-family:'JetBrains Mono',monospace">
-              {{ $c->recipient_phone }}
-            </div>
-            @else
-              <span style="color:var(--p-hint)">—</span>
-            @endif
-          </td>
-
-          <td style="text-align:right;font-family:'JetBrains Mono',monospace;
-                     font-weight:700;color:var(--p-success);font-size:13px">
-            {{ number_format($c->nominal_uzs) }} UZS
-          </td>
-
-          <td><span class="s-pill {{ $stCls }}" style="font-size:10px">{{ $stLbl }}</span></td>
-
-          <td style="font-size:11px;color:var(--p-hint);font-family:'JetBrains Mono',monospace;
-                     white-space:nowrap">
-            {{ $c->created_at?->format('d.m.Y') }}
-          </td>
-
-          <td>
-            <div class="flex gap-1">
-              <a href="{{ route('admin.gift-certificates.show',$c) }}"
-                 class="btn-p ghost sm"><i class="bi bi-eye"></i></a>
-
-              @if(!in_array($c->status,['used','cancelled']))
-              <form method="POST"
-                    action="{{ route('admin.gift-certificates.cancel',$c) }}"
-                    onsubmit="return confirm('Bekor qilinsinmi?')">
-                @csrf
-                <button class="btn-p danger sm"><i class="bi bi-x-lg"></i></button>
-              </form>
-              @endif
-            </div>
-          </td>
-        </tr>
-        @empty
-        <tr>
-          <td colspan="7" style="text-align:center;padding:40px;color:var(--p-hint)">
-            <i class="bi bi-gift" style="font-size:28px;display:block;margin-bottom:8px"></i>
-            Sertifikatlar topilmadi
-          </td>
-        </tr>
-        @endforelse
-      </tbody>
-    </table>
-  </div>
   @if($certs->hasPages())
-  <div class="flex justify-between items-center px-3 py-2"
-       style="border-top:1px solid var(--p-border)">
-    <div style="font-size:12px;color:var(--p-hint)">
-      {{ $certs->firstItem() }}–{{ $certs->lastItem() }} / {{ $certs->total() }}
-    </div>
-    {{ $certs->links('a122.partials.pagination') }}
-  </div>
+    <div>{{ $certs->links('a122.partials.pagination') }}</div>
   @endif
 </div>
-
 @endsection

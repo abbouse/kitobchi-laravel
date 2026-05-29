@@ -17,38 +17,38 @@
       <div class="a122-login-brand__content">
         <div class="a122-login-badge">
           <span class="a122-login-badge__dot"></span>
-          A122 operational workspace
+          A122 admin
         </div>
-        <h1 class="a122-login-brand__title">Bugungi ishlarni bitta sokin markazdan boshqaring</h1>
-        <p class="a122-login-brand__desc">Buyurtmalar, sellerlar, support va moliyaviy oqimlar bir xil ritmda ko‘rinadigan, ortiqcha shovqinsiz boshqaruv muhiti.</p>
+        <h1 class="a122-login-brand__title">Kitobchi Admin</h1>
+        <p class="a122-login-brand__desc">Buyurtmalar, katalog, sellerlar va support uchun ichki panel.</p>
 
         <div class="a122-login-brand__stats">
           <div class="a122-login-stat">
             <div class="a122-login-stat__icon">
               <i data-lucide="shopping-bag" class="w-4 h-4"></i>
             </div>
-            <div class="a122-login-stat__value">Buyurtma ritmi</div>
-            <div class="a122-login-stat__label">to‘lov, yetkazish va holat o‘zgarishlari bitta oqimda ko‘rinadi</div>
+            <div class="a122-login-stat__value">Buyurtmalar</div>
+            <div class="a122-login-stat__label">status va yetkazish</div>
           </div>
           <div class="a122-login-stat">
             <div class="a122-login-stat__icon">
               <i data-lucide="store" class="w-4 h-4"></i>
             </div>
-            <div class="a122-login-stat__value">Seller nazorati</div>
-            <div class="a122-login-stat__label">premium, katalog va ichki operatsiyalar bir qarashda ushlanadi</div>
+            <div class="a122-login-stat__value">Sellerlar</div>
+            <div class="a122-login-stat__label">moderatsiya va payout</div>
           </div>
           <div class="a122-login-stat">
             <div class="a122-login-stat__icon">
               <i data-lucide="messages-square" class="w-4 h-4"></i>
             </div>
-            <div class="a122-login-stat__value">Support va signal</div>
-            <div class="a122-login-stat__label">mijozlar bilan aloqa, shikoyat va community oqimi bir joyda jamlanadi</div>
+            <div class="a122-login-stat__value">Support</div>
+            <div class="a122-login-stat__label">ticket va murojaatlar</div>
           </div>
         </div>
 
         <div class="a122-login-brand__notice">
-          <div class="a122-login-brand__notice-title">Ichki ish muhiti</div>
-          <p>Faqat vakolatli administratorlar uchun. Kirishdan keyin dashboard, moliya va operatsion signal bloklari ixcham boshqaruv maydonida ochiladi.</p>
+          <div class="a122-login-brand__notice-title">Access</div>
+          <p>Faqat vakolatli administratorlar uchun.</p>
         </div>
       </div>
     </div>
@@ -63,7 +63,7 @@
             <span class="theme-icon-dark"><i data-lucide="moon-star" class="w-4.5 h-4.5"></i></span>
           </button>
         </div>
-        <p class="a122-login-sub">Ishchi email va parolni kiriting. Bir necha soniya ichida buyurtmalar, sellerlar va support oqimi ochiladi.</p>
+        <p class="a122-login-sub">Email va parolni kiriting.</p>
       </div>
 
       @if(session('error'))
@@ -114,7 +114,7 @@
 
       <div class="a122-login-help">
         <div class="a122-login-help__title">Kichik eslatma</div>
-        <p>Kirishda muammo bo‘lsa, credential va panel rolingizni tekshiring. Bu maydon faqat ichki jamoa uchun ochiq.</p>
+        <p>Credential yoki rol noto‘g‘ri bo‘lsa, kirish bloklanadi.</p>
       </div>
 
       <div class="a122-login-footer">

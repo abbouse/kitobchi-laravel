@@ -3,155 +3,137 @@
 @section('page-title', 'Kuryerlar')
 
 @section('content')
-@if(session('success'))
-    <div class="mb-4 rounded-lg bg-green-100 text-green-800 dark:bg-green-500/10 dark:text-green-400 px-4 py-3 text-sm font-medium">
-        {{ session('success') }}
-    </div>
-@endif
-@if(session('error'))
-    <div class="mb-4 rounded-lg bg-red-100 text-red-800 dark:bg-red-500/10 dark:text-red-400 px-4 py-3 text-sm font-medium">
-        {{ session('error') }}
-    </div>
-@endif
+@php
+  $tabs = [
+    'all' => ['label' => 'Barchasi', 'count' => $counts['all'] ?? 0],
+    'approved' => ['label' => 'Tasdiqlangan', 'count' => $counts['approved'] ?? 0],
+    'pending' => ['label' => 'Kutilmoqda', 'count' => $counts['pending'] ?? 0],
+    'rejected' => ['label' => 'Rad etilgan', 'count' => $counts['rejected'] ?? 0],
+    'blocked' => ['label' => 'Bloklangan', 'count' => $counts['blocked'] ?? 0],
+  ];
+@endphp
 
-<div class="a122-index-header">
-    <div>
-        <div class="a122-index-header__title">Kuryerlar ro‘yxati</div>
-        <div class="a122-index-header__meta">{{ $couriers->total() }} ta kuryer topildi</div>
-    </div>
-    <div class="a122-index-header__actions">
-        <form method="GET" class="a122-index-search-form">
-            <input type="hidden" name="tab" value="{{ request('tab', 'all') }}">
-            <i class="bi bi-search"></i>
-            <input type="search" name="search" value="{{ request('search') }}" placeholder="Ism, telefon yoki hudud bo‘yicha qidiring">
-        </form>
-        <a href="{{ route('admin.couriers.create') }}" class="btn btn-primary flex items-center gap-2">
-            <i data-lucide="plus" class="w-4 h-4"></i> Yangi kuryer
+<div class="d-flex flex-column gap-4">
+  @if(session('success'))
+    <div class="alert alert-success border-0 mb-0">{{ session('success') }}</div>
+  @endif
+  @if(session('error'))
+    <div class="alert alert-danger border-0 mb-0">{{ session('error') }}</div>
+  @endif
+
+  <x-admin.page-header eyebrow="Operations" title="Kuryerlar" subtitle="{{ $couriers->total() }} ta yozuv">
+    <form method="GET" class="kc-search flex-grow-1" style="max-width: 26rem;">
+      <input type="hidden" name="tab" value="{{ $tab }}">
+      <i class="bi bi-search kc-search__icon"></i>
+      <input type="search" name="search" value="{{ request('search') }}" placeholder="Ism, telefon yoki hudud" class="form-control">
+    </form>
+    <a href="{{ route('admin.couriers.create') }}" class="btn-p primary">
+      <i class="bi bi-plus-lg"></i>
+      <span>Qo‘shish</span>
+    </a>
+  </x-admin.page-header>
+
+  <div class="kc-filter-card">
+    <div class="nav nav-pills flex-wrap">
+      @foreach($tabs as $key => $tabItem)
+        <a href="{{ request()->fullUrlWithQuery(['tab' => $key, 'page' => null]) }}" class="nav-link {{ $tab === $key ? 'active' : '' }}">
+          {{ $tabItem['label'] }}
+          <span class="badge rounded-pill {{ $tab === $key ? 'text-bg-light' : 'text-bg-secondary' }}">{{ number_format($tabItem['count']) }}</span>
         </a>
+      @endforeach
     </div>
-</div>
+  </div>
 
-{{-- Top bar --}}
-<div class="flex items-center justify-between gap-3 mb-4 flex-wrap">
-    {{-- Tabs --}}
-    <div class="flex items-center gap-2 flex-wrap">
-        @php
-            $tabs = [
-                'all'      => ['label' => 'Barchasi',    'count' => $counts['all']      ?? 0],
-                'approved' => ['label' => 'Tasdiqlangan','count' => $counts['approved'] ?? 0],
-                'pending'  => ['label' => 'Kutilmoqda',  'count' => $counts['pending']  ?? 0],
-                'rejected' => ['label' => 'Rad etilgan', 'count' => $counts['rejected'] ?? 0],
-                'blocked'  => ['label' => 'Bloklangan',  'count' => $counts['blocked']  ?? 0],
-            ];
-        @endphp
-        @foreach($tabs as $key => $tabItem)
-            <a
-                href="{{ request()->fullUrlWithQuery(['tab' => $key]) }}"
-                class="btn {{ $tab === $key ? 'btn-primary' : 'btn-secondary' }} flex items-center gap-2 text-sm"
-            >
-                {{ $tabItem['label'] }}
-                <span class="badge {{ $tab === $key ? 'badge-info' : 'badge-muted' }}">{{ $tabItem['count'] }}</span>
-            </a>
-        @endforeach
+  <x-admin.section-card title="Kuryerlar jadvali" :meta="$couriers->total() . ' ta yozuv'">
+    <div class="kc-table-shell table-responsive">
+      <table class="table align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>ID</th>
+            <th>Ism</th>
+            <th>Telefon</th>
+            <th>Viloyat</th>
+            <th>Balans</th>
+            <th>Holat</th>
+            <th class="text-end">Amallar</th>
+          </tr>
+        </thead>
+        <tbody>
+          @forelse($couriers as $courier)
+            @php
+              $statusClass = match($courier->status) {
+                'approved' => 'text-bg-success-subtle border border-success-subtle text-success-emphasis',
+                'pending' => 'text-bg-warning-subtle border border-warning-subtle text-warning-emphasis',
+                'rejected', 'blocked' => 'text-bg-danger-subtle border border-danger-subtle text-danger-emphasis',
+                default => 'text-bg-secondary',
+              };
+              $statusLabel = match($courier->status) {
+                'approved' => 'Tasdiqlangan',
+                'pending' => 'Kutilmoqda',
+                'rejected' => 'Rad etilgan',
+                'blocked' => 'Bloklangan',
+                default => $courier->status ?? '—',
+              };
+              $courierName = trim(($courier->first_name ?? '') . ' ' . ($courier->last_name ?? '')) ?: 'Kuryer';
+            @endphp
+            <tr>
+              <td class="text-secondary">#{{ $courier->id }}</td>
+              <td>
+                <div class="d-flex align-items-center gap-3">
+                  @include('a122.partials.avatar', [
+                    'name' => $courierName,
+                    'image' => $courier->photo,
+                    'class' => 'w-10 h-10 rounded-2xl text-sm',
+                  ])
+                  <div class="fw-semibold">{{ $courierName }}</div>
+                </div>
+              </td>
+              <td>{{ $courier->phone_number ?? $courier->phone ?? '—' }}</td>
+              <td>{{ $courier->region ?? '—' }}</td>
+              <td class="fw-semibold text-nowrap">{{ number_format((float)($courier->balance ?? 0), 0, '.', ' ') }} UZS</td>
+              <td><span class="badge rounded-pill {{ $statusClass }}">{{ $statusLabel }}</span></td>
+              <td class="text-end">
+                <div class="d-inline-flex flex-wrap align-items-center justify-content-end gap-1">
+                  <form method="POST" action="{{ route('admin.couriers.approve', $courier) }}">
+                    @csrf
+                    @method('PATCH')
+                    <button type="submit" class="btn btn-sm btn-light border kc-table-action" title="Tasdiqlash">
+                      <i class="bi bi-patch-check"></i>
+                    </button>
+                  </form>
+                  <form method="POST" action="{{ route('admin.couriers.reject', $courier) }}">
+                    @csrf
+                    @method('PATCH')
+                    <button type="submit" class="btn btn-sm btn-light border kc-table-action" title="Rad etish">
+                      <i class="bi bi-x-circle"></i>
+                    </button>
+                  </form>
+                  <a href="{{ route('admin.couriers.show', $courier) }}" class="btn btn-sm btn-light border kc-table-action" title="Ko‘rish">
+                    <i class="bi bi-eye"></i>
+                  </a>
+                  <a href="{{ route('admin.couriers.edit', $courier) }}" class="btn btn-sm btn-light border kc-table-action" title="Tahrirlash">
+                    <i class="bi bi-pencil"></i>
+                  </a>
+                  <form method="POST" action="{{ route('admin.couriers.destroy', $courier) }}" onsubmit="return confirm('Kuryerni o‘chirishga ishonchingiz komilmi?')">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="btn btn-sm btn-light border kc-table-action text-danger" title="O‘chirish">
+                      <i class="bi bi-trash3"></i>
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          @empty
+            <tr><td colspan="7" class="text-center py-5 text-secondary">Kuryer topilmadi.</td></tr>
+          @endforelse
+        </tbody>
+      </table>
     </div>
-</div>
+  </x-admin.section-card>
 
-<div class="table-wrap">
-    <div class="overflow-x-auto">
-        <table class="tbl" data-index-grid>
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Ism</th>
-                    <th>Tel</th>
-                    <th>Viloyat</th>
-                    <th>Balans</th>
-                    <th>Holat</th>
-                    <th class="text-right">Amallar</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($couriers as $courier)
-                    <tr>
-                        <td class="text-gray-500 text-sm">{{ $courier->id }}</td>
-                        <td>
-                            <div class="flex items-center gap-3 min-w-0">
-                                @include('a122.partials.avatar', [
-                                    'name' => trim(($courier->first_name ?? '') . ' ' . ($courier->last_name ?? '')) ?: 'Kuryer',
-                                    'image' => $courier->photo,
-                                    'class' => 'w-10 h-10 rounded-2xl text-sm',
-                                ])
-                                <div class="min-w-0">
-                                    <div class="font-semibold truncate">
-                                        {{ trim(($courier->first_name ?? '') . ' ' . ($courier->last_name ?? '')) ?: '—' }}
-                                    </div>
-                                </div>
-                            </div>
-                        </td>
-                        <td class="text-sm">{{ $courier->phone_number ?? $courier->phone ?? '—' }}</td>
-                        <td class="text-sm">{{ $courier->region ?? '—' }}</td>
-                        <td class="text-sm font-medium whitespace-nowrap">
-                            {{ number_format((float)($courier->balance ?? 0), 0, '.', ' ') }} UZS
-                        </td>
-                        <td>
-                            @if($courier->status === 'approved')
-                                <span class="badge badge-success">Tasdiqlangan</span>
-                            @elseif($courier->status === 'pending')
-                                <span class="badge badge-warning">Kutilmoqda</span>
-                            @elseif($courier->status === 'rejected')
-                                <span class="badge badge-danger">Rad etilgan</span>
-                            @elseif($courier->status === 'blocked')
-                                <span class="badge badge-danger flex items-center gap-1">
-                                    <i data-lucide="ban" class="w-3 h-3"></i> Bloklangan
-                                </span>
-                            @else
-                                <span class="badge badge-muted">{{ $courier->status ?? '—' }}</span>
-                            @endif
-                        </td>
-                        <td>
-                            <div class="flex items-center justify-end gap-1 flex-wrap">
-                                <form method="POST" action="{{ route('admin.couriers.approve', $courier) }}">
-                                    @csrf
-                                    @method('PATCH')
-                                    <button type="submit" class="btn-ghost p-2 rounded-lg" title="Tasdiqlash">
-                                        <i data-lucide="badge-check" class="w-4 h-4"></i>
-                                    </button>
-                                </form>
-                                <form method="POST" action="{{ route('admin.couriers.reject', $courier) }}">
-                                    @csrf
-                                    @method('PATCH')
-                                    <button type="submit" class="btn-ghost p-2 rounded-lg" title="Rad etish">
-                                        <i data-lucide="badge-x" class="w-4 h-4"></i>
-                                    </button>
-                                </form>
-                                <a href="{{ route('admin.couriers.show', $courier) }}" class="btn-ghost p-2 rounded-lg" title="Ko'rish">
-                                    <i data-lucide="eye" class="w-4 h-4"></i>
-                                </a>
-                                <a href="{{ route('admin.couriers.edit', $courier) }}" class="btn-ghost p-2 rounded-lg" title="Tahrirlash">
-                                    <i data-lucide="pencil" class="w-4 h-4"></i>
-                                </a>
-                                <form method="POST" action="{{ route('admin.couriers.destroy', $courier) }}"
-                                    onsubmit="return confirm('Kuryerni o\'chirishga ishonchingiz komilmi?')">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn-ghost p-2 rounded-lg text-red-500 hover:text-red-600" title="O'chirish">
-                                        <i data-lucide="trash-2" class="w-4 h-4"></i>
-                                    </button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="7" class="text-center text-gray-400 py-8">Hech qanday kuryer topilmadi</td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
+  @if($couriers->hasPages())
+    <div>{{ $couriers->links('a122.partials.pagination') }}</div>
+  @endif
 </div>
-
-@if($couriers->hasPages())
-    <div class="mt-4">{{ $couriers->links('a122.partials.pagination') }}</div>
-@endif
 @endsection

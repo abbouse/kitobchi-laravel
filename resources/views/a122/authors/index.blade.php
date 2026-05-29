@@ -8,7 +8,7 @@
   <x-admin.page-header
     eyebrow="Author directory"
     title="Mualliflar"
-    subtitle="Ichki kitob katalogiga ulangan yagona mualliflar bazasi. Rasm, source va bog‘langan kitoblar shu bo‘limda boshqariladi.">
+    subtitle="{{ $authors->total() }} ta yozuv">
     <form method="GET" class="kc-search flex-grow-1" style="max-width: 24rem;">
       <i class="bi bi-search kc-search__icon"></i>
       <input name="search" value="{{ request('search') }}" placeholder="Muallif qidirish..." class="form-control">
@@ -45,7 +45,6 @@
       <x-admin.stat-card
         label="Jami muallif"
         :value="number_format($stats['total'])"
-        meta="Katalog ichidagi barcha author profile yozuvlari"
         icon="pen"
         tone="primary" />
     </div>
@@ -53,7 +52,6 @@
       <x-admin.stat-card
         label="Rasmli kartalar"
         :value="number_format($stats['with_image'])"
-        meta="Real upload yoki tashqi URL bilan to‘ldirilgan author kartalar"
         icon="image"
         tone="success" />
     </div>
@@ -61,7 +59,6 @@
       <x-admin.stat-card
         label="AI nomzodlar"
         :value="number_format($stats['ai_candidates'])"
-        meta="Single-author va hali real rasm qo‘yilmagan kartalar"
         icon="stars"
         tone="warning" />
     </div>
@@ -69,7 +66,6 @@
       <x-admin.stat-card
         label="Bog‘langan kitoblar"
         :value="number_format($stats['linked_books'])"
-        meta="Author relation orqali muallifga biriktirilgan books yozuvlari"
         icon="book"
         tone="info" />
     </div>

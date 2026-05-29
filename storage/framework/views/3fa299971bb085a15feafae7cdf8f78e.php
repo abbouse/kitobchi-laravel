@@ -1,255 +1,259 @@
-<?php $__env->startSection('title', 'Gift Sertifikatlar'); ?>
-<?php $__env->startSection('page-title', 'Gift Sertifikatlar'); ?>
+<?php $__env->startSection('title', 'Gift sertifikatlar'); ?>
+<?php $__env->startSection('page-title', 'Gift sertifikatlar'); ?>
 
 <?php $__env->startSection('content'); ?>
-
-<div class="a122-index-header">
-  <div>
-    <div class="a122-index-header__title">Gift sertifikatlar</div>
-    <div class="a122-index-header__meta"><?php echo e($certs->total()); ?> ta sertifikat topildi</div>
-  </div>
-  <div class="a122-index-header__actions">
-    <form method="GET" class="a122-index-search-form">
+<div class="d-flex flex-column gap-4">
+  <?php if (isset($component)) { $__componentOriginalcb19cb35a534439097b02b8af91726ee = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginalcb19cb35a534439097b02b8af91726ee = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.admin.page-header','data' => ['eyebrow' => 'Commerce','title' => 'Gift sertifikatlar','subtitle' => ''.e($certs->total()).' ta yozuv']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('admin.page-header'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['eyebrow' => 'Commerce','title' => 'Gift sertifikatlar','subtitle' => ''.e($certs->total()).' ta yozuv']); ?>
+    <form method="GET" class="kc-search flex-grow-1" style="max-width: 26rem;">
       <input type="hidden" name="tab" value="<?php echo e($tab); ?>">
-      <i class="bi bi-search"></i>
-      <input type="search" name="search" value="<?php echo e(request('search')); ?>" placeholder="Kod, telefon yoki ism bo'yicha qidiring">
+      <i class="bi bi-search kc-search__icon"></i>
+      <input type="search" name="search" value="<?php echo e(request('search')); ?>" placeholder="Kod, telefon yoki ism" class="form-control">
     </form>
-  </div>
-</div>
+   <?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginalcb19cb35a534439097b02b8af91726ee)): ?>
+<?php $attributes = $__attributesOriginalcb19cb35a534439097b02b8af91726ee; ?>
+<?php unset($__attributesOriginalcb19cb35a534439097b02b8af91726ee); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginalcb19cb35a534439097b02b8af91726ee)): ?>
+<?php $component = $__componentOriginalcb19cb35a534439097b02b8af91726ee; ?>
+<?php unset($__componentOriginalcb19cb35a534439097b02b8af91726ee); ?>
+<?php endif; ?>
 
-<div class="grid grid-cols-1 xl:grid-cols-12 gap-3 mb-4">
-  <div class="xl:col-span-7">
-    <div class="p-card">
-      <div class="p-card-header">
-        <div>
-          <div class="p-card-title">Gift sertifikat tariflari</div>
-          <div class="p-card-sub">Foydalanuvchiga sotuvda ko‘rinadigan nominal variantlar.</div>
-        </div>
-      </div>
-      <form method="POST" action="<?php echo e(route('admin.gift-certificates.options')); ?>" style="padding:0 18px 18px">
-        <?php echo csrf_field(); ?>
-        <?php echo method_field('PUT'); ?>
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+  <div class="row g-3">
+    <div class="col-12 col-xl-7">
+      <?php if (isset($component)) { $__componentOriginal6c55ae2c9251ebabe977f3f2190280eb = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal6c55ae2c9251ebabe977f3f2190280eb = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.admin.section-card','data' => ['title' => 'Tariflar','meta' => 'Nominal variantlar']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('admin.section-card'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['title' => 'Tariflar','meta' => 'Nominal variantlar']); ?>
+        <form method="POST" action="<?php echo e(route('admin.gift-certificates.options')); ?>" class="row g-3">
+          <?php echo csrf_field(); ?>
+          <?php echo method_field('PUT'); ?>
           <?php for($i = 0; $i < 4; $i++): ?>
-            <div>
-              <label class="p-form-label">Variant <?php echo e($i + 1); ?></label>
+            <div class="col-12 col-md-3">
+              <label class="form-label">Variant <?php echo e($i + 1); ?></label>
               <input
                 type="number"
                 name="options[]"
-                class="p-form-control"
+                class="form-control"
                 min="1000"
                 step="1000"
                 value="<?php echo e(old("options.$i", $giftCertificateOptions[$i] ?? '')); ?>"
                 placeholder="300000">
             </div>
           <?php endfor; ?>
+          <div class="col-12 d-flex justify-content-end">
+            <button type="submit" class="btn-p primary">
+              <i class="bi bi-floppy"></i>
+              <span>Saqlash</span>
+            </button>
+          </div>
+        </form>
+       <?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal6c55ae2c9251ebabe977f3f2190280eb)): ?>
+<?php $attributes = $__attributesOriginal6c55ae2c9251ebabe977f3f2190280eb; ?>
+<?php unset($__attributesOriginal6c55ae2c9251ebabe977f3f2190280eb); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal6c55ae2c9251ebabe977f3f2190280eb)): ?>
+<?php $component = $__componentOriginal6c55ae2c9251ebabe977f3f2190280eb; ?>
+<?php unset($__componentOriginal6c55ae2c9251ebabe977f3f2190280eb); ?>
+<?php endif; ?>
+    </div>
+    <div class="col-12 col-xl-5">
+      <?php if (isset($component)) { $__componentOriginal6c55ae2c9251ebabe977f3f2190280eb = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal6c55ae2c9251ebabe977f3f2190280eb = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.admin.section-card','data' => ['title' => 'Faol nominal','meta' => ''.e(count($giftCertificateOptions)).' ta variant']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('admin.section-card'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['title' => 'Faol nominal','meta' => ''.e(count($giftCertificateOptions)).' ta variant']); ?>
+        <div class="d-flex flex-wrap gap-2">
+          <?php $__empty_1 = true; $__currentLoopData = $giftCertificateOptions; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $amount): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+            <span class="badge rounded-pill text-bg-info-subtle border border-info-subtle text-info-emphasis"><?php echo e(number_format($amount)); ?> UZS</span>
+          <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
+            <span class="text-secondary">Variant yo‘q.</span>
+          <?php endif; ?>
         </div>
-        <div style="font-size:12px;color:var(--p-hint);margin-top:10px">
-          Bo‘sh qoldirilgan maydonlar saqlanmaydi, takrorlar avtomatik tozalanadi.
-        </div>
-        <div class="flex justify-end mt-3">
-          <button type="submit" class="btn-p primary">
-            <i class="bi bi-floppy-fill"></i> Tariflarni saqlash
-          </button>
-        </div>
-      </form>
+       <?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal6c55ae2c9251ebabe977f3f2190280eb)): ?>
+<?php $attributes = $__attributesOriginal6c55ae2c9251ebabe977f3f2190280eb; ?>
+<?php unset($__attributesOriginal6c55ae2c9251ebabe977f3f2190280eb); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal6c55ae2c9251ebabe977f3f2190280eb)): ?>
+<?php $component = $__componentOriginal6c55ae2c9251ebabe977f3f2190280eb; ?>
+<?php unset($__componentOriginal6c55ae2c9251ebabe977f3f2190280eb); ?>
+<?php endif; ?>
     </div>
   </div>
-  <div class="xl:col-span-5">
-    <div class="p-card">
-      <div class="p-card-header">
-        <div class="p-card-title">Faol nominal variantlar</div>
+
+  <div class="row g-3">
+    <?php $__currentLoopData = [
+      ['Jami', $counts['all'] ?? 0, 'bi-gift', 'primary'],
+      ['Faol', $counts['active'] ?? 0, 'bi-send', 'info'],
+      ['Ishlatilgan', $counts['used'] ?? 0, 'bi-check-circle', 'success'],
+      ['Bekor', $counts['cancelled'] ?? 0, 'bi-x-circle', 'danger'],
+    ]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$label, $value, $icon, $tone]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+      <div class="col-6 col-xl-3">
+        <div class="a122-stat-tile h-100">
+          <div class="a122-stat-tile__icon bg-<?php echo e($tone); ?>-subtle text-<?php echo e($tone); ?>">
+            <i class="bi <?php echo e($icon); ?>"></i>
+          </div>
+          <div>
+            <div class="a122-stat-tile__value"><?php echo e(number_format($value)); ?></div>
+            <div class="a122-stat-tile__label"><?php echo e($label); ?></div>
+          </div>
+        </div>
       </div>
-      <div style="padding:0 18px 18px;display:flex;flex-wrap:wrap;gap:8px">
-        <?php $__currentLoopData = $giftCertificateOptions; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $amount): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-          <span class="s-pill accent"><?php echo e(number_format($amount)); ?> UZS</span>
-        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-      </div>
+    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+  </div>
+
+  <div class="kc-filter-card">
+    <div class="nav nav-pills flex-wrap">
+      <?php $__currentLoopData = [
+        'all' => ['Barchasi', $counts['all'] ?? 0],
+        'pending_payment' => ['Kutilmoqda', $counts['pending_payment'] ?? 0],
+        'active' => ['Faol', $counts['active'] ?? 0],
+        'used' => ['Ishlatilgan', $counts['used'] ?? 0],
+        'cancelled' => ['Bekor qilingan', $counts['cancelled'] ?? 0],
+      ]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $key => [$label, $count]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+        <a href="<?php echo e(request()->fullUrlWithQuery(['tab' => $key, 'page' => null])); ?>" class="nav-link <?php echo e($tab === $key ? 'active' : ''); ?>">
+          <?php echo e($label); ?>
+
+          <span class="badge rounded-pill <?php echo e($tab === $key ? 'text-bg-light' : 'text-bg-secondary'); ?>"><?php echo e(number_format($count)); ?></span>
+        </a>
+      <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
     </div>
   </div>
-</div>
 
+  <?php if (isset($component)) { $__componentOriginal6c55ae2c9251ebabe977f3f2190280eb = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal6c55ae2c9251ebabe977f3f2190280eb = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.admin.section-card','data' => ['title' => 'Sertifikatlar jadvali','meta' => $certs->total() . ' ta yozuv']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('admin.section-card'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['title' => 'Sertifikatlar jadvali','meta' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($certs->total() . ' ta yozuv')]); ?>
+    <div class="kc-table-shell table-responsive">
+      <table class="table align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Kod</th>
+            <th>Sotib olgan</th>
+            <th>Qabul qiluvchi</th>
+            <th class="text-end">Miqdor</th>
+            <th>Holat</th>
+            <th>Sana</th>
+            <th class="text-end">Amallar</th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php $__empty_1 = true; $__currentLoopData = $certs; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $cert): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+            <?php
+              $statusClass = match($cert->status) {
+                'active', 'sent' => 'text-bg-success-subtle border border-success-subtle text-success-emphasis',
+                'used' => 'text-bg-secondary',
+                'paid' => 'text-bg-info-subtle border border-info-subtle text-info-emphasis',
+                'cancelled', 'payment_cancelled' => 'text-bg-danger-subtle border border-danger-subtle text-danger-emphasis',
+                default => 'text-bg-warning-subtle border border-warning-subtle text-warning-emphasis',
+              };
+              $statusLabel = match($cert->status) {
+                'pending_payment' => 'To‘lov kutilmoqda',
+                'paid' => 'To‘landi',
+                'active', 'sent' => 'Faol',
+                'used' => 'Ishlatildi',
+                'cancelled' => 'Bekor qilindi',
+                'payment_cancelled' => 'To‘lovsiz bekor',
+                default => $cert->status,
+              };
+            ?>
+            <tr>
+              <td><code class="kc-inline-code"><?php echo e($cert->code); ?></code></td>
+              <td>
+                <?php if($cert->buyer): ?>
+                  <a href="<?php echo e(route('admin.users.show', $cert->buyer_user_id)); ?>" class="fw-semibold text-decoration-none">
+                    <?php echo e($cert->buyer->name); ?> <?php echo e($cert->buyer->lastname); ?>
 
-<div class="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-4">
-  <?php $__currentLoopData = [
-    ['Jami',        $counts['all'],             'accent',  'bi-gift'],
-    ['Faol',        $counts['active'],          'info',    'bi-send'],
-    ['Ishlatilgan', $counts['used'],             'success', 'bi-check-circle'],
-    ['Bekor',       $counts['cancelled'],        'danger',  'bi-x-circle'],
-  ]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$l,$v,$c,$i]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-  <div class="">
-    <div class="p-card flex items-center gap-3" style="padding:14px">
-      <div style="width:36px;height:36px;border-radius:9px;flex-shrink:0;font-size:16px;
-                  background:var(--p-<?php echo e($c); ?>-d,var(--p-elevated));color:var(--p-<?php echo e($c); ?>);
-                  display:flex;align-items:center;justify-content:center">
-        <i class="bi <?php echo e($i); ?>"></i>
-      </div>
-      <div>
-        <div style="font-size:19px;font-weight:700;font-family:'JetBrains Mono',monospace;
-                    color:var(--p-<?php echo e($c); ?>)"><?php echo e($v); ?></div>
-        <div style="font-size:10px;color:var(--p-hint);text-transform:uppercase;
-                    letter-spacing:.07em"><?php echo e($l); ?></div>
-      </div>
+                  </a>
+                  <div class="small text-secondary"><?php echo e($cert->buyer->phone_number); ?></div>
+                <?php else: ?>
+                  <span class="text-secondary">—</span>
+                <?php endif; ?>
+              </td>
+              <td>
+                <?php if($cert->recipient): ?>
+                  <a href="<?php echo e(route('admin.users.show', $cert->recipient_user_id)); ?>" class="fw-semibold text-decoration-none">
+                    <?php echo e($cert->recipient->name); ?>
+
+                  </a>
+                <?php elseif($cert->recipient_name || $cert->recipient_phone): ?>
+                  <div><?php echo e($cert->recipient_name ?: '—'); ?></div>
+                  <div class="small text-secondary"><?php echo e($cert->recipient_phone); ?></div>
+                <?php else: ?>
+                  <span class="text-secondary">—</span>
+                <?php endif; ?>
+              </td>
+              <td class="text-end fw-semibold"><?php echo e(number_format($cert->nominal_uzs)); ?> UZS</td>
+              <td><span class="badge rounded-pill <?php echo e($statusClass); ?>"><?php echo e($statusLabel); ?></span></td>
+              <td class="text-secondary text-nowrap"><?php echo e($cert->created_at?->format('d.m.Y')); ?></td>
+              <td class="text-end">
+                <div class="d-inline-flex align-items-center justify-content-end gap-1">
+                  <a href="<?php echo e(route('admin.gift-certificates.show', $cert)); ?>" class="btn btn-sm btn-light border kc-table-action" title="Ko‘rish">
+                    <i class="bi bi-eye"></i>
+                  </a>
+                  <?php if(!in_array($cert->status, ['used', 'cancelled'])): ?>
+                    <form method="POST" action="<?php echo e(route('admin.gift-certificates.cancel', $cert)); ?>" onsubmit="return confirm('Bekor qilinsinmi?')">
+                      <?php echo csrf_field(); ?>
+                      <button class="btn btn-sm btn-light border kc-table-action text-danger" title="Bekor qilish">
+                        <i class="bi bi-x-lg"></i>
+                      </button>
+                    </form>
+                  <?php endif; ?>
+                </div>
+              </td>
+            </tr>
+          <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
+            <tr><td colspan="7" class="text-center py-5 text-secondary">Sertifikat topilmadi.</td></tr>
+          <?php endif; ?>
+        </tbody>
+      </table>
     </div>
-  </div>
-  <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-</div>
+   <?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal6c55ae2c9251ebabe977f3f2190280eb)): ?>
+<?php $attributes = $__attributesOriginal6c55ae2c9251ebabe977f3f2190280eb; ?>
+<?php unset($__attributesOriginal6c55ae2c9251ebabe977f3f2190280eb); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal6c55ae2c9251ebabe977f3f2190280eb)): ?>
+<?php $component = $__componentOriginal6c55ae2c9251ebabe977f3f2190280eb; ?>
+<?php unset($__componentOriginal6c55ae2c9251ebabe977f3f2190280eb); ?>
+<?php endif; ?>
 
-
-<div class="tab-pills fade-up mb-3">
-  <?php $__currentLoopData = [
-    'all'             => ['Barchasi',        $counts['all']],
-    'pending_payment' => ['Kutilmoqda',       $counts['pending_payment']],
-    'active'          => ['Faol',             $counts['active']],
-    'used'            => ['Ishlatilgan',      $counts['used']],
-    'cancelled'       => ['Bekor qilingan',   $counts['cancelled']],
-  ]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $k => [$l, $c]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-  <a href="<?php echo e(request()->fullUrlWithQuery(['tab'=>$k,'page'=>1])); ?>"
-     class="tab-pill <?php echo e($tab===$k?'active':''); ?>">
-    <?php echo e($l); ?> <span class="tab-count"><?php echo e($c); ?></span>
-  </a>
-  <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-</div>
-
-
-<div class="p-card fade-up">
-  <div class="table-responsive kc-twrap">
-    <table class="p-table" data-index-grid>
-      <thead>
-        <tr>
-          <th>Kod</th>
-          <th>Sotib olgan</th>
-          <th>Qabul qiluvchi</th>
-          <th style="text-align:right">Miqdor</th>
-          <th>Holat</th>
-          <th>Sana</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        <?php $__empty_1 = true; $__currentLoopData = $certs; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $c): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
-        <?php
-          $stCls = match($c->status){
-            'active'           => 'success',
-            'used'             => 'muted',
-            'paid'             => 'info',
-            'sent'             => 'success',
-            'cancelled'        => 'danger',
-            'payment_cancelled'=> 'danger',
-            'pending_payment'  => 'warning',
-            default            => 'warning',
-          };
-          $stLbl = match($c->status){
-            'pending_payment'  => "To'lov kutilmoqda",
-            'paid'             => "To'landi",
-            'active'           => 'Faol',
-            'sent'             => 'Faol',
-            'used'             => 'Ishlatildi',
-            'cancelled'        => 'Bekor qilindi',
-            'payment_cancelled'=> "To'lovsiz bekor",
-            default            => $c->status,   // ← 'default' emas, default keyword
-          };
-        ?>
-        <tr>
-          <td>
-            <code style="font-family:'JetBrains Mono',monospace;font-size:12px;
-                         font-weight:600;color:var(--p-accent);
-                         background:var(--p-accent-d);padding:2px 8px;border-radius:5px">
-              <?php echo e($c->code); ?>
-
-            </code>
-          </td>
-
-          <td>
-            <?php if($c->buyer): ?>
-            <a href="<?php echo e(route('admin.users.show',$c->buyer_user_id)); ?>"
-               style="font-size:12.5px;color:var(--p-text);text-decoration:none">
-              <?php echo e($c->buyer->name); ?> <?php echo e($c->buyer->lastname); ?>
-
-            </a>
-            <div style="font-size:10px;color:var(--p-hint);font-family:'JetBrains Mono',monospace">
-              <?php echo e($c->buyer->phone_number); ?>
-
-            </div>
-            <?php else: ?>
-              <span style="color:var(--p-hint)">—</span>
-            <?php endif; ?>
-          </td>
-
-          <td>
-            <?php if($c->recipient): ?>
-            <a href="<?php echo e(route('admin.users.show',$c->recipient_user_id)); ?>"
-               style="font-size:12.5px;color:var(--p-text);text-decoration:none">
-              <?php echo e($c->recipient->name); ?>
-
-            </a>
-            <?php elseif($c->recipient_name || $c->recipient_phone): ?>
-            <div style="font-size:12.5px;color:var(--p-muted)">
-              <?php echo e($c->recipient_name); ?>
-
-            </div>
-            <div style="font-size:10px;color:var(--p-hint);font-family:'JetBrains Mono',monospace">
-              <?php echo e($c->recipient_phone); ?>
-
-            </div>
-            <?php else: ?>
-              <span style="color:var(--p-hint)">—</span>
-            <?php endif; ?>
-          </td>
-
-          <td style="text-align:right;font-family:'JetBrains Mono',monospace;
-                     font-weight:700;color:var(--p-success);font-size:13px">
-            <?php echo e(number_format($c->nominal_uzs)); ?> UZS
-          </td>
-
-          <td><span class="s-pill <?php echo e($stCls); ?>" style="font-size:10px"><?php echo e($stLbl); ?></span></td>
-
-          <td style="font-size:11px;color:var(--p-hint);font-family:'JetBrains Mono',monospace;
-                     white-space:nowrap">
-            <?php echo e($c->created_at?->format('d.m.Y')); ?>
-
-          </td>
-
-          <td>
-            <div class="flex gap-1">
-              <a href="<?php echo e(route('admin.gift-certificates.show',$c)); ?>"
-                 class="btn-p ghost sm"><i class="bi bi-eye"></i></a>
-
-              <?php if(!in_array($c->status,['used','cancelled'])): ?>
-              <form method="POST"
-                    action="<?php echo e(route('admin.gift-certificates.cancel',$c)); ?>"
-                    onsubmit="return confirm('Bekor qilinsinmi?')">
-                <?php echo csrf_field(); ?>
-                <button class="btn-p danger sm"><i class="bi bi-x-lg"></i></button>
-              </form>
-              <?php endif; ?>
-            </div>
-          </td>
-        </tr>
-        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
-        <tr>
-          <td colspan="7" style="text-align:center;padding:40px;color:var(--p-hint)">
-            <i class="bi bi-gift" style="font-size:28px;display:block;margin-bottom:8px"></i>
-            Sertifikatlar topilmadi
-          </td>
-        </tr>
-        <?php endif; ?>
-      </tbody>
-    </table>
-  </div>
   <?php if($certs->hasPages()): ?>
-  <div class="flex justify-between items-center px-3 py-2"
-       style="border-top:1px solid var(--p-border)">
-    <div style="font-size:12px;color:var(--p-hint)">
-      <?php echo e($certs->firstItem()); ?>–<?php echo e($certs->lastItem()); ?> / <?php echo e($certs->total()); ?>
-
-    </div>
-    <?php echo e($certs->links('a122.partials.pagination')); ?>
-
-  </div>
+    <div><?php echo e($certs->links('a122.partials.pagination')); ?></div>
   <?php endif; ?>
 </div>
-
 <?php $__env->stopSection(); ?>
 
 <?php echo $__env->make('a122.layouts.admin', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH /Users/abbos/PROJECTS/MY/kitobchi-server/kitobchi-laravel/resources/views/a122/gift-certificates/index.blade.php ENDPATH**/ ?>

@@ -1,112 +1,83 @@
 @extends('a122.layouts.admin')
-@section('title', 'Push Bildirishnomalar')
-@section('page-title', 'Push Bildirishnomalar')
+@section('title', 'Push bildirishnomalar')
+@section('page-title', 'Push bildirishnomalar')
 
 @section('content')
-
-<x-a122.page-header>
-  <x-slot name="heading">Push bildirishnomalar</x-slot>
-  <x-slot name="meta">Barcha yuborilgan push xabarlar tarixi</x-slot>
-  <x-slot name="actions">
+<div class="d-flex flex-column gap-4">
+  <x-admin.page-header eyebrow="Operations" title="Push bildirishnomalar" subtitle="{{ $notifications->total() }} ta yozuv">
     <a href="{{ route('admin.push.create') }}" class="btn-p primary">
-        <i class="bi bi-send"></i> Yangi yuborish
-      </a>
-  </x-slot>
-</x-a122.page-header>
+      <i class="bi bi-send"></i>
+      <span>Yuborish</span>
+    </a>
+  </x-admin.page-header>
 
-<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4 mb-4">
-  @foreach([
-    [$counts['all'] ?? 0, 'Jami yuborish', 'accent', 'bi-bell'],
-    [$counts['users'] ?? 0, 'Userlar', 'info', 'bi-people'],
-    [$counts['business'] ?? 0, 'Sellerlar', 'warning', 'bi-shop-window'],
-    [$counts['courier'] ?? 0, 'Kuryerlar', 'success', 'bi-bicycle'],
-  ] as [$value, $label, $tone, $icon])
-    <div class="p-card flex items-center gap-3 fade-up" style="padding:14px">
-      <div style="width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:var(--p-{{ $tone }}-d,var(--p-elevated));color:var(--p-{{ $tone }})">
-        <i class="bi {{ $icon }}"></i>
+  <div class="row g-3">
+    @foreach([
+      [$counts['all'] ?? 0, 'Jami', 'bi-bell', 'primary'],
+      [$counts['users'] ?? 0, 'Userlar', 'bi-people', 'info'],
+      [$counts['business'] ?? 0, 'Sellerlar', 'bi-shop-window', 'warning'],
+      [$counts['courier'] ?? 0, 'Kuryerlar', 'bi-bicycle', 'success'],
+    ] as [$value, $label, $icon, $tone])
+      <div class="col-6 col-xl-3">
+        <div class="a122-stat-tile h-100">
+          <div class="a122-stat-tile__icon bg-{{ $tone }}-subtle text-{{ $tone }}">
+            <i class="bi {{ $icon }}"></i>
+          </div>
+          <div>
+            <div class="a122-stat-tile__value">{{ number_format($value) }}</div>
+            <div class="a122-stat-tile__label">{{ $label }}</div>
+          </div>
+        </div>
       </div>
-      <div>
-        <div style="font-size:22px;font-weight:700;color:var(--p-text)">{{ $value }}</div>
-        <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--p-hint)">{{ $label }}</div>
-      </div>
+    @endforeach
+  </div>
+
+  <x-admin.section-card title="Pushlar jadvali" :meta="$notifications->total() . ' ta yozuv'">
+    <div class="kc-table-shell table-responsive">
+      <table class="table align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>ID</th>
+            <th>Sarlavha</th>
+            <th>Matn</th>
+            <th>Qabul qiluvchi</th>
+            <th>Sana</th>
+            <th class="text-end">Amallar</th>
+          </tr>
+        </thead>
+        <tbody>
+          @forelse($notifications as $notification)
+            @php $target = $targets[$notification->who] ?? ['label' => $notification->who, 'color' => 'secondary', 'icon' => 'bi-bell']; @endphp
+            <tr>
+              <td class="text-secondary">#{{ $notification->id }}</td>
+              <td class="fw-semibold">{{ $notification->name }}</td>
+              <td class="text-secondary text-truncate" style="max-width: 24rem;">{{ $notification->description }}</td>
+              <td>
+                <span class="badge rounded-pill text-bg-info-subtle border border-info-subtle text-info-emphasis">
+                  <i class="bi {{ $target['icon'] }} me-1"></i>{{ $target['label'] }}
+                </span>
+              </td>
+              <td class="text-secondary text-nowrap">{{ $notification->created_at?->format('d.m.Y H:i') }}</td>
+              <td class="text-end">
+                <form method="POST" action="{{ route('admin.push.destroy', $notification) }}" onsubmit="return confirm('O‘chirilsinmi?')" class="d-inline">
+                  @csrf
+                  @method('DELETE')
+                  <button class="btn btn-sm btn-light border kc-table-action text-danger" title="O‘chirish">
+                    <i class="bi bi-trash3"></i>
+                  </button>
+                </form>
+              </td>
+            </tr>
+          @empty
+            <tr><td colspan="6" class="text-center py-5 text-secondary">Bildirishnoma topilmadi.</td></tr>
+          @endforelse
+        </tbody>
+      </table>
     </div>
-  @endforeach
-</div>
+  </x-admin.section-card>
 
-<div class="a122-index-header">
-  <div>
-    <div class="a122-index-header__title">Yuborilgan pushlar</div>
-    <div class="a122-index-header__meta">{{ $notifications->total() }} ta bildirishnoma tarixi ko'rinmoqda</div>
-  </div>
-</div>
-
-{{-- Table --}}
-<div class="p-card p-0 fade-up">
-  <div class="table-responsive kc-twrap">
-    <table class="p-table" data-index-grid>
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Sarlavha</th>
-          <th>Matn</th>
-          <th>Qabul qiluvchi</th>
-          <th>Sana</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        @forelse($notifications as $notif)
-        @php
-          $t = $targets[$notif->who] ?? ['label'=>$notif->who,'color'=>'muted','icon'=>'bi-bell'];
-        @endphp
-        <tr>
-          <td style="font-family:'JetBrains Mono',monospace;color:var(--p-accent);font-weight:600">
-            #{{ $notif->id }}
-          </td>
-          <td>
-            <div style="font-size:14px;font-weight:600;color:var(--p-text)">
-              {{ $notif->name }}
-            </div>
-          </td>
-          <td style="max-width:280px">
-            <div style="font-size:12px;color:var(--p-muted);
-                        overflow:hidden;display:-webkit-box;
-                        -webkit-line-clamp:2;-webkit-box-orient:vertical">
-              {{ $notif->description }}
-            </div>
-          </td>
-          <td>
-            <span class="s-pill {{ $t['color'] }}"
-                  style="display:inline-flex;align-items:center;gap:5px;font-size:12px">
-              <i class="bi {{ $t['icon'] }}"></i>
-              {{ $t['label'] }}
-            </span>
-          </td>
-          <td style="font-size:12px;color:var(--p-hint);white-space:nowrap;font-family:'JetBrains Mono',monospace">
-            {{ $notif->created_at?->format('d.m.Y H:i') }}
-          </td>
-          <td>
-            <form method="POST" action="{{ route('admin.push.destroy', $notif) }}"
-                  onsubmit="return confirm('O\'chirilsinmi?')">
-              @csrf @method('DELETE')
-              <button class="btn-p danger sm"><i class="bi bi-trash"></i></button>
-            </form>
-          </td>
-        </tr>
-        @empty
-        <tr>
-          <td colspan="6" style="text-align:center;padding:50px;color:var(--p-hint)">
-            <i class="bi bi-bell-slash" style="font-size:36px;display:block;margin-bottom:12px"></i>
-            Bildirishnomalar yo'q
-          </td>
-        </tr>
-        @endforelse
-      </tbody>
-    </table>
-  </div>
   @if($notifications->hasPages())
-  {{ $notifications->links('a122.partials.pagination') }}
+    <div>{{ $notifications->links('a122.partials.pagination') }}</div>
   @endif
 </div>
-
 @endsection
