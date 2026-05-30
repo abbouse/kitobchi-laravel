@@ -1,4 +1,4 @@
-import { usePage } from '@inertiajs/react';
+import { router, usePage } from '@inertiajs/react';
 
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
 
@@ -32,7 +32,11 @@ const statusLabel = (status?: number) => {
 
 export default function Stationeries() {
   const { stationeries = [] } = usePage<{ stationeries?: StatItem[] }>().props;
-  const createUrl = stationeries[0]?.createUrl || '/a122/stationery/create';
+  const createUrl = '/boshqaruv/stationeries';
+  const moderate = (item: StatItem, status: 0 | 1 | 2) => {
+    if (!item.moderateUrl) return;
+    router.patch(item.moderateUrl, { is_approved: status }, { preserveScroll: true });
+  };
 
   return (
     <div>
@@ -40,10 +44,6 @@ export default function Stationeries() {
         <div>
           <h1 className="page-title">Kanselyariya mahsulotlari</h1>
           <p className="page-subtitle">Jami {stationeries.length} ta mahsulot</p>
-        </div>
-        <div className="d-flex gap-2">
-          <a className="btn btn-outline-secondary" href="/a122/stationery">Filtr</a>
-          <a className="btn btn-primary-gradient" href={createUrl}><i className="bi bi-plus-lg me-1"></i>Yangi mahsulot</a>
         </div>
       </div>
 
@@ -79,9 +79,7 @@ export default function Stationeries() {
                   <div className="text-muted small mt-2">{item.seller || 'Ichki katalog'} · {fmt(item.views || 0)} ko'rish</div>
                 </div>
                 <div className="d-flex gap-2 mt-3 pt-2">
-                  <a className="btn btn-sm btn-light flex-fill" href={item.showUrl || '#'}><i className="bi bi-eye"></i></a>
-                  <a className="btn btn-sm btn-primary-gradient flex-fill" href={item.editUrl || '#'}><i className="bi bi-pencil"></i></a>
-                  <a className="btn btn-sm btn-light flex-fill" href={item.moderateUrl || '#'}><i className="bi bi-shield-check"></i></a>
+                  {item.moderateUrl ? <button className="btn btn-sm btn-light flex-fill" onClick={() => moderate(item, item.status === 1 ? 0 : 1)}><i className="bi bi-shield-check"></i></button> : null}
                 </div>
               </div>
             </div>

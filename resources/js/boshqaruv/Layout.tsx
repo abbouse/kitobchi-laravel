@@ -63,14 +63,21 @@ const nav = [
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem('boshqaruv-theme') === 'dark';
+  });
   const { url, props } = usePage<{
     auth?: { admin?: { name?: string; email?: string; role?: string } };
-    legacy?: { a122?: string | null };
   }>();
   const admin = props.auth?.admin;
-  const legacyUrl = props.legacy?.a122;
 
   useEffect(() => { setOpen(false); }, [url]);
+  useEffect(() => {
+    document.body.classList.toggle('boshqaruv-dark', darkMode);
+    document.documentElement.setAttribute('data-bs-theme', darkMode ? 'dark' : 'light');
+    localStorage.setItem('boshqaruv-theme', darkMode ? 'dark' : 'light');
+  }, [darkMode]);
 
   const isActive = (match: string) => {
     if (match === '/boshqaruv') return url === '/boshqaruv' || url === '/boshqaruv/';
@@ -133,15 +140,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <input placeholder="Sahifa, buyurtma, foydalanuvchi qidirish..." />
           </div>
           <div style={{ flex: 1 }}></div>
-          <button className="icon-btn"><i className="bi bi-moon"></i></button>
+          <button className="icon-btn" onClick={() => setDarkMode((value) => !value)} title={darkMode ? "Light mode" : "Dark mode"}>
+            <i className={`bi ${darkMode ? 'bi-sun' : 'bi-moon'}`}></i>
+          </button>
           <button className="icon-btn"><i className="bi bi-envelope"></i><span className="dot"></span></button>
           <button className="icon-btn"><i className="bi bi-bell"></i><span className="dot"></span></button>
-          {legacyUrl && (
-            <a href={legacyUrl} className="btn btn-primary-gradient btn-sm d-inline-flex align-items-center gap-1">
-              <i className="bi bi-tools"></i>
-              To'liq funksiyalar
-            </a>
-          )}
           <div className="d-flex align-items-center gap-2 ps-2 border-start">
             <div className="avatar" style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg,#f472b6,#8b5cf6)', color: 'white', fontWeight: 700, display: 'grid', placeItems: 'center', fontSize: 13 }}>AS</div>
             <div className="d-none d-md-block">

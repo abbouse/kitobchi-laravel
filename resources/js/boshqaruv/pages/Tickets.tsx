@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button, Form } from 'react-bootstrap';
+import PaginationControls, { useClientPagination } from '../components/PaginationControls';
 
 interface Ticket {
   id: number;
@@ -54,6 +55,7 @@ export default function Tickets() {
     const haystack = `${ticket.subject} ${ticket.user} ${ticket.id}`.toLowerCase();
     return matchTab && haystack.includes(search.toLowerCase());
   });
+  const pagination = useClientPagination(filtered, 25);
 
   return (
     <div>
@@ -62,7 +64,6 @@ export default function Tickets() {
           <h1 className="page-title">Murojaatlar</h1>
           <p className="page-subtitle">Telegram/support ticketlar va operator javoblari</p>
         </div>
-        <a className="btn btn-outline-secondary" href="/a122/support">Eski filtr</a>
       </div>
 
       <div className="row g-3 mb-4">
@@ -98,7 +99,7 @@ export default function Tickets() {
           <table className="data-table">
             <thead><tr><th>ID</th><th>Mavzu</th><th>Foydalanuvchi</th><th>Operator</th><th>Xabar</th><th>Reyting</th><th>Sana</th><th>Status</th><th>Amallar</th></tr></thead>
             <tbody>
-              {filtered.map((ticket) => (
+              {pagination.paginated.map((ticket) => (
                 <tr key={ticket.id}>
                   <td className="fw-semibold text-primary">#{ticket.id}</td>
                   <td className="fw-semibold">{ticket.subject}</td>
@@ -110,7 +111,6 @@ export default function Tickets() {
                   <td><span className={`chip ${statusChip(ticket.status)}`}>{ticket.status}</span></td>
                   <td>
                     <button className="btn btn-sm btn-primary-gradient me-1" onClick={() => handleOpenReply(ticket)}><i className="bi bi-reply"></i></button>
-                    {ticket.showUrl ? <a className="btn btn-sm btn-light me-1" href={ticket.showUrl}><i className="bi bi-eye"></i></a> : null}
                     {ticket.closeUrl ? <button className="btn btn-sm btn-light" onClick={() => closeTicket(ticket)}><i className="bi bi-check2"></i></button> : null}
                   </td>
                 </tr>
@@ -118,6 +118,7 @@ export default function Tickets() {
             </tbody>
           </table>
         </div>
+        <PaginationControls {...pagination} onPageChange={pagination.setPage} />
       </div>
 
       <Modal show={showReply} onHide={() => setShowReply(false)} centered>

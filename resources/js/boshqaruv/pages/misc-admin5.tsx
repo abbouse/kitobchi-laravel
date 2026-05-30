@@ -4,7 +4,7 @@ import { Modal, Button, Form } from 'react-bootstrap';
 
 // ===== MYSTERY BOX =====
 export function MysteryBox() {
-  const { mysteryBox = { plans: [], subscriptions: [], indexUrl: '/a122/mystery-box', plansUrl: '/a122/mystery-box/plans' } } = usePage<{
+  const { mysteryBox = { plans: [], subscriptions: [], indexUrl: '/boshqaruv/mystery-box', plansUrl: '/boshqaruv/mystery-box' } } = usePage<{
     mysteryBox?: {
       plans: Array<{ id: number; name: string; months: number; price: number; booksPerMonth: number; active: boolean; subscribers: number; plansUrl?: string; destroyUrl?: string }>;
       subscriptions: Array<{ id: number; user: string; phone?: string; plan: string; status: string; statusLabel?: string; nextDelivery?: string; progress?: number; showUrl?: string; pauseUrl?: string; resumeUrl?: string; cancelUrl?: string }>;
@@ -20,7 +20,6 @@ export function MysteryBox() {
     <div>
       <div className="page-head">
         <div><h1 className="page-title">Mystery Box</h1><p className="page-subtitle">{mysteryBox.plans.length} ta plan · {mysteryBox.subscriptions.filter(s => s.status === 'active').length} ta faol obuna</p></div>
-        <a className="btn btn-primary-gradient" href={mysteryBox.plansUrl}><i className="bi bi-plus-lg me-1"></i>Planlar</a>
       </div>
 
       <div className="row g-3 mb-3">
@@ -34,7 +33,6 @@ export function MysteryBox() {
               <div className="fw-bold text-primary fs-4">{p.price.toLocaleString()} so'm<small className="text-muted fs-6">/oy</small></div>
               <div className="text-muted mb-2">{p.months} oy · {p.booksPerMonth} kitob/oy · {p.subscribers} obunachi</div>
               <div className="d-flex gap-2">
-                <a className="btn btn-sm btn-light flex-fill" href={p.plansUrl || mysteryBox.plansUrl}><i className="bi bi-pencil"></i></a>
                 {p.destroyUrl ? <button className="btn btn-sm btn-light text-danger" onClick={() => router.delete(p.destroyUrl!, { preserveScroll: true })}><i className="bi bi-trash"></i></button> : null}
               </div>
             </div>
@@ -73,7 +71,6 @@ export function MysteryBox() {
           </div>
         </Modal.Body>
         <Modal.Footer>
-          {selected?.showUrl ? <a className="btn btn-primary-gradient" href={selected.showUrl}>Eski panelda ochish</a> : null}
           <Button variant="light" onClick={() => setSelected(null)}>Yopish</Button>
         </Modal.Footer>
       </Modal>
@@ -86,13 +83,12 @@ export function SovgAlar() {
   const { gifts = [] } = usePage<{
     gifts?: Array<{ id: number; name: string; seller?: string; stock: number; priceFrom: number; priceTo: number; status: string; approved: boolean; sold: number; revenue: number; image?: string | null; indexUrl?: string }>;
   }>().props;
-  const indexUrl = gifts[0]?.indexUrl || '/a122/gifts';
+  const indexUrl = '/boshqaruv/sovgalar';
 
   return (
     <div>
       <div className="page-head">
         <div><h1 className="page-title">Sovg'alar</h1><p className="page-subtitle">Jami {gifts.length} ta sovg'a mahsuloti</p></div>
-        <a className="btn btn-primary-gradient" href={indexUrl}>Eski panelda boshqarish</a>
       </div>
       <div className="card-panel">
         <div className="table-responsive"><table className="data-table">
@@ -106,7 +102,7 @@ export function SovgAlar() {
               <td>{gift.stock}</td>
               <td>{gift.sold}</td>
               <td><span className={`chip ${gift.approved ? 'chip-success' : 'chip-warning'}`}>{gift.approved ? gift.status : 'Moderatsiya'}</span></td>
-              <td><a className="btn btn-sm btn-light" href={gift.indexUrl || indexUrl}><i className="bi bi-box-arrow-up-right"></i></a></td>
+              <td><span className="chip chip-gray">Ko'rildi</span></td>
             </tr>
           ))}</tbody>
         </table></div>
@@ -120,13 +116,12 @@ export function Logistika() {
   const { deliveryServices = [] } = usePage<{
     deliveryServices?: Array<{ id: number; name: string; type?: string; price: number; days: number; country?: string; capital: boolean; freeFrom: number; active: boolean; indexUrl?: string }>;
   }>().props;
-  const indexUrl = deliveryServices[0]?.indexUrl || '/a122/logistics';
+  const indexUrl = '/boshqaruv/logistika';
 
   return (
     <div>
       <div className="page-head">
         <div><h1 className="page-title">Yetkazish zonalari va qoidalar</h1><p className="page-subtitle">Jami {deliveryServices.length} ta yetkazish xizmati</p></div>
-        <a className="btn btn-primary-gradient" href={indexUrl}><i className="bi bi-plus-lg me-1"></i>Logistika boshqaruvi</a>
       </div>
       <div className="card-panel">
         <div className="table-responsive"><table className="data-table">
@@ -141,7 +136,7 @@ export function Logistika() {
               <td className="fw-semibold">{service.days} kun</td>
               <td>{service.country || '—'} {service.capital ? '· poytaxt' : ''}</td>
               <td><span className={`chip ${service.active ? 'chip-success' : 'chip-gray'}`}>{service.active ? 'Faol' : 'Nofaol'}</span></td>
-              <td><a className="btn btn-sm btn-light" href={service.indexUrl || indexUrl}><i className="bi bi-box-arrow-up-right"></i></a></td>
+              <td><span className="chip chip-gray">Ko'rildi</span></td>
             </tr>
           ))}</tbody>
         </table></div>

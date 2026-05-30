@@ -1,4 +1,5 @@
 import { router, usePage } from '@inertiajs/react';
+import PaginationControls, { useClientPagination } from '../components/PaginationControls';
 
 interface Pub {
   id: number;
@@ -15,7 +16,7 @@ interface Pub {
 
 export default function Publishers() {
   const { publishers = [] } = usePage<{ publishers?: Pub[] }>().props;
-  const createUrl = publishers[0]?.createUrl || '/a122/publishers/create';
+  const pagination = useClientPagination(publishers, 30);
 
   const destroy = (publisher: Pub) => {
     if (!publisher.destroyUrl || !confirm(`${publisher.name} nashriyotini o'chirasizmi?`)) return;
@@ -29,10 +30,6 @@ export default function Publishers() {
           <h1 className="page-title">Nashriyotlar</h1>
           <p className="page-subtitle">Jami {publishers.length} ta nashriyot</p>
         </div>
-        <div className="d-flex gap-2">
-          <a className="btn btn-outline-secondary" href="/a122/publishers">Filtr</a>
-          <a className="btn btn-primary-gradient" href={createUrl}><i className="bi bi-plus-lg me-1"></i>Yangi nashriyot</a>
-        </div>
       </div>
 
       <div className="card-panel">
@@ -42,7 +39,7 @@ export default function Publishers() {
               <tr><th>Nashriyot</th><th>Kitoblar soni</th><th>Rasm</th><th>Status</th><th>Amallar</th></tr>
             </thead>
             <tbody>
-              {publishers.map((publisher, i) => (
+              {pagination.paginated.map((publisher, i) => (
                 <tr key={publisher.id}>
                   <td>
                     <div className="d-flex align-items-center gap-2">
@@ -59,7 +56,6 @@ export default function Publishers() {
                   <td><span className={`chip ${publisher.image ? 'chip-success' : 'chip-gray'}`}>{publisher.image ? 'Bor' : "Yo'q"}</span></td>
                   <td><span className="chip chip-success">Faol</span></td>
                   <td>
-                    <a className="btn btn-sm btn-light me-1" href={publisher.editUrl || '#'} title="Tahrirlash"><i className="bi bi-pencil"></i></a>
                     <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(publisher)} disabled={publisher.books > 0} title="O'chirish">
                       <i className="bi bi-trash"></i>
                     </button>
@@ -69,6 +65,7 @@ export default function Publishers() {
             </tbody>
           </table>
         </div>
+        <PaginationControls {...pagination} onPageChange={pagination.setPage} />
       </div>
     </div>
   );

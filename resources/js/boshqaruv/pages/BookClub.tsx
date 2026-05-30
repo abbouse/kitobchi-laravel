@@ -42,7 +42,6 @@ export default function BookClub() {
           <h1 className="page-title">Book Club postlari</h1>
           <p className="page-subtitle">O'quvchilar hamjamiyati, AI moderation va shikoyat nazorati</p>
         </div>
-        <a className="btn btn-outline-secondary" href="/a122/book-club">Eski filtr</a>
       </div>
 
       <div className="row g-3">
@@ -67,7 +66,7 @@ export default function BookClub() {
                     <span className="btn btn-sm btn-light"><i className="bi bi-heart-fill text-danger"></i> {post.likes}</span>
                     <button className="btn btn-sm btn-light" onClick={() => setSelectedPost(post)}><i className="bi bi-chat"></i> {post.comments}</button>
                     <span className="chip chip-gray">AI: {post.aiStatus || '—'} {post.aiScore ?? ''}</span>
-                    {post.editUrl ? <a className="btn btn-sm btn-light ms-auto" href={post.editUrl}><i className="bi bi-pencil"></i></a> : null}
+                    <button className="btn btn-sm btn-light ms-auto" onClick={() => setSelectedPost(post)}><i className="bi bi-eye"></i></button>
                     <button className="btn btn-sm btn-light" onClick={() => warn(post)}><i className="bi bi-flag"></i></button>
                     <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(post)}><i className="bi bi-trash"></i></button>
                   </div>
@@ -102,7 +101,6 @@ export default function BookClub() {
           </div>
         </Modal.Body>
         <Modal.Footer>
-          {selectedPost?.showUrl ? <a className="btn btn-primary-gradient" href={selectedPost.showUrl}>Eski panelda ochish</a> : null}
           <Button variant="light" onClick={() => setSelectedPost(null)}>Yopish</Button>
         </Modal.Footer>
       </Modal>

@@ -7,7 +7,7 @@ export function Adminlar() {
   const { admins = [] } = usePage<{
     admins?: Array<{ id: number; name: string; email: string; role: string; active: boolean; lastLogin?: string; createUrl?: string; showUrl?: string; editUrl?: string; toggleUrl?: string; destroyUrl?: string }>;
   }>().props;
-  const createUrl = admins[0]?.createUrl || '/a122/admins/create';
+  const createUrl = '/boshqaruv/adminlar';
 
   const toggle = (admin: (typeof admins)[0]) => admin.toggleUrl && router.patch(admin.toggleUrl, {}, { preserveScroll: true });
   const destroy = (admin: (typeof admins)[0]) => {
@@ -19,7 +19,6 @@ export function Adminlar() {
     <div>
       <div className="page-head">
         <div><h1 className="page-title">Adminlar</h1><p className="page-subtitle">Jami {admins.length} ta admin</p></div>
-        <a className="btn btn-primary-gradient" href={createUrl}><i className="bi bi-plus-lg me-1"></i>Yangi admin</a>
       </div>
       <div className="card-panel">
         <div className="table-responsive"><table className="data-table">
@@ -33,8 +32,6 @@ export function Adminlar() {
               <td className="text-muted">{admin.lastLogin || '—'}</td>
               <td><div className="form-check form-switch"><input type="checkbox" className="form-check-input" checked={admin.active} onChange={() => toggle(admin)} /></div></td>
               <td>
-                {admin.showUrl ? <a className="btn btn-sm btn-light me-1" href={admin.showUrl}><i className="bi bi-eye"></i></a> : null}
-                {admin.editUrl ? <a className="btn btn-sm btn-light me-1" href={admin.editUrl}><i className="bi bi-pencil"></i></a> : null}
                 <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(admin)}><i className="bi bi-trash"></i></button>
               </td>
             </tr>
@@ -53,9 +50,9 @@ export function ApiClients() {
   }>().props;
   const [showLogs, setShowLogs] = useState(false);
 
-  const createUrl = apiClients[0]?.createUrl || '/a122/api-clients/create';
-  const docsUrl = apiClients[0]?.docsUrl || '/a122/api-clients/docs';
-  const logsUrl = apiClients[0]?.logsUrl || '/a122/api-clients/logs';
+  const createUrl = '/boshqaruv/api-clients';
+  const docsUrl = '/boshqaruv/api-clients';
+  const logsUrl = '/boshqaruv/api-clients';
   const patch = (url?: string) => url && router.patch(url, {}, { preserveScroll: true });
   const destroy = (client: (typeof apiClients)[0]) => {
     if (!client.destroyUrl || !confirm(`${client.name} API clienti o'chirilsinmi?`)) return;
@@ -68,8 +65,6 @@ export function ApiClients() {
         <div><h1 className="page-title">API mijozlar</h1><p className="page-subtitle">Jami {apiClients.length} ta client</p></div>
         <div className="d-flex gap-2">
           <button className="btn btn-outline-secondary" onClick={() => setShowLogs(true)}><i className="bi bi-journal-code me-1"></i>API Logs</button>
-          <a className="btn btn-outline-secondary" href={docsUrl}><i className="bi bi-file-text me-1"></i>API Docs</a>
-          <a className="btn btn-primary-gradient" href={createUrl}><i className="bi bi-plus-lg me-1"></i>Yangi client</a>
         </div>
       </div>
       <div className="card-panel">
@@ -84,7 +79,6 @@ export function ApiClients() {
               <td>{client.rateLimitSecond || 0}/s · {client.rateLimitMinute || 0}/m</td>
               <td><div className="form-check form-switch"><input type="checkbox" className="form-check-input" checked={client.active} onChange={() => patch(client.toggleUrl)} /></div></td>
               <td>
-                {client.editUrl ? <a className="btn btn-sm btn-light me-1" href={client.editUrl}><i className="bi bi-pencil"></i></a> : null}
                 <button className="btn btn-sm btn-light me-1" onClick={() => patch(client.regenerateUrl)}><i className="bi bi-arrow-repeat"></i></button>
                 <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(client)}><i className="bi bi-trash"></i></button>
               </td>
@@ -108,7 +102,7 @@ export function ApiClients() {
             ))}</tbody>
           </table></div>
         </Modal.Body>
-        <Modal.Footer><a className="btn btn-outline-secondary" href={logsUrl}>To'liq loglar</a><Button variant="light" onClick={() => setShowLogs(false)}>Yopish</Button></Modal.Footer>
+        <Modal.Footer><Button variant="light" onClick={() => setShowLogs(false)}>Yopish</Button></Modal.Footer>
       </Modal>
     </div>
   );

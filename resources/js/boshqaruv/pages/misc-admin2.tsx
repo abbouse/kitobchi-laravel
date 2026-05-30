@@ -8,7 +8,7 @@ export function Blogerlar() {
     bloggers?: Array<{ id: number; name: string; phone?: string; address?: string; platforms?: string[]; followers?: number; shipments?: number; status: string; activeUntil?: string; createUrl?: string; showUrl?: string; editUrl?: string; destroyUrl?: string }>;
   }>().props;
   const [selected, setSelected] = useState<(typeof bloggers)[0] | null>(null);
-  const createUrl = bloggers[0]?.createUrl || '/a122/bloggers/create';
+  const createUrl = '/boshqaruv/blogerlar';
 
   const destroy = (blogger: (typeof bloggers)[0]) => {
     if (!blogger.destroyUrl || !confirm(`${blogger.name} blogerini o'chirasizmi?`)) return;
@@ -19,7 +19,6 @@ export function Blogerlar() {
     <div>
       <div className="page-head">
         <div><h1 className="page-title">Hamkor blogerlar</h1><p className="page-subtitle">Jami {bloggers.length} ta bloger · shipment va hamkorlik nazorati</p></div>
-        <a className="btn btn-primary-gradient" href={createUrl}><i className="bi bi-plus-lg me-1"></i>Yangi bloger</a>
       </div>
       <div className="row g-3">
         {bloggers.map(blogger => (
@@ -36,7 +35,6 @@ export function Blogerlar() {
               <div className="small text-muted mb-3">{blogger.address || blogger.activeUntil || '—'}</div>
               <div className="d-flex gap-2">
                 <button className="btn btn-sm btn-light flex-fill" onClick={() => setSelected(blogger)}><i className="bi bi-eye"></i></button>
-                <a className="btn btn-sm btn-primary-gradient flex-fill" href={blogger.editUrl || blogger.showUrl || '#'}><i className="bi bi-pencil"></i></a>
                 <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(blogger)}><i className="bi bi-trash"></i></button>
               </div>
             </div>
@@ -55,7 +53,6 @@ export function Blogerlar() {
           </div>
         </Modal.Body>
         <Modal.Footer>
-          {selected?.showUrl ? <a className="btn btn-primary-gradient" href={selected.showUrl}>Eski panelda ochish</a> : null}
           <Button variant="light" onClick={() => setSelected(null)}>Yopish</Button>
         </Modal.Footer>
       </Modal>
@@ -82,7 +79,7 @@ export function Shikoyatlar() {
 
   return (
     <div>
-      <div className="page-head"><div><h1 className="page-title">Shikoyatlar</h1><p className="page-subtitle">Jami {complaints.length} ta shikoyat</p></div><a className="btn btn-outline-secondary" href="/a122/complaints">Eski filtr</a></div>
+      <div className="page-head"><div><h1 className="page-title">Shikoyatlar</h1><p className="page-subtitle">Jami {complaints.length} ta shikoyat</p></div></div>
       <div className="card-panel">
         <div className="table-responsive"><table className="data-table">
           <thead><tr><th>ID</th><th>Foydalanuvchi</th><th>Sabab</th><th>Turi</th><th>Sana</th><th>Status</th><th>Amallar</th></tr></thead>
@@ -112,7 +109,7 @@ export function Shikoyatlar() {
             ))}
           </div>
         </Modal.Body>
-        <Modal.Footer>{selected?.showUrl ? <a className="btn btn-primary-gradient" href={selected.showUrl}>Eski panelda ochish</a> : null}<Button variant="light" onClick={() => setShowDetail(false)}>Yopish</Button></Modal.Footer>
+        <Modal.Footer><Button variant="light" onClick={() => setShowDetail(false)}>Yopish</Button></Modal.Footer>
       </Modal>
     </div>
   );
@@ -148,7 +145,7 @@ export function GiftSertifikatlar() {
               <td className="text-muted">{certificate.expires || '—'}</td>
               <td><span className={`chip ${certificate.status === 'active' ? 'chip-success' : certificate.status === 'used' ? 'chip-info' : certificate.status === 'cancelled' ? 'chip-danger' : 'chip-warning'}`} style={{ fontSize: 9 }}>{certificate.statusLabel || certificate.status}</span></td>
               <td>
-                {certificate.showUrl ? <a className="btn btn-sm btn-light me-1" href={certificate.showUrl}><i className="bi bi-eye"></i></a> : null}
+                <span className="chip chip-gray">Ko'rildi</span>
                 {certificate.status === 'active' && <button className="btn btn-sm btn-danger" onClick={() => cancel(certificate)}><i className="bi bi-x-lg"></i> Bekor qilish</button>}
               </td>
             </tr>

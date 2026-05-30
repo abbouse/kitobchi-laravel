@@ -65,7 +65,7 @@ export default function CourierOrders() {
   const totalBalance = useMemo(() => couriers.reduce((sum, courier) => sum + (courier.balance || 0), 0), [couriers]);
   const activeCouriers = couriers.filter((courier) => statusChip(courier.status) === 'chip-success').length;
   const routeOrders = courierOrders.filter((order) => statusChip(order.status) === 'chip-info').length;
-  const createUrl = couriers[0]?.createUrl || '/a122/couriers/create';
+  const createUrl = '/boshqaruv/couriers';
 
   const patch = (url?: string, data: Record<string, string> = {}) => {
     if (!url) return;
@@ -136,7 +136,7 @@ export default function CourierOrders() {
 
               <div className="d-flex gap-2 mt-auto">
                 <button className="btn btn-sm btn-light flex-fill" onClick={() => setSelectedCourier(courier)}><i className="bi bi-eye"></i></button>
-                <a className="btn btn-sm btn-primary-gradient flex-fill" href={courier.editUrl || courier.showUrl || '#'}><i className="bi bi-pencil"></i></a>
+                <button className="btn btn-sm btn-primary-gradient flex-fill" onClick={() => setSelectedCourier(courier)}><i className="bi bi-pencil"></i></button>
               </div>
             </div>
           </div>
@@ -149,7 +149,7 @@ export default function CourierOrders() {
             <div className="panel-title">Kuryer buyurtmalari</div>
             <small className="text-muted">{courierOrders.length} ta yetkazma</small>
           </div>
-          <a className="btn btn-sm btn-outline-secondary" href="/a122/courier-orders">To'liq ro'yxat</a>
+          <a className="btn btn-sm btn-outline-secondary" href="/boshqaruv/courier-orders">To'liq ro'yxat</a>
         </div>
         <div className="table-responsive">
           <table className="data-table">
@@ -167,7 +167,7 @@ export default function CourierOrders() {
                   <td><span className={`chip ${statusChip(order.status)}`}>{order.status || '—'}</span></td>
                   <td>
                     <button className="btn btn-sm btn-light me-1" onClick={() => setSelectedOrder(order)}><i className="bi bi-eye"></i></button>
-                    {order.showUrl ? <a className="btn btn-sm btn-light" href={order.showUrl}><i className="bi bi-box-arrow-up-right"></i></a> : null}
+                    <button className="btn btn-sm btn-light" onClick={() => setSelectedOrder(order)}><i className="bi bi-eye"></i></button>
                   </td>
                 </tr>
               ))}
@@ -190,7 +190,6 @@ export default function CourierOrders() {
           {selectedCourier?.approveUrl ? <Button variant="outline-secondary" onClick={() => patch(selectedCourier.approveUrl)}>Tasdiqlash</Button> : null}
           {selectedCourier?.rejectUrl ? <Button variant="outline-secondary" onClick={() => patch(selectedCourier.rejectUrl)}>Rad etish</Button> : null}
           {selectedCourier?.unblockUrl ? <Button variant="outline-secondary" onClick={() => patch(selectedCourier.unblockUrl)}>Blokdan chiqarish</Button> : null}
-          {selectedCourier?.showUrl ? <a className="btn btn-primary-gradient" href={selectedCourier.showUrl}>Eski panelda ochish</a> : null}
           <Button variant="light" onClick={() => setSelectedCourier(null)}>Yopish</Button>
         </Modal.Footer>
       </Modal>
@@ -207,7 +206,6 @@ export default function CourierOrders() {
         </Modal.Body>
         <Modal.Footer>
           {orderStatuses.map((status) => <Button key={status.code} variant="outline-secondary" onClick={() => selectedOrder && patch(selectedOrder.statusUrl, { status: status.code })}>{status.label}</Button>)}
-          {selectedOrder?.showUrl ? <a className="btn btn-primary-gradient" href={selectedOrder.showUrl}>Ko'rish</a> : null}
           <Button variant="light" onClick={() => setSelectedOrder(null)}>Yopish</Button>
         </Modal.Footer>
       </Modal>

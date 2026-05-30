@@ -27,7 +27,7 @@ const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
 export default function Hubs() {
   const { hubs = [] } = usePage<{ hubs?: Hub[] }>().props;
   const [selectedHub, setSelectedHub] = useState<Hub | null>(null);
-  const indexUrl = hubs[0]?.indexUrl || '/a122/hubs';
+  const indexUrl = '/boshqaruv/hubs';
 
   const totalStaff = useMemo(() => hubs.reduce((sum, hub) => sum + (hub.staff || 0), 0), [hubs]);
   const totalFulfillments = useMemo(() => hubs.reduce((sum, hub) => sum + (hub.fulfillments || 0), 0), [hubs]);
@@ -41,9 +41,6 @@ export default function Hubs() {
           <h1 className="page-title">Hub Fulfillment</h1>
           <p className="page-subtitle">Fulfillment markazlari, xodimlar va kuryer vazifalari</p>
         </div>
-        <a className="btn btn-primary-gradient" href={indexUrl}>
-          <i className="bi bi-building-add me-1"></i>Hub boshqaruvi
-        </a>
       </div>
 
       <div className="row g-3 mb-4">
@@ -102,7 +99,7 @@ export default function Hubs() {
 
               <div className="d-flex gap-2 mt-auto">
                 <button className="btn btn-sm btn-light flex-fill" onClick={() => setSelectedHub(hub)}><i className="bi bi-eye"></i> Batafsil</button>
-                <a className="btn btn-sm btn-primary-gradient flex-fill" href={hub.indexUrl || indexUrl}><i className="bi bi-gear"></i> Sozlash</a>
+                <button className="btn btn-sm btn-primary-gradient flex-fill" onClick={() => setSelectedHub(hub)}><i className="bi bi-gear"></i> Sozlash</button>
               </div>
             </div>
           </div>
@@ -136,7 +133,7 @@ export default function Hubs() {
                   </td>
                   <td>
                     <button className="btn btn-sm btn-light me-1" onClick={() => setSelectedHub(hub)}><i className="bi bi-eye"></i></button>
-                    <a className="btn btn-sm btn-light" href={hub.indexUrl || indexUrl}><i className="bi bi-box-arrow-up-right"></i></a>
+                    <button className="btn btn-sm btn-light" onClick={() => setSelectedHub(hub)}><i className="bi bi-eye"></i></button>
                   </td>
                 </tr>
               ))}
@@ -158,7 +155,6 @@ export default function Hubs() {
           </div>
         </Modal.Body>
         <Modal.Footer>
-          {selectedHub?.indexUrl ? <a className="btn btn-primary-gradient" href={selectedHub.indexUrl}>Eski panelda boshqarish</a> : null}
           <Button variant="light" onClick={() => setSelectedHub(null)}>Yopish</Button>
         </Modal.Footer>
       </Modal>

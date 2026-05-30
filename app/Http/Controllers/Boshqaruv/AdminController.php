@@ -12,7 +12,9 @@ use App\Models\BookClub;
 use App\Models\BotTicket;
 use App\Models\BookCategories;
 use App\Models\Books;
+use App\Models\CashbackSetting;
 use App\Models\CareerApplication;
+use App\Models\CommissionSetting;
 use App\Models\CourierOrder;
 use App\Models\Couriers;
 use App\Models\DeliveryService;
@@ -32,6 +34,7 @@ use App\Models\Reel;
 use App\Models\SearchHistory;
 use App\Models\SellerAd;
 use App\Models\Seller;
+use App\Models\SellerBanLog;
 use App\Models\SellerOrder;
 use App\Models\SellerTransaction;
 use App\Models\Sold;
@@ -45,6 +48,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use App\Support\ProductImageUrls;
+use App\Enums\SellerOrderStatusCode;
+use App\Services\AdminOrderStatusSyncService;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -99,14 +104,7 @@ class AdminController extends Controller
     public function dashboard(): Response
     {
         return Inertia::render('Dashboard', [
-            'metrics' => [
-                'orders' => $this->tableCount('solds'),
-                'users' => $this->tableCount('users'),
-                'books' => $this->tableCount('books'),
-                'sellers' => $this->tableCount('sellers'),
-                'couriers' => $this->tableCount('couriers'),
-                'tickets' => $this->tableCount('bot_tickets'),
-            ],
+            'dashboard' => $this->dashboardPayload(),
         ]);
     }
 
@@ -131,11 +129,7 @@ class AdminController extends Controller
 
     public function page(string $component): Response
     {
-        return Inertia::render($component, array_merge([
-            'legacy' => [
-                'a122' => $this->legacyUrl($component),
-            ],
-        ], $this->pagePayload($component)));
+        return Inertia::render($component, $this->pagePayload($component));
     }
 
     private function pagePayload(string $component): array
@@ -150,7 +144,13 @@ class AdminController extends Controller
             'Publishers' => ['publishers' => $this->publishersPayload()],
             'Users' => ['users' => $this->usersPayload()],
             'Orders' => ['orders' => $this->ordersPayload()],
-            'SellerOrders' => ['sellers' => $this->sellersPayload(), 'sellerOrders' => $this->sellerOrdersPayload()],
+            'SellerOrders' => [
+                'sellers' => $this->sellersPayload(),
+                'sellerCounts' => $this->sellerStatusCounts(),
+                'sellerOrders' => $this->sellerOrdersPayload(),
+                'sellerOrderCounts' => $this->sellerOrderStatusCounts(),
+                'sellerOrderStatuses' => AdminOrderStatusSyncService::SELLER_STATUSES,
+            ],
             'CourierOrders' => ['couriers' => $this->couriersPayload(), 'courierOrders' => $this->courierOrdersPayload()],
             'Hubs' => ['hubs' => $this->hubsPayload()],
             'Transaksiyalar' => ['transactions' => $this->transactionsPayload()],
@@ -176,6 +176,134 @@ class AdminController extends Controller
             'BookClub' => ['bookClubPosts' => $this->bookClubPayload()],
             default => [],
         };
+    }
+
+    private function dashboardPayload(): array
+    {
+        $today = now()->startOfDay();
+        $yesterday = now()->subDay()->startOfDay();
+        $week = now()->startOfWeek();
+        $lastWeek = now()->subWeek()->startOfWeek();
+        $month = now()->startOfMonth();
+        $lastMonth = now()->subMonth()->startOfMonth();
+
+        $paid = fn () => $this->paidOrdersQuery();
+        $period = fn ($start, $end = null) => [
+            'revenue' => (float) $paid()->where('created_at', '>=', $start)->when($end, fn ($q) => $q->where('created_at', '<', $end))->sum('amount'),
+            'orders' => (int) Sold::query()->where('created_at', '>=', $start)->when($end, fn ($q) => $q->where('created_at', '<', $end))->count(),
+            'users' => Schema::hasTable('users') ? (int) User::query()->where('created_at', '>=', $start)->when($end, fn ($q) => $q->where('created_at', '<', $end))->count() : 0,
+        ];
+
+        $todayStats = $period($today);
+        $yesterdayStats = $period($yesterday, $today);
+        $weekStats = $period($week);
+        $lastWeekStats = $period($lastWeek, $week);
+        $monthStats = $period($month);
+        $lastMonthStats = $period($lastMonth, $month);
+
+        $totalOrders = $this->tableCount('solds');
+        $paidCount = (int) $paid()->count();
+        $grossRevenue = (float) $paid()->sum('amount');
+        $deliveryIncome = (float) $paid()->sum('deliveryPrice');
+        $promoDiscount = (float) $paid()->sum('discountAmount');
+        $cashback = (float) $paid()->sum('cashbackAmount');
+        $giftDiscount = Schema::hasColumn('solds', 'gift_certificate_discount') ? (float) $paid()->sum('gift_certificate_discount') : 0;
+        $commission = Schema::hasTable('seller_transactions') ? (float) SellerTransaction::query()->where('status', 'approved')->sum('commissionPrice') : 0;
+        $courierPayout = Schema::hasTable('courier_orders') ? (float) CourierOrder::query()
+            ->where(fn ($query) => $query->whereIn('status_code', ['customer_received', 'delivered', 'C'])->orWhereIn('status', ['customer_received', 'delivered', 'C']))
+            ->sum('courierPrice') : 0;
+        $sellerPayout = Schema::hasTable('seller_transactions') ? (float) SellerTransaction::query()->where('status', 'approved')->sum('netAmount') : 0;
+        $platformProfit = $commission + $deliveryIncome - $promoDiscount - $cashback - $courierPayout;
+
+        $mainCounts = [
+            'all' => $totalOrders,
+            'new' => $this->countStatuses(Sold::query(), ['pending', 'A']),
+            'packing' => $this->countStatuses(Sold::query(), ['packing', 'P', 'B']),
+            'onway' => $this->countStatuses(Sold::query(), ['in_delivery', 'D']),
+            'done' => $this->countStatuses(Sold::query(), ['delivered', 'customer_received', 'C']),
+            'cancelled' => $this->countStatuses(Sold::query(), ['cancelled', 'returned', 'F']),
+        ];
+
+        $sellerCounts = [
+            'all' => $this->tableCount('seller_orders'),
+            'payment_pending' => Schema::hasTable('seller_orders') ? $this->countStatuses(SellerOrder::query(), ['payment_pending']) : 0,
+            'new' => Schema::hasTable('seller_orders') ? $this->countStatuses(SellerOrder::query(), ['new']) : 0,
+            'accepted' => Schema::hasTable('seller_orders') ? $this->countStatuses(SellerOrder::query(), ['accepted']) : 0,
+            'handover' => Schema::hasTable('seller_orders') ? $this->countStatuses(SellerOrder::query(), ['handed_to_courier']) : 0,
+            'cancelled' => Schema::hasTable('seller_orders') ? $this->countStatuses(SellerOrder::query(), ['cancelled']) : 0,
+        ];
+
+        $courierCounts = [
+            'all' => $this->tableCount('courier_orders'),
+            'pending' => Schema::hasTable('courier_orders') ? $this->countStatuses(CourierOrder::query(), ['pending']) : 0,
+            'in_delivery' => Schema::hasTable('courier_orders') ? $this->countStatuses(CourierOrder::query(), ['in_delivery']) : 0,
+            'delivered' => Schema::hasTable('courier_orders') ? $this->countStatuses(CourierOrder::query(), ['delivered']) : 0,
+            'customer_received' => Schema::hasTable('courier_orders') ? $this->countStatuses(CourierOrder::query(), ['customer_received']) : 0,
+            'rejected' => Schema::hasTable('courier_orders') ? $this->countStatuses(CourierOrder::query(), ['cancelled', 'returned']) : 0,
+        ];
+
+        return [
+            'generatedAt' => now()->format('Y-m-d H:i:s'),
+            'metrics' => [
+                'orders' => $totalOrders,
+                'paidOrders' => $paidCount,
+                'users' => $this->tableCount('users'),
+                'premiumUsers' => Schema::hasColumn('users', 'is_premium') ? (int) User::query()->where('is_premium', true)->count() : 0,
+                'onlineUsers' => Schema::hasColumn('users', 'last_seen_at') ? (int) User::query()->where('last_seen_at', '>=', now()->subMinutes(5))->count() : 0,
+                'books' => $this->tableCount('books'),
+                'stationeries' => $this->tableCount('stationeries'),
+                'sellers' => $this->tableCount('sellers'),
+                'pendingSellers' => Schema::hasTable('sellers') ? (int) Seller::query()->where('status', 'pending')->count() : 0,
+                'couriers' => $this->tableCount('couriers'),
+                'tickets' => $this->tableCount('bot_tickets'),
+                'complaints' => $this->tableCount('reports'),
+            ],
+            'periods' => [
+                'today' => $this->periodCard($todayStats),
+                'yesterday' => $this->periodCard($yesterdayStats),
+                'week' => $this->periodCard($weekStats),
+                'lastWeek' => $this->periodCard($lastWeekStats),
+                'month' => $this->periodCard($monthStats),
+                'lastMonth' => $this->periodCard($lastMonthStats),
+            ],
+            'financial' => [
+                'grossRevenue' => $grossRevenue,
+                'monthRevenue' => $monthStats['revenue'],
+                'deliveryIncome' => $deliveryIncome,
+                'commission' => $commission,
+                'promoDiscount' => $promoDiscount,
+                'cashback' => $cashback,
+                'giftDiscount' => $giftDiscount,
+                'courierPayout' => $courierPayout,
+                'sellerPayout' => $sellerPayout,
+                'platformProfit' => $platformProfit,
+                'avgOrderValue' => $paidCount > 0 ? round($grossRevenue / $paidCount) : 0,
+                'netMargin' => $grossRevenue > 0 ? round($platformProfit / $grossRevenue * 100, 1) : 0,
+            ],
+            'status' => [
+                'main' => $mainCounts,
+                'seller' => $sellerCounts,
+                'courier' => $courierCounts,
+            ],
+            'salesByMonth' => $this->dashboardMonthlySales(),
+            'categoryShare' => $this->dashboardCategoryShare(),
+            'topProducts' => $this->liveTopProducts(),
+            'recentOrders' => $this->liveRecentOrders(),
+            'paymentSplit' => $this->paymentSplit([]),
+            'deliverySplit' => $this->deliverySplit(),
+            'regions' => $this->liveRegionStats(),
+            'alerts' => $this->liveAlerts($mainCounts, $sellerCounts, $courierCounts),
+        ];
+    }
+
+    private function periodCard(array $stats): array
+    {
+        return [
+            'revenue' => (float) ($stats['revenue'] ?? 0),
+            'orders' => (int) ($stats['orders'] ?? 0),
+            'users' => (int) ($stats['users'] ?? 0),
+            'aov' => ((int) ($stats['orders'] ?? 0)) > 0 ? round(((float) ($stats['revenue'] ?? 0)) / (int) $stats['orders']) : 0,
+        ];
     }
 
     private function booksPayload(): array
@@ -225,7 +353,7 @@ class AdminController extends Controller
                         'status' => $book->seller->status,
                         'verified' => (bool) $book->seller->isVerified,
                         'hidden' => (bool) $book->seller->is_hidden,
-                        'url' => route('admin.sellers.show', $book->seller),
+                        'url' => route('boshqaruv.sellers'),
                     ] : null,
                     'lang' => $book->lang,
                     'langType' => $book->langType,
@@ -240,7 +368,7 @@ class AdminController extends Controller
                     'updatedAt' => optional($book->updated_at)->format('Y-m-d H:i'),
                     'showUrl' => route('admin.books.show', $book),
                     'editUrl' => route('admin.books.edit', $book),
-                    'moderateUrl' => route('admin.books.moderate', $book),
+                    'moderateUrl' => route('boshqaruv.books.moderate', $book),
                 ];
             })
             ->values()
@@ -274,7 +402,7 @@ class AdminController extends Controller
                         'image' => ProductImageUrls::originalUrl(collect($book->images ?? [])->first()),
                         'showUrl' => route('admin.books.show', $book),
                         'editUrl' => route('admin.books.edit', $book),
-                        'moderateUrl' => route('admin.books.moderate', $book),
+                        'moderateUrl' => route('boshqaruv.books.moderate', $book),
                     ]);
                 });
         }
@@ -302,7 +430,7 @@ class AdminController extends Controller
                         'image' => $this->assetFromStorage(collect($stationery->images ?? [])->first()),
                         'showUrl' => route('admin.stationery.show', $stationery->id),
                         'editUrl' => route('admin.stationery.edit', $stationery->id),
-                        'moderateUrl' => route('admin.stationery.moderate', $stationery->id),
+                        'moderateUrl' => route('boshqaruv.stationery.moderate', $stationery->id),
                     ]);
                 });
         }
@@ -382,10 +510,8 @@ class AdminController extends Controller
                 'bio' => $author->source_url ?: ($author->external_id ? 'External ID: '.$author->external_id : "Muallif katalogi"),
                 'image' => $author->display_image_url,
                 'needsAiPortrait' => (bool) $author->needs_ai_portrait,
-                'createUrl' => route('admin.authors.create'),
-                'editUrl' => route('admin.authors.edit', $author),
-                'destroyUrl' => route('admin.authors.destroy', $author),
-                'generateImagePromptUrl' => route('admin.authors.generate-image-prompt', $author),
+                'destroyUrl' => route('boshqaruv.authors.destroy', $author),
+                'generateImagePromptUrl' => route('boshqaruv.authors.generate-image-prompt', $author),
             ])
             ->values()
             ->all();
@@ -410,9 +536,7 @@ class AdminController extends Controller
                 'contact' => '—',
                 'rating' => 0,
                 'image' => $publisher->image_url,
-                'createUrl' => route('admin.publishers.create'),
-                'editUrl' => route('admin.publishers.edit', $publisher),
-                'destroyUrl' => route('admin.publishers.destroy', $publisher),
+                'destroyUrl' => route('boshqaruv.publishers.destroy', $publisher),
             ])
             ->values()
             ->all();
@@ -437,10 +561,8 @@ class AdminController extends Controller
                 'slug' => $category->slug,
                 'active' => (bool) $category->is_active,
                 'itemsCount' => (int) ($category->books_count ?? 0),
-                'createUrl' => route('admin.book-categories.create'),
-                'editUrl' => route('admin.book-categories.edit', $category),
-                'toggleUrl' => route('admin.book-categories.toggle', $category),
-                'destroyUrl' => route('admin.book-categories.destroy', $category),
+                'toggleUrl' => route('boshqaruv.book-categories.toggle', $category),
+                'destroyUrl' => route('boshqaruv.book-categories.destroy', $category),
             ])
             ->values()
             ->all();
@@ -465,10 +587,8 @@ class AdminController extends Controller
                 'slug' => $category->slug,
                 'active' => (bool) $category->is_active,
                 'itemsCount' => (int) ($category->stationeries_count ?? 0),
-                'createUrl' => route('admin.stationery-categories.create'),
-                'editUrl' => route('admin.stationery-categories.edit', $category),
-                'toggleUrl' => route('admin.stationery-categories.toggle', $category),
-                'destroyUrl' => route('admin.stationery-categories.destroy', $category),
+                'toggleUrl' => route('boshqaruv.stationery-categories.toggle', $category),
+                'destroyUrl' => route('boshqaruv.stationery-categories.destroy', $category),
             ])
             ->values()
             ->all();
@@ -507,7 +627,7 @@ class AdminController extends Controller
                     'createUrl' => route('admin.stationery.create'),
                     'showUrl' => route('admin.stationery.show', $item->id),
                     'editUrl' => route('admin.stationery.edit', $item->id),
-                    'moderateUrl' => route('admin.stationery.moderate', $item->id),
+                    'moderateUrl' => route('boshqaruv.stationery.moderate', $item->id),
                 ];
             })
             ->values()
@@ -533,43 +653,153 @@ class AdminController extends Controller
         }
 
         return Seller::query()
-            ->withCount(['books', 'stationeries', 'orders'])
+            ->withCount(['books', 'stationeries', 'orders', 'premiumSubscriptions'])
+            ->with(['locations' => fn ($query) => $query->orderByDesc('is_main')->orderBy('id')->take(4)])
             ->where(fn ($query) => $query->whereNull('parent_id')->orWhere('parent_id', 0))
             ->latest()
-            ->take(60)
+            ->take(240)
             ->get()
-            ->map(fn (Seller $seller) => [
-                'id' => $seller->id,
-                'name' => $seller->shop_name ?: trim(($seller->firstname ?? '').' '.($seller->lastname ?? '')) ?: 'Seller',
-                'legalName' => $seller->legal_type ?: '—',
-                'phone' => $seller->phone_number,
-                'region' => $seller->region,
-                'status' => $seller->status,
-                'verified' => (bool) $seller->isVerified,
-                'hidden' => (bool) $seller->is_hidden,
-                'premium' => (bool) $seller->isPremiumShop,
-                'rating' => (float) ($seller->rating ?? 0),
-                'balance' => (float) ($seller->balance ?? 0),
-                'commissionRate' => (float) ($seller->commission_percent ?? 0),
-                'products' => (int) (($seller->books_count ?? 0) + ($seller->stationeries_count ?? 0)),
-                'orders' => (int) ($seller->orders_count ?? 0),
-                'contract' => [
-                    'number' => $seller->contract_number,
-                    'signed' => (bool) $seller->contract_signed,
-                    'status' => $seller->contract_computed_status,
-                    'expiresAt' => optional($seller->contract_expires_at)->format('Y-m-d'),
-                    'daysRemaining' => $seller->contract_days_remaining,
-                ],
-                'createUrl' => route('admin.sellers.index'),
-                'showUrl' => route('admin.sellers.show', $seller),
-                'editUrl' => route('admin.sellers.edit', $seller),
-                'approveUrl' => route('admin.sellers.approve', $seller),
-                'rejectUrl' => route('admin.sellers.reject', $seller),
-                'unblockUrl' => route('admin.sellers.unblock', $seller),
-                'warnUrl' => route('admin.sellers.warn', $seller),
-            ])
+            ->map(fn (Seller $seller) => $this->sellerPayload($seller))
             ->values()
             ->all();
+    }
+
+    private function sellerPayload(Seller $seller): array
+    {
+        $sellerIds = Seller::query()
+            ->where('id', $seller->id)
+            ->orWhere('parent_id', $seller->id)
+            ->pluck('id');
+        $warningCount = Schema::hasTable('seller_ban_logs') ? SellerBanLog::getWarningCount($seller->id) : 0;
+        $transactions = Schema::hasTable('seller_transactions')
+            ? SellerTransaction::query()->whereIn('seller_id', $sellerIds)->latest()->take(6)->get()
+            : collect();
+        $recentOrders = Schema::hasTable('seller_orders')
+            ? SellerOrder::query()->with(['client:id,name,lastname,phone_number'])->whereIn('seller_id', $sellerIds)->latest()->take(6)->get()
+            : collect();
+        $banLogs = Schema::hasTable('seller_ban_logs')
+            ? SellerBanLog::query()->where('seller_id', $seller->id)->latest()->take(6)->get()
+            : collect();
+        $totalRevenue = Schema::hasTable('seller_transactions')
+            ? (float) SellerTransaction::query()
+                ->whereIn('seller_id', $sellerIds)
+                ->where('status', 'approved')
+                ->where('type', 'income')
+                ->sum('netAmount')
+            : 0;
+
+        return [
+            'id' => $seller->id,
+            'name' => $seller->shop_name ?: trim(($seller->firstname ?? '').' '.($seller->lastname ?? '')) ?: 'Seller',
+            'ownerName' => trim(($seller->firstname ?? '').' '.($seller->lastname ?? '')) ?: '—',
+            'legalName' => $seller->legal_type ?: '—',
+            'phone' => $seller->phone_number,
+            'photo' => $this->assetFromStorage($seller->photo),
+            'region' => $seller->region,
+            'district' => $seller->district ?? null,
+            'address' => $seller->address ?? $seller->legal_address,
+            'status' => $seller->status,
+            'verified' => (bool) $seller->isVerified,
+            'hidden' => (bool) $seller->is_hidden,
+            'premium' => (bool) $seller->isPremiumShop,
+            'premiumExpiresAt' => optional($seller->isPremiumExpiresAt)->format('Y-m-d'),
+            'rating' => (float) ($seller->rating ?? 0),
+            'ratingReviewsCount' => (int) ($seller->rating_reviews_count ?? 0),
+            'reputationScore' => (float) ($seller->reputation_score ?? 0),
+            'balance' => (float) ($seller->balance ?? 0),
+            'totalRevenue' => $totalRevenue,
+            'commissionRate' => (float) ($seller->commission_percent ?? 0),
+            'products' => (int) (($seller->books_count ?? 0) + ($seller->stationeries_count ?? 0)),
+            'books' => (int) ($seller->books_count ?? 0),
+            'stationeries' => (int) ($seller->stationeries_count ?? 0),
+            'orders' => (int) ($seller->orders_count ?? 0),
+            'warningCount' => (int) $warningCount,
+            'legal' => [
+                'type' => $seller->legal_type,
+                'inn' => $seller->inn,
+                'passport' => trim(($seller->passport_series ?? '').' '.($seller->passport_number ?? '')) ?: null,
+                'passportIssuedBy' => $seller->passport_issued_by,
+                'passportIssuedAt' => optional($seller->passport_issued_at)->format('Y-m-d'),
+                'legalAddress' => $seller->legal_address,
+            ],
+            'bank' => [
+                'name' => $seller->bank_name,
+                'account' => $seller->masked_bank_account,
+                'mfo' => $seller->bank_mfo,
+                'swift' => $seller->bank_swift,
+                'card' => $seller->masked_card,
+                'cardHolder' => $seller->card_holder,
+            ],
+            'contract' => [
+                'number' => $seller->contract_number,
+                'signed' => (bool) $seller->contract_signed,
+                'signedAt' => optional($seller->contract_signed_at)->format('Y-m-d'),
+                'status' => $seller->contract_computed_status,
+                'rawStatus' => $seller->contract_status,
+                'expiresAt' => optional($seller->contract_expires_at)->format('Y-m-d'),
+                'daysRemaining' => $seller->contract_days_remaining,
+                'notes' => $seller->contract_notes,
+            ],
+            'locations' => $seller->locations->map(fn ($location) => [
+                'id' => $location->id,
+                'address' => $location->fullAddress,
+                'description' => $location->description,
+                'main' => (bool) $location->is_main,
+                'qrUrl' => $location->qr_url,
+                'rotatedAt' => optional($location->qr_rotated_at)->format('Y-m-d H:i'),
+            ])->values()->all(),
+            'recentOrders' => $recentOrders->map(fn (SellerOrder $order) => [
+                'id' => $order->id,
+                'customer' => trim(($order->client?->name ?? '').' '.($order->client?->lastname ?? '')) ?: 'Mijoz',
+                'phone' => $order->client?->phone_number,
+                'amount' => (float) ($order->amount ?? 0),
+                'status' => (string) ($order->status_code ?? $order->status ?? ''),
+                'date' => optional($order->created_at)->format('Y-m-d H:i'),
+                'url' => route('boshqaruv.seller-orders'),
+            ])->values()->all(),
+            'transactions' => $transactions->map(fn (SellerTransaction $transaction) => [
+                'id' => $transaction->id,
+                'type' => $transaction->type,
+                'category' => $transaction->category,
+                'amount' => (float) ($transaction->amount ?? 0),
+                'commission' => (float) ($transaction->commissionPrice ?? 0),
+                'net' => (float) ($transaction->netAmount ?? 0),
+                'status' => $transaction->status,
+                'date' => optional($transaction->created_at)->format('Y-m-d H:i'),
+            ])->values()->all(),
+            'banLogs' => $banLogs->map(fn (SellerBanLog $log) => [
+                'id' => $log->id,
+                'title' => $log->title,
+                'message' => $log->message,
+                'type' => $log->type,
+                'read' => (bool) $log->is_read,
+                'date' => optional($log->created_at)->format('Y-m-d H:i'),
+            ])->values()->all(),
+            'actions' => [
+                'approveUrl' => route('boshqaruv.sellers.approve', $seller),
+                'rejectUrl' => route('boshqaruv.sellers.reject', $seller),
+                'unblockUrl' => route('boshqaruv.sellers.unblock', $seller),
+                'warnUrl' => route('boshqaruv.sellers.warn', $seller),
+                'resetPasswordUrl' => route('boshqaruv.sellers.reset-password', $seller),
+            ],
+        ];
+    }
+
+    private function sellerStatusCounts(): array
+    {
+        if (! Schema::hasTable('sellers')) {
+            return ['pending' => 0, 'approved' => 0, 'rejected' => 0, 'blocked' => 0, 'all' => 0];
+        }
+
+        $base = fn () => Seller::query()->where(fn ($query) => $query->whereNull('parent_id')->orWhere('parent_id', 0));
+
+        return [
+            'pending' => (int) $base()->where('status', 'pending')->count(),
+            'approved' => (int) $base()->where('status', 'approved')->count(),
+            'rejected' => (int) $base()->where('status', 'rejected')->count(),
+            'blocked' => (int) $base()->where('status', 'blocked')->count(),
+            'all' => (int) $base()->count(),
+        ];
     }
 
     private function sellerOrdersPayload(): array
@@ -579,27 +809,91 @@ class AdminController extends Controller
         }
 
         return SellerOrder::query()
-            ->with(['seller:id,shop_name,phone_number', 'client:id,name,lastname,phone_number', 'courier:id,first_name,last_name,phone_number'])
+            ->with(['seller:id,shop_name,firstname,lastname,phone_number,photo', 'client:id,name,lastname,phone_number', 'courier:id,first_name,last_name,phone_number', 'order:id,user_id,amount,status,paymentStatus,deliveryPrice,deliveryType,items,address,created_at'])
             ->latest()
-            ->take(80)
+            ->take(240)
             ->get()
-            ->map(fn (SellerOrder $order) => [
-                'id' => $order->id,
-                'seller' => $order->seller?->shop_name ?: 'Seller',
-                'sellerPhone' => $order->seller?->phone_number,
-                'customer' => trim(($order->client?->name ?? '').' '.($order->client?->lastname ?? '')) ?: 'Mijoz',
-                'customerPhone' => $order->client?->phone_number,
-                'courier' => trim(($order->courier?->first_name ?? '').' '.($order->courier?->last_name ?? '')) ?: ($order->courierName ?? '—'),
-                'amount' => (float) ($order->amount ?? 0),
-                'deliveryType' => $order->delivery_type,
-                'status' => (string) ($order->status_code ?? $order->status ?? ''),
-                'acceptedAt' => optional($order->accepted_at)->format('Y-m-d H:i'),
-                'date' => optional($order->created_at)->format('Y-m-d H:i'),
-                'showUrl' => route('admin.seller-orders.show', $order),
-                'statusUrl' => route('admin.seller-orders.status', $order),
-            ])
+            ->map(fn (SellerOrder $order) => $this->sellerOrderPayload($order))
             ->values()
             ->all();
+    }
+
+    private function sellerOrderPayload(SellerOrder $order): array
+    {
+        $address = collect($order->order?->address ?? $order->address ?? [])->first() ?: [];
+        $items = collect($order->order?->items ?? [])
+            ->filter(fn ($item) => (int) ($item['seller_id'] ?? 0) === (int) $order->seller_id)
+            ->values()
+            ->map(fn ($item) => [
+                'name' => $item['name'] ?? 'Mahsulot',
+                'type' => $item['type'] ?? 'book',
+                'quantity' => (int) ($item['count_item'] ?? $item['quantity'] ?? 1),
+                'price' => (float) ($item['item_price'] ?? $item['price'] ?? 0),
+                'cover' => $item['cover'] ?? null,
+                'author' => $item['author'] ?? null,
+            ]);
+        $statusCode = (string) ($order->status_code ?? SellerOrderStatusCode::fromLegacy($order->status ?? null)->value);
+        $statusMeta = AdminOrderStatusSyncService::SELLER_STATUSES[$statusCode] ?? ['label' => $statusCode, 'badge' => 'badge-muted'];
+
+        return [
+            'id' => $order->id,
+            'orderId' => $order->order_id,
+            'sellerId' => $order->seller_id,
+            'seller' => $order->seller?->shop_name ?: 'Seller',
+            'sellerOwner' => trim(($order->seller?->firstname ?? '').' '.($order->seller?->lastname ?? '')) ?: 'Sotuvchi',
+            'sellerPhone' => $order->seller?->phone_number,
+            'sellerPhoto' => $this->assetFromStorage($order->seller?->photo),
+            'customer' => trim(($order->client?->name ?? '').' '.($order->client?->lastname ?? '')) ?: ($address['fullName'] ?? 'Mijoz'),
+            'customerPhone' => $order->client?->phone_number ?? ($address['phoneNumber'] ?? null),
+            'courier' => trim(($order->courier?->first_name ?? '').' '.($order->courier?->last_name ?? '')) ?: ($order->courierName ?? '—'),
+            'courierPhone' => $order->courier?->phone_number,
+            'amount' => (float) ($order->amount ?? 0),
+            'mainOrderAmount' => (float) ($order->order?->amount ?? 0),
+            'deliveryPrice' => (float) ($order->order?->deliveryPrice ?? 0),
+            'deliveryType' => $order->delivery_type ?: ($order->order?->deliveryType ?? '—'),
+            'status' => $statusCode,
+            'statusLabel' => $statusMeta['label'],
+            'statusBadge' => $statusMeta['badge'],
+            'acceptedAt' => optional($order->accepted_at)->format('Y-m-d H:i'),
+            'date' => optional($order->created_at)->format('Y-m-d H:i'),
+            'address' => [
+                'fullName' => $address['fullName'] ?? null,
+                'phone' => $address['phoneNumber'] ?? null,
+                'region' => $address['region'] ?? $address['province'] ?? null,
+                'district' => $address['district'] ?? null,
+                'street' => $address['street'] ?? $address['address'] ?? null,
+                'home' => $address['home'] ?? null,
+            ],
+            'summary' => [
+                'itemsCount' => (int) $items->sum('quantity'),
+                'itemsTotal' => (float) $items->sum(fn ($item) => (float) $item['price'] * (int) $item['quantity']),
+            ],
+            'items' => $items->all(),
+            'showUrl' => route('boshqaruv.seller-orders'),
+            'statusUrl' => route('boshqaruv.seller-orders.status', $order),
+        ];
+    }
+
+    private function sellerOrderStatusCounts(): array
+    {
+        if (! Schema::hasTable('seller_orders')) {
+            return ['all' => 0];
+        }
+
+        $counts = ['all' => (int) SellerOrder::query()->count()];
+        foreach (array_keys(AdminOrderStatusSyncService::SELLER_STATUSES) as $status) {
+            $counts[$status] = (int) SellerOrder::query()
+                ->where(fn ($query) => $query
+                    ->where('status_code', $status)
+                    ->orWhere(fn ($fallback) => $fallback
+                        ->whereNull('status_code')
+                        ->where('status', SellerOrderStatusCode::fromLegacy($status)->legacy())
+                    )
+                )
+                ->count();
+        }
+
+        return $counts;
     }
 
     private function couriersPayload(): array
@@ -661,7 +955,7 @@ class AdminController extends Controller
                 'status' => (string) ($order->status_code ?? $order->status ?? ''),
                 'date' => optional($order->created_at)->format('Y-m-d H:i'),
                 'showUrl' => route('admin.courier-orders.show', $order),
-                'statusUrl' => route('admin.courier-orders.status', $order),
+                'statusUrl' => route('boshqaruv.courier-orders.status', $order),
             ])
             ->values()
             ->all();
@@ -790,7 +1084,7 @@ class AdminController extends Controller
                 'expiresAt' => optional($ad->expire_at)->format('Y-m-d'),
                 'image' => $this->assetFromStorage($ad->banner_img),
                 'showUrl' => route('admin.ads.show', $ad),
-                'moderateUrl' => route('admin.ads.moderate', $ad),
+                'moderateUrl' => route('boshqaruv.ads.moderate', $ad),
                 'destroyUrl' => route('admin.ads.destroy', $ad),
             ])
             ->values()
@@ -1219,24 +1513,128 @@ class AdminController extends Controller
             return [];
         }
 
-        $settings = ProjectSetting::query()->first();
+        $settings = ProjectSetting::query()->firstOrCreate([]);
 
         return [
-            'project' => $settings ? [
-                'marketVersionIos' => $settings->market_version_ios,
-                'marketVersionAndroid' => $settings->market_version_android,
-                'businessVersionIos' => $settings->business_version_ios,
-                'businessVersionAndroid' => $settings->business_version_android,
-                'courierVersionIos' => $settings->courier_version_ios,
-                'courierVersionAndroid' => $settings->courier_version_android,
-                'kitobchiPhone' => $settings->kitobchi_phone,
-                'kitobchiEmail' => $settings->kitobchi_email,
-                'onPremium' => (bool) $settings->on_premium,
-                'onReels' => (bool) $settings->on_reels,
-                'stopSales' => (bool) $settings->stop_sales,
-            ] : null,
-            'indexUrl' => route('admin.settings.index'),
+            'project' => [
+                'business_version_ios' => $settings->business_version_ios,
+                'business_version_android' => $settings->business_version_android,
+                'courier_version_ios' => $settings->courier_version_ios,
+                'courier_version_android' => $settings->courier_version_android,
+                'market_version_ios' => $settings->market_version_ios,
+                'market_version_android' => $settings->market_version_android,
+                'kitobchi_phone' => $settings->kitobchi_phone,
+                'kitobchi_email' => $settings->kitobchi_email,
+                'business_phone' => $settings->business_phone,
+                'business_email' => $settings->business_email,
+                'courier_phone' => $settings->courier_phone,
+                'courier_email' => $settings->courier_email,
+                'on_premium' => (bool) $settings->on_premium,
+                'on_reels' => (bool) $settings->on_reels,
+                'ramadan' => (bool) $settings->ramadan,
+                'stop_sales' => (bool) $settings->stop_sales,
+                'packaging_price_small' => (int) ($settings->packaging_price_small ?? 25000),
+                'packaging_price_large' => (int) ($settings->packaging_price_large ?? 40000),
+                'packaging_threshold' => (int) ($settings->packaging_threshold ?? 4),
+                'courier_surge_step' => (int) ($settings->courier_surge_step ?? 500),
+                'courier_surge_max' => (int) ($settings->courier_surge_max ?? 10000),
+                'courier_surge_threshold' => (int) ($settings->courier_surge_threshold ?? 5000),
+                'courier_sla_minutes' => (int) ($settings->courier_sla_minutes ?? 45),
+                'courier_penalty_step' => (int) ($settings->courier_penalty_step ?? 300),
+                'telegram_login_enabled' => (bool) $settings->telegram_login_enabled,
+                'telegram_client_id' => $settings->telegram_client_id,
+                'telegram_redirect_uri_ios' => $settings->telegram_redirect_uri_ios ?: 'https://app3206985527-login.tg.dev',
+                'telegram_redirect_uri_android' => $settings->telegram_redirect_uri_android ?: 'https://app2854400165-login.tg.dev/tglogin',
+                'telegram_scopes' => $settings->telegram_scopes ?: 'openid profile phone',
+            ],
+            'commission' => $this->settingsCommissionPayload(),
+            'cashback' => $this->settingsCashbackPayload(),
+            'cashbackDelivery' => $this->settingsCashbackPayload(CashbackSetting::TYPE_DELIVERY),
+            'cashbackPickup' => $this->settingsCashbackPayload(CashbackSetting::TYPE_PICKUP),
+            'delivery' => $this->settingsDeliveryPayload(),
+            'actions' => [
+                'versions' => route('boshqaruv.settings.versions'),
+                'contacts' => route('boshqaruv.settings.contacts'),
+                'appFlags' => route('boshqaruv.settings.app-flags'),
+                'courierBonus' => route('boshqaruv.settings.courier-bonus'),
+                'telegram' => route('boshqaruv.settings.telegram'),
+                'commissionStore' => route('boshqaruv.settings.commission.store'),
+                'cashbackStore' => route('boshqaruv.settings.cashback.store'),
+                'deliveryStore' => route('boshqaruv.settings.delivery.store'),
+            ],
+            'indexUrl' => route('boshqaruv.settings'),
         ];
+    }
+
+    private function settingsCommissionPayload(): array
+    {
+        if (! Schema::hasTable('commission_settings')) {
+            return [];
+        }
+
+        return CommissionSetting::query()
+            ->orderBy('priceFrom')
+            ->get()
+            ->map(fn (CommissionSetting $setting) => [
+                'id' => $setting->id,
+                'priceFrom' => (int) ($setting->priceFrom ?? 0),
+                'priceTo' => (int) ($setting->priceTo ?? 0),
+                'percent' => (int) ($setting->percent ?? 0),
+                'updateUrl' => route('boshqaruv.settings.commission.update', $setting),
+                'destroyUrl' => route('boshqaruv.settings.commission.destroy', $setting),
+            ])
+            ->values()
+            ->all();
+    }
+
+    private function settingsCashbackPayload(?string $type = null): array
+    {
+        if (! Schema::hasTable('cashback_settings')) {
+            return [];
+        }
+
+        return CashbackSetting::query()
+            ->when($type, fn ($query) => $query->where('type', $type))
+            ->orderBy('type')
+            ->orderBy('fromUzs')
+            ->get()
+            ->map(fn (CashbackSetting $setting) => [
+                'id' => $setting->id,
+                'fromUzs' => (int) ($setting->fromUzs ?? 0),
+                'toUzs' => (int) ($setting->toUzs ?? 0),
+                'cashback' => (int) ($setting->cashback ?? 0),
+                'type' => $setting->type ?: CashbackSetting::TYPE_DELIVERY,
+                'updateUrl' => route('boshqaruv.settings.cashback.update', $setting),
+                'destroyUrl' => route('boshqaruv.settings.cashback.destroy', $setting),
+            ])
+            ->values()
+            ->all();
+    }
+
+    private function settingsDeliveryPayload(): array
+    {
+        if (! Schema::hasTable('delivery_services')) {
+            return [];
+        }
+
+        return DeliveryService::query()
+            ->orderBy('name')
+            ->get()
+            ->map(fn (DeliveryService $service) => [
+                'id' => $service->id,
+                'name' => $service->name,
+                'type' => $service->type,
+                'priceKg' => (int) ($service->priceKg ?? 0),
+                'muddat' => (int) ($service->muddat ?? 0),
+                'forCountry' => $service->forCountry,
+                'capital' => (bool) $service->capital,
+                'freePriceFrom' => (int) ($service->freePriceFrom ?? 0),
+                'status' => (bool) $service->status,
+                'updateUrl' => route('boshqaruv.settings.delivery.update', $service),
+                'destroyUrl' => route('boshqaruv.settings.delivery.destroy', $service),
+            ])
+            ->values()
+            ->all();
     }
 
     private function deliveryServicesPayload(): array
@@ -1362,15 +1760,14 @@ class AdminController extends Controller
         $today = $now->copy()->startOfDay();
         $week = $now->copy()->startOfWeek();
         $month = $now->copy()->startOfMonth();
-        $paidStatuses = ['paid', 'success', 'completed', 'C', 'c', 'customer_received', 'delivered'];
         $activeOrderStatuses = ['pending', 'packing', 'in_delivery', 'A', 'P', 'B', 'D'];
 
         $orders = Sold::query();
         $todayOrdersQuery = Sold::query()->where('created_at', '>=', $today);
         $monthOrdersQuery = Sold::query()->where('created_at', '>=', $month);
-        $totalRevenue = (float) Sold::query()->sum('amount');
-        $todayRevenue = (float) (clone $todayOrdersQuery)->sum('amount');
-        $monthRevenue = (float) (clone $monthOrdersQuery)->sum('amount');
+        $totalRevenue = (float) $this->paidOrdersQuery()->sum('amount');
+        $todayRevenue = (float) $this->paidOrdersQuery()->where('created_at', '>=', $today)->sum('amount');
+        $monthRevenue = (float) $this->paidOrdersQuery()->where('created_at', '>=', $month)->sum('amount');
         $totalOrders = (int) $orders->count();
         $todayOrders = (int) (clone $todayOrdersQuery)->count();
         $weekOrders = (int) Sold::query()->where('created_at', '>=', $week)->count();
@@ -1444,9 +1841,80 @@ class AdminController extends Controller
             'online_users' => $this->liveOnlineUsers(),
             'top_products' => $this->liveTopProducts(),
             'alerts' => $this->liveAlerts($mainCounts, $sellerCounts, $courierCounts),
-            'payment_split' => $this->paymentSplit($paidStatuses),
+            'payment_split' => $this->paymentSplit([]),
             'delivery_split' => $this->deliverySplit(),
         ];
+    }
+
+    private function paidOrdersQuery()
+    {
+        return Sold::query()->where(function ($query) {
+            $query->whereIn('payment_status_code', ['paid', 'success', 'completed'])
+                ->orWhereIn('paymentStatus', ['paid', 'success', 'completed', 'C', 'c'])
+                ->orWhereNotNull('completed_at');
+        });
+    }
+
+    private function dashboardMonthlySales(): array
+    {
+        return collect(range(11, 0))->map(function ($i) {
+            $date = now()->subMonths($i);
+            $start = $date->copy()->startOfMonth();
+            $end = $date->copy()->endOfMonth();
+            $revenue = (float) $this->paidOrdersQuery()->whereBetween('created_at', [$start, $end])->sum('amount');
+            $orders = (int) Sold::query()->whereBetween('created_at', [$start, $end])->count();
+            $promo = (float) $this->paidOrdersQuery()->whereBetween('created_at', [$start, $end])->sum('discountAmount');
+            $cashback = (float) $this->paidOrdersQuery()->whereBetween('created_at', [$start, $end])->sum('cashbackAmount');
+            $delivery = (float) $this->paidOrdersQuery()->whereBetween('created_at', [$start, $end])->sum('deliveryPrice');
+            $commission = Schema::hasTable('seller_transactions')
+                ? (float) SellerTransaction::query()->where('status', 'approved')->whereBetween('created_at', [$start, $end])->sum('commissionPrice')
+                : 0;
+
+            return [
+                'month' => $date->format('M'),
+                'revenue' => $revenue,
+                'profit' => $commission + $delivery - $promo - $cashback,
+                'orders' => $orders,
+            ];
+        })->values()->all();
+    }
+
+    private function dashboardCategoryShare(): array
+    {
+        $colors = ['book' => '#4f46e5', 'stationery' => '#10b981', 'gift' => '#f59e0b', 'other' => '#ec4899'];
+        $labels = ['book' => 'Kitoblar', 'stationery' => 'Kanselyariya', 'gift' => 'Sovg\'alar', 'other' => 'Boshqa'];
+        $totals = ['book' => 0.0, 'stationery' => 0.0, 'gift' => 0.0, 'other' => 0.0];
+
+        $this->paidOrdersQuery()
+            ->whereNotNull('items')
+            ->latest()
+            ->take(1200)
+            ->get(['items'])
+            ->each(function (Sold $order) use (&$totals) {
+                foreach (collect($order->items ?? []) as $item) {
+                    $type = (string) ($item['type'] ?? 'book');
+                    $key = array_key_exists($type, $totals) ? $type : 'other';
+                    $quantity = (int) ($item['count_item'] ?? $item['count'] ?? $item['quantity'] ?? 1);
+                    $price = (float) ($item['item_price'] ?? $item['price'] ?? 0);
+                    $totals[$key] += $quantity * $price;
+                }
+            });
+
+        $sum = array_sum($totals);
+        if ($sum <= 0) {
+            return [];
+        }
+
+        return collect($totals)
+            ->filter(fn ($value) => $value > 0)
+            ->map(fn ($value, $key) => [
+                'name' => $labels[$key] ?? $key,
+                'value' => round($value / $sum * 100, 1),
+                'revenue' => $value,
+                'color' => $colors[$key] ?? '#64748b',
+            ])
+            ->values()
+            ->all();
     }
 
     private function countStatuses($query, array $statuses): int
@@ -1463,7 +1931,7 @@ class AdminController extends Controller
 
     private function liveHourlyChart($today): array
     {
-        return Sold::query()
+        return $this->paidOrdersQuery()
             ->where('created_at', '>=', $today)
             ->selectRaw('HOUR(created_at) as hour, COUNT(*) as orders, COALESCE(SUM(amount), 0) as revenue')
             ->groupBy(DB::raw('HOUR(created_at)'))
@@ -1487,7 +1955,7 @@ class AdminController extends Controller
             ['x' => 92, 'y' => 40], ['x' => 82, 'y' => 32], ['x' => 20, 'y' => 45], ['x' => 45, 'y' => 70],
         ];
 
-        $rows = Sold::query()
+        $rows = $this->paidOrdersQuery()
             ->whereNotNull('address')
             ->latest()
             ->take(500)
@@ -1542,7 +2010,7 @@ class AdminController extends Controller
                 'status' => $this->orderStatusLabel((string) ($order->status_code ?? $order->status ?? '')),
                 'status_code' => (string) ($order->status_code ?? $order->status ?? ''),
                 'updated_at' => optional($order->updated_at)->diffForHumans(),
-                'url' => route('admin.orders.show', $order),
+                'url' => route('boshqaruv.orders'),
             ])
             ->values()
             ->all();
@@ -1568,7 +2036,7 @@ class AdminController extends Controller
                 'status' => $this->sellerStatusLabel((string) ($order->status_code ?? $order->status ?? '')),
                 'status_code' => (string) ($order->status_code ?? $order->status ?? ''),
                 'updated_at' => optional($order->updated_at)->diffForHumans(),
-                'url' => route('admin.seller-orders.show', $order),
+                'url' => route('boshqaruv.seller-orders'),
             ])
             ->values()
             ->all();
@@ -1594,7 +2062,7 @@ class AdminController extends Controller
                 'status' => $this->orderStatusLabel((string) ($order->status_code ?? $order->status ?? '')),
                 'status_code' => (string) ($order->status_code ?? $order->status ?? ''),
                 'updated_at' => optional($order->updated_at)->diffForHumans(),
-                'url' => route('admin.courier-orders.show', $order),
+                'url' => route('boshqaruv.courier-orders'),
             ])
             ->values()
             ->all();
@@ -1620,7 +2088,7 @@ class AdminController extends Controller
 
     private function liveTopProducts(): array
     {
-        $products = Sold::query()
+        $products = $this->paidOrdersQuery()
             ->latest()
             ->take(300)
             ->get(['items'])
@@ -1653,18 +2121,18 @@ class AdminController extends Controller
     {
         $alerts = [];
         if (($mainCounts['new'] ?? 0) > 0) {
-            $alerts[] = ['level' => 'warning', 'icon' => 'bi-bag-check', 'title' => 'Yangi buyurtmalar', 'text' => $mainCounts['new']." ta buyurtma ishlov kutmoqda", 'url' => route('admin.orders.index')];
+            $alerts[] = ['level' => 'warning', 'icon' => 'bi-bag-check', 'title' => 'Yangi buyurtmalar', 'text' => $mainCounts['new']." ta buyurtma ishlov kutmoqda", 'url' => route('boshqaruv.orders')];
         }
         if (($sellerCounts['new'] ?? 0) > 0) {
-            $alerts[] = ['level' => 'info', 'icon' => 'bi-shop-window', 'title' => 'Seller navbati', 'text' => $sellerCounts['new']." ta seller order qabul kutmoqda", 'url' => route('admin.seller-orders.index')];
+            $alerts[] = ['level' => 'info', 'icon' => 'bi-shop-window', 'title' => 'Seller navbati', 'text' => $sellerCounts['new']." ta seller order qabul kutmoqda", 'url' => route('boshqaruv.seller-orders')];
         }
         if (($courierCounts['pending'] ?? 0) > 0) {
-            $alerts[] = ['level' => 'warning', 'icon' => 'bi-bicycle', 'title' => 'Kuryer navbati', 'text' => $courierCounts['pending']." ta kuryer order kutilmoqda", 'url' => route('admin.courier-orders.index')];
+            $alerts[] = ['level' => 'warning', 'icon' => 'bi-bicycle', 'title' => 'Kuryer navbati', 'text' => $courierCounts['pending']." ta kuryer order kutilmoqda", 'url' => route('boshqaruv.courier-orders')];
         }
         if ($this->tableCount('bot_tickets') > 0) {
             $queued = Schema::hasColumn('bot_tickets', 'status') ? DB::table('bot_tickets')->where('status', 'queue')->count() : 0;
             if ($queued > 0) {
-                $alerts[] = ['level' => 'danger', 'icon' => 'bi-headset', 'title' => 'Support navbati', 'text' => $queued.' ta murojaat javob kutmoqda', 'url' => route('admin.support.index')];
+                $alerts[] = ['level' => 'danger', 'icon' => 'bi-headset', 'title' => 'Support navbati', 'text' => $queued.' ta murojaat javob kutmoqda', 'url' => route('boshqaruv.tickets')];
             }
         }
 
@@ -1674,9 +2142,9 @@ class AdminController extends Controller
     private function paymentSplit(array $paidStatuses): array
     {
         $total = max(1, Sold::query()->count());
-        $paid = Sold::query()
-            ->where(fn ($query) => $query->whereIn('payment_status_code', $paidStatuses)->orWhereIn('paymentStatus', $paidStatuses))
-            ->count();
+        $paid = $paidStatuses
+            ? Sold::query()->where(fn ($query) => $query->whereIn('payment_status_code', $paidStatuses)->orWhereIn('paymentStatus', $paidStatuses))->count()
+            : $this->paidOrdersQuery()->count();
 
         return [
             ['name' => 'To\'langan', 'count' => (int) $paid, 'share' => round($paid / $total * 100, 1), 'color' => '#10b981'],
@@ -1686,7 +2154,7 @@ class AdminController extends Controller
 
     private function deliverySplit(): array
     {
-        return Sold::query()
+        return $this->paidOrdersQuery()
             ->selectRaw('deliveryType, COUNT(*) as count, COALESCE(SUM(amount), 0) as revenue')
             ->groupBy('deliveryType')
             ->orderByDesc('count')
@@ -1747,7 +2215,7 @@ class AdminController extends Controller
                 'amount' => (float) ($order->amount ?? 0),
                 'status' => (string) ($order->status_code ?? $order->status ?? ''),
                 'date' => optional($order->created_at)->format('Y-m-d H:i'),
-                'url' => route('admin.seller-orders.show', $order),
+                'url' => route('boshqaruv.seller-orders'),
             ])
             ->values()
             ->all();
@@ -1771,7 +2239,7 @@ class AdminController extends Controller
                     'deliveryType' => $sellerOrder->delivery_type,
                     'status' => (string) ($sellerOrder->status_code ?? $sellerOrder->status ?? ''),
                     'acceptedAt' => optional($sellerOrder->accepted_at)->format('Y-m-d H:i'),
-                    'url' => route('admin.seller-orders.show', $sellerOrder),
+                    'url' => route('boshqaruv.seller-orders'),
                 ])
                 ->values()
                 ->all()
@@ -1840,8 +2308,8 @@ class AdminController extends Controller
             'showUrl' => route('admin.orders.show', $order),
             'labelUrl' => route('admin.orders.print.label', $order),
             'receiptUrl' => route('admin.orders.print.receipt', $order),
-            'statusUrl' => route('admin.orders.status', $order),
-            'cancelUrl' => route('admin.orders.cancel', $order),
+            'statusUrl' => route('boshqaruv.orders.status', $order),
+            'cancelUrl' => route('boshqaruv.orders.cancel', $order),
             'switchModeUrl' => route('admin.orders.switch-mode', $order),
             'rerouteHubUrl' => route('admin.orders.reroute-hub', $order),
             'postalReturnUrl' => route('admin.orders.postal-return', $order),
@@ -1969,8 +2437,8 @@ class AdminController extends Controller
             'Users' => route('admin.users.index'),
             'Orders' => route('admin.orders.index'),
             'SellerOrders' => request()->is('boshqaruv/sellers*')
-                ? route('admin.sellers.index')
-                : route('admin.seller-orders.index'),
+                ? route('boshqaruv.sellers')
+                : route('boshqaruv.seller-orders'),
             'CourierOrders' => request()->is('boshqaruv/couriers*')
                 ? route('admin.couriers.index')
                 : route('admin.courier-orders.index'),
@@ -1996,7 +2464,7 @@ class AdminController extends Controller
             'Siyosatlar' => route('admin.policies.index'),
             'ApiClients' => route('admin.api-clients.index'),
             'SearchHistory' => route('admin.search-history.index'),
-            'Settings' => route('admin.settings.index'),
+            'Settings' => route('boshqaruv.settings'),
         ][$component] ?? null;
     }
 }

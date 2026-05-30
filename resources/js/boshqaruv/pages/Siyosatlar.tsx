@@ -15,7 +15,7 @@ interface Policy {
 
 export default function Siyosatlar() {
   const { policies = [] } = usePage<{ policies?: Policy[] }>().props;
-  const createUrl = policies[0]?.createUrl || '/a122/policies/create';
+  const createUrl = '/boshqaruv/siyosatlar';
 
   const toggle = (policy: Policy) => policy.toggleUrl && router.patch(policy.toggleUrl, {}, { preserveScroll: true });
   const destroy = (policy: Policy) => {
@@ -30,7 +30,6 @@ export default function Siyosatlar() {
           <h1 className="page-title">Siyosatlar va qoidalar</h1>
           <p className="page-subtitle">Legal sahifalar, appda ko'rinishi va aktiv holat</p>
         </div>
-        <a className="btn btn-primary-gradient" href={createUrl}><i className="bi bi-plus-lg me-1"></i>Yangi siyosat</a>
       </div>
 
       <div className="card-panel">
@@ -47,7 +46,6 @@ export default function Siyosatlar() {
                   <td><span className={`chip ${policy.showInApp ? 'chip-success' : 'chip-gray'}`}>{policy.showInApp ? 'Ha' : "Yo'q"}</span></td>
                   <td><div className="form-check form-switch"><input type="checkbox" className="form-check-input" checked={policy.status === 'Active'} onChange={() => toggle(policy)} /></div></td>
                   <td>
-                    {policy.editUrl ? <a className="btn btn-sm btn-light me-1" href={policy.editUrl}><i className="bi bi-pencil"></i></a> : null}
                     <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(policy)}><i className="bi bi-trash"></i></button>
                   </td>
                 </tr>

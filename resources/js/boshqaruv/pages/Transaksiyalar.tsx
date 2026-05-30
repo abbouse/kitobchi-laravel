@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button } from 'react-bootstrap';
+import PaginationControls, { useClientPagination } from '../components/PaginationControls';
 
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
 
@@ -40,6 +41,7 @@ export default function Transaksiyalar() {
     const approved = transactions.filter((item) => statusChip(item.status) === 'chip-success').length;
     return { income, commission, pending, approved };
   }, [transactions]);
+  const pagination = useClientPagination(transactions, 30);
 
   const patch = (url?: string, message?: string) => {
     if (!url || (message && !confirm(message))) return;
@@ -53,9 +55,6 @@ export default function Transaksiyalar() {
           <h1 className="page-title">Tranzaksiyalar</h1>
           <p className="page-subtitle">Seller to'lovlari, yechib olish so'rovlari va komissiyalar</p>
         </div>
-        <a className="btn btn-outline-secondary" href="/a122/transactions">
-          <i className="bi bi-funnel me-1"></i>Eski filtr
-        </a>
       </div>
 
       <div className="row g-3 mb-4">
@@ -91,7 +90,7 @@ export default function Transaksiyalar() {
           <table className="data-table">
             <thead><tr><th>ID</th><th>Seller</th><th>Turi</th><th>Summa</th><th>Komissiya</th><th>Net</th><th>Metod</th><th>Sana</th><th>Status</th><th>Amallar</th></tr></thead>
             <tbody>
-              {transactions.map((item) => (
+              {pagination.paginated.map((item) => (
                 <tr key={item.id}>
                   <td className="fw-semibold text-primary">#{item.id}</td>
                   <td><div className="fw-semibold">{item.user}</div><small className="text-muted">{item.phone}</small></td>
@@ -116,6 +115,7 @@ export default function Transaksiyalar() {
             </tbody>
           </table>
         </div>
+        <PaginationControls {...pagination} onPageChange={pagination.setPage} />
       </div>
 
       <Modal show={!!selected} onHide={() => setSelected(null)} centered>
@@ -134,7 +134,6 @@ export default function Transaksiyalar() {
         <Modal.Footer>
           {statusChip(selected?.status) === 'chip-warning' && selected?.approveUrl ? <Button variant="outline-secondary" onClick={() => patch(selected.approveUrl, 'Tranzaksiya tasdiqlansinmi?')}>Tasdiqlash</Button> : null}
           {statusChip(selected?.status) === 'chip-warning' && selected?.rejectUrl ? <Button variant="outline-secondary" onClick={() => patch(selected.rejectUrl, 'Tranzaksiya rad etilsinmi?')}>Rad etish</Button> : null}
-          {selected?.showUrl ? <a className="btn btn-primary-gradient" href={selected.showUrl}>Eski panelda ochish</a> : null}
           <Button variant="light" onClick={() => setSelected(null)}>Yopish</Button>
         </Modal.Footer>
       </Modal>

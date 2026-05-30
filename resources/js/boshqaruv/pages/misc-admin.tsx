@@ -7,7 +7,7 @@ export function Vakansiyalar() {
   const { vacancies = [] } = usePage<{
     vacancies?: Array<{ id: number; title: string; contractType?: string; location?: string; status: string; applicants: number; createUrl?: string; editUrl?: string; toggleUrl?: string; destroyUrl?: string }>;
   }>().props;
-  const createUrl = vacancies[0]?.createUrl || '/a122/jobs/create';
+  const createUrl = '/boshqaruv/vakansiyalar';
   const toggle = (vacancy: (typeof vacancies)[0]) => vacancy.toggleUrl && router.patch(vacancy.toggleUrl, {}, { preserveScroll: true });
   const destroy = (vacancy: (typeof vacancies)[0]) => {
     if (!vacancy.destroyUrl || !confirm(`${vacancy.title} vakansiyasi o'chirilsinmi?`)) return;
@@ -17,7 +17,7 @@ export function Vakansiyalar() {
   return (
     <div>
       <div className="page-head"><div><h1 className="page-title">Vakansiyalar</h1><p className="page-subtitle">Jami {vacancies.length} ta vakansiya</p></div>
-        <a className="btn btn-primary-gradient" href={createUrl}><i className="bi bi-plus-lg me-1"></i>Yangi vakansiya</a></div>
+        </div>
       <div className="card-panel">
         <div className="table-responsive"><table className="data-table">
           <thead><tr><th>ID</th><th>Vakansiya</th><th>Shart</th><th>Joylashuv</th><th>Arizalar</th><th>Holat</th><th>Amallar</th></tr></thead>
@@ -30,7 +30,6 @@ export function Vakansiyalar() {
               <td>{vacancy.applicants} ta</td>
               <td><div className="form-check form-switch"><input type="checkbox" className="form-check-input" checked={vacancy.status === 'Active'} onChange={() => toggle(vacancy)} /></div></td>
               <td>
-                {vacancy.editUrl ? <a className="btn btn-sm btn-light me-1" href={vacancy.editUrl}><i className="bi bi-pencil"></i></a> : null}
                 <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(vacancy)}><i className="bi bi-trash"></i></button>
               </td>
             </tr>
@@ -55,7 +54,7 @@ export function KaryeraArizalari() {
 
   return (
     <div>
-      <div className="page-head"><div><h1 className="page-title">Karyera arizalari</h1><p className="page-subtitle">Jami {applications.length} ta ariza</p></div><a className="btn btn-outline-secondary" href="/a122/job-applications">Eski filtr</a></div>
+      <div className="page-head"><div><h1 className="page-title">Karyera arizalari</h1><p className="page-subtitle">Jami {applications.length} ta ariza</p></div></div>
       <div className="card-panel">
         <div className="table-responsive"><table className="data-table">
           <thead><tr><th>ID</th><th>Nomzod</th><th>Vakansiya</th><th>Kontakt</th><th>Sana</th><th>Status</th><th>Amallar</th></tr></thead>
@@ -94,7 +93,6 @@ export function KaryeraArizalari() {
           </div>
         </Modal.Body>
         <Modal.Footer>
-          {selected?.showUrl ? <a className="btn btn-primary-gradient" href={selected.showUrl}>Eski panelda ochish</a> : null}
           <Button variant="light" onClick={() => setShowDetail(false)}>Yopish</Button>
         </Modal.Footer>
       </Modal>

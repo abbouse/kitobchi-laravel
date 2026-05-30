@@ -1,4 +1,5 @@
 import { router, usePage } from '@inertiajs/react';
+import PaginationControls, { useClientPagination } from '../components/PaginationControls';
 
 interface Cat {
   id: number;
@@ -16,7 +17,7 @@ interface Cat {
 
 export default function BookCategories() {
   const { categories = [] } = usePage<{ categories?: Cat[] }>().props;
-  const createUrl = categories[0]?.createUrl || '/a122/book-categories/create';
+  const pagination = useClientPagination(categories, 30);
 
   const destroy = (category: Cat) => {
     if (!category.destroyUrl || !confirm(`${category.name} kategoriyasini o'chirasizmi?`)) return;
@@ -35,7 +36,6 @@ export default function BookCategories() {
           <h1 className="page-title">Kitob kategoriyalari</h1>
           <p className="page-subtitle">Jami {categories.length} ta kategoriya</p>
         </div>
-        <a className="btn btn-primary-gradient" href={createUrl}><i className="bi bi-plus-lg me-1"></i>Yangi kategoriya</a>
       </div>
 
       <div className="card-panel">
@@ -43,7 +43,7 @@ export default function BookCategories() {
           <table className="data-table">
             <thead><tr><th>ID</th><th>Nomi</th><th>Slug</th><th>Kitoblar</th><th>Holat</th><th>Amallar</th></tr></thead>
             <tbody>
-              {categories.map((category) => (
+              {pagination.paginated.map((category) => (
                 <tr key={category.id}>
                   <td className="fw-semibold" style={{ color: '#4f46e5' }}>#{category.id}</td>
                   <td>
@@ -58,7 +58,6 @@ export default function BookCategories() {
                     </button>
                   </td>
                   <td>
-                    <a className="btn btn-sm btn-light me-1" href={category.editUrl || '#'}><i className="bi bi-pencil"></i></a>
                     <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(category)} disabled={category.itemsCount > 0}>
                       <i className="bi bi-trash"></i>
                     </button>
@@ -68,6 +67,7 @@ export default function BookCategories() {
             </tbody>
           </table>
         </div>
+        <PaginationControls {...pagination} onPageChange={pagination.setPage} />
       </div>
     </div>
   );

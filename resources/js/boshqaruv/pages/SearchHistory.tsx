@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { usePage } from '@inertiajs/react';
+import PaginationControls, { useClientPagination } from '../components/PaginationControls';
 
 interface SearchItem {
   id: number;
@@ -23,6 +24,7 @@ export default function SearchHistory() {
     const type = filter === 'Barchasi' || item.resultType === filter;
     return match && type;
   });
+  const pagination = useClientPagination(filtered, 40);
   const types = ['Barchasi', ...Array.from(new Set(searchHistory.map((item) => item.resultType).filter(Boolean)))];
 
   return (
@@ -32,7 +34,6 @@ export default function SearchHistory() {
           <h1 className="page-title">Qidiruv tarixi</h1>
           <p className="page-subtitle">Foydalanuvchilar nimalarni qidiryapti va natija sifati</p>
         </div>
-        <a className="btn btn-outline-secondary" href="/a122/search-history">Eski filtr</a>
       </div>
 
       <div className="card-panel">
@@ -50,7 +51,7 @@ export default function SearchHistory() {
           <table className="data-table">
             <thead><tr><th>So'z</th><th>Foydalanuvchi</th><th>Natija</th><th>Turi</th><th>Topilgan</th><th>Qidirilgan</th><th>Draft</th><th>Oxirgi</th></tr></thead>
             <tbody>
-              {filtered.map((item) => (
+              {pagination.paginated.map((item) => (
                 <tr key={item.id}>
                   <td className="fw-semibold">{item.text || '—'}</td>
                   <td>{item.user}</td>
@@ -65,6 +66,7 @@ export default function SearchHistory() {
             </tbody>
           </table>
         </div>
+        <PaginationControls {...pagination} onPageChange={pagination.setPage} />
       </div>
     </div>
   );

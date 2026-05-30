@@ -53,7 +53,6 @@ export default function Reklamalar() {
           <h1 className="page-title">Reklamalar</h1>
           <p className="page-subtitle">Seller reklamalari, moderatsiya va to'lov holati</p>
         </div>
-        <a className="btn btn-outline-secondary" href="/a122/ads">Eski filtr</a>
       </div>
 
       <div className="row g-3 mb-4">
@@ -86,7 +85,7 @@ export default function Reklamalar() {
                 <span className={`chip ${chip(ad.status)}`}>{ad.status || '—'}</span>
               </div>
 
-              {ad.image ? <img className="w-100 rounded mb-3" style={{ aspectRatio: '16/8', objectFit: 'cover' }} src={ad.image} alt={ad.name} /> : null}
+              {ad.image ? <img className="media-preview rounded mb-3" style={{ aspectRatio: '16/8' }} src={ad.image} alt={ad.name} /> : null}
 
               <div className="row g-2 text-center mb-3">
                 <div className="col-4"><div className="fw-bold">{fmt(ad.clicks)}</div><small className="text-muted">Klik</small></div>
@@ -102,7 +101,7 @@ export default function Reklamalar() {
 
               <div className="d-flex gap-2 mt-auto">
                 <button className="btn btn-sm btn-light flex-fill" onClick={() => setSelected(ad)}><i className="bi bi-eye"></i></button>
-                {ad.showUrl ? <a className="btn btn-sm btn-light flex-fill" href={ad.showUrl}><i className="bi bi-box-arrow-up-right"></i></a> : null}
+                <button className="btn btn-sm btn-light flex-fill" onClick={() => setSelected(ad)}><i className="bi bi-eye"></i></button>
                 <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(ad)}><i className="bi bi-trash"></i></button>
               </div>
             </div>
@@ -123,7 +122,6 @@ export default function Reklamalar() {
         <Modal.Footer>
           {selected?.moderateUrl ? <Button variant="outline-secondary" onClick={() => moderate(selected, 'approved')}>Tasdiqlash</Button> : null}
           {selected?.moderateUrl ? <Button variant="outline-secondary" onClick={() => moderate(selected, 'rejected')}>Rad etish</Button> : null}
-          {selected?.showUrl ? <a className="btn btn-primary-gradient" href={selected.showUrl}>Eski panelda ochish</a> : null}
           <Button variant="light" onClick={() => setSelected(null)}>Yopish</Button>
         </Modal.Footer>
       </Modal>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button } from 'react-bootstrap';
+import PaginationControls, { useClientPagination } from '../components/PaginationControls';
 
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
 
@@ -23,7 +24,7 @@ export default function Authors() {
   const { authors = [] } = usePage<{ authors?: Author[] }>().props;
   const [showView, setShowView] = useState(false);
   const [selectedAuthor, setSelectedAuthor] = useState<Author | null>(null);
-  const createUrl = authors[0]?.createUrl || '/a122/authors/create';
+  const pagination = useClientPagination(authors, 24);
 
   const destroy = (author: Author) => {
     if (!author.destroyUrl || !confirm(`${author.name} muallifini o'chirasizmi?`)) return;
@@ -42,14 +43,10 @@ export default function Authors() {
           <h1 className="page-title">Mualliflar</h1>
           <p className="page-subtitle">Jami {authors.length} ta muallif</p>
         </div>
-        <div className="d-flex gap-2">
-          <a className="btn btn-outline-secondary" href="/a122/authors">Filtr</a>
-          <a className="btn btn-primary-gradient" href={createUrl}><i className="bi bi-plus-lg me-1"></i>Yangi muallif</a>
-        </div>
       </div>
 
       <div className="row g-3">
-        {authors.map((author, i) => (
+        {pagination.paginated.map((author, i) => (
           <div className="col-xl-4 col-md-6" key={author.id}>
             <div className="card-panel h-100 d-flex flex-column justify-content-between">
               <div>
@@ -70,13 +67,13 @@ export default function Authors() {
               </div>
               <div className="d-flex gap-2 mt-3 pt-2">
                 <button className="btn btn-sm btn-light flex-fill" onClick={() => { setSelectedAuthor(author); setShowView(true); }}><i className="bi bi-eye"></i></button>
-                <a className="btn btn-sm btn-primary-gradient flex-fill" href={author.editUrl || '#'}><i className="bi bi-pencil"></i></a>
                 <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(author)} disabled={author.books > 0}><i className="bi bi-trash"></i></button>
               </div>
             </div>
           </div>
         ))}
       </div>
+      <PaginationControls {...pagination} onPageChange={pagination.setPage} />
 
       <Modal show={showView} onHide={() => setShowView(false)} centered>
         <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">Muallif profili</Modal.Title></Modal.Header>
@@ -95,7 +92,6 @@ export default function Authors() {
         </Modal.Body>
         <Modal.Footer>
           {selectedAuthor?.needsAiPortrait ? <Button variant="outline-secondary" onClick={() => generatePrompt(selectedAuthor)}>AI prompt</Button> : null}
-          {selectedAuthor?.editUrl ? <a className="btn btn-primary-gradient" href={selectedAuthor.editUrl}>Tahrirlash</a> : null}
           <Button variant="light" onClick={() => setShowView(false)}>Yopish</Button>
         </Modal.Footer>
       </Modal>

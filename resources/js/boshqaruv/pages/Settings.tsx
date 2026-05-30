@@ -1,180 +1,394 @@
-import { useState } from 'react';
+import { FormEvent, useMemo, useState } from 'react';
+import { router, usePage } from '@inertiajs/react';
 
-export default function Settings() {
-  const [tab, setTab] = useState('general');
+const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
+
+type ProjectSettings = Record<string, string | number | boolean | null | undefined>;
+type ActionMap = Record<string, string>;
+type Commission = { id: number; priceFrom: number; priceTo: number; percent: number; updateUrl: string; destroyUrl: string };
+type Cashback = { id: number; fromUzs: number; toUzs: number; cashback: number; type: string; updateUrl: string; destroyUrl: string };
+type Delivery = { id: number; name: string; type: string; priceKg: number; muddat: number; forCountry: string; capital: boolean; freePriceFrom: number; status: boolean; updateUrl: string; destroyUrl: string };
+
+type SettingsPayload = {
+  project?: ProjectSettings;
+  commission?: Commission[];
+  cashback?: Cashback[];
+  cashbackDelivery?: Cashback[];
+  cashbackPickup?: Cashback[];
+  delivery?: Delivery[];
+  actions?: ActionMap;
+};
+
+const tabs = [
+  { key: 'versions', label: 'App versiyalar', icon: 'bi-phone' },
+  { key: 'contacts', label: 'Kontaktlar', icon: 'bi-headset' },
+  { key: 'app-flags', label: 'App flaglar', icon: 'bi-toggles' },
+  { key: 'courier-bonus', label: 'Kuryer bonus', icon: 'bi-bicycle' },
+  { key: 'telegram', label: 'Telegram', icon: 'bi-telegram' },
+  { key: 'commission', label: 'Komissiya', icon: 'bi-percent' },
+  { key: 'cashback', label: 'Cashback', icon: 'bi-cash-stack' },
+  { key: 'delivery', label: 'Yetkazish', icon: 'bi-truck' },
+];
+
+function value(project: ProjectSettings, key: string, fallback = '') {
+  const val = project[key];
+  return val === null || val === undefined ? fallback : String(val);
+}
+
+function checked(project: ProjectSettings, key: string) {
+  return Boolean(project[key]);
+}
+
+function submitForm(event: FormEvent<HTMLFormElement>, method: 'post' | 'put', url?: string) {
+  event.preventDefault();
+  if (!url) return;
+
+  const form = event.currentTarget;
+  const data = Object.fromEntries(new FormData(form).entries());
+  const options = { preserveScroll: true };
+
+  if (method === 'post') {
+    router.post(url, data, options);
+  } else {
+    router.put(url, data, options);
+  }
+}
+
+function destroy(url?: string, label = "O'chirilsinmi?") {
+  if (!url || !confirm(label)) return;
+  router.delete(url, { preserveScroll: true });
+}
+
+function TextInput({ name, label, defaultValue, type = 'text', required = false, min, max, placeholder }: {
+  name: string; label: string; defaultValue?: string | number; type?: string; required?: boolean; min?: number; max?: number; placeholder?: string;
+}) {
   return (
     <div>
+      <label className="form-label small text-muted fw-semibold">{label}</label>
+      <input name={name} type={type} min={min} max={max} required={required} className="form-control" defaultValue={defaultValue ?? ''} placeholder={placeholder} />
+    </div>
+  );
+}
+
+function Toggle({ name, label, defaultChecked, icon }: { name: string; label: string; defaultChecked?: boolean; icon: string }) {
+  return (
+    <label className="d-flex align-items-center justify-content-between gap-3 p-3 rounded border">
+      <span className="d-flex align-items-center gap-2 fw-semibold"><i className={`bi ${icon} text-primary`}></i>{label}</span>
+      <span>
+        <input type="hidden" name={name} value="0" />
+        <input className="form-check-input" type="checkbox" name={name} value="1" defaultChecked={defaultChecked} />
+      </span>
+    </label>
+  );
+}
+
+function SaveButton({ label = 'Saqlash' }: { label?: string }) {
+  return <button className="btn btn-primary-gradient"><i className="bi bi-check2 me-1"></i>{label}</button>;
+}
+
+function SectionCard({ title, icon, children }: { title: string; icon: string; children: React.ReactNode }) {
+  return (
+    <div className="card-panel">
+      <div className="d-flex align-items-center gap-2 mb-3">
+        <i className={`bi ${icon} text-primary`}></i>
+        <h5 className="fw-bold mb-0">{title}</h5>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+export default function Settings() {
+  const { settings = {} } = usePage<{ settings: SettingsPayload }>().props;
+  const project = settings.project ?? {};
+  const actions = settings.actions ?? {};
+  const initialTab = useMemo(() => new URLSearchParams(window.location.search).get('tab') || 'versions', []);
+  const [tab, setTab] = useState(initialTab);
+
+  const setActiveTab = (key: string) => {
+    setTab(key);
+    window.history.replaceState(null, '', `${window.location.pathname}?tab=${key}`);
+  };
+
+  return (
+    <div className="settings-page">
       <div className="page-head">
         <div>
           <h1 className="page-title">Sozlamalar</h1>
-          <p className="page-subtitle">Tizim parametrlari, hisob va xavfsizlik</p>
+          <p className="page-subtitle">App versiyalari, operatsion flaglar, cashback, komissiya va yetkazish xizmatlari</p>
         </div>
-        <button className="btn btn-primary-gradient"><i className="bi bi-check2 me-1"></i>O'zgarishlarni saqlash</button>
       </div>
 
-      <div className="row g-3">
-        <div className="col-xl-3">
-          <div className="card-panel">
-            <nav className="nav flex-column">
+      <div className="card-panel mb-3">
+        <div className="d-flex flex-wrap gap-2">
+          {tabs.map((item) => (
+            <button key={item.key} type="button" onClick={() => setActiveTab(item.key)} className={`btn ${tab === item.key ? 'btn-primary-gradient' : 'btn-light'}`}>
+              <i className={`bi ${item.icon} me-1`}></i>{item.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {tab === 'versions' && (
+        <SectionCard title="App versiyalari" icon="bi-phone">
+          <form onSubmit={(event) => submitForm(event, 'put', actions.versions)}>
+            <div className="row g-3">
               {[
-                { k: 'general', l: 'Umumiy', i: 'bi-gear' },
-                { k: 'account', l: 'Hisob', i: 'bi-person' },
-                { k: 'notifications', l: 'Bildirishnomalar', i: 'bi-bell' },
-                { k: 'security', l: 'Xavfsizlik', i: 'bi-shield-lock' },
-                { k: 'payment', l: "To'lov usullari", i: 'bi-credit-card' },
-                { k: 'shipping', l: 'Yetkazib berish', i: 'bi-truck' },
-                { k: 'api', l: 'API & Integratsiya', i: 'bi-code-slash' },
-              ].map((t) => (
-                <a key={t.k} onClick={() => setTab(t.k)}
-                  className={`d-flex align-items-center gap-2 px-3 py-2 rounded mb-1 text-decoration-none ${tab === t.k ? 'bg-primary bg-opacity-10 text-primary fw-semibold' : 'text-dark'}`}
-                  style={{ cursor: 'pointer' }}>
-                  <i className={`bi ${t.i}`}></i> {t.l}
-                </a>
+                ['Kitobchi Business', 'business'],
+                ['Kuryer App', 'courier'],
+                ['Market App', 'market'],
+              ].map(([label, key]) => (
+                <div className="col-lg-4" key={key}>
+                  <div className="p-3 rounded border h-100">
+                    <div className="fw-bold mb-3">{label}</div>
+                    <div className="row g-2">
+                      <div className="col-md-6 col-lg-12"><TextInput name={`${key}_version_ios`} label="iOS versiya" required defaultValue={value(project, `${key}_version_ios`)} placeholder="1.0.0" /></div>
+                      <div className="col-md-6 col-lg-12"><TextInput name={`${key}_version_android`} label="Android versiya" required defaultValue={value(project, `${key}_version_android`)} placeholder="1.0.0" /></div>
+                    </div>
+                  </div>
+                </div>
               ))}
-            </nav>
+            </div>
+            <div className="text-end mt-3"><SaveButton /></div>
+          </form>
+        </SectionCard>
+      )}
+
+      {tab === 'contacts' && (
+        <SectionCard title="Kontaktlar" icon="bi-headset">
+          <form onSubmit={(event) => submitForm(event, 'put', actions.contacts)}>
+            <div className="row g-3">
+              {[
+                ['Kitobchi Market', 'kitobchi'],
+                ['Kitobchi Business', 'business'],
+                ['Endi Courier', 'courier'],
+              ].map(([label, key]) => (
+                <div className="col-xl-4" key={key}>
+                  <div className="p-3 rounded border h-100">
+                    <div className="fw-bold mb-3">{label}</div>
+                    <div className="row g-2">
+                      <div className="col-md-6 col-xl-12"><TextInput name={`${key}_phone`} label="Call center raqami" defaultValue={value(project, `${key}_phone`)} placeholder="+998 XX XXX XX XX" /></div>
+                      <div className="col-md-6 col-xl-12"><TextInput name={`${key}_email`} label="Email manzil" type="email" defaultValue={value(project, `${key}_email`)} placeholder="support@example.com" /></div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="text-end mt-3"><SaveButton /></div>
+          </form>
+        </SectionCard>
+      )}
+
+      {tab === 'app-flags' && (
+        <SectionCard title="App flaglar va qadoqlash" icon="bi-toggles">
+          <form onSubmit={(event) => submitForm(event, 'put', actions.appFlags)}>
+            <div className="row g-3">
+              <div className="col-lg-6"><Toggle name="on_premium" label="Premium rejim" icon="bi-star-fill" defaultChecked={checked(project, 'on_premium')} /></div>
+              <div className="col-lg-6"><Toggle name="on_reels" label="Reels yoqilgan" icon="bi-play-circle-fill" defaultChecked={checked(project, 'on_reels')} /></div>
+              <div className="col-lg-6"><Toggle name="ramadan" label="Ramazon rejim" icon="bi-moon-stars-fill" defaultChecked={checked(project, 'ramadan')} /></div>
+              <div className="col-lg-6"><Toggle name="stop_sales" label="Savdo to'xtatilgan" icon="bi-slash-circle-fill" defaultChecked={checked(project, 'stop_sales')} /></div>
+              <div className="col-md-4"><TextInput name="packaging_price_small" label="Kichik qadoqlash (UZS)" type="number" min={0} required defaultValue={value(project, 'packaging_price_small', '25000')} /></div>
+              <div className="col-md-4"><TextInput name="packaging_price_large" label="Katta qadoqlash (UZS)" type="number" min={0} required defaultValue={value(project, 'packaging_price_large', '40000')} /></div>
+              <div className="col-md-4"><TextInput name="packaging_threshold" label="Chegara (ta kitob)" type="number" min={1} required defaultValue={value(project, 'packaging_threshold', '4')} /></div>
+            </div>
+            <div className="text-end mt-3"><SaveButton /></div>
+          </form>
+        </SectionCard>
+      )}
+
+      {tab === 'courier-bonus' && (
+        <SectionCard title="Kuryer bonus tizimi" icon="bi-bicycle">
+          <form onSubmit={(event) => submitForm(event, 'put', actions.courierBonus)}>
+            <div className="row g-3">
+              <div className="col-md-6 col-xl-4"><TextInput name="courier_surge_step" label="Har minut bonus" type="number" min={0} max={5000} required defaultValue={value(project, 'courier_surge_step', '500')} /></div>
+              <div className="col-md-6 col-xl-4"><TextInput name="courier_surge_max" label="Maksimal surge" type="number" min={0} max={50000} required defaultValue={value(project, 'courier_surge_max', '10000')} /></div>
+              <div className="col-md-6 col-xl-4"><TextInput name="courier_surge_threshold" label="Push threshold" type="number" min={0} max={50000} required defaultValue={value(project, 'courier_surge_threshold', '5000')} /></div>
+              <div className="col-md-6 col-xl-4"><TextInput name="courier_sla_minutes" label="SLA daqiqa" type="number" min={1} max={180} required defaultValue={value(project, 'courier_sla_minutes', '45')} /></div>
+              <div className="col-md-6 col-xl-4"><TextInput name="courier_penalty_step" label="Kechikish penaltisi" type="number" min={0} max={10000} required defaultValue={value(project, 'courier_penalty_step', '300')} /></div>
+            </div>
+            <div className="text-end mt-3"><SaveButton /></div>
+          </form>
+        </SectionCard>
+      )}
+
+      {tab === 'telegram' && (
+        <SectionCard title="Telegram Login" icon="bi-telegram">
+          <form onSubmit={(event) => submitForm(event, 'put', actions.telegram)}>
+            <div className="row g-3">
+              <div className="col-12"><Toggle name="telegram_login_enabled" label="Telegram login yoqilgan" icon="bi-power" defaultChecked={checked(project, 'telegram_login_enabled')} /></div>
+              <div className="col-lg-6"><TextInput name="telegram_client_id" label="Client ID" defaultValue={value(project, 'telegram_client_id')} /></div>
+              <div className="col-lg-6"><TextInput name="telegram_scopes" label="Scopes" defaultValue={value(project, 'telegram_scopes', 'openid profile phone')} /></div>
+              <div className="col-lg-6"><TextInput name="telegram_redirect_uri_ios" label="iOS Redirect URI" defaultValue={value(project, 'telegram_redirect_uri_ios', 'https://app3206985527-login.tg.dev')} /></div>
+              <div className="col-lg-6"><TextInput name="telegram_redirect_uri_android" label="Android Redirect URI" defaultValue={value(project, 'telegram_redirect_uri_android', 'https://app2854400165-login.tg.dev/tglogin')} /></div>
+            </div>
+            <div className="small text-muted mt-3">Client secret server `.env` faylida saqlanadi.</div>
+            <div className="text-end mt-3"><SaveButton /></div>
+          </form>
+        </SectionCard>
+      )}
+
+      {tab === 'commission' && (
+        <div className="row g-3">
+          <div className="col-xl-8">
+            <SectionCard title="Komissiya qoidalari" icon="bi-percent">
+              <div className="table-responsive">
+                <table className="table data-table align-middle mb-0">
+                  <thead><tr><th>Narx dan</th><th>Narx gacha</th><th>Komissiya %</th><th></th></tr></thead>
+                  <tbody>
+                    {(settings.commission ?? []).map((item) => (
+                      <tr key={item.id}>
+                        <td><input form={`commission-${item.id}`} className="form-control form-control-sm" name="priceFrom" type="number" min={0} defaultValue={item.priceFrom} /></td>
+                        <td><input form={`commission-${item.id}`} className="form-control form-control-sm" name="priceTo" type="number" min={1} defaultValue={item.priceTo} /></td>
+                        <td><input form={`commission-${item.id}`} className="form-control form-control-sm" name="percent" type="number" min={0} max={100} defaultValue={item.percent} /></td>
+                        <td className="text-end">
+                          <form id={`commission-${item.id}`} className="d-inline" onSubmit={(event) => submitForm(event, 'put', item.updateUrl)}>
+                            <button className="btn btn-sm btn-light me-1"><i className="bi bi-check2"></i></button>
+                          </form>
+                          <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(item.destroyUrl, 'Komissiya qoidasi o‘chirilsinmi?')}><i className="bi bi-trash"></i></button>
+                        </td>
+                      </tr>
+                    ))}
+                    {(settings.commission ?? []).length === 0 ? <tr><td colSpan={4} className="text-center text-muted py-4">Komissiya qoidalari yo'q</td></tr> : null}
+                  </tbody>
+                </table>
+              </div>
+            </SectionCard>
+          </div>
+          <div className="col-xl-4">
+            <SectionCard title="Yangi qoida" icon="bi-plus-circle">
+              <form onSubmit={(event) => submitForm(event, 'post', actions.commissionStore)}>
+                <div className="row g-2">
+                  <div className="col-md-6 col-xl-12"><TextInput name="priceFrom" label="Narx dan" type="number" min={0} required /></div>
+                  <div className="col-md-6 col-xl-12"><TextInput name="priceTo" label="Narx gacha" type="number" min={1} required /></div>
+                  <div className="col-md-6 col-xl-12"><TextInput name="percent" label="Komissiya %" type="number" min={0} max={100} required /></div>
+                </div>
+                <div className="text-end mt-3"><SaveButton label="Qo'shish" /></div>
+              </form>
+            </SectionCard>
           </div>
         </div>
+      )}
 
-        <div className="col-xl-9">
-          {tab === 'general' && (
-            <div className="card-panel">
-              <h5 className="fw-bold mb-4">Umumiy sozlamalar</h5>
-              <div className="row g-3">
-                <div className="col-md-6"><label className="form-label small fw-semibold">Kompaniya nomi</label><input className="form-control" defaultValue="BookHub LLC" /></div>
-                <div className="col-md-6"><label className="form-label small fw-semibold">Email</label><input className="form-control" defaultValue="info@bookhub.uz" /></div>
-                <div className="col-md-6"><label className="form-label small fw-semibold">Telefon</label><input className="form-control" defaultValue="+998 71 200 00 00" /></div>
-                <div className="col-md-6"><label className="form-label small fw-semibold">Valyuta</label><select className="form-select"><option>UZS — O'zbek so'mi</option><option>USD</option></select></div>
-                <div className="col-md-6"><label className="form-label small fw-semibold">Til</label><select className="form-select"><option>O'zbek</option><option>Rus</option><option>Ingliz</option></select></div>
-                <div className="col-md-6"><label className="form-label small fw-semibold">Vaqt zonasi</label><select className="form-select"><option>Asia/Tashkent (UTC+5)</option></select></div>
-                <div className="col-12"><label className="form-label small fw-semibold">Manzil</label><textarea className="form-control" rows={2} defaultValue="Toshkent sh., Amir Temur shoh ko'chasi 108" /></div>
+      {tab === 'cashback' && (
+        <div className="row g-3">
+          <div className="col-xl-8">
+            <SectionCard title="Cashback qoidalari" icon="bi-cash-stack">
+              <div className="table-responsive">
+                <table className="table data-table align-middle mb-0">
+                  <thead><tr><th>Tur</th><th>Xarid dan</th><th>Xarid gacha</th><th>Cashback %</th><th></th></tr></thead>
+                  <tbody>
+                    {(settings.cashback ?? []).map((item) => (
+                      <tr key={item.id}>
+                        <td>
+                          <select form={`cashback-${item.id}`} className="form-select form-select-sm" name="type" defaultValue={item.type || 'delivery'}>
+                            <option value="delivery">Yetkazib berish</option>
+                            <option value="pickup">Pickup</option>
+                          </select>
+                        </td>
+                        <td><input form={`cashback-${item.id}`} className="form-control form-control-sm" name="fromUzs" type="number" min={0} defaultValue={item.fromUzs} /></td>
+                        <td><input form={`cashback-${item.id}`} className="form-control form-control-sm" name="toUzs" type="number" min={1} defaultValue={item.toUzs} /></td>
+                        <td><input form={`cashback-${item.id}`} className="form-control form-control-sm" name="cashback" type="number" min={0} max={100} defaultValue={item.cashback} /></td>
+                        <td className="text-end">
+                          <form id={`cashback-${item.id}`} className="d-inline" onSubmit={(event) => submitForm(event, 'put', item.updateUrl)}>
+                            <button className="btn btn-sm btn-light me-1"><i className="bi bi-check2"></i></button>
+                          </form>
+                          <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(item.destroyUrl, 'Cashback qoidasi o‘chirilsinmi?')}><i className="bi bi-trash"></i></button>
+                        </td>
+                      </tr>
+                    ))}
+                    {(settings.cashback ?? []).length === 0 ? <tr><td colSpan={5} className="text-center text-muted py-4">Cashback qoidalari yo'q</td></tr> : null}
+                  </tbody>
+                </table>
               </div>
-            </div>
-          )}
-
-          {tab === 'account' && (
-            <div className="card-panel">
-              <h5 className="fw-bold mb-4">Hisob ma'lumotlari</h5>
-              <div className="d-flex align-items-center gap-3 mb-4 pb-4 border-bottom">
-                <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'linear-gradient(135deg,#f472b6,#8b5cf6)', color: 'white', display: 'grid', placeItems: 'center', fontSize: 32, fontWeight: 700 }}>AS</div>
-                <div>
-                  <div className="fw-bold fs-5">Admin Sobir</div>
-                  <div className="text-muted">admin@bookhub.uz</div>
-                  <button className="btn btn-sm btn-outline-primary mt-2"><i className="bi bi-camera me-1"></i>Avatar o'zgartirish</button>
-                </div>
-              </div>
-              <div className="row g-3">
-                <div className="col-md-6"><label className="form-label small fw-semibold">To'liq ism</label><input className="form-control" defaultValue="Sobir Abdullayev" /></div>
-                <div className="col-md-6"><label className="form-label small fw-semibold">Rol</label><input className="form-control" value="Super Administrator" disabled /></div>
-                <div className="col-md-6"><label className="form-label small fw-semibold">Email</label><input className="form-control" defaultValue="admin@bookhub.uz" /></div>
-                <div className="col-md-6"><label className="form-label small fw-semibold">Telefon</label><input className="form-control" defaultValue="+998 90 123 45 67" /></div>
-              </div>
-            </div>
-          )}
-
-          {tab === 'notifications' && (
-            <div className="card-panel">
-              <h5 className="fw-bold mb-4">Bildirishnomalar</h5>
-              {[
-                ['Yangi buyurtma', 'Har bir buyurtmada ogohlantirish', true],
-                ['Kam qolgan mahsulot', 'Ombor 10 danadan kam bo\'lganda', true],
-                ['Yangi foydalanuvchi', 'Mijoz ro\'yxatdan o\'tganda', false],
-                ['Ticket ochilganda', 'Yuqori muhimlikdagi ticketlar', true],
-                ['Haftalik hisobot', 'Har dushanba ertalab 9:00', true],
-              ].map(([t, d, v]) => (
-                <div key={String(t)} className="d-flex justify-content-between align-items-center py-3 border-bottom">
-                  <div>
-                    <div className="fw-semibold">{String(t)}</div>
-                    <small className="text-muted">{d}</small>
+            </SectionCard>
+          </div>
+          <div className="col-xl-4">
+            <SectionCard title="Yangi cashback" icon="bi-plus-circle">
+              <form onSubmit={(event) => submitForm(event, 'post', actions.cashbackStore)}>
+                <div className="row g-2">
+                  <div className="col-12">
+                    <label className="form-label small text-muted fw-semibold">Buyurtma turi</label>
+                    <select name="type" className="form-select" required>
+                      <option value="delivery">Yetkazib berish</option>
+                      <option value="pickup">Pickup</option>
+                    </select>
                   </div>
-                  <div className="form-check form-switch"><input type="checkbox" className="form-check-input" defaultChecked={Boolean(v)} /></div>
+                  <div className="col-md-6 col-xl-12"><TextInput name="fromUzs" label="Xarid dan" type="number" min={0} required /></div>
+                  <div className="col-md-6 col-xl-12"><TextInput name="toUzs" label="Xarid gacha" type="number" min={1} required /></div>
+                  <div className="col-md-6 col-xl-12"><TextInput name="cashback" label="Cashback %" type="number" min={0} max={100} required /></div>
                 </div>
-              ))}
-            </div>
-          )}
-
-          {tab === 'security' && (
-            <div className="card-panel">
-              <h5 className="fw-bold mb-4">Xavfsizlik</h5>
-              <div className="mb-4 pb-4 border-bottom">
-                <h6 className="fw-semibold">Parolni o'zgartirish</h6>
-                <div className="row g-3">
-                  <div className="col-12"><label className="form-label small">Joriy parol</label><input type="password" className="form-control" /></div>
-                  <div className="col-md-6"><label className="form-label small">Yangi parol</label><input type="password" className="form-control" /></div>
-                  <div className="col-md-6"><label className="form-label small">Tasdiqlang</label><input type="password" className="form-control" /></div>
-                </div>
-              </div>
-              <h6 className="fw-semibold">Ikki bosqichli tasdiqlash</h6>
-              <div className="d-flex justify-content-between align-items-center p-3 bg-light rounded">
-                <div><div className="fw-semibold">2FA yoqilgan</div><small className="text-muted">Google Authenticator orqali</small></div>
-                <div className="form-check form-switch"><input type="checkbox" className="form-check-input" defaultChecked /></div>
-              </div>
-            </div>
-          )}
-
-          {tab === 'payment' && (
-            <div className="card-panel">
-              <h5 className="fw-bold mb-4">To'lov usullari</h5>
-              {[
-                ['Click', 'Onlayn to\'lov tizimi', true],
-                ['Payme', 'Onlayn to\'lov tizimi', true],
-                ['Uzum', 'Uzum Nasiya va to\'lov', true],
-                ['Naqd pul', 'Yetkazib berishda to\'lov', true],
-                ['Bank kartasi', 'Visa / Mastercard / Humo / Uzcard', true],
-              ].map(([n, d, v]) => (
-                <div key={String(n)} className="d-flex justify-content-between align-items-center py-3 border-bottom">
-                  <div className="d-flex align-items-center gap-2">
-                    <div style={{ width: 40, height: 40, borderRadius: 8, background: 'linear-gradient(135deg,#c7d2fe,#f3e8ff)', display: 'grid', placeItems: 'center' }}><i className="bi bi-credit-card-2-front"></i></div>
-                    <div><div className="fw-semibold">{String(n)}</div><small className="text-muted">{d}</small></div>
-                  </div>
-                  <div className="form-check form-switch"><input type="checkbox" className="form-check-input" defaultChecked={Boolean(v)} /></div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {tab === 'shipping' && (
-            <div className="card-panel">
-              <h5 className="fw-bold mb-4">Yetkazib berish</h5>
-              {[
-                { z: 'Toshkent shahri', p: '25,000', t: '1 kun' },
-                { z: 'Viloyat markazlari', p: '45,000', t: '2-3 kun' },
-                { z: 'Tumanlar', p: '65,000', t: '3-5 kun' },
-                { z: 'Qishloqlar', p: '85,000', t: '5-7 kun' },
-              ].map((s) => (
-                <div key={s.z} className="row g-2 py-3 border-bottom align-items-center">
-                  <div className="col-md-5"><input className="form-control" defaultValue={s.z} /></div>
-                  <div className="col-md-3"><div className="input-group"><input className="form-control" defaultValue={s.p} /><span className="input-group-text">so'm</span></div></div>
-                  <div className="col-md-3"><input className="form-control" defaultValue={s.t} /></div>
-                  <div className="col-md-1 text-end"><button className="btn btn-sm btn-light text-danger"><i className="bi bi-trash"></i></button></div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {tab === 'api' && (
-            <div className="card-panel">
-              <h5 className="fw-bold mb-4">API va Integratsiyalar</h5>
-              <div className="mb-4 p-3 bg-light rounded">
-                <div className="fw-semibold mb-2">API Key</div>
-                <code className="d-block p-2 bg-white rounded border">bh_live_sk_8f4a2c9e1d3b5a7f6e8c0d2b4a6f8e1c</code>
-                <button className="btn btn-sm btn-outline-secondary mt-2"><i className="bi bi-arrow-repeat me-1"></i>Regenerate</button>
-              </div>
-              <h6 className="fw-semibold mb-3">Webhook URL</h6>
-              <div className="input-group mb-4">
-                <input className="form-control" defaultValue="https://bookhub.uz/api/webhooks" />
-                <button className="btn btn-outline-secondary">Test</button>
-              </div>
-              <h6 className="fw-semibold mb-3">Ulangan servislar</h6>
-              {[['Telegram Bot', true], ['SMS Gateway (Eskiz)', true], ['1C Buxgalteriya', false], ['Google Analytics', true]].map(([n, v]) => (
-                <div key={String(n)} className="d-flex justify-content-between py-2 border-bottom">
-                  <span>{String(n)}</span>
-                  <div className="form-check form-switch"><input type="checkbox" className="form-check-input" defaultChecked={Boolean(v)} /></div>
-                </div>
-              ))}
-            </div>
-          )}
+                <div className="text-end mt-3"><SaveButton label="Qo'shish" /></div>
+              </form>
+            </SectionCard>
+          </div>
         </div>
-      </div>
+      )}
+
+      {tab === 'delivery' && (
+        <div className="row g-3">
+          <div className="col-xl-8">
+            <SectionCard title={`Yetkazish xizmatlari (${(settings.delivery ?? []).length})`} icon="bi-truck">
+              <div className="table-responsive">
+                <table className="table data-table align-middle mb-0">
+                  <thead><tr><th>Nomi</th><th>Turi</th><th>Narx</th><th>Muddat</th><th>Mamlakat</th><th>Holat</th><th></th></tr></thead>
+                  <tbody>
+                    {(settings.delivery ?? []).map((item) => (
+                      <tr key={item.id}>
+                        <td><input form={`delivery-${item.id}`} className="form-control form-control-sm" name="name" defaultValue={item.name} /></td>
+                        <td>
+                          <select form={`delivery-${item.id}`} className="form-select form-select-sm" name="type" defaultValue={item.type}>
+                            <option value="courier_service">Kuryer</option>
+                            <option value="mail_service">Pochta</option>
+                          </select>
+                        </td>
+                        <td><input form={`delivery-${item.id}`} className="form-control form-control-sm" name="priceKg" type="number" min={0} defaultValue={item.priceKg} /></td>
+                        <td><input form={`delivery-${item.id}`} className="form-control form-control-sm" name="muddat" type="number" min={1} defaultValue={item.muddat} /></td>
+                        <td>
+                          <input form={`delivery-${item.id}`} className="form-control form-control-sm mb-1" name="forCountry" defaultValue={item.forCountry} />
+                          <input form={`delivery-${item.id}`} name="freePriceFrom" type="hidden" defaultValue={item.freePriceFrom} />
+                          <input form={`delivery-${item.id}`} name="capital" type="hidden" value="0" />
+                          <label className="small text-muted"><input form={`delivery-${item.id}`} className="form-check-input me-1" name="capital" type="checkbox" value="1" defaultChecked={item.capital} />Toshkent</label>
+                        </td>
+                        <td>
+                          <input form={`delivery-${item.id}`} name="status" type="hidden" value="0" />
+                          <label className="small text-muted"><input form={`delivery-${item.id}`} className="form-check-input me-1" name="status" type="checkbox" value="1" defaultChecked={item.status} />Faol</label>
+                        </td>
+                        <td className="text-end">
+                          <form id={`delivery-${item.id}`} className="d-inline" onSubmit={(event) => submitForm(event, 'put', item.updateUrl)}>
+                            <button className="btn btn-sm btn-light me-1"><i className="bi bi-check2"></i></button>
+                          </form>
+                          <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(item.destroyUrl, 'Yetkazish xizmati o‘chirilsinmi?')}><i className="bi bi-trash"></i></button>
+                        </td>
+                      </tr>
+                    ))}
+                    {(settings.delivery ?? []).length === 0 ? <tr><td colSpan={7} className="text-center text-muted py-4">Xizmatlar yo'q</td></tr> : null}
+                  </tbody>
+                </table>
+              </div>
+            </SectionCard>
+          </div>
+          <div className="col-xl-4">
+            <SectionCard title="Yangi xizmat" icon="bi-plus-circle">
+              <form onSubmit={(event) => submitForm(event, 'post', actions.deliveryStore)}>
+                <div className="row g-2">
+                  <div className="col-md-6 col-xl-12"><TextInput name="name" label="Xizmat nomi" required /></div>
+                  <div className="col-md-6 col-xl-12">
+                    <label className="form-label small text-muted fw-semibold">Turi</label>
+                    <select name="type" className="form-select" required><option value="courier_service">Kuryer</option><option value="mail_service">Pochta</option></select>
+                  </div>
+                  <div className="col-md-6 col-xl-12"><TextInput name="priceKg" label="Narx (UZS)" type="number" min={0} required /></div>
+                  <div className="col-md-6 col-xl-12"><TextInput name="muddat" label="Muddat (kun)" type="number" min={1} required defaultValue={1} /></div>
+                  <div className="col-md-6 col-xl-12"><TextInput name="forCountry" label="Mamlakat" required defaultValue="uzbekistan" /></div>
+                  <div className="col-md-6 col-xl-12"><TextInput name="freePriceFrom" label="Bepul dan (UZS)" type="number" min={0} defaultValue={0} /></div>
+                  <div className="col-6"><Toggle name="capital" label="Toshkent" icon="bi-building" /></div>
+                  <div className="col-6"><Toggle name="status" label="Faol" icon="bi-toggle-on" defaultChecked /></div>
+                </div>
+                <div className="text-end mt-3"><SaveButton label="Qo'shish" /></div>
+              </form>
+            </SectionCard>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

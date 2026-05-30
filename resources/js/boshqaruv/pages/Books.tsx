@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import { usePage } from '@inertiajs/react';
+import { router, usePage } from '@inertiajs/react';
 import { Modal, Button } from 'react-bootstrap';
-import { topBooks } from '../data';
+import PaginationControls, { useClientPagination } from '../components/PaginationControls';
 
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
 
@@ -79,13 +79,19 @@ const Detail = ({ label, value }: { label: string; value?: ReactNode }) => (
 
 export default function Books() {
   const { books = [] } = usePage<{ books?: Book[] }>().props;
-  const list = useMemo<Book[]>(() => (books.length ? books : topBooks as Book[]), [books]);
+  const list = useMemo<Book[]>(() => books, [books]);
+  const pagination = useClientPagination(list, 24);
   const [showView, setShowView] = useState(false);
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
 
   const handleOpenView = (book: Book) => {
     setSelectedBook(book);
     setShowView(true);
+  };
+
+  const handleModerate = (book: Book, status: 0 | 1 | 2) => {
+    if (!book.moderateUrl) return;
+    router.patch(book.moderateUrl, { is_approved: status }, { preserveScroll: true });
   };
 
   return (
@@ -96,17 +102,14 @@ export default function Books() {
           <p className="page-subtitle">{list.length} ta kitob</p>
         </div>
         <div className="d-flex gap-2">
-          <a className="btn btn-outline-secondary" href="/a122/books">
+          <a className="btn btn-outline-secondary" href="/boshqaruv/products">
             <i className="bi bi-funnel me-1"></i>Filtr
-          </a>
-          <a className="btn btn-primary-gradient" href="/a122/books/create">
-            <i className="bi bi-plus-lg me-1"></i>Yangi kitob
           </a>
         </div>
       </div>
 
       <div className="row g-3">
-        {list.map((book) => (
+        {pagination.paginated.map((book) => (
           <div className="col-xl-3 col-md-6" key={book.id}>
             <div className="card-panel h-100 d-flex flex-column justify-content-between">
               <div>
@@ -132,14 +135,17 @@ export default function Books() {
                 <button className="btn btn-sm btn-light flex-fill" onClick={() => handleOpenView(book)} title="Ko'rish">
                   <i className="bi bi-eye"></i>
                 </button>
-                <a className="btn btn-sm btn-light flex-fill" href={book.editUrl || '#'} title="Tahrirlash">
-                  <i className="bi bi-pencil"></i>
-                </a>
+                {book.moderateUrl ? (
+                  <button className="btn btn-sm btn-light flex-fill" onClick={() => handleModerate(book, book.status ? 0 : 1)} title="Moderatsiya">
+                    <i className="bi bi-shield-check"></i>
+                  </button>
+                ) : null}
               </div>
             </div>
           </div>
         ))}
       </div>
+      <PaginationControls {...pagination} onPageChange={pagination.setPage} />
 
       <Modal show={showView} onHide={() => setShowView(false)} centered size="xl" scrollable>
         <Modal.Header closeButton>
@@ -167,7 +173,7 @@ export default function Books() {
                   <h6 className="fw-bold mb-3">Sotuvchi</h6>
                   {selectedBook.seller ? (
                     <>
-                      <div className="fw-semibold">{selectedBook.seller.url ? <a href={selectedBook.seller.url}>{selectedBook.seller.name}</a> : selectedBook.seller.name}</div>
+                      <div className="fw-semibold">{selectedBook.seller.name}</div>
                       <div className="text-muted small">{selectedBook.seller.phone || 'Telefon yoq'}</div>
                       <div className="d-flex gap-2 mt-2 flex-wrap">
                         {badge(selectedBook.seller.verified, 'Verified', 'Tekshirilmagan')}
@@ -246,9 +252,12 @@ export default function Books() {
           ) : null}
         </Modal.Body>
         <Modal.Footer>
-          {selectedBook?.showUrl ? <a className="btn btn-outline-secondary" href={selectedBook.showUrl}>Eski show</a> : null}
-          {selectedBook?.moderateUrl ? <a className="btn btn-outline-secondary" href={selectedBook.moderateUrl}>Moderatsiya</a> : null}
-          {selectedBook?.editUrl ? <a className="btn btn-primary-gradient" href={selectedBook.editUrl}>Tahrirlash</a> : null}
+          {selectedBook?.moderateUrl ? (
+            <>
+              <Button variant="outline-secondary" onClick={() => handleModerate(selectedBook, 0)}>Moderatsiya</Button>
+              <Button variant="primary" className="btn-primary-gradient" onClick={() => handleModerate(selectedBook, 1)}>Tasdiqlash</Button>
+            </>
+          ) : null}
           <Button variant="light" onClick={() => setShowView(false)}>Yopish</Button>
         </Modal.Footer>
       </Modal>
@@ -276,7 +285,7 @@ function MiniOrdersTable({ rows, empty }: { rows: MiniOrder[]; empty: string }) 
         <tbody>
           {rows.map((row) => (
             <tr key={row.id}>
-              <td>{row.url ? <a href={row.url}>#{row.id}</a> : `#${row.id}`}</td>
+              <td>#{row.id}</td>
               <td>
                 <div className="fw-semibold">{row.customer}</div>
                 <div className="text-muted small">{row.phone || row.seller || ''}</div>

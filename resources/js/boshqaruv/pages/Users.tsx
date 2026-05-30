@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button, Form } from 'react-bootstrap';
-import { users } from '../data';
+import PaginationControls, { useClientPagination } from '../components/PaginationControls';
 
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n);
 
@@ -23,11 +23,13 @@ interface User {
 
 export default function Users() {
   const { users: serverUsers = [] } = usePage<{ users?: User[] }>().props;
-  const [list, setList] = useState<User[]>(serverUsers.length ? serverUsers : users);
+  const list = useMemo(() => serverUsers, [serverUsers]);
+  const pagination = useClientPagination(list, 30);
 
   // Modals
   const [showAdd, setShowAdd] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
+  const [showView, setShowView] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   // Form states
@@ -59,31 +61,12 @@ export default function Users() {
   // Actions
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
-    const newU: User = {
-      id: Date.now(),
-      name: name || 'Yangi Foydalanuvchi',
-      email: email || 'user@bookhub.uz',
-      phone: phone || '+998 90 000 00 00',
-      orders: 0,
-      spent: 0,
-      status,
-      role
-    };
-    setList([newU, ...list]);
     setShowAdd(false);
   };
 
   const handleEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedUser) return;
-    setList(list.map(u => u.id === selectedUser.id ? {
-      ...u,
-      name,
-      email,
-      phone,
-      role,
-      status
-    } : u));
     setShowEdit(false);
   };
 
@@ -91,10 +74,14 @@ export default function Users() {
     if (confirm("Foydalanuvchini o'chirishni tasdiqlaysizmi?")) {
       if (user.destroyUrl) {
         router.delete(user.destroyUrl);
-        return;
       }
+    }
+  };
 
-      setList(list.filter(u => u.id !== user.id));
+  const handleToggleBlock = (user: User) => {
+    const url = user.status === 'Blocked' ? user.unblockUrl : user.blockUrl;
+    if (url) {
+      router.patch(url, {}, { preserveScroll: true });
     }
   };
 
@@ -104,14 +91,6 @@ export default function Users() {
         <div>
           <h1 className="page-title">Foydalanuvchilar</h1>
           <p className="page-subtitle">Mijozlar, sotuvchilar va administratorlar</p>
-        </div>
-        <div className="d-flex gap-2">
-          <a className="btn btn-outline-secondary" href="/a122/users">
-            <i className="bi bi-download me-1"></i>Export CSV
-          </a>
-          <a className="btn btn-primary-gradient" href="/a122/users/create">
-            <i className="bi bi-person-plus me-1"></i>Yangi foydalanuvchi
-          </a>
         </div>
       </div>
 
@@ -153,7 +132,7 @@ export default function Users() {
               </tr>
             </thead>
             <tbody>
-              {list.map((u) => (
+              {pagination.paginated.map((u) => (
                 <tr key={u.id}>
                   <td>
                     <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg,#c7d2fe,#f3e8ff)', display: 'grid', placeItems: 'center', fontWeight: 700, color: '#4f46e5' }}>
@@ -172,12 +151,14 @@ export default function Users() {
                     </span>
                   </td>
                   <td>
-                    <a className="btn btn-sm btn-light me-1" href={u.showUrl || '#'} title="Ko'rish">
+                    <button className="btn btn-sm btn-light me-1" onClick={() => { setSelectedUser(u); setShowView(true); }} title="Ko'rish">
                       <i className="bi bi-eye"></i>
-                    </a>
-                    <a className="btn btn-sm btn-light me-1" href={u.editUrl || '#'} onClick={(e) => { if (!u.editUrl) { e.preventDefault(); handleOpenEdit(u); } }} title="Tahrirlash">
-                      <i className="bi bi-pencil"></i>
-                    </a>
+                    </button>
+                    {(u.blockUrl || u.unblockUrl) ? (
+                      <button className="btn btn-sm btn-light me-1" onClick={() => handleToggleBlock(u)} title={u.status === 'Blocked' ? 'Blokdan chiqarish' : 'Bloklash'}>
+                        <i className={`bi ${u.status === 'Blocked' ? 'bi-unlock' : 'bi-lock'}`}></i>
+                      </button>
+                    ) : null}
                     <button className="btn btn-sm btn-light text-danger" onClick={() => handleDelete(u)} title="O'chirish">
                       <i className="bi bi-trash"></i>
                     </button>
@@ -187,7 +168,32 @@ export default function Users() {
             </tbody>
           </table>
         </div>
+        <PaginationControls {...pagination} onPageChange={pagination.setPage} />
       </div>
+
+      <Modal show={showView} onHide={() => setShowView(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title className="fs-5 fw-bold">{selectedUser?.name}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <div className="row g-3">
+            <div className="col-md-6"><div className="text-muted small">Email</div><div className="fw-semibold">{selectedUser?.email || '—'}</div></div>
+            <div className="col-md-6"><div className="text-muted small">Telefon</div><div className="fw-semibold">{selectedUser?.phone || '—'}</div></div>
+            <div className="col-md-6"><div className="text-muted small">Buyurtmalar</div><div className="fw-semibold">{selectedUser?.orders || 0}</div></div>
+            <div className="col-md-6"><div className="text-muted small">Sarflangan</div><div className="fw-semibold">{fmt(selectedUser?.spent || 0)} so'm</div></div>
+            <div className="col-md-6"><div className="text-muted small">Rol</div><span className="chip chip-purple">{selectedUser?.role}</span></div>
+            <div className="col-md-6"><div className="text-muted small">Status</div><span className={`chip ${selectedUser?.status === 'Blocked' ? 'chip-danger' : selectedUser?.status === 'VIP' ? 'chip-warning' : 'chip-success'}`}>{selectedUser?.status}</span></div>
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          {selectedUser && (selectedUser.blockUrl || selectedUser.unblockUrl) ? (
+            <Button variant="outline-secondary" onClick={() => handleToggleBlock(selectedUser)}>
+              {selectedUser.status === 'Blocked' ? 'Blokdan chiqarish' : 'Bloklash'}
+            </Button>
+          ) : null}
+          <Button variant="light" onClick={() => setShowView(false)}>Yopish</Button>
+        </Modal.Footer>
+      </Modal>
 
       {/* ADD MODAL */}
       <Modal show={showAdd} onHide={() => setShowAdd(false)} centered>

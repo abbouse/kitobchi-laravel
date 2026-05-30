@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button } from 'react-bootstrap';
+import PaginationControls, { useClientPagination } from '../components/PaginationControls';
 
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
 
@@ -42,6 +43,7 @@ export default function Products() {
   });
 
   const types = useMemo(() => ['Barchasi', ...Array.from(new Set(products.map((product) => product.type)))], [products]);
+  const pagination = useClientPagination(filtered, 30);
   const totalStock = products.reduce((sum, product) => sum + product.stock, 0);
   const lowStock = products.filter((product) => product.stock > 0 && product.stock < 15).length;
 
@@ -58,8 +60,8 @@ export default function Products() {
           <p className="page-subtitle">Kitob, kanselyariya va sovg'alar umumiy katalogi</p>
         </div>
         <div className="d-flex gap-2">
-          <a className="btn btn-outline-secondary" href="/a122/books/create">Kitob qo'shish</a>
-          <a className="btn btn-primary-gradient" href="/a122/stationery/create"><i className="bi bi-plus-lg me-1"></i>Kanselyariya qo'shish</a>
+          <a className="btn btn-outline-secondary" href="/boshqaruv/books">Kitoblar</a>
+          <a className="btn btn-primary-gradient" href="/boshqaruv/stationeries"><i className="bi bi-plus-lg me-1"></i>Kanselyariya</a>
         </div>
       </div>
 
@@ -102,7 +104,7 @@ export default function Products() {
           <table className="data-table">
             <thead><tr><th></th><th>Mahsulot</th><th>Turi</th><th>Seller</th><th>Narx</th><th>Ombor</th><th>Sotilgan</th><th>Status</th><th>Amallar</th></tr></thead>
             <tbody>
-              {filtered.map((product) => (
+              {pagination.paginated.map((product) => (
                 <tr key={product.id}>
                   <td>
                     <div className="thumb d-grid place-items-center" style={{ fontSize: 20 }}>
@@ -118,7 +120,6 @@ export default function Products() {
                   <td><span className={`chip ${product.approved ? 'chip-success' : 'chip-warning'}`}>{product.approved ? product.status : 'Moderatsiya'}</span></td>
                   <td>
                     <button className="btn btn-sm btn-light me-1" onClick={() => setSelected(product)}><i className="bi bi-eye"></i></button>
-                    {product.editUrl ? <a className="btn btn-sm btn-light me-1" href={product.editUrl}><i className="bi bi-pencil"></i></a> : null}
                     {product.moderateUrl ? <button className="btn btn-sm btn-light" onClick={() => moderate(product, !product.approved)}><i className="bi bi-shield-check"></i></button> : null}
                   </td>
                 </tr>
@@ -126,6 +127,7 @@ export default function Products() {
             </tbody>
           </table>
         </div>
+        <PaginationControls {...pagination} onPageChange={pagination.setPage} />
       </div>
 
       <Modal show={!!selected} onHide={() => setSelected(null)} centered>
@@ -141,7 +143,11 @@ export default function Products() {
           </div>
         </Modal.Body>
         <Modal.Footer>
-          {selected?.showUrl ? <a className="btn btn-primary-gradient" href={selected.showUrl}>Ko'rish</a> : null}
+          {selected?.moderateUrl ? (
+            <Button variant="primary" className="btn-primary-gradient" onClick={() => selected && moderate(selected, !selected.approved)}>
+              {selected.approved ? 'Moderatsiyaga qaytarish' : 'Tasdiqlash'}
+            </Button>
+          ) : null}
           <Button variant="light" onClick={() => setSelected(null)}>Yopish</Button>
         </Modal.Footer>
       </Modal>

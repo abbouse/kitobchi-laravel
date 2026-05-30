@@ -1,90 +1,165 @@
 import { useMemo, useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button } from 'react-bootstrap';
+import PaginationControls, { useClientPagination } from '../components/PaginationControls';
 
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
+
+type StatusMeta = { label: string; badge?: string };
+type Counts = Record<string, number>;
 
 interface Seller {
   id: number;
   name: string;
+  ownerName?: string;
   legalName?: string;
   phone?: string;
+  photo?: string;
   region?: string;
+  district?: string;
+  address?: string;
   status?: string;
   verified?: boolean;
   hidden?: boolean;
   premium?: boolean;
+  premiumExpiresAt?: string;
   rating?: number;
+  ratingReviewsCount?: number;
+  reputationScore?: number;
   balance?: number;
+  totalRevenue?: number;
   commissionRate?: number;
   products?: number;
+  books?: number;
+  stationeries?: number;
   orders?: number;
-  contract?: { number?: string; signed?: boolean; status?: string; expiresAt?: string; daysRemaining?: number };
-  createUrl?: string;
-  showUrl?: string;
-  editUrl?: string;
-  approveUrl?: string;
-  rejectUrl?: string;
-  unblockUrl?: string;
-  warnUrl?: string;
+  warningCount?: number;
+  legal?: Record<string, string | null | undefined>;
+  bank?: Record<string, string | null | undefined>;
+  contract?: Record<string, string | number | boolean | null | undefined>;
+  locations?: Array<Record<string, string | number | boolean | null | undefined>>;
+  recentOrders?: Array<Record<string, string | number | null | undefined>>;
+  transactions?: Array<Record<string, string | number | null | undefined>>;
+  banLogs?: Array<Record<string, string | number | boolean | null | undefined>>;
+  actions?: Record<string, string>;
 }
 
 interface SellerOrder {
   id: number;
+  orderId?: number;
   seller: string;
+  sellerOwner?: string;
   sellerPhone?: string;
   customer: string;
   customerPhone?: string;
   courier?: string;
+  courierPhone?: string;
   amount: number;
+  mainOrderAmount?: number;
+  deliveryPrice?: number;
   deliveryType?: string;
   status: string;
+  statusLabel?: string;
+  statusBadge?: string;
   acceptedAt?: string;
   date?: string;
-  showUrl?: string;
+  address?: Record<string, string | null | undefined>;
+  summary?: { itemsCount?: number; itemsTotal?: number };
+  items?: Array<{ name: string; type?: string; quantity: number; price: number; author?: string | null }>;
   statusUrl?: string;
 }
 
-const statusChip = (status?: string) => {
-  const value = String(status || '').toLowerCase();
-  if (['active', 'approved', 'c', 'completed', 'delivered', 'customer_received'].includes(value)) return 'chip-success';
-  if (['pending', 'p', 'a', 'new'].includes(value)) return 'chip-warning';
-  if (['blocked', 'rejected', 'cancelled', 'f'].includes(value)) return 'chip-danger';
+const sellerTabs = [
+  { key: 'pending', label: 'Kutilmoqda', icon: 'bi-hourglass-split' },
+  { key: 'approved', label: 'Faol', icon: 'bi-shop' },
+  { key: 'rejected', label: 'Bekor qilingan', icon: 'bi-x-octagon' },
+  { key: 'blocked', label: 'Bloklangan', icon: 'bi-shield-lock' },
+  { key: 'all', label: 'Barchasi', icon: 'bi-grid' },
+];
+
+const badgeClass = (badge?: string) => {
+  if (badge === 'badge-success') return 'chip-success';
+  if (badge === 'badge-danger') return 'chip-danger';
+  if (badge === 'badge-warning') return 'chip-warning';
+  if (badge === 'badge-info') return 'chip-info';
   return 'chip-gray';
 };
 
-const sellerStatuses = [
-  { code: 'approved', label: 'Tasdiqlash' },
-  { code: 'rejected', label: 'Rad etish' },
-  { code: 'unblocked', label: 'Blokdan chiqarish' },
-];
+const sellerChip = (status?: string) => {
+  if (status === 'approved') return 'chip-success';
+  if (status === 'pending') return 'chip-warning';
+  if (status === 'rejected' || status === 'blocked') return 'chip-danger';
+  return 'chip-gray';
+};
 
-const orderStatuses = [
-  { code: 'B', label: "Yig'ilmoqda" },
-  { code: 'D', label: 'Yetkazishda' },
-  { code: 'C', label: 'Yakunlandi' },
-  { code: 'F', label: 'Bekor' },
-];
+const sellerLabel = (status?: string) => ({
+  pending: 'Kutilmoqda',
+  approved: 'Faol',
+  rejected: 'Bekor qilingan',
+  blocked: 'Bloklangan',
+}[String(status || '')] || status || '—');
 
 export default function SellerOrders() {
-  const { sellers = [], sellerOrders = [] } = usePage<{ sellers?: Seller[]; sellerOrders?: SellerOrder[] }>().props;
+  const {
+    sellers = [],
+    sellerCounts = {},
+    sellerOrders = [],
+    sellerOrderCounts = {},
+    sellerOrderStatuses = {},
+  } = usePage<{
+    sellers?: Seller[];
+    sellerCounts?: Counts;
+    sellerOrders?: SellerOrder[];
+    sellerOrderCounts?: Counts;
+    sellerOrderStatuses?: Record<string, StatusMeta>;
+  }>().props;
+
+  const [sellerTab, setSellerTab] = useState('pending');
+  const [orderTab, setOrderTab] = useState('all');
+  const [sellerSearch, setSellerSearch] = useState('');
+  const [orderSearch, setOrderSearch] = useState('');
   const [selectedSeller, setSelectedSeller] = useState<Seller | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<SellerOrder | null>(null);
 
-  const totalBalance = useMemo(() => sellers.reduce((sum, seller) => sum + (seller.balance || 0), 0), [sellers]);
-  const activeSellers = sellers.filter((seller) => statusChip(seller.status) === 'chip-success').length;
-  const premiumSellers = sellers.filter((seller) => seller.premium).length;
-  const pendingOrders = sellerOrders.filter((order) => statusChip(order.status) === 'chip-warning').length;
-  const createUrl = sellers[0]?.createUrl || '/a122/sellers';
+  const filteredSellers = useMemo(() => {
+    const query = sellerSearch.trim().toLowerCase();
+    return sellers.filter((seller) => {
+      const statusMatch = sellerTab === 'all' || seller.status === sellerTab;
+      const text = `${seller.id} ${seller.name} ${seller.ownerName || ''} ${seller.phone || ''} ${seller.region || ''}`.toLowerCase();
+      return statusMatch && (!query || text.includes(query));
+    });
+  }, [sellers, sellerSearch, sellerTab]);
 
-  const runSellerAction = (url?: string, message?: string) => {
+  const filteredOrders = useMemo(() => {
+    const query = orderSearch.trim().toLowerCase();
+    return sellerOrders.filter((order) => {
+      const statusMatch = orderTab === 'all' || order.status === orderTab;
+      const text = `${order.id} ${order.orderId || ''} ${order.seller} ${order.customer} ${order.customerPhone || ''}`.toLowerCase();
+      return statusMatch && (!query || text.includes(query));
+    });
+  }, [sellerOrders, orderSearch, orderTab]);
+
+  const sellerPagination = useClientPagination(filteredSellers, 12);
+  const orderPagination = useClientPagination(filteredOrders, 25);
+  const totalBalance = useMemo(() => sellers.reduce((sum, seller) => sum + (seller.balance || 0), 0), [sellers]);
+  const orderStatusTabs = [{ key: 'all', label: 'Barchasi' }, ...Object.entries(sellerOrderStatuses).map(([key, meta]) => ({ key, label: meta.label }))];
+
+  const runPatch = (url?: string, message?: string, payload: Record<string, string> = {}) => {
     if (!url || (message && !confirm(message))) return;
-    router.patch(url, {}, { preserveScroll: true });
+    router.patch(url, payload, { preserveScroll: true });
   };
 
-  const updateOrderStatus = (order: SellerOrder, status: string) => {
-    if (!order.statusUrl) return;
-    router.patch(order.statusUrl, { status }, { preserveScroll: true });
+  const warnSeller = (seller: Seller) => {
+    const title = prompt('Ogohlantirish sarlavhasi', 'Admin ogohlantirishi');
+    if (!title) return;
+    const message = prompt('Ogohlantirish matni', 'Iltimos, marketplace qoidalariga amal qiling.');
+    if (!message) return;
+    router.post(seller.actions?.warnUrl || '', { title, message }, { preserveScroll: true });
+  };
+
+  const resetPassword = (seller: Seller) => {
+    if (!seller.actions?.resetPasswordUrl || !confirm(`${seller.name} uchun yangi parol SMS orqali yuborilsinmi?`)) return;
+    router.post(seller.actions.resetPasswordUrl, {}, { preserveScroll: true });
   };
 
   return (
@@ -92,19 +167,16 @@ export default function SellerOrders() {
       <div className="page-head">
         <div>
           <h1 className="page-title">Sellerlar</h1>
-          <p className="page-subtitle">Marketplace sellerlari, shartnomalar va seller buyurtmalari</p>
+          <p className="page-subtitle">Seller moderatsiyasi, shartnoma, ogohlantirishlar va seller buyurtmalari</p>
         </div>
-        <a className="btn btn-primary-gradient" href={createUrl}>
-          <i className="bi bi-plus-lg me-1"></i>Seller boshqaruvi
-        </a>
       </div>
 
       <div className="row g-3 mb-4">
         {[
-          { label: 'Jami seller', value: sellers.length, icon: 'bi-shop', color: '#4f46e5' },
-          { label: 'Faol seller', value: activeSellers, icon: 'bi-patch-check', color: '#10b981' },
-          { label: 'Premium', value: premiumSellers, icon: 'bi-gem', color: '#7c3aed' },
-          { label: "To'lanadigan balans", value: `${fmt(totalBalance)} so'm`, icon: 'bi-wallet2', color: '#f59e0b' },
+          { label: 'Kutilmoqda', value: sellerCounts.pending || 0, icon: 'bi-hourglass-split', color: '#f59e0b' },
+          { label: 'Faol', value: sellerCounts.approved || 0, icon: 'bi-shop', color: '#10b981' },
+          { label: 'Bekor qilingan', value: sellerCounts.rejected || 0, icon: 'bi-x-octagon', color: '#ef4444' },
+          { label: "To'lanadigan balans", value: `${fmt(totalBalance)} so'm`, icon: 'bi-wallet2', color: '#7c3aed' },
         ].map((item) => (
           <div className="col-xl-3 col-md-6" key={item.label}>
             <div className="stat-card">
@@ -120,116 +192,233 @@ export default function SellerOrders() {
         ))}
       </div>
 
-      <div className="row g-3 mb-4">
-        {sellers.map((seller) => (
-          <div className="col-xl-4 col-md-6" key={seller.id}>
-            <div className="card-panel h-100 d-flex flex-column">
-              <div className="d-flex justify-content-between align-items-start mb-3">
-                <div className="d-flex align-items-center gap-3" style={{ minWidth: 0 }}>
-                  <div className="resource-avatar">{seller.name.split(' ').map((part) => part[0]).join('').slice(0, 2)}</div>
-                  <div style={{ minWidth: 0 }}>
-                    <div className="fw-bold text-truncate">{seller.name}</div>
-                    <div className="text-muted small text-truncate">{seller.phone || seller.region || 'Seller'}</div>
-                  </div>
-                </div>
-                <span className={`chip ${statusChip(seller.status)}`}>{seller.status || '—'}</span>
-              </div>
-
-              <div className="row g-2 text-center mb-3">
-                <div className="col-4"><div className="fw-bold text-primary">{seller.products || 0}</div><small className="text-muted">Mahsulot</small></div>
-                <div className="col-4"><div className="fw-bold text-success">{seller.orders || 0}</div><small className="text-muted">Buyurtma</small></div>
-                <div className="col-4"><div className="fw-bold text-warning">{seller.rating || 0}</div><small className="text-muted">Reyting</small></div>
-              </div>
-
-              <div className="p-2 rounded mb-3 small bg-light">
-                <div className="d-flex justify-content-between"><span>Komissiya</span><strong>{seller.commissionRate || 0}%</strong></div>
-                <div className="d-flex justify-content-between"><span>Balans</span><strong>{fmt(seller.balance || 0)} so'm</strong></div>
-                <div className="d-flex justify-content-between"><span>Shartnoma</span><strong>{seller.contract?.status || '—'}</strong></div>
-              </div>
-
-              <div className="d-flex gap-2 mt-auto">
-                <button className="btn btn-sm btn-light flex-fill" onClick={() => setSelectedSeller(seller)}><i className="bi bi-eye"></i></button>
-                <a className="btn btn-sm btn-primary-gradient flex-fill" href={seller.editUrl || seller.showUrl || '#'}><i className="bi bi-pencil"></i></a>
-                <button className="btn btn-sm btn-light" title="Ogohlantirish" onClick={() => runSellerAction(seller.warnUrl, `${seller.name} selleriga ogohlantirish yuborilsinmi?`)}>
-                  <i className="bi bi-exclamation-triangle"></i>
-                </button>
-              </div>
-            </div>
+      <div className="card-panel mb-4">
+        <div className="panel-head">
+          <div>
+            <div className="panel-title">Sotuvchilar jadvali</div>
+            <small className="text-muted">{filteredSellers.length} ta seller topildi</small>
           </div>
-        ))}
+          <div className="d-flex flex-wrap gap-2">
+            <input className="form-control form-control-sm" style={{ maxWidth: 280 }} value={sellerSearch} onChange={(e) => setSellerSearch(e.target.value)} placeholder="Do'kon, telefon yoki hudud" />
+          </div>
+        </div>
+        <div className="d-flex flex-wrap gap-2 mb-3">
+          {sellerTabs.map((item) => (
+            <button key={item.key} className={`btn btn-sm ${sellerTab === item.key ? 'btn-primary-gradient' : 'btn-light'}`} onClick={() => { setSellerTab(item.key); sellerPagination.setPage(1); }}>
+              <i className={`bi ${item.icon} me-1`}></i>{item.label}
+              <span className="badge rounded-pill bg-light text-dark ms-2">{fmt(sellerCounts[item.key] || 0)}</span>
+            </button>
+          ))}
+        </div>
+        <div className="table-responsive">
+          <table className="data-table">
+            <thead><tr><th>ID</th><th>Do'kon</th><th>Tel</th><th>Viloyat</th><th>Mahsulot</th><th>Buyurtma</th><th>Ogohlantirish</th><th>Holat</th><th>Amallar</th></tr></thead>
+            <tbody>
+              {sellerPagination.paginated.map((seller) => (
+                <tr key={seller.id}>
+                  <td className="fw-semibold text-primary">#{seller.id}</td>
+                  <td>
+                    <div className="d-flex align-items-center gap-2">
+                      <div className="resource-avatar">{seller.photo ? <img src={seller.photo} alt="" /> : seller.name.slice(0, 2).toUpperCase()}</div>
+                      <div style={{ minWidth: 0 }}>
+                        <div className="fw-semibold text-truncate">{seller.name}</div>
+                        <small className="text-muted text-truncate d-block">{seller.ownerName || seller.legalName || '—'}</small>
+                      </div>
+                    </div>
+                  </td>
+                  <td>{seller.phone || '—'}</td>
+                  <td>{seller.region || '—'}</td>
+                  <td><span className="chip chip-gray">{seller.products || 0}</span></td>
+                  <td><span className="chip chip-info">{seller.orders || 0}</span></td>
+                  <td><span className={`chip ${(seller.warningCount || 0) >= 3 ? 'chip-danger' : (seller.warningCount || 0) > 0 ? 'chip-warning' : 'chip-gray'}`}>{seller.warningCount || 0}/3</span></td>
+                  <td><span className={`chip ${sellerChip(seller.status)}`}>{sellerLabel(seller.status)}</span></td>
+                  <td>
+                    <button className="btn btn-sm btn-light me-1" onClick={() => setSelectedSeller(seller)}><i className="bi bi-eye"></i></button>
+                    {seller.status !== 'approved' ? <button className="btn btn-sm btn-light me-1" onClick={() => runPatch(seller.actions?.approveUrl, 'Seller tasdiqlansinmi?')}><i className="bi bi-check2-circle"></i></button> : null}
+                    <button className="btn btn-sm btn-light me-1" onClick={() => runPatch(seller.actions?.rejectUrl, 'Seller bekor qilinsinmi?')}><i className="bi bi-x-circle"></i></button>
+                    {seller.status === 'blocked' ? <button className="btn btn-sm btn-light me-1" onClick={() => runPatch(seller.actions?.unblockUrl, 'Seller blokdan chiqarilsinmi?', { message: 'Admin tomonidan blokdan chiqarildi.' })}><i className="bi bi-unlock"></i></button> : null}
+                    <button className="btn btn-sm btn-light text-warning" onClick={() => warnSeller(seller)}><i className="bi bi-exclamation-triangle"></i></button>
+                  </td>
+                </tr>
+              ))}
+              {sellerPagination.total === 0 ? <tr><td colSpan={9} className="text-center text-muted py-5">Hech qanday seller topilmadi</td></tr> : null}
+            </tbody>
+          </table>
+        </div>
+        <PaginationControls {...sellerPagination} onPageChange={sellerPagination.setPage} />
       </div>
 
       <div className="card-panel">
         <div className="panel-head">
           <div>
             <div className="panel-title">Seller buyurtmalari</div>
-            <small className="text-muted">{sellerOrders.length} ta yozuv · {pendingOrders} ta kutilmoqda</small>
+            <small className="text-muted">{filteredOrders.length} ta yozuv topildi</small>
           </div>
-          <a className="btn btn-sm btn-outline-secondary" href="/a122/seller-orders">To'liq ro'yxat</a>
+          <input className="form-control form-control-sm" style={{ maxWidth: 280 }} value={orderSearch} onChange={(e) => setOrderSearch(e.target.value)} placeholder="ID, seller yoki mijoz" />
+        </div>
+        <div className="d-flex flex-wrap gap-2 mb-3">
+          {orderStatusTabs.map((item) => (
+            <button key={item.key} className={`btn btn-sm ${orderTab === item.key ? 'btn-primary-gradient' : 'btn-light'}`} onClick={() => { setOrderTab(item.key); orderPagination.setPage(1); }}>
+              {item.label}<span className="badge rounded-pill bg-light text-dark ms-2">{fmt(sellerOrderCounts[item.key] || 0)}</span>
+            </button>
+          ))}
         </div>
         <div className="table-responsive">
           <table className="data-table">
-            <thead><tr><th>ID</th><th>Seller</th><th>Mijoz</th><th>Kuryer</th><th>Summa</th><th>Yetkazish</th><th>Sana</th><th>Status</th><th>Amallar</th></tr></thead>
+            <thead><tr><th>ID</th><th>Seller</th><th>Mijoz</th><th>Summa</th><th>Mahsulot</th><th>Holat</th><th>Sana</th><th>Amallar</th></tr></thead>
             <tbody>
-              {sellerOrders.map((order) => (
+              {orderPagination.paginated.map((order) => (
                 <tr key={order.id}>
-                  <td className="fw-semibold text-primary">#{order.id}</td>
-                  <td><div className="fw-semibold">{order.seller}</div><small className="text-muted">{order.sellerPhone}</small></td>
-                  <td><div>{order.customer}</div><small className="text-muted">{order.customerPhone}</small></td>
-                  <td>{order.courier || '—'}</td>
-                  <td className="fw-semibold">{fmt(order.amount)} so'm</td>
-                  <td><span className="chip chip-gray">{order.deliveryType || '—'}</span></td>
-                  <td className="text-muted">{order.date || order.acceptedAt || '—'}</td>
-                  <td><span className={`chip ${statusChip(order.status)}`}>{order.status || '—'}</span></td>
+                  <td><div className="fw-bold">#{order.id}</div><small className="text-muted">ORD #{order.orderId || '—'}</small></td>
+                  <td><div className="fw-semibold">{order.seller}</div><small className="text-muted">{order.sellerPhone || order.sellerOwner || '—'}</small></td>
+                  <td><div>{order.customer}</div><small className="text-muted">{order.customerPhone || '—'}</small></td>
+                  <td><div className="fw-semibold">{fmt(order.amount)} so'm</div><small className="text-muted">{order.deliveryType || '—'}</small></td>
+                  <td>{order.summary?.itemsCount || 0} ta</td>
                   <td>
-                    <button className="btn btn-sm btn-light me-1" onClick={() => setSelectedOrder(order)}><i className="bi bi-eye"></i></button>
-                    {order.showUrl ? <a className="btn btn-sm btn-light" href={order.showUrl}><i className="bi bi-box-arrow-up-right"></i></a> : null}
+                    <select className={`form-select form-select-sm ${badgeClass(order.statusBadge)}`} value={order.status} onChange={(e) => runPatch(order.statusUrl, undefined, { status: e.target.value })}>
+                      {Object.entries(sellerOrderStatuses).map(([value, meta]) => <option key={value} value={value}>{meta.label}</option>)}
+                    </select>
                   </td>
+                  <td className="text-muted">{order.date || order.acceptedAt || '—'}</td>
+                  <td><button className="btn btn-sm btn-light" onClick={() => setSelectedOrder(order)}><i className="bi bi-eye"></i></button></td>
                 </tr>
               ))}
+              {orderPagination.total === 0 ? <tr><td colSpan={8} className="text-center text-muted py-5">Hech qanday buyurtma topilmadi</td></tr> : null}
             </tbody>
           </table>
         </div>
+        <PaginationControls {...orderPagination} onPageChange={orderPagination.setPage} />
       </div>
 
-      <Modal show={!!selectedSeller} onHide={() => setSelectedSeller(null)} centered>
-        <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">{selectedSeller?.name}</Modal.Title></Modal.Header>
-        <Modal.Body>
-          <div className="row g-3">
-            <div className="col-6"><small className="text-muted">Telefon</small><div className="fw-semibold">{selectedSeller?.phone || '—'}</div></div>
-            <div className="col-6"><small className="text-muted">Region</small><div>{selectedSeller?.region || '—'}</div></div>
-            <div className="col-6"><small className="text-muted">Status</small><div><span className={`chip ${statusChip(selectedSeller?.status)}`}>{selectedSeller?.status || '—'}</span></div></div>
-            <div className="col-6"><small className="text-muted">Shartnoma raqami</small><div>{selectedSeller?.contract?.number || '—'}</div></div>
-            <div className="col-6"><small className="text-muted">Shartnoma muddati</small><div>{selectedSeller?.contract?.expiresAt || '—'}</div></div>
-            <div className="col-6"><small className="text-muted">Balans</small><div className="fw-bold text-success">{fmt(selectedSeller?.balance || 0)} so'm</div></div>
-          </div>
-        </Modal.Body>
-        <Modal.Footer>
-          {sellerStatuses.map((status) => {
-            const url = status.code === 'approved' ? selectedSeller?.approveUrl : status.code === 'rejected' ? selectedSeller?.rejectUrl : selectedSeller?.unblockUrl;
-            return url ? <Button key={status.code} variant="outline-secondary" onClick={() => runSellerAction(url, `${status.label} amalini tasdiqlaysizmi?`)}>{status.label}</Button> : null;
-          })}
-          {selectedSeller?.showUrl ? <a className="btn btn-primary-gradient" href={selectedSeller.showUrl}>Eski panelda ochish</a> : null}
-          <Button variant="light" onClick={() => setSelectedSeller(null)}>Yopish</Button>
-        </Modal.Footer>
-      </Modal>
+      <SellerModal seller={selectedSeller} onHide={() => setSelectedSeller(null)} onWarn={warnSeller} onResetPassword={resetPassword} onPatch={runPatch} />
+      <OrderModal order={selectedOrder} statuses={sellerOrderStatuses} onHide={() => setSelectedOrder(null)} onPatch={runPatch} />
+    </div>
+  );
+}
 
-      <Modal show={!!selectedOrder} onHide={() => setSelectedOrder(null)} centered>
-        <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">Seller order #{selectedOrder?.id}</Modal.Title></Modal.Header>
-        <Modal.Body>
+function SellerModal({ seller, onHide, onWarn, onResetPassword, onPatch }: {
+  seller: Seller | null;
+  onHide: () => void;
+  onWarn: (seller: Seller) => void;
+  onResetPassword: (seller: Seller) => void;
+  onPatch: (url?: string, message?: string, payload?: Record<string, string>) => void;
+}) {
+  return (
+    <Modal show={!!seller} onHide={onHide} centered size="xl">
+      <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">{seller?.name}</Modal.Title></Modal.Header>
+      <Modal.Body>
+        {!seller ? null : (
           <div className="row g-3">
-            <div className="col-6"><small className="text-muted">Seller</small><div className="fw-semibold">{selectedOrder?.seller}</div></div>
-            <div className="col-6"><small className="text-muted">Mijoz</small><div>{selectedOrder?.customer}</div></div>
-            <div className="col-6"><small className="text-muted">Kuryer</small><div>{selectedOrder?.courier || '—'}</div></div>
-            <div className="col-6"><small className="text-muted">Summa</small><div className="fw-bold">{fmt(selectedOrder?.amount || 0)} so'm</div></div>
+            <Info title="Asosiy ma'lumotlar" rows={[
+              ['Egasi', seller.ownerName || '—'], ['Telefon', seller.phone || '—'], ['Hudud', [seller.region, seller.district].filter(Boolean).join(', ') || '—'],
+              ['Status', sellerLabel(seller.status)], ['Reyting', `${seller.rating || 0} (${seller.ratingReviewsCount || 0})`], ['Reputatsiya', String(seller.reputationScore || 0)],
+            ]} />
+            <Info title="Moliya va mahsulot" rows={[
+              ['Balans', `${fmt(seller.balance || 0)} so'm`], ['Tushum', `${fmt(seller.totalRevenue || 0)} so'm`], ['Komissiya', `${seller.commissionRate || 0}%`],
+              ['Kitoblar', String(seller.books || 0)], ['Kanstovar', String(seller.stationeries || 0)], ['Buyurtmalar', String(seller.orders || 0)],
+            ]} />
+            <Info title="Shartnoma" rows={[
+              ['Raqam', String(seller.contract?.number || '—')], ['Imzolangan', seller.contract?.signed ? 'Ha' : "Yo'q"], ['Holat', String(seller.contract?.status || '—')],
+              ['Tugash sanasi', String(seller.contract?.expiresAt || '—')], ['Qolgan kun', String(seller.contract?.daysRemaining ?? '—')], ['Izoh', String(seller.contract?.notes || '—')],
+            ]} />
+            <Info title="Huquqiy va bank" rows={[
+              ['Yuridik turi', String(seller.legal?.type || '—')], ['INN', String(seller.legal?.inn || '—')], ['Pasport', String(seller.legal?.passport || '—')],
+              ['Bank', String(seller.bank?.name || '—')], ['Hisob', String(seller.bank?.account || '—')], ['Karta', String(seller.bank?.card || '—')],
+            ]} />
+            <ListBlock title="Filiallar" empty="Filial yo'q" items={seller.locations || []} render={(item) => <><strong>{String(item.address || '—')}</strong><span>{item.main ? 'Asosiy filial' : 'Filial'} · {String(item.description || '')}</span></>} />
+            <ListBlock title="Oxirgi seller orderlar" empty="Order yo'q" items={seller.recentOrders || []} render={(item) => <><strong>#{item.id} · {fmt(Number(item.amount || 0))} so'm</strong><span>{String(item.customer || 'Mijoz')} · {String(item.date || '—')}</span></>} />
+            <ListBlock title="Tranzaksiyalar" empty="Tranzaksiya yo'q" items={seller.transactions || []} render={(item) => <><strong>{fmt(Number(item.net || item.amount || 0))} so'm · {String(item.status || '—')}</strong><span>{String(item.category || item.type || '—')} · {String(item.date || '—')}</span></>} />
+            <ListBlock title={`Ogohlantirishlar (${seller.warningCount || 0}/3)`} empty="Ogohlantirish yo'q" items={seller.banLogs || []} render={(item) => <><strong>{String(item.title || '—')}</strong><span>{String(item.message || '')} · {String(item.date || '—')}</span></>} />
           </div>
-        </Modal.Body>
-        <Modal.Footer>
-          {orderStatuses.map((status) => <Button key={status.code} variant="outline-secondary" onClick={() => selectedOrder && updateOrderStatus(selectedOrder, status.code)}>{status.label}</Button>)}
-          {selectedOrder?.showUrl ? <a className="btn btn-primary-gradient" href={selectedOrder.showUrl}>Ko'rish</a> : null}
-          <Button variant="light" onClick={() => setSelectedOrder(null)}>Yopish</Button>
-        </Modal.Footer>
-      </Modal>
+        )}
+      </Modal.Body>
+      <Modal.Footer>
+        {seller ? <Button variant="outline-warning" onClick={() => onWarn(seller)}>Ogohlantirish</Button> : null}
+        {seller ? <Button variant="outline-secondary" onClick={() => onResetPassword(seller)}>Parol reset</Button> : null}
+        {seller?.status !== 'approved' ? <Button variant="outline-success" onClick={() => onPatch(seller?.actions?.approveUrl, 'Seller tasdiqlansinmi?')}>Tasdiqlash</Button> : null}
+        <Button variant="outline-danger" onClick={() => onPatch(seller?.actions?.rejectUrl, 'Seller bekor qilinsinmi?')}>Bekor qilish</Button>
+        {seller?.status === 'blocked' ? <Button variant="outline-primary" onClick={() => onPatch(seller?.actions?.unblockUrl, 'Seller blokdan chiqarilsinmi?', { message: 'Admin tomonidan blokdan chiqarildi.' })}>Blokdan chiqarish</Button> : null}
+        <Button variant="light" onClick={onHide}>Yopish</Button>
+      </Modal.Footer>
+    </Modal>
+  );
+}
+
+function OrderModal({ order, statuses, onHide, onPatch }: {
+  order: SellerOrder | null;
+  statuses: Record<string, StatusMeta>;
+  onHide: () => void;
+  onPatch: (url?: string, message?: string, payload?: Record<string, string>) => void;
+}) {
+  return (
+    <Modal show={!!order} onHide={onHide} centered size="lg">
+      <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">Seller order #{order?.id}</Modal.Title></Modal.Header>
+      <Modal.Body>
+        {!order ? null : (
+          <div className="row g-3">
+            <Info title="Buyurtma" rows={[
+              ['Asosiy order', `#${order.orderId || '—'}`], ['Seller', order.seller], ['Mijoz', order.customer],
+              ['Telefon', order.customerPhone || '—'], ['Kuryer', order.courier || '—'], ['Sana', order.date || '—'],
+            ]} />
+            <Info title="Hisob-kitob" rows={[
+              ['Seller summa', `${fmt(order.amount)} so'm`], ['Asosiy order summa', `${fmt(order.mainOrderAmount || 0)} so'm`],
+              ['Yetkazish', `${fmt(order.deliveryPrice || 0)} so'm`], ['Yetkazish turi', order.deliveryType || '—'],
+              ['Mahsulot', `${order.summary?.itemsCount || 0} ta`], ['Mahsulot jami', `${fmt(order.summary?.itemsTotal || 0)} so'm`],
+            ]} />
+            <Info title="Manzil" rows={[
+              ['Qabul qiluvchi', order.address?.fullName || '—'], ['Telefon', order.address?.phone || '—'], ['Viloyat', order.address?.region || '—'],
+              ['Tuman', order.address?.district || '—'], ['Ko‘cha', order.address?.street || '—'], ['Uy', order.address?.home || '—'],
+            ]} />
+            <div className="col-12">
+              <div className="detail-panel">
+                <h6 className="fw-bold mb-3">Mahsulotlar</h6>
+                {(order.items || []).map((item, index) => (
+                  <div className="d-flex justify-content-between border-bottom py-2" key={`${item.name}-${index}`}>
+                    <div><strong>{item.name}</strong><div className="text-muted small">{item.author || item.type || '—'}</div></div>
+                    <div className="text-end"><div>{item.quantity} x {fmt(item.price)}</div><strong>{fmt(item.quantity * item.price)} so'm</strong></div>
+                  </div>
+                ))}
+                {(order.items || []).length === 0 ? <div className="text-muted">Mahsulotlar topilmadi</div> : null}
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal.Body>
+      <Modal.Footer>
+        {order ? (
+          <select className="form-select" style={{ maxWidth: 260 }} value={order.status} onChange={(e) => onPatch(order.statusUrl, undefined, { status: e.target.value })}>
+            {Object.entries(statuses).map(([value, meta]) => <option key={value} value={value}>{meta.label}</option>)}
+          </select>
+        ) : null}
+        <Button variant="light" onClick={onHide}>Yopish</Button>
+      </Modal.Footer>
+    </Modal>
+  );
+}
+
+function Info({ title, rows }: { title: string; rows: Array<[string, string]> }) {
+  return (
+    <div className="col-xl-6">
+      <div className="detail-panel h-100">
+        <h6 className="fw-bold mb-3">{title}</h6>
+        <div className="address-list">
+          {rows.map(([label, val]) => <div key={label}><span>{label}</span><strong>{val}</strong></div>)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ListBlock<T>({ title, empty, items, render }: { title: string; empty: string; items: T[]; render: (item: T) => React.ReactNode }) {
+  return (
+    <div className="col-xl-6">
+      <div className="detail-panel h-100">
+        <h6 className="fw-bold mb-3">{title}</h6>
+        <div className="d-grid gap-2">
+          {items.map((item, index) => <div className="mini-stat" key={index}>{render(item)}</div>)}
+          {items.length === 0 ? <div className="text-muted">{empty}</div> : null}
+        </div>
+      </div>
     </div>
   );
 }

@@ -25,8 +25,8 @@ interface Promo {
 export default function Promokodlar() {
   const { promocodes = [] } = usePage<{ promocodes?: Promo[] }>().props;
   const [selected, setSelected] = useState<Promo | null>(null);
-  const createUrl = promocodes[0]?.createUrl || '/a122/promocodes/create';
-  const generateUrl = promocodes[0]?.generateUrl || '/a122/promocodes/generate';
+  const createUrl = '/boshqaruv/promokodlar';
+  const generateUrl = '/boshqaruv/promokodlar';
 
   const activeCount = promocodes.filter((promo) => promo.status === 'Active').length;
   const usedTotal = useMemo(() => promocodes.reduce((sum, promo) => sum + (promo.used || 0), 0), [promocodes]);
@@ -44,8 +44,6 @@ export default function Promokodlar() {
           <p className="page-subtitle">Chegirmalar, limitlar va ishlatilish statistikasi</p>
         </div>
         <div className="d-flex gap-2">
-          <a className="btn btn-outline-secondary" href={generateUrl}><i className="bi bi-shuffle me-1"></i>Avto-generatsiya</a>
-          <a className="btn btn-primary-gradient" href={createUrl}><i className="bi bi-plus-lg me-1"></i>Yangi promokod</a>
         </div>
       </div>
 
@@ -90,7 +88,6 @@ export default function Promokodlar() {
                     <td><span className={`chip ${promo.status === 'Active' ? 'chip-success' : 'chip-gray'}`}>{promo.status}</span></td>
                     <td>
                       <button className="btn btn-sm btn-light me-1" onClick={() => setSelected(promo)}><i className="bi bi-eye"></i></button>
-                      {promo.editUrl ? <a className="btn btn-sm btn-light me-1" href={promo.editUrl}><i className="bi bi-pencil"></i></a> : null}
                       <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(promo)}><i className="bi bi-trash"></i></button>
                     </td>
                   </tr>
@@ -114,7 +111,6 @@ export default function Promokodlar() {
           </div>
         </Modal.Body>
         <Modal.Footer>
-          {selected?.showUrl ? <a className="btn btn-primary-gradient" href={selected.showUrl}>Eski panelda ochish</a> : null}
           <Button variant="light" onClick={() => setSelected(null)}>Yopish</Button>
         </Modal.Footer>
       </Modal>

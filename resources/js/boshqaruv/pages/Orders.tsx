@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button } from 'react-bootstrap';
-import { orders } from '../data';
+import PaginationControls, { useClientPagination } from '../components/PaginationControls';
 
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
 
@@ -112,7 +112,7 @@ const statusOptions = [
 
 export default function Orders() {
   const { orders: serverOrders = [] } = usePage<{ orders?: Ord[] }>().props;
-  const list = useMemo<Ord[]>(() => (serverOrders.length ? serverOrders : orders as Ord[]), [serverOrders]);
+  const list = useMemo<Ord[]>(() => serverOrders, [serverOrders]);
   const [activeTab, setActiveTab] = useState('Barchasi');
   const [showView, setShowView] = useState(false);
   const [selectedOrd, setSelectedOrd] = useState<Ord | null>(null);
@@ -128,6 +128,7 @@ export default function Orders() {
   };
 
   const filtered = list.filter((order) => activeTab === 'Barchasi' || String(order.status).toLowerCase().includes(activeTab.toLowerCase()));
+  const pagination = useClientPagination(filtered, 25);
   const delivered = list.filter((order) => statusChip(order.status) === 'chip-success').length;
   const processing = list.filter((order) => statusChip(order.status) === 'chip-warning').length;
   const cancelled = list.filter((order) => statusChip(order.status) === 'chip-danger').length;
@@ -138,11 +139,6 @@ export default function Orders() {
         <div>
           <h1 className="page-title">Buyurtmalar</h1>
           <p className="page-subtitle">Mijoz, mahsulot, to'lov va fulfillment nazorati</p>
-        </div>
-        <div className="d-flex gap-2">
-          <a className="btn btn-outline-secondary" href="/a122/orders">
-            <i className="bi bi-funnel me-1"></i>Filtr
-          </a>
         </div>
       </div>
 
@@ -196,7 +192,7 @@ export default function Orders() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((order) => (
+              {pagination.paginated.map((order) => (
                 <tr key={order.id}>
                   <td className="fw-semibold" style={{ color: '#4f46e5' }}>{order.id}</td>
                   <td>
@@ -213,7 +209,7 @@ export default function Orders() {
                     <button className="btn btn-sm btn-light me-1" onClick={() => handleOpenView(order)} title="Ko'rish / Boshqarish">
                       <i className="bi bi-eye"></i>
                     </button>
-                    <a className="btn btn-sm btn-light" href={order.receiptUrl || '#'} title="Chekni chop etish">
+                    <a className="btn btn-sm btn-light" href={order.receiptUrl || '#'} title="Chekni chop etish" target="_blank">
                       <i className="bi bi-printer"></i>
                     </a>
                   </td>
@@ -222,6 +218,7 @@ export default function Orders() {
             </tbody>
           </table>
         </div>
+        <PaginationControls {...pagination} onPageChange={pagination.setPage} />
       </div>
 
       <Modal show={showView} onHide={() => setShowView(false)} centered size="xl" scrollable>
@@ -237,7 +234,7 @@ export default function Orders() {
                     <div>
                       <div className="text-muted small">Mijoz</div>
                       <div className="fw-bold fs-5">
-                        {selectedOrd.user?.url ? <a href={selectedOrd.user.url}>{selectedOrd.customer}</a> : selectedOrd.customer}
+                        {selectedOrd.customer}
                       </div>
                       <div className="text-muted small">{selectedOrd.user?.phone || selectedOrd.user?.email || 'Kontakt yoq'}</div>
                     </div>
@@ -380,9 +377,8 @@ export default function Orders() {
           ) : null}
         </Modal.Body>
         <Modal.Footer>
-          {selectedOrd?.labelUrl ? <a className="btn btn-outline-secondary" href={selectedOrd.labelUrl}>Label</a> : null}
-          {selectedOrd?.receiptUrl ? <a className="btn btn-outline-secondary" href={selectedOrd.receiptUrl}>Chek</a> : null}
-          {selectedOrd?.showUrl ? <a className="btn btn-outline-secondary" href={selectedOrd.showUrl}>Eski show</a> : null}
+          {selectedOrd?.labelUrl ? <a className="btn btn-outline-secondary" href={selectedOrd.labelUrl} target="_blank">Label</a> : null}
+          {selectedOrd?.receiptUrl ? <a className="btn btn-outline-secondary" href={selectedOrd.receiptUrl} target="_blank">Chek</a> : null}
           <Button variant="light" onClick={() => setShowView(false)}>Yopish</Button>
         </Modal.Footer>
       </Modal>
@@ -430,7 +426,7 @@ function SellerOrdersTable({ rows }: { rows: SellerOrder[] }) {
         <tbody>
           {rows.map((row) => (
             <tr key={row.id}>
-              <td>{row.url ? <a href={row.url}>#{row.id}</a> : `#${row.id}`}</td>
+              <td>#{row.id}</td>
               <td>{row.seller || '—'}</td>
               <td>
                 <div>{row.courier || '—'}</div>
