@@ -33,7 +33,7 @@
 <?php endif; ?>
 
 
-<div class="card p-5 mb-6">
+<div class="card-panel p-5 mb-6">
     <div class="flex flex-col sm:flex-row sm:items-center gap-4">
         
         <div class="shrink-0">
@@ -177,7 +177,7 @@
 
 
 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-    <div class="card p-5 flex items-center gap-4">
+    <div class="card-panel p-5 flex items-center gap-4">
         <div class="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-500/10 flex items-center justify-center">
             <i data-lucide="package" class="w-6 h-6 text-blue-500"></i>
         </div>
@@ -187,7 +187,7 @@
         </div>
     </div>
 
-    <div class="card p-5 flex items-center gap-4">
+    <div class="card-panel p-5 flex items-center gap-4">
         <div class="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-500/10 flex items-center justify-center">
             <i data-lucide="banknote" class="w-6 h-6 text-green-500"></i>
         </div>
@@ -198,7 +198,7 @@
         </div>
     </div>
 
-    <div class="card p-5 flex items-center gap-4">
+    <div class="card-panel p-5 flex items-center gap-4">
         <div class="w-12 h-12 rounded-xl bg-yellow-100 dark:bg-yellow-500/10 flex items-center justify-center">
             <i data-lucide="wallet" class="w-6 h-6 text-yellow-500"></i>
         </div>
@@ -220,7 +220,7 @@
 ?>
 
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-    <div class="card p-5">
+    <div class="card-panel p-5">
         <div class="flex items-center justify-between mb-4">
             <h3 class="font-bold text-base flex items-center gap-2">
                 <i data-lucide="map-pinned" class="w-5 h-5 text-blue-500"></i>
@@ -245,7 +245,7 @@
         <?php endif; ?>
     </div>
 
-    <div class="card p-5">
+    <div class="card-panel p-5">
         <div class="flex items-center justify-between mb-4">
             <h3 class="font-bold text-base flex items-center gap-2">
                 <i data-lucide="route" class="w-5 h-5 text-emerald-500"></i>
@@ -311,7 +311,7 @@
 
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
     
-    <div class="card p-5">
+    <div class="card-panel p-5">
         <div class="flex items-center justify-between mb-4">
             <h3 class="font-bold text-base flex items-center gap-2">
                 <i data-lucide="<?php echo e($courier->transport_icon); ?>" class="w-5 h-5 text-blue-500"></i>
@@ -371,7 +371,7 @@
     </div>
 
     
-    <div class="card p-5">
+    <div class="card-panel p-5">
         <div class="flex items-center justify-between mb-4">
             <h3 class="font-bold text-base flex items-center gap-2">
                 <i data-lucide="folder" class="w-5 h-5 text-blue-500"></i>
@@ -412,7 +412,7 @@
 </div>
 
 
-<div class="card p-5 mb-6">
+<div class="card-panel p-5 mb-6">
     <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
         <h3 class="font-bold text-base flex items-center gap-2">
             <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-500"></i>
@@ -464,9 +464,9 @@
         <p class="text-[10px] text-gray-400 mt-1">3 ta ogohlantirishdan keyin kuryer avtomatik bloklanadi.</p>
     </div>
 
-    <div class="table-wrap">
+    <div class="table-responsive kc-table-shell">
         <div class="overflow-x-auto">
-            <table class="tbl">
+            <table class="table data-table align-middle mb-0">
                 <thead>
                     <tr>
                         <th>Vaqt</th>
@@ -585,11 +585,11 @@
 </div>
 
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-    <div class="card p-5">
+    <div class="card-panel p-5">
         <h3 class="font-bold text-base mb-4">So'nggi buyurtmalar</h3>
-        <div class="table-wrap">
+        <div class="table-responsive kc-table-shell">
             <div class="overflow-x-auto">
-                <table class="tbl">
+                <table class="table data-table align-middle mb-0">
                     <thead>
                         <tr>
                             <th>Courier-order</th>
@@ -650,11 +650,11 @@
         </div>
     </div>
 
-    <div class="card p-5">
+    <div class="card-panel p-5">
         <h3 class="font-bold text-base mb-4">So'nggi tranzaksiyalar</h3>
-        <div class="table-wrap">
+        <div class="table-responsive kc-table-shell">
             <div class="overflow-x-auto">
-                <table class="tbl">
+                <table class="table data-table align-middle mb-0">
                     <thead>
                         <tr>
                             <th>ID</th>

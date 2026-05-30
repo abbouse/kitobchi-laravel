@@ -414,6 +414,10 @@
 }
 .rich-editor hr { border: none; border-top: 1px solid var(--p-border); margin: 1em 0; }
 .slug-input { font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+.legal-toolbar,
+.legal-shell {
+  display: none;
+}
 @media (max-width: 1199px) {
   .legal-translations {
     grid-template-columns: 1fr;
@@ -436,11 +440,6 @@
   .legal-span-4 {
     grid-column: auto;
   }
-  .legal-shell__head,
-  .legal-toolbar {
-    align-items: flex-start;
-    flex-direction: column;
-  }
   .legal-actions {
     flex-direction: column-reverse;
     align-items: stretch;
@@ -455,67 +454,92 @@
   $total = $counts['total'] ?? $policies->total();
 ?>
 
-<div class="legal-toolbar">
-  <div>
-    <div class="legal-toolbar__title">Siyosatlar</div>
-    <div class="legal-toolbar__meta"><?php echo e($policies->total()); ?> ta huquqiy sahifa topildi</div>
-  </div>
-  <div class="a122-index-header__actions">
-    <form method="GET" class="a122-index-search-form">
-      <input type="hidden" name="tab" value="<?php echo e($tab ?? 'active'); ?>">
-      <i class="bi bi-search"></i>
-      <input type="search" name="search" value="<?php echo e(request('search')); ?>" placeholder="Sarlavha, slug yoki kontent bo‘yicha qidiring">
-    </form>
-    <button class="btn-p primary" data-bs-toggle="modal" data-bs-target="#createModal">
-      <i class="bi bi-plus-lg"></i> Yangi siyosat
-    </button>
-  </div>
-</div>
+<?php if (isset($component)) { $__componentOriginalcb19cb35a534439097b02b8af91726ee = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginalcb19cb35a534439097b02b8af91726ee = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.admin.page-header','data' => ['eyebrow' => 'Legal center','title' => 'Siyosatlar','subtitle' => ''.e($policies->total()).' ta huquqiy sahifa topildi']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('admin.page-header'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['eyebrow' => 'Legal center','title' => 'Siyosatlar','subtitle' => ''.e($policies->total()).' ta huquqiy sahifa topildi']); ?>
+  <button class="btn-primary-gradient" data-bs-toggle="modal" data-bs-target="#createModal">
+    <i class="bi bi-plus-lg me-2"></i>Yangi siyosat
+  </button>
+ <?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginalcb19cb35a534439097b02b8af91726ee)): ?>
+<?php $attributes = $__attributesOriginalcb19cb35a534439097b02b8af91726ee; ?>
+<?php unset($__attributesOriginalcb19cb35a534439097b02b8af91726ee); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginalcb19cb35a534439097b02b8af91726ee)): ?>
+<?php $component = $__componentOriginalcb19cb35a534439097b02b8af91726ee; ?>
+<?php unset($__componentOriginalcb19cb35a534439097b02b8af91726ee); ?>
+<?php endif; ?>
 
-<div class="tab-pills fade-up mb-3">
+<form method="GET" class="kc-filter-card p-3 mb-3">
+  <div class="row g-3 align-items-end">
+    <input type="hidden" name="tab" value="<?php echo e($tab ?? 'active'); ?>">
+    <div class="col-12 col-lg-9">
+      <label class="form-label small text-uppercase fw-semibold text-secondary">Qidiruv</label>
+      <div class="position-relative">
+        <i class="bi bi-search position-absolute top-50 translate-middle-y ms-3 text-secondary"></i>
+        <input type="search" name="search" value="<?php echo e(request('search')); ?>" class="form-control ps-5" placeholder="Sarlavha, slug yoki kontent bo‘yicha qidiring">
+      </div>
+    </div>
+    <div class="col-12 col-lg-3 d-grid">
+      <button class="btn btn-dark" type="submit"><i class="bi bi-funnel me-2"></i>Filtrlash</button>
+    </div>
+  </div>
+</form>
+
+<div class="d-flex flex-wrap gap-2 mb-3">
   <?php $__currentLoopData = [
     'active' => ['Faol', $counts['active'] ?? 0],
     'inactive' => ['Nofaol', $counts['inactive'] ?? 0],
     'all' => ['Barchasi', $counts['total'] ?? 0],
   ]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $key => [$label, $count]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-    <a href="<?php echo e(request()->fullUrlWithQuery(['tab' => $key, 'page' => null])); ?>" class="tab-pill <?php echo e(($tab ?? 'active') === $key ? 'active' : ''); ?>">
+    <a href="<?php echo e(request()->fullUrlWithQuery(['tab' => $key, 'page' => null])); ?>" class="chip text-decoration-none <?php echo e(($tab ?? 'active') === $key ? 'chip-purple' : 'chip-gray'); ?>">
       <?php echo e($label); ?> <span><?php echo e($count); ?></span>
     </a>
   <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
 </div>
 
-<div class="legal-stats">
+<div class="row g-3 mb-4">
   <?php $__currentLoopData = [
-    ['Jami', $total, 'accent', 'bi-file-earmark-text'],
-    ['Faol', $active, 'success', 'bi-check-circle'],
-    ['Nofaol', $total - $active, 'muted', 'bi-eye-slash'],
-  ]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$label, $value, $color, $icon]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-    <div class="legal-stat">
-      <div>
-        <div class="legal-stat__value"><?php echo e($value); ?></div>
-        <div class="legal-stat__label"><?php echo e($label); ?></div>
-      </div>
-      <div class="legal-stat__icon" style="background:var(--p-<?php echo e($color); ?>-d,var(--p-elevated));color:var(--p-<?php echo e($color); ?>,var(--p-muted));">
-        <i class="bi <?php echo e($icon); ?>"></i>
+    ['Jami', $total, 'chip-info', 'bi-file-earmark-text'],
+    ['Faol', $active, 'chip-success', 'bi-check-circle'],
+    ['Nofaol', $total - $active, 'chip-gray', 'bi-eye-slash'],
+  ]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$label, $value, $chip, $icon]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+    <div class="col-12 col-md-4">
+      <div class="card-panel p-3 h-100 d-flex align-items-center justify-content-between">
+        <div>
+          <div class="small text-secondary text-uppercase fw-bold mb-2" style="letter-spacing:.08em;"><?php echo e($label); ?></div>
+          <div class="h3 fw-bold mb-0"><?php echo e($value); ?></div>
+        </div>
+        <span class="chip <?php echo e($chip); ?>"><i class="bi <?php echo e($icon); ?>"></i></span>
       </div>
     </div>
   <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
 </div>
 
-<section class="legal-shell fade-up">
-  <div class="legal-shell__head">
-    <div>
-      <div class="legal-shell__title">Siyosatlar ro‘yxati</div>
-      <div class="legal-shell__sub">Slug, preview, ilova ko‘rinishi va status boshqaruvi</div>
-    </div>
-    <div class="flex items-center gap-2 flex-wrap">
-      <span class="legal-badge"><strong><?php echo e($total); ?></strong> jami</span>
-      <span class="legal-badge"><strong><?php echo e($active); ?></strong> faol</span>
-    </div>
-  </div>
-
-  <div class="table-responsive kc-twrap">
-    <table class="p-table" data-index-grid>
+<?php if (isset($component)) { $__componentOriginal6c55ae2c9251ebabe977f3f2190280eb = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal6c55ae2c9251ebabe977f3f2190280eb = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.admin.section-card','data' => ['title' => 'Siyosatlar ro‘yxati','meta' => 'Slug, preview, ilova ko‘rinishi va status boshqaruvi']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('admin.section-card'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['title' => 'Siyosatlar ro‘yxati','meta' => 'Slug, preview, ilova ko‘rinishi va status boshqaruvi']); ?>
+   <?php $__env->slot('actions', null, []); ?> 
+    <span class="chip chip-gray"><?php echo e($total); ?> jami</span>
+    <span class="chip chip-success"><?php echo e($active); ?> faol</span>
+   <?php $__env->endSlot(); ?>
+  <div class="table-responsive kc-table-shell">
+    <table class="table data-table align-middle mb-0" data-index-grid>
       <thead>
         <tr>
           <th style="width:40px"></th>
@@ -560,16 +584,16 @@
           </td>
           <td>
             <?php if($policy->show_in_app): ?>
-              <span class="s-pill success" style="font-size:10px"><i class="bi bi-check-lg"></i> Ha</span>
+              <span class="chip chip-success"><i class="bi bi-check-lg"></i> Ha</span>
             <?php else: ?>
-              <span class="s-pill muted" style="font-size:10px">Yo'q</span>
+              <span class="chip chip-gray">Yo'q</span>
             <?php endif; ?>
           </td>
           <td>
             <form method="POST" action="<?php echo e(route('admin.policies.toggle', $policy)); ?>" style="display:inline">
               <?php echo csrf_field(); ?> <?php echo method_field('PATCH'); ?>
               <button type="submit"
-                      class="btn-p <?php echo e($policy->is_active ? 'success' : 'ghost'); ?> sm legal-status-btn"
+                      class="btn btn-sm <?php echo e($policy->is_active ? 'btn-success' : 'btn-outline-secondary'); ?> legal-status-btn"
                       title="<?php echo e($policy->is_active ? 'Faol — o\'chirish' : 'Nofaol — yoqish'); ?>">
                 <i class="bi <?php echo e($policy->is_active ? 'bi-toggle-on' : 'bi-toggle-off'); ?>"></i>
                 <?php echo e($policy->is_active ? 'Faol' : 'Nofaol'); ?>
@@ -583,15 +607,15 @@
           </td>
           <td>
             <div class="flex gap-1 justify-end">
-              <a href="/legal/<?php echo e($policy->slug); ?>" target="_blank" class="btn-p ghost sm" title="Ko'rish">
+              <a href="/legal/<?php echo e($policy->slug); ?>" target="_blank" class="btn btn-sm btn-outline-secondary" title="Ko'rish">
                 <i class="bi bi-eye"></i>
               </a>
-              <button class="btn-p ghost sm" onclick="openEdit(<?php echo e($policy->id); ?>)" title="Tahrirlash">
+              <button class="btn btn-sm btn-outline-secondary" onclick="openEdit(<?php echo e($policy->id); ?>)" title="Tahrirlash">
                 <i class="bi bi-pencil"></i>
               </button>
               <form method="POST" action="<?php echo e(route('admin.policies.destroy', $policy)); ?>" onsubmit="return confirm('Siyosatni o\'chirishga ishonchingiz komilmi?')">
                 <?php echo csrf_field(); ?> <?php echo method_field('DELETE'); ?>
-                <button type="submit" class="btn-p danger sm" title="O'chirish">
+                <button type="submit" class="btn btn-sm btn-outline-danger" title="O'chirish">
                   <i class="bi bi-trash"></i>
                 </button>
               </form>
@@ -601,7 +625,7 @@
         <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
         <tr>
           <td colspan="10">
-            <div class="p-empty-cell">
+            <div class="empty-state p-4 text-center">
               <i class="bi bi-file-earmark-text" style="font-size:36px;display:block;margin-bottom:12px;opacity:.4"></i>
               <div style="font-size:14px">Hali siyosat qo'shilmagan</div>
             </div>
@@ -611,7 +635,16 @@
       </tbody>
     </table>
   </div>
-</section>
+ <?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal6c55ae2c9251ebabe977f3f2190280eb)): ?>
+<?php $attributes = $__attributesOriginal6c55ae2c9251ebabe977f3f2190280eb; ?>
+<?php unset($__attributesOriginal6c55ae2c9251ebabe977f3f2190280eb); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal6c55ae2c9251ebabe977f3f2190280eb)): ?>
+<?php $component = $__componentOriginal6c55ae2c9251ebabe977f3f2190280eb; ?>
+<?php unset($__componentOriginal6c55ae2c9251ebabe977f3f2190280eb); ?>
+<?php endif; ?>
 
 <?php if($policies->hasPages()): ?>
 <div class="mt-4">

@@ -44,7 +44,7 @@
                   <div class="text-xs text-gray-500">{{ $label }}</div>
                   <div class="text-sm font-semibold break-all">{{ preg_replace('#^https?://#', '', $url) }}</div>
                 </div>
-                <a href="{{ $url }}" target="_blank" rel="noopener" class="btn-ghost p-2 rounded-lg"><i class="bi bi-box-arrow-up-right"></i></a>
+                <a href="{{ $url }}" target="_blank" rel="noopener" class="btn btn-outline-secondary p-2 rounded-lg"><i class="bi bi-box-arrow-up-right"></i></a>
               </div>
             @empty
               <div class="text-sm text-gray-500">Ijtimoiy tarmoq linklari kiritilmagan.</div>
@@ -53,7 +53,7 @@
         </div>
       </section>
 
-      <section class="card p-5">
+      <section class="card-panel p-5">
         <h3 class="text-lg font-black mb-4">Qisqa statistika</h3>
         <div class="grid grid-cols-1 sm:grid-cols-3 xl:grid-cols-1 gap-3">
           <div class="kpi-soft"><div class="metric-label">Jo‘natildi</div><div class="metric-value text-xl">{{ $stats['delivered_shipments'] }}</div></div>
@@ -64,7 +64,7 @@
     </div>
 
     <div class="xl:col-span-8 space-y-4">
-      <section class="card p-5">
+      <section class="card-panel p-5">
         <h3 class="text-lg font-black mb-4">Yangi jo‘natma</h3>
         <form method="POST" action="{{ route('admin.bloggers.shipments.store', $blogger) }}" class="space-y-4">
           @csrf
@@ -87,7 +87,7 @@
         </form>
       </section>
 
-      <section class="card p-5">
+      <section class="card-panel p-5">
         <div class="flex items-center justify-between gap-3 mb-4">
           <h3 class="text-lg font-black">Jo‘natmalar tarixi</h3>
           <span class="badge badge-info">{{ $blogger->shipments->count() }} ta jo‘natma</span>

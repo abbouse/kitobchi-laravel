@@ -54,7 +54,7 @@
     @method('PUT')
 
     {{-- ────────────────────────────────────────── TAB 1: ASOSIY ───── --}}
-    <section data-seller-panel="main" class="card p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+    <section data-seller-panel="main" class="card-panel p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
         <div class="md:col-span-2">
             <label class="text-xs text-gray-500 mb-1 block">Do'kon nomi <span class="text-red-500">*</span></label>
             <input name="shop_name" class="input" required placeholder="Do'kon nomini kiriting"
@@ -130,7 +130,7 @@
     </section>
 
     {{-- ────────────────────────────────── TAB 2: REKVIZITLAR ────────── --}}
-    <section data-seller-panel="legal" class="card p-5 grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
+    <section data-seller-panel="legal" class="card-panel p-5 grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
         <div class="md:col-span-2">
             <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1">Huquqiy ma'lumotlar</h3>
             <p class="text-[11px] text-gray-400">Shartnoma tuzish uchun zarur rekvizitlar.</p>
@@ -224,7 +224,7 @@
     </section>
 
     {{-- ─────────────────────────────────── TAB 3: SHARTNOMA ─────────── --}}
-    <section data-seller-panel="contract" class="card p-5 grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
+    <section data-seller-panel="contract" class="card-panel p-5 grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
         <div class="md:col-span-2">
             <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1">Shartnoma ma'lumotlari</h3>
             <p class="text-[11px] text-gray-400">Shartnoma raqami, sanasi va holati. "Tez uzaytirish" tugmasi Hujjatlar tabida.</p>
@@ -298,7 +298,7 @@
     </section>
 
     {{-- ─────────────────────────────────── TAB 5: PREMIUM ───────────── --}}
-    <section data-seller-panel="premium" class="card p-5 hidden">
+    <section data-seller-panel="premium" class="card-panel p-5 hidden">
         <div class="p-4 rounded-lg border border-amber-200 bg-amber-50/60 dark:bg-amber-400/5 dark:border-amber-400/20 space-y-4">
             <div>
                 <div class="text-sm font-semibold text-amber-700 dark:text-amber-300">Premium obuna</div>
@@ -369,7 +369,7 @@
 </form>
 
 {{-- ══ TAB 4: HUJJATLAR — alohida form ════════════════════════════════ --}}
-<section data-seller-panel="documents" class="card p-5 hidden mt-4">
+<section data-seller-panel="documents" class="card-panel p-5 hidden mt-4">
     <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">Hujjatlar ro'yxati</h3>
 
     {{-- Upload form --}}

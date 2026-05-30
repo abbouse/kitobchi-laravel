@@ -52,7 +52,7 @@
 <?php endif; ?>
 
 
-<div class="card p-5 mb-6">
+<div class="card-panel p-5 mb-6">
     <h2 class="text-lg font-bold mb-3">Reel ma'lumotlari</h2>
     <dl class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
         <div>
@@ -79,11 +79,11 @@
 </div>
 
 
-<div class="card p-5 mb-6">
+<div class="card-panel p-5 mb-6">
     <h2 class="text-lg font-bold mb-4">Video elementlar</h2>
-    <div class="table-wrap">
+    <div class="table-responsive kc-table-shell">
         <div class="overflow-x-auto">
-            <table class="tbl">
+            <table class="table data-table align-middle mb-0">
                 <thead>
                     <tr>
                         <th>ID</th>
@@ -116,7 +116,7 @@
                                     <form method="POST" action="<?php echo e(route('admin.reels.items.destroy', [$reel, $item])); ?>" onsubmit="return confirm('Bu video elementni o\'chirishga ishonchingiz komilmi?')">
                                         <?php echo csrf_field(); ?>
                                         <?php echo method_field('DELETE'); ?>
-                                        <button type="submit" class="btn-ghost p-2 rounded-lg text-red-500 hover:text-red-700" title="O'chirish">
+                                        <button type="submit" class="btn btn-outline-secondary p-2 rounded-lg text-red-500 hover:text-red-700" title="O'chirish">
                                             <i data-lucide="trash-2" class="w-4 h-4"></i>
                                         </button>
                                     </form>
@@ -135,7 +135,7 @@
 </div>
 
 
-<div class="card p-5">
+<div class="card-panel p-5">
     <h2 class="text-lg font-bold mb-4">Yangi video qo'shish</h2>
 
     <?php if($errors->any()): ?>

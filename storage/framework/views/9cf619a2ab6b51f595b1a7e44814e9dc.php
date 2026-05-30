@@ -122,7 +122,7 @@
   <div class="xl:col-span-4">
 
     
-    <div class="p-card mb-3 fade-up" style="overflow:hidden">
+    <div class="card-panel mb-3 fade-up" style="overflow:hidden">
       <div style="padding:24px 22px;background:linear-gradient(135deg,
                   var(--p-accent-d) 0%,var(--p-elevated) 100%);
                   border-bottom:1px solid var(--p-border)">
@@ -156,8 +156,8 @@
     </div>
 
     
-    <div class="p-card mb-3 fade-up">
-      <div class="p-card-header"><div class="p-card-title">Tafsilotlar</div></div>
+    <div class="card-panel mb-3 fade-up">
+      <div class="card-panel-header"><div class="card-panel-title">Tafsilotlar</div></div>
       <div style="padding:0 18px 14px">
         <?php $__currentLoopData = [
           ['Miqdor',       number_format($giftCertificate->nominal_uzs).' UZS'],
@@ -197,9 +197,9 @@
 
       
       <div class="">
-        <div class="p-card h-100 fade-up">
-          <div class="p-card-header">
-            <div class="p-card-title">
+        <div class="card-panel h-100 fade-up">
+          <div class="card-panel-header">
+            <div class="card-panel-title">
               <i class="bi bi-person-fill mr-1" style="color:var(--p-info)"></i>
               Sotib olgan
             </div>
@@ -248,9 +248,9 @@
 
       
       <div class="">
-        <div class="p-card h-100 fade-up">
-          <div class="p-card-header">
-            <div class="p-card-title">
+        <div class="card-panel h-100 fade-up">
+          <div class="card-panel-header">
+            <div class="card-panel-title">
               <i class="bi bi-gift-fill mr-1" style="color:var(--p-success)"></i>
               Qabul qiluvchi
             </div>

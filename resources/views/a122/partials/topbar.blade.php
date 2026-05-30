@@ -12,14 +12,14 @@
   ];
 @endphp
 
-<header class="kc-topbar">
+<header class="topbar kc-topbar">
   <div class="container-fluid px-3 px-lg-4 px-xxl-5">
     <div class="kc-topbar__inner d-flex align-items-center gap-3">
       <button
         type="button"
         data-sidebar-toggle
         aria-expanded="true"
-        class="btn btn-white shadow-sm border kc-topbar__menu"
+        class="icon-btn sidebar-toggle kc-topbar__menu"
         aria-label="Menyu">
         <i class="bi bi-list fs-5"></i>
       </button>
@@ -29,7 +29,7 @@
         <div class="kc-topbar__title text-truncate">@yield('page-title', 'Dashboard')</div>
       </div>
 
-      <div class="kc-topbar__search flex-grow-1">
+      <div class="search kc-topbar__search flex-grow-1 d-none d-md-block">
         <form class="kc-search" onsubmit="event.preventDefault();const input=this.querySelector('input');const option=[...document.querySelectorAll('#a122-quick-nav-list option')].find(o=>o.value===input.value);if(option?.dataset?.href){window.location=option.dataset.href;}">
           <i class="bi bi-search kc-search__icon"></i>
           <input type="text" list="a122-quick-nav-list" class="form-control" placeholder="Qidiruv yoki tezkor o‘tish" />
@@ -41,11 +41,11 @@
         </form>
       </div>
 
-      <a href="{{ route('admin.support.index') }}" class="kc-topbar__icon-btn d-none d-sm-inline-flex" aria-label="Support">
+      <a href="{{ route('admin.support.index') }}" class="icon-btn kc-topbar__icon-btn d-none d-sm-inline-flex" aria-label="Support">
         <i class="bi bi-bell"></i>
       </a>
 
-      <button data-theme-toggle class="kc-topbar__icon-btn d-none d-sm-inline-flex" aria-label="Tema almashtirish">
+      <button data-theme-toggle class="icon-btn kc-topbar__icon-btn d-none d-sm-inline-flex" aria-label="Tema almashtirish">
         <i class="bi bi-moon-stars"></i>
       </button>
 

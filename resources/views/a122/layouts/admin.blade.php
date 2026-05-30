@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="uz" class="kc-panel-root">
+<html lang="uz" class="template-admin-root">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -31,23 +31,23 @@
   <div
     id="a122-shell"
     data-sidebar-shell
-    class="kc-shell d-flex sidebar-expanded">
+    class="app-shell kc-shell d-flex sidebar-expanded">
     @include('a122.partials.sidebar')
-    <div class="kc-main flex-grow-1 d-flex flex-column">
+    <div class="main-wrap kc-main flex-grow-1 d-flex flex-column">
       @include('a122.partials.topbar')
       <div class="kc-main__viewport flex-grow-1 d-flex flex-column">
-        <main class="kc-content flex-grow-1">
+        <main class="content kc-content flex-grow-1">
           <div class="container-fluid px-3 px-lg-4 px-xxl-5">
             <div class="mx-auto kc-shell-width">
               @yield('content')
             </div>
           </div>
         </main>
-        <footer class="kc-footer border-top bg-white bg-opacity-75">
+        <footer class="kc-footer border-top">
           <div class="container-fluid px-3 px-lg-4 px-xxl-5 py-3">
             <div class="mx-auto kc-shell-width d-flex flex-wrap align-items-center justify-content-between gap-2 small text-secondary">
               <span>© {{ date('Y') }} Kitobchi Admin</span>
-              <span>Operational dashboard workspace</span>
+              <span>Admin workspace</span>
             </div>
           </div>
         </footer>

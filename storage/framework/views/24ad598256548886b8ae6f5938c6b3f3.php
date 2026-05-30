@@ -137,7 +137,7 @@
       </div>
       <div class="a122-section-body">
         <div class="table-responsive kc-twrap">
-          <table class="p-table">
+          <table class="table data-table align-middle mb-0">
             <thead>
               <tr><th>Fayl nomi</th><th>Tur</th><th>Hajm</th><th>Yuboruvchi</th></tr>
             </thead>

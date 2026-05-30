@@ -133,7 +133,7 @@
       </div>
       <div class="a122-section-body">
         <div class="table-responsive kc-twrap">
-          <table class="p-table">
+          <table class="table data-table align-middle mb-0">
             <thead>
               <tr><th>#</th><th>Foydalanuvchi</th><th>Telefon</th><th>Sana</th></tr>
             </thead>

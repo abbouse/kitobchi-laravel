@@ -38,11 +38,11 @@ foreach ($attributes->all() as $__key => $__value) {
 
 unset($__defined_vars); ?>
 
-<div <?php echo e($attributes->class(['p-page-header fade-up'])); ?>>
-    <div class="flex min-w-0 flex-1 items-start gap-3 sm:gap-4">
+<div <?php echo e($attributes->class(['page-head card-panel p-4 mb-4'])); ?>>
+    <div class="d-flex min-w-0 flex-grow-1 align-items-start gap-3">
         <?php if($backHref): ?>
             <a href="<?php echo e($backHref); ?>"
-               class="btn-p ghost icon mt-0.5 shrink-0 sm:mt-1"
+               class="btn btn-outline-secondary btn-sm flex-shrink-0"
                title="<?php echo e($backLabel); ?>"
                aria-label="<?php echo e($backLabel); ?>">
                 <i class="bi bi-arrow-left"></i>
@@ -52,35 +52,35 @@ unset($__defined_vars); ?>
             <?php if(isset($heading)): ?>
                 <?php ($__headingMarkup = (string) $heading); ?>
                 <?php if(str_contains($__headingMarkup, '<')): ?>
-                    <div class="min-w-0 text-gray-800 dark:text-white/90 [&_.page-title]:text-xl [&_.page-title]:font-semibold [&_.page-title]:tracking-tight [&_.page-title]:text-gray-800 sm:[&_.page-title]:text-2xl xl:[&_.page-title]:text-[1.7rem] xl:[&_.page-title]:leading-snug 2xl:[&_.page-title]:text-[1.85rem] dark:[&_.page-title]:text-white/90">
+                    <div class="min-w-0">
                         <?php echo $heading; ?>
 
                     </div>
                 <?php else: ?>
-                    <h1 class="text-xl font-semibold tracking-tight text-gray-800 sm:text-2xl xl:text-[1.7rem] xl:leading-snug 2xl:text-[1.85rem] dark:text-white/90"><?php echo e($heading); ?></h1>
+                    <h1 class="page-title"><?php echo e($heading); ?></h1>
                 <?php endif; ?>
             <?php elseif($title !== ''): ?>
-                <h1 class="text-xl font-semibold tracking-tight text-gray-800 sm:text-2xl xl:text-[1.7rem] xl:leading-snug 2xl:text-[1.85rem] dark:text-white/90"><?php echo e($title); ?></h1>
+                <h1 class="page-title"><?php echo e($title); ?></h1>
             <?php endif; ?>
 
             <?php if(isset($meta)): ?>
                 <?php ($__metaMarkup = (string) $meta); ?>
                 <?php if(str_contains($__metaMarkup, '<')): ?>
-                    <div class="mt-1.5 max-w-prose text-sm leading-relaxed text-gray-500 dark:text-gray-400 xl:mt-2 xl:max-w-[62ch] xl:text-base xl:leading-relaxed [&_strong]:text-gray-700 dark:[&_strong]:text-white/80 [&_.page-sub]:mt-0">
+                    <div class="page-subtitle">
                         <?php echo $meta; ?>
 
                     </div>
                 <?php else: ?>
-                    <p class="mt-1.5 max-w-prose text-sm leading-relaxed text-gray-500 dark:text-gray-400 xl:mt-2 xl:max-w-[62ch] xl:text-base xl:leading-relaxed"><?php echo e($meta); ?></p>
+                    <p class="page-subtitle"><?php echo e($meta); ?></p>
                 <?php endif; ?>
             <?php elseif($subtitle): ?>
-                <p class="mt-1.5 max-w-prose text-sm leading-relaxed text-gray-500 dark:text-gray-400 xl:mt-2 xl:max-w-[62ch] xl:text-base xl:leading-relaxed"><?php echo e($subtitle); ?></p>
+                <p class="page-subtitle"><?php echo e($subtitle); ?></p>
             <?php endif; ?>
         </div>
     </div>
 
     <?php if(isset($actions)): ?>
-        <div class="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end"><?php echo e($actions); ?></div>
+        <div class="d-flex flex-shrink-0 flex-wrap align-items-center gap-2 justify-content-end"><?php echo e($actions); ?></div>
     <?php endif; ?>
 </div>
 <?php /**PATH /Users/abbos/PROJECTS/MY/kitobchi-server/kitobchi-laravel/resources/views/components/a122/page-header.blade.php ENDPATH**/ ?>

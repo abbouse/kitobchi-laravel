@@ -79,7 +79,7 @@
                 ['Telegram', $careerApplication->telegram_username ? '@'.$careerApplication->telegram_username : '—', 'send'],
                 ['Holat', ($statuses[$careerApplication->status]['label'] ?? $careerApplication->status), 'badge-check'],
             ]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$label, $value, $icon]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                <div class="p-card">
+                <div class="card-panel">
                     <div class="flex items-center gap-3">
                         <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--p-soft)] text-[var(--p-accent)]">
                             <i data-lucide="<?php echo e($icon); ?>" class="h-4.5 w-4.5"></i>
@@ -93,7 +93,7 @@
             <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
         </div>
 
-        <div class="p-card">
+        <div class="card-panel">
             <div class="dash-card-head"><div class="dash-card-title">Nomzod</div></div>
             <div class="dash-card-body space-y-2 p-body-relaxed text-sm">
                 <div><span class="text-[var(--p-hint)]">Ism:</span> <strong><?php echo e($careerApplication->full_name); ?></strong></div>
@@ -114,7 +114,7 @@
         </div>
 
         <?php if($careerApplication->cover_message): ?>
-            <div class="p-card">
+            <div class="card-panel">
                 <div class="dash-card-head"><div class="dash-card-title"><?php echo e($careerApplication->type === \App\Models\CareerApplication::TYPE_INQUIRY ? 'Murojaat matni' : 'Qisqa xat / izoh'); ?></div></div>
                 <div class="dash-card-body">
                     <div class="p-quote-block"><?php echo e($careerApplication->cover_message); ?></div>
@@ -122,7 +122,7 @@
             </div>
         <?php endif; ?>
 
-        <div class="p-card">
+        <div class="card-panel">
             <div class="dash-card-head"><div class="dash-card-title">Xabarlar</div></div>
             <div class="dash-card-body space-y-3">
                 <?php $__currentLoopData = $careerApplication->messages; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $msg): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
@@ -143,7 +143,7 @@
             </div>
         </div>
 
-        <div class="p-card">
+        <div class="card-panel">
             <div class="dash-card-head"><div class="dash-card-title">Nomzodga email yuborish</div></div>
             <div class="dash-card-body">
                 <p class="mb-2 text-xs text-[var(--p-hint)]">Xabar <strong><?php echo e(config('mail.from.address')); ?></strong> manzilidan <strong><?php echo e($careerApplication->email); ?></strong> ga yuboriladi (Reply-To: <?php echo e(config('mail.reply_to.address')); ?>).</p>
@@ -157,7 +157,7 @@
     </div>
 
     <div class="space-y-3">
-        <div class="p-card">
+        <div class="card-panel">
             <div class="dash-card-head"><div class="dash-card-title">Holat</div></div>
             <div class="dash-card-body">
                 <?php $st = $statuses[$careerApplication->status] ?? ['label' => $careerApplication->status, 'class' => 'ob-p']; ?>
@@ -176,7 +176,7 @@
         </div>
 
         <?php if($careerApplication->read_at): ?>
-            <div class="p-card">
+            <div class="card-panel">
                 <div class="dash-card-head"><div class="dash-card-title">O‘qilgan</div></div>
                 <div class="dash-card-body text-xs text-[var(--p-hint)]"><?php echo e($careerApplication->read_at->format('d.m.Y H:i')); ?></div>
             </div>

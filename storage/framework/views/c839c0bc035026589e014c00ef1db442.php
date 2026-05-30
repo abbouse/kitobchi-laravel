@@ -66,8 +66,8 @@
   <div class="xl:col-span-4">
 
     
-    <div class="p-card mb-3 fade-up">
-      <div class="p-card-header"><div class="p-card-title">Foydalanuvchi</div></div>
+    <div class="card-panel mb-3 fade-up">
+      <div class="card-panel-header"><div class="card-panel-title">Foydalanuvchi</div></div>
       <div style="padding:14px 18px">
         <?php if($subscription->user): ?>
         <div class="flex items-center gap-3 mb-3">
@@ -103,9 +103,9 @@
     </div>
 
     
-    <div class="p-card mb-3 fade-up">
-      <div class="p-card-header">
-        <div class="p-card-title">
+    <div class="card-panel mb-3 fade-up">
+      <div class="card-panel-header">
+        <div class="card-panel-title">
           <i class="bi bi-geo-alt mr-1" style="color:var(--p-accent)"></i> Yetkazish manzili
         </div>
       </div>
@@ -132,8 +132,8 @@
     </div>
 
     
-    <div class="p-card fade-up">
-      <div class="p-card-header"><div class="p-card-title">Tarif</div></div>
+    <div class="card-panel fade-up">
+      <div class="card-panel-header"><div class="card-panel-title">Tarif</div></div>
       <div style="padding:0 18px 14px">
         <?php $__currentLoopData = [
           ['Tarif',       $subscription->plan?->name_uz ?? '—'],
@@ -176,9 +176,9 @@
 
   
   <div class="xl:col-span-8">
-    <div class="p-card fade-up">
-      <div class="p-card-header">
-        <div class="p-card-title">
+    <div class="card-panel fade-up">
+      <div class="card-panel-header">
+        <div class="card-panel-title">
           <i class="bi bi-box-seam mr-1" style="color:var(--p-accent)"></i>
           Oylik yetkazishlar
         </div>

@@ -32,7 +32,7 @@
       <?php echo csrf_field(); ?>
       <?php if(isset($promocode)): ?> <?php echo method_field('PUT'); ?> <?php endif; ?>
 
-      <div class="p-card mb-3">
+      <div class="card-panel mb-3">
         <div class="dash-card-head"><div class="dash-card-title">Promokod ma'lumotlari</div></div>
         <div class="dash-card-body">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -202,7 +202,7 @@ unset($__errorArgs, $__bag); ?>
       </div>
 
       <?php if(isset($promocode)): ?>
-      <div class="p-card mb-3" style="background:var(--p-warning-d);border-color:rgba(245,166,35,.2)">
+      <div class="card-panel mb-3" style="background:var(--p-warning-d);border-color:rgba(245,166,35,.2)">
         <div class="dash-card-body" style="padding:14px 20px">
           <div class="flex gap-3">
             <div style="text-align:center">

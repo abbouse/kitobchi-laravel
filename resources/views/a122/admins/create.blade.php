@@ -14,7 +14,7 @@
       @csrf
 
       {{-- Asosiy --}}
-      <div class="p-card mb-3">
+      <div class="card-panel mb-3">
         <div class="dash-card-head">
           <div class="dash-card-title">Admin ma'lumotlari</div>
         </div>
@@ -56,7 +56,7 @@
       </div>
 
       {{-- Rol --}}
-      <div class="p-card mb-3">
+      <div class="card-panel mb-3">
         <div class="dash-card-head">
           <div class="dash-card-title">Rol va ruxsatlar</div>
         </div>

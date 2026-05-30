@@ -3,7 +3,7 @@
 ?>
 
 <div class="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-  <section class="p-card fade-up">
+  <section class="card-panel fade-up">
     <div class="dash-card-head">
       <div class="dash-card-title">Asosiy ma'lumotlar</div>
     </div>
@@ -136,7 +136,7 @@ unset($__errorArgs, $__bag); ?>
   </section>
 
   <aside class="space-y-4 fade-up">
-    <section class="p-card">
+    <section class="card-panel">
       <div class="dash-card-head">
         <div class="dash-card-title">Holat va boshqaruv</div>
       </div>
@@ -155,7 +155,7 @@ unset($__errorArgs, $__bag); ?>
       <?php endif; ?>
     </section>
 
-    <section class="p-card">
+    <section class="card-panel">
       <div class="dash-card-head">
         <div class="dash-card-title">Tez eslatma</div>
       </div>

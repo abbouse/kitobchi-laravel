@@ -25,7 +25,7 @@
     </div>
 <?php endif; ?>
 
-<div class="card p-5">
+<div class="card-panel p-5">
     <form method="POST" action="<?php echo e(route('admin.news.store')); ?>" enctype="multipart/form-data" class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <?php echo csrf_field(); ?>
 

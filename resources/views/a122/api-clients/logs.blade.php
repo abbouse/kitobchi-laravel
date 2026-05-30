@@ -12,7 +12,7 @@
     </x-slot>
   </x-a122.page-header>
 
-  <section class="p-card fade-up">
+  <section class="card-panel fade-up">
     <form method="GET" class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-6">
       <div>
         <label class="p-form-label">Client</label>
@@ -68,9 +68,9 @@
     </form>
   </section>
 
-  <section class="p-card fade-up">
+  <section class="card-panel fade-up">
     <div class="table-responsive kc-twrap">
-      <table class="p-table">
+      <table class="table data-table align-middle mb-0">
         <thead>
           <tr>
             <th>Vaqt</th>

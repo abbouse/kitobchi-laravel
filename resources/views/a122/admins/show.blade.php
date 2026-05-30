@@ -51,7 +51,7 @@
   {{-- Chap: ma'lumotlar --}}
   <div class="xl:col-span-8">
 
-    <div class="p-card mb-3">
+    <div class="card-panel mb-3">
       <div class="dash-card-head">
         <div class="dash-card-title">Admin ma'lumotlari</div>
         <div class="flex gap-2">
@@ -113,7 +113,7 @@
     </div>
 
     {{-- Ruxsatlar --}}
-    <div class="p-card">
+    <div class="card-panel">
       <div class="dash-card-head"><div class="dash-card-title">Ruxsatlar</div></div>
       <div class="dash-card-body">
         @if($admin->isSuperAdmin())
@@ -143,7 +143,7 @@
 
   {{-- O'ng: tezkor amallar --}}
   <div class="xl:col-span-4">
-    <div class="p-card">
+    <div class="card-panel">
       <div class="dash-card-head"><div class="dash-card-title">Amallar</div></div>
       <div class="dash-card-body flex flex-col gap-2">
         <a href="{{ route('admin.admins.edit', $admin) }}" class="btn-p primary" style="justify-content:center">

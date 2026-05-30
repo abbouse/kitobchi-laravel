@@ -9,15 +9,15 @@
 @endphp
 
 <div class="space-y-6">
-  <x-a122.page-header back-href="{{ route('admin.dashboard') }}">
-    <x-slot name="heading">Logistika boshqaruvi</x-slot>
-    <x-slot name="meta">Hudud, narx, COD va qaysi joyga qaysi xizmat ishlashini markazdan boshqarish.</x-slot>
-    <x-slot name="actions">
-      <a href="#service-profiles" class="btn-p ghost">
-        <i class="bi bi-sliders"></i> Xizmat profillari
-      </a>
-    </x-slot>
-  </x-a122.page-header>
+  <x-admin.page-header
+    eyebrow="Delivery operations"
+    title="Logistika boshqaruvi"
+    subtitle="Hudud, narx, COD va qaysi joyga qaysi xizmat ishlashini markazdan boshqarish."
+  >
+    <a href="#service-profiles" class="btn btn-outline-secondary">
+      <i class="bi bi-sliders me-2"></i>Xizmat profillari
+    </a>
+  </x-admin.page-header>
 
   <section class="a122-section">
     <div class="a122-section-body">
@@ -69,8 +69,8 @@
             </a>
           @endif
         </form>
-        <div class="table-wrap">
-          <table class="tbl">
+        <div class="table-responsive kc-table-shell">
+          <table class="table data-table align-middle mb-0">
             <thead>
               <tr>
                 <th>Zona</th>
@@ -128,7 +128,7 @@
                   <td><span class="badge {{ $rule->is_active ? 'badge-success' : 'badge-muted' }}">{{ $rule->is_active ? 'Faol' : 'O‘chiq' }}</span></td>
                   <td class="text-right">
                     <div class="flex justify-end gap-1">
-                      <button class="btn-ghost rounded-xl p-2"
+                      <button class="btn btn-sm btn-outline-secondary"
                               onclick="openEditRule(
                                 {{ $rule->id }},
                                 @js($rule->zone_name),
@@ -155,7 +155,7 @@
                       <form method="POST" action="{{ route('admin.logistics.destroy', $rule) }}" onsubmit="return confirm('Qoidani o‘chirasizmi?')">
                         @csrf
                         @method('DELETE')
-                        <button class="btn-ghost rounded-xl p-2 text-rose-600"><i class="bi bi-trash"></i></button>
+                        <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
                       </form>
                     </div>
                   </td>
@@ -259,8 +259,8 @@
           @if($preview['offers']->isEmpty())
             <div class="text-sm text-rose-600">Bu nuqta uchun faol yetkazish qoidasi topilmadi.</div>
           @else
-            <div class="table-wrap">
-              <table class="tbl">
+            <div class="table-responsive kc-table-shell">
+              <table class="table data-table align-middle mb-0">
                 <thead><tr><th>Xizmat</th><th>Zona</th><th>Narx</th><th>COD</th><th>ETA</th></tr></thead>
                 <tbody>
                   @foreach($preview['offers'] as $offer)
@@ -291,8 +291,8 @@
     <div class="a122-section-body">
       <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
         <div class="xl:col-span-7">
-          <div class="table-wrap">
-            <table class="tbl">
+          <div class="table-responsive kc-table-shell">
+            <table class="table data-table align-middle mb-0">
               <thead>
                 <tr>
                   <th>Nomi</th>
@@ -313,7 +313,7 @@
                     <td><span class="badge {{ $service->status ? 'badge-success' : 'badge-muted' }}">{{ $service->status ? 'Faol' : 'O‘chiq' }}</span></td>
                     <td class="text-right">
                       <div class="flex justify-end gap-1">
-                        <button class="btn-ghost rounded-xl p-2"
+                        <button class="btn btn-sm btn-outline-secondary"
                                 onclick="openEditService(
                                   {{ $service->id }},
                                   @js($service->name),
@@ -330,7 +330,7 @@
                         <form method="POST" action="{{ route('admin.settings.delivery.destroy', $service) }}" onsubmit="return confirm('Xizmat profilini o‘chirasizmi?')">
                           @csrf
                           @method('DELETE')
-                          <button class="btn-ghost rounded-xl p-2 text-rose-600"><i class="bi bi-trash"></i></button>
+                          <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
                         </form>
                       </div>
                     </td>

@@ -73,11 +73,11 @@
 
 <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
     <div class="xl:col-span-8 space-y-4">
-        <div class="p-card">
-            <div class="p-card-header">
+        <div class="card-panel">
+            <div class="card-panel-header">
                 <div>
-                    <div class="p-card-title"><i class="bi bi-megaphone mr-2" style="color:var(--p-accent)"></i>Banner preview</div>
-                    <div class="p-card-sub">Reklama materiali va tavsifi</div>
+                    <div class="card-panel-title"><i class="bi bi-megaphone mr-2" style="color:var(--p-accent)"></i>Banner preview</div>
+                    <div class="card-panel-sub">Reklama materiali va tavsifi</div>
                 </div>
             </div>
 
@@ -100,11 +100,11 @@
             </div>
         </div>
 
-        <div class="p-card">
-            <div class="p-card-header">
+        <div class="card-panel">
+            <div class="card-panel-header">
                 <div>
-                    <div class="p-card-title"><i class="bi bi-box-seam mr-2" style="color:var(--p-info)"></i>Bog'langan obyekt</div>
-                    <div class="p-card-sub">Reklama bosilganda foydalanuvchi qayerga yo'naltiriladi</div>
+                    <div class="card-panel-title"><i class="bi bi-box-seam mr-2" style="color:var(--p-info)"></i>Bog'langan obyekt</div>
+                    <div class="card-panel-sub">Reklama bosilganda foydalanuvchi qayerga yo'naltiriladi</div>
                 </div>
             </div>
 
@@ -146,9 +146,9 @@
     </div>
 
     <div class="xl:col-span-4 space-y-4">
-        <div class="p-card">
-            <div class="p-card-header">
-                <div class="p-card-title"><i class="bi bi-activity mr-2" style="color:var(--p-success)"></i>Status overview</div>
+        <div class="card-panel">
+            <div class="card-panel-header">
+                <div class="card-panel-title"><i class="bi bi-activity mr-2" style="color:var(--p-success)"></i>Status overview</div>
             </div>
             <div class="space-y-3">
                 <div class="data-kv">
@@ -184,9 +184,9 @@
             </div>
         </div>
 
-        <div class="p-card">
-            <div class="p-card-header">
-                <div class="p-card-title"><i class="bi bi-shop mr-2" style="color:var(--p-warning)"></i>Seller</div>
+        <div class="card-panel">
+            <div class="card-panel-header">
+                <div class="card-panel-title"><i class="bi bi-shop mr-2" style="color:var(--p-warning)"></i>Seller</div>
             </div>
             <div class="space-y-3">
                 <div class="data-kv">
@@ -205,9 +205,9 @@
             </div>
         </div>
 
-        <div class="p-card">
-            <div class="p-card-header">
-                <div class="p-card-title"><i class="bi bi-clock-history mr-2" style="color:var(--p-muted)"></i>Timeline</div>
+        <div class="card-panel">
+            <div class="card-panel-header">
+                <div class="card-panel-title"><i class="bi bi-clock-history mr-2" style="color:var(--p-muted)"></i>Timeline</div>
             </div>
             <div class="space-y-3">
                 <?php $__currentLoopData = $timeline; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $item): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>

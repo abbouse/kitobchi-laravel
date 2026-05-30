@@ -10,15 +10,15 @@
         . '<div id="'.$id.'" class="hub-help-popover hidden max-w-xs rounded-2xl border border-[var(--p-border)] bg-white px-3 py-2 text-xs leading-5 text-[var(--p-text)] shadow-2xl">'.$text.'</div>';
     };
   @endphp
-  <x-a122.page-header back-href="{{ route('admin.dashboard') }}">
-    <x-slot name="heading">Hublar</x-slot>
-    <x-slot name="meta">Yig‘ish markazlari, first mile, last mile va postal handoff markazlarini shu yerdan boshqaramiz.</x-slot>
-    <x-slot name="actions">
-      <a href="{{ route('hubdesk.login') }}" target="_blank" class="btn-p ghost">
-        <i class="bi bi-printer"></i> Hub desk / print
-      </a>
-    </x-slot>
-  </x-a122.page-header>
+  <x-admin.page-header
+    eyebrow="Fulfillment"
+    title="Hublar"
+    subtitle="Yig‘ish markazlari, first mile, last mile va postal handoff markazlarini shu yerdan boshqaramiz."
+  >
+    <a href="{{ route('hubdesk.login') }}" target="_blank" class="btn btn-outline-secondary">
+      <i class="bi bi-printer me-2"></i>Hub desk / print
+    </a>
+  </x-admin.page-header>
 
   <section class="a122-section">
     <div class="a122-section-body">
@@ -87,8 +87,8 @@
         </div>
       </div>
       <div class="a122-section-body">
-        <div class="table-wrap">
-          <table class="tbl">
+        <div class="table-responsive kc-table-shell">
+          <table class="table data-table align-middle mb-0">
             <thead>
               <tr>
                 <th>Hub</th>
@@ -136,7 +136,7 @@
                   </td>
                   <td class="text-right">
                     <div class="flex justify-end gap-1">
-                      <button class="btn-ghost rounded-xl p-2"
+                      <button class="btn btn-sm btn-outline-secondary"
                         onclick="openEditHub(
                           {{ $hub->id }},
                           @js($hub->name),
@@ -160,7 +160,7 @@
                       <form method="POST" action="{{ route('admin.hubs.destroy', $hub) }}" onsubmit="return confirm('Hub o‘chiriladimi?')">
                         @csrf
                         @method('DELETE')
-                        <button class="btn-ghost rounded-xl p-2 text-rose-600"><i class="bi bi-trash"></i></button>
+                        <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
                       </form>
                     </div>
                   </td>
@@ -264,8 +264,8 @@
         </div>
       </div>
       <div class="a122-section-body">
-        <div class="table-wrap">
-          <table class="tbl">
+        <div class="table-responsive kc-table-shell">
+          <table class="table data-table align-middle mb-0">
             <thead>
               <tr>
                 <th>F.I.SH</th>
@@ -306,7 +306,7 @@
                   </td>
                   <td class="text-right">
                     <div class="flex justify-end gap-2">
-                      <button type="button" class="btn-ghost rounded-xl px-3 py-2 text-sm" onclick="openEditStaff(
+                      <button type="button" class="btn btn-sm btn-outline-secondary" onclick="openEditStaff(
                         {{ $staffMember->id }},
                         {{ $staffMember->hub_id }},
                         @js($staffMember->full_name),
@@ -319,7 +319,7 @@
                       <form method="POST" action="{{ route('admin.hubs.staff.toggle', $staffMember) }}">
                         @csrf
                         @method('PATCH')
-                        <button class="btn-ghost rounded-xl px-3 py-2 text-sm {{ $staffMember->is_active ? 'text-rose-600' : 'text-emerald-700' }}">
+                        <button class="btn btn-sm {{ $staffMember->is_active ? 'btn-outline-danger' : 'btn-outline-success' }}">
                           {{ $staffMember->is_active ? 'O‘chirish' : 'Faollashtirish' }}
                         </button>
                       </form>
@@ -344,7 +344,7 @@
         <div class="text-lg font-semibold text-slate-900">Hub staffni tahrirlash</div>
         <div class="text-sm text-slate-500">Rol, hub va print access’ni shu yerdan boshqaramiz.</div>
       </div>
-      <button type="button" class="btn-ghost rounded-xl p-2" onclick="closeEditStaff()"><i class="bi bi-x-lg"></i></button>
+      <button type="button" class="btn btn-sm btn-outline-secondary" onclick="closeEditStaff()"><i class="bi bi-x-lg"></i></button>
     </div>
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-0">
       <form id="editStaffForm" method="POST" class="grid grid-cols-1 gap-3 px-6 py-5 border-b xl:border-b-0 xl:border-r border-slate-100">
@@ -406,7 +406,7 @@
         <div class="text-lg font-semibold text-slate-900">Hubni tahrirlash</div>
         <div class="text-sm text-slate-500">Fulfillment markazi sozlamalari</div>
       </div>
-      <button type="button" class="btn-ghost rounded-xl p-2" onclick="closeEditHub()"><i class="bi bi-x-lg"></i></button>
+      <button type="button" class="btn btn-sm btn-outline-secondary" onclick="closeEditHub()"><i class="bi bi-x-lg"></i></button>
     </div>
     <form id="editHubForm" method="POST" class="grid grid-cols-1 gap-3 px-6 py-5">
       @csrf

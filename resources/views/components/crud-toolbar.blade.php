@@ -11,15 +11,15 @@
   'searchPlaceholder'  => 'Qidirish...',
 ])
 
-<div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4">
+<div class="card-panel p-3 d-flex flex-column flex-lg-row align-items-lg-center justify-content-lg-between gap-3 mb-4">
   <div>
-    <h2 class="text-xl font-bold tracking-tight">{{ $title }}</h2>
-    <p class="text-xs text-gray-500 mt-0.5" x-text="filtered.length + ' ta yozuv topildi'"></p>
+    <h2 class="card-panel-title mb-1">{{ $title }}</h2>
+    <p class="card-panel-sub mb-0" x-text="filtered.length + ' ta yozuv topildi'"></p>
   </div>
 
-  <div class="flex flex-wrap items-center gap-2">
+  <div class="d-flex flex-wrap align-items-center gap-2">
     {{-- Search --}}
-    <div class="relative flex-1 min-w-[180px]">
+    <div class="position-relative flex-grow-1" style="min-width:180px;">
       <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
       <input x-model="search" type="text" placeholder="{{ $searchPlaceholder }}"
         class="input !pl-9 !py-2 w-full">
@@ -75,23 +75,23 @@
 </div>
 
 {{-- Filter panel (collapsible) --}}
-<div x-show="filterOpen" x-transition x-cloak class="card p-4 mb-4">
+<div x-show="filterOpen" x-transition x-cloak class="card-panel p-4 mb-4">
   {{ $slot }}
 </div>
 
 {{-- ===== Import modal ===== --}}
 <div x-show="importOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
   <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="importOpen = false"></div>
-  <div class="relative card w-full max-w-md p-6" x-transition>
+  <div class="relative card-panel w-full max-w-md p-4" x-transition>
     <div class="flex items-center justify-between mb-4">
-      <h3 class="font-bold text-lg flex items-center gap-2">
+      <h3 class="card-panel-title d-flex align-items-center gap-2 mb-0">
         <i data-lucide="upload" class="w-5 h-5 text-emerald-500"></i> Ma'lumot import qilish
       </h3>
-      <button @click="importOpen = false" class="btn-ghost p-1.5 rounded-lg">
+      <button @click="importOpen = false" class="btn btn-outline-secondary p-1.5 rounded-lg">
         <i data-lucide="x" class="w-4 h-4"></i>
       </button>
     </div>
-    <p class="text-sm text-gray-500 mb-4">CSV, Excel (.xlsx) yoki JSON formatdagi faylni tanlang.</p>
+    <p class="card-panel-sub mb-4">CSV, Excel (.xlsx) yoki JSON formatdagi faylni tanlang.</p>
     <label class="block border-2 border-dashed border-gray-300 dark:border-white/10 rounded-xl p-8 text-center cursor-pointer hover:border-emerald-500 transition">
       <input type="file" class="hidden" accept=".csv,.xlsx,.json">
       <i data-lucide="cloud-upload" class="w-10 h-10 text-gray-400 mx-auto mb-2"></i>
@@ -110,7 +110,7 @@
 {{-- ===== Delete confirm modal ===== --}}
 <div x-show="deleteOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
   <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="deleteOpen = false"></div>
-  <div class="relative card w-full max-w-sm p-6" x-transition>
+  <div class="relative card-panel w-full max-w-sm p-4" x-transition>
     <div class="w-12 h-12 rounded-full bg-rose-100 dark:bg-rose-500/10 flex items-center justify-center mx-auto mb-3">
       <i data-lucide="alert-triangle" class="w-6 h-6 text-rose-600"></i>
     </div>

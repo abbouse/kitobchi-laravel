@@ -496,7 +496,7 @@ unset($__errorArgs, $__bag); ?>
   <div class="xl:col-span-4">
 
     
-    <div class="p-card mb-3 fade-up">
+    <div class="card-panel mb-3 fade-up">
       <div class="dash-card-head"><div class="dash-card-title">Ma'lumotlar</div></div>
       <div class="dash-card-body">
         <?php $__currentLoopData = [
@@ -517,7 +517,7 @@ unset($__errorArgs, $__bag); ?>
     </div>
 
     
-    <div class="p-card mb-3 fade-up">
+    <div class="card-panel mb-3 fade-up">
       <div class="dash-card-head">
         <div class="dash-card-title">
           <i class="bi bi-heart-fill mr-1" style="color:var(--p-danger)"></i> Like bosganlar
@@ -572,7 +572,7 @@ unset($__errorArgs, $__bag); ?>
     </div>
 
     
-    <div class="p-card fade-up">
+    <div class="card-panel fade-up">
       <div class="dash-card-head">
         <div class="dash-card-title">
           <i class="bi bi-repeat mr-1" style="color:var(--p-info)"></i> Repost qilganlar

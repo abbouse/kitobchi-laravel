@@ -5,7 +5,7 @@
 
 @section('content')
 <div class="max-w-2xl">
-  <div class="card p-6">
+  <div class="card-panel p-6">
     <form method="POST" action="{{ $isEdit ? route('admin.stationery-categories.update', $stationeryCategory) : route('admin.stationery-categories.store') }}">
       @csrf
       @if($isEdit) @method('PUT') @endif

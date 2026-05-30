@@ -35,13 +35,13 @@
     <?php echo $__env->make('a122.api-clients._form', compact('apiClient'), array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
   </form>
 
-  <section class="p-card fade-up">
+  <section class="card-panel fade-up">
     <div class="dash-card-head">
       <div class="dash-card-title">So‘nggi audit loglar</div>
     </div>
 
     <div class="table-responsive kc-twrap">
-      <table class="p-table">
+      <table class="table data-table align-middle mb-0">
         <thead>
           <tr>
             <th>Vaqt</th>

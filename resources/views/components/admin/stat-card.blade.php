@@ -17,13 +17,12 @@
   ][$tone] ?? ['bg' => 'var(--kc-primary-soft)', 'color' => 'var(--kc-primary)'];
 @endphp
 
-<div {{ $attributes->merge(['class' => 'card a122-stat-card border-0 h-100 overflow-hidden']) }}>
-  <div class="card-body p-4 p-xl-4">
+<div {{ $attributes->merge(['class' => 'card-panel a122-stat-card h-100 overflow-hidden']) }}>
+  <div class="p-4 p-xl-4">
     <div class="d-flex align-items-start justify-content-between gap-3">
       <div class="a122-stat-card__icon d-inline-flex align-items-center justify-content-center flex-shrink-0" style="background:{{ $toneMap['bg'] }};color:{{ $toneMap['color'] }}">
         <i class="bi bi-{{ $icon }}"></i>
       </div>
-      <div class="a122-stat-card__tag">Overview</div>
     </div>
     <div class="a122-stat-card__label mt-4">{{ $label }}</div>
     <div class="a122-stat-card__value">{!! $value !!}</div>

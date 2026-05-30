@@ -33,8 +33,8 @@
 
   
   <div class="xl:col-span-3">
-    <div class="p-card mb-3 fade-up">
-      <div class="p-card-header"><div class="p-card-title">Foydalanuvchi</div></div>
+    <div class="card-panel mb-3 fade-up">
+      <div class="card-panel-header"><div class="card-panel-title">Foydalanuvchi</div></div>
       <div style="padding:14px 18px">
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
           <div style="width:46px;height:46px;border-radius:50%;overflow:hidden;flex-shrink:0;
@@ -66,8 +66,8 @@
       </div>
     </div>
 
-    <div class="p-card fade-up">
-      <div class="p-card-header"><div class="p-card-title">Statistika</div></div>
+    <div class="card-panel fade-up">
+      <div class="card-panel-header"><div class="card-panel-title">Statistika</div></div>
       <div style="padding:0 18px 14px">
         <div style="display:flex;justify-content:space-between;
                     padding:8px 0;border-bottom:1px solid var(--p-border)">
@@ -90,9 +90,9 @@
 
   
   <div class="xl:col-span-9">
-    <div class="p-card fade-up">
-      <div class="p-card-header">
-        <div class="p-card-title">
+    <div class="card-panel fade-up">
+      <div class="card-panel-header">
+        <div class="card-panel-title">
           <i class="bi bi-robot mr-1" style="color:var(--p-accent)"></i>
           AI suhbat tarixi
         </div>

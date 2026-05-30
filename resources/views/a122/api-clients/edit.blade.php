@@ -18,13 +18,13 @@
     @include('a122.api-clients._form', compact('apiClient'))
   </form>
 
-  <section class="p-card fade-up">
+  <section class="card-panel fade-up">
     <div class="dash-card-head">
       <div class="dash-card-title">So‘nggi audit loglar</div>
     </div>
 
     <div class="table-responsive kc-twrap">
-      <table class="p-table">
+      <table class="table data-table align-middle mb-0">
         <thead>
           <tr>
             <th>Vaqt</th>

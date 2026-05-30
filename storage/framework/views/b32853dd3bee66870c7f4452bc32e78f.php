@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="uz" class="kc-panel-root">
+<html lang="uz" class="template-admin-root">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -31,23 +31,23 @@
   <div
     id="a122-shell"
     data-sidebar-shell
-    class="kc-shell d-flex sidebar-expanded">
+    class="app-shell kc-shell d-flex sidebar-expanded">
     <?php echo $__env->make('a122.partials.sidebar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
-    <div class="kc-main flex-grow-1 d-flex flex-column">
+    <div class="main-wrap kc-main flex-grow-1 d-flex flex-column">
       <?php echo $__env->make('a122.partials.topbar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
       <div class="kc-main__viewport flex-grow-1 d-flex flex-column">
-        <main class="kc-content flex-grow-1">
+        <main class="content kc-content flex-grow-1">
           <div class="container-fluid px-3 px-lg-4 px-xxl-5">
             <div class="mx-auto kc-shell-width">
               <?php echo $__env->yieldContent('content'); ?>
             </div>
           </div>
         </main>
-        <footer class="kc-footer border-top bg-white bg-opacity-75">
+        <footer class="kc-footer border-top">
           <div class="container-fluid px-3 px-lg-4 px-xxl-5 py-3">
             <div class="mx-auto kc-shell-width d-flex flex-wrap align-items-center justify-content-between gap-2 small text-secondary">
               <span>© <?php echo e(date('Y')); ?> Kitobchi Admin</span>
-              <span>Operational dashboard workspace</span>
+              <span>Admin workspace</span>
             </div>
           </div>
         </footer>

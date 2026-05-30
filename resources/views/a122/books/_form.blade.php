@@ -25,7 +25,7 @@
   @endif
 
   <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
-    <section class="card p-5 xl:col-span-8">
+    <section class="card-panel p-5 xl:col-span-8">
       <h3 class="text-lg font-black mb-4">Asosiy ma’lumotlar</h3>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div><label class="p-form-label">Nomi</label><input name="name" class="p-form-control" required value="{{ $value('name') }}"></div>
@@ -51,7 +51,7 @@
       </div>
     </section>
 
-    <section class="card p-5 xl:col-span-4">
+    <section class="card-panel p-5 xl:col-span-4">
       <h3 class="text-lg font-black mb-4">Savdo va visibility</h3>
       <div class="space-y-4">
         <div><label class="p-form-label">Narx</label><input name="price" type="number" step="0.01" class="p-form-control" required value="{{ $value('price') }}"></div>
@@ -66,7 +66,7 @@
     </section>
   </div>
 
-  <section class="card p-5">
+  <section class="card-panel p-5">
     <h3 class="text-lg font-black mb-4">Rasmlar</h3>
     <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
       <div class="xl:col-span-8">
@@ -82,7 +82,7 @@
   </section>
 
   <div class="sticky bottom-4 z-20">
-    <div class="card p-4 flex items-center justify-end gap-2 shadow-[var(--p-shadow)]">
+    <div class="card-panel p-4 flex items-center justify-end gap-2 shadow-[var(--p-shadow)]">
       <a href="{{ $cancelHref }}" class="btn-p ghost">Bekor qilish</a>
       <button class="btn-p primary"><i class="bi bi-check2-circle"></i> Saqlash</button>
     </div>

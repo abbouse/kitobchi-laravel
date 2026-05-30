@@ -35,7 +35,7 @@
     ['Yakunlandi',  $counts['completed'],        'info',    'bi-flag'],
   ] as [$l,$v,$c,$i])
   <div class="">
-    <div class="p-card flex items-center gap-3" style="padding:14px">
+    <div class="card-panel flex items-center gap-3" style="padding:14px">
       <div style="width:36px;height:36px;border-radius:9px;flex-shrink:0;font-size:16px;
                   background:var(--p-{{ $c }}-d,var(--p-elevated));color:var(--p-{{ $c }});
                   display:flex;align-items:center;justify-content:center">
@@ -82,9 +82,9 @@
 </form>
 
 {{-- Table --}}
-<div class="p-card fade-up">
+<div class="card-panel fade-up">
   <div class="table-responsive kc-twrap">
-    <table class="p-table">
+    <table class="table data-table align-middle mb-0">
       <thead>
         <tr>
           <th>#</th>

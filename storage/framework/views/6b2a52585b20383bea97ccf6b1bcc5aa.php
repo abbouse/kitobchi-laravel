@@ -24,7 +24,7 @@
   <?php echo $__env->yieldPushContent('styles'); ?>
   <?php echo $__env->yieldPushContent('head'); ?>
 </head>
-<body class="a122-login-body text-gray-900 dark:text-gray-100 antialiased">
+<body class="a122-login-body antialiased">
   <?php echo $__env->yieldContent('content'); ?>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
   <?php echo $__env->yieldPushContent('scripts'); ?>

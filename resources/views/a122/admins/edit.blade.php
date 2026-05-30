@@ -36,8 +36,8 @@ $currentPerms = $admin->permissions ?? [];
 
     {{-- ── Asosiy ─────────────────────── --}}
     <div class="xl:col-span-7 fade-up">
-      <div class="p-card">
-        <div class="p-card-title mb-3">Asosiy ma'lumotlar</div>
+      <div class="card-panel">
+        <div class="card-panel-title mb-3">Asosiy ma'lumotlar</div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div class="">
             <label class="p-form-label">Ism <span style="color:var(--p-danger)">*</span></label>
@@ -85,8 +85,8 @@ $currentPerms = $admin->permissions ?? [];
 
     {{-- ── Ruxsatlar ───────────────────── --}}
     <div class="xl:col-span-5 fade-up">
-      <div class="p-card" id="permissionsCard">
-        <div class="p-card-title mb-1">Ruxsatlar</div>
+      <div class="card-panel" id="permissionsCard">
+        <div class="card-panel-title mb-1">Ruxsatlar</div>
         <div style="font-size:12px;color:var(--p-hint);margin-bottom:16px">
           Superadmin uchun avtomatik barcha ruxsatlar beriladi
         </div>
@@ -119,7 +119,7 @@ $currentPerms = $admin->permissions ?? [];
       </div>
 
       {{-- Holat --}}
-      <div class="p-card mt-3">
+      <div class="card-panel mt-3">
         <div class="flex items-center justify-between">
           <div>
             <div style="font-size:13px;font-weight:500;color:var(--p-text)">Aktiv</div>

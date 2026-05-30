@@ -29,7 +29,7 @@
     </section>
   @endif
 
-  <section class="p-card parser-hero">
+  <section class="card-panel parser-hero">
     <div class="d-flex flex-wrap align-items-start justify-content-between gap-3">
       <div>
         <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
@@ -40,8 +40,8 @@
             <span class="badge rounded-pill text-bg-light">So‘nggi sync: {{ \Illuminate\Support\Carbon::parse($stats['last_synced_at'])->format('d.m.Y H:i') }}</span>
           @endif
         </div>
-        <h1 class="p-page-title mb-2">book.uz katalog parseri</h1>
-        <p class="p-page-subtitle mb-0">Book.uz dagi barcha kitoblarni, stock yo‘qlari bilan birga ko‘rib chiqing. Rasmlar lokalga olinadi, mahsulotlar seller <strong>55</strong> nomidan bazaga qo‘shiladi. Parser sahifasi endi faqat bazadagi cache’ni ko‘rsatadi, haftalik sync alohida scheduler bilan yuradi.</p>
+        <h1 class="page-title mb-2">book.uz katalog parseri</h1>
+        <p class="page-subtitle mb-0">Book.uz dagi barcha kitoblarni, stock yo‘qlari bilan birga ko‘rib chiqing. Rasmlar lokalga olinadi, mahsulotlar seller <strong>55</strong> nomidan bazaga qo‘shiladi. Parser sahifasi endi faqat bazadagi cache’ni ko‘rsatadi, haftalik sync alohida scheduler bilan yuradi.</p>
       </div>
       <div class="d-flex flex-wrap gap-2">
         <a href="{{ route('admin.parsers.index') }}" class="btn btn-outline-secondary">
@@ -84,7 +84,7 @@
     </div>
   </div>
 
-  <section class="p-card">
+  <section class="card-panel">
     <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
       <div>
         <h2 class="h5 mb-1">Katalogni yangilash</h2>
@@ -113,7 +113,7 @@
     </form>
   </section>
 
-  <section class="p-card">
+  <section class="card-panel">
     <form method="GET" class="row g-3 align-items-end mb-4">
       <div class="col-12 col-lg-4">
         <label class="form-label">Qidiruv</label>
@@ -325,8 +325,8 @@
           @endforeach
         @else
           <div class="col-12">
-            <div class="p-empty-state">
-              <div class="p-empty-state__icon"><i class="bi bi-search"></i></div>
+            <div class="empty-state p-5 text-center">
+              <div class="mb-3 fs-2"><i class="bi bi-search"></i></div>
               <h3>Katalog topilmadi</h3>
               <p>Avval book.uz katalogini yangilang yoki filterlarni bo‘shating.</p>
             </div>
@@ -362,29 +362,29 @@
   }
   .parser-kpi {
     padding: 20px 22px;
-    background: #fff;
-    border: 1px solid rgba(148, 163, 184, 0.16);
+    background: var(--template-card);
+    border: 1px solid var(--template-border);
     box-shadow: 0 18px 48px rgba(15, 23, 42, 0.06);
   }
   .parser-kpi__label {
     font-size: .74rem;
     text-transform: uppercase;
     letter-spacing: .08em;
-    color: #64748b;
+    color: var(--template-muted);
     margin-bottom: 6px;
   }
   .parser-kpi__value {
     font-size: 1.6rem;
     font-weight: 800;
-    color: #0f172a;
+    color: var(--template-text);
   }
   .parser-item-card {
     display: grid;
     grid-template-columns: 168px minmax(0, 1fr);
     gap: 18px;
     padding: 18px;
-    background: #fff;
-    border: 1px solid rgba(148, 163, 184, 0.16);
+    background: var(--template-card);
+    border: 1px solid var(--template-border);
     box-shadow: 0 20px 54px rgba(15, 23, 42, 0.06);
     min-height: 100%;
   }
@@ -396,13 +396,13 @@
     aspect-ratio: 0.74;
     border-radius: 22px;
     object-fit: cover;
-    background: #f1f5f9;
-    border: 1px solid rgba(148, 163, 184, 0.16);
+    background: color-mix(in srgb, var(--template-card) 82%, var(--template-bg));
+    border: 1px solid var(--template-border);
   }
   .parser-item-card__image--placeholder {
     display: grid;
     place-items: center;
-    color: #94a3b8;
+    color: var(--template-muted);
     font-size: 2rem;
   }
   .parser-item-card__body {
@@ -420,10 +420,10 @@
   .parser-price-row__price {
     font-size: 1.2rem;
     font-weight: 800;
-    color: #0f172a;
+    color: var(--template-text);
   }
   .parser-price-row__meta {
-    color: #64748b;
+    color: var(--template-muted);
     font-size: .92rem;
   }
   .parser-meta-grid {
@@ -432,34 +432,34 @@
     gap: 10px 16px;
     padding: 14px 16px;
     border-radius: 20px;
-    background: #f8fafc;
-    border: 1px solid rgba(148, 163, 184, 0.14);
+    background: color-mix(in srgb, var(--template-card) 82%, var(--template-bg));
+    border: 1px solid var(--template-border);
   }
   .parser-meta-grid span {
     display: block;
     font-size: .74rem;
     text-transform: uppercase;
     letter-spacing: .08em;
-    color: #64748b;
+    color: var(--template-muted);
     margin-bottom: 3px;
   }
   .parser-meta-grid strong {
     display: block;
-    color: #0f172a;
+    color: var(--template-text);
     font-size: .95rem;
     font-weight: 700;
     word-break: break-word;
   }
   .parser-description {
     margin: 14px 0 0;
-    color: #475569;
+    color: var(--template-muted);
     line-height: 1.65;
   }
   .parser-tag-section {
     margin-top: 14px;
     padding: 14px 16px;
     border-radius: 18px;
-    background: #fffaf1;
+    background: color-mix(in srgb, #f59e0b 10%, var(--template-card));
     border: 1px solid rgba(245, 158, 11, 0.18);
   }
   .parser-tag-section__title {
@@ -500,18 +500,18 @@
     margin-top: 14px;
     padding: 14px 16px;
     border-radius: 18px;
-    background: #f8fafc;
-    border: 1px solid rgba(148, 163, 184, 0.14);
+    background: color-mix(in srgb, var(--template-card) 82%, var(--template-bg));
+    border: 1px solid var(--template-border);
   }
   .parser-match-note__title {
     font-size: .74rem;
     text-transform: uppercase;
     letter-spacing: .08em;
-    color: #64748b;
+    color: var(--template-muted);
     margin-bottom: 6px;
   }
   .parser-match-note__body {
-    color: #0f172a;
+    color: var(--template-text);
     line-height: 1.6;
     font-size: .95rem;
   }

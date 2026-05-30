@@ -5,7 +5,7 @@
 
 @section('content')
 <div class="max-w-3xl">
-  <div class="card p-6">
+  <div class="card-panel p-6">
     <form method="POST" action="{{ $isEdit ? route('admin.publishers.update', $publisher) : route('admin.publishers.store') }}" enctype="multipart/form-data">
       @csrf
       @if($isEdit) @method('PUT') @endif

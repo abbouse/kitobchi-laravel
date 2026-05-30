@@ -12,7 +12,7 @@
     </div>
 @endif
 
-<div class="p-card mb-4">
+<div class="card-panel mb-4">
     <div class="p-4 space-y-3">
         <div>
             <label class="p-label">Lavozim nomi *</label>

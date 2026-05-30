@@ -58,7 +58,7 @@
     <?php echo method_field('PUT'); ?>
 
     
-    <section data-courier-panel="main" class="card p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+    <section data-courier-panel="main" class="card-panel p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
             <label class="text-xs text-gray-500 mb-1 block">Ism <span class="text-red-500">*</span></label>
             <input name="first_name" class="input" required placeholder="Ism"
@@ -123,7 +123,7 @@
     </section>
 
     
-    <section data-courier-panel="transport" class="card p-5 grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
+    <section data-courier-panel="transport" class="card-panel p-5 grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
         <div class="md:col-span-2">
             <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1">Transport va to'lov ma'lumotlari</h3>
             <p class="text-[11px] text-gray-400">Kuryerning yetkazib berish vositasi va karta egasi haqida ma'lumotlar.</p>
@@ -248,7 +248,7 @@
     </section>
 
     
-    <section data-courier-panel="verification" class="card p-5 grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
+    <section data-courier-panel="verification" class="card-panel p-5 grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
         <div class="md:col-span-2">
             <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1">Verifikatsiya holati</h3>
             <p class="text-[11px] text-gray-400">Kuryer hujjatlarini ko'rib chiqib, tasdiqlash yoki rad etish.</p>
@@ -290,7 +290,7 @@
 </form>
 
 
-<section data-courier-panel="documents" class="card p-5 hidden mt-4">
+<section data-courier-panel="documents" class="card-panel p-5 hidden mt-4">
     <div class="mb-4 flex items-center justify-between flex-wrap gap-2">
         <div>
             <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-0.5">Hujjatlar</h3>

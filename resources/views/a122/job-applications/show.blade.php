@@ -62,7 +62,7 @@
                 ['Telegram', $careerApplication->telegram_username ? '@'.$careerApplication->telegram_username : '—', 'send'],
                 ['Holat', ($statuses[$careerApplication->status]['label'] ?? $careerApplication->status), 'badge-check'],
             ] as [$label, $value, $icon])
-                <div class="p-card">
+                <div class="card-panel">
                     <div class="flex items-center gap-3">
                         <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--p-soft)] text-[var(--p-accent)]">
                             <i data-lucide="{{ $icon }}" class="h-4.5 w-4.5"></i>
@@ -76,7 +76,7 @@
             @endforeach
         </div>
 
-        <div class="p-card">
+        <div class="card-panel">
             <div class="dash-card-head"><div class="dash-card-title">Nomzod</div></div>
             <div class="dash-card-body space-y-2 p-body-relaxed text-sm">
                 <div><span class="text-[var(--p-hint)]">Ism:</span> <strong>{{ $careerApplication->full_name }}</strong></div>
@@ -96,7 +96,7 @@
         </div>
 
         @if($careerApplication->cover_message)
-            <div class="p-card">
+            <div class="card-panel">
                 <div class="dash-card-head"><div class="dash-card-title">{{ $careerApplication->type === \App\Models\CareerApplication::TYPE_INQUIRY ? 'Murojaat matni' : 'Qisqa xat / izoh' }}</div></div>
                 <div class="dash-card-body">
                     <div class="p-quote-block">{{ $careerApplication->cover_message }}</div>
@@ -104,7 +104,7 @@
             </div>
         @endif
 
-        <div class="p-card">
+        <div class="card-panel">
             <div class="dash-card-head"><div class="dash-card-title">Xabarlar</div></div>
             <div class="dash-card-body space-y-3">
                 @foreach($careerApplication->messages as $msg)
@@ -124,7 +124,7 @@
             </div>
         </div>
 
-        <div class="p-card">
+        <div class="card-panel">
             <div class="dash-card-head"><div class="dash-card-title">Nomzodga email yuborish</div></div>
             <div class="dash-card-body">
                 <p class="mb-2 text-xs text-[var(--p-hint)]">Xabar <strong>{{ config('mail.from.address') }}</strong> manzilidan <strong>{{ $careerApplication->email }}</strong> ga yuboriladi (Reply-To: {{ config('mail.reply_to.address') }}).</p>
@@ -138,7 +138,7 @@
     </div>
 
     <div class="space-y-3">
-        <div class="p-card">
+        <div class="card-panel">
             <div class="dash-card-head"><div class="dash-card-title">Holat</div></div>
             <div class="dash-card-body">
                 @php $st = $statuses[$careerApplication->status] ?? ['label' => $careerApplication->status, 'class' => 'ob-p']; @endphp
@@ -157,7 +157,7 @@
         </div>
 
         @if($careerApplication->read_at)
-            <div class="p-card">
+            <div class="card-panel">
                 <div class="dash-card-head"><div class="dash-card-title">O‘qilgan</div></div>
                 <div class="dash-card-body text-xs text-[var(--p-hint)]">{{ $careerApplication->read_at->format('d.m.Y H:i') }}</div>
             </div>

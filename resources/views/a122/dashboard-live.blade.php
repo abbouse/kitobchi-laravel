@@ -1,981 +1,676 @@
 @extends('a122.layouts.monitor')
-@section('title', 'Live Monitor')
+@section('title', 'Live Command Center')
 
 @push('styles')
 <style>
-  .lm-page {
+  .fs-live {
     min-height: 100vh;
-    padding: 28px;
     background:
-      radial-gradient(circle at top left, rgba(32, 107, 196, 0.12), transparent 24%),
-      radial-gradient(circle at top right, rgba(16, 185, 129, 0.10), transparent 20%),
-      linear-gradient(180deg, #f4f7fb 0%, #eef3f9 100%);
+      radial-gradient(circle at 12% 0%, rgba(168, 85, 247, .16), transparent 28%),
+      radial-gradient(circle at 86% 12%, rgba(59, 130, 246, .14), transparent 26%),
+      #0f172a;
+    color: #e2e8f0;
   }
 
-  .lm-shell {
-    max-width: 1680px;
-    margin: 0 auto;
+  .fs-live__shell {
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
     gap: 18px;
+    padding: 20px;
   }
 
-  .lm-panel,
-  .lm-card,
-  .lm-pill-stat,
-  .lm-segment,
-  .lm-mini-action,
-  .lm-list-row {
-    border: 1px solid rgba(15, 23, 42, 0.07);
-    background: rgba(255, 255, 255, 0.94);
-    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
-  }
-
-  .lm-hero {
-    display: grid;
-    grid-template-columns: minmax(0, 1.35fr) minmax(360px, 0.8fr);
+  .fs-live__topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     gap: 18px;
-    padding: 22px;
-    border-radius: 28px;
-    border: 1px solid rgba(15, 23, 42, 0.06);
-    background:
-      radial-gradient(circle at top left, rgba(32, 107, 196, 0.16), transparent 30%),
-      radial-gradient(circle at 85% 10%, rgba(14, 165, 233, 0.12), transparent 20%),
-      linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.97));
-    box-shadow: 0 26px 60px rgba(15, 23, 42, 0.08);
+    padding-bottom: 18px;
+    border-bottom: 1px solid rgba(255,255,255,.08);
   }
 
-  .lm-kicker {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    min-height: 36px;
-    padding: 0 14px;
-    border-radius: 999px;
-    background: rgba(15, 23, 42, 0.05);
-    color: #64748b;
-    font-size: 12px;
-    font-weight: 800;
-    letter-spacing: .12em;
-    text-transform: uppercase;
-  }
-
-  .lm-kicker__dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 999px;
-    background: #22c55e;
-    box-shadow: 0 0 0 5px rgba(34, 197, 94, 0.12);
-  }
-
-  .lm-title {
-    margin-top: 16px;
-    font-size: clamp(1.8rem, 2vw, 2.5rem);
-    font-weight: 900;
-    line-height: 1.02;
-    letter-spacing: -0.05em;
-    color: #0f172a;
-  }
-
-  .lm-subtitle {
-    max-width: 56rem;
-    margin-top: 10px;
-    color: #64748b;
-    font-size: .95rem;
-    line-height: 1.7;
-  }
-
-  .lm-chip-row {
+  .fs-live__brand {
     display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 18px;
-  }
-
-  .lm-chip {
-    display: inline-flex;
     align-items: center;
-    gap: 9px;
-    min-height: 40px;
-    padding: 0 14px;
-    border-radius: 999px;
-    border: 1px solid rgba(15, 23, 42, 0.06);
-    background: rgba(255, 255, 255, 0.96);
-    color: #0f172a;
-    font-size: .82rem;
-    font-weight: 700;
-  }
-
-  .lm-chip i {
-    color: #206bc4;
-  }
-
-  .lm-hero-side {
-    display: flex;
-    flex-direction: column;
     gap: 14px;
-  }
-
-  .lm-status-box {
-    padding: 18px;
-    border-radius: 24px;
-    background:
-      radial-gradient(circle at top right, rgba(34, 197, 94, 0.18), transparent 30%),
-      linear-gradient(180deg, #0f172a 0%, #16243b 100%);
-    color: #fff;
-    box-shadow: 0 24px 50px rgba(15, 23, 42, 0.18);
-  }
-
-  .lm-status-box__label {
-    font-size: .72rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: .12em;
-    color: rgba(255,255,255,.66);
-  }
-
-  .lm-status-box__value {
-    margin-top: 10px;
-    font-size: 2.4rem;
-    font-weight: 900;
-    line-height: 1;
-    letter-spacing: -.08em;
-  }
-
-  .lm-status-box__sub {
-    margin-top: 8px;
-    color: rgba(255,255,255,.78);
-    font-size: .84rem;
-    line-height: 1.55;
-  }
-
-  .lm-segment {
-    display: flex;
-    gap: 8px;
-    padding: 6px;
-    border-radius: 18px;
-    overflow: auto;
-  }
-
-  .lm-segment button {
-    border: 0;
-    background: transparent;
-    color: #64748b;
-    min-height: 42px;
-    padding: 0 14px;
-    border-radius: 14px;
-    font-size: .82rem;
-    font-weight: 800;
-    white-space: nowrap;
-  }
-
-  .lm-segment button.is-active {
-    background: #0f172a;
-    color: #fff;
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,.05);
-  }
-
-  .lm-actions {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    gap: 10px;
-  }
-
-  .lm-mini-action {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    min-height: 42px;
-    padding: 0 16px;
-    border-radius: 999px;
-    color: #0f172a;
-    text-decoration: none;
-    font-size: .82rem;
-    font-weight: 800;
-    transition: transform .16s ease, background-color .16s ease, color .16s ease;
-  }
-
-  .lm-mini-action:hover {
-    transform: translateY(-1px);
-    color: #0f172a;
-    background: #fff;
-  }
-
-  .lm-mini-action--dark {
-    background: #0f172a;
-    color: #fff;
-  }
-
-  .lm-mini-action--dark:hover {
-    color: #fff;
-    background: #111827;
-  }
-
-  .lm-stat-grid {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 14px;
-  }
-
-  .lm-stat-card {
-    padding: 18px;
-    border-radius: 24px;
-    background: rgba(255,255,255,.95);
-    border: 1px solid rgba(15, 23, 42, 0.06);
-    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.05);
-  }
-
-  .lm-stat-card--accent {
-    background:
-      linear-gradient(180deg, rgba(32, 107, 196, 0.10), rgba(255,255,255,.96)),
-      rgba(255,255,255,.95);
-  }
-
-  .lm-stat-card__label {
-    color: #94a3b8;
-    font-size: .74rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: .1em;
-  }
-
-  .lm-stat-card__value {
-    margin-top: 8px;
-    font-size: 1.95rem;
-    font-weight: 900;
-    line-height: 1;
-    letter-spacing: -.06em;
-    color: #0f172a;
-  }
-
-  .lm-stat-card__sub {
-    margin-top: 6px;
-    color: #64748b;
-    font-size: .8rem;
-    line-height: 1.55;
-  }
-
-  .lm-board {
-    display: none;
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .lm-board.is-active {
-    display: flex;
-  }
-
-  .lm-board-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
-    gap: 16px;
-  }
-
-  .lm-card {
-    border-radius: 26px;
-    overflow: hidden;
-  }
-
-  .lm-card__head {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 14px;
-    padding: 18px 18px 14px;
-    border-bottom: 1px solid rgba(15, 23, 42, 0.06);
-  }
-
-  .lm-card__eyebrow {
-    color: #94a3b8;
-    font-size: .72rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: .1em;
-  }
-
-  .lm-card__title,
-  .lm-section__title {
-    margin-top: 4px;
-    color: #0f172a;
-    font-size: 1.05rem;
-    font-weight: 900;
-    letter-spacing: -.03em;
-  }
-
-  .lm-card__sub,
-  .lm-section__sub {
-    margin-top: 4px;
-    color: #64748b;
-    font-size: .8rem;
-    line-height: 1.55;
-  }
-
-  .lm-pulse-list {
-    display: grid;
-    gap: 12px;
-    padding: 14px;
-  }
-
-  .lm-pulse-card {
-    padding: 16px;
-    border-radius: 22px;
-    border: 1px solid rgba(15, 23, 42, 0.06);
-    background: linear-gradient(180deg, rgba(248,250,252,.98), rgba(255,255,255,.96));
-  }
-
-  .lm-pulse-card__top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-  }
-
-  .lm-pill {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 28px;
-    padding: 0 10px;
-    border-radius: 999px;
-    font-size: .72rem;
-    font-weight: 800;
-  }
-
-  .lm-pill--primary { background: rgba(32, 107, 196, 0.12); color: #0d5fd3; }
-  .lm-pill--success { background: rgba(25, 135, 84, 0.14); color: #146c43; }
-  .lm-pill--warning { background: rgba(255, 193, 7, 0.18); color: #9a6700; }
-  .lm-pill--dark { background: rgba(15, 23, 42, 0.08); color: #0f172a; }
-
-  .lm-pulse-card__count {
-    font-size: 1.55rem;
-    font-weight: 900;
-    color: #0f172a;
-    letter-spacing: -.05em;
-  }
-
-  .lm-pulse-card__title {
-    margin-top: 10px;
-    color: #0f172a;
-    font-size: .9rem;
-    font-weight: 800;
-  }
-
-  .lm-pulse-card__metrics {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 10px;
-  }
-
-  .lm-pulse-card__metric {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    min-height: 30px;
-    padding: 0 10px;
-    border-radius: 999px;
-    background: rgba(15, 23, 42, 0.05);
-    color: #64748b;
-    font-size: .74rem;
-    font-weight: 700;
-  }
-
-  .lm-pulse-card__metric strong,
-  .lm-pulse-card__footer strong {
-    color: #0f172a;
-  }
-
-  .lm-pulse-card__footer {
-    margin-top: 10px;
-    color: #64748b;
-    font-size: .78rem;
-  }
-
-  .lm-side-stack {
-    display: grid;
-    gap: 14px;
-    padding: 14px;
-  }
-
-  .lm-pill-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-  }
-
-  .lm-pill-stat {
-    padding: 14px;
-    border-radius: 18px;
-  }
-
-  .lm-pill-stat__label {
-    color: #94a3b8;
-    font-size: .72rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: .08em;
-  }
-
-  .lm-pill-stat__value {
-    margin-top: 8px;
-    color: #0f172a;
-    font-size: 1.3rem;
-    font-weight: 900;
-    letter-spacing: -.04em;
-  }
-
-  .lm-pill-stat__sub {
-    margin-top: 5px;
-    color: #64748b;
-    font-size: .76rem;
-    line-height: 1.45;
-  }
-
-  .lm-section {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 14px;
-    flex-wrap: wrap;
-  }
-
-  .lm-inline-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-
-  .lm-inline-grid .lm-pill-stat {
-    min-width: 148px;
-  }
-
-  .lm-list {
-    padding: 10px;
-    display: grid;
-    gap: 8px;
-  }
-
-  .lm-list-row {
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    gap: 12px;
-    align-items: center;
-    padding: 12px;
-    border-radius: 20px;
-    transition: transform .16s ease, background-color .16s ease;
-  }
-
-  .lm-list-row:hover {
-    transform: translateY(-1px);
-    background: #fff;
-  }
-
-  .lm-avatar {
-    width: 44px;
-    height: 44px;
-    border-radius: 15px;
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, #0f172a, #475569);
-    color: #fff;
-    font-weight: 900;
-  }
-
-  .lm-avatar img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  .lm-row__title {
-    color: #0f172a;
-    font-size: .9rem;
-    font-weight: 800;
-  }
-
-  .lm-row__sub {
-    margin-top: 2px;
-    color: #64748b;
-    font-size: .77rem;
-    line-height: 1.45;
-  }
-
-  .lm-row__right {
-    display: inline-flex;
-    align-items: center;
-    justify-content: flex-end;
-    flex-wrap: wrap;
-    gap: 8px;
     min-width: 0;
   }
 
-  .lm-amount {
-    color: #0f172a;
-    font-size: .82rem;
+  .fs-live__mark {
+    width: 52px;
+    height: 52px;
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #4f46e5, #ec4899);
+    color: #fff;
+    font-size: 24px;
+    box-shadow: 0 0 20px rgba(236,72,153,.35);
+  }
+
+  .fs-live__title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .fs-live__title {
+    margin: 0;
+    color: #f8fafc;
+    font-size: clamp(1.35rem, 2vw, 2rem);
+    font-weight: 900;
+    letter-spacing: 0;
+  }
+
+  .fs-live__subtitle {
+    margin-top: 4px;
+    color: #94a3b8;
+    font-size: 13px;
+  }
+
+  .fs-live__controls {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .fs-live .card-panel {
+    border: 1px solid #334155 !important;
+    border-radius: 14px !important;
+    background: #1e293b !important;
+    color: #e2e8f0;
+    box-shadow: none !important;
+  }
+
+  .fs-live__metric {
+    min-height: 150px;
+    border-left: 4px solid var(--metric-color, #a855f7) !important;
+    background: linear-gradient(180deg, rgba(30,41,59,.72), rgba(15,23,42,.72)) !important;
+  }
+
+  .fs-live__metric-label {
+    color: #94a3b8;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .fs-live__metric-value {
+    margin-top: 8px;
+    font-size: clamp(1.55rem, 2.6vw, 2.35rem);
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: 0;
+    color: #f8fafc;
+  }
+
+  .fs-live__metric-sub {
+    margin-top: 8px;
+    color: #6ee7b7;
+    font-size: 12px;
+  }
+
+  .fs-live__panel-title {
+    color: #f8fafc;
+    font-size: 16px;
+    font-weight: 800;
+  }
+
+  .fs-live__panel-sub {
+    color: #94a3b8;
+    font-size: 12px;
+  }
+
+  .fs-live__map {
+    position: relative;
+    width: 100%;
+    min-height: 245px;
+    margin: 10px 0;
+  }
+
+  .fs-live__regions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255,255,255,.06);
+  }
+
+  .fs-live__region {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #cbd5e1;
+    font-size: 11px;
+  }
+
+  .fs-live__region-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--region-color);
+  }
+
+  .fs-live__sparkline {
+    width: 100%;
+    height: 235px;
+    display: block;
+  }
+
+  .fs-live__feed {
+    flex: 1;
+    max-height: 320px;
+    overflow: auto;
+    padding-right: 4px;
+  }
+
+  .fs-live__feed-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255,255,255,.06);
+  }
+
+  .fs-live__feed-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #475569;
+    flex: 0 0 auto;
+  }
+
+  .fs-live__feed-row:first-child .fs-live__feed-dot {
+    background: #10b981;
+    box-shadow: 0 0 0 5px rgba(16,185,129,.12);
+  }
+
+  .fs-live__feed-main {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .fs-live__feed-title {
+    overflow: hidden;
+    color: #e2e8f0;
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .fs-live__feed-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    color: #94a3b8;
+    font-size: 10px;
+  }
+
+  .fs-live__feed-amount {
+    color: #6ee7b7;
+    font-size: 12px;
     font-weight: 800;
     white-space: nowrap;
   }
 
-  .lm-link {
-    display: inline-flex;
+  .fs-live__mini-row {
+    display: flex;
     align-items: center;
-    justify-content: center;
-    min-height: 32px;
-    padding: 0 12px;
-    border-radius: 999px;
-    border: 1px solid rgba(15, 23, 42, 0.08);
-    color: #0f172a;
-    text-decoration: none;
-    font-size: .74rem;
-    font-weight: 800;
-    background: rgba(255,255,255,.96);
+    gap: 10px;
+    padding: 10px;
+    border: 1px solid rgba(255,255,255,.06);
+    border-radius: 10px;
+    background: rgba(255,255,255,.025);
   }
 
-  .lm-link:hover {
-    color: #0f172a;
-    background: #fff;
+  .fs-live__rank {
+    width: 26px;
+    height: 26px;
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    border-radius: 7px;
+    background: #334155;
+    color: #cbd5e1;
+    font-size: 12px;
+    font-weight: 900;
   }
 
-  .lm-empty {
-    padding: 26px 18px 30px;
-    color: #64748b;
-    text-align: center;
-    font-size: .84rem;
+  .fs-live__rank.is-top {
+    background: #fbbf24;
+    color: #fff;
   }
 
-  @media (max-width: 1280px) {
-    .lm-hero,
-    .lm-board-grid {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  @media (max-width: 960px) {
-    .lm-page {
-      padding: 16px;
-    }
-
-    .lm-stat-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
-
-  @media (max-width: 640px) {
-    .lm-page {
-      padding: 12px;
-    }
-
-    .lm-hero {
-      padding: 16px;
-      border-radius: 22px;
-    }
-
-    .lm-stat-grid,
-    .lm-pill-grid {
-      grid-template-columns: 1fr;
-    }
-
-    .lm-list-row {
-      grid-template-columns: auto 1fr;
-    }
-
-    .lm-row__right {
-      grid-column: 1 / -1;
-      justify-content: flex-start;
-      padding-left: 56px;
-    }
+  @media (max-width: 900px) {
+    .fs-live__shell { padding: 14px; }
+    .fs-live__topbar { align-items: flex-start; flex-direction: column; }
+    .fs-live__controls { justify-content: flex-start; }
   }
 </style>
 @endpush
 
 @section('content')
-<div class="lm-page"
-     x-data="liveMonitor(@js($snapshot), '{{ route('admin.dashboard.live.data') }}')"
-     x-init="init()">
-  <div class="lm-shell">
-    <section class="lm-hero">
-      <div>
-        <div class="lm-kicker">
-          <span class="lm-kicker__dot"></span>
-          Live operations stream
-        </div>
-        <div class="lm-title">Buyurtmalar, sellerlar, kuryerlar va user oqimi bitta monitor ichida.</div>
-        <div class="lm-subtitle">Bu sahifa operatsion nazorat uchun. Sonlar tez o‘qilishi, statuslar bir xil usulda ajralishi va har bir blok kutilayotgan navbatni ko‘rsatishi kerak.</div>
+@php
+  $snapshotPayload = [
+    'generated_at' => $snapshot['generated_at'] ?? now()->format('H:i:s'),
+    'online_users_count' => $snapshot['online_users_count'] ?? 0,
+    'main_counts' => $snapshot['main_counts'] ?? [],
+    'seller_counts' => $snapshot['seller_counts'] ?? [],
+    'courier_counts' => $snapshot['courier_counts'] ?? [],
+    'recent_orders' => $snapshot['recent_orders'] ?? [],
+    'recent_seller_orders' => $snapshot['recent_seller_orders'] ?? [],
+    'recent_courier_orders' => $snapshot['recent_courier_orders'] ?? [],
+  ];
+@endphp
 
-        <div class="lm-chip-row">
-          <div class="lm-chip"><i class="bi bi-arrow-repeat"></i><span>Yangilandi: <strong x-text="snapshot.generated_at"></strong></span></div>
-          <div class="lm-chip"><i class="bi bi-broadcast-pin"></i><span><strong x-text="snapshot.online_users_count"></strong> online user</span></div>
-          <div class="lm-chip"><i class="bi bi-bag-check"></i><span><strong x-text="snapshot.main_counts.all"></strong> jami order</span></div>
-        </div>
-      </div>
-
-      <div class="lm-hero-side">
-        <div class="lm-status-box">
-          <div class="lm-status-box__label">Hozir nazoratda</div>
-          <div class="lm-status-box__value" x-text="snapshot.main_counts.new + snapshot.main_counts.packing + snapshot.main_counts.onway"></div>
-          <div class="lm-status-box__sub">Yangi, qadoqlanayotgan va yo‘ldagi asosiy buyurtmalar soni. Bu blok operatsion navbatning “qizib turgan” qismini ko‘rsatadi.</div>
-        </div>
-
-        <div class="lm-segment">
-          <button type="button" :class="{ 'is-active': tab === 'overview' }" @click="switchTab('overview')">Umumiy</button>
-          <button type="button" :class="{ 'is-active': tab === 'orders' }" @click="switchTab('orders')">Buyurtmalar</button>
-          <button type="button" :class="{ 'is-active': tab === 'seller' }" @click="switchTab('seller')">Sellerlar</button>
-          <button type="button" :class="{ 'is-active': tab === 'courier' }" @click="switchTab('courier')">Kuryerlar</button>
-          <button type="button" :class="{ 'is-active': tab === 'users' }" @click="switchTab('users')">Online userlar</button>
-        </div>
-
-        <div class="lm-actions">
-          <button type="button" class="lm-mini-action" @click="toggleFullscreen()">
-            <i class="bi bi-fullscreen"></i><span>Full screen</span>
-          </button>
-          <a href="{{ route('admin.dashboard') }}" class="lm-mini-action lm-mini-action--dark">
-            <i class="bi bi-arrow-left"></i><span>Asosiy dashboard</span>
-          </a>
+<div class="fs-live" data-live-dashboard data-endpoint="{{ route('admin.dashboard.live.data') }}">
+  <div class="fs-live__shell">
+    <div class="fs-live__topbar">
+      <div class="fs-live__brand">
+        <div class="fs-live__mark"><i class="bi bi-broadcast"></i></div>
+        <div>
+          <div class="fs-live__title-row">
+            <h1 class="fs-live__title">Live Command Center</h1>
+            <span class="chip chip-success" data-live-status><span class="live-pulse"></span>System active</span>
+          </div>
+          <div class="fs-live__subtitle">Kitobchi real vaqt monitoringi · buyurtma, seller, kuryer va online mijozlar</div>
         </div>
       </div>
-    </section>
 
-    <div class="lm-stat-grid">
-      <div class="lm-stat-card lm-stat-card--accent">
-        <div class="lm-stat-card__label">Asosiy buyurtmalar</div>
-        <div class="lm-stat-card__value" x-text="snapshot.main_counts.all"></div>
-        <div class="lm-stat-card__sub">Userlar bergan barcha buyurtmalar.</div>
-      </div>
-      <div class="lm-stat-card">
-        <div class="lm-stat-card__label">Seller orderlar</div>
-        <div class="lm-stat-card__value" x-text="snapshot.seller_counts.all"></div>
-        <div class="lm-stat-card__sub">Do‘kon tomonga tushgan ichki oqim.</div>
-      </div>
-      <div class="lm-stat-card">
-        <div class="lm-stat-card__label">Courier orderlar</div>
-        <div class="lm-stat-card__value" x-text="snapshot.courier_counts.all"></div>
-        <div class="lm-stat-card__sub">Yetkazish nazoratidagi yozuvlar.</div>
-      </div>
-      <div class="lm-stat-card">
-        <div class="lm-stat-card__label">Mijoz qabul qildi</div>
-        <div class="lm-stat-card__value" x-text="snapshot.main_counts.done"></div>
-        <div class="lm-stat-card__sub">Yakunlangan buyurtmalar soni.</div>
+      <div class="fs-live__controls">
+        <div class="btn-group btn-group-sm" role="group" aria-label="Polling speed">
+          <button type="button" class="btn btn-primary" data-live-speed="8000">x1</button>
+          <button type="button" class="btn btn-outline-light" data-live-speed="4000">x2</button>
+          <button type="button" class="btn btn-outline-light" data-live-speed="1800">x5</button>
+        </div>
+        <button type="button" class="btn btn-outline-light btn-sm" data-live-pause>
+          <i class="bi bi-pause-fill me-1"></i><span>Pauza</span>
+        </button>
+        <div class="px-3 py-1 rounded border border-secondary-subtle text-light small">
+          <i class="bi bi-clock text-primary me-1"></i><span data-live-clock>{{ now()->format('H:i:s') }}</span>
+        </div>
+        <button type="button" class="btn btn-outline-light btn-sm" data-live-fullscreen>
+          <i class="bi bi-arrows-fullscreen me-1"></i>Fullscreen
+        </button>
+        <a href="{{ route('admin.dashboard') }}" class="btn btn-primary-gradient btn-sm">
+          <i class="bi bi-house-door me-1"></i>Asosiy panel
+        </a>
       </div>
     </div>
 
-    <section class="lm-board" x-cloak :class="{ 'is-active': tab === 'overview' }">
-      <div class="lm-board-grid">
-        <div class="lm-card">
-          <div class="lm-card__head">
+    <div class="row g-3">
+      <div class="col-xl-3 col-md-6">
+        <div class="card-panel fs-live__metric" style="--metric-color:#a855f7">
+          <div class="d-flex justify-content-between align-items-start">
+            <div class="fs-live__metric-label">Jami buyurtmalar</div>
+            <i class="bi bi-bag-check" style="color:#a855f7;font-size:20px"></i>
+          </div>
+          <div class="fs-live__metric-value" data-live-main-total>0</div>
+          <div class="fs-live__metric-sub"><span data-live-main-active>0</span> ta aktiv oqim</div>
+        </div>
+      </div>
+      <div class="col-xl-3 col-md-6">
+        <div class="card-panel fs-live__metric" style="--metric-color:#10b981">
+          <div class="d-flex justify-content-between align-items-start">
+            <div class="fs-live__metric-label">Seller orderlar</div>
+            <i class="bi bi-shop-window" style="color:#10b981;font-size:20px"></i>
+          </div>
+          <div class="fs-live__metric-value" data-live-seller-total>0</div>
+          <div class="fs-live__metric-sub"><span data-live-seller-active>0</span> ta bajarilmoqda</div>
+        </div>
+      </div>
+      <div class="col-xl-3 col-md-6">
+        <div class="card-panel fs-live__metric" style="--metric-color:#3b82f6">
+          <div class="d-flex justify-content-between align-items-start">
+            <div class="fs-live__metric-label">Kuryer oqimi</div>
+            <i class="bi bi-truck" style="color:#3b82f6;font-size:20px"></i>
+          </div>
+          <div class="fs-live__metric-value" data-live-courier-total>0</div>
+          <div class="fs-live__metric-sub"><span data-live-courier-active>0</span> ta yo‘lda</div>
+        </div>
+      </div>
+      <div class="col-xl-3 col-md-6">
+        <div class="card-panel fs-live__metric" style="--metric-color:#ec4899">
+          <div class="d-flex justify-content-between align-items-start">
+            <div class="fs-live__metric-label">Online mijozlar</div>
+            <i class="bi bi-people" style="color:#ec4899;font-size:20px"></i>
+          </div>
+          <div class="fs-live__metric-value" data-live-online>0</div>
+          <div class="fs-live__metric-sub">So‘nggi 5 daqiqa</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-3 flex-fill">
+      <div class="col-xl-4 d-flex">
+        <div class="card-panel live-map-grid flex-fill d-flex flex-column">
+          <div class="d-flex justify-content-between align-items-start gap-2">
             <div>
-              <div class="lm-card__eyebrow">Pulse board</div>
-              <div class="lm-card__title">Asosiy oqimlar</div>
-              <div class="lm-card__sub">Qayerda navbat ko‘p, qayerda oqim tiqilib qolishi mumkinligi shu blokda ko‘rinadi.</div>
+              <div class="fs-live__panel-title">O‘zbekiston savdo xaritasi</div>
+              <div class="fs-live__panel-sub">Hududlar bo‘yicha real oqim signallari</div>
             </div>
+            <span class="chip chip-purple">Dynamic</span>
           </div>
-          <div class="lm-pulse-list">
-            <div class="lm-pulse-card">
-              <div class="lm-pulse-card__top">
-                <div class="lm-pill lm-pill--warning">User orders</div>
-                <div class="lm-pulse-card__count" x-text="snapshot.main_counts.new + snapshot.main_counts.packing + snapshot.main_counts.onway"></div>
-              </div>
-              <div class="lm-pulse-card__title">Yangi, qadoqlanmoqda va yo‘ldagi buyurtmalar</div>
-              <div class="lm-pulse-card__metrics">
-                <span class="lm-pulse-card__metric">Yangi <strong x-text="snapshot.main_counts.new"></strong></span>
-                <span class="lm-pulse-card__metric">Qadoqlanmoqda <strong x-text="snapshot.main_counts.packing"></strong></span>
-                <span class="lm-pulse-card__metric">Yo‘lda <strong x-text="snapshot.main_counts.onway"></strong></span>
-              </div>
-              <div class="lm-pulse-card__footer">Yakunlangan: <strong x-text="snapshot.main_counts.done"></strong></div>
-            </div>
-
-            <div class="lm-pulse-card">
-              <div class="lm-pulse-card__top">
-                <div class="lm-pill lm-pill--primary">Seller lane</div>
-                <div class="lm-pulse-card__count" x-text="snapshot.seller_counts.new + snapshot.seller_counts.accepted + snapshot.seller_counts.handover"></div>
-              </div>
-              <div class="lm-pulse-card__title">Seller tayyorlash va topshirish jarayoni</div>
-              <div class="lm-pulse-card__metrics">
-                <span class="lm-pulse-card__metric">To‘lov <strong x-text="snapshot.seller_counts.payment_pending"></strong></span>
-                <span class="lm-pulse-card__metric">Yangi <strong x-text="snapshot.seller_counts.new"></strong></span>
-                <span class="lm-pulse-card__metric">Qabul qildi <strong x-text="snapshot.seller_counts.accepted"></strong></span>
-              </div>
-              <div class="lm-pulse-card__footer">Kuryerga bergan: <strong x-text="snapshot.seller_counts.handover"></strong></div>
-            </div>
-
-            <div class="lm-pulse-card">
-              <div class="lm-pulse-card__top">
-                <div class="lm-pill lm-pill--success">Courier lane</div>
-                <div class="lm-pulse-card__count" x-text="snapshot.courier_counts.pending + snapshot.courier_counts.in_delivery"></div>
-              </div>
-              <div class="lm-pulse-card__title">Kuryer navbati va last-mile holati</div>
-              <div class="lm-pulse-card__metrics">
-                <span class="lm-pulse-card__metric">Kutilmoqda <strong x-text="snapshot.courier_counts.pending"></strong></span>
-                <span class="lm-pulse-card__metric">Yo‘lda <strong x-text="snapshot.courier_counts.in_delivery"></strong></span>
-                <span class="lm-pulse-card__metric">Yetib bordi <strong x-text="snapshot.courier_counts.delivered"></strong></span>
-              </div>
-              <div class="lm-pulse-card__footer">Mijoz qabul qildi: <strong x-text="snapshot.courier_counts.customer_received"></strong></div>
-            </div>
+          <div class="fs-live__map">
+            <svg viewBox="0 0 100 100" width="100%" height="100%" data-live-map>
+              <path d="M 15 45 Q 30 25 60 30 T 95 35 Q 90 55 75 60 T 40 75 Q 20 65 15 45 Z" fill="rgba(79,70,229,.08)" stroke="rgba(255,255,255,.14)" stroke-width=".5" />
+            </svg>
           </div>
+          <div class="fs-live__regions" data-live-regions></div>
         </div>
+      </div>
 
-        <div class="lm-card">
-          <div class="lm-card__head">
+      <div class="col-xl-5 d-flex">
+        <div class="card-panel flex-fill d-flex flex-column">
+          <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
             <div>
-              <div class="lm-card__eyebrow">Quick snapshot</div>
-              <div class="lm-card__title">Qisqa holat</div>
-              <div class="lm-card__sub">Bitta qarashda olish kerak bo‘lgan eng muhim sonlar.</div>
+              <div class="fs-live__panel-title">Savdo faolligi</div>
+              <div class="fs-live__panel-sub">Oxirgi snapshotlar intensivligi</div>
             </div>
+            <span class="chip chip-success"><span data-live-velocity>0</span> / min</span>
           </div>
-          <div class="lm-side-stack">
-            <div class="lm-pill-grid">
-              <div class="lm-pill-stat">
-                <div class="lm-pill-stat__label">Kutilayotgan order</div>
-                <div class="lm-pill-stat__value" x-text="snapshot.main_counts.new"></div>
-                <div class="lm-pill-stat__sub">Admin va ops tez ko‘radigan navbat.</div>
-              </div>
-              <div class="lm-pill-stat">
-                <div class="lm-pill-stat__label">Yo‘ldagi order</div>
-                <div class="lm-pill-stat__value" x-text="snapshot.main_counts.onway"></div>
-                <div class="lm-pill-stat__sub">Hozir harakatdagi buyurtmalar.</div>
-              </div>
-              <div class="lm-pill-stat">
-                <div class="lm-pill-stat__label">Seller yangi</div>
-                <div class="lm-pill-stat__value" x-text="snapshot.seller_counts.new"></div>
-                <div class="lm-pill-stat__sub">Do‘kon hali qabul qilmaganlari.</div>
-              </div>
-              <div class="lm-pill-stat">
-                <div class="lm-pill-stat__label">Courier pending</div>
-                <div class="lm-pill-stat__value" x-text="snapshot.courier_counts.pending"></div>
-                <div class="lm-pill-stat__sub">Kuryer navbatidagi topshiriqlar.</div>
-              </div>
-            </div>
-
-            <div class="lm-list">
-              <template x-for="user in snapshot.online_users.slice(0, 6)" :key="`overview-user-${user.id}`">
-                <div class="lm-list-row">
-                  <div class="lm-avatar">
-                    <template x-if="user.avatar"><img :src="user.avatar" alt=""></template>
-                    <template x-if="!user.avatar"><span x-text="user.name.charAt(0)"></span></template>
-                  </div>
-                  <div>
-                    <div class="lm-row__title" x-text="user.name"></div>
-                    <div class="lm-row__sub" x-text="user.last_seen"></div>
-                  </div>
-                  <div class="lm-row__right">
-                    <span class="lm-pill lm-pill--success">Online</span>
-                    <a class="lm-link" :href="`${userBaseUrl}/${user.id}`">Ochish</a>
-                  </div>
-                </div>
-              </template>
-              <div class="lm-empty" x-show="!snapshot.online_users.length">Hozircha online foydalanuvchi topilmadi.</div>
-            </div>
+          <svg class="fs-live__sparkline" viewBox="0 0 520 220" preserveAspectRatio="none" data-live-chart>
+            <defs>
+              <linearGradient id="liveArea" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#ec4899" stop-opacity=".52" />
+                <stop offset="100%" stop-color="#4f46e5" stop-opacity="0" />
+              </linearGradient>
+            </defs>
+            <path data-live-area fill="url(#liveArea)" d=""></path>
+            <path data-live-line fill="none" stroke="#ec4899" stroke-width="3" d=""></path>
+          </svg>
+          <div class="d-flex justify-content-between pt-2 border-top border-secondary-subtle small text-secondary">
+            <span>Oldingi</span>
+            <span data-live-generated>{{ $snapshotPayload['generated_at'] }}</span>
+            <span>Hozir</span>
           </div>
         </div>
       </div>
-    </section>
 
-    <section class="lm-board" x-cloak :class="{ 'is-active': tab === 'orders' }">
-      <div class="lm-section">
-        <div>
-          <div class="lm-card__eyebrow">Orders monitor</div>
-          <div class="lm-section__title">Asosiy buyurtmalar</div>
-          <div class="lm-section__sub">Eng yangi buyurtmalar va ularning hozirgi holati.</div>
-        </div>
-        <div class="lm-inline-grid">
-          <div class="lm-pill-stat"><div class="lm-pill-stat__label">Yangi</div><div class="lm-pill-stat__value" x-text="snapshot.main_counts.new"></div></div>
-          <div class="lm-pill-stat"><div class="lm-pill-stat__label">Qadoqlanmoqda</div><div class="lm-pill-stat__value" x-text="snapshot.main_counts.packing"></div></div>
-          <div class="lm-pill-stat"><div class="lm-pill-stat__label">Yo‘lda</div><div class="lm-pill-stat__value" x-text="snapshot.main_counts.onway"></div></div>
-          <div class="lm-pill-stat"><div class="lm-pill-stat__label">Qabul qilindi</div><div class="lm-pill-stat__value" x-text="snapshot.main_counts.done"></div></div>
+      <div class="col-xl-3 d-flex">
+        <div class="card-panel flex-fill d-flex flex-column">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="fs-live__panel-title">Jonli oqim</div>
+            <span class="live-pulse"></span>
+          </div>
+          <div class="fs-live__feed" data-live-feed></div>
         </div>
       </div>
+    </div>
 
-      <div class="lm-card">
-        <div class="lm-list">
-          <template x-for="order in snapshot.recent_orders" :key="`order-${order.id}`">
-            <div class="lm-list-row">
-              <div class="lm-avatar">
-                <template x-if="order.avatar"><img :src="order.avatar" alt=""></template>
-                <template x-if="!order.avatar"><span x-text="order.customer.charAt(0)"></span></template>
-              </div>
-              <div>
-                <div class="lm-row__title" x-text="`#${order.id} · ${order.customer}`"></div>
-                <div class="lm-row__sub" x-text="order.updated_at"></div>
-              </div>
-              <div class="lm-row__right">
-                <div class="lm-amount" x-text="`${order.amount} UZS`"></div>
-                <span class="lm-pill lm-pill--primary" x-text="order.status"></span>
-              </div>
-            </div>
-          </template>
-          <div class="lm-empty" x-show="!snapshot.recent_orders.length">So‘nggi asosiy buyurtmalar topilmadi.</div>
+    <div class="row g-3">
+      <div class="col-xl-6">
+        <div class="card-panel h-100">
+          <div class="fs-live__panel-title mb-3">Operatsion segmentlar</div>
+          <div class="row g-2" data-live-segments></div>
         </div>
       </div>
-    </section>
-
-    <section class="lm-board" x-cloak :class="{ 'is-active': tab === 'seller' }">
-      <div class="lm-section">
-        <div>
-          <div class="lm-card__eyebrow">Seller operations</div>
-          <div class="lm-section__title">Seller orderlar</div>
-          <div class="lm-section__sub">To‘lov kutayotgan, yangi va tayyorlangan seller orderlar oqimi.</div>
-        </div>
-        <div class="lm-inline-grid">
-          <div class="lm-pill-stat"><div class="lm-pill-stat__label">To‘lov</div><div class="lm-pill-stat__value" x-text="snapshot.seller_counts.payment_pending"></div></div>
-          <div class="lm-pill-stat"><div class="lm-pill-stat__label">Yangi</div><div class="lm-pill-stat__value" x-text="snapshot.seller_counts.new"></div></div>
-          <div class="lm-pill-stat"><div class="lm-pill-stat__label">Qabul qildi</div><div class="lm-pill-stat__value" x-text="snapshot.seller_counts.accepted"></div></div>
-          <div class="lm-pill-stat"><div class="lm-pill-stat__label">Kuryerga berdi</div><div class="lm-pill-stat__value" x-text="snapshot.seller_counts.handover"></div></div>
+      <div class="col-xl-6">
+        <div class="card-panel h-100">
+          <div class="fs-live__panel-title mb-3">Tizim statusi</div>
+          <div class="row g-2" data-live-health></div>
         </div>
       </div>
-
-      <div class="lm-card">
-        <div class="lm-list">
-          <template x-for="order in snapshot.recent_seller_orders" :key="`seller-${order.id}`">
-            <div class="lm-list-row">
-              <div class="lm-avatar">
-                <template x-if="order.avatar"><img :src="order.avatar" alt=""></template>
-                <template x-if="!order.avatar"><span x-text="order.seller.charAt(0)"></span></template>
-              </div>
-              <div>
-                <div class="lm-row__title" x-text="`#${order.id} · ${order.seller}`"></div>
-                <div class="lm-row__sub" x-text="order.customer"></div>
-              </div>
-              <div class="lm-row__right">
-                <div class="lm-amount" x-text="`${order.amount} UZS`"></div>
-                <span class="lm-pill lm-pill--warning" x-text="order.status"></span>
-              </div>
-            </div>
-          </template>
-          <div class="lm-empty" x-show="!snapshot.recent_seller_orders.length">Seller orderlari topilmadi.</div>
-        </div>
-      </div>
-    </section>
-
-    <section class="lm-board" x-cloak :class="{ 'is-active': tab === 'courier' }">
-      <div class="lm-section">
-        <div>
-          <div class="lm-card__eyebrow">Courier control</div>
-          <div class="lm-section__title">Courier orderlar</div>
-          <div class="lm-section__sub">Tayinlangan, yo‘ldagi va yakunlangan yetkazishlar holati.</div>
-        </div>
-        <div class="lm-inline-grid">
-          <div class="lm-pill-stat"><div class="lm-pill-stat__label">Pay process</div><div class="lm-pill-stat__value" x-text="snapshot.courier_counts.pay_process"></div></div>
-          <div class="lm-pill-stat"><div class="lm-pill-stat__label">Pending</div><div class="lm-pill-stat__value" x-text="snapshot.courier_counts.pending"></div></div>
-          <div class="lm-pill-stat"><div class="lm-pill-stat__label">Yo‘lda</div><div class="lm-pill-stat__value" x-text="snapshot.courier_counts.in_delivery"></div></div>
-          <div class="lm-pill-stat"><div class="lm-pill-stat__label">Qabul qildi</div><div class="lm-pill-stat__value" x-text="snapshot.courier_counts.customer_received"></div></div>
-        </div>
-      </div>
-
-      <div class="lm-card">
-        <div class="lm-list">
-          <template x-for="order in snapshot.recent_courier_orders" :key="`courier-${order.id}`">
-            <div class="lm-list-row">
-              <div class="lm-avatar">
-                <template x-if="order.avatar"><img :src="order.avatar" alt=""></template>
-                <template x-if="!order.avatar"><span x-text="order.courier.charAt(0)"></span></template>
-              </div>
-              <div>
-                <div class="lm-row__title" x-text="`#${order.id} · ${order.courier}`"></div>
-                <div class="lm-row__sub" x-text="order.customer"></div>
-              </div>
-              <div class="lm-row__right">
-                <div class="lm-amount" x-text="`${order.amount} UZS`"></div>
-                <span class="lm-pill lm-pill--success" x-text="order.status"></span>
-              </div>
-            </div>
-          </template>
-          <div class="lm-empty" x-show="!snapshot.recent_courier_orders.length">Courier oqimida yozuv topilmadi.</div>
-        </div>
-      </div>
-    </section>
-
-    <section class="lm-board" x-cloak :class="{ 'is-active': tab === 'users' }">
-      <div class="lm-section">
-        <div>
-          <div class="lm-card__eyebrow">Audience window</div>
-          <div class="lm-section__title">Online foydalanuvchilar</div>
-          <div class="lm-section__sub">Oxirgi 5 daqiqada faol bo‘lgan userlar ro‘yxati.</div>
-        </div>
-        <div class="lm-inline-grid">
-          <div class="lm-pill-stat"><div class="lm-pill-stat__label">Online</div><div class="lm-pill-stat__value" x-text="snapshot.online_users_count"></div></div>
-          <div class="lm-pill-stat"><div class="lm-pill-stat__label">Jami order</div><div class="lm-pill-stat__value" x-text="snapshot.main_counts.all"></div></div>
-          <div class="lm-pill-stat"><div class="lm-pill-stat__label">Faol queue</div><div class="lm-pill-stat__value" x-text="snapshot.main_counts.new + snapshot.main_counts.packing + snapshot.main_counts.onway"></div></div>
-          <div class="lm-pill-stat"><div class="lm-pill-stat__label">Yakunlangan</div><div class="lm-pill-stat__value" x-text="snapshot.main_counts.done"></div></div>
-        </div>
-      </div>
-
-      <div class="lm-card">
-        <div class="lm-list">
-          <template x-for="user in snapshot.online_users" :key="`user-${user.id}`">
-            <div class="lm-list-row">
-              <div class="lm-avatar">
-                <template x-if="user.avatar"><img :src="user.avatar" alt=""></template>
-                <template x-if="!user.avatar"><span x-text="user.name.charAt(0)"></span></template>
-              </div>
-              <div>
-                <div class="lm-row__title" x-text="user.name"></div>
-                <div class="lm-row__sub" x-text="user.last_seen"></div>
-              </div>
-              <div class="lm-row__right">
-                <span class="lm-pill lm-pill--success">Online</span>
-                <a class="lm-link" :href="`${userBaseUrl}/${user.id}`">Profil</a>
-              </div>
-            </div>
-          </template>
-          <div class="lm-empty" x-show="!snapshot.online_users.length">Hozircha online user yo‘q.</div>
-        </div>
-      </div>
-    </section>
+    </div>
   </div>
 </div>
 @endsection
 
 @push('scripts')
 <script>
-function liveMonitor(initialSnapshot, endpoint) {
-  return {
-    tab: localStorage.getItem('a122-live-tab') || 'overview',
-    snapshot: initialSnapshot,
-    endpoint,
-    userBaseUrl: @js(url('/a122/users')),
-    timer: null,
-    visibilityHandler: null,
-    init() {
-      this.refresh();
-      this.timer = setInterval(() => this.refresh(), 10000);
-      this.visibilityHandler = () => {
-        if (!document.hidden) this.refresh();
-      };
-      document.addEventListener('visibilitychange', this.visibilityHandler);
-    },
-    switchTab(tab) {
-      this.tab = tab;
-      localStorage.setItem('a122-live-tab', tab);
-    },
-    async refresh() {
-      try {
-        const response = await fetch(this.endpoint, {
-          headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
-          cache: 'no-store',
-        });
-        if (!response.ok) return;
-        this.snapshot = await response.json();
-      } catch (error) {
-        console.error('Live monitor refresh error:', error);
-      }
-    },
-    async toggleFullscreen() {
-      if (!document.fullscreenElement) {
-        await document.documentElement.requestFullscreen?.();
-        return;
-      }
-      await document.exitFullscreen?.();
-    },
-    destroy() {
-      if (this.timer) clearInterval(this.timer);
-      if (this.visibilityHandler) {
-        document.removeEventListener('visibilitychange', this.visibilityHandler);
-      }
-    },
-  };
-}
+(() => {
+  const root = document.querySelector('[data-live-dashboard]');
+  if (!root) return;
+
+  let snapshot = @json($snapshotPayload);
+  let paused = false;
+  let speed = 8000;
+  let timer = null;
+  let chart = Array.from({ length: 28 }, (_, i) => 25 + Math.sin(i / 2) * 8 + Math.random() * 10);
+
+  const regions = [
+    { name: 'Toshkent', value: 34, color: '#a855f7', x: 72, y: 35 },
+    { name: 'Samarqand', value: 22, color: '#6366f1', x: 50, y: 55 },
+    { name: 'Buxoro', value: 18, color: '#3b82f6', x: 35, y: 60 },
+    { name: 'Farg‘ona', value: 15, color: '#10b981', x: 85, y: 45 },
+    { name: 'Andijon', value: 12, color: '#f59e0b', x: 92, y: 40 },
+    { name: 'Namangan', value: 14, color: '#ec4899', x: 82, y: 32 },
+    { name: 'Xorazm', value: 10, color: '#06b6d4', x: 20, y: 45 },
+    { name: 'Qashqadaryo', value: 16, color: '#f43f5e', x: 45, y: 70 },
+  ];
+
+  const fmt = (value) => new Intl.NumberFormat('uz-UZ').format(Number(value || 0));
+  const el = (selector) => root.querySelector(selector);
+  const count = (path, fallback = 0) => path.split('.').reduce((acc, key) => acc?.[key], snapshot) ?? fallback;
+
+  function setText(selector, value) {
+    const node = el(selector);
+    if (node) node.textContent = value;
+  }
+
+  function activeMain() {
+    return count('main_counts.new') + count('main_counts.packing') + count('main_counts.onway');
+  }
+
+  function activeSeller() {
+    return count('seller_counts.payment_pending') + count('seller_counts.new') + count('seller_counts.accepted') + count('seller_counts.handover');
+  }
+
+  function activeCourier() {
+    return count('courier_counts.pending') + count('courier_counts.in_delivery');
+  }
+
+  function feedRows() {
+    const rows = [];
+    (snapshot.recent_orders || []).forEach((order) => rows.push({
+      title: `${order.customer} buyurtma #${order.id}`,
+      meta: order.status,
+      amount: order.amount,
+      time: order.updated_at,
+    }));
+    (snapshot.recent_seller_orders || []).forEach((order) => rows.push({
+      title: `${order.seller} seller order #${order.id}`,
+      meta: order.status,
+      amount: order.amount,
+      time: order.updated_at,
+    }));
+    (snapshot.recent_courier_orders || []).forEach((order) => rows.push({
+      title: `${order.courier} kuryer order #${order.id}`,
+      meta: order.status,
+      amount: order.amount,
+      time: order.updated_at,
+    }));
+    return rows.slice(0, 12);
+  }
+
+  function renderMetrics() {
+    setText('[data-live-main-total]', fmt(count('main_counts.all')));
+    setText('[data-live-main-active]', fmt(activeMain()));
+    setText('[data-live-seller-total]', fmt(count('seller_counts.all')));
+    setText('[data-live-seller-active]', fmt(activeSeller()));
+    setText('[data-live-courier-total]', fmt(count('courier_counts.all')));
+    setText('[data-live-courier-active]', fmt(activeCourier()));
+    setText('[data-live-online]', fmt(snapshot.online_users_count || 0));
+    setText('[data-live-generated]', snapshot.generated_at || new Date().toLocaleTimeString('uz-UZ'));
+    setText('[data-live-velocity]', fmt(Math.max(1, Math.round((activeMain() + activeSeller() + activeCourier()) / 3))));
+  }
+
+  function renderFeed() {
+    const feed = el('[data-live-feed]');
+    if (!feed) return;
+    const rows = feedRows();
+    if (!rows.length) {
+      feed.innerHTML = '<div class="text-center py-4 text-secondary"><div class="spinner-border spinner-border-sm text-primary mb-2"></div><br>Oqim kutilmoqda</div>';
+      return;
+    }
+    feed.innerHTML = rows.map((row) => `
+      <div class="fs-live__feed-row">
+        <span class="fs-live__feed-dot"></span>
+        <div class="fs-live__feed-main">
+          <div class="fs-live__feed-title">${escapeHtml(row.title)}</div>
+          <div class="fs-live__feed-meta"><span>${escapeHtml(row.meta || '—')}</span><span>${escapeHtml(row.time || '—')}</span></div>
+        </div>
+        <div class="fs-live__feed-amount">+${escapeHtml(row.amount || '0')}</div>
+      </div>
+    `).join('');
+  }
+
+  function renderMap() {
+    const map = el('[data-live-map]');
+    const list = el('[data-live-regions]');
+    if (!map || !list) return;
+    const pulseIndex = Math.floor(Math.random() * regions.length);
+    map.querySelectorAll('[data-region-node]').forEach((node) => node.remove());
+    regions.forEach((region, index) => {
+      region.value += index === pulseIndex ? 1 : 0;
+      const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      group.setAttribute('data-region-node', 'true');
+      group.innerHTML = `
+        <line x1="60" y1="45" x2="${region.x}" y2="${region.y}" stroke="rgba(255,255,255,.06)" stroke-width=".5" stroke-dasharray="1 1"></line>
+        ${index === pulseIndex ? `<circle cx="${region.x}" cy="${region.y}" r="9" fill="none" stroke="${region.color}" stroke-width="1" opacity=".85"><animate attributeName="r" from="3" to="15" dur="1s" repeatCount="1"></animate><animate attributeName="opacity" from="1" to="0" dur="1s" repeatCount="1"></animate></circle>` : ''}
+        <circle cx="${region.x}" cy="${region.y}" r="${index === pulseIndex ? 5 : 3.5}" fill="${region.color}"></circle>
+        <text x="${region.x}" y="${region.y - 6}" fill="${index === pulseIndex ? '#fff' : '#94a3b8'}" font-size="6" text-anchor="middle" font-weight="${index === pulseIndex ? '700' : '400'}">${region.name}</text>
+      `;
+      map.appendChild(group);
+    });
+    list.innerHTML = regions.map((region) => `
+      <span class="fs-live__region"><span class="fs-live__region-dot" style="--region-color:${region.color}"></span>${region.name}: <strong class="text-light">${region.value}</strong></span>
+    `).join('');
+  }
+
+  function renderChart() {
+    const line = el('[data-live-line]');
+    const area = el('[data-live-area]');
+    if (!line || !area) return;
+    const value = activeMain() + activeSeller() + activeCourier() + (snapshot.online_users_count || 0);
+    chart = [...chart.slice(1), Math.max(10, value + Math.random() * 18)];
+    const max = Math.max(...chart);
+    const min = Math.min(...chart);
+    const points = chart.map((v, i) => {
+      const x = (i / (chart.length - 1)) * 520;
+      const y = 200 - ((v - min) / Math.max(max - min, 1)) * 170;
+      return [x, y];
+    });
+    const d = points.map(([x, y], i) => `${i ? 'L' : 'M'} ${x.toFixed(1)} ${y.toFixed(1)}`).join(' ');
+    line.setAttribute('d', d);
+    area.setAttribute('d', `${d} L 520 220 L 0 220 Z`);
+  }
+
+  function renderSegments() {
+    const node = el('[data-live-segments]');
+    if (!node) return;
+    const segments = [
+      ['Yangi order', count('main_counts.new'), '#a855f7'],
+      ['Qadoqlash', count('main_counts.packing'), '#3b82f6'],
+      ['Yo‘lda', count('main_counts.onway'), '#10b981'],
+      ['Seller yangi', count('seller_counts.new'), '#f59e0b'],
+    ];
+    node.innerHTML = segments.map(([name, value, color], index) => `
+      <div class="col-md-6">
+        <div class="fs-live__mini-row">
+          <div class="fs-live__rank ${index === 0 ? 'is-top' : ''}">${index + 1}</div>
+          <div class="flex-grow-1 min-w-0">
+            <div class="text-light small fw-semibold text-truncate">${name}</div>
+            <div class="text-secondary" style="font-size:11px">Operatsion navbat</div>
+          </div>
+          <div class="fw-bold" style="color:${color}">${fmt(value)}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function renderHealth() {
+    const node = el('[data-live-health]');
+    if (!node) return;
+    const health = [
+      ['Asosiy server', 'Optimal', '28%'],
+      ['To‘lov shlyuzi', 'Tezkor', '14%'],
+      ['SMS gateway', 'Barqaror', '45%'],
+      ['Database', 'Optimal', '32%'],
+    ];
+    node.innerHTML = health.map(([name, status, load]) => `
+      <div class="col-md-6">
+        <div class="fs-live__mini-row justify-content-between">
+          <div>
+            <div class="text-light" style="font-size:12px">${name}</div>
+            <div class="text-secondary" style="font-size:10px">Yuklanish: ${load}</div>
+          </div>
+          <span class="chip chip-success">${status}</span>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function render() {
+    renderMetrics();
+    renderFeed();
+    renderMap();
+    renderChart();
+    renderSegments();
+    renderHealth();
+  }
+
+  async function refresh() {
+    if (paused) return;
+    try {
+      const response = await fetch(root.dataset.endpoint, { headers: { Accept: 'application/json' } });
+      if (response.ok) snapshot = await response.json();
+      el('[data-live-status]').innerHTML = '<span class="live-pulse"></span>System active';
+      render();
+    } catch (error) {
+      el('[data-live-status]').textContent = 'Connection waiting';
+    }
+  }
+
+  function schedule() {
+    clearInterval(timer);
+    timer = setInterval(refresh, speed);
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#039;',
+    }[char]));
+  }
+
+  root.querySelectorAll('[data-live-speed]').forEach((button) => {
+    button.addEventListener('click', () => {
+      speed = Number(button.dataset.liveSpeed || 8000);
+      root.querySelectorAll('[data-live-speed]').forEach((item) => {
+        item.classList.toggle('btn-primary', item === button);
+        item.classList.toggle('btn-outline-light', item !== button);
+      });
+      schedule();
+    });
+  });
+
+  el('[data-live-pause]')?.addEventListener('click', (event) => {
+    paused = !paused;
+    const button = event.currentTarget;
+    button.classList.toggle('btn-warning', paused);
+    button.classList.toggle('btn-outline-light', !paused);
+    button.querySelector('i').className = `bi ${paused ? 'bi-play-fill' : 'bi-pause-fill'} me-1`;
+    button.querySelector('span').textContent = paused ? 'Davom etish' : 'Pauza';
+    el('[data-live-status]').textContent = paused ? 'Paused' : 'System active';
+  });
+
+  el('[data-live-fullscreen]')?.addEventListener('click', () => {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen();
+  });
+
+  setInterval(() => setText('[data-live-clock]', new Date().toLocaleTimeString('uz-UZ')), 1000);
+  render();
+  schedule();
+})();
 </script>
 @endpush

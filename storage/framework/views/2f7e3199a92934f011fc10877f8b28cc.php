@@ -31,7 +31,7 @@
     <div class="row g-2 mb-4 fade-up">
       <?php $__currentLoopData = $targets; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $key => $t): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
       <div class="col-4">
-        <div class="p-card flex items-center gap-3" style="padding:14px"
+        <div class="card-panel flex items-center gap-3" style="padding:14px"
              id="preview-<?php echo e($key); ?>">
           <div style="width:36px;height:36px;border-radius:9px;display:flex;
                       align-items:center;justify-content:center;font-size:16px;
@@ -55,7 +55,7 @@
     <form method="POST" action="<?php echo e(route('admin.push.store')); ?>">
       <?php echo csrf_field(); ?>
 
-      <div class="p-card mb-3 fade-up">
+      <div class="card-panel mb-3 fade-up">
         <div class="dash-card-head"><div class="dash-card-title">Xabar ma'lumotlari</div></div>
         <div class="dash-card-body">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -167,7 +167,7 @@ unset($__errorArgs, $__bag); ?>
       </div>
 
       
-      <div class="p-card mb-3 fade-up" style="background:var(--p-elevated);border-style:dashed">
+      <div class="card-panel mb-3 fade-up" style="background:var(--p-elevated);border-style:dashed">
         <div class="dash-card-head">
           <div class="dash-card-title" style="font-size:12px;color:var(--p-hint)">
             <i class="bi bi-phone mr-1"></i> Telefon ko'rinishi (preview)

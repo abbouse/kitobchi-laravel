@@ -36,7 +36,7 @@
       <?php echo csrf_field(); ?> <?php echo method_field('PUT'); ?>
 
       
-      <div class="p-card mb-3 fade-up">
+      <div class="card-panel mb-3 fade-up">
         <div class="dash-card-head"><div class="dash-card-title">Post matni</div></div>
         <div class="dash-card-body">
           <textarea name="text" rows="6"
@@ -66,7 +66,7 @@ unset($__errorArgs, $__bag); ?>
 
       
       <?php if($bookClub->images->count()): ?>
-      <div class="p-card mb-3 fade-up">
+      <div class="card-panel mb-3 fade-up">
         <div class="dash-card-head">
           <div class="dash-card-title">Rasmlar</div>
           <div class="dash-card-sub">O'chirish uchun X bosing</div>
@@ -99,7 +99,7 @@ unset($__errorArgs, $__bag); ?>
 
       
       <?php if($bookClub->votes->count()): ?>
-      <div class="p-card mb-3 fade-up" style="opacity:.7">
+      <div class="card-panel mb-3 fade-up" style="opacity:.7">
         <div class="dash-card-head">
           <div class="dash-card-title">So'rovnoma</div>
           <div class="dash-card-sub"><i class="bi bi-lock"></i> Faqat ko'rish</div>

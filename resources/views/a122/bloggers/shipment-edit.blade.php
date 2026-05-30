@@ -9,7 +9,7 @@
     <x-slot name="meta">{{ $blogger->full_name }} · {{ $shipment->status_label }}</x-slot>
   </x-a122.page-header>
 
-  <div class="card p-6">
+  <div class="card-panel p-6">
     <form method="POST" action="{{ route('admin.bloggers.shipments.update', [$blogger, $shipment]) }}" class="space-y-4">
       @csrf
       @method('PUT')

@@ -26,19 +26,19 @@
              : ($trend === 'down' ? 'trending-down' : 'minus');
 @endphp
 
-<div class="card p-5 shadow-soft hover:shadow-md transition">
-  <div class="flex items-start justify-between mb-4">
-    <div class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ $title }}</div>
-    <div class="w-9 h-9 rounded-xl flex items-center justify-center {{ $c['bg'] }}">
+<div class="card-panel p-4 h-100">
+  <div class="d-flex align-items-start justify-content-between gap-3 mb-3">
+    <div class="small text-secondary fw-semibold">{{ $title }}</div>
+    <div class="d-inline-grid place-items-center rounded-3 {{ $c['bg'] }}" style="width:38px;height:38px;">
       <i data-lucide="{{ $icon }}" class="w-4 h-4 {{ $c['txt'] }}"></i>
     </div>
   </div>
-  <div class="text-2xl font-bold tracking-tight">{{ $value }}</div>
+  <div class="h3 fw-bold mb-0">{{ $value }}</div>
   @if($change !== null)
-    <div class="mt-2 flex items-center gap-1 text-xs font-semibold {{ $trendCls }}">
+    <div class="mt-2 d-flex align-items-center gap-1 small fw-semibold {{ $trendCls }}">
       <i data-lucide="{{ $trendIcon }}" class="w-3.5 h-3.5"></i>
       <span>{{ $change }}</span>
-      <span class="text-gray-400 dark:text-gray-500 font-normal">o'tgan davrga nisbatan</span>
+      <span class="text-secondary fw-normal">o'tgan davrga nisbatan</span>
     </div>
   @endif
 </div>

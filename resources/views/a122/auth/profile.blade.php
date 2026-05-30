@@ -13,8 +13,8 @@
 
   <div class="row g-4">
     <div class="col-12 col-xl-4">
-      <section class="kc-panel h-100 fade-up">
-        <div class="kc-panel__body">
+      <section class="card-panel h-100 fade-up">
+        <div class="p-4">
           <div class="d-flex flex-column align-items-center text-center gap-3">
             @include('a122.partials.avatar', [
               'name' => $admin->name,
@@ -62,12 +62,12 @@
       <form method="POST" action="{{ route('admin.profile.update') }}" enctype="multipart/form-data" class="d-flex flex-column gap-4 fade-up">
         @csrf
 
-        <section class="kc-panel">
-          <div class="kc-panel__header">
-            <h3 class="kc-panel__title">Shaxsiy ma'lumotlar</h3>
-            <div class="kc-panel__meta">Email, ism va avatar shu blokdan yangilanadi.</div>
+        <section class="card-panel">
+          <div class="card-panel-header">
+            <h3 class="card-panel-title mb-0">Shaxsiy ma'lumotlar</h3>
+            <div class="card-panel-sub">Email, ism va avatar shu blokdan yangilanadi.</div>
           </div>
-          <div class="kc-panel__body">
+          <div class="p-4">
             <div class="row g-4">
               <div class="col-12 col-lg-6">
                 <label class="p-form-label">Ism</label>
@@ -89,12 +89,12 @@
           </div>
         </section>
 
-        <section class="kc-panel">
-          <div class="kc-panel__header">
-            <h3 class="kc-panel__title">Parolni yangilash</h3>
-            <div class="kc-panel__meta">Xavfsizlikni kuchaytirish uchun yangi parol kiritishingiz mumkin.</div>
+        <section class="card-panel">
+          <div class="card-panel-header">
+            <h3 class="card-panel-title mb-0">Parolni yangilash</h3>
+            <div class="card-panel-sub">Xavfsizlikni kuchaytirish uchun yangi parol kiritishingiz mumkin.</div>
           </div>
-          <div class="kc-panel__body">
+          <div class="p-4">
             <div class="row g-4">
               <div class="col-12 col-lg-6">
                 <label class="p-form-label">Joriy parol</label>

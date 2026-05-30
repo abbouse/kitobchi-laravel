@@ -40,13 +40,13 @@ unset($__defined_vars); ?>
   $t = $tones[$tone] ?? $tones['emerald'];
 ?>
 
-<div class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white dark:bg-[#0f1218] border border-gray-100 dark:border-white/5 shadow-soft min-w-[180px]">
-  <div class="w-9 h-9 rounded-xl bg-gray-50 dark:bg-white/5 flex items-center justify-center">
+<div class="card-panel d-flex align-items-center gap-3 px-3 py-3" style="min-width:180px;">
+  <div class="d-inline-grid place-items-center rounded-3" style="width:36px;height:36px;background:color-mix(in srgb,var(--template-brand) 9%,var(--template-card));">
     <i data-lucide="<?php echo e($icon); ?>" class="w-4 h-4 <?php echo e($t); ?>"></i>
   </div>
-  <div class="leading-tight">
-    <div class="text-[11px] text-gray-500 dark:text-gray-400"><?php echo e($label); ?></div>
-    <div class="text-sm font-bold"><?php echo e($value); ?></div>
+  <div>
+    <div class="small text-secondary fw-semibold"><?php echo e($label); ?></div>
+    <div class="fw-bold"><?php echo e($value); ?></div>
   </div>
 </div>
 <?php /**PATH /Users/abbos/PROJECTS/MY/kitobchi-server/kitobchi-laravel/resources/views/components/stat-pill.blade.php ENDPATH**/ ?>

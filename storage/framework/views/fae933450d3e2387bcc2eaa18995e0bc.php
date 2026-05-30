@@ -19,9 +19,9 @@
     flex-wrap: wrap;
     padding: .85rem;
     border-radius: 1.65rem;
-    border: 1px solid #e6ebf2;
-    background: rgba(255,255,255,.98);
-    box-shadow: 0 14px 36px rgba(31,41,55,.05);
+    border: 1px solid var(--template-border);
+    background: var(--template-card);
+    box-shadow: 0 4px 20px rgba(15,23,42,.06);
   }
 
   .settings-tabs-bar .nav-link {
@@ -31,7 +31,7 @@
     min-height: 2.85rem;
     padding: 0 1rem;
     border-radius: 1rem;
-    color: #6f7890;
+    color: var(--template-muted);
     font-size: .84rem;
     font-weight: 800;
     border: 1px solid transparent;
@@ -39,13 +39,13 @@
   }
 
   .settings-tabs-bar .nav-link:hover {
-    color: #202631;
-    background: #f8f9fd;
-    border-color: #e6ebf2;
+    color: var(--template-text);
+    background: color-mix(in srgb, var(--template-card) 72%, var(--template-bg));
+    border-color: var(--template-border);
   }
 
   .settings-tabs-bar .nav-link.active {
-    background: #5b7cfa;
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
     color: #fff;
     box-shadow: 0 14px 26px rgba(91,124,250,.22);
   }
@@ -58,28 +58,40 @@
 
   .settings-main-card,
   .settings-aside-card {
-    border: 1px solid #e6ebf2;
-    border-radius: 2rem;
-    background: rgba(255,255,255,.98);
-    box-shadow: 0 16px 40px rgba(31,41,55,.05);
+    border: 1px solid var(--template-border);
+    border-radius: 14px;
+    background: var(--template-card);
+    box-shadow: 0 4px 20px rgba(15,23,42,.06);
     overflow: hidden;
   }
 
-  .settings-main-card .p-card-header,
-  .settings-aside-card .p-card-header {
+  .settings-main-card .settings-card-header,
+  .settings-aside-card .settings-card-header {
     padding: 1.35rem 1.5rem 0;
   }
 
+  .settings-card-title {
+    color: var(--template-text);
+    font-size: .98rem;
+    font-weight: 800;
+  }
+
+  .settings-card-sub {
+    margin-top: .25rem;
+    color: var(--template-muted);
+    font-size: .82rem;
+  }
+
   .settings-main-card form,
-  .settings-aside-card > div:not(.p-card-header) {
+  .settings-aside-card > div:not(.settings-card-header) {
     padding: 0 1.5rem 1.5rem;
   }
 
   .settings-block {
     padding: 1.1rem;
     border-radius: 1.4rem;
-    border: 1px solid #edf1f7;
-    background: #fafbfe;
+    border: 1px solid var(--template-border);
+    background: color-mix(in srgb, var(--template-card) 82%, var(--template-bg));
   }
 
   .settings-block + .settings-block {
@@ -91,7 +103,7 @@
     align-items: center;
     gap: .65rem;
     margin-bottom: .9rem;
-    color: #202631;
+    color: var(--template-text);
     font-size: .9rem;
     font-weight: 800;
   }
@@ -116,7 +128,7 @@
   .settings-shell .p-form-control {
     min-height: 3.15rem;
     border-radius: 1rem !important;
-    background: #fff !important;
+    background: var(--template-card) !important;
   }
 
   .settings-shell textarea.p-form-control {
@@ -144,7 +156,7 @@
   }
 
   .settings-shell .kc-settings-row + .kc-settings-row {
-    border-top: 1px solid #edf1f7;
+    border-top: 1px solid var(--template-border);
   }
 
   .settings-shell .kc-settings-row:last-child {
@@ -159,15 +171,15 @@
   .settings-shell .kc-settings-panel--compact {
     padding: 1rem;
     border-radius: 1.25rem;
-    border: 1px solid #edf1f7;
-    background: #fafbfe;
+    border: 1px solid var(--template-border);
+    background: color-mix(in srgb, var(--template-card) 82%, var(--template-bg));
   }
 
   .settings-shell .kc-settings-check {
     min-height: 3.25rem;
     border-radius: 1rem;
-    border-color: #e6ebf2;
-    background: #fff;
+    border-color: var(--template-border);
+    background: var(--template-card);
   }
 
   @media (max-width: 1199px) {
@@ -177,10 +189,10 @@
   }
 
   @media (max-width: 767px) {
-    .settings-main-card .p-card-header,
-    .settings-aside-card .p-card-header,
+    .settings-main-card .settings-card-header,
+    .settings-aside-card .settings-card-header,
     .settings-main-card form,
-    .settings-aside-card > div:not(.p-card-header) {
+    .settings-aside-card > div:not(.settings-card-header) {
       padding-left: 1rem;
       padding-right: 1rem;
     }
@@ -198,25 +210,25 @@
 <?php $tab = request('tab', 'versions'); ?>
 
 <div class="settings-shell">
-<?php if (isset($component)) { $__componentOriginal0c1345684b2d774f43a544669f5684b0 = $component; } ?>
-<?php if (isset($attributes)) { $__attributesOriginal0c1345684b2d774f43a544669f5684b0 = $attributes; } ?>
-<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.a122.page-header','data' => ['title' => 'Sozlamalar','subtitle' => 'Tizim konfiguratsiyasi, app versiyalari va operatsion flaglar bitta toza boshqaruv yuzasida jamlangan.']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
-<?php $component->withName('a122.page-header'); ?>
+<?php if (isset($component)) { $__componentOriginalcb19cb35a534439097b02b8af91726ee = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginalcb19cb35a534439097b02b8af91726ee = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.admin.page-header','data' => ['eyebrow' => 'System','title' => 'Sozlamalar','subtitle' => 'Tizim konfiguratsiyasi, app versiyalari va operatsion flaglar bitta toza boshqaruv yuzasida jamlangan.']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('admin.page-header'); ?>
 <?php if ($component->shouldRender()): ?>
 <?php $__env->startComponent($component->resolveView(), $component->data()); ?>
 <?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
 <?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
 <?php endif; ?>
-<?php $component->withAttributes(['title' => 'Sozlamalar','subtitle' => 'Tizim konfiguratsiyasi, app versiyalari va operatsion flaglar bitta toza boshqaruv yuzasida jamlangan.']); ?>
+<?php $component->withAttributes(['eyebrow' => 'System','title' => 'Sozlamalar','subtitle' => 'Tizim konfiguratsiyasi, app versiyalari va operatsion flaglar bitta toza boshqaruv yuzasida jamlangan.']); ?>
 <?php echo $__env->renderComponent(); ?>
 <?php endif; ?>
-<?php if (isset($__attributesOriginal0c1345684b2d774f43a544669f5684b0)): ?>
-<?php $attributes = $__attributesOriginal0c1345684b2d774f43a544669f5684b0; ?>
-<?php unset($__attributesOriginal0c1345684b2d774f43a544669f5684b0); ?>
+<?php if (isset($__attributesOriginalcb19cb35a534439097b02b8af91726ee)): ?>
+<?php $attributes = $__attributesOriginalcb19cb35a534439097b02b8af91726ee; ?>
+<?php unset($__attributesOriginalcb19cb35a534439097b02b8af91726ee); ?>
 <?php endif; ?>
-<?php if (isset($__componentOriginal0c1345684b2d774f43a544669f5684b0)): ?>
-<?php $component = $__componentOriginal0c1345684b2d774f43a544669f5684b0; ?>
-<?php unset($__componentOriginal0c1345684b2d774f43a544669f5684b0); ?>
+<?php if (isset($__componentOriginalcb19cb35a534439097b02b8af91726ee)): ?>
+<?php $component = $__componentOriginalcb19cb35a534439097b02b8af91726ee; ?>
+<?php unset($__componentOriginalcb19cb35a534439097b02b8af91726ee); ?>
 <?php endif; ?>
 
 
@@ -244,11 +256,11 @@
 <?php if($tab === 'versions'): ?>
 <div class="settings-grid">
   <div>
-    <div class="p-card settings-main-card">
-      <div class="p-card-header">
+    <div class="card-panel settings-main-card">
+      <div class="settings-card-header">
         <div>
-          <div class="p-card-title"><i class="bi bi-phone mr-2" style="color:var(--p-accent)"></i>App versiyalari</div>
-          <div class="p-card-sub">Minimum talab qilinadigan versiyalar</div>
+          <div class="settings-card-title"><i class="bi bi-phone mr-2" style="color:var(--p-accent)"></i>App versiyalari</div>
+          <div class="settings-card-sub">Minimum talab qilinadigan versiyalar</div>
         </div>
       </div>
       <form method="POST" action="<?php echo e(route('admin.settings.versions')); ?>">
@@ -291,9 +303,9 @@
   </div>
 
   <div>
-    <div class="p-card settings-aside-card">
-      <div class="p-card-header">
-        <div class="p-card-title"><i class="bi bi-info-circle mr-2" style="color:var(--p-info)"></i>Hozirgi versiyalar</div>
+    <div class="card-panel settings-aside-card">
+      <div class="settings-card-header">
+        <div class="settings-card-title"><i class="bi bi-info-circle mr-2" style="color:var(--p-info)"></i>Hozirgi versiyalar</div>
       </div>
       <?php $__currentLoopData = [
         ['Kitobchi Business iOS', $project?->business_version_ios, 'warning'],
@@ -320,11 +332,11 @@
 <?php if($tab === 'contacts'): ?>
 <div class="settings-grid">
   <div>
-    <div class="p-card settings-main-card">
-      <div class="p-card-header">
+    <div class="card-panel settings-main-card">
+      <div class="settings-card-header">
         <div>
-          <div class="p-card-title"><i class="bi bi-headset mr-2" style="color:var(--p-accent)"></i>Ilova kontaktlari</div>
-          <div class="p-card-sub">Call center raqamlari va email manzillar</div>
+          <div class="settings-card-title"><i class="bi bi-headset mr-2" style="color:var(--p-accent)"></i>Ilova kontaktlari</div>
+          <div class="settings-card-sub">Call center raqamlari va email manzillar</div>
         </div>
       </div>
       <form method="POST" action="<?php echo e(route('admin.settings.contacts')); ?>">
@@ -365,9 +377,9 @@
   </div>
 
   <div>
-    <div class="p-card settings-aside-card">
-      <div class="p-card-header">
-        <div class="p-card-title"><i class="bi bi-info-circle mr-2" style="color:var(--p-info)"></i>Hozirgi kontaktlar</div>
+    <div class="card-panel settings-aside-card">
+      <div class="settings-card-header">
+        <div class="settings-card-title"><i class="bi bi-info-circle mr-2" style="color:var(--p-info)"></i>Hozirgi kontaktlar</div>
       </div>
       <?php $__currentLoopData = [
         ['Kitobchi telefon',  $project?->kitobchi_phone, 'accent',  'bi-telephone'],
@@ -397,11 +409,11 @@
 <?php if($tab === 'app-flags'): ?>
 <div class="settings-grid">
   <div>
-    <div class="p-card settings-main-card">
-      <div class="p-card-header">
+    <div class="card-panel settings-main-card">
+      <div class="settings-card-header">
         <div>
-          <div class="p-card-title"><i class="bi bi-toggles mr-2" style="color:var(--p-accent)"></i>App sozlamalari</div>
-          <div class="p-card-sub">Global flaglar va qadoqlash narxi</div>
+          <div class="settings-card-title"><i class="bi bi-toggles mr-2" style="color:var(--p-accent)"></i>App sozlamalari</div>
+          <div class="settings-card-sub">Global flaglar va qadoqlash narxi</div>
         </div>
       </div>
       <form method="POST" action="<?php echo e(route('admin.settings.app-flags')); ?>">
@@ -470,9 +482,9 @@
   </div>
 
   <div>
-    <div class="p-card settings-aside-card">
-      <div class="p-card-header">
-        <div class="p-card-title"><i class="bi bi-info-circle mr-2" style="color:var(--p-info)"></i>Hozirgi holat</div>
+    <div class="card-panel settings-aside-card">
+      <div class="settings-card-header">
+        <div class="settings-card-title"><i class="bi bi-info-circle mr-2" style="color:var(--p-info)"></i>Hozirgi holat</div>
       </div>
       <?php $__currentLoopData = [
         ['onPremium',    $project?->on_premium,  'warning', 'bi-star-fill'],
@@ -519,11 +531,11 @@
 <?php if($tab === 'courier-bonus'): ?>
 <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
   <div class="xl:col-span-7">
-    <div class="p-card">
-      <div class="p-card-header">
+    <div class="card-panel">
+      <div class="settings-card-header">
         <div>
-          <div class="p-card-title"><i class="bi bi-bicycle mr-2" style="color:var(--p-info)"></i>Kuryer bonus tizimi</div>
-          <div class="p-card-sub">Surge bonus, trigger threshold va SLA penalty parametrlari.</div>
+          <div class="settings-card-title"><i class="bi bi-bicycle mr-2" style="color:var(--p-info)"></i>Kuryer bonus tizimi</div>
+          <div class="settings-card-sub">Surge bonus, trigger threshold va SLA penalty parametrlari.</div>
         </div>
       </div>
       <form method="POST" action="<?php echo e(route('admin.settings.courier-bonus')); ?>">
@@ -565,9 +577,9 @@
   </div>
 
   <div class="xl:col-span-5">
-    <div class="p-card">
-      <div class="p-card-header">
-        <div class="p-card-title"><i class="bi bi-activity mr-2" style="color:var(--p-warning)"></i>Joriy konfiguratsiya</div>
+    <div class="card-panel">
+      <div class="settings-card-header">
+        <div class="settings-card-title"><i class="bi bi-activity mr-2" style="color:var(--p-warning)"></i>Joriy konfiguratsiya</div>
       </div>
       <?php $__currentLoopData = [
         ['Har minut bonus', $project?->courier_surge_step ?? 500, 'so\'m'],
@@ -593,11 +605,11 @@
 <?php if($tab === 'telegram'): ?>
 <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
   <div class="xl:col-span-7">
-    <div class="p-card">
-      <div class="p-card-header">
+    <div class="card-panel">
+      <div class="settings-card-header">
         <div>
-          <div class="p-card-title"><i class="bi bi-telegram mr-2" style="color:#229ED9"></i>Telegram Login</div>
-          <div class="p-card-sub">OIDC orqali Telegram autentifikatsiya sozlamalari</div>
+          <div class="settings-card-title"><i class="bi bi-telegram mr-2" style="color:#229ED9"></i>Telegram Login</div>
+          <div class="settings-card-sub">OIDC orqali Telegram autentifikatsiya sozlamalari</div>
         </div>
       </div>
       <form method="POST" action="<?php echo e(route('admin.settings.telegram')); ?>">
@@ -662,9 +674,9 @@
   </div>
 
   <div class="xl:col-span-5">
-    <div class="p-card">
-      <div class="p-card-header">
-        <div class="p-card-title"><i class="bi bi-info-circle mr-2" style="color:var(--p-info)"></i>Hozirgi holat</div>
+    <div class="card-panel">
+      <div class="settings-card-header">
+        <div class="settings-card-title"><i class="bi bi-info-circle mr-2" style="color:var(--p-info)"></i>Hozirgi holat</div>
       </div>
       <div class="kc-settings-row">
         <span class="kc-settings-key"><i class="bi bi-power mr-1" style="color:#229ED9"></i> Holat</span>
@@ -706,15 +718,15 @@
 <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
 
   <div class="xl:col-span-8">
-    <div class="p-card">
-      <div class="p-card-header">
+    <div class="card-panel">
+      <div class="settings-card-header">
         <div>
-          <div class="p-card-title"><i class="bi bi-percent mr-2" style="color:var(--p-accent)"></i>Komissiya qoidalari</div>
-          <div class="p-card-sub">Narx oralig'iga qarab seller komissiyasi</div>
+          <div class="settings-card-title"><i class="bi bi-percent mr-2" style="color:var(--p-accent)"></i>Komissiya qoidalari</div>
+          <div class="settings-card-sub">Narx oralig'iga qarab seller komissiyasi</div>
         </div>
       </div>
       <div class="table-responsive kc-twrap">
-        <table class="p-table" data-index-grid>
+        <table class="table data-table align-middle mb-0" data-index-grid>
           <thead>
             <tr>
               <th>Narx dan (UZS)</th>
@@ -760,9 +772,9 @@
   </div>
 
   <div class="xl:col-span-4">
-    <div class="p-card">
-      <div class="p-card-header">
-        <div class="p-card-title">Yangi qoida qo'shish</div>
+    <div class="card-panel">
+      <div class="settings-card-header">
+        <div class="settings-card-title">Yangi qoida qo'shish</div>
       </div>
       <form method="POST" action="<?php echo e(route('admin.settings.commission.store')); ?>">
         <?php echo csrf_field(); ?>
@@ -841,15 +853,15 @@ document.getElementById('editCommissionModal').addEventListener('click', functio
 <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
 
   <div class="xl:col-span-8">
-    <div class="p-card">
-      <div class="p-card-header">
+    <div class="card-panel">
+      <div class="settings-card-header">
         <div>
-          <div class="p-card-title"><i class="bi bi-cash-stack mr-2" style="color:var(--p-success)"></i>Cashback qoidalari</div>
-          <div class="p-card-sub">Xarid summasiga qarab cashback foizi</div>
+          <div class="settings-card-title"><i class="bi bi-cash-stack mr-2" style="color:var(--p-success)"></i>Cashback qoidalari</div>
+          <div class="settings-card-sub">Xarid summasiga qarab cashback foizi</div>
         </div>
       </div>
       <div class="table-responsive kc-twrap">
-        <table class="p-table" data-index-grid>
+        <table class="table data-table align-middle mb-0" data-index-grid>
           <thead>
             <tr>
               <th>Tur</th>
@@ -908,9 +920,9 @@ document.getElementById('editCommissionModal').addEventListener('click', functio
   </div>
 
   <div class="xl:col-span-4">
-    <div class="p-card">
-      <div class="p-card-header">
-        <div class="p-card-title">Yangi qoida qo'shish</div>
+    <div class="card-panel">
+      <div class="settings-card-header">
+        <div class="settings-card-title">Yangi qoida qo'shish</div>
       </div>
       <form method="POST" action="<?php echo e(route('admin.settings.cashback.store')); ?>">
         <?php echo csrf_field(); ?>
@@ -1004,15 +1016,15 @@ document.getElementById('editCashbackModal').addEventListener('click', function(
 <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
 
   <div class="xl:col-span-7">
-    <div class="p-card">
-      <div class="p-card-header">
+    <div class="card-panel">
+      <div class="settings-card-header">
         <div>
-          <div class="p-card-title"><i class="bi bi-truck mr-2" style="color:var(--p-info)"></i>Yetkazish xizmatlari</div>
-          <div class="p-card-sub"><?php echo e($delivery->count()); ?> ta xizmat</div>
+          <div class="settings-card-title"><i class="bi bi-truck mr-2" style="color:var(--p-info)"></i>Yetkazish xizmatlari</div>
+          <div class="settings-card-sub"><?php echo e($delivery->count()); ?> ta xizmat</div>
         </div>
       </div>
       <div class="table-responsive kc-twrap">
-        <table class="p-table" data-index-grid>
+        <table class="table data-table align-middle mb-0" data-index-grid>
           <thead>
             <tr>
               <th>Nomi</th>
@@ -1093,9 +1105,9 @@ document.getElementById('editCashbackModal').addEventListener('click', function(
   </div>
 
   <div class="xl:col-span-5">
-    <div class="p-card">
-      <div class="p-card-header">
-        <div class="p-card-title">Yangi xizmat qo'shish</div>
+    <div class="card-panel">
+      <div class="settings-card-header">
+        <div class="settings-card-title">Yangi xizmat qo'shish</div>
       </div>
       <form method="POST" action="<?php echo e(route('admin.settings.delivery.store')); ?>">
         <?php echo csrf_field(); ?>

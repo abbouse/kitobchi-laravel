@@ -699,9 +699,9 @@
             </div>
         </div>
         <div class="a122-section-body">
-        <div class="table-wrap">
+        <div class="table-responsive kc-table-shell">
             <div class="overflow-x-auto">
-                <table class="tbl">
+                <table class="table data-table align-middle mb-0">
                     <thead>
                         <tr>
                             <th>Seller-order</th>
@@ -778,9 +778,9 @@
             </div>
         </div>
         <div class="a122-section-body">
-        <div class="table-wrap">
+        <div class="table-responsive kc-table-shell">
             <div class="overflow-x-auto">
-                <table class="tbl">
+                <table class="table data-table align-middle mb-0">
                     <thead>
                         <tr>
                             <th>ID</th>
@@ -837,9 +837,9 @@
         </div>
     </div>
     <div class="a122-section-body">
-    <div class="table-wrap">
+    <div class="table-responsive kc-table-shell">
         <div class="overflow-x-auto">
-            <table class="tbl">
+            <table class="table data-table align-middle mb-0">
                 <thead>
                     <tr>
                         <th>Vaqt</th>
@@ -879,9 +879,9 @@
         </div>
     </div>
     <div class="a122-section-body">
-    <div class="table-wrap">
+    <div class="table-responsive kc-table-shell">
         <div class="overflow-x-auto">
-            <table class="tbl">
+            <table class="table data-table align-middle mb-0">
                 <thead>
                     <tr>
                         <th>Vaqt</th>

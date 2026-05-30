@@ -57,17 +57,17 @@
   id="a122-sidebar"
   data-sidebar
   data-collapsed="false"
-  class="kc-sidebar is-expanded">
+  class="sidebar kc-sidebar is-expanded">
   <div class="kc-sidebar__surface">
-    <div class="kc-sidebar__brand">
+    <div class="brand kc-sidebar__brand">
       <div class="d-flex align-items-start justify-content-between gap-2">
         <a href="<?php echo e(route('admin.dashboard')); ?>" class="kc-sidebar__brand-link">
-          <span class="kc-sidebar__brand-mark">
-            <i class="bi bi-grid"></i>
+          <span class="brand-logo kc-sidebar__brand-mark">
+            <i class="bi bi-book-half"></i>
           </span>
           <span class="kc-sidebar__brand-copy">
-            <span class="kc-sidebar__brand-title d-block">Kitobchi</span>
-            <span class="kc-sidebar__brand-subtitle d-block">Admin Dashboard</span>
+            <span class="brand-name kc-sidebar__brand-title d-block">Kitobchi</span>
+            <span class="brand-sub kc-sidebar__brand-subtitle d-block">Admin Panel</span>
           </span>
         </a>
         <div class="d-flex align-items-center gap-2">
@@ -81,10 +81,10 @@
       </div>
     </div>
 
-    <div class="kc-sidebar__scroll">
+    <div class="nav-group kc-sidebar__scroll">
       <?php $__currentLoopData = $groups; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $group): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
         <section class="kc-sidebar__group">
-          <div class="kc-sidebar__group-title"><?php echo e($group['title']); ?></div>
+          <div class="nav-title kc-sidebar__group-title"><?php echo e($group['title']); ?></div>
           <nav class="nav flex-column kc-sidebar__nav">
             <?php $__currentLoopData = $group['items']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $item): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
               <?php
@@ -96,7 +96,7 @@
                 data-sidebar-link
                 data-label="<?php echo e($item['label']); ?>"
                 title="<?php echo e($item['label']); ?>"
-                class="nav-link <?php echo e($active ? 'active' : ''); ?>">
+                class="nav-item nav-link <?php echo e($active ? 'active' : ''); ?>">
                 <span class="kc-sidebar__icon"><i class="bi bi-<?php echo e($item['icon']); ?>"></i></span>
                 <span class="kc-sidebar__label"><?php echo e($item['label']); ?></span>
               </a>
@@ -106,7 +106,7 @@
       <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
     </div>
 
-    <div class="kc-sidebar__footer">
+    <div class="sidebar-footer kc-sidebar__footer">
       <div class="kc-sidebar__workspace">
         <div class="kc-sidebar__workspace-label">Signed in</div>
         <div class="kc-sidebar__workspace-title"><?php echo e($panelAdmin?->name ?? 'Admin'); ?></div>

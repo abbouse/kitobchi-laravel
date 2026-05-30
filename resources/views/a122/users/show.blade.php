@@ -223,8 +223,8 @@
         <span class="badge badge-info">{{ $stats['orders_count'] }} ta</span>
       </div>
 
-      <div class="table-wrap">
-        <table class="tbl">
+      <div class="table-responsive kc-table-shell">
+        <table class="table data-table align-middle mb-0">
           <thead><tr><th>ID</th><th>Status</th><th>To‘lov</th><th>Yetkazish</th><th>Summa</th><th>Sana</th><th></th></tr></thead>
           <tbody>
             @forelse($recentOrders as $order)
@@ -258,7 +258,7 @@
                 <td>{{ $deliveryLabel }}</td>
                 <td>{{ number_format((float) $order->amount, 0, '.', ' ') }} UZS</td>
                 <td>{{ optional($order->created_at)->format('d.m.Y H:i') }}</td>
-                <td class="text-right"><a href="{{ route('admin.orders.show', $order) }}" class="btn-ghost p-2 rounded-lg"><i data-lucide="eye" class="w-4 h-4"></i></a></td>
+                <td class="text-right"><a href="{{ route('admin.orders.show', $order) }}" class="btn btn-outline-secondary p-2 rounded-lg"><i data-lucide="eye" class="w-4 h-4"></i></a></td>
               </tr>
             @empty
               <tr><td colspan="7" class="text-center text-sm text-gray-500 py-8">Buyurtmalar topilmadi.</td></tr>
@@ -304,7 +304,7 @@
                 <form method="POST" action="{{ route('admin.users.cards.destroy', [$user, $card]) }}" onsubmit="return confirm('Kartani Paylov va tizimdan o‘chirasizmi?')">
                   @csrf
                   @method('DELETE')
-                  <button class="btn-ghost p-2 rounded-lg text-rose-600" title="Kartani o‘chirish">
+                  <button class="btn btn-outline-secondary p-2 rounded-lg text-rose-600" title="Kartani o‘chirish">
                     <i class="bi bi-trash"></i>
                   </button>
                 </form>
@@ -449,8 +449,8 @@
         <h3 class="text-lg font-black">Gift sertifikatlar</h3>
         <span class="badge badge-info">{{ $stats['gift_certificates_count'] }} ta</span>
       </div>
-      <div class="table-wrap">
-        <table class="tbl">
+      <div class="table-responsive kc-table-shell">
+        <table class="table data-table align-middle mb-0">
           <thead><tr><th>Kod</th><th>Rol</th><th>Status</th><th>Miqdor</th><th>Muddat</th><th></th></tr></thead>
           <tbody>
             @forelse($giftCertificates as $certificate)
@@ -460,7 +460,7 @@
                 <td><span class="badge badge-{{ $certificate->status_color }}">{{ $certificate->status_label }}</span></td>
                 <td>{{ number_format((int) $certificate->nominal_uzs, 0, '.', ' ') }} UZS</td>
                 <td>{{ optional($certificate->expires_at)->format('d.m.Y') ?: '—' }}</td>
-                <td class="text-right"><a href="{{ route('admin.gift-certificates.show', $certificate) }}" class="btn-ghost p-2 rounded-lg"><i data-lucide="eye" class="w-4 h-4"></i></a></td>
+                <td class="text-right"><a href="{{ route('admin.gift-certificates.show', $certificate) }}" class="btn btn-outline-secondary p-2 rounded-lg"><i data-lucide="eye" class="w-4 h-4"></i></a></td>
               </tr>
             @empty
               <tr><td colspan="6" class="text-center text-sm text-gray-500 py-8">Gift sertifikatlar topilmadi.</td></tr>

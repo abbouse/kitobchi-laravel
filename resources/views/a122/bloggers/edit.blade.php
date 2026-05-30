@@ -10,7 +10,7 @@
     <x-slot name="meta">Aloqa, manzil, tarmoq havolalari va faol muddatni belgilang.</x-slot>
   </x-a122.page-header>
 
-  <div class="card p-6">
+  <div class="card-panel p-6">
     <form method="POST" action="{{ $isEdit ? route('admin.bloggers.update', $blogger) : route('admin.bloggers.store') }}">
       @csrf
       @if($isEdit) @method('PUT') @endif

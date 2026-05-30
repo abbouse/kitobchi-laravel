@@ -3,14 +3,16 @@
 @section('page-title', $title ?? 'Sahifa')
 
 @section('content')
-<div class="card p-10 text-center">
-  <div class="w-16 h-16 rounded-2xl brand-gradient flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-500/20">
-    <i data-lucide="construction" class="w-7 h-7 text-white"></i>
+<div class="card-panel p-5 text-center mx-auto" style="max-width:640px;">
+  <div class="d-inline-grid place-items-center rounded-3 text-white mb-4"
+       style="width:64px;height:64px;background:linear-gradient(135deg,#4f46e5,#7c3aed);">
+    <i class="bi bi-grid-1x2-fill fs-3"></i>
   </div>
-  <h2 class="text-2xl font-bold">{{ $title ?? 'Sahifa' }}</h2>
-  <p class="text-sm text-gray-500 mt-2 max-w-md mx-auto">Bu modul keyingi bosqichda to'liq ko'chiriladi.</p>
-  <a href="{{ route('admin.dashboard') }}" class="btn btn-primary mt-6 inline-flex">
-    <i data-lucide="arrow-left" class="w-4 h-4"></i> Dashboardga qaytish
+  <h1 class="page-title mb-2">{{ $title ?? 'Sahifa' }}</h1>
+  <p class="page-subtitle mx-auto" style="max-width:420px;">Ushbu modul uchun boshqaruv oynasi tayyorlanmoqda.</p>
+  <a href="{{ route('admin.dashboard') }}" class="btn-primary-gradient d-inline-flex align-items-center gap-2 mt-4 text-decoration-none">
+    <i class="bi bi-arrow-left"></i>
+    Dashboard
   </a>
 </div>
 @endsection

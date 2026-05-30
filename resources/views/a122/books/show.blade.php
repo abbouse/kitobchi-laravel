@@ -47,7 +47,7 @@
         </div>
       </section>
 
-      <section class="card p-5">
+      <section class="card-panel p-5">
         <div class="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] gap-5">
           <div class="space-y-3">
             <div class="rounded-[1.4rem] overflow-hidden border border-[var(--p-border)] bg-[var(--p-elevated)] min-h-[320px] flex items-center justify-center">
@@ -119,7 +119,7 @@
         </div>
       </section>
 
-      <section class="card p-5">
+      <section class="card-panel p-5">
         <h3 class="text-lg font-black mb-4">Savdo va buyurtma analitikasi</h3>
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <div class="kpi-soft"><div class="metric-label">Sotilgan</div><div class="metric-value text-xl">{{ number_format((int)($book->totalSales ?? 0)) }}</div></div>
@@ -128,8 +128,8 @@
           <div class="kpi-soft"><div class="metric-label">Hafta savdosi</div><div class="metric-value text-xl">{{ number_format((int)($book->totalSalesWeek ?? 0)) }}</div></div>
         </div>
 
-        <div class="table-wrap mt-4">
-          <table class="tbl">
+        <div class="table-responsive kc-table-shell mt-4">
+          <table class="table data-table align-middle mb-0">
             <thead><tr><th>So‘nggi buyurtmalar</th><th>Mijoz</th><th>Summa</th><th>Status</th><th>Sana</th><th></th></tr></thead>
             <tbody>
               @forelse($recentOrders as $order)
@@ -139,7 +139,7 @@
                   <td>{{ number_format((float) $order->amount, 0, '.', ' ') }} UZS</td>
                   <td>{{ (int) $order->paymentStatus === 2 ? 'To‘langan' : 'Jarayonda' }}</td>
                   <td>{{ optional($order->created_at)->format('d.m.Y H:i') }}</td>
-                  <td class="text-right"><a href="{{ route('admin.orders.show', $order) }}" class="btn-ghost p-2 rounded-lg"><i data-lucide="eye" class="w-4 h-4"></i></a></td>
+                  <td class="text-right"><a href="{{ route('admin.orders.show', $order) }}" class="btn btn-outline-secondary p-2 rounded-lg"><i data-lucide="eye" class="w-4 h-4"></i></a></td>
                 </tr>
               @empty
                 <tr><td colspan="6" class="text-center text-sm text-gray-500 py-8">Bu kitob ishtirok etgan buyurtmalar topilmadi.</td></tr>
@@ -190,7 +190,7 @@
         </div>
       </section>
 
-      <section class="card p-5">
+      <section class="card-panel p-5">
         <h3 class="text-lg font-black mb-4">Seller oqimi</h3>
         <div class="space-y-3">
           @forelse($sellerOrders as $sellerOrder)

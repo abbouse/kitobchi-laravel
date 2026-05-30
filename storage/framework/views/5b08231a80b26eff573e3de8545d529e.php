@@ -1,109 +1,87 @@
 <?php $__env->startSection('title', 'Book Club'); ?>
-<?php $__env->startSection('page-title', 'Book Club postlari'); ?>
+<?php $__env->startSection('page-title', 'Book Club'); ?>
 
 <?php $__env->startSection('content'); ?>
-<div x-data="{
-  view: localStorage.getItem('a122-book-club-view') || 'grid',
-  setView(next) {
-    this.view = next;
-    localStorage.setItem('a122-book-club-view', next);
-  }
-}">
-
-<?php if (isset($component)) { $__componentOriginal0c1345684b2d774f43a544669f5684b0 = $component; } ?>
-<?php if (isset($attributes)) { $__attributesOriginal0c1345684b2d774f43a544669f5684b0 = $attributes; } ?>
-<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.a122.page-header','data' => []] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
-<?php $component->withName('a122.page-header'); ?>
+<div class="d-flex flex-column gap-4">
+  <?php if (isset($component)) { $__componentOriginalcb19cb35a534439097b02b8af91726ee = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginalcb19cb35a534439097b02b8af91726ee = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.admin.page-header','data' => ['eyebrow' => 'Community','title' => 'Book Club','subtitle' => ''.e($posts->total()).' ta post']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('admin.page-header'); ?>
 <?php if ($component->shouldRender()): ?>
 <?php $__env->startComponent($component->resolveView(), $component->data()); ?>
 <?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
 <?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
 <?php endif; ?>
-<?php $component->withAttributes([]); ?>
-   <?php $__env->slot('heading', null, []); ?> Book Club <?php $__env->endSlot(); ?>
-   <?php $__env->slot('meta', null, []); ?> Foydalanuvchilar postlari va repostlari <?php $__env->endSlot(); ?>
- <?php echo $__env->renderComponent(); ?>
+<?php $component->withAttributes(['eyebrow' => 'Community','title' => 'Book Club','subtitle' => ''.e($posts->total()).' ta post']); ?>
+<?php echo $__env->renderComponent(); ?>
 <?php endif; ?>
-<?php if (isset($__attributesOriginal0c1345684b2d774f43a544669f5684b0)): ?>
-<?php $attributes = $__attributesOriginal0c1345684b2d774f43a544669f5684b0; ?>
-<?php unset($__attributesOriginal0c1345684b2d774f43a544669f5684b0); ?>
+<?php if (isset($__attributesOriginalcb19cb35a534439097b02b8af91726ee)): ?>
+<?php $attributes = $__attributesOriginalcb19cb35a534439097b02b8af91726ee; ?>
+<?php unset($__attributesOriginalcb19cb35a534439097b02b8af91726ee); ?>
 <?php endif; ?>
-<?php if (isset($__componentOriginal0c1345684b2d774f43a544669f5684b0)): ?>
-<?php $component = $__componentOriginal0c1345684b2d774f43a544669f5684b0; ?>
-<?php unset($__componentOriginal0c1345684b2d774f43a544669f5684b0); ?>
+<?php if (isset($__componentOriginalcb19cb35a534439097b02b8af91726ee)): ?>
+<?php $component = $__componentOriginalcb19cb35a534439097b02b8af91726ee; ?>
+<?php unset($__componentOriginalcb19cb35a534439097b02b8af91726ee); ?>
 <?php endif; ?>
 
-<div class="a122-stat-grid mb-4 fade-up">
-  <?php $__currentLoopData = [
-    [$counts['all'] ?? 0, 'Jami postlar', 'accent', 'bi-chat-square-text'],
-    [$counts['posts'] ?? 0, 'Asl postlar', 'info', 'bi-pencil-square'],
-    [$counts['reposts'] ?? 0, 'Repostlar', 'warning', 'bi-arrow-repeat'],
-    [$posts->total() ?? 0, 'Ko‘rinayotgan postlar', 'success', 'bi-stars'],
-  ]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$value, $label, $tone, $icon]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-    <div class="a122-stat-tile">
-      <div class="a122-stat-tile__icon" style="background:var(--p-<?php echo e($tone); ?>-d,var(--p-elevated));color:var(--p-<?php echo e($tone); ?>)">
-        <i class="bi <?php echo e($icon); ?>"></i>
+  <div class="row g-3">
+    <?php $__currentLoopData = [
+      [$counts['all'] ?? 0, 'Jami postlar', 'bi-chat-square-text', 'primary'],
+      [$counts['posts'] ?? 0, 'Asl postlar', 'bi-pencil-square', 'info'],
+      [$counts['reposts'] ?? 0, 'Repostlar', 'bi-arrow-repeat', 'warning'],
+      [$posts->total() ?? 0, 'Ko‘rinmoqda', 'bi-stars', 'success'],
+    ]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$value, $label, $icon, $tone]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+      <div class="col-6 col-xl-3">
+        <div class="a122-stat-tile h-100">
+          <div class="a122-stat-tile__icon bg-<?php echo e($tone); ?>-subtle text-<?php echo e($tone); ?>">
+            <i class="bi <?php echo e($icon); ?>"></i>
+          </div>
+          <div>
+            <div class="a122-stat-tile__value"><?php echo e(number_format($value)); ?></div>
+            <div class="a122-stat-tile__label"><?php echo e($label); ?></div>
+          </div>
+        </div>
       </div>
-      <div>
-        <div class="a122-stat-tile__value"><?php echo e($value); ?></div>
-        <div class="a122-stat-tile__label"><?php echo e($label); ?></div>
+    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+  </div>
+
+  <?php if (isset($component)) { $__componentOriginal6c55ae2c9251ebabe977f3f2190280eb = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal6c55ae2c9251ebabe977f3f2190280eb = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.admin.section-card','data' => ['title' => 'Postlar oqimi','meta' => $posts->total() . ' ta yozuv']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('admin.section-card'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['title' => 'Postlar oqimi','meta' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($posts->total() . ' ta yozuv')]); ?>
+    <?php $__empty_1 = true; $__currentLoopData = $posts; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $post): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+      <?php if($loop->first): ?>
+        <div class="row g-3">
+      <?php endif; ?>
+      <div class="col-12 col-xl-6 col-xxl-4">
+        <?php echo $__env->make('a122.book-club._post-card', ['post' => $post, 'showUser' => true], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
       </div>
-    </div>
-  <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-</div>
+      <?php if($loop->last): ?>
+        </div>
+      <?php endif; ?>
+    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
+      <div class="text-center py-5 text-secondary">Post topilmadi.</div>
+    <?php endif; ?>
+   <?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal6c55ae2c9251ebabe977f3f2190280eb)): ?>
+<?php $attributes = $__attributesOriginal6c55ae2c9251ebabe977f3f2190280eb; ?>
+<?php unset($__attributesOriginal6c55ae2c9251ebabe977f3f2190280eb); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal6c55ae2c9251ebabe977f3f2190280eb)): ?>
+<?php $component = $__componentOriginal6c55ae2c9251ebabe977f3f2190280eb; ?>
+<?php unset($__componentOriginal6c55ae2c9251ebabe977f3f2190280eb); ?>
+<?php endif; ?>
 
-<div class="a122-index-header mb-3 fade-up">
-  <div>
-    <div class="a122-index-header__title">Book Club oqimi</div>
-    <div class="a122-index-header__meta"><?php echo e($posts->total()); ?> ta post ko'rinmoqda</div>
-  </div>
-  <div class="flex flex-wrap items-center justify-between gap-3">
-    <div class="index-table-segment" role="tablist" aria-label="Ko‘rinish">
-      <button type="button" @click="setView('list')" :class="{ 'is-active': view === 'list' }">
-        <i class="bi bi-list-ul"></i>
-        <span>List</span>
-      </button>
-      <button type="button" @click="setView('grid')" :class="{ 'is-active': view === 'grid' }">
-        <i class="bi bi-grid-3x3-gap"></i>
-        <span>Grid</span>
-      </button>
-    </div>
-  </div>
-</div>
-
-<div class="a122-section fade-up">
-  <div class="a122-section-head">
-    <div>
-      <div class="a122-section-head__title">Postlar oqimi</div>
-      <div class="a122-section-head__meta">List yoki grid ko‘rinishda moderatsiya qilish va tezkor boshqarish mumkin.</div>
-    </div>
-  </div>
-  <div class="a122-section-body">
-<?php $__empty_1 = true; $__currentLoopData = $posts; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $post): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
-  <?php if($loop->first): ?>
-  <div class="grid gap-3"
-       :class="view === 'grid' ? 'grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3' : 'grid-cols-1'">
+  <?php if($posts->hasPages()): ?>
+    <div><?php echo e($posts->links('a122.partials.pagination')); ?></div>
   <?php endif; ?>
-
-  <div class="fade-up">
-    <?php echo $__env->make('a122.book-club._post-card', ['post' => $post, 'showUser' => true], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
-  </div>
-
-  <?php if($loop->last): ?></div><?php endif; ?>
-<?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
-<div class="p-card fade-up" style="text-align:center;padding:50px;color:var(--p-hint)">
-  <i class="bi bi-chat-square-text" style="font-size:36px;display:block;margin-bottom:12px"></i>
-  Postlar topilmadi
-</div>
-<?php endif; ?>
-</div>
-</div>
-
-<div class="mt-3">
-  <?php echo e($posts->links('a122.partials.pagination')); ?>
-
-</div>
-
 </div>
 <?php $__env->stopSection(); ?>
 

@@ -77,11 +77,11 @@
 
 <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
     <div class="xl:col-span-8 space-y-4">
-        <div class="p-card">
-            <div class="p-card-header">
+        <div class="card-panel">
+            <div class="card-panel-header">
                 <div>
-                    <div class="p-card-title"><i class="bi bi-image mr-2" style="color:var(--p-accent)"></i>Banner va kontent</div>
-                    <div class="p-card-sub">Foydalanuvchi ilovasida ko‘rinadigan asosiy blok</div>
+                    <div class="card-panel-title"><i class="bi bi-image mr-2" style="color:var(--p-accent)"></i>Banner va kontent</div>
+                    <div class="card-panel-sub">Foydalanuvchi ilovasida ko‘rinadigan asosiy blok</div>
                 </div>
                 <span class="s-pill <?php echo e($news->status ? 'success' : 'danger'); ?>">
                     <?php echo e($news->status ? 'Faol' : 'Yashirin'); ?>
@@ -110,11 +110,11 @@
             </div>
         </div>
 
-        <div class="p-card">
-            <div class="p-card-header">
+        <div class="card-panel">
+            <div class="card-panel-header">
                 <div>
-                    <div class="p-card-title"><i class="bi bi-cursor mr-2" style="color:var(--p-info)"></i>Action target</div>
-                    <div class="p-card-sub">Yangilik bosilganda foydalanuvchi qayerga o‘tadi</div>
+                    <div class="card-panel-title"><i class="bi bi-cursor mr-2" style="color:var(--p-info)"></i>Action target</div>
+                    <div class="card-panel-sub">Yangilik bosilganda foydalanuvchi qayerga o‘tadi</div>
                 </div>
             </div>
 
@@ -156,9 +156,9 @@
     </div>
 
     <div class="xl:col-span-4 space-y-4">
-        <div class="p-card">
-            <div class="p-card-header">
-                <div class="p-card-title"><i class="bi bi-info-circle mr-2" style="color:var(--p-warning)"></i>Meta</div>
+        <div class="card-panel">
+            <div class="card-panel-header">
+                <div class="card-panel-title"><i class="bi bi-info-circle mr-2" style="color:var(--p-warning)"></i>Meta</div>
             </div>
             <div class="space-y-3">
                 <div class="data-kv">
@@ -185,9 +185,9 @@
             </div>
         </div>
 
-        <div class="p-card">
-            <div class="p-card-header">
-                <div class="p-card-title"><i class="bi bi-lightning-charge mr-2" style="color:var(--p-accent)"></i>Admin eslatma</div>
+        <div class="card-panel">
+            <div class="card-panel-header">
+                <div class="card-panel-title"><i class="bi bi-lightning-charge mr-2" style="color:var(--p-accent)"></i>Admin eslatma</div>
             </div>
             <div class="p-quote-block">
                 `to_shop` va `to_product` actionlarida target doimo mavjud bo‘lishi kerak. Aks holda banner bosilganda foydalanuvchi oqimi uziladi.

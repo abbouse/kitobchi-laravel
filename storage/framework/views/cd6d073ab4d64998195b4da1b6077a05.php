@@ -103,8 +103,8 @@
   <div class="xl:col-span-4">
 
     
-    <div class="p-card mb-3 fade-up">
-      <div class="p-card-header"><div class="p-card-title">Shikoyatchi</div></div>
+    <div class="card-panel mb-3 fade-up">
+      <div class="card-panel-header"><div class="card-panel-title">Shikoyatchi</div></div>
       <div style="padding:14px 18px">
         <?php if($report->user): ?>
         <div class="flex items-center gap-3 mb-3">
@@ -141,8 +141,8 @@
     </div>
 
     
-    <div class="p-card mb-3 fade-up">
-      <div class="p-card-header"><div class="p-card-title">Tafsilotlar</div></div>
+    <div class="card-panel mb-3 fade-up">
+      <div class="card-panel-header"><div class="card-panel-title">Tafsilotlar</div></div>
       <div style="padding:0 18px 14px">
         <?php $__currentLoopData = [
           ['Tur', match($report->reportable_type){
@@ -164,9 +164,9 @@
 
     
     <?php if($otherReports->count()): ?>
-    <div class="p-card fade-up" style="border-color:rgba(245,166,35,.3)">
-      <div class="p-card-header">
-        <div class="p-card-title" style="color:var(--p-warning)">
+    <div class="card-panel fade-up" style="border-color:rgba(245,166,35,.3)">
+      <div class="card-panel-header">
+        <div class="card-panel-title" style="color:var(--p-warning)">
           <i class="bi bi-exclamation-triangle-fill mr-1"></i>Boshqa shikoyatlar
         </div>
         <span class="s-pill warning" style="font-size:10px"><?php echo e($otherReports->count()); ?></span>
@@ -196,8 +196,8 @@
   <div class="xl:col-span-8">
 
     
-    <div class="p-card mb-3 fade-up">
-      <div class="p-card-header"><div class="p-card-title">Shikoyat matni</div></div>
+    <div class="card-panel mb-3 fade-up">
+      <div class="card-panel-header"><div class="card-panel-title">Shikoyat matni</div></div>
       <div style="padding:16px 18px">
         <div style="margin-bottom:14px">
           <div style="font-size:10px;color:var(--p-hint);text-transform:uppercase;
@@ -224,9 +224,9 @@
 
     
     <?php if($reportable): ?>
-    <div class="p-card fade-up" style="border-color:rgba(255,92,106,.2)">
-      <div class="p-card-header">
-        <div class="p-card-title" style="color:var(--p-danger)">
+    <div class="card-panel fade-up" style="border-color:rgba(255,92,106,.2)">
+      <div class="card-panel-header">
+        <div class="card-panel-title" style="color:var(--p-danger)">
           <i class="bi bi-flag-fill mr-1"></i>Shikoyat qilingan kontent
         </div>
         <span class="s-pill danger" style="font-size:10px">
@@ -291,7 +291,7 @@
     </div>
 
     <?php else: ?>
-    <div class="p-card fade-up">
+    <div class="card-panel fade-up">
       <div style="padding:30px;text-align:center;color:var(--p-hint)">
         <i class="bi bi-question-circle" style="font-size:28px;display:block;margin-bottom:8px"></i>
         Kontent topilmadi (o'chirilgan bo'lishi mumkin)

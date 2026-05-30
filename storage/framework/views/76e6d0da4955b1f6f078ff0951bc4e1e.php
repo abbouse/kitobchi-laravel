@@ -37,10 +37,10 @@
   
   <div class="xl:col-span-8">
     <?php $__empty_1 = true; $__currentLoopData = $plans; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $plan): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
-    <div class="p-card mb-3 fade-up">
-      <div class="p-card-header">
+    <div class="card-panel mb-3 fade-up">
+      <div class="card-panel-header">
         <div>
-          <div class="p-card-title"><?php echo e($plan->name_uz); ?></div>
+          <div class="card-panel-title"><?php echo e($plan->name_uz); ?></div>
           <?php if($plan->name_ru): ?>
           <div style="font-size:11px;color:var(--p-hint)"><?php echo e($plan->name_ru); ?></div>
           <?php endif; ?>
@@ -168,7 +168,7 @@
       <?php endif; ?>
     </div>
     <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
-    <div class="p-card fade-up" style="text-align:center;padding:40px;color:var(--p-hint)">
+    <div class="card-panel fade-up" style="text-align:center;padding:40px;color:var(--p-hint)">
       <i class="bi bi-box" style="font-size:32px;display:block;margin-bottom:8px"></i>
       Hali tariflar yo'q. O'ngdagi formadan birinchi tarifni yarating.
     </div>
@@ -177,9 +177,9 @@
 
   
   <div class="xl:col-span-4">
-    <div class="p-card fade-up">
-      <div class="p-card-header">
-        <div class="p-card-title">
+    <div class="card-panel fade-up">
+      <div class="card-panel-header">
+        <div class="card-panel-title">
           <i class="bi bi-plus-lg mr-1" style="color:var(--p-accent)"></i>
           Yangi tarif
         </div>

@@ -40,7 +40,7 @@
   <?php endif; ?>
 
   <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
-    <section class="card p-5 xl:col-span-8">
+    <section class="card-panel p-5 xl:col-span-8">
       <h3 class="text-lg font-black mb-4">Asosiy ma’lumotlar</h3>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div><label class="p-form-label">Nomi</label><input name="name" class="p-form-control" required value="<?php echo e($value('name')); ?>"></div>
@@ -53,7 +53,7 @@
       </div>
     </section>
 
-    <section class="card p-5 xl:col-span-4">
+    <section class="card-panel p-5 xl:col-span-4">
       <h3 class="text-lg font-black mb-4">Savdo parametrlari</h3>
       <div class="space-y-4">
         <div><label class="p-form-label">Narx</label><input name="price" type="number" class="p-form-control" required value="<?php echo e($value('price')); ?>"></div>
@@ -68,7 +68,7 @@
     </section>
   </div>
 
-  <section class="card p-5">
+  <section class="card-panel p-5">
     <h3 class="text-lg font-black mb-4">Rasmlar</h3>
     <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
       <div class="xl:col-span-8">
@@ -82,7 +82,7 @@
     </div>
   </section>
 
-  <section class="card p-5">
+  <section class="card-panel p-5">
     <div class="flex items-center justify-between gap-3 mb-4">
       <h3 class="text-lg font-black">Variantlar</h3>
       <button type="button" class="btn-p ghost" onclick="window.a122AddVariantRow?.()"><i class="bi bi-plus-circle"></i> Variant qo‘shish</button>
@@ -109,14 +109,14 @@
   </section>
 
   <div class="sticky bottom-4 z-20">
-    <div class="card p-4 flex justify-end gap-2 shadow-[var(--p-shadow)]">
+    <div class="card-panel p-4 flex justify-end gap-2 shadow-[var(--p-shadow)]">
       <a href="<?php echo e($item ? route('admin.stationery.show', $item->id) : route('admin.stationery.index')); ?>" class="btn-p ghost">Bekor qilish</a>
       <button class="btn-p primary"><i class="bi bi-check2-circle"></i> Saqlash</button>
     </div>
   </div>
 </form>
 
-<?php if (! $__env->hasRenderedOnce('0bb59547-3f38-4874-94cd-92dbb823f93a')): $__env->markAsRenderedOnce('0bb59547-3f38-4874-94cd-92dbb823f93a'); ?>
+<?php if (! $__env->hasRenderedOnce('9be01f85-1c38-423e-8a5e-88d6ee58d248')): $__env->markAsRenderedOnce('9be01f85-1c38-423e-8a5e-88d6ee58d248'); ?>
   <?php $__env->startPush('scripts'); ?>
     <script>
       window.a122AddVariantRow = function () {

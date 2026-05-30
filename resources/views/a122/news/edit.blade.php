@@ -30,7 +30,7 @@
     </div>
 @endif
 
-<div class="card p-5">
+<div class="card-panel p-5">
     <form method="POST" action="{{ route('admin.news.update', $news) }}" enctype="multipart/form-data" class="grid grid-cols-1 md:grid-cols-2 gap-4">
         @csrf
         @method('PUT')

@@ -10,7 +10,7 @@
   </x-a122.page-header>
 
   <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px] gap-4">
-    <section class="p-card fade-up">
+    <section class="card-panel fade-up">
       <div class="dash-card-head">
         <div class="dash-card-title">Autentifikatsiya</div>
       </div>
@@ -52,7 +52,7 @@ Accept: application/json</code></pre>
     </section>
 
     <aside class="space-y-4 fade-up">
-      <section class="p-card">
+      <section class="card-panel">
         <div class="dash-card-head">
           <div class="dash-card-title">Muhim eslatmalar</div>
         </div>
@@ -66,7 +66,7 @@ Accept: application/json</code></pre>
         </div>
       </section>
 
-      <section class="p-card">
+      <section class="card-panel">
         <div class="dash-card-head">
           <div class="dash-card-title">Response formati</div>
         </div>
@@ -76,7 +76,7 @@ Accept: application/json</code></pre>
 }</code></pre>
       </section>
 
-      <section class="p-card">
+      <section class="card-panel">
         <div class="dash-card-head">
           <div class="dash-card-title">Rate limit headerlari</div>
         </div>

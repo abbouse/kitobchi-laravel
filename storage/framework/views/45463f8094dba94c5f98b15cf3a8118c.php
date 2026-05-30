@@ -4,7 +4,7 @@
 
 <?php $__env->startSection('content'); ?>
 <div class="max-w-2xl">
-  <div class="card p-6">
+  <div class="card-panel p-6">
     <form method="POST" action="<?php echo e($isEdit ? route('admin.stationery-categories.update', $stationeryCategory) : route('admin.stationery-categories.store')); ?>">
       <?php echo csrf_field(); ?>
       <?php if($isEdit): ?> <?php echo method_field('PUT'); ?> <?php endif; ?>

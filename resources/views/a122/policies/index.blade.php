@@ -415,6 +415,10 @@
 }
 .rich-editor hr { border: none; border-top: 1px solid var(--p-border); margin: 1em 0; }
 .slug-input { font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+.legal-toolbar,
+.legal-shell {
+  display: none;
+}
 @media (max-width: 1199px) {
   .legal-translations {
     grid-template-columns: 1fr;
@@ -437,11 +441,6 @@
   .legal-span-4 {
     grid-column: auto;
   }
-  .legal-shell__head,
-  .legal-toolbar {
-    align-items: flex-start;
-    flex-direction: column;
-  }
   .legal-actions {
     flex-direction: column-reverse;
     align-items: stretch;
@@ -456,67 +455,69 @@
   $total = $counts['total'] ?? $policies->total();
 @endphp
 
-<div class="legal-toolbar">
-  <div>
-    <div class="legal-toolbar__title">Siyosatlar</div>
-    <div class="legal-toolbar__meta">{{ $policies->total() }} ta huquqiy sahifa topildi</div>
-  </div>
-  <div class="a122-index-header__actions">
-    <form method="GET" class="a122-index-search-form">
-      <input type="hidden" name="tab" value="{{ $tab ?? 'active' }}">
-      <i class="bi bi-search"></i>
-      <input type="search" name="search" value="{{ request('search') }}" placeholder="Sarlavha, slug yoki kontent bo‘yicha qidiring">
-    </form>
-    <button class="btn-p primary" data-bs-toggle="modal" data-bs-target="#createModal">
-      <i class="bi bi-plus-lg"></i> Yangi siyosat
-    </button>
-  </div>
-</div>
+<x-admin.page-header
+  eyebrow="Legal center"
+  title="Siyosatlar"
+  subtitle="{{ $policies->total() }} ta huquqiy sahifa topildi"
+>
+  <button class="btn-primary-gradient" data-bs-toggle="modal" data-bs-target="#createModal">
+    <i class="bi bi-plus-lg me-2"></i>Yangi siyosat
+  </button>
+</x-admin.page-header>
 
-<div class="tab-pills fade-up mb-3">
+<form method="GET" class="kc-filter-card p-3 mb-3">
+  <div class="row g-3 align-items-end">
+    <input type="hidden" name="tab" value="{{ $tab ?? 'active' }}">
+    <div class="col-12 col-lg-9">
+      <label class="form-label small text-uppercase fw-semibold text-secondary">Qidiruv</label>
+      <div class="position-relative">
+        <i class="bi bi-search position-absolute top-50 translate-middle-y ms-3 text-secondary"></i>
+        <input type="search" name="search" value="{{ request('search') }}" class="form-control ps-5" placeholder="Sarlavha, slug yoki kontent bo‘yicha qidiring">
+      </div>
+    </div>
+    <div class="col-12 col-lg-3 d-grid">
+      <button class="btn btn-dark" type="submit"><i class="bi bi-funnel me-2"></i>Filtrlash</button>
+    </div>
+  </div>
+</form>
+
+<div class="d-flex flex-wrap gap-2 mb-3">
   @foreach([
     'active' => ['Faol', $counts['active'] ?? 0],
     'inactive' => ['Nofaol', $counts['inactive'] ?? 0],
     'all' => ['Barchasi', $counts['total'] ?? 0],
   ] as $key => [$label, $count])
-    <a href="{{ request()->fullUrlWithQuery(['tab' => $key, 'page' => null]) }}" class="tab-pill {{ ($tab ?? 'active') === $key ? 'active' : '' }}">
+    <a href="{{ request()->fullUrlWithQuery(['tab' => $key, 'page' => null]) }}" class="chip text-decoration-none {{ ($tab ?? 'active') === $key ? 'chip-purple' : 'chip-gray' }}">
       {{ $label }} <span>{{ $count }}</span>
     </a>
   @endforeach
 </div>
 
-<div class="legal-stats">
+<div class="row g-3 mb-4">
   @foreach([
-    ['Jami', $total, 'accent', 'bi-file-earmark-text'],
-    ['Faol', $active, 'success', 'bi-check-circle'],
-    ['Nofaol', $total - $active, 'muted', 'bi-eye-slash'],
-  ] as [$label, $value, $color, $icon])
-    <div class="legal-stat">
-      <div>
-        <div class="legal-stat__value">{{ $value }}</div>
-        <div class="legal-stat__label">{{ $label }}</div>
-      </div>
-      <div class="legal-stat__icon" style="background:var(--p-{{ $color }}-d,var(--p-elevated));color:var(--p-{{ $color }},var(--p-muted));">
-        <i class="bi {{ $icon }}"></i>
+    ['Jami', $total, 'chip-info', 'bi-file-earmark-text'],
+    ['Faol', $active, 'chip-success', 'bi-check-circle'],
+    ['Nofaol', $total - $active, 'chip-gray', 'bi-eye-slash'],
+  ] as [$label, $value, $chip, $icon])
+    <div class="col-12 col-md-4">
+      <div class="card-panel p-3 h-100 d-flex align-items-center justify-content-between">
+        <div>
+          <div class="small text-secondary text-uppercase fw-bold mb-2" style="letter-spacing:.08em;">{{ $label }}</div>
+          <div class="h3 fw-bold mb-0">{{ $value }}</div>
+        </div>
+        <span class="chip {{ $chip }}"><i class="bi {{ $icon }}"></i></span>
       </div>
     </div>
   @endforeach
 </div>
 
-<section class="legal-shell fade-up">
-  <div class="legal-shell__head">
-    <div>
-      <div class="legal-shell__title">Siyosatlar ro‘yxati</div>
-      <div class="legal-shell__sub">Slug, preview, ilova ko‘rinishi va status boshqaruvi</div>
-    </div>
-    <div class="flex items-center gap-2 flex-wrap">
-      <span class="legal-badge"><strong>{{ $total }}</strong> jami</span>
-      <span class="legal-badge"><strong>{{ $active }}</strong> faol</span>
-    </div>
-  </div>
-
-  <div class="table-responsive kc-twrap">
-    <table class="p-table" data-index-grid>
+<x-admin.section-card title="Siyosatlar ro‘yxati" meta="Slug, preview, ilova ko‘rinishi va status boshqaruvi">
+  <x-slot name="actions">
+    <span class="chip chip-gray">{{ $total }} jami</span>
+    <span class="chip chip-success">{{ $active }} faol</span>
+  </x-slot>
+  <div class="table-responsive kc-table-shell">
+    <table class="table data-table align-middle mb-0" data-index-grid>
       <thead>
         <tr>
           <th style="width:40px"></th>
@@ -559,16 +560,16 @@
           </td>
           <td>
             @if($policy->show_in_app)
-              <span class="s-pill success" style="font-size:10px"><i class="bi bi-check-lg"></i> Ha</span>
+              <span class="chip chip-success"><i class="bi bi-check-lg"></i> Ha</span>
             @else
-              <span class="s-pill muted" style="font-size:10px">Yo'q</span>
+              <span class="chip chip-gray">Yo'q</span>
             @endif
           </td>
           <td>
             <form method="POST" action="{{ route('admin.policies.toggle', $policy) }}" style="display:inline">
               @csrf @method('PATCH')
               <button type="submit"
-                      class="btn-p {{ $policy->is_active ? 'success' : 'ghost' }} sm legal-status-btn"
+                      class="btn btn-sm {{ $policy->is_active ? 'btn-success' : 'btn-outline-secondary' }} legal-status-btn"
                       title="{{ $policy->is_active ? 'Faol — o\'chirish' : 'Nofaol — yoqish' }}">
                 <i class="bi {{ $policy->is_active ? 'bi-toggle-on' : 'bi-toggle-off' }}"></i>
                 {{ $policy->is_active ? 'Faol' : 'Nofaol' }}
@@ -580,15 +581,15 @@
           </td>
           <td>
             <div class="flex gap-1 justify-end">
-              <a href="/legal/{{ $policy->slug }}" target="_blank" class="btn-p ghost sm" title="Ko'rish">
+              <a href="/legal/{{ $policy->slug }}" target="_blank" class="btn btn-sm btn-outline-secondary" title="Ko'rish">
                 <i class="bi bi-eye"></i>
               </a>
-              <button class="btn-p ghost sm" onclick="openEdit({{ $policy->id }})" title="Tahrirlash">
+              <button class="btn btn-sm btn-outline-secondary" onclick="openEdit({{ $policy->id }})" title="Tahrirlash">
                 <i class="bi bi-pencil"></i>
               </button>
               <form method="POST" action="{{ route('admin.policies.destroy', $policy) }}" onsubmit="return confirm('Siyosatni o\'chirishga ishonchingiz komilmi?')">
                 @csrf @method('DELETE')
-                <button type="submit" class="btn-p danger sm" title="O'chirish">
+                <button type="submit" class="btn btn-sm btn-outline-danger" title="O'chirish">
                   <i class="bi bi-trash"></i>
                 </button>
               </form>
@@ -598,7 +599,7 @@
         @empty
         <tr>
           <td colspan="10">
-            <div class="p-empty-cell">
+            <div class="empty-state p-4 text-center">
               <i class="bi bi-file-earmark-text" style="font-size:36px;display:block;margin-bottom:12px;opacity:.4"></i>
               <div style="font-size:14px">Hali siyosat qo'shilmagan</div>
             </div>
@@ -608,7 +609,7 @@
       </tbody>
     </table>
   </div>
-</section>
+</x-admin.section-card>
 
 @if($policies->hasPages())
 <div class="mt-4">

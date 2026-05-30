@@ -449,8 +449,8 @@
         </div>
       </div>
       <div class="a122-section-body">
-        <div class="table-wrap">
-          <table class="tbl">
+        <div class="table-responsive kc-table-shell">
+          <table class="table data-table align-middle mb-0">
             <thead><tr><th>Mahsulot</th><th>Turi</th><th>Soni</th><th>Narxi</th><th>Jami</th></tr></thead>
             <tbody>
               <?php $__currentLoopData = $items; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $it): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
@@ -616,10 +616,10 @@
             <div>
               <span class="metric-label">Xaritada ochish</span>
               <div class="mt-2 flex flex-wrap gap-2">
-                <a href="<?php echo e($yandexMapsUrl); ?>" target="_blank" rel="noopener noreferrer" class="btn-ghost rounded-xl px-3 py-2 text-xs font-semibold">
+                <a href="<?php echo e($yandexMapsUrl); ?>" target="_blank" rel="noopener noreferrer" class="btn btn-outline-secondary rounded-xl px-3 py-2 text-xs font-semibold">
                   <i class="bi bi-geo-alt"></i> Yandex Maps
                 </a>
-                <a href="<?php echo e($googleMapsUrl); ?>" target="_blank" rel="noopener noreferrer" class="btn-ghost rounded-xl px-3 py-2 text-xs font-semibold">
+                <a href="<?php echo e($googleMapsUrl); ?>" target="_blank" rel="noopener noreferrer" class="btn btn-outline-secondary rounded-xl px-3 py-2 text-xs font-semibold">
                   <i class="bi bi-map"></i> Google Maps
                 </a>
               </div>

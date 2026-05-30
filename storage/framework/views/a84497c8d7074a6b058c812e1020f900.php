@@ -52,7 +52,7 @@
     ['Yakunlandi',  $counts['completed'],        'info',    'bi-flag'],
   ]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as [$l,$v,$c,$i]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
   <div class="">
-    <div class="p-card flex items-center gap-3" style="padding:14px">
+    <div class="card-panel flex items-center gap-3" style="padding:14px">
       <div style="width:36px;height:36px;border-radius:9px;flex-shrink:0;font-size:16px;
                   background:var(--p-<?php echo e($c); ?>-d,var(--p-elevated));color:var(--p-<?php echo e($c); ?>);
                   display:flex;align-items:center;justify-content:center">
@@ -99,9 +99,9 @@
 </form>
 
 
-<div class="p-card fade-up">
+<div class="card-panel fade-up">
   <div class="table-responsive kc-twrap">
-    <table class="p-table">
+    <table class="table data-table align-middle mb-0">
       <thead>
         <tr>
           <th>#</th>

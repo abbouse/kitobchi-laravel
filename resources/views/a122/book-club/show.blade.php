@@ -447,7 +447,7 @@
   <div class="xl:col-span-4">
 
     {{-- Meta --}}
-    <div class="p-card mb-3 fade-up">
+    <div class="card-panel mb-3 fade-up">
       <div class="dash-card-head"><div class="dash-card-title">Ma'lumotlar</div></div>
       <div class="dash-card-body">
         @foreach([
@@ -468,7 +468,7 @@
     </div>
 
     {{-- Like bosganlar --}}
-    <div class="p-card mb-3 fade-up">
+    <div class="card-panel mb-3 fade-up">
       <div class="dash-card-head">
         <div class="dash-card-title">
           <i class="bi bi-heart-fill mr-1" style="color:var(--p-danger)"></i> Like bosganlar
@@ -519,7 +519,7 @@
     </div>
 
     {{-- Repost qilganlar --}}
-    <div class="p-card fade-up">
+    <div class="card-panel fade-up">
       <div class="dash-card-head">
         <div class="dash-card-title">
           <i class="bi bi-repeat mr-1" style="color:var(--p-info)"></i> Repost qilganlar
