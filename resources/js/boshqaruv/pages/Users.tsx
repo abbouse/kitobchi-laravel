@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { router, usePage } from '@inertiajs/react';
 import { Modal, Button, Form } from 'react-bootstrap';
 import { users } from '../data';
 
@@ -13,10 +14,16 @@ interface User {
   spent: number;
   status: string;
   role: string;
+  showUrl?: string;
+  editUrl?: string;
+  blockUrl?: string;
+  unblockUrl?: string;
+  destroyUrl?: string;
 }
 
 export default function Users() {
-  const [list, setList] = useState<User[]>(users);
+  const { users: serverUsers = [] } = usePage<{ users?: User[] }>().props;
+  const [list, setList] = useState<User[]>(serverUsers.length ? serverUsers : users);
 
   // Modals
   const [showAdd, setShowAdd] = useState(false);
@@ -80,9 +87,14 @@ export default function Users() {
     setShowEdit(false);
   };
 
-  const handleDelete = (id: number) => {
+  const handleDelete = (user: User) => {
     if (confirm("Foydalanuvchini o'chirishni tasdiqlaysizmi?")) {
-      setList(list.filter(u => u.id !== id));
+      if (user.destroyUrl) {
+        router.delete(user.destroyUrl);
+        return;
+      }
+
+      setList(list.filter(u => u.id !== user.id));
     }
   };
 
@@ -94,12 +106,12 @@ export default function Users() {
           <p className="page-subtitle">Mijozlar, sotuvchilar va administratorlar</p>
         </div>
         <div className="d-flex gap-2">
-          <button className="btn btn-outline-secondary" onClick={() => alert("CSV export tayyorlanmoqda!")}>
+          <a className="btn btn-outline-secondary" href="/a122/users">
             <i className="bi bi-download me-1"></i>Export CSV
-          </button>
-          <button className="btn btn-primary-gradient" onClick={handleOpenAdd}>
+          </a>
+          <a className="btn btn-primary-gradient" href="/a122/users/create">
             <i className="bi bi-person-plus me-1"></i>Yangi foydalanuvchi
-          </button>
+          </a>
         </div>
       </div>
 
@@ -160,10 +172,13 @@ export default function Users() {
                     </span>
                   </td>
                   <td>
-                    <button className="btn btn-sm btn-light me-1" onClick={() => handleOpenEdit(u)} title="Tahrirlash">
+                    <a className="btn btn-sm btn-light me-1" href={u.showUrl || '#'} title="Ko'rish">
+                      <i className="bi bi-eye"></i>
+                    </a>
+                    <a className="btn btn-sm btn-light me-1" href={u.editUrl || '#'} onClick={(e) => { if (!u.editUrl) { e.preventDefault(); handleOpenEdit(u); } }} title="Tahrirlash">
                       <i className="bi bi-pencil"></i>
-                    </button>
-                    <button className="btn btn-sm btn-light text-danger" onClick={() => handleDelete(u.id)} title="O'chirish">
+                    </a>
+                    <button className="btn btn-sm btn-light text-danger" onClick={() => handleDelete(u)} title="O'chirish">
                       <i className="bi bi-trash"></i>
                     </button>
                   </td>

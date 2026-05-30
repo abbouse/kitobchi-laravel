@@ -1,43 +1,41 @@
 import { useState } from 'react';
+import { router, usePage } from '@inertiajs/react';
 import { Modal, Button, Form } from 'react-bootstrap';
 
 // ===== MYSTERY BOX =====
 export function MysteryBox() {
-  const [plans, setPlans] = useState([
-    { id: 1, name: 'Bronze', price: 99000, active: true, subscribers: 84 },
-    { id: 2, name: 'Silver', price: 199000, active: true, subscribers: 42 },
-    { id: 3, name: 'Gold', price: 349000, active: false, subscribers: 18 },
-  ]);
-  const [subs] = useState([
-    { id: 1, user: 'Aziza K.', plan: 'Bronze', status: 'Active', nextDelivery: '2026-01-20' },
-    { id: 2, user: 'Bobur A.', plan: 'Silver', status: 'Paused', nextDelivery: '—' },
-    { id: 3, user: 'Dilnoza R.', plan: 'Gold', status: 'Active', nextDelivery: '2026-01-22' },
-  ]);
-  const [show, setShow] = useState(false);
-  const [selected, setSelected] = useState<typeof plans[0] | null>(null);
-  const [name, setName] = useState('');
-  const [price, setPrice] = useState('');
+  const { mysteryBox = { plans: [], subscriptions: [], indexUrl: '/a122/mystery-box', plansUrl: '/a122/mystery-box/plans' } } = usePage<{
+    mysteryBox?: {
+      plans: Array<{ id: number; name: string; months: number; price: number; booksPerMonth: number; active: boolean; subscribers: number; plansUrl?: string; destroyUrl?: string }>;
+      subscriptions: Array<{ id: number; user: string; phone?: string; plan: string; status: string; statusLabel?: string; nextDelivery?: string; progress?: number; showUrl?: string; pauseUrl?: string; resumeUrl?: string; cancelUrl?: string }>;
+      indexUrl: string;
+      plansUrl: string;
+    };
+  }>().props;
+  const [selected, setSelected] = useState<(typeof mysteryBox.subscriptions)[0] | null>(null);
+
+  const patch = (url?: string) => url && router.patch(url, {}, { preserveScroll: true });
 
   return (
     <div>
       <div className="page-head">
-        <div><h1 className="page-title">Mystery Box</h1><p className="page-subtitle">{plans.length} ta plan · {subs.filter(s => s.status === 'Active').length} ta faol obuna</p></div>
-        <button className="btn btn-primary-gradient" onClick={() => { setName(''); setPrice(''); setShow(true); }}><i className="bi bi-plus-lg me-1"></i>Yangi plan</button>
+        <div><h1 className="page-title">Mystery Box</h1><p className="page-subtitle">{mysteryBox.plans.length} ta plan · {mysteryBox.subscriptions.filter(s => s.status === 'active').length} ta faol obuna</p></div>
+        <a className="btn btn-primary-gradient" href={mysteryBox.plansUrl}><i className="bi bi-plus-lg me-1"></i>Planlar</a>
       </div>
 
       <div className="row g-3 mb-3">
-        {plans.map(p => (
+        {mysteryBox.plans.map(p => (
           <div className="col-xl-4 col-md-6" key={p.id}>
             <div className="card-panel">
               <div className="d-flex justify-content-between align-items-center mb-2">
                 <div className="fw-bold fs-5">{p.name}</div>
-                <div className="form-check form-switch"><input type="checkbox" className="form-check-input" checked={p.active} onChange={() => setPlans(plans.map(x => x.id === p.id ? { ...x, active: !x.active } : x))} /></div>
+                <span className={`chip ${p.active ? 'chip-success' : 'chip-gray'}`}>{p.active ? 'Faol' : 'Nofaol'}</span>
               </div>
               <div className="fw-bold text-primary fs-4">{p.price.toLocaleString()} so'm<small className="text-muted fs-6">/oy</small></div>
-              <div className="text-muted mb-2">{p.subscribers} obunachi</div>
+              <div className="text-muted mb-2">{p.months} oy · {p.booksPerMonth} kitob/oy · {p.subscribers} obunachi</div>
               <div className="d-flex gap-2">
-                <button className="btn btn-sm btn-light flex-fill" onClick={() => { setSelected(p); setName(p.name); setPrice(String(p.price)); setShow(true); }}><i className="bi bi-pencil"></i></button>
-                <button className="btn btn-sm btn-light text-danger" onClick={() => setPlans(plans.filter(x => x.id !== p.id))}><i className="bi bi-trash"></i></button>
+                <a className="btn btn-sm btn-light flex-fill" href={p.plansUrl || mysteryBox.plansUrl}><i className="bi bi-pencil"></i></a>
+                {p.destroyUrl ? <button className="btn btn-sm btn-light text-danger" onClick={() => router.delete(p.destroyUrl!, { preserveScroll: true })}><i className="bi bi-trash"></i></button> : null}
               </div>
             </div>
           </div>
@@ -48,31 +46,36 @@ export function MysteryBox() {
         <div className="panel-title mb-3">📦 Obunalar</div>
         <div className="table-responsive"><table className="data-table">
           <thead><tr><th>ID</th><th>Foydalanuvchi</th><th>Plan</th><th>Status</th><th>Keyingi yetkazish</th><th>Amallar</th></tr></thead>
-          <tbody>{subs.map(s => (
+          <tbody>{mysteryBox.subscriptions.map(s => (
             <tr key={s.id}>
               <td className="fw-semibold" style={{ color: '#4f46e5' }}>#{s.id}</td>
               <td className="fw-semibold">{s.user}</td>
               <td><span className="chip chip-purple" style={{ fontSize: 9 }}>{s.plan}</span></td>
-              <td><span className={`chip ${s.status === 'Active' ? 'chip-success' : 'chip-warning'}`} style={{ fontSize: 9 }}>{s.status}</span></td>
+              <td><span className={`chip ${s.status === 'active' ? 'chip-success' : s.status === 'paused' ? 'chip-warning' : 'chip-gray'}`} style={{ fontSize: 9 }}>{s.statusLabel || s.status}</span></td>
               <td className="text-muted">{s.nextDelivery}</td>
               <td>
-                <button className="btn btn-sm btn-light me-1"><i className="bi bi-eye"></i></button>
-                {s.status === 'Active' ? <button className="btn btn-sm btn-warning" onClick={() => alert("Paused")}><i className="bi bi-pause-fill"></i></button> : <button className="btn btn-sm btn-success" onClick={() => alert("Resumed")}><i className="bi bi-play-fill"></i></button>}
+                <button className="btn btn-sm btn-light me-1" onClick={() => setSelected(s)}><i className="bi bi-eye"></i></button>
+                {s.status === 'active' ? <button className="btn btn-sm btn-warning" onClick={() => patch(s.pauseUrl)}><i className="bi bi-pause-fill"></i></button> : <button className="btn btn-sm btn-success" onClick={() => patch(s.resumeUrl)}><i className="bi bi-play-fill"></i></button>}
               </td>
             </tr>
           ))}</tbody>
         </table></div>
       </div>
 
-      <Modal show={show} onHide={() => setShow(false)} centered>
-        <Form onSubmit={(e) => { e.preventDefault(); if (selected) setPlans(plans.map(x => x.id === selected.id ? { ...x, name, price: Number(price) } : x)); else setPlans([...plans, { id: Date.now(), name, price: Number(price), active: true, subscribers: 0 }]); setShow(false); }}>
-          <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">{selected ? 'Tahrirlash' : 'Yangi plan'}</Modal.Title></Modal.Header>
-          <Modal.Body>
-            <Form.Group className="mb-3"><Form.Label className="small fw-semibold">Plan nomi</Form.Label><Form.Control required value={name} onChange={e => setName(e.target.value)} /></Form.Group>
-            <Form.Group><Form.Label className="small fw-semibold">Narxi (so'm)</Form.Label><Form.Control type="number" required value={price} onChange={e => setPrice(e.target.value)} /></Form.Group>
-          </Modal.Body>
-          <Modal.Footer><Button variant="light" onClick={() => setShow(false)}>Bekor qilish</Button><Button variant="primary" type="submit" className="btn-primary-gradient">Saqlash</Button></Modal.Footer>
-        </Form>
+      <Modal show={!!selected} onHide={() => setSelected(null)} centered>
+        <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">{selected?.user}</Modal.Title></Modal.Header>
+        <Modal.Body>
+          <div className="row g-3">
+            <div className="col-6"><small className="text-muted">Plan</small><div>{selected?.plan}</div></div>
+            <div className="col-6"><small className="text-muted">Status</small><div>{selected?.statusLabel || selected?.status}</div></div>
+            <div className="col-6"><small className="text-muted">Keyingi yetkazish</small><div>{selected?.nextDelivery || '—'}</div></div>
+            <div className="col-6"><small className="text-muted">Progress</small><div>{selected?.progress || 0}%</div></div>
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          {selected?.showUrl ? <a className="btn btn-primary-gradient" href={selected.showUrl}>Eski panelda ochish</a> : null}
+          <Button variant="light" onClick={() => setSelected(null)}>Yopish</Button>
+        </Modal.Footer>
       </Modal>
     </div>
   );
@@ -80,15 +83,33 @@ export function MysteryBox() {
 
 // ===== SOVG'ALAR =====
 export function SovgAlar() {
+  const { gifts = [] } = usePage<{
+    gifts?: Array<{ id: number; name: string; seller?: string; stock: number; priceFrom: number; priceTo: number; status: string; approved: boolean; sold: number; revenue: number; image?: string | null; indexUrl?: string }>;
+  }>().props;
+  const indexUrl = gifts[0]?.indexUrl || '/a122/gifts';
+
   return (
     <div>
       <div className="page-head">
-        <div><h1 className="page-title">Sovg'alar</h1><p className="page-subtitle">Sovg'a mahsulotlari — placeholder</p></div>
+        <div><h1 className="page-title">Sovg'alar</h1><p className="page-subtitle">Jami {gifts.length} ta sovg'a mahsuloti</p></div>
+        <a className="btn btn-primary-gradient" href={indexUrl}>Eski panelda boshqarish</a>
       </div>
-      <div className="card-panel text-center py-5">
-        <i className="bi bi-gift" style={{ fontSize: 64, color: '#ec4899' }}></i>
-        <h4 className="mt-3">Sovg'alar bo'limi</h4>
-        <p className="text-muted">Hozircha bu yerda placeholder. To'liq CRUD tez orada qo'shiladi.</p>
+      <div className="card-panel">
+        <div className="table-responsive"><table className="data-table">
+          <thead><tr><th></th><th>Nomi</th><th>Seller</th><th>Narx</th><th>Ombor</th><th>Sotilgan</th><th>Status</th><th>Amallar</th></tr></thead>
+          <tbody>{gifts.map(gift => (
+            <tr key={gift.id}>
+              <td><div className="thumb">{gift.image ? <img src={gift.image} alt={gift.name} /> : <i className="bi bi-gift"></i>}</div></td>
+              <td className="fw-semibold">{gift.name}</td>
+              <td>{gift.seller || '—'}</td>
+              <td>{gift.priceFrom.toLocaleString()} - {gift.priceTo.toLocaleString()} so'm</td>
+              <td>{gift.stock}</td>
+              <td>{gift.sold}</td>
+              <td><span className={`chip ${gift.approved ? 'chip-success' : 'chip-warning'}`}>{gift.approved ? gift.status : 'Moderatsiya'}</span></td>
+              <td><a className="btn btn-sm btn-light" href={gift.indexUrl || indexUrl}><i className="bi bi-box-arrow-up-right"></i></a></td>
+            </tr>
+          ))}</tbody>
+        </table></div>
       </div>
     </div>
   );
@@ -96,58 +117,35 @@ export function SovgAlar() {
 
 // ===== LOGISTIKA — YETKAZISH ZONALARI =====
 export function Logistika() {
-  const [zones, setZones] = useState([
-    { id: 1, name: 'Toshkent shahri', price: 0, minOrder: 0, deliveryDays: '1 kun', active: true },
-    { id: 2, name: 'Toshkent viloyati', price: 25000, minOrder: 100000, deliveryDays: '1-2 kun', active: true },
-    { id: 3, name: 'Viloyat markazlari', price: 45000, minOrder: 200000, deliveryDays: '2-3 kun', active: true },
-    { id: 4, name: 'Tumanlar', price: 65000, minOrder: 300000, deliveryDays: '3-5 kun', active: true },
-  ]);
-  const [show, setShow] = useState(false);
-  const [selected, setSelected] = useState<typeof zones[0] | null>(null);
-  const [name, setName] = useState('');
-  const [price, setPrice] = useState('');
-  const [minOrder, setMinOrder] = useState('');
-  const [deliveryDays, setDeliveryDays] = useState('');
+  const { deliveryServices = [] } = usePage<{
+    deliveryServices?: Array<{ id: number; name: string; type?: string; price: number; days: number; country?: string; capital: boolean; freeFrom: number; active: boolean; indexUrl?: string }>;
+  }>().props;
+  const indexUrl = deliveryServices[0]?.indexUrl || '/a122/logistics';
 
   return (
     <div>
       <div className="page-head">
-        <div><h1 className="page-title">Yetkazish zonalari va qoidalar</h1><p className="page-subtitle">Jami {zones.length} ta zona</p></div>
-        <button className="btn btn-primary-gradient" onClick={() => { setName(''); setPrice(''); setMinOrder(''); setDeliveryDays(''); setShow(true); }}><i className="bi bi-plus-lg me-1"></i>Yangi qoida</button>
+        <div><h1 className="page-title">Yetkazish zonalari va qoidalar</h1><p className="page-subtitle">Jami {deliveryServices.length} ta yetkazish xizmati</p></div>
+        <a className="btn btn-primary-gradient" href={indexUrl}><i className="bi bi-plus-lg me-1"></i>Logistika boshqaruvi</a>
       </div>
       <div className="card-panel">
         <div className="table-responsive"><table className="data-table">
-          <thead><tr><th>ID</th><th>Zona</th><th>Yetkazish narxi</th><th>Min. buyurtma</th><th>Muddat</th><th>Holat</th><th>Amallar</th></tr></thead>
-          <tbody>{zones.map(z => (
-            <tr key={z.id}>
-              <td className="fw-semibold" style={{ color: '#4f46e5' }}>#{z.id}</td>
-              <td className="fw-semibold">{z.name}</td>
-              <td>{z.price === 0 ? <span className="chip chip-success" style={{ fontSize: 9 }}>Bepul</span> : <span className="fw-semibold">{z.price.toLocaleString()} so'm</span>}</td>
-              <td>{z.minOrder > 0 ? `${z.minOrder.toLocaleString()} so'm` : '—'}</td>
-              <td className="fw-semibold">{z.deliveryDays}</td>
-              <td><div className="form-check form-switch"><input type="checkbox" className="form-check-input" checked={z.active} onChange={() => setZones(zones.map(x => x.id === z.id ? { ...x, active: !x.active } : x))} /></div></td>
-              <td>
-                <button className="btn btn-sm btn-light me-1" onClick={() => { setSelected(z); setName(z.name); setPrice(String(z.price)); setMinOrder(String(z.minOrder)); setDeliveryDays(z.deliveryDays); setShow(true); }}><i className="bi bi-pencil"></i></button>
-                <button className="btn btn-sm btn-light text-danger" onClick={() => setZones(zones.filter(x => x.id !== z.id))}><i className="bi bi-trash"></i></button>
-              </td>
+          <thead><tr><th>ID</th><th>Xizmat</th><th>Turi</th><th>Narx/kg</th><th>Bepuldan</th><th>Muddat</th><th>Mamlakat</th><th>Holat</th><th>Amallar</th></tr></thead>
+          <tbody>{deliveryServices.map(service => (
+            <tr key={service.id}>
+              <td className="fw-semibold" style={{ color: '#4f46e5' }}>#{service.id}</td>
+              <td className="fw-semibold">{service.name}</td>
+              <td><span className="chip chip-gray">{service.type || '—'}</span></td>
+              <td>{service.price === 0 ? <span className="chip chip-success">Bepul</span> : <span className="fw-semibold">{service.price.toLocaleString()} so'm</span>}</td>
+              <td>{service.freeFrom > 0 ? `${service.freeFrom.toLocaleString()} so'm` : '—'}</td>
+              <td className="fw-semibold">{service.days} kun</td>
+              <td>{service.country || '—'} {service.capital ? '· poytaxt' : ''}</td>
+              <td><span className={`chip ${service.active ? 'chip-success' : 'chip-gray'}`}>{service.active ? 'Faol' : 'Nofaol'}</span></td>
+              <td><a className="btn btn-sm btn-light" href={service.indexUrl || indexUrl}><i className="bi bi-box-arrow-up-right"></i></a></td>
             </tr>
           ))}</tbody>
         </table></div>
       </div>
-      <Modal show={show} onHide={() => setShow(false)} centered>
-        <Form onSubmit={(e) => { e.preventDefault(); const obj = { id: Date.now(), name, price: Number(price), minOrder: Number(minOrder) || 0, deliveryDays, active: true }; if (selected) setZones(zones.map(x => x.id === selected.id ? { ...x, name, price: Number(price), minOrder: Number(minOrder) || 0, deliveryDays } : x)); else setZones([...zones, obj]); setShow(false); }}>
-          <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">{selected ? 'Tahrirlash' : 'Yangi qoida'}</Modal.Title></Modal.Header>
-          <Modal.Body>
-            <Form.Group className="mb-3"><Form.Label className="small fw-semibold">Zona nomi</Form.Label><Form.Control required value={name} onChange={e => setName(e.target.value)} /></Form.Group>
-            <div className="row g-3">
-              <Form.Group className="col-4"><Form.Label className="small fw-semibold">Narxi (so'm)</Form.Label><Form.Control type="number" required value={price} onChange={e => setPrice(e.target.value)} /></Form.Group>
-              <Form.Group className="col-4"><Form.Label className="small fw-semibold">Min. summa</Form.Label><Form.Control type="number" value={minOrder} onChange={e => setMinOrder(e.target.value)} /></Form.Group>
-              <Form.Group className="col-4"><Form.Label className="small fw-semibold">Yetkazish muddati</Form.Label><Form.Control required placeholder="2-3 kun" value={deliveryDays} onChange={e => setDeliveryDays(e.target.value)} /></Form.Group>
-            </div>
-          </Modal.Body>
-          <Modal.Footer><Button variant="light" onClick={() => setShow(false)}>Bekor qilish</Button><Button variant="primary" type="submit" className="btn-primary-gradient">Saqlash</Button></Modal.Footer>
-        </Form>
-      </Modal>
     </div>
   );
 }

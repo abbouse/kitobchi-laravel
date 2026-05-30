@@ -14,6 +14,7 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
 
         Route::get('/', [AdminController::class, 'dashboard'])->name('dashboard');
         Route::get('/live', [AdminController::class, 'live'])->name('live');
+        Route::get('/live/data', [AdminController::class, 'liveData'])->name('live.data');
 
         Route::get('/products', fn (AdminController $controller) => $controller->page('Products'))->name('products');
         Route::get('/books', fn (AdminController $controller) => $controller->page('Books'))->name('books');

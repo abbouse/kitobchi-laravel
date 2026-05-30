@@ -1,49 +1,61 @@
 import { useState } from 'react';
+import { router, usePage } from '@inertiajs/react';
 import { Modal, Button, Form } from 'react-bootstrap';
 
 // ===== REELS =====
 export function Reels() {
-  const [list, setList] = useState([
-    { id: 1, title: "O'tkan kunlar — eng sara iqtiboslar", views: 12400, status: 'Active', items: 5 },
-    { id: 2, title: 'Bolalar uchun ertaklar to\'plami', views: 8400, status: 'Active', items: 3 },
-    { id: 3, title: 'Parker ruchka — yozish san\'ati', views: 3200, status: 'Inactive', items: 2 },
-  ]);
-  const [show, setShow] = useState(false);
-  const [selected, setSelected] = useState<typeof list[0] | null>(null);
-  const [title, setTitle] = useState('');
+  const { reels = [] } = usePage<{
+    reels?: Array<{ id: number; title: string; description?: string; order?: number; status: string; items: number; createUrl?: string; showUrl?: string; editUrl?: string; destroyUrl?: string }>;
+  }>().props;
+  const [selected, setSelected] = useState<(typeof reels)[0] | null>(null);
+  const createUrl = reels[0]?.createUrl || '/a122/reels/create';
+
+  const destroy = (reel: (typeof reels)[0]) => {
+    if (!reel.destroyUrl || !confirm(`${reel.title} reelini o'chirasizmi?`)) return;
+    router.delete(reel.destroyUrl, { preserveScroll: true });
+  };
 
   return (
     <div>
       <div className="page-head">
-        <div><h1 className="page-title">Reels / Shorts</h1><p className="page-subtitle">Jami {list.length} ta reel</p></div>
-        <button className="btn btn-primary-gradient" onClick={() => { setTitle(''); setShow(true); }}><i className="bi bi-plus-lg me-1"></i>Yangi reel</button>
+        <div><h1 className="page-title">Reels / Shorts</h1><p className="page-subtitle">Jami {reels.length} ta reel</p></div>
+        <a className="btn btn-primary-gradient" href={createUrl}><i className="bi bi-plus-lg me-1"></i>Yangi reel</a>
       </div>
       <div className="row g-3">
-        {list.map(r => (
-          <div className="col-xl-4 col-md-6" key={r.id}>
+        {reels.map(reel => (
+          <div className="col-xl-4 col-md-6" key={reel.id}>
             <div className="card-panel">
               <div className="d-flex justify-content-between mb-2">
-                <div className="fw-bold">{r.title}</div>
-                <span className={`chip ${r.status === 'Active' ? 'chip-success' : 'chip-gray'}`} style={{ fontSize: 9 }}>{r.status}</span>
+                <div className="fw-bold">{reel.title}</div>
+                <span className={`chip ${reel.status === 'Active' ? 'chip-success' : 'chip-gray'}`} style={{ fontSize: 9 }}>{reel.status}</span>
               </div>
               <div className="d-flex gap-3 small mb-2">
-                <span>👁 {r.views.toLocaleString()}</span>
-                <span>📦 {r.items} ta mahsulot</span>
+                <span>{reel.order || 0} tartib</span>
+                <span>{reel.items} ta mahsulot</span>
               </div>
+              <p className="text-muted small">{reel.description || '—'}</p>
               <div className="d-flex gap-2">
-                <button className="btn btn-sm btn-light flex-fill" onClick={() => { setSelected(r); setTitle(r.title); setShow(true); }}><i className="bi bi-pencil"></i></button>
-                <button className="btn btn-sm btn-light text-danger" onClick={() => setList(list.filter(x => x.id !== r.id))}><i className="bi bi-trash"></i></button>
+                <button className="btn btn-sm btn-light flex-fill" onClick={() => setSelected(reel)}><i className="bi bi-eye"></i></button>
+                <a className="btn btn-sm btn-primary-gradient flex-fill" href={reel.editUrl || reel.showUrl || '#'}><i className="bi bi-pencil"></i></a>
+                <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(reel)}><i className="bi bi-trash"></i></button>
               </div>
             </div>
           </div>
         ))}
       </div>
-      <Modal show={show} onHide={() => setShow(false)} centered>
-        <Form onSubmit={(e) => { e.preventDefault(); if (selected) setList(list.map(x => x.id === selected.id ? { ...x, title } : x)); else setList([...list, { id: Date.now(), title, views: 0, status: 'Active', items: 0 }]); setShow(false); }}>
-          <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">{selected ? 'Tahrirlash' : 'Yangi reel'}</Modal.Title></Modal.Header>
-          <Modal.Body><Form.Group><Form.Label className="small fw-semibold">Sarlavha</Form.Label><Form.Control required value={title} onChange={e => setTitle(e.target.value)} /></Form.Group></Modal.Body>
-          <Modal.Footer><Button variant="light" onClick={() => setShow(false)}>Bekor qilish</Button><Button variant="primary" type="submit" className="btn-primary-gradient">Saqlash</Button></Modal.Footer>
-        </Form>
+      <Modal show={!!selected} onHide={() => setSelected(null)} centered>
+        <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">{selected?.title}</Modal.Title></Modal.Header>
+        <Modal.Body>
+          <div className="row g-3">
+            <div className="col-6"><small className="text-muted">Tartib</small><div>{selected?.order || 0}</div></div>
+            <div className="col-6"><small className="text-muted">Elementlar</small><div>{selected?.items || 0}</div></div>
+            <div className="col-12"><small className="text-muted">Izoh</small><div>{selected?.description || '—'}</div></div>
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          {selected?.showUrl ? <a className="btn btn-primary-gradient" href={selected.showUrl}>Eski panelda ochish</a> : null}
+          <Button variant="light" onClick={() => setSelected(null)}>Yopish</Button>
+        </Modal.Footer>
       </Modal>
     </div>
   );
@@ -51,42 +63,51 @@ export function Reels() {
 
 // ===== MARKET YANGILIKLARI =====
 export function MarketNews() {
-  const [list, setList] = useState([
-    { id: 1, title: "Yangi yil aksiyasi — 20% chegirma", status: 'Active', date: '2026-01-14' },
-    { id: 2, title: "Parker ruchkalar yangi kolleksiyasi", status: 'Active', date: '2026-01-12' },
-    { id: 3, title: "O'tkan kunlar — qayta nashr", status: 'Inactive', date: '2026-01-10' },
-  ]);
-  const [show, setShow] = useState(false);
-  const [selected, setSelected] = useState<typeof list[0] | null>(null);
-  const [title, setTitle] = useState('');
+  const { news = [] } = usePage<{
+    news?: Array<{ id: number; title: string; description?: string; status: string; action?: string; image?: string | null; date?: string; createUrl?: string; showUrl?: string; editUrl?: string; toggleUrl?: string; destroyUrl?: string }>;
+  }>().props;
+  const [selected, setSelected] = useState<(typeof news)[0] | null>(null);
+  const createUrl = news[0]?.createUrl || '/a122/news/create';
+
+  const toggle = (item: (typeof news)[0]) => item.toggleUrl && router.patch(item.toggleUrl, {}, { preserveScroll: true });
+  const destroy = (item: (typeof news)[0]) => {
+    if (!item.destroyUrl || !confirm(`${item.title} yangiligi o'chirilsinmi?`)) return;
+    router.delete(item.destroyUrl, { preserveScroll: true });
+  };
 
   return (
     <div>
-      <div className="page-head"><div><h1 className="page-title">Market yangiliklari</h1><p className="page-subtitle">Jami {list.length} ta yangilik</p></div>
-        <button className="btn btn-primary-gradient" onClick={() => { setTitle(''); setShow(true); }}><i className="bi bi-plus-lg me-1"></i>Yangi yangilik</button></div>
+      <div className="page-head"><div><h1 className="page-title">Market yangiliklari</h1><p className="page-subtitle">Jami {news.length} ta yangilik</p></div>
+        <a className="btn btn-primary-gradient" href={createUrl}><i className="bi bi-plus-lg me-1"></i>Yangi yangilik</a></div>
       <div className="card-panel">
         <div className="table-responsive"><table className="data-table">
-          <thead><tr><th>ID</th><th>Sarlavha</th><th>Sana</th><th>Holat</th><th>Amallar</th></tr></thead>
-          <tbody>{list.map(n => (
-            <tr key={n.id}>
-              <td className="fw-semibold" style={{ color: '#4f46e5' }}>#{n.id}</td>
-              <td className="fw-semibold">{n.title}</td>
-              <td className="text-muted">{n.date}</td>
-              <td><div className="form-check form-switch"><input type="checkbox" className="form-check-input" checked={n.status === 'Active'} onChange={() => setList(list.map(x => x.id === n.id ? { ...x, status: x.status === 'Active' ? 'Inactive' : 'Active' } : x))} /></div></td>
+          <thead><tr><th>ID</th><th>Sarlavha</th><th>Action</th><th>Sana</th><th>Holat</th><th>Amallar</th></tr></thead>
+          <tbody>{news.map(item => (
+            <tr key={item.id}>
+              <td className="fw-semibold" style={{ color: '#4f46e5' }}>#{item.id}</td>
+              <td className="fw-semibold">{item.title}</td>
+              <td><span className="chip chip-gray">{item.action || 'Yangilik'}</span></td>
+              <td className="text-muted">{item.date || '—'}</td>
+              <td><div className="form-check form-switch"><input type="checkbox" className="form-check-input" checked={item.status === 'Active'} onChange={() => toggle(item)} /></div></td>
               <td>
-                <button className="btn btn-sm btn-light me-1" onClick={() => { setSelected(n); setTitle(n.title); setShow(true); }}><i className="bi bi-pencil"></i></button>
-                <button className="btn btn-sm btn-light text-danger" onClick={() => setList(list.filter(x => x.id !== n.id))}><i className="bi bi-trash"></i></button>
+                <button className="btn btn-sm btn-light me-1" onClick={() => setSelected(item)}><i className="bi bi-eye"></i></button>
+                {item.editUrl ? <a className="btn btn-sm btn-light me-1" href={item.editUrl}><i className="bi bi-pencil"></i></a> : null}
+                <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(item)}><i className="bi bi-trash"></i></button>
               </td>
             </tr>
           ))}</tbody>
         </table></div>
       </div>
-      <Modal show={show} onHide={() => setShow(false)} centered>
-        <Form onSubmit={(e) => { e.preventDefault(); if (selected) setList(list.map(x => x.id === selected.id ? { ...x, title } : x)); else setList([...list, { id: Date.now(), title, status: 'Active', date: new Date().toISOString().split('T')[0] }]); setShow(false); }}>
-          <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">{selected ? 'Tahrirlash' : 'Yangi'}</Modal.Title></Modal.Header>
-          <Modal.Body><Form.Group><Form.Label className="small fw-semibold">Sarlavha</Form.Label><Form.Control required value={title} onChange={e => setTitle(e.target.value)} /></Form.Group></Modal.Body>
-          <Modal.Footer><Button variant="light" onClick={() => setShow(false)}>Bekor qilish</Button><Button variant="primary" type="submit" className="btn-primary-gradient">Saqlash</Button></Modal.Footer>
-        </Form>
+      <Modal show={!!selected} onHide={() => setSelected(null)} centered>
+        <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">{selected?.title}</Modal.Title></Modal.Header>
+        <Modal.Body>
+          {selected?.image ? <img className="w-100 rounded mb-3" src={selected.image} alt={selected.title} /> : null}
+          <p className="text-muted">{selected?.description || '—'}</p>
+        </Modal.Body>
+        <Modal.Footer>
+          {selected?.showUrl ? <a className="btn btn-primary-gradient" href={selected.showUrl}>Eski panelda ochish</a> : null}
+          <Button variant="light" onClick={() => setSelected(null)}>Yopish</Button>
+        </Modal.Footer>
       </Modal>
     </div>
   );
@@ -138,48 +159,37 @@ export function ChatKuzatuv() {
 
 // ===== PUSH BILDIRISHNOMALAR =====
 export function PushNotifications() {
-  const [history, setHistory] = useState([
-    { id: 1, title: "Chegirma — 20%", sent: 2840, opened: 1240, status: 'Sent', date: '2026-01-14' },
-    { id: 2, title: "Yangi kitoblar keldi", sent: 2840, opened: 980, status: 'Sent', date: '2026-01-12' },
-    { id: 3, title: "Buyurtma statusi yangilandi", sent: 128, opened: 84, status: 'Sent', date: '2026-01-10' },
-  ]);
-  const [show, setShow] = useState(false);
-  const [pushTitle, setPushTitle] = useState('');
-  const [pushBody, setPushBody] = useState('');
+  const { notifications = [] } = usePage<{
+    notifications?: Array<{ id: number; title: string; body?: string; who?: string; status: string; date?: string; createUrl?: string; destroyUrl?: string }>;
+  }>().props;
+  const createUrl = notifications[0]?.createUrl || '/a122/push/create';
+  const destroy = (notification: (typeof notifications)[0]) => {
+    if (!notification.destroyUrl || !confirm(`#${notification.id} push o'chirilsinmi?`)) return;
+    router.delete(notification.destroyUrl, { preserveScroll: true });
+  };
 
   return (
     <div>
       <div className="page-head">
-        <div><h1 className="page-title">Push bildirishnomalar</h1><p className="page-subtitle">Jami {history.length} ta yuborilgan</p></div>
-        <button className="btn btn-primary-gradient" onClick={() => { setPushTitle(''); setPushBody(''); setShow(true); }}><i className="bi bi-send me-1"></i>Yangi push yaratish</button>
+        <div><h1 className="page-title">Push bildirishnomalar</h1><p className="page-subtitle">Jami {notifications.length} ta yuborilgan</p></div>
+        <a className="btn btn-primary-gradient" href={createUrl}><i className="bi bi-send me-1"></i>Yangi push yaratish</a>
       </div>
       <div className="card-panel">
         <div className="table-responsive"><table className="data-table">
-          <thead><tr><th>ID</th><th>Sarlavha</th><th>Yuborilgan</th><th>Ochilgan</th><th>CTR</th><th>Status</th><th>Sana</th><th>Amallar</th></tr></thead>
-          <tbody>{history.map(p => (
-            <tr key={p.id}>
-              <td className="fw-semibold" style={{ color: '#4f46e5' }}>#{p.id}</td>
-              <td className="fw-semibold">{p.title}</td>
-              <td>{p.sent.toLocaleString()}</td>
-              <td>{p.opened.toLocaleString()}</td>
-              <td><span className="chip chip-success" style={{ fontSize: 9 }}>{Math.round((p.opened / p.sent) * 100)}%</span></td>
-              <td><span className="chip chip-success" style={{ fontSize: 9 }}>{p.status}</span></td>
-              <td className="text-muted">{p.date}</td>
-              <td><button className="btn btn-sm btn-light text-danger" onClick={() => setHistory(history.filter(x => x.id !== p.id))}><i className="bi bi-trash"></i></button></td>
+          <thead><tr><th>ID</th><th>Sarlavha</th><th>Matn</th><th>Target</th><th>Status</th><th>Sana</th><th>Amallar</th></tr></thead>
+          <tbody>{notifications.map(notification => (
+            <tr key={notification.id}>
+              <td className="fw-semibold" style={{ color: '#4f46e5' }}>#{notification.id}</td>
+              <td className="fw-semibold">{notification.title}</td>
+              <td className="text-muted">{notification.body || '—'}</td>
+              <td><span className="chip chip-gray">{notification.who || 'all'}</span></td>
+              <td><span className="chip chip-success" style={{ fontSize: 9 }}>{notification.status}</span></td>
+              <td className="text-muted">{notification.date}</td>
+              <td><button className="btn btn-sm btn-light text-danger" onClick={() => destroy(notification)}><i className="bi bi-trash"></i></button></td>
             </tr>
           ))}</tbody>
         </table></div>
       </div>
-      <Modal show={show} onHide={() => setShow(false)} centered>
-        <Form onSubmit={(e) => { e.preventDefault(); setHistory([{ id: Date.now(), title: pushTitle, sent: 2840, opened: 0, status: 'Sent', date: new Date().toISOString().split('T')[0] }, ...history]); setShow(false); alert(`Push yuborildi: ${pushTitle}`); }}>
-          <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">Yangi push bildirishnoma</Modal.Title></Modal.Header>
-          <Modal.Body>
-            <Form.Group className="mb-3"><Form.Label className="small fw-semibold">Sarlavha</Form.Label><Form.Control required placeholder="Yangi kitob" value={pushTitle} onChange={e => setPushTitle(e.target.value)} /></Form.Group>
-            <Form.Group><Form.Label className="small fw-semibold">Matn</Form.Label><Form.Control as="textarea" rows={3} required placeholder="Yangi kitoblar keldi!" value={pushBody} onChange={e => setPushBody(e.target.value)} /></Form.Group>
-          </Modal.Body>
-          <Modal.Footer><Button variant="light" onClick={() => setShow(false)}>Bekor qilish</Button><Button variant="primary" type="submit" className="btn-primary-gradient"><i className="bi bi-send me-1"></i>Yuborish</Button></Modal.Footer>
-        </Form>
-      </Modal>
     </div>
   );
 }

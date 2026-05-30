@@ -1,45 +1,54 @@
-import { useState } from 'react';
-import { Modal, Button, Form } from 'react-bootstrap';
+import { router, usePage } from '@inertiajs/react';
 
-interface Policy { id: number; title: string; status: string; updated: string; }
-const initial: Policy[] = [
-  { id: 1, title: "Maxfiylik siyosati", status: 'Active', updated: '2026-01-10' },
-  { id: 2, title: "Foydalanish qoidalari", status: 'Active', updated: '2026-01-08' },
-  { id: 3, title: "Yetkazib berish qoidalari", status: 'Active', updated: '2026-01-05' },
-  { id: 4, title: "Qaytarish siyosati", status: 'Inactive', updated: '2025-12-20' },
-];
+interface Policy {
+  id: number;
+  title: string;
+  slug: string;
+  status: string;
+  showInApp: boolean;
+  sortOrder: number;
+  createUrl?: string;
+  editUrl?: string;
+  toggleUrl?: string;
+  destroyUrl?: string;
+}
 
 export default function Siyosatlar() {
-  const [list, setList] = useState(initial);
-  const [showAdd, setShowAdd] = useState(false);
-  const [showEdit, setShowEdit] = useState(false);
-  const [selected, setSelected] = useState<Policy | null>(null);
-  const [title, setTitle] = useState('');
+  const { policies = [] } = usePage<{ policies?: Policy[] }>().props;
+  const createUrl = policies[0]?.createUrl || '/a122/policies/create';
+
+  const toggle = (policy: Policy) => policy.toggleUrl && router.patch(policy.toggleUrl, {}, { preserveScroll: true });
+  const destroy = (policy: Policy) => {
+    if (!policy.destroyUrl || !confirm(`${policy.title} siyosati o'chirilsinmi?`)) return;
+    router.delete(policy.destroyUrl, { preserveScroll: true });
+  };
 
   return (
     <div>
       <div className="page-head">
         <div>
           <h1 className="page-title">Siyosatlar va qoidalar</h1>
-          <p className="page-subtitle">Jami {list.length} ta siyosat</p>
+          <p className="page-subtitle">Legal sahifalar, appda ko'rinishi va aktiv holat</p>
         </div>
-        <button className="btn btn-primary-gradient" onClick={() => { setTitle(''); setShowAdd(true); }}><i className="bi bi-plus-lg me-1"></i>Yangi siyosat</button>
+        <a className="btn btn-primary-gradient" href={createUrl}><i className="bi bi-plus-lg me-1"></i>Yangi siyosat</a>
       </div>
 
       <div className="card-panel">
         <div className="table-responsive">
           <table className="data-table">
-            <thead><tr><th>ID</th><th>Sarlavha</th><th>Oxirgi yangilangan</th><th>Holat</th><th>Amallar</th></tr></thead>
+            <thead><tr><th>ID</th><th>Sarlavha</th><th>Slug</th><th>Tartib</th><th>App</th><th>Holat</th><th>Amallar</th></tr></thead>
             <tbody>
-              {list.map(p => (
-                <tr key={p.id}>
-                  <td className="fw-semibold" style={{ color: '#4f46e5' }}>#{p.id}</td>
-                  <td className="fw-semibold">{p.title}</td>
-                  <td className="text-muted">{p.updated}</td>
-                  <td><div className="form-check form-switch"><input type="checkbox" className="form-check-input" checked={p.status === 'Active'} onChange={() => setList(list.map(x => x.id === p.id ? { ...x, status: x.status === 'Active' ? 'Inactive' : 'Active' } : x))} /></div></td>
+              {policies.map((policy) => (
+                <tr key={policy.id}>
+                  <td className="fw-semibold text-primary">#{policy.id}</td>
+                  <td className="fw-semibold">{policy.title}</td>
+                  <td><code>{policy.slug}</code></td>
+                  <td>{policy.sortOrder}</td>
+                  <td><span className={`chip ${policy.showInApp ? 'chip-success' : 'chip-gray'}`}>{policy.showInApp ? 'Ha' : "Yo'q"}</span></td>
+                  <td><div className="form-check form-switch"><input type="checkbox" className="form-check-input" checked={policy.status === 'Active'} onChange={() => toggle(policy)} /></div></td>
                   <td>
-                    <button className="btn btn-sm btn-light me-1" onClick={() => { setSelected(p); setTitle(p.title); setShowEdit(true); }}><i className="bi bi-pencil"></i></button>
-                    <button className="btn btn-sm btn-light text-danger" onClick={() => setList(list.filter(x => x.id !== p.id))}><i className="bi bi-trash"></i></button>
+                    {policy.editUrl ? <a className="btn btn-sm btn-light me-1" href={policy.editUrl}><i className="bi bi-pencil"></i></a> : null}
+                    <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(policy)}><i className="bi bi-trash"></i></button>
                   </td>
                 </tr>
               ))}
@@ -47,22 +56,6 @@ export default function Siyosatlar() {
           </table>
         </div>
       </div>
-
-      <Modal show={showAdd} onHide={() => setShowAdd(false)} centered>
-        <Form onSubmit={(e) => { e.preventDefault(); setList([...list, { id: Date.now(), title, status: 'Active', updated: new Date().toISOString().split('T')[0] }]); setShowAdd(false); }}>
-          <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">Yangi siyosat</Modal.Title></Modal.Header>
-          <Modal.Body><Form.Group><Form.Label className="small fw-semibold">Sarlavha</Form.Label><Form.Control required placeholder="Masalan: Chegirma siyosati" value={title} onChange={e => setTitle(e.target.value)} /></Form.Group></Modal.Body>
-          <Modal.Footer><Button variant="light" onClick={() => setShowAdd(false)}>Bekor qilish</Button><Button variant="primary" type="submit" className="btn-primary-gradient">Saqlash</Button></Modal.Footer>
-        </Form>
-      </Modal>
-
-      <Modal show={showEdit} onHide={() => setShowEdit(false)} centered>
-        <Form onSubmit={(e) => { e.preventDefault(); if (!selected) return; setList(list.map(x => x.id === selected.id ? { ...x, title } : x)); setShowEdit(false); }}>
-          <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">Siyosatni tahrirlash</Modal.Title></Modal.Header>
-          <Modal.Body><Form.Group><Form.Label className="small fw-semibold">Sarlavha</Form.Label><Form.Control required value={title} onChange={e => setTitle(e.target.value)} /></Form.Group></Modal.Body>
-          <Modal.Footer><Button variant="light" onClick={() => setShowEdit(false)}>Bekor qilish</Button><Button variant="primary" type="submit" className="btn-primary-gradient">Saqlash</Button></Modal.Footer>
-        </Form>
-      </Modal>
     </div>
   );
 }

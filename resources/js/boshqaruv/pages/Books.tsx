@@ -1,100 +1,91 @@
-import { useState } from 'react';
-import { Modal, Button, Form } from 'react-bootstrap';
+import { useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
+import { usePage } from '@inertiajs/react';
+import { Modal, Button } from 'react-bootstrap';
 import { topBooks } from '../data';
 
-const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n);
+const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
+
+interface MiniOrder {
+  id: number;
+  customer: string;
+  phone?: string;
+  amount: number;
+  status: string;
+  payment?: string;
+  date?: string;
+  url?: string;
+  seller?: string;
+}
 
 interface Book {
   id: number;
   title: string;
   author: string;
+  translator?: string;
+  isbn?: string;
   price: number;
+  discountPrice?: number | null;
+  discountExpiresAt?: string | null;
   stock: number;
   sold: number;
-  cover: string;
+  totalClients?: number;
+  totalRevenue?: number;
+  totalSalesWeek?: number;
+  views?: number;
+  cover: string | null;
+  images?: string[];
+  category?: string;
+  publisher?: string | null;
+  status?: number;
+  active?: boolean;
+  hidden?: boolean;
+  recommended?: boolean;
+  recommendedExpiresAt?: string | null;
+  seller?: {
+    name?: string;
+    phone?: string;
+    status?: string;
+    verified?: boolean;
+    hidden?: boolean;
+    url?: string;
+  } | null;
+  lang?: string;
+  langType?: string;
+  coverType?: string;
+  pages?: number;
+  year?: number;
+  description?: string | null;
+  mediaCount?: number;
+  recentOrders?: MiniOrder[];
+  sellerOrders?: MiniOrder[];
+  createdAt?: string;
+  updatedAt?: string;
+  showUrl?: string;
+  editUrl?: string;
+  moderateUrl?: string;
 }
 
+const badge = (ok: boolean | undefined, yes: string, no: string) => (
+  <span className={`chip ${ok ? 'chip-success' : 'chip-gray'}`}>{ok ? yes : no}</span>
+);
+
+const Detail = ({ label, value }: { label: string; value?: ReactNode }) => (
+  <div className="col-md-6">
+    <div className="text-muted small">{label}</div>
+    <div className="fw-semibold">{value || '—'}</div>
+  </div>
+);
+
 export default function Books() {
-  const [list, setList] = useState<Book[]>(topBooks);
-
-  // Modals
-  const [showAdd, setShowAdd] = useState(false);
+  const { books = [] } = usePage<{ books?: Book[] }>().props;
+  const list = useMemo<Book[]>(() => (books.length ? books : topBooks as Book[]), [books]);
   const [showView, setShowView] = useState(false);
-  const [showEdit, setShowEdit] = useState(false);
-  const [showDelete, setShowDelete] = useState(false);
-
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
 
-  // Form states
-  const [title, setTitle] = useState('');
-  const [author, setAuthor] = useState('');
-  const [price, setPrice] = useState('');
-  const [stock, setStock] = useState('');
-  const [cover, setCover] = useState('📕');
-
-  const handleOpenAdd = () => {
-    setTitle('');
-    setAuthor('');
-    setPrice('');
-    setStock('');
-    setCover('📕');
-    setShowAdd(true);
-  };
-
-  const handleOpenView = (b: Book) => {
-    setSelectedBook(b);
+  const handleOpenView = (book: Book) => {
+    setSelectedBook(book);
     setShowView(true);
-  };
-
-  const handleOpenEdit = (b: Book) => {
-    setSelectedBook(b);
-    setTitle(b.title);
-    setAuthor(b.author);
-    setPrice(String(b.price));
-    setStock(String(b.stock));
-    setCover(b.cover);
-    setShowEdit(true);
-  };
-
-  const handleOpenDelete = (b: Book) => {
-    setSelectedBook(b);
-    setShowDelete(true);
-  };
-
-  // Actions
-  const handleAdd = (e: React.FormEvent) => {
-    e.preventDefault();
-    const newB: Book = {
-      id: Date.now(),
-      title: title || 'Yangi kitob',
-      author: author || 'Noma\'lum',
-      price: Number(price) || 0,
-      stock: Number(stock) || 0,
-      sold: 0,
-      cover
-    };
-    setList([newB, ...list]);
-    setShowAdd(false);
-  };
-
-  const handleEdit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedBook) return;
-    setList(list.map(b => b.id === selectedBook.id ? {
-      ...b,
-      title,
-      author,
-      price: Number(price) || 0,
-      stock: Number(stock) || 0,
-      cover
-    } : b));
-    setShowEdit(false);
-  };
-
-  const handleDelete = () => {
-    if (!selectedBook) return;
-    setList(list.filter(b => b.id !== selectedBook.id));
-    setShowDelete(false);
   };
 
   return (
@@ -102,177 +93,201 @@ export default function Books() {
       <div className="page-head">
         <div>
           <h1 className="page-title">Kitoblar katalogi</h1>
-          <p className="page-subtitle">{list.length} ta kitob — badiiy, ilmiy, bolalar adabiyoti</p>
+          <p className="page-subtitle">{list.length} ta kitob</p>
         </div>
         <div className="d-flex gap-2">
-          <button className="btn btn-outline-secondary" onClick={() => alert("Import tizimi tez orada ishga tushadi!")}>
-            <i className="bi bi-upload me-1"></i>Import
-          </button>
-          <button className="btn btn-primary-gradient" onClick={handleOpenAdd}>
+          <a className="btn btn-outline-secondary" href="/a122/books">
+            <i className="bi bi-funnel me-1"></i>Filtr
+          </a>
+          <a className="btn btn-primary-gradient" href="/a122/books/create">
             <i className="bi bi-plus-lg me-1"></i>Yangi kitob
-          </button>
+          </a>
         </div>
       </div>
 
       <div className="row g-3">
-        {list.map((b) => (
-          <div className="col-xl-3 col-md-6" key={b.id}>
+        {list.map((book) => (
+          <div className="col-xl-3 col-md-6" key={book.id}>
             <div className="card-panel h-100 d-flex flex-column justify-content-between">
               <div>
                 <div className="d-flex gap-3">
-                  <div style={{ width: 80, height: 104, borderRadius: 8, background: 'linear-gradient(135deg,#c7d2fe,#f3e8ff)', display: 'grid', placeItems: 'center', fontSize: 40, flexShrink: 0 }}>
-                    {b.cover}
+                  <div className="book-cover-sm">
+                    {book.cover && String(book.cover).startsWith('http') ? (
+                      <img src={book.cover} alt={book.title} />
+                    ) : (book.cover || '📕')}
                   </div>
                   <div style={{ minWidth: 0, flex: 1 }}>
-                    <div className="fw-bold" style={{ fontSize: 15 }}>{b.title}</div>
-                    <div className="text-muted small mb-2">{b.author}</div>
-                    <div className="fw-bold" style={{ color: '#4f46e5' }}>{fmt(b.price)} so'm</div>
-                    <div className="d-flex gap-1 mt-2">
-                      <span className="chip chip-success">{b.stock} dona</span>
-                      <span className="chip chip-gray">⭐ 4.8</span>
+                    <div className="fw-bold text-truncate" style={{ fontSize: 15 }}>{book.title}</div>
+                    <div className="text-muted small mb-2 text-truncate">{book.author}</div>
+                    <div className="fw-bold" style={{ color: '#4f46e5' }}>{fmt(book.price)} so'm</div>
+                    <div className="d-flex gap-1 mt-2 flex-wrap">
+                      <span className="chip chip-success">{book.stock} dona</span>
+                      <span className="chip chip-gray">{book.category || 'Kitob'}</span>
+                      {book.hidden ? <span className="chip chip-danger">Yashirilgan</span> : null}
                     </div>
                   </div>
                 </div>
               </div>
               <div className="d-flex gap-2 mt-3 pt-3 border-top">
-                <button className="btn btn-sm btn-light flex-fill" onClick={() => handleOpenView(b)} title="Ko'rish">
+                <button className="btn btn-sm btn-light flex-fill" onClick={() => handleOpenView(book)} title="Ko'rish">
                   <i className="bi bi-eye"></i>
                 </button>
-                <button className="btn btn-sm btn-light flex-fill" onClick={() => handleOpenEdit(b)} title="Tahrirlash">
+                <a className="btn btn-sm btn-light flex-fill" href={book.editUrl || '#'} title="Tahrirlash">
                   <i className="bi bi-pencil"></i>
-                </button>
-                <button className="btn btn-sm btn-light text-danger" onClick={() => handleOpenDelete(b)} title="O'chirish">
-                  <i className="bi bi-trash"></i>
-                </button>
+                </a>
               </div>
             </div>
           </div>
         ))}
       </div>
 
-      {/* ADD MODAL */}
-      <Modal show={showAdd} onHide={() => setShowAdd(false)} centered>
-        <Form onSubmit={handleAdd}>
-          <Modal.Header closeButton>
-            <Modal.Title className="fs-5 fw-bold">Yangi kitob qo'shish</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            <Form.Group className="mb-3">
-              <Form.Label className="small fw-semibold">Kitob nomi</Form.Label>
-              <Form.Control required placeholder="Yulduzli tunlar" value={title} onChange={e => setTitle(e.target.value)} />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label className="small fw-semibold">Muallif</Form.Label>
-              <Form.Control required placeholder="Pirimqul Qodirov" value={author} onChange={e => setAuthor(e.target.value)} />
-            </Form.Group>
-            <div className="row g-3 mb-3">
-              <Form.Group className="col-md-6">
-                <Form.Label className="small fw-semibold">Narxi (so'm)</Form.Label>
-                <Form.Control type="number" required placeholder="85000" value={price} onChange={e => setPrice(e.target.value)} />
-              </Form.Group>
-              <Form.Group className="col-md-6">
-                <Form.Label className="small fw-semibold">Ombordagi soni</Form.Label>
-                <Form.Control type="number" required placeholder="30" value={stock} onChange={e => setStock(e.target.value)} />
-              </Form.Group>
-            </div>
-            <Form.Group>
-              <Form.Label className="small fw-semibold">Muqova / Emoji</Form.Label>
-              <Form.Select value={cover} onChange={e => setCover(e.target.value)}>
-                <option value="📕">📕 Qizil muqova</option>
-                <option value="📗">📗 Yashil muqova</option>
-                <option value="📘">📘 Ko'k muqova</option>
-                <option value="📙">📙 Apelsin muqova</option>
-                <option value="📓">📓 Qora muqova</option>
-              </Form.Select>
-            </Form.Group>
-          </Modal.Body>
-          <Modal.Footer>
-            <Button variant="light" onClick={() => setShowAdd(false)}>Bekor qilish</Button>
-            <Button variant="primary" type="submit" className="btn-primary-gradient">Qo'shish</Button>
-          </Modal.Footer>
-        </Form>
-      </Modal>
-
-      {/* EDIT MODAL */}
-      <Modal show={showEdit} onHide={() => setShowEdit(false)} centered>
-        <Form onSubmit={handleEdit}>
-          <Modal.Header closeButton>
-            <Modal.Title className="fs-5 fw-bold">Kitobni tahrirlash</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            <Form.Group className="mb-3">
-              <Form.Label className="small fw-semibold">Kitob nomi</Form.Label>
-              <Form.Control required value={title} onChange={e => setTitle(e.target.value)} />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label className="small fw-semibold">Muallif</Form.Label>
-              <Form.Control required value={author} onChange={e => setAuthor(e.target.value)} />
-            </Form.Group>
-            <div className="row g-3 mb-3">
-              <Form.Group className="col-md-6">
-                <Form.Label className="small fw-semibold">Narxi (so'm)</Form.Label>
-                <Form.Control type="number" required value={price} onChange={e => setPrice(e.target.value)} />
-              </Form.Group>
-              <Form.Group className="col-md-6">
-                <Form.Label className="small fw-semibold">Ombordagi soni</Form.Label>
-                <Form.Control type="number" required value={stock} onChange={e => setStock(e.target.value)} />
-              </Form.Group>
-            </div>
-            <Form.Group>
-              <Form.Label className="small fw-semibold">Muqova / Emoji</Form.Label>
-              <Form.Select value={cover} onChange={e => setCover(e.target.value)}>
-                <option value="📕">📕 Qizil muqova</option>
-                <option value="📗">📗 Yashil muqova</option>
-                <option value="📘">📘 Ko'k muqova</option>
-                <option value="📙">📙 Apelsin muqova</option>
-                <option value="📓">📓 Qora muqova</option>
-              </Form.Select>
-            </Form.Group>
-          </Modal.Body>
-          <Modal.Footer>
-            <Button variant="light" onClick={() => setShowEdit(false)}>Bekor qilish</Button>
-            <Button variant="primary" type="submit" className="btn-primary-gradient">Saqlash</Button>
-          </Modal.Footer>
-        </Form>
-      </Modal>
-
-      {/* VIEW MODAL */}
-      <Modal show={showView} onHide={() => setShowView(false)} centered>
+      <Modal show={showView} onHide={() => setShowView(false)} centered size="xl" scrollable>
         <Modal.Header closeButton>
-          <Modal.Title className="fs-5 fw-bold">Kitob ma'lumotlari</Modal.Title>
-        </Modal.Header>
-        <Modal.Body className="text-center">
-          <div style={{ fontSize: 72 }}>{selectedBook?.cover}</div>
-          <h4 className="fw-bold mt-2">{selectedBook?.title}</h4>
-          <div className="text-muted mb-3">{selectedBook?.author}</div>
-
-          <div className="row g-2 text-start border-top pt-3">
-            <div className="col-6"><span className="text-muted small">Narxi:</span></div>
-            <div className="col-6 fw-semibold text-primary">{fmt(selectedBook?.price || 0)} so'm</div>
-            <div className="col-6"><span className="text-muted small">Omborda:</span></div>
-            <div className="col-6 fw-semibold">{selectedBook?.stock} dona</div>
-            <div className="col-6"><span className="text-muted small">Sotilgan:</span></div>
-            <div className="col-6 fw-semibold text-success">{selectedBook?.sold} marta</div>
-          </div>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="light" onClick={() => setShowView(false)} className="w-100">Yopish</Button>
-        </Modal.Footer>
-      </Modal>
-
-      {/* DELETE MODAL */}
-      <Modal show={showDelete} onHide={() => setShowDelete(false)} centered>
-        <Modal.Header closeButton>
-          <Modal.Title className="fs-5 fw-bold text-danger">O'chirishni tasdiqlang</Modal.Title>
+          <Modal.Title className="fs-5 fw-bold">Kitob: {selectedBook?.title}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          Haqiqatan ham <strong>{selectedBook?.title}</strong> kitobini o'chirmoqchimisiz?
+          {selectedBook ? (
+            <div className="row g-4">
+              <div className="col-lg-4">
+                <div className="detail-panel text-center">
+                  <div className="book-cover-lg mx-auto mb-3">
+                    {selectedBook.cover ? <img src={selectedBook.cover} alt={selectedBook.title} /> : '📕'}
+                  </div>
+                  <h4 className="fw-bold mb-1">{selectedBook.title}</h4>
+                  <div className="text-muted mb-3">{selectedBook.author}</div>
+                  <div className="d-flex gap-2 justify-content-center flex-wrap">
+                    {badge(Boolean(selectedBook.active), 'Aktiv', 'Nofaol')}
+                    {badge(Boolean(selectedBook.status), 'Tasdiqlangan', 'Moderatsiya')}
+                    {badge(!selectedBook.hidden, "Ko'rinadi", 'Yashirilgan')}
+                    {selectedBook.recommended ? <span className="chip chip-info">Tavsiya</span> : null}
+                  </div>
+                </div>
+
+                <div className="detail-panel mt-3">
+                  <h6 className="fw-bold mb-3">Sotuvchi</h6>
+                  {selectedBook.seller ? (
+                    <>
+                      <div className="fw-semibold">{selectedBook.seller.url ? <a href={selectedBook.seller.url}>{selectedBook.seller.name}</a> : selectedBook.seller.name}</div>
+                      <div className="text-muted small">{selectedBook.seller.phone || 'Telefon yoq'}</div>
+                      <div className="d-flex gap-2 mt-2 flex-wrap">
+                        {badge(selectedBook.seller.verified, 'Verified', 'Tekshirilmagan')}
+                        {badge(!selectedBook.seller.hidden, 'Aktiv shop', 'Shop yashirin')}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-muted">Ichki katalog</div>
+                  )}
+                </div>
+              </div>
+
+              <div className="col-lg-8">
+                <div className="row g-3 mb-3">
+                  {[
+                    { label: 'Narx', value: `${fmt(selectedBook.price)} so'm`, icon: 'bi-cash-stack' },
+                    { label: 'Ombor', value: `${fmt(selectedBook.stock)} dona`, icon: 'bi-box-seam' },
+                    { label: 'Sotilgan', value: `${fmt(selectedBook.sold)} marta`, icon: 'bi-bag-check' },
+                    { label: 'Daromad', value: `${fmt(selectedBook.totalRevenue || 0)} so'm`, icon: 'bi-graph-up-arrow' },
+                  ].map((item) => (
+                    <div className="col-md-3 col-6" key={item.label}>
+                      <div className="mini-stat">
+                        <i className={`bi ${item.icon}`}></i>
+                        <span>{item.label}</span>
+                        <strong>{item.value}</strong>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="detail-panel">
+                  <h6 className="fw-bold mb-3">Asosiy ma'lumotlar</h6>
+                  <div className="row g-3">
+                    <Detail label="Kategoriya" value={selectedBook.category} />
+                    <Detail label="Nashriyot" value={selectedBook.publisher} />
+                    <Detail label="Tarjimon" value={selectedBook.translator} />
+                    <Detail label="ISBN" value={selectedBook.isbn} />
+                    <Detail label="Til / yozuv" value={[selectedBook.lang, selectedBook.langType].filter(Boolean).join(' / ')} />
+                    <Detail label="Muqova / sahifa" value={[selectedBook.coverType, selectedBook.pages ? `${selectedBook.pages} bet` : null].filter(Boolean).join(' / ')} />
+                    <Detail label="Yil" value={selectedBook.year} />
+                    <Detail label="Ko'rishlar" value={fmt(selectedBook.views || 0)} />
+                    <Detail label="Chegirma" value={selectedBook.discountPrice ? `${fmt(selectedBook.discountPrice)} so'm` : null} />
+                    <Detail label="Chegirma muddati" value={selectedBook.discountExpiresAt} />
+                    <Detail label="Tavsiya muddati" value={selectedBook.recommendedExpiresAt} />
+                    <Detail label="Media" value={`${selectedBook.mediaCount || 0} ta rasm`} />
+                  </div>
+                  {selectedBook.description ? (
+                    <div className="mt-3">
+                      <div className="text-muted small">Tavsif</div>
+                      <div className="detail-text">{selectedBook.description}</div>
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="detail-panel mt-3">
+                  <h6 className="fw-bold mb-3">Savdo analitikasi</h6>
+                  <div className="row g-3">
+                    <Detail label="Jami sotuv" value={`${fmt(selectedBook.sold)} dona`} />
+                    <Detail label="Jami mijoz" value={fmt(selectedBook.totalClients || 0)} />
+                    <Detail label="Haftalik sotuv" value={`${fmt(selectedBook.totalSalesWeek || 0)} dona`} />
+                    <Detail label="Jami tushum" value={`${fmt(selectedBook.totalRevenue || 0)} so'm`} />
+                  </div>
+                </div>
+
+                <div className="detail-panel mt-3">
+                  <h6 className="fw-bold mb-3">Oxirgi buyurtmalar</h6>
+                  <MiniOrdersTable rows={selectedBook.recentOrders || []} empty="Bu kitob bo'yicha buyurtma topilmadi" />
+                </div>
+
+                <div className="detail-panel mt-3">
+                  <h6 className="fw-bold mb-3">Seller orderlar</h6>
+                  <MiniOrdersTable rows={selectedBook.sellerOrders || []} empty="Seller order topilmadi" />
+                </div>
+              </div>
+            </div>
+          ) : null}
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="light" onClick={() => setShowDelete(false)}>Bekor qilish</Button>
-          <Button variant="danger" onClick={handleDelete}>O'chirish</Button>
+          {selectedBook?.showUrl ? <a className="btn btn-outline-secondary" href={selectedBook.showUrl}>Eski show</a> : null}
+          {selectedBook?.moderateUrl ? <a className="btn btn-outline-secondary" href={selectedBook.moderateUrl}>Moderatsiya</a> : null}
+          {selectedBook?.editUrl ? <a className="btn btn-primary-gradient" href={selectedBook.editUrl}>Tahrirlash</a> : null}
+          <Button variant="light" onClick={() => setShowView(false)}>Yopish</Button>
         </Modal.Footer>
       </Modal>
+    </div>
+  );
+}
+
+function MiniOrdersTable({ rows, empty }: { rows: MiniOrder[]; empty: string }) {
+  if (!rows.length) {
+    return <div className="text-muted small">{empty}</div>;
+  }
+
+  return (
+    <div className="table-responsive">
+      <table className="data-table compact-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Mijoz</th>
+            <th>Summa</th>
+            <th>Status</th>
+            <th>Sana</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.id}>
+              <td>{row.url ? <a href={row.url}>#{row.id}</a> : `#${row.id}`}</td>
+              <td>
+                <div className="fw-semibold">{row.customer}</div>
+                <div className="text-muted small">{row.phone || row.seller || ''}</div>
+              </td>
+              <td className="fw-semibold">{fmt(row.amount)} so'm</td>
+              <td><span className="chip chip-gray">{row.status || '—'}</span></td>
+              <td className="text-muted">{row.date || '—'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

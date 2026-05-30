@@ -1,129 +1,114 @@
 import { useState } from 'react';
+import { router, usePage } from '@inertiajs/react';
 import { Modal, Button, Form } from 'react-bootstrap';
 
 // ===== ADMINLAR =====
 export function Adminlar() {
-  const [list, setList] = useState([
-    { id: 1, name: 'Admin Sobir', email: 'sobir@bookhub.uz', role: 'Super Admin', active: true },
-    { id: 2, name: 'Zarnigor Xalilova', email: 'zarnigor@bookhub.uz', role: 'Moderator', active: true },
-    { id: 3, name: 'Javohir Raximjonov', email: 'java@bookhub.uz', role: 'Support', active: false },
-  ]);
-  const [show, setShow] = useState(false);
-  const [selected, setSelected] = useState<typeof list[0] | null>(null);
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [role, setRole] = useState('Moderator');
+  const { admins = [] } = usePage<{
+    admins?: Array<{ id: number; name: string; email: string; role: string; active: boolean; lastLogin?: string; createUrl?: string; showUrl?: string; editUrl?: string; toggleUrl?: string; destroyUrl?: string }>;
+  }>().props;
+  const createUrl = admins[0]?.createUrl || '/a122/admins/create';
+
+  const toggle = (admin: (typeof admins)[0]) => admin.toggleUrl && router.patch(admin.toggleUrl, {}, { preserveScroll: true });
+  const destroy = (admin: (typeof admins)[0]) => {
+    if (!admin.destroyUrl || !confirm(`${admin.name} admini o'chirilsinmi?`)) return;
+    router.delete(admin.destroyUrl, { preserveScroll: true });
+  };
 
   return (
     <div>
       <div className="page-head">
-        <div><h1 className="page-title">Adminlar</h1><p className="page-subtitle">Jami {list.length} ta admin</p></div>
-        <button className="btn btn-primary-gradient" onClick={() => { setName(''); setEmail(''); setRole('Moderator'); setShow(true); }}><i className="bi bi-plus-lg me-1"></i>Yangi admin</button>
+        <div><h1 className="page-title">Adminlar</h1><p className="page-subtitle">Jami {admins.length} ta admin</p></div>
+        <a className="btn btn-primary-gradient" href={createUrl}><i className="bi bi-plus-lg me-1"></i>Yangi admin</a>
       </div>
       <div className="card-panel">
         <div className="table-responsive"><table className="data-table">
-          <thead><tr><th>ID</th><th>Ism</th><th>Email</th><th>Rol</th><th>Holat</th><th>Amallar</th></tr></thead>
-          <tbody>{list.map(a => (
-            <tr key={a.id}>
-              <td className="fw-semibold" style={{ color: '#4f46e5' }}>#{a.id}</td>
-              <td className="fw-semibold">{a.name}</td>
-              <td className="text-muted">{a.email}</td>
-              <td><span className="chip chip-purple" style={{ fontSize: 9 }}>{a.role}</span></td>
-              <td><div className="form-check form-switch"><input type="checkbox" className="form-check-input" checked={a.active} onChange={() => setList(list.map(x => x.id === a.id ? { ...x, active: !x.active } : x))} /></div></td>
+          <thead><tr><th>ID</th><th>Ism</th><th>Email</th><th>Rol</th><th>Oxirgi kirish</th><th>Holat</th><th>Amallar</th></tr></thead>
+          <tbody>{admins.map(admin => (
+            <tr key={admin.id}>
+              <td className="fw-semibold" style={{ color: '#4f46e5' }}>#{admin.id}</td>
+              <td className="fw-semibold">{admin.name}</td>
+              <td className="text-muted">{admin.email}</td>
+              <td><span className="chip chip-purple" style={{ fontSize: 9 }}>{admin.role}</span></td>
+              <td className="text-muted">{admin.lastLogin || '—'}</td>
+              <td><div className="form-check form-switch"><input type="checkbox" className="form-check-input" checked={admin.active} onChange={() => toggle(admin)} /></div></td>
               <td>
-                <button className="btn btn-sm btn-light me-1" onClick={() => { setSelected(a); setName(a.name); setEmail(a.email); setRole(a.role); setShow(true); }}><i className="bi bi-pencil"></i></button>
-                <button className="btn btn-sm btn-light text-danger" onClick={() => setList(list.filter(x => x.id !== a.id))}><i className="bi bi-trash"></i></button>
+                {admin.showUrl ? <a className="btn btn-sm btn-light me-1" href={admin.showUrl}><i className="bi bi-eye"></i></a> : null}
+                {admin.editUrl ? <a className="btn btn-sm btn-light me-1" href={admin.editUrl}><i className="bi bi-pencil"></i></a> : null}
+                <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(admin)}><i className="bi bi-trash"></i></button>
               </td>
             </tr>
           ))}</tbody>
         </table></div>
       </div>
-      <Modal show={show} onHide={() => setShow(false)} centered>
-        <Form onSubmit={(e) => { e.preventDefault(); if (selected) setList(list.map(x => x.id === selected.id ? { ...x, name, email, role } : x)); else setList([...list, { id: Date.now(), name, email, role, active: true }]); setShow(false); }}>
-          <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">{selected ? 'Tahrirlash' : 'Yangi admin'}</Modal.Title></Modal.Header>
-          <Modal.Body>
-            <Form.Group className="mb-3"><Form.Label className="small fw-semibold">Ism</Form.Label><Form.Control required value={name} onChange={e => setName(e.target.value)} /></Form.Group>
-            <Form.Group className="mb-3"><Form.Label className="small fw-semibold">Email</Form.Label><Form.Control type="email" required value={email} onChange={e => setEmail(e.target.value)} /></Form.Group>
-            <Form.Group><Form.Label className="small fw-semibold">Rol</Form.Label><Form.Select value={role} onChange={e => setRole(e.target.value)}><option value="Super Admin">Super Admin</option><option value="Moderator">Moderator</option><option value="Support">Support</option></Form.Select></Form.Group>
-          </Modal.Body>
-          <Modal.Footer><Button variant="light" onClick={() => setShow(false)}>Bekor qilish</Button><Button variant="primary" type="submit" className="btn-primary-gradient">Saqlash</Button></Modal.Footer>
-        </Form>
-      </Modal>
     </div>
   );
 }
 
 // ===== API MIJOZLAR =====
 export function ApiClients() {
-  const [list, setList] = useState([
-    { id: 1, name: 'Mobile App Android', key: 'android_live_sk_8f4a...', active: true, requests: 124800 },
-    { id: 2, name: 'Mobile App iOS', key: 'ios_live_sk_3b7c...', active: true, requests: 84200 },
-    { id: 3, name: 'Web Widget', key: 'web_widget_9d2e...', active: false, requests: 4200 },
-  ]);
-  const [showAdd, setShowAdd] = useState(false);
-  const [name, setName] = useState('');
+  const { apiClients = [], apiLogs = [] } = usePage<{
+    apiClients?: Array<{ id: number; name: string; key: string; active: boolean; requests: number; rateLimitSecond?: number; rateLimitMinute?: number; createUrl?: string; docsUrl?: string; logsUrl?: string; editUrl?: string; toggleUrl?: string; regenerateUrl?: string; destroyUrl?: string }>;
+    apiLogs?: Array<{ id: number; client?: string; method?: string; path?: string; status: number; date?: string }>;
+  }>().props;
   const [showLogs, setShowLogs] = useState(false);
 
-  const logs = [
-    { method: 'POST', path: '/api/v2/orders', status: 200, time: '2026-01-14 10:23:12', client: 'Mobile App Android' },
-    { method: 'GET', path: '/api/v2/products', status: 200, time: '2026-01-14 10:23:11', client: 'Mobile App iOS' },
-    { method: 'POST', path: '/api/v2/auth/login', status: 401, time: '2026-01-14 10:23:10', client: 'Mobile App Android' },
-    { method: 'DELETE', path: '/api/v2/cart/items/42', status: 204, time: '2026-01-14 10:23:08', client: 'Mobile App Android' },
-  ];
+  const createUrl = apiClients[0]?.createUrl || '/a122/api-clients/create';
+  const docsUrl = apiClients[0]?.docsUrl || '/a122/api-clients/docs';
+  const logsUrl = apiClients[0]?.logsUrl || '/a122/api-clients/logs';
+  const patch = (url?: string) => url && router.patch(url, {}, { preserveScroll: true });
+  const destroy = (client: (typeof apiClients)[0]) => {
+    if (!client.destroyUrl || !confirm(`${client.name} API clienti o'chirilsinmi?`)) return;
+    router.delete(client.destroyUrl, { preserveScroll: true });
+  };
 
   return (
     <div>
       <div className="page-head">
-        <div><h1 className="page-title">API mijozlar</h1><p className="page-subtitle">Jami {list.length} ta client</p></div>
+        <div><h1 className="page-title">API mijozlar</h1><p className="page-subtitle">Jami {apiClients.length} ta client</p></div>
         <div className="d-flex gap-2">
           <button className="btn btn-outline-secondary" onClick={() => setShowLogs(true)}><i className="bi bi-journal-code me-1"></i>API Logs</button>
-          <button className="btn btn-outline-secondary"><i className="bi bi-file-text me-1"></i>API Docs</button>
-          <button className="btn btn-primary-gradient" onClick={() => { setName(''); setShowAdd(true); }}><i className="bi bi-plus-lg me-1"></i>Yangi client</button>
+          <a className="btn btn-outline-secondary" href={docsUrl}><i className="bi bi-file-text me-1"></i>API Docs</a>
+          <a className="btn btn-primary-gradient" href={createUrl}><i className="bi bi-plus-lg me-1"></i>Yangi client</a>
         </div>
       </div>
       <div className="card-panel">
         <div className="table-responsive"><table className="data-table">
-          <thead><tr><th>ID</th><th>Nomi</th><th>API Key</th><th>So'rovlar</th><th>Holat</th><th>Amallar</th></tr></thead>
-          <tbody>{list.map(c => (
-            <tr key={c.id}>
-              <td className="fw-semibold" style={{ color: '#4f46e5' }}>#{c.id}</td>
-              <td className="fw-semibold">{c.name}</td>
-              <td><code style={{ fontSize: 11, background: '#f3f4f6', padding: '2px 6px', borderRadius: 4 }}>{c.key}</code></td>
-              <td>{c.requests.toLocaleString()}</td>
-              <td><div className="form-check form-switch"><input type="checkbox" className="form-check-input" checked={c.active} onChange={() => setList(list.map(x => x.id === c.id ? { ...x, active: !x.active } : x))} /></div></td>
+          <thead><tr><th>ID</th><th>Nomi</th><th>App ID</th><th>So'rovlar</th><th>Limit</th><th>Holat</th><th>Amallar</th></tr></thead>
+          <tbody>{apiClients.map(client => (
+            <tr key={client.id}>
+              <td className="fw-semibold" style={{ color: '#4f46e5' }}>#{client.id}</td>
+              <td className="fw-semibold">{client.name}</td>
+              <td><code style={{ fontSize: 11, background: '#f3f4f6', padding: '2px 6px', borderRadius: 4 }}>{client.key}</code></td>
+              <td>{client.requests.toLocaleString()}</td>
+              <td>{client.rateLimitSecond || 0}/s · {client.rateLimitMinute || 0}/m</td>
+              <td><div className="form-check form-switch"><input type="checkbox" className="form-check-input" checked={client.active} onChange={() => patch(client.toggleUrl)} /></div></td>
               <td>
-                <button className="btn btn-sm btn-light me-1" onClick={() => { setName(c.name); setShowAdd(true); }}><i className="bi bi-pencil"></i></button>
-                <button className="btn btn-sm btn-light me-1" onClick={() => alert("Secret regenerate qilindi!")}><i className="bi bi-arrow-repeat"></i></button>
-                <button className="btn btn-sm btn-light text-danger" onClick={() => setList(list.filter(x => x.id !== c.id))}><i className="bi bi-trash"></i></button>
+                {client.editUrl ? <a className="btn btn-sm btn-light me-1" href={client.editUrl}><i className="bi bi-pencil"></i></a> : null}
+                <button className="btn btn-sm btn-light me-1" onClick={() => patch(client.regenerateUrl)}><i className="bi bi-arrow-repeat"></i></button>
+                <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(client)}><i className="bi bi-trash"></i></button>
               </td>
             </tr>
           ))}</tbody>
         </table></div>
       </div>
-      <Modal show={showAdd} onHide={() => setShowAdd(false)} centered>
-        <Form onSubmit={(e) => { e.preventDefault(); setList([...list, { id: Date.now(), name, key: `${name.toLowerCase().replace(/\s/g, '_')}_sk_${Math.random().toString(36).substring(2, 10)}`, active: true, requests: 0 }]); setShowAdd(false); }}>
-          <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">Yangi API client</Modal.Title></Modal.Header>
-          <Modal.Body><Form.Group><Form.Label className="small fw-semibold">Client nomi</Form.Label><Form.Control required value={name} onChange={e => setName(e.target.value)} /></Form.Group></Modal.Body>
-          <Modal.Footer><Button variant="light" onClick={() => setShowAdd(false)}>Bekor qilish</Button><Button variant="primary" type="submit" className="btn-primary-gradient">Yaratish</Button></Modal.Footer>
-        </Form>
-      </Modal>
       <Modal show={showLogs} onHide={() => setShowLogs(false)} centered size="lg">
         <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">API Logs (oxirgi 50 ta)</Modal.Title></Modal.Header>
         <Modal.Body>
           <div className="table-responsive"><table className="data-table">
             <thead><tr><th>Method</th><th>Path</th><th>Status</th><th>Vaqt</th><th>Client</th></tr></thead>
-            <tbody>{logs.map((l, i) => (
-              <tr key={i}>
-                <td><span className={`chip ${l.method === 'GET' ? 'chip-success' : l.method === 'POST' ? 'chip-info' : 'chip-danger'}`} style={{ fontSize: 9, fontFamily: 'monospace' }}>{l.method}</span></td>
-                <td className="fw-semibold" style={{ fontSize: 11 }}>{l.path}</td>
-                <td><span className={`chip ${l.status < 300 ? 'chip-success' : l.status < 400 ? 'chip-warning' : 'chip-danger'}`} style={{ fontSize: 9 }}>{l.status}</span></td>
-                <td className="text-muted small">{l.time}</td>
-                <td className="text-muted small">{l.client}</td>
+            <tbody>{apiLogs.map((log) => (
+              <tr key={log.id}>
+                <td><span className={`chip ${log.method === 'GET' ? 'chip-success' : log.method === 'POST' ? 'chip-info' : 'chip-danger'}`} style={{ fontSize: 9, fontFamily: 'monospace' }}>{log.method}</span></td>
+                <td className="fw-semibold" style={{ fontSize: 11 }}>{log.path}</td>
+                <td><span className={`chip ${log.status < 300 ? 'chip-success' : log.status < 400 ? 'chip-warning' : 'chip-danger'}`} style={{ fontSize: 9 }}>{log.status}</span></td>
+                <td className="text-muted small">{log.date}</td>
+                <td className="text-muted small">{log.client}</td>
               </tr>
             ))}</tbody>
           </table></div>
         </Modal.Body>
-        <Modal.Footer><Button variant="light" onClick={() => setShowLogs(false)}>Yopish</Button></Modal.Footer>
+        <Modal.Footer><a className="btn btn-outline-secondary" href={logsUrl}>To'liq loglar</a><Button variant="light" onClick={() => setShowLogs(false)}>Yopish</Button></Modal.Footer>
       </Modal>
     </div>
   );

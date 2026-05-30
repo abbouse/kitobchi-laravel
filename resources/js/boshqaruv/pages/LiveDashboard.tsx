@@ -1,188 +1,154 @@
-import { useEffect, useState } from 'react';
-import { router } from '@inertiajs/react';
+import { useEffect, useMemo, useState } from 'react';
+import { router, usePage } from '@inertiajs/react';
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
-const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n);
+const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(Math.round(n || 0));
 
-interface RegionStat {
-  name: string;
-  value: number;
-  color: string;
-  coords: { x: number; y: number };
-  revenue: number;
-  profit: number;
+interface CountMap {
+  [key: string]: number;
 }
 
-const initialRegions: RegionStat[] = [
-  { name: 'Toshkent', value: 34, color: '#a855f7', coords: { x: 72, y: 35 }, revenue: 18_450_200, profit: 7_380_080 },
-  { name: 'Samarqand', value: 22, color: '#6366f1', coords: { x: 50, y: 55 }, revenue: 6_210_400, profit: 2_484_160 },
-  { name: 'Buxoro', value: 18, color: '#3b82f6', coords: { x: 35, y: 60 }, revenue: 4_480_500, profit: 1_792_200 },
-  { name: "Farg'ona", value: 15, color: '#10b981', coords: { x: 85, y: 45 }, revenue: 5_420_600, profit: 2_168_240 },
-  { name: 'Andijon', value: 12, color: '#f59e0b', coords: { x: 92, y: 40 }, revenue: 3_680_200, profit: 1_472_080 },
-  { name: 'Namangan', value: 14, color: '#ec4899', coords: { x: 82, y: 32 }, revenue: 3_190_800, profit: 1_276_320 },
-  { name: 'Xorazm', value: 10, color: '#06b6d4', coords: { x: 20, y: 45 }, revenue: 2_360_700, profit: 944_280 },
-  { name: 'Qashqadaryo', value: 16, color: '#f43f5e', coords: { x: 45, y: 70 }, revenue: 2_740_300, profit: 1_096_120 },
-];
+interface FeedRow {
+  id: number;
+  title?: string;
+  customer?: string;
+  seller?: string;
+  courier?: string;
+  amount: number;
+  status: string;
+  status_code?: string;
+  updated_at?: string;
+  url?: string;
+}
 
-const appPlatforms = [
-  { name: 'Android', icon: '🤖', color: '#10b981', activeUsers: 2684, orders: 904, revenue: 34_290_000, conv: 3.7, crash: 0.42 },
-  { name: 'iOS', icon: '🍎', color: '#3b82f6', activeUsers: 728, orders: 380, revenue: 14_430_500, conv: 4.1, crash: 0.18 },
-];
+interface Snapshot {
+  generated_at: string;
+  endpoint?: string;
+  kpis: {
+    total_revenue: number;
+    today_revenue: number;
+    month_revenue: number;
+    platform_profit: number;
+    total_orders: number;
+    today_orders: number;
+    week_orders: number;
+    active_orders: number;
+    completed_orders: number;
+    cancelled_orders: number;
+    avg_order_value: number;
+    online_users: number;
+    delivery_income: number;
+    promo_discount: number;
+    cashback: number;
+  };
+  main_counts: CountMap;
+  seller_counts: CountMap;
+  courier_counts: CountMap;
+  chart: { hour: string; orders: number; revenue: number }[];
+  regions: { name: string; value: number; revenue: number; profit: number; color: string; coords: { x: number; y: number } }[];
+  recent_orders: FeedRow[];
+  recent_seller_orders: FeedRow[];
+  recent_courier_orders: FeedRow[];
+  online_users: { id: number; name: string; avatar?: string | null; last_seen?: string }[];
+  top_products: { name: string; quantity: number; revenue: number }[];
+  alerts: { level: string; icon: string; title: string; text: string; url?: string }[];
+  payment_split: { name: string; count: number; share: number; color: string }[];
+  delivery_split: { name: string; count: number; revenue: number }[];
+}
 
-const segments = [
-  { name: 'VIP', color: '#f59e0b', share: 5.0, revenue: 14_840_000, icon: '⭐' },
-  { name: 'Loyal', color: '#10b981', share: 26.1, revenue: 16_920_000, icon: '💚' },
-  { name: 'Occasional', color: '#3b82f6', share: 41.9, revenue: 11_420_000, icon: '💙' },
-  { name: 'New', color: '#a855f7', share: 11.3, revenue: 3_840_000, icon: '🆕' },
-  { name: 'Churned', color: '#ef4444', share: 15.7, revenue: 1_890_000, icon: '⚠️' },
-];
+const emptySnapshot: Snapshot = {
+  generated_at: '--:--:--',
+  kpis: {
+    total_revenue: 0,
+    today_revenue: 0,
+    month_revenue: 0,
+    platform_profit: 0,
+    total_orders: 0,
+    today_orders: 0,
+    week_orders: 0,
+    active_orders: 0,
+    completed_orders: 0,
+    cancelled_orders: 0,
+    avg_order_value: 0,
+    online_users: 0,
+    delivery_income: 0,
+    promo_discount: 0,
+    cashback: 0,
+  },
+  main_counts: {},
+  seller_counts: {},
+  courier_counts: {},
+  chart: [],
+  regions: [],
+  recent_orders: [],
+  recent_seller_orders: [],
+  recent_courier_orders: [],
+  online_users: [],
+  top_products: [],
+  alerts: [],
+  payment_split: [],
+  delivery_split: [],
+};
 
-const payments = [
-  { name: 'Ulangan karta', share: 65.6, color: '#4f46e5', success: 95.7, failed: 38 },
-  { name: 'Naqd', share: 34.4, color: '#f59e0b', success: 100, failed: 0 },
-];
+const statusClass = (status?: string) => {
+  const value = String(status || '').toLowerCase();
+  if (value.includes('qabul') || value.includes('yetib') || value.includes('delivered') || value === 'c') return 'chip-success';
+  if (value.includes("yo'l") || value.includes('delivery') || value === 'd') return 'chip-info';
+  if (value.includes('bekor') || value.includes('cancel') || value === 'f') return 'chip-danger';
+  return 'chip-warning';
+};
 
 export default function LiveDashboard() {
+  const { snapshot: initialSnapshot = emptySnapshot, liveEndpoint } = usePage<{ snapshot?: Snapshot; liveEndpoint?: string }>().props;
+  const [snapshot, setSnapshot] = useState<Snapshot>(initialSnapshot);
   const [isPaused, setIsPaused] = useState(false);
-  const [speed, setSpeed] = useState(2500);
-  const [soundEnabled, setSoundEnabled] = useState(false);
-
-  // Asosiy
-  const [rev, setRev] = useState(48_720_500);
-  const [ord, setOrd] = useState(1284);
-  const [vis, setVis] = useState(3412);
-  const [velocity, setVelocity] = useState(12);
-  const [profit, setProfit] = useState(20_270_300);
-  const loss = 2_082_500;
-  const [netProfit, setNetProfit] = useState(5_990_300);
-  const [grossMargin, setGrossMargin] = useState(41.6);
-  const netMargin = 12.3;
-  const [conversion, setConversion] = useState(3.42);
-  const [aov, setAov] = useState(37940);
-  const cac = 18500;
-  const roas = 4.8;
-  const retention = 72.5;
-  const ltv = 485000;
-
-  // Dinamik
-  const [chart, setChart] = useState(() => Array.from({ length: 30 }, (_, i) => ({ t: i, v: 300 + Math.random() * 400, p: 120 + Math.random() * 180 })));
-  const [funnel, setFunnel] = useState([56840, 53620, 34120, 18440, 8420, 4280, 2580, 1944]);
-  const [feed, setFeed] = useState<{ id: number; text: string; amount: number; region: string; profit: number; platform: string; time: string }[]>([]);
-  const [regionData, setRegionData] = useState<RegionStat[]>(initialRegions);
-  const [platformData, setPlatformData] = useState(appPlatforms);
-  const [activePulse, setActivePulse] = useState<string | null>('Toshkent');
+  const [speed, setSpeed] = useState(5000);
   const [clock, setClock] = useState(new Date());
-  const [insights, setInsights] = useState<string[]>([
-    'Android 2.7.9 versiyasida crash yuqori — forced update tavsiya',
-    '3 ta kitob zaxirasi kam — 12 kunga yetadi',
-    'VIP segmenti daromadi +8.4% o\'sdi',
-  ]);
+  const [lastError, setLastError] = useState<string | null>(null);
 
-  // Soat
+  const endpoint = liveEndpoint || snapshot.endpoint || '/boshqaruv/live/data';
+  const mainActive = (snapshot.main_counts.new || 0) + (snapshot.main_counts.packing || 0) + (snapshot.main_counts.onway || 0);
+  const sellerActive = (snapshot.seller_counts.payment_pending || 0) + (snapshot.seller_counts.new || 0) + (snapshot.seller_counts.accepted || 0) + (snapshot.seller_counts.handover || 0);
+  const courierActive = (snapshot.courier_counts.pending || 0) + (snapshot.courier_counts.in_delivery || 0);
+  const conversion = snapshot.kpis.total_orders > 0 ? Math.min(100, (snapshot.kpis.completed_orders / snapshot.kpis.total_orders) * 100) : 0;
+  const netSignal = snapshot.kpis.platform_profit - snapshot.kpis.promo_discount - snapshot.kpis.cashback;
+
+  const feed = useMemo(() => [
+    ...snapshot.recent_orders.map((row) => ({ ...row, kind: 'Buyurtma', icon: 'bi-receipt' })),
+    ...snapshot.recent_seller_orders.map((row) => ({ ...row, kind: 'Seller', icon: 'bi-shop-window' })),
+    ...snapshot.recent_courier_orders.map((row) => ({ ...row, kind: 'Kuryer', icon: 'bi-bicycle' })),
+  ].sort((a, b) => b.id - a.id).slice(0, 14), [snapshot]);
+
   useEffect(() => {
-    const t = setInterval(() => setClock(new Date()), 1000);
-    return () => clearInterval(t);
+    const timer = setInterval(() => setClock(new Date()), 1000);
+    return () => clearInterval(timer);
   }, []);
 
-  // Simulyator
   useEffect(() => {
     if (isPaused) return;
 
-    const names = ['Aziza K.', 'Bobur A.', 'Dilnoza R.', 'Jamshid T.', 'Malika U.', 'Shaxlo Y.', 'Sardor M.', 'Kamola N.', 'Farhod T.', 'Diyor R.'];
-    const products = [
-      { n: '"O\'tkan kunlar"', p: 85000, c: 52000, t: 'book' },
-      { n: '"Mehrobdan chayon"', p: 72000, c: 45000, t: 'book' },
-      { n: '"Sarob"', p: 65000, c: 41000, t: 'book' },
-      { n: 'Parker Ruchka', p: 245000, c: 155000, t: 'stationery' },
-      { n: 'Moleskine Daftar', p: 185000, c: 110000, t: 'stationery' },
-      { n: 'Stabilo Marker 10pk', p: 95000, c: 62000, t: 'stationery' },
-      { n: '"Kecha va kunduz"', p: 78000, c: 48000, t: 'book' },
-      { n: '"Yulduzli tunlar"', p: 95000, c: 58000, t: 'book' },
-      { n: 'Faber-Castell qalam', p: 42000, c: 26000, t: 'stationery' },
-      { n: "A4 Qog'oz 500v", p: 78000, c: 55000, t: 'stationery' },
-    ];
-
-    let id = Date.now();
-
-    const addFeed = () => {
-      const nm = names[Math.floor(Math.random() * names.length)];
-      const pr = products[Math.floor(Math.random() * products.length)];
-      const qty = 1 + Math.floor(Math.random() * 3);
-      const amt = pr.p * qty;
-      const prf = (pr.p - pr.c) * qty;
-      const regObj = initialRegions[Math.floor(Math.random() * initialRegions.length)];
-      const platform = appPlatforms[Math.floor(Math.random() * appPlatforms.length)];
-
-      if (soundEnabled && amt > 200000) {
-        try {
-          const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(587.33, ctx.currentTime);
-          gain.gain.setValueAtTime(0.1, ctx.currentTime);
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          osc.start();
-          gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.5);
-          osc.stop(ctx.currentTime + 0.5);
-        } catch (e) { /* ignore */ }
+    const controller = new AbortController();
+    const refresh = async () => {
+      try {
+        const response = await fetch(endpoint, {
+          headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+          signal: controller.signal,
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        setSnapshot(await response.json());
+        setLastError(null);
+      } catch (error) {
+        if (!controller.signal.aborted) setLastError(error instanceof Error ? error.message : 'Live data olinmadi');
       }
-
-      setFeed((f) => [
-        { id: id++, text: `${nm} ${qty}x ${pr.n} sotib oldi`, amount: amt, profit: prf, region: regObj.name, platform: platform.name, time: new Date().toLocaleTimeString('uz-UZ') },
-        ...f
-      ].slice(0, 15));
-
-      // Asosiy metrikalar
-      setRev((r) => r + amt);
-      setOrd((o) => o + 1);
-      setProfit((p) => p + prf);
-      setNetProfit((np) => np + Math.floor(prf * 0.4));
-      setVis((v) => Math.max(0, v + Math.floor(Math.random() * 11 - 5)));
-      setVelocity((v) => Math.min(45, Math.max(5, v + Math.floor(Math.random() * 5 - 2))));
-      setAov(Math.floor((rev + amt) / (ord + 1)));
-      setGrossMargin(+((profit + prf) / (rev + amt) * 100).toFixed(1));
-      setConversion(+(((ord + 1) / vis) * 100).toFixed(2));
-
-      // Chart
-      setChart((c) => [...c.slice(1), { t: c[c.length - 1].t + 1, v: 200 + Math.random() * 600, p: 100 + Math.random() * 250 }]);
-
-      // Funnel
-      setFunnel((fn) => fn.map((v, i) => Math.max(1, v + (i === 0 ? 15 : i === 1 ? 12 : i === 2 ? 8 : i === 3 ? 5 : i === 4 ? 3 : i === 5 ? 2 : i === 6 ? 2 : 1))));
-
-      // Region
-      setRegionData((rs) => rs.map((r) => r.name === regObj.name ? { ...r, value: r.value + 1, revenue: r.revenue + amt, profit: r.profit + prf } : r));
-      setActivePulse(regObj.name);
-
-      // Platform
-      setPlatformData((ps) => ps.map((p) => p.name === platform.name ? { ...p, orders: p.orders + 1, revenue: p.revenue + amt } : p));
-
-      setTimeout(() => setActivePulse(null), 1200);
     };
 
-    const iv = setInterval(addFeed, speed);
-    return () => clearInterval(iv);
-  }, [isPaused, speed, soundEnabled]);
-
-  // Insight rotatsiyasi
-  useEffect(() => {
-    const insightsPool = [
-      'Android 2.7.9 versiyasida crash 1.42% — majburiy yangilash tavsiya',
-      '3 ta kitob zaxirasi kam — 12 kunga yetadi',
-      'VIP segmenti daromadi +8.4% o\'sdi',
-      'Savat tashlash 68.2% — checkout optimizatsiya kerak',
-      'Shanba eng yuqori savdo kuni (+75% vs Dushanba)',
-      'Mobile qurilmalar 64% — UX test tavsiya',
-      'Karta ulash bosqichida 39.7% user yo\'qolmoqda — UX va bank xabarlarini yaxshilang',
-      'LTV/CAC 26.2x — mukammal koeffitsient',
-      'Naqd buyurtmalarda admin tasdiq SLA 26 minut — 20 minutdan pastga tushirish kerak',
-    ];
-    const iv = setInterval(() => {
-      setInsights([insightsPool[Math.floor(Math.random() * insightsPool.length)]]);
-    }, 8000);
-    return () => clearInterval(iv);
-  }, []);
+    const interval = setInterval(refresh, speed);
+    refresh();
+    return () => {
+      controller.abort();
+      clearInterval(interval);
+    };
+  }, [endpoint, isPaused, speed]);
 
   const goFull = () => {
     if (document.fullscreenElement) document.exitFullscreen();
@@ -191,32 +157,26 @@ export default function LiveDashboard() {
 
   return (
     <div className="fs-live p-3 p-xl-4" style={{ minHeight: '100vh' }}>
-      {/* ===== TOP BAR ===== */}
       <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2 pb-2 border-bottom" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
         <div className="d-flex align-items-center gap-2">
-          <div style={{ width: 44, height: 44, borderRadius: 12, background: 'linear-gradient(135deg, #4f46e5, #ec4899)', display: 'grid', placeItems: 'center', fontSize: 22, color: 'white', boxShadow: '0 0 20px rgba(236, 72, 153, 0.4)' }}>
-            <i className="bi bi-broadcast"></i>
-          </div>
+          <div className="live-brand-mark"><i className="bi bi-broadcast"></i></div>
           <div>
             <div className="d-flex align-items-center gap-2">
-              <h3 style={{ color: '#f8fafc', fontWeight: 800, margin: 0, letterSpacing: '-0.5px' }}>Live Command Center</h3>
+              <h3 style={{ color: '#f8fafc', fontWeight: 800, margin: 0 }}>Kitobchi Live Command Center</h3>
               <span className="chip" style={{ background: isPaused ? 'rgba(245,158,11,0.2)' : 'rgba(16,185,129,0.2)', color: isPaused ? '#fcd34d' : '#6ee7b7', border: `1px solid ${isPaused ? '#f59e0b' : '#10b981'}`, fontSize: 10 }}>
                 {!isPaused && <span className="live-pulse"></span>}
                 {isPaused ? 'PAUSED' : 'LIVE'}
               </span>
             </div>
-            <div style={{ color: '#94a3b8', fontSize: 11 }}>Real vaqt marketplace analitikasi · O'zbekiston bo'ylab</div>
+            <div style={{ color: '#94a3b8', fontSize: 11 }}>Buyurtma, seller, kuryer, to'lov va online mijozlar real monitoringi</div>
           </div>
         </div>
 
         <div className="d-flex gap-1 align-items-center flex-wrap">
-          <button className={`btn btn-sm ${soundEnabled ? 'btn-success' : 'btn-outline-secondary'}`} onClick={() => setSoundEnabled(!soundEnabled)} title="Ovozli signal">
-            <i className={`bi ${soundEnabled ? 'bi-volume-up-fill' : 'bi-volume-mute-fill'}`}></i>
-          </button>
           <div className="btn-group btn-group-sm">
-            <button className={`btn ${speed === 3500 ? 'btn-primary' : 'btn-outline-secondary'}`} onClick={() => setSpeed(3500)}>x1</button>
-            <button className={`btn ${speed === 2000 ? 'btn-primary' : 'btn-outline-secondary'}`} onClick={() => setSpeed(2000)}>x2</button>
-            <button className={`btn ${speed === 800 ? 'btn-primary' : 'btn-outline-secondary'}`} onClick={() => setSpeed(800)}>x5</button>
+            <button className={`btn ${speed === 8000 ? 'btn-primary' : 'btn-outline-secondary'}`} onClick={() => setSpeed(8000)}>x1</button>
+            <button className={`btn ${speed === 5000 ? 'btn-primary' : 'btn-outline-secondary'}`} onClick={() => setSpeed(5000)}>x2</button>
+            <button className={`btn ${speed === 2000 ? 'btn-primary' : 'btn-outline-secondary'}`} onClick={() => setSpeed(2000)}>x5</button>
           </div>
           <button className={`btn btn-sm ${isPaused ? 'btn-warning' : 'btn-outline-secondary'}`} onClick={() => setIsPaused(!isPaused)}>
             <i className={`bi ${isPaused ? 'bi-play-fill' : 'bi-pause-fill'}`}></i>
@@ -229,325 +189,218 @@ export default function LiveDashboard() {
         </div>
       </div>
 
-      {/* ===== AI INSIGHT BANNER ===== */}
-      <div className="mb-3 p-2 rounded d-flex align-items-center gap-2" style={{ background: 'linear-gradient(90deg, rgba(99,102,241,0.15), rgba(236,72,153,0.15))', border: '1px solid rgba(139,92,246,0.3)' }}>
-        <i className="bi bi-stars" style={{ fontSize: 18, color: '#a855f7' }}></i>
-        <span className="fw-bold small" style={{ color: '#a855f7' }}>AI Insight:</span>
-        <span style={{ color: '#e2e8f0', fontSize: 13, animation: 'fadeIn 0.5s' }}>{insights[0]}</span>
+      <div className="mb-3 p-2 rounded d-flex align-items-center gap-2" style={{ background: 'linear-gradient(90deg, rgba(99,102,241,0.15), rgba(16,185,129,0.12))', border: '1px solid rgba(139,92,246,0.3)' }}>
+        <i className={`bi ${lastError ? 'bi-exclamation-triangle' : 'bi-activity'}`} style={{ fontSize: 18, color: lastError ? '#f59e0b' : '#6ee7b7' }}></i>
+        <span className="fw-bold small" style={{ color: lastError ? '#fcd34d' : '#6ee7b7' }}>{lastError ? 'Live ogohlantirish:' : 'Snapshot:'}</span>
+        <span style={{ color: '#e2e8f0', fontSize: 13 }}>{lastError || `So'nggi yangilanish ${snapshot.generated_at}. Aktiv oqim: ${mainActive + sellerActive + courierActive} ta.`}</span>
       </div>
 
-      {/* ===== TOP KPIs (12 ta) ===== */}
       <div className="row g-2 mb-3">
         {[
-          { l: 'Daromad', v: fmt(rev) + ' so\'m', icon: 'bi-cash-stack', c: '#a855f7' },
-          { l: 'Sof Foyda', v: fmt(netProfit) + ' so\'m', icon: 'bi-graph-up-arrow', c: '#10b981' },
-          { l: 'Yalpi Marja', v: grossMargin + '%', icon: 'bi-percent', c: '#4f46e5' },
-          { l: 'Net Marja', v: netMargin + '%', icon: 'bi-graph-up', c: '#059669' },
-          { l: 'Buyurtmalar', v: fmt(ord), icon: 'bi-bag-check', c: '#10b981' },
-          { l: 'AOV', v: fmt(aov) + ' so\'m', icon: 'bi-receipt', c: '#f59e0b' },
-          { l: 'Konversiya', v: conversion + '%', icon: 'bi-bullseye', c: '#ec4899' },
-          { l: 'Tezlik', v: velocity + '/daq', icon: 'bi-lightning-charge', c: '#06b6d4' },
-          { l: 'CAC', v: fmt(cac) + ' so\'m', icon: 'bi-person-plus', c: '#7c3aed' },
-          { l: 'LTV', v: fmt(ltv) + ' so\'m', icon: 'bi-heart', c: '#ec4899' },
-          { l: 'ROAS', v: roas + 'x', icon: 'bi-megaphone', c: '#4f46e5' },
-          { l: 'Retention', v: retention + '%', icon: 'bi-people', c: '#10b981' },
-        ].map((k) => (
-          <div className="col-xl-2 col-lg-3 col-md-4 col-6" key={k.l}>
-            <div className="p-2 rounded" style={{ background: 'rgba(30, 41, 59, 0.5)', borderLeft: `3px solid ${k.c}` }}>
+          { l: 'Jami daromad', v: fmt(snapshot.kpis.total_revenue) + " so'm", icon: 'bi-cash-stack', c: '#a855f7' },
+          { l: 'Bugungi daromad', v: fmt(snapshot.kpis.today_revenue) + " so'm", icon: 'bi-calendar2-day', c: '#10b981' },
+          { l: 'Oylik daromad', v: fmt(snapshot.kpis.month_revenue) + " so'm", icon: 'bi-calendar3', c: '#4f46e5' },
+          { l: 'Platform signal', v: fmt(netSignal) + " so'm", icon: 'bi-graph-up-arrow', c: '#059669' },
+          { l: 'Jami order', v: fmt(snapshot.kpis.total_orders), icon: 'bi-bag-check', c: '#10b981' },
+          { l: 'Bugungi order', v: fmt(snapshot.kpis.today_orders), icon: 'bi-lightning-charge', c: '#06b6d4' },
+          { l: 'Aktiv order', v: fmt(snapshot.kpis.active_orders), icon: 'bi-hourglass-split', c: '#f59e0b' },
+          { l: 'AOV', v: fmt(snapshot.kpis.avg_order_value) + " so'm", icon: 'bi-receipt', c: '#ec4899' },
+          { l: 'Seller oqimi', v: fmt(sellerActive), icon: 'bi-shop-window', c: '#7c3aed' },
+          { l: 'Kuryer oqimi', v: fmt(courierActive), icon: 'bi-bicycle', c: '#3b82f6' },
+          { l: 'Online user', v: fmt(snapshot.kpis.online_users), icon: 'bi-people', c: '#10b981' },
+          { l: 'Completion', v: conversion.toFixed(1) + '%', icon: 'bi-bullseye', c: '#f59e0b' },
+        ].map((kpi) => (
+          <div className="col-xl-2 col-lg-3 col-md-4 col-6" key={kpi.l}>
+            <div className="live-kpi" style={{ borderLeftColor: kpi.c }}>
               <div className="d-flex justify-content-between align-items-start">
-                <span style={{ color: '#94a3b8', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>{k.l}</span>
-                <i className={`bi ${k.icon}`} style={{ fontSize: 14, color: k.c }}></i>
+                <span>{kpi.l}</span>
+                <i className={`bi ${kpi.icon}`} style={{ color: kpi.c }}></i>
               </div>
-              <div style={{ fontSize: 18, fontWeight: 800, color: k.c, margin: '2px 0' }}>{k.v}</div>
+              <strong style={{ color: kpi.c }}>{kpi.v}</strong>
             </div>
           </div>
         ))}
       </div>
 
-      {/* ===== P&L MINI PANEL ===== */}
       <div className="row g-2 mb-3">
-        <div className="col-12">
-          <div className="p-2 rounded" style={{ background: 'linear-gradient(90deg, rgba(16,185,129,0.08), rgba(79,70,229,0.08))', border: '1px solid rgba(139,92,246,0.2)' }}>
-            <div className="row g-2 text-center">
-              {[
-                { l: 'Daromad', v: fmt(rev), c: '#10b981' },
-                { l: '- COGS', v: fmt(rev - profit), c: '#ef4444' },
-                { l: 'Yalpi Foyda', v: fmt(profit), c: '#4f46e5' },
-                { l: '- Marketing', v: fmt(Math.floor(rev * 0.087)), c: '#f59e0b' },
-                { l: '- Shipping', v: fmt(Math.floor(rev * 0.039)), c: '#f59e0b' },
-                { l: '- Operating', v: fmt(Math.floor(rev * 0.167)), c: '#f59e0b' },
-                { l: 'Zararlar', v: fmt(loss), c: '#ef4444' },
-                { l: 'SOF FOYDA', v: fmt(netProfit), c: '#059669' },
-              ].map((m) => (
-                <div className="col" key={m.l}>
-                  <div style={{ fontSize: 9, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 0.5 }}>{m.l}</div>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: m.c }}>{m.v}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+        <StatusPanel title="Main orderlar" icon="bi-receipt" counts={snapshot.main_counts} labels={{ all: 'Jami', new: 'Yangi', packing: 'Qadoq', onway: "Yo'lda", arrived: 'Yetdi', done: 'Done', cancelled: 'Bekor' }} />
+        <StatusPanel title="Seller fulfillment" icon="bi-shop-window" counts={snapshot.seller_counts} labels={{ all: 'Jami', payment_pending: "To'lov", new: 'Yangi', accepted: 'Qabul', handover: 'Kuryerda', cancelled: 'Bekor' }} />
+        <StatusPanel title="Kuryer fulfillment" icon="bi-bicycle" counts={snapshot.courier_counts} labels={{ all: 'Jami', pending: 'Kutmoqda', in_delivery: "Yo'lda", delivered: 'Yetdi', customer_received: 'Qabul', rejected: 'Bekor' }} />
       </div>
 
-      {/* ===== MAIN ROW: MAP + CHART + FEED + FUNNEL ===== */}
       <div className="row g-3 mb-3">
-        {/* MAP */}
         <div className="col-xl-4">
           <div className="card-panel live-map-grid h-100">
-            <div className="d-flex justify-content-between align-items-center mb-2">
-              <div style={{ fontWeight: 700, fontSize: 13, color: '#f8fafc' }}>📍 Geografik segmentlar</div>
-              <span className="chip chip-purple" style={{ fontSize: 9 }}>{regionData.length} viloyat</span>
-            </div>
-            <div style={{ position: 'relative', height: 180 }}>
+            <div className="live-panel-title">Hududlar bo'yicha oqim</div>
+            <div style={{ position: 'relative', height: 210 }}>
               <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%' }}>
-                <path d="M 15 45 Q 30 25 60 30 T 95 35 Q 90 55 75 60 T 40 75 Q 20 65 15 45 Z" fill="rgba(79, 70, 229, 0.05)" stroke="rgba(255,255,255,0.1)" strokeWidth="0.5" />
-                {regionData.map((reg) => {
-                  const isPulse = activePulse === reg.name;
-                  return (
-                    <g key={reg.name}>
-                      <line x1="60" y1="45" x2={reg.coords.x} y2={reg.coords.y} stroke="rgba(255,255,255,0.05)" strokeWidth="0.3" strokeDasharray="0.5 0.5" />
-                      {isPulse && (
-                        <circle cx={reg.coords.x} cy={reg.coords.y} r="6" fill="none" stroke={reg.color} strokeWidth="1">
-                          <animate attributeName="r" from="3" to="12" dur="1s" begin="0s" repeatCount="1" />
-                          <animate attributeName="opacity" from="1" to="0" dur="1s" begin="0s" repeatCount="1" />
-                        </circle>
-                      )}
-                      <circle cx={reg.coords.x} cy={reg.coords.y} r={isPulse ? "4" : "2.5"} fill={reg.color} style={{ filter: isPulse ? `drop-shadow(0 0 6px ${reg.color})` : 'none' }} />
-                      <text x={reg.coords.x} y={reg.coords.y - 4} fill={isPulse ? '#fff' : '#94a3b8'} fontSize="5" textAnchor="middle" fontWeight={isPulse ? "bold" : "normal"}>{reg.name}</text>
-                    </g>
-                  );
-                })}
+                <path d="M 15 45 Q 30 25 60 30 T 95 35 Q 90 55 75 60 T 40 75 Q 20 65 15 45 Z" fill="rgba(79,70,229,0.06)" stroke="rgba(255,255,255,0.12)" strokeWidth="0.5" />
+                {snapshot.regions.map((region) => (
+                  <g key={region.name}>
+                    <line x1="60" y1="45" x2={region.coords.x} y2={region.coords.y} stroke="rgba(255,255,255,0.06)" strokeWidth="0.3" />
+                    <circle cx={region.coords.x} cy={region.coords.y} r={Math.max(2.5, Math.min(7, region.value / 4))} fill={region.color} />
+                    <text x={region.coords.x} y={region.coords.y - 5} fill="#cbd5e1" fontSize="5" textAnchor="middle">{region.name.slice(0, 12)}</text>
+                  </g>
+                ))}
               </svg>
             </div>
-            <div className="d-flex flex-wrap gap-1 pt-1 border-top" style={{ borderColor: 'rgba(255,255,255,0.05)', fontSize: 9 }}>
-              {regionData.slice(0, 8).map((r) => (
-                <span key={r.name} className="d-inline-flex align-items-center gap-1 me-1" style={{ color: '#cbd5e1' }}>
-                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: r.color, display: 'inline-block' }}></span>
-                  {r.name}: <strong style={{ color: '#fff' }}>{fmt(r.revenue).slice(0, 3)}k</strong>
-                </span>
+            <div className="live-region-list">
+              {snapshot.regions.map((region) => (
+                <span key={region.name}><i style={{ background: region.color }}></i>{region.name}: <b>{fmt(region.revenue)}</b></span>
               ))}
             </div>
           </div>
         </div>
 
-        {/* CHART */}
         <div className="col-xl-5">
           <div className="card-panel h-100">
             <div className="d-flex justify-content-between align-items-center mb-2">
-              <div style={{ fontWeight: 700, fontSize: 13, color: '#f8fafc' }}>📈 Daromad & Foyda trendi</div>
-              <div className="d-flex gap-2 small">
-                <span style={{ color: '#ec4899', fontSize: 10 }}>● Daromad</span>
-                <span style={{ color: '#10b981', fontSize: 10 }}>● Foyda</span>
-              </div>
+              <div className="live-panel-title">Bugungi savdo trendi</div>
+              <span className="chip chip-success">{snapshot.generated_at}</span>
             </div>
-            <ResponsiveContainer width="100%" height={180}>
-              <AreaChart data={chart}>
+            <ResponsiveContainer width="100%" height={235}>
+              <AreaChart data={snapshot.chart}>
                 <defs>
-                  <linearGradient id="liveRev" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#ec4899" stopOpacity={0.6} />
+                  <linearGradient id="liveRevenue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#ec4899" stopOpacity={0.55} />
                     <stop offset="100%" stopColor="#4f46e5" stopOpacity={0} />
                   </linearGradient>
-                  <linearGradient id="liveProf" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#10b981" stopOpacity={0.5} />
+                  <linearGradient id="liveOrders" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#10b981" stopOpacity={0.45} />
                     <stop offset="100%" stopColor="#059669" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <XAxis dataKey="t" hide />
+                <XAxis dataKey="hour" tick={{ fill: '#94a3b8', fontSize: 10 }} interval={3} />
                 <YAxis hide />
-                <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 6, fontSize: 11 }} />
-                <Area type="monotone" dataKey="v" stroke="#ec4899" strokeWidth={2} fill="url(#liveRev)" />
-                <Area type="monotone" dataKey="p" stroke="#10b981" strokeWidth={2} fill="url(#liveProf)" />
+                <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, fontSize: 12 }} formatter={(value: number, name) => name === 'revenue' ? `${fmt(value)} so'm` : fmt(value)} />
+                <Area type="monotone" dataKey="revenue" stroke="#ec4899" strokeWidth={2} fill="url(#liveRevenue)" />
+                <Area type="monotone" dataKey="orders" stroke="#10b981" strokeWidth={2} fill="url(#liveOrders)" />
               </AreaChart>
             </ResponsiveContainer>
-            <div className="d-flex justify-content-between text-muted pt-1" style={{ fontSize: 10, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-              <span>← 60s oldin</span>
-              <span style={{ color: '#6ee7b7' }}>● Real-time</span>
-              <span>Hozir →</span>
-            </div>
           </div>
         </div>
 
-        {/* FUNNEL */}
         <div className="col-xl-3">
           <div className="card-panel h-100">
-            <div style={{ fontWeight: 700, fontSize: 13, color: '#f8fafc', marginBottom: 8 }}>🎯 Live Funnel</div>
-            {['Launch', 'Home', 'List', 'Detail', 'Cart', 'Checkout', 'Pay select', 'Order'].map((s, i) => {
-              const percent = (funnel[i] / funnel[0] * 100).toFixed(1);
-              return (
-                <div key={s} className="mb-2">
-                  <div className="d-flex justify-content-between" style={{ fontSize: 10, color: '#cbd5e1' }}>
-                    <span>{s}</span>
-                    <span><strong>{fmt(funnel[i])}</strong> ({percent}%)</span>
-                  </div>
-                  <div className="progress" style={{ height: 12, background: 'rgba(255,255,255,0.05)' }}>
-                    <div className="progress-bar" style={{ width: `${percent}%`, background: `linear-gradient(90deg, #4f46e5, #ec4899)`, fontSize: 9, fontWeight: 700 }}>
-                      {percent}%
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-            <div className="mt-2 p-2 rounded text-center" style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)' }}>
-              <div style={{ fontSize: 10, color: '#94a3b8' }}>Final Konversiya</div>
-              <div style={{ fontSize: 20, fontWeight: 800, color: '#6ee7b7' }}>{conversion}%</div>
+            <div className="live-panel-title">Alertlar</div>
+            <div className="live-alert-list">
+              {snapshot.alerts.length ? snapshot.alerts.map((alert) => (
+                <a href={alert.url || '#'} key={alert.title} className={`live-alert is-${alert.level}`}>
+                  <i className={`bi ${alert.icon}`}></i>
+                  <span><b>{alert.title}</b><small>{alert.text}</small></span>
+                </a>
+              )) : <div className="text-muted small">Hozircha kritik ogohlantirish yo'q.</div>}
             </div>
           </div>
         </div>
       </div>
 
-      {/* ===== 2nd ROW: APP PLATFORM + SEGMENTS + PAYMENT ===== */}
-      <div className="row g-3 mb-3">
-        {/* APP PLATFORMS */}
-        <div className="col-xl-4">
-          <div className="card-panel h-100">
-            <div style={{ fontWeight: 700, fontSize: 13, color: '#f8fafc', marginBottom: 8 }}>📱 Android / iOS real-time</div>
-            {platformData.map((p) => (
-              <div key={p.name} className="d-flex align-items-center gap-2 py-2 border-bottom" style={{ borderColor: 'rgba(255,255,255,0.05)', fontSize: 11 }}>
-                <span style={{ fontSize: 16 }}>{p.icon}</span>
-                <span style={{ flex: 1, color: '#e2e8f0', fontWeight: 600 }}>{p.name}</span>
-                <span className="text-muted" style={{ fontSize: 10 }}>Conv {p.conv}%</span>
-                <span style={{ color: '#6ee7b7', fontWeight: 700 }}>{fmt(p.orders)}</span>
-                <span style={{ color: '#a855f7', fontWeight: 700, fontSize: 10 }}>{fmt(p.revenue).slice(0, 4)}k</span>
-              </div>
-            ))}
-            <div className="mt-2 pt-2 border-top" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
-              <div className="d-flex justify-content-between" style={{ fontSize: 10, color: '#94a3b8' }}>
-                <span>App active users:</span>
-                <span style={{ color: '#6ee7b7', fontWeight: 700 }}>{fmt(platformData.reduce((a, p) => a + p.activeUsers, 0))}</span>
-              </div>
-              <div className="d-flex justify-content-between" style={{ fontSize: 10, color: '#94a3b8' }}>
-                <span>Weighted crash:</span>
-                <span style={{ color: '#fcd34d', fontWeight: 700 }}>0.37%</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* SEGMENTS */}
-        <div className="col-xl-4">
-          <div className="card-panel h-100">
-            <div style={{ fontWeight: 700, fontSize: 13, color: '#f8fafc', marginBottom: 8 }}>👥 Mijoz segmentlari (RFM)</div>
-            {segments.map((s) => (
-              <div key={s.name} className="d-flex align-items-center gap-2 py-1 border-bottom" style={{ borderColor: 'rgba(255,255,255,0.05)', fontSize: 11 }}>
-                <span style={{ fontSize: 14 }}>{s.icon}</span>
-                <span style={{ flex: 1, color: '#e2e8f0', fontWeight: 600 }}>{s.name}</span>
-                <span className="chip" style={{ background: s.color + '22', color: s.color, fontSize: 9, padding: '1px 6px' }}>{s.share}%</span>
-                <span style={{ color: '#6ee7b7', fontWeight: 700, fontSize: 10 }}>{fmt(s.revenue).slice(0, 3)}k</span>
-              </div>
-            ))}
-            <div className="mt-2 pt-2 border-top" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
-              <div style={{ fontSize: 10, color: '#94a3b8' }}>Umumiy segment daromadi:</div>
-              <div style={{ fontSize: 14, fontWeight: 800, color: '#6ee7b7' }}>{fmt(segments.reduce((a, s) => a + s.revenue, 0))} so'm</div>
-            </div>
-          </div>
-        </div>
-
-        {/* PAYMENTS */}
-        <div className="col-xl-4">
-          <div className="card-panel h-100">
-            <div className="d-flex justify-content-between mb-2">
-              <div style={{ fontWeight: 700, fontSize: 13, color: '#f8fafc' }}>💳 Karta / Naqd</div>
-            </div>
-            {payments.map((p) => (
-              <div key={p.name} className="mb-2">
-                <div className="d-flex justify-content-between" style={{ fontSize: 10, color: '#cbd5e1' }}>
-                  <span>{p.name}</span>
-                  <span><strong>{p.share}%</strong> · success {p.success}%</span>
-                </div>
-                <div className="progress" style={{ height: 6, background: 'rgba(255,255,255,0.05)' }}>
-                  <div className="progress-bar" style={{ width: `${p.share}%`, background: p.color }}></div>
-                </div>
-                <div className="text-end" style={{ fontSize: 9, color: p.failed > 0 ? '#fca5a5' : '#6ee7b7' }}>Failed: {p.failed}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* ===== 3rd ROW: TOP/LIVE FEED + SYSTEM ===== */}
       <div className="row g-3">
-        {/* LIVE FEED */}
         <div className="col-xl-5">
-          <div className="card-panel" style={{ height: 280, display: 'flex', flexDirection: 'column' }}>
+          <div className="card-panel live-feed-panel">
             <div className="d-flex justify-content-between align-items-center mb-2">
-              <div style={{ fontWeight: 700, fontSize: 13, color: '#f8fafc' }}>⚡ Jonli buyurtmalar oqimi</div>
+              <div className="live-panel-title">Jonli operatsion feed</div>
               <span className="live-pulse"></span>
             </div>
-            <div style={{ flex: 1, overflowY: 'auto' }}>
-              {feed.length === 0 ? (
-                <div className="text-center py-4" style={{ color: '#64748b', fontSize: 12 }}>
-                  <div className="spinner-border spinner-border-sm text-primary mb-2"></div>
-                  <br />Buyurtmalar kutilmoqda...
-                </div>
-              ) : feed.map((f, index) => (
-                <div key={f.id} className="d-flex align-items-start gap-2 py-1 border-bottom" style={{ borderColor: 'rgba(255,255,255,0.05)', fontSize: 11, animation: index === 0 ? 'fadeIn 0.3s ease' : 'none' }}>
-                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: index === 0 ? '#10b981' : '#475569', flexShrink: 0, marginTop: 4 }}></div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ color: '#e2e8f0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.text}</div>
-                    <div className="d-flex justify-content-between" style={{ fontSize: 9, color: '#94a3b8' }}>
-                      <span>📍{f.region} · 📱{f.platform}</span>
-                      <span>{f.time}</span>
-                    </div>
-                  </div>
-                  <div className="text-end">
-                    <div style={{ color: '#6ee7b7', fontWeight: 700 }}>+{fmt(f.amount)}</div>
-                    <div style={{ color: '#a855f7', fontSize: 9 }}>+{fmt(f.profit)}</div>
-                  </div>
+            <div className="live-feed-list">
+              {feed.map((row) => (
+                <a href={row.url || '#'} className="live-feed-row" key={`${row.kind}-${row.id}`}>
+                  <i className={`bi ${row.icon}`}></i>
+                  <span>
+                    <b>{row.kind} #{row.id}</b>
+                    <small>{row.customer || row.seller || row.courier || row.title} · {row.updated_at || ''}</small>
+                  </span>
+                  <em>{fmt(row.amount)} so'm</em>
+                  <strong className={`chip ${statusClass(row.status_code || row.status)}`}>{row.status}</strong>
+                </a>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="col-xl-3">
+          <div className="card-panel live-feed-panel">
+            <div className="live-panel-title">Top mahsulotlar</div>
+            <div className="live-rank-list">
+              {snapshot.top_products.map((product, index) => (
+                <div className="live-rank-row" key={`${product.name}-${index}`}>
+                  <span>{index + 1}</span>
+                  <div><b>{product.name}</b><small>{fmt(product.quantity)} ta sotildi</small></div>
+                  <strong>{fmt(product.revenue)} so'm</strong>
                 </div>
               ))}
             </div>
           </div>
         </div>
 
-        {/* TOP PERFORMERS */}
         <div className="col-xl-4">
-          <div className="card-panel" style={{ height: 280 }}>
-            <div style={{ fontWeight: 700, fontSize: 13, color: '#f8fafc', marginBottom: 8 }}>🏆 Real-time Top 5</div>
-            {[
-              { n: "O'tkan kunlar", s: 124, r: 24_140_000 },
-              { n: 'Moleskine Daftar', s: 98, r: 22_940_000 },
-              { n: 'Parker Ruchka', s: 85, r: 21_805_000 },
-              { n: 'Stabilo Marker', s: 64, r: 19_950_000 },
-              { n: 'Mehrobdan chayon', s: 58, r: 15_768_000 },
-            ].map((p, i) => (
-              <div key={p.n} className="d-flex align-items-center gap-2 py-1 border-bottom" style={{ borderColor: 'rgba(255,255,255,0.05)', fontSize: 11 }}>
-                <div style={{ width: 22, height: 22, borderRadius: 5, background: i === 0 ? '#fbbf24' : i === 1 ? '#d1d5db' : i === 2 ? '#d97706' : '#334155', color: i > 2 ? '#94a3b8' : 'white', display: 'grid', placeItems: 'center', fontSize: 10, fontWeight: 800 }}>{i + 1}</div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ color: '#f1f5f9', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.n}</div>
-                  <small style={{ color: '#94a3b8' }}>{p.s} ta sotildi</small>
+          <div className="row g-3">
+            <div className="col-md-6">
+              <SplitPanel title="To'lov holati" rows={snapshot.payment_split.map((row) => ({ name: row.name, value: row.share, meta: `${fmt(row.count)} ta`, color: row.color }))} />
+            </div>
+            <div className="col-md-6">
+              <SplitPanel title="Yetkazish turi" rows={snapshot.delivery_split.map((row, index) => ({ name: row.name, value: row.count, meta: `${fmt(row.revenue)} so'm`, color: ['#4f46e5', '#10b981', '#f59e0b', '#ec4899', '#06b6d4'][index % 5] }))} />
+            </div>
+            <div className="col-12">
+              <div className="card-panel">
+                <div className="live-panel-title">Online mijozlar</div>
+                <div className="live-online-list">
+                  {snapshot.online_users.length ? snapshot.online_users.map((user) => (
+                    <div key={user.id}>
+                      {user.avatar ? <img src={user.avatar} alt={user.name} /> : <i className="bi bi-person"></i>}
+                      <span><b>{user.name}</b><small>{user.last_seen}</small></span>
+                    </div>
+                  )) : <div className="text-muted small">So'nggi 5 daqiqada online mijoz topilmadi.</div>}
                 </div>
-                <div style={{ color: '#6ee7b7', fontWeight: 700, fontSize: 10 }}>{fmt(p.r).slice(0, 4)}k</div>
               </div>
-            ))}
-          </div>
-        </div>
-
-        {/* SYSTEM HEALTH */}
-        <div className="col-xl-3">
-          <div className="card-panel" style={{ height: 280 }}>
-            <div style={{ fontWeight: 700, fontSize: 13, color: '#f8fafc', marginBottom: 8 }}>⚡ System Health</div>
-            {[
-              { n: 'Server', s: 'Online', c: '#10b981', l: '28%' },
-              { n: 'Payment GW', s: 'Fast', c: '#10b981', l: '14%' },
-              { n: 'SMS GW', s: 'OK', c: '#10b981', l: '45%' },
-              { n: 'Database', s: 'Optimal', c: '#10b981', l: '32%' },
-              { n: 'Cache', s: 'Online', c: '#10b981', l: '18%' },
-              { n: 'API', s: 'Online', c: '#10b981', l: '22%' },
-            ].map((it) => (
-              <div key={it.n} className="d-flex justify-content-between align-items-center py-1 border-bottom" style={{ borderColor: 'rgba(255,255,255,0.05)', fontSize: 11 }}>
-                <span style={{ color: '#cbd5e1' }}>{it.n}</span>
-                <span className="d-flex align-items-center gap-1">
-                  <span style={{ fontSize: 9, color: '#94a3b8' }}>{it.l}</span>
-                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: it.c }}></span>
-                </span>
-              </div>
-            ))}
-            <div className="mt-2 pt-2 border-top text-center" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
-              <small style={{ color: '#94a3b8' }}>Uptime: <span style={{ color: '#6ee7b7', fontWeight: 700 }}>99.98%</span></small>
             </div>
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function StatusPanel({ title, icon, counts, labels }: { title: string; icon: string; counts: CountMap; labels: Record<string, string> }) {
+  return (
+    <div className="col-xl-4">
+      <div className="live-status-panel">
+        <div className="d-flex align-items-center gap-2 mb-2">
+          <i className={`bi ${icon}`}></i>
+          <b>{title}</b>
+        </div>
+        <div className="live-status-grid">
+          {Object.entries(labels).map(([key, label]) => (
+            <div key={key}>
+              <span>{label}</span>
+              <strong>{fmt(counts[key] || 0)}</strong>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SplitPanel({ title, rows }: { title: string; rows: { name: string; value: number; meta: string; color: string }[] }) {
+  const total = rows.reduce((sum, row) => sum + row.value, 0) || 1;
+  return (
+    <div className="card-panel h-100">
+      <div className="live-panel-title">{title}</div>
+      {rows.length ? rows.map((row) => {
+        const width = row.value <= 100 && title.includes("To'lov") ? row.value : row.value / total * 100;
+        return (
+          <div key={row.name} className="mb-2">
+            <div className="d-flex justify-content-between" style={{ fontSize: 11, color: '#cbd5e1' }}>
+              <span>{row.name}</span>
+              <span>{row.meta}</span>
+            </div>
+            <div className="progress" style={{ height: 7, background: 'rgba(255,255,255,0.06)' }}>
+              <div className="progress-bar" style={{ width: `${Math.max(3, width)}%`, background: row.color }}></div>
+            </div>
+          </div>
+        );
+      }) : <div className="text-muted small">Ma'lumot yo'q.</div>}
     </div>
   );
 }
