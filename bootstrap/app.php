@@ -29,6 +29,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->appendToGroup('api', \App\Http\Middleware\UpdateLastSeen::class);
         $middleware->appendToGroup('web', \App\Http\Middleware\SecurityHeaders::class);
+        $middleware->appendToGroup('web', \App\Http\Middleware\HandleInertiaRequests::class);
         $middleware->appendToGroup('api', \App\Http\Middleware\SecurityHeaders::class);
 
         // API javoblarini lokalizatsiya: `lang=` query, `X-App-Locale` yoki

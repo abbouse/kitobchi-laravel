@@ -9,6 +9,8 @@ use App\Http\Controllers\TelegramWebhookController;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Route;
 
+require __DIR__.'/boshqaruv.php';
+
 Route::get('/locale/{locale}', [LocaleController::class, 'switch'])->name('locale.switch');
 
 Route::get('/', function () {
