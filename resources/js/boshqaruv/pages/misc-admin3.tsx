@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button, Form } from 'react-bootstrap';
+import PaginationControls from '../components/PaginationControls';
 
 // ===== REELS =====
 export function Reels() {
@@ -110,41 +111,53 @@ export function MarketNews() {
 
 // ===== CHAT KUZATUV =====
 export function ChatKuzatuv() {
-  const [convs] = useState([
-    { id: 1, user: 'Aziza K.', agent: 'AI Bot', messages: 12, lastMsg: 'Rahmat, tushindim', status: 'Active', time: '2 daqiqa oldin' },
-    { id: 2, user: 'Bobur A.', agent: 'Admin Sobir', messages: 8, lastMsg: 'Buyurtma qachon keladi?', status: 'Active', time: '5 daqiqa oldin' },
-    { id: 3, user: 'Dilnoza R.', agent: 'AI Bot', messages: 24, lastMsg: "Kitobni qaytarish mumkinmi?", status: 'Closed', time: '1 soat oldin' },
-  ]);
+  type Conversation = { id: number; kind: string; type?: string; user: string; phone?: string; agent: string; messages: number; lastMsg: string; date?: string; dataUrl?: string };
+  type Detail = { profile: Record<string, string | number | null | undefined>; messages: Array<Record<string, string | number | boolean | null | undefined>> };
+  const { conversations = [], conversationCounts = {}, conversationPagination = { page: 1, totalPages: 1, from: 0, to: 0, total: 0 }, conversationFilters = {} } = usePage<{ conversations?: Conversation[]; conversationCounts?: Record<string, number>; conversationPagination?: { page: number; totalPages: number; from: number; to: number; total: number }; conversationFilters?: { tab?: string; search?: string } }>().props;
+  const [tab, setTab] = useState(conversationFilters.tab || 'all');
+  const [search, setSearch] = useState(conversationFilters.search || '');
   const [show, setShow] = useState(false);
-  const [selected, setSelected] = useState<typeof convs[0] | null>(null);
+  const [selected, setSelected] = useState<Conversation | null>(null);
+  const [detail, setDetail] = useState<Detail | null>(null);
+  const [loading, setLoading] = useState(false);
+  const loadConversations = (page = 1, activeTab = tab, term = search) => router.get('/boshqaruv/chat', { chat_page: page, chat_tab: activeTab, chat_search: term }, { preserveState: true, preserveScroll: true, replace: true });
+  const open = async (conversation: Conversation) => {
+    if (!conversation.dataUrl) return;
+    setSelected(conversation); setShow(true); setLoading(true);
+    try {
+      const response = await fetch(conversation.dataUrl, { headers: { Accept: 'application/json' } });
+      setDetail(response.ok ? await response.json() : null);
+    } finally { setLoading(false); }
+  };
 
   return (
     <div>
-      <div className="page-head"><div><h1 className="page-title">Chat kuzatuv</h1><p className="page-subtitle">Jami {convs.length} ta conversation</p></div></div>
+      <div className="page-head"><div><h1 className="page-title">Chat kuzatuv</h1><p className="page-subtitle">Foydalanuvchi va seller suhbatlarini real vaqt kontekstida tekshirish</p></div></div>
       <div className="card-panel">
+        <div className="panel-head"><div className="d-flex flex-wrap gap-2">{[['all', 'Barchasi'], ['user', 'User chat'], ['seller', 'Seller chat']].map(([key, label]) => <button className={`btn btn-sm ${tab === key ? 'btn-primary-gradient' : 'btn-light'}`} key={key} onClick={() => { setTab(key); loadConversations(1, key); }}>{label}<span className="badge rounded-pill bg-light text-dark ms-2">{conversationCounts[key] || 0}</span></button>)}</div><form className="d-flex gap-2" onSubmit={(event) => { event.preventDefault(); loadConversations(); }}><input className="form-control form-control-sm" style={{ maxWidth: 280 }} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="User, telefon yoki seller" /><button className="btn btn-sm btn-outline-secondary"><i className="bi bi-search"></i></button></form></div>
         <div className="table-responsive"><table className="data-table">
-          <thead><tr><th>ID</th><th>Foydalanuvchi</th><th>Agent</th><th>Xabarlar</th><th>Oxirgi</th><th>Status</th><th>Amallar</th></tr></thead>
-          <tbody>{convs.map(c => (
+          <thead><tr><th>ID</th><th>Foydalanuvchi</th><th>Qabul qiluvchi</th><th>Turi</th><th>Xabarlar</th><th>Oxirgi</th><th>Amallar</th></tr></thead>
+          <tbody>{conversations.map(c => (
             <tr key={c.id}>
               <td className="fw-semibold" style={{ color: '#4f46e5' }}>#{c.id}</td>
-              <td className="fw-semibold">{c.user}</td>
+              <td><div className="fw-semibold">{c.user}</div><small className="text-muted">{c.phone || '—'}</small></td>
               <td>{c.agent}</td>
+              <td><span className={`chip ${c.kind === 'seller' ? 'chip-purple' : 'chip-info'}`}>{c.kind}</span></td>
               <td>{c.messages}</td>
-              <td className="text-muted">{c.lastMsg}<br /><small>{c.time}</small></td>
-              <td><span className={`chip ${c.status === 'Active' ? 'chip-success' : 'chip-gray'}`} style={{ fontSize: 9 }}>{c.status}</span></td>
-              <td><button className="btn btn-sm btn-light" onClick={() => { setSelected(c); setShow(true); }}><i className="bi bi-eye"></i></button></td>
+              <td className="text-muted">{c.lastMsg}<br /><small>{c.date || '—'}</small></td>
+              <td><button className="btn btn-sm btn-light" onClick={() => open(c)}><i className="bi bi-eye"></i></button></td>
             </tr>
-          ))}</tbody>
-        </table></div>
+          ))}{conversationPagination.total === 0 ? <tr><td colSpan={7} className="text-center text-muted py-5">Suhbat topilmadi</td></tr> : null}</tbody>
+        </table></div><PaginationControls {...conversationPagination} onPageChange={(page) => loadConversations(page)} />
       </div>
-      <Modal show={show} onHide={() => setShow(false)} centered>
+      <Modal show={show} onHide={() => setShow(false)} centered size="lg">
         <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">Conversation #{selected?.id}</Modal.Title></Modal.Header>
         <Modal.Body>
           <div className="mb-3 p-3 rounded bg-light">
             <div className="fw-semibold mb-1">{selected?.user} — {selected?.agent}</div>
             <div className="text-muted small">{selected?.messages} ta xabar</div>
           </div>
-          <div className="chat-bubble" style={{ textAlign: 'right' }}><div className="d-inline-block p-2 rounded" style={{ background: '#4f46e5', color: 'white' }}><small>{selected?.lastMsg}</small></div></div>
+          {loading ? <div className="text-muted text-center py-5">Yuklanmoqda...</div> : !detail ? <div className="text-muted text-center py-5">Xabarlar yuklanmadi</div> : <div>{detail.messages.map((message) => <div className={`d-flex mb-2 ${message.senderType === 'user' ? '' : 'justify-content-end'}`} key={String(message.id)}><div className="p-3 rounded border" style={{ maxWidth: '82%' }}><div>{String(message.message || '—')}</div><small className="text-muted">{String(message.senderType || 'user')} · {String(message.date || '—')}{message.reported ? ' · report bor' : ''}</small></div></div>)}{detail.messages.length === 0 ? <div className="text-muted">Xabar topilmadi</div> : null}</div>}
         </Modal.Body>
         <Modal.Footer><Button variant="light" onClick={() => setShow(false)}>Yopish</Button></Modal.Footer>
       </Modal>

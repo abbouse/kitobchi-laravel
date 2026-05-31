@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button, Form } from 'react-bootstrap';
+import PaginationControls from '../components/PaginationControls';
 
 // ===== BLOGERLAR =====
 export function Blogerlar() {
@@ -62,8 +63,9 @@ export function Blogerlar() {
 
 // ===== SHIKOYATLAR =====
 export function Shikoyatlar() {
-  const { complaints = [] } = usePage<{
-    complaints?: Array<{ id: number; user: string; phone?: string; reason?: string; comment?: string; type: string; status: string; date?: string; showUrl?: string; statusUrl?: string; destroyUrl?: string }>;
+  const { complaints = [], complaintPagination = { page: 1, totalPages: 1, from: 0, to: 0, total: 0 } } = usePage<{
+    complaints?: Array<{ id: number; user: string; phone?: string; avatar?: string; reason?: string; comment?: string; type: string; reportableId?: number; status: string; date?: string; otherReports?: Array<{ id: number; reason?: string; status: string; date?: string }>; statusUrl?: string; destroyUrl?: string }>;
+    complaintPagination?: { page: number; totalPages: number; from: number; to: number; total: number };
   }>().props;
   const [showDetail, setShowDetail] = useState(false);
   const [selected, setSelected] = useState<(typeof complaints)[0] | null>(null);
@@ -79,7 +81,7 @@ export function Shikoyatlar() {
 
   return (
     <div>
-      <div className="page-head"><div><h1 className="page-title">Shikoyatlar</h1><p className="page-subtitle">Jami {complaints.length} ta shikoyat</p></div></div>
+      <div className="page-head"><div><h1 className="page-title">Shikoyatlar</h1><p className="page-subtitle">Jami {complaintPagination.total} ta shikoyat</p></div></div>
       <div className="card-panel">
         <div className="table-responsive"><table className="data-table">
           <thead><tr><th>ID</th><th>Foydalanuvchi</th><th>Sabab</th><th>Turi</th><th>Sana</th><th>Status</th><th>Amallar</th></tr></thead>
@@ -90,22 +92,26 @@ export function Shikoyatlar() {
               <td>{complaint.reason || complaint.comment || '—'}</td>
               <td><span className="chip chip-gray" style={{ fontSize: 9 }}>{complaint.type}</span></td>
               <td className="text-muted">{complaint.date}</td>
-              <td><span className={`chip ${complaint.status === 'new' ? 'chip-danger' : complaint.status === 'reviewing' ? 'chip-warning' : 'chip-success'}`} style={{ fontSize: 9 }}>{complaint.status}</span></td>
+              <td><span className={`chip ${complaint.status === 'pending' ? 'chip-warning' : complaint.status === 'reviewed' ? 'chip-success' : 'chip-gray'}`} style={{ fontSize: 9 }}>{complaint.status}</span></td>
               <td>
                 <button className="btn btn-sm btn-light me-1" onClick={() => { setSelected(complaint); setShowDetail(true); }}><i className="bi bi-eye"></i></button>
                 <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(complaint)}><i className="bi bi-trash"></i></button>
               </td>
             </tr>
           ))}</tbody>
-        </table></div>
+        </table></div><PaginationControls {...complaintPagination} onPageChange={(page) => router.get('/boshqaruv/shikoyatlar', { complaints_page: page }, { preserveState: true, preserveScroll: true, replace: true })} />
       </div>
-      <Modal show={showDetail} onHide={() => setShowDetail(false)} centered>
+      <Modal show={showDetail} onHide={() => setShowDetail(false)} centered size="lg">
         <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">Shikoyat #{selected?.id}</Modal.Title></Modal.Header>
         <Modal.Body>
-          <p><strong>{selected?.user}</strong> dan shikoyat: {selected?.reason || selected?.comment || '—'}</p>
+          <div className="row g-3">
+            <div className="col-md-5"><div className="detail-panel h-100"><h6 className="fw-bold mb-3">Shikoyatchi</h6><div className="fw-semibold">{selected?.user}</div><div className="text-muted small">{selected?.phone || '—'}</div><hr /><small className="text-muted d-block">Turi</small><strong>{selected?.type || '—'}</strong><small className="text-muted d-block mt-2">Obyekt ID</small><strong>#{selected?.reportableId || '—'}</strong></div></div>
+            <div className="col-md-7"><div className="detail-panel h-100"><h6 className="fw-bold mb-3">Shikoyat matni</h6><strong>{selected?.reason || 'Sabab ko‘rsatilmagan'}</strong><div className="text-muted mt-2">{selected?.comment || 'Izoh kiritilmagan'}</div><small className="text-muted d-block mt-3">{selected?.date || '—'}</small></div></div>
+            <div className="col-12"><div className="detail-panel"><h6 className="fw-bold mb-3">Foydalanuvchining boshqa shikoyatlari</h6>{(selected?.otherReports || []).map((report) => <div className="d-flex justify-content-between border-bottom py-2" key={report.id}><span>#{report.id} · {report.reason || '—'}</span><span className="text-muted small">{report.status} · {report.date || '—'}</span></div>)}{(selected?.otherReports || []).length === 0 ? <div className="text-muted">Boshqa shikoyat topilmadi</div> : null}</div></div>
+          </div>
           <div className="d-flex gap-2 mt-3">
-            {['new', 'reviewing', 'resolved'].map(s => (
-              <button key={s} className={`btn btn-sm ${selected?.status === s ? 'btn-primary-gradient' : 'btn-outline-secondary'}`} onClick={() => updateStatus(s)}>{s}</button>
+            {[['pending', 'Qayta ochish'], ['reviewed', "Ko'rildi"], ['dismissed', 'Rad etish']].map(([status, label]) => (
+              <button key={status} className={`btn btn-sm ${selected?.status === status ? 'btn-primary-gradient' : 'btn-outline-secondary'}`} onClick={() => updateStatus(status)}>{label}</button>
             ))}
           </div>
         </Modal.Body>

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button, Form } from 'react-bootstrap';
-import PaginationControls, { useClientPagination } from '../components/PaginationControls';
+import PaginationControls from '../components/PaginationControls';
 
 interface Ticket {
   id: number;
@@ -12,10 +12,15 @@ interface Ticket {
   rating?: number;
   status: string;
   date?: string;
-  showUrl?: string;
-  assignUrl?: string;
+  dataUrl?: string;
   closeUrl?: string;
   replyUrl?: string;
+}
+interface TicketDetail {
+  profile: Record<string, string | number | null | undefined>;
+  messages: Array<Record<string, string | number | boolean | null | undefined>>;
+  attachments: Array<Record<string, string | number | null | undefined>>;
+  actions: Record<string, string>;
 }
 
 const statusChip = (s: string) => ({
@@ -26,12 +31,15 @@ const statusChip = (s: string) => ({
 }[s] || 'chip-gray');
 
 export default function Tickets() {
-  const { tickets = [] } = usePage<{ tickets?: Ticket[] }>().props;
-  const [activeTab, setActiveTab] = useState('Barchasi');
-  const [search, setSearch] = useState('');
+  const { tickets = [], ticketPagination = { page: 1, totalPages: 1, from: 0, to: 0, total: 0 }, ticketCounts = {}, ticketFilters = {} } = usePage<{ tickets?: Ticket[]; ticketPagination?: { page: number; totalPages: number; from: number; to: number; total: number }; ticketCounts?: Record<string, number>; ticketFilters?: { tab?: string; search?: string } }>().props;
+  const [activeTab, setActiveTab] = useState(ticketFilters.tab || 'all');
+  const [search, setSearch] = useState(ticketFilters.search || '');
   const [showReply, setShowReply] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [replyText, setReplyText] = useState('');
+  const [detail, setDetail] = useState<TicketDetail | null>(null);
+  const [showDetail, setShowDetail] = useState(false);
+  const [loadingDetail, setLoadingDetail] = useState(false);
 
   const handleOpenReply = (ticket: Ticket) => {
     setSelectedTicket(ticket);
@@ -41,7 +49,19 @@ export default function Tickets() {
 
   const closeTicket = (ticket: Ticket) => {
     if (!ticket.closeUrl || !confirm(`#${ticket.id} ticket yopilsinmi?`)) return;
-    router.patch(ticket.closeUrl, {}, { preserveScroll: true });
+    router.patch(ticket.closeUrl, { close_reason: prompt('Yopish sababi', 'Muammo hal qilindi.') || '' }, { preserveScroll: true });
+  };
+  const openDetail = async (ticket: Ticket) => {
+    if (!ticket.dataUrl) return;
+    setSelectedTicket(ticket);
+    setShowDetail(true);
+    setLoadingDetail(true);
+    try {
+      const response = await fetch(ticket.dataUrl, { headers: { Accept: 'application/json' } });
+      setDetail(response.ok ? await response.json() : null);
+    } finally {
+      setLoadingDetail(false);
+    }
   };
 
   const sendReply = (e: React.FormEvent) => {
@@ -50,12 +70,7 @@ export default function Tickets() {
     router.post(selectedTicket.replyUrl, { message: replyText }, { preserveScroll: true, onSuccess: () => setShowReply(false) });
   };
 
-  const filtered = tickets.filter((ticket) => {
-    const matchTab = activeTab === 'Barchasi' || ticket.status === activeTab;
-    const haystack = `${ticket.subject} ${ticket.user} ${ticket.id}`.toLowerCase();
-    return matchTab && haystack.includes(search.toLowerCase());
-  });
-  const pagination = useClientPagination(filtered, 25);
+  const loadTickets = (page = 1, tab = activeTab, term = search) => router.get('/boshqaruv/tickets', { tickets_page: page, tickets_tab: tab, tickets_search: term }, { preserveState: true, preserveScroll: true, replace: true });
 
   return (
     <div>
@@ -68,10 +83,10 @@ export default function Tickets() {
 
       <div className="row g-3 mb-4">
         {[
-          { label: 'Navbatda', val: tickets.filter(t => t.status === 'queue').length, icon: 'bi-envelope-exclamation', color: '#f59e0b' },
-          { label: 'Aktiv', val: tickets.filter(t => t.status === 'active').length, icon: 'bi-chat-dots', color: '#3b82f6' },
-          { label: 'Yopilgan', val: tickets.filter(t => t.status === 'closed').length, icon: 'bi-check2-circle', color: '#10b981' },
-          { label: 'Baholangan', val: tickets.filter(t => t.status === 'rated').length, icon: 'bi-star', color: '#7c3aed' },
+          { label: 'Navbatda', val: ticketCounts.queue || 0, icon: 'bi-envelope-exclamation', color: '#f59e0b' },
+          { label: 'Aktiv', val: ticketCounts.active || 0, icon: 'bi-chat-dots', color: '#3b82f6' },
+          { label: 'Yopilgan', val: ticketCounts.closed || 0, icon: 'bi-check2-circle', color: '#10b981' },
+          { label: 'Baholangan', val: ticketCounts.rated || 0, icon: 'bi-star', color: '#7c3aed' },
         ].map((s) => (
           <div className="col-xl-3 col-md-6" key={s.label}>
             <div className="stat-card">
@@ -86,20 +101,20 @@ export default function Tickets() {
 
       <div className="card-panel">
         <div className="d-flex gap-2 mb-3 flex-wrap">
-          {['Barchasi', 'queue', 'active', 'closed', 'rated'].map((s) => (
-            <button key={s} className={`btn btn-sm ${activeTab === s ? 'btn-primary-gradient' : 'btn-outline-secondary'}`} onClick={() => setActiveTab(s)}>{s}</button>
+          {['all', 'queue', 'active', 'closed', 'rated'].map((s) => (
+            <button key={s} className={`btn btn-sm ${activeTab === s ? 'btn-primary-gradient' : 'btn-outline-secondary'}`} onClick={() => { setActiveTab(s); loadTickets(1, s); }}>{s === 'all' ? 'Barchasi' : s} <span className="ms-1 opacity-75">{ticketCounts[s] || 0}</span></button>
           ))}
-          <div className="ms-auto input-group" style={{ maxWidth: 260 }}>
+          <form className="ms-auto input-group" style={{ maxWidth: 260 }} onSubmit={(event) => { event.preventDefault(); loadTickets(); }}>
             <span className="input-group-text bg-white"><i className="bi bi-search text-muted"></i></span>
             <input className="form-control" placeholder="Ticket qidirish..." value={search} onChange={e => setSearch(e.target.value)} />
-          </div>
+          </form>
         </div>
 
         <div className="table-responsive">
           <table className="data-table">
             <thead><tr><th>ID</th><th>Mavzu</th><th>Foydalanuvchi</th><th>Operator</th><th>Xabar</th><th>Reyting</th><th>Sana</th><th>Status</th><th>Amallar</th></tr></thead>
             <tbody>
-              {pagination.paginated.map((ticket) => (
+              {tickets.map((ticket) => (
                 <tr key={ticket.id}>
                   <td className="fw-semibold text-primary">#{ticket.id}</td>
                   <td className="fw-semibold">{ticket.subject}</td>
@@ -110,6 +125,7 @@ export default function Tickets() {
                   <td className="text-muted">{ticket.date || '—'}</td>
                   <td><span className={`chip ${statusChip(ticket.status)}`}>{ticket.status}</span></td>
                   <td>
+                    <button className="btn btn-sm btn-light me-1" onClick={() => openDetail(ticket)}><i className="bi bi-eye"></i></button>
                     <button className="btn btn-sm btn-primary-gradient me-1" onClick={() => handleOpenReply(ticket)}><i className="bi bi-reply"></i></button>
                     {ticket.closeUrl ? <button className="btn btn-sm btn-light" onClick={() => closeTicket(ticket)}><i className="bi bi-check2"></i></button> : null}
                   </td>
@@ -118,8 +134,23 @@ export default function Tickets() {
             </tbody>
           </table>
         </div>
-        <PaginationControls {...pagination} onPageChange={pagination.setPage} />
+        <PaginationControls {...ticketPagination} onPageChange={(page) => loadTickets(page)} />
       </div>
+
+      <Modal show={showDetail} onHide={() => setShowDetail(false)} centered size="xl">
+        <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">Murojaat #{selectedTicket?.id}</Modal.Title></Modal.Header>
+        <Modal.Body>
+          {loadingDetail ? <div className="text-muted py-5 text-center">Yuklanmoqda...</div> : !detail ? <div className="text-muted py-5 text-center">Ma'lumot yuklanmadi</div> : (
+            <div className="row g-3">
+              <div className="col-xl-4"><div className="detail-panel h-100"><h6 className="fw-bold mb-3">Murojaat egasi</h6><Info label="Ism" value={detail.profile.name} /><Info label="Telegram" value={detail.profile.username} /><Info label="User ID" value={detail.profile.userId} /><Info label="Manba" value={detail.profile.sourceType} /><Info label="Operator" value={detail.profile.operator} /><Info label="Sana" value={detail.profile.createdAt} /></div></div>
+              <div className="col-xl-8"><div className="detail-panel h-100"><h6 className="fw-bold mb-3">Suhbat tarixi</h6>{detail.messages.map((message) => <div className={`border rounded p-3 mb-2 ${message.sentBy === 'user' ? 'bg-light' : ''}`} key={String(message.id)}><div className="d-flex justify-content-between gap-3 mb-1"><strong className="small">{String(message.actor || message.sentBy || 'Tizim')}</strong><span className="text-muted small">{String(message.date || '—')}</span></div><div>{String(message.message || '—')}</div><small className="text-muted">{String(message.type || 'text')}{message.error ? ` · ${message.error}` : ''}</small></div>)}{detail.messages.length === 0 ? <div className="text-muted">Xabar tarixi topilmadi</div> : null}</div></div>
+              <div className="col-xl-6"><div className="detail-panel h-100"><h6 className="fw-bold mb-3">Ilovalar</h6>{detail.attachments.map((file) => <div className="border-bottom py-2" key={String(file.id)}><strong>{String(file.name || 'Fayl')}</strong><div className="small text-muted">{String(file.type || '—')} · {file.size ? `${file.size} KB` : 'hajm yo‘q'} · {String(file.sentBy || '—')}</div></div>)}{detail.attachments.length === 0 ? <div className="text-muted">Ilova mavjud emas</div> : null}</div></div>
+              <div className="col-xl-6"><div className="detail-panel h-100"><h6 className="fw-bold mb-3">Holat</h6><Info label="Status" value={detail.profile.status} /><Info label="Reyting" value={detail.profile.rating} /><Info label="Yopish sababi" value={detail.profile.closeReason} /><Info label="Yopilgan vaqt" value={detail.profile.closedAt} /></div></div>
+            </div>
+          )}
+        </Modal.Body>
+        <Modal.Footer>{selectedTicket ? <Button variant="outline-primary" onClick={() => { setShowDetail(false); handleOpenReply(selectedTicket); }}>Javob yozish</Button> : null}{selectedTicket?.closeUrl ? <Button variant="outline-danger" onClick={() => closeTicket(selectedTicket)}>Yopish</Button> : null}<Button variant="light" onClick={() => setShowDetail(false)}>Bekor qilish</Button></Modal.Footer>
+      </Modal>
 
       <Modal show={showReply} onHide={() => setShowReply(false)} centered>
         <Form onSubmit={sendReply}>
@@ -144,4 +175,8 @@ export default function Tickets() {
       </Modal>
     </div>
   );
+}
+
+function Info({ label, value }: { label: string; value: string | number | null | undefined }) {
+  return <div className="border-bottom py-2"><small className="text-muted d-block">{label}</small><span className="fw-semibold">{String(value || '—')}</span></div>;
 }

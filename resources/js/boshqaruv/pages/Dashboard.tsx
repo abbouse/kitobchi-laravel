@@ -91,6 +91,15 @@ export default function Dashboard() {
       </div>
 
       <div className="row g-2 mb-3">
+        <CompactMetric label="Premium user" value={dashboard.metrics.premiumUsers} href="/boshqaruv/users" />
+        <CompactMetric label="Online user" value={dashboard.metrics.onlineUsers} href="/boshqaruv/users" />
+        <CompactMetric label="Kanselyariya" value={dashboard.metrics.stationeries} href="/boshqaruv/stationeries" />
+        <CompactMetric label="Pending seller" value={dashboard.metrics.pendingSellers} href="/boshqaruv/sellers" />
+        <CompactMetric label="Support ticket" value={dashboard.metrics.tickets} href="/boshqaruv/tickets" />
+        <CompactMetric label="Shikoyatlar" value={dashboard.metrics.complaints} href="/boshqaruv/shikoyatlar" />
+      </div>
+
+      <div className="row g-2 mb-3">
         <PeriodCard label="Daromad" value={money(current.revenue)} delta={change(current.revenue, previous.revenue)} icon="bi-cash-coin" color="#4f46e5" />
         <PeriodCard label="Buyurtmalar" value={fmt(current.orders)} delta={change(current.orders, previous.orders)} icon="bi-bag-check" color="#10b981" />
         <PeriodCard label="O'rtacha chek" value={money(current.aov)} delta={change(current.aov, previous.aov)} icon="bi-receipt" color="#f59e0b" />
@@ -177,6 +186,12 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      <div className="row g-3 mt-1">
+        <DistributionPanel title="To'lov kesimi" rows={dashboard.paymentSplit.map((row) => ({ name: row.name, value: `${fmt(row.count)} ta · ${row.share}%` }))} />
+        <DistributionPanel title="Yetkazish kesimi" rows={dashboard.deliverySplit.map((row) => ({ name: row.name, value: `${fmt(row.count)} ta · ${money(row.revenue)}` }))} />
+        <DistributionPanel title="Hududlar" rows={dashboard.regions.map((row) => ({ name: row.name, value: `${fmt(row.value)} ta · ${money(row.revenue)}` }))} />
+      </div>
     </div>
   );
 }
@@ -189,8 +204,7 @@ function Metric({ label, value = 0, icon, color, href }: { label: string; value?
           <div style={{ fontSize: 11, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 1 }}>{label}</div>
           <i className={`bi ${icon}`} style={{ color, fontSize: 18 }}></i>
         </div>
-        <div style={{ fontSize: 22, fontWeight: 800, color: '#111827' }}>{fmt(value)}</div>
-        <div className="stat-trend up" style={{ fontSize: 11 }}>DB snapshot</div>
+        <div className="text-body" style={{ fontSize: 22, fontWeight: 800 }}>{fmt(value)}</div>
       </Link>
     </div>
   );
@@ -204,13 +218,21 @@ function PeriodCard({ label, value, delta, icon, color }: { label: string; value
           <div style={{ fontSize: 11, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 1 }}>{label}</div>
           <i className={`bi ${icon}`} style={{ color, fontSize: 18 }}></i>
         </div>
-        <div style={{ fontSize: 22, fontWeight: 800, color: '#111827' }}>{value}</div>
+        <div className="text-body" style={{ fontSize: 22, fontWeight: 800 }}>{value}</div>
         <div className={`stat-trend ${delta >= 0 ? 'up' : 'down'}`} style={{ fontSize: 11 }}>
           <i className={`bi ${delta >= 0 ? 'bi-arrow-up' : 'bi-arrow-down'}`}></i> {delta >= 0 ? '+' : ''}{delta.toFixed(1)}%
         </div>
       </div>
     </div>
   );
+}
+
+function CompactMetric({ label, value = 0, href }: { label: string; value?: number; href: string }) {
+  return <div className="col-xl-2 col-md-4 col-6"><Link href={href} className="mini-stat text-decoration-none h-100"><span>{label}</span><strong className="text-body">{fmt(value)}</strong></Link></div>;
+}
+
+function DistributionPanel({ title, rows }: { title: string; rows: Array<{ name: string; value: string }> }) {
+  return <div className="col-xl-4"><div className="card-panel h-100"><div className="panel-title mb-3">{title}</div>{rows.length ? rows.slice(0, 8).map((row) => <div className="d-flex justify-content-between gap-3 py-2 border-bottom small" key={row.name}><span className="text-muted text-truncate">{row.name}</span><strong className="text-nowrap">{row.value}</strong></div>) : <div className="text-muted small">Ma'lumot topilmadi.</div>}</div></div>;
 }
 
 function FinancialPanel({ dashboard }: { dashboard: DashboardPayload }) {

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button } from 'react-bootstrap';
-import PaginationControls, { useClientPagination } from '../components/PaginationControls';
+import PaginationControls from '../components/PaginationControls';
 
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
 
@@ -106,43 +106,30 @@ export default function SellerOrders() {
     sellerOrders = [],
     sellerOrderCounts = {},
     sellerOrderStatuses = {},
+    sellerPagination = { page: 1, totalPages: 1, from: 0, to: 0, total: 0 },
+    sellerOrderPagination = { page: 1, totalPages: 1, from: 0, to: 0, total: 0 },
+    sellerFilters = {}, sellerOrderFilters = {},
   } = usePage<{
     sellers?: Seller[];
     sellerCounts?: Counts;
     sellerOrders?: SellerOrder[];
     sellerOrderCounts?: Counts;
     sellerOrderStatuses?: Record<string, StatusMeta>;
+    sellerPagination?: { page: number; totalPages: number; from: number; to: number; total: number };
+    sellerOrderPagination?: { page: number; totalPages: number; from: number; to: number; total: number };
+    sellerFilters?: { tab?: string; search?: string }; sellerOrderFilters?: { tab?: string; search?: string };
   }>().props;
 
-  const [sellerTab, setSellerTab] = useState('pending');
-  const [orderTab, setOrderTab] = useState('all');
-  const [sellerSearch, setSellerSearch] = useState('');
-  const [orderSearch, setOrderSearch] = useState('');
+  const [sellerTab, setSellerTab] = useState(sellerFilters.tab || 'pending');
+  const [orderTab, setOrderTab] = useState(sellerOrderFilters.tab || 'all');
+  const [sellerSearch, setSellerSearch] = useState(sellerFilters.search || '');
+  const [orderSearch, setOrderSearch] = useState(sellerOrderFilters.search || '');
   const [selectedSeller, setSelectedSeller] = useState<Seller | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<SellerOrder | null>(null);
 
-  const filteredSellers = useMemo(() => {
-    const query = sellerSearch.trim().toLowerCase();
-    return sellers.filter((seller) => {
-      const statusMatch = sellerTab === 'all' || seller.status === sellerTab;
-      const text = `${seller.id} ${seller.name} ${seller.ownerName || ''} ${seller.phone || ''} ${seller.region || ''}`.toLowerCase();
-      return statusMatch && (!query || text.includes(query));
-    });
-  }, [sellers, sellerSearch, sellerTab]);
-
-  const filteredOrders = useMemo(() => {
-    const query = orderSearch.trim().toLowerCase();
-    return sellerOrders.filter((order) => {
-      const statusMatch = orderTab === 'all' || order.status === orderTab;
-      const text = `${order.id} ${order.orderId || ''} ${order.seller} ${order.customer} ${order.customerPhone || ''}`.toLowerCase();
-      return statusMatch && (!query || text.includes(query));
-    });
-  }, [sellerOrders, orderSearch, orderTab]);
-
-  const sellerPagination = useClientPagination(filteredSellers, 12);
-  const orderPagination = useClientPagination(filteredOrders, 25);
   const totalBalance = useMemo(() => sellers.reduce((sum, seller) => sum + (seller.balance || 0), 0), [sellers]);
   const orderStatusTabs = [{ key: 'all', label: 'Barchasi' }, ...Object.entries(sellerOrderStatuses).map(([key, meta]) => ({ key, label: meta.label }))];
+  const load = (extra: Record<string, string | number> = {}) => router.get('/boshqaruv/sellers', { sellers_page: sellerPagination.page, sellers_tab: sellerTab, sellers_search: sellerSearch, seller_orders_page: sellerOrderPagination.page, seller_orders_tab: orderTab, seller_orders_search: orderSearch, ...extra }, { preserveState: true, preserveScroll: true, replace: true });
 
   const runPatch = (url?: string, message?: string, payload: Record<string, string> = {}) => {
     if (!url || (message && !confirm(message))) return;
@@ -196,15 +183,15 @@ export default function SellerOrders() {
         <div className="panel-head">
           <div>
             <div className="panel-title">Sotuvchilar jadvali</div>
-            <small className="text-muted">{filteredSellers.length} ta seller topildi</small>
+            <small className="text-muted">{sellerPagination.total} ta seller topildi</small>
           </div>
           <div className="d-flex flex-wrap gap-2">
-            <input className="form-control form-control-sm" style={{ maxWidth: 280 }} value={sellerSearch} onChange={(e) => setSellerSearch(e.target.value)} placeholder="Do'kon, telefon yoki hudud" />
+            <input className="form-control form-control-sm" style={{ maxWidth: 280 }} value={sellerSearch} onChange={(e) => setSellerSearch(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && load({ sellers_page: 1 })} placeholder="Do'kon, telefon yoki hudud" />
           </div>
         </div>
         <div className="d-flex flex-wrap gap-2 mb-3">
           {sellerTabs.map((item) => (
-            <button key={item.key} className={`btn btn-sm ${sellerTab === item.key ? 'btn-primary-gradient' : 'btn-light'}`} onClick={() => { setSellerTab(item.key); sellerPagination.setPage(1); }}>
+            <button key={item.key} className={`btn btn-sm ${sellerTab === item.key ? 'btn-primary-gradient' : 'btn-light'}`} onClick={() => { setSellerTab(item.key); load({ sellers_page: 1, sellers_tab: item.key }); }}>
               <i className={`bi ${item.icon} me-1`}></i>{item.label}
               <span className="badge rounded-pill bg-light text-dark ms-2">{fmt(sellerCounts[item.key] || 0)}</span>
             </button>
@@ -214,7 +201,7 @@ export default function SellerOrders() {
           <table className="data-table">
             <thead><tr><th>ID</th><th>Do'kon</th><th>Tel</th><th>Viloyat</th><th>Mahsulot</th><th>Buyurtma</th><th>Ogohlantirish</th><th>Holat</th><th>Amallar</th></tr></thead>
             <tbody>
-              {sellerPagination.paginated.map((seller) => (
+              {sellers.map((seller) => (
                 <tr key={seller.id}>
                   <td className="fw-semibold text-primary">#{seller.id}</td>
                   <td>
@@ -245,20 +232,20 @@ export default function SellerOrders() {
             </tbody>
           </table>
         </div>
-        <PaginationControls {...sellerPagination} onPageChange={sellerPagination.setPage} />
+        <PaginationControls {...sellerPagination} onPageChange={(page) => load({ sellers_page: page })} />
       </div>
 
       <div className="card-panel">
         <div className="panel-head">
           <div>
             <div className="panel-title">Seller buyurtmalari</div>
-            <small className="text-muted">{filteredOrders.length} ta yozuv topildi</small>
+            <small className="text-muted">{sellerOrderPagination.total} ta yozuv topildi</small>
           </div>
-          <input className="form-control form-control-sm" style={{ maxWidth: 280 }} value={orderSearch} onChange={(e) => setOrderSearch(e.target.value)} placeholder="ID, seller yoki mijoz" />
+          <input className="form-control form-control-sm" style={{ maxWidth: 280 }} value={orderSearch} onChange={(e) => setOrderSearch(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && load({ seller_orders_page: 1 })} placeholder="ID, seller yoki mijoz" />
         </div>
         <div className="d-flex flex-wrap gap-2 mb-3">
           {orderStatusTabs.map((item) => (
-            <button key={item.key} className={`btn btn-sm ${orderTab === item.key ? 'btn-primary-gradient' : 'btn-light'}`} onClick={() => { setOrderTab(item.key); orderPagination.setPage(1); }}>
+            <button key={item.key} className={`btn btn-sm ${orderTab === item.key ? 'btn-primary-gradient' : 'btn-light'}`} onClick={() => { setOrderTab(item.key); load({ seller_orders_page: 1, seller_orders_tab: item.key }); }}>
               {item.label}<span className="badge rounded-pill bg-light text-dark ms-2">{fmt(sellerOrderCounts[item.key] || 0)}</span>
             </button>
           ))}
@@ -267,7 +254,7 @@ export default function SellerOrders() {
           <table className="data-table">
             <thead><tr><th>ID</th><th>Seller</th><th>Mijoz</th><th>Summa</th><th>Mahsulot</th><th>Holat</th><th>Sana</th><th>Amallar</th></tr></thead>
             <tbody>
-              {orderPagination.paginated.map((order) => (
+              {sellerOrders.map((order) => (
                 <tr key={order.id}>
                   <td><div className="fw-bold">#{order.id}</div><small className="text-muted">ORD #{order.orderId || '—'}</small></td>
                   <td><div className="fw-semibold">{order.seller}</div><small className="text-muted">{order.sellerPhone || order.sellerOwner || '—'}</small></td>
@@ -283,11 +270,11 @@ export default function SellerOrders() {
                   <td><button className="btn btn-sm btn-light" onClick={() => setSelectedOrder(order)}><i className="bi bi-eye"></i></button></td>
                 </tr>
               ))}
-              {orderPagination.total === 0 ? <tr><td colSpan={8} className="text-center text-muted py-5">Hech qanday buyurtma topilmadi</td></tr> : null}
+              {sellerOrderPagination.total === 0 ? <tr><td colSpan={8} className="text-center text-muted py-5">Hech qanday buyurtma topilmadi</td></tr> : null}
             </tbody>
           </table>
         </div>
-        <PaginationControls {...orderPagination} onPageChange={orderPagination.setPage} />
+        <PaginationControls {...sellerOrderPagination} onPageChange={(page) => load({ seller_orders_page: page })} />
       </div>
 
       <SellerModal seller={selectedSeller} onHide={() => setSelectedSeller(null)} onWarn={warnSeller} onResetPassword={resetPassword} onPatch={runPatch} />

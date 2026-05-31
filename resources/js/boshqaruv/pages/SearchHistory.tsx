@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { usePage } from '@inertiajs/react';
-import PaginationControls, { useClientPagination } from '../components/PaginationControls';
+import { router, usePage } from '@inertiajs/react';
+import PaginationControls from '../components/PaginationControls';
 
 interface SearchItem {
   id: number;
@@ -15,17 +15,11 @@ interface SearchItem {
 }
 
 export default function SearchHistory() {
-  const { searchHistory = [] } = usePage<{ searchHistory?: SearchItem[] }>().props;
-  const [filter, setFilter] = useState('Barchasi');
-  const [search, setSearch] = useState('');
-
-  const filtered = searchHistory.filter((item) => {
-    const match = `${item.text || ''} ${item.user} ${item.resultName || ''}`.toLowerCase().includes(search.toLowerCase());
-    const type = filter === 'Barchasi' || item.resultType === filter;
-    return match && type;
-  });
-  const pagination = useClientPagination(filtered, 40);
-  const types = ['Barchasi', ...Array.from(new Set(searchHistory.map((item) => item.resultType).filter(Boolean)))];
+  const { searchHistory = [], searchHistoryPagination = { page: 1, totalPages: 1, from: 0, to: 0, total: 0 }, searchHistoryTypes = [], searchHistoryFilters = {} } = usePage<{ searchHistory?: SearchItem[]; searchHistoryPagination?: { page: number; totalPages: number; from: number; to: number; total: number }; searchHistoryTypes?: string[]; searchHistoryFilters?: { type?: string; search?: string } }>().props;
+  const [filter, setFilter] = useState(searchHistoryFilters.type || 'all');
+  const [search, setSearch] = useState(searchHistoryFilters.search || '');
+  const load = (page = 1, type = filter, term = search) => router.get('/boshqaruv/search-history', { search_history_page: page, search_history_type: type, search_history_search: term }, { preserveState: true, preserveScroll: true, replace: true });
+  const types = ['all', ...searchHistoryTypes];
 
   return (
     <div>
@@ -38,12 +32,12 @@ export default function SearchHistory() {
 
       <div className="card-panel">
         <div className="d-flex gap-2 mb-3 flex-wrap">
-          <div className="input-group" style={{ maxWidth: 320 }}>
+          <form className="input-group" style={{ maxWidth: 320 }} onSubmit={(event) => { event.preventDefault(); load(); }}>
             <span className="input-group-text bg-white"><i className="bi bi-search text-muted"></i></span>
             <input className="form-control" placeholder="Qidiruv so'zi yoki foydalanuvchi..." value={search} onChange={e => setSearch(e.target.value)} />
-          </div>
-          <select className="form-select" style={{ width: 'auto' }} value={filter} onChange={e => setFilter(e.target.value)}>
-            {types.map((type) => <option key={type} value={type}>{type}</option>)}
+          </form>
+          <select className="form-select" style={{ width: 'auto' }} value={filter} onChange={e => { setFilter(e.target.value); load(1, e.target.value); }}>
+            {types.map((type) => <option key={type} value={type}>{type === 'all' ? 'Barchasi' : type}</option>)}
           </select>
         </div>
 
@@ -51,7 +45,7 @@ export default function SearchHistory() {
           <table className="data-table">
             <thead><tr><th>So'z</th><th>Foydalanuvchi</th><th>Natija</th><th>Turi</th><th>Topilgan</th><th>Qidirilgan</th><th>Draft</th><th>Oxirgi</th></tr></thead>
             <tbody>
-              {pagination.paginated.map((item) => (
+              {searchHistory.map((item) => (
                 <tr key={item.id}>
                   <td className="fw-semibold">{item.text || '—'}</td>
                   <td>{item.user}</td>
@@ -66,7 +60,7 @@ export default function SearchHistory() {
             </tbody>
           </table>
         </div>
-        <PaginationControls {...pagination} onPageChange={pagination.setPage} />
+        <PaginationControls {...searchHistoryPagination} onPageChange={(page) => load(page)} />
       </div>
     </div>
   );

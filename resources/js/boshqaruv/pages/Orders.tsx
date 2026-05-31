@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button } from 'react-bootstrap';
-import PaginationControls, { useClientPagination } from '../components/PaginationControls';
+import PaginationControls from '../components/PaginationControls';
 
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
 
@@ -73,7 +73,14 @@ interface Ord {
     cashCollectAmount?: number;
     tracking?: string | null;
     labelCode?: string | null;
+    lastModeSwitch?: Record<string, unknown> | null;
+    lastHubReroute?: Record<string, unknown> | null;
   } | null;
+  paymentTransaction?: { id: number; provider?: string; providerCardId?: string; amount?: number; status?: string; date?: string } | null;
+  settlementOverview?: { gross?: number; commission?: number; net?: number; reversedNet?: number; transactions?: number };
+  courierOrder?: { id: number; courier?: string; phone?: string; region?: string; status?: string; amount?: number; courierPrice?: number } | null;
+  activeHubs?: Array<{ id: number; label: string }>;
+  fulfillmentModes?: Array<{ value: string; label: string }>;
   sellerOrders?: SellerOrder[];
   showUrl?: string;
   labelUrl?: string;
@@ -83,14 +90,18 @@ interface Ord {
   switchModeUrl?: string;
   rerouteHubUrl?: string;
   postalReturnUrl?: string;
+  dataUrl?: string;
+  canRefundPayment?: boolean;
+  refundConfirmationPhrase?: string | null;
+  refundCancelUrl?: string;
 }
 
 const statusChip = (status: string) => {
   const normalized = String(status || '').toLowerCase();
   if (['delivered', 'customer_received', 'c', 'completed'].includes(normalized)) return 'chip-success';
-  if (['in_delivery', 'shipping', 'd'].includes(normalized)) return 'chip-info';
-  if (['packing', 'processing', 'b', 'p'].includes(normalized)) return 'chip-warning';
-  if (['cancelled', 'returned', 'f'].includes(normalized)) return 'chip-danger';
+  if (['in_delivery', 'shipping', 'b'].includes(normalized)) return 'chip-info';
+  if (['packing', 'processing', 'p'].includes(normalized)) return 'chip-warning';
+  if (['cancelled', 'returned', 'f', 'r'].includes(normalized)) return 'chip-danger';
   return 'chip-gray';
 };
 
@@ -102,24 +113,55 @@ const Detail = ({ label, value }: { label: string; value?: ReactNode }) => (
 );
 
 const statusOptions = [
-  { code: 'A', label: 'Yangi' },
-  { code: 'P', label: "To'lov kutilmoqda" },
-  { code: 'B', label: "Yig'ilmoqda" },
-  { code: 'D', label: 'Yetkazishda' },
-  { code: 'C', label: 'Yetkazildi' },
+  { code: 'A', label: 'Kutilmoqda' },
+  { code: 'P', label: 'Qadoqlanmoqda' },
+  { code: 'B', label: "Yo'lda" },
+  { code: 'C', label: 'Yetib bordi' },
+  { code: 'D', label: 'Mijoz qabul qildi' },
   { code: 'F', label: 'Bekor qilindi' },
 ];
 
+interface PaginationMeta {
+  page: number;
+  totalPages: number;
+  from: number;
+  to: number;
+  total: number;
+}
+
 export default function Orders() {
-  const { orders: serverOrders = [] } = usePage<{ orders?: Ord[] }>().props;
-  const list = useMemo<Ord[]>(() => serverOrders, [serverOrders]);
-  const [activeTab, setActiveTab] = useState('Barchasi');
+  const { orders = [], orderPagination = { page: 1, totalPages: 1, from: 0, to: 0, total: 0 }, orderCounts = {}, orderFilters = {} } = usePage<{
+    orders?: Ord[];
+    orderPagination?: PaginationMeta;
+    orderCounts?: Record<string, number>;
+    orderFilters?: { tab?: string; search?: string };
+  }>().props;
+  const [activeTab, setActiveTab] = useState(orderFilters.tab || 'all');
+  const [search, setSearch] = useState(orderFilters.search || '');
   const [showView, setShowView] = useState(false);
   const [selectedOrd, setSelectedOrd] = useState<Ord | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
 
-  const handleOpenView = (order: Ord) => {
+  const loadOrders = (page = 1, tab = activeTab, term = search) => {
+    router.get('/boshqaruv/orders', { orders_page: page, orders_tab: tab, orders_search: term }, {
+      preserveState: true,
+      preserveScroll: true,
+      replace: true,
+    });
+  };
+
+  const handleOpenView = async (order: Ord) => {
     setSelectedOrd(order);
     setShowView(true);
+    if (!order.dataUrl) return;
+    setDetailLoading(true);
+    try {
+      const response = await fetch(order.dataUrl, { headers: { Accept: 'application/json' } });
+      if (!response.ok) throw new Error('Buyurtma tafsilotlarini olib bo‘lmadi.');
+      setSelectedOrd(await response.json());
+    } finally {
+      setDetailLoading(false);
+    }
   };
 
   const handleUpdateStatus = (status: string) => {
@@ -127,11 +169,43 @@ export default function Orders() {
     router.patch(selectedOrd.statusUrl, { status }, { preserveScroll: true });
   };
 
-  const filtered = list.filter((order) => activeTab === 'Barchasi' || String(order.status).toLowerCase().includes(activeTab.toLowerCase()));
-  const pagination = useClientPagination(filtered, 25);
-  const delivered = list.filter((order) => statusChip(order.status) === 'chip-success').length;
-  const processing = list.filter((order) => statusChip(order.status) === 'chip-warning').length;
-  const cancelled = list.filter((order) => statusChip(order.status) === 'chip-danger').length;
+  const postPrompt = (url: string | undefined, data: Record<string, string | number>, method: 'post' | 'patch' = 'post') => {
+    if (!url) return;
+    router[method](url, data, { preserveScroll: true });
+  };
+
+  const switchMode = () => {
+    if (!selectedOrd?.switchModeUrl) return;
+    const target_mode = prompt('Yangi fulfillment mode', selectedOrd.fulfillment?.mode || selectedOrd.fulfillmentModes?.[0]?.value || '');
+    if (!target_mode) return;
+    const hub_id = prompt("Target hub ID (auto tanlash uchun bo'sh qoldiring)", '') || '';
+    const override_note = prompt('Mode almashtirish izohi', '') || '';
+    postPrompt(selectedOrd.switchModeUrl, { target_mode, hub_id, override_note });
+  };
+
+  const rerouteHub = () => {
+    if (!selectedOrd?.rerouteHubUrl) return;
+    const hub_id = prompt('Yangi hub ID', String(selectedOrd.activeHubs?.[0]?.id || ''));
+    if (!hub_id) return;
+    const reroute_note = prompt('Reroute izohi', '') || '';
+    postPrompt(selectedOrd.rerouteHubUrl, { hub_id, reroute_note });
+  };
+
+  const markPostalReturned = () => {
+    if (!selectedOrd?.postalReturnUrl) return;
+    const postal_return_fee = prompt('Pochta qaytimi jarimasi', String(selectedOrd.postalReturnFee || 0));
+    if (postal_return_fee === null) return;
+    const postal_return_note = prompt('Qaytim izohi', selectedOrd.postalReturnNote || '') || '';
+    postPrompt(selectedOrd.postalReturnUrl, { postal_return_fee, postal_return_note }, 'patch');
+  };
+
+  const refundAndCancel = () => {
+    if (!selectedOrd?.refundCancelUrl || !selectedOrd.refundConfirmationPhrase) return;
+    const confirmation_phrase = prompt(`Pulni qaytarish uchun tasdiqlash matnini kiriting: ${selectedOrd.refundConfirmationPhrase}`, '');
+    if (!confirmation_phrase) return;
+    const reason = prompt('Refund sababi', '') || '';
+    postPrompt(selectedOrd.refundCancelUrl, { confirmation_phrase, reason });
+  };
 
   return (
     <div>
@@ -144,10 +218,10 @@ export default function Orders() {
 
       <div className="row g-3 mb-4">
         {[
-          { label: 'Jami buyurtmalar', val: list.length, icon: 'bi-receipt', color: '#4f46e5' },
-          { label: 'Yetkazilgan', val: delivered, icon: 'bi-check-circle', color: '#10b981' },
-          { label: 'Jarayonda', val: processing, icon: 'bi-hourglass-split', color: '#f59e0b' },
-          { label: 'Bekor qilingan', val: cancelled, icon: 'bi-x-circle', color: '#ef4444' },
+          { label: 'Jami buyurtmalar', val: orderCounts.all || 0, icon: 'bi-receipt', color: '#4f46e5' },
+          { label: 'Yetkazilgan', val: orderCounts.paid || 0, icon: 'bi-check-circle', color: '#10b981' },
+          { label: 'Jarayonda', val: (orderCounts.pending || 0) + (orderCounts.shipped || 0), icon: 'bi-hourglass-split', color: '#f59e0b' },
+          { label: 'Bekor qilingan', val: orderCounts.cancelled || 0, icon: 'bi-x-circle', color: '#ef4444' },
         ].map((item) => (
           <div className="col-xl-3 col-md-6" key={item.label}>
             <div className="stat-card">
@@ -164,16 +238,26 @@ export default function Orders() {
       </div>
 
       <div className="card-panel">
-        <div className="d-flex gap-2 mb-3 flex-wrap">
-          {['Barchasi', 'pending', 'packing', 'in_delivery', 'delivered', 'cancelled'].map((status) => (
+        <div className="d-flex gap-2 mb-3 flex-wrap align-items-center">
+          {[
+            ['all', 'Barchasi'],
+            ['pending', 'Kutilmoqda'],
+            ['shipped', "Yo'lda"],
+            ['paid', 'Yetkazilgan'],
+            ['cancelled', 'Bekor qilingan'],
+          ].map(([status, label]) => (
             <button
               key={status}
               className={`btn btn-sm ${activeTab === status ? 'btn-primary-gradient' : 'btn-outline-secondary'}`}
-              onClick={() => setActiveTab(status)}
+              onClick={() => { setActiveTab(status); loadOrders(1, status); }}
             >
-              {status}
+              {label} <span className="ms-1 opacity-75">{orderCounts[status] || 0}</span>
             </button>
           ))}
+          <form className="ms-auto d-flex gap-2" onSubmit={(event) => { event.preventDefault(); loadOrders(1); }}>
+            <input className="form-control form-control-sm" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="ID, mijoz yoki telefon" />
+            <button className="btn btn-sm btn-outline-secondary" title="Qidirish"><i className="bi bi-search"></i></button>
+          </form>
         </div>
 
         <div className="table-responsive">
@@ -192,7 +276,7 @@ export default function Orders() {
               </tr>
             </thead>
             <tbody>
-              {pagination.paginated.map((order) => (
+              {orders.map((order) => (
                 <tr key={order.id}>
                   <td className="fw-semibold" style={{ color: '#4f46e5' }}>{order.id}</td>
                   <td>
@@ -218,7 +302,7 @@ export default function Orders() {
             </tbody>
           </table>
         </div>
-        <PaginationControls {...pagination} onPageChange={pagination.setPage} />
+        <PaginationControls {...orderPagination} onPageChange={(page) => loadOrders(page)} />
       </div>
 
       <Modal show={showView} onHide={() => setShowView(false)} centered size="xl" scrollable>
@@ -226,7 +310,7 @@ export default function Orders() {
           <Modal.Title className="fs-5 fw-bold">Buyurtma: {selectedOrd?.id}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          {selectedOrd ? (
+          {detailLoading ? <div className="py-5 text-center text-muted">Buyurtma tafsilotlari yuklanmoqda...</div> : selectedOrd ? (
             <div className="row g-4">
               <div className="col-lg-4">
                 <div className="detail-panel">
@@ -355,6 +439,43 @@ export default function Orders() {
                 <div className="detail-panel mt-3">
                   <h6 className="fw-bold mb-3">Seller orderlar</h6>
                   <SellerOrdersTable rows={selectedOrd.sellerOrders || []} />
+                </div>
+
+                <div className="row g-3 mt-1">
+                  <div className="col-lg-6">
+                    <div className="detail-panel h-100">
+                      <h6 className="fw-bold mb-3">Seller hisob-kitobi</h6>
+                      <div className="row g-3">
+                        <Detail label="Gross" value={`${fmt(selectedOrd.settlementOverview?.gross || 0)} so'm`} />
+                        <Detail label="Komissiya" value={`${fmt(selectedOrd.settlementOverview?.commission || 0)} so'm`} />
+                        <Detail label="Seller net" value={`${fmt(selectedOrd.settlementOverview?.net || 0)} so'm`} />
+                        <Detail label="Qaytarilgan net" value={`${fmt(selectedOrd.settlementOverview?.reversedNet || 0)} so'm`} />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="col-lg-6">
+                    <div className="detail-panel h-100">
+                      <h6 className="fw-bold mb-3">To'lov va kuryer</h6>
+                      <div className="row g-3">
+                        <Detail label="Payment provider" value={selectedOrd.paymentTransaction?.provider} />
+                        <Detail label="Payment status" value={selectedOrd.paymentTransaction?.status} />
+                        <Detail label="Kuryer" value={selectedOrd.courierOrder?.courier || selectedOrd.courierName} />
+                        <Detail label="Kuryer telefoni" value={selectedOrd.courierOrder?.phone} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="detail-panel mt-3">
+                  <h6 className="fw-bold mb-2">Fulfillment boshqaruvi</h6>
+                  <div className="d-flex flex-wrap gap-2">
+                    <button className="btn btn-sm btn-outline-secondary" onClick={switchMode}>Mode almashtirish</button>
+                    <button className="btn btn-sm btn-outline-secondary" onClick={rerouteHub}>Hub reroute</button>
+                    <button className="btn btn-sm btn-outline-secondary" onClick={markPostalReturned}>Pochta qaytimi</button>
+                    {selectedOrd.cancelUrl ? <button className="btn btn-sm btn-outline-danger" onClick={() => confirm('Buyurtma bekor qilinsinmi?') && postPrompt(selectedOrd.cancelUrl, {})}>Bekor qilish</button> : null}
+                    {selectedOrd.canRefundPayment ? <button className="btn btn-sm btn-danger" onClick={refundAndCancel}>Refund + bekor qilish</button> : null}
+                  </div>
+                  {selectedOrd.activeHubs?.length ? <div className="text-muted small mt-3">Faol hub ID: {selectedOrd.activeHubs.map((hub) => `${hub.id}: ${hub.label}`).join(' · ')}</div> : null}
                 </div>
 
                 <div className="detail-panel mt-3">

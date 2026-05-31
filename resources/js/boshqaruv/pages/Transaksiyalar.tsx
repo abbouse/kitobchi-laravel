@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button } from 'react-bootstrap';
-import PaginationControls, { useClientPagination } from '../components/PaginationControls';
+import PaginationControls from '../components/PaginationControls';
 
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
 
@@ -12,12 +12,20 @@ interface Transaction {
   type: string;
   amount: number;
   commission?: number;
+  commissionPercent?: number;
   netAmount?: number;
+  sellerId?: number;
+  orderId?: number;
+  sellerOrderId?: number;
   status: string;
+  statusLabel?: string;
   date?: string;
+  updatedAt?: string;
   method?: string;
   note?: string;
-  showUrl?: string;
+  category?: string;
+  sellerTotals?: { approvedCount?: number; approvedSum?: number; pendingSum?: number };
+  nearby?: Array<{ id: number; amount?: number; netAmount?: number; status?: string; date?: string }>;
   approveUrl?: string;
   rejectUrl?: string;
 }
@@ -31,17 +39,10 @@ const statusChip = (status?: string) => {
 };
 
 export default function Transaksiyalar() {
-  const { transactions = [] } = usePage<{ transactions?: Transaction[] }>().props;
+  const { transactions = [], transactionPagination = { page: 1, totalPages: 1, from: 0, to: 0, total: 0 }, transactionTotals = {} } = usePage<{ transactions?: Transaction[]; transactionPagination?: { page: number; totalPages: number; from: number; to: number; total: number }; transactionTotals?: Record<string, number> }>().props;
   const [selected, setSelected] = useState<Transaction | null>(null);
 
-  const totals = useMemo(() => {
-    const income = transactions.reduce((sum, item) => sum + Math.max(item.amount || 0, 0), 0);
-    const commission = transactions.reduce((sum, item) => sum + (item.commission || 0), 0);
-    const pending = transactions.filter((item) => statusChip(item.status) === 'chip-warning').length;
-    const approved = transactions.filter((item) => statusChip(item.status) === 'chip-success').length;
-    return { income, commission, pending, approved };
-  }, [transactions]);
-  const pagination = useClientPagination(transactions, 30);
+  const totals = { income: transactionTotals.income || 0, commission: transactionTotals.commission || 0, pending: transactionTotals.pending || 0, approved: transactionTotals.approved || 0 };
 
   const patch = (url?: string, message?: string) => {
     if (!url || (message && !confirm(message))) return;
@@ -59,7 +60,7 @@ export default function Transaksiyalar() {
 
       <div className="row g-3 mb-4">
         {[
-          { label: 'Jami tranzaksiya', value: transactions.length, icon: 'bi-receipt', color: '#4f46e5' },
+          { label: 'Jami tranzaksiya', value: transactionTotals.all || 0, icon: 'bi-receipt', color: '#4f46e5' },
           { label: 'Tasdiqlangan', value: totals.approved, icon: 'bi-check-circle', color: '#10b981' },
           { label: 'Kutilmoqda', value: totals.pending, icon: 'bi-hourglass-split', color: '#f59e0b' },
           { label: 'Komissiya', value: `${fmt(totals.commission)} so'm`, icon: 'bi-percent', color: '#7c3aed' },
@@ -90,7 +91,7 @@ export default function Transaksiyalar() {
           <table className="data-table">
             <thead><tr><th>ID</th><th>Seller</th><th>Turi</th><th>Summa</th><th>Komissiya</th><th>Net</th><th>Metod</th><th>Sana</th><th>Status</th><th>Amallar</th></tr></thead>
             <tbody>
-              {pagination.paginated.map((item) => (
+              {transactions.map((item) => (
                 <tr key={item.id}>
                   <td className="fw-semibold text-primary">#{item.id}</td>
                   <td><div className="fw-semibold">{item.user}</div><small className="text-muted">{item.phone}</small></td>
@@ -115,20 +116,26 @@ export default function Transaksiyalar() {
             </tbody>
           </table>
         </div>
-        <PaginationControls {...pagination} onPageChange={pagination.setPage} />
+        <PaginationControls {...transactionPagination} onPageChange={(page) => router.get('/boshqaruv/transactions', { transactions_page: page }, { preserveState: true, preserveScroll: true, replace: true })} />
       </div>
 
-      <Modal show={!!selected} onHide={() => setSelected(null)} centered>
+      <Modal show={!!selected} onHide={() => setSelected(null)} centered size="lg">
         <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">Tranzaksiya #{selected?.id}</Modal.Title></Modal.Header>
         <Modal.Body>
           <div className="row g-3">
             <div className="col-6"><small className="text-muted">Seller</small><div className="fw-semibold">{selected?.user}</div></div>
             <div className="col-6"><small className="text-muted">Telefon</small><div>{selected?.phone || '—'}</div></div>
-            <div className="col-6"><small className="text-muted">Turi</small><div>{selected?.type}</div></div>
+            <div className="col-6"><small className="text-muted">Turi</small><div>{selected?.type} {selected?.category ? `· ${selected.category}` : ''}</div></div>
             <div className="col-6"><small className="text-muted">Status</small><div><span className={`chip ${statusChip(selected?.status)}`}>{selected?.status || '—'}</span></div></div>
             <div className="col-6"><small className="text-muted">Summa</small><div className="fw-bold">{fmt(selected?.amount || 0)} so'm</div></div>
-            <div className="col-6"><small className="text-muted">Net</small><div>{fmt(selected?.netAmount ?? selected?.amount ?? 0)} so'm</div></div>
+            <div className="col-6"><small className="text-muted">Komissiya</small><div>{selected?.commissionPercent || 0}% · {fmt(selected?.commission || 0)} so'm</div></div>
+            <div className="col-6"><small className="text-muted">Net</small><div className="fw-bold text-success">{fmt(selected?.netAmount ?? selected?.amount ?? 0)} so'm</div></div>
+            <div className="col-6"><small className="text-muted">Karta</small><div>{selected?.method || '—'}</div></div>
+            <div className="col-6"><small className="text-muted">Order</small><div>#{selected?.orderId || '—'} · SELL #{selected?.sellerOrderId || '—'}</div></div>
+            <div className="col-6"><small className="text-muted">Yangilangan</small><div>{selected?.updatedAt || '—'}</div></div>
             <div className="col-12"><small className="text-muted">Izoh</small><div>{selected?.note || '—'}</div></div>
+            <div className="col-12"><div className="detail-panel"><h6 className="fw-bold mb-3">Seller summary</h6><div className="row g-2"><div className="col-md-4"><small className="text-muted d-block">Tasdiqlangan</small><strong>{selected?.sellerTotals?.approvedCount || 0} ta</strong></div><div className="col-md-4"><small className="text-muted d-block">Tasdiqlangan summa</small><strong>{fmt(selected?.sellerTotals?.approvedSum || 0)} so'm</strong></div><div className="col-md-4"><small className="text-muted d-block">Pending summa</small><strong>{fmt(selected?.sellerTotals?.pendingSum || 0)} so'm</strong></div></div></div></div>
+            <div className="col-12"><div className="detail-panel"><h6 className="fw-bold mb-3">Sellerning yaqin tranzaksiyalari</h6>{(selected?.nearby || []).map((row) => <div className="d-flex justify-content-between border-bottom py-2" key={row.id}><span>#TRX-{row.id} · {row.status || '—'}</span><strong>{fmt(row.netAmount || row.amount || 0)} so'm</strong></div>)}{(selected?.nearby || []).length === 0 ? <div className="text-muted">Boshqa tranzaksiya topilmadi</div> : null}</div></div>
           </div>
         </Modal.Body>
         <Modal.Footer>

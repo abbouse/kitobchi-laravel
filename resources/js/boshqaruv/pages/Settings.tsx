@@ -7,7 +7,6 @@ type ProjectSettings = Record<string, string | number | boolean | null | undefin
 type ActionMap = Record<string, string>;
 type Commission = { id: number; priceFrom: number; priceTo: number; percent: number; updateUrl: string; destroyUrl: string };
 type Cashback = { id: number; fromUzs: number; toUzs: number; cashback: number; type: string; updateUrl: string; destroyUrl: string };
-type Delivery = { id: number; name: string; type: string; priceKg: number; muddat: number; forCountry: string; capital: boolean; freePriceFrom: number; status: boolean; updateUrl: string; destroyUrl: string };
 
 type SettingsPayload = {
   project?: ProjectSettings;
@@ -15,7 +14,6 @@ type SettingsPayload = {
   cashback?: Cashback[];
   cashbackDelivery?: Cashback[];
   cashbackPickup?: Cashback[];
-  delivery?: Delivery[];
   actions?: ActionMap;
 };
 
@@ -27,7 +25,6 @@ const tabs = [
   { key: 'telegram', label: 'Telegram', icon: 'bi-telegram' },
   { key: 'commission', label: 'Komissiya', icon: 'bi-percent' },
   { key: 'cashback', label: 'Cashback', icon: 'bi-cash-stack' },
-  { key: 'delivery', label: 'Yetkazish', icon: 'bi-truck' },
 ];
 
 function value(project: ProjectSettings, key: string, fallback = '') {
@@ -115,7 +112,7 @@ export default function Settings() {
       <div className="page-head">
         <div>
           <h1 className="page-title">Sozlamalar</h1>
-          <p className="page-subtitle">App versiyalari, operatsion flaglar, cashback, komissiya va yetkazish xizmatlari</p>
+          <p className="page-subtitle">App versiyalari, operatsion flaglar, cashback va komissiya sozlamalari</p>
         </div>
       </div>
 
@@ -324,71 +321,6 @@ export default function Settings() {
         </div>
       )}
 
-      {tab === 'delivery' && (
-        <div className="row g-3">
-          <div className="col-xl-8">
-            <SectionCard title={`Yetkazish xizmatlari (${(settings.delivery ?? []).length})`} icon="bi-truck">
-              <div className="table-responsive">
-                <table className="table data-table align-middle mb-0">
-                  <thead><tr><th>Nomi</th><th>Turi</th><th>Narx</th><th>Muddat</th><th>Mamlakat</th><th>Holat</th><th></th></tr></thead>
-                  <tbody>
-                    {(settings.delivery ?? []).map((item) => (
-                      <tr key={item.id}>
-                        <td><input form={`delivery-${item.id}`} className="form-control form-control-sm" name="name" defaultValue={item.name} /></td>
-                        <td>
-                          <select form={`delivery-${item.id}`} className="form-select form-select-sm" name="type" defaultValue={item.type}>
-                            <option value="courier_service">Kuryer</option>
-                            <option value="mail_service">Pochta</option>
-                          </select>
-                        </td>
-                        <td><input form={`delivery-${item.id}`} className="form-control form-control-sm" name="priceKg" type="number" min={0} defaultValue={item.priceKg} /></td>
-                        <td><input form={`delivery-${item.id}`} className="form-control form-control-sm" name="muddat" type="number" min={1} defaultValue={item.muddat} /></td>
-                        <td>
-                          <input form={`delivery-${item.id}`} className="form-control form-control-sm mb-1" name="forCountry" defaultValue={item.forCountry} />
-                          <input form={`delivery-${item.id}`} name="freePriceFrom" type="hidden" defaultValue={item.freePriceFrom} />
-                          <input form={`delivery-${item.id}`} name="capital" type="hidden" value="0" />
-                          <label className="small text-muted"><input form={`delivery-${item.id}`} className="form-check-input me-1" name="capital" type="checkbox" value="1" defaultChecked={item.capital} />Toshkent</label>
-                        </td>
-                        <td>
-                          <input form={`delivery-${item.id}`} name="status" type="hidden" value="0" />
-                          <label className="small text-muted"><input form={`delivery-${item.id}`} className="form-check-input me-1" name="status" type="checkbox" value="1" defaultChecked={item.status} />Faol</label>
-                        </td>
-                        <td className="text-end">
-                          <form id={`delivery-${item.id}`} className="d-inline" onSubmit={(event) => submitForm(event, 'put', item.updateUrl)}>
-                            <button className="btn btn-sm btn-light me-1"><i className="bi bi-check2"></i></button>
-                          </form>
-                          <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(item.destroyUrl, 'Yetkazish xizmati o‘chirilsinmi?')}><i className="bi bi-trash"></i></button>
-                        </td>
-                      </tr>
-                    ))}
-                    {(settings.delivery ?? []).length === 0 ? <tr><td colSpan={7} className="text-center text-muted py-4">Xizmatlar yo'q</td></tr> : null}
-                  </tbody>
-                </table>
-              </div>
-            </SectionCard>
-          </div>
-          <div className="col-xl-4">
-            <SectionCard title="Yangi xizmat" icon="bi-plus-circle">
-              <form onSubmit={(event) => submitForm(event, 'post', actions.deliveryStore)}>
-                <div className="row g-2">
-                  <div className="col-md-6 col-xl-12"><TextInput name="name" label="Xizmat nomi" required /></div>
-                  <div className="col-md-6 col-xl-12">
-                    <label className="form-label small text-muted fw-semibold">Turi</label>
-                    <select name="type" className="form-select" required><option value="courier_service">Kuryer</option><option value="mail_service">Pochta</option></select>
-                  </div>
-                  <div className="col-md-6 col-xl-12"><TextInput name="priceKg" label="Narx (UZS)" type="number" min={0} required /></div>
-                  <div className="col-md-6 col-xl-12"><TextInput name="muddat" label="Muddat (kun)" type="number" min={1} required defaultValue={1} /></div>
-                  <div className="col-md-6 col-xl-12"><TextInput name="forCountry" label="Mamlakat" required defaultValue="uzbekistan" /></div>
-                  <div className="col-md-6 col-xl-12"><TextInput name="freePriceFrom" label="Bepul dan (UZS)" type="number" min={0} defaultValue={0} /></div>
-                  <div className="col-6"><Toggle name="capital" label="Toshkent" icon="bi-building" /></div>
-                  <div className="col-6"><Toggle name="status" label="Faol" icon="bi-toggle-on" defaultChecked /></div>
-                </div>
-                <div className="text-end mt-3"><SaveButton label="Qo'shish" /></div>
-              </form>
-            </SectionCard>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

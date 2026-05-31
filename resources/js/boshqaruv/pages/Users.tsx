@@ -1,293 +1,102 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
-import { Modal, Button, Form } from 'react-bootstrap';
-import PaginationControls, { useClientPagination } from '../components/PaginationControls';
+import { Modal, Button } from 'react-bootstrap';
+import PaginationControls from '../components/PaginationControls';
 
-const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n);
+const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
+type Counts = Record<string, number>;
+type Row = Record<string, string | number | boolean | null | undefined>;
 
-interface User {
-  id: number;
-  name: string;
-  email: string;
-  phone: string;
-  orders: number;
-  spent: number;
-  status: string;
-  role: string;
-  showUrl?: string;
-  editUrl?: string;
-  blockUrl?: string;
-  unblockUrl?: string;
-  destroyUrl?: string;
+interface UserRow {
+  id: number; name: string; firstName?: string; lastName?: string; email: string; phone: string; avatar?: string;
+  orders: number; cards?: number; spent: number; status: string; position: string; staffRole?: string; verified?: boolean; premium?: boolean; online?: boolean; lastSeenAt?: string; joined?: string;
+  dataUrl: string; blockUrl: string; unblockUrl: string; verifyUrl: string; premiumUrl: string;
 }
+interface UserDetail {
+  profile: Row; stats: Record<string, number>; orders: Row[]; cards: Row[]; devices: Row[]; addresses: Row[];
+  followers: Row[]; following: Row[]; giftCertificates: Row[]; mysteryBoxes: Row[]; actions: Record<string, string>;
+}
+interface PaginationMeta { page: number; totalPages: number; from: number; to: number; total: number }
+
+const tabs = [
+  ['all', 'Barchasi'], ['online', 'Online'], ['active', 'Faol'], ['pending', 'Kutilmoqda'], ['premium', 'Premium'],
+  ['buyers', 'Xaridorlar'], ['with_cards', 'Karta ulagan'], ['no_cards', 'Kartasiz'], ['support', 'Support'], ['blocked', 'Bloklangan'],
+];
 
 export default function Users() {
-  const { users: serverUsers = [] } = usePage<{ users?: User[] }>().props;
-  const list = useMemo(() => serverUsers, [serverUsers]);
-  const pagination = useClientPagination(list, 30);
+  const { users = [], userCounts = {}, userPagination = { page: 1, totalPages: 1, from: 0, to: 0, total: 0 }, userFilters = {} } = usePage<{ users?: UserRow[]; userCounts?: Counts; userPagination?: PaginationMeta; userFilters?: { tab?: string; search?: string } }>().props;
+  const [tab, setTab] = useState(userFilters.tab || 'all');
+  const [search, setSearch] = useState(userFilters.search || '');
+  const [selected, setSelected] = useState<UserRow | null>(null);
+  const [detail, setDetail] = useState<UserDetail | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  // Modals
-  const [showAdd, setShowAdd] = useState(false);
-  const [showEdit, setShowEdit] = useState(false);
-  const [showView, setShowView] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const loadUsers = (page = 1, activeTab = tab, term = search) => router.get('/boshqaruv/users', { users_page: page, users_tab: activeTab, users_search: term }, { preserveState: true, preserveScroll: true, replace: true });
 
-  // Form states
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [role, setRole] = useState('Customer');
-  const [status, setStatus] = useState('Active');
-
-  const handleOpenAdd = () => {
-    setName('');
-    setEmail('');
-    setPhone('');
-    setRole('Customer');
-    setStatus('Active');
-    setShowAdd(true);
-  };
-
-  const handleOpenEdit = (u: User) => {
-    setSelectedUser(u);
-    setName(u.name);
-    setEmail(u.email);
-    setPhone(u.phone);
-    setRole(u.role);
-    setStatus(u.status);
-    setShowEdit(true);
-  };
-
-  // Actions
-  const handleAdd = (e: React.FormEvent) => {
-    e.preventDefault();
-    setShowAdd(false);
-  };
-
-  const handleEdit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedUser) return;
-    setShowEdit(false);
-  };
-
-  const handleDelete = (user: User) => {
-    if (confirm("Foydalanuvchini o'chirishni tasdiqlaysizmi?")) {
-      if (user.destroyUrl) {
-        router.delete(user.destroyUrl);
-      }
-    }
-  };
-
-  const handleToggleBlock = (user: User) => {
-    const url = user.status === 'Blocked' ? user.unblockUrl : user.blockUrl;
-    if (url) {
-      router.patch(url, {}, { preserveScroll: true });
+  const openDetail = async (user: UserRow) => {
+    setSelected(user); setDetail(null); setLoading(true);
+    try {
+      const response = await fetch(user.dataUrl, { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+      if (!response.ok) throw new Error('Profilni yuklab bo‘lmadi');
+      setDetail(await response.json());
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div>
       <div className="page-head">
-        <div>
-          <h1 className="page-title">Foydalanuvchilar</h1>
-          <p className="page-subtitle">Mijozlar, sotuvchilar va administratorlar</p>
-        </div>
+        <div><h1 className="page-title">Foydalanuvchilar</h1><p className="page-subtitle">Profil, online holat, kartalar, premium, bloklash va xarid tarixi boshqaruvi</p></div>
       </div>
-
       <div className="row g-3 mb-4">
         {[
-          { label: 'Jami foydalanuvchilar', val: list.length, icon: 'bi-people', color: '#4f46e5' },
-          { label: 'VIP mijozlar', val: list.filter(u => u.status === 'VIP').length, icon: 'bi-star', color: '#f59e0b' },
-          { label: 'Sotuvchilar', val: list.filter(u => u.role === 'Seller').length, icon: 'bi-shop', color: '#10b981' },
-          { label: 'Faol a\'zolar', val: list.filter(u => u.status === 'Active').length, icon: 'bi-person-check', color: '#7c3aed' },
-        ].map((s) => (
-          <div className="col-xl-3 col-md-6" key={s.label}>
-            <div className="stat-card">
-              <div className="d-flex align-items-center gap-3">
-                <div className="stat-icon" style={{ background: s.color }}><i className={`bi ${s.icon}`}></i></div>
-                <div>
-                  <div className="stat-value">{s.val}</div>
-                  <div className="stat-label">{s.label}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
+          ['Jami', userCounts.all || 0, 'bi-people', '#4f46e5'], ['Online', userCounts.online || 0, 'bi-broadcast', '#10b981'],
+          ['Karta ulagan', userCounts.with_cards || 0, 'bi-credit-card', '#7c3aed'], ['Bloklangan', userCounts.blocked || 0, 'bi-person-lock', '#ef4444'],
+        ].map(([label, val, icon, color]) => <div className="col-xl-3 col-md-6" key={String(label)}><div className="stat-card"><div className="d-flex gap-3 align-items-center"><div className="stat-icon" style={{ background: String(color) }}><i className={`bi ${icon}`}></i></div><div><div className="stat-value">{val}</div><div className="stat-label">{label}</div></div></div></div></div>)}
       </div>
-
       <div className="card-panel">
-        <div className="table-responsive">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th></th>
-                <th>Ism</th>
-                <th>Email</th>
-                <th>Telefon</th>
-                <th>Buyurtmalar</th>
-                <th>Sarflangan</th>
-                <th>Rol</th>
-                <th>Status</th>
-                <th>Amallar</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pagination.paginated.map((u) => (
-                <tr key={u.id}>
-                  <td>
-                    <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg,#c7d2fe,#f3e8ff)', display: 'grid', placeItems: 'center', fontWeight: 700, color: '#4f46e5' }}>
-                      {u.name.split(' ').map(n => n[0]).join('')}
-                    </div>
-                  </td>
-                  <td className="fw-semibold">{u.name}</td>
-                  <td className="text-muted">{u.email}</td>
-                  <td>{u.phone}</td>
-                  <td>{u.orders}</td>
-                  <td className="fw-semibold">{fmt(u.spent)} so'm</td>
-                  <td><span className="chip chip-purple">{u.role}</span></td>
-                  <td>
-                    <span className={`chip ${u.status === 'VIP' ? 'chip-warning' : u.status === 'Blocked' ? 'chip-danger' : 'chip-success'}`}>
-                      {u.status}
-                    </span>
-                  </td>
-                  <td>
-                    <button className="btn btn-sm btn-light me-1" onClick={() => { setSelectedUser(u); setShowView(true); }} title="Ko'rish">
-                      <i className="bi bi-eye"></i>
-                    </button>
-                    {(u.blockUrl || u.unblockUrl) ? (
-                      <button className="btn btn-sm btn-light me-1" onClick={() => handleToggleBlock(u)} title={u.status === 'Blocked' ? 'Blokdan chiqarish' : 'Bloklash'}>
-                        <i className={`bi ${u.status === 'Blocked' ? 'bi-unlock' : 'bi-lock'}`}></i>
-                      </button>
-                    ) : null}
-                    <button className="btn btn-sm btn-light text-danger" onClick={() => handleDelete(u)} title="O'chirish">
-                      <i className="bi bi-trash"></i>
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <PaginationControls {...pagination} onPageChange={pagination.setPage} />
+        <div className="panel-head"><div><div className="panel-title">Foydalanuvchilar ro‘yxati</div><small className="text-muted">{userPagination.total} ta yozuv</small></div><form className="d-flex gap-2" onSubmit={(e) => { e.preventDefault(); loadUsers(); }}><input className="form-control form-control-sm" style={{ maxWidth: 280 }} value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Ism, telefon, email yoki ID" /><button className="btn btn-sm btn-outline-secondary"><i className="bi bi-search"></i></button></form></div>
+        <div className="d-flex flex-wrap gap-2 mb-3">{tabs.map(([key, label]) => <button className={`btn btn-sm ${tab === key ? 'btn-primary-gradient' : 'btn-light'}`} key={key} onClick={() => { setTab(key); loadUsers(1, key); }}>{label}<span className="badge rounded-pill bg-light text-dark ms-2">{fmt(userCounts[key] || 0)}</span></button>)}</div>
+        <div className="table-responsive"><table className="data-table"><thead><tr><th>ID</th><th>Foydalanuvchi</th><th>Telefon</th><th>Buyurtma</th><th>Sarflangan</th><th>Karta</th><th>Oxirgi aktivlik</th><th>Status</th><th>Amallar</th></tr></thead><tbody>
+          {users.map((user) => <tr key={user.id}>
+            <td className="fw-semibold text-primary">#{user.id}</td><td><div className="d-flex align-items-center gap-2"><Avatar user={user} /><div><div className="fw-semibold">{user.name}</div><small className="text-muted">{user.email || 'Email yo‘q'}</small></div></div></td>
+            <td>{user.phone || '—'}</td><td>{user.orders}</td><td className="fw-semibold">{fmt(user.spent)} so'm</td><td><span className={`chip ${(user.cards || 0) > 0 ? 'chip-info' : 'chip-gray'}`}>{user.cards || 0} ta</span></td><td>{user.online ? <span className="chip chip-success">Online</span> : <span className="text-muted small">{user.lastSeenAt || '—'}</span>}</td><td><Status user={user} /></td>
+            <td><button className="btn btn-sm btn-light" onClick={() => openDetail(user)}><i className="bi bi-eye"></i></button></td>
+          </tr>)}
+          {userPagination.total === 0 ? <tr><td colSpan={9} className="text-center text-muted py-5">Foydalanuvchi topilmadi</td></tr> : null}
+        </tbody></table></div>
+        <PaginationControls {...userPagination} onPageChange={(page) => loadUsers(page)} />
       </div>
-
-      <Modal show={showView} onHide={() => setShowView(false)} centered>
-        <Modal.Header closeButton>
-          <Modal.Title className="fs-5 fw-bold">{selectedUser?.name}</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <div className="row g-3">
-            <div className="col-md-6"><div className="text-muted small">Email</div><div className="fw-semibold">{selectedUser?.email || '—'}</div></div>
-            <div className="col-md-6"><div className="text-muted small">Telefon</div><div className="fw-semibold">{selectedUser?.phone || '—'}</div></div>
-            <div className="col-md-6"><div className="text-muted small">Buyurtmalar</div><div className="fw-semibold">{selectedUser?.orders || 0}</div></div>
-            <div className="col-md-6"><div className="text-muted small">Sarflangan</div><div className="fw-semibold">{fmt(selectedUser?.spent || 0)} so'm</div></div>
-            <div className="col-md-6"><div className="text-muted small">Rol</div><span className="chip chip-purple">{selectedUser?.role}</span></div>
-            <div className="col-md-6"><div className="text-muted small">Status</div><span className={`chip ${selectedUser?.status === 'Blocked' ? 'chip-danger' : selectedUser?.status === 'VIP' ? 'chip-warning' : 'chip-success'}`}>{selectedUser?.status}</span></div>
-          </div>
-        </Modal.Body>
-        <Modal.Footer>
-          {selectedUser && (selectedUser.blockUrl || selectedUser.unblockUrl) ? (
-            <Button variant="outline-secondary" onClick={() => handleToggleBlock(selectedUser)}>
-              {selectedUser.status === 'Blocked' ? 'Blokdan chiqarish' : 'Bloklash'}
-            </Button>
-          ) : null}
-          <Button variant="light" onClick={() => setShowView(false)}>Yopish</Button>
-        </Modal.Footer>
-      </Modal>
-
-      {/* ADD MODAL */}
-      <Modal show={showAdd} onHide={() => setShowAdd(false)} centered>
-        <Form onSubmit={handleAdd}>
-          <Modal.Header closeButton>
-            <Modal.Title className="fs-5 fw-bold">Yangi foydalanuvchi qo'shish</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            <Form.Group className="mb-3">
-              <Form.Label className="small fw-semibold">Ism-sharifi</Form.Label>
-              <Form.Control required placeholder="Alisher Navoiy" value={name} onChange={e => setName(e.target.value)} />
-            </Form.Group>
-            <div className="row g-3 mb-3">
-              <Form.Group className="col-md-6">
-                <Form.Label className="small fw-semibold">Email</Form.Label>
-                <Form.Control type="email" required placeholder="alisher@mail.uz" value={email} onChange={e => setEmail(e.target.value)} />
-              </Form.Group>
-              <Form.Group className="col-md-6">
-                <Form.Label className="small fw-semibold">Telefon</Form.Label>
-                <Form.Control required placeholder="+998 90 123 45 67" value={phone} onChange={e => setPhone(e.target.value)} />
-              </Form.Group>
-            </div>
-            <div className="row g-3">
-              <Form.Group className="col-md-6">
-                <Form.Label className="small fw-semibold">Roli</Form.Label>
-                <Form.Select value={role} onChange={e => setRole(e.target.value)}>
-                  <option value="Customer">Customer</option>
-                  <option value="Seller">Seller</option>
-                  <option value="Admin">Admin</option>
-                </Form.Select>
-              </Form.Group>
-              <Form.Group className="col-md-6">
-                <Form.Label className="small fw-semibold">Statusi</Form.Label>
-                <Form.Select value={status} onChange={e => setStatus(e.target.value)}>
-                  <option value="Active">Active</option>
-                  <option value="VIP">VIP</option>
-                  <option value="Blocked">Blocked</option>
-                </Form.Select>
-              </Form.Group>
-            </div>
-          </Modal.Body>
-          <Modal.Footer>
-            <Button variant="light" onClick={() => setShowAdd(false)}>Bekor qilish</Button>
-            <Button variant="primary" type="submit" className="btn-primary-gradient">Qo'shish</Button>
-          </Modal.Footer>
-        </Form>
-      </Modal>
-
-      {/* EDIT MODAL */}
-      <Modal show={showEdit} onHide={() => setShowEdit(false)} centered>
-        <Form onSubmit={handleEdit}>
-          <Modal.Header closeButton>
-            <Modal.Title className="fs-5 fw-bold">Foydalanuvchini tahrirlash</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            <Form.Group className="mb-3">
-              <Form.Label className="small fw-semibold">Ism-sharifi</Form.Label>
-              <Form.Control required value={name} onChange={e => setName(e.target.value)} />
-            </Form.Group>
-            <div className="row g-3 mb-3">
-              <Form.Group className="col-md-6">
-                <Form.Label className="small fw-semibold">Email</Form.Label>
-                <Form.Control type="email" required value={email} onChange={e => setEmail(e.target.value)} />
-              </Form.Group>
-              <Form.Group className="col-md-6">
-                <Form.Label className="small fw-semibold">Telefon</Form.Label>
-                <Form.Control required value={phone} onChange={e => setPhone(e.target.value)} />
-              </Form.Group>
-            </div>
-            <div className="row g-3">
-              <Form.Group className="col-md-6">
-                <Form.Label className="small fw-semibold">Roli</Form.Label>
-                <Form.Select value={role} onChange={e => setRole(e.target.value)}>
-                  <option value="Customer">Customer</option>
-                  <option value="Seller">Seller</option>
-                  <option value="Admin">Admin</option>
-                </Form.Select>
-              </Form.Group>
-              <Form.Group className="col-md-6">
-                <Form.Label className="small fw-semibold">Statusi</Form.Label>
-                <Form.Select value={status} onChange={e => setStatus(e.target.value)}>
-                  <option value="Active">Active</option>
-                  <option value="VIP">VIP</option>
-                  <option value="Blocked">Blocked</option>
-                </Form.Select>
-              </Form.Group>
-            </div>
-          </Modal.Body>
-          <Modal.Footer>
-            <Button variant="light" onClick={() => setShowEdit(false)}>Bekor qilish</Button>
-            <Button variant="primary" type="submit" className="btn-primary-gradient">Saqlash</Button>
-          </Modal.Footer>
-        </Form>
-      </Modal>
+      <ProfileModal user={selected} detail={detail} loading={loading} onHide={() => { setSelected(null); setDetail(null); }} reload={() => selected && openDetail(selected)} />
     </div>
   );
 }
+
+function ProfileModal({ user, detail, loading, onHide, reload }: { user: UserRow | null; detail: UserDetail | null; loading: boolean; onHide: () => void; reload: () => void }) {
+  const p = detail?.profile || {}; const s = detail?.stats || {};
+  const post = (url?: string, data: Record<string, string> = {}) => url && router.post(url, data, { preserveScroll: true, onSuccess: reload });
+  return <Modal show={!!user} onHide={onHide} centered size="xl"><Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">{user?.name}</Modal.Title></Modal.Header><Modal.Body>
+    {loading ? <div className="text-center py-5 text-muted">Profil yuklanmoqda...</div> : !detail ? <div className="text-danger">Profilni yuklab bo‘lmadi.</div> : <div className="row g-3">
+      <div className="col-12"><div className="detail-panel"><div className="d-flex flex-wrap align-items-center gap-3"><Avatar user={{ ...user!, avatar: String(p.avatar || '') }} large /><div><h4 className="mb-1">{String(p.name || '')}</h4><div className="text-muted">{String(p.email || 'Email yo‘q')} · {String(p.phone || 'Telefon yo‘q')}</div><div className="d-flex flex-wrap gap-2 mt-2"><Status user={user!} />{p.premium ? <span className="chip chip-warning">Premium</span> : null}{p.support ? <span className="chip chip-info">Support</span> : null}</div></div></div></div></div>
+      <Info title="Profil ma'lumotlari" rows={[['Username', p.username], ['Telegram ID', p.telegramId], ['Til', p.locale], ['Daraja', p.position], ['Role title', p.roleTitle], ['Staff roli', p.staffRole], ['AI limiti', p.aiLimit], ['Oxirgi faollik', p.lastSeenAt], ['Ro‘yxatdan o‘tgan', p.joined], ['Spent time', `${fmt(Number(p.spentSeconds || 0))} sec`], ['Bio', p.bio]]} />
+      <Info title="Hisob va statistika" rows={[['Buyurtmalar', s.orders], ['To‘langan orderlar', s.paidOrders], ['Sarflangan', `${fmt(s.spent || 0)} so'm`], ['Balans', `${fmt(Number(p.balance || 0))} so'm`], ['Cashback', `${fmt(Number(p.cashback || 0))} so'm`], ['Kartalar', s.cards], ['Qurilmalar', s.devices], ['Manzillar', s.addresses], ['Followers', s.followers], ['Following', s.following], ['Gift sertifikat', s.giftCertificates], ['Mystery Box', s.mysteryBoxes]]} />
+      <div className="col-12"><div className="detail-panel"><h6 className="fw-bold">Akkaunt boshqaruvi</h6>{p.blocked ? <div className="alert alert-danger mb-2">Bloklangan: {String(p.blockLabel || 'Abadiy')}<br />Sabab: {String(p.blockReason || '—')}</div> : <BlockForm action={detail.actions.blockUrl} onDone={reload} />}<div className="d-flex flex-wrap gap-2 mt-3">{p.blocked ? <Button variant="outline-success" onClick={() => post(detail.actions.unblockUrl)}>Blokdan chiqarish</Button> : null}<Button variant="outline-secondary" onClick={() => router.patch(detail.actions.verifyUrl, {}, { preserveScroll: true, onSuccess: reload })}>{p.verified ? 'Tasdiqni bekor qilish' : 'Tasdiqlash'}</Button><Button variant="outline-warning" onClick={() => router.patch(detail.actions.premiumUrl, {}, { preserveScroll: true, onSuccess: reload })}>{p.premium ? "Premiumni o'chirish" : 'Premium yoqish'}</Button></div></div></div>
+      <TableBlock title="So‘nggi buyurtmalar" rows={detail.orders} cols={[['ID', 'id'], ['Status', 'status'], ['To‘lov', 'payment'], ['Yetkazish', 'delivery'], ['Summa', 'amount'], ['Sana', 'date']]} />
+      <ListBlock title="Kartalar" rows={detail.cards} render={(x) => <><strong>{String(x.vendor)} · {String(x.number || '****')}</strong><span>{String(x.name || 'Nomsiz')} · {String(x.expires || 'Muddat yo‘q')}</span>{x.destroyUrl ? <button className="btn btn-sm btn-light text-danger mt-2" onClick={() => confirm("Kartani o'chirasizmi?") && router.delete(String(x.destroyUrl), { preserveScroll: true, onSuccess: reload })}><i className="bi bi-trash"></i></button> : null}</>} />
+      <ListBlock title="Qurilmalar" rows={detail.devices} render={(x) => <><strong>{String(x.name || 'Noma’lum qurilma')}</strong><span>{String(x.platform || '—')} · {String(x.deviceId || '—')} · Push: {x.push ? 'Ha' : "Yo'q"}</span></>} />
+      <ListBlock title="Manzillar" rows={detail.addresses} render={(x) => <><strong>{String(x.address || 'Manzil kiritilmagan')}</strong><span>{x.main ? 'Asosiy manzil' : 'Qo‘shimcha manzil'}</span></>} />
+      <ListBlock title="Followers" rows={detail.followers} render={(x) => <><strong>{String(x.name)}</strong><span>{String(x.phone || 'Telefon yo‘q')}</span></>} />
+      <ListBlock title="Following" rows={detail.following} render={(x) => <><strong>{String(x.name)}</strong><span>{String(x.phone || 'Telefon yo‘q')}</span></>} />
+      <TableBlock title="Gift sertifikatlar" rows={detail.giftCertificates} cols={[['Kod', 'code'], ['Rol', 'role'], ['Status', 'status'], ['Miqdor', 'amount'], ['Muddat', 'expires']]} />
+      <ListBlock title="Mystery Box obunalari" rows={detail.mysteryBoxes} render={(x) => <><strong>{String(x.name)} · {String(x.status)}</strong><span>{String(x.booksPerMonth)} kitob / {String(x.totalMonths)} oy · {fmt(Number(x.price || 0))} so'm · progress {String(x.progress)}%</span></>} />
+    </div>}
+  </Modal.Body><Modal.Footer><Button variant="light" onClick={onHide}>Yopish</Button></Modal.Footer></Modal>;
+}
+
+function Avatar({ user, large }: { user: Pick<UserRow, 'name' | 'avatar'>; large?: boolean }) { return <div className={`resource-avatar ${large ? '' : 'square'}`}>{user.avatar ? <img src={user.avatar} alt="" /> : user.name.slice(0, 2).toUpperCase()}</div>; }
+function Status({ user }: { user: Pick<UserRow, 'status' | 'premium'> }) { return <span className={`chip ${user.status === 'blocked' ? 'chip-danger' : user.status === 'pending' ? 'chip-warning' : user.premium ? 'chip-purple' : 'chip-success'}`}>{user.status === 'blocked' ? 'Bloklangan' : user.status === 'pending' ? 'Kutilmoqda' : user.premium ? 'Premium' : 'Faol'}</span>; }
+function Info({ title, rows }: { title: string; rows: Array<[string, unknown]> }) { return <div className="col-xl-6"><div className="detail-panel h-100"><h6 className="fw-bold mb-3">{title}</h6><div className="address-list">{rows.map(([k, v]) => <div key={k}><span>{k}</span><strong>{String(v ?? '—')}</strong></div>)}</div></div></div>; }
+function ListBlock({ title, rows, render }: { title: string; rows: Row[]; render: (x: Row) => React.ReactNode }) { return <div className="col-xl-6"><div className="detail-panel h-100"><h6 className="fw-bold mb-3">{title}</h6><div className="d-grid gap-2">{rows.map((x, i) => <div className="mini-stat" key={String(x.id || i)}>{render(x)}</div>)}{rows.length === 0 ? <div className="text-muted">Ma'lumot topilmadi</div> : null}</div></div></div>; }
+function TableBlock({ title, rows, cols }: { title: string; rows: Row[]; cols: Array<[string, string]> }) { return <div className="col-12"><div className="detail-panel"><h6 className="fw-bold mb-3">{title}</h6><div className="table-responsive"><table className="table data-table mb-0"><thead><tr>{cols.map(([l]) => <th key={l}>{l}</th>)}</tr></thead><tbody>{rows.map((x, i) => <tr key={String(x.id || i)}>{cols.map(([, k]) => <td key={k}>{k === 'amount' ? `${fmt(Number(x[k] || 0))} so'm` : String(x[k] ?? '—')}</td>)}</tr>)}{rows.length === 0 ? <tr><td colSpan={cols.length} className="text-center text-muted">Ma'lumot topilmadi</td></tr> : null}</tbody></table></div></div></div>; }
+function BlockForm({ action, onDone }: { action?: string; onDone: () => void }) { return <form className="row g-2 mt-2" onSubmit={(e) => { e.preventDefault(); if (!action) return; router.post(action, Object.fromEntries(new FormData(e.currentTarget).entries()), { preserveScroll: true, onSuccess: onDone }); }}><div className="col-md-4"><select name="block_period" className="form-select"><option value="10_days">10 kun</option><option value="1_month">1 oy</option><option value="1_year">1 yil</option><option value="3_years">3 yil</option><option value="forever">Abadiy</option></select></div><div className="col-md-6"><input name="block_reason" className="form-control" placeholder="Bloklash sababi" required /></div><div className="col-md-2"><button className="btn btn-outline-danger w-100">Bloklash</button></div></form>; }

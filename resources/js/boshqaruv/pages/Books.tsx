@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button } from 'react-bootstrap';
-import PaginationControls, { useClientPagination } from '../components/PaginationControls';
+import PaginationControls from '../components/PaginationControls';
 
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
 
@@ -78,9 +78,7 @@ const Detail = ({ label, value }: { label: string; value?: ReactNode }) => (
 );
 
 export default function Books() {
-  const { books = [] } = usePage<{ books?: Book[] }>().props;
-  const list = useMemo<Book[]>(() => books, [books]);
-  const pagination = useClientPagination(list, 24);
+  const { books = [], bookPagination = { page: 1, totalPages: 1, from: 0, to: 0, total: 0 } } = usePage<{ books?: Book[]; bookPagination?: { page: number; totalPages: number; from: number; to: number; total: number } }>().props;
   const [showView, setShowView] = useState(false);
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
 
@@ -99,7 +97,7 @@ export default function Books() {
       <div className="page-head">
         <div>
           <h1 className="page-title">Kitoblar katalogi</h1>
-          <p className="page-subtitle">{list.length} ta kitob</p>
+          <p className="page-subtitle">{bookPagination.total} ta kitob</p>
         </div>
         <div className="d-flex gap-2">
           <a className="btn btn-outline-secondary" href="/boshqaruv/products">
@@ -109,7 +107,7 @@ export default function Books() {
       </div>
 
       <div className="row g-3">
-        {pagination.paginated.map((book) => (
+        {books.map((book) => (
           <div className="col-xl-3 col-md-6" key={book.id}>
             <div className="card-panel h-100 d-flex flex-column justify-content-between">
               <div>
@@ -145,7 +143,7 @@ export default function Books() {
           </div>
         ))}
       </div>
-      <PaginationControls {...pagination} onPageChange={pagination.setPage} />
+      <PaginationControls {...bookPagination} onPageChange={(page) => router.get('/boshqaruv/books', { books_page: page }, { preserveState: true, preserveScroll: true, replace: true })} />
 
       <Modal show={showView} onHide={() => setShowView(false)} centered size="xl" scrollable>
         <Modal.Header closeButton>

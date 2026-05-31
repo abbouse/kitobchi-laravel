@@ -101,7 +101,6 @@ export default function Reklamalar() {
 
               <div className="d-flex gap-2 mt-auto">
                 <button className="btn btn-sm btn-light flex-fill" onClick={() => setSelected(ad)}><i className="bi bi-eye"></i></button>
-                <button className="btn btn-sm btn-light flex-fill" onClick={() => setSelected(ad)}><i className="bi bi-eye"></i></button>
                 <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(ad)}><i className="bi bi-trash"></i></button>
               </div>
             </div>
