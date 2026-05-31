@@ -6,11 +6,13 @@ import PaginationControls from '../components/PaginationControls';
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
 type Counts = Record<string, number>;
 type StatusMeta = { label: string; badge?: string };
-type AnyRow = Record<string, string | number | boolean | null | undefined>;
+type AnyRow = Record<string, string | number | boolean | null | undefined | Record<string, string>>;
 
 interface Courier {
   id: number;
   name: string;
+  firstName?: string;
+  lastName?: string;
   phone?: string;
   photo?: string;
   region?: string;
@@ -22,6 +24,8 @@ interface Courier {
   transport?: string;
   transportLabel?: string;
   vehicle?: string;
+  vehicleBrand?: string;
+  vehicleModel?: string;
   vehicleColor?: string;
   plate?: string;
   balance?: number;
@@ -68,7 +72,7 @@ interface CourierOrder {
   statusLabel?: string;
   statusBadge?: string;
   date?: string;
-  address?: Record<string, string | null | undefined>;
+  address?: Record<string, string | null | undefined | Record<string, string>>;
   summary?: { itemsCount?: number; itemsTotal?: number };
   items?: Array<{ name: string; type?: string; quantity: number; price: number; author?: string | null }>;
   statusUrl?: string;
@@ -112,6 +116,7 @@ export default function CourierOrders() {
   const [courierSearch, setCourierSearch] = useState(courierFilters.search || '');
   const [orderSearch, setOrderSearch] = useState(courierOrderFilters.search || '');
   const [selectedCourier, setSelectedCourier] = useState<Courier | null>(null);
+  const [editingCourier, setEditingCourier] = useState<Courier | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<CourierOrder | null>(null);
 
   const totalBalance = useMemo(() => couriers.reduce((sum, courier) => sum + (courier.balance || 0), 0), [couriers]);
@@ -170,13 +175,14 @@ export default function CourierOrders() {
           {courierOrderPagination.total === 0 ? <tr><td colSpan={8} className="text-center text-muted py-5">Buyurtma topilmadi</td></tr> : null}
         </tbody></table></div><PaginationControls {...courierOrderPagination} onPageChange={(page) => load({ courier_orders_page: page })} />
       </div>
-      <CourierModal courier={selectedCourier} onHide={() => setSelectedCourier(null)} onPatch={patch} onWarn={warn} onResetPassword={resetPassword} />
+      <CourierModal courier={selectedCourier} onHide={() => setSelectedCourier(null)} onPatch={patch} onWarn={warn} onResetPassword={resetPassword} onEdit={(courier) => setEditingCourier(courier)} />
+      <CourierEditModal courier={editingCourier} onHide={() => setEditingCourier(null)} />
       <OrderModal order={selectedOrder} statuses={courierOrderStatuses} onHide={() => setSelectedOrder(null)} onPatch={patch} />
     </div>
   );
 }
 
-function CourierModal({ courier, onHide, onPatch, onWarn, onResetPassword }: { courier: Courier | null; onHide: () => void; onPatch: (url?: string, data?: Record<string, string>, confirmation?: string) => void; onWarn: (courier: Courier) => void; onResetPassword: (courier: Courier) => void }) {
+function CourierModal({ courier, onHide, onPatch, onWarn, onResetPassword, onEdit }: { courier: Courier | null; onHide: () => void; onPatch: (url?: string, data?: Record<string, string>, confirmation?: string) => void; onWarn: (courier: Courier) => void; onResetPassword: (courier: Courier) => void; onEdit: (courier: Courier) => void }) {
   return <Modal show={!!courier} onHide={onHide} size="xl" centered><Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">{courier?.name}</Modal.Title></Modal.Header><Modal.Body>{!courier ? null : <div className="row g-3">
     <Info title="Asosiy ma'lumotlar" rows={[['Telefon', courier.phone || '—'], ['Hudud', courier.region || '—'], ['Holat', courierLabel(courier.status)], ['Verifikatsiya', courier.verificationLabel || courier.verificationStatus || '—'], ['Ro‘yxatdan o‘tgan', courier.joined || '—'], ['Ogohlantirish', `${courier.warningCount || 0}/3`]]} />
     <Info title="Moliya" rows={[['Balans', `${fmt(courier.balance || 0)} so'm`], ['Rezerv', `${fmt(courier.reserved || 0)} so'm`], ['Daromad', `${fmt(courier.totalEarned || 0)} so'm`], ['Yechilgan', `${fmt(courier.totalWithdrawal || 0)} so'm`], ['Buyurtmalar', String(courier.orders || 0)], ['Karta', String(courier.payment?.card || '—')]]} />
@@ -186,7 +192,7 @@ function CourierModal({ courier, onHide, onPatch, onWarn, onResetPassword }: { c
     <ListBlock title="Tranzaksiyalar" items={courier.transactions || []} render={(item) => <><strong>{fmt(Number(item.net || item.amount || 0))} so'm · {String(item.status || '—')}</strong><span>Komissiya: {fmt(Number(item.commission || 0))} · {String(item.date || '—')}</span></>} />
     <ListBlock title="Hujjatlar" items={courier.documents || []} render={(item) => <><strong>{String(item.type || 'Hujjat')} · {String(item.name || '—')}</strong><span>{String(item.description || '')} {item.size ? `· ${item.size} KB` : ''}</span></>} />
     <ListBlock title={`Ogohlantirishlar (${courier.warningCount || 0}/3)`} items={courier.banLogs || []} render={(item) => <><strong>{String(item.title || '—')}</strong><span>{String(item.message || '')} · {String(item.date || '—')}</span></>} />
-  </div>}</Modal.Body><Modal.Footer>{courier ? <Button variant="outline-warning" onClick={() => onWarn(courier)}>Ogohlantirish</Button> : null}{courier ? <Button variant="outline-secondary" onClick={() => onResetPassword(courier)}>Parol reset</Button> : null}{courier?.status !== 'approved' ? <Button variant="outline-success" onClick={() => onPatch(courier?.actions?.approveUrl, {}, 'Kuryer tasdiqlansinmi?')}>Tasdiqlash</Button> : null}<Button variant="outline-danger" onClick={() => onPatch(courier?.actions?.rejectUrl, {}, 'Kuryer rad etilsinmi?')}>Rad etish</Button>{courier?.status === 'blocked' ? <Button variant="outline-primary" onClick={() => onPatch(courier?.actions?.unblockUrl, { message: 'Admin tomonidan blokdan chiqarildi.' }, 'Kuryer blokdan chiqarilsinmi?')}>Blokdan chiqarish</Button> : null}<Button variant="light" onClick={onHide}>Yopish</Button></Modal.Footer></Modal>;
+  </div>}</Modal.Body><Modal.Footer>{courier ? <Button variant="outline-warning" onClick={() => onWarn(courier)}>Ogohlantirish</Button> : null}{courier ? <Button variant="outline-primary" onClick={() => onEdit(courier)}>Tahrirlash</Button> : null}{courier ? <Button variant="outline-secondary" onClick={() => onResetPassword(courier)}>Parol reset</Button> : null}{courier?.status !== 'approved' ? <Button variant="outline-success" onClick={() => onPatch(courier?.actions?.approveUrl, {}, 'Kuryer tasdiqlansinmi?')}>Tasdiqlash</Button> : null}<Button variant="outline-danger" onClick={() => onPatch(courier?.actions?.rejectUrl, {}, 'Kuryer rad etilsinmi?')}>Rad etish</Button>{courier?.status === 'blocked' ? <Button variant="outline-primary" onClick={() => onPatch(courier?.actions?.unblockUrl, { message: 'Admin tomonidan blokdan chiqarildi.' }, 'Kuryer blokdan chiqarilsinmi?')}>Blokdan chiqarish</Button> : null}<Button variant="light" onClick={onHide}>Yopish</Button></Modal.Footer></Modal>;
 }
 
 function OrderModal({ order, statuses, onHide, onPatch }: { order: CourierOrder | null; statuses: Record<string, StatusMeta>; onHide: () => void; onPatch: (url?: string, data?: Record<string, string>) => void }) {
@@ -195,6 +201,7 @@ function OrderModal({ order, statuses, onHide, onPatch }: { order: CourierOrder 
     <Info title="Hisob-kitob" rows={[['Yetkazma summasi', `${fmt(order.amount)} so'm`], ['Order summasi', `${fmt(order.mainOrderAmount || 0)} so'm`], ['Kuryer ulushi', `${fmt(order.courierPrice || 0)} so'm`], ['Bonus', `${fmt(order.bonus || 0)} so'm`], ['Pickup bonus', `${fmt(order.pickupBonus || 0)} so'm`], ['Settled', `${fmt(order.settledAmount || 0)} so'm`]]} />
     <Info title="Jarayon" rows={[['Holat', order.statusLabel || order.status], ['To‘lov', order.paymentStatus || '—'], ['Yetkazish turi', order.deliveryType || '—'], ['Olingan vaqt', order.pickedUpAt || '—'], ['SLA deadline', order.slaDeadline || '—'], ['Kechikish', `${order.delaySeconds || 0} soniya`]]} />
     <Info title="Manzil" rows={[['Qabul qiluvchi', order.address?.fullName || '—'], ['Telefon', order.address?.phone || '—'], ['Viloyat', order.address?.region || '—'], ['Tuman', order.address?.district || '—'], ['Ko‘cha', order.address?.street || '—'], ['Uy', order.address?.home || '—']]} />
+    <div className="col-12"><div className="detail-panel"><h6 className="fw-bold mb-2">Xaritada ochish</h6><MapButtons mapLinks={(order.address?.mapLinks || {}) as Record<string, string>} /></div></div>
     <div className="col-12"><div className="detail-panel"><h6 className="fw-bold mb-3">Mahsulotlar</h6>{(order.items || []).map((item, index) => <div className="d-flex justify-content-between border-bottom py-2" key={`${item.name}-${index}`}><div><strong>{item.name}</strong><div className="small text-muted">{item.author || item.type || '—'}</div></div><div className="text-end">{item.quantity} x {fmt(item.price)}<div className="fw-semibold">{fmt(item.quantity * item.price)} so'm</div></div></div>)}{(order.items || []).length === 0 ? <div className="text-muted">Mahsulot topilmadi</div> : null}</div></div>
   </div>}</Modal.Body><Modal.Footer>{order ? <select className="form-select" style={{ maxWidth: 280 }} value={order.status} onChange={(e) => onPatch(order.statusUrl, { status: e.target.value })}>{Object.entries(statuses).map(([value, meta]) => <option key={value} value={value}>{meta.label}</option>)}</select> : null}<Button variant="light" onClick={onHide}>Yopish</Button></Modal.Footer></Modal>;
 }
@@ -207,4 +214,49 @@ function Info({ title, rows }: { title: string; rows: Array<[string, string]> })
 }
 function ListBlock({ title, items, render }: { title: string; items: AnyRow[]; render: (item: AnyRow) => JSX.Element }) {
   return <div className="col-xl-6"><div className="detail-panel h-100"><h6 className="fw-bold mb-3">{title}</h6>{items.map((item, index) => <div className="border-bottom py-2 d-flex flex-column" key={String(item.id || index)}>{render(item)}</div>)}{items.length === 0 ? <div className="text-muted small">Ma'lumot topilmadi</div> : null}</div></div>;
+}
+
+function CourierEditModal({ courier, onHide }: { courier: Courier | null; onHide: () => void }) {
+  const submit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!courier?.actions?.updateUrl) return;
+    const form = new FormData(event.currentTarget);
+    form.append('_method', 'put');
+    router.post(courier.actions.updateUrl, form, { preserveScroll: true, onSuccess: onHide });
+  };
+
+  return <Modal show={!!courier} onHide={onHide} centered size="lg"><form onSubmit={submit}><Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">Kuryer tahrirlash</Modal.Title></Modal.Header><Modal.Body><div className="row g-3">
+    <FormInput name="first_name" label="Ism" defaultValue={courier?.firstName || courier?.name?.split(' ')[0]} required />
+    <FormInput name="last_name" label="Familiya" defaultValue={courier?.lastName || courier?.name?.split(' ').slice(1).join(' ')} required />
+    <FormInput name="phone_number" label="Telefon" defaultValue={courier?.phone} required />
+    <FormInput name="region" label="Hudud" defaultValue={courier?.region} required />
+    <div className="col-md-6"><label className="form-label">Status</label><select name="status" defaultValue={courier?.status || 'pending'} className="form-select"><option value="pending">Kutilmoqda</option><option value="approved">Faol</option><option value="rejected">Rad etilgan</option><option value="blocked">Bloklangan</option></select></div>
+    <FormInput name="balance" label="Balans" type="number" defaultValue={courier?.balance} />
+    <div className="col-md-6"><label className="form-label">Transport</label><select name="transport_type" defaultValue={courier?.transport || ''} className="form-select"><option value="">Tanlanmagan</option><option value="foot">Piyoda</option><option value="bicycle">Velosiped</option><option value="motorcycle">Mototsikl</option><option value="car">Avto</option></select></div>
+    <FormInput name="vehicle_brand" label="Brend" defaultValue={courier?.vehicleBrand} />
+    <FormInput name="vehicle_model" label="Model" defaultValue={courier?.vehicleModel} />
+    <FormInput name="vehicle_color" label="Rang" defaultValue={courier?.vehicleColor} />
+    <FormInput name="vehicle_plate_number" label="Raqam" defaultValue={courier?.plate} />
+    <FormInput name="inn" label="INN" defaultValue={String(courier?.identity?.inn || '')} />
+    <FormInput name="payment_card" label="Karta" defaultValue={String(courier?.payment?.card || '')} />
+    <FormInput name="card_holder" label="Karta egasi" defaultValue={String(courier?.payment?.cardHolder || '')} />
+    <FormInput name="home_address" label="Uy manzili" defaultValue={String(courier?.payment?.homeAddress || '')} />
+    <div className="col-md-6"><label className="form-label">Verifikatsiya</label><select name="verification_status" defaultValue={courier?.verificationStatus || 'unverified'} className="form-select"><option value="unverified">Unverified</option><option value="pending">Pending</option><option value="verified">Verified</option><option value="rejected">Rejected</option></select></div>
+    <div className="col-12"><label className="form-label">Verifikatsiya izohi</label><textarea name="verification_notes" defaultValue={courier?.verificationNotes || ''} className="form-control" rows={2}></textarea></div>
+  </div></Modal.Body><Modal.Footer><Button variant="light" onClick={onHide}>Bekor</Button><Button type="submit" variant="primary">Saqlash</Button></Modal.Footer></form></Modal>;
+}
+
+function FormInput({ name, label, defaultValue, required, type = 'text' }: { name: string; label: string; defaultValue?: string | number | null; required?: boolean; type?: string }) {
+  return <div className="col-md-6"><label className="form-label">{label}</label><input name={name} type={type} defaultValue={defaultValue ?? ''} required={required} className="form-control" /></div>;
+}
+
+function MapButtons({ mapLinks }: { mapLinks?: Record<string, string> }) {
+  if (!mapLinks?.google && !mapLinks?.yandex) return <span className="text-muted small">Xarita linki yo'q</span>;
+
+  return (
+    <div className="d-flex gap-2 flex-wrap mt-2">
+      {mapLinks.google ? <a className="btn btn-sm btn-light" href={mapLinks.google} target="_blank" rel="noreferrer"><i className="bi bi-geo-alt me-1"></i>Google Map</a> : null}
+      {mapLinks.yandex ? <a className="btn btn-sm btn-light" href={mapLinks.yandex} target="_blank" rel="noreferrer"><i className="bi bi-map me-1"></i>Yandex Map</a> : null}
+    </div>
+  );
 }

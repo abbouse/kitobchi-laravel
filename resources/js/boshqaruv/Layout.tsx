@@ -7,7 +7,6 @@ const nav = [
     { to: '/boshqaruv/live', match: '/boshqaruv/live', label: 'Live Dashboard', icon: 'bi-broadcast', badge: 'LIVE' },
   ]},
   { group: 'Katalog', items: [
-    { to: '/boshqaruv/products', match: '/boshqaruv/products', label: 'Mahsulotlar', icon: 'bi-box-seam' },
     { to: '/boshqaruv/books', match: '/boshqaruv/books', label: 'Kitoblar', icon: 'bi-book' },
     { to: '/boshqaruv/book-categories', match: '/boshqaruv/book-categories', label: 'Kitob kategoriyalari', icon: 'bi-bookmarks' },
     { to: '/boshqaruv/stationeries', match: '/boshqaruv/stationeries', label: 'Kanselyariya', icon: 'bi-pencil-square' },

@@ -24,4 +24,9 @@ class ProductViewLog extends Model
     protected $casts = [
         'recommendation_active' => 'boolean',
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
 }

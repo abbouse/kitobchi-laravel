@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import type { FormEvent } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button } from 'react-bootstrap';
 
@@ -14,20 +15,20 @@ interface Promo {
   status: string;
   maxDiscount?: number;
   minOrder?: number;
+  perUserLimit?: number;
   expiresAt?: string;
   createUrl?: string;
   generateUrl?: string;
-  showUrl?: string;
-  editUrl?: string;
+  updateUrl?: string;
   destroyUrl?: string;
 }
+
+const emptyPromo: Partial<Promo> = { code: '', type: 'percent', discount: 10, max: 0, minOrder: 0, maxDiscount: 0, perUserLimit: 1, status: 'Active' };
 
 export default function Promokodlar() {
   const { promocodes = [] } = usePage<{ promocodes?: Promo[] }>().props;
   const [selected, setSelected] = useState<Promo | null>(null);
-  const createUrl = '/boshqaruv/promokodlar';
-  const generateUrl = '/boshqaruv/promokodlar';
-
+  const [editing, setEditing] = useState<Partial<Promo> | null>(null);
   const activeCount = promocodes.filter((promo) => promo.status === 'Active').length;
   const usedTotal = useMemo(() => promocodes.reduce((sum, promo) => sum + (promo.used || 0), 0), [promocodes]);
 
@@ -39,12 +40,8 @@ export default function Promokodlar() {
   return (
     <div>
       <div className="page-head">
-        <div>
-          <h1 className="page-title">Promokodlar</h1>
-          <p className="page-subtitle">Chegirmalar, limitlar va ishlatilish statistikasi</p>
-        </div>
-        <div className="d-flex gap-2">
-        </div>
+        <div><h1 className="page-title">Promokodlar</h1><p className="page-subtitle">Chegirmalar, limitlar va ishlatilish statistikasi</p></div>
+        <button className="btn btn-primary-gradient" onClick={() => setEditing(emptyPromo)}><i className="bi bi-plus-lg me-1"></i>Promokod qo'shish</button>
       </div>
 
       <div className="row g-3 mb-4">
@@ -52,68 +49,55 @@ export default function Promokodlar() {
           { label: 'Jami promokod', value: promocodes.length, icon: 'bi-ticket-perforated', color: '#4f46e5' },
           { label: 'Faol', value: activeCount, icon: 'bi-check-circle', color: '#10b981' },
           { label: 'Ishlatilgan', value: usedTotal, icon: 'bi-bag-check', color: '#f59e0b' },
-          { label: 'Foizli kodlar', value: promocodes.filter((promo) => promo.type === 'percentage').length, icon: 'bi-percent', color: '#7c3aed' },
-        ].map((item) => (
-          <div className="col-xl-3 col-md-6" key={item.label}>
-            <div className="stat-card">
-              <div className="d-flex align-items-center gap-3">
-                <div className="stat-icon" style={{ background: item.color }}><i className={`bi ${item.icon}`}></i></div>
-                <div><div className="stat-value">{item.value}</div><div className="stat-label">{item.label}</div></div>
-              </div>
-            </div>
-          </div>
-        ))}
+          { label: 'Foizli kodlar', value: promocodes.filter((promo) => promo.type === 'percent').length, icon: 'bi-percent', color: '#7c3aed' },
+        ].map((item) => <div className="col-xl-3 col-md-6" key={item.label}><div className="stat-card"><div className="d-flex align-items-center gap-3"><div className="stat-icon" style={{ background: item.color }}><i className={`bi ${item.icon}`}></i></div><div><div className="stat-value">{item.value}</div><div className="stat-label">{item.label}</div></div></div></div></div>)}
       </div>
 
       <div className="card-panel">
         <div className="table-responsive">
           <table className="data-table">
             <thead><tr><th>ID</th><th>Kod</th><th>Chegirma</th><th>Turi</th><th>Ishlatilgan</th><th>Limit</th><th>Muddati</th><th>Status</th><th>Amallar</th></tr></thead>
-            <tbody>
-              {promocodes.map((promo) => {
-                const percent = promo.max > 0 ? Math.min(100, Math.round((promo.used / promo.max) * 100)) : 0;
-                return (
-                  <tr key={promo.id}>
-                    <td className="fw-semibold text-primary">#{promo.id}</td>
-                    <td className="fw-bold" style={{ fontFamily: 'monospace', letterSpacing: 1 }}>{promo.code}</td>
-                    <td className="fw-bold text-success">{promo.type === 'percentage' ? `${promo.discount}%` : `${fmt(promo.discount)} so'm`}</td>
-                    <td><span className="chip chip-purple">{promo.type}</span></td>
-                    <td>{promo.used} / {promo.max || '∞'}</td>
-                    <td>
-                      <div className="progress" style={{ width: 90, height: 6 }}>
-                        <div className="progress-bar" style={{ width: `${percent}%`, background: percent > 80 ? '#ef4444' : '#10b981' }}></div>
-                      </div>
-                    </td>
-                    <td className="text-muted">{promo.expiresAt || '—'}</td>
-                    <td><span className={`chip ${promo.status === 'Active' ? 'chip-success' : 'chip-gray'}`}>{promo.status}</span></td>
-                    <td>
-                      <button className="btn btn-sm btn-light me-1" onClick={() => setSelected(promo)}><i className="bi bi-eye"></i></button>
-                      <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(promo)}><i className="bi bi-trash"></i></button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
+            <tbody>{promocodes.map((promo) => {
+              const percent = promo.max > 0 ? Math.min(100, Math.round((promo.used / promo.max) * 100)) : 0;
+              return <tr key={promo.id}><td className="fw-semibold text-primary">#{promo.id}</td><td className="fw-bold" style={{ fontFamily: 'monospace', letterSpacing: 1 }}>{promo.code}</td><td className="fw-bold text-success">{promo.type === 'percent' ? `${promo.discount}%` : `${fmt(promo.discount)} so'm`}</td><td><span className="chip chip-purple">{promo.type}</span></td><td>{promo.used} / {promo.max || '∞'}</td><td><div className="progress" style={{ width: 90, height: 6 }}><div className="progress-bar" style={{ width: `${percent}%`, background: percent > 80 ? '#ef4444' : '#10b981' }}></div></div></td><td className="text-muted">{promo.expiresAt || '—'}</td><td><span className={`chip ${promo.status === 'Active' ? 'chip-success' : 'chip-gray'}`}>{promo.status}</span></td><td><button className="btn btn-sm btn-light me-1" onClick={() => setSelected(promo)}><i className="bi bi-eye"></i></button><button className="btn btn-sm btn-light me-1" onClick={() => setEditing(promo)}><i className="bi bi-pencil"></i></button><button className="btn btn-sm btn-light text-danger" onClick={() => destroy(promo)}><i className="bi bi-trash"></i></button></td></tr>;
+            })}</tbody>
           </table>
         </div>
       </div>
 
-      <Modal show={!!selected} onHide={() => setSelected(null)} centered>
-        <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">Promokod: {selected?.code}</Modal.Title></Modal.Header>
-        <Modal.Body>
-          <div className="row g-3">
-            <div className="col-6"><small className="text-muted">Kod</small><div className="fw-bold" style={{ fontFamily: 'monospace' }}>{selected?.code}</div></div>
-            <div className="col-6"><small className="text-muted">Chegirma</small><div className="fw-bold text-success">{selected?.type === 'percentage' ? `${selected?.discount}%` : `${fmt(selected?.discount || 0)} so'm`}</div></div>
-            <div className="col-6"><small className="text-muted">Min. buyurtma</small><div>{fmt(selected?.minOrder || 0)} so'm</div></div>
-            <div className="col-6"><small className="text-muted">Max. chegirma</small><div>{fmt(selected?.maxDiscount || 0)} so'm</div></div>
-            <div className="col-6"><small className="text-muted">Ishlatilgan</small><div>{selected?.used} / {selected?.max || '∞'}</div></div>
-            <div className="col-6"><small className="text-muted">Status</small><div><span className={`chip ${selected?.status === 'Active' ? 'chip-success' : 'chip-gray'}`}>{selected?.status}</span></div></div>
-          </div>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="light" onClick={() => setSelected(null)}>Yopish</Button>
-        </Modal.Footer>
-      </Modal>
+      <PromoView promo={selected} onHide={() => setSelected(null)} onEdit={() => { setEditing(selected); setSelected(null); }} />
+      <PromoForm promo={editing} generateUrl={promocodes[0]?.generateUrl || '/boshqaruv/promokodlar/generate'} onHide={() => setEditing(null)} />
     </div>
   );
+}
+
+function PromoView({ promo, onHide, onEdit }: { promo: Promo | null; onHide: () => void; onEdit: () => void }) {
+  return <Modal show={!!promo} onHide={onHide} centered><Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">Promokod: {promo?.code}</Modal.Title></Modal.Header><Modal.Body><div className="row g-3"><Info label="Kod" value={promo?.code} mono /><Info label="Chegirma" value={promo?.type === 'percent' ? `${promo?.discount}%` : `${fmt(promo?.discount || 0)} so'm`} /><Info label="Min. buyurtma" value={`${fmt(promo?.minOrder || 0)} so'm`} /><Info label="Max. chegirma" value={`${fmt(promo?.maxDiscount || 0)} so'm`} /><Info label="Bir user limiti" value={promo?.perUserLimit || 1} /><Info label="Ishlatilgan" value={`${promo?.used} / ${promo?.max || '∞'}`} /></div></Modal.Body><Modal.Footer><Button variant="outline-primary" onClick={onEdit}>Tahrirlash</Button><Button variant="light" onClick={onHide}>Yopish</Button></Modal.Footer></Modal>;
+}
+
+function PromoForm({ promo, generateUrl, onHide }: { promo: Partial<Promo> | null; generateUrl: string; onHide: () => void }) {
+  const isEdit = !!promo?.id;
+  const [code, setCode] = useState(promo?.code || '');
+
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    if (isEdit) form.append('_method', 'put');
+    router.post(isEdit ? String(promo?.updateUrl) : '/boshqaruv/promokodlar', form, { preserveScroll: true, onSuccess: onHide });
+  };
+
+  const generate = async () => {
+    const response = await fetch(generateUrl, { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+    if (response.ok) setCode((await response.json()).code || '');
+  };
+
+  return <Modal show={!!promo} onHide={onHide} centered><form onSubmit={submit}><Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">{isEdit ? 'Promokodni tahrirlash' : "Promokod qo'shish"}</Modal.Title></Modal.Header><Modal.Body><div className="row g-3"><div className="col-md-8"><label className="form-label">Kod</label><input name="code" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} disabled={isEdit} required className="form-control" /></div><div className="col-md-4 d-flex align-items-end"><button type="button" className="btn btn-light w-100" onClick={generate} disabled={isEdit}>Generate</button></div><Field name="amount" label="Chegirma" type="number" defaultValue={promo?.discount} required /><div className="col-md-6"><label className="form-label">Turi</label><select name="type" defaultValue={promo?.type || 'percent'} className="form-select"><option value="percent">Foiz</option><option value="fixed">Summa</option></select></div><Field name="max_discount_amount" label="Max chegirma" type="number" defaultValue={promo?.maxDiscount} /><Field name="min_order_amount" label="Min buyurtma" type="number" defaultValue={promo?.minOrder} /><Field name="per_user_limit" label="Bir user limiti" type="number" defaultValue={promo?.perUserLimit || 1} /><Field name="usesLimit" label="Umumiy limit" type="number" defaultValue={promo?.max || 0} /><Field name="expires_at" label="Muddati" type="date" defaultValue={promo?.expiresAt} required /><div className="col-md-6"><label className="form-label">Status</label><select name="status" defaultValue={promo?.status === 'Active' ? '1' : '0'} className="form-select"><option value="1">Faol</option><option value="0">Nofaol</option></select></div></div></Modal.Body><Modal.Footer><Button variant="light" onClick={onHide}>Bekor</Button><Button type="submit" variant="primary">{isEdit ? 'Saqlash' : "Qo'shish"}</Button></Modal.Footer></form></Modal>;
+}
+
+function Field({ name, label, type = 'text', defaultValue, required }: { name: string; label: string; type?: string; defaultValue?: string | number | null; required?: boolean }) {
+  return <div className="col-md-6"><label className="form-label">{label}</label><input name={name} type={type} defaultValue={defaultValue ?? ''} required={required} className="form-control" /></div>;
+}
+
+function Info({ label, value, mono }: { label: string; value?: string | number | null; mono?: boolean }) {
+  return <div className="col-6"><small className="text-muted">{label}</small><div className="fw-bold" style={mono ? { fontFamily: 'monospace' } : undefined}>{value ?? '—'}</div></div>;
 }

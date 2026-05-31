@@ -508,7 +508,8 @@ export default function Orders() {
 }
 
 function AddressBlock({ address }: { address: Record<string, unknown> }) {
-  const rows = Object.entries(address).filter(([, value]) => value !== null && value !== undefined && value !== '');
+  const rows = Object.entries(address).filter(([key, value]) => key !== 'mapLinks' && value !== null && value !== undefined && value !== '');
+  const mapLinks = (address.mapLinks || {}) as Record<string, string>;
 
   if (!rows.length) {
     return <div className="text-muted small">Manzil kiritilmagan.</div>;
@@ -522,7 +523,22 @@ function AddressBlock({ address }: { address: Record<string, unknown> }) {
           <strong>{String(value)}</strong>
         </div>
       ))}
+      <div>
+        <span>Xarita</span>
+        <MapButtons mapLinks={mapLinks} />
+      </div>
     </div>
+  );
+}
+
+function MapButtons({ mapLinks }: { mapLinks?: Record<string, string> }) {
+  if (!mapLinks?.google && !mapLinks?.yandex) return <strong>—</strong>;
+
+  return (
+    <strong className="d-flex gap-2 flex-wrap justify-content-end">
+      {mapLinks.google ? <a className="btn btn-sm btn-light" href={mapLinks.google} target="_blank" rel="noreferrer"><i className="bi bi-geo-alt me-1"></i>Google Map</a> : null}
+      {mapLinks.yandex ? <a className="btn btn-sm btn-light" href={mapLinks.yandex} target="_blank" rel="noreferrer"><i className="bi bi-map me-1"></i>Yandex Map</a> : null}
+    </strong>
   );
 }
 

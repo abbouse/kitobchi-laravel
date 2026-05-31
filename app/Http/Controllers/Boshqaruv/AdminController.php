@@ -13,7 +13,9 @@ use App\Models\ApiClient;
 use App\Models\ApiClientRequestLog;
 use App\Models\Author;
 use App\Models\Blogger;
+use App\Models\BloggerShipment;
 use App\Models\BookClub;
+use App\Models\BookClubComment;
 use App\Models\BotTicket;
 use App\Models\BookCategories;
 use App\Models\Books;
@@ -37,6 +39,7 @@ use App\Models\MysteryBoxPlan;
 use App\Models\MysteryBoxSubscription;
 use App\Models\Policy;
 use App\Models\ProjectSetting;
+use App\Models\ProductViewLog;
 use App\Models\Publisher;
 use App\Models\Report;
 use App\Models\Promocode;
@@ -59,7 +62,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use App\Support\ProductImageUrls;
 use App\Enums\SellerOrderStatusCode;
 use App\Services\AdminOrderStatusSyncService;
@@ -169,10 +174,369 @@ class AdminController extends Controller
         return response()->json($this->orderPayload($order));
     }
 
+    public function bookClubData(BookClub $bookClub): JsonResponse
+    {
+        return response()->json($this->bookClubDetailPayload($bookClub));
+    }
+
+    public function destroyBookClub(BookClub $bookClub): \Illuminate\Http\RedirectResponse
+    {
+        $bookClub->update(['is_deleted' => true]);
+
+        return back()->with('success', "Post o'chirildi.");
+    }
+
+    public function authorData(Author $author): JsonResponse
+    {
+        return response()->json($this->authorDetailPayload($author));
+    }
+
+    public function storeAuthor(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $data = $this->validatedAuthorData($request);
+        $data['image'] = $this->storeCatalogImage($request, 'authors', 'image_file', $data['image'] ?? null);
+
+        Author::query()->create($data);
+
+        return back()->with('success', "Muallif qo'shildi.");
+    }
+
+    public function updateAuthor(Request $request, Author $author): \Illuminate\Http\RedirectResponse
+    {
+        $data = $this->validatedAuthorData($request, $author);
+        $nameChanged = ($data['name'] ?? $author->name) !== $author->name;
+
+        if ($request->boolean('remove_image')) {
+            $this->deleteStoredFile($author->image);
+            $data['image'] = null;
+        }
+
+        if ($request->hasFile('image_file')) {
+            $this->deleteStoredFile($author->image);
+            $data['image'] = $this->storeCatalogImage($request, 'authors', 'image_file');
+        } elseif (array_key_exists('image', $data)) {
+            $data['image'] = trim((string) ($data['image'] ?? '')) ?: null;
+        }
+
+        $author->update($data);
+
+        if ($nameChanged) {
+            Books::query()->where('author_id', $author->id)->update(['author' => $author->name]);
+        }
+
+        return back()->with('success', 'Muallif yangilandi.');
+    }
+
+    public function generateAuthorImagePrompt(Author $author): \Illuminate\Http\RedirectResponse
+    {
+        if (! $author->needs_ai_portrait) {
+            return back()->with('error', 'Bu muallif uchun AI portret talab qilinmaydi.');
+        }
+
+        $prompt = "Photorealistic editorial portrait of author {$author->name}, shoulders-up, centered composition, soft natural studio lighting, clean neutral background, calm confident expression, realistic skin texture, high detail, bookstore catalog profile image, square 1:1 crop, no text, no watermark.";
+
+        return back()
+            ->with('success', 'AI portret prompti tayyorlandi.')
+            ->with('author_ai_prompt', $prompt);
+    }
+
+    public function destroyAuthor(Author $author): \Illuminate\Http\RedirectResponse
+    {
+        Books::query()
+            ->where('author_id', $author->id)
+            ->update(['author_id' => null, 'author' => null]);
+
+        $this->deleteStoredFile($author->image);
+        $author->delete();
+
+        return back()->with('success', "Muallif o'chirildi. Bog'langan kitoblar muallifsiz qoldirildi.");
+    }
+
+    public function publisherData(Publisher $publisher): JsonResponse
+    {
+        return response()->json($this->publisherDetailPayload($publisher));
+    }
+
+    public function storePublisher(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $data = $this->validatedPublisherData($request);
+        $data['image'] = $this->storeCatalogImage($request, 'publishers', 'image');
+
+        Publisher::query()->create($data);
+
+        return back()->with('success', "Nashriyot qo'shildi.");
+    }
+
+    public function updatePublisher(Request $request, Publisher $publisher): \Illuminate\Http\RedirectResponse
+    {
+        $data = $this->validatedPublisherData($request, $publisher);
+
+        if ($request->boolean('remove_image')) {
+            $this->deleteStoredFile($publisher->image);
+            $data['image'] = null;
+        }
+
+        if ($request->hasFile('image')) {
+            $this->deleteStoredFile($publisher->image);
+            $data['image'] = $this->storeCatalogImage($request, 'publishers', 'image');
+        } elseif (! $request->boolean('remove_image')) {
+            unset($data['image']);
+        }
+
+        $publisher->update($data);
+
+        return back()->with('success', 'Nashriyot yangilandi.');
+    }
+
+    public function destroyPublisher(Publisher $publisher): \Illuminate\Http\RedirectResponse
+    {
+        Books::query()->where('publisher_id', $publisher->id)->update(['publisher_id' => null]);
+
+        $this->deleteStoredFile($publisher->image);
+        $publisher->delete();
+
+        return back()->with('success', "Nashriyot o'chirildi. Bog'langan kitoblar nashriyotsiz qoldirildi.");
+    }
+
+    public function storeBookCategory(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        (new BookCategories())->forceFill($this->categoryData($request, 'book_categories'))->save();
+
+        return back()->with('success', "Kitob kategoriyasi qo'shildi.");
+    }
+
+    public function updateBookCategory(Request $request, BookCategories $bookCategory): \Illuminate\Http\RedirectResponse
+    {
+        $bookCategory->forceFill($this->categoryData($request, 'book_categories'))->save();
+
+        return back()->with('success', 'Kitob kategoriyasi yangilandi.');
+    }
+
+    public function destroyBookCategory(BookCategories $bookCategory): \Illuminate\Http\RedirectResponse
+    {
+        if ($bookCategory->books()->exists()) {
+            return back()->with('error', "Bu kategoriyada kitoblar mavjud — o'chirib bo'lmaydi.");
+        }
+
+        $bookCategory->delete();
+
+        return back()->with('success', "Kitob kategoriyasi o'chirildi.");
+    }
+
+    public function storeStationeryCategory(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        (new StationeryCategory())->forceFill($this->categoryData($request, 'stationery_categories'))->save();
+
+        return back()->with('success', "Kanstovar kategoriyasi qo'shildi.");
+    }
+
+    public function updateStationeryCategory(Request $request, StationeryCategory $stationeryCategory): \Illuminate\Http\RedirectResponse
+    {
+        $stationeryCategory->forceFill($this->categoryData($request, 'stationery_categories'))->save();
+
+        return back()->with('success', 'Kanstovar kategoriyasi yangilandi.');
+    }
+
+    public function destroyStationeryCategory(StationeryCategory $stationeryCategory): \Illuminate\Http\RedirectResponse
+    {
+        if ($stationeryCategory->stationeries()->exists()) {
+            return back()->with('error', "Bu kategoriyada mahsulotlar mavjud — o'chirib bo'lmaydi.");
+        }
+
+        $stationeryCategory->delete();
+
+        return back()->with('success', "Kanstovar kategoriyasi o'chirildi.");
+    }
+
+    public function storePromocode(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $data = $this->validatedPromocodeData($request);
+        $data['code'] = Str::upper($data['code']);
+        $data['usedCount'] = 0;
+        $data['max_discount_amount'] = $data['type'] === 'percent' ? ($data['max_discount_amount'] ?? null) : null;
+
+        Promocode::query()->create($data);
+
+        return back()->with('success', "Promokod qo'shildi.");
+    }
+
+    public function updatePromocode(Request $request, Promocode $promocode): \Illuminate\Http\RedirectResponse
+    {
+        $data = $this->validatedPromocodeData($request, $promocode);
+        unset($data['code']);
+        $data['max_discount_amount'] = $data['type'] === 'percent' ? ($data['max_discount_amount'] ?? null) : null;
+
+        $promocode->update($data);
+
+        return back()->with('success', 'Promokod yangilandi.');
+    }
+
+    public function destroyPromocode(Promocode $promocode): \Illuminate\Http\RedirectResponse
+    {
+        $promocode->delete();
+
+        return back()->with('success', "Promokod o'chirildi.");
+    }
+
+    public function generatePromocode(): JsonResponse
+    {
+        return response()->json(['code' => Str::upper(Str::random(8))]);
+    }
+
+    public function bloggerData(Blogger $blogger): JsonResponse
+    {
+        $blogger->load(['shipments' => fn ($query) => $query->latest('scheduled_for')->latest('id'), 'shipments.items']);
+
+        return response()->json($this->bloggerDetailPayload($blogger));
+    }
+
+    public function storeBlogger(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        Blogger::query()->create($this->validatedBloggerData($request));
+
+        return back()->with('success', "Bloger qo'shildi.");
+    }
+
+    public function updateBlogger(Request $request, Blogger $blogger): \Illuminate\Http\RedirectResponse
+    {
+        $blogger->update($this->validatedBloggerData($request));
+
+        return back()->with('success', 'Bloger yangilandi.');
+    }
+
+    public function destroyBlogger(Blogger $blogger): \Illuminate\Http\RedirectResponse
+    {
+        $blogger->delete();
+
+        return back()->with('success', "Bloger o'chirildi.");
+    }
+
+    public function storeBloggerShipment(Request $request, Blogger $blogger): \Illuminate\Http\RedirectResponse
+    {
+        $data = $request->validate([
+            'scheduled_for' => ['required', 'date'],
+            'note' => ['nullable', 'string', 'max:1000'],
+            'items_text' => ['required', 'string'],
+        ]);
+        $items = $this->shipmentItems((string) $data['items_text']);
+        if ($items === []) {
+            return back()->with('error', 'Kamida bitta item kiriting.');
+        }
+
+        $shipment = $blogger->shipments()->create([
+            'scheduled_for' => $data['scheduled_for'],
+            'status' => BloggerShipment::STATUS_PENDING,
+            'note' => $data['note'] ?? null,
+        ]);
+        $this->syncBloggerShipmentItems($shipment, $items);
+
+        return back()->with('success', "Jo'natma qo'shildi.");
+    }
+
+    public function updateBloggerShipment(Request $request, Blogger $blogger, BloggerShipment $shipment): \Illuminate\Http\RedirectResponse
+    {
+        abort_unless((int) $shipment->blogger_id === (int) $blogger->id, 404);
+        $data = $request->validate([
+            'scheduled_for' => ['required', 'date'],
+            'status' => ['required', Rule::in([BloggerShipment::STATUS_PENDING, BloggerShipment::STATUS_DELIVERED])],
+            'note' => ['nullable', 'string', 'max:1000'],
+            'items_text' => ['required', 'string'],
+        ]);
+        $items = $this->shipmentItems((string) $data['items_text']);
+        if ($items === []) {
+            return back()->with('error', 'Kamida bitta item kiriting.');
+        }
+
+        $shipment->update([
+            'scheduled_for' => $data['scheduled_for'],
+            'status' => $data['status'],
+            'delivered_at' => $data['status'] === BloggerShipment::STATUS_DELIVERED ? ($shipment->delivered_at ?: now()) : null,
+            'note' => $data['note'] ?? null,
+        ]);
+        $this->syncBloggerShipmentItems($shipment, $items);
+
+        return back()->with('success', "Jo'natma yangilandi.");
+    }
+
+    public function destroyBloggerShipment(Blogger $blogger, BloggerShipment $shipment): \Illuminate\Http\RedirectResponse
+    {
+        abort_unless((int) $shipment->blogger_id === (int) $blogger->id, 404);
+        $shipment->delete();
+
+        return back()->with('success', "Jo'natma o'chirildi.");
+    }
+
+    public function updateAdModeration(Request $request, SellerAd $ad): \Illuminate\Http\RedirectResponse
+    {
+        $data = $request->validate(['action' => ['required', Rule::in(['approve', 'reject'])]]);
+        $ad->update(['moderation' => $data['action'] === 'approve' ? 'approved' : 'rejected']);
+
+        return back()->with('success', $data['action'] === 'approve' ? 'Reklama tasdiqlandi.' : 'Reklama rad etildi.');
+    }
+
+    public function destroyAd(SellerAd $ad): \Illuminate\Http\RedirectResponse
+    {
+        $ad->delete();
+
+        return back()->with('success', "Reklama o'chirildi.");
+    }
+
+    public function updateSeller(Request $request, Seller $seller): \Illuminate\Http\RedirectResponse
+    {
+        $data = $request->validate([
+            'shop_name' => ['required', 'string', 'max:255'],
+            'firstname' => ['nullable', 'string', 'max:100'],
+            'lastname' => ['nullable', 'string', 'max:100'],
+            'phone_number' => ['required', 'string', Rule::unique('sellers', 'phone_number')->ignore($seller->id)],
+            'region' => ['required', 'string', 'max:100'],
+            'district' => ['nullable', 'string', 'max:100'],
+            'status' => ['required', Rule::in(['pending', 'approved', 'rejected', 'blocked'])],
+            'balance' => ['nullable', 'numeric', 'min:0'],
+            'commission_percent' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'legal_type' => ['nullable', 'string', 'max:50'],
+            'inn' => ['nullable', 'string', 'max:20'],
+            'bank_name' => ['nullable', 'string', 'max:100'],
+            'bank_account' => ['nullable', 'string', 'max:30'],
+            'payment_card' => ['nullable', 'string', 'max:50'],
+            'card_holder' => ['nullable', 'string', 'max:100'],
+            'legal_address' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $seller->update($data);
+
+        return back()->with('success', 'Seller yangilandi.');
+    }
+
+    public function updateCourier(Request $request, Couriers $courier): \Illuminate\Http\RedirectResponse
+    {
+        $data = $request->validate([
+            'first_name' => ['required', 'string', 'max:25'],
+            'last_name' => ['required', 'string', 'max:25'],
+            'phone_number' => ['required', 'string', Rule::unique('couriers', 'phone_number')->ignore($courier->id)],
+            'region' => ['required', 'string', 'max:50'],
+            'status' => ['required', Rule::in(['approved', 'pending', 'rejected', 'blocked'])],
+            'balance' => ['nullable', 'numeric', 'min:0'],
+            'transport_type' => ['nullable', Rule::in(['foot', 'bicycle', 'motorcycle', 'car'])],
+            'vehicle_brand' => ['nullable', 'string', 'max:50'],
+            'vehicle_model' => ['nullable', 'string', 'max:50'],
+            'vehicle_color' => ['nullable', 'string', 'max:30'],
+            'vehicle_plate_number' => ['nullable', 'string', 'max:20'],
+            'inn' => ['nullable', 'string', 'max:20'],
+            'payment_card' => ['nullable', 'string', 'max:50'],
+            'card_holder' => ['nullable', 'string', 'max:100'],
+            'home_address' => ['nullable', 'string', 'max:255'],
+            'verification_status' => ['nullable', Rule::in(['unverified', 'pending', 'verified', 'rejected'])],
+            'verification_notes' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $courier->update($data);
+
+        return back()->with('success', 'Kuryer yangilandi.');
+    }
+
     private function pagePayload(string $component): array
     {
         return match ($component) {
-            'Products' => ['products' => $this->productsPayload()],
             'Books' => $this->booksPagePayload(),
             'BookCategories' => ['categories' => $this->bookCategoriesPayload()],
             'stationery-categories' => ['categories' => $this->stationeryCategoriesPayload()],
@@ -717,6 +1081,7 @@ class AdminController extends Controller
                 'main' => (int) $address->id === (int) $user->mainAddressID,
                 'lat' => $address->lat,
                 'lon' => $address->lon,
+                'mapLinks' => $this->mapLinks($address->lat, $address->lon, $address->fullAddress),
             ])->values(),
             'followers' => $followers,
             'following' => $following,
@@ -773,6 +1138,266 @@ class AdminController extends Controller
             ->values();
     }
 
+    private function authorDetailPayload(Author $author): array
+    {
+        $author->loadCount('books');
+
+        return [
+            'id' => $author->id,
+            'name' => $author->name,
+            'image' => $author->display_image_url,
+            'rawImage' => $author->image,
+            'externalId' => $author->external_id,
+            'slug' => $author->slug,
+            'sourceUrl' => $author->source_url,
+            'booksCount' => (int) ($author->books_count ?? 0),
+            'hasMultipleAuthors' => (bool) $author->has_multiple_authors,
+            'needsAiPortrait' => (bool) $author->needs_ai_portrait,
+            'books' => $this->linkedBooksQuery()
+                ->where('author_id', $author->id)
+                ->latest('id')
+                ->take(50)
+                ->get()
+                ->map(fn (Books $book) => $this->catalogBookRow($book))
+                ->values()
+                ->all(),
+            'actions' => [
+                'updateUrl' => route('boshqaruv.authors.update', $author),
+                'destroyUrl' => route('boshqaruv.authors.destroy', $author),
+                'generateImagePromptUrl' => route('boshqaruv.authors.generate-image-prompt', $author),
+            ],
+        ];
+    }
+
+    private function publisherDetailPayload(Publisher $publisher): array
+    {
+        $publisher->loadCount('books');
+
+        return [
+            'id' => $publisher->id,
+            'name' => $publisher->name,
+            'image' => $publisher->image_url,
+            'rawImage' => $publisher->image,
+            'booksCount' => (int) ($publisher->books_count ?? 0),
+            'books' => $this->linkedBooksQuery()
+                ->where('publisher_id', $publisher->id)
+                ->latest('id')
+                ->take(50)
+                ->get()
+                ->map(fn (Books $book) => $this->catalogBookRow($book))
+                ->values()
+                ->all(),
+            'actions' => [
+                'updateUrl' => route('boshqaruv.publishers.update', $publisher),
+                'destroyUrl' => route('boshqaruv.publishers.destroy', $publisher),
+            ],
+        ];
+    }
+
+    private function linkedBooksQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        return Books::query()->with(['category:id,name_uz', 'seller:id,shop_name']);
+    }
+
+    private function catalogBookRow(Books $book): array
+    {
+        return [
+            'id' => $book->id,
+            'name' => $book->name,
+            'author' => $book->author,
+            'category' => $book->category?->name_uz,
+            'seller' => $book->seller?->shop_name,
+            'price' => (float) ($book->discountPrice ?: $book->price ?: 0),
+            'stock' => (int) ($book->count ?? 0),
+            'sold' => (int) ($book->totalSales ?? 0),
+            'status' => $book->status ? 'Faol' : 'Nofaol',
+            'approved' => (bool) $book->is_approved,
+            'hidden' => (bool) $book->is_hidden,
+        ];
+    }
+
+    private function validatedAuthorData(Request $request, ?Author $author = null): array
+    {
+        return $request->validate([
+            'name' => ['required', 'string', 'max:255', Rule::unique('authors', 'name')->ignore($author?->id)],
+            'image' => ['nullable', 'string', 'max:2048'],
+            'image_file' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:10240'],
+            'remove_image' => ['nullable', 'boolean'],
+            'external_id' => ['nullable', 'string', 'max:255', Rule::unique('authors', 'external_id')->ignore($author?->id)],
+            'slug' => ['nullable', 'string', 'max:255'],
+            'source_url' => ['nullable', 'string', 'max:2048'],
+        ]);
+    }
+
+    private function validatedPublisherData(Request $request, ?Publisher $publisher = null): array
+    {
+        return $request->validate([
+            'name' => ['required', 'string', 'max:255', Rule::unique('publishers', 'name')->ignore($publisher?->id)],
+            'image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:10240'],
+            'remove_image' => ['nullable', 'boolean'],
+        ]);
+    }
+
+    private function categoryData(Request $request, string $table): array
+    {
+        $validated = $request->validate([
+            'name_uz' => ['required', 'string', 'max:255'],
+            'name_ru' => ['required', 'string', 'max:255'],
+            'name_en' => ['nullable', 'string', 'max:255'],
+            'name_ja' => ['nullable', 'string', 'max:255'],
+            'icon' => ['nullable', 'string', 'max:32'],
+            'is_active' => ['nullable', 'boolean'],
+        ]);
+
+        $data = [
+            'name_uz' => $validated['name_uz'],
+            'name_ru' => $validated['name_ru'],
+            'name_en' => $validated['name_en'] ?? $validated['name_uz'],
+            'name_ja' => $validated['name_ja'] ?? $validated['name_uz'],
+            'slug' => Str::slug($validated['name_uz']),
+            'is_active' => $request->boolean('is_active'),
+        ];
+
+        if (Schema::hasColumn($table, 'icon')) {
+            $data['icon'] = $validated['icon'] ?? null;
+        }
+
+        return $data;
+    }
+
+    private function validatedPromocodeData(Request $request, ?Promocode $promocode = null): array
+    {
+        $rules = [
+            'type' => ['required', Rule::in(['percent', 'fixed'])],
+            'amount' => ['required', 'integer', 'min:1'],
+            'max_discount_amount' => ['nullable', 'integer', 'min:0'],
+            'min_order_amount' => ['nullable', 'integer', 'min:0'],
+            'per_user_limit' => ['nullable', 'integer', 'min:0'],
+            'usesLimit' => ['nullable', 'integer', 'min:0'],
+            'expires_at' => ['required', 'date'],
+            'status' => ['required', 'boolean'],
+        ];
+
+        if ($promocode) {
+            $rules['code'] = ['nullable', 'string', 'max:255'];
+        } else {
+            $rules['code'] = ['required', 'string', 'max:255', Rule::unique('promocodes', 'code')];
+            $rules['expires_at'][] = 'after:now';
+        }
+
+        $data = $request->validate($rules);
+        $data['min_order_amount'] = $data['min_order_amount'] ?? 0;
+        $data['per_user_limit'] = $data['per_user_limit'] ?? 1;
+        $data['usesLimit'] = $data['usesLimit'] ?? 0;
+
+        return $data;
+    }
+
+    private function validatedBloggerData(Request $request): array
+    {
+        $data = $request->validate([
+            'first_name' => ['required', 'string', 'max:120'],
+            'last_name' => ['nullable', 'string', 'max:120'],
+            'phone_number' => ['nullable', 'string', 'max:50'],
+            'address' => ['nullable', 'string', 'max:1000'],
+            'instagram_url' => ['nullable', 'string', 'max:255'],
+            'telegram_url' => ['nullable', 'string', 'max:255'],
+            'youtube_url' => ['nullable', 'url', 'max:255'],
+            'tiktok_url' => ['nullable', 'url', 'max:255'],
+            'active_until' => ['required', 'date'],
+        ]);
+
+        $data['instagram_url'] = $this->normalizeSocialLink($data['instagram_url'] ?? null, 'https://instagram.com/');
+        $data['telegram_url'] = $this->normalizeSocialLink($data['telegram_url'] ?? null, 'https://t.me/');
+
+        return $data;
+    }
+
+    private function normalizeSocialLink(?string $value, string $baseUrl): ?string
+    {
+        $value = trim((string) $value);
+        if ($value === '') {
+            return null;
+        }
+
+        if (Str::startsWith($value, ['http://', 'https://'])) {
+            return $value;
+        }
+
+        return rtrim($baseUrl, '/').'/'.ltrim($value, '@/');
+    }
+
+    private function bloggerDetailPayload(Blogger $blogger): array
+    {
+        return [
+            'id' => $blogger->id,
+            'firstName' => $blogger->first_name,
+            'lastName' => $blogger->last_name,
+            'name' => $blogger->full_name,
+            'phone' => $blogger->phone_number,
+            'address' => $blogger->address,
+            'instagramUrl' => $blogger->instagram_url,
+            'telegramUrl' => $blogger->telegram_url,
+            'youtubeUrl' => $blogger->youtube_url,
+            'tiktokUrl' => $blogger->tiktok_url,
+            'activeUntil' => optional($blogger->active_until)->format('Y-m-d\TH:i'),
+            'status' => $blogger->status_label,
+            'shipments' => $blogger->shipments->map(fn (BloggerShipment $shipment) => [
+                'id' => $shipment->id,
+                'scheduledFor' => optional($shipment->scheduled_for)->format('Y-m-d\TH:i'),
+                'status' => $shipment->status,
+                'deliveredAt' => $this->dateTime($shipment->delivered_at),
+                'note' => $shipment->note,
+                'itemsText' => $shipment->items->pluck('name')->implode("\n"),
+                'items' => $shipment->items->map(fn ($item) => ['id' => $item->id, 'name' => $item->name])->values()->all(),
+                'updateUrl' => route('boshqaruv.blogerlar.shipments.update', [$blogger, $shipment]),
+                'destroyUrl' => route('boshqaruv.blogerlar.shipments.destroy', [$blogger, $shipment]),
+            ])->values()->all(),
+            'actions' => [
+                'updateUrl' => route('boshqaruv.blogerlar.update', $blogger),
+                'destroyUrl' => route('boshqaruv.blogerlar.destroy', $blogger),
+                'shipmentStoreUrl' => route('boshqaruv.blogerlar.shipments.store', $blogger),
+            ],
+        ];
+    }
+
+    private function shipmentItems(string $text): array
+    {
+        return collect(preg_split('/\r\n|\r|\n/', $text) ?: [])
+            ->map(fn ($line) => trim((string) $line))
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    private function syncBloggerShipmentItems(BloggerShipment $shipment, array $items): void
+    {
+        $shipment->items()->delete();
+
+        foreach ($items as $index => $name) {
+            $shipment->items()->create(['name' => $name, 'position' => $index + 1]);
+        }
+    }
+
+    private function storeCatalogImage(Request $request, string $directory, string $field, ?string $fallback = null): ?string
+    {
+        if ($request->hasFile($field)) {
+            return $request->file($field)->store($directory, 'public');
+        }
+
+        $fallback = trim((string) ($fallback ?? ''));
+        return $fallback !== '' ? $fallback : null;
+    }
+
+    private function deleteStoredFile(?string $path): void
+    {
+        if (! is_string($path) || trim($path) === '' || str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return;
+        }
+
+        Storage::disk('public')->delete(ltrim($path, '/'));
+    }
+
     private function authorsPayload(): array
     {
         if (! Schema::hasTable('authors')) {
@@ -786,12 +1411,17 @@ class AdminController extends Controller
             ->map(fn (Author $author) => [
                 'id' => $author->id,
                 'name' => $author->name,
-                'country' => '—',
                 'books' => (int) ($author->books_count ?? 0),
-                'followers' => 0,
-                'bio' => $author->source_url ?: ($author->external_id ? 'External ID: '.$author->external_id : "Muallif katalogi"),
+                'externalId' => $author->external_id,
+                'slug' => $author->slug,
+                'sourceUrl' => $author->source_url,
+                'bio' => $author->source_url ?: ($author->external_id ? 'External ID: '.$author->external_id : 'Muallif katalogi'),
                 'image' => $author->display_image_url,
+                'rawImage' => $author->image,
+                'hasMultipleAuthors' => (bool) $author->has_multiple_authors,
                 'needsAiPortrait' => (bool) $author->needs_ai_portrait,
+                'dataUrl' => route('boshqaruv.authors.data', $author),
+                'updateUrl' => route('boshqaruv.authors.update', $author),
                 'destroyUrl' => route('boshqaruv.authors.destroy', $author),
                 'generateImagePromptUrl' => route('boshqaruv.authors.generate-image-prompt', $author),
             ])
@@ -812,11 +1442,11 @@ class AdminController extends Controller
             ->map(fn (Publisher $publisher) => [
                 'id' => $publisher->id,
                 'name' => $publisher->name,
-                'city' => '—',
                 'books' => (int) ($publisher->books_count ?? 0),
-                'contact' => '—',
-                'rating' => 0,
                 'image' => $publisher->image_url,
+                'rawImage' => $publisher->image,
+                'dataUrl' => route('boshqaruv.publishers.data', $publisher),
+                'updateUrl' => route('boshqaruv.publishers.update', $publisher),
                 'destroyUrl' => route('boshqaruv.publishers.destroy', $publisher),
             ])
             ->values()
@@ -836,11 +1466,16 @@ class AdminController extends Controller
             ->map(fn (BookCategories $category) => [
                 'id' => $category->id,
                 'name' => $category->name_uz ?: $category->name_ru ?: 'Kategoriya',
+                'nameUz' => $category->name_uz,
                 'nameRu' => $category->name_ru,
                 'nameEn' => $category->name_en,
+                'nameJa' => $category->name_ja,
+                'icon' => Schema::hasColumn('book_categories', 'icon') ? $category->icon : null,
                 'slug' => $category->slug,
                 'active' => (bool) $category->is_active,
                 'itemsCount' => (int) ($category->books_count ?? 0),
+                'storeUrl' => route('boshqaruv.book-categories.store'),
+                'updateUrl' => route('boshqaruv.book-categories.update', $category),
                 'toggleUrl' => route('boshqaruv.book-categories.toggle', $category),
                 'destroyUrl' => route('boshqaruv.book-categories.destroy', $category),
             ])
@@ -861,11 +1496,16 @@ class AdminController extends Controller
             ->map(fn (StationeryCategory $category) => [
                 'id' => $category->id,
                 'name' => $category->name_uz ?: $category->name_ru ?: 'Kategoriya',
+                'nameUz' => $category->name_uz,
                 'nameRu' => $category->name_ru,
                 'nameEn' => $category->name_en,
+                'nameJa' => $category->name_ja,
+                'icon' => Schema::hasColumn('stationery_categories', 'icon') ? $category->icon : null,
                 'slug' => $category->slug,
                 'active' => (bool) $category->is_active,
                 'itemsCount' => (int) ($category->stationeries_count ?? 0),
+                'storeUrl' => route('boshqaruv.stationery-categories.store'),
+                'updateUrl' => route('boshqaruv.stationery-categories.update', $category),
                 'toggleUrl' => route('boshqaruv.stationery-categories.toggle', $category),
                 'destroyUrl' => route('boshqaruv.stationery-categories.destroy', $category),
             ])
@@ -1110,6 +1750,9 @@ class AdminController extends Controller
         return [
             'id' => $seller->id,
             'name' => $seller->shop_name ?: trim(($seller->firstname ?? '').' '.($seller->lastname ?? '')) ?: 'Seller',
+            'shopName' => $seller->shop_name,
+            'firstName' => $seller->firstname,
+            'lastName' => $seller->lastname,
             'ownerName' => trim(($seller->firstname ?? '').' '.($seller->lastname ?? '')) ?: '—',
             'legalName' => $seller->legal_type ?: '—',
             'phone' => $seller->phone_number,
@@ -1144,9 +1787,11 @@ class AdminController extends Controller
             'bank' => [
                 'name' => $seller->bank_name,
                 'account' => $seller->masked_bank_account,
+                'rawAccount' => $seller->bank_account,
                 'mfo' => $seller->bank_mfo,
                 'swift' => $seller->bank_swift,
                 'card' => $seller->masked_card,
+                'rawCard' => $seller->payment_card,
                 'cardHolder' => $seller->card_holder,
             ],
             'contract' => [
@@ -1164,6 +1809,9 @@ class AdminController extends Controller
                 'address' => $location->fullAddress,
                 'description' => $location->description,
                 'main' => (bool) $location->is_main,
+                'lat' => $location->lat,
+                'lon' => $location->lon,
+                'mapLinks' => $this->mapLinks($location->lat, $location->lon, $location->fullAddress),
                 'qrUrl' => $location->qr_url,
                 'rotatedAt' => optional($location->qr_rotated_at)->format('Y-m-d H:i'),
             ])->values()->all(),
@@ -1200,6 +1848,7 @@ class AdminController extends Controller
                 'unblockUrl' => route('boshqaruv.sellers.unblock', $seller),
                 'warnUrl' => route('boshqaruv.sellers.warn', $seller),
                 'resetPasswordUrl' => route('boshqaruv.sellers.reset-password', $seller),
+                'updateUrl' => route('boshqaruv.sellers.update', $seller),
             ],
         ];
     }
@@ -1266,6 +1915,7 @@ class AdminController extends Controller
     private function sellerOrderPayload(SellerOrder $order): array
     {
         $address = collect($order->order?->address ?? $order->address ?? [])->first() ?: [];
+        $addressPayload = $this->orderAddressPayload((array) $address);
         $items = collect($order->order?->items ?? [])
             ->filter(fn ($item) => (int) ($item['seller_id'] ?? 0) === (int) $order->seller_id)
             ->values()
@@ -1301,14 +1951,7 @@ class AdminController extends Controller
             'statusBadge' => $statusMeta['badge'],
             'acceptedAt' => optional($order->accepted_at)->format('Y-m-d H:i'),
             'date' => optional($order->created_at)->format('Y-m-d H:i'),
-            'address' => [
-                'fullName' => $address['fullName'] ?? null,
-                'phone' => $address['phoneNumber'] ?? null,
-                'region' => $address['region'] ?? $address['province'] ?? null,
-                'district' => $address['district'] ?? null,
-                'street' => $address['street'] ?? $address['address'] ?? null,
-                'home' => $address['home'] ?? null,
-            ],
+            'address' => $addressPayload,
             'summary' => [
                 'itemsCount' => (int) $items->sum('quantity'),
                 'itemsTotal' => (float) $items->sum(fn ($item) => (float) $item['price'] * (int) $item['quantity']),
@@ -1404,6 +2047,8 @@ class AdminController extends Controller
         return [
             'id' => $courier->id,
             'name' => $courier->full_name ?: 'Kuryer',
+            'firstName' => $courier->first_name,
+            'lastName' => $courier->last_name,
             'phone' => $courier->phone_number,
             'photo' => $this->assetFromStorage($courier->photo),
             'region' => $courier->region,
@@ -1415,6 +2060,8 @@ class AdminController extends Controller
             'transport' => $courier->transport_type,
             'transportLabel' => $courier->transport_label,
             'vehicle' => trim(($courier->vehicle_brand ?? '').' '.($courier->vehicle_model ?? '')) ?: '—',
+            'vehicleBrand' => $courier->vehicle_brand,
+            'vehicleModel' => $courier->vehicle_model,
             'vehicleColor' => $courier->vehicle_color,
             'plate' => $courier->vehicle_plate_number,
             'balance' => (float) ($courier->balance ?? 0),
@@ -1483,6 +2130,7 @@ class AdminController extends Controller
                 'unblockUrl' => route('boshqaruv.couriers.unblock', $courier),
                 'warnUrl' => route('boshqaruv.couriers.warn', $courier),
                 'resetPasswordUrl' => route('boshqaruv.couriers.reset-password', $courier),
+                'updateUrl' => route('boshqaruv.couriers.update', $courier),
             ],
         ];
     }
@@ -1551,6 +2199,7 @@ class AdminController extends Controller
     private function courierOrderPayload(CourierOrder $order): array
     {
         $address = collect($order->order?->address ?? [])->first() ?: [];
+        $addressPayload = $this->orderAddressPayload((array) $address);
         $items = collect($order->order?->items ?? [])->map(fn ($item) => [
             'name' => $item['name'] ?? 'Mahsulot',
             'type' => $item['type'] ?? 'book',
@@ -1589,14 +2238,7 @@ class AdminController extends Controller
             'statusLabel' => $statusMeta['label'],
             'statusBadge' => $statusMeta['badge'],
             'date' => $this->dateTime($order->created_at),
-            'address' => [
-                'fullName' => $address['fullName'] ?? null,
-                'phone' => $address['phoneNumber'] ?? null,
-                'region' => $address['region'] ?? $address['province'] ?? null,
-                'district' => $address['district'] ?? null,
-                'street' => $address['street'] ?? $address['address'] ?? null,
-                'home' => $address['home'] ?? null,
-            ],
+            'address' => $addressPayload,
             'summary' => [
                 'itemsCount' => (int) $items->sum('quantity'),
                 'itemsTotal' => (float) $items->sum(fn ($item) => (float) $item['price'] * (int) $item['quantity']),
@@ -1837,11 +2479,11 @@ class AdminController extends Controller
                 'max' => (int) ($promocode->usesLimit ?? 0),
                 'status' => $promocode->is_active ? 'Active' : 'Inactive',
                 'expiresAt' => optional($promocode->expires_at)->format('Y-m-d'),
-                'createUrl' => route('admin.promocodes.create'),
-                'generateUrl' => route('admin.promocodes.generate'),
-                'showUrl' => route('admin.promocodes.show', $promocode),
-                'editUrl' => route('admin.promocodes.edit', $promocode),
-                'destroyUrl' => route('admin.promocodes.destroy', $promocode),
+                'perUserLimit' => (int) ($promocode->per_user_limit ?? 1),
+                'createUrl' => route('boshqaruv.promokodlar.store'),
+                'generateUrl' => route('boshqaruv.promokodlar.generate'),
+                'updateUrl' => route('boshqaruv.promokodlar.update', $promocode),
+                'destroyUrl' => route('boshqaruv.promokodlar.destroy', $promocode),
             ])
             ->values()
             ->all();
@@ -1870,9 +2512,8 @@ class AdminController extends Controller
                 'paymentStatus' => $ad->paymentStatus,
                 'expiresAt' => optional($ad->expire_at)->format('Y-m-d'),
                 'image' => $this->assetFromStorage($ad->banner_img),
-                'showUrl' => route('admin.ads.show', $ad),
                 'moderateUrl' => route('boshqaruv.ads.moderate', $ad),
-                'destroyUrl' => route('admin.ads.destroy', $ad),
+                'destroyUrl' => route('boshqaruv.ads.destroy', $ad),
             ])
             ->values()
             ->all();
@@ -1898,10 +2539,16 @@ class AdminController extends Controller
                 'shipments' => (int) ($blogger->shipments_count ?? 0),
                 'status' => $blogger->status_label,
                 'activeUntil' => optional($blogger->active_until)->format('Y-m-d'),
-                'createUrl' => route('admin.bloggers.create'),
-                'showUrl' => route('admin.bloggers.show', $blogger),
-                'editUrl' => route('admin.bloggers.edit', $blogger),
-                'destroyUrl' => route('admin.bloggers.destroy', $blogger),
+                'firstName' => $blogger->first_name,
+                'lastName' => $blogger->last_name,
+                'instagramUrl' => $blogger->instagram_url,
+                'telegramUrl' => $blogger->telegram_url,
+                'youtubeUrl' => $blogger->youtube_url,
+                'tiktokUrl' => $blogger->tiktok_url,
+                'dataUrl' => route('boshqaruv.blogerlar.data', $blogger),
+                'createUrl' => route('boshqaruv.blogerlar.store'),
+                'updateUrl' => route('boshqaruv.blogerlar.update', $blogger),
+                'destroyUrl' => route('boshqaruv.blogerlar.destroy', $blogger),
             ])
             ->values()
             ->all();
@@ -2797,22 +3444,218 @@ class AdminController extends Controller
             ->map(fn (BookClub $post) => [
                 'id' => $post->id,
                 'author' => trim(($post->user?->name ?? '').' '.($post->user?->lastname ?? '')) ?: 'Kitobxon',
+                'avatar' => $this->assetFromStorage($post->user?->avatar),
                 'text' => $post->text,
                 'productType' => $post->product_type,
+                'productId' => $post->product_id,
                 'repost' => (bool) $post->repost,
                 'likes' => (int) ($post->likes_count ?? 0),
                 'comments' => (int) ($post->comments_count ?? 0),
                 'aiStatus' => $post->ai_post_status,
                 'aiScore' => $post->ai_post_score,
+                'aiNote' => $post->ai_post_note,
                 'warning' => (bool) $post->activeWarning,
                 'date' => optional($post->created_at)->format('Y-m-d H:i'),
-                'showUrl' => route('admin.book-club.show', $post),
-                'editUrl' => route('admin.book-club.edit', $post),
-                'warnUrl' => route('admin.book-club.warn', $post),
-                'destroyUrl' => route('admin.book-club.destroy', $post),
+                'dataUrl' => route('boshqaruv.book-club.data', $post),
+                'warnUrl' => route('boshqaruv.book-club.warn', $post),
+                'destroyUrl' => route('boshqaruv.book-club.destroy', $post),
             ])
             ->values()
             ->all();
+    }
+
+    private function bookClubDetailPayload(BookClub $post): array
+    {
+        $post->load([
+            'user:id,name,lastname,avatar,phone_number',
+            'originalAuthor:id,name,lastname,avatar',
+            'images',
+            'votes',
+            'activeWarning',
+        ]);
+
+        $comments = BookClubComment::query()
+            ->where('post_id', $post->id)
+            ->whereNull('parent_id')
+            ->with([
+                'user:id,name,lastname,avatar,phone_number',
+                'replies.user:id,name,lastname,avatar,phone_number',
+            ])
+            ->withCount(['likes', 'replies'])
+            ->latest()
+            ->take(20)
+            ->get();
+
+        $likers = $post->likes()
+            ->with('user:id,name,lastname,avatar,phone_number')
+            ->latest()
+            ->take(30)
+            ->get();
+        $likesCount = $post->likes()->count();
+
+        $reposters = BookClub::query()
+            ->where('repost', true)
+            ->where('reposted_user_id', $post->user_id)
+            ->when($post->product_id, fn ($query) => $query->where('product_id', $post->product_id))
+            ->where('text', $post->text)
+            ->with('user:id,name,lastname,avatar')
+            ->latest()
+            ->take(20)
+            ->get();
+
+        $totalVotes = $post->votes->sum(fn ($vote) => DB::table('book_club_voted_users')->where('option_id', $vote->id)->count());
+
+        return [
+            'post' => [
+                'id' => $post->id,
+                'author' => trim(($post->user?->name ?? '').' '.($post->user?->lastname ?? '')) ?: 'Kitobxon',
+                'phone' => $post->user?->phone_number,
+                'avatar' => $this->assetFromStorage($post->user?->avatar),
+                'text' => $post->text,
+                'repost' => (bool) $post->repost,
+                'originalAuthor' => $post->originalAuthor ? trim(($post->originalAuthor->name ?? '').' '.($post->originalAuthor->lastname ?? '')) : null,
+                'productType' => $post->product_type,
+                'productId' => $post->product_id,
+                'date' => $this->dateTime($post->created_at),
+                'aiStatus' => $post->ai_post_status,
+                'aiScore' => $post->ai_post_score !== null ? (float) $post->ai_post_score : null,
+                'aiNote' => $post->ai_post_note,
+                'aiModel' => $post->ai_post_model,
+                'aiCheckedAt' => $this->dateTime($post->ai_post_checked_at),
+                'warning' => $post->activeWarning ? [
+                    'note' => $post->activeWarning->note,
+                    'date' => $this->dateTime($post->activeWarning->created_at),
+                ] : null,
+                'images' => $post->images->map(fn ($image) => $this->assetFromStorage($image->image))->filter()->values()->all(),
+            ],
+            'stats' => [
+                'likes' => $likesCount,
+                'comments' => $post->comments()->count(),
+                'reposts' => $reposters->count(),
+                'votes' => $totalVotes,
+            ],
+            'product' => $this->bookClubProductPayload($post),
+            'comments' => $comments->map(fn (BookClubComment $comment) => $this->bookClubCommentPayload($comment))->values()->all(),
+            'likers' => $likers->map(fn ($like) => [
+                'id' => $like->id,
+                'userId' => $like->user_id,
+                'name' => trim(($like->user?->name ?? '').' '.($like->user?->lastname ?? '')) ?: 'Foydalanuvchi',
+                'phone' => $like->user?->phone_number,
+                'avatar' => $this->assetFromStorage($like->user?->avatar),
+                'date' => $this->dateTime($like->created_at),
+            ])->values()->all(),
+            'reposters' => $reposters->map(fn (BookClub $repost) => [
+                'id' => $repost->id,
+                'name' => trim(($repost->user?->name ?? '').' '.($repost->user?->lastname ?? '')) ?: 'Foydalanuvchi',
+                'avatar' => $this->assetFromStorage($repost->user?->avatar),
+                'date' => $this->dateTime($repost->created_at),
+            ])->values()->all(),
+            'votes' => $post->votes->map(function ($vote) use ($totalVotes) {
+                $count = DB::table('book_club_voted_users')->where('option_id', $vote->id)->count();
+
+                return [
+                    'id' => $vote->id,
+                    'text' => $vote->option_text,
+                    'count' => $count,
+                    'percent' => $totalVotes > 0 ? round($count / $totalVotes * 100) : 0,
+                ];
+            })->values()->all(),
+            'actions' => [
+                'warnUrl' => route('boshqaruv.book-club.warn', $post),
+                'destroyUrl' => route('boshqaruv.book-club.destroy', $post),
+            ],
+        ];
+    }
+
+    private function bookClubCommentPayload(BookClubComment $comment): array
+    {
+        return [
+            'id' => $comment->id,
+            'userId' => $comment->user_id,
+            'name' => trim(($comment->user?->name ?? '').' '.($comment->user?->lastname ?? '')) ?: 'Foydalanuvchi',
+            'phone' => $comment->user?->phone_number,
+            'avatar' => $this->assetFromStorage($comment->user?->avatar),
+            'content' => $comment->content,
+            'likes' => (int) ($comment->likes_count ?? 0),
+            'repliesCount' => (int) ($comment->replies_count ?? 0),
+            'date' => $this->dateTime($comment->created_at),
+            'aiStatus' => $comment->ai_status,
+            'aiScore' => $comment->ai_score !== null ? (float) $comment->ai_score : null,
+            'aiNote' => $comment->ai_note,
+            'aiModel' => $comment->ai_model,
+            'aiCheckedAt' => $this->dateTime($comment->ai_checked_at),
+            'hiddenByAi' => (bool) $comment->is_hidden_by_ai,
+            'moderationStatus' => $comment->ai_moderation_status,
+            'moderationNote' => $comment->ai_moderation_note,
+            'kangarooStatus' => $comment->kangaroo_ugc_status,
+            'kangarooScore' => $comment->kangaroo_star_equivalent,
+            'updateUrl' => route('boshqaruv.book-club.comment.update', $comment),
+            'destroyUrl' => route('boshqaruv.book-club.comment.delete', $comment),
+            'replies' => $comment->replies->take(5)->map(fn (BookClubComment $reply) => [
+                'id' => $reply->id,
+                'name' => trim(($reply->user?->name ?? '').' '.($reply->user?->lastname ?? '')) ?: 'Foydalanuvchi',
+                'avatar' => $this->assetFromStorage($reply->user?->avatar),
+                'content' => $reply->content,
+                'date' => $this->dateTime($reply->created_at),
+                'destroyUrl' => route('boshqaruv.book-club.comment.delete', $reply),
+            ])->values()->all(),
+        ];
+    }
+
+    private function bookClubProductPayload(BookClub $post): ?array
+    {
+        if (! $post->product_id || ! in_array($post->product_type, ['book', 'stationery'], true)) {
+            return null;
+        }
+
+        $product = $post->product_type === 'book'
+            ? Books::query()->with('seller:id,shop_name,phone_number')->find($post->product_id)
+            : Stationery::query()->with('seller:id,shop_name,phone_number')->find($post->product_id);
+
+        $productComments = BookClubComment::query()
+            ->whereHas('post', fn ($query) => $query
+                ->where('product_id', $post->product_id)
+                ->where('product_type', $post->product_type)
+                ->where('is_deleted', false))
+            ->with('user:id,name,lastname,avatar,phone_number')
+            ->latest()
+            ->take(8)
+            ->get();
+
+        $viewsQuery = Schema::hasTable('product_view_logs')
+            ? ProductViewLog::query()->where('product_id', $post->product_id)->where('product_type', $post->product_type)
+            : null;
+
+        return [
+            'id' => $post->product_id,
+            'type' => $post->product_type,
+            'name' => $product?->name ?? data_get($post->product_snapshot ?? [], 'name') ?? 'Mahsulot',
+            'seller' => $product?->seller?->shop_name,
+            'views' => (int) ($product?->views ?? 0),
+            'viewLogs' => $viewsQuery ? (int) (clone $viewsQuery)->count() : 0,
+            'recentViews' => $viewsQuery
+                ? (clone $viewsQuery)->with('user:id,name,lastname,phone_number')->latest()->take(8)->get()->map(fn (ProductViewLog $view) => [
+                    'id' => $view->id,
+                    'user' => trim(($view->user?->name ?? '').' '.($view->user?->lastname ?? '')) ?: ($view->user_id ? 'Foydalanuvchi' : 'Mehmon'),
+                    'phone' => $view->user?->phone_number,
+                    'device' => $view->device_id,
+                    'recommended' => (bool) $view->recommendation_active,
+                    'date' => $this->dateTime($view->created_at),
+                ])->values()->all()
+                : [],
+            'aiScore' => $product && Schema::hasColumn($product->getTable(), 'ugc_aggregate_score') ? (float) ($product->ugc_aggregate_score ?? 0) : null,
+            'reviewsCount' => $product && Schema::hasColumn($product->getTable(), 'ugc_reviews_count') ? (int) ($product->ugc_reviews_count ?? 0) : $productComments->count(),
+            'scoredAt' => $product && Schema::hasColumn($product->getTable(), 'ugc_last_scored_at') ? $this->dateTime($product->ugc_last_scored_at) : null,
+            'comments' => $productComments->map(fn (BookClubComment $comment) => [
+                'id' => $comment->id,
+                'postId' => $comment->post_id,
+                'name' => trim(($comment->user?->name ?? '').' '.($comment->user?->lastname ?? '')) ?: 'Foydalanuvchi',
+                'content' => $comment->content,
+                'aiScore' => $comment->ai_score !== null ? (float) $comment->ai_score : null,
+                'aiStatus' => $comment->ai_status,
+                'date' => $this->dateTime($comment->created_at),
+            ])->values()->all(),
+        ];
     }
 
     private function liveSnapshot(): array
@@ -3305,7 +4148,7 @@ class AdminController extends Controller
                 ->values()
                 ->all()
             : [];
-        $address = collect($order->address ?? [])->values();
+        $address = collect($order->address ?? [])->values()->map(fn ($item) => $this->orderAddressPayload((array) $item));
         $primaryAddress = (array) ($address->first() ?? []);
         $fulfillment = $order->fulfillment;
         $paymentTransaction = Schema::hasTable('transactions') ? Transaction::query()
@@ -3446,6 +4289,57 @@ class AdminController extends Controller
         ];
     }
 
+    private function orderAddressPayload(array $address): array
+    {
+        $lat = $address['lat'] ?? $address['latitude'] ?? $address['location_lat'] ?? null;
+        $lon = $address['lon'] ?? $address['lng'] ?? $address['longitude'] ?? $address['location_lon'] ?? null;
+        $text = $address['fullAddress']
+            ?? $address['full_address']
+            ?? $address['address']
+            ?? collect([
+                $address['region'] ?? $address['province'] ?? null,
+                $address['district'] ?? null,
+                $address['street'] ?? null,
+                $address['home'] ?? null,
+            ])->filter()->implode(', ');
+
+        return [
+            'fullName' => $address['fullName'] ?? $address['full_name'] ?? null,
+            'phone' => $address['phoneNumber'] ?? $address['phone'] ?? null,
+            'region' => $address['region'] ?? $address['province'] ?? null,
+            'district' => $address['district'] ?? null,
+            'street' => $address['street'] ?? $address['address'] ?? null,
+            'home' => $address['home'] ?? null,
+            'fullAddress' => $text ?: null,
+            'lat' => $lat,
+            'lon' => $lon,
+            'mapLinks' => $this->mapLinks($lat, $lon, $text),
+        ];
+    }
+
+    private function mapLinks(mixed $lat = null, mixed $lon = null, ?string $address = null): array
+    {
+        $lat = is_numeric($lat) ? (float) $lat : null;
+        $lon = is_numeric($lon) ? (float) $lon : null;
+        $address = trim((string) $address);
+
+        if ($lat !== null && $lon !== null) {
+            return [
+                'google' => 'https://www.google.com/maps/search/?api=1&query='.$lat.','.$lon,
+                'yandex' => 'https://yandex.com/maps/?ll='.$lon.','.$lat.'&z=16&pt='.$lon.','.$lat.',pm2rdm',
+            ];
+        }
+
+        if ($address !== '') {
+            return [
+                'google' => 'https://www.google.com/maps/search/?api=1&query='.rawurlencode($address),
+                'yandex' => 'https://yandex.com/maps/?text='.rawurlencode($address),
+            ];
+        }
+
+        return [];
+    }
+
     private function orderItemPayload(array $item): array
     {
         $type = $item['type'] ?? 'book';
@@ -3572,7 +4466,6 @@ class AdminController extends Controller
     private function legacyUrl(string $component): ?string
     {
         return [
-            'Products' => route('admin.books.index'),
             'Books' => route('admin.books.index'),
             'BookCategories' => route('admin.book-categories.index'),
             'Stationeries' => route('boshqaruv.stationeries'),
@@ -3591,13 +4484,13 @@ class AdminController extends Controller
             'Hubs' => route('boshqaruv.hubs'),
             'Transaksiyalar' => route('boshqaruv.transactions'),
             'LogistikaPage' => route('boshqaruv.logistika'),
-            'Reklamalar' => route('admin.ads.index'),
-            'Promokodlar' => route('admin.promocodes.index'),
-            'Blogerlar' => route('admin.bloggers.index'),
+            'Reklamalar' => route('boshqaruv.reklamalar'),
+            'Promokodlar' => route('boshqaruv.promokodlar'),
+            'Blogerlar' => route('boshqaruv.blogerlar'),
             'GiftSertifikatlar' => route('admin.gift-certificates.index'),
             'MarketNewsPage' => route('admin.news.index'),
             'ReelsPage' => route('admin.reels.index'),
-            'BookClub' => route('admin.book-club.index'),
+            'BookClub' => route('boshqaruv.book-club'),
             'Tickets' => route('boshqaruv.tickets'),
             'Shikoyatlar' => route('boshqaruv.shikoyatlar'),
             'ChatKuzatuv' => route('boshqaruv.chat'),

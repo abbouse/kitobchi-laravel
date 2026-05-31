@@ -11,6 +11,9 @@ type Counts = Record<string, number>;
 interface Seller {
   id: number;
   name: string;
+  shopName?: string;
+  firstName?: string;
+  lastName?: string;
   ownerName?: string;
   legalName?: string;
   phone?: string;
@@ -37,7 +40,7 @@ interface Seller {
   legal?: Record<string, string | null | undefined>;
   bank?: Record<string, string | null | undefined>;
   contract?: Record<string, string | number | boolean | null | undefined>;
-  locations?: Array<Record<string, string | number | boolean | null | undefined>>;
+  locations?: Array<Record<string, string | number | boolean | null | undefined | Record<string, string>>>;
   recentOrders?: Array<Record<string, string | number | null | undefined>>;
   transactions?: Array<Record<string, string | number | null | undefined>>;
   banLogs?: Array<Record<string, string | number | boolean | null | undefined>>;
@@ -63,7 +66,7 @@ interface SellerOrder {
   statusBadge?: string;
   acceptedAt?: string;
   date?: string;
-  address?: Record<string, string | null | undefined>;
+  address?: Record<string, string | null | undefined | Record<string, string>>;
   summary?: { itemsCount?: number; itemsTotal?: number };
   items?: Array<{ name: string; type?: string; quantity: number; price: number; author?: string | null }>;
   statusUrl?: string;
@@ -125,6 +128,7 @@ export default function SellerOrders() {
   const [sellerSearch, setSellerSearch] = useState(sellerFilters.search || '');
   const [orderSearch, setOrderSearch] = useState(sellerOrderFilters.search || '');
   const [selectedSeller, setSelectedSeller] = useState<Seller | null>(null);
+  const [editingSeller, setEditingSeller] = useState<Seller | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<SellerOrder | null>(null);
 
   const totalBalance = useMemo(() => sellers.reduce((sum, seller) => sum + (seller.balance || 0), 0), [sellers]);
@@ -277,18 +281,20 @@ export default function SellerOrders() {
         <PaginationControls {...sellerOrderPagination} onPageChange={(page) => load({ seller_orders_page: page })} />
       </div>
 
-      <SellerModal seller={selectedSeller} onHide={() => setSelectedSeller(null)} onWarn={warnSeller} onResetPassword={resetPassword} onPatch={runPatch} />
+      <SellerModal seller={selectedSeller} onHide={() => setSelectedSeller(null)} onWarn={warnSeller} onResetPassword={resetPassword} onPatch={runPatch} onEdit={(seller) => setEditingSeller(seller)} />
+      <SellerEditModal seller={editingSeller} onHide={() => setEditingSeller(null)} />
       <OrderModal order={selectedOrder} statuses={sellerOrderStatuses} onHide={() => setSelectedOrder(null)} onPatch={runPatch} />
     </div>
   );
 }
 
-function SellerModal({ seller, onHide, onWarn, onResetPassword, onPatch }: {
+function SellerModal({ seller, onHide, onWarn, onResetPassword, onPatch, onEdit }: {
   seller: Seller | null;
   onHide: () => void;
   onWarn: (seller: Seller) => void;
   onResetPassword: (seller: Seller) => void;
   onPatch: (url?: string, message?: string, payload?: Record<string, string>) => void;
+  onEdit: (seller: Seller) => void;
 }) {
   return (
     <Modal show={!!seller} onHide={onHide} centered size="xl">
@@ -312,7 +318,7 @@ function SellerModal({ seller, onHide, onWarn, onResetPassword, onPatch }: {
               ['Yuridik turi', String(seller.legal?.type || '—')], ['INN', String(seller.legal?.inn || '—')], ['Pasport', String(seller.legal?.passport || '—')],
               ['Bank', String(seller.bank?.name || '—')], ['Hisob', String(seller.bank?.account || '—')], ['Karta', String(seller.bank?.card || '—')],
             ]} />
-            <ListBlock title="Filiallar" empty="Filial yo'q" items={seller.locations || []} render={(item) => <><strong>{String(item.address || '—')}</strong><span>{item.main ? 'Asosiy filial' : 'Filial'} · {String(item.description || '')}</span></>} />
+            <ListBlock title="Filiallar" empty="Filial yo'q" items={seller.locations || []} render={(item) => <><strong>{String(item.address || '—')}</strong><span>{item.main ? 'Asosiy filial' : 'Filial'} · {String(item.description || '')}</span><MapButtons mapLinks={(item.mapLinks || {}) as Record<string, string>} /></>} />
             <ListBlock title="Oxirgi seller orderlar" empty="Order yo'q" items={seller.recentOrders || []} render={(item) => <><strong>#{item.id} · {fmt(Number(item.amount || 0))} so'm</strong><span>{String(item.customer || 'Mijoz')} · {String(item.date || '—')}</span></>} />
             <ListBlock title="Tranzaksiyalar" empty="Tranzaksiya yo'q" items={seller.transactions || []} render={(item) => <><strong>{fmt(Number(item.net || item.amount || 0))} so'm · {String(item.status || '—')}</strong><span>{String(item.category || item.type || '—')} · {String(item.date || '—')}</span></>} />
             <ListBlock title={`Ogohlantirishlar (${seller.warningCount || 0}/3)`} empty="Ogohlantirish yo'q" items={seller.banLogs || []} render={(item) => <><strong>{String(item.title || '—')}</strong><span>{String(item.message || '')} · {String(item.date || '—')}</span></>} />
@@ -321,6 +327,7 @@ function SellerModal({ seller, onHide, onWarn, onResetPassword, onPatch }: {
       </Modal.Body>
       <Modal.Footer>
         {seller ? <Button variant="outline-warning" onClick={() => onWarn(seller)}>Ogohlantirish</Button> : null}
+        {seller ? <Button variant="outline-primary" onClick={() => onEdit(seller)}>Tahrirlash</Button> : null}
         {seller ? <Button variant="outline-secondary" onClick={() => onResetPassword(seller)}>Parol reset</Button> : null}
         {seller?.status !== 'approved' ? <Button variant="outline-success" onClick={() => onPatch(seller?.actions?.approveUrl, 'Seller tasdiqlansinmi?')}>Tasdiqlash</Button> : null}
         <Button variant="outline-danger" onClick={() => onPatch(seller?.actions?.rejectUrl, 'Seller bekor qilinsinmi?')}>Bekor qilish</Button>
@@ -356,6 +363,7 @@ function OrderModal({ order, statuses, onHide, onPatch }: {
               ['Qabul qiluvchi', order.address?.fullName || '—'], ['Telefon', order.address?.phone || '—'], ['Viloyat', order.address?.region || '—'],
               ['Tuman', order.address?.district || '—'], ['Ko‘cha', order.address?.street || '—'], ['Uy', order.address?.home || '—'],
             ]} />
+            <div className="col-12"><div className="detail-panel"><h6 className="fw-bold mb-2">Xaritada ochish</h6><MapButtons mapLinks={(order.address?.mapLinks || {}) as Record<string, string>} /></div></div>
             <div className="col-12">
               <div className="detail-panel">
                 <h6 className="fw-bold mb-3">Mahsulotlar</h6>
@@ -406,6 +414,50 @@ function ListBlock<T>({ title, empty, items, render }: { title: string; empty: s
           {items.length === 0 ? <div className="text-muted">{empty}</div> : null}
         </div>
       </div>
+    </div>
+  );
+}
+
+function SellerEditModal({ seller, onHide }: { seller: Seller | null; onHide: () => void }) {
+  const submit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!seller?.actions?.updateUrl) return;
+    const form = new FormData(event.currentTarget);
+    form.append('_method', 'put');
+    router.post(seller.actions.updateUrl, form, { preserveScroll: true, onSuccess: onHide });
+  };
+
+  return <Modal show={!!seller} onHide={onHide} centered size="lg"><form onSubmit={submit}><Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">Seller tahrirlash</Modal.Title></Modal.Header><Modal.Body><div className="row g-3">
+    <FormInput name="shop_name" label="Do'kon nomi" defaultValue={seller?.shopName || seller?.name} required />
+    <FormInput name="phone_number" label="Telefon" defaultValue={seller?.phone} required />
+    <FormInput name="firstname" label="Ism" defaultValue={seller?.firstName} />
+    <FormInput name="lastname" label="Familiya" defaultValue={seller?.lastName} />
+    <FormInput name="region" label="Viloyat" defaultValue={seller?.region} required />
+    <FormInput name="district" label="Tuman" defaultValue={seller?.district} />
+    <div className="col-md-6"><label className="form-label">Status</label><select name="status" defaultValue={seller?.status || 'pending'} className="form-select"><option value="pending">Kutilmoqda</option><option value="approved">Faol</option><option value="rejected">Bekor qilingan</option><option value="blocked">Bloklangan</option></select></div>
+    <FormInput name="balance" label="Balans" type="number" defaultValue={seller?.balance} />
+    <FormInput name="commission_percent" label="Komissiya %" type="number" defaultValue={seller?.commissionRate} />
+    <FormInput name="legal_type" label="Yuridik turi" defaultValue={String(seller?.legal?.type || '')} />
+    <FormInput name="inn" label="INN" defaultValue={String(seller?.legal?.inn || '')} />
+    <FormInput name="bank_name" label="Bank" defaultValue={String(seller?.bank?.name || '')} />
+    <FormInput name="bank_account" label="Hisob raqam" defaultValue={String(seller?.bank?.rawAccount || '')} />
+    <FormInput name="payment_card" label="Karta" defaultValue={String(seller?.bank?.rawCard || '')} />
+    <FormInput name="card_holder" label="Karta egasi" defaultValue={String(seller?.bank?.cardHolder || '')} />
+    <div className="col-12"><label className="form-label">Yuridik manzil</label><textarea name="legal_address" defaultValue={String(seller?.legal?.legalAddress || seller?.address || '')} className="form-control" rows={2}></textarea></div>
+  </div></Modal.Body><Modal.Footer><Button variant="light" onClick={onHide}>Bekor</Button><Button type="submit" variant="primary">Saqlash</Button></Modal.Footer></form></Modal>;
+}
+
+function FormInput({ name, label, defaultValue, required, type = 'text' }: { name: string; label: string; defaultValue?: string | number | null; required?: boolean; type?: string }) {
+  return <div className="col-md-6"><label className="form-label">{label}</label><input name={name} type={type} defaultValue={defaultValue ?? ''} required={required} className="form-control" /></div>;
+}
+
+function MapButtons({ mapLinks }: { mapLinks?: Record<string, string> }) {
+  if (!mapLinks?.google && !mapLinks?.yandex) return <span className="text-muted small">Xarita linki yo'q</span>;
+
+  return (
+    <div className="d-flex gap-2 flex-wrap mt-2">
+      {mapLinks.google ? <a className="btn btn-sm btn-light" href={mapLinks.google} target="_blank" rel="noreferrer"><i className="bi bi-geo-alt me-1"></i>Google Map</a> : null}
+      {mapLinks.yandex ? <a className="btn btn-sm btn-light" href={mapLinks.yandex} target="_blank" rel="noreferrer"><i className="bi bi-map me-1"></i>Yandex Map</a> : null}
     </div>
   );
 }

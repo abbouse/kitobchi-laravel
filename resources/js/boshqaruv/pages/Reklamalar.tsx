@@ -38,7 +38,7 @@ export default function Reklamalar() {
 
   const moderate = (ad: Ad, status: string) => {
     if (!ad.moderateUrl) return;
-    router.patch(ad.moderateUrl, { moderation: status }, { preserveScroll: true });
+    router.patch(ad.moderateUrl, { action: status === 'approved' ? 'approve' : 'reject' }, { preserveScroll: true });
   };
 
   const destroy = (ad: Ad) => {

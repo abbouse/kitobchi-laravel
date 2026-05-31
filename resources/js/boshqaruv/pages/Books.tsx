@@ -99,11 +99,6 @@ export default function Books() {
           <h1 className="page-title">Kitoblar katalogi</h1>
           <p className="page-subtitle">{bookPagination.total} ta kitob</p>
         </div>
-        <div className="d-flex gap-2">
-          <a className="btn btn-outline-secondary" href="/boshqaruv/products">
-            <i className="bi bi-funnel me-1"></i>Filtr
-          </a>
-        </div>
       </div>
 
       <div className="row g-3">
