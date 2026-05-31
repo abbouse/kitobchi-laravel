@@ -34,6 +34,7 @@ interface DashboardPayload {
   paymentSplit: Array<{ name: string; count: number; share: number; color: string }>;
   deliverySplit: Array<{ name: string; count: number; revenue: number }>;
   regions: Array<{ name: string; value: number; revenue: number; color: string }>;
+  platformAnalysis: Array<{ name: string; icon: string; color: string; version: string; activeUsers: number; orders: number; revenue: number; conversion: number; crashRate: number; avgSessionSeconds: number }>;
   alerts: Array<{ level: string; icon: string; title: string; text: string; url?: string }>;
 }
 
@@ -52,6 +53,7 @@ const emptyDashboard: DashboardPayload = {
   paymentSplit: [],
   deliverySplit: [],
   regions: [],
+  platformAnalysis: [],
   alerts: [],
 };
 
@@ -122,6 +124,7 @@ export default function Dashboard() {
           </p>
         </div>
         <div className="d-flex gap-2 align-items-center">
+          <span className="text-muted small">Davr kartalari</span>
           <div className="btn-group btn-group-sm">
             {(['today', 'week', 'month'] as const).map((item) => (
               <button key={item} className={`btn ${period === item ? 'btn-primary-gradient' : 'btn-outline-secondary'}`} onClick={() => setPeriod(item)}>
@@ -196,8 +199,8 @@ export default function Dashboard() {
         <div className="col-xl-4">
           <div className="card-panel h-100">
             <div className="d-flex align-items-center gap-2 mb-3">
-              <div className="panel-title">Mahsulot turi bo'yicha ulush</div>
-              <InfoHint text="To'langan order itemlari turiga qarab guruhlanadi. Kitob, kanselyariya va boshqa pullik mahsulotlar kiradi; gift sovg'alar chiqarib tashlangan." />
+                <div className="panel-title">Kategoriya bo'yicha savdo</div>
+              <InfoHint text="To'langan order itemlari kategoriya bo'yicha guruhlanadi. Kitoblar o'z categorylari bilan chiqadi, kanselyariya esa ichki bo'limlariga bo'linmay bitta Kanselyariya sifatida hisoblanadi. Gift sovg'alar kirmaydi." />
             </div>
             {dashboard.categoryShare.length ? (
               <>
@@ -229,6 +232,8 @@ export default function Dashboard() {
       </div>
 
       <BusinessKpis dashboard={dashboard} />
+
+      <PlatformAnalysis rows={dashboard.platformAnalysis} />
 
       <div className="row g-3">
         <div className="col-xl-4">
@@ -296,6 +301,68 @@ function BusinessKpis({ dashboard }: { dashboard: DashboardPayload }) {
       </div>
     </div>
   );
+}
+
+function PlatformAnalysis({ rows }: { rows: DashboardPayload['platformAnalysis'] }) {
+  return (
+    <div className="card-panel mb-3">
+      <div className="panel-head">
+        <div>
+          <div className="d-flex align-items-center gap-2">
+            <div className="panel-title">App platforma tahlili</div>
+            <InfoHint text="Userning oxirgi connected device platformasi olinadi. Aktiv user - oxirgi 30 kunda device yangilangan user, Orders va Daromad - shu platformadagi userlarning paid orderlari, Conv - paid buyer / aktiv user." />
+          </div>
+          <small className="text-muted">Android va iOS bo'yicha real device, order va tushum signallari</small>
+        </div>
+      </div>
+      <div className="row g-2">
+        {rows.length ? rows.map((row) => (
+          <div className="col-xl-6" key={row.name}>
+            <div className="platform-card h-100">
+              <div className="d-flex justify-content-between align-items-start gap-3 mb-3">
+                <div className="d-flex align-items-center gap-2" style={{ minWidth: 0 }}>
+                  <span className="platform-icon" style={{ color: row.color }}><i className={`bi ${row.icon}`}></i></span>
+                  <div style={{ minWidth: 0 }}>
+                    <div className="fw-bold text-truncate">{row.name}</div>
+                    <small className="text-muted">{row.version} · Conv {row.conversion}%</small>
+                  </div>
+                </div>
+                <span className="chip chip-info">App</span>
+              </div>
+              <div className="platform-grid">
+                <PlatformStat label="Faol user" value={fmt(row.activeUsers)} />
+                <PlatformStat label="Orders" value={fmt(row.orders)} />
+                <PlatformStat label="Daromad" value={money(row.revenue)} />
+                <PlatformStat label="Crash" value={`${row.crashRate}%`} />
+                <PlatformStat label="Session" value={formatDuration(row.avgSessionSeconds)} />
+              </div>
+            </div>
+          </div>
+        )) : <div className="text-muted small">Platform device ma'lumotlari topilmadi.</div>}
+      </div>
+    </div>
+  );
+}
+
+function PlatformStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <strong>{value}</strong>
+      <span>{label}</span>
+    </div>
+  );
+}
+
+function formatDuration(seconds = 0) {
+  if (!seconds) return '0m';
+  const minutes = Math.floor(seconds / 60);
+  const rest = seconds % 60;
+  if (minutes >= 60) {
+    const hours = Math.floor(minutes / 60);
+    return `${hours}h ${minutes % 60}m`;
+  }
+
+  return `${minutes}m ${rest}s`;
 }
 
 function Metric({ label, value = 0, icon, color, href, help }: { label: string; value?: number; icon: string; color: string; href: string; help?: string }) {

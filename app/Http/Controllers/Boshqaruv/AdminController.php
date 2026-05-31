@@ -896,8 +896,147 @@ class AdminController extends Controller
             'paymentSplit' => $this->paymentSplit([]),
             'deliverySplit' => $this->deliverySplit(),
             'regions' => $this->liveRegionStats(),
+            'platformAnalysis' => $this->dashboardPlatformAnalysis(),
             'alerts' => $this->liveAlerts($mainCounts, $sellerCounts, $courierCounts),
         ];
+    }
+
+    private function dashboardPlatformAnalysis(): array
+    {
+        if (! Schema::hasTable('connected_devices')) {
+            return [];
+        }
+
+        $platforms = [
+            'android' => ['name' => 'Android', 'icon' => 'bi-android2', 'color' => '#10b981'],
+            'ios' => ['name' => 'iOS', 'icon' => 'bi-apple', 'color' => '#111827'],
+        ];
+        $versionColumn = collect(['app_version', 'version', 'app_build'])
+            ->first(fn ($column) => Schema::hasColumn('connected_devices', $column));
+        $sessionColumn = Schema::hasColumn('users', 'total_seconds_spend') ? 'total_seconds_spend' : null;
+        $latestDevices = DB::table('connected_devices as cd')
+            ->join(DB::raw('(select user_id, max(updated_at) as latest_at from connected_devices where user_type = "user" and user_id is not null group by user_id) as latest_devices'), function ($join) {
+                $join->on('cd.user_id', '=', 'latest_devices.user_id')
+                    ->on('cd.updated_at', '=', 'latest_devices.latest_at');
+            })
+            ->where('cd.user_type', 'user')
+            ->whereNotNull('cd.user_id')
+            ->select(array_values(array_filter([
+                'cd.user_id',
+                'cd.platform',
+                $versionColumn ? 'cd.'.$versionColumn.' as app_version' : null,
+            ])))
+            ->get()
+            ->map(function ($device) {
+                return [
+                    'user_id' => (int) $device->user_id,
+                    'platform' => $this->canonicalAppPlatform($device->platform ?? null),
+                    'version' => isset($device->app_version) ? trim((string) $device->app_version) : null,
+                ];
+            })
+            ->filter(fn ($device) => in_array($device['platform'], ['android', 'ios'], true))
+            ->unique('user_id')
+            ->values();
+
+        $userPlatform = $latestDevices->pluck('platform', 'user_id')->all();
+        $stats = collect($platforms)->mapWithKeys(fn ($meta, $key) => [$key => [
+            ...$meta,
+            'version' => $this->mostCommonAppVersion($latestDevices, $key),
+            'activeUsers' => 0,
+            'orders' => 0,
+            'revenue' => 0.0,
+            'buyers' => [],
+            'conversion' => 0.0,
+            'crashRate' => 0.0,
+            'avgSessionSeconds' => 0,
+        ]])->all();
+
+        $latestDevices->each(function ($device) use (&$stats) {
+            if (isset($stats[$device['platform']])) {
+                $stats[$device['platform']]['activeUsersMap'][(int) $device['user_id']] = true;
+            }
+        });
+
+        $this->paidOrdersQuery()
+            ->whereNotNull('user_id')
+            ->select(['id', 'user_id', 'amount'])
+            ->chunkById(500, function ($orders) use (&$stats, $userPlatform) {
+                foreach ($orders as $order) {
+                    $platform = $userPlatform[(int) $order->user_id] ?? null;
+                    if (! isset($stats[$platform])) {
+                        continue;
+                    }
+
+                    $stats[$platform]['orders']++;
+                    $stats[$platform]['revenue'] += (float) ($order->amount ?? 0);
+                    $stats[$platform]['buyers'][(int) $order->user_id] = true;
+                }
+            });
+
+        if ($sessionColumn) {
+            User::query()
+                ->whereIn('id', array_keys($userPlatform))
+                ->select(['id', $sessionColumn])
+                ->chunkById(500, function ($users) use (&$stats, $userPlatform, $sessionColumn) {
+                    foreach ($users as $user) {
+                        $platform = $userPlatform[(int) $user->id] ?? null;
+                        if (! isset($stats[$platform])) {
+                            continue;
+                        }
+
+                        $stats[$platform]['sessionSum'] = ($stats[$platform]['sessionSum'] ?? 0) + (int) ($user->{$sessionColumn} ?? 0);
+                        $stats[$platform]['sessionUsers'] = ($stats[$platform]['sessionUsers'] ?? 0) + 1;
+                    }
+                });
+        }
+
+        return collect($stats)->map(function ($row) {
+            $activeUsers = count($row['activeUsersMap'] ?? []);
+            $buyers = count($row['buyers'] ?? []);
+            $sessionUsers = (int) ($row['sessionUsers'] ?? 0);
+
+            return [
+                'name' => $row['name'],
+                'icon' => $row['icon'],
+                'color' => $row['color'],
+                'version' => $row['version'],
+                'activeUsers' => $activeUsers,
+                'orders' => (int) $row['orders'],
+                'revenue' => (float) $row['revenue'],
+                'conversion' => $activeUsers > 0 ? round($buyers / $activeUsers * 100, 1) : 0.0,
+                'crashRate' => (float) $row['crashRate'],
+                'avgSessionSeconds' => $sessionUsers > 0 ? (int) round(($row['sessionSum'] ?? 0) / $sessionUsers) : 0,
+            ];
+        })->values()->all();
+    }
+
+    private function canonicalAppPlatform(mixed $platform): string
+    {
+        $value = Str::of((string) $platform)->lower()->replace([' ', '-', '_'], '')->value();
+
+        return match (true) {
+            str_contains($value, 'android') => 'android',
+            str_contains($value, 'ios') || str_contains($value, 'iphone') || str_contains($value, 'ipad') => 'ios',
+            default => 'other',
+        };
+    }
+
+    private function mostCommonAppVersion(\Illuminate\Support\Collection $devices, string $platform): string
+    {
+        $version = $devices
+            ->where('platform', $platform)
+            ->pluck('version')
+            ->filter()
+            ->countBy()
+            ->sortDesc()
+            ->keys()
+            ->first();
+
+        if (! $version) {
+            return 'Noma\'lum';
+        }
+
+        return Str::startsWith(Str::lower($version), 'v') ? $version : 'v'.$version;
     }
 
     private function marketplaceFinancialSnapshot(?Carbon $start = null, ?Carbon $end = null): array
@@ -4344,8 +4483,7 @@ class AdminController extends Controller
 
     private function dashboardCategoryShare(): array
     {
-        $colors = ['book' => '#4f46e5', 'stationery' => '#10b981', 'gift' => '#f59e0b', 'other' => '#ec4899'];
-        $labels = ['book' => 'Kitoblar', 'stationery' => 'Kanselyariya', 'gift' => 'Sovg\'alar', 'other' => 'Boshqa'];
+        $colors = ['#4f46e5', '#10b981', '#f59e0b', '#ec4899', '#06b6d4', '#7c3aed', '#ef4444', '#14b8a6'];
         $totals = $this->paidOrderItemAggregates()['categories'];
 
         $sum = array_sum($totals);
@@ -4353,14 +4491,23 @@ class AdminController extends Controller
             return [];
         }
 
+        $index = 0;
+
         return collect($totals)
             ->filter(fn ($value) => $value > 0)
-            ->map(fn ($value, $key) => [
-                'name' => $labels[$key] ?? $key,
-                'value' => round($value / $sum * 100, 1),
-                'revenue' => $value,
-                'color' => $colors[$key] ?? '#64748b',
-            ])
+            ->sortDesc()
+            ->take(8)
+            ->map(function ($value, $name) use (&$index, $colors, $sum) {
+                $color = $colors[$index % count($colors)];
+                $index++;
+
+                return [
+                    'name' => (string) $name,
+                    'value' => round($value / $sum * 100, 1),
+                    'revenue' => $value,
+                    'color' => $color,
+                ];
+            })
             ->values()
             ->all();
     }
@@ -4715,9 +4862,10 @@ class AdminController extends Controller
 
     private function paidOrderItemAggregates(): array
     {
-        return Cache::remember('boshqaruv.live.item-aggregates', now()->addMinute(), function () {
-            $categories = ['book' => 0.0, 'stationery' => 0.0, 'other' => 0.0];
+        return Cache::remember('boshqaruv.live.item-aggregates.v2.category-sales', now()->addMinute(), function () {
+            $categories = [];
             $products = [];
+            $bookCategoryNames = $this->bookCategoryNameMap();
 
             $this->paidOrdersQuery()
                 ->whereNotNull('items')
@@ -4725,18 +4873,23 @@ class AdminController extends Controller
                 ->chunkById(500, function ($orders) use (&$categories, &$products) {
                     foreach ($orders as $order) {
                         foreach (collect($order->items ?? []) as $item) {
-                            $type = (string) ($item['type'] ?? 'book');
+                            $type = Str::lower((string) ($item['type'] ?? 'book'));
                             if ($type === 'gift') {
                                 continue;
                             }
 
-                            $category = array_key_exists($type, $categories) ? $type : 'other';
                             $id = (int) ($item['item_id'] ?? $item['product_id'] ?? 0);
                             $name = (string) ($item['name'] ?? 'Mahsulot');
                             $quantity = (int) ($item['count_item'] ?? $item['count'] ?? $item['quantity'] ?? 1);
                             $revenue = $quantity * (float) ($item['item_price'] ?? $item['price'] ?? 0);
                             $key = $type.':'.$id.':'.$name;
+                            $category = match ($type) {
+                                'book' => $bookCategoryNames[$id] ?? 'Kitob: Kategoriyasiz',
+                                'stationery' => 'Kanselyariya',
+                                default => 'Boshqa',
+                            };
 
+                            $categories[$category] ??= 0.0;
                             $categories[$category] += $revenue;
                             $products[$key] ??= ['name' => $name, 'quantity' => 0, 'revenue' => 0.0];
                             $products[$key]['quantity'] += $quantity;
@@ -4747,6 +4900,30 @@ class AdminController extends Controller
 
             return ['categories' => $categories, 'products' => array_values($products)];
         });
+    }
+
+    private function bookCategoryNameMap(): array
+    {
+        if (! Schema::hasTable('book_categories')) {
+            return [];
+        }
+
+        return Books::query()
+            ->leftJoin('book_categories', 'books.category_id', '=', 'book_categories.id')
+            ->select([
+                'books.id as book_id',
+                'book_categories.name_uz',
+                'book_categories.name_ru',
+                'book_categories.name_en',
+                'book_categories.slug',
+            ])
+            ->get()
+            ->mapWithKeys(function ($row) {
+                $name = $row->name_uz ?: $row->name_ru ?: $row->name_en ?: $row->slug ?: 'Kitob: Kategoriyasiz';
+
+                return [(int) $row->book_id => (string) $name];
+            })
+            ->all();
     }
 
     private function liveAlerts(array $mainCounts, array $sellerCounts, array $courierCounts): array
