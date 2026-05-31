@@ -1,10 +1,20 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { router } from '@inertiajs/react';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(true);
+  const [darkMode, setDarkMode] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem('boshqaruv-theme') === 'dark';
+  });
+
+  useEffect(() => {
+    document.body.classList.toggle('boshqaruv-dark', darkMode);
+    document.documentElement.setAttribute('data-bs-theme', darkMode ? 'dark' : 'light');
+    localStorage.setItem('boshqaruv-theme', darkMode ? 'dark' : 'light');
+  }, [darkMode]);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -14,30 +24,24 @@ export default function Login() {
   return (
     <div className="login-wrap">
       <div className="login-left">
-        <div style={{ position: 'relative', zIndex: 1 }}>
-          <div className="d-flex align-items-center gap-2 mb-4">
-            <div className="brand-logo"><i className="bi bi-book-half"></i></div>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 22 }}>Kitobchi</div>
-              <div style={{ fontSize: 11, color: '#c7d2fe', letterSpacing: 2 }}>ADMIN PANEL</div>
-            </div>
-          </div>
-          <h1 style={{ fontSize: 44, fontWeight: 800, lineHeight: 1.15, marginBottom: 16 }}>
-            Kitob dunyosini<br/>bir joydan boshqaring
-          </h1>
-          <p style={{ fontSize: 16, color: '#e0e7ff', maxWidth: 420 }}>
-            Buyurtmalar, kuryerlar, sotuvchilar, mijozlar, Book Club va barcha analitika — barchasi bitta professional panelda.
+        <div className="login-brand-block">
+          <img src="/images/logo/logo_white.png" alt="Kitobchi" className="login-brand-logo" />
+          <span>Ichki boshqaruv muhiti</span>
+          <h1>Ruxsatli xodimlar uchun kirish</h1>
+          <p>
+            Bu sahifa faqat Kitobchi administratsiyasi uchun. Kirishlar nazorat qilinadi va sessiya xavfsizligi tekshiriladi.
           </p>
         </div>
-        <div style={{ position: 'relative', zIndex: 1, display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
+        <div className="login-security-grid">
           {[
-            { k: '12K+', v: 'Kitoblar' },
-            { k: '3.4K', v: 'Mijozlar' },
-            { k: '99.8%', v: 'Uptime' },
+            { icon: 'bi-shield-check', title: 'Audit', text: 'Har bir kirish qayd etiladi' },
+            { icon: 'bi-person-lock', title: 'Ruxsat', text: 'Faqat tasdiqlangan adminlar' },
+            { icon: 'bi-clock-history', title: 'Sessiya', text: 'Faollik muntazam tekshiriladi' },
           ].map((s) => (
-            <div key={s.k} style={{ background: 'rgba(255,255,255,.08)', borderRadius: 12, padding: 16, backdropFilter: 'blur(10px)' }}>
-              <div style={{ fontSize: 28, fontWeight: 800 }}>{s.k}</div>
-              <div style={{ fontSize: 12, color: '#c7d2fe' }}>{s.v}</div>
+            <div className="login-security-card" key={s.title}>
+              <i className={`bi ${s.icon}`}></i>
+              <strong>{s.title}</strong>
+              <span>{s.text}</span>
             </div>
           ))}
         </div>
@@ -45,8 +49,15 @@ export default function Login() {
 
       <div className="login-right">
         <div className="login-card">
-          <h2 style={{ fontWeight: 700, fontSize: 28 }}>Xush kelibsiz</h2>
-          <p style={{ color: '#6b7280', marginBottom: 28 }}>Boshqaruv paneliga kirish uchun hisob ma'lumotlaringizni kiriting.</p>
+          <div className="login-card-top">
+            <img src={darkMode ? '/images/logo/logo_white.png' : '/images/logo/logo_blue.png'} alt="Kitobchi" className="login-card-logo" />
+            <button type="button" className="login-theme-btn" onClick={() => setDarkMode((value) => !value)} aria-label={darkMode ? 'Light mode' : 'Dark mode'}>
+              <i className={`bi ${darkMode ? 'bi-sun' : 'bi-moon'}`}></i>
+            </button>
+          </div>
+
+          <h2>Kirish</h2>
+          <p className="login-muted">Hisob ma'lumotlaringizni kiriting.</p>
 
           <form onSubmit={submit}>
             <div className="mb-3">
@@ -74,12 +85,12 @@ export default function Login() {
               <i className="bi bi-box-arrow-in-right me-2"></i>Kirish
             </button>
             <div className="text-center">
-              <small className="text-muted">Kitobchi boshqaruv paneli</small>
+              <small className="text-muted">Ruxsatsiz kirish taqiqlanadi.</small>
             </div>
           </form>
 
           <div className="mt-4 pt-4 border-top text-center">
-            <small className="text-muted">© 2026 Kitobchi Admin. Barcha huquqlar himoyalangan.</small>
+            <small className="text-muted">© 2026 Kitobchi. Ichki foydalanish uchun.</small>
           </div>
         </div>
       </div>

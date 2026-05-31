@@ -14,6 +14,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import InfoHint from '../components/InfoHint';
 
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(Math.round(n || 0));
 const money = (n: number) => `${fmt(n)} so'm`;
@@ -56,6 +57,52 @@ const emptyDashboard: DashboardPayload = {
 
 const change = (current = 0, previous = 0) => previous > 0 ? ((current - previous) / previous * 100) : 0;
 
+const metricHelps: Record<string, string> = {
+  orders: "Bazadagi barcha asosiy buyurtmalar soni. Statusidan qat'i nazar jami orderlar sanaladi.",
+  paidOrders: "To'lovi paid/success/completed bo'lgan yoki yakunlangan buyurtmalar. Moliyaviy hisoblar asosan shundan olinadi.",
+  users: "Platformada ro'yxatdan o'tgan jami foydalanuvchilar soni.",
+  books: "Kitob katalogidagi mahsulotlar soni.",
+  sellers: "Marketplace sotuvchilari soni. Faol, kutilmoqda va bekor qilinganlar umumiy sanaladi.",
+  couriers: "Tizimdagi kuryerlar soni.",
+  premiumUsers: "Premium belgisi bor foydalanuvchilar soni.",
+  onlineUsers: "So'nggi bir necha daqiqada aktiv bo'lgan foydalanuvchilar.",
+  stationeries: "Kanselyariya katalogidagi mahsulotlar soni.",
+  pendingSellers: "Hali tasdiq kutayotgan sellerlar soni.",
+  tickets: "Support/ticket bo'limidagi murojaatlar soni.",
+  complaints: "Shikoyatlar bo'limidagi yozuvlar soni.",
+};
+
+const periodHelps: Record<string, string> = {
+  revenue: "Tanlangan davrda to'langan buyurtmalarning umumiy summasi. Pastdagi foiz oldingi shu davr bilan solishtiradi.",
+  orders: "Tanlangan davrda tushgan buyurtmalar soni. Pastdagi foiz oldingi davrga nisbatan o'zgarish.",
+  aov: "O'rtacha chek: tanlangan davrdagi tushum buyurtmalar soniga bo'linadi.",
+  users: "Tanlangan davrda yangi ro'yxatdan o'tgan foydalanuvchilar soni.",
+};
+
+const businessHelps: Record<string, string> = {
+  "To'lov ulushi": "Jami buyurtmalardan nechtasi haqiqatan to'langanini ko'rsatadi. Paid / jami order.",
+  'Yakunlash ulushi': "Jami buyurtmalardan yakunlanganlari ulushi. Admin operatsiya sifati uchun signal.",
+  'Bekor ulushi': "Bekor qilingan yoki qaytgan buyurtmalar ulushi. Ko'paysa logistika yoki mahsulot tomoni tekshiriladi.",
+  'Qayta xaridor': "Bir martadan ko'p xarid qilgan foydalanuvchilar ulushi.",
+  'Xaridorlar': "Kamida bitta to'langan buyurtma qilgan foydalanuvchilar.",
+  'Karta ulangan': "Tizimda tasdiqlangan karta bog'lagan foydalanuvchilar.",
+  "Order / xaridor": "To'langan buyurtmalar soni xaridorlar soniga bo'linadi.",
+  "Daromad / xaridor": "To'langan buyurtmalar tushumi xaridorlar soniga bo'linadi.",
+};
+
+const financialHelps: Record<string, string> = {
+  'Paid order tushumi': "To'lovi tasdiqlangan buyurtmalarning umumiy summasi. Bu hali sof foyda emas.",
+  'Delivery income': "Mijoz to'lagan yetkazish pullari yig'indisi.",
+  'Seller commission': "Sellerdan ushlanadigan marketplace komissiyasi. Sellerda alohida komissiya bo'lsa o'sha, bo'lmasa settingsdagi global foiz ishlaydi.",
+  'Promo discount': "Promokod yoki aksiyalar sabab platforma tomondan berilgan chegirmalar.",
+  'Cashback': "Foydalanuvchiga qaytarilgan cashback summasi.",
+  'Courier payout': "Kuryerga to'lanadigan yetkazish xarajatlari.",
+  'Kiritilgan chiqimlar': "Chiqimlar bo'limiga admin kiritgan real xarajatlar: reklama, servis, qadoq, operatsiya va hokazo.",
+  'Provider komissiyasi': "Payment provider ushlaydigan komissiya. Settingsdagi foiz asosida hisoblanadi.",
+  'Soliq': "Settingsdagi soliq sozlamasi bo'yicha hisoblanadi: so'm yoki foydadan foiz.",
+  'Marketplace marjasi': "Taxminiy net signal: seller komissiya + delivery income - promo - cashback - kuryer - chiqim - provider - soliq.",
+};
+
 export default function Dashboard() {
   const { dashboard = emptyDashboard } = usePage<{ dashboard?: DashboardPayload }>().props;
   const [period, setPeriod] = useState<'today' | 'week' | 'month'>('month');
@@ -87,28 +134,28 @@ export default function Dashboard() {
       </div>
 
       <div className="row g-2 mb-3">
-        <Metric label="Buyurtmalar" value={dashboard.metrics.orders} icon="bi-receipt" color="#4f46e5" href="/boshqaruv/orders" />
-        <Metric label="To'langan order" value={dashboard.metrics.paidOrders} icon="bi-credit-card" color="#10b981" href="/boshqaruv/orders" />
-        <Metric label="Foydalanuvchilar" value={dashboard.metrics.users} icon="bi-people" color="#06b6d4" href="/boshqaruv/users" />
-        <Metric label="Kitoblar" value={dashboard.metrics.books} icon="bi-book" color="#f59e0b" href="/boshqaruv/books" />
-        <Metric label="Sotuvchilar" value={dashboard.metrics.sellers} icon="bi-shop" color="#ec4899" href="/boshqaruv/sellers" />
-        <Metric label="Kuryerlar" value={dashboard.metrics.couriers} icon="bi-bicycle" color="#7c3aed" href="/boshqaruv/couriers" />
+        <Metric label="Buyurtmalar" value={dashboard.metrics.orders} icon="bi-receipt" color="#4f46e5" href="/boshqaruv/orders" help={metricHelps.orders} />
+        <Metric label="To'langan order" value={dashboard.metrics.paidOrders} icon="bi-credit-card" color="#10b981" href="/boshqaruv/orders" help={metricHelps.paidOrders} />
+        <Metric label="Foydalanuvchilar" value={dashboard.metrics.users} icon="bi-people" color="#06b6d4" href="/boshqaruv/users" help={metricHelps.users} />
+        <Metric label="Kitoblar" value={dashboard.metrics.books} icon="bi-book" color="#f59e0b" href="/boshqaruv/books" help={metricHelps.books} />
+        <Metric label="Sotuvchilar" value={dashboard.metrics.sellers} icon="bi-shop" color="#ec4899" href="/boshqaruv/sellers" help={metricHelps.sellers} />
+        <Metric label="Kuryerlar" value={dashboard.metrics.couriers} icon="bi-bicycle" color="#7c3aed" href="/boshqaruv/couriers" help={metricHelps.couriers} />
       </div>
 
       <div className="row g-2 mb-3">
-        <CompactMetric label="Premium user" value={dashboard.metrics.premiumUsers} icon="bi-stars" color="#7c3aed" href="/boshqaruv/users" />
-        <CompactMetric label="Online user" value={dashboard.metrics.onlineUsers} icon="bi-broadcast" color="#10b981" href="/boshqaruv/users" />
-        <CompactMetric label="Kanselyariya" value={dashboard.metrics.stationeries} icon="bi-pencil-square" color="#f59e0b" href="/boshqaruv/stationeries" />
-        <CompactMetric label="Pending seller" value={dashboard.metrics.pendingSellers} icon="bi-hourglass-split" color="#ec4899" href="/boshqaruv/sellers" />
-        <CompactMetric label="Support ticket" value={dashboard.metrics.tickets} icon="bi-headset" color="#06b6d4" href="/boshqaruv/tickets" />
-        <CompactMetric label="Shikoyatlar" value={dashboard.metrics.complaints} icon="bi-exclamation-triangle" color="#ef4444" href="/boshqaruv/shikoyatlar" />
+        <CompactMetric label="Premium user" value={dashboard.metrics.premiumUsers} icon="bi-stars" color="#7c3aed" href="/boshqaruv/users" help={metricHelps.premiumUsers} />
+        <CompactMetric label="Online user" value={dashboard.metrics.onlineUsers} icon="bi-broadcast" color="#10b981" href="/boshqaruv/users" help={metricHelps.onlineUsers} />
+        <CompactMetric label="Kanselyariya" value={dashboard.metrics.stationeries} icon="bi-pencil-square" color="#f59e0b" href="/boshqaruv/stationeries" help={metricHelps.stationeries} />
+        <CompactMetric label="Pending seller" value={dashboard.metrics.pendingSellers} icon="bi-hourglass-split" color="#ec4899" href="/boshqaruv/sellers" help={metricHelps.pendingSellers} />
+        <CompactMetric label="Support ticket" value={dashboard.metrics.tickets} icon="bi-headset" color="#06b6d4" href="/boshqaruv/tickets" help={metricHelps.tickets} />
+        <CompactMetric label="Shikoyatlar" value={dashboard.metrics.complaints} icon="bi-exclamation-triangle" color="#ef4444" href="/boshqaruv/shikoyatlar" help={metricHelps.complaints} />
       </div>
 
       <div className="row g-2 mb-3">
-        <PeriodCard label="Daromad" value={money(current.revenue)} delta={change(current.revenue, previous.revenue)} icon="bi-cash-coin" color="#4f46e5" />
-        <PeriodCard label="Buyurtmalar" value={fmt(current.orders)} delta={change(current.orders, previous.orders)} icon="bi-bag-check" color="#10b981" />
-        <PeriodCard label="O'rtacha chek" value={money(current.aov)} delta={change(current.aov, previous.aov)} icon="bi-receipt" color="#f59e0b" />
-        <PeriodCard label="Yangi userlar" value={fmt(current.users)} delta={change(current.users, previous.users)} icon="bi-person-plus" color="#ec4899" />
+        <PeriodCard label="Daromad" value={money(current.revenue)} delta={change(current.revenue, previous.revenue)} icon="bi-cash-coin" color="#4f46e5" help={periodHelps.revenue} />
+        <PeriodCard label="Buyurtmalar" value={fmt(current.orders)} delta={change(current.orders, previous.orders)} icon="bi-bag-check" color="#10b981" help={periodHelps.orders} />
+        <PeriodCard label="O'rtacha chek" value={money(current.aov)} delta={change(current.aov, previous.aov)} icon="bi-receipt" color="#f59e0b" help={periodHelps.aov} />
+        <PeriodCard label="Yangi userlar" value={fmt(current.users)} delta={change(current.users, previous.users)} icon="bi-person-plus" color="#ec4899" help={periodHelps.users} />
       </div>
 
       <div className="row g-3 mb-3">
@@ -116,7 +163,10 @@ export default function Dashboard() {
           <div className="card-panel h-100">
             <div className="panel-head">
               <div>
-                <div className="panel-title">12 oylik real savdo</div>
+                <div className="d-flex align-items-center gap-2">
+                  <div className="panel-title">12 oylik real savdo</div>
+                  <InfoHint text="Har oy bo'yicha to'langan buyurtmalar olinadi. Daromad - paid order summasi, Signal - shu oy uchun taxminiy marketplace foyda signali, Order - paid order soni." />
+                </div>
                 <small className="text-muted">To'langan buyurtmalar va platform signal</small>
               </div>
               <div className="btn-group btn-group-sm">
@@ -145,7 +195,10 @@ export default function Dashboard() {
 
         <div className="col-xl-4">
           <div className="card-panel h-100">
-            <div className="panel-title mb-3">Mahsulot turi bo'yicha ulush</div>
+            <div className="d-flex align-items-center gap-2 mb-3">
+              <div className="panel-title">Mahsulot turi bo'yicha ulush</div>
+              <InfoHint text="To'langan order itemlari turiga qarab guruhlanadi. Kitob, kanselyariya va boshqa pullik mahsulotlar kiradi; gift sovg'alar chiqarib tashlangan." />
+            </div>
             {dashboard.categoryShare.length ? (
               <>
                 <ResponsiveContainer width="100%" height={190}>
@@ -179,7 +232,7 @@ export default function Dashboard() {
 
       <div className="row g-3">
         <div className="col-xl-4">
-          <RankPanel title="Top mahsulotlar" rows={dashboard.topProducts.map((row) => ({ name: row.name, meta: `${fmt(row.quantity)} dona`, value: money(row.revenue) }))} />
+          <RankPanel title="Top mahsulotlar" help="To'langan buyurtmalardagi mahsulotlar sotilgan dona bo'yicha saralanadi. Gift turidagi sovg'alar tekin bo'lgani uchun bu ro'yxatga kirmaydi." rows={dashboard.topProducts.map((row) => ({ name: row.name, meta: `${fmt(row.quantity)} dona`, value: money(row.revenue) }))} />
         </div>
         <div className="col-xl-4">
           <RecentOrders rows={dashboard.recentOrders} />
@@ -198,9 +251,9 @@ export default function Dashboard() {
       </div>
 
       <div className="row g-3 mt-1">
-        <DistributionPanel title="To'lov kesimi" rows={dashboard.paymentSplit.map((row) => ({ name: row.name, value: `${fmt(row.count)} ta · ${row.share}%` }))} />
-        <DistributionPanel title="Yetkazish kesimi" rows={dashboard.deliverySplit.map((row) => ({ name: row.name, value: `${fmt(row.count)} ta · ${money(row.revenue)}` }))} />
-        <DistributionPanel title="Hududlar" rows={dashboard.regions.map((row) => ({ name: row.name, value: `${fmt(row.value)} ta · ${money(row.revenue)}` }))} />
+        <DistributionPanel title="To'lov kesimi" help="Buyurtmalar to'lov statusi bo'yicha guruhlanadi: qancha order va jami ichidagi ulushi." rows={dashboard.paymentSplit.map((row) => ({ name: row.name, value: `${fmt(row.count)} ta · ${row.share}%` }))} />
+        <DistributionPanel title="Yetkazish kesimi" help="Buyurtmalar yetkazish turi bo'yicha guruhlanadi. Yonidagi summa shu turdagi buyurtmalar tushumi." rows={dashboard.deliverySplit.map((row) => ({ name: row.name, value: `${fmt(row.count)} ta · ${money(row.revenue)}` }))} />
+        <DistributionPanel title="Hududlar" help="Buyurtma address snapshotidan viloyat/shahar nomi olinadi. Noma'lum addresslar alohida guruhga tushadi." rows={dashboard.regions.map((row) => ({ name: row.name, value: `${fmt(row.value)} ta · ${money(row.revenue)}` }))} />
       </div>
     </div>
   );
@@ -209,14 +262,14 @@ export default function Dashboard() {
 function BusinessKpis({ dashboard }: { dashboard: DashboardPayload }) {
   const b = dashboard.business;
   const rows = [
-    { label: "To'lov ulushi", value: `${b.paidRate || 0}%`, meta: 'Paid / jami order', icon: 'bi-credit-card', color: '#10b981' },
-    { label: 'Yakunlash ulushi', value: `${b.completionRate || 0}%`, meta: 'Yakunlangan / jami', icon: 'bi-check2-circle', color: '#4f46e5' },
-    { label: 'Bekor ulushi', value: `${b.cancellationRate || 0}%`, meta: 'Bekor va qaytgan', icon: 'bi-x-circle', color: '#ef4444' },
-    { label: 'Qayta xaridor', value: `${b.repeatBuyerRate || 0}%`, meta: `${fmt(b.repeatBuyers)} foydalanuvchi`, icon: 'bi-arrow-repeat', color: '#7c3aed' },
-    { label: 'Xaridorlar', value: fmt(b.buyingUsers), meta: 'Paid order qilgan', icon: 'bi-people', color: '#06b6d4' },
-    { label: 'Karta ulangan', value: fmt(b.cardUsers), meta: 'Tasdiqlangan karta', icon: 'bi-credit-card-2-front', color: '#ec4899' },
-    { label: "Order / xaridor", value: String(b.avgOrdersPerBuyer || 0), meta: "O'rtacha chastota", icon: 'bi-bag-check', color: '#f59e0b' },
-    { label: "Daromad / xaridor", value: money(b.avgRevenuePerBuyer), meta: "O'rtacha paid revenue", icon: 'bi-cash-stack', color: '#059669' },
+    { label: "To'lov ulushi", value: `${b.paidRate || 0}%`, meta: 'Paid / jami order', icon: 'bi-credit-card', color: '#10b981', help: businessHelps["To'lov ulushi"] },
+    { label: 'Yakunlash ulushi', value: `${b.completionRate || 0}%`, meta: 'Yakunlangan / jami', icon: 'bi-check2-circle', color: '#4f46e5', help: businessHelps['Yakunlash ulushi'] },
+    { label: 'Bekor ulushi', value: `${b.cancellationRate || 0}%`, meta: 'Bekor va qaytgan', icon: 'bi-x-circle', color: '#ef4444', help: businessHelps['Bekor ulushi'] },
+    { label: 'Qayta xaridor', value: `${b.repeatBuyerRate || 0}%`, meta: `${fmt(b.repeatBuyers)} foydalanuvchi`, icon: 'bi-arrow-repeat', color: '#7c3aed', help: businessHelps['Qayta xaridor'] },
+    { label: 'Xaridorlar', value: fmt(b.buyingUsers), meta: 'Paid order qilgan', icon: 'bi-people', color: '#06b6d4', help: businessHelps.Xaridorlar },
+    { label: 'Karta ulangan', value: fmt(b.cardUsers), meta: 'Tasdiqlangan karta', icon: 'bi-credit-card-2-front', color: '#ec4899', help: businessHelps['Karta ulangan'] },
+    { label: "Order / xaridor", value: String(b.avgOrdersPerBuyer || 0), meta: "O'rtacha chastota", icon: 'bi-bag-check', color: '#f59e0b', help: businessHelps["Order / xaridor"] },
+    { label: "Daromad / xaridor", value: money(b.avgRevenuePerBuyer), meta: "O'rtacha paid revenue", icon: 'bi-cash-stack', color: '#059669', help: businessHelps["Daromad / xaridor"] },
   ];
 
   return (
@@ -232,7 +285,10 @@ function BusinessKpis({ dashboard }: { dashboard: DashboardPayload }) {
           <div className="col-xl-3 col-md-6" key={row.label}>
             <div className="mini-stat h-100">
               <i className={`bi ${row.icon}`} style={{ color: row.color }}></i>
-              <span>{row.label}<small className="d-block text-muted">{row.meta}</small></span>
+              <span>
+                <span className="d-inline-flex align-items-center gap-1">{row.label}<InfoHint text={row.help} /></span>
+                <small className="d-block text-muted">{row.meta}</small>
+              </span>
               <strong style={{ color: row.color }}>{row.value}</strong>
             </div>
           </div>
@@ -242,13 +298,16 @@ function BusinessKpis({ dashboard }: { dashboard: DashboardPayload }) {
   );
 }
 
-function Metric({ label, value = 0, icon, color, href }: { label: string; value?: number; icon: string; color: string; href: string }) {
+function Metric({ label, value = 0, icon, color, href, help }: { label: string; value?: number; icon: string; color: string; href: string; help?: string }) {
   return (
     <div className="col-xl-2 col-md-4 col-6">
       <Link href={href} className="stat-card text-decoration-none d-block" style={{ padding: 14 }}>
         <div className="d-flex justify-content-between align-items-start mb-1">
-          <div style={{ fontSize: 11, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 1 }}>{label}</div>
-          <i className={`bi ${icon}`} style={{ color, fontSize: 18 }}></i>
+          <div className="d-flex align-items-center gap-1" style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 11, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 1 }}>{label}</div>
+            {help ? <InfoHint text={help} /> : null}
+          </div>
+          <i className={`bi ${icon}`} style={{ color, fontSize: 18, flexShrink: 0 }}></i>
         </div>
         <div className="text-body" style={{ fontSize: 22, fontWeight: 800 }}>{fmt(value)}</div>
       </Link>
@@ -256,12 +315,15 @@ function Metric({ label, value = 0, icon, color, href }: { label: string; value?
   );
 }
 
-function PeriodCard({ label, value, delta, icon, color }: { label: string; value: string; delta: number; icon: string; color: string }) {
+function PeriodCard({ label, value, delta, icon, color, help }: { label: string; value: string; delta: number; icon: string; color: string; help?: string }) {
   return (
     <div className="col-xl-3 col-md-6">
       <div className="stat-card" style={{ padding: 14 }}>
         <div className="d-flex justify-content-between align-items-start mb-1">
-          <div style={{ fontSize: 11, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 1 }}>{label}</div>
+          <div className="d-flex align-items-center gap-1">
+            <div style={{ fontSize: 11, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 1 }}>{label}</div>
+            {help ? <InfoHint text={help} /> : null}
+          </div>
           <i className={`bi ${icon}`} style={{ color, fontSize: 18 }}></i>
         </div>
         <div className="text-body" style={{ fontSize: 22, fontWeight: 800 }}>{value}</div>
@@ -273,13 +335,16 @@ function PeriodCard({ label, value, delta, icon, color }: { label: string; value
   );
 }
 
-function CompactMetric({ label, value = 0, icon, color, href }: { label: string; value?: number; icon: string; color: string; href: string }) {
+function CompactMetric({ label, value = 0, icon, color, href, help }: { label: string; value?: number; icon: string; color: string; href: string; help?: string }) {
   return (
     <div className="col-xl-2 col-md-4 col-6">
       <Link href={href} className="stat-card text-decoration-none d-block h-100" style={{ padding: 14 }}>
         <div className="d-flex justify-content-between align-items-start mb-1">
-          <div style={{ fontSize: 11, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 1 }}>{label}</div>
-          <i className={`bi ${icon}`} style={{ color, fontSize: 18 }}></i>
+          <div className="d-flex align-items-center gap-1" style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 11, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 1 }}>{label}</div>
+            {help ? <InfoHint text={help} /> : null}
+          </div>
+          <i className={`bi ${icon}`} style={{ color, fontSize: 18, flexShrink: 0 }}></i>
         </div>
         <div className="text-body" style={{ fontSize: 22, fontWeight: 800 }}>{fmt(value)}</div>
       </Link>
@@ -287,23 +352,23 @@ function CompactMetric({ label, value = 0, icon, color, href }: { label: string;
   );
 }
 
-function DistributionPanel({ title, rows }: { title: string; rows: Array<{ name: string; value: string }> }) {
-  return <div className="col-xl-4"><div className="card-panel h-100"><div className="panel-title mb-3">{title}</div>{rows.length ? rows.slice(0, 8).map((row) => <div className="d-flex justify-content-between gap-3 py-2 border-bottom small" key={row.name}><span className="text-muted text-truncate">{row.name}</span><strong className="text-nowrap">{row.value}</strong></div>) : <div className="text-muted small">Ma'lumot topilmadi.</div>}</div></div>;
+function DistributionPanel({ title, rows, help }: { title: string; rows: Array<{ name: string; value: string }>; help?: string }) {
+  return <div className="col-xl-4"><div className="card-panel h-100"><div className="d-flex align-items-center gap-2 mb-3"><div className="panel-title">{title}</div>{help ? <InfoHint text={help} /> : null}</div>{rows.length ? rows.slice(0, 8).map((row) => <div className="d-flex justify-content-between gap-3 py-2 border-bottom small" key={row.name}><span className="text-muted text-truncate">{row.name}</span><strong className="text-nowrap">{row.value}</strong></div>) : <div className="text-muted small">Ma'lumot topilmadi.</div>}</div></div>;
 }
 
 function FinancialPanel({ dashboard }: { dashboard: DashboardPayload }) {
   const f = dashboard.financial;
   const rows = [
-    ["Paid order tushumi", f.grossRevenue, '#10b981'],
-    ['Delivery income', f.deliveryIncome, '#4f46e5'],
-    ['Seller commission', f.commission, '#7c3aed'],
-    ['Promo discount', -f.promoDiscount, '#ef4444'],
-    ['Cashback', -f.cashback, '#ef4444'],
-    ['Courier payout', -f.courierPayout, '#f59e0b'],
-    ['Kiritilgan chiqimlar', -f.manualExpenses, '#ef4444'],
-    ['Provider komissiyasi', -f.providerFee, '#f97316'],
-    ['Soliq', -f.tax, '#dc2626'],
-    ['Marketplace marjasi', f.platformProfit, '#059669'],
+    { label: "Paid order tushumi", raw: f.grossRevenue, color: '#10b981' },
+    { label: 'Delivery income', raw: f.deliveryIncome, color: '#4f46e5' },
+    { label: 'Seller commission', raw: f.commission, color: '#7c3aed' },
+    { label: 'Promo discount', raw: -f.promoDiscount, color: '#ef4444' },
+    { label: 'Cashback', raw: -f.cashback, color: '#ef4444' },
+    { label: 'Courier payout', raw: -f.courierPayout, color: '#f59e0b' },
+    { label: 'Kiritilgan chiqimlar', raw: -f.manualExpenses, color: '#ef4444' },
+    { label: 'Provider komissiyasi', raw: -f.providerFee, color: '#f97316' },
+    { label: 'Soliq', raw: -f.tax, color: '#dc2626' },
+    { label: 'Marketplace marjasi', raw: f.platformProfit, color: '#059669' },
   ];
 
   return (
@@ -317,12 +382,12 @@ function FinancialPanel({ dashboard }: { dashboard: DashboardPayload }) {
           <span className={`chip ${f.platformProfit >= 0 ? 'chip-success' : 'chip-danger'}`}>Net {f.netMargin || 0}%</span>
         </div>
         <div className="row g-2">
-          {rows.map(([label, raw, color]) => (
-            <div className="col-md-6" key={String(label)}>
+          {rows.map((row) => (
+            <div className="col-md-6" key={row.label}>
               <div className="mini-stat">
-                <i className="bi bi-dot" style={{ color: String(color) }}></i>
-                <span>{label}</span>
-                <strong style={{ color: String(color) }}>{money(Number(raw))}</strong>
+                <i className="bi bi-dot" style={{ color: row.color }}></i>
+                <span className="d-inline-flex align-items-center gap-1">{row.label}<InfoHint text={financialHelps[row.label]} /></span>
+                <strong style={{ color: row.color }}>{money(Number(row.raw))}</strong>
               </div>
             </div>
           ))}
@@ -348,10 +413,10 @@ function StatusPanel({ title, counts, labels }: { title: string; counts: Record<
   );
 }
 
-function RankPanel({ title, rows }: { title: string; rows: Array<{ name: string; meta: string; value: string }> }) {
+function RankPanel({ title, rows, help }: { title: string; rows: Array<{ name: string; meta: string; value: string }>; help?: string }) {
   return (
     <div className="card-panel h-100">
-      <div className="panel-title mb-3">{title}</div>
+      <div className="d-flex align-items-center gap-2 mb-3"><div className="panel-title">{title}</div>{help ? <InfoHint text={help} /> : null}</div>
       {rows.length ? rows.map((row, index) => (
         <div className="d-flex align-items-center gap-2 py-2 border-bottom" key={`${row.name}-${index}`}>
           <span className="chip chip-purple">{index + 1}</span>

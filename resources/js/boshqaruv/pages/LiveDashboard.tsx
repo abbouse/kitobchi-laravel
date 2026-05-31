@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import InfoHint from '../components/InfoHint';
 
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(Math.round(n || 0));
 
@@ -118,6 +119,31 @@ const statusClass = (status?: string) => {
   return 'chip-warning';
 };
 
+const liveKpiHelps: Record<string, string> = {
+  'Jami daromad': "Barcha to'langan buyurtmalar summasi. Bu yalpi tushum, sof foyda emas.",
+  'Bugungi daromad': "Bugun to'langan buyurtmalar summasi.",
+  'Oylik daromad': "Joriy oy ichida to'langan buyurtmalar summasi.",
+  'Platform signal': "Taxminiy net signal: seller komissiya + delivery income - chegirma - cashback - kuryer - chiqim - provider - soliq.",
+  'Jami order': "Barcha asosiy buyurtmalar soni.",
+  'Bugungi order': "Bugun yaratilgan buyurtmalar soni.",
+  'Aktiv order': "Hali jarayonda turgan buyurtmalar: yangi, qadoqlanmoqda yoki yo'lda.",
+  AOV: "Average Order Value: to'langan tushum paid order soniga bo'linadi.",
+  'Seller oqimi': "Seller fulfillment jarayonida turgan orderlar soni.",
+  'Kuryer oqimi': "Kuryerga tegishli aktiv yetkazish orderlari.",
+  'Online user': "So'nggi bir necha daqiqada aktiv foydalanuvchilar.",
+  Completion: "Yakunlangan orderlar ulushi: completed / jami order.",
+};
+
+const liveFinanceHelps: Record<string, string> = {
+  "To'langan order": "Moliyaviy hisobga kiradigan orderlar. Payment paid/success/completed yoki yakunlangan orderlar.",
+  'Seller komissiya': "Sellerlardan ushlanadigan komissiya. Sellerning o'z foizi bo'lsa o'sha, bo'lmasa global settings foizi ishlaydi.",
+  'Yetkazish daromadi': "Mijozlar to'lagan delivery summasi.",
+  'Kuryer payout': "Kuryerlarga to'lanadigan yetkazish xarajatlari.",
+  'Promo + cashback': "Platforma bergan chegirma va cashbacklar yig'indisi.",
+  'Chiqim + provider + soliq': "Admin kiritgan chiqimlar, payment provider komissiyasi va soliq yig'indisi.",
+  'Net marja': "Platform signal yalpi tushumga nisbatan foizda. Manfiy chiqsa xarajat tushumdan ko'p.",
+};
+
 export default function LiveDashboard() {
   const { snapshot: initialSnapshot = emptySnapshot, liveEndpoint } = usePage<{ snapshot?: Snapshot; liveEndpoint?: string }>().props;
   const [snapshot, setSnapshot] = useState<Snapshot>(initialSnapshot);
@@ -232,7 +258,7 @@ export default function LiveDashboard() {
           <div className="col-xl-2 col-lg-3 col-md-4 col-6" key={kpi.l}>
             <div className="live-kpi" style={{ borderLeftColor: kpi.c }}>
               <div className="d-flex justify-content-between align-items-start">
-                <span>{kpi.l}</span>
+                <span className="d-inline-flex align-items-center gap-1">{kpi.l}<InfoHint tone="dark" text={liveKpiHelps[kpi.l]} /></span>
                 <i className={`bi ${kpi.icon}`} style={{ color: kpi.c }}></i>
               </div>
               <strong style={{ color: kpi.c }}>{kpi.v}</strong>
@@ -253,7 +279,7 @@ export default function LiveDashboard() {
         ].map((item) => (
           <div className="col-xl-2 col-lg-4 col-md-6" key={item.l}>
             <div className="live-kpi" style={{ borderLeftColor: item.c }}>
-              <span>{item.l}</span>
+              <span className="d-inline-flex align-items-center gap-1">{item.l}<InfoHint tone="dark" text={liveFinanceHelps[item.l]} /></span>
               <strong style={{ color: item.c }}>{item.v}</strong>
               <small style={{ color: '#94a3b8' }}>{item.s}</small>
             </div>
@@ -270,7 +296,10 @@ export default function LiveDashboard() {
       <div className="row g-3 mb-3">
         <div className="col-xl-4">
           <div className="card-panel live-map-grid h-100">
-            <div className="live-panel-title">Hududlar bo'yicha oqim</div>
+            <div className="d-flex align-items-center gap-2 mb-2">
+              <div className="live-panel-title mb-0">Hududlar bo'yicha oqim</div>
+              <InfoHint tone="dark" text="Buyurtma address snapshotidan viloyat/shahar nomi olinadi. Hozir O'zbekiston ichidagi real addresslar bo'yicha yig'iladi." />
+            </div>
             <div style={{ position: 'relative', height: 210 }}>
               <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%' }}>
                 <path d="M 15 45 Q 30 25 60 30 T 95 35 Q 90 55 75 60 T 40 75 Q 20 65 15 45 Z" fill="rgba(79,70,229,0.06)" stroke="rgba(255,255,255,0.12)" strokeWidth="0.5" />
@@ -294,7 +323,10 @@ export default function LiveDashboard() {
         <div className="col-xl-5">
           <div className="card-panel h-100">
             <div className="d-flex justify-content-between align-items-center mb-2">
-              <div className="live-panel-title">Bugungi savdo trendi</div>
+              <div className="d-flex align-items-center gap-2">
+                <div className="live-panel-title mb-0">Bugungi savdo trendi</div>
+                <InfoHint tone="dark" text="Bugungi orderlar soatlar bo'yicha guruhlanadi. Revenue - shu soatdagi to'langan summa, orders - order soni." />
+              </div>
               <span className="chip chip-success">{snapshot.generated_at}</span>
             </div>
             <ResponsiveContainer width="100%" height={235}>
@@ -359,7 +391,10 @@ export default function LiveDashboard() {
 
         <div className="col-xl-3">
           <div className="card-panel live-feed-panel">
-            <div className="live-panel-title">Top mahsulotlar</div>
+            <div className="d-flex align-items-center gap-2 mb-2">
+              <div className="live-panel-title mb-0">Top mahsulotlar</div>
+              <InfoHint tone="dark" text="To'langan order itemlaridan eng ko'p sotilgan mahsulotlar. Gift sovg'alar bu ro'yxatga qo'shilmaydi." />
+            </div>
             <div className="live-rank-list">
               {snapshot.top_products.map((product, index) => (
                 <div className="live-rank-row" key={`${product.name}-${index}`}>
@@ -375,10 +410,10 @@ export default function LiveDashboard() {
         <div className="col-xl-4">
           <div className="row g-3">
             <div className="col-md-6">
-              <SplitPanel title="To'lov holati" rows={snapshot.payment_split.map((row) => ({ name: row.name, value: row.share, meta: `${fmt(row.count)} ta`, color: row.color }))} />
+              <SplitPanel title="To'lov holati" help="Orderlar to'lov holati bo'yicha guruhlanadi. Foiz jami order ichidagi ulush." rows={snapshot.payment_split.map((row) => ({ name: row.name, value: row.share, meta: `${fmt(row.count)} ta`, color: row.color }))} />
             </div>
             <div className="col-md-6">
-              <SplitPanel title="Yetkazish turi" rows={snapshot.delivery_split.map((row, index) => ({ name: row.name, value: row.count, meta: `${fmt(row.revenue)} so'm`, color: ['#4f46e5', '#10b981', '#f59e0b', '#ec4899', '#06b6d4'][index % 5] }))} />
+              <SplitPanel title="Yetkazish turi" help="Buyurtmalar delivery turi bo'yicha ajratiladi. Yonidagi summa shu turdagi orderlar tushumi." rows={snapshot.delivery_split.map((row, index) => ({ name: row.name, value: row.count, meta: `${fmt(row.revenue)} so'm`, color: ['#4f46e5', '#10b981', '#f59e0b', '#ec4899', '#06b6d4'][index % 5] }))} />
             </div>
             <div className="col-12">
               <div className="card-panel">
@@ -421,11 +456,14 @@ function StatusPanel({ title, icon, counts, labels }: { title: string; icon: str
   );
 }
 
-function SplitPanel({ title, rows }: { title: string; rows: { name: string; value: number; meta: string; color: string }[] }) {
+function SplitPanel({ title, rows, help }: { title: string; rows: { name: string; value: number; meta: string; color: string }[]; help?: string }) {
   const total = rows.reduce((sum, row) => sum + row.value, 0) || 1;
   return (
     <div className="card-panel h-100">
-      <div className="live-panel-title">{title}</div>
+      <div className="d-flex align-items-center gap-2 mb-2">
+        <div className="live-panel-title mb-0">{title}</div>
+        {help ? <InfoHint tone="dark" text={help} /> : null}
+      </div>
       {rows.length ? rows.map((row) => {
         const width = row.value <= 100 && title.includes("To'lov") ? row.value : row.value / total * 100;
         return (

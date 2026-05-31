@@ -4403,20 +4403,15 @@ class AdminController extends Controller
             ['x' => 92, 'y' => 40], ['x' => 82, 'y' => 32], ['x' => 20, 'y' => 45], ['x' => 45, 'y' => 70],
         ];
 
-        $rows = Cache::remember('boshqaruv.live.regions', now()->addMinute(), function () {
+        $rows = Cache::remember('boshqaruv.live.regions.v3.address_snapshot', now()->addMinute(), function () {
             $regions = [];
-            $this->paidOrdersQuery()
+            Sold::query()
                 ->whereNotNull('address')
-                ->select(['id', 'address', 'amount', 'deliveryPrice', 'discountAmount', 'cashbackAmount'])
+                ->select(['id', 'address', 'recipient_region', 'amount', 'deliveryPrice', 'discountAmount', 'cashbackAmount'])
                 ->chunkById(500, function ($orders) use (&$regions) {
                     foreach ($orders as $order) {
-                        $address = collect($order->address ?? [])->first() ?? [];
-                        $region = data_get($address, 'region')
-                            ?: data_get($address, 'region_name')
-                            ?: data_get($address, 'city')
-                            ?: data_get($address, 'district')
-                            ?: 'Noma\'lum';
-                        $name = is_scalar($region) ? (string) $region : 'Noma\'lum';
+                        $address = $this->primaryOrderAddressSnapshot($order->address ?? []);
+                        $name = $this->regionNameFromOrderAddress($address, $order->recipient_region ?? null);
                         $regions[$name] ??= ['name' => $name, 'value' => 0, 'revenue' => 0.0, 'profit' => 0.0];
                         $regions[$name]['value']++;
                         $regions[$name]['revenue'] += (float) ($order->amount ?? 0);
@@ -4437,6 +4432,178 @@ class AdminController extends Controller
             'color' => $colors[$index % count($colors)],
             'coords' => $coords[$index % count($coords)],
         ])->all();
+    }
+
+    private function primaryOrderAddressSnapshot(mixed $address): array
+    {
+        if (! is_array($address)) {
+            return [];
+        }
+
+        $isList = array_is_list($address);
+        if ($isList) {
+            $first = collect($address)->first(fn ($row) => is_array($row));
+            return is_array($first) ? $first : [];
+        }
+
+        return $address;
+    }
+
+    private function regionNameFromOrderAddress(array $address, mixed $fallbackRegion = null): string
+    {
+        $direct = data_get($address, 'region')
+            ?: data_get($address, 'region_name')
+            ?: data_get($address, 'province')
+            ?: data_get($address, 'state')
+            ?: data_get($address, 'city')
+            ?: data_get($address, 'district');
+
+        if (is_scalar($direct) && trim((string) $direct) !== '') {
+            return $this->canonicalAddressRegionName((string) $direct);
+        }
+
+        $fullAddress = data_get($address, 'fullAddress')
+            ?: data_get($address, 'full_address')
+            ?: data_get($address, 'address');
+
+        if (is_scalar($fullAddress)) {
+            $parts = collect(explode(',', (string) $fullAddress))
+                ->map(fn ($part) => $this->cleanAddressRegionName($part))
+                ->filter()
+                ->values();
+
+            $withoutCountry = $parts
+                ->reject(fn ($part) => $this->isCountryAddressPart($part))
+                ->reject(fn ($part) => $this->isInvalidRegionAddressPart($part))
+                ->values();
+            if ($withoutCountry->isNotEmpty()) {
+                return $this->canonicalAddressRegionName((string) $withoutCountry->first());
+            }
+        }
+
+        if (is_scalar($fallbackRegion) && trim((string) $fallbackRegion) !== '') {
+            return $this->canonicalAddressRegionName((string) $fallbackRegion);
+        }
+
+        return 'Noma\'lum';
+    }
+
+    private function cleanAddressRegionName(string $value): string
+    {
+        return trim(preg_replace('/\s+/u', ' ', str_replace(['`', '’'], ["'", "'"], $value)) ?: '');
+    }
+
+    private function isCountryAddressPart(string $value): bool
+    {
+        $normalized = $this->normalizedAddressPartKey($value);
+
+        return in_array($normalized, [
+            'ozbekiston', 'uzbekiston', 'uzbekistan', 'uzb',
+            'ozbekistonrespublikasi', 'uzbekistonrespublikasi', 'republicofuzbekistan',
+            'узбекистан', 'республикаузбекистан',
+        ], true);
+    }
+
+    private function isInvalidRegionAddressPart(string $value): bool
+    {
+        $value = trim($value);
+
+        return $value === ''
+            || preg_match('/^[A-ZА-Я]\d{2,}$/u', $value) === 1
+            || preg_match('/^\d+$/', $value) === 1;
+    }
+
+    private function canonicalAddressRegionName(string $value): string
+    {
+        $name = $this->cleanAddressRegionName($value);
+        $key = $this->normalizedAddressPartKey($name);
+
+        $aliases = [
+            'toshkent' => 'Toshkent',
+            'toshkentshahri' => 'Toshkent',
+            'toshkentviloyati' => 'Toshkent viloyati',
+            'tashkent' => 'Toshkent',
+            'tashkentcity' => 'Toshkent',
+            'tashkentregion' => 'Toshkent viloyati',
+            'ташкент' => 'Toshkent',
+            'гташкент' => 'Toshkent',
+            'городташкент' => 'Toshkent',
+            'ташкентская' => 'Toshkent viloyati',
+            'ташкентскаяобласть' => 'Toshkent viloyati',
+            'ташкентобласть' => 'Toshkent viloyati',
+            'andijon' => 'Andijon',
+            'andijan' => 'Andijon',
+            'андижан' => 'Andijon',
+            'андижанская' => 'Andijon',
+            'buxoro' => 'Buxoro',
+            'bukhara' => 'Buxoro',
+            'бухара' => 'Buxoro',
+            'бухарская' => 'Buxoro',
+            'fargona' => 'Fargona',
+            'fergana' => 'Fargona',
+            'ferghana' => 'Fargona',
+            'фергана' => 'Fargona',
+            'ферганская' => 'Fargona',
+            'jizzax' => 'Jizzax',
+            'jizzakh' => 'Jizzax',
+            'джизак' => 'Jizzax',
+            'джизакская' => 'Jizzax',
+            'xorazm' => 'Xorazm',
+            'khorezm' => 'Xorazm',
+            'хорезм' => 'Xorazm',
+            'хорезмская' => 'Xorazm',
+            'namangan' => 'Namangan',
+            'наманган' => 'Namangan',
+            'наманганская' => 'Namangan',
+            'navoiy' => 'Navoiy',
+            'navoi' => 'Navoiy',
+            'навоий' => 'Navoiy',
+            'навоийская' => 'Navoiy',
+            'qashqadaryo' => 'Qashqadaryo',
+            'kashkadarya' => 'Qashqadaryo',
+            'кашкадарья' => 'Qashqadaryo',
+            'кашкадарьинская' => 'Qashqadaryo',
+            'qoraqalpogiston' => 'Qoraqalpogiston',
+            'qoraqalpogistonrespublikasi' => 'Qoraqalpogiston',
+            'karakalpakstan' => 'Qoraqalpogiston',
+            'karakalpakstanrepublic' => 'Qoraqalpogiston',
+            'republicofkarakalpakstan' => 'Qoraqalpogiston',
+            'каракалпакстан' => 'Qoraqalpogiston',
+            'республикакаракалпакстан' => 'Qoraqalpogiston',
+            'samarqand' => 'Samarqand',
+            'samarkand' => 'Samarqand',
+            'самарканд' => 'Samarqand',
+            'самаркандская' => 'Samarqand',
+            'sirdaryo' => 'Sirdaryo',
+            'syrdarya' => 'Sirdaryo',
+            'сырдарья' => 'Sirdaryo',
+            'сырдарьинская' => 'Sirdaryo',
+            'surxondaryo' => 'Surxondaryo',
+            'surkhandarya' => 'Surxondaryo',
+            'сурхандарья' => 'Surxondaryo',
+            'сурхандарьинская' => 'Surxondaryo',
+        ];
+
+        return $aliases[$key] ?? $aliases[$this->normalizedAddressBaseKey($name)] ?? $name;
+    }
+
+    private function normalizedAddressPartKey(string $value): string
+    {
+        return Str::of($value)
+            ->lower()
+            ->replace(["'", 'ʻ', 'ʼ', '`', '’', '.', ','], '')
+            ->replace([' ', '-', '_'], '')
+            ->value();
+    }
+
+    private function normalizedAddressBaseKey(string $value): string
+    {
+        return Str::of($this->normalizedAddressPartKey($value))
+            ->replace([
+                'viloyati', 'viloyat', 'region', 'oblast', 'область', 'обл',
+                'shahri', 'shahar', 'city', 'город',
+            ], '')
+            ->value();
     }
 
     private function liveRecentOrders(): array
@@ -4549,7 +4716,7 @@ class AdminController extends Controller
     private function paidOrderItemAggregates(): array
     {
         return Cache::remember('boshqaruv.live.item-aggregates', now()->addMinute(), function () {
-            $categories = ['book' => 0.0, 'stationery' => 0.0, 'gift' => 0.0, 'other' => 0.0];
+            $categories = ['book' => 0.0, 'stationery' => 0.0, 'other' => 0.0];
             $products = [];
 
             $this->paidOrdersQuery()
@@ -4559,6 +4726,10 @@ class AdminController extends Controller
                     foreach ($orders as $order) {
                         foreach (collect($order->items ?? []) as $item) {
                             $type = (string) ($item['type'] ?? 'book');
+                            if ($type === 'gift') {
+                                continue;
+                            }
+
                             $category = array_key_exists($type, $categories) ? $type : 'other';
                             $id = (int) ($item['item_id'] ?? $item['product_id'] ?? 0);
                             $name = (string) ($item['name'] ?? 'Mahsulot');
