@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import type { ReactNode } from 'react';
+import { useEffect, useState } from 'react';
+import type { FormEvent, ReactNode } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button } from 'react-bootstrap';
 import PaginationControls from '../components/PaginationControls';
@@ -35,8 +35,12 @@ interface Book {
   views?: number;
   cover: string | null;
   images?: string[];
+  rawImages?: string[];
   category?: string;
+  categoryId?: number | null;
   publisher?: string | null;
+  publisherId?: number | null;
+  sellerId?: number | null;
   status?: number;
   active?: boolean;
   hidden?: boolean;
@@ -66,6 +70,8 @@ interface Book {
   moderateUrl?: string;
 }
 
+interface OptionItem { id: number; name: string }
+
 const badge = (ok: boolean | undefined, yes: string, no: string) => (
   <span className={`chip ${ok ? 'chip-success' : 'chip-gray'}`}>{ok ? yes : no}</span>
 );
@@ -78,18 +84,39 @@ const Detail = ({ label, value }: { label: string; value?: ReactNode }) => (
 );
 
 export default function Books() {
-  const { books = [], bookPagination = { page: 1, totalPages: 1, from: 0, to: 0, total: 0 } } = usePage<{ books?: Book[]; bookPagination?: { page: number; totalPages: number; from: number; to: number; total: number } }>().props;
+  const { books = [], bookPagination = { page: 1, totalPages: 1, from: 0, to: 0, total: 0 }, bookFilters = {}, bookFormOptions = { categories: [], publishers: [], sellers: [] } } = usePage<{ books?: Book[]; bookPagination?: { page: number; totalPages: number; from: number; to: number; total: number }; bookFilters?: { search?: string }; bookFormOptions?: { categories: OptionItem[]; publishers: OptionItem[]; sellers: OptionItem[] } }>().props;
   const [showView, setShowView] = useState(false);
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
+  const [search, setSearch] = useState(bookFilters.search || '');
+  const [autoOpenedSearch, setAutoOpenedSearch] = useState('');
 
   const handleOpenView = (book: Book) => {
     setSelectedBook(book);
     setShowView(true);
   };
 
+  useEffect(() => {
+    if (bookFilters.search && bookFilters.search !== autoOpenedSearch && books.length === 1 && !showView) {
+      setAutoOpenedSearch(bookFilters.search);
+      handleOpenView(books[0]);
+    }
+  }, [bookFilters.search, autoOpenedSearch, books, showView]);
+
   const handleModerate = (book: Book, status: 0 | 1 | 2) => {
     if (!book.moderateUrl) return;
     router.patch(book.moderateUrl, { is_approved: status }, { preserveScroll: true });
+  };
+
+  const submitEdit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!selectedBook?.editUrl) return;
+    const data = new FormData(event.currentTarget);
+    data.append('_method', 'PUT');
+    router.post(selectedBook.editUrl, data, {
+      forceFormData: true,
+      preserveScroll: true,
+      onSuccess: () => setShowView(false),
+    });
   };
 
   return (
@@ -99,6 +126,10 @@ export default function Books() {
           <h1 className="page-title">Kitoblar katalogi</h1>
           <p className="page-subtitle">{bookPagination.total} ta kitob</p>
         </div>
+        <form className="d-flex gap-2" onSubmit={(event) => { event.preventDefault(); router.get('/boshqaruv/books', { books_search: search, books_page: 1 }, { preserveState: true, preserveScroll: true, replace: true }); }}>
+          <input className="form-control form-control-sm" style={{ minWidth: 280 }} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="ID, nom, ISBN, muallif yoki seller" />
+          <button className="btn btn-sm btn-outline-secondary"><i className="bi bi-search"></i></button>
+        </form>
       </div>
 
       <div className="row g-3">
@@ -138,7 +169,7 @@ export default function Books() {
           </div>
         ))}
       </div>
-      <PaginationControls {...bookPagination} onPageChange={(page) => router.get('/boshqaruv/books', { books_page: page }, { preserveState: true, preserveScroll: true, replace: true })} />
+      <PaginationControls {...bookPagination} onPageChange={(page) => router.get('/boshqaruv/books', { books_page: page, books_search: search }, { preserveState: true, preserveScroll: true, replace: true })} />
 
       <Modal show={showView} onHide={() => setShowView(false)} centered size="xl" scrollable>
         <Modal.Header closeButton>
@@ -240,6 +271,39 @@ export default function Books() {
                   <h6 className="fw-bold mb-3">Seller orderlar</h6>
                   <MiniOrdersTable rows={selectedBook.sellerOrders || []} empty="Seller order topilmadi" />
                 </div>
+
+                <div className="detail-panel mt-3">
+                  <h6 className="fw-bold mb-3">Admin tahriri</h6>
+                  <form className="row g-3" onSubmit={submitEdit}>
+                    <div className="col-md-6"><label className="form-label small text-muted">Nomi</label><input name="name" className="form-control" defaultValue={selectedBook.title} required /></div>
+                    <div className="col-md-6"><label className="form-label small text-muted">Muallif</label><input name="author" className="form-control" defaultValue={selectedBook.author} required /></div>
+                    <div className="col-md-4"><label className="form-label small text-muted">Tarjimon</label><input name="translator" className="form-control" defaultValue={selectedBook.translator || ''} /></div>
+                    <div className="col-md-4"><label className="form-label small text-muted">ISBN</label><input name="isbn" className="form-control" defaultValue={selectedBook.isbn || ''} /></div>
+                    <div className="col-md-4"><label className="form-label small text-muted">Yil</label><input name="year" type="number" className="form-control" defaultValue={selectedBook.year || ''} /></div>
+                    <div className="col-md-4"><label className="form-label small text-muted">Kategoriya</label><select name="category_id" className="form-select" defaultValue={selectedBook.categoryId || ''} required>{bookFormOptions.categories.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></div>
+                    <div className="col-md-4"><label className="form-label small text-muted">Nashriyot</label><select name="publisher_id" className="form-select" defaultValue={selectedBook.publisherId || ''}><option value="">Tanlanmagan</option>{bookFormOptions.publishers.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></div>
+                    <div className="col-md-4"><label className="form-label small text-muted">Seller</label><select name="seller_id" className="form-select" defaultValue={selectedBook.sellerId || ''}><option value="">Ichki katalog</option>{bookFormOptions.sellers.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></div>
+                    <div className="col-md-3"><label className="form-label small text-muted">Narx</label><input name="price" type="number" min={0} className="form-control" defaultValue={selectedBook.price} required /></div>
+                    <div className="col-md-3"><label className="form-label small text-muted">Chegirma narxi</label><input name="discountPrice" type="number" min={0} className="form-control" defaultValue={selectedBook.discountPrice || ''} /></div>
+                    <div className="col-md-3"><label className="form-label small text-muted">Chegirma muddati</label><input name="discountExpiresAt" type="datetime-local" className="form-control" defaultValue={toInputDate(selectedBook.discountExpiresAt)} /></div>
+                    <div className="col-md-3"><label className="form-label small text-muted">Ombor</label><input name="count" type="number" min={0} className="form-control" defaultValue={selectedBook.stock} required /></div>
+                    <div className="col-md-3"><label className="form-label small text-muted">Til</label><input name="lang" className="form-control" defaultValue={selectedBook.lang || ''} /></div>
+                    <div className="col-md-3"><label className="form-label small text-muted">Yozuv</label><input name="langType" className="form-control" defaultValue={selectedBook.langType || ''} /></div>
+                    <div className="col-md-3"><label className="form-label small text-muted">Muqova</label><input name="coverType" className="form-control" defaultValue={selectedBook.coverType || ''} /></div>
+                    <div className="col-md-3"><label className="form-label small text-muted">Sahifa</label><input name="pages" type="number" min={0} className="form-control" defaultValue={selectedBook.pages || ''} /></div>
+                    <div className="col-md-4"><label className="form-label small text-muted">Moderatsiya</label><select name="is_approved" className="form-select" defaultValue={selectedBook.status ?? 0}><option value="0">Moderatsiya</option><option value="1">Tasdiqlangan</option><option value="2">Rad etilgan</option></select></div>
+                    <div className="col-md-8 d-flex align-items-end gap-3 flex-wrap">
+                      <label className="form-check"><input name="status" value="1" className="form-check-input" type="checkbox" defaultChecked={selectedBook.active} /> <span className="form-check-label">Faol</span></label>
+                      <label className="form-check"><input name="is_hidden" value="1" className="form-check-input" type="checkbox" defaultChecked={selectedBook.hidden} /> <span className="form-check-label">Yashirish</span></label>
+                      <label className="form-check"><input name="recommended" value="1" className="form-check-input" type="checkbox" defaultChecked={selectedBook.recommended} /> <span className="form-check-label">Tavsiya</span></label>
+                    </div>
+                    <div className="col-md-6"><label className="form-label small text-muted">Tavsiya muddati</label><input name="recommendedExpiresAt" type="datetime-local" className="form-control" defaultValue={toInputDate(selectedBook.recommendedExpiresAt)} /></div>
+                    <div className="col-md-6"><label className="form-label small text-muted">Yangi rasmlar</label><input name="images[]" type="file" multiple accept="image/*" className="form-control" /></div>
+                    <div className="col-12"><label className="form-label small text-muted">Rasmlar ro'yxati</label><textarea name="images_text" className="form-control" rows={3} defaultValue={(selectedBook.rawImages || selectedBook.images || []).join('\n')} /></div>
+                    <div className="col-12"><label className="form-label small text-muted">Tavsif</label><textarea name="description" className="form-control" rows={4} defaultValue={selectedBook.description || ''} /></div>
+                    <div className="col-12"><button className="btn btn-primary-gradient">Saqlash</button></div>
+                  </form>
+                </div>
               </div>
             </div>
           ) : null}
@@ -258,6 +322,11 @@ export default function Books() {
   );
 }
 
+function toInputDate(value?: string | null) {
+  if (!value) return '';
+  return String(value).replace(' ', 'T').slice(0, 16);
+}
+
 function MiniOrdersTable({ rows, empty }: { rows: MiniOrder[]; empty: string }) {
   if (!rows.length) {
     return <div className="text-muted small">{empty}</div>;
@@ -273,6 +342,7 @@ function MiniOrdersTable({ rows, empty }: { rows: MiniOrder[]; empty: string }) 
             <th>Summa</th>
             <th>Status</th>
             <th>Sana</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
@@ -286,6 +356,9 @@ function MiniOrdersTable({ rows, empty }: { rows: MiniOrder[]; empty: string }) 
               <td className="fw-semibold">{fmt(row.amount)} so'm</td>
               <td><span className="chip chip-gray">{row.status || '—'}</span></td>
               <td className="text-muted">{row.date || '—'}</td>
+              <td className="text-end">
+                {row.url ? <a className="btn btn-sm btn-light" href={row.url} title="Buyurtmani ochish"><i className="bi bi-eye"></i></a> : null}
+              </td>
             </tr>
           ))}
         </tbody>

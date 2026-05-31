@@ -61,7 +61,9 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
         Route::get('/settings', fn (AdminController $controller) => $controller->page('Settings'))->name('settings');
 
         Route::patch('/books/{book}/moderate', [\App\Http\Controllers\A122\BookController::class, 'moderate'])->name('books.moderate');
+        Route::put('/books/{book}', [AdminController::class, 'updateBook'])->name('books.update');
         Route::patch('/stationery/{id}/moderate', [\App\Http\Controllers\A122\StationeryController::class, 'moderate'])->name('stationery.moderate');
+        Route::put('/stationery/{stationery}', [AdminController::class, 'updateStationery'])->name('stationery.update');
         Route::get('/authors/{author}/data', [AdminController::class, 'authorData'])->name('authors.data');
         Route::post('/authors', [AdminController::class, 'storeAuthor'])->name('authors.store');
         Route::post('/authors/{author}/generate-image-prompt', [AdminController::class, 'generateAuthorImagePrompt'])->name('authors.generate-image-prompt');

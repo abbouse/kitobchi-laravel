@@ -87,11 +87,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     <div className="app-shell">
       <aside className={`sidebar ${open ? 'open' : ''}`}>
         <div className="brand">
-          <div className="brand-logo"><i className="bi bi-book-half"></i></div>
-          <div>
-            <div className="brand-name">Kitobchi</div>
-            <div className="brand-sub">Admin Panel</div>
-          </div>
+          <img src="/images/logo/logo_white.png" alt="Kitobchi" style={{ width: 132, height: 'auto', display: 'block' }} />
         </div>
 
         <nav className="nav-group">

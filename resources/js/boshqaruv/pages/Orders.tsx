@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import type { ReactNode } from 'react';
+import { useEffect, useState } from 'react';
+import type { FormEvent, ReactNode } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button } from 'react-bootstrap';
 import PaginationControls from '../components/PaginationControls';
@@ -9,6 +9,7 @@ const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
 interface OrderItem {
   id?: number;
   type: string;
+  productUrl?: string;
   typeLabel: string;
   name: string;
   quantity: number;
@@ -20,14 +21,36 @@ interface OrderItem {
 
 interface SellerOrder {
   id: number;
+  sellerId?: number;
   seller?: string | null;
+  sellerPhone?: string | null;
+  sellerCommissionPercent?: number;
   courier?: string | null;
   courierPhone?: string | null;
+  courierRegion?: string | null;
   amount: number;
   deliveryType?: string;
   status: string;
   acceptedAt?: string | null;
+  createdAt?: string | null;
+  address?: Record<string, unknown>;
+  settlement?: SettlementOverview | null;
   url?: string;
+}
+
+interface SettlementOverview {
+  gross?: number;
+  commission?: number;
+  net?: number;
+  reversedNet?: number;
+  currentNet?: number;
+  saleCount?: number;
+  reversalCount?: number;
+  transactions?: number;
+  status?: string;
+  label?: string;
+  latestSaleAt?: string | null;
+  latestReversalAt?: string | null;
 }
 
 interface Ord {
@@ -42,7 +65,13 @@ interface Ord {
   deliveryPrice?: number;
   discountAmount?: number;
   cashbackAmount?: number;
+  withCashback?: boolean;
+  awardedCashbackAmount?: number;
+  cashbackReadyAt?: string | null;
+  cashbackAwardedAt?: string | null;
+  cashbackNotifiedAt?: string | null;
   giftCertAmount?: number;
+  giftCertificateId?: number | null;
   packagingPrice?: number;
   status: string;
   legacyStatus?: string;
@@ -59,6 +88,7 @@ interface Ord {
   resendReplacementOrderId?: number | null;
   resendAvailableAt?: string | null;
   address?: Record<string, unknown>;
+  addresses?: Array<Record<string, unknown>>;
   isInstore?: boolean;
   withPackaging?: boolean;
   isGiftToOther?: boolean;
@@ -76,13 +106,36 @@ interface Ord {
     cashCollectAmount?: number;
     tracking?: string | null;
     labelCode?: string | null;
+    notes?: unknown;
+    routingVersion?: string | null;
+    routingSnapshot?: unknown;
     lastModeSwitch?: Record<string, unknown> | null;
     lastHubReroute?: Record<string, unknown> | null;
     timeline?: Array<{ code: string; title: string; at: string }>;
   } | null;
   paymentTransaction?: { id: number; provider?: string; providerCardId?: string; amount?: number; status?: string; date?: string } | null;
-  settlementOverview?: { gross?: number; commission?: number; net?: number; reversedNet?: number; transactions?: number };
-  courierOrder?: { id: number; courier?: string; phone?: string; region?: string; status?: string; amount?: number; courierPrice?: number } | null;
+  paymentCard?: { provider?: string | null; providerCardId?: string | null; maskedNumber?: string | null; vendor?: string | null; cardName?: string | null; phone?: string | null };
+  settlementOverview?: SettlementOverview;
+  courierOrder?: {
+    id: number;
+    courier?: string;
+    phone?: string;
+    region?: string;
+    status?: string;
+    amount?: number;
+    courierPrice?: number;
+    courierBonus?: number;
+    pickupBonus?: number;
+    lockedBonus?: number;
+    finalBonus?: number;
+    settledAmount?: number;
+    settledAt?: string | null;
+    pickedUpAt?: string | null;
+    slaDeadline?: string | null;
+    customerDelayCount?: number;
+    totalDelaySeconds?: number;
+    isCustomerDelay?: boolean;
+  } | null;
   activeHubs?: Array<{ id: number; label: string }>;
   fulfillmentModes?: Array<{ value: string; label: string }>;
   sellerOrders?: SellerOrder[];
@@ -173,6 +226,7 @@ export default function Orders() {
   const [showView, setShowView] = useState(false);
   const [selectedOrd, setSelectedOrd] = useState<Ord | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [autoOpenedSearch, setAutoOpenedSearch] = useState('');
 
   const loadOrders = (page = 1, tab = activeTab, term = search) => {
     router.get('/boshqaruv/orders', { orders_page: page, orders_tab: tab, orders_search: term }, {
@@ -200,6 +254,13 @@ export default function Orders() {
     await loadOrderDetail(order);
   };
 
+  useEffect(() => {
+    if (orderFilters.search && orderFilters.search !== autoOpenedSearch && orders.length === 1 && !showView) {
+      setAutoOpenedSearch(orderFilters.search);
+      void handleOpenView(orders[0]);
+    }
+  }, [orderFilters.search, autoOpenedSearch, orders, showView]);
+
   const handleUpdateStatus = (status: string) => {
     if (!selectedOrd?.statusUrl) return;
     const nextStatus = normalizeStatus(status);
@@ -222,37 +283,15 @@ export default function Orders() {
     });
   };
 
-  const switchMode = () => {
-    if (!selectedOrd?.switchModeUrl) return;
-    const target_mode = prompt('Yangi fulfillment mode', selectedOrd.fulfillment?.mode || selectedOrd.fulfillmentModes?.[0]?.value || '');
-    if (!target_mode) return;
-    const hub_id = prompt("Target hub ID (auto tanlash uchun bo'sh qoldiring)", '') || '';
-    const override_note = prompt('Mode almashtirish izohi', '') || '';
-    postPrompt(selectedOrd.switchModeUrl, { target_mode, hub_id, override_note });
-  };
-
-  const rerouteHub = () => {
-    if (!selectedOrd?.rerouteHubUrl) return;
-    const hub_id = prompt('Yangi hub ID', String(selectedOrd.activeHubs?.[0]?.id || ''));
-    if (!hub_id) return;
-    const reroute_note = prompt('Reroute izohi', '') || '';
-    postPrompt(selectedOrd.rerouteHubUrl, { hub_id, reroute_note });
-  };
-
-  const markPostalReturned = () => {
-    if (!selectedOrd?.postalReturnUrl) return;
-    const postal_return_fee = prompt('Pochta qaytimi jarimasi', String(selectedOrd.postalReturnFee || 0));
-    if (postal_return_fee === null) return;
-    const postal_return_note = prompt('Qaytim izohi', selectedOrd.postalReturnNote || '') || '';
-    postPrompt(selectedOrd.postalReturnUrl, { postal_return_fee, postal_return_note }, 'patch');
-  };
-
-  const refundAndCancel = () => {
-    if (!selectedOrd?.refundCancelUrl || !selectedOrd.refundConfirmationPhrase) return;
-    const confirmation_phrase = prompt(`Pulni qaytarish uchun tasdiqlash matnini kiriting: ${selectedOrd.refundConfirmationPhrase}`, '');
-    if (!confirmation_phrase) return;
-    const reason = prompt('Refund sababi', '') || '';
-    postPrompt(selectedOrd.refundCancelUrl, { confirmation_phrase, reason });
+  const submitForm = (event: FormEvent<HTMLFormElement>, url: string | undefined, method: 'post' | 'patch' = 'post') => {
+    event.preventDefault();
+    if (!url) return;
+    const data = Object.fromEntries(new FormData(event.currentTarget).entries()) as Record<string, string>;
+    const currentOrder = selectedOrd;
+    router[method](url, data, {
+      preserveScroll: true,
+      onSuccess: () => currentOrder && loadOrderDetail(currentOrder),
+    });
   };
 
   return (
@@ -385,6 +424,19 @@ export default function Orders() {
                 <div className="detail-panel mt-3">
                   <h6 className="fw-bold mb-3">Manzil va sovg'a</h6>
                   <AddressBlock address={selectedOrd.address || {}} />
+                  {selectedOrd.addresses && selectedOrd.addresses.length > 1 ? (
+                    <div className="mt-3">
+                      <div className="text-muted small mb-2">Buyurtmadagi barcha manzillar</div>
+                      <div className="d-flex flex-column gap-2">
+                        {selectedOrd.addresses.map((address, index) => (
+                          <div className="rounded-3 border p-3" key={index}>
+                            <div className="fw-semibold mb-2">Manzil #{index + 1}</div>
+                            <AddressBlock address={address} />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
                   <div className="row g-3 mt-1">
                     <Detail label="Instore" value={selectedOrd.isInstore ? 'Ha' : "Yo'q"} />
                     <Detail label="Qadoqlash" value={selectedOrd.withPackaging ? `${fmt(selectedOrd.packagingPrice || 0)} so'm` : "Yo'q"} />
@@ -434,7 +486,11 @@ export default function Orders() {
                             <td>
                               <div className="d-flex align-items-center gap-2">
                                 <div className="item-thumb">{item.image ? <img src={item.image} alt={item.name} /> : <i className="bi bi-box"></i>}</div>
-                                <span className="fw-semibold">{item.name}</span>
+                                {item.productUrl ? (
+                                  <a className="fw-semibold text-decoration-none" href={item.productUrl} title="Mahsulotni ochish">{item.name}</a>
+                                ) : (
+                                  <span className="fw-semibold">{item.name}</span>
+                                )}
                               </div>
                             </td>
                             <td>{item.seller || '—'}</td>
@@ -459,7 +515,12 @@ export default function Orders() {
                         <Detail label="Qadoqlash" value={`${fmt(selectedOrd.packagingPrice || 0)} so'm`} />
                         <Detail label="Chegirma" value={`${fmt(selectedOrd.discountAmount || 0)} so'm`} />
                         <Detail label="Cashback" value={`${fmt(selectedOrd.cashbackAmount || 0)} so'm`} />
+                        <Detail label="Cashback berilgan" value={`${fmt(selectedOrd.awardedCashbackAmount || 0)} so'm`} />
+                        <Detail label="Cashback tayyor vaqti" value={selectedOrd.cashbackReadyAt} />
+                        <Detail label="Cashback tushgan vaqt" value={selectedOrd.cashbackAwardedAt} />
+                        <Detail label="Cashback xabari" value={selectedOrd.cashbackNotifiedAt} />
                         <Detail label="Sertifikat" value={`${fmt(selectedOrd.giftCertAmount || 0)} so'm`} />
+                        <Detail label="Sertifikat ID" value={selectedOrd.giftCertificateId ? `#${selectedOrd.giftCertificateId}` : '—'} />
                         <Detail label="Promokod" value={selectedOrd.promocode} />
                         <Detail label="Qaytim holati" value={selectedOrd.postalReturnStatus} />
                         <Detail label="Qayta jo'natish to'lovi" value={`${fmt(selectedOrd.postalReturnFee || 0)} so'm`} />
@@ -480,8 +541,11 @@ export default function Orders() {
                           <Detail label="First / last mile" value={[selectedOrd.fulfillment.firstMile, selectedOrd.fulfillment.lastMile].filter(Boolean).join(' / ')} />
                           <Detail label="COD" value={selectedOrd.fulfillment.isCod ? `${fmt(selectedOrd.fulfillment.cashCollectAmount || 0)} so'm` : "Yo'q"} />
                           <Detail label="Tracking / Label" value={[selectedOrd.fulfillment.tracking, selectedOrd.fulfillment.labelCode].filter(Boolean).join(' / ')} />
+                          <Detail label="Routing version" value={selectedOrd.fulfillment.routingVersion} />
                           <Detail label="Oxirgi mode almashuvi" value={formatAudit(selectedOrd.fulfillment.lastModeSwitch)} />
                           <Detail label="Oxirgi hub reroute" value={formatAudit(selectedOrd.fulfillment.lastHubReroute)} />
+                          <Detail label="Routing snapshot" value={<JsonPreview value={selectedOrd.fulfillment.routingSnapshot} />} />
+                          <Detail label="Fulfillment notes" value={<JsonPreview value={selectedOrd.fulfillment.notes} />} />
                         </div>
                       ) : (
                         <div className="text-muted small">Fulfillment yozuvi hali yoq.</div>
@@ -509,6 +573,8 @@ export default function Orders() {
                         <Detail label="Komissiya" value={`${fmt(selectedOrd.settlementOverview?.commission || 0)} so'm`} />
                         <Detail label="Seller net" value={`${fmt(selectedOrd.settlementOverview?.net || 0)} so'm`} />
                         <Detail label="Qaytarilgan net" value={`${fmt(selectedOrd.settlementOverview?.reversedNet || 0)} so'm`} />
+                        <Detail label="Hozirgi net" value={`${fmt(selectedOrd.settlementOverview?.currentNet || 0)} so'm`} />
+                        <Detail label="Holat" value={selectedOrd.settlementOverview?.label} />
                       </div>
                     </div>
                   </div>
@@ -518,8 +584,16 @@ export default function Orders() {
                       <div className="row g-3">
                         <Detail label="Payment provider" value={selectedOrd.paymentTransaction?.provider} />
                         <Detail label="Payment status" value={selectedOrd.paymentTransaction?.status} />
+                        <Detail label="Provider card ID" value={selectedOrd.paymentCard?.providerCardId || selectedOrd.paymentTransaction?.providerCardId} />
+                        <Detail label="Karta" value={[selectedOrd.paymentCard?.maskedNumber, selectedOrd.paymentCard?.vendor, selectedOrd.paymentCard?.cardName].filter(Boolean).join(' / ')} />
+                        <Detail label="Karta telefoni" value={selectedOrd.paymentCard?.phone} />
                         <Detail label="Kuryer" value={selectedOrd.courierOrder?.courier || selectedOrd.courierName} />
                         <Detail label="Kuryer telefoni" value={selectedOrd.courierOrder?.phone} />
+                        <Detail label="Kuryer narxi" value={`${fmt(selectedOrd.courierOrder?.courierPrice || 0)} so'm`} />
+                        <Detail label="Kuryer bonuslari" value={`${fmt((selectedOrd.courierOrder?.pickupBonus || 0) + (selectedOrd.courierOrder?.lockedBonus || 0) + (selectedOrd.courierOrder?.finalBonus || 0))} so'm`} />
+                        <Detail label="Settled" value={selectedOrd.courierOrder?.settledAt ? `${fmt(selectedOrd.courierOrder?.settledAmount || 0)} so'm · ${selectedOrd.courierOrder.settledAt}` : '—'} />
+                        <Detail label="SLA deadline" value={selectedOrd.courierOrder?.slaDeadline} />
+                        <Detail label="Mijoz kechikishi" value={selectedOrd.courierOrder?.isCustomerDelay ? `Ha · ${selectedOrd.courierOrder.customerDelayCount || 0} marta` : "Yo'q"} />
                       </div>
                     </div>
                   </div>
@@ -527,12 +601,65 @@ export default function Orders() {
 
                 <div className="detail-panel mt-3">
                   <h6 className="fw-bold mb-2">Fulfillment boshqaruvi</h6>
-                  <div className="d-flex flex-wrap gap-2">
-                    <button className="btn btn-sm btn-outline-secondary" onClick={switchMode}>Mode almashtirish</button>
-                    <button className="btn btn-sm btn-outline-secondary" onClick={rerouteHub}>Hub reroute</button>
-                    <button className="btn btn-sm btn-outline-secondary" onClick={markPostalReturned}>Pochta qaytimi</button>
-                    {selectedOrd.cancelUrl && canCancelOrder(selectedOrd.status) ? <button className="btn btn-sm btn-outline-danger" onClick={() => confirm('Buyurtma bekor qilinsinmi?') && postPrompt(selectedOrd.cancelUrl, {})}>Bekor qilish</button> : null}
-                    {selectedOrd.canRefundPayment ? <button className="btn btn-sm btn-danger" onClick={refundAndCancel}>Refund + bekor qilish</button> : null}
+                  <div className="row g-3">
+                    <div className="col-xl-6">
+                      <form className="rounded-3 border p-3 h-100" onSubmit={(event) => submitForm(event, selectedOrd.switchModeUrl)}>
+                        <div className="fw-semibold mb-2">Fulfillment mode almashtirish</div>
+                        <label className="form-label small text-muted">Yangi mode</label>
+                        <select name="target_mode" className="form-select form-select-sm mb-2" defaultValue={selectedOrd.fulfillment?.mode || selectedOrd.fulfillmentModes?.[0]?.value || ''} required>
+                          {(selectedOrd.fulfillmentModes || []).map((mode) => <option value={mode.value} key={mode.value}>{mode.label}</option>)}
+                        </select>
+                        <label className="form-label small text-muted">Target hub</label>
+                        <select name="hub_id" className="form-select form-select-sm mb-2" defaultValue="">
+                          <option value="">Auto tanlash</option>
+                          {(selectedOrd.activeHubs || []).map((hub) => <option value={hub.id} key={hub.id}>{hub.label}</option>)}
+                        </select>
+                        <label className="form-label small text-muted">Izoh</label>
+                        <textarea name="override_note" className="form-control form-control-sm mb-3" rows={2} placeholder="Nega mode almashtirilmoqda?" />
+                        <button className="btn btn-sm btn-primary-gradient" disabled={!selectedOrd.switchModeUrl}>Mode'ni yangilash</button>
+                      </form>
+                    </div>
+                    <div className="col-xl-6">
+                      <form className="rounded-3 border p-3 h-100" onSubmit={(event) => submitForm(event, selectedOrd.rerouteHubUrl)}>
+                        <div className="fw-semibold mb-2">Mas'ul hubni reroute qilish</div>
+                        <label className="form-label small text-muted">Yangi hub</label>
+                        <select name="hub_id" className="form-select form-select-sm mb-2" defaultValue="" required>
+                          <option value="" disabled>Hub tanlang</option>
+                          {(selectedOrd.activeHubs || []).map((hub) => <option value={hub.id} key={hub.id}>{hub.label}</option>)}
+                        </select>
+                        <label className="form-label small text-muted">Reroute izohi</label>
+                        <textarea name="reroute_note" className="form-control form-control-sm mb-3" rows={2} placeholder="Masalan: mijozga yaqin hub tanlandi" />
+                        <button className="btn btn-sm btn-outline-secondary" disabled={!selectedOrd.rerouteHubUrl}>Hub'ni yangilash</button>
+                      </form>
+                    </div>
+                    <div className="col-xl-6">
+                      <form className="rounded-3 border p-3 h-100" onSubmit={(event) => submitForm(event, selectedOrd.postalReturnUrl, 'patch')}>
+                        <div className="fw-semibold mb-2">Pochta qaytimi / qayta jo'natish</div>
+                        <label className="form-label small text-muted">Qaytim xarajati</label>
+                        <input name="postal_return_fee" type="number" min={0} max={1000000} className="form-control form-control-sm mb-2" defaultValue={selectedOrd.postalReturnFee || 0} required />
+                        <label className="form-label small text-muted">Izoh</label>
+                        <textarea name="postal_return_note" className="form-control form-control-sm mb-3" rows={2} defaultValue={selectedOrd.postalReturnNote || ''} />
+                        <button className="btn btn-sm btn-outline-secondary" disabled={!selectedOrd.postalReturnUrl}>Qaytim sifatida belgilash</button>
+                      </form>
+                    </div>
+                    <div className="col-xl-6">
+                      <div className="rounded-3 border p-3 h-100">
+                        <div className="fw-semibold mb-2">Riskli amallar</div>
+                        <div className="d-flex flex-wrap gap-2 mb-3">
+                          {selectedOrd.cancelUrl && canCancelOrder(selectedOrd.status) ? <button className="btn btn-sm btn-outline-danger" onClick={() => confirm('Buyurtma bekor qilinsinmi?') && postPrompt(selectedOrd.cancelUrl, {})}>Bekor qilish</button> : null}
+                        </div>
+                        {selectedOrd.canRefundPayment && selectedOrd.refundConfirmationPhrase ? (
+                          <form onSubmit={(event) => submitForm(event, selectedOrd.refundCancelUrl)}>
+                            <div className="alert alert-danger py-2 small mb-2">
+                              Tasdiqlash matni: <strong>{selectedOrd.refundConfirmationPhrase}</strong>
+                            </div>
+                            <input name="confirmation_phrase" className="form-control form-control-sm mb-2" placeholder="Tasdiqlash matni" required />
+                            <input name="reason" className="form-control form-control-sm mb-2" placeholder="Refund sababi" />
+                            <button className="btn btn-sm btn-danger">Refund + bekor qilish</button>
+                          </form>
+                        ) : <div className="text-muted small">Refund faqat ruxsat bo'lsa va shartlar mos kelsa chiqadi.</div>}
+                      </div>
+                    </div>
                   </div>
                   {selectedOrd.activeHubs?.length ? <div className="text-muted small mt-3">Faol hub ID: {selectedOrd.activeHubs.map((hub) => `${hub.id}: ${hub.label}`).join(' · ')}</div> : null}
                 </div>
@@ -572,6 +699,16 @@ function formatAudit(value?: Record<string, unknown> | null) {
     .filter(([, item]) => item !== null && item !== undefined && item !== '')
     .map(([key, item]) => `${key}: ${String(item)}`)
     .join(' · ');
+}
+
+function JsonPreview({ value }: { value?: unknown }) {
+  if (!value || (Array.isArray(value) && value.length === 0)) return <>—</>;
+  if (typeof value === 'string') return <>{value || '—'}</>;
+  return (
+    <pre className="small text-muted mb-0 bg-light rounded-3 p-2" style={{ maxHeight: 140, overflow: 'auto', whiteSpace: 'pre-wrap' }}>
+      {JSON.stringify(value, null, 2)}
+    </pre>
+  );
 }
 
 function OrderTimeline({ rows }: { rows: Array<{ code: string; title: string; at: string }> }) {
@@ -643,6 +780,7 @@ function SellerOrdersTable({ rows }: { rows: SellerOrder[] }) {
             <th>Seller</th>
             <th>Kuryer</th>
             <th>Summa</th>
+            <th>Hisob-kitob</th>
             <th>Status</th>
             <th>Qabul</th>
           </tr>
@@ -651,14 +789,24 @@ function SellerOrdersTable({ rows }: { rows: SellerOrder[] }) {
           {rows.map((row) => (
             <tr key={row.id}>
               <td>#{row.id}</td>
-              <td>{row.seller || '—'}</td>
+              <td>
+                <div className="fw-semibold">{row.seller || '—'}</div>
+                <div className="text-muted small">{[row.sellerPhone, row.sellerCommissionPercent ? `${row.sellerCommissionPercent}% komissiya` : null].filter(Boolean).join(' · ')}</div>
+              </td>
               <td>
                 <div>{row.courier || '—'}</div>
-                <div className="text-muted small">{row.courierPhone || ''}</div>
+                <div className="text-muted small">{[row.courierPhone, row.courierRegion].filter(Boolean).join(' · ')}</div>
               </td>
               <td className="fw-semibold">{fmt(row.amount)} so'm</td>
+              <td>
+                <div className="fw-semibold">{fmt(row.settlement?.currentNet || 0)} so'm</div>
+                <div className="text-muted small">{row.settlement?.label || 'Hisob-kitob kutilmoqda'}</div>
+              </td>
               <td><span className={`chip ${statusChip(row.status)}`}>{row.status || '—'}</span></td>
-              <td className="text-muted">{row.acceptedAt || '—'}</td>
+              <td>
+                <div className="text-muted">{row.acceptedAt || '—'}</div>
+                <div className="text-muted small">{row.createdAt || ''}</div>
+              </td>
             </tr>
           ))}
         </tbody>

@@ -29,7 +29,7 @@ interface DashboardPayload {
   hourlySales: Array<{ hour: string; revenue: number; orders: number }>;
   categoryShare: Array<{ name: string; value: number; revenue: number; color: string }>;
   topProducts: Array<{ name: string; quantity: number; revenue: number }>;
-  recentOrders: Array<{ id: number; customer?: string; amount: number; status: string; updated_at?: string }>;
+  recentOrders: Array<{ id: number; customer?: string; amount: number; status: string; updated_at?: string; url?: string }>;
   paymentSplit: Array<{ name: string; count: number; share: number; color: string }>;
   deliverySplit: Array<{ name: string; count: number; revenue: number }>;
   regions: Array<{ name: string; value: number; revenue: number; color: string }>;
@@ -378,6 +378,7 @@ function RecentOrders({ rows }: { rows: DashboardPayload['recentOrders'] }) {
             <small className="text-muted">{row.status} · {row.updated_at || ''}</small>
           </div>
           <strong className="text-success small">{money(row.amount)}</strong>
+          {row.url ? <a href={row.url} className="btn btn-sm btn-light" title="Buyurtmani ochish"><i className="bi bi-eye"></i></a> : null}
         </div>
       )) : <div className="text-muted small">Buyurtma topilmadi.</div>}
     </div>

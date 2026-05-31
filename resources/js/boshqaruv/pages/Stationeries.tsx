@@ -1,26 +1,43 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import type { FormEvent } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Button, Modal } from 'react-bootstrap';
 import PaginationControls from '../components/PaginationControls';
 
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
 interface Variant { id: number; name: string; stock: number; price?: number; image?: string | null }
+interface MiniOrder { id: number; customer: string; phone?: string; seller?: string; amount: number; status: string; date?: string; url?: string }
+interface OptionItem { id: number; name: string }
 interface StatItem {
-  id: number; name: string; category: string; seller?: string | null; price: number; discountPrice?: number | null;
+  id: number; name: string; categoryId?: number | null; sellerId?: number | null; category: string; seller?: string | null; price: number; discountPrice?: number | null;
   discountPercent?: number; discountExpiresAt?: string; stock: number; variantStock?: number; sold: number; clients?: number;
   revenue?: number; views?: number; status?: number; active?: boolean; hidden?: boolean; recommended?: boolean;
-  recommendedExpiresAt?: string; icon?: string | null; images?: string[]; barcode?: string; material?: string;
-  description?: string; createdAt?: string; updatedAt?: string; variants?: Variant[]; moderateUrl?: string;
+  recommendedExpiresAt?: string; icon?: string | null; images?: string[]; rawImages?: string[]; barcode?: string; material?: string;
+  description?: string; createdAt?: string; updatedAt?: string; variants?: Variant[]; recentOrders?: MiniOrder[]; sellerOrders?: MiniOrder[]; editUrl?: string; moderateUrl?: string;
 }
 const statusLabel = (status?: number) => status === 1 ? ['Tasdiqlangan', 'chip-success'] : status === 2 ? ['Rad etilgan', 'chip-danger'] : ['Moderatsiya', 'chip-warning'];
 
 export default function Stationeries() {
-  const { stationeries = [], stationeryCounts = {}, stationeryPagination = { page: 1, totalPages: 1, from: 0, to: 0, total: 0 }, stationeryFilters = {} } = usePage<{ stationeries?: StatItem[]; stationeryCounts?: Record<string, number>; stationeryPagination?: { page: number; totalPages: number; from: number; to: number; total: number }; stationeryFilters?: { tab?: string; search?: string } }>().props;
+  const { stationeries = [], stationeryCounts = {}, stationeryPagination = { page: 1, totalPages: 1, from: 0, to: 0, total: 0 }, stationeryFilters = {}, stationeryFormOptions = { categories: [], sellers: [] } } = usePage<{ stationeries?: StatItem[]; stationeryCounts?: Record<string, number>; stationeryPagination?: { page: number; totalPages: number; from: number; to: number; total: number }; stationeryFilters?: { tab?: string; search?: string }; stationeryFormOptions?: { categories: OptionItem[]; sellers: OptionItem[] } }>().props;
   const [tab, setTab] = useState(stationeryFilters.tab || 'pending');
   const [search, setSearch] = useState(stationeryFilters.search || '');
   const [selected, setSelected] = useState<StatItem | null>(null);
+  const [autoOpenedSearch, setAutoOpenedSearch] = useState('');
   const loadItems = (page = 1, activeTab = tab, term = search) => router.get('/boshqaruv/stationeries', { stationeries_page: page, stationeries_tab: activeTab, stationeries_search: term }, { preserveState: true, preserveScroll: true, replace: true });
   const moderate = (item: StatItem, status: 0 | 1 | 2) => item.moderateUrl && router.patch(item.moderateUrl, { is_approved: status }, { preserveScroll: true });
+  useEffect(() => {
+    if (stationeryFilters.search && stationeryFilters.search !== autoOpenedSearch && stationeries.length === 1 && !selected) {
+      setAutoOpenedSearch(stationeryFilters.search);
+      setSelected(stationeries[0]);
+    }
+  }, [stationeryFilters.search, autoOpenedSearch, stationeries, selected]);
+  const submitEdit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!selected?.editUrl) return;
+    const data = new FormData(event.currentTarget);
+    data.append('_method', 'PUT');
+    router.post(selected.editUrl, data, { forceFormData: true, preserveScroll: true, onSuccess: () => setSelected(null) });
+  };
 
   return <div>
     <div className="page-head"><div><h1 className="page-title">Kanselyariya mahsulotlari</h1><p className="page-subtitle">Moderatsiya, ombor, variantlar va katalog nazorati</p></div></div>
@@ -39,9 +56,47 @@ export default function Stationeries() {
       <div className="col-xl-6"><div className="detail-panel h-100"><h6 className="fw-bold mb-3">Variantlar</h6>{(selected.variants || []).map((variant) => <div className="d-flex justify-content-between border-bottom py-2" key={variant.id}><span>{variant.name}</span><strong>{variant.stock} dona</strong></div>)}{(selected.variants || []).length === 0 ? <div className="text-muted">Variant mavjud emas</div> : null}</div></div>
       <Info title="Admin nazorati" rows={[['Moderatsiya', statusLabel(selected.status)[0]], ['Recommended', selected.recommended ? 'Ha' : "Yo'q"], ['Chegirma muddati', selected.discountExpiresAt || '—'], ['Recommendation muddati', selected.recommendedExpiresAt || '—'], ['Yaratilgan', selected.createdAt || '—'], ['Yangilangan', selected.updatedAt || '—']]} />
       <div className="col-12"><div className="detail-panel"><h6 className="fw-bold mb-2">Tavsif</h6><div className="text-muted">{selected.description || 'Tavsif kiritilmagan'}</div></div></div>
+      <div className="col-xl-6"><div className="detail-panel h-100"><h6 className="fw-bold mb-3">Shu mahsulot buyurtmalari</h6><MiniOrdersTable rows={selected.recentOrders || []} empty="Bu kanselyariya bo'yicha buyurtma topilmadi" /></div></div>
+      <div className="col-xl-6"><div className="detail-panel h-100"><h6 className="fw-bold mb-3">Seller orderlar</h6><MiniOrdersTable rows={selected.sellerOrders || []} empty="Seller order topilmadi" /></div></div>
+      <div className="col-12"><div className="detail-panel"><h6 className="fw-bold mb-3">Admin tahriri</h6><form className="row g-3" onSubmit={submitEdit}>
+        <div className="col-md-6"><label className="form-label small text-muted">Nomi</label><input name="name" className="form-control" defaultValue={selected.name} required /></div>
+        <div className="col-md-3"><label className="form-label small text-muted">Kategoriya</label><select name="category_id" className="form-select" defaultValue={selected.categoryId || ''} required>{stationeryFormOptions.categories.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></div>
+        <div className="col-md-3"><label className="form-label small text-muted">Seller</label><select name="seller_id" className="form-select" defaultValue={selected.sellerId || ''}><option value="">Ichki katalog</option>{stationeryFormOptions.sellers.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></div>
+        <div className="col-md-3"><label className="form-label small text-muted">Barcode</label><input name="barcode" className="form-control" defaultValue={selected.barcode || ''} /></div>
+        <div className="col-md-3"><label className="form-label small text-muted">Material</label><input name="material" className="form-control" defaultValue={selected.material || ''} /></div>
+        <div className="col-md-3"><label className="form-label small text-muted">Narx</label><input name="price" type="number" min={0} className="form-control" defaultValue={selected.price} required /></div>
+        <div className="col-md-3"><label className="form-label small text-muted">Chegirma narxi</label><input name="discount_price" type="number" min={0} className="form-control" defaultValue={selected.discountPrice || ''} /></div>
+        <div className="col-md-3"><label className="form-label small text-muted">Chegirma muddati</label><input name="discountExpiresAt" type="datetime-local" className="form-control" defaultValue={toInputDate(selected.discountExpiresAt)} /></div>
+        <div className="col-md-3"><label className="form-label small text-muted">Ombor</label><input name="stock" type="number" min={0} className="form-control" defaultValue={selected.stock} required /></div>
+        <div className="col-md-3"><label className="form-label small text-muted">Moderatsiya</label><select name="is_approved" className="form-select" defaultValue={selected.status ?? 0}><option value="0">Moderatsiya</option><option value="1">Tasdiqlangan</option><option value="2">Rad etilgan</option></select></div>
+        <div className="col-md-6 d-flex align-items-end gap-3 flex-wrap">
+          <label className="form-check"><input name="status" value="1" className="form-check-input" type="checkbox" defaultChecked={selected.active} /> <span className="form-check-label">Faol</span></label>
+          <label className="form-check"><input name="is_hidden" value="1" className="form-check-input" type="checkbox" defaultChecked={selected.hidden} /> <span className="form-check-label">Yashirish</span></label>
+          <label className="form-check"><input name="recommended" value="1" className="form-check-input" type="checkbox" defaultChecked={selected.recommended} /> <span className="form-check-label">Tavsiya</span></label>
+        </div>
+        <div className="col-md-3"><label className="form-label small text-muted">Tavsiya muddati</label><input name="recommendedExpiresAt" type="datetime-local" className="form-control" defaultValue={toInputDate(selected.recommendedExpiresAt)} /></div>
+        <div className="col-md-6"><label className="form-label small text-muted">Yangi rasmlar</label><input name="images[]" type="file" multiple accept="image/*" className="form-control" /></div>
+        <div className="col-md-6"><label className="form-label small text-muted">Rasmlar ro'yxati</label><textarea name="images_text" className="form-control" rows={3} defaultValue={(selected.rawImages || selected.images || []).join('\n')} /></div>
+        <div className="col-12"><label className="form-label small text-muted">Tavsif</label><textarea name="description" className="form-control" rows={4} defaultValue={selected.description || ''} /></div>
+        <div className="col-12"><h6 className="fw-bold mb-2">Variantlar</h6>{[...(selected.variants || []), { id: 0, name: '', stock: 0, image: '' }].map((variant, index) => <div className="row g-2 mb-2" key={`${variant.id}-${index}`}>
+          <input type="hidden" name="variant_id[]" value={variant.id || ''} /><input type="hidden" name="variant_image_existing[]" value={variant.image || ''} />
+          <div className="col-md-4"><input name="variant_color_name[]" className="form-control" placeholder="Rang/variant" defaultValue={variant.name} /></div>
+          <div className="col-md-3"><input name="variant_stock[]" type="number" min={0} className="form-control" placeholder="Stock" defaultValue={variant.stock} /></div>
+          <div className="col-md-5"><input name="variant_image[]" type="file" accept="image/*" className="form-control" /></div>
+        </div>)}</div>
+        <div className="col-12"><button className="btn btn-primary-gradient">Saqlash</button></div>
+      </form></div></div>
     </div>}</Modal.Body><Modal.Footer>{selected ? <Button variant="primary" className="btn-primary-gradient" onClick={() => moderate(selected, selected.status === 1 ? 0 : 1)}>{selected.status === 1 ? 'Moderatsiyaga qaytarish' : 'Tasdiqlash'}</Button> : null}<Button variant="light" onClick={() => setSelected(null)}>Yopish</Button></Modal.Footer></Modal>
   </div>;
 }
 function Info({ title, rows }: { title: string; rows: Array<[string, string]> }) {
   return <div className="col-xl-4"><div className="detail-panel h-100"><h6 className="fw-bold mb-3">{title}</h6>{rows.map(([label, value]) => <div className="border-bottom py-2" key={label}><small className="text-muted d-block">{label}</small><strong>{value}</strong></div>)}</div></div>;
+}
+function MiniOrdersTable({ rows, empty }: { rows: MiniOrder[]; empty: string }) {
+  if (!rows.length) return <div className="text-muted small">{empty}</div>;
+  return <div className="table-responsive"><table className="data-table compact-table"><thead><tr><th>ID</th><th>Mijoz</th><th>Summa</th><th>Status</th><th>Sana</th><th></th></tr></thead><tbody>{rows.map((row) => <tr key={row.id}><td>#{row.id}</td><td><strong>{row.customer}</strong><small className="d-block text-muted">{row.phone || row.seller || ''}</small></td><td>{fmt(row.amount)} so'm</td><td><span className="chip chip-gray">{row.status || '—'}</span></td><td>{row.date || '—'}</td><td className="text-end">{row.url ? <a className="btn btn-sm btn-light" href={row.url} title="Buyurtmani ochish"><i className="bi bi-eye"></i></a> : null}</td></tr>)}</tbody></table></div>;
+}
+function toInputDate(value?: string | null) {
+  if (!value) return '';
+  return String(value).replace(' ', 'T').slice(0, 16);
 }

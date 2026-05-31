@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
-import { Modal, Button } from 'react-bootstrap';
+import { Accordion, Modal, Button } from 'react-bootstrap';
 import PaginationControls from '../components/PaginationControls';
 
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
@@ -319,22 +319,97 @@ function SellerModal({ seller, onHide, onWarn, onResetPassword, onPatch, onEdit 
               ['Balans', `${fmt(seller.balance || 0)} so'm`], ['Tushum', `${fmt(seller.totalRevenue || 0)} so'm`], ['Komissiya', `${seller.commissionRate || 0}%`],
               ['Kitoblar', String(seller.books || 0)], ['Kanstovar', String(seller.stationeries || 0)], ['Buyurtmalar', String(seller.orders || 0)],
             ]} />
-            <Info title="Shartnoma" rows={[
-              ['Raqam', String(seller.contract?.number || '—')], ['Imzolangan', seller.contract?.signed ? 'Ha' : "Yo'q"], ['Holat', String(seller.contract?.status || '—')],
-              ['Tugash sanasi', String(seller.contract?.expiresAt || '—')], ['Qolgan kun', String(seller.contract?.daysRemaining ?? '—')], ['Izoh', String(seller.contract?.notes || '—')],
-            ]} />
-            <Info title="Huquqiy va bank" rows={[
-              ['Yuridik turi', String(seller.legal?.type || '—')], ['INN', String(seller.legal?.inn || '—')], ['Pasport', String(seller.legal?.passport || '—')],
-              ['Bank', String(seller.bank?.name || '—')], ['Hisob', String(seller.bank?.account || '—')], ['Karta', String(seller.bank?.card || '—')],
-            ]} />
-            <ListBlock title="Filiallar" empty="Filial yo'q" items={seller.locations || []} render={(item) => <><strong>{String(item.address || '—')}</strong><span>{item.main ? 'Asosiy filial' : 'Filial'} · {String(item.description || '')}</span><MapButtons mapLinks={(item.mapLinks || {}) as Record<string, string>} />{item.rotateUrl ? <Button size="sm" variant="outline-primary" className="mt-2" onClick={() => router.post(String(item.rotateUrl), {}, { preserveScroll: true })}><i className="bi bi-qr-code me-1"></i>Filial QR yangilash</Button> : null}</>} />
-            <Info title="Do'kon QR" rows={[
-              ['QR manzil', String(seller.qr?.url || '—')], ['Yangilangan', String(seller.qr?.rotatedAt || '—')],
-            ]} />
-            <div className="col-xl-6"><div className="detail-panel h-100"><h6 className="fw-bold mb-3">QR boshqaruvi</h6><p className="small text-muted text-break">{String(seller.qr?.url || "QR hali yaratilmagan")}</p><Button size="sm" variant="outline-primary" onClick={() => seller.actions?.rotateQrUrl && router.post(seller.actions.rotateQrUrl, {}, { preserveScroll: true })}><i className="bi bi-qr-code me-1"></i>Do'kon QR yangilash</Button></div></div>
-            <ListBlock title="Shartnoma tarixi" empty="Tarix yo'q" items={seller.contractHistory || []} render={(item) => <><strong>{String(item.action || 'Yangilandi')} · {String(item.number || 'Raqamsiz')}</strong><span>{String(item.oldExpiresAt || '—')} → {String(item.newExpiresAt || '—')} · {String(item.date || '—')}</span><span>{String(item.notes || '')}</span></>} />
-            <div className="col-xl-6"><div className="detail-panel h-100"><h6 className="fw-bold mb-3">Shartnomani tez uzaytirish</h6><form onSubmit={(event) => { event.preventDefault(); if (seller.actions?.extendContractUrl) router.patch(seller.actions.extendContractUrl, Object.fromEntries(new FormData(event.currentTarget)) as Record<string, string>, { preserveScroll: true }); }} className="row g-2"><div className="col-4"><select name="months" className="form-select form-select-sm" defaultValue="12"><option value="3">3 oy</option><option value="6">6 oy</option><option value="12">12 oy</option><option value="24">24 oy</option></select></div><div className="col-8"><input name="notes" className="form-control form-control-sm" placeholder="Izoh" /></div><div className="col-12"><Button size="sm" type="submit">Uzaytirish</Button></div></form></div></div>
-            <div className="col-12"><div className="detail-panel"><h6 className="fw-bold mb-3">Hujjatlar</h6><form onSubmit={uploadDocument} className="row g-2 mb-3"><div className="col-md-3"><select name="type" className="form-select form-select-sm" required><option value="passport">Pasport</option><option value="contract">Shartnoma</option><option value="inn_certificate">STIR guvohnomasi</option><option value="license">Litsenziya</option><option value="bank_details">Bank rekvizitlari</option><option value="addendum">Qo'shimcha kelishuv</option><option value="other">Boshqa</option></select></div><div className="col-md-4"><input type="file" name="file" className="form-control form-control-sm" accept=".pdf,image/*" required /></div><div className="col-md-3"><input name="description" className="form-control form-control-sm" placeholder="Izoh" /></div><div className="col-md-2"><Button size="sm" type="submit">Yuklash</Button></div></form>{(seller.documents || []).map((item) => <div className="d-flex justify-content-between align-items-center border-top py-2 gap-2" key={String(item.id)}><div><strong>{String(item.typeLabel || item.type || 'Hujjat')}</strong><div className="small text-muted">{String(item.name || '—')} · {String(item.date || '—')}</div></div><div className="d-flex gap-2">{item.url ? <a href={String(item.url)} target="_blank" rel="noreferrer" className="btn btn-sm btn-light">Ko'rish</a> : null}{item.deleteUrl ? <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => confirm("Hujjat o'chirilsinmi?") && router.delete(String(item.deleteUrl), { preserveScroll: true })}><i className="bi bi-trash"></i></button> : null}</div></div>)}{(seller.documents || []).length === 0 ? <div className="text-muted small">Hujjat topilmadi</div> : null}</div></div>
+            <div className="col-12">
+              <Accordion defaultActiveKey="qr" alwaysOpen className="seller-detail-accordion">
+                <Accordion.Item eventKey="qr">
+                  <Accordion.Header>QR kodlar va filiallar</Accordion.Header>
+                  <Accordion.Body>
+                    <div className="row g-3">
+                      <div className="col-xl-4">
+                        <div className="detail-panel h-100 text-center">
+                          <h6 className="fw-bold mb-3">Do'kon QR</h6>
+                          {seller.qr?.imageUrl ? <img src={String(seller.qr.imageUrl)} alt="Do'kon QR" className="img-fluid rounded-4 border bg-white p-2 mb-3" style={{ maxWidth: 220 }} /> : <div className="text-muted small py-4">QR hali yaratilmagan</div>}
+                          <div className="small text-muted text-break">{String(seller.qr?.url || '—')}</div>
+                          <div className="small text-muted text-break mt-1">Token: {String(seller.qr?.token || '—')}</div>
+                          <div className="small text-muted mt-1">Yangilangan: {String(seller.qr?.rotatedAt || '—')}</div>
+                          <div className="d-flex gap-2 justify-content-center mt-3 flex-wrap">
+                            {seller.qr?.imageUrl ? <a className="btn btn-sm btn-light" href={String(seller.qr.imageUrl)} target="_blank" rel="noreferrer">Ochish</a> : null}
+                            {seller.qr?.imageUrl ? <a className="btn btn-sm btn-light" href={String(seller.qr.imageUrl)} download={`kitobchi-seller-${seller.id}-qr.png`}>Yuklab olish</a> : null}
+                            <Button size="sm" variant="outline-primary" onClick={() => seller.actions?.rotateQrUrl && router.post(seller.actions.rotateQrUrl, {}, { preserveScroll: true })}><i className="bi bi-arrow-clockwise me-1"></i>Yangilash</Button>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="col-xl-8">
+                        <div className="row g-3">
+                          {(seller.locations || []).map((item) => (
+                            <div className="col-md-6" key={String(item.id)}>
+                              <div className="detail-panel h-100">
+                                <div className="d-flex gap-3 align-items-start">
+                                  {item.qrImageUrl ? <img src={String(item.qrImageUrl)} alt="Filial QR" className="rounded-4 border bg-white p-2" style={{ width: 120, height: 120 }} /> : null}
+                                  <div className="min-w-0">
+                                    <div className="d-flex gap-2 flex-wrap mb-2">
+                                      <span className={`chip ${item.main ? 'chip-warning' : 'chip-gray'}`}>{item.main ? 'Asosiy filial' : 'Filial'}</span>
+                                      <span className="chip chip-gray">ID: {String(item.id)}</span>
+                                    </div>
+                                    <div className="fw-semibold">{String(item.address || '—')}</div>
+                                    <div className="small text-muted">{String(item.description || '')}</div>
+                                    <div className="small text-muted text-break mt-2">URL: {String(item.qrUrl || '—')}</div>
+                                    <div className="small text-muted text-break">Token: {String(item.qrToken || '—')}</div>
+                                    <MapButtons mapLinks={(item.mapLinks || {}) as Record<string, string>} />
+                                    <div className="d-flex gap-2 flex-wrap mt-2">
+                                      {item.qrImageUrl ? <a href={String(item.qrImageUrl)} className="btn btn-sm btn-light" target="_blank" rel="noreferrer">QR ochish</a> : null}
+                                      {item.qrImageUrl ? <a href={String(item.qrImageUrl)} className="btn btn-sm btn-light" download={`kitobchi-location-${String(item.id)}.png`}>Yuklab olish</a> : null}
+                                      {item.rotateUrl ? <Button size="sm" variant="outline-primary" onClick={() => confirm("Eski filial QR ishlamay qoladi. Yangilansinmi?") && router.post(String(item.rotateUrl), {}, { preserveScroll: true })}>QR yangilash</Button> : null}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                          {(seller.locations || []).length === 0 ? <div className="col-12 text-muted small">Filial yo'q</div> : null}
+                        </div>
+                      </div>
+                    </div>
+                  </Accordion.Body>
+                </Accordion.Item>
+                <Accordion.Item eventKey="contract">
+                  <Accordion.Header>Shartnoma va tarixi</Accordion.Header>
+                  <Accordion.Body>
+                    <div className="row g-3">
+                      <Info title="Shartnoma" rows={[
+                        ['Raqam', String(seller.contract?.number || '—')], ['Imzolangan', seller.contract?.signed ? 'Ha' : "Yo'q"], ['Holat', String(seller.contract?.status || '—')],
+                        ['Imzolangan sana', String(seller.contract?.signedAt || '—')], ['Tugash sanasi', String(seller.contract?.expiresAt || '—')], ['Qolgan kun', String(seller.contract?.daysRemaining ?? '—')],
+                        ['Izoh', String(seller.contract?.notes || '—')],
+                      ]} />
+                      <div className="col-xl-6"><div className="detail-panel h-100"><h6 className="fw-bold mb-3">Tez uzaytirish</h6><form onSubmit={(event) => { event.preventDefault(); if (seller.actions?.extendContractUrl) router.patch(seller.actions.extendContractUrl, Object.fromEntries(new FormData(event.currentTarget)) as Record<string, string>, { preserveScroll: true }); }} className="row g-2"><div className="col-4"><select name="months" className="form-select form-select-sm" defaultValue="12"><option value="3">3 oy</option><option value="6">6 oy</option><option value="12">12 oy</option><option value="24">24 oy</option></select></div><div className="col-8"><input name="notes" className="form-control form-control-sm" placeholder="Izoh" /></div><div className="col-12"><Button size="sm" type="submit">Uzaytirish</Button></div></form></div></div>
+                      <ListBlock title="Shartnoma tarixi" empty="Tarix yo'q" items={seller.contractHistory || []} render={(item) => <><strong>{String(item.action || 'Yangilandi')} · {String(item.number || 'Raqamsiz')}</strong><span>{String(item.oldExpiresAt || '—')} → {String(item.newExpiresAt || '—')} · {String(item.date || '—')}</span><span>{String(item.notes || '')}</span></>} />
+                    </div>
+                  </Accordion.Body>
+                </Accordion.Item>
+                <Accordion.Item eventKey="legal">
+                  <Accordion.Header>Huquqiy va bank rekvizitlari</Accordion.Header>
+                  <Accordion.Body>
+                    <div className="row g-3">
+                      <Info title="Huquqiy ma'lumotlar" rows={[
+                        ['Yuridik turi', String(seller.legal?.type || '—')], ['INN', String(seller.legal?.inn || '—')], ['Pasport', String(seller.legal?.passport || '—')],
+                        ['Pasport beruvchi', String(seller.legal?.passportIssuedBy || '—')], ['Pasport sanasi', String(seller.legal?.passportIssuedAt || '—')], ['Yuridik manzil', String(seller.legal?.legalAddress || seller.address || '—')],
+                      ]} />
+                      <Info title="Bank" rows={[
+                        ['Bank', String(seller.bank?.name || '—')], ['Hisob', String(seller.bank?.account || '—')], ['MFO', String(seller.bank?.mfo || '—')],
+                        ['SWIFT', String(seller.bank?.swift || '—')], ['Karta', String(seller.bank?.card || '—')], ['Karta egasi', String(seller.bank?.cardHolder || '—')],
+                      ]} />
+                    </div>
+                  </Accordion.Body>
+                </Accordion.Item>
+                <Accordion.Item eventKey="documents">
+                  <Accordion.Header>Hujjatlar va yuklash</Accordion.Header>
+                  <Accordion.Body>
+                    <form onSubmit={uploadDocument} className="row g-2 mb-3"><div className="col-md-3"><select name="type" className="form-select form-select-sm" required><option value="passport">Pasport</option><option value="contract">Shartnoma</option><option value="inn_certificate">STIR guvohnomasi</option><option value="license">Litsenziya</option><option value="bank_details">Bank rekvizitlari</option><option value="addendum">Qo'shimcha kelishuv</option><option value="other">Boshqa</option></select></div><div className="col-md-4"><input type="file" name="file" className="form-control form-control-sm" accept=".pdf,image/*" required /></div><div className="col-md-3"><input name="description" className="form-control form-control-sm" placeholder="Izoh" /></div><div className="col-md-2"><Button size="sm" type="submit">Yuklash</Button></div></form>
+                    <div className="d-grid gap-2">{(seller.documents || []).map((item) => <div className="d-flex justify-content-between align-items-center border rounded-3 p-3 gap-2" key={String(item.id)}><div><strong>{String(item.typeLabel || item.type || 'Hujjat')}</strong><div className="small text-muted">{String(item.name || '—')} · {String(item.size || 0)} KB · {String(item.date || '—')}</div><div className="small text-muted">{String(item.description || '')}</div></div><div className="d-flex gap-2">{item.url ? <a href={String(item.url)} target="_blank" rel="noreferrer" className="btn btn-sm btn-light">Ko'rish</a> : null}{item.deleteUrl ? <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => confirm("Hujjat o'chirilsinmi?") && router.delete(String(item.deleteUrl), { preserveScroll: true })}><i className="bi bi-trash"></i></button> : null}</div></div>)}{(seller.documents || []).length === 0 ? <div className="text-muted small">Hujjat topilmadi</div> : null}</div>
+                  </Accordion.Body>
+                </Accordion.Item>
+              </Accordion>
+            </div>
             <ListBlock title="Oxirgi seller orderlar" empty="Order yo'q" items={seller.recentOrders || []} render={(item) => <><strong>#{item.id} · {fmt(Number(item.amount || 0))} so'm</strong><span>{String(item.customer || 'Mijoz')} · {String(item.date || '—')}</span></>} />
             <ListBlock title="Tranzaksiyalar" empty="Tranzaksiya yo'q" items={seller.transactions || []} render={(item) => <><strong>{fmt(Number(item.net || item.amount || 0))} so'm · {String(item.status || '—')}</strong><span>{String(item.category || item.type || '—')} · {String(item.date || '—')}</span></>} />
             <ListBlock title={`Ogohlantirishlar (${seller.warningCount || 0}/3)`} empty="Ogohlantirish yo'q" items={seller.banLogs || []} render={(item) => <><strong>{String(item.title || '—')}</strong><span>{String(item.message || '')} · {String(item.date || '—')}</span></>} />

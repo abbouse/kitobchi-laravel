@@ -51,10 +51,12 @@ use App\Models\Seller;
 use App\Models\SellerBanLog;
 use App\Models\SellerContractHistory;
 use App\Models\SellerOrder;
+use App\Models\SellerOrderItem;
 use App\Models\SellerTransaction;
 use App\Models\Sold;
 use App\Models\Stationery;
 use App\Models\StationeryCategory;
+use App\Models\StationeryVariant;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\UserCard;
@@ -69,6 +71,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use App\Support\ProductImageUrls;
+use App\Support\ProductImageVariantGenerator;
 use App\Enums\SellerOrderStatusCode;
 use App\Services\AdminOrderStatusSyncService;
 use App\Services\DeliveryZoneResolverService;
@@ -352,6 +355,87 @@ class AdminController extends Controller
         $stationeryCategory->delete();
 
         return back()->with('success', "Kanstovar kategoriyasi o'chirildi.");
+    }
+
+    public function updateBook(Request $request, Books $book): \Illuminate\Http\RedirectResponse
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'author' => ['required', 'string', 'max:255'],
+            'translator' => ['nullable', 'string', 'max:255'],
+            'isbn' => ['nullable', 'string', 'max:20'],
+            'category_id' => ['required', 'exists:book_categories,id'],
+            'publisher_id' => ['nullable', 'exists:publishers,id'],
+            'seller_id' => ['nullable', 'exists:sellers,id'],
+            'description' => ['nullable', 'string', 'max:3000'],
+            'price' => ['required', 'numeric', 'min:0'],
+            'discountPrice' => ['nullable', 'numeric', 'min:0'],
+            'discountExpiresAt' => ['nullable', 'date'],
+            'count' => ['required', 'integer', 'min:0'],
+            'lang' => ['nullable', 'string', 'max:10'],
+            'langType' => ['nullable', 'string', 'max:40'],
+            'coverType' => ['nullable', 'string', 'max:40'],
+            'year' => ['nullable', 'integer', 'min:0', 'max:2100'],
+            'pages' => ['nullable', 'integer', 'min:0'],
+            'status' => ['nullable', 'boolean'],
+            'is_hidden' => ['nullable', 'boolean'],
+            'recommended' => ['nullable', 'boolean'],
+            'recommendedExpiresAt' => ['nullable', 'date'],
+            'is_approved' => ['nullable', Rule::in([0, 1, 2, '0', '1', '2'])],
+            'images_text' => ['nullable', 'string'],
+            'images.*' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:10240'],
+        ]);
+
+        $author = app(\App\Services\AuthorDirectoryService::class)->resolveOrCreateByName($request->input('author'));
+        $data['isbn'] = Books::normalizeIsbn($request->input('isbn'));
+        $data['images'] = $this->syncCatalogImages($request, $book->images ?? [], 'images', 'images_text', 'books', 'admin_book');
+        $data['status'] = $request->boolean('status');
+        $data['is_hidden'] = $request->boolean('is_hidden');
+        $data['recommended'] = $request->boolean('recommended');
+        $data['author_id'] = $author?->id;
+        $data['author'] = $author?->name ?: trim((string) $request->input('author'));
+
+        $book->update($data);
+
+        return back()->with('success', 'Kitob yangilandi.');
+    }
+
+    public function updateStationery(Request $request, Stationery $stationery): \Illuminate\Http\RedirectResponse
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'seller_id' => ['nullable', 'exists:sellers,id'],
+            'barcode' => ['nullable', 'string', 'max:32'],
+            'material' => ['nullable', 'string', 'max:255'],
+            'category_id' => ['required', 'exists:stationery_categories,id'],
+            'description' => ['nullable', 'string', 'max:3000'],
+            'price' => ['required', 'numeric', 'min:0'],
+            'discount_price' => ['nullable', 'numeric', 'min:0'],
+            'discountExpiresAt' => ['nullable', 'date'],
+            'stock' => ['required', 'integer', 'min:0'],
+            'is_approved' => ['nullable', Rule::in([0, 1, 2, '0', '1', '2'])],
+            'status' => ['nullable', 'boolean'],
+            'recommended' => ['nullable', 'boolean'],
+            'recommendedExpiresAt' => ['nullable', 'date'],
+            'is_hidden' => ['nullable', 'boolean'],
+            'images_text' => ['nullable', 'string'],
+            'images.*' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:10240'],
+            'variant_id.*' => ['nullable', 'integer', 'exists:stationery_variants,id'],
+            'variant_color_name.*' => ['nullable', 'string', 'max:100'],
+            'variant_stock.*' => ['nullable', 'integer', 'min:0'],
+            'variant_image_existing.*' => ['nullable', 'string', 'max:1000'],
+            'variant_image.*' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:10240'],
+        ]);
+
+        $data['images'] = $this->syncCatalogImages($request, $stationery->images ?? [], 'images', 'images_text', 'stationery', 'admin_stationery');
+        $data['status'] = $request->boolean('status');
+        $data['recommended'] = $request->boolean('recommended');
+        $data['is_hidden'] = $request->boolean('is_hidden');
+
+        $stationery->update($data);
+        $this->syncStationeryVariants($request, $stationery);
+
+        return back()->with('success', 'Kanselyariya mahsuloti yangilandi.');
     }
 
     public function storePromocode(Request $request): \Illuminate\Http\RedirectResponse
@@ -945,8 +1029,17 @@ class AdminController extends Controller
 
     private function booksPagePayload(): array
     {
+        $search = trim((string) request('books_search', ''));
         $books = Books::query()
             ->with(['authorProfile:id,name', 'category:id,name_uz', 'publisher:id,name', 'seller:id,shop_name,firstname,lastname,phone_number,status,isVerified,is_hidden'])
+            ->when($search !== '', fn ($query) => $query->where(fn ($nested) => $nested
+                ->where('id', $search)
+                ->orWhere('name', 'like', "%{$search}%")
+                ->orWhere('isbn', 'like', "%{$search}%")
+                ->orWhere('author', 'like', "%{$search}%")
+                ->orWhereHas('authorProfile', fn ($author) => $author->where('name', 'like', "%{$search}%"))
+                ->orWhereHas('category', fn ($category) => $category->where('name_uz', 'like', "%{$search}%"))
+                ->orWhereHas('seller', fn ($seller) => $seller->where('shop_name', 'like', "%{$search}%"))))
             ->latest()
             ->paginate(24, ['*'], 'books_page')
             ->withQueryString();
@@ -958,8 +1051,8 @@ class AdminController extends Controller
                     ->map(fn (string $image) => ProductImageUrls::originalUrl($image))
                     ->filter()
                     ->values();
-                $recentOrders = $this->recentBookOrders($book);
-                $sellerOrders = $this->recentSellerOrdersForBook($book);
+                $recentOrders = $this->recentProductOrders('book', (int) $book->id);
+                $sellerOrders = $this->recentSellerOrdersForProduct('book', (int) $book->id);
 
                 return [
                     'id' => $book->id,
@@ -980,11 +1073,15 @@ class AdminController extends Controller
                     'views' => (int) ($book->views ?? 0),
                     'cover' => $images->first(),
                     'images' => $images->all(),
+                    'rawImages' => array_values(is_array($book->images) ? $book->images : (json_decode((string) $book->images, true) ?: [])),
                     'status' => (int) ($book->is_approved ?? 0),
                     'active' => (bool) ($book->status ?? false),
                     'hidden' => (bool) ($book->is_hidden ?? false),
                     'recommended' => (bool) ($book->recommended ?? false),
                     'recommendedExpiresAt' => $this->dateTime($book->recommendedExpiresAt),
+                    'categoryId' => $book->category_id,
+                    'publisherId' => $book->publisher_id,
+                    'sellerId' => $book->seller_id,
                     'seller' => $book->seller ? [
                         'id' => $book->seller->id,
                         'name' => $book->seller->shop_name ?: trim(($book->seller->firstname ?? '').' '.($book->seller->lastname ?? '')),
@@ -1006,13 +1103,19 @@ class AdminController extends Controller
                     'createdAt' => optional($book->created_at)->format('Y-m-d H:i'),
                     'updatedAt' => optional($book->updated_at)->format('Y-m-d H:i'),
                     'showUrl' => route('admin.books.show', $book),
-                    'editUrl' => route('admin.books.edit', $book),
+                    'editUrl' => route('boshqaruv.books.update', $book),
                     'moderateUrl' => route('boshqaruv.books.moderate', $book),
                 ];
             })
             ->values()
             ->all(),
             'bookPagination' => $this->paginationMeta($books),
+            'bookFilters' => ['search' => $search],
+            'bookFormOptions' => [
+                'categories' => BookCategories::query()->orderBy('name_uz')->get(['id', 'name_uz'])->map(fn ($category) => ['id' => $category->id, 'name' => $category->name_uz])->values()->all(),
+                'publishers' => Publisher::query()->orderBy('name')->get(['id', 'name'])->map(fn ($publisher) => ['id' => $publisher->id, 'name' => $publisher->name])->values()->all(),
+                'sellers' => Seller::query()->whereNotNull('shop_name')->orderBy('shop_name')->get(['id', 'shop_name'])->map(fn ($seller) => ['id' => $seller->id, 'name' => $seller->shop_name])->values()->all(),
+            ],
         ];
     }
 
@@ -1618,6 +1721,105 @@ class AdminController extends Controller
         return $fallback !== '' ? $fallback : null;
     }
 
+    private function parseImagesText(?string $raw): array
+    {
+        if (! is_string($raw) || trim($raw) === '') {
+            return [];
+        }
+
+        return collect(preg_split('/[\r\n,]+/', $raw) ?: [])
+            ->map(fn ($item) => trim((string) $item))
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    private function syncCatalogImages(Request $request, array|string|null $currentImages, string $fileField, string $textField, string $directory, string $prefix): array
+    {
+        $currentImages = is_array($currentImages) ? $currentImages : (json_decode((string) $currentImages, true) ?: []);
+        $existingImages = $this->parseImagesText($request->input($textField));
+        $deletedImages = array_diff($currentImages, $existingImages);
+        foreach ($deletedImages as $image) {
+            if (is_string($image) && ! str_starts_with($image, 'http')) {
+                Storage::disk('public')->delete($image);
+                ProductImageVariantGenerator::deleteForPath($image);
+            }
+        }
+
+        $images = $existingImages;
+        if ($request->hasFile($fileField)) {
+            foreach ((array) $request->file($fileField) as $index => $image) {
+                if (! $image || ! $image->isValid()) {
+                    continue;
+                }
+                $filename = time()."_{$prefix}_{$index}.".$image->getClientOriginalExtension();
+                $path = $image->storeAs($directory, $filename, 'public');
+                $images[] = $path;
+                ProductImageVariantGenerator::generateForPath($path);
+            }
+        }
+
+        return array_values(array_unique($images));
+    }
+
+    private function syncStationeryVariants(Request $request, Stationery $item): void
+    {
+        $variantIds = (array) $request->input('variant_id', []);
+        $variantNames = (array) $request->input('variant_color_name', []);
+        $variantStocks = (array) $request->input('variant_stock', []);
+        $variantExistingImages = (array) $request->input('variant_image_existing', []);
+        $variantFiles = $request->file('variant_image', []);
+        $seen = [];
+
+        foreach ($variantNames as $index => $name) {
+            $name = trim((string) $name);
+            $stock = max(0, (int) ($variantStocks[$index] ?? 0));
+            $variantId = (int) ($variantIds[$index] ?? 0);
+            $imagePath = trim((string) ($variantExistingImages[$index] ?? ''));
+            $file = $variantFiles[$index] ?? null;
+            if ($file && $file->isValid()) {
+                if ($imagePath !== '' && ! str_starts_with($imagePath, 'http')) {
+                    Storage::disk('public')->delete($imagePath);
+                    ProductImageVariantGenerator::deleteForPath($imagePath);
+                }
+                $imagePath = $file->storeAs('stationery/variants', time()."_variant_{$index}.".$file->getClientOriginalExtension(), 'public');
+                ProductImageVariantGenerator::generateForPath($imagePath);
+            }
+
+            if ($name === '' && $stock === 0 && $imagePath === '') {
+                continue;
+            }
+
+            $variant = $variantId > 0
+                ? StationeryVariant::query()->where('product_id', $item->id)->find($variantId)
+                : new StationeryVariant(['product_id' => $item->id]);
+
+            if (! $variant) {
+                continue;
+            }
+
+            $variant->fill([
+                'product_id' => $item->id,
+                'color_name' => $name,
+                'stock' => $stock,
+                'image_path' => $imagePath ?: null,
+            ])->save();
+            $seen[] = $variant->id;
+        }
+
+        StationeryVariant::query()
+            ->where('product_id', $item->id)
+            ->when($seen !== [], fn ($query) => $query->whereNotIn('id', $seen))
+            ->get()
+            ->each(function (StationeryVariant $variant) {
+                if ($variant->image_path && ! str_starts_with($variant->image_path, 'http')) {
+                    Storage::disk('public')->delete($variant->image_path);
+                    ProductImageVariantGenerator::deleteForPath($variant->image_path);
+                }
+                $variant->delete();
+            });
+    }
+
     private function deleteStoredFile(?string $path): void
     {
         if (! is_string($path) || trim($path) === '' || str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
@@ -1756,7 +1958,8 @@ class AdminController extends Controller
             ->when($tab === 'active', fn ($builder) => $builder->where('is_approved', 1))
             ->when($tab === 'rejected', fn ($builder) => $builder->where('is_approved', 2))
             ->when($search !== '', fn ($builder) => $builder->where(fn ($nested) => $nested
-                ->where('name', 'like', "%{$search}%")
+                ->where('id', $search)
+                ->orWhere('name', 'like', "%{$search}%")
                 ->orWhere('barcode', 'like', "%{$search}%")
                 ->orWhereHas('category', fn ($category) => $category->where('name_uz', 'like', "%{$search}%"))
                 ->orWhereHas('seller', fn ($seller) => $seller->where('shop_name', 'like', "%{$search}%"))));
@@ -1773,6 +1976,8 @@ class AdminController extends Controller
                 return [
                     'id' => $item->id,
                     'name' => $item->name,
+                    'categoryId' => $item->category_id,
+                    'sellerId' => $item->seller_id,
                     'category' => $item->category?->name_uz ?: '—',
                     'seller' => $item->seller?->shop_name,
                     'price' => (float) ($item->price ?? 0),
@@ -1791,6 +1996,7 @@ class AdminController extends Controller
                     'recommended' => (bool) ($item->recommended ?? false),
                     'icon' => $images->first(),
                     'images' => $images->all(),
+                    'rawImages' => array_values(is_array($item->images) ? $item->images : (json_decode((string) $item->images, true) ?: [])),
                     'barcode' => $item->barcode,
                     'material' => $item->material,
                     'description' => $item->description,
@@ -1804,6 +2010,9 @@ class AdminController extends Controller
                         'price' => (float) ($variant->price ?? 0),
                         'image' => ProductImageUrls::originalUrl($variant->image_path),
                     ])->values()->all(),
+                    'recentOrders' => $this->recentProductOrders('stationery', (int) $item->id),
+                    'sellerOrders' => $this->recentSellerOrdersForProduct('stationery', (int) $item->id),
+                    'editUrl' => route('boshqaruv.stationery.update', $item->id),
                     'moderateUrl' => route('boshqaruv.stationery.moderate', $item->id),
                 ];
             })
@@ -1817,6 +2026,10 @@ class AdminController extends Controller
             ],
             'stationeryPagination' => $this->paginationMeta($items),
             'stationeryFilters' => ['tab' => $tab, 'search' => $search],
+            'stationeryFormOptions' => [
+                'categories' => StationeryCategory::query()->orderBy('name_uz')->get(['id', 'name_uz'])->map(fn ($category) => ['id' => $category->id, 'name' => $category->name_uz])->values()->all(),
+                'sellers' => Seller::query()->whereNotNull('shop_name')->orderBy('shop_name')->get(['id', 'shop_name'])->map(fn ($seller) => ['id' => $seller->id, 'name' => $seller->shop_name])->values()->all(),
+            ],
         ];
     }
 
@@ -1914,7 +2127,7 @@ class AdminController extends Controller
 
         return Seller::query()
             ->withCount(['books', 'stationeries', 'orders', 'premiumSubscriptions'])
-            ->with(['locations' => fn ($query) => $query->orderByDesc('is_main')->orderBy('id')->take(4)])
+            ->with(['locations' => fn ($query) => $query->orderByDesc('is_main')->orderBy('id')->take(12)])
             ->where(fn ($query) => $query->whereNull('parent_id')->orWhere('parent_id', 0))
             ->latest()
             ->take(240)
@@ -1934,7 +2147,7 @@ class AdminController extends Controller
         $search = trim((string) request('sellers_search', ''));
         $query = Seller::query()
             ->withCount(['books', 'stationeries', 'orders', 'premiumSubscriptions'])
-            ->with(['locations' => fn ($builder) => $builder->orderByDesc('is_main')->orderBy('id')->take(4)])
+            ->with(['locations' => fn ($builder) => $builder->orderByDesc('is_main')->orderBy('id')->take(12)])
             ->where(fn ($builder) => $builder->whereNull('parent_id')->orWhere('parent_id', 0))
             ->when($tab !== 'all', fn ($builder) => $builder->where('status', $tab))
             ->when($search !== '', fn ($builder) => $builder->where(fn ($nested) => $nested
@@ -1969,10 +2182,10 @@ class AdminController extends Controller
             ? SellerBanLog::query()->where('seller_id', $seller->id)->latest()->take(6)->get()
             : collect();
         $documents = Schema::hasTable('seller_documents')
-            ? $seller->documents()->take(8)->get()
+            ? $seller->documents()->take(20)->get()
             : collect();
         $contractHistory = Schema::hasTable('seller_contract_history')
-            ? $seller->contractHistory()->take(8)->get()
+            ? $seller->contractHistory()->take(20)->get()
             : collect();
         $totalRevenue = Schema::hasTable('seller_transactions')
             ? (float) SellerTransaction::query()
@@ -2042,6 +2255,8 @@ class AdminController extends Controller
             ],
             'qr' => [
                 'url' => $seller->qrUrl(),
+                'imageUrl' => $this->qrImageUrl($seller->qrUrl()),
+                'token' => $seller->qr_token,
                 'rotatedAt' => optional($seller->qr_rotated_at)->format('Y-m-d H:i'),
             ],
             'locations' => $seller->locations->map(fn ($location) => [
@@ -2053,6 +2268,8 @@ class AdminController extends Controller
                 'lon' => $location->lon,
                 'mapLinks' => $this->mapLinks($location->lat, $location->lon, $location->fullAddress),
                 'qrUrl' => $location->qr_url,
+                'qrImageUrl' => $this->qrImageUrl($location->qr_url),
+                'qrToken' => $location->qr_token,
                 'rotatedAt' => optional($location->qr_rotated_at)->format('Y-m-d H:i'),
                 'rotateUrl' => route('boshqaruv.sellers.locations.qr.rotate', [$seller, $location]),
             ])->values()->all(),
@@ -4239,7 +4456,7 @@ class AdminController extends Controller
                 'status' => $this->orderStatusLabel((string) ($order->status_code ?? $order->status ?? '')),
                 'status_code' => (string) ($order->status_code ?? $order->status ?? ''),
                 'updated_at' => optional($order->updated_at)->diffForHumans(),
-                'url' => route('boshqaruv.orders'),
+                'url' => route('boshqaruv.orders', ['orders_search' => $order->id, 'orders_tab' => 'all']),
             ])
             ->values()
             ->all();
@@ -4419,16 +4636,18 @@ class AdminController extends Controller
 
     private function recentBookOrders(Books $book): array
     {
+        return $this->recentProductOrders('book', (int) $book->id);
+    }
+
+    private function recentProductOrders(string $type, int $productId): array
+    {
         return Sold::query()
             ->with('user:id,name,lastname,phone_number')
             ->latest()
-            ->take(80)
+            ->take(500)
             ->get()
-            ->filter(fn (Sold $order) => collect($order->items ?? [])->contains(
-                fn ($item) => (int) ($item['item_id'] ?? $item['product_id'] ?? 0) === (int) $book->id
-                    && ($item['type'] ?? 'book') === 'book'
-            ))
-            ->take(6)
+            ->filter(fn (Sold $order) => $this->orderContainsProduct($order->items ?? [], $type, $productId))
+            ->take(10)
             ->map(fn (Sold $order) => [
                 'id' => $order->id,
                 'customer' => trim(($order->user?->name ?? '').' '.($order->user?->lastname ?? '')) ?: 'Mijoz',
@@ -4437,7 +4656,7 @@ class AdminController extends Controller
                 'status' => (string) ($order->status_code ?? $order->status ?? ''),
                 'payment' => (string) ($order->payment_status_code ?? $order->paymentStatus ?? ''),
                 'date' => optional($order->created_at)->format('Y-m-d H:i'),
-                'url' => route('admin.orders.show', $order),
+                'url' => route('boshqaruv.orders', ['orders_search' => $order->id, 'orders_tab' => 'all']),
             ])
             ->values()
             ->all();
@@ -4445,15 +4664,23 @@ class AdminController extends Controller
 
     private function recentSellerOrdersForBook(Books $book): array
     {
-        if (! $book->seller_id || ! Schema::hasTable('seller_orders')) {
+        return $this->recentSellerOrdersForProduct('book', (int) $book->id);
+    }
+
+    private function recentSellerOrdersForProduct(string $type, int $productId): array
+    {
+        if (! Schema::hasTable('seller_order_items') || ! Schema::hasTable('seller_orders')) {
             return [];
         }
 
         return SellerOrder::query()
             ->with(['client:id,name,lastname,phone_number', 'seller:id,shop_name'])
-            ->where('seller_id', $book->seller_id)
+            ->whereIn('id', SellerOrderItem::query()
+                ->select('order_id')
+                ->where('type', $type)
+                ->where('product_id', $productId))
             ->latest()
-            ->take(6)
+            ->take(10)
             ->get()
             ->map(fn (SellerOrder $order) => [
                 'id' => $order->id,
@@ -4463,35 +4690,33 @@ class AdminController extends Controller
                 'amount' => (float) ($order->amount ?? 0),
                 'status' => (string) ($order->status_code ?? $order->status ?? ''),
                 'date' => optional($order->created_at)->format('Y-m-d H:i'),
-                'url' => route('boshqaruv.seller-orders'),
+                'url' => route('boshqaruv.seller-orders', ['seller_orders_search' => $order->id, 'seller_orders_tab' => 'all']),
             ])
             ->values()
             ->all();
     }
 
+    private function orderContainsProduct(array $items, string $type, int $productId): bool
+    {
+        return collect($items)->contains(function ($item) use ($type, $productId) {
+            $item = (array) $item;
+            $itemType = (string) ($item['type'] ?? 'book');
+            $itemId = (int) ($item['item_id'] ?? $item['product_id'] ?? $item['id'] ?? 0);
+
+            return $itemType === $type && $itemId === $productId;
+        });
+    }
+
     private function orderPayload(Sold $order): array
     {
         $items = collect($order->items ?? [])->map(fn ($item) => $this->orderItemPayload((array) $item))->values();
-        $sellerOrders = Schema::hasTable('seller_orders')
+        $sellerOrderModels = Schema::hasTable('seller_orders')
             ? SellerOrder::query()
-                ->with(['seller:id,shop_name', 'courier:id,first_name,last_name,phone_number'])
+                ->with(['seller:id,shop_name,phone_number,commission_percent', 'courier:id,first_name,last_name,phone_number,region'])
                 ->where('order_id', $order->id)
                 ->latest('id')
                 ->get()
-                ->map(fn (SellerOrder $sellerOrder) => [
-                    'id' => $sellerOrder->id,
-                    'seller' => $sellerOrder->seller?->shop_name,
-                    'courier' => trim(($sellerOrder->courier?->first_name ?? '').' '.($sellerOrder->courier?->last_name ?? '')) ?: ($sellerOrder->courierName ?? null),
-                    'courierPhone' => $sellerOrder->courier?->phone_number,
-                    'amount' => (float) ($sellerOrder->amount ?? 0),
-                    'deliveryType' => $sellerOrder->delivery_type,
-                    'status' => (string) ($sellerOrder->status_code ?? $sellerOrder->status ?? ''),
-                    'acceptedAt' => optional($sellerOrder->accepted_at)->format('Y-m-d H:i'),
-                    'url' => route('boshqaruv.seller-orders'),
-                ])
-                ->values()
-                ->all()
-            : [];
+            : collect();
         $address = collect($order->address ?? [])->values()->map(fn ($item) => $this->orderAddressPayload((array) $item));
         $primaryAddress = (array) ($address->first() ?? []);
         $fulfillment = $order->fulfillment;
@@ -4508,13 +4733,115 @@ class AdminController extends Controller
             ->where('order_id', $order->id)
             ->latest('id')
             ->first() : null;
-        $settlementOverview = [
-            'gross' => (float) $sellerTransactions->where('type', 'income')->sum('amount'),
-            'commission' => (float) $sellerTransactions->where('type', 'income')->sum('commissionPrice'),
-            'net' => (float) $sellerTransactions->where('type', 'income')->sum('netAmount'),
-            'reversedNet' => (float) $sellerTransactions->where('type', 'expense')->sum('netAmount'),
-            'transactions' => $sellerTransactions->count(),
+
+        $paymentCard = null;
+        if ($paymentTransaction && filled($paymentTransaction->provider_card_id) && Schema::hasTable('user_cards')) {
+            $paymentCard = UserCard::query()
+                ->where('provider_card_id', $paymentTransaction->provider_card_id)
+                ->first();
+        }
+        $paymentCardSnapshot = data_get($paymentTransaction?->provider_response, 'card_snapshot', []);
+        $paymentCardView = [
+            'provider' => $paymentTransaction?->provider,
+            'providerCardId' => $paymentTransaction?->provider_card_id,
+            'maskedNumber' => $paymentCard?->card_number ?: ($paymentCardSnapshot['masked_number'] ?? null),
+            'vendor' => $paymentCard?->vendor ?: ($paymentCardSnapshot['vendor'] ?? null),
+            'cardName' => $paymentCard?->card_name ?: ($paymentCardSnapshot['card_name'] ?? null),
+            'phone' => $paymentCard?->phone_number ?: ($paymentCardSnapshot['phone_number'] ?? null),
         ];
+
+        $sellerSettlements = [];
+        $settlementOverview = [
+            'gross' => 0,
+            'commission' => 0,
+            'net' => 0,
+            'reversedNet' => 0,
+            'currentNet' => 0,
+            'saleCount' => 0,
+            'reversalCount' => 0,
+            'transactions' => (int) $sellerTransactions->count(),
+            'status' => 'pending',
+            'label' => 'Hisob-kitob kutilmoqda',
+        ];
+        foreach ($sellerOrderModels as $sellerOrder) {
+            $transactions = $sellerTransactions->where('seller_order_id', $sellerOrder->id)->values();
+            $saleTransactions = $transactions
+                ->where('category', SellerOrderSettlementService::CATEGORY_ORDER_SALE)
+                ->where('status', SellerTransaction::STATUS_APPROVED)
+                ->values();
+            $reversalTransactions = $transactions
+                ->where('category', SellerOrderSettlementService::CATEGORY_ORDER_REVERSAL)
+                ->where('status', SellerTransaction::STATUS_APPROVED)
+                ->values();
+
+            $gross = (int) $saleTransactions->sum('amount');
+            $commission = (int) $saleTransactions->sum('commissionPrice');
+            $net = (int) $saleTransactions->sum('netAmount');
+            $reversedNet = (int) $reversalTransactions->sum('netAmount');
+            $currentNet = $net - $reversedNet;
+            $saleCount = $saleTransactions->count();
+            $reversalCount = $reversalTransactions->count();
+            $status = 'pending';
+            $label = 'Hisob-kitob kutilmoqda';
+            if ($saleCount > 0 && $currentNet > 0) {
+                $status = 'settled';
+                $label = 'Sellerga tushgan';
+            } elseif ($saleCount > 0 && $currentNet <= 0) {
+                $status = 'reversed';
+                $label = 'Hisob-kitob qaytarilgan';
+            }
+
+            $sellerSettlements[$sellerOrder->id] = [
+                'gross' => $gross,
+                'commission' => $commission,
+                'net' => $net,
+                'reversedNet' => $reversedNet,
+                'currentNet' => $currentNet,
+                'saleCount' => $saleCount,
+                'reversalCount' => $reversalCount,
+                'status' => $status,
+                'label' => $label,
+                'latestSaleAt' => $this->dateTime($saleTransactions->last()?->created_at),
+                'latestReversalAt' => $this->dateTime($reversalTransactions->last()?->created_at),
+            ];
+
+            $settlementOverview['gross'] += $gross;
+            $settlementOverview['commission'] += $commission;
+            $settlementOverview['net'] += $net;
+            $settlementOverview['reversedNet'] += $reversedNet;
+            $settlementOverview['saleCount'] += $saleCount;
+            $settlementOverview['reversalCount'] += $reversalCount;
+        }
+        $settlementOverview['currentNet'] = $settlementOverview['net'] - $settlementOverview['reversedNet'];
+        if ($settlementOverview['saleCount'] > 0 && $settlementOverview['currentNet'] > 0) {
+            $settlementOverview['status'] = 'settled';
+            $settlementOverview['label'] = 'Sellerga tushgan';
+        } elseif ($settlementOverview['saleCount'] > 0 && $settlementOverview['currentNet'] <= 0) {
+            $settlementOverview['status'] = 'reversed';
+            $settlementOverview['label'] = 'Hisob-kitob qaytarilgan';
+        }
+
+        $sellerOrders = $sellerOrderModels
+            ->map(fn (SellerOrder $sellerOrder) => [
+                'id' => $sellerOrder->id,
+                'sellerId' => $sellerOrder->seller_id,
+                'seller' => $sellerOrder->seller?->shop_name,
+                'sellerPhone' => $sellerOrder->seller?->phone_number,
+                'sellerCommissionPercent' => (int) ($sellerOrder->seller?->commission_percent ?? 0),
+                'courier' => trim(($sellerOrder->courier?->first_name ?? '').' '.($sellerOrder->courier?->last_name ?? '')) ?: ($sellerOrder->courierName ?? null),
+                'courierPhone' => $sellerOrder->courier?->phone_number,
+                'courierRegion' => $sellerOrder->courier?->region,
+                'amount' => (float) ($sellerOrder->amount ?? 0),
+                'deliveryType' => $sellerOrder->delivery_type,
+                'status' => (string) ($sellerOrder->status_code ?? $sellerOrder->status ?? ''),
+                'acceptedAt' => $this->dateTime($sellerOrder->accepted_at),
+                'createdAt' => $this->dateTime($sellerOrder->created_at),
+                'address' => $this->orderAddressPayload((array) ($sellerOrder->address ?? [])),
+                'settlement' => $sellerSettlements[$sellerOrder->id] ?? null,
+                'url' => route('boshqaruv.seller-orders'),
+            ])
+            ->values()
+            ->all();
         $panelAdmin = Auth::guard('panel')->user();
         $canRefundPayment = $panelAdmin?->isSuperAdmin()
             && ($paymentTransaction?->provider === 'paylov')
@@ -4544,7 +4871,13 @@ class AdminController extends Controller
             'deliveryPrice' => (float) ($order->deliveryPrice ?? 0),
             'discountAmount' => (float) ($order->discountAmount ?? 0),
             'cashbackAmount' => (float) ($order->cashbackAmount ?? 0),
+            'withCashback' => (bool) ($order->withCashback ?? false),
+            'awardedCashbackAmount' => (float) ($order->awarded_cashback_amount ?? 0),
+            'cashbackReadyAt' => $this->dateTime($order->cashback_ready_at),
+            'cashbackAwardedAt' => $this->dateTime($order->cashback_awarded_at),
+            'cashbackNotifiedAt' => $this->dateTime($order->cashback_notified_at),
             'giftCertAmount' => (float) ($order->giftCertAmount ?? 0),
+            'giftCertificateId' => $order->gift_certificate_id,
             'packagingPrice' => (float) ($order->packaging_price ?? 0),
             'status' => OrderStatusCode::fromLegacy($order->status_code ?? $order->status)->value,
             'legacyStatus' => (string) ($order->status ?? ''),
@@ -4584,6 +4917,9 @@ class AdminController extends Controller
                 'cashCollectAmount' => (float) ($fulfillment->cash_collect_amount ?? 0),
                 'tracking' => $fulfillment->postal_tracking_number,
                 'labelCode' => $fulfillment->label_code,
+                'notes' => $fulfillment->notes,
+                'routingVersion' => $fulfillment->routing_version,
+                'routingSnapshot' => $fulfillment->routing_snapshot,
                 'lastModeSwitch' => collect(data_get($fulfillment->meta ?? [], 'mode_switch_log', []))->last(),
                 'lastHubReroute' => collect(data_get($fulfillment->meta ?? [], 'hub_reroute_log', []))->last(),
                 'timeline' => $this->orderFulfillmentTimeline($fulfillment),
@@ -4596,6 +4932,7 @@ class AdminController extends Controller
                 'status' => $paymentTransaction->status,
                 'date' => $this->dateTime($paymentTransaction->created_at),
             ] : null,
+            'paymentCard' => $paymentCardView,
             'settlementOverview' => $settlementOverview,
             'canRefundPayment' => (bool) $canRefundPayment,
             'refundConfirmationPhrase' => $refundConfirmationPhrase,
@@ -4607,6 +4944,17 @@ class AdminController extends Controller
                 'status' => $courierOrder->status_code ?? $courierOrder->status,
                 'amount' => (float) ($courierOrder->amount ?? 0),
                 'courierPrice' => (float) ($courierOrder->courierPrice ?? 0),
+                'courierBonus' => (float) ($courierOrder->courierBonus ?? 0),
+                'pickupBonus' => (float) ($courierOrder->pickup_bonus ?? 0),
+                'lockedBonus' => (float) ($courierOrder->locked_bonus ?? 0),
+                'finalBonus' => (float) ($courierOrder->final_bonus ?? 0),
+                'settledAmount' => (float) ($courierOrder->settled_amount ?? 0),
+                'settledAt' => $this->dateTime($courierOrder->settled_at),
+                'pickedUpAt' => $this->dateTime($courierOrder->picked_up_at),
+                'slaDeadline' => $this->dateTime($courierOrder->sla_deadline),
+                'customerDelayCount' => (int) ($courierOrder->customer_delay_count ?? 0),
+                'totalDelaySeconds' => (int) ($courierOrder->total_delay_seconds ?? 0),
+                'isCustomerDelay' => (bool) ($courierOrder->is_customer_delay ?? false),
             ] : null,
             'activeHubs' => Schema::hasTable('hubs') ? Hub::query()
                 ->where('is_active', true)
@@ -4721,6 +5069,16 @@ class AdminController extends Controller
         return [];
     }
 
+    private function qrImageUrl(?string $value): ?string
+    {
+        $value = trim((string) $value);
+        if ($value === '') {
+            return null;
+        }
+
+        return 'https://api.qrserver.com/v1/create-qr-code/?size=520x520&margin=22&format=png&ecc=Q&data='.rawurlencode($value);
+    }
+
     private function orderItemPayload(array $item): array
     {
         $type = $item['type'] ?? 'book';
@@ -4738,6 +5096,11 @@ class AdminController extends Controller
         return [
             'id' => $productId,
             'type' => $type,
+            'productUrl' => match ($type) {
+                'stationery' => route('boshqaruv.stationeries', ['stationeries_search' => $productId, 'stationeries_tab' => 'all']),
+                'gift' => route('boshqaruv.sovgalar'),
+                default => route('boshqaruv.books', ['books_search' => $productId]),
+            },
             'typeLabel' => match ($type) {
                 'stationery' => 'Kanselyariya',
                 'gift' => "Sovg'a",
