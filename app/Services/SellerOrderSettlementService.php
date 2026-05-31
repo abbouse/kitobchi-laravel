@@ -150,8 +150,8 @@ class SellerOrderSettlementService
 
     public function resolveCommissionPercent(Seller $seller, int $grossAmount): int
     {
-        if ($seller->commission_percent !== null) {
-            return max(0, min(100, (int) $seller->commission_percent));
+        if ((int) ($seller->commission_percent ?? 0) > 0) {
+            return min(100, (int) $seller->commission_percent);
         }
 
         $setting = CommissionSetting::query()

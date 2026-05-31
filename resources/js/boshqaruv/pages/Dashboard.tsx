@@ -23,8 +23,10 @@ interface DashboardPayload {
   metrics: Record<string, number>;
   periods: Record<string, { revenue: number; orders: number; users: number; aov: number }>;
   financial: Record<string, number>;
+  business: Record<string, number>;
   status: { main: Record<string, number>; seller: Record<string, number>; courier: Record<string, number> };
   salesByMonth: Array<{ month: string; revenue: number; profit: number; orders: number }>;
+  hourlySales: Array<{ hour: string; revenue: number; orders: number }>;
   categoryShare: Array<{ name: string; value: number; revenue: number; color: string }>;
   topProducts: Array<{ name: string; quantity: number; revenue: number }>;
   recentOrders: Array<{ id: number; customer?: string; amount: number; status: string; updated_at?: string }>;
@@ -39,8 +41,10 @@ const emptyDashboard: DashboardPayload = {
   metrics: {},
   periods: {},
   financial: {},
+  business: {},
   status: { main: {}, seller: {}, courier: {} },
   salesByMonth: [],
+  hourlySales: [],
   categoryShare: [],
   topProducts: [],
   recentOrders: [],
@@ -55,6 +59,7 @@ const change = (current = 0, previous = 0) => previous > 0 ? ((current - previou
 export default function Dashboard() {
   const { dashboard = emptyDashboard } = usePage<{ dashboard?: DashboardPayload }>().props;
   const [period, setPeriod] = useState<'today' | 'week' | 'month'>('month');
+  const [chartMetric, setChartMetric] = useState<'revenue' | 'profit' | 'orders'>('revenue');
   const previousKey = period === 'today' ? 'yesterday' : period === 'week' ? 'lastWeek' : 'lastMonth';
   const current = dashboard.periods[period] || { revenue: 0, orders: 0, users: 0, aov: 0 };
   const previous = dashboard.periods[previousKey] || { revenue: 0, orders: 0, users: 0, aov: 0 };
@@ -91,12 +96,12 @@ export default function Dashboard() {
       </div>
 
       <div className="row g-2 mb-3">
-        <CompactMetric label="Premium user" value={dashboard.metrics.premiumUsers} href="/boshqaruv/users" />
-        <CompactMetric label="Online user" value={dashboard.metrics.onlineUsers} href="/boshqaruv/users" />
-        <CompactMetric label="Kanselyariya" value={dashboard.metrics.stationeries} href="/boshqaruv/stationeries" />
-        <CompactMetric label="Pending seller" value={dashboard.metrics.pendingSellers} href="/boshqaruv/sellers" />
-        <CompactMetric label="Support ticket" value={dashboard.metrics.tickets} href="/boshqaruv/tickets" />
-        <CompactMetric label="Shikoyatlar" value={dashboard.metrics.complaints} href="/boshqaruv/shikoyatlar" />
+        <CompactMetric label="Premium user" value={dashboard.metrics.premiumUsers} icon="bi-stars" color="#7c3aed" href="/boshqaruv/users" />
+        <CompactMetric label="Online user" value={dashboard.metrics.onlineUsers} icon="bi-broadcast" color="#10b981" href="/boshqaruv/users" />
+        <CompactMetric label="Kanselyariya" value={dashboard.metrics.stationeries} icon="bi-pencil-square" color="#f59e0b" href="/boshqaruv/stationeries" />
+        <CompactMetric label="Pending seller" value={dashboard.metrics.pendingSellers} icon="bi-hourglass-split" color="#ec4899" href="/boshqaruv/sellers" />
+        <CompactMetric label="Support ticket" value={dashboard.metrics.tickets} icon="bi-headset" color="#06b6d4" href="/boshqaruv/tickets" />
+        <CompactMetric label="Shikoyatlar" value={dashboard.metrics.complaints} icon="bi-exclamation-triangle" color="#ef4444" href="/boshqaruv/shikoyatlar" />
       </div>
 
       <div className="row g-2 mb-3">
@@ -112,7 +117,12 @@ export default function Dashboard() {
             <div className="panel-head">
               <div>
                 <div className="panel-title">12 oylik real savdo</div>
-                <small className="text-muted">To'langan buyurtmalar, platform signal va order soni</small>
+                <small className="text-muted">To'langan buyurtmalar va platform signal</small>
+              </div>
+              <div className="btn-group btn-group-sm">
+                <button className={`btn ${chartMetric === 'revenue' ? 'btn-primary-gradient' : 'btn-outline-secondary'}`} onClick={() => setChartMetric('revenue')}>Daromad</button>
+                <button className={`btn ${chartMetric === 'profit' ? 'btn-success' : 'btn-outline-secondary'}`} onClick={() => setChartMetric('profit')}>Signal</button>
+                <button className={`btn ${chartMetric === 'orders' ? 'btn-warning' : 'btn-outline-secondary'}`} onClick={() => setChartMetric('orders')}>Order</button>
               </div>
             </div>
             <ResponsiveContainer width="100%" height={300}>
@@ -126,10 +136,8 @@ export default function Dashboard() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#eef0f4" vertical={false} />
                 <XAxis dataKey="month" stroke="#94a3b8" fontSize={11} />
                 <YAxis stroke="#94a3b8" fontSize={11} tickFormatter={(v) => `${(Number(v) / 1000000).toFixed(1)}M`} />
-                <Tooltip formatter={(value: number, name) => name === 'orders' ? fmt(value) : money(value)} />
-                <Area type="monotone" dataKey="revenue" stroke="#4f46e5" fill="url(#dashRevenue)" strokeWidth={2} />
-                <Area type="monotone" dataKey="profit" stroke="#10b981" fill="transparent" strokeWidth={2} />
-                <Area type="monotone" dataKey="orders" stroke="#f59e0b" fill="transparent" strokeWidth={2} />
+                <Tooltip formatter={(value: number) => chartMetric === 'orders' ? fmt(value) : money(value)} />
+                <Area type="monotone" dataKey={chartMetric} stroke={chartMetric === 'revenue' ? '#4f46e5' : chartMetric === 'profit' ? '#10b981' : '#f59e0b'} fill={chartMetric === 'revenue' ? 'url(#dashRevenue)' : 'transparent'} strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -167,6 +175,8 @@ export default function Dashboard() {
         <StatusPanel title="Kuryer orderlar" counts={dashboard.status.courier} labels={{ all: 'Jami', pending: 'Kutmoqda', in_delivery: "Yo'lda", delivered: 'Yetdi', customer_received: 'Qabul', rejected: 'Bekor' }} />
       </div>
 
+      <BusinessKpis dashboard={dashboard} />
+
       <div className="row g-3">
         <div className="col-xl-4">
           <RankPanel title="Top mahsulotlar" rows={dashboard.topProducts.map((row) => ({ name: row.name, meta: `${fmt(row.quantity)} dona`, value: money(row.revenue) }))} />
@@ -191,6 +201,42 @@ export default function Dashboard() {
         <DistributionPanel title="To'lov kesimi" rows={dashboard.paymentSplit.map((row) => ({ name: row.name, value: `${fmt(row.count)} ta · ${row.share}%` }))} />
         <DistributionPanel title="Yetkazish kesimi" rows={dashboard.deliverySplit.map((row) => ({ name: row.name, value: `${fmt(row.count)} ta · ${money(row.revenue)}` }))} />
         <DistributionPanel title="Hududlar" rows={dashboard.regions.map((row) => ({ name: row.name, value: `${fmt(row.value)} ta · ${money(row.revenue)}` }))} />
+      </div>
+    </div>
+  );
+}
+
+function BusinessKpis({ dashboard }: { dashboard: DashboardPayload }) {
+  const b = dashboard.business;
+  const rows = [
+    { label: "To'lov ulushi", value: `${b.paidRate || 0}%`, meta: 'Paid / jami order', icon: 'bi-credit-card', color: '#10b981' },
+    { label: 'Yakunlash ulushi', value: `${b.completionRate || 0}%`, meta: 'Yakunlangan / jami', icon: 'bi-check2-circle', color: '#4f46e5' },
+    { label: 'Bekor ulushi', value: `${b.cancellationRate || 0}%`, meta: 'Bekor va qaytgan', icon: 'bi-x-circle', color: '#ef4444' },
+    { label: 'Qayta xaridor', value: `${b.repeatBuyerRate || 0}%`, meta: `${fmt(b.repeatBuyers)} foydalanuvchi`, icon: 'bi-arrow-repeat', color: '#7c3aed' },
+    { label: 'Xaridorlar', value: fmt(b.buyingUsers), meta: 'Paid order qilgan', icon: 'bi-people', color: '#06b6d4' },
+    { label: 'Karta ulangan', value: fmt(b.cardUsers), meta: 'Tasdiqlangan karta', icon: 'bi-credit-card-2-front', color: '#ec4899' },
+    { label: "Order / xaridor", value: String(b.avgOrdersPerBuyer || 0), meta: "O'rtacha chastota", icon: 'bi-bag-check', color: '#f59e0b' },
+    { label: "Daromad / xaridor", value: money(b.avgRevenuePerBuyer), meta: "O'rtacha paid revenue", icon: 'bi-cash-stack', color: '#059669' },
+  ];
+
+  return (
+    <div className="card-panel mb-3">
+      <div className="panel-head">
+        <div>
+          <div className="panel-title">Marketplace KPI</div>
+          <small className="text-muted">Faqat real order va foydalanuvchi ma'lumotlaridan hisoblangan</small>
+        </div>
+      </div>
+      <div className="row g-2">
+        {rows.map((row) => (
+          <div className="col-xl-3 col-md-6" key={row.label}>
+            <div className="mini-stat h-100">
+              <i className={`bi ${row.icon}`} style={{ color: row.color }}></i>
+              <span>{row.label}<small className="d-block text-muted">{row.meta}</small></span>
+              <strong style={{ color: row.color }}>{row.value}</strong>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -227,8 +273,18 @@ function PeriodCard({ label, value, delta, icon, color }: { label: string; value
   );
 }
 
-function CompactMetric({ label, value = 0, href }: { label: string; value?: number; href: string }) {
-  return <div className="col-xl-2 col-md-4 col-6"><Link href={href} className="mini-stat text-decoration-none h-100"><span>{label}</span><strong className="text-body">{fmt(value)}</strong></Link></div>;
+function CompactMetric({ label, value = 0, icon, color, href }: { label: string; value?: number; icon: string; color: string; href: string }) {
+  return (
+    <div className="col-xl-2 col-md-4 col-6">
+      <Link href={href} className="stat-card text-decoration-none d-block h-100" style={{ padding: 14 }}>
+        <div className="d-flex justify-content-between align-items-start mb-1">
+          <div style={{ fontSize: 11, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 1 }}>{label}</div>
+          <i className={`bi ${icon}`} style={{ color, fontSize: 18 }}></i>
+        </div>
+        <div className="text-body" style={{ fontSize: 22, fontWeight: 800 }}>{fmt(value)}</div>
+      </Link>
+    </div>
+  );
 }
 
 function DistributionPanel({ title, rows }: { title: string; rows: Array<{ name: string; value: string }> }) {
@@ -238,14 +294,16 @@ function DistributionPanel({ title, rows }: { title: string; rows: Array<{ name:
 function FinancialPanel({ dashboard }: { dashboard: DashboardPayload }) {
   const f = dashboard.financial;
   const rows = [
-    ['Gross revenue', f.grossRevenue, '#10b981'],
+    ["Paid order tushumi", f.grossRevenue, '#10b981'],
     ['Delivery income', f.deliveryIncome, '#4f46e5'],
     ['Seller commission', f.commission, '#7c3aed'],
     ['Promo discount', -f.promoDiscount, '#ef4444'],
     ['Cashback', -f.cashback, '#ef4444'],
     ['Courier payout', -f.courierPayout, '#f59e0b'],
-    ['Seller payout', -f.sellerPayout, '#64748b'],
-    ['Platform signal', f.platformProfit, '#059669'],
+    ['Kiritilgan chiqimlar', -f.manualExpenses, '#ef4444'],
+    ['Provider komissiyasi', -f.providerFee, '#f97316'],
+    ['Soliq', -f.tax, '#dc2626'],
+    ['Marketplace marjasi', f.platformProfit, '#059669'],
   ];
 
   return (
@@ -254,7 +312,7 @@ function FinancialPanel({ dashboard }: { dashboard: DashboardPayload }) {
         <div className="panel-head">
           <div>
             <div className="panel-title">Real P&L signali</div>
-            <small className="text-muted">Paid order, commission, delivery, discount va payout asosida</small>
+            <small className="text-muted">Net komissiya, delivery, chegirma, kuryer, ledger, provider va soliq asosida</small>
           </div>
           <span className={`chip ${f.platformProfit >= 0 ? 'chip-success' : 'chip-danger'}`}>Net {f.netMargin || 0}%</span>
         </div>

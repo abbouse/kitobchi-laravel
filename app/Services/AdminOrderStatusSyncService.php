@@ -42,14 +42,13 @@ class AdminOrderStatusSyncService
     {
         DB::transaction(function () use ($order, $status) {
             $previousStatus = (string) $order->status;
+            $statusCode = OrderStatusCode::fromLegacy($status);
 
-            if ($status === 'F') {
+            if ($statusCode === OrderStatusCode::CANCELLED) {
                 $this->orderService->cancelOrder($order, strict: false);
                 DB::afterCommit(fn () => $this->orderStatusPushService->sendForTransition($order->fresh(), $previousStatus, 'F'));
                 return;
             }
-
-            $statusCode = OrderStatusCode::fromLegacy($status);
 
             if (in_array($statusCode, [OrderStatusCode::DELIVERED, OrderStatusCode::CUSTOMER_RECEIVED], true)
                 && $order->payment_status_code !== PaymentStatusCode::PAID->value) {

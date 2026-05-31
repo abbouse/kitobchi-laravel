@@ -22,7 +22,6 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
         Route::get('/stationery-categories', fn (AdminController $controller) => $controller->page('stationery-categories'))->name('stationery-categories');
         Route::get('/authors', fn (AdminController $controller) => $controller->page('Authors'))->name('authors');
         Route::get('/publishers', fn (AdminController $controller) => $controller->page('Publishers'))->name('publishers');
-        Route::get('/parser', fn (AdminController $controller) => $controller->page('Parser'))->name('parser');
         Route::get('/users', fn (AdminController $controller) => $controller->page('Users'))->name('users');
         Route::get('/users/{user}/data', [AdminController::class, 'userData'])->name('users.data');
         Route::post('/users/{user}/block', [\App\Http\Controllers\A122\UserController::class, 'block'])->name('users.block');
@@ -37,6 +36,7 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
         Route::get('/courier-orders', fn (AdminController $controller) => $controller->page('CourierOrders'))->name('courier-orders');
         Route::get('/hubs', fn (AdminController $controller) => $controller->page('Hubs'))->name('hubs');
         Route::get('/transactions', fn (AdminController $controller) => $controller->page('Transaksiyalar'))->name('transactions');
+        Route::get('/expenses', fn (AdminController $controller) => $controller->page('Expenses'))->name('expenses');
         Route::get('/logistika', fn (AdminController $controller) => $controller->page('LogistikaPage'))->name('logistika');
         Route::get('/reklamalar', fn (AdminController $controller) => $controller->page('Reklamalar'))->name('reklamalar');
         Route::get('/promokodlar', fn (AdminController $controller) => $controller->page('Promokodlar'))->name('promokodlar');
@@ -94,6 +94,11 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
         Route::patch('/sellers/{seller}/unblock', [\App\Http\Controllers\A122\SellerController::class, 'unblock'])->name('sellers.unblock');
         Route::post('/sellers/{seller}/warn', [\App\Http\Controllers\A122\SellerController::class, 'warn'])->name('sellers.warn');
         Route::post('/sellers/{seller}/reset-password', [\App\Http\Controllers\A122\SellerController::class, 'resetPassword'])->name('sellers.reset-password');
+        Route::post('/sellers/{seller}/qr/rotate', [\App\Http\Controllers\A122\SellerController::class, 'rotateQr'])->name('sellers.qr.rotate');
+        Route::post('/sellers/{seller}/locations/{location}/qr/rotate', [\App\Http\Controllers\A122\SellerController::class, 'rotateLocationQr'])->name('sellers.locations.qr.rotate');
+        Route::patch('/sellers/{seller}/contract/extend', [\App\Http\Controllers\A122\SellerController::class, 'extendContract'])->name('sellers.contract.extend');
+        Route::post('/sellers/{seller}/documents', [\App\Http\Controllers\A122\SellerController::class, 'uploadDocument'])->name('sellers.documents.store');
+        Route::delete('/sellers/{seller}/documents/{document}', [\App\Http\Controllers\A122\SellerController::class, 'deleteDocument'])->name('sellers.documents.destroy');
         Route::patch('/seller-orders/{sellerOrder}/status', [\App\Http\Controllers\A122\SellerOrderController::class, 'updateStatus'])->name('seller-orders.status');
         Route::patch('/couriers/{courier}/approve', [\App\Http\Controllers\A122\CourierController::class, 'approve'])->name('couriers.approve');
         Route::put('/couriers/{courier}', [AdminController::class, 'updateCourier'])->name('couriers.update');
@@ -101,9 +106,14 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
         Route::patch('/couriers/{courier}/unblock', [\App\Http\Controllers\A122\CourierController::class, 'unblock'])->name('couriers.unblock');
         Route::post('/couriers/{courier}/warn', [\App\Http\Controllers\A122\CourierController::class, 'warn'])->name('couriers.warn');
         Route::post('/couriers/{courier}/reset-password', [\App\Http\Controllers\A122\CourierController::class, 'resetPassword'])->name('couriers.reset-password');
+        Route::post('/couriers/{courier}/documents', [\App\Http\Controllers\A122\CourierController::class, 'uploadDocument'])->name('couriers.documents.store');
+        Route::delete('/couriers/{courier}/documents/{document}', [\App\Http\Controllers\A122\CourierController::class, 'deleteDocument'])->name('couriers.documents.destroy');
         Route::patch('/courier-orders/{courierOrder}/status', [\App\Http\Controllers\A122\CourierOrderController::class, 'updateStatus'])->name('courier-orders.status');
         Route::patch('/transactions/{transaction}/approve', [\App\Http\Controllers\A122\TransactionController::class, 'approve'])->name('transactions.approve');
         Route::patch('/transactions/{transaction}/reject', [\App\Http\Controllers\A122\TransactionController::class, 'reject'])->name('transactions.reject');
+        Route::post('/expenses', [AdminController::class, 'storeExpense'])->name('expenses.store');
+        Route::put('/expenses/{expense}', [AdminController::class, 'updateExpense'])->name('expenses.update');
+        Route::delete('/expenses/{expense}', [AdminController::class, 'destroyExpense'])->name('expenses.destroy');
         Route::post('/promokodlar', [AdminController::class, 'storePromocode'])->name('promokodlar.store');
         Route::get('/promokodlar/generate', [AdminController::class, 'generatePromocode'])->name('promokodlar.generate');
         Route::put('/promokodlar/{promocode}', [AdminController::class, 'updatePromocode'])->name('promokodlar.update');
@@ -145,6 +155,7 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
         Route::put('/settings/contacts', [\App\Http\Controllers\A122\SettingsController::class, 'updateContacts'])->name('settings.contacts');
         Route::put('/settings/app-flags', [\App\Http\Controllers\A122\SettingsController::class, 'updateAppFlags'])->name('settings.app-flags');
         Route::put('/settings/courier-bonus', [\App\Http\Controllers\A122\SettingsController::class, 'updateCourierBonus'])->name('settings.courier-bonus');
+        Route::put('/settings/finance', [\App\Http\Controllers\A122\SettingsController::class, 'updateFinance'])->name('settings.finance');
         Route::put('/settings/telegram', [\App\Http\Controllers\A122\SettingsController::class, 'updateTelegram'])->name('settings.telegram');
         Route::post('/settings/commission', [\App\Http\Controllers\A122\SettingsController::class, 'storeCommission'])->name('settings.commission.store');
         Route::put('/settings/commission/{commissionSetting}', [\App\Http\Controllers\A122\SettingsController::class, 'updateCommission'])->name('settings.commission.update');

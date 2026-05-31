@@ -20,6 +20,8 @@ class ProjectSetting extends Model
         'on_premium', 'on_reels', 'ramadan', 'stop_sales',
         // Qadoqlash
         'packaging_price_small', 'packaging_price_large', 'packaging_threshold',
+        // Marketplace moliyaviy sozlamalari
+        'tax_mode', 'tax_fixed_uzs', 'tax_profit_percent', 'payment_provider_percent',
         // Gift certificate
         'gift_certificate_options',
         // Phase 3 — Kuryer bonus tizimi
@@ -34,6 +36,9 @@ class ProjectSetting extends Model
         'stop_sales'  => 'boolean',
         'telegram_login_enabled' => 'boolean',
         'gift_certificate_options' => 'array',
+        'tax_fixed_uzs'            => 'integer',
+        'tax_profit_percent'       => 'decimal:3',
+        'payment_provider_percent' => 'decimal:3',
         'courier_surge_step'      => 'integer',
         'courier_surge_max'       => 'integer',
         'courier_surge_threshold' => 'integer',

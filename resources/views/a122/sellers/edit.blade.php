@@ -106,7 +106,7 @@
             <input name="commission_percent" type="number" class="input" min="0" max="100" step="1"
                    placeholder="Default CommissionSetting"
                    value="{{ old('commission_percent', $seller->commission_percent) }}">
-            <p class="text-[10px] text-gray-400 mt-1">Bo'sh qoldirilsa, umumiy CommissionSetting'dan olinadi.</p>
+            <p class="text-[10px] text-gray-400 mt-1">Bo'sh yoki 0 qoldirilsa, umumiy CommissionSetting'dan olinadi. 0 dan katta qiymat seller uchun alohida override bo'ladi.</p>
         </div>
 
         <div>

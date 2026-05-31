@@ -40,7 +40,11 @@ interface Seller {
   legal?: Record<string, string | null | undefined>;
   bank?: Record<string, string | null | undefined>;
   contract?: Record<string, string | number | boolean | null | undefined>;
+  qr?: Record<string, string | null | undefined>;
   locations?: Array<Record<string, string | number | boolean | null | undefined | Record<string, string>>>;
+  documents?: Array<Record<string, string | number | null | undefined>>;
+  contractHistory?: Array<Record<string, string | number | null | undefined>>;
+  premiumPlans?: Array<{ type: string; label: string; price: number }>;
   recentOrders?: Array<Record<string, string | number | null | undefined>>;
   transactions?: Array<Record<string, string | number | null | undefined>>;
   banLogs?: Array<Record<string, string | number | boolean | null | undefined>>;
@@ -296,6 +300,11 @@ function SellerModal({ seller, onHide, onWarn, onResetPassword, onPatch, onEdit 
   onPatch: (url?: string, message?: string, payload?: Record<string, string>) => void;
   onEdit: (seller: Seller) => void;
 }) {
+  const uploadDocument = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!seller?.actions?.uploadDocumentUrl) return;
+    router.post(seller.actions.uploadDocumentUrl, new FormData(event.currentTarget), { preserveScroll: true });
+  };
   return (
     <Modal show={!!seller} onHide={onHide} centered size="xl">
       <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">{seller?.name}</Modal.Title></Modal.Header>
@@ -318,7 +327,14 @@ function SellerModal({ seller, onHide, onWarn, onResetPassword, onPatch, onEdit 
               ['Yuridik turi', String(seller.legal?.type || '—')], ['INN', String(seller.legal?.inn || '—')], ['Pasport', String(seller.legal?.passport || '—')],
               ['Bank', String(seller.bank?.name || '—')], ['Hisob', String(seller.bank?.account || '—')], ['Karta', String(seller.bank?.card || '—')],
             ]} />
-            <ListBlock title="Filiallar" empty="Filial yo'q" items={seller.locations || []} render={(item) => <><strong>{String(item.address || '—')}</strong><span>{item.main ? 'Asosiy filial' : 'Filial'} · {String(item.description || '')}</span><MapButtons mapLinks={(item.mapLinks || {}) as Record<string, string>} /></>} />
+            <ListBlock title="Filiallar" empty="Filial yo'q" items={seller.locations || []} render={(item) => <><strong>{String(item.address || '—')}</strong><span>{item.main ? 'Asosiy filial' : 'Filial'} · {String(item.description || '')}</span><MapButtons mapLinks={(item.mapLinks || {}) as Record<string, string>} />{item.rotateUrl ? <Button size="sm" variant="outline-primary" className="mt-2" onClick={() => router.post(String(item.rotateUrl), {}, { preserveScroll: true })}><i className="bi bi-qr-code me-1"></i>Filial QR yangilash</Button> : null}</>} />
+            <Info title="Do'kon QR" rows={[
+              ['QR manzil', String(seller.qr?.url || '—')], ['Yangilangan', String(seller.qr?.rotatedAt || '—')],
+            ]} />
+            <div className="col-xl-6"><div className="detail-panel h-100"><h6 className="fw-bold mb-3">QR boshqaruvi</h6><p className="small text-muted text-break">{String(seller.qr?.url || "QR hali yaratilmagan")}</p><Button size="sm" variant="outline-primary" onClick={() => seller.actions?.rotateQrUrl && router.post(seller.actions.rotateQrUrl, {}, { preserveScroll: true })}><i className="bi bi-qr-code me-1"></i>Do'kon QR yangilash</Button></div></div>
+            <ListBlock title="Shartnoma tarixi" empty="Tarix yo'q" items={seller.contractHistory || []} render={(item) => <><strong>{String(item.action || 'Yangilandi')} · {String(item.number || 'Raqamsiz')}</strong><span>{String(item.oldExpiresAt || '—')} → {String(item.newExpiresAt || '—')} · {String(item.date || '—')}</span><span>{String(item.notes || '')}</span></>} />
+            <div className="col-xl-6"><div className="detail-panel h-100"><h6 className="fw-bold mb-3">Shartnomani tez uzaytirish</h6><form onSubmit={(event) => { event.preventDefault(); if (seller.actions?.extendContractUrl) router.patch(seller.actions.extendContractUrl, Object.fromEntries(new FormData(event.currentTarget)) as Record<string, string>, { preserveScroll: true }); }} className="row g-2"><div className="col-4"><select name="months" className="form-select form-select-sm" defaultValue="12"><option value="3">3 oy</option><option value="6">6 oy</option><option value="12">12 oy</option><option value="24">24 oy</option></select></div><div className="col-8"><input name="notes" className="form-control form-control-sm" placeholder="Izoh" /></div><div className="col-12"><Button size="sm" type="submit">Uzaytirish</Button></div></form></div></div>
+            <div className="col-12"><div className="detail-panel"><h6 className="fw-bold mb-3">Hujjatlar</h6><form onSubmit={uploadDocument} className="row g-2 mb-3"><div className="col-md-3"><select name="type" className="form-select form-select-sm" required><option value="passport">Pasport</option><option value="contract">Shartnoma</option><option value="inn_certificate">STIR guvohnomasi</option><option value="license">Litsenziya</option><option value="bank_details">Bank rekvizitlari</option><option value="addendum">Qo'shimcha kelishuv</option><option value="other">Boshqa</option></select></div><div className="col-md-4"><input type="file" name="file" className="form-control form-control-sm" accept=".pdf,image/*" required /></div><div className="col-md-3"><input name="description" className="form-control form-control-sm" placeholder="Izoh" /></div><div className="col-md-2"><Button size="sm" type="submit">Yuklash</Button></div></form>{(seller.documents || []).map((item) => <div className="d-flex justify-content-between align-items-center border-top py-2 gap-2" key={String(item.id)}><div><strong>{String(item.typeLabel || item.type || 'Hujjat')}</strong><div className="small text-muted">{String(item.name || '—')} · {String(item.date || '—')}</div></div><div className="d-flex gap-2">{item.url ? <a href={String(item.url)} target="_blank" rel="noreferrer" className="btn btn-sm btn-light">Ko'rish</a> : null}{item.deleteUrl ? <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => confirm("Hujjat o'chirilsinmi?") && router.delete(String(item.deleteUrl), { preserveScroll: true })}><i className="bi bi-trash"></i></button> : null}</div></div>)}{(seller.documents || []).length === 0 ? <div className="text-muted small">Hujjat topilmadi</div> : null}</div></div>
             <ListBlock title="Oxirgi seller orderlar" empty="Order yo'q" items={seller.recentOrders || []} render={(item) => <><strong>#{item.id} · {fmt(Number(item.amount || 0))} so'm</strong><span>{String(item.customer || 'Mijoz')} · {String(item.date || '—')}</span></>} />
             <ListBlock title="Tranzaksiyalar" empty="Tranzaksiya yo'q" items={seller.transactions || []} render={(item) => <><strong>{fmt(Number(item.net || item.amount || 0))} so'm · {String(item.status || '—')}</strong><span>{String(item.category || item.type || '—')} · {String(item.date || '—')}</span></>} />
             <ListBlock title={`Ogohlantirishlar (${seller.warningCount || 0}/3)`} empty="Ogohlantirish yo'q" items={seller.banLogs || []} render={(item) => <><strong>{String(item.title || '—')}</strong><span>{String(item.message || '')} · {String(item.date || '—')}</span></>} />
@@ -427,7 +443,8 @@ function SellerEditModal({ seller, onHide }: { seller: Seller | null; onHide: ()
     router.post(seller.actions.updateUrl, form, { preserveScroll: true, onSuccess: onHide });
   };
 
-  return <Modal show={!!seller} onHide={onHide} centered size="lg"><form onSubmit={submit}><Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">Seller tahrirlash</Modal.Title></Modal.Header><Modal.Body><div className="row g-3">
+  return <Modal show={!!seller} onHide={onHide} centered size="xl"><form onSubmit={submit}><Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">Seller tahrirlash</Modal.Title></Modal.Header><Modal.Body><div className="row g-3">
+    <SectionTitle title="Asosiy ma'lumotlar" />
     <FormInput name="shop_name" label="Do'kon nomi" defaultValue={seller?.shopName || seller?.name} required />
     <FormInput name="phone_number" label="Telefon" defaultValue={seller?.phone} required />
     <FormInput name="firstname" label="Ism" defaultValue={seller?.firstName} />
@@ -436,19 +453,41 @@ function SellerEditModal({ seller, onHide }: { seller: Seller | null; onHide: ()
     <FormInput name="district" label="Tuman" defaultValue={seller?.district} />
     <div className="col-md-6"><label className="form-label">Status</label><select name="status" defaultValue={seller?.status || 'pending'} className="form-select"><option value="pending">Kutilmoqda</option><option value="approved">Faol</option><option value="rejected">Bekor qilingan</option><option value="blocked">Bloklangan</option></select></div>
     <FormInput name="balance" label="Balans" type="number" defaultValue={seller?.balance} />
-    <FormInput name="commission_percent" label="Komissiya %" type="number" defaultValue={seller?.commissionRate} />
-    <FormInput name="legal_type" label="Yuridik turi" defaultValue={String(seller?.legal?.type || '')} />
+    <FormInput name="commission_percent" label="Komissiya % (0 yoki bo'sh = global)" type="number" defaultValue={seller?.commissionRate} />
+    <FormInput name="password" label="Yangi parol" type="password" />
+    <FormInput name="photo" label="Profil rasmi" type="file" />
+    <SectionTitle title="Huquqiy va bank rekvizitlari" />
+    <div className="col-md-6"><label className="form-label">Yuridik turi</label><select name="legal_type" defaultValue={String(seller?.legal?.type || '')} className="form-select"><option value="">Tanlanmagan</option><option value="individual">Jismoniy shaxs</option><option value="entrepreneur">YTT</option><option value="llc">MChJ</option><option value="jsc">AJ / OAJ</option></select></div>
     <FormInput name="inn" label="INN" defaultValue={String(seller?.legal?.inn || '')} />
+    <FormInput name="passport_series" label="Pasport seriyasi" defaultValue={String(seller?.legal?.passport || '').split(' ')[0]} />
+    <FormInput name="passport_number" label="Pasport raqami" defaultValue={String(seller?.legal?.passport || '').split(' ').slice(1).join(' ')} />
+    <FormInput name="passport_issued_by" label="Pasport kim tomonidan berilgan" defaultValue={String(seller?.legal?.passportIssuedBy || '')} />
+    <FormInput name="passport_issued_at" label="Pasport berilgan sana" type="date" defaultValue={String(seller?.legal?.passportIssuedAt || '')} />
     <FormInput name="bank_name" label="Bank" defaultValue={String(seller?.bank?.name || '')} />
     <FormInput name="bank_account" label="Hisob raqam" defaultValue={String(seller?.bank?.rawAccount || '')} />
+    <FormInput name="bank_mfo" label="MFO" defaultValue={String(seller?.bank?.mfo || '')} />
+    <FormInput name="bank_swift" label="SWIFT" defaultValue={String(seller?.bank?.swift || '')} />
     <FormInput name="payment_card" label="Karta" defaultValue={String(seller?.bank?.rawCard || '')} />
     <FormInput name="card_holder" label="Karta egasi" defaultValue={String(seller?.bank?.cardHolder || '')} />
     <div className="col-12"><label className="form-label">Yuridik manzil</label><textarea name="legal_address" defaultValue={String(seller?.legal?.legalAddress || seller?.address || '')} className="form-control" rows={2}></textarea></div>
+    <SectionTitle title="Shartnoma va premium" />
+    <FormInput name="contract_number" label="Shartnoma raqami" defaultValue={String(seller?.contract?.number || '')} />
+    <div className="col-md-6"><label className="form-label">Shartnoma holati</label><select name="contract_status" defaultValue={String(seller?.contract?.rawStatus || 'none')} className="form-select"><option value="none">Mavjud emas</option><option value="active">Faol</option><option value="expiring">Tugash arafasida</option><option value="expired">Tugagan</option><option value="terminated">To'xtatilgan</option></select></div>
+    <FormInput name="contract_signed_at" label="Imzolangan sana" type="date" defaultValue={String(seller?.contract?.signedAt || '')} />
+    <FormInput name="contract_expires_at" label="Tugash sanasi" type="date" defaultValue={String(seller?.contract?.expiresAt || '')} />
+    <div className="col-md-6 form-check ms-2"><input className="form-check-input" name="contract_signed" value="1" type="checkbox" defaultChecked={Boolean(seller?.contract?.signed)} id="seller-contract-signed" /><label className="form-check-label" htmlFor="seller-contract-signed">Shartnoma imzolangan</label></div>
+    <div className="col-12"><label className="form-label">Shartnoma izohi</label><textarea name="contract_notes" defaultValue={String(seller?.contract?.notes || '')} className="form-control" rows={2}></textarea></div>
+    <div className="col-md-6"><label className="form-label">Premium amal</label><select name="premium_action" defaultValue="keep" className="form-select"><option value="keep">O'zgartirmaslik</option><option value="grant">Premium berish / uzaytirish</option><option value="revoke">Premiumni bekor qilish</option></select></div>
+    <div className="col-md-6"><label className="form-label">Premium tarif</label><select name="premium_plan" defaultValue="" className="form-select"><option value="">Tanlang</option>{(seller?.premiumPlans || []).map((plan) => <option value={plan.type} key={plan.type}>{plan.label} · {fmt(plan.price)} so'm</option>)}</select></div>
   </div></Modal.Body><Modal.Footer><Button variant="light" onClick={onHide}>Bekor</Button><Button type="submit" variant="primary">Saqlash</Button></Modal.Footer></form></Modal>;
 }
 
 function FormInput({ name, label, defaultValue, required, type = 'text' }: { name: string; label: string; defaultValue?: string | number | null; required?: boolean; type?: string }) {
   return <div className="col-md-6"><label className="form-label">{label}</label><input name={name} type={type} defaultValue={defaultValue ?? ''} required={required} className="form-control" /></div>;
+}
+
+function SectionTitle({ title }: { title: string }) {
+  return <div className="col-12 mt-4"><h6 className="fw-bold mb-0">{title}</h6></div>;
 }
 
 function MapButtons({ mapLinks }: { mapLinks?: Record<string, string> }) {

@@ -12,6 +12,7 @@ class CleanupPendingSpecialPayments extends Command
 {
     protected $signature = 'shop:cleanup-pending-special-payments
                             {--minutes=30 : Necha daqiqadan keyin pending_payment bekor qilinsin}
+                            {--purge-days=30 : Bekor qilingan yozuvlar necha kundan keyin o\'chirilsin}
                             {--dry-run : Hech narsani o\'zgartirmaydi, faqat ko\'rsatadi}';
 
     protected $description = 'Gift certificate va mystery boxdagi eski pending_payment yozuvlarini avtomatik bekor qiladi';
@@ -28,6 +29,7 @@ class CleanupPendingSpecialPayments extends Command
         $minutes = max(1, (int) $this->option('minutes'));
         $dryRun = (bool) $this->option('dry-run');
         $cutoff = now()->subMinutes($minutes);
+        $purgeCutoff = now()->subDays(max(1, (int) $this->option('purge-days')));
 
         $pendingCertificates = GiftCertificate::query()
             ->where('status', GiftCertificate::STATUS_PENDING)
@@ -42,6 +44,14 @@ class CleanupPendingSpecialPayments extends Command
         $this->info("Cutoff: {$cutoff->format('Y-m-d H:i:s')} ({$minutes} daqiqa)");
         $this->line("Gift certificates: {$pendingCertificates->count()} ta");
         $this->line("Mystery box subscriptions: {$pendingSubscriptions->count()} ta");
+        $cancelledCertificates = GiftCertificate::query()
+            ->where('status', GiftCertificate::STATUS_CANCELLED)
+            ->where('updated_at', '<=', $purgeCutoff);
+        $cancelledSubscriptions = MysteryBoxSubscription::query()
+            ->where('status', MysteryBoxSubscription::STATUS_CANCELLED)
+            ->where('updated_at', '<=', $purgeCutoff);
+        $this->line("Purge gift certificates: {$cancelledCertificates->count()} ta");
+        $this->line("Purge mystery subscriptions: {$cancelledSubscriptions->count()} ta");
 
         if ($dryRun) {
             if ($pendingCertificates->isNotEmpty()) {
@@ -92,6 +102,15 @@ class CleanupPendingSpecialPayments extends Command
 
         $this->info("Cancelled gift certificates: {$giftCancelled}");
         $this->info("Cancelled mystery subscriptions: {$mysteryCancelled}");
+        $giftDeleted = $cancelledCertificates->delete();
+        $mysteryDeleted = 0;
+        $cancelledSubscriptions->eachById(function (MysteryBoxSubscription $subscription) use (&$mysteryDeleted) {
+            $subscription->deliveries()->delete();
+            $subscription->delete();
+            $mysteryDeleted++;
+        });
+        $this->info("Deleted old cancelled gift certificates: {$giftDeleted}");
+        $this->info("Deleted old cancelled mystery subscriptions: {$mysteryDeleted}");
 
         return self::SUCCESS;
     }

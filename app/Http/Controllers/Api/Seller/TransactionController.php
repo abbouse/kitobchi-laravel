@@ -48,8 +48,8 @@ class TransactionController extends Controller
 
     private function resolveCommissionPercent(Seller $storeSeller, int $amount): ?int
     {
-        if ($storeSeller->commission_percent !== null) {
-            return max(0, min(100, (int) $storeSeller->commission_percent));
+        if ((int) ($storeSeller->commission_percent ?? 0) > 0) {
+            return min(100, (int) $storeSeller->commission_percent);
         }
 
         $commissionSetting = CommissionSetting::where('priceFrom', '<=', $amount)

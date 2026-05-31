@@ -183,14 +183,19 @@ export default function CourierOrders() {
 }
 
 function CourierModal({ courier, onHide, onPatch, onWarn, onResetPassword, onEdit }: { courier: Courier | null; onHide: () => void; onPatch: (url?: string, data?: Record<string, string>, confirmation?: string) => void; onWarn: (courier: Courier) => void; onResetPassword: (courier: Courier) => void; onEdit: (courier: Courier) => void }) {
+  const uploadDocument = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!courier?.actions?.uploadDocumentUrl) return;
+    router.post(courier.actions.uploadDocumentUrl, new FormData(event.currentTarget), { preserveScroll: true });
+  };
   return <Modal show={!!courier} onHide={onHide} size="xl" centered><Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">{courier?.name}</Modal.Title></Modal.Header><Modal.Body>{!courier ? null : <div className="row g-3">
     <Info title="Asosiy ma'lumotlar" rows={[['Telefon', courier.phone || '—'], ['Hudud', courier.region || '—'], ['Holat', courierLabel(courier.status)], ['Verifikatsiya', courier.verificationLabel || courier.verificationStatus || '—'], ['Ro‘yxatdan o‘tgan', courier.joined || '—'], ['Ogohlantirish', `${courier.warningCount || 0}/3`]]} />
     <Info title="Moliya" rows={[['Balans', `${fmt(courier.balance || 0)} so'm`], ['Rezerv', `${fmt(courier.reserved || 0)} so'm`], ['Daromad', `${fmt(courier.totalEarned || 0)} so'm`], ['Yechilgan', `${fmt(courier.totalWithdrawal || 0)} so'm`], ['Buyurtmalar', String(courier.orders || 0)], ['Karta', String(courier.payment?.card || '—')]]} />
-    <Info title="Transport va shaxs" rows={[['Transport', courier.transportLabel || courier.transport || '—'], ['Avtomobil', [courier.vehicle, courier.vehicleColor].filter(Boolean).join(', ') || '—'], ['Raqam', courier.plate || '—'], ['INN', String(courier.identity?.inn || '—')], ['Pasport', String(courier.identity?.passport || '—')], ['Guvohnoma', String(courier.identity?.license || '—')]]} />
-    <Info title="Lokatsiya va manzil" rows={[['Uy manzili', String(courier.payment?.homeAddress || '—')], ['Karta egasi', String(courier.payment?.cardHolder || '—')], ['Latitude', String(courier.location?.lat || '—')], ['Longitude', String(courier.location?.lon || '—')], ['Lokatsiya yangilangan', String(courier.location?.updatedAt || '—')], ['Verifikatsiya izohi', courier.verificationNotes || '—']]} />
+    <Info title="Transport va shaxs" rows={[['Transport', courier.transportLabel || courier.transport || '—'], ['Avtomobil', [courier.vehicle, courier.vehicleColor].filter(Boolean).join(', ') || '—'], ['Raqam', courier.plate || '—'], ['INN', String(courier.identity?.inn || '—')], ['Tug‘ilgan sana', String(courier.identity?.birthdate || '—')], ['Pasport', String(courier.identity?.passport || '—')], ['Pasport berilgan', String(courier.identity?.passportIssuedAt || '—')], ['Guvohnoma', String(courier.identity?.license || '—')], ['Guvohnoma tugaydi', String(courier.identity?.licenseExpiresAt || '—')], ['Qolgan kun', String(courier.identity?.licenseDaysRemaining ?? '—')]]} />
+    <Info title="Lokatsiya va manzil" rows={[['Uy manzili', String(courier.payment?.homeAddress || '—')], ['Karta egasi', String(courier.payment?.cardHolder || '—')], ['Latitude', String(courier.location?.lat || '—')], ['Longitude', String(courier.location?.lon || '—')], ['Lokatsiya yangilangan', String(courier.location?.updatedAt || '—')], ['Tasdiqlangan sana', courier.verifiedAt || '—'], ['Verifikatsiya izohi', courier.verificationNotes || '—']]} />
     <ListBlock title="Oxirgi buyurtmalar" items={courier.recentOrders || []} render={(item) => <><strong>#{item.id} / ORD #{item.orderId} · {fmt(Number(item.amount || 0))} so'm</strong><span>{String(item.customer || 'Mijoz')} · {String(item.status || '—')} · {String(item.date || '—')}</span></>} />
     <ListBlock title="Tranzaksiyalar" items={courier.transactions || []} render={(item) => <><strong>{fmt(Number(item.net || item.amount || 0))} so'm · {String(item.status || '—')}</strong><span>Komissiya: {fmt(Number(item.commission || 0))} · {String(item.date || '—')}</span></>} />
-    <ListBlock title="Hujjatlar" items={courier.documents || []} render={(item) => <><strong>{String(item.type || 'Hujjat')} · {String(item.name || '—')}</strong><span>{String(item.description || '')} {item.size ? `· ${item.size} KB` : ''}</span></>} />
+    <div className="col-12"><div className="detail-panel"><h6 className="fw-bold mb-3">Hujjatlar</h6><form onSubmit={uploadDocument} className="row g-2 mb-3"><div className="col-md-3"><select name="type" className="form-select form-select-sm" required><option value="passport">Pasport</option><option value="driver_license">Haydovchi guvohnomasi</option><option value="vehicle_reg">Transport guvohnomasi</option><option value="vehicle_insurance">Sug'urta polisi</option><option value="inn_certificate">STIR guvohnomasi</option><option value="medical_cert">Tibbiy ma'lumotnoma</option><option value="photo_with_passport">Pasport bilan selfi</option><option value="other">Boshqa</option></select></div><div className="col-md-4"><input type="file" name="file" className="form-control form-control-sm" accept=".pdf,image/*" required /></div><div className="col-md-3"><input name="description" className="form-control form-control-sm" placeholder="Izoh" /></div><div className="col-md-2"><Button size="sm" type="submit">Yuklash</Button></div></form>{(courier.documents || []).map((item) => <div className="d-flex justify-content-between align-items-center border-top py-2 gap-2" key={String(item.id)}><div><strong>{String(item.typeLabel || item.type || 'Hujjat')}</strong><div className="small text-muted">{String(item.name || '—')} · {String(item.date || '—')}</div><div className="small">{String(item.description || '')}</div></div><div className="d-flex gap-2">{item.url ? <a href={String(item.url)} target="_blank" rel="noreferrer" className="btn btn-sm btn-light">Ko'rish</a> : null}{item.deleteUrl ? <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => confirm("Hujjat o'chirilsinmi?") && router.delete(String(item.deleteUrl), { preserveScroll: true })}><i className="bi bi-trash"></i></button> : null}</div></div>)}{(courier.documents || []).length === 0 ? <div className="text-muted small">Hujjat topilmadi</div> : null}</div></div>
     <ListBlock title={`Ogohlantirishlar (${courier.warningCount || 0}/3)`} items={courier.banLogs || []} render={(item) => <><strong>{String(item.title || '—')}</strong><span>{String(item.message || '')} · {String(item.date || '—')}</span></>} />
   </div>}</Modal.Body><Modal.Footer>{courier ? <Button variant="outline-warning" onClick={() => onWarn(courier)}>Ogohlantirish</Button> : null}{courier ? <Button variant="outline-primary" onClick={() => onEdit(courier)}>Tahrirlash</Button> : null}{courier ? <Button variant="outline-secondary" onClick={() => onResetPassword(courier)}>Parol reset</Button> : null}{courier?.status !== 'approved' ? <Button variant="outline-success" onClick={() => onPatch(courier?.actions?.approveUrl, {}, 'Kuryer tasdiqlansinmi?')}>Tasdiqlash</Button> : null}<Button variant="outline-danger" onClick={() => onPatch(courier?.actions?.rejectUrl, {}, 'Kuryer rad etilsinmi?')}>Rad etish</Button>{courier?.status === 'blocked' ? <Button variant="outline-primary" onClick={() => onPatch(courier?.actions?.unblockUrl, { message: 'Admin tomonidan blokdan chiqarildi.' }, 'Kuryer blokdan chiqarilsinmi?')}>Blokdan chiqarish</Button> : null}<Button variant="light" onClick={onHide}>Yopish</Button></Modal.Footer></Modal>;
 }
@@ -225,22 +230,36 @@ function CourierEditModal({ courier, onHide }: { courier: Courier | null; onHide
     router.post(courier.actions.updateUrl, form, { preserveScroll: true, onSuccess: onHide });
   };
 
-  return <Modal show={!!courier} onHide={onHide} centered size="lg"><form onSubmit={submit}><Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">Kuryer tahrirlash</Modal.Title></Modal.Header><Modal.Body><div className="row g-3">
+  return <Modal show={!!courier} onHide={onHide} centered size="xl"><form onSubmit={submit}><Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">Kuryer tahrirlash</Modal.Title></Modal.Header><Modal.Body><div className="row g-3">
+    <SectionTitle title="Asosiy ma'lumotlar" />
     <FormInput name="first_name" label="Ism" defaultValue={courier?.firstName || courier?.name?.split(' ')[0]} required />
     <FormInput name="last_name" label="Familiya" defaultValue={courier?.lastName || courier?.name?.split(' ').slice(1).join(' ')} required />
     <FormInput name="phone_number" label="Telefon" defaultValue={courier?.phone} required />
     <FormInput name="region" label="Hudud" defaultValue={courier?.region} required />
     <div className="col-md-6"><label className="form-label">Status</label><select name="status" defaultValue={courier?.status || 'pending'} className="form-select"><option value="pending">Kutilmoqda</option><option value="approved">Faol</option><option value="rejected">Rad etilgan</option><option value="blocked">Bloklangan</option></select></div>
     <FormInput name="balance" label="Balans" type="number" defaultValue={courier?.balance} />
+    <FormInput name="password" label="Yangi parol" type="password" />
+    <FormInput name="photo" label="Profil rasmi" type="file" />
+    <FormInput name="birthdate" label="Tug'ilgan sana" type="date" defaultValue={String(courier?.identity?.birthdate || '')} />
+    <FormInput name="home_address" label="Uy manzili" defaultValue={String(courier?.payment?.homeAddress || '')} />
+    <SectionTitle title="Transport va to'lov" />
     <div className="col-md-6"><label className="form-label">Transport</label><select name="transport_type" defaultValue={courier?.transport || ''} className="form-select"><option value="">Tanlanmagan</option><option value="foot">Piyoda</option><option value="bicycle">Velosiped</option><option value="motorcycle">Mototsikl</option><option value="car">Avto</option></select></div>
     <FormInput name="vehicle_brand" label="Brend" defaultValue={courier?.vehicleBrand} />
     <FormInput name="vehicle_model" label="Model" defaultValue={courier?.vehicleModel} />
     <FormInput name="vehicle_color" label="Rang" defaultValue={courier?.vehicleColor} />
     <FormInput name="vehicle_plate_number" label="Raqam" defaultValue={courier?.plate} />
     <FormInput name="inn" label="INN" defaultValue={String(courier?.identity?.inn || '')} />
-    <FormInput name="payment_card" label="Karta" defaultValue={String(courier?.payment?.card || '')} />
+    <FormInput name="payment_card" label="Karta" defaultValue={String(courier?.payment?.rawCard || '')} />
     <FormInput name="card_holder" label="Karta egasi" defaultValue={String(courier?.payment?.cardHolder || '')} />
-    <FormInput name="home_address" label="Uy manzili" defaultValue={String(courier?.payment?.homeAddress || '')} />
+    <SectionTitle title="Pasport va haydovchilik guvohnomasi" />
+    <FormInput name="passport_series" label="Pasport seriyasi" defaultValue={String(courier?.identity?.passport || '').split(' ')[0]} />
+    <FormInput name="passport_number" label="Pasport raqami" defaultValue={String(courier?.identity?.passport || '').split(' ').slice(1).join(' ')} />
+    <FormInput name="passport_issued_by" label="Pasport kim tomonidan berilgan" defaultValue={String(courier?.identity?.passportIssuedBy || '')} />
+    <FormInput name="passport_issued_at" label="Pasport berilgan sana" type="date" defaultValue={String(courier?.identity?.passportIssuedAt || '')} />
+    <FormInput name="driver_license_number" label="Guvohnoma raqami" defaultValue={String(courier?.identity?.license || '')} />
+    <FormInput name="driver_license_issued_at" label="Guvohnoma berilgan sana" type="date" defaultValue={String(courier?.identity?.licenseIssuedAt || '')} />
+    <FormInput name="driver_license_expires_at" label="Guvohnoma tugash sanasi" type="date" defaultValue={String(courier?.identity?.licenseExpiresAt || '')} />
+    <SectionTitle title="Verifikatsiya" />
     <div className="col-md-6"><label className="form-label">Verifikatsiya</label><select name="verification_status" defaultValue={courier?.verificationStatus || 'unverified'} className="form-select"><option value="unverified">Unverified</option><option value="pending">Pending</option><option value="verified">Verified</option><option value="rejected">Rejected</option></select></div>
     <div className="col-12"><label className="form-label">Verifikatsiya izohi</label><textarea name="verification_notes" defaultValue={courier?.verificationNotes || ''} className="form-control" rows={2}></textarea></div>
   </div></Modal.Body><Modal.Footer><Button variant="light" onClick={onHide}>Bekor</Button><Button type="submit" variant="primary">Saqlash</Button></Modal.Footer></form></Modal>;
@@ -248,6 +267,10 @@ function CourierEditModal({ courier, onHide }: { courier: Courier | null; onHide
 
 function FormInput({ name, label, defaultValue, required, type = 'text' }: { name: string; label: string; defaultValue?: string | number | null; required?: boolean; type?: string }) {
   return <div className="col-md-6"><label className="form-label">{label}</label><input name={name} type={type} defaultValue={defaultValue ?? ''} required={required} className="form-control" /></div>;
+}
+
+function SectionTitle({ title }: { title: string }) {
+  return <div className="col-12 mt-4"><h6 className="fw-bold mb-0">{title}</h6></div>;
 }
 
 function MapButtons({ mapLinks }: { mapLinks?: Record<string, string> }) {

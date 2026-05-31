@@ -13,7 +13,7 @@ class ExpireGiftCertificates extends Command
 
     public function handle(): void
     {
-        $expired = GiftCertificate::where('status', 'sent')
+        $expired = GiftCertificate::where('status', GiftCertificate::STATUS_ACTIVE)
             ->where('expires_at', '<=', now())
             ->get();
 

@@ -55,6 +55,9 @@ interface Ord {
   postalReturnStatus?: string;
   postalReturnFee?: number;
   postalReturnNote?: string | null;
+  resendSourceOrderId?: number | null;
+  resendReplacementOrderId?: number | null;
+  resendAvailableAt?: string | null;
   address?: Record<string, unknown>;
   isInstore?: boolean;
   withPackaging?: boolean;
@@ -75,6 +78,7 @@ interface Ord {
     labelCode?: string | null;
     lastModeSwitch?: Record<string, unknown> | null;
     lastHubReroute?: Record<string, unknown> | null;
+    timeline?: Array<{ code: string; title: string; at: string }>;
   } | null;
   paymentTransaction?: { id: number; provider?: string; providerCardId?: string; amount?: number; status?: string; date?: string } | null;
   settlementOverview?: { gross?: number; commission?: number; net?: number; reversedNet?: number; transactions?: number };
@@ -113,13 +117,41 @@ const Detail = ({ label, value }: { label: string; value?: ReactNode }) => (
 );
 
 const statusOptions = [
-  { code: 'A', label: 'Kutilmoqda' },
-  { code: 'P', label: 'Qadoqlanmoqda' },
-  { code: 'B', label: "Yo'lda" },
-  { code: 'C', label: 'Yetib bordi' },
-  { code: 'D', label: 'Mijoz qabul qildi' },
-  { code: 'F', label: 'Bekor qilindi' },
+  { code: 'pending', label: 'Kutilmoqda' },
+  { code: 'packing', label: 'Qadoqlanmoqda' },
+  { code: 'in_delivery', label: "Yo'lda" },
+  { code: 'delivered', label: 'Yetib bordi' },
+  { code: 'customer_received', label: 'Mijoz qabul qildi' },
+  { code: 'cancelled', label: 'Bekor qilindi' },
 ];
+
+const normalizeStatus = (status?: string) => {
+  const value = String(status || 'pending').toLowerCase();
+  return ({
+    a: 'pending',
+    p: 'packing',
+    b: 'in_delivery',
+    c: 'delivered',
+    d: 'customer_received',
+    f: 'cancelled',
+    r: 'returned',
+  } as Record<string, string>)[value] || value;
+};
+
+const statusLabel = (status?: string) => {
+  const normalized = normalizeStatus(status);
+  if (normalized === 'returned') return 'Qaytgan';
+  return statusOptions.find((option) => option.code === normalized)?.label || status || '—';
+};
+
+const canCancelOrder = (status?: string) => ![
+  'delivered',
+  'customer_received',
+  'cancelled',
+  'returned',
+].includes(normalizeStatus(status));
+
+const normalizeOrder = (order: Ord): Ord => ({ ...order, status: normalizeStatus(order.status) });
 
 interface PaginationMeta {
   page: number;
@@ -136,7 +168,7 @@ export default function Orders() {
     orderCounts?: Record<string, number>;
     orderFilters?: { tab?: string; search?: string };
   }>().props;
-  const [activeTab, setActiveTab] = useState(orderFilters.tab || 'all');
+  const [activeTab, setActiveTab] = useState(orderFilters.tab || 'pending');
   const [search, setSearch] = useState(orderFilters.search || '');
   const [showView, setShowView] = useState(false);
   const [selectedOrd, setSelectedOrd] = useState<Ord | null>(null);
@@ -150,28 +182,44 @@ export default function Orders() {
     });
   };
 
-  const handleOpenView = async (order: Ord) => {
-    setSelectedOrd(order);
-    setShowView(true);
+  const loadOrderDetail = async (order: Ord) => {
     if (!order.dataUrl) return;
     setDetailLoading(true);
     try {
       const response = await fetch(order.dataUrl, { headers: { Accept: 'application/json' } });
       if (!response.ok) throw new Error('Buyurtma tafsilotlarini olib bo‘lmadi.');
-      setSelectedOrd(await response.json());
+      setSelectedOrd(normalizeOrder(await response.json()));
     } finally {
       setDetailLoading(false);
     }
   };
 
+  const handleOpenView = async (order: Ord) => {
+    setSelectedOrd(normalizeOrder(order));
+    setShowView(true);
+    await loadOrderDetail(order);
+  };
+
   const handleUpdateStatus = (status: string) => {
     if (!selectedOrd?.statusUrl) return;
-    router.patch(selectedOrd.statusUrl, { status }, { preserveScroll: true });
+    const nextStatus = normalizeStatus(status);
+    if (nextStatus === 'cancelled' && !confirm('Buyurtma bekor qilinsinmi?')) return;
+    const currentOrder = selectedOrd;
+    setSelectedOrd({ ...currentOrder, status: nextStatus });
+    router.patch(currentOrder.statusUrl, { status: nextStatus }, {
+      preserveScroll: true,
+      onSuccess: () => loadOrderDetail(currentOrder),
+      onError: () => setSelectedOrd(currentOrder),
+    });
   };
 
   const postPrompt = (url: string | undefined, data: Record<string, string | number>, method: 'post' | 'patch' = 'post') => {
     if (!url) return;
-    router[method](url, data, { preserveScroll: true });
+    const currentOrder = selectedOrd;
+    router[method](url, data, {
+      preserveScroll: true,
+      onSuccess: () => currentOrder && loadOrderDetail(currentOrder),
+    });
   };
 
   const switchMode = () => {
@@ -288,7 +336,7 @@ export default function Orders() {
                   <td><span className="chip chip-gray">{order.paymentStatus || order.payment}</span></td>
                   <td><span className="chip chip-gray">{order.deliveryType || '—'}</span></td>
                   <td className="text-muted">{order.date}</td>
-                  <td><span className={`chip ${statusChip(order.status)}`}>{order.status}</span></td>
+                  <td><span className={`chip ${statusChip(order.status)}`}>{statusLabel(order.status)}</span></td>
                   <td>
                     <button className="btn btn-sm btn-light me-1" onClick={() => handleOpenView(order)} title="Ko'rish / Boshqarish">
                       <i className="bi bi-eye"></i>
@@ -322,7 +370,7 @@ export default function Orders() {
                       </div>
                       <div className="text-muted small">{selectedOrd.user?.phone || selectedOrd.user?.email || 'Kontakt yoq'}</div>
                     </div>
-                    <span className={`chip ${statusChip(selectedOrd.status)}`}>{selectedOrd.status}</span>
+                    <span className={`chip ${statusChip(selectedOrd.status)}`}>{statusLabel(selectedOrd.status)}</span>
                   </div>
                   <div className="row g-3">
                     <Detail label="Sana" value={selectedOrd.date} />
@@ -413,6 +461,10 @@ export default function Orders() {
                         <Detail label="Cashback" value={`${fmt(selectedOrd.cashbackAmount || 0)} so'm`} />
                         <Detail label="Sertifikat" value={`${fmt(selectedOrd.giftCertAmount || 0)} so'm`} />
                         <Detail label="Promokod" value={selectedOrd.promocode} />
+                        <Detail label="Qaytim holati" value={selectedOrd.postalReturnStatus} />
+                        <Detail label="Qayta jo'natish to'lovi" value={`${fmt(selectedOrd.postalReturnFee || 0)} so'm`} />
+                        <Detail label="Manba order" value={selectedOrd.resendSourceOrderId ? `#${selectedOrd.resendSourceOrderId}` : '—'} />
+                        <Detail label="Replacement order" value={selectedOrd.resendReplacementOrderId ? `#${selectedOrd.resendReplacementOrderId}` : '—'} />
                         <Detail label="Final summa" value={<span className="text-primary">{fmt(selectedOrd.total)} so'm</span>} />
                       </div>
                     </div>
@@ -428,12 +480,19 @@ export default function Orders() {
                           <Detail label="First / last mile" value={[selectedOrd.fulfillment.firstMile, selectedOrd.fulfillment.lastMile].filter(Boolean).join(' / ')} />
                           <Detail label="COD" value={selectedOrd.fulfillment.isCod ? `${fmt(selectedOrd.fulfillment.cashCollectAmount || 0)} so'm` : "Yo'q"} />
                           <Detail label="Tracking / Label" value={[selectedOrd.fulfillment.tracking, selectedOrd.fulfillment.labelCode].filter(Boolean).join(' / ')} />
+                          <Detail label="Oxirgi mode almashuvi" value={formatAudit(selectedOrd.fulfillment.lastModeSwitch)} />
+                          <Detail label="Oxirgi hub reroute" value={formatAudit(selectedOrd.fulfillment.lastHubReroute)} />
                         </div>
                       ) : (
                         <div className="text-muted small">Fulfillment yozuvi hali yoq.</div>
                       )}
                     </div>
                   </div>
+                </div>
+
+                <div className="detail-panel mt-3">
+                  <h6 className="fw-bold mb-3">Operatsion timeline</h6>
+                  <OrderTimeline rows={selectedOrd.fulfillment?.timeline || []} />
                 </div>
 
                 <div className="detail-panel mt-3">
@@ -472,7 +531,7 @@ export default function Orders() {
                     <button className="btn btn-sm btn-outline-secondary" onClick={switchMode}>Mode almashtirish</button>
                     <button className="btn btn-sm btn-outline-secondary" onClick={rerouteHub}>Hub reroute</button>
                     <button className="btn btn-sm btn-outline-secondary" onClick={markPostalReturned}>Pochta qaytimi</button>
-                    {selectedOrd.cancelUrl ? <button className="btn btn-sm btn-outline-danger" onClick={() => confirm('Buyurtma bekor qilinsinmi?') && postPrompt(selectedOrd.cancelUrl, {})}>Bekor qilish</button> : null}
+                    {selectedOrd.cancelUrl && canCancelOrder(selectedOrd.status) ? <button className="btn btn-sm btn-outline-danger" onClick={() => confirm('Buyurtma bekor qilinsinmi?') && postPrompt(selectedOrd.cancelUrl, {})}>Bekor qilish</button> : null}
                     {selectedOrd.canRefundPayment ? <button className="btn btn-sm btn-danger" onClick={refundAndCancel}>Refund + bekor qilish</button> : null}
                   </div>
                   {selectedOrd.activeHubs?.length ? <div className="text-muted small mt-3">Faol hub ID: {selectedOrd.activeHubs.map((hub) => `${hub.id}: ${hub.label}`).join(' · ')}</div> : null}
@@ -484,9 +543,9 @@ export default function Orders() {
                     {statusOptions.map((status) => (
                       <button
                         key={status.code}
-                        className="btn btn-sm btn-outline-secondary"
+                        className={`btn btn-sm ${normalizeStatus(selectedOrd.status) === status.code ? 'btn-primary-gradient' : 'btn-outline-secondary'}`}
                         onClick={() => handleUpdateStatus(status.code)}
-                        disabled={!selectedOrd.statusUrl}
+                        disabled={!selectedOrd.statusUrl || normalizeStatus(selectedOrd.status) === status.code}
                       >
                         {status.label}
                       </button>
@@ -503,6 +562,34 @@ export default function Orders() {
           <Button variant="light" onClick={() => setShowView(false)}>Yopish</Button>
         </Modal.Footer>
       </Modal>
+    </div>
+  );
+}
+
+function formatAudit(value?: Record<string, unknown> | null) {
+  if (!value) return '—';
+  return Object.entries(value)
+    .filter(([, item]) => item !== null && item !== undefined && item !== '')
+    .map(([key, item]) => `${key}: ${String(item)}`)
+    .join(' · ');
+}
+
+function OrderTimeline({ rows }: { rows: Array<{ code: string; title: string; at: string }> }) {
+  if (!rows.length) {
+    return <div className="text-muted small">Fulfillment bosqichlari hali qayd etilmagan.</div>;
+  }
+
+  return (
+    <div className="d-flex flex-column gap-2">
+      {rows.map((row) => (
+        <div className="d-flex gap-3 align-items-start" key={`${row.code}-${row.at}`}>
+          <i className="bi bi-check-circle-fill text-success mt-1"></i>
+          <div>
+            <div className="fw-semibold">{row.title}</div>
+            <div className="text-muted small">{row.at}</div>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

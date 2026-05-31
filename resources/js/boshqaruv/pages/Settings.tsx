@@ -22,6 +22,7 @@ const tabs = [
   { key: 'contacts', label: 'Kontaktlar', icon: 'bi-headset' },
   { key: 'app-flags', label: 'App flaglar', icon: 'bi-toggles' },
   { key: 'courier-bonus', label: 'Kuryer bonus', icon: 'bi-bicycle' },
+  { key: 'finance', label: 'Moliya', icon: 'bi-calculator' },
   { key: 'telegram', label: 'Telegram', icon: 'bi-telegram' },
   { key: 'commission', label: 'Komissiya', icon: 'bi-percent' },
   { key: 'cashback', label: 'Cashback', icon: 'bi-cash-stack' },
@@ -219,6 +220,27 @@ export default function Settings() {
               <div className="col-lg-6"><TextInput name="telegram_redirect_uri_android" label="Android Redirect URI" defaultValue={value(project, 'telegram_redirect_uri_android', 'https://app2854400165-login.tg.dev/tglogin')} /></div>
             </div>
             <div className="small text-muted mt-3">Client secret server `.env` faylida saqlanadi.</div>
+            <div className="text-end mt-3"><SaveButton /></div>
+          </form>
+        </SectionCard>
+      )}
+
+      {tab === 'finance' && (
+        <SectionCard title="Marketplace moliyaviy sozlamalari" icon="bi-calculator">
+          <form onSubmit={(event) => submitForm(event, 'put', actions.finance)}>
+            <div className="row g-3">
+              <div className="col-lg-4">
+                <label className="form-label small text-muted fw-semibold">Soliq hisoblash turi</label>
+                <select name="tax_mode" className="form-select" defaultValue={value(project, 'tax_mode', 'fixed')}>
+                  <option value="fixed">Belgilangan summa (UZS)</option>
+                  <option value="profit_percent">Operatsion foydadan foiz</option>
+                </select>
+              </div>
+              <div className="col-lg-4"><TextInput name="tax_fixed_uzs" label="Soliq summasi (UZS)" type="number" min={0} required defaultValue={value(project, 'tax_fixed_uzs', '0')} /></div>
+              <div className="col-lg-4"><TextInput name="tax_profit_percent" label="Foydadan soliq (%)" type="number" min={0} max={100} required defaultValue={value(project, 'tax_profit_percent', '0')} /></div>
+              <div className="col-lg-4"><TextInput name="payment_provider_percent" label="Payment provider komissiyasi (%)" type="number" min={0} max={100} required defaultValue={value(project, 'payment_provider_percent', '0')} /></div>
+            </div>
+            <div className="small text-muted mt-3">Belgilangan soliq summasi har bir hisobot davriga qo‘llanadi. Payment provider komissiyasi paid orderlarga bog‘langan oxirgi muvaffaqiyatli karta tranzaksiyasidan olinadi.</div>
             <div className="text-end mt-3"><SaveButton /></div>
           </form>
         </SectionCard>

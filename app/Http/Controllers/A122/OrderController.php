@@ -414,7 +414,9 @@ class OrderController extends Controller
 
     public function updateStatus(Request $request, Sold $order)
     {
-        $request->validate(['status' => 'required|in:A,P,B,C,D,F']);
+        $request->validate([
+            'status' => 'required|in:A,P,B,C,D,F,pending,packing,in_delivery,delivered,customer_received,cancelled',
+        ]);
         $this->statusSync->updateMainOrder($order, (string) $request->input('status'));
         return back()->with('success', "Buyurtma holati yangilandi.");
     }
@@ -490,8 +492,14 @@ class OrderController extends Controller
 
     public function adminCancel(Request $request, Sold $order)
     {
-        if (in_array($order->status, ['C', 'F'])) {
-            return back()->with('error', "Yetkazilgan yoki bekor qilingan buyurtmani bekor qilib bo'lmaydi.");
+        $statusCode = OrderStatusCode::fromLegacy($order->status_code ?? $order->status);
+        if (in_array($statusCode, [
+            OrderStatusCode::DELIVERED,
+            OrderStatusCode::CUSTOMER_RECEIVED,
+            OrderStatusCode::CANCELLED,
+            OrderStatusCode::RETURNED,
+        ], true)) {
+            return back()->with('error', "Yakunlangan, qaytgan yoki bekor qilingan buyurtmani bekor qilib bo'lmaydi.");
         }
         $previousStatus = (string) $order->status;
         $result = $this->orderService->cancelOrder($order, strict: false);

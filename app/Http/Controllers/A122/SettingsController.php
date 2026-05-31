@@ -243,6 +243,20 @@ class SettingsController extends Controller
         return back()->with('success', 'Kuryer bonus sozlamalari yangilandi.');
     }
 
+    public function updateFinance(Request $request)
+    {
+        $validated = $request->validate([
+            'tax_mode' => 'required|in:fixed,profit_percent',
+            'tax_fixed_uzs' => 'required|integer|min:0|max:100000000000',
+            'tax_profit_percent' => 'required|numeric|min:0|max:100',
+            'payment_provider_percent' => 'required|numeric|min:0|max:100',
+        ]);
+
+        $this->projectSettings()->update($validated);
+
+        return back()->with('success', 'Moliyaviy sozlamalar yangilandi.');
+    }
+
     public function updateTelegram(Request $request)
     {
         $defaultIosRedirect = 'https://app3206985527-login.tg.dev';

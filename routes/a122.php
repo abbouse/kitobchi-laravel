@@ -34,7 +34,6 @@ use App\Http\Controllers\A122\SearchHistoryController;
 use App\Http\Controllers\A122\SettingsController;
 use App\Http\Controllers\A122\LogisticsController;
 use App\Http\Controllers\A122\HubController;
-use App\Http\Controllers\A122\ParserController;
 use App\Http\Controllers\A122\AuthorController;
 use App\Http\Controllers\A122\PublisherController;
 use App\Http\Controllers\A122\BloggerController;
@@ -125,16 +124,6 @@ Route::prefix('a122')->name('admin.')->group(function () {
         Route::patch('/{blogger}/shipments/{shipment}/delivered', [BloggerController::class, 'markShipmentDelivered'])->name('shipments.delivered');
         Route::patch('/{blogger}/shipments/{shipment}/pending', [BloggerController::class, 'markShipmentPending'])->name('shipments.pending');
         Route::get('/{blogger}/shipments/{shipment}/print', [BloggerController::class, 'printShipment'])->name('shipments.print');
-    });
-
-    // ── Parsers ────────────────────────────────────────────────────
-    Route::prefix('parsers')->name('parsers.')->group(function () {
-        Route::get('/', [ParserController::class, 'index'])->name('index');
-        Route::get('/book-uz', [ParserController::class, 'bookUz'])->name('book-uz');
-        Route::post('/book-uz/sync', [ParserController::class, 'syncBookUz'])->name('book-uz.sync');
-        Route::post('/book-uz/import-selected', [ParserController::class, 'importBookUzSelected'])->name('book-uz.import-selected');
-        Route::post('/book-uz/import-all-stock', [ParserController::class, 'importBookUzAllStock'])->name('book-uz.import-all-stock');
-        Route::post('/book-uz/{item}/import', [ParserController::class, 'importBookUzItem'])->name('book-uz.import-item');
     });
 
     // ── Stationery ─────────────────────────────────────────────────

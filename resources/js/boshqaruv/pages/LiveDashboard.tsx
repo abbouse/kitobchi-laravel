@@ -30,6 +30,7 @@ interface Snapshot {
     month_revenue: number;
     platform_profit: number;
     total_orders: number;
+    paid_orders: number;
     today_orders: number;
     week_orders: number;
     active_orders: number;
@@ -40,6 +41,15 @@ interface Snapshot {
     delivery_income: number;
     promo_discount: number;
     cashback: number;
+    commission: number;
+    courier_payout: number;
+    manual_expenses: number;
+    provider_fee: number;
+    tax: number;
+    completion_rate: number;
+    cancellation_rate: number;
+    paid_rate: number;
+    profit_margin: number;
   };
   main_counts: CountMap;
   seller_counts: CountMap;
@@ -64,6 +74,7 @@ const emptySnapshot: Snapshot = {
     month_revenue: 0,
     platform_profit: 0,
     total_orders: 0,
+    paid_orders: 0,
     today_orders: 0,
     week_orders: 0,
     active_orders: 0,
@@ -74,6 +85,15 @@ const emptySnapshot: Snapshot = {
     delivery_income: 0,
     promo_discount: 0,
     cashback: 0,
+    commission: 0,
+    courier_payout: 0,
+    manual_expenses: 0,
+    provider_fee: 0,
+    tax: 0,
+    completion_rate: 0,
+    cancellation_rate: 0,
+    paid_rate: 0,
+    profit_margin: 0,
   },
   main_counts: {},
   seller_counts: {},
@@ -92,9 +112,9 @@ const emptySnapshot: Snapshot = {
 
 const statusClass = (status?: string) => {
   const value = String(status || '').toLowerCase();
-  if (value.includes('qabul') || value.includes('yetib') || value.includes('delivered') || value === 'c') return 'chip-success';
-  if (value.includes("yo'l") || value.includes('delivery') || value === 'd') return 'chip-info';
-  if (value.includes('bekor') || value.includes('cancel') || value === 'f') return 'chip-danger';
+  if (value.includes('qabul') || value.includes('yetib') || value.includes('delivered') || value === 'customer_received' || value === 'c' || value === 'd') return 'chip-success';
+  if (value.includes("yo'l") || value.includes('delivery') || value === 'b') return 'chip-info';
+  if (value.includes('bekor') || value.includes('qayt') || value.includes('cancel') || value === 'returned' || value === 'f' || value === 'r') return 'chip-danger';
   return 'chip-warning';
 };
 
@@ -110,8 +130,7 @@ export default function LiveDashboard() {
   const mainActive = (snapshot.main_counts.new || 0) + (snapshot.main_counts.packing || 0) + (snapshot.main_counts.onway || 0);
   const sellerActive = (snapshot.seller_counts.payment_pending || 0) + (snapshot.seller_counts.new || 0) + (snapshot.seller_counts.accepted || 0) + (snapshot.seller_counts.handover || 0);
   const courierActive = (snapshot.courier_counts.pending || 0) + (snapshot.courier_counts.in_delivery || 0);
-  const conversion = snapshot.kpis.total_orders > 0 ? Math.min(100, (snapshot.kpis.completed_orders / snapshot.kpis.total_orders) * 100) : 0;
-  const netSignal = snapshot.kpis.platform_profit - snapshot.kpis.promo_discount - snapshot.kpis.cashback;
+  const netSignal = snapshot.kpis.platform_profit;
 
   const feed = useMemo(() => [
     ...snapshot.recent_orders.map((row) => ({ ...row, kind: 'Buyurtma', icon: 'bi-receipt' })),
@@ -208,7 +227,7 @@ export default function LiveDashboard() {
           { l: 'Seller oqimi', v: fmt(sellerActive), icon: 'bi-shop-window', c: '#7c3aed' },
           { l: 'Kuryer oqimi', v: fmt(courierActive), icon: 'bi-bicycle', c: '#3b82f6' },
           { l: 'Online user', v: fmt(snapshot.kpis.online_users), icon: 'bi-people', c: '#10b981' },
-          { l: 'Completion', v: conversion.toFixed(1) + '%', icon: 'bi-bullseye', c: '#f59e0b' },
+          { l: 'Completion', v: snapshot.kpis.completion_rate.toFixed(1) + '%', icon: 'bi-bullseye', c: '#f59e0b' },
         ].map((kpi) => (
           <div className="col-xl-2 col-lg-3 col-md-4 col-6" key={kpi.l}>
             <div className="live-kpi" style={{ borderLeftColor: kpi.c }}>
@@ -217,6 +236,26 @@ export default function LiveDashboard() {
                 <i className={`bi ${kpi.icon}`} style={{ color: kpi.c }}></i>
               </div>
               <strong style={{ color: kpi.c }}>{kpi.v}</strong>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="row g-2 mb-3">
+        {[
+          { l: "To'langan order", v: fmt(snapshot.kpis.paid_orders), s: `${snapshot.kpis.paid_rate.toFixed(1)}% ulush`, c: '#10b981' },
+          { l: 'Seller komissiya', v: fmt(snapshot.kpis.commission) + " so'm", s: 'Tasdiqlangan tranzaksiya', c: '#7c3aed' },
+          { l: 'Yetkazish daromadi', v: fmt(snapshot.kpis.delivery_income) + " so'm", s: 'Paid orderlar', c: '#06b6d4' },
+          { l: 'Kuryer payout', v: fmt(snapshot.kpis.courier_payout) + " so'm", s: 'Topshirilgan orderlar', c: '#f59e0b' },
+          { l: 'Promo + cashback', v: fmt(snapshot.kpis.promo_discount + snapshot.kpis.cashback) + " so'm", s: 'Chegirma xarajati', c: '#ef4444' },
+          { l: 'Chiqim + provider + soliq', v: fmt(snapshot.kpis.manual_expenses + snapshot.kpis.provider_fee + snapshot.kpis.tax) + " so'm", s: 'Marketplace xarajatlari', c: '#dc2626' },
+          { l: 'Net marja', v: snapshot.kpis.profit_margin.toFixed(1) + '%', s: `Cancel ${snapshot.kpis.cancellation_rate.toFixed(1)}%`, c: snapshot.kpis.profit_margin >= 0 ? '#10b981' : '#ef4444' },
+        ].map((item) => (
+          <div className="col-xl-2 col-lg-4 col-md-6" key={item.l}>
+            <div className="live-kpi" style={{ borderLeftColor: item.c }}>
+              <span>{item.l}</span>
+              <strong style={{ color: item.c }}>{item.v}</strong>
+              <small style={{ color: '#94a3b8' }}>{item.s}</small>
             </div>
           </div>
         ))}
