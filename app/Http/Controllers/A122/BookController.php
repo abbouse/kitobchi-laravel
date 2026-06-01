@@ -38,7 +38,12 @@ class BookController extends Controller
     public function index(Request $request)
     {
         $query = Books::with(['category', 'publisher', 'authorProfile']);
-        $tab = $request->input('tab', 'pending');
+        $tab = match ((string) $request->input('tab', 'pending')) {
+            'active' => 'active',
+            'rejected', 'reject' => 'rejected',
+            'all' => 'all',
+            default => 'pending',
+        };
 
         match ($tab) {
             'active' => $query->where('is_approved', 1),
