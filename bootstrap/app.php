@@ -23,6 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'api.client' => \App\Http\Middleware\VerifyApiClient::class,
             'auth.panel' => \App\Http\Middleware\AuthenticatePanel::class,
+            'admin.audit' => \App\Http\Middleware\AdminAuditLogger::class,
             'auth.hubdesk' => \App\Http\Middleware\AuthenticateHubDesk::class,
             'panel.permission' => \App\Http\Middleware\PanelPermission::class,
         ]);

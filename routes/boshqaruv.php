@@ -9,7 +9,7 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
         Route::post('/login', [AdminController::class, 'authenticate'])->middleware('throttle:auth-panel')->name('login.post');
     });
 
-    Route::middleware('auth.panel')->group(function () {
+    Route::middleware(['auth.panel', 'admin.audit'])->group(function () {
         Route::post('/logout', [AdminController::class, 'logout'])->name('logout');
 
         Route::get('/', [AdminController::class, 'dashboard'])->name('dashboard');
@@ -36,6 +36,8 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
         Route::get('/courier-orders', fn (AdminController $controller) => $controller->page('CourierOrders'))->name('courier-orders');
         Route::get('/hubs', fn (AdminController $controller) => $controller->page('Hubs'))->name('hubs');
         Route::get('/transactions', fn (AdminController $controller) => $controller->page('Transaksiyalar'))->name('transactions');
+        Route::get('/commission-audit', fn (AdminController $controller) => $controller->page('CommissionAudit'))->name('commission-audit');
+        Route::get('/audit-logs', fn (AdminController $controller) => $controller->page('AuditLogs'))->name('audit-logs');
         Route::get('/expenses', fn (AdminController $controller) => $controller->page('Expenses'))->name('expenses');
         Route::get('/logistika', fn (AdminController $controller) => $controller->page('LogistikaPage'))->name('logistika');
         Route::get('/reklamalar', fn (AdminController $controller) => $controller->page('Reklamalar'))->name('reklamalar');

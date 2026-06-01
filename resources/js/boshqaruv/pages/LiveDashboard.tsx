@@ -157,6 +157,9 @@ export default function LiveDashboard() {
   const sellerActive = (snapshot.seller_counts.payment_pending || 0) + (snapshot.seller_counts.new || 0) + (snapshot.seller_counts.accepted || 0) + (snapshot.seller_counts.handover || 0);
   const courierActive = (snapshot.courier_counts.pending || 0) + (snapshot.courier_counts.in_delivery || 0);
   const netSignal = snapshot.kpis.platform_profit;
+  const regionTotalOrders = snapshot.regions.reduce((sum, region) => sum + region.value, 0);
+  const regionTotalRevenue = snapshot.regions.reduce((sum, region) => sum + region.revenue, 0);
+  const topRegion = snapshot.regions[0];
 
   const feed = useMemo(() => [
     ...snapshot.recent_orders.map((row) => ({ ...row, kind: 'Buyurtma', icon: 'bi-receipt' })),
@@ -295,27 +298,56 @@ export default function LiveDashboard() {
 
       <div className="row g-3 mb-3">
         <div className="col-xl-4">
-          <div className="card-panel live-map-grid h-100">
-            <div className="d-flex align-items-center gap-2 mb-2">
-              <div className="live-panel-title mb-0">Hududlar bo'yicha oqim</div>
-              <InfoHint tone="dark" text="Buyurtma address snapshotidan viloyat/shahar nomi olinadi. Hozir O'zbekiston ichidagi real addresslar bo'yicha yig'iladi." />
+          <div className="card-panel live-region-panel h-100">
+            <div className="d-flex align-items-center justify-content-between gap-2 mb-3">
+              <div className="d-flex align-items-center gap-2">
+                <div className="live-panel-title mb-0">Hududlar bo'yicha oqim</div>
+                <InfoHint tone="dark" text="Buyurtma address snapshotidan viloyat/shahar nomi olinadi. Hozir O'zbekiston ichidagi real addresslar bo'yicha yig'iladi." />
+              </div>
+              <span className="chip chip-info">{fmt(regionTotalOrders)} ta</span>
             </div>
-            <div style={{ position: 'relative', height: 210 }}>
-              <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%' }}>
-                <path d="M 15 45 Q 30 25 60 30 T 95 35 Q 90 55 75 60 T 40 75 Q 20 65 15 45 Z" fill="rgba(79,70,229,0.06)" stroke="rgba(255,255,255,0.12)" strokeWidth="0.5" />
-                {snapshot.regions.map((region) => (
-                  <g key={region.name}>
-                    <line x1="60" y1="45" x2={region.coords.x} y2={region.coords.y} stroke="rgba(255,255,255,0.06)" strokeWidth="0.3" />
-                    <circle cx={region.coords.x} cy={region.coords.y} r={Math.max(2.5, Math.min(7, region.value / 4))} fill={region.color} />
-                    <text x={region.coords.x} y={region.coords.y - 5} fill="#cbd5e1" fontSize="5" textAnchor="middle">{region.name.slice(0, 12)}</text>
-                  </g>
-                ))}
-              </svg>
+
+            <div className="live-region-hero">
+              <div>
+                <small>Yetakchi hudud</small>
+                <strong>{topRegion?.name || "Ma'lumot yo'q"}</strong>
+                <span>{topRegion ? `${fmt(topRegion.value)} order · ${fmt(topRegion.revenue)} so'm` : 'Address snapshot topilmadi'}</span>
+              </div>
+              <div>
+                <small>Jami tushum</small>
+                <strong>{fmt(regionTotalRevenue)}</strong>
+                <span>so'm</span>
+              </div>
             </div>
-            <div className="live-region-list">
-              {snapshot.regions.map((region) => (
-                <span key={region.name}><i style={{ background: region.color }}></i>{region.name}: <b>{fmt(region.revenue)}</b></span>
-              ))}
+
+            <div className="live-region-bars">
+              {snapshot.regions.map((region, index) => {
+                const orderShare = regionTotalOrders > 0 ? region.value / regionTotalOrders * 100 : 0;
+                const revenueShare = regionTotalRevenue > 0 ? region.revenue / regionTotalRevenue * 100 : 0;
+
+                return (
+                  <div className="live-region-row" key={region.name}>
+                    <div className="live-region-rank" style={{ background: region.color }}>{index + 1}</div>
+                    <div className="live-region-main">
+                      <div className="d-flex justify-content-between gap-2">
+                        <b>{region.name}</b>
+                        <span>{fmt(region.value)} ta</span>
+                      </div>
+                      <div className="live-region-track">
+                        <i style={{ width: `${Math.max(4, orderShare)}%`, background: region.color }}></i>
+                      </div>
+                      <small>{fmt(region.revenue)} so'm · {revenueShare.toFixed(1)}% tushum</small>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="live-region-heat">
+              {snapshot.regions.slice(0, 6).map((region) => {
+                const intensity = regionTotalOrders > 0 ? Math.max(0.16, region.value / regionTotalOrders) : 0.16;
+                return <span key={region.name} style={{ background: `color-mix(in srgb, ${region.color} ${Math.min(85, intensity * 160)}%, rgba(15,23,42,.82))` }}>{region.name.slice(0, 10)}</span>;
+              })}
             </div>
           </div>
         </div>

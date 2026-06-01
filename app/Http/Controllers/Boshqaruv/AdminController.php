@@ -9,6 +9,7 @@ use App\Enums\FulfillmentMode;
 use App\Enums\HubStaffRole;
 use App\Http\Controllers\Controller;
 use App\Models\Admin;
+use App\Models\AdminAuditLog;
 use App\Models\ApiClient;
 use App\Models\ApiClientRequestLog;
 use App\Models\Author;
@@ -770,6 +771,8 @@ class AdminController extends Controller
             ],
             'Hubs' => $this->hubsPagePayload(),
             'Transaksiyalar' => $this->transactionsPagePayload(),
+            'CommissionAudit' => $this->commissionAuditPagePayload(),
+            'AuditLogs' => $this->auditLogsPagePayload(),
             'Expenses' => $this->expensesPagePayload(),
             'Promokodlar' => ['promocodes' => $this->promocodesPayload()],
             'Reklamalar' => ['ads' => $this->adsPayload()],
@@ -3082,6 +3085,146 @@ class AdminController extends Controller
         ];
     }
 
+    private function commissionAuditPagePayload(): array
+    {
+        if (! Schema::hasTable('seller_transactions')) {
+            return ['commissionAuditRows' => [], 'commissionAuditPagination' => $this->emptyPagination(), 'commissionAuditTotals' => [], 'commissionRules' => []];
+        }
+
+        $query = SellerTransaction::query()
+            ->with('seller:id,shop_name,phone_number,commission_percent')
+            ->whereNotNull('commissionPercent')
+            ->latest();
+
+        $rows = $query->paginate(30, ['*'], 'commission_page')->withQueryString();
+        $collection = $rows->getCollection()->map(function (SellerTransaction $transaction) {
+            $sellerRate = (float) ($transaction->seller?->commission_percent ?? 0);
+            $amount = (float) ($transaction->amount ?? 0);
+            $expected = $this->expectedCommissionRule($transaction->seller, $amount);
+            $actualPercent = (float) ($transaction->commissionPercent ?? 0);
+            $actualCommission = (float) ($transaction->commissionPrice ?? 0);
+            $expectedCommission = round($amount * $expected['percent'] / 100);
+
+            return [
+                'id' => $transaction->id,
+                'seller' => $transaction->seller?->shop_name ?: 'Seller',
+                'phone' => $transaction->seller?->phone_number,
+                'sellerId' => $transaction->seller_id,
+                'orderId' => $transaction->order_id,
+                'sellerOrderId' => $transaction->seller_order_id,
+                'amount' => $amount,
+                'netAmount' => (float) ($transaction->netAmount ?? 0),
+                'actualPercent' => $actualPercent,
+                'actualCommission' => $actualCommission,
+                'expectedPercent' => $expected['percent'],
+                'expectedCommission' => $expectedCommission,
+                'ruleSource' => $expected['source'],
+                'sellerRate' => $sellerRate,
+                'globalRule' => $expected['globalRule'],
+                'diffPercent' => round($actualPercent - $expected['percent'], 2),
+                'diffAmount' => round($actualCommission - $expectedCommission),
+                'status' => $transaction->status,
+                'date' => $this->dateTime($transaction->created_at),
+                'ok' => abs($actualPercent - $expected['percent']) < 0.01 && abs($actualCommission - $expectedCommission) <= 1,
+            ];
+        })->values();
+
+        return [
+            'commissionAuditRows' => $collection->all(),
+            'commissionAuditPagination' => $this->paginationMeta($rows),
+            'commissionAuditTotals' => [
+                'rows' => (int) $rows->total(),
+                'mismatches' => (int) $collection->where('ok', false)->count(),
+                'sellerSpecific' => (int) $collection->where('ruleSource', 'seller')->count(),
+                'global' => (int) $collection->where('ruleSource', 'global')->count(),
+            ],
+            'commissionRules' => $this->commissionRulesPayload(),
+        ];
+    }
+
+    private function expectedCommissionRule(?Seller $seller, float $amount): array
+    {
+        $sellerRate = (float) ($seller?->commission_percent ?? 0);
+        if ($sellerRate > 0) {
+            return [
+                'percent' => min(100, $sellerRate),
+                'source' => 'seller',
+                'globalRule' => null,
+            ];
+        }
+
+        $rule = CommissionSetting::query()
+            ->where('priceFrom', '<=', $amount)
+            ->where(function ($query) use ($amount) {
+                $query->whereNull('priceTo')
+                    ->orWhere('priceTo', 0)
+                    ->orWhere('priceTo', '>=', $amount);
+            })
+            ->orderByDesc('priceFrom')
+            ->first();
+
+        return [
+            'percent' => (float) ($rule?->percent ?? 0),
+            'source' => 'global',
+            'globalRule' => $rule ? [
+                'id' => $rule->id,
+                'from' => (float) $rule->priceFrom,
+                'to' => (float) $rule->priceTo,
+                'percent' => (float) $rule->percent,
+            ] : null,
+        ];
+    }
+
+    private function commissionRulesPayload(): array
+    {
+        return CommissionSetting::query()
+            ->orderBy('priceFrom')
+            ->get()
+            ->map(fn (CommissionSetting $rule) => [
+                'id' => $rule->id,
+                'from' => (float) $rule->priceFrom,
+                'to' => (float) $rule->priceTo,
+                'percent' => (float) $rule->percent,
+            ])
+            ->values()
+            ->all();
+    }
+
+    private function auditLogsPagePayload(): array
+    {
+        if (! Schema::hasTable('admin_audit_logs')) {
+            return ['auditLogs' => [], 'auditLogPagination' => $this->emptyPagination(), 'auditLogTotals' => []];
+        }
+
+        $logs = AdminAuditLog::query()
+            ->latest()
+            ->paginate(40, ['*'], 'audit_page')
+            ->withQueryString();
+
+        return [
+            'auditLogs' => $logs->getCollection()->map(fn (AdminAuditLog $log) => [
+                'id' => $log->id,
+                'admin' => $log->admin_name ?: 'Admin',
+                'method' => $log->method,
+                'route' => $log->route_name,
+                'path' => $log->path,
+                'action' => $log->action,
+                'targetType' => $log->target_type,
+                'targetId' => $log->target_id,
+                'requestData' => $log->request_data ?? [],
+                'ip' => $log->ip_address,
+                'statusCode' => $log->status_code,
+                'date' => $this->dateTime($log->created_at),
+            ])->values()->all(),
+            'auditLogPagination' => $this->paginationMeta($logs),
+            'auditLogTotals' => [
+                'all' => (int) AdminAuditLog::query()->count(),
+                'today' => (int) AdminAuditLog::query()->where('created_at', '>=', now()->startOfDay())->count(),
+                'failed' => (int) AdminAuditLog::query()->where('status_code', '>=', 400)->count(),
+            ],
+        ];
+    }
+
     private function promocodesPayload(): array
     {
         if (! Schema::hasTable('promocodes')) {
@@ -4862,7 +5005,7 @@ class AdminController extends Controller
 
     private function paidOrderItemAggregates(): array
     {
-        return Cache::remember('boshqaruv.live.item-aggregates.v2.category-sales', now()->addMinute(), function () {
+        return Cache::remember('boshqaruv.live.item-aggregates.v3.category-sales', now()->addMinute(), function () {
             $categories = [];
             $products = [];
             $bookCategoryNames = $this->bookCategoryNameMap();
@@ -4870,7 +5013,7 @@ class AdminController extends Controller
             $this->paidOrdersQuery()
                 ->whereNotNull('items')
                 ->select(['id', 'items'])
-                ->chunkById(500, function ($orders) use (&$categories, &$products) {
+                ->chunkById(500, function ($orders) use (&$categories, &$products, $bookCategoryNames) {
                     foreach ($orders as $order) {
                         foreach (collect($order->items ?? []) as $item) {
                             $type = Str::lower((string) ($item['type'] ?? 'book'));
