@@ -42,6 +42,7 @@ class AdminOrderStatusSyncService
     {
         DB::transaction(function () use ($order, $status) {
             $previousStatus = (string) $order->status;
+            $previousCompletedPaid = $order->isCompletedAndPaid();
             $statusCode = OrderStatusCode::fromLegacy($status);
 
             if ($statusCode === OrderStatusCode::CANCELLED) {
@@ -76,9 +77,7 @@ class AdminOrderStatusSyncService
                 'updated_at' => now(),
             ]);
 
-            if ($order->payment_status_code === PaymentStatusCode::PAID->value) {
-                $this->orderService->processCashbackAfterOrderMutation($order, $order->user()->first());
-            }
+            $this->syncCompletedOrderSideEffects($order, $previousCompletedPaid, 'main_status_update');
 
             DB::afterCommit(fn () => $this->orderStatusPushService->sendForTransition($order->fresh(), $previousStatus, $statusCode->legacy()));
         });
@@ -97,6 +96,7 @@ class AdminOrderStatusSyncService
             if (!$order) {
                 return;
             }
+            $previousCompletedPaid = $order->isCompletedAndPaid();
 
             if ($statusCode === SellerOrderStatusCode::CANCELLED) {
                 $previousStatus = (string) $order->status;
@@ -115,6 +115,7 @@ class AdminOrderStatusSyncService
             $this->syncCompletionState($order);
             $order->save();
             $this->syncFulfillmentFromSellerStatus($order, $statusCode);
+            $this->syncCompletedOrderSideEffects($order, $previousCompletedPaid, 'seller_status_update');
 
             $courierStatus = $this->resolveCourierStatusForSellerUpdate($order, $statusCode);
             CourierOrder::where('order_id', $order->id)->update([
@@ -142,6 +143,7 @@ class AdminOrderStatusSyncService
             }
 
             $previousStatus = (string) $order->status;
+            $previousCompletedPaid = $order->isCompletedAndPaid();
 
             if ($statusCode === CourierOrderStatusCode::CANCELLED) {
                 $this->orderService->cancelOrder($order, strict: false);
@@ -174,9 +176,7 @@ class AdminOrderStatusSyncService
                 'updated_at' => now(),
             ]);
 
-            if ($order->payment_status_code === PaymentStatusCode::PAID->value) {
-                $this->orderService->processCashbackAfterOrderMutation($order, $order->user()->first());
-            }
+            $this->syncCompletedOrderSideEffects($order, $previousCompletedPaid, 'courier_status_update');
 
             DB::afterCommit(fn () => $this->orderStatusPushService->sendForTransition($order->fresh(), $previousStatus, (string) $order->status));
         });
@@ -305,6 +305,20 @@ class AdminOrderStatusSyncService
         }
 
         $order->completed_at = null;
+    }
+
+    private function syncCompletedOrderSideEffects(Sold $order, bool $previousCompletedPaid, string $reason): void
+    {
+        $order->refresh();
+
+        if ($order->isCompletedAndPaid()) {
+            $this->orderService->processCashbackAfterOrderMutation($order, $order->user()->first());
+            return;
+        }
+
+        if ($previousCompletedPaid) {
+            $this->orderService->reverseCompletedOrderSideEffects($order, "{$reason}: order={$order->id}");
+        }
     }
 
     private function syncFulfillmentFromMainStatus(Sold $order, string $status): void

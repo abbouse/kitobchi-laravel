@@ -232,7 +232,7 @@ class KangarooSyncContentModeration extends Command
         $issues = array_merge($issues, $invalidNote);
 
         $score = array_key_exists('score', $r) && $r['score'] !== null && $r['score'] !== ''
-            ? (int) $r['score']
+            ? round(max(1, min(5, (float) $r['score'])), 1)
             : null;
 
         $update = [

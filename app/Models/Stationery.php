@@ -53,6 +53,7 @@ class Stationery extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'kangaroo_listing_issues' => 'array',
+        'kangaroo_listing_score' => 'decimal:1',
         'kangaroo_listing_checked_at' => 'datetime',
         'ugc_last_scored_at' => 'datetime',
     ];

@@ -8,6 +8,7 @@ use App\Models\Stationery;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class ProductUgcRatingService
 {
@@ -104,7 +105,7 @@ class ProductUgcRatingService
             $this->updateProductScore(
                 $productType,
                 $productId,
-                round(max(1, min(5, $bayesian)), 2),
+                round(max(1, min(5, $bayesian)), 1),
                 $posts->count(),
             );
         }
@@ -112,18 +113,36 @@ class ProductUgcRatingService
 
     private function updateProductScore(string $productType, int $productId, float $score, int $reviewsCount): void
     {
-        $payload = [
-            'ugc_aggregate_score' => $score,
-            'ugc_reviews_count' => max(0, $reviewsCount),
-            'ugc_last_scored_at' => now(),
-        ];
-
         if ($productType === 'book') {
+            if (! Schema::hasColumn('books', 'ugc_aggregate_score')) {
+                return;
+            }
+
+            $payload = ['ugc_aggregate_score' => $score];
+            if (Schema::hasColumn('books', 'ugc_reviews_count')) {
+                $payload['ugc_reviews_count'] = max(0, $reviewsCount);
+            }
+            if (Schema::hasColumn('books', 'ugc_last_scored_at')) {
+                $payload['ugc_last_scored_at'] = now();
+            }
+
             Books::query()->whereKey($productId)->update($payload);
             return;
         }
 
         if ($productType === 'stationery') {
+            if (! Schema::hasColumn('stationeries', 'ugc_aggregate_score')) {
+                return;
+            }
+
+            $payload = ['ugc_aggregate_score' => $score];
+            if (Schema::hasColumn('stationeries', 'ugc_reviews_count')) {
+                $payload['ugc_reviews_count'] = max(0, $reviewsCount);
+            }
+            if (Schema::hasColumn('stationeries', 'ugc_last_scored_at')) {
+                $payload['ugc_last_scored_at'] = now();
+            }
+
             Stationery::query()->whereKey($productId)->update($payload);
         }
     }

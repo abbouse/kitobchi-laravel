@@ -212,11 +212,14 @@ class OrderService
             return 0;
         }
 
-        if ((bool) ($order->is_instore ?? false)) {
-            return $this->awardCashbackForPaidOrder($order, $user, notify: true);
-        }
-
         if ($order->isCompletedAndPaid()) {
+            $this->sellerOrderSettlementService->settleCompletedOrder($order);
+            $this->courierOrderSettlementService->settleCompletedOrder($order);
+
+            if ((bool) ($order->is_instore ?? false)) {
+                return $this->awardCashbackForPaidOrder($order, $user, notify: true);
+            }
+
             $this->scheduleCashbackRelease($order, $order->completed_at);
         }
 
@@ -256,6 +259,16 @@ class OrderService
     public function releaseScheduledCashback(Sold $order, ?User $user = null, bool $notify = true): int
     {
         return $this->awardCashbackForPaidOrder($order, $user, notify: $notify);
+    }
+
+    public function reverseCompletedOrderSideEffects(Sold $order, ?string $reason = null): void
+    {
+        $freshOrder = $order->fresh() ?? $order;
+        $reason ??= "completed_order_reopened: order={$freshOrder->id}";
+
+        $this->sellerOrderSettlementService->reverseCompletedOrderSettlement($freshOrder, $reason);
+        $this->courierOrderSettlementService->reverseCompletedOrderSettlement($freshOrder, $reason);
+        $this->productReviewPromptService->closeForOrder($freshOrder, 'order_reopened_after_completion');
     }
 
     public function awardCashbackForPaidOrder(Sold $order, ?User $user = null, bool $notify = false): int
@@ -430,20 +443,27 @@ class OrderService
             // cashbackAmount = qancha ayirilgani
             if ($order->withCashback && (int)$order->cashbackAmount > 0) {
                 $refundAmount = (int) $order->cashbackAmount;
-                $balanceBefore = (int) DB::table('users')->where('id', $order->user_id)->value('cashback');
+                $alreadyRefunded = DB::table('cashback_histories')
+                    ->where('sold_id', $order->id)
+                    ->where('action', 'refund')
+                    ->exists();
 
-                DB::table('users')
-                    ->where('id', $order->user_id)
-                    ->increment('cashback', $refundAmount);
+                if (! $alreadyRefunded) {
+                    $balanceBefore = (int) DB::table('users')->where('id', $order->user_id)->value('cashback');
 
-                $this->cashbackHistoryService->record(
-                    userId: (int) $order->user_id,
-                    action: 'refund',
-                    amount: $refundAmount,
-                    order: $order,
-                    balanceBefore: $balanceBefore,
-                    balanceAfter: $balanceBefore + $refundAmount,
-                );
+                    DB::table('users')
+                        ->where('id', $order->user_id)
+                        ->increment('cashback', $refundAmount);
+
+                    $this->cashbackHistoryService->record(
+                        userId: (int) $order->user_id,
+                        action: 'refund',
+                        amount: $refundAmount,
+                        order: $order,
+                        balanceBefore: $balanceBefore,
+                        balanceAfter: $balanceBefore + $refundAmount,
+                    );
+                }
             }
 
             if ((int) ($order->awarded_cashback_amount ?? 0) > 0) {
@@ -527,11 +547,7 @@ class OrderService
         }
 
         if ($previousCompletedPaid) {
-            $reason = "order_cancelled_after_paid: order={$order->id}";
-            $freshOrder = $order->fresh() ?? $order;
-            $this->sellerOrderSettlementService->reverseCompletedOrderSettlement($freshOrder, $reason);
-            $this->courierOrderSettlementService->reverseCompletedOrderSettlement($freshOrder, $reason);
-            $this->productReviewPromptService->closeForOrder($freshOrder, 'order_cancelled_after_refund');
+            $this->reverseCompletedOrderSideEffects($order, "order_cancelled_after_paid: order={$order->id}");
         }
 
         if ($order->user_id) {

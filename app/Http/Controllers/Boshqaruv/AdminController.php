@@ -67,6 +67,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -572,6 +573,241 @@ class AdminController extends Controller
         return back()->with('success', "Reklama o'chirildi.");
     }
 
+    public function storeMarketNews(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $data = $this->marketNewsData($request);
+        if ($request->hasFile('imgUrl')) {
+            $data['imgUrl'] = $request->file('imgUrl')->store('blog', 'public');
+        }
+        MarketNews::create($data);
+
+        return back()->with('success', 'Market yangiligi yaratildi.');
+    }
+
+    public function updateMarketNews(Request $request, MarketNews $news): \Illuminate\Http\RedirectResponse
+    {
+        $data = $this->marketNewsData($request);
+        if ($request->hasFile('imgUrl')) {
+            if ($news->imgUrl) {
+                Storage::disk('public')->delete($news->imgUrl);
+            }
+            $data['imgUrl'] = $request->file('imgUrl')->store('blog', 'public');
+        }
+        $news->update($data);
+
+        return back()->with('success', 'Market yangiligi yangilandi.');
+    }
+
+    public function toggleMarketNews(MarketNews $news): \Illuminate\Http\RedirectResponse
+    {
+        $news->update(['status' => ! $news->status]);
+
+        return back()->with('success', $news->status ? 'Market yangiligi faollashtirildi.' : 'Market yangiligi yashirildi.');
+    }
+
+    public function destroyMarketNews(MarketNews $news): \Illuminate\Http\RedirectResponse
+    {
+        if ($news->imgUrl) {
+            Storage::disk('public')->delete($news->imgUrl);
+        }
+        $news->delete();
+
+        return back()->with('success', "Market yangiligi o'chirildi.");
+    }
+
+    public function storeReel(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        Reel::create($this->reelData($request));
+
+        return back()->with('success', 'Reel yaratildi.');
+    }
+
+    public function updateReel(Request $request, Reel $reel): \Illuminate\Http\RedirectResponse
+    {
+        $reel->update($this->reelData($request));
+
+        return back()->with('success', 'Reel yangilandi.');
+    }
+
+    public function destroyReel(Reel $reel): \Illuminate\Http\RedirectResponse
+    {
+        $reel->load('items');
+        foreach ($reel->items as $item) {
+            foreach (['video_720p', 'video_480p', 'video_360p'] as $field) {
+                if ($item->{$field}) {
+                    Storage::disk('public')->delete($item->{$field});
+                }
+            }
+        }
+        $reel->delete();
+
+        return back()->with('success', "Reel o'chirildi.");
+    }
+
+    public function storePolicy(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        Policy::create($this->policyData($request, null));
+
+        return back()->with('success', "Siyosat qo'shildi.");
+    }
+
+    public function updatePolicy(Request $request, Policy $policy): \Illuminate\Http\RedirectResponse
+    {
+        $policy->update($this->policyData($request, $policy));
+
+        return back()->with('success', 'Siyosat yangilandi.');
+    }
+
+    public function togglePolicy(Policy $policy): \Illuminate\Http\RedirectResponse
+    {
+        $policy->update(['is_active' => ! $policy->is_active]);
+
+        return back()->with('success', $policy->is_active ? 'Siyosat faollashtirildi.' : 'Siyosat yashirildi.');
+    }
+
+    public function destroyPolicy(Policy $policy): \Illuminate\Http\RedirectResponse
+    {
+        $policy->delete();
+
+        return back()->with('success', "Siyosat o'chirildi.");
+    }
+
+    public function storePushNotification(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        FcmNotifications::create($request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'description' => ['required', 'string', 'max:500'],
+            'who' => ['required', Rule::in(['users', 'business', 'courier'])],
+        ]));
+
+        return back()->with('success', 'Push bildirishnoma saqlandi.');
+    }
+
+    public function destroyPushNotification(FcmNotifications $notification): \Illuminate\Http\RedirectResponse
+    {
+        $notification->delete();
+
+        return back()->with('success', "Push bildirishnoma o'chirildi.");
+    }
+
+    public function storeVacancy(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        Vacancy::create($this->vacancyData($request));
+
+        return back()->with('success', "Vakansiya qo'shildi.");
+    }
+
+    public function updateVacancy(Request $request, Vacancy $vacancy): \Illuminate\Http\RedirectResponse
+    {
+        $vacancy->update($this->vacancyData($request));
+
+        return back()->with('success', 'Vakansiya yangilandi.');
+    }
+
+    public function toggleVacancy(Vacancy $vacancy): \Illuminate\Http\RedirectResponse
+    {
+        $vacancy->update(['is_active' => ! $vacancy->is_active]);
+
+        return back()->with('success', $vacancy->is_active ? 'Vakansiya faollashtirildi.' : 'Vakansiya yashirildi.');
+    }
+
+    public function destroyVacancy(Vacancy $vacancy): \Illuminate\Http\RedirectResponse
+    {
+        $vacancy->delete();
+
+        return back()->with('success', "Vakansiya o'chirildi.");
+    }
+
+    public function storePanelAdmin(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:100'],
+            'email' => ['required', 'email', 'max:255', Rule::unique('admins', 'email')],
+            'password' => ['required', 'string', 'min:8'],
+            'role' => ['required', Rule::in(['superadmin', 'admin', 'moderator'])],
+            'is_active' => ['nullable', 'boolean'],
+        ]);
+        $data['password'] = Hash::make($data['password']);
+        $data['is_active'] = $request->boolean('is_active', true);
+
+        Admin::create($data);
+
+        return back()->with('success', "Admin qo'shildi.");
+    }
+
+    public function updatePanelAdmin(Request $request, Admin $admin): \Illuminate\Http\RedirectResponse
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:100'],
+            'email' => ['required', 'email', 'max:255', Rule::unique('admins', 'email')->ignore($admin->id)],
+            'password' => ['nullable', 'string', 'min:8'],
+            'role' => ['required', Rule::in(['superadmin', 'admin', 'moderator'])],
+            'is_active' => ['nullable', 'boolean'],
+        ]);
+        if (! empty($data['password'])) {
+            $data['password'] = Hash::make($data['password']);
+        } else {
+            unset($data['password']);
+        }
+        $data['is_active'] = $request->boolean('is_active');
+        $admin->update($data);
+
+        return back()->with('success', 'Admin yangilandi.');
+    }
+
+    public function togglePanelAdmin(Admin $admin): \Illuminate\Http\RedirectResponse
+    {
+        $admin->update(['is_active' => ! $admin->is_active]);
+
+        return back()->with('success', $admin->is_active ? 'Admin faollashtirildi.' : 'Admin bloklandi.');
+    }
+
+    public function destroyPanelAdmin(Admin $admin): \Illuminate\Http\RedirectResponse
+    {
+        abort_if(Auth::id() === $admin->id, 422, "O'zingizni o'chira olmaysiz.");
+        $admin->delete();
+
+        return back()->with('success', "Admin o'chirildi.");
+    }
+
+    public function storeApiClient(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $data = $this->apiClientData($request);
+        $credentials = ApiClient::generateCredentials();
+
+        ApiClient::create($data + $credentials);
+
+        return back()->with('success', 'API mijoz yaratildi.');
+    }
+
+    public function updateApiClient(Request $request, ApiClient $apiClient): \Illuminate\Http\RedirectResponse
+    {
+        $apiClient->update($this->apiClientData($request, false));
+
+        return back()->with('success', 'API mijoz yangilandi.');
+    }
+
+    public function toggleApiClient(ApiClient $apiClient): \Illuminate\Http\RedirectResponse
+    {
+        $apiClient->update(['is_active' => ! $apiClient->is_active]);
+
+        return back()->with('success', $apiClient->is_active ? 'API mijoz faollashtirildi.' : 'API mijoz o‘chirildi.');
+    }
+
+    public function regenerateApiClient(ApiClient $apiClient): \Illuminate\Http\RedirectResponse
+    {
+        $apiClient->update(['app_secret' => ApiClient::generateCredentials()['app_secret']]);
+
+        return back()->with('success', 'API secret yangilandi.');
+    }
+
+    public function destroyApiClient(ApiClient $apiClient): \Illuminate\Http\RedirectResponse
+    {
+        $apiClient->delete();
+
+        return back()->with('success', "API mijoz o'chirildi.");
+    }
+
     public function updateSeller(Request $request, Seller $seller): \Illuminate\Http\RedirectResponse
     {
         $data = $request->validate([
@@ -729,6 +965,96 @@ class AdminController extends Controller
         $expense->delete();
 
         return back()->with('success', "Chiqim o'chirildi.");
+    }
+
+    private function marketNewsData(Request $request): array
+    {
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string', 'max:4000'],
+            'align' => ['required', Rule::in(['top', 'center'])],
+            'status' => ['nullable', 'boolean'],
+            'action' => ['required', Rule::in(['news', 'to_shop', 'to_product'])],
+            'action_id' => ['nullable', 'integer', 'min:1'],
+            'imgUrl' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+        ]);
+        $data['status'] = $request->boolean('status');
+        if ($data['action'] === 'news') {
+            $data['action_id'] = null;
+        }
+
+        return $data;
+    }
+
+    private function vacancyData(Request $request): array
+    {
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'icon' => ['nullable', 'string', Rule::in(array_keys(Vacancy::iconOptions()))],
+            'contract_type' => ['nullable', 'string', 'max:120'],
+            'location' => ['nullable', 'string', 'max:255'],
+            'description' => ['required', 'string', 'max:10000'],
+            'sort_order' => ['nullable', 'integer', 'min:0'],
+            'is_active' => ['nullable', 'boolean'],
+        ]);
+        $data['is_active'] = $request->boolean('is_active', true);
+
+        return $data;
+    }
+
+    private function reelData(Request $request): array
+    {
+        return $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string', 'max:4000'],
+            'order' => ['required', 'integer', 'min:0'],
+        ]);
+    }
+
+    private function policyData(Request $request, ?Policy $policy): array
+    {
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'slug' => ['nullable', 'string', 'max:255', Rule::unique('policies', 'slug')->ignore($policy?->id)],
+            'content' => ['required', 'string'],
+            'sort_order' => ['nullable', 'integer', 'min:0'],
+            'is_active' => ['nullable', 'boolean'],
+            'show_in_app' => ['nullable', 'boolean'],
+        ]);
+        $data['slug'] = $data['slug'] ?: Str::slug($data['title']);
+        $data['is_active'] = $request->boolean('is_active');
+        $data['show_in_app'] = $request->boolean('show_in_app');
+
+        return $data;
+    }
+
+    private function apiClientData(Request $request, bool $defaultActive = true): array
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:100'],
+            'abilities' => ['nullable', 'string', 'max:1000'],
+            'is_active' => ['nullable', 'boolean'],
+            'rate_limit_per_second' => ['nullable', 'integer', 'min:1', 'max:10000'],
+            'rate_limit_per_minute' => ['nullable', 'integer', 'min:1', 'max:500000'],
+        ]);
+        $abilities = trim((string) ($data['abilities'] ?? ''));
+        $decoded = $abilities !== '' ? json_decode($abilities, true) : null;
+        $data['abilities'] = is_array($decoded)
+            ? array_values(array_unique(array_filter(array_map('strval', $decoded))))
+            : collect(preg_split('/[\s,]+/', $abilities) ?: ['read'])
+                ->map(fn ($ability) => strtolower(trim((string) $ability)))
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
+        if ($data['abilities'] === []) {
+            $data['abilities'] = ['read'];
+        }
+        $data['is_active'] = $request->boolean('is_active', $defaultActive);
+        $data['rate_limit_per_second'] = $data['rate_limit_per_second'] ?? 8;
+        $data['rate_limit_per_minute'] = $data['rate_limit_per_minute'] ?? 240;
+
+        return $data;
     }
 
     private function expenseData(Request $request): array
@@ -1244,7 +1570,7 @@ class AdminController extends Controller
                     'sellerOrders' => $sellerOrders,
                     'createdAt' => optional($book->created_at)->format('Y-m-d H:i'),
                     'updatedAt' => optional($book->updated_at)->format('Y-m-d H:i'),
-                    'showUrl' => route('admin.books.show', $book),
+                    'showUrl' => route('boshqaruv.books', ['books_search' => $book->id]),
                     'editUrl' => route('boshqaruv.books.update', $book),
                     'moderateUrl' => route('boshqaruv.books.moderate', $book),
                 ];
@@ -1285,8 +1611,8 @@ class AdminController extends Controller
                         'status' => $book->status ? 'Active' : 'Inactive',
                         'approved' => (bool) $book->is_approved,
                         'image' => ProductImageUrls::originalUrl(collect($book->images ?? [])->first()),
-                        'showUrl' => route('admin.books.show', $book),
-                        'editUrl' => route('admin.books.edit', $book),
+                        'showUrl' => route('boshqaruv.books', ['books_search' => $book->id]),
+                        'editUrl' => route('boshqaruv.books', ['books_search' => $book->id]),
                         'moderateUrl' => route('boshqaruv.books.moderate', $book),
                     ]);
                 });
@@ -1312,8 +1638,8 @@ class AdminController extends Controller
                         'status' => $stationery->status ? 'Active' : 'Inactive',
                         'approved' => (bool) $stationery->is_approved,
                         'image' => $this->assetFromStorage(collect($stationery->images ?? [])->first()),
-                        'showUrl' => route('admin.stationery.show', $stationery->id),
-                        'editUrl' => route('admin.stationery.edit', $stationery->id),
+                        'showUrl' => route('boshqaruv.stationeries', ['stationeries_search' => $stationery->id]),
+                        'editUrl' => route('boshqaruv.stationeries', ['stationeries_search' => $stationery->id]),
                         'moderateUrl' => route('boshqaruv.stationery.moderate', $stationery->id),
                     ]);
                 });
@@ -1339,8 +1665,8 @@ class AdminController extends Controller
                         'status' => $gift->status ? 'Active' : 'Inactive',
                         'approved' => (bool) $gift->is_approved,
                         'image' => $this->assetFromStorage(collect($gift->images ?? [])->first()),
-                        'showUrl' => route('admin.gifts.index'),
-                        'editUrl' => route('admin.gifts.index'),
+                        'showUrl' => route('boshqaruv.sovgalar'),
+                        'editUrl' => route('boshqaruv.sovgalar'),
                     ]);
                 });
         }
@@ -3362,15 +3688,18 @@ class AdminController extends Controller
                 'id' => $news->id,
                 'title' => $news->title,
                 'description' => $news->description,
+                'align' => $news->align,
                 'status' => $news->status ? 'Active' : 'Inactive',
+                'active' => (bool) $news->status,
+                'actionType' => $news->action,
+                'actionId' => $news->action_id,
                 'action' => $news->action_label,
                 'image' => $this->assetFromStorage($news->imgUrl),
                 'date' => optional($news->created_at)->format('Y-m-d'),
-                'createUrl' => route('admin.news.create'),
-                'showUrl' => route('admin.news.show', $news),
-                'editUrl' => route('admin.news.edit', $news),
-                'toggleUrl' => route('admin.news.toggle', $news),
-                'destroyUrl' => route('admin.news.destroy', $news),
+                'createUrl' => route('boshqaruv.market-news.store'),
+                'updateUrl' => route('boshqaruv.market-news.update', $news),
+                'toggleUrl' => route('boshqaruv.market-news.toggle', $news),
+                'destroyUrl' => route('boshqaruv.market-news.destroy', $news),
             ])
             ->values()
             ->all();
@@ -3394,10 +3723,9 @@ class AdminController extends Controller
                 'order' => (int) ($reel->order ?? 0),
                 'items' => (int) ($reel->items_count ?? 0),
                 'status' => 'Active',
-                'createUrl' => route('admin.reels.create'),
-                'showUrl' => route('admin.reels.show', $reel),
-                'editUrl' => route('admin.reels.edit', $reel),
-                'destroyUrl' => route('admin.reels.destroy', $reel),
+                'createUrl' => route('boshqaruv.reels.store'),
+                'updateUrl' => route('boshqaruv.reels.update', $reel),
+                'destroyUrl' => route('boshqaruv.reels.destroy', $reel),
             ])
             ->values()
             ->all();
@@ -3417,13 +3745,14 @@ class AdminController extends Controller
                 'id' => $policy->id,
                 'title' => $policy->title,
                 'slug' => $policy->slug,
+                'content' => $policy->content,
                 'status' => $policy->is_active ? 'Active' : 'Inactive',
                 'showInApp' => (bool) $policy->show_in_app,
                 'sortOrder' => (int) ($policy->sort_order ?? 0),
-                'createUrl' => route('admin.policies.create'),
-                'editUrl' => route('admin.policies.edit', $policy),
-                'toggleUrl' => route('admin.policies.toggle', $policy),
-                'destroyUrl' => route('admin.policies.destroy', $policy),
+                'createUrl' => route('boshqaruv.policies.store'),
+                'updateUrl' => route('boshqaruv.policies.update', $policy),
+                'toggleUrl' => route('boshqaruv.policies.toggle', $policy),
+                'destroyUrl' => route('boshqaruv.policies.destroy', $policy),
             ])
             ->values()
             ->all();
@@ -3445,8 +3774,8 @@ class AdminController extends Controller
                 'who' => $notification->who,
                 'status' => $notification->is_read ? 'Read' : 'Sent',
                 'date' => optional($notification->created_at)->format('Y-m-d H:i'),
-                'createUrl' => route('admin.push.create'),
-                'destroyUrl' => route('admin.push.destroy', $notification),
+                'createUrl' => route('boshqaruv.push.store'),
+                'destroyUrl' => route('boshqaruv.push.destroy', $notification),
             ])
             ->values()
             ->all();
@@ -3780,14 +4109,17 @@ class AdminController extends Controller
             ->map(fn (Vacancy $vacancy) => [
                 'id' => $vacancy->id,
                 'title' => $vacancy->title,
+                'icon' => $vacancy->icon,
                 'contractType' => $vacancy->contract_type,
                 'location' => $vacancy->location,
+                'description' => $vacancy->description,
+                'sortOrder' => (int) ($vacancy->sort_order ?? 0),
                 'status' => $vacancy->is_active ? 'Active' : 'Inactive',
                 'applicants' => (int) ($vacancy->career_applications_count ?? 0),
-                'createUrl' => route('admin.jobs.create'),
-                'editUrl' => route('admin.jobs.edit', $vacancy),
-                'toggleUrl' => route('admin.jobs.toggle', $vacancy),
-                'destroyUrl' => route('admin.jobs.destroy', $vacancy),
+                'createUrl' => route('boshqaruv.vacancies.store'),
+                'updateUrl' => route('boshqaruv.vacancies.update', $vacancy),
+                'toggleUrl' => route('boshqaruv.vacancies.toggle', $vacancy),
+                'destroyUrl' => route('boshqaruv.vacancies.destroy', $vacancy),
             ])
             ->values()
             ->all();
@@ -3837,11 +4169,11 @@ class AdminController extends Controller
                 'role' => $admin->role_label,
                 'active' => (bool) $admin->is_active,
                 'lastLogin' => optional($admin->last_login_at)->format('Y-m-d H:i'),
-                'createUrl' => route('admin.admins.create'),
-                'showUrl' => route('admin.admins.show', $admin),
-                'editUrl' => route('admin.admins.edit', $admin),
-                'toggleUrl' => route('admin.admins.toggle', $admin),
-                'destroyUrl' => route('admin.admins.destroy', $admin),
+                'roleKey' => $admin->role,
+                'createUrl' => route('boshqaruv.admins.store'),
+                'updateUrl' => route('boshqaruv.admins.update', $admin),
+                'toggleUrl' => route('boshqaruv.admins.toggle', $admin),
+                'destroyUrl' => route('boshqaruv.admins.destroy', $admin),
             ])
             ->values()
             ->all();
@@ -3861,17 +4193,16 @@ class AdminController extends Controller
                 'id' => $client->id,
                 'name' => $client->name,
                 'key' => $client->app_id,
+                'abilities' => implode(', ', $client->abilities ?? []),
                 'active' => (bool) $client->is_active,
                 'requests' => (int) ($client->request_logs_count ?? 0),
                 'rateLimitSecond' => (int) ($client->rate_limit_per_second ?? 0),
                 'rateLimitMinute' => (int) ($client->rate_limit_per_minute ?? 0),
-                'createUrl' => route('admin.api-clients.create'),
-                'docsUrl' => route('admin.api-clients.docs'),
-                'logsUrl' => route('admin.api-clients.logs'),
-                'editUrl' => route('admin.api-clients.edit', $client),
-                'toggleUrl' => route('admin.api-clients.toggle', $client),
-                'regenerateUrl' => route('admin.api-clients.regenerate', $client),
-                'destroyUrl' => route('admin.api-clients.destroy', $client),
+                'createUrl' => route('boshqaruv.api-clients.store'),
+                'updateUrl' => route('boshqaruv.api-clients.update', $client),
+                'toggleUrl' => route('boshqaruv.api-clients.toggle', $client),
+                'regenerateUrl' => route('boshqaruv.api-clients.regenerate', $client),
+                'destroyUrl' => route('boshqaruv.api-clients.destroy', $client),
             ])
             ->values()
             ->all();
@@ -5701,14 +6032,14 @@ class AdminController extends Controller
     private function legacyUrl(string $component): ?string
     {
         return [
-            'Books' => route('admin.books.index'),
-            'BookCategories' => route('admin.book-categories.index'),
+            'Books' => route('boshqaruv.books'),
+            'BookCategories' => route('boshqaruv.book-categories'),
             'Stationeries' => route('boshqaruv.stationeries'),
             'stationery-categories' => route('boshqaruv.stationery-categories'),
-            'Authors' => route('admin.authors.index'),
-            'Publishers' => route('admin.publishers.index'),
+            'Authors' => route('boshqaruv.authors'),
+            'Publishers' => route('boshqaruv.publishers'),
             'Users' => route('boshqaruv.users'),
-            'Orders' => route('admin.orders.index'),
+            'Orders' => route('boshqaruv.orders'),
             'SellerOrders' => request()->is('boshqaruv/sellers*')
                 ? route('boshqaruv.sellers')
                 : route('boshqaruv.seller-orders'),
@@ -5722,21 +6053,21 @@ class AdminController extends Controller
             'Promokodlar' => route('boshqaruv.promokodlar'),
             'Blogerlar' => route('boshqaruv.blogerlar'),
             'GiftSertifikatlar' => route('admin.gift-certificates.index'),
-            'MarketNewsPage' => route('admin.news.index'),
-            'ReelsPage' => route('admin.reels.index'),
+            'MarketNewsPage' => route('boshqaruv.market-news'),
+            'ReelsPage' => route('boshqaruv.reels'),
             'BookClub' => route('boshqaruv.book-club'),
             'Tickets' => route('boshqaruv.tickets'),
             'Shikoyatlar' => route('boshqaruv.shikoyatlar'),
             'ChatKuzatuv' => route('boshqaruv.chat'),
-            'PushNotifications' => route('admin.push.index'),
-            'Vakansiyalar' => route('admin.jobs.index'),
+            'PushNotifications' => route('boshqaruv.push'),
+            'Vakansiyalar' => route('boshqaruv.vakansiyalar'),
             'KaryeraArizalari' => route('admin.job-applications.index'),
-            'Adminlar' => route('admin.admins.index'),
+            'Adminlar' => route('boshqaruv.adminlar'),
             'MysteryBoxPage' => route('admin.mystery-box.index'),
             'Sovgalar' => route('admin.gifts.index'),
-            'Siyosatlar' => route('admin.policies.index'),
-            'ApiClients' => route('admin.api-clients.index'),
-            'SearchHistory' => route('admin.search-history.index'),
+            'Siyosatlar' => route('boshqaruv.siyosatlar'),
+            'ApiClients' => route('boshqaruv.api-clients'),
+            'SearchHistory' => route('boshqaruv.search-history'),
             'Settings' => route('boshqaruv.settings'),
         ][$component] ?? null;
     }

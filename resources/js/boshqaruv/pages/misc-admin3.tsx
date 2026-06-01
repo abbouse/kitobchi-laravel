@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { FormEvent, useMemo, useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button, Form } from 'react-bootstrap';
 import PaginationControls from '../components/PaginationControls';
@@ -6,20 +6,29 @@ import PaginationControls from '../components/PaginationControls';
 // ===== REELS =====
 export function Reels() {
   const { reels = [] } = usePage<{
-    reels?: Array<{ id: number; title: string; description?: string; order?: number; status: string; items: number; createUrl?: string; showUrl?: string; editUrl?: string; destroyUrl?: string }>;
+    reels?: Array<{ id: number; title: string; description?: string; order?: number; status: string; items: number; createUrl?: string; updateUrl?: string; destroyUrl?: string }>;
   }>().props;
   const [selected, setSelected] = useState<(typeof reels)[0] | null>(null);
-  const createUrl = '/boshqaruv/reels';
+  const [editing, setEditing] = useState<(typeof reels)[0] | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const createUrl = reels[0]?.createUrl || '/boshqaruv/reels';
 
   const destroy = (reel: (typeof reels)[0]) => {
     if (!reel.destroyUrl || !confirm(`${reel.title} reelini o'chirasizmi?`)) return;
     router.delete(reel.destroyUrl, { preserveScroll: true });
+  };
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const data = Object.fromEntries(new FormData(event.currentTarget).entries());
+    const options = { preserveScroll: true, onSuccess: () => { setEditing(null); setShowForm(false); } };
+    editing?.updateUrl ? router.put(editing.updateUrl, data, options) : router.post(createUrl, data, options);
   };
 
   return (
     <div>
       <div className="page-head">
         <div><h1 className="page-title">Reels / Shorts</h1><p className="page-subtitle">Jami {reels.length} ta reel</p></div>
+        <button className="btn btn-primary-gradient" onClick={() => { setEditing(null); setShowForm(true); }}><i className="bi bi-plus-lg me-1"></i>Reel qo'shish</button>
       </div>
       <div className="row g-3">
         {reels.map(reel => (
@@ -36,6 +45,7 @@ export function Reels() {
               <p className="text-muted small">{reel.description || '—'}</p>
               <div className="d-flex gap-2">
                 <button className="btn btn-sm btn-light flex-fill" onClick={() => setSelected(reel)}><i className="bi bi-eye"></i></button>
+                <button className="btn btn-sm btn-light" onClick={() => { setEditing(reel); setShowForm(true); }}><i className="bi bi-pencil"></i></button>
                 <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(reel)}><i className="bi bi-trash"></i></button>
               </div>
             </div>
@@ -55,6 +65,17 @@ export function Reels() {
           <Button variant="light" onClick={() => setSelected(null)}>Yopish</Button>
         </Modal.Footer>
       </Modal>
+      <Modal show={showForm} onHide={() => setShowForm(false)} centered>
+        <Form onSubmit={submit}>
+          <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">{editing ? 'Reelni tahrirlash' : "Reel qo'shish"}</Modal.Title></Modal.Header>
+          <Modal.Body>
+            <Form.Label>Sarlavha</Form.Label><Form.Control name="title" required defaultValue={editing?.title || ''} className="mb-3" />
+            <Form.Label>Tartib</Form.Label><Form.Control name="order" type="number" min={0} required defaultValue={editing?.order ?? (reels.length + 1)} className="mb-3" />
+            <Form.Label>Tavsif</Form.Label><Form.Control as="textarea" rows={4} name="description" defaultValue={editing?.description || ''} />
+          </Modal.Body>
+          <Modal.Footer><Button variant="light" onClick={() => setShowForm(false)}>Bekor qilish</Button><Button type="submit" className="btn-primary-gradient border-0">Saqlash</Button></Modal.Footer>
+        </Form>
+      </Modal>
     </div>
   );
 }
@@ -62,20 +83,29 @@ export function Reels() {
 // ===== MARKET YANGILIKLARI =====
 export function MarketNews() {
   const { news = [] } = usePage<{
-    news?: Array<{ id: number; title: string; description?: string; status: string; action?: string; image?: string | null; date?: string; createUrl?: string; showUrl?: string; editUrl?: string; toggleUrl?: string; destroyUrl?: string }>;
+    news?: Array<{ id: number; title: string; description?: string; align?: string; status: string; active?: boolean; action?: string; actionType?: string; actionId?: number | null; image?: string | null; date?: string; createUrl?: string; updateUrl?: string; toggleUrl?: string; destroyUrl?: string }>;
   }>().props;
   const [selected, setSelected] = useState<(typeof news)[0] | null>(null);
-  const createUrl = '/boshqaruv/market-news';
+  const [editing, setEditing] = useState<(typeof news)[0] | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const createUrl = news[0]?.createUrl || '/boshqaruv/market-news';
 
   const toggle = (item: (typeof news)[0]) => item.toggleUrl && router.patch(item.toggleUrl, {}, { preserveScroll: true });
   const destroy = (item: (typeof news)[0]) => {
     if (!item.destroyUrl || !confirm(`${item.title} yangiligi o'chirilsinmi?`)) return;
     router.delete(item.destroyUrl, { preserveScroll: true });
   };
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    const options = { preserveScroll: true, forceFormData: true, onSuccess: () => { setEditing(null); setShowForm(false); } };
+    editing?.updateUrl ? router.post(editing.updateUrl, { ...Object.fromEntries(data.entries()), _method: 'put' }, options) : router.post(createUrl, data, options);
+  };
 
   return (
     <div>
       <div className="page-head"><div><h1 className="page-title">Market yangiliklari</h1><p className="page-subtitle">Jami {news.length} ta yangilik</p></div>
+        <button className="btn btn-primary-gradient" onClick={() => { setEditing(null); setShowForm(true); }}><i className="bi bi-plus-lg me-1"></i>Qo'shish</button>
         </div>
       <div className="card-panel">
         <div className="table-responsive"><table className="data-table">
@@ -89,6 +119,7 @@ export function MarketNews() {
               <td><div className="form-check form-switch"><input type="checkbox" className="form-check-input" checked={item.status === 'Active'} onChange={() => toggle(item)} /></div></td>
               <td>
                 <button className="btn btn-sm btn-light me-1" onClick={() => setSelected(item)}><i className="bi bi-eye"></i></button>
+                <button className="btn btn-sm btn-light me-1" onClick={() => { setEditing(item); setShowForm(true); }}><i className="bi bi-pencil"></i></button>
                 <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(item)}><i className="bi bi-trash"></i></button>
               </td>
             </tr>
@@ -104,6 +135,23 @@ export function MarketNews() {
         <Modal.Footer>
           <Button variant="light" onClick={() => setSelected(null)}>Yopish</Button>
         </Modal.Footer>
+      </Modal>
+      <Modal show={showForm} onHide={() => setShowForm(false)} centered size="lg">
+        <Form onSubmit={submit}>
+          <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">{editing ? 'Yangilikni tahrirlash' : "Yangilik qo'shish"}</Modal.Title></Modal.Header>
+          <Modal.Body>
+            <div className="row g-3">
+              <div className="col-md-8"><Form.Label>Sarlavha</Form.Label><Form.Control name="title" required defaultValue={editing?.title || ''} /></div>
+              <div className="col-md-4"><Form.Label>Joylashuv</Form.Label><Form.Select name="align" defaultValue={editing?.align || 'center'}><option value="center">Center</option><option value="top">Top</option></Form.Select></div>
+              <div className="col-md-6"><Form.Label>Action</Form.Label><Form.Select name="action" defaultValue={editing?.actionType || 'news'}><option value="news">Yangilik</option><option value="to_shop">Do'konga o'tish</option><option value="to_product">Mahsulotga o'tish</option></Form.Select></div>
+              <div className="col-md-6"><Form.Label>Action ID</Form.Label><Form.Control name="action_id" type="number" min={1} defaultValue={editing?.actionId || ''} /></div>
+              <div className="col-12"><Form.Label>Rasm</Form.Label><Form.Control name="imgUrl" type="file" accept="image/*" /></div>
+              <div className="col-12"><Form.Label>Tavsif</Form.Label><Form.Control as="textarea" rows={4} name="description" defaultValue={editing?.description || ''} /></div>
+              <div className="col-12"><Form.Check type="switch" name="status" value="1" label="Faol" defaultChecked={editing ? editing.status === 'Active' : true} /></div>
+            </div>
+          </Modal.Body>
+          <Modal.Footer><Button variant="light" onClick={() => setShowForm(false)}>Bekor qilish</Button><Button type="submit" className="btn-primary-gradient border-0">Saqlash</Button></Modal.Footer>
+        </Form>
       </Modal>
     </div>
   );
@@ -170,7 +218,12 @@ export function PushNotifications() {
   const { notifications = [] } = usePage<{
     notifications?: Array<{ id: number; title: string; body?: string; who?: string; status: string; date?: string; createUrl?: string; destroyUrl?: string }>;
   }>().props;
-  const createUrl = '/boshqaruv/push';
+  const [showForm, setShowForm] = useState(false);
+  const createUrl = notifications[0]?.createUrl || '/boshqaruv/push';
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    router.post(createUrl, Object.fromEntries(new FormData(event.currentTarget).entries()), { preserveScroll: true, onSuccess: () => setShowForm(false) });
+  };
   const destroy = (notification: (typeof notifications)[0]) => {
     if (!notification.destroyUrl || !confirm(`#${notification.id} push o'chirilsinmi?`)) return;
     router.delete(notification.destroyUrl, { preserveScroll: true });
@@ -180,6 +233,7 @@ export function PushNotifications() {
     <div>
       <div className="page-head">
         <div><h1 className="page-title">Push bildirishnomalar</h1><p className="page-subtitle">Jami {notifications.length} ta yuborilgan</p></div>
+        <button className="btn btn-primary-gradient" onClick={() => setShowForm(true)}><i className="bi bi-send me-1"></i>Push yaratish</button>
       </div>
       <div className="card-panel">
         <div className="table-responsive"><table className="data-table">
@@ -197,6 +251,17 @@ export function PushNotifications() {
           ))}</tbody>
         </table></div>
       </div>
+      <Modal show={showForm} onHide={() => setShowForm(false)} centered>
+        <Form onSubmit={submit}>
+          <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">Push bildirishnoma</Modal.Title></Modal.Header>
+          <Modal.Body>
+            <Form.Label>Sarlavha</Form.Label><Form.Control name="name" required className="mb-3" />
+            <Form.Label>Matn</Form.Label><Form.Control as="textarea" rows={4} name="description" required className="mb-3" />
+            <Form.Label>Auditoriya</Form.Label><Form.Select name="who" required defaultValue="users"><option value="users">Foydalanuvchilar</option><option value="business">Sellerlar</option><option value="courier">Kuryerlar</option></Form.Select>
+          </Modal.Body>
+          <Modal.Footer><Button variant="light" onClick={() => setShowForm(false)}>Bekor qilish</Button><Button type="submit" className="btn-primary-gradient border-0">Saqlash</Button></Modal.Footer>
+        </Form>
+      </Modal>
     </div>
   );
 }

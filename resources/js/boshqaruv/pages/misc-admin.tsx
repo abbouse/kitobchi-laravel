@@ -1,22 +1,31 @@
-import { useState } from 'react';
+import { FormEvent, useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button, Form } from 'react-bootstrap';
 
 // ===== VAKANSIYALAR =====
 export function Vakansiyalar() {
   const { vacancies = [] } = usePage<{
-    vacancies?: Array<{ id: number; title: string; contractType?: string; location?: string; status: string; applicants: number; createUrl?: string; editUrl?: string; toggleUrl?: string; destroyUrl?: string }>;
+    vacancies?: Array<{ id: number; title: string; icon?: string; contractType?: string; location?: string; description?: string; sortOrder?: number; status: string; applicants: number; createUrl?: string; updateUrl?: string; toggleUrl?: string; destroyUrl?: string }>;
   }>().props;
-  const createUrl = '/boshqaruv/vakansiyalar';
+  const [editing, setEditing] = useState<(typeof vacancies)[0] | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const createUrl = vacancies[0]?.createUrl || '/boshqaruv/vakansiyalar';
   const toggle = (vacancy: (typeof vacancies)[0]) => vacancy.toggleUrl && router.patch(vacancy.toggleUrl, {}, { preserveScroll: true });
   const destroy = (vacancy: (typeof vacancies)[0]) => {
     if (!vacancy.destroyUrl || !confirm(`${vacancy.title} vakansiyasi o'chirilsinmi?`)) return;
     router.delete(vacancy.destroyUrl, { preserveScroll: true });
   };
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const data = Object.fromEntries(new FormData(event.currentTarget).entries());
+    const options = { preserveScroll: true, onSuccess: () => { setShowForm(false); setEditing(null); } };
+    editing?.updateUrl ? router.put(editing.updateUrl, data, options) : router.post(createUrl, data, options);
+  };
 
   return (
     <div>
       <div className="page-head"><div><h1 className="page-title">Vakansiyalar</h1><p className="page-subtitle">Jami {vacancies.length} ta vakansiya</p></div>
+        <button className="btn btn-primary-gradient" onClick={() => { setEditing(null); setShowForm(true); }}><i className="bi bi-plus-lg me-1"></i>Qo'shish</button>
         </div>
       <div className="card-panel">
         <div className="table-responsive"><table className="data-table">
@@ -30,12 +39,30 @@ export function Vakansiyalar() {
               <td>{vacancy.applicants} ta</td>
               <td><div className="form-check form-switch"><input type="checkbox" className="form-check-input" checked={vacancy.status === 'Active'} onChange={() => toggle(vacancy)} /></div></td>
               <td>
+                <button className="btn btn-sm btn-light me-1" onClick={() => { setEditing(vacancy); setShowForm(true); }}><i className="bi bi-pencil"></i></button>
                 <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(vacancy)}><i className="bi bi-trash"></i></button>
               </td>
             </tr>
           ))}</tbody>
         </table></div>
       </div>
+      <Modal show={showForm} onHide={() => setShowForm(false)} centered size="lg">
+        <Form onSubmit={submit}>
+          <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">{editing ? 'Vakansiyani tahrirlash' : "Vakansiya qo'shish"}</Modal.Title></Modal.Header>
+          <Modal.Body>
+            <div className="row g-3">
+              <div className="col-md-8"><Form.Label>Sarlavha</Form.Label><Form.Control name="title" required defaultValue={editing?.title || ''} /></div>
+              <div className="col-md-4"><Form.Label>Icon</Form.Label><Form.Select name="icon" defaultValue={editing?.icon || 'briefcase'}><option value="briefcase">Lavozim</option><option value="code">IT</option><option value="palette">Dizayn</option><option value="shop">Savdo</option><option value="megaphone">Marketing</option><option value="people">HR</option><option value="chart">Analitika</option></Form.Select></div>
+              <div className="col-md-4"><Form.Label>Shart turi</Form.Label><Form.Control name="contract_type" defaultValue={editing?.contractType || ''} /></div>
+              <div className="col-md-4"><Form.Label>Joylashuv</Form.Label><Form.Control name="location" defaultValue={editing?.location || ''} /></div>
+              <div className="col-md-4"><Form.Label>Tartib</Form.Label><Form.Control name="sort_order" type="number" min={0} defaultValue={editing?.sortOrder ?? 0} /></div>
+              <div className="col-12"><Form.Label>Tavsif</Form.Label><Form.Control as="textarea" rows={5} name="description" required defaultValue={editing?.description || ''} /></div>
+              <div className="col-12"><Form.Check type="switch" name="is_active" value="1" label="Faol" defaultChecked={editing ? editing.status === 'Active' : true} /></div>
+            </div>
+          </Modal.Body>
+          <Modal.Footer><Button variant="light" onClick={() => setShowForm(false)}>Bekor qilish</Button><Button type="submit" className="btn-primary-gradient border-0">Saqlash</Button></Modal.Footer>
+        </Form>
+      </Modal>
     </div>
   );
 }
