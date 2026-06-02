@@ -13,6 +13,7 @@
                     <a href="<?php echo e(route('careers.index')); ?>" class="footer-link"><?php echo e(__('nav.careers')); ?></a>
                     <a href="https://t.me/kitobchi_market" target="_blank" rel="noopener" class="footer-link">Telegram</a>
                     <a href="https://instagram.com/kitobchi_market" target="_blank" rel="noopener" class="footer-link">Instagram</a>
+                    <a href="<?php echo e(route('developers.api-docs')); ?>" class="footer-link"><?php echo e(__('nav.api_docs')); ?></a>
                 </div>
                 <div class="footer-cell">
                     <div class="footer-heading"><?php echo e(__('nav.footer_boring')); ?></div>

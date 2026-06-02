@@ -160,7 +160,11 @@ export function MarketNews() {
 // ===== CHAT KUZATUV =====
 export function ChatKuzatuv() {
   type Conversation = { id: number; kind: string; type?: string; user: string; phone?: string; agent: string; messages: number; lastMsg: string; date?: string; dataUrl?: string };
-  type Detail = { profile: Record<string, string | number | null | undefined>; messages: Array<Record<string, string | number | boolean | null | undefined>> };
+  type Detail = {
+    profile: Record<string, string | number | null | undefined>;
+    messages: Array<Record<string, string | number | boolean | null | undefined>>;
+    otherConversations?: Array<{ id: number; kind: string; type?: string; agent: string; messages: number; lastMsg: string; date?: string; dataUrl?: string }>;
+  };
   const { conversations = [], conversationCounts = {}, conversationPagination = { page: 1, totalPages: 1, from: 0, to: 0, total: 0 }, conversationFilters = {} } = usePage<{ conversations?: Conversation[]; conversationCounts?: Record<string, number>; conversationPagination?: { page: number; totalPages: number; from: number; to: number; total: number }; conversationFilters?: { tab?: string; search?: string } }>().props;
   const [tab, setTab] = useState(conversationFilters.tab || 'all');
   const [search, setSearch] = useState(conversationFilters.search || '');
@@ -168,10 +172,11 @@ export function ChatKuzatuv() {
   const [selected, setSelected] = useState<Conversation | null>(null);
   const [detail, setDetail] = useState<Detail | null>(null);
   const [loading, setLoading] = useState(false);
+  const [otherLimit, setOtherLimit] = useState(4);
   const loadConversations = (page = 1, activeTab = tab, term = search) => router.get('/boshqaruv/chat', { chat_page: page, chat_tab: activeTab, chat_search: term }, { preserveState: true, preserveScroll: true, replace: true });
   const open = async (conversation: Conversation) => {
     if (!conversation.dataUrl) return;
-    setSelected(conversation); setShow(true); setLoading(true);
+    setSelected(conversation); setShow(true); setLoading(true); setOtherLimit(4);
     try {
       const response = await fetch(conversation.dataUrl, { headers: { Accept: 'application/json' } });
       setDetail(response.ok ? await response.json() : null);
@@ -202,6 +207,17 @@ export function ChatKuzatuv() {
     });
   }, []);
 
+  const chatKindLabel = (kind?: string) => {
+    switch (kind) {
+      case 'seller':
+        return 'Do‘kon bilan';
+      case 'user':
+        return 'Foydalanuvchi bilan';
+      default:
+        return 'Suhbat';
+    }
+  };
+
   return (
     <div>
       <div className="page-head"><div><h1 className="page-title">Chat kuzatuv</h1><p className="page-subtitle">Foydalanuvchi va seller suhbatlarini real vaqt kontekstida tekshirish</p></div></div>
@@ -214,7 +230,7 @@ export function ChatKuzatuv() {
               <td className="fw-semibold" style={{ color: '#4f46e5' }}>#{c.id}</td>
               <td><div className="fw-semibold">{c.user}</div><small className="text-muted">{c.phone || '—'}</small></td>
               <td>{c.agent}</td>
-              <td><span className={`chip ${c.kind === 'seller' ? 'chip-purple' : 'chip-info'}`}>{c.kind}</span></td>
+              <td><span className={`chip ${c.kind === 'seller' ? 'chip-purple' : 'chip-info'}`}>{chatKindLabel(c.kind)}</span></td>
               <td>{c.messages}</td>
               <td className="text-muted">{c.lastMsg}<br /><small>{c.date || '—'}</small></td>
               <td><button className="btn btn-sm btn-light" onClick={() => open(c)}><i className="bi bi-eye"></i></button></td>
@@ -222,14 +238,106 @@ export function ChatKuzatuv() {
           ))}{conversationPagination.total === 0 ? <tr><td colSpan={7} className="text-center text-muted py-5">Suhbat topilmadi</td></tr> : null}</tbody>
         </table></div><PaginationControls {...conversationPagination} onPageChange={(page) => loadConversations(page)} />
       </div>
-      <Modal show={show} onHide={() => setShow(false)} centered size="lg">
-        <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">Conversation #{selected?.id}</Modal.Title></Modal.Header>
+      <Modal show={show} onHide={() => setShow(false)} centered size="xl">
+        <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">Suhbat #{selected?.id}</Modal.Title></Modal.Header>
         <Modal.Body>
-          <div className="mb-3 p-3 rounded bg-light">
-            <div className="fw-semibold mb-1">{selected?.user} — {selected?.agent}</div>
-            <div className="text-muted small">{selected?.messages} ta xabar</div>
-          </div>
-          {loading ? <div className="text-muted text-center py-5">Yuklanmoqda...</div> : !detail ? <div className="text-muted text-center py-5">Xabarlar yuklanmadi</div> : <div>{detail.messages.map((message) => <div className={`d-flex mb-2 ${message.senderType === 'user' ? '' : 'justify-content-end'}`} key={String(message.id)}><div className="p-3 rounded border" style={{ maxWidth: '82%' }}><div>{String(message.message || '—')}</div><small className="text-muted">{String(message.senderType || 'user')} · {String(message.date || '—')}{message.reported ? ' · report bor' : ''}</small></div></div>)}{detail.messages.length === 0 ? <div className="text-muted">Xabar topilmadi</div> : null}</div>}
+          {loading ? <div className="text-muted text-center py-5">Yuklanmoqda...</div> : !detail ? <div className="text-muted text-center py-5">Xabarlar yuklanmadi</div> : (
+            <div className="row g-3">
+              <div className="col-xl-8">
+                <div className="detail-panel mb-3">
+                  <div className="d-flex flex-wrap align-items-start justify-content-between gap-3">
+                    <div>
+                      <div className="fw-bold fs-5">{String(detail.profile.user || 'Foydalanuvchi')} — {String(detail.profile.agent || 'Suhbatdosh')}</div>
+                      <div className="text-muted small mt-1">{String(detail.profile.kindLabel || chatKindLabel(String(detail.profile.kind || '')))} · {String(detail.profile.type || 'chat')}</div>
+                    </div>
+                    <div className="d-flex flex-wrap gap-2">
+                      <span className="chip chip-info">{String(detail.profile.messagesCount || detail.messages.length)} ta xabar</span>
+                      {detail.profile.orderId ? <span className="chip chip-gray">Buyurtma #{String(detail.profile.orderId)}</span> : null}
+                      <span className="chip chip-gray">Oxirgi: {String(detail.profile.lastMessageAt || '—')}</span>
+                    </div>
+                  </div>
+                  <div className="row g-3 mt-1">
+                    <div className="col-md-6">
+                      <small className="text-muted d-block">Mijoz</small>
+                      <div className="fw-semibold">{String(detail.profile.user || '—')}</div>
+                      <div className="text-muted small">{String(detail.profile.phone || 'Telefon yo‘q')}</div>
+                    </div>
+                    <div className="col-md-6">
+                      <small className="text-muted d-block">Suhbatdosh</small>
+                      <div className="fw-semibold">{String(detail.profile.agent || '—')}</div>
+                      <div className="text-muted small">Ochilgan: {String(detail.profile.createdAt || '—')}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="detail-panel">
+                  <div className="d-flex align-items-center justify-content-between mb-3">
+                    <h6 className="fw-bold mb-0">Xabarlar oqimi</h6>
+                    <span className="text-muted small">Eng ko‘pi bilan 200 ta so‘nggi xabar</span>
+                  </div>
+                  <div className="d-grid gap-2">
+                    {detail.messages.map((message) => (
+                      <div className={`d-flex ${message.senderType === 'user' ? '' : 'justify-content-end'}`} key={String(message.id)}>
+                        <div className={`rounded-4 border p-3 ${message.senderType === 'user' ? 'bg-white' : 'bg-light-subtle'}`} style={{ maxWidth: '86%' }}>
+                          <div className="d-flex flex-wrap align-items-center gap-2 mb-2">
+                            <span className="fw-semibold">{String(message.senderLabel || message.senderType || 'Xabar')}</span>
+                            <span className="text-muted small">{String(message.date || '—')}</span>
+                            {message.edited ? <span className="chip chip-gray">Tahrirlangan</span> : null}
+                            {message.read ? <span className="chip chip-success">O‘qilgan</span> : null}
+                            {message.reported ? <span className="chip chip-danger">Shikoyat bor</span> : null}
+                          </div>
+                          <div style={{ whiteSpace: 'pre-line' }}>{String(message.message || '—')}</div>
+                        </div>
+                      </div>
+                    ))}
+                    {detail.messages.length === 0 ? <div className="text-muted">Xabar topilmadi</div> : null}
+                  </div>
+                </div>
+              </div>
+
+              <div className="col-xl-4">
+                <div className="detail-panel">
+                  <div className="d-flex align-items-center justify-content-between mb-3">
+                    <h6 className="fw-bold mb-0">Userning boshqa yozishmalari</h6>
+                    <span className="chip chip-gray">{detail.otherConversations?.length || 0} ta</span>
+                  </div>
+                  {(detail.otherConversations || []).slice(0, otherLimit).map((conversation) => (
+                    <button
+                      key={conversation.id}
+                      type="button"
+                      className="w-100 text-start border rounded-4 p-3 bg-white mb-2"
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => open({
+                        id: conversation.id,
+                        kind: conversation.kind,
+                        type: conversation.type,
+                        user: String(detail.profile.user || 'Foydalanuvchi'),
+                        phone: String(detail.profile.phone || ''),
+                        agent: conversation.agent,
+                        messages: conversation.messages,
+                        lastMsg: conversation.lastMsg,
+                        date: conversation.date,
+                        dataUrl: conversation.dataUrl,
+                      })}
+                    >
+                      <div className="d-flex justify-content-between gap-2">
+                        <div className="fw-semibold">{conversation.agent}</div>
+                        <span className={`chip ${conversation.kind === 'seller' ? 'chip-purple' : 'chip-info'}`}>{chatKindLabel(conversation.kind)}</span>
+                      </div>
+                      <div className="text-muted small mt-1">{conversation.lastMsg}</div>
+                      <div className="text-muted small mt-2">{conversation.messages} ta xabar · {conversation.date || '—'}</div>
+                    </button>
+                  ))}
+                  {(detail.otherConversations || []).length === 0 ? <div className="text-muted">Bu foydalanuvchining boshqa yozishmasi topilmadi.</div> : null}
+                  {(detail.otherConversations || []).length > otherLimit ? (
+                    <button className="btn btn-sm btn-light w-100 mt-2" onClick={() => setOtherLimit((limit) => limit + 4)}>
+                      Yana ko‘rsatish
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          )}
         </Modal.Body>
         <Modal.Footer><Button variant="light" onClick={() => setShow(false)}>Yopish</Button></Modal.Footer>
       </Modal>

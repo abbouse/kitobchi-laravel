@@ -1,7 +1,7 @@
 <?php
 
 use App\Http\Controllers\CareersController;
-use App\Http\Controllers\A122\ApiClientController;
+use App\Http\Controllers\Developers\ApiDocsController;
 use App\Http\Controllers\HubDesk\AuthController as HubDeskAuthController;
 use App\Http\Controllers\HubDesk\DeskController as HubDeskDeskController;
 use App\Http\Controllers\LegalController;
@@ -14,7 +14,7 @@ require __DIR__.'/boshqaruv.php';
 
 Route::get('/locale/{locale}', [LocaleController::class, 'switch'])->name('locale.switch');
 
-Route::get('/developers/api', [ApiClientController::class, 'docs'])->name('developers.api-docs');
+Route::get('/developers/api/{page?}', ApiDocsController::class)->name('developers.api-docs');
 
 Route::get('/', function () {
     $featuredBooks = \App\Models\Books::where('is_approved', 1)

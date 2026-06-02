@@ -3955,22 +3955,73 @@ class AdminController extends Controller
     private function searchHistoryPagePayload(): array
     {
         if (! Schema::hasTable('search_histories')) {
-            return ['searchHistory' => [], 'searchHistoryPagination' => $this->emptyPagination(), 'searchHistoryTypes' => []];
+            return ['searchHistory' => [], 'searchHistoryPagination' => $this->emptyPagination(), 'searchHistoryTypes' => [], 'searchHistoryInsights' => ['topQueries' => [], 'missingDemand' => [], 'summary' => []]];
         }
 
         $filter = (string) request('search_history_type', 'all');
         $search = trim((string) request('search_history_search', ''));
         $hasResultType = Schema::hasColumn('search_histories', 'result_type');
         $hasResultName = Schema::hasColumn('search_histories', 'result_name');
-        $query = SearchHistory::query()
-            ->with('user:id,name,lastname,phone_number')
-            ->when($hasResultType && $filter !== 'all', fn ($builder) => $builder->where('result_type', $filter))
-            ->when($search !== '', fn ($builder) => $builder->where(function ($nested) use ($search, $hasResultName) {
-                $nested->where('text', 'like', "%{$search}%")
-                    ->when($hasResultName, fn ($result) => $result->orWhere('result_name', 'like', "%{$search}%"))
-                    ->orWhereHas('user', fn ($user) => $user->where('name', 'like', "%{$search}%")->orWhere('phone_number', 'like', "%{$search}%"));
-            }));
+        $query = SearchHistory::query()->with('user:id,name,lastname,phone_number');
+        $this->applySearchHistoryFilters($query, $filter, $search, $hasResultType, $hasResultName);
         $history = $query->latest()->paginate(40, ['*'], 'search_history_page')->withQueryString();
+
+        $insightsQuery = SearchHistory::query();
+        $this->applySearchHistoryFilters($insightsQuery, $filter, $search, $hasResultType, $hasResultName);
+
+        $topQueries = (clone $insightsQuery)
+            ->selectRaw('text')
+            ->selectRaw('SUM(COALESCE(search_count, 1)) as total_searches')
+            ->selectRaw('SUM(CASE WHEN COALESCE(result_count, 0) > 0 THEN COALESCE(search_count, 1) ELSE 0 END) as found_searches')
+            ->selectRaw('SUM(CASE WHEN COALESCE(result_count, 0) = 0 THEN COALESCE(search_count, 1) ELSE 0 END) as missing_searches')
+            ->selectRaw('MAX(created_at) as last_seen_at')
+            ->whereNotNull('text')
+            ->where('text', '!=', '')
+            ->groupBy('text')
+            ->orderByDesc('total_searches')
+            ->limit(12)
+            ->get()
+            ->map(fn ($row) => [
+                'text' => $row->text,
+                'totalSearches' => (int) ($row->total_searches ?? 0),
+                'foundSearches' => (int) ($row->found_searches ?? 0),
+                'missingSearches' => (int) ($row->missing_searches ?? 0),
+                'successRate' => (int) round(((int) ($row->total_searches ?? 0)) > 0 ? ((int) ($row->found_searches ?? 0) / (int) $row->total_searches) * 100 : 0),
+                'lastSeenAt' => $this->dateTime($row->last_seen_at),
+            ])
+            ->values()
+            ->all();
+
+        $missingDemand = (clone $insightsQuery)
+            ->selectRaw('text')
+            ->selectRaw('SUM(COALESCE(search_count, 1)) as total_searches')
+            ->selectRaw('COUNT(*) as attempts')
+            ->selectRaw('MAX(created_at) as last_seen_at')
+            ->whereNotNull('text')
+            ->where('text', '!=', '')
+            ->groupBy('text')
+            ->havingRaw('SUM(CASE WHEN COALESCE(result_count, 0) > 0 THEN 1 ELSE 0 END) = 0')
+            ->orderByDesc('total_searches')
+            ->limit(10)
+            ->get()
+            ->map(fn ($row) => [
+                'text' => $row->text,
+                'totalSearches' => (int) ($row->total_searches ?? 0),
+                'attempts' => (int) ($row->attempts ?? 0),
+                'lastSeenAt' => $this->dateTime($row->last_seen_at),
+                'recommendation' => 'Katalogga qo‘shib ko‘rish yoki synonym/alias ochish tavsiya etiladi.',
+            ])
+            ->values()
+            ->all();
+
+        $summaryBase = (clone $insightsQuery);
+        $summary = [
+            'totalRecords' => (int) $summaryBase->count(),
+            'zeroResultRecords' => (int) (clone $insightsQuery)->where(function ($builder) {
+                $builder->whereNull('result_count')->orWhere('result_count', 0);
+            })->count(),
+            'uniqueQueries' => (int) (clone $insightsQuery)->whereNotNull('text')->where('text', '!=', '')->distinct('text')->count('text'),
+        ];
 
         return [
             'searchHistory' => $history->getCollection()->map(fn (SearchHistory $history) => [
@@ -3989,7 +4040,23 @@ class AdminController extends Controller
             'searchHistoryPagination' => $this->paginationMeta($history),
             'searchHistoryTypes' => $hasResultType ? SearchHistory::query()->whereNotNull('result_type')->distinct()->orderBy('result_type')->pluck('result_type')->values()->all() : [],
             'searchHistoryFilters' => ['type' => $filter, 'search' => $search],
+            'searchHistoryInsights' => [
+                'topQueries' => $topQueries,
+                'missingDemand' => $missingDemand,
+                'summary' => $summary,
+            ],
         ];
+    }
+
+    private function applySearchHistoryFilters($query, string $filter, string $search, bool $hasResultType, bool $hasResultName): void
+    {
+        $query
+            ->when($hasResultType && $filter !== 'all', fn ($builder) => $builder->where('result_type', $filter))
+            ->when($search !== '', fn ($builder) => $builder->where(function ($nested) use ($search, $hasResultName) {
+                $nested->where('text', 'like', "%{$search}%")
+                    ->when($hasResultName, fn ($result) => $result->orWhere('result_name', 'like', "%{$search}%"))
+                    ->orWhereHas('user', fn ($user) => $user->where('name', 'like', "%{$search}%")->orWhere('phone_number', 'like', "%{$search}%"));
+            }));
     }
 
     private function giftsPayload(): array
@@ -4136,6 +4203,12 @@ class AdminController extends Controller
             ->leftJoin('users as u1', 'u1.id', '=', 'conversations.user_id')
             ->leftJoin('users as u2', 'u2.id', '=', 'conversations.receiver_id')
             ->leftJoin('sellers as s', 's.id', '=', 'conversations.shop_id')
+            ->whereExists(function ($subquery) {
+                $subquery->selectRaw('1')
+                    ->from('messages')
+                    ->whereColumn('messages.conversation_id', 'conversations.id')
+                    ->where('messages.is_deleted', false);
+            })
             ->when($tab === 'user', fn ($builder) => $builder->whereNull('conversations.shop_id'))
             ->when($tab === 'seller', fn ($builder) => $builder->whereNotNull('conversations.shop_id'))
             ->when($search !== '', fn ($builder) => $builder->where(fn ($nested) => $nested
@@ -4172,10 +4245,18 @@ class AdminController extends Controller
             return ['all' => 0, 'user' => 0, 'seller' => 0];
         }
 
+        $base = DB::table('conversations')
+            ->whereExists(function ($subquery) {
+                $subquery->selectRaw('1')
+                    ->from('messages')
+                    ->whereColumn('messages.conversation_id', 'conversations.id')
+                    ->where('messages.is_deleted', false);
+            });
+
         return [
-            'all' => (int) DB::table('conversations')->count(),
-            'user' => (int) DB::table('conversations')->whereNull('shop_id')->count(),
-            'seller' => (int) DB::table('conversations')->whereNotNull('shop_id')->count(),
+            'all' => (int) (clone $base)->count(),
+            'user' => (int) (clone $base)->whereNull('shop_id')->count(),
+            'seller' => (int) (clone $base)->whereNotNull('shop_id')->count(),
         ];
     }
 
@@ -4203,6 +4284,7 @@ class AdminController extends Controller
                 'id' => $message->id,
                 'senderId' => $message->sender_id,
                 'senderType' => $message->sender_type,
+                'senderLabel' => $this->chatSenderLabel($message->sender_type, $conversation),
                 'message' => $message->message,
                 'read' => (bool) $message->is_read,
                 'edited' => (bool) $message->is_edited,
@@ -4210,18 +4292,72 @@ class AdminController extends Controller
                 'date' => $this->dateTime($message->created_at),
             ]);
 
+        $otherConversations = DB::table('conversations')
+            ->select([
+                'conversations.id',
+                'conversations.shop_id',
+                'conversations.type',
+                'conversations.last_message_at',
+                'u2.name as receiver_name',
+                'u2.lastname as receiver_lastname',
+                's.shop_name as seller_name',
+            ])
+            ->selectSub(DB::table('messages')->selectRaw('count(*)')->whereColumn('messages.conversation_id', 'conversations.id')->where('is_deleted', false), 'messages_count')
+            ->selectSub(DB::table('messages')->select('message')->whereColumn('messages.conversation_id', 'conversations.id')->where('is_deleted', false)->latest('created_at')->limit(1), 'last_message')
+            ->leftJoin('users as u2', 'u2.id', '=', 'conversations.receiver_id')
+            ->leftJoin('sellers as s', 's.id', '=', 'conversations.shop_id')
+            ->where('conversations.user_id', $conversation->user_id)
+            ->where('conversations.id', '!=', $conversationId)
+            ->whereExists(function ($subquery) {
+                $subquery->selectRaw('1')
+                    ->from('messages')
+                    ->whereColumn('messages.conversation_id', 'conversations.id')
+                    ->where('messages.is_deleted', false);
+            })
+            ->orderByDesc('conversations.last_message_at')
+            ->limit(12)
+            ->get()
+            ->map(fn ($item) => [
+                'id' => $item->id,
+                'kind' => $item->shop_id ? 'seller' : 'user',
+                'type' => $item->type,
+                'agent' => $item->seller_name ?: trim(($item->receiver_name ?? '').' '.($item->receiver_lastname ?? '')) ?: 'Foydalanuvchi',
+                'messages' => (int) ($item->messages_count ?? 0),
+                'lastMsg' => $item->last_message ?: 'Xabar yo‘q',
+                'date' => $this->dateTime($item->last_message_at),
+                'dataUrl' => route('boshqaruv.chat.data', $item->id),
+            ])
+            ->values()
+            ->all();
+
         return [
             'profile' => [
                 'id' => $conversation->id,
                 'kind' => $conversation->shop_id ? 'seller' : 'user',
+                'kindLabel' => $conversation->shop_id ? 'Do‘kon bilan suhbat' : 'Foydalanuvchi suhbati',
                 'type' => $conversation->type,
                 'user' => trim(($conversation->user_name ?? '').' '.($conversation->user_lastname ?? '')) ?: 'Foydalanuvchi',
                 'phone' => $conversation->user_phone,
                 'agent' => $conversation->seller_name ?: trim(($conversation->receiver_name ?? '').' '.($conversation->receiver_lastname ?? '')) ?: 'Foydalanuvchi',
+                'messagesCount' => $messages->count(),
+                'orderId' => $conversation->order_id,
+                'createdAt' => $this->dateTime($conversation->created_at),
                 'lastMessageAt' => $this->dateTime($conversation->last_message_at),
             ],
             'messages' => $messages->values()->all(),
+            'otherConversations' => $otherConversations,
         ];
+    }
+
+    private function chatSenderLabel(?string $senderType, object $conversation): string
+    {
+        return match ($senderType) {
+            'user' => trim(($conversation->user_name ?? '').' '.($conversation->user_lastname ?? '')) ?: 'Mijoz',
+            'seller' => $conversation->seller_name ?: 'Do‘kon',
+            'courier' => 'Kuryer',
+            'admin', 'operator' => trim(($conversation->receiver_name ?? '').' '.($conversation->receiver_lastname ?? '')) ?: 'Operator',
+            default => $senderType ?: 'Noma’lum',
+        };
     }
 
     private function complaintsPagePayload(): array
@@ -4249,7 +4385,7 @@ class AdminController extends Controller
                     'avatar' => $report->user?->avatar,
                     'reason' => $report->reason,
                     'comment' => $report->comment,
-                    'type' => $report->reportable_type ?: 'report',
+                    'type' => $this->normalizeComplaintReportableType($report->reportable_type) ?: 'report',
                     'reportableId' => $report->reportable_id,
                     'status' => $report->status,
                     'date' => $this->dateTime($report->created_at),
@@ -4273,10 +4409,14 @@ class AdminController extends Controller
     private function complaintSubjectPayloads($reports): array
     {
         $payloads = [];
-        $reports = collect($reports);
+        $reports = collect($reports)->map(function (Report $report) {
+            $report->setAttribute('normalized_reportable_type', $this->normalizeComplaintReportableType($report->reportable_type));
+
+            return $report;
+        });
 
         $bookClubIds = $reports
-            ->where('reportable_type', 'book_club')
+            ->where('normalized_reportable_type', 'book_club')
             ->pluck('reportable_id')
             ->filter()
             ->unique()
@@ -4294,7 +4434,7 @@ class AdminController extends Controller
                 ->get()
                 ->keyBy('id');
 
-            foreach ($reports->where('reportable_type', 'book_club') as $report) {
+            foreach ($reports->where('normalized_reportable_type', 'book_club') as $report) {
                 $post = $posts->get($report->reportable_id);
                 $payloads[$report->id] = $post
                     ? $this->complaintBookClubSubjectPayload($post)
@@ -4303,7 +4443,7 @@ class AdminController extends Controller
         }
 
         $messageIds = $reports
-            ->where('reportable_type', 'conversation_message')
+            ->where('normalized_reportable_type', 'conversation_message')
             ->pluck('reportable_id')
             ->filter()
             ->unique()
@@ -4321,7 +4461,7 @@ class AdminController extends Controller
                 ->get()
                 ->keyBy('id');
 
-            foreach ($reports->where('reportable_type', 'conversation_message') as $report) {
+            foreach ($reports->where('normalized_reportable_type', 'conversation_message') as $report) {
                 $message = $messages->get($report->reportable_id);
                 $payloads[$report->id] = $message
                     ? $this->complaintConversationMessagePayload($message)
@@ -4454,12 +4594,26 @@ class AdminController extends Controller
             'title' => 'Kontent topilmadi',
             'summary' => 'Shikoyat qilingan obyekt hozir bazada topilmadi yoki o‘chirilgan.',
             'meta' => [
-                'reportableType' => $report->reportable_type,
+                'reportableType' => $this->normalizeComplaintReportableType($report->reportable_type) ?: $report->reportable_type,
+                'rawReportableType' => $report->reportable_type,
                 'reportableId' => $report->reportable_id,
             ],
             'manageUrl' => null,
             'manageLabel' => null,
         ];
+    }
+
+    private function normalizeComplaintReportableType(?string $type): ?string
+    {
+        if (! $type) {
+            return null;
+        }
+
+        return match ($type) {
+            'book_club', BookClub::class, 'App\\Models\\book_club', 'App\\Models\\Bookclub' => 'book_club',
+            'conversation_message', Message::class, 'message', 'messages', 'App\\Models\\conversation_message' => 'conversation_message',
+            default => Str::of($type)->afterLast('\\')->lower()->value(),
+        };
     }
 
     private function vacanciesPayload(): array

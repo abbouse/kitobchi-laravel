@@ -104,8 +104,11 @@ export function Shikoyatlar() {
   const complaintTypeLabel = (type?: string) => {
     switch (type) {
       case 'book_club':
+      case 'bookclub':
         return 'Book Club posti';
       case 'conversation_message':
+      case 'message':
+      case 'messages':
         return 'Chat xabari';
       default:
         return type || 'Shikoyat';
