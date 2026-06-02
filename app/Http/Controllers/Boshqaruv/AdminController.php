@@ -5219,7 +5219,10 @@ class AdminController extends Controller
             ->whereHas('post', fn ($query) => $query
                 ->where('product_id', $post->product_id)
                 ->where('product_type', $post->product_type)
-                ->where('is_deleted', false))
+                ->where('is_deleted', false)
+                ->where(function ($builder) {
+                    $builder->where('repost', false)->orWhereNull('repost');
+                }))
             ->with('user:id,name,lastname,avatar,phone_number')
             ->latest()
             ->take(8)
