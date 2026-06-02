@@ -30,6 +30,14 @@ const statusChip = (s: string) => ({
   rated: 'chip-success',
 }[s] || 'chip-gray');
 
+const statusLabel = (s: string) => ({
+  all: 'Barchasi',
+  queue: 'Navbatda',
+  active: 'Aktiv',
+  closed: 'Yopilgan',
+  rated: 'Baholangan',
+}[s] || s || '—');
+
 export default function Tickets() {
   const { tickets = [], ticketPagination = { page: 1, totalPages: 1, from: 0, to: 0, total: 0 }, ticketCounts = {}, ticketFilters = {} } = usePage<{ tickets?: Ticket[]; ticketPagination?: { page: number; totalPages: number; from: number; to: number; total: number }; ticketCounts?: Record<string, number>; ticketFilters?: { tab?: string; search?: string } }>().props;
   const [activeTab, setActiveTab] = useState(ticketFilters.tab || 'all');
@@ -102,7 +110,7 @@ export default function Tickets() {
       <div className="card-panel">
         <div className="d-flex gap-2 mb-3 flex-wrap">
           {['all', 'queue', 'active', 'closed', 'rated'].map((s) => (
-            <button key={s} className={`btn btn-sm ${activeTab === s ? 'btn-primary-gradient' : 'btn-outline-secondary'}`} onClick={() => { setActiveTab(s); loadTickets(1, s); }}>{s === 'all' ? 'Barchasi' : s} <span className="ms-1 opacity-75">{ticketCounts[s] || 0}</span></button>
+            <button key={s} className={`btn btn-sm ${activeTab === s ? 'btn-primary-gradient' : 'btn-outline-secondary'}`} onClick={() => { setActiveTab(s); loadTickets(1, s); }}>{statusLabel(s)} <span className="ms-1 opacity-75">{ticketCounts[s] || 0}</span></button>
           ))}
           <form className="ms-auto input-group" style={{ maxWidth: 260 }} onSubmit={(event) => { event.preventDefault(); loadTickets(); }}>
             <span className="input-group-text bg-white"><i className="bi bi-search text-muted"></i></span>
@@ -123,7 +131,7 @@ export default function Tickets() {
                   <td>{ticket.messages}</td>
                   <td>{ticket.rating || '—'}</td>
                   <td className="text-muted">{ticket.date || '—'}</td>
-                  <td><span className={`chip ${statusChip(ticket.status)}`}>{ticket.status}</span></td>
+                  <td><span className={`chip ${statusChip(ticket.status)}`}>{statusLabel(ticket.status)}</span></td>
                   <td>
                     <button className="btn btn-sm btn-light me-1" onClick={() => openDetail(ticket)}><i className="bi bi-eye"></i></button>
                     <button className="btn btn-sm btn-primary-gradient me-1" onClick={() => handleOpenReply(ticket)}><i className="bi bi-reply"></i></button>
@@ -145,7 +153,7 @@ export default function Tickets() {
               <div className="col-xl-4"><div className="detail-panel h-100"><h6 className="fw-bold mb-3">Murojaat egasi</h6><Info label="Ism" value={detail.profile.name} /><Info label="Telegram" value={detail.profile.username} /><Info label="User ID" value={detail.profile.userId} /><Info label="Manba" value={detail.profile.sourceType} /><Info label="Operator" value={detail.profile.operator} /><Info label="Sana" value={detail.profile.createdAt} /></div></div>
               <div className="col-xl-8"><div className="detail-panel h-100"><h6 className="fw-bold mb-3">Suhbat tarixi</h6>{detail.messages.map((message) => <div className={`border rounded p-3 mb-2 ${message.sentBy === 'user' ? 'bg-light' : ''}`} key={String(message.id)}><div className="d-flex justify-content-between gap-3 mb-1"><strong className="small">{String(message.actor || message.sentBy || 'Tizim')}</strong><span className="text-muted small">{String(message.date || '—')}</span></div><div>{String(message.message || '—')}</div><small className="text-muted">{String(message.type || 'text')}{message.error ? ` · ${message.error}` : ''}</small></div>)}{detail.messages.length === 0 ? <div className="text-muted">Xabar tarixi topilmadi</div> : null}</div></div>
               <div className="col-xl-6"><div className="detail-panel h-100"><h6 className="fw-bold mb-3">Ilovalar</h6>{detail.attachments.map((file) => <div className="border-bottom py-2" key={String(file.id)}><strong>{String(file.name || 'Fayl')}</strong><div className="small text-muted">{String(file.type || '—')} · {file.size ? `${file.size} KB` : 'hajm yo‘q'} · {String(file.sentBy || '—')}</div></div>)}{detail.attachments.length === 0 ? <div className="text-muted">Ilova mavjud emas</div> : null}</div></div>
-              <div className="col-xl-6"><div className="detail-panel h-100"><h6 className="fw-bold mb-3">Holat</h6><Info label="Status" value={detail.profile.status} /><Info label="Reyting" value={detail.profile.rating} /><Info label="Yopish sababi" value={detail.profile.closeReason} /><Info label="Yopilgan vaqt" value={detail.profile.closedAt} /></div></div>
+              <div className="col-xl-6"><div className="detail-panel h-100"><h6 className="fw-bold mb-3">Holat</h6><Info label="Status" value={statusLabel(String(detail.profile.status || ''))} /><Info label="Reyting" value={detail.profile.rating} /><Info label="Yopish sababi" value={detail.profile.closeReason} /><Info label="Yopilgan vaqt" value={detail.profile.closedAt} /></div></div>
             </div>
           )}
         </Modal.Body>

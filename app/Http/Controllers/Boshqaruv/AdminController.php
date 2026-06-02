@@ -78,6 +78,7 @@ use App\Enums\SellerOrderStatusCode;
 use App\Services\AdminOrderStatusSyncService;
 use App\Services\DeliveryZoneResolverService;
 use App\Services\HubRoleAccessService;
+use App\Support\AdminOrderStatusPresenter;
 use App\Services\SellerPremiumService;
 use App\Services\SellerOrderSettlementService;
 use Illuminate\Support\Carbon;
@@ -1498,8 +1499,12 @@ class AdminController extends Controller
     private function booksPagePayload(): array
     {
         $search = trim((string) request('books_search', ''));
+        $tab = (string) request('books_tab', 'pending');
         $books = Books::query()
             ->with(['authorProfile:id,name', 'category:id,name_uz', 'publisher:id,name', 'seller:id,shop_name,firstname,lastname,phone_number,status,isVerified,is_hidden'])
+            ->when($tab === 'pending', fn ($query) => $query->where('is_approved', 0))
+            ->when($tab === 'active', fn ($query) => $query->where('is_approved', 1))
+            ->when($tab === 'rejected', fn ($query) => $query->where('is_approved', 2))
             ->when($search !== '', fn ($query) => $query->where(fn ($nested) => $nested
                 ->where('id', $search)
                 ->orWhere('name', 'like', "%{$search}%")
@@ -1543,6 +1548,11 @@ class AdminController extends Controller
                     'images' => $images->all(),
                     'rawImages' => array_values(is_array($book->images) ? $book->images : (json_decode((string) $book->images, true) ?: [])),
                     'status' => (int) ($book->is_approved ?? 0),
+                    'statusLabel' => match ((int) ($book->is_approved ?? 0)) {
+                        1 => 'Faol katalogda',
+                        2 => 'Rad etilgan',
+                        default => 'Moderatsiya kutilmoqda',
+                    },
                     'active' => (bool) ($book->status ?? false),
                     'hidden' => (bool) ($book->is_hidden ?? false),
                     'recommended' => (bool) ($book->recommended ?? false),
@@ -1578,7 +1588,13 @@ class AdminController extends Controller
             ->values()
             ->all(),
             'bookPagination' => $this->paginationMeta($books),
-            'bookFilters' => ['search' => $search],
+            'bookCounts' => [
+                'all' => (int) Books::query()->count(),
+                'pending' => (int) Books::query()->where('is_approved', 0)->count(),
+                'active' => (int) Books::query()->where('is_approved', 1)->count(),
+                'rejected' => (int) Books::query()->where('is_approved', 2)->count(),
+            ],
+            'bookFilters' => ['search' => $search, 'tab' => $tab],
             'bookFormOptions' => [
                 'categories' => BookCategories::query()->orderBy('name_uz')->get(['id', 'name_uz'])->map(fn ($category) => ['id' => $category->id, 'name' => $category->name_uz])->values()->all(),
                 'publishers' => Publisher::query()->orderBy('name')->get(['id', 'name'])->map(fn ($publisher) => ['id' => $publisher->id, 'name' => $publisher->name])->values()->all(),
@@ -2566,6 +2582,9 @@ class AdminController extends Controller
 
     private function orderSummaryPayload(Sold $order): array
     {
+        $paymentStatus = PaymentStatusCode::fromLegacy($order->payment_status_code ?? $order->paymentStatus);
+        $deliveryType = Sold::normalizeDeliveryTypeValue($order->deliveryType);
+
         return [
             'id' => '#'.$order->id,
             'rawId' => $order->id,
@@ -2578,10 +2597,15 @@ class AdminController extends Controller
             'items' => (int) collect($order->items ?? [])->sum(fn ($item) => (int) ($item['count_item'] ?? $item['count'] ?? $item['quantity'] ?? 1)),
             'total' => (float) ($order->amount ?? 0),
             'status' => OrderStatusCode::fromLegacy($order->status_code ?? $order->status)->value,
+            'statusLabel' => AdminOrderStatusPresenter::mainOrder($order->status_code ?? $order->status),
             'date' => optional($order->created_at)->format('Y-m-d H:i'),
-            'payment' => (string) ($order->paymentStatus ?? $order->payment_status_code ?? '—'),
-            'paymentStatus' => (string) ($order->payment_status_code ?? $order->paymentStatus ?? '—'),
-            'deliveryType' => $order->deliveryType,
+            'payment' => AdminOrderStatusPresenter::payment($paymentStatus->value),
+            'paymentStatus' => AdminOrderStatusPresenter::paymentDetail($paymentStatus->value),
+            'deliveryType' => match ($deliveryType) {
+                'pickup' => "Do'kondan olib ketish",
+                'postal' => 'Pochta orqali yuboriladi',
+                default => 'Kuryer orqali yetkaziladi',
+            },
             'dataUrl' => route('boshqaruv.orders.data', $order),
             'receiptUrl' => route('boshqaruv.orders.print.receipt', $order),
         ];

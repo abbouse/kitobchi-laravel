@@ -172,7 +172,7 @@ const Detail = ({ label, value }: { label: string; value?: ReactNode }) => (
 const statusOptions = [
   { code: 'pending', label: 'Kutilmoqda' },
   { code: 'packing', label: 'Qadoqlanmoqda' },
-  { code: 'in_delivery', label: "Yo'lda" },
+  { code: 'in_delivery', label: 'Yetkazilmoqda' },
   { code: 'delivered', label: 'Yetib bordi' },
   { code: 'customer_received', label: 'Mijoz qabul qildi' },
   { code: 'cancelled', label: 'Bekor qilindi' },
@@ -195,6 +195,72 @@ const statusLabel = (status?: string) => {
   const normalized = normalizeStatus(status);
   if (normalized === 'returned') return 'Qaytgan';
   return statusOptions.find((option) => option.code === normalized)?.label || status || '—';
+};
+
+const paymentLabel = (value?: string) => {
+  const normalized = String(value || '').toLowerCase();
+  if (normalized.includes('naqd') || normalized.includes("to'lov")) return value || '—';
+  return ({
+    cash_pending: "Mijoz olganda naqd to'laydi",
+    card_pending: "Karta to'lovi kutilmoqda",
+    paid: "To'lov olingan",
+    cancelled: "To'lov bekor qilingan",
+  } as Record<string, string>)[normalized] || value || '—';
+};
+
+const deliveryTypeLabel = (value?: string) => {
+  const normalized = String(value || '').toLowerCase();
+  return ({
+    pickup: "Do'kondan olib ketish",
+    postal: 'Pochta orqali yuboriladi',
+    delivery: 'Kuryer orqali yetkaziladi',
+  } as Record<string, string>)[normalized] || value || '—';
+};
+
+const postalReturnLabel = (value?: string) => {
+  const normalized = String(value || '').toLowerCase();
+  return ({
+    none: "Pochta qaytimi yo'q",
+    returned_to_sender: "Pochta qaytarib yuborgan",
+    resend_pending_payment: "Qayta yuborish to'lovi kutilmoqda",
+    resent: "Qayta yuborilgan",
+  } as Record<string, string>)[normalized] || value || '—';
+};
+
+const orderKindLabel = (order?: Ord | null) => {
+  if (!order) return '—';
+  if (order.isInstore) return "Do'kon ichida rasmiylashtirilgan";
+  if (order.isGiftToOther) return "Boshqa odam uchun sovg'a buyurtma";
+  return 'Oddiy buyurtma';
+};
+
+const fulfillmentModeLabel = (value?: string | null) => {
+  const normalized = String(value || '').toLowerCase();
+  return ({
+    hub_based: 'Hub orqali tayyorlanib, keyin kuryerga beriladi',
+    direct_courier: "Do'kondan kuryer to'g'ridan-to'g'ri olib ketadi",
+    postal_only_via_hub: "Hub orqali pochtaga topshiriladi",
+    pickup_only: "Mijoz o'zi olib ketadi",
+  } as Record<string, string>)[normalized] || value || 'Logistika yo‘li hali aniqlanmagan';
+};
+
+const fulfillmentStatusLabel = (value?: string | null) => {
+  const normalized = String(value || '').toLowerCase();
+  return ({
+    awaiting_seller_prep: 'Seller tayyorlamoqda',
+    ready_for_pickup: "Olib ketishga tayyor",
+    picked_from_seller: "Do'kondan olib ketilgan",
+    arrived_at_hub: 'Hubga yetib kelgan',
+    qc_checked: 'Sifat nazoratidan o‘tgan',
+    packed: 'Qadoqlangan',
+    labeled: 'Etiketka yopishtirilgan',
+    dispatched_to_post: 'Pochtaga topshirilgan',
+    assigned_last_mile: 'Yakuniy yetkazuvchi biriktirilgan',
+    out_for_delivery: 'Mijozga olib ketilmoqda',
+    delivered: 'Yetib borgan',
+    returned: 'Qaytgan',
+    cancelled: 'Bekor qilingan',
+  } as Record<string, string>)[normalized] || value || 'Hali ishga tushmagan';
 };
 
 const canCancelOrder = (status?: string) => ![
@@ -372,8 +438,8 @@ export default function Orders() {
                   </td>
                   <td>{order.items} dona</td>
                   <td className="fw-semibold">{fmt(order.total)} so'm</td>
-                  <td><span className="chip chip-gray">{order.paymentStatus || order.payment}</span></td>
-                  <td><span className="chip chip-gray">{order.deliveryType || '—'}</span></td>
+                  <td><span className="chip chip-gray">{paymentLabel(order.paymentStatus || order.payment)}</span></td>
+                  <td><span className="chip chip-gray">{deliveryTypeLabel(order.deliveryType)}</span></td>
                   <td className="text-muted">{order.date}</td>
                   <td><span className={`chip ${statusChip(order.status)}`}>{statusLabel(order.status)}</span></td>
                   <td>
@@ -414,10 +480,10 @@ export default function Orders() {
                   <div className="row g-3">
                     <Detail label="Sana" value={selectedOrd.date} />
                     <Detail label="Yakunlangan" value={selectedOrd.completedAt} />
-                    <Detail label="To'lov statusi" value={selectedOrd.paymentStatus || selectedOrd.payment} />
-                    <Detail label="Yetkazish turi" value={selectedOrd.deliveryType} />
-                    <Detail label="Order turi" value={selectedOrd.orderKind} />
-                    <Detail label="Pochta qaytimi" value={selectedOrd.postalReturnStatus} />
+                    <Detail label="To'lov holati" value={paymentLabel(selectedOrd.paymentStatus || selectedOrd.payment)} />
+                    <Detail label="Yetkazish turi" value={deliveryTypeLabel(selectedOrd.deliveryType)} />
+                    <Detail label="Buyurtma turi" value={orderKindLabel(selectedOrd)} />
+                    <Detail label="Pochta qaytimi" value={postalReturnLabel(selectedOrd.postalReturnStatus)} />
                   </div>
                 </div>
 
@@ -535,17 +601,17 @@ export default function Orders() {
                       <h6 className="fw-bold mb-3">Fulfillment</h6>
                       {selectedOrd.fulfillment ? (
                         <div className="row g-3">
-                          <Detail label="Mode" value={selectedOrd.fulfillment.mode} />
-                          <Detail label="Status" value={selectedOrd.fulfillment.status} />
-                          <Detail label="Hub" value={selectedOrd.fulfillment.hub} />
-                          <Detail label="First / last mile" value={[selectedOrd.fulfillment.firstMile, selectedOrd.fulfillment.lastMile].filter(Boolean).join(' / ')} />
-                          <Detail label="COD" value={selectedOrd.fulfillment.isCod ? `${fmt(selectedOrd.fulfillment.cashCollectAmount || 0)} so'm` : "Yo'q"} />
-                          <Detail label="Tracking / Label" value={[selectedOrd.fulfillment.tracking, selectedOrd.fulfillment.labelCode].filter(Boolean).join(' / ')} />
-                          <Detail label="Routing version" value={selectedOrd.fulfillment.routingVersion} />
-                          <Detail label="Oxirgi mode almashuvi" value={formatAudit(selectedOrd.fulfillment.lastModeSwitch)} />
-                          <Detail label="Oxirgi hub reroute" value={formatAudit(selectedOrd.fulfillment.lastHubReroute)} />
-                          <Detail label="Routing snapshot" value={<JsonPreview value={selectedOrd.fulfillment.routingSnapshot} />} />
-                          <Detail label="Fulfillment notes" value={<JsonPreview value={selectedOrd.fulfillment.notes} />} />
+                        <Detail label="Qanday yo'l bilan bajariladi" value={fulfillmentModeLabel(selectedOrd.fulfillment.mode)} />
+                        <Detail label="Logistika bosqichi" value={fulfillmentStatusLabel(selectedOrd.fulfillment.status)} />
+                        <Detail label="Mas'ul hub" value={selectedOrd.fulfillment.hub || "Hub biriktirilmagan yoki to'g'ridan-to'g'ri oqim"} />
+                        <Detail label="First / last mile" value={[selectedOrd.fulfillment.firstMile, selectedOrd.fulfillment.lastMile].filter(Boolean).join(' / ')} />
+                        <Detail label="Naqd yig'ish" value={selectedOrd.fulfillment.isCod ? `${fmt(selectedOrd.fulfillment.cashCollectAmount || 0)} so'm olinadi` : "Yo'q, oldindan to'langan"} />
+                        <Detail label="Kuzatuv / label" value={[selectedOrd.fulfillment.tracking, selectedOrd.fulfillment.labelCode].filter(Boolean).join(' / ')} />
+                        <Detail label="Routing versiyasi" value={selectedOrd.fulfillment.routingVersion} />
+                        <Detail label="Oxirgi oqim almashtirish" value={formatAudit(selectedOrd.fulfillment.lastModeSwitch)} />
+                        <Detail label="Oxirgi hub almashtirish" value={formatAudit(selectedOrd.fulfillment.lastHubReroute)} />
+                        <Detail label="Tizim routing yozuvi" value={<JsonPreview value={selectedOrd.fulfillment.routingSnapshot} />} />
+                        <Detail label="Ichki izohlar" value={<JsonPreview value={selectedOrd.fulfillment.notes} />} />
                         </div>
                       ) : (
                         <div className="text-muted small">Fulfillment yozuvi hali yoq.</div>
@@ -600,46 +666,46 @@ export default function Orders() {
                 </div>
 
                 <div className="detail-panel mt-3">
-                  <h6 className="fw-bold mb-2">Fulfillment boshqaruvi</h6>
+                  <h6 className="fw-bold mb-2">Logistika boshqaruvi</h6>
                   <div className="row g-3">
                     <div className="col-xl-6">
                       <form className="rounded-3 border p-3 h-100" onSubmit={(event) => submitForm(event, selectedOrd.switchModeUrl)}>
-                        <div className="fw-semibold mb-2">Fulfillment mode almashtirish</div>
-                        <label className="form-label small text-muted">Yangi mode</label>
+                        <div className="fw-semibold mb-2">Yetkazish oqimini almashtirish</div>
+                        <label className="form-label small text-muted">Yangi oqim</label>
                         <select name="target_mode" className="form-select form-select-sm mb-2" defaultValue={selectedOrd.fulfillment?.mode || selectedOrd.fulfillmentModes?.[0]?.value || ''} required>
                           {(selectedOrd.fulfillmentModes || []).map((mode) => <option value={mode.value} key={mode.value}>{mode.label}</option>)}
                         </select>
-                        <label className="form-label small text-muted">Target hub</label>
+                        <label className="form-label small text-muted">Qaysi hubga biriktirilsin</label>
                         <select name="hub_id" className="form-select form-select-sm mb-2" defaultValue="">
                           <option value="">Auto tanlash</option>
                           {(selectedOrd.activeHubs || []).map((hub) => <option value={hub.id} key={hub.id}>{hub.label}</option>)}
                         </select>
-                        <label className="form-label small text-muted">Izoh</label>
-                        <textarea name="override_note" className="form-control form-control-sm mb-3" rows={2} placeholder="Nega mode almashtirilmoqda?" />
-                        <button className="btn btn-sm btn-primary-gradient" disabled={!selectedOrd.switchModeUrl}>Mode'ni yangilash</button>
+                        <label className="form-label small text-muted">Sabab</label>
+                        <textarea name="override_note" className="form-control form-control-sm mb-3" rows={2} placeholder="Nega logistika yo'li o'zgaryapti?" />
+                        <button className="btn btn-sm btn-primary-gradient" disabled={!selectedOrd.switchModeUrl}>Oqimni yangilash</button>
                       </form>
                     </div>
                     <div className="col-xl-6">
                       <form className="rounded-3 border p-3 h-100" onSubmit={(event) => submitForm(event, selectedOrd.rerouteHubUrl)}>
-                        <div className="fw-semibold mb-2">Mas'ul hubni reroute qilish</div>
+                        <div className="fw-semibold mb-2">Mas'ul hubni almashtirish</div>
                         <label className="form-label small text-muted">Yangi hub</label>
                         <select name="hub_id" className="form-select form-select-sm mb-2" defaultValue="" required>
                           <option value="" disabled>Hub tanlang</option>
                           {(selectedOrd.activeHubs || []).map((hub) => <option value={hub.id} key={hub.id}>{hub.label}</option>)}
                         </select>
-                        <label className="form-label small text-muted">Reroute izohi</label>
-                        <textarea name="reroute_note" className="form-control form-control-sm mb-3" rows={2} placeholder="Masalan: mijozga yaqin hub tanlandi" />
-                        <button className="btn btn-sm btn-outline-secondary" disabled={!selectedOrd.rerouteHubUrl}>Hub'ni yangilash</button>
+                        <label className="form-label small text-muted">Almashtirish sababi</label>
+                        <textarea name="reroute_note" className="form-control form-control-sm mb-3" rows={2} placeholder="Masalan: mijozga yaqinroq hub tanlandi" />
+                        <button className="btn btn-sm btn-outline-secondary" disabled={!selectedOrd.rerouteHubUrl}>Hubni yangilash</button>
                       </form>
                     </div>
                     <div className="col-xl-6">
                       <form className="rounded-3 border p-3 h-100" onSubmit={(event) => submitForm(event, selectedOrd.postalReturnUrl, 'patch')}>
-                        <div className="fw-semibold mb-2">Pochta qaytimi / qayta jo'natish</div>
+                        <div className="fw-semibold mb-2">Pochta qaytimi / qayta yuborish</div>
                         <label className="form-label small text-muted">Qaytim xarajati</label>
                         <input name="postal_return_fee" type="number" min={0} max={1000000} className="form-control form-control-sm mb-2" defaultValue={selectedOrd.postalReturnFee || 0} required />
                         <label className="form-label small text-muted">Izoh</label>
                         <textarea name="postal_return_note" className="form-control form-control-sm mb-3" rows={2} defaultValue={selectedOrd.postalReturnNote || ''} />
-                        <button className="btn btn-sm btn-outline-secondary" disabled={!selectedOrd.postalReturnUrl}>Qaytim sifatida belgilash</button>
+                        <button className="btn btn-sm btn-outline-secondary" disabled={!selectedOrd.postalReturnUrl}>Pochta qaytgan deb belgilash</button>
                       </form>
                     </div>
                     <div className="col-xl-6">

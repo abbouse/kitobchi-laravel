@@ -42,6 +42,7 @@ interface Book {
   publisherId?: number | null;
   sellerId?: number | null;
   status?: number;
+  statusLabel?: string;
   active?: boolean;
   hidden?: boolean;
   recommended?: boolean;
@@ -84,10 +85,11 @@ const Detail = ({ label, value }: { label: string; value?: ReactNode }) => (
 );
 
 export default function Books() {
-  const { books = [], bookPagination = { page: 1, totalPages: 1, from: 0, to: 0, total: 0 }, bookFilters = {}, bookFormOptions = { categories: [], publishers: [], sellers: [] } } = usePage<{ books?: Book[]; bookPagination?: { page: number; totalPages: number; from: number; to: number; total: number }; bookFilters?: { search?: string }; bookFormOptions?: { categories: OptionItem[]; publishers: OptionItem[]; sellers: OptionItem[] } }>().props;
+  const { books = [], bookPagination = { page: 1, totalPages: 1, from: 0, to: 0, total: 0 }, bookCounts = {}, bookFilters = {}, bookFormOptions = { categories: [], publishers: [], sellers: [] } } = usePage<{ books?: Book[]; bookPagination?: { page: number; totalPages: number; from: number; to: number; total: number }; bookCounts?: Record<string, number>; bookFilters?: { search?: string; tab?: string }; bookFormOptions?: { categories: OptionItem[]; publishers: OptionItem[]; sellers: OptionItem[] } }>().props;
   const [showView, setShowView] = useState(false);
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [search, setSearch] = useState(bookFilters.search || '');
+  const [activeTab, setActiveTab] = useState(bookFilters.tab || 'pending');
   const [autoOpenedSearch, setAutoOpenedSearch] = useState('');
 
   const handleOpenView = (book: Book) => {
@@ -101,6 +103,10 @@ export default function Books() {
       handleOpenView(books[0]);
     }
   }, [bookFilters.search, autoOpenedSearch, books, showView]);
+
+  const loadBooks = (page = 1, tab = activeTab, term = search) => {
+    router.get('/boshqaruv/books', { books_page: page, books_tab: tab, books_search: term }, { preserveState: true, preserveScroll: true, replace: true });
+  };
 
   const handleModerate = (book: Book, status: 0 | 1 | 2) => {
     if (!book.moderateUrl) return;
@@ -124,12 +130,60 @@ export default function Books() {
       <div className="page-head">
         <div>
           <h1 className="page-title">Kitoblar katalogi</h1>
-          <p className="page-subtitle">{bookPagination.total} ta kitob</p>
+          <p className="page-subtitle">Moderatsiya, faol va rad etilgan kitoblarni boshqarish</p>
         </div>
-        <form className="d-flex gap-2" onSubmit={(event) => { event.preventDefault(); router.get('/boshqaruv/books', { books_search: search, books_page: 1 }, { preserveState: true, preserveScroll: true, replace: true }); }}>
+        <form className="d-flex gap-2" onSubmit={(event) => { event.preventDefault(); loadBooks(1); }}>
           <input className="form-control form-control-sm" style={{ minWidth: 280 }} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="ID, nom, ISBN, muallif yoki seller" />
           <button className="btn btn-sm btn-outline-secondary"><i className="bi bi-search"></i></button>
         </form>
+      </div>
+
+      <div className="row g-3 mb-4">
+        {[
+          { key: 'pending', label: 'Moderatsiyada', val: bookCounts.pending || 0, hint: 'Avval ko‘rib chiqilishi kerak', color: '#f59e0b' },
+          { key: 'active', label: 'Faol kitoblar', val: bookCounts.active || 0, hint: 'Xaridorga ko‘rinayotganlar', color: '#10b981' },
+          { key: 'rejected', label: 'Rad etilgan', val: bookCounts.rejected || 0, hint: 'Qayta ko‘rib chiqilishi mumkin', color: '#ef4444' },
+          { key: 'all', label: 'Jami katalog', val: bookCounts.all || 0, hint: 'Barcha yozuvlar', color: '#4f46e5' },
+        ].map((item) => (
+          <div className="col-xl-3 col-md-6" key={item.key}>
+            <button
+              type="button"
+              className="stat-card text-start w-100 border-0"
+              onClick={() => { setActiveTab(item.key); loadBooks(1, item.key); }}
+              style={{ outline: activeTab === item.key ? `2px solid ${item.color}` : undefined }}
+            >
+              <div className="stat-label">{item.label}</div>
+              <div className="stat-value">{item.val}</div>
+              <div className="text-muted small mt-1">{item.hint}</div>
+            </button>
+          </div>
+        ))}
+      </div>
+
+      <div className="card-panel mb-4">
+        <div className="d-flex flex-wrap gap-2 align-items-center justify-content-between">
+          <div>
+            <div className="fw-semibold">Holat bo‘yicha filter</div>
+            <div className="text-muted small">Birinchi kirganda moderatsiyadagi kitoblar chiqadi. Shu blokdan boshqa holatlarga tez o‘tasiz.</div>
+          </div>
+          <div className="d-flex gap-2 flex-wrap">
+            {[
+              ['pending', 'Moderatsiya'],
+              ['active', 'Faol'],
+              ['rejected', 'Rad etilgan'],
+              ['all', 'Barchasi'],
+            ].map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                className={`btn btn-sm ${activeTab === key ? 'btn-primary-gradient' : 'btn-outline-secondary'}`}
+                onClick={() => { setActiveTab(key); loadBooks(1, key); }}
+              >
+                {label} <span className="ms-1 opacity-75">{bookCounts[key] || 0}</span>
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       <div className="row g-3">
@@ -150,6 +204,7 @@ export default function Books() {
                     <div className="d-flex gap-1 mt-2 flex-wrap">
                       <span className="chip chip-success">{book.stock} dona</span>
                       <span className="chip chip-gray">{book.category || 'Kitob'}</span>
+                      <span className={`chip ${book.status === 1 ? 'chip-success' : (book.status === 2 ? 'chip-danger' : 'chip-warning')}`}>{book.statusLabel || 'Moderatsiya'}</span>
                       {book.hidden ? <span className="chip chip-danger">Yashirilgan</span> : null}
                     </div>
                   </div>
@@ -169,7 +224,7 @@ export default function Books() {
           </div>
         ))}
       </div>
-      <PaginationControls {...bookPagination} onPageChange={(page) => router.get('/boshqaruv/books', { books_page: page, books_search: search }, { preserveState: true, preserveScroll: true, replace: true })} />
+      <PaginationControls {...bookPagination} onPageChange={(page) => loadBooks(page)} />
 
       <Modal show={showView} onHide={() => setShowView(false)} centered size="xl" scrollable>
         <Modal.Header closeButton>
