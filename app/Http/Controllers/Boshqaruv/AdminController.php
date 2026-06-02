@@ -87,6 +87,8 @@ use Inertia\Response;
 
 class AdminController extends Controller
 {
+    private const CONTENT_LOCALES = ['ru', 'en', 'ja'];
+
     public function login(): Response|\Illuminate\Http\RedirectResponse
     {
         if (Auth::guard('panel')->check()) {
@@ -647,7 +649,8 @@ class AdminController extends Controller
 
     public function storePolicy(Request $request): \Illuminate\Http\RedirectResponse
     {
-        Policy::create($this->policyData($request, null));
+        $policy = Policy::create($this->policyData($request, null));
+        $this->syncPolicyTranslations($policy, (array) $request->input('translations', []));
 
         return back()->with('success', "Siyosat qo'shildi.");
     }
@@ -655,6 +658,7 @@ class AdminController extends Controller
     public function updatePolicy(Request $request, Policy $policy): \Illuminate\Http\RedirectResponse
     {
         $policy->update($this->policyData($request, $policy));
+        $this->syncPolicyTranslations($policy, (array) $request->input('translations', []));
 
         return back()->with('success', 'Siyosat yangilandi.');
     }
@@ -693,7 +697,8 @@ class AdminController extends Controller
 
     public function storeVacancy(Request $request): \Illuminate\Http\RedirectResponse
     {
-        Vacancy::create($this->vacancyData($request));
+        $vacancy = Vacancy::create($this->vacancyData($request));
+        $this->syncVacancyTranslations($vacancy, (array) $request->input('translations', []));
 
         return back()->with('success', "Vakansiya qo'shildi.");
     }
@@ -701,6 +706,7 @@ class AdminController extends Controller
     public function updateVacancy(Request $request, Vacancy $vacancy): \Illuminate\Http\RedirectResponse
     {
         $vacancy->update($this->vacancyData($request));
+        $this->syncVacancyTranslations($vacancy, (array) $request->input('translations', []));
 
         return back()->with('success', 'Vakansiya yangilandi.');
     }
@@ -997,6 +1003,11 @@ class AdminController extends Controller
             'description' => ['required', 'string', 'max:10000'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
             'is_active' => ['nullable', 'boolean'],
+            'translations' => ['nullable', 'array'],
+            'translations.*.title' => ['nullable', 'string', 'max:255'],
+            'translations.*.contract_type' => ['nullable', 'string', 'max:120'],
+            'translations.*.location' => ['nullable', 'string', 'max:255'],
+            'translations.*.description' => ['nullable', 'string'],
         ]);
         $data['is_active'] = $request->boolean('is_active', true);
 
@@ -1021,12 +1032,71 @@ class AdminController extends Controller
             'sort_order' => ['nullable', 'integer', 'min:0'],
             'is_active' => ['nullable', 'boolean'],
             'show_in_app' => ['nullable', 'boolean'],
+            'translations' => ['nullable', 'array'],
+            'translations.*.title' => ['nullable', 'string', 'max:255'],
+            'translations.*.content' => ['nullable', 'string'],
         ]);
         $data['slug'] = $data['slug'] ?: Str::slug($data['title']);
         $data['is_active'] = $request->boolean('is_active');
         $data['show_in_app'] = $request->boolean('show_in_app');
 
         return $data;
+    }
+
+    private function syncPolicyTranslations(Policy $policy, array $translations): void
+    {
+        if (! Schema::hasTable('policy_translations')) {
+            return;
+        }
+
+        foreach (self::CONTENT_LOCALES as $locale) {
+            $payload = $translations[$locale] ?? [];
+            $title = trim((string) ($payload['title'] ?? ''));
+            $content = trim((string) ($payload['content'] ?? ''));
+
+            if ($title === '' && $content === '') {
+                $policy->translations()->where('locale', $locale)->delete();
+                continue;
+            }
+
+            $policy->translations()->updateOrCreate(
+                ['locale' => $locale],
+                [
+                    'title' => $title !== '' ? $title : null,
+                    'content' => $content !== '' ? $content : null,
+                ]
+            );
+        }
+    }
+
+    private function syncVacancyTranslations(Vacancy $vacancy, array $translations): void
+    {
+        if (! Schema::hasTable('vacancy_translations')) {
+            return;
+        }
+
+        foreach (self::CONTENT_LOCALES as $locale) {
+            $payload = $translations[$locale] ?? [];
+            $title = trim((string) ($payload['title'] ?? ''));
+            $contractType = trim((string) ($payload['contract_type'] ?? ''));
+            $location = trim((string) ($payload['location'] ?? ''));
+            $description = trim((string) ($payload['description'] ?? ''));
+
+            if ($title === '' && $contractType === '' && $location === '' && $description === '') {
+                $vacancy->translations()->where('locale', $locale)->delete();
+                continue;
+            }
+
+            $vacancy->translations()->updateOrCreate(
+                ['locale' => $locale],
+                [
+                    'title' => $title !== '' ? $title : null,
+                    'contract_type' => $contractType !== '' ? $contractType : null,
+                    'location' => $location !== '' ? $location : null,
+                    'description' => $description !== '' ? $description : null,
+                ]
+            );
+        }
     }
 
     private function apiClientData(Request $request, bool $defaultActive = true): array
@@ -1117,7 +1187,11 @@ class AdminController extends Controller
             'Vakansiyalar' => ['vacancies' => $this->vacanciesPayload()],
             'KaryeraArizalari' => ['applications' => $this->careerApplicationsPayload()],
             'Adminlar' => ['admins' => $this->adminsPayload()],
-            'ApiClients' => ['apiClients' => $this->apiClientsPayload(), 'apiLogs' => $this->apiLogsPayload()],
+            'ApiClients' => [
+                'apiClients' => $this->apiClientsPayload(),
+                'apiLogs' => $this->apiLogsPayload(),
+                'apiClientsMeta' => $this->apiClientsMeta(),
+            ],
             'Settings' => ['settings' => $this->settingsPayload()],
             'LogistikaPage' => $this->logisticsPagePayload(),
             'MysteryBoxPage' => ['mysteryBox' => $this->mysteryBoxPayload()],
@@ -3761,11 +3835,28 @@ class AdminController extends Controller
             return [];
         }
 
+        $hasTranslations = Schema::hasTable('policy_translations');
+
         return Policy::query()
+            ->when($hasTranslations, fn ($query) => $query->with('translations'))
             ->orderBy('sort_order')
             ->latest()
             ->get()
-            ->map(fn (Policy $policy) => [
+            ->map(function (Policy $policy) use ($hasTranslations) {
+                $translations = [];
+
+                foreach (self::CONTENT_LOCALES as $locale) {
+                    $translation = $hasTranslations
+                        ? $policy->translations->firstWhere('locale', $locale)
+                        : null;
+
+                    $translations[$locale] = [
+                        'title' => $translation?->title ?? '',
+                        'content' => $translation?->content ?? '',
+                    ];
+                }
+
+                return [
                 'id' => $policy->id,
                 'title' => $policy->title,
                 'slug' => $policy->slug,
@@ -3773,11 +3864,13 @@ class AdminController extends Controller
                 'status' => $policy->is_active ? 'Active' : 'Inactive',
                 'showInApp' => (bool) $policy->show_in_app,
                 'sortOrder' => (int) ($policy->sort_order ?? 0),
+                'translations' => $translations,
                 'createUrl' => route('boshqaruv.policies.store'),
                 'updateUrl' => route('boshqaruv.policies.update', $policy),
                 'toggleUrl' => route('boshqaruv.policies.toggle', $policy),
                 'destroyUrl' => route('boshqaruv.policies.destroy', $policy),
-            ])
+                ];
+            })
             ->values()
             ->all();
     }
@@ -4126,11 +4219,31 @@ class AdminController extends Controller
             return [];
         }
 
+        $hasTranslations = Schema::hasTable('vacancy_translations');
+        $hasApplications = Schema::hasTable('career_applications');
+
         return Vacancy::query()
-            ->withCount('careerApplications')
+            ->when($hasTranslations, fn ($query) => $query->with('translations'))
+            ->when($hasApplications, fn ($query) => $query->withCount('careerApplications'))
             ->ordered()
             ->get()
-            ->map(fn (Vacancy $vacancy) => [
+            ->map(function (Vacancy $vacancy) use ($hasTranslations) {
+                $translations = [];
+
+                foreach (self::CONTENT_LOCALES as $locale) {
+                    $translation = $hasTranslations
+                        ? $vacancy->translations->firstWhere('locale', $locale)
+                        : null;
+
+                    $translations[$locale] = [
+                        'title' => $translation?->title ?? '',
+                        'contract_type' => $translation?->contract_type ?? '',
+                        'location' => $translation?->location ?? '',
+                        'description' => $translation?->description ?? '',
+                    ];
+                }
+
+                return [
                 'id' => $vacancy->id,
                 'title' => $vacancy->title,
                 'icon' => $vacancy->icon,
@@ -4140,11 +4253,13 @@ class AdminController extends Controller
                 'sortOrder' => (int) ($vacancy->sort_order ?? 0),
                 'status' => $vacancy->is_active ? 'Active' : 'Inactive',
                 'applicants' => (int) ($vacancy->career_applications_count ?? 0),
+                'translations' => $translations,
                 'createUrl' => route('boshqaruv.vacancies.store'),
                 'updateUrl' => route('boshqaruv.vacancies.update', $vacancy),
                 'toggleUrl' => route('boshqaruv.vacancies.toggle', $vacancy),
                 'destroyUrl' => route('boshqaruv.vacancies.destroy', $vacancy),
-            ])
+                ];
+            })
             ->values()
             ->all();
     }
@@ -4209,19 +4324,23 @@ class AdminController extends Controller
             return [];
         }
 
+        $hasRequestLogs = Schema::hasTable('api_client_request_logs');
+        $hasRateLimitPerSecond = Schema::hasColumn('api_clients', 'rate_limit_per_second');
+        $hasRateLimitPerMinute = Schema::hasColumn('api_clients', 'rate_limit_per_minute');
+
         return ApiClient::query()
-            ->withCount('requestLogs')
-            ->latest()
+            ->when($hasRequestLogs, fn ($query) => $query->withCount('requestLogs'))
+            ->orderByDesc('id')
             ->get()
             ->map(fn (ApiClient $client) => [
                 'id' => $client->id,
                 'name' => $client->name,
-                'key' => $client->app_id,
+                'key' => $client->app_id ?: '—',
                 'abilities' => implode(', ', $client->abilities ?? []),
                 'active' => (bool) $client->is_active,
                 'requests' => (int) ($client->request_logs_count ?? 0),
-                'rateLimitSecond' => (int) ($client->rate_limit_per_second ?? 0),
-                'rateLimitMinute' => (int) ($client->rate_limit_per_minute ?? 0),
+                'rateLimitSecond' => $hasRateLimitPerSecond ? (int) ($client->rate_limit_per_second ?? 0) : null,
+                'rateLimitMinute' => $hasRateLimitPerMinute ? (int) ($client->rate_limit_per_minute ?? 0) : null,
                 'createUrl' => route('boshqaruv.api-clients.store'),
                 'updateUrl' => route('boshqaruv.api-clients.update', $client),
                 'toggleUrl' => route('boshqaruv.api-clients.toggle', $client),
@@ -4252,6 +4371,31 @@ class AdminController extends Controller
             ])
             ->values()
             ->all();
+    }
+
+    private function apiClientsMeta(): array
+    {
+        $warnings = [];
+
+        if (! Schema::hasTable('api_clients')) {
+            $warnings[] = 'api_clients jadvali topilmadi. Sahifa faqat bo‘sh holatda ochiladi.';
+        }
+
+        if (Schema::hasTable('api_clients') && ! Schema::hasColumn('api_clients', 'rate_limit_per_second')) {
+            $warnings[] = 'Sekundlik limit ustuni topilmadi. Limitlar vaqtincha ko‘rsatilmaydi.';
+        }
+
+        if (Schema::hasTable('api_clients') && ! Schema::hasColumn('api_clients', 'rate_limit_per_minute')) {
+            $warnings[] = 'Minutlik limit ustuni topilmadi. Limitlar vaqtincha ko‘rsatilmaydi.';
+        }
+
+        if (! Schema::hasTable('api_client_request_logs')) {
+            $warnings[] = 'API request loglari jadvali topilmadi. So‘rov statistikasi va loglar ko‘rsatilmaydi.';
+        }
+
+        return [
+            'warnings' => $warnings,
+        ];
     }
 
     private function settingsPayload(): array

@@ -10,6 +10,7 @@ interface Policy {
   status: string;
   showInApp: boolean;
   sortOrder: number;
+  translations?: Record<string, { title?: string; content?: string }>;
   createUrl?: string;
   updateUrl?: string;
   toggleUrl?: string;
@@ -29,7 +30,7 @@ export default function Siyosatlar() {
   };
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const data = Object.fromEntries(new FormData(event.currentTarget).entries());
+    const data = new FormData(event.currentTarget);
     const options = { preserveScroll: true, onSuccess: () => { setEditing(null); setShowForm(false); } };
     editing?.updateUrl ? router.put(editing.updateUrl, data, options) : router.post(createUrl, data, options);
   };
@@ -78,6 +79,35 @@ export default function Siyosatlar() {
               <div className="col-md-4 d-flex align-items-end"><Form.Check type="switch" name="is_active" value="1" label="Faol" defaultChecked={editing ? editing.status === 'Active' : true} /></div>
               <div className="col-md-4 d-flex align-items-end"><Form.Check type="switch" name="show_in_app" value="1" label="Appda ko'rinsin" defaultChecked={editing ? editing.showInApp : true} /></div>
               <div className="col-12"><Form.Label>Matn</Form.Label><Form.Control as="textarea" rows={8} name="content" required defaultValue={editing?.content || ''} /></div>
+              {[
+                ['ru', 'Ruscha'],
+                ['en', 'Inglizcha'],
+                ['ja', 'Yaponcha'],
+              ].map(([locale, label]) => (
+                <div className="col-12" key={locale}>
+                  <div className="rounded-4 border bg-light-subtle p-3">
+                    <div className="fw-semibold mb-3">{label} tarjima</div>
+                    <div className="row g-3">
+                      <div className="col-12">
+                        <Form.Label>{label} sarlavha</Form.Label>
+                        <Form.Control
+                          name={`translations[${locale}][title]`}
+                          defaultValue={editing?.translations?.[locale]?.title || ''}
+                        />
+                      </div>
+                      <div className="col-12">
+                        <Form.Label>{label} matn</Form.Label>
+                        <Form.Control
+                          as="textarea"
+                          rows={5}
+                          name={`translations[${locale}][content]`}
+                          defaultValue={editing?.translations?.[locale]?.content || ''}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </Modal.Body>
           <Modal.Footer><Button variant="light" onClick={() => setShowForm(false)}>Bekor qilish</Button><Button type="submit" className="btn-primary-gradient border-0">Saqlash</Button></Modal.Footer>

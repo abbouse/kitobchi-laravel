@@ -5,7 +5,7 @@ import { Modal, Button, Form } from 'react-bootstrap';
 // ===== VAKANSIYALAR =====
 export function Vakansiyalar() {
   const { vacancies = [] } = usePage<{
-    vacancies?: Array<{ id: number; title: string; icon?: string; contractType?: string; location?: string; description?: string; sortOrder?: number; status: string; applicants: number; createUrl?: string; updateUrl?: string; toggleUrl?: string; destroyUrl?: string }>;
+    vacancies?: Array<{ id: number; title: string; icon?: string; contractType?: string; location?: string; description?: string; sortOrder?: number; status: string; applicants: number; translations?: Record<string, { title?: string; contract_type?: string; location?: string; description?: string }>; createUrl?: string; updateUrl?: string; toggleUrl?: string; destroyUrl?: string }>;
   }>().props;
   const [editing, setEditing] = useState<(typeof vacancies)[0] | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -17,7 +17,7 @@ export function Vakansiyalar() {
   };
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const data = Object.fromEntries(new FormData(event.currentTarget).entries());
+    const data = new FormData(event.currentTarget);
     const options = { preserveScroll: true, onSuccess: () => { setShowForm(false); setEditing(null); } };
     editing?.updateUrl ? router.put(editing.updateUrl, data, options) : router.post(createUrl, data, options);
   };
@@ -57,6 +57,49 @@ export function Vakansiyalar() {
               <div className="col-md-4"><Form.Label>Joylashuv</Form.Label><Form.Control name="location" defaultValue={editing?.location || ''} /></div>
               <div className="col-md-4"><Form.Label>Tartib</Form.Label><Form.Control name="sort_order" type="number" min={0} defaultValue={editing?.sortOrder ?? 0} /></div>
               <div className="col-12"><Form.Label>Tavsif</Form.Label><Form.Control as="textarea" rows={5} name="description" required defaultValue={editing?.description || ''} /></div>
+              {[
+                ['ru', 'Ruscha'],
+                ['en', 'Inglizcha'],
+                ['ja', 'Yaponcha'],
+              ].map(([locale, label]) => (
+                <div className="col-12" key={locale}>
+                  <div className="rounded-4 border bg-light-subtle p-3">
+                    <div className="fw-semibold mb-3">{label} tarjima</div>
+                    <div className="row g-3">
+                      <div className="col-md-6">
+                        <Form.Label>{label} sarlavha</Form.Label>
+                        <Form.Control
+                          name={`translations[${locale}][title]`}
+                          defaultValue={editing?.translations?.[locale]?.title || ''}
+                        />
+                      </div>
+                      <div className="col-md-3">
+                        <Form.Label>{label} shart turi</Form.Label>
+                        <Form.Control
+                          name={`translations[${locale}][contract_type]`}
+                          defaultValue={editing?.translations?.[locale]?.contract_type || ''}
+                        />
+                      </div>
+                      <div className="col-md-3">
+                        <Form.Label>{label} joylashuv</Form.Label>
+                        <Form.Control
+                          name={`translations[${locale}][location]`}
+                          defaultValue={editing?.translations?.[locale]?.location || ''}
+                        />
+                      </div>
+                      <div className="col-12">
+                        <Form.Label>{label} tavsif</Form.Label>
+                        <Form.Control
+                          as="textarea"
+                          rows={4}
+                          name={`translations[${locale}][description]`}
+                          defaultValue={editing?.translations?.[locale]?.description || ''}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
               <div className="col-12"><Form.Check type="switch" name="is_active" value="1" label="Faol" defaultChecked={editing ? editing.status === 'Active' : true} /></div>
             </div>
           </Modal.Body>

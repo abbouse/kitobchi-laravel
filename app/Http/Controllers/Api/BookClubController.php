@@ -262,37 +262,93 @@ class BookClubController extends Controller
     private function applySmartFeedRanking($query, array $followingIds): object
     {
         $followingIdsString = implode(',', array_map('intval', array_unique(array_merge($followingIds, [0]))));
+        $ageHoursSql = "TIMESTAMPDIFF(HOUR, book_club.created_at, NOW())";
         $likesCountSql = "(SELECT COUNT(*) FROM book_club_likes WHERE book_club_likes.post_id = book_club.id)";
         $topLevelCommentsCountSql = "(SELECT COUNT(*) FROM book_club_comments WHERE book_club_comments.post_id = book_club.id AND book_club_comments.parent_id IS NULL)";
         $votesCountSql = "(SELECT COUNT(*) FROM book_club_voted_users AS voted INNER JOIN book_club_votes AS votes ON votes.id = voted.option_id WHERE votes.post_id = book_club.id)";
         $repostsCountSql = "(SELECT COUNT(*) FROM book_club AS reposts WHERE reposts.reposted_user_id = book_club.user_id AND reposts.repost = 1 AND reposts.is_deleted = 0)";
+        $mediaCountSql = "(SELECT COUNT(*) FROM book_club_images WHERE book_club_images.post_id = book_club.id)";
+        $engagementRawSql = "
+            (
+                LOG(1 + GREATEST(($likesCountSql), 0)) * 1.1
+                + LOG(1 + GREATEST(($topLevelCommentsCountSql), 0)) * 1.6
+                + LOG(1 + GREATEST(($votesCountSql), 0)) * 1.15
+                + LOG(1 + GREATEST(($repostsCountSql), 0)) * 1.4
+            )
+        ";
+        $engagementScoreSql = "
+            (($engagementRawSql) / (1 + GREATEST(($ageHoursSql), 0) / 36))
+        ";
 
         return $query
             ->select('book_club.*')
+            ->leftJoin('users as feed_authors', 'feed_authors.id', '=', 'book_club.user_id')
             ->selectRaw("$likesCountSql AS likes_count")
             ->selectRaw("$topLevelCommentsCountSql AS top_level_comments_count")
             ->selectRaw("$votesCountSql AS votes_count")
             ->selectRaw("$repostsCountSql AS reposts_count")
+            ->selectRaw("$mediaCountSql AS media_count")
+            ->selectRaw("$ageHoursSql AS age_hours")
+            ->selectRaw("CASE WHEN book_club.user_id IN ($followingIdsString) THEN 1 ELSE 0 END AS is_followed_author")
+            ->selectRaw("CASE WHEN COALESCE(feed_authors.isVerified, 0) = 1 THEN 1 ELSE 0 END AS is_verified_author")
+            ->selectRaw("CASE WHEN COALESCE(feed_authors.isSupport, 0) = 1 THEN 1 ELSE 0 END AS is_support_author")
+            ->selectRaw("COALESCE(feed_authors.staff_role, '') AS author_staff_role")
+            ->selectRaw("$engagementRawSql AS engagement_raw")
+            ->selectRaw("$engagementScoreSql AS engagement_score")
             ->selectRaw("
                 (
-                    CASE WHEN book_club.user_id IN ($followingIdsString) THEN 5.0 ELSE 0 END
-                    + CASE
-                        WHEN book_club.created_at >= NOW() - INTERVAL 1 DAY THEN 5.0
-                        WHEN book_club.created_at >= NOW() - INTERVAL 3 DAY THEN 3.0
-                        WHEN book_club.created_at >= NOW() - INTERVAL 7 DAY THEN 1.5
+                    CASE
+                        WHEN $ageHoursSql <= 12 THEN 6.4
+                        WHEN $ageHoursSql <= 24 THEN 5.2
+                        WHEN $ageHoursSql <= 72 THEN 3.0
+                        WHEN $ageHoursSql <= 168 THEN 1.1
                         ELSE 0
-                      END
-                    + LEAST(COALESCE(book_club.ai_post_score, 3), 5) * 0.8
-                    + LOG(1 + GREATEST(($likesCountSql), 0)) * 1.15
-                    + LOG(1 + GREATEST(($topLevelCommentsCountSql), 0)) * 1.55
-                    + LOG(1 + GREATEST(($votesCountSql), 0)) * 1.25
-                    + LOG(1 + GREATEST(($repostsCountSql), 0)) * 1.45
-                    + CASE WHEN book_club.product_id IS NOT NULL THEN 0.35 ELSE 0 END
-                    + CASE WHEN CHAR_LENGTH(COALESCE(book_club.text, '')) >= 80 THEN 0.25 ELSE 0 END
+                    END
+                    + CASE
+                        WHEN book_club.user_id IN ($followingIdsString) AND $ageHoursSql <= 24 THEN 2.4
+                        WHEN book_club.user_id IN ($followingIdsString) AND $ageHoursSql <= 72 THEN 1.2
+                        WHEN book_club.user_id IN ($followingIdsString) AND $ageHoursSql <= 168 THEN 0.45
+                        ELSE 0
+                    END
+                    + CASE
+                        WHEN COALESCE(feed_authors.isVerified, 0) = 1 AND $ageHoursSql <= 72 THEN 0.65
+                        WHEN COALESCE(feed_authors.isVerified, 0) = 1 THEN 0.25
+                        ELSE 0
+                    END
+                    + CASE
+                        WHEN COALESCE(feed_authors.isSupport, 0) = 1 AND $ageHoursSql <= 48 THEN 0.75
+                        WHEN COALESCE(feed_authors.isSupport, 0) = 1 THEN 0.3
+                        ELSE 0
+                    END
+                    + CASE
+                        WHEN LOWER(COALESCE(feed_authors.staff_role, '')) IN ('administrator', 'moderator') AND $ageHoursSql <= 48 THEN 0.55
+                        ELSE 0
+                    END
+                    + ($engagementScoreSql) * 2.05
+                    + LEAST(GREATEST(COALESCE(book_club.ai_post_score, 3), 0), 5) * 0.42
+                    + CASE WHEN book_club.product_id IS NOT NULL THEN 0.28 ELSE 0 END
+                    + CASE WHEN ($mediaCountSql) > 0 THEN LEAST(($mediaCountSql), 4) * 0.12 ELSE 0 END
+                    + CASE
+                        WHEN CHAR_LENGTH(COALESCE(book_club.text, '')) BETWEEN 80 AND 1200 THEN 0.28
+                        WHEN CHAR_LENGTH(COALESCE(book_club.text, '')) >= 35 THEN 0.14
+                        ELSE 0
+                    END
+                    + CASE
+                        WHEN book_club.user_id NOT IN ($followingIdsString) AND $ageHoursSql <= 48 THEN 0.35
+                        ELSE 0
+                    END
+                    - CASE
+                        WHEN book_club.user_id IN ($followingIdsString) AND $ageHoursSql > 168 THEN 1.8
+                        WHEN $ageHoursSql > 240 THEN 2.35
+                        WHEN $ageHoursSql > 168 THEN 1.2
+                        WHEN $ageHoursSql > 96 THEN 0.55
+                        ELSE 0
+                    END
                 ) AS feed_score
             ")
             ->orderByDesc('feed_score')
-            ->orderBy('updated_at', 'DESC');
+            ->orderByDesc('engagement_score')
+            ->orderBy('book_club.updated_at', 'DESC');
     }
 
     private function diversifyFeedPage($posts)
@@ -301,15 +357,15 @@ class BookClubController extends Controller
         $ordered = [];
         $lastUserId = null;
         $streak = 0;
+        $recentBuckets = [];
+        $pattern = ['followed_fresh', 'trending', 'discovery', 'trusted', 'fresh', 'trending'];
 
-        while (!empty($pool)) {
-            $pickIndex = null;
+        while (! empty($pool)) {
+            $targetBucket = $pattern[count($ordered) % count($pattern)];
+            $pickIndex = $this->pickFeedPostIndex($pool, $targetBucket, $lastUserId, $streak, $recentBuckets);
 
-            foreach ($pool as $index => $post) {
-                if ($lastUserId === null || (int) $post->user_id !== (int) $lastUserId || $streak < 2) {
-                    $pickIndex = $index;
-                    break;
-                }
+            if ($pickIndex === null) {
+                $pickIndex = $this->pickFeedPostIndex($pool, null, $lastUserId, $streak, $recentBuckets);
             }
 
             $pickIndex ??= 0;
@@ -323,9 +379,68 @@ class BookClubController extends Controller
                 $lastUserId = (int) $picked->user_id;
                 $streak = 1;
             }
+
+            $recentBuckets[] = $this->feedBucket($picked);
+            if (count($recentBuckets) > 4) {
+                array_shift($recentBuckets);
+            }
         }
 
         return collect($ordered);
+    }
+
+    private function pickFeedPostIndex(array $pool, ?string $targetBucket, ?int $lastUserId, int $streak, array $recentBuckets): ?int
+    {
+        foreach ($pool as $index => $post) {
+            $bucket = $this->feedBucket($post);
+
+            if ($targetBucket !== null && $bucket !== $targetBucket) {
+                continue;
+            }
+
+            if ($lastUserId !== null && (int) $post->user_id === (int) $lastUserId && $streak >= 2) {
+                continue;
+            }
+
+            if ($targetBucket !== null && count($recentBuckets) >= 2) {
+                $tail = array_slice($recentBuckets, -2);
+                if (count(array_unique($tail)) === 1 && $tail[0] === $targetBucket) {
+                    continue;
+                }
+            }
+
+            return $index;
+        }
+
+        return null;
+    }
+
+    private function feedBucket($post): string
+    {
+        $isFollowed = (bool) ($post->is_followed_author ?? false);
+        $isTrusted = (bool) ($post->is_verified_author ?? false)
+            || (bool) ($post->is_support_author ?? false)
+            || in_array(mb_strtolower((string) ($post->author_staff_role ?? '')), ['moderator', 'administrator'], true);
+        $ageHours = (int) ($post->age_hours ?? 9999);
+        $engagement = (float) ($post->engagement_score ?? 0);
+
+        if ($isFollowed && $ageHours <= 72) {
+            return 'followed_fresh';
+        }
+
+        if ($isTrusted && $ageHours <= 96) {
+            return 'trusted';
+        }
+
+        if (! $isFollowed && $ageHours <= 48) {
+            return 'discovery';
+        }
+
+        if ($engagement >= 1.35 || ((int) ($post->top_level_comments_count ?? 0) >= 4) || ((int) ($post->likes_count ?? 0) >= 9)) {
+            return 'trending';
+        }
+
+        return 'fresh';
     }
 
     private function ensureCanModerate(User $user)

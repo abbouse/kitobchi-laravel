@@ -67,9 +67,10 @@ export function Adminlar() {
 
 // ===== API MIJOZLAR =====
 export function ApiClients() {
-  const { apiClients = [], apiLogs = [] } = usePage<{
+  const { apiClients = [], apiLogs = [], apiClientsMeta } = usePage<{
     apiClients?: Array<{ id: number; name: string; key: string; abilities?: string; active: boolean; requests: number; rateLimitSecond?: number; rateLimitMinute?: number; createUrl?: string; updateUrl?: string; toggleUrl?: string; regenerateUrl?: string; destroyUrl?: string }>;
     apiLogs?: Array<{ id: number; client?: string; method?: string; path?: string; status: number; date?: string }>;
+    apiClientsMeta?: { warnings?: string[] };
   }>().props;
   const [showLogs, setShowLogs] = useState(false);
   const [editing, setEditing] = useState<(typeof apiClients)[0] | null>(null);
@@ -97,6 +98,14 @@ export function ApiClients() {
           <button className="btn btn-primary-gradient" onClick={() => { setEditing(null); setShowForm(true); }}><i className="bi bi-plus-lg me-1"></i>Client qo'shish</button>
         </div>
       </div>
+      {(apiClientsMeta?.warnings || []).length ? (
+        <div className="alert alert-warning border-0 shadow-sm rounded-4">
+          <div className="fw-semibold mb-1">Sahifa himoyalangan rejimda ishlayapti</div>
+          <ul className="mb-0 ps-3">
+            {(apiClientsMeta?.warnings || []).map((warning) => <li key={warning}>{warning}</li>)}
+          </ul>
+        </div>
+      ) : null}
       <div className="card-panel">
         <div className="table-responsive"><table className="data-table">
           <thead><tr><th>ID</th><th>Nomi</th><th>App ID</th><th>So'rovlar</th><th>Limit</th><th>Holat</th><th>Amallar</th></tr></thead>
@@ -106,7 +115,7 @@ export function ApiClients() {
               <td className="fw-semibold">{client.name}</td>
               <td><code style={{ fontSize: 11, background: '#f3f4f6', padding: '2px 6px', borderRadius: 4 }}>{client.key}</code></td>
               <td>{client.requests.toLocaleString()}</td>
-              <td>{client.rateLimitSecond || 0}/s · {client.rateLimitMinute || 0}/m</td>
+              <td>{client.rateLimitSecond != null || client.rateLimitMinute != null ? `${client.rateLimitSecond ?? 0}/s · ${client.rateLimitMinute ?? 0}/m` : 'Limitlar sozlanmagan'}</td>
               <td><div className="form-check form-switch"><input type="checkbox" className="form-check-input" checked={client.active} onChange={() => patch(client.toggleUrl)} /></div></td>
               <td>
                 <button className="btn btn-sm btn-light me-1" onClick={() => { setEditing(client); setShowForm(true); }}><i className="bi bi-pencil"></i></button>
