@@ -13,9 +13,10 @@ return [
     'logo_aria' => 'Kitobchi',
     'lang_label' => '言語',
 
-    'footer_good' => 'The Good',
-    'footer_boring' => 'The Boring',
-    'footer_cool' => 'The Cool',
+    'footer_good' => 'つながる',
+    'footer_boring' => '法的情報',
+    'footer_cool' => 'モバイルアプリ',
     'footer_help' => 'サポート',
     'footer_all_doc' => 'すべての文書',
+    'api_docs' => 'APIドキュメント',
 ];

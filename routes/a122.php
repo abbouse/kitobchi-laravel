@@ -440,7 +440,7 @@ Route::prefix('a122')->name('admin.')->group(function () {
     // ── API Clients ────────────────────────────────────────────────
     Route::prefix('api-clients')->name('api-clients.')->group(function () {
         Route::get('/',                      [ApiClientController::class, 'index'])->name('index');
-        Route::get('/docs',                  [ApiClientController::class, 'docs'])->name('docs');
+        Route::get('/docs',                  fn () => redirect()->route('developers.api-docs'))->name('docs');
         Route::get('/logs',                  [ApiClientController::class, 'logs'])->name('logs');
         Route::get('/logs/export',           [ApiClientController::class, 'exportLogs'])->name('logs.export');
         Route::get('/create',                [ApiClientController::class, 'create'])->name('create');

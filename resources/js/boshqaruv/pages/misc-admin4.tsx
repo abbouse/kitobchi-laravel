@@ -94,6 +94,7 @@ export function ApiClients() {
       <div className="page-head">
         <div><h1 className="page-title">API mijozlar</h1><p className="page-subtitle">Jami {apiClients.length} ta client</p></div>
         <div className="d-flex gap-2">
+          <a className="btn btn-outline-secondary" href="/developers/api"><i className="bi bi-file-earmark-code me-1"></i>Docs</a>
           <button className="btn btn-outline-secondary" onClick={() => setShowLogs(true)}><i className="bi bi-journal-code me-1"></i>API Logs</button>
           <button className="btn btn-primary-gradient" onClick={() => { setEditing(null); setShowForm(true); }}><i className="bi bi-plus-lg me-1"></i>Client qo'shish</button>
         </div>

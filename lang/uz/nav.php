@@ -13,9 +13,10 @@ return [
     'logo_aria' => 'Kitobchi',
     'lang_label' => 'Til',
 
-    'footer_good' => 'The Good',
-    'footer_boring' => 'The Boring',
-    'footer_cool' => 'The Cool',
+    'footer_good' => 'Aloqa va hamjamiyat',
+    'footer_boring' => 'Huquqiy maʼlumotlar',
+    'footer_cool' => 'Mobil ilovalar',
     'footer_help' => 'Yordam',
     'footer_all_doc' => 'Barcha hujjatlar',
+    'api_docs' => 'API hujjatlari',
 ];

@@ -36,6 +36,7 @@ use App\Models\Gifts;
 use App\Models\Hub;
 use App\Models\HubStaff;
 use App\Models\MarketNews;
+use App\Models\Message;
 use App\Models\MysteryBoxPlan;
 use App\Models\MysteryBoxSubscription;
 use App\Models\Policy;
@@ -783,6 +784,7 @@ class AdminController extends Controller
         $credentials = ApiClient::generateCredentials();
 
         ApiClient::create($data + $credentials);
+        $this->clearApiClientCache();
 
         return back()->with('success', 'API mijoz yaratildi.');
     }
@@ -790,6 +792,7 @@ class AdminController extends Controller
     public function updateApiClient(Request $request, ApiClient $apiClient): \Illuminate\Http\RedirectResponse
     {
         $apiClient->update($this->apiClientData($request, false));
+        $this->clearApiClientCache();
 
         return back()->with('success', 'API mijoz yangilandi.');
     }
@@ -797,6 +800,7 @@ class AdminController extends Controller
     public function toggleApiClient(ApiClient $apiClient): \Illuminate\Http\RedirectResponse
     {
         $apiClient->update(['is_active' => ! $apiClient->is_active]);
+        $this->clearApiClientCache();
 
         return back()->with('success', $apiClient->is_active ? 'API mijoz faollashtirildi.' : 'API mijoz o‘chirildi.');
     }
@@ -804,6 +808,7 @@ class AdminController extends Controller
     public function regenerateApiClient(ApiClient $apiClient): \Illuminate\Http\RedirectResponse
     {
         $apiClient->update(['app_secret' => ApiClient::generateCredentials()['app_secret']]);
+        $this->clearApiClientCache();
 
         return back()->with('success', 'API secret yangilandi.');
     }
@@ -811,6 +816,7 @@ class AdminController extends Controller
     public function destroyApiClient(ApiClient $apiClient): \Illuminate\Http\RedirectResponse
     {
         $apiClient->delete();
+        $this->clearApiClientCache();
 
         return back()->with('success', "API mijoz o'chirildi.");
     }
@@ -1101,6 +1107,8 @@ class AdminController extends Controller
 
     private function apiClientData(Request $request, bool $defaultActive = true): array
     {
+        $hasRateLimitPerSecond = Schema::hasTable('api_clients') && Schema::hasColumn('api_clients', 'rate_limit_per_second');
+        $hasRateLimitPerMinute = Schema::hasTable('api_clients') && Schema::hasColumn('api_clients', 'rate_limit_per_minute');
         $data = $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'abilities' => ['nullable', 'string', 'max:1000'],
@@ -1122,8 +1130,16 @@ class AdminController extends Controller
             $data['abilities'] = ['read'];
         }
         $data['is_active'] = $request->boolean('is_active', $defaultActive);
-        $data['rate_limit_per_second'] = $data['rate_limit_per_second'] ?? 8;
-        $data['rate_limit_per_minute'] = $data['rate_limit_per_minute'] ?? 240;
+        if ($hasRateLimitPerSecond) {
+            $data['rate_limit_per_second'] = $data['rate_limit_per_second'] ?? 8;
+        } else {
+            unset($data['rate_limit_per_second']);
+        }
+        if ($hasRateLimitPerMinute) {
+            $data['rate_limit_per_minute'] = $data['rate_limit_per_minute'] ?? 240;
+        } else {
+            unset($data['rate_limit_per_minute']);
+        }
 
         return $data;
     }
@@ -4220,6 +4236,8 @@ class AdminController extends Controller
             ->paginate(25, ['*'], 'complaints_page')
             ->withQueryString();
 
+        $subjectPayloads = $this->complaintSubjectPayloads($reports->getCollection());
+
         return [
             'complaints' => $reports->getCollection()->map(function (Report $report) {
                 $otherReports = Report::query()->where('user_id', $report->user_id)->whereKeyNot($report->id)->latest()->take(5)->get();
@@ -4235,6 +4253,7 @@ class AdminController extends Controller
                     'reportableId' => $report->reportable_id,
                     'status' => $report->status,
                     'date' => $this->dateTime($report->created_at),
+                    'content' => $subjectPayloads[$report->id] ?? $this->complaintMissingSubjectPayload($report),
                     'otherReports' => $otherReports->map(fn (Report $other) => [
                         'id' => $other->id,
                         'reason' => $other->reason,
@@ -4248,6 +4267,198 @@ class AdminController extends Controller
             ->values()
             ->all(),
             'complaintPagination' => $this->paginationMeta($reports),
+        ];
+    }
+
+    private function complaintSubjectPayloads($reports): array
+    {
+        $payloads = [];
+        $reports = collect($reports);
+
+        $bookClubIds = $reports
+            ->where('reportable_type', 'book_club')
+            ->pluck('reportable_id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($bookClubIds->isNotEmpty()) {
+            $posts = BookClub::query()
+                ->whereIn('id', $bookClubIds)
+                ->with([
+                    'user:id,name,lastname,phone_number,avatar',
+                    'images',
+                    'activeWarning',
+                ])
+                ->withCount(['likes', 'comments'])
+                ->get()
+                ->keyBy('id');
+
+            foreach ($reports->where('reportable_type', 'book_club') as $report) {
+                $post = $posts->get($report->reportable_id);
+                $payloads[$report->id] = $post
+                    ? $this->complaintBookClubSubjectPayload($post)
+                    : $this->complaintMissingSubjectPayload($report);
+            }
+        }
+
+        $messageIds = $reports
+            ->where('reportable_type', 'conversation_message')
+            ->pluck('reportable_id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($messageIds->isNotEmpty()) {
+            $messages = Message::query()
+                ->whereIn('id', $messageIds)
+                ->with([
+                    'conversation.user:id,name,lastname,phone_number',
+                    'conversation.receiver:id,name,lastname,phone_number',
+                    'conversation.shop:id,shop_name',
+                    'replyTo:id,message,sender_type,created_at',
+                ])
+                ->get()
+                ->keyBy('id');
+
+            foreach ($reports->where('reportable_type', 'conversation_message') as $report) {
+                $message = $messages->get($report->reportable_id);
+                $payloads[$report->id] = $message
+                    ? $this->complaintConversationMessagePayload($message)
+                    : $this->complaintMissingSubjectPayload($report);
+            }
+        }
+
+        foreach ($reports as $report) {
+            $payloads[$report->id] ??= $this->complaintMissingSubjectPayload($report);
+        }
+
+        return $payloads;
+    }
+
+    private function complaintBookClubSubjectPayload(BookClub $post): array
+    {
+        return [
+            'kind' => 'book_club',
+            'title' => 'Book Club posti',
+            'summary' => $post->text ?: 'Post matni yo‘q',
+            'author' => trim(($post->user?->name ?? '').' '.($post->user?->lastname ?? '')) ?: 'Kitobxon',
+            'phone' => $post->user?->phone_number,
+            'avatar' => $this->assetFromStorage($post->user?->avatar),
+            'date' => $this->dateTime($post->created_at),
+            'images' => $post->images
+                ->take(3)
+                ->map(fn ($image) => $this->assetFromStorage($image->image))
+                ->filter()
+                ->values()
+                ->all(),
+            'stats' => [
+                'likes' => (int) ($post->likes_count ?? 0),
+                'comments' => (int) ($post->comments_count ?? 0),
+            ],
+            'meta' => [
+                'warning' => (bool) $post->activeWarning,
+                'isDeleted' => (bool) $post->is_deleted,
+                'repost' => (bool) $post->repost,
+                'aiStatus' => $post->ai_post_status,
+            ],
+            'manageUrl' => route('boshqaruv.book-club', ['focus_post' => $post->id]),
+            'manageLabel' => 'Post boshqaruvini ochish',
+        ];
+    }
+
+    private function complaintConversationMessagePayload(Message $message): array
+    {
+        $conversation = $message->conversation;
+
+        return [
+            'kind' => 'conversation_message',
+            'title' => 'Chatdagi xabar',
+            'summary' => $message->message ?: 'Xabar matni yo‘q',
+            'date' => $this->dateTime($message->created_at),
+            'meta' => [
+                'senderType' => $this->complaintMessageSenderLabel($message->sender_type),
+                'isEdited' => (bool) $message->is_edited,
+                'isDeleted' => (bool) $message->is_deleted,
+            ],
+            'conversation' => [
+                'id' => $conversation?->id,
+                'user' => trim(($conversation?->user?->name ?? '').' '.($conversation?->user?->lastname ?? '')) ?: 'Foydalanuvchi',
+                'userPhone' => $conversation?->user?->phone_number,
+                'agent' => $conversation?->shop?->shop_name ?: trim(($conversation?->receiver?->name ?? '').' '.($conversation?->receiver?->lastname ?? '')) ?: 'Operator',
+                'type' => $conversation?->type,
+                'orderId' => $conversation?->order_id,
+            ],
+            'replyTo' => $message->replyTo ? [
+                'text' => $message->replyTo->message ?: 'Matnsiz xabar',
+                'senderType' => $this->complaintMessageSenderLabel($message->replyTo->sender_type),
+                'date' => $this->dateTime($message->replyTo->created_at),
+            ] : null,
+            'context' => $this->complaintConversationContextPayload($message),
+            'manageUrl' => $conversation
+                ? route('boshqaruv.chat', ['focus_chat' => $conversation->id, 'focus_message' => $message->id])
+                : route('boshqaruv.chat'),
+            'manageLabel' => 'Chat boshqaruvini ochish',
+        ];
+    }
+
+    private function complaintConversationContextPayload(Message $message): array
+    {
+        $before = Message::query()
+            ->where('conversation_id', $message->conversation_id)
+            ->where('id', '<', $message->id)
+            ->where('is_deleted', false)
+            ->latest('id')
+            ->take(2)
+            ->get()
+            ->reverse()
+            ->values();
+
+        $after = Message::query()
+            ->where('conversation_id', $message->conversation_id)
+            ->where('id', '>', $message->id)
+            ->where('is_deleted', false)
+            ->orderBy('id')
+            ->take(2)
+            ->get();
+
+        return $before
+            ->concat(collect([$message]))
+            ->concat($after)
+            ->map(fn (Message $row) => [
+                'id' => $row->id,
+                'text' => $row->message ?: 'Matnsiz xabar',
+                'senderType' => $this->complaintMessageSenderLabel($row->sender_type),
+                'date' => $this->dateTime($row->created_at),
+                'isTarget' => (int) $row->id === (int) $message->id,
+            ])
+            ->values()
+            ->all();
+    }
+
+    private function complaintMessageSenderLabel(?string $senderType): string
+    {
+        return match ($senderType) {
+            'user' => 'Mijoz',
+            'seller' => 'Seller',
+            'courier' => 'Kuryer',
+            'admin', 'operator' => 'Operator',
+            default => $senderType ?: 'Noma’lum',
+        };
+    }
+
+    private function complaintMissingSubjectPayload(Report $report): array
+    {
+        return [
+            'kind' => 'missing',
+            'title' => 'Kontent topilmadi',
+            'summary' => 'Shikoyat qilingan obyekt hozir bazada topilmadi yoki o‘chirilgan.',
+            'meta' => [
+                'reportableType' => $report->reportable_type,
+                'reportableId' => $report->reportable_id,
+            ],
+            'manageUrl' => null,
+            'manageLabel' => null,
         ];
     }
 
@@ -4362,31 +4573,33 @@ class AdminController extends Controller
             return [];
         }
 
-        $hasRequestLogs = Schema::hasTable('api_client_request_logs');
-        $hasRateLimitPerSecond = Schema::hasColumn('api_clients', 'rate_limit_per_second');
-        $hasRateLimitPerMinute = Schema::hasColumn('api_clients', 'rate_limit_per_minute');
+        return Cache::remember('boshqaruv:api-clients:payload:v2', now()->addMinutes(5), function () {
+            $hasRequestLogs = Schema::hasTable('api_client_request_logs');
+            $hasRateLimitPerSecond = Schema::hasColumn('api_clients', 'rate_limit_per_second');
+            $hasRateLimitPerMinute = Schema::hasColumn('api_clients', 'rate_limit_per_minute');
 
-        return ApiClient::query()
-            ->when($hasRequestLogs, fn ($query) => $query->withCount('requestLogs'))
-            ->orderByDesc('id')
-            ->get()
-            ->map(fn (ApiClient $client) => [
-                'id' => $client->id,
-                'name' => $client->name,
-                'key' => $client->app_id ?: '—',
-                'abilities' => implode(', ', $client->abilities ?? []),
-                'active' => (bool) $client->is_active,
-                'requests' => (int) ($client->request_logs_count ?? 0),
-                'rateLimitSecond' => $hasRateLimitPerSecond ? (int) ($client->rate_limit_per_second ?? 0) : null,
-                'rateLimitMinute' => $hasRateLimitPerMinute ? (int) ($client->rate_limit_per_minute ?? 0) : null,
-                'createUrl' => route('boshqaruv.api-clients.store'),
-                'updateUrl' => route('boshqaruv.api-clients.update', $client),
-                'toggleUrl' => route('boshqaruv.api-clients.toggle', $client),
-                'regenerateUrl' => route('boshqaruv.api-clients.regenerate', $client),
-                'destroyUrl' => route('boshqaruv.api-clients.destroy', $client),
-            ])
-            ->values()
-            ->all();
+            return ApiClient::query()
+                ->when($hasRequestLogs, fn ($query) => $query->withCount('requestLogs'))
+                ->orderByDesc('id')
+                ->get()
+                ->map(fn (ApiClient $client) => [
+                    'id' => $client->id,
+                    'name' => $client->name,
+                    'key' => $client->app_id ?: '—',
+                    'abilities' => implode(', ', $this->apiClientAbilities($client->abilities)),
+                    'active' => (bool) $client->is_active,
+                    'requests' => (int) ($client->request_logs_count ?? 0),
+                    'rateLimitSecond' => $hasRateLimitPerSecond ? (int) ($client->rate_limit_per_second ?? 0) : null,
+                    'rateLimitMinute' => $hasRateLimitPerMinute ? (int) ($client->rate_limit_per_minute ?? 0) : null,
+                    'createUrl' => route('boshqaruv.api-clients.store'),
+                    'updateUrl' => route('boshqaruv.api-clients.update', $client),
+                    'toggleUrl' => route('boshqaruv.api-clients.toggle', $client),
+                    'regenerateUrl' => route('boshqaruv.api-clients.regenerate', $client),
+                    'destroyUrl' => route('boshqaruv.api-clients.destroy', $client),
+                ])
+                ->values()
+                ->all();
+        });
     }
 
     private function apiLogsPayload(): array
@@ -4395,9 +4608,10 @@ class AdminController extends Controller
             return [];
         }
 
-        return ApiClientRequestLog::query()
+        return Cache::remember('boshqaruv:api-clients:logs:v1', now()->addSeconds(30), fn () => ApiClientRequestLog::query()
             ->with('client:id,name')
             ->latest()
+            ->take(50)
             ->get()
             ->map(fn (ApiClientRequestLog $log) => [
                 'id' => $log->id,
@@ -4408,7 +4622,7 @@ class AdminController extends Controller
                 'date' => optional($log->created_at)->format('Y-m-d H:i:s'),
             ])
             ->values()
-            ->all();
+            ->all());
     }
 
     private function apiClientsMeta(): array
@@ -4431,9 +4645,31 @@ class AdminController extends Controller
             $warnings[] = 'API request loglari jadvali topilmadi. So‘rov statistikasi va loglar ko‘rsatilmaydi.';
         }
 
-        return [
+        return Cache::remember('boshqaruv:api-clients:meta:v1', now()->addMinutes(5), fn () => [
             'warnings' => $warnings,
-        ];
+        ]);
+    }
+
+    private function apiClientAbilities(mixed $abilities): array
+    {
+        if (is_string($abilities)) {
+            $decoded = json_decode($abilities, true);
+            $abilities = is_array($decoded) ? $decoded : preg_split('/[\s,]+/', $abilities);
+        }
+
+        return collect(is_array($abilities) ? $abilities : [])
+            ->map(fn ($ability) => strtolower(trim((string) $ability)))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all() ?: ['read'];
+    }
+
+    private function clearApiClientCache(): void
+    {
+        Cache::forget('boshqaruv:api-clients:payload:v2');
+        Cache::forget('boshqaruv:api-clients:logs:v1');
+        Cache::forget('boshqaruv:api-clients:meta:v1');
     }
 
     private function settingsPayload(): array

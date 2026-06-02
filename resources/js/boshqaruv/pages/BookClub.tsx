@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button } from 'react-bootstrap';
 
@@ -85,6 +85,30 @@ export default function BookClub() {
   };
 
   const reloadDetail = () => selectedPost && openDetail(selectedPost);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const focusPostId = Number(new URLSearchParams(window.location.search).get('focus_post') || 0);
+    if (!focusPostId) return;
+
+    const existing = bookClubPosts.find((post) => post.id === focusPostId);
+
+    if (existing) {
+      openDetail(existing);
+      return;
+    }
+
+    openDetail({
+      id: focusPostId,
+      author: 'Book Club post',
+      repost: false,
+      likes: 0,
+      comments: 0,
+      warning: false,
+      dataUrl: `/boshqaruv/book-club/${focusPostId}/data`,
+    });
+  }, []);
 
   const destroy = (post: Post) => {
     if (!post.destroyUrl || !confirm(`#${post.id} post o'chirilsinmi?`)) return;

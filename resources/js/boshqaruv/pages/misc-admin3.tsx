@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button, Form } from 'react-bootstrap';
 import PaginationControls from '../components/PaginationControls';
@@ -177,6 +177,30 @@ export function ChatKuzatuv() {
       setDetail(response.ok ? await response.json() : null);
     } finally { setLoading(false); }
   };
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const focusChatId = Number(new URLSearchParams(window.location.search).get('focus_chat') || 0);
+    if (!focusChatId) return;
+
+    const existing = conversations.find((conversation) => conversation.id === focusChatId);
+
+    if (existing) {
+      open(existing);
+      return;
+    }
+
+    open({
+      id: focusChatId,
+      kind: 'unknown',
+      user: 'Foydalanuvchi',
+      agent: 'Chat',
+      messages: 0,
+      lastMsg: 'Xabarlar yuklanmoqda...',
+      dataUrl: `/boshqaruv/chat/${focusChatId}/data`,
+    });
+  }, []);
 
   return (
     <div>

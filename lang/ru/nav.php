@@ -13,9 +13,10 @@ return [
     'logo_aria' => 'Kitobchi',
     'lang_label' => 'Язык',
 
-    'footer_good' => 'The Good',
-    'footer_boring' => 'The Boring',
-    'footer_cool' => 'The Cool',
+    'footer_good' => 'Связь и сообщество',
+    'footer_boring' => 'Правовая информация',
+    'footer_cool' => 'Мобильные приложения',
     'footer_help' => 'Помощь',
     'footer_all_doc' => 'Все документы',
+    'api_docs' => 'Документация API',
 ];
