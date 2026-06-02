@@ -1823,7 +1823,8 @@ class AdminController extends Controller
                     'firstName' => $user->name,
                     'lastName' => $user->lastname,
                     'email' => $user->email ?? '',
-                    'phone' => $user->phone_number ?? $user->phone ?? '',
+                    'phone' => $this->formatPhone($user->phone_number ?? $user->phone ?? ''),
+                    'rawPhone' => $user->phone_number ?? $user->phone ?? '',
                     'avatar' => $this->assetFromStorage($user->avatar),
                     'orders' => (int) ($user->orders_count ?? 0),
                     'cards' => (int) ($user->cards_count ?? 0),
@@ -1836,6 +1837,7 @@ class AdminController extends Controller
                     'online' => $lastSeenAt?->gte(now()->subMinutes(5)) ?? false,
                     'lastSeenAt' => $lastSeenAt?->format('Y-m-d H:i'),
                     'joined' => optional($user->created_at)->format('Y-m-d'),
+                    'joinedLabel' => $this->dateTime($user->created_at),
                     'dataUrl' => route('boshqaruv.users.data', $user),
                     'blockUrl' => route('boshqaruv.users.block', $user),
                     'unblockUrl' => route('boshqaruv.users.unblock', $user),
@@ -1893,6 +1895,11 @@ class AdminController extends Controller
         $subscriptions = Schema::hasTable('mystery_box_subscriptions') ? MysteryBoxSubscription::query()
             ->with(['plan:id,name_uz,months,books_per_month', 'deliveries'])
             ->where('user_id', $user->id)->latest()->take(6)->get() : collect();
+        $searchHistory = Schema::hasTable('search_histories') ? SearchHistory::query()
+            ->where('user_id', $user->id)
+            ->latest()
+            ->take(12)
+            ->get() : collect();
 
         return [
             'profile' => [
@@ -1901,7 +1908,8 @@ class AdminController extends Controller
                 'firstName' => $user->name,
                 'lastName' => $user->lastname,
                 'avatar' => $this->assetFromStorage($user->avatar),
-                'phone' => $user->phone_number,
+                'phone' => $this->formatPhone($user->phone_number),
+                'rawPhone' => $user->phone_number,
                 'email' => $user->email,
                 'username' => $user->username,
                 'telegramId' => $user->telegram_id,
@@ -1936,14 +1944,16 @@ class AdminController extends Controller
                 'following' => $following->count(),
                 'giftCertificates' => $giftCertificates->count(),
                 'mysteryBoxes' => $subscriptions->count(),
+                'searches' => $searchHistory->sum(fn (SearchHistory $history) => max(1, (int) ($history->search_count ?? 1))),
             ],
-            'orders' => (clone $orders)->latest()->take(8)->get()->map(fn (Sold $order) => [
+            'orders' => (clone $orders)->latest()->take(12)->get()->map(fn (Sold $order) => [
                 'id' => $order->id,
                 'status' => $order->status_code ?? $order->status,
                 'payment' => $order->payment_status_code ?? $order->paymentStatus,
                 'delivery' => $order->deliveryType,
                 'amount' => (float) ($order->amount ?? 0),
                 'date' => optional($order->created_at)->format('Y-m-d H:i'),
+                'url' => route('boshqaruv.orders', ['orders_search' => $order->id, 'orders_tab' => 'all']),
             ])->values(),
             'cards' => $cards->map(fn (UserCard $card) => [
                 'id' => $card->id,
@@ -1951,7 +1961,7 @@ class AdminController extends Controller
                 'number' => $card->masked_number,
                 'name' => $card->card_name,
                 'expires' => $card->expire_date,
-                'phone' => $card->phone_number,
+                'phone' => $this->formatPhone($card->phone_number),
                 'verified' => (bool) $card->is_verified,
                 'default' => (bool) $card->is_default,
                 'temporary' => (bool) $card->is_temporary,
@@ -1975,6 +1985,17 @@ class AdminController extends Controller
             ])->values(),
             'followers' => $followers,
             'following' => $following,
+            'searchHistory' => $searchHistory->map(fn (SearchHistory $history) => [
+                'id' => $history->id,
+                'text' => $history->text,
+                'resultCount' => (int) ($history->result_count ?? 0),
+                'resultName' => $history->result_name,
+                'resultType' => $history->result_type,
+                'searchCount' => (int) ($history->search_count ?? 0),
+                'draft' => (bool) $history->is_draft,
+                'date' => optional($history->created_at)->format('Y-m-d H:i'),
+                'url' => route('boshqaruv.search-history', ['search_history_search' => $history->text ?: $user->phone_number]),
+            ])->values(),
             'giftCertificates' => $giftCertificates->map(fn (GiftCertificate $certificate) => [
                 'id' => $certificate->id,
                 'code' => $certificate->code,
@@ -1993,6 +2014,8 @@ class AdminController extends Controller
                 'price' => (int) $subscription->price_uzs,
                 'progress' => $subscription->progress_pct,
                 'nextDeliveryAt' => optional($subscription->next_delivery_at)->format('Y-m-d'),
+                'showUrl' => route('admin.mystery-box.show', $subscription),
+                'indexUrl' => route('boshqaruv.mystery-box'),
             ])->values(),
             'actions' => [
                 'blockUrl' => route('boshqaruv.users.block', $user),
@@ -2022,7 +2045,7 @@ class AdminController extends Controller
             ->map(fn ($person) => [
                 'id' => $person->id,
                 'name' => trim(($person->name ?? '').' '.($person->lastname ?? '')) ?: 'Foydalanuvchi',
-                'phone' => $person->phone_number,
+                'phone' => $this->formatPhone($person->phone_number),
                 'avatar' => $this->assetFromStorage($person->avatar),
             ])
             ->values();
@@ -3530,6 +3553,15 @@ class AdminController extends Controller
             $actualPercent = (float) ($transaction->commissionPercent ?? 0);
             $actualCommission = (float) ($transaction->commissionPrice ?? 0);
             $expectedCommission = round($amount * $expected['percent'] / 100);
+            $netAmount = (float) ($transaction->netAmount ?? max(0, $amount - $actualCommission));
+            $balanceEffect = 0.0;
+            if ($transaction->status === SellerTransaction::STATUS_APPROVED) {
+                if ($transaction->type === 'income') {
+                    $balanceEffect = $netAmount;
+                } elseif ($transaction->type === 'expense') {
+                    $balanceEffect = -$netAmount;
+                }
+            }
 
             return [
                 'id' => $transaction->id,
@@ -3539,7 +3571,8 @@ class AdminController extends Controller
                 'orderId' => $transaction->order_id,
                 'sellerOrderId' => $transaction->seller_order_id,
                 'amount' => $amount,
-                'netAmount' => (float) ($transaction->netAmount ?? 0),
+                'netAmount' => $netAmount,
+                'balanceEffect' => $balanceEffect,
                 'actualPercent' => $actualPercent,
                 'actualCommission' => $actualCommission,
                 'expectedPercent' => $expected['percent'],
@@ -3547,6 +3580,8 @@ class AdminController extends Controller
                 'ruleSource' => $expected['source'],
                 'sellerRate' => $sellerRate,
                 'globalRule' => $expected['globalRule'],
+                'type' => $transaction->type,
+                'category' => $transaction->category,
                 'diffPercent' => round($actualPercent - $expected['percent'], 2),
                 'diffAmount' => round($actualCommission - $expectedCommission),
                 'status' => $transaction->status,
@@ -3563,6 +3598,7 @@ class AdminController extends Controller
                 'mismatches' => (int) $collection->where('ok', false)->count(),
                 'sellerSpecific' => (int) $collection->where('ruleSource', 'seller')->count(),
                 'global' => (int) $collection->where('ruleSource', 'global')->count(),
+                'balanceAdded' => (float) $collection->where('balanceEffect', '>', 0)->sum('balanceEffect'),
             ],
             'commissionRules' => $this->commissionRulesPayload(),
         ];
@@ -6189,6 +6225,33 @@ class AdminController extends Controller
         } catch (\Throwable) {
             return is_scalar($value) ? (string) $value : null;
         }
+    }
+
+    private function formatPhone(mixed $phone): ?string
+    {
+        if (blank($phone)) {
+            return null;
+        }
+
+        $raw = (string) $phone;
+        $digits = preg_replace('/\D+/', '', $raw) ?: '';
+
+        if (strlen($digits) === 9) {
+            $digits = '998'.$digits;
+        }
+
+        if (strlen($digits) === 12 && str_starts_with($digits, '998')) {
+            return sprintf(
+                '+%s %s %s %s %s',
+                substr($digits, 0, 3),
+                substr($digits, 3, 2),
+                substr($digits, 5, 3),
+                substr($digits, 8, 2),
+                substr($digits, 10, 2),
+            );
+        }
+
+        return $raw;
     }
 
     private function tableCount(string $table): int

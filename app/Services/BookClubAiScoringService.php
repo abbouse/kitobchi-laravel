@@ -26,8 +26,13 @@ class BookClubAiScoringService
      */
     public function scorePendingContent(bool $full = false, int $postLimit = 150, int $commentLimit = 240): array
     {
+        $this->syncRepostAiScores();
+
         $posts = BookClub::query()
             ->where('is_deleted', false)
+            ->where(function ($query) {
+                $query->where('repost', false)->orWhereNull('repost');
+            })
             ->when(!$full, function ($query) {
                 $query->where(function ($q) {
                     $q->whereNull('ai_post_checked_at')
@@ -67,6 +72,75 @@ class BookClubAiScoringService
             'posts' => $posts->count(),
             'comments' => $comments->count(),
         ];
+    }
+
+    private function syncRepostAiScores(int $limit = 300): void
+    {
+        BookClub::query()
+            ->where('is_deleted', false)
+            ->where('repost', true)
+            ->where(function ($query) {
+                $query->whereNull('ai_post_score')
+                    ->orWhereNull('ai_post_checked_at')
+                    ->orWhereIn('ai_post_status', ['pending', 'failed', 'skipped_repost']);
+            })
+            ->orderByDesc('updated_at')
+            ->limit($limit)
+            ->get([
+                'id',
+                'reposted_user_id',
+                'text',
+                'product_id',
+                'product_type',
+                'ai_post_status',
+            ])
+            ->each(function (BookClub $repost): void {
+                if (!$repost->reposted_user_id) {
+                    BookClub::query()->whereKey($repost->id)->update([
+                        'ai_post_status' => 'skipped_repost',
+                        'ai_post_note' => 'Repost: original post topilmadi',
+                        'ai_post_checked_at' => now(),
+                    ]);
+                    return;
+                }
+
+                $original = BookClub::query()
+                    ->where('is_deleted', false)
+                    ->where(function ($query) {
+                        $query->where('repost', false)->orWhereNull('repost');
+                    })
+                    ->where('user_id', $repost->reposted_user_id)
+                    ->where('text', $repost->text)
+                    ->where('product_id', $repost->product_id)
+                    ->where('product_type', $repost->product_type)
+                    ->where('ai_post_status', 'scored')
+                    ->whereNotNull('ai_post_score')
+                    ->orderByDesc('id')
+                    ->first([
+                        'ai_post_score',
+                        'ai_post_note',
+                        'ai_post_model',
+                        'ai_post_checked_at',
+                    ]);
+
+                if (!$original) {
+                    BookClub::query()->whereKey($repost->id)->update([
+                        'ai_post_status' => 'skipped_repost',
+                        'ai_post_note' => 'Repost: original post bahosi kutilmoqda',
+                        'ai_post_checked_at' => now(),
+                    ]);
+                    return;
+                }
+
+                BookClub::query()->whereKey($repost->id)->update([
+                    'ai_post_score' => $original->ai_post_score,
+                    'ai_post_status' => 'scored',
+                    'ai_post_note' => $original->ai_post_note ?: 'Repost: original post AI bahosi ishlatildi',
+                    'ai_post_model' => $original->ai_post_model,
+                    'ai_post_checked_at' => $original->ai_post_checked_at ?: now(),
+                    'ai_post_feedback_notified_at' => now(),
+                ]);
+            });
     }
 
     /**

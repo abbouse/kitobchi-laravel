@@ -132,14 +132,23 @@ class BookClubController extends Controller
             'text' => 'required|string|max:2000',
         ]);
 
-        $bookClub->update([
+        $aiPayload = $bookClub->repost
+            ? [
+                'ai_post_status' => 'skipped_repost',
+                'ai_post_note' => 'Repost: original post AI bahosi ishlatiladi',
+                'ai_post_checked_at' => now(),
+            ]
+            : [
+                'ai_post_status' => 'pending',
+                'ai_post_score' => null,
+                'ai_post_checked_at' => null,
+                'ai_post_note' => null,
+                'ai_post_model' => null,
+            ];
+
+        $bookClub->update(array_merge([
             'text' => $request->text,
-            'ai_post_status' => 'pending',
-            'ai_post_score' => null,
-            'ai_post_checked_at' => null,
-            'ai_post_note' => null,
-            'ai_post_model' => null,
-        ]);
+        ], $aiPayload));
 
         return redirect()->route('admin.book-club.show', $bookClub)->with('success', 'Post yangilandi.');
     }

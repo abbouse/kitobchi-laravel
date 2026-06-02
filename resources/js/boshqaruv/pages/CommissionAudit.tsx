@@ -11,12 +11,16 @@ interface Row {
   orderId?: number;
   sellerOrderId?: number;
   amount: number;
+  netAmount: number;
+  balanceEffect: number;
   actualPercent: number;
   actualCommission: number;
   expectedPercent: number;
   expectedCommission: number;
   ruleSource: string;
   sellerRate: number;
+  type?: string;
+  category?: string;
   diffPercent: number;
   diffAmount: number;
   status: string;
@@ -51,7 +55,7 @@ export default function CommissionAudit() {
           ['Yozuvlar', commissionAuditTotals.rows || 0, 'bi-list-check', '#4f46e5'],
           ['Farq bor', commissionAuditTotals.mismatches || 0, 'bi-exclamation-triangle', '#ef4444'],
           ['Seller qoidasi', commissionAuditTotals.sellerSpecific || 0, 'bi-shop', '#10b981'],
-          ['Global qoida', commissionAuditTotals.global || 0, 'bi-globe', '#7c3aed'],
+          ['Balansga qo‘shilgan', commissionAuditTotals.balanceAdded || 0, 'bi-wallet2', '#0ea5e9'],
         ].map(([label, value, icon, color]) => (
           <div className="col-xl-3 col-md-6" key={String(label)}>
             <div className="stat-card">
@@ -80,7 +84,7 @@ export default function CommissionAudit() {
         </div>
         <div className="table-responsive">
           <table className="data-table">
-            <thead><tr><th>ID</th><th>Seller</th><th>Order</th><th>Summa</th><th>Qoida</th><th>Amalda</th><th>Kutilgan</th><th>Farq</th><th>Status</th></tr></thead>
+            <thead><tr><th>ID</th><th>Seller</th><th>Order</th><th>Summa</th><th>Balansga</th><th>Qoida</th><th>Amalda</th><th>Kutilgan</th><th>Farq</th><th>Status</th></tr></thead>
             <tbody>
               {commissionAuditRows.map((row) => (
                 <tr key={row.id}>
@@ -88,6 +92,12 @@ export default function CommissionAudit() {
                   <td><strong>{row.seller}</strong><small className="d-block text-muted">{row.phone || '—'}</small></td>
                   <td><span className="chip chip-gray">#{row.orderId || '—'}</span><small className="d-block text-muted">SELL #{row.sellerOrderId || '—'}</small></td>
                   <td>{money(row.amount)}</td>
+                  <td>
+                    <strong className={row.balanceEffect < 0 ? 'text-danger' : row.balanceEffect > 0 ? 'text-success' : 'text-muted'}>
+                      {row.balanceEffect > 0 ? '+' : ''}{money(row.balanceEffect || row.netAmount || 0)}
+                    </strong>
+                    <small className="d-block text-muted">{row.balanceEffect > 0 ? 'seller balansiga qo‘shildi' : row.balanceEffect < 0 ? 'balansdan qaytarildi' : 'balansga ta’sir yo‘q'}</small>
+                  </td>
                   <td><span className={`chip ${row.ruleSource === 'seller' ? 'chip-success' : 'chip-info'}`}>{row.ruleSource === 'seller' ? 'Seller' : 'Global'} · {row.expectedPercent}%</span></td>
                   <td>{row.actualPercent}% · {money(row.actualCommission)}</td>
                   <td>{row.expectedPercent}% · {money(row.expectedCommission)}</td>

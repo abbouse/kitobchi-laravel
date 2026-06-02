@@ -22,6 +22,9 @@ class ProductUgcRatingService
     {
         $products = BookClub::query()
             ->whereIn('id', array_values(array_unique(array_filter($postIds))))
+            ->where(function ($query) {
+                $query->where('repost', false)->orWhereNull('repost');
+            })
             ->whereNotNull('product_id')
             ->whereIn('product_type', ['book', 'stationery'])
             ->get(['product_id', 'product_type'])
@@ -39,6 +42,9 @@ class ProductUgcRatingService
     {
         $products = BookClub::query()
             ->where('is_deleted', false)
+            ->where(function ($query) {
+                $query->where('repost', false)->orWhereNull('repost');
+            })
             ->whereNotNull('product_id')
             ->whereIn('product_type', ['book', 'stationery'])
             ->get(['product_id', 'product_type'])
@@ -67,6 +73,9 @@ class ProductUgcRatingService
 
             $posts = DB::table('book_club as p')
                 ->where('p.is_deleted', 0)
+                ->where(function ($query) {
+                    $query->where('p.repost', false)->orWhereNull('p.repost');
+                })
                 ->where('p.product_type', $productType)
                 ->where('p.product_id', $productId)
                 ->where('p.ai_post_status', 'scored')

@@ -11,8 +11,6 @@ interface Transaction {
   phone?: string;
   type: string;
   amount: number;
-  commission?: number;
-  commissionPercent?: number;
   netAmount?: number;
   sellerId?: number;
   orderId?: number;
@@ -42,7 +40,7 @@ export default function Transaksiyalar() {
   const { transactions = [], transactionPagination = { page: 1, totalPages: 1, from: 0, to: 0, total: 0 }, transactionTotals = {} } = usePage<{ transactions?: Transaction[]; transactionPagination?: { page: number; totalPages: number; from: number; to: number; total: number }; transactionTotals?: Record<string, number> }>().props;
   const [selected, setSelected] = useState<Transaction | null>(null);
 
-  const totals = { income: transactionTotals.income || 0, commission: transactionTotals.commission || 0, pending: transactionTotals.pending || 0, approved: transactionTotals.approved || 0 };
+  const totals = { income: transactionTotals.income || 0, pending: transactionTotals.pending || 0, approved: transactionTotals.approved || 0 };
 
   const patch = (url?: string, message?: string) => {
     if (!url || (message && !confirm(message))) return;
@@ -54,7 +52,7 @@ export default function Transaksiyalar() {
       <div className="page-head">
         <div>
           <h1 className="page-title">Tranzaksiyalar</h1>
-          <p className="page-subtitle">Seller to'lovlari, yechib olish so'rovlari va komissiyalar</p>
+          <p className="page-subtitle">Seller to'lovlari va yechib olish so'rovlari</p>
         </div>
       </div>
 
@@ -63,7 +61,7 @@ export default function Transaksiyalar() {
           { label: 'Jami tranzaksiya', value: transactionTotals.all || 0, icon: 'bi-receipt', color: '#4f46e5' },
           { label: 'Tasdiqlangan', value: totals.approved, icon: 'bi-check-circle', color: '#10b981' },
           { label: 'Kutilmoqda', value: totals.pending, icon: 'bi-hourglass-split', color: '#f59e0b' },
-          { label: 'Komissiya', value: `${fmt(totals.commission)} so'm`, icon: 'bi-percent', color: '#7c3aed' },
+          { label: 'Jami summa', value: `${fmt(totals.income)} so'm`, icon: 'bi-wallet2', color: '#0ea5e9' },
         ].map((item) => (
           <div className="col-xl-3 col-md-6" key={item.label}>
             <div className="stat-card">
@@ -89,7 +87,7 @@ export default function Transaksiyalar() {
         </div>
         <div className="table-responsive">
           <table className="data-table">
-            <thead><tr><th>ID</th><th>Seller</th><th>Turi</th><th>Summa</th><th>Komissiya</th><th>Net</th><th>Metod</th><th>Sana</th><th>Status</th><th>Amallar</th></tr></thead>
+            <thead><tr><th>ID</th><th>Seller</th><th>Turi</th><th>Summa</th><th>Net</th><th>Metod</th><th>Sana</th><th>Status</th><th>Amallar</th></tr></thead>
             <tbody>
               {transactions.map((item) => (
                 <tr key={item.id}>
@@ -97,7 +95,6 @@ export default function Transaksiyalar() {
                   <td><div className="fw-semibold">{item.user}</div><small className="text-muted">{item.phone}</small></td>
                   <td><span className="chip chip-gray">{item.type}</span></td>
                   <td className={`fw-bold ${item.amount >= 0 ? 'text-success' : 'text-danger'}`}>{item.amount >= 0 ? '+' : ''}{fmt(item.amount)} so'm</td>
-                  <td>{fmt(item.commission || 0)} so'm</td>
                   <td className="fw-semibold">{fmt(item.netAmount ?? item.amount)} so'm</td>
                   <td><span className="chip chip-gray">{item.method || '—'}</span></td>
                   <td className="text-muted">{item.date || '—'}</td>
@@ -128,7 +125,6 @@ export default function Transaksiyalar() {
             <div className="col-6"><small className="text-muted">Turi</small><div>{selected?.type} {selected?.category ? `· ${selected.category}` : ''}</div></div>
             <div className="col-6"><small className="text-muted">Status</small><div><span className={`chip ${statusChip(selected?.status)}`}>{selected?.status || '—'}</span></div></div>
             <div className="col-6"><small className="text-muted">Summa</small><div className="fw-bold">{fmt(selected?.amount || 0)} so'm</div></div>
-            <div className="col-6"><small className="text-muted">Komissiya</small><div>{selected?.commissionPercent || 0}% · {fmt(selected?.commission || 0)} so'm</div></div>
             <div className="col-6"><small className="text-muted">Net</small><div className="fw-bold text-success">{fmt(selected?.netAmount ?? selected?.amount ?? 0)} so'm</div></div>
             <div className="col-6"><small className="text-muted">Karta</small><div>{selected?.method || '—'}</div></div>
             <div className="col-6"><small className="text-muted">Order</small><div>#{selected?.orderId || '—'} · SELL #{selected?.sellerOrderId || '—'}</div></div>

@@ -1409,7 +1409,7 @@ class BookClubController extends Controller
             }
 
             return DB::transaction(function () use ($user, $original) {
-                $newPost = BookClub::create([
+                $newPost = BookClub::create(array_merge([
                     'user_id'          => $user->id,
                     'text'             => $original->text,
                     'product_id'       => $original->product_id,
@@ -1418,7 +1418,7 @@ class BookClubController extends Controller
                     'theme_id'         => $original->theme_id,
                     'repost'           => true,
                     'reposted_user_id' => $original->user_id,
-                ]);
+                ], $this->repostAiFields($original)));
 
                 foreach ($original->images as $img) {
                     BookClubImages::create([
@@ -1473,6 +1473,29 @@ class BookClubController extends Controller
     }
 
     // ─── Yordamchi metodlar ───────────────────────────────────────────────────────
+
+    private function repostAiFields(BookClub $original): array
+    {
+        if ($original->ai_post_status === 'scored' && $original->ai_post_score !== null) {
+            return [
+                'ai_post_score' => $original->ai_post_score,
+                'ai_post_status' => 'scored',
+                'ai_post_note' => $original->ai_post_note ?: 'Repost: original post AI bahosi ishlatildi',
+                'ai_post_model' => $original->ai_post_model,
+                'ai_post_checked_at' => $original->ai_post_checked_at ?: now(),
+                'ai_post_feedback_notified_at' => now(),
+            ];
+        }
+
+        return [
+            'ai_post_score' => null,
+            'ai_post_status' => 'skipped_repost',
+            'ai_post_note' => 'Repost: original post AI bahosi kutilmoqda',
+            'ai_post_model' => $original->ai_post_model,
+            'ai_post_checked_at' => now(),
+            'ai_post_feedback_notified_at' => now(),
+        ];
+    }
 
     private function notifyFollowers($user, $postId)
     {
