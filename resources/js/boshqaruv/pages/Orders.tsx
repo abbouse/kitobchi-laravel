@@ -58,6 +58,12 @@ interface Ord {
   rawId?: number;
   customer: string;
   user?: { name?: string; phone?: string; email?: string; url?: string } | null;
+  userReputation?: {
+    score: number;
+    cashOnDeliveryAllowed: boolean;
+    codReturnStrikes: number;
+    cashOnDeliveryBlockReason?: string | null;
+  } | null;
   items: number;
   itemsList?: OrderItem[];
   total: number;
@@ -87,6 +93,15 @@ interface Ord {
   resendSourceOrderId?: number | null;
   resendReplacementOrderId?: number | null;
   resendAvailableAt?: string | null;
+  returnFlow?: {
+    isPostal: boolean;
+    isReturned: boolean;
+    penaltyAmount: number;
+    canCreateReplacement: boolean;
+    replacementOrderId?: number | null;
+    availableAt?: string | null;
+    note?: string | null;
+  } | null;
   address?: Record<string, unknown>;
   addresses?: Array<Record<string, unknown>>;
   isInstore?: boolean;
@@ -175,6 +190,7 @@ const statusOptions = [
   { code: 'in_delivery', label: 'Yetkazilmoqda' },
   { code: 'delivered', label: 'Yetib bordi' },
   { code: 'customer_received', label: 'Mijoz qabul qildi' },
+  { code: 'returned', label: 'Qaytgan' },
   { code: 'cancelled', label: 'Bekor qilindi' },
 ];
 
@@ -225,6 +241,48 @@ const postalReturnLabel = (value?: string) => {
     resend_pending_payment: "Qayta yuborish to'lovi kutilmoqda",
     resent: "Qayta yuborilgan",
   } as Record<string, string>)[normalized] || value || '—';
+};
+
+const isCashPending = (value?: string) => String(value || '').toLowerCase() === 'cash_pending';
+
+const returnFlowSummary = (order?: Ord | null) => {
+  if (!order?.returnFlow?.isPostal) {
+    return {
+      title: "Oddiy qaytish oqimi",
+      text: "Bu buyurtma pochta orqali qayta yuborish oqimiga kirmaydi. Zarur bo'lsa faqat 'Qaytgan' statusi bilan qayd etiladi.",
+      tone: 'secondary',
+    };
+  }
+
+  if (order.returnFlow.replacementOrderId) {
+    return {
+      title: 'Qayta yuborish buyurtmasi yaratilgan',
+      text: `Mijoz jarimani to'lagan va yangi qayta yuborish buyurtmasi ochilgan: #${order.returnFlow.replacementOrderId}.`,
+      tone: 'success',
+    };
+  }
+
+  if (order.returnFlow.canCreateReplacement) {
+    return {
+      title: "Mijoz to'lov qilsa qayta yuboriladi",
+      text: "Jarima summasi kiritilgan. Endi foydalanuvchi shu summani to'lab, buyurtmani qayta yuborish uchun yangi order ochishi mumkin.",
+      tone: 'warning',
+    };
+  }
+
+  if ((order.returnFlow.penaltyAmount || 0) > 0) {
+    return {
+      title: "Jarima kiritilgan, qaytish qayd etilgan",
+      text: "Buyurtma qaytgan deb belgilangan. Qayta yuborish ochilishi uchun tizim source order holatini tekshiradi.",
+      tone: 'warning',
+    };
+  }
+
+  return {
+    title: "Jarima hali kiritilmagan",
+    text: "Pochta buyurtmasi qaytgan bo'lsa, pastdagi blok orqali jarima summasini kiriting va qayta yuborish oqimini yoqing.",
+    tone: 'secondary',
+  };
 };
 
 const orderKindLabel = (order?: Ord | null) => {
@@ -331,6 +389,14 @@ export default function Orders() {
     if (!selectedOrd?.statusUrl) return;
     const nextStatus = normalizeStatus(status);
     if (nextStatus === 'cancelled' && !confirm('Buyurtma bekor qilinsinmi?')) return;
+    if (nextStatus === 'returned' && selectedOrd.deliveryType === 'postal' && selectedOrd.postalReturnUrl) {
+      alert("Pochta buyurtmasiga jarima belgilash va qayta yuborish oqimini ochish uchun pastdagi 'Pochta qaytimi / qayta yuborish' blokidan foydalaning.");
+      return;
+    }
+    if (
+      nextStatus === 'returned'
+      && !confirm("Buyurtma qaytgan deb belgilansinmi?\n\nAgar bu naqd buyurtma bo'lsa, mijoz uchun naqd to'lov vaqtincha yopilishi mumkin.")
+    ) return;
     const currentOrder = selectedOrd;
     setSelectedOrd({ ...currentOrder, status: nextStatus });
     router.patch(currentOrder.statusUrl, { status: nextStatus }, {
@@ -374,9 +440,10 @@ export default function Orders() {
           { label: 'Jami buyurtmalar', val: orderCounts.all || 0, icon: 'bi-receipt', color: '#4f46e5' },
           { label: 'Yetkazilgan', val: orderCounts.paid || 0, icon: 'bi-check-circle', color: '#10b981' },
           { label: 'Jarayonda', val: (orderCounts.pending || 0) + (orderCounts.shipped || 0), icon: 'bi-hourglass-split', color: '#f59e0b' },
+          { label: 'Qaytgan', val: orderCounts.returned || 0, icon: 'bi-arrow-counterclockwise', color: '#f97316' },
           { label: 'Bekor qilingan', val: orderCounts.cancelled || 0, icon: 'bi-x-circle', color: '#ef4444' },
         ].map((item) => (
-          <div className="col-xl-3 col-md-6" key={item.label}>
+          <div className="col-xl col-md-6" key={item.label}>
             <div className="stat-card">
               <div className="d-flex align-items-center gap-3">
                 <div className="stat-icon" style={{ background: item.color }}><i className={`bi ${item.icon}`}></i></div>
@@ -397,6 +464,7 @@ export default function Orders() {
             ['pending', 'Kutilmoqda'],
             ['shipped', "Yo'lda"],
             ['paid', 'Yetkazilgan'],
+            ['returned', 'Qaytgan'],
             ['cancelled', 'Bekor qilingan'],
           ].map(([status, label]) => (
             <button
@@ -477,6 +545,13 @@ export default function Orders() {
                     </div>
                     <span className={`chip ${statusChip(selectedOrd.status)}`}>{statusLabel(selectedOrd.status)}</span>
                   </div>
+                  {normalizeStatus(selectedOrd.status) === 'returned' ? (
+                    <div className="alert alert-warning py-2 small mb-3">
+                      Bu buyurtma <strong>qaytgan</strong> holatda. {isCashPending(selectedOrd.paymentStatus || selectedOrd.payment)
+                        ? "Naqd buyurtma bo'lgani uchun bu holat mijozning naqd buyurtma olish imkoniyatiga ta'sir qiladi."
+                        : "Bu qaytish qayd etilgan, lekin u naqd jarima hisobiga kirmaydi."}
+                    </div>
+                  ) : null}
                   <div className="row g-3">
                     <Detail label="Sana" value={selectedOrd.date} />
                     <Detail label="Yakunlangan" value={selectedOrd.completedAt} />
@@ -512,6 +587,28 @@ export default function Orders() {
                     <Detail label="Mijoz izohi" value={selectedOrd.buyerWish} />
                   </div>
                 </div>
+
+                {selectedOrd.userReputation ? (
+                  <div className="detail-panel mt-3">
+                    <h6 className="fw-bold mb-3">Mijoz ishonch holati</h6>
+                    <div className="row g-3">
+                      <Detail label="Ishonch balli" value={`${selectedOrd.userReputation.score} / 100`} />
+                      <Detail label="Qaytgan naqd buyurtmalar" value={`${selectedOrd.userReputation.codReturnStrikes} ta`} />
+                      <Detail
+                        label="Naqd buyurtma huquqi"
+                        value={selectedOrd.userReputation.cashOnDeliveryAllowed ? 'Ochiq' : 'Vaqtincha yopilgan'}
+                      />
+                      <Detail
+                        label="Izoh"
+                        value={selectedOrd.userReputation.cashOnDeliveryAllowed
+                          ? "Mijoz hozircha naqd buyurtma bera oladi."
+                          : selectedOrd.userReputation.cashOnDeliveryBlockReason}
+                      />
+                    </div>
+                  </div>
+                ) : null}
+
+                <ReturnPenaltyCard order={selectedOrd} />
               </div>
 
               <div className="col-lg-8">
@@ -588,7 +685,7 @@ export default function Orders() {
                         <Detail label="Sertifikat" value={`${fmt(selectedOrd.giftCertAmount || 0)} so'm`} />
                         <Detail label="Sertifikat ID" value={selectedOrd.giftCertificateId ? `#${selectedOrd.giftCertificateId}` : '—'} />
                         <Detail label="Promokod" value={selectedOrd.promocode} />
-                        <Detail label="Qaytim holati" value={selectedOrd.postalReturnStatus} />
+                        <Detail label="Qaytim holati" value={postalReturnLabel(selectedOrd.postalReturnStatus)} />
                         <Detail label="Qayta jo'natish to'lovi" value={`${fmt(selectedOrd.postalReturnFee || 0)} so'm`} />
                         <Detail label="Manba order" value={selectedOrd.resendSourceOrderId ? `#${selectedOrd.resendSourceOrderId}` : '—'} />
                         <Detail label="Replacement order" value={selectedOrd.resendReplacementOrderId ? `#${selectedOrd.resendReplacementOrderId}` : '—'} />
@@ -700,12 +797,15 @@ export default function Orders() {
                     </div>
                     <div className="col-xl-6">
                       <form className="rounded-3 border p-3 h-100" onSubmit={(event) => submitForm(event, selectedOrd.postalReturnUrl, 'patch')}>
-                        <div className="fw-semibold mb-2">Pochta qaytimi / qayta yuborish</div>
+                        <div className="fw-semibold mb-2">Pochta qaytimi / jarima / qayta yuborish</div>
+                        <div className="text-muted small mb-2">
+                          Bu blok buyurtmani qaytgan deb belgilaydi, jarima summasini yozadi va mijoz to'lagach qayta yuborish oqimini ochadi.
+                        </div>
                         <label className="form-label small text-muted">Qaytim xarajati</label>
                         <input name="postal_return_fee" type="number" min={0} max={1000000} className="form-control form-control-sm mb-2" defaultValue={selectedOrd.postalReturnFee || 0} required />
                         <label className="form-label small text-muted">Izoh</label>
                         <textarea name="postal_return_note" className="form-control form-control-sm mb-3" rows={2} defaultValue={selectedOrd.postalReturnNote || ''} />
-                        <button className="btn btn-sm btn-outline-secondary" disabled={!selectedOrd.postalReturnUrl}>Pochta qaytgan deb belgilash</button>
+                        <button className="btn btn-sm btn-outline-secondary" disabled={!selectedOrd.postalReturnUrl}>Jarima qo'yib qaytgan deb belgilash</button>
                       </form>
                     </div>
                     <div className="col-xl-6">
@@ -817,6 +917,44 @@ function AddressBlock({ address }: { address: Record<string, unknown> }) {
         <span>Xarita</span>
         <MapButtons mapLinks={mapLinks} />
       </div>
+    </div>
+  );
+}
+
+function ReturnPenaltyCard({ order }: { order: Ord }) {
+  const summary = returnFlowSummary(order);
+  const alertClass = summary.tone === 'success'
+    ? 'alert-success'
+    : summary.tone === 'warning'
+      ? 'alert-warning'
+      : 'alert-secondary';
+
+  return (
+    <div className="detail-panel mt-3">
+      <h6 className="fw-bold mb-3">Jarima va qayta yuborish</h6>
+      <div className={`alert ${alertClass} py-2 small mb-3`}>
+        <strong>{summary.title}.</strong> {summary.text}
+      </div>
+      <div className="row g-3">
+        <Detail label="Oqim turi" value={order.returnFlow?.isPostal ? 'Pochta orqali qaytish' : 'Oddiy qaytish'} />
+        <Detail label="Buyurtma holati" value={order.returnFlow?.isReturned ? 'Qaytgan deb qayd etilgan' : 'Hali qaytgan emas'} />
+        <Detail label="Jarima summasi" value={`${fmt(order.returnFlow?.penaltyAmount || 0)} so'm`} />
+        <Detail
+          label="Qayta yuborish holati"
+          value={order.returnFlow?.replacementOrderId
+            ? `Yangi order ochilgan (#${order.returnFlow.replacementOrderId})`
+            : order.returnFlow?.canCreateReplacement
+              ? "Mijoz to'lov qilsa ochiladi"
+              : "Hali ochilmagan"}
+        />
+        <Detail label="Qayta yuborish ochilgan vaqt" value={order.returnFlow?.availableAt} />
+        <Detail label="Admin izohi" value={order.returnFlow?.note || order.postalReturnNote} />
+      </div>
+      {order.returnFlow?.isPostal ? (
+        <div className="text-muted small mt-3">
+          Eslatma: `returned` holatda buyurtma yaratilganda ishlatilgan sertifikat, promokod yoki cashback ortga qaytmaydi. Faqat jarima to'lansa, qayta yuborish uchun yangi order ochiladi.
+        </div>
+      ) : null}
     </div>
   );
 }

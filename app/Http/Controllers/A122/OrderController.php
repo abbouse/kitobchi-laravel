@@ -415,7 +415,7 @@ class OrderController extends Controller
     public function updateStatus(Request $request, Sold $order)
     {
         $request->validate([
-            'status' => 'required|in:A,P,B,C,D,F,pending,packing,in_delivery,delivered,customer_received,cancelled',
+            'status' => 'required|in:A,P,B,C,D,F,R,pending,packing,in_delivery,delivered,customer_received,cancelled,returned',
         ]);
         $this->statusSync->updateMainOrder($order, (string) $request->input('status'));
         return back()->with('success', "Buyurtma holati yangilandi.");

@@ -271,6 +271,64 @@ class OrderService
         $this->productReviewPromptService->closeForOrder($freshOrder, 'order_reopened_after_completion');
     }
 
+    public function reverseAwardedCashbackForOrderReopened(Sold $order, ?string $reason = null): void
+    {
+        $freshOrder = $order->fresh() ?? $order;
+        if (! $freshOrder->user_id) {
+            return;
+        }
+
+        DB::transaction(function () use ($freshOrder, $reason) {
+            $lockedOrder = Sold::query()->lockForUpdate()->find($freshOrder->id);
+            if (! $lockedOrder) {
+                return;
+            }
+
+            if (! $lockedOrder->cashback_ready_at
+                && ! $lockedOrder->cashback_notified_at
+                && (int) ($lockedOrder->awarded_cashback_amount ?? 0) <= 0
+            ) {
+                return;
+            }
+
+            $revokeAmount = (int) ($lockedOrder->awarded_cashback_amount ?? 0);
+            $balanceBefore = (int) DB::table('users')->where('id', $lockedOrder->user_id)->value('cashback');
+
+            if ($revokeAmount > 0) {
+                DB::table('users')
+                    ->where('id', $lockedOrder->user_id)
+                    ->decrement('cashback', $revokeAmount);
+            }
+
+            DB::table('solds')->where('id', $lockedOrder->id)->update([
+                'awarded_cashback_amount' => 0,
+                'cashback_awarded_at' => null,
+                'cashback_ready_at' => null,
+                'cashback_notified_at' => null,
+                'updated_at' => now(),
+            ]);
+
+            if ($revokeAmount > 0) {
+                $this->cashbackHistoryService->record(
+                    userId: (int) $lockedOrder->user_id,
+                    action: 'revoked',
+                    amount: -$revokeAmount,
+                    order: $lockedOrder,
+                    balanceBefore: $balanceBefore,
+                    balanceAfter: $balanceBefore - $revokeAmount,
+                    meta: ['reason' => $reason ?? 'completed_order_reopened'],
+                );
+            }
+
+            Log::warning('Order cashback reversed after completion reopened', [
+                'order_id' => $lockedOrder->id,
+                'user_id' => $lockedOrder->user_id,
+                'revoke_amount' => $revokeAmount,
+                'reason' => $reason,
+            ]);
+        });
+    }
+
     public function awardCashbackForPaidOrder(Sold $order, ?User $user = null, bool $notify = false): int
     {
         $user ??= $order->user()->first();

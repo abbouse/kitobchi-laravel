@@ -183,7 +183,7 @@ class AdminController extends Controller
 
     public function orderData(Sold $order): JsonResponse
     {
-        $order->load(['user:id,name,lastname,phone_number,email', 'fulfillment.hub']);
+        $order->load(['user:id,name,lastname,phone_number,email,reputation_score,cash_on_delivery_allowed,cod_return_strikes', 'fulfillment.hub']);
 
         return response()->json($this->orderPayload($order));
     }
@@ -2601,7 +2601,8 @@ class AdminController extends Controller
             'pending' => [OrderStatusCode::PENDING, OrderStatusCode::PACKING],
             'shipped' => [OrderStatusCode::IN_DELIVERY],
             'paid' => [OrderStatusCode::DELIVERED, OrderStatusCode::CUSTOMER_RECEIVED],
-            'cancelled' => [OrderStatusCode::CANCELLED, OrderStatusCode::RETURNED],
+            'returned' => [OrderStatusCode::RETURNED],
+            'cancelled' => [OrderStatusCode::CANCELLED],
             default => [],
         };
 
@@ -2629,7 +2630,8 @@ class AdminController extends Controller
                 'pending' => $this->mainOrderStatusCount([OrderStatusCode::PENDING, OrderStatusCode::PACKING]),
                 'shipped' => $this->mainOrderStatusCount([OrderStatusCode::IN_DELIVERY]),
                 'paid' => $this->mainOrderStatusCount([OrderStatusCode::DELIVERED, OrderStatusCode::CUSTOMER_RECEIVED]),
-                'cancelled' => $this->mainOrderStatusCount([OrderStatusCode::CANCELLED, OrderStatusCode::RETURNED]),
+                'returned' => $this->mainOrderStatusCount([OrderStatusCode::RETURNED]),
+                'cancelled' => $this->mainOrderStatusCount([OrderStatusCode::CANCELLED]),
             ],
             'orderFilters' => ['tab' => $tab, 'search' => $search],
         ];
@@ -5854,6 +5856,14 @@ class AdminController extends Controller
                 'email' => $order->user->email,
                 'url' => route('boshqaruv.users'),
             ] : null,
+            'userReputation' => $order->user ? [
+                'score' => round((float) ($order->user->reputation_score ?? \App\Services\UserReputationService::BASELINE_SCORE), 2),
+                'cashOnDeliveryAllowed' => (bool) ($order->user->cash_on_delivery_allowed ?? true),
+                'codReturnStrikes' => (int) ($order->user->cod_return_strikes ?? 0),
+                'cashOnDeliveryBlockReason' => ($order->user->cash_on_delivery_allowed ?? true)
+                    ? null
+                    : "Avvalgi qaytgan naqd buyurtma sabab mijoz uchun naqd to'lov vaqtincha yopilgan.",
+            ] : null,
             'items' => $items->count(),
             'itemsList' => $items->all(),
             'total' => (float) ($order->amount ?? 0),
@@ -5883,6 +5893,15 @@ class AdminController extends Controller
             'resendSourceOrderId' => $order->resend_source_order_id,
             'resendReplacementOrderId' => $order->resend_replacement_order_id,
             'resendAvailableAt' => optional($order->resend_available_at)->format('Y-m-d H:i'),
+            'returnFlow' => [
+                'isPostal' => $order->deliveryType === 'postal',
+                'isReturned' => OrderStatusCode::fromLegacy($order->status_code ?? $order->status) === OrderStatusCode::RETURNED,
+                'penaltyAmount' => (float) ($order->postal_return_fee ?? 0),
+                'canCreateReplacement' => $order->isPostalResendSource(),
+                'replacementOrderId' => $order->resend_replacement_order_id,
+                'availableAt' => optional($order->resend_available_at)->format('Y-m-d H:i'),
+                'note' => $order->postal_return_note,
+            ],
             'address' => $primaryAddress,
             'addresses' => $address->all(),
             'isInstore' => (bool) ($order->is_instore ?? false),

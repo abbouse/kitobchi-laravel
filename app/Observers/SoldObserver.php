@@ -18,6 +18,7 @@ use App\Models\User;
 use App\Services\SellerOrderSettlementService;
 use App\Services\CourierOrderSettlementService;
 use App\Services\ProductReviewPromptService;
+use App\Services\OrderService;
 use App\Services\UserReputationService;
 use App\Services\UserPositionService;
 use Illuminate\Support\Facades\DB;
@@ -30,6 +31,7 @@ class SoldObserver
         private readonly SellerOrderSettlementService $sellerOrderSettlementService,
         private readonly CourierOrderSettlementService $courierOrderSettlementService,
         private readonly ProductReviewPromptService $productReviewPromptService,
+        private readonly OrderService $orderService,
         private readonly UserReputationService $userReputationService,
     ) {}
 
@@ -90,6 +92,10 @@ class SoldObserver
                 "old_status={$previousStatusCode}, old_payment={$previousPaymentStatusCode}, new_status={$currentStatusCode}, new_payment={$currentPaymentStatusCode}"
             );
             $this->productReviewPromptService->closeForOrder($order->fresh(), 'order_reverted');
+            $this->orderService->reverseAwardedCashbackForOrderReopened(
+                $order,
+                "old_status={$previousStatusCode}, old_payment={$previousPaymentStatusCode}, new_status={$currentStatusCode}, new_payment={$currentPaymentStatusCode}"
+            );
         }
 
         if (($statusChanged || $paymentStatusChanged) && !$previousCompletedPaid && $currentCompletedPaid && $order->user_id) {
