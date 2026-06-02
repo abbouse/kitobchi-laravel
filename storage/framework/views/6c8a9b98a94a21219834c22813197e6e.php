@@ -35,6 +35,10 @@
 <?php unset($__componentOriginalcb19cb35a534439097b02b8af91726ee); ?>
 <?php endif; ?>
 
+  <?php if(session('warning')): ?>
+    <div class="alert alert-warning border-0 mb-0"><?php echo e(session('warning')); ?></div>
+  <?php endif; ?>
+
   <div class="kc-filter-card">
     <div class="nav nav-pills flex-wrap">
       <?php $__currentLoopData = [
@@ -135,7 +139,11 @@
                 </div>
               </td>
               <td class="small text-secondary text-nowrap">
-                <?php echo e($client->rate_limit_per_second ?? 8); ?>/s · <?php echo e($client->rate_limit_per_minute ?? 240); ?>/min
+                <?php if(($ratePerSecondColumnExists ?? false) || ($ratePerMinuteColumnExists ?? false)): ?>
+                  <?php echo e($client->rate_limit_per_second ?? 8); ?>/s · <?php echo e($client->rate_limit_per_minute ?? 240); ?>/min
+                <?php else: ?>
+                  <span class="text-warning-emphasis">Migratsiya kutilmoqda</span>
+                <?php endif; ?>
               </td>
               <td>
                 <form method="POST" action="<?php echo e(route('admin.api-clients.toggle', $client)); ?>" class="d-inline">

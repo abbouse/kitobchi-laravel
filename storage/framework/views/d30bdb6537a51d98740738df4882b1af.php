@@ -4,6 +4,7 @@
 
 <?php $__env->startSection('content'); ?>
 <?php
+    use App\Support\AdminOrderStatusPresenter;
     $tabs = ['all' => ['label' => 'Barchasi', 'count' => $counts['all'] ?? 0]];
     foreach ($statuses as $value => $statusItem) {
         $tabs[(string) $value] = ['label' => $statusItem['label'], 'count' => $counts[$value] ?? 0];
@@ -194,7 +195,7 @@
                             $itemsCount = collect($order->order?->items ?? [])->filter(fn ($item) => (int) ($item['seller_id'] ?? 0) === (int) $order->seller_id)->sum(fn ($item) => (int) ($item['count_item'] ?? 1));
                             $orderAmount = (float) ($order->amount ?? 0);
                             $statusCode = $order->status_code ?? \App\Enums\SellerOrderStatusCode::fromLegacy($order->status ?? 1)->value;
-                            $statusMeta = $statuses[$statusCode] ?? ['label' => $statusCode, 'badge' => 'badge-muted'];
+                            $statusMeta = $statuses[$statusCode] ?? ['label' => AdminOrderStatusPresenter::sellerOrder($statusCode), 'badge' => 'badge-muted'];
                         ?>
                         <tr>
                             <td>

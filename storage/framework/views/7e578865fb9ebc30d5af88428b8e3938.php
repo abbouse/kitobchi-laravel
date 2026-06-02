@@ -4,21 +4,16 @@
 <?php $__env->startSection('content'); ?>
 <div class="d-flex flex-column gap-4">
   <?php
+    use App\Support\AdminOrderStatusPresenter;
     $currentOrderStatus = $order->status_code ?? $order->status;
     $currentPaymentStatus = $order->payment_status_code ?? $order->paymentStatus;
     $normalizedDeliveryType = (string) ($order->deliveryType ?? 'delivery');
     $isPostalDelivery = $normalizedDeliveryType === 'postal';
 
-    $orderStatusLabel = match ($currentOrderStatus) {
-      'pending', 'A' => 'Kutilmoqda',
-      'packing', 'P' => 'Qadoqlanmoqda',
-      'in_delivery', 'B' => "Yo'lda",
-      'delivered', 'C' => 'Yetib bordi',
-      'customer_received', 'D' => 'Mijoz qabul qildi',
-      'returned' => 'Pochta qaytargan',
-      'cancelled', 'F' => 'Bekor qilingan',
-      default => $currentOrderStatus ?: '—',
-    };
+    $orderStatusLabel = AdminOrderStatusPresenter::mainOrder($currentOrderStatus);
+    if ((string) $currentOrderStatus === 'returned') {
+      $orderStatusLabel = 'Pochta qaytargan';
+    }
     $orderStatusBadge = match ($currentOrderStatus) {
       'delivered', 'C', 'customer_received', 'D' => 'badge badge-success',
       'returned', 'cancelled', 'F' => 'badge badge-danger',
@@ -26,23 +21,13 @@
       default => 'badge badge-info',
     };
 
-    $paymentLabel = match ($currentPaymentStatus) {
-      'paid', 2 => 'Karta orqali to‘langan',
-      'card_pending', 1 => 'Karta orqali, tasdiq kutilmoqda',
-      'cash_pending', 0 => 'Naqd to‘lov',
-      'cancelled', 3 => 'To‘lov bekor qilingan',
-      default => 'Aniqlanmagan',
-    };
+    $paymentLabel = AdminOrderStatusPresenter::paymentDetail($currentPaymentStatus);
     $paymentBadge = match ($currentPaymentStatus) {
       'paid', 2 => 'badge badge-success',
       'cancelled', 3 => 'badge badge-danger',
       default => 'badge badge-warning',
     };
-    $paymentMethodLabel = match ($currentPaymentStatus) {
-      'paid', 'card_pending', 2, 1 => 'Karta / Paylov',
-      'cash_pending', 0 => 'Naqd',
-      default => 'Noma’lum to‘lov turi',
-    };
+    $paymentMethodLabel = AdminOrderStatusPresenter::paymentMethod($currentPaymentStatus);
     $paymentCardLabel = trim(collect([
       $paymentCardView['vendor'] ?? null,
       $paymentCardView['masked_number'] ?? null,
@@ -127,29 +112,9 @@
       ? "Do‘konda — darhol"
       : 'Oddiy buyurtma — 7 kundan keyin';
 
-    $sellerStatusLabel = function ($status) {
-      return match ($status) {
-        'new', 1, '1' => 'Yangi',
-        'accepted', 2, '2' => 'Qabul qilingan',
-        'handed_to_courier', 3, '3' => 'Kuryerga topshirilgan',
-        'cancelled', 4, '4' => 'Bekor qilingan',
-        default => $status ?: '—',
-      };
-    };
+    $sellerStatusLabel = fn ($status) => AdminOrderStatusPresenter::sellerOrder($status);
 
-    $courierStatusLabel = function ($status) {
-      return match ($status) {
-        'payment_pending', 'pay_process' => 'To‘lov kutilmoqda',
-        'pending' => 'Kutilmoqda',
-        'accepted' => 'Qabul qilingan',
-        'in_delivery' => "Yo'lda",
-        'delivered' => 'Yetib bordi',
-        'customer_received' => 'Mijoz qabul qildi',
-        'returned' => 'Qaytgan',
-        'cancelled', 'rejected' => 'Bekor qilingan',
-        default => $status ?: '—',
-      };
-    };
+    $courierStatusLabel = fn ($status) => AdminOrderStatusPresenter::courierOrder($status);
   ?>
 
   <?php if (isset($component)) { $__componentOriginalcb19cb35a534439097b02b8af91726ee = $component; } ?>

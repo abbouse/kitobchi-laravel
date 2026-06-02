@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ApiClient;
 use App\Models\ApiClientRequestLog;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class ApiClientController extends Controller
@@ -40,6 +41,10 @@ class ApiClientController extends Controller
 
     private function buildLogsQuery(Request $request)
     {
+        if (! Schema::hasTable('api_client_request_logs')) {
+            return ApiClientRequestLog::query()->whereRaw('1 = 0');
+        }
+
         return ApiClientRequestLog::query()
             ->with('client:id,name,app_id')
             ->when($request->filled('client_id'), fn ($query) => $query->where('api_client_id', (int) $request->input('client_id')))
@@ -58,6 +63,18 @@ class ApiClientController extends Controller
 
     public function index(Request $request)
     {
+        if (! Schema::hasTable('api_clients')) {
+            $clients = ApiClient::query()->whereRaw('1 = 0')->paginate(20);
+            $counts = ['all' => 0, 'active' => 0, 'inactive' => 0];
+            $tab = $request->input('tab', 'active');
+
+            return view('a122.api-clients.index', compact('clients', 'counts', 'tab'))
+                ->with('warning', '`api_clients` jadvali topilmadi. `php artisan migrate`dan keyin sahifa to‘liq ishlaydi.');
+        }
+
+        $ratePerSecondColumnExists = Schema::hasColumn('api_clients', 'rate_limit_per_second');
+        $ratePerMinuteColumnExists = Schema::hasColumn('api_clients', 'rate_limit_per_minute');
+
         $clients = ApiClient::query()
             ->when($request->input('tab', 'active') === 'active', fn ($query) => $query->where('is_active', true))
             ->when($request->input('tab') === 'inactive', fn ($query) => $query->where('is_active', false))
@@ -83,7 +100,7 @@ class ApiClientController extends Controller
             'inactive' => ApiClient::where('is_active', false)->count(),
         ];
 
-        return view('a122.api-clients.index', compact('clients', 'counts', 'tab'));
+        return view('a122.api-clients.index', compact('clients', 'counts', 'tab', 'ratePerSecondColumnExists', 'ratePerMinuteColumnExists'));
     }
 
     public function create()
@@ -119,9 +136,9 @@ class ApiClientController extends Controller
             ->paginate(50)
             ->withQueryString();
 
-        $clients = ApiClient::query()
-            ->orderBy('name')
-            ->get(['id', 'name', 'app_id']);
+        $clients = Schema::hasTable('api_clients')
+            ? ApiClient::query()->orderBy('name')->get(['id', 'name', 'app_id'])
+            : collect();
 
         return view('a122.api-clients.logs', compact('logs', 'clients'));
     }

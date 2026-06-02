@@ -5,10 +5,11 @@
 
 @section('content')
 @php
+    use App\Support\AdminOrderStatusPresenter;
     $customerName = trim(($sellerOrder->client?->name ?? '') . ' ' . ($sellerOrder->client?->lastname ?? '')) ?: ($address['fullName'] ?? '—');
     $customerPhone = $sellerOrder->client?->phone_number ?? ($address['phoneNumber'] ?? '—');
     $statusVal = $sellerOrder->status_code ?? \App\Enums\SellerOrderStatusCode::fromLegacy($sellerOrder->status ?? 1)->value;
-    $statusMeta = $statuses[$statusVal] ?? ['label' => $statusVal, 'badge' => 'badge-muted'];
+    $statusMeta = $statuses[$statusVal] ?? ['label' => AdminOrderStatusPresenter::sellerOrder($statusVal), 'badge' => 'badge-muted'];
     $statusBadgeClass = match ($statusMeta['badge']) {
         'badge-success' => 'text-bg-success-subtle border border-success-subtle text-success-emphasis',
         'badge-danger' => 'text-bg-danger-subtle border border-danger-subtle text-danger-emphasis',

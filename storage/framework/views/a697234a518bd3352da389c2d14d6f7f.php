@@ -14,7 +14,6 @@
       ['label' => 'Kanstovar', 'route' => 'admin.stationery.index', 'icon' => 'pencil-square'],
       ['label' => 'Mualliflar', 'route' => 'admin.authors.index', 'icon' => 'pen'],
       ['label' => 'Nashriyotlar', 'route' => 'admin.publishers.index', 'icon' => 'building'],
-      ['label' => 'Parser', 'route' => 'admin.parsers.index', 'icon' => 'database-down'],
       ['label' => 'Kanstovar kategoriyalari', 'route' => 'admin.stationery-categories.index', 'icon' => 'tags'],
       ['label' => 'Reels', 'route' => 'admin.reels.index', 'icon' => 'camera-reels'],
       ['label' => 'Market yangiliklari', 'route' => 'admin.news.index', 'icon' => 'newspaper'],

@@ -4,8 +4,9 @@
 
 <?php $__env->startSection('content'); ?>
 <?php
+    use App\Support\AdminOrderStatusPresenter;
     $statusKey = (string) ($courierOrder->status ?? '');
-    $statusLabel = $statuses[$statusKey]['label'] ?? ($statusKey ?: '—');
+    $statusLabel = $statuses[$statusKey]['label'] ?? AdminOrderStatusPresenter::courierOrder($statusKey);
     $statusBadgeClass = match ($statusKey) {
         'delivered', 'customer_received' => 'text-bg-success-subtle border border-success-subtle text-success-emphasis',
         'pending', 'pay_process' => 'text-bg-warning-subtle border border-warning-subtle text-warning-emphasis',
@@ -170,7 +171,7 @@
 
                     <div class="row g-4 small">
                         <div class="col-sm-6"><div class="text-secondary mb-1">Viloyat</div><div><?php echo e($courierOrder->courier->region ?? '—'); ?></div></div>
-                        <div class="col-sm-6"><div class="text-secondary mb-1">Holat</div><div><?php echo e($courierOrder->courier->status ?? '—'); ?></div></div>
+                        <div class="col-sm-6"><div class="text-secondary mb-1">Holat</div><div><?php echo e(\App\Support\AdminOrderStatusPresenter::courierProfile($courierOrder->courier->status ?? null)); ?></div></div>
                     </div>
                 <?php else: ?>
                     <div class="text-secondary">Kuryer ma'lumotlari mavjud emas.</div>

@@ -9,6 +9,27 @@ use Illuminate\Support\Str;
 
 class PolicyController extends Controller
 {
+    private const LOCALES = ['ru', 'en', 'ja'];
+
+    private function syncTranslations(Policy $policy, array $translations): void
+    {
+        foreach (self::LOCALES as $locale) {
+            $payload = $translations[$locale] ?? [];
+            $title = trim((string) ($payload['title'] ?? ''));
+            $content = trim((string) ($payload['content'] ?? ''));
+
+            if ($title === '' && $content === '') {
+                $policy->translations()->where('locale', $locale)->delete();
+                continue;
+            }
+
+            $policy->translations()->updateOrCreate(
+                ['locale' => $locale],
+                ['title' => $title !== '' ? $title : null, 'content' => $content]
+            );
+        }
+    }
+
     public function index(Request $request)
     {
         $tab = $request->input('tab', 'active');
@@ -45,7 +66,7 @@ class PolicyController extends Controller
 
     public function create()
     {
-        return view('a122.policies.edit');
+        return redirect()->route('admin.policies.index');
     }
 
     public function store(Request $request)
@@ -57,6 +78,9 @@ class PolicyController extends Controller
             'sort_order' => 'nullable|integer|min:0',
             'is_active'  => 'nullable|boolean',
             'show_in_app' => 'nullable|boolean',
+            'translations' => 'nullable|array',
+            'translations.*.title' => 'nullable|string|max:255',
+            'translations.*.content' => 'nullable|string',
         ]);
 
         if (empty($data['slug'])) {
@@ -65,30 +89,36 @@ class PolicyController extends Controller
         $data['is_active']   = $request->boolean('is_active');
         $data['show_in_app'] = $request->boolean('show_in_app');
 
-        Policy::create($data);
+        $policy = Policy::create($data);
+        $this->syncTranslations($policy, (array) $request->input('translations', []));
         return redirect()->route('admin.policies.index')->with('success', "Siyosat qo'shildi.");
     }
 
     public function edit(Policy $policy)
     {
-        return view('a122.policies.edit', compact('policy'));
+        return redirect()->route('admin.policies.index');
     }
 
     public function update(Request $request, Policy $policy)
     {
         $data = $request->validate([
             'title'      => 'required|string|max:255',
+            'slug'       => 'nullable|string|max:255|unique:policies,slug,' . $policy->id,
             'content'    => 'required|string',
             'sort_order' => 'nullable|integer|min:0',
             'is_active'  => 'nullable|boolean',
             'show_in_app' => 'nullable|boolean',
+            'translations' => 'nullable|array',
+            'translations.*.title' => 'nullable|string|max:255',
+            'translations.*.content' => 'nullable|string',
         ]);
 
-        $data['slug']       = Str::slug($data['title']);
+        $data['slug']       = ! empty($data['slug']) ? Str::slug((string) $data['slug']) : Str::slug($data['title']);
         $data['is_active']  = $request->boolean('is_active');
         $data['show_in_app'] = $request->boolean('show_in_app');
 
         $policy->update($data);
+        $this->syncTranslations($policy, (array) $request->input('translations', []));
         return back()->with('success', 'Siyosat yangilandi.');
     }
 

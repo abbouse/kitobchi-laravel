@@ -4,6 +4,7 @@
 
 <?php $__env->startSection('content'); ?>
 <?php
+    use App\Support\AdminOrderStatusPresenter;
     $tabs = [
         'pay_process' => ["To'lov jarayonida", $counts['pay_process'] ?? 0],
         'pending' => ['Kutilmoqda', $counts['pending'] ?? 0],
@@ -188,7 +189,7 @@
                             <td>
                                 <div class="d-flex flex-wrap gap-2 align-items-center">
                                     <span class="badge rounded-pill <?php echo e($statusBadgeClass((string) ($order->status ?? ''))); ?>">
-                                        <?php echo e($statuses[$order->status]['label'] ?? ($order->status ?: '—')); ?>
+                                        <?php echo e($statuses[$order->status]['label'] ?? AdminOrderStatusPresenter::courierOrder($order->status ?? null)); ?>
 
                                     </span>
                                     <form method="POST" action="<?php echo e(route('admin.courier-orders.status', $order)); ?>">

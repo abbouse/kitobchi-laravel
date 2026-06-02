@@ -37,7 +37,7 @@ class BookController extends Controller
 
     public function index(Request $request)
     {
-        $query = Books::with(['category', 'publisher', 'authorProfile']);
+        $query = Books::with(['category', 'publisher', 'authorProfile', 'seller']);
         $tab = match ((string) $request->input('tab', 'pending')) {
             'active' => 'active',
             'rejected', 'reject' => 'rejected',
@@ -55,7 +55,9 @@ class BookController extends Controller
         if ($search = $request->input('search')) {
             $query->where(fn ($q) => $q
                 ->where('name', 'like', "%{$search}%")
+                ->orWhereHas('category', fn ($categoryQuery) => $categoryQuery->where('name_uz', 'like', "%{$search}%"))
                 ->orWhereHas('authorProfile', fn ($authorQuery) => $authorQuery->where('name', 'like', "%{$search}%"))
+                ->orWhereHas('seller', fn ($sellerQuery) => $sellerQuery->where('shop_name', 'like', "%{$search}%"))
                 ->orWhere('id', $search));
         }
 
@@ -68,15 +70,26 @@ class BookController extends Controller
         ];
 
         $rows = $books->map(function (Books $b) {
+            $status = (int) ($b->is_approved ?? 0) === 1
+                ? 'active'
+                : ((int) ($b->is_approved ?? 0) === 2 ? 'rejected' : 'pending');
+
             return [
                 'id' => $b->id,
                 'title' => $b->name,
                 'author' => $b->authorProfile?->name ?: ($b->author ?: '—'),
                 'category' => $b->category?->name_uz ?: '—',
+                'seller' => $b->seller?->shop_name ?: '—',
                 'price' => number_format((float) $b->price, 0).' UZS',
                 'stock' => (int) ($b->count ?? 0),
                 'sold' => (int) ($b->totalSales ?? 0),
-                'status' => (int) ($b->is_approved ?? 0) === 1 ? 'active' : ((int) ($b->is_approved ?? 0) === 2 ? 'banned' : 'pending'),
+                'status' => $status,
+                'status_label' => match ($status) {
+                    'active' => 'Faol',
+                    'rejected' => 'Rad etilgan',
+                    default => 'Moderatsiyada',
+                },
+                'updated_at' => optional($b->updated_at)->format('d.m.Y H:i') ?: '—',
             ];
         })->values();
 

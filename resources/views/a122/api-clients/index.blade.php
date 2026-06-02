@@ -18,6 +18,10 @@
     </a>
   </x-admin.page-header>
 
+  @if(session('warning'))
+    <div class="alert alert-warning border-0 mb-0">{{ session('warning') }}</div>
+  @endif
+
   <div class="kc-filter-card">
     <div class="nav nav-pills flex-wrap">
       @foreach([
@@ -108,7 +112,11 @@
                 </div>
               </td>
               <td class="small text-secondary text-nowrap">
-                {{ $client->rate_limit_per_second ?? 8 }}/s · {{ $client->rate_limit_per_minute ?? 240 }}/min
+                @if(($ratePerSecondColumnExists ?? false) || ($ratePerMinuteColumnExists ?? false))
+                  {{ $client->rate_limit_per_second ?? 8 }}/s · {{ $client->rate_limit_per_minute ?? 240 }}/min
+                @else
+                  <span class="text-warning-emphasis">Migratsiya kutilmoqda</span>
+                @endif
               </td>
               <td>
                 <form method="POST" action="{{ route('admin.api-clients.toggle', $client) }}" class="d-inline">

@@ -7,8 +7,9 @@ use App\Models\BotOperator;
 use App\Models\BotTicket;
 use App\Services\SessionService;
 use App\Services\SupportChatBridgeService;
+use App\Services\TelegramSupportService;
 use Illuminate\Http\Request;
-use SergiX44\Nutgram\Nutgram;
+use Illuminate\Support\Facades\Log;
 
 class SupportController extends Controller
 {
@@ -102,19 +103,32 @@ class SupportController extends Controller
         return back()->with('success', "Ticket yopildi.");
     }
 
-    public function reply(Request $request, BotTicket $ticket, Nutgram $bot, SupportChatBridgeService $supportChatBridgeService)
+    public function reply(
+        Request $request,
+        BotTicket $ticket,
+        SupportChatBridgeService $supportChatBridgeService,
+        TelegramSupportService $telegramSupportService
+    )
     {
+        $isShopChat = $ticket->source_type === 'shop_chat' && $ticket->source_conversation_id;
+
         $data = $request->validate([
-            'message' => 'required|string|max:5000',
+            'message' => 'required|string|max:'.($isShopChat ? 5000 : 4096),
         ]);
 
         $admin = auth('panel')->user();
 
         try {
-            if ($ticket->source_type === 'shop_chat' && $ticket->source_conversation_id) {
+            if ($isShopChat) {
                 $supportChatBridgeService->sendReplyToConversation($ticket, $data['message'], null, $admin?->id);
                 return back()->with('success', 'Javob foydalanuvchiga yuborildi.');
             } else {
+                $chatId = (int) $ticket->user_id;
+
+                if ($chatId <= 0) {
+                    throw new \RuntimeException('Foydalanuvchi chat ID topilmadi.');
+                }
+
                 $msg = SessionService::saveMessage(
                     ticketId: $ticket->id,
                     sentBy: 'admin',
@@ -123,8 +137,14 @@ class SupportController extends Controller
                     adminId: $admin?->id,
                     isDelivered: false
                 );
-                $bot->sendMessage($data['message'], chat_id: (int) $ticket->user_id);
-                $msg->update(['is_delivered' => true, 'delivery_error' => null]);
+                $response = $telegramSupportService->sendText($chatId, $data['message']);
+                $telegramMessageId = (int) data_get($response, 'result.message_id');
+
+                $msg->update([
+                    'is_delivered' => true,
+                    'delivery_error' => null,
+                    'telegram_message_id' => $telegramMessageId ?: null,
+                ]);
                 $ticket->update([
                     'status' => in_array($ticket->status, ['closed', 'rated']) ? 'active' : $ticket->status,
                     'updated_at' => now(),
@@ -138,6 +158,14 @@ class SupportController extends Controller
                     'delivery_error' => $e->getMessage(),
                 ]);
             }
+
+            Log::warning('Admin support reply yuborilmadi', [
+                'ticket_id' => $ticket->id,
+                'source_type' => $ticket->source_type,
+                'user_id' => $ticket->user_id,
+                'admin_id' => $admin?->id,
+                'error' => $e->getMessage(),
+            ]);
 
             return back()->with('error', 'Javobni yuborib bo‘lmadi: '.$e->getMessage());
         }

@@ -4,6 +4,7 @@
 
 <?php $__env->startSection('content'); ?>
 <?php
+  use App\Support\AdminOrderStatusPresenter;
   $statusTabs = [
     'pending' => ['Kutilmoqda', $counts['pending'] ?? 0],
     'shipped' => ['Yo‘lda', $counts['shipped'] ?? 0],
@@ -13,26 +14,11 @@
   ];
 
   $statusLabel = function ($status) {
-    return match ((string) $status) {
-      'A', 'pending' => 'Kutilmoqda',
-      'P', 'packing' => 'Qadoqlanmoqda',
-      'B', 'in_delivery' => "Yo'lda",
-      'C', 'delivered' => 'Yetib bordi',
-      'D', 'customer_received' => 'Mijoz qabul qildi',
-      'returned' => 'Qaytgan',
-      'F', 'cancelled' => 'Bekor qilingan',
-      default => 'Kutilmoqda',
-    };
+    return AdminOrderStatusPresenter::mainOrder($status);
   };
 
   $paymentLabel = function ($status) {
-    return match ((string) $status) {
-      '2', 'paid' => "To'langan",
-      '1', 'card_pending', 'pending' => 'Karta kutilmoqda',
-      '0', 'cash_pending' => 'Naqd kutilmoqda',
-      '3', 'cancelled', 'rejected' => "To'lov bekor qilingan",
-      default => 'Noma’lum',
-    };
+    return AdminOrderStatusPresenter::payment($status);
   };
 
   $statusBadgeClass = function ($label) {
