@@ -3962,77 +3962,25 @@ class AdminController extends Controller
         $search = trim((string) request('search_history_search', ''));
         $hasResultType = Schema::hasColumn('search_histories', 'result_type');
         $hasResultName = Schema::hasColumn('search_histories', 'result_name');
+        $hasResultCount = Schema::hasColumn('search_histories', 'result_count');
+        $hasSearchCount = Schema::hasColumn('search_histories', 'search_count');
+        $hasDraft = Schema::hasColumn('search_histories', 'is_draft');
         $query = SearchHistory::query()->with('user:id,name,lastname,phone_number');
         $this->applySearchHistoryFilters($query, $filter, $search, $hasResultType, $hasResultName);
         $history = $query->latest()->paginate(40, ['*'], 'search_history_page')->withQueryString();
 
-        $insightsQuery = SearchHistory::query();
-        $this->applySearchHistoryFilters($insightsQuery, $filter, $search, $hasResultType, $hasResultName);
-
-        $topQueries = (clone $insightsQuery)
-            ->selectRaw('text')
-            ->selectRaw('SUM(COALESCE(search_count, 1)) as total_searches')
-            ->selectRaw('SUM(CASE WHEN COALESCE(result_count, 0) > 0 THEN COALESCE(search_count, 1) ELSE 0 END) as found_searches')
-            ->selectRaw('SUM(CASE WHEN COALESCE(result_count, 0) = 0 THEN COALESCE(search_count, 1) ELSE 0 END) as missing_searches')
-            ->selectRaw('MAX(created_at) as last_seen_at')
-            ->whereNotNull('text')
-            ->where('text', '!=', '')
-            ->groupBy('text')
-            ->orderByDesc('total_searches')
-            ->limit(12)
-            ->get()
-            ->map(fn ($row) => [
-                'text' => $row->text,
-                'totalSearches' => (int) ($row->total_searches ?? 0),
-                'foundSearches' => (int) ($row->found_searches ?? 0),
-                'missingSearches' => (int) ($row->missing_searches ?? 0),
-                'successRate' => (int) round(((int) ($row->total_searches ?? 0)) > 0 ? ((int) ($row->found_searches ?? 0) / (int) $row->total_searches) * 100 : 0),
-                'lastSeenAt' => $this->dateTime($row->last_seen_at),
-            ])
-            ->values()
-            ->all();
-
-        $missingDemand = (clone $insightsQuery)
-            ->selectRaw('text')
-            ->selectRaw('SUM(COALESCE(search_count, 1)) as total_searches')
-            ->selectRaw('COUNT(*) as attempts')
-            ->selectRaw('MAX(created_at) as last_seen_at')
-            ->whereNotNull('text')
-            ->where('text', '!=', '')
-            ->groupBy('text')
-            ->havingRaw('SUM(CASE WHEN COALESCE(result_count, 0) > 0 THEN 1 ELSE 0 END) = 0')
-            ->orderByDesc('total_searches')
-            ->limit(10)
-            ->get()
-            ->map(fn ($row) => [
-                'text' => $row->text,
-                'totalSearches' => (int) ($row->total_searches ?? 0),
-                'attempts' => (int) ($row->attempts ?? 0),
-                'lastSeenAt' => $this->dateTime($row->last_seen_at),
-                'recommendation' => 'Katalogga qo‘shib ko‘rish yoki synonym/alias ochish tavsiya etiladi.',
-            ])
-            ->values()
-            ->all();
-
-        $summaryBase = (clone $insightsQuery);
-        $summary = [
-            'totalRecords' => (int) $summaryBase->count(),
-            'zeroResultRecords' => (int) (clone $insightsQuery)->where(function ($builder) {
-                $builder->whereNull('result_count')->orWhere('result_count', 0);
-            })->count(),
-            'uniqueQueries' => (int) (clone $insightsQuery)->whereNotNull('text')->where('text', '!=', '')->distinct('text')->count('text'),
-        ];
+        $insights = $this->searchHistoryInsightsPayload($filter, $search, $hasResultType, $hasResultName, $hasResultCount, $hasSearchCount);
 
         return [
             'searchHistory' => $history->getCollection()->map(fn (SearchHistory $history) => [
                 'id' => $history->id,
                 'text' => $history->text,
                 'user' => trim(($history->user?->name ?? '').' '.($history->user?->lastname ?? '')) ?: ($history->session_id ?: 'Mehmon'),
-                'resultCount' => (int) ($history->result_count ?? 0),
-                'resultName' => $history->result_name,
-                'resultType' => $history->result_type,
-                'searchCount' => (int) ($history->search_count ?? 0),
-                'draft' => (bool) $history->is_draft,
+                'resultCount' => $hasResultCount ? (int) ($history->result_count ?? 0) : 0,
+                'resultName' => $hasResultName ? $history->result_name : null,
+                'resultType' => $hasResultType ? $history->result_type : null,
+                'searchCount' => $hasSearchCount ? (int) ($history->search_count ?? 0) : 0,
+                'draft' => $hasDraft ? (bool) $history->is_draft : false,
                 'date' => optional($history->created_at)->format('Y-m-d H:i'),
             ])
             ->values()
@@ -4040,12 +3988,100 @@ class AdminController extends Controller
             'searchHistoryPagination' => $this->paginationMeta($history),
             'searchHistoryTypes' => $hasResultType ? SearchHistory::query()->whereNotNull('result_type')->distinct()->orderBy('result_type')->pluck('result_type')->values()->all() : [],
             'searchHistoryFilters' => ['type' => $filter, 'search' => $search],
-            'searchHistoryInsights' => [
+            'searchHistoryInsights' => $insights,
+        ];
+    }
+
+    private function searchHistoryInsightsPayload(
+        string $filter,
+        string $search,
+        bool $hasResultType,
+        bool $hasResultName,
+        bool $hasResultCount,
+        bool $hasSearchCount
+    ): array {
+        try {
+            $insightsQuery = SearchHistory::query();
+            $this->applySearchHistoryFilters($insightsQuery, $filter, $search, $hasResultType, $hasResultName);
+
+            $weightSql = $hasSearchCount ? 'COALESCE(search_count, 1)' : '1';
+            $foundConditionSql = $hasResultCount
+                ? 'COALESCE(result_count, 0) > 0'
+                : ($hasResultName ? "COALESCE(result_name, '') != ''" : '0 = 1');
+            $missingConditionSql = $hasResultCount
+                ? 'COALESCE(result_count, 0) = 0'
+                : ($hasResultName ? "(result_name IS NULL OR result_name = '')" : '1 = 1');
+
+            $topQueries = (clone $insightsQuery)
+                ->selectRaw('text')
+                ->selectRaw("SUM({$weightSql}) as total_searches")
+                ->selectRaw("SUM(CASE WHEN {$foundConditionSql} THEN {$weightSql} ELSE 0 END) as found_searches")
+                ->selectRaw("SUM(CASE WHEN {$missingConditionSql} THEN {$weightSql} ELSE 0 END) as missing_searches")
+                ->selectRaw('MAX(created_at) as last_seen_at')
+                ->whereNotNull('text')
+                ->where('text', '!=', '')
+                ->groupBy('text')
+                ->orderByDesc('total_searches')
+                ->limit(12)
+                ->get()
+                ->map(fn ($row) => [
+                    'text' => $row->text,
+                    'totalSearches' => (int) ($row->total_searches ?? 0),
+                    'foundSearches' => (int) ($row->found_searches ?? 0),
+                    'missingSearches' => (int) ($row->missing_searches ?? 0),
+                    'successRate' => (int) round(((int) ($row->total_searches ?? 0)) > 0 ? ((int) ($row->found_searches ?? 0) / (int) $row->total_searches) * 100 : 0),
+                    'lastSeenAt' => $this->dateTime($row->last_seen_at),
+                ])
+                ->values()
+                ->all();
+
+            $missingDemand = (clone $insightsQuery)
+                ->selectRaw('text')
+                ->selectRaw("SUM({$weightSql}) as total_searches")
+                ->selectRaw('COUNT(*) as attempts')
+                ->selectRaw('MAX(created_at) as last_seen_at')
+                ->whereNotNull('text')
+                ->where('text', '!=', '')
+                ->groupBy('text')
+                ->havingRaw("SUM(CASE WHEN {$foundConditionSql} THEN 1 ELSE 0 END) = 0")
+                ->orderByDesc('total_searches')
+                ->limit(10)
+                ->get()
+                ->map(fn ($row) => [
+                    'text' => $row->text,
+                    'totalSearches' => (int) ($row->total_searches ?? 0),
+                    'attempts' => (int) ($row->attempts ?? 0),
+                    'lastSeenAt' => $this->dateTime($row->last_seen_at),
+                    'recommendation' => 'Katalogga qo‘shib ko‘rish yoki synonym/alias ochish tavsiya etiladi.',
+                ])
+                ->values()
+                ->all();
+
+            $summaryBase = (clone $insightsQuery);
+            $summary = [
+                'totalRecords' => (int) $summaryBase->count(),
+                'zeroResultRecords' => (int) (clone $insightsQuery)->whereRaw($missingConditionSql)->count(),
+                'uniqueQueries' => (int) (clone $insightsQuery)->whereNotNull('text')->where('text', '!=', '')->distinct('text')->count('text'),
+            ];
+
+            return [
                 'topQueries' => $topQueries,
                 'missingDemand' => $missingDemand,
                 'summary' => $summary,
-            ],
-        ];
+            ];
+        } catch (\Throwable $e) {
+            report($e);
+
+            return [
+                'topQueries' => [],
+                'missingDemand' => [],
+                'summary' => [
+                    'totalRecords' => 0,
+                    'zeroResultRecords' => 0,
+                    'uniqueQueries' => 0,
+                ],
+            ];
+        }
     }
 
     private function applySearchHistoryFilters($query, string $filter, string $search, bool $hasResultType, bool $hasResultName): void
