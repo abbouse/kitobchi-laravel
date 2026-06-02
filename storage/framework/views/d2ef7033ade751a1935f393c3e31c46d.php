@@ -230,7 +230,7 @@
             <tr>
               <td>
                 <div class="fw-bold">#ORD-<?php echo e($order->id); ?></div>
-                <div class="small text-secondary">Internal order flow</div>
+                <div class="small text-secondary">Platformadagi buyurtma</div>
               </td>
               <td>
                 <div class="fw-semibold"><?php echo e(trim(($order->user?->name ?? 'Mehmon').' '.($order->user?->lastname ?? ''))); ?></div>
@@ -250,7 +250,7 @@
                     <select name="status" class="form-select form-select-sm rounded-pill" onchange="this.form.submit()">
                       <option value="A" <?php if(in_array(($order->status_code ?? $order->status), ['A','pending'], true)): echo 'selected'; endif; ?>>Kutilmoqda</option>
                       <option value="P" <?php if(in_array(($order->status_code ?? $order->status), ['P','packing'], true)): echo 'selected'; endif; ?>>Qadoqlanmoqda</option>
-                      <option value="B" <?php if(in_array(($order->status_code ?? $order->status), ['B','in_delivery'], true)): echo 'selected'; endif; ?>>Yo'lda</option>
+                      <option value="B" <?php if(in_array(($order->status_code ?? $order->status), ['B','in_delivery'], true)): echo 'selected'; endif; ?>>Yetkazilmoqda</option>
                       <option value="C" <?php if(in_array(($order->status_code ?? $order->status), ['C','delivered'], true)): echo 'selected'; endif; ?>>Yetib bordi</option>
                       <option value="D" <?php if(in_array(($order->status_code ?? $order->status), ['D','customer_received'], true)): echo 'selected'; endif; ?>>Mijoz qabul qildi</option>
                       <option value="F" <?php if(in_array(($order->status_code ?? $order->status), ['F','cancelled','returned'], true)): echo 'selected'; endif; ?>>Bekor qilingan</option>

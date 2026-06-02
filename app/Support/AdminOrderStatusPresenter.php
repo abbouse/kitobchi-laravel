@@ -25,9 +25,9 @@ class AdminOrderStatusPresenter
     public static function payment(string|int|null $status): string
     {
         return match (PaymentStatusCode::fromLegacy($status)) {
-            PaymentStatusCode::PAID => "To'langan",
-            PaymentStatusCode::CARD_PENDING => 'Karta kutilmoqda',
-            PaymentStatusCode::CASH_PENDING => 'Naqd kutilmoqda',
+            PaymentStatusCode::PAID => "To'lov olingan",
+            PaymentStatusCode::CARD_PENDING => 'Karta to‘lovi kutilmoqda',
+            PaymentStatusCode::CASH_PENDING => 'Naqd to‘lov olinadi',
             PaymentStatusCode::CANCELLED => "To'lov bekor qilingan",
         };
     }
@@ -35,9 +35,9 @@ class AdminOrderStatusPresenter
     public static function paymentDetail(string|int|null $status): string
     {
         return match (PaymentStatusCode::fromLegacy($status)) {
-            PaymentStatusCode::PAID => 'Karta orqali to‘langan',
-            PaymentStatusCode::CARD_PENDING => 'Karta orqali, tasdiq kutilmoqda',
-            PaymentStatusCode::CASH_PENDING => 'Naqd to‘lov',
+            PaymentStatusCode::PAID => 'To‘lov muvaffaqiyatli olingan',
+            PaymentStatusCode::CARD_PENDING => 'Karta orqali to‘lov qilinishi yoki tasdiqlanishi kutilmoqda',
+            PaymentStatusCode::CASH_PENDING => 'Mijoz buyurtmani olayotganda naqd to‘laydi',
             PaymentStatusCode::CANCELLED => 'To‘lov bekor qilingan',
         };
     }
@@ -45,8 +45,8 @@ class AdminOrderStatusPresenter
     public static function paymentMethod(string|int|null $status): string
     {
         return match (PaymentStatusCode::fromLegacy($status)) {
-            PaymentStatusCode::PAID, PaymentStatusCode::CARD_PENDING => 'Karta / Paylov',
-            PaymentStatusCode::CASH_PENDING => 'Naqd',
+            PaymentStatusCode::PAID, PaymentStatusCode::CARD_PENDING => 'Karta orqali',
+            PaymentStatusCode::CASH_PENDING => 'Naqd to‘lov',
             PaymentStatusCode::CANCELLED => 'To‘lov bekor qilingan',
         };
     }

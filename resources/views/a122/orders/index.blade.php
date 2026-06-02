@@ -132,7 +132,7 @@
             <tr>
               <td>
                 <div class="fw-bold">#ORD-{{ $order->id }}</div>
-                <div class="small text-secondary">Internal order flow</div>
+                <div class="small text-secondary">Platformadagi buyurtma</div>
               </td>
               <td>
                 <div class="fw-semibold">{{ trim(($order->user?->name ?? 'Mehmon').' '.($order->user?->lastname ?? '')) }}</div>
@@ -152,7 +152,7 @@
                     <select name="status" class="form-select form-select-sm rounded-pill" onchange="this.form.submit()">
                       <option value="A" @selected(in_array(($order->status_code ?? $order->status), ['A','pending'], true))>Kutilmoqda</option>
                       <option value="P" @selected(in_array(($order->status_code ?? $order->status), ['P','packing'], true))>Qadoqlanmoqda</option>
-                      <option value="B" @selected(in_array(($order->status_code ?? $order->status), ['B','in_delivery'], true))>Yo'lda</option>
+                      <option value="B" @selected(in_array(($order->status_code ?? $order->status), ['B','in_delivery'], true))>Yetkazilmoqda</option>
                       <option value="C" @selected(in_array(($order->status_code ?? $order->status), ['C','delivered'], true))>Yetib bordi</option>
                       <option value="D" @selected(in_array(($order->status_code ?? $order->status), ['D','customer_received'], true))>Mijoz qabul qildi</option>
                       <option value="F" @selected(in_array(($order->status_code ?? $order->status), ['F','cancelled','returned'], true))>Bekor qilingan</option>

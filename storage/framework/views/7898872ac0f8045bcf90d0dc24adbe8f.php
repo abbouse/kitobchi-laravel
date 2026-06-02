@@ -125,19 +125,40 @@
   </div>
 
   <div class="kc-filter-card">
-    <div class="nav nav-pills flex-wrap">
-      <?php $__currentLoopData = [
-        'pending' => ['Moderatsiya', $counts['pending'] ?? 0],
-        'active' => ['Faol', $counts['active'] ?? 0],
-        'rejected' => ['Rad etilgan', $counts['rejected'] ?? 0],
-        'all' => ['Barchasi', $counts['all'] ?? 0],
-      ]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $key => [$label, $count]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-        <a href="<?php echo e(request()->fullUrlWithQuery(['tab' => $key, 'page' => null])); ?>" class="nav-link <?php echo e($tab === $key ? 'active' : ''); ?>">
-          <?php echo e($label); ?>
+    <div class="d-flex flex-column gap-3">
+      <div class="d-flex flex-column flex-xl-row gap-3 align-items-xl-center justify-content-between">
+        <div>
+          <div class="fw-semibold">Holat bo‘yicha filter</div>
+          <div class="small text-secondary">Avval moderatsiyadagi kitoblar ochiladi. Shu blokdan faol va rad etilgan yozuvlarga ham tez o‘tasiz.</div>
+        </div>
+        <form method="GET" class="d-flex gap-2 align-items-center">
+          <input type="hidden" name="search" value="<?php echo e(request('search')); ?>">
+          <label for="books-tab-filter" class="small text-secondary mb-0">Ko‘rsatish:</label>
+          <select id="books-tab-filter" name="tab" class="form-select" onchange="this.form.submit()" style="min-width: 220px;">
+            <option value="pending" <?php if($tab === 'pending'): echo 'selected'; endif; ?>>Moderatsiyadagi kitoblar</option>
+            <option value="active" <?php if($tab === 'active'): echo 'selected'; endif; ?>>Faol kitoblar</option>
+            <option value="rejected" <?php if($tab === 'rejected'): echo 'selected'; endif; ?>>Rad etilgan kitoblar</option>
+            <option value="all" <?php if($tab === 'all'): echo 'selected'; endif; ?>>Barcha kitoblar</option>
+          </select>
+        </form>
+      </div>
 
-          <span class="badge rounded-pill <?php echo e($tab === $key ? 'text-bg-light' : 'text-bg-secondary'); ?>"><?php echo e(number_format($count)); ?></span>
-        </a>
-      <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+      <div class="nav nav-pills flex-wrap gap-2">
+        <?php $__currentLoopData = [
+          'pending' => ['Moderatsiya', $counts['pending'] ?? 0, 'Avval ko‘rib chiqilishi kerak bo‘lganlar'],
+          'active' => ['Faol', $counts['active'] ?? 0, 'Xaridorlarga ko‘rinayotgan kitoblar'],
+          'rejected' => ['Rad etilgan', $counts['rejected'] ?? 0, 'Qayta ko‘rib chiqish kerak bo‘lishi mumkin'],
+          'all' => ['Barchasi', $counts['all'] ?? 0, 'Umumiy katalog'],
+        ]; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $key => [$label, $count, $meta]): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+          <a href="<?php echo e(request()->fullUrlWithQuery(['tab' => $key, 'page' => null])); ?>" class="nav-link <?php echo e($tab === $key ? 'active' : ''); ?>">
+            <span class="d-flex flex-column align-items-start">
+              <span><?php echo e($label); ?></span>
+              <span class="small <?php echo e($tab === $key ? 'text-white-50' : 'text-secondary'); ?>"><?php echo e($meta); ?></span>
+            </span>
+            <span class="badge rounded-pill <?php echo e($tab === $key ? 'text-bg-light' : 'text-bg-secondary'); ?>"><?php echo e(number_format($count)); ?></span>
+          </a>
+        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+      </div>
     </div>
     <?php if($tab === 'pending'): ?>
       <div class="small text-secondary mt-3">

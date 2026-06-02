@@ -70,11 +70,11 @@
     $cashbackNotifiedAt = $order->cashback_notified_at;
     $fulfillment = $order->fulfillment;
     $fulfillmentModeLabel = match ($fulfillment?->fulfillment_mode) {
-      'direct_courier' => "Kuryer: seller → mijoz",
-      'postal_only_via_hub' => 'Hub → pochta oqimi',
-      'pickup_only' => "Olib ketish / ichki pickup",
-      'hub_based' => 'Hub orqali kuryer yetkazuvi',
-      default => 'Legacy / hali biriktirilmagan',
+      'direct_courier' => "Do‘kon tayyorlaydi, kuryer mijozga olib boradi",
+      'postal_only_via_hub' => 'Hub orqali pochtaga topshiriladi',
+      'pickup_only' => "Mijoz o‘zi olib ketadi",
+      'hub_based' => 'Hub orqali tayyorlanib, keyin kuryerga beriladi',
+      default => 'Logistika yo‘li hali aniqlanmagan',
     };
     $fulfillmentStatusLabel = match ($fulfillment?->status_code) {
       'awaiting_seller_prep' => 'Seller tayyorlamoqda',
@@ -85,12 +85,12 @@
       'packed' => 'Qadoqlandi',
       'labeled' => 'Etiketka yopildi',
       'dispatched_to_post' => 'Pochtaga topshirilgan',
-      'assigned_last_mile' => 'Last-mile biriktirilgan',
+      'assigned_last_mile' => 'Yakuniy yetkazuvchi biriktirilgan',
       'out_for_delivery' => 'Yetkazib berishga chiqqan',
       'delivered' => 'Yetkazish nuqtasiga yetib borgan',
       'returned' => 'Qaytgan',
       'cancelled' => 'Bekor qilingan',
-      default => 'Hali ochilmagan',
+      default => 'Hali ishga tushmagan',
     };
     $lastModeSwitch = collect(data_get($fulfillment?->meta ?? [], 'mode_switch_log', []))->last();
     $lastHubReroute = collect(data_get($fulfillment?->meta ?? [], 'hub_reroute_log', []))->last();
@@ -109,7 +109,7 @@
     };
 
     $cashbackFlowLabel = $isInstore
-      ? "Do‘konda — darhol"
+      ? "Do‘kon ichidagi buyurtma — darhol"
       : 'Oddiy buyurtma — 7 kundan keyin';
 
     $sellerStatusLabel = fn ($status) => AdminOrderStatusPresenter::sellerOrder($status);
@@ -245,32 +245,32 @@
 
       <div class="mt-4 rounded-3xl border border-[var(--p-border)] bg-[var(--p-elevated)] p-4">
         <div class="flex flex-wrap items-center gap-2">
-          <div class="text-sm font-semibold">Fulfillment routing</div>
+          <div class="text-sm font-semibold">Yetkazish oqimi</div>
           <button type="button" class="order-help-trigger inline-flex h-5 w-5 items-center justify-center rounded-full border border-[var(--p-border)] text-[11px] font-bold text-[var(--p-muted)]" data-help-target="fulfillment-routing-help">?</button>
           <div id="fulfillment-routing-help" class="order-help-popover hidden max-w-xs rounded-2xl border border-[var(--p-border)] bg-white p-3 text-xs leading-5 text-[var(--p-text)] shadow-xl">
-            Order yaratilganda tizim qaysi mode bilan ishlashini shu yerda qotiradi: hub-based, direct courier yoki postal oqim. Hub, seller va courier app’lar keyingi bosqichlarda aynan shu routing qarorga qarab ishlaydi.
+            Buyurtma qaysi yo‘l bilan bajarilishini tizim shu yerda belgilaydi: kuryer to‘g‘ridan olib ketadimi, hub orqali yuradimi yoki pochtaga topshiriladimi. Keyingi barcha logistika bosqichlari shu qarorga qarab ishlaydi.
           </div>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 mt-3 text-sm">
           <div>
-            <div class="metric-label">Mode</div>
+            <div class="metric-label">Qaysi yo‘l bilan bajariladi</div>
             <div class="font-semibold mt-1"><?php echo e($fulfillmentModeLabel); ?></div>
           </div>
           <div>
-            <div class="metric-label">Fulfillment holati</div>
+            <div class="metric-label">Logistika bosqichi</div>
             <div class="font-semibold mt-1"><?php echo e($fulfillmentStatusLabel); ?></div>
           </div>
           <div>
             <div class="metric-label">Mas’ul hub</div>
-            <div class="font-semibold mt-1"><?php echo e($fulfillment?->hub?->name ?: 'Hub yo‘q / direct'); ?></div>
+            <div class="font-semibold mt-1"><?php echo e($fulfillment?->hub?->name ?: 'Hub biriktirilmagan yoki to‘g‘ridan-to‘g‘ri oqim'); ?></div>
           </div>
           <div>
-            <div class="metric-label">COD</div>
+            <div class="metric-label">Naqd yig‘ish</div>
             <div class="font-semibold mt-1">
               <?php if($fulfillment?->is_cod): ?>
-                Ha · <?php echo e(number_format((int) ($fulfillment->cash_collect_amount ?? 0), 0, '.', ' ')); ?> UZS
+                Ha · <?php echo e(number_format((int) ($fulfillment->cash_collect_amount ?? 0), 0, '.', ' ')); ?> UZS olinadi
               <?php else: ?>
-                Yo‘q
+                Yo‘q, oldindan to‘langan
               <?php endif; ?>
             </div>
           </div>
@@ -289,13 +289,13 @@
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3 text-xs">
             <?php if($lastModeSwitch): ?>
               <div class="rounded-2xl border border-[var(--p-border)] bg-[var(--p-surface)] p-3 text-[var(--p-hint)]">
-                <div class="font-semibold text-[var(--p-text)]">Oxirgi mode switch</div>
+                <div class="font-semibold text-[var(--p-text)]">Oxirgi oqim almashtirish</div>
                 <div class="mt-1">
                   <?php echo e(data_get($lastModeSwitch, 'admin_name') ?: 'Admin'); ?> ·
                   <?php echo e(\Illuminate\Support\Carbon::parse(data_get($lastModeSwitch, 'at'))->format('d.m.Y H:i')); ?>
 
                 </div>
-                <div class="mt-1">Mode: <?php echo e(data_get($lastModeSwitch, 'target_mode')); ?></div>
+                <div class="mt-1">Yangi oqim: <?php echo e(data_get($lastModeSwitch, 'target_mode')); ?></div>
                 <?php if(data_get($lastModeSwitch, 'hub_name')): ?>
                   <div class="mt-1">Hub: <?php echo e(data_get($lastModeSwitch, 'hub_name')); ?></div>
                 <?php endif; ?>
@@ -306,7 +306,7 @@
             <?php endif; ?>
             <?php if($lastHubReroute): ?>
               <div class="rounded-2xl border border-[var(--p-border)] bg-[var(--p-surface)] p-3 text-[var(--p-hint)]">
-                <div class="font-semibold text-[var(--p-text)]">Oxirgi hub reroute</div>
+                <div class="font-semibold text-[var(--p-text)]">Oxirgi hub almashtirish</div>
                 <div class="mt-1">
                   <?php echo e(data_get($lastHubReroute, 'admin_name') ?: 'Admin'); ?> ·
                   <?php echo e(\Illuminate\Support\Carbon::parse(data_get($lastHubReroute, 'at'))->format('d.m.Y H:i')); ?>
@@ -324,17 +324,17 @@
         <div class="grid grid-cols-1 xl:grid-cols-2 gap-3 mt-4">
           <div class="rounded-3xl border border-[var(--p-border)] bg-white p-4">
             <div class="flex flex-wrap items-center gap-2">
-              <div class="text-sm font-semibold">Fulfillment mode almashtirish</div>
+              <div class="text-sm font-semibold">Yetkazish oqimini almashtirish</div>
               <button type="button" class="order-help-trigger inline-flex h-5 w-5 items-center justify-center rounded-full border border-[var(--p-border)] text-[11px] font-bold text-[var(--p-muted)]" data-help-target="mode-switch-help">?</button>
               <div id="mode-switch-help" class="order-help-popover hidden max-w-xs rounded-2xl border border-[var(--p-border)] bg-white p-3 text-xs leading-5 text-[var(--p-text)] shadow-xl">
-                Bu action orderni hub orqali kuryer yetkazuviga, direct courier oqimiga yoki pochta oqimiga o‘tkazadi. Tizim kech bosqichlarga o‘tgan, kuryer biriktirilgan yoki qadoqlash boshlangan orderlarda bu amaliyotni bloklaydi.
+                Bu amal buyurtmani boshqa logistika yo‘liga o‘tkazadi: hub orqali, to‘g‘ridan-to‘g‘ri kuryer bilan yoki pochta orqali. Buyurtma juda kech bosqichga o‘tib ketgan bo‘lsa, tizim bunga ruxsat bermaydi.
               </div>
             </div>
             <form method="POST" action="<?php echo e(route('admin.orders.switch-mode', $order)); ?>" class="space-y-3 mt-3">
               <?php echo csrf_field(); ?>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <label class="space-y-1">
-                  <span class="metric-label">Yangi mode</span>
+                  <span class="metric-label">Yangi oqim</span>
                   <select name="target_mode" class="w-full rounded-2xl border border-[var(--p-border)] bg-[var(--p-surface)] px-3 py-2 text-sm js-fulfillment-mode-select">
                     <?php $__currentLoopData = $fulfillmentModes; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $modeOption): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                       <option value="<?php echo e($modeOption['value']); ?>" <?php if(($fulfillment?->fulfillment_mode ?? old('target_mode')) === $modeOption['value']): echo 'selected'; endif; ?>>
@@ -345,7 +345,7 @@
                   </select>
                 </label>
                 <label class="space-y-1 js-fulfillment-hub-wrap">
-                  <span class="metric-label">Target hub</span>
+                  <span class="metric-label">Qaysi hubga biriktirilsin</span>
                   <select name="hub_id" class="w-full rounded-2xl border border-[var(--p-border)] bg-[var(--p-surface)] px-3 py-2 text-sm">
                     <option value="">Auto tanlash</option>
                     <?php $__currentLoopData = $activeHubs; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $hub): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
@@ -361,18 +361,18 @@
                 <textarea name="override_note" rows="2" class="w-full rounded-2xl border border-[var(--p-border)] bg-[var(--p-surface)] px-3 py-2 text-sm" placeholder="Nega mode almashtirilayotgani haqida qisqa izoh"><?php echo e(old('override_note')); ?></textarea>
               </label>
               <div class="flex flex-wrap items-center justify-between gap-2">
-                <div class="text-xs text-[var(--p-hint)]">Hub kerak bo‘lgan mode’larda target hub bo‘sh qolsa tizim o‘zi mos hub tanlaydi.</div>
-                <button type="submit" class="btn-p primary">Mode’ni yangilash</button>
+                <div class="text-xs text-[var(--p-hint)]">Hub talab qilinadigan oqim tanlansa, hub bo‘sh qolganida tizim o‘zi mos markazni tanlaydi.</div>
+                <button type="submit" class="btn-p primary">Oqimni yangilash</button>
               </div>
             </form>
           </div>
 
           <div class="rounded-3xl border border-[var(--p-border)] bg-white p-4">
             <div class="flex flex-wrap items-center gap-2">
-              <div class="text-sm font-semibold">Mas’ul hubni reroute qilish</div>
+              <div class="text-sm font-semibold">Mas’ul hubni almashtirish</div>
               <button type="button" class="order-help-trigger inline-flex h-5 w-5 items-center justify-center rounded-full border border-[var(--p-border)] text-[11px] font-bold text-[var(--p-muted)]" data-help-target="hub-reroute-help">?</button>
               <div id="hub-reroute-help" class="order-help-popover hidden max-w-xs rounded-2xl border border-[var(--p-border)] bg-white p-3 text-xs leading-5 text-[var(--p-text)] shadow-xl">
-                Reroute faqat hub orqali yuradigan orderlarda va sellerdan olib ketish tugamagan bosqichlarda ishlaydi. Shu bilan noto‘g‘ri hubga ketayotgan orderni xavfsiz boshqa markazga burish mumkin.
+                Bu amal faqat hub orqali yuradigan buyurtmalarda ishlaydi. Shu bilan noto‘g‘ri markazga tushgan buyurtmani xavfsiz boshqa hubga o‘tkazish mumkin.
               </div>
             </div>
             <form method="POST" action="<?php echo e(route('admin.orders.reroute-hub', $order)); ?>" class="space-y-3 mt-3">
@@ -388,12 +388,12 @@
                 </select>
               </label>
               <label class="space-y-1 block">
-                <span class="metric-label">Reroute izohi</span>
+                <span class="metric-label">Almashtirish sababi</span>
                 <textarea name="reroute_note" rows="2" class="w-full rounded-2xl border border-[var(--p-border)] bg-[var(--p-surface)] px-3 py-2 text-sm" placeholder="Masalan: hub yuklamasi yuqori, mijozga yaqin hub tanlandi"><?php echo e(old('reroute_note')); ?></textarea>
               </label>
               <div class="flex flex-wrap items-center justify-between gap-2">
-                <div class="text-xs text-[var(--p-hint)]">Direct courier orderlarda bu forma ishlamaydi, backend guard xatoni to‘xtatadi.</div>
-                <button type="submit" class="btn-p ghost">Hub’ni yangilash</button>
+                <div class="text-xs text-[var(--p-hint)]">To‘g‘ridan-to‘g‘ri kuryer oqimida bu amal ishlamaydi.</div>
+                <button type="submit" class="btn-p ghost">Hubni yangilash</button>
               </div>
             </form>
           </div>

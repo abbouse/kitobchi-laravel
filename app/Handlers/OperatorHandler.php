@@ -4,6 +4,7 @@ namespace App\Handlers;
 
 use App\Services\SessionService;
 use App\Services\SupportChatBridgeService;
+use App\Services\TelegramSupportService;
 use Illuminate\Support\Facades\Log;
 use SergiX44\Nutgram\Nutgram;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardButton;
@@ -379,14 +380,33 @@ class OperatorHandler
         }
 
         $userId = (int) $ticket->user_id;
-
-        self::saveMessage($message, (int) $ticket->id, 'operator', $cid);
+        $isTextOnly = !$message->photo && !$message->document && !$message->voice && !$message->video;
+        $savedMessage = self::saveMessage($message, (int) $ticket->id, 'operator', $cid, false);
         self::saveAttachment($message, $ticket->id, 'operator');
 
         try {
-            $bot->copyMessage(chat_id: $userId, from_chat_id: $cid, message_id: $message->message_id);
+            if ($isTextOnly) {
+                $body = $message->text ?? $message->caption ?? '';
+                $response = app(TelegramSupportService::class)->sendText($userId, $body);
+                $savedMessage->update([
+                    'is_delivered' => true,
+                    'delivery_error' => null,
+                    'telegram_message_id' => (int) data_get($response, 'result.message_id'),
+                ]);
+            } else {
+                $copied = $bot->copyMessage(chat_id: $userId, from_chat_id: $cid, message_id: $message->message_id);
+                $savedMessage->update([
+                    'is_delivered' => true,
+                    'delivery_error' => null,
+                    'telegram_message_id' => $copied?->message_id,
+                ]);
+            }
             Log::info("[Operator] xabar userga yuborildi", ['ticket_id' => $ticket->id]);
         } catch (\Throwable $e) {
+            $savedMessage->update([
+                'is_delivered' => false,
+                'delivery_error' => $e->getMessage(),
+            ]);
             Log::error("[Operator] nusxalash xatosi", ['error' => $e->getMessage()]);
             $bot->sendMessage("⚠️ Xabar foydalanuvchiga yetkazilmadi. Bot bloklangan bo'lishi mumkin.");
         }
@@ -504,8 +524,9 @@ class OperatorHandler
         \SergiX44\Nutgram\Telegram\Types\Message\Message $message,
         int $ticketId,
         string $sentBy,
-        int $operatorId
-    ): void {
+        int $operatorId,
+        bool $isDelivered = true
+    ): \App\Models\BotTicketMessage {
         $body = $message->text ?? $message->caption;
         $type = 'text';
 
@@ -523,14 +544,15 @@ class OperatorHandler
             $body = $body ?: '[video]';
         }
 
-        SessionService::saveMessage(
+        return SessionService::saveMessage(
             ticketId: $ticketId,
             sentBy: $sentBy,
             message: $body,
             messageType: $type,
             operatorId: $operatorId,
             telegramActorId: $operatorId,
-            telegramMessageId: $message->message_id ?? null
+            telegramMessageId: $message->message_id ?? null,
+            isDelivered: $isDelivered
         );
     }
 

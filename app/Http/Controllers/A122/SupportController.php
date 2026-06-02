@@ -113,7 +113,7 @@ class SupportController extends Controller
         $isShopChat = $ticket->source_type === 'shop_chat' && $ticket->source_conversation_id;
 
         $data = $request->validate([
-            'message' => 'required|string|max:'.($isShopChat ? 5000 : 4096),
+            'message' => 'required|string|max:'.($isShopChat ? 5000 : 12000),
         ]);
 
         $admin = auth('panel')->user();
