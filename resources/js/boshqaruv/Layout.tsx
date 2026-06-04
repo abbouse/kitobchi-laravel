@@ -17,6 +17,7 @@ const nav = [
   { group: 'Buyurtmalar va Foydalanuvchilar', items: [
     { to: '/boshqaruv/orders', match: '/boshqaruv/orders', label: 'Buyurtmalar', icon: 'bi-receipt' },
     { to: '/boshqaruv/users', match: '/boshqaruv/users', label: 'Foydalanuvchilar', icon: 'bi-people' },
+    { to: '/boshqaruv/split', match: '/boshqaruv/split', label: 'Split nazorati', icon: 'bi-wallet2' },
     { to: '/boshqaruv/search-history', match: '/boshqaruv/search-history', label: 'Qidiruv tarixi', icon: 'bi-clock-history' },
   ]},
   { group: 'Savdo va Logistika', items: [

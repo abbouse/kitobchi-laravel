@@ -129,6 +129,11 @@ return Application::configure(basePath: dirname(__DIR__))
             ->timezone($tz)
             ->withoutOverlapping();
 
+        $schedule->command('split:refresh-user-profiles')
+            ->dailyAt('05:20')
+            ->timezone($tz)
+            ->withoutOverlapping();
+
         $schedule->command('products:send-review-prompts')
             ->twiceDaily(11, 18)
             ->timezone($tz)

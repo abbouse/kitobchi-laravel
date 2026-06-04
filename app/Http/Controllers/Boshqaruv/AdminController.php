@@ -31,12 +31,14 @@ use App\Models\Couriers;
 use App\Models\DeliveryService;
 use App\Models\DeliveryZoneRule;
 use App\Models\FcmNotifications;
+use App\Models\FavouriteProducts;
 use App\Models\GiftCertificate;
 use App\Models\Gifts;
 use App\Models\Hub;
 use App\Models\HubStaff;
 use App\Models\MarketNews;
 use App\Models\Message;
+use App\Models\MyCart;
 use App\Models\MysteryBoxPlan;
 use App\Models\MysteryBoxSubscription;
 use App\Models\Policy;
@@ -56,6 +58,8 @@ use App\Models\SellerOrder;
 use App\Models\SellerOrderItem;
 use App\Models\SellerTransaction;
 use App\Models\Sold;
+use App\Models\SplitCategoryRule;
+use App\Models\SplitUserProfile;
 use App\Models\Stationery;
 use App\Models\StationeryCategory;
 use App\Models\StationeryVariant;
@@ -82,6 +86,7 @@ use App\Services\HubRoleAccessService;
 use App\Support\AdminOrderStatusPresenter;
 use App\Services\SellerPremiumService;
 use App\Services\SellerOrderSettlementService;
+use App\Services\SplitProfileService;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -165,6 +170,107 @@ class AdminController extends Controller
     public function page(string $component): Response
     {
         return Inertia::render($component, $this->pagePayload($component));
+    }
+
+    public function refreshSplitProfiles(Request $request, SplitProfileService $service): \Illuminate\Http\RedirectResponse
+    {
+        $data = $request->validate([
+            'user_id' => 'nullable|integer|exists:users,id',
+        ]);
+
+        if (! empty($data['user_id'])) {
+            $service->refreshUser(User::query()->findOrFail((int) $data['user_id']));
+
+            return back()->with('success', 'Foydalanuvchi split profili yangilandi.');
+        }
+
+        $count = $service->refreshAll();
+
+        return back()->with('success', "{$count} ta foydalanuvchi split profili yangilandi.");
+    }
+
+    public function updateSplitSettings(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $data = $request->validate([
+            'split_enabled' => 'nullable|boolean',
+            'split_public_enabled' => 'nullable|boolean',
+            'split_global_min_order_sum' => 'required|integer|min:1000',
+            'split_global_max_order_sum' => 'required|integer|gte:split_global_min_order_sum',
+            'split_global_min_limit' => 'required|integer|min:1000',
+            'split_global_max_limit' => 'required|integer|gte:split_global_min_limit',
+            'split_min_completed_orders' => 'required|integer|min:1|max:100',
+            'split_min_account_age_days' => 'required|integer|min:1|max:3650',
+            'split_min_card_age_days' => 'required|integer|min:1|max:3650',
+            'split_min_reputation_score' => 'required|numeric|min:1|max:100',
+            'split_max_active_contracts' => 'required|integer|min:1|max:2',
+            'split_default_fee_percent' => 'required|numeric|min:0|max:30',
+            'split_card_delete_lock_enabled' => 'nullable|boolean',
+        ]);
+
+        $settings = ProjectSetting::query()->firstOrCreate([]);
+        $settings->update([
+            'split_enabled' => $request->boolean('split_enabled'),
+            'split_public_enabled' => $request->boolean('split_public_enabled'),
+            'split_upfront_percent' => 25,
+            'split_term_days' => 60,
+            'split_global_min_order_sum' => $request->integer('split_global_min_order_sum'),
+            'split_global_max_order_sum' => $request->integer('split_global_max_order_sum'),
+            'split_global_min_limit' => $request->integer('split_global_min_limit'),
+            'split_global_max_limit' => $request->integer('split_global_max_limit'),
+            'split_min_completed_orders' => $request->integer('split_min_completed_orders'),
+            'split_min_account_age_days' => $request->integer('split_min_account_age_days'),
+            'split_min_card_age_days' => $request->integer('split_min_card_age_days'),
+            'split_min_reputation_score' => round((float) $request->input('split_min_reputation_score'), 2),
+            'split_max_active_contracts' => $request->integer('split_max_active_contracts'),
+            'split_default_fee_percent' => round((float) $request->input('split_default_fee_percent'), 2),
+            'split_card_delete_lock_enabled' => $request->boolean('split_card_delete_lock_enabled'),
+        ]);
+
+        return back()->with('success', 'Split sozlamalari yangilandi.');
+    }
+
+    public function storeSplitCategoryRule(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $data = $request->validate([
+            'category_type' => 'required|in:book,stationery',
+            'category_id' => 'required|integer|min:1',
+            'enabled' => 'nullable|boolean',
+            'fee_percent' => 'nullable|numeric|min:0|max:30',
+            'min_order_sum_override' => 'nullable|integer|min:1000',
+            'max_order_sum_override' => 'nullable|integer|min:1000',
+            'upfront_percent_override' => 'nullable|integer|min:1|max:25',
+        ]);
+
+        if (
+            filled($data['min_order_sum_override'] ?? null)
+            && filled($data['max_order_sum_override'] ?? null)
+            && (int) $data['max_order_sum_override'] < (int) $data['min_order_sum_override']
+        ) {
+            return back()->with('error', "Kategoriya uchun maksimal summa minimal summadan kichik bo'lishi mumkin emas.");
+        }
+
+        SplitCategoryRule::query()->updateOrCreate(
+            [
+                'category_type' => $data['category_type'],
+                'category_id' => (int) $data['category_id'],
+            ],
+            [
+                'enabled' => $request->boolean('enabled'),
+                'fee_percent' => filled($data['fee_percent'] ?? null) ? round((float) $data['fee_percent'], 2) : null,
+                'min_order_sum_override' => $data['min_order_sum_override'] ?? null,
+                'max_order_sum_override' => $data['max_order_sum_override'] ?? null,
+                'upfront_percent_override' => $data['upfront_percent_override'] ?? null,
+            ],
+        );
+
+        return back()->with('success', 'Kategoriya split qoidasi saqlandi.');
+    }
+
+    public function destroySplitCategoryRule(SplitCategoryRule $splitCategoryRule): \Illuminate\Http\RedirectResponse
+    {
+        $splitCategoryRule->delete();
+
+        return back()->with('success', 'Kategoriya split qoidasi o‘chirildi.');
     }
 
     public function userData(User $user): JsonResponse
@@ -1167,6 +1273,7 @@ class AdminController extends Controller
             'Authors' => ['authors' => $this->authorsPayload()],
             'Publishers' => ['publishers' => $this->publishersPayload()],
             'Users' => $this->usersPagePayload(),
+            'Split' => $this->splitPagePayload(),
             'Orders' => $this->ordersPagePayload(),
             'SellerOrders' => [
                 ...$this->sellersPagePayload(),
@@ -1916,6 +2023,22 @@ class AdminController extends Controller
             ->latest()
             ->take(12)
             ->get() : collect();
+        $splitProfile = Schema::hasTable('split_user_profiles')
+            ? app(SplitProfileService::class)->refreshUser($user, true)
+            : null;
+        $favourites = Schema::hasTable('favourite_products') ? FavouriteProducts::query()
+            ->where('user_id', $user->id)
+            ->with('variant')
+            ->latest()
+            ->take(20)
+            ->get() : collect();
+        $cartItems = Schema::hasTable('my_carts') ? MyCart::query()
+            ->where('user_id', $user->id)
+            ->with('variant')
+            ->latest()
+            ->take(20)
+            ->get() : collect();
+        $cartHasPriceItem = Schema::hasTable('my_carts') && Schema::hasColumn('my_carts', 'priceItem');
 
         return [
             'profile' => [
@@ -1961,6 +2084,17 @@ class AdminController extends Controller
                 'giftCertificates' => $giftCertificates->count(),
                 'mysteryBoxes' => $subscriptions->count(),
                 'searches' => $searchHistory->sum(fn (SearchHistory $history) => max(1, (int) ($history->search_count ?? 1))),
+                'favourites' => $favourites->count(),
+                'cartItems' => $cartItems->count(),
+                'cartQuantity' => $cartItems->sum(fn (MyCart $item) => max(1, (int) ($item->count_item ?? 1))),
+                'cartTotal' => $cartItems->sum(function (MyCart $item) use ($cartHasPriceItem) {
+                    $quantity = max(1, (int) ($item->count_item ?? 1));
+                    $unitPrice = $cartHasPriceItem && $item->priceItem !== null
+                        ? (float) $item->priceItem
+                        : $this->userProductPrice((string) $item->product_type, (int) $item->product_id);
+
+                    return $unitPrice * $quantity;
+                }),
             ],
             'orders' => (clone $orders)->latest()->take(12)->get()->map(fn (Sold $order) => [
                 'id' => $order->id,
@@ -2012,6 +2146,39 @@ class AdminController extends Controller
                 'date' => optional($history->created_at)->format('Y-m-d H:i'),
                 'url' => route('boshqaruv.search-history', ['search_history_search' => $history->text ?: $user->phone_number]),
             ])->values(),
+            'favourites' => $favourites->map(function (FavouriteProducts $favourite) {
+                $product = $this->userProductPayload(
+                    (string) $favourite->product_type,
+                    (int) $favourite->product_id,
+                    $favourite->variant,
+                );
+
+                return array_merge($product, [
+                    'id' => $favourite->id,
+                    'favouriteId' => $favourite->id,
+                    'addedAt' => optional($favourite->created_at)->format('Y-m-d H:i'),
+                ]);
+            })->values(),
+            'cartItems' => $cartItems->map(function (MyCart $item) use ($cartHasPriceItem) {
+                $quantity = max(1, (int) ($item->count_item ?? 1));
+                $product = $this->userProductPayload(
+                    (string) $item->product_type,
+                    (int) $item->product_id,
+                    $item->variant,
+                );
+                $unitPrice = $cartHasPriceItem && $item->priceItem !== null
+                    ? (float) $item->priceItem
+                    : (float) $product['price'];
+
+                return array_merge($product, [
+                    'id' => $item->id,
+                    'cartId' => $item->id,
+                    'quantity' => $quantity,
+                    'unitPrice' => $unitPrice,
+                    'total' => $unitPrice * $quantity,
+                    'addedAt' => optional($item->created_at)->format('Y-m-d H:i'),
+                ]);
+            })->values(),
             'giftCertificates' => $giftCertificates->map(fn (GiftCertificate $certificate) => [
                 'id' => $certificate->id,
                 'code' => $certificate->code,
@@ -2033,6 +2200,20 @@ class AdminController extends Controller
                 'showUrl' => route('admin.mystery-box.show', $subscription),
                 'indexUrl' => route('boshqaruv.mystery-box'),
             ])->values(),
+            'splitProfile' => $splitProfile ? [
+                'eligible' => (bool) $splitProfile['eligible'],
+                'confidenceScore' => (float) $splitProfile['confidence_score'],
+                'computedLimit' => (int) $splitProfile['computed_limit'],
+                'availableLimit' => (int) $splitProfile['available_limit'],
+                'activeExposure' => (int) $splitProfile['active_exposure'],
+                'reputationScore' => (float) $splitProfile['reputation_score'],
+                'verifiedCardAgeDays' => (int) $splitProfile['verified_card_age_days'],
+                'successfulCardPayments180d' => (int) $splitProfile['successful_card_payments_180d'],
+                'completedOrdersAll' => (int) $splitProfile['completed_orders_all'],
+                'codReturnStrikes' => (int) $splitProfile['cod_return_strikes'],
+                'reasons' => array_values($splitProfile['eligibility_reasons'] ?? []),
+                'lastRefreshedAt' => $splitProfile['last_refreshed_at'] ?? null,
+            ] : null,
             'actions' => [
                 'blockUrl' => route('boshqaruv.users.block', $user),
                 'unblockUrl' => route('boshqaruv.users.unblock', $user),
@@ -2040,6 +2221,100 @@ class AdminController extends Controller
                 'premiumUrl' => route('boshqaruv.users.premium', $user),
             ],
         ];
+    }
+
+    private function userProductPayload(string $type, int $productId, ?StationeryVariant $variant = null): array
+    {
+        $type = strtolower(trim($type));
+        $product = $this->userProductModel($type, $productId);
+        $variantImage = $variant?->image_url;
+
+        return [
+            'productId' => $productId,
+            'productType' => $type,
+            'typeLabel' => $this->userProductTypeLabel($type),
+            'name' => $product?->name ?? $product?->title ?? 'Mahsulot topilmadi',
+            'image' => $variantImage ?: $this->productImageUrl($product),
+            'price' => $this->userProductPrice($type, $productId, $product),
+            'stock' => $variant ? (int) ($variant->stock ?? 0) : $this->userProductStock($type, $product),
+            'seller' => $product?->seller?->shop_name,
+            'status' => $product ? ($product->status ? 'Faol' : 'Nofaol') : 'Topilmadi',
+            'approved' => $product ? (bool) ($product->is_approved ?? true) : false,
+            'variant' => $variant ? [
+                'id' => $variant->id,
+                'name' => $variant->color_name ?: 'Variant',
+                'stock' => (int) ($variant->stock ?? 0),
+                'image' => $variantImage,
+            ] : null,
+            'url' => $this->userProductUrl($type, $productId),
+        ];
+    }
+
+    private function userProductModel(string $type, int $productId)
+    {
+        if ($productId <= 0) {
+            return null;
+        }
+
+        return match ($type) {
+            'stationery' => Stationery::query()->with('seller:id,shop_name')->find($productId),
+            'gift' => Gifts::query()->with('seller:id,shop_name')->find($productId),
+            'book' => Books::query()->with('seller:id,shop_name')->find($productId),
+            default => null,
+        };
+    }
+
+    private function userProductPrice(string $type, int $productId, $product = null): float
+    {
+        $product ??= $this->userProductModel($type, $productId);
+
+        if (! $product) {
+            return 0.0;
+        }
+
+        return match ($type) {
+            'stationery' => (float) (($product->discount_price ?? 0) > 0 ? $product->discount_price : ($product->price ?? 0)),
+            'gift' => (float) ($product->priceFrom ?? $product->price ?? 0),
+            default => (float) (($product->discountPrice ?? 0) > 0 ? $product->discountPrice : ($product->price ?? 0)),
+        };
+    }
+
+    private function userProductStock(string $type, $product): int
+    {
+        if (! $product) {
+            return 0;
+        }
+
+        return match ($type) {
+            'stationery', 'gift' => (int) ($product->stock ?? 0),
+            default => (int) ($product->count ?? 0),
+        };
+    }
+
+    private function userProductTypeLabel(string $type): string
+    {
+        return match ($type) {
+            'book' => 'Kitob',
+            'stationery' => 'Kanselyariya',
+            'gift' => "Sovg'a",
+            'ebook' => 'Elektron kitob',
+            'audiobook' => 'Audiokitob',
+            default => $type ?: 'Mahsulot',
+        };
+    }
+
+    private function userProductUrl(string $type, int $productId): ?string
+    {
+        if ($productId <= 0) {
+            return null;
+        }
+
+        return match ($type) {
+            'stationery' => route('boshqaruv.stationeries', ['stationeries_search' => $productId, 'stationeries_tab' => 'all']),
+            'gift' => route('boshqaruv.sovgalar'),
+            'book' => route('boshqaruv.books', ['books_search' => $productId, 'books_tab' => 'all']),
+            default => null,
+        };
     }
 
     private function userFollowPayload(int $userId, bool $following): \Illuminate\Support\Collection
@@ -4860,6 +5135,166 @@ class AdminController extends Controller
         Cache::forget('boshqaruv:api-clients:payload:v2');
         Cache::forget('boshqaruv:api-clients:logs:v1');
         Cache::forget('boshqaruv:api-clients:meta:v1');
+    }
+
+    private function splitPagePayload(): array
+    {
+        $service = app(SplitProfileService::class);
+        $status = trim((string) request('split_status', 'all'));
+        $search = trim((string) request('split_search', ''));
+        $hasProfiles = Schema::hasTable('split_user_profiles');
+
+        $query = User::query()
+            ->select('users.*')
+            ->when($search !== '', fn ($builder) => $builder->where(function ($builder) use ($search) {
+                $builder->where('users.id', $search)
+                    ->orWhere('users.name', 'like', "%{$search}%")
+                    ->orWhere('users.lastname', 'like', "%{$search}%")
+                    ->orWhere('users.phone_number', 'like', "%{$search}%")
+                    ->orWhere('users.email', 'like', "%{$search}%");
+            }));
+
+        if ($hasProfiles) {
+            $query
+                ->leftJoin('split_user_profiles as split_profiles', 'split_profiles.user_id', '=', 'users.id')
+                ->when($status === 'eligible', fn ($builder) => $builder->where('split_profiles.eligible', true))
+                ->when($status === 'ineligible', fn ($builder) => $builder->where(function ($builder) {
+                    $builder->where('split_profiles.eligible', false)->orWhereNull('split_profiles.eligible');
+                }))
+                ->when($status === 'locked', fn ($builder) => $builder->where('split_profiles.active_exposure', '>', 0))
+                ->orderByDesc(DB::raw('COALESCE(split_profiles.eligible, 0)'))
+                ->orderByDesc(DB::raw('COALESCE(split_profiles.confidence_score, 0)'));
+        }
+
+        $query->orderByDesc('users.id');
+
+        $users = $query->paginate(20, ['users.*'], 'split_page')->withQueryString();
+        $service->warmProfilesForUsers($users->getCollection());
+
+        $profiles = $hasProfiles
+            ? SplitUserProfile::query()
+                ->whereIn('user_id', $users->getCollection()->pluck('id'))
+                ->get()
+                ->keyBy('user_id')
+            : collect();
+
+        return [
+            'splitSettings' => $this->splitSettingsPanelPayload($service),
+            'splitSummary' => $this->splitSummaryPayload(),
+            'splitBookRules' => $this->splitCategoryRulesPayload('book'),
+            'splitStationeryRules' => $this->splitCategoryRulesPayload('stationery'),
+            'splitUsers' => $users->getCollection()->map(function (User $user) use ($profiles) {
+                /** @var SplitUserProfile|null $profile */
+                $profile = $profiles->get($user->id);
+
+                return [
+                    'id' => $user->id,
+                    'name' => $user->full_name,
+                    'phone' => $this->formatPhone($user->phone_number ?? $user->phone ?? ''),
+                    'verified' => (bool) $user->isVerified,
+                    'eligible' => (bool) ($profile?->eligible ?? false),
+                    'confidenceScore' => (float) ($profile?->confidence_score ?? 0),
+                    'computedLimit' => (int) ($profile?->computed_limit ?? 0),
+                    'availableLimit' => (int) ($profile?->available_limit ?? 0),
+                    'activeExposure' => (int) ($profile?->active_exposure ?? 0),
+                    'reputationScore' => (float) ($profile?->reputation_score ?? $user->reputation_score ?? 0),
+                    'completedOrders' => (int) ($profile?->completed_orders_all ?? 0),
+                    'verifiedCardAgeDays' => (int) ($profile?->verified_card_age_days ?? 0),
+                    'verifiedCardsCount' => (int) ($profile?->verified_cards_count ?? 0),
+                    'successfulCardPayments180d' => (int) ($profile?->successful_card_payments_180d ?? 0),
+                    'codReturnStrikes' => (int) ($profile?->cod_return_strikes ?? 0),
+                    'reasons' => array_values($profile?->eligibility_reasons ?? []),
+                    'lastRefreshedAt' => optional($profile?->last_refreshed_at)->format('Y-m-d H:i'),
+                    'profileUrl' => route('boshqaruv.users', ['users_search' => $user->id]),
+                    'refreshUrl' => route('boshqaruv.split.refresh'),
+                ];
+            })->values()->all(),
+            'splitPagination' => $this->paginationMeta($users),
+            'splitFilters' => ['status' => $status, 'search' => $search],
+            'splitActions' => [
+                'settingsUpdateUrl' => route('boshqaruv.split.settings.update'),
+                'ruleStoreUrl' => route('boshqaruv.split.category-rules.store'),
+                'refreshUrl' => route('boshqaruv.split.refresh'),
+            ],
+        ];
+    }
+
+    private function splitSettingsPanelPayload(SplitProfileService $service): array
+    {
+        $settings = $service->settings();
+
+        return [
+            'enabled' => (bool) $settings['enabled'],
+            'publicEnabled' => (bool) $settings['public_enabled'],
+            'upfrontPercent' => (int) $settings['upfront_percent'],
+            'termDays' => (int) $settings['term_days'],
+            'globalMinOrderSum' => (int) $settings['global_min_order_sum'],
+            'globalMaxOrderSum' => (int) $settings['global_max_order_sum'],
+            'globalMinLimit' => (int) $settings['global_min_limit'],
+            'globalMaxLimit' => (int) $settings['global_max_limit'],
+            'minCompletedOrders' => (int) $settings['min_completed_orders'],
+            'minAccountAgeDays' => (int) $settings['min_account_age_days'],
+            'minCardAgeDays' => (int) $settings['min_card_age_days'],
+            'minReputationScore' => (float) $settings['min_reputation_score'],
+            'maxActiveContracts' => (int) $settings['max_active_contracts'],
+            'defaultFeePercent' => (float) $settings['default_fee_percent'],
+            'cardDeleteLockEnabled' => (bool) $settings['card_delete_lock_enabled'],
+        ];
+    }
+
+    private function splitSummaryPayload(): array
+    {
+        if (! Schema::hasTable('split_user_profiles')) {
+            return [
+                'profiles' => 0,
+                'eligible' => 0,
+                'locked' => 0,
+                'avgConfidence' => 0,
+                'totalAvailableLimit' => 0,
+            ];
+        }
+
+        return [
+            'profiles' => (int) SplitUserProfile::query()->count(),
+            'eligible' => (int) SplitUserProfile::query()->where('eligible', true)->count(),
+            'locked' => (int) SplitUserProfile::query()->where('active_exposure', '>', 0)->count(),
+            'avgConfidence' => round((float) SplitUserProfile::query()->avg('confidence_score'), 2),
+            'totalAvailableLimit' => (int) round((float) SplitUserProfile::query()->sum('available_limit')),
+        ];
+    }
+
+    private function splitCategoryRulesPayload(string $type): array
+    {
+        if (! Schema::hasTable('split_category_rules')) {
+            return [];
+        }
+
+        $rules = SplitCategoryRule::query()
+            ->where('category_type', $type)
+            ->get()
+            ->keyBy('category_id');
+
+        $categories = $type === 'book'
+            ? BookCategories::query()->orderBy('name_uz')->get()
+            : StationeryCategory::query()->orderBy('name_uz')->get();
+
+        return $categories->map(function ($category) use ($rules, $type) {
+            /** @var SplitCategoryRule|null $rule */
+            $rule = $rules->get($category->id);
+
+            return [
+                'id' => $category->id,
+                'categoryType' => $type,
+                'name' => $category->name_uz ?: $category->name_ru ?: $category->name_en ?: "Kategoriya #{$category->id}",
+                'active' => (bool) ($category->is_active ?? true),
+                'enabled' => (bool) ($rule?->enabled ?? false),
+                'feePercent' => $rule?->fee_percent !== null ? (float) $rule->fee_percent : null,
+                'minOrderSumOverride' => $rule?->min_order_sum_override,
+                'maxOrderSumOverride' => $rule?->max_order_sum_override,
+                'upfrontPercentOverride' => $rule?->upfront_percent_override,
+                'destroyUrl' => $rule ? route('boshqaruv.split.category-rules.destroy', $rule) : null,
+            ];
+        })->values()->all();
     }
 
     private function settingsPayload(): array

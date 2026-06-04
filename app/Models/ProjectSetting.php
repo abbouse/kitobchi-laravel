@@ -27,6 +27,14 @@ class ProjectSetting extends Model
         // Phase 3 — Kuryer bonus tizimi
         'courier_surge_step', 'courier_surge_max', 'courier_surge_threshold',
         'courier_sla_minutes', 'courier_penalty_step',
+        // Split v1 prep
+        'split_enabled', 'split_public_enabled', 'split_upfront_percent', 'split_term_days',
+        'split_global_min_order_sum', 'split_global_max_order_sum',
+        'split_global_min_limit', 'split_global_max_limit',
+        'split_min_completed_orders', 'split_min_account_age_days',
+        'split_min_card_age_days', 'split_min_reputation_score',
+        'split_max_active_contracts', 'split_default_fee_percent',
+        'split_card_delete_lock_enabled',
     ];
 
     protected $casts = [
@@ -44,5 +52,20 @@ class ProjectSetting extends Model
         'courier_surge_threshold' => 'integer',
         'courier_sla_minutes'     => 'integer',
         'courier_penalty_step'    => 'integer',
+        'split_enabled' => 'boolean',
+        'split_public_enabled' => 'boolean',
+        'split_upfront_percent' => 'integer',
+        'split_term_days' => 'integer',
+        'split_global_min_order_sum' => 'integer',
+        'split_global_max_order_sum' => 'integer',
+        'split_global_min_limit' => 'integer',
+        'split_global_max_limit' => 'integer',
+        'split_min_completed_orders' => 'integer',
+        'split_min_account_age_days' => 'integer',
+        'split_min_card_age_days' => 'integer',
+        'split_min_reputation_score' => 'decimal:2',
+        'split_max_active_contracts' => 'integer',
+        'split_default_fee_percent' => 'decimal:2',
+        'split_card_delete_lock_enabled' => 'boolean',
     ];
 }

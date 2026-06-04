@@ -8,6 +8,7 @@ use App\Models\Sold;
 use App\Models\UserCard;
 use App\Services\PaylovOrderPaymentService;
 use App\Services\PaylovService;
+use App\Services\SplitProfileService;
 use Illuminate\Http\Request;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
@@ -377,6 +378,12 @@ class CardController extends Controller
         $card = $user->cards()->find($id);
         if (!$card) {
             return $this->error('Karta topilmadi.', 404);
+        }
+
+        if (app(SplitProfileService::class)->cardRemovalBlocked($user)) {
+            return $this->error('Sizda faol split to‘lovi bor. Qarzdorlik yopilmaguncha bog‘langan kartalarni o‘chirib bo‘lmaydi.', 422, [
+                'error_code' => 'split_card_removal_blocked',
+            ]);
         }
 
         try {

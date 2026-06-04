@@ -11,6 +11,7 @@ use App\Models\Sold;
 use App\Models\UserCard;
 use App\Models\User;
 use App\Services\PaylovService;
+use App\Services\SplitProfileService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -241,6 +242,10 @@ class UserController extends Controller
     {
         if ((int) $card->user_id !== (int) $user->id) {
             abort(404);
+        }
+
+        if (app(SplitProfileService::class)->cardRemovalBlocked($user)) {
+            return back()->with('error', 'Foydalanuvchida faol split to‘lovi bor. Qarzdorlik yopilmaguncha bog‘langan kartalarni o‘chirib bo‘lmaydi.');
         }
 
         try {

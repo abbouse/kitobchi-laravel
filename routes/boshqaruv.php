@@ -23,12 +23,17 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
         Route::get('/authors', fn (AdminController $controller) => $controller->page('Authors'))->name('authors');
         Route::get('/publishers', fn (AdminController $controller) => $controller->page('Publishers'))->name('publishers');
         Route::get('/users', fn (AdminController $controller) => $controller->page('Users'))->name('users');
+        Route::get('/split', fn (AdminController $controller) => $controller->page('Split'))->name('split');
         Route::get('/users/{user}/data', [AdminController::class, 'userData'])->name('users.data');
         Route::post('/users/{user}/block', [\App\Http\Controllers\A122\UserController::class, 'block'])->name('users.block');
         Route::post('/users/{user}/unblock', [\App\Http\Controllers\A122\UserController::class, 'unblock'])->name('users.unblock');
         Route::patch('/users/{user}/verify', [\App\Http\Controllers\A122\UserController::class, 'toggleVerify'])->name('users.verify');
         Route::patch('/users/{user}/premium', [\App\Http\Controllers\A122\UserController::class, 'togglePremium'])->name('users.premium');
         Route::delete('/users/{user}/cards/{card}', [\App\Http\Controllers\A122\UserController::class, 'destroyCard'])->name('users.cards.destroy');
+        Route::post('/split/refresh', [AdminController::class, 'refreshSplitProfiles'])->name('split.refresh');
+        Route::put('/split/settings', [AdminController::class, 'updateSplitSettings'])->name('split.settings.update');
+        Route::post('/split/category-rules', [AdminController::class, 'storeSplitCategoryRule'])->name('split.category-rules.store');
+        Route::delete('/split/category-rules/{splitCategoryRule}', [AdminController::class, 'destroySplitCategoryRule'])->name('split.category-rules.destroy');
         Route::get('/orders', fn (AdminController $controller) => $controller->page('Orders'))->name('orders');
         Route::get('/sellers', fn (AdminController $controller) => $controller->page('SellerOrders'))->name('sellers');
         Route::get('/seller-orders', fn (AdminController $controller) => $controller->page('SellerOrders'))->name('seller-orders');
