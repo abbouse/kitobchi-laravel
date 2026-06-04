@@ -50,7 +50,6 @@ class Books extends Model
         'views',
         'recommendedExpiresAt',
         'kangaroo_listing_decision',
-        'kangaroo_listing_score',
         'kangaroo_listing_checked_at',
         'kangaroo_listing_issues',
         'ugc_aggregate_score',
@@ -64,7 +63,6 @@ class Books extends Model
         'recommended' => 'boolean',
         'vectorData' => 'json',
         'kangaroo_listing_issues' => 'array',
-        'kangaroo_listing_score' => 'decimal:1',
         'kangaroo_listing_checked_at' => 'datetime',
         'ugc_last_scored_at' => 'datetime',
     ];

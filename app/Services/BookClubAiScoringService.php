@@ -18,6 +18,7 @@ class BookClubAiScoringService
         private readonly OpenAIService $openAIService,
         private readonly BookClubModerationService $moderationService,
         private readonly ProductReviewFeedbackPushService $productReviewFeedbackPushService,
+        private readonly ProductUgcRatingService $productUgcRatingService,
     ) {
     }
 
@@ -67,6 +68,19 @@ class BookClubAiScoringService
 
         $this->scorePosts($posts);
         $this->scoreComments($comments);
+
+        $affectedPostIds = collect()
+            ->merge($posts->pluck('id'))
+            ->merge($comments->pluck('post_id'))
+            ->filter(fn ($id) => (int) $id > 0)
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($affectedPostIds !== []) {
+            $this->productUgcRatingService->refreshFromPostIds($affectedPostIds);
+        }
 
         return [
             'posts' => $posts->count(),

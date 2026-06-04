@@ -10,7 +10,7 @@ class RefreshProductUgcRatings extends Command
 {
     protected $signature = 'products:refresh-ugc-ratings';
 
-    protected $description = 'AI baholangan product izohlaridan mahsulot UGC reytingini qayta hisoblaydi';
+    protected $description = 'AI baholangan mahsulot izohlaridan mahsulot UGC reytingini qayta hisoblaydi';
 
     public function handle(ProductUgcRatingService $service): int
     {

@@ -105,9 +105,15 @@ return Application::configure(basePath: dirname(__DIR__))
             ->timezone($tz)
             ->withoutOverlapping();
 
-        // ── Book Club AI baholash — kuniga 2 marta ───────────────────
+        // ── Book Club AI baholash — haftasiga 1 marta ─────────────────
         $schedule->command('openai:score-book-club-content')
-            ->twiceDaily(9, 21)
+            ->weeklyOn(0, '09:00')
+            ->timezone($tz)
+            ->withoutOverlapping();
+
+        // ── Mahsulot UGC ratinglari — haftasiga 1 marta qayta yig'iladi ──
+        $schedule->command('products:refresh-ugc-ratings')
+            ->weeklyOn(0, '09:40')
             ->timezone($tz)
             ->withoutOverlapping();
 

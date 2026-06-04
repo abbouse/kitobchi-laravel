@@ -80,7 +80,7 @@ class ProductUgcRatingService
                 ->where('p.product_id', $productId)
                 ->where('p.ai_post_status', 'scored')
                 ->whereNotNull('p.ai_post_score')
-                ->select('p.ai_post_score', 'p.created_at')
+                ->select('p.id', 'p.ai_post_score', 'p.created_at')
                 ->get();
 
             if ($posts->isEmpty()) {
@@ -88,23 +88,39 @@ class ProductUgcRatingService
                 continue;
             }
 
+            $comments = DB::table('book_club_comments as c')
+                ->join('book_club as p', 'p.id', '=', 'c.post_id')
+                ->where('p.is_deleted', 0)
+                ->where(function ($query) {
+                    $query->where('p.repost', false)->orWhereNull('p.repost');
+                })
+                ->where('p.product_type', $productType)
+                ->where('p.product_id', $productId)
+                ->where('c.ai_status', 'scored')
+                ->whereNotNull('c.ai_score')
+                ->where(function ($query) {
+                    $query->whereNull('c.is_hidden_by_ai')->orWhere('c.is_hidden_by_ai', false);
+                })
+                ->select('c.post_id', 'c.ai_score', 'c.parent_id', 'c.created_at')
+                ->get();
+
             $weightedScore = 0.0;
             $weightedCount = 0.0;
 
             foreach ($posts as $post) {
-                $weight = 1.0;
-                $createdAt = $post->created_at ? Carbon::parse($post->created_at) : null;
-
-                if ($createdAt) {
-                    $days = $createdAt->diffInDays(now());
-                    if ($days <= 30) {
-                        $weight = 1.25;
-                    } elseif ($days <= 90) {
-                        $weight = 1.10;
-                    }
-                }
+                $weight = $this->freshnessWeight($post->created_at);
 
                 $weightedScore += ((float) $post->ai_post_score) * $weight;
+                $weightedCount += $weight;
+            }
+
+            foreach ($comments as $comment) {
+                // Postlar product uchun asosiy review signal.
+                // Post ostidagi izohlar esa faqat ozgina ta'sir qiladi.
+                $weight = $comment->parent_id ? 0.08 : 0.18;
+                $weight *= $this->freshnessWeight($comment->created_at);
+
+                $weightedScore += ((float) $comment->ai_score) * $weight;
                 $weightedCount += $weight;
             }
 
@@ -118,6 +134,25 @@ class ProductUgcRatingService
                 $posts->count(),
             );
         }
+    }
+
+    private function freshnessWeight($createdAt): float
+    {
+        $carbon = $createdAt ? Carbon::parse($createdAt) : null;
+        if (! $carbon) {
+            return 1.0;
+        }
+
+        $days = $carbon->diffInDays(now());
+        if ($days <= 30) {
+            return 1.25;
+        }
+
+        if ($days <= 90) {
+            return 1.10;
+        }
+
+        return 1.0;
     }
 
     private function updateProductScore(string $productType, int $productId, float $score, int $reviewsCount): void

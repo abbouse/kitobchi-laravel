@@ -157,6 +157,7 @@ class SplitProfileService
         $accountAgeDays = $user->created_at instanceof Carbon
             ? max(0, $user->created_at->diffInDays($now))
             : 0;
+        $lastSeenAt = $this->parseDate($user->last_seen_at);
 
         $activeExposure = 0;
         $activeContractCount = 0;
@@ -196,7 +197,7 @@ class SplitProfileService
             cardChurn90d: $cardChurn90d,
             cancelRate90d: $cancelRate90d,
             activeWarningCount: $activeWarningCount,
-            isActiveRecently: (bool) ($user->last_seen_at?->gte($now->copy()->subDays(14)) ?? false),
+            isActiveRecently: (bool) ($lastSeenAt?->gte($now->copy()->subDays(14)) ?? false),
             codReturnStrikes: $codReturnStrikes,
         );
 
@@ -413,5 +414,22 @@ class SplitProfileService
                             ->where('paymentStatus', PaymentStatusCode::PAID->legacy());
                     });
             });
+    }
+
+    private function parseDate(mixed $value): ?Carbon
+    {
+        if ($value instanceof Carbon) {
+            return $value;
+        }
+
+        if (blank($value)) {
+            return null;
+        }
+
+        try {
+            return Carbon::parse((string) $value);
+        } catch (\Throwable) {
+            return null;
+        }
     }
 }

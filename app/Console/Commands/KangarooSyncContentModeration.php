@@ -117,7 +117,6 @@ class KangarooSyncContentModeration extends Command
             if (! in_array((int) $b->id, $returnedBookIds, true)) {
                 $this->applyListingResult(Books::class, (int) $b->id, [
                     'decision' => 'human_review',
-                    'score' => null,
                     'issues' => [['code' => 'missing_kangaroo_response', 'severity' => 'warn']],
                 ], $autoApply);
             }
@@ -126,7 +125,6 @@ class KangarooSyncContentModeration extends Command
             if (! in_array((int) $s->id, $returnedStIds, true)) {
                 $this->applyListingResult(Stationery::class, (int) $s->id, [
                     'decision' => 'human_review',
-                    'score' => null,
                     'issues' => [['code' => 'missing_kangaroo_response', 'severity' => 'warn']],
                 ], $autoApply);
             }
@@ -139,7 +137,6 @@ class KangarooSyncContentModeration extends Command
     {
         foreach ([
             'kangaroo_listing_decision',
-            'kangaroo_listing_score',
             'kangaroo_listing_checked_at',
             'kangaroo_listing_issues',
         ] as $column) {
@@ -183,7 +180,6 @@ class KangarooSyncContentModeration extends Command
         foreach ($books as $b) {
             Books::query()->where('id', $b->id)->update([
                 'kangaroo_listing_decision' => 'human_review',
-                'kangaroo_listing_score' => null,
                 'kangaroo_listing_issues' => [$issue],
                 'kangaroo_listing_checked_at' => now(),
             ]);
@@ -191,7 +187,6 @@ class KangarooSyncContentModeration extends Command
         foreach ($stationeries as $s) {
             Stationery::query()->where('id', $s->id)->update([
                 'kangaroo_listing_decision' => 'human_review',
-                'kangaroo_listing_score' => null,
                 'kangaroo_listing_issues' => [$issue],
                 'kangaroo_listing_checked_at' => now(),
             ]);
@@ -231,13 +226,8 @@ class KangarooSyncContentModeration extends Command
         }
         $issues = array_merge($issues, $invalidNote);
 
-        $score = array_key_exists('score', $r) && $r['score'] !== null && $r['score'] !== ''
-            ? round(max(1, min(5, (float) $r['score'])), 1)
-            : null;
-
         $update = [
             'kangaroo_listing_decision' => $decision,
-            'kangaroo_listing_score' => $score,
             'kangaroo_listing_issues' => $issues,
             'kangaroo_listing_checked_at' => now(),
         ];
