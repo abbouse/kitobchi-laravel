@@ -20,6 +20,8 @@ type SplitSettings = {
   maxActiveContracts: number;
   defaultFeePercent: number;
   cardDeleteLockEnabled: boolean;
+  refundSenderCardId: string;
+  refundServiceId: string;
 };
 
 type SplitSummary = {
@@ -176,10 +178,18 @@ export default function Split() {
                 <div className="col-md-3"><Field name="split_min_reputation_score" label="Min reputation score" type="number" step="0.01" defaultValue={splitSettings.minReputationScore} /></div>
                 <div className="col-md-3"><Field name="split_max_active_contracts" label="Max aktiv split" type="number" defaultValue={splitSettings.maxActiveContracts} /></div>
                 <div className="col-md-3"><Field name="split_default_fee_percent" label="Default ustama (%)" type="number" step="0.01" defaultValue={splitSettings.defaultFeePercent} /></div>
+                <div className="col-md-3"><Field name="paylov_refund_sender_card_id" label="Refund sender cardId" defaultValue={splitSettings.refundSenderCardId} /></div>
+                <div className="col-md-3"><Field name="paylov_refund_service_id" label="Refund serviceId" defaultValue={splitSettings.refundServiceId} /></div>
                 <div className="col-md-6">
                   <div className="mini-stat h-100">
                     <strong>Skor nima bilan hisoblanadi</strong>
                     <span>Reputation, yakunlangan pullik orderlar, GMV, verified karta yoshi, saved-card payment tarixi, device barqarorligi, cancel/COD strike va warninglar.</span>
+                  </div>
+                </div>
+                <div className="col-md-6">
+                  <div className="mini-stat h-100">
+                    <strong>Partial refund texnik sozlamasi</strong>
+                    <span>Item yoki seller-order bo‘yicha refund kerak bo‘lsa, tizim aynan original Paylov kartaga `Account2Card/P2P` bilan pul qaytaradi. Shu uchun sender `cardId` va kerak bo‘lsa `serviceId` shu yerda saqlanadi.</span>
                   </div>
                 </div>
               </div>

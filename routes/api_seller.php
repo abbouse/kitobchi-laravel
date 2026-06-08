@@ -65,9 +65,12 @@ Route::middleware('auth:seller')->group(function () {
     Route::get('orders/last-orders', [OrderController::class, 'lastOrders']);
     Route::post('orders/view-order', [OrderController::class, 'viewOrder']);
     Route::get('orders/orders-count', [OrderController::class, 'ordersCount']);
+    Route::get('orders/cancel-reasons', [OrderController::class, 'cancelReasonCatalog']);
     Route::get('orders/accept/{id}', [OrderController::class, 'acceptOrder']);
     Route::get('orders/scan-qr/{qr}', [OrderController::class, 'scanQR']);
     Route::post('orders/toCourier/{qr}', [OrderController::class, 'toCourier']);
+    Route::post('orders/{id}/cancel', [OrderController::class, 'cancelSellerOrder']);
+    Route::post('orders/items/{itemId}/cancel', [OrderController::class, 'cancelItem']);
     Route::get('premium/info', [PremiumController::class, 'info']);
     Route::post('premium/buy', [PremiumController::class, 'buy']);
     Route::post('premium/cancel', [PremiumController::class, 'cancel']);

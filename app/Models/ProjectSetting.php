@@ -35,6 +35,8 @@ class ProjectSetting extends Model
         'split_min_card_age_days', 'split_min_reputation_score',
         'split_max_active_contracts', 'split_default_fee_percent',
         'split_card_delete_lock_enabled',
+        // Refund
+        'paylov_refund_sender_card_id', 'paylov_refund_service_id',
     ];
 
     protected $casts = [

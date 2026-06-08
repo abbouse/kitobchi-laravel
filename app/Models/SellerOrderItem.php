@@ -9,7 +9,14 @@ class SellerOrderItem extends Model
 {
     use HasFactory;
     protected $fillable = [
-        'seller_id', 'order_id', 'product_id', 'variant_id', 'type', 'quantity', 'price'
+        'seller_id', 'order_id', 'product_id', 'variant_id', 'type', 'quantity', 'price',
+        'cancelled_at', 'cancelled_by_seller_id', 'cancel_reason_code',
+        'cancel_note_uz', 'cancel_note_ru', 'cancel_note_en', 'cancel_note_ja',
+        'custom_cancel_note', 'refund_status', 'refunded_at',
+    ];
+    protected $casts = [
+        'cancelled_at' => 'datetime',
+        'refunded_at' => 'datetime',
     ];
     public function book()
     {

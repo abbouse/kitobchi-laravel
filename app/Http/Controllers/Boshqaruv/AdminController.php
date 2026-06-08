@@ -54,6 +54,7 @@ use App\Models\SellerAd;
 use App\Models\Seller;
 use App\Models\SellerBanLog;
 use App\Models\SellerContractHistory;
+use App\Models\OrderRefund;
 use App\Models\SellerOrder;
 use App\Models\SellerOrderItem;
 use App\Models\SellerTransaction;
@@ -86,6 +87,7 @@ use App\Services\HubRoleAccessService;
 use App\Support\AdminOrderStatusPresenter;
 use App\Services\SellerPremiumService;
 use App\Services\SellerOrderSettlementService;
+use App\Services\SellerCancellationReasonCatalog;
 use App\Services\SplitProfileService;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
@@ -205,6 +207,8 @@ class AdminController extends Controller
             'split_max_active_contracts' => 'required|integer|min:1|max:2',
             'split_default_fee_percent' => 'required|numeric|min:0|max:30',
             'split_card_delete_lock_enabled' => 'nullable|boolean',
+            'paylov_refund_sender_card_id' => 'nullable|string|max:255',
+            'paylov_refund_service_id' => 'nullable|string|max:255',
         ]);
 
         $settings = ProjectSetting::query()->firstOrCreate([]);
@@ -224,6 +228,12 @@ class AdminController extends Controller
             'split_max_active_contracts' => $request->integer('split_max_active_contracts'),
             'split_default_fee_percent' => round((float) $request->input('split_default_fee_percent'), 2),
             'split_card_delete_lock_enabled' => $request->boolean('split_card_delete_lock_enabled'),
+            'paylov_refund_sender_card_id' => filled($data['paylov_refund_sender_card_id'] ?? null)
+                ? trim((string) $data['paylov_refund_sender_card_id'])
+                : null,
+            'paylov_refund_service_id' => filled($data['paylov_refund_service_id'] ?? null)
+                ? trim((string) $data['paylov_refund_service_id'])
+                : null,
         ]);
 
         return back()->with('success', 'Split sozlamalari yangilandi.');
@@ -5239,6 +5249,8 @@ class AdminController extends Controller
             'maxActiveContracts' => (int) $settings['max_active_contracts'],
             'defaultFeePercent' => (float) $settings['default_fee_percent'],
             'cardDeleteLockEnabled' => (bool) $settings['card_delete_lock_enabled'],
+            'refundSenderCardId' => (string) $settings['refund_sender_card_id'],
+            'refundServiceId' => (string) $settings['refund_service_id'],
         ];
     }
 
@@ -6601,7 +6613,8 @@ class AdminController extends Controller
 
     private function orderPayload(Sold $order): array
     {
-        $items = collect($order->items ?? [])->map(fn ($item) => $this->orderItemPayload((array) $item))->values();
+        $panelAdmin = Auth::guard('panel')->user();
+        $canModerateRefunds = (bool) ($panelAdmin?->isAdmin() ?? false);
         $sellerOrderModels = Schema::hasTable('seller_orders')
             ? SellerOrder::query()
                 ->with(['seller:id,shop_name,phone_number,commission_percent', 'courier:id,first_name,last_name,phone_number,region'])
@@ -6609,6 +6622,21 @@ class AdminController extends Controller
                 ->latest('id')
                 ->get()
             : collect();
+        $sellerOrderItemModels = Schema::hasTable('seller_order_items') && $sellerOrderModels->isNotEmpty()
+            ? SellerOrderItem::query()
+                ->with([
+                    'book:id,name,author,images',
+                    'stationery:id,name,images',
+                    'gift:id,name,images',
+                    'variant:id,color_name,image_path,stock',
+                ])
+                ->whereIn('order_id', $sellerOrderModels->pluck('id')->all())
+                ->orderBy('id')
+                ->get()
+            : collect();
+        $items = $sellerOrderItemModels->isNotEmpty()
+            ? $sellerOrderItemModels->map(fn (SellerOrderItem $item) => $this->sellerOrderItemPayload($item, $canModerateRefunds))->values()
+            : collect($order->items ?? [])->map(fn ($item) => $this->orderItemPayload((array) $item))->values();
         $address = collect($order->address ?? [])->values()->map(fn ($item) => $this->orderAddressPayload((array) $item));
         $primaryAddress = (array) ($address->first() ?? []);
         $fulfillment = $order->fulfillment;
@@ -6625,6 +6653,12 @@ class AdminController extends Controller
             ->where('order_id', $order->id)
             ->latest('id')
             ->first() : null;
+        $refunds = Schema::hasTable('order_refunds')
+            ? OrderRefund::query()
+                ->where('order_id', $order->id)
+                ->latest('id')
+                ->get()
+            : collect();
 
         $paymentCard = null;
         if ($paymentTransaction && filled($paymentTransaction->provider_card_id) && Schema::hasTable('user_cards')) {
@@ -6731,10 +6765,21 @@ class AdminController extends Controller
                 'address' => $this->orderAddressPayload((array) ($sellerOrder->address ?? [])),
                 'settlement' => $sellerSettlements[$sellerOrder->id] ?? null,
                 'url' => route('boshqaruv.seller-orders'),
+                'isCancelled' => $sellerOrder->cancelled_at !== null,
+                'cancelledAt' => $this->dateTime($sellerOrder->cancelled_at),
+                'cancelReasonCode' => $sellerOrder->cancel_reason_code,
+                'cancelNotes' => [
+                    'uz' => $sellerOrder->cancel_note_uz,
+                    'ru' => $sellerOrder->cancel_note_ru,
+                    'en' => $sellerOrder->cancel_note_en,
+                    'ja' => $sellerOrder->cancel_note_ja,
+                ],
+                'refundStatus' => $sellerOrder->refund_status,
+                'canRefund' => $canModerateRefunds && $sellerOrder->cancelled_at === null,
+                'refundUrl' => route('boshqaruv.seller-orders.refund', $sellerOrder),
             ])
             ->values()
             ->all();
-        $panelAdmin = Auth::guard('panel')->user();
         $canRefundPayment = $panelAdmin?->isSuperAdmin()
             && ($paymentTransaction?->provider === 'paylov')
             && in_array((string) ($order->payment_status_code ?? $order->paymentStatus), [PaymentStatusCode::PAID->value, (string) PaymentStatusCode::PAID->legacy()], true)
@@ -6845,6 +6890,23 @@ class AdminController extends Controller
             'settlementOverview' => $settlementOverview,
             'canRefundPayment' => (bool) $canRefundPayment,
             'refundConfirmationPhrase' => $refundConfirmationPhrase,
+            'refundReasonCatalog' => [
+                'item' => SellerCancellationReasonCatalog::itemOptions(),
+                'order' => SellerCancellationReasonCatalog::orderOptions(),
+            ],
+            'refundLedger' => $refunds->map(fn (OrderRefund $refund) => [
+                'id' => $refund->id,
+                'type' => $refund->type,
+                'status' => $refund->status,
+                'cardRefundAmount' => (float) ($refund->card_refund_amount ?? 0),
+                'cashbackRestoreAmount' => (float) ($refund->cashback_restore_amount ?? 0),
+                'giftCertRestoreAmount' => (float) ($refund->gift_cert_restore_amount ?? 0),
+                'deliveryRefundAmount' => (float) ($refund->delivery_refund_amount ?? 0),
+                'packagingRefundAmount' => (float) ($refund->packaging_refund_amount ?? 0),
+                'reasonCode' => $refund->reason_code,
+                'reasonNoteUz' => $refund->reason_note_uz,
+                'processedAt' => $this->dateTime($refund->processed_at),
+            ])->values()->all(),
             'courierOrder' => $courierOrder ? [
                 'id' => $courierOrder->id,
                 'courier' => trim(($courierOrder->courier?->first_name ?? '').' '.($courierOrder->courier?->last_name ?? '')) ?: '—',
@@ -7021,6 +7083,55 @@ class AdminController extends Controller
             'total' => $price * $quantity,
             'seller' => $seller?->shop_name ?? $product?->seller?->shop_name ?? null,
             'image' => $this->productImageUrl($product),
+        ];
+    }
+
+    private function sellerOrderItemPayload(SellerOrderItem $item, bool $canModerateRefunds): array
+    {
+        $product = match ($item->type) {
+            'stationery' => $item->stationery,
+            'gift' => $item->gift,
+            default => $item->book,
+        };
+
+        $seller = $item->seller_id ? Seller::select('id', 'shop_name')->find($item->seller_id) : null;
+
+        return [
+            'id' => (int) $item->product_id,
+            'sellerOrderItemId' => (int) $item->id,
+            'sellerOrderId' => (int) $item->order_id,
+            'type' => (string) $item->type,
+            'variantId' => $item->variant_id ? (int) $item->variant_id : null,
+            'productUrl' => match ($item->type) {
+                'stationery' => route('boshqaruv.stationeries', ['stationeries_search' => $item->product_id, 'stationeries_tab' => 'all']),
+                'gift' => route('boshqaruv.sovgalar'),
+                default => route('boshqaruv.books', ['books_search' => $item->product_id]),
+            },
+            'typeLabel' => match ($item->type) {
+                'stationery' => 'Kanselyariya',
+                'gift' => "Sovg'a",
+                default => 'Kitob',
+            },
+            'name' => $product?->name ?? 'Mahsulot',
+            'quantity' => (int) ($item->quantity ?? 1),
+            'price' => (float) ($item->price ?? 0),
+            'total' => (float) (($item->price ?? 0) * ($item->quantity ?? 1)),
+            'seller' => $seller?->shop_name,
+            'image' => $item->type === 'stationery' && $item->variant?->image_path
+                ? ProductImageUrls::originalUrl((string) $item->variant->image_path)
+                : $this->productImageUrl($product),
+            'isCancelled' => $item->cancelled_at !== null,
+            'cancelledAt' => $this->dateTime($item->cancelled_at),
+            'cancelReasonCode' => $item->cancel_reason_code,
+            'cancelNotes' => [
+                'uz' => $item->cancel_note_uz,
+                'ru' => $item->cancel_note_ru,
+                'en' => $item->cancel_note_en,
+                'ja' => $item->cancel_note_ja,
+            ],
+            'refundStatus' => $item->refund_status,
+            'canRefund' => $canModerateRefunds && $item->cancelled_at === null,
+            'refundUrl' => route('boshqaruv.seller-order-items.refund', $item),
         ];
     }
 

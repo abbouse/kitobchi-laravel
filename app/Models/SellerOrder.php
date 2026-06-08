@@ -22,11 +22,21 @@ class SellerOrder extends Model
         'status',
         'status_code',
         'accepted_at',
+        'cancelled_at',
+        'cancelled_by_seller_id',
+        'cancel_reason_code',
+        'cancel_note_uz',
+        'cancel_note_ru',
+        'cancel_note_en',
+        'cancel_note_ja',
+        'custom_cancel_note',
+        'refund_status',
     ];
 
     protected $casts = [
         'address' => 'array',
         'accepted_at' => 'datetime',
+        'cancelled_at' => 'datetime',
     ];
 
     public function getStatusCodeAttribute(?string $value): string

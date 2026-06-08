@@ -46,6 +46,8 @@ class SplitProfileService
             'max_active_contracts' => (int) ($settings?->split_max_active_contracts ?? 1),
             'default_fee_percent' => (float) ($settings?->split_default_fee_percent ?? 0),
             'card_delete_lock_enabled' => (bool) ($settings?->split_card_delete_lock_enabled ?? true),
+            'refund_sender_card_id' => (string) ($settings?->paylov_refund_sender_card_id ?? ''),
+            'refund_service_id' => (string) ($settings?->paylov_refund_service_id ?? ''),
         ];
     }
 

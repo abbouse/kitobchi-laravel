@@ -8,6 +8,8 @@ const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
 
 interface OrderItem {
   id?: number;
+  sellerOrderItemId?: number;
+  sellerOrderId?: number;
   type: string;
   productUrl?: string;
   typeLabel: string;
@@ -17,6 +19,14 @@ interface OrderItem {
   total: number;
   seller?: string | null;
   image?: string | null;
+  variantId?: number | null;
+  isCancelled?: boolean;
+  cancelledAt?: string | null;
+  cancelReasonCode?: string | null;
+  cancelNotes?: { uz?: string | null; ru?: string | null; en?: string | null; ja?: string | null };
+  refundStatus?: string | null;
+  canRefund?: boolean;
+  refundUrl?: string;
 }
 
 interface SellerOrder {
@@ -36,6 +46,33 @@ interface SellerOrder {
   address?: Record<string, unknown>;
   settlement?: SettlementOverview | null;
   url?: string;
+  isCancelled?: boolean;
+  cancelledAt?: string | null;
+  cancelReasonCode?: string | null;
+  cancelNotes?: { uz?: string | null; ru?: string | null; en?: string | null; ja?: string | null };
+  refundStatus?: string | null;
+  canRefund?: boolean;
+  refundUrl?: string;
+}
+
+interface RefundReasonOption {
+  code: string;
+  notes: { uz?: string | null; ru?: string | null; en?: string | null; ja?: string | null };
+  auto_zero_stock?: boolean;
+}
+
+interface RefundLedgerRow {
+  id: number;
+  type: string;
+  status: string;
+  cardRefundAmount: number;
+  cashbackRestoreAmount: number;
+  giftCertRestoreAmount: number;
+  deliveryRefundAmount?: number;
+  packagingRefundAmount?: number;
+  reasonCode?: string | null;
+  reasonNoteUz?: string | null;
+  processedAt?: string | null;
 }
 
 interface SettlementOverview {
@@ -166,6 +203,11 @@ interface Ord {
   canRefundPayment?: boolean;
   refundConfirmationPhrase?: string | null;
   refundCancelUrl?: string;
+  refundReasonCatalog?: {
+    item?: RefundReasonOption[];
+    order?: RefundReasonOption[];
+  };
+  refundLedger?: RefundLedgerRow[];
 }
 
 const statusChip = (status: string) => {
@@ -641,6 +683,8 @@ export default function Orders() {
                           <th>Soni</th>
                           <th>Narx</th>
                           <th>Jami</th>
+                          <th>Holat</th>
+                          <th>Refund</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -661,6 +705,35 @@ export default function Orders() {
                             <td>{item.quantity}</td>
                             <td>{fmt(item.price)} so'm</td>
                             <td className="fw-semibold">{fmt(item.total)} so'm</td>
+                            <td>
+                              {item.isCancelled ? (
+                                <div>
+                                  <span className="chip chip-danger">Bekor qilingan</span>
+                                  <div className="text-muted small mt-1">{item.cancelNotes?.uz || item.cancelReasonCode || '—'}</div>
+                                </div>
+                              ) : (
+                                <span className="chip chip-success">Faol</span>
+                              )}
+                            </td>
+                            <td style={{ minWidth: 260 }}>
+                              {item.canRefund && item.refundUrl ? (
+                                <form onSubmit={(event) => submitForm(event, item.refundUrl)} className="d-flex flex-column gap-2">
+                                  <select name="reason_code" className="form-select form-select-sm" defaultValue={(selectedOrd.refundReasonCatalog?.item || [])[0]?.code || 'product_out_of_stock'} required>
+                                    {(selectedOrd.refundReasonCatalog?.item || []).map((reason) => (
+                                      <option value={reason.code} key={reason.code}>
+                                        {reason.notes?.uz}{reason.auto_zero_stock ? ' · stock 0' : ''}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <input name="custom_note" className="form-control form-control-sm" placeholder="Custom izoh kerak bo‘lsa" />
+                                  <button className="btn btn-sm btn-outline-danger">Faqat shu mahsulotni refund qilish</button>
+                                </form>
+                              ) : (
+                                <div className="text-muted small">
+                                  {item.isCancelled ? "Bu mahsulot allaqachon bekor qilingan." : 'Refund mumkin emas.'}
+                                </div>
+                              )}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -724,7 +797,12 @@ export default function Orders() {
 
                 <div className="detail-panel mt-3">
                   <h6 className="fw-bold mb-3">Seller orderlar</h6>
-                  <SellerOrdersTable rows={selectedOrd.sellerOrders || []} />
+                  <SellerOrdersTable rows={selectedOrd.sellerOrders || []} reasonOptions={selectedOrd.refundReasonCatalog?.order || []} onSubmit={submitForm} />
+                </div>
+
+                <div className="detail-panel mt-3">
+                  <h6 className="fw-bold mb-3">Refund jurnali</h6>
+                  <RefundLedgerTable rows={selectedOrd.refundLedger || []} />
                 </div>
 
                 <div className="row g-3 mt-1">
@@ -970,7 +1048,15 @@ function MapButtons({ mapLinks }: { mapLinks?: Record<string, string> }) {
   );
 }
 
-function SellerOrdersTable({ rows }: { rows: SellerOrder[] }) {
+function SellerOrdersTable({
+  rows,
+  reasonOptions,
+  onSubmit,
+}: {
+  rows: SellerOrder[];
+  reasonOptions: RefundReasonOption[];
+  onSubmit: (event: FormEvent<HTMLFormElement>, url: string | undefined, method?: 'post' | 'patch') => void;
+}) {
   if (!rows.length) {
     return <div className="text-muted small">Seller order topilmadi.</div>;
   }
@@ -987,6 +1073,7 @@ function SellerOrdersTable({ rows }: { rows: SellerOrder[] }) {
             <th>Hisob-kitob</th>
             <th>Status</th>
             <th>Qabul</th>
+            <th>Refund</th>
           </tr>
         </thead>
         <tbody>
@@ -1011,6 +1098,65 @@ function SellerOrdersTable({ rows }: { rows: SellerOrder[] }) {
                 <div className="text-muted">{row.acceptedAt || '—'}</div>
                 <div className="text-muted small">{row.createdAt || ''}</div>
               </td>
+              <td style={{ minWidth: 280 }}>
+                {row.canRefund && row.refundUrl ? (
+                  <form onSubmit={(event) => onSubmit(event, row.refundUrl)} className="d-flex flex-column gap-2">
+                    <select name="reason_code" className="form-select form-select-sm" defaultValue={reasonOptions[0]?.code || 'all_products_out_of_stock'} required>
+                      {reasonOptions.map((reason) => (
+                        <option value={reason.code} key={reason.code}>
+                          {reason.notes?.uz}{reason.auto_zero_stock ? ' · stock 0' : ''}
+                        </option>
+                      ))}
+                    </select>
+                    <input name="custom_note" className="form-control form-control-sm" placeholder="Custom izoh kerak bo‘lsa" />
+                    <button className="btn btn-sm btn-outline-danger">Shu seller orderni refund qilish</button>
+                  </form>
+                ) : (
+                  <div className="text-muted small">
+                    {row.isCancelled ? (row.cancelNotes?.uz || 'Seller order bekor qilingan.') : 'Refund mumkin emas.'}
+                  </div>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function RefundLedgerTable({ rows }: { rows: RefundLedgerRow[] }) {
+  if (!rows.length) {
+    return <div className="text-muted small">Bu buyurtma bo‘yicha refund yozuvlari hali yo‘q.</div>;
+  }
+
+  return (
+    <div className="table-responsive">
+      <table className="data-table compact-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Turi</th>
+            <th>Karta</th>
+            <th>Cashback</th>
+            <th>Gift cert</th>
+            <th>Sabab</th>
+            <th>Vaqti</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.id}>
+              <td>#{row.id}</td>
+              <td>
+                <div className="fw-semibold">{row.type}</div>
+                <div className="text-muted small">{row.status}</div>
+              </td>
+              <td>{fmt(row.cardRefundAmount || 0)} so'm</td>
+              <td>{fmt(row.cashbackRestoreAmount || 0)} so'm</td>
+              <td>{fmt(row.giftCertRestoreAmount || 0)} so'm</td>
+              <td>{row.reasonNoteUz || row.reasonCode || '—'}</td>
+              <td>{row.processedAt || '—'}</td>
             </tr>
           ))}
         </tbody>

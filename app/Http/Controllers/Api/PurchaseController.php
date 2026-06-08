@@ -35,6 +35,7 @@ use App\Services\CourierTaskOrchestratorService;
 use App\Services\PaylovOrderPaymentService;
 use App\Services\UserReputationService;
 use App\Services\ProductReviewPromptService;
+use App\Services\OrderFinancialSnapshotService;
 use App\Enums\FulfillmentMode;
 use App\Models\GiftCertificate;
 use App\Models\UserCard;
@@ -59,6 +60,7 @@ class PurchaseController extends Controller
         private readonly UserReputationService $userReputationService,
         private readonly PaylovOrderPaymentService $paylovOrderPaymentService,
         private readonly ProductReviewPromptService $productReviewPromptService,
+        private readonly OrderFinancialSnapshotService $orderFinancialSnapshotService,
     ) {}
 
     // ── Xatolik response ──────────────────────────────────────
@@ -787,6 +789,7 @@ class PurchaseController extends Controller
                 $sellerOrder->update(['amount' => (int) round($sellerAmount)]);
             }
             $this->trace('seller_orders_created', ['count' => count($groupedBySeller)]);
+            $this->orderFinancialSnapshotService->ensureSnapshotsForOrder($purchase);
 
             // ── Courier order ─────────────────────────────────────
             $courierOrder = CourierOrder::create([
@@ -1178,6 +1181,8 @@ class PurchaseController extends Controller
                     'variant_id' => $itm['variant_id'] ?? null,
                 ]);
             }
+
+            $this->orderFinancialSnapshotService->ensureSnapshotsForOrder($purchase);
 
             // ── Stock + statistika ───────────────────────────────
             foreach ($productsToUpdate as $data) {

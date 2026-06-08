@@ -190,6 +190,43 @@ class PaylovService
         ]);
     }
 
+    public function p2pReceiver(string $cardNumberOrRef): array
+    {
+        return $this->post('/merchant/p2p/receiver/', [
+            'cardNumber' => $cardNumberOrRef,
+        ]);
+    }
+
+    public function p2pTransferCreate(
+        string $receiverCardNumberOrRef,
+        int $amount,
+        ?string $senderCardId = null,
+        ?string $serviceId = null,
+    ): array {
+        $payload = [
+            'cardNumber' => $receiverCardNumberOrRef,
+            'amount' => $amount,
+        ];
+
+        if ($senderCardId) {
+            $payload['cardId'] = $senderCardId;
+        }
+
+        if ($serviceId) {
+            $payload['serviceId'] = $serviceId;
+        }
+
+        return $this->post('/merchant/p2p/transfer/create/', $payload);
+    }
+
+    public function p2pTransferConfirm(string $transactionId, string $senderCardId): array
+    {
+        return $this->post('/merchant/p2p/transfer/confirm/', [
+            'transactionId' => $transactionId,
+            'cardId' => $senderCardId,
+        ]);
+    }
+
     private function post(string $path, array $payload): array
     {
         return $this->send('post', $path, $payload);

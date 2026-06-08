@@ -11,6 +11,7 @@ use App\Models\Sold;
 use App\Models\UserCard;
 use App\Models\User;
 use App\Services\PaylovService;
+use App\Services\RefundCardLockService;
 use App\Services\SplitProfileService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -246,6 +247,10 @@ class UserController extends Controller
 
         if (app(SplitProfileService::class)->cardRemovalBlocked($user)) {
             return back()->with('error', 'Foydalanuvchida faol split to‘lovi bor. Qarzdorlik yopilmaguncha bog‘langan kartalarni o‘chirib bo‘lmaydi.');
+        }
+
+        if (app(RefundCardLockService::class)->cardRemovalBlocked($user, $card)) {
+            return back()->with('error', 'Bu karta hali refund kerak bo‘lishi mumkin bo‘lgan faol buyurtmaga bog‘langan. Buyurtma yakunlanmaguncha yoki bekor qilinmaguncha kartani o‘chirib bo‘lmaydi.');
         }
 
         try {

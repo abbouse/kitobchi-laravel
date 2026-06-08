@@ -20,10 +20,13 @@ use App\Services\OrderStatusPushService;
 use App\Services\OrderRealtimeService;
 use App\Services\QrTokenService;
 use App\Services\CourierTaskOrchestratorService;
+use App\Services\SellerCancellationReasonCatalog;
+use App\Services\SellerOrderCancellationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class OrderController extends Controller
 {
@@ -34,6 +37,7 @@ class OrderController extends Controller
         private readonly QrTokenService $qrTokenService,
         private readonly OrderStatusPushService $orderStatusPushService,
         private readonly CourierTaskOrchestratorService $courierTaskOrchestratorService,
+        private readonly SellerOrderCancellationService $sellerOrderCancellationService,
     )
     {
         $this->middleware('auth:seller');
@@ -138,6 +142,17 @@ class OrderController extends Controller
                 'image_path' => $item->variant->image_path,
                 'stock' => (int) ($item->variant->stock ?? 0),
             ] : null,
+            'is_cancelled' => $item->cancelled_at !== null,
+            'cancelled_at' => optional($item->cancelled_at)?->toISOString(),
+            'cancel_reason_code' => $item->cancel_reason_code,
+            'cancel_notes' => [
+                'uz' => $item->cancel_note_uz,
+                'ru' => $item->cancel_note_ru,
+                'en' => $item->cancel_note_en,
+                'ja' => $item->cancel_note_ja,
+            ],
+            'refund_status' => $item->refund_status,
+            'refunded_at' => optional($item->refunded_at)?->toISOString(),
         ];
     }
 
@@ -255,6 +270,15 @@ class OrderController extends Controller
             'items' => $items,
             'created_at' => optional($order->created_at)?->toISOString(),
             'updated_at' => optional($order->updated_at)?->toISOString(),
+            'cancelled_at' => optional($order->cancelled_at)?->toISOString(),
+            'cancel_reason_code' => $order->cancel_reason_code,
+            'cancel_notes' => [
+                'uz' => $order->cancel_note_uz,
+                'ru' => $order->cancel_note_ru,
+                'en' => $order->cancel_note_en,
+                'ja' => $order->cancel_note_ja,
+            ],
+            'refund_status' => $order->refund_status,
         ];
     }
 
@@ -722,6 +746,94 @@ public function toCourier(Request $request, $qr)
         return response()->json([
             'success' => true,
             'orders' => $count,
+        ], 200);
+    }
+
+    public function cancelItem(Request $request, int $itemId)
+    {
+        $request->validate([
+            'reason_code' => ['required', 'string', 'max:64', Rule::in(SellerCancellationReasonCatalog::itemSelectableCodes())],
+            'custom_note' => 'nullable|string|max:500',
+        ]);
+
+        if ($request->input('reason_code') === 'custom' && blank($request->input('custom_note'))) {
+            return response()->json(['success' => false, 'message' => 'Custom sabab uchun izoh yozilishi shart.'], 422);
+        }
+
+        $seller = Auth::guard('seller')->user();
+        if (! $seller) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $item = SellerOrder::query()
+            ->select('seller_orders.seller_id')
+            ->join('seller_order_items', 'seller_order_items.order_id', '=', 'seller_orders.id')
+            ->where('seller_order_items.id', $itemId)
+            ->exists();
+
+        if (! $item) {
+            return response()->json(['success' => false, 'message' => 'Mahsulot topilmadi'], 404);
+        }
+
+        $sellerOrderItem = \App\Models\SellerOrderItem::query()->find($itemId);
+
+        try {
+            $result = $this->sellerOrderCancellationService->cancelItem(
+                seller: $seller,
+                item: $sellerOrderItem,
+                reasonCode: (string) $request->input('reason_code'),
+                customNote: $request->input('custom_note'),
+            );
+
+            return response()->json(['success' => true, 'message' => $result['message'], 'data' => $result], 200);
+        } catch (\Throwable $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        }
+    }
+
+    public function cancelSellerOrder(Request $request, int $id)
+    {
+        $request->validate([
+            'reason_code' => ['required', 'string', 'max:64', Rule::in(SellerCancellationReasonCatalog::orderSelectableCodes())],
+            'custom_note' => 'nullable|string|max:500',
+        ]);
+
+        if ($request->input('reason_code') === 'custom' && blank($request->input('custom_note'))) {
+            return response()->json(['success' => false, 'message' => 'Custom sabab uchun izoh yozilishi shart.'], 422);
+        }
+
+        $seller = Auth::guard('seller')->user();
+        if (! $seller) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $sellerOrder = SellerOrder::query()->find($id);
+        if (! $sellerOrder) {
+            return response()->json(['success' => false, 'message' => 'Seller order topilmadi'], 404);
+        }
+
+        try {
+            $result = $this->sellerOrderCancellationService->cancelSellerOrder(
+                seller: $seller,
+                sellerOrder: $sellerOrder,
+                reasonCode: (string) $request->input('reason_code'),
+                customNote: $request->input('custom_note'),
+            );
+
+            return response()->json(['success' => true, 'message' => $result['message'], 'data' => $result], 200);
+        } catch (\Throwable $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        }
+    }
+
+    public function cancelReasonCatalog()
+    {
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'item_reasons' => SellerCancellationReasonCatalog::itemOptions(),
+                'order_reasons' => SellerCancellationReasonCatalog::orderOptions(),
+            ],
         ], 200);
     }
 }

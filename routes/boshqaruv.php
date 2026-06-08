@@ -97,6 +97,8 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
         Route::post('/orders/{order}/fulfillment/reroute-hub', [\App\Http\Controllers\A122\OrderController::class, 'rerouteHub'])->name('orders.reroute-hub');
         Route::patch('/orders/{order}/postal-return', [\App\Http\Controllers\A122\OrderController::class, 'markPostalReturned'])->name('orders.postal-return');
         Route::post('/orders/{order}/refund-cancel', [\App\Http\Controllers\A122\OrderController::class, 'refundAndCancel'])->name('orders.refund-cancel');
+        Route::post('/seller-orders/{sellerOrder}/refund', [\App\Http\Controllers\A122\OrderController::class, 'refundSellerOrder'])->name('seller-orders.refund');
+        Route::post('/seller-order-items/{sellerOrderItem}/refund', [\App\Http\Controllers\A122\OrderController::class, 'refundSellerOrderItem'])->name('seller-order-items.refund');
         Route::patch('/sellers/{seller}/approve', [\App\Http\Controllers\A122\SellerController::class, 'approve'])->name('sellers.approve');
         Route::put('/sellers/{seller}', [AdminController::class, 'updateSeller'])->name('sellers.update');
         Route::patch('/sellers/{seller}/reject', [\App\Http\Controllers\A122\SellerController::class, 'reject'])->name('sellers.reject');

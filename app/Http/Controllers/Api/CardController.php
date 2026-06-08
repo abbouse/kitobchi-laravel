@@ -8,6 +8,7 @@ use App\Models\Sold;
 use App\Models\UserCard;
 use App\Services\PaylovOrderPaymentService;
 use App\Services\PaylovService;
+use App\Services\RefundCardLockService;
 use App\Services\SplitProfileService;
 use Illuminate\Http\Request;
 use Illuminate\Database\QueryException;
@@ -383,6 +384,12 @@ class CardController extends Controller
         if (app(SplitProfileService::class)->cardRemovalBlocked($user)) {
             return $this->error('Sizda faol split to‘lovi bor. Qarzdorlik yopilmaguncha bog‘langan kartalarni o‘chirib bo‘lmaydi.', 422, [
                 'error_code' => 'split_card_removal_blocked',
+            ]);
+        }
+
+        if (app(RefundCardLockService::class)->cardRemovalBlocked($user, $card)) {
+            return $this->error('Bu karta hali refund kerak bo‘lishi mumkin bo‘lgan faol buyurtmaga bog‘langan. Buyurtma yakunlanmaguncha yoki bekor qilinmaguncha kartani o‘chirib bo‘lmaydi.', 422, [
+                'error_code' => 'refund_card_removal_blocked',
             ]);
         }
 

@@ -27,10 +27,13 @@ use App\Services\HubPrintViewService;
 use App\Services\OrderService;
 use App\Services\OrderStatusPushService;
 use App\Services\PostalResendService;
+use App\Services\SellerCancellationReasonCatalog;
+use App\Services\SellerOrderCancellationService;
 use App\Services\SellerOrderSettlementService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\OrdersExport;
 
@@ -44,6 +47,7 @@ class OrderController extends Controller
         private readonly FulfillmentAdminOverrideService $fulfillmentAdminOverrideService,
         private readonly HubPrintViewService $hubPrintViewService,
         private readonly AdminPaidOrderRefundService $adminPaidOrderRefundService,
+        private readonly SellerOrderCancellationService $sellerOrderCancellationService,
     ) {}
 
     public function index(Request $request)
@@ -536,6 +540,66 @@ class OrderController extends Controller
             );
 
             return back()->with('success', 'Pul qaytarildi va buyurtma bekor qilindi.');
+        } catch (\Throwable $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
+    public function refundSellerOrder(Request $request, SellerOrder $sellerOrder)
+    {
+        $admin = Auth::guard('panel')->user();
+        if (! $admin || ! $admin->isAdmin()) {
+            return back()->with('error', 'Bu amal faqat admin uchun ruxsat etilgan.');
+        }
+
+        $request->validate([
+            'reason_code' => ['required', 'string', 'max:64', Rule::in(SellerCancellationReasonCatalog::orderSelectableCodes())],
+            'custom_note' => 'nullable|string|max:500',
+        ]);
+
+        if ($request->input('reason_code') === 'custom' && blank($request->input('custom_note'))) {
+            return back()->with('error', 'Custom sabab uchun izoh yozilishi shart.');
+        }
+
+        try {
+            $this->sellerOrderCancellationService->cancelSellerOrderByAdmin(
+                $admin,
+                $sellerOrder,
+                (string) $request->input('reason_code'),
+                $request->filled('custom_note') ? (string) $request->input('custom_note') : null,
+            );
+
+            return back()->with('success', 'Seller order bo‘yicha refund va bekor qilish bajarildi.');
+        } catch (\Throwable $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
+    public function refundSellerOrderItem(Request $request, \App\Models\SellerOrderItem $sellerOrderItem)
+    {
+        $admin = Auth::guard('panel')->user();
+        if (! $admin || ! $admin->isAdmin()) {
+            return back()->with('error', 'Bu amal faqat admin uchun ruxsat etilgan.');
+        }
+
+        $request->validate([
+            'reason_code' => ['required', 'string', 'max:64', Rule::in(SellerCancellationReasonCatalog::itemSelectableCodes())],
+            'custom_note' => 'nullable|string|max:500',
+        ]);
+
+        if ($request->input('reason_code') === 'custom' && blank($request->input('custom_note'))) {
+            return back()->with('error', 'Custom sabab uchun izoh yozilishi shart.');
+        }
+
+        try {
+            $this->sellerOrderCancellationService->cancelItemByAdmin(
+                $admin,
+                $sellerOrderItem,
+                (string) $request->input('reason_code'),
+                $request->filled('custom_note') ? (string) $request->input('custom_note') : null,
+            );
+
+            return back()->with('success', 'Mahsulot bo‘yicha refund va bekor qilish bajarildi.');
         } catch (\Throwable $e) {
             return back()->with('error', $e->getMessage());
         }

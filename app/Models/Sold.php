@@ -42,6 +42,8 @@ class Sold extends Model
         'recipient_name',
         'recipient_region',
         'recipient_address',
+        'cancel_reason_code', 'cancel_note_uz', 'cancel_note_ru', 'cancel_note_en', 'cancel_note_ja',
+        'cancelled_by_seller_id', 'refund_total_amount',
     ];
 
     protected $casts = [
@@ -59,6 +61,7 @@ class Sold extends Model
         'is_gift_to_other'=> 'boolean',
         'packaging_price' => 'integer',
         'postal_return_fee' => 'integer',
+        'refund_total_amount' => 'integer',
     ];
 
     public function getStatusCodeAttribute(?string $value): string
