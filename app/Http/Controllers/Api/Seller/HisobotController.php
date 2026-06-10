@@ -367,11 +367,16 @@ class HisobotController extends Controller
                 ->whereNotNull('solds.completed_at')
                 ->whereBetween('solds.completed_at', [$period['start'], $period['end']])
                 ->selectRaw('seller_order_items.type as product_type')
-                ->selectRaw('COALESCE(book_categories.id, stationery_categories.id, 0) as category_id')
-                ->selectRaw("COALESCE(book_categories.name_uz, stationery_categories.name_uz, CASE WHEN seller_order_items.type = 'gift' THEN 'Sovg\\'a' WHEN seller_order_items.type = 'stationery' THEN 'Kanselyariya' ELSE 'Kitob' END) as name_uz")
-                ->selectRaw("COALESCE(book_categories.name_ru, stationery_categories.name_ru, CASE WHEN seller_order_items.type = 'gift' THEN 'Подарки' WHEN seller_order_items.type = 'stationery' THEN 'Канцелярия' ELSE 'Книги' END) as name_ru")
-                ->selectRaw("COALESCE(book_categories.name_en, stationery_categories.name_en, CASE WHEN seller_order_items.type = 'gift' THEN 'Gifts' WHEN seller_order_items.type = 'stationery' THEN 'Stationery' ELSE 'Books' END) as name_en")
-                ->selectRaw("COALESCE(book_categories.name_ja, stationery_categories.name_ja, CASE WHEN seller_order_items.type = 'gift' THEN 'ギフト' WHEN seller_order_items.type = 'stationery' THEN '文房具' ELSE '本' END) as name_ja")
+                ->selectRaw('book_categories.id as book_category_id')
+                ->selectRaw('stationery_categories.id as stationery_category_id')
+                ->selectRaw('book_categories.name_uz as book_name_uz')
+                ->selectRaw('book_categories.name_ru as book_name_ru')
+                ->selectRaw('book_categories.name_en as book_name_en')
+                ->selectRaw('book_categories.name_ja as book_name_ja')
+                ->selectRaw('stationery_categories.name_uz as stationery_name_uz')
+                ->selectRaw('stationery_categories.name_ru as stationery_name_ru')
+                ->selectRaw('stationery_categories.name_en as stationery_name_en')
+                ->selectRaw('stationery_categories.name_ja as stationery_name_ja')
                 ->selectRaw('SUM(seller_order_items.quantity) as total_quantity')
                 ->selectRaw('SUM(seller_order_items.price * seller_order_items.quantity) as total_revenue')
                 ->groupBy([
@@ -399,14 +404,35 @@ class HisobotController extends Controller
                 ->values()
                 ->map(function ($row) use ($categoryRevenueTotal) {
                     $revenue = (int) ($row->total_revenue ?? 0);
+                    $type = (string) $row->product_type;
+
+                    if ($type === 'stationery') {
+                        $categoryId = (int) ($row->stationery_category_id ?? 0);
+                        $nameUz = (string) ($row->stationery_name_uz ?? 'Kanselyariya');
+                        $nameRu = (string) ($row->stationery_name_ru ?? 'Канцелярия');
+                        $nameEn = (string) ($row->stationery_name_en ?? 'Stationery');
+                        $nameJa = (string) ($row->stationery_name_ja ?? '文房具');
+                    } elseif ($type === 'gift') {
+                        $categoryId = 0;
+                        $nameUz = 'Sovg\'a';
+                        $nameRu = 'Подарки';
+                        $nameEn = 'Gifts';
+                        $nameJa = 'ギフト';
+                    } else {
+                        $categoryId = (int) ($row->book_category_id ?? 0);
+                        $nameUz = (string) ($row->book_name_uz ?? 'Kitob');
+                        $nameRu = (string) ($row->book_name_ru ?? 'Книги');
+                        $nameEn = (string) ($row->book_name_en ?? 'Books');
+                        $nameJa = (string) ($row->book_name_ja ?? '本');
+                    }
 
                     return [
-                        'product_type' => (string) $row->product_type,
-                        'category_id' => (int) ($row->category_id ?? 0),
-                        'name_uz' => (string) ($row->name_uz ?? 'Kategoriya'),
-                        'name_ru' => (string) ($row->name_ru ?? 'Категория'),
-                        'name_en' => (string) ($row->name_en ?? 'Category'),
-                        'name_ja' => (string) ($row->name_ja ?? 'カテゴリ'),
+                        'product_type' => $type,
+                        'category_id' => $categoryId,
+                        'name_uz' => $nameUz,
+                        'name_ru' => $nameRu,
+                        'name_en' => $nameEn,
+                        'name_ja' => $nameJa,
                         'quantity' => (int) ($row->total_quantity ?? 0),
                         'revenue' => $revenue,
                         'share_percent' => $categoryRevenueTotal > 0
