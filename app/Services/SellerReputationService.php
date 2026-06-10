@@ -6,6 +6,7 @@ use App\Enums\OrderStatusCode;
 use App\Enums\PaymentStatusCode;
 use App\Enums\SellerOrderStatusCode;
 use App\Models\Seller;
+use App\Models\SellerBanLog;
 use App\Models\SellerOrder;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -50,13 +51,15 @@ class SellerReputationService
             $responseScore = $this->responseScore($metrics['response_time_hours']);
             $recentActivityScore = $this->logScore($metrics['completed_30d'], 30);
             $lifetimeConfidenceScore = $this->logScore($metrics['completed_all'], 200);
+            $warningScore = 1 - min(($metrics['warning_weighted_impact'] ?? 0) / 3, 1);
 
             $operationalScore = (
-                ($successRate * 0.34) +
-                ($cancelScore * 0.20) +
-                ($returnScore * 0.18) +
-                ($responseScore * 0.16) +
-                ($recentActivityScore * 0.07) +
+                ($successRate * 0.31) +
+                ($cancelScore * 0.18) +
+                ($returnScore * 0.16) +
+                ($responseScore * 0.14) +
+                ($warningScore * 0.10) +
+                ($recentActivityScore * 0.06) +
                 ($lifetimeConfidenceScore * 0.05)
             );
 
@@ -78,6 +81,11 @@ class SellerReputationService
             if ($metrics['returned_90d'] >= 3 && $metrics['return_rate'] >= 0.10) {
                 $publicRating -= 0.20;
                 $internalScore -= 6;
+            }
+
+            if (($metrics['warning_weighted_impact'] ?? 0) > 0.0) {
+                $publicRating -= min(0.35, ((float) $metrics['warning_weighted_impact']) * 0.09);
+                $internalScore -= min(10, ((float) $metrics['warning_weighted_impact']) * 3.2);
             }
         }
 
@@ -142,6 +150,22 @@ class SellerReputationService
             })
             ->count();
 
+        $warningRows = SellerBanLog::activeWarningsQuery($seller->id)
+            ->get(['created_at']);
+
+        $activeWarningCount = $warningRows->count();
+        $warningWeightedImpact = round((float) $warningRows->sum(function ($warning) use ($now) {
+            $days = (int) optional($warning->created_at)?->diffInDays($now);
+
+            return match (true) {
+                $days <= 14 => 1.00,
+                $days <= 30 => 0.85,
+                $days <= 60 => 0.65,
+                $days <= 90 => 0.40,
+                default => 0.20,
+            };
+        }), 2);
+
         $evidenceCount = $completedAll + $cancelled90d + $returned90d;
         $attempts90d = max(1, $completed90d + $cancelled90d + $returned90d);
         $responseTimeHours = max(0.25, (float) ($seller->response_time_hours ?? 24));
@@ -156,6 +180,8 @@ class SellerReputationService
             'success_rate' => $completed90d / $attempts90d,
             'cancel_rate' => $cancelled90d / $attempts90d,
             'return_rate' => $returned90d / $attempts90d,
+            'active_warning_count' => (int) $activeWarningCount,
+            'warning_weighted_impact' => $warningWeightedImpact,
             'response_time_hours' => round($responseTimeHours, 2),
         ];
     }

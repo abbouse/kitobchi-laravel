@@ -208,6 +208,13 @@ class HisobotController extends Controller
         $this->applyBranchFilterToSellerOrders($ordersQuery, $selectedLocation);
         $salesCount = (clone $ordersQuery)->count();
         $salesPrice = (int) ((clone $ordersQuery)->sum('seller_orders.amount') ?? 0);
+        $previousOrdersQuery = $this->baseCompletedOrders(
+            $storeSellerId,
+            $period['previous_start'],
+            $period['previous_end']
+        );
+        $this->applyBranchFilterToSellerOrders($previousOrdersQuery, $selectedLocation);
+        $previousSalesPrice = (int) ((clone $previousOrdersQuery)->sum('seller_orders.amount') ?? 0);
         $sellerBalance = (int) optional(Seller::find($storeSellerId))->balance;
         $sellerClients = (clone $ordersQuery)
             ->distinct('seller_orders.client_id')
@@ -329,6 +336,72 @@ class HisobotController extends Controller
             ];
         })->all();
 
+        $categoryRows = SellerOrderItem::query()
+            ->join('seller_orders', 'seller_orders.id', '=', 'seller_order_items.order_id')
+            ->join('solds', 'solds.id', '=', 'seller_orders.order_id')
+            ->leftJoin('books', function ($join) {
+                $join->on('books.id', '=', 'seller_order_items.product_id')
+                    ->where('seller_order_items.type', '=', 'book');
+            })
+            ->leftJoin('book_categories', 'book_categories.id', '=', 'books.category_id')
+            ->leftJoin('stationeries', function ($join) {
+                $join->on('stationeries.id', '=', 'seller_order_items.product_id')
+                    ->where('seller_order_items.type', '=', 'stationery');
+            })
+            ->leftJoin('stationery_categories', 'stationery_categories.id', '=', 'stationeries.category_id')
+            ->where('seller_order_items.seller_id', $storeSellerId)
+            ->whereNotNull('solds.completed_at')
+            ->whereBetween('solds.completed_at', [$period['start'], $period['end']])
+            ->selectRaw('seller_order_items.type as product_type')
+            ->selectRaw('COALESCE(book_categories.id, stationery_categories.id, 0) as category_id')
+            ->selectRaw("COALESCE(book_categories.name_uz, stationery_categories.name_uz, CASE WHEN seller_order_items.type = 'gift' THEN 'Sovg\\'a' WHEN seller_order_items.type = 'stationery' THEN 'Kanselyariya' ELSE 'Kitob' END) as name_uz")
+            ->selectRaw("COALESCE(book_categories.name_ru, stationery_categories.name_ru, CASE WHEN seller_order_items.type = 'gift' THEN 'Подарки' WHEN seller_order_items.type = 'stationery' THEN 'Канцелярия' ELSE 'Книги' END) as name_ru")
+            ->selectRaw("COALESCE(book_categories.name_en, stationery_categories.name_en, CASE WHEN seller_order_items.type = 'gift' THEN 'Gifts' WHEN seller_order_items.type = 'stationery' THEN 'Stationery' ELSE 'Books' END) as name_en")
+            ->selectRaw("COALESCE(book_categories.name_ja, stationery_categories.name_ja, CASE WHEN seller_order_items.type = 'gift' THEN 'ギフト' WHEN seller_order_items.type = 'stationery' THEN '文房具' ELSE '本' END) as name_ja")
+            ->selectRaw('SUM(seller_order_items.quantity) as total_quantity')
+            ->selectRaw('SUM(seller_order_items.price * seller_order_items.quantity) as total_revenue')
+            ->groupBy([
+                'seller_order_items.type',
+                'book_categories.id',
+                'stationery_categories.id',
+                'book_categories.name_uz',
+                'book_categories.name_ru',
+                'book_categories.name_en',
+                'book_categories.name_ja',
+                'stationery_categories.name_uz',
+                'stationery_categories.name_ru',
+                'stationery_categories.name_en',
+                'stationery_categories.name_ja',
+            ]);
+        $this->applyCompletedPaidSoldFilter($categoryRows);
+        $this->applyBranchFilterToSellerOrders($categoryRows, $selectedLocation, 'seller_orders');
+        $categoryRows = $categoryRows
+            ->orderByDesc('total_revenue')
+            ->get();
+
+        $categoryRevenueTotal = (int) $categoryRows->sum('total_revenue');
+        $categorySalesPayload = $categoryRows
+            ->take(4)
+            ->values()
+            ->map(function ($row) use ($categoryRevenueTotal) {
+                $revenue = (int) ($row->total_revenue ?? 0);
+
+                return [
+                    'product_type' => (string) $row->product_type,
+                    'category_id' => (int) ($row->category_id ?? 0),
+                    'name_uz' => (string) ($row->name_uz ?? 'Kategoriya'),
+                    'name_ru' => (string) ($row->name_ru ?? 'Категория'),
+                    'name_en' => (string) ($row->name_en ?? 'Category'),
+                    'name_ja' => (string) ($row->name_ja ?? 'カテゴリ'),
+                    'quantity' => (int) ($row->total_quantity ?? 0),
+                    'revenue' => $revenue,
+                    'share_percent' => $categoryRevenueTotal > 0
+                        ? round(($revenue / $categoryRevenueTotal) * 100, 1)
+                        : 0,
+                ];
+            })
+            ->all();
+
         return response()->json([
             'success' => true,
             'data' => [
@@ -337,6 +410,10 @@ class HisobotController extends Controller
                 'selected_location_address' => $selectedLocation?->fullAddress,
                 'sales_count' => (int) $salesCount,
                 'sales_price' => (int) $salesPrice,
+                'previous_sales_price' => $previousSalesPrice,
+                'sales_growth_percent' => $previousSalesPrice > 0
+                    ? round((($salesPrice - $previousSalesPrice) / $previousSalesPrice) * 100, 1)
+                    : null,
                 'seller_balance' => (int) $sellerBalance,
                 'seller_clients' => (int) $sellerClients,
                 'kitobchi_clients' => (int) User::count(),
@@ -348,6 +425,7 @@ class HisobotController extends Controller
                 'top_sellers_label' => $monthStart->translatedFormat('F Y'),
                 'top_sellers' => $topSellersPayload,
                 'top_products' => $topProductsPayload,
+                'category_sales' => $categorySalesPayload,
             ],
         ], 200);
     }

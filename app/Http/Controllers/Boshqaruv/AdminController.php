@@ -3059,6 +3059,7 @@ class AdminController extends Controller
 
     private function sellerPayload(Seller $seller): array
     {
+        $karmaSummary = app(\App\Services\SellerKarmaSummaryService::class)->cachedSummary($seller);
         $sellerIds = Seller::query()
             ->where('id', $seller->id)
             ->orWhere('parent_id', $seller->id)
@@ -3109,6 +3110,16 @@ class AdminController extends Controller
             'rating' => (float) ($seller->rating ?? 0),
             'ratingReviewsCount' => (int) ($seller->rating_reviews_count ?? 0),
             'reputationScore' => (float) ($seller->reputation_score ?? 0),
+            'karma' => (float) ($karmaSummary['karma'] ?? 0),
+            'karmaCode' => $karmaSummary['karma_code'] ?? null,
+            'karmaLabelUz' => $karmaSummary['karma_label_uz'] ?? null,
+            'karmaLabelRu' => $karmaSummary['karma_label_ru'] ?? null,
+            'karmaHintUz' => $karmaSummary['karma_hint_uz'] ?? null,
+            'karmaHintRu' => $karmaSummary['karma_hint_ru'] ?? null,
+            'productScore' => (float) ($karmaSummary['product_score'] ?? 0),
+            'responseScore' => (float) ($karmaSummary['response_score'] ?? 0),
+            'successScore' => (float) ($karmaSummary['success_score'] ?? 0),
+            'catalogHealth' => (float) ($karmaSummary['catalog_health'] ?? 0),
             'balance' => (float) ($seller->balance ?? 0),
             'totalRevenue' => $totalRevenue,
             'commissionRate' => (float) ($seller->commission_percent ?? 0),

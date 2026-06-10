@@ -29,6 +29,16 @@ interface Seller {
   rating?: number;
   ratingReviewsCount?: number;
   reputationScore?: number;
+  karma?: number;
+  karmaCode?: string;
+  karmaLabelUz?: string;
+  karmaLabelRu?: string;
+  karmaHintUz?: string;
+  karmaHintRu?: string;
+  productScore?: number;
+  responseScore?: number;
+  successScore?: number;
+  catalogHealth?: number;
   balance?: number;
   totalRevenue?: number;
   commissionRate?: number;
@@ -207,7 +217,7 @@ export default function SellerOrders() {
         </div>
         <div className="table-responsive">
           <table className="data-table">
-            <thead><tr><th>ID</th><th>Do'kon</th><th>Tel</th><th>Viloyat</th><th>Mahsulot</th><th>Buyurtma</th><th>Ogohlantirish</th><th>Holat</th><th>Amallar</th></tr></thead>
+            <thead><tr><th>ID</th><th>Do'kon</th><th>Tel</th><th>Viloyat</th><th>Karma</th><th>Mahsulot</th><th>Buyurtma</th><th>Ogohlantirish</th><th>Holat</th><th>Amallar</th></tr></thead>
             <tbody>
               {sellers.map((seller) => (
                 <tr key={seller.id}>
@@ -223,6 +233,10 @@ export default function SellerOrders() {
                   </td>
                   <td>{seller.phone || '—'}</td>
                   <td>{seller.region || '—'}</td>
+                  <td>
+                    <div className="fw-semibold">{Math.round(seller.karma || 0)}%</div>
+                    <small className="text-muted d-block">{seller.karmaLabelUz || '—'}</small>
+                  </td>
                   <td><span className="chip chip-gray">{seller.products || 0}</span></td>
                   <td><span className="chip chip-info">{seller.orders || 0}</span></td>
                   <td><span className={`chip ${(seller.warningCount || 0) >= 3 ? 'chip-danger' : (seller.warningCount || 0) > 0 ? 'chip-warning' : 'chip-gray'}`}>{seller.warningCount || 0}/3</span></td>
@@ -236,7 +250,7 @@ export default function SellerOrders() {
                   </td>
                 </tr>
               ))}
-              {sellerPagination.total === 0 ? <tr><td colSpan={9} className="text-center text-muted py-5">Hech qanday seller topilmadi</td></tr> : null}
+              {sellerPagination.total === 0 ? <tr><td colSpan={10} className="text-center text-muted py-5">Hech qanday seller topilmadi</td></tr> : null}
             </tbody>
           </table>
         </div>
@@ -311,6 +325,26 @@ function SellerModal({ seller, onHide, onWarn, onResetPassword, onPatch, onEdit 
       <Modal.Body>
         {!seller ? null : (
           <div className="row g-3">
+            <div className="col-12">
+              <div className="detail-panel">
+                <div className="d-flex flex-wrap justify-content-between align-items-start gap-3">
+                  <div style={{ minWidth: 0 }}>
+                    <div className="small text-muted mb-1">Do'kon karmasi</div>
+                    <div className="d-flex flex-wrap align-items-center gap-2 mb-2">
+                      <div className="fw-bold" style={{ fontSize: '2rem', lineHeight: 1 }}>{Math.round(seller.karma || seller.reputationScore || 0)}%</div>
+                      <span className={`chip ${seller.karmaCode === 'elite' ? 'chip-success' : seller.karmaCode === 'strong' ? 'chip-info' : seller.karmaCode === 'stable' ? 'chip-warning' : seller.karmaCode === 'growing' ? 'chip-gray' : 'chip-danger'}`}>{seller.karmaLabelUz || '—'}</span>
+                    </div>
+                    <div className="text-muted small" style={{ maxWidth: 760 }}>{seller.karmaHintUz || "Do'kon sifati haqida tavsiya tayyorlanmoqda."}</div>
+                  </div>
+                  <div className="d-flex flex-wrap gap-2">
+                    <span className="chip chip-gray">Mahsulot {Math.round(seller.productScore || 0)}%</span>
+                    <span className="chip chip-gray">Javob {Math.round(seller.responseScore || 0)}%</span>
+                    <span className="chip chip-gray">Buyurtma {Math.round(seller.successScore || 0)}%</span>
+                    <span className="chip chip-gray">Katalog {Math.round(seller.catalogHealth || 0)}%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
             <Info title="Asosiy ma'lumotlar" rows={[
               ['Egasi', seller.ownerName || '—'], ['Telefon', seller.phone || '—'], ['Hudud', [seller.region, seller.district].filter(Boolean).join(', ') || '—'],
               ['Status', sellerLabel(seller.status)], ['Reyting', `${seller.rating || 0} (${seller.ratingReviewsCount || 0})`], ['Reputatsiya', String(seller.reputationScore || 0)],

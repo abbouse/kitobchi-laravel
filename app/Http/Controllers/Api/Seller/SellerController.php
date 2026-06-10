@@ -15,7 +15,7 @@ use App\Models\SellerTransaction;
 use App\Models\Message;
 use App\Models\SellerLocation;
 use App\Services\PasswordResetService;
-use App\Services\SellerReputationService;
+use App\Services\SellerKarmaSummaryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -29,7 +29,7 @@ class SellerController extends Controller
 {
     public function __construct(
         private readonly PasswordResetService $passwordResetService,
-        private readonly SellerReputationService $sellerReputationService,
+        private readonly SellerKarmaSummaryService $sellerKarmaSummaryService,
     )
     {
         $this->middleware('auth:seller');
@@ -367,140 +367,7 @@ class SellerController extends Controller
             return response()->json(['success' => false, 'message' => 'Seller not found'], 404);
         }
 
-        $data = Cache::remember(
-            "seller:{$storeSellerId}:menu_reputation_summary:v2",
-            now()->addMinutes(3),
-            function () use ($storeSellerId, $storeSeller) {
-                $reputation = $this->sellerReputationService->recalculateSeller($storeSeller, false);
-                $metrics = $reputation['metrics'] ?? [];
-
-                $booksQuery = Books::query()->where('seller_id', $storeSellerId)->where('is_hidden', 0);
-                $stationeryQuery = Stationery::query()->where('seller_id', $storeSellerId)->where('is_hidden', 0);
-
-                $bookAvg = (float) ($booksQuery->where('ugc_aggregate_score', '>', 0)->avg('ugc_aggregate_score') ?? 0);
-                $stationeryAvg = (float) ($stationeryQuery->where('ugc_aggregate_score', '>', 0)->avg('ugc_aggregate_score') ?? 0);
-                $bookCount = (int) Books::query()->where('seller_id', $storeSellerId)->where('is_hidden', 0)->count();
-                $stationeryCount = (int) Stationery::query()->where('seller_id', $storeSellerId)->where('is_hidden', 0)->count();
-                $activeBooks = (int) Books::query()
-                    ->where('seller_id', $storeSellerId)
-                    ->where('is_hidden', 0)
-                    ->where('status', 1)
-                    ->where('count', '>', 0)
-                    ->count();
-                $activeStationery = (int) Stationery::query()
-                    ->where('seller_id', $storeSellerId)
-                    ->where('is_hidden', 0)
-                    ->where('status', 1)
-                    ->where('stock', '>', 0)
-                    ->count();
-
-                $ratedSources = collect([$bookAvg, $stationeryAvg])->filter(fn ($value) => $value > 0);
-                $productRating = $ratedSources->isNotEmpty()
-                    ? round((float) $ratedSources->avg(), 2)
-                    : round((float) ($storeSeller->rating ?? SellerReputationService::BASELINE_PUBLIC_RATING), 2);
-
-                $soldProducts = (int) DB::table('seller_order_items')
-                    ->join('seller_orders', 'seller_orders.id', '=', 'seller_order_items.order_id')
-                    ->join('solds', 'solds.id', '=', 'seller_orders.order_id')
-                    ->where('seller_order_items.seller_id', $storeSellerId)
-                    ->whereNull('seller_order_items.cancelled_at')
-                    ->whereNotNull('solds.completed_at')
-                    ->where(function ($query) {
-                        $query->where('solds.payment_status_code', 'paid')
-                            ->orWhere(function ($fallback) {
-                                $fallback->whereNull('solds.payment_status_code')
-                                    ->where('solds.paymentStatus', 2);
-                            });
-                    })
-                    ->sum('seller_order_items.quantity');
-
-                $returnedProducts = (int) DB::table('seller_order_items')
-                    ->join('seller_orders', 'seller_orders.id', '=', 'seller_order_items.order_id')
-                    ->join('solds', 'solds.id', '=', 'seller_orders.order_id')
-                    ->where('seller_order_items.seller_id', $storeSellerId)
-                    ->where(function ($query) {
-                        $query->where('solds.status_code', 'returned')
-                            ->orWhere(function ($fallback) {
-                                $fallback->whereNull('solds.status_code')
-                                    ->where('solds.status', 'R');
-                            });
-                    })
-                    ->sum('seller_order_items.quantity');
-
-                $approvedSales = (int) SellerTransaction::query()
-                    ->where('seller_id', $storeSellerId)
-                    ->where('status', SellerTransaction::STATUS_APPROVED)
-                    ->where('category', 'order_sale')
-                    ->sum('netAmount');
-
-                $approvedReversals = (int) SellerTransaction::query()
-                    ->where('seller_id', $storeSellerId)
-                    ->where('status', SellerTransaction::STATUS_APPROVED)
-                    ->where('category', 'order_reversal')
-                    ->sum('netAmount');
-
-                $totalIncome = max(0, $approvedSales - $approvedReversals);
-                $withdrawableBalance = max(0, (int) ($storeSeller->balance ?? 0));
-                $totalWithdrawal = max(0, (int) ($storeSeller->total_withdrawal ?? 0));
-
-                $productScore = round(max(45, min(100, ($productRating / 5) * 100)), 2);
-                $responseHours = max(0.25, (float) ($metrics['response_time_hours'] ?? $storeSeller->response_time_hours ?? 24));
-                $responseScore = match (true) {
-                    $responseHours <= 1 => 100.0,
-                    $responseHours <= 3 => 95.0,
-                    $responseHours <= 6 => 90.0,
-                    $responseHours <= 12 => 82.0,
-                    $responseHours <= 24 => 72.0,
-                    $responseHours <= 48 => 58.0,
-                    default => 45.0,
-                };
-                $successScore = round(((float) ($metrics['success_rate'] ?? 0.78)) * 100, 2);
-                $catalogHealth = ($bookCount + $stationeryCount) > 0
-                    ? round((($activeBooks + $activeStationery) / ($bookCount + $stationeryCount)) * 100, 2)
-                    : 70.0;
-
-                $karma = round(
-                    ($reputation['reputation_score'] * 0.46) +
-                    ($productScore * 0.24) +
-                    ($responseScore * 0.18) +
-                    ($catalogHealth * 0.07) +
-                    ($successScore * 0.05),
-                    2
-                );
-
-                $tier = match (true) {
-                    $karma >= 90 => 'Top store',
-                    $karma >= 82 => 'Strong store',
-                    $karma >= 72 => 'Stable store',
-                    $karma >= 60 => 'Growing store',
-                    default => 'Needs focus',
-                };
-
-                return [
-                    'karma' => $karma,
-                    'tier' => $tier,
-                    'public_rating' => round((float) ($reputation['rating'] ?? $storeSeller->rating ?? 5), 2),
-                    'reputation_score' => round((float) ($reputation['reputation_score'] ?? $storeSeller->reputation_score ?? 78), 2),
-                    'product_rating' => $productRating,
-                    'product_score' => $productScore,
-                    'response_time_hours' => round($responseHours, 2),
-                    'response_score' => $responseScore,
-                    'success_score' => $successScore,
-                    'catalog_health' => $catalogHealth,
-                    'completed_orders' => (int) ($metrics['completed_all'] ?? 0),
-                    'completed_30d' => (int) ($metrics['completed_30d'] ?? 0),
-                    'cancelled_90d' => (int) ($metrics['cancelled_90d'] ?? 0),
-                    'returned_90d' => (int) ($metrics['returned_90d'] ?? 0),
-                    'active_products' => $activeBooks + $activeStationery,
-                    'all_products' => $bookCount + $stationeryCount,
-                    'sold_products' => $soldProducts,
-                    'returned_products' => $returnedProducts,
-                    'total_income' => $totalIncome,
-                    'withdrawable_balance' => $withdrawableBalance,
-                    'total_withdrawal' => $totalWithdrawal,
-                ];
-            }
-        );
+        $data = $this->sellerKarmaSummaryService->cachedSummary($storeSeller);
 
         return response()->json([
             'success' => true,
