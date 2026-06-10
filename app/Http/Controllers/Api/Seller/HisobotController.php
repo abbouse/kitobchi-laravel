@@ -16,6 +16,7 @@ use App\Models\ProductViewLog;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class HisobotController extends Controller
@@ -369,127 +370,141 @@ class HisobotController extends Controller
             $storeSellerId,
             $request->filled('location_id') ? (int) $request->query('location_id') : null
         );
-        $data = [];
+        $cacheKey = sprintf(
+            'seller:%d:sales_stats:%s:%s:%s:%s:v1',
+            $storeSellerId,
+            $period['period'],
+            $period['start']->format('Ymd'),
+            $period['end']->format('Ymd'),
+            $selectedLocation?->id ?? 'all',
+        );
 
-        $viewRows = ProductViewLog::query()
-            ->selectRaw('DATE(created_at) as bucket_key')
-            ->selectRaw('COUNT(*) as total_views')
-            ->selectRaw('SUM(CASE WHEN recommendation_active = 1 THEN 1 ELSE 0 END) as total_recommended_views')
-            ->where('seller_id', $storeSellerId)
-            ->whereBetween('created_at', [$period['start'], $period['end']])
-            ->groupBy('bucket_key')
-            ->get()
-            ->keyBy('bucket_key');
+        $data = Cache::remember($cacheKey, now()->addMinutes(5), function () use (
+            $storeSellerId,
+            $period,
+            $selectedLocation
+        ) {
+            $data = [];
 
-        if ($period['group'] === 'month') {
-            $rows = SellerOrder::query()
-                ->join('solds', 'solds.id', '=', 'seller_orders.order_id')
-                ->selectRaw("DATE_FORMAT(solds.completed_at, '%Y-%m') as bucket_key")
-                ->selectRaw('SUM(seller_orders.amount) as total_amount')
-                ->selectRaw('COUNT(*) as total_orders')
-                ->selectRaw('COUNT(DISTINCT seller_orders.client_id) as total_clients')
-                ->where('seller_orders.seller_id', $storeSellerId)
-                ->whereNotNull('solds.completed_at')
-                ->whereBetween('solds.completed_at', [$period['start'], $period['end']])
-                ->groupBy('bucket_key');
-            $this->applyCompletedPaidSoldFilter($rows);
-            $this->applyBranchFilterToSellerOrders($rows, $selectedLocation);
-            $rows = $rows->get()
+            $viewRows = ProductViewLog::query()
+                ->selectRaw('DATE(created_at) as bucket_key')
+                ->selectRaw('COUNT(*) as total_views')
+                ->selectRaw('SUM(CASE WHEN recommendation_active = 1 THEN 1 ELSE 0 END) as total_recommended_views')
+                ->where('seller_id', $storeSellerId)
+                ->whereBetween('created_at', [$period['start'], $period['end']])
+                ->groupBy('bucket_key')
+                ->get()
                 ->keyBy('bucket_key');
 
-            $cursor = $period['start']->copy();
-            while ($cursor <= $period['end']) {
-                $bucketKey = $cursor->format('Y-m');
-                $row = $rows->get($bucketKey);
-                $viewStats = $viewRows
-                    ->filter(fn($_, $key) => str_starts_with((string) $key, $bucketKey))
-                    ->values();
+            if ($period['group'] === 'month') {
+                $rows = SellerOrder::query()
+                    ->join('solds', 'solds.id', '=', 'seller_orders.order_id')
+                    ->selectRaw("DATE_FORMAT(solds.completed_at, '%Y-%m') as bucket_key")
+                    ->selectRaw('SUM(seller_orders.amount) as total_amount')
+                    ->selectRaw('COUNT(*) as total_orders')
+                    ->selectRaw('COUNT(DISTINCT seller_orders.client_id) as total_clients')
+                    ->where('seller_orders.seller_id', $storeSellerId)
+                    ->whereNotNull('solds.completed_at')
+                    ->whereBetween('solds.completed_at', [$period['start'], $period['end']])
+                    ->groupBy('bucket_key');
+                $this->applyCompletedPaidSoldFilter($rows);
+                $this->applyBranchFilterToSellerOrders($rows, $selectedLocation);
+                $rows = $rows->get()->keyBy('bucket_key');
 
-                $data[] = [
-                    'time' => $cursor->copy()->startOfMonth()->toDateString(),
-                    'label' => $cursor->translatedFormat('M'),
-                    'value' => (int) ($row->total_amount ?? 0),
-                    'orders' => (int) ($row->total_orders ?? 0),
-                    'clients' => (int) ($row->total_clients ?? 0),
-                    'views' => (int) $viewStats->sum('total_views'),
-                    'recommended_views' => (int) $viewStats->sum('total_recommended_views'),
-                ];
+                $cursor = $period['start']->copy();
+                while ($cursor <= $period['end']) {
+                    $bucketKey = $cursor->format('Y-m');
+                    $row = $rows->get($bucketKey);
+                    $viewStats = $viewRows
+                        ->filter(fn($_, $key) => str_starts_with((string) $key, $bucketKey))
+                        ->values();
 
-                $cursor->addMonth();
+                    $data[] = [
+                        'time' => $cursor->copy()->startOfMonth()->toDateString(),
+                        'label' => $cursor->translatedFormat('M'),
+                        'value' => (int) ($row->total_amount ?? 0),
+                        'orders' => (int) ($row->total_orders ?? 0),
+                        'clients' => (int) ($row->total_clients ?? 0),
+                        'views' => (int) $viewStats->sum('total_views'),
+                        'recommended_views' => (int) $viewStats->sum('total_recommended_views'),
+                    ];
+
+                    $cursor->addMonth();
+                }
+            } elseif ($period['group'] === 'week') {
+                $rows = SellerOrder::query()
+                    ->join('solds', 'solds.id', '=', 'seller_orders.order_id')
+                    ->selectRaw('YEARWEEK(solds.completed_at, 1) as bucket_key')
+                    ->selectRaw('SUM(seller_orders.amount) as total_amount')
+                    ->selectRaw('COUNT(*) as total_orders')
+                    ->selectRaw('COUNT(DISTINCT seller_orders.client_id) as total_clients')
+                    ->where('seller_orders.seller_id', $storeSellerId)
+                    ->whereNotNull('solds.completed_at')
+                    ->whereBetween('solds.completed_at', [$period['start'], $period['end']])
+                    ->groupBy('bucket_key');
+                $this->applyCompletedPaidSoldFilter($rows);
+                $this->applyBranchFilterToSellerOrders($rows, $selectedLocation);
+                $rows = $rows->get()->keyBy('bucket_key');
+
+                $cursor = $period['start']->copy()->startOfWeek(Carbon::MONDAY);
+                while ($cursor <= $period['end']) {
+                    $bucketKey = (int) $cursor->format('oW');
+                    $row = $rows->get($bucketKey);
+                    $weekStart = $cursor->copy()->startOfWeek(Carbon::MONDAY)->toDateString();
+                    $weekEnd = $cursor->copy()->endOfWeek(Carbon::SUNDAY)->toDateString();
+                    $viewStats = $viewRows
+                        ->filter(fn($_, $key) => $key >= $weekStart && $key <= $weekEnd)
+                        ->values();
+
+                    $data[] = [
+                        'time' => $cursor->toDateString(),
+                        'label' => $cursor->translatedFormat('j M'),
+                        'value' => (int) ($row->total_amount ?? 0),
+                        'orders' => (int) ($row->total_orders ?? 0),
+                        'clients' => (int) ($row->total_clients ?? 0),
+                        'views' => (int) $viewStats->sum('total_views'),
+                        'recommended_views' => (int) $viewStats->sum('total_recommended_views'),
+                    ];
+
+                    $cursor->addWeek();
+                }
+            } else {
+                $rows = SellerOrder::query()
+                    ->join('solds', 'solds.id', '=', 'seller_orders.order_id')
+                    ->selectRaw('DATE(solds.completed_at) as bucket_key')
+                    ->selectRaw('SUM(seller_orders.amount) as total_amount')
+                    ->selectRaw('COUNT(*) as total_orders')
+                    ->selectRaw('COUNT(DISTINCT seller_orders.client_id) as total_clients')
+                    ->where('seller_orders.seller_id', $storeSellerId)
+                    ->whereNotNull('solds.completed_at')
+                    ->whereBetween('solds.completed_at', [$period['start'], $period['end']])
+                    ->groupBy('bucket_key');
+                $this->applyCompletedPaidSoldFilter($rows);
+                $this->applyBranchFilterToSellerOrders($rows, $selectedLocation);
+                $rows = $rows->get()->keyBy('bucket_key');
+
+                $cursor = $period['start']->copy();
+                while ($cursor <= $period['end']) {
+                    $bucketKey = $cursor->toDateString();
+                    $row = $rows->get($bucketKey);
+                    $viewRow = $viewRows->get($bucketKey);
+
+                    $data[] = [
+                        'time' => $bucketKey,
+                        'label' => $cursor->translatedFormat('j M'),
+                        'value' => (int) ($row->total_amount ?? 0),
+                        'orders' => (int) ($row->total_orders ?? 0),
+                        'clients' => (int) ($row->total_clients ?? 0),
+                        'views' => (int) ($viewRow->total_views ?? 0),
+                        'recommended_views' => (int) ($viewRow->total_recommended_views ?? 0),
+                    ];
+
+                    $cursor->addDay();
+                }
             }
-        } elseif ($period['group'] === 'week') {
-            $rows = SellerOrder::query()
-                ->join('solds', 'solds.id', '=', 'seller_orders.order_id')
-                ->selectRaw('YEARWEEK(solds.completed_at, 1) as bucket_key')
-                ->selectRaw('SUM(seller_orders.amount) as total_amount')
-                ->selectRaw('COUNT(*) as total_orders')
-                ->selectRaw('COUNT(DISTINCT seller_orders.client_id) as total_clients')
-                ->where('seller_orders.seller_id', $storeSellerId)
-                ->whereNotNull('solds.completed_at')
-                ->whereBetween('solds.completed_at', [$period['start'], $period['end']])
-                ->groupBy('bucket_key');
-            $this->applyCompletedPaidSoldFilter($rows);
-            $this->applyBranchFilterToSellerOrders($rows, $selectedLocation);
-            $rows = $rows->get()
-                ->keyBy('bucket_key');
 
-            $cursor = $period['start']->copy()->startOfWeek(Carbon::MONDAY);
-            while ($cursor <= $period['end']) {
-                $bucketKey = (int) $cursor->format('oW');
-                $row = $rows->get($bucketKey);
-                $weekStart = $cursor->copy()->startOfWeek(Carbon::MONDAY)->toDateString();
-                $weekEnd = $cursor->copy()->endOfWeek(Carbon::SUNDAY)->toDateString();
-                $viewStats = $viewRows
-                    ->filter(fn($_, $key) => $key >= $weekStart && $key <= $weekEnd)
-                    ->values();
-
-                $data[] = [
-                    'time' => $cursor->toDateString(),
-                    'label' => $cursor->translatedFormat('j M'),
-                    'value' => (int) ($row->total_amount ?? 0),
-                    'orders' => (int) ($row->total_orders ?? 0),
-                    'clients' => (int) ($row->total_clients ?? 0),
-                    'views' => (int) $viewStats->sum('total_views'),
-                    'recommended_views' => (int) $viewStats->sum('total_recommended_views'),
-                ];
-
-                $cursor->addWeek();
-            }
-        } else {
-            $rows = SellerOrder::query()
-                ->join('solds', 'solds.id', '=', 'seller_orders.order_id')
-                ->selectRaw('DATE(solds.completed_at) as bucket_key')
-                ->selectRaw('SUM(seller_orders.amount) as total_amount')
-                ->selectRaw('COUNT(*) as total_orders')
-                ->selectRaw('COUNT(DISTINCT seller_orders.client_id) as total_clients')
-                ->where('seller_orders.seller_id', $storeSellerId)
-                ->whereNotNull('solds.completed_at')
-                ->whereBetween('solds.completed_at', [$period['start'], $period['end']])
-                ->groupBy('bucket_key');
-            $this->applyCompletedPaidSoldFilter($rows);
-            $this->applyBranchFilterToSellerOrders($rows, $selectedLocation);
-            $rows = $rows->get()
-                ->keyBy('bucket_key');
-
-            $cursor = $period['start']->copy();
-            while ($cursor <= $period['end']) {
-                $bucketKey = $cursor->toDateString();
-                $row = $rows->get($bucketKey);
-                $viewRow = $viewRows->get($bucketKey);
-
-                $data[] = [
-                    'time' => $bucketKey,
-                    'label' => $cursor->translatedFormat('j M'),
-                    'value' => (int) ($row->total_amount ?? 0),
-                    'orders' => (int) ($row->total_orders ?? 0),
-                    'clients' => (int) ($row->total_clients ?? 0),
-                    'views' => (int) ($viewRow->total_views ?? 0),
-                    'recommended_views' => (int) ($viewRow->total_recommended_views ?? 0),
-                ];
-
-                $cursor->addDay();
-            }
-        }
+            return $data;
+        });
 
         return response()->json([
             'success' => true,

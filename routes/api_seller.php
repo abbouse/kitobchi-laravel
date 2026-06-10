@@ -33,6 +33,7 @@ Route::middleware('auth:seller')->group(function () {
     Route::get('notifications', [SellerController::class, 'notifications']);
     Route::get('notifications/count', [SellerController::class, 'notificationsCount']);
     Route::get('menu/badge-summary', [SellerController::class, 'menuBadgeSummary']);
+    Route::get('menu/reputation-summary', [SellerController::class, 'menuReputationSummary']);
     Route::post('notifications/read', [SellerController::class, 'markAsRead']);
     Route::post('notifications/read-all', [SellerController::class, 'markAllAsRead']);
 

@@ -15,6 +15,7 @@ use App\Models\Couriers;
 use App\Models\CourierOrder;
 use App\Models\CourierOrderItem;
 use App\Models\SellerOrder;
+use App\Models\SellerOrderItem;
 use App\Services\CourierBonusService;
 use App\Services\OrderService;
 use App\Services\OrderStatusPushService;
@@ -126,7 +127,9 @@ class CourierOrderController extends Controller
                 $order->available_collateral = $this->courierCashOnDeliveryCapacityService->availableCollateral($courier);
                 $this->bonusService->normalizeBonusState($order, false);
                 return $this->hydrateCourierOrderItems($order, Auth::guard('courier')->id());
-            });
+            })
+            ->filter(fn (CourierOrder $order) => $order->items->isNotEmpty())
+            ->values();
 
         Log::info('Courier available orders fetched', [
             'courier_id' => $courier->id,
@@ -169,6 +172,12 @@ class CourierOrderController extends Controller
         }
 
         $show = $this->hydrateCourierOrderItems($show, $courier->id);
+        if ($show->items->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => __('courier_api.order_not_found')
+            ], 404);
+        }
         $taskSummary = $this->buildTaskSummary($show->order()->first(), $courier->id);
         $show->task_leg = $taskSummary['task_leg'];
         $show->fulfillment_mode = $taskSummary['fulfillment_mode'];
@@ -365,7 +374,9 @@ class CourierOrderController extends Controller
                 $order->available_collateral = $this->courierCashOnDeliveryCapacityService->availableCollateral($courier);
                 $this->bonusService->normalizeBonusState($order, false);
                 return $this->hydrateCourierOrderItems($order, $order->courier_id);
-            });
+            })
+            ->filter(fn (CourierOrder $order) => $order->items->isNotEmpty())
+            ->values();
         return response()->json([
             'success' => true,
             'data'    => $orders,
@@ -456,6 +467,13 @@ class CourierOrderController extends Controller
             $order->setRelation('items', $items);
         }
 
+        $items = $this->filterCancelledSellerItems($order, $items);
+        $order->setRelation('items', $items);
+
+        if ($items->isEmpty()) {
+            return $order;
+        }
+
         $sellerStatuses = SellerOrder::query()
             ->where('order_id', $order->order_id)
             ->whereIn('seller_id', $items->pluck('seller_id')->filter()->unique()->values())
@@ -488,6 +506,80 @@ class CourierOrderController extends Controller
         }
 
         return $order;
+    }
+
+    private function filterCancelledSellerItems(CourierOrder $order, \Illuminate\Support\Collection $items): \Illuminate\Support\Collection
+    {
+        if ($items->isEmpty()) {
+            return $items;
+        }
+
+        $activeSellerItems = SellerOrderItem::query()
+            ->join('seller_orders', 'seller_orders.id', '=', 'seller_order_items.order_id')
+            ->where('seller_orders.order_id', $order->order_id)
+            ->whereNull('seller_order_items.cancelled_at')
+            ->get([
+                'seller_orders.seller_id as seller_id',
+                'seller_order_items.product_id',
+                'seller_order_items.variant_id',
+                'seller_order_items.type',
+                'seller_order_items.quantity',
+                'seller_order_items.price',
+            ]);
+
+        if ($activeSellerItems->isEmpty()) {
+            return $items->take(0);
+        }
+
+        $remaining = [];
+        foreach ($activeSellerItems as $sellerItem) {
+            $key = $this->courierItemMatchKey(
+                (int) $sellerItem->seller_id,
+                (int) $sellerItem->product_id,
+                $sellerItem->variant_id !== null ? (int) $sellerItem->variant_id : null,
+                (string) $sellerItem->type,
+                (int) $sellerItem->quantity,
+                (int) $sellerItem->price,
+            );
+            $remaining[$key] = ($remaining[$key] ?? 0) + 1;
+        }
+
+        return $items->filter(function ($item) use (&$remaining) {
+            $key = $this->courierItemMatchKey(
+                (int) ($item->seller_id ?? 0),
+                (int) ($item->product_id ?? 0),
+                $item->variant_id !== null ? (int) $item->variant_id : null,
+                (string) ($item->type ?? ''),
+                (int) ($item->quantity ?? 0),
+                (int) ($item->price ?? 0),
+            );
+
+            if (($remaining[$key] ?? 0) <= 0) {
+                return false;
+            }
+
+            $remaining[$key]--;
+
+            return true;
+        })->values();
+    }
+
+    private function courierItemMatchKey(
+        int $sellerId,
+        int $productId,
+        ?int $variantId,
+        string $type,
+        int $quantity,
+        int $price
+    ): string {
+        return implode(':', [
+            $sellerId,
+            $productId,
+            $variantId ?? 0,
+            $type,
+            $quantity,
+            $price,
+        ]);
     }
 
     private function buildPickupQrForItem(mixed $item, ?int $courierId, ?int $soldOrderId = null): ?string
