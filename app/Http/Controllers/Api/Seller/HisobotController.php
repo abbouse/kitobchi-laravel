@@ -6,6 +6,7 @@ use App\Enums\OrderStatusCode;
 use App\Enums\PaymentStatusCode;
 use App\Http\Controllers\Controller;
 use App\Models\Books;
+use App\Models\Gifts;
 use App\Models\Seller;
 use App\Models\SellerLocation;
 use App\Models\SellerOrder;
@@ -218,6 +219,14 @@ class HisobotController extends Controller
             $selectedLocation,
             $period
         ) {
+            $sellerScopeIds = Seller::query()
+                ->where('id', $storeSellerId)
+                ->orWhere('parent_id', $storeSellerId)
+                ->pluck('id')
+                ->filter()
+                ->unique()
+                ->values();
+
             $ordersQuery = $this->baseCompletedOrders($storeSellerId, $period['start'], $period['end']);
             $this->applyBranchFilterToSellerOrders($ordersQuery, $selectedLocation);
             $salesCount = (clone $ordersQuery)->count();
@@ -271,6 +280,7 @@ class HisobotController extends Controller
             $topSellers = SellerOrder::query()
                 ->join('solds', 'solds.id', '=', 'seller_orders.order_id')
                 ->select('seller_orders.seller_id', DB::raw('SUM(seller_orders.amount) as total_sales'), DB::raw('COUNT(*) as orders_count'))
+                ->whereIn('seller_orders.seller_id', $sellerScopeIds)
                 ->whereNotNull('solds.completed_at')
                 ->whereBetween('solds.completed_at', [$monthStart, $monthEnd])
                 ->groupBy('seller_orders.seller_id')
@@ -309,7 +319,7 @@ class HisobotController extends Controller
                 )
                 ->join('seller_orders', 'seller_orders.id', '=', 'seller_order_items.order_id')
                 ->join('solds', 'solds.id', '=', 'seller_orders.order_id')
-                ->where('seller_order_items.seller_id', $storeSellerId)
+                ->whereIn('seller_order_items.seller_id', $sellerScopeIds)
                 ->whereNotNull('solds.completed_at')
                 ->whereBetween('solds.completed_at', [$period['start'], $period['end']])
                 ->groupBy('seller_order_items.product_id', 'seller_order_items.type');
@@ -322,6 +332,7 @@ class HisobotController extends Controller
 
             $bookIds = $topProducts->where('type', 'book')->pluck('product_id')->unique()->values();
             $stationeryIds = $topProducts->where('type', 'stationery')->pluck('product_id')->unique()->values();
+            $giftIds = $topProducts->where('type', 'gift')->pluck('product_id')->unique()->values();
 
             $bookMap = Books::query()
                 ->whereIn('id', $bookIds)
@@ -331,11 +342,17 @@ class HisobotController extends Controller
                 ->whereIn('id', $stationeryIds)
                 ->get(['id', 'name', 'images'])
                 ->keyBy('id');
+            $giftMap = Gifts::query()
+                ->whereIn('id', $giftIds)
+                ->get(['id', 'name', 'images'])
+                ->keyBy('id');
 
-            $topProductsPayload = $topProducts->values()->map(function ($row, $index) use ($bookMap, $stationeryMap) {
-                $product = $row->type === 'stationery'
-                    ? $stationeryMap->get($row->product_id)
-                    : $bookMap->get($row->product_id);
+            $topProductsPayload = $topProducts->values()->map(function ($row, $index) use ($bookMap, $stationeryMap, $giftMap) {
+                $product = match ((string) $row->type) {
+                    'stationery' => $stationeryMap->get($row->product_id),
+                    'gift' => $giftMap->get($row->product_id),
+                    default => $bookMap->get($row->product_id),
+                };
 
                 $images = is_array($product?->images) ? $product->images : [];
 
@@ -350,89 +367,98 @@ class HisobotController extends Controller
                 ];
             })->all();
 
-            $categoryRows = SellerOrderItem::query()
+            $bookCategoryRows = SellerOrderItem::query()
                 ->join('seller_orders', 'seller_orders.id', '=', 'seller_order_items.order_id')
                 ->join('solds', 'solds.id', '=', 'seller_orders.order_id')
-                ->leftJoin('books', function ($join) {
-                    $join->on('books.id', '=', 'seller_order_items.product_id')
-                        ->where('seller_order_items.type', '=', 'book');
-                })
+                ->join('books', 'books.id', '=', 'seller_order_items.product_id')
                 ->leftJoin('book_categories', 'book_categories.id', '=', 'books.category_id')
-                ->leftJoin('stationeries', function ($join) {
-                    $join->on('stationeries.id', '=', 'seller_order_items.product_id')
-                        ->where('seller_order_items.type', '=', 'stationery');
-                })
-                ->leftJoin('stationery_categories', 'stationery_categories.id', '=', 'stationeries.category_id')
                 ->where('seller_order_items.seller_id', $storeSellerId)
+                ->where('seller_order_items.type', 'book')
                 ->whereNotNull('solds.completed_at')
                 ->whereBetween('solds.completed_at', [$period['start'], $period['end']])
-                ->selectRaw('seller_order_items.type as product_type')
-                ->selectRaw('book_categories.id as book_category_id')
-                ->selectRaw('stationery_categories.id as stationery_category_id')
-                ->selectRaw('book_categories.name_uz as book_name_uz')
-                ->selectRaw('book_categories.name_ru as book_name_ru')
-                ->selectRaw('book_categories.name_en as book_name_en')
-                ->selectRaw('book_categories.name_ja as book_name_ja')
-                ->selectRaw('stationery_categories.name_uz as stationery_name_uz')
-                ->selectRaw('stationery_categories.name_ru as stationery_name_ru')
-                ->selectRaw('stationery_categories.name_en as stationery_name_en')
-                ->selectRaw('stationery_categories.name_ja as stationery_name_ja')
+                ->selectRaw("'book' as product_type")
+                ->selectRaw('COALESCE(book_categories.id, 0) as category_id')
+                ->selectRaw("COALESCE(book_categories.name_uz, 'Kitob') as name_uz")
+                ->selectRaw("COALESCE(book_categories.name_ru, 'Книги') as name_ru")
+                ->selectRaw("COALESCE(book_categories.name_en, 'Books') as name_en")
+                ->selectRaw("COALESCE(book_categories.name_ja, '本') as name_ja")
                 ->selectRaw('SUM(seller_order_items.quantity) as total_quantity')
                 ->selectRaw('SUM(seller_order_items.price * seller_order_items.quantity) as total_revenue')
                 ->groupBy([
-                    'seller_order_items.type',
                     'book_categories.id',
-                    'stationery_categories.id',
                     'book_categories.name_uz',
                     'book_categories.name_ru',
                     'book_categories.name_en',
                     'book_categories.name_ja',
+                ]);
+            $this->applyCompletedPaidSoldFilter($bookCategoryRows);
+            $this->applyBranchFilterToSellerOrders($bookCategoryRows, $selectedLocation, 'seller_orders');
+
+            $stationeryCategoryRows = SellerOrderItem::query()
+                ->join('seller_orders', 'seller_orders.id', '=', 'seller_order_items.order_id')
+                ->join('solds', 'solds.id', '=', 'seller_orders.order_id')
+                ->join('stationeries', 'stationeries.id', '=', 'seller_order_items.product_id')
+                ->leftJoin('stationery_categories', 'stationery_categories.id', '=', 'stationeries.category_id')
+                ->where('seller_order_items.seller_id', $storeSellerId)
+                ->where('seller_order_items.type', 'stationery')
+                ->whereNotNull('solds.completed_at')
+                ->whereBetween('solds.completed_at', [$period['start'], $period['end']])
+                ->selectRaw("'stationery' as product_type")
+                ->selectRaw('COALESCE(stationery_categories.id, 0) as category_id')
+                ->selectRaw("COALESCE(stationery_categories.name_uz, 'Kanselyariya') as name_uz")
+                ->selectRaw("COALESCE(stationery_categories.name_ru, 'Канцелярия') as name_ru")
+                ->selectRaw("COALESCE(stationery_categories.name_en, 'Stationery') as name_en")
+                ->selectRaw("COALESCE(stationery_categories.name_ja, '文房具') as name_ja")
+                ->selectRaw('SUM(seller_order_items.quantity) as total_quantity')
+                ->selectRaw('SUM(seller_order_items.price * seller_order_items.quantity) as total_revenue')
+                ->groupBy([
+                    'stationery_categories.id',
                     'stationery_categories.name_uz',
                     'stationery_categories.name_ru',
                     'stationery_categories.name_en',
                     'stationery_categories.name_ja',
                 ]);
-            $this->applyCompletedPaidSoldFilter($categoryRows);
-            $this->applyBranchFilterToSellerOrders($categoryRows, $selectedLocation, 'seller_orders');
-            $categoryRows = $categoryRows
-                ->orderByDesc('total_revenue')
-                ->get();
+            $this->applyCompletedPaidSoldFilter($stationeryCategoryRows);
+            $this->applyBranchFilterToSellerOrders($stationeryCategoryRows, $selectedLocation, 'seller_orders');
+
+            $giftCategoryRows = SellerOrderItem::query()
+                ->join('seller_orders', 'seller_orders.id', '=', 'seller_order_items.order_id')
+                ->join('solds', 'solds.id', '=', 'seller_orders.order_id')
+                ->where('seller_order_items.seller_id', $storeSellerId)
+                ->where('seller_order_items.type', 'gift')
+                ->whereNotNull('solds.completed_at')
+                ->whereBetween('solds.completed_at', [$period['start'], $period['end']])
+                ->selectRaw("'gift' as product_type")
+                ->selectRaw('0 as category_id')
+                ->selectRaw("'Sovg\\'a' as name_uz")
+                ->selectRaw("'Подарки' as name_ru")
+                ->selectRaw("'Gifts' as name_en")
+                ->selectRaw("'ギフト' as name_ja")
+                ->selectRaw('SUM(seller_order_items.quantity) as total_quantity')
+                ->selectRaw('SUM(seller_order_items.price * seller_order_items.quantity) as total_revenue');
+            $this->applyCompletedPaidSoldFilter($giftCategoryRows);
+            $this->applyBranchFilterToSellerOrders($giftCategoryRows, $selectedLocation, 'seller_orders');
+
+            $categoryRows = $bookCategoryRows->get()
+                ->concat($stationeryCategoryRows->get())
+                ->concat($giftCategoryRows->get())
+                ->filter(fn ($row) => (int) ($row->total_revenue ?? 0) > 0)
+                ->sortByDesc('total_revenue')
+                ->values();
 
             $categoryRevenueTotal = (int) $categoryRows->sum('total_revenue');
             $categorySalesPayload = $categoryRows
                 ->take(4)
-                ->values()
                 ->map(function ($row) use ($categoryRevenueTotal) {
                     $revenue = (int) ($row->total_revenue ?? 0);
-                    $type = (string) $row->product_type;
-
-                    if ($type === 'stationery') {
-                        $categoryId = (int) ($row->stationery_category_id ?? 0);
-                        $nameUz = (string) ($row->stationery_name_uz ?? 'Kanselyariya');
-                        $nameRu = (string) ($row->stationery_name_ru ?? 'Канцелярия');
-                        $nameEn = (string) ($row->stationery_name_en ?? 'Stationery');
-                        $nameJa = (string) ($row->stationery_name_ja ?? '文房具');
-                    } elseif ($type === 'gift') {
-                        $categoryId = 0;
-                        $nameUz = 'Sovg\'a';
-                        $nameRu = 'Подарки';
-                        $nameEn = 'Gifts';
-                        $nameJa = 'ギフト';
-                    } else {
-                        $categoryId = (int) ($row->book_category_id ?? 0);
-                        $nameUz = (string) ($row->book_name_uz ?? 'Kitob');
-                        $nameRu = (string) ($row->book_name_ru ?? 'Книги');
-                        $nameEn = (string) ($row->book_name_en ?? 'Books');
-                        $nameJa = (string) ($row->book_name_ja ?? '本');
-                    }
 
                     return [
-                        'product_type' => $type,
-                        'category_id' => $categoryId,
-                        'name_uz' => $nameUz,
-                        'name_ru' => $nameRu,
-                        'name_en' => $nameEn,
-                        'name_ja' => $nameJa,
+                        'product_type' => (string) ($row->product_type ?? 'book'),
+                        'category_id' => (int) ($row->category_id ?? 0),
+                        'name_uz' => (string) ($row->name_uz ?? 'Kategoriya'),
+                        'name_ru' => (string) ($row->name_ru ?? 'Категория'),
+                        'name_en' => (string) ($row->name_en ?? 'Category'),
+                        'name_ja' => (string) ($row->name_ja ?? 'カテゴリ'),
                         'quantity' => (int) ($row->total_quantity ?? 0),
                         'revenue' => $revenue,
                         'share_percent' => $categoryRevenueTotal > 0
@@ -440,6 +466,7 @@ class HisobotController extends Controller
                             : 0,
                     ];
                 })
+                ->values()
                 ->all();
 
             return [
