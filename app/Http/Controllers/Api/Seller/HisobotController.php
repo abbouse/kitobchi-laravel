@@ -17,7 +17,6 @@ use App\Models\ProductViewLog;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class HisobotController extends Controller
@@ -51,8 +50,12 @@ class HisobotController extends Controller
                 $start = $now->copy()->startOfDay()->subDays(6);
                 $group = 'day';
                 break;
-            case '6m':
             case '90d':
+                $period = '90d';
+                $start = $now->copy()->startOfDay()->subDays(89);
+                $group = 'day';
+                break;
+            case '6m':
                 $period = '6m';
                 $start = $now->copy()->startOfMonth()->subMonths(5);
                 $group = 'month';
@@ -205,16 +208,7 @@ class HisobotController extends Controller
             ], 200);
         }
 
-        $cacheKey = sprintf(
-            'seller:%d:statistics:data:%s:%s:%s:%s:v2',
-            $storeSellerId,
-            $period['period'],
-            $period['start']->format('Ymd'),
-            $period['end']->format('Ymd'),
-            $selectedLocation?->id ?? 'all',
-        );
-
-        $payload = Cache::remember($cacheKey, now()->addMinutes(5), function () use (
+        $payload = (function () use (
             $storeSellerId,
             $selectedLocation,
             $period
@@ -492,7 +486,7 @@ class HisobotController extends Controller
                 'top_products' => $topProductsPayload,
                 'category_sales' => $categorySalesPayload,
             ];
-        });
+        })();
 
         return response()->json([
             'success' => true,
@@ -518,16 +512,7 @@ class HisobotController extends Controller
             $storeSellerId,
             $request->filled('location_id') ? (int) $request->query('location_id') : null
         );
-        $cacheKey = sprintf(
-            'seller:%d:sales_stats:%s:%s:%s:%s:v1',
-            $storeSellerId,
-            $period['period'],
-            $period['start']->format('Ymd'),
-            $period['end']->format('Ymd'),
-            $selectedLocation?->id ?? 'all',
-        );
-
-        $data = Cache::remember($cacheKey, now()->addMinutes(5), function () use (
+        $data = (function () use (
             $storeSellerId,
             $period,
             $selectedLocation
@@ -652,7 +637,7 @@ class HisobotController extends Controller
             }
 
             return $data;
-        });
+        })();
 
         return response()->json([
             'success' => true,
