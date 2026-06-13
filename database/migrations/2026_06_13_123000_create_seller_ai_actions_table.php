@@ -11,8 +11,8 @@ return new class extends Migration
         Schema::create('seller_ai_actions', function (Blueprint $table) {
             $table->id();
             $table->uuid('token')->unique();
-            $table->unsignedInteger('seller_id');
-            $table->unsignedInteger('requested_by_seller_id')->nullable();
+            $table->bigInteger('seller_id');
+            $table->bigInteger('requested_by_seller_id')->nullable();
             $table->string('action_type')->index();
             $table->enum('status', ['preview', 'applied', 'rolled_back', 'cancelled', 'failed'])->default('preview')->index();
             $table->string('source_file_name')->nullable();

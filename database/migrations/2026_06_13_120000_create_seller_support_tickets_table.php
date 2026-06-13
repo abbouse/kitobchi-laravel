@@ -13,7 +13,7 @@ return new class extends Migration
 
         Schema::create('seller_support_tickets', function (Blueprint $table) {
             $table->id();
-            $table->unsignedInteger('seller_id');
+            $table->bigInteger('seller_id');
             $table->unsignedBigInteger('admin_id')->nullable()->index();
             $table->string('subject')->nullable();
             $table->enum('status', ['open', 'answered', 'waiting', 'closed'])->default('open')->index();
