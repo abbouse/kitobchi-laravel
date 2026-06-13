@@ -22,6 +22,24 @@ class SellerAuthController extends Controller
     ) {
     }
 
+    private function normalizeActivityType(?string $type): ?string
+    {
+        $value = mb_strtolower(trim((string) $type));
+        if ($value === '') {
+            return null;
+        }
+
+        if (in_array($value, ['book', 'books', 'kitob', 'книга', 'книги'], true)) {
+            return 'Kitob';
+        }
+
+        if (in_array($value, ['stationery', 'stationary', 'kanstovar', 'kanselyariya', 'канцелярия'], true)) {
+            return 'Kanstovar';
+        }
+
+        return null;
+    }
+
     public function register(Request $request)
     {
         $phone_number = $request->input('phone_number');
@@ -51,11 +69,18 @@ class SellerAuthController extends Controller
         } elseif (!is_array($activity_types)) {
             $error = 'Faoliyat turlarida xatolik';
         } else {
-            $allowed_types = ['Kitob', 'Kanstovar'];
+            $normalizedActivityTypes = [];
             foreach ($activity_types as $type) {
-                if (!in_array($type, $allowed_types)) {
+                $normalizedType = $this->normalizeActivityType($type);
+                if (! $normalizedType) {
                     $error = "Noto‘g‘ri faoliyat turi: $type. Ruxsat etilgan: Kitob, Kanstovar";
+                    break;
                 }
+                $normalizedActivityTypes[] = $normalizedType;
+            }
+            $activity_types = array_values(array_unique($normalizedActivityTypes));
+            if (empty($activity_types)) {
+                $error = 'Faoliyat turlari bo‘sh bo‘lmasligi kerak';
             }
         }
         if ($error) {

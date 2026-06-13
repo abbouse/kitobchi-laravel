@@ -49,6 +49,7 @@ class StationeryController extends Controller
         if ($search = $request->input('search')) {
             $query->where(fn ($q) => $q
                 ->where('name', 'like', "%{$search}%")
+                ->orWhere('artikul', 'like', "%{$search}%")
                 ->orWhere('material', 'like', "%{$search}%")
                 ->orWhere('id', $search));
         }

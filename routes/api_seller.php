@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Controllers\Api\Seller\BanLogController;
-use App\Http\Controllers\Api\Seller\ContestsController;
 use App\Http\Controllers\Api\Seller\ConversationController;
 use App\Http\Controllers\Api\Seller\GiftController;
 use App\Http\Controllers\Api\Seller\HisobotController;
@@ -10,9 +9,11 @@ use App\Http\Controllers\Api\Seller\PremiumController;
 use App\Http\Controllers\Api\Seller\ProductController;
 use App\Http\Controllers\Api\Seller\SellerAuthController;
 use App\Http\Controllers\Api\Seller\SellerController;
+use App\Http\Controllers\Api\Seller\SellerAiController;
 use App\Http\Controllers\Api\Seller\SellerLocationController;
 use App\Http\Controllers\Api\Seller\SellerMarketInsightController;
 use App\Http\Controllers\Api\Seller\SellerStaffController;
+use App\Http\Controllers\Api\Seller\SupportTicketController;
 use App\Http\Controllers\Api\Seller\TargetController;
 use App\Http\Controllers\Api\Seller\TransactionController;
 use Illuminate\Support\Facades\Route;
@@ -28,6 +29,12 @@ Route::middleware('auth:seller')->group(function () {
     Route::post('update/profile', [SellerController::class, 'updateProfile']);
     Route::get('update/password', [SellerController::class, 'updatePassword']);
     Route::post('update/status', [SellerController::class, 'updateStatus']);
+    Route::post('ai/chat', [SellerAiController::class, 'chat']);
+    Route::post('ai/parse-document', [SellerAiController::class, 'parseDocument']);
+    Route::post('ai/stock-preview', [SellerAiController::class, 'previewStockUpdate']);
+    Route::get('ai/actions', [SellerAiController::class, 'actionsHistory']);
+    Route::post('ai/actions/{token}/apply', [SellerAiController::class, 'applyAction']);
+    Route::post('ai/actions/{token}/rollback', [SellerAiController::class, 'rollbackAction']);
     Route::get('devices', [SellerController::class, 'getDevices']);
     Route::post('devices/remove-device', [SellerController::class, 'removeDevice']);
     Route::get('notifications', [SellerController::class, 'notifications']);
@@ -86,12 +93,13 @@ Route::middleware('auth:seller')->group(function () {
     Route::post('target/banner', [TargetController::class, 'storeHomePageBannerAd']);
     Route::get('target/product-stats/{id}', [TargetController::class, 'getProductStats']);
 
-    Route::get('contests', [ContestsController::class, 'getContests']);
-    Route::get('contests/{contestId}', [ContestsController::class, 'getContestDetails']);
-    Route::get('contests/{contestId}/download-participants', [ContestsController::class, 'downloadParticipants']);
-    Route::post('contests', [ContestsController::class, 'createContest']);
-    Route::post('contests/{contestId}/end', [ContestsController::class, 'endContest']);
-    Route::get('contests/{contestId}', [ContestsController::class, 'deleteContest']);
+    Route::prefix('support-tickets')->group(function () {
+        Route::get('/', [SupportTicketController::class, 'index']);
+        Route::post('/', [SupportTicketController::class, 'store']);
+        Route::get('{ticket}', [SupportTicketController::class, 'show']);
+        Route::post('{ticket}/reply', [SupportTicketController::class, 'reply']);
+        Route::post('{ticket}/close', [SupportTicketController::class, 'close']);
+    });
 
     Route::get('ban-logs', [BanLogController::class, 'index'])->name('seller.index_banlog');
     Route::get('ban-logs/{id}/read', [BanLogController::class, 'markAsRead'])->name('seller.markAsRead_banlog');
@@ -116,6 +124,7 @@ Route::middleware('auth:seller')->group(function () {
 
     Route::prefix('conversations')->group(function () {
         Route::get('/', [ConversationController::class, 'getConversations']);
+        Route::get('order/{orderId}/start', [ConversationController::class, 'startForOrder']);
         Route::get('{id}/messages', [ConversationController::class, 'getMessages']);
         Route::post('{id}/send', [ConversationController::class, 'sendMessage']);
         Route::post('{id}/edit', [ConversationController::class, 'editMessage']);

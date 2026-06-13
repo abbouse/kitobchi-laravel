@@ -28,6 +28,7 @@ class ProductPayloadFormatter
 
         $payload = [
             'id' => $product->id,
+            'artikul' => $product->artikul ?? null,
             'type' => $type,
             'product_type' => $type,
             'name' => $product->name,

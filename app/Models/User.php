@@ -173,14 +173,6 @@ class User extends Authenticatable
     }
 
     /**
-     * Tanlovlarda ishtiroki
-     */
-    public function contests()
-    {
-        return $this->hasMany(SellerContestParticipant::class, 'participant_id');
-    }
-
-    /**
      * Asosiy yetkazib berish manzili
      */
     public function location()

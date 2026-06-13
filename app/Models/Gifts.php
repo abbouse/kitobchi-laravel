@@ -12,6 +12,7 @@ class Gifts extends Model
     protected $table = 'gifts';
     protected $fillable = [
         'seller_id',
+        'artikul',
         'name',
         'images',
         'stock',

@@ -8,9 +8,9 @@ use App\Models\Stationery;
 use App\Models\Seller;
 use App\Models\SellerAd;
 use App\Models\SellerBanLog;
-use App\Models\SellerContest;
 use App\Models\SellerNotification;
 use App\Models\SellerStaffLog;
+use App\Models\SellerSupportTicket;
 use App\Models\SellerTransaction;
 use App\Models\Message;
 use App\Models\SellerLocation;
@@ -163,11 +163,16 @@ class SellerController extends Controller
                 'message' => 'Access denied'
             ], 403);
             }
-        $seller->is_hidden = $seller->is_hidden ? false : true;
+        if ($request->has('is_active')) {
+            $seller->is_hidden = ! $request->boolean('is_active');
+        } else {
+            $seller->is_hidden = ! $seller->is_hidden;
+        }
         $seller->save();
         return response()->json([
             'success' => true,
             'is_hidden' => $seller->is_hidden,
+            'is_active' => ! $seller->is_hidden,
             'message' => 'Do\'kon statusi yangilandi',
         ], 200);
     }
@@ -303,7 +308,7 @@ class SellerController extends Controller
         $storeSellerId = $this->getStoreSellerId($seller);
 
         $data = Cache::remember(
-            "seller:{$storeSellerId}:menu_badge_summary:v1",
+            "seller:{$storeSellerId}:menu_badge_summary:v2",
             now()->addSeconds(45),
             function () use ($storeSellerId) {
                 $messagesUnread = Message::query()
@@ -320,10 +325,9 @@ class SellerController extends Controller
                     ->where('seller_id', $storeSellerId)
                     ->where('status', 'pending')
                     ->count();
-                $eventsPending = SellerContest::query()
+                $supportUnread = SellerSupportTicket::query()
                     ->where('seller_id', $storeSellerId)
-                    ->where('status', 'pending')
-                    ->count();
+                    ->sum('seller_unread_count');
                 $adsPending = SellerAd::query()
                     ->where('seller_id', $storeSellerId)
                     ->where(function ($q) {
@@ -340,7 +344,8 @@ class SellerController extends Controller
                     'messages' => (int) $messagesUnread,
                     'warnings' => (int) $warningsUnread,
                     'transactions' => (int) $transactionsPending,
-                    'events' => (int) $eventsPending,
+                    'events' => 0,
+                    'support' => (int) $supportUnread,
                     'ads' => (int) $adsPending,
                     'notifications' => (int) $notificationsUnread,
                 ];

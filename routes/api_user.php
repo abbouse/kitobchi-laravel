@@ -7,7 +7,6 @@ use App\Http\Controllers\Api\CardController;
 use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\ChatBotController;
 use App\Http\Controllers\Api\ChatController;
-use App\Http\Controllers\Api\ContestController;
 use App\Http\Controllers\Api\GiftCertificateController;
 use App\Http\Controllers\Api\GiftsController;
 use App\Http\Controllers\Api\GuestSyncController;
@@ -65,7 +64,6 @@ Route::get('book_club/profile-posts', [BookClubController::class, 'getProfilePos
 Route::get('cart_user', [CartController::class, 'index']);
 Route::get('cart_user/count', [CartController::class, 'count']);
 Route::get('shared-order/{orderId}', [SharedCartController::class, 'orderItems']);
-Route::get('contest/{sellerId}', [ContestController::class, 'getContest']);
 Route::get('reels', [ReelController::class, 'index']);
 Route::get('shop/info', [ShopApiController::class, 'info']);
 
@@ -210,6 +208,4 @@ Route::middleware('auth:user')->group(function () {
         Route::get('select/{id}', [UserController::class, 'select_location']);
         Route::get('delete/{location}', [UserController::class, 'delete_location']);
     });
-    Route::get('contest/{contest}/join', [ContestController::class, 'joinToContest']);
-    Route::get('contest/my/list', [ContestController::class, 'getUserContests']);
 });

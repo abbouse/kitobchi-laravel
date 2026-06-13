@@ -169,16 +169,16 @@ class HisobotController extends Controller
 
         if ($location->is_main) {
             return $query->where(function ($inner) use ($table, $jsonLocationExpr, $location) {
-                $inner->where("{$table}.delivery_type", '!=', 'pickup')
+                $inner->whereRaw("LOWER(COALESCE({$table}.delivery_type, '')) != ?", ['pickup'])
                     ->orWhereNull("{$table}.delivery_type")
                     ->orWhere(function ($pickup) use ($table, $jsonLocationExpr, $location) {
-                        $pickup->where("{$table}.delivery_type", 'pickup')
+                        $pickup->whereRaw("LOWER(COALESCE({$table}.delivery_type, '')) = ?", ['pickup'])
                             ->whereRaw("{$jsonLocationExpr} = ?", [$location->id]);
                     });
             });
         }
 
-        return $query->where("{$table}.delivery_type", 'pickup')
+        return $query->whereRaw("LOWER(COALESCE({$table}.delivery_type, '')) = ?", ['pickup'])
             ->whereRaw("{$jsonLocationExpr} = ?", [$location->id]);
     }
 
@@ -242,14 +242,15 @@ class HisobotController extends Controller
                 ->distinct('seller_orders.client_id')
                 ->count('seller_orders.client_id');
 
-            $itemsSold = (int) SellerOrderItem::query()
+            $itemsSoldQuery = SellerOrderItem::query()
                 ->join('seller_orders', 'seller_orders.id', '=', 'seller_order_items.order_id')
                 ->join('solds', 'solds.id', '=', 'seller_orders.order_id')
                 ->whereIn('seller_order_items.seller_id', $sellerScopeIds)
                 ->whereNotNull('solds.completed_at')
-                ->whereBetween('solds.completed_at', [$period['start'], $period['end']])
-                ->tap(fn ($query) => $this->applyCompletedPaidSoldFilter($query))
-                ->sum('seller_order_items.quantity');
+                ->whereBetween('solds.completed_at', [$period['start'], $period['end']]);
+            $this->applyCompletedPaidSoldFilter($itemsSoldQuery);
+            $this->applyBranchFilterToSellerOrders($itemsSoldQuery, $selectedLocation, 'seller_orders');
+            $itemsSold = (int) $itemsSoldQuery->sum('seller_order_items.quantity');
 
             $repeatClientsQuery = SellerOrder::query()
                 ->join('solds', 'solds.id', '=', 'seller_orders.order_id')
@@ -266,7 +267,7 @@ class HisobotController extends Controller
                 ->count();
 
             $viewLogsQuery = ProductViewLog::query()
-                ->where('seller_id', $storeSellerId)
+                ->whereIn('seller_id', $sellerScopeIds)
                 ->whereBetween('created_at', [$period['start'], $period['end']]);
 
             $totalViews = (int) (clone $viewLogsQuery)->count();
@@ -371,7 +372,7 @@ class HisobotController extends Controller
                 ->join('solds', 'solds.id', '=', 'seller_orders.order_id')
                 ->join('books', 'books.id', '=', 'seller_order_items.product_id')
                 ->leftJoin('book_categories', 'book_categories.id', '=', 'books.category_id')
-                ->where('seller_order_items.seller_id', $storeSellerId)
+                ->whereIn('seller_order_items.seller_id', $sellerScopeIds)
                 ->where('seller_order_items.type', 'book')
                 ->whereNotNull('solds.completed_at')
                 ->whereBetween('solds.completed_at', [$period['start'], $period['end']])
@@ -398,7 +399,7 @@ class HisobotController extends Controller
                 ->join('solds', 'solds.id', '=', 'seller_orders.order_id')
                 ->join('stationeries', 'stationeries.id', '=', 'seller_order_items.product_id')
                 ->leftJoin('stationery_categories', 'stationery_categories.id', '=', 'stationeries.category_id')
-                ->where('seller_order_items.seller_id', $storeSellerId)
+                ->whereIn('seller_order_items.seller_id', $sellerScopeIds)
                 ->where('seller_order_items.type', 'stationery')
                 ->whereNotNull('solds.completed_at')
                 ->whereBetween('solds.completed_at', [$period['start'], $period['end']])
@@ -423,7 +424,7 @@ class HisobotController extends Controller
             $giftCategoryRows = SellerOrderItem::query()
                 ->join('seller_orders', 'seller_orders.id', '=', 'seller_order_items.order_id')
                 ->join('solds', 'solds.id', '=', 'seller_orders.order_id')
-                ->where('seller_order_items.seller_id', $storeSellerId)
+                ->whereIn('seller_order_items.seller_id', $sellerScopeIds)
                 ->where('seller_order_items.type', 'gift')
                 ->whereNotNull('solds.completed_at')
                 ->whereBetween('solds.completed_at', [$period['start'], $period['end']])
@@ -529,7 +530,7 @@ class HisobotController extends Controller
                 ->selectRaw('DATE(created_at) as bucket_key')
                 ->selectRaw('COUNT(*) as total_views')
                 ->selectRaw('SUM(CASE WHEN recommendation_active = 1 THEN 1 ELSE 0 END) as total_recommended_views')
-                ->where('seller_id', $storeSellerId)
+                ->whereIn('seller_id', $sellerScopeIds)
                 ->whereBetween('created_at', [$period['start'], $period['end']])
                 ->groupBy('bucket_key')
                 ->get()

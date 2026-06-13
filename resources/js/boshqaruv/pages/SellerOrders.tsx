@@ -21,6 +21,8 @@ interface Seller {
   region?: string;
   district?: string;
   address?: string;
+  activityTypes?: string[];
+  activityTypeLabels?: string[];
   status?: string;
   verified?: boolean;
   hidden?: boolean;
@@ -115,6 +117,11 @@ const sellerLabel = (status?: string) => ({
   rejected: 'Bekor qilingan',
   blocked: 'Bloklangan',
 }[String(status || '')] || status || '—');
+
+const sellerActivityOptions = [
+  { value: 'Kitob', label: 'Kitob' },
+  { value: 'Kanstovar', label: 'Kanselyariya' },
+];
 
 export default function SellerOrders() {
   const {
@@ -343,6 +350,11 @@ function SellerModal({ seller, onHide, onWarn, onResetPassword, onPatch, onEdit 
                     <span className="chip chip-gray">Katalog {Math.round(seller.catalogHealth || 0)}%</span>
                   </div>
                 </div>
+                <div className="d-flex flex-wrap gap-2 mt-3">
+                  {(seller.activityTypeLabels || []).length > 0
+                    ? (seller.activityTypeLabels || []).map((label) => <span className="chip chip-info" key={label}>{label}</span>)
+                    : <span className="chip chip-gray">Faoliyat turi belgilanmagan</span>}
+                </div>
               </div>
             </div>
             <Info title="Asosiy ma'lumotlar" rows={[
@@ -544,6 +556,7 @@ function ListBlock<T>({ title, empty, items, render }: { title: string; empty: s
 }
 
 function SellerEditModal({ seller, onHide }: { seller: Seller | null; onHide: () => void }) {
+  const selectedActivityTypes = seller?.activityTypes || [];
   const submit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!seller?.actions?.updateUrl) return;
@@ -560,6 +573,24 @@ function SellerEditModal({ seller, onHide }: { seller: Seller | null; onHide: ()
     <FormInput name="lastname" label="Familiya" defaultValue={seller?.lastName} />
     <FormInput name="region" label="Viloyat" defaultValue={seller?.region} required />
     <FormInput name="district" label="Tuman" defaultValue={seller?.district} />
+    <div className="col-md-6">
+      <label className="form-label">Faoliyat turlari</label>
+      <div className="d-flex flex-wrap gap-2">
+        {sellerActivityOptions.map((option) => (
+          <label className="chip chip-gray" key={option.value} style={{ cursor: 'pointer' }}>
+            <input
+              className="form-check-input me-2"
+              type="checkbox"
+              name="activity_types[]"
+              value={option.value}
+              defaultChecked={selectedActivityTypes.includes(option.value)}
+            />
+            {option.label}
+          </label>
+        ))}
+      </div>
+      <div className="form-text">Business appdagi mahsulot qo'shish tanlovi shu maydonga qarab ishlaydi.</div>
+    </div>
     <div className="col-md-6"><label className="form-label">Status</label><select name="status" defaultValue={seller?.status || 'pending'} className="form-select"><option value="pending">Kutilmoqda</option><option value="approved">Faol</option><option value="rejected">Bekor qilingan</option><option value="blocked">Bloklangan</option></select></div>
     <FormInput name="balance" label="Balans" type="number" defaultValue={seller?.balance} />
     <FormInput name="commission_percent" label="Komissiya % (0 yoki bo'sh = global)" type="number" defaultValue={seller?.commissionRate} />

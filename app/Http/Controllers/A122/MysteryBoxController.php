@@ -39,6 +39,7 @@ class MysteryBoxController extends Controller
             ->when($q !== '', function ($query) use ($q) {
                 $query->where(function ($inner) use ($q) {
                     $inner->where('name', 'like', "%{$q}%")
+                        ->orWhere('artikul', 'like', "%{$q}%")
                         ->orWhereHas('authorProfile', fn ($authorQuery) => $authorQuery->where('name', 'like', "%{$q}%"));
 
                     if (ctype_digit($q)) {

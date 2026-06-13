@@ -403,6 +403,11 @@ class ChatBotController extends Controller
             ->with(['category', 'seller', 'tags', 'authorProfile']);
 
         if (!$fallback) {
+            $artikulQuery = preg_replace('/\D+/', '', $text);
+            if (strlen($artikulQuery) >= 3) {
+                $q->where('artikul', 'LIKE', "%{$artikulQuery}%");
+            }
+
             if ($filters['category_id'])      $q->where('category_id', $filters['category_id']);
             if (!empty($filters['tag_ids']))  $q->whereHas('tags', fn($t) => $t->whereIn('book_tags.id', $filters['tag_ids']));
             if ($filters['author'])           $q->whereHas('authorProfile', fn($authorQuery) => $authorQuery->where('name', 'LIKE', "%{$filters['author']}%"));
@@ -435,6 +440,11 @@ class ChatBotController extends Controller
             ->with(['category', 'seller', 'tags']);
 
         if (!$fallback) {
+            $artikulQuery = preg_replace('/\D+/', '', $text);
+            if (strlen($artikulQuery) >= 3) {
+                $q->where('artikul', 'LIKE', "%{$artikulQuery}%");
+            }
+
             if ($filters['category_id'])     $q->where('category_id', $filters['category_id']);
             if (!empty($filters['tag_ids'])) $q->whereHas('tags', fn($t) => $t->whereIn('stationery_tags.id', $filters['tag_ids']));
             if ($filters['price_range'])     $q->whereBetween('price', $filters['price_range']);

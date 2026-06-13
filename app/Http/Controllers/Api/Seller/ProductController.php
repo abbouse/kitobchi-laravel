@@ -18,6 +18,7 @@ use App\Models\Gifts;
 use App\Models\SellerStaffLog;
 use App\Services\AuthorDirectoryService;
 use App\Support\ProductImageVariantGenerator;
+use App\Support\ProductArtikul;
 use App\Services\SellerPremiumService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -66,6 +67,17 @@ class ProductController extends Controller
             'seller_id' => $storeSellerId,
             'text' => "Hodim: {$staff->firstname} {$staff->lastname} ({$staff->role}) → {$action}" . ($details ? " | {$details}" : ''),
         ]);
+    }
+
+    private function assignGeneratedArtikul($product, string $type): void
+    {
+        if ($product->artikul) {
+            return;
+        }
+
+        $product->forceFill([
+            'artikul' => ProductArtikul::generate($type, (int) $product->id),
+        ])->save();
     }
 
     public function lastProducts(Request $request)
@@ -126,37 +138,26 @@ public function lastProductsBS(Request $request)
     $booksSearch = $request->input('books_search', '');
     $stationerySearch = $request->input('stationery_search', '');
 
-    // COUNTS (filtr va searchdan mustaqil)
+    $bookBase = Seller::find($storeSellerId)->books()->where('is_hidden', false);
+    $stationeryBase = Seller::find($storeSellerId)->stationeries()->where('is_hidden', false);
+
+    // COUNTS (paginationdan mustaqil, serverdagi aniq sonlar)
     $booksCounts = [
-        'active' => Seller::find($storeSellerId)->books()
-            ->where('is_hidden', false)
-            ->where('is_approved', 1)
-            ->count(),
-        'cancelled' => Seller::find($storeSellerId)->books()
-            ->where('is_hidden', false)
-            ->where('is_approved', 2)
-            ->count(),
-        'low_stock' => Seller::find($storeSellerId)->books()
-            ->where('is_hidden', false)
-            ->where('is_approved', 1)
-            ->where('count', '<', 4)
-            ->count(),
+        'all' => (clone $bookBase)->count(),
+        'active' => (clone $bookBase)->where('is_approved', 1)->where('count', '>', 3)->count(),
+        'out_stock' => (clone $bookBase)->where('count', '<=', 0)->count(),
+        'low_stock' => (clone $bookBase)->where('is_approved', 1)->whereBetween('count', [1, 3])->count(),
+        'pending' => (clone $bookBase)->where(fn ($query) => $query->whereNull('is_approved')->orWhere('is_approved', 0))->count(),
+        'rejected' => (clone $bookBase)->where('is_approved', 2)->count(),
     ];
 
     $stationeryCounts = [
-        'active' => Seller::find($storeSellerId)->stationeries()
-            ->where('is_hidden', false)
-            ->where('is_approved', 1)
-            ->count(),
-        'cancelled' => Seller::find($storeSellerId)->stationeries()
-            ->where('is_hidden', false)
-            ->where('is_approved', 2)
-            ->count(),
-        'low_stock' => Seller::find($storeSellerId)->stationeries()
-            ->where('is_hidden', false)
-            ->where('is_approved', 1)
-            ->where('stock', '<', 4)
-            ->count(),
+        'all' => (clone $stationeryBase)->count(),
+        'active' => (clone $stationeryBase)->where('is_approved', 1)->where('stock', '>', 3)->count(),
+        'out_stock' => (clone $stationeryBase)->where('stock', '<=', 0)->count(),
+        'low_stock' => (clone $stationeryBase)->where('is_approved', 1)->whereBetween('stock', [1, 3])->count(),
+        'pending' => (clone $stationeryBase)->where(fn ($query) => $query->whereNull('is_approved')->orWhere('is_approved', 0))->count(),
+        'rejected' => (clone $stationeryBase)->where('is_approved', 2)->count(),
     ];
 
     // Asosiy querylar
@@ -170,30 +171,47 @@ public function lastProductsBS(Request $request)
 
     // Books search
     if ($booksSearch !== '') {
-        $booksQuery->where('name', 'like', "%$booksSearch%");
+        $booksQuery->where(function ($query) use ($booksSearch) {
+            $query->where('name', 'like', "%{$booksSearch}%")
+                ->orWhere('artikul', 'like', "%{$booksSearch}%")
+                ->orWhere('isbn', 'like', "%{$booksSearch}%")
+                ->orWhere('author', 'like', "%{$booksSearch}%");
+        });
     }
 
     // Stationery search
     if ($stationerySearch !== '') {
-        $stationeryQuery->where('name', 'like', "%$stationerySearch%");
+        $stationeryQuery->where(function ($query) use ($stationerySearch) {
+            $query->where('name', 'like', "%{$stationerySearch}%")
+                ->orWhere('artikul', 'like', "%{$stationerySearch}%")
+                ->orWhere('barcode', 'like', "%{$stationerySearch}%");
+        });
     }
 
     // Books filter
     if ($booksFilter === 'active') {
-        $booksQuery->where('is_approved', 1);
-    } elseif ($booksFilter === 'cancelled') {
-        $booksQuery->where('is_approved', 2);
+        $booksQuery->where('is_approved', 1)->where('count', '>', 3);
+    } elseif ($booksFilter === 'out_stock') {
+        $booksQuery->where('count', '<=', 0);
     } elseif ($booksFilter === 'low_stock') {
-        $booksQuery->where('is_approved', 1)->where('count', '<', 4);
+        $booksQuery->where('is_approved', 1)->whereBetween('count', [1, 3]);
+    } elseif ($booksFilter === 'pending') {
+        $booksQuery->where(fn ($query) => $query->whereNull('is_approved')->orWhere('is_approved', 0));
+    } elseif ($booksFilter === 'rejected') {
+        $booksQuery->where('is_approved', 2);
     }
 
     // Stationery filter
     if ($stationeryFilter === 'active') {
-        $stationeryQuery->where('is_approved', 1);
-    } elseif ($stationeryFilter === 'cancelled') {
-        $stationeryQuery->where('is_approved', 2);
+        $stationeryQuery->where('is_approved', 1)->where('stock', '>', 3);
+    } elseif ($stationeryFilter === 'out_stock') {
+        $stationeryQuery->where('stock', '<=', 0);
     } elseif ($stationeryFilter === 'low_stock') {
-        $stationeryQuery->where('is_approved', 1)->where('stock', '<', 4);
+        $stationeryQuery->where('is_approved', 1)->whereBetween('stock', [1, 3]);
+    } elseif ($stationeryFilter === 'pending') {
+        $stationeryQuery->where(fn ($query) => $query->whereNull('is_approved')->orWhere('is_approved', 0));
+    } elseif ($stationeryFilter === 'rejected') {
+        $stationeryQuery->where('is_approved', 2);
     }
 
     $books = $booksQuery->latest('updated_at')->paginate($perPage, ['*'], 'books_page', $booksPage);
@@ -392,6 +410,7 @@ public function createStationery(Request $request)
         'images'         => $imagePaths,
         'is_approved'    => $autoApproved ? 1 : 0,
     ]);
+    $this->assignGeneratedArtikul($stationery, 'stationery');
 
     // 5. Taglarni bog'lash
     if ($request->filled('tag_ids')) {
@@ -620,6 +639,7 @@ $variantsToDelete = array_diff($existingVariants, $incomingVariantIds);
     // === ASOSIY MA'LUMOTLARNI YANGILASH ===
     $stationery->update([
         'name' => $request->name,
+        'artikul' => $stationery->artikul ?: ProductArtikul::generate('stationery', (int) $stationery->id),
         'barcode' => $normalizedBarcode,
         'material' => $request->material ?? $stationery->material,
         'price' => $request->price,
@@ -759,7 +779,7 @@ public function updateProductStatus(Request $request)
         $storeSellerId = $this->getStoreSellerId($seller);
 
         $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
+        'name' => 'required|string|max:255',
             'author' => 'required|string|max:255',
             'translator' => 'nullable|string|max:255',
             'publisher_id' => 'nullable|integer|exists:publishers,id',
@@ -837,6 +857,7 @@ public function updateProductStatus(Request $request)
             'is_hidden' => false,
             'is_approved' => $autoApproved ? 1 : 0,
         ]);
+        $this->assignGeneratedArtikul($book, 'book');
 
         if ($request->has('tag_ids')) {
             $book->tags()->attach($request->input('tag_ids'));
@@ -996,6 +1017,7 @@ public function updateProductStatus(Request $request)
     // Mahsulotni yangilash
     $product->update([
         'name' => $request->name,
+        'artikul' => $product->artikul ?: ProductArtikul::generate('book', (int) $product->id),
         'author' => $author?->name ?: $request->author,
         'author_id' => $author?->id,
         'translator' => $request->translator,

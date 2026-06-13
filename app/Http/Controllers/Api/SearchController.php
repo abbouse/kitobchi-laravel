@@ -327,7 +327,7 @@ class SearchController extends Controller
                 ->when($categoryId, fn ($q) => $q->where('category_id', $categoryId))
                 ->when($minPrice !== null, fn ($q) => $q->where('price', '>=', $minPrice))
                 ->when($maxPrice !== null, fn ($q) => $q->where('price', '<=', $maxPrice))
-                ->select('id', 'name', 'author_id', 'totalSalesWeek', 'totalSales')
+                ->select('id', 'artikul', 'name', 'author_id', 'totalSalesWeek', 'totalSales')
                 ->orderByDesc('totalSalesWeek')
                 ->orderByDesc('totalSales')
                 ->limit(2500)
@@ -338,7 +338,7 @@ class SearchController extends Controller
                         'id' => (int) $item->id,
                         'type' => 'book',
                         'display_name' => trim((string) $item->name),
-                        'label' => trim(($item->name ?? '') . ' ' . $authorName),
+                        'label' => trim(($item->name ?? '') . ' ' . ($item->artikul ?? '') . ' ' . $authorName),
                         'popularity' => (int) (($item->totalSalesWeek ?? 0) * 3 + ($item->totalSales ?? 0)),
                     ];
                 });
@@ -359,7 +359,7 @@ class SearchController extends Controller
                 ->when($categoryId, fn ($q) => $q->where('category_id', $categoryId))
                 ->when($minPrice !== null, fn ($q) => $q->where('price', '>=', $minPrice))
                 ->when($maxPrice !== null, fn ($q) => $q->where('price', '<=', $maxPrice))
-                ->select('id', 'name', 'material', 'totalSalesWeek', 'totalSales')
+                ->select('id', 'artikul', 'name', 'material', 'totalSalesWeek', 'totalSales')
                 ->orderByDesc('totalSalesWeek')
                 ->orderByDesc('totalSales')
                 ->limit(2500)
@@ -369,7 +369,7 @@ class SearchController extends Controller
                         'id' => (int) $item->id,
                         'type' => 'stationery',
                         'display_name' => trim((string) $item->name),
-                        'label' => trim(($item->name ?? '') . ' ' . ($item->material ?? '')),
+                        'label' => trim(($item->name ?? '') . ' ' . ($item->artikul ?? '') . ' ' . ($item->material ?? '')),
                         'popularity' => (int) (($item->totalSalesWeek ?? 0) * 3 + ($item->totalSales ?? 0)),
                     ];
                 });
@@ -872,6 +872,7 @@ class SearchController extends Controller
                             $method = $i === 0 ? 'where' : 'orWhere';
                             $or->$method(function ($inner) use ($pattern) {
                                 $inner->where('name', 'LIKE', $pattern)
+                                      ->orWhere('artikul', 'LIKE', $pattern)
                                       ->orWhereHas('authorProfile', fn ($authorQuery) => $authorQuery->where('name', 'LIKE', $pattern))
                                       ->orWhere('description', 'LIKE', $pattern);
                             });
@@ -890,6 +891,7 @@ class SearchController extends Controller
                         $method = $i === 0 ? 'where' : 'orWhere';
                         $w->$method(function ($inner) use ($pattern) {
                             $inner->where('name', 'LIKE', $pattern)
+                                  ->orWhere('artikul', 'LIKE', $pattern)
                                   ->orWhereHas('authorProfile', fn ($authorQuery) => $authorQuery->where('name', 'LIKE', $pattern))
                                   ->orWhere('description', 'LIKE', $pattern);
                         });
@@ -962,6 +964,7 @@ class SearchController extends Controller
                             $method = $i === 0 ? 'where' : 'orWhere';
                             $or->$method(function ($inner) use ($pattern) {
                                 $inner->where('name', 'LIKE', $pattern)
+                                      ->orWhere('artikul', 'LIKE', $pattern)
                                       ->orWhere('description', 'LIKE', $pattern)
                                       ->orWhere('material', 'LIKE', $pattern);
                             });
@@ -980,6 +983,7 @@ class SearchController extends Controller
                         $method = $i === 0 ? 'where' : 'orWhere';
                         $w->$method(function ($inner) use ($pattern) {
                             $inner->where('name', 'LIKE', $pattern)
+                                  ->orWhere('artikul', 'LIKE', $pattern)
                                   ->orWhere('description', 'LIKE', $pattern)
                                   ->orWhere('material', 'LIKE', $pattern);
                         });
@@ -1030,6 +1034,7 @@ class SearchController extends Controller
                         $method = $i === 0 ? 'where' : 'orWhere';
                         $nameAuthor->$method(function ($inner) use ($p) {
                             $inner->where('name', 'LIKE', $p)
+                                  ->orWhere('artikul', 'LIKE', $p)
                                   ->orWhereHas('authorProfile', fn ($authorQuery) => $authorQuery->where('name', 'LIKE', $p));
                         });
                     }
@@ -1048,7 +1053,7 @@ class SearchController extends Controller
                     });
                 });
             })
-            ->select('name', 'author_id')
+            ->select('name', 'artikul', 'author_id')
             ->orderByDesc('totalSalesWeek')
             ->limit(8)
             ->get();
@@ -1135,7 +1140,10 @@ class SearchController extends Controller
                 $w->where(function ($namePart) use ($patterns) {
                     foreach ($patterns as $i => $p) {
                         $method = $i === 0 ? 'where' : 'orWhere';
-                        $namePart->$method('name', 'LIKE', $p);
+                        $namePart->$method(function ($inner) use ($p) {
+                            $inner->where('name', 'LIKE', $p)
+                                ->orWhere('artikul', 'LIKE', $p);
+                        });
                     }
                 })->orWhereHas('tags', function ($t) use ($patterns) {
                     $t->where(function ($tw) use ($patterns) {
@@ -1151,7 +1159,7 @@ class SearchController extends Controller
                     });
                 });
             })
-            ->select('name')
+            ->select('name', 'artikul')
             ->orderByDesc('totalSalesWeek')
             ->limit(5)
             ->get();
@@ -1409,6 +1417,7 @@ class SearchController extends Controller
                         }
 
                         $q->orWhere('name', 'LIKE', "%{$combinedQuery}%")
+                          ->orWhere('artikul', 'LIKE', "%{$combinedQuery}%")
                           ->orWhereHas('authorProfile', fn ($authorQuery) => $authorQuery->where('name', 'LIKE', "%{$combinedQuery}%"));
                     })
                     ->orderByDesc('totalSalesWeek')
@@ -1423,7 +1432,8 @@ class SearchController extends Controller
                             "MATCH(name, description, material) AGAINST(? IN NATURAL LANGUAGE MODE)",
                             [$analyzed['boolean']]
                         )
-                        ->orWhere('name', 'LIKE', "%{$combinedQuery}%");
+                        ->orWhere('name', 'LIKE', "%{$combinedQuery}%")
+                        ->orWhere('artikul', 'LIKE', "%{$combinedQuery}%");
                     })
                     ->orderByDesc('totalSalesWeek')
                     ->limit(8)

@@ -28,7 +28,9 @@ class MarketNewsController extends Controller
                     ->orWhere('title', 'like', "%{$search}%")
                     ->orWhere('description', 'like', "%{$search}%")
                     ->orWhereHas('seller', fn ($sellerQuery) => $sellerQuery->where('shop_name', 'like', "%{$search}%"))
-                    ->orWhereHas('book', fn ($bookQuery) => $bookQuery->where('name', 'like', "%{$search}%"));
+                    ->orWhereHas('book', fn ($bookQuery) => $bookQuery
+                        ->where('name', 'like', "%{$search}%")
+                        ->orWhere('artikul', 'like', "%{$search}%"));
             });
         }
 

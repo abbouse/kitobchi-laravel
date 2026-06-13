@@ -52,11 +52,14 @@ use App\Models\Reel;
 use App\Models\SearchHistory;
 use App\Models\SellerAd;
 use App\Models\Seller;
+use App\Models\SellerAiAction;
 use App\Models\SellerBanLog;
 use App\Models\SellerContractHistory;
 use App\Models\OrderRefund;
 use App\Models\SellerOrder;
 use App\Models\SellerOrderItem;
+use App\Models\SellerSupportTicket;
+use App\Models\SellerSupportTicketMessage;
 use App\Models\SellerTransaction;
 use App\Models\Sold;
 use App\Models\SplitCategoryRule;
@@ -69,6 +72,7 @@ use App\Models\User;
 use App\Models\UserCard;
 use App\Models\Vacancy;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -78,6 +82,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use App\Support\ProductArtikul;
 use App\Support\ProductImageUrls;
 use App\Support\ProductImageVariantGenerator;
 use App\Enums\SellerOrderStatusCode;
@@ -291,6 +296,56 @@ class AdminController extends Controller
     public function ticketData(BotTicket $ticket): JsonResponse
     {
         return response()->json($this->ticketDetailPayload($ticket));
+    }
+
+    public function sellerSupportTicketData(SellerSupportTicket $ticket): JsonResponse
+    {
+        return response()->json($this->sellerSupportTicketDetailPayload($ticket));
+    }
+
+    public function replySellerSupportTicket(Request $request, SellerSupportTicket $ticket): \Illuminate\Http\RedirectResponse
+    {
+        $data = $request->validate([
+            'message' => ['required', 'string', 'min:1', 'max:5000'],
+        ]);
+
+        if ($ticket->status === 'closed') {
+            return back()->with('error', 'Yopilgan seller murojaatiga javob yozib bo‘lmaydi.');
+        }
+
+        SellerSupportTicketMessage::create([
+            'ticket_id' => $ticket->id,
+            'sender_type' => 'admin',
+            'sender_id' => Auth::guard('panel')->id(),
+            'message' => $data['message'],
+        ]);
+
+        $ticket->update([
+            'admin_id' => Auth::guard('panel')->id(),
+            'status' => 'answered',
+            'last_message_at' => now(),
+            'seller_unread_count' => $ticket->seller_unread_count + 1,
+            'admin_unread_count' => 0,
+        ]);
+
+        return back()->with('success', 'Seller murojaatiga javob yuborildi.');
+    }
+
+    public function closeSellerSupportTicket(Request $request, SellerSupportTicket $ticket): \Illuminate\Http\RedirectResponse
+    {
+        $data = $request->validate([
+            'close_reason' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $ticket->update([
+            'admin_id' => Auth::guard('panel')->id(),
+            'status' => 'closed',
+            'closed_at' => now(),
+            'close_reason' => $data['close_reason'] ?? null,
+            'admin_unread_count' => 0,
+        ]);
+
+        return back()->with('success', 'Seller murojaati yopildi.');
     }
 
     public function chatData(int $conversation): JsonResponse
@@ -509,6 +564,7 @@ class AdminController extends Controller
         ]);
 
         $author = app(\App\Services\AuthorDirectoryService::class)->resolveOrCreateByName($request->input('author'));
+        $data['artikul'] = $book->artikul ?: ProductArtikul::generate('book', (int) $book->id);
         $data['isbn'] = Books::normalizeIsbn($request->input('isbn'));
         $data['images'] = $this->syncCatalogImages($request, $book->images ?? [], 'images', 'images_text', 'books', 'admin_book');
         $data['status'] = $request->boolean('status');
@@ -550,6 +606,7 @@ class AdminController extends Controller
         ]);
 
         $data['images'] = $this->syncCatalogImages($request, $stationery->images ?? [], 'images', 'images_text', 'stationery', 'admin_stationery');
+        $data['artikul'] = $stationery->artikul ?: ProductArtikul::generate('stationery', (int) $stationery->id);
         $data['status'] = $request->boolean('status');
         $data['recommended'] = $request->boolean('recommended');
         $data['is_hidden'] = $request->boolean('is_hidden');
@@ -946,6 +1003,8 @@ class AdminController extends Controller
             'phone_number' => ['required', 'string', Rule::unique('sellers', 'phone_number')->ignore($seller->id)],
             'region' => ['required', 'string', 'max:100'],
             'district' => ['nullable', 'string', 'max:100'],
+            'activity_types' => ['nullable', 'array'],
+            'activity_types.*' => ['string', Rule::in(['Kitob', 'Kanstovar', 'book', 'books', 'stationery', 'stationary', 'kitob', 'kanselyariya', 'Книги', 'Канцелярия'])],
             'status' => ['required', Rule::in(['pending', 'approved', 'rejected', 'blocked'])],
             'balance' => ['nullable', 'numeric', 'min:0'],
             'commission_percent' => ['nullable', 'integer', 'min:0', 'max:100'],
@@ -981,6 +1040,7 @@ class AdminController extends Controller
         }
 
         unset($data['premium_action'], $data['premium_plan']);
+        $data['activity_types'] = $this->normalizeSellerActivityTypes($request->input('activity_types', []));
         $data['contract_signed'] = $request->boolean('contract_signed');
         if (! $request->filled('password')) {
             unset($data['password']);
@@ -1303,6 +1363,7 @@ class AdminController extends Controller
             'Transaksiyalar' => $this->transactionsPagePayload(),
             'CommissionAudit' => $this->commissionAuditPagePayload(),
             'AuditLogs' => $this->auditLogsPagePayload(),
+            'SellerAiActions' => $this->sellerAiActionsPagePayload(),
             'Expenses' => $this->expensesPagePayload(),
             'Promokodlar' => ['promocodes' => $this->promocodesPayload()],
             'Reklamalar' => ['ads' => $this->adsPayload()],
@@ -1714,6 +1775,7 @@ class AdminController extends Controller
             ->when($tab === 'rejected', fn ($query) => $query->where('is_approved', 2))
             ->when($search !== '', fn ($query) => $query->where(fn ($nested) => $nested
                 ->where('id', $search)
+                ->orWhere('artikul', 'like', "%{$search}%")
                 ->orWhere('name', 'like', "%{$search}%")
                 ->orWhere('isbn', 'like', "%{$search}%")
                 ->orWhere('author', 'like', "%{$search}%")
@@ -1736,6 +1798,7 @@ class AdminController extends Controller
 
                 return [
                     'id' => $book->id,
+                    'artikul' => $book->artikul,
                     'title' => $book->name,
                     'author' => $book->authorProfile?->name ?: ($book->author ?: 'Noma\'lum'),
                     'translator' => $book->translator,
@@ -1823,6 +1886,7 @@ class AdminController extends Controller
                     $items->push([
                         'id' => 'book-'.$book->id,
                         'rawId' => $book->id,
+                        'artikul' => $book->artikul,
                         'title' => $book->name,
                         'type' => 'Kitob',
                         'category' => $book->category?->name_uz ?: 'Kitob',
@@ -1850,6 +1914,7 @@ class AdminController extends Controller
                     $items->push([
                         'id' => 'stationery-'.$stationery->id,
                         'rawId' => $stationery->id,
+                        'artikul' => $stationery->artikul,
                         'title' => $stationery->name,
                         'type' => 'Kanselyariya',
                         'category' => $stationery->category?->name_uz ?: $stationery->category?->name_ru ?: $stationery->category?->slug ?: 'Kanselyariya',
@@ -1877,6 +1942,7 @@ class AdminController extends Controller
                     $items->push([
                         'id' => 'gift-'.$gift->id,
                         'rawId' => $gift->id,
+                        'artikul' => $gift->artikul,
                         'title' => $gift->name,
                         'type' => "Sovg'a",
                         'category' => "Sovg'a",
@@ -2841,6 +2907,7 @@ class AdminController extends Controller
             ->when($tab === 'rejected', fn ($builder) => $builder->where('is_approved', 2))
             ->when($search !== '', fn ($builder) => $builder->where(fn ($nested) => $nested
                 ->where('id', $search)
+                ->orWhere('artikul', 'like', "%{$search}%")
                 ->orWhere('name', 'like', "%{$search}%")
                 ->orWhere('barcode', 'like', "%{$search}%")
                 ->orWhereHas('category', fn ($category) => $category->where('name_uz', 'like', "%{$search}%"))
@@ -2857,6 +2924,7 @@ class AdminController extends Controller
 
                 return [
                     'id' => $item->id,
+                    'artikul' => $item->artikul,
                     'name' => $item->name,
                     'categoryId' => $item->category_id,
                     'sellerId' => $item->seller_id,
@@ -3057,9 +3125,36 @@ class AdminController extends Controller
         ];
     }
 
+    private function normalizeSellerActivityTypes(mixed $value): array
+    {
+        $items = is_array($value) ? $value : [$value];
+
+        return collect($items)
+            ->map(fn ($item) => mb_strtolower(trim((string) $item)))
+            ->map(fn (string $item) => match ($item) {
+                'kitob', 'book', 'books', 'книга', 'книги' => 'Kitob',
+                'kanstovar', 'stationery', 'stationary', 'kanselyariya', 'канцелярия' => 'Kanstovar',
+                default => null,
+            })
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    private function sellerActivityTypeLabel(string $type): string
+    {
+        return match ($type) {
+            'Kitob' => 'Kitob',
+            'Kanstovar' => 'Kanselyariya',
+            default => $type,
+        };
+    }
+
     private function sellerPayload(Seller $seller): array
     {
         $karmaSummary = app(\App\Services\SellerKarmaSummaryService::class)->cachedSummary($seller);
+        $activityTypes = $this->normalizeSellerActivityTypes($seller->activity_types);
         $sellerIds = Seller::query()
             ->where('id', $seller->id)
             ->orWhere('parent_id', $seller->id)
@@ -3101,6 +3196,8 @@ class AdminController extends Controller
             'region' => $seller->region,
             'district' => $seller->district ?? null,
             'address' => $seller->address ?? $seller->legal_address,
+            'activityTypes' => $activityTypes,
+            'activityTypeLabels' => array_map(fn (string $type) => $this->sellerActivityTypeLabel($type), $activityTypes),
             'status' => $seller->status,
             'verified' => (bool) $seller->isVerified,
             'hidden' => (bool) $seller->is_hidden,
@@ -4403,6 +4500,7 @@ class AdminController extends Controller
             ->get()
             ->map(fn (Gifts $gift) => [
                 'id' => $gift->id,
+                'artikul' => $gift->artikul,
                 'name' => $gift->name,
                 'seller' => $gift->seller?->shop_name,
                 'stock' => (int) ($gift->stock ?? 0),
@@ -4421,46 +4519,101 @@ class AdminController extends Controller
 
     private function ticketsPagePayload(): array
     {
-        if (! Schema::hasTable('bot_tickets')) {
+        if (! Schema::hasTable('bot_tickets') && ! Schema::hasTable('seller_support_tickets')) {
             return ['tickets' => [], 'ticketPagination' => $this->emptyPagination(), 'ticketCounts' => []];
         }
 
         $tab = (string) request('tickets_tab', 'all');
         $search = trim((string) request('tickets_search', ''));
-        $query = BotTicket::query()
-            ->with(['operator', 'latestMessage'])
-            ->withCount('messages')
-            ->when($tab !== 'all', fn ($builder) => $builder->where('status', $tab))
-            ->when($search !== '', fn ($builder) => $builder->where(fn ($nested) => $nested
-                ->where('id', $search)
-                ->orWhere('name', 'like', "%{$search}%")
-                ->orWhere('username', 'like', "%{$search}%")
-                ->orWhere('first_msg', 'like', "%{$search}%")));
-        $tickets = $query->latest()->paginate(25, ['*'], 'tickets_page')->withQueryString();
+        $rows = collect();
+
+        if (Schema::hasTable('bot_tickets')) {
+            $rows = $rows->concat(BotTicket::query()
+                ->with(['operator', 'latestMessage'])
+                ->withCount('messages')
+                ->when($tab !== 'all', fn ($builder) => $builder->where('status', $tab))
+                ->when($search !== '', fn ($builder) => $builder->where(fn ($nested) => $nested
+                    ->where('id', $search)
+                    ->orWhere('name', 'like', "%{$search}%")
+                    ->orWhere('username', 'like', "%{$search}%")
+                    ->orWhere('first_msg', 'like', "%{$search}%")))
+                ->latest()
+                ->get()
+                ->map(fn (BotTicket $ticket) => [
+                    'source' => 'bot',
+                    'sourceLabel' => 'User/Telegram',
+                    'id' => $ticket->id,
+                    'user' => $ticket->name ?: ($ticket->username ?: 'Mijoz'),
+                    'subject' => $ticket->first_msg ?: $ticket->latestMessage?->message ?: 'Support ticket',
+                    'operator' => $ticket->operator?->name,
+                    'messages' => (int) ($ticket->messages_count ?? 0),
+                    'rating' => $ticket->rating,
+                    'status' => $ticket->status,
+                    'date' => optional($ticket->created_at)->format('Y-m-d H:i'),
+                    'sortAt' => optional($ticket->updated_at ?: $ticket->created_at)->timestamp ?? 0,
+                    'dataUrl' => route('boshqaruv.support.data', $ticket),
+                    'closeUrl' => route('boshqaruv.support.close', $ticket),
+                    'replyUrl' => route('boshqaruv.support.reply', $ticket),
+                ]));
+        }
+
+        if (Schema::hasTable('seller_support_tickets')) {
+            $rows = $rows->concat(SellerSupportTicket::query()
+                ->with(['seller:id,shop_name,firstname,lastname,phone_number', 'admin:id,name', 'latestMessage'])
+                ->withCount('messages')
+                ->when($tab !== 'all', fn ($builder) => $builder->where('status', $tab))
+                ->when($search !== '', fn ($builder) => $builder->where(fn ($nested) => $nested
+                    ->where('id', $search)
+                    ->orWhere('subject', 'like', "%{$search}%")
+                    ->orWhereHas('seller', fn ($seller) => $seller
+                        ->where('shop_name', 'like', "%{$search}%")
+                        ->orWhere('firstname', 'like', "%{$search}%")
+                        ->orWhere('lastname', 'like', "%{$search}%")
+                        ->orWhere('phone_number', 'like', "%{$search}%"))))
+                ->latest('last_message_at')
+                ->latest('id')
+                ->get()
+                ->map(fn (SellerSupportTicket $ticket) => [
+                    'source' => 'seller',
+                    'sourceLabel' => 'Seller',
+                    'id' => $ticket->id,
+                    'user' => trim(($ticket->seller?->shop_name ?: 'Seller') . ' · ' . ($ticket->seller?->phone_number ?: '')),
+                    'subject' => $ticket->subject ?: $ticket->latestMessage?->message ?: 'Kitobchi bilan suhbat',
+                    'operator' => $ticket->admin?->name,
+                    'messages' => (int) ($ticket->messages_count ?? 0),
+                    'rating' => null,
+                    'status' => $ticket->status,
+                    'date' => optional($ticket->last_message_at ?: $ticket->created_at)->format('Y-m-d H:i'),
+                    'sortAt' => optional($ticket->last_message_at ?: $ticket->updated_at ?: $ticket->created_at)->timestamp ?? 0,
+                    'dataUrl' => route('boshqaruv.seller-support.data', $ticket),
+                    'closeUrl' => $ticket->status !== 'closed' ? route('boshqaruv.seller-support.close', $ticket) : null,
+                    'replyUrl' => $ticket->status !== 'closed' ? route('boshqaruv.seller-support.reply', $ticket) : null,
+                ]));
+        }
+
+        $rows = $rows->sortByDesc('sortAt')->values();
+        $page = max(1, (int) request('tickets_page', 1));
+        $perPage = 25;
+        $tickets = new LengthAwarePaginator(
+            $rows->slice(($page - 1) * $perPage, $perPage)->values(),
+            $rows->count(),
+            $perPage,
+            $page,
+            ['pageName' => 'tickets_page']
+        );
 
         return [
-            'tickets' => $tickets->getCollection()->map(fn (BotTicket $ticket) => [
-                'id' => $ticket->id,
-                'user' => $ticket->name ?: ($ticket->username ?: 'Mijoz'),
-                'subject' => $ticket->first_msg ?: $ticket->latestMessage?->message ?: 'Support ticket',
-                'operator' => $ticket->operator?->name,
-                'messages' => (int) ($ticket->messages_count ?? 0),
-                'rating' => $ticket->rating,
-                'status' => $ticket->status,
-                'date' => optional($ticket->created_at)->format('Y-m-d H:i'),
-                'dataUrl' => route('boshqaruv.support.data', $ticket),
-                'closeUrl' => route('boshqaruv.support.close', $ticket),
-                'replyUrl' => route('boshqaruv.support.reply', $ticket),
-            ])
-            ->values()
-            ->all(),
+            'tickets' => $tickets->getCollection()->map(fn ($ticket) => collect($ticket)->except('sortAt')->all())->values()->all(),
             'ticketPagination' => $this->paginationMeta($tickets),
             'ticketCounts' => [
-                'all' => (int) BotTicket::query()->count(),
-                'queue' => (int) BotTicket::query()->where('status', 'queue')->count(),
-                'active' => (int) BotTicket::query()->where('status', 'active')->count(),
-                'closed' => (int) BotTicket::query()->where('status', 'closed')->count(),
-                'rated' => (int) BotTicket::query()->where('status', 'rated')->count(),
+                'all' => (int) $rows->count(),
+                'queue' => (int) $rows->where('status', 'queue')->count(),
+                'active' => (int) $rows->where('status', 'active')->count(),
+                'open' => (int) $rows->where('status', 'open')->count(),
+                'answered' => (int) $rows->where('status', 'answered')->count(),
+                'waiting' => (int) $rows->where('status', 'waiting')->count(),
+                'closed' => (int) $rows->where('status', 'closed')->count(),
+                'rated' => (int) $rows->where('status', 'rated')->count(),
             ],
             'ticketFilters' => ['tab' => $tab, 'search' => $search],
         ];
@@ -4506,6 +4659,98 @@ class AdminController extends Controller
                 'closeUrl' => route('boshqaruv.support.close', $ticket),
                 'replyUrl' => route('boshqaruv.support.reply', $ticket),
             ],
+        ];
+    }
+
+    private function sellerSupportTicketDetailPayload(SellerSupportTicket $ticket): array
+    {
+        $ticket->update(['admin_unread_count' => 0]);
+        $ticket->load(['seller:id,shop_name,firstname,lastname,phone_number,region,status', 'admin:id,name', 'messages.admin']);
+
+        return [
+            'profile' => [
+                'id' => $ticket->id,
+                'name' => $ticket->seller?->shop_name ?: trim(($ticket->seller?->firstname ?? '') . ' ' . ($ticket->seller?->lastname ?? '')),
+                'username' => $ticket->seller?->phone_number,
+                'userId' => $ticket->seller_id,
+                'sourceType' => 'Seller support',
+                'sourceConversationId' => null,
+                'operator' => $ticket->admin?->name,
+                'status' => $ticket->status,
+                'rating' => null,
+                'closeReason' => $ticket->close_reason,
+                'closedAt' => $this->dateTime($ticket->closed_at),
+                'createdAt' => $this->dateTime($ticket->created_at),
+            ],
+            'messages' => $ticket->messages->map(fn (SellerSupportTicketMessage $message) => [
+                'id' => $message->id,
+                'sentBy' => $message->sender_type,
+                'actor' => $message->sender_type === 'admin'
+                    ? ($message->admin?->name ?: 'Admin')
+                    : ($message->sender_type === 'seller' ? 'Seller' : 'Tizim'),
+                'type' => 'text',
+                'message' => $message->message,
+                'delivered' => true,
+                'error' => null,
+                'date' => $this->dateTime($message->created_at),
+            ])->values()->all(),
+            'attachments' => [],
+            'actions' => [
+                'closeUrl' => route('boshqaruv.seller-support.close', $ticket),
+                'replyUrl' => route('boshqaruv.seller-support.reply', $ticket),
+            ],
+        ];
+    }
+
+    private function sellerAiActionsPagePayload(): array
+    {
+        if (! Schema::hasTable('seller_ai_actions')) {
+            return ['sellerAiActions' => [], 'sellerAiActionPagination' => $this->emptyPagination(), 'sellerAiActionCounts' => []];
+        }
+
+        $status = (string) request('ai_status', 'all');
+        $search = trim((string) request('ai_search', ''));
+
+        $query = SellerAiAction::query()
+            ->with(['seller:id,shop_name,phone_number', 'requestedBy:id,firstname,lastname,phone_number'])
+            ->when($status !== 'all', fn ($builder) => $builder->where('status', $status))
+            ->when($search !== '', fn ($builder) => $builder->where(fn ($nested) => $nested
+                ->where('token', 'like', "%{$search}%")
+                ->orWhere('source_file_name', 'like', "%{$search}%")
+                ->orWhere('summary', 'like', "%{$search}%")
+                ->orWhereHas('seller', fn ($seller) => $seller
+                    ->where('shop_name', 'like', "%{$search}%")
+                    ->orWhere('phone_number', 'like', "%{$search}%"))));
+
+        $actions = $query->latest()->paginate(25, ['*'], 'ai_page')->withQueryString();
+
+        return [
+            'sellerAiActions' => $actions->getCollection()->map(fn (SellerAiAction $action) => [
+                'token' => $action->token,
+                'seller' => $action->seller?->shop_name ?: 'Seller',
+                'sellerPhone' => $action->seller?->phone_number,
+                'requestedBy' => trim(($action->requestedBy?->firstname ?? '') . ' ' . ($action->requestedBy?->lastname ?? '')) ?: $action->requestedBy?->phone_number,
+                'actionType' => $action->action_type,
+                'status' => $action->status,
+                'file' => $action->source_file_name,
+                'summary' => $action->summary,
+                'itemsCount' => count($action->payload['items'] ?? []),
+                'appliedCount' => count($action->result['applied'] ?? []),
+                'payload' => $action->payload,
+                'result' => $action->result,
+                'createdAt' => $this->dateTime($action->created_at),
+                'appliedAt' => $this->dateTime($action->applied_at),
+                'rolledBackAt' => $this->dateTime($action->rolled_back_at),
+            ])->values()->all(),
+            'sellerAiActionPagination' => $this->paginationMeta($actions),
+            'sellerAiActionCounts' => [
+                'all' => SellerAiAction::query()->count(),
+                'preview' => SellerAiAction::query()->where('status', 'preview')->count(),
+                'applied' => SellerAiAction::query()->where('status', 'applied')->count(),
+                'rolled_back' => SellerAiAction::query()->where('status', 'rolled_back')->count(),
+                'failed' => SellerAiAction::query()->where('status', 'failed')->count(),
+            ],
+            'sellerAiActionFilters' => ['status' => $status, 'search' => $search],
         ];
     }
 
@@ -7284,6 +7529,7 @@ class AdminController extends Controller
                 : route('boshqaruv.courier-orders'),
             'Hubs' => route('boshqaruv.hubs'),
             'Transaksiyalar' => route('boshqaruv.transactions'),
+            'SellerAiActions' => route('boshqaruv.seller-ai-actions'),
             'LogistikaPage' => route('boshqaruv.logistika'),
             'Reklamalar' => route('boshqaruv.reklamalar'),
             'Promokodlar' => route('boshqaruv.promokodlar'),

@@ -5,6 +5,8 @@ import PaginationControls from '../components/PaginationControls';
 
 interface Ticket {
   id: number;
+  source?: string;
+  sourceLabel?: string;
   subject: string;
   user: string;
   operator?: string;
@@ -12,9 +14,9 @@ interface Ticket {
   rating?: number;
   status: string;
   date?: string;
-  dataUrl?: string;
-  closeUrl?: string;
-  replyUrl?: string;
+  dataUrl?: string | null;
+  closeUrl?: string | null;
+  replyUrl?: string | null;
 }
 interface TicketDetail {
   profile: Record<string, string | number | null | undefined>;
@@ -26,6 +28,9 @@ interface TicketDetail {
 const statusChip = (s: string) => ({
   queue: 'chip-warning',
   active: 'chip-info',
+  open: 'chip-warning',
+  answered: 'chip-success',
+  waiting: 'chip-info',
   closed: 'chip-gray',
   rated: 'chip-success',
 }[s] || 'chip-gray');
@@ -34,6 +39,9 @@ const statusLabel = (s: string) => ({
   all: 'Barchasi',
   queue: 'Navbatda',
   active: 'Aktiv',
+  open: 'Yangi',
+  answered: 'Javob berildi',
+  waiting: 'Seller javobini kutmoqda',
   closed: 'Yopilgan',
   rated: 'Baholangan',
 }[s] || s || '—');
@@ -85,16 +93,16 @@ export default function Tickets() {
       <div className="page-head">
         <div>
           <h1 className="page-title">Murojaatlar</h1>
-          <p className="page-subtitle">Telegram/support ticketlar va operator javoblari</p>
+          <p className="page-subtitle">Mijoz supporti va sellerlarning Kitobchi bilan suhbatlari</p>
         </div>
       </div>
 
       <div className="row g-3 mb-4">
-        {[
-          { label: 'Navbatda', val: ticketCounts.queue || 0, icon: 'bi-envelope-exclamation', color: '#f59e0b' },
-          { label: 'Aktiv', val: ticketCounts.active || 0, icon: 'bi-chat-dots', color: '#3b82f6' },
+          {[
+          { label: 'Yangi', val: (ticketCounts.open || 0) + (ticketCounts.queue || 0), icon: 'bi-envelope-exclamation', color: '#f59e0b' },
+          { label: 'Javob berildi', val: ticketCounts.answered || 0, icon: 'bi-reply', color: '#3b82f6' },
           { label: 'Yopilgan', val: ticketCounts.closed || 0, icon: 'bi-check2-circle', color: '#10b981' },
-          { label: 'Baholangan', val: ticketCounts.rated || 0, icon: 'bi-star', color: '#7c3aed' },
+          { label: 'Jami', val: ticketCounts.all || 0, icon: 'bi-headset', color: '#7c3aed' },
         ].map((s) => (
           <div className="col-xl-3 col-md-6" key={s.label}>
             <div className="stat-card">
@@ -109,7 +117,7 @@ export default function Tickets() {
 
       <div className="card-panel">
         <div className="d-flex gap-2 mb-3 flex-wrap">
-          {['all', 'queue', 'active', 'closed', 'rated'].map((s) => (
+          {['all', 'open', 'answered', 'waiting', 'queue', 'active', 'closed', 'rated'].map((s) => (
             <button key={s} className={`btn btn-sm ${activeTab === s ? 'btn-primary-gradient' : 'btn-outline-secondary'}`} onClick={() => { setActiveTab(s); loadTickets(1, s); }}>{statusLabel(s)} <span className="ms-1 opacity-75">{ticketCounts[s] || 0}</span></button>
           ))}
           <form className="ms-auto input-group" style={{ maxWidth: 260 }} onSubmit={(event) => { event.preventDefault(); loadTickets(); }}>
@@ -120,11 +128,12 @@ export default function Tickets() {
 
         <div className="table-responsive">
           <table className="data-table">
-            <thead><tr><th>ID</th><th>Mavzu</th><th>Foydalanuvchi</th><th>Operator</th><th>Xabar</th><th>Reyting</th><th>Sana</th><th>Status</th><th>Amallar</th></tr></thead>
+            <thead><tr><th>ID</th><th>Manba</th><th>Mavzu</th><th>Foydalanuvchi</th><th>Operator</th><th>Xabar</th><th>Reyting</th><th>Sana</th><th>Status</th><th>Amallar</th></tr></thead>
             <tbody>
               {tickets.map((ticket) => (
-                <tr key={ticket.id}>
+                <tr key={`${ticket.source || 'bot'}-${ticket.id}`}>
                   <td className="fw-semibold text-primary">#{ticket.id}</td>
+                  <td><span className={`chip ${ticket.source === 'seller' ? 'chip-purple' : 'chip-info'}`}>{ticket.sourceLabel || 'Support'}</span></td>
                   <td className="fw-semibold">{ticket.subject}</td>
                   <td>{ticket.user}</td>
                   <td>{ticket.operator || '—'}</td>

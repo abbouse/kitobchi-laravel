@@ -43,6 +43,7 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
         Route::get('/transactions', fn (AdminController $controller) => $controller->page('Transaksiyalar'))->name('transactions');
         Route::get('/commission-audit', fn (AdminController $controller) => $controller->page('CommissionAudit'))->name('commission-audit');
         Route::get('/audit-logs', fn (AdminController $controller) => $controller->page('AuditLogs'))->name('audit-logs');
+        Route::get('/seller-ai-actions', fn (AdminController $controller) => $controller->page('SellerAiActions'))->name('seller-ai-actions');
         Route::get('/expenses', fn (AdminController $controller) => $controller->page('Expenses'))->name('expenses');
         Route::get('/logistika', fn (AdminController $controller) => $controller->page('LogistikaPage'))->name('logistika');
         Route::get('/reklamalar', fn (AdminController $controller) => $controller->page('Reklamalar'))->name('reklamalar');
@@ -184,6 +185,9 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
         Route::get('/support/{ticket}/data', [AdminController::class, 'ticketData'])->name('support.data');
         Route::post('/support/{ticket}/reply', [\App\Http\Controllers\A122\SupportController::class, 'reply'])->name('support.reply');
         Route::patch('/support/{ticket}/close', [\App\Http\Controllers\A122\SupportController::class, 'close'])->name('support.close');
+        Route::get('/seller-support/{ticket}/data', [AdminController::class, 'sellerSupportTicketData'])->name('seller-support.data');
+        Route::post('/seller-support/{ticket}/reply', [AdminController::class, 'replySellerSupportTicket'])->name('seller-support.reply');
+        Route::patch('/seller-support/{ticket}/close', [AdminController::class, 'closeSellerSupportTicket'])->name('seller-support.close');
         Route::get('/chat/{conversation}/data', [AdminController::class, 'chatData'])->name('chat.data');
         Route::patch('/complaints/{complaint}/status', [\App\Http\Controllers\A122\ComplaintController::class, 'updateStatus'])->name('complaints.status');
         Route::delete('/complaints/{complaint}', [\App\Http\Controllers\A122\ComplaintController::class, 'destroy'])->name('complaints.destroy');

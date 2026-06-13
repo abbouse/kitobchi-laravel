@@ -959,7 +959,10 @@ class ProductsController extends Controller
         }
 
         $booksInSeller = Books::query()
-            ->whereIsbn($normalizedCode)
+            ->where(function ($query) use ($normalizedCode) {
+                $query->whereIsbn($normalizedCode)
+                    ->orWhere('artikul', $normalizedCode);
+            })
             ->where('seller_id', $sellerId)
             ->where('is_approved', 1)
             ->where('is_hidden', 0)
@@ -970,7 +973,10 @@ class ProductsController extends Controller
         $bookMatches = $booksInSeller->where('count', '>', 0)->values();
 
         $stationeryInSeller = Stationery::query()
-            ->where('barcode', $normalizedCode)
+            ->where(function ($query) use ($normalizedCode) {
+                $query->where('barcode', $normalizedCode)
+                    ->orWhere('artikul', $normalizedCode);
+            })
             ->where('seller_id', $sellerId)
             ->where('is_approved', 1)
             ->where('is_hidden', 0)
@@ -1017,12 +1023,18 @@ class ProductsController extends Controller
         }
 
         $existsAnywhere = Books::query()
-            ->whereIsbn($normalizedCode)
+            ->where(function ($query) use ($normalizedCode) {
+                $query->whereIsbn($normalizedCode)
+                    ->orWhere('artikul', $normalizedCode);
+            })
             ->where('is_approved', 1)
             ->where('is_hidden', 0)
             ->exists()
             || Stationery::query()
-                ->where('barcode', $normalizedCode)
+                ->where(function ($query) use ($normalizedCode) {
+                    $query->where('barcode', $normalizedCode)
+                        ->orWhere('artikul', $normalizedCode);
+                })
                 ->where('is_approved', 1)
                 ->where('is_hidden', 0)
                 ->exists();

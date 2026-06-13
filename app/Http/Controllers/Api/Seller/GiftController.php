@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Seller;
 use App\Http\Controllers\Controller;
 use App\Models\Gifts;
 use App\Models\SellerStaffLog;
+use App\Support\ProductArtikul;
 use App\Support\ProductImageVariantGenerator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -36,6 +37,17 @@ class GiftController extends Controller
             'seller_id' => $storeSellerId,
             'text' => "Hodim: {$staff->firstname} {$staff->lastname} → {$action}" . ($details ? " | {$details}" : ''),
         ]);
+    }
+
+    private function assignGeneratedArtikul(Gifts $gift): void
+    {
+        if ($gift->artikul) {
+            return;
+        }
+
+        $gift->forceFill([
+            'artikul' => ProductArtikul::generate('gift', (int) $gift->id),
+        ])->save();
     }
 
     public function list(Request $request)
@@ -86,6 +98,7 @@ class GiftController extends Controller
             'priceTo'   => $request->max_price,
             'images'     => $paths, // to'g'ridan-to'g'ri array beramiz, Laravel json_encode qiladi
         ]);
+        $this->assignGeneratedArtikul($gift);
 
         $this->writeLog($seller, 'Created gift', "Gift ID: {$gift->id}");
 
@@ -123,6 +136,7 @@ class GiftController extends Controller
 
         // Oddiy maydonlar
         $gift->fill($request->only(['name', 'stock']));
+        $gift->artikul = $gift->artikul ?: ProductArtikul::generate('gift', (int) $gift->id);
         if ($request->has('min_price')) $gift->priceFrom = $request->min_price;
         if ($request->has('max_price')) $gift->priceTo = $request->max_price;
 

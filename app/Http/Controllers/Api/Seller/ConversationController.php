@@ -6,6 +6,7 @@ use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\User;
 use App\Models\Seller;
+use App\Models\SellerOrder;
 use App\Events\MessageSent;
 use App\Events\MessageEdited;
 use App\Events\MessageDeleted;
@@ -105,6 +106,82 @@ public function getConversations(Request $request) {
 
     return response()->json(['status' => 'success', 'data' => $conversations]);
 }
+
+    public function startForOrder(int $orderId, Request $request)
+    {
+        $seller = Auth::guard('seller')->user();
+        if (!$seller) return response()->json(['status' => 'error'], 401);
+
+        $storeSellerId = $this->getStoreSellerId($seller);
+        $order = SellerOrder::query()
+            ->where('id', $orderId)
+            ->where('seller_id', $storeSellerId)
+            ->first();
+
+        if (!$order || !$order->client_id) {
+            return response()->json(['status' => 'error', 'message' => 'Buyurtma yoki mijoz topilmadi'], 404);
+        }
+
+        $conversation = Conversation::query()
+            ->where('type', 'shop')
+            ->where('user_id', (int) $order->client_id)
+            ->where('shop_id', $storeSellerId)
+            ->first();
+
+        if (!$conversation) {
+            $conversation = Conversation::create([
+                'type' => 'shop',
+                'user_id' => (int) $order->client_id,
+                'shop_id' => $storeSellerId,
+                'order_id' => $order->order_id,
+                'last_message_at' => now(),
+                'messages_hidden_at' => now(),
+            ]);
+        } else {
+            $hiddenBy = json_decode($conversation->hidden_by ?? '[]', true);
+            if (is_array($hiddenBy)) {
+                $hiddenBy = array_values(array_diff($hiddenBy, [$seller->id, $storeSellerId]));
+                $conversation->hidden_by = empty($hiddenBy) ? null : json_encode($hiddenBy);
+                $conversation->save();
+            }
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $this->serializeConversationForSeller($conversation->loadMissing('user')),
+        ]);
+    }
+
+    private function serializeConversationForSeller(Conversation $conversation): array
+    {
+        $lastMessage = Message::query()
+            ->where('conversation_id', $conversation->id)
+            ->where('is_deleted', 0)
+            ->latest()
+            ->value('message');
+        $unreadCount = Message::query()
+            ->where('conversation_id', $conversation->id)
+            ->where('sender_type', '!=', Seller::class)
+            ->where('is_read', 0)
+            ->count();
+        $user = $conversation->user;
+
+        return [
+            'id' => $conversation->id,
+            'type' => $conversation->type,
+            'user_id' => $conversation->user_id,
+            'receiver_id' => $conversation->receiver_id,
+            'shop_id' => $conversation->shop_id,
+            'last_message_at' => optional($conversation->last_message_at)->toIso8601String() ?? $conversation->last_message_at,
+            'last_message' => $lastMessage,
+            'unread_count' => $unreadCount,
+            'other_party_name' => trim(($user?->name ?? '') . ' ' . ($user?->lastname ?? '')),
+            'avatar' => $user?->avatar,
+            'last_seen_at' => $user?->last_seen_at ?? null,
+            'isVerified' => (bool) ($user?->isVerified ?? false),
+            'isSupport' => (bool) ($user?->isSupport ?? false),
+        ];
+    }
 
     // ========== GET MESSAGES (Backend filter) ==========
     public function getMessages($id, Request $request) {

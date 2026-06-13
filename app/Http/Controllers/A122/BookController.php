@@ -55,6 +55,7 @@ class BookController extends Controller
         if ($search = $request->input('search')) {
             $query->where(fn ($q) => $q
                 ->where('name', 'like', "%{$search}%")
+                ->orWhere('artikul', 'like', "%{$search}%")
                 ->orWhereHas('category', fn ($categoryQuery) => $categoryQuery->where('name_uz', 'like', "%{$search}%"))
                 ->orWhereHas('authorProfile', fn ($authorQuery) => $authorQuery->where('name', 'like', "%{$search}%"))
                 ->orWhereHas('seller', fn ($sellerQuery) => $sellerQuery->where('shop_name', 'like', "%{$search}%"))
