@@ -44,6 +44,7 @@ const nav = [
   ]},
   { group: 'Mijozlarga xizmat', items: [
     { to: '/boshqaruv/tickets', match: '/boshqaruv/tickets', label: 'Support', icon: 'bi-headset' },
+    { to: '/boshqaruv/tickets?tickets_source=seller', match: '/boshqaruv/tickets?tickets_source=seller', label: 'Seller tiketlari', icon: 'bi-chat-left-text' },
     { to: '/boshqaruv/shikoyatlar', match: '/boshqaruv/shikoyatlar', label: 'Shikoyatlar', icon: 'bi-exclamation-triangle' },
     { to: '/boshqaruv/chat', match: '/boshqaruv/chat', label: 'Chat kuzatuv', icon: 'bi-chat-dots' },
     { to: '/boshqaruv/push', match: '/boshqaruv/push', label: 'Push bildirishnomalar', icon: 'bi-bell' },
@@ -84,6 +85,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   const isActive = (match: string) => {
     if (match === '/boshqaruv') return url === '/boshqaruv' || url === '/boshqaruv/';
+    if (match.includes('?')) return url.startsWith(match);
+    if (match === '/boshqaruv/tickets' && url.includes('tickets_source=seller')) return false;
     return url.startsWith(match);
   };
 

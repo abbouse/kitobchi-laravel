@@ -4524,10 +4524,11 @@ class AdminController extends Controller
         }
 
         $tab = (string) request('tickets_tab', 'all');
+        $source = (string) request('tickets_source', 'all');
         $search = trim((string) request('tickets_search', ''));
         $rows = collect();
 
-        if (Schema::hasTable('bot_tickets')) {
+        if ($source !== 'seller' && Schema::hasTable('bot_tickets')) {
             $rows = $rows->concat(BotTicket::query()
                 ->with(['operator', 'latestMessage'])
                 ->withCount('messages')
@@ -4557,7 +4558,7 @@ class AdminController extends Controller
                 ]));
         }
 
-        if (Schema::hasTable('seller_support_tickets')) {
+        if ($source !== 'user' && Schema::hasTable('seller_support_tickets')) {
             $rows = $rows->concat(SellerSupportTicket::query()
                 ->with(['seller:id,shop_name,firstname,lastname,phone_number', 'admin:id,name', 'latestMessage'])
                 ->withCount('messages')
@@ -4607,6 +4608,8 @@ class AdminController extends Controller
             'ticketPagination' => $this->paginationMeta($tickets),
             'ticketCounts' => [
                 'all' => (int) $rows->count(),
+                'user' => (int) $rows->where('source', 'bot')->count(),
+                'seller' => (int) $rows->where('source', 'seller')->count(),
                 'queue' => (int) $rows->where('status', 'queue')->count(),
                 'active' => (int) $rows->where('status', 'active')->count(),
                 'open' => (int) $rows->where('status', 'open')->count(),
@@ -4615,7 +4618,7 @@ class AdminController extends Controller
                 'closed' => (int) $rows->where('status', 'closed')->count(),
                 'rated' => (int) $rows->where('status', 'rated')->count(),
             ],
-            'ticketFilters' => ['tab' => $tab, 'search' => $search],
+            'ticketFilters' => ['tab' => $tab, 'source' => $source, 'search' => $search],
         ];
     }
 

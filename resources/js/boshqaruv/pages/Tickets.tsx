@@ -47,8 +47,9 @@ const statusLabel = (s: string) => ({
 }[s] || s || '—');
 
 export default function Tickets() {
-  const { tickets = [], ticketPagination = { page: 1, totalPages: 1, from: 0, to: 0, total: 0 }, ticketCounts = {}, ticketFilters = {} } = usePage<{ tickets?: Ticket[]; ticketPagination?: { page: number; totalPages: number; from: number; to: number; total: number }; ticketCounts?: Record<string, number>; ticketFilters?: { tab?: string; search?: string } }>().props;
+  const { tickets = [], ticketPagination = { page: 1, totalPages: 1, from: 0, to: 0, total: 0 }, ticketCounts = {}, ticketFilters = {} } = usePage<{ tickets?: Ticket[]; ticketPagination?: { page: number; totalPages: number; from: number; to: number; total: number }; ticketCounts?: Record<string, number>; ticketFilters?: { tab?: string; source?: string; search?: string } }>().props;
   const [activeTab, setActiveTab] = useState(ticketFilters.tab || 'all');
+  const [activeSource, setActiveSource] = useState(ticketFilters.source || 'all');
   const [search, setSearch] = useState(ticketFilters.search || '');
   const [showReply, setShowReply] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
@@ -86,7 +87,7 @@ export default function Tickets() {
     router.post(selectedTicket.replyUrl, { message: replyText }, { preserveScroll: true, onSuccess: () => setShowReply(false) });
   };
 
-  const loadTickets = (page = 1, tab = activeTab, term = search) => router.get('/boshqaruv/tickets', { tickets_page: page, tickets_tab: tab, tickets_search: term }, { preserveState: true, preserveScroll: true, replace: true });
+  const loadTickets = (page = 1, tab = activeTab, term = search, source = activeSource) => router.get('/boshqaruv/tickets', { tickets_page: page, tickets_tab: tab, tickets_source: source, tickets_search: term }, { preserveState: true, preserveScroll: true, replace: true });
 
   return (
     <div>
@@ -116,6 +117,21 @@ export default function Tickets() {
       </div>
 
       <div className="card-panel">
+        <div className="d-flex gap-2 mb-3 flex-wrap">
+          {[
+            ['all', 'Barcha murojaatlar', ticketCounts.all || 0],
+            ['user', 'Mijoz supporti', ticketCounts.user || 0],
+            ['seller', 'Seller tiketlari', ticketCounts.seller || 0],
+          ].map(([source, label, count]) => (
+            <button
+              key={String(source)}
+              className={`btn btn-sm ${activeSource === source ? 'btn-primary-gradient' : 'btn-outline-secondary'}`}
+              onClick={() => { setActiveSource(String(source)); loadTickets(1, activeTab, search, String(source)); }}
+            >
+              {label} <span className="ms-1 opacity-75">{count}</span>
+            </button>
+          ))}
+        </div>
         <div className="d-flex gap-2 mb-3 flex-wrap">
           {['all', 'open', 'answered', 'waiting', 'queue', 'active', 'closed', 'rated'].map((s) => (
             <button key={s} className={`btn btn-sm ${activeTab === s ? 'btn-primary-gradient' : 'btn-outline-secondary'}`} onClick={() => { setActiveTab(s); loadTickets(1, s); }}>{statusLabel(s)} <span className="ms-1 opacity-75">{ticketCounts[s] || 0}</span></button>
