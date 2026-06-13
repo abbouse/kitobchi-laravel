@@ -8,10 +8,13 @@ return new class extends Migration
 {
     public function up(): void
     {
+        Schema::dropIfExists('seller_support_ticket_messages');
+        Schema::dropIfExists('seller_support_tickets');
+
         Schema::create('seller_support_tickets', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('seller_id')->constrained('sellers')->cascadeOnDelete();
-            $table->foreignId('admin_id')->nullable()->constrained('admins')->nullOnDelete();
+            $table->unsignedInteger('seller_id');
+            $table->unsignedBigInteger('admin_id')->nullable()->index();
             $table->string('subject')->nullable();
             $table->enum('status', ['open', 'answered', 'waiting', 'closed'])->default('open')->index();
             $table->timestamp('last_message_at')->nullable()->index();
@@ -22,6 +25,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index(['seller_id', 'status']);
+            $table->foreign('seller_id')->references('id')->on('sellers')->cascadeOnDelete();
         });
 
         Schema::create('seller_support_ticket_messages', function (Blueprint $table) {

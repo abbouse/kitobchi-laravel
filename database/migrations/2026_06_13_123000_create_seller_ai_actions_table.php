@@ -11,8 +11,8 @@ return new class extends Migration
         Schema::create('seller_ai_actions', function (Blueprint $table) {
             $table->id();
             $table->uuid('token')->unique();
-            $table->foreignId('seller_id')->constrained('sellers')->cascadeOnDelete();
-            $table->foreignId('requested_by_seller_id')->nullable()->constrained('sellers')->nullOnDelete();
+            $table->unsignedInteger('seller_id');
+            $table->unsignedInteger('requested_by_seller_id')->nullable();
             $table->string('action_type')->index();
             $table->enum('status', ['preview', 'applied', 'rolled_back', 'cancelled', 'failed'])->default('preview')->index();
             $table->string('source_file_name')->nullable();
@@ -24,6 +24,8 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index(['seller_id', 'action_type', 'status']);
+            $table->foreign('seller_id')->references('id')->on('sellers')->cascadeOnDelete();
+            $table->foreign('requested_by_seller_id')->references('id')->on('sellers')->nullOnDelete();
         });
     }
 
