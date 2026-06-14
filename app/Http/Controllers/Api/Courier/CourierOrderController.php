@@ -518,6 +518,10 @@ class CourierOrderController extends Controller
             ->join('seller_orders', 'seller_orders.id', '=', 'seller_order_items.order_id')
             ->where('seller_orders.order_id', $order->order_id)
             ->whereNull('seller_order_items.cancelled_at')
+            ->where(function ($query) {
+                $query->whereNull('seller_order_items.refund_status')
+                    ->orWhere('seller_order_items.refund_status', '!=', 'cancel_pending');
+            })
             ->get([
                 'seller_orders.seller_id as seller_id',
                 'seller_order_items.product_id',
