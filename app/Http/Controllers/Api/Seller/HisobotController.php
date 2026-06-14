@@ -7,13 +7,13 @@ use App\Enums\PaymentStatusCode;
 use App\Http\Controllers\Controller;
 use App\Models\Books;
 use App\Models\Gifts;
+use App\Models\ProductViewLog;
 use App\Models\Seller;
 use App\Models\SellerLocation;
 use App\Models\SellerOrder;
 use App\Models\SellerOrderItem;
 use App\Models\Stationery;
 use App\Models\User;
-use App\Models\ProductViewLog;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -33,7 +33,7 @@ class HisobotController extends Controller
 
     private function hasDashboardAccess($seller): bool
     {
-        if (!$seller->parent_id) {
+        if (! $seller->parent_id) {
             return true;
         }
 
@@ -148,7 +148,7 @@ class HisobotController extends Controller
 
     private function resolveSellerLocation(int $storeSellerId, ?int $locationId): ?SellerLocation
     {
-        if (!$locationId) {
+        if (! $locationId) {
             return null;
         }
 
@@ -159,9 +159,22 @@ class HisobotController extends Controller
             ->first();
     }
 
+    private function requestedLocationIdForSeller($seller, Request $request): ?int
+    {
+        if ($seller->parent_id) {
+            return $seller->seller_location_id
+                ? (int) $seller->seller_location_id
+                : -1;
+        }
+
+        return $request->filled('location_id')
+            ? (int) $request->query('location_id')
+            : null;
+    }
+
     private function applyBranchFilterToSellerOrders($query, ?SellerLocation $location, string $table = 'seller_orders')
     {
-        if (!$location) {
+        if (! $location) {
             return $query;
         }
 
@@ -169,23 +182,24 @@ class HisobotController extends Controller
 
         if ($location->is_main) {
             return $query->where(function ($inner) use ($table, $jsonLocationExpr, $location) {
-                $inner->whereRaw("LOWER(COALESCE({$table}.delivery_type, '')) != ?", ['pickup'])
-                    ->orWhereNull("{$table}.delivery_type")
-                    ->orWhere(function ($pickup) use ($table, $jsonLocationExpr, $location) {
-                        $pickup->whereRaw("LOWER(COALESCE({$table}.delivery_type, '')) = ?", ['pickup'])
-                            ->whereRaw("{$jsonLocationExpr} = ?", [$location->id]);
+                $inner->whereRaw("{$jsonLocationExpr} = ?", [$location->id])
+                    ->orWhere(function ($legacy) use ($table, $jsonLocationExpr) {
+                        $legacy->whereRaw("{$jsonLocationExpr} IS NULL")
+                            ->where(function ($delivery) use ($table) {
+                                $delivery->whereRaw("LOWER(COALESCE({$table}.delivery_type, '')) != ?", ['pickup'])
+                                    ->orWhereNull("{$table}.delivery_type");
+                            });
                     });
             });
         }
 
-        return $query->whereRaw("LOWER(COALESCE({$table}.delivery_type, '')) = ?", ['pickup'])
-            ->whereRaw("{$jsonLocationExpr} = ?", [$location->id]);
+        return $query->whereRaw("{$jsonLocationExpr} = ?", [$location->id]);
     }
 
     public function index(Request $request)
     {
         $seller = Auth::guard('seller')->user();
-        if (!$seller) {
+        if (! $seller) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
@@ -194,10 +208,17 @@ class HisobotController extends Controller
         $period = $this->resolvePeriod($request, $storeSeller);
         $selectedLocation = $this->resolveSellerLocation(
             $storeSellerId,
-            $request->filled('location_id') ? (int) $request->query('location_id') : null
+            $this->requestedLocationIdForSeller($seller, $request)
         );
 
-        if (!$this->hasDashboardAccess($seller)) {
+        if ($seller->parent_id && ! $selectedLocation) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Xodimga faol filial biriktirilmagan.',
+            ], 403);
+        }
+
+        if (! $this->hasDashboardAccess($seller)) {
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -212,7 +233,9 @@ class HisobotController extends Controller
                     'repeat_clients' => 0,
                     'total_views' => 0,
                     'recommended_views' => 0,
-                    'top_sellers_label' => now()->translatedFormat('F Y'),
+                    'top_sellers_label' => $period['start']->format('d.m.Y')
+                        .' – '
+                        .$period['end']->format('d.m.Y'),
                     'top_sellers' => [],
                     'top_products' => [],
                 ],
@@ -275,16 +298,16 @@ class HisobotController extends Controller
                 ->where('recommendation_active', true)
                 ->count();
 
-            $monthStart = now()->copy()->startOfMonth();
-            $monthEnd = now()->copy()->endOfDay();
             $topSellers = SellerOrder::query()
                 ->join('solds', 'solds.id', '=', 'seller_orders.order_id')
                 ->select('seller_orders.seller_id', DB::raw('SUM(seller_orders.amount) as total_sales'), DB::raw('COUNT(*) as orders_count'))
                 ->whereIn('seller_orders.seller_id', $sellerScopeIds)
                 ->whereNotNull('solds.completed_at')
-                ->whereBetween('solds.completed_at', [$monthStart, $monthEnd])
-                ->groupBy('seller_orders.seller_id')
-                ->tap(fn ($query) => $this->applyCompletedPaidSoldFilter($query))
+                ->whereBetween('solds.completed_at', [$period['start'], $period['end']])
+                ->groupBy('seller_orders.seller_id');
+            $this->applyCompletedPaidSoldFilter($topSellers);
+            $this->applyBranchFilterToSellerOrders($topSellers, $selectedLocation);
+            $topSellers = $topSellers
                 ->orderByDesc('total_sales')
                 ->orderByDesc('orders_count')
                 ->orderBy('seller_orders.seller_id')
@@ -487,7 +510,9 @@ class HisobotController extends Controller
                 'repeat_clients' => $repeatClients,
                 'total_views' => $totalViews,
                 'recommended_views' => $recommendedViews,
-                'top_sellers_label' => $monthStart->translatedFormat('F Y'),
+                'top_sellers_label' => $period['start']->format('d.m.Y')
+                    .' – '
+                    .$period['end']->format('d.m.Y'),
                 'top_sellers' => $topSellersPayload,
                 'top_products' => $topProductsPayload,
                 'category_sales' => $categorySalesPayload,
@@ -503,11 +528,11 @@ class HisobotController extends Controller
     public function getSalesStats(Request $request)
     {
         $seller = Auth::guard('seller')->user();
-        if (!$seller) {
+        if (! $seller) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
-        if (!$this->hasDashboardAccess($seller)) {
+        if (! $this->hasDashboardAccess($seller)) {
             return response()->json(['success' => true, 'data' => []], 200);
         }
 
@@ -516,8 +541,15 @@ class HisobotController extends Controller
         $period = $this->resolvePeriod($request, $storeSeller);
         $selectedLocation = $this->resolveSellerLocation(
             $storeSellerId,
-            $request->filled('location_id') ? (int) $request->query('location_id') : null
+            $this->requestedLocationIdForSeller($seller, $request)
         );
+
+        if ($seller->parent_id && ! $selectedLocation) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Xodimga faol filial biriktirilmagan.',
+            ], 403);
+        }
         $data = (function () use (
             $storeSellerId,
             $period,
@@ -556,7 +588,7 @@ class HisobotController extends Controller
                     $bucketKey = $cursor->format('Y-m');
                     $row = $rows->get($bucketKey);
                     $viewStats = $viewRows
-                        ->filter(fn($_, $key) => str_starts_with((string) $key, $bucketKey))
+                        ->filter(fn ($_, $key) => str_starts_with((string) $key, $bucketKey))
                         ->values();
 
                     $data[] = [
@@ -593,7 +625,7 @@ class HisobotController extends Controller
                     $weekStart = $cursor->copy()->startOfWeek(Carbon::MONDAY)->toDateString();
                     $weekEnd = $cursor->copy()->endOfWeek(Carbon::SUNDAY)->toDateString();
                     $viewStats = $viewRows
-                        ->filter(fn($_, $key) => $key >= $weekStart && $key <= $weekEnd)
+                        ->filter(fn ($_, $key) => $key >= $weekStart && $key <= $weekEnd)
                         ->values();
 
                     $data[] = [

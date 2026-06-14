@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
-use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -22,7 +22,7 @@ class Seller extends Authenticatable
         'region', 'balance', 'rating', 'rating_reviews_count', 'reputation_score', 'reputation_last_calculated_at',
         'status', 'is_hidden', 'isVerified', 'isPremiumShop', 'isPremiumExpiresAt',
         'activity_types', 'successful_orders',
-        'parent_id', 'role', 'staff_status',
+        'parent_id', 'seller_location_id', 'role', 'staff_status', 'can_withdraw_balance',
         'commission_percent', 'fcm_token',
         'response_time_hours',
 
@@ -50,24 +50,25 @@ class Seller extends Authenticatable
 
     protected $casts = [
         'isVerified' => 'boolean',
-        'isSupport'  => 'boolean',
+        'isSupport' => 'boolean',
         'isPremiumShop' => 'boolean',
         'isPremiumExpiresAt' => 'datetime',
         'rating' => 'decimal:2',
         'rating_reviews_count' => 'integer',
         'reputation_score' => 'decimal:2',
         'reputation_last_calculated_at' => 'datetime',
-        'is_hidden'  => 'boolean',
+        'is_hidden' => 'boolean',
+        'can_withdraw_balance' => 'boolean',
         'password_reset_limit' => 'integer',
         'password_reset_limit_reset_at' => 'datetime',
-        'password'   => 'hashed',
+        'password' => 'hashed',
 
-        'contract_signed'     => 'boolean',
-        'contract_signed_at'  => 'date',
+        'contract_signed' => 'boolean',
+        'contract_signed_at' => 'date',
         'contract_expires_at' => 'date',
-        'passport_issued_at'  => 'date',
+        'passport_issued_at' => 'date',
 
-        'qr_rotated_at'       => 'datetime',
+        'qr_rotated_at' => 'datetime',
     ];
 
     /**
@@ -78,7 +79,7 @@ class Seller extends Authenticatable
     {
         static::creating(function (Seller $seller) {
             if (empty($seller->qr_token)) {
-                $seller->qr_token      = self::generateUniqueQrToken();
+                $seller->qr_token = self::generateUniqueQrToken();
                 $seller->qr_rotated_at = now();
             }
         });
@@ -104,7 +105,7 @@ class Seller extends Authenticatable
      */
     public function rotateQrToken(): string
     {
-        $this->qr_token      = self::generateUniqueQrToken();
+        $this->qr_token = self::generateUniqueQrToken();
         $this->qr_rotated_at = now();
         $this->save();
 
@@ -117,8 +118,11 @@ class Seller extends Authenticatable
      */
     public function qrUrl(): ?string
     {
-        if (empty($this->qr_token)) return null;
+        if (empty($this->qr_token)) {
+            return null;
+        }
         $base = rtrim((string) config('app.qr_base_url', 'https://kitobchi.com'), '/');
+
         return "{$base}/s/{$this->qr_token}";
     }
 
@@ -128,10 +132,17 @@ class Seller extends Authenticatable
      */
     public function getActivityTypesAttribute($value): array
     {
-        if (is_array($value))   return $value;
-        if (empty($value))      return [];
+        if (is_array($value)) {
+            return $value;
+        }
+        if (empty($value)) {
+            return [];
+        }
         $decoded = json_decode($value, true);
-        if (is_array($decoded)) return $decoded;
+        if (is_array($decoded)) {
+            return $decoded;
+        }
+
         return array_values(array_filter(array_map('trim', explode(',', $value))));
     }
 
@@ -150,18 +161,28 @@ class Seller extends Authenticatable
      */
     public function getMaskedCardAttribute(): ?string
     {
-        if (empty($this->payment_card)) return null;
+        if (empty($this->payment_card)) {
+            return null;
+        }
         $card = preg_replace('/\D/', '', $this->payment_card);
-        if (strlen($card) < 4) return $this->payment_card;
-        return '**** **** **** ' . substr($card, -4);
+        if (strlen($card) < 4) {
+            return $this->payment_card;
+        }
+
+        return '**** **** **** '.substr($card, -4);
     }
 
     public function getMaskedBankAccountAttribute(): ?string
     {
-        if (empty($this->bank_account)) return null;
+        if (empty($this->bank_account)) {
+            return null;
+        }
         $acc = preg_replace('/\D/', '', $this->bank_account);
-        if (strlen($acc) < 4) return $this->bank_account;
-        return str_repeat('*', strlen($acc) - 4) . substr($acc, -4);
+        if (strlen($acc) < 4) {
+            return $this->bank_account;
+        }
+
+        return str_repeat('*', strlen($acc) - 4).substr($acc, -4);
     }
 
     /**
@@ -169,7 +190,10 @@ class Seller extends Authenticatable
      */
     public function getContractDaysRemainingAttribute(): ?int
     {
-        if (empty($this->contract_expires_at)) return null;
+        if (empty($this->contract_expires_at)) {
+            return null;
+        }
+
         return (int) now()->startOfDay()->diffInDays($this->contract_expires_at, false);
     }
 
@@ -179,11 +203,20 @@ class Seller extends Authenticatable
      */
     public function getContractComputedStatusAttribute(): string
     {
-        if (empty($this->contract_expires_at)) return 'none';
+        if (empty($this->contract_expires_at)) {
+            return 'none';
+        }
         $days = $this->contract_days_remaining;
-        if ($days === null) return 'none';
-        if ($days < 0)   return 'expired';
-        if ($days <= 30) return 'expiring';
+        if ($days === null) {
+            return 'none';
+        }
+        if ($days < 0) {
+            return 'expired';
+        }
+        if ($days <= 30) {
+            return 'expiring';
+        }
+
         return 'active';
     }
 
@@ -212,6 +245,12 @@ class Seller extends Authenticatable
     public function locations(): HasMany
     {
         return $this->hasMany(SellerLocation::class, 'seller_id')->where('is_deleted', false);
+    }
+
+    public function assignedLocation()
+    {
+        return $this->belongsTo(SellerLocation::class, 'seller_location_id')
+            ->where('is_deleted', false);
     }
 
     public function devices()

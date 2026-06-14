@@ -85,12 +85,13 @@ class GiftsController extends Controller
 
         // Har bir seller uchun alohida query
         // Birinchi sahifada per_seller_limit ta ko'rsatamiz
-        $perSellerLimit = (int) $request->input('per_seller', 6);
+        $perSellerLimit = min(max((int) $request->input('per_seller', 6), 1), 20);
 
         $result = [];
 
         // ── Platforma sovg'alari (seller_id = 1) ─────────────────
         $platformQuery = Gifts::where('status', true)
+            ->whereNull('archived_at')
             ->where('is_approved', true)
             ->where('stock', '>', 0)
             ->where('seller_id', 1)
@@ -120,6 +121,7 @@ class GiftsController extends Controller
             $sum = $sellerSums[$sellerId];
 
             $sellerQuery = Gifts::where('status', true)
+                ->whereNull('archived_at')
                 ->where('is_approved', true)
                 ->where('stock', '>', 0)
                 ->where('seller_id', $sellerId)
@@ -188,6 +190,7 @@ class GiftsController extends Controller
         if ($sellerId == 1) {
             // Platforma — umumiy summa bo'yicha
             $query = Gifts::where('status', true)
+                ->whereNull('archived_at')
                 ->where('is_approved', true)
                 ->where('stock', '>', 0)
                 ->where('seller_id', 1)
@@ -200,6 +203,7 @@ class GiftsController extends Controller
                 return response()->json(['status' => 'success', 'data' => [], 'meta' => ['has_more' => false]]);
             }
             $query = Gifts::where('status', true)
+                ->whereNull('archived_at')
                 ->where('is_approved', true)
                 ->where('stock', '>', 0)
                 ->where('seller_id', $sellerId)
@@ -240,11 +244,32 @@ class GiftsController extends Controller
         }
 
         $gift = Gifts::where('id', $request->gift_id)
+            ->whereNull('archived_at')
+            ->where('status', true)
             ->where('is_approved', true)
             ->where('stock', '>', 0)
-            ->firstOrFail();
+            ->first();
 
-        $cartItems     = MyCart::where('user_id', $user->id)->with('product')->get();
+        if (! $gift) {
+            return response()->json([
+                'status' => 'error',
+                'message' => "Sovg'a mavjud emas yoki hozir faol emas.",
+            ], 404);
+        }
+
+        $sellerSums = $this->calcSellerSums($user->id);
+        $eligibleSum = (int) ($gift->seller_id == 1
+            ? array_sum($sellerSums)
+            : ($sellerSums[$gift->seller_id] ?? 0));
+
+        if ($eligibleSum < (int) $gift->priceFrom || $eligibleSum > (int) $gift->priceTo) {
+            return response()->json([
+                'status' => 'error',
+                'message' => "Savat summasi bu sovg'a uchun belgilangan oraliqqa mos emas.",
+            ], 422);
+        }
+
+        $cartItems = MyCart::where('user_id', $user->id)->with('product')->get();
         $cartSellerIds = $cartItems->pluck('product.seller_id')
             ->unique()->filter()->toArray();
 

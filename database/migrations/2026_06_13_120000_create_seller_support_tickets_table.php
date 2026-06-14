@@ -25,7 +25,6 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index(['seller_id', 'status']);
-            $table->foreign('seller_id')->references('id')->on('sellers')->cascadeOnDelete();
         });
 
         Schema::create('seller_support_ticket_messages', function (Blueprint $table) {

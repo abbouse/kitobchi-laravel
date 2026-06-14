@@ -9,6 +9,17 @@ class CourierOrderItem extends Model
 {
     use HasFactory;
 
+    protected static function booted(): void
+    {
+        static::creating(function (CourierOrderItem $item): void {
+            if ($item->type === 'gift' && (int) $item->seller_id === 1) {
+                throw new \LogicException(
+                    "Kitobchi platforma sovg'asi kuryer order itemiga qo'shilmaydi."
+                );
+            }
+        });
+    }
+
     protected $fillable = [
         'order_id',
         'seller_id',

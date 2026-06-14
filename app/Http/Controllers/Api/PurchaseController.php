@@ -48,6 +48,9 @@ use Carbon\Carbon;
 
 class PurchaseController extends Controller
 {
+    private const PLATFORM_SELLER_ID = 1;
+    private const DEFAULT_PLATFORM_GIFT_ID = 1;
+
     public function __construct(
         private readonly OrderService $orderService,
         private readonly CashbackHistoryService $cashbackHistoryService,
@@ -115,6 +118,22 @@ class PurchaseController extends Controller
             return $images; // oddiy URL string holi
         }
         return null;
+    }
+
+    private function findAvailableGiftForCheckout(int $giftId): ?Gifts
+    {
+        $query = Gifts::query()
+            ->whereKey($giftId)
+            ->whereNull('archived_at')
+            ->where('status', true)
+            ->where('is_approved', true)
+            ->where('stock', '>', 0);
+
+        if ($giftId === self::DEFAULT_PLATFORM_GIFT_ID) {
+            $query->where('seller_id', self::PLATFORM_SELLER_ID);
+        }
+
+        return $query->lockForUpdate()->first();
     }
 
     // ── Breadcrumb logger ──────────────────────────────────────
@@ -553,24 +572,25 @@ class PurchaseController extends Controller
             }
 
             // ── Gift ──────────────────────────────────────────────
-            $giftId = $request->input('gift_id');
-            $gift   = null;
+            $requestedGiftId = $request->filled('gift_id')
+                ? (int) $request->input('gift_id')
+                : null;
+            $giftId = $requestedGiftId ?? self::DEFAULT_PLATFORM_GIFT_ID;
+            $gift = $this->findAvailableGiftForCheckout($giftId);
 
-            if ($giftId !== null) {
-                $gift = Gifts::find((int)$giftId);
-                if (!$gift) {
-                    $gift   = Gifts::find(1);
-                    $giftId = 1;
-                }
+            // User sovg'a tanlamasa yoki tanlangan sovg'a ayni paytda mavjud
+            // bo'lmasa, Kitobchining standart sovg'asiga qaytamiz.
+            if (! $gift && $giftId !== self::DEFAULT_PLATFORM_GIFT_ID) {
+                $giftId = self::DEFAULT_PLATFORM_GIFT_ID;
+                $gift = $this->findAvailableGiftForCheckout($giftId);
             }
 
             if ($gift) {
-                if (($gift->stock ?? 0) < 1) {
-                    DB::rollBack();
-                    return $this->err("{$gift->name} sovg'asi tugagan!", 400);
-                }
+                $isDefaultPlatformGift = (int) $gift->id === self::DEFAULT_PLATFORM_GIFT_ID
+                    && (int) $gift->seller_id === self::PLATFORM_SELLER_ID;
+                $selectedGiftIsEligible = true;
 
-                if ($gift->seller_id != 1) {
+                if (! $isDefaultPlatformGift && (int) $gift->seller_id !== self::PLATFORM_SELLER_ID) {
                     $sellerSumInCart = collect($groupedBySeller[$gift->seller_id] ?? [])
                         ->sum(fn($item) => $this->effectivePrice($item->product) * $item->count_item);
 
@@ -579,19 +599,22 @@ class PurchaseController extends Controller
                         $sellerSumInCart < $gift->priceFrom ||
                         $sellerSumInCart > $gift->priceTo
                     ) {
-                        $gift   = Gifts::find(1);
-                        $giftId = 1;
-                        if (!$gift || ($gift->stock ?? 0) < 1) {
-                            $gift   = null;
-                            $giftId = null;
-                        }
+                        $selectedGiftIsEligible = false;
                     }
-                } else {
+                } elseif (! $isDefaultPlatformGift) {
                     if ($priceBeforePromo < $gift->priceFrom || $priceBeforePromo > $gift->priceTo) {
-                        $gift   = null;
-                        $giftId = null;
+                        $selectedGiftIsEligible = false;
                     }
                 }
+
+                if (! $selectedGiftIsEligible) {
+                    $giftId = self::DEFAULT_PLATFORM_GIFT_ID;
+                    $gift = $this->findAvailableGiftForCheckout($giftId);
+                }
+            }
+
+            if (! $gift) {
+                $giftId = null;
             }
 
             if ($gift) {
@@ -741,8 +764,28 @@ class PurchaseController extends Controller
             // Har sotuvchi uchun bitta SellerOrder + nechta SellerOrderItem.
             // Defensiv casts: amount/quantity/price MySQL'da int — float
             // berilsa strict mode'da xato ehtimoli bor.
+            $sellerMainLocations = [];
             foreach ($groupedBySeller as $sellerId => $items) {
                 $sellerAmount = 0;
+                $sellerLocation = DB::table('seller_locations')
+                    ->where('seller_id', $sellerId)
+                    ->where('is_main', true)
+                    ->where('is_deleted', false)
+                    ->first(['id', 'fullAddress', 'lat', 'lon', 'is_main']);
+
+                if (! $sellerLocation) {
+                    throw new \RuntimeException("Main seller location not found for seller_id: {$sellerId}");
+                }
+
+                $sellerMainLocations[(int) $sellerId] = $sellerLocation;
+                $sellerOrderAddress = array_merge($locationData, [
+                    'location_id' => (int) $sellerLocation->id,
+                    'branch_address' => $sellerLocation->fullAddress,
+                    'branch_lat' => $sellerLocation->lat,
+                    'branch_lon' => $sellerLocation->lon,
+                    'branch_is_main' => true,
+                ]);
+
                 $sellerOrder  = SellerOrder::create([
                     'seller_id'     => (int) $sellerId,
                     'order_id'      => (int) $purchase->id,
@@ -754,7 +797,7 @@ class PurchaseController extends Controller
                         ? SellerOrderStatusCode::PAYMENT_PENDING->value
                         : SellerOrderStatusCode::NEW->value,
                     'delivery_type' => $normalizedDeliveryType,
-                    'address'       => [$locationData],
+                    'address'       => [$sellerOrderAddress],
                 ]);
 
                 foreach ($items as $item) {
@@ -774,7 +817,12 @@ class PurchaseController extends Controller
                     ]);
                 }
 
-                if (isset($gift) && $gift && $gift->seller_id != 1 && $gift->seller_id == $sellerId) {
+                if (
+                    isset($gift)
+                    && $gift
+                    && (int) $gift->seller_id !== self::PLATFORM_SELLER_ID
+                    && (int) $gift->seller_id === (int) $sellerId
+                ) {
                     SellerOrderItem::create([
                         'seller_id'  => (int) $sellerId,
                         'order_id'   => (int) $sellerOrder->id,
@@ -814,13 +862,10 @@ class PurchaseController extends Controller
                 $itm_type = (string) ($itm['type'] ?? '');
                 $itm_sid  = (int) ($itm['seller_id'] ?? 1);
 
-                if ($itm_type === 'gift' && $itm_sid == 1) continue;
+                if ($itm_type === 'gift' && $itm_sid === self::PLATFORM_SELLER_ID) continue;
                 if ($itm_type === 'gift' && !isset($groupedBySeller[$itm_sid])) continue;
 
-                $sellerLocation = DB::table('seller_locations')
-                    ->where('seller_id', $itm_sid)
-                    ->where('is_main', true)
-                    ->first();
+                $sellerLocation = $sellerMainLocations[$itm_sid] ?? null;
 
                 if (!$sellerLocation) {
                     throw new \RuntimeException("Seller location not found for seller_id: {$itm_sid}");

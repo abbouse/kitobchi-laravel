@@ -67,6 +67,29 @@ class SellerController extends Controller
         ]);
     }
 
+    public function sessionConfig()
+    {
+        $seller = Auth::guard('seller')->user();
+        if (! $seller) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $storeSeller = Seller::query()->find($this->getStoreSellerId($seller));
+        if (! $storeSeller) {
+            return response()->json(['success' => false, 'message' => 'Seller not found'], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'activity_types' => $storeSeller->activity_types,
+                'shop_name' => $storeSeller->shop_name,
+                'photo' => $storeSeller->photo,
+                'is_verified' => (bool) $storeSeller->isVerified,
+            ],
+        ]);
+    }
+
     public function getDevices(Request $request)
     {
         $seller = Auth::guard('seller')->user();

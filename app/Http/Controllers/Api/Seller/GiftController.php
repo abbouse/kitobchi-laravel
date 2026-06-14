@@ -9,6 +9,7 @@ use App\Support\ProductArtikul;
 use App\Support\ProductImageVariantGenerator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
@@ -59,13 +60,63 @@ class GiftController extends Controller
 
         $storeSellerId = $this->getStoreSellerId($seller);
 
-        $gifts = Gifts::where('seller_id', $storeSellerId)
-            ->latest('updated_at')
-            ->get();
+        $perPage = min(max((int) $request->input('per_page', 20), 1), 50);
+        $search = trim((string) $request->input('search', ''));
+        $filter = (string) $request->input('filter', 'all');
+
+        $baseQuery = Gifts::query()
+            ->where('seller_id', $storeSellerId)
+            ->whereNull('archived_at');
+        $counts = [
+            'all' => (clone $baseQuery)->count(),
+            'active' => (clone $baseQuery)
+                ->where('status', true)
+                ->where('is_approved', 1)
+                ->where('stock', '>', 0)
+                ->count(),
+            'out_stock' => (clone $baseQuery)->where('stock', '<=', 0)->count(),
+            'pending' => (clone $baseQuery)
+                ->where(fn ($query) => $query->whereNull('is_approved')->orWhere('is_approved', 0))
+                ->count(),
+            'rejected' => (clone $baseQuery)->where('is_approved', 2)->count(),
+        ];
+
+        $query = Gifts::query()
+            ->where('seller_id', $storeSellerId)
+            ->whereNull('archived_at');
+        if ($search !== '') {
+            $query->where(function ($query) use ($search) {
+                $query->where('name', 'like', "%{$search}%")
+                    ->orWhere('artikul', 'like', "%{$search}%");
+            });
+        }
+
+        match ($filter) {
+            'active' => $query
+                ->where('status', true)
+                ->where('is_approved', 1)
+                ->where('stock', '>', 0),
+            'out_stock' => $query->where('stock', '<=', 0),
+            'pending' => $query->where(
+                fn ($query) => $query->whereNull('is_approved')->orWhere('is_approved', 0)
+            ),
+            'rejected' => $query->where('is_approved', 2),
+            default => null,
+        };
+
+        $gifts = $query->latest('updated_at')->paginate($perPage);
 
         return response()->json([
             'success' => true,
-            'data' => $gifts, // images avtomatik URL bilan chiqadi
+            'data' => $gifts->items(),
+            'meta' => [
+                'current_page' => $gifts->currentPage(),
+                'last_page' => $gifts->lastPage(),
+                'per_page' => $gifts->perPage(),
+                'total' => $gifts->total(),
+                'has_more' => $gifts->hasMorePages(),
+            ],
+            'counts' => $counts,
         ], 200);
     }
 
@@ -78,24 +129,25 @@ class GiftController extends Controller
 
         $validator = Validator::make($request->all(), [
             'name'      => 'required|string|max:255',
-            'stock'     => 'nullable|integer|min:0',
-            'min_price' => 'nullable|numeric|min:0',
-            'max_price' => 'nullable|numeric|min:0',
-            'images.*'  => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
+            'stock'     => 'required|integer|min:0',
+            'min_price' => 'required|integer|min:0',
+            'max_price' => 'required|integer|gte:min_price',
+            'images'    => 'required|array|min:1|max:8',
+            'images.*'  => 'required|image|mimes:jpeg,png,jpg,webp|max:10240',
         ]);
 
         if ($validator->fails()) {
             return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
         }
 
-        $paths = $this->uploadImages($request->file('images'));
+        $paths = $this->uploadImages($request->file('images', []));
 
         $gift = Gifts::create([
             'seller_id' => $this->getStoreSellerId($seller),
             'name'      => $request->name,
-            'stock'     => $request->stock ?? 0,
-            'priceFrom' => $request->min_price,
-            'priceTo'   => $request->max_price,
+            'stock'     => (int) $request->stock,
+            'priceFrom' => (int) $request->min_price,
+            'priceTo'   => (int) $request->max_price,
             'images'     => $paths, // to'g'ridan-to'g'ri array beramiz, Laravel json_encode qiladi
         ]);
         $this->assignGeneratedArtikul($gift);
@@ -118,14 +170,15 @@ class GiftController extends Controller
 
         $gift = Gifts::where('id', $id)
             ->where('seller_id', $this->getStoreSellerId($seller))
+            ->whereNull('archived_at')
             ->firstOrFail();
 
         $validator = Validator::make($request->all(), [
             'name'             => 'sometimes|required|string|max:255',
-            'stock'            => 'nullable|integer|min:0',
-            'min_price'        => 'nullable|numeric|min:0',
-            'max_price'        => 'nullable|numeric|min:0',
-            'images.*'         => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
+            'stock'            => 'required|integer|min:0',
+            'min_price'        => 'required|integer|min:0',
+            'max_price'        => 'required|integer|gte:min_price',
+            'images.*'         => 'nullable|image|mimes:jpeg,png,jpg,webp|max:10240',
             'existing_images'  => 'nullable|array',
             'existing_images.*'=> 'string',
         ]);
@@ -134,16 +187,39 @@ class GiftController extends Controller
             return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
         }
 
+        $currentImages = array_values($gift->images ?? []);
+        $requestedExistingImages = $request->input('existing_images');
+        if (! is_array($requestedExistingImages)) {
+            $legacyImages = json_decode((string) $request->input('old_images', '[]'), true);
+            $requestedExistingImages = is_array($legacyImages) ? $legacyImages : [];
+        }
+        $existingImages = array_values(array_intersect(
+            $currentImages,
+            is_array($requestedExistingImages) ? $requestedExistingImages : []
+        ));
+        $newImageCount = count($request->file('images', []));
+        $totalImageCount = count($existingImages) + $newImageCount;
+
+        if ($totalImageCount < 1 || $totalImageCount > 8) {
+            return response()->json([
+                'success' => false,
+                'errors' => [
+                    'images' => [
+                        $totalImageCount < 1
+                            ? 'Sovg‘a uchun kamida bitta rasm kerak.'
+                            : 'Ko‘pi bilan 8 ta rasm yuklash mumkin.',
+                    ],
+                ],
+            ], 422);
+        }
+
         // Oddiy maydonlar
         $gift->fill($request->only(['name', 'stock']));
         $gift->artikul = $gift->artikul ?: ProductArtikul::generate('gift', (int) $gift->id);
-        if ($request->has('min_price')) $gift->priceFrom = $request->min_price;
-        if ($request->has('max_price')) $gift->priceTo = $request->max_price;
+        $gift->priceFrom = (int) $request->min_price;
+        $gift->priceTo = (int) $request->max_price;
 
         // Rasmlar
-        $currentImages = $gift->images ?? []; // array
-        $existingImages = $request->input('existing_images', []);
-
         // O'chirilganlarni serverdan o'chirish
         foreach ($currentImages as $path) {
             if (!in_array($path, $existingImages) && Storage::disk('public')->exists($path)) {
@@ -156,7 +232,7 @@ class GiftController extends Controller
         $newImages = $request->hasFile('images') ? $this->uploadImages($request->file('images')) : [];
 
         // Yakuniy array
-        $gift->images = array_merge($existingImages, $newImages);
+        $gift->images = array_values(array_merge($existingImages, $newImages));
 
         $gift->save();
 
@@ -194,18 +270,37 @@ class GiftController extends Controller
 
         $gift = Gifts::where('id', $id)
             ->where('seller_id', $storeSellerId)
+            ->whereNull('archived_at')
             ->first();
 
         if (!$gift) {
             return response()->json(['success' => false, 'message' => 'Gift not found'], 404);
         }
 
-        // Barcha rasmlarni o'chirish
-        $images = json_decode($gift->images, true) ?? [];
-        foreach ($images as $path) {
-            if (Storage::disk('public')->exists($path)) {
-                Storage::disk('public')->delete($path);
-                ProductImageVariantGenerator::deleteForPath($path);
+        $isUsedInOrders = DB::table('seller_order_items')
+            ->where('type', 'gift')
+            ->where('product_id', $gift->id)
+            ->exists();
+
+        if ($isUsedInOrders) {
+            $gift->update([
+                'status' => false,
+                'stock' => 0,
+                'archived_at' => now(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Buyurtmalar tarixini saqlash uchun sovg‘a o‘chirilmay, nofaol qilindi.',
+                'archived' => true,
+            ]);
+        }
+
+        foreach (($gift->images ?? []) as $path) {
+            $storagePath = $this->storagePath($path);
+            if ($storagePath && Storage::disk('public')->exists($storagePath)) {
+                Storage::disk('public')->delete($storagePath);
+                ProductImageVariantGenerator::deleteForPath($storagePath);
             }
         }
 
@@ -217,5 +312,15 @@ class GiftController extends Controller
             'success' => true,
             'message' => 'Gift muvaffaqiyatli o\'chirildi'
         ], 200);
+    }
+
+    private function storagePath(?string $path): ?string
+    {
+        if (! $path) {
+            return null;
+        }
+
+        $parsedPath = parse_url($path, PHP_URL_PATH) ?: $path;
+        return ltrim(preg_replace('#^/storage/#', '', $parsedPath), '/');
     }
 }

@@ -2,8 +2,12 @@
 
 namespace App\Services;
 
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use RuntimeException;
 
 class QrTokenService
 {
@@ -12,11 +16,105 @@ class QrTokenService
 
     public function makePickupToken(int $sellerId, int $orderId, int $courierId, ?int $ttlSeconds = null): string
     {
-        return $this->makeToken(self::PICKUP_PREFIX, [
-            'seller_id' => $sellerId,
-            'order_id' => $orderId,
-            'courier_id' => $courierId,
-        ], $ttlSeconds ?? 60 * 60 * 12);
+        if (!Schema::hasTable('courier_pickup_codes')) {
+            return $this->makeToken(self::PICKUP_PREFIX, [
+                'seller_id' => $sellerId,
+                'order_id' => $orderId,
+                'courier_id' => $courierId,
+            ], $ttlSeconds ?? 60 * 60 * 12);
+        }
+
+        return $this->makeNumericPickupCode($sellerId, $orderId, $courierId, $ttlSeconds);
+    }
+
+    public function makeNumericPickupCode(int $sellerId, int $orderId, int $courierId, ?int $ttlSeconds = null): string
+    {
+        $ttlSeconds ??= 60 * 60 * 12;
+        $expiresAt = now()->addSeconds($ttlSeconds);
+
+        $existing = DB::table('courier_pickup_codes')
+            ->where('seller_id', $sellerId)
+            ->where('order_id', $orderId)
+            ->where('courier_id', $courierId)
+            ->whereNull('used_at')
+            ->where(function ($query) {
+                $query->whereNull('expires_at')
+                    ->orWhere('expires_at', '>', now());
+            })
+            ->orderByDesc('id')
+            ->value('code');
+
+        if (is_string($existing) && $existing !== '') {
+            return $existing;
+        }
+
+        for ($attempt = 0; $attempt < 30; $attempt++) {
+            $code = (string) random_int(10000000, 99999999);
+
+            try {
+                DB::table('courier_pickup_codes')->insert([
+                    'code' => $code,
+                    'seller_id' => $sellerId,
+                    'order_id' => $orderId,
+                    'courier_id' => $courierId,
+                    'expires_at' => $expiresAt,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+                return $code;
+            } catch (QueryException $exception) {
+                if (!str_contains($exception->getMessage(), 'Duplicate')) {
+                    throw $exception;
+                }
+            }
+        }
+
+        throw new RuntimeException('Courier pickup code could not be generated.');
+    }
+
+    public function parsePickupCode(?string $code): ?array
+    {
+        $normalized = $this->normalizeNumericCode($code);
+        if (!$normalized || !Schema::hasTable('courier_pickup_codes')) {
+            return null;
+        }
+
+        $row = DB::table('courier_pickup_codes')
+            ->where('code', $normalized)
+            ->whereNull('used_at')
+            ->where(function ($query) {
+                $query->whereNull('expires_at')
+                    ->orWhere('expires_at', '>', now());
+            })
+            ->first();
+
+        if (!$row) {
+            return null;
+        }
+
+        return [
+            'seller_id' => (int) $row->seller_id,
+            'order_id' => (int) $row->order_id,
+            'courier_id' => (int) $row->courier_id,
+            'code' => $normalized,
+        ];
+    }
+
+    public function markPickupCodeUsed(?string $code): void
+    {
+        $normalized = $this->normalizeNumericCode($code);
+        if (!$normalized) {
+            return;
+        }
+
+        DB::table('courier_pickup_codes')
+            ->where('code', $normalized)
+            ->whereNull('used_at')
+            ->update([
+                'used_at' => now(),
+                'updated_at' => now(),
+            ]);
     }
 
     public function makeDeliveryToken(int $soldId, int $userId, ?int $courierId, ?int $ttlSeconds = null): string
@@ -167,5 +265,19 @@ class QrTokenService
         }
 
         return null;
+    }
+
+    private function normalizeNumericCode(?string $code): ?string
+    {
+        if (!is_string($code) || trim($code) === '') {
+            return null;
+        }
+
+        $normalized = preg_replace('/\D+/', '', $code);
+        if (!is_string($normalized) || !preg_match('/^\d{6,12}$/', $normalized)) {
+            return null;
+        }
+
+        return $normalized;
     }
 }

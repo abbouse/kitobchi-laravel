@@ -29,6 +29,7 @@ class SellerAiController extends Controller
         $data = $request->validate([
             'message' => ['required', 'string', 'min:1', 'max:5000'],
             'document_text' => ['nullable', 'string', 'max:60000'],
+            'app_locale' => ['nullable', 'string', 'max:12'],
         ]);
 
         $seller = Auth::guard('seller')->user();
@@ -47,12 +48,20 @@ class SellerAiController extends Controller
             'activity_types' => $storeSeller?->activity_types ?? [],
         ];
 
+        $appLocale = strtolower((string) ($data['app_locale'] ?? ''));
+        $preferredLanguage = str_starts_with($appLocale, 'ru')
+            ? 'Russian'
+            : (str_starts_with($appLocale, 'uz') ? 'Uzbek' : 'the seller message language');
+
         $system = implode("\n", [
             "Sen Kitobchi marketplace seller yordamchisisan.",
             "Faqat Kitobchi platformasi, seller do'koni, buyurtma, mahsulot, stock, balans, kuryer, support va hujjat tahlili haqida javob ber.",
             "Boshqa mavzu so'ralsa, muloyimlik bilan Kitobchi doirasida yordam bera olishingni ayt.",
             "Hozir write amal bajarish huquqing yo'q: stock, narx, mahsulot yoki buyurtmani o'zgartirishni so'ralsa, faqat reja va tasdiqlash uchun preview kerakligini tushuntir.",
-            "Javoblar sodda o'zbek tilida, aniq va qisqa bo'lsin.",
+            "Javob tili: seller xabari qaysi tilda yozilgan bo'lsa, o'sha tilda javob ber. Agar xabar tili aniq bo'lmasa, {$preferredLanguage} tilida javob ber.",
+            "Agar seller o'zbekcha yozsa o'zbekcha, ruscha yozsa ruscha, inglizcha yozsa inglizcha javob ber. Aralash tilda yozsa seller ko'proq ishlatgan tilni tanla.",
+            "Mahsulot nomlari, artikul, ID, telefon va raqamlarni tarjima qilma.",
+            "Javoblar sodda, aniq va qisqa bo'lsin.",
             "Seller konteksti: " . json_encode($context, JSON_UNESCAPED_UNICODE),
         ]);
 

@@ -7,11 +7,9 @@ use App\Models\Seller;
 use App\Services\PasswordResetService;
 use App\Services\SmsService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use RuntimeException;
 
 class SellerAuthController extends Controller
@@ -19,8 +17,7 @@ class SellerAuthController extends Controller
     public function __construct(
         private readonly SmsService $smsService,
         private readonly PasswordResetService $passwordResetService
-    ) {
-    }
+    ) {}
 
     private function normalizeActivityType(?string $type): ?string
     {
@@ -48,7 +45,7 @@ class SellerAuthController extends Controller
         $activity_types = $request->input('activity_types');
         $cleaned_phone = preg_replace('/[\s\(\)-]/', '', $phone_number);
         $sellerCheck = Seller::where('phone_number', $cleaned_phone)->first();
-        
+
         $error = '';
         if (empty($phone_number)) {
             $error = 'Telefon raqami bo‘sh bo‘lmasligi kerak';
@@ -66,7 +63,7 @@ class SellerAuthController extends Controller
         }
         if (empty($activity_types)) {
             $error = 'Faoliyat turlari bo‘sh bo‘lmasligi kerak';
-        } elseif (!is_array($activity_types)) {
+        } elseif (! is_array($activity_types)) {
             $error = 'Faoliyat turlarida xatolik';
         } else {
             $normalizedActivityTypes = [];
@@ -85,7 +82,7 @@ class SellerAuthController extends Controller
         }
         if ($error) {
             return response()->json([
-                'message' => $error
+                'message' => $error,
             ], 422);
         }
 
@@ -103,7 +100,7 @@ class SellerAuthController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'seller' => "Biz siz bilan aloqaga chiqamiz",
+            'seller' => 'Biz siz bilan aloqaga chiqamiz',
         ], 201);
     }
 
@@ -112,9 +109,10 @@ class SellerAuthController extends Controller
      */
     private function getStoreSellerData($seller)
     {
-        if (!$seller->parent_id) {
+        if (! $seller->parent_id) {
             return $seller;
         }
+
         return Seller::where('id', $seller->parent_id)->first();
     }
 
@@ -136,14 +134,24 @@ class SellerAuthController extends Controller
             return response()->json(['message' => 'Profilingiz admin tomonidan bloklangan. Qo‘llab-quvvatlash bilan bog‘laning.'], 200);
         }
 
-        if (!$seller || $seller->status != 'approved' || !Hash::check($request->password, $seller->password)) {
+        if ($seller && $seller->parent_id && $seller->staff_status !== 'active') {
+            return response()->json(['message' => 'Xodim akkaunti vaqtincha faolsizlantirilgan'], 200);
+        }
+
+        if (! $seller || $seller->status != 'approved' || ! Hash::check($request->password, $seller->password)) {
             return response()->json(['message' => 'Login yoki parol xato yoki profilingiz faol emas'], 200);
+        }
+
+        if ($seller->parent_id && ! $seller->assignedLocation()->exists()) {
+            return response()->json([
+                'message' => 'Xodimga filial biriktirilmagan. Do‘kon egasiga murojaat qiling.',
+            ], 200);
         }
 
         // Token yaratish
         $tokenResult = $seller->createToken('seller-token');
         $plainTextToken = $tokenResult->plainTextToken;
-        
+
         // Sanctum tokenni bazada shunday saqlaydi (solishtirish uchun kerak)
         $hashedToken = hash('sha256', explode('|', $plainTextToken)[1]);
 
@@ -151,14 +159,14 @@ class SellerAuthController extends Controller
         DB::table('connected_devices')->updateOrInsert(
             ['device_id' => $request->device_id],
             [
-                'user_id'     => $seller->id,
-                'user_type'   => 'seller',
-                'token'       => $hashedToken,
-                'fcm_token'   => $request->fcm_token, // Endi xato bermaydi
+                'user_id' => $seller->id,
+                'user_type' => 'seller',
+                'token' => $hashedToken,
+                'fcm_token' => $request->fcm_token, // Endi xato bermaydi
                 'device_name' => $request->device_name ?? 'Unknown Device',
-                'platform'    => $request->platform ?? 'Unknown Platform',
-                'updated_at'  => now(),
-                'created_at'  => now(),
+                'platform' => $request->platform ?? 'Unknown Platform',
+                'updated_at' => now(),
+                'created_at' => now(),
             ]
         );
 
@@ -183,10 +191,16 @@ class SellerAuthController extends Controller
                 'activity_types' => $storeSeller->activity_types,
                 'photo' => $storeSeller->photo,
                 'status' => $storeSeller->status,
+                'isVerified' => (bool) $storeSeller->isVerified,
                 'firstname' => $seller->firstname,
                 'lastname' => $seller->lastname,
                 'role' => $seller->role,
                 'parent_id' => $seller->parent_id,
+                'seller_location_id' => $seller->seller_location_id,
+                'assigned_location' => $seller->assignedLocation,
+                'is_owner' => ! (bool) $seller->parent_id,
+                'can_withdraw_balance' => ! (bool) $seller->parent_id
+                    || ((int) $seller->role === 4 && (bool) $seller->can_withdraw_balance),
                 'balance' => $storeSeller->balance,
                 'created_at' => $storeSeller->created_at,
             ],
@@ -202,8 +216,8 @@ class SellerAuthController extends Controller
 
         $cleaned_phone = preg_replace('/[\s\(\)-]/', '', $request->phone_number);
         $seller = Seller::where('phone_number', $cleaned_phone)->first();
-        
-        if (!$seller) {
+
+        if (! $seller) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Telefon raqami topilmadi.',
@@ -216,7 +230,7 @@ class SellerAuthController extends Controller
                 'message' => 'Profil admin tomonidan bloklangan. Parolni tiklash mumkin emas.',
             ], 403);
         }
-        
+
         if ($seller->status !== 'approved') {
             return response()->json([
                 'status' => 'error',

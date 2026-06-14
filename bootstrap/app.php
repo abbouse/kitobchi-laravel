@@ -160,4 +160,10 @@ return Application::configure(basePath: dirname(__DIR__))
             ->withoutOverlapping(2)
             ->runInBackground();
 
+        $schedule->command('seller-orders:finalize-pending-item-cancellations')
+            ->everyMinute()
+            ->timezone($tz)
+            ->withoutOverlapping(2)
+            ->runInBackground();
+
     })->create();

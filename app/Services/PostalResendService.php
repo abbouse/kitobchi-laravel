@@ -19,6 +19,8 @@ use Illuminate\Support\Str;
 
 class PostalResendService
 {
+    private const PLATFORM_SELLER_ID = 1;
+
     public function markReturnedToSender(Sold $order, int $fee, ?string $note = null): void
     {
         if ((string) $order->deliveryType !== 'postal') {
@@ -104,7 +106,13 @@ class PostalResendService
                 'postal_return_note' => $lockedSource->postal_return_note,
             ]);
 
-            $groupedItems = collect($lockedSource->items ?? [])
+            // Kitobchi platformasining sovg'asi Sold snapshotida qoladi,
+            // lekin seller yoki kuryer yig'ish ro'yxatiga kirmaydi.
+            $operationalItems = collect($lockedSource->items ?? [])
+                ->reject(fn ($item) => (string) ($item['type'] ?? '') === 'gift'
+                    && (int) ($item['seller_id'] ?? 0) === self::PLATFORM_SELLER_ID);
+
+            $groupedItems = $operationalItems
                 ->groupBy(fn ($item) => (int) ($item['seller_id'] ?? 0));
 
             foreach ($groupedItems as $sellerId => $items) {

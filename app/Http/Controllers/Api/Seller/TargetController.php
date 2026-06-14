@@ -238,6 +238,13 @@ class TargetController extends Controller
         $storeSellerId = $this->getStoreSellerId($seller);
         $type          = $request->query('type', 'book');
 
+        if (!in_array($type, ['book', 'stationery'], true)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Mahsulot turi noto‘g‘ri.',
+            ], 422);
+        }
+
         // ── Mahsulotni topish ──────────────────────────────────────
         if ($type === 'stationery') {
             $product = Stationery::where('id', $id)
@@ -275,19 +282,23 @@ class TargetController extends Controller
         // ── Cart da nechta ─────────────────────────────────────────
         $inCarts = MyCart::where('product_id', $id)
             ->where('product_type', $type)
-            ->count();
+            ->distinct()
+            ->count('user_id');
 
         // ── Sevimlilar da nechta ───────────────────────────────────
         $inFavourites = FavouriteProducts::where('product_id', $id)
             ->where('product_type', $type)
-            ->count();
+            ->distinct()
+            ->count('user_id');
 
         // ── Ko'rishlar ─────────────────────────────────────────────
-        // Books va Stationery modelida 'views' ustuni bo'lishi kerak
-        $views = (int) ($product->views ?? 0);
-        $recommendedViews = (int) ProductViewLog::query()
+        $viewLogs = ProductViewLog::query()
+            ->where('seller_id', $storeSellerId)
             ->where('product_id', $product->id)
-            ->where('product_type', $type)
+            ->where('product_type', $type);
+
+        $views = (int) (clone $viewLogs)->count();
+        $recommendedViews = (int) (clone $viewLogs)
             ->where('recommendation_active', true)
             ->count();
 

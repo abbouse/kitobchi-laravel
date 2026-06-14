@@ -20,6 +20,7 @@ class Gifts extends Model
         'priceTo',
         'is_approved',
         'status',
+        'archived_at',
         'totalSales',
         'totalClients',
         'totalRevenue',
@@ -30,6 +31,7 @@ class Gifts extends Model
     protected $casts = [
         'images' => 'array',
         'status' => 'boolean',
+        'archived_at' => 'datetime',
     ];
     
     public function seller()

@@ -31,14 +31,7 @@ class SellerOrderCancellationService
 
     public function cancelItem(Seller $seller, SellerOrderItem $item, string $reasonCode, ?string $customNote = null): array
     {
-        return $this->cancelItemFlow(
-            item: $item,
-            reasonCode: $reasonCode,
-            customNote: $customNote,
-            seller: $seller,
-            admin: null,
-            enforceOwnership: true,
-        );
+        return $this->requestItemCancellation($seller, $item, $reasonCode, $customNote);
     }
 
     public function cancelItemByAdmin(Admin $admin, SellerOrderItem $item, string $reasonCode, ?string $customNote = null): array
@@ -152,6 +145,8 @@ class SellerOrderCancellationService
                 'custom_cancel_note' => $reason['custom_note'],
                 'refund_status' => 'completed',
                 'refunded_at' => now(),
+                'cancel_requested_at' => null,
+                'cancel_restore_until' => null,
             ])->save();
 
             $sellerOrder->amount = max(0, (int) $sellerOrder->amount - (int) $snapshot->gross_amount);
@@ -184,6 +179,7 @@ class SellerOrderCancellationService
                 $row['refund_cashback_amount'] = (int) $snapshot->cashback_allocated;
                 $row['refund_gift_cert_amount'] = (int) $snapshot->gift_cert_allocated;
                 $row['refund_id'] = $refund->id;
+                unset($row['cancel_requested_at'], $row['cancel_restore_until']);
 
                 return $row;
             });
@@ -216,6 +212,168 @@ class SellerOrderCancellationService
             'refund_id' => $refund->id,
             'message' => 'Mahsulot bekor qilindi va refund bajarildi.',
         ];
+    }
+
+    public function requestItemCancellation(Seller $seller, SellerOrderItem $item, string $reasonCode, ?string $customNote = null): array
+    {
+        $sellerOrder = SellerOrder::query()->findOrFail($item->order_id);
+        $order = Sold::query()->findOrFail($sellerOrder->order_id);
+
+        $this->assertSellerOwnsOrder($seller, $sellerOrder);
+        $this->assertOrderCancelable($sellerOrder, $order);
+
+        if ($item->cancelled_at) {
+            throw new RuntimeException('Bu mahsulot allaqachon bekor qilingan.');
+        }
+
+        if ($item->refund_status === 'cancel_pending') {
+            throw new RuntimeException('Bu mahsulot allaqachon kutish holatida.');
+        }
+
+        $activeItemCount = $this->activeOrderItemsQuery($order)->count();
+        if ($activeItemCount <= 1) {
+            throw new RuntimeException('Oxirgi mahsulotni item bo‘yicha bekor qilib bo‘lmaydi. Butun buyurtmani bekor qiling.');
+        }
+
+        $reason = SellerCancellationReasonCatalog::itemReasonPayload($reasonCode, $customNote);
+        $restoreUntil = now()->addMinutes(30);
+
+        DB::transaction(function () use ($seller, $item, $order, $reason, $restoreUntil) {
+            $item->forceFill([
+                'cancel_requested_at' => now(),
+                'cancel_restore_until' => $restoreUntil,
+                'cancelled_by_seller_id' => $seller->id,
+                'cancel_reason_code' => $reason['code'],
+                'cancel_note_uz' => $reason['notes']['uz'],
+                'cancel_note_ru' => $reason['notes']['ru'],
+                'cancel_note_en' => $reason['notes']['en'],
+                'cancel_note_ja' => $reason['notes']['ja'],
+                'custom_cancel_note' => $reason['custom_note'],
+                'refund_status' => 'cancel_pending',
+                'refunded_at' => null,
+            ])->save();
+
+            $this->mutateOrderItemsJson($order, function (array $row) use ($item, $reason, $restoreUntil) {
+                if (! $this->jsonRowMatchesItem($row, $item)) {
+                    return $row;
+                }
+
+                $row['is_cancelled'] = false;
+                $row['cancel_requested_at'] = now()->toIso8601String();
+                $row['cancel_restore_until'] = $restoreUntil->toIso8601String();
+                $row['cancel_reason_code'] = $reason['code'];
+                $row['cancel_note_uz'] = $reason['notes']['uz'];
+                $row['cancel_note_ru'] = $reason['notes']['ru'];
+                $row['cancel_note_en'] = $reason['notes']['en'];
+                $row['cancel_note_ja'] = $reason['notes']['ja'];
+                $row['refund_status'] = 'cancel_pending';
+
+                return $row;
+            });
+
+            if (in_array($reason['code'], SellerCancellationReasonCatalog::itemStockZeroReasons(), true)) {
+                $this->zeroStockForItem($item);
+            }
+        });
+
+        return [
+            'ok' => true,
+            'status' => 'cancel_pending',
+            'restore_until' => $restoreUntil->toISOString(),
+            'message' => 'Mahsulot vaqtincha bekor qilindi. 30 daqiqa ichida sotuvda mavjud deb qaytarishingiz mumkin.',
+        ];
+    }
+
+    public function restorePendingItemCancellation(Seller $seller, SellerOrderItem $item): array
+    {
+        $sellerOrder = SellerOrder::query()->findOrFail($item->order_id);
+        $order = Sold::query()->findOrFail($sellerOrder->order_id);
+
+        $this->assertSellerOwnsOrder($seller, $sellerOrder);
+
+        if ($item->refund_status !== 'cancel_pending') {
+            throw new RuntimeException('Bu mahsulot kutish holatida emas.');
+        }
+
+        if (! $item->cancel_restore_until || $item->cancel_restore_until->isPast()) {
+            throw new RuntimeException('30 daqiqalik qaytarish muddati tugagan.');
+        }
+
+        DB::transaction(function () use ($item, $order) {
+            $this->restoreProductAvailabilityForItem($item);
+
+            $item->forceFill([
+                'cancel_requested_at' => null,
+                'cancel_restore_until' => null,
+                'cancelled_by_seller_id' => null,
+                'cancel_reason_code' => null,
+                'cancel_note_uz' => null,
+                'cancel_note_ru' => null,
+                'cancel_note_en' => null,
+                'cancel_note_ja' => null,
+                'custom_cancel_note' => null,
+                'refund_status' => null,
+                'refunded_at' => null,
+            ])->save();
+
+            $this->mutateOrderItemsJson($order, function (array $row) use ($item) {
+                if (! $this->jsonRowMatchesItem($row, $item)) {
+                    return $row;
+                }
+
+                foreach ([
+                    'cancel_requested_at',
+                    'cancel_restore_until',
+                    'cancel_reason_code',
+                    'cancel_note_uz',
+                    'cancel_note_ru',
+                    'cancel_note_en',
+                    'cancel_note_ja',
+                    'refund_status',
+                ] as $key) {
+                    unset($row[$key]);
+                }
+                $row['is_cancelled'] = false;
+
+                return $row;
+            });
+        });
+
+        return [
+            'ok' => true,
+            'status' => 'active',
+            'message' => 'Mahsulot sotuvda mavjud deb qaytarildi.',
+        ];
+    }
+
+    public function finalizePendingItemCancellations(int $limit = 100): int
+    {
+        $items = SellerOrderItem::query()
+            ->where('refund_status', 'cancel_pending')
+            ->whereNotNull('cancel_restore_until')
+            ->where('cancel_restore_until', '<=', now())
+            ->orderBy('cancel_restore_until')
+            ->limit($limit)
+            ->get();
+
+        $processed = 0;
+        foreach ($items as $item) {
+            try {
+                $this->cancelItemFlow(
+                    item: $item,
+                    reasonCode: (string) $item->cancel_reason_code,
+                    customNote: $item->custom_cancel_note,
+                    seller: $item->cancelled_by_seller_id ? Seller::query()->find($item->cancelled_by_seller_id) : null,
+                    admin: null,
+                    enforceOwnership: false,
+                );
+                $processed++;
+            } catch (\Throwable) {
+                continue;
+            }
+        }
+
+        return $processed;
     }
 
     public function cancelSellerOrder(Seller $seller, SellerOrder $sellerOrder, string $reasonCode, ?string $customNote = null): array
@@ -643,6 +801,23 @@ class SellerOrderCancellationService
         $order->save();
     }
 
+    private function jsonRowMatchesItem(array $row, SellerOrderItem $item): bool
+    {
+        if ((int) ($row['seller_order_item_id'] ?? $row['id'] ?? 0) === (int) $item->id) {
+            return true;
+        }
+
+        if ((int) ($row['item_id'] ?? 0) !== (int) $item->product_id) {
+            return false;
+        }
+
+        if ((string) ($row['type'] ?? '') !== (string) $item->type) {
+            return false;
+        }
+
+        return (int) ($row['variant_id'] ?? 0) === (int) ($item->variant_id ?? 0);
+    }
+
     private function zeroStockForItem(SellerOrderItem $item): void
     {
         if ($item->type === 'book') {
@@ -666,6 +841,43 @@ class SellerOrderCancellationService
                 'stock' => 0,
                 'updated_at' => now(),
             ]);
+        }
+    }
+
+    private function restoreProductAvailabilityForItem(SellerOrderItem $item): void
+    {
+        $quantity = max(1, (int) $item->quantity);
+
+        if ($item->type === 'book') {
+            DB::table('books')
+                ->where('id', $item->product_id)
+                ->where('count', '<', $quantity)
+                ->update([
+                    'count' => $quantity,
+                    'updated_at' => now(),
+                ]);
+            return;
+        }
+
+        if ($item->type === 'stationery') {
+            if ($item->variant_id) {
+                DB::table('stationery_variants')
+                    ->where('id', $item->variant_id)
+                    ->where('stock', '<', $quantity)
+                    ->update([
+                        'stock' => $quantity,
+                        'updated_at' => now(),
+                    ]);
+                return;
+            }
+
+            DB::table('stationeries')
+                ->where('id', $item->product_id)
+                ->where('stock', '<', $quantity)
+                ->update([
+                    'stock' => $quantity,
+                    'updated_at' => now(),
+                ]);
         }
     }
 

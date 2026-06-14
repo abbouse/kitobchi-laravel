@@ -25,6 +25,7 @@ Route::post('forgot', [SellerAuthController::class, 'forgot'])->middleware('thro
 
 // Avtorizatsiyadan o'tgan sotuvchilar
 Route::middleware('auth:seller')->group(function () {
+    Route::get('session/config', [SellerController::class, 'sessionConfig']);
     Route::post('update/fcm', [SellerController::class, 'updateFcm']);
     Route::post('update/profile', [SellerController::class, 'updateProfile']);
     Route::get('update/password', [SellerController::class, 'updatePassword']);
@@ -70,6 +71,7 @@ Route::middleware('auth:seller')->group(function () {
     Route::get('gifts/list', [GiftController::class, 'list']);
     Route::post('gifts/create', [GiftController::class, 'create']);
     Route::post('gifts/update/{gift_id}', [GiftController::class, 'update']);
+    Route::post('gifts/delete/{gift_id}', [GiftController::class, 'delete']);
     Route::get('orders/last-orders', [OrderController::class, 'lastOrders']);
     Route::post('orders/view-order', [OrderController::class, 'viewOrder']);
     Route::get('orders/orders-count', [OrderController::class, 'ordersCount']);
@@ -79,6 +81,7 @@ Route::middleware('auth:seller')->group(function () {
     Route::post('orders/toCourier/{qr}', [OrderController::class, 'toCourier']);
     Route::post('orders/{id}/cancel', [OrderController::class, 'cancelSellerOrder']);
     Route::post('orders/items/{itemId}/cancel', [OrderController::class, 'cancelItem']);
+    Route::post('orders/items/{itemId}/restore-cancel', [OrderController::class, 'restoreCancelledItem']);
     Route::get('premium/info', [PremiumController::class, 'info']);
     Route::post('premium/buy', [PremiumController::class, 'buy']);
     Route::post('premium/cancel', [PremiumController::class, 'cancel']);

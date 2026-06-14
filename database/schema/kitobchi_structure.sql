@@ -609,6 +609,7 @@ CREATE TABLE IF NOT EXISTS `gifts` (
   `is_approved` int DEFAULT '0',
   `stock` int DEFAULT NULL,
   `status` tinyint(1) DEFAULT '1',
+  `archived_at` timestamp NULL DEFAULT NULL,
   `priceFrom` int NOT NULL DEFAULT '0',
   `priceTo` int NOT NULL DEFAULT '50000',
   `totalSales` bigint DEFAULT '0',
@@ -619,7 +620,8 @@ CREATE TABLE IF NOT EXISTS `gifts` (
   `totalClientsWeek` bigint DEFAULT '0',
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `gifts_archived_at_index` (`archived_at`)
 ) ENGINE=InnoDB  DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 

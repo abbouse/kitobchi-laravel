@@ -166,7 +166,7 @@ class SoldObserver
             // ── 3. Gift stock ─────────────────────────────────────────────────
             if ($order->gift) {
                 $gift = Gifts::find($order->gift);
-                if ($gift && $gift->seller_id == 1) {
+                if ($gift) {
                     $gift->increment('stock', 1);
                 }
             }
@@ -202,7 +202,7 @@ class SoldObserver
             // ── 5. Gift statistika ────────────────────────────────────────────
             if ($order->gift) {
                 $gift = Gifts::find($order->gift);
-                if ($gift && $gift->seller_id == 1) {
+                if ($gift) {
                     $gift->decrement('totalSales',     1);
                     $gift->decrement('totalSalesWeek', 1);
                     $gift->totalSales     = max(0, $gift->totalSales);

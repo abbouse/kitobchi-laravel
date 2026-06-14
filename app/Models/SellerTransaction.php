@@ -30,17 +30,19 @@ class SellerTransaction extends Model
     protected $casts = [
         'order_id' => 'integer',
         'seller_order_id' => 'integer',
-        'amount'          => 'integer',
+        'amount' => 'integer',
         'commissionPercent' => 'integer',
         'commissionPrice' => 'integer',
-        'netAmount'       => 'integer',
-        'created_at'      => 'datetime',
-        'updated_at'      => 'datetime',
+        'netAmount' => 'integer',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     // ── Status constants ───────────────────────────────────────
-    const STATUS_PENDING  = 'pending';
+    const STATUS_PENDING = 'pending';
+
     const STATUS_APPROVED = 'approved';
+
     const STATUS_REJECTED = 'rejected';
 
     // ── Relationships ──────────────────────────────────────────
@@ -49,24 +51,29 @@ class SellerTransaction extends Model
         return $this->belongsTo(Seller::class, 'seller_id');
     }
 
+    public function sellerOrder()
+    {
+        return $this->belongsTo(SellerOrder::class, 'seller_order_id');
+    }
+
     // ── Helpers ────────────────────────────────────────────────
     public function getStatusLabelAttribute(): string
     {
-        return match($this->status) {
-            self::STATUS_PENDING  => 'Kutilmoqda',
+        return match ($this->status) {
+            self::STATUS_PENDING => 'Kutilmoqda',
             self::STATUS_APPROVED => 'Tasdiqlangan',
             self::STATUS_REJECTED => 'Rad etildi',
-            default               => $this->status,
+            default => $this->status,
         };
     }
 
     public function getStatusColorAttribute(): string
     {
-        return match($this->status) {
-            self::STATUS_PENDING  => 'warning',
+        return match ($this->status) {
+            self::STATUS_PENDING => 'warning',
             self::STATUS_APPROVED => 'success',
             self::STATUS_REJECTED => 'danger',
-            default               => 'muted',
+            default => 'muted',
         };
     }
 }

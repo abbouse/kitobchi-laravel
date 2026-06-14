@@ -2,29 +2,28 @@
 
 namespace App\Http\Controllers\Api\Seller;
 
+use App\Enums\FulfillmentMode;
 use App\Enums\OrderStatusCode;
 use App\Enums\PaymentStatusCode;
 use App\Enums\SellerOrderStatusCode;
-use App\Enums\FulfillmentMode;
 use App\Http\Controllers\Controller;
-use App\Models\Seller;
-use App\Models\Sold;
-use App\Models\SellerOrder;
-use App\Models\Books;
-use App\Models\Couriers;
 use App\Models\CourierOrder;
+use App\Models\Couriers;
 use App\Models\OrderFulfillment;
+use App\Models\Seller;
+use App\Models\SellerLocation;
+use App\Models\SellerOrder;
+use App\Models\Sold;
 use App\Services\AdminOrderStatusSyncService;
 use App\Services\CourierBonusService;
-use App\Services\OrderStatusPushService;
-use App\Services\OrderRealtimeService;
-use App\Services\QrTokenService;
 use App\Services\CourierTaskOrchestratorService;
+use App\Services\OrderRealtimeService;
+use App\Services\OrderStatusPushService;
+use App\Services\QrTokenService;
 use App\Services\SellerCancellationReasonCatalog;
 use App\Services\SellerOrderCancellationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
@@ -38,8 +37,7 @@ class OrderController extends Controller
         private readonly OrderStatusPushService $orderStatusPushService,
         private readonly CourierTaskOrchestratorService $courierTaskOrchestratorService,
         private readonly SellerOrderCancellationService $sellerOrderCancellationService,
-    )
-    {
+    ) {
         $this->middleware('auth:seller');
     }
 
@@ -58,7 +56,7 @@ class OrderController extends Controller
     {
         // parent_id = NULL → OWNER → FULL ACCESS
         // parent_id mavjud + role=1 yoki 2 → ACCESS
-        return !$seller->parent_id || in_array($seller->role, [1, 2]);
+        return ! $seller->parent_id || in_array($seller->role, [1, 2]);
     }
 
     private function applySellerStatusFilter($query, SellerOrderStatusCode ...$statuses)
@@ -106,6 +104,64 @@ class OrderController extends Controller
             });
     }
 
+    private function assignedLocation($seller): ?SellerLocation
+    {
+        if (! $seller?->parent_id || ! $seller->seller_location_id) {
+            return null;
+        }
+
+        return SellerLocation::query()
+            ->whereKey($seller->seller_location_id)
+            ->where('seller_id', $this->getStoreSellerId($seller))
+            ->where('is_deleted', false)
+            ->first();
+    }
+
+    private function applyStaffBranchScope($query, $seller, string $table = 'seller_orders')
+    {
+        if (! $seller->parent_id) {
+            return $query;
+        }
+
+        $location = $this->assignedLocation($seller);
+        if (! $location) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        $jsonLocation = "CAST(JSON_UNQUOTE(JSON_EXTRACT({$table}.address, '$[0].location_id')) AS UNSIGNED)";
+
+        if ($location->is_main) {
+            return $query->where(function ($inner) use ($table, $jsonLocation, $location) {
+                $inner->whereRaw("{$jsonLocation} = ?", [$location->id])
+                    ->orWhere(function ($legacy) use ($table, $jsonLocation) {
+                        $legacy->whereRaw("{$jsonLocation} IS NULL")
+                            ->where(function ($delivery) use ($table) {
+                                $delivery->whereRaw("LOWER(COALESCE({$table}.delivery_type, '')) != ?", ['pickup'])
+                                    ->orWhereNull("{$table}.delivery_type");
+                            });
+                    });
+            });
+        }
+
+        return $query->whereRaw("{$jsonLocation} = ?", [$location->id]);
+    }
+
+    private function staffCanAccessOrder($seller, SellerOrder $order): bool
+    {
+        if ((int) $order->seller_id !== (int) $this->getStoreSellerId($seller)) {
+            return false;
+        }
+
+        if (! $seller->parent_id) {
+            return true;
+        }
+
+        return $this->applyStaffBranchScope(
+            SellerOrder::query()->whereKey($order->id),
+            $seller
+        )->exists();
+    }
+
     private function formatOrderAddress($address): array
     {
         if (is_array($address)) {
@@ -114,6 +170,7 @@ class OrderController extends Controller
 
         if (is_string($address)) {
             $decoded = json_decode($address, true);
+
             return is_array($decoded) ? array_values($decoded) : [];
         }
 
@@ -153,13 +210,18 @@ class OrderController extends Controller
             ],
             'refund_status' => $item->refund_status,
             'refunded_at' => optional($item->refunded_at)?->toISOString(),
+            'cancel_requested_at' => optional($item->cancel_requested_at)?->toISOString(),
+            'cancel_restore_until' => optional($item->cancel_restore_until)?->toISOString(),
+            'can_restore_cancel' => $item->refund_status === 'cancel_pending'
+                && $item->cancel_restore_until
+                && $item->cancel_restore_until->isFuture(),
         ];
     }
 
     private function resolveMainOrderStatus($order): ?string
     {
         $mainOrder = $order->order;
-        if (!$mainOrder) {
+        if (! $mainOrder) {
             return null;
         }
 
@@ -196,14 +258,14 @@ class OrderController extends Controller
 
     private function buildFulfillmentHint(?OrderFulfillment $fulfillment): ?string
     {
-        if (!$fulfillment) {
+        if (! $fulfillment) {
             return null;
         }
 
         $hubName = $fulfillment->hub?->name ?: 'Hub';
 
         return match ($fulfillment->status_code) {
-            'awaiting_seller_prep' => "Buyurtma tayyorlanmoqda",
+            'awaiting_seller_prep' => 'Buyurtma tayyorlanmoqda',
             'ready_for_pickup' => "Kuryer {$hubName} uchun olib ketadi",
             'picked_from_seller' => "Buyurtma {$hubName}ga olib ketilmoqda",
             'arrived_at_hub' => "{$hubName} buyurtmani qabul qildi",
@@ -212,11 +274,11 @@ class OrderController extends Controller
             'labeled' => "{$hubName} etiketka yopishtirdi",
             'dispatched_to_post' => "{$hubName} pochtaga topshirdi",
             'assigned_last_mile' => "{$hubName} mijozga yuborishni boshladi",
-            'out_for_delivery' => "Buyurtma mijozga olib borilmoqda",
-            'delivered' => "Buyurtma yetkazish nuqtasiga yetib bordi",
-            'customer_received' => "Mijoz buyurtmani qabul qildi",
-            'returned' => "Buyurtma qaytdi",
-            'cancelled' => "Buyurtma bekor qilindi",
+            'out_for_delivery' => 'Buyurtma mijozga olib borilmoqda',
+            'delivered' => 'Buyurtma yetkazish nuqtasiga yetib bordi',
+            'customer_received' => 'Mijoz buyurtmani qabul qildi',
+            'returned' => 'Buyurtma qaytdi',
+            'cancelled' => 'Buyurtma bekor qilindi',
             default => null,
         };
     }
@@ -224,7 +286,7 @@ class OrderController extends Controller
     private function formatSellerOrder($order): array
     {
         $items = collect($order->items ?? [])
-            ->map(fn($item) => $this->formatSellerOrderItem($item))
+            ->map(fn ($item) => $this->formatSellerOrderItem($item))
             ->values()
             ->all();
         $address = $this->formatOrderAddress($order->address);
@@ -233,15 +295,14 @@ class OrderController extends Controller
         $isPickup = (string) $order->delivery_type === 'pickup';
 
         $branch = [
-            'id' => $isPickup
-                ? (isset($primaryAddress['location_id']) ? (int) $primaryAddress['location_id'] : null)
-                : ($mainLocation?->id ? (int) $mainLocation->id : null),
-            'address' => $isPickup
-                ? (($primaryAddress['branch_address'] ?? $primaryAddress['fullAddress'] ?? null))
-                : ($mainLocation?->fullAddress),
-            'is_main' => $isPickup
-                ? (bool) ($primaryAddress['branch_is_main'] ?? false)
-                : true,
+            'id' => isset($primaryAddress['location_id'])
+                ? (int) $primaryAddress['location_id']
+                : ($isPickup ? null : ($mainLocation?->id ? (int) $mainLocation->id : null)),
+            'address' => $primaryAddress['branch_address']
+                ?? ($isPickup ? ($primaryAddress['fullAddress'] ?? null) : $mainLocation?->fullAddress),
+            'is_main' => array_key_exists('branch_is_main', $primaryAddress)
+                ? (bool) $primaryAddress['branch_is_main']
+                : ! $isPickup,
         ];
 
         $fulfillment = $order->order?->fulfillment;
@@ -286,10 +347,10 @@ class OrderController extends Controller
     {
         $seller = Auth::guard('seller')->user();
 
-        if (!$this->hasOrderAccess($seller)) {
+        if (! $this->hasOrderAccess($seller)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Access denied'
+                'message' => 'Access denied',
             ], 403);
         }
 
@@ -303,10 +364,11 @@ class OrderController extends Controller
             ->with([
                 'seller.location',
                 'order.fulfillment.hub:id,name,code',
-                'items' => fn($q) => $q->where('seller_id', $storeSellerId)
+                'items' => fn ($q) => $q->where('seller_id', $storeSellerId)
                     ->with(['book', 'stationery', 'gift']),
             ])
-            ->withCount(['items' => fn($q) => $q->where('seller_id', $storeSellerId)]);
+            ->withCount(['items' => fn ($q) => $q->where('seller_id', $storeSellerId)]);
+        $this->applyStaffBranchScope($query, $seller);
 
         if ($scope === 'home') {
             $this->applySellerStatusFilter(
@@ -366,11 +428,10 @@ class OrderController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $orders->map(fn($order) => $this->formatSellerOrder($order))->values(),
+            'data' => $orders->map(fn ($order) => $this->formatSellerOrder($order))->values(),
         ]);
     }
 
-    
     /**
      * QR skanerlanganda — buyurtma ma'lumotlarini qaytaradi (status o'zgarmaydi)
      * GET /orders/scan-qr/{qr}
@@ -378,15 +439,15 @@ class OrderController extends Controller
     public function scanQR(Request $request, $qr)
     {
         $seller = Auth::guard('seller')->user();
-        if (!$seller) {
+        if (! $seller) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
-        if (!$this->hasOrderAccess($seller)) {
+        if (! $this->hasOrderAccess($seller)) {
             return response()->json(['success' => false, 'message' => 'Access denied.'], 403);
         }
 
         $parsedQr = $this->parsePickupQr($qr);
-        if (!$parsedQr) {
+        if (! $parsedQr) {
             return response()->json(['success' => false, 'message' => "Noto'g'ri QR format"], 400);
         }
         $sellerId = $parsedQr['seller_id'];
@@ -399,175 +460,205 @@ class OrderController extends Controller
         }
 
         $sellerOrder = SellerOrder::with([
-            'items' => fn($q) => $q->where('seller_id', $storeSellerId)
+            'items' => fn ($q) => $q->where('seller_id', $storeSellerId)
                 ->with(['book', 'stationery', 'gift', 'variant']),
         ])
             ->where('order_id', $orderId)
             ->where('seller_id', $storeSellerId)
             ->first();
 
-        if (!$sellerOrder) {
+        if (! $sellerOrder) {
             return response()->json(['success' => false, 'message' => 'Buyurtma topilmadi'], 404);
+        }
+        if (! $this->staffCanAccessOrder($seller, $sellerOrder)) {
+            return response()->json(['success' => false, 'message' => 'Bu buyurtma boshqa filialga tegishli'], 403);
         }
 
         $courier = Couriers::find($courierId);
-        if (!$courier) {
+        if (! $courier) {
             return response()->json(['success' => false, 'message' => 'Kuryer topilmadi'], 404);
         }
 
         return response()->json([
             'success' => true,
             'data' => [
-                'order'   => $this->formatSellerOrder($sellerOrder),
+                'order' => $this->formatSellerOrder($sellerOrder),
                 'courier' => [
-                    'id'   => $courier->id,
-                    'name' => $courier->first_name . ' ' . $courier->last_name,
+                    'id' => $courier->id,
+                    'name' => $courier->first_name.' '.$courier->last_name,
                 ],
                 'qr' => $parsedQr['normalized_qr'],
             ],
         ]);
     }
 
-public function toCourier(Request $request, $qr)
-{
-    $seller = Auth::guard('seller')->user();
-    if (!$seller) {
-        return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
-    }
-    if (!$this->hasOrderAccess($seller)) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Access denied. Orders available only for Owner, Admin, and Product Manager.'
-        ], 403);
-    }
-    $parsedQr = $this->parsePickupQr($qr);
-    if (!$parsedQr) {
-        return response()->json(['success' => false, 'message' => 'Invalid QR format'], 400);
-    }
-    $sellerId = $parsedQr['seller_id'];
-    $orderId = $parsedQr['order_id'];
-    $courierId = $parsedQr['courier_id'];
+    public function toCourier(Request $request, $qr)
+    {
+        $seller = Auth::guard('seller')->user();
+        if (! $seller) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+        if (! $this->hasOrderAccess($seller)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Access denied. Orders available only for Owner, Admin, and Product Manager.',
+            ], 403);
+        }
+        $parsedQr = $this->parsePickupQr($qr);
+        if (! $parsedQr) {
+            return response()->json(['success' => false, 'message' => 'Invalid QR format'], 400);
+        }
+        $sellerId = $parsedQr['seller_id'];
+        $orderId = $parsedQr['order_id'];
+        $courierId = $parsedQr['courier_id'];
 
         $storeSellerId = $this->getStoreSellerId($seller);
         $storeSeller = Seller::find($storeSellerId);
 
-    if (!$storeSeller || (string) $storeSellerId !== (string) $sellerId) {
-        return response()->json(['success' => false, 'message' => 'Shop name does not match'], 403);
-    }
-
-        try {
-        $response = DB::transaction(function () use ($storeSeller, $orderId, $courierId, $storeSellerId) {
-            $sellerOrderQuery = SellerOrder::where('order_id', $orderId)
-                ->where('seller_id', $storeSellerId)
-                ->lockForUpdate();
-            $this->applySellerStatusFilter(
-                $sellerOrderQuery,
-                SellerOrderStatusCode::NEW,
-                SellerOrderStatusCode::ACCEPTED,
-            );
-            $seller_order = $sellerOrderQuery->first();
-
-            if (!$seller_order) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Buyurtma topilmadi yoki allaqachon kuryerga berilgan'
-                ], 404);
-            }
-
-            $sold = Sold::where('id', $orderId)->lockForUpdate()->first();
-            if (!$sold) {
-                return response()->json(['success' => false, 'message' => 'Order not found in solds table'], 404);
-            }
-
-            $courier = Couriers::find($courierId);
-            if (!$courier) {
-                return response()->json(['success' => false, 'message' => 'Courier not found'], 404);
-            }
-
-            $seller_order->courier_id = $courier->id;
-            $seller_order->courierName = $courier->first_name . ' ' . $courier->last_name;
-            $seller_order->status = SellerOrderStatusCode::HANDED_TO_COURIER->legacy();
-            $seller_order->status_code = SellerOrderStatusCode::HANDED_TO_COURIER->value;
-            $seller_order->save();
-
-            $allSellersDone = SellerOrder::where('order_id', $orderId)
-                ->where(function ($query) {
-                    $query->where('status_code', '!=', SellerOrderStatusCode::HANDED_TO_COURIER->value)
-                        ->orWhere(function ($fallback) {
-                            $fallback->whereNull('status_code')
-                                ->where('status', '!=', SellerOrderStatusCode::HANDED_TO_COURIER->legacy());
-                        });
-                })
-                ->doesntExist();
-
-            $this->courierTaskOrchestratorService->markSellerHandover(
-                order: $sold,
-                sellerId: $storeSellerId,
-                courierId: $courier->id,
-            );
-
-            $sold->loadMissing('fulfillment');
-            $fulfillmentMode = $sold->fulfillment?->fulfillment_mode;
-
-            if ($allSellersDone) {
-                $previousStatus = (string) $sold->status;
-
-                if ($fulfillmentMode === FulfillmentMode::DIRECT_COURIER->value) {
-                    $sold->status = OrderStatusCode::IN_DELIVERY->legacy();
-                    $sold->status_code = OrderStatusCode::IN_DELIVERY->value;
-                } else {
-                    $sold->status = OrderStatusCode::PACKING->legacy();
-                    $sold->status_code = OrderStatusCode::PACKING->value;
-                }
-                $sold->updated_at = now();
-                $sold->save();
-
-                $courierOrder = CourierOrder::where('order_id', $orderId)
-                    ->where('courier_id', $courierId)
-                    ->lockForUpdate()
-                    ->first();
-
-                if ($courierOrder && $fulfillmentMode === FulfillmentMode::DIRECT_COURIER->value) {
-                    $this->courierBonusService->startSlaOnPickupReady($courierOrder);
-                }
-
-                DB::afterCommit(fn () => $this->orderStatusPushService->sendForTransition(
-                    $sold->fresh(),
-                    $previousStatus,
-                    $fulfillmentMode === FulfillmentMode::DIRECT_COURIER->value ? 'B' : 'P'
-                ));
-            }
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Products collected. ' . ($allSellersDone ? 'Order fully sent to courier.' : 'Waiting for other shops...')
-            ], 200);
-        });
-
-        $sellerOrder = SellerOrder::where('order_id', $orderId)
-            ->where('seller_id', $storeSellerId)
-            ->first();
-        if ($sellerOrder) {
-            $this->orderRealtimeService->broadcastSellerOrderUpdated($sellerOrder, 'seller_order.handed_to_courier');
+        if (! $storeSeller || (string) $storeSellerId !== (string) $sellerId) {
+            return response()->json(['success' => false, 'message' => 'Shop name does not match'], 403);
         }
 
-        return $response;
-    } catch (\Throwable $th) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Xatolik: ' . $th->getMessage()
-        ], 500);
-    }
+        try {
+            $response = DB::transaction(function () use ($orderId, $courierId, $storeSellerId, $seller) {
+                $sellerOrderQuery = SellerOrder::where('order_id', $orderId)
+                    ->where('seller_id', $storeSellerId)
+                    ->lockForUpdate();
+                $this->applyStaffBranchScope($sellerOrderQuery, $seller);
+                $this->applySellerStatusFilter(
+                    $sellerOrderQuery,
+                    SellerOrderStatusCode::NEW,
+                    SellerOrderStatusCode::ACCEPTED,
+                );
+                $seller_order = $sellerOrderQuery->first();
+
+                if (! $seller_order) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Buyurtma topilmadi yoki allaqachon kuryerga berilgan',
+                    ], 404);
+                }
+
+                $sold = Sold::where('id', $orderId)->lockForUpdate()->first();
+                if (! $sold) {
+                    return response()->json(['success' => false, 'message' => 'Order not found in solds table'], 404);
+                }
+
+                $hasPendingItemCancellation = \App\Models\SellerOrderItem::query()
+                    ->where('order_id', $seller_order->id)
+                    ->where('refund_status', 'cancel_pending')
+                    ->exists();
+
+                if ($hasPendingItemCancellation) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Mahsulot bo‘yicha 30 daqiqalik kutish holati bor. Avval uni sotuvda mavjud deb qaytaring yoki muddat tugashini kuting.',
+                    ], 422);
+                }
+
+                $courier = Couriers::find($courierId);
+                if (! $courier) {
+                    return response()->json(['success' => false, 'message' => 'Courier not found'], 404);
+                }
+
+                $seller_order->courier_id = $courier->id;
+                $seller_order->courierName = $courier->first_name.' '.$courier->last_name;
+                $seller_order->status = SellerOrderStatusCode::HANDED_TO_COURIER->legacy();
+                $seller_order->status_code = SellerOrderStatusCode::HANDED_TO_COURIER->value;
+                $seller_order->save();
+
+                $allSellersDone = SellerOrder::where('order_id', $orderId)
+                    ->where(function ($query) {
+                        $query->where('status_code', '!=', SellerOrderStatusCode::HANDED_TO_COURIER->value)
+                            ->orWhere(function ($fallback) {
+                                $fallback->whereNull('status_code')
+                                    ->where('status', '!=', SellerOrderStatusCode::HANDED_TO_COURIER->legacy());
+                            });
+                    })
+                    ->doesntExist();
+
+                $this->courierTaskOrchestratorService->markSellerHandover(
+                    order: $sold,
+                    sellerId: $storeSellerId,
+                    courierId: $courier->id,
+                );
+
+                $sold->loadMissing('fulfillment');
+                $fulfillmentMode = $sold->fulfillment?->fulfillment_mode;
+
+                if ($allSellersDone) {
+                    $previousStatus = (string) $sold->status;
+
+                    if ($fulfillmentMode === FulfillmentMode::DIRECT_COURIER->value) {
+                        $sold->status = OrderStatusCode::IN_DELIVERY->legacy();
+                        $sold->status_code = OrderStatusCode::IN_DELIVERY->value;
+                    } else {
+                        $sold->status = OrderStatusCode::PACKING->legacy();
+                        $sold->status_code = OrderStatusCode::PACKING->value;
+                    }
+                    $sold->updated_at = now();
+                    $sold->save();
+
+                    $courierOrder = CourierOrder::where('order_id', $orderId)
+                        ->where('courier_id', $courierId)
+                        ->lockForUpdate()
+                        ->first();
+
+                    if ($courierOrder && $fulfillmentMode === FulfillmentMode::DIRECT_COURIER->value) {
+                        $this->courierBonusService->startSlaOnPickupReady($courierOrder);
+                    }
+
+                    DB::afterCommit(fn () => $this->orderStatusPushService->sendForTransition(
+                        $sold->fresh(),
+                        $previousStatus,
+                        $fulfillmentMode === FulfillmentMode::DIRECT_COURIER->value ? 'B' : 'P'
+                    ));
+                }
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Products collected. '.($allSellersDone ? 'Order fully sent to courier.' : 'Waiting for other shops...'),
+                ], 200);
+            });
+
+            $sellerOrder = SellerOrder::where('order_id', $orderId)
+                ->where('seller_id', $storeSellerId)
+                ->first();
+            if ($sellerOrder) {
+                $this->orderRealtimeService->broadcastSellerOrderUpdated($sellerOrder, 'seller_order.handed_to_courier');
+            }
+
+            if ($response->getStatusCode() >= 200 && $response->getStatusCode() < 300) {
+                $this->qrTokenService->markPickupCodeUsed($parsedQr['normalized_qr']);
+            }
+
+            return $response;
+        } catch (\Throwable $th) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Xatolik: '.$th->getMessage(),
+            ], 500);
+        }
     }
 
     private function parsePickupQr(string $qr): ?array
     {
+        $numeric = $this->qrTokenService->parsePickupCode($qr);
+        if ($numeric) {
+            return [
+                'seller_id' => $numeric['seller_id'],
+                'order_id' => $numeric['order_id'],
+                'courier_id' => $numeric['courier_id'],
+                'normalized_qr' => $numeric['code'],
+            ];
+        }
+
         $signed = $this->qrTokenService->parsePickupToken($qr);
         if ($signed) {
             return $signed + ['normalized_qr' => $qr];
         }
 
-        if (!str_starts_with($qr, 'KC:')) {
+        if (! str_starts_with($qr, 'KC:')) {
             return null;
         }
 
@@ -592,17 +683,18 @@ public function toCourier(Request $request, $qr)
             'normalized_qr' => $qr,
         ];
     }
+
     public function acceptOrder(Request $request, $id)
     {
         $seller = Auth::guard('seller')->user();
-        if (!$seller) {
+        if (! $seller) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
-        if (!$this->hasOrderAccess($seller)) {
+        if (! $this->hasOrderAccess($seller)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Access denied. Orders available only for Owner, Admin, and Product Manager.'
+                'message' => 'Access denied. Orders available only for Owner, Admin, and Product Manager.',
             ], 403);
         }
 
@@ -612,7 +704,7 @@ public function toCourier(Request $request, $qr)
             ->where('seller_id', $storeSellerId)
             ->first();
 
-        if (!$sellerOrder) {
+        if (! $sellerOrder || ! $this->staffCanAccessOrder($seller, $sellerOrder)) {
             return response()->json(['success' => false, 'message' => 'Order not found'], 404);
         }
 
@@ -638,6 +730,18 @@ public function toCourier(Request $request, $qr)
                 'message' => "Buyurtma allaqachon do'kon tomonidan qabul qilingan",
                 'data' => ['status' => $statusCode, 'status_code' => $statusCode],
             ], 200);
+        }
+
+        $hasPendingItemCancellation = \App\Models\SellerOrderItem::query()
+            ->where('order_id', $sellerOrder->id)
+            ->where('refund_status', 'cancel_pending')
+            ->exists();
+
+        if ($hasPendingItemCancellation) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Mahsulot bo‘yicha 30 daqiqalik kutish holati bor. Avval uni sotuvda mavjud deb qaytaring yoki muddat tugashini kuting.',
+            ], 422);
         }
 
         DB::transaction(function () use ($sellerOrder, $storeSellerId) {
@@ -678,39 +782,40 @@ public function toCourier(Request $request, $qr)
     {
         $orderId = $request->input('order_id');
         $seller = Auth::guard('seller')->user();
-        
-        if (!$seller) {
+
+        if (! $seller) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
         // ✅ ACCESS CHECK
-        if (!$this->hasOrderAccess($seller)) {
+        if (! $this->hasOrderAccess($seller)) {
             return response()->json([
-                'success' => false, 
-                'message' => 'Access denied. Orders available only for Owner, Admin, and Product Manager.'
+                'success' => false,
+                'message' => 'Access denied. Orders available only for Owner, Admin, and Product Manager.',
             ], 403);
         }
 
         $storeSellerId = $this->getStoreSellerId($seller); // ✅ OWNER ID
 
         // ✅ OWNER DO'KONI ORDERI
-        $view = $this->applyVisibleSellerOrdersScope(
+        $viewQuery = $this->applyVisibleSellerOrdersScope(
             Seller::find($storeSellerId)->orders()
         )
             ->where('id', $orderId)
             ->with([
                 'seller.location',
                 'order.fulfillment.hub:id,name,code',
-                'items' => fn($q) => $q->where('seller_id', $storeSellerId)
+                'items' => fn ($q) => $q->where('seller_id', $storeSellerId)
                     ->with(['book', 'stationery', 'variant', 'gift']),
             ])
-            ->withCount(['items' => fn($q) => $q->where('seller_id', $storeSellerId)])
-            ->first();
+            ->withCount(['items' => fn ($q) => $q->where('seller_id', $storeSellerId)]);
+        $this->applyStaffBranchScope($viewQuery, $seller);
+        $view = $viewQuery->first();
 
-        if (!$view) {
+        if (! $view) {
             return response()->json([
-                'success' => false, 
-                'message' => 'Order topilmadi'
+                'success' => false,
+                'message' => 'Order topilmadi',
             ], 404);
         }
 
@@ -723,12 +828,12 @@ public function toCourier(Request $request, $qr)
     public function ordersCount(Request $request)
     {
         $seller = Auth::guard('seller')->user();
-        if (!$seller) {
+        if (! $seller) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
         // ✅ ACCESS CHECK
-        if (!$this->hasOrderAccess($seller)) {
+        if (! $this->hasOrderAccess($seller)) {
             return response()->json([
                 'success' => true,
                 'orders' => 0, // Bo'sh count
@@ -738,10 +843,11 @@ public function toCourier(Request $request, $qr)
         $storeSellerId = $this->getStoreSellerId($seller); // ✅ OWNER ID
 
         // ✅ OWNER DO'KONI ORDER SONI
-        $count = $this->applyVisibleSellerOrdersScope(
+        $countQuery = $this->applyVisibleSellerOrdersScope(
             Seller::find($storeSellerId)->orders()
-        )
-            ->count();
+        );
+        $this->applyStaffBranchScope($countQuery, $seller);
+        $count = $countQuery->count();
 
         return response()->json([
             'success' => true,
@@ -776,6 +882,10 @@ public function toCourier(Request $request, $qr)
         }
 
         $sellerOrderItem = \App\Models\SellerOrderItem::query()->find($itemId);
+        if (! $sellerOrderItem || ! $sellerOrderItem->order ||
+            ! $this->staffCanAccessOrder($seller, $sellerOrderItem->order)) {
+            return response()->json(['success' => false, 'message' => 'Bu mahsulot boshqa filial buyurtmasiga tegishli'], 403);
+        }
 
         try {
             $result = $this->sellerOrderCancellationService->cancelItem(
@@ -783,6 +893,34 @@ public function toCourier(Request $request, $qr)
                 item: $sellerOrderItem,
                 reasonCode: (string) $request->input('reason_code'),
                 customNote: $request->input('custom_note'),
+            );
+
+            return response()->json(['success' => true, 'message' => $result['message'], 'data' => $result], 200);
+        } catch (\Throwable $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        }
+    }
+
+    public function restoreCancelledItem(Request $request, int $itemId)
+    {
+        $seller = Auth::guard('seller')->user();
+        if (! $seller) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $sellerOrderItem = \App\Models\SellerOrderItem::query()->find($itemId);
+        if (! $sellerOrderItem) {
+            return response()->json(['success' => false, 'message' => 'Mahsulot topilmadi'], 404);
+        }
+        if (! $sellerOrderItem->order ||
+            ! $this->staffCanAccessOrder($seller, $sellerOrderItem->order)) {
+            return response()->json(['success' => false, 'message' => 'Bu mahsulot boshqa filial buyurtmasiga tegishli'], 403);
+        }
+
+        try {
+            $result = $this->sellerOrderCancellationService->restorePendingItemCancellation(
+                seller: $seller,
+                item: $sellerOrderItem,
             );
 
             return response()->json(['success' => true, 'message' => $result['message'], 'data' => $result], 200);
@@ -810,6 +948,9 @@ public function toCourier(Request $request, $qr)
         $sellerOrder = SellerOrder::query()->find($id);
         if (! $sellerOrder) {
             return response()->json(['success' => false, 'message' => 'Seller order topilmadi'], 404);
+        }
+        if (! $this->staffCanAccessOrder($seller, $sellerOrder)) {
+            return response()->json(['success' => false, 'message' => 'Bu buyurtma boshqa filialga tegishli'], 403);
         }
 
         try {

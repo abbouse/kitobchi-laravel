@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Api\Seller;
 
+use App\Enums\OrderStatusCode;
+use App\Enums\PaymentStatusCode;
 use App\Http\Controllers\Controller;
 use App\Models\Author;
 use App\Models\Books;
@@ -15,6 +17,7 @@ use App\Models\Seller;
 use App\Models\BookTag;
 use App\Models\Sold;
 use App\Models\Gifts;
+use App\Models\SellerOrderItem;
 use App\Models\SellerStaffLog;
 use App\Services\AuthorDirectoryService;
 use App\Support\ProductImageVariantGenerator;
@@ -22,6 +25,7 @@ use App\Support\ProductArtikul;
 use App\Services\SellerPremiumService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
@@ -698,7 +702,11 @@ public function removeProduct(Request $request)
     }
 
     // LOG YOZISH
-    $prefix = ($type === 'stationery') ? '[Kanselyariya] ' : '[Kitob] ';
+    $prefix = match ($type) {
+        'stationery' => '[Kanselyariya] ',
+        'gift' => '[Sovg‘a] ',
+        default => '[Kitob] ',
+    };
     $this->writeLog($seller, 'Maxsulotni marketdan o\'chirib yubordi', $prefix . $product->name);
 
     // O'chirish (Hiden qilish)
@@ -735,7 +743,9 @@ public function updateProductStatus(Request $request)
     if ($type === 'stationery') {
         $product = \App\Models\Stationery::where('seller_id', $storeSellerId)->find($productId);
     }elseif ($type === 'gift') {
-        $product = Gifts::where('seller_id', $storeSellerId)->find($productId);
+        $product = Gifts::where('seller_id', $storeSellerId)
+            ->whereNull('archived_at')
+            ->find($productId);
     } else {
         $product = \App\Models\Seller::find($storeSellerId)->books()->find($productId);
     }
@@ -746,7 +756,11 @@ public function updateProductStatus(Request $request)
 
     $oldStatus = $product->status ? 'Faol' : 'Nofaol';
     $newStatus = !$product->status ? 'Faol' : 'Nofaol';
-    $prefix = ($type === 'stationery') ? '[Kanselyariya] ' : '[Kitob] ';
+    $prefix = match ($type) {
+        'stationery' => '[Kanselyariya] ',
+        'gift' => '[Sovg‘a] ',
+        default => '[Kitob] ',
+    };
 
     // LOG YOZISH
     $this->writeLog($seller, 'Maxsulot holatini o\'zgartirdi', "{$prefix}{$product->name} | {$oldStatus} → {$newStatus}");
@@ -1065,6 +1079,13 @@ public function productStatistics(Request $request, $id)
         ], 403);
     }
 
+    if (!in_array($type, ['book', 'stationery', 'gift'], true)) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Mahsulot turi noto‘g‘ri.',
+        ], 422);
+    }
+
     $storeSellerId = $this->getStoreSellerId($seller);
     $product = null;
 
@@ -1075,6 +1096,7 @@ public function productStatistics(Request $request, $id)
             ->first();
     }elseif ($type === 'gift') {
         $product = \App\Models\Gifts::where('seller_id', $storeSellerId)
+            ->whereNull('archived_at')
             ->where('id', $id)
             ->first();
     } else {
@@ -1090,6 +1112,66 @@ public function productStatistics(Request $request, $id)
         ], 404);
     }
 
+    $completedItems = SellerOrderItem::query()
+        ->join('seller_orders', 'seller_orders.id', '=', 'seller_order_items.order_id')
+        ->join('solds', 'solds.id', '=', 'seller_orders.order_id')
+        ->where('seller_order_items.seller_id', $storeSellerId)
+        ->where('seller_order_items.product_id', $product->id)
+        ->where('seller_order_items.type', $type)
+        ->whereNotNull('solds.completed_at')
+        ->where(function ($query) {
+            $query->where('solds.status_code', OrderStatusCode::CUSTOMER_RECEIVED->value)
+                ->orWhere(function ($fallback) {
+                    $fallback->whereNull('solds.status_code')
+                        ->where('solds.status', OrderStatusCode::CUSTOMER_RECEIVED->legacy());
+                })
+                ->orWhere(function ($delivered) {
+                    $delivered->where(function ($status) {
+                        $status->where('solds.status_code', OrderStatusCode::DELIVERED->value)
+                            ->orWhere(function ($fallback) {
+                                $fallback->whereNull('solds.status_code')
+                                    ->where('solds.status', OrderStatusCode::DELIVERED->legacy());
+                            });
+                    })->whereRaw(
+                        "LOWER(COALESCE(solds.deliveryType, 'delivery')) NOT IN (?, ?, ?)",
+                        ['postal', 'mail_service', 'uzpost']
+                    )->whereRaw(
+                        "LOWER(COALESCE(solds.deliveryType, 'delivery')) NOT LIKE ?",
+                        ['%pochta%']
+                    )->whereRaw(
+                        "LOWER(COALESCE(solds.deliveryType, 'delivery')) NOT LIKE ?",
+                        ['%mail%']
+                    )->whereRaw(
+                        "LOWER(COALESCE(solds.deliveryType, 'delivery')) NOT LIKE ?",
+                        ['%post%']
+                    );
+            });
+        })
+        ->where(function ($query) {
+            $query->where('solds.payment_status_code', PaymentStatusCode::PAID->value)
+                ->orWhere(function ($fallback) {
+                    $fallback->whereNull('solds.payment_status_code')
+                        ->where('solds.paymentStatus', PaymentStatusCode::PAID->legacy());
+                });
+        });
+
+    if (Schema::hasColumn('seller_order_items', 'cancelled_at')) {
+        $completedItems->whereNull('seller_order_items.cancelled_at');
+    }
+
+    $totals = (clone $completedItems)
+        ->selectRaw('COALESCE(SUM(seller_order_items.quantity), 0) as total_sales')
+        ->selectRaw('COALESCE(SUM(seller_order_items.price * seller_order_items.quantity), 0) as total_revenue')
+        ->selectRaw('COUNT(DISTINCT COALESCE(solds.user_id, seller_orders.client_id)) as total_clients')
+        ->first();
+
+    $weekTotals = (clone $completedItems)
+        ->where('solds.completed_at', '>=', now()->subDays(6)->startOfDay())
+        ->selectRaw('COALESCE(SUM(seller_order_items.quantity), 0) as total_sales')
+        ->selectRaw('COALESCE(SUM(seller_order_items.price * seller_order_items.quantity), 0) as total_revenue')
+        ->selectRaw('COUNT(DISTINCT COALESCE(solds.user_id, seller_orders.client_id)) as total_clients')
+        ->first();
+
     $result = [
         'id'             => $product->id,
         'name'           => $product->name,
@@ -1097,14 +1179,14 @@ public function productStatistics(Request $request, $id)
         'category_id'    => $product->category_id,
         
         // Umumiy statistikalar
-        'total_sales'    => $product->totalSales ?? 0,
-        'total_revenue'  => $product->totalRevenue ?? 0,
-        'total_clients'  => $product->totalClients ?? 0,
+        'total_sales'    => (int) ($totals->total_sales ?? 0),
+        'total_revenue'  => (float) ($totals->total_revenue ?? 0),
+        'total_clients'  => (int) ($totals->total_clients ?? 0),
         
         // Haftalik statistikalar
-        'total_sales_week'   => $product->totalSalesWeek ?? 0,
-        'total_clients_week' => $product->totalClientsWeek ?? 0,
-        'total_revenue_week' => $product->totalRevenueWeek ?? 0,
+        'total_sales_week'   => (int) ($weekTotals->total_sales ?? 0),
+        'total_clients_week' => (int) ($weekTotals->total_clients ?? 0),
+        'total_revenue_week' => (float) ($weekTotals->total_revenue ?? 0),
         
         // Narx va Ombor
         'price'          => $product->price,
