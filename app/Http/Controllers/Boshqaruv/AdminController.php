@@ -26,6 +26,7 @@ use App\Models\CommissionSetting;
 use App\Models\ConnectedDevice;
 use App\Models\CourierOrder;
 use App\Models\CourierBanLog;
+use App\Models\CourierTask;
 use App\Models\CourierTransaction;
 use App\Models\Couriers;
 use App\Models\DeliveryService;
@@ -3685,6 +3686,11 @@ class AdminController extends Controller
     {
         $address = collect($order->order?->address ?? [])->first() ?: [];
         $addressPayload = $this->orderAddressPayload((array) $address);
+        $activeTask = Schema::hasTable('courier_tasks') ? CourierTask::query()
+            ->where('order_id', $order->order_id)
+            ->when($order->courier_id, fn ($query) => $query->where('courier_id', $order->courier_id))
+            ->latest('id')
+            ->first() : null;
         $items = collect($order->order?->items ?? [])->map(fn ($item) => [
             'name' => $item['name'] ?? 'Mahsulot',
             'type' => $item['type'] ?? 'book',
@@ -3708,14 +3714,16 @@ class AdminController extends Controller
             'amount' => (float) ($order->amount ?? 0),
             'mainOrderAmount' => (float) ($order->order?->amount ?? 0),
             'courierPrice' => (float) ($order->courierPrice ?? 0),
-            'bonus' => (float) ($order->final_bonus ?? $order->locked_bonus ?? $order->courierBonus ?? 0),
-            'pickupBonus' => (float) ($order->pickup_bonus ?? 0),
+            'bonus' => (float) ($order->courierBonus ?? 0),
+            'taskDistanceKm' => (float) ($activeTask?->distance_km ?? 0),
+            'taskFeeAmount' => (float) ($activeTask?->fee_amount ?? 0),
+            'taskBaseFeeAmount' => (float) ($activeTask?->base_fee_amount ?? 0),
+            'taskDistanceFeeAmount' => (float) ($activeTask?->distance_fee_amount ?? 0),
+            'taskBonusAmount' => (float) ($activeTask?->bonus_amount ?? 0),
+            'taskLeg' => $activeTask?->leg,
             'settledAmount' => (float) ($order->settled_amount ?? 0),
             'settledAt' => $this->dateTime($order->settled_at),
             'pickedUpAt' => $this->dateTime($order->picked_up_at),
-            'slaDeadline' => $this->dateTime($order->sla_deadline),
-            'delaySeconds' => (int) ($order->total_delay_seconds ?? 0),
-            'customerDelay' => (bool) ($order->is_customer_delay ?? false),
             'deliveryPrice' => (float) ($order->order?->deliveryPrice ?? 0),
             'deliveryType' => $order->order?->deliveryType,
             'paymentStatus' => $order->order?->paymentStatus,
@@ -5601,11 +5609,10 @@ class AdminController extends Controller
                 'tax_fixed_uzs' => (int) ($settings->tax_fixed_uzs ?? 0),
                 'tax_profit_percent' => (float) ($settings->tax_profit_percent ?? 0),
                 'payment_provider_percent' => (float) ($settings->payment_provider_percent ?? 0),
-                'courier_surge_step' => (int) ($settings->courier_surge_step ?? 500),
-                'courier_surge_max' => (int) ($settings->courier_surge_max ?? 10000),
-                'courier_surge_threshold' => (int) ($settings->courier_surge_threshold ?? 5000),
-                'courier_sla_minutes' => (int) ($settings->courier_sla_minutes ?? 45),
-                'courier_penalty_step' => (int) ($settings->courier_penalty_step ?? 300),
+                'courier_base_fee' => (int) ($settings->courier_base_fee ?? 3000),
+                'courier_price_per_km' => (int) ($settings->courier_price_per_km ?? 1500),
+                'courier_min_fee' => (int) ($settings->courier_min_fee ?? 5000),
+                'courier_bonus_rules' => $settings->courier_bonus_rules ?? [],
                 'telegram_login_enabled' => (bool) $settings->telegram_login_enabled,
                 'telegram_client_id' => $settings->telegram_client_id,
                 'telegram_redirect_uri_ios' => $settings->telegram_redirect_uri_ios ?: 'https://app3206985527-login.tg.dev',
@@ -6912,6 +6919,11 @@ class AdminController extends Controller
             ->where('order_id', $order->id)
             ->latest('id')
             ->first() : null;
+        $courierTask = Schema::hasTable('courier_tasks') ? CourierTask::query()
+            ->where('order_id', $order->id)
+            ->when($courierOrder?->courier_id, fn ($query) => $query->where('courier_id', $courierOrder->courier_id))
+            ->latest('id')
+            ->first() : null;
         $refunds = Schema::hasTable('order_refunds')
             ? OrderRefund::query()
                 ->where('order_id', $order->id)
@@ -7175,16 +7187,15 @@ class AdminController extends Controller
                 'amount' => (float) ($courierOrder->amount ?? 0),
                 'courierPrice' => (float) ($courierOrder->courierPrice ?? 0),
                 'courierBonus' => (float) ($courierOrder->courierBonus ?? 0),
-                'pickupBonus' => (float) ($courierOrder->pickup_bonus ?? 0),
-                'lockedBonus' => (float) ($courierOrder->locked_bonus ?? 0),
-                'finalBonus' => (float) ($courierOrder->final_bonus ?? 0),
+                'taskDistanceKm' => (float) ($courierTask?->distance_km ?? 0),
+                'taskFeeAmount' => (float) ($courierTask?->fee_amount ?? 0),
+                'taskBaseFeeAmount' => (float) ($courierTask?->base_fee_amount ?? 0),
+                'taskDistanceFeeAmount' => (float) ($courierTask?->distance_fee_amount ?? 0),
+                'taskBonusAmount' => (float) ($courierTask?->bonus_amount ?? 0),
+                'taskLeg' => $courierTask?->leg,
                 'settledAmount' => (float) ($courierOrder->settled_amount ?? 0),
                 'settledAt' => $this->dateTime($courierOrder->settled_at),
                 'pickedUpAt' => $this->dateTime($courierOrder->picked_up_at),
-                'slaDeadline' => $this->dateTime($courierOrder->sla_deadline),
-                'customerDelayCount' => (int) ($courierOrder->customer_delay_count ?? 0),
-                'totalDelaySeconds' => (int) ($courierOrder->total_delay_seconds ?? 0),
-                'isCustomerDelay' => (bool) ($courierOrder->is_customer_delay ?? false),
             ] : null,
             'activeHubs' => Schema::hasTable('hubs') ? Hub::query()
                 ->where('is_active', true)

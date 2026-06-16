@@ -426,6 +426,7 @@ class HubFulfillmentController extends Controller
         $this->appendTimeline($fulfillment, $staff, 'arrived_at_hub', 'Hubga qabul qilindi');
         $this->clearException($fulfillment);
         $fulfillment->save();
+        $this->courierTaskOrchestratorService->markArrivedAtHub($fulfillment->fresh());
 
         return response()->json(['status' => 'success', 'fulfillment' => $this->serializeFulfillment($fulfillment->fresh())]);
     }
@@ -502,6 +503,9 @@ class HubFulfillmentController extends Controller
     public function dispatch(Request $request, OrderFulfillment $fulfillment)
     {
         $staff = $this->staff($request);
+        $validated = $request->validate([
+            'dispatch_method' => ['nullable', Rule::in(['postal', 'courier'])],
+        ]);
         if (!$this->hubRoleAccessService->can($staff, 'queue.dispatch.send')) {
             return response()->json(['status' => 'error', 'message' => 'Bu action sizga ruxsat etilmagan.'], 403);
         }
@@ -512,11 +516,16 @@ class HubFulfillmentController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Dispatch faqat labeled fulfillmentga ishlaydi.'], 422);
         }
 
-        if ($fulfillment->last_mile_mode === 'postal_dispatch') {
+        $dispatchMethod = $validated['dispatch_method'] ?? null;
+        $useCourier = $dispatchMethod === 'courier' || ($dispatchMethod === null && $fulfillment->last_mile_mode !== 'postal_dispatch');
+
+        if (!$useCourier) {
+            $fulfillment->last_mile_mode = 'postal_dispatch';
             $fulfillment->status_code = FulfillmentStatusCode::DISPATCHED_TO_POST->value;
             $fulfillment->dispatched_to_post_at ??= now();
             $this->appendTimeline($fulfillment, $staff, 'dispatched_to_post', 'Pochtaga topshirildi');
         } else {
+            $fulfillment->last_mile_mode = 'courier_delivery';
             $this->courierTaskOrchestratorService->ensureLastMileTask($fulfillment);
             $fulfillment->status_code = FulfillmentStatusCode::ASSIGNED_LAST_MILE->value;
             $fulfillment->assigned_last_mile_at ??= now();

@@ -15,6 +15,12 @@ enum CourierOrderStatusCode: string
     public static function fromLegacy(string|int|null $value): self
     {
         return match ((string) $value) {
+            'A', 'P' => self::PENDING,
+            'B' => self::IN_DELIVERY,
+            'C' => self::DELIVERED,
+            'D' => self::CUSTOMER_RECEIVED,
+            'F' => self::CANCELLED,
+            'R' => self::RETURNED,
             'pay_process', 'payment_pending' => self::PAYMENT_PENDING,
             'pending' => self::PENDING,
             'in_delivery' => self::IN_DELIVERY,

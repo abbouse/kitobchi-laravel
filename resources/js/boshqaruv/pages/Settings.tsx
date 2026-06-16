@@ -3,7 +3,8 @@ import { router, usePage } from '@inertiajs/react';
 
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
 
-type ProjectSettings = Record<string, string | number | boolean | null | undefined>;
+type CourierBonusRule = { from_km?: number | string | null; to_km?: number | string | null; bonus_amount?: number | string | null };
+type ProjectSettings = Record<string, string | number | boolean | CourierBonusRule[] | null | undefined>;
 type ActionMap = Record<string, string>;
 type Commission = { id: number; priceFrom: number; priceTo: number; percent: number; updateUrl: string; destroyUrl: string };
 type Cashback = { id: number; fromUzs: number; toUzs: number; cashback: number; type: string; updateUrl: string; destroyUrl: string };
@@ -195,14 +196,29 @@ export default function Settings() {
       )}
 
       {tab === 'courier-bonus' && (
-        <SectionCard title="Kuryer bonus tizimi" icon="bi-bicycle">
+        <SectionCard title="Kuryer km va bonus tizimi" icon="bi-bicycle">
           <form onSubmit={(event) => submitForm(event, 'put', actions.courierBonus)}>
             <div className="row g-3">
-              <div className="col-md-6 col-xl-4"><TextInput name="courier_surge_step" label="Har minut bonus" type="number" min={0} max={5000} required defaultValue={value(project, 'courier_surge_step', '500')} /></div>
-              <div className="col-md-6 col-xl-4"><TextInput name="courier_surge_max" label="Maksimal surge" type="number" min={0} max={50000} required defaultValue={value(project, 'courier_surge_max', '10000')} /></div>
-              <div className="col-md-6 col-xl-4"><TextInput name="courier_surge_threshold" label="Push threshold" type="number" min={0} max={50000} required defaultValue={value(project, 'courier_surge_threshold', '5000')} /></div>
-              <div className="col-md-6 col-xl-4"><TextInput name="courier_sla_minutes" label="SLA daqiqa" type="number" min={1} max={180} required defaultValue={value(project, 'courier_sla_minutes', '45')} /></div>
-              <div className="col-md-6 col-xl-4"><TextInput name="courier_penalty_step" label="Kechikish penaltisi" type="number" min={0} max={10000} required defaultValue={value(project, 'courier_penalty_step', '300')} /></div>
+              <div className="col-md-4"><TextInput name="courier_base_fee" label="Bazaviy haq" type="number" min={0} max={1000000} required defaultValue={value(project, 'courier_base_fee', '3000')} /></div>
+              <div className="col-md-4"><TextInput name="courier_price_per_km" label="1 km narxi" type="number" min={0} max={1000000} required defaultValue={value(project, 'courier_price_per_km', '1500')} /></div>
+              <div className="col-md-4"><TextInput name="courier_min_fee" label="Minimal payout" type="number" min={0} max={1000000} required defaultValue={value(project, 'courier_min_fee', '5000')} /></div>
+              <div className="col-12">
+                <div className="rounded border p-3">
+                  <div className="fw-bold mb-2">Masofa bonuslari</div>
+                  <div className="small text-muted mb-3">Masalan: 5 km dan 10 km gacha bo'lsa qo'shimcha bonus. Bo'sh qatorlar saqlanmaydi.</div>
+                  {Array.from({ length: 5 }).map((_, index) => {
+                    const rules = Array.isArray(project.courier_bonus_rules) ? project.courier_bonus_rules as CourierBonusRule[] : [];
+                    const rule = rules[index] || {};
+                    return (
+                      <div className="row g-2 align-items-end mb-2" key={index}>
+                        <div className="col-md-4"><TextInput name={`courier_bonus_rules[${index}][from_km]`} label="Dan (km)" type="number" min={0} defaultValue={rule.from_km ?? ''} /></div>
+                        <div className="col-md-4"><TextInput name={`courier_bonus_rules[${index}][to_km]`} label="Gacha (km)" type="number" min={0} defaultValue={rule.to_km ?? ''} /></div>
+                        <div className="col-md-4"><TextInput name={`courier_bonus_rules[${index}][bonus_amount]`} label="Bonus (so'm)" type="number" min={0} defaultValue={rule.bonus_amount ?? ''} /></div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
             <div className="text-end mt-3"><SaveButton /></div>
           </form>

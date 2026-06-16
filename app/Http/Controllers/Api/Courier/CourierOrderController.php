@@ -16,7 +16,6 @@ use App\Models\CourierOrder;
 use App\Models\CourierOrderItem;
 use App\Models\SellerOrder;
 use App\Models\SellerOrderItem;
-use App\Services\CourierBonusService;
 use App\Services\OrderService;
 use App\Services\OrderStatusPushService;
 use App\Services\OrderRealtimeService;
@@ -31,7 +30,6 @@ use Illuminate\Support\Facades\Log;
 class CourierOrderController extends Controller
 {
     public function __construct(
-        private readonly CourierBonusService $bonusService,
         private readonly OrderService $orderService,
         private readonly OrderRealtimeService $orderRealtimeService,
         private readonly QrTokenService $qrTokenService,
@@ -123,9 +121,17 @@ class CourierOrderController extends Controller
                 $order->is_cod = $taskSummary['is_cod'];
                 $order->task_pickup_address = $taskSummary['pickup_address'];
                 $order->task_dropoff_address = $taskSummary['dropoff_address'];
+                $order->task_distance_km = $taskSummary['distance_km'];
+                $order->task_fee_amount = $taskSummary['task_fee_amount'];
+                $order->task_bonus_amount = $taskSummary['task_bonus_amount'];
+                $order->payout_breakdown = $taskSummary['payout_breakdown'];
+                if ($taskSummary['task_fee_amount'] > 0) {
+                    $order->courierPrice = $this->taskBasePayout($taskSummary);
+                    $order->courierBonus = $taskSummary['task_bonus_amount'];
+                }
                 $order->hub = $taskSummary['hub'];
                 $order->available_collateral = $this->courierCashOnDeliveryCapacityService->availableCollateral($courier);
-                $this->bonusService->normalizeBonusState($order, false);
+                $this->normalizeCourierOrderStatusForPayload($order);
                 return $this->hydrateCourierOrderItems($order, Auth::guard('courier')->id());
             })
             ->filter(fn (CourierOrder $order) => $order->items->isNotEmpty())
@@ -185,9 +191,17 @@ class CourierOrderController extends Controller
         $show->is_cod = $taskSummary['is_cod'];
         $show->task_pickup_address = $taskSummary['pickup_address'];
         $show->task_dropoff_address = $taskSummary['dropoff_address'];
+        $show->task_distance_km = $taskSummary['distance_km'];
+        $show->task_fee_amount = $taskSummary['task_fee_amount'];
+        $show->task_bonus_amount = $taskSummary['task_bonus_amount'];
+        $show->payout_breakdown = $taskSummary['payout_breakdown'];
+        if ($taskSummary['task_fee_amount'] > 0) {
+            $show->courierPrice = $this->taskBasePayout($taskSummary);
+            $show->courierBonus = $taskSummary['task_bonus_amount'];
+        }
         $show->hub = $taskSummary['hub'];
         $show->available_collateral = $this->courierCashOnDeliveryCapacityService->availableCollateral($courier);
-        $this->bonusService->normalizeBonusState($show, false);
+        $this->normalizeCourierOrderStatusForPayload($show);
 
         return response()->json([
             'success' => true,
@@ -216,13 +230,8 @@ class CourierOrderController extends Controller
             return response()->json(['success' => false, 'message' => __('courier_api.order_not_found')], 404);
         }
         try {
-            $finalBonus = 0;
-            DB::transaction(function () use ($order, $orderCustomer, $courier, &$finalBonus) {
+            DB::transaction(function () use ($order, $orderCustomer, $courier) {
                 $previousStatus = (string) $orderCustomer->status;
-                // Phase 3: SLA penaltyni hisoblab final_bonus ni yozamiz.
-                // computeFinalBonus() bonusni courierBonus va final_bonus ustunlariga
-                // yozadi va sla_deadline ni mijoz pause bilan to'g'rilaydi.
-                $finalBonus = $this->bonusService->computeFinalBonus($order);
 
                 $order->status = CourierOrderStatusCode::CUSTOMER_RECEIVED->legacy();
                 $order->status_code = CourierOrderStatusCode::CUSTOMER_RECEIVED->value;
@@ -249,7 +258,7 @@ class CourierOrderController extends Controller
                 'success'      => true,
                 'message'      => __('courier_api.order_delivered'),
                 'order_id'     => $order->order_id,
-                'final_bonus'  => $finalBonus,
+                'courier_bonus' => (int) $order->courierBonus,
                 'courierPrice' => (int) $order->courierPrice,
             ], 200);
         } catch (\Throwable $th) {
@@ -288,7 +297,6 @@ class CourierOrderController extends Controller
                     ->first();
 
                 $sold = Sold::where('id', $id)
-                    ->whereNull('courier_id')
                     ->lockForUpdate()
                     ->first();
 
@@ -299,7 +307,11 @@ class CourierOrderController extends Controller
                     ], 404);
                 }
 
-                $this->courierTaskOrchestratorService->acceptAvailableTasksForCourier($sold, $courier);
+                $acceptedTasks = $this->courierTaskOrchestratorService->acceptAvailableTasksForCourier($sold, $courier);
+                $taskBonus = (int) $acceptedTasks->sum('bonus_amount');
+                $taskBasePayout = (int) $acceptedTasks->sum(
+                    fn (CourierTask $task) => max(0, (int) $task->fee_amount - (int) $task->bonus_amount)
+                );
 
                 $sold->courier_id   = $courier->id;
                 $sold->courierName  = $courier->first_name . ' ' . $courier->last_name;
@@ -310,18 +322,16 @@ class CourierOrderController extends Controller
                 $order->courier_id = $courier->id;
                 $order->status     = CourierOrderStatusCode::IN_DELIVERY->legacy();
                 $order->status_code = CourierOrderStatusCode::IN_DELIVERY->value;
+                $order->courierPrice = $taskBasePayout;
+                $order->courierBonus = $taskBonus;
                 $order->save();
-
-                // Phase 3: pickup_bonus ni qulflash + SLA boshlash.
-                // Bu yerda asosan locked_bonus, picked_up_at, sla_deadline o'rnatadi.
-                $this->bonusService->lockBonusOnAccept($order);
 
                 return response()->json([
                     'success'      => true,
                     'message'      => __('courier_api.order_confirmed'),
                     'order_id'     => $order->order_id,
-                    'locked_bonus' => (int) $order->locked_bonus,
-                    'sla_deadline' => optional($order->sla_deadline)->toIso8601String(),
+                    'courier_bonus' => (int) $order->courierBonus,
+                    'courier_price' => (int) $order->courierPrice,
                 ], 200);
             });
 
@@ -370,9 +380,17 @@ class CourierOrderController extends Controller
                 $order->is_cod = $taskSummary['is_cod'];
                 $order->task_pickup_address = $taskSummary['pickup_address'];
                 $order->task_dropoff_address = $taskSummary['dropoff_address'];
+                $order->task_distance_km = $taskSummary['distance_km'];
+                $order->task_fee_amount = $taskSummary['task_fee_amount'];
+                $order->task_bonus_amount = $taskSummary['task_bonus_amount'];
+                $order->payout_breakdown = $taskSummary['payout_breakdown'];
+                if ($taskSummary['task_fee_amount'] > 0) {
+                    $order->courierPrice = $this->taskBasePayout($taskSummary);
+                    $order->courierBonus = $taskSummary['task_bonus_amount'];
+                }
                 $order->hub = $taskSummary['hub'];
                 $order->available_collateral = $this->courierCashOnDeliveryCapacityService->availableCollateral($courier);
-                $this->bonusService->normalizeBonusState($order, false);
+                $this->normalizeCourierOrderStatusForPayload($order);
                 return $this->hydrateCourierOrderItems($order, $order->courier_id);
             })
             ->filter(fn (CourierOrder $order) => $order->items->isNotEmpty())
@@ -383,68 +401,20 @@ class CourierOrderController extends Controller
         ], 200);
     }
 
-    /**
-     * Phase 3 — "Mijoz javob bermayapti" tugmasi.
-     *
-     * Kuryer in_delivery statusdagi buyurtma uchun bu endpointni chaqirib SLA
-     * timerini pauza qilishi/davom ettirishi mumkin. Pauza paytidagi vaqt
-     * sla_deadline ni oldinga suradi, shuning uchun kuryer kechikgan deb
-     * hisoblanmaydi. Tugma toggle ishlaydi: birinchi bosishda pauza, ikkinchi
-     * bosishda davom ettirish.
-     */
+    private function normalizeCourierOrderStatusForPayload(CourierOrder $order): void
+    {
+        $statusCode = CourierOrderStatusCode::fromLegacy($order->status_code ?: $order->status);
+        $order->status_code = $statusCode->value;
+        $order->status = $statusCode->value;
+    }
+
     public function customerDelay(Request $request, $id)
     {
-        $courier = Auth::guard('courier')->user();
-        if (!$courier) {
-            return response()->json([
-                'success' => false,
-                'message' => __('courier_api.unauthorized'),
-            ], 401);
-        }
-
-        $order = CourierOrder::where('order_id', $id)
-            ->where('courier_id', $courier->id)
-            ->where('status', 'in_delivery')
-            ->first();
-
-        if (!$order) {
-            return response()->json([
-                'success' => false,
-                'message' => __('courier_api.customer_delay_invalid'),
-            ], 404);
-        }
-
-        $result = $this->bonusService->toggleCustomerDelay($order);
-
-        if (($result['success'] ?? true) === false) {
-            return response()->json([
-                'success' => false,
-                'paused' => false,
-                'message' => $result['message'] ?? __('courier_api.customer_delay_limit_reached'),
-                'total_delay_seconds' => $result['total_delay_seconds'] ?? (int) $order->total_delay_seconds,
-                'customer_delay_count' => $result['customer_delay_count'] ?? (int) $order->customer_delay_count,
-                'remaining_delay_seconds' => $result['remaining_delay_seconds'] ?? 0,
-                'sla_deadline' => $result['sla_deadline'] ?? optional($order->sla_deadline)->toIso8601String(),
-            ], 422);
-        }
-
-        $order->refresh();
-        $this->orderRealtimeService->broadcastCourierOrderUpdated(
-            $order,
-            $result['paused'] ? 'courier_order.customer_delay_started' : 'courier_order.customer_delay_resumed'
-        );
-
         return response()->json([
-            'success'             => true,
-            'paused'              => $result['paused'],
-            'message'             => $result['paused']
-                ? __('courier_api.customer_delay_marked')
-                : __('courier_api.customer_delay_resumed'),
-            'total_delay_seconds' => $result['total_delay_seconds'],
-            'customer_delay_count'=> $result['customer_delay_count'] ?? (int) $order->customer_delay_count,
-            'remaining_delay_seconds' => $result['remaining_delay_seconds'] ?? 0,
-            'sla_deadline'        => $result['sla_deadline'],
-        ], 200);
+            'success' => false,
+            'paused' => false,
+            'message' => 'Kutish rejimi o‘chirilgan. Kuryer to‘lovi km va bonus qoidalari asosida hisoblanadi.',
+        ], 410);
     }
 
     private function hydrateCourierOrderItems(CourierOrder $order, ?int $courierId): CourierOrder
@@ -637,6 +607,10 @@ class CourierOrderController extends Controller
                 'is_cod' => false,
                 'pickup_address' => null,
                 'dropoff_address' => null,
+                'distance_km' => 0.0,
+                'task_fee_amount' => 0,
+                'task_bonus_amount' => 0,
+                'payout_breakdown' => null,
                 'hub' => null,
             ];
         }
@@ -659,8 +633,20 @@ class CourierOrderController extends Controller
             'is_cod' => (bool) ($activeTask?->is_cod ?? $order->fulfillment?->is_cod ?? false),
             'pickup_address' => $activeTask?->pickup_address,
             'dropoff_address' => $activeTask?->dropoff_address,
+            'distance_km' => (float) ($activeTask?->distance_km ?? 0),
+            'task_fee_amount' => (int) ($activeTask?->fee_amount ?? 0),
+            'task_bonus_amount' => (int) ($activeTask?->bonus_amount ?? 0),
+            'payout_breakdown' => $activeTask?->payout_breakdown,
             'hub' => $order->fulfillment?->hub?->only(['id', 'name', 'code', 'address', 'lat', 'lon']),
         ];
+    }
+
+    private function taskBasePayout(array $taskSummary): int
+    {
+        return max(
+            0,
+            (int) ($taskSummary['task_fee_amount'] ?? 0) - (int) ($taskSummary['task_bonus_amount'] ?? 0)
+        );
     }
 
     private function pickPreferredTask(\Illuminate\Support\Collection $tasks, ?int $courierId): ?CourierTask

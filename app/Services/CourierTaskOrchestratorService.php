@@ -3,9 +3,11 @@
 namespace App\Services;
 
 use App\Enums\CourierTaskLeg;
+use App\Enums\CourierOrderStatusCode;
 use App\Enums\CourierTaskStatusCode;
 use App\Enums\FulfillmentMode;
 use App\Enums\FulfillmentStatusCode;
+use App\Models\CourierOrder;
 use App\Models\CourierOrderItem;
 use App\Models\CourierTask;
 use App\Models\Couriers;
@@ -19,6 +21,7 @@ class CourierTaskOrchestratorService
 {
     public function __construct(
         private readonly CourierCashOnDeliveryCapacityService $codCapacityService,
+        private readonly CourierTaskPayoutService $payoutService,
     ) {}
 
     public function ensureTasksForOrder(Sold $order): Collection
@@ -92,7 +95,9 @@ class CourierTaskOrchestratorService
             ));
         }
 
-        return $created;
+        return CourierTask::query()
+            ->where('order_id', $order->id)
+            ->get();
     }
 
     public function acceptAvailableTasksForCourier(Sold $order, Couriers $courier): Collection
@@ -224,6 +229,64 @@ class CourierTaskOrchestratorService
         return $task->fresh();
     }
 
+    public function markArrivedAtHub(OrderFulfillment $fulfillment): void
+    {
+        $fulfillment->loadMissing('order');
+        $order = $fulfillment->order;
+        if (!$order) {
+            return;
+        }
+
+        $tasks = CourierTask::query()
+            ->where('order_id', $order->id)
+            ->where('fulfillment_id', $fulfillment->id)
+            ->where('leg', CourierTaskLeg::FIRST_MILE->value)
+            ->whereNotNull('courier_id')
+            ->whereIn('status_code', [
+                CourierTaskStatusCode::ACCEPTED->value,
+                CourierTaskStatusCode::ARRIVED_AT_PICKUP->value,
+                CourierTaskStatusCode::PICKED_UP->value,
+                CourierTaskStatusCode::DROPPED_OFF->value,
+            ])
+            ->get();
+
+        foreach ($tasks as $task) {
+            DB::transaction(function () use ($task) {
+                $lockedTask = CourierTask::query()->lockForUpdate()->findOrFail($task->id);
+                if ($lockedTask->settled_at) {
+                    return;
+                }
+
+                $lockedTask->status_code = CourierTaskStatusCode::COMPLETED->value;
+                $lockedTask->dropped_off_at ??= now();
+                $lockedTask->completed_at ??= now();
+
+                $payout = max(0, (int) ($lockedTask->fee_amount ?? 0));
+                if ($payout > 0 && $lockedTask->courier_id) {
+                    $courier = Couriers::query()->lockForUpdate()->find($lockedTask->courier_id);
+                    if ($courier) {
+                        $courier->balance = (int) $courier->balance + $payout;
+                        $courier->save();
+                    }
+                }
+
+                $lockedTask->settlement_status = $payout > 0 ? 'paid' : 'zero';
+                $lockedTask->settled_at = now();
+                $lockedTask->save();
+
+                CourierOrder::query()
+                    ->where('order_id', $lockedTask->order_id)
+                    ->where('courier_id', $lockedTask->courier_id)
+                    ->where('status_code', CourierOrderStatusCode::IN_DELIVERY->value)
+                    ->update([
+                        'status' => CourierOrderStatusCode::DELIVERED->legacy(),
+                        'status_code' => CourierOrderStatusCode::DELIVERED->value,
+                        'updated_at' => now(),
+                    ]);
+            });
+        }
+    }
+
     public function ensureLastMileTask(OrderFulfillment $fulfillment): ?CourierTask
     {
         $fulfillment->loadMissing('order', 'hub');
@@ -244,7 +307,7 @@ class CourierTaskOrchestratorService
             'country_code' => $fulfillment->hub->country_code,
         ];
 
-        return $this->firstOrCreateTask(
+        $task = $this->firstOrCreateTask(
             order: $order,
             fulfillment: $fulfillment,
             sellerId: 0,
@@ -255,6 +318,23 @@ class CourierTaskOrchestratorService
             cashCollectAmount: (int) ($fulfillment->cash_collect_amount ?? 0),
             feeAmount: (int) ($order->deliveryPrice ?? 0),
         );
+
+        CourierOrder::query()->firstOrCreate(
+            [
+                'order_id' => $order->id,
+                'courier_id' => null,
+                'status_code' => CourierOrderStatusCode::PENDING->value,
+            ],
+            [
+                'user_id' => (int) $order->user_id,
+                'amount' => (int) ($order->amount ?? 0),
+                'status' => CourierOrderStatusCode::PENDING->legacy(),
+                'courierPrice' => max(0, (int) $task->fee_amount - (int) $task->bonus_amount),
+                'courierBonus' => (int) $task->bonus_amount,
+            ]
+        );
+
+        return $task;
     }
 
     private function firstOrCreateTask(
@@ -280,9 +360,11 @@ class CourierTaskOrchestratorService
         $task->dropoff_address = $dropoffAddress;
         $task->is_cod = $isCod;
         $task->cash_collect_amount = $isCod ? $cashCollectAmount : 0;
-        $task->fee_amount = $feeAmount;
+        $this->payoutService->apply($task);
         $task->meta = array_merge($task->meta ?? [], [
             'generated_from_fulfillment' => true,
+            'payout_model' => 'km_based',
+            'legacy_requested_fee_amount' => $feeAmount,
         ]);
 
         if (!$task->exists || $task->status_code === CourierTaskStatusCode::CANCELLED->value) {

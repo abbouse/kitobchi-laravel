@@ -5,7 +5,9 @@ namespace App\Services;
 use App\Enums\OrderKind;
 use App\Enums\OrderStatusCode;
 use App\Enums\PaymentStatusCode;
+use App\Enums\CourierTaskLeg;
 use App\Models\CourierOrder;
+use App\Models\CourierTask;
 use App\Models\Couriers;
 use App\Models\Sold;
 use Illuminate\Support\Facades\DB;
@@ -13,10 +15,6 @@ use Illuminate\Support\Facades\Log;
 
 class CourierOrderSettlementService
 {
-    public function __construct(
-        private readonly CourierBonusService $courierBonusService,
-    ) {}
-
     public function settleCompletedOrder(Sold $order): void
     {
         if ($order->order_kind !== OrderKind::STANDARD->value) {
@@ -31,10 +29,26 @@ class CourierOrderSettlementService
         DB::transaction(function () use ($order) {
             $courierOrder = CourierOrder::query()
                 ->where('order_id', $order->id)
+                ->where('courier_id', $order->courier_id)
+                ->latest('id')
                 ->lockForUpdate()
                 ->first();
 
             if (!$courierOrder || $courierOrder->settled_at) {
+                return;
+            }
+
+            $firstMileAlreadySettled = CourierTask::query()
+                ->where('order_id', $order->id)
+                ->where('courier_id', $courierOrder->courier_id)
+                ->where('leg', CourierTaskLeg::FIRST_MILE->value)
+                ->whereNotNull('settled_at')
+                ->exists();
+
+            if ($firstMileAlreadySettled) {
+                $courierOrder->settled_amount = 0;
+                $courierOrder->settled_at = now();
+                $courierOrder->save();
                 return;
             }
 
@@ -48,12 +62,7 @@ class CourierOrderSettlementService
                 $courierOrder->status_code = \App\Enums\CourierOrderStatusCode::CUSTOMER_RECEIVED->value;
             }
 
-            $finalBonus = $courierOrder->final_bonus;
-            if ($finalBonus === null) {
-                $finalBonus = $this->courierBonusService->computeFinalBonus($courierOrder);
-            } else {
-                $finalBonus = max(0, (int) $finalBonus);
-            }
+            $finalBonus = max(0, (int) ($courierOrder->courierBonus ?? 0));
 
             $settledAmount = max(0, (int) $courierOrder->courierPrice) + $finalBonus;
             if ($settledAmount <= 0) {
@@ -75,7 +84,7 @@ class CourierOrderSettlementService
                 'courier_id' => $courier->id,
                 'courier_order_id' => $courierOrder->id,
                 'courier_price' => (int) $courierOrder->courierPrice,
-                'final_bonus' => $finalBonus,
+                'courier_bonus' => $finalBonus,
                 'settled_amount' => $settledAmount,
             ]);
         });
@@ -90,6 +99,8 @@ class CourierOrderSettlementService
         DB::transaction(function () use ($order, $reason) {
             $courierOrder = CourierOrder::query()
                 ->where('order_id', $order->id)
+                ->where('courier_id', $order->courier_id)
+                ->latest('id')
                 ->lockForUpdate()
                 ->first();
 

@@ -221,23 +221,39 @@ class SettingsController extends Controller
 
     public function updateCourierBonus(Request $request)
     {
-        $request->validate([
-            'courier_surge_step' => 'required|integer|min:0|max:5000',
-            'courier_surge_max' => 'required|integer|min:0|max:50000',
-            'courier_surge_threshold' => 'required|integer|min:0|max:50000',
-            'courier_sla_minutes' => 'required|integer|min:1|max:180',
-            'courier_penalty_step' => 'required|integer|min:0|max:10000',
+        $validated = $request->validate([
+            'courier_base_fee' => 'required|integer|min:0|max:1000000',
+            'courier_price_per_km' => 'required|integer|min:0|max:1000000',
+            'courier_min_fee' => 'required|integer|min:0|max:1000000',
+            'courier_bonus_rules' => 'nullable|array',
+            'courier_bonus_rules.*.from_km' => 'nullable|numeric|min:0|max:10000',
+            'courier_bonus_rules.*.to_km' => 'nullable|numeric|min:0|max:10000',
+            'courier_bonus_rules.*.bonus_amount' => 'nullable|integer|min:0|max:1000000',
         ]);
 
-        $surgeMax = $request->integer('courier_surge_max');
-        $surgeThreshold = min($request->integer('courier_surge_threshold'), $surgeMax);
+        $rules = collect($validated['courier_bonus_rules'] ?? [])
+            ->map(function (array $rule) {
+                $from = max(0, (float) ($rule['from_km'] ?? 0));
+                $to = isset($rule['to_km']) && $rule['to_km'] !== '' ? max(0, (float) $rule['to_km']) : null;
+                if ($to !== null && $to < $from) {
+                    $to = $from;
+                }
+
+                return [
+                    'from_km' => $from,
+                    'to_km' => $to,
+                    'bonus_amount' => max(0, (int) ($rule['bonus_amount'] ?? 0)),
+                ];
+            })
+            ->filter(fn (array $rule) => $rule['bonus_amount'] > 0)
+            ->values()
+            ->all();
 
         $this->projectSettings()->update([
-            'courier_surge_step' => $request->integer('courier_surge_step'),
-            'courier_surge_max' => $surgeMax,
-            'courier_surge_threshold' => $surgeThreshold,
-            'courier_sla_minutes' => $request->integer('courier_sla_minutes'),
-            'courier_penalty_step' => $request->integer('courier_penalty_step'),
+            'courier_base_fee' => $validated['courier_base_fee'],
+            'courier_price_per_km' => $validated['courier_price_per_km'],
+            'courier_min_fee' => $validated['courier_min_fee'],
+            'courier_bonus_rules' => $rules,
         ]);
 
         return back()->with('success', 'Kuryer bonus sozlamalari yangilandi.');

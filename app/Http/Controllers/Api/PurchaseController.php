@@ -769,12 +769,22 @@ class PurchaseController extends Controller
                 $sellerAmount = 0;
                 $sellerLocation = DB::table('seller_locations')
                     ->where('seller_id', $sellerId)
-                    ->where('is_main', true)
                     ->where('is_deleted', false)
+                    ->orderByDesc('is_main')
+                    ->orderBy('id')
                     ->first(['id', 'fullAddress', 'lat', 'lon', 'is_main']);
 
                 if (! $sellerLocation) {
-                    throw new \RuntimeException("Main seller location not found for seller_id: {$sellerId}");
+                    DB::rollBack();
+                    Log::warning('Purchase blocked: seller has no active location', [
+                        'seller_id' => (int) $sellerId,
+                        'user_id' => (int) $user->id,
+                    ]);
+
+                    return $this->err(
+                        "Sotuvchi filiali topilmadi. Iltimos, do'kon joylashuvini tekshiring.",
+                        422
+                    );
                 }
 
                 $sellerMainLocations[(int) $sellerId] = $sellerLocation;
@@ -853,9 +863,6 @@ class PurchaseController extends Controller
                     : CourierOrderStatusCode::PENDING->value,
                 'courierPrice' => (int) $deliveryPrice,
                 'courierBonus' => 0,
-                'pickup_bonus' => 0,
-                'locked_bonus' => null,
-                'final_bonus' => null,
             ]);
 
             foreach ($allItems as $itm) {
@@ -1166,7 +1173,7 @@ class PurchaseController extends Controller
             if ($locationId) {
                 $sellerLocationQuery->where('id', $locationId);
             } else {
-                $sellerLocationQuery->where('is_main', true);
+                $sellerLocationQuery->orderByDesc('is_main')->orderBy('id');
             }
 
             $sellerLocation = $sellerLocationQuery->first(['id', 'fullAddress', 'lat', 'lon', 'is_main']);

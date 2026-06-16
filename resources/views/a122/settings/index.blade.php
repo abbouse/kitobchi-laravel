@@ -514,8 +514,8 @@
     <div class="card-panel">
       <div class="settings-card-header">
         <div>
-          <div class="settings-card-title"><i class="bi bi-bicycle mr-2" style="color:var(--p-info)"></i>Kuryer bonus tizimi</div>
-          <div class="settings-card-sub">Surge bonus, trigger threshold va SLA penalty parametrlari.</div>
+          <div class="settings-card-title"><i class="bi bi-bicycle mr-2" style="color:var(--p-info)"></i>Kuryer km va bonus tizimi</div>
+          <div class="settings-card-sub">Bazaviy haq, km narxi va masofa oralig'iga qarab bonuslar.</div>
         </div>
       </div>
       <form method="POST" action="{{ route('admin.settings.courier-bonus') }}">
@@ -523,29 +523,31 @@
         <div class="kc-settings-panel">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <label class="p-form-label">Har minut qo‘shiladigan bonus</label>
-              <input type="number" name="courier_surge_step" class="p-form-control" min="0"
-                     value="{{ old('courier_surge_step', $project?->courier_surge_step ?? 500) }}">
+              <label class="p-form-label">Bazaviy haq</label>
+              <input type="number" name="courier_base_fee" class="p-form-control" min="0"
+                     value="{{ old('courier_base_fee', $project?->courier_base_fee ?? 3000) }}">
             </div>
             <div>
-              <label class="p-form-label">Maksimal surge bonus</label>
-              <input type="number" name="courier_surge_max" class="p-form-control" min="0"
-                     value="{{ old('courier_surge_max', $project?->courier_surge_max ?? 10000) }}">
+              <label class="p-form-label">1 km narxi</label>
+              <input type="number" name="courier_price_per_km" class="p-form-control" min="0"
+                     value="{{ old('courier_price_per_km', $project?->courier_price_per_km ?? 1500) }}">
             </div>
             <div>
-              <label class="p-form-label">Push trigger threshold</label>
-              <input type="number" name="courier_surge_threshold" class="p-form-control" min="0"
-                     value="{{ old('courier_surge_threshold', $project?->courier_surge_threshold ?? 5000) }}">
-            </div>
-            <div>
-              <label class="p-form-label">SLA daqiqa</label>
-              <input type="number" name="courier_sla_minutes" class="p-form-control" min="1"
-                     value="{{ old('courier_sla_minutes', $project?->courier_sla_minutes ?? 45) }}">
+              <label class="p-form-label">Minimal payout</label>
+              <input type="number" name="courier_min_fee" class="p-form-control" min="0"
+                     value="{{ old('courier_min_fee', $project?->courier_min_fee ?? 5000) }}">
             </div>
             <div class="md:col-span-2">
-              <label class="p-form-label">Kechikish penaltisi (har minut)</label>
-              <input type="number" name="courier_penalty_step" class="p-form-control" min="0"
-                     value="{{ old('courier_penalty_step', $project?->courier_penalty_step ?? 300) }}">
+              <label class="p-form-label">Masofa bonuslari</label>
+              @php $bonusRules = old('courier_bonus_rules', $project?->courier_bonus_rules ?? []); @endphp
+              @for($i = 0; $i < 5; $i++)
+                @php $rule = $bonusRules[$i] ?? []; @endphp
+                <div class="grid grid-cols-3 gap-2 mb-2">
+                  <input type="number" step="0.1" name="courier_bonus_rules[{{ $i }}][from_km]" class="p-form-control" min="0" placeholder="Dan km" value="{{ $rule['from_km'] ?? '' }}">
+                  <input type="number" step="0.1" name="courier_bonus_rules[{{ $i }}][to_km]" class="p-form-control" min="0" placeholder="Gacha km" value="{{ $rule['to_km'] ?? '' }}">
+                  <input type="number" name="courier_bonus_rules[{{ $i }}][bonus_amount]" class="p-form-control" min="0" placeholder="Bonus so'm" value="{{ $rule['bonus_amount'] ?? '' }}">
+                </div>
+              @endfor
             </div>
           </div>
         </div>
@@ -562,11 +564,9 @@
         <div class="settings-card-title"><i class="bi bi-activity mr-2" style="color:var(--p-warning)"></i>Joriy konfiguratsiya</div>
       </div>
       @foreach([
-        ['Har minut bonus', $project?->courier_surge_step ?? 500, 'so\'m'],
-        ['Max surge', $project?->courier_surge_max ?? 10000, 'so\'m'],
-        ['Threshold', $project?->courier_surge_threshold ?? 5000, 'so\'m'],
-        ['SLA', $project?->courier_sla_minutes ?? 45, 'minut'],
-        ['Penalty', $project?->courier_penalty_step ?? 300, 'so\'m/min'],
+        ['Bazaviy haq', $project?->courier_base_fee ?? 3000, 'so\'m'],
+        ['1 km narxi', $project?->courier_price_per_km ?? 1500, 'so\'m'],
+        ['Minimal payout', $project?->courier_min_fee ?? 5000, 'so\'m'],
       ] as [$lbl, $val, $suffix])
       <div class="kc-settings-row">
         <span class="kc-settings-key">{{ $lbl }}</span>

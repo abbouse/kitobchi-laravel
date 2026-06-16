@@ -153,9 +153,6 @@ class PostalResendService
                 'status_code' => CourierOrderStatusCode::PAYMENT_PENDING->value,
                 'courierPrice' => $penaltyFee,
                 'courierBonus' => 0,
-                'pickup_bonus' => 0,
-                'locked_bonus' => null,
-                'final_bonus' => null,
             ]);
 
             foreach ($groupedItems as $sellerId => $items) {

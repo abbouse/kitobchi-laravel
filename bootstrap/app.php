@@ -150,16 +150,6 @@ return Application::configure(basePath: dirname(__DIR__))
             ->timezone($tz)
             ->withoutOverlapping();
 
-        // ── Phase 3: Kuryer bonus tizimi ──────────────────────────────
-        // Har minutda surge bonusini oshirib boradi va SLA-5min ogohlantirish
-        // push xabarlarini yuboradi. withoutOverlapping(2) — agar oldingi run
-        // 1 minutdan oshib ketsa ham yangi run boshlanmaydi (2 min lock).
-        $schedule->command('courier:refresh-bonus')
-            ->everyMinute()
-            ->timezone($tz)
-            ->withoutOverlapping(2)
-            ->runInBackground();
-
         $schedule->command('seller-orders:finalize-pending-item-cancellations')
             ->everyMinute()
             ->timezone($tz)

@@ -58,13 +58,15 @@ interface CourierOrder {
   mainOrderAmount?: number;
   courierPrice?: number;
   bonus?: number;
-  pickupBonus?: number;
+  taskDistanceKm?: number;
+  taskFeeAmount?: number;
+  taskBaseFeeAmount?: number;
+  taskDistanceFeeAmount?: number;
+  taskBonusAmount?: number;
+  taskLeg?: string;
   settledAmount?: number;
   settledAt?: string;
   pickedUpAt?: string;
-  slaDeadline?: string;
-  delaySeconds?: number;
-  customerDelay?: boolean;
   deliveryPrice?: number;
   deliveryType?: string;
   paymentStatus?: string;
@@ -203,8 +205,9 @@ function CourierModal({ courier, onHide, onPatch, onWarn, onResetPassword, onEdi
 function OrderModal({ order, statuses, onHide, onPatch }: { order: CourierOrder | null; statuses: Record<string, StatusMeta>; onHide: () => void; onPatch: (url?: string, data?: Record<string, string>) => void }) {
   return <Modal show={!!order} onHide={onHide} size="xl" centered><Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">Kuryer order #{order?.id}</Modal.Title></Modal.Header><Modal.Body>{!order ? null : <div className="row g-3">
     <Info title="Yetkazma" rows={[['Asosiy order', `#${order.orderId || '—'}`], ['Kuryer', order.courier], ['Kuryer telefoni', order.courierPhone || '—'], ['Hudud', order.courierRegion || '—'], ['Mijoz', order.customer], ['Mijoz telefoni', order.customerPhone || '—']]} />
-    <Info title="Hisob-kitob" rows={[['Yetkazma summasi', `${fmt(order.amount)} so'm`], ['Order summasi', `${fmt(order.mainOrderAmount || 0)} so'm`], ['Kuryer ulushi', `${fmt(order.courierPrice || 0)} so'm`], ['Bonus', `${fmt(order.bonus || 0)} so'm`], ['Pickup bonus', `${fmt(order.pickupBonus || 0)} so'm`], ['Settled', `${fmt(order.settledAmount || 0)} so'm`]]} />
-    <Info title="Jarayon" rows={[['Holat', order.statusLabel || order.status], ['To‘lov', order.paymentStatus || '—'], ['Yetkazish turi', order.deliveryType || '—'], ['Olingan vaqt', order.pickedUpAt || '—'], ['SLA deadline', order.slaDeadline || '—'], ['Kechikish', `${order.delaySeconds || 0} soniya`]]} />
+    <Info title="Hisob-kitob" rows={[['Yetkazma summasi', `${fmt(order.amount)} so'm`], ['Order summasi', `${fmt(order.mainOrderAmount || 0)} so'm`], ['Kuryer ulushi', `${fmt(order.courierPrice || 0)} so'm`], ['Bonus', `${fmt(order.bonus || 0)} so'm`], ['Jami payout', `${fmt((order.courierPrice || 0) + (order.bonus || 0))} so'm`], ['Settled', `${fmt(order.settledAmount || 0)} so'm`]]} />
+    <Info title="Km payout breakdown" rows={[['Masofa', `${Number(order.taskDistanceKm || 0).toFixed(2)} km`], ['Leg', order.taskLeg || '—'], ['Bazaviy haq', `${fmt(order.taskBaseFeeAmount || 0)} so'm`], ['Km haqi', `${fmt(order.taskDistanceFeeAmount || 0)} so'm`], ['Masofa bonusi', `${fmt(order.taskBonusAmount || 0)} so'm`], ['Task jami', `${fmt(order.taskFeeAmount || 0)} so'm`]]} />
+    <Info title="Jarayon" rows={[['Holat', order.statusLabel || order.status], ['To‘lov', order.paymentStatus || '—'], ['Yetkazish turi', order.deliveryType || '—'], ['Olingan vaqt', order.pickedUpAt || '—'], ['Kutish rejimi', 'O‘chirilgan'], ['Kechikish', 'Hisoblanmaydi']]} />
     <Info title="Manzil" rows={[['Qabul qiluvchi', order.address?.fullName || '—'], ['Telefon', order.address?.phone || '—'], ['Viloyat', order.address?.region || '—'], ['Tuman', order.address?.district || '—'], ['Ko‘cha', order.address?.street || '—'], ['Uy', order.address?.home || '—']]} />
     <div className="col-12"><div className="detail-panel"><h6 className="fw-bold mb-2">Xaritada ochish</h6><MapButtons mapLinks={(order.address?.mapLinks || {}) as Record<string, string>} /></div></div>
     <div className="col-12"><div className="detail-panel"><h6 className="fw-bold mb-3">Mahsulotlar</h6>{(order.items || []).map((item, index) => <div className="d-flex justify-content-between border-bottom py-2" key={`${item.name}-${index}`}><div><strong>{item.name}</strong><div className="small text-muted">{item.author || item.type || '—'}</div></div><div className="text-end">{item.quantity} x {fmt(item.price)}<div className="fw-semibold">{fmt(item.quantity * item.price)} so'm</div></div></div>)}{(order.items || []).length === 0 ? <div className="text-muted">Mahsulot topilmadi</div> : null}</div></div>

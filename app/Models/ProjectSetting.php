@@ -24,9 +24,8 @@ class ProjectSetting extends Model
         'tax_mode', 'tax_fixed_uzs', 'tax_profit_percent', 'payment_provider_percent',
         // Gift certificate
         'gift_certificate_options',
-        // Phase 3 — Kuryer bonus tizimi
-        'courier_surge_step', 'courier_surge_max', 'courier_surge_threshold',
-        'courier_sla_minutes', 'courier_penalty_step',
+        // Kuryer km-based to'lov va bonus tizimi
+        'courier_base_fee', 'courier_price_per_km', 'courier_min_fee', 'courier_bonus_rules',
         // Split v1 prep
         'split_enabled', 'split_public_enabled', 'split_upfront_percent', 'split_term_days',
         'split_global_min_order_sum', 'split_global_max_order_sum',
@@ -49,11 +48,10 @@ class ProjectSetting extends Model
         'tax_fixed_uzs'            => 'integer',
         'tax_profit_percent'       => 'decimal:3',
         'payment_provider_percent' => 'decimal:3',
-        'courier_surge_step'      => 'integer',
-        'courier_surge_max'       => 'integer',
-        'courier_surge_threshold' => 'integer',
-        'courier_sla_minutes'     => 'integer',
-        'courier_penalty_step'    => 'integer',
+        'courier_base_fee'        => 'integer',
+        'courier_price_per_km'    => 'integer',
+        'courier_min_fee'         => 'integer',
+        'courier_bonus_rules'     => 'array',
         'split_enabled' => 'boolean',
         'split_public_enabled' => 'boolean',
         'split_upfront_percent' => 'integer',

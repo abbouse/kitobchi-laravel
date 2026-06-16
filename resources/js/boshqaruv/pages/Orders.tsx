@@ -177,16 +177,15 @@ interface Ord {
     amount?: number;
     courierPrice?: number;
     courierBonus?: number;
-    pickupBonus?: number;
-    lockedBonus?: number;
-    finalBonus?: number;
+    taskDistanceKm?: number;
+    taskFeeAmount?: number;
+    taskBaseFeeAmount?: number;
+    taskDistanceFeeAmount?: number;
+    taskBonusAmount?: number;
+    taskLeg?: string;
     settledAmount?: number;
     settledAt?: string | null;
     pickedUpAt?: string | null;
-    slaDeadline?: string | null;
-    customerDelayCount?: number;
-    totalDelaySeconds?: number;
-    isCustomerDelay?: boolean;
   } | null;
   activeHubs?: Array<{ id: number; label: string }>;
   fulfillmentModes?: Array<{ value: string; label: string }>;
@@ -831,10 +830,12 @@ export default function Orders() {
                         <Detail label="Kuryer" value={selectedOrd.courierOrder?.courier || selectedOrd.courierName} />
                         <Detail label="Kuryer telefoni" value={selectedOrd.courierOrder?.phone} />
                         <Detail label="Kuryer narxi" value={`${fmt(selectedOrd.courierOrder?.courierPrice || 0)} so'm`} />
-                        <Detail label="Kuryer bonuslari" value={`${fmt((selectedOrd.courierOrder?.pickupBonus || 0) + (selectedOrd.courierOrder?.lockedBonus || 0) + (selectedOrd.courierOrder?.finalBonus || 0))} so'm`} />
+                        <Detail label="Masofa" value={`${Number(selectedOrd.courierOrder?.taskDistanceKm || 0).toFixed(2)} km`} />
+                        <Detail label="Km haqi" value={`${fmt(selectedOrd.courierOrder?.taskDistanceFeeAmount || 0)} so'm`} />
+                        <Detail label="Kuryer bonuslari" value={`${fmt(selectedOrd.courierOrder?.courierBonus ?? 0)} so'm`} />
+                        <Detail label="Task jami" value={`${fmt(selectedOrd.courierOrder?.taskFeeAmount || 0)} so'm`} />
                         <Detail label="Settled" value={selectedOrd.courierOrder?.settledAt ? `${fmt(selectedOrd.courierOrder?.settledAmount || 0)} so'm · ${selectedOrd.courierOrder.settledAt}` : '—'} />
-                        <Detail label="SLA deadline" value={selectedOrd.courierOrder?.slaDeadline} />
-                        <Detail label="Mijoz kechikishi" value={selectedOrd.courierOrder?.isCustomerDelay ? `Ha · ${selectedOrd.courierOrder.customerDelayCount || 0} marta` : "Yo'q"} />
+                        <Detail label="Kutish rejimi" value="O'chirilgan" />
                       </div>
                     </div>
                   </div>
