@@ -3,9 +3,13 @@
 namespace App\Services;
 
 use App\Enums\OrderStatusCode;
+use App\Enums\CourierTaskStatusCode;
+use App\Enums\FulfillmentStatusCode;
 use App\Enums\PaymentStatusCode;
 use App\Enums\SellerOrderStatusCode;
 use App\Models\Admin;
+use App\Models\CourierTask;
+use App\Models\Couriers;
 use App\Models\GiftCertificate;
 use App\Models\OrderItemFinancialSnapshot;
 use App\Models\OrderRefund;
@@ -26,6 +30,7 @@ class SellerOrderCancellationService
         private readonly PaylovP2pRefundService $paylovP2pRefundService,
         private readonly CashbackHistoryService $cashbackHistoryService,
         private readonly OrderService $orderService,
+        private readonly OrderStatusPushService $orderStatusPushService,
     ) {
     }
 
@@ -155,15 +160,10 @@ class SellerOrderCancellationService
             $order->amount = max(0, (int) $order->amount - (int) $snapshot->card_paid_allocated);
             $order->refund_total_amount = (int) ($order->refund_total_amount ?? 0) + $cardRefund;
             $order->save();
+            $this->syncCodCollectAmount($order);
 
             $this->mutateOrderItemsJson($order, function (array $row) use ($item, $reason, $refund, $snapshot) {
-                if ((int) ($row['item_id'] ?? 0) !== (int) $item->product_id) {
-                    return $row;
-                }
-                if ((string) ($row['type'] ?? '') !== (string) $item->type) {
-                    return $row;
-                }
-                if ((int) ($row['variant_id'] ?? 0) !== (int) ($item->variant_id ?? 0)) {
+                if (! $this->jsonRowMatchesItem($row, $item)) {
                     return $row;
                 }
 
@@ -299,6 +299,8 @@ class SellerOrderCancellationService
             throw new RuntimeException('30 daqiqalik qaytarish muddati tugagan.');
         }
 
+        $this->assertPendingItemCanBeRestored($sellerOrder, $order);
+
         DB::transaction(function () use ($item, $order) {
             $this->restoreProductAvailabilityForItem($item);
 
@@ -357,8 +359,13 @@ class SellerOrderCancellationService
             ->get();
 
         $processed = 0;
+        $notificationsByOrder = [];
         foreach ($items as $item) {
             try {
+                $sellerOrder = SellerOrder::query()->find($item->order_id);
+                $orderId = (int) ($sellerOrder?->order_id ?? 0);
+                $itemTitle = $this->resolveSellerOrderItemTitle($item, $sellerOrder?->order_id);
+
                 $this->cancelItemFlow(
                     item: $item,
                     reasonCode: (string) $item->cancel_reason_code,
@@ -368,9 +375,22 @@ class SellerOrderCancellationService
                     enforceOwnership: false,
                 );
                 $processed++;
+
+                if ($orderId > 0 && $itemTitle !== null && $item->cancelled_by_seller_id) {
+                    $notificationsByOrder[$orderId][] = $itemTitle;
+                }
             } catch (\Throwable) {
                 continue;
             }
+        }
+
+        foreach ($notificationsByOrder as $orderId => $titles) {
+            $order = Sold::query()->find($orderId);
+            if (! $order) {
+                continue;
+            }
+
+            $this->orderStatusPushService->sendSellerItemsUnavailableNotice($order, $titles);
         }
 
         return $processed;
@@ -446,6 +466,7 @@ class SellerOrderCancellationService
             $cashbackRestore = 0;
             $giftRestore = 0;
             $grossAmount = 0;
+            $customerAmountReduction = 0;
 
             foreach ($items as $item) {
                 $snapshot = $snapshots->get($item->id);
@@ -457,6 +478,7 @@ class SellerOrderCancellationService
                 $cashbackRestore += (int) $snapshot->cashback_allocated;
                 $giftRestore += (int) $snapshot->gift_cert_allocated;
                 $grossAmount += (int) $snapshot->gross_amount;
+                $customerAmountReduction += (int) $snapshot->card_paid_allocated;
             }
 
             $providerPayload = null;
@@ -521,13 +543,7 @@ class SellerOrderCancellationService
                 ])->save();
 
                 $this->mutateOrderItemsJson($order, function (array $row) use ($item, $reason, $refund, $snapshot) {
-                    if ((int) ($row['item_id'] ?? 0) !== (int) $item->product_id) {
-                        return $row;
-                    }
-                    if ((string) ($row['type'] ?? '') !== (string) $item->type) {
-                        return $row;
-                    }
-                    if ((int) ($row['variant_id'] ?? 0) !== (int) ($item->variant_id ?? 0)) {
+                    if (! $this->jsonRowMatchesItem($row, $item)) {
                         return $row;
                     }
 
@@ -567,9 +583,10 @@ class SellerOrderCancellationService
                 'refund_status' => 'completed',
             ])->save();
 
-            $order->amount = max(0, (int) $order->amount - $cardRefund);
+            $order->amount = max(0, (int) $order->amount - $customerAmountReduction);
             $order->refund_total_amount = (int) ($order->refund_total_amount ?? 0) + $cardRefund;
             $order->save();
+            $this->syncCodCollectAmount($order);
 
             return [
                 'ok' => true,
@@ -588,7 +605,7 @@ class SellerOrderCancellationService
                 ->keyBy('seller_order_item_id');
 
             $transaction = $this->findPaylovTransaction($order);
-            $cardRefund = $this->isPaidCardOrder($order) ? (int) $order->amount : 0;
+            $cardRefund = $this->shouldRefundToCard($order) ? (int) $order->amount : 0;
             $cashbackRestore = (int) ($order->cashbackAmount ?? 0);
             $giftRestore = (int) ($order->giftCertAmount ?? 0);
             $deliveryRefund = (int) ($order->deliveryPrice ?? 0);
@@ -678,13 +695,7 @@ class SellerOrderCancellationService
 
                 if ($freshOrder) {
                     $this->mutateOrderItemsJson($freshOrder, function (array $row) use ($item, $reason, $refund, $snapshot) {
-                        if ((int) ($row['item_id'] ?? 0) !== (int) $item->product_id) {
-                            return $row;
-                        }
-                        if ((string) ($row['type'] ?? '') !== (string) $item->type) {
-                            return $row;
-                        }
-                        if ((int) ($row['variant_id'] ?? 0) !== (int) ($item->variant_id ?? 0)) {
+                        if (! $this->jsonRowMatchesItem($row, $item)) {
                             return $row;
                         }
 
@@ -738,8 +749,17 @@ class SellerOrderCancellationService
             ->where('provider', 'paylov')
             ->latest('id');
 
-        if ($this->isPaidCardOrder($order)) {
-            $query->where('state', 2);
+        if ($this->isPaymentAccepted($order)) {
+            $paidTransaction = (clone $query)
+                ->where(function ($builder) {
+                    $builder->where('state', 2)
+                        ->orWhereNotNull('perform_time');
+                })
+                ->first();
+
+            if ($paidTransaction) {
+                return $paidTransaction;
+            }
         }
 
         return $query->first();
@@ -791,6 +811,106 @@ class SellerOrderCancellationService
                     'nominal_uzs' => DB::raw("nominal_uzs + {$amount}"),
                     'updated_at' => now(),
                 ]);
+        }
+    }
+
+    private function syncCodCollectAmount(Sold $order): void
+    {
+        $order->loadMissing('fulfillment');
+        $fulfillment = $order->fulfillment;
+
+        if (! $fulfillment || ! $fulfillment->is_cod) {
+            return;
+        }
+
+        $newAmount = max(0, (int) ($order->amount ?? 0));
+        $oldFulfillmentAmount = max(0, (int) ($fulfillment->cash_collect_amount ?? 0));
+
+        if ($oldFulfillmentAmount !== $newAmount) {
+            $fulfillment->forceFill([
+                'cash_collect_amount' => $newAmount,
+            ])->save();
+        }
+
+        $tasks = CourierTask::query()
+            ->where('order_id', $order->id)
+            ->where('fulfillment_id', $fulfillment->id)
+            ->where('is_cod', true)
+            ->whereNull('wallet_debited_at')
+            ->whereNotIn('status_code', [
+                CourierTaskStatusCode::COMPLETED->value,
+                CourierTaskStatusCode::CANCELLED->value,
+                CourierTaskStatusCode::FAILED->value,
+            ])
+            ->get();
+
+        foreach ($tasks as $task) {
+            DB::transaction(function () use ($task, $newAmount) {
+                $lockedTask = CourierTask::query()->lockForUpdate()->findOrFail($task->id);
+                $oldAmount = max(0, (int) ($lockedTask->cash_collect_amount ?? 0));
+
+                if ($oldAmount === $newAmount) {
+                    return;
+                }
+
+                if ($lockedTask->cod_reserved_at && ! $lockedTask->cod_released_at && $lockedTask->courier_id) {
+                    $courier = Couriers::query()->lockForUpdate()->find($lockedTask->courier_id);
+                    if ($courier) {
+                        $diff = $newAmount - $oldAmount;
+                        $courier->cod_reserved_amount = max(
+                            0,
+                            (int) ($courier->cod_reserved_amount ?? 0) + $diff
+                        );
+                        $courier->save();
+                    }
+                }
+
+                $lockedTask->cash_collect_amount = $newAmount;
+                $lockedTask->save();
+            });
+        }
+    }
+
+    private function assertPendingItemCanBeRestored(SellerOrder $sellerOrder, Sold $order): void
+    {
+        $sellerStatus = $sellerOrder->status_code
+            ? SellerOrderStatusCode::fromLegacy($sellerOrder->status_code)
+            : SellerOrderStatusCode::fromLegacy($sellerOrder->status);
+
+        if ($sellerStatus === SellerOrderStatusCode::HANDED_TO_COURIER) {
+            throw new RuntimeException('Buyurtma kuryerga berilgan. Endi mahsulotni sotuvda mavjud deb qaytarib bo‘lmaydi.');
+        }
+
+        $order->loadMissing('fulfillment');
+        $fulfillmentStatus = $order->fulfillment?->status_code;
+        if (in_array($fulfillmentStatus, [
+            FulfillmentStatusCode::PICKED_FROM_SELLER->value,
+            FulfillmentStatusCode::ARRIVED_AT_HUB->value,
+            FulfillmentStatusCode::QC_CHECKED->value,
+            FulfillmentStatusCode::PACKED->value,
+            FulfillmentStatusCode::LABELED->value,
+            FulfillmentStatusCode::DISPATCHED_TO_POST->value,
+            FulfillmentStatusCode::ASSIGNED_LAST_MILE->value,
+            FulfillmentStatusCode::OUT_FOR_DELIVERY->value,
+            FulfillmentStatusCode::DELIVERED->value,
+            FulfillmentStatusCode::RETURNED->value,
+            FulfillmentStatusCode::CANCELLED->value,
+        ], true)) {
+            throw new RuntimeException('Buyurtma kuryer/logistika jarayoniga o‘tgan. Endi mahsulotni sotuvda mavjud deb qaytarib bo‘lmaydi.');
+        }
+
+        $hasPickedCourierTask = CourierTask::query()
+            ->where('order_id', $order->id)
+            ->where('seller_id', $sellerOrder->seller_id)
+            ->whereIn('status_code', [
+                CourierTaskStatusCode::PICKED_UP->value,
+                CourierTaskStatusCode::DROPPED_OFF->value,
+                CourierTaskStatusCode::COMPLETED->value,
+            ])
+            ->exists();
+
+        if ($hasPickedCourierTask) {
+            throw new RuntimeException('Kuryer bu buyurtmani olib ketgan. Endi mahsulotni sotuvda mavjud deb qaytarib bo‘lmaydi.');
         }
     }
 
@@ -883,12 +1003,25 @@ class SellerOrderCancellationService
 
     private function shouldRefundToCard(Sold $order): bool
     {
-        return $this->isPaidCardOrder($order);
+        if (! $this->isPaymentAccepted($order)) {
+            return false;
+        }
+
+        if ((int) ($order->amount ?? 0) <= 0) {
+            return false;
+        }
+
+        return $this->findPaylovTransaction($order) !== null;
     }
 
     private function isPaidCardOrder(Sold $order): bool
     {
-        return $order->payment_status_code === PaymentStatusCode::PAID->value;
+        return $this->shouldRefundToCard($order);
+    }
+
+    private function isPaymentAccepted(Sold $order): bool
+    {
+        return PaymentStatusCode::fromLegacy($order->payment_status_code ?? $order->paymentStatus) === PaymentStatusCode::PAID;
     }
 
     private function assertSellerOwnsOrder(Seller $seller, SellerOrder $sellerOrder): void
@@ -934,5 +1067,35 @@ class SellerOrderCancellationService
             ->where('order_id', $sellerOrder->id)
             ->whereNull('cancelled_at')
             ->where('type', '!=', 'gift');
+    }
+
+    private function resolveSellerOrderItemTitle(SellerOrderItem $item, ?int $orderId = null): ?string
+    {
+        $productPayload = $item->product;
+        $parent = is_array($productPayload) ? ($productPayload['parent'] ?? null) : null;
+        $variant = is_array($productPayload) ? ($productPayload['variant'] ?? null) : null;
+
+        $title = trim((string) (
+            $variant?->name
+            ?? $parent?->name
+            ?? null
+        ));
+
+        if ($title !== '') {
+            return $title;
+        }
+
+        if ($orderId) {
+            $order = Sold::query()->find($orderId);
+            $row = collect($order?->items ?? [])
+                ->first(fn ($row) => $this->jsonRowMatchesItem((array) $row, $item));
+
+            $fallbackTitle = trim((string) (($row['name'] ?? $row['title'] ?? '')));
+            if ($fallbackTitle !== '') {
+                return $fallbackTitle;
+            }
+        }
+
+        return 'Mahsulot';
     }
 }

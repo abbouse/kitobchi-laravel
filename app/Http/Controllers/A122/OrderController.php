@@ -374,7 +374,7 @@ class OrderController extends Controller
         $fulfillment = $order->fulfillment;
         abort_if(! $fulfillment, 404, 'Fulfillment topilmadi.');
 
-        return view('a122.hubs.print.label', [
+        return view('boshqaruv.orders.print.label', [
             'order' => $order,
             'fulfillment' => $fulfillment,
             'label' => $this->hubPrintViewService->labelData($fulfillment),
@@ -388,7 +388,7 @@ class OrderController extends Controller
         $fulfillment = $order->fulfillment;
         abort_if(! $fulfillment, 404, 'Fulfillment topilmadi.');
 
-        return view('a122.hubs.print.receipt', [
+        return view('boshqaruv.orders.print.receipt', [
             'order' => $order,
             'fulfillment' => $fulfillment,
             'receipt' => $this->hubPrintViewService->receiptData($fulfillment),
@@ -552,6 +552,11 @@ class OrderController extends Controller
             return back()->with('error', 'Bu amal faqat admin uchun ruxsat etilgan.');
         }
 
+        $order = Sold::query()->find($sellerOrder->order_id);
+        if (! $order || PaymentStatusCode::fromLegacy($order->payment_status_code ?? $order->paymentStatus) !== PaymentStatusCode::PAID) {
+            return back()->with('error', "Refund faqat to'lov qabul qilingan buyurtmalar uchun ochiq.");
+        }
+
         $request->validate([
             'reason_code' => ['required', 'string', 'max:64', Rule::in(SellerCancellationReasonCatalog::orderSelectableCodes())],
             'custom_note' => 'nullable|string|max:500',
@@ -580,6 +585,12 @@ class OrderController extends Controller
         $admin = Auth::guard('panel')->user();
         if (! $admin || ! $admin->isAdmin()) {
             return back()->with('error', 'Bu amal faqat admin uchun ruxsat etilgan.');
+        }
+
+        $sellerOrder = SellerOrder::query()->find($sellerOrderItem->order_id);
+        $order = $sellerOrder ? Sold::query()->find($sellerOrder->order_id) : null;
+        if (! $order || PaymentStatusCode::fromLegacy($order->payment_status_code ?? $order->paymentStatus) !== PaymentStatusCode::PAID) {
+            return back()->with('error', "Refund faqat to'lov qabul qilingan buyurtmalar uchun ochiq.");
         }
 
         $request->validate([

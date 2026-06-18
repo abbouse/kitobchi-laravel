@@ -467,6 +467,9 @@ export default function Orders() {
     });
   };
 
+  const showItemRefundColumn = (selectedOrd?.itemsList || []).some((item) => item.canRefund && item.refundUrl);
+  const showSellerOrderRefundColumn = (selectedOrd?.sellerOrders || []).some((row) => row.canRefund && row.refundUrl);
+
   return (
     <div>
       <div className="page-head">
@@ -683,7 +686,7 @@ export default function Orders() {
                           <th>Narx</th>
                           <th>Jami</th>
                           <th>Holat</th>
-                          <th>Refund</th>
+                          {showItemRefundColumn ? <th>Refund</th> : null}
                         </tr>
                       </thead>
                       <tbody>
@@ -714,25 +717,27 @@ export default function Orders() {
                                 <span className="chip chip-success">Faol</span>
                               )}
                             </td>
-                            <td style={{ minWidth: 260 }}>
-                              {item.canRefund && item.refundUrl ? (
-                                <form onSubmit={(event) => submitForm(event, item.refundUrl)} className="d-flex flex-column gap-2">
-                                  <select name="reason_code" className="form-select form-select-sm" defaultValue={(selectedOrd.refundReasonCatalog?.item || [])[0]?.code || 'product_out_of_stock'} required>
-                                    {(selectedOrd.refundReasonCatalog?.item || []).map((reason) => (
-                                      <option value={reason.code} key={reason.code}>
-                                        {reason.notes?.uz}{reason.auto_zero_stock ? ' · stock 0' : ''}
-                                      </option>
-                                    ))}
-                                  </select>
-                                  <input name="custom_note" className="form-control form-control-sm" placeholder="Custom izoh kerak bo‘lsa" />
-                                  <button className="btn btn-sm btn-outline-danger">Faqat shu mahsulotni refund qilish</button>
-                                </form>
-                              ) : (
-                                <div className="text-muted small">
-                                  {item.isCancelled ? "Bu mahsulot allaqachon bekor qilingan." : 'Refund mumkin emas.'}
-                                </div>
-                              )}
-                            </td>
+                            {showItemRefundColumn ? (
+                              <td style={{ minWidth: 260 }}>
+                                {item.canRefund && item.refundUrl ? (
+                                  <form onSubmit={(event) => submitForm(event, item.refundUrl)} className="d-flex flex-column gap-2">
+                                    <select name="reason_code" className="form-select form-select-sm" defaultValue={(selectedOrd.refundReasonCatalog?.item || [])[0]?.code || 'product_out_of_stock'} required>
+                                      {(selectedOrd.refundReasonCatalog?.item || []).map((reason) => (
+                                        <option value={reason.code} key={reason.code}>
+                                          {reason.notes?.uz}{reason.auto_zero_stock ? ' · stock 0' : ''}
+                                        </option>
+                                      ))}
+                                    </select>
+                                    <input name="custom_note" className="form-control form-control-sm" placeholder="Custom izoh kerak bo‘lsa" />
+                                    <button className="btn btn-sm btn-outline-danger">Faqat shu mahsulotni refund qilish</button>
+                                  </form>
+                                ) : (
+                                  <div className="text-muted small">
+                                    {item.isCancelled ? "Bu mahsulot allaqachon bekor qilingan." : 'Refund mumkin emas.'}
+                                  </div>
+                                )}
+                              </td>
+                            ) : null}
                           </tr>
                         ))}
                       </tbody>
@@ -796,7 +801,7 @@ export default function Orders() {
 
                 <div className="detail-panel mt-3">
                   <h6 className="fw-bold mb-3">Seller orderlar</h6>
-                  <SellerOrdersTable rows={selectedOrd.sellerOrders || []} reasonOptions={selectedOrd.refundReasonCatalog?.order || []} onSubmit={submitForm} />
+                  <SellerOrdersTable rows={selectedOrd.sellerOrders || []} reasonOptions={selectedOrd.refundReasonCatalog?.order || []} onSubmit={submitForm} showRefundColumn={showSellerOrderRefundColumn} />
                 </div>
 
                 <div className="detail-panel mt-3">
@@ -1053,10 +1058,12 @@ function SellerOrdersTable({
   rows,
   reasonOptions,
   onSubmit,
+  showRefundColumn,
 }: {
   rows: SellerOrder[];
   reasonOptions: RefundReasonOption[];
   onSubmit: (event: FormEvent<HTMLFormElement>, url: string | undefined, method?: 'post' | 'patch') => void;
+  showRefundColumn: boolean;
 }) {
   if (!rows.length) {
     return <div className="text-muted small">Seller order topilmadi.</div>;
@@ -1074,7 +1081,7 @@ function SellerOrdersTable({
             <th>Hisob-kitob</th>
             <th>Status</th>
             <th>Qabul</th>
-            <th>Refund</th>
+            {showRefundColumn ? <th>Refund</th> : null}
           </tr>
         </thead>
         <tbody>
@@ -1099,25 +1106,27 @@ function SellerOrdersTable({
                 <div className="text-muted">{row.acceptedAt || '—'}</div>
                 <div className="text-muted small">{row.createdAt || ''}</div>
               </td>
-              <td style={{ minWidth: 280 }}>
-                {row.canRefund && row.refundUrl ? (
-                  <form onSubmit={(event) => onSubmit(event, row.refundUrl)} className="d-flex flex-column gap-2">
-                    <select name="reason_code" className="form-select form-select-sm" defaultValue={reasonOptions[0]?.code || 'all_products_out_of_stock'} required>
-                      {reasonOptions.map((reason) => (
-                        <option value={reason.code} key={reason.code}>
-                          {reason.notes?.uz}{reason.auto_zero_stock ? ' · stock 0' : ''}
-                        </option>
-                      ))}
-                    </select>
-                    <input name="custom_note" className="form-control form-control-sm" placeholder="Custom izoh kerak bo‘lsa" />
-                    <button className="btn btn-sm btn-outline-danger">Shu seller orderni refund qilish</button>
-                  </form>
-                ) : (
-                  <div className="text-muted small">
-                    {row.isCancelled ? (row.cancelNotes?.uz || 'Seller order bekor qilingan.') : 'Refund mumkin emas.'}
-                  </div>
-                )}
-              </td>
+              {showRefundColumn ? (
+                <td style={{ minWidth: 280 }}>
+                  {row.canRefund && row.refundUrl ? (
+                    <form onSubmit={(event) => onSubmit(event, row.refundUrl)} className="d-flex flex-column gap-2">
+                      <select name="reason_code" className="form-select form-select-sm" defaultValue={reasonOptions[0]?.code || 'all_products_out_of_stock'} required>
+                        {reasonOptions.map((reason) => (
+                          <option value={reason.code} key={reason.code}>
+                            {reason.notes?.uz}{reason.auto_zero_stock ? ' · stock 0' : ''}
+                          </option>
+                        ))}
+                      </select>
+                      <input name="custom_note" className="form-control form-control-sm" placeholder="Custom izoh kerak bo‘lsa" />
+                      <button className="btn btn-sm btn-outline-danger">Shu seller orderni refund qilish</button>
+                    </form>
+                  ) : (
+                    <div className="text-muted small">
+                      {row.isCancelled ? (row.cancelNotes?.uz || 'Seller order bekor qilingan.') : 'Refund mumkin emas.'}
+                    </div>
+                  )}
+                </td>
+              ) : null}
             </tr>
           ))}
         </tbody>

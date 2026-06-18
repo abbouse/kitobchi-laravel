@@ -5,13 +5,16 @@ namespace App\Http\Controllers\A122;
 use App\Http\Controllers\Controller;
 use App\Models\DeliveryService;
 use App\Models\DeliveryZoneRule;
+use App\Services\DeliveryEtaSyncService;
 use App\Services\DeliveryZoneResolverService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class LogisticsController extends Controller
 {
     public function __construct(
         private readonly DeliveryZoneResolverService $deliveryZoneResolverService,
+        private readonly DeliveryEtaSyncService $deliveryEtaSyncService,
     ) {}
 
     public function index(Request $request)
@@ -90,10 +93,32 @@ class LogisticsController extends Controller
     public function update(Request $request, DeliveryZoneRule $logistic)
     {
         $validated = $this->validateRule($request);
+        $previousEtaDays = $logistic->eta_days;
 
         $logistic->update($this->payload($validated, $request));
+        $freshLogistic = $logistic->fresh();
 
-        return back()->with('success', 'Logistika qoidasi yangilandi.');
+        $affectedOrders = $this->deliveryEtaSyncService->syncZoneRuleEtaChange(
+            $freshLogistic,
+            $previousEtaDays,
+            $freshLogistic?->eta_days,
+        );
+
+        if ($affectedOrders > 0) {
+            Log::info('Delivery zone ETA synced to active orders', [
+                'delivery_zone_rule_id' => $logistic->id,
+                'previous_eta_days' => $previousEtaDays,
+                'new_eta_days' => $logistic->eta_days,
+                'affected_orders' => $affectedOrders,
+            ]);
+        }
+
+        $message = 'Logistika qoidasi yangilandi.';
+        if ($affectedOrders > 0) {
+            $message .= " {$affectedOrders} ta faol buyurtmaning muddat prognozi ham yangilandi.";
+        }
+
+        return back()->with('success', $message);
     }
 
     public function destroy(DeliveryZoneRule $logistic)

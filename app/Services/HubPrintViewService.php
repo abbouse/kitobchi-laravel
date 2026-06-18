@@ -15,6 +15,7 @@ class HubPrintViewService
         $order = $fulfillment->order;
         $locale = $this->resolveLocale($order?->user?->locale);
         $address = collect($order?->address ?? [])->first() ?? [];
+        $items = $this->mapPrintableItems($order?->items ?? [], $locale);
         $customerName = trim((string) (
             Arr::get($address, 'fullName')
             ?? $order?->recipient_name
@@ -47,7 +48,11 @@ class HubPrintViewService
                 ? $this->text($locale, 'cash_collect')
                 : $this->text($locale, 'card_paid'),
             'cod_amount' => (int) ($fulfillment->cash_collect_amount ?? 0),
-            'items_count' => (int) collect($order?->items ?? [])->sum(fn ($item) => (int) ($item['count_item'] ?? $item['count'] ?? 1)),
+            'items_count' => (int) collect($items)
+                ->reject(fn (array $item) => $item['is_cancelled'])
+                ->sum('qty'),
+            'items_preview' => collect($items)->take(3)->values()->all(),
+            'items_preview_hidden_count' => max(0, count($items) - 3),
             'created_at' => optional($order?->created_at)?->format('d.m.Y H:i'),
             'created_at_pretty' => $this->formatPrettyDateTime($order?->created_at, $locale),
             'delivery_type' => (string) ($order?->deliveryType ?? 'delivery'),
@@ -55,23 +60,17 @@ class HubPrintViewService
             'total_amount' => (int) round((float) ($order?->amount ?? 0)),
             'meta_hub_name' => $fulfillment->hub?->name ?: $this->text($locale, 'hub_unknown'),
             'delight_message' => $this->resolveReceiptDelightMessage($fulfillment, $locale),
+            'cancel_state_label' => $this->text($locale, 'cancelled_item_label'),
+            'more_items_label' => $this->text($locale, 'more_items'),
         ];
     }
 
     public function receiptData(OrderFulfillment $fulfillment): array
     {
         $order = $fulfillment->order;
-        $items = collect($order?->items ?? [])->map(function ($item) {
-            $qty = (int) ($item['count_item'] ?? $item['count'] ?? 1);
-            $price = (float) ($item['item_price'] ?? $item['price'] ?? 0);
-
-            return [
-                'title' => (string) ($item['name'] ?? $item['title'] ?? 'Mahsulot'),
-                'qty' => $qty,
-                'price' => $price,
-                'total' => $qty * $price,
-            ];
-        })->values()->all();
+        $locale = $this->resolveLocale($order?->user?->locale);
+        $items = $this->mapPrintableItems($order?->items ?? [], $locale);
+        $activeItems = collect($items)->reject(fn (array $item) => $item['is_cancelled'])->values();
 
         return [
             'order_number' => '#ORD-' . $fulfillment->order_id,
@@ -81,12 +80,51 @@ class HubPrintViewService
             'payment_method' => $fulfillment->is_cod ? 'Naqd (COD)' : 'Oldindan to‘langan',
             'cod_amount' => (int) ($fulfillment->cash_collect_amount ?? 0),
             'items' => $items,
-            'items_count' => (int) collect($items)->sum('qty'),
-            'subtotal' => (int) round((float) collect($items)->sum('total')),
+            'items_count' => (int) $activeItems->sum('qty'),
+            'subtotal' => (int) round((float) $activeItems->sum('total')),
             'delivery_amount' => (int) round((float) ($order?->deliveryPrice ?? 0)),
             'discount_amount' => (int) round((float) ($order?->discountAmount ?? 0)),
             'total_amount' => (int) round((float) ($order?->amount ?? 0)),
+            'cancel_state_label' => $this->text($locale, 'cancelled_item_label'),
         ];
+    }
+
+    private function mapPrintableItems(array $items, string $locale): array
+    {
+        return collect($items)->map(function ($item) use ($locale) {
+            $qty = (int) ($item['count_item'] ?? $item['count'] ?? 1);
+            $price = (float) ($item['item_price'] ?? $item['price'] ?? 0);
+
+            return [
+                'title' => (string) ($item['name'] ?? $item['title'] ?? 'Mahsulot'),
+                'qty' => $qty,
+                'price' => $price,
+                'total' => $qty * $price,
+                'is_cancelled' => $this->isPrintableCancelledItem($item),
+                'cancel_reason' => $this->resolvePrintableCancelReason($item, $locale),
+            ];
+        })->values()->all();
+    }
+
+    private function isPrintableCancelledItem(array $item): bool
+    {
+        $refundStatus = strtolower(trim((string) ($item['refund_status'] ?? '')));
+
+        return ($item['is_cancelled'] ?? false) === true
+            || ! empty($item['cancelled_at'])
+            || ! empty($item['cancel_requested_at'])
+            || in_array($refundStatus, ['cancel_pending', 'completed'], true);
+    }
+
+    private function resolvePrintableCancelReason(array $item, string $locale): ?string
+    {
+        if (! $this->isPrintableCancelledItem($item)) {
+            return null;
+        }
+
+        $note = trim((string) ($item['cancel_note_' . $locale] ?? $item['cancel_note_uz'] ?? ''));
+
+        return $note !== '' ? $note : $this->text($locale, 'cancelled_item_label');
     }
 
     private function formatPhoneForLabel(?string $phone): string
@@ -218,6 +256,8 @@ class HubPrintViewService
                 'delivery_pickup' => 'O‘zi olib ketish',
                 'delivery_courier' => 'Kuryer orqali',
                 'hub_unknown' => 'Hub aniqlanmagan',
+                'cancelled_item_label' => 'Qolmadi',
+                'more_items' => 'yana',
             ],
             'ru' => [
                 'customer_fallback' => 'Клиент',
@@ -227,6 +267,8 @@ class HubPrintViewService
                 'delivery_pickup' => 'Самовывоз',
                 'delivery_courier' => 'Через курьера',
                 'hub_unknown' => 'Хаб не указан',
+                'cancelled_item_label' => 'Отменено',
+                'more_items' => 'ещё',
             ],
             'en' => [
                 'customer_fallback' => 'Customer',
@@ -236,6 +278,8 @@ class HubPrintViewService
                 'delivery_pickup' => 'Self pickup',
                 'delivery_courier' => 'Via courier',
                 'hub_unknown' => 'Hub not set',
+                'cancelled_item_label' => 'Cancelled',
+                'more_items' => 'more',
             ],
             'ja' => [
                 'customer_fallback' => 'お客様',
@@ -245,6 +289,8 @@ class HubPrintViewService
                 'delivery_pickup' => '店頭受け取り',
                 'delivery_courier' => '配達員がお届け',
                 'hub_unknown' => 'ハブ未設定',
+                'cancelled_item_label' => '欠品',
+                'more_items' => '件',
             ],
         ];
 

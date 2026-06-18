@@ -77,7 +77,7 @@ class DeskController extends Controller
         $this->authorizePermission('print.label');
         $fulfillment->loadMissing(['order.user', 'hub']);
 
-        return view('a122.hubs.print.label', [
+        return view('boshqaruv.orders.print.label', [
             'order' => $fulfillment->order,
             'fulfillment' => $fulfillment,
             'label' => $this->hubPrintViewService->labelData($fulfillment),
@@ -91,7 +91,7 @@ class DeskController extends Controller
         $this->authorizePermission('print.receipt');
         $fulfillment->loadMissing(['order.user', 'hub']);
 
-        return view('a122.hubs.print.receipt', [
+        return view('boshqaruv.orders.print.receipt', [
             'order' => $fulfillment->order,
             'fulfillment' => $fulfillment,
             'receipt' => $this->hubPrintViewService->receiptData($fulfillment),

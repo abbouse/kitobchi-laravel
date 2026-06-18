@@ -1428,7 +1428,7 @@ class AdminController extends Controller
             'new' => $this->countStatuses(Sold::query(), ['pending', 'A']),
             'packing' => $this->countStatuses(Sold::query(), ['packing', 'P']),
             'onway' => $this->countStatuses(Sold::query(), ['in_delivery', 'B']),
-            'done' => $this->countStatuses(Sold::query(), ['delivered', 'customer_received', 'C', 'D']),
+            'done' => $this->countStatuses(Sold::query(), ['customer_received', 'D']),
             'cancelled' => $this->countStatuses(Sold::query(), ['cancelled', 'returned', 'F', 'R']),
         ];
 
@@ -1671,10 +1671,7 @@ class AdminController extends Controller
         $commission = $commissionIncome - $commissionReversal;
 
         $courierPayout = Schema::hasTable('courier_orders')
-            ? (float) $between(CourierOrder::query()
-                ->where(fn ($query) => $query
-                    ->whereIn('status_code', ['customer_received', 'delivered'])
-                    ->orWhereIn('status', ['C', 'D', 'customer_received', 'delivered'])))
+            ? (float) $between($this->customerReceivedCourierQuery())
                 ->sum(DB::raw('COALESCE(settled_amount, courierPrice, 0)'))
             : 0;
 
@@ -6188,7 +6185,7 @@ class AdminController extends Controller
         $avgOrderValue = $paidOrders > 0 ? round($totalRevenue / $paidOrders) : 0;
         $activeOrders = $this->countStatuses(Sold::query(), $activeOrderStatuses);
         $cancelledOrders = $this->countStatuses(Sold::query(), ['cancelled', 'returned', 'F', 'R']);
-        $completedOrders = $this->countStatuses(Sold::query(), ['delivered', 'customer_received', 'C', 'D']);
+        $completedOrders = $this->countStatuses(Sold::query(), ['customer_received', 'D']);
         $finance = $this->marketplaceFinancialSnapshot();
         $deliveryIncome = $finance['deliveryIncome'];
         $promoDiscount = $finance['promoDiscount'];
@@ -6277,10 +6274,36 @@ class AdminController extends Controller
 
     private function paidOrdersQuery()
     {
-        return Sold::query()->where(function ($query) {
-            $query->whereIn('payment_status_code', ['paid', 'success', 'completed'])
-                ->orWhereIn('paymentStatus', ['paid', 'success', 'completed', 'C', 'c'])
-                ->orWhereNotNull('completed_at');
+        return Sold::query()
+            ->where(function ($query) {
+                $query->where('status_code', 'customer_received')
+                    ->orWhere(function ($fallback) {
+                        $fallback->whereNull('status_code')
+                            ->whereIn('status', ['D', 'customer_received']);
+                    });
+            })
+            ->where(function ($query) {
+                $query->whereIn('payment_status_code', ['paid', 'success', 'completed'])
+                    ->orWhere(function ($fallback) {
+                        $fallback->whereNull('payment_status_code')
+                            ->whereIn('paymentStatus', ['2', 2, 'paid', 'success', 'completed', 'C', 'c']);
+                    });
+            });
+    }
+
+    private function customerReceivedOrdersQuery()
+    {
+        return $this->paidOrdersQuery();
+    }
+
+    private function customerReceivedCourierQuery()
+    {
+        return CourierOrder::query()->where(function ($query) {
+            $query->where('status_code', 'customer_received')
+                ->orWhere(function ($fallback) {
+                    $fallback->whereNull('status_code')
+                        ->whereIn('status', ['D', 'customer_received']);
+                });
         });
     }
 
@@ -6348,7 +6371,7 @@ class AdminController extends Controller
 
     private function liveHourlyChart($today): array
     {
-        return $this->paidOrdersQuery()
+        return $this->customerReceivedOrdersQuery()
             ->where('created_at', '>=', $today)
             ->selectRaw('HOUR(created_at) as hour, COUNT(*) as orders, COALESCE(SUM(amount), 0) as revenue')
             ->groupBy(DB::raw('HOUR(created_at)'))
@@ -6372,9 +6395,9 @@ class AdminController extends Controller
             ['x' => 92, 'y' => 40], ['x' => 82, 'y' => 32], ['x' => 20, 'y' => 45], ['x' => 45, 'y' => 70],
         ];
 
-        $rows = Cache::remember('boshqaruv.live.regions.v3.address_snapshot', now()->addMinute(), function () {
+        $rows = Cache::remember('boshqaruv.live.regions.v4.address_snapshot', now()->addMinute(), function () {
             $regions = [];
-            Sold::query()
+            $this->customerReceivedOrdersQuery()
                 ->whereNotNull('address')
                 ->select(['id', 'address', 'recipient_region', 'amount', 'deliveryPrice', 'discountAmount', 'cashbackAmount'])
                 ->chunkById(500, function ($orders) use (&$regions) {
@@ -6900,8 +6923,9 @@ class AdminController extends Controller
                 ->orderBy('id')
                 ->get()
             : collect();
+        $canProcessRefunds = $this->canProcessOperationalRefunds($order, $paymentTransaction);
         $items = $sellerOrderItemModels->isNotEmpty()
-            ? $sellerOrderItemModels->map(fn (SellerOrderItem $item) => $this->sellerOrderItemPayload($item, $canModerateRefunds))->values()
+            ? $sellerOrderItemModels->map(fn (SellerOrderItem $item) => $this->sellerOrderItemPayload($item, $canModerateRefunds && $canProcessRefunds))->values()
             : collect($order->items ?? [])->map(fn ($item) => $this->orderItemPayload((array) $item))->values();
         $address = collect($order->address ?? [])->values()->map(fn ($item) => $this->orderAddressPayload((array) $item));
         $primaryAddress = (array) ($address->first() ?? []);
@@ -7046,7 +7070,7 @@ class AdminController extends Controller
                     'ja' => $sellerOrder->cancel_note_ja,
                 ],
                 'refundStatus' => $sellerOrder->refund_status,
-                'canRefund' => $canModerateRefunds && $sellerOrder->cancelled_at === null,
+                'canRefund' => $canModerateRefunds && $canProcessRefunds && $sellerOrder->cancelled_at === null,
                 'refundUrl' => route('boshqaruv.seller-orders.refund', $sellerOrder),
             ])
             ->values()
@@ -7403,6 +7427,35 @@ class AdminController extends Controller
             'canRefund' => $canModerateRefunds && $item->cancelled_at === null,
             'refundUrl' => route('boshqaruv.seller-order-items.refund', $item),
         ];
+    }
+
+    private function canProcessOperationalRefunds(Sold $order, ?Transaction $paymentTransaction = null): bool
+    {
+        $paymentStatus = PaymentStatusCode::fromLegacy($order->payment_status_code ?? $order->paymentStatus);
+        if ($paymentStatus !== PaymentStatusCode::PAID) {
+            return false;
+        }
+
+        if ((int) ($order->amount ?? 0) <= 0) {
+            return (int) ($order->cashbackAmount ?? 0) > 0
+                || (int) ($order->giftCertAmount ?? 0) > 0;
+        }
+
+        $transaction = $paymentTransaction;
+        if (! $transaction) {
+            $transaction = Transaction::query()
+                ->where('order_id', $order->id)
+                ->where('payment_type', 'order')
+                ->where('provider', 'paylov')
+                ->where(function ($query) {
+                    $query->where('state', 2)
+                        ->orWhereNotNull('perform_time');
+                })
+                ->latest('id')
+                ->first();
+        }
+
+        return $transaction?->provider === 'paylov';
     }
 
     private function productImageUrl($product): ?string
