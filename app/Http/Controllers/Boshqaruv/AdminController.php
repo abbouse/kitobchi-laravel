@@ -3073,6 +3073,8 @@ class AdminController extends Controller
                 default => 'Kuryer orqali yetkaziladi',
             },
             'dataUrl' => route('boshqaruv.orders.data', $order),
+            'statusUrl' => route('boshqaruv.orders.status', $order),
+            'labelUrl' => route('boshqaruv.orders.print.label', $order),
             'receiptUrl' => route('boshqaruv.orders.print.receipt', $order),
         ];
     }
@@ -6923,18 +6925,18 @@ class AdminController extends Controller
                 ->orderBy('id')
                 ->get()
             : collect();
-        $canProcessRefunds = $this->canProcessOperationalRefunds($order, $paymentTransaction);
-        $items = $sellerOrderItemModels->isNotEmpty()
-            ? $sellerOrderItemModels->map(fn (SellerOrderItem $item) => $this->sellerOrderItemPayload($item, $canModerateRefunds && $canProcessRefunds))->values()
-            : collect($order->items ?? [])->map(fn ($item) => $this->orderItemPayload((array) $item))->values();
         $address = collect($order->address ?? [])->values()->map(fn ($item) => $this->orderAddressPayload((array) $item));
         $primaryAddress = (array) ($address->first() ?? []);
         $fulfillment = $order->fulfillment;
         $paymentTransaction = Schema::hasTable('transactions') ? Transaction::query()
             ->where('order_id', $order->id)
             ->where('payment_type', 'order')
-            ->latest('id')
-            ->first() : null;
+                ->latest('id')
+                ->first() : null;
+        $canProcessRefunds = $this->canProcessOperationalRefunds($order, $paymentTransaction);
+        $items = $sellerOrderItemModels->isNotEmpty()
+            ? $sellerOrderItemModels->map(fn (SellerOrderItem $item) => $this->sellerOrderItemPayload($item, $canModerateRefunds && $canProcessRefunds))->values()
+            : collect($order->items ?? [])->map(fn ($item) => $this->orderItemPayload((array) $item))->values();
         $sellerTransactions = Schema::hasTable('seller_transactions') ? SellerTransaction::query()
             ->where('order_id', $order->id)
             ->get() : collect();
@@ -7347,16 +7349,23 @@ class AdminController extends Controller
     private function orderItemPayload(array $item): array
     {
         $type = $item['type'] ?? 'book';
-        $productId = (int) ($item['item_id'] ?? $item['product_id'] ?? 0);
+        $productId = (int) (
+            $item['item_id']
+            ?? $item['product_id']
+            ?? $item['productId']
+            ?? $item['itemId']
+            ?? $item['id']
+            ?? 0
+        );
         $product = match ($type) {
             'stationery' => $productId ? Stationery::find($productId) : null,
             'gift' => $productId ? Gifts::find($productId) : null,
             default => $productId ? Books::with('seller:id,shop_name')->find($productId) : null,
         };
-        $sellerId = (int) ($item['seller_id'] ?? 0);
+        $sellerId = (int) ($item['seller_id'] ?? $item['sellerId'] ?? 0);
         $seller = $sellerId > 0 ? Seller::select('id', 'shop_name')->find($sellerId) : null;
-        $quantity = (int) ($item['count_item'] ?? $item['count'] ?? $item['quantity'] ?? 1);
-        $price = (float) ($item['item_price'] ?? $item['price'] ?? 0);
+        $quantity = (int) ($item['count_item'] ?? $item['count'] ?? $item['quantity'] ?? $item['qty'] ?? 1);
+        $price = (float) ($item['item_price'] ?? $item['price'] ?? $item['amount'] ?? 0);
 
         return [
             'id' => $productId,
@@ -7371,11 +7380,17 @@ class AdminController extends Controller
                 'gift' => "Sovg'a",
                 default => 'Kitob',
             },
-            'name' => $product?->name ?? $product?->title ?? ($item['name'] ?? 'Mahsulot'),
+            'name' => $product?->name
+                ?? $product?->title
+                ?? $item['name']
+                ?? $item['title']
+                ?? $item['product_name']
+                ?? $item['productName']
+                ?? 'Mahsulot',
             'quantity' => $quantity,
             'price' => $price,
             'total' => $price * $quantity,
-            'seller' => $seller?->shop_name ?? $product?->seller?->shop_name ?? null,
+            'seller' => $seller?->shop_name ?? $product?->seller?->shop_name ?? ($item['seller'] ?? $item['seller_name'] ?? null),
             'image' => $this->productImageUrl($product),
         ];
     }
