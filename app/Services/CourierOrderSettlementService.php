@@ -8,6 +8,7 @@ use App\Enums\PaymentStatusCode;
 use App\Enums\CourierTaskLeg;
 use App\Models\CourierOrder;
 use App\Models\CourierTask;
+use App\Models\CourierTransaction;
 use App\Models\Couriers;
 use App\Models\Sold;
 use Illuminate\Support\Facades\DB;
@@ -79,6 +80,25 @@ class CourierOrderSettlementService
             $courierOrder->settled_at = now();
             $courierOrder->save();
 
+            CourierTransaction::query()->firstOrCreate(
+                [
+                    'courier_id' => $courier->id,
+                    'category' => 'order_delivery',
+                    'order_id' => $order->id,
+                    'courier_order_id' => $courierOrder->id,
+                ],
+                [
+                    'card' => '',
+                    'type' => 'income',
+                    'amount' => $settledAmount,
+                    'commissionPercent' => 0,
+                    'commissionPrice' => 0,
+                    'netAmount' => $settledAmount,
+                    'status' => 'approved',
+                    'description' => "Buyurtma #{$order->id} uchun yetkazish daromadi",
+                ]
+            );
+
             Log::info('Courier order settled', [
                 'order_id' => $order->id,
                 'courier_id' => $courier->id,
@@ -117,6 +137,23 @@ class CourierOrderSettlementService
             if ($settledAmount > 0) {
                 $courier->balance = (int) $courier->balance - $settledAmount;
                 $courier->save();
+
+                CourierTransaction::query()->create([
+                    'courier_id' => $courier->id,
+                    'card' => '',
+                    'type' => 'expense',
+                    'category' => 'reversal',
+                    'order_id' => $order->id,
+                    'courier_order_id' => $courierOrder->id,
+                    'amount' => $settledAmount,
+                    'commissionPercent' => 0,
+                    'commissionPrice' => 0,
+                    'netAmount' => $settledAmount,
+                    'status' => 'approved',
+                    'description' => $reason
+                        ? "Buyurtma #{$order->id} bo'yicha qaytarish: {$reason}"
+                        : "Buyurtma #{$order->id} bo'yicha qaytarish",
+                ]);
             }
 
             $courierOrder->settled_amount = null;

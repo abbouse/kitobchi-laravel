@@ -19,14 +19,6 @@
     .name { font-size: 12px; font-weight: 700; line-height: 1.05; }
     .phone { font-size: 10px; line-height: 1.2; }
     .address { border: 1px solid #111827; border-radius: 3px; padding: 1.4mm 2mm; font-size: 9.6px; line-height: 1.08; min-height: 10.2mm; }
-    .items { border: 1px dashed #9ca3af; border-radius: 3px; padding: 1.1mm 1.7mm; min-height: 6.8mm; }
-    .item-line { display: flex; align-items: flex-start; gap: 1.1mm; font-size: 8px; line-height: 1.08; }
-    .item-line + .item-line { margin-top: .7mm; }
-    .item-qty { min-width: 5mm; color: #4b5563; }
-    .item-title { flex: 1; }
-    .item-title--cancelled { text-decoration: line-through; text-decoration-thickness: 1px; color: #9b1c1c; }
-    .item-state { color: #b91c1c; font-weight: 700; }
-    .item-more { margin-top: .6mm; font-size: 7.8px; color: #6b7280; text-align: right; }
     .footer { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5mm; }
     .box { border: 1px solid #111827; border-radius: 3px; padding: 1.2mm 1.8mm; min-height: 7.2mm; }
     .label { display: block; font-size: 8px; color: #4b5563; margin-bottom: .6mm; text-transform: uppercase; }
@@ -54,25 +46,6 @@
     </div>
 
     <div class="address">{{ $label['address'] }}</div>
-
-    @if(!empty($label['items_preview']))
-      <div class="items">
-        @foreach($label['items_preview'] as $item)
-          <div class="item-line">
-            <span class="item-qty">{{ $item['qty'] }}x</span>
-            <span class="item-title {{ $item['is_cancelled'] ? 'item-title--cancelled' : '' }}">
-              {{ $item['title'] }}
-            </span>
-            @if($item['is_cancelled'])
-              <span class="item-state">{{ $label['cancel_state_label'] }}</span>
-            @endif
-          </div>
-        @endforeach
-        @if(($label['items_preview_hidden_count'] ?? 0) > 0)
-          <div class="item-more">+{{ $label['items_preview_hidden_count'] }} {{ $label['more_items_label'] }}</div>
-        @endif
-      </div>
-    @endif
 
     <div class="footer">
       <div class="box">

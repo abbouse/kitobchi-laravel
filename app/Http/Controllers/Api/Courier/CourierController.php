@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class CourierController extends Controller
@@ -127,6 +128,77 @@ class CourierController extends Controller
 
         return response()->json(['success' => true], 200);
     }
+
+    public function availability(Request $request)
+    {
+        $courier = Auth::guard('courier')->user();
+        if (!$courier) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'is_online' => (bool) $courier->is_online,
+                'updated_at' => optional($courier->availability_updated_at)?->toIso8601String(),
+            ],
+        ]);
+    }
+
+    public function updateAvailability(Request $request)
+    {
+        $courier = Auth::guard('courier')->user();
+        if (!$courier) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $validated = $request->validate([
+            'is_online' => ['required', 'boolean'],
+        ]);
+
+        $courier->forceFill([
+            'is_online' => (bool) $validated['is_online'],
+            'availability_updated_at' => now(),
+        ])->save();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'is_online' => (bool) $courier->is_online,
+                'updated_at' => $courier->availability_updated_at?->toIso8601String(),
+            ],
+        ]);
+    }
+
+    public function updatePhoto(Request $request)
+    {
+        $courier = Auth::guard('courier')->user();
+        if (!$courier) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $validated = $request->validate([
+            'photo' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+        ]);
+
+        if ($courier->photo && Storage::disk('public')->exists($courier->photo)) {
+            Storage::disk('public')->delete($courier->photo);
+        }
+
+        $path = $request->file('photo')->store('courier_photos', 'public');
+        $courier->photo = $path;
+        $courier->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Foto yangilandi',
+            'data' => [
+                'photo' => $path,
+                'photo_url' => asset('storage/' . $path),
+            ],
+        ], 200);
+    }
+
     public function notifications(Request $request)
     {
         $courier = Auth::guard('courier')->user();

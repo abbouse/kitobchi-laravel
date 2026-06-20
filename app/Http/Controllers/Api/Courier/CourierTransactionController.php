@@ -66,11 +66,14 @@ class CourierTransactionController extends Controller
                 $transaction = CourierTransaction::create([
                     'courier_id'       => $lockedCourier->id,
                     'card'             => $lockedCourier->payment_card,
+                    'type'             => 'expense',
+                    'category'         => 'withdrawal',
                     'amount'           => $amount,
                     'commissionPercent'=> $commissionPercent,
                     'commissionPrice'  => $commissionPrice,
                     'netAmount'        => $netAmount,
                     'status'           => 'pending',
+                    'description'      => "Balansdan yechib olish so'rovi",
                 ]);
 
                 $lockedCourier->balance = max(0, (int) $lockedCourier->balance - $amount);
@@ -102,7 +105,8 @@ class CourierTransactionController extends Controller
         $transactions = CourierTransaction::where('courier_id', $courier->id)
             ->orderBy('created_at', 'desc')
             ->limit(50)
-            ->get();
+            ->get()
+            ->map(fn (CourierTransaction $transaction) => $this->transactionPayload($transaction));
         return response()->json([
             'success' => true, 
             'data' => $transactions
@@ -179,5 +183,42 @@ class CourierTransactionController extends Controller
             'message' => 'Tranzaksiya muvaffaqiyatli bekor qilindi',
             'transaction_id' => $transactionId,
         ], 200);
+    }
+
+    private function transactionPayload(CourierTransaction $transaction): array
+    {
+        $category = $transaction->category ?: 'withdrawal';
+        $type = $transaction->type ?: ($category === 'withdrawal' ? 'expense' : 'income');
+
+        return [
+            'id' => $transaction->id,
+            'courier_id' => $transaction->courier_id,
+            'card' => $transaction->card,
+            'type' => $type,
+            'category' => $category,
+            'order_id' => $transaction->order_id,
+            'courier_order_id' => $transaction->courier_order_id,
+            'courier_task_id' => $transaction->courier_task_id,
+            'amount' => (int) $transaction->amount,
+            'commissionPercent' => (int) ($transaction->commissionPercent ?? 0),
+            'commissionPrice' => (int) ($transaction->commissionPrice ?? 0),
+            'netAmount' => (int) ($transaction->netAmount ?? $transaction->amount),
+            'status' => $transaction->status,
+            'description' => $transaction->description ?: $this->defaultDescription($category, $transaction->order_id),
+            'rejected_desc' => $transaction->rejected_desc,
+            'created_at' => optional($transaction->created_at)->toIso8601String(),
+            'updated_at' => optional($transaction->updated_at)->toIso8601String(),
+        ];
+    }
+
+    private function defaultDescription(string $category, ?int $orderId): string
+    {
+        return match ($category) {
+            'order_delivery' => $orderId ? "Buyurtma #{$orderId} uchun yetkazish daromadi" : 'Yetkazish daromadi',
+            'hub_delivery' => $orderId ? "Buyurtma #{$orderId} hubgacha yetkazildi" : 'Hubgacha yetkazish daromadi',
+            'reversal' => $orderId ? "Buyurtma #{$orderId} bo‘yicha qaytarish" : 'Balans tuzatish',
+            'penalty' => $orderId ? "Buyurtma #{$orderId} bo‘yicha jarima" : 'Jarima',
+            default => "Balansdan yechib olish so'rovi",
+        };
     }
 }

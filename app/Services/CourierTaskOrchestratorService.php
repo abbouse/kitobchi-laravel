@@ -10,6 +10,7 @@ use App\Enums\FulfillmentStatusCode;
 use App\Models\CourierOrder;
 use App\Models\CourierOrderItem;
 use App\Models\CourierTask;
+use App\Models\CourierTransaction;
 use App\Models\Couriers;
 use App\Models\OrderFulfillment;
 use App\Models\SellerOrder;
@@ -267,6 +268,25 @@ class CourierTaskOrchestratorService
                     if ($courier) {
                         $courier->balance = (int) $courier->balance + $payout;
                         $courier->save();
+
+                        CourierTransaction::query()->firstOrCreate(
+                            [
+                                'courier_id' => $courier->id,
+                                'category' => 'hub_delivery',
+                                'order_id' => $lockedTask->order_id,
+                                'courier_task_id' => $lockedTask->id,
+                            ],
+                            [
+                                'card' => '',
+                                'type' => 'income',
+                                'amount' => $payout,
+                                'commissionPercent' => 0,
+                                'commissionPrice' => 0,
+                                'netAmount' => $payout,
+                                'status' => 'approved',
+                                'description' => "Buyurtma #{$lockedTask->order_id} hubgacha yetkazildi",
+                            ]
+                        );
                     }
                 }
 

@@ -14,6 +14,7 @@ use App\Models\Seller;
 use App\Models\Couriers;
 use App\Models\CourierOrder;
 use App\Models\CourierOrderItem;
+use App\Models\SellerLocation;
 use App\Models\SellerOrder;
 use App\Models\SellerOrderItem;
 use App\Services\OrderService;
@@ -22,6 +23,8 @@ use App\Services\OrderRealtimeService;
 use App\Services\QrTokenService;
 use App\Services\CourierTaskOrchestratorService;
 use App\Services\CourierCashOnDeliveryCapacityService;
+use App\Services\SellerOrderCancellationService;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -36,6 +39,7 @@ class CourierOrderController extends Controller
         private readonly OrderStatusPushService $orderStatusPushService,
         private readonly CourierTaskOrchestratorService $courierTaskOrchestratorService,
         private readonly CourierCashOnDeliveryCapacityService $courierCashOnDeliveryCapacityService,
+        private readonly SellerOrderCancellationService $sellerOrderCancellationService,
     ) {
     }
 
@@ -47,6 +51,14 @@ class CourierOrderController extends Controller
                 'success' => false,
                 'message' => __('courier_api.unauthorized')
             ], 401);
+        }
+
+        if (!$courier->is_online) {
+            return response()->json([
+                'success' => true,
+                'data' => [],
+                'is_online' => false,
+            ], 200);
         }
 
         $orders = CourierOrder::query()
@@ -114,10 +126,17 @@ class CourierOrderController extends Controller
                     $order->status = CourierOrderStatusCode::PENDING->legacy();
                     $order->status_code = CourierOrderStatusCode::PENDING->value;
                 }
-                $taskSummary = $this->buildTaskSummary($order->order()->first(), null);
+                $soldOrder = $order->order()->first();
+                $taskSummary = $this->buildTaskSummary($soldOrder, null);
+                $operationalAmount = $soldOrder
+                    ? $this->sellerOrderCancellationService->operationalAmountForCourier($soldOrder)
+                    : max(0, (int) $order->amount);
+                $order->amount = $operationalAmount;
                 $order->task_leg = $taskSummary['task_leg'];
                 $order->fulfillment_mode = $taskSummary['fulfillment_mode'];
-                $order->cash_collect_amount = $taskSummary['cash_collect_amount'];
+                $order->cash_collect_amount = $taskSummary['is_cod']
+                    ? $operationalAmount
+                    : $taskSummary['cash_collect_amount'];
                 $order->is_cod = $taskSummary['is_cod'];
                 $order->task_pickup_address = $taskSummary['pickup_address'];
                 $order->task_dropoff_address = $taskSummary['dropoff_address'];
@@ -135,6 +154,7 @@ class CourierOrderController extends Controller
                 return $this->hydrateCourierOrderItems($order, Auth::guard('courier')->id());
             })
             ->filter(fn (CourierOrder $order) => $order->items->isNotEmpty())
+            ->filter(fn (CourierOrder $order) => !$this->hasClosedPickupLocation($order))
             ->values();
 
         Log::info('Courier available orders fetched', [
@@ -184,10 +204,17 @@ class CourierOrderController extends Controller
                 'message' => __('courier_api.order_not_found')
             ], 404);
         }
-        $taskSummary = $this->buildTaskSummary($show->order()->first(), $courier->id);
+        $soldOrder = $show->order()->first();
+        $taskSummary = $this->buildTaskSummary($soldOrder, $courier->id);
+        $operationalAmount = $soldOrder
+            ? $this->sellerOrderCancellationService->operationalAmountForCourier($soldOrder)
+            : max(0, (int) $show->amount);
+        $show->amount = $operationalAmount;
         $show->task_leg = $taskSummary['task_leg'];
         $show->fulfillment_mode = $taskSummary['fulfillment_mode'];
-        $show->cash_collect_amount = $taskSummary['cash_collect_amount'];
+        $show->cash_collect_amount = $taskSummary['is_cod']
+            ? $operationalAmount
+            : $taskSummary['cash_collect_amount'];
         $show->is_cod = $taskSummary['is_cod'];
         $show->task_pickup_address = $taskSummary['pickup_address'];
         $show->task_dropoff_address = $taskSummary['dropoff_address'];
@@ -272,6 +299,14 @@ class CourierOrderController extends Controller
         $courier = Auth::guard('courier')->user();
         if (!$courier) {
             return response()->json(['success' => false, 'message' => __('courier_api.unauthorized')], 401);
+        }
+
+        if (!$courier->is_online) {
+            return response()->json([
+                'success' => false,
+                'error_code' => 'courier_offline',
+                'message' => "Buyurtmani qabul qilish uchun onlayn holatga o'ting.",
+            ], 409);
         }
 
         try {
@@ -373,10 +408,17 @@ class CourierOrderController extends Controller
             ->orderByDesc('updated_at')
             ->get()
             ->map(function ($order) use ($courier) {
-                $taskSummary = $this->buildTaskSummary($order->order()->first(), $courier->id);
+                $soldOrder = $order->order()->first();
+                $taskSummary = $this->buildTaskSummary($soldOrder, $courier->id);
+                $operationalAmount = $soldOrder
+                    ? $this->sellerOrderCancellationService->operationalAmountForCourier($soldOrder)
+                    : max(0, (int) $order->amount);
+                $order->amount = $operationalAmount;
                 $order->task_leg = $taskSummary['task_leg'];
                 $order->fulfillment_mode = $taskSummary['fulfillment_mode'];
-                $order->cash_collect_amount = $taskSummary['cash_collect_amount'];
+                $order->cash_collect_amount = $taskSummary['is_cod']
+                    ? $operationalAmount
+                    : $taskSummary['cash_collect_amount'];
                 $order->is_cod = $taskSummary['is_cod'];
                 $order->task_pickup_address = $taskSummary['pickup_address'];
                 $order->task_dropoff_address = $taskSummary['dropoff_address'];
@@ -468,6 +510,11 @@ class CourierOrderController extends Controller
             if ($seller && $item->sellerLocation) {
                 $seller->location = $item->sellerLocation;
             }
+            $schedule = $this->locationScheduleState($item->sellerLocation);
+            $item->seller_location_is_open = $schedule['is_open'];
+            $item->seller_location_today_open_time = $schedule['open_time'];
+            $item->seller_location_today_close_time = $schedule['close_time'];
+            $item->seller_location_today_work_time_label = $schedule['label'];
             if ($item->product && $seller) {
                 $item->product->setRelation('seller', $seller);
             }
@@ -476,6 +523,62 @@ class CourierOrderController extends Controller
         }
 
         return $order;
+    }
+
+    private function hasClosedPickupLocation(CourierOrder $order): bool
+    {
+        if (!in_array($order->task_leg, ['first_mile', 'direct_delivery'], true)) {
+            return false;
+        }
+
+        return $order->items
+            ->filter(fn ($item) => $item->sellerLocation !== null)
+            ->contains(fn ($item) => $this->locationScheduleState($item->sellerLocation)['is_open'] === false);
+    }
+
+    private function locationScheduleState(?SellerLocation $location): array
+    {
+        if (!$location) {
+            return [
+                'is_open' => true,
+                'open_time' => null,
+                'close_time' => null,
+                'label' => null,
+            ];
+        }
+
+        $now = Carbon::now(config('app.timezone', 'Asia/Tashkent'));
+        $dayOfWeek = strtolower($now->format('l'));
+        $workday = $location->relationLoaded('workdays')
+            ? $location->workdays->firstWhere('day_of_week', $dayOfWeek)
+            : $location->workdays()->where('day_of_week', $dayOfWeek)->first();
+
+        if (!$workday) {
+            return [
+                'is_open' => true,
+                'open_time' => null,
+                'close_time' => null,
+                'label' => null,
+            ];
+        }
+
+        $open = Carbon::parse($workday->open_time, config('app.timezone', 'Asia/Tashkent'))
+            ->setDate($now->year, $now->month, $now->day);
+        $close = Carbon::parse($workday->close_time, config('app.timezone', 'Asia/Tashkent'))
+            ->setDate($now->year, $now->month, $now->day);
+        if ($close->lessThanOrEqualTo($open)) {
+            $close->addDay();
+        }
+
+        $openTime = $open->format('H:i');
+        $closeTime = $close->format('H:i');
+
+        return [
+            'is_open' => $now->betweenIncluded($open, $close),
+            'open_time' => $openTime,
+            'close_time' => $closeTime,
+            'label' => "Bugun {$openTime} - {$closeTime} gacha ishlaydi",
+        ];
     }
 
     private function filterCancelledSellerItems(CourierOrder $order, \Illuminate\Support\Collection $items): \Illuminate\Support\Collection

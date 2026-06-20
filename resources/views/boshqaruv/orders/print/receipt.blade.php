@@ -19,23 +19,6 @@
     th { text-align: left; font-size: 9px; color: #4b5563; font-weight: 700; }
     td:last-child, th:last-child { text-align: right; }
     .total-row td { font-weight: 700; padding-top: 2mm; }
-    .item-title { display: inline-block; max-width: 42mm; }
-    .item-title--cancelled {
-      text-decoration: line-through;
-      text-decoration-thickness: 1px;
-      color: #9b1c1c;
-    }
-    .item-badge {
-      display: inline-block;
-      margin-top: .8mm;
-      padding: .35mm 1.2mm;
-      border: 1px solid #ef4444;
-      border-radius: 999px;
-      font-size: 8px;
-      line-height: 1;
-      color: #b91c1c;
-    }
-    .item-note { display: block; margin-top: .6mm; font-size: 8px; color: #6b7280; line-height: 1.15; }
   </style>
 </head>
 <body onload="window.print()">
@@ -53,37 +36,6 @@
         <div><strong>Naqd olinadi:</strong> {{ number_format((int) $receipt['cod_amount'], 0, '.', ' ') }} UZS</div>
       @endif
     </div>
-
-    <div class="line"></div>
-
-    <table>
-      <thead>
-        <tr>
-          <th>Mahsulot</th>
-          <th>Soni</th>
-          <th>Jami</th>
-        </tr>
-      </thead>
-      <tbody>
-        @foreach($receipt['items'] as $item)
-          <tr>
-            <td>
-              <span class="item-title {{ $item['is_cancelled'] ? 'item-title--cancelled' : '' }}">
-                {{ $item['title'] }}
-              </span>
-              @if($item['is_cancelled'])
-                <span class="item-badge">{{ $receipt['cancel_state_label'] }}</span>
-                @if($item['cancel_reason'])
-                  <span class="item-note">{{ $item['cancel_reason'] }}</span>
-                @endif
-              @endif
-            </td>
-            <td>{{ $item['qty'] }}</td>
-            <td>{{ number_format((float) $item['total'], 0, '.', ' ') }}</td>
-          </tr>
-        @endforeach
-      </tbody>
-    </table>
 
     <div class="line"></div>
 

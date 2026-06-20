@@ -31,6 +31,8 @@ class Couriers extends Authenticatable
         'total_withdrawal',
         'payment_card',
         'status',
+        'is_online',
+        'availability_updated_at',
 
         // ── Transport ───────────────────────────────────────────
         'transport_type',
@@ -68,6 +70,8 @@ class Couriers extends Authenticatable
         'current_lat'                => 'float',
         'current_lon'                => 'float',
         'location_updated_at'        => 'datetime',
+        'is_online'                  => 'boolean',
+        'availability_updated_at'    => 'datetime',
     ];
 
     // ── Password ───────────────────────────────────────────────────

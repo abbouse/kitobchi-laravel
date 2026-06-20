@@ -127,6 +127,7 @@ class CourierAuthController extends Controller
                 'last_name'    => $courier->last_name,
                 'photo'        => $courier->photo,
                 'phone_number' => $courier->phone_number,
+                'is_online'    => (bool) $courier->is_online,
             ],
         ], 201);
     }

@@ -157,7 +157,7 @@ class SellerOrderCancellationService
             $sellerOrder->amount = max(0, (int) $sellerOrder->amount - (int) $snapshot->gross_amount);
             $sellerOrder->save();
 
-            $order->amount = max(0, (int) $order->amount - (int) $snapshot->card_paid_allocated);
+            $order->amount = max(0, (int) $order->amount - $this->customerAmountReduction($snapshot));
             $order->refund_total_amount = (int) ($order->refund_total_amount ?? 0) + $cardRefund;
             $order->save();
             $this->syncCodCollectAmount($order);
@@ -274,6 +274,8 @@ class SellerOrderCancellationService
             if (in_array($reason['code'], SellerCancellationReasonCatalog::itemStockZeroReasons(), true)) {
                 $this->zeroStockForItem($item);
             }
+
+            $this->syncCodCollectAmount($order);
         });
 
         return [
@@ -339,6 +341,8 @@ class SellerOrderCancellationService
 
                 return $row;
             });
+
+            $this->syncCodCollectAmount($order);
         });
 
         return [
@@ -478,7 +482,7 @@ class SellerOrderCancellationService
                 $cashbackRestore += (int) $snapshot->cashback_allocated;
                 $giftRestore += (int) $snapshot->gift_cert_allocated;
                 $grossAmount += (int) $snapshot->gross_amount;
-                $customerAmountReduction += (int) $snapshot->card_paid_allocated;
+                $customerAmountReduction += $this->customerAmountReduction($snapshot);
             }
 
             $providerPayload = null;
@@ -814,6 +818,29 @@ class SellerOrderCancellationService
         }
     }
 
+    public function operationalAmountForCourier(Sold $order): int
+    {
+        $pendingItemIds = SellerOrderItem::query()
+            ->join('seller_orders', 'seller_orders.id', '=', 'seller_order_items.order_id')
+            ->where('seller_orders.order_id', $order->id)
+            ->where('seller_order_items.refund_status', 'cancel_pending')
+            ->pluck('seller_order_items.id');
+
+        if ($pendingItemIds->isEmpty()) {
+            return max(0, (int) ($order->amount ?? 0));
+        }
+
+        $this->snapshotService->ensureSnapshotsForOrder($order);
+
+        $pendingReduction = OrderItemFinancialSnapshot::query()
+            ->where('sold_id', $order->id)
+            ->whereIn('seller_order_item_id', $pendingItemIds)
+            ->get(['gross_amount', 'promo_allocated'])
+            ->sum(fn (OrderItemFinancialSnapshot $snapshot) => $this->customerAmountReduction($snapshot));
+
+        return max(0, (int) ($order->amount ?? 0) - (int) $pendingReduction);
+    }
+
     private function syncCodCollectAmount(Sold $order): void
     {
         $order->loadMissing('fulfillment');
@@ -823,7 +850,7 @@ class SellerOrderCancellationService
             return;
         }
 
-        $newAmount = max(0, (int) ($order->amount ?? 0));
+        $newAmount = $this->operationalAmountForCourier($order);
         $oldFulfillmentAmount = max(0, (int) ($fulfillment->cash_collect_amount ?? 0));
 
         if ($oldFulfillmentAmount !== $newAmount) {
@@ -869,6 +896,14 @@ class SellerOrderCancellationService
                 $lockedTask->save();
             });
         }
+    }
+
+    private function customerAmountReduction(OrderItemFinancialSnapshot $snapshot): int
+    {
+        return max(
+            0,
+            (int) ($snapshot->gross_amount ?? 0) - (int) ($snapshot->promo_allocated ?? 0)
+        );
     }
 
     private function assertPendingItemCanBeRestored(SellerOrder $sellerOrder, Sold $order): void

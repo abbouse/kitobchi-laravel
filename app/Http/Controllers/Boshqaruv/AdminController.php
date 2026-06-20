@@ -1136,6 +1136,60 @@ class AdminController extends Controller
         return back()->with('success', 'Kuryer yangilandi.');
     }
 
+    public function applyCourierPenalty(Request $request, CourierOrder $courierOrder): \Illuminate\Http\RedirectResponse
+    {
+        $rules = $this->courierPenaltyRules();
+        $data = $request->validate([
+            'reason' => ['required', Rule::in(array_keys($rules))],
+            'note' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        if (! $courierOrder->courier_id) {
+            return back()->withErrors(['penalty' => 'Bu orderga kuryer biriktirilmagan.']);
+        }
+
+        $amount = $this->calculateCourierPenaltyAmount($courierOrder, $data['reason']);
+        if ($amount <= 0) {
+            return back()->withErrors(['penalty' => 'Jarima summasini hisoblab bo‘lmadi. Order yoki payout ma’lumotlarini tekshiring.']);
+        }
+
+        DB::transaction(function () use ($courierOrder, $amount, $data, $rules) {
+            $lockedCourier = Couriers::query()->lockForUpdate()->findOrFail((int) $courierOrder->courier_id);
+            $lockedOrder = CourierOrder::query()->lockForUpdate()->findOrFail($courierOrder->id);
+            $rule = $rules[$data['reason']];
+            $note = trim((string) ($data['note'] ?? ''));
+            $description = "Buyurtma #{$lockedOrder->order_id} bo‘yicha jarima: {$rule['label']}";
+            if ($note !== '') {
+                $description .= ". Izoh: {$note}";
+            }
+
+            $lockedCourier->balance = (int) $lockedCourier->balance - $amount;
+            $lockedCourier->save();
+
+            CourierTransaction::query()->create([
+                'courier_id' => $lockedCourier->id,
+                'card' => '',
+                'type' => 'expense',
+                'category' => 'penalty',
+                'order_id' => $lockedOrder->order_id,
+                'courier_order_id' => $lockedOrder->id,
+                'courier_task_id' => CourierTask::query()
+                    ->where('order_id', $lockedOrder->order_id)
+                    ->where('courier_id', $lockedCourier->id)
+                    ->latest('id')
+                    ->value('id'),
+                'amount' => $amount,
+                'commissionPercent' => 0,
+                'commissionPrice' => 0,
+                'netAmount' => $amount,
+                'status' => 'approved',
+                'description' => $description,
+            ]);
+        });
+
+        return back()->with('success', number_format($amount, 0, '.', ' ')." so‘m jarima kuryer balansidan yechildi.");
+    }
+
     public function storeExpense(Request $request): \Illuminate\Http\RedirectResponse
     {
         PlatformExpense::create($this->expenseData($request) + ['created_by' => Auth::id()]);
@@ -3522,7 +3576,13 @@ class AdminController extends Controller
             ? $courier->documents()->take(8)->get()
             : collect();
         $totalEarned = Schema::hasTable('courier_transactions')
-            ? (float) CourierTransaction::query()->where('courier_id', $courier->id)->where('status', 'approved')->sum('netAmount')
+            ? (float) CourierTransaction::query()
+                ->where('courier_id', $courier->id)
+                ->where('status', 'approved')
+                ->where(fn ($query) => $query
+                    ->where('type', 'income')
+                    ->orWhereIn('category', ['order_delivery', 'hub_delivery']))
+                ->sum('netAmount')
             : 0;
 
         return [
@@ -3584,10 +3644,13 @@ class AdminController extends Controller
             ])->values()->all(),
             'transactions' => $transactions->map(fn (CourierTransaction $transaction) => [
                 'id' => $transaction->id,
+                'type' => $transaction->type,
+                'category' => $transaction->category,
                 'amount' => (float) ($transaction->amount ?? 0),
                 'commission' => (float) ($transaction->commissionPrice ?? 0),
                 'net' => (float) ($transaction->netAmount ?? 0),
                 'status' => $transaction->status,
+                'description' => $transaction->description,
                 'date' => $this->dateTime($transaction->created_at),
             ])->values()->all(),
             'banLogs' => $banLogs->map(fn (CourierBanLog $log) => [
@@ -3735,9 +3798,104 @@ class AdminController extends Controller
                 'itemsCount' => (int) $items->sum('quantity'),
                 'itemsTotal' => (float) $items->sum(fn ($item) => (float) $item['price'] * (int) $item['quantity']),
             ],
+            'penaltyUrl' => route('boshqaruv.courier-orders.penalty', $order),
+            'penaltyRules' => $this->courierPenaltySuggestions($order),
             'items' => $items->all(),
             'statusUrl' => route('boshqaruv.courier-orders.status', $order),
         ];
+    }
+
+    private function courierPenaltySuggestions(CourierOrder $order): array
+    {
+        return collect($this->courierPenaltyRules())
+            ->map(fn (array $rule, string $key) => [
+                'key' => $key,
+                'label' => $rule['label'],
+                'description' => $rule['description'],
+                'amount' => $this->calculateCourierPenaltyAmount($order, $key),
+            ])
+            ->values()
+            ->all();
+    }
+
+    private function courierPenaltyRules(): array
+    {
+        return [
+            'late_delivery' => [
+                'label' => 'Kechikib yetkazish',
+                'description' => 'SLA yoki kelishilgan vaqt buzilganda. Yengil jarima payoutdan hisoblanadi.',
+                'base' => 'payout',
+                'percent' => 25,
+                'min' => 5000,
+                'max' => 30000,
+            ],
+            'rude_behavior' => [
+                'label' => 'Qo‘pol muomala',
+                'description' => 'Mijozga qo‘pol muomala, aloqa madaniyati buzilganda.',
+                'base' => 'payout',
+                'percent' => 50,
+                'min' => 10000,
+                'max' => 75000,
+            ],
+            'wrong_status_or_qr' => [
+                'label' => 'Noto‘g‘ri status yoki QR tartibi',
+                'description' => 'QR tasdiqlamasdan topshirish, noto‘g‘ri status bosish yoki jarayonni buzish.',
+                'base' => 'payout',
+                'percent' => 30,
+                'min' => 7000,
+                'max' => 50000,
+            ],
+            'cash_issue' => [
+                'label' => 'Naqd pul bo‘yicha muammo',
+                'description' => 'COD pulini kechiktirish, noto‘g‘ri qaytim yoki inkassatsiya muammosi.',
+                'base' => 'order_amount',
+                'percent' => 20,
+                'min' => 15000,
+                'max' => 200000,
+            ],
+            'damaged_package' => [
+                'label' => 'Paket yoki mahsulot shikastlangan',
+                'description' => 'Yetkazish jarayonida qadoq yoki mahsulot shikastlanganida.',
+                'base' => 'order_amount',
+                'percent' => 10,
+                'min' => 10000,
+                'max' => 150000,
+            ],
+            'lost_item' => [
+                'label' => 'Mahsulot yo‘qolgan',
+                'description' => 'Mahsulot yo‘qolgan yoki mijozga yetib bormagan og‘ir holat.',
+                'base' => 'order_amount',
+                'percent' => 100,
+                'min' => 0,
+                'max' => 500000,
+            ],
+        ];
+    }
+
+    private function calculateCourierPenaltyAmount(CourierOrder $order, string $reason): int
+    {
+        $rule = $this->courierPenaltyRules()[$reason] ?? null;
+        if (! $rule) {
+            return 0;
+        }
+
+        $payout = max(0, (int) ($order->settled_amount ?: ((int) ($order->courierPrice ?? 0) + (int) ($order->courierBonus ?? 0))));
+        $orderAmount = max(0, (int) ($order->order?->amount ?? $order->amount ?? 0));
+        $base = $rule['base'] === 'order_amount' ? $orderAmount : $payout;
+        if ($base <= 0) {
+            $base = max($payout, $orderAmount);
+        }
+
+        $amount = (int) ceil($base * ((float) $rule['percent'] / 100));
+        $amount = max((int) $rule['min'], $amount);
+        if (! empty($rule['max'])) {
+            $amount = min((int) $rule['max'], $amount);
+        }
+        if ($rule['base'] === 'order_amount' && $orderAmount > 0) {
+            $amount = min($orderAmount, $amount);
+        }
+
+        return max(0, $amount);
     }
 
     private function courierOrderStatusCounts(): array
@@ -7087,6 +7245,10 @@ class AdminController extends Controller
             session()->put("admin.order_refund_phrase.{$order->id}", $refundConfirmationPhrase);
         }
 
+        $activeItems = $items
+            ->reject(fn ($item) => (bool) ($item['isCancelled'] ?? false))
+            ->values();
+
         return [
             'id' => '#'.$order->id,
             'rawId' => $order->id,
@@ -7106,10 +7268,10 @@ class AdminController extends Controller
                     ? null
                     : "Avvalgi qaytgan naqd buyurtma sabab mijoz uchun naqd to'lov vaqtincha yopilgan.",
             ] : null,
-            'items' => $items->count(),
+            'items' => (int) $activeItems->sum(fn ($item) => (int) ($item['quantity'] ?? 1)),
             'itemsList' => $items->all(),
             'total' => (float) ($order->amount ?? 0),
-            'subtotal' => (float) $items->sum(fn ($item) => ((float) ($item['price'] ?? 0)) * (int) ($item['quantity'] ?? 1)),
+            'subtotal' => (float) $activeItems->sum(fn ($item) => ((float) ($item['price'] ?? 0)) * (int) ($item['quantity'] ?? 1)),
             'deliveryPrice' => (float) ($order->deliveryPrice ?? 0),
             'discountAmount' => (float) ($order->discountAmount ?? 0),
             'cashbackAmount' => (float) ($order->cashbackAmount ?? 0),

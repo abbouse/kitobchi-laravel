@@ -895,6 +895,16 @@ class OrderController extends Controller
                 customNote: $request->input('custom_note'),
             );
 
+            $courierOrder = CourierOrder::query()
+                ->where('order_id', $sellerOrderItem->order->order_id)
+                ->first();
+            if ($courierOrder) {
+                $this->orderRealtimeService->broadcastCourierOrderUpdated(
+                    $courierOrder,
+                    'courier_order.item_unavailable',
+                );
+            }
+
             return response()->json(['success' => true, 'message' => $result['message'], 'data' => $result], 200);
         } catch (\Throwable $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
@@ -922,6 +932,16 @@ class OrderController extends Controller
                 seller: $seller,
                 item: $sellerOrderItem,
             );
+
+            $courierOrder = CourierOrder::query()
+                ->where('order_id', $sellerOrderItem->order->order_id)
+                ->first();
+            if ($courierOrder) {
+                $this->orderRealtimeService->broadcastCourierOrderUpdated(
+                    $courierOrder,
+                    'courier_order.item_restored',
+                );
+            }
 
             return response()->json(['success' => true, 'message' => $result['message'], 'data' => $result], 200);
         } catch (\Throwable $e) {

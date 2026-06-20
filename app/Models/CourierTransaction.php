@@ -12,11 +12,17 @@ class CourierTransaction extends Model
     protected $fillable = [
         'courier_id',
         'card',
+        'type',
+        'category',
+        'order_id',
+        'courier_order_id',
+        'courier_task_id',
         'amount',
         'commissionPercent',
         'commissionPrice',
         'netAmount',
         'status',
+        'description',
         'rejected_desc'
     ];
 
