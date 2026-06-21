@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Models\BookClubNotification;
 use App\Models\User;
 use App\Services\BookClubNotificationTextService;
+use App\Services\FcmRecipientService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -30,7 +31,10 @@ class SendBookClubPushNotification implements ShouldQueue
         if (!$n || $n->is_read) return;
 
         $receiver = User::find($n->user_id);
-        if (!$receiver || !$receiver->fcm_token) return;
+        if (!$receiver) return;
+
+        $tokens = app(FcmRecipientService::class)->tokensFor('user', (int) $receiver->id);
+        if (empty($tokens)) return;
 
         $data = $n->data;
         $formatter = app(BookClubNotificationTextService::class);
@@ -40,7 +44,7 @@ class SendBookClubPushNotification implements ShouldQueue
             'app_key' => 'kitobchi',
             'title'   => $formatted['title'],
             'body'    => $formatted['body'],
-            'tokens'  => [$receiver->fcm_token],
+            'tokens'  => $tokens,
             'data'    => [
                 'type' => 'book_club_notification',
                 'notification_type' => $n->type,

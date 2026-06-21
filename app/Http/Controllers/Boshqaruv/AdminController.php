@@ -89,6 +89,7 @@ use App\Support\ProductImageVariantGenerator;
 use App\Enums\SellerOrderStatusCode;
 use App\Services\AdminOrderStatusSyncService;
 use App\Services\DeliveryZoneResolverService;
+use App\Services\FcmRecipientService;
 use App\Services\HubRoleAccessService;
 use App\Support\AdminOrderStatusPresenter;
 use App\Services\SellerPremiumService;
@@ -854,13 +855,130 @@ class AdminController extends Controller
 
     public function storePushNotification(Request $request): \Illuminate\Http\RedirectResponse
     {
-        FcmNotifications::create($request->validate([
+        $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'description' => ['required', 'string', 'max:500'],
             'who' => ['required', Rule::in(['users', 'business', 'courier'])],
-        ]));
+            'target_mode' => ['required', Rule::in(['audience', 'individual'])],
+            'recipient' => ['nullable', 'string', 'max:255', Rule::requiredIf($request->input('target_mode') === 'individual')],
+        ]);
 
-        return back()->with('success', 'Push bildirishnoma saqlandi.');
+        $userType = $data['who'] === 'users' ? 'user' : $data['who'];
+        $target = null;
+
+        if ($data['target_mode'] === 'individual') {
+            $target = $this->resolvePushRecipient($data['who'], (string) $data['recipient']);
+            if (! $target) {
+                return back()->withErrors([
+                    'recipient' => 'Qabul qiluvchi topilmadi. ID, telefon, email yoki username-ni aniq kiriting.',
+                ])->withInput();
+            }
+        }
+
+        $recipientService = app(FcmRecipientService::class);
+        $tokens = $target
+            ? $recipientService->tokensFor($userType, (int) $target->id)
+            : $recipientService->tokensForAudience($userType);
+
+        if (empty($tokens)) {
+            return back()->withErrors([
+                'recipient' => $target
+                    ? 'Ushbu qabul qiluvchining faol push qurilmasi topilmadi.'
+                    : 'Tanlangan auditoriyada faol push qurilmasi topilmadi.',
+            ])->withInput();
+        }
+
+        $who = $target
+            ? ($data['who'] === 'users' ? (string) $target->id : "{$data['who']}:{$target->id}")
+            : $data['who'];
+
+        $notification = FcmNotifications::create([
+            'name' => $data['name'],
+            'description' => $data['description'],
+            'who' => $who,
+            'source' => 'admin',
+            'delivery_status' => 'sending',
+            'is_read' => false,
+        ]);
+
+        $pushRequest = new Request([
+            'app_key' => match ($data['who']) {
+                'business' => 'business',
+                'courier' => 'courier',
+                default => 'kitobchi',
+            },
+            'title' => $notification->name,
+            'body' => $notification->description,
+            'tokens' => $tokens,
+            'data' => [
+                'type' => 'general',
+                'notification_id' => (string) $notification->id,
+                'target_mode' => $data['target_mode'],
+            ],
+        ]);
+
+        $response = app(\App\Http\Controllers\PushController::class)->sendPush($pushRequest);
+        $result = (array) $response->getData(true);
+
+        $notification->update([
+            'delivery_status' => ($result['success'] ?? false) ? 'sent' : 'failed',
+            'sent_count' => (int) ($result['sent'] ?? 0),
+            'failed_count' => (int) ($result['failed'] ?? count($tokens)),
+        ]);
+
+        if (! ($result['success'] ?? false)) {
+            return back()->withErrors([
+                'recipient' => (string) ($result['message'] ?? 'Push yuborilmadi.'),
+            ])->withInput();
+        }
+
+        $targetLabel = $target ? $this->pushRecipientLabel($data['who'], $target) : count($tokens).' ta qurilma';
+
+        return back()->with('success', "Push {$targetLabel} uchun yuborildi.");
+    }
+
+    private function resolvePushRecipient(string $audience, string $identifier): User|Seller|Couriers|null
+    {
+        $identifier = trim(ltrim($identifier, '#'));
+        $digits = preg_replace('/\D+/', '', $identifier) ?? '';
+        $phoneCandidates = array_values(array_unique(array_filter([
+            $identifier,
+            $digits,
+            $digits !== '' ? '+'.$digits : null,
+        ])));
+
+        if ($audience === 'users') {
+            return User::query()
+                ->where(function ($query) use ($identifier, $phoneCandidates) {
+                    if (ctype_digit($identifier)) {
+                        $query->orWhereKey((int) $identifier);
+                    }
+                    $query->orWhereIn('phone_number', $phoneCandidates)
+                        ->orWhere('email', $identifier)
+                        ->orWhere('username', $identifier);
+                })
+                ->first();
+        }
+
+        $model = $audience === 'business' ? Seller::query() : Couriers::query();
+
+        return $model
+            ->where(function ($query) use ($identifier, $phoneCandidates) {
+                if (ctype_digit($identifier)) {
+                    $query->orWhereKey((int) $identifier);
+                }
+                $query->orWhereIn('phone_number', $phoneCandidates);
+            })
+            ->first();
+    }
+
+    private function pushRecipientLabel(string $audience, User|Seller|Couriers $recipient): string
+    {
+        return match ($audience) {
+            'business' => trim((string) ($recipient->shop_name ?: "Seller #{$recipient->id}")),
+            'courier' => trim((string) ($recipient->first_name.' '.$recipient->last_name)) ?: "Kuryer #{$recipient->id}",
+            default => trim((string) ($recipient->name.' '.$recipient->lastname)) ?: "Foydalanuvchi #{$recipient->id}",
+        };
     }
 
     public function destroyPushNotification(FcmNotifications $notification): \Illuminate\Http\RedirectResponse
@@ -1188,6 +1306,65 @@ class AdminController extends Controller
         });
 
         return back()->with('success', number_format($amount, 0, '.', ' ')." so‘m jarima kuryer balansidan yechildi.");
+    }
+
+    public function approveCourierTransaction(CourierTransaction $courierTransaction): \Illuminate\Http\RedirectResponse
+    {
+        if (($courierTransaction->category ?: 'withdrawal') !== 'withdrawal') {
+            return back()->with('error', "Bu kuryer tranzaksiyasi qo'lda tasdiqlanmaydi.");
+        }
+
+        if ($courierTransaction->status !== 'pending') {
+            return back()->with('error', "Faqat kutilayotgan arizani tasdiqlash mumkin.");
+        }
+
+        DB::transaction(function () use ($courierTransaction) {
+            $lockedTransaction = CourierTransaction::query()->lockForUpdate()->find($courierTransaction->id);
+            if (! $lockedTransaction || $lockedTransaction->status !== 'pending') {
+                return;
+            }
+
+            $courier = Couriers::query()->lockForUpdate()->find($lockedTransaction->courier_id);
+            $lockedTransaction->update(['status' => 'approved']);
+
+            if ($courier) {
+                $courier->total_withdrawal = (int) $courier->total_withdrawal + (int) ($lockedTransaction->netAmount ?? 0);
+                $courier->save();
+            }
+        });
+
+        return back()->with('success', "Kuryer to'lov arizasi tasdiqlandi.");
+    }
+
+    public function rejectCourierTransaction(CourierTransaction $courierTransaction): \Illuminate\Http\RedirectResponse
+    {
+        if (($courierTransaction->category ?: 'withdrawal') !== 'withdrawal') {
+            return back()->with('error', "Bu kuryer tranzaksiyasi qo'lda rad etilmaydi.");
+        }
+
+        if ($courierTransaction->status !== 'pending') {
+            return back()->with('error', "Faqat kutilayotgan arizani rad etish mumkin.");
+        }
+
+        DB::transaction(function () use ($courierTransaction) {
+            $lockedTransaction = CourierTransaction::query()->lockForUpdate()->find($courierTransaction->id);
+            if (! $lockedTransaction || $lockedTransaction->status !== 'pending') {
+                return;
+            }
+
+            $courier = Couriers::query()->lockForUpdate()->find($lockedTransaction->courier_id);
+            $lockedTransaction->update([
+                'status' => 'rejected',
+                'rejected_desc' => $lockedTransaction->rejected_desc ?: 'Admin tomonidan rad etildi, summa balansga qaytarildi.',
+            ]);
+
+            if ($courier) {
+                $courier->balance = (int) $courier->balance + (int) ($lockedTransaction->amount ?? 0);
+                $courier->save();
+            }
+        });
+
+        return back()->with('success', "Kuryer to'lov arizasi rad etildi va balansga qaytarildi.");
     }
 
     public function storeExpense(Request $request): \Illuminate\Http\RedirectResponse
@@ -2600,7 +2777,7 @@ class AdminController extends Controller
     private function validatedPromocodeData(Request $request, ?Promocode $promocode = null): array
     {
         $rules = [
-            'type' => ['required', Rule::in(['percent', 'fixed'])],
+            'type' => ['required', Rule::in(['percent', 'fixed', 'uzs'])],
             'amount' => ['required', 'integer', 'min:1'],
             'max_discount_amount' => ['nullable', 'integer', 'min:0'],
             'min_order_amount' => ['nullable', 'integer', 'min:0'],
@@ -2621,6 +2798,7 @@ class AdminController extends Controller
         $data['min_order_amount'] = $data['min_order_amount'] ?? 0;
         $data['per_user_limit'] = $data['per_user_limit'] ?? 1;
         $data['usesLimit'] = $data['usesLimit'] ?? 0;
+        $data['type'] = $data['type'] === 'percent' ? 'percent' : 'uzs';
 
         return $data;
     }
@@ -3594,6 +3772,8 @@ class AdminController extends Controller
             'photo' => $this->assetFromStorage($courier->photo),
             'region' => $courier->region,
             'status' => $courier->status,
+            'isOnline' => (bool) ($courier->is_online ?? false),
+            'availabilityUpdatedAt' => $this->dateTime($courier->availability_updated_at),
             'verificationStatus' => $courier->verification_status,
             'verificationLabel' => $courier->verification_label,
             'verificationNotes' => $courier->verification_notes,
@@ -3616,6 +3796,7 @@ class AdminController extends Controller
                 'lat' => $courier->current_lat,
                 'lon' => $courier->current_lon,
                 'updatedAt' => $this->dateTime($courier->location_updated_at),
+                'mapLinks' => $this->mapLinks($courier->current_lat, $courier->current_lon),
             ],
             'identity' => [
                 'inn' => $courier->inn,
@@ -3726,6 +3907,7 @@ class AdminController extends Controller
 
         $tab = (string) request('courier_orders_tab', 'all');
         $search = trim((string) request('courier_orders_search', ''));
+        $digits = preg_replace('/\D+/', '', $search) ?: $search;
         $query = CourierOrder::query()
             ->with(['courier:id,first_name,last_name,phone_number,region,status,photo', 'user:id,name,lastname,phone_number', 'order:id,amount,status,paymentStatus,deliveryPrice,deliveryType,address,items,created_at'])
             ->when($tab !== 'all', fn ($builder) => $builder->where(fn ($nested) => $nested
@@ -3733,8 +3915,17 @@ class AdminController extends Controller
                 ->orWhere(fn ($fallback) => $fallback->whereNull('status_code')->where('status', CourierOrderStatusCode::fromLegacy($tab)->legacy()))))
             ->when($search !== '', fn ($builder) => $builder->where(fn ($nested) => $nested
                 ->where('id', $search)->orWhere('order_id', $search)
-                ->orWhereHas('courier', fn ($courier) => $courier->where('first_name', 'like', "%{$search}%")->orWhere('phone_number', 'like', "%{$search}%"))
-                ->orWhereHas('user', fn ($user) => $user->where('name', 'like', "%{$search}%")->orWhere('phone_number', 'like', "%{$search}%"))));
+                ->orWhere('amount', $search)
+                ->orWhereHas('courier', fn ($courier) => $courier
+                    ->where('first_name', 'like', "%{$search}%")
+                    ->orWhere('last_name', 'like', "%{$search}%")
+                    ->orWhere('phone_number', 'like', "%{$search}%")
+                    ->orWhere('phone_number', 'like', "%{$digits}%"))
+                ->orWhereHas('user', fn ($user) => $user
+                    ->where('name', 'like', "%{$search}%")
+                    ->orWhere('lastname', 'like', "%{$search}%")
+                    ->orWhere('phone_number', 'like', "%{$search}%")
+                    ->orWhere('phone_number', 'like', "%{$digits}%"))));
         $orders = $query->latest()->paginate(25, ['*'], 'courier_orders_page')->withQueryString();
 
         return [
@@ -4039,17 +4230,104 @@ class AdminController extends Controller
 
     private function transactionsPagePayload(): array
     {
+        $owner = request('transaction_owner') === 'courier' ? 'courier' : 'seller';
+        $search = trim((string) request('transactions_search', ''));
+
+        if ($owner === 'courier') {
+            if (! Schema::hasTable('courier_transactions')) {
+                return ['transactions' => [], 'transactionPagination' => $this->emptyPagination(), 'transactionTotals' => [], 'transactionFilters' => ['owner' => $owner, 'search' => $search]];
+            }
+
+            $baseQuery = CourierTransaction::query();
+            $query = (clone $baseQuery)
+                ->with('courier:id,first_name,last_name,phone_number,payment_card,balance,total_withdrawal')
+                ->when($search !== '', fn ($builder) => $builder->where(fn ($nested) => $nested
+                    ->where('id', $search)
+                    ->orWhere('order_id', $search)
+                    ->orWhere('courier_order_id', $search)
+                    ->orWhere('amount', $search)
+                    ->orWhereHas('courier', fn ($courier) => $courier
+                        ->where('first_name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%")
+                        ->orWhere('phone_number', 'like', "%{$search}%"))));
+            $transactions = $query->latest()->paginate(30, ['*'], 'transactions_page')->withQueryString();
+
+            return [
+                'transactions' => $transactions->getCollection()->map(function (CourierTransaction $transaction) {
+                    $base = CourierTransaction::query()->where('courier_id', $transaction->courier_id);
+                    $nearby = $transaction->courier_id
+                        ? (clone $base)->whereKeyNot($transaction->id)->latest()->take(6)->get()
+                        : collect();
+
+                    $courierName = trim(($transaction->courier?->first_name ?? '').' '.($transaction->courier?->last_name ?? '')) ?: 'Kuryer';
+
+                    return [
+                        'id' => $transaction->id,
+                        'owner' => 'courier',
+                        'user' => $courierName,
+                        'phone' => $transaction->courier?->phone_number,
+                        'courierId' => $transaction->courier_id,
+                        'orderId' => $transaction->order_id,
+                        'courierOrderId' => $transaction->courier_order_id,
+                        'courierTaskId' => $transaction->courier_task_id,
+                        'type' => $transaction->type ?: ($transaction->category ?: 'withdrawal'),
+                        'category' => $transaction->category ?: 'withdrawal',
+                        'amount' => (float) ($transaction->amount ?? 0),
+                        'commissionPercent' => (float) ($transaction->commissionPercent ?? 0),
+                        'commission' => (float) ($transaction->commissionPrice ?? 0),
+                        'netAmount' => (float) ($transaction->netAmount ?? $transaction->amount ?? 0),
+                        'status' => (string) ($transaction->status ?? 'pending'),
+                        'statusLabel' => $transaction->status,
+                        'date' => $this->dateTime($transaction->created_at),
+                        'updatedAt' => $this->dateTime($transaction->updated_at),
+                        'method' => $transaction->card ?: $transaction->courier?->masked_card ?: '—',
+                        'note' => $transaction->description ?: $transaction->rejected_desc,
+                        'ownerTotals' => [
+                            'approvedCount' => (int) (clone $base)->where('status', 'approved')->count(),
+                            'approvedSum' => (float) (clone $base)->where('status', 'approved')->sum('netAmount'),
+                            'pendingSum' => (float) (clone $base)->where('status', 'pending')->sum('netAmount'),
+                        ],
+                        'nearby' => $nearby->map(fn (CourierTransaction $row) => [
+                            'id' => $row->id,
+                            'amount' => (float) ($row->amount ?? 0),
+                            'netAmount' => (float) ($row->netAmount ?? 0),
+                            'status' => $row->status,
+                            'date' => $this->dateTime($row->created_at),
+                        ])->values()->all(),
+                        'approveUrl' => route('boshqaruv.courier-transactions.approve', $transaction),
+                        'rejectUrl' => route('boshqaruv.courier-transactions.reject', $transaction),
+                    ];
+                })->values()->all(),
+                'transactionPagination' => $this->paginationMeta($transactions),
+                'transactionTotals' => [
+                    'all' => (int) (clone $baseQuery)->count(),
+                    'income' => (float) (clone $baseQuery)->sum('amount'),
+                    'commission' => (float) (clone $baseQuery)->sum('commissionPrice'),
+                    'pending' => (int) (clone $baseQuery)->where('status', 'pending')->count(),
+                    'approved' => (int) (clone $baseQuery)->where('status', 'approved')->count(),
+                    'withdrawalPending' => (int) (clone $baseQuery)->where('category', 'withdrawal')->where('status', 'pending')->count(),
+                ],
+                'transactionFilters' => ['owner' => $owner, 'search' => $search],
+            ];
+        }
+
         if (! Schema::hasTable('seller_transactions')) {
-            return ['transactions' => [], 'transactionPagination' => $this->emptyPagination(), 'transactionTotals' => []];
+            return ['transactions' => [], 'transactionPagination' => $this->emptyPagination(), 'transactionTotals' => [], 'transactionFilters' => ['owner' => $owner, 'search' => $search]];
         }
 
         $baseQuery = SellerTransaction::query()
             ->where(fn ($query) => $query->whereNull('category')->orWhere('category', 'withdrawal')->orWhere('category', 'seller_withdrawal'));
-        $transactions = (clone $baseQuery)
+        $query = (clone $baseQuery)
             ->with('seller:id,shop_name,phone_number')
-            ->latest()
-            ->paginate(30, ['*'], 'transactions_page')
-            ->withQueryString();
+            ->when($search !== '', fn ($builder) => $builder->where(fn ($nested) => $nested
+                ->where('id', $search)
+                ->orWhere('order_id', $search)
+                ->orWhere('seller_order_id', $search)
+                ->orWhere('amount', $search)
+                ->orWhereHas('seller', fn ($seller) => $seller
+                    ->where('shop_name', 'like', "%{$search}%")
+                    ->orWhere('phone_number', 'like', "%{$search}%"))));
+        $transactions = $query->latest()->paginate(30, ['*'], 'transactions_page')->withQueryString();
 
         return [
             'transactions' => $transactions->getCollection()->map(function (SellerTransaction $transaction) {
@@ -4062,6 +4340,7 @@ class AdminController extends Controller
 
                 return [
                     'id' => $transaction->id,
+                    'owner' => 'seller',
                     'user' => $transaction->seller?->shop_name ?: 'Seller',
                     'phone' => $transaction->seller?->phone_number,
                     'sellerId' => $transaction->seller_id,
@@ -4079,7 +4358,7 @@ class AdminController extends Controller
                     'updatedAt' => $this->dateTime($transaction->updated_at),
                     'method' => $transaction->card ?: '—',
                     'note' => $transaction->description ?: $transaction->rejected_desc,
-                    'sellerTotals' => [
+                    'ownerTotals' => [
                         'approvedCount' => (int) (clone $base)->where('status', 'approved')->count(),
                         'approvedSum' => (float) (clone $base)->where('status', 'approved')->sum('netAmount'),
                         'pendingSum' => (float) (clone $base)->where('status', 'pending')->sum('netAmount'),
@@ -4094,9 +4373,7 @@ class AdminController extends Controller
                     'approveUrl' => route('boshqaruv.transactions.approve', $transaction),
                     'rejectUrl' => route('boshqaruv.transactions.reject', $transaction),
                 ];
-            })
-            ->values()
-            ->all(),
+            })->values()->all(),
             'transactionPagination' => $this->paginationMeta($transactions),
             'transactionTotals' => [
                 'all' => (int) (clone $baseQuery)->count(),
@@ -4105,13 +4382,129 @@ class AdminController extends Controller
                 'pending' => (int) (clone $baseQuery)->where('status', 'pending')->count(),
                 'approved' => (int) (clone $baseQuery)->where('status', 'approved')->count(),
             ],
+            'transactionFilters' => ['owner' => $owner, 'search' => $search],
         ];
     }
 
     private function commissionAuditPagePayload(): array
     {
+        $owner = request('commission_audit_owner') === 'courier' ? 'courier' : 'seller';
+
+        if ($owner === 'courier') {
+            if (! Schema::hasTable('courier_transactions')) {
+                return ['commissionAuditRows' => [], 'commissionAuditPagination' => $this->emptyPagination(), 'commissionAuditTotals' => [], 'commissionRules' => [], 'commissionAuditFilters' => ['owner' => $owner]];
+            }
+
+            $rows = CourierTransaction::query()
+                ->with('courier:id,first_name,last_name,phone_number')
+                ->latest()
+                ->paginate(30, ['*'], 'commission_page')
+                ->withQueryString();
+
+            $taskIds = $rows->getCollection()
+                ->pluck('courier_task_id')
+                ->filter()
+                ->unique()
+                ->values();
+            $tasks = $taskIds->isNotEmpty()
+                ? CourierTask::query()->whereIn('id', $taskIds)->get()->keyBy('id')
+                : collect();
+
+            $collection = $rows->getCollection()->map(function (CourierTransaction $transaction) use ($tasks) {
+                $category = $transaction->category ?: 'withdrawal';
+                $task = $transaction->courier_task_id ? $tasks->get($transaction->courier_task_id) : null;
+                $amount = (float) ($transaction->amount ?? 0);
+                $netAmount = (float) ($transaction->netAmount ?? $transaction->amount ?? 0);
+                $actualPercent = (float) ($transaction->commissionPercent ?? 0);
+                $actualCommission = (float) ($transaction->commissionPrice ?? 0);
+                $expectedPercent = 0.0;
+                $expectedCommission = 0.0;
+                $ruleSource = 'payout';
+                $globalRule = null;
+                $auditKind = 'payout';
+
+                if ($category === 'withdrawal') {
+                    $expected = $this->expectedWithdrawalCommission($amount);
+                    $expectedPercent = $expected['percent'];
+                    $expectedCommission = $expected['commission'];
+                    $ruleSource = $expected['source'];
+                    $globalRule = $expected['globalRule'];
+                    $auditKind = 'withdrawal_commission';
+                } elseif (in_array($category, ['order_delivery', 'hub_delivery'], true)) {
+                    $expectedCommission = (float) ($task?->fee_amount ?? $netAmount);
+                    $actualCommission = $netAmount;
+                    $ruleSource = $task ? 'km_formula' : 'transaction';
+                    $auditKind = 'km_payout';
+                } else {
+                    $expectedCommission = $netAmount;
+                    $actualCommission = $netAmount;
+                    $ruleSource = $category;
+                    $auditKind = $category;
+                }
+
+                $balanceEffect = 0.0;
+                if ($transaction->status === 'approved') {
+                    $balanceEffect = ($transaction->type === 'income') ? $netAmount : -$netAmount;
+                } elseif ($category === 'withdrawal' && $transaction->status === 'pending') {
+                    $balanceEffect = -$amount;
+                }
+
+                $diffAmount = round($actualCommission - $expectedCommission);
+
+                return [
+                    'id' => $transaction->id,
+                    'owner' => 'courier',
+                    'seller' => trim(($transaction->courier?->first_name ?? '').' '.($transaction->courier?->last_name ?? '')) ?: 'Kuryer',
+                    'phone' => $transaction->courier?->phone_number,
+                    'courierId' => $transaction->courier_id,
+                    'orderId' => $transaction->order_id,
+                    'courierOrderId' => $transaction->courier_order_id,
+                    'courierTaskId' => $transaction->courier_task_id,
+                    'amount' => $amount,
+                    'netAmount' => $netAmount,
+                    'balanceEffect' => $balanceEffect,
+                    'actualPercent' => $actualPercent,
+                    'actualCommission' => $actualCommission,
+                    'expectedPercent' => $expectedPercent,
+                    'expectedCommission' => $expectedCommission,
+                    'ruleSource' => $ruleSource,
+                    'sellerRate' => 0,
+                    'globalRule' => $globalRule,
+                    'type' => $transaction->type,
+                    'category' => $category,
+                    'auditKind' => $auditKind,
+                    'distanceKm' => (float) ($task?->distance_km ?? 0),
+                    'baseFee' => (float) ($task?->base_fee_amount ?? 0),
+                    'distanceFee' => (float) ($task?->distance_fee_amount ?? 0),
+                    'bonus' => (float) ($task?->bonus_amount ?? 0),
+                    'diffPercent' => round($actualPercent - $expectedPercent, 2),
+                    'diffAmount' => $diffAmount,
+                    'status' => $transaction->status,
+                    'date' => $this->dateTime($transaction->created_at),
+                    'ok' => abs($diffAmount) <= 1 && abs($actualPercent - $expectedPercent) < 0.01,
+                ];
+            })->values();
+
+            return [
+                'commissionAuditRows' => $collection->all(),
+                'commissionAuditPagination' => $this->paginationMeta($rows),
+                'commissionAuditTotals' => [
+                    'rows' => (int) $rows->total(),
+                    'mismatches' => (int) $collection->where('ok', false)->count(),
+                    'sellerSpecific' => (int) $collection->where('ruleSource', 'km_formula')->count(),
+                    'global' => (int) $collection->where('auditKind', 'withdrawal_commission')->count(),
+                    'balanceAdded' => (float) $collection->where('balanceEffect', '>', 0)->sum('balanceEffect'),
+                ],
+                'commissionRules' => [
+                    ...$this->commissionRulesPayload(),
+                    ...$this->courierPayoutRulesPayload(),
+                ],
+                'commissionAuditFilters' => ['owner' => $owner],
+            ];
+        }
+
         if (! Schema::hasTable('seller_transactions')) {
-            return ['commissionAuditRows' => [], 'commissionAuditPagination' => $this->emptyPagination(), 'commissionAuditTotals' => [], 'commissionRules' => []];
+            return ['commissionAuditRows' => [], 'commissionAuditPagination' => $this->emptyPagination(), 'commissionAuditTotals' => [], 'commissionRules' => [], 'commissionAuditFilters' => ['owner' => $owner]];
         }
 
         $query = SellerTransaction::query()
@@ -4175,7 +4568,60 @@ class AdminController extends Controller
                 'balanceAdded' => (float) $collection->where('balanceEffect', '>', 0)->sum('balanceEffect'),
             ],
             'commissionRules' => $this->commissionRulesPayload(),
+            'commissionAuditFilters' => ['owner' => $owner],
         ];
+    }
+
+    private function expectedWithdrawalCommission(float $amount): array
+    {
+        $rule = CommissionSetting::query()
+            ->where('priceFrom', '<=', $amount)
+            ->where(function ($query) use ($amount) {
+                $query->whereNull('priceTo')
+                    ->orWhere('priceTo', 0)
+                    ->orWhere('priceTo', '>=', $amount);
+            })
+            ->orderByDesc('priceFrom')
+            ->first();
+
+        $percent = (float) ($rule?->percent ?? 0);
+        return [
+            'percent' => $percent,
+            'commission' => round($amount * $percent / 100),
+            'source' => $rule ? 'withdrawal_global' : 'withdrawal_none',
+            'globalRule' => $rule ? [
+                'id' => $rule->id,
+                'from' => (float) $rule->priceFrom,
+                'to' => (float) $rule->priceTo,
+                'percent' => $percent,
+            ] : null,
+        ];
+    }
+
+    private function courierPayoutRulesPayload(): array
+    {
+        $settings = ProjectSetting::query()->first();
+        $rules = collect($settings?->courier_bonus_rules ?? [])->map(fn ($rule, $index) => [
+            'id' => 'courier-bonus-'.$index,
+            'from' => (float) ($rule['from_km'] ?? 0),
+            'to' => (float) ($rule['to_km'] ?? 0),
+            'percent' => 0,
+            'label' => 'Kuryer bonus',
+            'bonus' => (float) ($rule['bonus_amount'] ?? 0),
+        ])->values()->all();
+
+        array_unshift($rules, [
+            'id' => 'courier-base',
+            'from' => 0,
+            'to' => 0,
+            'percent' => 0,
+            'label' => 'Kuryer km payout',
+            'base' => (float) ($settings?->courier_base_fee ?? 3000),
+            'perKm' => (float) ($settings?->courier_price_per_km ?? 1500),
+            'min' => (float) ($settings?->courier_min_fee ?? 5000),
+        ]);
+
+        return $rules;
     }
 
     private function expectedCommissionRule(?Seller $seller, float $amount): array
@@ -4496,18 +4942,61 @@ class AdminController extends Controller
         return FcmNotifications::query()
             ->latest()
             ->get()
-            ->map(fn (FcmNotifications $notification) => [
+            ->map(function (FcmNotifications $notification) {
+                $who = (string) $notification->who;
+                $targetMode = ctype_digit($who) || str_contains($who, ':') ? 'individual' : 'audience';
+
+                return [
                 'id' => $notification->id,
                 'title' => $notification->name,
                 'body' => $notification->description,
-                'who' => $notification->who,
-                'status' => $notification->is_read ? 'Read' : 'Sent',
+                'who' => $who,
+                'targetMode' => $targetMode,
+                'targetLabel' => $this->pushTargetLabel($who),
+                'source' => $notification->source ?? 'legacy',
+                'status' => match ($notification->delivery_status ?? 'in_app') {
+                    'sent' => 'Yuborildi',
+                    'failed' => 'Xatolik',
+                    'sending' => 'Yuborilmoqda',
+                    default => 'Ilova ichida',
+                },
+                'sentCount' => (int) ($notification->sent_count ?? 0),
+                'failedCount' => (int) ($notification->failed_count ?? 0),
                 'date' => optional($notification->created_at)->format('Y-m-d H:i'),
                 'createUrl' => route('boshqaruv.push.store'),
                 'destroyUrl' => route('boshqaruv.push.destroy', $notification),
-            ])
+                ];
+            })
             ->values()
             ->all();
+    }
+
+    private function pushTargetLabel(string $who): string
+    {
+        if (ctype_digit($who)) {
+            $user = User::query()->find((int) $who);
+
+            return $user
+                ? (trim((string) ($user->name.' '.$user->lastname)) ?: "Foydalanuvchi #{$user->id}")
+                : "Foydalanuvchi #{$who}";
+        }
+
+        if (preg_match('/^(business|courier):(\d+)$/', $who, $matches)) {
+            $recipient = $matches[1] === 'business'
+                ? Seller::query()->find((int) $matches[2])
+                : Couriers::query()->find((int) $matches[2]);
+
+            return $recipient
+                ? $this->pushRecipientLabel($matches[1], $recipient)
+                : ($matches[1] === 'business' ? 'Seller' : 'Kuryer')." #{$matches[2]}";
+        }
+
+        return match ($who) {
+            'users' => 'Barcha foydalanuvchilar',
+            'business' => 'Barcha sellerlar',
+            'courier' => 'Barcha kuryerlar',
+            default => $who,
+        };
     }
 
     private function searchHistoryPagePayload(): array

@@ -10,11 +10,15 @@ interface Transaction {
   user: string;
   phone?: string;
   type: string;
+  owner?: 'seller' | 'courier';
   amount: number;
   netAmount?: number;
   sellerId?: number;
+  courierId?: number;
   orderId?: number;
   sellerOrderId?: number;
+  courierOrderId?: number;
+  courierTaskId?: number;
   status: string;
   statusLabel?: string;
   date?: string;
@@ -22,6 +26,7 @@ interface Transaction {
   method?: string;
   note?: string;
   category?: string;
+  ownerTotals?: { approvedCount?: number; approvedSum?: number; pendingSum?: number };
   sellerTotals?: { approvedCount?: number; approvedSum?: number; pendingSum?: number };
   nearby?: Array<{ id: number; amount?: number; netAmount?: number; status?: string; date?: string }>;
   approveUrl?: string;
@@ -37,10 +42,14 @@ const statusChip = (status?: string) => {
 };
 
 export default function Transaksiyalar() {
-  const { transactions = [], transactionPagination = { page: 1, totalPages: 1, from: 0, to: 0, total: 0 }, transactionTotals = {} } = usePage<{ transactions?: Transaction[]; transactionPagination?: { page: number; totalPages: number; from: number; to: number; total: number }; transactionTotals?: Record<string, number> }>().props;
+  const { transactions = [], transactionPagination = { page: 1, totalPages: 1, from: 0, to: 0, total: 0 }, transactionTotals = {}, transactionFilters = {} } = usePage<{ transactions?: Transaction[]; transactionPagination?: { page: number; totalPages: number; from: number; to: number; total: number }; transactionTotals?: Record<string, number>; transactionFilters?: { owner?: string; search?: string } }>().props;
   const [selected, setSelected] = useState<Transaction | null>(null);
+  const [owner, setOwner] = useState(transactionFilters.owner || 'seller');
+  const [search, setSearch] = useState(transactionFilters.search || '');
 
   const totals = { income: transactionTotals.income || 0, pending: transactionTotals.pending || 0, approved: transactionTotals.approved || 0 };
+  const ownerLabel = owner === 'courier' ? 'Kuryer' : 'Seller';
+  const go = (extra: Record<string, string | number> = {}) => router.get('/boshqaruv/transactions', { transaction_owner: owner, transactions_search: search, transactions_page: transactionPagination.page, ...extra }, { preserveState: true, preserveScroll: true, replace: true });
 
   const patch = (url?: string, message?: string) => {
     if (!url || (message && !confirm(message))) return;
@@ -52,13 +61,23 @@ export default function Transaksiyalar() {
       <div className="page-head">
         <div>
           <h1 className="page-title">Tranzaksiyalar</h1>
-          <p className="page-subtitle">Seller to'lovlari va yechib olish so'rovlari</p>
+          <p className="page-subtitle">Seller va kuryer to'lovlari, jarimalar, order daromadlari va yechib olish so'rovlari</p>
         </div>
+      </div>
+
+      <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <div className="btn-group">
+          {[
+            ['seller', 'Sellerlar'],
+            ['courier', 'Kuryerlar'],
+          ].map(([key, label]) => <button key={key} className={`btn btn-sm ${owner === key ? 'btn-primary-gradient' : 'btn-light'}`} onClick={() => { setOwner(key); router.get('/boshqaruv/transactions', { transaction_owner: key, transactions_page: 1 }, { preserveState: true, preserveScroll: true, replace: true }); }}>{label}</button>)}
+        </div>
+        <input className="form-control form-control-sm" style={{ maxWidth: 360 }} value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && go({ transactions_page: 1 })} placeholder={`${ownerLabel}, telefon, order ID yoki summa`} />
       </div>
 
       <div className="row g-3 mb-4">
         {[
-          { label: 'Jami tranzaksiya', value: transactionTotals.all || 0, icon: 'bi-receipt', color: '#4f46e5' },
+          { label: `${ownerLabel} tranzaksiya`, value: transactionTotals.all || 0, icon: 'bi-receipt', color: '#4f46e5' },
           { label: 'Tasdiqlangan', value: totals.approved, icon: 'bi-check-circle', color: '#10b981' },
           { label: 'Kutilmoqda', value: totals.pending, icon: 'bi-hourglass-split', color: '#f59e0b' },
           { label: 'Jami summa', value: `${fmt(totals.income)} so'm`, icon: 'bi-wallet2', color: '#0ea5e9' },
@@ -87,7 +106,7 @@ export default function Transaksiyalar() {
         </div>
         <div className="table-responsive">
           <table className="data-table">
-            <thead><tr><th>ID</th><th>Seller</th><th>Turi</th><th>Summa</th><th>Net</th><th>Metod</th><th>Sana</th><th>Status</th><th>Amallar</th></tr></thead>
+            <thead><tr><th>ID</th><th>{ownerLabel}</th><th>Turi</th><th>Summa</th><th>Net</th><th>Metod</th><th>Order</th><th>Sana</th><th>Status</th><th>Amallar</th></tr></thead>
             <tbody>
               {transactions.map((item) => (
                 <tr key={item.id}>
@@ -97,6 +116,7 @@ export default function Transaksiyalar() {
                   <td className={`fw-bold ${item.amount >= 0 ? 'text-success' : 'text-danger'}`}>{item.amount >= 0 ? '+' : ''}{fmt(item.amount)} so'm</td>
                   <td className="fw-semibold">{fmt(item.netAmount ?? item.amount)} so'm</td>
                   <td><span className="chip chip-gray">{item.method || '—'}</span></td>
+                  <td><small className="text-muted">{owner === 'courier' ? `ORD #${item.orderId || '—'} · CO #${item.courierOrderId || '—'}` : `ORD #${item.orderId || '—'} · SELL #${item.sellerOrderId || '—'}`}</small></td>
                   <td className="text-muted">{item.date || '—'}</td>
                   <td><span className={`chip ${statusChip(item.status)}`}>{item.status || '—'}</span></td>
                   <td>
@@ -110,28 +130,29 @@ export default function Transaksiyalar() {
                   </td>
                 </tr>
               ))}
+              {transactions.length === 0 ? <tr><td colSpan={10} className="text-center text-muted py-5">Tranzaksiya topilmadi</td></tr> : null}
             </tbody>
           </table>
         </div>
-        <PaginationControls {...transactionPagination} onPageChange={(page) => router.get('/boshqaruv/transactions', { transactions_page: page }, { preserveState: true, preserveScroll: true, replace: true })} />
+        <PaginationControls {...transactionPagination} onPageChange={(page) => go({ transactions_page: page })} />
       </div>
 
       <Modal show={!!selected} onHide={() => setSelected(null)} centered size="lg">
         <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">Tranzaksiya #{selected?.id}</Modal.Title></Modal.Header>
         <Modal.Body>
           <div className="row g-3">
-            <div className="col-6"><small className="text-muted">Seller</small><div className="fw-semibold">{selected?.user}</div></div>
+            <div className="col-6"><small className="text-muted">{selected?.owner === 'courier' ? 'Kuryer' : 'Seller'}</small><div className="fw-semibold">{selected?.user}</div></div>
             <div className="col-6"><small className="text-muted">Telefon</small><div>{selected?.phone || '—'}</div></div>
             <div className="col-6"><small className="text-muted">Turi</small><div>{selected?.type} {selected?.category ? `· ${selected.category}` : ''}</div></div>
             <div className="col-6"><small className="text-muted">Status</small><div><span className={`chip ${statusChip(selected?.status)}`}>{selected?.status || '—'}</span></div></div>
             <div className="col-6"><small className="text-muted">Summa</small><div className="fw-bold">{fmt(selected?.amount || 0)} so'm</div></div>
             <div className="col-6"><small className="text-muted">Net</small><div className="fw-bold text-success">{fmt(selected?.netAmount ?? selected?.amount ?? 0)} so'm</div></div>
             <div className="col-6"><small className="text-muted">Karta</small><div>{selected?.method || '—'}</div></div>
-            <div className="col-6"><small className="text-muted">Order</small><div>#{selected?.orderId || '—'} · SELL #{selected?.sellerOrderId || '—'}</div></div>
+            <div className="col-6"><small className="text-muted">Order</small><div>{selected?.owner === 'courier' ? `#${selected?.orderId || '—'} · CO #${selected?.courierOrderId || '—'} · TASK #${selected?.courierTaskId || '—'}` : `#${selected?.orderId || '—'} · SELL #${selected?.sellerOrderId || '—'}`}</div></div>
             <div className="col-6"><small className="text-muted">Yangilangan</small><div>{selected?.updatedAt || '—'}</div></div>
             <div className="col-12"><small className="text-muted">Izoh</small><div>{selected?.note || '—'}</div></div>
-            <div className="col-12"><div className="detail-panel"><h6 className="fw-bold mb-3">Seller summary</h6><div className="row g-2"><div className="col-md-4"><small className="text-muted d-block">Tasdiqlangan</small><strong>{selected?.sellerTotals?.approvedCount || 0} ta</strong></div><div className="col-md-4"><small className="text-muted d-block">Tasdiqlangan summa</small><strong>{fmt(selected?.sellerTotals?.approvedSum || 0)} so'm</strong></div><div className="col-md-4"><small className="text-muted d-block">Pending summa</small><strong>{fmt(selected?.sellerTotals?.pendingSum || 0)} so'm</strong></div></div></div></div>
-            <div className="col-12"><div className="detail-panel"><h6 className="fw-bold mb-3">Sellerning yaqin tranzaksiyalari</h6>{(selected?.nearby || []).map((row) => <div className="d-flex justify-content-between border-bottom py-2" key={row.id}><span>#TRX-{row.id} · {row.status || '—'}</span><strong>{fmt(row.netAmount || row.amount || 0)} so'm</strong></div>)}{(selected?.nearby || []).length === 0 ? <div className="text-muted">Boshqa tranzaksiya topilmadi</div> : null}</div></div>
+            <div className="col-12"><div className="detail-panel"><h6 className="fw-bold mb-3">{selected?.owner === 'courier' ? 'Kuryer summary' : 'Seller summary'}</h6><div className="row g-2"><div className="col-md-4"><small className="text-muted d-block">Tasdiqlangan</small><strong>{selected?.ownerTotals?.approvedCount || selected?.sellerTotals?.approvedCount || 0} ta</strong></div><div className="col-md-4"><small className="text-muted d-block">Tasdiqlangan summa</small><strong>{fmt(selected?.ownerTotals?.approvedSum || selected?.sellerTotals?.approvedSum || 0)} so'm</strong></div><div className="col-md-4"><small className="text-muted d-block">Pending summa</small><strong>{fmt(selected?.ownerTotals?.pendingSum || selected?.sellerTotals?.pendingSum || 0)} so'm</strong></div></div></div></div>
+            <div className="col-12"><div className="detail-panel"><h6 className="fw-bold mb-3">Yaqin tranzaksiyalar</h6>{(selected?.nearby || []).map((row) => <div className="d-flex justify-content-between border-bottom py-2" key={row.id}><span>#TRX-{row.id} · {row.status || '—'}</span><strong>{fmt(row.netAmount || row.amount || 0)} so'm</strong></div>)}{(selected?.nearby || []).length === 0 ? <div className="text-muted">Boshqa tranzaksiya topilmadi</div> : null}</div></div>
           </div>
         </Modal.Body>
         <Modal.Footer>

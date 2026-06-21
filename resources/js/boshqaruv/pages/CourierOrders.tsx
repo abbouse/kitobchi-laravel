@@ -18,6 +18,8 @@ interface Courier {
   photo?: string;
   region?: string;
   status?: string;
+  isOnline?: boolean;
+  availabilityUpdatedAt?: string;
   verificationStatus?: string;
   verificationLabel?: string;
   verificationNotes?: string;
@@ -36,7 +38,7 @@ interface Courier {
   orders?: number;
   warningCount?: number;
   joined?: string;
-  location?: AnyRow;
+  location?: AnyRow & { mapLinks?: Record<string, string> };
   identity?: AnyRow;
   payment?: AnyRow;
   recentOrders?: AnyRow[];
@@ -125,8 +127,11 @@ export default function CourierOrders() {
   const [selectedOrder, setSelectedOrder] = useState<CourierOrder | null>(null);
 
   const totalBalance = useMemo(() => couriers.reduce((sum, courier) => sum + (courier.balance || 0), 0), [couriers]);
+  const onlineCount = useMemo(() => couriers.filter((courier) => courier.isOnline).length, [couriers]);
   const orderTabs = [{ key: 'all', label: 'Barchasi' }, ...Object.entries(courierOrderStatuses).map(([key, meta]) => ({ key, label: meta.label }))];
-  const load = (extra: Record<string, string | number> = {}) => router.get('/boshqaruv/couriers', { couriers_page: courierPagination.page, couriers_tab: courierTab, couriers_search: courierSearch, courier_orders_page: courierOrderPagination.page, courier_orders_tab: orderTab, courier_orders_search: orderSearch, ...extra }, { preserveState: true, preserveScroll: true, replace: true });
+  const isOrderPage = typeof window !== 'undefined' && window.location.pathname.includes('/courier-orders');
+  const pageUrl = isOrderPage ? '/boshqaruv/courier-orders' : '/boshqaruv/couriers';
+  const load = (extra: Record<string, string | number> = {}) => router.get(pageUrl, { couriers_page: courierPagination.page, couriers_tab: courierTab, couriers_search: courierSearch, courier_orders_page: courierOrderPagination.page, courier_orders_tab: orderTab, courier_orders_search: orderSearch, ...extra }, { preserveState: true, preserveScroll: true, replace: true });
 
   const patch = (url?: string, data: Record<string, string> = {}, confirmation?: string) => {
     if (!url || (confirmation && !confirm(confirmation))) return;
@@ -146,40 +151,46 @@ export default function CourierOrders() {
 
   return (
     <div>
-      <div className="page-head"><div><h1 className="page-title">Kuryerlar</h1><p className="page-subtitle">Kuryer profillari, verifikatsiya, balans va yetkazmalar</p></div></div>
+      <div className="page-head"><div><h1 className="page-title">{isOrderPage ? 'Kuryer buyurtmalari' : 'Kuryerlar'}</h1><p className="page-subtitle">{isOrderPage ? 'Kuryer orderlari, statuslar, mijoz qidiruvi va jarimalar' : 'Kuryer profillari, online holat, lokatsiya, verifikatsiya va balans'}</p></div></div>
       <div className="row g-3 mb-4">
-        {[
+        {(isOrderPage ? [
+          ['Jami order', courierOrderCounts.all || 0, 'bi-truck', '#4f46e5'],
+          ["Yo'lda", courierOrderCounts.in_delivery || 0, 'bi-signpost-split', '#2563eb'],
+          ['Yetkazildi', courierOrderCounts.delivered || 0, 'bi-check-circle', '#10b981'],
+          ['Mijoz qabul qildi', courierOrderCounts.customer_received || 0, 'bi-bag-check', '#7c3aed'],
+        ] : [
           ['Kutilmoqda', courierCounts.pending || 0, 'bi-hourglass-split', '#f59e0b'],
           ['Faol kuryer', courierCounts.approved || 0, 'bi-bicycle', '#10b981'],
-          ["Yo'ldagi order", courierOrderCounts.in_delivery || 0, 'bi-truck', '#2563eb'],
+          ['Online', onlineCount, 'bi-broadcast-pin', '#2563eb'],
           ['Kuryer balansi', `${fmt(totalBalance)} so'm`, 'bi-wallet2', '#7c3aed'],
-        ].map(([label, value, icon, color]) => <div className="col-xl-3 col-md-6" key={String(label)}><div className="stat-card"><div className="d-flex align-items-center gap-3"><div className="stat-icon" style={{ background: String(color) }}><i className={`bi ${icon}`}></i></div><div><div className="stat-value">{value}</div><div className="stat-label">{label}</div></div></div></div></div>)}
+        ]).map(([label, value, icon, color]) => <div className="col-xl-3 col-md-6" key={String(label)}><div className="stat-card"><div className="d-flex align-items-center gap-3"><div className="stat-icon" style={{ background: String(color) }}><i className={`bi ${icon}`}></i></div><div><div className="stat-value">{value}</div><div className="stat-label">{label}</div></div></div></div></div>)}
       </div>
 
-      <div className="card-panel mb-4">
+      {!isOrderPage ? <div className="card-panel">
         <div className="panel-head"><div><div className="panel-title">Kuryerlar jadvali</div><small className="text-muted">{courierPagination.total} ta kuryer topildi</small></div><input className="form-control form-control-sm" style={{ maxWidth: 280 }} value={courierSearch} onChange={(e) => setCourierSearch(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && load({ couriers_page: 1 })} placeholder="Ism, telefon, hudud yoki raqam" /></div>
         <div className="d-flex flex-wrap gap-2 mb-3">{courierTabs.map((tab) => <button key={tab.key} className={`btn btn-sm ${courierTab === tab.key ? 'btn-primary-gradient' : 'btn-light'}`} onClick={() => { setCourierTab(tab.key); load({ couriers_page: 1, couriers_tab: tab.key }); }}>{tab.label}<span className="badge rounded-pill bg-light text-dark ms-2">{fmt(courierCounts[tab.key] || 0)}</span></button>)}</div>
-        <div className="table-responsive"><table className="data-table"><thead><tr><th>ID</th><th>Kuryer</th><th>Hudud</th><th>Transport</th><th>Buyurtma</th><th>Balans</th><th>Ogohlantirish</th><th>Holat</th><th>Amallar</th></tr></thead><tbody>
+        <div className="table-responsive"><table className="data-table"><thead><tr><th>ID</th><th>Kuryer</th><th>Ish holati</th><th>Hudud</th><th>Transport</th><th>Buyurtma</th><th>Balans</th><th>Ogohlantirish</th><th>Holat</th><th>Amallar</th></tr></thead><tbody>
           {couriers.map((courier) => <tr key={courier.id}>
             <td className="fw-semibold text-primary">#{courier.id}</td>
             <td><div className="d-flex align-items-center gap-2"><Avatar row={courier} /><div><div className="fw-semibold">{courier.name}</div><small className="text-muted">{courier.phone || '—'}</small></div></div></td>
+            <td><span className={`chip ${courier.isOnline ? 'chip-success' : 'chip-gray'}`}>{courier.isOnline ? 'Online' : 'Offline'}</span><small className="d-block text-muted">{courier.availabilityUpdatedAt || courier.location?.updatedAt || '—'}</small></td>
             <td>{courier.region || '—'}</td><td><div>{courier.transportLabel || courier.transport || '—'}</div><small className="text-muted">{courier.plate || courier.vehicle}</small></td>
             <td><span className="chip chip-info">{courier.orders || 0}</span></td><td>{fmt(courier.balance || 0)} so'm</td>
             <td><span className={`chip ${(courier.warningCount || 0) > 0 ? 'chip-warning' : 'chip-gray'}`}>{courier.warningCount || 0}/3</span></td>
             <td><span className={`chip ${chip(courier.status)}`}>{courierLabel(courier.status)}</span></td>
             <td><button className="btn btn-sm btn-light me-1" onClick={() => setSelectedCourier(courier)}><i className="bi bi-eye"></i></button>{courier.status !== 'approved' ? <button className="btn btn-sm btn-light me-1" onClick={() => patch(courier.actions?.approveUrl, {}, 'Kuryer tasdiqlansinmi?')}><i className="bi bi-check2-circle"></i></button> : null}<button className="btn btn-sm btn-light text-warning" onClick={() => warn(courier)}><i className="bi bi-exclamation-triangle"></i></button></td>
-          </tr>)}{courierPagination.total === 0 ? <tr><td colSpan={9} className="text-center text-muted py-5">Kuryer topilmadi</td></tr> : null}
+          </tr>)}{courierPagination.total === 0 ? <tr><td colSpan={10} className="text-center text-muted py-5">Kuryer topilmadi</td></tr> : null}
         </tbody></table></div><PaginationControls {...courierPagination} onPageChange={(page) => load({ couriers_page: page })} />
-      </div>
+      </div> : null}
 
-      <div className="card-panel">
-        <div className="panel-head"><div><div className="panel-title">Kuryer buyurtmalari</div><small className="text-muted">{courierOrderPagination.total} ta yozuv topildi</small></div><input className="form-control form-control-sm" style={{ maxWidth: 280 }} value={orderSearch} onChange={(e) => setOrderSearch(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && load({ courier_orders_page: 1 })} placeholder="Order, kuryer yoki mijoz" /></div>
+      {isOrderPage ? <div className="card-panel">
+        <div className="panel-head"><div><div className="panel-title">Kuryer buyurtmalari</div><small className="text-muted">{courierOrderPagination.total} ta yozuv topildi</small></div><input className="form-control form-control-sm" style={{ maxWidth: 360 }} value={orderSearch} onChange={(e) => setOrderSearch(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && load({ courier_orders_page: 1 })} placeholder="Order ID, mijoz raqami/ismi yoki kuryer" /></div>
         <div className="d-flex flex-wrap gap-2 mb-3">{orderTabs.map((tab) => <button key={tab.key} className={`btn btn-sm ${orderTab === tab.key ? 'btn-primary-gradient' : 'btn-light'}`} onClick={() => { setOrderTab(tab.key); load({ courier_orders_page: 1, courier_orders_tab: tab.key }); }}>{tab.label}<span className="badge rounded-pill bg-light text-dark ms-2">{fmt(courierOrderCounts[tab.key] || 0)}</span></button>)}</div>
         <div className="table-responsive"><table className="data-table"><thead><tr><th>ID</th><th>Kuryer</th><th>Mijoz</th><th>Summa</th><th>To'lov</th><th>Holat</th><th>Sana</th><th>Amallar</th></tr></thead><tbody>
           {courierOrders.map((order) => <tr key={order.id}><td><strong>#{order.id}</strong><small className="d-block text-muted">ORD #{order.orderId || '—'}</small></td><td><div className="fw-semibold">{order.courier}</div><small className="text-muted">{order.courierPhone || '—'}</small></td><td><div>{order.customer}</div><small className="text-muted">{order.customerPhone || '—'}</small></td><td><strong>{fmt(order.amount)} so'm</strong><small className="d-block text-muted">Ulush: {fmt((order.courierPrice || 0) + (order.bonus || 0))}</small></td><td>{order.paymentStatus || '—'}</td><td><select className={`form-select form-select-sm ${chip(order.status, order.statusBadge)}`} value={order.status} onChange={(e) => patch(order.statusUrl, { status: e.target.value })}>{Object.entries(courierOrderStatuses).map(([value, meta]) => <option key={value} value={value}>{meta.label}</option>)}</select></td><td className="text-muted">{order.date || '—'}</td><td><button className="btn btn-sm btn-light" onClick={() => setSelectedOrder(order)}><i className="bi bi-eye"></i></button></td></tr>)}
           {courierOrderPagination.total === 0 ? <tr><td colSpan={8} className="text-center text-muted py-5">Buyurtma topilmadi</td></tr> : null}
         </tbody></table></div><PaginationControls {...courierOrderPagination} onPageChange={(page) => load({ courier_orders_page: page })} />
-      </div>
+      </div> : null}
       <CourierModal courier={selectedCourier} onHide={() => setSelectedCourier(null)} onPatch={patch} onWarn={warn} onResetPassword={resetPassword} onEdit={(courier) => setEditingCourier(courier)} />
       <CourierEditModal courier={editingCourier} onHide={() => setEditingCourier(null)} />
       <OrderModal order={selectedOrder} statuses={courierOrderStatuses} onHide={() => setSelectedOrder(null)} onPatch={patch} />
@@ -194,10 +205,11 @@ function CourierModal({ courier, onHide, onPatch, onWarn, onResetPassword, onEdi
     router.post(courier.actions.uploadDocumentUrl, new FormData(event.currentTarget), { preserveScroll: true });
   };
   return <Modal show={!!courier} onHide={onHide} size="xl" centered><Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">{courier?.name}</Modal.Title></Modal.Header><Modal.Body>{!courier ? null : <div className="row g-3">
-    <Info title="Asosiy ma'lumotlar" rows={[['Telefon', courier.phone || '—'], ['Hudud', courier.region || '—'], ['Holat', courierLabel(courier.status)], ['Verifikatsiya', courier.verificationLabel || courier.verificationStatus || '—'], ['Ro‘yxatdan o‘tgan', courier.joined || '—'], ['Ogohlantirish', `${courier.warningCount || 0}/3`]]} />
+    <Info title="Asosiy ma'lumotlar" rows={[['Telefon', courier.phone || '—'], ['Hudud', courier.region || '—'], ['Ish faoliyati', courier.isOnline ? 'Online' : 'Offline'], ['Holat yangilangan', courier.availabilityUpdatedAt || '—'], ['Holat', courierLabel(courier.status)], ['Verifikatsiya', courier.verificationLabel || courier.verificationStatus || '—'], ['Ro‘yxatdan o‘tgan', courier.joined || '—'], ['Ogohlantirish', `${courier.warningCount || 0}/3`]]} />
     <Info title="Moliya" rows={[['Balans', `${fmt(courier.balance || 0)} so'm`], ['Rezerv', `${fmt(courier.reserved || 0)} so'm`], ['Daromad', `${fmt(courier.totalEarned || 0)} so'm`], ['Yechilgan', `${fmt(courier.totalWithdrawal || 0)} so'm`], ['Buyurtmalar', String(courier.orders || 0)], ['Karta', String(courier.payment?.card || '—')]]} />
     <Info title="Transport va shaxs" rows={[['Transport', courier.transportLabel || courier.transport || '—'], ['Avtomobil', [courier.vehicle, courier.vehicleColor].filter(Boolean).join(', ') || '—'], ['Raqam', courier.plate || '—'], ['INN', String(courier.identity?.inn || '—')], ['Tug‘ilgan sana', String(courier.identity?.birthdate || '—')], ['Pasport', String(courier.identity?.passport || '—')], ['Pasport berilgan', String(courier.identity?.passportIssuedAt || '—')], ['Guvohnoma', String(courier.identity?.license || '—')], ['Guvohnoma tugaydi', String(courier.identity?.licenseExpiresAt || '—')], ['Qolgan kun', String(courier.identity?.licenseDaysRemaining ?? '—')]]} />
     <Info title="Lokatsiya va manzil" rows={[['Uy manzili', String(courier.payment?.homeAddress || '—')], ['Karta egasi', String(courier.payment?.cardHolder || '—')], ['Latitude', String(courier.location?.lat || '—')], ['Longitude', String(courier.location?.lon || '—')], ['Lokatsiya yangilangan', String(courier.location?.updatedAt || '—')], ['Tasdiqlangan sana', courier.verifiedAt || '—'], ['Verifikatsiya izohi', courier.verificationNotes || '—']]} />
+    <div className="col-xl-6"><div className="detail-panel h-100"><h6 className="fw-bold mb-3">Joriy lokatsiya xaritasi</h6><div className="small text-muted mb-2">Kuryerning oxirgi yuborgan koordinatasi asosida ochiladi.</div><MapButtons mapLinks={(courier.location?.mapLinks || {}) as Record<string, string>} /></div></div>
     <ListBlock title="Oxirgi buyurtmalar" items={courier.recentOrders || []} render={(item) => <><strong>#{item.id} / ORD #{item.orderId} · {fmt(Number(item.amount || 0))} so'm</strong><span>{String(item.customer || 'Mijoz')} · {String(item.status || '—')} · {String(item.date || '—')}</span></>} />
     <ListBlock title="Tranzaksiyalar" items={courier.transactions || []} render={(item) => {
       const isExpense = item.type === 'expense' || item.category === 'penalty' || item.category === 'withdrawal' || item.category === 'reversal';

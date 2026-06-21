@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\ConnectedDevice;
 use App\Models\FcmNotifications;
 use App\Models\ProductReviewPrompt;
 use Illuminate\Support\Collection;
@@ -100,6 +99,10 @@ class ProductReviewReminderPushService
                 'name' => $title,
                 'description' => $body,
                 'who' => (string) $user->id,
+                'source' => 'product_review_reminder',
+                'delivery_status' => 'sent',
+                'sent_count' => (int) ($result['success'] ?? 0),
+                'failed_count' => (int) ($result['failure'] ?? 0),
                 'is_read' => false,
             ]);
         }
@@ -109,15 +112,7 @@ class ProductReviewReminderPushService
 
     private function tokensForUser(int $userId): Collection
     {
-        return ConnectedDevice::query()
-            ->where('user_type', 'user')
-            ->where('user_id', $userId)
-            ->whereNotNull('fcm_token')
-            ->where('fcm_token', '!=', '')
-            ->pluck('fcm_token')
-            ->filter(fn ($token) => is_string($token) && $token !== '')
-            ->unique()
-            ->values();
+        return collect(app(FcmRecipientService::class)->tokensFor('user', $userId));
     }
 
     private function resolveLocale(?string $locale): string

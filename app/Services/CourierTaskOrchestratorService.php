@@ -252,6 +252,13 @@ class CourierTaskOrchestratorService
             ->get();
 
         foreach ($tasks as $task) {
+            // First-mile kuryer mijoz pulini olmaydi. Eski noto'g'ri COD
+            // snapshot qolgan bo'lsa, reservationni yechib tashlaymiz.
+            if ($task->is_cod) {
+                $this->codCapacityService->releaseReservation($task);
+                $task->refresh();
+            }
+
             DB::transaction(function () use ($task) {
                 $lockedTask = CourierTask::query()->lockForUpdate()->findOrFail($task->id);
                 if ($lockedTask->settled_at) {
@@ -259,6 +266,8 @@ class CourierTaskOrchestratorService
                 }
 
                 $lockedTask->status_code = CourierTaskStatusCode::COMPLETED->value;
+                $lockedTask->is_cod = false;
+                $lockedTask->cash_collect_amount = 0;
                 $lockedTask->dropped_off_at ??= now();
                 $lockedTask->completed_at ??= now();
 

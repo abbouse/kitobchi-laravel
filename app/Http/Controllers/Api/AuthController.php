@@ -201,8 +201,13 @@ class AuthController extends Controller
 
             // Qurilmani saqlash
             if ($request->has('device_id')) {
+                app(\App\Services\FcmRecipientService::class)->claimToken(
+                    'user',
+                    (int) $user->id,
+                    $request->fcm_token,
+                );
                 DB::table('connected_devices')->updateOrInsert(
-                    ['device_id' => $request->device_id],
+                    ['device_id' => $request->device_id, 'user_type' => 'user'],
                     [
                         'user_id'     => $user->id,
                         'user_type'   => 'user',
@@ -440,8 +445,13 @@ class AuthController extends Controller
         $hashedToken = hash('sha256', explode('|', $plainTextToken)[1]);
 
         if ($request->filled('device_id')) {
+            app(\App\Services\FcmRecipientService::class)->claimToken(
+                'user',
+                (int) $user->id,
+                $request->fcm_token,
+            );
             DB::table('connected_devices')->updateOrInsert(
-                ['device_id' => $request->device_id],
+                ['device_id' => $request->device_id, 'user_type' => 'user'],
                 [
                     'user_id' => $user->id,
                     'user_type' => 'user',

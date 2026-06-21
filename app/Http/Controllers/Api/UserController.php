@@ -25,6 +25,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -195,10 +196,27 @@ class UserController extends Controller
         if (!$user) {
             return response()->json(['status' => 'error', 'message' => "Bunday foydalanuvchi mavjud emas!"], 404);
         }
-        $data = FcmNotifications::where('who', $user->id)
-            ->orWhere('who', 'users')
+        $data = FcmNotifications::query()
+            ->where(function ($query) use ($user) {
+                $query->where('who', (string) $user->id)
+                    ->orWhere('who', 'users');
+            })
             ->orderBy('updated_at', 'DESC')
             ->get();
+
+        if (Schema::hasTable('fcm_notification_reads')) {
+            $readIds = DB::table('fcm_notification_reads')
+                ->where('user_id', $user->id)
+                ->whereIn('notification_id', $data->pluck('id'))
+                ->pluck('notification_id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+
+            $data->each(function (FcmNotifications $notification) use ($readIds) {
+                $notification->is_read = in_array((int) $notification->id, $readIds, true);
+            });
+        }
+
         return response()->json(['status' => 'success', 'data' => $data], 201);
     }
 
@@ -218,7 +236,15 @@ class UserController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Bildirishnoma topilmadi!'], 404);
         }
 
-        $notification->update(['is_read' => true]);
+        if (Schema::hasTable('fcm_notification_reads')) {
+            DB::table('fcm_notification_reads')->updateOrInsert(
+                ['notification_id' => $notification->id, 'user_id' => $user->id],
+                ['read_at' => now(), 'updated_at' => now(), 'created_at' => now()],
+            );
+        } elseif ((string) $notification->who === (string) $user->id) {
+            $notification->update(['is_read' => true]);
+        }
+
         return response()->json(['status' => 'success', 'message' => "Bildirishnoma o'qilgan deb belgilandi."], 200);
     }
 
@@ -239,6 +265,12 @@ class UserController extends Controller
         $deviceName = Str::limit(trim((string) $request->input('device_name', '')), 64, '');
         $platform = Str::limit(trim((string) $request->input('platform', '')), 64, '');
         $now = now();
+
+        app(\App\Services\FcmRecipientService::class)->claimToken(
+            'user',
+            (int) $user->id,
+            $request->fcm_token,
+        );
 
         $query = DB::table('connected_devices')
             ->where('user_id', $user->id)

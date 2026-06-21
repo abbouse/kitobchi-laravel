@@ -20,6 +20,16 @@ class FcmNotifications extends Model
         'name',
         'description',
         'who',
+        'source',
+        'delivery_status',
+        'sent_count',
+        'failed_count',
         'is_read',
+    ];
+
+    protected $casts = [
+        'is_read' => 'boolean',
+        'sent_count' => 'integer',
+        'failed_count' => 'integer',
     ];
 }

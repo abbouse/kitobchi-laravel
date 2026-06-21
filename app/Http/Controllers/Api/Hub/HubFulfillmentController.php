@@ -8,6 +8,7 @@ use App\Models\HubStaff;
 use App\Models\OrderFulfillment;
 use App\Services\CourierTaskOrchestratorService;
 use App\Services\HubRoleAccessService;
+use App\Services\QrTokenService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
@@ -18,6 +19,7 @@ class HubFulfillmentController extends Controller
     public function __construct(
         private readonly HubRoleAccessService $hubRoleAccessService,
         private readonly CourierTaskOrchestratorService $courierTaskOrchestratorService,
+        private readonly QrTokenService $qrTokenService,
     ) {
         $this->middleware('auth:hub');
     }
@@ -303,6 +305,67 @@ class HubFulfillmentController extends Controller
         return response()->json([
             'status' => 'success',
             'fulfillment' => $this->serializeFulfillment($fulfillment),
+        ]);
+    }
+
+    public function handoffQr(Request $request, OrderFulfillment $fulfillment)
+    {
+        $staff = $this->staff($request);
+        if (! $this->hubRoleAccessService->can($staff, 'queue.inbound.arrive')) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Kuryerdan qabul qilish QR kodi sizga ruxsat etilmagan.',
+            ], 403);
+        }
+        if ($response = $this->ensureSameHub($staff, $fulfillment)) {
+            return $response;
+        }
+        if ($fulfillment->status_code !== FulfillmentStatusCode::PICKED_FROM_SELLER->value) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Bu fulfillment kuryerdan qabul qilish bosqichida emas.',
+            ], 422);
+        }
+
+        $task = $fulfillment->courierTasks()
+            ->where('leg', 'first_mile')
+            ->whereNotNull('courier_id')
+            ->whereNotIn('status_code', ['completed', 'failed', 'cancelled'])
+            ->latest('id')
+            ->first();
+
+        if (! $task) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Bu buyurtmaga faol first-mile kuryer topilmadi.',
+            ], 422);
+        }
+
+        $expiresAt = now()->addMinutes(10);
+        $claims = [
+            'fulfillment_id' => (int) $fulfillment->id,
+            'hub_id' => (int) $fulfillment->hub_id,
+            'order_id' => (int) $fulfillment->order_id,
+            'courier_id' => (int) $task->courier_id,
+        ];
+        $token = $this->qrTokenService->makeHubHandoffToken(
+            $fulfillment->id,
+            (int) $fulfillment->hub_id,
+            (int) $fulfillment->order_id,
+            (int) $task->courier_id,
+            60 * 10,
+        );
+        $code = $this->qrTokenService->makeNumericHubHandoffCode($claims, 60 * 10);
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'token' => $token,
+                'code' => $code,
+                'order_id' => (int) $fulfillment->order_id,
+                'fulfillment_id' => (int) $fulfillment->id,
+                'expires_at' => $expiresAt->toIso8601String(),
+            ],
         ]);
     }
 

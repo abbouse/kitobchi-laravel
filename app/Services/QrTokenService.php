@@ -5,6 +5,7 @@ namespace App\Services;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -13,6 +14,7 @@ class QrTokenService
 {
     private const PICKUP_PREFIX = 'KCP1';
     private const DELIVERY_PREFIX = 'KCD1';
+    private const HUB_HANDOFF_PREFIX = 'KCH1';
 
     public function makePickupToken(int $sellerId, int $orderId, int $courierId, ?int $ttlSeconds = null): string
     {
@@ -168,6 +170,85 @@ class QrTokenService
             'user_id' => $userId,
             'courier_id' => $courierId,
         ];
+    }
+
+    public function makeHubHandoffToken(
+        int $fulfillmentId,
+        int $hubId,
+        int $orderId,
+        int $courierId,
+        ?int $ttlSeconds = null,
+    ): string {
+        return $this->makeToken(self::HUB_HANDOFF_PREFIX, [
+            'fulfillment_id' => $fulfillmentId,
+            'hub_id' => $hubId,
+            'order_id' => $orderId,
+            'courier_id' => $courierId,
+        ], $ttlSeconds ?? 60 * 10);
+    }
+
+    public function parseHubHandoffToken(?string $token): ?array
+    {
+        $numericCode = $this->normalizeNumericCode($token);
+        if ($numericCode && strlen($numericCode) === 8) {
+            $cached = Cache::get($this->hubHandoffCacheKey($numericCode));
+            if (is_array($cached)) {
+                return $cached;
+            }
+        }
+
+        $payload = $this->parseToken($token, self::HUB_HANDOFF_PREFIX);
+        if (! $payload) {
+            return null;
+        }
+
+        $fulfillmentId = $this->toInt(Arr::get($payload, 'fulfillment_id'));
+        $hubId = $this->toInt(Arr::get($payload, 'hub_id'));
+        $orderId = $this->toInt(Arr::get($payload, 'order_id'));
+        $courierId = $this->toInt(Arr::get($payload, 'courier_id'));
+
+        if (! $fulfillmentId || ! $hubId || ! $orderId || ! $courierId) {
+            return null;
+        }
+
+        return [
+            'fulfillment_id' => $fulfillmentId,
+            'hub_id' => $hubId,
+            'order_id' => $orderId,
+            'courier_id' => $courierId,
+        ];
+    }
+
+    public function makeNumericHubHandoffCode(array $claims, ?int $ttlSeconds = null): string
+    {
+        $ttlSeconds ??= 60 * 10;
+        foreach (['fulfillment_id', 'hub_id', 'order_id', 'courier_id'] as $key) {
+            if ($this->toInt(Arr::get($claims, $key)) === null) {
+                throw new RuntimeException('Hub handoff claims are incomplete.');
+            }
+        }
+
+        for ($attempt = 0; $attempt < 30; $attempt++) {
+            $code = (string) random_int(10000000, 99999999);
+            if (Cache::add($this->hubHandoffCacheKey($code), $claims, $ttlSeconds)) {
+                return $code;
+            }
+        }
+
+        throw new RuntimeException('Hub handoff code could not be generated.');
+    }
+
+    public function forgetHubHandoffCode(?string $code): void
+    {
+        $normalized = $this->normalizeNumericCode($code);
+        if ($normalized && strlen($normalized) === 8) {
+            Cache::forget($this->hubHandoffCacheKey($normalized));
+        }
+    }
+
+    private function hubHandoffCacheKey(string $code): string
+    {
+        return 'courier:hub-handoff:'.$code;
     }
 
     private function makeToken(string $prefix, array $claims, int $ttlSeconds): string

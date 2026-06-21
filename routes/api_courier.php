@@ -36,7 +36,10 @@ Route::middleware('auth:courier')->group(function () {
     Route::post('orders/confirm/{id}', [CourierOrderController::class, 'confirmOrder']);
     Route::get('orders/view/{id}', [CourierOrderController::class, 'showOrder']);
     Route::get('orders/my', [CourierOrderController::class, 'myOrders']);
+    Route::get('orders/history', [CourierOrderController::class, 'orderHistory']);
+    Route::get('orders/reports', [CourierOrderController::class, 'reports']);
     Route::post('orders/toCustomer/{qr}', [CourierOrderController::class, 'toCustomer']);
+    Route::post('orders/toHub/{qr}', [CourierOrderController::class, 'toHub']);
     // Phase 3: Mijoz javob bermayapti — SLA timerini pauza/resume (toggle).
     Route::post('orders/{id}/customer-delay', [CourierOrderController::class, 'customerDelay']);
     Route::prefix('conversations')->group(function () {

@@ -136,6 +136,8 @@ class BookClubModerationService
                 ? "Postlaringiz orasida nomaqbul kontent topildi. Shu sabab Book Club va xabar yozish vaqtincha to'xtatildi."
                 : "Postlaringizdan birida nomaqbul kontent aniqlandi. Iltimos, keyingi postlarda qoidalarga rioya qiling.",
             'who' => (int) $user->id,
+            'source' => 'book_club_moderation',
+            'delivery_status' => 'in_app',
             'is_read' => false,
         ]);
     }

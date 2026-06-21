@@ -348,9 +348,11 @@ export function ChatKuzatuv() {
 // ===== PUSH BILDIRISHNOMALAR =====
 export function PushNotifications() {
   const { notifications = [] } = usePage<{
-    notifications?: Array<{ id: number; title: string; body?: string; who?: string; status: string; date?: string; createUrl?: string; destroyUrl?: string }>;
+    notifications?: Array<{ id: number; title: string; body?: string; who?: string; targetMode?: 'audience' | 'individual'; targetLabel?: string; source?: string; status: string; sentCount?: number; failedCount?: number; date?: string; createUrl?: string; destroyUrl?: string }>;
   }>().props;
   const [showForm, setShowForm] = useState(false);
+  const [targetMode, setTargetMode] = useState<'audience' | 'individual'>('individual');
+  const [audience, setAudience] = useState('users');
   const createUrl = notifications[0]?.createUrl || '/boshqaruv/push';
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -375,8 +377,17 @@ export function PushNotifications() {
               <td className="fw-semibold" style={{ color: '#4f46e5' }}>#{notification.id}</td>
               <td className="fw-semibold">{notification.title}</td>
               <td className="text-muted">{notification.body || '—'}</td>
-              <td><span className="chip chip-gray">{notification.who || 'all'}</span></td>
-              <td><span className="chip chip-success" style={{ fontSize: 9 }}>{notification.status}</span></td>
+              <td>
+                <span className={`chip ${notification.targetMode === 'individual' ? 'chip-success' : 'chip-gray'}`}>
+                  {notification.targetLabel || notification.who || 'all'}
+                </span>
+              </td>
+              <td>
+                <span className={`chip ${notification.status === 'Xatolik' ? 'chip-danger' : notification.status === 'Yuborildi' ? 'chip-success' : 'chip-gray'}`} style={{ fontSize: 9 }}>
+                  {notification.status}
+                </span>
+                {notification.status === 'Yuborildi' ? <div className="text-muted mt-1" style={{ fontSize: 10 }}>{notification.sentCount || 0} qurilma</div> : null}
+              </td>
               <td className="text-muted">{notification.date}</td>
               <td><button className="btn btn-sm btn-light text-danger" onClick={() => destroy(notification)}><i className="bi bi-trash"></i></button></td>
             </tr>
@@ -389,9 +400,51 @@ export function PushNotifications() {
           <Modal.Body>
             <Form.Label>Sarlavha</Form.Label><Form.Control name="name" required className="mb-3" />
             <Form.Label>Matn</Form.Label><Form.Control as="textarea" rows={4} name="description" required className="mb-3" />
-            <Form.Label>Auditoriya</Form.Label><Form.Select name="who" required defaultValue="users"><option value="users">Foydalanuvchilar</option><option value="business">Sellerlar</option><option value="courier">Kuryerlar</option></Form.Select>
+            <Form.Label>Ilova auditoriyasi</Form.Label>
+            <Form.Select name="who" required value={audience} onChange={(event) => setAudience(event.target.value)} className="mb-3">
+              <option value="users">Foydalanuvchilar</option>
+              <option value="business">Sellerlar</option>
+              <option value="courier">Kuryerlar</option>
+            </Form.Select>
+
+            <Form.Label>Qabul qiluvchilar</Form.Label>
+            <div className="d-flex gap-2 mb-3">
+              <Button
+                type="button"
+                variant={targetMode === 'individual' ? 'dark' : 'light'}
+                className="flex-fill"
+                onClick={() => setTargetMode('individual')}
+              >
+                <i className="bi bi-person me-1"></i>Bitta qabul qiluvchi
+              </Button>
+              <Button
+                type="button"
+                variant={targetMode === 'audience' ? 'dark' : 'light'}
+                className="flex-fill"
+                onClick={() => setTargetMode('audience')}
+              >
+                <i className="bi bi-people me-1"></i>Butun auditoriya
+              </Button>
+            </div>
+            <input type="hidden" name="target_mode" value={targetMode} />
+
+            {targetMode === 'individual' ? (
+              <>
+                <Form.Label>Qabul qiluvchi</Form.Label>
+                <Form.Control
+                  name="recipient"
+                  required
+                  placeholder={audience === 'users' ? 'ID, telefon, email yoki username' : 'ID yoki telefon raqami'}
+                />
+                <Form.Text className="text-muted">Push faqat topilgan akkauntning faol qurilmalariga yuboriladi.</Form.Text>
+              </>
+            ) : (
+              <div className="alert alert-warning mb-0 py-2 small">
+                Bu xabar tanlangan ilovaning barcha faol qurilmalariga yuboriladi.
+              </div>
+            )}
           </Modal.Body>
-          <Modal.Footer><Button variant="light" onClick={() => setShowForm(false)}>Bekor qilish</Button><Button type="submit" className="btn-primary-gradient border-0">Saqlash</Button></Modal.Footer>
+          <Modal.Footer><Button variant="light" onClick={() => setShowForm(false)}>Bekor qilish</Button><Button type="submit" className="btn-primary-gradient border-0">Yuborish</Button></Modal.Footer>
         </Form>
       </Modal>
     </div>

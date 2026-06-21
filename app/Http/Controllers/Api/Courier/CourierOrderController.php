@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api\Courier;
 
 use App\Enums\CourierOrderStatusCode;
 use App\Enums\CourierTaskStatusCode;
+use App\Enums\FulfillmentStatusCode;
 use App\Enums\OrderStatusCode;
 use App\Enums\PaymentStatusCode;
+use App\Enums\SellerOrderStatusCode;
 use App\Http\Controllers\Controller;
 use App\Models\CourierTask;
 use App\Models\Sold;
@@ -14,6 +16,8 @@ use App\Models\Seller;
 use App\Models\Couriers;
 use App\Models\CourierOrder;
 use App\Models\CourierOrderItem;
+use App\Models\CourierTransaction;
+use App\Models\OrderFulfillment;
 use App\Models\SellerLocation;
 use App\Models\SellerOrder;
 use App\Models\SellerOrderItem;
@@ -294,6 +298,94 @@ class CourierOrderController extends Controller
         }
     }
 
+    public function toHub(Request $request, string $qr)
+    {
+        $courier = Auth::guard('courier')->user();
+        if (! $courier) {
+            return response()->json([
+                'success' => false,
+                'message' => __('courier_api.unauthorized'),
+            ], 401);
+        }
+
+        $payload = $this->qrTokenService->parseHubHandoffToken($qr);
+        if (! $payload || (int) $payload['courier_id'] !== (int) $courier->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Hub QR kodi noto‘g‘ri, eskirgan yoki boshqa kuryerga tegishli.',
+            ], 422);
+        }
+
+        try {
+            $fulfillment = DB::transaction(function () use ($payload, $courier) {
+                $locked = OrderFulfillment::query()
+                    ->whereKey((int) $payload['fulfillment_id'])
+                    ->where('hub_id', (int) $payload['hub_id'])
+                    ->where('order_id', (int) $payload['order_id'])
+                    ->lockForUpdate()
+                    ->first();
+
+                if (! $locked || $locked->status_code !== FulfillmentStatusCode::PICKED_FROM_SELLER->value) {
+                    throw new \RuntimeException('Buyurtma hubga topshirish bosqichida emas.');
+                }
+
+                $hasTask = CourierTask::query()
+                    ->where('fulfillment_id', $locked->id)
+                    ->where('order_id', $locked->order_id)
+                    ->where('courier_id', $courier->id)
+                    ->where('leg', 'first_mile')
+                    ->whereNotIn('status_code', [
+                        CourierTaskStatusCode::COMPLETED->value,
+                        CourierTaskStatusCode::FAILED->value,
+                        CourierTaskStatusCode::CANCELLED->value,
+                    ])
+                    ->exists();
+
+                if (! $hasTask) {
+                    throw new \RuntimeException('Sizga tegishli faol hub missiyasi topilmadi.');
+                }
+
+                $meta = $locked->meta ?? [];
+                $timeline = collect($meta['timeline'] ?? [])
+                    ->filter(fn ($row) => is_array($row))
+                    ->values()
+                    ->all();
+                $timeline[] = [
+                    'code' => 'arrived_at_hub',
+                    'title' => 'Kuryer QR orqali hubga topshirdi',
+                    'at' => now()->toIso8601String(),
+                    'actor' => [
+                        'id' => $courier->id,
+                        'name' => trim($courier->first_name.' '.$courier->last_name),
+                        'role' => 'courier',
+                    ],
+                ];
+                $meta['timeline'] = $timeline;
+
+                $locked->status_code = FulfillmentStatusCode::ARRIVED_AT_HUB->value;
+                $locked->arrived_at_hub_at ??= now();
+                $locked->meta = $meta;
+                $locked->save();
+
+                return $locked->fresh();
+            });
+
+            $this->courierTaskOrchestratorService->markArrivedAtHub($fulfillment);
+            $this->qrTokenService->forgetHubHandoffCode($qr);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Buyurtma hubga muvaffaqiyatli topshirildi.',
+                'order_id' => (int) $fulfillment->order_id,
+            ]);
+        } catch (\Throwable $exception) {
+            return response()->json([
+                'success' => false,
+                'message' => $exception->getMessage(),
+            ], $exception instanceof \RuntimeException ? 422 : 500);
+        }
+    }
+
     public function confirmOrder(Request $request, $id)
     {
         $courier = Auth::guard('courier')->user();
@@ -443,6 +535,214 @@ class CourierOrderController extends Controller
         ], 200);
     }
 
+    public function orderHistory(Request $request)
+    {
+        $courier = Auth::guard('courier')->user();
+        if (! $courier) {
+            return response()->json([
+                'success' => false,
+                'message' => __('courier_api.unauthorized'),
+            ], 401);
+        }
+
+        $perPage = min(30, max(10, (int) $request->integer('per_page', 20)));
+        $terminalCodes = [
+            CourierOrderStatusCode::DELIVERED->value,
+            CourierOrderStatusCode::CUSTOMER_RECEIVED->value,
+            CourierOrderStatusCode::CANCELLED->value,
+            CourierOrderStatusCode::RETURNED->value,
+        ];
+        $terminalLegacy = [
+            CourierOrderStatusCode::DELIVERED->legacy(),
+            CourierOrderStatusCode::CUSTOMER_RECEIVED->legacy(),
+            CourierOrderStatusCode::CANCELLED->legacy(),
+            CourierOrderStatusCode::RETURNED->legacy(),
+            'cancelled',
+        ];
+
+        $orders = CourierOrder::query()
+            ->where('courier_id', $courier->id)
+            ->where(function ($query) use ($terminalCodes, $terminalLegacy) {
+                $query->whereIn('status_code', $terminalCodes)
+                    ->orWhere(function ($legacy) use ($terminalLegacy) {
+                        $legacy->whereNull('status_code')
+                            ->whereIn('status', $terminalLegacy);
+                    });
+            })
+            ->with(['order.fulfillment.hub', 'order.courierTasks'])
+            ->orderByDesc('updated_at')
+            ->paginate($perPage);
+
+        $orders->getCollection()->transform(function (CourierOrder $courierOrder) use ($courier) {
+            $soldOrder = $courierOrder->order;
+            $taskSummary = $this->buildTaskSummary($soldOrder, $courier->id);
+            $status = CourierOrderStatusCode::fromLegacy(
+                $courierOrder->status_code ?: $courierOrder->status
+            )->value;
+            $dropoff = $taskSummary['dropoff_address'];
+            $address = is_array($dropoff)
+                ? ($dropoff['fullAddress'] ?? $dropoff['address'] ?? null)
+                : null;
+
+            if (! $address && $soldOrder) {
+                $snapshot = $soldOrder->address;
+                if (is_array($snapshot)) {
+                    $address = $snapshot['fullAddress']
+                        ?? $snapshot['address']
+                        ?? $snapshot['address_line']
+                        ?? null;
+                } elseif (is_string($snapshot)) {
+                    $address = $snapshot;
+                }
+            }
+
+            $calculatedPayout = (int) ($taskSummary['task_fee_amount'] ?? 0);
+            if ($calculatedPayout <= 0) {
+                $calculatedPayout = max(
+                    0,
+                    (int) ($courierOrder->courierPrice ?? 0)
+                        + (int) ($courierOrder->courierBonus ?? 0)
+                );
+            }
+            $payout = $courierOrder->settled_amount !== null
+                ? max(0, (int) $courierOrder->settled_amount)
+                : $calculatedPayout;
+
+            return [
+                'id' => (int) $courierOrder->id,
+                'order_id' => (int) $courierOrder->order_id,
+                'status' => $status,
+                'delivered_address' => $address,
+                'payout' => $payout,
+                'distance_km' => round((float) ($taskSummary['distance_km'] ?? 0), 2),
+                'payment_type' => ($taskSummary['is_cod'] ?? false) ? 'cash' : 'card',
+                'completed_at' => optional(
+                    $courierOrder->settled_at ?: $courierOrder->updated_at
+                )->toIso8601String(),
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => $orders->items(),
+            'meta' => [
+                'current_page' => $orders->currentPage(),
+                'last_page' => $orders->lastPage(),
+                'per_page' => $orders->perPage(),
+                'total' => $orders->total(),
+                'has_more' => $orders->hasMorePages(),
+            ],
+        ]);
+    }
+
+    public function reports(Request $request)
+    {
+        $courier = Auth::guard('courier')->user();
+        if (! $courier) {
+            return response()->json([
+                'success' => false,
+                'message' => __('courier_api.unauthorized'),
+            ], 401);
+        }
+
+        $days = (int) $request->integer('days', 30);
+        if (! in_array($days, [7, 30, 90], true)) {
+            $days = 30;
+        }
+        $start = now()->subDays($days - 1)->startOfDay();
+        $end = now()->endOfDay();
+
+        $completedQuery = CourierTask::query()
+            ->where('courier_id', $courier->id)
+            ->where('status_code', CourierTaskStatusCode::COMPLETED->value)
+            ->whereBetween('completed_at', [$start, $end]);
+
+        $totals = (clone $completedQuery)
+            ->selectRaw('COUNT(*) as deliveries')
+            ->selectRaw('COUNT(DISTINCT order_id) as orders_count')
+            ->selectRaw('COALESCE(SUM(fee_amount), 0) as gross_earnings')
+            ->selectRaw('COALESCE(SUM(bonus_amount), 0) as bonus_earnings')
+            ->selectRaw('COALESCE(SUM(distance_km), 0) as distance_km')
+            ->selectRaw('COALESCE(SUM(CASE WHEN is_cod = 1 THEN 1 ELSE 0 END), 0) as cash_deliveries')
+            ->first();
+
+        $failedDeliveries = CourierTask::query()
+            ->where('courier_id', $courier->id)
+            ->whereIn('status_code', [
+                CourierTaskStatusCode::FAILED->value,
+                CourierTaskStatusCode::CANCELLED->value,
+            ])
+            ->whereBetween('updated_at', [$start, $end])
+            ->count();
+
+        $penalties = (int) CourierTransaction::query()
+            ->where('courier_id', $courier->id)
+            ->where('category', 'penalty')
+            ->where('status', 'approved')
+            ->whereBetween('created_at', [$start, $end])
+            ->sum('amount');
+
+        $dailyRows = (clone $completedQuery)
+            ->selectRaw('DATE(completed_at) as report_date')
+            ->selectRaw('COUNT(*) as deliveries')
+            ->selectRaw('COALESCE(SUM(fee_amount), 0) as earnings')
+            ->selectRaw('COALESCE(SUM(distance_km), 0) as distance_km')
+            ->groupByRaw('DATE(completed_at)')
+            ->orderBy('report_date')
+            ->get()
+            ->keyBy('report_date');
+
+        $daily = collect(range(0, $days - 1))->map(function (int $offset) use ($start, $dailyRows) {
+            $date = $start->copy()->addDays($offset);
+            $key = $date->toDateString();
+            $row = $dailyRows->get($key);
+
+            return [
+                'date' => $key,
+                'deliveries' => (int) ($row->deliveries ?? 0),
+                'earnings' => (int) ($row->earnings ?? 0),
+                'distance_km' => round((float) ($row->distance_km ?? 0), 2),
+            ];
+        })->values();
+
+        $deliveries = (int) ($totals->deliveries ?? 0);
+        $ordersCount = (int) ($totals->orders_count ?? 0);
+        $grossEarnings = (int) ($totals->gross_earnings ?? 0);
+        $bonusEarnings = (int) ($totals->bonus_earnings ?? 0);
+        $baseEarnings = max(0, $grossEarnings - $bonusEarnings);
+        $distanceKm = round((float) ($totals->distance_km ?? 0), 2);
+        $cashDeliveries = (int) ($totals->cash_deliveries ?? 0);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'period_days' => $days,
+                'period_start' => $start->toDateString(),
+                'period_end' => $end->toDateString(),
+                'balance' => (int) $courier->balance,
+                'total_withdrawn' => (int) $courier->total_withdrawal,
+                'deliveries' => $deliveries,
+                'orders_count' => $ordersCount,
+                'failed_deliveries' => $failedDeliveries,
+                'gross_earnings' => $grossEarnings,
+                'base_earnings' => $baseEarnings,
+                'bonus_earnings' => $bonusEarnings,
+                'penalties' => $penalties,
+                'net_earnings' => $grossEarnings - $penalties,
+                'distance_km' => $distanceKm,
+                'average_earning' => $deliveries > 0
+                    ? (int) round($grossEarnings / $deliveries)
+                    : 0,
+                'average_distance_km' => $deliveries > 0
+                    ? round($distanceKm / $deliveries, 2)
+                    : 0,
+                'cash_deliveries' => $cashDeliveries,
+                'card_deliveries' => max(0, $deliveries - $cashDeliveries),
+                'daily' => $daily,
+            ],
+        ]);
+    }
+
     private function normalizeCourierOrderStatusForPayload(CourierOrder $order): void
     {
         $statusCode = CourierOrderStatusCode::fromLegacy($order->status_code ?: $order->status);
@@ -515,6 +815,7 @@ class CourierOrderController extends Controller
             $item->seller_location_today_open_time = $schedule['open_time'];
             $item->seller_location_today_close_time = $schedule['close_time'];
             $item->seller_location_today_work_time_label = $schedule['label'];
+            $item->seller_location_today_work_time_state = $schedule['state'];
             if ($item->product && $seller) {
                 $item->product->setRelation('seller', $seller);
             }
@@ -544,40 +845,91 @@ class CourierOrderController extends Controller
                 'open_time' => null,
                 'close_time' => null,
                 'label' => null,
+                'state' => 'unknown',
             ];
         }
 
         $now = Carbon::now(config('app.timezone', 'Asia/Tashkent'));
         $dayOfWeek = strtolower($now->format('l'));
-        $workday = $location->relationLoaded('workdays')
-            ? $location->workdays->firstWhere('day_of_week', $dayOfWeek)
-            : $location->workdays()->where('day_of_week', $dayOfWeek)->first();
+        $workdays = $location->relationLoaded('workdays')
+            ? $location->workdays
+            : $location->workdays()->get();
 
-        if (!$workday) {
+        if ($workdays->isEmpty()) {
             return [
                 'is_open' => true,
                 'open_time' => null,
                 'close_time' => null,
-                'label' => null,
+                'label' => "Ish vaqti ko'rsatilmagan",
+                'state' => 'not_configured',
             ];
         }
 
-        $open = Carbon::parse($workday->open_time, config('app.timezone', 'Asia/Tashkent'))
-            ->setDate($now->year, $now->month, $now->day);
-        $close = Carbon::parse($workday->close_time, config('app.timezone', 'Asia/Tashkent'))
-            ->setDate($now->year, $now->month, $now->day);
-        if ($close->lessThanOrEqualTo($open)) {
+        $previousDay = strtolower($now->copy()->subDay()->format('l'));
+        $previousWorkday = $workdays->firstWhere('day_of_week', $previousDay);
+        if ($previousWorkday) {
+            $previousInterval = $this->locationWorkdayInterval($previousWorkday, $now->copy()->subDay());
+            if (
+                $previousInterval['overnight'] &&
+                $now->betweenIncluded($previousInterval['open'], $previousInterval['close'])
+            ) {
+                return [
+                    'is_open' => true,
+                    'open_time' => $previousInterval['open_time'],
+                    'close_time' => $previousInterval['close_time'],
+                    'label' => "Kecha {$previousInterval['open_time']} - bugun {$previousInterval['close_time']} gacha ishlaydi",
+                    'state' => 'open_overnight',
+                ];
+            }
+        }
+
+        $workday = $workdays->firstWhere('day_of_week', $dayOfWeek);
+        if (!$workday) {
+            return [
+                'is_open' => false,
+                'open_time' => null,
+                'close_time' => null,
+                'label' => 'Bugun ishlamaydi',
+                'state' => 'closed_today',
+            ];
+        }
+
+        $interval = $this->locationWorkdayInterval($workday, $now);
+        $isOpen = $now->betweenIncluded($interval['open'], $interval['close']);
+        $state = $isOpen
+            ? 'open'
+            : ($now->lessThan($interval['open']) ? 'opens_later' : 'closed_after_hours');
+        $label = $state === 'closed_after_hours'
+            ? "Bugun {$interval['open_time']} - {$interval['close_time']} gacha ishlagan"
+            : "Bugun {$interval['open_time']} - {$interval['close_time']} gacha ishlaydi";
+
+        return [
+            'is_open' => $isOpen,
+            'open_time' => $interval['open_time'],
+            'close_time' => $interval['close_time'],
+            'label' => $label,
+            'state' => $state,
+        ];
+    }
+
+    private function locationWorkdayInterval(mixed $workday, Carbon $date): array
+    {
+        $timezone = config('app.timezone', 'Asia/Tashkent');
+        $open = Carbon::parse($workday->open_time, $timezone)
+            ->setDate($date->year, $date->month, $date->day);
+        $close = Carbon::parse($workday->close_time, $timezone)
+            ->setDate($date->year, $date->month, $date->day);
+        $overnight = $close->lessThanOrEqualTo($open);
+        if ($overnight) {
             $close->addDay();
         }
 
-        $openTime = $open->format('H:i');
-        $closeTime = $close->format('H:i');
-
         return [
-            'is_open' => $now->betweenIncluded($open, $close),
-            'open_time' => $openTime,
-            'close_time' => $closeTime,
-            'label' => "Bugun {$openTime} - {$closeTime} gacha ishlaydi",
+            'open' => $open,
+            'close' => $close,
+            'open_time' => $open->format('H:i'),
+            'close_time' => $close->format('H:i'),
+            'overnight' => $overnight,
         ];
     }
 
@@ -586,6 +938,18 @@ class CourierOrderController extends Controller
         if ($items->isEmpty()) {
             return $items;
         }
+
+        $cancelledSellerIds = SellerOrder::query()
+            ->where('order_id', $order->order_id)
+            ->where(function ($query) {
+                $query->where('status_code', SellerOrderStatusCode::CANCELLED->value)
+                    ->orWhere('status', SellerOrderStatusCode::CANCELLED->legacy());
+            })
+            ->pluck('seller_id')
+            ->map(fn ($sellerId) => (int) $sellerId)
+            ->unique()
+            ->values()
+            ->all();
 
         $activeSellerItems = SellerOrderItem::query()
             ->join('seller_orders', 'seller_orders.id', '=', 'seller_order_items.order_id')
@@ -604,7 +968,7 @@ class CourierOrderController extends Controller
                 'seller_order_items.price',
             ]);
 
-        if ($activeSellerItems->isEmpty()) {
+        if ($activeSellerItems->isEmpty() && empty($cancelledSellerIds)) {
             return $items->take(0);
         }
 
@@ -621,9 +985,14 @@ class CourierOrderController extends Controller
             $remaining[$key] = ($remaining[$key] ?? 0) + 1;
         }
 
-        return $items->filter(function ($item) use (&$remaining) {
+        return $items->filter(function ($item) use (&$remaining, $cancelledSellerIds) {
+            $sellerId = (int) ($item->seller_id ?? 0);
+            if (in_array($sellerId, $cancelledSellerIds, true)) {
+                return true;
+            }
+
             $key = $this->courierItemMatchKey(
-                (int) ($item->seller_id ?? 0),
+                $sellerId,
                 (int) ($item->product_id ?? 0),
                 $item->variant_id !== null ? (int) $item->variant_id : null,
                 (string) ($item->type ?? ''),

@@ -17,6 +17,7 @@ Route::middleware('auth:hub')->group(function () {
     Route::get('activity', [HubFulfillmentController::class, 'activity']);
     Route::get('scan', [HubFulfillmentController::class, 'scan']);
     Route::get('fulfillments/{fulfillment}', [HubFulfillmentController::class, 'show']);
+    Route::get('fulfillments/{fulfillment}/handoff-qr', [HubFulfillmentController::class, 'handoffQr']);
     Route::get('fulfillments/{fulfillment}/print-payload', [HubFulfillmentController::class, 'printPayload']);
     Route::post('fulfillments/{fulfillment}/mark-print', [HubFulfillmentController::class, 'markPrint']);
     Route::post('fulfillments/{fulfillment}/arrive', [HubFulfillmentController::class, 'arrive']);

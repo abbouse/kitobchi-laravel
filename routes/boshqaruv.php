@@ -124,6 +124,8 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
         Route::post('/courier-orders/{courierOrder}/penalty', [AdminController::class, 'applyCourierPenalty'])->name('courier-orders.penalty');
         Route::patch('/transactions/{transaction}/approve', [\App\Http\Controllers\A122\TransactionController::class, 'approve'])->name('transactions.approve');
         Route::patch('/transactions/{transaction}/reject', [\App\Http\Controllers\A122\TransactionController::class, 'reject'])->name('transactions.reject');
+        Route::patch('/courier-transactions/{courierTransaction}/approve', [AdminController::class, 'approveCourierTransaction'])->name('courier-transactions.approve');
+        Route::patch('/courier-transactions/{courierTransaction}/reject', [AdminController::class, 'rejectCourierTransaction'])->name('courier-transactions.reject');
         Route::post('/expenses', [AdminController::class, 'storeExpense'])->name('expenses.store');
         Route::put('/expenses/{expense}', [AdminController::class, 'updateExpense'])->name('expenses.update');
         Route::delete('/expenses/{expense}', [AdminController::class, 'destroyExpense'])->name('expenses.destroy');
