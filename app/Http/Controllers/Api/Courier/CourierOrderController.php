@@ -116,6 +116,9 @@ class CourierOrderController extends Controller
                 if ($targetLegs !== []) {
                     $tasks = $tasks->whereIn('leg', $targetLegs);
                 }
+                if (! $this->allSellerPickupTasksReadyForCourier($tasks, $orderModel)) {
+                    return false;
+                }
 
                 if ($tasks->isEmpty()) {
                     return false;
@@ -470,7 +473,32 @@ class CourierOrderController extends Controller
                     $order->status_code = CourierOrderStatusCode::PENDING->value;
                 }
 
-                $acceptedTasks = $this->courierTaskOrchestratorService->acceptAvailableTasksForCourier($sold, $courier);
+                $targetLegs = $this->courierTaskOrchestratorService->targetLegsForCurrentPhase($sold->fulfillment);
+                $availableTasks = $this->courierTaskOrchestratorService->ensureTasksForOrder($sold)
+                    ->filter(fn (CourierTask $task) => $task->status_code === CourierTaskStatusCode::ASSIGNED->value && $task->courier_id === null)
+                    ->when($targetLegs !== [], fn ($tasks) => $tasks->whereIn('leg', $targetLegs))
+                    ->values();
+
+                if (! $this->allSellerPickupTasksReadyForCourier($availableTasks, $sold)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Multi buyurtmadagi do‘konlarning hammasi hali tayyor emas. Hamma do‘kon qabul qilgandan yoki 30 daqiqa tugagandan keyin olinadi.',
+                    ], 422);
+                }
+
+                $eligibleTaskIds = $availableTasks
+                    ->pluck('id')
+                    ->values()
+                    ->all();
+
+                if ($eligibleTaskIds === []) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Do‘kon buyurtmani hali qabul qilmagan. 30 daqiqadan keyin yoki do‘kon qabul qilgandan so‘ng olinadi.',
+                    ], 422);
+                }
+
+                $acceptedTasks = $this->courierTaskOrchestratorService->acceptAvailableTasksForCourier($sold, $courier, $eligibleTaskIds);
                 $taskBonus = (int) $acceptedTasks->sum('bonus_amount');
                 $taskBasePayout = (int) $acceptedTasks->sum(
                     fn (CourierTask $task) => max(0, (int) $task->fee_amount - (int) $task->bonus_amount)
@@ -876,6 +904,72 @@ class CourierOrderController extends Controller
             ->contains(fn ($item) => $this->locationScheduleState($item->sellerLocation)['is_open'] === false);
     }
 
+    private function sellerPickupTaskReadyForCourier(CourierTask $task, Sold $order): bool
+    {
+        if (! in_array($task->leg, [CourierTaskLeg::FIRST_MILE->value, CourierTaskLeg::DIRECT_DELIVERY->value], true)) {
+            return true;
+        }
+
+        $sellerId = (int) ($task->seller_id ?? 0);
+        if ($sellerId <= 0) {
+            return true;
+        }
+
+        $sellerOrder = SellerOrder::query()
+            ->where('order_id', $order->id)
+            ->where('seller_id', $sellerId)
+            ->first(['id', 'status', 'status_code', 'created_at']);
+
+        if (! $sellerOrder) {
+            return false;
+        }
+
+        $status = SellerOrderStatusCode::fromLegacy($sellerOrder->status_code ?: $sellerOrder->status);
+        if ($status === SellerOrderStatusCode::CANCELLED || $status === SellerOrderStatusCode::PAYMENT_PENDING) {
+            return false;
+        }
+
+        if (! $this->sellerOrderHasCourierVisibleItems($sellerOrder)) {
+            return false;
+        }
+
+        if (in_array($status, [SellerOrderStatusCode::ACCEPTED, SellerOrderStatusCode::HANDED_TO_COURIER], true)) {
+            return true;
+        }
+
+        return $sellerOrder->created_at
+            ? $sellerOrder->created_at->lte(now()->subMinutes(30))
+            : false;
+    }
+
+    private function allSellerPickupTasksReadyForCourier(\Illuminate\Support\Collection $tasks, Sold $order): bool
+    {
+        if ($tasks->isEmpty()) {
+            return false;
+        }
+
+        foreach ($tasks as $task) {
+            if (! $this->sellerPickupTaskReadyForCourier($task, $order)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function sellerOrderHasCourierVisibleItems(SellerOrder $sellerOrder): bool
+    {
+        return SellerOrderItem::query()
+            ->where('order_id', $sellerOrder->id)
+            ->where('type', '!=', 'gift')
+            ->whereNull('cancelled_at')
+            ->where(function ($query) {
+                $query->whereNull('refund_status')
+                    ->orWhere('refund_status', '!=', 'cancel_pending');
+            })
+            ->exists();
+    }
+
     private function locationScheduleState(?SellerLocation $location): array
     {
         if (! $location) {
@@ -990,14 +1084,10 @@ class CourierOrderController extends Controller
             ->values()
             ->all();
 
-        $activeSellerItems = SellerOrderItem::query()
+        $sellerItemRows = SellerOrderItem::query()
             ->join('seller_orders', 'seller_orders.id', '=', 'seller_order_items.order_id')
             ->where('seller_orders.order_id', $order->order_id)
             ->whereNull('seller_order_items.cancelled_at')
-            ->where(function ($query) {
-                $query->whereNull('seller_order_items.refund_status')
-                    ->orWhere('seller_order_items.refund_status', '!=', 'cancel_pending');
-            })
             ->get([
                 'seller_orders.seller_id as seller_id',
                 'seller_order_items.product_id',
@@ -1005,9 +1095,14 @@ class CourierOrderController extends Controller
                 'seller_order_items.type',
                 'seller_order_items.quantity',
                 'seller_order_items.price',
+                'seller_order_items.refund_status',
             ]);
 
-        if ($activeSellerItems->isEmpty()) {
+        $activeSellerItems = $sellerItemRows
+            ->filter(fn ($row) => ($row->refund_status ?? null) !== 'cancel_pending')
+            ->values();
+
+        if ($sellerItemRows->isEmpty()) {
             return $items
                 ->reject(fn ($item) => in_array((int) ($item->seller_id ?? 0), $cancelledSellerIds, true))
                 ->values();
@@ -1027,7 +1122,7 @@ class CourierOrderController extends Controller
         return $items->filter(function ($item) use (&$remaining, $cancelledSellerIds) {
             $sellerId = (int) ($item->seller_id ?? 0);
             if (in_array($sellerId, $cancelledSellerIds, true)) {
-                return true;
+                return false;
             }
 
             $key = $this->courierItemMatchKey(

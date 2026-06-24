@@ -150,6 +150,10 @@ class DeliveryZoneResolverService
 
     private function ruleMatchesLocation(DeliveryZoneRule $rule, object|array $location): bool
     {
+        if (! $this->locationNamesMatchRule($rule, $location)) {
+            return false;
+        }
+
         if ($rule->scope === 'country') {
             return true;
         }
@@ -161,6 +165,36 @@ class DeliveryZoneResolverService
         }
 
         return $this->distanceKm($lat, $lon, (float) $rule->center_lat, (float) $rule->center_lon) <= (float) $rule->radius_km;
+    }
+
+    private function locationNamesMatchRule(DeliveryZoneRule $rule, object|array $location): bool
+    {
+        foreach (['region_name', 'district_name', 'city_name'] as $field) {
+            $ruleValue = $this->normalizeLocationName($rule->{$field});
+            if ($ruleValue === '') {
+                continue;
+            }
+
+            $locationValue = $this->normalizeLocationName($this->value($location, $field));
+            if ($locationValue === '') {
+                return false;
+            }
+
+            if ($locationValue !== $ruleValue) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function normalizeLocationName(mixed $value): string
+    {
+        $value = mb_strtolower(trim((string) $value));
+        $value = str_replace(["'", 'ʻ', 'ʼ', '`', '’'], '', $value);
+        $value = preg_replace('/\s+/u', ' ', $value) ?: '';
+
+        return $value;
     }
 
     private function specificityScore(DeliveryZoneRule $rule): int

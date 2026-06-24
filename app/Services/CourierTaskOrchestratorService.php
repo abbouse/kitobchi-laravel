@@ -101,7 +101,7 @@ class CourierTaskOrchestratorService
             ->get();
     }
 
-    public function acceptAvailableTasksForCourier(Sold $order, Couriers $courier): Collection
+    public function acceptAvailableTasksForCourier(Sold $order, Couriers $courier, ?array $eligibleTaskIds = null): Collection
     {
         $order->loadMissing('fulfillment');
         $targetLegs = $this->targetLegsForCurrentPhase($order->fulfillment);
@@ -112,6 +112,7 @@ class CourierTaskOrchestratorService
                     && $task->courier_id === null;
             })
             ->when($targetLegs !== [], fn (Collection $tasks) => $tasks->whereIn('leg', $targetLegs))
+            ->when(is_array($eligibleTaskIds), fn (Collection $tasks) => $tasks->whereIn('id', $eligibleTaskIds))
             ->values();
 
         if ($tasks->isEmpty()) {

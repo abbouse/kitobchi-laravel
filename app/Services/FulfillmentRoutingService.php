@@ -96,8 +96,7 @@ class FulfillmentRoutingService
         int $sellerCount,
         bool $withPackaging,
         bool $containsBooks,
-    ): FulfillmentMode
-    {
+    ): FulfillmentMode {
         if ($deliveryType === 'pickup') {
             return FulfillmentMode::PICKUP_ONLY;
         }

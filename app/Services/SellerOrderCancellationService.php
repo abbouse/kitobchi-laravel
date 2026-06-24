@@ -2,14 +2,14 @@
 
 namespace App\Services;
 
-use App\Enums\OrderStatusCode;
 use App\Enums\CourierTaskStatusCode;
 use App\Enums\FulfillmentStatusCode;
+use App\Enums\OrderStatusCode;
 use App\Enums\PaymentStatusCode;
 use App\Enums\SellerOrderStatusCode;
 use App\Models\Admin;
-use App\Models\CourierTask;
 use App\Models\Couriers;
+use App\Models\CourierTask;
 use App\Models\GiftCertificate;
 use App\Models\OrderItemFinancialSnapshot;
 use App\Models\OrderRefund;
@@ -18,7 +18,6 @@ use App\Models\SellerOrder;
 use App\Models\SellerOrderItem;
 use App\Models\Sold;
 use App\Models\Transaction;
-use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
@@ -31,8 +30,7 @@ class SellerOrderCancellationService
         private readonly CashbackHistoryService $cashbackHistoryService,
         private readonly OrderService $orderService,
         private readonly OrderStatusPushService $orderStatusPushService,
-    ) {
-    }
+    ) {}
 
     public function cancelItem(Seller $seller, SellerOrderItem $item, string $reasonCode, ?string $customNote = null): array
     {
@@ -71,9 +69,15 @@ class SellerOrderCancellationService
             throw new RuntimeException('Bu mahsulot allaqachon bekor qilingan.');
         }
 
-        $activeItemCount = $this->activeOrderItemsQuery($order)->count();
-        if ($activeItemCount <= 1) {
-            throw new RuntimeException('Oxirgi mahsulotni item bo‘yicha bekor qilib bo‘lmaydi. Butun buyurtmani bekor qiling.');
+        if (! $this->hasOtherCourierVisibleSellerOrderItem($sellerOrder, $item)) {
+            return $this->cancelSellerOrderFlow(
+                sellerOrder: $sellerOrder,
+                reasonCode: 'all_products_out_of_stock',
+                customNote: $customNote,
+                seller: $seller,
+                admin: $admin,
+                enforceOwnership: $enforceOwnership,
+            );
         }
 
         $reason = SellerCancellationReasonCatalog::itemReasonPayload($reasonCode, $customNote);
@@ -230,15 +234,30 @@ class SellerOrderCancellationService
             throw new RuntimeException('Bu mahsulot allaqachon kutish holatida.');
         }
 
-        $activeItemCount = $this->activeOrderItemsQuery($order)->count();
-        if ($activeItemCount <= 1) {
-            throw new RuntimeException('Oxirgi mahsulotni item bo‘yicha bekor qilib bo‘lmaydi. Butun buyurtmani bekor qiling.');
+        if (! $this->hasOtherCourierVisibleSellerOrderItem($sellerOrder, $item)) {
+            return $this->cancelSellerOrderFlow(
+                sellerOrder: $sellerOrder,
+                reasonCode: 'all_products_out_of_stock',
+                customNote: $customNote,
+                seller: $seller,
+                admin: null,
+                enforceOwnership: true,
+            );
         }
 
         $reason = SellerCancellationReasonCatalog::itemReasonPayload($reasonCode, $customNote);
         $restoreUntil = now()->addMinutes(30);
 
-        DB::transaction(function () use ($seller, $item, $order, $reason, $restoreUntil) {
+        DB::transaction(function () use ($seller, $sellerOrder, $item, $order, $reason, $restoreUntil) {
+            $sellerStatus = SellerOrderStatusCode::fromLegacy($sellerOrder->status_code ?: $sellerOrder->status);
+            if ($sellerStatus === SellerOrderStatusCode::NEW) {
+                $sellerOrder->forceFill([
+                    'status' => SellerOrderStatusCode::ACCEPTED->legacy(),
+                    'status_code' => SellerOrderStatusCode::ACCEPTED->value,
+                    'accepted_at' => $sellerOrder->accepted_at ?: now(),
+                ])->save();
+            }
+
             $item->forceFill([
                 'cancel_requested_at' => now(),
                 'cancel_restore_until' => $restoreUntil,
@@ -980,6 +999,7 @@ class SellerOrderCancellationService
                 'count' => 0,
                 'updated_at' => now(),
             ]);
+
             return;
         }
 
@@ -989,6 +1009,7 @@ class SellerOrderCancellationService
                     'stock' => 0,
                     'updated_at' => now(),
                 ]);
+
                 return;
             }
 
@@ -1011,6 +1032,7 @@ class SellerOrderCancellationService
                     'count' => $quantity,
                     'updated_at' => now(),
                 ]);
+
             return;
         }
 
@@ -1023,6 +1045,7 @@ class SellerOrderCancellationService
                         'stock' => $quantity,
                         'updated_at' => now(),
                     ]);
+
                 return;
             }
 
@@ -1102,6 +1125,20 @@ class SellerOrderCancellationService
             ->where('order_id', $sellerOrder->id)
             ->whereNull('cancelled_at')
             ->where('type', '!=', 'gift');
+    }
+
+    private function hasOtherCourierVisibleSellerOrderItem(SellerOrder $sellerOrder, SellerOrderItem $currentItem): bool
+    {
+        return SellerOrderItem::query()
+            ->where('order_id', $sellerOrder->id)
+            ->where('id', '!=', $currentItem->id)
+            ->whereNull('cancelled_at')
+            ->where('type', '!=', 'gift')
+            ->where(function ($query) {
+                $query->whereNull('refund_status')
+                    ->orWhere('refund_status', '!=', 'cancel_pending');
+            })
+            ->exists();
     }
 
     private function resolveSellerOrderItemTitle(SellerOrderItem $item, ?int $orderId = null): ?string

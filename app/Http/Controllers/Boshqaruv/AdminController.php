@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers\Boshqaruv;
 
-use App\Enums\PaymentStatusCode;
 use App\Enums\CourierOrderStatusCode;
-use App\Enums\OrderStatusCode;
 use App\Enums\FulfillmentMode;
 use App\Enums\HubStaffRole;
+use App\Enums\OrderStatusCode;
+use App\Enums\PaymentStatusCode;
+use App\Enums\SellerOrderStatusCode;
 use App\Http\Controllers\Controller;
 use App\Models\Admin;
 use App\Models\AdminAuditLog;
@@ -15,24 +16,24 @@ use App\Models\ApiClientRequestLog;
 use App\Models\Author;
 use App\Models\Blogger;
 use App\Models\BloggerShipment;
+use App\Models\BookCategories;
 use App\Models\BookClub;
 use App\Models\BookClubComment;
-use App\Models\BotTicket;
-use App\Models\BookCategories;
 use App\Models\Books;
-use App\Models\CashbackSetting;
+use App\Models\BotTicket;
 use App\Models\CareerApplication;
+use App\Models\CashbackSetting;
 use App\Models\CommissionSetting;
 use App\Models\ConnectedDevice;
-use App\Models\CourierOrder;
 use App\Models\CourierBanLog;
+use App\Models\CourierOrder;
+use App\Models\Couriers;
 use App\Models\CourierTask;
 use App\Models\CourierTransaction;
-use App\Models\Couriers;
 use App\Models\DeliveryService;
 use App\Models\DeliveryZoneRule;
-use App\Models\FcmNotifications;
 use App\Models\FavouriteProducts;
+use App\Models\FcmNotifications;
 use App\Models\GiftCertificate;
 use App\Models\Gifts;
 use App\Models\Hub;
@@ -42,21 +43,21 @@ use App\Models\Message;
 use App\Models\MyCart;
 use App\Models\MysteryBoxPlan;
 use App\Models\MysteryBoxSubscription;
-use App\Models\Policy;
+use App\Models\OrderRefund;
 use App\Models\PlatformExpense;
-use App\Models\ProjectSetting;
+use App\Models\Policy;
 use App\Models\ProductViewLog;
-use App\Models\Publisher;
-use App\Models\Report;
+use App\Models\ProjectSetting;
 use App\Models\Promocode;
+use App\Models\Publisher;
 use App\Models\Reel;
+use App\Models\Report;
 use App\Models\SearchHistory;
-use App\Models\SellerAd;
 use App\Models\Seller;
+use App\Models\SellerAd;
 use App\Models\SellerAiAction;
 use App\Models\SellerBanLog;
 use App\Models\SellerContractHistory;
-use App\Models\OrderRefund;
 use App\Models\SellerOrder;
 use App\Models\SellerOrderItem;
 use App\Models\SellerSupportTicket;
@@ -72,9 +73,22 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Models\UserCard;
 use App\Models\Vacancy;
+use App\Services\AdminOrderStatusSyncService;
+use App\Services\DeliveryZoneResolverService;
+use App\Services\FcmRecipientService;
+use App\Services\HubRoleAccessService;
+use App\Services\SellerCancellationReasonCatalog;
+use App\Services\SellerOrderSettlementService;
+use App\Services\SellerPremiumService;
+use App\Services\SplitProfileService;
+use App\Support\AdminOrderStatusPresenter;
+use App\Support\ProductArtikul;
+use App\Support\ProductImageUrls;
+use App\Support\ProductImageVariantGenerator;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -83,20 +97,6 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
-use App\Support\ProductArtikul;
-use App\Support\ProductImageUrls;
-use App\Support\ProductImageVariantGenerator;
-use App\Enums\SellerOrderStatusCode;
-use App\Services\AdminOrderStatusSyncService;
-use App\Services\DeliveryZoneResolverService;
-use App\Services\FcmRecipientService;
-use App\Services\HubRoleAccessService;
-use App\Support\AdminOrderStatusPresenter;
-use App\Services\SellerPremiumService;
-use App\Services\SellerOrderSettlementService;
-use App\Services\SellerCancellationReasonCatalog;
-use App\Services\SplitProfileService;
-use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -147,7 +147,7 @@ class AdminController extends Controller
         $request->session()->regenerateToken();
 
         return redirect()->route('boshqaruv.login')
-            ->with('success', "Tizimdan chiqildi.");
+            ->with('success', 'Tizimdan chiqildi.');
     }
 
     public function dashboard(): Response
@@ -488,7 +488,7 @@ class AdminController extends Controller
 
     public function storeBookCategory(Request $request): \Illuminate\Http\RedirectResponse
     {
-        (new BookCategories())->forceFill($this->categoryData($request, 'book_categories'))->save();
+        (new BookCategories)->forceFill($this->categoryData($request, 'book_categories'))->save();
 
         return back()->with('success', "Kitob kategoriyasi qo'shildi.");
     }
@@ -513,7 +513,7 @@ class AdminController extends Controller
 
     public function storeStationeryCategory(Request $request): \Illuminate\Http\RedirectResponse
     {
-        (new StationeryCategory())->forceFill($this->categoryData($request, 'stationery_categories'))->save();
+        (new StationeryCategory)->forceFill($this->categoryData($request, 'stationery_categories'))->save();
 
         return back()->with('success', "Kanstovar kategoriyasi qo'shildi.");
     }
@@ -1305,7 +1305,7 @@ class AdminController extends Controller
             ]);
         });
 
-        return back()->with('success', number_format($amount, 0, '.', ' ')." so‘m jarima kuryer balansidan yechildi.");
+        return back()->with('success', number_format($amount, 0, '.', ' ').' so‘m jarima kuryer balansidan yechildi.');
     }
 
     public function approveCourierTransaction(CourierTransaction $courierTransaction): \Illuminate\Http\RedirectResponse
@@ -1315,7 +1315,7 @@ class AdminController extends Controller
         }
 
         if ($courierTransaction->status !== 'pending') {
-            return back()->with('error', "Faqat kutilayotgan arizani tasdiqlash mumkin.");
+            return back()->with('error', 'Faqat kutilayotgan arizani tasdiqlash mumkin.');
         }
 
         DB::transaction(function () use ($courierTransaction) {
@@ -1343,7 +1343,7 @@ class AdminController extends Controller
         }
 
         if ($courierTransaction->status !== 'pending') {
-            return back()->with('error', "Faqat kutilayotgan arizani rad etish mumkin.");
+            return back()->with('error', 'Faqat kutilayotgan arizani rad etish mumkin.');
         }
 
         DB::transaction(function () use ($courierTransaction) {
@@ -1470,6 +1470,7 @@ class AdminController extends Controller
 
             if ($title === '' && $content === '') {
                 $policy->translations()->where('locale', $locale)->delete();
+
                 continue;
             }
 
@@ -1498,6 +1499,7 @@ class AdminController extends Controller
 
             if ($title === '' && $contractType === '' && $location === '' && $description === '') {
                 $vacancy->translations()->where('locale', $locale)->delete();
+
                 continue;
             }
 
@@ -2084,8 +2086,8 @@ class AdminController extends Controller
                     'moderateUrl' => route('boshqaruv.books.moderate', $book),
                 ];
             })
-            ->values()
-            ->all(),
+                ->values()
+                ->all(),
             'bookPagination' => $this->paginationMeta($books),
             'bookCounts' => [
                 'all' => (int) Books::query()->count(),
@@ -2273,8 +2275,8 @@ class AdminController extends Controller
                     'premiumUrl' => route('boshqaruv.users.premium', $user),
                 ];
             })
-            ->values()
-            ->all(),
+                ->values()
+                ->all(),
             'userCounts' => $this->userStatusCounts(),
             'userPagination' => $this->paginationMeta($users),
             'userFilters' => ['tab' => $tab, 'search' => $search],
@@ -2896,6 +2898,7 @@ class AdminController extends Controller
         }
 
         $fallback = trim((string) ($fallback ?? ''));
+
         return $fallback !== '' ? $fallback : null;
     }
 
@@ -3196,8 +3199,8 @@ class AdminController extends Controller
                     'moderateUrl' => route('boshqaruv.stationery.moderate', $item->id),
                 ];
             })
-            ->values()
-            ->all(),
+                ->values()
+                ->all(),
             'stationeryCounts' => [
                 'all' => (int) Stationery::query()->count(),
                 'pending' => (int) Stationery::query()->where(fn ($builder) => $builder->whereNull('is_approved')->orWhere('is_approved', 0))->count(),
@@ -4585,6 +4588,7 @@ class AdminController extends Controller
             ->first();
 
         $percent = (float) ($rule?->percent ?? 0);
+
         return [
             'percent' => $percent,
             'commission' => round($amount * $percent / 100),
@@ -4915,18 +4919,18 @@ class AdminController extends Controller
                 }
 
                 return [
-                'id' => $policy->id,
-                'title' => $policy->title,
-                'slug' => $policy->slug,
-                'content' => $policy->content,
-                'status' => $policy->is_active ? 'Active' : 'Inactive',
-                'showInApp' => (bool) $policy->show_in_app,
-                'sortOrder' => (int) ($policy->sort_order ?? 0),
-                'translations' => $translations,
-                'createUrl' => route('boshqaruv.policies.store'),
-                'updateUrl' => route('boshqaruv.policies.update', $policy),
-                'toggleUrl' => route('boshqaruv.policies.toggle', $policy),
-                'destroyUrl' => route('boshqaruv.policies.destroy', $policy),
+                    'id' => $policy->id,
+                    'title' => $policy->title,
+                    'slug' => $policy->slug,
+                    'content' => $policy->content,
+                    'status' => $policy->is_active ? 'Active' : 'Inactive',
+                    'showInApp' => (bool) $policy->show_in_app,
+                    'sortOrder' => (int) ($policy->sort_order ?? 0),
+                    'translations' => $translations,
+                    'createUrl' => route('boshqaruv.policies.store'),
+                    'updateUrl' => route('boshqaruv.policies.update', $policy),
+                    'toggleUrl' => route('boshqaruv.policies.toggle', $policy),
+                    'destroyUrl' => route('boshqaruv.policies.destroy', $policy),
                 ];
             })
             ->values()
@@ -4947,24 +4951,24 @@ class AdminController extends Controller
                 $targetMode = ctype_digit($who) || str_contains($who, ':') ? 'individual' : 'audience';
 
                 return [
-                'id' => $notification->id,
-                'title' => $notification->name,
-                'body' => $notification->description,
-                'who' => $who,
-                'targetMode' => $targetMode,
-                'targetLabel' => $this->pushTargetLabel($who),
-                'source' => $notification->source ?? 'legacy',
-                'status' => match ($notification->delivery_status ?? 'in_app') {
-                    'sent' => 'Yuborildi',
-                    'failed' => 'Xatolik',
-                    'sending' => 'Yuborilmoqda',
-                    default => 'Ilova ichida',
-                },
-                'sentCount' => (int) ($notification->sent_count ?? 0),
-                'failedCount' => (int) ($notification->failed_count ?? 0),
-                'date' => optional($notification->created_at)->format('Y-m-d H:i'),
-                'createUrl' => route('boshqaruv.push.store'),
-                'destroyUrl' => route('boshqaruv.push.destroy', $notification),
+                    'id' => $notification->id,
+                    'title' => $notification->name,
+                    'body' => $notification->description,
+                    'who' => $who,
+                    'targetMode' => $targetMode,
+                    'targetLabel' => $this->pushTargetLabel($who),
+                    'source' => $notification->source ?? 'legacy',
+                    'status' => match ($notification->delivery_status ?? 'in_app') {
+                        'sent' => 'Yuborildi',
+                        'failed' => 'Xatolik',
+                        'sending' => 'Yuborilmoqda',
+                        default => 'Ilova ichida',
+                    },
+                    'sentCount' => (int) ($notification->sent_count ?? 0),
+                    'failedCount' => (int) ($notification->failed_count ?? 0),
+                    'date' => optional($notification->created_at)->format('Y-m-d H:i'),
+                    'createUrl' => route('boshqaruv.push.store'),
+                    'destroyUrl' => route('boshqaruv.push.destroy', $notification),
                 ];
             })
             ->values()
@@ -5030,8 +5034,8 @@ class AdminController extends Controller
                 'draft' => $hasDraft ? (bool) $history->is_draft : false,
                 'date' => optional($history->created_at)->format('Y-m-d H:i'),
             ])
-            ->values()
-            ->all(),
+                ->values()
+                ->all(),
             'searchHistoryPagination' => $this->paginationMeta($history),
             'searchHistoryTypes' => $hasResultType ? SearchHistory::query()->whereNotNull('result_type')->distinct()->orderBy('result_type')->pluck('result_type')->values()->all() : [],
             'searchHistoryFilters' => ['type' => $filter, 'search' => $search],
@@ -5232,7 +5236,7 @@ class AdminController extends Controller
                     'source' => 'seller',
                     'sourceLabel' => 'Seller',
                     'id' => $ticket->id,
-                    'user' => trim(($ticket->seller?->shop_name ?: 'Seller') . ' · ' . ($ticket->seller?->phone_number ?: '')),
+                    'user' => trim(($ticket->seller?->shop_name ?: 'Seller').' · '.($ticket->seller?->phone_number ?: '')),
                     'subject' => $ticket->subject ?: $ticket->latestMessage?->message ?: 'Kitobchi bilan suhbat',
                     'operator' => $ticket->admin?->name,
                     'messages' => (int) ($ticket->messages_count ?? 0),
@@ -5327,7 +5331,7 @@ class AdminController extends Controller
         return [
             'profile' => [
                 'id' => $ticket->id,
-                'name' => $ticket->seller?->shop_name ?: trim(($ticket->seller?->firstname ?? '') . ' ' . ($ticket->seller?->lastname ?? '')),
+                'name' => $ticket->seller?->shop_name ?: trim(($ticket->seller?->firstname ?? '').' '.($ticket->seller?->lastname ?? '')),
                 'username' => $ticket->seller?->phone_number,
                 'userId' => $ticket->seller_id,
                 'sourceType' => 'Seller support',
@@ -5386,7 +5390,7 @@ class AdminController extends Controller
                 'token' => $action->token,
                 'seller' => $action->seller?->shop_name ?: 'Seller',
                 'sellerPhone' => $action->seller?->phone_number,
-                'requestedBy' => trim(($action->requestedBy?->firstname ?? '') . ' ' . ($action->requestedBy?->lastname ?? '')) ?: $action->requestedBy?->phone_number,
+                'requestedBy' => trim(($action->requestedBy?->firstname ?? '').' '.($action->requestedBy?->lastname ?? '')) ?: $action->requestedBy?->phone_number,
                 'actionType' => $action->action_type,
                 'status' => $action->status,
                 'file' => $action->source_file_name,
@@ -5465,8 +5469,8 @@ class AdminController extends Controller
                 'date' => $this->dateTime($conversation->last_message_at),
                 'dataUrl' => route('boshqaruv.chat.data', $conversation->id),
             ])
-            ->values()
-            ->all(),
+                ->values()
+                ->all(),
             'conversationCounts' => $this->conversationCounts(),
             'conversationPagination' => $this->paginationMeta($conversations),
             'conversationFilters' => ['tab' => $tab, 'search' => $search],
@@ -5634,8 +5638,8 @@ class AdminController extends Controller
                     'destroyUrl' => route('boshqaruv.complaints.destroy', $report),
                 ];
             })
-            ->values()
-            ->all(),
+                ->values()
+                ->all(),
             'complaintPagination' => $this->paginationMeta($reports),
         ];
     }
@@ -5881,20 +5885,20 @@ class AdminController extends Controller
                 }
 
                 return [
-                'id' => $vacancy->id,
-                'title' => $vacancy->title,
-                'icon' => $vacancy->icon,
-                'contractType' => $vacancy->contract_type,
-                'location' => $vacancy->location,
-                'description' => $vacancy->description,
-                'sortOrder' => (int) ($vacancy->sort_order ?? 0),
-                'status' => $vacancy->is_active ? 'Active' : 'Inactive',
-                'applicants' => (int) ($vacancy->career_applications_count ?? 0),
-                'translations' => $translations,
-                'createUrl' => route('boshqaruv.vacancies.store'),
-                'updateUrl' => route('boshqaruv.vacancies.update', $vacancy),
-                'toggleUrl' => route('boshqaruv.vacancies.toggle', $vacancy),
-                'destroyUrl' => route('boshqaruv.vacancies.destroy', $vacancy),
+                    'id' => $vacancy->id,
+                    'title' => $vacancy->title,
+                    'icon' => $vacancy->icon,
+                    'contractType' => $vacancy->contract_type,
+                    'location' => $vacancy->location,
+                    'description' => $vacancy->description,
+                    'sortOrder' => (int) ($vacancy->sort_order ?? 0),
+                    'status' => $vacancy->is_active ? 'Active' : 'Inactive',
+                    'applicants' => (int) ($vacancy->career_applications_count ?? 0),
+                    'translations' => $translations,
+                    'createUrl' => route('boshqaruv.vacancies.store'),
+                    'updateUrl' => route('boshqaruv.vacancies.update', $vacancy),
+                    'toggleUrl' => route('boshqaruv.vacancies.toggle', $vacancy),
+                    'destroyUrl' => route('boshqaruv.vacancies.destroy', $vacancy),
                 ];
             })
             ->values()
@@ -7044,7 +7048,7 @@ class AdminController extends Controller
             ['x' => 92, 'y' => 40], ['x' => 82, 'y' => 32], ['x' => 20, 'y' => 45], ['x' => 45, 'y' => 70],
         ];
 
-        $rows = Cache::remember('boshqaruv.live.regions.v4.address_snapshot', now()->addMinute(), function () {
+        $rows = Cache::remember('boshqaruv.live.regions.v5.address_snapshot', now()->addMinute(), function () {
             $regions = [];
             $this->customerReceivedOrdersQuery()
                 ->whereNotNull('address')
@@ -7084,6 +7088,7 @@ class AdminController extends Controller
         $isList = array_is_list($address);
         if ($isList) {
             $first = collect($address)->first(fn ($row) => is_array($row));
+
             return is_array($first) ? $first : [];
         }
 
@@ -7092,15 +7097,26 @@ class AdminController extends Controller
 
     private function regionNameFromOrderAddress(array $address, mixed $fallbackRegion = null): string
     {
-        $direct = data_get($address, 'region')
-            ?: data_get($address, 'region_name')
-            ?: data_get($address, 'province')
-            ?: data_get($address, 'state')
-            ?: data_get($address, 'city')
-            ?: data_get($address, 'district');
+        $directFields = [
+            'region_name',
+            'recipient_region',
+            'region',
+            'province',
+            'state',
+            'regionSlug',
+            'region_slug',
+        ];
 
-        if (is_scalar($direct) && trim((string) $direct) !== '') {
-            return $this->canonicalAddressRegionName((string) $direct);
+        foreach ($directFields as $field) {
+            $direct = data_get($address, $field);
+            if (! is_scalar($direct) || trim((string) $direct) === '') {
+                continue;
+            }
+
+            $region = $this->canonicalAddressRegionFromText((string) $direct);
+            if ($region !== null) {
+                return $region;
+            }
         }
 
         $fullAddress = data_get($address, 'fullAddress')
@@ -7108,22 +7124,29 @@ class AdminController extends Controller
             ?: data_get($address, 'address');
 
         if (is_scalar($fullAddress)) {
-            $parts = collect(explode(',', (string) $fullAddress))
-                ->map(fn ($part) => $this->cleanAddressRegionName($part))
-                ->filter()
-                ->values();
-
-            $withoutCountry = $parts
-                ->reject(fn ($part) => $this->isCountryAddressPart($part))
-                ->reject(fn ($part) => $this->isInvalidRegionAddressPart($part))
-                ->values();
-            if ($withoutCountry->isNotEmpty()) {
-                return $this->canonicalAddressRegionName((string) $withoutCountry->first());
+            $region = $this->canonicalAddressRegionFromText((string) $fullAddress);
+            if ($region !== null) {
+                return $region;
             }
         }
 
         if (is_scalar($fallbackRegion) && trim((string) $fallbackRegion) !== '') {
-            return $this->canonicalAddressRegionName((string) $fallbackRegion);
+            $region = $this->canonicalAddressRegionFromText((string) $fallbackRegion);
+            if ($region !== null) {
+                return $region;
+            }
+        }
+
+        foreach (['city_name', 'city', 'district_name', 'district'] as $field) {
+            $value = data_get($address, $field);
+            if (! is_scalar($value) || trim((string) $value) === '') {
+                continue;
+            }
+
+            $region = $this->canonicalAddressRegionFromText((string) $value);
+            if ($region !== null) {
+                return $region;
+            }
         }
 
         return 'Noma\'lum';
@@ -7131,108 +7154,118 @@ class AdminController extends Controller
 
     private function cleanAddressRegionName(string $value): string
     {
-        return trim(preg_replace('/\s+/u', ' ', str_replace(['`', '’'], ["'", "'"], $value)) ?: '');
+        return trim(preg_replace('/\s+/u', ' ', str_replace(['`', '‘', '’'], ["'", "'", "'"], $value)) ?: '');
     }
 
-    private function isCountryAddressPart(string $value): bool
+    private function canonicalAddressRegionFromText(string $value): ?string
     {
-        $normalized = $this->normalizedAddressPartKey($value);
+        $key = $this->normalizedAddressPartKey($value);
+        if ($key === '' || $this->isCountryAddressKey($key)) {
+            return null;
+        }
 
-        return in_array($normalized, [
+        $aliases = $this->addressRegionAliases();
+        $baseKey = $this->normalizedAddressBaseKey($value);
+        if (isset($aliases[$key])) {
+            return $aliases[$key];
+        }
+        if (isset($aliases[$baseKey])) {
+            return $aliases[$baseKey];
+        }
+
+        foreach ($aliases as $alias => $label) {
+            if ($alias !== '' && str_contains($key, $alias)) {
+                return $label;
+            }
+        }
+
+        return null;
+    }
+
+    private function addressRegionAliases(): array
+    {
+        return [
+            'toshkentshahri' => 'Toshkent shahri',
+            'tashkentcity' => 'Toshkent shahri',
+            'городташкент' => 'Toshkent shahri',
+            'гташкент' => 'Toshkent shahri',
+            'toshkentviloyati' => 'Toshkent viloyati',
+            'tashkentregion' => 'Toshkent viloyati',
+            'ташкентская' => 'Toshkent viloyati',
+            'ташкентскаяобласть' => 'Toshkent viloyati',
+            'ташкентобласть' => 'Toshkent viloyati',
+            'toshkent' => 'Toshkent shahri',
+            'tashkent' => 'Toshkent shahri',
+            'ташкент' => 'Toshkent shahri',
+            'andijon' => 'Andijon viloyati',
+            'andijan' => 'Andijon viloyati',
+            'андижан' => 'Andijon viloyati',
+            'андижанская' => 'Andijon viloyati',
+            'buxoro' => 'Buxoro viloyati',
+            'bukhara' => 'Buxoro viloyati',
+            'бухара' => 'Buxoro viloyati',
+            'бухарская' => 'Buxoro viloyati',
+            'fargona' => "Farg'ona viloyati",
+            'fergana' => "Farg'ona viloyati",
+            'ferghana' => "Farg'ona viloyati",
+            'фергана' => "Farg'ona viloyati",
+            'ферганская' => "Farg'ona viloyati",
+            'jizzax' => 'Jizzax viloyati',
+            'jizzakh' => 'Jizzax viloyati',
+            'джизак' => 'Jizzax viloyati',
+            'джизакская' => 'Jizzax viloyati',
+            'xorazm' => 'Xorazm viloyati',
+            'khorezm' => 'Xorazm viloyati',
+            'хорезм' => 'Xorazm viloyati',
+            'хорезмская' => 'Xorazm viloyati',
+            'namangan' => 'Namangan viloyati',
+            'наманган' => 'Namangan viloyati',
+            'наманганская' => 'Namangan viloyati',
+            'navoiy' => 'Navoiy viloyati',
+            'navoi' => 'Navoiy viloyati',
+            'навоий' => 'Navoiy viloyati',
+            'навоийская' => 'Navoiy viloyati',
+            'qashqadaryo' => 'Qashqadaryo viloyati',
+            'qashqadaryooblast' => 'Qashqadaryo viloyati',
+            'kashkadarya' => 'Qashqadaryo viloyati',
+            'кашкадарья' => 'Qashqadaryo viloyati',
+            'кашкадарьинская' => 'Qashqadaryo viloyati',
+            'qoraqalpogiston' => "Qoraqalpog'iston Respublikasi",
+            'qoraqalpogistonrespublikasi' => "Qoraqalpog'iston Respublikasi",
+            'karakalpakstan' => "Qoraqalpog'iston Respublikasi",
+            'karakalpakstanrepublic' => "Qoraqalpog'iston Respublikasi",
+            'republicofkarakalpakstan' => "Qoraqalpog'iston Respublikasi",
+            'каракалпакстан' => "Qoraqalpog'iston Respublikasi",
+            'республикакаракалпакстан' => "Qoraqalpog'iston Respublikasi",
+            'samarqand' => 'Samarqand viloyati',
+            'samarkand' => 'Samarqand viloyati',
+            'самарканд' => 'Samarqand viloyati',
+            'самаркандская' => 'Samarqand viloyati',
+            'sirdaryo' => 'Sirdaryo viloyati',
+            'syrdarya' => 'Sirdaryo viloyati',
+            'сырдарья' => 'Sirdaryo viloyati',
+            'сырдарьинская' => 'Sirdaryo viloyati',
+            'surxondaryo' => 'Surxondaryo viloyati',
+            'surkhandarya' => 'Surxondaryo viloyati',
+            'сурхандарья' => 'Surxondaryo viloyati',
+            'сурхандарьинская' => 'Surxondaryo viloyati',
+        ];
+    }
+
+    private function isCountryAddressKey(string $key): bool
+    {
+        return in_array($key, [
             'ozbekiston', 'uzbekiston', 'uzbekistan', 'uzb',
             'ozbekistonrespublikasi', 'uzbekistonrespublikasi', 'republicofuzbekistan',
             'узбекистан', 'республикаузбекистан',
         ], true);
     }
 
-    private function isInvalidRegionAddressPart(string $value): bool
-    {
-        $value = trim($value);
-
-        return $value === ''
-            || preg_match('/^[A-ZА-Я]\d{2,}$/u', $value) === 1
-            || preg_match('/^\d+$/', $value) === 1;
-    }
-
-    private function canonicalAddressRegionName(string $value): string
-    {
-        $name = $this->cleanAddressRegionName($value);
-        $key = $this->normalizedAddressPartKey($name);
-
-        $aliases = [
-            'toshkent' => 'Toshkent',
-            'toshkentshahri' => 'Toshkent',
-            'toshkentviloyati' => 'Toshkent viloyati',
-            'tashkent' => 'Toshkent',
-            'tashkentcity' => 'Toshkent',
-            'tashkentregion' => 'Toshkent viloyati',
-            'ташкент' => 'Toshkent',
-            'гташкент' => 'Toshkent',
-            'городташкент' => 'Toshkent',
-            'ташкентская' => 'Toshkent viloyati',
-            'ташкентскаяобласть' => 'Toshkent viloyati',
-            'ташкентобласть' => 'Toshkent viloyati',
-            'andijon' => 'Andijon',
-            'andijan' => 'Andijon',
-            'андижан' => 'Andijon',
-            'андижанская' => 'Andijon',
-            'buxoro' => 'Buxoro',
-            'bukhara' => 'Buxoro',
-            'бухара' => 'Buxoro',
-            'бухарская' => 'Buxoro',
-            'fargona' => 'Fargona',
-            'fergana' => 'Fargona',
-            'ferghana' => 'Fargona',
-            'фергана' => 'Fargona',
-            'ферганская' => 'Fargona',
-            'jizzax' => 'Jizzax',
-            'jizzakh' => 'Jizzax',
-            'джизак' => 'Jizzax',
-            'джизакская' => 'Jizzax',
-            'xorazm' => 'Xorazm',
-            'khorezm' => 'Xorazm',
-            'хорезм' => 'Xorazm',
-            'хорезмская' => 'Xorazm',
-            'namangan' => 'Namangan',
-            'наманган' => 'Namangan',
-            'наманганская' => 'Namangan',
-            'navoiy' => 'Navoiy',
-            'navoi' => 'Navoiy',
-            'навоий' => 'Navoiy',
-            'навоийская' => 'Navoiy',
-            'qashqadaryo' => 'Qashqadaryo',
-            'kashkadarya' => 'Qashqadaryo',
-            'кашкадарья' => 'Qashqadaryo',
-            'кашкадарьинская' => 'Qashqadaryo',
-            'qoraqalpogiston' => 'Qoraqalpogiston',
-            'qoraqalpogistonrespublikasi' => 'Qoraqalpogiston',
-            'karakalpakstan' => 'Qoraqalpogiston',
-            'karakalpakstanrepublic' => 'Qoraqalpogiston',
-            'republicofkarakalpakstan' => 'Qoraqalpogiston',
-            'каракалпакстан' => 'Qoraqalpogiston',
-            'республикакаракалпакстан' => 'Qoraqalpogiston',
-            'samarqand' => 'Samarqand',
-            'samarkand' => 'Samarqand',
-            'самарканд' => 'Samarqand',
-            'самаркандская' => 'Samarqand',
-            'sirdaryo' => 'Sirdaryo',
-            'syrdarya' => 'Sirdaryo',
-            'сырдарья' => 'Sirdaryo',
-            'сырдарьинская' => 'Sirdaryo',
-            'surxondaryo' => 'Surxondaryo',
-            'surkhandarya' => 'Surxondaryo',
-            'сурхандарья' => 'Surxondaryo',
-            'сурхандарьинская' => 'Surxondaryo',
-        ];
-
-        return $aliases[$key] ?? $aliases[$this->normalizedAddressBaseKey($name)] ?? $name;
-    }
-
     private function normalizedAddressPartKey(string $value): string
     {
         return Str::of($value)
             ->lower()
-            ->replace(["'", 'ʻ', 'ʼ', '`', '’', '.', ','], '')
+            ->replace(["'", 'ʻ', 'ʼ', '`', '‘', '’', '.', ','], '')
             ->replace([' ', '-', '_'], '')
             ->value();
     }
@@ -7424,13 +7457,13 @@ class AdminController extends Controller
     {
         $alerts = [];
         if (($mainCounts['new'] ?? 0) > 0) {
-            $alerts[] = ['level' => 'warning', 'icon' => 'bi-bag-check', 'title' => 'Yangi buyurtmalar', 'text' => $mainCounts['new']." ta buyurtma ishlov kutmoqda", 'url' => route('boshqaruv.orders')];
+            $alerts[] = ['level' => 'warning', 'icon' => 'bi-bag-check', 'title' => 'Yangi buyurtmalar', 'text' => $mainCounts['new'].' ta buyurtma ishlov kutmoqda', 'url' => route('boshqaruv.orders')];
         }
         if (($sellerCounts['new'] ?? 0) > 0) {
-            $alerts[] = ['level' => 'info', 'icon' => 'bi-shop-window', 'title' => 'Seller navbati', 'text' => $sellerCounts['new']." ta seller order qabul kutmoqda", 'url' => route('boshqaruv.seller-orders')];
+            $alerts[] = ['level' => 'info', 'icon' => 'bi-shop-window', 'title' => 'Seller navbati', 'text' => $sellerCounts['new'].' ta seller order qabul kutmoqda', 'url' => route('boshqaruv.seller-orders')];
         }
         if (($courierCounts['pending'] ?? 0) > 0) {
-            $alerts[] = ['level' => 'warning', 'icon' => 'bi-bicycle', 'title' => 'Kuryer navbati', 'text' => $courierCounts['pending']." ta kuryer order kutilmoqda", 'url' => route('boshqaruv.courier-orders')];
+            $alerts[] = ['level' => 'warning', 'icon' => 'bi-bicycle', 'title' => 'Kuryer navbati', 'text' => $courierCounts['pending'].' ta kuryer order kutilmoqda', 'url' => route('boshqaruv.courier-orders')];
         }
         if ($this->tableCount('bot_tickets') > 0) {
             $queued = Schema::hasColumn('bot_tickets', 'status') ? DB::table('bot_tickets')->where('status', 'queue')->count() : 0;
@@ -7578,8 +7611,8 @@ class AdminController extends Controller
         $paymentTransaction = Schema::hasTable('transactions') ? Transaction::query()
             ->where('order_id', $order->id)
             ->where('payment_type', 'order')
-                ->latest('id')
-                ->first() : null;
+            ->latest('id')
+            ->first() : null;
         $canProcessRefunds = $this->canProcessOperationalRefunds($order, $paymentTransaction);
         $items = $sellerOrderItemModels->isNotEmpty()
             ? $sellerOrderItemModels->map(fn (SellerOrderItem $item) => $this->sellerOrderItemPayload($item, $canModerateRefunds && $canProcessRefunds))->values()
