@@ -25,9 +25,9 @@ class CourierOrder extends Model
     ];
 
     protected $casts = [
-        'picked_up_at'              => 'datetime',
-        'settled_amount'            => 'integer',
-        'settled_at'                => 'datetime',
+        'picked_up_at' => 'datetime',
+        'settled_amount' => 'integer',
+        'settled_at' => 'datetime',
     ];
 
     public function getStatusCodeAttribute(?string $value): string
@@ -67,6 +67,6 @@ class CourierOrder extends Model
     public function paymentStatus()
     {
         return $this->belongsTo(Sold::class, 'order_id')
-            ->select('id', 'paymentStatus');
+            ->select('id', 'paymentStatus', 'payment_status_code');
     }
 }

@@ -4,11 +4,16 @@ namespace App\Http\Controllers\Api\Hub;
 
 use App\Http\Controllers\Controller;
 use App\Models\HubStaff;
+use App\Services\HubRoleAccessService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
 class HubAuthController extends Controller
 {
+    public function __construct(
+        private readonly HubRoleAccessService $hubRoleAccessService,
+    ) {}
+
     public function login(Request $request)
     {
         $request->validate([
@@ -22,14 +27,14 @@ class HubAuthController extends Controller
             ->where('username', trim((string) $request->input('username')))
             ->first();
 
-        if (!$staff || !Hash::check((string) $request->input('password'), (string) $staff->password)) {
+        if (! $staff || ! Hash::check((string) $request->input('password'), (string) $staff->password)) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Login yoki parol xato.',
             ], 401);
         }
 
-        if (!$staff->is_active || !$staff->hub?->is_active) {
+        if (! $staff->is_active || ! $staff->hub?->is_active) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Hub akkaunti hozir faol emas.',
@@ -47,6 +52,7 @@ class HubAuthController extends Controller
                 'username' => $staff->username,
                 'full_name' => $staff->full_name,
                 'role' => $staff->role,
+                'permissions' => $this->hubRoleAccessService->effectivePermissions($staff),
                 'hub' => $staff->hub ? [
                     'id' => $staff->hub->id,
                     'name' => $staff->hub->name,
@@ -83,7 +89,7 @@ class HubAuthController extends Controller
                 'full_name' => $staff->full_name,
                 'phone_number' => $staff->phone_number,
                 'role' => $staff->role,
-                'permissions' => $staff->permissions ?? [],
+                'permissions' => $this->hubRoleAccessService->effectivePermissions($staff),
                 'hub' => $staff->hub ? [
                     'id' => $staff->hub->id,
                     'name' => $staff->hub->name,

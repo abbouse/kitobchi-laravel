@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\Api\Hub;
 
+use App\Enums\CourierTaskStatusCode;
 use App\Enums\FulfillmentStatusCode;
 use App\Http\Controllers\Controller;
+use App\Models\CourierTask;
 use App\Models\HubStaff;
 use App\Models\OrderFulfillment;
 use App\Services\CourierTaskOrchestratorService;
@@ -27,6 +29,12 @@ class HubFulfillmentController extends Controller
     public function dashboard(Request $request)
     {
         $staff = $this->staff($request);
+        if (! $this->hubRoleAccessService->can($staff, 'dashboard.view')) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Dashboard sizga ruxsat etilmagan.',
+            ], 403);
+        }
         $hubId = $staff->hub_id;
 
         return response()->json([
@@ -53,6 +61,12 @@ class HubFulfillmentController extends Controller
                 'exceptions' => $this->baseQuery($hubId)
                     ->whereNotNull('meta->exception->code')
                     ->count(),
+                'active_couriers' => CourierTask::query()
+                    ->where('hub_id', $hubId)
+                    ->whereNotNull('courier_id')
+                    ->whereIn('status_code', $this->activeCourierTaskStatuses())
+                    ->distinct('courier_id')
+                    ->count('courier_id'),
             ],
             'analytics' => $this->dashboardAnalytics($hubId),
         ]);
@@ -68,7 +82,7 @@ class HubFulfillmentController extends Controller
             'dispatch' => 'queue.dispatch.view',
             default => null,
         };
-        if (!$permission || !$this->hubRoleAccessService->can($staff, $permission)) {
+        if (! $permission || ! $this->hubRoleAccessService->can($staff, $permission)) {
             return response()->json(['status' => 'error', 'message' => 'Bu queue sizga ruxsat etilmagan.'], 403);
         }
 
@@ -84,13 +98,13 @@ class HubFulfillmentController extends Controller
             ->when($request->filled('q'), function ($query) use ($request) {
                 $search = trim((string) $request->string('q'));
                 $query->where(function ($scoped) use ($search) {
-                    $scoped->where('order_id', 'like', '%' . $search . '%')
-                        ->orWhere('label_code', 'like', '%' . $search . '%')
-                        ->orWhere('postal_tracking_number', 'like', '%' . $search . '%')
+                    $scoped->where('order_id', 'like', '%'.$search.'%')
+                        ->orWhere('label_code', 'like', '%'.$search.'%')
+                        ->orWhere('postal_tracking_number', 'like', '%'.$search.'%')
                         ->orWhereHas('order.user', function ($userQuery) use ($search) {
-                            $userQuery->where('name', 'like', '%' . $search . '%')
-                                ->orWhere('lastname', 'like', '%' . $search . '%')
-                                ->orWhere('phone_number', 'like', '%' . $search . '%');
+                            $userQuery->where('name', 'like', '%'.$search.'%')
+                                ->orWhere('lastname', 'like', '%'.$search.'%')
+                                ->orWhere('phone_number', 'like', '%'.$search.'%');
                         });
                 });
             })
@@ -118,8 +132,8 @@ class HubFulfillmentController extends Controller
     {
         $staff = $this->staff($request);
         if (
-            !$this->hubRoleAccessService->can($staff, 'queue.exception.report')
-            && !$this->hubRoleAccessService->can($staff, 'queue.exception.resolve')
+            ! $this->hubRoleAccessService->can($staff, 'queue.exception.report')
+            && ! $this->hubRoleAccessService->can($staff, 'queue.exception.resolve')
         ) {
             return response()->json(['status' => 'error', 'message' => 'Exception markazi sizga ruxsat etilmagan.'], 403);
         }
@@ -136,13 +150,13 @@ class HubFulfillmentController extends Controller
             ->when($request->filled('q'), function ($query) use ($request) {
                 $search = trim((string) $request->string('q'));
                 $query->where(function ($scoped) use ($search) {
-                    $scoped->where('order_id', 'like', '%' . $search . '%')
-                        ->orWhere('label_code', 'like', '%' . $search . '%')
-                        ->orWhere('postal_tracking_number', 'like', '%' . $search . '%')
+                    $scoped->where('order_id', 'like', '%'.$search.'%')
+                        ->orWhere('label_code', 'like', '%'.$search.'%')
+                        ->orWhere('postal_tracking_number', 'like', '%'.$search.'%')
                         ->orWhereHas('order.user', function ($userQuery) use ($search) {
-                            $userQuery->where('name', 'like', '%' . $search . '%')
-                                ->orWhere('lastname', 'like', '%' . $search . '%')
-                                ->orWhere('phone_number', 'like', '%' . $search . '%');
+                            $userQuery->where('name', 'like', '%'.$search.'%')
+                                ->orWhere('lastname', 'like', '%'.$search.'%')
+                                ->orWhere('phone_number', 'like', '%'.$search.'%');
                         });
                 });
             })
@@ -163,7 +177,7 @@ class HubFulfillmentController extends Controller
     public function activity(Request $request)
     {
         $staff = $this->staff($request);
-        if (!$this->hubRoleAccessService->can($staff, 'dashboard.view')) {
+        if (! $this->hubRoleAccessService->can($staff, 'dashboard.view')) {
             return response()->json(['status' => 'error', 'message' => 'Activity markazi sizga ruxsat etilmagan.'], 403);
         }
 
@@ -179,7 +193,7 @@ class HubFulfillmentController extends Controller
 
         foreach ($fulfillments as $fulfillment) {
             $timeline = collect(Arr::get($fulfillment->meta ?? [], 'timeline', []))
-                ->filter(fn ($row) => is_array($row) && !empty($row['at']) && is_array($row['actor'] ?? null));
+                ->filter(fn ($row) => is_array($row) && ! empty($row['at']) && is_array($row['actor'] ?? null));
 
             foreach ($timeline as $row) {
                 $actor = $row['actor'];
@@ -257,7 +271,7 @@ class HubFulfillmentController extends Controller
     public function scan(Request $request)
     {
         $staff = $this->staff($request);
-        if (!$this->hubRoleAccessService->can($staff, 'queue.scan.use')) {
+        if (! $this->hubRoleAccessService->can($staff, 'queue.scan.use')) {
             return response()->json(['status' => 'error', 'message' => 'Scanner sizga ruxsat etilmagan.'], 403);
         }
 
@@ -280,7 +294,7 @@ class HubFulfillmentController extends Controller
             ->latest('updated_at')
             ->first();
 
-        if (!$fulfillment) {
+        if (! $fulfillment) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Bu kod bo‘yicha fulfillment topilmadi yoki boshqa hubga tegishli.',
@@ -393,9 +407,9 @@ class HubFulfillmentController extends Controller
                     'hub_name' => $fulfillment->hub?->name,
                     'hub_code' => $fulfillment->hub?->code,
                     'order_id' => $fulfillment->order_id,
-                    'label_code' => $fulfillment->label_code ?: ('ORD-' . $fulfillment->order_id),
+                    'label_code' => $fulfillment->label_code ?: ('ORD-'.$fulfillment->order_id),
                     'tracking_number' => $fulfillment->postal_tracking_number,
-                    'customer_name' => trim((string) (($order?->user?->name ?? '') . ' ' . ($order?->user?->lastname ?? ''))),
+                    'customer_name' => trim((string) (($order?->user?->name ?? '').' '.($order?->user?->lastname ?? ''))),
                     'customer_phone' => $order?->user?->phone_number,
                     'address' => $address['fullAddress'] ?? $address['branch_address'] ?? null,
                     'fulfillment_mode' => $fulfillment->fulfillment_mode,
@@ -407,7 +421,7 @@ class HubFulfillmentController extends Controller
                 'receipt' => [
                     'hub_name' => $fulfillment->hub?->name,
                     'order_id' => $fulfillment->order_id,
-                    'customer_name' => trim((string) (($order?->user?->name ?? '') . ' ' . ($order?->user?->lastname ?? ''))),
+                    'customer_name' => trim((string) (($order?->user?->name ?? '').' '.($order?->user?->lastname ?? ''))),
                     'customer_phone' => $order?->user?->phone_number,
                     'address' => $address['fullAddress'] ?? $address['branch_address'] ?? null,
                     'order_amount' => (int) ($order?->amount ?? 0),
@@ -433,7 +447,7 @@ class HubFulfillmentController extends Controller
         ]);
 
         $permission = $validated['type'] === 'label' ? 'print.label' : 'print.receipt';
-        if (!$this->hubRoleAccessService->can($staff, $permission)) {
+        if (! $this->hubRoleAccessService->can($staff, $permission)) {
             return response()->json(['status' => 'error', 'message' => 'Print sizga ruxsat etilmagan.'], 403);
         }
 
@@ -474,7 +488,7 @@ class HubFulfillmentController extends Controller
     public function arrive(Request $request, OrderFulfillment $fulfillment)
     {
         $staff = $this->staff($request);
-        if (!$this->hubRoleAccessService->can($staff, 'queue.inbound.arrive')) {
+        if (! $this->hubRoleAccessService->can($staff, 'queue.inbound.arrive')) {
             return response()->json(['status' => 'error', 'message' => 'Bu action sizga ruxsat etilmagan.'], 403);
         }
         if ($response = $this->ensureSameHub($staff, $fulfillment)) {
@@ -497,7 +511,7 @@ class HubFulfillmentController extends Controller
     public function qc(Request $request, OrderFulfillment $fulfillment)
     {
         $staff = $this->staff($request);
-        if (!$this->hubRoleAccessService->can($staff, 'queue.qc.complete')) {
+        if (! $this->hubRoleAccessService->can($staff, 'queue.qc.complete')) {
             return response()->json(['status' => 'error', 'message' => 'Bu action sizga ruxsat etilmagan.'], 403);
         }
         if ($response = $this->ensureSameHub($staff, $fulfillment)) {
@@ -519,7 +533,7 @@ class HubFulfillmentController extends Controller
     public function pack(Request $request, OrderFulfillment $fulfillment)
     {
         $staff = $this->staff($request);
-        if (!$this->hubRoleAccessService->can($staff, 'queue.packing.pack')) {
+        if (! $this->hubRoleAccessService->can($staff, 'queue.packing.pack')) {
             return response()->json(['status' => 'error', 'message' => 'Bu action sizga ruxsat etilmagan.'], 403);
         }
         if ($response = $this->ensureSameHub($staff, $fulfillment)) {
@@ -541,7 +555,7 @@ class HubFulfillmentController extends Controller
     public function label(Request $request, OrderFulfillment $fulfillment)
     {
         $staff = $this->staff($request);
-        if (!$this->hubRoleAccessService->can($staff, 'queue.packing.label')) {
+        if (! $this->hubRoleAccessService->can($staff, 'queue.packing.label')) {
             return response()->json(['status' => 'error', 'message' => 'Bu action sizga ruxsat etilmagan.'], 403);
         }
         if ($response = $this->ensureSameHub($staff, $fulfillment)) {
@@ -553,7 +567,7 @@ class HubFulfillmentController extends Controller
 
         $fulfillment->status_code = FulfillmentStatusCode::LABELED->value;
         $fulfillment->labeled_at ??= now();
-        $fulfillment->label_code = $fulfillment->label_code ?: ('LBL-' . $fulfillment->order_id . '-' . now()->format('His'));
+        $fulfillment->label_code = $fulfillment->label_code ?: ('LBL-'.$fulfillment->order_id.'-'.now()->format('His'));
         $this->appendTimeline($fulfillment, $staff, 'labeled', 'Etiketka tayyorlandi', [
             'label_code' => $fulfillment->label_code,
         ]);
@@ -569,7 +583,7 @@ class HubFulfillmentController extends Controller
         $validated = $request->validate([
             'dispatch_method' => ['nullable', Rule::in(['postal', 'courier'])],
         ]);
-        if (!$this->hubRoleAccessService->can($staff, 'queue.dispatch.send')) {
+        if (! $this->hubRoleAccessService->can($staff, 'queue.dispatch.send')) {
             return response()->json(['status' => 'error', 'message' => 'Bu action sizga ruxsat etilmagan.'], 403);
         }
         if ($response = $this->ensureSameHub($staff, $fulfillment)) {
@@ -582,7 +596,7 @@ class HubFulfillmentController extends Controller
         $dispatchMethod = $validated['dispatch_method'] ?? null;
         $useCourier = $dispatchMethod === 'courier' || ($dispatchMethod === null && $fulfillment->last_mile_mode !== 'postal_dispatch');
 
-        if (!$useCourier) {
+        if (! $useCourier) {
             $fulfillment->last_mile_mode = 'postal_dispatch';
             $fulfillment->status_code = FulfillmentStatusCode::DISPATCHED_TO_POST->value;
             $fulfillment->dispatched_to_post_at ??= now();
@@ -603,7 +617,7 @@ class HubFulfillmentController extends Controller
     public function reportException(Request $request, OrderFulfillment $fulfillment)
     {
         $staff = $this->staff($request);
-        if (!$this->hubRoleAccessService->can($staff, 'queue.exception.report')) {
+        if (! $this->hubRoleAccessService->can($staff, 'queue.exception.report')) {
             return response()->json(['status' => 'error', 'message' => 'Exception yozish sizga ruxsat etilmagan.'], 403);
         }
         if ($response = $this->ensureSameHub($staff, $fulfillment)) {
@@ -653,7 +667,7 @@ class HubFulfillmentController extends Controller
     public function resolveException(Request $request, OrderFulfillment $fulfillment)
     {
         $staff = $this->staff($request);
-        if (!$this->hubRoleAccessService->can($staff, 'queue.exception.resolve')) {
+        if (! $this->hubRoleAccessService->can($staff, 'queue.exception.resolve')) {
             return response()->json(['status' => 'error', 'message' => 'Exception yopish sizga ruxsat etilmagan.'], 403);
         }
         if ($response = $this->ensureSameHub($staff, $fulfillment)) {
@@ -662,7 +676,7 @@ class HubFulfillmentController extends Controller
 
         $meta = $fulfillment->meta ?? [];
         $exception = Arr::get($meta, 'exception');
-        if (!is_array($exception) || empty($exception['code'])) {
+        if (! is_array($exception) || empty($exception['code'])) {
             return response()->json(['status' => 'error', 'message' => 'Faol muammo topilmadi.'], 422);
         }
 
@@ -686,6 +700,7 @@ class HubFulfillmentController extends Controller
         /** @var HubStaff $staff */
         $staff = $request->user('hub');
         $staff->loadMissing('hub:id,name,code,city_name,country_code,is_active');
+
         return $staff;
     }
 
@@ -701,8 +716,23 @@ class HubFulfillmentController extends Controller
     private function baseQuery(int $hubId)
     {
         return OrderFulfillment::query()
-            ->with(['order.user:id,name,lastname,phone_number', 'hub:id,name,code'])
+            ->with([
+                'order.user:id,name,lastname,phone_number',
+                'hub:id,name,code',
+                'courierTasks.courier:id,first_name,last_name,phone_number,photo,is_online,current_lat,current_lon,location_updated_at',
+            ])
             ->where('hub_id', $hubId);
+    }
+
+    private function activeCourierTaskStatuses(): array
+    {
+        return [
+            CourierTaskStatusCode::ASSIGNED->value,
+            CourierTaskStatusCode::ACCEPTED->value,
+            CourierTaskStatusCode::ARRIVED_AT_PICKUP->value,
+            CourierTaskStatusCode::PICKED_UP->value,
+            CourierTaskStatusCode::DROPPED_OFF->value,
+        ];
     }
 
     private function clearException(OrderFulfillment $fulfillment): void
@@ -710,7 +740,7 @@ class HubFulfillmentController extends Controller
         $meta = $fulfillment->meta ?? [];
         $exception = Arr::get($meta, 'exception');
 
-        if (is_array($exception) && !empty($exception['code']) && empty($exception['resolved_at'])) {
+        if (is_array($exception) && ! empty($exception['code']) && empty($exception['resolved_at'])) {
             Arr::set($meta, 'exception.resolved_at', now()->toIso8601String());
             Arr::set($meta, 'exception.resolved_by', [
                 'id' => null,
@@ -746,7 +776,11 @@ class HubFulfillmentController extends Controller
 
     private function serializeFulfillment(OrderFulfillment $fulfillment): array
     {
-        $fulfillment->loadMissing(['order.user:id,name,lastname,phone_number', 'hub:id,name,code']);
+        $fulfillment->loadMissing([
+            'order.user:id,name,lastname,phone_number',
+            'hub:id,name,code',
+            'courierTasks.courier:id,first_name,last_name,phone_number,photo,is_online,current_lat,current_lon,location_updated_at',
+        ]);
         $order = $fulfillment->order;
         $address = collect($order?->address ?? [])->first() ?? [];
         $exception = Arr::get($fulfillment->meta ?? [], 'exception');
@@ -781,12 +815,46 @@ class HubFulfillmentController extends Controller
                 ->filter(fn ($row) => is_array($row))
                 ->values()
                 ->all(),
+            'courier_tasks' => $fulfillment->courierTasks
+                ->sortByDesc('id')
+                ->map(function (CourierTask $task): array {
+                    $courier = $task->courier;
+                    $photo = trim((string) ($courier?->photo ?? ''));
+
+                    return [
+                        'id' => (int) $task->id,
+                        'leg' => (string) $task->leg,
+                        'status_code' => (string) $task->status_code,
+                        'is_active' => in_array($task->status_code, $this->activeCourierTaskStatuses(), true),
+                        'distance_km' => (float) ($task->distance_km ?? 0),
+                        'pickup' => $task->pickup_address,
+                        'dropoff' => $task->dropoff_address,
+                        'assigned_at' => optional($task->assigned_at)?->toIso8601String(),
+                        'accepted_at' => optional($task->accepted_at)?->toIso8601String(),
+                        'picked_up_at' => optional($task->picked_up_at)?->toIso8601String(),
+                        'completed_at' => optional($task->completed_at)?->toIso8601String(),
+                        'courier' => $courier ? [
+                            'id' => (int) $courier->id,
+                            'name' => trim((string) ($courier->first_name.' '.$courier->last_name)),
+                            'phone_number' => (string) ($courier->phone_number ?? ''),
+                            'photo_url' => $photo !== '' ? asset('storage/'.$photo) : null,
+                            'is_online' => (bool) $courier->is_online,
+                            'location' => [
+                                'lat' => $courier->current_lat,
+                                'lon' => $courier->current_lon,
+                                'updated_at' => optional($courier->location_updated_at)?->toIso8601String(),
+                            ],
+                        ] : null,
+                    ];
+                })
+                ->values()
+                ->all(),
             'order' => $order ? [
                 'id' => $order->id,
                 'amount' => (int) $order->amount,
                 'delivery_price' => (int) ($order->deliveryPrice ?? 0),
                 'customer' => [
-                    'name' => trim((string) (($order->user?->name ?? '') . ' ' . ($order->user?->lastname ?? ''))),
+                    'name' => trim((string) (($order->user?->name ?? '').' '.($order->user?->lastname ?? ''))),
                     'phone_number' => $order->user?->phone_number,
                 ],
                 'address' => [
@@ -800,10 +868,10 @@ class HubFulfillmentController extends Controller
 
     private function buildTimeline(OrderFulfillment $fulfillment): array
     {
-        $timeline = new Collection();
+        $timeline = new Collection;
 
         $pushTimestamp = function (?string $at, string $code, string $title) use ($timeline): void {
-            if (!$at) {
+            if (! $at) {
                 return;
             }
 
@@ -833,7 +901,7 @@ class HubFulfillmentController extends Controller
         }
 
         collect(Arr::get($fulfillment->meta ?? [], 'timeline', []))
-            ->filter(fn ($row) => is_array($row) && !empty($row['at']) && !empty($row['title']))
+            ->filter(fn ($row) => is_array($row) && ! empty($row['at']) && ! empty($row['title']))
             ->each(fn ($row) => $timeline->push($row));
 
         return $timeline

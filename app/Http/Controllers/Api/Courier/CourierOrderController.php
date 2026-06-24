@@ -9,28 +9,26 @@ use App\Enums\OrderStatusCode;
 use App\Enums\PaymentStatusCode;
 use App\Enums\SellerOrderStatusCode;
 use App\Http\Controllers\Controller;
-use App\Models\CourierTask;
-use App\Models\Sold;
-use App\Models\User;
-use App\Models\Seller;
-use App\Models\Couriers;
 use App\Models\CourierOrder;
 use App\Models\CourierOrderItem;
+use App\Models\CourierTask;
 use App\Models\CourierTransaction;
 use App\Models\OrderFulfillment;
+use App\Models\Seller;
 use App\Models\SellerLocation;
 use App\Models\SellerOrder;
 use App\Models\SellerOrderItem;
+use App\Models\Sold;
+use App\Services\CourierCashOnDeliveryCapacityService;
+use App\Services\CourierTaskOrchestratorService;
+use App\Services\OrderRealtimeService;
 use App\Services\OrderService;
 use App\Services\OrderStatusPushService;
-use App\Services\OrderRealtimeService;
 use App\Services\QrTokenService;
-use App\Services\CourierTaskOrchestratorService;
-use App\Services\CourierCashOnDeliveryCapacityService;
 use App\Services\SellerOrderCancellationService;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -44,20 +42,19 @@ class CourierOrderController extends Controller
         private readonly CourierTaskOrchestratorService $courierTaskOrchestratorService,
         private readonly CourierCashOnDeliveryCapacityService $courierCashOnDeliveryCapacityService,
         private readonly SellerOrderCancellationService $sellerOrderCancellationService,
-    ) {
-    }
+    ) {}
 
     public function getAvailableOrders(Request $request)
     {
         $courier = Auth::guard('courier')->user();
-        if (!$courier) {
+        if (! $courier) {
             return response()->json([
                 'success' => false,
-                'message' => __('courier_api.unauthorized')
+                'message' => __('courier_api.unauthorized'),
             ], 401);
         }
 
-        if (!$courier->is_online) {
+        if (! $courier->is_online) {
             return response()->json([
                 'success' => true,
                 'data' => [],
@@ -80,12 +77,12 @@ class CourierOrderController extends Controller
                     // ko'rsatamiz.
                     ->orWhere(function ($q) {
                         $q->where(function ($pendingQuery) {
-                                $pendingQuery->where('status_code', CourierOrderStatusCode::PAYMENT_PENDING->value)
-                                    ->orWhere(function ($fallback) {
-                                        $fallback->whereNull('status_code')
-                                            ->where('status', CourierOrderStatusCode::PAYMENT_PENDING->legacy());
-                                    });
-                            })
+                            $pendingQuery->where('status_code', CourierOrderStatusCode::PAYMENT_PENDING->value)
+                                ->orWhere(function ($fallback) {
+                                    $fallback->whereNull('status_code')
+                                        ->where('status', CourierOrderStatusCode::PAYMENT_PENDING->legacy());
+                                });
+                        })
                             ->whereHas('order', fn ($order) => $order->where(function ($paidQuery) {
                                 $paidQuery->where('payment_status_code', PaymentStatusCode::PAID->value)
                                     ->orWhere(function ($fallback) {
@@ -100,13 +97,13 @@ class CourierOrderController extends Controller
                 'items.product.seller',
                 'items.orderStatus',
                 'items.sellerLocation.workdays',
-                'customer.location'
+                'customer.location',
             ])
             ->latest()
             ->get()
             ->filter(function ($order) use ($courier) {
                 $orderModel = $order->order()->first();
-                if (!$orderModel) {
+                if (! $orderModel) {
                     return false;
                 }
 
@@ -125,12 +122,16 @@ class CourierOrderController extends Controller
                     || $this->courierCashOnDeliveryCapacityService->canTakeCashOrder($courier, $codExposure);
             })
             ->map(function ($order) use ($courier) {
-                if ($order->status_code === CourierOrderStatusCode::PAYMENT_PENDING->value
-                    && ($order->paymentStatus?->payment_status_code ?? null) === PaymentStatusCode::PAID->value) {
+                $soldOrder = $order->order()->first();
+                if (
+                    $order->status_code === CourierOrderStatusCode::PAYMENT_PENDING->value
+                    && $soldOrder
+                    && PaymentStatusCode::fromLegacy($soldOrder->payment_status_code ?? $soldOrder->paymentStatus)->value === PaymentStatusCode::PAID->value
+                ) {
                     $order->status = CourierOrderStatusCode::PENDING->legacy();
                     $order->status_code = CourierOrderStatusCode::PENDING->value;
+                    $order->save();
                 }
-                $soldOrder = $order->order()->first();
                 $taskSummary = $this->buildTaskSummary($soldOrder, null);
                 $operationalAmount = $soldOrder
                     ? $this->sellerOrderCancellationService->operationalAmountForCourier($soldOrder)
@@ -155,10 +156,11 @@ class CourierOrderController extends Controller
                 $order->hub = $taskSummary['hub'];
                 $order->available_collateral = $this->courierCashOnDeliveryCapacityService->availableCollateral($courier);
                 $this->normalizeCourierOrderStatusForPayload($order);
+
                 return $this->hydrateCourierOrderItems($order, Auth::guard('courier')->id());
             })
             ->filter(fn (CourierOrder $order) => $order->items->isNotEmpty())
-            ->filter(fn (CourierOrder $order) => !$this->hasClosedPickupLocation($order))
+            ->filter(fn (CourierOrder $order) => ! $this->hasClosedPickupLocation($order))
             ->values();
 
         Log::info('Courier available orders fetched', [
@@ -170,17 +172,17 @@ class CourierOrderController extends Controller
 
         return response()->json([
             'success' => true,
-            'data'    => $orders,
+            'data' => $orders,
         ], 200);
     }
 
     public function showOrder(Request $request, $id)
     {
         $courier = Auth::guard('courier')->user();
-        if (!$courier) {
+        if (! $courier) {
             return response()->json([
                 'success' => false,
-                'message' => __('courier_api.unauthorized')
+                'message' => __('courier_api.unauthorized'),
             ], 401);
         }
         $show = CourierOrder::where('order_id', $id)
@@ -190,14 +192,14 @@ class CourierOrderController extends Controller
                 'items.product.seller',
                 'items.orderStatus',
                 'items.sellerLocation.workdays',
-                'customer.location'
+                'customer.location',
             ])
             ->first();
 
-        if (!$show) {
+        if (! $show) {
             return response()->json([
                 'success' => false,
-                'message' => __('courier_api.order_not_found')
+                'message' => __('courier_api.order_not_found'),
             ], 404);
         }
 
@@ -205,7 +207,7 @@ class CourierOrderController extends Controller
         if ($show->items->isEmpty()) {
             return response()->json([
                 'success' => false,
-                'message' => __('courier_api.order_not_found')
+                'message' => __('courier_api.order_not_found'),
             ], 404);
         }
         $soldOrder = $show->order()->first();
@@ -236,28 +238,28 @@ class CourierOrderController extends Controller
 
         return response()->json([
             'success' => true,
-            'data'    => $show
+            'data' => $show,
         ], 200);
     }
 
     public function toCustomer(Request $request, $qr)
     {
         $courier = Auth::guard('courier')->user();
-        if (!$courier) {
+        if (! $courier) {
             return response()->json([
                 'success' => false,
-                'message' => __('courier_api.unauthorized')
+                'message' => __('courier_api.unauthorized'),
             ], 401);
         }
         $orderCustomer = $this->resolveCustomerOrderByQr($qr, $courier->id);
-        if (!$orderCustomer) {
+        if (! $orderCustomer) {
             return response()->json(['success' => false, 'message' => __('courier_api.order_invalid_qr')], 404);
         }
         $order = CourierOrder::where('order_id', $orderCustomer->id)
             ->where('status', 'in_delivery')
             ->where('courier_id', $courier->id)
             ->first();
-        if (!$order) {
+        if (! $order) {
             return response()->json(['success' => false, 'message' => __('courier_api.order_not_found')], 404);
         }
         try {
@@ -286,15 +288,16 @@ class CourierOrderController extends Controller
             $this->orderService->processCashbackAfterOrderMutation($orderCustomer, $orderCustomer->user()->first());
 
             return response()->json([
-                'success'      => true,
-                'message'      => __('courier_api.order_delivered'),
-                'order_id'     => $order->order_id,
+                'success' => true,
+                'message' => __('courier_api.order_delivered'),
+                'order_id' => $order->order_id,
                 'courier_bonus' => (int) $order->courierBonus,
                 'courierPrice' => (int) $order->courierPrice,
             ], 200);
         } catch (\Throwable $th) {
             $code = $th instanceof \RuntimeException ? 422 : 500;
-            return response()->json(['success' => false, 'message' => 'Xatolik: ' . $th->getMessage()], $code);
+
+            return response()->json(['success' => false, 'message' => 'Xatolik: '.$th->getMessage()], $code);
         }
     }
 
@@ -389,11 +392,11 @@ class CourierOrderController extends Controller
     public function confirmOrder(Request $request, $id)
     {
         $courier = Auth::guard('courier')->user();
-        if (!$courier) {
+        if (! $courier) {
             return response()->json(['success' => false, 'message' => __('courier_api.unauthorized')], 401);
         }
 
-        if (!$courier->is_online) {
+        if (! $courier->is_online) {
             return response()->json([
                 'success' => false,
                 'error_code' => 'courier_offline',
@@ -412,26 +415,53 @@ class CourierOrderController extends Controller
                 if ($activeOrdersCount >= 3) {
                     return response()->json([
                         'success' => false,
-                        'message' => "Sizda faol buyurtmalar soni 3 taga yetgan. Avval ulardan birini yakunlang.",
+                        'message' => 'Sizda faol buyurtmalar soni 3 taga yetgan. Avval ulardan birini yakunlang.',
                     ], 422);
                 }
-
-                // Lock rows to prevent race condition
-                $order = CourierOrder::where('order_id', $id)
-                    ->where('status', 'pending')
-                    ->whereNull('courier_id')
-                    ->lockForUpdate()
-                    ->first();
 
                 $sold = Sold::where('id', $id)
                     ->lockForUpdate()
                     ->first();
 
-                if (!$order || !$sold) {
+                // Lock rows to prevent race condition. Card-paid orders can
+                // briefly remain in courier payment_pending if the payment
+                // callback and courier feed race each other.
+                $order = CourierOrder::where('order_id', $id)
+                    ->whereNull('courier_id')
+                    ->where(function ($query) use ($sold) {
+                        $query->where('status_code', CourierOrderStatusCode::PENDING->value)
+                            ->orWhere(function ($fallback) {
+                                $fallback->whereNull('status_code')
+                                    ->where('status', CourierOrderStatusCode::PENDING->legacy());
+                            });
+
+                        if (
+                            $sold
+                            && PaymentStatusCode::fromLegacy($sold->payment_status_code ?? $sold->paymentStatus)->value === PaymentStatusCode::PAID->value
+                        ) {
+                            $query->orWhere('status_code', CourierOrderStatusCode::PAYMENT_PENDING->value)
+                                ->orWhere(function ($fallback) {
+                                    $fallback->whereNull('status_code')
+                                        ->where('status', CourierOrderStatusCode::PAYMENT_PENDING->legacy());
+                                });
+                        }
+                    })
+                    ->lockForUpdate()
+                    ->first();
+
+                if (! $order || ! $sold) {
                     return response()->json([
                         'success' => false,
                         'message' => __('courier_api.order_already_taken'),
                     ], 404);
+                }
+
+                if (
+                    $order->status_code === CourierOrderStatusCode::PAYMENT_PENDING->value
+                    && PaymentStatusCode::fromLegacy($sold->payment_status_code ?? $sold->paymentStatus)->value === PaymentStatusCode::PAID->value
+                ) {
+                    $order->status = CourierOrderStatusCode::PENDING->legacy();
+                    $order->status_code = CourierOrderStatusCode::PENDING->value;
                 }
 
                 $acceptedTasks = $this->courierTaskOrchestratorService->acceptAvailableTasksForCourier($sold, $courier);
@@ -440,23 +470,23 @@ class CourierOrderController extends Controller
                     fn (CourierTask $task) => max(0, (int) $task->fee_amount - (int) $task->bonus_amount)
                 );
 
-                $sold->courier_id   = $courier->id;
-                $sold->courierName  = $courier->first_name . ' ' . $courier->last_name;
-                $sold->status       = OrderStatusCode::PACKING->legacy();
-                $sold->status_code  = OrderStatusCode::PACKING->value;
+                $sold->courier_id = $courier->id;
+                $sold->courierName = $courier->first_name.' '.$courier->last_name;
+                $sold->status = OrderStatusCode::PACKING->legacy();
+                $sold->status_code = OrderStatusCode::PACKING->value;
                 $sold->save();
 
                 $order->courier_id = $courier->id;
-                $order->status     = CourierOrderStatusCode::IN_DELIVERY->legacy();
+                $order->status = CourierOrderStatusCode::IN_DELIVERY->legacy();
                 $order->status_code = CourierOrderStatusCode::IN_DELIVERY->value;
                 $order->courierPrice = $taskBasePayout;
                 $order->courierBonus = $taskBonus;
                 $order->save();
 
                 return response()->json([
-                    'success'      => true,
-                    'message'      => __('courier_api.order_confirmed'),
-                    'order_id'     => $order->order_id,
+                    'success' => true,
+                    'message' => __('courier_api.order_confirmed'),
+                    'order_id' => $order->order_id,
                     'courier_bonus' => (int) $order->courierBonus,
                     'courier_price' => (int) $order->courierPrice,
                 ], 200);
@@ -472,14 +502,15 @@ class CourierOrderController extends Controller
             return $response;
         } catch (\Throwable $th) {
             $code = $th instanceof \RuntimeException ? 422 : 500;
-            return response()->json(['success' => false, 'message' => 'Xatolik: ' . $th->getMessage()], $code);
+
+            return response()->json(['success' => false, 'message' => 'Xatolik: '.$th->getMessage()], $code);
         }
     }
 
     public function myOrders(Request $request)
     {
         $courier = Auth::guard('courier')->user();
-        if (!$courier) {
+        if (! $courier) {
             return response()->json(['success' => false, 'message' => __('courier_api.unauthorized')], 401);
         }
         $orders = CourierOrder::where('courier_id', $courier->id)
@@ -488,7 +519,7 @@ class CourierOrderController extends Controller
                 'items.product.seller',
                 'items.orderStatus',
                 'items.sellerLocation.workdays',
-                'customer.location'
+                'customer.location',
             ])
             ->orderByRaw("
                 CASE
@@ -525,13 +556,15 @@ class CourierOrderController extends Controller
                 $order->hub = $taskSummary['hub'];
                 $order->available_collateral = $this->courierCashOnDeliveryCapacityService->availableCollateral($courier);
                 $this->normalizeCourierOrderStatusForPayload($order);
+
                 return $this->hydrateCourierOrderItems($order, $order->courier_id);
             })
             ->filter(fn (CourierOrder $order) => $order->items->isNotEmpty())
             ->values();
+
         return response()->json([
             'success' => true,
-            'data'    => $orders,
+            'data' => $orders,
         ], 200);
     }
 
@@ -828,7 +861,7 @@ class CourierOrderController extends Controller
 
     private function hasClosedPickupLocation(CourierOrder $order): bool
     {
-        if (!in_array($order->task_leg, ['first_mile', 'direct_delivery'], true)) {
+        if (! in_array($order->task_leg, ['first_mile', 'direct_delivery'], true)) {
             return false;
         }
 
@@ -839,7 +872,7 @@ class CourierOrderController extends Controller
 
     private function locationScheduleState(?SellerLocation $location): array
     {
-        if (!$location) {
+        if (! $location) {
             return [
                 'is_open' => true,
                 'open_time' => null,
@@ -884,7 +917,7 @@ class CourierOrderController extends Controller
         }
 
         $workday = $workdays->firstWhere('day_of_week', $dayOfWeek);
-        if (!$workday) {
+        if (! $workday) {
             return [
                 'is_open' => false,
                 'open_time' => null,
@@ -1033,7 +1066,7 @@ class CourierOrderController extends Controller
         $sellerId = (int) ($item->product?->seller_id ?? 0);
         $orderId = (int) ($soldOrderId ?? $item->order_id ?? 0);
 
-        if ($sellerId <= 0 || $orderId <= 0 || !$courierId) {
+        if ($sellerId <= 0 || $orderId <= 0 || ! $courierId) {
             return null;
         }
 
@@ -1045,12 +1078,12 @@ class CourierOrderController extends Controller
         $signed = $this->qrTokenService->parseDeliveryToken($qr);
         if ($signed) {
             return Sold::where(function ($query) {
-                    $query->where('status_code', OrderStatusCode::IN_DELIVERY->value)
-                        ->orWhere(function ($fallback) {
-                            $fallback->whereNull('status_code')
-                                ->where('status', OrderStatusCode::IN_DELIVERY->legacy());
-                        });
-                })
+                $query->where('status_code', OrderStatusCode::IN_DELIVERY->value)
+                    ->orWhere(function ($fallback) {
+                        $fallback->whereNull('status_code')
+                            ->where('status', OrderStatusCode::IN_DELIVERY->legacy());
+                    });
+            })
                 ->where('id', $signed['sold_id'])
                 ->where('user_id', $signed['user_id'])
                 ->where('courier_id', $courierId)
@@ -1058,12 +1091,12 @@ class CourierOrderController extends Controller
         }
 
         return Sold::where(function ($query) {
-                $query->where('status_code', OrderStatusCode::IN_DELIVERY->value)
-                    ->orWhere(function ($fallback) {
-                        $fallback->whereNull('status_code')
-                            ->where('status', OrderStatusCode::IN_DELIVERY->legacy());
-                    });
-            })
+            $query->where('status_code', OrderStatusCode::IN_DELIVERY->value)
+                ->orWhere(function ($fallback) {
+                    $fallback->whereNull('status_code')
+                        ->where('status', OrderStatusCode::IN_DELIVERY->legacy());
+                });
+        })
             ->where('qr', $qr)
             ->where('courier_id', $courierId)
             ->first();
@@ -1071,7 +1104,7 @@ class CourierOrderController extends Controller
 
     private function buildTaskSummary(?Sold $order, ?int $courierId): array
     {
-        if (!$order) {
+        if (! $order) {
             return [
                 'task_leg' => null,
                 'fulfillment_mode' => null,

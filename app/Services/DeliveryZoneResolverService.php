@@ -42,7 +42,7 @@ class DeliveryZoneResolverService
             ->filter(function (DeliveryZoneRule $rule) use ($location) {
                 $service = $rule->deliveryService;
 
-                if (!$service || !$service->status) {
+                if (! $service || ! $service->status) {
                     return false;
                 }
 
@@ -61,11 +61,15 @@ class DeliveryZoneResolverService
                 $service = $rule->deliveryService;
                 $codAllowed = $service->type === 'courier_service' && (bool) $rule->cod_allowed;
                 $basePrice = (int) ($rule->base_price ?? $service->priceKg ?? 0);
-                $sellerMultiplier = max(0, $sellerCount - 1);
                 $additionalPercent = (float) ($rule->additional_seller_percent ?? 50);
-                $calcPrice = $basePrice + ($basePrice * ($additionalPercent / 100) * $sellerMultiplier);
                 $freePriceFrom = (int) ($rule->free_price_from ?? $service->freePriceFrom ?? 0);
-                $finalPrice = $cartTotal >= $freePriceFrom ? 0 : (int) round($calcPrice);
+                $priceComponents = $this->calculatePriceComponents(
+                    basePrice: $basePrice,
+                    sellerCount: $sellerCount,
+                    additionalPercent: $additionalPercent,
+                    freePriceFrom: $freePriceFrom,
+                    cartTotal: $cartTotal,
+                );
 
                 return [
                     'id' => (int) $service->id,
@@ -74,8 +78,12 @@ class DeliveryZoneResolverService
                     'muddat' => (int) ($rule->eta_days ?? $service->muddat ?? 0),
                     'priceKg' => (int) ($service->priceKg ?? 0),
                     'freePriceFrom' => $freePriceFrom,
-                    'is_free' => $finalPrice === 0,
-                    'calculated_price' => $finalPrice,
+                    'is_free' => $priceComponents['total'] === 0,
+                    'calculated_price' => $priceComponents['total'],
+                    'base_delivery_price' => $priceComponents['base_delivery_price'],
+                    'additional_seller_price' => $priceComponents['additional_seller_price'],
+                    'additional_seller_percent' => $additionalPercent,
+                    'seller_count' => $sellerCount,
                     'capital' => (bool) ($service->capital ?? false),
                     'cod_allowed' => $codAllowed,
                     'zone_rule_id' => (int) $rule->id,
@@ -92,6 +100,26 @@ class DeliveryZoneResolverService
     {
         return $this->resolveOffers($location, $sellerCount, $cartTotal)
             ->firstWhere('id', $deliveryServiceId);
+    }
+
+    public function calculatePriceComponents(
+        int $basePrice,
+        int $sellerCount,
+        float $additionalPercent,
+        int $freePriceFrom,
+        float|int $cartTotal,
+    ): array {
+        $sellerMultiplier = max(0, $sellerCount - 1);
+        $additionalSellerPrice = (int) round($basePrice * ($additionalPercent / 100) * $sellerMultiplier);
+        $baseDeliveryPrice = $freePriceFrom > 0 && $cartTotal >= $freePriceFrom
+            ? 0
+            : max(0, $basePrice);
+
+        return [
+            'base_delivery_price' => $baseDeliveryPrice,
+            'additional_seller_price' => $additionalSellerPrice,
+            'total' => $baseDeliveryPrice + $additionalSellerPrice,
+        ];
     }
 
     private function detectCountryCode(object|array $location): ?string
