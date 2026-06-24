@@ -2,18 +2,17 @@
 
 namespace App\Services;
 
-use App\Enums\CourierTaskLeg;
 use App\Enums\CourierOrderStatusCode;
+use App\Enums\CourierTaskLeg;
 use App\Enums\CourierTaskStatusCode;
 use App\Enums\FulfillmentMode;
 use App\Enums\FulfillmentStatusCode;
 use App\Models\CourierOrder;
 use App\Models\CourierOrderItem;
+use App\Models\Couriers;
 use App\Models\CourierTask;
 use App\Models\CourierTransaction;
-use App\Models\Couriers;
 use App\Models\OrderFulfillment;
-use App\Models\SellerOrder;
 use App\Models\Sold;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -30,7 +29,7 @@ class CourierTaskOrchestratorService
         $order->loadMissing('fulfillment.hub');
         /** @var OrderFulfillment|null $fulfillment */
         $fulfillment = $order->fulfillment;
-        if (!$fulfillment) {
+        if (! $fulfillment) {
             return collect();
         }
 
@@ -80,6 +79,7 @@ class CourierTaskOrchestratorService
                     cashCollectAmount: (int) ($fulfillment->cash_collect_amount ?? 0),
                     feeAmount: (int) ($order->deliveryPrice ?? 0),
                 ));
+
                 continue;
             }
 
@@ -103,11 +103,15 @@ class CourierTaskOrchestratorService
 
     public function acceptAvailableTasksForCourier(Sold $order, Couriers $courier): Collection
     {
+        $order->loadMissing('fulfillment');
+        $targetLegs = $this->targetLegsForCurrentPhase($order->fulfillment);
+
         $tasks = $this->ensureTasksForOrder($order)
             ->filter(function (CourierTask $task) {
                 return $task->status_code === CourierTaskStatusCode::ASSIGNED->value
                     && $task->courier_id === null;
             })
+            ->when($targetLegs !== [], fn (Collection $tasks) => $tasks->whereIn('leg', $targetLegs))
             ->values();
 
         if ($tasks->isEmpty()) {
@@ -120,7 +124,7 @@ class CourierTaskOrchestratorService
                 ->sum(fn (CourierTask $task) => (int) ($task->cash_collect_amount ?? 0));
 
             $lockedCourier = Couriers::query()->lockForUpdate()->findOrFail($courier->id);
-            if ($totalCodExposure > 0 && !$this->codCapacityService->canTakeCashOrder($lockedCourier, $totalCodExposure)) {
+            if ($totalCodExposure > 0 && ! $this->codCapacityService->canTakeCashOrder($lockedCourier, $totalCodExposure)) {
                 throw new \RuntimeException("Kuryer balansida bu naqd buyurtma uchun yetarli collateral yo'q.");
             }
 
@@ -148,11 +152,39 @@ class CourierTaskOrchestratorService
             ->get();
     }
 
+    public function targetLegsForCurrentPhase(?OrderFulfillment $fulfillment): array
+    {
+        if (! $fulfillment) {
+            return [];
+        }
+
+        if ($fulfillment->fulfillment_mode === FulfillmentMode::DIRECT_COURIER->value) {
+            return [CourierTaskLeg::DIRECT_DELIVERY->value];
+        }
+
+        if ($fulfillment->fulfillment_mode === FulfillmentMode::POSTAL_ONLY_VIA_HUB->value) {
+            return [CourierTaskLeg::FIRST_MILE->value];
+        }
+
+        if ($fulfillment->fulfillment_mode === FulfillmentMode::HUB_BASED->value) {
+            $lastMileStatuses = [
+                FulfillmentStatusCode::ASSIGNED_LAST_MILE->value,
+                FulfillmentStatusCode::OUT_FOR_DELIVERY->value,
+            ];
+
+            return in_array($fulfillment->status_code, $lastMileStatuses, true)
+                ? [CourierTaskLeg::LAST_MILE->value]
+                : [CourierTaskLeg::FIRST_MILE->value];
+        }
+
+        return [];
+    }
+
     public function markSellerHandover(Sold $order, ?int $sellerId = null, ?int $courierId = null): void
     {
         $order->loadMissing('fulfillment');
         $fulfillment = $order->fulfillment;
-        if (!$fulfillment) {
+        if (! $fulfillment) {
             return;
         }
 
@@ -204,7 +236,7 @@ class CourierTaskOrchestratorService
             ->latest('id')
             ->first();
 
-        if (!$task) {
+        if (! $task) {
             return null;
         }
 
@@ -234,7 +266,7 @@ class CourierTaskOrchestratorService
     {
         $fulfillment->loadMissing('order');
         $order = $fulfillment->order;
-        if (!$order) {
+        if (! $order) {
             return;
         }
 
@@ -320,7 +352,7 @@ class CourierTaskOrchestratorService
     {
         $fulfillment->loadMissing('order', 'hub');
         $order = $fulfillment->order;
-        if (!$order || !$fulfillment->hub) {
+        if (! $order || ! $fulfillment->hub) {
             return null;
         }
 
@@ -396,7 +428,7 @@ class CourierTaskOrchestratorService
             'legacy_requested_fee_amount' => $feeAmount,
         ]);
 
-        if (!$task->exists || $task->status_code === CourierTaskStatusCode::CANCELLED->value) {
+        if (! $task->exists || $task->status_code === CourierTaskStatusCode::CANCELLED->value) {
             $task->courier_id = null;
             $task->status_code = CourierTaskStatusCode::ASSIGNED->value;
             $task->assigned_at = now();
@@ -414,7 +446,7 @@ class CourierTaskOrchestratorService
 
     private function normalizeAddress(mixed $address): ?array
     {
-        if (!is_array($address) || empty($address)) {
+        if (! is_array($address) || empty($address)) {
             return null;
         }
 

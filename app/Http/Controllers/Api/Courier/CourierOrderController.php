@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Api\Courier;
 
 use App\Enums\CourierOrderStatusCode;
+use App\Enums\CourierTaskLeg;
 use App\Enums\CourierTaskStatusCode;
+use App\Enums\FulfillmentMode;
 use App\Enums\FulfillmentStatusCode;
 use App\Enums\OrderStatusCode;
 use App\Enums\PaymentStatusCode;
@@ -107,8 +109,13 @@ class CourierOrderController extends Controller
                     return false;
                 }
 
+                $orderModel->loadMissing('fulfillment');
+                $targetLegs = $this->courierTaskOrchestratorService->targetLegsForCurrentPhase($orderModel->fulfillment);
                 $tasks = $this->courierTaskOrchestratorService->ensureTasksForOrder($orderModel)
                     ->filter(fn ($task) => $task->courier_id === null && $task->status_code === 'assigned');
+                if ($targetLegs !== []) {
+                    $tasks = $tasks->whereIn('leg', $targetLegs);
+                }
 
                 if ($tasks->isEmpty()) {
                     return false;
@@ -1113,16 +1120,13 @@ class CourierOrderController extends Controller
             ];
         }
 
-        $order->loadMissing('fulfillment.hub', 'courierTasks');
-        $tasks = $order->courierTasks;
-        if ($tasks->isEmpty()) {
-            $tasks = $this->courierTaskOrchestratorService->ensureTasksForOrder($order);
-        }
+        $order->loadMissing('fulfillment.hub');
+        $tasks = $this->courierTaskOrchestratorService->ensureTasksForOrder($order);
         if ($courierId) {
             $tasks = $tasks->where('courier_id', $courierId);
         }
 
-        $activeTask = $this->pickPreferredTask($tasks, $courierId);
+        $activeTask = $this->pickPreferredTask($tasks, $courierId, $order->fulfillment);
 
         return [
             'task_leg' => $activeTask?->leg,
@@ -1147,10 +1151,21 @@ class CourierOrderController extends Controller
         );
     }
 
-    private function pickPreferredTask(\Illuminate\Support\Collection $tasks, ?int $courierId): ?CourierTask
-    {
+    private function pickPreferredTask(
+        \Illuminate\Support\Collection $tasks,
+        ?int $courierId,
+        ?OrderFulfillment $fulfillment
+    ): ?CourierTask {
         if ($tasks->isEmpty()) {
             return null;
+        }
+
+        $targetLegs = $this->courierTaskOrchestratorService->targetLegsForCurrentPhase($fulfillment);
+        if ($targetLegs !== []) {
+            $targetTasks = $tasks->whereIn('leg', $targetLegs);
+            if ($targetTasks->isNotEmpty()) {
+                $tasks = $targetTasks;
+            }
         }
 
         if ($courierId === null) {
@@ -1175,16 +1190,41 @@ class CourierOrderController extends Controller
         ];
 
         return $tasks
-            ->sort(function (CourierTask $a, CourierTask $b) use ($priority) {
+            ->sort(function (CourierTask $a, CourierTask $b) use ($priority, $fulfillment) {
                 $aPriority = $priority[$a->status_code] ?? 999;
                 $bPriority = $priority[$b->status_code] ?? 999;
 
                 if ($aPriority === $bPriority) {
+                    $aLegPriority = $this->legPriority($a->leg, $fulfillment);
+                    $bLegPriority = $this->legPriority($b->leg, $fulfillment);
+                    if ($aLegPriority !== $bLegPriority) {
+                        return $aLegPriority <=> $bLegPriority;
+                    }
+
                     return (int) $b->id <=> (int) $a->id;
                 }
 
                 return $aPriority <=> $bPriority;
             })
             ->first();
+    }
+
+    private function legPriority(?string $leg, ?OrderFulfillment $fulfillment): int
+    {
+        if (! $fulfillment) {
+            return 50;
+        }
+
+        return match ($fulfillment->fulfillment_mode) {
+            FulfillmentMode::DIRECT_COURIER->value => $leg === CourierTaskLeg::DIRECT_DELIVERY->value ? 0 : 50,
+            FulfillmentMode::POSTAL_ONLY_VIA_HUB->value => $leg === CourierTaskLeg::FIRST_MILE->value ? 0 : 50,
+            FulfillmentMode::HUB_BASED->value => in_array($fulfillment->status_code, [
+                FulfillmentStatusCode::ASSIGNED_LAST_MILE->value,
+                FulfillmentStatusCode::OUT_FOR_DELIVERY->value,
+            ], true)
+                ? ($leg === CourierTaskLeg::LAST_MILE->value ? 0 : 50)
+                : ($leg === CourierTaskLeg::FIRST_MILE->value ? 0 : 50),
+            default => 50,
+        };
     }
 }
