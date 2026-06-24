@@ -160,7 +160,6 @@ class CourierOrderController extends Controller
                 return $this->hydrateCourierOrderItems($order, Auth::guard('courier')->id());
             })
             ->filter(fn (CourierOrder $order) => $order->items->isNotEmpty())
-            ->filter(fn (CourierOrder $order) => ! $this->hasClosedPickupLocation($order))
             ->values();
 
         Log::info('Courier available orders fetched', [
@@ -1001,8 +1000,10 @@ class CourierOrderController extends Controller
                 'seller_order_items.price',
             ]);
 
-        if ($activeSellerItems->isEmpty() && empty($cancelledSellerIds)) {
-            return $items->take(0);
+        if ($activeSellerItems->isEmpty()) {
+            return $items
+                ->reject(fn ($item) => in_array((int) ($item->seller_id ?? 0), $cancelledSellerIds, true))
+                ->values();
         }
 
         $remaining = [];
@@ -1012,8 +1013,6 @@ class CourierOrderController extends Controller
                 (int) $sellerItem->product_id,
                 $sellerItem->variant_id !== null ? (int) $sellerItem->variant_id : null,
                 (string) $sellerItem->type,
-                (int) $sellerItem->quantity,
-                (int) $sellerItem->price,
             );
             $remaining[$key] = ($remaining[$key] ?? 0) + 1;
         }
@@ -1029,8 +1028,6 @@ class CourierOrderController extends Controller
                 (int) ($item->product_id ?? 0),
                 $item->variant_id !== null ? (int) $item->variant_id : null,
                 (string) ($item->type ?? ''),
-                (int) ($item->quantity ?? 0),
-                (int) ($item->price ?? 0),
             );
 
             if (($remaining[$key] ?? 0) <= 0) {
@@ -1047,17 +1044,13 @@ class CourierOrderController extends Controller
         int $sellerId,
         int $productId,
         ?int $variantId,
-        string $type,
-        int $quantity,
-        int $price
+        string $type
     ): string {
         return implode(':', [
             $sellerId,
             $productId,
             $variantId ?? 0,
             $type,
-            $quantity,
-            $price,
         ]);
     }
 
