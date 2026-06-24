@@ -63,6 +63,9 @@ class SellerOrderCancellationService
         if ($enforceOwnership && $seller) {
             $this->assertSellerOwnsOrder($seller, $sellerOrder);
         }
+        if ($seller) {
+            $this->assertSellerOrderAcceptedBeforeCancel($sellerOrder);
+        }
         $this->assertOrderCancelable($sellerOrder, $order);
 
         if ($item->cancelled_at) {
@@ -224,6 +227,9 @@ class SellerOrderCancellationService
         $order = Sold::query()->findOrFail($sellerOrder->order_id);
 
         $this->assertSellerOwnsOrder($seller, $sellerOrder);
+        if ($seller) {
+            $this->assertSellerOrderAcceptedBeforeCancel($sellerOrder);
+        }
         $this->assertOrderCancelable($sellerOrder, $order);
 
         if ($item->cancelled_at) {
@@ -248,16 +254,7 @@ class SellerOrderCancellationService
         $reason = SellerCancellationReasonCatalog::itemReasonPayload($reasonCode, $customNote);
         $restoreUntil = now()->addMinutes(30);
 
-        DB::transaction(function () use ($seller, $sellerOrder, $item, $order, $reason, $restoreUntil) {
-            $sellerStatus = SellerOrderStatusCode::fromLegacy($sellerOrder->status_code ?: $sellerOrder->status);
-            if ($sellerStatus === SellerOrderStatusCode::NEW) {
-                $sellerOrder->forceFill([
-                    'status' => SellerOrderStatusCode::ACCEPTED->legacy(),
-                    'status_code' => SellerOrderStatusCode::ACCEPTED->value,
-                    'accepted_at' => $sellerOrder->accepted_at ?: now(),
-                ])->save();
-            }
-
+        DB::transaction(function () use ($seller, $item, $order, $reason, $restoreUntil) {
             $item->forceFill([
                 'cancel_requested_at' => now(),
                 'cancel_restore_until' => $restoreUntil,
@@ -1107,6 +1104,15 @@ class SellerOrderCancellationService
             OrderStatusCode::CANCELLED->value,
         ], true)) {
             throw new RuntimeException('Bu buyurtma bosqichida seller bekor qila olmaydi.');
+        }
+    }
+
+    private function assertSellerOrderAcceptedBeforeCancel(SellerOrder $sellerOrder): void
+    {
+        $status = SellerOrderStatusCode::fromLegacy($sellerOrder->status_code ?: $sellerOrder->status);
+
+        if ($status === SellerOrderStatusCode::NEW) {
+            throw new RuntimeException('Avval buyurtmani qabul qiling, keyin mahsulot yoki buyurtmani bekor qilishingiz mumkin.');
         }
     }
 
