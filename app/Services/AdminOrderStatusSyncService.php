@@ -19,7 +19,7 @@ class AdminOrderStatusSyncService
         'payment_pending' => ['label' => "To'lov jarayonida", 'badge' => 'badge-muted'],
         'new' => ['label' => 'Yangi buyurtma', 'badge' => 'badge-info'],
         'accepted' => ['label' => "Do'kon qabul qildi", 'badge' => 'badge-warning'],
-        'handed_to_courier' => ['label' => "Kuryerga berildi", 'badge' => 'badge-success'],
+        'handed_to_courier' => ['label' => 'Kuryerga berildi', 'badge' => 'badge-success'],
         'cancelled' => ['label' => 'Bekor qilindi', 'badge' => 'badge-danger'],
     ];
 
@@ -48,6 +48,7 @@ class AdminOrderStatusSyncService
             if ($statusCode === OrderStatusCode::CANCELLED) {
                 $this->orderService->cancelOrder($order, strict: false);
                 DB::afterCommit(fn () => $this->orderStatusPushService->sendForTransition($order->fresh(), $previousStatus, 'F'));
+
                 return;
             }
 
@@ -93,7 +94,7 @@ class AdminOrderStatusSyncService
             ]);
 
             $order = $sellerOrder->order()->first();
-            if (!$order) {
+            if (! $order) {
                 return;
             }
             $previousCompletedPaid = $order->isCompletedAndPaid();
@@ -102,6 +103,7 @@ class AdminOrderStatusSyncService
                 $previousStatus = (string) $order->status;
                 $this->orderService->cancelOrder($order, strict: false);
                 DB::afterCommit(fn () => $this->orderStatusPushService->sendForTransition($order->fresh(), $previousStatus, 'F'));
+
                 return;
             }
 
@@ -138,7 +140,7 @@ class AdminOrderStatusSyncService
             ]);
 
             $order = $courierOrder->order()->first();
-            if (!$order) {
+            if (! $order) {
                 return;
             }
 
@@ -148,6 +150,7 @@ class AdminOrderStatusSyncService
             if ($statusCode === CourierOrderStatusCode::CANCELLED) {
                 $this->orderService->cancelOrder($order, strict: false);
                 DB::afterCommit(fn () => $this->orderStatusPushService->sendForTransition($order->fresh(), $previousStatus, 'F'));
+
                 return;
             }
 
@@ -246,11 +249,11 @@ class AdminOrderStatusSyncService
                 : CourierOrderStatusCode::PENDING;
         }
 
-        if (!$hasCourier && in_array($statusCode, [
+        if (! $hasCourier && in_array($statusCode, [
             OrderStatusCode::PACKING->value,
             OrderStatusCode::IN_DELIVERY->value,
         ], true)) {
-            return CourierOrderStatusCode::CANCELLED;
+            return CourierOrderStatusCode::PENDING;
         }
 
         return match ($statusCode) {
@@ -272,10 +275,10 @@ class AdminOrderStatusSyncService
         return match ($statusCode) {
             SellerOrderStatusCode::HANDED_TO_COURIER => $hasCourier
                 ? CourierOrderStatusCode::IN_DELIVERY
-                : CourierOrderStatusCode::CANCELLED,
+                : CourierOrderStatusCode::PENDING,
             SellerOrderStatusCode::ACCEPTED => $hasCourier
                 ? CourierOrderStatusCode::IN_DELIVERY
-                : CourierOrderStatusCode::CANCELLED,
+                : CourierOrderStatusCode::PENDING,
             SellerOrderStatusCode::CANCELLED => CourierOrderStatusCode::CANCELLED,
             default => ($paymentCode === PaymentStatusCode::CARD_PENDING->value
                 ? CourierOrderStatusCode::PAYMENT_PENDING
@@ -301,6 +304,7 @@ class AdminOrderStatusSyncService
 
         if ($isCompletedPaid) {
             $order->completed_at ??= now();
+
             return;
         }
 
@@ -313,6 +317,7 @@ class AdminOrderStatusSyncService
 
         if ($order->isCompletedAndPaid()) {
             $this->orderService->processCashbackAfterOrderMutation($order, $order->user()->first());
+
             return;
         }
 
@@ -324,7 +329,7 @@ class AdminOrderStatusSyncService
     private function syncFulfillmentFromMainStatus(Sold $order, string $status): void
     {
         $fulfillment = $order->fulfillment()->first();
-        if (!$fulfillment) {
+        if (! $fulfillment) {
             return;
         }
 
@@ -344,7 +349,7 @@ class AdminOrderStatusSyncService
     private function syncFulfillmentFromSellerStatus(Sold $order, SellerOrderStatusCode $statusCode): void
     {
         $fulfillment = $order->fulfillment()->first();
-        if (!$fulfillment) {
+        if (! $fulfillment) {
             return;
         }
 
@@ -362,7 +367,7 @@ class AdminOrderStatusSyncService
     private function syncFulfillmentFromCourierStatus(Sold $order, CourierOrderStatusCode $statusCode): void
     {
         $fulfillment = $order->fulfillment()->first();
-        if (!$fulfillment) {
+        if (! $fulfillment) {
             return;
         }
 

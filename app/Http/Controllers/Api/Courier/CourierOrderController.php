@@ -92,6 +92,45 @@ class CourierOrderController extends Controller
                                             ->where('paymentStatus', PaymentStatusCode::PAID->legacy());
                                     });
                             }));
+                    })
+                    // Avvalgi sync xatosi sabab ayrim paid-active orderlar
+                    // courier_orders ichida `rejected/cancelled` bo'lib qolgan.
+                    // Asosiy order bekor qilinmagan bo'lsa, ularni available
+                    // feedga qaytarib, pastda pendingga normalizatsiya qilamiz.
+                    ->orWhere(function ($q) {
+                        $q->where(function ($cancelledQuery) {
+                            $cancelledQuery->where('status_code', CourierOrderStatusCode::CANCELLED->value)
+                                ->orWhere(function ($fallback) {
+                                    $fallback->whereNull('status_code')
+                                        ->whereIn('status', [
+                                            CourierOrderStatusCode::CANCELLED->legacy(),
+                                            'cancelled',
+                                        ]);
+                                });
+                        })
+                            ->whereHas('order', function ($order) {
+                                $order->where(function ($paidQuery) {
+                                    $paidQuery->where('payment_status_code', PaymentStatusCode::PAID->value)
+                                        ->orWhere(function ($fallback) {
+                                            $fallback->whereNull('payment_status_code')
+                                                ->where('paymentStatus', PaymentStatusCode::PAID->legacy());
+                                        });
+                                })
+                                    ->where(function ($activeStatus) {
+                                        $activeStatus->whereNotIn('status_code', [
+                                            OrderStatusCode::CANCELLED->value,
+                                            OrderStatusCode::RETURNED->value,
+                                        ])->orWhereNull('status_code');
+                                    })
+                                    ->where(function ($activeLegacy) {
+                                        $activeLegacy->whereNotIn('status', [
+                                            OrderStatusCode::CANCELLED->legacy(),
+                                            OrderStatusCode::RETURNED->legacy(),
+                                            OrderStatusCode::CANCELLED->value,
+                                            OrderStatusCode::RETURNED->value,
+                                        ])->orWhereNull('status');
+                                    });
+                            });
                     });
             })
             ->with([
@@ -134,9 +173,16 @@ class CourierOrderController extends Controller
             ->map(function ($order) use ($courier) {
                 $soldOrder = $order->order()->first();
                 if (
-                    $order->status_code === CourierOrderStatusCode::PAYMENT_PENDING->value
+                    in_array($order->status_code, [
+                        CourierOrderStatusCode::PAYMENT_PENDING->value,
+                        CourierOrderStatusCode::CANCELLED->value,
+                    ], true)
                     && $soldOrder
                     && PaymentStatusCode::fromLegacy($soldOrder->payment_status_code ?? $soldOrder->paymentStatus)->value === PaymentStatusCode::PAID->value
+                    && ! in_array(OrderStatusCode::fromLegacy($soldOrder->status_code ?? $soldOrder->status), [
+                        OrderStatusCode::CANCELLED,
+                        OrderStatusCode::RETURNED,
+                    ], true)
                 ) {
                     $order->status = CourierOrderStatusCode::PENDING->legacy();
                     $order->status_code = CourierOrderStatusCode::PENDING->value;
