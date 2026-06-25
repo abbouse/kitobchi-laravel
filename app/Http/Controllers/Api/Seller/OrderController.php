@@ -25,6 +25,7 @@ use App\Services\SellerOrderCancellationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
 class OrderController extends Controller
@@ -569,6 +570,14 @@ class OrderController extends Controller
 
                 $allSellersDone = SellerOrder::where('order_id', $orderId)
                     ->where(function ($query) {
+                        $query->where('status_code', '!=', SellerOrderStatusCode::CANCELLED->value)
+                            ->orWhereNull('status_code');
+                    })
+                    ->where(function ($query) {
+                        $query->where('status', '!=', SellerOrderStatusCode::CANCELLED->legacy())
+                            ->orWhereNull('status');
+                    })
+                    ->where(function ($query) {
                         $query->where('status_code', '!=', SellerOrderStatusCode::HANDED_TO_COURIER->value)
                             ->orWhere(function ($fallback) {
                                 $fallback->whereNull('status_code')
@@ -624,12 +633,20 @@ class OrderController extends Controller
             $sellerOrder = SellerOrder::where('order_id', $orderId)
                 ->where('seller_id', $storeSellerId)
                 ->first();
-            if ($sellerOrder) {
-                $this->orderRealtimeService->broadcastSellerOrderUpdated($sellerOrder, 'seller_order.handed_to_courier');
-            }
-
             if ($response->getStatusCode() >= 200 && $response->getStatusCode() < 300) {
-                $this->qrTokenService->markPickupCodeUsed($parsedQr['normalized_qr']);
+                try {
+                    if ($sellerOrder) {
+                        $this->orderRealtimeService->broadcastSellerOrderUpdated($sellerOrder, 'seller_order.handed_to_courier');
+                    }
+                    $this->qrTokenService->markPickupCodeUsed($parsedQr['normalized_qr']);
+                } catch (\Throwable $sideEffectError) {
+                    Log::warning('[SellerOrder] Handover side effect failed', [
+                        'order_id' => $orderId,
+                        'seller_id' => $storeSellerId,
+                        'courier_id' => $courierId,
+                        'error' => $sideEffectError->getMessage(),
+                    ]);
+                }
             }
 
             return $response;
