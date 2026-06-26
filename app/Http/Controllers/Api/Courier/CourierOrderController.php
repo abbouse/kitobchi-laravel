@@ -155,6 +155,7 @@ class CourierOrderController extends Controller
                 if ($targetLegs !== []) {
                     $tasks = $tasks->whereIn('leg', $targetLegs);
                 }
+                $tasks = $this->courierVisibleTasksForAvailableFeed($tasks, $orderModel);
                 if (! $this->allSellerPickupTasksReadyForCourier($tasks, $orderModel)) {
                     return false;
                 }
@@ -523,6 +524,7 @@ class CourierOrderController extends Controller
                 $availableTasks = $this->courierTaskOrchestratorService->ensureTasksForOrder($sold)
                     ->filter(fn (CourierTask $task) => $task->status_code === CourierTaskStatusCode::ASSIGNED->value && $task->courier_id === null)
                     ->when($targetLegs !== [], fn ($tasks) => $tasks->whereIn('leg', $targetLegs))
+                    ->pipe(fn ($tasks) => $this->courierVisibleTasksForAvailableFeed($tasks, $sold))
                     ->values();
 
                 if (! $this->allSellerPickupTasksReadyForCourier($availableTasks, $sold)) {
@@ -1001,6 +1003,36 @@ class CourierOrderController extends Controller
         }
 
         return true;
+    }
+
+    private function courierVisibleTasksForAvailableFeed(\Illuminate\Support\Collection $tasks, Sold $order): \Illuminate\Support\Collection
+    {
+        return $tasks->filter(function (CourierTask $task) use ($order) {
+            if (! in_array($task->leg, [CourierTaskLeg::FIRST_MILE->value, CourierTaskLeg::DIRECT_DELIVERY->value], true)) {
+                return true;
+            }
+
+            $sellerId = (int) ($task->seller_id ?? 0);
+            if ($sellerId <= 0) {
+                return true;
+            }
+
+            $sellerOrder = SellerOrder::query()
+                ->where('order_id', $order->id)
+                ->where('seller_id', $sellerId)
+                ->first(['id', 'status', 'status_code']);
+
+            if (! $sellerOrder) {
+                return false;
+            }
+
+            $status = SellerOrderStatusCode::fromLegacy($sellerOrder->status_code ?: $sellerOrder->status);
+            if ($status === SellerOrderStatusCode::CANCELLED || $status === SellerOrderStatusCode::PAYMENT_PENDING) {
+                return false;
+            }
+
+            return $this->sellerOrderHasCourierVisibleItems($sellerOrder);
+        })->values();
     }
 
     private function sellerOrderHasCourierVisibleItems(SellerOrder $sellerOrder): bool

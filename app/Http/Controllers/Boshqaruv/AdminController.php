@@ -1372,17 +1372,25 @@ class AdminController extends Controller
     public function sellerTransactionReport(SellerTransaction $transaction, PayoutReportService $reportService)
     {
         $report = $reportService->seller($transaction);
+        $report['lang'] = request('lang') === 'ru' ? 'ru' : 'uz';
         $pdf = Pdf::loadView('boshqaruv.pdf.payout-report', $report)->setPaper('a4');
+        $filename = $report['lang'] === 'ru'
+            ? "otchet-prodavtsa-{$transaction->id}.pdf"
+            : "sotuvchi-hisobot-{$transaction->id}.pdf";
 
-        return $pdf->download("seller-payout-report-{$transaction->id}.pdf");
+        return $pdf->download($filename);
     }
 
     public function courierTransactionReport(CourierTransaction $courierTransaction, PayoutReportService $reportService)
     {
         $report = $reportService->courier($courierTransaction);
+        $report['lang'] = request('lang') === 'ru' ? 'ru' : 'uz';
         $pdf = Pdf::loadView('boshqaruv.pdf.payout-report', $report)->setPaper('a4');
+        $filename = $report['lang'] === 'ru'
+            ? "otchet-kurera-{$courierTransaction->id}.pdf"
+            : "kuryer-hisobot-{$courierTransaction->id}.pdf";
 
-        return $pdf->download("courier-payout-report-{$courierTransaction->id}.pdf");
+        return $pdf->download($filename);
     }
 
     public function storeExpense(Request $request): \Illuminate\Http\RedirectResponse

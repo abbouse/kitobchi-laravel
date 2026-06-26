@@ -112,7 +112,7 @@ class PayoutReportService
 
         return [
             'owner' => $owner,
-            'document_no' => strtoupper($owner).'-PAY-'.$transaction->id,
+            'document_no' => ($owner === 'courier' ? 'KURYER-HISOB-' : 'SOTUVCHI-HISOB-').$transaction->id,
             'generated_at' => now()->format('Y-m-d H:i'),
             'period' => [
                 'from' => $periodFrom ?: 'Boshlanishidan',
