@@ -42,6 +42,8 @@ return [
         'username' => env('PAYLOV_USERNAME'),
         'password' => env('PAYLOV_PASSWORD'),
         'merchant_id' => env('PAYLOV_MERCHANT_ID'),
+        'hold_minutes' => (int) env('PAYLOV_ORDER_HOLD_MINUTES', 10080),
+        'hold_time_key' => env('PAYLOV_HOLD_TIME_KEY', 'holdTime'),
     ],
 
     'kangaroo' => [
@@ -52,8 +54,8 @@ return [
         'http_retry_delay_ms' => max(50, (int) env('KANGAROO_HTTP_RETRY_DELAY_MS', 250)),
     ],
     'openai' => [
-    'key' => env('OPENAI_API_KEY'),
-],
+        'key' => env('OPENAI_API_KEY'),
+    ],
     'eskiz' => [
         'email' => env('ESKIZ_EMAIL', 'toordaliev@gmail.com'),
         'password' => env('ESKIZ_PASSWORD', 'aF6WH2CcaKes30zgLPCZ1MM7CPfPlgCX07HoM8rE'),

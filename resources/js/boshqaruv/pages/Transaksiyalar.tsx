@@ -28,9 +28,33 @@ interface Transaction {
   category?: string;
   ownerTotals?: { approvedCount?: number; approvedSum?: number; pendingSum?: number };
   sellerTotals?: { approvedCount?: number; approvedSum?: number; pendingSum?: number };
+  breakdown?: {
+    orders?: number;
+    products?: number;
+    gross?: number;
+    commission?: number;
+    net?: number;
+    basePayout?: number;
+    bonus?: number;
+    periodFrom?: string;
+    periodTo?: string;
+    rows?: Array<{
+      transaction_id?: number;
+      order_id?: number;
+      sub_order_id?: number;
+      gross?: number;
+      commission?: number;
+      net?: number;
+      base_payout?: number;
+      bonus?: number;
+      product_count?: number;
+      date?: string;
+    }>;
+  };
   nearby?: Array<{ id: number; amount?: number; netAmount?: number; status?: string; date?: string }>;
   approveUrl?: string;
   rejectUrl?: string;
+  reportUrl?: string;
 }
 
 const statusChip = (status?: string) => {
@@ -151,11 +175,48 @@ export default function Transaksiyalar() {
             <div className="col-6"><small className="text-muted">Order</small><div>{selected?.owner === 'courier' ? `#${selected?.orderId || '—'} · CO #${selected?.courierOrderId || '—'} · TASK #${selected?.courierTaskId || '—'}` : `#${selected?.orderId || '—'} · SELL #${selected?.sellerOrderId || '—'}`}</div></div>
             <div className="col-6"><small className="text-muted">Yangilangan</small><div>{selected?.updatedAt || '—'}</div></div>
             <div className="col-12"><small className="text-muted">Izoh</small><div>{selected?.note || '—'}</div></div>
+            <div className="col-12">
+              <div className="detail-panel">
+                <div className="d-flex justify-content-between align-items-start gap-2 mb-3">
+                  <div>
+                    <h6 className="fw-bold mb-1">Payout tarkibi</h6>
+                    <small className="text-muted">{selected?.breakdown?.periodFrom || 'Boshlanishidan'} — {selected?.breakdown?.periodTo || selected?.date || '—'}</small>
+                  </div>
+                  {selected?.reportUrl ? <a className="btn btn-sm btn-dark" href={selected.reportUrl} target="_blank" rel="noreferrer"><i className="bi bi-filetype-pdf me-1"></i> PDF hisobot</a> : null}
+                </div>
+                <div className="row g-2 mb-3">
+                  <div className="col-md-3 col-6"><small className="text-muted d-block">Orderlar</small><strong>{selected?.breakdown?.orders || 0} ta</strong></div>
+                  <div className="col-md-3 col-6"><small className="text-muted d-block">Mahsulotlar</small><strong>{selected?.breakdown?.products || 0} ta</strong></div>
+                  <div className="col-md-3 col-6"><small className="text-muted d-block">{selected?.owner === 'courier' ? 'Bonus' : 'Komissiya'}</small><strong>{fmt(selected?.owner === 'courier' ? (selected?.breakdown?.bonus || 0) : (selected?.breakdown?.commission || 0))} so'm</strong></div>
+                  <div className="col-md-3 col-6"><small className="text-muted d-block">Yakuniy</small><strong>{fmt(selected?.breakdown?.net || selected?.netAmount || selected?.amount || 0)} so'm</strong></div>
+                </div>
+                <div className="table-responsive">
+                  <table className="data-table small">
+                    <thead><tr><th>Order</th><th>Sub order</th><th>Mahsulot</th><th>Brutto/Baza</th><th>Komissiya/Bonus</th><th>Net</th></tr></thead>
+                    <tbody>
+                      {(selected?.breakdown?.rows || []).slice(0, 8).map((row, index) => (
+                        <tr key={`${row.transaction_id || index}-${row.order_id || 'x'}`}>
+                          <td>#{row.order_id || '—'}<br /><small className="text-muted">{row.date || '—'}</small></td>
+                          <td>#{row.sub_order_id || '—'}<br /><small className="text-muted">TRX #{row.transaction_id || '—'}</small></td>
+                          <td>{row.product_count || 0} ta</td>
+                          <td>{fmt(selected?.owner === 'courier' ? (row.base_payout || row.gross || 0) : (row.gross || 0))} so'm</td>
+                          <td>{fmt(selected?.owner === 'courier' ? (row.bonus || 0) : (row.commission || 0))} so'm</td>
+                          <td className="fw-bold">{fmt(row.net || 0)} so'm</td>
+                        </tr>
+                      ))}
+                      {(selected?.breakdown?.rows || []).length === 0 ? <tr><td colSpan={6} className="text-center text-muted py-3">Breakdown topilmadi</td></tr> : null}
+                    </tbody>
+                  </table>
+                </div>
+                {(selected?.breakdown?.rows || []).length > 8 ? <small className="text-muted d-block mt-2">PDF hisobotda barcha qatorlar to'liq chiqadi.</small> : null}
+              </div>
+            </div>
             <div className="col-12"><div className="detail-panel"><h6 className="fw-bold mb-3">{selected?.owner === 'courier' ? 'Kuryer summary' : 'Seller summary'}</h6><div className="row g-2"><div className="col-md-4"><small className="text-muted d-block">Tasdiqlangan</small><strong>{selected?.ownerTotals?.approvedCount || selected?.sellerTotals?.approvedCount || 0} ta</strong></div><div className="col-md-4"><small className="text-muted d-block">Tasdiqlangan summa</small><strong>{fmt(selected?.ownerTotals?.approvedSum || selected?.sellerTotals?.approvedSum || 0)} so'm</strong></div><div className="col-md-4"><small className="text-muted d-block">Pending summa</small><strong>{fmt(selected?.ownerTotals?.pendingSum || selected?.sellerTotals?.pendingSum || 0)} so'm</strong></div></div></div></div>
             <div className="col-12"><div className="detail-panel"><h6 className="fw-bold mb-3">Yaqin tranzaksiyalar</h6>{(selected?.nearby || []).map((row) => <div className="d-flex justify-content-between border-bottom py-2" key={row.id}><span>#TRX-{row.id} · {row.status || '—'}</span><strong>{fmt(row.netAmount || row.amount || 0)} so'm</strong></div>)}{(selected?.nearby || []).length === 0 ? <div className="text-muted">Boshqa tranzaksiya topilmadi</div> : null}</div></div>
           </div>
         </Modal.Body>
         <Modal.Footer>
+          {selected?.reportUrl ? <a className="btn btn-outline-dark" href={selected.reportUrl} target="_blank" rel="noreferrer"><i className="bi bi-filetype-pdf me-1"></i> PDF yuklab olish</a> : null}
           {statusChip(selected?.status) === 'chip-warning' && selected?.approveUrl ? <Button variant="outline-secondary" onClick={() => patch(selected.approveUrl, 'Tranzaksiya tasdiqlansinmi?')}>Tasdiqlash</Button> : null}
           {statusChip(selected?.status) === 'chip-warning' && selected?.rejectUrl ? <Button variant="outline-secondary" onClick={() => patch(selected.rejectUrl, 'Tranzaksiya rad etilsinmi?')}>Rad etish</Button> : null}
           <Button variant="light" onClick={() => setSelected(null)}>Yopish</Button>

@@ -106,6 +106,25 @@ class TransactionController extends Controller
         return $commissionSetting ? (int) $commissionSetting->percent : null;
     }
 
+    private function resolveWithdrawalMethod(Seller $seller): ?string
+    {
+        if (filled($seller->payment_card)) {
+            return (string) $seller->payment_card;
+        }
+
+        if (filled($seller->bank_account)) {
+            $parts = array_filter([
+                filled($seller->bank_name) ? trim((string) $seller->bank_name) : null,
+                'Hisob: '.($seller->masked_bank_account ?: $seller->bank_account),
+                filled($seller->bank_mfo) ? 'MFO: '.trim((string) $seller->bank_mfo) : null,
+            ]);
+
+            return implode(' · ', $parts);
+        }
+
+        return null;
+    }
+
     public function requestWithdrawal()
     {
         $seller = Auth::guard('seller')->user();
@@ -131,10 +150,11 @@ class TransactionController extends Controller
                 ], 400);
             }
 
-            if (empty($storeSeller->payment_card)) {
+            $withdrawalMethod = $this->resolveWithdrawalMethod($storeSeller);
+            if (! $withdrawalMethod) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Avval to‘lov kartasini kiriting',
+                    'message' => 'Avval to‘lov kartasi yoki bank hisob raqamini kiriting',
                 ], 400);
             }
 
@@ -142,7 +162,7 @@ class TransactionController extends Controller
 
             $transaction = SellerTransaction::create([
                 'seller_id' => $storeSellerId,
-                'card' => $storeSeller->payment_card,
+                'card' => $withdrawalMethod,
                 'type' => 'expense',
                 'category' => \App\Services\SellerOrderSettlementService::CATEGORY_WITHDRAWAL,
                 'amount' => $amount,

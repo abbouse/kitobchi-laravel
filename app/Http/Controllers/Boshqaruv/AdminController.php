@@ -77,6 +77,7 @@ use App\Services\AdminOrderStatusSyncService;
 use App\Services\DeliveryZoneResolverService;
 use App\Services\FcmRecipientService;
 use App\Services\HubRoleAccessService;
+use App\Services\PayoutReportService;
 use App\Services\SellerCancellationReasonCatalog;
 use App\Services\SellerOrderSettlementService;
 use App\Services\SellerPremiumService;
@@ -85,6 +86,7 @@ use App\Support\AdminOrderStatusPresenter;
 use App\Support\ProductArtikul;
 use App\Support\ProductImageUrls;
 use App\Support\ProductImageVariantGenerator;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -1365,6 +1367,22 @@ class AdminController extends Controller
         });
 
         return back()->with('success', "Kuryer to'lov arizasi rad etildi va balansga qaytarildi.");
+    }
+
+    public function sellerTransactionReport(SellerTransaction $transaction, PayoutReportService $reportService)
+    {
+        $report = $reportService->seller($transaction);
+        $pdf = Pdf::loadView('boshqaruv.pdf.payout-report', $report)->setPaper('a4');
+
+        return $pdf->download("seller-payout-report-{$transaction->id}.pdf");
+    }
+
+    public function courierTransactionReport(CourierTransaction $courierTransaction, PayoutReportService $reportService)
+    {
+        $report = $reportService->courier($courierTransaction);
+        $pdf = Pdf::loadView('boshqaruv.pdf.payout-report', $report)->setPaper('a4');
+
+        return $pdf->download("courier-payout-report-{$courierTransaction->id}.pdf");
     }
 
     public function storeExpense(Request $request): \Illuminate\Http\RedirectResponse
@@ -4257,6 +4275,7 @@ class AdminController extends Controller
 
             return [
                 'transactions' => $transactions->getCollection()->map(function (CourierTransaction $transaction) {
+                    $report = app(PayoutReportService::class)->courier($transaction);
                     $base = CourierTransaction::query()->where('courier_id', $transaction->courier_id);
                     $nearby = $transaction->courier_id
                         ? (clone $base)->whereKeyNot($transaction->id)->latest()->take(6)->get()
@@ -4290,6 +4309,18 @@ class AdminController extends Controller
                             'approvedSum' => (float) (clone $base)->where('status', 'approved')->sum('netAmount'),
                             'pendingSum' => (float) (clone $base)->where('status', 'pending')->sum('netAmount'),
                         ],
+                        'breakdown' => [
+                            'orders' => $report['totals']['orders'],
+                            'products' => $report['totals']['products'],
+                            'gross' => $report['totals']['gross'],
+                            'commission' => $report['totals']['commission'],
+                            'net' => $report['totals']['net'],
+                            'basePayout' => $report['totals']['base_payout'],
+                            'bonus' => $report['totals']['bonus'],
+                            'periodFrom' => $report['period']['from'],
+                            'periodTo' => $report['period']['to'],
+                            'rows' => $report['rows'],
+                        ],
                         'nearby' => $nearby->map(fn (CourierTransaction $row) => [
                             'id' => $row->id,
                             'amount' => (float) ($row->amount ?? 0),
@@ -4299,6 +4330,7 @@ class AdminController extends Controller
                         ])->values()->all(),
                         'approveUrl' => route('boshqaruv.courier-transactions.approve', $transaction),
                         'rejectUrl' => route('boshqaruv.courier-transactions.reject', $transaction),
+                        'reportUrl' => route('boshqaruv.courier-transactions.report', $transaction),
                     ];
                 })->values()->all(),
                 'transactionPagination' => $this->paginationMeta($transactions),
@@ -4334,6 +4366,7 @@ class AdminController extends Controller
 
         return [
             'transactions' => $transactions->getCollection()->map(function (SellerTransaction $transaction) {
+                $report = app(PayoutReportService::class)->seller($transaction);
                 $base = SellerTransaction::query()
                     ->where('seller_id', $transaction->seller_id)
                     ->where(fn ($query) => $query->whereNull('category')->orWhere('category', 'withdrawal')->orWhere('category', 'seller_withdrawal'));
@@ -4366,6 +4399,18 @@ class AdminController extends Controller
                         'approvedSum' => (float) (clone $base)->where('status', 'approved')->sum('netAmount'),
                         'pendingSum' => (float) (clone $base)->where('status', 'pending')->sum('netAmount'),
                     ],
+                    'breakdown' => [
+                        'orders' => $report['totals']['orders'],
+                        'products' => $report['totals']['products'],
+                        'gross' => $report['totals']['gross'],
+                        'commission' => $report['totals']['commission'],
+                        'net' => $report['totals']['net'],
+                        'basePayout' => $report['totals']['base_payout'],
+                        'bonus' => $report['totals']['bonus'],
+                        'periodFrom' => $report['period']['from'],
+                        'periodTo' => $report['period']['to'],
+                        'rows' => $report['rows'],
+                    ],
                     'nearby' => $nearby->map(fn (SellerTransaction $row) => [
                         'id' => $row->id,
                         'amount' => (float) ($row->amount ?? 0),
@@ -4375,6 +4420,7 @@ class AdminController extends Controller
                     ])->values()->all(),
                     'approveUrl' => route('boshqaruv.transactions.approve', $transaction),
                     'rejectUrl' => route('boshqaruv.transactions.reject', $transaction),
+                    'reportUrl' => route('boshqaruv.transactions.report', $transaction),
                 ];
             })->values()->all(),
             'transactionPagination' => $this->paginationMeta($transactions),

@@ -1880,7 +1880,9 @@ class PurchaseController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'message' => 'To‘lov muvaffaqiyatli qabul qilindi.',
+                'message' => ($payment['payment_status'] ?? null) === PaymentStatusCode::HELD->value
+                    ? 'Karta mablag‘i vaqtincha ushlab turildi.'
+                    : 'To‘lov muvaffaqiyatli qabul qilindi.',
                 'data' => $payment,
             ]);
         } catch (\Throwable $e) {

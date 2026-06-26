@@ -8,7 +8,6 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Models\UserCard;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use RuntimeException;
 
@@ -19,8 +18,7 @@ class PaylovOrderPaymentService
     public function __construct(
         private readonly OrderService $orderService,
         private readonly OrderStatusPushService $orderStatusPushService,
-    ) {
-    }
+    ) {}
 
     public function payPendingOrder(Sold $order, User $user, UserCard $card): array
     {
@@ -32,15 +30,20 @@ class PaylovOrderPaymentService
             throw new RuntimeException('Bu karta sizga tegishli emas.');
         }
 
-        if ($order->payment_status_code !== PaymentStatusCode::CARD_PENDING->value) {
-            throw new RuntimeException('Bu buyurtma karta bilan to‘lovni kutmayapti.');
-        }
-
         if ((int) $order->paymentStatus === PaymentStatusCode::PAID->legacy()) {
             return $this->buildAlreadyPaidResponse($order);
         }
 
-        if (!$card->is_verified || blank($card->provider_card_id)) {
+        $paymentStatus = PaymentStatusCode::fromLegacy($order->payment_status_code ?? $order->paymentStatus);
+        if ($paymentStatus === PaymentStatusCode::HELD) {
+            return $this->buildHeldResponse($order);
+        }
+
+        if ($paymentStatus !== PaymentStatusCode::CARD_PENDING) {
+            throw new RuntimeException('Bu buyurtma karta bilan to‘lovni kutmayapti.');
+        }
+
+        if (! $card->is_verified || blank($card->provider_card_id)) {
             throw new RuntimeException('Tasdiqlanmagan karta bilan to‘lab bo‘lmaydi.');
         }
 
@@ -51,117 +54,171 @@ class PaylovOrderPaymentService
             return $reconciled;
         }
 
-        $receipt = $paylov->createReceipt(
+        $holdMinutes = max(1, min(40320, (int) config('services.paylov.hold_minutes', 5760)));
+        $holdCreate = $paylov->createHold(
             (string) $user->id,
+            (string) $card->provider_card_id,
             (int) $order->amount,
+            $holdMinutes,
             [
-                'order_id' => 'NRK-' . $order->id,
+                'order_id' => 'NRK-'.$order->id,
                 'merchant_id' => $paylov->merchantId(),
+                'payment_mode' => 'hold',
             ],
         );
 
-        $transactionId = (string) ($receipt['result']['transactionId'] ?? '');
+        $transactionId = (string) data_get($holdCreate, 'result.transactionId', '');
         if ($transactionId === '') {
             throw new RuntimeException('Paylov transactionId qaytarmadi.');
         }
 
-        $transaction = $this->createPendingTransaction(
-            $order,
-            $user,
-            $card,
-            $transactionId,
-            $receipt,
-        );
-
-        $payResponse = null;
-        $statusResponse = null;
-
         try {
-            $payResponse = $paylov->payReceipt($transactionId, $card->provider_card_id, (string) $user->id);
-            $statusResponse = $paylov->getTransactions($transactionId);
-
-            return $this->finalizeSuccessfulPayment(
-                order: $order,
-                user: $user,
-                card: $card,
-                transaction: $transaction,
-                transactionId: $transactionId,
-                receipt: $receipt,
-                payResponse: $payResponse,
-                statusResponse: $statusResponse,
+            $transaction = $this->createPendingTransaction(
+                $order,
+                $user,
+                $card,
+                $transactionId,
+                $holdCreate,
+                [
+                    'mode' => 'hold',
+                    'hold' => [
+                        'status' => 'held',
+                        'amount' => (int) $order->amount,
+                        'hold_minutes' => $holdMinutes,
+                        'created_at' => now()->toIso8601String(),
+                    ],
+                ],
             );
         } catch (\Throwable $e) {
-            $remotePaidDetected = false;
-
-            if ($transactionId !== '' && $this->canAttemptReconcile($payResponse, $statusResponse)) {
-                try {
-                    $freshStatusResponse = is_array($statusResponse) && $statusResponse !== []
-                        ? $statusResponse
-                        : $paylov->getTransactions($transactionId);
-
-                    if ($this->remoteTransactionLooksPaid($freshStatusResponse, $payResponse)) {
-                        $remotePaidDetected = true;
-
-                        return $this->finalizeSuccessfulPayment(
-                            order: $order,
-                            user: $user,
-                            card: $card,
-                            transaction: $transaction,
-                            transactionId: $transactionId,
-                            receipt: $receipt,
-                            payResponse: $payResponse,
-                            statusResponse: $freshStatusResponse,
-                            localFinalizeError: $e->getMessage(),
-                        );
-                    }
-                } catch (\Throwable $reconcileException) {
-                    Log::warning('[Paylov] Order payment reconcile attempt failed', [
-                        'order_id' => $order->id,
-                        'transaction_id' => $transactionId,
-                        'message' => $reconcileException->getMessage(),
-                    ]);
-                }
-            }
-
-            if ($remotePaidDetected) {
-                $this->updateTransaction($transaction, [
-                    'state' => 2,
-                    'perform_time' => now()->format('Y-m-d H:i:s'),
-                    'perform_time_unix' => time(),
-                    'provider_response' => [
-                        'create' => $receipt,
-                        'pay' => $payResponse,
-                        'status' => $statusResponse,
-                        'error' => $e->getMessage(),
-                        'needs_reconciliation' => true,
-                        'card_snapshot' => $this->cardSnapshot($card),
-                    ],
+            try {
+                $paylov->dismissHold($transactionId);
+            } catch (\Throwable $dismissError) {
+                Log::warning('[Paylov] Hold dismiss after transaction create failure failed', [
+                    'order_id' => $order->id,
+                    'transaction_id' => $transactionId,
+                    'error' => $dismissError->getMessage(),
                 ]);
-
-                throw new RuntimeException('To‘lov qabul qilindi, lekin buyurtma tasdiqlanishi biroz kechikmoqda. Iltimos, sahifani yangilang yoki birozdan keyin qayta urinib ko‘ring.');
             }
-
-            $this->updateTransaction($transaction, [
-                'state' => -1,
-                'reason' => 0,
-                'cancel_time' => (string) intval(round(microtime(true) * 1000)),
-                'provider_response' => [
-                    'create' => $receipt,
-                    'pay' => $payResponse,
-                    'status' => $statusResponse,
-                    'error' => $e->getMessage(),
-                    'card_snapshot' => $this->cardSnapshot($card),
-                ],
-            ]);
-
-            Log::warning('[Paylov] Order payment failed', [
-                'order_id' => $order->id,
-                'transaction_id' => $transactionId,
-                'message' => $e->getMessage(),
-            ]);
 
             throw $e;
         }
+
+        try {
+            DB::transaction(function () use ($order) {
+                $freshOrder = Sold::query()->lockForUpdate()->find($order->id);
+                if (! $freshOrder) {
+                    throw new RuntimeException('Buyurtma topilmadi.');
+                }
+
+                if (PaymentStatusCode::fromLegacy($freshOrder->payment_status_code ?? $freshOrder->paymentStatus) === PaymentStatusCode::CARD_PENDING) {
+                    $this->orderService->handleOrderHeld($freshOrder);
+                }
+            });
+        } catch (\Throwable $e) {
+            $this->dismissCreatedHoldAfterLocalFailure($paylov, $transaction, $transactionId, $e->getMessage());
+
+            throw $e;
+        }
+
+        return $this->buildHoldResponse($transactionId, $holdCreate, $transaction);
+    }
+
+    public function chargeHeldOrder(Sold $order, ?int $amount = null, string $reason = 'order_handover'): ?array
+    {
+        $paymentStatus = PaymentStatusCode::fromLegacy($order->payment_status_code ?? $order->paymentStatus);
+        if ($paymentStatus === PaymentStatusCode::PAID) {
+            return $this->buildAlreadyPaidResponse($order);
+        }
+
+        if ($paymentStatus !== PaymentStatusCode::HELD) {
+            return null;
+        }
+
+        $transaction = $this->latestHeldTransaction($order);
+        if (! $transaction || blank($transaction->provider_transaction_id)) {
+            throw new RuntimeException('Hold transaction topilmadi.');
+        }
+
+        $chargeAmount = max(0, (int) ($amount ?? $order->amount));
+        if ($chargeAmount <= 0) {
+            return $this->dismissHeldOrder($order, 'zero_amount_after_cancellations');
+        }
+
+        $paylov = PaylovService::make();
+        $chargeResponse = $paylov->chargeHold((string) $transaction->provider_transaction_id, $chargeAmount);
+        $statusResponse = [];
+        try {
+            $statusResponse = $paylov->getTransactions((string) $transaction->provider_transaction_id);
+        } catch (\Throwable $statusError) {
+            Log::warning('[Paylov] Hold charge status refresh failed', [
+                'order_id' => $order->id,
+                'transaction_id' => $transaction->provider_transaction_id,
+                'error' => $statusError->getMessage(),
+            ]);
+        }
+        $providerResponse = is_array($transaction->provider_response) ? $transaction->provider_response : [];
+        $providerResponse['charge'] = $chargeResponse;
+        $providerResponse['status'] = $statusResponse;
+        $providerResponse['hold']['status'] = 'charged';
+        $providerResponse['hold']['charged_amount'] = $chargeAmount;
+        $providerResponse['hold']['charged_at'] = now()->toIso8601String();
+        $providerResponse['hold']['charge_reason'] = $reason;
+
+        $this->updateTransaction($transaction, [
+            'amount' => $chargeAmount,
+            'state' => 2,
+            'perform_time' => now()->format('Y-m-d H:i:s'),
+            'perform_time_unix' => time(),
+            'provider_response' => $providerResponse,
+        ]);
+
+        DB::transaction(function () use ($order, $chargeAmount) {
+            $freshOrder = Sold::query()->lockForUpdate()->find($order->id);
+            if (! $freshOrder) {
+                throw new RuntimeException('Buyurtma topilmadi.');
+            }
+
+            if ((int) $freshOrder->amount !== $chargeAmount) {
+                $freshOrder->amount = $chargeAmount;
+                $freshOrder->save();
+            }
+
+            if (PaymentStatusCode::fromLegacy($freshOrder->payment_status_code ?? $freshOrder->paymentStatus) !== PaymentStatusCode::PAID) {
+                $user = $freshOrder->user ?: User::query()->find((int) $freshOrder->user_id);
+                if (! $user) {
+                    throw new RuntimeException('Buyurtma foydalanuvchisi topilmadi.');
+                }
+
+                $this->orderService->handleOrderPaid($freshOrder, $user, giveCashback: false);
+            }
+        });
+
+        return $this->buildPaymentResponse((string) $transaction->provider_transaction_id, $statusResponse, $chargeResponse);
+    }
+
+    public function dismissHeldOrder(Sold $order, string $reason = 'order_cancelled'): ?array
+    {
+        $transaction = $this->latestHeldTransaction($order);
+        if (! $transaction || blank($transaction->provider_transaction_id)) {
+            return null;
+        }
+
+        $paylov = PaylovService::make();
+        $dismissResponse = $paylov->dismissHold((string) $transaction->provider_transaction_id);
+        $providerResponse = is_array($transaction->provider_response) ? $transaction->provider_response : [];
+        $providerResponse['dismiss'] = $dismissResponse;
+        $providerResponse['hold']['status'] = 'dismissed';
+        $providerResponse['hold']['dismiss_reason'] = $reason;
+        $providerResponse['hold']['dismissed_at'] = now()->toIso8601String();
+
+        $this->updateTransaction($transaction, [
+            'state' => -1,
+            'reason' => 0,
+            'cancel_time' => (string) intval(round(microtime(true) * 1000)),
+            'provider_response' => $providerResponse,
+        ]);
+
+        return $dismissResponse;
     }
 
     private function reconcileExistingSuccessfulPayment(
@@ -177,8 +234,23 @@ class PaylovOrderPaymentService
             ->latest('id')
             ->first();
 
-        if (!$transaction || blank($transaction->provider_transaction_id)) {
+        if (! $transaction || blank($transaction->provider_transaction_id)) {
             return null;
+        }
+
+        if ($this->transactionLooksHeld($transaction)) {
+            DB::transaction(function () use ($order) {
+                $freshOrder = Sold::query()->lockForUpdate()->find($order->id);
+                if ($freshOrder && PaymentStatusCode::fromLegacy($freshOrder->payment_status_code ?? $freshOrder->paymentStatus) === PaymentStatusCode::CARD_PENDING) {
+                    $this->orderService->handleOrderHeld($freshOrder);
+                }
+            });
+
+            return $this->buildHoldResponse(
+                (string) $transaction->provider_transaction_id,
+                is_array($transaction->provider_response['create'] ?? null) ? $transaction->provider_response['create'] : [],
+                $transaction,
+            );
         }
 
         if ((int) $order->paymentStatus === PaymentStatusCode::PAID->legacy()) {
@@ -190,7 +262,7 @@ class PaylovOrderPaymentService
         }
 
         $statusResponse = $paylov->getTransactions((string) $transaction->provider_transaction_id);
-        if (!$this->remoteTransactionLooksPaid($statusResponse)) {
+        if (! $this->remoteTransactionLooksPaid($statusResponse)) {
             return null;
         }
 
@@ -251,7 +323,7 @@ class PaylovOrderPaymentService
 
         DB::transaction(function () use ($order, $user, &$orderWasRecovered) {
             $freshOrder = Sold::query()->lockForUpdate()->find($order->id);
-            if (!$freshOrder) {
+            if (! $freshOrder) {
                 throw new RuntimeException('Buyurtma topilmadi.');
             }
 
@@ -312,6 +384,19 @@ class PaylovOrderPaymentService
         ];
     }
 
+    private function buildHoldResponse(string $transactionId, array $holdCreate = [], ?Transaction $transaction = null): array
+    {
+        return [
+            'transaction_id' => $transactionId,
+            'payment_status' => PaymentStatusCode::HELD->value,
+            'hold' => [
+                'status' => 'held',
+                'amount' => (int) ($transaction?->amount ?? data_get($holdCreate, 'result.amount', 0)),
+                'transaction' => data_get($holdCreate, 'result') ?? [],
+            ],
+        ];
+    }
+
     private function buildAlreadyPaidResponse(Sold $order): array
     {
         $transaction = Transaction::query()
@@ -332,13 +417,69 @@ class PaylovOrderPaymentService
         );
     }
 
+    private function latestHeldTransaction(Sold $order): ?Transaction
+    {
+        return Transaction::query()
+            ->where('order_id', $order->id)
+            ->where('payment_type', 'order')
+            ->where('provider', 'paylov')
+            ->where('state', 1)
+            ->latest('id')
+            ->get()
+            ->first(fn (Transaction $transaction) => $this->transactionLooksHeld($transaction));
+    }
+
+    private function dismissCreatedHoldAfterLocalFailure(
+        PaylovService $paylov,
+        Transaction $transaction,
+        string $transactionId,
+        string $error,
+    ): void {
+        $dismissResponse = null;
+
+        try {
+            $dismissResponse = $paylov->dismissHold($transactionId);
+        } catch (\Throwable $dismissError) {
+            Log::warning('[Paylov] Hold dismiss after local failure failed', [
+                'transaction_id' => $transactionId,
+                'error' => $dismissError->getMessage(),
+            ]);
+        }
+
+        $providerResponse = is_array($transaction->provider_response) ? $transaction->provider_response : [];
+        $providerResponse['local_finalize_error'] = $error;
+        $providerResponse['dismiss_after_local_failure'] = $dismissResponse;
+        $providerResponse['hold']['status'] = $dismissResponse ? 'dismissed' : 'dismiss_failed';
+
+        $this->updateTransaction($transaction, [
+            'state' => -1,
+            'reason' => 0,
+            'cancel_time' => (string) intval(round(microtime(true) * 1000)),
+            'provider_response' => $providerResponse,
+        ]);
+    }
+
+    private function transactionLooksHeld(Transaction $transaction): bool
+    {
+        $providerResponse = is_array($transaction->provider_response) ? $transaction->provider_response : [];
+
+        return ($providerResponse['mode'] ?? null) === 'hold'
+            || data_get($providerResponse, 'hold.status') === 'held';
+    }
+
     private function createPendingTransaction(
         Sold $order,
         User $user,
         UserCard $card,
         string $transactionId,
         array $receipt,
+        array $extraProviderResponse = [],
     ): Transaction {
+        $providerResponse = array_merge([
+            'create' => $receipt,
+            'card_snapshot' => $this->cardSnapshot($card),
+        ], $extraProviderResponse);
+
         $payload = $this->filterTransactionPayload([
             'owner_id' => $user->id,
             'order_id' => $order->id,
@@ -352,10 +493,7 @@ class PaylovOrderPaymentService
             'provider' => 'paylov',
             'provider_transaction_id' => $transactionId,
             'provider_card_id' => $card->provider_card_id,
-            'provider_response' => [
-                'create' => $receipt,
-                'card_snapshot' => $this->cardSnapshot($card),
-            ],
+            'provider_response' => $providerResponse,
             'receivers' => [],
         ]);
 
@@ -390,7 +528,7 @@ class PaylovOrderPaymentService
                     return json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
                 }
 
-                if ($key === 'perform_time_unix' && !is_null($value)) {
+                if ($key === 'perform_time_unix' && ! is_null($value)) {
                     return (string) $value;
                 }
 

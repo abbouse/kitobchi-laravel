@@ -5,7 +5,7 @@ namespace App\Http\Controllers\A122;
 use App\Enums\FulfillmentMode;
 use App\Enums\OrderStatusCode;
 use App\Enums\PaymentStatusCode;
-use App\Enums\PostalReturnStatus;
+use App\Exports\OrdersExport;
 use App\Http\Controllers\Controller;
 use App\Models\Books;
 use App\Models\CourierOrder;
@@ -20,9 +20,9 @@ use App\Models\Sold;
 use App\Models\Stationery;
 use App\Models\Transaction;
 use App\Models\UserCard;
+use App\Services\AdminOrderStatusSyncService;
 use App\Services\AdminPaidOrderRefundService;
 use App\Services\FulfillmentAdminOverrideService;
-use App\Services\AdminOrderStatusSyncService;
 use App\Services\HubPrintViewService;
 use App\Services\OrderService;
 use App\Services\OrderStatusPushService;
@@ -35,7 +35,6 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Maatwebsite\Excel\Facades\Excel;
-use App\Exports\OrdersExport;
 
 class OrderController extends Controller
 {
@@ -132,7 +131,8 @@ class OrderController extends Controller
                 'status' => $status,
                 'date' => optional($o->created_at)->format('Y-m-d'),
                 'payment' => match ($paymentStatus) {
-                    PaymentStatusCode::PAID => "To‘langan",
+                    PaymentStatusCode::PAID => 'To‘langan',
+                    PaymentStatusCode::HELD => 'Hold qilingan',
                     PaymentStatusCode::CARD_PENDING => 'Karta kutilmoqda',
                     PaymentStatusCode::CASH_PENDING => 'Naqd kutilmoqda',
                     PaymentStatusCode::CANCELLED => 'To‘lov bekor qilingan',
@@ -158,7 +158,7 @@ class OrderController extends Controller
                 'value' => $mode->value,
                 'label' => match ($mode) {
                     FulfillmentMode::HUB_BASED => 'Hub orqali kuryer yetkazuvi',
-                    FulfillmentMode::DIRECT_COURIER => "Direct courier (seller → mijoz)",
+                    FulfillmentMode::DIRECT_COURIER => 'Direct courier (seller → mijoz)',
                     FulfillmentMode::POSTAL_ONLY_VIA_HUB => 'Hub → pochta',
                     FulfillmentMode::PICKUP_ONLY => 'Pickup only',
                 },
@@ -175,10 +175,10 @@ class OrderController extends Controller
             if ($sellerId > 0) {
                 $seller = Seller::select('id', 'shop_name', 'photo')->find($sellerId);
             }
-            if (!$seller && $product?->relationLoaded('seller')) {
+            if (! $seller && $product?->relationLoaded('seller')) {
                 $seller = $product->seller;
             }
-            if (!$seller && method_exists($product, 'seller')) {
+            if (! $seller && method_exists($product, 'seller')) {
                 $seller = $product->seller()->first(['id', 'shop_name', 'photo']);
             }
 
@@ -190,6 +190,7 @@ class OrderController extends Controller
                 'gift' => 'Sovg‘a',
                 default => 'Kitob',
             };
+
             return $item;
         });
         $summary = [
@@ -281,7 +282,7 @@ class OrderController extends Controller
             $label = 'Hisob-kitob kutilmoqda';
             if ($saleCount > 0 && $currentNet > 0) {
                 $status = 'settled';
-                $label = "Sellerga tushgan";
+                $label = 'Sellerga tushgan';
             } elseif ($saleCount > 0 && $currentNet <= 0) {
                 $status = 'reversed';
                 $label = 'Hisob-kitob qaytarilgan';
@@ -312,7 +313,7 @@ class OrderController extends Controller
         $settlementOverview['current_net'] = $settlementOverview['net'] - $settlementOverview['reversed_net'];
         if ($settlementOverview['sale_count'] > 0 && $settlementOverview['current_net'] > 0) {
             $settlementOverview['status'] = 'settled';
-            $settlementOverview['label'] = "Sellerga tushgan";
+            $settlementOverview['label'] = 'Sellerga tushgan';
         } elseif ($settlementOverview['sale_count'] > 0 && $settlementOverview['current_net'] <= 0) {
             $settlementOverview['status'] = 'reversed';
             $settlementOverview['label'] = 'Hisob-kitob qaytarilgan';
@@ -324,7 +325,7 @@ class OrderController extends Controller
             ->first();
 
         $assignedCourier = $courierOrder?->courier;
-        if (!$assignedCourier && !empty($order->courier_id)) {
+        if (! $assignedCourier && ! empty($order->courier_id)) {
             $assignedCourier = Couriers::select('id', 'first_name', 'last_name', 'phone_number', 'photo', 'region')
                 ->find($order->courier_id);
         }
@@ -336,7 +337,7 @@ class OrderController extends Controller
                 PaymentStatusCode::PAID->value,
                 (string) PaymentStatusCode::PAID->legacy(),
             ], true)
-            && !in_array((string) ($order->status_code ?? $order->status), [
+            && ! in_array((string) ($order->status_code ?? $order->status), [
                 OrderStatusCode::CANCELLED->value,
                 OrderStatusCode::CANCELLED->legacy(),
             ], true);
@@ -397,7 +398,7 @@ class OrderController extends Controller
 
     private function resolveItemImage($product): ?string
     {
-        if (!$product) {
+        if (! $product) {
             return null;
         }
 
@@ -409,7 +410,7 @@ class OrderController extends Controller
         }
 
         $images = $product->images ?? null;
-        if (is_array($images) && !empty($images[0]) && is_string($images[0])) {
+        if (is_array($images) && ! empty($images[0]) && is_string($images[0])) {
             return $images[0];
         }
 
@@ -422,13 +423,14 @@ class OrderController extends Controller
             'status' => 'required|in:A,P,B,C,D,F,R,pending,packing,in_delivery,delivered,customer_received,cancelled,returned',
         ]);
         $this->statusSync->updateMainOrder($order, (string) $request->input('status'));
-        return back()->with('success', "Buyurtma holati yangilandi.");
+
+        return back()->with('success', 'Buyurtma holati yangilandi.');
     }
 
     public function switchFulfillmentMode(Request $request, Sold $order)
     {
         $request->validate([
-            'target_mode' => 'required|string|in:' . implode(',', array_map(
+            'target_mode' => 'required|string|in:'.implode(',', array_map(
                 static fn (FulfillmentMode $mode) => $mode->value,
                 FulfillmentMode::cases(),
             )),
@@ -447,7 +449,7 @@ class OrderController extends Controller
                 $request->input('override_note'),
             );
 
-            return back()->with('success', "Fulfillment mode yangilandi.");
+            return back()->with('success', 'Fulfillment mode yangilandi.');
         } catch (\Throwable $e) {
             return back()->with('error', $e->getMessage() ?: "Fulfillment mode’ni almashtirib bo'lmadi.");
         }
@@ -468,7 +470,7 @@ class OrderController extends Controller
                 $request->input('reroute_note'),
             );
 
-            return back()->with('success', "Mas’ul hub yangilandi.");
+            return back()->with('success', 'Mas’ul hub yangilandi.');
         } catch (\Throwable $e) {
             return back()->with('error', $e->getMessage() ?: "Hub reroute qilib bo'lmadi.");
         }
@@ -488,7 +490,7 @@ class OrderController extends Controller
                 $request->input('postal_return_note'),
             );
 
-            return back()->with('success', "Buyurtma pochta qaytimi sifatida belgilandi.");
+            return back()->with('success', 'Buyurtma pochta qaytimi sifatida belgilandi.');
         } catch (\Throwable $e) {
             return back()->with('error', $e->getMessage());
         }
@@ -510,13 +512,14 @@ class OrderController extends Controller
         if (($result['ok'] ?? false) === true) {
             $this->orderStatusPushService->sendForTransition($order->fresh(), $previousStatus, 'F');
         }
-        return back()->with($result['ok'] ? 'success' : 'error', $result['ok'] ? "Buyurtma bekor qilindi." : $result['message']);
+
+        return back()->with($result['ok'] ? 'success' : 'error', $result['ok'] ? 'Buyurtma bekor qilindi.' : $result['message']);
     }
 
     public function refundAndCancel(Request $request, Sold $order)
     {
         $admin = Auth::guard('panel')->user();
-        if (!$admin || !$admin->isSuperAdmin()) {
+        if (! $admin || ! $admin->isSuperAdmin()) {
             return back()->with('error', 'Bu amal faqat superadmin uchun ruxsat etilgan.');
         }
 
@@ -528,7 +531,7 @@ class OrderController extends Controller
         $expectedPhrase = (string) session()->get("admin.order_refund_phrase.{$order->id}", '');
         session()->forget("admin.order_refund_phrase.{$order->id}");
 
-        if ($expectedPhrase === '' || !hash_equals($expectedPhrase, trim((string) $request->input('confirmation_phrase')))) {
+        if ($expectedPhrase === '' || ! hash_equals($expectedPhrase, trim((string) $request->input('confirmation_phrase')))) {
             return back()->with('error', 'Tasdiqlash matni noto‘g‘ri kiritildi.');
         }
 
@@ -618,11 +621,11 @@ class OrderController extends Controller
 
     private function makeRefundConfirmationPhrase(): string
     {
-        return 'QAYTAR-' . Str::upper(Str::random(3)) . '-' . random_int(10, 99);
+        return 'QAYTAR-'.Str::upper(Str::random(3)).'-'.random_int(10, 99);
     }
 
     public function export(Request $request)
     {
-        return Excel::download(new OrdersExport($request->all()), 'orders_' . now()->format('Y-m-d') . '.xlsx');
+        return Excel::download(new OrdersExport($request->all()), 'orders_'.now()->format('Y-m-d').'.xlsx');
     }
 }

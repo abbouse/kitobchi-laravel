@@ -19,8 +19,7 @@ class PaylovService
         private readonly string $username = '',
         private readonly string $password = '',
         private readonly ?string $merchantId = null,
-    ) {
-    }
+    ) {}
 
     public static function make(): self
     {
@@ -85,7 +84,7 @@ class PaylovService
 
     public function getSingleCard(string $cardId): array
     {
-        return $this->get('/merchant/userCard/getCard/' . trim($cardId) . '/');
+        return $this->get('/merchant/userCard/getCard/'.trim($cardId).'/');
     }
 
     public function syncUserCard(UserCard $card): array
@@ -133,7 +132,7 @@ class PaylovService
         $errorCode = null;
         if ($isExpired) {
             $errorCode = 'card_expired';
-        } elseif (!$isActive) {
+        } elseif (! $isActive) {
             $errorCode = 'card_not_active';
         } elseif ($remoteUserId !== null && $remoteUserId !== '' && (string) $card->user_id !== $remoteUserId) {
             $errorCode = 'card_not_match';
@@ -153,7 +152,7 @@ class PaylovService
     public function ensureCardReadyForPayment(UserCard $card): void
     {
         $state = $this->cardPaymentState($card, true);
-        if (!$state['can_pay']) {
+        if (! $state['can_pay']) {
             throw new RuntimeException((string) $state['error_code']);
         }
     }
@@ -186,6 +185,41 @@ class PaylovService
     public function cancelPayment(string $transactionId): array
     {
         return $this->post('/merchant/payment/cancel/', [
+            'transactionId' => $transactionId,
+        ]);
+    }
+
+    public function createHold(
+        string $userId,
+        string $cardId,
+        int $amount,
+        int $holdMinutes,
+        array $account = [],
+    ): array {
+        $payload = [
+            'userId' => $userId,
+            'cardId' => $cardId,
+            'amount' => $amount,
+            'account' => (object) $account,
+        ];
+
+        $holdTimeKey = (string) config('services.paylov.hold_time_key', 'holdTime');
+        $payload[$holdTimeKey !== '' ? $holdTimeKey : 'holdTime'] = $holdMinutes;
+
+        return $this->post('/merchant/payment/hold/create/', $payload);
+    }
+
+    public function chargeHold(string $transactionId, int $amount): array
+    {
+        return $this->post('/merchant/payment/hold/charge/', [
+            'transactionId' => $transactionId,
+            'amount' => $amount,
+        ]);
+    }
+
+    public function dismissHold(string $transactionId): array
+    {
+        return $this->post('/merchant/payment/hold/dismiss/', [
             'transactionId' => $transactionId,
         ]);
     }
@@ -249,14 +283,14 @@ class PaylovService
         }
 
         $accessToken = $this->resolveAccessToken();
-        $url = rtrim($this->baseUrl, '/') . '/' . ltrim($path, '/');
-        $maskedAuthorization = 'Bearer ' . $this->maskToken($accessToken);
+        $url = rtrim($this->baseUrl, '/').'/'.ltrim($path, '/');
+        $maskedAuthorization = 'Bearer '.$this->maskToken($accessToken);
 
         $request = Http::withHeaders([
-                'Authorization' => 'Bearer ' . trim($accessToken),
-                'Accept' => 'application/json',
-                'Content-Type' => 'application/json',
-            ])
+            'Authorization' => 'Bearer '.trim($accessToken),
+            'Accept' => 'application/json',
+            'Content-Type' => 'application/json',
+        ])
             ->acceptJson()
             ->asJson()
             ->timeout(20);
@@ -269,7 +303,7 @@ class PaylovService
         };
 
         $body = $response->json();
-        if (!is_array($body)) {
+        if (! is_array($body)) {
             Log::warning('[Paylov] Non-JSON response', [
                 'method' => $method,
                 'path' => $path,
@@ -280,7 +314,7 @@ class PaylovService
             throw new RuntimeException('Paylov noto‘g‘ri javob qaytardi.');
         }
 
-        if (!$response->successful() || !empty($body['error'])) {
+        if (! $response->successful() || ! empty($body['error'])) {
             $message = $body['error']['message'] ?? $body['message'] ?? 'Paylov xatoligi';
             $code = $body['error']['code'] ?? (string) $response->status();
 
@@ -318,7 +352,7 @@ class PaylovService
 
     private function oauthAccessToken(): string
     {
-        $cacheKey = 'paylov.oauth.token.' . md5($this->baseUrl . '|' . $this->username . '|' . $this->consumerKey);
+        $cacheKey = 'paylov.oauth.token.'.md5($this->baseUrl.'|'.$this->username.'|'.$this->consumerKey);
 
         /** @var string|null $cached */
         $cached = Cache::get($cacheKey);
@@ -326,7 +360,7 @@ class PaylovService
             return $cached;
         }
 
-        $url = rtrim($this->baseUrl, '/') . '/merchant/oauth2/token/';
+        $url = rtrim($this->baseUrl, '/').'/merchant/oauth2/token/';
 
         $response = Http::asForm()
             ->withBasicAuth(trim($this->consumerKey), trim($this->consumerSecret))
@@ -339,7 +373,7 @@ class PaylovService
             ]);
 
         $body = $response->json();
-        if (!is_array($body)) {
+        if (! is_array($body)) {
             Log::warning('[Paylov OAuth] Non-JSON response', [
                 'url' => $url,
                 'status' => $response->status(),
@@ -349,7 +383,7 @@ class PaylovService
             throw new RuntimeException('Paylov OAuth noto‘g‘ri javob qaytardi.');
         }
 
-        if (!$response->successful()) {
+        if (! $response->successful()) {
             Log::warning('[Paylov OAuth] Token request failed', [
                 'url' => $url,
                 'status' => $response->status(),
@@ -382,7 +416,7 @@ class PaylovService
         Cache::put($cacheKey, $token, now()->addSeconds($ttlSeconds));
 
         if (filled($body['refresh_token'] ?? null)) {
-            Cache::put($cacheKey . '.refresh', (string) $body['refresh_token'], now()->addDay());
+            Cache::put($cacheKey.'.refresh', (string) $body['refresh_token'], now()->addDay());
         }
 
         return $token;
@@ -400,8 +434,8 @@ class PaylovService
         }
 
         return mb_substr($trimmed, 0, 6)
-            . str_repeat('*', max(0, mb_strlen($trimmed) - 10))
-            . mb_substr($trimmed, -4);
+            .str_repeat('*', max(0, mb_strlen($trimmed) - 10))
+            .mb_substr($trimmed, -4);
     }
 
     private function normalizeExpireToDisplay(string $expireDate): string
@@ -411,7 +445,7 @@ class PaylovService
             return $expireDate;
         }
 
-        return substr($digits, 2, 2) . substr($digits, 0, 2);
+        return substr($digits, 2, 2).substr($digits, 0, 2);
     }
 
     private function isDisplayExpireExpired(string $expireDate): bool

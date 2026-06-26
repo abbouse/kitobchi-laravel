@@ -19,6 +19,7 @@ use App\Services\CourierBonusService;
 use App\Services\CourierTaskOrchestratorService;
 use App\Services\OrderRealtimeService;
 use App\Services\OrderStatusPushService;
+use App\Services\PaylovOrderPaymentService;
 use App\Services\QrTokenService;
 use App\Services\SellerCancellationReasonCatalog;
 use App\Services\SellerOrderCancellationService;
@@ -38,6 +39,7 @@ class OrderController extends Controller
         private readonly OrderStatusPushService $orderStatusPushService,
         private readonly CourierTaskOrchestratorService $courierTaskOrchestratorService,
         private readonly SellerOrderCancellationService $sellerOrderCancellationService,
+        private readonly PaylovOrderPaymentService $paylovOrderPaymentService,
     ) {
         $this->middleware('auth:seller');
     }
@@ -597,6 +599,14 @@ class OrderController extends Controller
 
                 if ($allSellersDone) {
                     $previousStatus = (string) $sold->status;
+                    if (PaymentStatusCode::fromLegacy($sold->payment_status_code ?? $sold->paymentStatus) === PaymentStatusCode::HELD) {
+                        $this->paylovOrderPaymentService->chargeHeldOrder(
+                            $sold,
+                            $this->sellerOrderCancellationService->operationalAmountForCourier($sold),
+                            'seller_handed_to_courier',
+                        );
+                        $sold->refresh();
+                    }
 
                     if ($fulfillmentMode === FulfillmentMode::DIRECT_COURIER->value) {
                         $sold->status = OrderStatusCode::IN_DELIVERY->legacy();

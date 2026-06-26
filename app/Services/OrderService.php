@@ -7,17 +7,18 @@ use App\Enums\OrderKind;
 use App\Enums\OrderStatusCode;
 use App\Enums\PaymentStatusCode;
 use App\Enums\SellerOrderStatusCode;
-use App\Models\Sold;
-use App\Models\SellerOrder;
-use App\Models\CourierOrder;
 use App\Models\Books;
+use App\Models\CashbackSetting;
+use App\Models\CourierOrder;
+use App\Models\GiftCertificate;
+use App\Models\Gifts;
+use App\Models\PromocodeHistory;
+use App\Models\SellerOrder;
+use App\Models\Sold;
 use App\Models\Stationery;
 use App\Models\StationeryVariant;
-use App\Models\Gifts;
-use App\Models\CashbackSetting;
-use App\Models\PromocodeHistory;
+use App\Models\Transaction;
 use App\Models\User;
-use App\Models\GiftCertificate;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -40,22 +41,32 @@ class OrderService
 
     public function decrementStock(array $data): void
     {
-        $product  = $data['product'];
-        $variant  = $data['variant'] ?? null;
+        $product = $data['product'];
+        $variant = $data['variant'] ?? null;
         $quantity = $data['quantity'];
 
         if ($variant) {
             $variant->decrement('stock', $quantity);
-            if ($variant->stock < 0) { $variant->stock = 0; $variant->save(); }
+            if ($variant->stock < 0) {
+                $variant->stock = 0;
+                $variant->save();
+            }
+
             return;
         }
 
         if ($product instanceof Books) {
             $product->decrement('count', $quantity);
-            if ($product->count < 0) { $product->count = 0; $product->save(); }
+            if ($product->count < 0) {
+                $product->count = 0;
+                $product->save();
+            }
         } elseif ($product instanceof Stationery) {
             $product->decrement('stock', $quantity);
-            if ($product->stock < 0) { $product->stock = 0; $product->save(); }
+            if ($product->stock < 0) {
+                $product->stock = 0;
+                $product->save();
+            }
         }
     }
 
@@ -65,14 +76,14 @@ class OrderService
 
     public function incrementStock(array $item): void
     {
-        $type      = $item['type']       ?? 'book';
+        $type = $item['type'] ?? 'book';
         $productId = $item['item_id'];
         $variantId = $item['variant_id'] ?? null;
-        $quantity  = $item['count_item'];
+        $quantity = $item['count_item'];
 
         if ($type === 'book') {
             $product = Books::query()->lockForUpdate()->find($productId);
-            if (!$product) {
+            if (! $product) {
                 return;
             }
 
@@ -81,7 +92,7 @@ class OrderService
         } elseif ($type === 'stationery') {
             if ($variantId) {
                 $variant = StationeryVariant::query()->lockForUpdate()->find($variantId);
-                if (!$variant) {
+                if (! $variant) {
                     return;
                 }
 
@@ -89,7 +100,7 @@ class OrderService
                 $variant->save();
             } else {
                 $product = Stationery::query()->lockForUpdate()->find($productId);
-                if (!$product) {
+                if (! $product) {
                     return;
                 }
 
@@ -105,25 +116,27 @@ class OrderService
 
     public function incrementProductStats(array $data, int $soldId): void
     {
-        $product  = $data['product'];
+        $product = $data['product'];
         $quantity = $data['quantity'];
-        $revenue  = $data['revenue'];
-        $userId   = $data['user_id'];
-        $type     = $data['type'] ?? 'book';
+        $revenue = $data['revenue'];
+        $userId = $data['user_id'];
+        $type = $data['type'] ?? 'book';
 
-        if (!$product || $type === 'gift') return;
+        if (! $product || $type === 'gift') {
+            return;
+        }
 
-        $product->increment('totalSales',       $quantity);
-        $product->increment('totalRevenue',      $revenue);
-        $product->increment('totalSalesWeek',    $quantity);
-        $product->increment('totalRevenueWeek',  $revenue);
+        $product->increment('totalSales', $quantity);
+        $product->increment('totalRevenue', $revenue);
+        $product->increment('totalSalesWeek', $quantity);
+        $product->increment('totalRevenueWeek', $revenue);
 
         $hasPrev = Sold::where('user_id', $userId)
             ->where('id', '!=', $soldId)
             ->whereJsonContains('items', ['item_id' => $product->id, 'type' => $type])
             ->exists();
 
-        if (!$hasPrev) {
+        if (! $hasPrev) {
             $product->increment('totalClients');
             $product->increment('totalClientsWeek');
         }
@@ -136,24 +149,64 @@ class OrderService
 
     public function decrementProductStats(array $item): void
     {
-        $type      = $item['type']       ?? 'book';
+        $type = $item['type'] ?? 'book';
         $productId = $item['item_id'];
-        $quantity  = $item['count_item'];
-        $revenue   = ($item['item_price'] ?? 0) * $quantity;
+        $quantity = $item['count_item'];
+        $revenue = ($item['item_price'] ?? 0) * $quantity;
 
-        if ($type === 'gift') return;
+        if ($type === 'gift') {
+            return;
+        }
 
         $product = $type === 'stationery'
             ? Stationery::find($productId)
             : Books::find($productId);
 
-        if (!$product) return;
+        if (! $product) {
+            return;
+        }
 
-        $product->totalSales       = max(0, $product->totalSales       - $quantity);
-        $product->totalRevenue     = max(0, $product->totalRevenue     - $revenue);
-        $product->totalSalesWeek   = max(0, $product->totalSalesWeek   - $quantity);
+        $product->totalSales = max(0, $product->totalSales - $quantity);
+        $product->totalRevenue = max(0, $product->totalRevenue - $revenue);
+        $product->totalSalesWeek = max(0, $product->totalSalesWeek - $quantity);
         $product->totalRevenueWeek = max(0, $product->totalRevenueWeek - $revenue);
         $product->save();
+    }
+
+    // =========================================================================
+    //  KARTA SUMMASI HOLDA USHLANGANDA
+    // =========================================================================
+
+    public function handleOrderHeld(Sold $order): void
+    {
+        $order->update([
+            'paymentStatus' => PaymentStatusCode::HELD->legacy(),
+            'payment_status_code' => PaymentStatusCode::HELD->value,
+        ]);
+
+        if ($order->order_kind === OrderKind::POSTAL_RESEND->value) {
+            return;
+        }
+
+        SellerOrder::where('order_id', $order->id)
+            ->where(function ($query) {
+                $query->where('status', SellerOrderStatusCode::PAYMENT_PENDING->legacy())
+                    ->orWhere('status_code', SellerOrderStatusCode::PAYMENT_PENDING->value);
+            })
+            ->update([
+                'status' => SellerOrderStatusCode::NEW->legacy(),
+                'status_code' => SellerOrderStatusCode::NEW->value,
+            ]);
+
+        CourierOrder::where('order_id', $order->id)
+            ->where(function ($query) {
+                $query->where('status', CourierOrderStatusCode::PAYMENT_PENDING->legacy())
+                    ->orWhere('status_code', CourierOrderStatusCode::PAYMENT_PENDING->value);
+            })
+            ->update([
+                'status' => CourierOrderStatusCode::PENDING->legacy(),
+                'status_code' => CourierOrderStatusCode::PENDING->value,
+            ]);
     }
 
     // =========================================================================
@@ -166,7 +219,7 @@ class OrderService
             'paymentStatus' => PaymentStatusCode::PAID->legacy(),
             'payment_status_code' => PaymentStatusCode::PAID->value,
         ];
-        if ($order->isCompletedAndPaid() && !$order->completed_at) {
+        if ($order->isCompletedAndPaid() && ! $order->completed_at) {
             $payload['completed_at'] = now();
         }
 
@@ -230,7 +283,7 @@ class OrderService
     {
         DB::transaction(function () use ($order, $from) {
             $lockedOrder = Sold::query()->lockForUpdate()->find($order->id);
-            if (!$lockedOrder) {
+            if (! $lockedOrder) {
                 return;
             }
 
@@ -238,7 +291,7 @@ class OrderService
                 return;
             }
 
-            if (!$lockedOrder->isCompletedAndPaid()) {
+            if (! $lockedOrder->isCompletedAndPaid()) {
                 return;
             }
 
@@ -332,13 +385,13 @@ class OrderService
     public function awardCashbackForPaidOrder(Sold $order, ?User $user = null, bool $notify = false): int
     {
         $user ??= $order->user()->first();
-        if (!$user) {
+        if (! $user) {
             return 0;
         }
 
         return DB::transaction(function () use ($order, $user, $notify) {
             $lockedOrder = Sold::query()->lockForUpdate()->find($order->id);
-            if (!$lockedOrder) {
+            if (! $lockedOrder) {
                 return 0;
             }
 
@@ -418,6 +471,7 @@ class OrderService
     {
         $previousCompletedPaid = $order->isCompletedAndPaid();
         $didCancel = false;
+        $paymentStatus = PaymentStatusCode::fromLegacy($order->payment_status_code ?? $order->paymentStatus);
 
         // Tez tekshiruv (DB ga bormaydi)
         if ($order->status_code === OrderStatusCode::CANCELLED->value) {
@@ -427,12 +481,17 @@ class OrderService
         if ($strict) {
             // paymentStatus=0: naqd (to'lanmagan), paymentStatus=1: karta (to'lanmagan)
             // paymentStatus=2: to'langan → bekor qilish mumkin emas
-            if (!in_array($order->payment_status_code, [
+            if (! in_array($order->payment_status_code, [
                 PaymentStatusCode::CASH_PENDING->value,
                 PaymentStatusCode::CARD_PENDING->value,
+                PaymentStatusCode::HELD->value,
             ], true)) {
                 return ['ok' => false, 'message' => 'cancel_order_error_paid'];
             }
+        }
+
+        if ($paymentStatus === PaymentStatusCode::HELD) {
+            $this->dismissPaylovOrderHold($order, 'order_cancelled');
         }
 
         DB::transaction(function () use ($order, &$didCancel) {
@@ -447,16 +506,16 @@ class OrderService
             // Shu sababli stock, cashback, cert 2x qaytarilmaydi.
 
             $affected = DB::table('solds')
-                ->where('id',     $order->id)
+                ->where('id', $order->id)
                 ->where('status', '!=', 'F')
                 ->update([
-                    'status'        => OrderStatusCode::CANCELLED->legacy(),
-                    'status_code'   => OrderStatusCode::CANCELLED->value,
+                    'status' => OrderStatusCode::CANCELLED->legacy(),
+                    'status_code' => OrderStatusCode::CANCELLED->value,
                     'paymentStatus' => PaymentStatusCode::CANCELLED->legacy(),
                     'payment_status_code' => PaymentStatusCode::CANCELLED->value,
                     'cashback_ready_at' => null,
                     'cashback_notified_at' => null,
-                    'updated_at'    => now(),
+                    'updated_at' => now(),
                 ]);
 
             // Agar buyurtma allaqachon bekor qilingan bo'lsa — to'xtatamiz
@@ -480,7 +539,9 @@ class OrderService
             // ── Mahsulot stoki qaytarish ──────────────────────────────────
             foreach ($order->items ?? [] as $item) {
                 $type = $item['type'] ?? '';
-                if (!in_array($type, ['book', 'stationery'])) continue;
+                if (! in_array($type, ['book', 'stationery'])) {
+                    continue;
+                }
                 $this->incrementStock($item);
                 $this->decrementProductStats($item);
             }
@@ -490,7 +551,7 @@ class OrderService
                 Gifts::where('id', $order->gift)->increment('stock', 1);
                 $gift = Gifts::find($order->gift);
                 if ($gift) {
-                    $gift->totalSales     = max(0, $gift->totalSales     - 1);
+                    $gift->totalSales = max(0, $gift->totalSales - 1);
                     $gift->totalSalesWeek = max(0, $gift->totalSalesWeek - 1);
                     $gift->save();
                 }
@@ -499,7 +560,7 @@ class OrderService
             // ── Cashback qaytarish ────────────────────────────────────────
             // withCashback = true faqat karta+cashback ishlatilganda saqlanadi
             // cashbackAmount = qancha ayirilgani
-            if ($order->withCashback && (int)$order->cashbackAmount > 0) {
+            if ($order->withCashback && (int) $order->cashbackAmount > 0) {
                 $refundAmount = (int) $order->cashbackAmount;
                 $alreadyRefunded = DB::table('cashback_histories')
                     ->where('sold_id', $order->id)
@@ -553,31 +614,31 @@ class OrderService
             // ── Gift Sertifikat qaytarish ─────────────────────────────────
             // giftCertAmount = sertifikatdan qancha ayirilgani
             // Bu yerga faqat affected=1 bo'lganda kelinadi → bir marta ishlaydi
-            if ($order->gift_certificate_id && (int)$order->giftCertAmount > 0) {
-                $certId     = (int)$order->gift_certificate_id;
-                $returnAmt  = (int)$order->giftCertAmount;
+            if ($order->gift_certificate_id && (int) $order->giftCertAmount > 0) {
+                $certId = (int) $order->gift_certificate_id;
+                $returnAmt = (int) $order->giftCertAmount;
 
                 // DB dan fresh qiymat olib, atomic update
                 // used → active + nominal tiklash
                 // active (partial) → nominal oshirish
                 $updatedUsed = DB::table('gift_certificates')
-                    ->where('id',     $certId)
+                    ->where('id', $certId)
                     ->where('status', GiftCertificate::STATUS_USED)
                     ->update([
-                        'status'      => GiftCertificate::STATUS_ACTIVE,
+                        'status' => GiftCertificate::STATUS_ACTIVE,
                         'nominal_uzs' => DB::raw("nominal_uzs + {$returnAmt}"),
-                        'used_at'     => null,
-                        'updated_at'  => now(),
+                        'used_at' => null,
+                        'updated_at' => now(),
                     ]);
 
                 if ($updatedUsed === 0) {
                     // 'used' emas — 'active' (partial use) bo'lishi mumkin
                     DB::table('gift_certificates')
-                        ->where('id',     $certId)
+                        ->where('id', $certId)
                         ->where('status', GiftCertificate::STATUS_ACTIVE)
                         ->update([
                             'nominal_uzs' => DB::raw("nominal_uzs + {$returnAmt}"),
-                            'updated_at'  => now(),
+                            'updated_at' => now(),
                         ]);
                 }
             }
@@ -589,18 +650,18 @@ class OrderService
                     ->first();
                 if ($promo) {
                     DB::table('promocodes')
-                        ->where('id',         $promo->id)
-                        ->where('usedCount',  '>', 0)
+                        ->where('id', $promo->id)
+                        ->where('usedCount', '>', 0)
                         ->decrement('usedCount', 1);
 
-                    PromocodeHistory::where('user_id',      $order->user_id)
-                                    ->where('promocode_id', $promo->id)
-                                    ->delete();
+                    PromocodeHistory::where('user_id', $order->user_id)
+                        ->where('promocode_id', $promo->id)
+                        ->delete();
                 }
             }
         });
 
-        if (!$didCancel) {
+        if (! $didCancel) {
             return ['ok' => false, 'message' => 'Buyurtma allaqachon bekor qilingan.'];
         }
 
@@ -615,6 +676,44 @@ class OrderService
             }
         }
 
-        return ['ok' => true, 'message' => "Buyurtma bekor qilindi."];
+        return ['ok' => true, 'message' => 'Buyurtma bekor qilindi.'];
+    }
+
+    private function dismissPaylovOrderHold(Sold $order, string $reason): void
+    {
+        $transaction = Transaction::query()
+            ->where('order_id', $order->id)
+            ->where('payment_type', 'order')
+            ->where('provider', 'paylov')
+            ->where('state', 1)
+            ->latest('id')
+            ->get()
+            ->first(function (Transaction $transaction) {
+                $response = is_array($transaction->provider_response) ? $transaction->provider_response : [];
+
+                return ($response['mode'] ?? null) === 'hold'
+                    || data_get($response, 'hold.status') === 'held';
+            });
+
+        if (! $transaction || blank($transaction->provider_transaction_id)) {
+            throw new \RuntimeException('Hold transaction topilmadi.');
+        }
+
+        $dismissResponse = PaylovService::make()->dismissHold((string) $transaction->provider_transaction_id);
+        $providerResponse = is_array($transaction->provider_response) ? $transaction->provider_response : [];
+        $providerResponse['dismiss'] = $dismissResponse;
+        $providerResponse['hold']['status'] = 'dismissed';
+        $providerResponse['hold']['dismiss_reason'] = $reason;
+        $providerResponse['hold']['dismissed_at'] = now()->toIso8601String();
+
+        DB::table('transactions')
+            ->where('id', $transaction->id)
+            ->update([
+                'state' => -1,
+                'reason' => 0,
+                'cancel_time' => (string) intval(round(microtime(true) * 1000)),
+                'provider_response' => json_encode($providerResponse, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                'updated_at' => now(),
+            ]);
     }
 }
