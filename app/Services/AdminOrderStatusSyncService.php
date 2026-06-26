@@ -36,6 +36,8 @@ class AdminOrderStatusSyncService
     public function __construct(
         private readonly OrderService $orderService,
         private readonly OrderStatusPushService $orderStatusPushService,
+        private readonly PaylovOrderPaymentService $paylovOrderPaymentService,
+        private readonly SellerOrderCancellationService $sellerOrderCancellationService,
     ) {}
 
     public function updateMainOrder(Sold $order, string $status): void
@@ -51,6 +53,9 @@ class AdminOrderStatusSyncService
 
                 return;
             }
+
+            $this->chargeHeldPaymentForOperationalStatus($order, $statusCode, 'admin_main_status_update');
+            $order->refresh();
 
             if (in_array($statusCode, [OrderStatusCode::DELIVERED, OrderStatusCode::CUSTOMER_RECEIVED], true)
                 && $order->payment_status_code !== PaymentStatusCode::PAID->value) {
@@ -108,6 +113,8 @@ class AdminOrderStatusSyncService
             }
 
             $previousStatus = (string) $order->status;
+            $this->chargeHeldPaymentForOperationalStatus($order, $order->status_code ? OrderStatusCode::fromLegacy($order->status_code) : OrderStatusCode::PENDING, 'admin_seller_status_update');
+            $order->refresh();
             $order->status_code = match ($statusCode) {
                 SellerOrderStatusCode::HANDED_TO_COURIER => OrderStatusCode::IN_DELIVERY->value,
                 SellerOrderStatusCode::ACCEPTED => OrderStatusCode::PACKING->value,
@@ -154,6 +161,16 @@ class AdminOrderStatusSyncService
                 return;
             }
 
+            $targetOrderStatus = match ($statusCode) {
+                CourierOrderStatusCode::DELIVERED => OrderStatusCode::DELIVERED,
+                CourierOrderStatusCode::CUSTOMER_RECEIVED => OrderStatusCode::CUSTOMER_RECEIVED,
+                CourierOrderStatusCode::IN_DELIVERY => OrderStatusCode::IN_DELIVERY,
+                CourierOrderStatusCode::RETURNED => OrderStatusCode::RETURNED,
+                default => OrderStatusCode::PENDING,
+            };
+            $this->chargeHeldPaymentForOperationalStatus($order, $targetOrderStatus, 'admin_courier_status_update');
+            $order->refresh();
+
             $order->status_code = match ($statusCode) {
                 CourierOrderStatusCode::DELIVERED => OrderStatusCode::DELIVERED->value,
                 CourierOrderStatusCode::CUSTOMER_RECEIVED => OrderStatusCode::CUSTOMER_RECEIVED->value,
@@ -183,6 +200,27 @@ class AdminOrderStatusSyncService
 
             DB::afterCommit(fn () => $this->orderStatusPushService->sendForTransition($order->fresh(), $previousStatus, (string) $order->status));
         });
+    }
+
+    private function chargeHeldPaymentForOperationalStatus(Sold $order, OrderStatusCode $targetStatus, string $reason): void
+    {
+        if (! in_array($targetStatus, [
+            OrderStatusCode::IN_DELIVERY,
+            OrderStatusCode::DELIVERED,
+            OrderStatusCode::CUSTOMER_RECEIVED,
+        ], true)) {
+            return;
+        }
+
+        if (PaymentStatusCode::fromLegacy($order->payment_status_code ?? $order->paymentStatus) !== PaymentStatusCode::HELD) {
+            return;
+        }
+
+        $this->paylovOrderPaymentService->chargeHeldOrder(
+            $order,
+            $this->sellerOrderCancellationService->operationalAmountForCourier($order),
+            $reason,
+        );
     }
 
     public function mapMainToSeller(string $status, int|string|null $paymentStatus = null): SellerOrderStatusCode

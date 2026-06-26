@@ -625,6 +625,8 @@ class SellerOrderCancellationService
                 ->keyBy('seller_order_item_id');
 
             $transaction = $this->findPaylovTransaction($order);
+            $paymentStatus = PaymentStatusCode::fromLegacy($order->payment_status_code ?? $order->paymentStatus);
+            $isHeldPayment = $paymentStatus === PaymentStatusCode::HELD;
             $cardRefund = $this->shouldRefundToCard($order) ? (int) $order->amount : 0;
             $cashbackRestore = (int) ($order->cashbackAmount ?? 0);
             $giftRestore = (int) ($order->giftCertAmount ?? 0);
@@ -647,13 +649,18 @@ class SellerOrderCancellationService
                 throw new RuntimeException((string) ($result['message'] ?? 'Buyurtmani bekor qilib bo‘lmadi.'));
             }
 
+            if ($isHeldPayment && $transaction) {
+                $transaction->refresh();
+                $providerPayload = data_get($transaction->provider_response, 'dismiss');
+            }
+
             $refund = OrderRefund::query()->create([
                 'order_id' => $order->id,
                 'seller_order_id' => $sellerOrder->id,
                 'seller_id' => $sellerOrder->seller_id,
                 'user_id' => $order->user_id,
                 'type' => 'full_order',
-                'provider' => $cardRefund > 0 ? 'paylov_cancel' : 'internal_only',
+                'provider' => $isHeldPayment ? 'paylov_hold_dismiss' : ($cardRefund > 0 ? 'paylov_cancel' : 'internal_only'),
                 'card_refund_amount' => $cardRefund,
                 'cashback_restore_amount' => $cashbackRestore,
                 'gift_cert_restore_amount' => $giftRestore,

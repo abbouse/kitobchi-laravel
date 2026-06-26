@@ -684,7 +684,7 @@ class CourierOrderController extends Controller
                             ->whereIn('status', $terminalLegacy);
                     });
             })
-            ->with(['order.fulfillment.hub', 'order.courierTasks'])
+            ->with(['items:id,order_id,seller_id', 'order.fulfillment.hub', 'order.courierTasks'])
             ->orderByDesc('updated_at')
             ->paginate($perPage);
 
@@ -722,6 +722,11 @@ class CourierOrderController extends Controller
             $payout = $courierOrder->settled_amount !== null
                 ? max(0, (int) $courierOrder->settled_amount)
                 : $calculatedPayout;
+            $sellerCount = $courierOrder->items
+                ->pluck('seller_id')
+                ->filter()
+                ->unique()
+                ->count();
 
             return [
                 'id' => (int) $courierOrder->id,
@@ -731,6 +736,8 @@ class CourierOrderController extends Controller
                 'payout' => $payout,
                 'distance_km' => round((float) ($taskSummary['distance_km'] ?? 0), 2),
                 'payment_type' => ($taskSummary['is_cod'] ?? false) ? 'cash' : 'card',
+                'seller_count' => $sellerCount,
+                'is_multi' => $sellerCount > 1,
                 'completed_at' => optional(
                     $courierOrder->settled_at ?: $courierOrder->updated_at
                 )->toIso8601String(),

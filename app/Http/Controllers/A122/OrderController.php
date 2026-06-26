@@ -333,10 +333,7 @@ class OrderController extends Controller
         $panelAdmin = Auth::guard('panel')->user();
         $canRefundPayment = $panelAdmin?->isSuperAdmin()
             && ($paymentTransaction?->provider === 'paylov')
-            && in_array((string) ($order->payment_status_code ?? $order->paymentStatus), [
-                PaymentStatusCode::PAID->value,
-                (string) PaymentStatusCode::PAID->legacy(),
-            ], true)
+            && in_array(PaymentStatusCode::fromLegacy($order->payment_status_code ?? $order->paymentStatus), [PaymentStatusCode::HELD, PaymentStatusCode::PAID], true)
             && ! in_array((string) ($order->status_code ?? $order->status), [
                 OrderStatusCode::CANCELLED->value,
                 OrderStatusCode::CANCELLED->legacy(),
@@ -556,8 +553,8 @@ class OrderController extends Controller
         }
 
         $order = Sold::query()->find($sellerOrder->order_id);
-        if (! $order || PaymentStatusCode::fromLegacy($order->payment_status_code ?? $order->paymentStatus) !== PaymentStatusCode::PAID) {
-            return back()->with('error', "Refund faqat to'lov qabul qilingan buyurtmalar uchun ochiq.");
+        if (! $order || ! $this->canProcessOperationalAdjustment($order)) {
+            return back()->with('error', 'Bu buyurtma statusida mahsulot/seller qismini bekor qilib bo‘lmaydi.');
         }
 
         $request->validate([
@@ -592,8 +589,8 @@ class OrderController extends Controller
 
         $sellerOrder = SellerOrder::query()->find($sellerOrderItem->order_id);
         $order = $sellerOrder ? Sold::query()->find($sellerOrder->order_id) : null;
-        if (! $order || PaymentStatusCode::fromLegacy($order->payment_status_code ?? $order->paymentStatus) !== PaymentStatusCode::PAID) {
-            return back()->with('error', "Refund faqat to'lov qabul qilingan buyurtmalar uchun ochiq.");
+        if (! $order || ! $this->canProcessOperationalAdjustment($order)) {
+            return back()->with('error', 'Bu buyurtma statusida mahsulot/seller qismini bekor qilib bo‘lmaydi.');
         }
 
         $request->validate([
@@ -622,6 +619,48 @@ class OrderController extends Controller
     private function makeRefundConfirmationPhrase(): string
     {
         return 'QAYTAR-'.Str::upper(Str::random(3)).'-'.random_int(10, 99);
+    }
+
+    private function canProcessOperationalAdjustment(Sold $order): bool
+    {
+        $orderStatus = OrderStatusCode::fromLegacy($order->status_code ?? $order->status);
+        if (in_array($orderStatus, [
+            OrderStatusCode::IN_DELIVERY,
+            OrderStatusCode::DELIVERED,
+            OrderStatusCode::CUSTOMER_RECEIVED,
+            OrderStatusCode::RETURNED,
+            OrderStatusCode::CANCELLED,
+        ], true)) {
+            return false;
+        }
+
+        $paymentStatus = PaymentStatusCode::fromLegacy($order->payment_status_code ?? $order->paymentStatus);
+        if (in_array($paymentStatus, [
+            PaymentStatusCode::CASH_PENDING,
+            PaymentStatusCode::CARD_PENDING,
+            PaymentStatusCode::HELD,
+        ], true)) {
+            return true;
+        }
+
+        if ($paymentStatus !== PaymentStatusCode::PAID) {
+            return false;
+        }
+
+        if ((int) ($order->amount ?? 0) <= 0) {
+            return (int) ($order->cashbackAmount ?? 0) > 0
+                || (int) ($order->giftCertAmount ?? 0) > 0;
+        }
+
+        return Transaction::query()
+            ->where('order_id', $order->id)
+            ->where('payment_type', 'order')
+            ->where('provider', 'paylov')
+            ->where(function ($query) {
+                $query->where('state', 2)
+                    ->orWhereNotNull('perform_time');
+            })
+            ->exists();
     }
 
     public function export(Request $request)

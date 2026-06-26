@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Enums\PaymentStatusCode;
 use App\Models\Admin;
+use App\Models\OrderRefund;
 use App\Models\Sold;
 use App\Models\Transaction;
 use Illuminate\Support\Facades\DB;
@@ -17,12 +19,11 @@ class AdminPaidOrderRefundService
     public function __construct(
         private readonly OrderService $orderService,
         private readonly OrderStatusPushService $orderStatusPushService,
-    ) {
-    }
+    ) {}
 
     public function refundAndCancelOrder(Sold $order, Admin $admin, ?string $reason = null): array
     {
-        if (!$admin->isSuperAdmin()) {
+        if (! $admin->isSuperAdmin()) {
             throw new RuntimeException('Bu amal faqat superadmin uchun ruxsat etilgan.');
         }
 
@@ -33,7 +34,7 @@ class AdminPaidOrderRefundService
             ->latest('id')
             ->first();
 
-        if (!$transaction) {
+        if (! $transaction) {
             throw new RuntimeException('Ushbu buyurtma uchun Paylov tranzaksiyasi topilmadi.');
         }
 
@@ -49,28 +50,41 @@ class AdminPaidOrderRefundService
         $existingCancel = is_array($providerResponse['cancel'] ?? null)
             ? $providerResponse['cancel']
             : [];
+        $existingDismiss = is_array($providerResponse['dismiss'] ?? null)
+            ? $providerResponse['dismiss']
+            : [];
 
-        if ($this->looksCancelled($existingCancel) && $this->isOrderCancelled($order)) {
+        if (($this->looksCancelled($existingCancel) || $existingDismiss !== []) && $this->isOrderCancelled($order)) {
             return [
                 'transaction_id' => $transactionId,
-                'cancel' => $existingCancel['result'] ?? [],
+                'cancel' => ($existingCancel['result'] ?? []) ?: $existingDismiss,
                 'message' => 'Refund va bekor qilish allaqachon bajarilgan.',
             ];
         }
 
+        $paymentStatus = PaymentStatusCode::fromLegacy($order->payment_status_code ?? $order->paymentStatus);
+        $providerAction = $paymentStatus === PaymentStatusCode::HELD ? 'hold_dismiss' : 'cancel';
+
         $paylov = PaylovService::make();
-        $cancelResponse = $this->looksCancelled($existingCancel)
-            ? $existingCancel
-            : $paylov->cancelPayment($transactionId);
+        if ($providerAction === 'hold_dismiss') {
+            $cancelResponse = is_array($providerResponse['dismiss'] ?? null)
+                ? $providerResponse['dismiss']
+                : $paylov->dismissHold($transactionId);
+        } else {
+            $cancelResponse = $this->looksCancelled($existingCancel)
+                ? $existingCancel
+                : $paylov->cancelPayment($transactionId);
+        }
 
         $this->updateTransaction($transaction, [
             'cancel_time' => (string) intval(round(microtime(true) * 1000)),
             'provider_response' => array_merge($providerResponse, [
-                'cancel' => $cancelResponse,
+                ($providerAction === 'hold_dismiss' ? 'dismiss' : 'cancel') => $cancelResponse,
                 'admin_refund' => [
                     'admin_id' => $admin->id,
                     'admin_name' => $admin->name,
                     'reason' => $reason,
+                    'provider_action' => $providerAction,
                     'cancelled_at' => now()->toIso8601String(),
                 ],
             ]),
@@ -85,6 +99,7 @@ class AdminPaidOrderRefundService
         }
 
         $this->orderStatusPushService->sendForTransition($order->fresh(), $previousStatus, 'F');
+        $this->writeRefundLedger($order->fresh() ?? $order, $admin, $reason, $transaction, $cancelResponse, $paymentStatus, $providerAction);
 
         Log::warning('[AdminRefund] Order refunded and cancelled', [
             'order_id' => $order->id,
@@ -98,6 +113,52 @@ class AdminPaidOrderRefundService
             'cancel' => $cancelResponse['result'] ?? [],
             'message' => 'Pul qaytarildi va buyurtma bekor qilindi.',
         ];
+    }
+
+    private function writeRefundLedger(
+        Sold $order,
+        Admin $admin,
+        ?string $reason,
+        Transaction $transaction,
+        array $providerPayload,
+        PaymentStatusCode $paymentStatus,
+        string $providerAction,
+    ): void {
+        $exists = OrderRefund::query()
+            ->where('order_id', $order->id)
+            ->where('type', 'admin_full_order')
+            ->where('status', 'completed')
+            ->exists();
+
+        if ($exists) {
+            return;
+        }
+
+        $cardRefundAmount = $paymentStatus === PaymentStatusCode::PAID
+            ? max(0, (int) ($order->amount ?? $transaction->amount ?? 0))
+            : 0;
+
+        OrderRefund::query()->create([
+            'order_id' => $order->id,
+            'user_id' => $order->user_id,
+            'type' => 'admin_full_order',
+            'provider' => $providerAction === 'hold_dismiss' ? 'paylov_hold_dismiss' : 'paylov_cancel',
+            'card_refund_amount' => $cardRefundAmount,
+            'cashback_restore_amount' => max(0, (int) ($order->cashbackAmount ?? 0)),
+            'gift_cert_restore_amount' => max(0, (int) ($order->giftCertAmount ?? 0)),
+            'delivery_refund_amount' => max(0, (int) ($order->deliveryPrice ?? 0)),
+            'packaging_refund_amount' => max(0, (int) ($order->packaging_price ?? 0)),
+            'total_customer_value' => max(0, $cardRefundAmount + (int) ($order->cashbackAmount ?? 0) + (int) ($order->giftCertAmount ?? 0)),
+            'status' => 'completed',
+            'provider_transaction_id' => (string) ($transaction->provider_transaction_id ?: $transaction->paycom_transaction_id),
+            'reason_code' => 'admin_refund_cancel',
+            'reason_note_uz' => $reason ?: 'Admin tomonidan to‘liq bekor qilindi.',
+            'reason_note_ru' => $reason ?: 'Полная отмена администратором.',
+            'reason_note_en' => $reason ?: 'Fully cancelled by admin.',
+            'provider_payload' => $providerPayload,
+            'processed_by_admin_id' => $admin->id,
+            'processed_at' => now(),
+        ]);
     }
 
     private function markNeedsLocalCancel(

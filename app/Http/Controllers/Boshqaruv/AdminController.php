@@ -7813,7 +7813,7 @@ class AdminController extends Controller
             ->all();
         $canRefundPayment = $panelAdmin?->isSuperAdmin()
             && ($paymentTransaction?->provider === 'paylov')
-            && in_array((string) ($order->payment_status_code ?? $order->paymentStatus), [PaymentStatusCode::PAID->value, (string) PaymentStatusCode::PAID->legacy()], true)
+            && in_array(PaymentStatusCode::fromLegacy($order->payment_status_code ?? $order->paymentStatus), [PaymentStatusCode::HELD, PaymentStatusCode::PAID], true)
             && ! in_array((string) ($order->status_code ?? $order->status), [OrderStatusCode::CANCELLED->value, OrderStatusCode::CANCELLED->legacy()], true);
         $refundConfirmationPhrase = null;
         if ($canRefundPayment) {
@@ -8184,7 +8184,26 @@ class AdminController extends Controller
 
     private function canProcessOperationalRefunds(Sold $order, ?Transaction $paymentTransaction = null): bool
     {
+        $orderStatus = OrderStatusCode::fromLegacy($order->status_code ?? $order->status);
+        if (in_array($orderStatus, [
+            OrderStatusCode::IN_DELIVERY,
+            OrderStatusCode::DELIVERED,
+            OrderStatusCode::CUSTOMER_RECEIVED,
+            OrderStatusCode::RETURNED,
+            OrderStatusCode::CANCELLED,
+        ], true)) {
+            return false;
+        }
+
         $paymentStatus = PaymentStatusCode::fromLegacy($order->payment_status_code ?? $order->paymentStatus);
+        if (in_array($paymentStatus, [
+            PaymentStatusCode::CASH_PENDING,
+            PaymentStatusCode::CARD_PENDING,
+            PaymentStatusCode::HELD,
+        ], true)) {
+            return true;
+        }
+
         if ($paymentStatus !== PaymentStatusCode::PAID) {
             return false;
         }
