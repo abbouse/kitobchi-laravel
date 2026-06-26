@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, InputHTMLAttributes, useMemo, useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button } from 'react-bootstrap';
 
@@ -90,14 +90,27 @@ function destroy(url?: string, message = "O'chirilsinmi?") {
   if (url && confirm(message)) router.delete(url, { preserveScroll: true });
 }
 
-function TextInput({ name, label, defaultValue, type = 'text', required = false, min, max, step, placeholder }: {
-  name: string; label: string; defaultValue?: string | number | null; type?: string; required?: boolean; min?: number; max?: number; step?: string; placeholder?: string;
+function TextInput({ name, label, defaultValue, type = 'text', required = false, min, max, step, placeholder, inputMode }: {
+  name: string; label: string; defaultValue?: string | number | null; type?: string; required?: boolean; min?: number; max?: number; step?: string; placeholder?: string; inputMode?: InputHTMLAttributes<HTMLInputElement>['inputMode'];
 }) {
   return (
     <div>
       <label className="form-label small text-muted fw-semibold">{label}</label>
-      <input className="form-control" name={name} type={type} min={min} max={max} step={step} required={required} defaultValue={defaultValue ?? ''} placeholder={placeholder} />
+      <input className="form-control" name={name} type={type} min={min} max={max} step={step} required={required} defaultValue={defaultValue ?? ''} placeholder={placeholder} inputMode={inputMode} />
     </div>
+  );
+}
+
+function CoordinateInput({ name, label, defaultValue, placeholder }: { name: string; label: string; defaultValue?: string | number | null; placeholder?: string }) {
+  return (
+    <TextInput
+      name={name}
+      label={label}
+      type="text"
+      inputMode="decimal"
+      defaultValue={defaultValue}
+      placeholder={placeholder}
+    />
   );
 }
 
@@ -123,8 +136,8 @@ function HubForm({ hub, action, onDone }: { hub?: Hub | null; action?: string; o
         <div className="col-md-4"><TextInput name="region_name" label="Viloyat" defaultValue={hub?.region} /></div>
         <div className="col-md-4"><TextInput name="city_name" label="Shahar" defaultValue={hub?.city} /></div>
         <div className="col-12"><TextInput name="address" label="Manzil" defaultValue={hub?.address} /></div>
-        <div className="col-md-4"><TextInput name="lat" label="Latitude" type="number" step="0.000001" defaultValue={hub?.lat} /></div>
-        <div className="col-md-4"><TextInput name="lon" label="Longitude" type="number" step="0.000001" defaultValue={hub?.lon} /></div>
+        <div className="col-md-4"><CoordinateInput name="lat" label="Latitude" defaultValue={hub?.lat} placeholder="41.2995" /></div>
+        <div className="col-md-4"><CoordinateInput name="lon" label="Longitude" defaultValue={hub?.lon} placeholder="69.2401" /></div>
         <div className="col-md-4"><TextInput name="priority" label="Priority" type="number" min={0} defaultValue={hub?.priority ?? 100} /></div>
         <div className="col-md-6"><Toggle name="is_active" label="Faol" defaultChecked={hub?.active ?? true} /></div>
         <div className="col-md-6"><Toggle name="is_primary" label="Asosiy hub" defaultChecked={hub?.primary ?? false} /></div>

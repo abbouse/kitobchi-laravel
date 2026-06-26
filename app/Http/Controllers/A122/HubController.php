@@ -75,7 +75,7 @@ class HubController extends Controller
             'username' => 'required|string|max:80|unique:hub_staff,username',
             'phone_number' => 'nullable|string|max:40',
             'password' => 'required|string|min:6|max:120',
-            'role' => 'required|string|in:' . implode(',', array_map(
+            'role' => 'required|string|in:'.implode(',', array_map(
                 static fn (HubStaffRole $role) => $role->value,
                 HubStaffRole::cases(),
             )),
@@ -100,9 +100,9 @@ class HubController extends Controller
         $data = $request->validate([
             'hub_id' => 'required|exists:hubs,id',
             'full_name' => 'required|string|max:150',
-            'username' => 'required|string|max:80|unique:hub_staff,username,' . $staff->id,
+            'username' => 'required|string|max:80|unique:hub_staff,username,'.$staff->id,
             'phone_number' => 'nullable|string|max:40',
-            'role' => 'required|string|in:' . implode(',', array_map(
+            'role' => 'required|string|in:'.implode(',', array_map(
                 static fn (HubStaffRole $role) => $role->value,
                 HubStaffRole::cases(),
             )),
@@ -153,6 +153,11 @@ class HubController extends Controller
 
     private function validatedPayload(Request $request): array
     {
+        $request->merge([
+            'lat' => $this->normalizeCoordinate($request->input('lat')),
+            'lon' => $this->normalizeCoordinate($request->input('lon')),
+        ]);
+
         $validated = $request->validate([
             'name' => 'required|string|max:150',
             'code' => 'required|string|max:50',
@@ -185,5 +190,16 @@ class HubController extends Controller
                 ? ['notes' => trim((string) $validated['meta'])]
                 : null,
         ];
+    }
+
+    private function normalizeCoordinate(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $value = trim(str_replace(',', '.', (string) $value));
+
+        return $value === '' ? null : $value;
     }
 }
