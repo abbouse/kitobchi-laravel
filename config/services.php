@@ -43,7 +43,7 @@ return [
         'password' => env('PAYLOV_PASSWORD'),
         'merchant_id' => env('PAYLOV_MERCHANT_ID'),
         'hold_minutes' => (int) env('PAYLOV_ORDER_HOLD_MINUTES', 10080),
-        'hold_time_key' => env('PAYLOV_HOLD_TIME_KEY', 'holdTime'),
+        'hold_time_key' => env('PAYLOV_HOLD_TIME_KEY', 'time'),
     ],
 
     'kangaroo' => [

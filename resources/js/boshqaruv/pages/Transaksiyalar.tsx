@@ -50,6 +50,8 @@ interface Transaction {
     status?: string;
     rawStatus?: string;
     notes?: string;
+    invoiceNumber?: string;
+    invoiceDate?: string;
     paymentPurpose?: string;
   };
   ownerTotals?: { approvedCount?: number; approvedSum?: number; pendingSum?: number };
@@ -226,6 +228,8 @@ export default function Transaksiyalar() {
                     <div className="col-md-4"><small className="text-muted d-block">Shartnoma raqami</small><strong>{selected?.contract?.number || '—'}</strong></div>
                     <div className="col-md-4"><small className="text-muted d-block">Imzolangan sana</small><strong>{selected?.contract?.signedAt || '—'}</strong></div>
                     <div className="col-md-4"><small className="text-muted d-block">Amal qilish muddati</small><strong>{selected?.contract?.expiresAt || '—'}</strong></div>
+                    <div className="col-md-6"><small className="text-muted d-block">Hisobvaraq-faktura raqami</small><strong>{selected?.contract?.invoiceNumber || '—'}</strong></div>
+                    <div className="col-md-6"><small className="text-muted d-block">Hisobvaraq-faktura sanasi</small><strong>{selected?.contract?.invoiceDate || '—'}</strong></div>
                     <div className="col-12">
                       <div className="p-3 rounded-4 border bg-light">
                         <div className="d-flex justify-content-between align-items-start gap-2">

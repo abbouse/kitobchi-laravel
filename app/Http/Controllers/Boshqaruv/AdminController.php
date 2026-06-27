@@ -3438,8 +3438,11 @@ class AdminController extends Controller
         $to = $this->formatPaymentPurposeDate($report['period']['to'] ?? null)
             ?: Carbon::parse($transaction->created_at ?? now())->format('d.m.Y');
         $period = $from ? "{$from} dan {$to} gacha" : "{$to} gacha";
+        $invoiceNumber = $this->sellerTransactionInvoiceNumber($transaction);
+        $invoiceDate = $this->sellerTransactionInvoiceDate($transaction);
+        $invoice = $invoiceNumber ? ", {$invoiceDate} dagi {$invoiceNumber}-sonli hisobvaraq-faktura" : '';
 
-        return "{$contractDate} sanadagi N {$contractNumber} shartnomaga asosan internet ekvayring ({$period})";
+        return "{$contractDate} sanadagi {$contractNumber}-sonli shartnomaga{$invoice} asosan internet ekvayring ({$period})";
     }
 
     private function formatPaymentPurposeDate(mixed $value): ?string
@@ -3453,6 +3456,27 @@ class AdminController extends Controller
         } catch (\Throwable) {
             return null;
         }
+    }
+
+    private function sellerTransactionInvoiceNumber(SellerTransaction $transaction): ?string
+    {
+        $contractNumber = trim((string) ($transaction->seller?->contract_number ?? ''));
+        if ($contractNumber === '' || ! $transaction->seller_id || ! $transaction->id) {
+            return null;
+        }
+
+        $ordinal = SellerTransaction::query()
+            ->where('seller_id', $transaction->seller_id)
+            ->where(fn ($query) => $query->whereNull('category')->orWhere('category', 'withdrawal')->orWhere('category', 'seller_withdrawal'))
+            ->where('id', '<=', $transaction->id)
+            ->count();
+
+        return $contractNumber.'-'.max(1, (int) $ordinal);
+    }
+
+    private function sellerTransactionInvoiceDate(SellerTransaction $transaction): string
+    {
+        return Carbon::parse($transaction->created_at ?? now())->format('d.m.Y');
     }
 
     private function sellerPayload(Seller $seller): array
@@ -4467,6 +4491,8 @@ class AdminController extends Controller
                         'status' => $seller?->contract_computed_status,
                         'rawStatus' => $seller?->contract_status,
                         'notes' => $seller?->contract_notes,
+                        'invoiceNumber' => $this->sellerTransactionInvoiceNumber($transaction),
+                        'invoiceDate' => $this->sellerTransactionInvoiceDate($transaction),
                         'paymentPurpose' => $this->sellerTransactionPaymentPurpose($transaction, $report),
                     ],
                     'ownerTotals' => [

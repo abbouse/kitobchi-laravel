@@ -201,10 +201,14 @@ class PaylovService
             'cardId' => $cardId,
             'amount' => $amount,
             'account' => (object) $account,
+            'time' => $holdMinutes,
         ];
 
-        $holdTimeKey = (string) config('services.paylov.hold_time_key', 'holdTime');
-        $payload[$holdTimeKey !== '' ? $holdTimeKey : 'holdTime'] = $holdMinutes;
+        $holdTimeKey = (string) config('services.paylov.hold_time_key', 'time');
+        $holdTimeKey = $holdTimeKey !== '' ? $holdTimeKey : 'time';
+        if ($holdTimeKey !== 'time') {
+            $payload[$holdTimeKey] = $holdMinutes;
+        }
 
         return $this->post('/merchant/payment/hold/create/', $payload);
     }
