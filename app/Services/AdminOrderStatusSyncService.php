@@ -61,6 +61,10 @@ class AdminOrderStatusSyncService
                 return;
             }
 
+            if ($statusCode === OrderStatusCode::IN_DELIVERY) {
+                $this->markActiveSellerOrdersHandedToCourier($order);
+            }
+
             $this->chargeHeldPaymentForOperationalStatus($order, $statusCode, 'admin_main_status_update');
             $order->refresh();
 
@@ -77,11 +81,7 @@ class AdminOrderStatusSyncService
             $this->syncFulfillmentFromMainStatus($order, $statusCode->value);
 
             $sellerStatus = $this->mapMainToSeller($statusCode->value, $order->payment_status_code);
-            SellerOrder::where('order_id', $order->id)->update([
-                'status' => $sellerStatus->legacy(),
-                'status_code' => $sellerStatus->value,
-                'updated_at' => now(),
-            ]);
+            $this->updateActiveSellerOrders($order, $sellerStatus);
 
             $courierStatus = $this->resolveCourierStatusForMainOrder($order, $statusCode->value);
             CourierOrder::where('order_id', $order->id)->update([
@@ -496,10 +496,6 @@ class AdminOrderStatusSyncService
             return;
         }
 
-        if ($target === OrderStatusCode::IN_DELIVERY && ! $this->allActiveSellerOrdersHandedToCourierForOrder($order)) {
-            throw new RuntimeException('Buyurtmani yetkazilmoqda holatiga o‘tkazish uchun barcha aktiv seller orderlar kuryerga berilgan bo‘lishi kerak.');
-        }
-
         if (! $this->isMainRollback($current, $target)) {
             return;
         }
@@ -647,6 +643,40 @@ class AdminOrderStatusSyncService
                     });
             })
             ->doesntExist();
+    }
+
+    private function markActiveSellerOrdersHandedToCourier(Sold $order): void
+    {
+        $this->activeSellerOrdersQuery($order)
+            ->update([
+                'status' => SellerOrderStatusCode::HANDED_TO_COURIER->legacy(),
+                'status_code' => SellerOrderStatusCode::HANDED_TO_COURIER->value,
+                'updated_at' => now(),
+            ]);
+    }
+
+    private function updateActiveSellerOrders(Sold $order, SellerOrderStatusCode $status): void
+    {
+        $this->activeSellerOrdersQuery($order)
+            ->update([
+                'status' => $status->legacy(),
+                'status_code' => $status->value,
+                'updated_at' => now(),
+            ]);
+    }
+
+    private function activeSellerOrdersQuery(Sold $order): \Illuminate\Database\Eloquent\Builder
+    {
+        return SellerOrder::query()
+            ->where('order_id', $order->id)
+            ->where(function ($query) {
+                $query->where('status_code', '!=', SellerOrderStatusCode::CANCELLED->value)
+                    ->orWhereNull('status_code');
+            })
+            ->where(function ($query) {
+                $query->where('status', '!=', SellerOrderStatusCode::CANCELLED->legacy())
+                    ->orWhereNull('status');
+            });
     }
 
     private function syncFulfillmentCancellation(Sold $order): void
