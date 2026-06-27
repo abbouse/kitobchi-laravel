@@ -30,6 +30,28 @@ interface Transaction {
   method?: string;
   note?: string;
   category?: string;
+  recipient?: {
+    legalType?: string;
+    legalTypeLabel?: string;
+    inn?: string;
+    legalAddress?: string;
+    bankName?: string;
+    bankAccount?: string;
+    bankMfo?: string;
+    bankSwift?: string;
+    card?: string;
+    cardHolder?: string;
+  };
+  contract?: {
+    number?: string;
+    signed?: boolean;
+    signedAt?: string;
+    expiresAt?: string;
+    status?: string;
+    rawStatus?: string;
+    notes?: string;
+    paymentPurpose?: string;
+  };
   ownerTotals?: { approvedCount?: number; approvedSum?: number; pendingSum?: number };
   sellerTotals?: { approvedCount?: number; approvedSum?: number; pendingSum?: number };
   breakdown?: {
@@ -82,6 +104,10 @@ export default function Transaksiyalar() {
   const patch = (url?: string, message?: string) => {
     if (!url || (message && !confirm(message))) return;
     router.patch(url, {}, { preserveScroll: true });
+  };
+  const copy = (value?: string) => {
+    if (!value) return;
+    navigator.clipboard?.writeText(value);
   };
 
   return (
@@ -179,6 +205,45 @@ export default function Transaksiyalar() {
             <div className="col-6"><small className="text-muted">Buyurtma</small><div>{selected?.owner === 'courier' ? `#${selected?.orderId || '—'} · Kuryer #${selected?.courierOrderId || '—'} · Vazifa #${selected?.courierTaskId || '—'}` : `#${selected?.orderId || '—'} · Sotuvchi #${selected?.sellerOrderId || '—'}`}</div></div>
             <div className="col-6"><small className="text-muted">Yangilangan</small><div>{selected?.updatedAt || '—'}</div></div>
             <div className="col-12"><small className="text-muted">Izoh</small><div>{selected?.note || '—'}</div></div>
+            {selected?.owner === 'seller' ? (
+              <div className="col-12">
+                <div className="detail-panel">
+                  <div className="d-flex justify-content-between align-items-start gap-2 mb-3">
+                    <div>
+                      <h6 className="fw-bold mb-1">Pul o‘tkazish rekvizitlari</h6>
+                      <small className="text-muted">Shartnoma va bank ma’lumotlari seller kartochkasidan olinadi.</small>
+                    </div>
+                    <span className="chip chip-gray">{selected?.recipient?.legalTypeLabel || 'Tanlanmagan'}</span>
+                  </div>
+                  <div className="row g-3">
+                    <div className="col-md-4"><small className="text-muted d-block">Hisob raqam</small><strong className="text-break">{selected?.recipient?.bankAccount || '—'}</strong></div>
+                    <div className="col-md-4"><small className="text-muted d-block">STIR</small><strong>{selected?.recipient?.inn || '—'}</strong></div>
+                    <div className="col-md-4"><small className="text-muted d-block">MFO</small><strong>{selected?.recipient?.bankMfo || '—'}</strong></div>
+                    <div className="col-md-4"><small className="text-muted d-block">Bank</small><strong>{selected?.recipient?.bankName || '—'}</strong></div>
+                    <div className="col-md-4"><small className="text-muted d-block">SWIFT</small><strong>{selected?.recipient?.bankSwift || '—'}</strong></div>
+                    <div className="col-md-4"><small className="text-muted d-block">Karta / karta egasi</small><strong>{[selected?.recipient?.card, selected?.recipient?.cardHolder].filter(Boolean).join(' · ') || '—'}</strong></div>
+                    <div className="col-12"><small className="text-muted d-block">Yuridik manzil</small><strong>{selected?.recipient?.legalAddress || '—'}</strong></div>
+                    <div className="col-md-4"><small className="text-muted d-block">Shartnoma raqami</small><strong>{selected?.contract?.number || '—'}</strong></div>
+                    <div className="col-md-4"><small className="text-muted d-block">Imzolangan sana</small><strong>{selected?.contract?.signedAt || '—'}</strong></div>
+                    <div className="col-md-4"><small className="text-muted d-block">Amal qilish muddati</small><strong>{selected?.contract?.expiresAt || '—'}</strong></div>
+                    <div className="col-12">
+                      <div className="p-3 rounded-4 border bg-light">
+                        <div className="d-flex justify-content-between align-items-start gap-2">
+                          <div>
+                            <small className="text-muted d-block mb-1">To‘lov izohi</small>
+                            <strong>{selected?.contract?.paymentPurpose || selected?.note || 'Shartnoma raqami kiritilmagan'}</strong>
+                          </div>
+                          <button type="button" className="btn btn-sm btn-light border" onClick={() => copy(selected?.contract?.paymentPurpose || selected?.note)}>
+                            <i className="bi bi-copy"></i>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    {selected?.contract?.notes ? <div className="col-12"><small className="text-muted d-block">Shartnoma izohi</small><div>{selected.contract.notes}</div></div> : null}
+                  </div>
+                </div>
+              </div>
+            ) : null}
             <div className="col-12">
               <div className="detail-panel">
                 <div className="d-flex justify-content-between align-items-start gap-2 mb-3">

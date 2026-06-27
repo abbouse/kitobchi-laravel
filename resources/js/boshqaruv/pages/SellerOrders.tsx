@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Accordion, Modal, Button } from 'react-bootstrap';
 import PaginationControls from '../components/PaginationControls';
@@ -321,6 +321,10 @@ function SellerModal({ seller, onHide, onWarn, onResetPassword, onPatch, onEdit 
   onPatch: (url?: string, message?: string, payload?: Record<string, string>) => void;
   onEdit: (seller: Seller) => void;
 }) {
+  const [section, setSection] = useState('overview');
+  useEffect(() => {
+    setSection('overview');
+  }, [seller?.id]);
   const uploadDocument = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!seller?.actions?.uploadDocumentUrl) return;
@@ -357,17 +361,40 @@ function SellerModal({ seller, onHide, onWarn, onResetPassword, onPatch, onEdit 
                 </div>
               </div>
             </div>
-            <Info title="Asosiy ma'lumotlar" rows={[
-              ['Egasi', seller.ownerName || '—'], ['Telefon', seller.phone || '—'], ['Hudud', [seller.region, seller.district].filter(Boolean).join(', ') || '—'],
-              ['Status', sellerLabel(seller.status)], ['Reyting', `${seller.rating || 0} (${seller.ratingReviewsCount || 0})`], ['Reputatsiya', String(seller.reputationScore || 0)],
-            ]} />
-            <Info title="Moliya va mahsulot" rows={[
-              ['Balans', `${fmt(seller.balance || 0)} so'm`], ['Tushum', `${fmt(seller.totalRevenue || 0)} so'm`], ['Komissiya', `${seller.commissionRate || 0}%`],
-              ['Kitoblar', String(seller.books || 0)], ['Kanstovar', String(seller.stationeries || 0)], ['Buyurtmalar', String(seller.orders || 0)],
-            ]} />
             <div className="col-12">
-              <Accordion defaultActiveKey="qr" alwaysOpen className="seller-detail-accordion">
-                <Accordion.Item eventKey="qr">
+              <div className="detail-panel">
+                <div className="d-flex flex-wrap gap-2">
+                  {[
+                    ['overview', 'Umumiy'],
+                    ['branches', 'Filial va QR'],
+                    ['contract', 'Shartnoma'],
+                    ['legal', 'Rekvizitlar'],
+                    ['documents', 'Hujjatlar'],
+                    ['activity', 'Harakatlar'],
+                  ].map(([key, label]) => (
+                    <button key={key} type="button" className={`btn btn-sm ${section === key ? 'btn-primary-gradient' : 'btn-light'}`} onClick={() => setSection(key)}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            {section === 'overview' ? (
+              <>
+                <Info title="Asosiy ma'lumotlar" rows={[
+                  ['Egasi', seller.ownerName || '—'], ['Telefon', seller.phone || '—'], ['Hudud', [seller.region, seller.district].filter(Boolean).join(', ') || '—'],
+                  ['Status', sellerLabel(seller.status)], ['Reyting', `${seller.rating || 0} (${seller.ratingReviewsCount || 0})`], ['Reputatsiya', String(seller.reputationScore || 0)],
+                ]} />
+                <Info title="Moliya va mahsulot" rows={[
+                  ['Balans', `${fmt(seller.balance || 0)} so'm`], ['Tushum', `${fmt(seller.totalRevenue || 0)} so'm`], ['Komissiya', `${seller.commissionRate || 0}%`],
+                  ['Kitoblar', String(seller.books || 0)], ['Kanstovar', String(seller.stationeries || 0)], ['Buyurtmalar', String(seller.orders || 0)],
+                ]} />
+              </>
+            ) : null}
+            {['branches', 'contract', 'legal', 'documents'].includes(section) ? (
+              <div className="col-12">
+                <Accordion activeKey={section} className="seller-detail-accordion">
+                <Accordion.Item eventKey="branches">
                   <Accordion.Header>QR kodlar va filiallar</Accordion.Header>
                   <Accordion.Body>
                     <div className="row g-3">
@@ -437,7 +464,7 @@ function SellerModal({ seller, onHide, onWarn, onResetPassword, onPatch, onEdit 
                   <Accordion.Body>
                     <div className="row g-3">
                       <Info title="Huquqiy ma'lumotlar" rows={[
-                        ['Yuridik turi', String(seller.legal?.type || '—')], ['INN', String(seller.legal?.inn || '—')], ['Pasport', String(seller.legal?.passport || '—')],
+                        ['Yuridik turi', String(seller.legal?.typeLabel || seller.legalName || '—')], ['STIR', String(seller.legal?.inn || '—')], ['Pasport', String(seller.legal?.passport || '—')],
                         ['Pasport beruvchi', String(seller.legal?.passportIssuedBy || '—')], ['Pasport sanasi', String(seller.legal?.passportIssuedAt || '—')], ['Yuridik manzil', String(seller.legal?.legalAddress || seller.address || '—')],
                       ]} />
                       <Info title="Bank" rows={[
@@ -456,9 +483,14 @@ function SellerModal({ seller, onHide, onWarn, onResetPassword, onPatch, onEdit 
                 </Accordion.Item>
               </Accordion>
             </div>
-            <ListBlock title="Oxirgi seller orderlar" empty="Order yo'q" items={seller.recentOrders || []} render={(item) => <><strong>#{item.id} · {fmt(Number(item.amount || 0))} so'm</strong><span>{String(item.customer || 'Mijoz')} · {String(item.date || '—')}</span></>} />
-            <ListBlock title="Tranzaksiyalar" empty="Tranzaksiya yo'q" items={seller.transactions || []} render={(item) => <><strong>{fmt(Number(item.net || item.amount || 0))} so'm · {String(item.status || '—')}</strong><span>{String(item.category || item.type || '—')} · {String(item.date || '—')}</span></>} />
-            <ListBlock title={`Ogohlantirishlar (${seller.warningCount || 0}/3)`} empty="Ogohlantirish yo'q" items={seller.banLogs || []} render={(item) => <><strong>{String(item.title || '—')}</strong><span>{String(item.message || '')} · {String(item.date || '—')}</span></>} />
+            ) : null}
+            {section === 'activity' ? (
+              <>
+                <ListBlock title="Oxirgi seller orderlar" empty="Order yo'q" items={seller.recentOrders || []} render={(item) => <><strong>#{item.id} · {fmt(Number(item.amount || 0))} so'm</strong><span>{String(item.customer || 'Mijoz')} · {String(item.date || '—')}</span></>} />
+                <ListBlock title="Tranzaksiyalar" empty="Tranzaksiya yo'q" items={seller.transactions || []} render={(item) => <><strong>{fmt(Number(item.net || item.amount || 0))} so'm · {String(item.status || '—')}</strong><span>{String(item.category || item.type || '—')} · {String(item.date || '—')}</span></>} />
+                <ListBlock title={`Ogohlantirishlar (${seller.warningCount || 0}/3)`} empty="Ogohlantirish yo'q" items={seller.banLogs || []} render={(item) => <><strong>{String(item.title || '—')}</strong><span>{String(item.message || '')} · {String(item.date || '—')}</span></>} />
+              </>
+            ) : null}
           </div>
         )}
       </Modal.Body>
@@ -557,6 +589,12 @@ function ListBlock<T>({ title, empty, items, render }: { title: string; empty: s
 
 function SellerEditModal({ seller, onHide }: { seller: Seller | null; onHide: () => void }) {
   const selectedActivityTypes = seller?.activityTypes || [];
+  const [legalType, setLegalType] = useState(String(seller?.legal?.type || ''));
+  useEffect(() => {
+    setLegalType(String(seller?.legal?.type || ''));
+  }, [seller?.id, seller?.legal?.type]);
+  const isIndividual = legalType === 'individual';
+  const isOrganization = ['entrepreneur', 'llc', 'jsc'].includes(legalType);
   const submit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!seller?.actions?.updateUrl) return;
@@ -596,20 +634,41 @@ function SellerEditModal({ seller, onHide }: { seller: Seller | null; onHide: ()
     <FormInput name="commission_percent" label="Komissiya % (0 yoki bo'sh = global)" type="number" defaultValue={seller?.commissionRate} />
     <FormInput name="password" label="Yangi parol" type="password" />
     <FormInput name="photo" label="Profil rasmi" type="file" />
-    <SectionTitle title="Huquqiy va bank rekvizitlari" />
-    <div className="col-md-6"><label className="form-label">Yuridik turi</label><select name="legal_type" defaultValue={String(seller?.legal?.type || '')} className="form-select"><option value="">Tanlanmagan</option><option value="individual">Jismoniy shaxs</option><option value="entrepreneur">YTT</option><option value="llc">MChJ</option><option value="jsc">AJ / OAJ</option></select></div>
-    <FormInput name="inn" label="INN" defaultValue={String(seller?.legal?.inn || '')} />
-    <FormInput name="passport_series" label="Pasport seriyasi" defaultValue={String(seller?.legal?.passport || '').split(' ')[0]} />
-    <FormInput name="passport_number" label="Pasport raqami" defaultValue={String(seller?.legal?.passport || '').split(' ').slice(1).join(' ')} />
-    <FormInput name="passport_issued_by" label="Pasport kim tomonidan berilgan" defaultValue={String(seller?.legal?.passportIssuedBy || '')} />
-    <FormInput name="passport_issued_at" label="Pasport berilgan sana" type="date" defaultValue={String(seller?.legal?.passportIssuedAt || '')} />
-    <FormInput name="bank_name" label="Bank" defaultValue={String(seller?.bank?.name || '')} />
-    <FormInput name="bank_account" label="Hisob raqam" defaultValue={String(seller?.bank?.rawAccount || '')} />
-    <FormInput name="bank_mfo" label="MFO" defaultValue={String(seller?.bank?.mfo || '')} />
-    <FormInput name="bank_swift" label="SWIFT" defaultValue={String(seller?.bank?.swift || '')} />
-    <FormInput name="payment_card" label="Karta" defaultValue={String(seller?.bank?.rawCard || '')} />
-    <FormInput name="card_holder" label="Karta egasi" defaultValue={String(seller?.bank?.cardHolder || '')} />
-    <div className="col-12"><label className="form-label">Yuridik manzil</label><textarea name="legal_address" defaultValue={String(seller?.legal?.legalAddress || seller?.address || '')} className="form-control" rows={2}></textarea></div>
+    <SectionTitle title="Huquqiy tur" />
+    <div className="col-md-6">
+      <label className="form-label">Seller turi</label>
+      <select name="legal_type" value={legalType} onChange={(event) => setLegalType(event.target.value)} className="form-select">
+        <option value="">Tanlanmagan</option>
+        <option value="individual">Jismoniy shaxs</option>
+        <option value="entrepreneur">YTT</option>
+        <option value="llc">MChJ</option>
+        <option value="jsc">AJ / OAJ</option>
+      </select>
+      <div className="form-text">Tanlangan turga qarab faqat kerakli rekvizitlar ochiladi.</div>
+    </div>
+    {!legalType ? <div className="col-md-6"><div className="detail-panel h-100 d-flex align-items-center text-muted">Avval seller yuridik turini tanlang.</div></div> : null}
+    {isIndividual ? (
+      <>
+        <SectionTitle title="Jismoniy shaxs ma'lumotlari" />
+        <FormInput name="passport_series" label="Pasport seriyasi" defaultValue={String(seller?.legal?.passport || '').split(' ')[0]} />
+        <FormInput name="passport_number" label="Pasport raqami" defaultValue={String(seller?.legal?.passport || '').split(' ').slice(1).join(' ')} />
+        <FormInput name="passport_issued_by" label="Pasport kim tomonidan berilgan" defaultValue={String(seller?.legal?.passportIssuedBy || '')} />
+        <FormInput name="passport_issued_at" label="Pasport berilgan sana" type="date" defaultValue={String(seller?.legal?.passportIssuedAt || '')} />
+        <FormInput name="payment_card" label="Karta" defaultValue={String(seller?.bank?.rawCard || '')} />
+        <FormInput name="card_holder" label="Karta egasi" defaultValue={String(seller?.bank?.cardHolder || '')} />
+      </>
+    ) : null}
+    {isOrganization ? (
+      <>
+        <SectionTitle title="Tashkilot rekvizitlari" />
+        <FormInput name="inn" label="STIR" defaultValue={String(seller?.legal?.inn || '')} />
+        <FormInput name="bank_name" label="Bank" defaultValue={String(seller?.bank?.name || '')} />
+        <FormInput name="bank_account" label="Hisob raqam" defaultValue={String(seller?.bank?.rawAccount || '')} />
+        <FormInput name="bank_mfo" label="MFO" defaultValue={String(seller?.bank?.mfo || '')} />
+        <FormInput name="bank_swift" label="SWIFT" defaultValue={String(seller?.bank?.swift || '')} />
+        <div className="col-12"><label className="form-label">Yuridik manzil</label><textarea name="legal_address" defaultValue={String(seller?.legal?.legalAddress || seller?.address || '')} className="form-control" rows={2}></textarea></div>
+      </>
+    ) : null}
     <SectionTitle title="Shartnoma va premium" />
     <FormInput name="contract_number" label="Shartnoma raqami" defaultValue={String(seller?.contract?.number || '')} />
     <div className="col-md-6"><label className="form-label">Shartnoma holati</label><select name="contract_status" defaultValue={String(seller?.contract?.rawStatus || 'none')} className="form-select"><option value="none">Mavjud emas</option><option value="active">Faol</option><option value="expiring">Tugash arafasida</option><option value="expired">Tugagan</option><option value="terminated">To'xtatilgan</option></select></div>

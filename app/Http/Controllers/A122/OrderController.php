@@ -419,7 +419,11 @@ class OrderController extends Controller
         $request->validate([
             'status' => 'required|in:A,P,B,C,D,F,R,pending,packing,in_delivery,delivered,customer_received,cancelled,returned',
         ]);
-        $this->statusSync->updateMainOrder($order, (string) $request->input('status'));
+        try {
+            $this->statusSync->updateMainOrder($order, (string) $request->input('status'));
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
         return back()->with('success', 'Buyurtma holati yangilandi.');
     }

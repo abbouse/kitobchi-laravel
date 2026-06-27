@@ -599,7 +599,10 @@ class OrderController extends Controller
 
                 if ($allSellersDone) {
                     $previousStatus = (string) $sold->status;
-                    if (PaymentStatusCode::fromLegacy($sold->payment_status_code ?? $sold->paymentStatus) === PaymentStatusCode::HELD) {
+                    if (
+                        $fulfillmentMode === FulfillmentMode::DIRECT_COURIER->value
+                        && PaymentStatusCode::fromLegacy($sold->payment_status_code ?? $sold->paymentStatus) === PaymentStatusCode::HELD
+                    ) {
                         $this->paylovOrderPaymentService->chargeHeldOrder(
                             $sold,
                             $this->sellerOrderCancellationService->operationalAmountForCourier($sold),

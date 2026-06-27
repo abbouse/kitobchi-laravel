@@ -26,6 +26,7 @@ use App\Services\CourierTaskOrchestratorService;
 use App\Services\OrderRealtimeService;
 use App\Services\OrderService;
 use App\Services\OrderStatusPushService;
+use App\Services\PaylovOrderPaymentService;
 use App\Services\QrTokenService;
 use App\Services\SellerOrderCancellationService;
 use Carbon\Carbon;
@@ -44,6 +45,7 @@ class CourierOrderController extends Controller
         private readonly CourierTaskOrchestratorService $courierTaskOrchestratorService,
         private readonly CourierCashOnDeliveryCapacityService $courierCashOnDeliveryCapacityService,
         private readonly SellerOrderCancellationService $sellerOrderCancellationService,
+        private readonly PaylovOrderPaymentService $paylovOrderPaymentService,
     ) {}
 
     public function getAvailableOrders(Request $request)
@@ -326,6 +328,14 @@ class CourierOrderController extends Controller
                 $order->status_code = CourierOrderStatusCode::CUSTOMER_RECEIVED->value;
                 $order->save();
 
+                if (PaymentStatusCode::fromLegacy($orderCustomer->payment_status_code ?? $orderCustomer->paymentStatus) === PaymentStatusCode::HELD) {
+                    $this->paylovOrderPaymentService->chargeHeldOrder(
+                        $orderCustomer,
+                        $this->sellerOrderCancellationService->operationalAmountForCourier($orderCustomer),
+                        'courier_customer_received',
+                    );
+                    $orderCustomer->refresh();
+                }
                 $orderCustomer->status = OrderStatusCode::CUSTOMER_RECEIVED->legacy();
                 $orderCustomer->status_code = OrderStatusCode::CUSTOMER_RECEIVED->value;
                 if ($orderCustomer->payment_status_code !== PaymentStatusCode::PAID->value) {

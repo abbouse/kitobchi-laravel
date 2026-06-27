@@ -3,15 +3,19 @@
 namespace App\Services;
 
 use App\Enums\CourierOrderStatusCode;
+use App\Enums\CourierTaskStatusCode;
 use App\Enums\FulfillmentMode;
 use App\Enums\FulfillmentStatusCode;
 use App\Enums\OrderStatusCode;
 use App\Enums\PaymentStatusCode;
 use App\Enums\SellerOrderStatusCode;
 use App\Models\CourierOrder;
+use App\Models\CourierTask;
+use App\Models\OrderFulfillment;
 use App\Models\SellerOrder;
 use App\Models\Sold;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 
 class AdminOrderStatusSyncService
 {
@@ -40,15 +44,18 @@ class AdminOrderStatusSyncService
         private readonly SellerOrderCancellationService $sellerOrderCancellationService,
     ) {}
 
-    public function updateMainOrder(Sold $order, string $status): void
+    public function updateMainOrder(Sold $order, string $status, array $options = []): void
     {
-        DB::transaction(function () use ($order, $status) {
+        DB::transaction(function () use ($order, $status, $options) {
+            $order = Sold::query()->lockForUpdate()->findOrFail($order->id);
             $previousStatus = (string) $order->status;
             $previousCompletedPaid = $order->isCompletedAndPaid();
             $statusCode = OrderStatusCode::fromLegacy($status);
+            $this->guardMainTransition($order, $statusCode, $options);
 
             if ($statusCode === OrderStatusCode::CANCELLED) {
                 $this->orderService->cancelOrder($order, strict: false);
+                $this->syncFulfillmentCancellation($order);
                 DB::afterCommit(fn () => $this->orderStatusPushService->sendForTransition($order->fresh(), $previousStatus, 'F'));
 
                 return;
@@ -89,10 +96,12 @@ class AdminOrderStatusSyncService
         });
     }
 
-    public function updateSellerOrder(SellerOrder $sellerOrder, int|string $status): void
+    public function updateSellerOrder(SellerOrder $sellerOrder, int|string $status, array $options = []): void
     {
-        DB::transaction(function () use ($sellerOrder, $status) {
+        DB::transaction(function () use ($sellerOrder, $status, $options) {
+            $sellerOrder = SellerOrder::query()->lockForUpdate()->findOrFail($sellerOrder->id);
             $statusCode = SellerOrderStatusCode::fromLegacy($status);
+            $this->guardSellerTransition($sellerOrder, $statusCode, $options);
             $sellerOrder->update([
                 'status' => $statusCode->legacy(),
                 'status_code' => $statusCode->value,
@@ -107,20 +116,25 @@ class AdminOrderStatusSyncService
             if ($statusCode === SellerOrderStatusCode::CANCELLED) {
                 $previousStatus = (string) $order->status;
                 $this->orderService->cancelOrder($order, strict: false);
+                $this->syncFulfillmentCancellation($order);
                 DB::afterCommit(fn () => $this->orderStatusPushService->sendForTransition($order->fresh(), $previousStatus, 'F'));
 
                 return;
             }
 
             $previousStatus = (string) $order->status;
-            $this->chargeHeldPaymentForOperationalStatus($order, $order->status_code ? OrderStatusCode::fromLegacy($order->status_code) : OrderStatusCode::PENDING, 'admin_seller_status_update');
-            $order->refresh();
-            $order->status_code = match ($statusCode) {
-                SellerOrderStatusCode::HANDED_TO_COURIER => OrderStatusCode::IN_DELIVERY->value,
-                SellerOrderStatusCode::ACCEPTED => OrderStatusCode::PACKING->value,
-                default => OrderStatusCode::PENDING->value,
+            $allActiveSellerOrdersDone = $this->allActiveSellerOrdersHandedToCourier($sellerOrder);
+            $order->loadMissing('fulfillment');
+            $isDirectCourier = $order->fulfillment?->fulfillment_mode === FulfillmentMode::DIRECT_COURIER->value;
+            $targetOrderStatus = match ($statusCode) {
+                SellerOrderStatusCode::HANDED_TO_COURIER => $allActiveSellerOrdersDone && $isDirectCourier ? OrderStatusCode::IN_DELIVERY : OrderStatusCode::PACKING,
+                SellerOrderStatusCode::ACCEPTED => OrderStatusCode::PACKING,
+                default => OrderStatusCode::PENDING,
             };
-            $order->status = OrderStatusCode::from($order->status_code)->legacy();
+            $this->chargeHeldPaymentForOperationalStatus($order, $targetOrderStatus, 'admin_seller_status_update');
+            $order->refresh();
+            $order->status_code = $targetOrderStatus->value;
+            $order->status = $targetOrderStatus->legacy();
             $this->syncCompletionState($order);
             $order->save();
             $this->syncFulfillmentFromSellerStatus($order, $statusCode);
@@ -137,10 +151,12 @@ class AdminOrderStatusSyncService
         });
     }
 
-    public function updateCourierOrder(CourierOrder $courierOrder, string $status): void
+    public function updateCourierOrder(CourierOrder $courierOrder, string $status, array $options = []): void
     {
-        DB::transaction(function () use ($courierOrder, $status) {
+        DB::transaction(function () use ($courierOrder, $status, $options) {
+            $courierOrder = CourierOrder::query()->lockForUpdate()->findOrFail($courierOrder->id);
             $statusCode = CourierOrderStatusCode::fromLegacy($status);
+            $this->guardCourierTransition($courierOrder, $statusCode, $options);
             $courierOrder->update([
                 'status' => $statusCode->legacy(),
                 'status_code' => $statusCode->value,
@@ -156,6 +172,7 @@ class AdminOrderStatusSyncService
 
             if ($statusCode === CourierOrderStatusCode::CANCELLED) {
                 $this->orderService->cancelOrder($order, strict: false);
+                $this->syncFulfillmentCancellation($order);
                 DB::afterCommit(fn () => $this->orderStatusPushService->sendForTransition($order->fresh(), $previousStatus, 'F'));
 
                 return;
@@ -202,6 +219,56 @@ class AdminOrderStatusSyncService
         });
     }
 
+    public function updateFulfillmentStatus(OrderFulfillment $fulfillment, FulfillmentStatusCode|string $status, array $options = []): OrderFulfillment
+    {
+        return DB::transaction(function () use ($fulfillment, $status, $options) {
+            $target = $status instanceof FulfillmentStatusCode ? $status : FulfillmentStatusCode::from((string) $status);
+            /** @var OrderFulfillment $fulfillment */
+            $fulfillment = OrderFulfillment::query()->lockForUpdate()->findOrFail($fulfillment->id);
+            $order = $fulfillment->order()->lockForUpdate()->first();
+
+            $this->guardFulfillmentTransition($fulfillment, $target, $order, $options);
+
+            if ($target === FulfillmentStatusCode::CANCELLED && $order) {
+                $this->orderService->cancelOrder($order, strict: false);
+                $this->syncFulfillmentCancellation($order);
+
+                return $fulfillment->fresh();
+            }
+
+            $this->applyFulfillmentStatus($fulfillment, $target);
+            $fulfillment->save();
+
+            if ($order) {
+                $this->syncOrderFromFulfillmentStatus($order, $fulfillment, $target, $options);
+            }
+
+            return $fulfillment->fresh();
+        });
+    }
+
+    private function allActiveSellerOrdersHandedToCourier(SellerOrder $sellerOrder): bool
+    {
+        return SellerOrder::query()
+            ->where('order_id', $sellerOrder->order_id)
+            ->where(function ($query) {
+                $query->where('status_code', '!=', SellerOrderStatusCode::CANCELLED->value)
+                    ->orWhereNull('status_code');
+            })
+            ->where(function ($query) {
+                $query->where('status', '!=', SellerOrderStatusCode::CANCELLED->legacy())
+                    ->orWhereNull('status');
+            })
+            ->where(function ($query) {
+                $query->where('status_code', '!=', SellerOrderStatusCode::HANDED_TO_COURIER->value)
+                    ->orWhere(function ($fallback) {
+                        $fallback->whereNull('status_code')
+                            ->where('status', '!=', SellerOrderStatusCode::HANDED_TO_COURIER->legacy());
+                    });
+            })
+            ->doesntExist();
+    }
+
     private function chargeHeldPaymentForOperationalStatus(Sold $order, OrderStatusCode $targetStatus, string $reason): void
     {
         if (! in_array($targetStatus, [
@@ -213,6 +280,10 @@ class AdminOrderStatusSyncService
         }
 
         if (PaymentStatusCode::fromLegacy($order->payment_status_code ?? $order->paymentStatus) !== PaymentStatusCode::HELD) {
+            return;
+        }
+
+        if ($targetStatus === OrderStatusCode::IN_DELIVERY && ! $this->allActiveSellerOrdersHandedToCourierForOrder($order)) {
             return;
         }
 
@@ -314,9 +385,7 @@ class AdminOrderStatusSyncService
             SellerOrderStatusCode::HANDED_TO_COURIER => $hasCourier
                 ? CourierOrderStatusCode::IN_DELIVERY
                 : CourierOrderStatusCode::PENDING,
-            SellerOrderStatusCode::ACCEPTED => $hasCourier
-                ? CourierOrderStatusCode::IN_DELIVERY
-                : CourierOrderStatusCode::PENDING,
+            SellerOrderStatusCode::ACCEPTED => CourierOrderStatusCode::PENDING,
             SellerOrderStatusCode::CANCELLED => CourierOrderStatusCode::CANCELLED,
             default => ($paymentCode === PaymentStatusCode::CARD_PENDING->value
                 ? CourierOrderStatusCode::PAYMENT_PENDING
@@ -418,5 +487,283 @@ class AdminOrderStatusSyncService
             default => $fulfillment->status_code,
         };
         $fulfillment->save();
+    }
+
+    private function guardMainTransition(Sold $order, OrderStatusCode $target, array $options = []): void
+    {
+        $current = OrderStatusCode::fromLegacy($order->status_code ?? $order->status);
+        if ($current === $target) {
+            return;
+        }
+
+        if ($target === OrderStatusCode::IN_DELIVERY && ! $this->allActiveSellerOrdersHandedToCourierForOrder($order)) {
+            throw new RuntimeException('Buyurtmani yetkazilmoqda holatiga o‘tkazish uchun barcha aktiv seller orderlar kuryerga berilgan bo‘lishi kerak.');
+        }
+
+        if (! $this->isMainRollback($current, $target)) {
+            return;
+        }
+
+        $paymentStatus = PaymentStatusCode::fromLegacy($order->payment_status_code ?? $order->paymentStatus);
+        if ($paymentStatus === PaymentStatusCode::PAID && empty($options['allow_paid_rollback'])) {
+            throw new RuntimeException('To‘lovi yechilgan buyurtmani oddiy status bilan orqaga qaytarib bo‘lmaydi. Refund yoki maxsus rollback amali kerak.');
+        }
+    }
+
+    private function guardSellerTransition(SellerOrder $sellerOrder, SellerOrderStatusCode $target, array $options = []): void
+    {
+        $current = SellerOrderStatusCode::fromLegacy($sellerOrder->status_code ?? $sellerOrder->status);
+        if ($current === $target || ! $this->isSellerRollback($current, $target)) {
+            return;
+        }
+
+        $order = $sellerOrder->order()->first();
+        $paymentStatus = $order ? PaymentStatusCode::fromLegacy($order->payment_status_code ?? $order->paymentStatus) : null;
+        if ($paymentStatus === PaymentStatusCode::PAID && empty($options['allow_paid_rollback'])) {
+            throw new RuntimeException('To‘lovi yechilgan seller orderni oddiy status bilan orqaga qaytarib bo‘lmaydi.');
+        }
+    }
+
+    private function guardCourierTransition(CourierOrder $courierOrder, CourierOrderStatusCode $target, array $options = []): void
+    {
+        $current = CourierOrderStatusCode::fromLegacy($courierOrder->status_code ?? $courierOrder->status);
+        if ($current === $target) {
+            return;
+        }
+
+        $order = $courierOrder->order()->first();
+        if ($target === CourierOrderStatusCode::IN_DELIVERY && $order && ! $this->allActiveSellerOrdersHandedToCourierForOrder($order)) {
+            throw new RuntimeException('Kuryer orderni yo‘lga chiqarish uchun barcha aktiv seller orderlar kuryerga berilgan bo‘lishi kerak.');
+        }
+
+        if (! $this->isCourierRollback($current, $target)) {
+            return;
+        }
+
+        $paymentStatus = $order ? PaymentStatusCode::fromLegacy($order->payment_status_code ?? $order->paymentStatus) : null;
+        if ($paymentStatus === PaymentStatusCode::PAID && empty($options['allow_paid_rollback'])) {
+            throw new RuntimeException('To‘lovi yechilgan kuryer orderni oddiy status bilan orqaga qaytarib bo‘lmaydi.');
+        }
+    }
+
+    private function guardFulfillmentTransition(OrderFulfillment $fulfillment, FulfillmentStatusCode $target, ?Sold $order, array $options = []): void
+    {
+        $current = $fulfillment->status_code
+            ? FulfillmentStatusCode::from((string) $fulfillment->status_code)
+            : FulfillmentStatusCode::AWAITING_SELLER_PREP;
+
+        if ($current === $target || ! $this->isFulfillmentRollback($current, $target)) {
+            return;
+        }
+
+        $paymentStatus = $order ? PaymentStatusCode::fromLegacy($order->payment_status_code ?? $order->paymentStatus) : null;
+        if ($paymentStatus === PaymentStatusCode::PAID && empty($options['allow_paid_rollback'])) {
+            throw new RuntimeException('To‘lovi yechilgan fulfillmentni oddiy status bilan orqaga qaytarib bo‘lmaydi.');
+        }
+    }
+
+    private function applyFulfillmentStatus(OrderFulfillment $fulfillment, FulfillmentStatusCode $target): void
+    {
+        $currentRank = $this->rank($this->fulfillmentFlow(), (string) $fulfillment->status_code);
+        $targetRank = $this->rank($this->fulfillmentFlow(), $target->value);
+        $fulfillment->status_code = $target->value;
+
+        match ($target) {
+            FulfillmentStatusCode::PICKED_FROM_SELLER => $fulfillment->picked_from_seller_at ??= now(),
+            FulfillmentStatusCode::ARRIVED_AT_HUB => $fulfillment->arrived_at_hub_at ??= now(),
+            FulfillmentStatusCode::QC_CHECKED => $fulfillment->qc_checked_at ??= now(),
+            FulfillmentStatusCode::PACKED => $fulfillment->packed_at ??= now(),
+            FulfillmentStatusCode::LABELED => $fulfillment->labeled_at ??= now(),
+            FulfillmentStatusCode::DISPATCHED_TO_POST => $fulfillment->dispatched_to_post_at ??= now(),
+            FulfillmentStatusCode::ASSIGNED_LAST_MILE => $fulfillment->assigned_last_mile_at ??= now(),
+            FulfillmentStatusCode::OUT_FOR_DELIVERY => $fulfillment->out_for_delivery_at ??= now(),
+            FulfillmentStatusCode::DELIVERED => $fulfillment->delivered_at ??= now(),
+            default => null,
+        };
+
+        if ($targetRank < $currentRank) {
+            $this->clearFutureFulfillmentTimestamps($fulfillment, $targetRank);
+        }
+    }
+
+    private function syncOrderFromFulfillmentStatus(Sold $order, OrderFulfillment $fulfillment, FulfillmentStatusCode $target, array $options = []): void
+    {
+        $targetOrderStatus = match ($target) {
+            FulfillmentStatusCode::DISPATCHED_TO_POST,
+            FulfillmentStatusCode::ASSIGNED_LAST_MILE,
+            FulfillmentStatusCode::OUT_FOR_DELIVERY => OrderStatusCode::IN_DELIVERY,
+            FulfillmentStatusCode::DELIVERED => OrderStatusCode::DELIVERED,
+            FulfillmentStatusCode::RETURNED => OrderStatusCode::RETURNED,
+            default => OrderStatusCode::PACKING,
+        };
+
+        if ($targetOrderStatus === OrderStatusCode::IN_DELIVERY && ! $this->allActiveSellerOrdersHandedToCourierForOrder($order)) {
+            return;
+        }
+
+        if (in_array($targetOrderStatus, [OrderStatusCode::IN_DELIVERY, OrderStatusCode::DELIVERED], true)) {
+            $this->chargeHeldPaymentForOperationalStatus($order, $targetOrderStatus, 'fulfillment_status_update');
+            $order->refresh();
+        }
+
+        $order->status = $targetOrderStatus->legacy();
+        $order->status_code = $targetOrderStatus->value;
+        $this->syncCompletionState($order);
+        $order->save();
+
+        if ($target === FulfillmentStatusCode::OUT_FOR_DELIVERY) {
+            CourierOrder::query()
+                ->where('order_id', $order->id)
+                ->whereNotIn('status_code', [
+                    CourierOrderStatusCode::CUSTOMER_RECEIVED->value,
+                    CourierOrderStatusCode::CANCELLED->value,
+                    CourierOrderStatusCode::RETURNED->value,
+                ])
+                ->update([
+                    'status' => CourierOrderStatusCode::IN_DELIVERY->legacy(),
+                    'status_code' => CourierOrderStatusCode::IN_DELIVERY->value,
+                    'updated_at' => now(),
+                ]);
+        }
+    }
+
+    private function allActiveSellerOrdersHandedToCourierForOrder(Sold $order): bool
+    {
+        return SellerOrder::query()
+            ->where('order_id', $order->id)
+            ->where(function ($query) {
+                $query->where('status_code', '!=', SellerOrderStatusCode::CANCELLED->value)
+                    ->orWhereNull('status_code');
+            })
+            ->where(function ($query) {
+                $query->where('status', '!=', SellerOrderStatusCode::CANCELLED->legacy())
+                    ->orWhereNull('status');
+            })
+            ->where(function ($query) {
+                $query->where('status_code', '!=', SellerOrderStatusCode::HANDED_TO_COURIER->value)
+                    ->orWhere(function ($fallback) {
+                        $fallback->whereNull('status_code')
+                            ->where('status', '!=', SellerOrderStatusCode::HANDED_TO_COURIER->legacy());
+                    });
+            })
+            ->doesntExist();
+    }
+
+    private function syncFulfillmentCancellation(Sold $order): void
+    {
+        $fulfillment = OrderFulfillment::query()->where('order_id', $order->id)->first();
+        if ($fulfillment) {
+            $fulfillment->status_code = FulfillmentStatusCode::CANCELLED->value;
+            $fulfillment->save();
+        }
+
+        CourierTask::query()
+            ->where('order_id', $order->id)
+            ->whereNotIn('status_code', [
+                CourierTaskStatusCode::COMPLETED->value,
+                CourierTaskStatusCode::CANCELLED->value,
+                CourierTaskStatusCode::FAILED->value,
+            ])
+            ->update([
+                'status_code' => CourierTaskStatusCode::CANCELLED->value,
+                'updated_at' => now(),
+            ]);
+    }
+
+    private function isMainRollback(OrderStatusCode $current, OrderStatusCode $target): bool
+    {
+        return $this->rank($this->mainOrderFlow(), $target->value) < $this->rank($this->mainOrderFlow(), $current->value);
+    }
+
+    private function isSellerRollback(SellerOrderStatusCode $current, SellerOrderStatusCode $target): bool
+    {
+        return $this->rank($this->sellerOrderFlow(), $target->value) < $this->rank($this->sellerOrderFlow(), $current->value);
+    }
+
+    private function isCourierRollback(CourierOrderStatusCode $current, CourierOrderStatusCode $target): bool
+    {
+        return $this->rank($this->courierOrderFlow(), $target->value) < $this->rank($this->courierOrderFlow(), $current->value);
+    }
+
+    private function isFulfillmentRollback(FulfillmentStatusCode $current, FulfillmentStatusCode $target): bool
+    {
+        return $this->rank($this->fulfillmentFlow(), $target->value) < $this->rank($this->fulfillmentFlow(), $current->value);
+    }
+
+    private function rank(array $flow, string $status): int
+    {
+        $rank = array_search($status, $flow, true);
+
+        return $rank === false ? 0 : (int) $rank;
+    }
+
+    private function mainOrderFlow(): array
+    {
+        return [
+            OrderStatusCode::PENDING->value,
+            OrderStatusCode::PACKING->value,
+            OrderStatusCode::IN_DELIVERY->value,
+            OrderStatusCode::DELIVERED->value,
+            OrderStatusCode::CUSTOMER_RECEIVED->value,
+        ];
+    }
+
+    private function sellerOrderFlow(): array
+    {
+        return [
+            SellerOrderStatusCode::PAYMENT_PENDING->value,
+            SellerOrderStatusCode::NEW->value,
+            SellerOrderStatusCode::ACCEPTED->value,
+            SellerOrderStatusCode::HANDED_TO_COURIER->value,
+        ];
+    }
+
+    private function courierOrderFlow(): array
+    {
+        return [
+            CourierOrderStatusCode::PAYMENT_PENDING->value,
+            CourierOrderStatusCode::PENDING->value,
+            CourierOrderStatusCode::IN_DELIVERY->value,
+            CourierOrderStatusCode::DELIVERED->value,
+            CourierOrderStatusCode::CUSTOMER_RECEIVED->value,
+        ];
+    }
+
+    private function fulfillmentFlow(): array
+    {
+        return [
+            FulfillmentStatusCode::AWAITING_SELLER_PREP->value,
+            FulfillmentStatusCode::READY_FOR_PICKUP->value,
+            FulfillmentStatusCode::PICKED_FROM_SELLER->value,
+            FulfillmentStatusCode::ARRIVED_AT_HUB->value,
+            FulfillmentStatusCode::QC_CHECKED->value,
+            FulfillmentStatusCode::PACKED->value,
+            FulfillmentStatusCode::LABELED->value,
+            FulfillmentStatusCode::DISPATCHED_TO_POST->value,
+            FulfillmentStatusCode::ASSIGNED_LAST_MILE->value,
+            FulfillmentStatusCode::OUT_FOR_DELIVERY->value,
+            FulfillmentStatusCode::DELIVERED->value,
+        ];
+    }
+
+    private function clearFutureFulfillmentTimestamps(OrderFulfillment $fulfillment, int $targetRank): void
+    {
+        $columns = [
+            FulfillmentStatusCode::PICKED_FROM_SELLER->value => 'picked_from_seller_at',
+            FulfillmentStatusCode::ARRIVED_AT_HUB->value => 'arrived_at_hub_at',
+            FulfillmentStatusCode::QC_CHECKED->value => 'qc_checked_at',
+            FulfillmentStatusCode::PACKED->value => 'packed_at',
+            FulfillmentStatusCode::LABELED->value => 'labeled_at',
+            FulfillmentStatusCode::DISPATCHED_TO_POST->value => 'dispatched_to_post_at',
+            FulfillmentStatusCode::ASSIGNED_LAST_MILE->value => 'assigned_last_mile_at',
+            FulfillmentStatusCode::OUT_FOR_DELIVERY->value => 'out_for_delivery_at',
+            FulfillmentStatusCode::DELIVERED->value => 'delivered_at',
+        ];
+
+        foreach ($columns as $status => $column) {
+            if ($this->rank($this->fulfillmentFlow(), $status) > $targetRank) {
+                $fulfillment->{$column} = null;
+            }
+        }
     }
 }

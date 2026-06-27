@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CourierTask;
 use App\Models\HubStaff;
 use App\Models\OrderFulfillment;
+use App\Services\AdminOrderStatusSyncService;
 use App\Services\CourierTaskOrchestratorService;
 use App\Services\HubRoleAccessService;
 use App\Services\QrTokenService;
@@ -21,6 +22,7 @@ class HubFulfillmentController extends Controller
     public function __construct(
         private readonly HubRoleAccessService $hubRoleAccessService,
         private readonly CourierTaskOrchestratorService $courierTaskOrchestratorService,
+        private readonly AdminOrderStatusSyncService $statusSync,
         private readonly QrTokenService $qrTokenService,
     ) {
         $this->middleware('auth:hub');
@@ -498,8 +500,7 @@ class HubFulfillmentController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Bu fulfillment hali hubga qabul qilish bosqichida emas.'], 422);
         }
 
-        $fulfillment->status_code = FulfillmentStatusCode::ARRIVED_AT_HUB->value;
-        $fulfillment->arrived_at_hub_at ??= now();
+        $fulfillment = $this->statusSync->updateFulfillmentStatus($fulfillment, FulfillmentStatusCode::ARRIVED_AT_HUB);
         $this->appendTimeline($fulfillment, $staff, 'arrived_at_hub', 'Hubga qabul qilindi');
         $this->clearException($fulfillment);
         $fulfillment->save();
@@ -521,8 +522,7 @@ class HubFulfillmentController extends Controller
             return response()->json(['status' => 'error', 'message' => 'QC faqat hubga qabul qilingan fulfillmentga ishlaydi.'], 422);
         }
 
-        $fulfillment->status_code = FulfillmentStatusCode::QC_CHECKED->value;
-        $fulfillment->qc_checked_at ??= now();
+        $fulfillment = $this->statusSync->updateFulfillmentStatus($fulfillment, FulfillmentStatusCode::QC_CHECKED);
         $this->appendTimeline($fulfillment, $staff, 'qc_checked', 'QC tekshiruvi yakunlandi');
         $this->clearException($fulfillment);
         $fulfillment->save();
@@ -543,8 +543,7 @@ class HubFulfillmentController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Packing faqat QC tugagan fulfillmentga ishlaydi.'], 422);
         }
 
-        $fulfillment->status_code = FulfillmentStatusCode::PACKED->value;
-        $fulfillment->packed_at ??= now();
+        $fulfillment = $this->statusSync->updateFulfillmentStatus($fulfillment, FulfillmentStatusCode::PACKED);
         $this->appendTimeline($fulfillment, $staff, 'packed', 'Qadoqlash tasdiqlandi');
         $this->clearException($fulfillment);
         $fulfillment->save();
@@ -565,8 +564,7 @@ class HubFulfillmentController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Label faqat packed fulfillmentga ishlaydi.'], 422);
         }
 
-        $fulfillment->status_code = FulfillmentStatusCode::LABELED->value;
-        $fulfillment->labeled_at ??= now();
+        $fulfillment = $this->statusSync->updateFulfillmentStatus($fulfillment, FulfillmentStatusCode::LABELED);
         $fulfillment->label_code = $fulfillment->label_code ?: ('LBL-'.$fulfillment->order_id.'-'.now()->format('His'));
         $this->appendTimeline($fulfillment, $staff, 'labeled', 'Etiketka tayyorlandi', [
             'label_code' => $fulfillment->label_code,
@@ -598,14 +596,14 @@ class HubFulfillmentController extends Controller
 
         if (! $useCourier) {
             $fulfillment->last_mile_mode = 'postal_dispatch';
-            $fulfillment->status_code = FulfillmentStatusCode::DISPATCHED_TO_POST->value;
-            $fulfillment->dispatched_to_post_at ??= now();
+            $fulfillment->save();
+            $fulfillment = $this->statusSync->updateFulfillmentStatus($fulfillment, FulfillmentStatusCode::DISPATCHED_TO_POST);
             $this->appendTimeline($fulfillment, $staff, 'dispatched_to_post', 'Pochtaga topshirildi');
         } else {
             $fulfillment->last_mile_mode = 'courier_delivery';
-            $this->courierTaskOrchestratorService->ensureLastMileTask($fulfillment);
-            $fulfillment->status_code = FulfillmentStatusCode::ASSIGNED_LAST_MILE->value;
-            $fulfillment->assigned_last_mile_at ??= now();
+            $fulfillment->save();
+            $this->courierTaskOrchestratorService->ensureLastMileTask($fulfillment->fresh());
+            $fulfillment = $this->statusSync->updateFulfillmentStatus($fulfillment, FulfillmentStatusCode::ASSIGNED_LAST_MILE);
             $this->appendTimeline($fulfillment, $staff, 'assigned_last_mile', 'Last-mile kuryerga uzatildi');
         }
         $this->clearException($fulfillment);

@@ -96,6 +96,7 @@ class SellerOrderCancellationService
         }
 
         $refund = DB::transaction(function () use ($seller, $admin, $item, $sellerOrder, $order, $snapshot, $reason) {
+            $paymentStatus = PaymentStatusCode::fromLegacy($order->payment_status_code ?? $order->paymentStatus);
             $cardRefund = $this->shouldRefundToCard($order) ? (int) $snapshot->card_paid_allocated : 0;
             $cashbackRestore = (int) $snapshot->cashback_allocated;
             $giftRestore = (int) $snapshot->gift_cert_allocated;
@@ -126,7 +127,7 @@ class SellerOrderCancellationService
                 'seller_id' => $sellerOrder->seller_id,
                 'user_id' => $order->user_id,
                 'type' => 'partial_item',
-                'provider' => $cardRefund > 0 ? 'paylov_p2p' : 'internal_only',
+                'provider' => $paymentStatus === PaymentStatusCode::HELD ? 'paylov_hold_adjustment' : ($cardRefund > 0 ? 'paylov_p2p' : 'internal_only'),
                 'card_refund_amount' => $cardRefund,
                 'cashback_restore_amount' => $cashbackRestore,
                 'gift_cert_restore_amount' => $giftRestore,
@@ -165,6 +166,8 @@ class SellerOrderCancellationService
             $sellerOrder->save();
 
             $order->amount = max(0, (int) $order->amount - $this->customerAmountReduction($snapshot));
+            $order->cashbackAmount = max(0, (int) ($order->cashbackAmount ?? 0) - $cashbackRestore);
+            $order->giftCertAmount = max(0, (int) ($order->giftCertAmount ?? 0) - $giftRestore);
             $order->refund_total_amount = (int) ($order->refund_total_amount ?? 0) + $cardRefund;
             $order->save();
             $this->syncCodCollectAmount($order);
@@ -482,6 +485,7 @@ class SellerOrderCancellationService
             ->keyBy('seller_order_item_id');
 
         return DB::transaction(function () use ($seller, $admin, $sellerOrder, $order, $items, $snapshots, $reason) {
+            $paymentStatus = PaymentStatusCode::fromLegacy($order->payment_status_code ?? $order->paymentStatus);
             $cardRefund = 0;
             $cashbackRestore = 0;
             $giftRestore = 0;
@@ -526,7 +530,7 @@ class SellerOrderCancellationService
                 'seller_id' => $sellerOrder->seller_id,
                 'user_id' => $order->user_id,
                 'type' => 'seller_order_full',
-                'provider' => $cardRefund > 0 ? 'paylov_p2p' : 'internal_only',
+                'provider' => $paymentStatus === PaymentStatusCode::HELD ? 'paylov_hold_adjustment' : ($cardRefund > 0 ? 'paylov_p2p' : 'internal_only'),
                 'card_refund_amount' => $cardRefund,
                 'cashback_restore_amount' => $cashbackRestore,
                 'gift_cert_restore_amount' => $giftRestore,
@@ -604,6 +608,8 @@ class SellerOrderCancellationService
             ])->save();
 
             $order->amount = max(0, (int) $order->amount - $customerAmountReduction);
+            $order->cashbackAmount = max(0, (int) ($order->cashbackAmount ?? 0) - $cashbackRestore);
+            $order->giftCertAmount = max(0, (int) ($order->giftCertAmount ?? 0) - $giftRestore);
             $order->refund_total_amount = (int) ($order->refund_total_amount ?? 0) + $cardRefund;
             $order->save();
             $this->syncCodCollectAmount($order);

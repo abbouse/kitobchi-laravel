@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers\A122;
 
+use App\Enums\SellerOrderStatusCode;
 use App\Http\Controllers\Controller;
 use App\Models\Books;
 use App\Models\SellerOrder;
 use App\Models\Stationery;
 use App\Services\AdminOrderStatusSyncService;
-use App\Enums\SellerOrderStatusCode;
 use Illuminate\Http\Request;
 
 class SellerOrderController extends Controller
@@ -31,7 +31,7 @@ class SellerOrderController extends Controller
         }
 
         if ($s = $request->search) {
-            $q->where(fn($x) => $x
+            $q->where(fn ($x) => $x
                 ->where('id', $s)
                 ->orWhere('order_id', $s)
                 ->orWhere('seller_id', $s)
@@ -43,8 +43,12 @@ class SellerOrderController extends Controller
             );
         }
 
-        if ($request->date_from) $q->whereDate('created_at', '>=', $request->date_from);
-        if ($request->date_to)   $q->whereDate('created_at', '<=', $request->date_to);
+        if ($request->date_from) {
+            $q->whereDate('created_at', '>=', $request->date_from);
+        }
+        if ($request->date_to) {
+            $q->whereDate('created_at', '<=', $request->date_to);
+        }
 
         $orders = $q->latest()->paginate(25)->withQueryString();
 
@@ -104,13 +108,19 @@ class SellerOrderController extends Controller
         ];
 
         $statuses = AdminOrderStatusSyncService::SELLER_STATUSES;
+
         return view('a122.seller-orders.show', compact('sellerOrder', 'statuses', 'items', 'address', 'summary'));
     }
 
     public function updateStatus(Request $request, SellerOrder $sellerOrder)
     {
         $request->validate(['status' => 'required|in:payment_pending,new,accepted,handed_to_courier,cancelled,0,1,2,3,4']);
-        $this->statusSync->updateSellerOrder($sellerOrder, (string) $request->status);
+        try {
+            $this->statusSync->updateSellerOrder($sellerOrder, (string) $request->status);
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
         return back()->with('success', 'Holat yangilandi.');
     }
 }

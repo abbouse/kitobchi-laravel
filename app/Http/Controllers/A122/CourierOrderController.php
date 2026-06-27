@@ -20,7 +20,7 @@ class CourierOrderController extends Controller
         ]);
 
         if ($s = $request->search) {
-            $q->where(fn($x) => $x
+            $q->where(fn ($x) => $x
                 ->where('id', $s)
                 ->orWhere('courier_id', $s)
                 ->orWhereHas('courier', fn ($courierQuery) => $courierQuery
@@ -41,7 +41,7 @@ class CourierOrderController extends Controller
 
         $orders = $q->latest()->paginate(25)->withQueryString();
 
-        $counts = collect(array_keys(AdminOrderStatusSyncService::COURIER_STATUSES))->mapWithKeys(fn($status) => [
+        $counts = collect(array_keys(AdminOrderStatusSyncService::COURIER_STATUSES))->mapWithKeys(fn ($status) => [
             $status => CourierOrder::where('status', $status)->count(),
         ])->all();
         $counts['all'] = CourierOrder::count();
@@ -54,6 +54,7 @@ class CourierOrderController extends Controller
     {
         $courierOrder->load(['courier', 'user', 'items']);
         $statuses = AdminOrderStatusSyncService::COURIER_STATUSES;
+
         return view('a122.courier-orders.show', compact('courierOrder', 'statuses'));
     }
 
@@ -63,7 +64,11 @@ class CourierOrderController extends Controller
             'status' => 'required|in:payment_pending,pending,in_delivery,delivered,customer_received,cancelled,returned,pay_process,rejected',
         ]);
 
-        $this->statusSync->updateCourierOrder($courierOrder, (string) $request->status);
+        try {
+            $this->statusSync->updateCourierOrder($courierOrder, (string) $request->status);
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
         return back()->with('success', 'Holat yangilandi.');
     }

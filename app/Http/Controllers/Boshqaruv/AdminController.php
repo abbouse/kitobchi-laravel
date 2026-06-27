@@ -3412,6 +3412,49 @@ class AdminController extends Controller
         };
     }
 
+    private function sellerLegalTypeLabel(?string $type): string
+    {
+        return match ($type) {
+            'individual' => 'Jismoniy shaxs',
+            'entrepreneur' => 'YTT',
+            'llc' => 'MChJ',
+            'jsc' => 'AJ / OAJ',
+            default => 'Tanlanmagan',
+        };
+    }
+
+    private function sellerTransactionPaymentPurpose(SellerTransaction $transaction, array $report): ?string
+    {
+        $seller = $transaction->seller;
+        $contractNumber = trim((string) ($seller?->contract_number ?? ''));
+        if ($contractNumber === '') {
+            return null;
+        }
+
+        $contractDate = $seller?->contract_signed_at
+            ? Carbon::parse($seller->contract_signed_at)->format('d.m.Y')
+            : Carbon::parse($transaction->created_at ?? now())->format('d.m.Y');
+        $from = $this->formatPaymentPurposeDate($report['period']['from'] ?? null);
+        $to = $this->formatPaymentPurposeDate($report['period']['to'] ?? null)
+            ?: Carbon::parse($transaction->created_at ?? now())->format('d.m.Y');
+        $period = $from ? "{$from} dan {$to} gacha" : "{$to} gacha";
+
+        return "{$contractDate} sanadagi N {$contractNumber} shartnomaga asosan internet ekvayring ({$period})";
+    }
+
+    private function formatPaymentPurposeDate(mixed $value): ?string
+    {
+        if (blank($value)) {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($value)->format('d.m.Y');
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
     private function sellerPayload(Seller $seller): array
     {
         $karmaSummary = app(\App\Services\SellerKarmaSummaryService::class)->cachedSummary($seller);
@@ -3451,7 +3494,7 @@ class AdminController extends Controller
             'firstName' => $seller->firstname,
             'lastName' => $seller->lastname,
             'ownerName' => trim(($seller->firstname ?? '').' '.($seller->lastname ?? '')) ?: '—',
-            'legalName' => $seller->legal_type ?: '—',
+            'legalName' => $this->sellerLegalTypeLabel($seller->legal_type),
             'phone' => $seller->phone_number,
             'photo' => $this->assetFromStorage($seller->photo),
             'region' => $seller->region,
@@ -3488,6 +3531,7 @@ class AdminController extends Controller
             'warningCount' => (int) $warningCount,
             'legal' => [
                 'type' => $seller->legal_type,
+                'typeLabel' => $this->sellerLegalTypeLabel($seller->legal_type),
                 'inn' => $seller->inn,
                 'passport' => trim(($seller->passport_series ?? '').' '.($seller->passport_number ?? '')) ?: null,
                 'passportIssuedBy' => $seller->passport_issued_by,
@@ -4361,7 +4405,7 @@ class AdminController extends Controller
         $baseQuery = SellerTransaction::query()
             ->where(fn ($query) => $query->whereNull('category')->orWhere('category', 'withdrawal')->orWhere('category', 'seller_withdrawal'));
         $query = (clone $baseQuery)
-            ->with('seller:id,shop_name,phone_number')
+            ->with('seller:id,shop_name,phone_number,legal_type,inn,legal_address,bank_name,bank_account,bank_mfo,bank_swift,payment_card,card_holder,contract_number,contract_signed,contract_signed_at,contract_expires_at,contract_status,contract_notes')
             ->when($search !== '', fn ($builder) => $builder->where(fn ($nested) => $nested
                 ->where('id', $search)
                 ->orWhere('order_id', $search)
@@ -4375,6 +4419,7 @@ class AdminController extends Controller
         return [
             'transactions' => $transactions->getCollection()->map(function (SellerTransaction $transaction) {
                 $report = app(PayoutReportService::class)->seller($transaction);
+                $seller = $transaction->seller;
                 $base = SellerTransaction::query()
                     ->where('seller_id', $transaction->seller_id)
                     ->where(fn ($query) => $query->whereNull('category')->orWhere('category', 'withdrawal')->orWhere('category', 'seller_withdrawal'));
@@ -4402,6 +4447,28 @@ class AdminController extends Controller
                     'updatedAt' => $this->dateTime($transaction->updated_at),
                     'method' => $transaction->card ?: '—',
                     'note' => $transaction->description ?: $transaction->rejected_desc,
+                    'recipient' => [
+                        'legalType' => $seller?->legal_type,
+                        'legalTypeLabel' => $this->sellerLegalTypeLabel($seller?->legal_type),
+                        'inn' => $seller?->inn,
+                        'legalAddress' => $seller?->legal_address,
+                        'bankName' => $seller?->bank_name,
+                        'bankAccount' => $seller?->bank_account,
+                        'bankMfo' => $seller?->bank_mfo,
+                        'bankSwift' => $seller?->bank_swift,
+                        'card' => $seller?->payment_card,
+                        'cardHolder' => $seller?->card_holder,
+                    ],
+                    'contract' => [
+                        'number' => $seller?->contract_number,
+                        'signed' => (bool) ($seller?->contract_signed ?? false),
+                        'signedAt' => optional($seller?->contract_signed_at)->format('Y-m-d'),
+                        'expiresAt' => optional($seller?->contract_expires_at)->format('Y-m-d'),
+                        'status' => $seller?->contract_computed_status,
+                        'rawStatus' => $seller?->contract_status,
+                        'notes' => $seller?->contract_notes,
+                        'paymentPurpose' => $this->sellerTransactionPaymentPurpose($transaction, $report),
+                    ],
                     'ownerTotals' => [
                         'approvedCount' => (int) (clone $base)->where('status', 'approved')->count(),
                         'approvedSum' => (float) (clone $base)->where('status', 'approved')->sum('netAmount'),

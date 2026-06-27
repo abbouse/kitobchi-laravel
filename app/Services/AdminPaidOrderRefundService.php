@@ -65,30 +65,27 @@ class AdminPaidOrderRefundService
         $paymentStatus = PaymentStatusCode::fromLegacy($order->payment_status_code ?? $order->paymentStatus);
         $providerAction = $paymentStatus === PaymentStatusCode::HELD ? 'hold_dismiss' : 'cancel';
 
-        $paylov = PaylovService::make();
-        if ($providerAction === 'hold_dismiss') {
-            $cancelResponse = is_array($providerResponse['dismiss'] ?? null)
-                ? $providerResponse['dismiss']
-                : $paylov->dismissHold($transactionId);
-        } else {
+        $cancelResponse = $existingDismiss;
+        if ($providerAction === 'cancel') {
+            $paylov = PaylovService::make();
             $cancelResponse = $this->looksCancelled($existingCancel)
                 ? $existingCancel
                 : $paylov->cancelPayment($transactionId);
-        }
 
-        $this->updateTransaction($transaction, [
-            'cancel_time' => (string) intval(round(microtime(true) * 1000)),
-            'provider_response' => array_merge($providerResponse, [
-                ($providerAction === 'hold_dismiss' ? 'dismiss' : 'cancel') => $cancelResponse,
-                'admin_refund' => [
-                    'admin_id' => $admin->id,
-                    'admin_name' => $admin->name,
-                    'reason' => $reason,
-                    'provider_action' => $providerAction,
-                    'cancelled_at' => now()->toIso8601String(),
-                ],
-            ]),
-        ]);
+            $this->updateTransaction($transaction, [
+                'cancel_time' => (string) intval(round(microtime(true) * 1000)),
+                'provider_response' => array_merge($providerResponse, [
+                    'cancel' => $cancelResponse,
+                    'admin_refund' => [
+                        'admin_id' => $admin->id,
+                        'admin_name' => $admin->name,
+                        'reason' => $reason,
+                        'provider_action' => $providerAction,
+                        'cancelled_at' => now()->toIso8601String(),
+                    ],
+                ]),
+            ]);
+        }
 
         $previousStatus = (string) ($order->status ?? 'F');
         $result = $this->orderService->cancelOrder($order, strict: false);
@@ -96,6 +93,27 @@ class AdminPaidOrderRefundService
         if (($result['ok'] ?? false) !== true) {
             $this->markNeedsLocalCancel($transaction, $providerResponse, $cancelResponse, $admin, $reason, $result['message'] ?? 'Local cancel failed');
             throw new RuntimeException('Pul qaytarildi, lekin buyurtmani ichki bekor qilish yakunlanmadi. Iltimos, qayta urinib ko‘ring.');
+        }
+
+        if ($providerAction === 'hold_dismiss') {
+            $transaction->refresh();
+            $providerResponse = is_array($transaction->provider_response)
+                ? $transaction->provider_response
+                : [];
+            $cancelResponse = is_array($providerResponse['dismiss'] ?? null)
+                ? $providerResponse['dismiss']
+                : [];
+            $this->updateTransaction($transaction, [
+                'provider_response' => array_merge($providerResponse, [
+                    'admin_refund' => [
+                        'admin_id' => $admin->id,
+                        'admin_name' => $admin->name,
+                        'reason' => $reason,
+                        'provider_action' => $providerAction,
+                        'cancelled_at' => now()->toIso8601String(),
+                    ],
+                ]),
+            ]);
         }
 
         $this->orderStatusPushService->sendForTransition($order->fresh(), $previousStatus, 'F');
@@ -159,6 +177,12 @@ class AdminPaidOrderRefundService
             'processed_by_admin_id' => $admin->id,
             'processed_at' => now(),
         ]);
+
+        if ($cardRefundAmount > 0) {
+            $order->forceFill([
+                'refund_total_amount' => (int) ($order->refund_total_amount ?? 0) + $cardRefundAmount,
+            ])->save();
+        }
     }
 
     private function markNeedsLocalCancel(
