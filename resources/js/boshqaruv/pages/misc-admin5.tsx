@@ -1,4 +1,4 @@
-import { FormEvent, useState } from 'react';
+import { ChangeEvent, FormEvent, useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button, Form } from 'react-bootstrap';
 
@@ -190,13 +190,29 @@ function removeLogistics(url?: string, label = "O'chirilsinmi?") {
   if (url && confirm(label)) router.delete(url, { preserveScroll: true });
 }
 
-function LogisticsInput({ name, label, defaultValue, type = 'text', required = false, min, max, step }: {
-  name: string; label: string; defaultValue?: string | number | null; type?: string; required?: boolean; min?: number; max?: number; step?: string;
+function LogisticsInput({ name, label, defaultValue, type = 'text', required = false, min, max, step, help, inputMode, value, onChange }: {
+  name: string;
+  label: string;
+  defaultValue?: string | number | null;
+  type?: string;
+  required?: boolean;
+  min?: number;
+  max?: number;
+  step?: string;
+  help?: string;
+  inputMode?: 'text' | 'decimal' | 'numeric' | 'search' | 'tel' | 'url' | 'email';
+  value?: string | number;
+  onChange?: (value: string) => void;
 }) {
+  const controlProps = onChange
+    ? { value: value ?? '', onChange: (event: ChangeEvent<HTMLInputElement>) => onChange(event.target.value) }
+    : { defaultValue: defaultValue ?? '' };
+
   return (
     <div>
       <label className="form-label small text-muted fw-semibold">{label}</label>
-      <input className="form-control" name={name} type={type} min={min} max={max} step={step} required={required} defaultValue={defaultValue ?? ''} />
+      <input className="form-control" name={name} type={type} min={min} max={max} step={step} required={required} inputMode={inputMode} {...controlProps} />
+      {help ? <div className="form-text">{help}</div> : null}
     </div>
   );
 }
@@ -213,11 +229,128 @@ function LogisticsToggle({ name, label, defaultChecked = false }: { name: string
   );
 }
 
+const tashkentMapBounds = {
+  north: 41.43,
+  south: 41.16,
+  west: 69.12,
+  east: 69.43,
+};
+
+function toLogisticsDecimal(value: string | number | null | undefined, fallback = '') {
+  if (value === null || value === undefined || value === '') return fallback;
+  return String(value).replace(',', '.');
+}
+
+function RadiusMapPicker({
+  lat,
+  lon,
+  radius,
+  onLat,
+  onLon,
+  onRadius,
+}: {
+  lat: string;
+  lon: string;
+  radius: string;
+  onLat: (value: string) => void;
+  onLon: (value: string) => void;
+  onRadius: (value: string) => void;
+}) {
+  const numericLat = Number.parseFloat(lat || '41.3111');
+  const numericLon = Number.parseFloat(lon || '69.2797');
+  const numericRadius = Math.max(1, Number.parseFloat(radius || '28'));
+  const x = Math.min(92, Math.max(8, ((numericLon - tashkentMapBounds.west) / (tashkentMapBounds.east - tashkentMapBounds.west)) * 100));
+  const y = Math.min(88, Math.max(10, ((tashkentMapBounds.north - numericLat) / (tashkentMapBounds.north - tashkentMapBounds.south)) * 100));
+  const radiusPx = Math.min(44, Math.max(12, numericRadius * 1.05));
+
+  const setPreset = (presetLat: number, presetLon: number, presetRadius: number) => {
+    onLat(presetLat.toFixed(6));
+    onLon(presetLon.toFixed(6));
+    onRadius(String(presetRadius));
+  };
+
+  const handlePick = (event: React.MouseEvent<HTMLDivElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const clickX = (event.clientX - rect.left) / rect.width;
+    const clickY = (event.clientY - rect.top) / rect.height;
+    const pickedLon = tashkentMapBounds.west + clickX * (tashkentMapBounds.east - tashkentMapBounds.west);
+    const pickedLat = tashkentMapBounds.north - clickY * (tashkentMapBounds.north - tashkentMapBounds.south);
+    onLat(pickedLat.toFixed(6));
+    onLon(pickedLon.toFixed(6));
+  };
+
+  return (
+    <div className="rounded-4 border bg-light-subtle p-3">
+      <div className="d-flex align-items-start justify-content-between gap-3 mb-3">
+        <div>
+          <div className="fw-bold">Radius xaritasi</div>
+          <div className="small text-muted">Xaritadan markazni bosing, radiusni slider bilan belgilang. Toshkent uchun nom maydonlarini bo'sh qoldirish tavsiya qilinadi.</div>
+        </div>
+        <span className="chip chip-success">{numericRadius.toFixed(numericRadius % 1 === 0 ? 0 : 1)} km</span>
+      </div>
+
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={handlePick}
+        className="position-relative overflow-hidden rounded-4 border"
+        style={{
+          height: 260,
+          cursor: 'crosshair',
+          background:
+            'linear-gradient(135deg, rgba(15,23,42,.04), rgba(16,185,129,.08)), radial-gradient(circle at 30% 25%, rgba(79,70,229,.12), transparent 32%), radial-gradient(circle at 70% 70%, rgba(245,158,11,.14), transparent 30%), #f8fafc',
+        }}
+      >
+        <div className="position-absolute top-0 start-0 w-100 h-100" style={{
+          backgroundImage:
+            'linear-gradient(rgba(15,23,42,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(15,23,42,.06) 1px, transparent 1px)',
+          backgroundSize: '34px 34px',
+        }} />
+        <div className="position-absolute rounded-pill bg-white border px-2 py-1 small text-muted" style={{ top: 14, left: 14 }}>Toshkent zonasi</div>
+        <div className="position-absolute" style={{ left: `${x}%`, top: `${y}%`, transform: 'translate(-50%, -50%)' }}>
+          <div className="position-absolute rounded-circle" style={{
+            width: radiusPx * 2,
+            height: radiusPx * 2,
+            left: -radiusPx,
+            top: -radiusPx,
+            background: 'rgba(16,185,129,.16)',
+            border: '1px solid rgba(16,185,129,.35)',
+          }} />
+          <div className="position-relative d-flex align-items-center justify-content-center rounded-circle shadow" style={{
+            width: 24,
+            height: 24,
+            background: '#10b981',
+            color: '#fff',
+            border: '3px solid #fff',
+          }}>
+            <i className="bi bi-geo-alt-fill" style={{ fontSize: 11 }} />
+          </div>
+        </div>
+      </div>
+
+      <div className="d-flex flex-wrap gap-2 mt-3">
+        <button type="button" className="btn btn-sm btn-light" onClick={() => setPreset(41.311081, 69.240562, 28)}>Toshkent markaz · 28 km</button>
+        <button type="button" className="btn btn-sm btn-light" onClick={() => setPreset(41.311081, 69.240562, 40)}>Katta Toshkent · 40 km</button>
+        <button type="button" className="btn btn-sm btn-light" onClick={() => setPreset(41.299496, 69.240073, 45)}>Uzoq zona · 45 km</button>
+      </div>
+
+      <div className="mt-3">
+        <label className="form-label small text-muted fw-semibold">Radius: {numericRadius.toFixed(numericRadius % 1 === 0 ? 0 : 1)} km</label>
+        <input className="form-range" type="range" min="1" max="80" step="1" value={Number.isFinite(numericRadius) ? numericRadius : 28} onChange={(event) => onRadius(event.target.value)} />
+      </div>
+    </div>
+  );
+}
+
 function DeliveryServiceForm({ service, action, onDone }: { service?: DeliveryService | null; action?: string; onDone: () => void }) {
   if (!action) return null;
 
   return (
     <form onSubmit={(event) => submitLogistics(event, service ? 'put' : 'post', action, onDone)}>
+      <div className="rounded-4 border bg-light-subtle p-3 mb-3">
+        <div className="fw-bold mb-1">Xizmat - bu yetkazish kanali</div>
+        <div className="small text-muted">Masalan: Kitobchi kuryer, UzPost yoki boshqa pochta. Xizmat bir marta ochiladi, keyin unga bir nechta zona qoidasi ulanadi.</div>
+      </div>
       <div className="row g-3">
         <div className="col-md-6"><LogisticsInput name="name" label="Xizmat nomi" required defaultValue={service?.name} /></div>
         <div className="col-md-6">
@@ -242,26 +375,54 @@ function DeliveryServiceForm({ service, action, onDone }: { service?: DeliverySe
 }
 
 function DeliveryRuleForm({ rule, services, action, onDone }: { rule?: DeliveryRule | null; services: DeliveryService[]; action?: string; onDone: () => void }) {
+  const [scope, setScope] = useState(rule?.scope || 'radius');
+  const [lat, setLat] = useState(toLogisticsDecimal(rule?.centerLat, '41.311081'));
+  const [lon, setLon] = useState(toLogisticsDecimal(rule?.centerLon, '69.240562'));
+  const [radius, setRadius] = useState(toLogisticsDecimal(rule?.radiusKm, '28'));
+
   if (!action) return null;
 
   return (
     <form onSubmit={(event) => submitLogistics(event, rule ? 'put' : 'post', action, onDone)}>
+      <div className="rounded-4 border bg-light-subtle p-3 mb-3">
+        <div className="fw-bold mb-1">Zona qoidasi - bu xizmat qayerda va qanday narxda ishlashini belgilaydi</div>
+        <div className="small text-muted">Bitta xizmatga bir nechta zona qo'shish mumkin. Masalan: Kitobchi kuryer 28 km standart, Kitobchi kuryer 45 km uzoq zona. Servisni ikki marta ochish shart emas.</div>
+      </div>
       <div className="row g-3">
         <div className="col-md-6"><LogisticsInput name="zone_name" label="Zona nomi" required defaultValue={rule?.zoneName} /></div>
         <div className="col-md-3"><LogisticsInput name="country_code" label="Mamlakat kodi" required max={2} defaultValue={rule?.country || 'UZ'} /></div>
         <div className="col-md-3">
-          <label className="form-label small text-muted fw-semibold">Scope</label>
-          <select className="form-select" name="scope" required defaultValue={rule?.scope || 'country'}>
-            <option value="country">Mamlakat</option>
-            <option value="radius">Radius</option>
+          <label className="form-label small text-muted fw-semibold">Zona turi</label>
+          <select className="form-select" name="scope" required value={scope} onChange={(event) => setScope(event.target.value)}>
+            <option value="radius">Radius bo'yicha</option>
+            <option value="country">Butun mamlakat</option>
           </select>
         </div>
-        <div className="col-md-4"><LogisticsInput name="region_name" label="Viloyat" defaultValue={rule?.region} /></div>
-        <div className="col-md-4"><LogisticsInput name="district_name" label="Tuman" defaultValue={rule?.district} /></div>
-        <div className="col-md-4"><LogisticsInput name="city_name" label="Shahar" defaultValue={rule?.city} /></div>
-        <div className="col-md-4"><LogisticsInput name="center_lat" label="Markaz lat" type="number" step="0.000001" defaultValue={rule?.centerLat} /></div>
-        <div className="col-md-4"><LogisticsInput name="center_lon" label="Markaz lon" type="number" step="0.000001" defaultValue={rule?.centerLon} /></div>
-        <div className="col-md-4"><LogisticsInput name="radius_km" label="Radius km" type="number" min={0} step="0.1" defaultValue={rule?.radiusKm} /></div>
+        <div className="col-12">
+          <div className="alert alert-light border mb-0">
+            <div className="fw-semibold mb-1">Nom maydonlari ixtiyoriy</div>
+            <div className="small text-muted">Toshkent kuryer zonalarida viloyat/tuman/shaharni bo'sh qoldiring. Shunda Yandex manzil nomlari ruscha yoki inglizcha kelsa ham radius bo'yicha to'g'ri ishlaydi.</div>
+          </div>
+        </div>
+        <div className="col-md-4"><LogisticsInput name="region_name" label="Viloyat" help="Faqat nom bo'yicha majburan cheklash kerak bo'lsa yozing." defaultValue={rule?.region} /></div>
+        <div className="col-md-4"><LogisticsInput name="district_name" label="Tuman" help="Bo'sh bo'lsa tuman tekshirilmaydi." defaultValue={rule?.district} /></div>
+        <div className="col-md-4"><LogisticsInput name="city_name" label="Shahar" help="Bo'sh bo'lsa shahar tekshirilmaydi." defaultValue={rule?.city} /></div>
+        {scope === 'radius' ? (
+          <>
+            <div className="col-12">
+              <RadiusMapPicker lat={lat} lon={lon} radius={radius} onLat={setLat} onLon={setLon} onRadius={setRadius} />
+            </div>
+            <div className="col-md-4"><LogisticsInput name="center_lat" label="Markaz latitude" type="text" inputMode="decimal" required value={lat} onChange={(value) => setLat(value.replace(',', '.'))} help="Masalan: 41.311081" /></div>
+            <div className="col-md-4"><LogisticsInput name="center_lon" label="Markaz longitude" type="text" inputMode="decimal" required value={lon} onChange={(value) => setLon(value.replace(',', '.'))} help="Masalan: 69.240562" /></div>
+            <div className="col-md-4"><LogisticsInput name="radius_km" label="Radius km" type="text" inputMode="decimal" required value={radius} onChange={(value) => setRadius(value.replace(',', '.'))} help="Masalan: 28, 40 yoki 45" /></div>
+          </>
+        ) : (
+          <>
+            <input type="hidden" name="center_lat" value="" />
+            <input type="hidden" name="center_lon" value="" />
+            <input type="hidden" name="radius_km" value="" />
+          </>
+        )}
         <div className="col-md-6">
           <label className="form-label small text-muted fw-semibold">Yetkazish xizmati</label>
           <select className="form-select" name="delivery_service_id" required defaultValue={rule?.deliveryServiceId ?? services[0]?.id ?? ''}>
@@ -299,11 +460,14 @@ export function Logistika() {
   const indexUrl = '/boshqaruv/logistika';
   const [editingService, setEditingService] = useState<DeliveryService | null | undefined>(undefined);
   const [editingRule, setEditingRule] = useState<DeliveryRule | null | undefined>(undefined);
+  const courierServices = deliveryServices.filter((service) => service.type === 'courier_service');
+  const postalServices = deliveryServices.filter((service) => service.type === 'mail_service');
+  const radiusRules = deliveryRules.filter((rule) => rule.scope === 'radius');
 
   return (
     <div>
       <div className="page-head">
-        <div><h1 className="page-title">Logistika</h1><p className="page-subtitle">Yetkazish xizmatlari, zona qoidalari, COD va manzil bo'yicha preview</p></div>
+        <div><h1 className="page-title">Logistika</h1><p className="page-subtitle">Xizmatni bir marta oching, keyin u qaysi zonalarda ishlashini qoidalar orqali belgilang.</p></div>
         <div className="d-flex gap-2">
           <button className="btn btn-light" onClick={() => setEditingService(null)}><i className="bi bi-truck me-1"></i>Xizmat</button>
           <button className="btn btn-primary-gradient" onClick={() => setEditingRule(null)}><i className="bi bi-plus-circle me-1"></i>Zona qoidasi</button>
@@ -326,6 +490,73 @@ export function Logistika() {
             </div>
           </div>
         ))}
+      </div>
+
+      <div className="row g-3 mb-4">
+        <div className="col-xl-4">
+          <div className="card-panel h-100">
+            <div className="d-flex align-items-center gap-3 mb-3">
+              <div className="stat-icon" style={{ background: '#111827' }}><i className="bi bi-diagram-3"></i></div>
+              <div>
+                <div className="panel-title">Qanday ishlaydi?</div>
+                <small className="text-muted">Chalkashmaslik uchun ikki qismga bo'lingan</small>
+              </div>
+            </div>
+            <div className="d-flex flex-column gap-3">
+              <div className="rounded-4 border p-3">
+                <div className="fw-bold">1. Xizmat</div>
+                <div className="small text-muted">Kuryer yoki pochta kanali. Masalan: Kitobchi kuryer, UzPost. Buni ikki marta qo'shish shart emas.</div>
+              </div>
+              <div className="rounded-4 border p-3">
+                <div className="fw-bold">2. Zona qoidasi</div>
+                <div className="small text-muted">Shu xizmat qayerda ishlaydi, narxi qancha, COD bormi, radius nechchi km - hammasi shu yerda.</div>
+              </div>
+              <div className="rounded-4 border p-3">
+                <div className="fw-bold">3. Preview</div>
+                <div className="small text-muted">User koordinatasini kiritib, checkoutda qaysi yetkazish chiqishini oldindan tekshirasiz.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="col-xl-8">
+          <div className="card-panel h-100">
+            <div className="panel-head">
+              <div>
+                <div className="panel-title">Faol logistika xaritasi</div>
+                <small className="text-muted">Radiusli qoidalar umumiy ko'rinishi. Markerlar taxminiy vizual nazorat uchun.</small>
+              </div>
+              <span className="chip chip-gray">{radiusRules.length} radius</span>
+            </div>
+            <div className="position-relative overflow-hidden rounded-4 border bg-light-subtle" style={{
+              height: 280,
+              background:
+                'linear-gradient(135deg, rgba(15,23,42,.04), rgba(79,70,229,.06)), radial-gradient(circle at 28% 35%, rgba(16,185,129,.12), transparent 34%), radial-gradient(circle at 72% 62%, rgba(245,158,11,.12), transparent 32%), #f8fafc',
+            }}>
+              <div className="position-absolute top-0 start-0 w-100 h-100" style={{
+                backgroundImage:
+                  'linear-gradient(rgba(15,23,42,.055) 1px, transparent 1px), linear-gradient(90deg, rgba(15,23,42,.055) 1px, transparent 1px)',
+                backgroundSize: '36px 36px',
+              }} />
+              {radiusRules.map((rule, index) => {
+                const lat = Number(rule.centerLat);
+                const lon = Number(rule.centerLon);
+                const radius = Math.max(1, Number(rule.radiusKm || 1));
+                const x = Number.isFinite(lon) ? Math.min(94, Math.max(6, ((lon - tashkentMapBounds.west) / (tashkentMapBounds.east - tashkentMapBounds.west)) * 100)) : 12 + index * 8;
+                const y = Number.isFinite(lat) ? Math.min(90, Math.max(10, ((tashkentMapBounds.north - lat) / (tashkentMapBounds.north - tashkentMapBounds.south)) * 100)) : 20 + index * 8;
+                const size = Math.min(92, Math.max(24, radius * 1.6));
+                return (
+                  <div key={rule.id} className="position-absolute" style={{ left: `${x}%`, top: `${y}%`, transform: 'translate(-50%, -50%)' }}>
+                    <div className="position-absolute rounded-circle" style={{ width: size, height: size, left: -size / 2, top: -size / 2, border: '1px solid rgba(16,185,129,.28)', background: 'rgba(16,185,129,.12)' }} />
+                    <button type="button" className="btn btn-sm btn-light shadow-sm rounded-pill position-relative" onClick={() => setEditingRule(rule)}>
+                      <i className="bi bi-geo-alt-fill text-success me-1"></i>{rule.zoneName}
+                    </button>
+                  </div>
+                );
+              })}
+              {radiusRules.length === 0 ? <div className="position-absolute top-50 start-50 translate-middle text-center text-muted">Radiusli zona hali qo'shilmagan</div> : null}
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="row g-3 mb-4">
