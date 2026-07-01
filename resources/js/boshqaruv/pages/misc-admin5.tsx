@@ -229,12 +229,67 @@ function LogisticsToggle({ name, label, defaultChecked = false }: { name: string
   );
 }
 
-const tashkentMapBounds = {
-  north: 41.43,
-  south: 41.16,
-  west: 69.12,
-  east: 69.43,
-};
+const tileSize = 256;
+const earthRadiusMeters = 6378137;
+
+function clampLatitude(value: number) {
+  return Math.min(85.05112878, Math.max(-85.05112878, value));
+}
+
+function lonToWorldX(lon: number, zoom: number) {
+  return ((lon + 180) / 360) * tileSize * 2 ** zoom;
+}
+
+function latToWorldY(lat: number, zoom: number) {
+  const safeLat = clampLatitude(lat);
+  const sinLat = Math.sin((safeLat * Math.PI) / 180);
+  return (0.5 - Math.log((1 + sinLat) / (1 - sinLat)) / (4 * Math.PI)) * tileSize * 2 ** zoom;
+}
+
+function worldXToLon(x: number, zoom: number) {
+  return (x / (tileSize * 2 ** zoom)) * 360 - 180;
+}
+
+function worldYToLat(y: number, zoom: number) {
+  const n = Math.PI - (2 * Math.PI * y) / (tileSize * 2 ** zoom);
+  return (180 / Math.PI) * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)));
+}
+
+function metersPerPixel(lat: number, zoom: number) {
+  return (Math.cos((lat * Math.PI) / 180) * 2 * Math.PI * earthRadiusMeters) / (tileSize * 2 ** zoom);
+}
+
+function cartoTileUrl(x: number, y: number, zoom: number) {
+  const server = ['a', 'b', 'c'][(Math.abs(x + y) % 3)];
+  const retinaSuffix = typeof window !== 'undefined' && window.devicePixelRatio > 1 ? '@2x' : '';
+  return `https://${server}.basemaps.cartocdn.com/light_all/${zoom}/${x}/${y}${retinaSuffix}.png`;
+}
+
+function buildMapTiles(centerLat: number, centerLon: number, zoom: number, width: number, height: number) {
+  const centerX = lonToWorldX(centerLon, zoom);
+  const centerY = latToWorldY(centerLat, zoom);
+  const startTileX = Math.floor((centerX - width / 2) / tileSize);
+  const endTileX = Math.floor((centerX + width / 2) / tileSize);
+  const startTileY = Math.floor((centerY - height / 2) / tileSize);
+  const endTileY = Math.floor((centerY + height / 2) / tileSize);
+  const tileCount = 2 ** zoom;
+  const tiles: Array<{ left: number; top: number; url: string; key: string }> = [];
+
+  for (let x = startTileX; x <= endTileX; x += 1) {
+    for (let y = startTileY; y <= endTileY; y += 1) {
+      if (y < 0 || y >= tileCount) continue;
+      const wrappedX = ((x % tileCount) + tileCount) % tileCount;
+      tiles.push({
+        left: x * tileSize - centerX + width / 2,
+        top: y * tileSize - centerY + height / 2,
+        url: cartoTileUrl(wrappedX, y, zoom),
+        key: `${zoom}-${x}-${y}`,
+      });
+    }
+  }
+
+  return { centerX, centerY, tiles };
+}
 
 function toLogisticsDecimal(value: string | number | null | undefined, fallback = '') {
   if (value === null || value === undefined || value === '') return fallback;
@@ -256,12 +311,15 @@ function RadiusMapPicker({
   onLon: (value: string) => void;
   onRadius: (value: string) => void;
 }) {
+  const [zoom, setZoom] = useState(11);
   const numericLat = Number.parseFloat(lat || '41.3111');
   const numericLon = Number.parseFloat(lon || '69.2797');
   const numericRadius = Math.max(1, Number.parseFloat(radius || '28'));
-  const x = Math.min(92, Math.max(8, ((numericLon - tashkentMapBounds.west) / (tashkentMapBounds.east - tashkentMapBounds.west)) * 100));
-  const y = Math.min(88, Math.max(10, ((tashkentMapBounds.north - numericLat) / (tashkentMapBounds.north - tashkentMapBounds.south)) * 100));
-  const radiusPx = Math.min(44, Math.max(12, numericRadius * 1.05));
+  const width = 760;
+  const height = 280;
+  const { centerX, centerY, tiles } = buildMapTiles(numericLat, numericLon, zoom, width, height);
+
+  const radiusPx = Math.max(12, (numericRadius * 1000) / metersPerPixel(numericLat, zoom));
 
   const setPreset = (presetLat: number, presetLon: number, presetRadius: number) => {
     onLat(presetLat.toFixed(6));
@@ -271,10 +329,10 @@ function RadiusMapPicker({
 
   const handlePick = (event: React.MouseEvent<HTMLDivElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
-    const clickX = (event.clientX - rect.left) / rect.width;
-    const clickY = (event.clientY - rect.top) / rect.height;
-    const pickedLon = tashkentMapBounds.west + clickX * (tashkentMapBounds.east - tashkentMapBounds.west);
-    const pickedLat = tashkentMapBounds.north - clickY * (tashkentMapBounds.north - tashkentMapBounds.south);
+    const clickX = event.clientX - rect.left;
+    const clickY = event.clientY - rect.top;
+    const pickedLon = worldXToLon(centerX + clickX - rect.width / 2, zoom);
+    const pickedLat = worldYToLat(centerY + clickY - rect.height / 2, zoom);
     onLat(pickedLat.toFixed(6));
     onLon(pickedLon.toFixed(6));
   };
@@ -284,9 +342,16 @@ function RadiusMapPicker({
       <div className="d-flex align-items-start justify-content-between gap-3 mb-3">
         <div>
           <div className="fw-bold">Radius xaritasi</div>
-          <div className="small text-muted">Xaritadan markazni bosing, radiusni slider bilan belgilang. Toshkent uchun nom maydonlarini bo'sh qoldirish tavsiya qilinadi.</div>
+          <div className="small text-muted">Haqiqiy xaritadan markazni bosing, radiusni slider bilan belgilang. Toshkent uchun nom maydonlarini bo'sh qoldirish tavsiya qilinadi.</div>
         </div>
-        <span className="chip chip-success">{numericRadius.toFixed(numericRadius % 1 === 0 ? 0 : 1)} km</span>
+        <div className="d-flex align-items-center gap-2">
+          <span className="chip chip-success">{numericRadius.toFixed(numericRadius % 1 === 0 ? 0 : 1)} km</span>
+          <div className="btn-group btn-group-sm">
+            <button type="button" className="btn btn-light" onClick={() => setZoom((value) => Math.max(5, value - 1))}><i className="bi bi-dash"></i></button>
+            <button type="button" className="btn btn-light disabled">{zoom}</button>
+            <button type="button" className="btn btn-light" onClick={() => setZoom((value) => Math.min(15, value + 1))}><i className="bi bi-plus"></i></button>
+          </div>
+        </div>
       </div>
 
       <div
@@ -295,19 +360,23 @@ function RadiusMapPicker({
         onClick={handlePick}
         className="position-relative overflow-hidden rounded-4 border"
         style={{
-          height: 260,
+          height,
           cursor: 'crosshair',
-          background:
-            'linear-gradient(135deg, rgba(15,23,42,.04), rgba(16,185,129,.08)), radial-gradient(circle at 30% 25%, rgba(79,70,229,.12), transparent 32%), radial-gradient(circle at 70% 70%, rgba(245,158,11,.14), transparent 30%), #f8fafc',
+          background: '#eef2f7',
         }}
       >
-        <div className="position-absolute top-0 start-0 w-100 h-100" style={{
-          backgroundImage:
-            'linear-gradient(rgba(15,23,42,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(15,23,42,.06) 1px, transparent 1px)',
-          backgroundSize: '34px 34px',
-        }} />
-        <div className="position-absolute rounded-pill bg-white border px-2 py-1 small text-muted" style={{ top: 14, left: 14 }}>Toshkent zonasi</div>
-        <div className="position-absolute" style={{ left: `${x}%`, top: `${y}%`, transform: 'translate(-50%, -50%)' }}>
+        {tiles.map((tile) => (
+          <img
+            alt=""
+            draggable={false}
+            key={tile.key}
+            src={tile.url}
+            className="position-absolute"
+            style={{ left: tile.left, top: tile.top, width: tileSize, height: tileSize, userSelect: 'none' }}
+          />
+        ))}
+        <div className="position-absolute rounded-pill bg-white border px-2 py-1 small text-muted shadow-sm" style={{ top: 14, left: 14 }}>OpenStreetMap / CARTO</div>
+        <div className="position-absolute" style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}>
           <div className="position-absolute rounded-circle" style={{
             width: radiusPx * 2,
             height: radiusPx * 2,
@@ -325,6 +394,9 @@ function RadiusMapPicker({
           }}>
             <i className="bi bi-geo-alt-fill" style={{ fontSize: 11 }} />
           </div>
+        </div>
+        <div className="position-absolute small text-muted bg-white bg-opacity-75 rounded-pill px-2 py-1" style={{ right: 10, bottom: 10 }}>
+          © OpenStreetMap contributors © CARTO
         </div>
       </div>
 
@@ -463,6 +535,17 @@ export function Logistika() {
   const courierServices = deliveryServices.filter((service) => service.type === 'courier_service');
   const postalServices = deliveryServices.filter((service) => service.type === 'mail_service');
   const radiusRules = deliveryRules.filter((rule) => rule.scope === 'radius');
+  const overviewWidth = 1040;
+  const overviewHeight = 280;
+  const overviewZoom = radiusRules.length > 1 ? 8 : 10;
+  const overviewValidRules = radiusRules.filter((rule) => Number.isFinite(Number(rule.centerLat)) && Number.isFinite(Number(rule.centerLon)));
+  const overviewLat = overviewValidRules.length
+    ? overviewValidRules.reduce((sum, rule) => sum + Number(rule.centerLat), 0) / overviewValidRules.length
+    : 41.311081;
+  const overviewLon = overviewValidRules.length
+    ? overviewValidRules.reduce((sum, rule) => sum + Number(rule.centerLon), 0) / overviewValidRules.length
+    : 69.240562;
+  const overviewMap = buildMapTiles(overviewLat, overviewLon, overviewZoom, overviewWidth, overviewHeight);
 
   return (
     <div>
@@ -523,29 +606,30 @@ export function Logistika() {
             <div className="panel-head">
               <div>
                 <div className="panel-title">Faol logistika xaritasi</div>
-                <small className="text-muted">Radiusli qoidalar umumiy ko'rinishi. Markerlar taxminiy vizual nazorat uchun.</small>
+                <small className="text-muted">Radiusli qoidalar haqiqiy xaritada ko'rinadi. Markerga bosib tahrirlaysiz.</small>
               </div>
               <span className="chip chip-gray">{radiusRules.length} radius</span>
             </div>
-            <div className="position-relative overflow-hidden rounded-4 border bg-light-subtle" style={{
-              height: 280,
-              background:
-                'linear-gradient(135deg, rgba(15,23,42,.04), rgba(79,70,229,.06)), radial-gradient(circle at 28% 35%, rgba(16,185,129,.12), transparent 34%), radial-gradient(circle at 72% 62%, rgba(245,158,11,.12), transparent 32%), #f8fafc',
-            }}>
-              <div className="position-absolute top-0 start-0 w-100 h-100" style={{
-                backgroundImage:
-                  'linear-gradient(rgba(15,23,42,.055) 1px, transparent 1px), linear-gradient(90deg, rgba(15,23,42,.055) 1px, transparent 1px)',
-                backgroundSize: '36px 36px',
-              }} />
+            <div className="position-relative overflow-hidden rounded-4 border bg-light-subtle" style={{ height: overviewHeight, background: '#eef2f7' }}>
+              {overviewMap.tiles.map((tile) => (
+                <img
+                  alt=""
+                  draggable={false}
+                  key={tile.key}
+                  src={tile.url}
+                  className="position-absolute"
+                  style={{ left: tile.left, top: tile.top, width: tileSize, height: tileSize, userSelect: 'none' }}
+                />
+              ))}
               {radiusRules.map((rule, index) => {
                 const lat = Number(rule.centerLat);
                 const lon = Number(rule.centerLon);
                 const radius = Math.max(1, Number(rule.radiusKm || 1));
-                const x = Number.isFinite(lon) ? Math.min(94, Math.max(6, ((lon - tashkentMapBounds.west) / (tashkentMapBounds.east - tashkentMapBounds.west)) * 100)) : 12 + index * 8;
-                const y = Number.isFinite(lat) ? Math.min(90, Math.max(10, ((tashkentMapBounds.north - lat) / (tashkentMapBounds.north - tashkentMapBounds.south)) * 100)) : 20 + index * 8;
-                const size = Math.min(92, Math.max(24, radius * 1.6));
+                const x = Number.isFinite(lon) ? lonToWorldX(lon, overviewZoom) - overviewMap.centerX + overviewWidth / 2 : 80 + index * 36;
+                const y = Number.isFinite(lat) ? latToWorldY(lat, overviewZoom) - overviewMap.centerY + overviewHeight / 2 : 50 + index * 28;
+                const size = Math.min(160, Math.max(24, (radius * 1000) / metersPerPixel(Number.isFinite(lat) ? lat : overviewLat, overviewZoom)));
                 return (
-                  <div key={rule.id} className="position-absolute" style={{ left: `${x}%`, top: `${y}%`, transform: 'translate(-50%, -50%)' }}>
+                  <div key={rule.id} className="position-absolute" style={{ left: x, top: y, transform: 'translate(-50%, -50%)' }}>
                     <div className="position-absolute rounded-circle" style={{ width: size, height: size, left: -size / 2, top: -size / 2, border: '1px solid rgba(16,185,129,.28)', background: 'rgba(16,185,129,.12)' }} />
                     <button type="button" className="btn btn-sm btn-light shadow-sm rounded-pill position-relative" onClick={() => setEditingRule(rule)}>
                       <i className="bi bi-geo-alt-fill text-success me-1"></i>{rule.zoneName}
@@ -554,6 +638,9 @@ export function Logistika() {
                 );
               })}
               {radiusRules.length === 0 ? <div className="position-absolute top-50 start-50 translate-middle text-center text-muted">Radiusli zona hali qo'shilmagan</div> : null}
+              <div className="position-absolute small text-muted bg-white bg-opacity-75 rounded-pill px-2 py-1" style={{ right: 10, bottom: 10 }}>
+                © OpenStreetMap contributors © CARTO
+              </div>
             </div>
           </div>
         </div>
