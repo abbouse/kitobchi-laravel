@@ -30,6 +30,8 @@ use App\Models\CourierOrder;
 use App\Models\Couriers;
 use App\Models\CourierTask;
 use App\Models\CourierTransaction;
+use App\Models\CuratedCollection;
+use App\Models\CuratedCollectionItem;
 use App\Models\DeliveryService;
 use App\Models\DeliveryZoneRule;
 use App\Models\FavouriteProducts;
@@ -99,6 +101,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -796,6 +799,98 @@ class AdminController extends Controller
         return back()->with('success', "Market yangiligi o'chirildi.");
     }
 
+    public function collectionBookSearch(Request $request): JsonResponse
+    {
+        $search = trim((string) $request->input('q', ''));
+
+        $books = Books::query()
+            ->with('seller:id,shop_name')
+            ->where('is_approved', 1)
+            ->where('is_hidden', 0)
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($inner) use ($search) {
+                    $inner->where('name', 'like', "%{$search}%")
+                        ->orWhere('author', 'like', "%{$search}%")
+                        ->orWhere('artikul', 'like', "%{$search}%");
+
+                    if (is_numeric($search)) {
+                        $inner->orWhere('id', (int) $search);
+                    }
+                });
+            })
+            ->latest('updated_at')
+            ->limit(20)
+            ->get(['id', 'name', 'author', 'artikul', 'price', 'discountPrice', 'count', 'seller_id', 'images']);
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $books->map(fn (Books $book) => [
+                'id' => $book->id,
+                'name' => $book->name,
+                'author' => $book->author,
+                'artikul' => $book->artikul,
+                'seller' => $book->seller?->shop_name,
+                'price' => (int) (($book->discountPrice ?: $book->price) ?? 0),
+                'base_price' => (int) ($book->price ?? 0),
+                'stock' => (int) ($book->count ?? 0),
+                'image' => $this->assetFromStorage(collect($book->images ?? [])->first()),
+            ])->values()->all(),
+        ]);
+    }
+
+    public function storeCollection(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $data = $this->collectionData($request);
+        $items = $data['items'];
+        unset($data['items'], $data['items_json']);
+
+        if ($request->hasFile('hero_image')) {
+            $data['hero_image'] = $request->file('hero_image')->store('collections', 'public');
+        }
+
+        $collection = CuratedCollection::create($data);
+        $this->syncCollectionItems($collection, $items);
+
+        return back()->with('success', "To'plam yaratildi.");
+    }
+
+    public function updateCollection(Request $request, CuratedCollection $collection): \Illuminate\Http\RedirectResponse
+    {
+        $data = $this->collectionData($request, $collection);
+        $items = $data['items'];
+        unset($data['items'], $data['items_json']);
+
+        if ($request->hasFile('hero_image')) {
+            if ($collection->hero_image) {
+                Storage::disk('public')->delete($collection->hero_image);
+            }
+            $data['hero_image'] = $request->file('hero_image')->store('collections', 'public');
+        }
+
+        $collection->update($data);
+        $this->syncCollectionItems($collection, $items);
+
+        return back()->with('success', "To'plam yangilandi.");
+    }
+
+    public function toggleCollection(CuratedCollection $collection): \Illuminate\Http\RedirectResponse
+    {
+        $collection->update(['is_active' => ! $collection->is_active]);
+
+        return back()->with('success', $collection->is_active ? "To'plam faollashtirildi." : "To'plam yashirildi.");
+    }
+
+    public function destroyCollection(CuratedCollection $collection): \Illuminate\Http\RedirectResponse
+    {
+        if ($collection->hero_image) {
+            Storage::disk('public')->delete($collection->hero_image);
+        }
+
+        $collection->delete();
+
+        return back()->with('success', "To'plam o'chirildi.");
+    }
+
     public function storeReel(Request $request): \Illuminate\Http\RedirectResponse
     {
         Reel::create($this->reelData($request));
@@ -1421,16 +1516,114 @@ class AdminController extends Controller
             'description' => ['nullable', 'string', 'max:4000'],
             'align' => ['required', Rule::in(['top', 'center'])],
             'status' => ['nullable', 'boolean'],
-            'action' => ['required', Rule::in(['news', 'to_shop', 'to_product'])],
+            'action' => ['required', Rule::in(MarketNews::allowedActions())],
             'action_id' => ['nullable', 'integer', 'min:1'],
             'imgUrl' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
         ]);
         $data['status'] = $request->boolean('status');
-        if ($data['action'] === 'news') {
+        if (in_array($data['action'], [MarketNews::ACTION_NEWS, MarketNews::ACTION_TO_BOTTOMSHEET, MarketNews::ACTION_TO_CATALOG], true)) {
             $data['action_id'] = null;
         }
 
         return $data;
+    }
+
+    private function collectionData(Request $request, ?CuratedCollection $collection = null): array
+    {
+        $colorRule = ['required', 'regex:/^#?[0-9A-Fa-f]{6}$/'];
+
+        $data = $request->validate([
+            'slug' => ['nullable', 'string', 'max:160', Rule::unique('curated_collections', 'slug')->ignore($collection?->id)],
+            'sort_order' => ['nullable', 'integer', 'min:0', 'max:100000'],
+            'is_active' => ['nullable', 'boolean'],
+            'title_uz' => ['required', 'string', 'max:255'],
+            'title_ru' => ['nullable', 'string', 'max:255'],
+            'title_en' => ['nullable', 'string', 'max:255'],
+            'title_ja' => ['nullable', 'string', 'max:255'],
+            'subtitle_uz' => ['nullable', 'string', 'max:255'],
+            'subtitle_ru' => ['nullable', 'string', 'max:255'],
+            'subtitle_en' => ['nullable', 'string', 'max:255'],
+            'subtitle_ja' => ['nullable', 'string', 'max:255'],
+            'description_uz' => ['nullable', 'string', 'max:12000'],
+            'description_ru' => ['nullable', 'string', 'max:12000'],
+            'description_en' => ['nullable', 'string', 'max:12000'],
+            'description_ja' => ['nullable', 'string', 'max:12000'],
+            'gradient_from' => $colorRule,
+            'gradient_to' => $colorRule,
+            'button_bg_color' => $colorRule,
+            'button_text_color' => $colorRule,
+            'hero_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+            'items_json' => ['required', 'string'],
+        ]);
+
+        $data['slug'] = Str::slug($data['slug'] ?: $data['title_uz']);
+        $data['is_active'] = $request->boolean('is_active', true);
+        $data['sort_order'] = (int) ($data['sort_order'] ?? 0);
+        $data['gradient_from'] = strtoupper((string) $data['gradient_from']);
+        $data['gradient_to'] = strtoupper((string) $data['gradient_to']);
+        $data['button_bg_color'] = strtoupper((string) $data['button_bg_color']);
+        $data['button_text_color'] = strtoupper((string) $data['button_text_color']);
+
+        $decodedItems = json_decode((string) $request->input('items_json'), true);
+        if (! is_array($decodedItems)) {
+            throw ValidationException::withMessages([
+                'items_json' => "To'plam mahsulotlari noto'g'ri formatda yuborildi.",
+            ]);
+        }
+
+        $items = collect($decodedItems)
+            ->map(function ($item, $index) {
+                $productId = (int) data_get($item, 'product_id', 0);
+                if ($productId <= 0) {
+                    return null;
+                }
+
+                return [
+                    'product_id' => $productId,
+                    'product_type' => 'book',
+                    'quantity' => max(1, (int) data_get($item, 'quantity', 1)),
+                    'sort_order' => max(0, (int) data_get($item, 'sort_order', $index)),
+                ];
+            })
+            ->filter()
+            ->values();
+
+        if ($items->isEmpty()) {
+            throw ValidationException::withMessages([
+                'items_json' => "To'plam uchun kamida bitta kitob tanlang.",
+            ]);
+        }
+
+        $existingBookIds = Books::query()
+            ->whereIn('id', $items->pluck('product_id')->all())
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        $missingIds = $items->pluck('product_id')->diff($existingBookIds)->values()->all();
+        if ($missingIds !== []) {
+            throw ValidationException::withMessages([
+                'items_json' => 'Ba\'zi kitoblar topilmadi: #'.implode(', #', $missingIds),
+            ]);
+        }
+
+        $data['items'] = $items->all();
+
+        return $data;
+    }
+
+    private function syncCollectionItems(CuratedCollection $collection, array $items): void
+    {
+        $collection->items()->delete();
+
+        foreach ($items as $item) {
+            $collection->items()->create([
+                'product_id' => (int) $item['product_id'],
+                'product_type' => 'book',
+                'quantity' => (int) $item['quantity'],
+                'sort_order' => (int) $item['sort_order'],
+            ]);
+        }
     }
 
     private function vacancyData(Request $request): array
@@ -1630,6 +1823,7 @@ class AdminController extends Controller
             'Blogerlar' => ['bloggers' => $this->bloggersPayload()],
             'GiftSertifikatlar' => ['giftCertificates' => $this->giftCertificatesPayload()],
             'MarketNewsPage' => ['news' => $this->marketNewsPayload()],
+            'CollectionsPage' => $this->collectionsPagePayload(),
             'ReelsPage' => ['reels' => $this->reelsPayload()],
             'Siyosatlar' => ['policies' => $this->policiesPayload()],
             'PushNotifications' => ['notifications' => $this->pushNotificationsPayload()],
@@ -4998,7 +5192,7 @@ class AdminController extends Controller
                 'align' => $news->align,
                 'status' => $news->status ? 'Active' : 'Inactive',
                 'active' => (bool) $news->status,
-                'actionType' => $news->action,
+                'actionType' => $news->normalizedAction(),
                 'actionId' => $news->action_id,
                 'action' => $news->action_label,
                 'image' => $this->assetFromStorage($news->imgUrl),
@@ -5010,6 +5204,80 @@ class AdminController extends Controller
             ])
             ->values()
             ->all();
+    }
+
+    private function collectionsPagePayload(): array
+    {
+        if (! Schema::hasTable('curated_collections') || ! Schema::hasTable('curated_collection_items')) {
+            return ['collections' => []];
+        }
+
+        return [
+            'collections' => CuratedCollection::query()
+                ->with(['items.book.seller:id,shop_name'])
+                ->orderBy('sort_order')
+                ->latest('id')
+                ->get()
+                ->map(function (CuratedCollection $collection) {
+                    $items = $collection->items->map(function (CuratedCollectionItem $item) {
+                        $book = $item->book;
+                        $price = (int) (($book?->discountPrice ?: $book?->price) ?? 0);
+                        $available = $book
+                            && (int) ($book->count ?? 0) >= (int) ($item->quantity ?? 1)
+                            && (int) ($book->is_hidden ?? 0) === 0
+                            && (int) ($book->is_approved ?? 0) === 1;
+
+                        return [
+                            'id' => $item->id,
+                            'productId' => (int) $item->product_id,
+                            'name' => $book?->name ?? "Kitob #{$item->product_id}",
+                            'author' => $book?->author,
+                            'seller' => $book?->seller?->shop_name,
+                            'quantity' => (int) ($item->quantity ?? 1),
+                            'sortOrder' => (int) ($item->sort_order ?? 0),
+                            'price' => $price,
+                            'stock' => (int) ($book?->count ?? 0),
+                            'available' => (bool) $available,
+                            'image' => $this->assetFromStorage(collect($book?->images ?? [])->first()),
+                        ];
+                    })->values();
+
+                    return [
+                        'id' => $collection->id,
+                        'slug' => $collection->slug,
+                        'isActive' => (bool) $collection->is_active,
+                        'sortOrder' => (int) ($collection->sort_order ?? 0),
+                        'titleUz' => $collection->title_uz,
+                        'titleRu' => $collection->title_ru,
+                        'titleEn' => $collection->title_en,
+                        'titleJa' => $collection->title_ja,
+                        'subtitleUz' => $collection->subtitle_uz,
+                        'subtitleRu' => $collection->subtitle_ru,
+                        'subtitleEn' => $collection->subtitle_en,
+                        'subtitleJa' => $collection->subtitle_ja,
+                        'descriptionUz' => $collection->description_uz,
+                        'descriptionRu' => $collection->description_ru,
+                        'descriptionEn' => $collection->description_en,
+                        'descriptionJa' => $collection->description_ja,
+                        'heroImage' => $this->assetFromStorage($collection->hero_image),
+                        'gradientFrom' => $collection->gradient_from,
+                        'gradientTo' => $collection->gradient_to,
+                        'buttonBgColor' => $collection->button_bg_color,
+                        'buttonTextColor' => $collection->button_text_color,
+                        'itemCount' => $items->count(),
+                        'availableItemCount' => $items->where('available', true)->count(),
+                        'totalAmount' => (int) $items->sum(fn ($item) => ((int) $item['price']) * ((int) $item['quantity'])),
+                        'items' => $items->all(),
+                        'bookSearchUrl' => route('boshqaruv.collections.book-search'),
+                        'createUrl' => route('boshqaruv.collections.store'),
+                        'updateUrl' => route('boshqaruv.collections.update', $collection),
+                        'toggleUrl' => route('boshqaruv.collections.toggle', $collection),
+                        'destroyUrl' => route('boshqaruv.collections.destroy', $collection),
+                    ];
+                })
+                ->values()
+                ->all(),
+        ];
     }
 
     private function reelsPayload(): array
@@ -8468,6 +8736,7 @@ class AdminController extends Controller
             'Blogerlar' => route('boshqaruv.blogerlar'),
             'GiftSertifikatlar' => route('admin.gift-certificates.index'),
             'MarketNewsPage' => route('boshqaruv.market-news'),
+            'CollectionsPage' => route('boshqaruv.collections'),
             'ReelsPage' => route('boshqaruv.reels'),
             'BookClub' => route('boshqaruv.book-club'),
             'Tickets' => route('boshqaruv.tickets'),

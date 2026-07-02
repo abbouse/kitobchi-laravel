@@ -33,6 +33,7 @@ class Sold extends Model
         'postal_return_fee', 'postal_return_note',
         'resend_source_order_id', 'resend_replacement_order_id',
         'resend_available_at',
+        'source_collection_id',
         // ── Packaging ─────────────────────────────────────────
         'with_packaging',
         'packaging_price',
@@ -219,6 +220,11 @@ class Sold extends Model
     public function resendReplacement(): BelongsTo
     {
         return $this->belongsTo(self::class, 'resend_replacement_order_id');
+    }
+
+    public function sourceCollection(): BelongsTo
+    {
+        return $this->belongsTo(CuratedCollection::class, 'source_collection_id');
     }
 
     public function fulfillment()

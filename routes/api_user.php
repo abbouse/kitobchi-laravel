@@ -66,6 +66,8 @@ Route::get('cart_user/count', [CartController::class, 'count']);
 Route::get('shared-order/{orderId}', [SharedCartController::class, 'orderItems']);
 Route::get('reels', [ReelController::class, 'index']);
 Route::get('shop/info', [ShopApiController::class, 'info']);
+Route::get('shop/collections', [ShopApiController::class, 'collections']);
+Route::get('shop/collections/{collection}', [ShopApiController::class, 'collectionDetail']);
 
 Route::prefix('share')->group(function () {
     Route::get('product/{id}', [ShareController::class, 'product']);
@@ -96,6 +98,7 @@ Route::middleware('auth:user')->group(function () {
     Route::post('shop/mystery-box/{id}/pay-with-card', [ShopApiController::class, 'payMysteryBoxWithSavedCard']);
     Route::get('shop/mystery-box/subscription/{id}', [ShopApiController::class, 'subscriptionDetail']);
     Route::post('shop/mystery-box/update-address', [ShopApiController::class, 'updateSubscriptionAddress']);
+    Route::post('shop/collections/{collection}/checkout', [ShopApiController::class, 'checkoutCollection']);
 
     Route::post('products/{type}/{id}/stock-alert', [ProductsController::class, 'subscribeStockAlert']);
 

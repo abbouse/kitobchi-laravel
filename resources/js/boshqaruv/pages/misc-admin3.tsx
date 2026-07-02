@@ -143,8 +143,8 @@ export function MarketNews() {
             <div className="row g-3">
               <div className="col-md-8"><Form.Label>Sarlavha</Form.Label><Form.Control name="title" required defaultValue={editing?.title || ''} /></div>
               <div className="col-md-4"><Form.Label>Joylashuv</Form.Label><Form.Select name="align" defaultValue={editing?.align || 'center'}><option value="center">Center</option><option value="top">Top</option></Form.Select></div>
-              <div className="col-md-6"><Form.Label>Action</Form.Label><Form.Select name="action" defaultValue={editing?.actionType || 'news'}><option value="news">Yangilik</option><option value="to_shop">Do'konga o'tish</option><option value="to_product">Mahsulotga o'tish</option></Form.Select></div>
-              <div className="col-md-6"><Form.Label>Action ID</Form.Label><Form.Control name="action_id" type="number" min={1} defaultValue={editing?.actionId || ''} /></div>
+              <div className="col-md-6"><Form.Label>Action</Form.Label><Form.Select name="action" defaultValue={editing?.actionType || 'to_bottomsheet'}><option value="to_bottomsheet">Bottomsheet</option><option value="to_shop">Do'konga o'tish</option><option value="to_product">Mahsulotga o'tish</option><option value="to_catalog">To'plamlar katalogi</option><option value="to_collection">Muayyan to'plam</option></Form.Select></div>
+              <div className="col-md-6"><Form.Label>Action ID</Form.Label><Form.Control name="action_id" type="number" min={1} placeholder="Shop / mahsulot / to'plam ID" defaultValue={editing?.actionId || ''} /><div className="form-text">Bottomsheet va katalog uchun bo'sh qoldiring.</div></div>
               <div className="col-12"><Form.Label>Rasm</Form.Label><Form.Control name="imgUrl" type="file" accept="image/*" /></div>
               <div className="col-12"><Form.Label>Tavsif</Form.Label><Form.Control as="textarea" rows={4} name="description" defaultValue={editing?.description || ''} /></div>
               <div className="col-12"><Form.Check type="switch" name="status" value="1" label="Faol" defaultChecked={editing ? editing.status === 'Active' : true} /></div>

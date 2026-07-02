@@ -4,6 +4,7 @@
 @section('content')
 @php
     $newsStatus = $news->status ? 'Faol' : 'Yashirin';
+    $normalizedAction = $news->normalizedAction();
 @endphp
 <x-a122.page-header back-href="{{ route('admin.news.index') }}">
     <x-slot name="heading">{{ $news->title }}</x-slot>
@@ -106,7 +107,7 @@
                 </div>
                 <div class="data-kv">
                     <div class="label">Action kodi</div>
-                    <div class="value">{{ $news->action }}</div>
+                    <div class="value">{{ $normalizedAction }}</div>
                 </div>
                 <div class="data-kv">
                     <div class="label">Action ID</div>
@@ -122,14 +123,22 @@
                 @if($target)
                     <div class="module-link-card">
                         <div>
-                            <div class="module-link-card__title">{{ $target->shop_name ?? $target->name ?? ('#'.$target->id) }}</div>
+                            <div class="module-link-card__title">{{ $target->shop_name ?? $target->name ?? $target->title_uz ?? $target->title_ru ?? $target->title_en ?? ('#'.$target->id) }}</div>
                             <div class="module-link-card__meta">Bog‘langan target topildi va action bilan mos.</div>
                         </div>
                         <div class="s-pill accent">ID {{ $target->id }}</div>
                     </div>
-                @elseif($news->action !== 'news')
+                @elseif(in_array($normalizedAction, ['to_shop', 'to_product', 'to_collection'], true))
                     <div class="p-quote-block">
                         Action ID bor, lekin bog‘langan obyekt topilmadi. Bu odatda o‘chirilgan shop yoki mahsulotga ishora qiladi.
+                    </div>
+                @elseif($normalizedAction === 'to_catalog')
+                    <div class="p-quote-block">
+                        Bu banner umumiy to‘plamlar katalogini ochadi. Action ID talab qilinmaydi.
+                    </div>
+                @else
+                    <div class="p-quote-block">
+                        Bu banner bottomsheet ochadi. Action ID talab qilinmaydi.
                     </div>
                 @endif
             </div>
@@ -170,7 +179,7 @@
                 <div class="card-panel-title"><i class="bi bi-lightning-charge mr-2" style="color:var(--p-accent)"></i>Admin eslatma</div>
             </div>
             <div class="p-quote-block">
-                `to_shop` va `to_product` actionlarida target doimo mavjud bo‘lishi kerak. Aks holda banner bosilganda foydalanuvchi oqimi uziladi.
+                `to_shop`, `to_product` va `to_collection` actionlarida target doimo mavjud bo‘lishi kerak. `to_catalog` va `to_bottomsheet` uchun esa action ID kiritilmaydi.
             </div>
         </div>
     </div>

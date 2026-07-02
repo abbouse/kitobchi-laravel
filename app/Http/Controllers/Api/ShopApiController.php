@@ -2,13 +2,18 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Api\PurchaseController;
+use App\Models\CuratedCollection;
 use App\Models\MysteryBoxPlan;
 use App\Models\GiftCertificate;
 use App\Models\MysteryBoxDelivery;
 use App\Models\MysteryBoxSubscription;
+use App\Models\MyCart;
 use App\Models\ProjectSetting;
 use App\Models\UserCard;
+use App\Services\DeliveryZoneResolverService;
 use App\Services\PaylovPayablePaymentService;
+use App\Support\ProductPayloadFormatter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -18,6 +23,7 @@ class ShopApiController extends Controller
 {
     public function __construct(
         private readonly PaylovPayablePaymentService $paylovPayablePaymentService,
+        private readonly DeliveryZoneResolverService $deliveryZoneResolverService,
     ) {
     }
 
@@ -63,6 +69,112 @@ class ShopApiController extends Controller
         return !empty($options) ? $options : [300000, 500000, 1000000];
     }
 
+    private function collectionLocale(Request $request): string
+    {
+        $locale = trim((string) $request->input('locale', ''));
+        if (in_array($locale, ['uz', 'ru', 'en', 'ja'], true)) {
+            return $locale;
+        }
+
+        return Auth::guard('user')->user()?->locale ?? 'uz';
+    }
+
+    private function resolveCollection(string $value): ?CuratedCollection
+    {
+        return CuratedCollection::query()
+            ->with([
+                'items.book.category',
+                'items.book.tags',
+                'items.book.seller:id,shop_name,photo,rating,rating_reviews_count,reputation_score,isVerified,status,is_hidden',
+            ])
+            ->where(function ($query) use ($value) {
+                if (is_numeric($value)) {
+                    $query->where('id', (int) $value);
+                }
+
+                $query->orWhere('slug', $value);
+            })
+            ->first();
+    }
+
+    private function buildCollectionPayload(CuratedCollection $collection, string $locale, $user = null): array
+    {
+        $items = collect($collection->items)
+            ->map(function ($item) use ($user) {
+                $book = $item->book;
+                $seller = $book?->seller;
+                $available = $book
+                    && (int) ($book->is_approved ?? 0) === 1
+                    && (int) ($book->is_hidden ?? 0) === 0
+                    && (int) ($seller?->status === 'approved')
+                    && (int) ($seller?->is_hidden ?? 0) === 0
+                    && (int) ($book->count ?? 0) >= (int) ($item->quantity ?? 1);
+
+                $price = (int) (($book?->discountPrice ?: $book?->price) ?? 0);
+                $productPayload = $book
+                    ? ProductPayloadFormatter::format($book, [
+                        'user' => $user,
+                        'type' => 'book',
+                        'mode' => 'card',
+                        'category_format' => 'title',
+                    ])
+                    : null;
+
+                return [
+                    'id' => (int) $item->id,
+                    'product_id' => (int) $item->product_id,
+                    'product_type' => 'book',
+                    'quantity' => (int) ($item->quantity ?? 1),
+                    'sort_order' => (int) ($item->sort_order ?? 0),
+                    'available' => (bool) $available,
+                    'price' => $price,
+                    'line_total' => $price * (int) ($item->quantity ?? 1),
+                    'stock' => (int) ($book?->count ?? 0),
+                    'product' => $productPayload,
+                ];
+            })
+            ->values();
+
+        $availableItems = $items->where('available', true)->values();
+        $sellerCount = $availableItems
+            ->pluck('product.seller.seller_id')
+            ->filter()
+            ->unique()
+            ->count();
+
+        return [
+            'id' => $collection->id,
+            'slug' => $collection->slug,
+            'is_active' => (bool) $collection->is_active,
+            'title' => $collection->localized('title', $locale),
+            'subtitle' => $collection->localized('subtitle', $locale),
+            'description' => $collection->localized('description', $locale),
+            'hero_image' => $collection->hero_image,
+            'gradient_from' => $collection->gradient_from,
+            'gradient_to' => $collection->gradient_to,
+            'button_bg_color' => $collection->button_bg_color,
+            'button_text_color' => $collection->button_text_color,
+            'items' => $items->all(),
+            'item_count' => $items->count(),
+            'available_item_count' => $availableItems->count(),
+            'seller_count' => $sellerCount,
+            'total_price' => (int) $availableItems->sum('line_total'),
+            'checkout_enabled' => $items->isNotEmpty() && $items->count() === $availableItems->count(),
+        ];
+    }
+
+    private function selectCollectionDeliveryOffer(object $location, int $sellerCount, int $totalAmount): ?array
+    {
+        return $this->deliveryZoneResolverService
+            ->resolveOffers($location, max(1, $sellerCount), $totalAmount)
+            ->sortBy([
+                fn ($offer) => ($offer['type'] ?? '') === 'courier_service' ? 0 : 1,
+                fn ($offer) => (int) ($offer['calculated_price'] ?? 0),
+                fn ($offer) => (int) ($offer['muddat'] ?? 0),
+            ])
+            ->first();
+    }
+
     // ── GET /api/shop/info ────────────────────────────────────────────────────
     // Mystery box planlar + gift cert options
     public function info()
@@ -96,6 +208,158 @@ class ShopApiController extends Controller
                 ],
             ],
         ]);
+    }
+
+    public function collections(Request $request)
+    {
+        $locale = $this->collectionLocale($request);
+        $user = Auth::guard('user')->user();
+
+        $collections = CuratedCollection::query()
+            ->where('is_active', true)
+            ->with([
+                'items.book.category',
+                'items.book.tags',
+                'items.book.seller:id,shop_name,photo,rating,rating_reviews_count,reputation_score,isVerified,status,is_hidden',
+            ])
+            ->orderBy('sort_order')
+            ->latest('id')
+            ->get()
+            ->map(fn (CuratedCollection $collection) => $this->buildCollectionPayload($collection, $locale, $user))
+            ->filter(fn (array $collection) => (int) ($collection['item_count'] ?? 0) > 0)
+            ->values()
+            ->all();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $collections,
+        ]);
+    }
+
+    public function collectionDetail(Request $request, string $collection)
+    {
+        $model = $this->resolveCollection($collection);
+        if (! $model || ! $model->is_active) {
+            return response()->json(['status' => 'error', 'message' => "To'plam topilmadi"], 404);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $this->buildCollectionPayload(
+                $model,
+                $this->collectionLocale($request),
+                Auth::guard('user')->user(),
+            ),
+        ]);
+    }
+
+    public function checkoutCollection(Request $request, string $collection)
+    {
+        $user = Auth::guard('user')->user();
+        if (! $user) {
+            return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
+        }
+
+        $model = $this->resolveCollection($collection);
+        if (! $model || ! $model->is_active) {
+            return response()->json(['status' => 'error', 'message' => "To'plam topilmadi"], 404);
+        }
+
+        $payload = $this->buildCollectionPayload($model, $this->collectionLocale($request), $user);
+        if (! ($payload['checkout_enabled'] ?? false)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => "To'plamdagi ayrim kitoblar hozircha tayyor emas. Admin to'plamni yangilashi kerak.",
+            ], 422);
+        }
+
+        if (empty($user->mainAddressID)) {
+            return response()->json(['status' => 'error', 'message' => 'Avval yetkazib berish manzilini belgilang'], 400);
+        }
+
+        $location = DB::table('locations')
+            ->where('id', $user->mainAddressID)
+            ->where('user_id', $user->id)
+            ->first();
+
+        if (! $location) {
+            return response()->json(['status' => 'error', 'message' => 'Yetkazib berish manzili topilmadi'], 400);
+        }
+
+        $offer = $this->selectCollectionDeliveryOffer(
+            $location,
+            (int) ($payload['seller_count'] ?? 1),
+            (int) ($payload['total_price'] ?? 0),
+        );
+
+        if (! $offer || empty($offer['id'])) {
+            return response()->json([
+                'status' => 'error',
+                'message' => "Manzilingiz uchun mos yetkazish xizmati topilmadi",
+            ], 422);
+        }
+
+        $tempCartIds = [];
+
+        try {
+            foreach ((array) ($payload['items'] ?? []) as $item) {
+                $tempCart = MyCart::create([
+                    'user_id' => (int) $user->id,
+                    'product_id' => (int) $item['product_id'],
+                    'product_type' => 'book',
+                    'variant_id' => null,
+                    'count_item' => (int) $item['quantity'],
+                    'priceItem' => (int) $item['price'],
+                ]);
+
+                $tempCartIds[] = (int) $tempCart->id;
+            }
+
+            $checkoutRequest = Request::create('/api/purchase/make', 'POST', [
+                'paymentStatus' => 1,
+                'deliveryservice_id' => (int) $offer['id'],
+                'selected_cart_ids' => $tempCartIds,
+            ]);
+
+            /** @var PurchaseController $purchaseController */
+            $purchaseController = app(PurchaseController::class);
+            $response = $purchaseController->buy_book($checkoutRequest);
+
+            $decoded = json_decode($response->getContent(), true) ?: [];
+            if ($response->getStatusCode() >= 400 || ($decoded['status'] ?? '') !== 'success') {
+                MyCart::query()->whereIn('id', $tempCartIds)->delete();
+                return $response;
+            }
+
+            $orderId = (int) ($decoded['order_id'] ?? 0);
+            if ($orderId > 0) {
+                DB::table('solds')->where('id', $orderId)->update([
+                    'source_collection_id' => (int) $model->id,
+                ]);
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'message' => $decoded['message'] ?? "To'plam buyurtmasi yaratildi",
+                'order_id' => $orderId,
+                'payment_status' => $decoded['payment_status'] ?? null,
+                'delivery_offer' => $offer,
+                'collection' => [
+                    'id' => $model->id,
+                    'slug' => $model->slug,
+                    'title' => $payload['title'],
+                ],
+            ], $response->getStatusCode());
+        } catch (\Throwable $e) {
+            if ($tempCartIds !== []) {
+                MyCart::query()->whereIn('id', $tempCartIds)->delete();
+            }
+
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     // ── POST /api/shop/gift-certificate/buy ───────────────────────────────────

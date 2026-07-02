@@ -51,6 +51,7 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
         Route::get('/blogerlar', fn (AdminController $controller) => $controller->page('Blogerlar'))->name('blogerlar');
         Route::get('/gift-sertifikatlar', fn (AdminController $controller) => $controller->page('GiftSertifikatlar'))->name('gift-sertifikatlar');
         Route::get('/market-news', fn (AdminController $controller) => $controller->page('MarketNewsPage'))->name('market-news');
+        Route::get('/collections', fn (AdminController $controller) => $controller->page('CollectionsPage'))->name('collections');
         Route::get('/reels', fn (AdminController $controller) => $controller->page('ReelsPage'))->name('reels');
         Route::get('/book-club', fn (AdminController $controller) => $controller->page('BookClub'))->name('book-club');
         Route::get('/book-club/{bookClub}/data', [AdminController::class, 'bookClubData'])->name('book-club.data');
@@ -148,6 +149,11 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
         Route::put('/market-news/{news}', [AdminController::class, 'updateMarketNews'])->name('market-news.update');
         Route::patch('/market-news/{news}/toggle', [AdminController::class, 'toggleMarketNews'])->name('market-news.toggle');
         Route::delete('/market-news/{news}', [AdminController::class, 'destroyMarketNews'])->name('market-news.destroy');
+        Route::get('/collections/book-search', [AdminController::class, 'collectionBookSearch'])->name('collections.book-search');
+        Route::post('/collections', [AdminController::class, 'storeCollection'])->name('collections.store');
+        Route::put('/collections/{collection}', [AdminController::class, 'updateCollection'])->name('collections.update');
+        Route::patch('/collections/{collection}/toggle', [AdminController::class, 'toggleCollection'])->name('collections.toggle');
+        Route::delete('/collections/{collection}', [AdminController::class, 'destroyCollection'])->name('collections.destroy');
         Route::post('/reels', [AdminController::class, 'storeReel'])->name('reels.store');
         Route::put('/reels/{reel}', [AdminController::class, 'updateReel'])->name('reels.update');
         Route::delete('/reels/{reel}', [AdminController::class, 'destroyReel'])->name('reels.destroy');

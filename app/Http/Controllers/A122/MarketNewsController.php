@@ -64,11 +64,16 @@ class MarketNewsController extends Controller
 
     public function show(MarketNews $news)
     {
-        $news->load(['seller:id,shop_name', 'book:id,name,author']);
+        $news->load([
+            'seller:id,shop_name',
+            'book:id,name,author',
+            'collection:id,slug,title_uz,title_ru,title_en,title_ja',
+        ]);
 
-        $target = match ($news->action) {
+        $target = match ($news->normalizedAction()) {
             MarketNews::ACTION_TO_SHOP => $news->seller,
             MarketNews::ACTION_TO_PRODUCT => $news->book,
+            MarketNews::ACTION_TO_COLLECTION => $news->collection,
             default => null,
         };
 
@@ -113,12 +118,12 @@ class MarketNewsController extends Controller
             'description' => 'nullable|string',
             'align'       => 'required|in:top,center',
             'status'      => 'boolean',
-            'action'      => 'required|in:news,to_shop,to_product',
+            'action'      => 'required|in:'.implode(',', MarketNews::allowedActions()),
             'action_id'   => 'nullable|integer|min:1',
             'imgUrl'      => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
         ]);
 
-        if ($data['action'] === 'news') {
+        if (in_array($data['action'], [MarketNews::ACTION_NEWS, MarketNews::ACTION_TO_BOTTOMSHEET, MarketNews::ACTION_TO_CATALOG], true)) {
             $data['action_id'] = null;
         }
         $data['status'] = $request->boolean('status');

@@ -60,11 +60,13 @@
           @forelse($news as $item)
             @php
               $isActive = $item->status === 'active' || $item->status == 1 || $item->status === true;
-              $actionLabel = match ($item->action) {
-                'news' => 'Yangilik',
+              $actionLabel = match ($item->normalizedAction()) {
+                'to_bottomsheet' => 'Bottomsheet',
                 'to_shop' => 'Do‘konga',
                 'to_product' => 'Mahsulotga',
-                default => $item->action,
+                'to_catalog' => 'To‘plamlar katalogi',
+                'to_collection' => 'To‘plamga',
+                default => $item->normalizedAction(),
               };
             @endphp
             <tr>

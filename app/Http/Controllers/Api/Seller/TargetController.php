@@ -138,7 +138,7 @@ class TargetController extends Controller
         $request->validate([
             'type'        => ['required', 'string', Rule::in(['top_banner', 'center_banner'])],
             'description' => 'nullable|string|max:1000',
-            'action'      => ['required', 'string', Rule::in(['to_book', 'to_shop'])],
+            'action'      => ['required', 'string', Rule::in(['to_book', 'to_product', 'to_shop'])],
             'product_id'  => 'nullable|integer',
             'expire_days' => 'required|integer|min:1|max:30',
             'images'      => 'sometimes|array|min:1|max:1',
@@ -155,9 +155,13 @@ class TargetController extends Controller
         $productId   = $request->product_id;
         $productType = 'none';
 
-        if ($request->action === 'to_book') {
+        $normalizedAction = $request->action === 'to_book'
+            ? 'to_product'
+            : $request->action;
+
+        if ($normalizedAction === 'to_product') {
             if (empty($productId)) {
-                return response()->json(['success' => false, 'message' => 'action=to_book uchun product_id shart.'], 422);
+                return response()->json(['success' => false, 'message' => 'action=to_product uchun product_id shart.'], 422);
             }
             $productData = $this->checkAndGetProductData($productId, $storeSellerId);
             if (is_null($productData)) {
@@ -178,7 +182,7 @@ class TargetController extends Controller
                 'seller_id'     => $storeSellerId,
                 'type'          => $request->type,
                 'description'   => $request->description,
-                'action'        => $request->action,
+                'action'        => $normalizedAction,
                 'product_id'    => $productId,
                 'product_type'  => $productType,
                 'banner_img'    => $bannerPath,
