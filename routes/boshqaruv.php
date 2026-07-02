@@ -153,6 +153,7 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
         Route::post('/collections', [AdminController::class, 'storeCollection'])->name('collections.store');
         Route::put('/collections/{collection}', [AdminController::class, 'updateCollection'])->name('collections.update');
         Route::patch('/collections/{collection}/toggle', [AdminController::class, 'toggleCollection'])->name('collections.toggle');
+        Route::post('/collections/{collection}/duplicate', [AdminController::class, 'duplicateCollection'])->name('collections.duplicate');
         Route::delete('/collections/{collection}', [AdminController::class, 'destroyCollection'])->name('collections.destroy');
         Route::post('/reels', [AdminController::class, 'storeReel'])->name('reels.store');
         Route::put('/reels/{reel}', [AdminController::class, 'updateReel'])->name('reels.update');

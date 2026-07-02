@@ -802,8 +802,27 @@ class AdminController extends Controller
     public function collectionBookSearch(Request $request): JsonResponse
     {
         $search = trim((string) $request->input('q', ''));
+        $type = strtolower((string) $request->input('type', 'book'));
+        if (! in_array($type, ['book', 'stationery'], true)) {
+            $type = 'book';
+        }
 
-        $books = Books::query()
+        if ($type === 'stationery') {
+            $data = $this->searchStationeryForCollection($search);
+        } else {
+            $data = $this->searchBooksForCollection($search);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'type' => $type,
+            'data' => $data,
+        ]);
+    }
+
+    private function searchBooksForCollection(string $search): array
+    {
+        return Books::query()
             ->with('seller:id,shop_name')
             ->where('is_approved', 1)
             ->where('is_hidden', 0)
@@ -820,12 +839,10 @@ class AdminController extends Controller
             })
             ->latest('updated_at')
             ->limit(20)
-            ->get(['id', 'name', 'author', 'artikul', 'price', 'discountPrice', 'count', 'seller_id', 'images']);
-
-        return response()->json([
-            'status' => 'success',
-            'data' => $books->map(fn (Books $book) => [
+            ->get(['id', 'name', 'author', 'artikul', 'price', 'discountPrice', 'count', 'seller_id', 'images'])
+            ->map(fn (Books $book) => [
                 'id' => $book->id,
+                'productType' => 'book',
                 'name' => $book->name,
                 'author' => $book->author,
                 'artikul' => $book->artikul,
@@ -834,8 +851,45 @@ class AdminController extends Controller
                 'base_price' => (int) ($book->price ?? 0),
                 'stock' => (int) ($book->count ?? 0),
                 'image' => $this->assetFromStorage(collect($book->images ?? [])->first()),
-            ])->values()->all(),
-        ]);
+            ])->values()->all();
+    }
+
+    private function searchStationeryForCollection(string $search): array
+    {
+        if (! Schema::hasTable('stationeries')) {
+            return [];
+        }
+
+        return Stationery::query()
+            ->with('seller:id,shop_name')
+            ->where('is_approved', 1)
+            ->where('is_hidden', 0)
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($inner) use ($search) {
+                    $inner->where('name', 'like', "%{$search}%")
+                        ->orWhere('artikul', 'like', "%{$search}%")
+                        ->orWhere('barcode', 'like', "%{$search}%");
+
+                    if (is_numeric($search)) {
+                        $inner->orWhere('id', (int) $search);
+                    }
+                });
+            })
+            ->latest('updated_at')
+            ->limit(20)
+            ->get(['id', 'name', 'artikul', 'price', 'discount_price', 'stock', 'seller_id', 'images'])
+            ->map(fn (Stationery $item) => [
+                'id' => $item->id,
+                'productType' => 'stationery',
+                'name' => $item->name,
+                'author' => null,
+                'artikul' => $item->artikul,
+                'seller' => $item->seller?->shop_name,
+                'price' => (int) (($item->discount_price ?: $item->price) ?? 0),
+                'base_price' => (int) ($item->price ?? 0),
+                'stock' => (int) ($item->stock ?? 0),
+                'image' => $this->assetFromStorage(collect($item->images ?? [])->first()),
+            ])->values()->all();
     }
 
     public function storeCollection(Request $request): \Illuminate\Http\RedirectResponse
@@ -889,6 +943,49 @@ class AdminController extends Controller
         $collection->delete();
 
         return back()->with('success', "To'plam o'chirildi.");
+    }
+
+    public function duplicateCollection(CuratedCollection $collection): \Illuminate\Http\RedirectResponse
+    {
+        $collection->load('items');
+
+        $baseSlug = Str::slug($collection->slug.'-nusxa');
+        $slug = $baseSlug;
+        $suffix = 2;
+        while (CuratedCollection::where('slug', $slug)->exists()) {
+            $slug = $baseSlug.'-'.$suffix;
+            $suffix++;
+        }
+
+        $copy = $collection->replicate([
+            'slug',
+            'hero_image',
+            'is_active',
+            'created_at',
+            'updated_at',
+        ]);
+        $copy->slug = $slug;
+        $copy->is_active = false; // Nusxa yashirin holatda yaratiladi.
+        $copy->title_uz = trim(($collection->title_uz ?? 'To\'plam').' (nusxa)');
+        // Hero rasm faylini ham nusxalaymiz (asl fayl o'chirilsa nusxa buzilmasin).
+        if ($collection->hero_image && Storage::disk('public')->exists($collection->hero_image)) {
+            $ext = pathinfo($collection->hero_image, PATHINFO_EXTENSION);
+            $newPath = 'collections/'.Str::uuid().($ext ? '.'.$ext : '');
+            Storage::disk('public')->copy($collection->hero_image, $newPath);
+            $copy->hero_image = $newPath;
+        }
+        $copy->save();
+
+        foreach ($collection->items as $item) {
+            $copy->items()->create([
+                'product_id' => $item->product_id,
+                'product_type' => $item->product_type,
+                'quantity' => $item->quantity,
+                'sort_order' => $item->sort_order,
+            ]);
+        }
+
+        return back()->with('success', "To'plamdan nusxa olindi (yashirin holatda). Tahrirlab faollashtiring.");
     }
 
     public function storeReel(Request $request): \Illuminate\Http\RedirectResponse
@@ -1582,9 +1679,14 @@ class AdminController extends Controller
                     return null;
                 }
 
+                $type = strtolower((string) data_get($item, 'product_type', 'book'));
+                if (! in_array($type, ['book', 'stationery'], true)) {
+                    $type = 'book';
+                }
+
                 return [
                     'product_id' => $productId,
-                    'product_type' => 'book',
+                    'product_type' => $type,
                     'quantity' => max(1, (int) data_get($item, 'quantity', 1)),
                     'sort_order' => max(0, (int) data_get($item, 'sort_order', $index)),
                 ];
@@ -1594,20 +1696,35 @@ class AdminController extends Controller
 
         if ($items->isEmpty()) {
             throw ValidationException::withMessages([
-                'items_json' => "To'plam uchun kamida bitta kitob tanlang.",
+                'items_json' => "To'plam uchun kamida bitta mahsulot tanlang.",
             ]);
         }
 
-        $existingBookIds = Books::query()
-            ->whereIn('id', $items->pluck('product_id')->all())
-            ->pluck('id')
-            ->map(fn ($id) => (int) $id)
-            ->all();
+        // Har bir mahsulot turini o'z jadvalidan tekshiramiz.
+        $bookIds = $items->where('product_type', 'book')->pluck('product_id')->unique();
+        $stationeryIds = $items->where('product_type', 'stationery')->pluck('product_id')->unique();
 
-        $missingIds = $items->pluck('product_id')->diff($existingBookIds)->values()->all();
-        if ($missingIds !== []) {
+        $missing = [];
+
+        if ($bookIds->isNotEmpty()) {
+            $existingBookIds = Books::query()->whereIn('id', $bookIds->all())->pluck('id')
+                ->map(fn ($id) => (int) $id);
+            foreach ($bookIds->diff($existingBookIds)->values()->all() as $id) {
+                $missing[] = "kitob #{$id}";
+            }
+        }
+
+        if ($stationeryIds->isNotEmpty() && Schema::hasTable('stationeries')) {
+            $existingStationeryIds = Stationery::query()->whereIn('id', $stationeryIds->all())->pluck('id')
+                ->map(fn ($id) => (int) $id);
+            foreach ($stationeryIds->diff($existingStationeryIds)->values()->all() as $id) {
+                $missing[] = "kanselyariya #{$id}";
+            }
+        }
+
+        if ($missing !== []) {
             throw ValidationException::withMessages([
-                'items_json' => 'Ba\'zi kitoblar topilmadi: #'.implode(', #', $missingIds),
+                'items_json' => "Ba'zi mahsulotlar topilmadi: ".implode(', ', $missing),
             ]);
         }
 
@@ -1623,7 +1740,9 @@ class AdminController extends Controller
         foreach ($items as $item) {
             $collection->items()->create([
                 'product_id' => (int) $item['product_id'],
-                'product_type' => 'book',
+                'product_type' => in_array(($item['product_type'] ?? 'book'), ['book', 'stationery'], true)
+                    ? $item['product_type']
+                    : 'book',
                 'quantity' => (int) $item['quantity'],
                 'sort_order' => (int) $item['sort_order'],
             ]);
@@ -5216,33 +5335,50 @@ class AdminController extends Controller
             return ['collections' => []];
         }
 
+        $hasStationery = Schema::hasTable('stationeries');
+
         return [
             'collections' => CuratedCollection::query()
-                ->with(['items.book.seller:id,shop_name'])
+                ->with(array_filter([
+                    'items.book.seller:id,shop_name',
+                    $hasStationery ? 'items.stationery.seller:id,shop_name' : null,
+                ]))
                 ->orderBy('sort_order')
                 ->latest('id')
                 ->get()
                 ->map(function (CuratedCollection $collection) {
                     $items = $collection->items->map(function (CuratedCollectionItem $item) {
-                        $book = $item->book;
-                        $price = (int) (($book?->discountPrice ?: $book?->price) ?? 0);
-                        $available = $book
-                            && (int) ($book->count ?? 0) >= (int) ($item->quantity ?? 1)
-                            && (int) ($book->is_hidden ?? 0) === 0
-                            && (int) ($book->is_approved ?? 0) === 1;
+                        $isStationery = $item->product_type === 'stationery';
+                        $product = $isStationery ? $item->stationery : $item->book;
+
+                        $price = $isStationery
+                            ? (int) (($product?->discount_price ?: $product?->price) ?? 0)
+                            : (int) (($product?->discountPrice ?: $product?->price) ?? 0);
+                        $stock = $isStationery
+                            ? (int) ($product?->stock ?? 0)
+                            : (int) ($product?->count ?? 0);
+                        $fallbackName = $isStationery
+                            ? "Kanselyariya #{$item->product_id}"
+                            : "Kitob #{$item->product_id}";
+
+                        $available = $product
+                            && $stock >= (int) ($item->quantity ?? 1)
+                            && (int) ($product->is_hidden ?? 0) === 0
+                            && (int) ($product->is_approved ?? 0) === 1;
 
                         return [
                             'id' => $item->id,
                             'productId' => (int) $item->product_id,
-                            'name' => $book?->name ?? "Kitob #{$item->product_id}",
-                            'author' => $book?->author,
-                            'seller' => $book?->seller?->shop_name,
+                            'productType' => $isStationery ? 'stationery' : 'book',
+                            'name' => $product?->name ?? $fallbackName,
+                            'author' => $isStationery ? null : $product?->author,
+                            'seller' => $product?->seller?->shop_name,
                             'quantity' => (int) ($item->quantity ?? 1),
                             'sortOrder' => (int) ($item->sort_order ?? 0),
                             'price' => $price,
-                            'stock' => (int) ($book?->count ?? 0),
+                            'stock' => $stock,
                             'available' => (bool) $available,
-                            'image' => $this->assetFromStorage(collect($book?->images ?? [])->first()),
+                            'image' => $this->assetFromStorage(collect($product?->images ?? [])->first()),
                         ];
                     })->values();
 
@@ -5280,6 +5416,7 @@ class AdminController extends Controller
                         'createUrl' => route('boshqaruv.collections.store'),
                         'updateUrl' => route('boshqaruv.collections.update', $collection),
                         'toggleUrl' => route('boshqaruv.collections.toggle', $collection),
+                        'duplicateUrl' => route('boshqaruv.collections.duplicate', $collection),
                         'destroyUrl' => route('boshqaruv.collections.destroy', $collection),
                     ];
                 })

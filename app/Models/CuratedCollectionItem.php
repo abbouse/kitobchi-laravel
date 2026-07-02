@@ -32,4 +32,14 @@ class CuratedCollectionItem extends Model
     {
         return $this->belongsTo(Books::class, 'product_id');
     }
+
+    public function stationery(): BelongsTo
+    {
+        return $this->belongsTo(Stationery::class, 'product_id');
+    }
+
+    public function isStationery(): bool
+    {
+        return $this->product_type === 'stationery';
+    }
 }
