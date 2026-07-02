@@ -82,13 +82,21 @@ export function Reels() {
 
 // ===== MARKET YANGILIKLARI =====
 export function MarketNews() {
-  const { news = [] } = usePage<{
+  const { news = [], errors = {}, flash = {} } = usePage<{
     news?: Array<{ id: number; title: string; description?: string; align?: string; status: string; active?: boolean; action?: string; actionType?: string; actionId?: number | null; image?: string | null; date?: string; createUrl?: string; updateUrl?: string; toggleUrl?: string; destroyUrl?: string }>;
+    errors?: Record<string, string>;
+    flash?: { success?: string; error?: string };
   }>().props;
   const [selected, setSelected] = useState<(typeof news)[0] | null>(null);
   const [editing, setEditing] = useState<(typeof news)[0] | null>(null);
   const [showForm, setShowForm] = useState(false);
   const createUrl = news[0]?.createUrl || '/boshqaruv/market-news';
+
+  useEffect(() => {
+    if (Object.keys(errors).length > 0) {
+      setShowForm(true);
+    }
+  }, [errors]);
 
   const toggle = (item: (typeof news)[0]) => item.toggleUrl && router.patch(item.toggleUrl, {}, { preserveScroll: true });
   const destroy = (item: (typeof news)[0]) => {
@@ -98,12 +106,26 @@ export function MarketNews() {
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
-    const options = { preserveScroll: true, forceFormData: true, onSuccess: () => { setEditing(null); setShowForm(false); } };
-    editing?.updateUrl ? router.post(editing.updateUrl, { ...Object.fromEntries(data.entries()), _method: 'put' }, options) : router.post(createUrl, data, options);
+    const options = {
+      preserveScroll: true,
+      preserveState: true,
+      forceFormData: true,
+      onSuccess: () => { setEditing(null); setShowForm(false); },
+      onError: () => { setShowForm(true); },
+    };
+    if (editing?.updateUrl) {
+      data.append('_method', 'put');
+      router.post(editing.updateUrl, data, options);
+      return;
+    }
+
+    router.post(createUrl, data, options);
   };
 
   return (
     <div>
+      {flash.success ? <div className="alert alert-success">{flash.success}</div> : null}
+      {flash.error ? <div className="alert alert-danger">{flash.error}</div> : null}
       <div className="page-head"><div><h1 className="page-title">Market yangiliklari</h1><p className="page-subtitle">Jami {news.length} ta yangilik</p></div>
         <button className="btn btn-primary-gradient" onClick={() => { setEditing(null); setShowForm(true); }}><i className="bi bi-plus-lg me-1"></i>Qo'shish</button>
         </div>
@@ -140,12 +162,22 @@ export function MarketNews() {
         <Form onSubmit={submit}>
           <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">{editing ? 'Yangilikni tahrirlash' : "Yangilik qo'shish"}</Modal.Title></Modal.Header>
           <Modal.Body>
+            {Object.keys(errors).length > 0 ? (
+              <div className="alert alert-danger">
+                <div className="fw-semibold mb-1">Saqlashda xatolik bor.</div>
+                <ul className="mb-0 ps-3">
+                  {Object.entries(errors).map(([key, value]) => (
+                    <li key={key}>{value}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
             <div className="row g-3">
               <div className="col-md-8"><Form.Label>Sarlavha</Form.Label><Form.Control name="title" required defaultValue={editing?.title || ''} /></div>
               <div className="col-md-4"><Form.Label>Joylashuv</Form.Label><Form.Select name="align" defaultValue={editing?.align || 'center'}><option value="center">Center</option><option value="top">Top</option></Form.Select></div>
               <div className="col-md-6"><Form.Label>Action</Form.Label><Form.Select name="action" defaultValue={editing?.actionType || 'to_bottomsheet'}><option value="to_bottomsheet">Bottomsheet</option><option value="to_shop">Do'konga o'tish</option><option value="to_product">Mahsulotga o'tish</option><option value="to_catalog">To'plamlar katalogi</option><option value="to_collection">Muayyan to'plam</option></Form.Select></div>
               <div className="col-md-6"><Form.Label>Action ID</Form.Label><Form.Control name="action_id" type="number" min={1} placeholder="Shop / mahsulot / to'plam ID" defaultValue={editing?.actionId || ''} /><div className="form-text">Bottomsheet va katalog uchun bo'sh qoldiring.</div></div>
-              <div className="col-12"><Form.Label>Rasm</Form.Label><Form.Control name="imgUrl" type="file" accept="image/*" /></div>
+              <div className="col-12"><Form.Label>Rasm</Form.Label><Form.Control name="imgUrl" type="file" accept="image/*" />{editing?.image ? <div className="form-text">Yangi rasm tanlanmasa, hozirgisi saqlanadi.</div> : null}</div>
               <div className="col-12"><Form.Label>Tavsif</Form.Label><Form.Control as="textarea" rows={4} name="description" defaultValue={editing?.description || ''} /></div>
               <div className="col-12"><Form.Check type="switch" name="status" value="1" label="Faol" defaultChecked={editing ? editing.status === 'Active' : true} /></div>
             </div>
