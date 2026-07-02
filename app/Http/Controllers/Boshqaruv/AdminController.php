@@ -1536,6 +1536,7 @@ class AdminController extends Controller
             'slug' => ['nullable', 'string', 'max:160', Rule::unique('curated_collections', 'slug')->ignore($collection?->id)],
             'sort_order' => ['nullable', 'integer', 'min:0', 'max:100000'],
             'is_active' => ['nullable', 'boolean'],
+            'custom_total_price' => ['nullable', 'integer', 'min:1000', 'max:2000000000'],
             'title_uz' => ['required', 'string', 'max:255'],
             'title_ru' => ['nullable', 'string', 'max:255'],
             'title_en' => ['nullable', 'string', 'max:255'],
@@ -1559,6 +1560,9 @@ class AdminController extends Controller
         $data['slug'] = Str::slug($data['slug'] ?: $data['title_uz']);
         $data['is_active'] = $request->boolean('is_active', true);
         $data['sort_order'] = (int) ($data['sort_order'] ?? 0);
+        $data['custom_total_price'] = filled($request->input('custom_total_price'))
+            ? max(1000, (int) $request->input('custom_total_price'))
+            : null;
         $data['gradient_from'] = strtoupper((string) $data['gradient_from']);
         $data['gradient_to'] = strtoupper((string) $data['gradient_to']);
         $data['button_bg_color'] = strtoupper((string) $data['button_bg_color']);
@@ -5247,6 +5251,7 @@ class AdminController extends Controller
                         'slug' => $collection->slug,
                         'isActive' => (bool) $collection->is_active,
                         'sortOrder' => (int) ($collection->sort_order ?? 0),
+                        'customTotalPrice' => $collection->custom_total_price !== null ? (int) $collection->custom_total_price : null,
                         'titleUz' => $collection->title_uz,
                         'titleRu' => $collection->title_ru,
                         'titleEn' => $collection->title_en,
@@ -5264,9 +5269,12 @@ class AdminController extends Controller
                         'gradientTo' => $collection->gradient_to,
                         'buttonBgColor' => $collection->button_bg_color,
                         'buttonTextColor' => $collection->button_text_color,
+                        'baseTotalAmount' => (int) $items->sum(fn ($item) => ((int) $item['price']) * ((int) $item['quantity'])),
                         'itemCount' => $items->count(),
                         'availableItemCount' => $items->where('available', true)->count(),
-                        'totalAmount' => (int) $items->sum(fn ($item) => ((int) $item['price']) * ((int) $item['quantity'])),
+                        'totalAmount' => $collection->custom_total_price !== null
+                            ? (int) $collection->custom_total_price
+                            : (int) $items->sum(fn ($item) => ((int) $item['price']) * ((int) $item['quantity'])),
                         'items' => $items->all(),
                         'bookSearchUrl' => route('boshqaruv.collections.book-search'),
                         'createUrl' => route('boshqaruv.collections.store'),

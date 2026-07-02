@@ -97,6 +97,81 @@ class ShopApiController extends Controller
             ->first();
     }
 
+    private function buildCollectionCheckoutRows(array $items, ?int $customTotalPrice): array
+    {
+        $baseTotal = (int) collect($items)->sum('line_total');
+        if ($baseTotal <= 0 || $customTotalPrice === null || $customTotalPrice <= 0) {
+            return collect($items)
+                ->map(fn (array $item) => [
+                    'product_id' => (int) $item['product_id'],
+                    'quantity' => max(1, (int) ($item['quantity'] ?? 1)),
+                    'unit_price' => max(0, (int) ($item['price'] ?? 0)),
+                ])
+                ->values()
+                ->all();
+        }
+
+        $targetTotal = max(0, $customTotalPrice);
+        $units = [];
+
+        foreach ($items as $item) {
+            $quantity = max(1, (int) ($item['quantity'] ?? 1));
+            $baseUnitPrice = max(0, (int) ($item['price'] ?? 0));
+
+            for ($index = 0; $index < $quantity; $index++) {
+                $units[] = [
+                    'product_id' => (int) $item['product_id'],
+                    'base_unit_price' => $baseUnitPrice,
+                ];
+            }
+        }
+
+        if ($units === []) {
+            return [];
+        }
+
+        $flooredTotal = 0;
+        foreach ($units as $index => $unit) {
+            $raw = ($targetTotal * $unit['base_unit_price']) / $baseTotal;
+            $floor = (int) floor($raw);
+            $units[$index]['unit_price'] = $floor;
+            $units[$index]['fraction'] = $raw - $floor;
+            $flooredTotal += $floor;
+        }
+
+        $remainder = max(0, $targetTotal - $flooredTotal);
+        if ($remainder > 0) {
+            uasort($units, fn (array $left, array $right) => $right['fraction'] <=> $left['fraction']);
+            foreach (array_keys($units) as $unitIndex) {
+                if ($remainder <= 0) {
+                    break;
+                }
+
+                $units[$unitIndex]['unit_price']++;
+                $remainder--;
+            }
+            ksort($units);
+        }
+
+        return collect($units)
+            ->map(fn (array $unit) => [
+                'product_id' => (int) $unit['product_id'],
+                'unit_price' => max(0, (int) ($unit['unit_price'] ?? 0)),
+            ])
+            ->groupBy(fn (array $unit) => $unit['product_id'].'|'.$unit['unit_price'])
+            ->map(function ($group) {
+                $first = $group->first();
+
+                return [
+                    'product_id' => (int) $first['product_id'],
+                    'quantity' => $group->count(),
+                    'unit_price' => (int) $first['unit_price'],
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
     private function buildCollectionPayload(CuratedCollection $collection, string $locale, $user = null): array
     {
         $items = collect($collection->items)
@@ -136,6 +211,10 @@ class ShopApiController extends Controller
             ->values();
 
         $availableItems = $items->where('available', true)->values();
+        $baseTotalPrice = (int) $availableItems->sum('line_total');
+        $customTotalPrice = $collection->custom_total_price !== null
+            ? max(1000, (int) $collection->custom_total_price)
+            : null;
         $sellerCount = $availableItems
             ->pluck('product.seller.seller_id')
             ->filter()
@@ -154,11 +233,14 @@ class ShopApiController extends Controller
             'gradient_to' => $collection->gradient_to,
             'button_bg_color' => $collection->button_bg_color,
             'button_text_color' => $collection->button_text_color,
+            'custom_total_price' => $customTotalPrice,
+            'base_total_price' => $baseTotalPrice,
             'items' => $items->all(),
             'item_count' => $items->count(),
             'available_item_count' => $availableItems->count(),
             'seller_count' => $sellerCount,
-            'total_price' => (int) $availableItems->sum('line_total'),
+            'total_price' => $customTotalPrice ?? $baseTotalPrice,
+            'is_custom_pricing' => $customTotalPrice !== null,
             'checkout_enabled' => $items->isNotEmpty() && $items->count() === $availableItems->count(),
         ];
     }
@@ -300,16 +382,20 @@ class ShopApiController extends Controller
         }
 
         $tempCartIds = [];
+        $checkoutRows = $this->buildCollectionCheckoutRows(
+            (array) ($payload['items'] ?? []),
+            isset($payload['custom_total_price']) ? (int) $payload['custom_total_price'] : null,
+        );
 
         try {
-            foreach ((array) ($payload['items'] ?? []) as $item) {
+            foreach ($checkoutRows as $item) {
                 $tempCart = MyCart::create([
                     'user_id' => (int) $user->id,
                     'product_id' => (int) $item['product_id'],
                     'product_type' => 'book',
                     'variant_id' => null,
                     'count_item' => (int) $item['quantity'],
-                    'priceItem' => (int) $item['price'],
+                    'priceItem' => (int) $item['unit_price'],
                 ]);
 
                 $tempCartIds[] = (int) $tempCart->id;

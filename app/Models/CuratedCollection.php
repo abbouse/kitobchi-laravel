@@ -31,11 +31,13 @@ class CuratedCollection extends Model
         'gradient_to',
         'button_bg_color',
         'button_text_color',
+        'custom_total_price',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
         'sort_order' => 'integer',
+        'custom_total_price' => 'integer',
     ];
 
     public function items(): HasMany

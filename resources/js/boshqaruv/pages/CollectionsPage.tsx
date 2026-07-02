@@ -21,6 +21,7 @@ type CollectionRow = {
   slug: string;
   isActive: boolean;
   sortOrder: number;
+  customTotalPrice?: number | null;
   titleUz: string;
   titleRu?: string | null;
   titleEn?: string | null;
@@ -38,6 +39,7 @@ type CollectionRow = {
   gradientTo: string;
   buttonBgColor: string;
   buttonTextColor: string;
+  baseTotalAmount: number;
   itemCount: number;
   availableItemCount: number;
   totalAmount: number;
@@ -67,6 +69,7 @@ const defaultForm = {
   slug: '',
   sortOrder: 0,
   isActive: true,
+  customTotalPrice: '',
   titleUz: '',
   titleRu: '',
   titleEn: '',
@@ -86,7 +89,11 @@ const defaultForm = {
 };
 
 export default function CollectionsPage() {
-  const { collections = [] } = usePage<{ collections?: CollectionRow[] }>().props;
+  const { collections = [], errors = {}, flash = {} } = usePage<{
+    collections?: CollectionRow[];
+    errors?: Record<string, string>;
+    flash?: { success?: string; error?: string };
+  }>().props;
   const baseSearchUrl = collections[0]?.bookSearchUrl || '/boshqaruv/collections/book-search';
   const baseCreateUrl = collections[0]?.createUrl || '/boshqaruv/collections';
 
@@ -123,6 +130,7 @@ export default function CollectionsPage() {
       slug: collection.slug,
       sortOrder: collection.sortOrder,
       isActive: collection.isActive,
+      customTotalPrice: collection.customTotalPrice ? String(collection.customTotalPrice) : '',
       titleUz: collection.titleUz || '',
       titleRu: collection.titleRu || '',
       titleEn: collection.titleEn || '',
@@ -179,6 +187,12 @@ export default function CollectionsPage() {
     return () => window.clearTimeout(timer);
   }, [search]);
 
+  useEffect(() => {
+    if (Object.keys(errors).length > 0) {
+      setShowForm(true);
+    }
+  }, [errors]);
+
   const addBook = (book: SearchBook) => {
     setItems((current) => {
       const existingIndex = current.findIndex((item) => item.productId === book.id);
@@ -221,6 +235,7 @@ export default function CollectionsPage() {
     payload.append('slug', form.slug);
     payload.append('sort_order', String(form.sortOrder || 0));
     payload.append('is_active', form.isActive ? '1' : '0');
+    payload.append('custom_total_price', String((form as any).customTotalPrice || ''));
     payload.append('title_uz', form.titleUz);
     payload.append('title_ru', form.titleRu);
     payload.append('title_en', form.titleEn);
@@ -254,10 +269,14 @@ export default function CollectionsPage() {
 
     const options = {
       preserveScroll: true,
+      preserveState: true,
       forceFormData: true,
       onSuccess: () => {
         setShowForm(false);
         resetForm();
+      },
+      onError: () => {
+        setShowForm(true);
       },
     };
 
@@ -281,6 +300,9 @@ export default function CollectionsPage() {
 
   return (
     <div>
+      {flash.success ? <div className="alert alert-success">{flash.success}</div> : null}
+      {flash.error ? <div className="alert alert-danger">{flash.error}</div> : null}
+
       <div className="page-head">
         <div>
           <h1 className="page-title">To'plamlar</h1>
@@ -341,8 +363,15 @@ export default function CollectionsPage() {
               <div className="d-flex flex-wrap gap-2 mb-3">
                 <span className="chip chip-gray">{collection.itemCount} ta kitob</span>
                 <span className="chip chip-gray">{collection.availableItemCount} ta tayyor</span>
+                {collection.customTotalPrice ? <span className="chip chip-purple">Qo'lda narx</span> : null}
                 <span className="chip chip-gray">{fmt(collection.totalAmount)} so'm</span>
               </div>
+
+              {collection.customTotalPrice ? (
+                <div className="small text-muted mb-3">
+                  Asl yig'indi: {fmt(collection.baseTotalAmount)} so'm
+                </div>
+              ) : null}
 
               <div className="table-responsive mb-3">
                 <table className="data-table">
@@ -392,6 +421,16 @@ export default function CollectionsPage() {
             <Modal.Title className="fs-5 fw-bold">{editing ? "To'plamni tahrirlash" : "To'plam qo'shish"}</Modal.Title>
           </Modal.Header>
           <Modal.Body>
+            {Object.keys(errors).length > 0 ? (
+              <div className="alert alert-danger">
+                <div className="fw-semibold mb-1">To'plamni saqlashda xatolik bor.</div>
+                <ul className="mb-0 ps-3">
+                  {Object.entries(errors).map(([key, value]) => (
+                    <li key={key}>{value}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
             <div className="row g-4">
               <div className="col-lg-7">
                 <div className="row g-3">
@@ -402,6 +441,17 @@ export default function CollectionsPage() {
                   <div className="col-md-4">
                     <Form.Label>Tartib</Form.Label>
                     <Form.Control type="number" min={0} value={form.sortOrder} onChange={(event) => setForm((prev) => ({ ...prev, sortOrder: Number(event.target.value || 0) }))} />
+                  </div>
+                  <div className="col-md-6">
+                    <Form.Label>Umumiy narx</Form.Label>
+                    <Form.Control
+                      type="number"
+                      min={1000}
+                      value={(form as any).customTotalPrice}
+                      onChange={(event) => setForm((prev) => ({ ...prev, customTotalPrice: event.target.value }))}
+                      placeholder="Bo'sh qoldirilsa kitoblar yig'indisi ishlaydi"
+                    />
+                    <div className="form-text">Bundle umumiy narxini admin qo'lda belgilashi mumkin.</div>
                   </div>
 
                   {[
@@ -464,12 +514,15 @@ export default function CollectionsPage() {
                   <div className="small opacity-75">Preview</div>
                   <div className="fw-bold fs-4 mt-2">{form.titleUz || "To'plam nomi"}</div>
                   <div className="small mt-2">{form.subtitleUz || 'Subtitle shu yerda ko‘rinadi'}</div>
+                  {Number((form as any).customTotalPrice || 0) > 0 ? (
+                    <div className="small mt-2 opacity-75">Asl yig'indi: {fmt(totalAmount)} so'm</div>
+                  ) : null}
                   <button
                     type="button"
                     className="btn mt-3"
                     style={{ background: form.buttonBgColor, color: form.buttonTextColor, borderRadius: 999, paddingInline: 18 }}
                   >
-                    {fmt(totalAmount)} so'mga sotib olish
+                    {fmt(Number((form as any).customTotalPrice || 0) > 0 ? Number((form as any).customTotalPrice || 0) : totalAmount)} so'mga sotib olish
                   </button>
                 </div>
 

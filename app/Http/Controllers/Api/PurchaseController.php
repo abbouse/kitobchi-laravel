@@ -88,6 +88,15 @@ class PurchaseController extends Controller
         return 0;
     }
 
+    private function effectiveCartItemUnitPrice(MyCart $cartItem): float
+    {
+        if (is_numeric($cartItem->priceItem) && (float) $cartItem->priceItem >= 0) {
+            return (float) $cartItem->priceItem;
+        }
+
+        return $this->effectivePrice($cartItem->product);
+    }
+
     // ── Mavjud zaxira ──────────────────────────────────────────
     private function availableStock($cartItem): int
     {
@@ -278,7 +287,7 @@ class PurchaseController extends Controller
             if (! $product || ! $product->seller_id) {
                 continue;
             }
-            $totalSum += $this->effectivePrice($product) * $item->count_item;
+            $totalSum += $this->effectiveCartItemUnitPrice($item) * $item->count_item;
             $sellers[$product->seller_id] = true;
         }
 
@@ -351,7 +360,7 @@ class PurchaseController extends Controller
             return $this->err("Savatcha bo'sh!", 400);
         }
 
-        $total = $cartItems->sum(fn ($i) => $this->effectivePrice($i->product) * $i->count_item);
+        $total = $cartItems->sum(fn ($i) => $this->effectiveCartItemUnitPrice($i) * $i->count_item);
         $res = $this->validatePromocode($code, $user->id, $total);
 
         if (isset($res['error'])) {
@@ -465,7 +474,7 @@ class PurchaseController extends Controller
                 }
 
                 $qty = $cartItem->count_item;
-                $price = $this->effectivePrice($product);
+                $price = $this->effectiveCartItemUnitPrice($cartItem);
                 $stock = $this->availableStock($cartItem);
 
                 if ($qty > $stock) {
@@ -641,7 +650,7 @@ class PurchaseController extends Controller
 
                 if (! $isDefaultPlatformGift && (int) $gift->seller_id !== self::PLATFORM_SELLER_ID) {
                     $sellerSumInCart = collect($groupedBySeller[$gift->seller_id] ?? [])
-                        ->sum(fn ($item) => $this->effectivePrice($item->product) * $item->count_item);
+                        ->sum(fn ($item) => $this->effectiveCartItemUnitPrice($item) * $item->count_item);
 
                     if (
                         ! isset($groupedBySeller[$gift->seller_id]) ||
@@ -870,7 +879,7 @@ class PurchaseController extends Controller
                 foreach ($items as $item) {
                     $product = $item->product;
                     $qty = (int) $item->count_item;
-                    $price = $this->effectivePrice($product);
+                    $price = $this->effectiveCartItemUnitPrice($item);
                     $sellerAmount += $price * $qty;
 
                     SellerOrderItem::create([
