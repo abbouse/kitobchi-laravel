@@ -11,6 +11,7 @@ use App\Support\ProductPayloadFormatter;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 
 class NewsController extends Controller
 {
@@ -71,6 +72,9 @@ class NewsController extends Controller
             $shopPhoto = $item->seller?->photo;
         } elseif ($action === MarketNews::ACTION_TO_COLLECTION) {
             $collectionData = $this->formatCollectionPreview($collectionMap[$item->action_id] ?? null);
+            if (! $collectionData) {
+                $action = MarketNews::ACTION_TO_BOTTOMSHEET;
+            }
         }
 
         return [
@@ -96,16 +100,22 @@ class NewsController extends Controller
     public function index(Request $request)
     {
         $user = Auth::guard('user')->user();
+        $hasCollectionsTable = Schema::hasTable('curated_collections');
+
+        $with = [
+            'seller:id,shop_name,photo',
+            'book:id,name,author,category_id,images,description,price,count,lang,langType,coverType,year,discountPrice,is_hidden,is_approved,seller_id,ugc_aggregate_score,ugc_reviews_count,ugc_last_scored_at',
+            'book.category:id,title',
+            'book.tags',
+            'book.seller:id,shop_name,photo,rating,rating_reviews_count,reputation_score,isVerified',
+        ];
+
+        if ($hasCollectionsTable) {
+            $with[] = 'collection:id,slug,title_uz,title_ru,title_en,title_ja,subtitle_uz,subtitle_ru,subtitle_en,subtitle_ja,hero_image,gradient_from,gradient_to,button_bg_color,button_text_color';
+        }
 
         $marketNews = MarketNews::query()
-            ->with([
-                'seller:id,shop_name,photo',
-                'book:id,name,author,category_id,images,description,price,count,lang,langType,coverType,year,discountPrice,is_hidden,is_approved,seller_id,ugc_aggregate_score,ugc_reviews_count,ugc_last_scored_at',
-                'book.category:id,title',
-                'book.tags',
-                'book.seller:id,shop_name,photo,rating,rating_reviews_count,reputation_score,isVerified',
-                'collection:id,slug,title_uz,title_ru,title_en,title_ja,subtitle_uz,subtitle_ru,subtitle_en,subtitle_ja,hero_image,gradient_from,gradient_to,button_bg_color,button_text_color',
-            ])
+            ->with($with)
             ->where('status', true)
             ->get();
 
@@ -136,18 +146,21 @@ class NewsController extends Controller
             ->get()
             ->keyBy('id');
 
-        $collectionIds = $marketNews
-            ->filter(fn (MarketNews $news) => $news->normalizedAction() === MarketNews::ACTION_TO_COLLECTION)
-            ->pluck('action_id')
-            ->filter()
-            ->unique()
-            ->values()
-            ->all();
+        $collections = collect();
+        if ($hasCollectionsTable) {
+            $collectionIds = $marketNews
+                ->filter(fn (MarketNews $news) => $news->normalizedAction() === MarketNews::ACTION_TO_COLLECTION)
+                ->pluck('action_id')
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
 
-        $collections = CuratedCollection::query()
-            ->whereIn('id', $collectionIds)
-            ->get()
-            ->keyBy('id');
+            $collections = CuratedCollection::query()
+                ->whereIn('id', $collectionIds)
+                ->get()
+                ->keyBy('id');
+        }
 
         $news = $marketNews->map(fn (MarketNews $item) => $this->formatMarketNews(
             $item,

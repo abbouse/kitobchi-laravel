@@ -1,10 +1,13 @@
-import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
+import { ChangeEvent, DragEvent, FormEvent, useEffect, useMemo, useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Button, Form, Modal } from 'react-bootstrap';
+
+type ProductType = 'book' | 'stationery';
 
 type CollectionItem = {
   id?: number;
   productId: number;
+  productType: ProductType;
   name: string;
   author?: string | null;
   seller?: string | null;
@@ -48,11 +51,13 @@ type CollectionRow = {
   createUrl: string;
   updateUrl: string;
   toggleUrl: string;
+  duplicateUrl: string;
   destroyUrl: string;
 };
 
-type SearchBook = {
+type SearchProduct = {
   id: number;
+  productType: ProductType;
   name: string;
   author?: string | null;
   artikul?: string | null;
@@ -63,7 +68,11 @@ type SearchBook = {
   image?: string | null;
 };
 
+type StatusFilter = 'all' | 'active' | 'hidden';
+type SortOption = 'sort' | 'name' | 'items' | 'amount' | 'newest';
+
 const fmt = (value: number) => new Intl.NumberFormat('uz-UZ').format(value || 0);
+const itemKey = (type: ProductType, id: number) => `${type}-${id}`;
 
 const defaultForm = {
   slug: '',
@@ -88,6 +97,13 @@ const defaultForm = {
   buttonTextColor: '#FFFFFF',
 };
 
+const TypeBadge = ({ type }: { type: ProductType }) =>
+  type === 'stationery' ? (
+    <span className="chip chip-purple"><i className="bi bi-pencil-fill me-1"></i>Kanselyariya</span>
+  ) : (
+    <span className="chip chip-gray"><i className="bi bi-book me-1"></i>Kitob</span>
+  );
+
 export default function CollectionsPage() {
   const { collections = [], errors = {}, flash = {} } = usePage<{
     collections?: CollectionRow[];
@@ -100,19 +116,30 @@ export default function CollectionsPage() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<CollectionRow | null>(null);
   const [heroFile, setHeroFile] = useState<File | null>(null);
+  const [heroPreview, setHeroPreview] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [searchType, setSearchType] = useState<ProductType>('book');
   const [searchLoading, setSearchLoading] = useState(false);
-  const [searchResults, setSearchResults] = useState<SearchBook[]>([]);
+  const [searchResults, setSearchResults] = useState<SearchProduct[]>([]);
   const [items, setItems] = useState<CollectionItem[]>([]);
   const [form, setForm] = useState(defaultForm);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+
+  // --- Ro'yxat filtrlari ---
+  const [listQuery, setListQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [sortOption, setSortOption] = useState<SortOption>('sort');
 
   const resetForm = () => {
     setEditing(null);
     setHeroFile(null);
+    setHeroPreview(null);
     setSearch('');
+    setSearchType('book');
     setSearchResults([]);
     setItems([]);
     setForm(defaultForm);
+    setDragIndex(null);
   };
 
   const hydrateForm = (collection?: CollectionRow | null) => {
@@ -123,9 +150,11 @@ export default function CollectionsPage() {
 
     setEditing(collection);
     setHeroFile(null);
+    setHeroPreview(collection.heroImage || null);
     setSearch('');
+    setSearchType('book');
     setSearchResults([]);
-    setItems(collection.items.map((item) => ({ ...item })));
+    setItems(collection.items.map((item) => ({ ...item, productType: item.productType || 'book' })));
     setForm({
       slug: collection.slug,
       sortOrder: collection.sortOrder,
@@ -155,12 +184,11 @@ export default function CollectionsPage() {
     [items],
   );
 
-  const availableCount = useMemo(
-    () => items.filter((item) => item.available).length,
-    [items],
-  );
+  const unavailableCount = useMemo(() => items.filter((item) => !item.available).length, [items]);
+  const bookCount = useMemo(() => items.filter((item) => item.productType === 'book').length, [items]);
+  const stationeryCount = useMemo(() => items.filter((item) => item.productType === 'stationery').length, [items]);
 
-  const searchBooks = async (query: string) => {
+  const searchProducts = async (query: string, type: ProductType) => {
     const clean = query.trim();
     if (!clean) {
       setSearchResults([]);
@@ -169,11 +197,13 @@ export default function CollectionsPage() {
 
     setSearchLoading(true);
     try {
-      const response = await fetch(`${baseSearchUrl}?q=${encodeURIComponent(clean)}`, {
+      const response = await fetch(`${baseSearchUrl}?type=${type}&q=${encodeURIComponent(clean)}`, {
         headers: { Accept: 'application/json' },
       });
       const payload = response.ok ? await response.json() : null;
       setSearchResults(Array.isArray(payload?.data) ? payload.data : []);
+    } catch {
+      setSearchResults([]);
     } finally {
       setSearchLoading(false);
     }
@@ -181,11 +211,11 @@ export default function CollectionsPage() {
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      searchBooks(search);
+      searchProducts(search, searchType);
     }, 220);
 
     return () => window.clearTimeout(timer);
-  }, [search]);
+  }, [search, searchType]);
 
   useEffect(() => {
     if (Object.keys(errors).length > 0) {
@@ -193,9 +223,11 @@ export default function CollectionsPage() {
     }
   }, [errors]);
 
-  const addBook = (book: SearchBook) => {
+  const addProduct = (product: SearchProduct) => {
     setItems((current) => {
-      const existingIndex = current.findIndex((item) => item.productId === book.id);
+      const existingIndex = current.findIndex(
+        (item) => item.productId === product.id && item.productType === product.productType,
+      );
       if (existingIndex >= 0) {
         return current.map((item, index) =>
           index === existingIndex ? { ...item, quantity: item.quantity + 1 } : item,
@@ -205,16 +237,17 @@ export default function CollectionsPage() {
       return [
         ...current,
         {
-          productId: book.id,
-          name: book.name,
-          author: book.author,
-          seller: book.seller,
+          productId: product.id,
+          productType: product.productType,
+          name: product.name,
+          author: product.author,
+          seller: product.seller,
           quantity: 1,
           sortOrder: current.length,
-          price: book.price,
-          stock: book.stock,
-          available: book.stock > 0,
-          image: book.image,
+          price: product.price,
+          stock: product.stock,
+          available: product.stock > 0,
+          image: product.image,
         },
       ];
     });
@@ -225,7 +258,32 @@ export default function CollectionsPage() {
   };
 
   const removeItem = (index: number) => {
-    setItems((current) => current.filter((_, itemIndex) => itemIndex !== index).map((item, order) => ({ ...item, sortOrder: order })));
+    setItems((current) =>
+      current.filter((_, itemIndex) => itemIndex !== index).map((item, order) => ({ ...item, sortOrder: order })),
+    );
+  };
+
+  // --- Drag & drop tartiblash ---
+  const onDragStart = (index: number) => setDragIndex(index);
+  const onDragOver = (event: DragEvent) => event.preventDefault();
+  const onDrop = (index: number) => {
+    if (dragIndex === null || dragIndex === index) {
+      setDragIndex(null);
+      return;
+    }
+    setItems((current) => {
+      const next = [...current];
+      const [moved] = next.splice(dragIndex, 1);
+      next.splice(index, 0, moved);
+      return next.map((item, order) => ({ ...item, sortOrder: order }));
+    });
+    setDragIndex(null);
+  };
+
+  const onHeroChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] || null;
+    setHeroFile(file);
+    setHeroPreview(file ? URL.createObjectURL(file) : editing?.heroImage || null);
   };
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
@@ -257,6 +315,7 @@ export default function CollectionsPage() {
       JSON.stringify(
         items.map((item, index) => ({
           product_id: item.productId,
+          product_type: item.productType,
           quantity: item.quantity,
           sort_order: item.sortOrder ?? index,
         })),
@@ -293,10 +352,51 @@ export default function CollectionsPage() {
     router.patch(collection.toggleUrl, {}, { preserveScroll: true });
   };
 
+  const duplicate = (collection: CollectionRow) => {
+    router.post(collection.duplicateUrl, {}, { preserveScroll: true });
+  };
+
   const destroy = (collection: CollectionRow) => {
     if (!confirm(`${collection.titleUz} to'plami o'chirilsinmi?`)) return;
     router.delete(collection.destroyUrl, { preserveScroll: true });
   };
+
+  // --- Filtrlangan + saralangan ro'yxat ---
+  const visibleCollections = useMemo(() => {
+    const q = listQuery.trim().toLowerCase();
+    let list = collections.filter((collection) => {
+      if (statusFilter === 'active' && !collection.isActive) return false;
+      if (statusFilter === 'hidden' && collection.isActive) return false;
+      if (!q) return true;
+      return (
+        collection.titleUz.toLowerCase().includes(q) ||
+        (collection.slug || '').toLowerCase().includes(q) ||
+        (collection.subtitleUz || '').toLowerCase().includes(q)
+      );
+    });
+
+    list = [...list].sort((a, b) => {
+      switch (sortOption) {
+        case 'name':
+          return a.titleUz.localeCompare(b.titleUz, 'uz');
+        case 'items':
+          return b.itemCount - a.itemCount;
+        case 'amount':
+          return b.totalAmount - a.totalAmount;
+        case 'newest':
+          return b.id - a.id;
+        default:
+          return a.sortOrder - b.sortOrder || b.id - a.id;
+      }
+    });
+
+    return list;
+  }, [collections, listQuery, statusFilter, sortOption]);
+
+  const totalUnavailable = useMemo(
+    () => collections.reduce((sum, item) => sum + (item.itemCount - item.availableItemCount), 0),
+    [collections],
+  );
 
   return (
     <div>
@@ -306,7 +406,7 @@ export default function CollectionsPage() {
       <div className="page-head">
         <div>
           <h1 className="page-title">To'plamlar</h1>
-          <p className="page-subtitle">Banner orqali ochiladigan tayyor kitob to'plamlari va ularning sahifa dizayni</p>
+          <p className="page-subtitle">Banner orqali ochiladigan tayyor kitob va kanselyariya to'plamlari, ularning sahifa dizayni</p>
         </div>
         <button
           className="btn btn-primary-gradient"
@@ -323,13 +423,20 @@ export default function CollectionsPage() {
         {[
           { label: 'Jami to‘plam', value: collections.length, icon: 'bi-collection' },
           { label: 'Faol', value: collections.filter((item) => item.isActive).length, icon: 'bi-check-circle' },
-          { label: 'Kitoblar', value: collections.reduce((sum, item) => sum + item.itemCount, 0), icon: 'bi-book' },
-          { label: 'Jami summa', value: `${fmt(collections.reduce((sum, item) => sum + item.totalAmount, 0))} so'm`, icon: 'bi-cash-stack' },
+          { label: 'Mahsulotlar', value: collections.reduce((sum, item) => sum + item.itemCount, 0), icon: 'bi-box-seam' },
+          {
+            label: totalUnavailable > 0 ? 'Tugagan mahsulot' : 'Jami summa',
+            value: totalUnavailable > 0 ? totalUnavailable : `${fmt(collections.reduce((sum, item) => sum + item.totalAmount, 0))} so'm`,
+            icon: totalUnavailable > 0 ? 'bi-exclamation-triangle' : 'bi-cash-stack',
+            danger: totalUnavailable > 0,
+          },
         ].map((stat) => (
           <div className="col-xl-3 col-md-6" key={stat.label}>
             <div className="stat-card">
               <div className="d-flex align-items-center gap-3">
-                <div className="stat-icon"><i className={`bi ${stat.icon}`}></i></div>
+                <div className="stat-icon" style={(stat as any).danger ? { background: '#FEE2E2', color: '#DC2626' } : undefined}>
+                  <i className={`bi ${stat.icon}`}></i>
+                </div>
                 <div>
                   <div className="stat-value">{stat.value}</div>
                   <div className="stat-label">{stat.label}</div>
@@ -340,79 +447,145 @@ export default function CollectionsPage() {
         ))}
       </div>
 
-      <div className="row g-3">
-        {collections.map((collection) => (
-          <div className="col-xl-6" key={collection.id}>
-            <div className="card-panel h-100">
-              <div
-                className="rounded-4 p-3 mb-3 text-white"
-                style={{
-                  background: `linear-gradient(135deg, ${collection.gradientFrom}, ${collection.gradientTo})`,
-                }}
-              >
-                <div className="d-flex justify-content-between align-items-start gap-3">
-                  <div>
-                    <div className="small opacity-75">/{collection.slug}</div>
-                    <div className="fw-bold fs-4">{collection.titleUz}</div>
-                    <div className="small mt-1" style={{ maxWidth: 420 }}>{collection.subtitleUz || 'Subtitle kiritilmagan'}</div>
-                  </div>
-                  <span className={`chip ${collection.isActive ? 'chip-success' : 'chip-gray'}`}>{collection.isActive ? 'Faol' : 'Yashirin'}</span>
-                </div>
-              </div>
-
-              <div className="d-flex flex-wrap gap-2 mb-3">
-                <span className="chip chip-gray">{collection.itemCount} ta kitob</span>
-                <span className="chip chip-gray">{collection.availableItemCount} ta tayyor</span>
-                {collection.customTotalPrice ? <span className="chip chip-purple">Qo'lda narx</span> : null}
-                <span className="chip chip-gray">{fmt(collection.totalAmount)} so'm</span>
-              </div>
-
-              {collection.customTotalPrice ? (
-                <div className="small text-muted mb-3">
-                  Asl yig'indi: {fmt(collection.baseTotalAmount)} so'm
-                </div>
-              ) : null}
-
-              <div className="table-responsive mb-3">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>Kitob</th>
-                      <th>Sotuvchi</th>
-                      <th>Soni</th>
-                      <th>Narx</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {collection.items.slice(0, 4).map((item) => (
-                      <tr key={`${collection.id}-${item.productId}`}>
-                        <td>
-                          <div className="fw-semibold">{item.name}</div>
-                          <small className="text-muted">{item.author || item.productId}</small>
-                        </td>
-                        <td>{item.seller || '—'}</td>
-                        <td>{item.quantity}</td>
-                        <td>{fmt(item.price)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="d-flex gap-2">
-                <button className="btn btn-sm btn-light flex-fill" onClick={() => { hydrateForm(collection); setShowForm(true); }}>
-                  <i className="bi bi-pencil me-1"></i>Tahrirlash
-                </button>
-                <button className="btn btn-sm btn-light" onClick={() => toggle(collection)}>
-                  <i className={`bi ${collection.isActive ? 'bi-eye-slash' : 'bi-eye'}`}></i>
-                </button>
-                <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(collection)}>
-                  <i className="bi bi-trash"></i>
-                </button>
-              </div>
+      {/* Qidiruv + filtr paneli */}
+      <div className="card-panel mb-3">
+        <div className="row g-2 align-items-center">
+          <div className="col-lg-5">
+            <div className="position-relative">
+              <i className="bi bi-search position-absolute" style={{ left: 14, top: 11, color: '#9CA3AF' }}></i>
+              <Form.Control
+                value={listQuery}
+                onChange={(event) => setListQuery(event.target.value)}
+                placeholder="To'plam nomi yoki slug bo'yicha qidiring"
+                style={{ paddingLeft: 38 }}
+              />
             </div>
           </div>
-        ))}
+          <div className="col-lg-4">
+            <div className="btn-group w-100" role="group">
+              {([
+                ['all', 'Barchasi'],
+                ['active', 'Faol'],
+                ['hidden', 'Yashirin'],
+              ] as [StatusFilter, string][]).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={`btn btn-sm ${statusFilter === value ? 'btn-primary-gradient' : 'btn-light'}`}
+                  onClick={() => setStatusFilter(value)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="col-lg-3">
+            <Form.Select value={sortOption} onChange={(event) => setSortOption(event.target.value as SortOption)}>
+              <option value="sort">Tartib bo'yicha</option>
+              <option value="newest">Yangi qo'shilgan</option>
+              <option value="name">Nomi (A-Z)</option>
+              <option value="items">Ko'p mahsulotli</option>
+              <option value="amount">Qimmat summa</option>
+            </Form.Select>
+          </div>
+        </div>
+      </div>
+
+      {visibleCollections.length === 0 ? (
+        <div className="card-panel text-center py-5">
+          <i className="bi bi-collection fs-1 text-muted"></i>
+          <div className="mt-2 fw-semibold">To'plam topilmadi</div>
+          <div className="text-muted small">Qidiruv yoki filtrlarni o'zgartiring, yoki yangi to'plam qo'shing.</div>
+        </div>
+      ) : null}
+
+      <div className="row g-3">
+        {visibleCollections.map((collection) => {
+          const outOfStock = collection.itemCount - collection.availableItemCount;
+          return (
+            <div className="col-xl-6" key={collection.id}>
+              <div className="card-panel h-100">
+                <div
+                  className="rounded-4 p-3 mb-3 text-white"
+                  style={{ background: `linear-gradient(135deg, ${collection.gradientFrom}, ${collection.gradientTo})` }}
+                >
+                  <div className="d-flex justify-content-between align-items-start gap-3">
+                    <div>
+                      <div className="small opacity-75">/{collection.slug}</div>
+                      <div className="fw-bold fs-4">{collection.titleUz}</div>
+                      <div className="small mt-1" style={{ maxWidth: 420 }}>{collection.subtitleUz || 'Subtitle kiritilmagan'}</div>
+                    </div>
+                    <span className={`chip ${collection.isActive ? 'chip-success' : 'chip-gray'}`}>{collection.isActive ? 'Faol' : 'Yashirin'}</span>
+                  </div>
+                </div>
+
+                <div className="d-flex flex-wrap gap-2 mb-3">
+                  <span className="chip chip-gray">{collection.itemCount} ta mahsulot</span>
+                  <span className="chip chip-gray">{collection.availableItemCount} ta tayyor</span>
+                  {outOfStock > 0 ? <span className="chip" style={{ background: '#FEE2E2', color: '#DC2626' }}>{outOfStock} ta tugagan</span> : null}
+                  {collection.customTotalPrice ? <span className="chip chip-purple">Qo'lda narx</span> : null}
+                  <span className="chip chip-gray">{fmt(collection.totalAmount)} so'm</span>
+                </div>
+
+                {collection.customTotalPrice ? (
+                  <div className="small text-muted mb-3">Asl yig'indi: {fmt(collection.baseTotalAmount)} so'm</div>
+                ) : null}
+
+                <div className="table-responsive mb-3" style={{ maxHeight: 220, overflowY: 'auto' }}>
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Mahsulot</th>
+                        <th>Tur</th>
+                        <th>Soni</th>
+                        <th>Narx</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {collection.items.map((item) => (
+                        <tr key={`${collection.id}-${item.productType}-${item.productId}`} style={!item.available ? { opacity: 0.55 } : undefined}>
+                          <td>
+                            <div className="d-flex align-items-center gap-2">
+                              {item.image ? (
+                                <img src={item.image} alt="" width={34} height={34} style={{ borderRadius: 8, objectFit: 'cover' }} />
+                              ) : (
+                                <div style={{ width: 34, height: 34, borderRadius: 8, background: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  <i className={`bi ${item.productType === 'stationery' ? 'bi-pencil' : 'bi-book'} text-muted`}></i>
+                                </div>
+                              )}
+                              <div style={{ minWidth: 0 }}>
+                                <div className="fw-semibold text-truncate" style={{ maxWidth: 180 }}>{item.name}</div>
+                                <small className="text-muted">{item.author || (item.available ? item.seller : 'Tugagan')}</small>
+                              </div>
+                            </div>
+                          </td>
+                          <td><TypeBadge type={item.productType} /></td>
+                          <td>{item.quantity}</td>
+                          <td>{fmt(item.price)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="d-flex gap-2">
+                  <button className="btn btn-sm btn-light flex-fill" onClick={() => { hydrateForm(collection); setShowForm(true); }}>
+                    <i className="bi bi-pencil me-1"></i>Tahrirlash
+                  </button>
+                  <button className="btn btn-sm btn-light" title="Nusxa olish" onClick={() => duplicate(collection)}>
+                    <i className="bi bi-files"></i>
+                  </button>
+                  <button className="btn btn-sm btn-light" title={collection.isActive ? 'Yashirish' : 'Faollashtirish'} onClick={() => toggle(collection)}>
+                    <i className={`bi ${collection.isActive ? 'bi-eye-slash' : 'bi-eye'}`}></i>
+                  </button>
+                  <button className="btn btn-sm btn-light text-danger" title="O'chirish" onClick={() => destroy(collection)}>
+                    <i className="bi bi-trash"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       <Modal show={showForm} onHide={() => { setShowForm(false); resetForm(); }} size="xl" centered>
@@ -449,7 +622,7 @@ export default function CollectionsPage() {
                       min={1000}
                       value={(form as any).customTotalPrice}
                       onChange={(event) => setForm((prev) => ({ ...prev, customTotalPrice: event.target.value }))}
-                      placeholder="Bo'sh qoldirilsa kitoblar yig'indisi ishlaydi"
+                      placeholder="Bo'sh qoldirilsa mahsulotlar yig'indisi ishlaydi"
                     />
                     <div className="form-text">Bundle umumiy narxini admin qo'lda belgilashi mumkin.</div>
                   </div>
@@ -500,8 +673,8 @@ export default function CollectionsPage() {
                   </div>
                   <div className="col-12">
                     <Form.Label>Hero rasm</Form.Label>
-                    <Form.Control type="file" accept="image/*" onChange={(event: ChangeEvent<HTMLInputElement>) => setHeroFile(event.target.files?.[0] || null)} />
-                    {!heroFile && editing?.heroImage ? <div className="form-text">Hozirgi rasm saqlanadi.</div> : null}
+                    <Form.Control type="file" accept="image/*" onChange={onHeroChange} />
+                    {heroPreview ? <img src={heroPreview} alt="" className="mt-2 rounded-3" style={{ maxHeight: 90 }} /> : null}
                   </div>
                   <div className="col-12">
                     <Form.Check type="switch" label="Faol" checked={form.isActive} onChange={(event) => setForm((prev) => ({ ...prev, isActive: event.target.checked }))} />
@@ -528,52 +701,120 @@ export default function CollectionsPage() {
 
                 <div className="card-panel">
                   <div className="d-flex justify-content-between align-items-center mb-2">
-                    <div className="fw-bold">Kitob qo'shish</div>
-                    <span className="text-muted small">{items.length} ta</span>
+                    <div className="fw-bold">Mahsulot qo'shish</div>
+                    <span className="text-muted small">{bookCount} kitob · {stationeryCount} kanselyariya</span>
                   </div>
-                  <Form.Control value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Nomi, muallif yoki artikul bo'yicha qidiring" className="mb-3" />
+
+                  {/* Kitob / Kanselyariya tab */}
+                  <div className="btn-group w-100 mb-2" role="group">
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${searchType === 'book' ? 'btn-primary-gradient' : 'btn-light'}`}
+                      onClick={() => { setSearchType('book'); setSearchResults([]); }}
+                    >
+                      <i className="bi bi-book me-1"></i>Kitob
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${searchType === 'stationery' ? 'btn-primary-gradient' : 'btn-light'}`}
+                      onClick={() => { setSearchType('stationery'); setSearchResults([]); }}
+                    >
+                      <i className="bi bi-pencil me-1"></i>Kanselyariya
+                    </button>
+                  </div>
+
+                  <Form.Control
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    placeholder={searchType === 'book' ? "Nomi, muallif yoki artikul bo'yicha" : "Nomi, artikul yoki barkod bo'yicha"}
+                    className="mb-3"
+                  />
 
                   <div className="border rounded-4 p-2 mb-3" style={{ minHeight: 112, maxHeight: 220, overflowY: 'auto' }}>
                     {searchLoading ? <div className="text-muted small">Qidirilmoqda...</div> : null}
-                    {!searchLoading && searchResults.length === 0 ? <div className="text-muted small">Kitob qidirsangiz natijalar shu yerda chiqadi.</div> : null}
-                    {searchResults.map((book) => (
+                    {!searchLoading && searchResults.length === 0 ? <div className="text-muted small">Qidirsangiz natijalar shu yerda chiqadi.</div> : null}
+                    {searchResults.map((product) => (
                       <button
                         type="button"
-                        key={book.id}
-                        className="btn btn-light w-100 text-start mb-2"
-                        onClick={() => addBook(book)}
+                        key={itemKey(product.productType, product.id)}
+                        className="btn btn-light w-100 text-start mb-2 d-flex align-items-center gap-2"
+                        onClick={() => addProduct(product)}
                       >
-                        <div className="fw-semibold">{book.name}</div>
-                        <div className="small text-muted">{book.author || 'Muallif yo‘q'} · {book.seller || 'Do‘kon yo‘q'} · {fmt(book.price)} so'm</div>
+                        {product.image ? (
+                          <img src={product.image} alt="" width={36} height={36} style={{ borderRadius: 8, objectFit: 'cover' }} />
+                        ) : (
+                          <div style={{ width: 36, height: 36, borderRadius: 8, background: '#EEF0F3', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <i className={`bi ${product.productType === 'stationery' ? 'bi-pencil' : 'bi-book'} text-muted`}></i>
+                          </div>
+                        )}
+                        <div style={{ minWidth: 0 }}>
+                          <div className="fw-semibold text-truncate">{product.name}</div>
+                          <div className="small text-muted text-truncate">
+                            {product.author || product.seller || '—'} · {fmt(product.price)} so'm · {product.stock > 0 ? `${product.stock} dona` : 'tugagan'}
+                          </div>
+                        </div>
                       </button>
                     ))}
                   </div>
 
-                  <div className="border rounded-4 p-2" style={{ maxHeight: 380, overflowY: 'auto' }}>
-                    {items.length === 0 ? <div className="text-muted small">Hali kitob tanlanmagan.</div> : null}
+                  <div className="d-flex justify-content-between align-items-center mb-1">
+                    <div className="fw-semibold small">Tanlangan ({items.length})</div>
+                    {unavailableCount > 0 ? <span className="small text-danger">{unavailableCount} ta tugagan</span> : null}
+                  </div>
+                  <div className="small text-muted mb-2">Tartibni sudrab (drag) o'zgartiring.</div>
+
+                  <div className="border rounded-4 p-2" style={{ maxHeight: 360, overflowY: 'auto' }}>
+                    {items.length === 0 ? <div className="text-muted small">Hali mahsulot tanlanmagan.</div> : null}
                     {items.map((item, index) => (
-                      <div key={`${item.productId}-${index}`} className="border rounded-4 p-2 mb-2">
+                      <div
+                        key={`${item.productType}-${item.productId}-${index}`}
+                        className="border rounded-4 p-2 mb-2"
+                        draggable
+                        onDragStart={() => onDragStart(index)}
+                        onDragOver={onDragOver}
+                        onDrop={() => onDrop(index)}
+                        style={{
+                          cursor: 'grab',
+                          background: dragIndex === index ? '#EEF2FF' : undefined,
+                          borderColor: !item.available ? '#FCA5A5' : undefined,
+                        }}
+                      >
                         <div className="d-flex justify-content-between gap-2">
-                          <div style={{ minWidth: 0 }}>
-                            <div className="fw-semibold text-truncate">{item.name}</div>
-                            <div className="small text-muted text-truncate">{item.author || 'Muallif yo‘q'} · {item.seller || 'Do‘kon yo‘q'}</div>
+                          <div className="d-flex align-items-center gap-2" style={{ minWidth: 0 }}>
+                            <i className="bi bi-grip-vertical text-muted"></i>
+                            {item.image ? (
+                              <img src={item.image} alt="" width={32} height={32} style={{ borderRadius: 6, objectFit: 'cover' }} />
+                            ) : null}
+                            <div style={{ minWidth: 0 }}>
+                              <div className="fw-semibold text-truncate">{item.name}</div>
+                              <div className="small text-muted text-truncate">
+                                {item.productType === 'stationery' ? 'Kanselyariya' : 'Kitob'} · {item.seller || '—'}
+                                {!item.available ? ' · tugagan' : ''}
+                              </div>
+                            </div>
                           </div>
                           <button type="button" className="btn btn-sm btn-light text-danger" onClick={() => removeItem(index)}>
                             <i className="bi bi-trash"></i>
                           </button>
                         </div>
                         <div className="row g-2 mt-1">
-                          <div className="col-4">
-                            <Form.Label className="small text-muted">Soni</Form.Label>
-                            <Form.Control type="number" min={1} value={item.quantity} onChange={(event) => updateItem(index, { quantity: Number(event.target.value || 1) })} />
+                          <div className="col-6">
+                            <Form.Label className="small text-muted mb-1">Soni</Form.Label>
+                            <div className="input-group input-group-sm">
+                              <button type="button" className="btn btn-light" onClick={() => updateItem(index, { quantity: Math.max(1, item.quantity - 1) })}>−</button>
+                              <Form.Control
+                                type="number"
+                                min={1}
+                                className="text-center"
+                                value={item.quantity}
+                                onChange={(event) => updateItem(index, { quantity: Math.max(1, Number(event.target.value || 1)) })}
+                              />
+                              <button type="button" className="btn btn-light" onClick={() => updateItem(index, { quantity: item.quantity + 1 })}>+</button>
+                            </div>
                           </div>
-                          <div className="col-4">
-                            <Form.Label className="small text-muted">Tartib</Form.Label>
-                            <Form.Control type="number" min={0} value={item.sortOrder} onChange={(event) => updateItem(index, { sortOrder: Number(event.target.value || 0) })} />
-                          </div>
-                          <div className="col-4">
-                            <Form.Label className="small text-muted">Narx</Form.Label>
-                            <Form.Control value={fmt(item.price)} disabled />
+                          <div className="col-6">
+                            <Form.Label className="small text-muted mb-1">Jami narx</Form.Label>
+                            <Form.Control value={`${fmt(item.price * item.quantity)} so'm`} disabled />
                           </div>
                         </div>
                       </div>

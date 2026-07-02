@@ -1,6 +1,17 @@
 import { FormEvent, InputHTMLAttributes, useMemo, useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button } from 'react-bootstrap';
+import { LeafletMapPicker, LeafletMapView } from '../components/LeafletMap';
+
+interface HubPipeline {
+  inbound: number;
+  qc: number;
+  packing: number;
+  dispatch: number;
+  delivery: number;
+  exceptions: number;
+  open: number;
+}
 
 interface Hub {
   id: number;
@@ -22,8 +33,34 @@ interface Hub {
   supportsLastMile?: boolean;
   supportsPostal?: boolean;
   notes?: string | null;
+  pipeline?: HubPipeline;
   updateUrl?: string;
   destroyUrl?: string;
+}
+
+interface FulfillmentStage {
+  key: string;
+  label: string;
+  icon: string;
+  color: string;
+}
+
+interface FulfillmentRecent {
+  id: number;
+  orderId?: number | null;
+  hub: string;
+  hubCode?: string;
+  status: string;
+  stage?: string | null;
+  stageLabel: string;
+  hasException: boolean;
+  updatedAt?: string;
+}
+
+interface HubFulfillment {
+  stages?: FulfillmentStage[];
+  totals?: Record<string, number>;
+  recent?: FulfillmentRecent[];
 }
 
 interface HubStaff {
@@ -64,9 +101,50 @@ interface HubsPayload {
   hubPermissions?: HubPermission[];
   hubStats?: { total?: number; active?: number; postal?: number; firstMile?: number; staff?: number };
   hubActions?: { storeUrl?: string; staffStoreUrl?: string };
+  hubFulfillment?: HubFulfillment;
 }
 
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
+
+const STAGE_ORDER = ['inbound', 'qc', 'packing', 'dispatch', 'delivery'] as const;
+
+// Hub kartasidagi kichik pipeline chizig'i
+function PipelineBar({ pipeline, stages }: { pipeline?: HubPipeline; stages: FulfillmentStage[] }) {
+  const stageList = stages.length ? stages : STAGE_ORDER.map((k) => ({ key: k, label: k, icon: 'bi-dot', color: '#4f46e5' }));
+  const total = STAGE_ORDER.reduce((sum, key) => sum + (pipeline?.[key] || 0), 0);
+
+  if (!pipeline || total === 0) {
+    return <div className="small text-muted"><i className="bi bi-check2-circle me-1 text-success"></i>Ochiq fulfillment yo'q</div>;
+  }
+
+  return (
+    <div>
+      <div className="d-flex rounded-pill overflow-hidden mb-2" style={{ height: 8, background: '#F1F3F5' }}>
+        {stageList.map((stage) => {
+          const value = pipeline[stage.key as keyof HubPipeline] || 0;
+          if (!value) return null;
+          return <div key={stage.key} title={`${stage.label}: ${value}`} style={{ width: `${(value / total) * 100}%`, background: stage.color }} />;
+        })}
+      </div>
+      <div className="d-flex flex-wrap gap-1">
+        {stageList.map((stage) => {
+          const value = pipeline[stage.key as keyof HubPipeline] || 0;
+          if (!value) return null;
+          return (
+            <span key={stage.key} className="badge rounded-pill" style={{ background: `${stage.color}18`, color: stage.color, fontWeight: 600 }}>
+              <i className={`bi ${stage.icon} me-1`}></i>{value}
+            </span>
+          );
+        })}
+        {pipeline.exceptions > 0 ? (
+          <span className="badge rounded-pill" style={{ background: '#FEE2E2', color: '#DC2626', fontWeight: 600 }}>
+            <i className="bi bi-exclamation-triangle me-1"></i>{pipeline.exceptions}
+          </span>
+        ) : null}
+      </div>
+    </div>
+  );
+}
 
 function submitForm(event: FormEvent<HTMLFormElement>, method: 'post' | 'put', url?: string, onDone?: () => void) {
   event.preventDefault();
@@ -101,19 +179,6 @@ function TextInput({ name, label, defaultValue, type = 'text', required = false,
   );
 }
 
-function CoordinateInput({ name, label, defaultValue, placeholder }: { name: string; label: string; defaultValue?: string | number | null; placeholder?: string }) {
-  return (
-    <TextInput
-      name={name}
-      label={label}
-      type="text"
-      inputMode="decimal"
-      defaultValue={defaultValue}
-      placeholder={placeholder}
-    />
-  );
-}
-
 function Toggle({ name, label, defaultChecked = false }: { name: string; label: string; defaultChecked?: boolean }) {
   return (
     <label className="d-flex align-items-center justify-content-between gap-3 p-3 rounded border h-100">
@@ -127,6 +192,12 @@ function Toggle({ name, label, defaultChecked = false }: { name: string; label: 
 }
 
 function HubForm({ hub, action, onDone }: { hub?: Hub | null; action?: string; onDone: () => void }) {
+  const [coords, setCoords] = useState<{ lat: number | string | null; lon: number | string | null }>({
+    lat: hub?.lat ?? '',
+    lon: hub?.lon ?? '',
+  });
+  const [autoAddress, setAutoAddress] = useState<string | null>(null);
+
   return (
     <form onSubmit={(event) => submitForm(event, hub ? 'put' : 'post', action, onDone)}>
       <div className="row g-3">
@@ -136,8 +207,42 @@ function HubForm({ hub, action, onDone }: { hub?: Hub | null; action?: string; o
         <div className="col-md-4"><TextInput name="region_name" label="Viloyat" defaultValue={hub?.region} /></div>
         <div className="col-md-4"><TextInput name="city_name" label="Shahar" defaultValue={hub?.city} /></div>
         <div className="col-12"><TextInput name="address" label="Manzil" defaultValue={hub?.address} /></div>
-        <div className="col-md-4"><CoordinateInput name="lat" label="Latitude" defaultValue={hub?.lat} placeholder="41.2995" /></div>
-        <div className="col-md-4"><CoordinateInput name="lon" label="Longitude" defaultValue={hub?.lon} placeholder="69.2401" /></div>
+
+        <div className="col-12">
+          <label className="form-label small text-muted fw-semibold">Joylashuv (xaritadan tanlang)</label>
+          <LeafletMapPicker
+            lat={coords.lat}
+            lon={coords.lon}
+            onChange={(next, address) => {
+              setCoords({ lat: next.lat ?? '', lon: next.lon ?? '' });
+              if (address) setAutoAddress(address);
+            }}
+            height={300}
+          />
+          {autoAddress ? <div className="small text-muted mt-1"><i className="bi bi-pin-map me-1"></i>{autoAddress}</div> : null}
+        </div>
+        <div className="col-md-4">
+          <label className="form-label small text-muted fw-semibold">Latitude</label>
+          <input
+            className="form-control"
+            name="lat"
+            inputMode="decimal"
+            value={coords.lat ?? ''}
+            onChange={(e) => setCoords((prev) => ({ ...prev, lat: e.target.value }))}
+            placeholder="41.2995"
+          />
+        </div>
+        <div className="col-md-4">
+          <label className="form-label small text-muted fw-semibold">Longitude</label>
+          <input
+            className="form-control"
+            name="lon"
+            inputMode="decimal"
+            value={coords.lon ?? ''}
+            onChange={(e) => setCoords((prev) => ({ ...prev, lon: e.target.value }))}
+            placeholder="69.2401"
+          />
+        </div>
         <div className="col-md-4"><TextInput name="priority" label="Priority" type="number" min={0} defaultValue={hub?.priority ?? 100} /></div>
         <div className="col-md-6"><Toggle name="is_active" label="Faol" defaultChecked={hub?.active ?? true} /></div>
         <div className="col-md-6"><Toggle name="is_primary" label="Asosiy hub" defaultChecked={hub?.primary ?? false} /></div>
@@ -207,13 +312,30 @@ function StaffForm({ staff, hubs, roles, permissions, action, onDone }: {
 }
 
 export default function Hubs() {
-  const { hubs = [], hubStaff = [], hubRoles = [], hubPermissions = [], hubStats = {}, hubActions = {} } = usePage<HubsPayload>().props;
+  const { hubs = [], hubStaff = [], hubRoles = [], hubPermissions = [], hubStats = {}, hubActions = {}, hubFulfillment = {} } = usePage<HubsPayload>().props;
   const [selectedHub, setSelectedHub] = useState<Hub | null>(null);
   const [editingHub, setEditingHub] = useState<Hub | null | undefined>(undefined);
   const [editingStaff, setEditingStaff] = useState<HubStaff | null | undefined>(undefined);
 
   const totalFulfillments = useMemo(() => hubs.reduce((sum, hub) => sum + (hub.fulfillments || 0), 0), [hubs]);
   const totalCourierTasks = useMemo(() => hubs.reduce((sum, hub) => sum + (hub.courierTasks || 0), 0), [hubs]);
+
+  const stages = hubFulfillment.stages ?? [];
+  const totals = hubFulfillment.totals ?? {};
+  const recent = hubFulfillment.recent ?? [];
+  const openTotal = STAGE_ORDER.reduce((sum, key) => sum + (totals[key] || 0), 0);
+  const hubMarkers = useMemo(
+    () =>
+      hubs
+        .filter((hub) => hub.lat && hub.lon)
+        .map((hub) => ({
+          lat: hub.lat ?? null,
+          lon: hub.lon ?? null,
+          label: `<strong>${hub.name}</strong><br>${hub.code || ''}`,
+          color: hub.active ? '#10b981' : '#9ca3af',
+        })),
+    [hubs],
+  );
 
   const resetPassword = (staff: HubStaff) => {
     const password = prompt(`${staff.name} uchun yangi parol`);
@@ -253,6 +375,79 @@ export default function Hubs() {
         ))}
       </div>
 
+      {/* Fulfillment quvuri — global kesim */}
+      <div className="card-panel mb-4">
+        <div className="panel-head">
+          <div>
+            <div className="panel-title">Fulfillment quvuri</div>
+            <small className="text-muted">Barcha hublardagi ochiq orderlarning bosqichlari</small>
+          </div>
+          <span className="chip chip-info">{fmt(openTotal)} ta ochiq</span>
+        </div>
+        <div className="row g-2">
+          {(stages.length ? stages : STAGE_ORDER.map((k) => ({ key: k, label: k, icon: 'bi-dot', color: '#4f46e5' }))).map((stage) => (
+            <div className="col-6 col-xl" key={stage.key}>
+              <div className="p-3 rounded-3 h-100" style={{ background: `${stage.color}12` }}>
+                <div className="d-flex align-items-center gap-2 mb-1" style={{ color: stage.color }}>
+                  <i className={`bi ${stage.icon}`}></i>
+                  <span className="fw-bold fs-4">{fmt(totals[stage.key] || 0)}</span>
+                </div>
+                <div className="small text-muted">{stage.label}</div>
+              </div>
+            </div>
+          ))}
+          <div className="col-6 col-xl">
+            <div className="p-3 rounded-3 h-100" style={{ background: (totals.exceptions || 0) > 0 ? '#FEE2E2' : '#F1F5F9' }}>
+              <div className="d-flex align-items-center gap-2 mb-1" style={{ color: (totals.exceptions || 0) > 0 ? '#DC2626' : '#64748B' }}>
+                <i className="bi bi-exclamation-triangle"></i>
+                <span className="fw-bold fs-4">{fmt(totals.exceptions || 0)}</span>
+              </div>
+              <div className="small text-muted">Exception</div>
+            </div>
+          </div>
+        </div>
+        {(totals.delivered || totals.returned) ? (
+          <div className="d-flex gap-3 mt-3 small text-muted">
+            <span><i className="bi bi-check-circle text-success me-1"></i>Yetkazilgan: <strong>{fmt(totals.delivered || 0)}</strong></span>
+            <span><i className="bi bi-arrow-counterclockwise text-danger me-1"></i>Qaytgan/bekor: <strong>{fmt(totals.returned || 0)}</strong></span>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="row g-3 mb-4">
+        <div className="col-xl-7">
+          <div className="card-panel h-100">
+            <div className="panel-head">
+              <div><div className="panel-title">Hublar xaritasi</div><small className="text-muted">Fulfillment markazlarining joylashuvi</small></div>
+            </div>
+            <LeafletMapView markers={hubMarkers} height={280} />
+          </div>
+        </div>
+        <div className="col-xl-5">
+          <div className="card-panel h-100">
+            <div className="panel-head">
+              <div><div className="panel-title">So'nggi harakatlar</div><small className="text-muted">Oxirgi fulfillment yangilanishlari</small></div>
+            </div>
+            <div className="d-flex flex-column gap-2" style={{ maxHeight: 280, overflowY: 'auto' }}>
+              {recent.length === 0 ? <div className="text-muted small text-center py-4">Harakatlar yo'q</div> : null}
+              {recent.map((item) => (
+                <div key={item.id} className="d-flex align-items-center justify-content-between gap-2 p-2 rounded border">
+                  <div style={{ minWidth: 0 }}>
+                    <div className="fw-semibold small text-truncate">
+                      {item.orderId ? `#${item.orderId}` : `Fulfillment #${item.id}`} · {item.hub}
+                    </div>
+                    <div className="text-muted" style={{ fontSize: 12 }}>{item.updatedAt || ''}</div>
+                  </div>
+                  <div className="text-end">
+                    {item.hasException ? <span className="chip" style={{ background: '#FEE2E2', color: '#DC2626' }}>Exception</span> : <span className="chip chip-gray">{item.stageLabel}</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="row g-3 mb-4">
         {hubs.map((hub) => (
           <div className="col-xl-4 col-md-6" key={hub.id}>
@@ -272,6 +467,11 @@ export default function Hubs() {
                 <div className="col-4"><div className="fw-bold text-primary">{hub.staff || 0}</div><small className="text-muted">Xodim</small></div>
                 <div className="col-4"><div className="fw-bold text-success">{hub.fulfillments || 0}</div><small className="text-muted">Order</small></div>
                 <div className="col-4"><div className="fw-bold text-warning">{hub.courierTasks || 0}</div><small className="text-muted">Kuryer</small></div>
+              </div>
+
+              <div className="mb-3">
+                <div className="small text-muted fw-semibold mb-2">Fulfillment quvuri</div>
+                <PipelineBar pipeline={hub.pipeline} stages={stages} />
               </div>
 
               <div className="p-2 rounded mb-3 small bg-light">
@@ -404,6 +604,17 @@ export default function Hubs() {
             <div className="col-md-3"><small className="text-muted">Priority</small><div className="fw-semibold">{selectedHub?.priority ?? '—'}</div></div>
             <div className="col-md-3"><small className="text-muted">Koordinata</small><div>{[selectedHub?.lat, selectedHub?.lon].filter(Boolean).join(', ') || '—'}</div></div>
             <div className="col-12"><small className="text-muted">Manzil</small><div>{selectedHub?.address || '—'}</div></div>
+            {selectedHub?.lat && selectedHub?.lon ? (
+              <div className="col-12">
+                <LeafletMapView markers={[{ lat: selectedHub.lat, lon: selectedHub.lon, label: selectedHub.name, color: selectedHub.active ? '#10b981' : '#9ca3af' }]} height={220} />
+              </div>
+            ) : null}
+            {selectedHub?.pipeline ? (
+              <div className="col-12">
+                <small className="text-muted">Fulfillment quvuri</small>
+                <div className="mt-1"><PipelineBar pipeline={selectedHub.pipeline} stages={hubFulfillment.stages ?? []} /></div>
+              </div>
+            ) : null}
             <div className="col-md-4"><small className="text-muted">Xodim</small><div className="fw-bold">{selectedHub?.staff || 0}</div></div>
             <div className="col-md-4"><small className="text-muted">Fulfillment</small><div className="fw-bold">{selectedHub?.fulfillments || 0}</div></div>
             <div className="col-md-4"><small className="text-muted">Kuryer</small><div className="fw-bold">{selectedHub?.courierTasks || 0}</div></div>

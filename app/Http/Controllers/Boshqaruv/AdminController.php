@@ -4576,6 +4576,8 @@ class AdminController extends Controller
             ? HubStaff::query()->with('hub:id,name,code')->latest('id')->get()
             : collect();
 
+        $fulfillment = $this->hubFulfillmentOverview();
+
         return [
             'hubs' => $hubs->map(fn (Hub $hub) => [
                 'id' => $hub->id,
@@ -4597,9 +4599,15 @@ class AdminController extends Controller
                 'supportsLastMile' => (bool) $hub->supports_last_mile,
                 'supportsPostal' => (bool) $hub->supports_postal_dispatch,
                 'notes' => data_get($hub->meta ?? [], 'notes'),
+                'pipeline' => $fulfillment['byHub'][$hub->id] ?? $this->emptyFulfillmentStages(),
                 'updateUrl' => route('boshqaruv.hubs.update', $hub),
                 'destroyUrl' => route('boshqaruv.hubs.destroy', $hub),
             ])->values()->all(),
+            'hubFulfillment' => [
+                'stages' => $fulfillment['stageMeta'],
+                'totals' => $fulfillment['totals'],
+                'recent' => $fulfillment['recent'],
+            ],
             'hubStaff' => $staff->map(fn (HubStaff $member) => [
                 'id' => $member->id,
                 'hubId' => $member->hub_id,
@@ -4639,6 +4647,140 @@ class AdminController extends Controller
                 'storeUrl' => route('boshqaruv.hubs.store'),
                 'staffStoreUrl' => route('boshqaruv.hubs.staff.store'),
             ],
+        ];
+    }
+
+    /**
+     * Fulfillment quvurini (pipeline) bosqichlarga ajratib qaytaradi.
+     * Bosqichlar: inbound → qc → packing → dispatch → delivery.
+     */
+    private function fulfillmentStageMap(): array
+    {
+        return [
+            'inbound' => ['label' => 'Kelayotgan', 'icon' => 'bi-truck', 'color' => '#2563EB', 'statuses' => ['picked_from_seller', 'arrived_at_hub']],
+            'qc' => ['label' => 'Nazorat (QC)', 'icon' => 'bi-clipboard-check', 'color' => '#7C3AED', 'statuses' => ['qc_checked']],
+            'packing' => ['label' => 'Qadoqlash', 'icon' => 'bi-box-seam', 'color' => '#D97706', 'statuses' => ['packed']],
+            'dispatch' => ['label' => 'Jo‘natish', 'icon' => 'bi-send', 'color' => '#059669', 'statuses' => ['labeled', 'dispatched_to_post', 'assigned_last_mile']],
+            'delivery' => ['label' => 'Yetkazishda', 'icon' => 'bi-geo-alt', 'color' => '#0891B2', 'statuses' => ['out_for_delivery']],
+        ];
+    }
+
+    private function emptyFulfillmentStages(): array
+    {
+        $stages = array_fill_keys(array_keys($this->fulfillmentStageMap()), 0);
+        $stages['exceptions'] = 0;
+        $stages['open'] = 0;
+
+        return $stages;
+    }
+
+    private function hubFulfillmentOverview(): array
+    {
+        $stageMap = $this->fulfillmentStageMap();
+        $stageMeta = collect($stageMap)->map(fn ($meta, $key) => [
+            'key' => $key,
+            'label' => $meta['label'],
+            'icon' => $meta['icon'],
+            'color' => $meta['color'],
+        ])->values()->all();
+
+        $empty = [
+            'byHub' => [],
+            'stageMeta' => $stageMeta,
+            'totals' => array_merge($this->emptyFulfillmentStages(), ['delivered' => 0, 'returned' => 0]),
+            'recent' => [],
+        ];
+
+        if (! Schema::hasTable('order_fulfillments')) {
+            return $empty;
+        }
+
+        // status_code → bosqich xaritasi
+        $statusToStage = [];
+        foreach ($stageMap as $stageKey => $meta) {
+            foreach ($meta['statuses'] as $status) {
+                $statusToStage[$status] = $stageKey;
+            }
+        }
+
+        $grouped = \App\Models\OrderFulfillment::query()
+            ->selectRaw('hub_id, status_code, COUNT(*) as total')
+            ->groupBy('hub_id', 'status_code')
+            ->get();
+
+        $byHub = [];
+        $totals = array_merge($this->emptyFulfillmentStages(), ['delivered' => 0, 'returned' => 0]);
+
+        foreach ($grouped as $row) {
+            $hubId = (int) $row->hub_id;
+            $count = (int) $row->total;
+            $status = (string) $row->status_code;
+
+            if (! isset($byHub[$hubId])) {
+                $byHub[$hubId] = $this->emptyFulfillmentStages();
+            }
+
+            if (isset($statusToStage[$status])) {
+                $stageKey = $statusToStage[$status];
+                $byHub[$hubId][$stageKey] += $count;
+                $byHub[$hubId]['open'] += $count;
+                $totals[$stageKey] += $count;
+                $totals['open'] += $count;
+            } elseif ($status === 'delivered') {
+                $totals['delivered'] += $count;
+            } elseif (in_array($status, ['returned', 'cancelled'], true)) {
+                $totals['returned'] += $count;
+            }
+        }
+
+        // Ochiq exception'lar (meta->exception->code)
+        $exceptionRows = \App\Models\OrderFulfillment::query()
+            ->selectRaw('hub_id, COUNT(*) as total')
+            ->whereNotNull('meta->exception->code')
+            ->whereNotIn('status_code', ['delivered', 'returned', 'cancelled'])
+            ->groupBy('hub_id')
+            ->get();
+
+        foreach ($exceptionRows as $row) {
+            $hubId = (int) $row->hub_id;
+            $count = (int) $row->total;
+            if (! isset($byHub[$hubId])) {
+                $byHub[$hubId] = $this->emptyFulfillmentStages();
+            }
+            $byHub[$hubId]['exceptions'] = $count;
+            $totals['exceptions'] += $count;
+        }
+
+        // So'nggi harakatlar
+        $recent = \App\Models\OrderFulfillment::query()
+            ->with(['hub:id,name,code'])
+            ->latest('updated_at')
+            ->limit(10)
+            ->get()
+            ->map(function ($f) use ($stageMap, $statusToStage) {
+                $status = (string) $f->status_code;
+                $stageKey = $statusToStage[$status] ?? null;
+
+                return [
+                    'id' => $f->id,
+                    'orderId' => $f->order_id ?? null,
+                    'hub' => $f->hub?->name ?? '—',
+                    'hubCode' => $f->hub?->code,
+                    'status' => $status,
+                    'stage' => $stageKey,
+                    'stageLabel' => $stageKey ? ($stageMap[$stageKey]['label'] ?? $status) : ucfirst(str_replace('_', ' ', $status)),
+                    'hasException' => (bool) data_get($f->meta ?? [], 'exception.code'),
+                    'updatedAt' => $this->dateTime($f->updated_at),
+                ];
+            })
+            ->values()
+            ->all();
+
+        return [
+            'byHub' => $byHub,
+            'stageMeta' => $stageMeta,
+            'totals' => $totals,
+            'recent' => $recent,
         ];
     }
 
