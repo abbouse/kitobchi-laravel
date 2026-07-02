@@ -58,6 +58,10 @@ class ProductPayloadFormatter
 
         if ($isDetail) {
             $payload['description'] = $product->description ?? null;
+            $payload['isbn'] = $isBook ? ($product->isbn ?? null) : null;
+            $payload['pages'] = $isBook ? ($product->pages ?? null) : null;
+            $payload['publisher'] = $isBook ? ($product->publisher?->name ?? null) : null;
+            $payload['barcode'] = $isBook ? null : ($product->barcode ?? null);
             $payload['lang'] = $isBook ? ($product->lang ?? "O'zbek") : null;
             $payload['langType'] = $isBook ? ($product->langType ?? '') : null;
             $payload['coverType'] = $isBook ? ($product->coverType ?? 'Yumshoq') : null;

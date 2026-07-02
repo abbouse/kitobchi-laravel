@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\Hub\HubAuthController;
 use App\Http\Controllers\Api\Hub\HubFulfillmentController;
+use App\Http\Controllers\Api\Hub\HubStaffController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('login', [HubAuthController::class, 'login'])->middleware('throttle:auth-courier');
@@ -15,6 +16,8 @@ Route::middleware('auth:hub')->group(function () {
         ->whereIn('queue', ['inbound', 'qc', 'packing', 'dispatch']);
     Route::get('exceptions', [HubFulfillmentController::class, 'exceptions']);
     Route::get('activity', [HubFulfillmentController::class, 'activity']);
+    Route::get('staff', [HubStaffController::class, 'index']);
+    Route::patch('staff/{staff}/role', [HubStaffController::class, 'updateRole']);
     Route::get('scan', [HubFulfillmentController::class, 'scan']);
     Route::get('fulfillments/{fulfillment}', [HubFulfillmentController::class, 'show']);
     Route::get('fulfillments/{fulfillment}/handoff-qr', [HubFulfillmentController::class, 'handoffQr']);

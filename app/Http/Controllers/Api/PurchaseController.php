@@ -36,6 +36,7 @@ use App\Services\PostalResendService;
 use App\Services\ProductReviewPromptService;
 use App\Services\QrTokenService;
 use App\Services\UserReputationService;
+use App\Support\ProductPayloadFormatter;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -1474,9 +1475,11 @@ class PurchaseController extends Controller
             'year' => 'nullable|integer|min:2000|max:2100',
             'month' => 'nullable|integer|min:1|max:12',
             'periods_selected' => 'nullable|string',
+            'page' => 'nullable|integer|min:1',
             'per_page' => 'nullable|integer|min:1|max:100',
             'grouped' => 'nullable|boolean',
             'periods' => 'nullable|boolean',
+            'review_prompts' => 'nullable|boolean',
             'section' => 'nullable|string|in:progress,in_delivery,delivered,cancelled',
         ]);
 
@@ -1485,6 +1488,10 @@ class PurchaseController extends Controller
                 'status' => 'success',
                 'periods' => $this->availablePurchasePeriods($user),
             ]);
+        }
+
+        if ($request->boolean('review_prompts')) {
+            return $this->reviewPromptProducts($request, $user);
         }
 
         if ($request->boolean('grouped') && ! $request->filled('status')) {
@@ -1723,13 +1730,34 @@ class PurchaseController extends Controller
         });
     }
 
+    private function reviewPromptProducts(Request $request, User $user)
+    {
+        $perPage = (int) $request->input('per_page', 8);
+        $perPage = max(1, min(20, $perPage));
+        $page = max(1, (int) $request->input('page', 1));
+
+        $result = $this->buildReviewPromptProductPage($user, $page, $perPage);
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $result['data'],
+            'meta' => $result['meta'],
+        ]);
+    }
+
     private function buildReviewPromptProducts(User $user, int $limit = 20): array
     {
+        return $this->buildReviewPromptProductPage($user, 1, $limit)['data'];
+    }
+
+    private function buildReviewPromptProductPage(User $user, int $page, int $perPage): array
+    {
+        $targetCount = ($page * $perPage) + 1;
         $unique = [];
         $bookIds = [];
         $stationeryIds = [];
 
-        $orders = Sold::query()
+        $ordersQuery = Sold::query()
             ->where('user_id', $user->id)
             ->whereNotNull('completed_at')
             ->where(function ($query) {
@@ -1739,51 +1767,72 @@ class PurchaseController extends Controller
                             ->where('paymentStatus', PaymentStatusCode::PAID->legacy());
                     });
             })
-            ->latest('completed_at')
-            ->limit(120)
-            ->get(['id', 'items', 'completed_at']);
+            ->orderByDesc('completed_at')
+            ->orderByDesc('id');
 
-        foreach ($orders as $order) {
-            foreach (collect($order->items ?? []) as $item) {
-                $type = (string) ($item['type'] ?? '');
-                $productId = (int) ($item['item_id'] ?? 0);
+        $ordersPage = 1;
+        $ordersPerChunk = 100;
 
-                if (! in_array($type, ['book', 'stationery'], true) || $productId <= 0) {
-                    continue;
-                }
+        while (true) {
+            $orders = (clone $ordersQuery)
+                ->forPage($ordersPage, $ordersPerChunk)
+                ->get(['id', 'items', 'completed_at']);
 
-                $key = $type.'_'.$productId;
-                if (isset($unique[$key])) {
-                    continue;
-                }
+            if ($orders->isEmpty()) {
+                break;
+            }
 
-                if ($this->productReviewPromptService->hasReviewedProduct($user->id, $productId, $type)) {
-                    continue;
-                }
+            foreach ($orders as $order) {
+                foreach (collect($order->items ?? []) as $item) {
+                    $type = (string) ($item['type'] ?? '');
+                    $productId = (int) ($item['item_id'] ?? 0);
 
-                if (! $this->productReviewPromptService->isProductStillPublic($productId, $type)) {
-                    continue;
-                }
+                    if (! in_array($type, ['book', 'stationery'], true) || $productId <= 0) {
+                        continue;
+                    }
 
-                $unique[$key] = [
-                    'product_id' => $productId,
-                    'product_type' => $type,
-                ];
+                    $key = $type.'_'.$productId;
+                    if (isset($unique[$key])) {
+                        continue;
+                    }
 
-                if ($type === 'book') {
-                    $bookIds[] = $productId;
-                } else {
-                    $stationeryIds[] = $productId;
-                }
+                    if ($this->productReviewPromptService->hasReviewedProduct($user->id, $productId, $type)) {
+                        continue;
+                    }
 
-                if (count($unique) >= $limit) {
-                    break 2;
+                    if (! $this->productReviewPromptService->isProductStillPublic($productId, $type)) {
+                        continue;
+                    }
+
+                    $unique[$key] = [
+                        'product_id' => $productId,
+                        'product_type' => $type,
+                    ];
+
+                    if ($type === 'book') {
+                        $bookIds[] = $productId;
+                    } else {
+                        $stationeryIds[] = $productId;
+                    }
+
+                    if (count($unique) >= $targetCount) {
+                        break 3;
+                    }
                 }
             }
+
+            $ordersPage++;
         }
 
         if (empty($unique)) {
-            return [];
+            return [
+                'data' => [],
+                'meta' => [
+                    'current_page' => $page,
+                    'per_page' => $perPage,
+                    'has_more' => false,
+                ],
+            ];
         }
 
         $books = Books::query()
@@ -1800,7 +1849,10 @@ class PurchaseController extends Controller
 
         $payload = [];
 
-        foreach ($unique as $item) {
+        $pageItems = array_slice(array_values($unique), ($page - 1) * $perPage, $perPage);
+        $hasMore = count($unique) > ($page * $perPage);
+
+        foreach ($pageItems as $item) {
             $type = $item['product_type'];
             $productId = $item['product_id'];
             $product = $type === 'book'
@@ -1822,7 +1874,14 @@ class PurchaseController extends Controller
             }
         }
 
-        return $payload;
+        return [
+            'data' => $payload,
+            'meta' => [
+                'current_page' => $page,
+                'per_page' => $perPage,
+                'has_more' => $hasMore,
+            ],
+        ];
     }
 
     public function purchaseDetails(Request $request, $order_id)
