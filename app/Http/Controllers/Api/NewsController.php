@@ -97,21 +97,66 @@ class NewsController extends Controller
         ];
     }
 
+    /**
+     * Berilgan ustunlardan faqat jadvalda haqiqatan mavjud bo'lganlarini qaytaradi.
+     * Natija so'rov davomida keshlanadi. 'id' doim birinchi bo'lib qoladi
+     * (eager-load relation'larini bog'lash uchun zarur).
+     */
+    private function existingColumns(string $table, array $columns): array
+    {
+        static $cache = [];
+
+        if (! array_key_exists($table, $cache)) {
+            $cache[$table] = Schema::hasTable($table)
+                ? Schema::getColumnListing($table)
+                : [];
+        }
+
+        $existing = array_values(array_intersect($columns, $cache[$table]));
+
+        if ($existing === []) {
+            return ['id'];
+        }
+
+        if (! in_array('id', $existing, true)) {
+            array_unshift($existing, 'id');
+        }
+
+        return $existing;
+    }
+
     public function index(Request $request)
     {
         $user = Auth::guard('user')->user();
         $hasCollectionsTable = Schema::hasTable('curated_collections');
 
+        // Ustunlarni bazadagi haqiqiy ustunlar bilan cheklaymiz — shunda
+        // migratsiya kechiksa ham (masalan ugc_* hali qo'shilmagan bo'lsa)
+        // eager-load "Unknown column" bilan 500 bermaydi.
+        $bookColumns = $this->existingColumns('books', [
+            'id', 'name', 'author', 'category_id', 'images', 'description', 'price', 'count',
+            'lang', 'langType', 'coverType', 'year', 'discountPrice', 'is_hidden', 'is_approved',
+            'seller_id', 'ugc_aggregate_score', 'ugc_reviews_count', 'ugc_last_scored_at',
+        ]);
+        $bookSellerColumns = $this->existingColumns('sellers', [
+            'id', 'shop_name', 'photo', 'rating', 'rating_reviews_count', 'reputation_score', 'isVerified',
+        ]);
+        $collectionColumns = $this->existingColumns('curated_collections', [
+            'id', 'slug', 'title_uz', 'title_ru', 'title_en', 'title_ja',
+            'subtitle_uz', 'subtitle_ru', 'subtitle_en', 'subtitle_ja',
+            'hero_image', 'gradient_from', 'gradient_to', 'button_bg_color', 'button_text_color',
+        ]);
+
         $with = [
             'seller:id,shop_name,photo',
-            'book:id,name,author,category_id,images,description,price,count,lang,langType,coverType,year,discountPrice,is_hidden,is_approved,seller_id,ugc_aggregate_score,ugc_reviews_count,ugc_last_scored_at',
+            'book:' . implode(',', $bookColumns),
             'book.category:id,name_uz,name_ru,name_en,name_ja,slug',
             'book.tags',
-            'book.seller:id,shop_name,photo,rating,rating_reviews_count,reputation_score,isVerified',
+            'book.seller:' . implode(',', $bookSellerColumns),
         ];
 
         if ($hasCollectionsTable) {
-            $with[] = 'collection:id,slug,title_uz,title_ru,title_en,title_ja,subtitle_uz,subtitle_ru,subtitle_en,subtitle_ja,hero_image,gradient_from,gradient_to,button_bg_color,button_text_color';
+            $with[] = 'collection:' . implode(',', $collectionColumns);
         }
 
         $marketNews = MarketNews::query()
@@ -127,9 +172,11 @@ class NewsController extends Controller
             ->values()
             ->all();
 
-        $activeBanners = SellerAd::whereIn('type', ['top_banner', 'center_banner'])
+        $activeBanners = SellerAd::with('seller:id,shop_name,photo')
+            ->whereIn('type', ['top_banner', 'center_banner'])
             ->where('moderation', 'approved')
             ->where('expire_at', '>', Carbon::now())
+            ->whereHas('seller') // sotuvchisi o'chirilgan bannerlar chiqmasin (500 ning oldini oladi)
             ->inRandomOrder()
             ->get();
 
@@ -181,7 +228,7 @@ class NewsController extends Controller
             return [
                 'ad_id' => 'ad_' . $ad->id,
                 'type' => $ad->type,
-                'title' => $ad->seller->shop_name, 
+                'title' => $ad->seller?->shop_name,
                 'description' => $ad->description,
                 'imgUrl' => $ad->banner_img,
                 'action' => $action,

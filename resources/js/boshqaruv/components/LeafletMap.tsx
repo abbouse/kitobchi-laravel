@@ -47,17 +47,20 @@ export function LeafletMapPicker({
   onChange,
   height = 320,
   search = true,
+  radiusKm,
 }: {
   lat: number | string | null;
   lon: number | string | null;
   onChange: (coords: LatLon, address?: string) => void;
   height?: number;
   search?: boolean;
+  radiusKm?: number | string | null;
 }) {
   const ready = useLeafletReady();
   const mapEl = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
   const markerRef = useRef<any>(null);
+  const circleRef = useRef<any>(null);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
 
@@ -84,13 +87,28 @@ export function LeafletMapPicker({
     markerRef.current = marker;
     mapRef.current = map;
 
+    const rKm = toNum(radiusKm as any);
+    if (rKm && rKm > 0) {
+      circleRef.current = L.circle(center, {
+        radius: rKm * 1000,
+        color: '#10b981',
+        fillColor: '#10b981',
+        fillOpacity: 0.14,
+        weight: 1,
+      }).addTo(map);
+    }
+
     const emit = (latlng: any) => {
+      if (circleRef.current) circleRef.current.setLatLng(latlng);
       onChangeRef.current({ lat: Number(latlng.lat.toFixed(6)), lon: Number(latlng.lng.toFixed(6)) });
     };
 
     map.on('click', (event: any) => {
       marker.setLatLng(event.latlng);
       emit(event.latlng);
+    });
+    marker.on('drag', () => {
+      if (circleRef.current) circleRef.current.setLatLng(markerRef.current.getLatLng());
     });
     marker.on('dragend', () => emit(marker.getLatLng()));
 
@@ -113,9 +131,33 @@ export function LeafletMapPicker({
     const current = markerRef.current.getLatLng();
     if (Math.abs(current.lat - nLat) > 1e-6 || Math.abs(current.lng - nLon) > 1e-6) {
       markerRef.current.setLatLng([nLat, nLon]);
+      if (circleRef.current) circleRef.current.setLatLng([nLat, nLon]);
       mapRef.current.setView([nLat, nLon], Math.max(mapRef.current.getZoom(), 14));
     }
   }, [lat, lon]);
+
+  // Radius o'zgarsa doirani yangilaymiz
+  useEffect(() => {
+    if (!mapRef.current || !window.L) return;
+    const rKm = toNum(radiusKm as any);
+    if (rKm && rKm > 0) {
+      const center = markerRef.current ? markerRef.current.getLatLng() : mapRef.current.getCenter();
+      if (circleRef.current) {
+        circleRef.current.setRadius(rKm * 1000);
+      } else {
+        circleRef.current = window.L.circle(center, {
+          radius: rKm * 1000,
+          color: '#10b981',
+          fillColor: '#10b981',
+          fillOpacity: 0.14,
+          weight: 1,
+        }).addTo(mapRef.current);
+      }
+    } else if (circleRef.current) {
+      circleRef.current.remove();
+      circleRef.current = null;
+    }
+  }, [radiusKm]);
 
   // Manzil qidiruvi (Nominatim)
   useEffect(() => {
@@ -199,6 +241,99 @@ export function LeafletMapPicker({
       </div>
     </div>
   );
+}
+
+/**
+ * Logistika zonalari: har bir zona uchun marker + radius doirasi.
+ * Marker/doiraga bosilganda onSelect(id) chaqiriladi.
+ */
+export function LeafletZonesMap({
+  zones,
+  height = 340,
+  onSelect,
+}: {
+  zones: Array<{ id: number; lat: number | string | null; lon: number | string | null; radiusKm?: number | string | null; label?: string; color?: string }>;
+  height?: number;
+  onSelect?: (id: number) => void;
+}) {
+  const ready = useLeafletReady();
+  const mapEl = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<any>(null);
+  const onSelectRef = useRef(onSelect);
+  onSelectRef.current = onSelect;
+
+  const points = useMemo(
+    () =>
+      zones
+        .map((z) => ({ ...z, lat: toNum(z.lat), lon: toNum(z.lon), radiusKm: toNum(z.radiusKm as any) }))
+        .filter((z) => z.lat !== null && z.lon !== null) as Array<{ id: number; lat: number; lon: number; radiusKm: number | null; label?: string; color?: string }>,
+    [zones],
+  );
+
+  useEffect(() => {
+    if (!ready || !mapEl.current) return;
+    const L = window.L;
+
+    if (!mapRef.current) {
+      mapRef.current = L.map(mapEl.current, { center: points[0] ? [points[0].lat, points[0].lon] : TASHKENT, zoom: 10 });
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 19 }).addTo(mapRef.current);
+    }
+
+    const map = mapRef.current;
+    const layer = L.layerGroup().addTo(map);
+    const bounds: Array<[number, number]> = [];
+
+    points.forEach((p) => {
+      const color = p.color || '#10b981';
+      if (p.radiusKm && p.radiusKm > 0) {
+        const circle = L.circle([p.lat, p.lon], {
+          radius: p.radiusKm * 1000,
+          color,
+          fillColor: color,
+          fillOpacity: 0.12,
+          weight: 1,
+        }).addTo(layer);
+        if (onSelectRef.current) circle.on('click', () => onSelectRef.current!(p.id));
+        circle.getBounds && bounds.push(...[circle.getBounds().getNorthEast(), circle.getBounds().getSouthWest()].map((c: any) => [c.lat, c.lng] as [number, number]));
+      }
+      const icon = L.divIcon({
+        className: '',
+        html: `<div style="background:${color};color:#fff;border:2px solid #fff;border-radius:999px;padding:2px 8px;font-size:11px;font-weight:600;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.25)">${p.label || ''}</div>`,
+        iconSize: [10, 10],
+        iconAnchor: [5, 5],
+      });
+      const marker = L.marker([p.lat, p.lon], { icon }).addTo(layer);
+      if (onSelectRef.current) marker.on('click', () => onSelectRef.current!(p.id));
+      bounds.push([p.lat, p.lon]);
+    });
+
+    if (bounds.length > 1) {
+      map.fitBounds(bounds, { padding: [30, 30], maxZoom: 13 });
+    } else if (bounds.length === 1) {
+      map.setView(bounds[0], 11);
+    }
+
+    setTimeout(() => map.invalidateSize(), 200);
+
+    return () => layer.remove();
+  }, [ready, points]);
+
+  useEffect(() => () => {
+    if (mapRef.current) {
+      mapRef.current.remove();
+      mapRef.current = null;
+    }
+  }, []);
+
+  if (!ready) {
+    return <div className="d-flex align-items-center justify-content-center text-muted small border rounded-3" style={{ height }}>Xarita yuklanmoqda…</div>;
+  }
+
+  if (points.length === 0) {
+    return <div className="d-flex align-items-center justify-content-center text-muted small border rounded-3" style={{ height }}><span><i className="bi bi-geo me-1"></i>Radiusli zona hali qo'shilmagan</span></div>;
+  }
+
+  return <div ref={mapEl} style={{ height, borderRadius: 12, overflow: 'hidden', zIndex: 1 }} />;
 }
 
 /**

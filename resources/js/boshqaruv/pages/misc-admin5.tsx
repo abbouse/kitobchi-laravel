@@ -1,6 +1,7 @@
-import { ChangeEvent, FormEvent, useState } from 'react';
+import { ChangeEvent, FormEvent, useMemo, useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button, Form } from 'react-bootstrap';
+import { LeafletMapPicker, LeafletZonesMap } from '../components/LeafletMap';
 
 // ===== MYSTERY BOX =====
 export function MysteryBox() {
@@ -482,7 +483,34 @@ function DeliveryRuleForm({ rule, services, action, onDone }: { rule?: DeliveryR
         {scope === 'radius' ? (
           <>
             <div className="col-12">
-              <RadiusMapPicker lat={lat} lon={lon} radius={radius} onLat={setLat} onLon={setLon} onRadius={setRadius} />
+              <div className="rounded-4 border bg-light-subtle p-3">
+                <div className="d-flex align-items-start justify-content-between gap-3 mb-2">
+                  <div>
+                    <div className="fw-bold">Radius xaritasi</div>
+                    <div className="small text-muted">Xaritaga bosing yoki markerni sudrang. Manzil qidiruvi ham ishlaydi.</div>
+                  </div>
+                  <span className="chip chip-success">{Math.max(1, Number.parseFloat(radius || '28')).toFixed(Number.parseFloat(radius || '28') % 1 === 0 ? 0 : 1)} km</span>
+                </div>
+                <LeafletMapPicker
+                  lat={lat}
+                  lon={lon}
+                  radiusKm={Number.parseFloat(radius || '28')}
+                  onChange={(next) => {
+                    if (next.lat !== null) setLat(next.lat.toFixed(6));
+                    if (next.lon !== null) setLon(next.lon.toFixed(6));
+                  }}
+                  height={300}
+                />
+                <div className="d-flex flex-wrap gap-2 mt-3">
+                  <button type="button" className="btn btn-sm btn-light" onClick={() => { setLat('41.311081'); setLon('69.240562'); setRadius('28'); }}>Toshkent markaz · 28 km</button>
+                  <button type="button" className="btn btn-sm btn-light" onClick={() => { setLat('41.311081'); setLon('69.240562'); setRadius('40'); }}>Katta Toshkent · 40 km</button>
+                  <button type="button" className="btn btn-sm btn-light" onClick={() => { setLat('41.299496'); setLon('69.240073'); setRadius('45'); }}>Uzoq zona · 45 km</button>
+                </div>
+                <div className="mt-3">
+                  <label className="form-label small text-muted fw-semibold">Radius: {Math.max(1, Number.parseFloat(radius || '28')).toFixed(Number.parseFloat(radius || '28') % 1 === 0 ? 0 : 1)} km</label>
+                  <input className="form-range" type="range" min="1" max="80" step="1" value={Number.isFinite(Number.parseFloat(radius)) ? Number.parseFloat(radius) : 28} onChange={(event) => setRadius(event.target.value)} />
+                </div>
+              </div>
             </div>
             <div className="col-md-4"><LogisticsInput name="center_lat" label="Markaz latitude" type="text" inputMode="decimal" required value={lat} onChange={(value) => setLat(value.replace(',', '.'))} help="Masalan: 41.311081" /></div>
             <div className="col-md-4"><LogisticsInput name="center_lon" label="Markaz longitude" type="text" inputMode="decimal" required value={lon} onChange={(value) => setLon(value.replace(',', '.'))} help="Masalan: 69.240562" /></div>
@@ -532,20 +560,34 @@ export function Logistika() {
   const indexUrl = '/boshqaruv/logistika';
   const [editingService, setEditingService] = useState<DeliveryService | null | undefined>(undefined);
   const [editingRule, setEditingRule] = useState<DeliveryRule | null | undefined>(undefined);
+  const [ruleQuery, setRuleQuery] = useState('');
+  const [ruleScope, setRuleScope] = useState<'all' | 'radius' | 'country'>('all');
+  const [serviceQuery, setServiceQuery] = useState('');
   const courierServices = deliveryServices.filter((service) => service.type === 'courier_service');
   const postalServices = deliveryServices.filter((service) => service.type === 'mail_service');
   const radiusRules = deliveryRules.filter((rule) => rule.scope === 'radius');
-  const overviewWidth = 1040;
-  const overviewHeight = 280;
-  const overviewZoom = radiusRules.length > 1 ? 8 : 10;
-  const overviewValidRules = radiusRules.filter((rule) => Number.isFinite(Number(rule.centerLat)) && Number.isFinite(Number(rule.centerLon)));
-  const overviewLat = overviewValidRules.length
-    ? overviewValidRules.reduce((sum, rule) => sum + Number(rule.centerLat), 0) / overviewValidRules.length
-    : 41.311081;
-  const overviewLon = overviewValidRules.length
-    ? overviewValidRules.reduce((sum, rule) => sum + Number(rule.centerLon), 0) / overviewValidRules.length
-    : 69.240562;
-  const overviewMap = buildMapTiles(overviewLat, overviewLon, overviewZoom, overviewWidth, overviewHeight);
+
+  const filteredRules = useMemo(() => {
+    const q = ruleQuery.trim().toLowerCase();
+    return deliveryRules.filter((rule) => {
+      if (ruleScope !== 'all' && (rule.scope || '') !== ruleScope) return false;
+      if (!q) return true;
+      return (
+        (rule.zoneName || '').toLowerCase().includes(q) ||
+        (rule.service || '').toLowerCase().includes(q) ||
+        [rule.city, rule.district, rule.region, rule.country].filter(Boolean).join(' ').toLowerCase().includes(q)
+      );
+    });
+  }, [deliveryRules, ruleQuery, ruleScope]);
+
+  const filteredServices = useMemo(() => {
+    const q = serviceQuery.trim().toLowerCase();
+    if (!q) return deliveryServices;
+    return deliveryServices.filter((service) =>
+      (service.name || '').toLowerCase().includes(q) || (service.type || '').toLowerCase().includes(q) || (service.country || '').toLowerCase().includes(q),
+    );
+  }, [deliveryServices, serviceQuery]);
+  const overviewHeight = 300;
 
   return (
     <div>
@@ -610,38 +652,21 @@ export function Logistika() {
               </div>
               <span className="chip chip-gray">{radiusRules.length} radius</span>
             </div>
-            <div className="position-relative overflow-hidden rounded-4 border bg-light-subtle" style={{ height: overviewHeight, background: '#eef2f7' }}>
-              {overviewMap.tiles.map((tile) => (
-                <img
-                  alt=""
-                  draggable={false}
-                  key={tile.key}
-                  src={tile.url}
-                  className="position-absolute"
-                  style={{ left: tile.left, top: tile.top, width: tileSize, height: tileSize, userSelect: 'none' }}
-                />
-              ))}
-              {radiusRules.map((rule, index) => {
-                const lat = Number(rule.centerLat);
-                const lon = Number(rule.centerLon);
-                const radius = Math.max(1, Number(rule.radiusKm || 1));
-                const x = Number.isFinite(lon) ? lonToWorldX(lon, overviewZoom) - overviewMap.centerX + overviewWidth / 2 : 80 + index * 36;
-                const y = Number.isFinite(lat) ? latToWorldY(lat, overviewZoom) - overviewMap.centerY + overviewHeight / 2 : 50 + index * 28;
-                const size = Math.min(160, Math.max(24, (radius * 1000) / metersPerPixel(Number.isFinite(lat) ? lat : overviewLat, overviewZoom)));
-                return (
-                  <div key={rule.id} className="position-absolute" style={{ left: x, top: y, transform: 'translate(-50%, -50%)' }}>
-                    <div className="position-absolute rounded-circle" style={{ width: size, height: size, left: -size / 2, top: -size / 2, border: '1px solid rgba(16,185,129,.28)', background: 'rgba(16,185,129,.12)' }} />
-                    <button type="button" className="btn btn-sm btn-light shadow-sm rounded-pill position-relative" onClick={() => setEditingRule(rule)}>
-                      <i className="bi bi-geo-alt-fill text-success me-1"></i>{rule.zoneName}
-                    </button>
-                  </div>
-                );
-              })}
-              {radiusRules.length === 0 ? <div className="position-absolute top-50 start-50 translate-middle text-center text-muted">Radiusli zona hali qo'shilmagan</div> : null}
-              <div className="position-absolute small text-muted bg-white bg-opacity-75 rounded-pill px-2 py-1" style={{ right: 10, bottom: 10 }}>
-                © OpenStreetMap contributors © CARTO
-              </div>
-            </div>
+            <LeafletZonesMap
+              height={overviewHeight}
+              zones={radiusRules.map((rule) => ({
+                id: rule.id,
+                lat: rule.centerLat ?? null,
+                lon: rule.centerLon ?? null,
+                radiusKm: rule.radiusKm ?? null,
+                label: rule.zoneName,
+                color: rule.active ? '#10b981' : '#9ca3af',
+              }))}
+              onSelect={(id) => {
+                const rule = deliveryRules.find((item) => item.id === id);
+                if (rule) setEditingRule(rule);
+              }}
+            />
           </div>
         </div>
       </div>
@@ -663,10 +688,23 @@ export function Logistika() {
                 <button className="btn btn-sm btn-light"><i className="bi bi-funnel"></i></button>
               </form>
             </div>
+            <div className="d-flex flex-wrap gap-2 mb-2">
+              <div className="position-relative flex-fill" style={{ minWidth: 180 }}>
+                <i className="bi bi-search position-absolute" style={{ left: 12, top: 9, color: '#9CA3AF' }}></i>
+                <input className="form-control form-control-sm" style={{ paddingLeft: 32 }} placeholder="Zona, xizmat yoki hudud bo'yicha" value={ruleQuery} onChange={(event) => setRuleQuery(event.target.value)} />
+              </div>
+              <div className="btn-group btn-group-sm">
+                {(['all', 'radius', 'country'] as const).map((value) => (
+                  <button key={value} type="button" className={`btn ${ruleScope === value ? 'btn-primary-gradient' : 'btn-light'}`} onClick={() => setRuleScope(value)}>
+                    {value === 'all' ? 'Barchasi' : value === 'radius' ? 'Radius' : 'Mamlakat'}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="table-responsive">
               <table className="data-table">
                 <thead><tr><th>Zona</th><th>Scope</th><th>Xizmat</th><th>Narx</th><th>ETA</th><th>COD</th><th>Holat</th><th></th></tr></thead>
-                <tbody>{deliveryRules.map((rule) => (
+                <tbody>{filteredRules.map((rule) => (
                   <tr key={rule.id}>
                     <td><div className="fw-semibold">{rule.zoneName}</div><small className="text-muted">{[rule.city, rule.district, rule.region, rule.country].filter(Boolean).join(', ') || '—'}</small></td>
                     <td><span className="chip chip-gray">{rule.scope || '—'}</span>{rule.scope === 'radius' ? <div className="small text-muted">{rule.radiusKm || 0} km</div> : null}</td>
@@ -680,7 +718,8 @@ export function Logistika() {
                       <button className="btn btn-sm btn-light text-danger" onClick={() => removeLogistics(rule.destroyUrl, `${rule.zoneName} qoidasi o'chirilsinmi?`)}><i className="bi bi-trash"></i></button>
                     </td>
                   </tr>
-                ))}</tbody>
+                ))}
+                {filteredRules.length === 0 ? <tr><td colSpan={8} className="text-center text-muted py-4">Mos zona qoidasi topilmadi</td></tr> : null}</tbody>
               </table>
             </div>
           </div>
@@ -726,12 +765,18 @@ export function Logistika() {
             <div className="panel-title">Yetkazish xizmatlari</div>
             <small className="text-muted">Kuryer va pochta xizmatlari endi Settings emas, Logistika ichida boshqariladi</small>
           </div>
-          <button className="btn btn-sm btn-light" onClick={() => setEditingService(null)}><i className="bi bi-plus-circle me-1"></i>Xizmat qo'shish</button>
+          <div className="d-flex gap-2 align-items-center">
+            <div className="position-relative" style={{ width: 200 }}>
+              <i className="bi bi-search position-absolute" style={{ left: 12, top: 9, color: '#9CA3AF' }}></i>
+              <input className="form-control form-control-sm" style={{ paddingLeft: 32 }} placeholder="Xizmat qidirish" value={serviceQuery} onChange={(event) => setServiceQuery(event.target.value)} />
+            </div>
+            <button className="btn btn-sm btn-light" onClick={() => setEditingService(null)}><i className="bi bi-plus-circle me-1"></i>Xizmat qo'shish</button>
+          </div>
         </div>
         <div className="table-responsive">
           <table className="data-table">
             <thead><tr><th>ID</th><th>Xizmat</th><th>Turi</th><th>Narx/kg</th><th>Bepuldan</th><th>Muddat</th><th>Mamlakat</th><th>Holat</th><th>Amallar</th></tr></thead>
-            <tbody>{deliveryServices.map(service => (
+            <tbody>{filteredServices.map(service => (
               <tr key={service.id}>
                 <td className="fw-semibold" style={{ color: '#4f46e5' }}>#{service.id}</td>
                 <td className="fw-semibold">{service.name}</td>
@@ -746,7 +791,8 @@ export function Logistika() {
                   <button className="btn btn-sm btn-light text-danger" onClick={() => removeLogistics(service.destroyUrl, `${service.name} xizmati o'chirilsinmi?`)}><i className="bi bi-trash"></i></button>
                 </td>
               </tr>
-            ))}</tbody>
+            ))}
+            {filteredServices.length === 0 ? <tr><td colSpan={9} className="text-center text-muted py-4">Mos xizmat topilmadi</td></tr> : null}</tbody>
           </table>
         </div>
       </div>
