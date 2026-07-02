@@ -105,7 +105,7 @@ class NewsController extends Controller
         $with = [
             'seller:id,shop_name,photo',
             'book:id,name,author,category_id,images,description,price,count,lang,langType,coverType,year,discountPrice,is_hidden,is_approved,seller_id,ugc_aggregate_score,ugc_reviews_count,ugc_last_scored_at',
-            'book.category:id,title',
+            'book.category:id,name_uz,name_ru,name_en,name_ja,slug',
             'book.tags',
             'book.seller:id,shop_name,photo,rating,rating_reviews_count,reputation_score,isVerified',
         ];
