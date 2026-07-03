@@ -149,6 +149,7 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
         Route::put('/market-news/{news}', [AdminController::class, 'updateMarketNews'])->name('market-news.update');
         Route::patch('/market-news/{news}/toggle', [AdminController::class, 'toggleMarketNews'])->name('market-news.toggle');
         Route::delete('/market-news/{news}', [AdminController::class, 'destroyMarketNews'])->name('market-news.destroy');
+        Route::post('/content/translate', [AdminController::class, 'translateContent'])->name('content.translate');
         Route::get('/collections/book-search', [AdminController::class, 'collectionBookSearch'])->name('collections.book-search');
         Route::post('/collections', [AdminController::class, 'storeCollection'])->name('collections.store');
         Route::put('/collections/{collection}', [AdminController::class, 'updateCollection'])->name('collections.update');

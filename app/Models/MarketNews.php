@@ -14,7 +14,15 @@ class MarketNews extends Model
     protected $fillable = [
         'imgUrl',
         'title',
+        'title_uz',
+        'title_ru',
+        'title_en',
+        'title_ja',
         'description',
+        'description_uz',
+        'description_ru',
+        'description_en',
+        'description_ja',
         'align',
         'status',
         'action',
@@ -31,7 +39,6 @@ class MarketNews extends Model
     public const ACTION_TO_SHOP = 'to_shop';
     public const ACTION_TO_PRODUCT = 'to_product';
     public const ACTION_TO_COLLECTION = 'to_collection';
-    public const ACTION_TO_CATALOG = 'to_catalog';
 
     public function seller()
     {
@@ -56,7 +63,6 @@ class MarketNews extends Model
             self::ACTION_TO_SHOP,
             self::ACTION_TO_PRODUCT,
             self::ACTION_TO_COLLECTION,
-            self::ACTION_TO_CATALOG,
         ];
     }
 
@@ -64,6 +70,7 @@ class MarketNews extends Model
     {
         return match ($this->action) {
             'to_book' => self::ACTION_TO_PRODUCT,
+            'to_catalog' => self::ACTION_TO_BOTTOMSHEET,
             self::ACTION_NEWS => self::ACTION_TO_BOTTOMSHEET,
             default => $this->action ?: self::ACTION_TO_BOTTOMSHEET,
         };
@@ -75,8 +82,33 @@ class MarketNews extends Model
             self::ACTION_TO_SHOP    => 'Do\'konga o\'tish',
             self::ACTION_TO_PRODUCT => 'Mahsulotga o\'tish',
             self::ACTION_TO_COLLECTION => 'To‘plamga o‘tish',
-            self::ACTION_TO_CATALOG => 'To‘plamlar katalogi',
             default => 'Bottomsheet',
         };
+    }
+
+    public function localized(string $field, string $locale = 'uz'): ?string
+    {
+        $preferred = $this->getAttribute("{$field}_{$locale}");
+        if (filled($preferred)) {
+            return $preferred;
+        }
+
+        if ($field === 'title' || $field === 'description') {
+            $legacy = $this->getAttribute($field);
+            if (filled($legacy)) {
+                return $legacy;
+            }
+        }
+
+        foreach (['uz', 'ru', 'en', 'ja'] as $fallbackLocale) {
+            $fallback = $this->getAttribute("{$field}_{$fallbackLocale}");
+            if (filled($fallback)) {
+                return $fallback;
+            }
+        }
+
+        return $field === 'title' || $field === 'description'
+            ? $this->getAttribute($field)
+            : null;
     }
 }

@@ -132,10 +132,6 @@
                     <div class="p-quote-block">
                         Action ID bor, lekin bog‘langan obyekt topilmadi. Bu odatda o‘chirilgan shop yoki mahsulotga ishora qiladi.
                     </div>
-                @elseif($normalizedAction === 'to_catalog')
-                    <div class="p-quote-block">
-                        Bu banner umumiy to‘plamlar katalogini ochadi. Action ID talab qilinmaydi.
-                    </div>
                 @else
                     <div class="p-quote-block">
                         Bu banner bottomsheet ochadi. Action ID talab qilinmaydi.
@@ -179,7 +175,7 @@
                 <div class="card-panel-title"><i class="bi bi-lightning-charge mr-2" style="color:var(--p-accent)"></i>Admin eslatma</div>
             </div>
             <div class="p-quote-block">
-                `to_shop`, `to_product` va `to_collection` actionlarida target doimo mavjud bo‘lishi kerak. `to_catalog` va `to_bottomsheet` uchun esa action ID kiritilmaydi.
+                `to_shop`, `to_product` va `to_collection` actionlarida target doimo mavjud bo‘lishi kerak. `to_bottomsheet` uchun esa action ID kiritilmaydi.
             </div>
         </div>
     </div>

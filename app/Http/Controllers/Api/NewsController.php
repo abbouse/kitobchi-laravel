@@ -41,11 +41,13 @@ class NewsController extends Controller
             return null;
         }
 
+        $locale = app()->getLocale();
+
         return [
             'id' => $collection->id,
             'slug' => $collection->slug,
-            'title' => $collection->localized('title', 'uz'),
-            'subtitle' => $collection->localized('subtitle', 'uz'),
+            'title' => $collection->localized('title', $locale),
+            'subtitle' => $collection->localized('subtitle', $locale),
             'hero_image' => $collection->hero_image,
             'gradient_from' => $collection->gradient_from,
             'gradient_to' => $collection->gradient_to,
@@ -56,6 +58,7 @@ class NewsController extends Controller
 
     private function formatMarketNews(MarketNews $item, array $bookMap, array $collectionMap, $user = null): array
     {
+        $locale = app()->getLocale();
         $action = $item->normalizedAction();
         $productData = null;
         $shopId = null;
@@ -80,8 +83,8 @@ class NewsController extends Controller
         return [
             'id' => $item->id,
             'type' => $item->align === 'top' ? 'top_banner' : 'center_banner',
-            'title' => $item->title,
-            'description' => $item->description,
+            'title' => $item->localized('title', $locale),
+            'description' => $item->localized('description', $locale),
             'imgUrl' => $item->imgUrl,
             'align' => $item->align,
             'created_at' => optional($item->created_at)?->toIso8601String(),

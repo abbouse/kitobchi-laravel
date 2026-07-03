@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\MarketNews;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class MarketNewsController extends Controller
 {
@@ -114,8 +115,16 @@ class MarketNewsController extends Controller
     private function validateNews(Request $request, ?MarketNews $news = null): array
     {
         $data = $request->validate([
-            'title'       => 'required|string|max:255',
+            'title'       => 'nullable|string|max:255',
+            'title_uz'    => 'nullable|string|max:255',
+            'title_ru'    => 'nullable|string|max:255',
+            'title_en'    => 'nullable|string|max:255',
+            'title_ja'    => 'nullable|string|max:255',
             'description' => 'nullable|string',
+            'description_uz' => 'nullable|string',
+            'description_ru' => 'nullable|string',
+            'description_en' => 'nullable|string',
+            'description_ja' => 'nullable|string',
             'align'       => 'required|in:top,center',
             'status'      => 'boolean',
             'action'      => 'required|in:'.implode(',', MarketNews::allowedActions()),
@@ -123,10 +132,39 @@ class MarketNewsController extends Controller
             'imgUrl'      => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
         ]);
 
-        if (in_array($data['action'], [MarketNews::ACTION_NEWS, MarketNews::ACTION_TO_BOTTOMSHEET, MarketNews::ACTION_TO_CATALOG], true)) {
+        $data = $this->normalizeLocalizedField($data, 'title', required: true);
+        $data = $this->normalizeLocalizedField($data, 'description');
+
+        if (in_array($data['action'], [MarketNews::ACTION_NEWS, MarketNews::ACTION_TO_BOTTOMSHEET], true)) {
             $data['action_id'] = null;
         }
         $data['status'] = $request->boolean('status');
+
+        return $data;
+    }
+
+    private function normalizeLocalizedField(array $data, string $field, bool $required = false): array
+    {
+        $legacyValue = isset($data[$field]) ? trim((string) $data[$field]) : null;
+        $uzValue = isset($data["{$field}_uz"]) ? trim((string) $data["{$field}_uz"]) : null;
+        $resolvedUz = filled($uzValue) ? $uzValue : $legacyValue;
+
+        if ($required && ! filled($resolvedUz)) {
+            throw ValidationException::withMessages([
+                "{$field}_uz" => $field === 'title'
+                    ? 'Uzbekcha sarlavha majburiy.'
+                    : 'Uzbekcha matn majburiy.',
+            ]);
+        }
+
+        $data[$field] = filled($resolvedUz) ? $resolvedUz : null;
+        $data["{$field}_uz"] = filled($resolvedUz) ? $resolvedUz : null;
+
+        foreach (['ru', 'en', 'ja'] as $locale) {
+            $key = "{$field}_{$locale}";
+            $value = isset($data[$key]) ? trim((string) $data[$key]) : null;
+            $data[$key] = filled($value) ? $value : null;
+        }
 
         return $data;
     }

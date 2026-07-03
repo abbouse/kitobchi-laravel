@@ -3,6 +3,7 @@ import { router, usePage } from '@inertiajs/react';
 import { Button, Form, Modal } from 'react-bootstrap';
 
 type ProductType = 'book' | 'stationery';
+type TranslateLocale = 'ru' | 'en' | 'ja';
 
 type CollectionItem = {
   id?: number;
@@ -73,6 +74,8 @@ type SortOption = 'sort' | 'name' | 'items' | 'amount' | 'newest';
 
 const fmt = (value: number) => new Intl.NumberFormat('uz-UZ').format(value || 0);
 const itemKey = (type: ProductType, id: number) => `${type}-${id}`;
+const translateLocaleLabels: Record<TranslateLocale, string> = { ru: 'RU', en: 'EN', ja: 'JA' };
+const getCsrfToken = () => document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content || '';
 
 const defaultForm = {
   slug: '',
@@ -105,8 +108,9 @@ const TypeBadge = ({ type }: { type: ProductType }) =>
   );
 
 export default function CollectionsPage() {
-  const { collections = [], errors = {}, flash = {} } = usePage<{
+  const { collections = [], errors = {}, flash = {}, translateUrl = '/boshqaruv/content/translate' } = usePage<{
     collections?: CollectionRow[];
+    translateUrl?: string;
     errors?: Record<string, string>;
     flash?: { success?: string; error?: string };
   }>().props;
@@ -124,6 +128,7 @@ export default function CollectionsPage() {
   const [items, setItems] = useState<CollectionItem[]>([]);
   const [form, setForm] = useState(defaultForm);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [translatingLocales, setTranslatingLocales] = useState<TranslateLocale[]>([]);
 
   // --- Ro'yxat filtrlari ---
   const [listQuery, setListQuery] = useState('');
@@ -284,6 +289,67 @@ export default function CollectionsPage() {
     const file = event.target.files?.[0] || null;
     setHeroFile(file);
     setHeroPreview(file ? URL.createObjectURL(file) : editing?.heroImage || null);
+  };
+
+  const translateFromUz = async (targetLocales: TranslateLocale[]) => {
+    const texts: Record<string, string> = {};
+
+    if (form.titleUz.trim()) texts.title = form.titleUz.trim();
+    if (form.subtitleUz.trim()) texts.subtitle = form.subtitleUz.trim();
+    if (form.descriptionUz.trim()) texts.description = form.descriptionUz.trim();
+
+    if (Object.keys(texts).length === 0) {
+      window.alert("Avval UZ maydonlarini to'ldiring.");
+      return;
+    }
+
+    setTranslatingLocales(targetLocales);
+
+    try {
+      const response = await fetch(translateUrl, {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': getCsrfToken(),
+        },
+        body: JSON.stringify({
+          source_locale: 'uz',
+          target_locales: targetLocales,
+          texts,
+        }),
+      });
+
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok || payload?.status !== 'success') {
+        throw new Error(payload?.message || payload?.errors?.texts?.[0] || 'AI tarjima xatosi');
+      }
+
+      setForm((prev) => {
+        const next = { ...prev };
+
+        targetLocales.forEach((locale) => {
+          const translated = payload.data?.[locale] || {};
+
+          if (translated.title) {
+            (next as any)[`title${locale.charAt(0).toUpperCase()}${locale.slice(1)}`] = translated.title;
+          }
+          if (translated.subtitle) {
+            (next as any)[`subtitle${locale.charAt(0).toUpperCase()}${locale.slice(1)}`] = translated.subtitle;
+          }
+          if (translated.description) {
+            (next as any)[`description${locale.charAt(0).toUpperCase()}${locale.slice(1)}`] = translated.description;
+          }
+        });
+
+        return next;
+      });
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'AI tarjima vaqtincha ishlamadi.');
+    } finally {
+      setTranslatingLocales([]);
+    }
   };
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
@@ -625,6 +691,36 @@ export default function CollectionsPage() {
                       placeholder="Bo'sh qoldirilsa mahsulotlar yig'indisi ishlaydi"
                     />
                     <div className="form-text">Bundle umumiy narxini admin qo'lda belgilashi mumkin.</div>
+                  </div>
+
+                  <div className="col-12">
+                    <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 rounded-4 border px-3 py-2">
+                      <div>
+                        <div className="fw-semibold">UZ matndan AI tarjima</div>
+                        <div className="small text-muted">Nomi, subtitle va tavsif RU, EN, JA maydonlariga to'ldiriladi.</div>
+                      </div>
+                      <div className="d-flex flex-wrap gap-2">
+                        {(['ru', 'en', 'ja'] as TranslateLocale[]).map((locale) => (
+                          <button
+                            key={locale}
+                            type="button"
+                            className="btn btn-sm btn-light"
+                            disabled={translatingLocales.length > 0}
+                            onClick={() => translateFromUz([locale])}
+                          >
+                            {translatingLocales.includes(locale) ? '...' : translateLocaleLabels[locale]}
+                          </button>
+                        ))}
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-primary-gradient"
+                          disabled={translatingLocales.length > 0}
+                          onClick={() => translateFromUz(['ru', 'en', 'ja'])}
+                        >
+                          {translatingLocales.length > 0 ? 'Tarjima...' : 'Barchasi'}
+                        </button>
+                      </div>
+                    </div>
                   </div>
 
                   {[

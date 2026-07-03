@@ -79,6 +79,7 @@ use App\Services\AdminOrderStatusSyncService;
 use App\Services\DeliveryZoneResolverService;
 use App\Services\FcmRecipientService;
 use App\Services\HubRoleAccessService;
+use App\Services\OpenAIService;
 use App\Services\PayoutReportService;
 use App\Services\SellerCancellationReasonCatalog;
 use App\Services\SellerOrderSettlementService;
@@ -799,6 +800,43 @@ class AdminController extends Controller
         return back()->with('success', "Market yangiligi o'chirildi.");
     }
 
+    public function translateContent(Request $request): JsonResponse
+    {
+        $supportedLocales = array_merge(['uz'], self::CONTENT_LOCALES);
+
+        $data = $request->validate([
+            'source_locale' => ['required', Rule::in($supportedLocales)],
+            'target_locales' => ['required', 'array', 'min:1'],
+            'target_locales.*' => ['required', Rule::in(self::CONTENT_LOCALES)],
+            'texts' => ['required', 'array'],
+            'texts.title' => ['nullable', 'string', 'max:255'],
+            'texts.subtitle' => ['nullable', 'string', 'max:255'],
+            'texts.description' => ['nullable', 'string', 'max:12000'],
+        ]);
+
+        $texts = collect($data['texts'])
+            ->map(fn ($value) => filled($value) ? trim((string) $value) : null)
+            ->filter(fn ($value) => filled($value))
+            ->all();
+
+        if ($texts === []) {
+            throw ValidationException::withMessages([
+                'texts' => "Tarjima uchun kamida bitta UZ matn kiriting.",
+            ]);
+        }
+
+        $translations = $this->translateTextsWithAi(
+            $texts,
+            (string) $data['source_locale'],
+            array_values(array_unique($data['target_locales'])),
+        );
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $translations,
+        ]);
+    }
+
     public function collectionBookSearch(Request $request): JsonResponse
     {
         $search = trim((string) $request->input('q', ''));
@@ -824,8 +862,13 @@ class AdminController extends Controller
     {
         return Books::query()
             ->with('seller:id,shop_name')
+            ->where('status', true)
             ->where('is_approved', 1)
             ->where('is_hidden', 0)
+            ->where('count', '>', 0)
+            ->whereHas('seller', fn ($sellerQuery) => $sellerQuery
+                ->where('status', 'approved')
+                ->where('is_hidden', 0))
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($inner) use ($search) {
                     $inner->where('name', 'like', "%{$search}%")
@@ -861,9 +904,17 @@ class AdminController extends Controller
         }
 
         return Stationery::query()
-            ->with('seller:id,shop_name')
+            ->with(['seller:id,shop_name', 'variants:id,product_id,stock'])
+            ->where('status', true)
             ->where('is_approved', 1)
             ->where('is_hidden', 0)
+            ->where(function ($query) {
+                $query->where('stock', '>', 0)
+                    ->orWhereHas('variants', fn ($variantQuery) => $variantQuery->where('stock', '>', 0));
+            })
+            ->whereHas('seller', fn ($sellerQuery) => $sellerQuery
+                ->where('status', 'approved')
+                ->where('is_hidden', 0))
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($inner) use ($search) {
                     $inner->where('name', 'like', "%{$search}%")
@@ -878,18 +929,23 @@ class AdminController extends Controller
             ->latest('updated_at')
             ->limit(20)
             ->get(['id', 'name', 'artikul', 'price', 'discount_price', 'stock', 'seller_id', 'images'])
-            ->map(fn (Stationery $item) => [
-                'id' => $item->id,
-                'productType' => 'stationery',
-                'name' => $item->name,
-                'author' => null,
-                'artikul' => $item->artikul,
-                'seller' => $item->seller?->shop_name,
-                'price' => (int) (($item->discount_price ?: $item->price) ?? 0),
-                'base_price' => (int) ($item->price ?? 0),
-                'stock' => (int) ($item->stock ?? 0),
-                'image' => $this->assetFromStorage(collect($item->images ?? [])->first()),
-            ])->values()->all();
+            ->map(function (Stationery $item) {
+                $variantStock = (int) $item->variants->sum(fn ($variant) => (int) ($variant->stock ?? 0));
+                $stock = max((int) ($item->stock ?? 0), $variantStock);
+
+                return [
+                    'id' => $item->id,
+                    'productType' => 'stationery',
+                    'name' => $item->name,
+                    'author' => null,
+                    'artikul' => $item->artikul,
+                    'seller' => $item->seller?->shop_name,
+                    'price' => (int) (($item->discount_price ?: $item->price) ?? 0),
+                    'base_price' => (int) ($item->price ?? 0),
+                    'stock' => $stock,
+                    'image' => $this->assetFromStorage(collect($item->images ?? [])->first()),
+                ];
+            })->values()->all();
     }
 
     public function storeCollection(Request $request): \Illuminate\Http\RedirectResponse
@@ -1609,20 +1665,117 @@ class AdminController extends Controller
     private function marketNewsData(Request $request): array
     {
         $data = $request->validate([
-            'title' => ['required', 'string', 'max:255'],
+            'title' => ['nullable', 'string', 'max:255'],
+            'title_uz' => ['nullable', 'string', 'max:255'],
+            'title_ru' => ['nullable', 'string', 'max:255'],
+            'title_en' => ['nullable', 'string', 'max:255'],
+            'title_ja' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:4000'],
+            'description_uz' => ['nullable', 'string', 'max:4000'],
+            'description_ru' => ['nullable', 'string', 'max:4000'],
+            'description_en' => ['nullable', 'string', 'max:4000'],
+            'description_ja' => ['nullable', 'string', 'max:4000'],
             'align' => ['required', Rule::in(['top', 'center'])],
             'status' => ['nullable', 'boolean'],
             'action' => ['required', Rule::in(MarketNews::allowedActions())],
             'action_id' => ['nullable', 'integer', 'min:1'],
             'imgUrl' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
         ]);
+
+        $data = $this->normalizeLocalizedField($data, 'title', required: true);
+        $data = $this->normalizeLocalizedField($data, 'description');
+
         $data['status'] = $request->boolean('status');
-        if (in_array($data['action'], [MarketNews::ACTION_NEWS, MarketNews::ACTION_TO_BOTTOMSHEET, MarketNews::ACTION_TO_CATALOG], true)) {
+        if (in_array($data['action'], [MarketNews::ACTION_NEWS, MarketNews::ACTION_TO_BOTTOMSHEET], true)) {
             $data['action_id'] = null;
         }
 
         return $data;
+    }
+
+    private function normalizeLocalizedField(array $data, string $field, bool $required = false): array
+    {
+        $legacyValue = isset($data[$field]) ? trim((string) $data[$field]) : null;
+        $uzValue = isset($data["{$field}_uz"]) ? trim((string) $data["{$field}_uz"]) : null;
+        $resolvedUz = filled($uzValue) ? $uzValue : $legacyValue;
+
+        if ($required && ! filled($resolvedUz)) {
+            throw ValidationException::withMessages([
+                "{$field}_uz" => $field === 'title'
+                    ? 'Uzbekcha sarlavha majburiy.'
+                    : 'Uzbekcha matn majburiy.',
+            ]);
+        }
+
+        $data[$field] = filled($resolvedUz) ? $resolvedUz : null;
+        $data["{$field}_uz"] = filled($resolvedUz) ? $resolvedUz : null;
+
+        foreach (self::CONTENT_LOCALES as $locale) {
+            $key = "{$field}_{$locale}";
+            $value = isset($data[$key]) ? trim((string) $data[$key]) : null;
+            $data[$key] = filled($value) ? $value : null;
+        }
+
+        return $data;
+    }
+
+    private function translateTextsWithAi(array $texts, string $sourceLocale, array $targetLocales): array
+    {
+        $system = <<<'PROMPT'
+Sen Kitobchi boshqaruv paneli uchun professional tarjimonsan.
+
+Vazifa:
+- Berilgan matnlarni source_locale tilidan target_locales ro'yxatidagi tillarga tarjima qil.
+- Marketplace va e-commerce uslubini saqla.
+- Juda erkin ijod qilma, ma'noni aniq saqla.
+- Qisqa sarlavhalarni qisqa qoldir.
+- Emoji, izoh, markdown yoki qo'shimcha sharh yozma.
+- Faqat JSON qaytar.
+
+JSON formati:
+{
+  "ru": {"title": "...", "subtitle": "...", "description": "..."},
+  "en": {"title": "...", "subtitle": "...", "description": "..."},
+  "ja": {"title": "...", "subtitle": "...", "description": "..."}
+}
+PROMPT;
+
+        $result = app(OpenAIService::class)->askJsonWithMessages([
+            ['role' => 'system', 'content' => $system],
+            ['role' => 'user', 'content' => json_encode([
+                'source_locale' => $sourceLocale,
+                'target_locales' => array_values($targetLocales),
+                'texts' => $texts,
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)],
+        ], 1600, 0.2);
+
+        $translations = [];
+
+        foreach ($targetLocales as $locale) {
+            $translated = [];
+            $payload = is_array($result[$locale] ?? null) ? $result[$locale] : [];
+
+            foreach (array_keys($texts) as $field) {
+                $value = $payload[$field] ?? null;
+                $translated[$field] = is_string($value) && filled(trim($value))
+                    ? trim($value)
+                    : null;
+            }
+
+            $translations[$locale] = $translated;
+        }
+
+        $hasAtLeastOne = collect($translations)
+            ->flatten()
+            ->contains(fn ($value) => filled($value));
+
+        if (! $hasAtLeastOne) {
+            throw ValidationException::withMessages([
+                'texts' => "AI tarjima hozircha javob bermadi. Yana bir bor urinib ko'ring.",
+            ]);
+        }
+
+        return $translations;
     }
 
     private function collectionData(Request $request, ?CuratedCollection $collection = null): array
@@ -1945,8 +2098,14 @@ class AdminController extends Controller
             'Reklamalar' => ['ads' => $this->adsPayload()],
             'Blogerlar' => ['bloggers' => $this->bloggersPayload()],
             'GiftSertifikatlar' => ['giftCertificates' => $this->giftCertificatesPayload()],
-            'MarketNewsPage' => ['news' => $this->marketNewsPayload()],
-            'CollectionsPage' => $this->collectionsPagePayload(),
+            'MarketNewsPage' => [
+                'news' => $this->marketNewsPayload(),
+                'translateUrl' => route('boshqaruv.content.translate'),
+            ],
+            'CollectionsPage' => [
+                ...$this->collectionsPagePayload(),
+                'translateUrl' => route('boshqaruv.content.translate'),
+            ],
             'ReelsPage' => ['reels' => $this->reelsPayload()],
             'Siyosatlar' => ['policies' => $this->policiesPayload()],
             'PushNotifications' => ['notifications' => $this->pushNotificationsPayload()],
@@ -5452,8 +5611,16 @@ class AdminController extends Controller
             ->get()
             ->map(fn (MarketNews $news) => [
                 'id' => $news->id,
-                'title' => $news->title,
-                'description' => $news->description,
+                'title' => $news->localized('title', 'uz'),
+                'titleUz' => $news->localized('title', 'uz'),
+                'titleRu' => $news->localized('title', 'ru'),
+                'titleEn' => $news->localized('title', 'en'),
+                'titleJa' => $news->localized('title', 'ja'),
+                'description' => $news->localized('description', 'uz'),
+                'descriptionUz' => $news->localized('description', 'uz'),
+                'descriptionRu' => $news->localized('description', 'ru'),
+                'descriptionEn' => $news->localized('description', 'en'),
+                'descriptionJa' => $news->localized('description', 'ja'),
                 'align' => $news->align,
                 'status' => $news->status ? 'Active' : 'Inactive',
                 'active' => (bool) $news->status,

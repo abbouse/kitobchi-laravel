@@ -69,7 +69,6 @@
                 <option value="to_bottomsheet" @selected(old('action', 'to_bottomsheet') === 'to_bottomsheet')>Bottomsheet (to_bottomsheet)</option>
                 <option value="to_shop" @selected(old('action') === 'to_shop')>Do'konga (to_shop)</option>
                 <option value="to_product" @selected(old('action') === 'to_product')>Mahsulotga (to_product)</option>
-                <option value="to_catalog" @selected(old('action') === 'to_catalog')>To'plamlar katalogi (to_catalog)</option>
                 <option value="to_collection" @selected(old('action') === 'to_collection')>To'plamga (to_collection)</option>
             </select>
         </div>
@@ -80,7 +79,7 @@
                 name="action_id"
                 type="number"
                 class="input"
-                placeholder="Bottomsheet va katalog uchun bo'sh qoldiring"
+                placeholder="Bottomsheet uchun bo'sh qoldiring"
                 value="{{ old('action_id') }}"
                 min="1"
             >

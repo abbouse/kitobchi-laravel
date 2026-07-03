@@ -64,7 +64,6 @@
                 'to_bottomsheet' => 'Bottomsheet',
                 'to_shop' => 'Do‘konga',
                 'to_product' => 'Mahsulotga',
-                'to_catalog' => 'To‘plamlar katalogi',
                 'to_collection' => 'To‘plamga',
                 default => $item->normalizedAction(),
               };

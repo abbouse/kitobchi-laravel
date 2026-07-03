@@ -3,6 +3,10 @@ import { router, usePage } from '@inertiajs/react';
 import { Modal, Button, Form } from 'react-bootstrap';
 import PaginationControls from '../components/PaginationControls';
 
+type TranslateLocale = 'ru' | 'en' | 'ja';
+const translateLocaleLabels: Record<TranslateLocale, string> = { ru: 'RU', en: 'EN', ja: 'JA' };
+const getCsrfToken = () => document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content || '';
+
 // ===== REELS =====
 export function Reels() {
   const { reels = [] } = usePage<{
@@ -82,15 +86,99 @@ export function Reels() {
 
 // ===== MARKET YANGILIKLARI =====
 export function MarketNews() {
-  const { news = [], errors = {}, flash = {} } = usePage<{
-    news?: Array<{ id: number; title: string; description?: string; align?: string; status: string; active?: boolean; action?: string; actionType?: string; actionId?: number | null; image?: string | null; date?: string; createUrl?: string; updateUrl?: string; toggleUrl?: string; destroyUrl?: string }>;
+  type NewsRow = {
+    id: number;
+    title: string;
+    titleUz?: string | null;
+    titleRu?: string | null;
+    titleEn?: string | null;
+    titleJa?: string | null;
+    description?: string;
+    descriptionUz?: string | null;
+    descriptionRu?: string | null;
+    descriptionEn?: string | null;
+    descriptionJa?: string | null;
+    align?: string;
+    status: string;
+    active?: boolean;
+    action?: string;
+    actionType?: string;
+    actionId?: number | null;
+    image?: string | null;
+    date?: string;
+    createUrl?: string;
+    updateUrl?: string;
+    toggleUrl?: string;
+    destroyUrl?: string;
+  };
+
+  type NewsForm = {
+    titleUz: string;
+    titleRu: string;
+    titleEn: string;
+    titleJa: string;
+    descriptionUz: string;
+    descriptionRu: string;
+    descriptionEn: string;
+    descriptionJa: string;
+    align: 'top' | 'center';
+    action: 'to_bottomsheet' | 'to_shop' | 'to_product' | 'to_collection';
+    actionId: string;
+    status: boolean;
+  };
+
+  const defaultForm: NewsForm = {
+    titleUz: '',
+    titleRu: '',
+    titleEn: '',
+    titleJa: '',
+    descriptionUz: '',
+    descriptionRu: '',
+    descriptionEn: '',
+    descriptionJa: '',
+    align: 'center',
+    action: 'to_bottomsheet',
+    actionId: '',
+    status: true,
+  };
+
+  const { news = [], errors = {}, flash = {}, translateUrl = '/boshqaruv/content/translate' } = usePage<{
+    news?: NewsRow[];
+    translateUrl?: string;
     errors?: Record<string, string>;
     flash?: { success?: string; error?: string };
   }>().props;
-  const [selected, setSelected] = useState<(typeof news)[0] | null>(null);
-  const [editing, setEditing] = useState<(typeof news)[0] | null>(null);
+  const [selected, setSelected] = useState<NewsRow | null>(null);
+  const [editing, setEditing] = useState<NewsRow | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState<NewsForm>(defaultForm);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [translatingLocales, setTranslatingLocales] = useState<TranslateLocale[]>([]);
   const createUrl = news[0]?.createUrl || '/boshqaruv/market-news';
+
+  const hydrateForm = (item?: NewsRow | null) => {
+    if (!item) {
+      setForm(defaultForm);
+      setImageFile(null);
+      return;
+    }
+
+    setForm({
+      titleUz: item.titleUz || item.title || '',
+      titleRu: item.titleRu || '',
+      titleEn: item.titleEn || '',
+      titleJa: item.titleJa || '',
+      descriptionUz: item.descriptionUz || item.description || '',
+      descriptionRu: item.descriptionRu || '',
+      descriptionEn: item.descriptionEn || '',
+      descriptionJa: item.descriptionJa || '',
+      align: item.align === 'top' ? 'top' : 'center',
+      action: (item.actionType as NewsForm['action']) || 'to_bottomsheet',
+      actionId: item.actionId ? String(item.actionId) : '',
+      status: item.status === 'Active',
+    });
+    setImageFile(null);
+  };
 
   useEffect(() => {
     if (Object.keys(errors).length > 0) {
@@ -98,19 +186,108 @@ export function MarketNews() {
     }
   }, [errors]);
 
-  const toggle = (item: (typeof news)[0]) => item.toggleUrl && router.patch(item.toggleUrl, {}, { preserveScroll: true });
-  const destroy = (item: (typeof news)[0]) => {
+  useEffect(() => {
+    if (showForm) {
+      hydrateForm(editing);
+    }
+  }, [showForm, editing]);
+
+  const toggle = (item: NewsRow) => item.toggleUrl && router.patch(item.toggleUrl, {}, { preserveScroll: true });
+  const destroy = (item: NewsRow) => {
     if (!item.destroyUrl || !confirm(`${item.title} yangiligi o'chirilsinmi?`)) return;
     router.delete(item.destroyUrl, { preserveScroll: true });
   };
+
+  const translateFromUz = async (targetLocales: TranslateLocale[]) => {
+    const texts: Record<string, string> = {};
+
+    if (form.titleUz.trim()) texts.title = form.titleUz.trim();
+    if (form.descriptionUz.trim()) texts.description = form.descriptionUz.trim();
+
+    if (Object.keys(texts).length === 0) {
+      window.alert("Avval UZ maydonlarini to'ldiring.");
+      return;
+    }
+
+    setTranslatingLocales(targetLocales);
+
+    try {
+      const response = await fetch(translateUrl, {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': getCsrfToken(),
+        },
+        body: JSON.stringify({
+          source_locale: 'uz',
+          target_locales: targetLocales,
+          texts,
+        }),
+      });
+
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok || payload?.status !== 'success') {
+        throw new Error(payload?.message || payload?.errors?.texts?.[0] || 'AI tarjima xatosi');
+      }
+
+      setForm((prev) => {
+        const next = { ...prev };
+
+        targetLocales.forEach((locale) => {
+          const translated = payload.data?.[locale] || {};
+
+          if (translated.title) {
+            (next as any)[`title${locale.charAt(0).toUpperCase()}${locale.slice(1)}`] = translated.title;
+          }
+          if (translated.description) {
+            (next as any)[`description${locale.charAt(0).toUpperCase()}${locale.slice(1)}`] = translated.description;
+          }
+        });
+
+        return next;
+      });
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'AI tarjima vaqtincha ishlamadi.');
+    } finally {
+      setTranslatingLocales([]);
+    }
+  };
+
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
+    const data = new FormData();
+    data.append('title_uz', form.titleUz);
+    data.append('title_ru', form.titleRu);
+    data.append('title_en', form.titleEn);
+    data.append('title_ja', form.titleJa);
+    data.append('description_uz', form.descriptionUz);
+    data.append('description_ru', form.descriptionRu);
+    data.append('description_en', form.descriptionEn);
+    data.append('description_ja', form.descriptionJa);
+    data.append('align', form.align);
+    data.append('action', form.action);
+    data.append('status', form.status ? '1' : '0');
+
+    if (form.actionId.trim()) {
+      data.append('action_id', form.actionId.trim());
+    }
+
+    if (imageFile) {
+      data.append('imgUrl', imageFile);
+    }
+
     const options = {
       preserveScroll: true,
       preserveState: true,
       forceFormData: true,
-      onSuccess: () => { setEditing(null); setShowForm(false); },
+      onSuccess: () => {
+        setEditing(null);
+        setShowForm(false);
+        setForm(defaultForm);
+        setImageFile(null);
+      },
       onError: () => { setShowForm(true); },
     };
     if (editing?.updateUrl) {
@@ -173,13 +350,48 @@ export function MarketNews() {
               </div>
             ) : null}
             <div className="row g-3">
-              <div className="col-md-8"><Form.Label>Sarlavha</Form.Label><Form.Control name="title" required defaultValue={editing?.title || ''} /></div>
-              <div className="col-md-4"><Form.Label>Joylashuv</Form.Label><Form.Select name="align" defaultValue={editing?.align || 'center'}><option value="center">Center</option><option value="top">Top</option></Form.Select></div>
-              <div className="col-md-6"><Form.Label>Action</Form.Label><Form.Select name="action" defaultValue={editing?.actionType || 'to_bottomsheet'}><option value="to_bottomsheet">Bottomsheet</option><option value="to_shop">Do'konga o'tish</option><option value="to_product">Mahsulotga o'tish</option><option value="to_catalog">To'plamlar katalogi</option><option value="to_collection">Muayyan to'plam</option></Form.Select></div>
-              <div className="col-md-6"><Form.Label>Action ID</Form.Label><Form.Control name="action_id" type="number" min={1} placeholder="Shop / mahsulot / to'plam ID" defaultValue={editing?.actionId || ''} /><div className="form-text">Bottomsheet va katalog uchun bo'sh qoldiring.</div></div>
-              <div className="col-12"><Form.Label>Rasm</Form.Label><Form.Control name="imgUrl" type="file" accept="image/*" />{editing?.image ? <div className="form-text">Yangi rasm tanlanmasa, hozirgisi saqlanadi.</div> : null}</div>
-              <div className="col-12"><Form.Label>Tavsif</Form.Label><Form.Control as="textarea" rows={4} name="description" defaultValue={editing?.description || ''} /></div>
-              <div className="col-12"><Form.Check type="switch" name="status" value="1" label="Faol" defaultChecked={editing ? editing.status === 'Active' : true} /></div>
+              <div className="col-12">
+                <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 rounded-4 border px-3 py-2">
+                  <div>
+                    <div className="fw-semibold">UZ matndan AI tarjima</div>
+                    <div className="small text-muted">Sarlavha va tavsif RU, EN, JA maydonlariga to'ldiriladi.</div>
+                  </div>
+                  <div className="d-flex flex-wrap gap-2">
+                    {(['ru', 'en', 'ja'] as TranslateLocale[]).map((locale) => (
+                      <button
+                        key={locale}
+                        type="button"
+                        className="btn btn-sm btn-light"
+                        disabled={translatingLocales.length > 0}
+                        onClick={() => translateFromUz([locale])}
+                      >
+                        {translatingLocales.includes(locale) ? '...' : translateLocaleLabels[locale]}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-primary-gradient"
+                      disabled={translatingLocales.length > 0}
+                      onClick={() => translateFromUz(['ru', 'en', 'ja'])}
+                    >
+                      {translatingLocales.length > 0 ? 'Tarjima...' : 'Barchasi'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div className="col-md-6"><Form.Label>Sarlavha (UZ)</Form.Label><Form.Control required value={form.titleUz} onChange={(event) => setForm((prev) => ({ ...prev, titleUz: event.target.value }))} /></div>
+              <div className="col-md-6"><Form.Label>Joylashuv</Form.Label><Form.Select value={form.align} onChange={(event) => setForm((prev) => ({ ...prev, align: event.target.value as NewsForm['align'] }))}><option value="center">Center</option><option value="top">Top</option></Form.Select></div>
+              <div className="col-md-4"><Form.Label>Sarlavha (RU)</Form.Label><Form.Control value={form.titleRu} onChange={(event) => setForm((prev) => ({ ...prev, titleRu: event.target.value }))} /></div>
+              <div className="col-md-4"><Form.Label>Sarlavha (EN)</Form.Label><Form.Control value={form.titleEn} onChange={(event) => setForm((prev) => ({ ...prev, titleEn: event.target.value }))} /></div>
+              <div className="col-md-4"><Form.Label>Sarlavha (JA)</Form.Label><Form.Control value={form.titleJa} onChange={(event) => setForm((prev) => ({ ...prev, titleJa: event.target.value }))} /></div>
+              <div className="col-md-6"><Form.Label>Action</Form.Label><Form.Select value={form.action} onChange={(event) => setForm((prev) => ({ ...prev, action: event.target.value as NewsForm['action'] }))}><option value="to_bottomsheet">Bottomsheet</option><option value="to_shop">Do'konga o'tish</option><option value="to_product">Mahsulotga o'tish</option><option value="to_collection">Muayyan to'plam</option></Form.Select></div>
+              <div className="col-md-6"><Form.Label>Action ID</Form.Label><Form.Control type="number" min={1} placeholder="Shop / mahsulot / to'plam ID" value={form.actionId} onChange={(event) => setForm((prev) => ({ ...prev, actionId: event.target.value }))} /><div className="form-text">Bottomsheet uchun bo'sh qoldiring.</div></div>
+              <div className="col-12"><Form.Label>Rasm</Form.Label><Form.Control type="file" accept="image/*" onChange={(event) => setImageFile(event.target.files?.[0] || null)} />{editing?.image ? <div className="form-text">Yangi rasm tanlanmasa, hozirgisi saqlanadi.</div> : null}</div>
+              <div className="col-md-6"><Form.Label>Tavsif (UZ)</Form.Label><Form.Control as="textarea" rows={4} value={form.descriptionUz} onChange={(event) => setForm((prev) => ({ ...prev, descriptionUz: event.target.value }))} /></div>
+              <div className="col-md-6"><Form.Label>Tavsif (RU)</Form.Label><Form.Control as="textarea" rows={4} value={form.descriptionRu} onChange={(event) => setForm((prev) => ({ ...prev, descriptionRu: event.target.value }))} /></div>
+              <div className="col-md-6"><Form.Label>Tavsif (EN)</Form.Label><Form.Control as="textarea" rows={4} value={form.descriptionEn} onChange={(event) => setForm((prev) => ({ ...prev, descriptionEn: event.target.value }))} /></div>
+              <div className="col-md-6"><Form.Label>Tavsif (JA)</Form.Label><Form.Control as="textarea" rows={4} value={form.descriptionJa} onChange={(event) => setForm((prev) => ({ ...prev, descriptionJa: event.target.value }))} /></div>
+              <div className="col-12"><Form.Check type="switch" label="Faol" checked={form.status} onChange={(event) => setForm((prev) => ({ ...prev, status: event.target.checked }))} /></div>
             </div>
           </Modal.Body>
           <Modal.Footer><Button variant="light" onClick={() => setShowForm(false)}>Bekor qilish</Button><Button type="submit" className="btn-primary-gradient border-0">Saqlash</Button></Modal.Footer>
