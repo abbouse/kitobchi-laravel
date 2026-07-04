@@ -175,6 +175,16 @@ export default function Split() {
   const [status, setStatus] = useState(splitFilters.status || 'all');
   const [search, setSearch] = useState(splitFilters.search || '');
 
+  type SplitTab = 'plans' | 'contracts' | 'categories' | 'users' | 'settings';
+  const [tab, setTab] = useState<SplitTab>('plans');
+  const tabs: [SplitTab, string, string][] = [
+    ['plans', 'Tariflar', 'bi-calendar-week'],
+    ['contracts', 'Shartnomalar', 'bi-file-earmark-text'],
+    ['categories', 'Kategoriyalar', 'bi-tags'],
+    ['users', 'Foydalanuvchilar', 'bi-people'],
+    ['settings', 'Sozlamalar', 'bi-gear'],
+  ];
+
   const reload = (page = 1, nextStatus = status, nextSearch = search) => {
     router.get('/boshqaruv/split', {
       split_page: page,
@@ -196,13 +206,32 @@ export default function Split() {
       <div className="page-head">
         <div>
           <h1 className="page-title">Split nazorati</h1>
-          <p className="page-subtitle">Tariflar (muddat, foiz, chastota), shartnomalar, kategoriya va foydalanuvchi ishonchlilik profilini boshqarish</p>
+          <p className="page-subtitle">Nasiya tariflari, shartnomalar va foydalanuvchi limitlarini boshqarish</p>
         </div>
-        <div className="d-flex gap-2 flex-wrap">
-          <button className="btn btn-light" onClick={() => refreshProfiles()}><i className="bi bi-arrow-clockwise me-1"></i>Barchasini qayta hisoblash</button>
-        </div>
+        {tab === 'users' ? (
+          <div className="d-flex gap-2 flex-wrap">
+            <button className="btn btn-light" onClick={() => refreshProfiles()}><i className="bi bi-arrow-clockwise me-1"></i>Barchasini qayta hisoblash</button>
+          </div>
+        ) : null}
       </div>
 
+      <div className="d-flex gap-2 flex-wrap mb-3">
+        {tabs.map(([key, label, icon]) => (
+          <button
+            key={key}
+            className={`btn btn-sm ${tab === key ? 'btn-primary-gradient' : 'btn-light'}`}
+            onClick={() => setTab(key)}
+          >
+            <i className={`bi ${icon} me-1`}></i>
+            {label}
+            {key === 'contracts' && splitContractStats.overdue > 0 ? (
+              <span className="badge bg-danger ms-1">{splitContractStats.overdue}</span>
+            ) : null}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'users' ? (
       <div className="row g-3 mb-4">
         {[
           ['Profil yozuvlari', splitSummary.profiles, 'bi-database-check', '#4f46e5'],
@@ -223,69 +252,74 @@ export default function Split() {
           </div>
         ))}
       </div>
+      ) : null}
 
       <div className="row g-3">
+        {tab === 'settings' ? (
         <div className="col-12">
           <div className="card-panel">
             <div className="panel-head">
               <div>
-                <div className="panel-title">Global split policy</div>
-                <small className="text-muted">Mobilga chiqmaydi. Hozircha faqat admin va backend tayyorgarligi.</small>
+                <div className="panel-title">Sozlamalar</div>
+                <small className="text-muted">Kim nasiya olishi mumkinligi shu yerda. Summa/foiz/muddat esa «Tariflar» tabida.</small>
               </div>
               <div className="d-flex flex-wrap gap-2">
-                <span className="chip chip-info">Upfront: {splitSettings.upfrontPercent}%</span>
-                <span className="chip chip-purple">Muddat: {splitSettings.termDays} kun</span>
-                <span className={`chip ${splitSettings.enabled ? 'chip-success' : 'chip-warning'}`}>{splitSettings.enabled ? 'Ichki modul yoqilgan' : "Ichki modul o'chirilgan"}</span>
-                <span className={`chip ${splitSettings.publicEnabled ? 'chip-danger' : 'chip-gray'}`}>{splitSettings.publicEnabled ? 'Public ko‘rinadi' : 'Public yashirin'}</span>
+                <span className={`chip ${splitSettings.enabled ? 'chip-success' : 'chip-warning'}`}>{splitSettings.enabled ? 'Modul yoqilgan' : "Modul o'chirilgan"}</span>
+                <span className={`chip ${splitSettings.publicEnabled ? 'chip-danger' : 'chip-gray'}`}>{splitSettings.publicEnabled ? 'Ilovada ko‘rinadi' : 'Ilovada yashirin'}</span>
               </div>
             </div>
             <form onSubmit={(event) => submitForm(event, splitActions.settingsUpdateUrl)}>
               <div className="row g-3">
-                <div className="col-lg-3"><Toggle name="split_enabled" label="Ichki split moduli yoqilgan" defaultChecked={splitSettings.enabled} /></div>
-                <div className="col-lg-3"><Toggle name="split_public_enabled" label="Public checkoutga chiqarish" defaultChecked={splitSettings.publicEnabled} /></div>
-                <div className="col-lg-3"><Toggle name="split_card_delete_lock_enabled" label="Aktiv splitda karta o‘chirish blok" defaultChecked={splitSettings.cardDeleteLockEnabled} /></div>
-                <div className="col-lg-3">
-                  <div className="mini-stat h-100">
-                    <strong>To&apos;lov modeli</strong>
-                    <span>Muddat/foiz/chastota endi pastdagi tariflarda sozlanadi. 1-to&apos;lov checkoutda hold, topshirilganda yechiladi; qolganlari jadval bo&apos;yicha avto.</span>
-                  </div>
-                </div>
-                <div className="col-md-3"><Field name="split_global_min_order_sum" label="Min order summasi" type="number" defaultValue={splitSettings.globalMinOrderSum} /></div>
-                <div className="col-md-3"><Field name="split_global_max_order_sum" label="Max order summasi" type="number" defaultValue={splitSettings.globalMaxOrderSum} /></div>
-                <div className="col-md-3"><Field name="split_global_min_limit" label="Min limit" type="number" defaultValue={splitSettings.globalMinLimit} /></div>
-                <div className="col-md-3"><Field name="split_global_max_limit" label="Max limit" type="number" defaultValue={splitSettings.globalMaxLimit} /></div>
-                <div className="col-md-3"><Field name="split_min_completed_orders" label="Min completed order" type="number" defaultValue={splitSettings.minCompletedOrders} /></div>
-                <div className="col-md-3"><Field name="split_min_account_age_days" label="Min account yoshi (kun)" type="number" defaultValue={splitSettings.minAccountAgeDays} /></div>
-                <div className="col-md-3"><Field name="split_min_card_age_days" label="Min karta yoshi (kun)" type="number" defaultValue={splitSettings.minCardAgeDays} /></div>
-                <div className="col-md-3"><Field name="split_min_reputation_score" label="Min reputation score" type="number" step="0.01" defaultValue={splitSettings.minReputationScore} /></div>
-                <div className="col-md-3"><Field name="split_max_active_contracts" label="Max aktiv split" type="number" defaultValue={splitSettings.maxActiveContracts} /></div>
-                <div className="col-md-3"><Field name="split_default_fee_percent" label="Default ustama (%)" type="number" step="0.01" defaultValue={splitSettings.defaultFeePercent} /></div>
-                <div className="col-md-3"><Field name="paylov_refund_sender_card_id" label="Refund sender cardId" defaultValue={splitSettings.refundSenderCardId} /></div>
-                <div className="col-md-3"><Field name="paylov_refund_service_id" label="Refund serviceId" defaultValue={splitSettings.refundServiceId} /></div>
-                <div className="col-md-6">
-                  <div className="mini-stat h-100">
-                    <strong>Skor nima bilan hisoblanadi</strong>
-                    <span>Reputation, yakunlangan pullik orderlar, GMV, verified karta yoshi, saved-card payment tarixi, device barqarorligi, cancel/COD strike va warninglar.</span>
-                  </div>
-                </div>
-                <div className="col-md-6">
-                  <div className="mini-stat h-100">
-                    <strong>Partial refund texnik sozlamasi</strong>
-                    <span>Item yoki seller-order bo‘yicha refund kerak bo‘lsa, tizim aynan original Paylov kartaga `Account2Card/P2P` bilan pul qaytaradi. Shu uchun sender `cardId` va kerak bo‘lsa `serviceId` shu yerda saqlanadi.</span>
-                  </div>
-                </div>
+                <div className="col-lg-4"><Toggle name="split_enabled" label="Split moduli" hint="Umumiy vklyuchatel. O'chiq bo'lsa hech qanday yangi nasiya ochilmaydi — mavjud shartnomalar ishlashda davom etadi." defaultChecked={splitSettings.enabled} /></div>
+                <div className="col-lg-4"><Toggle name="split_public_enabled" label="Ilovada ko'rsatish" hint="Yoqilsa mos userlar checkoutda «Nasiya» tugmasini ko'radi. O'chiq bo'lsa modul faqat admin panelda ishlaydi (test rejimi)." defaultChecked={splitSettings.publicEnabled} /></div>
+                <div className="col-lg-4"><Toggle name="split_card_delete_lock_enabled" label="Qarzdorda karta o'chirish blok" hint="Ochiq nasiyasi bor user ilovadan bog'langan kartalarini o'chira olmaydi — qarzdan «qochib ketish» yo'li yopiladi. Nasiya to'liq yopilgach blok avtomatik ochiladi." defaultChecked={splitSettings.cardDeleteLockEnabled} /></div>
+
+                <div className="col-12"><div className="fw-semibold small text-muted mt-2">LIMIT ORALIG&apos;I</div></div>
+                <div className="col-md-3"><Field name="split_global_min_limit" label="Min limit" type="number" defaultValue={splitSettings.globalMinLimit}
+                  hint="Tizim hisoblagan shaxsiy limit bundan past chiqsa shu qiymatga ko'tariladi — mos user hech bo'lmaganda shuncha nasiya oladi."
+                  example="min 300 000 bo'lsa, hisob 180 000 chiqqan userga baribir 300 000 limit beriladi." /></div>
+                <div className="col-md-3"><Field name="split_global_max_limit" label="Max limit" type="number" defaultValue={splitSettings.globalMaxLimit}
+                  hint="Eng ishonchli user ham bundan ko'p limit ololmaydi. Kompaniyaning bitta userga maksimal riski."
+                  example="2 000 000 qo'ysangiz, hech kimning limiti undan oshmaydi." /></div>
+
+                <div className="col-12"><div className="fw-semibold small text-muted mt-2">KIM NASIYA OLADI (eligibility)</div></div>
+                <div className="col-md-3"><Field name="split_min_completed_orders" label="Min yakunlangan buyurtma" type="number" defaultValue={splitSettings.minCompletedOrders}
+                  hint="User nasiya olishdan oldin kamida shuncha pullik buyurtmani muvaffaqiyatli yakunlagan bo'lishi kerak."
+                  example="3 qo'ysangiz, 2 ta buyurtmasi bor user hali nasiya ko'rmaydi." /></div>
+                <div className="col-md-3"><Field name="split_min_account_age_days" label="Min akkaunt yoshi (kun)" type="number" defaultValue={splitSettings.minAccountAgeDays}
+                  hint="Ro'yxatdan o'tganiga kamida shuncha kun bo'lgan userlargagina nasiya. Yangi akkaunt — firibgarlik riski."
+                  example="90 bo'lsa, 2 oylik akkaunt hali mos emas." /></div>
+                <div className="col-md-3"><Field name="split_min_card_age_days" label="Min karta yoshi (kun)" type="number" defaultValue={splitSettings.minCardAgeDays}
+                  hint="Tasdiqlangan Paylov kartasi kamida shuncha kun oldin ulangan bo'lishi kerak — bugun karta ulab, bugun nasiya olib bo'lmaydi."
+                  example="45 bo'lsa, kecha ulangan karta bilan nasiya ochilmaydi." /></div>
+                <div className="col-md-3"><Field name="split_min_reputation_score" label="Min reputatsiya balli" type="number" step="0.01" defaultValue={splitSettings.minReputationScore}
+                  hint="Userning umumiy obro' balli (0–100, tizim hisoblaydi). Bekor qilishlar, qaytarishlar, warninglar ballni tushiradi."
+                  example="78 qo'ysangiz, balli 75 bo'lgan user nasiya ololmaydi." /></div>
+                <div className="col-md-3"><Field name="split_max_active_contracts" label="Bir userda max ochiq nasiya" type="number" defaultValue={splitSettings.maxActiveContracts}
+                  hint="Bir vaqtning o'zida nechta ochiq nasiya shartnomasi bo'lishi mumkin."
+                  example="1 bo'lsa, avvalgi nasiyasini yopmaguncha yangisini ololmaydi." /></div>
+
+                <div className="col-12"><div className="fw-semibold small text-muted mt-2">TEXNIK (Paylov refund)</div></div>
+                <div className="col-md-3"><Field name="paylov_refund_sender_card_id" label="Refund sender cardId" defaultValue={splitSettings.refundSenderCardId}
+                  hint="Pul qaytarish kerak bo'lganda mablag' shu Paylov kartadan (Account2Card) jo'natiladi. Paylov kabinetidan olinadi." /></div>
+                <div className="col-md-3"><Field name="paylov_refund_service_id" label="Refund serviceId" defaultValue={splitSettings.refundServiceId}
+                  hint="Paylov refund xizmatining ID'si. Bo'sh qoldirsangiz standart qiymat ishlatiladi." /></div>
               </div>
               <div className="text-end mt-3">
-                <button className="btn btn-primary-gradient"><i className="bi bi-check2 me-1"></i>Policy saqlash</button>
+                <button className="btn btn-primary-gradient"><i className="bi bi-check2 me-1"></i>Saqlash</button>
               </div>
             </form>
           </div>
         </div>
+        ) : null}
 
+        {tab === 'plans' ? (
         <div className="col-12">
           <PlanSection plans={splitPlans} storeUrl={splitActions.planStoreUrl} previewUrl={splitActions.planPreviewUrl} />
         </div>
+        ) : null}
 
+        {tab === 'contracts' ? (
         <div className="col-12">
           <ContractSection
             contracts={splitContracts}
@@ -294,7 +328,10 @@ export default function Split() {
             contractStoreUrl={splitActions.contractStoreUrl}
           />
         </div>
+        ) : null}
 
+        {tab === 'categories' ? (
+        <>
         <div className="col-12">
           <RuleSection title="Kitob kategoriyalari" rows={splitBookRules} actionUrl={splitActions.ruleStoreUrl} />
         </div>
@@ -302,7 +339,10 @@ export default function Split() {
         <div className="col-12">
           <RuleSection title="Kanselyariya kategoriyalari" rows={splitStationeryRules} actionUrl={splitActions.ruleStoreUrl} />
         </div>
+        </>
+        ) : null}
 
+        {tab === 'users' ? (
         <div className="col-12">
           <div className="card-panel">
             <div className="panel-head">
@@ -326,10 +366,32 @@ export default function Split() {
                 <thead>
                   <tr>
                     <th>User</th>
-                    <th>Moslik</th>
-                    <th>Skor</th>
-                    <th>Limit</th>
-                    <th>Exposure</th>
+                    <th>
+                      Moslik
+                      <InfoHint
+                        text="Nasiya olish shartlarini bajargan-bajarmagani. «Mos emas» bo'lsa sababi qatorda ko'rinadi."
+                        example="Karta yoshi yetmasa yoki reputatsiya past bo'lsa — mos emas."
+                      />
+                    </th>
+                    <th>
+                      Skor
+                      <InfoHint
+                        text="Ishonch balli (0–100) — buyurtma tarixi, GMV, karta yoshi, qurilma barqarorligi va nasiya to'lov intizomidan avtomatik hisoblanadi."
+                        example="Har toza yopilgan nasiya ballni oshiradi, kechikish tushiradi."
+                      />
+                    </th>
+                    <th>
+                      Limit
+                      <InfoHint
+                        text="Tizim hisoblagan shaxsiy nasiya limiti. «Bo'sh» — hozir ishlatilishi mumkin bo'lgan qismi (limit minus ochiq qarz)."
+                      />
+                    </th>
+                    <th>
+                      Exposure
+                      <InfoHint
+                        text="Userning hozirgi ochiq nasiya qarzi (hali to'lanmagan bo'laklar yig'indisi)."
+                      />
+                    </th>
                     <th>Karta</th>
                     <th>Orderlar</th>
                     <th>Risk</th>
@@ -390,6 +452,7 @@ export default function Split() {
             <PaginationControls {...splitPagination} onPageChange={(page) => reload(page)} />
           </div>
         </div>
+        ) : null}
       </div>
     </div>
   );
@@ -444,12 +507,14 @@ function PlanSection({ plans, storeUrl, previewUrl }: { plans: SplitPlanRow[]; s
     <div className="card-panel">
       <div className="panel-head">
         <div>
-          <div className="panel-title">Split tariflari</div>
-          <small className="text-muted">
-            Istagancha muddat qo&apos;shing: masalan «2 oy · foizsiz · har 2 haftada» yoki «6 oy · oyiga 3% · har oy».
-            Ustama = mahsulot summasi × oylik % × oy. 1-to&apos;lov hozir, qolganlari sotib olish sanasidan anchor qilinadi.
-            Yetkazish haqi splitga kirmaydi: to&apos;liq 1-to&apos;lovga qo&apos;shiladi va unga foiz hisoblanmaydi.
-          </small>
+          <div className="panel-title">
+            Split tariflari
+            <InfoHint
+              text="Istagancha tarif qo'shing — har biri o'z muddati, foizi va to'lov chastotasi bilan. 1-to'lov xariddayoq olinadi, qolganlari sotib olish sanasidan hisoblangan aniq kunlarda avto yechiladi. Yetkazish/qadoqlash splitga kirmaydi — foizsiz 1-to'lovga qo'shiladi."
+              example="«2 oy · 0% · har 2 haftada» va «6 oy · oyiga 3% · har oyda» — ikkalasi parallel ishlaydi."
+            />
+          </div>
+          <small className="text-muted">Pastdagi bo&apos;sh qatordan yangi tarif qo&apos;shasiz. Har bir qiymat nima ekani ustun sarlavhasidagi <i className="bi bi-info-circle"></i> da.</small>
         </div>
         <div className="d-flex align-items-center gap-2 flex-wrap">
           <span className="text-muted small">Preview — mahsulot:</span>
@@ -477,13 +542,40 @@ function PlanSection({ plans, storeUrl, previewUrl }: { plans: SplitPlanRow[]; s
           <thead>
             <tr>
               <th>Nomi</th>
-              <th>Muddat (oy)</th>
-              <th>Chastota</th>
-              <th>Oylik %</th>
+              <th>
+                Muddat (oy)
+                <InfoHint text="Nasiya jami necha oyga bo'linadi." example="2, 4 yoki 6 oy." />
+              </th>
+              <th>
+                Chastota
+                <InfoHint
+                  text="To'lov qanchalik tez-tez yechiladi. Muddat o'zgarmaydi, faqat bo'laklar soni o'zgaradi."
+                  example="2 oylik tarif «har 2 haftada» bo'lsa 4 ta to'lovga bo'linadi, «har oyda» bo'lsa 2 ta."
+                />
+              </th>
+              <th>
+                Oylik %
+                <InfoHint
+                  text="Umumiy ustama = oylik % × oy soni. 0 kiritsangiz tarif foizsiz bo'ladi."
+                  example="4 oy, oyiga 2.5% → jami 10%. 1 mln buyurtmada 100 000 so'm ustama."
+                />
+              </th>
               <th>Umumiy ustama</th>
               <th>To&apos;lovlar</th>
-              <th>Min/Max summa</th>
-              <th>Min skor</th>
+              <th>
+                Min/Max summa
+                <InfoHint
+                  text="Bu tarif qaysi buyurtma summalarida ko'rinadi. Bo'sh qoldirsangiz — cheklovsiz (shaxsiy limit baribir yuqoridan chegaralaydi)."
+                  example="6 oylik tarifga min 500 000 qo'ysangiz, arzon buyurtmalarda 6 oy varianti chiqmaydi."
+                />
+              </th>
+              <th>
+                Min skor
+                <InfoHint
+                  text="Ishonch balli (0–100, tizim hisoblaydi). Faqat balli shundan yuqori userlar bu tarifni ko'radi. Bo'sh = barcha mos userlarga ochiq."
+                  example="Uzoq 6 oylik tarifga 70 qo'yib, uni faqat eng ishonchli mijozlarga bering."
+                />
+              </th>
               <th>Holat</th>
               <th>Amal</th>
             </tr>
@@ -615,7 +707,13 @@ function ContractSection({
     <div className="card-panel">
       <div className="panel-head">
         <div>
-          <div className="panel-title">Split shartnomalari</div>
+          <div className="panel-title">
+            Split shartnomalari
+            <InfoHint
+              text="Holatlar: «Kutilmoqda» — 1-to'lov hold qilingan, buyurtma hali topshirilmagan. «Faol» — jadval bo'yicha to'lanmoqda. «Muddati o'tgan» — avto yechish 4 urinishda ham o'tmagan. «Yopilgan» — to'liq to'langan."
+              example="Kutilmoqda holatida ▶ bosilsa hold yechiladi, ✕ bosilsa hold qaytariladi."
+            />
+          </div>
           <small className="text-muted">
             Ochiq: {stats.active} · Muddati o‘tgan: {stats.overdue} · Exposure: {fmt(stats.exposure)} so&apos;m · Oxirgi 30 kunda undirildi: {fmt(stats.collected30d)} so&apos;m
           </small>
@@ -845,10 +943,67 @@ function resetRule(url: string) {
   router.delete(url, { preserveScroll: true });
 }
 
-function Toggle({ name, label, defaultChecked }: { name: string; label: string; defaultChecked?: boolean }) {
+function InfoHint({ text, example }: { text: string; example?: string }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <span className="position-relative d-inline-block" style={{ verticalAlign: 'middle' }}>
+      <i
+        className="bi bi-info-circle ms-1"
+        style={{ color: '#94a3b8', fontSize: 12, cursor: 'pointer' }}
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          setOpen((value) => !value);
+        }}
+      ></i>
+      {open ? (
+        <span
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            setOpen(false);
+          }}
+          style={{
+            position: 'absolute',
+            zIndex: 60,
+            top: 20,
+            left: -120,
+            width: 270,
+            background: '#1e293b',
+            color: '#f1f5f9',
+            borderRadius: 12,
+            padding: '10px 12px',
+            fontSize: 12,
+            fontWeight: 400,
+            lineHeight: 1.5,
+            textAlign: 'left',
+            whiteSpace: 'normal',
+            textTransform: 'none',
+            letterSpacing: 'normal',
+            boxShadow: '0 10px 28px rgba(0,0,0,0.28)',
+            cursor: 'pointer',
+          }}
+        >
+          {text}
+          {example ? (
+            <span style={{ display: 'block', marginTop: 6, color: '#94a3b8' }}>
+              <i className="bi bi-lightbulb me-1"></i>Misol: {example}
+            </span>
+          ) : null}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+function Toggle({ name, label, defaultChecked, hint, example }: { name: string; label: string; defaultChecked?: boolean; hint?: string; example?: string }) {
   return (
     <label className="d-flex align-items-center justify-content-between gap-3 p-3 rounded border h-100">
-      <span className="fw-semibold">{label}</span>
+      <span className="fw-semibold">
+        {label}
+        {hint ? <InfoHint text={hint} example={example} /> : null}
+      </span>
       <span>
         <input type="hidden" name={name} value="0" />
         <input className="form-check-input" type="checkbox" name={name} value="1" defaultChecked={defaultChecked} />
@@ -857,10 +1012,13 @@ function Toggle({ name, label, defaultChecked }: { name: string; label: string; 
   );
 }
 
-function Field({ name, label, defaultValue, type = 'text', step }: { name: string; label: string; defaultValue: string | number; type?: string; step?: string }) {
+function Field({ name, label, defaultValue, type = 'text', step, hint, example }: { name: string; label: string; defaultValue: string | number; type?: string; step?: string; hint?: string; example?: string }) {
   return (
     <div>
-      <label className="form-label small text-muted fw-semibold">{label}</label>
+      <label className="form-label small text-muted fw-semibold">
+        {label}
+        {hint ? <InfoHint text={hint} example={example} /> : null}
+      </label>
       <input name={name} type={type} step={step} className="form-control" defaultValue={defaultValue} />
     </div>
   );

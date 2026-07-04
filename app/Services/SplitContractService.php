@@ -850,8 +850,10 @@ class SplitContractService
             throw new RuntimeException('Split moduli o\'chirilgan.');
         }
 
-        $minSum = (int) ($plan->min_order_sum ?? $settings['global_min_order_sum']);
-        $maxSum = (int) ($plan->max_order_sum ?? $settings['global_max_order_sum']);
+        // Min/max summa faqat tarif darajasida: bo'sh = cheklovsiz
+        // (shaxsiy limit baribir yuqoridan chegaralaydi).
+        $minSum = $plan->min_order_sum !== null ? (int) $plan->min_order_sum : 1000;
+        $maxSum = $plan->max_order_sum !== null ? (int) $plan->max_order_sum : PHP_INT_MAX;
 
         if ($principal < $minSum) {
             throw new RuntimeException("Buyurtma summasi bu tarif uchun juda kichik (min: {$minSum}).");

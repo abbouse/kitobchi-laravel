@@ -214,8 +214,6 @@ class AdminController extends Controller
         $data = $request->validate([
             'split_enabled' => 'nullable|boolean',
             'split_public_enabled' => 'nullable|boolean',
-            'split_global_min_order_sum' => 'required|integer|min:1000',
-            'split_global_max_order_sum' => 'required|integer|gte:split_global_min_order_sum',
             'split_global_min_limit' => 'required|integer|min:1000',
             'split_global_max_limit' => 'required|integer|gte:split_global_min_limit',
             'split_min_completed_orders' => 'required|integer|min:1|max:100',
@@ -223,7 +221,6 @@ class AdminController extends Controller
             'split_min_card_age_days' => 'required|integer|min:1|max:3650',
             'split_min_reputation_score' => 'required|numeric|min:1|max:100',
             'split_max_active_contracts' => 'required|integer|min:1|max:2',
-            'split_default_fee_percent' => 'required|numeric|min:0|max:30',
             'split_card_delete_lock_enabled' => 'nullable|boolean',
             'paylov_refund_sender_card_id' => 'nullable|string|max:255',
             'paylov_refund_service_id' => 'nullable|string|max:255',
@@ -235,8 +232,6 @@ class AdminController extends Controller
             'split_public_enabled' => $request->boolean('split_public_enabled'),
             'split_upfront_percent' => 25,
             'split_term_days' => 60,
-            'split_global_min_order_sum' => $request->integer('split_global_min_order_sum'),
-            'split_global_max_order_sum' => $request->integer('split_global_max_order_sum'),
             'split_global_min_limit' => $request->integer('split_global_min_limit'),
             'split_global_max_limit' => $request->integer('split_global_max_limit'),
             'split_min_completed_orders' => $request->integer('split_min_completed_orders'),
@@ -244,7 +239,6 @@ class AdminController extends Controller
             'split_min_card_age_days' => $request->integer('split_min_card_age_days'),
             'split_min_reputation_score' => round((float) $request->input('split_min_reputation_score'), 2),
             'split_max_active_contracts' => $request->integer('split_max_active_contracts'),
-            'split_default_fee_percent' => round((float) $request->input('split_default_fee_percent'), 2),
             'split_card_delete_lock_enabled' => $request->boolean('split_card_delete_lock_enabled'),
             'paylov_refund_sender_card_id' => filled($data['paylov_refund_sender_card_id'] ?? null)
                 ? trim((string) $data['paylov_refund_sender_card_id'])

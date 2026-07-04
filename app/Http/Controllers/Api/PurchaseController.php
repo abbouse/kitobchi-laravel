@@ -369,10 +369,19 @@ class PurchaseController extends Controller
             return $unavailable;
         }
 
-        $hasPlans = \App\Models\SplitPlan::query()->where('enabled', true)->exists();
-        if (! $hasPlans) {
+        $planBounds = \App\Models\SplitPlan::query()
+            ->where('enabled', true)
+            ->get(['min_order_sum', 'max_order_sum']);
+
+        if ($planBounds->isEmpty()) {
             return $unavailable;
         }
+
+        // Min/max summa faqat tarif darajasida (bo'sh = cheklovsiz).
+        $minPlanSum = (int) $planBounds->min(fn ($plan) => (int) ($plan->min_order_sum ?? 1000));
+        $maxPlanSum = (int) $planBounds->max(
+            fn ($plan) => $plan->max_order_sum !== null ? (int) $plan->max_order_sum : PHP_INT_MAX,
+        );
 
         // Kesh: profil 24 soatdan yangi bo'lsa qayta hisoblamaymiz (checkout tez ochilsin).
         $profile = \App\Models\SplitUserProfile::query()->where('user_id', $user->id)->first();
@@ -385,17 +394,18 @@ class PurchaseController extends Controller
             $availableLimit = (int) $profile->available_limit;
         }
 
-        if (! $eligible || $availableLimit < (int) $settings['global_min_order_sum']) {
+        if (! $eligible || $availableLimit < $minPlanSum) {
             return $unavailable;
         }
+
+        $effectiveMax = min($availableLimit, $maxPlanSum);
 
         return [
             'available' => true,
             'available_limit' => $availableLimit,
-            'min_order_sum' => (int) $settings['global_min_order_sum'],
-            'max_order_sum' => (int) $settings['global_max_order_sum'],
-            'fits' => $productTotal >= (int) $settings['global_min_order_sum']
-                && $productTotal <= min($availableLimit, (int) $settings['global_max_order_sum']),
+            'min_order_sum' => $minPlanSum,
+            'max_order_sum' => $effectiveMax,
+            'fits' => $productTotal >= $minPlanSum && $productTotal <= $effectiveMax,
         ];
     }
 
@@ -453,9 +463,9 @@ class PurchaseController extends Controller
             ->orderBy('sort_order')
             ->orderBy('months')
             ->get()
-            ->filter(function (\App\Models\SplitPlan $plan) use ($amount, $settings, $profile) {
-                $minSum = (int) ($plan->min_order_sum ?? $settings['global_min_order_sum']);
-                $maxSum = (int) ($plan->max_order_sum ?? $settings['global_max_order_sum']);
+            ->filter(function (\App\Models\SplitPlan $plan) use ($amount, $profile) {
+                $minSum = $plan->min_order_sum !== null ? (int) $plan->min_order_sum : 1000;
+                $maxSum = $plan->max_order_sum !== null ? (int) $plan->max_order_sum : PHP_INT_MAX;
 
                 if ($amount < $minSum || $amount > $maxSum) {
                     return false;
