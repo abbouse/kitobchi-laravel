@@ -38,10 +38,6 @@ type SplitRuleRow = {
   name: string;
   active: boolean;
   enabled: boolean;
-  feePercent: number | null;
-  minOrderSumOverride: number | null;
-  maxOrderSumOverride: number | null;
-  upfrontPercentOverride: number | null;
   destroyUrl?: string | null;
 };
 
@@ -878,8 +874,14 @@ function RuleSection({ title, rows, actionUrl }: { title: string; rows: SplitRul
     <div className="card-panel">
       <div className="panel-head">
         <div>
-          <div className="panel-title">{title}</div>
-          <small className="text-muted">Faqat admin ruxsat bergan kategoriyalarda split chiqishi mumkin bo‘ladi.</small>
+          <div className="panel-title">
+            {title}
+            <InfoHint
+              text="Kategoriya darajasida faqat ruxsat/taqiq boshqariladi (summa va foiz tariflarda). Agar HECH BITTA kategoriya yoqilmagan bo'lsa — cheklov yo'q, hammasi nasiyada sotiladi. Kamida bittasi yoqilsa — faqat yoqilgan kategoriyalar nasiyaga chiqadi."
+              example="Faqat «Badiiy adabiyot»ni yoqsangiz, boshqa kategoriyali mahsulot bor savatga nasiya ochilmaydi."
+            />
+          </div>
+          <small className="text-muted">Yoqilgan: {rows.filter((row) => row.enabled).length} / {rows.length}</small>
         </div>
       </div>
       <div className="table-responsive">
@@ -887,11 +889,7 @@ function RuleSection({ title, rows, actionUrl }: { title: string; rows: SplitRul
           <thead>
             <tr>
               <th>Kategoriya</th>
-              <th>Holat</th>
-              <th>Ustama %</th>
-              <th>Min summa</th>
-              <th>Max summa</th>
-              <th>Upfront %</th>
+              <th>Nasiyaga ruxsat</th>
               <th>Amal</th>
             </tr>
           </thead>
@@ -906,24 +904,20 @@ function RuleSection({ title, rows, actionUrl }: { title: string; rows: SplitRul
                   <label className="d-flex align-items-center gap-2 mb-0">
                     <input form={`split-rule-${row.categoryType}-${row.id}`} type="hidden" name="enabled" value="0" />
                     <input form={`split-rule-${row.categoryType}-${row.id}`} type="checkbox" className="form-check-input" name="enabled" value="1" defaultChecked={row.enabled} />
-                    <span className={`chip ${row.enabled ? 'chip-success' : 'chip-gray'}`}>{row.enabled ? 'Yoqilgan' : "O'chirilgan"}</span>
+                    <span className={`chip ${row.enabled ? 'chip-success' : 'chip-gray'}`}>{row.enabled ? 'Ruxsat' : 'Taqiq'}</span>
                   </label>
                 </td>
-                <td><input form={`split-rule-${row.categoryType}-${row.id}`} className="form-control form-control-sm" name="fee_percent" type="number" min={0} max={30} step="0.01" defaultValue={row.feePercent ?? ''} /></td>
-                <td><input form={`split-rule-${row.categoryType}-${row.id}`} className="form-control form-control-sm" name="min_order_sum_override" type="number" min={1000} defaultValue={row.minOrderSumOverride ?? ''} /></td>
-                <td><input form={`split-rule-${row.categoryType}-${row.id}`} className="form-control form-control-sm" name="max_order_sum_override" type="number" min={1000} defaultValue={row.maxOrderSumOverride ?? ''} /></td>
-                <td><input form={`split-rule-${row.categoryType}-${row.id}`} className="form-control form-control-sm" name="upfront_percent_override" type="number" min={1} max={25} defaultValue={row.upfrontPercentOverride ?? ''} /></td>
                 <td>
                   <form id={`split-rule-${row.categoryType}-${row.id}`} onSubmit={(event) => submitRule(event, actionUrl)} className="d-inline">
                     <input type="hidden" name="category_type" value={row.categoryType} />
                     <input type="hidden" name="category_id" value={row.id} />
-                    <button className="btn btn-sm btn-light me-2"><i className="bi bi-check2"></i></button>
+                    <button className="btn btn-sm btn-light me-2" title="Saqlash"><i className="bi bi-check2"></i></button>
                   </form>
-                  {row.destroyUrl ? <button className="btn btn-sm btn-light text-danger" onClick={() => resetRule(row.destroyUrl)}><i className="bi bi-trash"></i></button> : null}
+                  {row.destroyUrl ? <button className="btn btn-sm btn-light text-danger" title="Qoidani o'chirish" onClick={() => resetRule(row.destroyUrl)}><i className="bi bi-trash"></i></button> : null}
                 </td>
               </tr>
             ))}
-            {rows.length === 0 ? <tr><td colSpan={7} className="text-center text-muted py-5">Kategoriya topilmadi</td></tr> : null}
+            {rows.length === 0 ? <tr><td colSpan={3} className="text-center text-muted py-5">Kategoriya topilmadi</td></tr> : null}
           </tbody>
         </table>
       </div>

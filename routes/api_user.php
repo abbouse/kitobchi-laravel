@@ -28,6 +28,7 @@ Route::get('user/premium/plans', [PremiumController::class, 'plans']);
 Route::get('user/update_locale/{locale}', [UserController::class, 'updateLocale']);
 Route::get('user/by-username/{username}', [UserController::class, 'byUsername']);
 Route::get('counts', [UserController::class, 'getGlobalCounts']);
+Route::get('split-preview', [PurchaseController::class, 'splitPreview']);
 Route::get('news', [NewsController::class, 'index']);
 Route::get('blog', [NewsController::class, 'blog']);
 Route::prefix('products')->group(function () {
@@ -161,6 +162,9 @@ Route::middleware('auth:user')->group(function () {
         Route::post('details/{order_id}/pay-with-card', [PurchaseController::class, 'payPendingOrderWithSavedCard']);
         Route::post('details/{order_id}/pay-with-split', [PurchaseController::class, 'payPendingOrderWithSplit']);
         Route::get('split-offers', [PurchaseController::class, 'splitOffers']);
+        Route::get('split-limit', [PurchaseController::class, 'splitLimit']);
+        Route::get('split-contracts', [PurchaseController::class, 'mySplitContracts']);
+        Route::post('split-contracts/pay', [PurchaseController::class, 'paySplitContracts']);
         Route::post('details/{order_id}/postal-resend', [PurchaseController::class, 'createPostalResend']);
         Route::get('cancel/{orderId}', [PurchaseController::class, 'cancelOrder']);
         Route::get('cashback-history', [PurchaseController::class, 'cashbackHistory']);

@@ -93,6 +93,7 @@ interface SettlementOverview {
 interface Ord {
   id: string;
   rawId?: number;
+  splitStatus?: string | null;
   customer: string;
   user?: { name?: string; phone?: string; email?: string; url?: string } | null;
   userReputation?: {
@@ -167,6 +168,37 @@ interface Ord {
   } | null;
   paymentTransaction?: { id: number; provider?: string; providerCardId?: string; amount?: number; status?: string; date?: string } | null;
   paymentCard?: { provider?: string | null; providerCardId?: string | null; maskedNumber?: string | null; vendor?: string | null; cardName?: string | null; phone?: string | null };
+  split?: {
+    contractId: number;
+    contractNumber: string;
+    status: string;
+    planName?: string | null;
+    months: number;
+    monthlyInterestPercent: number;
+    principal: number;
+    interest: number;
+    total: number;
+    paid: number;
+    remaining: number;
+    installmentsPaid: number;
+    installmentsCount: number;
+    debitDay?: number | null;
+    nextDueAt?: string | null;
+    nextAmount?: number | null;
+    overdueSince?: string | null;
+    startsAt?: string | null;
+    closedAt?: string | null;
+    installments: Array<{
+      sequence: number;
+      amount: number;
+      dueAt?: string | null;
+      paidAt?: string | null;
+      status: string;
+      attempts: number;
+      isUpfront: boolean;
+    }>;
+    manageUrl: string;
+  } | null;
   settlementOverview?: SettlementOverview;
   courierOrder?: {
     id: number;
@@ -550,7 +582,14 @@ export default function Orders() {
                   </td>
                   <td>{order.items} dona</td>
                   <td className="fw-semibold">{fmt(order.total)} so'm</td>
-                  <td><span className="chip chip-gray">{paymentLabel(order.paymentStatus || order.payment)}</span></td>
+                  <td>
+                    <span className="chip chip-gray">{paymentLabel(order.paymentStatus || order.payment)}</span>
+                    {order.splitStatus ? (
+                      <span className={`chip ms-1 ${order.splitStatus === 'overdue' ? 'chip-danger' : 'chip-purple'}`}>
+                        Nasiya{order.splitStatus === 'overdue' ? ' !' : ''}
+                      </span>
+                    ) : null}
+                  </td>
                   <td><span className="chip chip-gray">{deliveryTypeLabel(order.deliveryType)}</span></td>
                   <td className="text-muted">{order.date}</td>
                   <td><span className={`chip ${statusChip(order.status)}`}>{statusLabel(order.status)}</span></td>
@@ -605,6 +644,77 @@ export default function Orders() {
                     <Detail label="Pochta qaytimi" value={postalReturnLabel(selectedOrd.postalReturnStatus)} />
                   </div>
                 </div>
+
+                {selectedOrd.split ? (
+                  <div className="detail-panel mt-3">
+                    <div className="d-flex justify-content-between align-items-center mb-3">
+                      <h6 className="fw-bold mb-0">
+                        <i className="bi bi-calendar-week me-1"></i>Nasiya shartnomasi
+                      </h6>
+                      <span className={`chip ${
+                        selectedOrd.split.status === 'overdue' ? 'chip-danger'
+                          : selectedOrd.split.status === 'active' ? 'chip-success'
+                          : selectedOrd.split.status === 'pending' ? 'chip-info'
+                          : selectedOrd.split.status === 'completed' ? 'chip-gray'
+                          : 'chip-warning'
+                      }`}>
+                        {selectedOrd.split.status === 'pending' ? 'Kutilmoqda (hold)'
+                          : selectedOrd.split.status === 'active' ? 'Faol'
+                          : selectedOrd.split.status === 'overdue' ? "Muddati o'tgan"
+                          : selectedOrd.split.status === 'completed' ? 'Yopilgan'
+                          : selectedOrd.split.status === 'cancelled' ? 'Bekor qilingan'
+                          : selectedOrd.split.status}
+                      </span>
+                    </div>
+                    <div className="row g-3">
+                      <Detail label="Shartnoma" value={selectedOrd.split.contractNumber} />
+                      <Detail label="Tarif" value={selectedOrd.split.planName || `${selectedOrd.split.months} oy`} />
+                      <Detail label="Jami / To'langan" value={`${fmt(selectedOrd.split.total)} / ${fmt(selectedOrd.split.paid)} so'm`} />
+                      <Detail label="Qoldiq" value={`${fmt(selectedOrd.split.remaining)} so'm`} />
+                      <Detail label="Progress" value={`${selectedOrd.split.installmentsPaid}/${selectedOrd.split.installmentsCount} to'lov`} />
+                      {selectedOrd.split.nextDueAt ? (
+                        <Detail label="Keyingi to'lov" value={`${selectedOrd.split.nextDueAt} · ${fmt(selectedOrd.split.nextAmount || 0)} so'm`} />
+                      ) : null}
+                      {selectedOrd.split.overdueSince ? (
+                        <Detail label="Kechikish boshlanishi" value={selectedOrd.split.overdueSince} />
+                      ) : null}
+                    </div>
+                    {selectedOrd.split.installments.length > 0 ? (
+                      <div className="mt-3">
+                        <div className="text-muted small mb-2">To'lov grafigi</div>
+                        {selectedOrd.split.installments.map((inst) => (
+                          <div key={inst.sequence} className="d-flex justify-content-between align-items-center py-1 border-bottom small">
+                            <span className="text-muted">
+                              #{inst.sequence} · {inst.isUpfront ? 'Upfront' : inst.dueAt}
+                              {inst.attempts > 0 ? ` · ${inst.attempts} urinish` : ''}
+                            </span>
+                            <span>
+                              <strong>{fmt(inst.amount)}</strong>{' '}
+                              <span className={`chip ${
+                                inst.status === 'paid' ? 'chip-success'
+                                  : inst.status === 'overdue' ? 'chip-danger'
+                                  : inst.status === 'waived' ? 'chip-gray'
+                                  : inst.status === 'cancelled' ? 'chip-gray'
+                                  : 'chip-info'
+                              }`} style={{ fontSize: 11 }}>
+                                {inst.status === 'paid' ? "To'landi"
+                                  : inst.status === 'overdue' ? 'Kechikkan'
+                                  : inst.status === 'waived' ? 'Kechirilgan'
+                                  : inst.status === 'cancelled' ? 'Bekor'
+                                  : 'Kutilmoqda'}
+                              </span>
+                            </span>
+                          </div>
+                        ))}
+                        <div className="text-end mt-2">
+                          <a className="btn btn-sm btn-light" href={selectedOrd.split.manageUrl}>
+                            <i className="bi bi-box-arrow-up-right me-1"></i>Split boshqaruvida ochish
+                          </a>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
 
                 <div className="detail-panel mt-3">
                   <h6 className="fw-bold mb-3">Manzil va sovg'a</h6>

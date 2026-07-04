@@ -545,6 +545,12 @@ class PurchaseController extends Controller
             return $this->err('Bu buyurtma to\'lovni kutmayapti.', 422);
         }
 
+        // Nasiya keshbek yoki gift sertifikat bilan birga ishlatilmaydi (promokod mumkin).
+        // Klient bu holatni UI'da bloklaydi — bu server tomonidagi qattiq himoya.
+        if ((int) ($order->cashbackAmount ?? 0) > 0 || filled($order->gift_certificate_id)) {
+            return $this->err('Keshbek yoki sertifikat ishlatilgan buyurtmani nasiyaga rasmiylashtirib bo\'lmaydi.', 422);
+        }
+
         /** @var UserCard|null $card */
         $card = $user->cards()
             ->where('id', (int) $request->card_id)
@@ -580,6 +586,276 @@ class PurchaseController extends Controller
         } catch (\Throwable $e) {
             return $this->err($e->getMessage(), 422);
         }
+    }
+
+    /**
+     * Mahsulot sahifasi uchun PUBLIC nasiya preview (auth talab qilinmaydi).
+     * Faqat hisob-kitob: tariflar va jadval — eligibility/limit tekshirilmaydi,
+     * rasmiylashtirish baribir checkoutda to'liq tekshiruvdan o'tadi.
+     */
+    public function splitPreview(Request $request)
+    {
+        $data = $request->validate([
+            'amount' => 'required|integer|min:1000',
+        ]);
+
+        $disabled = ['status' => 'success', 'data' => ['enabled' => false, 'plans' => []]];
+
+        if (! Schema::hasTable('split_plans')) {
+            return response()->json($disabled);
+        }
+
+        $splitService = app(\App\Services\SplitProfileService::class);
+        $settings = $splitService->settings();
+
+        if (! $settings['enabled'] || ! $settings['public_enabled']) {
+            return response()->json($disabled);
+        }
+
+        $amount = (int) $data['amount'];
+        $scheduleService = app(\App\Services\SplitScheduleService::class);
+
+        $plans = \App\Models\SplitPlan::query()
+            ->where('enabled', true)
+            ->orderBy('sort_order')
+            ->orderBy('months')
+            ->get()
+            ->filter(function (\App\Models\SplitPlan $plan) use ($amount) {
+                $minSum = $plan->min_order_sum !== null ? (int) $plan->min_order_sum : 1000;
+                $maxSum = $plan->max_order_sum !== null ? (int) $plan->max_order_sum : PHP_INT_MAX;
+
+                return $amount >= $minSum && $amount <= $maxSum;
+            })
+            ->map(function (\App\Models\SplitPlan $plan) use ($scheduleService, $amount) {
+                $schedule = $scheduleService->calculate($plan, $amount);
+
+                return [
+                    'id' => $plan->id,
+                    'months' => (int) $plan->months,
+                    'period_unit' => $plan->period_unit,
+                    'period_every' => (int) $plan->period_every,
+                    'monthly_interest_percent' => (float) $plan->monthly_interest_percent,
+                    'total_interest_percent' => $plan->totalInterestPercent(),
+                    'installments_count' => (int) $schedule['installments_count'],
+                    'interest' => (int) $schedule['interest'],
+                    'total' => (int) $schedule['total'],
+                    'first_payment' => (int) $schedule['installments'][0]['amount'],
+                    'regular_payment' => count($schedule['installments']) > 1
+                        ? (int) $schedule['installments'][1]['amount']
+                        : (int) $schedule['installments'][0]['amount'],
+                ];
+            })
+            ->values();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'enabled' => $plans->isNotEmpty(),
+                'plans' => $plans,
+            ],
+        ]);
+    }
+
+    /**
+     * Profil banneri uchun yengil endpoint: nasiya limiti.
+     * Og'ir refresh qilinmaydi — keshlangan profil o'qiladi.
+     */
+    public function splitLimit()
+    {
+        $user = Auth::guard('user')->user();
+        if (! $user) {
+            return $this->err('Foydalanuvchi topilmadi!', 401);
+        }
+
+        $disabled = ['status' => 'success', 'data' => ['enabled' => false, 'eligible' => false, 'available_limit' => 0]];
+
+        if (! Schema::hasTable('split_user_profiles')) {
+            return response()->json($disabled);
+        }
+
+        $splitService = app(\App\Services\SplitProfileService::class);
+        $settings = $splitService->settings();
+        if (! $settings['enabled'] || ! $settings['public_enabled']) {
+            return response()->json($disabled);
+        }
+
+        $profile = \App\Models\SplitUserProfile::query()->where('user_id', $user->id)->first();
+
+        // Profil hali hisoblanmagan yoki eskirgan bo'lsa — shu yerda hisoblab olamiz
+        // (aks holda cron ishlamaguncha user limitini ko'rmaydi).
+        if (! $profile || ! $profile->last_refreshed_at || $profile->last_refreshed_at->lt(now()->subDay())) {
+            try {
+                $fresh = $splitService->refreshUser($user, true);
+
+                return response()->json([
+                    'status' => 'success',
+                    'data' => [
+                        'enabled' => true,
+                        'eligible' => (bool) $fresh['eligible'],
+                        'available_limit' => (int) $fresh['available_limit'],
+                        'computed_limit' => (int) $fresh['computed_limit'],
+                    ],
+                ]);
+            } catch (\Throwable $e) {
+                Log::warning('[Split] Limit refresh failed', [
+                    'user_id' => $user->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'enabled' => true,
+                'eligible' => (bool) ($profile?->eligible ?? false),
+                'available_limit' => (int) ($profile?->available_limit ?? 0),
+                'computed_limit' => (int) ($profile?->computed_limit ?? 0),
+            ],
+        ]);
+    }
+
+    /**
+     * "Mening nasiyalarim" — userning split shartnomalari, grafigi va
+     * "hozir to'lasangiz" kotirovkasi bilan.
+     */
+    public function mySplitContracts()
+    {
+        $user = Auth::guard('user')->user();
+        if (! $user) {
+            return $this->err('Foydalanuvchi topilmadi!', 401);
+        }
+
+        if (! Schema::hasTable('split_contracts')) {
+            return response()->json(['status' => 'success', 'data' => ['contracts' => []]]);
+        }
+
+        $contractService = app(\App\Services\SplitContractService::class);
+
+        $contracts = \App\Models\SplitContract::query()
+            ->with(['installments', 'plan:id,name'])
+            ->where('user_id', $user->id)
+            ->orderByDesc('id')
+            ->limit(50)
+            ->get()
+            ->map(function (\App\Models\SplitContract $contract) use ($contractService) {
+                $isOpen = in_array($contract->status, ['active', 'overdue'], true);
+                $hasInterest = (float) $contract->monthly_interest_percent > 0
+                    && (int) $contract->interest_amount > 0;
+
+                $payoffNow = null;
+                if ($isOpen) {
+                    $payoffNow = $hasInterest
+                        ? (int) $contractService->payoffQuote($contract)['payoff']
+                        : (int) $contract->remaining_amount;
+                }
+
+                $nextInstallment = $contract->installments
+                    ->whereIn('status', ['pending', 'overdue'])
+                    ->sortBy('sequence')
+                    ->first();
+
+                return [
+                    'id' => $contract->id,
+                    'contract_number' => 'N-'.str_pad((string) $contract->id, 5, '0', STR_PAD_LEFT),
+                    'status' => $contract->status,
+                    'plan_name' => $contract->plan?->name,
+                    'months' => (int) $contract->months,
+                    'order_id' => $contract->order_id,
+                    'total' => (int) $contract->total_amount,
+                    'paid' => (int) $contract->paid_amount,
+                    'remaining' => (int) $contract->remaining_amount,
+                    'has_interest' => $hasInterest,
+                    'monthly_interest_percent' => (float) $contract->monthly_interest_percent,
+                    'payable' => $isOpen,
+                    'payoff_now' => $payoffNow,
+                    'next_due_date' => optional($nextInstallment?->due_at)->format('Y-m-d'),
+                    'next_amount' => $nextInstallment
+                        ? max(0, (int) $nextInstallment->amount - (int) $nextInstallment->paid_amount)
+                        : null,
+                    'starts_at' => optional($contract->starts_at)->format('Y-m-d'),
+                    'installments_paid' => $contract->installments->where('status', 'paid')->count(),
+                    'installments_count' => (int) $contract->installments_count,
+                    'installments' => $contract->installments->map(fn ($installment) => [
+                        'sequence' => (int) $installment->sequence,
+                        'amount' => (int) $installment->amount,
+                        'due_date' => optional($installment->due_at)->format('Y-m-d'),
+                        'paid_at' => optional($installment->paid_at)->format('Y-m-d'),
+                        'status' => $installment->status,
+                        'is_upfront' => (bool) $installment->is_upfront,
+                    ])->values(),
+                ];
+            })
+            ->values();
+
+        return response()->json(['status' => 'success', 'data' => ['contracts' => $contracts]]);
+    }
+
+    /**
+     * Tanlangan shartnomalarni tanlangan kartadan to'liq yopish.
+     * Foizli shartnomada hali kelmagan oylar foizsiz hisoblanadi (erta yopish).
+     */
+    public function paySplitContracts(Request $request)
+    {
+        $request->validate([
+            'contract_ids' => 'required|array|min:1|max:10',
+            'contract_ids.*' => 'integer|min:1',
+            'card_id' => 'required|integer|min:1',
+        ]);
+
+        $user = Auth::guard('user')->user();
+        if (! $user) {
+            return $this->err('Foydalanuvchi topilmadi!', 401);
+        }
+
+        /** @var UserCard|null $card */
+        $card = $user->cards()
+            ->where('id', (int) $request->card_id)
+            ->where('is_verified', true)
+            ->first();
+
+        if (! $card) {
+            return $this->err('Karta topilmadi!', 404);
+        }
+
+        $contractService = app(\App\Services\SplitContractService::class);
+
+        $paidContracts = [];
+        $failed = [];
+        $totalCharged = 0;
+
+        foreach (array_unique($request->input('contract_ids')) as $contractId) {
+            $contract = \App\Models\SplitContract::query()
+                ->where('user_id', $user->id)
+                ->whereIn('status', ['active', 'overdue'])
+                ->find((int) $contractId);
+
+            if (! $contract) {
+                $failed[] = ['id' => (int) $contractId, 'error' => 'Shartnoma topilmadi yoki yopib bo\'lmaydi.'];
+
+                continue;
+            }
+
+            try {
+                $quote = $contractService->settleEarly($contract, $card);
+                $paidContracts[] = (int) $contractId;
+                $totalCharged += (int) $quote['payoff'];
+            } catch (\Throwable $e) {
+                $failed[] = ['id' => (int) $contractId, 'error' => $e->getMessage()];
+            }
+        }
+
+        return response()->json([
+            'status' => $paidContracts !== [] ? 'success' : 'error',
+            'message' => $paidContracts !== []
+                ? count($paidContracts)." ta nasiya yopildi."
+                : ($failed[0]['error'] ?? 'To\'lov amalga oshmadi.'),
+            'data' => [
+                'paid_contract_ids' => $paidContracts,
+                'failed' => $failed,
+                'total_charged' => $totalCharged,
+            ],
+        ]);
     }
 
     // =========================================================================

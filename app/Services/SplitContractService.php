@@ -61,6 +61,7 @@ class SplitContractService
         $this->assertPlanUsable($plan, $principal);
         $this->assertUserEligible($user, $plan, $principal);
         $this->assertCardUsable($user, $card);
+        $this->assertOrderCategoriesAllowed($order);
 
         if (SplitContract::query()->where('order_id', $order->id)->whereIn('status', [
             SplitContract::STATUS_PENDING,
@@ -552,15 +553,13 @@ class SplitContractService
     }
 
     /**
-     * Muddatidan oldin to'liq yopish: faqat o'tgan oylar ustamasi olinadi,
-     * qolgan ustama kechiriladi (startap uslubidagi adolatli early payoff).
+     * Erta yopish kotirovkasi: muddati kelgan oylar ustamasi bilan, hali
+     * kelmagan oylar esa foizsiz (faqat asosiy summa).
+     *
+     * @return array{payoff:int, earned_interest:int, waived_interest:int, elapsed_months:int}
      */
-    public function settleEarly(SplitContract $contract): array
+    public function payoffQuote(SplitContract $contract): array
     {
-        if (! in_array($contract->status, [SplitContract::STATUS_ACTIVE, SplitContract::STATUS_OVERDUE], true)) {
-            throw new RuntimeException('Faqat faol shartnomani muddatidan oldin yopish mumkin.');
-        }
-
         // paid_amount ichida xizmat haqlari (yetkazish + packaging) ham bor —
         // kredit qismini toza ajratamiz, aks holda payoff sun'iy kichik chiqadi.
         $serviceFees = max(0, (int) data_get(
@@ -569,21 +568,45 @@ class SplitContractService
             (int) data_get($contract->meta, 'delivery_fee', 0),
         ));
 
-        $quote = $this->scheduleService->earlyPayoffQuote(
+        return $this->scheduleService->earlyPayoffQuote(
             (int) $contract->principal_amount,
             (float) $contract->monthly_interest_percent,
             (int) $contract->months,
             $contract->starts_at,
             max(0, (int) $contract->paid_amount - $serviceFees),
         );
+    }
+
+    /**
+     * Muddatidan oldin to'liq yopish: faqat o'tgan oylar ustamasi olinadi,
+     * qolgan ustama kechiriladi (startap uslubidagi adolatli early payoff).
+     * $card berilmasa default verified karta ishlatiladi.
+     */
+    public function settleEarly(SplitContract $contract, ?UserCard $card = null): array
+    {
+        if (! in_array($contract->status, [SplitContract::STATUS_ACTIVE, SplitContract::STATUS_OVERDUE], true)) {
+            throw new RuntimeException('Faqat faol shartnomani muddatidan oldin yopish mumkin.');
+        }
+
+        $serviceFees = max(0, (int) data_get(
+            $contract->meta,
+            'service_fees',
+            (int) data_get($contract->meta, 'delivery_fee', 0),
+        ));
+
+        $quote = $this->payoffQuote($contract);
 
         $user = $contract->user;
         if (! $user) {
             throw new RuntimeException('Shartnoma foydalanuvchisi topilmadi.');
         }
 
+        if ($card !== null) {
+            $this->assertCardUsable($user, $card);
+        }
+
         if ($quote['payoff'] > 0) {
-            $card = UserCard::query()
+            $card ??= UserCard::query()
                 ->where('user_id', $user->id)
                 ->where('is_verified', true)
                 ->whereNotNull('provider_card_id')
@@ -879,6 +902,92 @@ class SplitContractService
 
         if ($principal > (int) $profile['available_limit']) {
             throw new RuntimeException('Buyurtma summasi bo\'sh limitdan katta.');
+        }
+    }
+
+    /**
+     * Kategoriya allowlist tekshiruvi.
+     * Hech bitta kategoriya yoqilmagan bo'lsa — cheklov yo'q (sozlanmagan holat).
+     * Kamida bittasi yoqilgan bo'lsa — buyurtmadagi HAR BIR mahsulot kategoriyasi
+     * ruxsat etilgan bo'lishi shart.
+     */
+    private function assertOrderCategoriesAllowed(Sold $order): void
+    {
+        if (! Schema::hasTable('split_category_rules')) {
+            return;
+        }
+
+        $hasEnabledRules = \App\Models\SplitCategoryRule::query()->where('enabled', true)->exists();
+        if (! $hasEnabledRules) {
+            return;
+        }
+
+        // Itemlar: seller_order_items aniqroq manba, bo'lmasa order items json
+        $items = Schema::hasTable('seller_order_items')
+            ? DB::table('seller_order_items')
+                ->where('order_id', $order->id)
+                ->whereNull('cancelled_at')
+                ->get(['product_id', 'type'])
+            : collect();
+
+        if ($items->isEmpty()) {
+            $items = collect($order->items ?? [])->map(fn ($item) => (object) [
+                'product_id' => (int) (((array) $item)['item_id'] ?? 0),
+                'type' => (string) (((array) $item)['type'] ?? ''),
+            ]);
+        }
+
+        $bookIds = [];
+        $stationeryIds = [];
+
+        foreach ($items as $item) {
+            $type = strtolower((string) $item->type);
+            $productId = (int) $item->product_id;
+
+            if ($productId <= 0 || $type === 'gift') {
+                continue; // 0 so'mlik sovg'alar tekshirilmaydi
+            }
+
+            if (str_contains($type, 'stationer')) {
+                $stationeryIds[] = $productId;
+            } else {
+                $bookIds[] = $productId;
+            }
+        }
+
+        $allowedBookCategories = \App\Models\SplitCategoryRule::query()
+            ->where('category_type', 'book')
+            ->where('enabled', true)
+            ->pluck('category_id')
+            ->flip();
+        $allowedStationeryCategories = \App\Models\SplitCategoryRule::query()
+            ->where('category_type', 'stationery')
+            ->where('enabled', true)
+            ->pluck('category_id')
+            ->flip();
+
+        if ($bookIds !== []) {
+            $bookCategories = DB::table('books')
+                ->whereIn('id', array_unique($bookIds))
+                ->pluck('category_id', 'id');
+
+            foreach ($bookCategories as $categoryId) {
+                if (! $allowedBookCategories->has((int) $categoryId)) {
+                    throw new RuntimeException('Buyurtmadagi ayrim mahsulotlar kategoriyasi nasiyaga ruxsat etilmagan.');
+                }
+            }
+        }
+
+        if ($stationeryIds !== []) {
+            $stationeryCategories = DB::table('stationeries')
+                ->whereIn('id', array_unique($stationeryIds))
+                ->pluck('category_id', 'id');
+
+            foreach ($stationeryCategories as $categoryId) {
+                if (! $allowedStationeryCategories->has((int) $categoryId)) {
+                    throw new RuntimeException('Buyurtmadagi ayrim mahsulotlar kategoriyasi nasiyaga ruxsat etilmagan.');
+                }
+            }
         }
     }
 

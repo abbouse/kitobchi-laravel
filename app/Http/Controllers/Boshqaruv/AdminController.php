@@ -253,23 +253,13 @@ class AdminController extends Controller
 
     public function storeSplitCategoryRule(Request $request): \Illuminate\Http\RedirectResponse
     {
+        // Kategoriya darajasida faqat ruxsat/taqiq — summa/foiz sozlamalari
+        // tarif (plan) darajasida boshqariladi.
         $data = $request->validate([
             'category_type' => 'required|in:book,stationery',
             'category_id' => 'required|integer|min:1',
             'enabled' => 'nullable|boolean',
-            'fee_percent' => 'nullable|numeric|min:0|max:30',
-            'min_order_sum_override' => 'nullable|integer|min:1000',
-            'max_order_sum_override' => 'nullable|integer|min:1000',
-            'upfront_percent_override' => 'nullable|integer|min:1|max:25',
         ]);
-
-        if (
-            filled($data['min_order_sum_override'] ?? null)
-            && filled($data['max_order_sum_override'] ?? null)
-            && (int) $data['max_order_sum_override'] < (int) $data['min_order_sum_override']
-        ) {
-            return back()->with('error', "Kategoriya uchun maksimal summa minimal summadan kichik bo'lishi mumkin emas.");
-        }
 
         SplitCategoryRule::query()->updateOrCreate(
             [
@@ -278,10 +268,10 @@ class AdminController extends Controller
             ],
             [
                 'enabled' => $request->boolean('enabled'),
-                'fee_percent' => filled($data['fee_percent'] ?? null) ? round((float) $data['fee_percent'], 2) : null,
-                'min_order_sum_override' => $data['min_order_sum_override'] ?? null,
-                'max_order_sum_override' => $data['max_order_sum_override'] ?? null,
-                'upfront_percent_override' => $data['upfront_percent_override'] ?? null,
+                'fee_percent' => null,
+                'min_order_sum_override' => null,
+                'max_order_sum_override' => null,
+                'upfront_percent_override' => null,
             ],
         );
 
@@ -3960,8 +3950,17 @@ PROMPT;
 
         $orders = $query->latest()->paginate(25, ['*'], 'orders_page')->withQueryString();
 
+        // Nasiya buyurtmalarini ro'yxatda belgilash uchun (bitta batch so'rov, N+1 emas)
+        $splitByOrder = Schema::hasTable('split_contracts')
+            ? SplitContract::query()
+                ->whereIn('order_id', $orders->getCollection()->pluck('id'))
+                ->where('status', '!=', 'cancelled')
+                ->get(['order_id', 'status'])
+                ->keyBy('order_id')
+            : collect();
+
         return [
-            'orders' => $orders->getCollection()->map(fn (Sold $order) => $this->orderSummaryPayload($order))->values()->all(),
+            'orders' => $orders->getCollection()->map(fn (Sold $order) => $this->orderSummaryPayload($order, $splitByOrder))->values()->all(),
             'orderPagination' => $this->paginationMeta($orders),
             'orderCounts' => [
                 'all' => Sold::query()->count(),
@@ -3994,12 +3993,23 @@ PROMPT;
         return (int) $query->count();
     }
 
-    private function orderSummaryPayload(Sold $order): array
+    private function orderSummaryPayload(Sold $order, $splitByOrder = null): array
     {
         $paymentStatus = PaymentStatusCode::fromLegacy($order->payment_status_code ?? $order->paymentStatus);
         $deliveryType = Sold::normalizeDeliveryTypeValue($order->deliveryType);
 
+        $splitStatus = null;
+        if ($splitByOrder !== null) {
+            $splitStatus = $splitByOrder->get($order->id)?->status;
+        } elseif (Schema::hasTable('split_contracts')) {
+            $splitStatus = SplitContract::query()
+                ->where('order_id', $order->id)
+                ->where('status', '!=', 'cancelled')
+                ->value('status');
+        }
+
         return [
+            'splitStatus' => $splitStatus,
             'id' => '#'.$order->id,
             'rawId' => $order->id,
             'customer' => trim(($order->user?->name ?? '').' '.($order->user?->lastname ?? '')) ?: 'Mijoz',
@@ -7233,6 +7243,64 @@ PROMPT;
         ];
     }
 
+    /**
+     * Order detail uchun nasiya shartnomasi bloki (bo'lmasa null).
+     * Bekor qilingan shartnoma ham ko'rsatiladi — shaffoflik uchun.
+     */
+    private function orderSplitDetailPayload(Sold $order): ?array
+    {
+        if (! Schema::hasTable('split_contracts')) {
+            return null;
+        }
+
+        $contract = SplitContract::query()
+            ->with(['plan:id,name', 'installments'])
+            ->where('order_id', $order->id)
+            ->latest('id')
+            ->first();
+
+        if (! $contract) {
+            return null;
+        }
+
+        $nextInstallment = $contract->installments
+            ->whereIn('status', [SplitInstallment::STATUS_PENDING, SplitInstallment::STATUS_OVERDUE])
+            ->sortBy('sequence')
+            ->first();
+
+        return [
+            'contractId' => $contract->id,
+            'contractNumber' => 'N-'.str_pad((string) $contract->id, 5, '0', STR_PAD_LEFT),
+            'status' => $contract->status,
+            'planName' => $contract->plan?->name,
+            'months' => (int) $contract->months,
+            'monthlyInterestPercent' => (float) $contract->monthly_interest_percent,
+            'principal' => (int) $contract->principal_amount,
+            'interest' => (int) $contract->interest_amount,
+            'total' => (int) $contract->total_amount,
+            'paid' => (int) $contract->paid_amount,
+            'remaining' => (int) $contract->remaining_amount,
+            'installmentsPaid' => $contract->installments->where('status', SplitInstallment::STATUS_PAID)->count(),
+            'installmentsCount' => (int) $contract->installments_count,
+            'debitDay' => $contract->debit_day,
+            'nextDueAt' => optional($nextInstallment?->due_at)->format('Y-m-d'),
+            'nextAmount' => $nextInstallment ? (int) $nextInstallment->amount : null,
+            'overdueSince' => optional($contract->overdue_since)->format('Y-m-d'),
+            'startsAt' => optional($contract->starts_at)->format('Y-m-d'),
+            'closedAt' => optional($contract->closed_at)->format('Y-m-d'),
+            'installments' => $contract->installments->map(fn (SplitInstallment $installment) => [
+                'sequence' => (int) $installment->sequence,
+                'amount' => (int) $installment->amount,
+                'dueAt' => optional($installment->due_at)->format('Y-m-d'),
+                'paidAt' => optional($installment->paid_at)->format('Y-m-d'),
+                'status' => $installment->status,
+                'attempts' => (int) $installment->attempt_count,
+                'isUpfront' => (bool) $installment->is_upfront,
+            ])->values()->all(),
+            'manageUrl' => route('boshqaruv.split'),
+        ];
+    }
+
     private function splitPlansPayload(): array
     {
         if (! Schema::hasTable('split_plans')) {
@@ -7424,10 +7492,6 @@ PROMPT;
                 'name' => $category->name_uz ?: $category->name_ru ?: $category->name_en ?: "Kategoriya #{$category->id}",
                 'active' => (bool) ($category->is_active ?? true),
                 'enabled' => (bool) ($rule?->enabled ?? false),
-                'feePercent' => $rule?->fee_percent !== null ? (float) $rule->fee_percent : null,
-                'minOrderSumOverride' => $rule?->min_order_sum_override,
-                'maxOrderSumOverride' => $rule?->max_order_sum_override,
-                'upfrontPercentOverride' => $rule?->upfront_percent_override,
                 'destroyUrl' => $rule ? route('boshqaruv.split.category-rules.destroy', $rule) : null,
             ];
         })->values()->all();
@@ -8851,16 +8915,28 @@ PROMPT;
                 ->get()
             : collect();
 
-        $paymentCard = null;
-        if ($paymentTransaction && filled($paymentTransaction->provider_card_id) && Schema::hasTable('user_cards')) {
-            $paymentCard = UserCard::query()
-                ->where('provider_card_id', $paymentTransaction->provider_card_id)
+        // Nasiya buyurtmasida to'lov tranzaksiyasi payment_type='split' bo'ladi —
+        // karta ma'lumotini ko'rsatish uchun shu yerdan olamiz (refund logikasi
+        // esa faqat 'order' tranzaksiyasiga qaraydi, unga tegilmaydi).
+        $cardSourceTransaction = $paymentTransaction;
+        if (! $cardSourceTransaction && Schema::hasTable('transactions')) {
+            $cardSourceTransaction = Transaction::query()
+                ->where('order_id', $order->id)
+                ->where('payment_type', 'split')
+                ->latest('id')
                 ->first();
         }
-        $paymentCardSnapshot = data_get($paymentTransaction?->provider_response, 'card_snapshot', []);
+
+        $paymentCard = null;
+        if ($cardSourceTransaction && filled($cardSourceTransaction->provider_card_id) && Schema::hasTable('user_cards')) {
+            $paymentCard = UserCard::query()
+                ->where('provider_card_id', $cardSourceTransaction->provider_card_id)
+                ->first();
+        }
+        $paymentCardSnapshot = data_get($cardSourceTransaction?->provider_response, 'card_snapshot', []);
         $paymentCardView = [
-            'provider' => $paymentTransaction?->provider,
-            'providerCardId' => $paymentTransaction?->provider_card_id,
+            'provider' => $cardSourceTransaction?->provider,
+            'providerCardId' => $cardSourceTransaction?->provider_card_id,
             'maskedNumber' => $paymentCard?->card_number ?: ($paymentCardSnapshot['masked_number'] ?? null),
             'vendor' => $paymentCard?->vendor ?: ($paymentCardSnapshot['vendor'] ?? null),
             'cardName' => $paymentCard?->card_name ?: ($paymentCardSnapshot['card_name'] ?? null),
@@ -9082,6 +9158,7 @@ PROMPT;
                 'date' => $this->dateTime($paymentTransaction->created_at),
             ] : null,
             'paymentCard' => $paymentCardView,
+            'split' => $this->orderSplitDetailPayload($order),
             'settlementOverview' => $settlementOverview,
             'canRefundPayment' => (bool) $canRefundPayment,
             'refundConfirmationPhrase' => $refundConfirmationPhrase,

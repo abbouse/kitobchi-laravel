@@ -22,6 +22,7 @@ use App\Models\User;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class OrderService
 {
@@ -282,6 +283,11 @@ class OrderService
 
     public function scheduleCashbackRelease(Sold $order, ?CarbonInterface $from = null): void
     {
+        // Split buyurtmalar keshbek olmaydi — release navbatiga ham qo'yilmaydi.
+        if ($this->orderHasSplitContract($order)) {
+            return;
+        }
+
         DB::transaction(function () use ($order, $from) {
             $lockedOrder = Sold::query()->lockForUpdate()->find($order->id);
             if (! $lockedOrder) {
@@ -383,8 +389,33 @@ class OrderService
         });
     }
 
+    /**
+     * Buyurtma nasiya (split) orqali rasmiylashtirilganmi — bekor qilinganlar
+     * hisobga olinmaydi (bekor bo'lsa buyurtma oddiy statusiga qaytadi).
+     */
+    private function orderHasSplitContract(Sold $order): bool
+    {
+        static $hasTable = null;
+        $hasTable ??= Schema::hasTable('split_contracts');
+
+        if (! $hasTable) {
+            return false;
+        }
+
+        return DB::table('split_contracts')
+            ->where('order_id', $order->id)
+            ->where('status', '!=', 'cancelled')
+            ->exists();
+    }
+
     public function awardCashbackForPaidOrder(Sold $order, ?User $user = null, bool $notify = false): int
     {
+        // Nasiya (split) buyurtmalarga keshbek berilmaydi — foizsiz tarif ustiga
+        // keshbek berish ikki tomonlama marja xarajati bo'lardi.
+        if ($this->orderHasSplitContract($order)) {
+            return 0;
+        }
+
         $user ??= $order->user()->first();
         if (! $user) {
             return 0;
