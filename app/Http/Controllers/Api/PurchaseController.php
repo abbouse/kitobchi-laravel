@@ -343,7 +343,7 @@ class PurchaseController extends Controller
                     'expires_at' => $cert->expires_at?->format('d.m.Y'),
                 ]),
             'delivery_services' => $services,
-            'split' => $this->splitAvailabilityPayload($user, (int) $totalSum),
+            'split' => $this->splitAvailabilityPayload($user, (int) $totalSum, $cartItems),
         ]]);
     }
 
@@ -354,7 +354,7 @@ class PurchaseController extends Controller
     /**
      * Checkout sahifasida Nasiya tile'ini ko'rsatish kerakmi — yengil flag.
      */
-    private function splitAvailabilityPayload(User $user, int $productTotal): array
+    private function splitAvailabilityPayload(User $user, int $productTotal, $cartItems = null): array
     {
         $unavailable = ['available' => false];
 
@@ -367,6 +367,30 @@ class PurchaseController extends Controller
 
         if (! $settings['enabled'] || ! $settings['public_enabled']) {
             return $unavailable;
+        }
+
+        // Savatda taqiqlangan kategoriyali mahsulot bo'lsa Nasiya tile umuman chiqmaydi
+        // (rasmiylashtirishda baribir qattiq tekshiruv bor — bu faqat UX).
+        if ($cartItems !== null) {
+            $contractService = app(\App\Services\SplitContractService::class);
+
+            if ($contractService->hasCategoryRestrictions()) {
+                foreach ($cartItems as $item) {
+                    $product = $item->product ?? null;
+                    if (! $product) {
+                        continue;
+                    }
+
+                    $type = str_contains(strtolower((string) ($item->product_type ?? '')), 'stationer')
+                        ? 'stationery'
+                        : 'book';
+                    $categoryId = (int) ($product->category_id ?? 0);
+
+                    if (! $contractService->categoryAllowed($type, $categoryId > 0 ? $categoryId : null)) {
+                        return $unavailable;
+                    }
+                }
+            }
         }
 
         $planBounds = \App\Models\SplitPlan::query()
@@ -597,6 +621,8 @@ class PurchaseController extends Controller
     {
         $data = $request->validate([
             'amount' => 'required|integer|min:1000',
+            'product_type' => 'nullable|in:book,stationery',
+            'product_id' => 'nullable|integer|min:1',
         ]);
 
         $disabled = ['status' => 'success', 'data' => ['enabled' => false, 'plans' => []]];
@@ -610,6 +636,23 @@ class PurchaseController extends Controller
 
         if (! $settings['enabled'] || ! $settings['public_enabled']) {
             return response()->json($disabled);
+        }
+
+        // Mahsulot kategoriyasi taqiqlangan bo'lsa preview umuman ko'rinmaydi.
+        if (filled($data['product_type'] ?? null) && filled($data['product_id'] ?? null)) {
+            $productType = (string) $data['product_type'];
+            $categoryId = DB::table($productType === 'stationery' ? 'stationeries' : 'books')
+                ->where('id', (int) $data['product_id'])
+                ->value('category_id');
+
+            $categoryOk = app(\App\Services\SplitContractService::class)->categoryAllowed(
+                $productType,
+                $categoryId !== null ? (int) $categoryId : null,
+            );
+
+            if (! $categoryOk) {
+                return response()->json($disabled);
+            }
         }
 
         $amount = (int) $data['amount'];

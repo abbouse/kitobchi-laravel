@@ -96,7 +96,7 @@ class SplitContractService
         }
 
         try {
-            $contract = DB::transaction(function () use ($user, $order, $plan, $schedule, $upfrontAmount, $providerTransactionId, $holdCreate, $card, $holdMinutes) {
+            $contract = DB::transaction(function () use ($user, $order, $plan, $schedule, $upfrontAmount, $providerTransactionId, $holdCreate, $card, $holdMinutes, $deliveryFee, $packagingFee) {
                 $contract = SplitContract::query()->create([
                     'user_id' => $user->id,
                     'order_id' => $order->id,
@@ -903,6 +903,36 @@ class SplitContractService
         if ($principal > (int) $profile['available_limit']) {
             throw new RuntimeException('Buyurtma summasi bo\'sh limitdan katta.');
         }
+    }
+
+    /**
+     * Kategoriya cheklovlari umuman sozlanganmi (kamida bitta yoqilgan qoida bormi).
+     */
+    public function hasCategoryRestrictions(): bool
+    {
+        return Schema::hasTable('split_category_rules')
+            && \App\Models\SplitCategoryRule::query()->where('enabled', true)->exists();
+    }
+
+    /**
+     * Bitta kategoriya nasiyaga ruxsat etilganmi.
+     * Cheklovlar sozlanmagan bo'lsa — hamma ruxsat.
+     */
+    public function categoryAllowed(string $categoryType, ?int $categoryId): bool
+    {
+        if (! $this->hasCategoryRestrictions()) {
+            return true;
+        }
+
+        if ($categoryId === null || $categoryId <= 0) {
+            return false;
+        }
+
+        return \App\Models\SplitCategoryRule::query()
+            ->where('category_type', $categoryType)
+            ->where('category_id', $categoryId)
+            ->where('enabled', true)
+            ->exists();
     }
 
     /**
