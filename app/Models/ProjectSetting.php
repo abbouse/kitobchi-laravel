@@ -17,7 +17,7 @@ class ProjectSetting extends Model
         'telegram_login_enabled', 'telegram_client_id',
         'telegram_redirect_uri_ios', 'telegram_redirect_uri_android', 'telegram_scopes',
         // App flaglar
-        'on_premium', 'on_reels', 'ramadan', 'stop_sales',
+        'on_premium', 'on_reels', 'ramadan', 'stop_sales', 'show_home_special_sections',
         // Qadoqlash
         'packaging_price_small', 'packaging_price_large', 'packaging_threshold',
         // Marketplace moliyaviy sozlamalari
@@ -43,6 +43,7 @@ class ProjectSetting extends Model
         'on_reels'    => 'boolean',
         'ramadan'     => 'boolean',
         'stop_sales'  => 'boolean',
+        'show_home_special_sections' => 'boolean',
         'telegram_login_enabled' => 'boolean',
         'gift_certificate_options' => 'array',
         'tax_fixed_uzs'            => 'integer',

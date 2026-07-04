@@ -32,12 +32,14 @@ class CuratedCollection extends Model
         'button_bg_color',
         'button_text_color',
         'custom_total_price',
+        'festive_effect',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
         'sort_order' => 'integer',
         'custom_total_price' => 'integer',
+        'festive_effect' => 'boolean',
     ];
 
     public function items(): HasMany

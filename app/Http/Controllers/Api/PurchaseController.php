@@ -42,6 +42,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class PurchaseController extends Controller
@@ -95,6 +96,18 @@ class PurchaseController extends Controller
         }
 
         return $this->effectivePrice($cartItem->product);
+    }
+
+    private function sellerFacingCartItemUnitPrice(MyCart $cartItem): float
+    {
+        return $this->effectivePrice($cartItem->product);
+    }
+
+    private function collectionCheckoutMeta(Request $request): array
+    {
+        $meta = $request->attributes->get('collection_checkout_meta');
+
+        return is_array($meta) ? $meta : [];
     }
 
     // ── Mavjud zaxira ──────────────────────────────────────────
@@ -438,6 +451,12 @@ class PurchaseController extends Controller
 
         $this->trace('start', ['user_id' => $user->id, 'cart_ids' => $request->input('selected_cart_ids', [])]);
 
+        $collectionCheckoutMeta = $this->collectionCheckoutMeta($request);
+        $sourceCollectionId = max(0, (int) ($collectionCheckoutMeta['source_collection_id'] ?? 0));
+        $collectionDiscountAmount = max(0, (int) ($collectionCheckoutMeta['collection_discount_amount'] ?? 0));
+        $supportsCollectionDiscountAmount = Schema::hasColumn('solds', 'collectionDiscountAmount');
+        $supportsSourceCollectionId = Schema::hasColumn('solds', 'source_collection_id');
+
         DB::beginTransaction();
         try {
             // ── Cart itemlarni olish ──────────────────────────────
@@ -475,6 +494,7 @@ class PurchaseController extends Controller
 
                 $qty = $cartItem->count_item;
                 $price = $this->effectiveCartItemUnitPrice($cartItem);
+                $sellerFacingPrice = $this->sellerFacingCartItemUnitPrice($cartItem);
                 $stock = $this->availableStock($cartItem);
 
                 if ($qty > $stock) {
@@ -499,6 +519,10 @@ class PurchaseController extends Controller
                     'cover' => $image,
                 ];
 
+                if ((int) round($sellerFacingPrice) !== (int) round($price)) {
+                    $item['seller_item_price'] = (int) round($sellerFacingPrice);
+                }
+
                 if ($cartItem->product_type === 'book') {
                     $item['author'] = $product->author;
                 }
@@ -515,7 +539,7 @@ class PurchaseController extends Controller
                     'product' => $product,
                     'variant' => $variant,
                     'quantity' => $qty,
-                    'revenue' => $price * $qty,
+                    'revenue' => $sellerFacingPrice * $qty,
                     'user_id' => $user->id,
                     'type' => $cartItem->product_type,
                 ];
@@ -730,7 +754,7 @@ class PurchaseController extends Controller
             // INSERT'da SQLSTATE xatolari kelmasligi uchun aniq cast qilamiz.
             $normalizedDeliveryType = $this->resolveDeliveryType($deliveryService);
 
-            $purchase = Sold::create([
+            $purchasePayload = [
                 'user_id' => (int) $user->id,
                 'qr' => Str::random(40),
                 'items' => $allItems,
@@ -766,7 +790,7 @@ class PurchaseController extends Controller
                 'gift' => $giftId !== null ? (int) $giftId : null,
                 'buyerWish' => Str::limit(trim(strip_tags($request->input('buyerWish', ''))), 300),
                 'promocode' => $appliedPromo,
-                'discountAmount' => (int) $discountAmount,
+                'discountAmount' => (int) ($discountAmount + ($supportsCollectionDiscountAmount ? 0 : $collectionDiscountAmount)),
                 'withCashback' => (bool) ($useCashback && $cashbackUsed > 0),
                 'cashbackAmount' => (int) $cashbackUsed,
                 'gift_certificate_id' => $appliedCertId !== null ? (int) $appliedCertId : null,
@@ -778,7 +802,17 @@ class PurchaseController extends Controller
                 'recipient_name' => $request->input('recipient_name'),
                 'recipient_region' => $request->input('recipient_region'),
                 'recipient_address' => $request->input('recipient_address'),
-            ]);
+            ];
+
+            if ($supportsCollectionDiscountAmount) {
+                $purchasePayload['collectionDiscountAmount'] = $collectionDiscountAmount;
+            }
+
+            if ($supportsSourceCollectionId && $sourceCollectionId > 0) {
+                $purchasePayload['source_collection_id'] = $sourceCollectionId;
+            }
+
+            $purchase = Sold::create($purchasePayload);
             $this->trace('sold_created', ['order_id' => $purchase->id, 'amount' => $finalPrice]);
 
             $routingDecision = $this->fulfillmentRoutingService->decide(
@@ -879,7 +913,7 @@ class PurchaseController extends Controller
                 foreach ($items as $item) {
                     $product = $item->product;
                     $qty = (int) $item->count_item;
-                    $price = $this->effectiveCartItemUnitPrice($item);
+                    $price = $this->sellerFacingCartItemUnitPrice($item);
                     $sellerAmount += $price * $qty;
 
                     SellerOrderItem::create([

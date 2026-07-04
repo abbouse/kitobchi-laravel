@@ -17,6 +17,7 @@ use App\Support\ProductPayloadFormatter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 
 class ShopApiController extends Controller
@@ -225,6 +226,7 @@ class ShopApiController extends Controller
             'id' => $collection->id,
             'slug' => $collection->slug,
             'is_active' => (bool) $collection->is_active,
+            'festive_effect' => (bool) ($collection->festive_effect ?? true),
             'title' => $collection->localized('title', $locale),
             'subtitle' => $collection->localized('subtitle', $locale),
             'description' => $collection->localized('description', $locale),
@@ -262,6 +264,7 @@ class ShopApiController extends Controller
     public function info()
     {
         $locale = Auth::guard('user')->user()?->locale ?? 'uz';
+        $settings = ProjectSetting::query()->first();
 
         $mysteryPlans = MysteryBoxPlan::where('is_active', true)
             ->orderBy('sort_order')
@@ -280,6 +283,9 @@ class ShopApiController extends Controller
         return response()->json([
             'status' => 'success',
             'data'   => [
+                'ui' => [
+                    'show_special_sections' => $settings?->show_home_special_sections === null ? true : (bool) $settings->show_home_special_sections,
+                ],
                 'mystery_box' => [
                     'plans' => $mysteryPlans,
                     // Features Flutter tomonida hardcode — bu yerda faqat planlar
@@ -386,17 +392,44 @@ class ShopApiController extends Controller
             (array) ($payload['items'] ?? []),
             isset($payload['custom_total_price']) ? (int) $payload['custom_total_price'] : null,
         );
+        $cartHasPriceItem = Schema::hasTable('my_carts') && Schema::hasColumn('my_carts', 'priceItem');
+        $baseTotalPrice = (int) ($payload['base_total_price'] ?? 0);
+        $customerTotalPrice = (int) ($payload['total_price'] ?? $baseTotalPrice);
+        $collectionDiscountAmount = max(0, $baseTotalPrice - $customerTotalPrice);
+
+        $requiresCustomUnitPrice = collect($checkoutRows)->contains(function (array $item) use ($payload) {
+            $targetPrice = (int) ($item['unit_price'] ?? 0);
+            $productId = (int) ($item['product_id'] ?? 0);
+
+            $basePrice = collect((array) ($payload['items'] ?? []))
+                ->firstWhere('product_id', $productId)['price'] ?? null;
+
+            return $basePrice !== null && (int) $basePrice !== $targetPrice;
+        });
+
+        if (! $cartHasPriceItem && $requiresCustomUnitPrice) {
+            return response()->json([
+                'status' => 'error',
+                'message' => "Collection narxini hisoblash uchun server migratsiyasi kerak. Iltimos, admin migratsiyani ishga tushirsin.",
+                'error_code' => 'collection_price_item_column_missing',
+            ], 503);
+        }
 
         try {
             foreach ($checkoutRows as $item) {
-                $tempCart = MyCart::create([
+                $cartPayload = [
                     'user_id' => (int) $user->id,
                     'product_id' => (int) $item['product_id'],
                     'product_type' => 'book',
                     'variant_id' => null,
                     'count_item' => (int) $item['quantity'],
-                    'priceItem' => (int) $item['unit_price'],
-                ]);
+                ];
+
+                if ($cartHasPriceItem) {
+                    $cartPayload['priceItem'] = (int) $item['unit_price'];
+                }
+
+                $tempCart = MyCart::create($cartPayload);
 
                 $tempCartIds[] = (int) $tempCart->id;
             }
@@ -405,6 +438,10 @@ class ShopApiController extends Controller
                 'paymentStatus' => 1,
                 'deliveryservice_id' => (int) $offer['id'],
                 'selected_cart_ids' => $tempCartIds,
+            ]);
+            $checkoutRequest->attributes->set('collection_checkout_meta', [
+                'source_collection_id' => (int) $model->id,
+                'collection_discount_amount' => $collectionDiscountAmount,
             ]);
 
             /** @var PurchaseController $purchaseController */
@@ -418,12 +455,6 @@ class ShopApiController extends Controller
             }
 
             $orderId = (int) ($decoded['order_id'] ?? 0);
-            if ($orderId > 0) {
-                DB::table('solds')->where('id', $orderId)->update([
-                    'source_collection_id' => (int) $model->id,
-                ]);
-            }
-
             return response()->json([
                 'status' => 'success',
                 'message' => $decoded['message'] ?? "To'plam buyurtmasi yaratildi",

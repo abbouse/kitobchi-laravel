@@ -29,6 +29,7 @@ use App\Services\SellerOrderSettlementService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class DashboardController extends Controller
 {
@@ -318,9 +319,16 @@ class DashboardController extends Controller
         // ── FINANCIAL ─────────────────────────────────────────
         $totalDeliveryIncome = Cache::remember('dash5_fin_delivery', $ttl, fn () => (int) $paidOrders()->sum('deliveryPrice'));
         $monthDeliveryIncome = (int) $paidOrders()->whereMonth('created_at', now()->month)->sum('deliveryPrice');
+        $hasCollectionDiscountAmount = Schema::hasColumn('solds', 'collectionDiscountAmount');
         $totalPromoDiscount = Cache::remember('dash5_fin_promo', $ttl, fn () => (int) $paidOrders()->where('discountAmount', '>', 0)->sum('discountAmount'));
         $monthPromoDiscount = (int) $paidOrders()->whereMonth('created_at', now()->month)->where('discountAmount', '>', 0)->sum('discountAmount');
         $promoOrdersCount = $paidOrders()->where('discountAmount', '>', 0)->count();
+        $totalCollectionDiscount = $hasCollectionDiscountAmount
+            ? Cache::remember('dash5_fin_collection_discount', $ttl, fn () => (int) $paidOrders()->where('collectionDiscountAmount', '>', 0)->sum('collectionDiscountAmount'))
+            : 0;
+        $monthCollectionDiscount = $hasCollectionDiscountAmount
+            ? (int) $paidOrders()->whereMonth('created_at', now()->month)->where('collectionDiscountAmount', '>', 0)->sum('collectionDiscountAmount')
+            : 0;
         $totalCashbackPaid = Cache::remember('dash5_fin_cashback', $ttl, fn () => (int) $paidOrders()->where('cashbackAmount', '>', 0)->sum('cashbackAmount'));
         $monthCashbackPaid = (int) $paidOrders()->whereMonth('created_at', now()->month)->where('cashbackAmount', '>', 0)->sum('cashbackAmount');
         $totalCommissionEarned = Cache::remember('dash5_fin_comm', $ttl, fn () => (int) $this->sellerOrderIncomeQuery()->where('status', 'approved')->sum('commissionPrice'));
@@ -334,21 +342,24 @@ class DashboardController extends Controller
         $pendingCourierPayout = (int) CourierTransaction::where('status', 'pending')->sum('netAmount');
         $pendingSellerTxCount = $this->sellerPayoutQuery()->where('status', 'pending')->count();
         $pendingCourierTxCount = CourierTransaction::where('status', 'pending')->count();
-        $netRevenue = $totalRevenue - $totalPromoDiscount - $totalCashbackPaid - $totalCourierPayout + $totalDeliveryIncome;
-        $monthNetRevenue = $monthRevenue - $monthPromoDiscount - $monthCashbackPaid - $monthCourierPayout + $monthDeliveryIncome;
+        $netRevenue = $totalRevenue - $totalPromoDiscount - $totalCollectionDiscount - $totalCashbackPaid - $totalCourierPayout + $totalDeliveryIncome;
+        $monthNetRevenue = $monthRevenue - $monthPromoDiscount - $monthCollectionDiscount - $monthCashbackPaid - $monthCourierPayout + $monthDeliveryIncome;
 
-        $monthlyFinancial = Cache::remember('dash5_monthly_fin', $ttl, fn () => collect(range(5, 0))->map(function ($i) use ($paidOrders, $completedCourierOrders) {
+        $monthlyFinancial = Cache::remember('dash5_monthly_fin', $ttl, fn () => collect(range(5, 0))->map(function ($i) use ($paidOrders, $completedCourierOrders, $hasCollectionDiscountAmount) {
             $m = now()->subMonths($i);
             $mo = $m->month;
             $yr = $m->year;
             $rev = (int) $paidOrders()->whereMonth('created_at', $mo)->whereYear('created_at', $yr)->sum('amount');
             $promo = (int) $paidOrders()->whereMonth('created_at', $mo)->whereYear('created_at', $yr)->sum('discountAmount');
+            $collectionDiscount = $hasCollectionDiscountAmount
+                ? (int) $paidOrders()->whereMonth('created_at', $mo)->whereYear('created_at', $yr)->sum('collectionDiscountAmount')
+                : 0;
             $cash = (int) $paidOrders()->whereMonth('created_at', $mo)->whereYear('created_at', $yr)->sum('cashbackAmount');
             $del = (int) $paidOrders()->whereMonth('created_at', $mo)->whereYear('created_at', $yr)->sum('deliveryPrice');
             $comm = (int) SellerTransaction::where('status', 'approved')->whereMonth('created_at', $mo)->whereYear('created_at', $yr)->sum('commissionPrice');
             $cour = (int) $completedCourierOrders()->whereMonth('created_at', $mo)->whereYear('created_at', $yr)->sum('courierPrice');
 
-            return ['month' => $m->format('M'), 'revenue' => $rev, 'cost' => $promo + $cash + $cour, 'commission' => $comm + $del, 'net' => $rev - $promo - $cash - $cour + $del];
+            return ['month' => $m->format('M'), 'revenue' => $rev, 'cost' => $promo + $collectionDiscount + $cash + $cour, 'commission' => $comm + $del, 'net' => $rev - $promo - $collectionDiscount - $cash - $cour + $del];
         })
         );
 

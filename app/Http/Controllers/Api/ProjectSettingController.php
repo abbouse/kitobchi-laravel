@@ -47,6 +47,9 @@ class ProjectSettingController extends Controller
                     'redirect_uri_android' => $s->telegram_redirect_uri_android ?: 'https://app2854400165-login.tg.dev/tglogin',
                     'scopes' => $s->telegram_scopes ?: 'openid profile phone',
                 ],
+                'ui_flags' => [
+                    'show_home_special_sections' => $s->show_home_special_sections === null ? true : (bool) $s->show_home_special_sections,
+                ],
             ]],
         ], 200);
     }

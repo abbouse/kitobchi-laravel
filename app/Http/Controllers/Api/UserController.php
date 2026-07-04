@@ -983,6 +983,7 @@ class UserController extends Controller
                 'ramadan'                  => (bool) ($cfg?->ramadan     ?? false),
                 'data_required'            => $user ? (bool) $user->firstEdit  : false,
                 'stopSales'                => (bool) ($cfg?->stop_sales  ?? false),
+                'showHomeSpecialSections'  => $cfg?->show_home_special_sections === null ? true : (bool) $cfg->show_home_special_sections,
                 'packaging_price'          => $packagingPrice,
             ],
         ]);

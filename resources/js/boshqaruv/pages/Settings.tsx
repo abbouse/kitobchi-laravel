@@ -186,10 +186,12 @@ export default function Settings() {
               <div className="col-lg-6"><Toggle name="on_reels" label="Reels yoqilgan" icon="bi-play-circle-fill" defaultChecked={checked(project, 'on_reels')} /></div>
               <div className="col-lg-6"><Toggle name="ramadan" label="Ramazon rejim" icon="bi-moon-stars-fill" defaultChecked={checked(project, 'ramadan')} /></div>
               <div className="col-lg-6"><Toggle name="stop_sales" label="Savdo to'xtatilgan" icon="bi-slash-circle-fill" defaultChecked={checked(project, 'stop_sales')} /></div>
+              <div className="col-lg-6"><Toggle name="show_home_special_sections" label="Mystery box va gift section ko'rsatilsin" icon="bi-layout-text-window-reverse" defaultChecked={project.show_home_special_sections === undefined ? true : checked(project, 'show_home_special_sections')} /></div>
               <div className="col-md-4"><TextInput name="packaging_price_small" label="Kichik qadoqlash (UZS)" type="number" min={0} required defaultValue={value(project, 'packaging_price_small', '25000')} /></div>
               <div className="col-md-4"><TextInput name="packaging_price_large" label="Katta qadoqlash (UZS)" type="number" min={0} required defaultValue={value(project, 'packaging_price_large', '40000')} /></div>
               <div className="col-md-4"><TextInput name="packaging_threshold" label="Chegara (ta kitob)" type="number" min={1} required defaultValue={value(project, 'packaging_threshold', '4')} /></div>
             </div>
+            <div className="small text-muted mt-3">Agar bu flag o'chirilsa, mystery box va gift certificate sectionlari ilovada yashiriladi va top bannerlar homepage ichida ularning o'rniga tushadi.</div>
             <div className="text-end mt-3"><SaveButton /></div>
           </form>
         </SectionCard>

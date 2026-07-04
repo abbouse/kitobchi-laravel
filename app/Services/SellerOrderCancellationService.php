@@ -630,7 +630,6 @@ class SellerOrderCancellationService
                 ->get()
                 ->keyBy('seller_order_item_id');
 
-            $transaction = $this->findPaylovTransaction($order);
             $paymentStatus = PaymentStatusCode::fromLegacy($order->payment_status_code ?? $order->paymentStatus);
             $isHeldPayment = $paymentStatus === PaymentStatusCode::HELD;
             $cardRefund = $this->shouldRefundToCard($order) ? (int) $order->amount : 0;
@@ -638,16 +637,14 @@ class SellerOrderCancellationService
             $giftRestore = (int) ($order->giftCertAmount ?? 0);
             $deliveryRefund = (int) ($order->deliveryPrice ?? 0);
             $packagingRefund = (int) ($order->packaging_price ?? 0);
+            $transaction = $this->findPaylovTransaction($order);
 
             $providerPayload = null;
-            if ($cardRefund > 0) {
-                if (! $transaction) {
-                    throw new RuntimeException('Paylov tranzaksiyasi topilmadi.');
-                }
-
-                $providerPayload = PaylovService::make()->cancelPayment(
-                    (string) ($transaction->provider_transaction_id ?: $transaction->paycom_transaction_id)
-                );
+            if ($cardRefund > 0 && ! $isHeldPayment) {
+                $providerPayload = $this->partialCardRefund($order, $cardRefund, [
+                    'mode' => 'full_order',
+                    'seller_order_id' => $sellerOrder->id,
+                ]);
             }
 
             $result = $this->orderService->cancelOrder($order, strict: false);
@@ -666,7 +663,7 @@ class SellerOrderCancellationService
                 'seller_id' => $sellerOrder->seller_id,
                 'user_id' => $order->user_id,
                 'type' => 'full_order',
-                'provider' => $isHeldPayment ? 'paylov_hold_dismiss' : ($cardRefund > 0 ? 'paylov_cancel' : 'internal_only'),
+                'provider' => $isHeldPayment ? 'paylov_hold_dismiss' : ($cardRefund > 0 ? 'paylov_p2p' : 'internal_only'),
                 'card_refund_amount' => $cardRefund,
                 'cashback_restore_amount' => $cashbackRestore,
                 'gift_cert_restore_amount' => $giftRestore,

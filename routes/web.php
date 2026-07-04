@@ -86,6 +86,21 @@ Route::get('/share/cart/{slug}', function (string $slug) {
         'description' => 'Kitobchi ilovasida bu savatchani ko\'ring',
     ]);
 })->where('slug', '[A-Za-z0-9]+');
+
+Route::get('/share/collection/{slug}', function (string $slug) {
+    return view('share.redirect', [
+        'type' => 'collection',
+        'value' => $slug,
+        'appScheme' => "kitobchi://share/collection/{$slug}",
+        'title' => 'Kitobchi — To\'plam',
+        'description' => 'Kitobchi ilovasida bu to\'plamni ko\'ring',
+    ]);
+})->where('slug', '[A-Za-z0-9\-]+');
+
+Route::get('/shared-cart/{slug}', function (string $slug) {
+    return redirect("/share/cart/{$slug}", 301);
+})->where('slug', '[A-Za-z0-9]+');
+
 Route::get('/demo', function () {
     return view('demo');
 })->name('demo');

@@ -152,7 +152,8 @@ class OrderService
         $type = $item['type'] ?? 'book';
         $productId = $item['item_id'];
         $quantity = $item['count_item'];
-        $revenue = ($item['item_price'] ?? 0) * $quantity;
+        $unitRevenue = $item['seller_item_price'] ?? $item['item_price'] ?? 0;
+        $revenue = $unitRevenue * $quantity;
 
         if ($type === 'gift') {
             return;

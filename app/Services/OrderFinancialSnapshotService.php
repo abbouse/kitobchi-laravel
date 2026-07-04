@@ -55,7 +55,7 @@ class OrderFinancialSnapshotService
 
         $allocations = $this->allocateForItems(
             items: $missing,
-            promoTotal: (int) ($order->discountAmount ?? 0),
+            promoTotal: (int) (($order->discountAmount ?? 0) + ($order->collectionDiscountAmount ?? 0)),
             cashbackTotal: (int) ($order->cashbackAmount ?? 0),
             giftCertTotal: (int) ($order->giftCertAmount ?? 0),
         );

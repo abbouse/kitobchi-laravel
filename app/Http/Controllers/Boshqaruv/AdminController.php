@@ -1804,6 +1804,7 @@ PROMPT;
             'button_bg_color' => $colorRule,
             'button_text_color' => $colorRule,
             'hero_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+            'festive_effect' => ['nullable', 'boolean'],
             'items_json' => ['required', 'string'],
         ]);
 
@@ -1813,6 +1814,12 @@ PROMPT;
         $data['custom_total_price'] = filled($request->input('custom_total_price'))
             ? max(1000, (int) $request->input('custom_total_price'))
             : null;
+        // Bayramona effekt — ustun mavjud bo'lsagina saqlaymiz (migratsiya kechiksa 500 bermasin)
+        if (Schema::hasColumn('curated_collections', 'festive_effect')) {
+            $data['festive_effect'] = $request->boolean('festive_effect', true);
+        } else {
+            unset($data['festive_effect']);
+        }
         $data['gradient_from'] = strtoupper((string) $data['gradient_from']);
         $data['gradient_to'] = strtoupper((string) $data['gradient_to']);
         $data['button_bg_color'] = strtoupper((string) $data['button_bg_color']);
@@ -2381,9 +2388,11 @@ PROMPT;
                 ->when($end, fn ($builder) => $builder->where($column, '<=', $end));
         };
         $paid = fn () => $between($this->paidOrdersQuery());
+        $hasCollectionDiscountAmount = Schema::hasColumn('solds', 'collectionDiscountAmount');
         $grossRevenue = (float) $paid()->sum('amount');
         $deliveryIncome = (float) $paid()->sum('deliveryPrice');
         $promoDiscount = (float) $paid()->sum('discountAmount');
+        $collectionDiscount = $hasCollectionDiscountAmount ? (float) $paid()->sum('collectionDiscountAmount') : 0.0;
         $cashback = (float) $paid()->sum('cashbackAmount');
         $giftDiscount = Schema::hasColumn('solds', 'giftCertAmount') ? (float) $paid()->sum('giftCertAmount') : 0;
 
@@ -2429,7 +2438,7 @@ PROMPT;
             $providerTurnover = (float) $paid()->whereIn('id', $paidProviderOrderIds)->sum('amount');
         }
         $providerFee = round($providerTurnover * $providerPercent / 100, 2);
-        $contributionBeforeTax = $commission + $deliveryIncome - $promoDiscount - $cashback - $courierPayout - $manualExpenses - $providerFee;
+        $contributionBeforeTax = $commission + $deliveryIncome - $promoDiscount - $collectionDiscount - $cashback - $courierPayout - $manualExpenses - $providerFee;
         $taxMode = (string) ($settings?->tax_mode ?? 'fixed');
         $tax = $taxMode === 'profit_percent'
             ? round(max(0, $contributionBeforeTax) * (float) ($settings?->tax_profit_percent ?? 0) / 100, 2)
@@ -2442,6 +2451,7 @@ PROMPT;
             'commissionIncome' => $commissionIncome,
             'commissionReversal' => $commissionReversal,
             'promoDiscount' => $promoDiscount,
+            'collectionDiscount' => $collectionDiscount,
             'cashback' => $cashback,
             'giftDiscount' => $giftDiscount,
             'courierPayout' => $courierPayout,
@@ -5695,6 +5705,7 @@ PROMPT;
                         'id' => $collection->id,
                         'slug' => $collection->slug,
                         'isActive' => (bool) $collection->is_active,
+                        'festiveEffect' => (bool) ($collection->festive_effect ?? true),
                         'sortOrder' => (int) ($collection->sort_order ?? 0),
                         'customTotalPrice' => $collection->custom_total_price !== null ? (int) $collection->custom_total_price : null,
                         'titleUz' => $collection->title_uz,
@@ -7121,6 +7132,7 @@ PROMPT;
                 'on_reels' => (bool) $settings->on_reels,
                 'ramadan' => (bool) $settings->ramadan,
                 'stop_sales' => (bool) $settings->stop_sales,
+                'show_home_special_sections' => $settings->show_home_special_sections === null ? true : (bool) $settings->show_home_special_sections,
                 'packaging_price_small' => (int) ($settings->packaging_price_small ?? 25000),
                 'packaging_price_large' => (int) ($settings->packaging_price_large ?? 40000),
                 'packaging_threshold' => (int) ($settings->packaging_threshold ?? 4),
@@ -7919,9 +7931,14 @@ PROMPT;
 
         $rows = Cache::remember('boshqaruv.live.regions.v5.address_snapshot', now()->addMinute(), function () {
             $regions = [];
+            $hasCollectionDiscountAmount = Schema::hasColumn('solds', 'collectionDiscountAmount');
+            $selectColumns = ['id', 'address', 'recipient_region', 'amount', 'deliveryPrice', 'discountAmount', 'cashbackAmount'];
+            if ($hasCollectionDiscountAmount) {
+                $selectColumns[] = 'collectionDiscountAmount';
+            }
             $this->customerReceivedOrdersQuery()
                 ->whereNotNull('address')
-                ->select(['id', 'address', 'recipient_region', 'amount', 'deliveryPrice', 'discountAmount', 'cashbackAmount'])
+                ->select($selectColumns)
                 ->chunkById(500, function ($orders) use (&$regions) {
                     foreach ($orders as $order) {
                         $address = $this->primaryOrderAddressSnapshot($order->address ?? []);
@@ -7931,6 +7948,7 @@ PROMPT;
                         $regions[$name]['revenue'] += (float) ($order->amount ?? 0);
                         $regions[$name]['profit'] += (float) ($order->deliveryPrice ?? 0)
                             - (float) ($order->discountAmount ?? 0)
+                            - (float) ($order->collectionDiscountAmount ?? 0)
                             - (float) ($order->cashbackAmount ?? 0);
                     }
                 });
@@ -8664,7 +8682,7 @@ PROMPT;
             'total' => (float) ($order->amount ?? 0),
             'subtotal' => (float) $activeItems->sum(fn ($item) => ((float) ($item['price'] ?? 0)) * (int) ($item['quantity'] ?? 1)),
             'deliveryPrice' => (float) ($order->deliveryPrice ?? 0),
-            'discountAmount' => (float) ($order->discountAmount ?? 0),
+            'discountAmount' => (float) (($order->discountAmount ?? 0) + ($order->collectionDiscountAmount ?? 0)),
             'cashbackAmount' => (float) ($order->cashbackAmount ?? 0),
             'withCashback' => (bool) ($order->withCashback ?? false),
             'awardedCashbackAmount' => (float) ($order->awarded_cashback_amount ?? 0),

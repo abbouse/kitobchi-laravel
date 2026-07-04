@@ -20,7 +20,7 @@ class Sold extends Model
         'deliveryType', 'items', 'user_id', 'courier_id', 'courierName',
         'amount', 'status', 'address', 'qr', 'gift',
         'gift_certificate_id', 'giftCertAmount',
-        'buyerWish', 'promocode', 'discountAmount',
+        'buyerWish', 'promocode', 'discountAmount', 'collectionDiscountAmount',
         'is_instore',
         'withCashback', 'cashbackAmount',
         'awarded_cashback_amount', 'cashback_awarded_at',
@@ -63,6 +63,7 @@ class Sold extends Model
         'packaging_price' => 'integer',
         'postal_return_fee' => 'integer',
         'refund_total_amount' => 'integer',
+        'collectionDiscountAmount' => 'integer',
     ];
 
     public function getStatusCodeAttribute(?string $value): string

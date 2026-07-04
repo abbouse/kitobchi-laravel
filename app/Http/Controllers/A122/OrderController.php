@@ -197,7 +197,7 @@ class OrderController extends Controller
             'items_count' => (int) $items->sum(fn ($it) => (int) ($it['count_item'] ?? $it['count'] ?? 1)),
             'subtotal' => (float) $items->sum(fn ($it) => ((float) ($it['item_price'] ?? $it['price'] ?? 0)) * (int) ($it['count_item'] ?? $it['count'] ?? 1)),
             'delivery' => (float) ($order->deliveryPrice ?? 0),
-            'discount' => (float) ($order->discountAmount ?? 0),
+            'discount' => (float) (($order->discountAmount ?? 0) + ($order->collectionDiscountAmount ?? 0)),
             'cashback' => (float) ($order->cashbackAmount ?? 0),
         ];
         $order->status_code = $order->status_code;

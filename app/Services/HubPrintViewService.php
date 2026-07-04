@@ -83,7 +83,7 @@ class HubPrintViewService
             'items_count' => (int) $activeItems->sum('qty'),
             'subtotal' => (int) round((float) $activeItems->sum('total')),
             'delivery_amount' => (int) round((float) ($order?->deliveryPrice ?? 0)),
-            'discount_amount' => (int) round((float) ($order?->discountAmount ?? 0)),
+            'discount_amount' => (int) round((float) (($order?->discountAmount ?? 0) + ($order?->collectionDiscountAmount ?? 0))),
             'total_amount' => (int) round((float) ($order?->amount ?? 0)),
             'cancel_state_label' => $this->text($locale, 'cancelled_item_label'),
         ];

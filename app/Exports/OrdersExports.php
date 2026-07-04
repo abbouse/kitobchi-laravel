@@ -38,7 +38,7 @@ class OrdersExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSi
             $o->user?->phone_number,
             $o->amount,
             $o->deliveryPrice,
-            $o->discountAmount,
+            (int) (($o->discountAmount ?? 0) + ($o->collectionDiscountAmount ?? 0)),
             $st[$o->status] ?? $o->status,
             $py[$o->paymentStatus] ?? '—',
             $o->deliveryType,

@@ -8,6 +8,7 @@ use App\Models\CommissionSetting;
 use App\Models\DeliveryService;
 use App\Models\ProjectSetting;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class SettingsController extends Controller
 {
@@ -206,15 +207,22 @@ class SettingsController extends Controller
             'packaging_threshold'   => 'required|integer|min:1',
         ]);
 
-        $this->projectSettings()->update([
+        $settings = $this->projectSettings();
+
+        $settings->update([
             'on_premium'            => $request->boolean('on_premium'),
             'on_reels'              => $request->boolean('on_reels'),
             'ramadan'               => $request->boolean('ramadan'),
             'stop_sales'            => $request->boolean('stop_sales'),
+            'show_home_special_sections' => $request->has('show_home_special_sections')
+                ? $request->boolean('show_home_special_sections')
+                : (bool) ($settings->show_home_special_sections ?? true),
             'packaging_price_small' => $request->packaging_price_small,
             'packaging_price_large' => $request->packaging_price_large,
             'packaging_threshold'   => $request->packaging_threshold,
         ]);
+
+        Cache::forget('project_settings');
 
         return back()->with('success', 'App sozlamalari yangilandi.');
     }

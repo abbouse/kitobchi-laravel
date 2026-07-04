@@ -24,6 +24,7 @@ type CollectionRow = {
   id: number;
   slug: string;
   isActive: boolean;
+  festiveEffect?: boolean;
   sortOrder: number;
   customTotalPrice?: number | null;
   titleUz: string;
@@ -81,6 +82,7 @@ const defaultForm = {
   slug: '',
   sortOrder: 0,
   isActive: true,
+  festiveEffect: true,
   customTotalPrice: '',
   titleUz: '',
   titleRu: '',
@@ -164,6 +166,7 @@ export default function CollectionsPage() {
       slug: collection.slug,
       sortOrder: collection.sortOrder,
       isActive: collection.isActive,
+      festiveEffect: collection.festiveEffect ?? true,
       customTotalPrice: collection.customTotalPrice ? String(collection.customTotalPrice) : '',
       titleUz: collection.titleUz || '',
       titleRu: collection.titleRu || '',
@@ -359,6 +362,7 @@ export default function CollectionsPage() {
     payload.append('slug', form.slug);
     payload.append('sort_order', String(form.sortOrder || 0));
     payload.append('is_active', form.isActive ? '1' : '0');
+    payload.append('festive_effect', form.festiveEffect ? '1' : '0');
     payload.append('custom_total_price', String((form as any).customTotalPrice || ''));
     payload.append('title_uz', form.titleUz);
     payload.append('title_ru', form.titleRu);
@@ -772,8 +776,15 @@ export default function CollectionsPage() {
                     <Form.Control type="file" accept="image/*" onChange={onHeroChange} />
                     {heroPreview ? <img src={heroPreview} alt="" className="mt-2 rounded-3" style={{ maxHeight: 90 }} /> : null}
                   </div>
-                  <div className="col-12">
+                  <div className="col-12 d-flex flex-wrap gap-4">
                     <Form.Check type="switch" label="Faol" checked={form.isActive} onChange={(event) => setForm((prev) => ({ ...prev, isActive: event.target.checked }))} />
+                    <Form.Check
+                      type="switch"
+                      id="festive-effect-switch"
+                      label={<span><i className="bi bi-stars text-warning me-1"></i>Bayramona effekt (yulduzcha animatsiyasi)</span>}
+                      checked={form.festiveEffect}
+                      onChange={(event) => setForm((prev) => ({ ...prev, festiveEffect: event.target.checked }))}
+                    />
                   </div>
                 </div>
               </div>
