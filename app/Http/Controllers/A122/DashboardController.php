@@ -234,14 +234,14 @@ class DashboardController extends Controller
         // ── USERS ─────────────────────────────────────────────
         $totalUsers = Cache::remember('dash5_u_total', $ttl, fn () => User::count());
         $premiumUsers = Cache::remember('dash5_u_premium', $ttl, fn () => User::where('is_premium', true)->count());
-        $activeUsers = Cache::remember('dash5_u_active', $ttl, fn () => User::whereNull('verifyCode')->count());
-        $inactiveUsers = Cache::remember('dash5_u_inactive', $ttl, fn () => User::whereNotNull('verifyCode')->count());
+        $activeUsers = Cache::remember('dash5_u_active', $ttl, fn () => User::query()->phoneVerified()->count());
+        $inactiveUsers = Cache::remember('dash5_u_inactive', $ttl, fn () => User::query()->phoneUnverified()->count());
         $onlineUsers = Cache::remember('dash5_u_online', $hot, fn () => User::where('last_seen_at', '>=', now()->subMinutes(5))->count());
         $newUsersToday = Cache::remember('dash5_u_today', $hot, fn () => User::whereDate('created_at', today())->count());
         $newUsersWeek = Cache::remember('dash5_u_week', $ttl, fn () => User::whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])->count());
         $newUsersMonth = Cache::remember('dash5_u_month', $ttl, fn () => User::whereMonth('created_at', now()->month)->whereYear('created_at', now()->year)->count());
         $verifiedUsers = Cache::remember('dash5_u_verified', $ttl, fn () => User::where('isVerified', true)->count());
-        $isolatedUsers = Cache::remember('dash5_u_isolated', $ttl, fn () => User::whereNull('verifyCode')
+        $isolatedUsers = Cache::remember('dash5_u_isolated', $ttl, fn () => User::query()->phoneVerified()
             ->where(fn ($q) => $q->where('last_seen_at', '<=', now()->subDays(30))->orWhereNull('last_seen_at'))
             ->count()
         );

@@ -67,6 +67,9 @@ use App\Models\SellerSupportTicketMessage;
 use App\Models\SellerTransaction;
 use App\Models\Sold;
 use App\Models\SplitCategoryRule;
+use App\Models\SplitContract;
+use App\Models\SplitInstallment;
+use App\Models\SplitPlan;
 use App\Models\SplitUserProfile;
 use App\Models\Stationery;
 use App\Models\StationeryCategory;
@@ -84,7 +87,9 @@ use App\Services\PayoutReportService;
 use App\Services\SellerCancellationReasonCatalog;
 use App\Services\SellerOrderSettlementService;
 use App\Services\SellerPremiumService;
+use App\Services\SplitContractService;
 use App\Services\SplitProfileService;
+use App\Services\SplitScheduleService;
 use App\Support\AdminOrderStatusPresenter;
 use App\Support\ProductArtikul;
 use App\Support\ProductImageUrls;
@@ -294,6 +299,205 @@ class AdminController extends Controller
         $splitCategoryRule->delete();
 
         return back()->with('success', 'Kategoriya split qoidasi o‘chirildi.');
+    }
+
+    public function storeSplitPlan(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $data = $request->validate([
+            'id' => 'nullable|integer|exists:split_plans,id',
+            'name' => 'required|string|max:120',
+            'months' => 'required|integer|min:1|max:36',
+            'period_unit' => 'required|in:month,week',
+            'period_every' => 'required|integer|min:1|max:8',
+            'monthly_interest_percent' => 'required|numeric|min:0|max:30',
+            'min_order_sum' => 'nullable|integer|min:1000',
+            'max_order_sum' => 'nullable|integer|min:1000',
+            'min_confidence_score' => 'nullable|numeric|min:0|max:100',
+            'enabled' => 'nullable|boolean',
+            'sort_order' => 'nullable|integer|min:0|max:1000',
+        ]);
+
+        if (
+            filled($data['min_order_sum'] ?? null)
+            && filled($data['max_order_sum'] ?? null)
+            && (int) $data['max_order_sum'] < (int) $data['min_order_sum']
+        ) {
+            return back()->with('error', "Tarif uchun maksimal summa minimal summadan kichik bo'lishi mumkin emas.");
+        }
+
+        // Haftalik jadvalda period muddatdan oshib ketmasin (masalan, 1 oy / har 8 hafta).
+        if ($data['period_unit'] === 'week' && (int) $data['period_every'] > (int) $data['months'] * 4) {
+            return back()->with('error', "To'lov chastotasi tarif muddatidan uzun bo'lishi mumkin emas.");
+        }
+
+        if ($data['period_unit'] === 'month' && (int) $data['period_every'] > (int) $data['months']) {
+            return back()->with('error', "To'lov chastotasi tarif muddatidan uzun bo'lishi mumkin emas.");
+        }
+
+        SplitPlan::query()->updateOrCreate(
+            ['id' => $data['id'] ?? null],
+            [
+                'name' => trim($data['name']),
+                'months' => (int) $data['months'],
+                'period_unit' => $data['period_unit'],
+                'period_every' => (int) $data['period_every'],
+                'monthly_interest_percent' => round((float) $data['monthly_interest_percent'], 2),
+                'min_order_sum' => $data['min_order_sum'] ?? null,
+                'max_order_sum' => $data['max_order_sum'] ?? null,
+                'min_confidence_score' => filled($data['min_confidence_score'] ?? null)
+                    ? round((float) $data['min_confidence_score'], 2)
+                    : null,
+                'enabled' => $request->boolean('enabled'),
+                'sort_order' => (int) ($data['sort_order'] ?? 0),
+            ],
+        );
+
+        return back()->with('success', 'Split tarifi saqlandi.');
+    }
+
+    public function destroySplitPlan(SplitPlan $splitPlan): \Illuminate\Http\RedirectResponse
+    {
+        if ($splitPlan->contracts()->whereIn('status', ['pending', 'active', 'overdue'])->exists()) {
+            return back()->with('error', "Bu tarifda ochiq shartnomalar bor, o'chirish mumkin emas. Avval tarifni o'chiring (disable).");
+        }
+
+        $splitPlan->delete();
+
+        return back()->with('success', "Split tarifi o'chirildi.");
+    }
+
+    public function previewSplitPlan(Request $request, SplitScheduleService $scheduleService): JsonResponse
+    {
+        $data = $request->validate([
+            'plan_id' => 'required|integer|exists:split_plans,id',
+            'amount' => 'required|integer|min:1000',
+            'delivery_fee' => 'nullable|integer|min:0',
+        ]);
+
+        /** @var SplitPlan $plan */
+        $plan = SplitPlan::query()->findOrFail((int) $data['plan_id']);
+
+        return response()->json($scheduleService->calculate(
+            $plan,
+            (int) $data['amount'],
+            null,
+            (int) ($data['delivery_fee'] ?? 0),
+        ));
+    }
+
+    public function storeSplitContract(Request $request, SplitContractService $contractService): \Illuminate\Http\RedirectResponse
+    {
+        $data = $request->validate([
+            'user_id' => 'required|integer|exists:users,id',
+            'order_id' => 'required|integer|exists:solds,id',
+            'plan_id' => 'required|integer|exists:split_plans,id',
+        ]);
+
+        $user = User::query()->findOrFail((int) $data['user_id']);
+        $order = Sold::query()->findOrFail((int) $data['order_id']);
+        $plan = SplitPlan::query()->findOrFail((int) $data['plan_id']);
+
+        if ((int) $order->user_id !== (int) $user->id) {
+            return back()->with('error', 'Buyurtma bu foydalanuvchiga tegishli emas.');
+        }
+
+        $card = UserCard::query()
+            ->where('user_id', $user->id)
+            ->where('is_verified', true)
+            ->whereNotNull('provider_card_id')
+            ->orderByDesc('is_default')
+            ->orderBy('created_at')
+            ->first();
+
+        if (! $card) {
+            return back()->with('error', 'Foydalanuvchida yaroqli verified karta topilmadi.');
+        }
+
+        try {
+            $contract = $contractService->openContractForOrder($user, $order, $plan, $card);
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Split ochilmadi: '.$e->getMessage());
+        }
+
+        return back()->with('success', "Split shartnoma #{$contract->id} ochildi (1-to'lov hold qilindi).");
+    }
+
+    public function activateSplitContract(SplitContract $splitContract, SplitContractService $contractService): \Illuminate\Http\RedirectResponse
+    {
+        try {
+            $contractService->activate($splitContract);
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Faollashtirilmadi: '.$e->getMessage());
+        }
+
+        return back()->with('success', "Shartnoma #{$splitContract->id} faollashtirildi (1-to'lov yechildi).");
+    }
+
+    public function cancelSplitContract(SplitContract $splitContract, SplitContractService $contractService): \Illuminate\Http\RedirectResponse
+    {
+        try {
+            $contractService->cancelPending($splitContract, 'cancelled_by_admin');
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Bekor qilinmadi: '.$e->getMessage());
+        }
+
+        return back()->with('success', "Shartnoma #{$splitContract->id} bekor qilindi (hold qaytarildi).");
+    }
+
+    public function chargeSplitInstallment(SplitInstallment $splitInstallment, SplitContractService $contractService): \Illuminate\Http\RedirectResponse
+    {
+        try {
+            $charged = $contractService->chargeDueInstallment($splitInstallment);
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Yechilmadi: '.$e->getMessage());
+        }
+
+        return $charged
+            ? back()->with('success', "Installment #{$splitInstallment->sequence} yechildi.")
+            : back()->with('error', 'Yechish muvaffaqiyatsiz — retry rejalashtirildi yoki holat mos emas.');
+    }
+
+    public function creditSplitContract(Request $request, SplitContract $splitContract, SplitContractService $contractService): \Illuminate\Http\RedirectResponse
+    {
+        $data = $request->validate([
+            'product_amount' => 'required|integer|min:0',
+            'delivery_credit' => 'nullable|integer|min:0',
+            'reason' => 'nullable|string|max:120',
+        ]);
+
+        try {
+            $result = $contractService->applyCancellationCredit(
+                $splitContract,
+                (int) $data['product_amount'],
+                (int) ($data['delivery_credit'] ?? 0),
+                trim((string) ($data['reason'] ?? '')) ?: 'item_cancelled',
+            );
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Kredit qo\'llanmadi: '.$e->getMessage());
+        }
+
+        $applied = number_format((int) $result['applied'], 0, '.', ' ');
+        $message = "Kredit qo'llandi: {$applied} so'm kelajakdagi to'lovlardan ayirildi.";
+
+        if ((int) $result['refund_due'] > 0) {
+            $refund = number_format((int) $result['refund_due'], 0, '.', ' ');
+            $message .= " Diqqat: {$refund} so'm naqd refund talab qilinadi (ochiq to'lovlar yetmadi).";
+        }
+
+        return back()->with('success', $message);
+    }
+
+    public function settleSplitContract(SplitContract $splitContract, SplitContractService $contractService): \Illuminate\Http\RedirectResponse
+    {
+        try {
+            $quote = $contractService->settleEarly($splitContract);
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Erta yopilmadi: '.$e->getMessage());
+        }
+
+        $waived = number_format((int) $quote['waived_interest'], 0, '.', ' ');
+
+        return back()->with('success', "Shartnoma erta yopildi. Kechirilgan ustama: {$waived} so'm.");
     }
 
     public function userData(User $user): JsonResponse
@@ -2733,8 +2937,8 @@ PROMPT;
 
         match ($tab) {
             'online' => $query->where('last_seen_at', '>=', now()->subMinutes(5)),
-            'active' => $query->where('isVerified', true),
-            'pending' => $query->where(fn ($builder) => $builder->where('isVerified', false)->orWhereNull('isVerified')),
+            'active' => $query->phoneVerified(),
+            'pending' => $query->phoneUnverified(),
             'premium' => $query->where('is_premium', true),
             'buyers' => $query->whereExists(fn ($builder) => $builder->selectRaw('1')->from('solds')->whereColumn('solds.user_id', 'users.id')),
             'with_cards' => $query->whereExists(fn ($builder) => $builder->selectRaw('1')->from('user_cards')->whereColumn('user_cards.user_id', 'users.id')),
@@ -2771,10 +2975,11 @@ PROMPT;
                     'orders' => (int) ($user->orders_count ?? 0),
                     'cards' => (int) ($user->cards_count ?? 0),
                     'spent' => (float) ($user->spent_total ?? 0),
-                    'status' => $user->isBlocked() ? 'blocked' : ($user->isVerified ? 'active' : 'pending'),
+                    'status' => $user->isBlocked() ? 'blocked' : ($user->hasVerifiedPhone() ? 'active' : 'pending'),
                     'position' => $user->position ?: 'reader',
                     'staffRole' => $user->staff_role,
                     'verified' => (bool) $user->isVerified,
+                    'phoneVerified' => $user->hasVerifiedPhone(),
                     'premium' => (bool) $user->is_premium,
                     'online' => $lastSeenAt?->gte(now()->subMinutes(5)) ?? false,
                     'lastSeenAt' => $lastSeenAt?->format('Y-m-d H:i'),
@@ -2802,8 +3007,8 @@ PROMPT;
         return [
             'all' => (int) User::query()->count(),
             'online' => (int) User::query()->where('last_seen_at', '>=', now()->subMinutes(5))->count(),
-            'active' => (int) User::query()->where('isVerified', true)->count(),
-            'pending' => (int) User::query()->where(fn ($query) => $query->where('isVerified', false)->orWhereNull('isVerified'))->count(),
+            'active' => (int) User::query()->phoneVerified()->count(),
+            'pending' => (int) User::query()->phoneUnverified()->count(),
             'premium' => (int) User::query()->where('is_premium', true)->count(),
             'buyers' => (int) $buyers,
             'with_cards' => Schema::hasTable('user_cards') ? (int) UserCard::query()->distinct()->count('user_id') : 0,
@@ -2878,6 +3083,8 @@ PROMPT;
                 'roleEmoji' => $user->role_emoji,
                 'bio' => $user->bio,
                 'verified' => (bool) $user->isVerified,
+                'phoneVerified' => $user->hasVerifiedPhone(),
+                'phoneVerifiedAt' => $this->dateTime($user->phone_verified_at),
                 'premium' => (bool) $user->is_premium,
                 'premiumUntil' => $this->dateTime($user->premium_until),
                 'support' => (bool) $user->isSupport,
@@ -6988,6 +7195,9 @@ PROMPT;
         return [
             'splitSettings' => $this->splitSettingsPanelPayload($service),
             'splitSummary' => $this->splitSummaryPayload(),
+            'splitPlans' => $this->splitPlansPayload(),
+            'splitContracts' => $this->splitContractsPayload(),
+            'splitContractStats' => $this->splitContractStatsPayload(),
             'splitBookRules' => $this->splitCategoryRulesPayload('book'),
             'splitStationeryRules' => $this->splitCategoryRulesPayload('stationery'),
             'splitUsers' => $users->getCollection()->map(function (User $user) use ($profiles) {
@@ -7022,7 +7232,130 @@ PROMPT;
                 'settingsUpdateUrl' => route('boshqaruv.split.settings.update'),
                 'ruleStoreUrl' => route('boshqaruv.split.category-rules.store'),
                 'refreshUrl' => route('boshqaruv.split.refresh'),
+                'planStoreUrl' => route('boshqaruv.split.plans.store'),
+                'planPreviewUrl' => route('boshqaruv.split.plans.preview'),
+                'contractStoreUrl' => route('boshqaruv.split.contracts.store'),
             ],
+        ];
+    }
+
+    private function splitPlansPayload(): array
+    {
+        if (! Schema::hasTable('split_plans')) {
+            return [];
+        }
+
+        return SplitPlan::query()
+            ->orderBy('sort_order')
+            ->orderBy('months')
+            ->get()
+            ->map(fn (SplitPlan $plan) => [
+                'id' => $plan->id,
+                'name' => $plan->name,
+                'months' => (int) $plan->months,
+                'periodUnit' => $plan->period_unit,
+                'periodEvery' => (int) $plan->period_every,
+                'monthlyInterestPercent' => (float) $plan->monthly_interest_percent,
+                'totalInterestPercent' => $plan->totalInterestPercent(),
+                'installmentsCount' => $plan->installmentsCount(),
+                'frequencyLabel' => $plan->frequencyLabel(),
+                'minOrderSum' => $plan->min_order_sum,
+                'maxOrderSum' => $plan->max_order_sum,
+                'minConfidenceScore' => $plan->min_confidence_score !== null ? (float) $plan->min_confidence_score : null,
+                'enabled' => (bool) $plan->enabled,
+                'sortOrder' => (int) $plan->sort_order,
+                'openContracts' => Schema::hasTable('split_contracts')
+                    ? (int) $plan->contracts()->whereIn('status', ['pending', 'active', 'overdue'])->count()
+                    : 0,
+                'destroyUrl' => route('boshqaruv.split.plans.destroy', $plan),
+            ])
+            ->values()
+            ->all();
+    }
+
+    private function splitContractsPayload(): array
+    {
+        if (! Schema::hasTable('split_contracts')) {
+            return [];
+        }
+
+        $statusRank = ['overdue' => 0, 'pending' => 1, 'active' => 2, 'completed' => 3, 'defaulted' => 4, 'cancelled' => 5];
+
+        return SplitContract::query()
+            ->with(['user:id,name,lastname,phone_number', 'installments', 'plan:id,name'])
+            ->orderByDesc('id')
+            ->limit(30)
+            ->get()
+            ->sortBy(fn (SplitContract $contract) => $statusRank[$contract->status] ?? 9)
+            ->values()
+            ->map(function (SplitContract $contract) {
+                $nextInstallment = $contract->installments
+                    ->whereIn('status', [SplitInstallment::STATUS_PENDING, SplitInstallment::STATUS_OVERDUE])
+                    ->sortBy('sequence')
+                    ->first();
+
+                return [
+                    'id' => $contract->id,
+                    'orderId' => $contract->order_id,
+                    'userId' => $contract->user_id,
+                    'userName' => trim(($contract->user?->name ?? '').' '.($contract->user?->lastname ?? '')) ?: ('#'.$contract->user_id),
+                    'planName' => $contract->plan?->name ?? ($contract->months.' oy'),
+                    'status' => $contract->status,
+                    'principal' => (int) $contract->principal_amount,
+                    'interest' => (int) $contract->interest_amount,
+                    'total' => (int) $contract->total_amount,
+                    'paid' => (int) $contract->paid_amount,
+                    'remaining' => (int) $contract->remaining_amount,
+                    'installmentsPaid' => $contract->installments->where('status', SplitInstallment::STATUS_PAID)->count(),
+                    'installmentsCount' => (int) $contract->installments_count,
+                    'debitDay' => $contract->debit_day,
+                    'nextDueAt' => optional($nextInstallment?->due_at)->format('Y-m-d'),
+                    'nextAmount' => $nextInstallment ? (int) $nextInstallment->amount : null,
+                    'nextInstallmentId' => $nextInstallment?->id,
+                    'startsAt' => optional($contract->starts_at)->format('Y-m-d'),
+                    'overdueSince' => optional($contract->overdue_since)->format('Y-m-d'),
+                    'installments' => $contract->installments->map(fn (SplitInstallment $installment) => [
+                        'id' => $installment->id,
+                        'sequence' => (int) $installment->sequence,
+                        'amount' => (int) $installment->amount,
+                        'dueAt' => optional($installment->due_at)->format('Y-m-d'),
+                        'status' => $installment->status,
+                        'attempts' => (int) $installment->attempt_count,
+                        'isUpfront' => (bool) $installment->is_upfront,
+                        'chargeUrl' => route('boshqaruv.split.installments.charge', $installment),
+                    ])->values()->all(),
+                    'activateUrl' => route('boshqaruv.split.contracts.activate', $contract),
+                    'cancelUrl' => route('boshqaruv.split.contracts.cancel', $contract),
+                    'settleUrl' => route('boshqaruv.split.contracts.settle', $contract),
+                    'creditUrl' => route('boshqaruv.split.contracts.credit', $contract),
+                    'refundDue' => (int) data_get($contract->meta, 'refund_due', 0),
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    private function splitContractStatsPayload(): array
+    {
+        if (! Schema::hasTable('split_contracts')) {
+            return [
+                'active' => 0,
+                'overdue' => 0,
+                'exposure' => 0,
+                'collected30d' => 0,
+            ];
+        }
+
+        return [
+            'active' => (int) SplitContract::query()->whereIn('status', ['active', 'pending'])->count(),
+            'overdue' => (int) SplitContract::query()->where('status', 'overdue')->count(),
+            'exposure' => (int) SplitContract::query()->whereIn('status', ['active', 'overdue'])->sum('remaining_amount'),
+            'collected30d' => Schema::hasTable('split_installments')
+                ? (int) SplitInstallment::query()
+                    ->where('status', SplitInstallment::STATUS_PAID)
+                    ->where('paid_at', '>=', now()->subDays(30))
+                    ->sum('paid_amount')
+                : 0,
         ];
     }
 

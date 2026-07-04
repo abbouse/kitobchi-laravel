@@ -140,6 +140,19 @@ return Application::configure(basePath: dirname(__DIR__))
             ->timezone($tz)
             ->withoutOverlapping();
 
+        // ── Split installmentlar: kunduzi har soatda undiriladi (kechasi bezovta qilmaymiz) ──
+        $schedule->command('split:collect-installments')
+            ->hourly()
+            ->between('09:00', '21:00')
+            ->timezone($tz)
+            ->withoutOverlapping();
+
+        // ── Split to'lov eslatmasi: 2 kun oldin, ertalab ──
+        $schedule->command('split:send-payment-reminders --days=2')
+            ->dailyAt('10:30')
+            ->timezone($tz)
+            ->withoutOverlapping();
+
         $schedule->command('products:send-review-prompts')
             ->twiceDaily(11, 18)
             ->timezone($tz)

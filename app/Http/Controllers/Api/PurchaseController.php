@@ -343,7 +343,233 @@ class PurchaseController extends Controller
                     'expires_at' => $cert->expires_at?->format('d.m.Y'),
                 ]),
             'delivery_services' => $services,
+            'split' => $this->splitAvailabilityPayload($user, (int) $totalSum),
         ]]);
+    }
+
+    // =========================================================================
+    //  SPLIT (NASIYA) ENDPOINTLARI
+    // =========================================================================
+
+    /**
+     * Checkout sahifasida Nasiya tile'ini ko'rsatish kerakmi — yengil flag.
+     */
+    private function splitAvailabilityPayload(User $user, int $productTotal): array
+    {
+        $unavailable = ['available' => false];
+
+        if (! Schema::hasTable('split_plans') || ! Schema::hasTable('split_user_profiles')) {
+            return $unavailable;
+        }
+
+        $splitService = app(\App\Services\SplitProfileService::class);
+        $settings = $splitService->settings();
+
+        if (! $settings['enabled'] || ! $settings['public_enabled']) {
+            return $unavailable;
+        }
+
+        $hasPlans = \App\Models\SplitPlan::query()->where('enabled', true)->exists();
+        if (! $hasPlans) {
+            return $unavailable;
+        }
+
+        // Kesh: profil 24 soatdan yangi bo'lsa qayta hisoblamaymiz (checkout tez ochilsin).
+        $profile = \App\Models\SplitUserProfile::query()->where('user_id', $user->id)->first();
+        if (! $profile || ! $profile->last_refreshed_at || $profile->last_refreshed_at->lt(now()->subDay())) {
+            $fresh = $splitService->refreshUser($user, true);
+            $eligible = (bool) $fresh['eligible'];
+            $availableLimit = (int) $fresh['available_limit'];
+        } else {
+            $eligible = (bool) $profile->eligible;
+            $availableLimit = (int) $profile->available_limit;
+        }
+
+        if (! $eligible || $availableLimit < (int) $settings['global_min_order_sum']) {
+            return $unavailable;
+        }
+
+        return [
+            'available' => true,
+            'available_limit' => $availableLimit,
+            'min_order_sum' => (int) $settings['global_min_order_sum'],
+            'max_order_sum' => (int) $settings['global_max_order_sum'],
+            'fits' => $productTotal >= (int) $settings['global_min_order_sum']
+                && $productTotal <= min($availableLimit, (int) $settings['global_max_order_sum']),
+        ];
+    }
+
+    /**
+     * Nasiya bottomsheet uchun tariflar + aniq jadval.
+     * amount = mahsulot qismi (promo'dan keyin), delivery/packaging alohida —
+     * ular 1-to'lovga foizsiz qo'shiladi.
+     */
+    public function splitOffers(Request $request)
+    {
+        $user = Auth::guard('user')->user();
+        if (! $user) {
+            return $this->err('Foydalanuvchi topilmadi!', 401);
+        }
+
+        $data = $request->validate([
+            'amount' => 'required|integer|min:1000',
+            'delivery_fee' => 'nullable|integer|min:0',
+            'packaging_fee' => 'nullable|integer|min:0',
+        ]);
+
+        if (! Schema::hasTable('split_plans')) {
+            return $this->err('Nasiya hozircha mavjud emas.', 422);
+        }
+
+        $splitService = app(\App\Services\SplitProfileService::class);
+        $scheduleService = app(\App\Services\SplitScheduleService::class);
+        $settings = $splitService->settings();
+
+        if (! $settings['enabled'] || ! $settings['public_enabled']) {
+            return $this->err('Nasiya hozircha mavjud emas.', 422);
+        }
+
+        $amount = (int) $data['amount'];
+        $upfrontExtra = (int) ($data['delivery_fee'] ?? 0) + (int) ($data['packaging_fee'] ?? 0);
+
+        $profile = $splitService->getFreshProfile($user);
+
+        if (! $profile['eligible']) {
+            return response()->json([
+                'status' => 'success',
+                'data' => [
+                    'eligible' => false,
+                    'reason' => $profile['eligibility_reasons'][0] ?? null,
+                    'available_limit' => 0,
+                    'plans' => [],
+                ],
+            ]);
+        }
+
+        $withinLimit = $amount <= (int) $profile['available_limit'];
+
+        $plans = \App\Models\SplitPlan::query()
+            ->where('enabled', true)
+            ->orderBy('sort_order')
+            ->orderBy('months')
+            ->get()
+            ->filter(function (\App\Models\SplitPlan $plan) use ($amount, $settings, $profile) {
+                $minSum = (int) ($plan->min_order_sum ?? $settings['global_min_order_sum']);
+                $maxSum = (int) ($plan->max_order_sum ?? $settings['global_max_order_sum']);
+
+                if ($amount < $minSum || $amount > $maxSum) {
+                    return false;
+                }
+
+                if ($plan->min_confidence_score !== null
+                    && (float) $profile['confidence_score'] < (float) $plan->min_confidence_score) {
+                    return false;
+                }
+
+                return true;
+            })
+            ->map(function (\App\Models\SplitPlan $plan) use ($scheduleService, $amount, $upfrontExtra) {
+                $schedule = $scheduleService->calculate($plan, $amount, null, $upfrontExtra);
+
+                return [
+                    'id' => $plan->id,
+                    'name' => $plan->name,
+                    'months' => (int) $plan->months,
+                    'period_unit' => $plan->period_unit,
+                    'period_every' => (int) $plan->period_every,
+                    'frequency_label' => $plan->frequencyLabel(),
+                    'monthly_interest_percent' => (float) $plan->monthly_interest_percent,
+                    'total_interest_percent' => $plan->totalInterestPercent(),
+                    'installments_count' => (int) $schedule['installments_count'],
+                    'interest' => (int) $schedule['interest'],
+                    'total' => (int) $schedule['total'],
+                    'first_payment' => (int) $schedule['installments'][0]['amount'],
+                    'regular_payment' => count($schedule['installments']) > 1
+                        ? (int) $schedule['installments'][1]['amount']
+                        : (int) $schedule['installments'][0]['amount'],
+                    'installments' => array_map(fn (array $row) => [
+                        'sequence' => $row['sequence'],
+                        'amount' => $row['amount'],
+                        'due_date' => substr($row['due_at'], 0, 10),
+                        'is_upfront' => $row['is_upfront'],
+                    ], $schedule['installments']),
+                ];
+            })
+            ->values();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'eligible' => $withinLimit,
+                'reason' => $withinLimit ? null : "Buyurtma summasi nasiya limitingizdan katta.",
+                'available_limit' => (int) $profile['available_limit'],
+                'upfront_extra' => $upfrontExtra,
+                'plans' => $plans,
+            ],
+        ]);
+    }
+
+    /**
+     * Order yaratilgandan keyin (CARD_PENDING) Nasiya rasmiylashtirish:
+     * 1-installment hold qilinadi, order HELD bo'ladi, topshirilganda shartnoma faollashadi.
+     */
+    public function payPendingOrderWithSplit(Request $request, int $order_id)
+    {
+        $request->validate([
+            'card_id' => 'required|integer|min:1',
+            'plan_id' => 'required|integer|min:1',
+        ]);
+
+        $user = Auth::guard('user')->user();
+        if (! $user) {
+            return $this->err('Foydalanuvchi topilmadi!', 401);
+        }
+
+        $order = Sold::where('user_id', $user->id)->where('id', $order_id)->first();
+        if (! $order) {
+            return $this->err('Buyurtma topilmadi!', 404);
+        }
+
+        $paymentStatus = PaymentStatusCode::fromLegacy($order->payment_status_code ?? $order->paymentStatus);
+        if ($paymentStatus !== PaymentStatusCode::CARD_PENDING) {
+            return $this->err('Bu buyurtma to\'lovni kutmayapti.', 422);
+        }
+
+        /** @var UserCard|null $card */
+        $card = $user->cards()
+            ->where('id', (int) $request->card_id)
+            ->where('is_verified', true)
+            ->first();
+
+        if (! $card) {
+            return $this->err('Karta topilmadi!', 404);
+        }
+
+        $plan = \App\Models\SplitPlan::query()->where('enabled', true)->find((int) $request->plan_id);
+        if (! $plan) {
+            return $this->err('Nasiya tarifi topilmadi!', 404);
+        }
+
+        try {
+            $contract = app(\App\Services\SplitContractService::class)
+                ->openContractForOrder($user, $order, $plan, $card);
+
+            $upfront = $contract->installments()->where('is_upfront', true)->first();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => "Nasiya rasmiylashtirildi. Birinchi to'lov kartada ushlab turildi.",
+                'data' => [
+                    'contract_id' => $contract->id,
+                    'total' => (int) $contract->total_amount,
+                    'first_payment' => (int) ($upfront?->amount ?? 0),
+                    'installments_count' => (int) $contract->installments_count,
+                    'payment_status' => PaymentStatusCode::HELD->value,
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            return $this->err($e->getMessage(), 422);
+        }
     }
 
     // =========================================================================

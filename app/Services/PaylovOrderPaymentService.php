@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\PaymentStatusCode;
 use App\Models\Sold;
+use App\Models\SplitContract;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\UserCard;
@@ -11,6 +12,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use RuntimeException;
+
+// Split shartnoma xizmati shu faylda lazy (app()) chaqiriladi — circular DI oldini olish uchun.
 
 class PaylovOrderPaymentService
 {
@@ -135,6 +138,13 @@ class PaylovOrderPaymentService
             return null;
         }
 
+        // Split (Nasiya) buyurtmasi: hold faqat 1-installment uchun qo'yilgan —
+        // shartnoma faollashtiriladi, buyurtma to'langan deb belgilanadi
+        // (marketplace qolganini o'z zimmasiga oladi, keyingi to'lovlar jadval bo'yicha).
+        if ($splitContract = $this->pendingSplitContractFor($order)) {
+            return $this->settleSplitOnHandover($order, $splitContract, $amount, $reason);
+        }
+
         $transaction = $this->latestHeldTransaction($order);
         if (! $transaction || blank($transaction->provider_transaction_id)) {
             throw new RuntimeException('Hold transaction topilmadi.');
@@ -199,6 +209,13 @@ class PaylovOrderPaymentService
 
     public function dismissHeldOrder(Sold $order, string $reason = 'order_cancelled'): ?array
     {
+        // Split buyurtmasi bekor bo'lsa: shartnoma bekor, upfront hold qaytadi.
+        if ($splitContract = $this->pendingSplitContractFor($order)) {
+            app(SplitContractService::class)->cancelPending($splitContract, $reason);
+
+            return ['split_contract_id' => $splitContract->id, 'status' => 'cancelled'];
+        }
+
         $transaction = $this->latestHeldTransaction($order);
         if (! $transaction || blank($transaction->provider_transaction_id)) {
             return null;
@@ -220,6 +237,92 @@ class PaylovOrderPaymentService
         ]);
 
         return $dismissResponse;
+    }
+
+    private function pendingSplitContractFor(Sold $order): ?SplitContract
+    {
+        if (! Schema::hasTable('split_contracts')) {
+            return null;
+        }
+
+        return SplitContract::query()
+            ->where('order_id', $order->id)
+            ->where('status', SplitContract::STATUS_PENDING)
+            ->latest('id')
+            ->first();
+    }
+
+    private function settleSplitOnHandover(
+        Sold $order,
+        SplitContract $contract,
+        ?int $amount,
+        string $reason,
+    ): ?array {
+        $splitService = app(SplitContractService::class);
+        $chargeAmount = max(0, (int) ($amount ?? $order->amount));
+
+        // Hamma item bekor bo'lgan — shartnoma ham bekor, hold qaytadi.
+        if ($chargeAmount <= 0) {
+            $splitService->cancelPending($contract, 'zero_amount_after_cancellations');
+
+            return ['split_contract_id' => $contract->id, 'status' => 'cancelled'];
+        }
+
+        $contract = $splitService->activate($contract);
+
+        // Topshirishgacha qisman bekor qilishlar bo'lgan bo'lsa — farq kredit
+        // sifatida kelajakdagi to'lovlardan avtomatik ayiriladi.
+        $originalAmount = (int) $order->amount;
+        $reduction = max(0, $originalAmount - $chargeAmount);
+
+        if ($reduction > 0) {
+            try {
+                $splitService->applyCancellationCredit(
+                    $contract,
+                    min($reduction, (int) $contract->principal_amount),
+                    0,
+                    'items_cancelled_before_handover',
+                );
+            } catch (\Throwable $e) {
+                Log::error('[Split] Handover reduction credit failed', [
+                    'contract_id' => $contract->id,
+                    'reduction' => $reduction,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        DB::transaction(function () use ($order, $chargeAmount) {
+            $freshOrder = Sold::query()->lockForUpdate()->find($order->id);
+            if (! $freshOrder) {
+                throw new RuntimeException('Buyurtma topilmadi.');
+            }
+
+            if ((int) $freshOrder->amount !== $chargeAmount) {
+                $freshOrder->amount = $chargeAmount;
+                $freshOrder->save();
+            }
+
+            if (PaymentStatusCode::fromLegacy($freshOrder->payment_status_code ?? $freshOrder->paymentStatus) !== PaymentStatusCode::PAID) {
+                $user = $freshOrder->user ?: User::query()->find((int) $freshOrder->user_id);
+                if (! $user) {
+                    throw new RuntimeException('Buyurtma foydalanuvchisi topilmadi.');
+                }
+
+                $this->orderService->handleOrderPaid($freshOrder, $user, giveCashback: false);
+            }
+        });
+
+        Log::info('[Split] Order settled on handover', [
+            'order_id' => $order->id,
+            'contract_id' => $contract->id,
+            'reason' => $reason,
+        ]);
+
+        return [
+            'split_contract_id' => $contract->id,
+            'status' => 'activated',
+        ];
     }
 
     private function reconcileExistingSuccessfulPayment(

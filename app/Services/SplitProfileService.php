@@ -163,14 +163,57 @@ class SplitProfileService
 
         $activeExposure = 0;
         $activeContractCount = 0;
+        $splitHistory = [
+            'completed_contracts' => 0,
+            'defaulted_contracts' => 0,
+            'has_active_overdue' => false,
+            'installments_paid_on_time' => 0,
+            'installments_paid_late' => 0,
+        ];
 
         if (Schema::hasTable('split_contracts')) {
+            // Pending (hold bosqichi) ham limitni band qiladi — aks holda user
+            // bir vaqtda bir nechta pending split ochib limitdan oshishi mumkin.
             $query = \Illuminate\Support\Facades\DB::table('split_contracts')
                 ->where('user_id', $user->id)
-                ->whereIn('status', ['active', 'overdue']);
+                ->whereIn('status', ['pending', 'active', 'overdue']);
 
             $activeContractCount = (int) $query->count();
             $activeExposure = (int) round((float) $query->sum('remaining_amount'));
+
+            $splitHistory['completed_contracts'] = (int) \Illuminate\Support\Facades\DB::table('split_contracts')
+                ->where('user_id', $user->id)
+                ->where('status', 'completed')
+                ->count();
+
+            $splitHistory['defaulted_contracts'] = (int) \Illuminate\Support\Facades\DB::table('split_contracts')
+                ->where('user_id', $user->id)
+                ->where('status', 'defaulted')
+                ->count();
+
+            $splitHistory['has_active_overdue'] = \Illuminate\Support\Facades\DB::table('split_contracts')
+                ->where('user_id', $user->id)
+                ->where('status', 'overdue')
+                ->exists();
+        }
+
+        if (Schema::hasTable('split_installments')) {
+            $paidInstallments = \Illuminate\Support\Facades\DB::table('split_installments')
+                ->where('user_id', $user->id)
+                ->where('status', 'paid')
+                ->where('is_upfront', false)
+                ->get(['due_at', 'paid_at']);
+
+            foreach ($paidInstallments as $row) {
+                $dueAt = $this->parseDate($row->due_at);
+                $paidAt = $this->parseDate($row->paid_at);
+
+                if ($dueAt && $paidAt && $paidAt->lte($dueAt->copy()->endOfDay())) {
+                    $splitHistory['installments_paid_on_time']++;
+                } else {
+                    $splitHistory['installments_paid_late']++;
+                }
+            }
         }
 
         $reputationScore = (float) ($reputation['reputation_score'] ?? $user->reputation_score ?? 0);
@@ -186,6 +229,7 @@ class SplitProfileService
             completedAll: $completedAll,
             activeWarningCount: $activeWarningCount,
             activeContractCount: $activeContractCount,
+            splitHistory: $splitHistory,
         );
         $eligible = $reasons === [];
 
@@ -201,6 +245,7 @@ class SplitProfileService
             activeWarningCount: $activeWarningCount,
             isActiveRecently: (bool) ($lastSeenAt?->gte($now->copy()->subDays(14)) ?? false),
             codReturnStrikes: $codReturnStrikes,
+            splitHistory: $splitHistory,
         );
 
         $computedLimit = $eligible
@@ -212,6 +257,7 @@ class SplitProfileService
                 successfulCardPayments180d: $successfulCardPayments180d,
                 verifiedCardAgeDays: $verifiedCardAgeDays,
                 reputationScore: $reputationScore,
+                splitHistory: $splitHistory,
             )
             : 0;
 
@@ -244,6 +290,7 @@ class SplitProfileService
             'snapshot' => [
                 'settings' => $settings,
                 'metrics' => $reputation['metrics'] ?? [],
+                'split_history' => $splitHistory,
             ],
         ];
 
@@ -293,14 +340,23 @@ class SplitProfileService
         int $completedAll,
         int $activeWarningCount,
         int $activeContractCount,
+        array $splitHistory = [],
     ): array {
         $reasons = [];
+
+        if (! empty($splitHistory['has_active_overdue'])) {
+            $reasons[] = "Faol splitda muddati o'tgan to'lov bor.";
+        }
+
+        if ((int) ($splitHistory['defaulted_contracts'] ?? 0) > 0) {
+            $reasons[] = "Oldingi split shartnoma to'lanmay yopilgan (default).";
+        }
 
         if ($user->isBlocked()) {
             $reasons[] = 'Foydalanuvchi bloklangan.';
         }
 
-        if (! (bool) $user->isVerified) {
+        if (! $user->hasVerifiedPhone()) {
             $reasons[] = 'Foydalanuvchi akkaunti tasdiqlanmagan.';
         }
 
@@ -351,6 +407,7 @@ class SplitProfileService
         int $activeWarningCount,
         bool $isActiveRecently,
         int $codReturnStrikes,
+        array $splitHistory = [],
     ): float {
         $reputationComponent = max(0.0, min(1.0, $reputationScore / 100));
         $ordersComponent = min(1.0, log($completedAll + 1) / log(21));
@@ -378,6 +435,17 @@ class SplitProfileService
             $score -= 20;
         }
 
+        // Split to'lov tarixi — eng kuchli birinchi-qo'l signal:
+        // o'z vaqtida to'langan installmentlar va yopilgan shartnomalar ball qo'shadi,
+        // kechikishlar ayiradi.
+        $onTime = (int) ($splitHistory['installments_paid_on_time'] ?? 0);
+        $late = (int) ($splitHistory['installments_paid_late'] ?? 0);
+        $completedContracts = (int) ($splitHistory['completed_contracts'] ?? 0);
+
+        $score += min(6.0, $onTime * 1.0);
+        $score += min(4.0, $completedContracts * 2.0);
+        $score -= min(15.0, $late * 3.0);
+
         return round(max(0.0, min(100.0, $score)), 2);
     }
 
@@ -389,6 +457,7 @@ class SplitProfileService
         int $successfulCardPayments180d,
         int $verifiedCardAgeDays,
         float $reputationScore,
+        array $splitHistory = [],
     ): int {
         $limit = 0;
         $limit += min(600000, $completedAll * 35000);
@@ -397,6 +466,15 @@ class SplitProfileService
         $limit += min(250000, (int) floor($verifiedCardAgeDays / 30) * 20000);
         $limit += min(250000, max(0, (int) floor($reputationScore - $settings['min_reputation_score'])) * 10000);
         $limit += (int) round(($confidenceScore / 100) * 150000);
+
+        // Trust ladder: har bir toza yopilgan split shartnoma limitni oshiradi,
+        // kechikib to'langan installmentlar esa pasaytiradi.
+        $completedContracts = (int) ($splitHistory['completed_contracts'] ?? 0);
+        $late = (int) ($splitHistory['installments_paid_late'] ?? 0);
+
+        $limit += min(500000, $completedContracts * 125000);
+        $limit -= min(400000, $late * 100000);
+        $limit = max(0, $limit);
 
         $min = (int) $settings['global_min_limit'];
         $max = (int) $settings['global_max_limit'];

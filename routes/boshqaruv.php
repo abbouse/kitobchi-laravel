@@ -34,6 +34,15 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
         Route::put('/split/settings', [AdminController::class, 'updateSplitSettings'])->name('split.settings.update');
         Route::post('/split/category-rules', [AdminController::class, 'storeSplitCategoryRule'])->name('split.category-rules.store');
         Route::delete('/split/category-rules/{splitCategoryRule}', [AdminController::class, 'destroySplitCategoryRule'])->name('split.category-rules.destroy');
+        Route::post('/split/plans', [AdminController::class, 'storeSplitPlan'])->name('split.plans.store');
+        Route::delete('/split/plans/{splitPlan}', [AdminController::class, 'destroySplitPlan'])->name('split.plans.destroy');
+        Route::get('/split/plans/preview', [AdminController::class, 'previewSplitPlan'])->name('split.plans.preview');
+        Route::post('/split/contracts', [AdminController::class, 'storeSplitContract'])->name('split.contracts.store');
+        Route::post('/split/contracts/{splitContract}/activate', [AdminController::class, 'activateSplitContract'])->name('split.contracts.activate');
+        Route::post('/split/contracts/{splitContract}/cancel', [AdminController::class, 'cancelSplitContract'])->name('split.contracts.cancel');
+        Route::post('/split/contracts/{splitContract}/settle', [AdminController::class, 'settleSplitContract'])->name('split.contracts.settle');
+        Route::post('/split/contracts/{splitContract}/credit', [AdminController::class, 'creditSplitContract'])->name('split.contracts.credit');
+        Route::post('/split/installments/{splitInstallment}/charge', [AdminController::class, 'chargeSplitInstallment'])->name('split.installments.charge');
         Route::get('/orders', fn (AdminController $controller) => $controller->page('Orders'))->name('orders');
         Route::get('/sellers', fn (AdminController $controller) => $controller->page('SellerOrders'))->name('sellers');
         Route::get('/seller-orders', fn (AdminController $controller) => $controller->page('SellerOrders'))->name('seller-orders');

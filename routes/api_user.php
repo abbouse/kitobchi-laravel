@@ -159,6 +159,8 @@ Route::middleware('auth:user')->group(function () {
         Route::get('list', [PurchaseController::class, 'purchaseList']);
         Route::get('details/{order_id}', [PurchaseController::class, 'purchaseDetails']);
         Route::post('details/{order_id}/pay-with-card', [PurchaseController::class, 'payPendingOrderWithSavedCard']);
+        Route::post('details/{order_id}/pay-with-split', [PurchaseController::class, 'payPendingOrderWithSplit']);
+        Route::get('split-offers', [PurchaseController::class, 'splitOffers']);
         Route::post('details/{order_id}/postal-resend', [PurchaseController::class, 'createPostalResend']);
         Route::get('cancel/{orderId}', [PurchaseController::class, 'cancelOrder']);
         Route::get('cashback-history', [PurchaseController::class, 'cashbackHistory']);

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -33,6 +34,7 @@ class User extends Authenticatable
         'telegram_photo',
         'telegram_connected_at',
         'phone_number',
+        'phone_verified_at',
         'avatar',
         'status',
         'verifyCode',
@@ -71,6 +73,7 @@ class User extends Authenticatable
         'isSupport' => 'boolean',
         'firstEdit' => 'boolean',
         'telegram_connected_at' => 'datetime',
+        'phone_verified_at' => 'datetime',
         'blocked_until' => 'datetime',
         'blocked_at' => 'datetime',
         'position_earned_at' => 'datetime',
@@ -120,6 +123,21 @@ class User extends Authenticatable
     public function canUseCashOnDelivery(): bool
     {
         return (bool) ($this->cash_on_delivery_allowed ?? true);
+    }
+
+    public function hasVerifiedPhone(): bool
+    {
+        return $this->phone_verified_at !== null;
+    }
+
+    public function scopePhoneVerified(Builder $query): Builder
+    {
+        return $query->whereNotNull('phone_verified_at');
+    }
+
+    public function scopePhoneUnverified(Builder $query): Builder
+    {
+        return $query->whereNull('phone_verified_at');
     }
     
     protected static function booted()

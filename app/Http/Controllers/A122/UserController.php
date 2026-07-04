@@ -28,8 +28,8 @@ class UserController extends Controller
         $tab = $request->input('tab', 'all');
 
         match ($tab) {
-            'active' => $query->where('isVerified', true),
-            'pending' => $query->where(fn ($inner) => $inner->where('isVerified', false)->orWhereNull('isVerified')),
+            'active' => $query->phoneVerified(),
+            'pending' => $query->phoneUnverified(),
             'premium' => $query->where('is_premium', true),
             'buyers' => $query->whereIn('id', $buyersQuery),
             'with_cards' => $query->whereHas('cards'),
@@ -50,8 +50,8 @@ class UserController extends Controller
         $users = $query->latest()->paginate(20)->withQueryString();
         $counts = [
             'all' => User::count(),
-            'active' => User::where('isVerified', true)->count(),
-            'pending' => User::where(fn ($inner) => $inner->where('isVerified', false)->orWhereNull('isVerified'))->count(),
+            'active' => User::query()->phoneVerified()->count(),
+            'pending' => User::query()->phoneUnverified()->count(),
             'premium' => User::where('is_premium', true)->count(),
             'buyers' => (clone $buyersQuery)->count(),
             'with_cards' => User::whereHas('cards')->count(),
@@ -67,7 +67,7 @@ class UserController extends Controller
                 'email' => $u->email ?: '—',
                 'role' => $u->position ?: 'reader',
                 'staff_role' => $u->staff_role,
-                'status' => $u->isBlocked() ? 'blocked' : ($u->isVerified ? 'active' : 'pending'),
+                'status' => $u->isBlocked() ? 'blocked' : ($u->hasVerifiedPhone() ? 'active' : 'pending'),
                 'orders' => 0,
                 'joined' => optional($u->created_at)->format('Y-m-d'),
                 'avatar' => $u->avatar ? asset('storage/'.$u->avatar) : null,
@@ -105,7 +105,7 @@ class UserController extends Controller
     {
         if ($user->status === 'blocked' && $user->blocked_until && $user->blocked_until->isPast()) {
             $user->update([
-                'status' => $user->isVerified ? 'active' : 'pending',
+                'status' => null,
                 'blocked_until' => null,
                 'blocked_at' => null,
                 'block_reason' => null,
@@ -292,7 +292,7 @@ class UserController extends Controller
     {
         $user->update(['isVerified' => ! $user->isVerified]);
 
-        return back()->with('success', $user->isVerified ? 'Foydalanuvchi tasdiqlandi.' : 'Tasdiq bekor qilindi.');
+        return back()->with('success', $user->isVerified ? 'Verified badge yoqildi.' : 'Verified badge o‘chirildi.');
     }
 
     public function togglePremium(User $user)
@@ -338,7 +338,7 @@ class UserController extends Controller
     public function unblock(User $user)
     {
         $user->forceFill([
-            'status' => $user->isVerified ? 'active' : 'pending',
+            'status' => null,
             'blocked_until' => null,
             'blocked_at' => null,
             'block_reason' => null,

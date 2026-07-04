@@ -229,7 +229,10 @@ class AuthController extends Controller
                 ->toArray();
             $user->tokens()->whereNotIn('token', $activeTokens)->delete();
 
-            $user->update(['verifyCode' => null, 'verified' => 1]);
+            $user->update([
+                'verifyCode' => null,
+                'phone_verified_at' => now(),
+            ]);
             $this->clearVerifyAttemptState($phone_number);
 
             // ── ✅ GUEST DATA SYNC ────────────────────────────────────
@@ -499,6 +502,8 @@ class AuthController extends Controller
                 'position' => $user->position ?? 'reader',
                 'staff_role' => $user->staff_role,
                 'isVerified' => (bool) $user->isVerified,
+                'phoneVerified' => $user->hasVerifiedPhone(),
+                'phoneVerifiedAt' => optional($user->phone_verified_at)->toIso8601String(),
                 'isSupport' => (bool) $user->isSupport,
                 'role_emoji' => $user->role_emoji,
                 'role_title' => $user->role_title,
