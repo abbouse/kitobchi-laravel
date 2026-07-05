@@ -185,6 +185,9 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
         Route::patch('/api-clients/{apiClient}/toggle', [AdminController::class, 'toggleApiClient'])->name('api-clients.toggle');
         Route::patch('/api-clients/{apiClient}/regenerate', [AdminController::class, 'regenerateApiClient'])->name('api-clients.regenerate');
         Route::delete('/api-clients/{apiClient}', [AdminController::class, 'destroyApiClient'])->name('api-clients.destroy');
+        Route::post('/api-clients/{apiClient}/webhooks', [AdminController::class, 'storeApiWebhook'])->name('api-clients.webhooks.store');
+        Route::patch('/api-webhooks/{apiWebhook}/toggle', [AdminController::class, 'toggleApiWebhook'])->name('api-webhooks.toggle');
+        Route::delete('/api-webhooks/{apiWebhook}', [AdminController::class, 'destroyApiWebhook'])->name('api-webhooks.destroy');
         Route::post('/book-club/{bookClub}/warn', [\App\Http\Controllers\A122\BookClubController::class, 'warn'])->name('book-club.warn');
         Route::delete('/book-club/{bookClub}', [AdminController::class, 'destroyBookClub'])->name('book-club.destroy');
         Route::patch('/book-club/comments/{comment}', [\App\Http\Controllers\A122\BookClubController::class, 'updateComment'])->name('book-club.comment.update');

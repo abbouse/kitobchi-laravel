@@ -732,12 +732,13 @@ class PurchaseController extends Controller
 
                 return response()->json([
                     'status' => 'success',
-                    'data' => [
-                        'enabled' => true,
-                        'eligible' => (bool) $fresh['eligible'],
-                        'available_limit' => (int) $fresh['available_limit'],
-                        'computed_limit' => (int) $fresh['computed_limit'],
-                    ],
+                    'data' => $this->splitLimitData(
+                        eligible: (bool) $fresh['eligible'],
+                        reasons: array_values((array) ($fresh['eligibility_reasons'] ?? [])),
+                        availableLimit: (int) $fresh['available_limit'],
+                        computedLimit: (int) $fresh['computed_limit'],
+                        activeContractCount: (int) ($fresh['active_contract_count'] ?? 0),
+                    ),
                 ]);
             } catch (\Throwable $e) {
                 Log::warning('[Split] Limit refresh failed', [
@@ -749,13 +750,40 @@ class PurchaseController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'data' => [
-                'enabled' => true,
-                'eligible' => (bool) ($profile?->eligible ?? false),
-                'available_limit' => (int) ($profile?->available_limit ?? 0),
-                'computed_limit' => (int) ($profile?->computed_limit ?? 0),
-            ],
+            'data' => $this->splitLimitData(
+                eligible: (bool) ($profile?->eligible ?? false),
+                reasons: array_values((array) ($profile?->eligibility_reasons ?? [])),
+                availableLimit: (int) ($profile?->available_limit ?? 0),
+                computedLimit: (int) ($profile?->computed_limit ?? 0),
+                activeContractCount: (int) ($profile?->active_contract_count ?? 0),
+            ),
         ]);
+    }
+
+    /**
+     * split-limit javob shakli. "blocked" = modul yoqilgan, lekin user hozir
+     * nasiyaga yaroqsiz VA uning ochiq (pending/active/overdue) shartnomasi bor —
+     * ya'ni limiti bo'lgan, biroq masalan muddati o'tgan to'lov sabab vaqtincha
+     * bloklangan. Bunda ilova profil bannerida summa o'rniga "Limit bloklangan"
+     * ko'rsatadi; user MySplits'ga kirib aniq sababni ko'radi.
+     */
+    private function splitLimitData(
+        bool $eligible,
+        array $reasons,
+        int $availableLimit,
+        int $computedLimit,
+        int $activeContractCount,
+    ): array {
+        $blocked = ! $eligible && $activeContractCount > 0;
+
+        return [
+            'enabled' => true,
+            'eligible' => $eligible,
+            'blocked' => $blocked,
+            'blocked_reason' => $blocked ? ($reasons[0] ?? null) : null,
+            'available_limit' => $availableLimit,
+            'computed_limit' => $computedLimit,
+        ];
     }
 
     /**
@@ -783,8 +811,24 @@ class PurchaseController extends Controller
             ->get()
             ->map(function (\App\Models\SplitContract $contract) use ($contractService) {
                 $isOpen = in_array($contract->status, ['active', 'overdue'], true);
+                $serviceFees = max(0, (int) data_get(
+                    $contract->meta,
+                    'service_fees',
+                    (int) data_get($contract->meta, 'delivery_fee', 0) + (int) data_get($contract->meta, 'packaging_fee', 0),
+                ));
                 $hasInterest = (float) $contract->monthly_interest_percent > 0
                     && (int) $contract->interest_amount > 0;
+                $principalAmount = max(0, (int) $contract->principal_amount);
+                $totalAmount = max(0, (int) $contract->total_amount);
+                $interestAmount = max(0, (int) $contract->interest_amount);
+
+                if ($principalAmount <= 0) {
+                    $principalAmount = max(0, (int) data_get($contract->snapshot, 'schedule.principal', 0));
+                }
+
+                if ($principalAmount <= 0 && $totalAmount > 0) {
+                    $principalAmount = max(0, $totalAmount - $interestAmount - $serviceFees);
+                }
 
                 $payoffNow = null;
                 if ($isOpen) {
@@ -798,6 +842,23 @@ class PurchaseController extends Controller
                     ->sortBy('sequence')
                     ->first();
 
+                $monthlyAmount = max(0, (int) optional(
+                    $contract->installments->firstWhere('is_upfront', false)
+                )->amount);
+
+                if ($monthlyAmount <= 0) {
+                    $monthlyAmount = max(0, (int) data_get(
+                        collect(data_get($contract->snapshot, 'schedule.installments', []))
+                            ->first(fn ($row) => ! data_get($row, 'is_upfront', false)),
+                        'amount',
+                        0
+                    ));
+                }
+
+                if ($monthlyAmount <= 0) {
+                    $monthlyAmount = max(0, (int) optional($contract->installments->first())->amount);
+                }
+
                 return [
                     'id' => $contract->id,
                     'contract_number' => 'N-'.str_pad((string) $contract->id, 5, '0', STR_PAD_LEFT),
@@ -805,9 +866,16 @@ class PurchaseController extends Controller
                     'plan_name' => $contract->plan?->name,
                     'months' => (int) $contract->months,
                     'order_id' => $contract->order_id,
-                    'total' => (int) $contract->total_amount,
+                    'total' => $totalAmount,
+                    'principal' => $principalAmount,
+                    'interest_amount' => $interestAmount,
+                    'service_fees' => $serviceFees,
+                    'monthly_amount' => $monthlyAmount,
                     'paid' => (int) $contract->paid_amount,
                     'remaining' => (int) $contract->remaining_amount,
+                    'ends_at' => optional(
+                        $contract->installments->pluck('due_at')->filter()->max()
+                    )?->format('Y-m-d'),
                     'has_interest' => $hasInterest,
                     'monthly_interest_percent' => (float) $contract->monthly_interest_percent,
                     'payable' => $isOpen,
@@ -822,6 +890,7 @@ class PurchaseController extends Controller
                     'installments' => $contract->installments->map(fn ($installment) => [
                         'sequence' => (int) $installment->sequence,
                         'amount' => (int) $installment->amount,
+                        'paid_amount' => (int) $installment->paid_amount,
                         'due_date' => optional($installment->due_at)->format('Y-m-d'),
                         'paid_at' => optional($installment->paid_at)->format('Y-m-d'),
                         'status' => $installment->status,
@@ -897,6 +966,60 @@ class PurchaseController extends Controller
                 'paid_contract_ids' => $paidContracts,
                 'failed' => $failed,
                 'total_charged' => $totalCharged,
+            ],
+        ]);
+    }
+
+    /**
+     * Tanlangan davrlarni (eng yaqin to'lanmagandan $up_to_sequence gacha —
+     * faqat ketma-ket prefix) tanlangan kartadan to'laydi.
+     */
+    public function paySplitInstallments(Request $request)
+    {
+        $request->validate([
+            'contract_id' => 'required|integer|min:1',
+            'up_to_sequence' => 'required|integer|min:1',
+            'card_id' => 'required|integer|min:1',
+        ]);
+
+        $user = Auth::guard('user')->user();
+        if (! $user) {
+            return $this->err('Foydalanuvchi topilmadi!', 401);
+        }
+
+        /** @var UserCard|null $card */
+        $card = $user->cards()
+            ->where('id', (int) $request->card_id)
+            ->where('is_verified', true)
+            ->first();
+
+        if (! $card) {
+            return $this->err('Karta topilmadi!', 404);
+        }
+
+        $contract = \App\Models\SplitContract::query()
+            ->where('user_id', $user->id)
+            ->whereIn('status', ['active', 'overdue'])
+            ->find((int) $request->contract_id);
+
+        if (! $contract) {
+            return $this->err('Shartnoma topilmadi yoki to\'lab bo\'lmaydi.', 404);
+        }
+
+        try {
+            $result = app(\App\Services\SplitContractService::class)
+                ->payInstallmentsUpTo($contract, (int) $request->up_to_sequence, $card);
+        } catch (\Throwable $e) {
+            return $this->err($e->getMessage());
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => $result['paid_installments'].' ta to\'lov amalga oshirildi.',
+            'data' => [
+                'paid_installments' => $result['paid_installments'],
+                'charged' => $result['charged'],
+                'error' => $result['error'],
             ],
         ]);
     }

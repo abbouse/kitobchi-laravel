@@ -166,6 +166,7 @@ Route::middleware('auth:user')->group(function () {
         Route::get('split-limit', [PurchaseController::class, 'splitLimit']);
         Route::get('split-contracts', [PurchaseController::class, 'mySplitContracts']);
         Route::post('split-contracts/pay', [PurchaseController::class, 'paySplitContracts']);
+        Route::post('split-contracts/pay-installments', [PurchaseController::class, 'paySplitInstallments']);
         Route::post('details/{order_id}/postal-resend', [PurchaseController::class, 'createPostalResend']);
         Route::get('cancel/{orderId}', [PurchaseController::class, 'cancelOrder']);
         Route::get('cashback-history', [PurchaseController::class, 'cashbackHistory']);

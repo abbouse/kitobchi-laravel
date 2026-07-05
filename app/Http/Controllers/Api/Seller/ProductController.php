@@ -1437,6 +1437,100 @@ public function productStatistics(Request $request, $id)
     }
 
     /**
+     * Do'kon uchun: ISBN (kitob) yoki shtrix-kod (kanselyariya) orqali do'kondagi
+     * mahsulotni topib, zaxirasini yangilaydi.
+     *   - stock: mutlaq yangi qiymat
+     *   - delta: joriy zaxiraga qo'shiladigan o'zgarish (+/-)
+     * Mahsulot saqlanganda observer webhook (product.stock_changed) yuboradi.
+     */
+    public function updateStockByCode(Request $request)
+    {
+        $seller = Auth::guard('seller')->user();
+        if (! $seller) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        if (! $this->hasProductAccess($seller)) {
+            return response()->json(['success' => false, 'message' => 'Access denied.'], 403);
+        }
+
+        $data = $request->validate([
+            'code' => ['required', 'string', 'max:32'],
+            'type' => ['nullable', 'in:book,stationery'],
+            'stock' => ['nullable', 'integer', 'min:0'],
+            'delta' => ['nullable', 'integer'],
+        ]);
+
+        $hasStock = array_key_exists('stock', $data) && $data['stock'] !== null;
+        $hasDelta = array_key_exists('delta', $data) && $data['delta'] !== null;
+        if (! $hasStock && ! $hasDelta) {
+            return response()->json(['success' => false, 'message' => "stock yoki delta qiymatini yuboring."], 422);
+        }
+
+        $storeSellerId = $this->getStoreSellerId($seller);
+        $code = trim($data['code']);
+        $type = $data['type'] ?? null;
+
+        // ── Kitob (ISBN) ──
+        if ($type === 'book' || $type === null) {
+            $canonical = Books::normalizeIsbn($code);
+            if ($canonical !== null) {
+                $book = Seller::find($storeSellerId)->books()->whereIsbn($canonical)->first();
+                if ($book) {
+                    $new = $hasStock
+                        ? (int) $data['stock']
+                        : max(0, (int) $book->count + (int) $data['delta']);
+                    $book->count = $new;
+                    $book->save();
+
+                    return response()->json([
+                        'success' => true,
+                        'type' => 'book',
+                        'id' => $book->id,
+                        'name' => $book->name,
+                        'stock' => $new,
+                        'in_stock' => $new > 0,
+                    ]);
+                }
+                if ($type === 'book') {
+                    return response()->json(['success' => false, 'message' => "Bu ISBN sizning do'koningizda topilmadi."], 404);
+                }
+            } elseif ($type === 'book') {
+                return response()->json(['success' => false, 'message' => "ISBN formati noto'g'ri."], 422);
+            }
+        }
+
+        // ── Kanselyariya (shtrix-kod) ──
+        if ($type === 'stationery' || $type === null) {
+            $normalized = $this->normalizeBarcode($code);
+            if ($normalized !== null) {
+                $stationery = Seller::find($storeSellerId)->stationeries()->where('barcode', $normalized)->first();
+                if ($stationery) {
+                    $new = $hasStock
+                        ? (int) $data['stock']
+                        : max(0, (int) $stationery->stock + (int) $data['delta']);
+                    $stationery->stock = $new;
+                    $stationery->save();
+
+                    return response()->json([
+                        'success' => true,
+                        'type' => 'stationery',
+                        'id' => $stationery->id,
+                        'name' => $stationery->name,
+                        'stock' => $new,
+                        'in_stock' => $new > 0,
+                    ]);
+                }
+            }
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => "Bu kod bo'yicha do'koningizda mahsulot topilmadi.",
+        ], 404);
+    }
+
+    /**
      * DB'da turli xil yozilgan til qiymatlarini Flutter forma kutadigan
      * uch belgili kodga moslashtiramiz.
      */

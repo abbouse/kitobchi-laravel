@@ -443,6 +443,53 @@
         width: auto;
       }
     }
+    /* ── Modern endpoint cards / samples / try-it ── */
+    .endpoint { scroll-margin-top: 88px; }
+    .method--GET { background:#dcfce7; color:#166534; }
+    .method--POST { background:#dbeafe; color:#1e40af; }
+    .method--PUT, .method--PATCH { background:#fef3c7; color:#92400e; }
+    .method--DELETE { background:#fee2e2; color:#991b1b; }
+    html[data-theme="dark"] .method--GET { background:rgba(34,197,94,.15); color:#86efac; }
+    html[data-theme="dark"] .method--POST { background:rgba(59,130,246,.16); color:#93c5fd; }
+    html[data-theme="dark"] .method--PUT, html[data-theme="dark"] .method--PATCH { background:rgba(245,158,11,.16); color:#fcd34d; }
+    html[data-theme="dark"] .method--DELETE { background:rgba(239,68,68,.16); color:#fca5a5; }
+    .tag-cache { flex:0 0 auto; border:1px solid var(--border); border-radius:999px; padding:2px 8px; font-size:11px; font-weight:700; color:var(--muted); background:var(--panel); }
+    .endpoint-body { padding:14px; }
+    .endpoint-title { margin:0 0 4px; font-size:16px; font-weight:800; }
+    .endpoint-summary { margin:0 0 8px; color:var(--muted); font-size:14px; line-height:1.65; }
+    .endpoint-params { margin:12px 0 4px; }
+    .endpoint-params th, .endpoint-params td { font-size:13px; padding:8px; }
+    .code-tabs { margin:14px 0; border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+    .code-tabs-head { display:flex; align-items:center; gap:8px; padding:6px 8px; background:var(--soft); border-bottom:1px solid var(--border); }
+    .code-tabs-langs { display:flex; gap:4px; flex-wrap:wrap; min-width:0; }
+    .code-tab { border:0; background:transparent; color:var(--muted); font:600 12.5px Inter, sans-serif; padding:6px 10px; border-radius:6px; cursor:pointer; }
+    .code-tab:hover { color:var(--text); }
+    .code-tab.active { background:var(--panel); color:var(--text); box-shadow:0 1px 2px rgba(0,0,0,.06); }
+    .code-copy { margin-left:auto; border:1px solid var(--border); background:var(--panel); color:var(--muted); border-radius:6px; padding:5px 10px; font:600 12px Inter, sans-serif; cursor:pointer; white-space:nowrap; }
+    .code-copy:hover { color:var(--text); }
+    .code-copy.copied { color:#16a34a; border-color:#16a34a; }
+    .code-pane { display:none; background:var(--code-bg); }
+    .code-pane.active { display:block; }
+    .code-pane pre { margin:0; padding:16px; overflow:auto; color:var(--code-text); font:13px/1.7 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; white-space:pre; }
+    .endpoint-response { margin:14px 0 2px; }
+    .endpoint-response-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+    .endpoint-response-head span { font-size:13px; font-weight:800; color:var(--text); }
+    .endpoint-response-head em { font-style:normal; font-weight:700; color:#16a34a; font-size:12px; margin-left:6px; }
+    .response-code { margin:0; }
+    .try-it { margin:14px 0 2px; border:1px dashed var(--border); border-radius:8px; }
+    .try-it > summary { cursor:pointer; list-style:none; padding:11px 14px; font-weight:700; font-size:13.5px; color:var(--accent); }
+    .try-it > summary::-webkit-details-marker { display:none; }
+    .try-it > summary::before { content:"\25B8  "; }
+    .try-it[open] > summary::before { content:"\25BE  "; }
+    .try-it-body { padding:0 14px 14px; }
+    .try-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:10px; margin-bottom:12px; }
+    .try-grid label { display:flex; flex-direction:column; gap:4px; font-size:12px; font-weight:700; color:var(--muted); }
+    .try-grid label em { color:#dc2626; font-style:normal; }
+    .try-grid input { height:36px; border:1px solid var(--border); border-radius:7px; background:var(--soft); color:var(--text); padding:0 10px; font:13px ui-monospace, monospace; outline:none; }
+    .try-send { border:0; background:var(--accent); color:#fff; border-radius:8px; padding:9px 16px; font:700 13px Inter, sans-serif; cursor:pointer; }
+    .try-send:disabled { opacity:.6; cursor:default; }
+    .try-status { margin:8px 0 0; font-size:12.5px; font-weight:700; min-height:16px; }
+    .try-result { margin:8px 0 0; max-height:340px; overflow:auto; background:var(--code-bg); color:var(--code-text); border-radius:8px; padding:14px; font:12.5px/1.6 ui-monospace, monospace; white-space:pre; }
   </style>
 </head>
 <body>
@@ -461,7 +508,8 @@
       </button>
     </div>
     <div class="docs-actions">
-      <span class="docs-lang">O‘zbekcha</span>
+      <a class="docs-icon-btn docs-spec-link" href="{{ $openapiUrl }}" target="_blank" rel="noopener" title="OpenAPI (JSON) spec" style="width:auto;padding:0 10px;">OpenAPI</a>
+      <button class="docs-icon-btn" id="copyMdButton" type="button" title="Sahifani LLM uchun Markdown ko‘rinishda nusxa olish" style="width:auto;padding:0 10px;">Markdown</button>
       <button class="docs-icon-btn" id="themeButton" type="button" aria-label="Ko‘rinishni almashtirish">◐</button>
     </div>
   </header>
@@ -538,42 +586,90 @@ X-API-Cache: HIT</code></pre></div>
           @break
 
         @case('products')
-          <section id="list">
-            <h2>Ro‘yxat</h2>
-            <p>Mahsulotlar endpointlari katalogni tashqi servisga chiqarish uchun ishlatiladi. Javob ichida mahsulot nomi, narx, rasm, kategoriya, seller va zaxira maʼlumotlari keladi.</p>
-            @foreach($endpoints['products'] as $endpoint)
-              <x-api-docs-endpoint :endpoint="$endpoint" />
-            @endforeach
+          <section>
+            <h2>Mahsulotlar</h2>
+            <p>Katalogni tashqi servis, hamkor vitrina yoki marketplace integratsiyasiga chiqarish uchun. Javoblarda nom, narx, rasm, kategoriya, seller va zaxira holati keladi. Barcha endpointlar <span class="docs-inline">read</span> ability va GET cache bilan ishlaydi.</p>
           </section>
-          <section id="recommendation">
-            <h2>Tavsiyalar</h2>
-            <p><span class="docs-inline">/products/recommendation/{col}</span> endpointi tavsiya qilingan mahsulotlarni qaytaradi. Uni vitrinalar, hamkor kataloglar va “sizga mos” bloklar uchun ishlatish mumkin.</p>
-          </section>
-          <section id="sellers">
-            <h2>Sellerlar</h2>
-            <p>Seller endpointlari do‘kon maʼlumotlari, QR orqali seller topish va seller mahsulotlarini sahifalab olish uchun ishlatiladi.</p>
-          </section>
+          @foreach($pageEndpoints as $endpoint)
+            <x-api-docs-endpoint :endpoint="$endpoint" />
+          @endforeach
           @break
 
         @case('search')
-          <section id="global">
-            <h2>Global qidiruv</h2>
-            <p>Global qidiruv nom, kategoriya va mahsulot turiga qarab natija qaytaradi. Asosiy query parametri: <span class="docs-inline">q</span>.</p>
-            <div class="docs-code"><pre><code>curl --request GET \
-  --url '{{ url('/api/v1/client/search?q=python') }}' \
-  --header 'Accept: application/json' \
-  --header 'X-App-ID: app_xxxxxxxxxxxx' \
-  --header 'X-App-Secret: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'</code></pre></div>
+          <section>
+            <h2>Qidiruv</h2>
+            <p>Global qidiruv, autocomplete, trend so‘rovlar va kategoriyalar. <span class="docs-inline">suggestions</span> va <span class="docs-inline">trending</span> qidiruv maydonini boyitish uchun juda tez ishlaydi.</p>
           </section>
-          <section id="categories">
-            <h2>Kategoriyalar</h2>
-            <x-api-docs-endpoint :endpoint="$endpoints['search'][1]" />
-            <p>Bu endpoint katalog menyusi yoki filter panelini qurish uchun ishlatiladi.</p>
+          @foreach($pageEndpoints as $endpoint)
+            <x-api-docs-endpoint :endpoint="$endpoint" />
+          @endforeach
+          @break
+
+        @case('pagination')
+          <section id="params">
+            <h2>Parametrlar</h2>
+            <p>Ro‘yxat qaytaradigan endpointlar <span class="docs-inline">page</span> bilan sahifalanadi. Ba’zilari <span class="docs-inline">q</span> (matn filtri) va <span class="docs-inline">sort</span> ni ham qo‘llaydi.</p>
+            <table class="docs-table">
+              <thead><tr><th>Parametr</th><th>Turi</th><th>Izoh</th></tr></thead>
+              <tbody>
+                <tr><td><span class="docs-inline">page</span></td><td>integer</td><td>Sahifa raqami, 1 dan boshlanadi. Default: 1.</td></tr>
+                <tr><td><span class="docs-inline">q</span></td><td>string</td><td>Nom bo‘yicha filtr (qidiruvda majburiy).</td></tr>
+                <tr><td><span class="docs-inline">sort</span></td><td>string</td><td>popular, new, price_asc, price_desc.</td></tr>
+              </tbody>
+            </table>
           </section>
-          <section id="category-products">
-            <h2>Kategoriya mahsulotlari</h2>
-            <x-api-docs-endpoint :endpoint="$endpoints['search'][2]" />
-            <p><span class="docs-inline">type</span> qiymati mahsulot turini bildiradi. Kategoriya ichidagi natijalar sahifalangan bo‘lishi mumkin.</p>
+          <section id="meta">
+            <h2>Meta bloki</h2>
+            <p>Sahifalangan javoblarda <span class="docs-inline">meta</span> bloki sahifa holatini bildiradi. Natija bo‘sh bo‘lsa <span class="docs-inline">data</span> bo‘sh massiv (<span class="docs-inline">[]</span>) qaytadi — bu xato emas.</p>
+            <div class="docs-code"><pre><code>{
+  "status": "success",
+  "data": [ ... ],
+  "meta": { "page": 1, "per_page": 20, "total": 342 }
+}</code></pre></div>
+          </section>
+          @break
+
+        @case('webhooks')
+          <section id="events">
+            <h2>Hodisalar</h2>
+            <p>Webhook orqali Kitobchi hodisa yuz berganda sizning serveringizga POST yuboradi — narx yoki zaxira o‘zgarishi, yangi mahsulot va h.k. Obuna admin paneldagi API mijozlar bo‘limida sozlanadi.</p>
+            <table class="docs-table">
+              <thead><tr><th>Hodisa</th><th>Qachon</th></tr></thead>
+              <tbody>
+                <tr><td><span class="docs-inline">product.updated</span></td><td>Mahsulot narxi, nomi yoki holati o‘zgarganda.</td></tr>
+                <tr><td><span class="docs-inline">product.stock_changed</span></td><td>Zaxira miqdori o‘zgarganda (0 ga tushishi ham).</td></tr>
+                <tr><td><span class="docs-inline">product.created</span></td><td>Yangi mahsulot qo‘shilganda.</td></tr>
+                <tr><td><span class="docs-inline">seller.updated</span></td><td>Do‘kon ma’lumoti o‘zgarganda.</td></tr>
+              </tbody>
+            </table>
+            <h3>Payload namunasi</h3>
+            <div class="docs-code"><pre><code>POST https://your-server.com/webhooks/kitobchi
+Content-Type: application/json
+X-Kitobchi-Event: product.stock_changed
+X-Kitobchi-Delivery: 6f1e0b9c-...
+X-Kitobchi-Signature: sha256=9a1c...
+
+{
+  "event": "product.stock_changed",
+  "sent_at": "2026-07-05T09:00:00Z",
+  "data": { "id": 128, "type": "book", "in_stock": false, "count": 0 }
+}</code></pre></div>
+          </section>
+          <section id="signature">
+            <h2>Imzo tekshiruvi</h2>
+            <p>Har bir yetkazishda <span class="docs-inline">X-Kitobchi-Signature</span> header keladi: <span class="docs-inline">sha256=HMAC(secret, raw_body)</span>. Serveringizda xuddi shu imzoni hisoblab, <span class="docs-inline">hash_equals</span> bilan solishtiring. Mos kelmasa — so‘rovni rad eting.</p>
+            <div class="docs-code"><pre><code>$payload  = file_get_contents('php://input');
+$expected = 'sha256=' . hash_hmac('sha256', $payload, $webhookSecret);
+
+if (! hash_equals($expected, $_SERVER['HTTP_X_KITOBCHI_SIGNATURE'] ?? '')) {
+    http_response_code(401);
+    exit;
+}</code></pre></div>
+          </section>
+          <section id="retries">
+            <h2>Qayta yuborish</h2>
+            <p>Server <span class="docs-inline">2xx</span> qaytarmasa, yetkazish oshib boruvchi kechikish bilan qayta uriniladi (masalan 1m, 5m, 30m, 2s). <span class="docs-inline">X-Kitobchi-Delivery</span> takroriy yetkazishlarda bir xil — idempotentlik uchun shundan foydalaning.</p>
+            <div class="docs-callout">Webhook uchlaringiz imkon qadar tez <span class="docs-inline">200</span> qaytarsin — og‘ir ishni navbatga (queue) qo‘ying.</div>
           </section>
           @break
 
@@ -624,6 +720,7 @@ X-API-Cache: HIT</code></pre></div>
             <h2>Umumiy tushuncha</h2>
             <p>Kitobchi Client API hamkor servislar, tashqi kataloglar va marketplace integratsiyalari uchun mo‘ljallangan. API orqali mahsulotlar, sellerlar, kategoriyalar va qidiruv natijalarini olish mumkin.</p>
             <div class="docs-callout">Base URL: <span class="docs-inline">{{ $baseUrl }}</span></div>
+            <div class="docs-callout">Mashinaga tushunarli spec: <a href="{{ $openapiUrl }}" target="_blank" rel="noopener"><span class="docs-inline">openapi.json</span></a> — uni Postman / Insomnia’ga import qiling yoki SDK generatsiya qiling. Yuqoridagi <strong>OpenAPI</strong> va <strong>Markdown</strong> tugmalari ham shu uchun.</div>
           </section>
           <section id="first-request">
             <h2>Birinchi so‘rov</h2>
@@ -726,6 +823,108 @@ X-API-Cache: HIT</code></pre></div>
       if (!popover.contains(event.target) && !button.contains(event.target)) {
         popover.classList.remove('open');
       }
+    });
+  </script>
+
+  <script>
+    // ── Kod namunasi tablari ──
+    document.addEventListener('click', (event) => {
+      const tab = event.target.closest('.code-tab');
+      if (!tab) return;
+      const wrap = tab.closest('.code-tabs');
+      const target = tab.dataset.tab;
+      wrap.querySelectorAll('.code-tab').forEach((t) => t.classList.toggle('active', t === tab));
+      wrap.querySelectorAll('.code-pane').forEach((p) => p.classList.toggle('active', p.dataset.pane === target));
+    });
+
+    // ── Nusxa olish tugmalari ──
+    document.addEventListener('click', async (event) => {
+      const btn = event.target.closest('.code-copy');
+      if (!btn) return;
+      let text = '';
+      const tabs = btn.closest('.code-tabs');
+      const resp = btn.closest('.endpoint-response');
+      if (tabs) {
+        const pane = tabs.querySelector('.code-pane.active') || tabs.querySelector('.code-pane');
+        text = pane ? pane.innerText : '';
+      } else if (resp) {
+        const code = resp.querySelector('code');
+        text = code ? code.innerText : '';
+      }
+      try {
+        await navigator.clipboard.writeText(text);
+        const original = btn.textContent;
+        btn.classList.add('copied');
+        btn.textContent = 'Nusxa olindi';
+        setTimeout(() => { btn.classList.remove('copied'); btn.textContent = original; }, 1200);
+      } catch (_) {}
+    });
+
+    // ── Sinab ko‘rish (Try it) ──
+    document.addEventListener('click', async (event) => {
+      const send = event.target.closest('.try-send');
+      if (!send) return;
+      const root = send.closest('[data-tryit]');
+      let url = root.dataset.urlTemplate || '';
+      const appid = (root.querySelector('[data-try="appid"]').value || '').trim();
+      const secret = (root.querySelector('[data-try="secret"]').value || '').trim();
+      root.querySelectorAll('[data-try-path]').forEach((inp) => {
+        url = url.replace('{' + inp.dataset.tryPath + '}', encodeURIComponent((inp.value || '').trim()));
+      });
+      const qs = [];
+      root.querySelectorAll('[data-try-query]').forEach((inp) => {
+        const v = (inp.value || '').trim();
+        if (v !== '') qs.push(encodeURIComponent(inp.dataset.tryQuery) + '=' + encodeURIComponent(v));
+      });
+      if (qs.length) url += (url.includes('?') ? '&' : '?') + qs.join('&');
+
+      const statusEl = root.querySelector('[data-try-status]');
+      const resultEl = root.querySelector('[data-try-result]');
+      statusEl.textContent = 'Yuborilmoqda…';
+      statusEl.style.color = 'var(--muted)';
+      send.disabled = true;
+      try {
+        const res = await fetch(url, {
+          headers: { 'Accept': 'application/json', 'X-App-ID': appid, 'X-App-Secret': secret },
+        });
+        const txt = await res.text();
+        let body = txt;
+        try { body = JSON.stringify(JSON.parse(txt), null, 2); } catch (_) {}
+        statusEl.textContent = res.status + ' ' + res.statusText;
+        statusEl.style.color = res.ok ? '#16a34a' : '#dc2626';
+        resultEl.textContent = body;
+        resultEl.hidden = false;
+      } catch (err) {
+        statusEl.textContent = 'Xato: ' + err.message;
+        statusEl.style.color = '#dc2626';
+        resultEl.hidden = true;
+      } finally {
+        send.disabled = false;
+      }
+    });
+
+    // ── Sahifani LLM uchun Markdown nusxa olish ──
+    document.getElementById('copyMdButton')?.addEventListener('click', async () => {
+      const h1 = document.querySelector('.docs-main h1')?.innerText || 'Kitobchi API';
+      const lead = document.querySelector('.docs-lead')?.innerText || '';
+      let md = `# ${h1}\n\n${lead}\n`;
+      document.querySelectorAll('.docs-main .endpoint').forEach((ep) => {
+        const method = ep.querySelector('.method')?.innerText || '';
+        const path = ep.querySelector('.path')?.innerText || '';
+        const summary = ep.querySelector('.endpoint-summary')?.innerText || '';
+        md += `\n## ${method} ${path}\n${summary}\n`;
+        const active = ep.querySelector('.code-pane.active code');
+        if (active) md += '\n```\n' + active.innerText + '\n```\n';
+        const resp = ep.querySelector('.response-code code');
+        if (resp) md += '\nJavob:\n```json\n' + resp.innerText + '\n```\n';
+      });
+      try {
+        await navigator.clipboard.writeText(md);
+        const b = document.getElementById('copyMdButton');
+        const original = b.textContent;
+        b.textContent = '✓ Nusxa';
+        setTimeout(() => { b.textContent = original; }, 1200);
+      } catch (_) {}
     });
   </script>
 </body>

@@ -13,6 +13,8 @@ use App\Models\Admin;
 use App\Models\AdminAuditLog;
 use App\Models\ApiClient;
 use App\Models\ApiClientRequestLog;
+use App\Models\ApiWebhook;
+use App\Services\WebhookService;
 use App\Models\Author;
 use App\Models\Blogger;
 use App\Models\BloggerShipment;
@@ -967,9 +969,7 @@ class AdminController extends Controller
             'target_locales' => ['required', 'array', 'min:1'],
             'target_locales.*' => ['required', Rule::in(self::CONTENT_LOCALES)],
             'texts' => ['required', 'array'],
-            'texts.title' => ['nullable', 'string', 'max:255'],
-            'texts.subtitle' => ['nullable', 'string', 'max:255'],
-            'texts.description' => ['nullable', 'string', 'max:12000'],
+            'texts.*' => ['nullable', 'string', 'max:20000'],
         ]);
 
         $texts = collect($data['texts'])
@@ -1521,6 +1521,41 @@ class AdminController extends Controller
         return back()->with('success', "API mijoz o'chirildi.");
     }
 
+    public function storeApiWebhook(Request $request, ApiClient $apiClient): \Illuminate\Http\RedirectResponse
+    {
+        $data = $request->validate([
+            'url' => ['required', 'url', 'max:500'],
+            'events' => ['required', 'array', 'min:1'],
+            'events.*' => ['string', Rule::in([...WebhookService::EVENTS, '*'])],
+        ]);
+
+        $apiClient->webhooks()->create([
+            'url' => $data['url'],
+            'events' => array_values(array_unique($data['events'])),
+            'is_active' => true,
+        ]);
+
+        $this->clearApiClientCache();
+
+        return back()->with('success', 'Webhook qo‘shildi.');
+    }
+
+    public function toggleApiWebhook(ApiWebhook $apiWebhook): \Illuminate\Http\RedirectResponse
+    {
+        $apiWebhook->update(['is_active' => ! $apiWebhook->is_active]);
+        $this->clearApiClientCache();
+
+        return back()->with('success', $apiWebhook->is_active ? 'Webhook yoqildi.' : 'Webhook o‘chirildi.');
+    }
+
+    public function destroyApiWebhook(ApiWebhook $apiWebhook): \Illuminate\Http\RedirectResponse
+    {
+        $apiWebhook->delete();
+        $this->clearApiClientCache();
+
+        return back()->with('success', 'Webhook o‘chirildi.');
+    }
+
     public function updateSeller(Request $request, Seller $seller): \Illuminate\Http\RedirectResponse
     {
         $data = $request->validate([
@@ -1887,14 +1922,17 @@ Vazifa:
 - Marketplace va e-commerce uslubini saqla.
 - Juda erkin ijod qilma, ma'noni aniq saqla.
 - Qisqa sarlavhalarni qisqa qoldir.
+- Agar matn HTML bo'lsa, HTML teglar, atributlar, ro'yxatlar va struktura o'zgarishsiz qolsin.
+- Faqat ko'rinadigan matn tarjima qilinsin, teg nomlari va href/class kabi atributlarga tegma.
 - Emoji, izoh, markdown yoki qo'shimcha sharh yozma.
 - Faqat JSON qaytar.
+- "texts" obyektida qaysi kalitlar kelsa, javobda ham aynan o'sha kalitlar qaytsin.
 
 JSON formati:
 {
-  "ru": {"title": "...", "subtitle": "...", "description": "..."},
-  "en": {"title": "...", "subtitle": "...", "description": "..."},
-  "ja": {"title": "...", "subtitle": "...", "description": "..."}
+  "ru": {"field1": "...", "field2": "..."},
+  "en": {"field1": "...", "field2": "..."},
+  "ja": {"field1": "...", "field2": "..."}
 }
 PROMPT;
 
@@ -1905,7 +1943,7 @@ PROMPT;
                 'target_locales' => array_values($targetLocales),
                 'texts' => $texts,
             ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)],
-        ], 1600, 0.2);
+        ], 6000, 0.2);
 
         $translations = [];
 
@@ -2272,7 +2310,10 @@ PROMPT;
                 'translateUrl' => route('boshqaruv.content.translate'),
             ],
             'ReelsPage' => ['reels' => $this->reelsPayload()],
-            'Siyosatlar' => ['policies' => $this->policiesPayload()],
+            'Siyosatlar' => [
+                'policies' => $this->policiesPayload(),
+                'translateUrl' => route('boshqaruv.content.translate'),
+            ],
             'PushNotifications' => ['notifications' => $this->pushNotificationsPayload()],
             'SearchHistory' => $this->searchHistoryPagePayload(),
             'Sovgalar' => ['gifts' => $this->giftsPayload()],
@@ -5984,6 +6025,7 @@ PROMPT;
                     'title' => $policy->title,
                     'slug' => $policy->slug,
                     'content' => $policy->content,
+                    'publicUrl' => $policy->url,
                     'status' => $policy->is_active ? 'Active' : 'Inactive',
                     'showInApp' => (bool) $policy->show_in_app,
                     'sortOrder' => (int) ($policy->sort_order ?? 0),
@@ -7026,13 +7068,15 @@ PROMPT;
             return [];
         }
 
-        return Cache::remember('boshqaruv:api-clients:payload:v2', now()->addMinutes(5), function () {
+        return Cache::remember('boshqaruv:api-clients:payload:v3', now()->addMinutes(5), function () {
             $hasRequestLogs = Schema::hasTable('api_client_request_logs');
             $hasRateLimitPerSecond = Schema::hasColumn('api_clients', 'rate_limit_per_second');
             $hasRateLimitPerMinute = Schema::hasColumn('api_clients', 'rate_limit_per_minute');
+            $hasWebhooks = Schema::hasTable('api_webhooks');
 
             return ApiClient::query()
                 ->when($hasRequestLogs, fn ($query) => $query->withCount('requestLogs'))
+                ->when($hasWebhooks, fn ($query) => $query->with('webhooks'))
                 ->orderByDesc('id')
                 ->get()
                 ->map(fn (ApiClient $client) => [
@@ -7049,6 +7093,19 @@ PROMPT;
                     'toggleUrl' => route('boshqaruv.api-clients.toggle', $client),
                     'regenerateUrl' => route('boshqaruv.api-clients.regenerate', $client),
                     'destroyUrl' => route('boshqaruv.api-clients.destroy', $client),
+                    'availableEvents' => WebhookService::EVENTS,
+                    'webhookStoreUrl' => route('boshqaruv.api-clients.webhooks.store', $client),
+                    'webhooks' => $hasWebhooks
+                        ? $client->webhooks->map(fn (ApiWebhook $hook) => [
+                            'id' => $hook->id,
+                            'url' => $hook->url,
+                            'events' => $hook->events ?? [],
+                            'active' => (bool) $hook->is_active,
+                            'failures' => (int) ($hook->failure_count ?? 0),
+                            'toggleUrl' => route('boshqaruv.api-webhooks.toggle', $hook),
+                            'destroyUrl' => route('boshqaruv.api-webhooks.destroy', $hook),
+                        ])->values()->all()
+                        : [],
                 ])
                 ->values()
                 ->all();
@@ -7120,9 +7177,11 @@ PROMPT;
 
     private function clearApiClientCache(): void
     {
+        Cache::forget('boshqaruv:api-clients:payload:v3');
         Cache::forget('boshqaruv:api-clients:payload:v2');
         Cache::forget('boshqaruv:api-clients:logs:v1');
         Cache::forget('boshqaruv:api-clients:meta:v1');
+        WebhookService::flushCache();
     }
 
     private function splitPagePayload(): array

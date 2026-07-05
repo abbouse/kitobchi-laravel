@@ -56,6 +56,7 @@ Route::middleware('auth:seller')->group(function () {
     Route::get('products/publishers/suggestions', [ProductController::class, 'getPublisherSuggestions']);
     Route::get('products/by-isbn/{isbn}', [ProductController::class, 'lookupByIsbn']);
     Route::get('products/stationery/by-barcode/{barcode}', [ProductController::class, 'lookupStationeryByBarcode']);
+    Route::post('products/stock/by-code', [ProductController::class, 'updateStockByCode']);
     Route::get('products/categories', [ProductController::class, 'getCategories']);
     Route::post('products/stationery/create', [ProductController::class, 'createStationery']);
     Route::post('products/stationery/update', [ProductController::class, 'updateStationery']);

@@ -52,4 +52,9 @@ class ApiClient extends Model
     {
         return $this->hasMany(ApiClientRequestLog::class, 'api_client_id');
     }
+
+    public function webhooks()
+    {
+        return $this->hasMany(ApiWebhook::class, 'api_client_id');
+    }
 }

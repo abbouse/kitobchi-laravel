@@ -1,38 +1,302 @@
 import { router, usePage } from '@inertiajs/react';
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Button, Form, Modal } from 'react-bootstrap';
+import { splitPolicyPreset } from './policyPresets';
+
+type TranslateLocale = 'ru' | 'en' | 'ja';
+type StatusFilter = 'all' | 'active' | 'inactive';
 
 interface Policy {
   id: number;
   title: string;
   slug: string;
   content?: string;
+  publicUrl?: string;
   status: string;
   showInApp: boolean;
   sortOrder: number;
-  translations?: Record<string, { title?: string; content?: string }>;
+  translations?: Record<TranslateLocale, { title?: string; content?: string }>;
   createUrl?: string;
   updateUrl?: string;
   toggleUrl?: string;
   destroyUrl?: string;
 }
 
+type PolicyFormState = {
+  title: string;
+  slug: string;
+  content: string;
+  sortOrder: number;
+  isActive: boolean;
+  showInApp: boolean;
+  translations: Record<TranslateLocale, { title: string; content: string }>;
+};
+
+const localeLabels: Record<TranslateLocale, string> = {
+  ru: 'RU',
+  en: 'EN',
+  ja: 'JA',
+};
+
+const localeTitles: Record<TranslateLocale, string> = {
+  ru: 'Ruscha',
+  en: 'Inglizcha',
+  ja: 'Yaponcha',
+};
+
+const defaultTranslations = (): PolicyFormState['translations'] => ({
+  ru: { title: '', content: '' },
+  en: { title: '', content: '' },
+  ja: { title: '', content: '' },
+});
+
+const defaultForm = (): PolicyFormState => ({
+  title: '',
+  slug: '',
+  content: '',
+  sortOrder: 0,
+  isActive: true,
+  showInApp: true,
+  translations: defaultTranslations(),
+});
+
+const getCsrfToken = () =>
+  document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content || '';
+
+const slugify = (value: string) =>
+  value
+    .toLowerCase()
+    .trim()
+    .replace(/['"`]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
 export default function Siyosatlar() {
-  const { policies = [] } = usePage<{ policies?: Policy[] }>().props;
+  const {
+    policies = [],
+    errors = {},
+    translateUrl = '/boshqaruv/content/translate',
+  } = usePage<{
+    policies?: Policy[];
+    errors?: Record<string, string>;
+    translateUrl?: string;
+  }>().props;
+
+  const createUrl = policies[0]?.createUrl || '/boshqaruv/siyosatlar';
   const [editing, setEditing] = useState<Policy | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const createUrl = policies[0]?.createUrl || '/boshqaruv/siyosatlar';
+  const [query, setQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [translatingLocales, setTranslatingLocales] = useState<TranslateLocale[]>([]);
+  const [form, setForm] = useState<PolicyFormState>(defaultForm);
 
-  const toggle = (policy: Policy) => policy.toggleUrl && router.patch(policy.toggleUrl, {}, { preserveScroll: true });
+  useEffect(() => {
+    if (Object.keys(errors).length > 0) {
+      setShowForm(true);
+    }
+  }, [errors]);
+
+  const counts = useMemo(() => {
+    const active = policies.filter((policy) => policy.status === 'Active').length;
+    const inactive = policies.length - active;
+    const inApp = policies.filter((policy) => policy.showInApp).length;
+
+    return { all: policies.length, active, inactive, inApp };
+  }, [policies]);
+
+  const filteredPolicies = useMemo(() => {
+    const clean = query.trim().toLowerCase();
+
+    return policies.filter((policy) => {
+      if (statusFilter === 'active' && policy.status !== 'Active') return false;
+      if (statusFilter === 'inactive' && policy.status === 'Active') return false;
+
+      if (!clean) return true;
+
+      const searchPool = [
+        policy.title,
+        policy.slug,
+        policy.content || '',
+        policy.translations?.ru?.title || '',
+        policy.translations?.en?.title || '',
+        policy.translations?.ja?.title || '',
+      ]
+        .join(' ')
+        .toLowerCase();
+
+      return searchPool.includes(clean);
+    });
+  }, [policies, query, statusFilter]);
+
+  const resetForm = () => {
+    setEditing(null);
+    setForm(defaultForm());
+    setTranslatingLocales([]);
+  };
+
+  const hydrateForm = (policy?: Policy | null) => {
+    if (!policy) {
+      resetForm();
+      return;
+    }
+
+    setEditing(policy);
+    setForm({
+      title: policy.title || '',
+      slug: policy.slug || '',
+      content: policy.content || '',
+      sortOrder: policy.sortOrder ?? 0,
+      isActive: policy.status === 'Active',
+      showInApp: !!policy.showInApp,
+      translations: {
+        ru: {
+          title: policy.translations?.ru?.title || '',
+          content: policy.translations?.ru?.content || '',
+        },
+        en: {
+          title: policy.translations?.en?.title || '',
+          content: policy.translations?.en?.content || '',
+        },
+        ja: {
+          title: policy.translations?.ja?.title || '',
+          content: policy.translations?.ja?.content || '',
+        },
+      },
+    });
+    setTranslatingLocales([]);
+  };
+
+  const openCreate = () => {
+    resetForm();
+    setShowForm(true);
+  };
+
+  const openEdit = (policy: Policy) => {
+    hydrateForm(policy);
+    setShowForm(true);
+  };
+
+  const closeModal = () => {
+    setShowForm(false);
+    setEditing(null);
+    setTranslatingLocales([]);
+  };
+
+  const toggle = (policy: Policy) => {
+    if (!policy.toggleUrl) return;
+    router.patch(policy.toggleUrl, {}, { preserveScroll: true });
+  };
+
   const destroy = (policy: Policy) => {
-    if (!policy.destroyUrl || !confirm(`${policy.title} siyosati o'chirilsinmi?`)) return;
+    if (!policy.destroyUrl) return;
+    if (!window.confirm(`${policy.title} siyosati o'chirilsinmi?`)) return;
     router.delete(policy.destroyUrl, { preserveScroll: true });
   };
+
+  const applySplitPreset = () => {
+    const hasContent = form.title.trim() || form.slug.trim() || form.content.trim();
+    if (hasContent && !window.confirm("Joriy matn nasiya shabloni bilan almashtirilsinmi?")) {
+      return;
+    }
+
+    setForm((prev) => ({
+      ...prev,
+      title: splitPolicyPreset.title,
+      slug: splitPolicyPreset.slug,
+      content: splitPolicyPreset.content,
+      showInApp: true,
+      sortOrder: prev.sortOrder || 30,
+    }));
+  };
+
+  const translateFromUz = async (targetLocales: TranslateLocale[]) => {
+    const texts: Record<string, string> = {};
+    if (form.title.trim()) texts.title = form.title.trim();
+    if (form.content.trim()) texts.content = form.content.trim();
+
+    if (Object.keys(texts).length === 0) {
+      window.alert("Avval UZ sarlavha yoki UZ matnni to'ldiring.");
+      return;
+    }
+
+    setTranslatingLocales(targetLocales);
+
+    try {
+      const response = await fetch(translateUrl, {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': getCsrfToken(),
+        },
+        body: JSON.stringify({
+          source_locale: 'uz',
+          target_locales: targetLocales,
+          texts,
+        }),
+      });
+
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || payload?.status !== 'success') {
+        throw new Error(payload?.message || payload?.errors?.texts?.[0] || 'AI tarjima xatosi');
+      }
+
+      setForm((prev) => {
+        const next = {
+          ...prev,
+          translations: {
+            ru: { ...prev.translations.ru },
+            en: { ...prev.translations.en },
+            ja: { ...prev.translations.ja },
+          },
+        };
+
+        targetLocales.forEach((locale) => {
+          const translated = payload.data?.[locale] || {};
+          if (translated.title) next.translations[locale].title = translated.title;
+          if (translated.content) next.translations[locale].content = translated.content;
+        });
+
+        return next;
+      });
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'AI tarjima vaqtincha ishlamadi.');
+    } finally {
+      setTranslatingLocales([]);
+    }
+  };
+
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    const options = { preserveScroll: true, onSuccess: () => { setEditing(null); setShowForm(false); } };
-    editing?.updateUrl ? router.put(editing.updateUrl, data, options) : router.post(createUrl, data, options);
+
+    const payload = new FormData();
+    payload.append('title', form.title);
+    payload.append('slug', form.slug);
+    payload.append('content', form.content);
+    payload.append('sort_order', String(form.sortOrder || 0));
+    payload.append('is_active', form.isActive ? '1' : '0');
+    payload.append('show_in_app', form.showInApp ? '1' : '0');
+
+    (['ru', 'en', 'ja'] as TranslateLocale[]).forEach((locale) => {
+      payload.append(`translations[${locale}][title]`, form.translations[locale].title || '');
+      payload.append(`translations[${locale}][content]`, form.translations[locale].content || '');
+    });
+
+    const options = {
+      preserveScroll: true,
+      preserveState: true,
+      onSuccess: () => {
+        closeModal();
+        resetForm();
+      },
+    };
+
+    if (editing?.updateUrl) {
+      router.put(editing.updateUrl, payload, options);
+      return;
+    }
+
+    router.post(createUrl, payload, options);
   };
 
   return (
@@ -40,68 +304,336 @@ export default function Siyosatlar() {
       <div className="page-head">
         <div>
           <h1 className="page-title">Siyosatlar va qoidalar</h1>
-          <p className="page-subtitle">Legal sahifalar, appda ko'rinishi va aktiv holat</p>
+          <p className="page-subtitle">Legal sahifalar, app ichidagi ko'rinishi va AI bilan ko'p tilli boshqaruv</p>
         </div>
-        <button className="btn btn-primary-gradient" onClick={() => { setEditing(null); setShowForm(true); }}><i className="bi bi-plus-lg me-1"></i>Siyosat qo'shish</button>
+        <button className="btn btn-primary-gradient" onClick={openCreate}>
+          <i className="bi bi-plus-lg me-1"></i>Siyosat qo'shish
+        </button>
+      </div>
+
+      <div className="row g-3 mb-3">
+        <div className="col-md-3">
+          <div className="card-panel h-100">
+            <div className="small text-muted">Jami siyosat</div>
+            <div className="fs-4 fw-bold mt-2">{counts.all}</div>
+          </div>
+        </div>
+        <div className="col-md-3">
+          <div className="card-panel h-100">
+            <div className="small text-muted">Faol</div>
+            <div className="fs-4 fw-bold mt-2 text-success">{counts.active}</div>
+          </div>
+        </div>
+        <div className="col-md-3">
+          <div className="card-panel h-100">
+            <div className="small text-muted">Yashirin</div>
+            <div className="fs-4 fw-bold mt-2 text-secondary">{counts.inactive}</div>
+          </div>
+        </div>
+        <div className="col-md-3">
+          <div className="card-panel h-100">
+            <div className="small text-muted">Appda ko'rinadi</div>
+            <div className="fs-4 fw-bold mt-2 text-primary">{counts.inApp}</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="card-panel mb-3">
+        <div className="row g-3 align-items-end">
+          <div className="col-lg-7">
+            <Form.Label>Qidiruv</Form.Label>
+            <Form.Control
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Sarlavha, slug yoki matn bo'yicha qidiring"
+            />
+          </div>
+          <div className="col-lg-3">
+            <Form.Label>Holat</Form.Label>
+            <Form.Select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}>
+              <option value="all">Barchasi</option>
+              <option value="active">Faqat faol</option>
+              <option value="inactive">Faqat yashirin</option>
+            </Form.Select>
+          </div>
+          <div className="col-lg-2">
+            <div className="small text-muted">Natija</div>
+            <div className="fs-5 fw-bold">{filteredPolicies.length}</div>
+          </div>
+        </div>
       </div>
 
       <div className="card-panel">
         <div className="table-responsive">
           <table className="data-table">
-            <thead><tr><th>ID</th><th>Sarlavha</th><th>Slug</th><th>Tartib</th><th>App</th><th>Holat</th><th>Amallar</th></tr></thead>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Sarlavha</th>
+                <th>Slug / URL</th>
+                <th>Tillar</th>
+                <th>Tartib</th>
+                <th>App</th>
+                <th>Holat</th>
+                <th>Amallar</th>
+              </tr>
+            </thead>
             <tbody>
-              {policies.map((policy) => (
-                <tr key={policy.id}>
-                  <td className="fw-semibold text-primary">#{policy.id}</td>
-                  <td className="fw-semibold">{policy.title}</td>
-                  <td><code>{policy.slug}</code></td>
-                  <td>{policy.sortOrder}</td>
-                  <td><span className={`chip ${policy.showInApp ? 'chip-success' : 'chip-gray'}`}>{policy.showInApp ? 'Ha' : "Yo'q"}</span></td>
-                  <td><div className="form-check form-switch"><input type="checkbox" className="form-check-input" checked={policy.status === 'Active'} onChange={() => toggle(policy)} /></div></td>
-                  <td>
-                    <button className="btn btn-sm btn-light me-1" onClick={() => { setEditing(policy); setShowForm(true); }}><i className="bi bi-pencil"></i></button>
-                    <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(policy)}><i className="bi bi-trash"></i></button>
+              {filteredPolicies.map((policy) => {
+                const translationsReady = (['ru', 'en', 'ja'] as TranslateLocale[]).filter(
+                  (locale) => (policy.translations?.[locale]?.title || '').trim() || (policy.translations?.[locale]?.content || '').trim(),
+                ).length;
+
+                return (
+                  <tr key={policy.id}>
+                    <td className="fw-semibold text-primary">#{policy.id}</td>
+                    <td>
+                      <div className="fw-semibold">{policy.title}</div>
+                      <div className="small text-muted">{policy.content ? `${policy.content.replace(/<[^>]+>/g, '').slice(0, 92)}...` : 'Matn yo‘q'}</div>
+                    </td>
+                    <td>
+                      <div><code>{policy.slug}</code></div>
+                      {policy.publicUrl ? (
+                        <a href={policy.publicUrl} target="_blank" rel="noreferrer" className="small">
+                          Ochiq sahifa
+                        </a>
+                      ) : null}
+                    </td>
+                    <td>
+                      <span className="chip chip-gray">{translationsReady}/3 tarjima</span>
+                    </td>
+                    <td>{policy.sortOrder}</td>
+                    <td>
+                      <span className={`chip ${policy.showInApp ? 'chip-success' : 'chip-gray'}`}>
+                        {policy.showInApp ? 'Ko‘rinadi' : 'Yashirin'}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="form-check form-switch">
+                        <input
+                          type="checkbox"
+                          className="form-check-input"
+                          checked={policy.status === 'Active'}
+                          onChange={() => toggle(policy)}
+                        />
+                      </div>
+                    </td>
+                    <td>
+                      <div className="d-flex gap-1">
+                        <button className="btn btn-sm btn-light" onClick={() => openEdit(policy)}>
+                          <i className="bi bi-pencil"></i>
+                        </button>
+                        {policy.publicUrl ? (
+                          <a className="btn btn-sm btn-light" href={policy.publicUrl} target="_blank" rel="noreferrer">
+                            <i className="bi bi-box-arrow-up-right"></i>
+                          </a>
+                        ) : null}
+                        <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(policy)}>
+                          <i className="bi bi-trash"></i>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+              {filteredPolicies.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="text-center text-muted py-5">
+                    Mos siyosat topilmadi.
                   </td>
                 </tr>
-              ))}
+              ) : null}
             </tbody>
           </table>
         </div>
       </div>
-      <Modal show={showForm} onHide={() => setShowForm(false)} centered size="lg">
+
+      <Modal show={showForm} onHide={closeModal} centered size="xl" scrollable>
         <Form onSubmit={submit}>
-          <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">{editing ? 'Siyosatni tahrirlash' : "Siyosat qo'shish"}</Modal.Title></Modal.Header>
+          <Modal.Header closeButton>
+            <Modal.Title className="fs-5 fw-bold">
+              {editing ? 'Siyosatni tahrirlash' : "Siyosat qo'shish"}
+            </Modal.Title>
+          </Modal.Header>
           <Modal.Body>
             <div className="row g-3">
-              <div className="col-md-8"><Form.Label>Sarlavha</Form.Label><Form.Control name="title" required defaultValue={editing?.title || ''} /></div>
-              <div className="col-md-4"><Form.Label>Slug</Form.Label><Form.Control name="slug" defaultValue={editing?.slug || ''} /></div>
-              <div className="col-md-4"><Form.Label>Tartib</Form.Label><Form.Control name="sort_order" type="number" min={0} defaultValue={editing?.sortOrder ?? 0} /></div>
-              <div className="col-md-4 d-flex align-items-end"><Form.Check type="switch" name="is_active" value="1" label="Faol" defaultChecked={editing ? editing.status === 'Active' : true} /></div>
-              <div className="col-md-4 d-flex align-items-end"><Form.Check type="switch" name="show_in_app" value="1" label="Appda ko'rinsin" defaultChecked={editing ? editing.showInApp : true} /></div>
-              <div className="col-12"><Form.Label>Matn</Form.Label><Form.Control as="textarea" rows={8} name="content" required defaultValue={editing?.content || ''} /></div>
-              {[
-                ['ru', 'Ruscha'],
-                ['en', 'Inglizcha'],
-                ['ja', 'Yaponcha'],
-              ].map(([locale, label]) => (
+              <div className="col-12">
+                <div className="rounded-4 border p-3 d-flex flex-wrap justify-content-between align-items-center gap-3">
+                  <div>
+                    <div className="fw-semibold">Tezkor yordamchi</div>
+                    <div className="small text-muted">Nasiya uchun tayyor UZ draftni qo'yib, keyin RU, EN, JA ga AI orqali tarjima qiling.</div>
+                  </div>
+                  <div className="d-flex flex-wrap gap-2">
+                    <button type="button" className="btn btn-sm btn-dark" onClick={applySplitPreset}>
+                      <i className="bi bi-file-earmark-richtext me-1"></i>Nasiya shabloni
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-light"
+                      onClick={() => setForm((prev) => ({ ...prev, slug: slugify(prev.slug || prev.title) }))}
+                    >
+                      Slug yaratish
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="col-md-7">
+                <Form.Label>Sarlavha (UZ)</Form.Label>
+                <Form.Control
+                  required
+                  value={form.title}
+                  onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
+                  placeholder="Masalan: Kitobchi nasiya xizmati shartlari"
+                />
+              </div>
+              <div className="col-md-5">
+                <Form.Label>Slug</Form.Label>
+                <Form.Control
+                  value={form.slug}
+                  onChange={(event) => setForm((prev) => ({ ...prev, slug: event.target.value }))}
+                  placeholder="nasiya-shartlari"
+                />
+              </div>
+
+              <div className="col-md-3">
+                <Form.Label>Tartib</Form.Label>
+                <Form.Control
+                  type="number"
+                  min={0}
+                  value={form.sortOrder}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, sortOrder: Number(event.target.value || 0) }))
+                  }
+                />
+              </div>
+              <div className="col-md-3 d-flex align-items-end">
+                <Form.Check
+                  type="switch"
+                  label="Faol"
+                  checked={form.isActive}
+                  onChange={(event) => setForm((prev) => ({ ...prev, isActive: event.target.checked }))}
+                />
+              </div>
+              <div className="col-md-3 d-flex align-items-end">
+                <Form.Check
+                  type="switch"
+                  label="Appda ko'rinsin"
+                  checked={form.showInApp}
+                  onChange={(event) => setForm((prev) => ({ ...prev, showInApp: event.target.checked }))}
+                />
+              </div>
+              <div className="col-md-3 d-flex align-items-end">
+                {editing?.publicUrl ? (
+                  <a href={editing.publicUrl} target="_blank" rel="noreferrer" className="btn btn-light w-100">
+                    <i className="bi bi-box-arrow-up-right me-1"></i>Ochiq sahifani ko‘rish
+                  </a>
+                ) : (
+                  <div className="small text-muted">Saqlangach ochiq preview havolasi paydo bo'ladi.</div>
+                )}
+              </div>
+
+              <div className="col-12">
+                <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 rounded-4 border px-3 py-2">
+                  <div>
+                    <div className="fw-semibold">UZ matndan AI tarjima</div>
+                    <div className="small text-muted">Sarlavha va HTML matn RU, EN, JA maydonlariga strukturani saqlagan holda tarjima qilinadi.</div>
+                  </div>
+                  <div className="d-flex flex-wrap gap-2">
+                    {(['ru', 'en', 'ja'] as TranslateLocale[]).map((locale) => (
+                      <button
+                        key={locale}
+                        type="button"
+                        className="btn btn-sm btn-light"
+                        disabled={translatingLocales.length > 0}
+                        onClick={() => translateFromUz([locale])}
+                      >
+                        {translatingLocales.includes(locale) ? '...' : localeLabels[locale]}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-primary-gradient"
+                      disabled={translatingLocales.length > 0}
+                      onClick={() => translateFromUz(['ru', 'en', 'ja'])}
+                    >
+                      {translatingLocales.length > 0 ? 'Tarjima...' : 'Barchasi'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="col-xl-7">
+                <Form.Label>Matn (UZ, HTML bo'lishi mumkin)</Form.Label>
+                <Form.Control
+                  as="textarea"
+                  rows={22}
+                  required
+                  value={form.content}
+                  onChange={(event) => setForm((prev) => ({ ...prev, content: event.target.value }))}
+                  style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}
+                />
+              </div>
+              <div className="col-xl-5">
+                <div className="rounded-4 border h-100 overflow-hidden">
+                  <div className="px-3 py-2 border-bottom bg-light fw-semibold">UZ preview</div>
+                  <div
+                    className="p-3"
+                    style={{ minHeight: 420, maxHeight: 620, overflowY: 'auto', background: '#fff' }}
+                  >
+                    {form.content.trim() ? (
+                      <div dangerouslySetInnerHTML={{ __html: form.content }} />
+                    ) : (
+                      <div className="text-muted small">Bu yerda HTML preview ko'rinadi.</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {(['ru', 'en', 'ja'] as TranslateLocale[]).map((locale) => (
                 <div className="col-12" key={locale}>
                   <div className="rounded-4 border bg-light-subtle p-3">
-                    <div className="fw-semibold mb-3">{label} tarjima</div>
+                    <div className="d-flex justify-content-between align-items-center gap-2 mb-3">
+                      <div className="fw-semibold">{localeTitles[locale]} tarjima</div>
+                      <span className="chip chip-gray">{localeLabels[locale]}</span>
+                    </div>
                     <div className="row g-3">
                       <div className="col-12">
-                        <Form.Label>{label} sarlavha</Form.Label>
+                        <Form.Label>{localeTitles[locale]} sarlavha</Form.Label>
                         <Form.Control
-                          name={`translations[${locale}][title]`}
-                          defaultValue={editing?.translations?.[locale]?.title || ''}
+                          value={form.translations[locale].title}
+                          onChange={(event) =>
+                            setForm((prev) => ({
+                              ...prev,
+                              translations: {
+                                ...prev.translations,
+                                [locale]: {
+                                  ...prev.translations[locale],
+                                  title: event.target.value,
+                                },
+                              },
+                            }))
+                          }
                         />
                       </div>
                       <div className="col-12">
-                        <Form.Label>{label} matn</Form.Label>
+                        <Form.Label>{localeTitles[locale]} matn</Form.Label>
                         <Form.Control
                           as="textarea"
-                          rows={5}
-                          name={`translations[${locale}][content]`}
-                          defaultValue={editing?.translations?.[locale]?.content || ''}
+                          rows={10}
+                          value={form.translations[locale].content}
+                          onChange={(event) =>
+                            setForm((prev) => ({
+                              ...prev,
+                              translations: {
+                                ...prev.translations,
+                                [locale]: {
+                                  ...prev.translations[locale],
+                                  content: event.target.value,
+                                },
+                              },
+                            }))
+                          }
                         />
                       </div>
                     </div>
@@ -110,7 +642,14 @@ export default function Siyosatlar() {
               ))}
             </div>
           </Modal.Body>
-          <Modal.Footer><Button variant="light" onClick={() => setShowForm(false)}>Bekor qilish</Button><Button type="submit" className="btn-primary-gradient border-0">Saqlash</Button></Modal.Footer>
+          <Modal.Footer>
+            <Button variant="light" onClick={closeModal}>
+              Bekor qilish
+            </Button>
+            <Button type="submit" className="btn-primary-gradient border-0">
+              Saqlash
+            </Button>
+          </Modal.Footer>
         </Form>
       </Modal>
     </div>

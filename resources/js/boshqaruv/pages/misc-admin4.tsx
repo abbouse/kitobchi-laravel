@@ -68,7 +68,7 @@ export function Adminlar() {
 // ===== API MIJOZLAR =====
 export function ApiClients() {
   const { apiClients = [], apiLogs = [], apiClientsMeta } = usePage<{
-    apiClients?: Array<{ id: number; name: string; key: string; abilities?: string; active: boolean; requests: number; rateLimitSecond?: number; rateLimitMinute?: number; createUrl?: string; updateUrl?: string; toggleUrl?: string; regenerateUrl?: string; destroyUrl?: string }>;
+    apiClients?: Array<{ id: number; name: string; key: string; abilities?: string; active: boolean; requests: number; rateLimitSecond?: number; rateLimitMinute?: number; createUrl?: string; updateUrl?: string; toggleUrl?: string; regenerateUrl?: string; destroyUrl?: string; webhooks?: Array<{ id: number; url: string; events: string[]; active: boolean; failures: number; toggleUrl: string; destroyUrl: string }>; availableEvents?: string[]; webhookStoreUrl?: string }>;
     apiLogs?: Array<{ id: number; client?: string; method?: string; path?: string; status: number; date?: string }>;
     apiClientsMeta?: { warnings?: string[] };
   }>().props;
@@ -87,6 +87,28 @@ export function ApiClients() {
     const data = Object.fromEntries(new FormData(event.currentTarget).entries());
     const options = { preserveScroll: true, onSuccess: () => { setEditing(null); setShowForm(false); } };
     editing?.updateUrl ? router.put(editing.updateUrl, data, options) : router.post(createUrl, data, options);
+  };
+
+  // ── Webhooklar ──
+  const [webhookClientId, setWebhookClientId] = useState<number | null>(null);
+  const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
+  const webhookClient = apiClients.find((c) => c.id === webhookClientId) || null;
+  const toggleEvent = (ev: string) =>
+    setSelectedEvents((s) => (s.includes(ev) ? s.filter((x) => x !== ev) : [...s, ev]));
+  const addWebhook = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!webhookClient?.webhookStoreUrl) return;
+    const form = event.currentTarget;
+    const url = (new FormData(form).get('url') as string) || '';
+    router.post(
+      webhookClient.webhookStoreUrl,
+      { url, events: selectedEvents },
+      { preserveScroll: true, onSuccess: () => { setSelectedEvents([]); form.reset(); } },
+    );
+  };
+  const removeWebhook = (url?: string) => {
+    if (!url || !confirm("Webhook o'chirilsinmi?")) return;
+    router.delete(url, { preserveScroll: true });
   };
 
   return (
@@ -120,6 +142,10 @@ export function ApiClients() {
               <td><div className="form-check form-switch"><input type="checkbox" className="form-check-input" checked={client.active} onChange={() => patch(client.toggleUrl)} /></div></td>
               <td>
                 <button className="btn btn-sm btn-light me-1" onClick={() => { setEditing(client); setShowForm(true); }}><i className="bi bi-pencil"></i></button>
+                <button className="btn btn-sm btn-light me-1" title="Webhooklar" onClick={() => { setSelectedEvents([]); setWebhookClientId(client.id); }}>
+                  <i className="bi bi-broadcast"></i>
+                  {(client.webhooks?.length || 0) > 0 ? <span className="badge bg-secondary ms-1" style={{ fontSize: 9 }}>{client.webhooks!.length}</span> : null}
+                </button>
                 <button className="btn btn-sm btn-light me-1" onClick={() => patch(client.regenerateUrl)}><i className="bi bi-arrow-repeat"></i></button>
                 <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(client)}><i className="bi bi-trash"></i></button>
               </td>
@@ -159,6 +185,41 @@ export function ApiClients() {
           </Modal.Body>
           <Modal.Footer><Button variant="light" onClick={() => setShowForm(false)}>Bekor qilish</Button><Button type="submit" className="btn-primary-gradient border-0">Saqlash</Button></Modal.Footer>
         </Form>
+      </Modal>
+      <Modal show={webhookClient !== null} onHide={() => setWebhookClientId(null)} centered size="lg">
+        <Modal.Header closeButton>
+          <Modal.Title className="fs-5 fw-bold">Webhooklar — {webhookClient?.name}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {(webhookClient?.webhooks || []).length ? (
+            <div className="table-responsive mb-4"><table className="data-table">
+              <thead><tr><th>URL</th><th>Hodisalar</th><th>Xato</th><th>Holat</th><th></th></tr></thead>
+              <tbody>{(webhookClient?.webhooks || []).map((w) => (
+                <tr key={w.id}>
+                  <td style={{ fontSize: 11 }}><code>{w.url}</code></td>
+                  <td>{w.events.map((e) => <span key={e} className="chip chip-info me-1 mb-1" style={{ fontSize: 9 }}>{e}</span>)}</td>
+                  <td>{w.failures > 0 ? <span className="chip chip-danger" style={{ fontSize: 9 }}>{w.failures}</span> : <span className="text-muted">—</span>}</td>
+                  <td><div className="form-check form-switch"><input type="checkbox" className="form-check-input" checked={w.active} onChange={() => patch(w.toggleUrl)} /></div></td>
+                  <td><button className="btn btn-sm btn-light text-danger" onClick={() => removeWebhook(w.destroyUrl)}><i className="bi bi-trash"></i></button></td>
+                </tr>
+              ))}</tbody>
+            </table></div>
+          ) : <p className="text-muted">Hali webhook obunasi yo'q.</p>}
+
+          <Form onSubmit={addWebhook}>
+            <Form.Label>Yangi webhook URL</Form.Label>
+            <Form.Control name="url" type="url" placeholder="https://your-server.com/webhooks/kitobchi" required className="mb-3" />
+            <Form.Label>Hodisalar</Form.Label>
+            <div className="mb-3">
+              {(webhookClient?.availableEvents || []).map((ev) => (
+                <Form.Check inline key={ev} type="checkbox" id={`ev-${ev}`} label={ev} checked={selectedEvents.includes(ev)} onChange={() => toggleEvent(ev)} />
+              ))}
+            </div>
+            <div className="text-muted small mb-3">Imzo: har yetkazishda <code>X-Kitobchi-Signature: sha256=HMAC(secret, body)</code>. Secret webhook yaratilganda avtomatik beriladi.</div>
+            <Button type="submit" className="btn-primary-gradient border-0" disabled={selectedEvents.length === 0}>Webhook qo'shish</Button>
+          </Form>
+        </Modal.Body>
+        <Modal.Footer><Button variant="light" onClick={() => setWebhookClientId(null)}>Yopish</Button></Modal.Footer>
       </Modal>
     </div>
   );

@@ -140,11 +140,21 @@ class SplitScheduleService
         Carbon $startsAt,
         int $alreadyPaid,
         ?Carbon $asOf = null,
+        string $periodUnit = SplitPlan::PERIOD_MONTH,
+        int $periodEvery = 1,
     ): array {
         $asOf = ($asOf ?? now())->copy();
+        $every = max(1, $periodEvery);
 
-        // Boshlangan oy to'liq hisoblanadi (1..months oralig'ida clamp).
-        $elapsedMonths = min($months, max(1, (int) $startsAt->diffInMonths($asOf) + 1));
+        // Boshlangan davr to'liq hisoblanadi (1..months oralig'ida clamp). Davrlar
+        // jadval BIRLIGIDA sanaladi: haftalik jadvalda hafta, oylikda oy bilan.
+        // (Ilgari hamma reja diffInMonths bilan sanalib, haftaliklarda ustama
+        // noto'g'ri — juda kam — chiqardi.)
+        $unitsElapsed = $periodUnit === SplitPlan::PERIOD_WEEK
+            ? (int) $startsAt->diffInWeeks($asOf)
+            : (int) $startsAt->diffInMonths($asOf);
+        $periodsElapsed = intdiv($unitsElapsed, $every);
+        $elapsedMonths = min($months, max(1, $periodsElapsed + 1));
 
         $earnedInterest = (int) round($principal * $monthlyPercent * $elapsedMonths / 100);
         $fullInterest = (int) round($principal * $monthlyPercent * $months / 100);

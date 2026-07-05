@@ -574,7 +574,82 @@ class SplitContractService
             (int) $contract->months,
             $contract->starts_at,
             max(0, (int) $contract->paid_amount - $serviceFees),
+            null,
+            (string) $contract->period_unit,
+            (int) $contract->period_every,
         );
+    }
+
+    /**
+     * Foydalanuvchi tanlagan davrlarni tanlangan kartadan to'laydi.
+     * Faqat KETMA-KET (prefix): eng yaqin to'lanmagan installmentdan boshlab
+     * $upToSequence gacha. Ora-oradan bitta-bitta to'lov OLINMAYDI — shu bois
+     * client nimani yuborishidan qat'i nazar, backend prefixni o'zi hisoblaydi.
+     *
+     * Har bir installment o'z jadval summasida (o'sha davr ustamasi bilan)
+     * to'lanadi — bu foizsiz erta yopish EMAS (uni settleEarly() bajaradi),
+     * balki oldindan bir necha davrni to'lash.
+     *
+     * @return array{paid_installments:int, charged:int, error:?string}
+     */
+    public function payInstallmentsUpTo(SplitContract $contract, int $upToSequence, UserCard $card): array
+    {
+        if (! in_array($contract->status, [SplitContract::STATUS_ACTIVE, SplitContract::STATUS_OVERDUE], true)) {
+            throw new RuntimeException('Faqat faol shartnoma to\'lovlarini amalga oshirish mumkin.');
+        }
+
+        $user = $contract->user;
+        if (! $user) {
+            throw new RuntimeException('Shartnoma foydalanuvchisi topilmadi.');
+        }
+
+        $this->assertCardUsable($user, $card);
+
+        $installments = $contract->installments()
+            ->whereIn('status', [SplitInstallment::STATUS_PENDING, SplitInstallment::STATUS_OVERDUE])
+            ->where('sequence', '<=', $upToSequence)
+            ->orderBy('sequence')
+            ->get();
+
+        if ($installments->isEmpty()) {
+            throw new RuntimeException('To\'lanadigan muddat topilmadi.');
+        }
+
+        $paid = 0;
+        $charged = 0;
+        $lastError = null;
+
+        foreach ($installments as $installment) {
+            $amount = max(0, (int) $installment->amount - (int) $installment->paid_amount);
+
+            if ($amount <= 0) {
+                $this->markInstallmentPaid($installment, 0, ['note' => 'zero_remaining']);
+                $this->recalculateContractTotals($contract);
+                $paid++;
+
+                continue;
+            }
+
+            try {
+                $this->payInstallmentWithCard($installment, $contract, $user, $card, $amount);
+                $paid++;
+                $charged += $amount;
+            } catch (\Throwable $e) {
+                // Prefix buzilmasligi uchun biror davr o'tmasa keyingilariga o'tmaymiz.
+                $lastError = $e->getMessage();
+                break;
+            }
+        }
+
+        if ($paid === 0) {
+            throw new RuntimeException($lastError ?? 'To\'lov amalga oshmadi.');
+        }
+
+        return [
+            'paid_installments' => $paid,
+            'charged' => $charged,
+            'error' => $lastError,
+        ];
     }
 
     /**

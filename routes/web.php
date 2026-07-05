@@ -14,6 +14,7 @@ require __DIR__.'/boshqaruv.php';
 
 Route::get('/locale/{locale}', [LocaleController::class, 'switch'])->name('locale.switch');
 
+Route::get('/developers/api/openapi.json', [ApiDocsController::class, 'openapi'])->name('developers.api-openapi');
 Route::get('/developers/api/{page?}', ApiDocsController::class)->name('developers.api-docs');
 
 Route::get('/', function () {
