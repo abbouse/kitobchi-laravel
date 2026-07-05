@@ -490,6 +490,22 @@
     .try-send:disabled { opacity:.6; cursor:default; }
     .try-status { margin:8px 0 0; font-size:12.5px; font-weight:700; min-height:16px; }
     .try-result { margin:8px 0 0; max-height:340px; overflow:auto; background:var(--code-bg); color:var(--code-text); border-radius:8px; padding:14px; font:12.5px/1.6 ui-monospace, monospace; white-space:pre; }
+
+    /* ── Reference-docs polish (Wildberries/Uzum uslubi) ── */
+    .ability { text-transform:none; }
+    .ability--read { color:var(--muted); }
+    .ability--stock-write { color:#b45309; border-color:#f59e0b; background:#fffbeb; }
+    html[data-theme="dark"] .ability--stock-write { color:#fcd34d; border-color:rgba(245,158,11,.4); background:rgba(245,158,11,.12); }
+    .docs-nav a.active { position:relative; }
+    .docs-nav a.active::before { content:""; position:absolute; left:-9px; top:6px; bottom:6px; width:3px; border-radius:2px; background:var(--accent); }
+    .docs-nav-title { text-transform:uppercase; letter-spacing:.04em; }
+    .endpoint-top { gap:12px; }
+    .endpoint-top .path { font-weight:600; }
+    .docs-lead { font-size:17.5px; }
+    .docs-search { transition:border-color .15s, background .15s; }
+    .docs-search:hover { border-color:var(--accent); }
+    .docs-icon-btn:hover, .docs-spec-link:hover { border-color:var(--accent); color:var(--accent); }
+    .try-send:hover { filter:brightness(1.05); }
   </style>
 </head>
 <body>
@@ -555,8 +571,17 @@ Accept: application/json</code></pre></div>
             <div class="docs-callout">Agar secret oshkor bo‘lsa, admin paneldan client secretni yangilang. Eski secret darhol ishlamay qoladi.</div>
           </section>
           <section id="abilities">
-            <h2>Ruxsatlar</h2>
-            <p>Hozirgi client endpointlar <span class="docs-inline">read</span> ruxsati bilan ishlaydi. Keyinchalik yozish yoki order bilan bog‘liq endpointlar qo‘shilsa, ular alohida ability talab qiladi.</p>
+            <h2>Ruxsatlar (abilities)</h2>
+            <p>Ommaviy read endpointlar <span class="docs-inline">read</span> ruxsati bilan ishlaydi. <strong>Seller API</strong> (zaxira yozish) uchun kalit do‘konga bog‘langan bo‘lishi va <span class="docs-inline">stock:write</span> ruxsatiga ega bo‘lishi shart. Har bir kalit faqat o‘ziga biriktirilgan do‘kon mahsulotlariga ta’sir qiladi.</p>
+            <table class="docs-table">
+              <thead><tr><th>Ability</th><th>Nima ochadi</th></tr></thead>
+              <tbody>
+                <tr><td><span class="docs-inline">read</span></td><td>Ommaviy katalog, seller va qidiruv (read-only).</td></tr>
+                <tr><td><span class="docs-inline">stock:write</span></td><td>Seller-scoped zaxira yozish — faqat o‘z do‘koni.</td></tr>
+              </tbody>
+            </table>
+            <h3>IP allowlist</h3>
+            <p>Kalitga IP yoki CIDR ro‘yxati biriktirilsa, so‘rovlar faqat o‘sha manzillardan qabul qilinadi — aks holda <span class="docs-inline">403</span>. Yuqori xavfsizlik uchun integratsiya serveringiz IP’ini qo‘shing.</p>
           </section>
           @break
 
@@ -599,6 +624,17 @@ X-API-Cache: HIT</code></pre></div>
           <section>
             <h2>Qidiruv</h2>
             <p>Global qidiruv, autocomplete, trend so‘rovlar va kategoriyalar. <span class="docs-inline">suggestions</span> va <span class="docs-inline">trending</span> qidiruv maydonini boyitish uchun juda tez ishlaydi.</p>
+          </section>
+          @foreach($pageEndpoints as $endpoint)
+            <x-api-docs-endpoint :endpoint="$endpoint" />
+          @endforeach
+          @break
+
+        @case('seller')
+          <section>
+            <h2>Seller API — o‘z zaxirangizni boshqaring</h2>
+            <p>Do‘konga bog‘langan kalit (App-ID/Secret + <span class="docs-inline">stock:write</span> ruxsati) orqali o‘z tizimingizni Kitobchiga integratsiya qiling: ISBN yoki shtrix-kod bo‘yicha zaxirani yangilang. Kalit faqat <strong>o‘z do‘koningiz</strong> mahsulotlariga ta’sir qiladi.</p>
+            <div class="docs-callout"><strong>Idempotentlik:</strong> har bir yozuvga <span class="docs-inline">Idempotency-Key</span> header bering — tarmoq uzilib qayta yuborilsa ham zaxira 2 marta o‘zgarmaydi. Xavfsizlik uchun kalitga IP allowlist yoqing.</div>
           </section>
           @foreach($pageEndpoints as $endpoint)
             <x-api-docs-endpoint :endpoint="$endpoint" />

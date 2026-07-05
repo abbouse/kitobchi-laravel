@@ -15,9 +15,11 @@ class ApiClient extends Model
 {
     protected $fillable = [
         'name',
+        'seller_id',
         'app_id',
         'app_secret',
         'abilities',
+        'allowed_ips',
         'is_active',
         'rate_limit_per_second',
         'rate_limit_per_minute',
@@ -25,7 +27,9 @@ class ApiClient extends Model
 
     protected $casts = [
         'abilities' => 'array',
+        'allowed_ips' => 'array',
         'is_active' => 'boolean',
+        'seller_id' => 'integer',
         'rate_limit_per_second' => 'integer',
         'rate_limit_per_minute' => 'integer',
     ];
@@ -56,5 +60,10 @@ class ApiClient extends Model
     public function webhooks()
     {
         return $this->hasMany(ApiWebhook::class, 'api_client_id');
+    }
+
+    public function seller()
+    {
+        return $this->belongsTo(Seller::class, 'seller_id');
     }
 }

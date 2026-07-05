@@ -54,6 +54,16 @@ class VerifyApiClient
             ], 403);
         }
 
+        // IP allowlist — kalitga IP biriktirilgan bo'lsa, faqat o'sha manzillar.
+        if (! $this->ipAllowed($request, $client)) {
+            $this->logRequest($request, $client, 403, $startedAt, ['blocked_ip' => $request->ip()]);
+
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'IP address not allowed for this API key',
+            ], 403);
+        }
+
         $rateLimitResponse = $this->ensureRateLimit($client);
         if ($rateLimitResponse) {
             $this->logRequest($request, $client, $rateLimitResponse->getStatusCode(), $startedAt, [
@@ -79,6 +89,7 @@ class VerifyApiClient
         // Keyingi qatlamga client modelini uzatamiz
         $request->attributes->set('api_client', $client);
         $request->attributes->set('api_client_started_at', $startedAt);
+        $request->attributes->set('api_seller_id', $client->seller_id);
 
         if ($cachedResponse = $this->cachedGetResponse($request, $client)) {
             $this->attachRateLimitHeaders($cachedResponse, $client);
@@ -250,6 +261,54 @@ class VerifyApiClient
             (string) $request->headers->get('X-App-Locale'),
             (string) $request->headers->get('Accept-Language'),
         ]));
+    }
+
+    private function ipAllowed(Request $request, ApiClient $client): bool
+    {
+        $allowed = $client->allowed_ips;
+        if (is_string($allowed)) {
+            $decoded = json_decode($allowed, true);
+            $allowed = is_array($decoded) ? $decoded : preg_split('/[\s,]+/', $allowed);
+        }
+        $allowed = array_values(array_filter(array_map('trim', (array) ($allowed ?? []))));
+
+        if ($allowed === []) {
+            return true; // cheklov yo'q
+        }
+
+        $ip = (string) $request->ip();
+
+        foreach ($allowed as $entry) {
+            if (str_contains($entry, '/')) {
+                if ($this->ipInCidr($ip, $entry)) {
+                    return true;
+                }
+            } elseif (hash_equals($entry, $ip)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function ipInCidr(string $ip, string $cidr): bool
+    {
+        [$subnet, $mask] = array_pad(explode('/', $cidr, 2), 2, null);
+        $ipLong = ip2long($ip);
+        $subnetLong = ip2long((string) $subnet);
+
+        if ($ipLong === false || $subnetLong === false || $mask === null || ! is_numeric($mask)) {
+            return false;
+        }
+
+        $mask = (int) $mask;
+        if ($mask < 0 || $mask > 32) {
+            return false;
+        }
+
+        $maskLong = $mask === 0 ? 0 : (-1 << (32 - $mask)) & 0xFFFFFFFF;
+
+        return (($ipLong & $maskLong) === ($subnetLong & $maskLong));
     }
 
     private function clientAbilities(mixed $abilities): array

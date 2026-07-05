@@ -68,7 +68,7 @@ export function Adminlar() {
 // ===== API MIJOZLAR =====
 export function ApiClients() {
   const { apiClients = [], apiLogs = [], apiClientsMeta } = usePage<{
-    apiClients?: Array<{ id: number; name: string; key: string; abilities?: string; active: boolean; requests: number; rateLimitSecond?: number; rateLimitMinute?: number; createUrl?: string; updateUrl?: string; toggleUrl?: string; regenerateUrl?: string; destroyUrl?: string; webhooks?: Array<{ id: number; url: string; events: string[]; active: boolean; failures: number; toggleUrl: string; destroyUrl: string }>; availableEvents?: string[]; webhookStoreUrl?: string }>;
+    apiClients?: Array<{ id: number; name: string; key: string; abilities?: string; sellerId?: number | null; sellerName?: string | null; allowedIps?: string; active: boolean; requests: number; rateLimitSecond?: number; rateLimitMinute?: number; createUrl?: string; updateUrl?: string; toggleUrl?: string; regenerateUrl?: string; destroyUrl?: string; webhooks?: Array<{ id: number; url: string; events: string[]; active: boolean; failures: number; toggleUrl: string; destroyUrl: string }>; availableEvents?: string[]; webhookStoreUrl?: string }>;
     apiLogs?: Array<{ id: number; client?: string; method?: string; path?: string; status: number; date?: string }>;
     apiClientsMeta?: { warnings?: string[] };
   }>().props;
@@ -135,7 +135,7 @@ export function ApiClients() {
           <tbody>{apiClients.map(client => (
             <tr key={client.id}>
               <td className="fw-semibold" style={{ color: '#4f46e5' }}>#{client.id}</td>
-              <td className="fw-semibold">{client.name}</td>
+              <td className="fw-semibold">{client.name}{client.sellerName ? <div className="text-muted small"><i className="bi bi-shop me-1"></i>{client.sellerName}</div> : (client.sellerId ? <div className="text-muted small"><i className="bi bi-shop me-1"></i>#{client.sellerId}</div> : null)}</td>
               <td><code style={{ fontSize: 11, background: '#f3f4f6', padding: '2px 6px', borderRadius: 4 }}>{client.key}</code></td>
               <td>{client.requests.toLocaleString()}</td>
               <td>{client.rateLimitSecond != null || client.rateLimitMinute != null ? `${client.rateLimitSecond ?? 0}/s · ${client.rateLimitMinute ?? 0}/m` : 'Limitlar sozlanmagan'}</td>
@@ -176,7 +176,12 @@ export function ApiClients() {
           <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">{editing ? 'API mijozni tahrirlash' : "API mijoz qo'shish"}</Modal.Title></Modal.Header>
           <Modal.Body>
             <Form.Label>Nomi</Form.Label><Form.Control name="name" required defaultValue={editing?.name || ''} className="mb-3" />
-            <Form.Label>Abilities</Form.Label><Form.Control name="abilities" placeholder="read, write" defaultValue={editing?.abilities || 'read'} className="mb-3" />
+            <Form.Label>Abilities</Form.Label><Form.Control name="abilities" placeholder="read, stock:write" defaultValue={editing?.abilities || 'read'} className="mb-1" />
+            <div className="text-muted small mb-3">Seller integratsiyasi uchun: <code>read, stock:write</code></div>
+            <Form.Label>Seller ID <span className="text-muted">(ixtiyoriy — kalitni do'konga bog'lash)</span></Form.Label>
+            <Form.Control name="seller_id" type="number" min={1} placeholder="Masalan: 12" defaultValue={editing?.sellerId ?? ''} className="mb-3" />
+            <Form.Label>Ruxsat etilgan IP'lar <span className="text-muted">(ixtiyoriy, vergul/qator bilan; bo'sh = hamma)</span></Form.Label>
+            <Form.Control name="allowed_ips" as="textarea" rows={2} placeholder="203.0.113.10, 10.0.0.0/24" defaultValue={editing?.allowedIps || ''} className="mb-3" />
             <div className="row g-3 mb-3">
               <div className="col-6"><Form.Label>Limit / sekund</Form.Label><Form.Control name="rate_limit_per_second" type="number" min={1} defaultValue={editing?.rateLimitSecond || 8} /></div>
               <div className="col-6"><Form.Label>Limit / minut</Form.Label><Form.Control name="rate_limit_per_minute" type="number" min={1} defaultValue={editing?.rateLimitMinute || 240} /></div>

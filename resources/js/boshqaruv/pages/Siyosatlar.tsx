@@ -230,6 +230,7 @@ export default function Siyosatlar() {
           'X-CSRF-TOKEN': getCsrfToken(),
         },
         body: JSON.stringify({
+          provider: 'google_community',
           source_locale: 'uz',
           target_locales: targetLocales,
           texts,
@@ -448,20 +449,20 @@ export default function Siyosatlar() {
         </div>
       </div>
 
-      <Modal show={showForm} onHide={closeModal} centered size="xl" scrollable>
+      <Modal show={showForm} onHide={closeModal} centered size="xl">
         <Form onSubmit={submit}>
           <Modal.Header closeButton>
             <Modal.Title className="fs-5 fw-bold">
               {editing ? 'Siyosatni tahrirlash' : "Siyosat qo'shish"}
             </Modal.Title>
           </Modal.Header>
-          <Modal.Body>
+          <Modal.Body style={{ maxHeight: 'calc(100vh - 140px)', overflowY: 'auto' }}>
             <div className="row g-3">
               <div className="col-12">
                 <div className="rounded-4 border p-3 d-flex flex-wrap justify-content-between align-items-center gap-3">
                   <div>
                     <div className="fw-semibold">Tezkor yordamchi</div>
-                    <div className="small text-muted">Nasiya uchun tayyor UZ draftni qo'yib, keyin RU, EN, JA ga AI orqali tarjima qiling.</div>
+                    <div className="small text-muted">Nasiya uchun tayyor UZ draftni qo'yib, keyin RU, EN, JA ga Google community tarjimasi bilan to'ldiring.</div>
                   </div>
                   <div className="d-flex flex-wrap gap-2">
                     <button type="button" className="btn btn-sm btn-dark" onClick={applySplitPreset}>
@@ -536,8 +537,8 @@ export default function Siyosatlar() {
               <div className="col-12">
                 <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 rounded-4 border px-3 py-2">
                   <div>
-                    <div className="fw-semibold">UZ matndan AI tarjima</div>
-                    <div className="small text-muted">Sarlavha va HTML matn RU, EN, JA maydonlariga strukturani saqlagan holda tarjima qilinadi.</div>
+                    <div className="fw-semibold">UZ matndan Google community tarjima</div>
+                    <div className="small text-muted">Uzun legal HTML matnlar struktura saqlangan holda fonda tarjima qilinadi. Tarjima ketayotgan paytda ham modalni bemalol scroll qilish mumkin.</div>
                   </div>
                   <div className="d-flex flex-wrap gap-2">
                     {(['ru', 'en', 'ja'] as TranslateLocale[]).map((locale) => (

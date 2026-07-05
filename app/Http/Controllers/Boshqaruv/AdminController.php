@@ -965,6 +965,7 @@ class AdminController extends Controller
         $supportedLocales = array_merge(['uz'], self::CONTENT_LOCALES);
 
         $data = $request->validate([
+            'provider' => ['nullable', Rule::in(['openai', 'google_community'])],
             'source_locale' => ['required', Rule::in($supportedLocales)],
             'target_locales' => ['required', 'array', 'min:1'],
             'target_locales.*' => ['required', Rule::in(self::CONTENT_LOCALES)],
@@ -983,14 +984,25 @@ class AdminController extends Controller
             ]);
         }
 
-        $translations = $this->translateTextsWithAi(
-            $texts,
-            (string) $data['source_locale'],
-            array_values(array_unique($data['target_locales'])),
-        );
+        $provider = (string) ($data['provider'] ?? 'openai');
+        $sourceLocale = (string) $data['source_locale'];
+        $targetLocales = array_values(array_unique($data['target_locales']));
+
+        $translations = $provider === 'google_community'
+            ? app(\App\Services\GoogleCommunityTranslateService::class)->translateTexts(
+                $texts,
+                $sourceLocale,
+                $targetLocales,
+            )
+            : $this->translateTextsWithAi(
+                $texts,
+                $sourceLocale,
+                $targetLocales,
+            );
 
         return response()->json([
             'status' => 'success',
+            'provider' => $provider,
             'data' => $translations,
         ]);
     }
@@ -2219,7 +2231,9 @@ PROMPT;
         $hasRateLimitPerMinute = Schema::hasTable('api_clients') && Schema::hasColumn('api_clients', 'rate_limit_per_minute');
         $data = $request->validate([
             'name' => ['required', 'string', 'max:100'],
+            'seller_id' => ['nullable', 'integer', 'exists:sellers,id'],
             'abilities' => ['nullable', 'string', 'max:1000'],
+            'allowed_ips' => ['nullable', 'string', 'max:2000'],
             'is_active' => ['nullable', 'boolean'],
             'rate_limit_per_second' => ['nullable', 'integer', 'min:1', 'max:10000'],
             'rate_limit_per_minute' => ['nullable', 'integer', 'min:1', 'max:500000'],
@@ -2247,6 +2261,21 @@ PROMPT;
             $data['rate_limit_per_minute'] = $data['rate_limit_per_minute'] ?? 240;
         } else {
             unset($data['rate_limit_per_minute']);
+        }
+
+        if (Schema::hasColumn('api_clients', 'seller_id')) {
+            $data['seller_id'] = $request->filled('seller_id') ? (int) $request->input('seller_id') : null;
+        } else {
+            unset($data['seller_id']);
+        }
+
+        if (Schema::hasColumn('api_clients', 'allowed_ips')) {
+            $rawIps = trim((string) ($data['allowed_ips'] ?? ''));
+            $data['allowed_ips'] = $rawIps !== ''
+                ? array_values(array_filter(array_map('trim', preg_split('/[\s,]+/', $rawIps) ?: [])))
+                : null;
+        } else {
+            unset($data['allowed_ips']);
         }
 
         return $data;
@@ -7068,21 +7097,27 @@ PROMPT;
             return [];
         }
 
-        return Cache::remember('boshqaruv:api-clients:payload:v3', now()->addMinutes(5), function () {
+        return Cache::remember('boshqaruv:api-clients:payload:v4', now()->addMinutes(5), function () {
             $hasRequestLogs = Schema::hasTable('api_client_request_logs');
             $hasRateLimitPerSecond = Schema::hasColumn('api_clients', 'rate_limit_per_second');
             $hasRateLimitPerMinute = Schema::hasColumn('api_clients', 'rate_limit_per_minute');
             $hasWebhooks = Schema::hasTable('api_webhooks');
+            $hasSeller = Schema::hasColumn('api_clients', 'seller_id');
+            $hasAllowedIps = Schema::hasColumn('api_clients', 'allowed_ips');
 
             return ApiClient::query()
                 ->when($hasRequestLogs, fn ($query) => $query->withCount('requestLogs'))
                 ->when($hasWebhooks, fn ($query) => $query->with('webhooks'))
+                ->when($hasSeller, fn ($query) => $query->with('seller:id,shop_name'))
                 ->orderByDesc('id')
                 ->get()
                 ->map(fn (ApiClient $client) => [
                     'id' => $client->id,
                     'name' => $client->name,
                     'key' => $client->app_id ?: '—',
+                    'sellerId' => $hasSeller ? $client->seller_id : null,
+                    'sellerName' => $hasSeller ? ($client->seller?->shop_name) : null,
+                    'allowedIps' => $hasAllowedIps && is_array($client->allowed_ips) ? implode(', ', $client->allowed_ips) : '',
                     'abilities' => implode(', ', $this->apiClientAbilities($client->abilities)),
                     'active' => (bool) $client->is_active,
                     'requests' => (int) ($client->request_logs_count ?? 0),
@@ -7177,6 +7212,7 @@ PROMPT;
 
     private function clearApiClientCache(): void
     {
+        Cache::forget('boshqaruv:api-clients:payload:v4');
         Cache::forget('boshqaruv:api-clients:payload:v3');
         Cache::forget('boshqaruv:api-clients:payload:v2');
         Cache::forget('boshqaruv:api-clients:logs:v1');

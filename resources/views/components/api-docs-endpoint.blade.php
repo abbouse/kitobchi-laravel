@@ -3,7 +3,7 @@
 @php
     $ep = $endpoint;
     $samples = $ep['samples'] ?? [];
-    $hasParams = ! empty($ep['path_params']) || ! empty($ep['query_params']);
+    $hasParams = ! empty($ep['path_params']) || ! empty($ep['query_params']) || ! empty($ep['body_params']);
     $uid = $ep['id'] ?? \Illuminate\Support\Str::random(6);
 @endphp
 
@@ -12,7 +12,7 @@
     <span class="method method--{{ $ep['method'] }}">{{ $ep['method'] }}</span>
     <span class="path">{{ $ep['full_path'] ?? $ep['path'] }}</span>
     @if(! empty($ep['cache']))<span class="tag-cache" title="GET javob qisqa muddat cache qilinadi">cache</span>@endif
-    <span class="ability">{{ $ep['ability'] ?? 'read' }}</span>
+    <span class="ability ability--{{ \Illuminate\Support\Str::slug($ep['ability'] ?? 'read') }}">{{ $ep['ability'] ?? 'read' }}</span>
   </div>
 
   <div class="endpoint-body">
@@ -43,8 +43,27 @@
               <td>{{ $p['desc'] ?? '' }}</td>
             </tr>
           @endforeach
+          @foreach($ep['body_params'] ?? [] as $p)
+            <tr>
+              <td><span class="docs-inline">{{ $p['name'] }}</span></td>
+              <td>{{ $p['type'] ?? 'string' }}</td>
+              <td>body</td>
+              <td>{{ ($p['required'] ?? false) ? 'ha' : 'yo‘q' }}</td>
+              <td>{{ $p['desc'] ?? '' }}</td>
+            </tr>
+          @endforeach
         </tbody>
       </table>
+    @endif
+
+    @if(! empty($ep['request_json']))
+      <div class="endpoint-response">
+        <div class="endpoint-response-head">
+          <span>So‘rov tanasi <em>JSON</em></span>
+          <button type="button" class="code-copy" data-copy>Nusxa</button>
+        </div>
+        <div class="docs-code response-code"><pre><code>{{ $ep['request_json'] }}</code></pre></div>
+      </div>
     @endif
 
     {{-- Kod namunalari (til tablari) --}}

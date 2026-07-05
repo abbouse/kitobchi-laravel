@@ -89,6 +89,11 @@ class ApiDocsController extends Controller
                 'description' => 'Global qidiruv, autocomplete, trend so‘rovlar va kategoriyalar.',
                 'group' => 'Endpointlar',
             ],
+            'seller' => [
+                'title' => 'Seller API (yozish)',
+                'description' => 'Do‘konga bog‘langan kalit orqali o‘z zaxirangizni boshqaring — ISBN yoki shtrix-kod bo‘yicha.',
+                'group' => 'Endpointlar',
+            ],
             'webhooks' => [
                 'title' => 'Webhooklar',
                 'description' => 'Hodisalarga obuna bo‘lish, imzo (HMAC) tekshiruvi va qayta yuborish siyosati.',
@@ -143,6 +148,10 @@ class ApiDocsController extends Controller
                 ['id' => 'search-suggestions', 'label' => 'Autocomplete'],
                 ['id' => 'search-trending', 'label' => 'Trendlar'],
                 ['id' => 'search-categories', 'label' => 'Kategoriyalar'],
+            ],
+            'seller' => [
+                ['id' => 'seller-stock-update', 'label' => 'Zaxirani yangilash'],
+                ['id' => 'seller-my-products', 'label' => 'Mening mahsulotlarim'],
             ],
             'webhooks' => [
                 ['id' => 'events', 'label' => 'Hodisalar'],
@@ -386,6 +395,57 @@ class ApiDocsController extends Controller
                     ],
                 ],
             ],
+            'seller' => [
+                [
+                    'id' => 'seller-stock-update',
+                    'method' => 'POST',
+                    'path' => '/products/stock/by-code',
+                    'title' => 'Zaxirani kod bo‘yicha yangilash',
+                    'summary' => 'Do‘konga bog‘langan kalit orqali ISBN (kitob) yoki shtrix-kod (kanselyariya) bo‘yicha zaxirani o‘rnatadi (`stock`) yoki o‘zgartiradi (`delta`). `stock:write` ability va seller-scoped kalit talab qilinadi.',
+                    'ability' => 'stock:write',
+                    'cache' => false,
+                    'path_params' => [],
+                    'query_params' => [],
+                    'body_params' => [
+                        ['name' => 'code', 'type' => 'string', 'required' => true, 'desc' => 'ISBN yoki shtrix-kod.'],
+                        ['name' => 'type', 'type' => 'string', 'required' => false, 'desc' => 'book | stationery. Bo‘sh bo‘lsa avtomatik aniqlanadi.'],
+                        ['name' => 'stock', 'type' => 'integer', 'required' => false, 'desc' => 'Yangi mutlaq zaxira (>= 0).'],
+                        ['name' => 'delta', 'type' => 'integer', 'required' => false, 'desc' => 'Joriy zaxiraga qo‘shiladigan o‘zgarish (+/-).'],
+                    ],
+                    'body' => ['code' => '9781847941831', 'stock' => 25],
+                    'response' => [
+                        'status' => 'success',
+                        'success' => true,
+                        'type' => 'book',
+                        'id' => 128,
+                        'name' => 'Atomic Habits',
+                        'stock' => 25,
+                        'in_stock' => true,
+                    ],
+                ],
+                [
+                    'id' => 'seller-my-products',
+                    'method' => 'GET',
+                    'path' => '/products/mine',
+                    'title' => 'Mening mahsulotlarim',
+                    'summary' => 'Kalitga bog‘langan do‘konning mahsulotlari va zaxirasi (sahifalangan).',
+                    'ability' => 'stock:write',
+                    'cache' => false,
+                    'path_params' => [],
+                    'query_params' => [
+                        ['name' => 'type', 'type' => 'string', 'required' => false, 'desc' => 'book (default) yoki stationery.', 'example' => 'book'],
+                        ['name' => 'per_page', 'type' => 'integer', 'required' => false, 'desc' => 'Sahifadagi soni (1–100).', 'example' => 50],
+                        ['name' => 'page', 'type' => 'integer', 'required' => false, 'desc' => 'Sahifa raqami.', 'example' => 1],
+                    ],
+                    'response' => [
+                        'status' => 'success',
+                        'data' => [
+                            ['id' => 128, 'type' => 'book', 'name' => 'Atomic Habits', 'code' => '9781847941831', 'price' => 89000, 'stock' => 25, 'in_stock' => true],
+                        ],
+                        'meta' => ['page' => 1, 'per_page' => 50, 'total' => 240],
+                    ],
+                ],
+            ],
         ];
     }
 
@@ -407,7 +467,10 @@ class ApiDocsController extends Controller
             $ep['response'] ?? ['status' => 'success', 'data' => []],
             JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
         );
-        $ep['samples'] = $this->codeSamples($ep['method'], $exampleUrl);
+        $ep['request_json'] = isset($ep['body'])
+            ? json_encode($ep['body'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
+            : null;
+        $ep['samples'] = $this->codeSamples($ep['method'], $exampleUrl, $ep['body'] ?? null);
 
         return $ep;
     }
@@ -437,49 +500,92 @@ class ApiDocsController extends Controller
     /**
      * @return array<string,array{label:string,lang:string,code:string}>
      */
-    private function codeSamples(string $method, string $url): array
+    private function codeSamples(string $method, string $url, ?array $body = null): array
     {
         $m = strtoupper($method);
+        $bodyJson = $body !== null ? json_encode($body, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : null;
+        $bodyPretty = $body !== null ? json_encode($body, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : null;
 
+        // ── cURL ──
         $curl = "curl --request {$m} \\\n"
             ."  --url '{$url}' \\\n"
             ."  --header 'Accept: application/json' \\\n"
             ."  --header 'X-App-ID: app_xxxxxxxxxxxx' \\\n"
             ."  --header 'X-App-Secret: your-secret'";
+        if ($bodyJson !== null) {
+            $curl .= " \\\n  --header 'Content-Type: application/json' \\\n"
+                ."  --header 'Idempotency-Key: unique-123' \\\n"
+                ."  --data '{$bodyJson}'";
+        }
 
-        $js = "const res = await fetch(\"{$url}\", {\n"
-            ."  headers: {\n"
-            ."    \"Accept\": \"application/json\",\n"
+        // ── JavaScript (fetch) ──
+        $jsHeaders = "    \"Accept\": \"application/json\",\n"
             ."    \"X-App-ID\": \"app_xxxxxxxxxxxx\",\n"
-            ."    \"X-App-Secret\": process.env.KITOBCHI_APP_SECRET,\n"
-            ."  },\n"
-            ."});\n"
-            ."const data = await res.json();\n"
-            ."console.log(data);";
+            ."    \"X-App-Secret\": process.env.KITOBCHI_APP_SECRET,\n";
+        if ($bodyJson !== null) {
+            $js = "const res = await fetch(\"{$url}\", {\n"
+                ."  method: \"{$m}\",\n"
+                ."  headers: {\n{$jsHeaders}"
+                ."    \"Content-Type\": \"application/json\",\n"
+                ."    \"Idempotency-Key\": \"unique-123\",\n"
+                ."  },\n"
+                ."  body: JSON.stringify({$bodyPretty}),\n"
+                ."});\n"
+                ."const data = await res.json();";
+        } else {
+            $js = "const res = await fetch(\"{$url}\", {\n"
+                ."  headers: {\n{$jsHeaders}  },\n"
+                ."});\n"
+                ."const data = await res.json();";
+        }
 
-        $php = "<?php\n"
-            ."\$ch = curl_init(\"{$url}\");\n"
-            ."curl_setopt_array(\$ch, [\n"
-            ."  CURLOPT_RETURNTRANSFER => true,\n"
-            ."  CURLOPT_HTTPHEADER => [\n"
-            ."    'Accept: application/json',\n"
-            ."    'X-App-ID: app_xxxxxxxxxxxx',\n"
-            ."    'X-App-Secret: ' . getenv('KITOBCHI_APP_SECRET'),\n"
-            ."  ],\n"
-            ."]);\n"
-            ."\$data = json_decode(curl_exec(\$ch), true);\n"
-            ."curl_close(\$ch);";
+        // ── PHP (curl) ──
+        if ($bodyJson !== null) {
+            $php = "<?php\n\$ch = curl_init(\"{$url}\");\n"
+                ."curl_setopt_array(\$ch, [\n"
+                ."  CURLOPT_RETURNTRANSFER => true,\n"
+                ."  CURLOPT_CUSTOMREQUEST => '{$m}',\n"
+                ."  CURLOPT_POSTFIELDS => '{$bodyJson}',\n"
+                ."  CURLOPT_HTTPHEADER => [\n"
+                ."    'Accept: application/json',\n"
+                ."    'Content-Type: application/json',\n"
+                ."    'X-App-ID: app_xxxxxxxxxxxx',\n"
+                ."    'X-App-Secret: ' . getenv('KITOBCHI_APP_SECRET'),\n"
+                ."    'Idempotency-Key: unique-123',\n"
+                ."  ],\n"
+                ."]);\n\$data = json_decode(curl_exec(\$ch), true);\ncurl_close(\$ch);";
+        } else {
+            $php = "<?php\n\$ch = curl_init(\"{$url}\");\n"
+                ."curl_setopt_array(\$ch, [\n"
+                ."  CURLOPT_RETURNTRANSFER => true,\n"
+                ."  CURLOPT_HTTPHEADER => [\n"
+                ."    'Accept: application/json',\n"
+                ."    'X-App-ID: app_xxxxxxxxxxxx',\n"
+                ."    'X-App-Secret: ' . getenv('KITOBCHI_APP_SECRET'),\n"
+                ."  ],\n"
+                ."]);\n\$data = json_decode(curl_exec(\$ch), true);\ncurl_close(\$ch);";
+        }
 
-        $python = "import os, requests\n\n"
-            ."res = requests.get(\n"
-            ."    \"{$url}\",\n"
-            ."    headers={\n"
-            ."        \"Accept\": \"application/json\",\n"
-            ."        \"X-App-ID\": \"app_xxxxxxxxxxxx\",\n"
-            ."        \"X-App-Secret\": os.environ[\"KITOBCHI_APP_SECRET\"],\n"
-            ."    },\n"
-            .")\n"
-            ."data = res.json()";
+        // ── Python (requests) ──
+        if ($bodyJson !== null) {
+            $python = "import os, requests\n\n"
+                ."res = requests.request(\n    \"{$m}\",\n    \"{$url}\",\n"
+                ."    headers={\n"
+                ."        \"Accept\": \"application/json\",\n"
+                ."        \"X-App-ID\": \"app_xxxxxxxxxxxx\",\n"
+                ."        \"X-App-Secret\": os.environ[\"KITOBCHI_APP_SECRET\"],\n"
+                ."        \"Idempotency-Key\": \"unique-123\",\n"
+                ."    },\n"
+                ."    json={$bodyPretty},\n)\ndata = res.json()";
+        } else {
+            $python = "import os, requests\n\n"
+                ."res = requests.get(\n    \"{$url}\",\n"
+                ."    headers={\n"
+                ."        \"Accept\": \"application/json\",\n"
+                ."        \"X-App-ID\": \"app_xxxxxxxxxxxx\",\n"
+                ."        \"X-App-Secret\": os.environ[\"KITOBCHI_APP_SECRET\"],\n"
+                ."    },\n)\ndata = res.json()";
+        }
 
         return [
             'curl' => ['label' => 'cURL', 'lang' => 'bash', 'code' => $curl],
@@ -543,6 +649,15 @@ class ApiDocsController extends Controller
                         '429' => ['description' => 'Rate limit oshib ketdi'],
                     ],
                 ];
+
+                if (isset($ep['body'])) {
+                    $operation['requestBody'] = [
+                        'required' => true,
+                        'content' => [
+                            'application/json' => ['example' => $ep['body']],
+                        ],
+                    ];
+                }
 
                 $paths[$ep['path']][strtolower($ep['method'])] = $operation;
             }

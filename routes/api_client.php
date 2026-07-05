@@ -1,7 +1,18 @@
 <?php
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\{ProductsController, PurchaseController, SearchController, CartController, GiftsController};
+use App\Http\Controllers\Api\Client\SellerApiController;
 
+// ── Seller-scoped WRITE API ──────────────────────────────────────────────
+// Kalit bitta sellerga bog'langan + `stock:write` ability. Bu guruh READ
+// guruhidan OLDIN turadi — aks holda GET products/mine "products/{col}" ga tushib
+// ketardi.
+Route::middleware('api.client:stock:write')->group(function () {
+    Route::post('products/stock/by-code', [SellerApiController::class, 'updateStockByCode']);
+    Route::get('products/mine', [SellerApiController::class, 'myProducts']);
+});
+
+// ── Public READ API ──────────────────────────────────────────────────────
 Route::middleware('api.client:read')->group(function () {
     Route::prefix('products')->group(function () {
         Route::get('sellers/list', [ProductsController::class, 'sellersWithLatestProducts']);
