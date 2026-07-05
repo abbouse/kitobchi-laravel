@@ -7,18 +7,12 @@ const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(n || 0);
 type SplitSettings = {
   enabled: boolean;
   publicEnabled: boolean;
-  upfrontPercent: number;
-  termDays: number;
-  globalMinOrderSum: number;
-  globalMaxOrderSum: number;
   globalMinLimit: number;
   globalMaxLimit: number;
   minCompletedOrders: number;
   minAccountAgeDays: number;
   minCardAgeDays: number;
   minReputationScore: number;
-  maxActiveContracts: number;
-  defaultFeePercent: number;
   cardDeleteLockEnabled: boolean;
   refundSenderCardId: string;
   refundServiceId: string;
@@ -116,8 +110,6 @@ type SplitContractRow = {
   startsAt: string | null;
   overdueSince: string | null;
   installments: SplitInstallmentRow[];
-  activateUrl: string;
-  cancelUrl: string;
   settleUrl: string;
   creditUrl: string;
   refundDue: number;
@@ -291,9 +283,6 @@ export default function Split() {
                 <div className="col-md-3"><Field name="split_min_reputation_score" label="Min reputatsiya balli" type="number" step="0.01" defaultValue={splitSettings.minReputationScore}
                   hint="Userning umumiy obro' balli (0–100, tizim hisoblaydi). Bekor qilishlar, qaytarishlar, warninglar ballni tushiradi."
                   example="78 qo'ysangiz, balli 75 bo'lgan user nasiya ololmaydi." /></div>
-                <div className="col-md-3"><Field name="split_max_active_contracts" label="Bir userda max ochiq nasiya" type="number" defaultValue={splitSettings.maxActiveContracts}
-                  hint="Bir vaqtning o'zida nechta ochiq nasiya shartnomasi bo'lishi mumkin."
-                  example="1 bo'lsa, avvalgi nasiyasini yopmaguncha yangisini ololmaydi." /></div>
 
                 <div className="col-12"><div className="fw-semibold small text-muted mt-2">TEXNIK (Paylov refund)</div></div>
                 <div className="col-md-3"><Field name="paylov_refund_sender_card_id" label="Refund sender cardId" defaultValue={splitSettings.refundSenderCardId}
@@ -707,7 +696,7 @@ function ContractSection({
             Split shartnomalari
             <InfoHint
               text="Holatlar: «Kutilmoqda» — 1-to'lov hold qilingan, buyurtma hali topshirilmagan. «Faol» — jadval bo'yicha to'lanmoqda. «Muddati o'tgan» — avto yechish 4 urinishda ham o'tmagan. «Yopilgan» — to'liq to'langan."
-              example="Kutilmoqda holatida ▶ bosilsa hold yechiladi, ✕ bosilsa hold qaytariladi."
+              example="Kutilmoqda holatidagi shartnoma buyurtma orqali boshqariladi: buyurtma topshirilsa avtomatik faollashadi, buyurtma bekor qilinsa hold qaytadi. Bu yerdan alohida bekor qilinmaydi."
             />
           </div>
           <small className="text-muted">
@@ -792,14 +781,13 @@ function ContractSection({
                     <td>
                       <div className="d-flex gap-1 flex-wrap">
                         {contract.status === 'pending' ? (
-                          <>
-                            <button className="btn btn-sm btn-light" title="Faollashtirish (holdni yechish)" onClick={() => { if (confirm('1-to‘lov holddan yechilsinmi?')) router.post(contract.activateUrl, {}, { preserveScroll: true }); }}>
-                              <i className="bi bi-play-fill text-success"></i>
-                            </button>
-                            <button className="btn btn-sm btn-light" title="Bekor qilish (hold qaytadi)" onClick={() => { if (confirm('Shartnoma bekor qilinsinmi?')) router.post(contract.cancelUrl, {}, { preserveScroll: true }); }}>
-                              <i className="bi bi-x-lg text-danger"></i>
-                            </button>
-                          </>
+                          <span
+                            className="text-muted small"
+                            title="Buyurtma topshirilganda shartnoma avtomatik faollashadi; buyurtma bekor qilinsa hold avtomatik qaytadi. Boshqaruv Buyurtmalar sahifasidan."
+                          >
+                            <i className="bi bi-link-45deg me-1"></i>
+                            Order #{contract.orderId} orqali boshqariladi
+                          </span>
                         ) : null}
                         {contract.status === 'active' || contract.status === 'overdue' ? (
                           <>

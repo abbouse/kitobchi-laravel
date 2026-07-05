@@ -33,18 +33,12 @@ class SplitProfileService
         return [
             'enabled' => (bool) ($settings?->split_enabled ?? false),
             'public_enabled' => (bool) ($settings?->split_public_enabled ?? false),
-            'upfront_percent' => (int) ($settings?->split_upfront_percent ?? 25),
-            'term_days' => (int) ($settings?->split_term_days ?? 60),
-            'global_min_order_sum' => (int) ($settings?->split_global_min_order_sum ?? 100000),
-            'global_max_order_sum' => (int) ($settings?->split_global_max_order_sum ?? 2000000),
             'global_min_limit' => (int) ($settings?->split_global_min_limit ?? 300000),
             'global_max_limit' => (int) ($settings?->split_global_max_limit ?? 2000000),
             'min_completed_orders' => (int) ($settings?->split_min_completed_orders ?? 3),
             'min_account_age_days' => (int) ($settings?->split_min_account_age_days ?? 90),
             'min_card_age_days' => (int) ($settings?->split_min_card_age_days ?? 45),
             'min_reputation_score' => (float) ($settings?->split_min_reputation_score ?? 78),
-            'max_active_contracts' => (int) ($settings?->split_max_active_contracts ?? 1),
-            'default_fee_percent' => (float) ($settings?->split_default_fee_percent ?? 0),
             'card_delete_lock_enabled' => (bool) ($settings?->split_card_delete_lock_enabled ?? true),
             'refund_sender_card_id' => (string) ($settings?->paylov_refund_sender_card_id ?? ''),
             'refund_service_id' => (string) ($settings?->paylov_refund_service_id ?? ''),
@@ -174,12 +168,35 @@ class SplitProfileService
         if (Schema::hasTable('split_contracts')) {
             // Pending (hold bosqichi) ham limitni band qiladi — aks holda user
             // bir vaqtda bir nechta pending split ochib limitdan oshishi mumkin.
-            $query = \Illuminate\Support\Facades\DB::table('split_contracts')
+            //
+            // Exposure = faqat to'lanmagan ASOSIY summa (marketpleys standarti):
+            // foiz platform daromadi, yetkazish/qadoqlash 1-to'lovda olinadi —
+            // ular limitni band qilmaydi. To'lovlar principal/foizga proporsional
+            // taqsimlanadi deb hisoblanadi.
+            $openContracts = \Illuminate\Support\Facades\DB::table('split_contracts')
                 ->where('user_id', $user->id)
-                ->whereIn('status', ['pending', 'active', 'overdue']);
+                ->whereIn('status', ['pending', 'active', 'overdue'])
+                ->get(['principal_amount', 'interest_amount', 'paid_amount', 'meta']);
 
-            $activeContractCount = (int) $query->count();
-            $activeExposure = (int) round((float) $query->sum('remaining_amount'));
+            $activeContractCount = $openContracts->count();
+            $activeExposure = (int) $openContracts->sum(function ($contract) {
+                $principal = (int) $contract->principal_amount;
+                $interest = (int) $contract->interest_amount;
+                $paid = (int) $contract->paid_amount;
+
+                $meta = is_string($contract->meta) ? (array) json_decode($contract->meta, true) : [];
+                $serviceFees = max(0, (int) ($meta['service_fees'] ?? $meta['delivery_fee'] ?? 0));
+
+                // Xizmat haqlari 1-to'lovda — kreditga tegishli to'lov qismi:
+                $paidTowardFinanced = max(0, $paid - $serviceFees);
+                $financed = $principal + $interest;
+
+                $principalPaid = $financed > 0
+                    ? min($principal, (int) round($paidTowardFinanced * $principal / $financed))
+                    : 0;
+
+                return max(0, $principal - $principalPaid);
+            });
 
             $splitHistory['completed_contracts'] = (int) \Illuminate\Support\Facades\DB::table('split_contracts')
                 ->where('user_id', $user->id)
@@ -228,10 +245,12 @@ class SplitProfileService
             codReturnStrikes: $codReturnStrikes,
             completedAll: $completedAll,
             activeWarningCount: $activeWarningCount,
-            activeContractCount: $activeContractCount,
             splitHistory: $splitHistory,
         );
+
+        // Shartnomalar soni cheklanmaydi — user bo'sh limiti yetguncha olaveradi.
         $eligible = $reasons === [];
+        $limitEligible = $eligible;
 
         $confidenceScore = $this->confidenceScore(
             reputationScore: $reputationScore,
@@ -248,7 +267,7 @@ class SplitProfileService
             splitHistory: $splitHistory,
         );
 
-        $computedLimit = $eligible
+        $computedLimit = $limitEligible
             ? $this->computeLimit(
                 settings: $settings,
                 confidenceScore: $confidenceScore,
@@ -271,7 +290,6 @@ class SplitProfileService
             'computed_limit' => $computedLimit,
             'available_limit' => $availableLimit,
             'active_exposure' => $activeExposure,
-            'max_active_contracts' => (int) $settings['max_active_contracts'],
             'active_contract_count' => $activeContractCount,
             'reputation_score' => round($reputationScore, 2),
             'cod_return_strikes' => $codReturnStrikes,
@@ -339,7 +357,6 @@ class SplitProfileService
         int $codReturnStrikes,
         int $completedAll,
         int $activeWarningCount,
-        int $activeContractCount,
         array $splitHistory = [],
     ): array {
         $reasons = [];
@@ -386,10 +403,6 @@ class SplitProfileService
 
         if ($activeWarningCount > 0) {
             $reasons[] = 'Faol community ogohlantirishlari mavjud.';
-        }
-
-        if ($activeContractCount >= (int) $settings['max_active_contracts']) {
-            $reasons[] = 'Faol splitlar soni limitga yetgan.';
         }
 
         return $reasons;

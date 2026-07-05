@@ -713,6 +713,22 @@ class OrderService
 
     private function dismissPaylovOrderHold(Sold $order, string $reason): void
     {
+        // Nasiya buyurtmasi: hold 1-installment uchun shartnomada turadi —
+        // shartnoma bekor qilinadi (hold qaytadi, grafik bekor bo'ladi, limit bo'shaydi).
+        if (Schema::hasTable('split_contracts')) {
+            $contract = \App\Models\SplitContract::query()
+                ->where('order_id', $order->id)
+                ->where('status', \App\Models\SplitContract::STATUS_PENDING)
+                ->latest('id')
+                ->first();
+
+            if ($contract) {
+                app(\App\Services\SplitContractService::class)->cancelPending($contract, $reason);
+
+                return;
+            }
+        }
+
         $transaction = Transaction::query()
             ->where('order_id', $order->id)
             ->where('payment_type', 'order')

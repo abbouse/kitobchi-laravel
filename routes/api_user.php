@@ -72,6 +72,7 @@ Route::get('shop/collections/{collection}', [ShopApiController::class, 'collecti
 
 Route::prefix('share')->group(function () {
     Route::get('product/{id}', [ShareController::class, 'product']);
+    Route::get('art/{artikul}', [ShareController::class, 'productByArtikul']);
     Route::get('cart/{slug}', [SharedCartController::class, 'show']);
 });
 

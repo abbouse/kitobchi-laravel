@@ -69,6 +69,58 @@ class ShareController extends Controller
         ]);
     }
 
+    public function productByArtikul(Request $request, string $artikul)
+    {
+        $normalizedArtikul = trim($artikul);
+        if ($normalizedArtikul === '') {
+            return $this->err('Mahsulot topilmadi!');
+        }
+
+        $user = Auth::guard('user')->user();
+
+        $book = $this->publicBookScope()
+            ->with(['seller', 'category', 'tags'])
+            ->where('artikul', $normalizedArtikul)
+            ->first();
+
+        if ($book) {
+            $isFavourite = false;
+            if ($user) {
+                $isFavourite = FavouriteProducts::where('user_id', $user->id)
+                    ->where('product_id', $book->id)
+                    ->where('product_type', 'book')
+                    ->exists();
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'data'   => $this->formatProduct($book, 'book', $isFavourite),
+            ]);
+        }
+
+        $stationery = $this->publicStationeryScope()
+            ->with(['seller', 'category', 'tags', 'variants'])
+            ->where('artikul', $normalizedArtikul)
+            ->first();
+
+        if ($stationery) {
+            $isFavourite = false;
+            if ($user) {
+                $isFavourite = FavouriteProducts::where('user_id', $user->id)
+                    ->where('product_id', $stationery->id)
+                    ->where('product_type', 'stationery')
+                    ->exists();
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'data'   => $this->formatProduct($stationery, 'stationery', $isFavourite),
+            ]);
+        }
+
+        return $this->err('Mahsulot topilmadi!');
+    }
+
     private function formatProduct($product, string $type, bool $isFavourite): array
     {
         $user = Auth::guard('user')->user();

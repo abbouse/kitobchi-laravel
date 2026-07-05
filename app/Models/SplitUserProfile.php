@@ -15,7 +15,6 @@ class SplitUserProfile extends Model
         'computed_limit',
         'available_limit',
         'active_exposure',
-        'max_active_contracts',
         'active_contract_count',
         'reputation_score',
         'cod_return_strikes',

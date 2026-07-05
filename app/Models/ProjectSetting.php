@@ -27,12 +27,10 @@ class ProjectSetting extends Model
         // Kuryer km-based to'lov va bonus tizimi
         'courier_base_fee', 'courier_price_per_km', 'courier_min_fee', 'courier_bonus_rules',
         // Split v1 prep
-        'split_enabled', 'split_public_enabled', 'split_upfront_percent', 'split_term_days',
-        'split_global_min_order_sum', 'split_global_max_order_sum',
+        'split_enabled', 'split_public_enabled',
         'split_global_min_limit', 'split_global_max_limit',
         'split_min_completed_orders', 'split_min_account_age_days',
         'split_min_card_age_days', 'split_min_reputation_score',
-        'split_max_active_contracts', 'split_default_fee_percent',
         'split_card_delete_lock_enabled',
         // Refund
         'paylov_refund_sender_card_id', 'paylov_refund_service_id',
@@ -55,18 +53,12 @@ class ProjectSetting extends Model
         'courier_bonus_rules'     => 'array',
         'split_enabled' => 'boolean',
         'split_public_enabled' => 'boolean',
-        'split_upfront_percent' => 'integer',
-        'split_term_days' => 'integer',
-        'split_global_min_order_sum' => 'integer',
-        'split_global_max_order_sum' => 'integer',
         'split_global_min_limit' => 'integer',
         'split_global_max_limit' => 'integer',
         'split_min_completed_orders' => 'integer',
         'split_min_account_age_days' => 'integer',
         'split_min_card_age_days' => 'integer',
         'split_min_reputation_score' => 'decimal:2',
-        'split_max_active_contracts' => 'integer',
-        'split_default_fee_percent' => 'decimal:2',
         'split_card_delete_lock_enabled' => 'boolean',
     ];
 }

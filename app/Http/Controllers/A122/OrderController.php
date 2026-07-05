@@ -508,6 +508,12 @@ class OrderController extends Controller
         ], true)) {
             return back()->with('error', "Yakunlangan, qaytgan yoki bekor qilingan buyurtmani bekor qilib bo'lmaydi.");
         }
+        // Faqat yetkazishga chiqmagan (yangi) buyurtmani bekor qilib, pulni qaytarish mumkin.
+        // Buyurtma kuryerga topshirilib yetkazilayotgan bo'lsa — nasiya shartnomasi allaqachon
+        // faollashgan (hold charge qilingan), shu bois bu bosqichda avtomatik refund bilan bekor qilinmaydi.
+        if ($statusCode === OrderStatusCode::IN_DELIVERY) {
+            return back()->with('error', "Buyurtma yetkazilmoqda. Yetkazilayotgan buyurtmani bu yerdan bekor qilib bo'lmaydi.");
+        }
         $previousStatus = (string) $order->status;
         $result = $this->orderService->cancelOrder($order, strict: false);
         if (($result['ok'] ?? false) === true) {

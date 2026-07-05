@@ -76,6 +76,16 @@ Route::get('/share/product/{id}', function (int $id) {
     ]);
 })->where('id', '[0-9]+');
 
+Route::get('/art/{artikul}', function (string $artikul) {
+    return view('share.redirect', [
+        'type' => 'artikul',
+        'value' => $artikul,
+        'appScheme' => "kitobchi://art/{$artikul}",
+        'title' => 'Kitobchi — Mahsulot',
+        'description' => 'Kitobchi ilovasida bu mahsulotni ko\'ring',
+    ]);
+})->where('artikul', '[A-Za-z0-9\-]+');
+
 // ── Cart share ────────────────────────────────────────────────────────
 Route::get('/share/cart/{slug}', function (string $slug) {
     return view('share.redirect', [

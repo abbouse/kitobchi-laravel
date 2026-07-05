@@ -220,7 +220,6 @@ class AdminController extends Controller
             'split_min_account_age_days' => 'required|integer|min:1|max:3650',
             'split_min_card_age_days' => 'required|integer|min:1|max:3650',
             'split_min_reputation_score' => 'required|numeric|min:1|max:100',
-            'split_max_active_contracts' => 'required|integer|min:1|max:2',
             'split_card_delete_lock_enabled' => 'nullable|boolean',
             'paylov_refund_sender_card_id' => 'nullable|string|max:255',
             'paylov_refund_service_id' => 'nullable|string|max:255',
@@ -230,15 +229,12 @@ class AdminController extends Controller
         $settings->update([
             'split_enabled' => $request->boolean('split_enabled'),
             'split_public_enabled' => $request->boolean('split_public_enabled'),
-            'split_upfront_percent' => 25,
-            'split_term_days' => 60,
             'split_global_min_limit' => $request->integer('split_global_min_limit'),
             'split_global_max_limit' => $request->integer('split_global_max_limit'),
             'split_min_completed_orders' => $request->integer('split_min_completed_orders'),
             'split_min_account_age_days' => $request->integer('split_min_account_age_days'),
             'split_min_card_age_days' => $request->integer('split_min_card_age_days'),
             'split_min_reputation_score' => round((float) $request->input('split_min_reputation_score'), 2),
-            'split_max_active_contracts' => $request->integer('split_max_active_contracts'),
             'split_card_delete_lock_enabled' => $request->boolean('split_card_delete_lock_enabled'),
             'paylov_refund_sender_card_id' => filled($data['paylov_refund_sender_card_id'] ?? null)
                 ? trim((string) $data['paylov_refund_sender_card_id'])
@@ -268,10 +264,6 @@ class AdminController extends Controller
             ],
             [
                 'enabled' => $request->boolean('enabled'),
-                'fee_percent' => null,
-                'min_order_sum_override' => null,
-                'max_order_sum_override' => null,
-                'upfront_percent_override' => null,
             ],
         );
 
@@ -404,28 +396,6 @@ class AdminController extends Controller
         }
 
         return back()->with('success', "Split shartnoma #{$contract->id} ochildi (1-to'lov hold qilindi).");
-    }
-
-    public function activateSplitContract(SplitContract $splitContract, SplitContractService $contractService): \Illuminate\Http\RedirectResponse
-    {
-        try {
-            $contractService->activate($splitContract);
-        } catch (\Throwable $e) {
-            return back()->with('error', 'Faollashtirilmadi: '.$e->getMessage());
-        }
-
-        return back()->with('success', "Shartnoma #{$splitContract->id} faollashtirildi (1-to'lov yechildi).");
-    }
-
-    public function cancelSplitContract(SplitContract $splitContract, SplitContractService $contractService): \Illuminate\Http\RedirectResponse
-    {
-        try {
-            $contractService->cancelPending($splitContract, 'cancelled_by_admin');
-        } catch (\Throwable $e) {
-            return back()->with('error', 'Bekor qilinmadi: '.$e->getMessage());
-        }
-
-        return back()->with('success', "Shartnoma #{$splitContract->id} bekor qilindi (hold qaytarildi).");
     }
 
     public function chargeSplitInstallment(SplitInstallment $splitInstallment, SplitContractService $contractService): \Illuminate\Http\RedirectResponse
@@ -7386,8 +7356,6 @@ PROMPT;
                         'isUpfront' => (bool) $installment->is_upfront,
                         'chargeUrl' => route('boshqaruv.split.installments.charge', $installment),
                     ])->values()->all(),
-                    'activateUrl' => route('boshqaruv.split.contracts.activate', $contract),
-                    'cancelUrl' => route('boshqaruv.split.contracts.cancel', $contract),
                     'settleUrl' => route('boshqaruv.split.contracts.settle', $contract),
                     'creditUrl' => route('boshqaruv.split.contracts.credit', $contract),
                     'refundDue' => (int) data_get($contract->meta, 'refund_due', 0),
@@ -7428,18 +7396,12 @@ PROMPT;
         return [
             'enabled' => (bool) $settings['enabled'],
             'publicEnabled' => (bool) $settings['public_enabled'],
-            'upfrontPercent' => (int) $settings['upfront_percent'],
-            'termDays' => (int) $settings['term_days'],
-            'globalMinOrderSum' => (int) $settings['global_min_order_sum'],
-            'globalMaxOrderSum' => (int) $settings['global_max_order_sum'],
             'globalMinLimit' => (int) $settings['global_min_limit'],
             'globalMaxLimit' => (int) $settings['global_max_limit'],
             'minCompletedOrders' => (int) $settings['min_completed_orders'],
             'minAccountAgeDays' => (int) $settings['min_account_age_days'],
             'minCardAgeDays' => (int) $settings['min_card_age_days'],
             'minReputationScore' => (float) $settings['min_reputation_score'],
-            'maxActiveContracts' => (int) $settings['max_active_contracts'],
-            'defaultFeePercent' => (float) $settings['default_fee_percent'],
             'cardDeleteLockEnabled' => (bool) $settings['card_delete_lock_enabled'],
             'refundSenderCardId' => (string) $settings['refund_sender_card_id'],
             'refundServiceId' => (string) $settings['refund_service_id'],
