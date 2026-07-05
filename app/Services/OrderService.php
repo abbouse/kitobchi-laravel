@@ -744,7 +744,19 @@ class OrderService
             });
 
         if (! $transaction || blank($transaction->provider_transaction_id)) {
-            throw new \RuntimeException('Hold transaction topilmadi.');
+            // Hold allaqachon qaytarilgan bo'lishi mumkin: masalan, nasiya shartnomasi
+            // avval alohida bekor qilingan — o'shanda hold dismiss bo'lib, tranzaksiya
+            // state=-1 ga o'tgan, shartnoma esa endi PENDING emas. Bunday holatda
+            // qaytariladigan AKTIV hold qolmagan. Ilgari bu yerda exception tashlanardi
+            // va u cancelOrder'ning status yangilanishidan OLDIN otilib, buyurtma
+            // "osilib" qolardi (hold bekor, order esa bekor bo'lmasdi). Endi idempotent:
+            // hech narsani to'xtatmaymiz — ogohlantirish yozib, bekor qilishni davom ettiramiz.
+            Log::warning('[OrderService] Aktiv hold topilmadi — buyurtma bekor qilish davom etadi', [
+                'order_id' => $order->id,
+                'reason' => $reason,
+            ]);
+
+            return;
         }
 
         $dismissResponse = PaylovService::make()->dismissHold((string) $transaction->provider_transaction_id);
