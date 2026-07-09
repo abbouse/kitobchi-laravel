@@ -789,6 +789,54 @@ class SearchController extends Controller
                 }
             }
 
+            // ── Semantik (vector) fallback ─────────────────────────────
+            // Matnli + fuzzy qidiruv ham yetarli natija bermasa,
+            // ma'no bo'yicha eng yaqin mahsulotlarni qidiramiz.
+            if ($filteredItems->count() < 4 && mb_strlen($query) >= 3) {
+                try {
+                    $vectorType = in_array($type, ['book', 'stationery'], true) ? $type : 'both';
+
+                    $semantic = app(\App\Services\VectorSearchService::class)
+                        ->search($query, $vectorType, 12, 0.35);
+
+                    if ($sellerId)          $semantic = $semantic->where('seller_id', $sellerId)->values();
+                    if ($categoryId)        $semantic = $semantic->where('category_id', (int) $categoryId)->values();
+                    if ($minPrice !== null) $semantic = $semantic->filter(fn ($p) => (float) $p->price >= $minPrice)->values();
+                    if ($maxPrice !== null) $semantic = $semantic->filter(fn ($p) => (float) $p->price <= $maxPrice)->values();
+
+                    $semanticItems = $semantic
+                        ->map(fn ($p) => $this->formatProduct($p, $user))
+                        ->filter()
+                        ->values();
+
+                    if ($semanticItems->isNotEmpty()) {
+                        $existingKeys = $filteredItems
+                            ->map(fn ($item) => ($item['type'] ?? '') . ':' . ($item['id'] ?? ''))
+                            ->all();
+
+                        $newItems = $semanticItems->filter(function ($item) use ($existingKeys) {
+                            $key = ($item['type'] ?? '') . ':' . ($item['id'] ?? '');
+                            return !in_array($key, $existingKeys, true);
+                        });
+
+                        if ($newItems->isNotEmpty()) {
+                            $filteredItems = $filteredItems
+                                ->merge($newItems)
+                                ->take(max($perPage, 12))
+                                ->values();
+
+                            $total      = max($total, $filteredItems->count());
+                            $searchMode = $searchMode === 'default' ? 'semantic' : $searchMode . '+semantic';
+                        }
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning('Semantic search fallback failed', [
+                        'query' => $query,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
             // History — faqat matn qidiruv uchun, teg emas
             if ($saveHistory && mb_strlen($query) >= 2 && $page === 1) {
                 if ($filteredItems->isNotEmpty()) {

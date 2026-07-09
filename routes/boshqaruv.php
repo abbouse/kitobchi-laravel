@@ -68,6 +68,9 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
         Route::get('/push', fn (AdminController $controller) => $controller->page('PushNotifications'))->name('push');
         Route::get('/vakansiyalar', fn (AdminController $controller) => $controller->page('Vakansiyalar'))->name('vakansiyalar');
         Route::get('/karyera-arizalari', fn (AdminController $controller) => $controller->page('KaryeraArizalari'))->name('karyera-arizalari');
+        Route::get('/hub-arizalari', fn (AdminController $controller) => $controller->page('HubApplications'))->name('hub-applications');
+        Route::patch('/hub-arizalari/{hubApplication}/status', [AdminController::class, 'updateHubApplicationStatus'])->name('hub-applications.status');
+        Route::delete('/hub-arizalari/{hubApplication}', [AdminController::class, 'destroyHubApplication'])->name('hub-applications.destroy');
         Route::get('/adminlar', fn (AdminController $controller) => $controller->page('Adminlar'))->name('adminlar');
         Route::get('/mystery-box', fn (AdminController $controller) => $controller->page('MysteryBoxPage'))->name('mystery-box');
         Route::get('/sovgalar', fn (AdminController $controller) => $controller->page('Sovgalar'))->name('sovgalar');

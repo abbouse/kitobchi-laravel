@@ -33,6 +33,7 @@ class Stationery extends Model
         'totalClientsWeek',
         'totalRevenueWeek',
         'vectorData',
+        'vector_text_hash',
         'recommended',
         'views',
         'recommendedExpiresAt',
@@ -104,7 +105,9 @@ class Stationery extends Model
         return $query->where(function (Builder $innerQuery) {
             $innerQuery
                 ->whereNull('vectorData')
-                ->orWhereRaw('JSON_LENGTH(vectorData) <> 1536');
+                ->orWhereRaw('JSON_LENGTH(vectorData) <> 1536')
+                // Bulk yangilanishlar hash ni null qiladi — scheduler qayta embed qiladi
+                ->orWhereNull('vector_text_hash');
         });
     }
 

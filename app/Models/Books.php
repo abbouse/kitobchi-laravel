@@ -47,6 +47,7 @@ class Books extends Model
         'totalRevenueWeek',
         'totalClientsWeek',
         'vectorData',
+        'vector_text_hash',
         'recommended',
         'views',
         'recommendedExpiresAt',
@@ -136,7 +137,10 @@ class Books extends Model
         return $query->where(function (Builder $innerQuery) {
             $innerQuery
                 ->whereNull('vectorData')
-                ->orWhereRaw('JSON_LENGTH(vectorData) <> 1536');
+                ->orWhereRaw('JSON_LENGTH(vectorData) <> 1536')
+                // Bulk yangilanishlar (masalan, admin muallif nomini o'zgartirsa)
+                // hash ni null qiladi — scheduler qayta embed qiladi
+                ->orWhereNull('vector_text_hash');
         });
     }
 

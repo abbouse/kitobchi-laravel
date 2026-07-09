@@ -24,6 +24,7 @@ use App\Models\BookClubComment;
 use App\Models\Books;
 use App\Models\BotTicket;
 use App\Models\CareerApplication;
+use App\Models\HubApplication;
 use App\Models\CashbackSetting;
 use App\Models\CommissionSetting;
 use App\Models\ConnectedDevice;
@@ -575,7 +576,12 @@ class AdminController extends Controller
         $author->update($data);
 
         if ($nameChanged) {
-            Books::query()->where('author_id', $author->id)->update(['author' => $author->name]);
+            // vector_text_hash = null — scheduler (vectors:rebuild) bu kitoblarni
+            // avtomatik qayta embed qiladi (bulk update observer ni chetlab o'tadi)
+            Books::query()->where('author_id', $author->id)->update([
+                'author'           => $author->name,
+                'vector_text_hash' => null,
+            ]);
         }
 
         return back()->with('success', 'Muallif yangilandi.');
@@ -598,7 +604,7 @@ class AdminController extends Controller
     {
         Books::query()
             ->where('author_id', $author->id)
-            ->update(['author_id' => null, 'author' => null]);
+            ->update(['author_id' => null, 'author' => null, 'vector_text_hash' => null]);
 
         $this->deleteStoredFile($author->image);
         $author->delete();
@@ -2351,6 +2357,7 @@ PROMPT;
             'ChatKuzatuv' => $this->conversationsPagePayload(),
             'Vakansiyalar' => ['vacancies' => $this->vacanciesPayload()],
             'KaryeraArizalari' => ['applications' => $this->careerApplicationsPayload()],
+            'HubApplications' => ['hubApplications' => $this->hubApplicationsPayload()],
             'Adminlar' => ['admins' => $this->adminsPayload()],
             'ApiClients' => [
                 'apiClients' => $this->apiClientsPayload(),
@@ -7063,6 +7070,53 @@ PROMPT;
             ])
             ->values()
             ->all();
+    }
+
+    private function hubApplicationsPayload(): array
+    {
+        if (! Schema::hasTable('hub_applications')) {
+            return [];
+        }
+
+        return HubApplication::query()
+            ->latest()
+            ->get()
+            ->map(fn (HubApplication $application) => [
+                'id' => $application->id,
+                'name' => $application->full_name,
+                'phone' => $application->phone,
+                'region' => $application->region,
+                'position' => $application->position,
+                'tashkent' => $application->tashkent_availability,
+                'status' => $application->status,
+                'note' => $application->note,
+                'date' => optional($application->created_at)->format('Y-m-d H:i'),
+                'statusUrl' => route('boshqaruv.hub-applications.status', $application),
+                'destroyUrl' => route('boshqaruv.hub-applications.destroy', $application),
+            ])
+            ->values()
+            ->all();
+    }
+
+    public function updateHubApplicationStatus(Request $request, HubApplication $hubApplication): \Illuminate\Http\RedirectResponse
+    {
+        $data = $request->validate([
+            'status' => ['required', Rule::in(HubApplication::STATUSES)],
+        ]);
+
+        $hubApplication->update([
+            'status' => $data['status'],
+            'read_at' => $hubApplication->read_at ?? now(),
+        ]);
+
+        return back()->with('success', 'Ariza holati yangilandi.');
+    }
+
+    public function destroyHubApplication(HubApplication $hubApplication): \Illuminate\Http\RedirectResponse
+    {
+        $hubApplication->delete();
+
+        return back()->with('success', 'Ariza o‘chirildi.');
     }
 
     private function adminsPayload(): array

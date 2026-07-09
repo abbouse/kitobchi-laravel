@@ -1,11 +1,15 @@
 <?php
 
+use App\Http\Controllers\Api\Hub\HubApplicationController;
 use App\Http\Controllers\Api\Hub\HubAuthController;
 use App\Http\Controllers\Api\Hub\HubFulfillmentController;
 use App\Http\Controllers\Api\Hub\HubStaffController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('login', [HubAuthController::class, 'login'])->middleware('throttle:auth-courier');
+
+// Ochiq: ish o'rniga ariza qoldirish (login talab qilinmaydi).
+Route::post('applications', [HubApplicationController::class, 'store'])->middleware('throttle:registration-light');
 
 Route::middleware('auth:hub')->group(function () {
     Route::post('logout', [HubAuthController::class, 'logout']);

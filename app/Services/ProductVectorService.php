@@ -91,6 +91,19 @@ class ProductVectorService
             return $this->clearVector($product);
         }
 
+        // ── Hash tekshiruvi — matn o'zgarmagan bo'lsa OpenAI ga bormaymiz ──
+        // Har bir savdo totalSales ni o'zgartiradi, lekin embed matni odatda
+        // bir xil qoladi (savdo darajasi label bo'yicha). Bu tekshiruv
+        // keraksiz embedding so'rovlarini (va xarajatni) keskin kamaytiradi.
+        $hash = md5($text);
+
+        $existingVector = $product->getRawOriginal('vectorData');
+        $existingHash   = $product->getRawOriginal('vector_text_hash');
+
+        if ($existingHash === $hash && $existingVector !== null) {
+            return true; // Hech narsa o'zgarmagan
+        }
+
         $vector = $this->openAI->getVector($text);
 
         if (! $this->isValidVector($vector)) {
@@ -99,10 +112,25 @@ class ProductVectorService
         }
 
         $product->updateQuietly([
-            'vectorData' => $vector,
+            'vectorData'       => $vector,
+            'vector_text_hash' => $hash,
         ]);
 
+        $this->invalidateSearchIndex($product instanceof Books ? 'book' : 'stationery');
+
         return true;
+    }
+
+    /**
+     * Semantik qidiruv indeksining cache'ini tozalaydi.
+     */
+    public function invalidateSearchIndex(string $type): void
+    {
+        try {
+            VectorSearchService::invalidateIndex($this->normalizeType($type));
+        } catch (\Throwable $e) {
+            Log::warning('Vector index invalidation failed', ['type' => $type, 'message' => $e->getMessage()]);
+        }
     }
 
     public function rebuildType(string $type, bool $force = false, int $limit = 0): array
@@ -135,6 +163,10 @@ class ProductVectorService
 
             return $limit <= 0 || $processed < $limit;
         });
+
+        if ($synced > 0 || $cleared > 0) {
+            $this->invalidateSearchIndex($type);
+        }
 
         return [
             'cleared' => $cleared,
@@ -170,12 +202,18 @@ class ProductVectorService
                 return 0;
             }
 
-            return $this->queryForType($type)
+            $cleared = $this->queryForType($type)
                 ->whereIn('id', $ids)
-                ->update(['vectorData' => null]);
+                ->update(['vectorData' => null, 'vector_text_hash' => null]);
+        } else {
+            $cleared = $query->update(['vectorData' => null, 'vector_text_hash' => null]);
         }
 
-        return $query->update(['vectorData' => null]);
+        if ($cleared > 0) {
+            $this->invalidateSearchIndex($type);
+        }
+
+        return $cleared;
     }
 
     private function loadProduct(string $type, int $id): Books|Stationery|null
@@ -243,6 +281,11 @@ class ProductVectorService
                 'author' => $product->authorProfile?->name ?: $product->author,
                 'category' => $product->category?->name_uz ?? $product->category?->title,
                 'tags' => $product->tags->pluck('tag_name_uz')->filter()->values()->all(),
+                'artikul' => $product->artikul,
+                'lang' => $product->lang,
+                'year' => $product->year,
+                'coverType' => $product->coverType,
+                'price' => $product->discountPrice ?: $product->price,
                 'shop_name' => $product->seller?->shop_name,
                 'description' => $product->description,
                 'totalSales' => $product->totalSales,
@@ -254,6 +297,9 @@ class ProductVectorService
             'name' => $product->name,
             'category' => $product->category?->name_uz ?? $product->category?->name,
             'tags' => $product->tags->pluck('name_uz')->filter()->values()->all(),
+            'artikul' => $product->artikul,
+            'material' => $product->material,
+            'price' => $product->discount_price ?: $product->price,
             'shop_name' => $product->seller?->shop_name,
             'description' => $product->description,
             'totalSales' => $product->totalSales,
@@ -283,8 +329,11 @@ class ProductVectorService
         }
 
         $product->updateQuietly([
-            'vectorData' => null,
+            'vectorData'       => null,
+            'vector_text_hash' => null,
         ]);
+
+        $this->invalidateSearchIndex($product instanceof Books ? 'book' : 'stationery');
 
         return true;
     }
