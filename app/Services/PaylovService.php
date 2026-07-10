@@ -204,8 +204,9 @@ class PaylovService
     {
         return $this->post('/merchant/fiscalization/register/', [
             'transactionId' => $transactionId,
-            // 0 = oddiy savdo cheki (docs request namunasida mavjud)
-            'receiptType' => 0,
+            // Docs namunasida 0 deyilgan, lekin real validatsiya faqat 1 ni
+            // qabul qiladi ("receiptType must be one of: 1")
+            'receiptType' => 1,
             'items' => array_values($items),
         ]);
     }
