@@ -115,11 +115,13 @@ class Books extends Model
 
     public function scopeActiveForVector(Builder $query): Builder
     {
+        // Eslatma: stock (count) sharti YO'Q — sotuvda qolmagan kitoblar ham
+        // chatbot qidiruvida ko'rinadi (mijoz ko'rishi va "kelganda xabar ber"
+        // bosishi uchun). Asosiy search o'zi in-stock filterini qo'llaydi.
         return $query
             ->where('status', true)
             ->where('is_approved', 1)
             ->where('is_hidden', 0)
-            ->where('count', '>', 0)
             ->whereHas('seller', fn (Builder $sellerQuery) => $sellerQuery
                 ->where('status', 'approved')
                 ->where('is_hidden', 0));

@@ -797,7 +797,7 @@ class SearchController extends Controller
                     $vectorType = in_array($type, ['book', 'stationery'], true) ? $type : 'both';
 
                     $semantic = app(\App\Services\VectorSearchService::class)
-                        ->search($query, $vectorType, 12, 0.35);
+                        ->search($query, $vectorType, 12, 0.35, inStockOnly: true);
 
                     if ($sellerId)          $semantic = $semantic->where('seller_id', $sellerId)->values();
                     if ($categoryId)        $semantic = $semantic->where('category_id', (int) $categoryId)->values();
@@ -1170,7 +1170,7 @@ class SearchController extends Controller
                 };
 
                 $semantic = app(\App\Services\VectorSearchService::class)
-                    ->search($searchQuery, $vectorType, 12, 0.25);
+                    ->search($searchQuery, $vectorType, 12, 0.25, inStockOnly: true);
 
                 $push($semantic, 'semantic');
             }

@@ -2323,11 +2323,18 @@ class PurchaseController extends Controller
             ];
         }
 
+        $reviewPromptPage = $this->buildReviewPromptProductPage($user, 1, 20);
+        $reviewCashback = $this->buildReviewCashbackPayload(
+            app(\App\Services\ReviewCashbackService::class)->settings(),
+            (int) ($reviewPromptPage['meta']['total'] ?? count($reviewPromptPage['data']))
+        );
+
         return response()->json([
             'status' => 'success',
             'sections' => $sections,
-            'review_prompt_items' => $this->buildReviewPromptProducts($user),
-            'review_cashback' => app(\App\Services\ReviewCashbackService::class)->settings(),
+            'review_prompt_items' => $reviewPromptPage['data'],
+            'review_prompt_meta' => $reviewPromptPage['meta'],
+            'review_cashback' => $reviewCashback,
         ]);
     }
 
@@ -2464,7 +2471,10 @@ class PurchaseController extends Controller
             'status' => 'success',
             'data' => $result['data'],
             'meta' => $result['meta'],
-            'review_cashback' => app(\App\Services\ReviewCashbackService::class)->settings(),
+            'review_cashback' => $this->buildReviewCashbackPayload(
+                app(\App\Services\ReviewCashbackService::class)->settings(),
+                (int) ($result['meta']['total'] ?? count($result['data']))
+            ),
         ]);
     }
 
@@ -2475,7 +2485,6 @@ class PurchaseController extends Controller
 
     private function buildReviewPromptProductPage(User $user, int $page, int $perPage): array
     {
-        $targetCount = ($page * $perPage) + 1;
         $unique = [];
         $bookIds = [];
         $stationeryIds = [];
@@ -2538,9 +2547,6 @@ class PurchaseController extends Controller
                         $stationeryIds[] = $productId;
                     }
 
-                    if (count($unique) >= $targetCount) {
-                        break 3;
-                    }
                 }
             }
 
@@ -2553,6 +2559,7 @@ class PurchaseController extends Controller
                 'meta' => [
                     'current_page' => $page,
                     'per_page' => $perPage,
+                    'total' => 0,
                     'has_more' => false,
                 ],
             ];
@@ -2572,8 +2579,9 @@ class PurchaseController extends Controller
 
         $payload = [];
 
+        $total = count($unique);
         $pageItems = array_slice(array_values($unique), ($page - 1) * $perPage, $perPage);
-        $hasMore = count($unique) > ($page * $perPage);
+        $hasMore = $total > ($page * $perPage);
 
         foreach ($pageItems as $item) {
             $type = $item['product_type'];
@@ -2602,8 +2610,27 @@ class PurchaseController extends Controller
             'meta' => [
                 'current_page' => $page,
                 'per_page' => $perPage,
+                'total' => $total,
                 'has_more' => $hasMore,
             ],
+        ];
+    }
+
+    /**
+     * @param array{enabled: bool, amount: int} $settings
+     * @return array{enabled: bool, amount: int, pending_count: int, total_amount: int}
+     */
+    private function buildReviewCashbackPayload(array $settings, int $pendingCount): array
+    {
+        $amount = max(0, (int) ($settings['amount'] ?? 0));
+        $enabled = (bool) ($settings['enabled'] ?? false);
+        $safePendingCount = max(0, $pendingCount);
+
+        return [
+            'enabled' => $enabled,
+            'amount' => $amount,
+            'pending_count' => $safePendingCount,
+            'total_amount' => $enabled ? ($amount * $safePendingCount) : 0,
         ];
     }
 

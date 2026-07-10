@@ -120,7 +120,7 @@ class VectorSearchService
      *
      * @return Collection<Books|Stationery> _similarity va _type atributlari bilan
      */
-    public function search(string $query, string $type = 'both', int $limit = 12, float $minScore = 0.30): Collection
+    public function search(string $query, string $type = 'both', int $limit = 12, float $minScore = 0.30, bool $inStockOnly = false): Collection
     {
         $queryVec = $this->openAI->getCachedVector($query);
 
@@ -128,13 +128,16 @@ class VectorSearchService
             return collect();
         }
 
-        return $this->searchByVector($queryVec, $type, $limit, $minScore);
+        return $this->searchByVector($queryVec, $type, $limit, $minScore, $inStockOnly);
     }
 
     /**
      * Tayyor embedding bo'yicha qidiruv (masalan, rasm tahlilidan olingan).
+     *
+     * @param bool $inStockOnly true — faqat sotuvda bor mahsulotlar (asosiy search);
+     *                          false — tugaganlar ham (chatbot, stock-alert uchun)
      */
-    public function searchByVector(array $queryVec, string $type = 'both', int $limit = 12, float $minScore = 0.30): Collection
+    public function searchByVector(array $queryVec, string $type = 'both', int $limit = 12, float $minScore = 0.30, bool $inStockOnly = false): Collection
     {
         $packedQuery = self::packNormalized($queryVec);
 
@@ -158,9 +161,9 @@ class VectorSearchService
             );
         }
 
-        $top = $results->sortByDesc('_similarity')->take($limit)->values();
+        $top = $results->sortByDesc('_similarity')->take($limit * 2)->values();
 
-        return $this->hydrate($top);
+        return $this->hydrate($top, $inStockOnly)->take($limit)->values();
     }
 
     /**
@@ -214,17 +217,19 @@ class VectorSearchService
      * Indeks biroz eskirgan bo'lishi mumkin — shu yerda activeForVector bilan
      * qayta filtrlaymiz (sotuvda yo'q mahsulot mijozga chiqmasin).
      */
-    private function hydrate(Collection $scored): Collection
+    private function hydrate(Collection $scored, bool $inStockOnly = false): Collection
     {
         $bookIds = $scored->where('type', 'book')->pluck('id')->all();
         $statIds = $scored->where('type', 'stationery')->pluck('id')->all();
 
         $books = empty($bookIds) ? collect() : Books::with(['category', 'seller', 'tags', 'authorProfile'])
             ->activeForVector()
+            ->when($inStockOnly, fn ($q) => $q->where('count', '>', 0))
             ->whereIn('id', $bookIds)->get()->keyBy('id');
 
         $stats = empty($statIds) ? collect() : Stationery::with(['category', 'seller', 'tags'])
             ->activeForVector()
+            ->when($inStockOnly, fn ($q) => $q->where('stock', '>', 0))
             ->whereIn('id', $statIds)->get()->keyBy('id');
 
         return $scored->map(function (array $row) use ($books, $stats) {

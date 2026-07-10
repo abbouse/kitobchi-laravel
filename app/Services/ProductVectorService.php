@@ -178,7 +178,9 @@ class ProductVectorService
     {
         $query = $this->queryForType($type)
             ->whereNotNull('vectorData')
-            ->where(function (Builder $inactiveQuery) use ($type) {
+            ->where(function (Builder $inactiveQuery) {
+                // Eslatma: stock sharti olib tashlangan — tugagan mahsulot
+                // vectori saqlanadi (chatbotda ko'rinishi va stock-alert uchun)
                 $inactiveQuery
                     ->where('status', false)
                     ->orWhere('is_hidden', 1)
@@ -186,12 +188,6 @@ class ProductVectorService
                     ->orWhereDoesntHave('seller', fn (Builder $sellerQuery) => $sellerQuery
                         ->where('status', 'approved')
                         ->where('is_hidden', 0));
-
-                if ($type === 'book') {
-                    $inactiveQuery->orWhere('count', '<=', 0);
-                } else {
-                    $inactiveQuery->orWhere('stock', '<=', 0);
-                }
             })
             ->orderBy('id');
 
@@ -266,11 +262,9 @@ class ProductVectorService
             return false;
         }
 
-        $stock = $product instanceof Books
-            ? (int) ($product->count ?? 0)
-            : (int) ($product->stock ?? 0);
-
-        return $stock > 0;
+        // Stock tekshirilmaydi — tugagan mahsulot ham indeksda qoladi
+        // (chatbot ko'rsatadi, mijoz "kelganda xabar ber" bosadi)
+        return true;
     }
 
     private function buildEmbedText(Books|Stationery $product): string

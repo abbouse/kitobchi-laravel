@@ -83,11 +83,12 @@ class Stationery extends Model
 
     public function scopeActiveForVector(Builder $query): Builder
     {
+        // Eslatma: stock sharti YO'Q — tugagan mahsulotlar ham chatbotda
+        // ko'rinadi (stock-alert uchun). Asosiy search in-stock filterlaydi.
         return $query
             ->where('status', true)
             ->where('is_approved', 1)
             ->where('is_hidden', 0)
-            ->where('stock', '>', 0)
             ->whereHas('seller', fn (Builder $sellerQuery) => $sellerQuery
                 ->where('status', 'approved')
                 ->where('is_hidden', 0));
