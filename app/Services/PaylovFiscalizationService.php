@@ -216,6 +216,31 @@ class PaylovFiscalizationService
             ->with('category:id,ofd_ikpu_code,ofd_package_code')
             ->whereIn('id', $statIds)->get(['id', 'category_id', 'ofd_ikpu_code', 'ofd_package_code'])->keyBy('id');
 
+        // Sotuvchilar STIRi — OFD har bir itemda tin YOKI pinfl talab qiladi.
+        // Sotuvchining o'z INN/PINFLi bo'lsa o'shani, bo'lmasa platforma STIRini
+        // ishlatamiz (config services.paylov.ofd.tin).
+        $sellerIds = $orderItems->pluck('seller_id')->filter()->unique()->values()->all();
+        $sellerInns = empty($sellerIds) ? collect() : \App\Models\Seller::query()
+            ->whereIn('id', $sellerIds)->pluck('inn', 'id');
+
+        /**
+         * @return array{tin: ?string, pinfl: ?string}
+         */
+        $resolveTaxId = function (?int $sellerId) use ($sellerInns, $tin): array {
+            $raw = preg_replace('/\D+/', '', (string) ($sellerId ? $sellerInns->get($sellerId) : ''));
+
+            if (strlen($raw) === 9) {
+                return ['tin' => $raw, 'pinfl' => null];
+            }
+
+            if (strlen($raw) === 14) {
+                return ['tin' => null, 'pinfl' => $raw];
+            }
+
+            // Fallback — platforma STIRi
+            return ['tin' => $tin !== '' ? $tin : null, 'pinfl' => null];
+        };
+
         $items = [];
 
         foreach ($orderItems as $row) {
@@ -258,8 +283,12 @@ class PaylovFiscalizationService
                 'package_code' => trim((string) ($product?->ofd_package_code ?: ($categoryPackage ?: $defaultPackage))),
             ];
 
-            if ($tin !== '') {
-                $item['tin'] = $tin;
+            // OFD: har bir itemda tin YOKI pinfl bo'lishi SHART
+            $taxId = $resolveTaxId((int) ($row['seller_id'] ?? 0) ?: null);
+            if ($taxId['tin']) {
+                $item['tin'] = $taxId['tin'];
+            } elseif ($taxId['pinfl']) {
+                $item['pinfl'] = $taxId['pinfl'];
             }
 
             $items[] = $item;
@@ -284,6 +313,7 @@ class PaylovFiscalizationService
                 'package_code' => trim((string) ($cfg['service_package_code'] ?? '')),
             ];
 
+            // Xizmatlar platforma nomidan — platforma STIRi
             if ($tin !== '') {
                 $item['tin'] = $tin;
             }
@@ -291,10 +321,19 @@ class PaylovFiscalizationService
             $items[] = $item;
         }
 
-        // IKPU topilmagan item bo'lsa — yubormaymiz (OFD rad etadi)
+        // IKPU yoki STIR/PINFL yetishmagan item bo'lsa — yubormaymiz (OFD rad etadi)
         foreach ($items as $item) {
             if ($item['code'] === '' || $item['package_code'] === '') {
                 Log::warning('[Paylov OFD] Item without IKPU/package code', [
+                    'order_id' => $order->id,
+                    'title' => $item['title'],
+                ]);
+
+                return [];
+            }
+
+            if (empty($item['tin']) && empty($item['pinfl'])) {
+                Log::warning('[Paylov OFD] Item without tin/pinfl — set PAYLOV_OFD_TIN in .env', [
                     'order_id' => $order->id,
                     'title' => $item['title'],
                 ]);

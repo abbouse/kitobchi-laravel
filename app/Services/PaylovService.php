@@ -204,6 +204,8 @@ class PaylovService
     {
         return $this->post('/merchant/fiscalization/register/', [
             'transactionId' => $transactionId,
+            // 0 = oddiy savdo cheki (docs request namunasida mavjud)
+            'receiptType' => 0,
             'items' => array_values($items),
         ]);
     }
