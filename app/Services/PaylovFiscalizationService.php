@@ -227,6 +227,12 @@ class PaylovFiscalizationService
             $unitPrice = (int) round(((float) ($row['item_price'] ?? 0)) * $mult);
             $count = max(1, (int) ($row['count_item'] ?? 1));
 
+            // OFD 0 so'mlik pozitsiyani qabul qilmaydi (validation_error).
+            // Bepul sovg'alar summaga ta'sir qilmaydi — chekka kiritmaymiz.
+            if ($unitPrice <= 0) {
+                continue;
+            }
+
             $product = $type === 'book'
                 ? $bookCodes->get((int) ($row['item_id'] ?? 0))
                 : $statCodes->get((int) ($row['item_id'] ?? 0));

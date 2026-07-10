@@ -168,6 +168,7 @@ interface Ord {
   } | null;
   paymentTransaction?: { id: number; provider?: string; providerCardId?: string; amount?: number; status?: string; date?: string } | null;
   paymentCard?: { provider?: string | null; providerCardId?: string | null; maskedNumber?: string | null; vendor?: string | null; cardName?: string | null; phone?: string | null };
+  fiscalReceipt?: { status: 'disabled' | 'none' | 'pending' | 'registered' | 'refunded'; receiptUrl?: string | null; refundReceiptUrl?: string | null; receiptId?: number | string | null; fiscalSign?: string | null; date?: string | null };
   split?: {
     contractId: number;
     contractNumber: string;
@@ -942,6 +943,37 @@ export default function Orders() {
                         <Detail label="Provider card ID" value={selectedOrd.paymentCard?.providerCardId || selectedOrd.paymentTransaction?.providerCardId} />
                         <Detail label="Karta" value={[selectedOrd.paymentCard?.maskedNumber, selectedOrd.paymentCard?.vendor, selectedOrd.paymentCard?.cardName].filter(Boolean).join(' / ')} />
                         <Detail label="Karta telefoni" value={selectedOrd.paymentCard?.phone} />
+                        <div className="col-md-6">
+                          <div className="text-muted small">Fiskal chek (OFD)</div>
+                          <div className="fw-semibold">
+                            {selectedOrd.fiscalReceipt?.status === 'registered' && (
+                              <>
+                                <span className="chip chip-success border-0 me-2">Berilgan</span>
+                                {selectedOrd.fiscalReceipt?.receiptUrl && (
+                                  <a href={selectedOrd.fiscalReceipt.receiptUrl} target="_blank" rel="noreferrer">Chekni ochish</a>
+                                )}
+                              </>
+                            )}
+                            {selectedOrd.fiscalReceipt?.status === 'refunded' && (
+                              <>
+                                <span className="chip chip-gray border-0 me-2">Qaytarilgan</span>
+                                {selectedOrd.fiscalReceipt?.refundReceiptUrl && (
+                                  <a href={selectedOrd.fiscalReceipt.refundReceiptUrl} target="_blank" rel="noreferrer">Refund chek</a>
+                                )}
+                              </>
+                            )}
+                            {selectedOrd.fiscalReceipt?.status === 'pending' && (
+                              <span className="chip chip-warning border-0">Kutilmoqda</span>
+                            )}
+                            {selectedOrd.fiscalReceipt?.status === 'none' && <span className="text-muted">—</span>}
+                            {(!selectedOrd.fiscalReceipt || selectedOrd.fiscalReceipt.status === 'disabled') && (
+                              <span className="text-muted">O'chirilgan</span>
+                            )}
+                          </div>
+                          {selectedOrd.fiscalReceipt?.fiscalSign && (
+                            <div className="text-muted small">Fiskal belgi: {selectedOrd.fiscalReceipt.fiscalSign}</div>
+                          )}
+                        </div>
                         <Detail label="Kuryer" value={selectedOrd.courierOrder?.courier || selectedOrd.courierName} />
                         <Detail label="Kuryer telefoni" value={selectedOrd.courierOrder?.phone} />
                         <Detail label="Kuryer narxi" value={`${fmt(selectedOrd.courierOrder?.courierPrice || 0)} so'm`} />

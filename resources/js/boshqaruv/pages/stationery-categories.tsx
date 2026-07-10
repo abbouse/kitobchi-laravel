@@ -14,6 +14,8 @@ interface Cat {
   icon?: string | null;
   slug?: string;
   active: boolean;
+  ofdIkpuCode?: string | null;
+  ofdPackageCode?: string | null;
   itemsCount: number;
   updateUrl?: string;
   toggleUrl?: string;
@@ -88,6 +90,9 @@ function CategoryFormModal({ category, baseUrl, onHide }: { category: Partial<Ca
           <Field name="name_ja" label="Nomi JA" defaultValue={category?.nameJa} />
           <Field name="icon" label="Icon" defaultValue={category?.icon} />
           <div className="col-md-6 d-flex align-items-end"><label className="form-check mb-2"><input className="form-check-input" type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} /><span className="form-check-label ms-2">Faol</span></label></div>
+          <Field name="ofd_ikpu_code" label="OFD IKPU (MXIK) kodi" defaultValue={category?.ofdIkpuCode} />
+          <Field name="ofd_package_code" label="OFD qadoq kodi" defaultValue={category?.ofdPackageCode} />
+          <div className="col-12 small text-muted">Fiskal chek uchun. Bo'sh qolsa .env dagi umumiy kanstovar kodi ishlatiladi. Kodlarni tasnif.soliq.uz dan oling.</div>
         </div></Modal.Body>
         <Modal.Footer><Button variant="light" onClick={onHide}>Bekor</Button><Button type="submit" variant="primary">{isEdit ? 'Saqlash' : "Qo'shish"}</Button></Modal.Footer>
       </form>

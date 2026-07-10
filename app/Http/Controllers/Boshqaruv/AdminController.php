@@ -3848,6 +3848,8 @@ PROMPT;
                 'icon' => Schema::hasColumn('book_categories', 'icon') ? $category->icon : null,
                 'slug' => $category->slug,
                 'active' => (bool) $category->is_active,
+                'ofdIkpuCode' => Schema::hasColumn('book_categories', 'ofd_ikpu_code') ? $category->ofd_ikpu_code : null,
+                'ofdPackageCode' => Schema::hasColumn('book_categories', 'ofd_package_code') ? $category->ofd_package_code : null,
                 'itemsCount' => (int) ($category->books_count ?? 0),
                 'storeUrl' => route('boshqaruv.book-categories.store'),
                 'updateUrl' => route('boshqaruv.book-categories.update', $category),
@@ -3878,6 +3880,8 @@ PROMPT;
                 'icon' => Schema::hasColumn('stationery_categories', 'icon') ? $category->icon : null,
                 'slug' => $category->slug,
                 'active' => (bool) $category->is_active,
+                'ofdIkpuCode' => Schema::hasColumn('stationery_categories', 'ofd_ikpu_code') ? $category->ofd_ikpu_code : null,
+                'ofdPackageCode' => Schema::hasColumn('stationery_categories', 'ofd_package_code') ? $category->ofd_package_code : null,
                 'itemsCount' => (int) ($category->stationeries_count ?? 0),
                 'storeUrl' => route('boshqaruv.stationery-categories.store'),
                 'updateUrl' => route('boshqaruv.stationery-categories.update', $category),
@@ -8992,6 +8996,54 @@ PROMPT;
         });
     }
 
+    /**
+     * Buyurtmaning OFD fiskal chek holati (boshqaruv order show uchun).
+     *
+     * status: 'registered' — chek yaratilgan, 'refunded' — qaytarilgan,
+     * 'pending' — to'langan lekin chek hali yo'q, 'none' — tranzaksiya yo'q
+     * (naqd yoki to'lanmagan), 'disabled' — OFD o'chirilgan.
+     */
+    private function orderFiscalReceiptPayload(?Transaction $transaction): array
+    {
+        if (! (bool) config('services.paylov.ofd.enabled', false)) {
+            return ['status' => 'disabled'];
+        }
+
+        if (! $transaction || (int) $transaction->state !== 2) {
+            return ['status' => 'none'];
+        }
+
+        $perform = is_array($transaction->perform_fiscal_data) ? $transaction->perform_fiscal_data : [];
+        $cancel = is_array($transaction->cancel_fiscal_data) ? $transaction->cancel_fiscal_data : [];
+
+        $receiptUrl = (string) ($perform['qr_code_url'] ?? '');
+        $refundUrl = (string) ($cancel['qr_code_url'] ?? '');
+
+        if ($refundUrl !== '') {
+            return [
+                'status' => 'refunded',
+                'receiptUrl' => $receiptUrl ?: null,
+                'refundReceiptUrl' => $refundUrl,
+                'receiptId' => $perform['receipt_id'] ?? null,
+                'fiscalSign' => $perform['fiscal_sign'] ?? null,
+                'date' => $perform['date'] ?? null,
+            ];
+        }
+
+        if ($receiptUrl !== '') {
+            return [
+                'status' => 'registered',
+                'receiptUrl' => $receiptUrl,
+                'refundReceiptUrl' => null,
+                'receiptId' => $perform['receipt_id'] ?? null,
+                'fiscalSign' => $perform['fiscal_sign'] ?? null,
+                'date' => $perform['date'] ?? null,
+            ];
+        }
+
+        return ['status' => 'pending'];
+    }
+
     private function orderPayload(Sold $order): array
     {
         $panelAdmin = Auth::guard('panel')->user();
@@ -9290,6 +9342,7 @@ PROMPT;
                 'date' => $this->dateTime($paymentTransaction->created_at),
             ] : null,
             'paymentCard' => $paymentCardView,
+            'fiscalReceipt' => $this->orderFiscalReceiptPayload($paymentTransaction),
             'split' => $this->orderSplitDetailPayload($order),
             'settlementOverview' => $settlementOverview,
             'canRefundPayment' => (bool) $canRefundPayment,
