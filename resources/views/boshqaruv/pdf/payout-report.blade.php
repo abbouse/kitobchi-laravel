@@ -7,13 +7,14 @@
     $labels = [
         'uz' => [
             'brand' => 'Kitobchi',
-            'title' => 'Pul yechish bo‘yicha hisob-kitob hujjati',
-            'subtitle' => 'Yakunlangan buyurtmalar asosida shakllantirilgan hisobot',
+            'title' => 'HISOB-KITOB HUJJATI',
+            'subtitle' => 'Pul mablag‘larini yechib berish bo‘yicha',
             'owner_seller' => 'Sotuvchi',
             'owner_courier' => 'Kuryer',
-            'document_no' => 'Hujjat raqami',
-            'generated_at' => 'Yaratilgan sana',
-            'recipient' => 'Qabul qiluvchi',
+            'document_no' => 'Hujjat №',
+            'generated_at' => 'Sana',
+            'recipient' => 'QABUL QILUVCHI',
+            'payer' => 'TO‘LOVCHI',
             'phone_missing' => 'Telefon ko‘rsatilmagan',
             'payment_method' => 'To‘lov rekviziti',
             'transaction' => 'Tranzaksiya',
@@ -22,37 +23,39 @@
             'from_start' => 'Boshlanishidan',
             'request_amount' => 'Ariza summasi',
             'request_date' => 'Ariza sanasi',
-            'orders' => 'Buyurtmalar',
-            'products' => 'Mahsulotlar',
+            'orders' => 'Buyurtmalar soni',
+            'products' => 'Mahsulotlar soni',
             'commission' => 'Komissiya',
             'bonus' => 'Bonus',
-            'final_amount' => 'Yechib beriladigan summa',
+            'final_amount' => 'YECHIB BERILADIGAN SUMMA',
             'orders_title' => 'Hisob-kitob tarkibidagi buyurtmalar',
-            'main_order' => 'Asosiy buyurtma',
+            'main_order' => 'Buyurtma',
             'sub_seller' => 'Sotuvchi buyurtmasi',
             'sub_courier' => 'Kuryer buyurtmasi',
-            'transaction_short' => 'Tranzaksiya',
+            'date' => 'Sana',
             'quantity' => 'Soni',
             'gross' => 'Umumiy summa',
             'base_payout' => 'Asosiy haq',
             'final' => 'Yakuniy',
             'empty' => 'Ushbu tranzaksiya uchun buyurtmalar topilmadi.',
             'summary' => 'Yakuniy hisob-kitob',
-            'note' => 'Ushbu hujjat Kitobchi tizimida yakunlangan va tasdiqlangan buyurtmalar asosida avtomatik shakllantirildi.',
-            'kitobchi_rep' => 'Kitobchi vakili',
+            'note' => 'Ushbu hujjat Kitobchi elektron tizimida yakunlangan va tasdiqlangan buyurtmalar asosida avtomatik shakllantirilgan bo‘lib, tomonlar o‘rtasidagi o‘zaro hisob-kitobni tasdiqlovchi hujjat hisoblanadi.',
+            'kitobchi_rep' => 'Kitobchi MChJ vakili',
             'owner_rep' => 'vakili',
-            'stamp' => 'Imzo / muhr',
-            'signature' => 'Imzo',
+            'stamp' => 'M.O‘.',
+            'signature' => '(imzo)',
+            'fio' => '(F.I.Sh.)',
         ],
         'ru' => [
             'brand' => 'Kitobchi',
-            'title' => 'Расчетный документ на вывод средств',
-            'subtitle' => 'Отчет сформирован на основании завершенных заказов',
+            'title' => 'РАСЧЕТНЫЙ ДОКУМЕНТ',
+            'subtitle' => 'на вывод денежных средств',
             'owner_seller' => 'Продавец',
             'owner_courier' => 'Курьер',
-            'document_no' => 'Номер документа',
-            'generated_at' => 'Дата формирования',
-            'recipient' => 'Получатель',
+            'document_no' => 'Документ №',
+            'generated_at' => 'Дата',
+            'recipient' => 'ПОЛУЧАТЕЛЬ',
+            'payer' => 'ПЛАТЕЛЬЩИК',
             'phone_missing' => 'Телефон не указан',
             'payment_method' => 'Платежные реквизиты',
             'transaction' => 'Транзакция',
@@ -61,27 +64,28 @@
             'from_start' => 'С начала',
             'request_amount' => 'Сумма заявки',
             'request_date' => 'Дата заявки',
-            'orders' => 'Заказы',
-            'products' => 'Товары',
+            'orders' => 'Количество заказов',
+            'products' => 'Количество товаров',
             'commission' => 'Комиссия',
             'bonus' => 'Бонус',
-            'final_amount' => 'Сумма к выплате',
+            'final_amount' => 'СУММА К ВЫПЛАТЕ',
             'orders_title' => 'Заказы в составе расчета',
-            'main_order' => 'Основной заказ',
+            'main_order' => 'Заказ',
             'sub_seller' => 'Заказ продавца',
             'sub_courier' => 'Заказ курьера',
-            'transaction_short' => 'Транзакция',
+            'date' => 'Дата',
             'quantity' => 'Кол-во',
             'gross' => 'Общая сумма',
             'base_payout' => 'Основная сумма',
             'final' => 'Итого',
             'empty' => 'По этой транзакции заказы не найдены.',
             'summary' => 'Итоговый расчет',
-            'note' => 'Документ автоматически сформирован на основании завершенных и подтвержденных заказов в системе Kitobchi.',
-            'kitobchi_rep' => 'Представитель Kitobchi',
+            'note' => 'Настоящий документ сформирован автоматически на основании завершенных и подтвержденных заказов в электронной системе Kitobchi и является документом, подтверждающим взаиморасчеты между сторонами.',
+            'kitobchi_rep' => 'Представитель ООО Kitobchi',
             'owner_rep' => 'представитель',
-            'stamp' => 'Подпись / печать',
-            'signature' => 'Подпись',
+            'stamp' => 'М.П.',
+            'signature' => '(подпись)',
+            'fio' => '(Ф.И.О.)',
         ],
     ];
 
@@ -96,93 +100,81 @@
 <head>
     <meta charset="utf-8">
     <style>
-        @page { margin: 26px 30px 34px; }
-        body { font-family: DejaVu Sans, sans-serif; color: #111827; font-size: 11px; line-height: 1.45; }
-        .top { width: 100%; border-collapse: collapse; border-bottom: 2px solid #111827; padding-bottom: 14px; margin-bottom: 16px; }
-        .top td { vertical-align: top; }
-        .brand { font-size: 23px; font-weight: 800; letter-spacing: .2px; }
-        .doc-title { font-size: 18px; font-weight: 800; margin-top: 9px; }
-        .muted { color: #6b7280; }
+        @page { margin: 34px 40px 44px; }
+        body { font-family: DejaVu Sans, sans-serif; color: #000; font-size: 10.5px; line-height: 1.4; }
         .right { text-align: right; }
-        .meta-box { display: inline-block; text-align: left; border: 1px solid #e5e7eb; border-radius: 8px; padding: 9px 11px; background: #f9fafb; }
-        .section-title { font-size: 12px; font-weight: 800; margin: 18px 0 8px; }
-        .label { color: #6b7280; font-size: 9px; text-transform: uppercase; letter-spacing: .35px; }
-        .value { font-size: 12px; font-weight: 700; margin-top: 2px; }
-        .info-grid { width: 100%; border-collapse: separate; border-spacing: 0; border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden; }
-        .info-grid td { width: 50%; vertical-align: top; padding: 10px 12px; border-right: 1px solid #e5e7eb; border-bottom: 1px solid #e5e7eb; }
-        .info-grid tr:last-child td { border-bottom: 0; }
-        .info-grid td:last-child { border-right: 0; }
-        .cards { width: 100%; border-collapse: separate; border-spacing: 8px 0; margin: 12px -8px 14px; }
-        .cards td { width: 25%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 9px; background: #f9fafb; }
-        .card-value { font-size: 15px; font-weight: 800; margin-top: 2px; }
-        table.lines { width: 100%; border-collapse: collapse; margin-top: 8px; border: 1px solid #e5e7eb; }
-        .lines th { background: #111827; color: white; padding: 8px 6px; font-size: 9px; text-align: left; }
-        .lines td { border-bottom: 1px solid #e5e7eb; padding: 7px 6px; vertical-align: top; }
-        .lines tr:last-child td { border-bottom: 0; }
-        .summary-wrap { width: 100%; margin-top: 16px; }
-        .summary { width: 46%; margin-left: auto; border-collapse: collapse; border: 1px solid #e5e7eb; }
-        .summary td { padding: 8px 9px; border-bottom: 1px solid #e5e7eb; }
-        .summary tr:last-child td { font-weight: 800; font-size: 13px; background: #f9fafb; border-bottom: 0; }
-        .note { margin-top: 16px; padding: 11px 12px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 9px; color: #374151; }
-        .signatures { width: 100%; margin-top: 31px; border-collapse: collapse; }
-        .signatures td { width: 50%; padding-right: 28px; vertical-align: bottom; }
-        .line { border-bottom: 1px solid #111827; height: 34px; margin-bottom: 5px; }
-        .footer { position: fixed; bottom: -16px; left: 0; right: 0; text-align: center; color: #9ca3af; font-size: 9px; }
+        .center { text-align: center; }
+        .muted { color: #444; }
+        .small { font-size: 9px; }
+
+        /* Sarlavha — rasmiy, markazda */
+        .doc-head { text-align: center; margin-bottom: 4px; }
+        .doc-title { font-size: 15px; font-weight: 700; letter-spacing: 1px; }
+        .doc-subtitle { font-size: 10.5px; margin-top: 1px; }
+        .doc-meta { text-align: center; margin: 6px 0 18px; font-size: 10.5px; }
+        .head-rule { border-bottom: 1.4px solid #000; margin: 12px 0 14px; }
+
+        /* Rekvizitlar */
+        table.req { width: 100%; border-collapse: collapse; margin-bottom: 14px; }
+        table.req td { width: 50%; vertical-align: top; padding: 0 14px 0 0; }
+        table.req td + td { padding: 0 0 0 14px; }
+        .req-title { font-size: 9px; font-weight: 700; letter-spacing: .6px; border-bottom: 1px solid #000; padding-bottom: 3px; margin-bottom: 6px; }
+        .req-row { margin-bottom: 3px; }
+        .req-label { color: #444; }
+
+        /* Jadval */
+        table.lines { width: 100%; border-collapse: collapse; margin-top: 6px; }
+        .lines th { border: 1px solid #000; background: #f2f2f2; padding: 6px 5px; font-size: 9px; font-weight: 700; text-align: left; }
+        .lines td { border: 1px solid #000; padding: 5px; vertical-align: top; }
+
+        .section-title { font-size: 11px; font-weight: 700; margin: 14px 0 4px; }
+
+        /* Yakuniy hisob-kitob */
+        table.summary { width: 45%; margin-left: auto; border-collapse: collapse; margin-top: 12px; }
+        .summary td { border: 1px solid #000; padding: 6px 8px; }
+        .summary tr.total td { font-weight: 700; font-size: 11.5px; background: #f2f2f2; }
+
+        .note { margin-top: 14px; font-size: 9px; color: #333; text-align: justify; }
+
+        /* Imzolar */
+        table.signatures { width: 100%; margin-top: 34px; border-collapse: collapse; }
+        .signatures td { width: 50%; vertical-align: top; padding-right: 30px; }
+        .sig-role { font-weight: 700; margin-bottom: 26px; }
+        .sig-line { border-bottom: 1px solid #000; height: 1px; margin-bottom: 3px; }
+        .sig-caption { font-size: 8.5px; color: #444; }
+        table.sig-inner { width: 100%; border-collapse: collapse; }
+        table.sig-inner td { padding: 0 6px 0 0; border: 0; width: 55%; }
+        table.sig-inner td + td { width: 45%; padding: 0 0 0 6px; }
+
+        .footer { position: fixed; bottom: -24px; left: 0; right: 0; text-align: center; color: #666; font-size: 8.5px; border-top: .5px solid #999; padding-top: 4px; }
     </style>
 </head>
 <body>
-    <table class="top">
-        <tr>
-            <td>
-                <div class="brand">{{ $t['brand'] }}</div>
-                <div class="doc-title">{{ $t['title'] }}</div>
-                <div class="muted">{{ $t['subtitle'] }}</div>
-            </td>
-            <td class="right">
-                <div class="meta-box">
-                    <div class="label">{{ $t['document_no'] }}</div>
-                    <div class="value">{{ $document_no }}</div>
-                    <div class="label" style="margin-top: 6px;">{{ $t['generated_at'] }}</div>
-                    <div>{{ $generated_at }}</div>
-                </div>
-            </td>
-        </tr>
-    </table>
+    <div class="doc-head">
+        <div class="doc-title">{{ $t['title'] }}</div>
+        <div class="doc-subtitle">{{ $t['subtitle'] }}</div>
+    </div>
+    <div class="doc-meta">
+        {{ $t['document_no'] }} <strong>{{ $document_no }}</strong>
+        &nbsp;·&nbsp; {{ $t['generated_at'] }}: <strong>{{ $generated_at }}</strong>
+    </div>
+    <div class="head-rule"></div>
 
-    <div class="section-title">{{ $t['recipient'] }}</div>
-    <table class="info-grid">
+    <table class="req">
         <tr>
             <td>
-                <div class="label">{{ $ownerLabel }}</div>
-                <div class="value">{{ $recipient['name'] }}</div>
-                <div class="muted">{{ $recipient['phone'] ?: $t['phone_missing'] }}</div>
+                <div class="req-title">{{ $t['payer'] }}</div>
+                <div class="req-row"><strong>{{ $t['brand'] }}</strong></div>
+                <div class="req-row muted">{{ $t['transaction'] }} №{{ $transaction['id'] }} · {{ $t['status'] }}: {{ $transaction['status'] }}</div>
+                <div class="req-row"><span class="req-label">{{ $t['period'] }}:</span> {{ $periodFrom }} — {{ $periodTo }}</div>
             </td>
             <td>
-                <div class="label">{{ $t['payment_method'] }}</div>
-                <div class="value">{{ $transaction['method'] }}</div>
-                <div class="muted">{{ $t['transaction'] }} #{{ $transaction['id'] }} · {{ $t['status'] }}: {{ $transaction['status'] }}</div>
+                <div class="req-title">{{ $t['recipient'] }} ({{ $ownerLabel }})</div>
+                <div class="req-row"><strong>{{ $recipient['name'] }}</strong></div>
+                <div class="req-row muted">{{ $recipient['phone'] ?: $t['phone_missing'] }}</div>
+                <div class="req-row"><span class="req-label">{{ $t['payment_method'] }}:</span> {{ $transaction['method'] }}</div>
+                <div class="req-row"><span class="req-label">{{ $t['request_date'] }}:</span> {{ $transaction['created_at'] }}</div>
             </td>
-        </tr>
-        <tr>
-            <td>
-                <div class="label">{{ $t['period'] }}</div>
-                <div class="value">{{ $periodFrom }} - {{ $periodTo }}</div>
-            </td>
-            <td>
-                <div class="label">{{ $t['request_amount'] }}</div>
-                <div class="value">{{ $fmt($transaction['net']) }} {{ $currency }}</div>
-                <div class="muted">{{ $t['request_date'] }}: {{ $transaction['created_at'] }}</div>
-            </td>
-        </tr>
-    </table>
-
-    <div class="section-title">{{ $t['summary'] }}</div>
-    <table class="cards">
-        <tr>
-            <td><div class="label">{{ $t['orders'] }}</div><div class="card-value">{{ $totals['orders'] }}</div></td>
-            <td><div class="label">{{ $t['products'] }}</div><div class="card-value">{{ $totals['products'] }}</div></td>
-            <td><div class="label">{{ $isCourier ? $t['bonus'] : $t['commission'] }}</div><div class="card-value">{{ $fmt($isCourier ? $totals['bonus'] : $totals['commission']) }}</div></td>
-            <td><div class="label">{{ $t['final_amount'] }}</div><div class="card-value">{{ $fmt($totals['net']) }}</div></td>
         </tr>
     </table>
 
@@ -190,21 +182,21 @@
     <table class="lines">
         <thead>
             <tr>
-                <th>#</th>
+                <th style="width: 4%;">№</th>
                 <th>{{ $t['main_order'] }}</th>
                 <th>{{ $isCourier ? $t['sub_courier'] : $t['sub_seller'] }}</th>
-                <th class="right">{{ $t['quantity'] }}</th>
-                <th class="right">{{ $isCourier ? $t['base_payout'] : $t['gross'] }}</th>
-                <th class="right">{{ $isCourier ? $t['bonus'] : $t['commission'] }}</th>
-                <th class="right">{{ $t['final'] }}</th>
+                <th style="width: 8%;" class="right">{{ $t['quantity'] }}</th>
+                <th style="width: 15%;" class="right">{{ $isCourier ? $t['base_payout'] : $t['gross'] }}</th>
+                <th style="width: 13%;" class="right">{{ $isCourier ? $t['bonus'] : $t['commission'] }}</th>
+                <th style="width: 15%;" class="right">{{ $t['final'] }}</th>
             </tr>
         </thead>
         <tbody>
         @forelse($rows as $index => $row)
             <tr>
                 <td>{{ $index + 1 }}</td>
-                <td>#{{ $row['order_id'] ?: '—' }}<br><span class="muted">{{ $row['date'] }}</span></td>
-                <td>#{{ $row['sub_order_id'] ?: '—' }}<br><span class="muted">{{ $t['transaction_short'] }} #{{ $row['transaction_id'] }}</span></td>
+                <td>№{{ $row['order_id'] ?: '—' }} <span class="muted small">({{ $row['date'] }})</span></td>
+                <td>№{{ $row['sub_order_id'] ?: '—' }}</td>
                 <td class="right">{{ $row['product_count'] }}</td>
                 <td class="right">{{ $fmt($isCourier ? ($row['base_payout'] ?? $row['gross']) : $row['gross']) }}</td>
                 <td class="right">{{ $fmt($isCourier ? ($row['bonus'] ?? 0) : $row['commission']) }}</td>
@@ -216,36 +208,67 @@
         </tbody>
     </table>
 
-    <div class="summary-wrap">
-        <table class="summary">
-            <tr><td>{{ $t['gross'] }}</td><td class="right">{{ $fmt($totals['gross']) }} {{ $currency }}</td></tr>
-            @if($isCourier)
-                <tr><td>{{ $t['base_payout'] }}</td><td class="right">{{ $fmt($totals['base_payout']) }} {{ $currency }}</td></tr>
-                <tr><td>{{ $t['bonus'] }}</td><td class="right">{{ $fmt($totals['bonus']) }} {{ $currency }}</td></tr>
-            @else
-                <tr><td>{{ $t['commission'] }}</td><td class="right">{{ $fmt($totals['commission']) }} {{ $currency }}</td></tr>
-            @endif
-            <tr><td>{{ $t['final_amount'] }}</td><td class="right">{{ $fmt($totals['net']) }} {{ $currency }}</td></tr>
-        </table>
-    </div>
+    <table class="summary">
+        <tr>
+            <td>{{ $t['orders'] }}</td>
+            <td class="right">{{ $totals['orders'] }}</td>
+        </tr>
+        <tr>
+            <td>{{ $t['products'] }}</td>
+            <td class="right">{{ $totals['products'] }}</td>
+        </tr>
+        <tr>
+            <td>{{ $t['gross'] }}</td>
+            <td class="right">{{ $fmt($totals['gross']) }} {{ $currency }}</td>
+        </tr>
+        @if($isCourier)
+            <tr>
+                <td>{{ $t['base_payout'] }}</td>
+                <td class="right">{{ $fmt($totals['base_payout']) }} {{ $currency }}</td>
+            </tr>
+            <tr>
+                <td>{{ $t['bonus'] }}</td>
+                <td class="right">{{ $fmt($totals['bonus']) }} {{ $currency }}</td>
+            </tr>
+        @else
+            <tr>
+                <td>{{ $t['commission'] }}</td>
+                <td class="right">{{ $fmt($totals['commission']) }} {{ $currency }}</td>
+            </tr>
+        @endif
+        <tr class="total">
+            <td>{{ $t['final_amount'] }}</td>
+            <td class="right">{{ $fmt($totals['net']) }} {{ $currency }}</td>
+        </tr>
+    </table>
 
     <div class="note">{{ $t['note'] }}</div>
 
     <table class="signatures">
         <tr>
             <td>
-                <div class="line"></div>
-                <strong>{{ $t['kitobchi_rep'] }}</strong><br>
-                <span class="muted">{{ $t['stamp'] }}</span>
+                <div class="sig-role">{{ $t['kitobchi_rep'] }}:</div>
+                <table class="sig-inner">
+                    <tr>
+                        <td><div class="sig-line"></div><div class="sig-caption center">{{ $t['fio'] }}</div></td>
+                        <td><div class="sig-line"></div><div class="sig-caption center">{{ $t['signature'] }}</div></td>
+                    </tr>
+                </table>
+                <div class="small muted" style="margin-top: 8px;">{{ $t['stamp'] }}</div>
             </td>
             <td>
-                <div class="line"></div>
-                <strong>{{ $ownerLabel }} {{ $t['owner_rep'] }}</strong><br>
-                <span class="muted">{{ $t['signature'] }}</span>
+                <div class="sig-role">{{ $ownerLabel }} {{ $t['owner_rep'] }}:</div>
+                <table class="sig-inner">
+                    <tr>
+                        <td><div class="sig-line"></div><div class="sig-caption center">{{ $t['fio'] }}</div></td>
+                        <td><div class="sig-line"></div><div class="sig-caption center">{{ $t['signature'] }}</div></td>
+                    </tr>
+                </table>
+                <div class="small muted" style="margin-top: 8px;">{{ $t['stamp'] }}</div>
             </td>
         </tr>
     </table>
 
-    <div class="footer">Kitobchi · {{ $document_no }}</div>
+    <div class="footer">{{ $t['brand'] }} · {{ $document_no }} · {{ $generated_at }}</div>
 </body>
 </html>

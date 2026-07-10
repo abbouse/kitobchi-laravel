@@ -44,6 +44,28 @@ return [
         'merchant_id' => env('PAYLOV_MERCHANT_ID'),
         'hold_minutes' => (int) env('PAYLOV_ORDER_HOLD_MINUTES', 10080),
         'hold_time_key' => env('PAYLOV_HOLD_TIME_KEY', 'time'),
+
+        // ── OFD (Fiskalizatsiya) ──────────────────────────────────────
+        // https://developer.paylov.uz/uz/subscribe/ofd/register
+        'ofd' => [
+            'enabled' => (bool) env('PAYLOV_OFD_ENABLED', false),
+            // Item narxlari OFD ga tiyin ko'rinishida yuboriladi.
+            // To'lov API'lari qaysi birlikda ishlatilgan bo'lsa, shunga
+            // moslang: to'lovlar so'mda yuborilsa 100, tiyinda bo'lsa 1.
+            'amount_multiplier' => (int) env('PAYLOV_OFD_AMOUNT_MULTIPLIER', 100),
+            // QQS foizi (soliq rejimiga qarab; soddalashtirilganda 0)
+            'vat_percent' => (int) env('PAYLOV_OFD_VAT_PERCENT', 0),
+            // Mahsulot turi bo'yicha default IKPU (mahsulotda o'zi bo'lmasa)
+            'book_ikpu' => env('PAYLOV_OFD_BOOK_IKPU', ''),
+            'book_package_code' => env('PAYLOV_OFD_BOOK_PACKAGE_CODE', ''),
+            'stationery_ikpu' => env('PAYLOV_OFD_STATIONERY_IKPU', ''),
+            'stationery_package_code' => env('PAYLOV_OFD_STATIONERY_PACKAGE_CODE', ''),
+            // Yetkazish/qadoqlash xizmatlari uchun IKPU
+            'service_ikpu' => env('PAYLOV_OFD_SERVICE_IKPU', ''),
+            'service_package_code' => env('PAYLOV_OFD_SERVICE_PACKAGE_CODE', ''),
+            // Marketpleys STIRi (ixtiyoriy, item darajasida yuboriladi)
+            'tin' => env('PAYLOV_OFD_TIN', ''),
+        ],
     ],
 
     'kangaroo' => [

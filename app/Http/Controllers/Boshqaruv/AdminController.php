@@ -3510,6 +3510,9 @@ PROMPT;
             'name_ja' => ['nullable', 'string', 'max:255'],
             'icon' => ['nullable', 'string', 'max:32'],
             'is_active' => ['nullable', 'boolean'],
+            // OFD fiskalizatsiya — kategoriya darajasidagi kodlar
+            'ofd_ikpu_code' => ['nullable', 'string', 'max:20'],
+            'ofd_package_code' => ['nullable', 'string', 'max:20'],
         ]);
 
         $data = [
@@ -3523,6 +3526,14 @@ PROMPT;
 
         if (Schema::hasColumn($table, 'icon')) {
             $data['icon'] = $validated['icon'] ?? null;
+        }
+
+        if (Schema::hasColumn($table, 'ofd_ikpu_code') && $request->has('ofd_ikpu_code')) {
+            $data['ofd_ikpu_code'] = trim((string) ($validated['ofd_ikpu_code'] ?? '')) ?: null;
+        }
+
+        if (Schema::hasColumn($table, 'ofd_package_code') && $request->has('ofd_package_code')) {
+            $data['ofd_package_code'] = trim((string) ($validated['ofd_package_code'] ?? '')) ?: null;
         }
 
         return $data;

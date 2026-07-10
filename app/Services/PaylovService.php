@@ -189,6 +189,55 @@ class PaylovService
         ]);
     }
 
+    // ── OFD (Fiskalizatsiya) ──────────────────────────────────────────────
+    // https://developer.paylov.uz/uz/subscribe/ofd/register
+
+    /**
+     * Tranzaksiyani fiskal tizimga (OFD) yuborib fiskal chek yaratadi.
+     *
+     * @param string $transactionId Card payment tranzaksiya IDsi
+     * @param array  $items         Har biri: title, price (tiyin, chegirmasiz),
+     *                              discount, count, code (IKPU), vat_percent,
+     *                              package_code, ixtiyoriy: tin yoki pinfl
+     */
+    public function registerFiscalReceipt(string $transactionId, array $items): array
+    {
+        return $this->post('/merchant/fiscalization/register/', [
+            'transactionId' => $transactionId,
+            'items' => array_values($items),
+        ]);
+    }
+
+    /**
+     * Fiskal chek holatini oladi (transactionId yoki externalId bo'yicha).
+     */
+    public function getFiscalReceipt(?string $transactionId = null, ?string $externalId = null, ?bool $refunded = null): array
+    {
+        $query = array_filter([
+            'transactionId' => $transactionId,
+            'externalId' => $externalId,
+        ], fn ($v) => filled($v));
+
+        if ($refunded !== null) {
+            $query['refunded'] = $refunded ? 'true' : 'false';
+        }
+
+        return $this->get('/merchant/fiscalization/status/', $query);
+    }
+
+    /**
+     * Refund fiskal chek yaratadi.
+     * Eslatma: card payment /payment/cancel/ bilan bekor qilinsa,
+     * fiskalizatsiya avtomatik bekor bo'ladi — bu metod p2p refund
+     * kabi holatlar uchun.
+     */
+    public function refundFiscalReceipt(int $receiptId): array
+    {
+        return $this->post('/merchant/fiscalization/refund/', [
+            'receiptId' => $receiptId,
+        ]);
+    }
+
     public function createHold(
         string $userId,
         string $cardId,

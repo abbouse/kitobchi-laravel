@@ -48,6 +48,8 @@ class Books extends Model
         'totalClientsWeek',
         'vectorData',
         'vector_text_hash',
+        'ofd_ikpu_code',
+        'ofd_package_code',
         'recommended',
         'views',
         'recommendedExpiresAt',

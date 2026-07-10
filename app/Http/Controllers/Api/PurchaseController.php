@@ -2779,17 +2779,41 @@ class PurchaseController extends Controller
             ->where('order_id', $order->id)
             ->where('state', 2)
             ->latest('id')
-            ->first(['perform_fiscal_data', 'cancel_fiscal_data']);
+            ->first(['perform_fiscal_data', 'cancel_fiscal_data', 'provider_response']);
 
         $perform = is_array($transaction?->perform_fiscal_data) ? $transaction->perform_fiscal_data : [];
         $cancel = is_array($transaction?->cancel_fiscal_data) ? $transaction->cancel_fiscal_data : [];
+        $providerResponse = is_array($transaction?->provider_response) ? $transaction->provider_response : [];
+
+        $statusTransaction = data_get($providerResponse, 'status.result.transactions.0');
+        if (! is_array($statusTransaction)) {
+            $statusTransaction = [];
+        }
+
+        $payTransaction = data_get($providerResponse, 'pay.result');
+        if (! is_array($payTransaction)) {
+            $payTransaction = [];
+        }
+
+        $perform = $perform ?: $statusTransaction ?: $payTransaction;
 
         $order->has_payment_receipt = filled($perform['qr_code_url'] ?? null);
         $order->payment_receipt_url = $perform['qr_code_url'] ?? null;
         $order->payment_receipt_fiscal_sign = $perform['fiscal_sign'] ?? null;
         $order->payment_receipt_terminal_id = $perform['terminal_id'] ?? null;
-        $order->payment_receipt_date = $perform['date'] ?? null;
-        $order->payment_cancel_receipt_url = $cancel['qr_code_url'] ?? null;
+        $order->payment_receipt_date = $perform['date'] ?? ($perform['pay_time'] ?? null);
+        $order->payment_cancel_receipt_url = $cancel['qr_code_url'] ?? ($statusTransaction['cancel_qr_code_url'] ?? null);
+
+        // ── Backfill ───────────────────────────────────────────────────
+        // To'langan buyurtmada chek yo'q bo'lsa — fonda fiskalizatsiya
+        // qilamiz (eski buyurtmalar uchun; kuniga 1 marta throttle).
+        if (! $order->has_payment_receipt
+            && $transaction !== null
+            && config('services.paylov.ofd.enabled', false)
+            && \Illuminate\Support\Facades\Cache::add("ofd:backfill:{$order->id}", 1, now()->addDay())
+        ) {
+            \App\Jobs\RegisterOrderFiscalReceiptJob::dispatch((int) $order->id);
+        }
     }
 
     private function appendDeliveryProgressMeta(Sold $order): void

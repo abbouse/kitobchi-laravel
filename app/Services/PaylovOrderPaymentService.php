@@ -204,6 +204,9 @@ class PaylovOrderPaymentService
             }
         });
 
+        // OFD fiskal chek — fonda yaratiladi
+        \App\Jobs\RegisterOrderFiscalReceiptJob::dispatch((int) $order->id);
+
         return $this->buildPaymentResponse((string) $transaction->provider_transaction_id, $statusResponse, $chargeResponse);
     }
 
@@ -440,6 +443,9 @@ class PaylovOrderPaymentService
         if ($orderWasRecovered && $localFinalizeError !== null) {
             $this->orderStatusPushService->sendRecoveredPaymentNotice($order->fresh());
         }
+
+        // OFD fiskal chek — fonda yaratiladi
+        \App\Jobs\RegisterOrderFiscalReceiptJob::dispatch((int) $order->id);
 
         return $this->buildPaymentResponse($transactionId, $statusResponse, $payResponse ?? []);
     }
