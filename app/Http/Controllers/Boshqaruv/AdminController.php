@@ -2166,9 +2166,12 @@ PROMPT;
             'translations.*.title' => ['nullable', 'string', 'max:255'],
             'translations.*.content' => ['nullable', 'string'],
         ]);
-        $data['slug'] = $data['slug'] ?: Str::slug($data['title']);
+        $data['title'] = trim((string) $data['title']);
+        $data['content'] = trim((string) $data['content']);
+        $data['slug'] = Str::slug(trim((string) ($data['slug'] ?: $data['title'])));
         $data['is_active'] = $request->boolean('is_active');
         $data['show_in_app'] = $request->boolean('show_in_app');
+        $data['sort_order'] = (int) ($data['sort_order'] ?? 0);
 
         return $data;
     }
@@ -2347,7 +2350,6 @@ PROMPT;
             'ReelsPage' => ['reels' => $this->reelsPayload()],
             'Siyosatlar' => [
                 'policies' => $this->policiesPayload(),
-                'translateUrl' => route('boshqaruv.content.translate'),
             ],
             'PushNotifications' => ['notifications' => $this->pushNotificationsPayload()],
             'SearchHistory' => $this->searchHistoryPagePayload(),
@@ -6065,6 +6067,11 @@ PROMPT;
                     'status' => $policy->is_active ? 'Active' : 'Inactive',
                     'showInApp' => (bool) $policy->show_in_app,
                     'sortOrder' => (int) ($policy->sort_order ?? 0),
+                    'updatedAt' => optional($policy->updated_at)?->toIso8601String(),
+                    'updatedAtLabel' => optional($policy->updated_at)?->format('d.m.Y H:i'),
+                    'translationsCompleted' => collect($translations)
+                        ->filter(fn (array $item) => filled(trim((string) ($item['title'] ?? ''))) || filled(trim((string) ($item['content'] ?? ''))))
+                        ->count(),
                     'translations' => $translations,
                     'createUrl' => route('boshqaruv.policies.store'),
                     'updateUrl' => route('boshqaruv.policies.update', $policy),
@@ -7638,6 +7645,9 @@ PROMPT;
                 'packaging_price_small' => (int) ($settings->packaging_price_small ?? 25000),
                 'packaging_price_large' => (int) ($settings->packaging_price_large ?? 40000),
                 'packaging_threshold' => (int) ($settings->packaging_threshold ?? 4),
+                'review_cashback_enabled' => $settings->review_cashback_enabled === null ? true : (bool) $settings->review_cashback_enabled,
+                'review_cashback_amount' => (int) ($settings->review_cashback_amount ?? 100),
+                'ai_bot_extra_notes' => (string) ($settings->ai_bot_extra_notes ?? ''),
                 'tax_mode' => $settings->tax_mode ?? 'fixed',
                 'tax_fixed_uzs' => (int) ($settings->tax_fixed_uzs ?? 0),
                 'tax_profit_percent' => (float) ($settings->tax_profit_percent ?? 0),

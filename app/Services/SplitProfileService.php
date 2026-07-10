@@ -280,7 +280,10 @@ class SplitProfileService
             )
             : 0;
 
-        $availableLimit = max(0, $computedLimit - $activeExposure);
+        // YAXLITLASH: bo'sh limit 1 000 so'mga karrali (pastga). Exposure
+        // ixtiyoriy son bo'lishi mumkin (foizlar, qisman to'lovlar) — mijozga
+        // yaxlit summa ko'rsatamiz va hech qachon oshirib yubormaymiz.
+        $availableLimit = max(0, intdiv($computedLimit - $activeExposure, 1000) * 1000);
 
         $payload = [
             'user_id' => $user->id,
@@ -488,6 +491,11 @@ class SplitProfileService
         $limit += min(500000, $completedContracts * 125000);
         $limit -= min(400000, $late * 100000);
         $limit = max(0, $limit);
+
+        // YAXLITLASH: limit har doim 10 000 so'mga karrali bo'lsin.
+        // Confidence komponenti ixtiyoriy son berishi mumkin (masalan 123 495),
+        // mijozga esa chiroyli, yaxlit limit ko'rsatilishi kerak.
+        $limit = intdiv($limit, 10000) * 10000;
 
         $min = (int) $settings['global_min_limit'];
         $max = (int) $settings['global_max_limit'];

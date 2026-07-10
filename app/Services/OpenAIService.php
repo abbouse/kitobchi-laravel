@@ -202,12 +202,14 @@ FAQAT quyidagi JSON formatida javob ber:
   "product_type": "book" yoki "stationery" yoki "other",
   "title": "kitob/mahsulot nomi yoki null",
   "author": "muallif ismi yoki null",
+  "isbn": "rasmda ISBN raqami yoki shtrix-kod ostidagi raqam ko'rinsa (masalan 978-...) yoki null",
   "text_on_image": "rasmda ko'ringan asosiy matn yoki null",
   "keywords": ["qidiruv", "uchun", "kalit", "so'zlar"],
   "search_query": "mahsulotni topish uchun eng yaxshi qidiruv matni (nom + muallif + tur)",
   "description": "rasmning qisqa tavsifi (1-2 gap)"
 }
 Kitob muqovasi bo'lsa: title va author ni aniq o'qishga harakat qil.
+Kitobning orqa muqovasida ISBN/shtrix-kod bo'lsa — raqamini aynan o'qib "isbn" ga yoz.
 Kanselyariya bo'lsa (qalam, daftar, ruchka, sumka...): turini va rangini keywords ga yoz.
 EOT;
 
@@ -295,6 +297,15 @@ EOT;
         $title  = filled($data['title'] ?? null) ? trim((string) $data['title']) : null;
         $author = filled($data['author'] ?? null) ? trim((string) $data['author']) : null;
 
+        // ISBN: faqat raqam va X qoldiramiz, 10 yoki 13 xonali bo'lsa qabul qilinadi
+        $isbn = null;
+        if (filled($data['isbn'] ?? null)) {
+            $cleaned = preg_replace('/[^0-9Xx]/', '', (string) $data['isbn']);
+            if (in_array(strlen($cleaned), [10, 13], true)) {
+                $isbn = strtoupper($cleaned);
+            }
+        }
+
         $searchQuery = trim((string) ($data['search_query'] ?? ''));
         if ($searchQuery === '') {
             $searchQuery = trim(implode(' ', array_filter([$title, $author, implode(' ', $keywords)])));
@@ -304,6 +315,7 @@ EOT;
             'product_type'  => $type,
             'title'         => $title,
             'author'        => $author,
+            'isbn'          => $isbn,
             'text_on_image' => filled($data['text_on_image'] ?? null) ? trim((string) $data['text_on_image']) : null,
             'keywords'      => $keywords,
             'search_query'  => $searchQuery,

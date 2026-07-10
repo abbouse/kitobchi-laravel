@@ -436,7 +436,12 @@ class SplitContractService
         }
 
         // Bekor bo'lgan mahsulotga to'g'ri kelgan ustama ham kechiriladi.
-        $interestCredit = (int) round($productAmount * (float) $contract->monthly_interest_percent * (int) $contract->months / 100);
+        // YAXLITLASH: jadval bilan bir xil qoida — 100 so'mga karrali.
+        $interestCredit = SplitScheduleService::roundTo100(
+            $productAmount * (float) $contract->monthly_interest_percent * (int) $contract->months / 100
+        );
+        // Yaxlitlash shartnomadagi umumiy ustamadan oshirmasin
+        $interestCredit = min($interestCredit, max(0, (int) $contract->interest_amount));
         $totalCredit = $productAmount + $interestCredit + $deliveryCredit;
 
         if ($totalCredit <= 0) {

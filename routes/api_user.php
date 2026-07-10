@@ -46,6 +46,8 @@ Route::prefix('products')->group(function () {
 });
 Route::prefix('search')->group(function () {
     Route::get('/', [SearchController::class, 'search']);
+    // Rasm orqali qidiruv — vision xarajatli, shuning uchun throttle
+    Route::post('image', [SearchController::class, 'imageSearch'])->middleware('throttle:15,1');
     Route::get('history', [SearchController::class, 'history']);
     Route::delete('history', [SearchController::class, 'clearHistory']);
     Route::get('suggestions', [SearchController::class, 'suggestions']);

@@ -24,6 +24,7 @@ class BookClubController extends Controller
         private readonly MentionService $mentionService,
         private readonly ProductReviewPromptService $productReviewPromptService,
         private readonly UserPositionService $userPositionService,
+        private readonly \App\Services\ReviewCashbackService $reviewCashbackService,
     ) {}
 
     /**
@@ -905,9 +906,17 @@ class BookClubController extends Controller
                     'mention',
                     (int) $bookClub->id
                 );
-                $this->productReviewPromptService->markReviewedByPost($bookClub->fresh());
+                $freshPost = $bookClub->fresh();
+                $this->productReviewPromptService->markReviewedByPost($freshPost);
 
-                return response()->json(['status' => 'success', 'post_id' => $bookClub->id], 201);
+                // Sotib olingan mahsulotga izoh — keshbek (har mahsulotga 1 marta)
+                $reviewCashback = $this->reviewCashbackService->awardForPost($freshPost);
+
+                return response()->json([
+                    'status'          => 'success',
+                    'post_id'         => $bookClub->id,
+                    'review_cashback' => $reviewCashback,
+                ], 201);
             });
         } catch (\Exception $e) {
             Log::error("New Post Error: " . $e->getMessage());
@@ -1019,7 +1028,12 @@ class BookClubController extends Controller
                     'mention',
                     (int) $post->id
                 );
-                $this->productReviewPromptService->markReviewedByPost($post->fresh());
+                $updatedPost = $post->fresh();
+                $this->productReviewPromptService->markReviewedByPost($updatedPost);
+
+                // Post tahrirlanib mahsulot biriktirilgan bo'lsa ham keshbek
+                // berilishi mumkin (har mahsulotga 1 marta — xizmat o'zi tekshiradi)
+                $this->reviewCashbackService->awardForPost($updatedPost);
 
                 // ── Rasmlarni o'chirish ────────────────────────────────────────
                 $deletedIds = json_decode($request->input('deleted_image_ids', '[]'), true);

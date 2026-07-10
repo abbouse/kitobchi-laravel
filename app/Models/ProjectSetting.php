@@ -34,6 +34,10 @@ class ProjectSetting extends Model
         'split_card_delete_lock_enabled',
         // Refund
         'paylov_refund_sender_card_id', 'paylov_refund_service_id',
+        // Izoh (review) uchun keshbek
+        'review_cashback_enabled', 'review_cashback_amount',
+        // AI bot qo'llanmasi (boshqaruvdan tahrir qilinadi)
+        'ai_bot_extra_notes',
     ];
 
     protected $casts = [
@@ -60,5 +64,7 @@ class ProjectSetting extends Model
         'split_min_card_age_days' => 'integer',
         'split_min_reputation_score' => 'decimal:2',
         'split_card_delete_lock_enabled' => 'boolean',
+        'review_cashback_enabled' => 'boolean',
+        'review_cashback_amount' => 'integer',
     ];
 }

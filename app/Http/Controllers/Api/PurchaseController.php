@@ -2327,6 +2327,7 @@ class PurchaseController extends Controller
             'status' => 'success',
             'sections' => $sections,
             'review_prompt_items' => $this->buildReviewPromptProducts($user),
+            'review_cashback' => app(\App\Services\ReviewCashbackService::class)->settings(),
         ]);
     }
 
@@ -2463,6 +2464,7 @@ class PurchaseController extends Controller
             'status' => 'success',
             'data' => $result['data'],
             'meta' => $result['meta'],
+            'review_cashback' => app(\App\Services\ReviewCashbackService::class)->settings(),
         ]);
     }
 

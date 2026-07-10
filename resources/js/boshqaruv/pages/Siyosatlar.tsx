@@ -15,6 +15,8 @@ interface Policy {
   status: string;
   showInApp: boolean;
   sortOrder: number;
+  updatedAtLabel?: string;
+  translationsCompleted?: number;
   translations?: Record<TranslateLocale, { title?: string; content?: string }>;
   createUrl?: string;
   updateUrl?: string;
@@ -60,9 +62,6 @@ const defaultForm = (): PolicyFormState => ({
   translations: defaultTranslations(),
 });
 
-const getCsrfToken = () =>
-  document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content || '';
-
 const slugify = (value: string) =>
   value
     .toLowerCase()
@@ -75,11 +74,11 @@ export default function Siyosatlar() {
   const {
     policies = [],
     errors = {},
-    translateUrl = '/boshqaruv/content/translate',
+    flash = {},
   } = usePage<{
     policies?: Policy[];
     errors?: Record<string, string>;
-    translateUrl?: string;
+    flash?: Record<string, string>;
   }>().props;
 
   const createUrl = policies[0]?.createUrl || '/boshqaruv/siyosatlar';
@@ -87,7 +86,6 @@ export default function Siyosatlar() {
   const [showForm, setShowForm] = useState(false);
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  const [translatingLocales, setTranslatingLocales] = useState<TranslateLocale[]>([]);
   const [form, setForm] = useState<PolicyFormState>(defaultForm);
 
   useEffect(() => {
@@ -131,7 +129,6 @@ export default function Siyosatlar() {
   const resetForm = () => {
     setEditing(null);
     setForm(defaultForm());
-    setTranslatingLocales([]);
   };
 
   const hydrateForm = (policy?: Policy | null) => {
@@ -163,7 +160,6 @@ export default function Siyosatlar() {
         },
       },
     });
-    setTranslatingLocales([]);
   };
 
   const openCreate = () => {
@@ -179,7 +175,6 @@ export default function Siyosatlar() {
   const closeModal = () => {
     setShowForm(false);
     setEditing(null);
-    setTranslatingLocales([]);
   };
 
   const toggle = (policy: Policy) => {
@@ -209,63 +204,7 @@ export default function Siyosatlar() {
     }));
   };
 
-  const translateFromUz = async (targetLocales: TranslateLocale[]) => {
-    const texts: Record<string, string> = {};
-    if (form.title.trim()) texts.title = form.title.trim();
-    if (form.content.trim()) texts.content = form.content.trim();
-
-    if (Object.keys(texts).length === 0) {
-      window.alert("Avval UZ sarlavha yoki UZ matnni to'ldiring.");
-      return;
-    }
-
-    setTranslatingLocales(targetLocales);
-
-    try {
-      const response = await fetch(translateUrl, {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': getCsrfToken(),
-        },
-        body: JSON.stringify({
-          provider: 'google_community',
-          source_locale: 'uz',
-          target_locales: targetLocales,
-          texts,
-        }),
-      });
-
-      const payload = await response.json().catch(() => null);
-      if (!response.ok || payload?.status !== 'success') {
-        throw new Error(payload?.message || payload?.errors?.texts?.[0] || 'AI tarjima xatosi');
-      }
-
-      setForm((prev) => {
-        const next = {
-          ...prev,
-          translations: {
-            ru: { ...prev.translations.ru },
-            en: { ...prev.translations.en },
-            ja: { ...prev.translations.ja },
-          },
-        };
-
-        targetLocales.forEach((locale) => {
-          const translated = payload.data?.[locale] || {};
-          if (translated.title) next.translations[locale].title = translated.title;
-          if (translated.content) next.translations[locale].content = translated.content;
-        });
-
-        return next;
-      });
-    } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'AI tarjima vaqtincha ishlamadi.');
-    } finally {
-      setTranslatingLocales([]);
-    }
-  };
+  const fieldError = (key: string) => errors[key];
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -305,12 +244,19 @@ export default function Siyosatlar() {
       <div className="page-head">
         <div>
           <h1 className="page-title">Siyosatlar va qoidalar</h1>
-          <p className="page-subtitle">Legal sahifalar, app ichidagi ko'rinishi va AI bilan ko'p tilli boshqaruv</p>
+          <p className="page-subtitle">Legal sahifalarni qo'lda, aniq va ko'p tilli tarzda boshqaring</p>
         </div>
         <button className="btn btn-primary-gradient" onClick={openCreate}>
           <i className="bi bi-plus-lg me-1"></i>Siyosat qo'shish
         </button>
       </div>
+
+      {flash.success ? (
+        <div className="alert alert-success rounded-4 mb-3">{flash.success}</div>
+      ) : null}
+      {flash.error ? (
+        <div className="alert alert-danger rounded-4 mb-3">{flash.error}</div>
+      ) : null}
 
       <div className="row g-3 mb-3">
         <div className="col-md-3">
@@ -390,6 +336,9 @@ export default function Siyosatlar() {
                     <td className="fw-semibold text-primary">#{policy.id}</td>
                     <td>
                       <div className="fw-semibold">{policy.title}</div>
+                      {policy.updatedAtLabel ? (
+                        <div className="small text-muted mb-1">Yangilangan: {policy.updatedAtLabel}</div>
+                      ) : null}
                       <div className="small text-muted">{policy.content ? `${policy.content.replace(/<[^>]+>/g, '').slice(0, 92)}...` : 'Matn yo‘q'}</div>
                     </td>
                     <td>
@@ -401,7 +350,17 @@ export default function Siyosatlar() {
                       ) : null}
                     </td>
                     <td>
-                      <span className="chip chip-gray">{translationsReady}/3 tarjima</span>
+                      <div className="d-flex flex-wrap gap-1">
+                        {(['ru', 'en', 'ja'] as TranslateLocale[]).map((locale) => {
+                          const ready = (policy.translations?.[locale]?.title || '').trim() || (policy.translations?.[locale]?.content || '').trim();
+                          return (
+                            <span key={locale} className={`chip ${ready ? 'chip-success' : 'chip-gray'}`}>
+                              {localeLabels[locale]}
+                            </span>
+                          );
+                        })}
+                      </div>
+                      <div className="small text-muted mt-1">{translationsReady}/3 til to'ldirilgan</div>
                     </td>
                     <td>{policy.sortOrder}</td>
                     <td>
@@ -458,11 +417,18 @@ export default function Siyosatlar() {
           </Modal.Header>
           <Modal.Body style={{ maxHeight: 'calc(100vh - 140px)', overflowY: 'auto' }}>
             <div className="row g-3">
+              {Object.keys(errors).length > 0 ? (
+                <div className="col-12">
+                  <div className="alert alert-danger rounded-4 mb-0">
+                    Majburiy maydonlarni tekshiring va qayta saqlang.
+                  </div>
+                </div>
+              ) : null}
               <div className="col-12">
                 <div className="rounded-4 border p-3 d-flex flex-wrap justify-content-between align-items-center gap-3">
                   <div>
                     <div className="fw-semibold">Tezkor yordamchi</div>
-                    <div className="small text-muted">Nasiya uchun tayyor UZ draftni qo'yib, keyin RU, EN, JA ga Google community tarjimasi bilan to'ldiring.</div>
+                    <div className="small text-muted">Asosiy UZ matnni tayyorlang, keyin boshqa tillarni admin qo'lda alohida to'ldiradi. Slug va tartib shu yerdan boshqariladi.</div>
                   </div>
                   <div className="d-flex flex-wrap gap-2">
                     <button type="button" className="btn btn-sm btn-dark" onClick={applySplitPreset}>
@@ -475,6 +441,9 @@ export default function Siyosatlar() {
                     >
                       Slug yaratish
                     </button>
+                    <button type="button" className="btn btn-sm btn-light" onClick={resetForm}>
+                      Tozalash
+                    </button>
                   </div>
                 </div>
               </div>
@@ -486,7 +455,9 @@ export default function Siyosatlar() {
                   value={form.title}
                   onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
                   placeholder="Masalan: Kitobchi nasiya xizmati shartlari"
+                  isInvalid={!!fieldError('title')}
                 />
+                <Form.Control.Feedback type="invalid">{fieldError('title')}</Form.Control.Feedback>
               </div>
               <div className="col-md-5">
                 <Form.Label>Slug</Form.Label>
@@ -494,7 +465,9 @@ export default function Siyosatlar() {
                   value={form.slug}
                   onChange={(event) => setForm((prev) => ({ ...prev, slug: event.target.value }))}
                   placeholder="nasiya-shartlari"
+                  isInvalid={!!fieldError('slug')}
                 />
+                <Form.Control.Feedback type="invalid">{fieldError('slug')}</Form.Control.Feedback>
               </div>
 
               <div className="col-md-3">
@@ -506,7 +479,9 @@ export default function Siyosatlar() {
                   onChange={(event) =>
                     setForm((prev) => ({ ...prev, sortOrder: Number(event.target.value || 0) }))
                   }
+                  isInvalid={!!fieldError('sort_order')}
                 />
+                <Form.Control.Feedback type="invalid">{fieldError('sort_order')}</Form.Control.Feedback>
               </div>
               <div className="col-md-3 d-flex align-items-end">
                 <Form.Check
@@ -534,36 +509,6 @@ export default function Siyosatlar() {
                 )}
               </div>
 
-              <div className="col-12">
-                <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 rounded-4 border px-3 py-2">
-                  <div>
-                    <div className="fw-semibold">UZ matndan Google community tarjima</div>
-                    <div className="small text-muted">Uzun legal HTML matnlar struktura saqlangan holda fonda tarjima qilinadi. Tarjima ketayotgan paytda ham modalni bemalol scroll qilish mumkin.</div>
-                  </div>
-                  <div className="d-flex flex-wrap gap-2">
-                    {(['ru', 'en', 'ja'] as TranslateLocale[]).map((locale) => (
-                      <button
-                        key={locale}
-                        type="button"
-                        className="btn btn-sm btn-light"
-                        disabled={translatingLocales.length > 0}
-                        onClick={() => translateFromUz([locale])}
-                      >
-                        {translatingLocales.includes(locale) ? '...' : localeLabels[locale]}
-                      </button>
-                    ))}
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-primary-gradient"
-                      disabled={translatingLocales.length > 0}
-                      onClick={() => translateFromUz(['ru', 'en', 'ja'])}
-                    >
-                      {translatingLocales.length > 0 ? 'Tarjima...' : 'Barchasi'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
               <div className="col-xl-7">
                 <Form.Label>Matn (UZ, HTML bo'lishi mumkin)</Form.Label>
                 <Form.Control
@@ -573,7 +518,9 @@ export default function Siyosatlar() {
                   value={form.content}
                   onChange={(event) => setForm((prev) => ({ ...prev, content: event.target.value }))}
                   style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}
+                  isInvalid={!!fieldError('content')}
                 />
+                <Form.Control.Feedback type="invalid">{fieldError('content')}</Form.Control.Feedback>
               </div>
               <div className="col-xl-5">
                 <div className="rounded-4 border h-100 overflow-hidden">
@@ -595,8 +542,11 @@ export default function Siyosatlar() {
                 <div className="col-12" key={locale}>
                   <div className="rounded-4 border bg-light-subtle p-3">
                     <div className="d-flex justify-content-between align-items-center gap-2 mb-3">
-                      <div className="fw-semibold">{localeTitles[locale]} tarjima</div>
-                      <span className="chip chip-gray">{localeLabels[locale]}</span>
+                      <div>
+                        <div className="fw-semibold">{localeTitles[locale]} versiya</div>
+                        <div className="small text-muted">Bu til uchun sarlavha va legal matn qo'lda kiritiladi.</div>
+                      </div>
+                      <span className={`chip ${(form.translations[locale].title.trim() || form.translations[locale].content.trim()) ? 'chip-success' : 'chip-gray'}`}>{localeLabels[locale]}</span>
                     </div>
                     <div className="row g-3">
                       <div className="col-12">
@@ -615,7 +565,9 @@ export default function Siyosatlar() {
                               },
                             }))
                           }
+                          isInvalid={!!fieldError(`translations.${locale}.title`)}
                         />
+                        <Form.Control.Feedback type="invalid">{fieldError(`translations.${locale}.title`)}</Form.Control.Feedback>
                       </div>
                       <div className="col-12">
                         <Form.Label>{localeTitles[locale]} matn</Form.Label>
@@ -635,7 +587,9 @@ export default function Siyosatlar() {
                               },
                             }))
                           }
+                          isInvalid={!!fieldError(`translations.${locale}.content`)}
                         />
+                        <Form.Control.Feedback type="invalid">{fieldError(`translations.${locale}.content`)}</Form.Control.Feedback>
                       </div>
                     </div>
                   </div>

@@ -1058,6 +1058,142 @@ class SearchController extends Controller
     // ─────────────────────────────────────────────
     // SUGGESTIONS
     // ─────────────────────────────────────────────
+    // ─────────────────────────────────────────────
+    // RASM ORQALI QIDIRUV
+    // ─────────────────────────────────────────────
+
+    /**
+     * POST /search/image — rasm yuborilsa, undan mahsulot topadi.
+     *
+     * Kaskad (aniqroqdan noaniqroqqa):
+     *   1. ISBN rasmda ko'rinsa → aniq ISBN qidiruvi (eng ishonchli)
+     *   2. Aniqlangan nom/muallif → LIKE qidiruvi
+     *   3. Semantik (vector) qidiruv — search_query bo'yicha
+     *
+     * Javob: data (mahsulotlar) + recognized (rasmdan aniqlangan ma'lumot,
+     * ilova "Rasmda: X" ko'rsatishi va inputga yozib qo'yishi uchun).
+     */
+    public function imageSearch(Request $request)
+    {
+        $request->validate([
+            'image' => 'required|image|mimes:jpeg,jpg,png,webp,heic|max:8192',
+            'q'     => 'nullable|string|max:255',
+        ]);
+
+        try {
+            $user = auth('sanctum')->user();
+            $extraText = trim((string) $request->input('q', ''));
+
+            // Rasmni saqlamasdan to'g'ridan-to'g'ri base64 qilamiz
+            $file = $request->file('image');
+            $mime = $file->getMimeType() ?: 'image/jpeg';
+            $dataUrl = 'data:' . $mime . ';base64,' . base64_encode($file->get());
+
+            $analysis = app(\App\Services\OpenAIService::class)
+                ->analyzeProductImage($dataUrl, $extraText);
+
+            $recognized = [
+                'product_type' => $analysis['product_type'],
+                'title'        => $analysis['title'],
+                'author'       => $analysis['author'],
+                'isbn'         => $analysis['isbn'] ?? null,
+                'description'  => $analysis['description'],
+                'search_query' => $analysis['search_query'],
+            ];
+
+            $results = collect();
+            $seen = [];
+            $push = function ($items, string $matchType) use (&$results, &$seen) {
+                foreach ($items as $item) {
+                    $key = ($item->_type ?? ($item instanceof Books ? 'book' : 'stationery')) . ':' . $item->id;
+                    if (isset($seen[$key])) {
+                        continue;
+                    }
+                    $seen[$key] = true;
+                    $item->_match_type = $matchType;
+                    $results->push($item);
+                }
+            };
+
+            // ── 1. ISBN — aniq moslik ──────────────────────────────────
+            if (! empty($analysis['isbn'])) {
+                $isbnBooks = $this->visibleBooks(['category', 'seller', 'tags'])
+                    ->whereIsbn($analysis['isbn'])
+                    ->limit(5)
+                    ->get()
+                    ->each(fn ($b) => $b->_type = 'book');
+
+                $push($isbnBooks, 'isbn');
+            }
+
+            // ── 2. Aniqlangan nom/muallif — LIKE ───────────────────────
+            $type = $analysis['product_type'];
+
+            if (in_array($type, ['book', 'other'], true)) {
+                $q = $this->visibleBooks(['category', 'seller', 'tags']);
+                $applied = false;
+
+                $q->where(function ($sub) use ($analysis, &$applied) {
+                    if (filled($analysis['title']) && mb_strlen($analysis['title']) >= 3) {
+                        $sub->orWhere('name', 'LIKE', '%' . $analysis['title'] . '%');
+                        $applied = true;
+                    }
+                    if (filled($analysis['author']) && mb_strlen($analysis['author']) >= 3) {
+                        $sub->orWhere('author', 'LIKE', '%' . $analysis['author'] . '%');
+                        $applied = true;
+                    }
+                });
+
+                if ($applied) {
+                    $push($q->limit(10)->get()->each(fn ($b) => $b->_type = 'book'), 'text');
+                }
+            }
+
+            if (in_array($type, ['stationery', 'other'], true) && filled($analysis['title'])) {
+                $stationeries = $this->visibleStationeries(['category', 'seller', 'tags'])
+                    ->where('name', 'LIKE', '%' . $analysis['title'] . '%')
+                    ->limit(10)
+                    ->get()
+                    ->each(fn ($s) => $s->_type = 'stationery');
+
+                $push($stationeries, 'text');
+            }
+
+            // ── 3. Semantik (vector) qidiruv ───────────────────────────
+            $searchQuery = trim(implode(' ', array_filter([$analysis['search_query'], $extraText])));
+
+            if ($searchQuery !== '' && $results->count() < 12) {
+                $vectorType = match ($type) {
+                    'book'       => 'book',
+                    'stationery' => 'stationery',
+                    default      => 'both',
+                };
+
+                $semantic = app(\App\Services\VectorSearchService::class)
+                    ->search($searchQuery, $vectorType, 12, 0.25);
+
+                $push($semantic, 'semantic');
+            }
+
+            $items = $results
+                ->take(20)
+                ->map(fn ($p) => $this->formatProduct($p, $user))
+                ->filter()
+                ->values();
+
+            return response()->json([
+                'status'     => 'success',
+                'recognized' => $recognized,
+                'data'       => $items->toArray(),
+                'pagination' => ['has_more' => false],
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Image search error', ['error' => $e->getMessage()]);
+
+            return response()->json(['status' => 'error', 'message' => 'Rasmni qayta ishlashda xatolik'], 500);
+        }
+    }
+
     public function suggestions(Request $request)
     {
         $query    = trim($request->query('q', ''));

@@ -46,7 +46,9 @@ class SplitScheduleService
 
         $monthlyPercent = max(0.0, (float) $plan->monthly_interest_percent);
         // Foiz faqat kredit (mahsulot) qismiga — upfrontExtra'ga (yetkazish) hisoblanmaydi.
-        $interest = (int) round($principal * $monthlyPercent * $months / 100);
+        // YAXLITLASH: ustama 100 so'mga karrali — shunda barcha installment va
+        // umumiy summalar ham yaxlit chiqadi (principal odatda 100 ga karrali).
+        $interest = self::roundTo100($principal * $monthlyPercent * $months / 100);
         $financedTotal = $principal + $interest;
         $total = $financedTotal + $upfrontExtra;
 
@@ -156,9 +158,15 @@ class SplitScheduleService
         $periodsElapsed = intdiv($unitsElapsed, $every);
         $elapsedMonths = min($months, max(1, $periodsElapsed + 1));
 
-        $earnedInterest = (int) round($principal * $monthlyPercent * $elapsedMonths / 100);
-        $fullInterest = (int) round($principal * $monthlyPercent * $months / 100);
+        // YAXLITLASH: ustamalar 100 so'mga karrali (calculate() bilan bir xil qoida).
+        $earnedInterest = self::roundTo100($principal * $monthlyPercent * $elapsedMonths / 100);
+        $fullInterest = self::roundTo100($principal * $monthlyPercent * $months / 100);
+
+        // Payoff PASTGA 100 so'mga yaxlitlanadi — mijoz hech qachon ortiqcha
+        // to'lamaydi (1–99 so'm farq platforma hisobidan kechiriladi;
+        // settleEarly baribir shartnomani to'liq yopadi).
         $payoff = max(0, $principal + $earnedInterest - $alreadyPaid);
+        $payoff = intdiv($payoff, 100) * 100;
 
         return [
             'payoff' => $payoff,
@@ -166,5 +174,13 @@ class SplitScheduleService
             'waived_interest' => max(0, $fullInterest - $earnedInterest),
             'elapsed_months' => $elapsedMonths,
         ];
+    }
+
+    /**
+     * Eng yaqin 100 so'mga yaxlitlaydi.
+     */
+    public static function roundTo100(float $value): int
+    {
+        return (int) round($value / 100) * 100;
     }
 }

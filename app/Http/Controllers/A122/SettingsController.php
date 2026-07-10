@@ -205,6 +205,8 @@ class SettingsController extends Controller
             'packaging_price_small' => 'required|integer|min:0',
             'packaging_price_large' => 'required|integer|min:0',
             'packaging_threshold'   => 'required|integer|min:1',
+            'review_cashback_amount' => 'nullable|integer|min:0|max:100000',
+            'ai_bot_extra_notes' => 'nullable|string|max:2000',
         ]);
 
         $settings = $this->projectSettings();
@@ -220,9 +222,18 @@ class SettingsController extends Controller
             'packaging_price_small' => $request->packaging_price_small,
             'packaging_price_large' => $request->packaging_price_large,
             'packaging_threshold'   => $request->packaging_threshold,
+            // Izoh uchun keshbek
+            'review_cashback_enabled' => $request->boolean('review_cashback_enabled'),
+            'review_cashback_amount'  => $request->filled('review_cashback_amount')
+                ? (int) $request->input('review_cashback_amount')
+                : (int) ($settings->review_cashback_amount ?? 100),
+            // AI bot qo'llanmasi
+            'ai_bot_extra_notes' => trim((string) $request->input('ai_bot_extra_notes', '')) ?: null,
         ]);
 
         Cache::forget('project_settings');
+        \App\Services\ReviewCashbackService::forgetSettingsCache();
+        \App\Services\ChatBotKnowledgeService::forgetCache();
 
         return back()->with('success', 'App sozlamalari yangilandi.');
     }

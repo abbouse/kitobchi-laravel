@@ -190,6 +190,16 @@ export default function Settings() {
               <div className="col-md-4"><TextInput name="packaging_price_small" label="Kichik qadoqlash (UZS)" type="number" min={0} required defaultValue={value(project, 'packaging_price_small', '25000')} /></div>
               <div className="col-md-4"><TextInput name="packaging_price_large" label="Katta qadoqlash (UZS)" type="number" min={0} required defaultValue={value(project, 'packaging_price_large', '40000')} /></div>
               <div className="col-md-4"><TextInput name="packaging_threshold" label="Chegara (ta kitob)" type="number" min={1} required defaultValue={value(project, 'packaging_threshold', '4')} /></div>
+              <div className="col-12"><hr className="my-1" /></div>
+              <div className="col-lg-6"><Toggle name="review_cashback_enabled" label="Izoh uchun keshbek yoqilgan" icon="bi-chat-heart-fill" defaultChecked={project.review_cashback_enabled === undefined ? true : checked(project, 'review_cashback_enabled')} /></div>
+              <div className="col-md-4"><TextInput name="review_cashback_amount" label="Izoh keshbek miqdori (UZS)" type="number" min={0} max={100000} defaultValue={value(project, 'review_cashback_amount', '100')} /></div>
+              <div className="col-12 small text-muted">Mijoz o'zi sotib olgan mahsulotga izoh qoldirsa shu miqdorda keshbek oladi. Har bir mahsulot uchun faqat 1 marta beriladi (nechta izoh yozishidan qat'i nazar).</div>
+              <div className="col-12"><hr className="my-1" /></div>
+              <div className="col-12">
+                <label className="form-label small text-muted fw-semibold">AI bot qo'shimcha qo'llanmasi</label>
+                <textarea name="ai_bot_extra_notes" className="form-control" rows={4} maxLength={2000} placeholder="Masalan: Ramazon aksiyasi davomida barcha buyurtmalarga sovg'a qo'shiladi. Ish vaqti: 9:00–21:00." defaultValue={value(project, 'ai_bot_extra_notes', '')} />
+                <div className="small text-muted mt-1">Bu matn AI chatbot bilimiga qo'shiladi — aksiyalar, ish vaqti, maxsus qoidalarni shu yerga yozing. Tariflar, yetkazish narxlari va to'lov qoidalari tizimdan avtomatik olinadi, ularni yozish shart emas.</div>
+              </div>
             </div>
             <div className="small text-muted mt-3">Agar bu flag o'chirilsa, mystery box va gift certificate sectionlari ilovada yashiriladi va top bannerlar homepage ichida ularning o'rniga tushadi.</div>
             <div className="text-end mt-3"><SaveButton /></div>
