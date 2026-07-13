@@ -398,11 +398,19 @@ class PaylovService
                 'token_length' => mb_strlen(trim($accessToken)),
                 'response_body' => $body,
                 'response_headers' => $response->headers(),
+                'request_summary' => $path === '/merchant/fiscalization/register/'
+                    ? $this->fiscalRequestSummary($payload)
+                    : null,
             ]);
 
             $errorData = is_array($body['error']['data'] ?? null) ? $body['error']['data'] : [];
             $field = trim((string) ($errorData['field'] ?? ''));
-            $details = $field !== '' ? " (field: {$field})" : '';
+            $dataSummary = $errorData === []
+                ? ''
+                : mb_substr((string) json_encode($errorData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 0, 700);
+            $details = $field !== ''
+                ? " (field: {$field})"
+                : ($dataSummary !== '' ? " (data: {$dataSummary})" : '');
 
             throw new PaylovApiException(
                 "{$message} ({$code}){$details}",
@@ -413,6 +421,46 @@ class PaylovService
         }
 
         return $body;
+    }
+
+    /**
+     * OFD validation diagnostikasi. STIR/PINFL qiymatlari loglanmaydi;
+     * faqat identifikator turi va uzunligi saqlanadi.
+     */
+    private function fiscalRequestSummary(array $payload): array
+    {
+        $items = collect(is_array($payload['items'] ?? null) ? $payload['items'] : [])
+            ->values()
+            ->map(function ($item, int $index) {
+                $item = is_array($item) ? $item : [];
+                $taxValue = (string) ($item['tin'] ?? $item['pinfl'] ?? '');
+
+                return [
+                    'index' => $index,
+                    'title' => mb_substr((string) ($item['title'] ?? ''), 0, 80),
+                    'price' => $item['price'] ?? null,
+                    'discount' => $item['discount'] ?? null,
+                    'count' => $item['count'] ?? null,
+                    'code' => $item['code'] ?? null,
+                    'vat_percent' => $item['vat_percent'] ?? null,
+                    'package_code' => $item['package_code'] ?? null,
+                    'tax_id_type' => isset($item['tin']) ? 'tin' : (isset($item['pinfl']) ? 'pinfl' : null),
+                    'tax_id_length' => mb_strlen($taxValue),
+                ];
+            })
+            ->all();
+
+        return [
+            'transaction_id_present' => filled($payload['transactionId'] ?? null),
+            'receipt_type_present' => array_key_exists('receiptType', $payload),
+            'advance_contract_id_present' => filled($payload['advanceContractId'] ?? null),
+            'items_count' => count($items),
+            'items_total' => array_sum(array_map(
+                fn (array $item) => max(0, ((int) ($item['price'] ?? 0)) - ((int) ($item['discount'] ?? 0))) * max(1, (int) ($item['count'] ?? 1)),
+                $items,
+            )),
+            'items' => $items,
+        ];
     }
 
     private function resolveAccessToken(): string

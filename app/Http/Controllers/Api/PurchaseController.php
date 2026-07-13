@@ -535,7 +535,7 @@ class PurchaseController extends Controller
             'status' => 'success',
             'data' => [
                 'eligible' => $withinLimit,
-                'reason' => $withinLimit ? null : "Buyurtma summasi nasiya limitingizdan katta.",
+                'reason' => $withinLimit ? null : 'Buyurtma summasi nasiya limitingizdan katta.',
                 'available_limit' => (int) $profile['available_limit'],
                 'upfront_extra' => $upfrontExtra,
                 'plans' => $plans,
@@ -804,7 +804,7 @@ class PurchaseController extends Controller
         $contractService = app(\App\Services\SplitContractService::class);
 
         $contracts = \App\Models\SplitContract::query()
-            ->with(['installments', 'plan:id,name'])
+            ->with(['installments.transaction', 'plan:id,name'])
             ->where('user_id', $user->id)
             ->orderByDesc('id')
             ->limit(50)
@@ -887,15 +887,40 @@ class PurchaseController extends Controller
                     'starts_at' => optional($contract->starts_at)->format('Y-m-d'),
                     'installments_paid' => $contract->installments->where('status', 'paid')->count(),
                     'installments_count' => (int) $contract->installments_count,
-                    'installments' => $contract->installments->map(fn ($installment) => [
-                        'sequence' => (int) $installment->sequence,
-                        'amount' => (int) $installment->amount,
-                        'paid_amount' => (int) $installment->paid_amount,
-                        'due_date' => optional($installment->due_at)->format('Y-m-d'),
-                        'paid_at' => optional($installment->paid_at)->format('Y-m-d'),
-                        'status' => $installment->status,
-                        'is_upfront' => (bool) $installment->is_upfront,
-                    ])->values(),
+                    'installments' => $contract->installments->map(function ($installment) {
+                        $transaction = $installment->transaction;
+                        $perform = is_array($transaction?->perform_fiscal_data)
+                            ? $transaction->perform_fiscal_data
+                            : [];
+                        $receiptUrl = $perform['qr_code_url'] ?? null;
+
+                        if ($installment->status === 'paid'
+                            && $transaction !== null
+                            && blank($receiptUrl)
+                            && config('services.paylov.ofd.enabled', false)
+                            && \Illuminate\Support\Facades\Cache::add(
+                                "ofd:split-backfill:{$transaction->id}",
+                                1,
+                                now()->addHour(),
+                            )
+                        ) {
+                            \App\Jobs\RegisterTransactionFiscalReceiptJob::dispatch((int) $transaction->id);
+                        }
+
+                        return [
+                            'sequence' => (int) $installment->sequence,
+                            'amount' => (int) $installment->amount,
+                            'paid_amount' => (int) $installment->paid_amount,
+                            'due_date' => optional($installment->due_at)->format('Y-m-d'),
+                            'paid_at' => optional($installment->paid_at)->format('Y-m-d'),
+                            'status' => $installment->status,
+                            'is_upfront' => (bool) $installment->is_upfront,
+                            'has_receipt' => filled($receiptUrl),
+                            'receipt_url' => $receiptUrl,
+                            'receipt_fiscal_sign' => $perform['fiscal_sign'] ?? null,
+                            'receipt_date' => $perform['date'] ?? null,
+                        ];
+                    })->values(),
                 ];
             })
             ->values();
@@ -960,7 +985,7 @@ class PurchaseController extends Controller
         return response()->json([
             'status' => $paidContracts !== [] ? 'success' : 'error',
             'message' => $paidContracts !== []
-                ? count($paidContracts)." ta nasiya yopildi."
+                ? count($paidContracts).' ta nasiya yopildi.'
                 : ($failed[0]['error'] ?? 'To\'lov amalga oshmadi.'),
             'data' => [
                 'paid_contract_ids' => $paidContracts,
@@ -2617,7 +2642,7 @@ class PurchaseController extends Controller
     }
 
     /**
-     * @param array{enabled: bool, amount: int} $settings
+     * @param  array{enabled: bool, amount: int}  $settings
      * @return array{enabled: bool, amount: int, pending_count: int, total_amount: int}
      */
     private function buildReviewCashbackPayload(array $settings, int $pendingCount): array
@@ -2780,7 +2805,22 @@ class PurchaseController extends Controller
             ->where('provider', 'paylov')
             ->where('state', 2)
             ->latest('id')
-            ->first(['perform_fiscal_data', 'cancel_fiscal_data', 'provider_response']);
+            ->first(['id', 'payment_type', 'perform_fiscal_data', 'cancel_fiscal_data', 'provider_response']);
+
+        // Split buyurtmasida ViewPurchase faqat birinchi real to'lov chekini
+        // ko'rsatadi. Keyingi cheklar shartnoma jadvaliga tegishli.
+        if ($transaction === null) {
+            $splitTransactions = Transaction::query()
+                ->where('payment_type', 'split')
+                ->where('order_id', $order->id)
+                ->where('provider', 'paylov')
+                ->where('state', 2)
+                ->orderBy('id')
+                ->get(['id', 'payment_type', 'perform_fiscal_data', 'cancel_fiscal_data', 'provider_response']);
+
+            $transaction = $splitTransactions->first(fn (Transaction $candidate) => (int) data_get($candidate->provider_response, 'split_installment_sequence', 0) === 1
+            ) ?? $splitTransactions->first();
+        }
 
         $perform = is_array($transaction?->perform_fiscal_data) ? $transaction->perform_fiscal_data : [];
         $cancel = is_array($transaction?->cancel_fiscal_data) ? $transaction->cancel_fiscal_data : [];
@@ -2811,9 +2851,13 @@ class PurchaseController extends Controller
         if (! $order->has_payment_receipt
             && $transaction !== null
             && config('services.paylov.ofd.enabled', false)
-            && \Illuminate\Support\Facades\Cache::add("ofd:backfill:{$order->id}", 1, now()->addDay())
+            && \Illuminate\Support\Facades\Cache::add("ofd:backfill:{$transaction->id}", 1, now()->addDay())
         ) {
-            \App\Jobs\RegisterOrderFiscalReceiptJob::dispatch((int) $order->id);
+            if ((string) $transaction->payment_type === 'split') {
+                \App\Jobs\RegisterTransactionFiscalReceiptJob::dispatch((int) $transaction->id);
+            } else {
+                \App\Jobs\RegisterOrderFiscalReceiptJob::dispatch((int) $order->id);
+            }
         }
     }
 

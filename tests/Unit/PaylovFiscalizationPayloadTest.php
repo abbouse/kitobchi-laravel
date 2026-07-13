@@ -32,23 +32,50 @@ class PaylovFiscalizationPayloadTest extends TestCase
             'vat_percent' => 0,
             'package_code' => '1',
             'tin' => '123456789',
-        ]], 0);
+        ]]);
 
         Http::assertSent(function (Request $request) {
             return $request->url() === 'https://gw.paylov.test/merchant/fiscalization/register/'
                 && $request['transactionId'] === 'transaction-1'
-                && $request['receiptType'] === 0
+                && ! isset($request['receiptType'])
                 && ! isset($request['advanceContractId'])
                 && count($request['items']) === 1;
         });
     }
 
-    public function test_fiscal_context_keeps_standard_and_split_receipts_separate(): void
+    public function test_split_credit_receipt_sends_contract_reference(): void
+    {
+        Http::fake([
+            'https://gw.paylov.test/*' => Http::response([
+                'result' => ['ofd' => ['receiptUrl' => 'https://ofd.test/credit-receipt']],
+            ]),
+        ]);
+
+        $service = new PaylovService(
+            baseUrl: 'https://gw.paylov.test',
+            accessToken: 'test-access-token',
+        );
+
+        $service->registerFiscalReceipt('split-transaction-2', [[
+            'title' => 'Kitob',
+            'price' => 250000,
+            'count' => 1,
+            'code' => '123',
+            'vat_percent' => 0,
+            'package_code' => '1',
+            'tin' => '123456789',
+        ]], 2, 'N-00000007');
+
+        Http::assertSent(fn (Request $request) => $request['transactionId'] === 'split-transaction-2'
+            && $request['receiptType'] === 2
+            && $request['advanceContractId'] === 'N-00000007'
+        );
+    }
+
+    public function test_fiscal_context_keeps_standard_and_split_credit_receipts_separate(): void
     {
         config([
-            'services.paylov.ofd.standard_receipt_type' => 0,
-            'services.paylov.ofd.split_receipt_type' => 1,
-            'services.paylov.ofd.split_advance_contract_id' => 'advance-contract-7',
+            'services.paylov.ofd.split_credit_receipt_type' => 2,
         ]);
 
         $service = new \App\Services\PaylovFiscalizationService;
@@ -60,10 +87,13 @@ class PaylovFiscalizationPayloadTest extends TestCase
         ]));
         $split = $method->invoke($service, new \App\Models\Transaction([
             'payment_type' => 'split',
+            'provider_response' => [
+                'fiscal_contract_id' => 'N-00000007',
+            ],
         ]));
 
-        $this->assertSame(['flow' => 'standard', 'receipt_type' => 0, 'advance_contract_id' => null], $standard);
-        $this->assertSame(['flow' => 'split_advance', 'receipt_type' => 1, 'advance_contract_id' => 'advance-contract-7'], $split);
+        $this->assertSame(['flow' => 'standard', 'receipt_type' => null, 'advance_contract_id' => null], $standard);
+        $this->assertSame(['flow' => 'split_credit', 'receipt_type' => 2, 'advance_contract_id' => 'N-00000007'], $split);
     }
 
     public function test_paylov_error_preserves_required_field_context(): void

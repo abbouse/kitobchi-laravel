@@ -36,8 +36,7 @@ class SplitContractService
     public function __construct(
         private readonly SplitScheduleService $scheduleService,
         private readonly SplitProfileService $profileService,
-    ) {
-    }
+    ) {}
 
     /**
      * Checkout / admin: buyurtma uchun split shartnoma ochadi.
@@ -55,7 +54,7 @@ class SplitContractService
         $principal = max(0, (int) $order->amount - $serviceFees);
 
         if ($principal <= 0) {
-            throw new RuntimeException("Buyurtmaning mahsulot qismi splitga yetarli emas.");
+            throw new RuntimeException('Buyurtmaning mahsulot qismi splitga yetarli emas.');
         }
 
         $this->assertPlanUsable($plan, $principal);
@@ -125,6 +124,8 @@ class SplitContractService
                     ],
                 ]);
 
+                $fiscalContractId = $this->fiscalContractReference($contract);
+
                 foreach ($schedule['installments'] as $row) {
                     SplitInstallment::query()->create([
                         'contract_id' => $contract->id,
@@ -155,6 +156,8 @@ class SplitContractService
                         'mode' => 'hold',
                         'split_contract_id' => $contract->id,
                         'split_installment_sequence' => 1,
+                        'fiscal_receipt_type' => 2,
+                        'fiscal_contract_id' => $fiscalContractId,
                         'hold' => [
                             'status' => 'held',
                             'amount' => $upfrontAmount,
@@ -268,6 +271,10 @@ class SplitContractService
         SplitEvent::record('contract_activated', $contract->id, $upfront->id, $contract->user_id, [
             'upfront_amount' => (int) $upfront->amount,
         ]);
+
+        if ($upfront->transaction_id) {
+            \App\Jobs\RegisterTransactionFiscalReceiptJob::dispatch((int) $upfront->transaction_id);
+        }
 
         $this->safeRefreshProfile($contract->user);
 
@@ -777,6 +784,8 @@ class SplitContractService
                 'status' => $statusResponse,
                 'split_contract_id' => $contract->id,
                 'split_installment_sequence' => $installment->sequence,
+                'fiscal_receipt_type' => 2,
+                'fiscal_contract_id' => $this->fiscalContractReference($contract),
                 'card_snapshot' => $this->cardSnapshot($card),
             ],
             'receivers' => [],
@@ -795,6 +804,8 @@ class SplitContractService
             'sequence' => $installment->sequence,
             'on_time' => now()->lte($installment->due_at->copy()->endOfDay()),
         ]);
+
+        \App\Jobs\RegisterTransactionFiscalReceiptJob::dispatch($rowId);
     }
 
     private function payArbitraryAmount(
@@ -819,7 +830,7 @@ class SplitContractService
 
         $payResponse = $paylov->payReceipt($transactionId, (string) $card->provider_card_id, (string) $user->id);
 
-        $this->insertTransaction([
+        $rowId = $this->insertTransaction([
             'owner_id' => $user->id,
             'order_id' => $contract->order_id,
             'amount' => $amount,
@@ -838,10 +849,14 @@ class SplitContractService
                 'pay' => $payResponse,
                 'split_contract_id' => $contract->id,
                 'reference' => $reference,
+                'fiscal_receipt_type' => 2,
+                'fiscal_contract_id' => $this->fiscalContractReference($contract),
                 'card_snapshot' => $this->cardSnapshot($card),
             ],
             'receivers' => [],
         ]);
+
+        \App\Jobs\RegisterTransactionFiscalReceiptJob::dispatch($rowId);
     }
 
     private function markInstallmentPaid(SplitInstallment $installment, int $amount, array $meta = []): void
@@ -1133,6 +1148,22 @@ class SplitContractService
     private function insertTransaction(array $payload): int
     {
         return (int) DB::table('transactions')->insertGetId($this->filterTransactionPayload($payload));
+    }
+
+    private function fiscalContractReference(SplitContract $contract): string
+    {
+        $meta = is_array($contract->meta) ? $contract->meta : [];
+        $reference = trim((string) ($meta['fiscal_contract_id'] ?? ''));
+        if ($reference !== '') {
+            return $reference;
+        }
+
+        $reference = 'N-'.str_pad((string) $contract->id, 8, '0', STR_PAD_LEFT);
+        $contract->forceFill([
+            'meta' => array_merge($meta, ['fiscal_contract_id' => $reference]),
+        ])->save();
+
+        return $reference;
     }
 
     private function updateTransactionRow(int $transactionRowId, array $payload, ?callable $responseMutator = null): void

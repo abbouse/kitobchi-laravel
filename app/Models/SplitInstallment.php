@@ -53,4 +53,9 @@ class SplitInstallment extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function transaction(): BelongsTo
+    {
+        return $this->belongsTo(Transaction::class, 'transaction_id');
+    }
 }

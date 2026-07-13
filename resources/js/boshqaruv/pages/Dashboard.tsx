@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, usePage } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import {
   Area,
   AreaChart,
@@ -18,15 +18,21 @@ import InfoHint from '../components/InfoHint';
 
 const fmt = (n: number) => new Intl.NumberFormat('uz-UZ').format(Math.round(n || 0));
 const money = (n: number) => `${fmt(n)} so'm`;
+const compact = (n: number) => new Intl.NumberFormat('uz-UZ', { notation: 'compact', maximumFractionDigits: 1 }).format(Number(n) || 0);
 
 interface DashboardPayload {
   generatedAt: string;
   metrics: Record<string, number>;
-  periods: Record<string, { revenue: number; orders: number; users: number; aov: number }>;
+  periods: {
+    current?: { revenue: number; orders: number; users: number; aov: number };
+    previous?: { revenue: number; orders: number; users: number; aov: number } | null;
+  };
+  range: { key: string; label: string; from?: string | null; to?: string | null; canCompare: boolean };
   financial: Record<string, number>;
   business: Record<string, number>;
   status: { main: Record<string, number>; seller: Record<string, number>; courier: Record<string, number> };
   salesByMonth: Array<{ month: string; revenue: number; profit: number; orders: number }>;
+  salesTrend: { label: string; granularity: string };
   hourlySales: Array<{ hour: string; revenue: number; orders: number }>;
   categoryShare: Array<{ name: string; value: number; revenue: number; color: string }>;
   topProducts: Array<{ name: string; quantity: number; revenue: number }>;
@@ -42,10 +48,12 @@ const emptyDashboard: DashboardPayload = {
   generatedAt: '--',
   metrics: {},
   periods: {},
+  range: { key: 'month', label: 'Joriy oy', canCompare: true },
   financial: {},
   business: {},
   status: { main: {}, seller: {}, courier: {} },
   salesByMonth: [],
+  salesTrend: { label: 'Joriy oy', granularity: 'Kunlik' },
   hourlySales: [],
   categoryShare: [],
   topProducts: [],
@@ -57,11 +65,11 @@ const emptyDashboard: DashboardPayload = {
   alerts: [],
 };
 
-const change = (current = 0, previous = 0) => previous > 0 ? ((current - previous) / previous * 100) : 0;
+const change = (current = 0, previous = 0) => previous > 0 ? ((current - previous) / previous * 100) : (current > 0 ? 100 : 0);
 
 const metricHelps: Record<string, string> = {
   orders: "Bazadagi barcha asosiy buyurtmalar soni. Statusidan qat'i nazar jami orderlar sanaladi.",
-  paidOrders: "To'lovi paid/success/completed bo'lgan yoki yakunlangan buyurtmalar. Moliyaviy hisoblar asosan shundan olinadi.",
+  paidOrders: "Mijoz qabul qilgan va to'lovi tasdiqlangan yakuniy savdolar soni. Moliyaviy hisoblar shu orderlardan olinadi.",
   users: "Platformada ro'yxatdan o'tgan jami foydalanuvchilar soni.",
   books: "Kitob katalogidagi mahsulotlar soni.",
   sellers: "Marketplace sotuvchilari soni. Faol, kutilmoqda va bekor qilinganlar umumiy sanaladi.",
@@ -75,14 +83,14 @@ const metricHelps: Record<string, string> = {
 };
 
 const periodHelps: Record<string, string> = {
-  revenue: "Tanlangan davrda to'langan buyurtmalarning umumiy summasi. Pastdagi foiz oldingi shu davr bilan solishtiradi.",
-  orders: "Tanlangan davrda tushgan buyurtmalar soni. Pastdagi foiz oldingi davrga nisbatan o'zgarish.",
-  aov: "O'rtacha chek: tanlangan davrdagi tushum buyurtmalar soniga bo'linadi.",
+  revenue: "Tanlangan davrda mijoz qabul qilgan va to'lovi tasdiqlangan savdolarning umumiy summasi. Foiz teng uzunlikdagi oldingi davr bilan solishtiriladi.",
+  orders: "Tanlangan davrda mijoz qabul qilgan va to'lovi tasdiqlangan savdolar soni. Foiz teng uzunlikdagi oldingi davr bilan solishtiriladi.",
+  aov: "O'rtacha chek: tanlangan davrdagi yakuniy savdo tushumi yakuniy savdolar soniga bo'linadi.",
   users: "Tanlangan davrda yangi ro'yxatdan o'tgan foydalanuvchilar soni.",
 };
 
 const businessHelps: Record<string, string> = {
-  "To'lov ulushi": "Jami buyurtmalardan nechtasi haqiqatan to'langanini ko'rsatadi. Paid / jami order.",
+  'Yakuniy savdo ulushi': "Jami buyurtmalardan nechtasi mijoz tomonidan qabul qilingan va to'lovi tasdiqlangan yakuniy savdoga aylanganini ko'rsatadi.",
   'Yakunlash ulushi': "Jami buyurtmalardan yakunlanganlari ulushi. Admin operatsiya sifati uchun signal.",
   'Bekor ulushi': "Bekor qilingan yoki qaytgan buyurtmalar ulushi. Ko'paysa logistika yoki mahsulot tomoni tekshiriladi.",
   'Qayta xaridor': "Bir martadan ko'p xarid qilgan foydalanuvchilar ulushi.",
@@ -93,7 +101,7 @@ const businessHelps: Record<string, string> = {
 };
 
 const financialHelps: Record<string, string> = {
-  'Paid order tushumi': "To'lovi tasdiqlangan buyurtmalarning umumiy summasi. Bu hali sof foyda emas.",
+  'Yakuniy savdo tushumi': "Mijoz qabul qilgan va to'lovi tasdiqlangan savdolarning umumiy summasi. Bu hali sof foyda emas.",
   'Delivery income': "Mijoz to'lagan yetkazish pullari yig'indisi.",
   'Seller commission': "Sellerdan ushlanadigan marketplace komissiyasi. Sellerda alohida komissiya bo'lsa o'sha, bo'lmasa settingsdagi global foiz ishlaydi.",
   'Promo discount': "Promokod yoki aksiyalar sabab platforma tomondan berilgan chegirmalar.",
@@ -107,11 +115,34 @@ const financialHelps: Record<string, string> = {
 
 export default function Dashboard() {
   const { dashboard = emptyDashboard } = usePage<{ dashboard?: DashboardPayload }>().props;
-  const [period, setPeriod] = useState<'today' | 'week' | 'month'>('month');
   const [chartMetric, setChartMetric] = useState<'revenue' | 'profit' | 'orders'>('revenue');
-  const previousKey = period === 'today' ? 'yesterday' : period === 'week' ? 'lastWeek' : 'lastMonth';
-  const current = dashboard.periods[period] || { revenue: 0, orders: 0, users: 0, aov: 0 };
-  const previous = dashboard.periods[previousKey] || { revenue: 0, orders: 0, users: 0, aov: 0 };
+  const [showCustomRange, setShowCustomRange] = useState(dashboard.range.key === 'custom');
+  const [customFrom, setCustomFrom] = useState(dashboard.range.from || '');
+  const [customTo, setCustomTo] = useState(dashboard.range.to || '');
+  const [isFiltering, setIsFiltering] = useState(false);
+  const current = dashboard.periods.current || { revenue: 0, orders: 0, users: 0, aov: 0 };
+  const previous = dashboard.periods.previous || null;
+  const localNow = new Date();
+  const today = `${localNow.getFullYear()}-${String(localNow.getMonth() + 1).padStart(2, '0')}-${String(localNow.getDate()).padStart(2, '0')}`;
+
+  const selectPeriod = (dashboardPeriod: string, from?: string, to?: string) => {
+    setIsFiltering(true);
+    router.get('/boshqaruv', {
+      dashboard_period: dashboardPeriod,
+      ...(dashboardPeriod === 'custom' ? { dashboard_from: from, dashboard_to: to } : {}),
+    }, {
+      only: ['dashboard'],
+      preserveScroll: true,
+      preserveState: true,
+      replace: true,
+      onFinish: () => setIsFiltering(false),
+    });
+  };
+
+  const applyCustomRange = () => {
+    if (!customFrom || !customTo) return;
+    selectPeriod('custom', customFrom, customTo);
+  };
 
   return (
     <div>
@@ -123,22 +154,51 @@ export default function Dashboard() {
             Oxirgi hisoblash: {dashboard.generatedAt}
           </p>
         </div>
-        <div className="d-flex gap-2 align-items-center">
-          <span className="text-muted small">Davr kartalari</span>
-          <div className="btn-group btn-group-sm">
-            {(['today', 'week', 'month'] as const).map((item) => (
-              <button key={item} className={`btn ${period === item ? 'btn-primary-gradient' : 'btn-outline-secondary'}`} onClick={() => setPeriod(item)}>
-                {item === 'today' ? 'Bugun' : item === 'week' ? 'Hafta' : 'Oy'}
+        <div className="d-flex gap-2 align-items-center flex-wrap justify-content-end">
+          <span className="chip chip-info"><i className="bi bi-calendar3 me-1"></i>{dashboard.range.label}</span>
+          <div className="btn-group btn-group-sm" aria-label="Dashboard davri">
+            {([
+              ['today', 'Bugun'],
+              ['week', 'Hafta'],
+              ['month', 'Oy'],
+              ['year', 'Yil'],
+              ['all', 'Barchasi'],
+            ] as const).map(([key, label]) => (
+              <button key={key} disabled={isFiltering} className={`btn ${dashboard.range.key === key ? 'btn-primary-gradient' : 'btn-outline-secondary'}`} onClick={() => selectPeriod(key)}>
+                {label}
               </button>
             ))}
+            <button disabled={isFiltering} className={`btn ${dashboard.range.key === 'custom' ? 'btn-primary-gradient' : 'btn-outline-secondary'}`} onClick={() => setShowCustomRange((value) => !value)}>
+              <i className="bi bi-calendar-range me-1"></i>Sana
+            </button>
           </div>
           <Link href="/boshqaruv/live" className="btn btn-outline-secondary btn-sm"><i className="bi bi-broadcast me-1"></i>Live</Link>
         </div>
       </div>
 
+      {showCustomRange ? (
+        <div className="card-panel mb-3 py-2 px-3">
+          <div className="d-flex align-items-end gap-2 flex-wrap">
+            <label className="small text-muted">
+              <span className="d-block mb-1">Boshlanish</span>
+              <input className="form-control form-control-sm" type="date" max={customTo || today} value={customFrom} onChange={(event) => setCustomFrom(event.target.value)} />
+            </label>
+            <label className="small text-muted">
+              <span className="d-block mb-1">Tugash</span>
+              <input className="form-control form-control-sm" type="date" min={customFrom || undefined} max={today} value={customTo} onChange={(event) => setCustomTo(event.target.value)} />
+            </label>
+            <button className="btn btn-primary-gradient btn-sm" disabled={!customFrom || !customTo || isFiltering} onClick={applyCustomRange}>
+              {isFiltering ? <span className="spinner-border spinner-border-sm me-1"></span> : <i className="bi bi-funnel me-1"></i>}
+              Ko'rsatish
+            </button>
+            <small className="text-muted ms-auto">Savdo sanasi mijoz buyurtmani qabul qilgan vaqt bo'yicha olinadi.</small>
+          </div>
+        </div>
+      ) : null}
+
       <div className="row g-2 mb-3">
         <Metric label="Buyurtmalar" value={dashboard.metrics.orders} icon="bi-receipt" color="#4f46e5" href="/boshqaruv/orders" help={metricHelps.orders} />
-        <Metric label="To'langan order" value={dashboard.metrics.paidOrders} icon="bi-credit-card" color="#10b981" href="/boshqaruv/orders" help={metricHelps.paidOrders} />
+        <Metric label="Yakuniy savdo" value={dashboard.metrics.paidOrders} icon="bi-credit-card" color="#10b981" href="/boshqaruv/orders" help={metricHelps.paidOrders} />
         <Metric label="Foydalanuvchilar" value={dashboard.metrics.users} icon="bi-people" color="#06b6d4" href="/boshqaruv/users" help={metricHelps.users} />
         <Metric label="Kitoblar" value={dashboard.metrics.books} icon="bi-book" color="#f59e0b" href="/boshqaruv/books" help={metricHelps.books} />
         <Metric label="Sotuvchilar" value={dashboard.metrics.sellers} icon="bi-shop" color="#ec4899" href="/boshqaruv/sellers" help={metricHelps.sellers} />
@@ -155,10 +215,10 @@ export default function Dashboard() {
       </div>
 
       <div className="row g-2 mb-3">
-        <PeriodCard label="Daromad" value={money(current.revenue)} delta={change(current.revenue, previous.revenue)} icon="bi-cash-coin" color="#4f46e5" help={periodHelps.revenue} />
-        <PeriodCard label="Buyurtmalar" value={fmt(current.orders)} delta={change(current.orders, previous.orders)} icon="bi-bag-check" color="#10b981" help={periodHelps.orders} />
-        <PeriodCard label="O'rtacha chek" value={money(current.aov)} delta={change(current.aov, previous.aov)} icon="bi-receipt" color="#f59e0b" help={periodHelps.aov} />
-        <PeriodCard label="Yangi userlar" value={fmt(current.users)} delta={change(current.users, previous.users)} icon="bi-person-plus" color="#ec4899" help={periodHelps.users} />
+        <PeriodCard label="Daromad" value={money(current.revenue)} delta={previous ? change(current.revenue, previous.revenue) : null} icon="bi-cash-coin" color="#4f46e5" help={periodHelps.revenue} />
+        <PeriodCard label="Yakuniy savdolar" value={fmt(current.orders)} delta={previous ? change(current.orders, previous.orders) : null} icon="bi-bag-check" color="#10b981" help={periodHelps.orders} />
+        <PeriodCard label="O'rtacha chek" value={money(current.aov)} delta={previous ? change(current.aov, previous.aov) : null} icon="bi-receipt" color="#f59e0b" help={periodHelps.aov} />
+        <PeriodCard label="Yangi userlar" value={fmt(current.users)} delta={previous ? change(current.users, previous.users) : null} icon="bi-person-plus" color="#ec4899" help={periodHelps.users} />
       </div>
 
       <div className="row g-3 mb-3">
@@ -167,10 +227,10 @@ export default function Dashboard() {
             <div className="panel-head">
               <div>
                 <div className="d-flex align-items-center gap-2">
-                  <div className="panel-title">12 oylik real savdo</div>
-                  <InfoHint text="Har oy bo'yicha to'langan buyurtmalar olinadi. Daromad - paid order summasi, Signal - shu oy uchun taxminiy marketplace foyda signali, Order - paid order soni." />
+                  <div className="panel-title">{dashboard.salesTrend.label} savdo trendi</div>
+                  <InfoHint text="Grafik tanlangan davr uzunligiga qarab soatlik, kunlik, oylik yoki yillik bo'linadi. Daromad va order faqat yakuniy savdolardan olinadi; Signal tanlangan davr P&L marjasining vaqt nuqtalariga mutanosib taqsimotidir." />
                 </div>
-                <small className="text-muted">To'langan buyurtmalar va platform signal</small>
+                <small className="text-muted">{dashboard.salesTrend.granularity} · yakuniy savdolar va platform signal</small>
               </div>
               <div className="btn-group btn-group-sm">
                 <button className={`btn ${chartMetric === 'revenue' ? 'btn-primary-gradient' : 'btn-outline-secondary'}`} onClick={() => setChartMetric('revenue')}>Daromad</button>
@@ -178,28 +238,32 @@ export default function Dashboard() {
                 <button className={`btn ${chartMetric === 'orders' ? 'btn-warning' : 'btn-outline-secondary'}`} onClick={() => setChartMetric('orders')}>Order</button>
               </div>
             </div>
-            <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={dashboard.salesByMonth}>
-                <defs>
-                  <linearGradient id="dashRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#4f46e5" stopOpacity={0.45} />
-                    <stop offset="100%" stopColor="#4f46e5" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#eef0f4" vertical={false} />
-                <XAxis dataKey="month" stroke="#94a3b8" fontSize={11} />
-                <YAxis stroke="#94a3b8" fontSize={11} tickFormatter={(v) => `${(Number(v) / 1000000).toFixed(1)}M`} />
-                <Tooltip formatter={(value: number) => chartMetric === 'orders' ? fmt(value) : money(value)} />
-                <Area type="monotone" dataKey={chartMetric} stroke={chartMetric === 'revenue' ? '#4f46e5' : chartMetric === 'profit' ? '#10b981' : '#f59e0b'} fill={chartMetric === 'revenue' ? 'url(#dashRevenue)' : 'transparent'} strokeWidth={2} />
-              </AreaChart>
-            </ResponsiveContainer>
+            <div style={{ overflowX: 'auto', overflowY: 'hidden' }}>
+              <div style={{ minWidth: Math.max(720, dashboard.salesByMonth.length * 54) }}>
+                <ResponsiveContainer width="100%" height={300}>
+                  <AreaChart data={dashboard.salesByMonth} margin={{ left: 4, right: 18, top: 8, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="dashRevenue" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#4f46e5" stopOpacity={0.45} />
+                        <stop offset="100%" stopColor="#4f46e5" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#eef0f4" vertical={false} />
+                    <XAxis dataKey="month" stroke="#94a3b8" fontSize={11} interval={0} minTickGap={10} />
+                    <YAxis stroke="#94a3b8" fontSize={11} width={54} tickFormatter={(value) => chartMetric === 'orders' ? fmt(Number(value)) : compact(Number(value))} />
+                    <Tooltip formatter={(value: number) => chartMetric === 'orders' ? fmt(value) : money(value)} />
+                    <Area type="monotone" dataKey={chartMetric} stroke={chartMetric === 'revenue' ? '#4f46e5' : chartMetric === 'profit' ? '#10b981' : '#f59e0b'} fill={chartMetric === 'revenue' ? 'url(#dashRevenue)' : 'transparent'} strokeWidth={2} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
           </div>
         </div>
 
         <div className="col-xl-4">
           <div className="card-panel h-100">
             <div className="d-flex align-items-center gap-2 mb-3">
-                <div className="panel-title">Kategoriya bo'yicha savdo</div>
+                <div className="panel-title">Kategoriya bo'yicha savdo · {dashboard.range.label}</div>
               <InfoHint text="To'langan order itemlari kategoriya bo'yicha guruhlanadi. Kitoblar o'z categorylari bilan chiqadi, kanselyariya esa ichki bo'limlariga bo'linmay bitta Kanselyariya sifatida hisoblanadi. Gift sovg'alar kirmaydi." />
             </div>
             {dashboard.categoryShare.length ? (
@@ -237,7 +301,7 @@ export default function Dashboard() {
 
       <div className="row g-3">
         <div className="col-xl-4">
-          <RankPanel title="Top mahsulotlar" help="To'langan buyurtmalardagi mahsulotlar sotilgan dona bo'yicha saralanadi. Gift turidagi sovg'alar tekin bo'lgani uchun bu ro'yxatga kirmaydi." rows={dashboard.topProducts.map((row) => ({ name: row.name, meta: `${fmt(row.quantity)} dona`, value: money(row.revenue) }))} />
+          <RankPanel title={`Top mahsulotlar · ${dashboard.range.label}`} help="Tanlangan davrda yakunlangan savdolardagi mahsulotlar dona bo'yicha saralanadi. Gift turidagi sovg'alar tekin bo'lgani uchun bu ro'yxatga kirmaydi." rows={dashboard.topProducts.map((row) => ({ name: row.name, meta: `${fmt(row.quantity)} dona`, value: money(row.revenue) }))} />
         </div>
         <div className="col-xl-4">
           <RecentOrders rows={dashboard.recentOrders} />
@@ -256,9 +320,9 @@ export default function Dashboard() {
       </div>
 
       <div className="row g-3 mt-1">
-        <DistributionPanel title="To'lov kesimi" help="Buyurtmalar to'lov statusi bo'yicha guruhlanadi: qancha order va jami ichidagi ulushi." rows={dashboard.paymentSplit.map((row) => ({ name: row.name, value: `${fmt(row.count)} ta · ${row.share}%` }))} />
-        <DistributionPanel title="Yetkazish kesimi" help="Buyurtmalar yetkazish turi bo'yicha guruhlanadi. Yonidagi summa shu turdagi buyurtmalar tushumi." rows={dashboard.deliverySplit.map((row) => ({ name: row.name, value: `${fmt(row.count)} ta · ${money(row.revenue)}` }))} />
-        <DistributionPanel title="Hududlar" help="Buyurtma address snapshotidan viloyat/shahar nomi olinadi. Noma'lum addresslar alohida guruhga tushadi." rows={dashboard.regions.map((row) => ({ name: row.name, value: `${fmt(row.value)} ta · ${money(row.revenue)}` }))} />
+        <DistributionPanel title={`To'lov kesimi · ${dashboard.range.label}`} help="Tanlangan davrda yaratilgan buyurtmalar to'lov statusi bo'yicha guruhlanadi: qancha order va jami ichidagi ulushi." rows={dashboard.paymentSplit.map((row) => ({ name: row.name, value: `${fmt(row.count)} ta · ${row.share}%` }))} />
+        <DistributionPanel title={`Yetkazish kesimi · ${dashboard.range.label}`} help="Tanlangan davrda yakunlangan savdolar yetkazish turi bo'yicha guruhlanadi. Yonidagi summa shu turdagi savdolar tushumi." rows={dashboard.deliverySplit.map((row) => ({ name: row.name, value: `${fmt(row.count)} ta · ${money(row.revenue)}` }))} />
+        <DistributionPanel title={`Hududlar · ${dashboard.range.label}`} help="Tanlangan davrda yakunlangan savdolarning address snapshotidan viloyat/shahar olinadi. Noma'lum addresslar alohida guruhga tushadi." rows={dashboard.regions.map((row) => ({ name: row.name, value: `${fmt(row.value)} ta · ${money(row.revenue)}` }))} />
       </div>
     </div>
   );
@@ -267,7 +331,7 @@ export default function Dashboard() {
 function BusinessKpis({ dashboard }: { dashboard: DashboardPayload }) {
   const b = dashboard.business;
   const rows = [
-    { label: "To'lov ulushi", value: `${b.paidRate || 0}%`, meta: 'Paid / jami order', icon: 'bi-credit-card', color: '#10b981', help: businessHelps["To'lov ulushi"] },
+    { label: 'Yakuniy savdo ulushi', value: `${b.paidRate || 0}%`, meta: 'Yakuniy savdo / jami', icon: 'bi-credit-card', color: '#10b981', help: businessHelps['Yakuniy savdo ulushi'] },
     { label: 'Yakunlash ulushi', value: `${b.completionRate || 0}%`, meta: 'Yakunlangan / jami', icon: 'bi-check2-circle', color: '#4f46e5', help: businessHelps['Yakunlash ulushi'] },
     { label: 'Bekor ulushi', value: `${b.cancellationRate || 0}%`, meta: 'Bekor va qaytgan', icon: 'bi-x-circle', color: '#ef4444', help: businessHelps['Bekor ulushi'] },
     { label: 'Qayta xaridor', value: `${b.repeatBuyerRate || 0}%`, meta: `${fmt(b.repeatBuyers)} foydalanuvchi`, icon: 'bi-arrow-repeat', color: '#7c3aed', help: businessHelps['Qayta xaridor'] },
@@ -382,7 +446,7 @@ function Metric({ label, value = 0, icon, color, href, help }: { label: string; 
   );
 }
 
-function PeriodCard({ label, value, delta, icon, color, help }: { label: string; value: string; delta: number; icon: string; color: string; help?: string }) {
+function PeriodCard({ label, value, delta, icon, color, help }: { label: string; value: string; delta: number | null; icon: string; color: string; help?: string }) {
   return (
     <div className="col-xl-3 col-md-6">
       <div className="stat-card" style={{ padding: 14 }}>
@@ -394,9 +458,13 @@ function PeriodCard({ label, value, delta, icon, color, help }: { label: string;
           <i className={`bi ${icon}`} style={{ color, fontSize: 18 }}></i>
         </div>
         <div className="text-body" style={{ fontSize: 22, fontWeight: 800 }}>{value}</div>
-        <div className={`stat-trend ${delta >= 0 ? 'up' : 'down'}`} style={{ fontSize: 11 }}>
-          <i className={`bi ${delta >= 0 ? 'bi-arrow-up' : 'bi-arrow-down'}`}></i> {delta >= 0 ? '+' : ''}{delta.toFixed(1)}%
-        </div>
+        {delta === null ? (
+          <div className="text-muted" style={{ fontSize: 11 }}><i className="bi bi-infinity me-1"></i>Barcha davr</div>
+        ) : (
+          <div className={`stat-trend ${delta >= 0 ? 'up' : 'down'}`} style={{ fontSize: 11 }}>
+            <i className={`bi ${delta >= 0 ? 'bi-arrow-up' : 'bi-arrow-down'}`}></i> {delta >= 0 ? '+' : ''}{delta.toFixed(1)}%
+          </div>
+        )}
       </div>
     </div>
   );
@@ -426,7 +494,7 @@ function DistributionPanel({ title, rows, help }: { title: string; rows: Array<{
 function FinancialPanel({ dashboard }: { dashboard: DashboardPayload }) {
   const f = dashboard.financial;
   const rows = [
-    { label: "Paid order tushumi", raw: f.grossRevenue, color: '#10b981' },
+    { label: 'Yakuniy savdo tushumi', raw: f.grossRevenue, color: '#10b981' },
     { label: 'Delivery income', raw: f.deliveryIncome, color: '#4f46e5' },
     { label: 'Seller commission', raw: f.commission, color: '#7c3aed' },
     { label: 'Promo discount', raw: -f.promoDiscount, color: '#ef4444' },
@@ -443,8 +511,8 @@ function FinancialPanel({ dashboard }: { dashboard: DashboardPayload }) {
       <div className="card-panel h-100">
         <div className="panel-head">
           <div>
-            <div className="panel-title">Real P&L signali</div>
-            <small className="text-muted">Net komissiya, delivery, chegirma, kuryer, ledger, provider va soliq asosida</small>
+            <div className="panel-title">Real P&L signali · {dashboard.range.label}</div>
+            <small className="text-muted">Tanlangan davrdagi net komissiya, delivery, chegirma, kuryer, ledger, provider va soliq asosida</small>
           </div>
           <span className={`chip ${f.platformProfit >= 0 ? 'chip-success' : 'chip-danger'}`}>Net {f.netMargin || 0}%</span>
         </div>

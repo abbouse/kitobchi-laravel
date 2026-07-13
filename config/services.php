@@ -49,15 +49,13 @@ return [
         // https://developer.paylov.uz/uz/subscribe/ofd/register
         'ofd' => [
             'enabled' => (bool) env('PAYLOV_OFD_ENABLED', false),
-            // Oddiy karta xaridi savdo cheki, split to'lovi esa avans cheki sifatida
-            // alohida yuradi. Eski global qiymatlar faqat split fallback'i bo'lib qoladi.
-            'standard_receipt_type' => (int) env('PAYLOV_OFD_STANDARD_RECEIPT_TYPE', 0),
-            'split_receipt_type' => (int) env(
-                'PAYLOV_OFD_SPLIT_RECEIPT_TYPE',
-                env('PAYLOV_OFD_RECEIPT_TYPE', 1),
-            ),
-            // Faqat split uchun Paylov bergan avans shartnoma IDsi.
-            // Transaction ID yoki lokal split_contracts.id bilan almashtirmang.
+            // Oddiy karta xaridida receiptType/advanceContractId yuborilmaydi:
+            // ular Paylov hujjatidagi majburiy Card Payment fieldlari ro'yxatida yo'q.
+            // Tovar topshirilgach olinadigan nasiya to'lovi: Kredit = 2.
+            // Avans = 1 faqat tovar topshirilishidan oldin real pul yechilsa ishlatiladi.
+            'split_credit_receipt_type' => (int) env('PAYLOV_OFD_SPLIT_CREDIT_RECEIPT_TYPE', 2),
+            // Faqat eski split tranzaksiyalar uchun fallback. Yangi shartnomada
+            // alohida, o'zgarmas fiscal_contract_id avtomatik yaratiladi.
             'split_advance_contract_id' => env(
                 'PAYLOV_OFD_SPLIT_ADVANCE_CONTRACT_ID',
                 env('PAYLOV_OFD_ADVANCE_CONTRACT_ID', ''),

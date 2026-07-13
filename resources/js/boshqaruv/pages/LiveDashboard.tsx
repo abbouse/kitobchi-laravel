@@ -120,14 +120,14 @@ const statusClass = (status?: string) => {
 };
 
 const liveKpiHelps: Record<string, string> = {
-  'Jami daromad': "Barcha to'langan buyurtmalar summasi. Bu yalpi tushum, sof foyda emas.",
-  'Bugungi daromad': "Bugun to'langan buyurtmalar summasi.",
-  'Oylik daromad': "Joriy oy ichida to'langan buyurtmalar summasi.",
+  'Jami daromad': "Mijoz qabul qilgan va to'lovi tasdiqlangan barcha savdolar summasi. Bu yalpi tushum, sof foyda emas.",
+  'Bugungi daromad': "Bugun mijoz qabul qilgan va to'lovi tasdiqlangan savdolar summasi.",
+  'Oylik daromad': "Joriy oyda mijoz qabul qilgan va to'lovi tasdiqlangan savdolar summasi.",
   'Platform signal': "Taxminiy net signal: seller komissiya + delivery income - chegirma - cashback - kuryer - chiqim - provider - soliq.",
   'Jami order': "Barcha asosiy buyurtmalar soni.",
   'Bugungi order': "Bugun yaratilgan buyurtmalar soni.",
   'Aktiv order': "Hali jarayonda turgan buyurtmalar: yangi, qadoqlanmoqda yoki yo'lda.",
-  AOV: "Average Order Value: to'langan tushum paid order soniga bo'linadi.",
+  AOV: "Average Order Value: yakuniy savdo tushumi mijoz qabul qilgan va to'lovi tasdiqlangan savdolar soniga bo'linadi.",
   'Seller oqimi': "Seller fulfillment jarayonida turgan orderlar soni.",
   'Kuryer oqimi': "Kuryerga tegishli aktiv yetkazish orderlari.",
   'Online user': "So'nggi bir necha daqiqada aktiv foydalanuvchilar.",
@@ -135,7 +135,7 @@ const liveKpiHelps: Record<string, string> = {
 };
 
 const liveFinanceHelps: Record<string, string> = {
-  "To'langan order": "Moliyaviy hisobga kiradigan orderlar. Payment paid/success/completed yoki yakunlangan orderlar.",
+  'Yakuniy savdo': "Moliyaviy hisobga faqat mijoz qabul qilgan va to'lovi tasdiqlangan orderlar kiradi.",
   'Seller komissiya': "Sellerlardan ushlanadigan komissiya. Sellerning o'z foizi bo'lsa o'sha, bo'lmasa global settings foizi ishlaydi.",
   'Yetkazish daromadi': "Mijozlar to'lagan delivery summasi.",
   'Kuryer payout': "Kuryerlarga to'lanadigan yetkazish xarajatlari.",
@@ -272,7 +272,7 @@ export default function LiveDashboard() {
 
       <div className="row g-2 mb-3">
         {[
-          { l: "To'langan order", v: fmt(snapshot.kpis.paid_orders), s: `${snapshot.kpis.paid_rate.toFixed(1)}% ulush`, c: '#10b981' },
+          { l: 'Yakuniy savdo', v: fmt(snapshot.kpis.paid_orders), s: `${snapshot.kpis.paid_rate.toFixed(1)}% ulush`, c: '#10b981' },
           { l: 'Seller komissiya', v: fmt(snapshot.kpis.commission) + " so'm", s: 'Tasdiqlangan tranzaksiya', c: '#7c3aed' },
           { l: 'Yetkazish daromadi', v: fmt(snapshot.kpis.delivery_income) + " so'm", s: 'Paid orderlar', c: '#06b6d4' },
           { l: 'Kuryer payout', v: fmt(snapshot.kpis.courier_payout) + " so'm", s: 'Topshirilgan orderlar', c: '#f59e0b' },
@@ -357,7 +357,7 @@ export default function LiveDashboard() {
             <div className="d-flex justify-content-between align-items-center mb-2">
               <div className="d-flex align-items-center gap-2">
                 <div className="live-panel-title mb-0">Bugungi savdo trendi</div>
-                <InfoHint tone="dark" text="Bugungi orderlar soatlar bo'yicha guruhlanadi. Revenue - shu soatdagi to'langan summa, orders - order soni." />
+                <InfoHint tone="dark" text="Bugun yakunlangan savdolar qabul qilingan soati bo'yicha guruhlanadi. Revenue - shu soatdagi yakuniy tushum, orders - yakuniy savdo soni." />
               </div>
               <span className="chip chip-success">{snapshot.generated_at}</span>
             </div>

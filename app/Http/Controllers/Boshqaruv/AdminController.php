@@ -14,7 +14,6 @@ use App\Models\AdminAuditLog;
 use App\Models\ApiClient;
 use App\Models\ApiClientRequestLog;
 use App\Models\ApiWebhook;
-use App\Services\WebhookService;
 use App\Models\Author;
 use App\Models\Blogger;
 use App\Models\BloggerShipment;
@@ -24,7 +23,6 @@ use App\Models\BookClubComment;
 use App\Models\Books;
 use App\Models\BotTicket;
 use App\Models\CareerApplication;
-use App\Models\HubApplication;
 use App\Models\CashbackSetting;
 use App\Models\CommissionSetting;
 use App\Models\ConnectedDevice;
@@ -42,6 +40,7 @@ use App\Models\FcmNotifications;
 use App\Models\GiftCertificate;
 use App\Models\Gifts;
 use App\Models\Hub;
+use App\Models\HubApplication;
 use App\Models\HubStaff;
 use App\Models\MarketNews;
 use App\Models\Message;
@@ -94,6 +93,7 @@ use App\Services\SellerPremiumService;
 use App\Services\SplitContractService;
 use App\Services\SplitProfileService;
 use App\Services\SplitScheduleService;
+use App\Services\WebhookService;
 use App\Support\AdminOrderStatusPresenter;
 use App\Support\ProductArtikul;
 use App\Support\ProductImageUrls;
@@ -165,10 +165,10 @@ class AdminController extends Controller
             ->with('success', 'Tizimdan chiqildi.');
     }
 
-    public function dashboard(): Response
+    public function dashboard(Request $request): Response
     {
         return Inertia::render('Dashboard', [
-            'dashboard' => $this->dashboardPayload(),
+            'dashboard' => $this->dashboardPayload($request),
         ]);
     }
 
@@ -652,7 +652,7 @@ class AdminController extends Controller
             // vector_text_hash = null — scheduler (vectors:rebuild) bu kitoblarni
             // avtomatik qayta embed qiladi (bulk update observer ni chetlab o'tadi)
             Books::query()->where('author_id', $author->id)->update([
-                'author'           => $author->name,
+                'author' => $author->name,
                 'vector_text_hash' => null,
             ]);
         }
@@ -1059,7 +1059,7 @@ class AdminController extends Controller
 
         if ($texts === []) {
             throw ValidationException::withMessages([
-                'texts' => "Tarjima uchun kamida bitta UZ matn kiriting.",
+                'texts' => 'Tarjima uchun kamida bitta UZ matn kiriting.',
             ]);
         }
 
@@ -2448,34 +2448,22 @@ PROMPT;
         };
     }
 
-    private function dashboardPayload(): array
+    private function dashboardPayload(Request $request): array
     {
         $today = now()->startOfDay();
-        $yesterday = now()->subDay()->startOfDay();
-        $week = now()->startOfWeek();
-        $lastWeek = now()->subWeek()->startOfWeek();
-        $month = now()->startOfMonth();
-        $lastMonth = now()->subMonth()->startOfMonth();
+        $range = $this->dashboardDateRange($request);
 
-        $paid = fn () => $this->paidOrdersQuery();
-        $period = fn ($start, $end = null) => [
-            'revenue' => (float) $paid()->where('created_at', '>=', $start)->when($end, fn ($q) => $q->where('created_at', '<', $end))->sum('amount'),
-            'orders' => (int) Sold::query()->where('created_at', '>=', $start)->when($end, fn ($q) => $q->where('created_at', '<', $end))->count(),
-            'paidOrders' => (int) $paid()->where('created_at', '>=', $start)->when($end, fn ($q) => $q->where('created_at', '<', $end))->count(),
-            'users' => Schema::hasTable('users') ? (int) User::query()->where('created_at', '>=', $start)->when($end, fn ($q) => $q->where('created_at', '<', $end))->count() : 0,
-        ];
-
-        $todayStats = $period($today);
-        $yesterdayStats = $period($yesterday, $today);
-        $weekStats = $period($week);
-        $lastWeekStats = $period($lastWeek, $week);
-        $monthStats = $period($month);
-        $lastMonthStats = $period($lastMonth, $month);
+        $currentStats = $this->dashboardPeriodStats($range['from'], $range['to']);
+        $previousStats = $range['previousFrom'] && $range['previousTo']
+            ? $this->dashboardPeriodStats($range['previousFrom'], $range['previousTo'])
+            : null;
+        $monthStats = $this->dashboardPeriodStats(now()->startOfMonth(), now());
 
         $totalOrders = $this->tableCount('solds');
-        $paidCount = (int) $paid()->count();
-        $finance = $this->marketplaceFinancialSnapshot();
+        $paidCount = (int) $this->paidOrdersQuery()->count();
+        $finance = $this->marketplaceFinancialSnapshot($range['from'], $range['to']);
         $grossRevenue = $finance['grossRevenue'];
+        $salesTrend = $this->dashboardSalesTrend($range['from'], $range['to'], $finance);
         $mainCounts = [
             'all' => $totalOrders,
             'new' => $this->countStatuses(Sold::query(), ['pending', 'A']),
@@ -2520,18 +2508,21 @@ PROMPT;
                 'complaints' => $this->tableCount('reports'),
             ],
             'periods' => [
-                'today' => $this->periodCard($todayStats),
-                'yesterday' => $this->periodCard($yesterdayStats),
-                'week' => $this->periodCard($weekStats),
-                'lastWeek' => $this->periodCard($lastWeekStats),
-                'month' => $this->periodCard($monthStats),
-                'lastMonth' => $this->periodCard($lastMonthStats),
+                'current' => $this->periodCard($currentStats),
+                'previous' => $previousStats ? $this->periodCard($previousStats) : null,
+            ],
+            'range' => [
+                'key' => $range['key'],
+                'label' => $range['label'],
+                'from' => $range['from']?->toDateString(),
+                'to' => $range['displayTo']?->toDateString(),
+                'canCompare' => $previousStats !== null,
             ],
             'financial' => [
                 'grossRevenue' => $grossRevenue,
                 'monthRevenue' => $monthStats['revenue'],
                 ...$finance,
-                'avgOrderValue' => $paidCount > 0 ? round($grossRevenue / $paidCount) : 0,
+                'avgOrderValue' => $currentStats['paidOrders'] > 0 ? round($grossRevenue / $currentStats['paidOrders']) : 0,
                 'netMargin' => $grossRevenue > 0 ? round($finance['platformProfit'] / $grossRevenue * 100, 1) : 0,
             ],
             'status' => [
@@ -2540,14 +2531,18 @@ PROMPT;
                 'courier' => $courierCounts,
             ],
             'business' => $this->dashboardBusinessKpis($totalOrders, $paidCount, $mainCounts),
-            'salesByMonth' => $this->dashboardMonthlySales(),
+            'salesByMonth' => $salesTrend['rows'],
+            'salesTrend' => [
+                'label' => $range['label'],
+                'granularity' => $salesTrend['granularity'],
+            ],
             'hourlySales' => $this->liveHourlyChart($today),
-            'categoryShare' => $this->dashboardCategoryShare(),
-            'topProducts' => $this->liveTopProducts(),
+            'categoryShare' => $this->dashboardCategoryShare($range['from'], $range['to']),
+            'topProducts' => $this->liveTopProducts($range['from'], $range['to']),
             'recentOrders' => $this->liveRecentOrders(),
-            'paymentSplit' => $this->paymentSplit([]),
-            'deliverySplit' => $this->deliverySplit(),
-            'regions' => $this->liveRegionStats(),
+            'paymentSplit' => $this->paymentSplit([], $range['from'], $range['to']),
+            'deliverySplit' => $this->deliverySplit($range['from'], $range['to']),
+            'regions' => $this->liveRegionStats($range['from'], $range['to']),
             'platformAnalysis' => $this->dashboardPlatformAnalysis(),
             'alerts' => $this->liveAlerts($mainCounts, $sellerCounts, $courierCounts),
         ];
@@ -2696,9 +2691,9 @@ PROMPT;
         $between = function ($query, string $column = 'created_at') use ($start, $end) {
             return $query
                 ->when($start, fn ($builder) => $builder->where($column, '>=', $start))
-                ->when($end, fn ($builder) => $builder->where($column, '<=', $end));
+                ->when($end, fn ($builder) => $builder->where($column, '<', $end));
         };
-        $paid = fn () => $between($this->paidOrdersQuery());
+        $paid = fn () => $this->applyCompletedRange($this->paidOrdersQuery(), $start, $end);
         $hasCollectionDiscountAmount = Schema::hasColumn('solds', 'collectionDiscountAmount');
         $grossRevenue = (float) $paid()->sum('amount');
         $deliveryIncome = (float) $paid()->sum('deliveryPrice');
@@ -2776,6 +2771,116 @@ PROMPT;
             'contributionBeforeTax' => $contributionBeforeTax,
             'platformProfit' => $contributionBeforeTax - $tax,
         ];
+    }
+
+    private function dashboardDateRange(Request $request): array
+    {
+        $key = (string) $request->query('dashboard_period', 'month');
+        if (! in_array($key, ['today', 'week', 'month', 'year', 'all', 'custom'], true)) {
+            $key = 'month';
+        }
+
+        $now = now();
+        $from = match ($key) {
+            'today' => $now->copy()->startOfDay(),
+            'week' => $now->copy()->startOfWeek(),
+            'year' => $now->copy()->startOfYear(),
+            'all' => null,
+            default => $now->copy()->startOfMonth(),
+        };
+        $to = $now->copy();
+        $displayTo = $now->copy();
+
+        if ($key === 'custom') {
+            try {
+                $from = Carbon::createFromFormat('Y-m-d', (string) $request->query('dashboard_from'))->startOfDay();
+                $displayTo = Carbon::createFromFormat('Y-m-d', (string) $request->query('dashboard_to'))->startOfDay();
+                if ($from->greaterThan($displayTo)) {
+                    [$from, $displayTo] = [$displayTo, $from];
+                }
+                $to = $displayTo->copy()->addDay();
+            } catch (\Throwable) {
+                $key = 'month';
+                $from = $now->copy()->startOfMonth();
+                $to = $now->copy();
+                $displayTo = $now->copy();
+            }
+        }
+
+        $previousFrom = null;
+        $previousTo = null;
+        if ($from) {
+            $duration = max(1, (int) ceil($from->diffInSeconds($to)));
+            $previousFrom = match ($key) {
+                'today' => $from->copy()->subDay(),
+                'week' => $from->copy()->subWeek(),
+                'month' => $from->copy()->subMonthNoOverflow()->startOfMonth(),
+                'year' => $from->copy()->subYear()->startOfYear(),
+                default => $from->copy()->subSeconds($duration),
+            };
+            $previousTo = $previousFrom->copy()->addSeconds($duration);
+            if (in_array($key, ['today', 'week', 'month', 'year'], true) && $previousTo->greaterThan($from)) {
+                $previousTo = $from->copy();
+            }
+        }
+
+        $label = match ($key) {
+            'today' => 'Bugun',
+            'week' => 'Joriy hafta',
+            'month' => 'Joriy oy',
+            'year' => 'Joriy yil',
+            'all' => 'Barcha vaqt',
+            default => $from->format('d.m.Y').' - '.$displayTo->format('d.m.Y'),
+        };
+
+        return compact('key', 'label', 'from', 'to', 'displayTo', 'previousFrom', 'previousTo');
+    }
+
+    private function dashboardPeriodStats(?Carbon $start, ?Carbon $end): array
+    {
+        $paidOrders = $this->applyCompletedRange($this->paidOrdersQuery(), $start, $end);
+        $paidCount = (int) (clone $paidOrders)->count();
+        $users = 0;
+
+        if (Schema::hasTable('users')) {
+            $users = (int) User::query()
+                ->when($start, fn ($query) => $query->where('created_at', '>=', $start))
+                ->when($end, fn ($query) => $query->where('created_at', '<', $end))
+                ->count();
+        }
+
+        return [
+            'revenue' => (float) (clone $paidOrders)->sum('amount'),
+            'orders' => $paidCount,
+            'paidOrders' => $paidCount,
+            'users' => $users,
+        ];
+    }
+
+    private function applyCompletedRange($query, ?Carbon $start, ?Carbon $end)
+    {
+        if (! $start && ! $end) {
+            return $query;
+        }
+
+        return $query->where(function ($range) use ($start, $end) {
+            $range->where(function ($completed) use ($start, $end) {
+                $completed->whereNotNull('completed_at')
+                    ->when($start, fn ($query) => $query->where('completed_at', '>=', $start))
+                    ->when($end, fn ($query) => $query->where('completed_at', '<', $end));
+            })->orWhere(function ($legacy) use ($start, $end) {
+                $legacy->whereNull('completed_at')
+                    ->when($start, fn ($query) => $query->where('updated_at', '>=', $start))
+                    ->when($end, fn ($query) => $query->where('updated_at', '<', $end));
+            });
+        });
+    }
+
+    private function applyCreatedRange($query, ?Carbon $start, ?Carbon $end)
+    {
+        return $query
+            ->when($start, fn ($builder) => $builder->where('created_at', '>=', $start))
+            ->when($end, fn ($builder) => $builder->where('created_at', '<', $end));
     }
 
     private function periodCard(array $stats): array
@@ -8336,11 +8441,10 @@ PROMPT;
 
         $orders = Sold::query();
         $todayOrdersQuery = Sold::query()->where('created_at', '>=', $today);
-        $monthOrdersQuery = Sold::query()->where('created_at', '>=', $month);
         $totalRevenue = (float) $this->paidOrdersQuery()->sum('amount');
         $paidOrders = (int) $this->paidOrdersQuery()->count();
-        $todayRevenue = (float) $this->paidOrdersQuery()->where('created_at', '>=', $today)->sum('amount');
-        $monthRevenue = (float) $this->paidOrdersQuery()->where('created_at', '>=', $month)->sum('amount');
+        $todayRevenue = (float) $this->applyCompletedRange($this->paidOrdersQuery(), $today, $now)->sum('amount');
+        $monthRevenue = (float) $this->applyCompletedRange($this->paidOrdersQuery(), $month, $now)->sum('amount');
         $totalOrders = (int) $orders->count();
         $todayOrders = (int) (clone $todayOrdersQuery)->count();
         $weekOrders = (int) Sold::query()->where('created_at', '>=', $week)->count();
@@ -8453,6 +8557,28 @@ PROMPT;
             });
     }
 
+    private function paymentStatusPaidOrdersQuery()
+    {
+        return Sold::query()->where(function ($query) {
+            $query->whereIn('payment_status_code', ['paid', 'success', 'completed'])
+                ->orWhere(function ($fallback) {
+                    $fallback->whereNull('payment_status_code')
+                        ->whereIn('paymentStatus', ['2', 2, 'paid', 'success', 'completed', 'C', 'c']);
+                });
+        });
+    }
+
+    private function paymentStatusCancelledOrdersQuery()
+    {
+        return Sold::query()->where(function ($query) {
+            $query->where('payment_status_code', PaymentStatusCode::CANCELLED->value)
+                ->orWhere(function ($fallback) {
+                    $fallback->whereNull('payment_status_code')
+                        ->whereIn('paymentStatus', [3, '3', 'cancelled', 'rejected']);
+                });
+        });
+    }
+
     private function customerReceivedOrdersQuery()
     {
         return $this->paidOrdersQuery();
@@ -8469,29 +8595,94 @@ PROMPT;
         });
     }
 
-    private function dashboardMonthlySales(): array
+    private function dashboardSalesTrend(?Carbon $start, Carbon $end, array $finance): array
     {
-        return collect(range(11, 0))->map(function ($i) {
-            $date = now()->subMonths($i);
-            $start = $date->copy()->startOfMonth();
-            $end = $date->copy()->endOfMonth();
-            $revenue = (float) $this->paidOrdersQuery()->whereBetween('created_at', [$start, $end])->sum('amount');
-            $orders = (int) $this->paidOrdersQuery()->whereBetween('created_at', [$start, $end])->count();
-            $finance = $this->marketplaceFinancialSnapshot($start, $end);
+        if (! $start) {
+            $firstSaleAt = $this->paidOrdersQuery()
+                ->selectRaw('MIN(COALESCE(completed_at, updated_at)) as first_sale_at')
+                ->value('first_sale_at');
+            $start = $firstSaleAt ? Carbon::parse($firstSaleAt)->startOfDay() : $end->copy()->startOfYear();
+        }
 
-            return [
-                'month' => $date->format('M'),
+        if ($start->greaterThanOrEqualTo($end)) {
+            $start = $end->copy()->startOfDay();
+        }
+
+        $days = max(1, (int) ceil($start->diffInDays($end)));
+        $months = max(1, (int) ceil($start->diffInMonths($end)));
+        $granularity = match (true) {
+            $days <= 2 => 'hour',
+            $days <= 62 => 'day',
+            $months <= 60 => 'month',
+            default => 'year',
+        };
+        $cursor = match ($granularity) {
+            'hour' => $start->copy()->startOfHour(),
+            'day' => $start->copy()->startOfDay(),
+            'month' => $start->copy()->startOfMonth(),
+            default => $start->copy()->startOfYear(),
+        };
+        $dateExpression = match ($granularity) {
+            'hour' => "DATE_FORMAT(COALESCE(completed_at, updated_at), '%Y-%m-%d %H:00:00')",
+            'day' => 'DATE(COALESCE(completed_at, updated_at))',
+            'month' => "DATE_FORMAT(COALESCE(completed_at, updated_at), '%Y-%m-01')",
+            default => "DATE_FORMAT(COALESCE(completed_at, updated_at), '%Y-01-01')",
+        };
+        $aggregates = $this->applyCompletedRange($this->paidOrdersQuery(), $start, $end)
+            ->selectRaw("{$dateExpression} as bucket_key, COUNT(*) as orders, COALESCE(SUM(amount), 0) as revenue")
+            ->groupBy(DB::raw($dateExpression))
+            ->get()
+            ->keyBy('bucket_key');
+        $profitRatio = abs((float) ($finance['grossRevenue'] ?? 0)) > 0
+            ? (float) ($finance['platformProfit'] ?? 0) / (float) $finance['grossRevenue']
+            : 0.0;
+        $rows = [];
+
+        while ($cursor->lessThan($end)) {
+            $next = match ($granularity) {
+                'hour' => $cursor->copy()->addHour(),
+                'day' => $cursor->copy()->addDay(),
+                'month' => $cursor->copy()->addMonth(),
+                default => $cursor->copy()->addYear(),
+            };
+            $bucketKey = match ($granularity) {
+                'hour' => $cursor->format('Y-m-d H:00:00'),
+                'day' => $cursor->format('Y-m-d'),
+                'month' => $cursor->format('Y-m-01'),
+                default => $cursor->format('Y-01-01'),
+            };
+            $aggregate = $aggregates->get($bucketKey);
+            $revenue = (float) ($aggregate?->revenue ?? 0);
+
+            $rows[] = [
+                'month' => match ($granularity) {
+                    'hour' => $cursor->format('H:i'),
+                    'day' => $cursor->format('d M'),
+                    'month' => $cursor->format('M Y'),
+                    default => $cursor->format('Y'),
+                },
                 'revenue' => $revenue,
-                'profit' => $finance['platformProfit'],
-                'orders' => $orders,
+                'profit' => round($revenue * $profitRatio, 2),
+                'orders' => (int) ($aggregate?->orders ?? 0),
             ];
-        })->values()->all();
+            $cursor = $next;
+        }
+
+        return [
+            'granularity' => match ($granularity) {
+                'hour' => 'Soatlik',
+                'day' => 'Kunlik',
+                'month' => 'Oylik',
+                default => 'Yillik',
+            },
+            'rows' => $rows,
+        ];
     }
 
-    private function dashboardCategoryShare(): array
+    private function dashboardCategoryShare(?Carbon $start = null, ?Carbon $end = null): array
     {
         $colors = ['#4f46e5', '#10b981', '#f59e0b', '#ec4899', '#06b6d4', '#7c3aed', '#ef4444', '#14b8a6'];
-        $totals = $this->paidOrderItemAggregates()['categories'];
+        $totals = $this->paidOrderItemAggregates($start, $end)['categories'];
 
         $sum = array_sum($totals);
         if ($sum <= 0) {
@@ -8533,10 +8724,9 @@ PROMPT;
 
     private function liveHourlyChart($today): array
     {
-        return $this->customerReceivedOrdersQuery()
-            ->where('created_at', '>=', $today)
-            ->selectRaw('HOUR(created_at) as hour, COUNT(*) as orders, COALESCE(SUM(amount), 0) as revenue')
-            ->groupBy(DB::raw('HOUR(created_at)'))
+        return $this->applyCompletedRange($this->customerReceivedOrdersQuery(), $today, now())
+            ->selectRaw('HOUR(COALESCE(completed_at, updated_at)) as hour, COUNT(*) as orders, COALESCE(SUM(amount), 0) as revenue')
+            ->groupBy(DB::raw('HOUR(COALESCE(completed_at, updated_at))'))
             ->orderBy('hour')
             ->get()
             ->keyBy('hour')
@@ -8549,7 +8739,7 @@ PROMPT;
             ->all();
     }
 
-    private function liveRegionStats(): array
+    private function liveRegionStats(?Carbon $start = null, ?Carbon $end = null): array
     {
         $colors = ['#a855f7', '#6366f1', '#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#06b6d4', '#f43f5e'];
         $coords = [
@@ -8557,14 +8747,15 @@ PROMPT;
             ['x' => 92, 'y' => 40], ['x' => 82, 'y' => 32], ['x' => 20, 'y' => 45], ['x' => 45, 'y' => 70],
         ];
 
-        $rows = Cache::remember('boshqaruv.live.regions.v5.address_snapshot', now()->addMinute(), function () {
+        $rangeKey = ($start?->format('YmdHi') ?? 'first').'-'.($end?->format('YmdHi') ?? 'now');
+        $rows = Cache::remember('boshqaruv.live.regions.v6.address_snapshot.'.$rangeKey, now()->addMinute(), function () use ($start, $end) {
             $regions = [];
             $hasCollectionDiscountAmount = Schema::hasColumn('solds', 'collectionDiscountAmount');
             $selectColumns = ['id', 'address', 'recipient_region', 'amount', 'deliveryPrice', 'discountAmount', 'cashbackAmount'];
             if ($hasCollectionDiscountAmount) {
                 $selectColumns[] = 'collectionDiscountAmount';
             }
-            $this->customerReceivedOrdersQuery()
+            $this->applyCompletedRange($this->customerReceivedOrdersQuery(), $start, $end)
                 ->whereNotNull('address')
                 ->select($selectColumns)
                 ->chunkById(500, function ($orders) use (&$regions) {
@@ -8892,9 +9083,9 @@ PROMPT;
             ->all();
     }
 
-    private function liveTopProducts(): array
+    private function liveTopProducts(?Carbon $start = null, ?Carbon $end = null): array
     {
-        $products = collect($this->paidOrderItemAggregates()['products'])
+        $products = collect($this->paidOrderItemAggregates($start, $end)['products'])
             ->sortByDesc('quantity')
             ->take(5)
             ->values();
@@ -8902,14 +9093,16 @@ PROMPT;
         return $products->all();
     }
 
-    private function paidOrderItemAggregates(): array
+    private function paidOrderItemAggregates(?Carbon $start = null, ?Carbon $end = null): array
     {
-        return Cache::remember('boshqaruv.live.item-aggregates.v3.category-sales', now()->addMinute(), function () {
+        $rangeKey = ($start?->format('YmdHi') ?? 'first').'-'.($end?->format('YmdHi') ?? 'now');
+
+        return Cache::remember('boshqaruv.live.item-aggregates.v4.'.$rangeKey, now()->addMinute(), function () use ($start, $end) {
             $categories = [];
             $products = [];
             $bookCategoryNames = $this->bookCategoryNameMap();
 
-            $this->paidOrdersQuery()
+            $this->applyCompletedRange($this->paidOrdersQuery(), $start, $end)
                 ->whereNotNull('items')
                 ->select(['id', 'items'])
                 ->chunkById(500, function ($orders) use (&$categories, &$products, $bookCategoryNames) {
@@ -8990,26 +9183,27 @@ PROMPT;
         return array_slice($alerts, 0, 6);
     }
 
-    private function paymentSplit(array $paidStatuses): array
+    private function paymentSplit(array $paidStatuses, ?Carbon $start = null, ?Carbon $end = null): array
     {
-        $total = max(1, Sold::query()->count());
+        $total = max(1, (clone $this->applyCreatedRange(Sold::query(), $start, $end))->count());
         $paid = $paidStatuses
-            ? Sold::query()->where(fn ($query) => $query->whereIn('payment_status_code', $paidStatuses)->orWhereIn('paymentStatus', $paidStatuses))->count()
-            : $this->paidOrdersQuery()->count();
+            ? $this->applyCreatedRange(Sold::query(), $start, $end)
+                ->where(fn ($query) => $query->whereIn('payment_status_code', $paidStatuses)->orWhereIn('paymentStatus', $paidStatuses))->count()
+            : $this->applyCreatedRange($this->paymentStatusPaidOrdersQuery(), $start, $end)->count();
 
-        $cancelled = $this->countStatuses(Sold::query(), ['cancelled', 'returned', 'F', 'R']);
+        $cancelled = (int) $this->applyCreatedRange($this->paymentStatusCancelledOrdersQuery(), $start, $end)->count();
         $pending = max(0, $total - $paid - $cancelled);
 
         return [
             ['name' => 'To\'langan', 'count' => (int) $paid, 'share' => round($paid / $total * 100, 1), 'color' => '#10b981'],
             ['name' => 'Kutilmoqda', 'count' => $pending, 'share' => round($pending / $total * 100, 1), 'color' => '#f59e0b'],
-            ['name' => 'Bekor / qaytgan', 'count' => $cancelled, 'share' => round($cancelled / $total * 100, 1), 'color' => '#ef4444'],
+            ['name' => "To'lov bekor qilingan", 'count' => $cancelled, 'share' => round($cancelled / $total * 100, 1), 'color' => '#ef4444'],
         ];
     }
 
-    private function deliverySplit(): array
+    private function deliverySplit(?Carbon $start = null, ?Carbon $end = null): array
     {
-        return $this->paidOrdersQuery()
+        return $this->applyCompletedRange($this->paidOrdersQuery(), $start, $end)
             ->selectRaw('deliveryType, COUNT(*) as count, COALESCE(SUM(amount), 0) as revenue')
             ->groupBy('deliveryType')
             ->orderByDesc('count')
@@ -9232,7 +9426,6 @@ PROMPT;
             && filled(config('services.paylov.password'))
         );
         $tin = preg_replace('/\D+/', '', (string) ($cfg['tin'] ?? ''));
-        $splitAdvanceContractId = trim((string) ($cfg['split_advance_contract_id'] ?? ''));
 
         return [
             'fiscalSummary' => [
@@ -9251,9 +9444,9 @@ PROMPT;
                 ['key' => 'queue', 'label' => 'Queue rejimi', 'ready' => config('queue.default') !== 'sync', 'value' => (string) config('queue.default'), 'hint' => 'Productionda queue worker doimiy ishlashi kerak'],
             ],
             'fiscalConfig' => [
-                'standardReceiptType' => (int) ($cfg['standard_receipt_type'] ?? 0),
-                'splitReceiptType' => (int) ($cfg['split_receipt_type'] ?? 1),
-                'splitAdvanceConfigured' => $splitAdvanceContractId !== '',
+                'standardReceiptType' => null,
+                'splitReceiptType' => (int) ($cfg['split_credit_receipt_type'] ?? 2),
+                'splitAdvanceConfigured' => true,
                 'amountMultiplier' => (int) ($cfg['amount_multiplier'] ?? 100),
                 'vatPercent' => (int) ($cfg['vat_percent'] ?? 0),
             ],
@@ -9283,6 +9476,9 @@ PROMPT;
                     'error' => $perform['last_error'] ?? null,
                     'errorCode' => $perform['last_error_code'] ?? null,
                     'errorField' => $perform['last_error_field'] ?? null,
+                    'errorData' => isset($perform['last_error_data'])
+                        ? json_encode($perform['last_error_data'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+                        : null,
                     'receiptUrl' => $receiptUrl ?: null,
                     'refundReceiptUrl' => $refundUrl ?: null,
                     'receiptId' => $perform['receipt_id'] ?? null,
@@ -9330,6 +9526,7 @@ PROMPT;
 
                     if ($effectiveIkpu === '' || $effectivePackage === '') {
                         $totals['missing']++;
+
                         continue;
                     }
 

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Exceptions\PaylovApiException;
 use App\Models\Books;
 use App\Models\Sold;
+use App\Models\SplitContract;
 use App\Models\Stationery;
 use App\Models\Transaction;
 use Illuminate\Support\Facades\Log;
@@ -49,13 +50,38 @@ class PaylovFiscalizationService
             return false;
         }
 
+        return $this->registerForTransaction($transaction, $order);
+    }
+
+    /**
+     * Bitta real Paylov tranzaksiyasi uchun bitta fiskal chek yaratadi.
+     * Split to'lovlarida order bitta, tranzaksiyalar esa bir nechta bo'ladi.
+     */
+    public function registerForTransaction(Transaction $transaction, ?Sold $order = null): bool
+    {
+        if (! $this->isEnabled()
+            || (string) $transaction->provider !== 'paylov'
+            || (int) $transaction->state !== 2
+            || blank($transaction->provider_transaction_id)
+        ) {
+            return false;
+        }
+
+        $order ??= $transaction->order;
+        if (! $order) {
+            return false;
+        }
+
         // Allaqachon fiskalizatsiya qilinganmi?
         $existing = is_array($transaction->perform_fiscal_data) ? $transaction->perform_fiscal_data : [];
         if (filled($existing['qr_code_url'] ?? null)) {
             return true;
         }
 
-        $items = $this->buildFiscalItems($order);
+        $expectedAmount = (string) $transaction->payment_type === 'split'
+            ? max(0, (int) $transaction->amount)
+            : null;
+        $items = $this->buildFiscalItems($order, $expectedAmount);
         if ($items === []) {
             Log::warning('[Paylov OFD] Fiscal items build failed', ['order_id' => $order->id]);
 
@@ -80,7 +106,7 @@ class PaylovFiscalizationService
         } catch (\Throwable $e) {
             // Chek allaqachon yaratilgan bo'lsa — statusdan olib saqlaymiz
             if (str_contains($e->getMessage(), 'ofd_check_already_generated')) {
-                return $this->syncFromStatus($order);
+                return $this->syncTransactionFromStatus($transaction);
             }
 
             $this->markFailure($transaction, $e);
@@ -113,6 +139,15 @@ class PaylovFiscalizationService
             return false;
         }
 
+        return $this->syncTransactionFromStatus($transaction);
+    }
+
+    public function syncTransactionFromStatus(Transaction $transaction): bool
+    {
+        if (! $this->isEnabled() || blank($transaction->provider_transaction_id)) {
+            return false;
+        }
+
         try {
             $response = PaylovService::make()->getFiscalReceipt(
                 transactionId: (string) $transaction->provider_transaction_id,
@@ -126,7 +161,8 @@ class PaylovFiscalizationService
             return $this->storePerformData($transaction, $result);
         } catch (\Throwable $e) {
             Log::warning('[Paylov OFD] Status sync failed', [
-                'order_id' => $order->id,
+                'order_id' => $transaction->order_id,
+                'transaction_id' => $transaction->provider_transaction_id,
                 'error' => $e->getMessage(),
             ]);
 
@@ -203,7 +239,7 @@ class PaylovFiscalizationService
      * Buyurtmadan OFD items ro'yxatini tuzadi.
      * sum(price*count - discount) == order.amount * multiplier bo'lishi shart.
      */
-    public function buildFiscalItems(Sold $order): array
+    public function buildFiscalItems(Sold $order, ?int $expectedAmount = null): array
     {
         $cfg = (array) config('services.paylov.ofd', []);
         $mult = max(1, (int) ($cfg['amount_multiplier'] ?? 100));
@@ -356,7 +392,10 @@ class PaylovFiscalizationService
         // ── Summani tranzaksiyaga tenglashtirish ───────────────────────
         // Promo/keshbek chegirmalari itemlar narxida aks etmagan — farqni
         // discount sifatida eng katta itemlardan boshlab taqsimlaymiz.
-        $expected = (int) round(((float) $order->amount) * $mult);
+        $expected = (int) round(((float) ($expectedAmount ?? $order->amount)) * $mult);
+        if ($expected <= 0) {
+            return [];
+        }
         $itemsTotal = array_sum(array_map(fn ($item) => $item['price'] * $item['count'], $items));
 
         $diff = $itemsTotal - $expected; // musbat = chegirma kerak
@@ -407,6 +446,7 @@ class PaylovFiscalizationService
             if ($lineDiscount <= 0) {
                 $item['discount'] = 0;
                 $result[] = $item;
+
                 continue;
             }
 
@@ -504,6 +544,9 @@ class PaylovFiscalizationService
                 'last_error_field' => $error instanceof PaylovApiException
                     ? ($error->errorData['field'] ?? null)
                     : null,
+                'last_error_data' => $error instanceof PaylovApiException && $error->errorData !== []
+                    ? $error->errorData
+                    : null,
                 'last_failed_at' => now()->toDateTimeString(),
             ]),
         ])->save();
@@ -513,33 +556,35 @@ class PaylovFiscalizationService
      * Oddiy order hech qachon global split/avans konfiguratsiyasini meros olmaydi.
      * Bu ajratish noto'g'ri "Bo'nak (Avans)" chek yaratilishining oldini oladi.
      *
-     * @return array{flow: string, receipt_type: int, advance_contract_id: ?string}
+     * @return array{flow: string, receipt_type: ?int, advance_contract_id: ?string}
      */
     private function receiptMetaFor(Transaction $transaction): array
     {
         if ((string) $transaction->payment_type !== 'split') {
             return [
                 'flow' => 'standard',
-                'receipt_type' => (int) config('services.paylov.ofd.standard_receipt_type', 0),
+                'receipt_type' => null,
                 'advance_contract_id' => null,
             ];
         }
 
+        $receiptType = (int) data_get(
+            $transaction->provider_response,
+            'fiscal_receipt_type',
+            config('services.paylov.ofd.split_credit_receipt_type', 2),
+        );
+
         return [
-            'flow' => 'split_advance',
-            'receipt_type' => (int) config('services.paylov.ofd.split_receipt_type', 1),
-            'advance_contract_id' => $this->splitAdvanceContractId($transaction),
+            'flow' => $receiptType === 1 ? 'split_advance' : 'split_credit',
+            'receipt_type' => $receiptType,
+            'advance_contract_id' => $this->splitContractReference($transaction),
         ];
     }
 
-    private function splitAdvanceContractId(Transaction $transaction): ?string
+    private function splitContractReference(Transaction $transaction): ?string
     {
-        $configured = trim((string) config('services.paylov.ofd.split_advance_contract_id', ''));
-        if ($configured !== '') {
-            return $configured;
-        }
-
         foreach ([
+            'fiscal_contract_id',
             'create.result.advanceContractId',
             'pay.result.advanceContractId',
             'transaction.advanceContractId',
@@ -549,6 +594,30 @@ class PaylovFiscalizationService
             if ($value !== '') {
                 return $value;
             }
+        }
+
+        $contractId = (int) data_get($transaction->provider_response, 'split_contract_id', 0);
+        if ($contractId > 0) {
+            $contract = SplitContract::query()->find($contractId);
+            if ($contract) {
+                $meta = is_array($contract->meta) ? $contract->meta : [];
+                $reference = trim((string) ($meta['fiscal_contract_id'] ?? ''));
+                if ($reference === '') {
+                    $reference = 'N-'.str_pad((string) $contract->id, 8, '0', STR_PAD_LEFT);
+                    $contract->forceFill([
+                        'meta' => array_merge($meta, ['fiscal_contract_id' => $reference]),
+                    ])->save();
+                }
+
+                return $reference;
+            }
+        }
+
+        // Eski tranzaksiyalar uchun vaqtinchalik fallback. Yangi shartnomalar
+        // har doim o'zining alohida fiscal_contract_id qiymatiga ega bo'ladi.
+        $configured = trim((string) config('services.paylov.ofd.split_advance_contract_id', ''));
+        if ($configured !== '') {
+            return $configured;
         }
 
         return null;

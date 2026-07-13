@@ -147,6 +147,12 @@ return Application::configure(basePath: dirname(__DIR__))
             ->timezone($tz)
             ->withoutOverlapping();
 
+        $schedule->command('split:backfill-fiscal-receipts --limit=100')
+            ->everyThirtyMinutes()
+            ->timezone($tz)
+            ->withoutOverlapping()
+            ->runInBackground();
+
         // ── Split to'lov eslatmasi: 2 kun oldin, ertalab ──
         $schedule->command('split:send-payment-reminders --days=2')
             ->dailyAt('10:30')

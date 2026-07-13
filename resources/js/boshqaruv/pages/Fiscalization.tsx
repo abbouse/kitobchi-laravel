@@ -15,7 +15,7 @@ type Summary = {
 
 type Health = { key: string; label: string; ready: boolean; value: string; hint: string };
 type Coverage = { total: number; ready: number; missing: number; direct: number; categoryFallback: number; globalFallback: number; percent: number };
-type FiscalConfig = { standardReceiptType: number; splitReceiptType: number; splitAdvanceConfigured: boolean; amountMultiplier: number; vatPercent: number };
+type FiscalConfig = { standardReceiptType: number | null; splitReceiptType: number; splitAdvanceConfigured: boolean; amountMultiplier: number; vatPercent: number };
 type FiscalRow = {
   id: number;
   orderId: number;
@@ -29,6 +29,7 @@ type FiscalRow = {
   error?: string | null;
   errorCode?: string | null;
   errorField?: string | null;
+  errorData?: string | null;
   receiptUrl?: string | null;
   refundReceiptUrl?: string | null;
   receiptId?: number | string | null;
@@ -41,7 +42,7 @@ type FiscalRow = {
 type Pagination = { page: number; totalPages: number; from: number; to: number; total: number };
 
 const defaultSummary: Summary = { paid: 0, registered: 0, pending: 0, failed: 0, refunded: 0, coveragePercent: 100 };
-const defaultConfig: FiscalConfig = { standardReceiptType: 0, splitReceiptType: 1, splitAdvanceConfigured: false, amountMultiplier: 100, vatPercent: 0 };
+const defaultConfig: FiscalConfig = { standardReceiptType: null, splitReceiptType: 2, splitAdvanceConfigured: true, amountMultiplier: 100, vatPercent: 0 };
 
 export default function Fiscalization() {
   const {
@@ -166,9 +167,9 @@ export default function Fiscalization() {
             <CoverageRow label="Kanselyariya" icon="bi-pencil-square" coverage={fiscalCatalogCoverage.stationery} href="/boshqaruv/stationeries" />
           </div>
           <div className="fiscal-config-grid">
-            <ConfigItem label="Oddiy chek" value={`Type ${fiscalConfig.standardReceiptType}`} state="ready" />
-            <ConfigItem label="Split avans" value={`Type ${fiscalConfig.splitReceiptType}`} />
-            <ConfigItem label="Split ID" value={fiscalConfig.splitAdvanceConfigured ? 'Tayyor' : 'Kiritilmagan'} state={fiscalConfig.splitAdvanceConfigured ? 'ready' : 'warning'} />
+            <ConfigItem label="Oddiy chek" value="Avtomatik" state="ready" />
+            <ConfigItem label="Nasiya cheki" value={`Kredit · Type ${fiscalConfig.splitReceiptType}`} />
+            <ConfigItem label="Shartnoma ID" value="Har bir shartnomaga alohida" state="ready" />
             <ConfigItem label="Hisob birligi" value={`×${fiscalConfig.amountMultiplier}`} />
             <ConfigItem label="QQS" value={`${fiscalConfig.vatPercent}%`} />
             <ConfigItem label="Refund chek" value={fmt(fiscalSummary.refunded)} />
@@ -272,7 +273,7 @@ function FiscalStatus({ row }: { row: FiscalRow }) {
 
 function FiscalMessage({ row }: { row: FiscalRow }) {
   if (row.error) {
-    return <div className="fiscal-error"><span>{row.error}</span><small>{[row.errorCode, row.errorField ? `field: ${row.errorField}` : null].filter(Boolean).join(' · ')}</small></div>;
+    return <div className="fiscal-error"><span>{row.error}</span><small>{[row.errorCode, row.errorField ? `field: ${row.errorField}` : null, row.errorData].filter(Boolean).join(' · ')}</small></div>;
   }
   return <span className="fiscal-transaction-id">{row.transactionId || 'Transaction ID yo‘q'}</span>;
 }
