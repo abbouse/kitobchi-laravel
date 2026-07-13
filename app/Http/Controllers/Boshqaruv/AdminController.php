@@ -291,8 +291,8 @@ class AdminController extends Controller
     /**
      * Admin istagan foydalanuvchiga qo'lda split limit beradi.
      * amount = 0 — qo'lda limitni olib tashlash (skoring rejimiga qaytadi).
-     * Manual limit skoring talablarini chetlab o'tadi; faqat qattiq bloklar
-     * (admin blok, muddati o'tgan to'lov, default) amal qiladi.
+     * Manual limit skoring talablarini chetlab o'tadi. Tasdiqlangan telefon,
+     * tasdiqlangan karta va qattiq bloklar baribir amal qiladi.
      */
     public function setUserSplitManualLimit(Request $request, User $user, SplitProfileService $service): \Illuminate\Http\RedirectResponse
     {
@@ -302,25 +302,18 @@ class AdminController extends Controller
 
         $amount = intdiv((int) $data['amount'], 1000) * 1000; // yaxlit
 
-        \App\Models\SplitUserProfile::query()->updateOrCreate(
-            ['user_id' => $user->id],
-            [
-                'manual_limit' => $amount > 0 ? $amount : null,
-                'manual_limit_set_by' => Auth::guard('panel')->id(),
-                'manual_limit_set_at' => $amount > 0 ? now() : null,
-            ],
-        );
-
-        // Profilni darhol qayta hisoblash — limit shu zahoti kuchga kiradi.
-        // Limit birinchi marta ochilayotgan bo'lsa, tabrik push ham shu
-        // yerda avtomatik ketadi (maybeSendLimitGrantedPush).
         try {
-            $service->refreshUser($user, true);
+            // Limit o'zgarishi, profil refreshi va checkout bir xil per-user
+            // lockdan foydalanadi. Shu sabab parallel so'rov eski limitni
+            // sarflab yubora olmaydi.
+            $service->setManualLimit($user, $amount, Auth::guard('panel')->id());
         } catch (\Throwable $e) {
-            Log::warning('[Split] Manual limit refresh failed', [
+            Log::warning('[Split] Manual limit update failed', [
                 'user_id' => $user->id,
                 'error' => $e->getMessage(),
             ]);
+
+            return back()->with('error', $e->getMessage());
         }
 
         return back()->with('success', $amount > 0

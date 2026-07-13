@@ -561,6 +561,11 @@ class PurchaseController extends Controller
             return $this->err('Foydalanuvchi topilmadi!', 401);
         }
 
+        $splitSettings = app(\App\Services\SplitProfileService::class)->settings();
+        if (! $splitSettings['enabled'] || ! $splitSettings['public_enabled']) {
+            return $this->err('Nasiya hozircha mavjud emas.', 422);
+        }
+
         $order = Sold::where('user_id', $user->id)->where('id', $order_id)->first();
         if (! $order) {
             return $this->err('Buyurtma topilmadi!', 404);
@@ -581,6 +586,9 @@ class PurchaseController extends Controller
         $card = $user->cards()
             ->where('id', (int) $request->card_id)
             ->where('is_verified', true)
+            ->where(function ($query) {
+                $query->whereNull('is_temporary')->orWhere('is_temporary', false);
+            })
             ->first();
 
         if (! $card) {

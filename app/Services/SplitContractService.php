@@ -10,6 +10,8 @@ use App\Models\SplitPlan;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\UserCard;
+use Illuminate\Contracts\Cache\LockTimeoutException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
@@ -44,6 +46,21 @@ class SplitContractService
      */
     public function openContractForOrder(User $user, Sold $order, SplitPlan $plan, UserCard $card): SplitContract
     {
+        try {
+            return Cache::lock(
+                SplitProfileService::mutationLockKey((int) $user->id),
+                120,
+            )->block(
+                10,
+                fn () => $this->openContractForOrderUnderLock($user, $order, $plan, $card),
+            );
+        } catch (LockTimeoutException) {
+            throw new RuntimeException("Split limiti ayni paytda ishlatilmoqda. Bir ozdan keyin qayta urinib ko'ring.");
+        }
+    }
+
+    private function openContractForOrderUnderLock(User $user, Sold $order, SplitPlan $plan, UserCard $card): SplitContract
+    {
         // Xizmat haqlari kreditga kirmaydi: to'liq 1-to'lovga qo'shiladi, foiz hisoblanmaydi.
         // Bu yetkazish (multi-seller bo'lsa har seller uchun qo'shimcha bilan birga —
         // hammasi parent orderning deliveryPrice ichida) va packaging'ni qamraydi.
@@ -58,7 +75,7 @@ class SplitContractService
         }
 
         $this->assertPlanUsable($plan, $principal);
-        $this->assertUserEligible($user, $plan, $principal);
+        $limitProfile = $this->assertUserEligible($user, $plan, $principal);
         $this->assertCardUsable($user, $card);
         $this->assertOrderCategoriesAllowed($order);
 
@@ -95,7 +112,7 @@ class SplitContractService
         }
 
         try {
-            $contract = DB::transaction(function () use ($user, $order, $plan, $schedule, $upfrontAmount, $providerTransactionId, $holdCreate, $card, $holdMinutes, $deliveryFee, $packagingFee) {
+            $contract = DB::transaction(function () use ($user, $order, $plan, $schedule, $upfrontAmount, $providerTransactionId, $holdCreate, $card, $holdMinutes, $deliveryFee, $packagingFee, $limitProfile) {
                 $contract = SplitContract::query()->create([
                     'user_id' => $user->id,
                     'order_id' => $order->id,
@@ -116,6 +133,15 @@ class SplitContractService
                     'snapshot' => [
                         'plan' => $plan->only(['id', 'name', 'months', 'period_unit', 'period_every', 'monthly_interest_percent']),
                         'schedule' => $schedule,
+                        'limit' => [
+                            'source' => ($limitProfile['manual_limit_active'] ?? false) ? 'manual' : 'scored',
+                            'approved' => (int) $limitProfile['computed_limit'],
+                            'available_before' => (int) $limitProfile['available_limit'],
+                            'active_exposure_before' => (int) ($limitProfile['active_exposure'] ?? 0),
+                            'manual_limit' => (int) ($limitProfile['manual_limit'] ?? 0),
+                            'confidence_score' => (float) ($limitProfile['confidence_score'] ?? 0),
+                            'captured_at' => now()->toIso8601String(),
+                        ],
                     ],
                     'meta' => [
                         'delivery_fee' => $deliveryFee,
@@ -209,7 +235,7 @@ class SplitContractService
         } catch (\Throwable $e) {
             // Order held bo'lmasa shartnomani qoldirib bo'lmaydi — hold qaytariladi.
             try {
-                $this->cancelPending($contract->refresh(), 'order_held_failed');
+                $this->cancelPending($contract->refresh(), 'order_held_failed', true);
             } catch (\Throwable $cancelError) {
                 Log::error('[Split] Rollback after held failure failed', [
                     'contract_id' => $contract->id,
@@ -220,7 +246,7 @@ class SplitContractService
             throw $e;
         }
 
-        $this->safeRefreshProfile($user);
+        $this->safeRefreshProfile($user, true);
 
         return $contract;
     }
@@ -284,8 +310,11 @@ class SplitContractService
     /**
      * Pending shartnomani bekor qilish: hold dismiss, hamma narsa cancelled.
      */
-    public function cancelPending(SplitContract $contract, string $reason = 'cancelled_by_admin'): SplitContract
-    {
+    public function cancelPending(
+        SplitContract $contract,
+        string $reason = 'cancelled_by_admin',
+        bool $lockAlreadyHeld = false,
+    ): SplitContract {
         if ($contract->status !== SplitContract::STATUS_PENDING) {
             throw new RuntimeException('Faqat pending shartnomani bekor qilish mumkin.');
         }
@@ -332,7 +361,7 @@ class SplitContractService
         });
 
         SplitEvent::record('contract_cancelled', $contract->id, null, $contract->user_id, ['reason' => $reason]);
-        $this->safeRefreshProfile($contract->user);
+        $this->safeRefreshProfile($contract->user, $lockAlreadyHeld);
 
         return $contract->refresh();
     }
@@ -982,9 +1011,12 @@ class SplitContractService
         }
     }
 
-    private function assertUserEligible(User $user, SplitPlan $plan, int $principal): void
+    private function assertUserEligible(User $user, SplitPlan $plan, int $principal): array
     {
-        $profile = $this->profileService->getFreshProfile($user);
+        // openContractForOrder() per-user lockni ushlab turibdi. Shu lock
+        // ichida exposure qayta hisoblanib, parallel checkout eski limitni
+        // ishlata olmaydi.
+        $profile = $this->profileService->getFreshProfile($user, true);
 
         if (! $profile['eligible']) {
             $reason = $profile['eligibility_reasons'][0] ?? 'Foydalanuvchi splitga mos emas.';
@@ -1003,6 +1035,8 @@ class SplitContractService
         if ($principal > (int) $profile['available_limit']) {
             throw new RuntimeException('Buyurtma summasi bo\'sh limitdan katta.');
         }
+
+        return $profile;
     }
 
     /**
@@ -1127,19 +1161,19 @@ class SplitContractService
             throw new RuntimeException('Bu karta foydalanuvchiga tegishli emas.');
         }
 
-        if (! $card->is_verified || blank($card->provider_card_id)) {
-            throw new RuntimeException('Tasdiqlanmagan karta bilan split ochib bo\'lmaydi.');
+        if (! $card->is_verified || $card->is_temporary || blank($card->provider_card_id)) {
+            throw new RuntimeException('Split uchun yaroqli tasdiqlangan karta topilmadi.');
         }
     }
 
-    private function safeRefreshProfile(?User $user): void
+    private function safeRefreshProfile(?User $user, bool $lockAlreadyHeld = false): void
     {
         if (! $user) {
             return;
         }
 
         try {
-            $this->profileService->refreshUser($user, true);
+            $this->profileService->refreshUser($user, true, $lockAlreadyHeld);
         } catch (\Throwable $e) {
             Log::warning('[Split] Profile refresh failed', [
                 'user_id' => $user->id,

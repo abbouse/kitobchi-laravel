@@ -12,13 +12,20 @@ use App\Models\SplitUserProfile;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\UserCard;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use RuntimeException;
 
 class SplitProfileService
 {
+    private const USER_MUTATION_LOCK_SECONDS = 120;
+
+    private const USER_MUTATION_WAIT_SECONDS = 10;
+
     public function __construct(
         private readonly UserReputationService $userReputationService,
     ) {}
@@ -68,13 +75,25 @@ class SplitProfileService
         }
     }
 
-    public function getFreshProfile(User $user): array
+    public static function mutationLockKey(int $userId): string
     {
-        return $this->refreshUser($user, true);
+        return 'split:user:'.$userId.':mutation';
     }
 
-    public function refreshUser(User $user, bool $persist = true): array
+    public function getFreshProfile(User $user, bool $lockAlreadyHeld = false): array
     {
+        return $this->refreshUser($user, true, $lockAlreadyHeld);
+    }
+
+    public function refreshUser(User $user, bool $persist = true, bool $lockAlreadyHeld = false): array
+    {
+        if ($persist && ! $lockAlreadyHeld) {
+            return $this->withUserMutationLock(
+                $user,
+                fn () => $this->refreshUser($user, true, true),
+            );
+        }
+
         $settings = $this->settings();
         $existingProfile = Schema::hasTable('split_user_profiles')
             ? SplitUserProfile::query()->where('user_id', $user->id)->first()
@@ -262,6 +281,7 @@ class SplitProfileService
         if ($manualLimit > 0) {
             $reasons = $this->hardBlockReasons(
                 user: $user,
+                verifiedCardsCount: $verifiedCardsCount,
                 manualBlocked: $manualBlocked,
                 manualBlockReason: $manualBlockReason,
                 splitHistory: $splitHistory,
@@ -368,6 +388,7 @@ class SplitProfileService
      */
     private function hardBlockReasons(
         User $user,
+        int $verifiedCardsCount,
         bool $manualBlocked,
         string $manualBlockReason,
         array $splitHistory,
@@ -390,6 +411,16 @@ class SplitProfileService
 
         if ($user->isBlocked()) {
             $reasons[] = 'Foydalanuvchi bloklangan.';
+        }
+
+        // Manual limit faqat skoringni override qiladi. Shaxsni va to'lov
+        // vositasini tasdiqlash split ishlashi uchun majburiy qoladi.
+        if (! $user->hasVerifiedPhone()) {
+            $reasons[] = 'Foydalanuvchi akkaunti tasdiqlanmagan.';
+        }
+
+        if ($verifiedCardsCount < 1) {
+            $reasons[] = 'Kamida bitta tasdiqlangan Paylov karta kerak.';
         }
 
         return $reasons;
@@ -430,22 +461,55 @@ class SplitProfileService
         }
     }
 
+    public function setManualLimit(User $user, int $amount, ?int $adminId = null): array
+    {
+        if (! Schema::hasTable('split_user_profiles')) {
+            return [];
+        }
+
+        $normalizedAmount = max(0, intdiv($amount, 1000) * 1000);
+
+        return $this->withUserMutationLock($user, function () use ($user, $normalizedAmount, $adminId) {
+            SplitUserProfile::query()->updateOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'manual_limit' => $normalizedAmount > 0 ? $normalizedAmount : null,
+                    'manual_limit_set_by' => $normalizedAmount > 0 ? $adminId : null,
+                    'manual_limit_set_at' => $normalizedAmount > 0 ? now() : null,
+                    // Refresh muvaffaqiyatsiz qolsa eski limit ishlamasin.
+                    'eligible' => false,
+                    'computed_limit' => 0,
+                    'available_limit' => 0,
+                    'last_refreshed_at' => null,
+                ],
+            );
+
+            return $this->refreshUser($user, true, true);
+        });
+    }
+
     public function manuallyBlockUser(User $user, string $reason, ?int $adminId = null): array
     {
         if (! Schema::hasTable('split_user_profiles')) {
             return [];
         }
 
-        SplitUserProfile::query()->updateOrCreate(
-            ['user_id' => $user->id],
-            [
-                'manual_blocked_at' => now(),
-                'manual_block_reason' => trim($reason),
-                'manual_blocked_by_admin_id' => $adminId,
-            ],
-        );
+        return $this->withUserMutationLock($user, function () use ($user, $reason, $adminId) {
+            SplitUserProfile::query()->updateOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'manual_blocked_at' => now(),
+                    'manual_block_reason' => trim($reason),
+                    'manual_blocked_by_admin_id' => $adminId,
+                    'eligible' => false,
+                    'computed_limit' => 0,
+                    'available_limit' => 0,
+                    'last_refreshed_at' => null,
+                ],
+            );
 
-        return $this->refreshUser($user, true);
+            return $this->refreshUser($user, true, true);
+        });
     }
 
     public function clearManualBlock(User $user): array
@@ -454,13 +518,16 @@ class SplitProfileService
             return [];
         }
 
-        SplitUserProfile::query()->where('user_id', $user->id)->update([
-            'manual_blocked_at' => null,
-            'manual_block_reason' => null,
-            'manual_blocked_by_admin_id' => null,
-        ]);
+        return $this->withUserMutationLock($user, function () use ($user) {
+            SplitUserProfile::query()->where('user_id', $user->id)->update([
+                'manual_blocked_at' => null,
+                'manual_block_reason' => null,
+                'manual_blocked_by_admin_id' => null,
+                'last_refreshed_at' => null,
+            ]);
 
-        return $this->refreshUser($user, true);
+            return $this->refreshUser($user, true, true);
+        });
     }
 
     public function cardRemovalBlocked(User $user): bool
@@ -650,6 +717,18 @@ class SplitProfileService
                             ->where('paymentStatus', PaymentStatusCode::PAID->legacy());
                     });
             });
+    }
+
+    private function withUserMutationLock(User $user, callable $callback): mixed
+    {
+        try {
+            return Cache::lock(
+                self::mutationLockKey((int) $user->id),
+                self::USER_MUTATION_LOCK_SECONDS,
+            )->block(self::USER_MUTATION_WAIT_SECONDS, $callback);
+        } catch (LockTimeoutException) {
+            throw new RuntimeException("Split ma'lumotlari ayni paytda yangilanmoqda. Bir ozdan keyin qayta urinib ko'ring.");
+        }
     }
 
     private function parseDate(mixed $value): ?Carbon

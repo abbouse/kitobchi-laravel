@@ -8,8 +8,9 @@ use Illuminate\Support\Facades\Schema;
  * Admin tomonidan qo'lda beriladigan split limit.
  *
  * manual_limit > 0 bo'lsa: skoring talablari (akkaunt yoshi, karta yoshi,
- * reputatsiya, buyurtmalar soni...) chetlab o'tiladi — faqat qattiq bloklar
- * (admin blok, muddati o'tgan to'lov, default, bloklangan akkaunt) qoladi.
+ * reputatsiya, buyurtmalar soni...) chetlab o'tiladi. Tasdiqlangan telefon,
+ * kamida bitta tasdiqlangan karta va qattiq bloklar (admin blok, muddati
+ * o'tgan to'lov, default, bloklangan akkaunt) baribir majburiy qoladi.
  *
  * limit_granted_notified_at — limit berilgani haqidagi bir martalik push.
  * last_promo_push_at — haftalik "limitingizni ishlating" promo push.
