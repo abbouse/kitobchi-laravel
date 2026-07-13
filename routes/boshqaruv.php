@@ -41,6 +41,8 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
         Route::delete('/split/plans/{splitPlan}', [AdminController::class, 'destroySplitPlan'])->name('split.plans.destroy');
         Route::get('/split/plans/preview', [AdminController::class, 'previewSplitPlan'])->name('split.plans.preview');
         Route::post('/split/contracts', [AdminController::class, 'storeSplitContract'])->name('split.contracts.store');
+        Route::get('/split/contracts/{splitContract}/contract-pdf', [AdminController::class, 'splitContractPdf'])->name('split.contracts.pdf');
+        Route::get('/split/contracts/{splitContract}/demand-letter', [AdminController::class, 'splitDemandLetterPdf'])->name('split.contracts.demand-letter');
         Route::post('/split/contracts/{splitContract}/settle', [AdminController::class, 'settleSplitContract'])->name('split.contracts.settle');
         Route::post('/split/contracts/{splitContract}/credit', [AdminController::class, 'creditSplitContract'])->name('split.contracts.credit');
         Route::post('/split/installments/{splitInstallment}/charge', [AdminController::class, 'chargeSplitInstallment'])->name('split.installments.charge');

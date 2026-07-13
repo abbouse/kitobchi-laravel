@@ -328,6 +328,36 @@ class AdminController extends Controller
             : "Qo'lda berilgan split limit olib tashlandi.");
     }
 
+    /**
+     * Split shartnomasining yuridik PDF nusxasi (til — mijoz locale'siga
+     * qarab: ru → ruscha, aks holda o'zbekcha).
+     */
+    public function splitContractPdf(SplitContract $splitContract, \App\Services\SplitDocumentService $documents)
+    {
+        $data = $documents->contractData($splitContract);
+
+        return Pdf::loadView('boshqaruv.pdf.split-contract', $data)
+            ->setPaper('a4')
+            ->stream('kitobchi-split-shartnoma-'.$documents->contractNumber($splitContract).'.pdf');
+    }
+
+    /**
+     * Undirish xati (talabnoma/pretenziya) — faqat muddati o'tgan
+     * to'lovi bor shartnomalar uchun.
+     */
+    public function splitDemandLetterPdf(SplitContract $splitContract, \App\Services\SplitDocumentService $documents)
+    {
+        $data = $documents->demandLetterData($splitContract);
+
+        if (empty($data['overdue'])) {
+            return back()->with('error', "Bu shartnomada muddati o'tgan to'lov yo'q — undirish xati shakllantirilmaydi.");
+        }
+
+        return Pdf::loadView('boshqaruv.pdf.split-demand-letter', $data)
+            ->setPaper('a4')
+            ->stream('kitobchi-undirish-xati-'.$documents->contractNumber($splitContract).'.pdf');
+    }
+
     public function updateSplitSettings(Request $request): \Illuminate\Http\RedirectResponse
     {
         $data = $request->validate([
@@ -337,8 +367,7 @@ class AdminController extends Controller
             'split_global_max_limit' => 'required|integer|gte:split_global_min_limit',
             'split_min_completed_orders' => 'required|integer|min:1|max:100',
             'split_min_account_age_days' => 'required|integer|min:1|max:3650',
-            'split_min_card_age_days' => 'required|integer|min:1|max:3650',
-            'split_min_reputation_score' => 'required|numeric|min:1|max:100',
+            'split_min_card_age_days' => 'required|integer|min:0|max:3650',
             'split_card_delete_lock_enabled' => 'nullable|boolean',
             'paylov_refund_sender_card_id' => 'nullable|string|max:255',
             'paylov_refund_service_id' => 'nullable|string|max:255',
@@ -353,7 +382,6 @@ class AdminController extends Controller
             'split_min_completed_orders' => $request->integer('split_min_completed_orders'),
             'split_min_account_age_days' => $request->integer('split_min_account_age_days'),
             'split_min_card_age_days' => $request->integer('split_min_card_age_days'),
-            'split_min_reputation_score' => round((float) $request->input('split_min_reputation_score'), 2),
             'split_card_delete_lock_enabled' => $request->boolean('split_card_delete_lock_enabled'),
             'paylov_refund_sender_card_id' => filled($data['paylov_refund_sender_card_id'] ?? null)
                 ? trim((string) $data['paylov_refund_sender_card_id'])
@@ -362,6 +390,12 @@ class AdminController extends Controller
                 ? trim((string) $data['paylov_refund_service_id'])
                 : null,
         ]);
+
+        // Profilni shu yerning o'zida ommaviy hisoblash serverni band qiladi.
+        // Eskirgan deb belgilaymiz; keyingi checkout/profile so'rovi lazy refresh qiladi.
+        if (Schema::hasTable('split_user_profiles')) {
+            SplitUserProfile::query()->update(['last_refreshed_at' => null]);
+        }
 
         return back()->with('success', 'Split sozlamalari yangilandi.');
     }
@@ -405,7 +439,7 @@ class AdminController extends Controller
             'period_unit' => 'required|in:month,week',
             'period_every' => 'required|integer|min:1|max:8',
             'monthly_interest_percent' => 'required|numeric|min:0|max:30',
-            'min_order_sum' => 'nullable|integer|min:1000',
+            'min_order_sum' => 'nullable|integer|min:0',
             'max_order_sum' => 'nullable|integer|min:1000',
             'min_confidence_score' => 'nullable|numeric|min:0|max:100',
             'enabled' => 'nullable|boolean',
@@ -465,7 +499,7 @@ class AdminController extends Controller
     {
         $data = $request->validate([
             'plan_id' => 'required|integer|exists:split_plans,id',
-            'amount' => 'required|integer|min:1000',
+            'amount' => 'required|integer|min:1',
             'delivery_fee' => 'nullable|integer|min:0',
         ]);
 
@@ -6418,6 +6452,8 @@ PROMPT;
 
         return FcmNotifications::query()
             ->latest()
+            // Sahifa kampaniyalar ro'yxati — cheksiz o'sishning oldini olamiz
+            ->limit(500)
             ->get()
             ->map(function (FcmNotifications $notification) {
                 $who = (string) $notification->who;
@@ -7691,6 +7727,7 @@ PROMPT;
             })->values()->all(),
             'splitPagination' => $this->paginationMeta($users),
             'splitFilters' => ['status' => $status, 'search' => $search],
+            'splitContractFilters' => ['status' => trim((string) request('contract_status', 'all'))],
             'splitActions' => [
                 'settingsUpdateUrl' => route('boshqaruv.split.settings.update'),
                 'ruleStoreUrl' => route('boshqaruv.split.category-rules.store'),
@@ -7801,11 +7838,18 @@ PROMPT;
         }
 
         $statusRank = ['overdue' => 0, 'pending' => 1, 'active' => 2, 'completed' => 3, 'defaulted' => 4, 'cancelled' => 5];
+        $filter = trim((string) request('contract_status', 'all'));
 
         return SplitContract::query()
             ->with(['user:id,name,lastname,phone_number', 'installments', 'plan:id,name'])
+            // «To'lanmaganlar» — statusi overdue YOKI muddati o'tgan installmenti borlar
+            ->when($filter === 'overdue', fn ($query) => $query->where(function ($query) {
+                $query->where('status', SplitContract::STATUS_OVERDUE)
+                    ->orWhereHas('installments', fn ($inner) => $inner->where('status', SplitInstallment::STATUS_OVERDUE));
+            }))
+            ->when(in_array($filter, ['pending', 'active', 'completed', 'defaulted', 'cancelled'], true), fn ($query) => $query->where('status', $filter))
             ->orderByDesc('id')
-            ->limit(30)
+            ->limit($filter === 'all' ? 30 : 200)
             ->get()
             ->sortBy(fn (SplitContract $contract) => $statusRank[$contract->status] ?? 9)
             ->values()
@@ -7814,6 +7858,17 @@ PROMPT;
                     ->whereIn('status', [SplitInstallment::STATUS_PENDING, SplitInstallment::STATUS_OVERDUE])
                     ->sortBy('sequence')
                     ->first();
+
+                // Kechikish: eng erta muddati o'tgan installment (bo'lmasa
+                // overdue_since) sanasidan bugungacha necha kun o'tgani
+                $overdueInstallments = $contract->installments->where('status', SplitInstallment::STATUS_OVERDUE);
+                $overdueAnchor = $overdueInstallments->sortBy('due_at')->first()?->due_at ?? $contract->overdue_since;
+                $overdueDays = $overdueAnchor && $overdueAnchor->lessThan(now())
+                    ? $overdueAnchor->copy()->startOfDay()->diffInDays(now()->startOfDay())
+                    : 0;
+                $overdueAmount = (int) $overdueInstallments->sum(
+                    fn (SplitInstallment $installment) => max(0, (int) $installment->amount - (int) $installment->paid_amount),
+                );
 
                 return [
                     'id' => $contract->id,
@@ -7835,6 +7890,10 @@ PROMPT;
                     'nextInstallmentId' => $nextInstallment?->id,
                     'startsAt' => optional($contract->starts_at)->format('Y-m-d'),
                     'overdueSince' => optional($contract->overdue_since)->format('Y-m-d'),
+                    'overdueDays' => (int) $overdueDays,
+                    'overdueAmount' => $overdueAmount,
+                    'contractPdfUrl' => route('boshqaruv.split.contracts.pdf', $contract),
+                    'demandLetterUrl' => route('boshqaruv.split.contracts.demand-letter', $contract),
                     'installments' => $contract->installments->map(fn (SplitInstallment $installment) => [
                         'id' => $installment->id,
                         'sequence' => (int) $installment->sequence,
@@ -7890,7 +7949,6 @@ PROMPT;
             'minCompletedOrders' => (int) $settings['min_completed_orders'],
             'minAccountAgeDays' => (int) $settings['min_account_age_days'],
             'minCardAgeDays' => (int) $settings['min_card_age_days'],
-            'minReputationScore' => (float) $settings['min_reputation_score'],
             'cardDeleteLockEnabled' => (bool) $settings['card_delete_lock_enabled'],
             'refundSenderCardId' => (string) $settings['refund_sender_card_id'],
             'refundServiceId' => (string) $settings['refund_service_id'],

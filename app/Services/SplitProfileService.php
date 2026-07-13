@@ -14,7 +14,6 @@ use App\Models\User;
 use App\Models\UserCard;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
@@ -22,8 +21,7 @@ class SplitProfileService
 {
     public function __construct(
         private readonly UserReputationService $userReputationService,
-    ) {
-    }
+    ) {}
 
     public function settings(): array
     {
@@ -39,7 +37,6 @@ class SplitProfileService
             'min_completed_orders' => (int) ($settings?->split_min_completed_orders ?? 3),
             'min_account_age_days' => (int) ($settings?->split_min_account_age_days ?? 90),
             'min_card_age_days' => (int) ($settings?->split_min_card_age_days ?? 45),
-            'min_reputation_score' => (float) ($settings?->split_min_reputation_score ?? 78),
             'card_delete_lock_enabled' => (bool) ($settings?->split_card_delete_lock_enabled ?? true),
             'refund_sender_card_id' => (string) ($settings?->paylov_refund_sender_card_id ?? ''),
             'refund_service_id' => (string) ($settings?->paylov_refund_service_id ?? ''),
@@ -247,7 +244,6 @@ class SplitProfileService
             accountAgeDays: $accountAgeDays,
             verifiedCardsCount: $verifiedCardsCount,
             verifiedCardAgeDays: $verifiedCardAgeDays,
-            reputationScore: $reputationScore,
             codReturnStrikes: $codReturnStrikes,
             completedAll: $completedAll,
             activeWarningCount: $activeWarningCount,
@@ -303,7 +299,6 @@ class SplitProfileService
                     completedGmv180d: $completedGmv180d,
                     successfulCardPayments180d: $successfulCardPayments180d,
                     verifiedCardAgeDays: $verifiedCardAgeDays,
-                    reputationScore: $reputationScore,
                     splitHistory: $splitHistory,
                 )
                 : 0;
@@ -495,7 +490,6 @@ class SplitProfileService
         int $accountAgeDays,
         int $verifiedCardsCount,
         int $verifiedCardAgeDays,
-        float $reputationScore,
         int $codReturnStrikes,
         int $completedAll,
         int $activeWarningCount,
@@ -537,10 +531,6 @@ class SplitProfileService
 
         if ($verifiedCardAgeDays < (int) $settings['min_card_age_days']) {
             $reasons[] = "Tasdiqlangan karta yoshi kamida {$settings['min_card_age_days']} kun bo'lishi kerak.";
-        }
-
-        if ($reputationScore < (float) $settings['min_reputation_score']) {
-            $reasons[] = "Reputation score kamida {$settings['min_reputation_score']} bo'lishi kerak.";
         }
 
         if ($codReturnStrikes > 0) {
@@ -619,7 +609,6 @@ class SplitProfileService
         int $completedGmv180d,
         int $successfulCardPayments180d,
         int $verifiedCardAgeDays,
-        float $reputationScore,
         array $splitHistory = [],
     ): int {
         $limit = 0;
@@ -627,7 +616,6 @@ class SplitProfileService
         $limit += min(550000, (int) floor($completedGmv180d / 100000) * 25000);
         $limit += min(300000, $successfulCardPayments180d * 30000);
         $limit += min(250000, (int) floor($verifiedCardAgeDays / 30) * 20000);
-        $limit += min(250000, max(0, (int) floor($reputationScore - $settings['min_reputation_score'])) * 10000);
         $limit += (int) round(($confidenceScore / 100) * 150000);
 
         // Trust ladder: har bir toza yopilgan split shartnoma limitni oshiradi,

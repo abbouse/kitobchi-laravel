@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -30,7 +31,7 @@ class ProjectSetting extends Model
         'split_enabled', 'split_public_enabled',
         'split_global_min_limit', 'split_global_max_limit',
         'split_min_completed_orders', 'split_min_account_age_days',
-        'split_min_card_age_days', 'split_min_reputation_score',
+        'split_min_card_age_days',
         'split_card_delete_lock_enabled',
         // Refund
         'paylov_refund_sender_card_id', 'paylov_refund_service_id',
@@ -41,20 +42,20 @@ class ProjectSetting extends Model
     ];
 
     protected $casts = [
-        'on_premium'  => 'boolean',
-        'on_reels'    => 'boolean',
-        'ramadan'     => 'boolean',
-        'stop_sales'  => 'boolean',
+        'on_premium' => 'boolean',
+        'on_reels' => 'boolean',
+        'ramadan' => 'boolean',
+        'stop_sales' => 'boolean',
         'show_home_special_sections' => 'boolean',
         'telegram_login_enabled' => 'boolean',
         'gift_certificate_options' => 'array',
-        'tax_fixed_uzs'            => 'integer',
-        'tax_profit_percent'       => 'decimal:3',
+        'tax_fixed_uzs' => 'integer',
+        'tax_profit_percent' => 'decimal:3',
         'payment_provider_percent' => 'decimal:3',
-        'courier_base_fee'        => 'integer',
-        'courier_price_per_km'    => 'integer',
-        'courier_min_fee'         => 'integer',
-        'courier_bonus_rules'     => 'array',
+        'courier_base_fee' => 'integer',
+        'courier_price_per_km' => 'integer',
+        'courier_min_fee' => 'integer',
+        'courier_bonus_rules' => 'array',
         'split_enabled' => 'boolean',
         'split_public_enabled' => 'boolean',
         'split_global_min_limit' => 'integer',
@@ -62,7 +63,6 @@ class ProjectSetting extends Model
         'split_min_completed_orders' => 'integer',
         'split_min_account_age_days' => 'integer',
         'split_min_card_age_days' => 'integer',
-        'split_min_reputation_score' => 'decimal:2',
         'split_card_delete_lock_enabled' => 'boolean',
         'review_cashback_enabled' => 'boolean',
         'review_cashback_amount' => 'integer',

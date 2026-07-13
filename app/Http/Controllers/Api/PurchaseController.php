@@ -402,9 +402,9 @@ class PurchaseController extends Controller
         }
 
         // Min/max summa faqat tarif darajasida (bo'sh = cheklovsiz).
-        $minPlanSum = (int) $planBounds->min(fn ($plan) => (int) ($plan->min_order_sum ?? 1000));
+        $minPlanSum = (int) $planBounds->min(fn (\App\Models\SplitPlan $plan) => $plan->minimumOrderSum());
         $maxPlanSum = (int) $planBounds->max(
-            fn ($plan) => $plan->max_order_sum !== null ? (int) $plan->max_order_sum : PHP_INT_MAX,
+            fn (\App\Models\SplitPlan $plan) => $plan->maximumOrderSum(),
         );
 
         // Kesh: profil 24 soatdan yangi bo'lsa qayta hisoblamaymiz (checkout tez ochilsin).
@@ -446,7 +446,7 @@ class PurchaseController extends Controller
         }
 
         $data = $request->validate([
-            'amount' => 'required|integer|min:1000',
+            'amount' => 'required|integer|min:1',
             'delivery_fee' => 'nullable|integer|min:0',
             'packaging_fee' => 'nullable|integer|min:0',
         ]);
@@ -488,8 +488,8 @@ class PurchaseController extends Controller
             ->orderBy('months')
             ->get()
             ->filter(function (\App\Models\SplitPlan $plan) use ($amount, $profile) {
-                $minSum = $plan->min_order_sum !== null ? (int) $plan->min_order_sum : 1000;
-                $maxSum = $plan->max_order_sum !== null ? (int) $plan->max_order_sum : PHP_INT_MAX;
+                $minSum = $plan->minimumOrderSum();
+                $maxSum = $plan->maximumOrderSum();
 
                 if ($amount < $minSum || $amount > $maxSum) {
                     return false;
@@ -622,7 +622,7 @@ class PurchaseController extends Controller
     public function splitPreview(Request $request)
     {
         $data = $request->validate([
-            'amount' => 'required|integer|min:1000',
+            'amount' => 'required|integer|min:1',
             'product_type' => 'nullable|in:book,stationery',
             'product_id' => 'nullable|integer|min:1',
         ]);
@@ -666,8 +666,8 @@ class PurchaseController extends Controller
             ->orderBy('months')
             ->get()
             ->filter(function (\App\Models\SplitPlan $plan) use ($amount) {
-                $minSum = $plan->min_order_sum !== null ? (int) $plan->min_order_sum : 1000;
-                $maxSum = $plan->max_order_sum !== null ? (int) $plan->max_order_sum : PHP_INT_MAX;
+                $minSum = $plan->minimumOrderSum();
+                $maxSum = $plan->maximumOrderSum();
 
                 return $amount >= $minSum && $amount <= $maxSum;
             })

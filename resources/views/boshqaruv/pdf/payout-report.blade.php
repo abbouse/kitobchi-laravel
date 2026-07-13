@@ -94,6 +94,8 @@
     $periodFrom = ($period['from'] ?? null) ?: $t['from_start'];
     $periodTo = $period['to'] ?? ($transaction['created_at'] ?? '—');
     $currency = $lang === 'ru' ? 'сум' : 'so‘m';
+    $logoPath = public_path('images/logo/logo_black.png');
+    $logo = is_file($logoPath) ? 'data:image/png;base64,'.base64_encode(file_get_contents($logoPath)) : null;
 @endphp
 <!doctype html>
 <html lang="{{ $lang }}">
@@ -151,6 +153,9 @@
 </head>
 <body>
     <div class="doc-head">
+        @if($logo)
+            <img src="{{ $logo }}" alt="Kitobchi" style="height: 26px; margin-bottom: 10px;">
+        @endif
         <div class="doc-title">{{ $t['title'] }}</div>
         <div class="doc-subtitle">{{ $t['subtitle'] }}</div>
     </div>

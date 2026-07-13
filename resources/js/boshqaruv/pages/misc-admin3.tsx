@@ -142,11 +142,10 @@ export function MarketNews() {
     status: true,
   };
 
-  const { news = [], errors = {}, flash = {}, translateUrl = '/boshqaruv/content/translate' } = usePage<{
+  const { news = [], errors = {}, translateUrl = '/boshqaruv/content/translate' } = usePage<{
     news?: NewsRow[];
     translateUrl?: string;
     errors?: Record<string, string>;
-    flash?: { success?: string; error?: string };
   }>().props;
   const [selected, setSelected] = useState<NewsRow | null>(null);
   const [editing, setEditing] = useState<NewsRow | null>(null);
@@ -301,8 +300,6 @@ export function MarketNews() {
 
   return (
     <div>
-      {flash.success ? <div className="alert alert-success">{flash.success}</div> : null}
-      {flash.error ? <div className="alert alert-danger">{flash.error}</div> : null}
       <div className="page-head"><div><h1 className="page-title">Market yangiliklari</h1><p className="page-subtitle">Jami {news.length} ta yangilik</p></div>
         <button className="btn btn-primary-gradient" onClick={() => { setEditing(null); setShowForm(true); }}><i className="bi bi-plus-lg me-1"></i>Qo'shish</button>
         </div>

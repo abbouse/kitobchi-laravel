@@ -54,7 +54,6 @@ export default function Fiscalization() {
     fiscalPagination = { page: 1, totalPages: 1, from: 0, to: 0, total: 0 },
     fiscalFilters = {},
     retryPendingUrl = '',
-    flash = {},
   } = usePage<{
     fiscalSummary?: Summary;
     fiscalHealth?: Health[];
@@ -64,7 +63,6 @@ export default function Fiscalization() {
     fiscalPagination?: Pagination;
     fiscalFilters?: { status?: string; search?: string };
     retryPendingUrl?: string;
-    flash?: { success?: string; error?: string };
   }>().props;
 
   const [status, setStatus] = useState(fiscalFilters.status || 'all');
@@ -110,8 +108,6 @@ export default function Fiscalization() {
         </button>
       </header>
 
-      {flash.success ? <div className="alert alert-success fiscal-alert">{flash.success}</div> : null}
-      {flash.error ? <div className="alert alert-danger fiscal-alert">{flash.error}</div> : null}
 
       <section className="fiscal-overview" aria-label="Fiskalizatsiya umumiy holati">
         <div className="fiscal-overview__lead">

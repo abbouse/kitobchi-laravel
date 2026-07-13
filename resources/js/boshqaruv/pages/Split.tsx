@@ -12,7 +12,6 @@ type SplitSettings = {
   minCompletedOrders: number;
   minAccountAgeDays: number;
   minCardAgeDays: number;
-  minReputationScore: number;
   cardDeleteLockEnabled: boolean;
   refundSenderCardId: string;
   refundServiceId: string;
@@ -115,6 +114,10 @@ type SplitContractRow = {
   nextInstallmentId: number | null;
   startsAt: string | null;
   overdueSince: string | null;
+  overdueDays: number;
+  overdueAmount: number;
+  contractPdfUrl: string;
+  demandLetterUrl: string;
   installments: SplitInstallmentRow[];
   settleUrl: string;
   creditUrl: string;
@@ -144,6 +147,7 @@ export default function Split() {
     splitUsers = [],
     splitPagination = { page: 1, totalPages: 1, from: 0, to: 0, total: 0 },
     splitFilters = {},
+    splitContractFilters = { status: 'all' },
     splitActions,
   } = usePage<{
     splitSettings: SplitSettings;
@@ -156,6 +160,7 @@ export default function Split() {
     splitUsers?: SplitUserRow[];
     splitPagination?: PaginationMeta;
     splitFilters?: { status?: string; search?: string };
+    splitContractFilters?: { status?: string };
     splitActions: {
       settingsUpdateUrl: string;
       ruleStoreUrl: string;
@@ -170,7 +175,7 @@ export default function Split() {
   const [search, setSearch] = useState(splitFilters.search || '');
 
   type SplitTab = 'plans' | 'contracts' | 'categories' | 'users' | 'settings';
-  const [tab, setTab] = useState<SplitTab>('plans');
+  const [tab, setTab] = useState<SplitTab>((splitContractFilters.status || 'all') !== 'all' ? 'contracts' : 'plans');
   const tabs: [SplitTab, string, string][] = [
     ['plans', 'Tariflar', 'bi-calendar-week'],
     ['contracts', 'Shartnomalar', 'bi-file-earmark-text'],
@@ -192,6 +197,7 @@ export default function Split() {
   };
 
   const refreshProfiles = (userId?: number) => {
+    if (!userId && !confirm("Barcha foydalanuvchilarning split profillari qayta hisoblansinmi? Bu bir necha daqiqa vaqt olishi mumkin.")) return;
     router.post(splitActions.refreshUrl, userId ? { user_id: userId } : {}, { preserveScroll: true });
   };
 
@@ -256,7 +262,7 @@ export default function Split() {
             <div className="panel-head">
               <div>
                 <div className="panel-title">Sozlamalar</div>
-                <small className="text-muted">Kim nasiya olishi mumkinligi shu yerda. Summa/foiz/muddat esa «Tariflar» tabida.</small>
+                <small className="text-muted">Global xavfsizlik talablari shu yerda. Skor threshold, summa, foiz va muddat faqat «Tariflar» tabida.</small>
               </div>
               <div className="d-flex flex-wrap gap-2">
                 <span className={`chip ${splitSettings.enabled ? 'chip-success' : 'chip-warning'}`}>{splitSettings.enabled ? 'Modul yoqilgan' : "Modul o'chirilgan"}</span>
@@ -285,11 +291,9 @@ export default function Split() {
                   hint="Ro'yxatdan o'tganiga kamida shuncha kun bo'lgan userlargagina nasiya. Yangi akkaunt — firibgarlik riski."
                   example="90 bo'lsa, 2 oylik akkaunt hali mos emas." /></div>
                 <div className="col-md-3"><Field name="split_min_card_age_days" label="Min karta yoshi (kun)" type="number" defaultValue={splitSettings.minCardAgeDays}
-                  hint="Tasdiqlangan Paylov kartasi kamida shuncha kun oldin ulangan bo'lishi kerak — bugun karta ulab, bugun nasiya olib bo'lmaydi."
-                  example="45 bo'lsa, kecha ulangan karta bilan nasiya ochilmaydi." /></div>
-                <div className="col-md-3"><Field name="split_min_reputation_score" label="Min reputatsiya balli" type="number" step="0.01" defaultValue={splitSettings.minReputationScore}
-                  hint="Userning umumiy obro' balli (0–100, tizim hisoblaydi). Bekor qilishlar, qaytarishlar, warninglar ballni tushiradi."
-                  example="78 qo'ysangiz, balli 75 bo'lgan user nasiya ololmaydi." /></div>
+                  min={0}
+                  hint="Tasdiqlangan Paylov kartasi kamida shuncha kun oldin ulangan bo'lishi kerak. 0 qo'ysangiz kutish muddati bo'lmaydi, ammo tasdiqlangan karta baribir talab qilinadi."
+                  example="0 — yangi ulangan karta darhol yaroqli; 45 — kamida 45 kunlik karta kerak." /></div>
 
                 <div className="col-12"><div className="fw-semibold small text-muted mt-2">TEXNIK (Paylov refund)</div></div>
                 <div className="col-md-3"><Field name="paylov_refund_sender_card_id" label="Refund sender cardId" defaultValue={splitSettings.refundSenderCardId}
@@ -315,6 +319,7 @@ export default function Split() {
         <div className="col-12">
           <ContractSection
             contracts={splitContracts}
+            filter={splitContractFilters.status || 'all'}
             stats={splitContractStats}
             plans={splitPlans}
             contractStoreUrl={splitActions.contractStoreUrl}
@@ -363,7 +368,7 @@ export default function Split() {
                       Moslik
                       <InfoHint
                         text="Nasiya olish shartlarini bajargan-bajarmagani. «Mos emas» bo'lsa sababi qatorda ko'rinadi."
-                        example="Karta yoshi yetmasa yoki reputatsiya past bo'lsa — mos emas."
+                        example="Karta yoshi yetmasa — global mos emas; skor yetmasa faqat shu skor talab qilingan tarif ochilmaydi."
                       />
                     </th>
                     <th>
@@ -569,7 +574,7 @@ function PlanSection({ plans, storeUrl, previewUrl }: { plans: SplitPlanRow[]; s
               <th>
                 Min/Max summa
                 <InfoHint
-                  text="Bu tarif qaysi buyurtma summalarida ko'rinadi. Bo'sh qoldirsangiz — cheklovsiz (shaxsiy limit baribir yuqoridan chegaralaydi)."
+                  text="Bu tarif qaysi buyurtma summalarida ko'rinadi. Min qiymat 0 yoki bo'sh bo'lsa — minimum yo'q (shaxsiy limit baribir yuqoridan chegaralaydi)."
                   example="6 oylik tarifga min 500 000 qo'ysangiz, arzon buyurtmalarda 6 oy varianti chiqmaydi."
                 />
               </th>
@@ -643,7 +648,7 @@ function PlanRow({ plan, storeUrl, onPreview, previewLoading }: { plan: SplitPla
       <td>{plan ? <span className="chip chip-info">{plan.installmentsCount} ta · {plan.frequencyLabel}</span> : <span className="text-muted small">—</span>}</td>
       <td>
         <div className="d-flex gap-1">
-          <input form={formId} className="form-control form-control-sm" style={{ width: 100 }} name="min_order_sum" type="number" min={1000} placeholder="min" defaultValue={plan?.minOrderSum ?? ''} />
+          <input form={formId} className="form-control form-control-sm" style={{ width: 100 }} name="min_order_sum" type="number" min={0} placeholder="min (0 = yo'q)" title="0 yoki bo'sh qiymat minimal buyurtma cheklovini o'chiradi" defaultValue={plan?.minOrderSum ?? ''} />
           <input form={formId} className="form-control form-control-sm" style={{ width: 100 }} name="max_order_sum" type="number" min={1000} placeholder="max" defaultValue={plan?.maxOrderSum ?? ''} />
         </div>
       </td>
@@ -695,17 +700,29 @@ function PlanRow({ plan, storeUrl, onPreview, previewLoading }: { plan: SplitPla
 
 function ContractSection({
   contracts,
+  filter,
   stats,
   plans,
   contractStoreUrl,
 }: {
   contracts: SplitContractRow[];
+  filter: string;
   stats: SplitContractStats;
   plans: SplitPlanRow[];
   contractStoreUrl: string;
 }) {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const enabledPlans = plans.filter((plan) => plan.enabled);
+  const filterOptions: [string, string][] = [
+    ['all', 'Barchasi'],
+    ['overdue', "To'lanmayotganlar"],
+    ['active', 'Faol'],
+    ['pending', 'Kutilmoqda'],
+    ['completed', 'Yopilgan'],
+  ];
+  const applyFilter = (value: string) => {
+    router.get('/boshqaruv/split', value === 'all' ? {} : { contract_status: value }, { preserveScroll: true });
+  };
 
   return (
     <div className="card-panel">
@@ -741,6 +758,19 @@ function ContractSection({
             <i className="bi bi-plus-lg me-1"></i>Split ochish
           </button>
         </form>
+      </div>
+      <div className="d-flex gap-2 flex-wrap px-3 pt-2 pb-1">
+        {filterOptions.map(([value, label]) => (
+          <button
+            key={value}
+            className={`btn btn-sm ${filter === value ? 'btn-primary-gradient' : 'btn-light'}`}
+            onClick={() => applyFilter(value)}
+          >
+            {value === 'overdue' ? <i className="bi bi-exclamation-triangle me-1"></i> : null}
+            {label}
+            {value === 'overdue' && stats.overdue > 0 ? <span className="badge bg-danger ms-1">{stats.overdue}</span> : null}
+          </button>
+        ))}
       </div>
       <div className="table-responsive">
         <table className="data-table">
@@ -780,7 +810,14 @@ function ContractSection({
                     </td>
                     <td>
                       <span className={`chip ${chipClass}`}>{chipLabel}</span>
-                      {contract.overdueSince ? <small className="text-danger d-block">{contract.overdueSince} dan beri</small> : null}
+                      {contract.overdueDays > 0 ? (
+                        <div className="mt-1">
+                          <span className="chip chip-danger">{contract.overdueDays} kun kechikkan</span>
+                          <small className="text-danger d-block">
+                            {fmt(contract.overdueAmount)} so&apos;m muddati o&apos;tgan{contract.overdueSince ? ` · ${contract.overdueSince} dan beri` : ''}
+                          </small>
+                        </div>
+                      ) : contract.overdueSince ? <small className="text-danger d-block">{contract.overdueSince} dan beri</small> : null}
                     </td>
                     <td>
                       <strong>{fmt(contract.total)} so&apos;m</strong>
@@ -799,6 +836,14 @@ function ContractSection({
                     </td>
                     <td>
                       <div className="d-flex gap-1 flex-wrap">
+                        <a className="btn btn-sm btn-light" href={contract.contractPdfUrl} target="_blank" rel="noreferrer" title="Shartnoma PDF (mijoz tilida)">
+                          <i className="bi bi-file-earmark-pdf text-danger"></i>
+                        </a>
+                        {contract.overdueDays > 0 || contract.status === 'overdue' ? (
+                          <a className="btn btn-sm btn-light" href={contract.demandLetterUrl} target="_blank" rel="noreferrer" title="Undirish xati (talabnoma/pretenziya)">
+                            <i className="bi bi-envelope-exclamation text-danger"></i>
+                          </a>
+                        ) : null}
                         {contract.status === 'pending' ? (
                           <span
                             className="text-muted small"
@@ -868,7 +913,7 @@ function ContractSection({
                 </Fragment>
               );
             })}
-            {contracts.length === 0 ? <tr><td colSpan={8} className="text-center text-muted py-5">Hali shartnoma yo&apos;q</td></tr> : null}
+            {contracts.length === 0 ? <tr><td colSpan={8} className="text-center text-muted py-5">{filter === 'all' ? "Hali shartnoma yo'q" : "Bu filtrga mos shartnoma yo'q"}</td></tr> : null}
           </tbody>
         </table>
       </div>
@@ -1013,14 +1058,14 @@ function Toggle({ name, label, defaultChecked, hint, example }: { name: string; 
   );
 }
 
-function Field({ name, label, defaultValue, type = 'text', step, hint, example }: { name: string; label: string; defaultValue: string | number; type?: string; step?: string; hint?: string; example?: string }) {
+function Field({ name, label, defaultValue, type = 'text', step, min, max, hint, example }: { name: string; label: string; defaultValue: string | number; type?: string; step?: string; min?: number; max?: number; hint?: string; example?: string }) {
   return (
     <div>
       <label className="form-label small text-muted fw-semibold">
         {label}
         {hint ? <InfoHint text={hint} example={example} /> : null}
       </label>
-      <input name={name} type={type} step={step} className="form-control" defaultValue={defaultValue} />
+      <input name={name} type={type} step={step} min={min} max={max} className="form-control" defaultValue={defaultValue} />
     </div>
   );
 }

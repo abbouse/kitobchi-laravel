@@ -74,11 +74,9 @@ export default function Siyosatlar() {
   const {
     policies = [],
     errors = {},
-    flash = {},
   } = usePage<{
     policies?: Policy[];
     errors?: Record<string, string>;
-    flash?: Record<string, string>;
   }>().props;
 
   const createUrl = policies[0]?.createUrl || '/boshqaruv/siyosatlar';
@@ -250,13 +248,6 @@ export default function Siyosatlar() {
           <i className="bi bi-plus-lg me-1"></i>Siyosat qo'shish
         </button>
       </div>
-
-      {flash.success ? (
-        <div className="alert alert-success rounded-4 mb-3">{flash.success}</div>
-      ) : null}
-      {flash.error ? (
-        <div className="alert alert-danger rounded-4 mb-3">{flash.error}</div>
-      ) : null}
 
       <div className="row g-3 mb-3">
         <div className="col-md-3">

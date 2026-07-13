@@ -146,7 +146,7 @@ export function ApiClients() {
                   <i className="bi bi-broadcast"></i>
                   {(client.webhooks?.length || 0) > 0 ? <span className="badge bg-secondary ms-1" style={{ fontSize: 9 }}>{client.webhooks!.length}</span> : null}
                 </button>
-                <button className="btn btn-sm btn-light me-1" onClick={() => patch(client.regenerateUrl)}><i className="bi bi-arrow-repeat"></i></button>
+                <button className="btn btn-sm btn-light me-1" title="Kalitni yangilash" onClick={() => { if (confirm(`${client.name} uchun API kalit qayta yaratilsinmi? Eski kalit darhol ishlamay qoladi.`)) patch(client.regenerateUrl); }}><i className="bi bi-arrow-repeat"></i></button>
                 <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(client)}><i className="bi bi-trash"></i></button>
               </td>
             </tr>

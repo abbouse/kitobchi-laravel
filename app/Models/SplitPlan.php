@@ -27,12 +27,29 @@ class SplitPlan extends Model
     protected $casts = [
         'enabled' => 'boolean',
         'monthly_interest_percent' => 'decimal:2',
+        'min_order_sum' => 'integer',
+        'max_order_sum' => 'integer',
         'min_confidence_score' => 'decimal:2',
     ];
 
     public function contracts(): HasMany
     {
         return $this->hasMany(SplitContract::class, 'plan_id');
+    }
+
+    /**
+     * Null va 0 bir xil ma'noda: tarifda minimal buyurtma cheklovi yo'q.
+     */
+    public function minimumOrderSum(): int
+    {
+        return max(0, (int) ($this->min_order_sum ?? 0));
+    }
+
+    public function maximumOrderSum(): int
+    {
+        return $this->max_order_sum === null
+            ? PHP_INT_MAX
+            : max(0, (int) $this->max_order_sum);
     }
 
     /**

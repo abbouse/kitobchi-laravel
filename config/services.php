@@ -79,6 +79,23 @@ return [
         ],
     ],
 
+    // ── Split (nasiya) shartnomalari uchun kreditor rekvizitlari ──────
+    'split_lender' => [
+        'name' => env('SPLIT_LENDER_NAME', "YaTT TURDALIYEV ABBOS ERKIN O'G'LI"),
+        'name_ru' => env('SPLIT_LENDER_NAME_RU', 'ЯТТ TURDALIYEV ABBOS ERKIN O‘G‘LI'),
+        'inn' => env('SPLIT_LENDER_INN', '51503025990027'),
+        'account' => env('SPLIT_LENDER_ACCOUNT', '2021 8000 4071 9264 9001'),
+        'mfo' => env('SPLIT_LENDER_MFO', '00491'),
+        'bank' => env('SPLIT_LENDER_BANK', '"Trastbank" XAB Bosh ofisi'),
+        'bank_ru' => env('SPLIT_LENDER_BANK_RU', 'Головной офис ЧАБ «Трастбанк»'),
+        'email' => env('SPLIT_LENDER_EMAIL', 'info@kitobchi.com'),
+        'phone' => env('SPLIT_LENDER_PHONE', ''),
+        'address' => env('SPLIT_LENDER_ADDRESS', ''),
+        'address_ru' => env('SPLIT_LENDER_ADDRESS_RU', ''),
+        // Undirish xatida beriladigan to'lov muddati (kalendar kun)
+        'demand_days' => (int) env('SPLIT_DEMAND_DAYS', 10),
+    ],
+
     'openai' => [
         'key' => env('OPENAI_API_KEY'),
     ],

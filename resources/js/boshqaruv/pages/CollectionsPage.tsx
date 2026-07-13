@@ -110,11 +110,10 @@ const TypeBadge = ({ type }: { type: ProductType }) =>
   );
 
 export default function CollectionsPage() {
-  const { collections = [], errors = {}, flash = {}, translateUrl = '/boshqaruv/content/translate' } = usePage<{
+  const { collections = [], errors = {}, translateUrl = '/boshqaruv/content/translate' } = usePage<{
     collections?: CollectionRow[];
     translateUrl?: string;
     errors?: Record<string, string>;
-    flash?: { success?: string; error?: string };
   }>().props;
   const baseSearchUrl = collections[0]?.bookSearchUrl || '/boshqaruv/collections/book-search';
   const baseCreateUrl = collections[0]?.createUrl || '/boshqaruv/collections';
@@ -470,8 +469,6 @@ export default function CollectionsPage() {
 
   return (
     <div>
-      {flash.success ? <div className="alert alert-success">{flash.success}</div> : null}
-      {flash.error ? <div className="alert alert-danger">{flash.error}</div> : null}
 
       <div className="page-head">
         <div>

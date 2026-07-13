@@ -24,6 +24,7 @@
 <body onload="window.print()">
   <div class="sheet">
     <div class="center">
+      <img src="{{ asset('images/logo/logo_black.png') }}" alt="Kitobchi" style="height: 7mm; margin-bottom: 1.5mm;">
       <div class="title">Kitobchi Hub Receipt</div>
       <div class="muted">{{ $receipt['hub_name'] ?: 'Hub' }}</div>
       <div class="muted">{{ $receipt['order_number'] }} · {{ $receipt['created_at'] ?: '—' }}</div>

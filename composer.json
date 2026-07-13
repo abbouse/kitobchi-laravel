@@ -9,6 +9,7 @@
         "php": "^8.2",
         "barryvdh/laravel-dompdf": "^3.1",
         "capcom6/android-sms-gateway": "^2.0",
+        "endroid/qr-code": "^6.0",
         "gemini-api-php/client": "^1.7",
         "google-gemini-php/client": "^2.0",
         "google-gemini-php/laravel": "^2.0",

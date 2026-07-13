@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, router, usePage } from '@inertiajs/react';
 
 const nav = [
@@ -68,6 +68,156 @@ const nav = [
   ]},
 ];
 
+// ── Global qidiruv: bo'lim nomi bo'yicha sakrash + asosiy ro'yxatlarda qidirish ──
+const searchTargets = [
+  { label: 'Buyurtmalardan qidirish', path: '/boshqaruv/orders', icon: 'bi-receipt' },
+  { label: 'Foydalanuvchilardan qidirish', path: '/boshqaruv/users', icon: 'bi-people' },
+  { label: 'Kitoblardan qidirish', path: '/boshqaruv/books', icon: 'bi-book' },
+  { label: 'Kanselyariyadan qidirish', path: '/boshqaruv/stationeries', icon: 'bi-pencil-square' },
+  { label: 'Tranzaksiyalardan qidirish', path: '/boshqaruv/transactions', icon: 'bi-cash-coin' },
+];
+
+type QuickResult = { key: string; label: string; icon: string; hint?: string; go: () => void };
+
+function QuickSearch() {
+  const [query, setQuery] = useState('');
+  const [active, setActive] = useState(0);
+  const [focused, setFocused] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const navItems = useMemo(() => nav.flatMap((g) => g.items.map((it) => ({ ...it, group: g.group }))), []);
+
+  const results = useMemo<QuickResult[]>(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+    const sections: QuickResult[] = navItems
+      .filter((it) => it.label.toLowerCase().includes(q))
+      .slice(0, 5)
+      .map((it) => ({
+        key: `nav:${it.to}`,
+        label: it.label,
+        icon: it.icon,
+        hint: it.group,
+        go: () => router.visit(it.to),
+      }));
+    const jumps: QuickResult[] = searchTargets.map((t) => ({
+      key: `jump:${t.path}`,
+      label: `${t.label}: "${query.trim()}"`,
+      icon: t.icon,
+      hint: 'Qidiruv',
+      go: () => router.get(t.path, { search: query.trim() }),
+    }));
+    return [...sections, ...jumps];
+  }, [query, navItems]);
+
+  const open = focused && results.length > 0;
+
+  useEffect(() => { setActive(0); }, [query]);
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        inputRef.current?.focus();
+      }
+    };
+    const onClick = (event: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(event.target as Node)) setFocused(false);
+    };
+    window.addEventListener('keydown', onKey);
+    window.addEventListener('mousedown', onClick);
+    return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('mousedown', onClick); };
+  }, []);
+
+  const pick = (result: QuickResult) => {
+    setFocused(false);
+    setQuery('');
+    inputRef.current?.blur();
+    result.go();
+  };
+
+  return (
+    <div className="search quick-search d-none d-md-block" ref={wrapRef}>
+      <i className="bi bi-search"></i>
+      <input
+        ref={inputRef}
+        value={query}
+        placeholder="Bo'lim, buyurtma, foydalanuvchi qidirish..."
+        onChange={(e) => setQuery(e.target.value)}
+        onFocus={() => setFocused(true)}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') { setFocused(false); inputRef.current?.blur(); }
+          if (!open) return;
+          if (e.key === 'ArrowDown') { e.preventDefault(); setActive((v) => Math.min(v + 1, results.length - 1)); }
+          if (e.key === 'ArrowUp') { e.preventDefault(); setActive((v) => Math.max(v - 1, 0)); }
+          if (e.key === 'Enter') { e.preventDefault(); const r = results[active] || results[0]; if (r) pick(r); }
+        }}
+      />
+      <span className="quick-search-kbd">Ctrl K</span>
+      {open && (
+        <div className="quick-search-menu">
+          {results.map((r, index) => (
+            <button
+              key={r.key}
+              type="button"
+              className={`quick-search-item ${index === active ? 'active' : ''}`}
+              onMouseEnter={() => setActive(index)}
+              onClick={() => pick(r)}
+            >
+              <i className={`bi ${r.icon}`}></i>
+              <span className="quick-search-label">{r.label}</span>
+              {r.hint ? <span className="quick-search-hint">{r.hint}</span> : null}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Global flash/xato toastlari: hamma sahifadagi amallar uchun yagona feedback ──
+type ToastItem = { id: number; type: 'success' | 'error'; text: string };
+let toastSeq = 0;
+
+function useFlashToasts() {
+  const pageProps = usePage<{
+    flash?: { success?: string | null; error?: string | null };
+    errors?: Record<string, string>;
+  }>().props;
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+
+  useEffect(() => {
+    const items: Array<{ type: 'success' | 'error'; text: string }> = [];
+    if (pageProps.flash?.success) items.push({ type: 'success', text: String(pageProps.flash.success) });
+    if (pageProps.flash?.error) items.push({ type: 'error', text: String(pageProps.flash.error) });
+    const errorValues = pageProps.errors ? Object.values(pageProps.errors) : [];
+    if (!pageProps.flash?.error && errorValues.length) {
+      items.push({ type: 'error', text: String(errorValues[0]) });
+    }
+    if (!items.length) return;
+
+    const stamped = items.map((item) => ({ ...item, id: ++toastSeq }));
+    setToasts((current) => [...current, ...stamped].slice(-4));
+    // Timerlar cleanup qilinmaydi — sahifa almashsa ham toast o'z vaqtida yopiladi
+    stamped.forEach((toast) =>
+      window.setTimeout(() => {
+        setToasts((current) => current.filter((t) => t.id !== toast.id));
+      }, toast.type === 'error' ? 7000 : 4500),
+    );
+  }, [pageProps]);
+
+  const dismiss = (id: number) => setToasts((current) => current.filter((t) => t.id !== id));
+
+  return { toasts, dismiss };
+}
+
+function initialsOf(name?: string): string {
+  const parts = (name || '').trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return 'A';
+  return parts.slice(0, 2).map((word) => word[0]!.toUpperCase()).join('');
+}
+
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(() => {
@@ -78,6 +228,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     auth?: { admin?: { name?: string; email?: string; role?: string } };
   }>();
   const admin = props.auth?.admin;
+  const initials = initialsOf(admin?.name);
+  const { toasts, dismiss } = useFlashToasts();
 
   useEffect(() => { setOpen(false); }, [url]);
   useEffect(() => {
@@ -92,6 +244,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     if (match === '/boshqaruv/tickets' && url.includes('tickets_source=seller')) return false;
     return url.startsWith(match);
   };
+
+  // Brauzer tab sarlavhasi joriy bo'limga mos bo'ladi
+  useEffect(() => {
+    const current = nav
+      .flatMap((g) => g.items)
+      .filter((it) => isActive(it.match))
+      .sort((a, b) => b.match.length - a.match.length)[0];
+    document.title = current && current.match !== '/boshqaruv'
+      ? `${current.label} — Kitobchi Boshqaruv`
+      : 'Kitobchi Boshqaruv';
+  }, [url]);
 
   return (
     <div className="app-shell">
@@ -124,12 +287,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </nav>
 
         <div className="sidebar-footer">
-          <div className="avatar">AS</div>
+          <div className="avatar">{initials}</div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ color: 'white', fontWeight: 600, fontSize: 14 }}>{admin?.name || 'Admin'}</div>
             <div style={{ color: '#a5b4fc', fontSize: 12 }}>{admin?.role || 'Administrator'}</div>
           </div>
-          <button className="btn btn-sm" style={{ color: '#c7d2fe' }} onClick={() => router.post('/boshqaruv/logout')}>
+          <button className="btn btn-sm" style={{ color: '#c7d2fe' }} title="Chiqish" onClick={() => router.post('/boshqaruv/logout')}>
             <i className="bi bi-box-arrow-right" style={{ fontSize: 18 }}></i>
           </button>
         </div>
@@ -140,18 +303,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <button className="icon-btn sidebar-toggle" onClick={() => setOpen(!open)}>
             <i className="bi bi-list" style={{ fontSize: 20 }}></i>
           </button>
-          <div className="search d-none d-md-block">
-            <i className="bi bi-search"></i>
-            <input placeholder="Sahifa, buyurtma, foydalanuvchi qidirish..." />
-          </div>
+          <QuickSearch />
           <div style={{ flex: 1 }}></div>
           <button className="icon-btn" onClick={() => setDarkMode((value) => !value)} title={darkMode ? "Light mode" : "Dark mode"}>
             <i className={`bi ${darkMode ? 'bi-sun' : 'bi-moon'}`}></i>
           </button>
-          <button className="icon-btn"><i className="bi bi-envelope"></i><span className="dot"></span></button>
-          <button className="icon-btn"><i className="bi bi-bell"></i><span className="dot"></span></button>
           <div className="d-flex align-items-center gap-2 ps-2 border-start">
-            <div className="avatar" style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg,#f472b6,#8b5cf6)', color: 'white', fontWeight: 700, display: 'grid', placeItems: 'center', fontSize: 13 }}>AS</div>
+            <div className="avatar" style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg,#f472b6,#8b5cf6)', color: 'white', fontWeight: 700, display: 'grid', placeItems: 'center', fontSize: 13 }}>{initials}</div>
             <div className="d-none d-md-block">
               <div style={{ fontSize: 13, fontWeight: 600 }}>{admin?.name || 'Admin'}</div>
               <div style={{ fontSize: 11, color: '#6b7280' }}>{admin?.email || 'admin@kitobchi.uz'}</div>
@@ -159,6 +317,18 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
         <main className="content">{children}</main>
+      </div>
+
+      <div className="toast-stack">
+        {toasts.map((toast) => (
+          <div key={toast.id} className={`app-toast ${toast.type === 'success' ? 'app-toast-success' : 'app-toast-error'}`}>
+            <i className={`bi ${toast.type === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill'}`}></i>
+            <span className="app-toast-text">{toast.text}</span>
+            <button type="button" className="app-toast-close" onClick={() => dismiss(toast.id)}>
+              <i className="bi bi-x-lg"></i>
+            </button>
+          </div>
+        ))}
       </div>
 
       {open && <div className="d-block d-md-none" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', zIndex: 1029 }} onClick={() => setOpen(false)}></div>}

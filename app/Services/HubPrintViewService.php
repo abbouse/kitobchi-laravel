@@ -5,6 +5,11 @@ namespace App\Services;
 use App\Models\OrderFulfillment;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
+use Endroid\QrCode\Builder\Builder;
+use Endroid\QrCode\Encoding\Encoding;
+use Endroid\QrCode\ErrorCorrectionLevel;
+use Endroid\QrCode\RoundBlockSizeMode;
+use Endroid\QrCode\Writer\SvgWriter;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 
@@ -34,12 +39,17 @@ class HubPrintViewService
             ?? $order?->recipient_address
             ?? 'Manzil kiritilmagan'
         ));
+        $scanCode = trim((string) $fulfillment->label_code);
+        if ($scanCode === '') {
+            $scanCode = 'ORD-'.$fulfillment->order_id;
+        }
 
         return [
-            'order_number' => '#ORD-' . $fulfillment->order_id,
+            'order_number' => '#ORD-'.$fulfillment->order_id,
             'locale' => $locale,
             'hub_name' => $fulfillment->hub?->name,
-            'label_code' => $fulfillment->label_code ?: 'LBL-' . $fulfillment->id,
+            'label_code' => $scanCode,
+            'qr_data_uri' => $this->makeQrDataUri($scanCode),
             'tracking' => $fulfillment->postal_tracking_number ?: null,
             'customer_name' => $customerName,
             'customer_phone' => $this->formatPhoneForLabel($phone),
@@ -65,6 +75,24 @@ class HubPrintViewService
         ];
     }
 
+    private function makeQrDataUri(string $data): string
+    {
+        return (new Builder(
+            writer: new SvgWriter,
+            writerOptions: [
+                SvgWriter::WRITER_OPTION_EXCLUDE_XML_DECLARATION => true,
+                SvgWriter::WRITER_OPTION_COMPACT => true,
+            ],
+            data: $data,
+            // ASCII label kodlari uchun scannerlarda eng keng mos encoding.
+            encoding: new Encoding('ISO-8859-1'),
+            errorCorrectionLevel: ErrorCorrectionLevel::Medium,
+            size: 280,
+            margin: 16,
+            roundBlockSizeMode: RoundBlockSizeMode::None,
+        ))->build()->getDataUri();
+    }
+
     public function receiptData(OrderFulfillment $fulfillment): array
     {
         $order = $fulfillment->order;
@@ -73,7 +101,7 @@ class HubPrintViewService
         $activeItems = collect($items)->reject(fn (array $item) => $item['is_cancelled'])->values();
 
         return [
-            'order_number' => '#ORD-' . $fulfillment->order_id,
+            'order_number' => '#ORD-'.$fulfillment->order_id,
             'hub_name' => $fulfillment->hub?->name,
             'customer_name' => $order?->user?->full_name ?: 'Mijoz',
             'created_at' => optional($order?->created_at)?->format('d.m.Y H:i'),
@@ -122,7 +150,7 @@ class HubPrintViewService
             return null;
         }
 
-        $note = trim((string) ($item['cancel_note_' . $locale] ?? $item['cancel_note_uz'] ?? ''));
+        $note = trim((string) ($item['cancel_note_'.$locale] ?? $item['cancel_note_uz'] ?? ''));
 
         return $note !== '' ? $note : $this->text($locale, 'cancelled_item_label');
     }
@@ -140,10 +168,10 @@ class HubPrintViewService
         }
 
         if (strlen($digits) === 9) {
-            return $this->formatUzbekPhone('998' . $digits);
+            return $this->formatUzbekPhone('998'.$digits);
         }
 
-        return Str::startsWith($digits, '+') ? $digits : '+' . $digits;
+        return Str::startsWith($digits, '+') ? $digits : '+'.$digits;
     }
 
     private function formatUzbekPhone(string $digits): string
@@ -168,8 +196,8 @@ class HubPrintViewService
         $month = $this->monthLabel($date->month, $locale);
 
         return match ($locale) {
-            'ja' => $date->month . '月' . $date->day . '日 ' . $date->format('H:i'),
-            default => $date->day . '-' . $month . ' ' . $date->format('H:i'),
+            'ja' => $date->month.'月'.$date->day.'日 '.$date->format('H:i'),
+            default => $date->day.'-'.$month.' '.$date->format('H:i'),
         };
     }
 
