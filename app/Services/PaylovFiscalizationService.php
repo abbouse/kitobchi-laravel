@@ -63,14 +63,15 @@ class PaylovFiscalizationService
         }
 
         $paylov = PaylovService::make();
-        $this->markAttempt($transaction);
+        $receiptMeta = $this->receiptMetaFor($transaction);
+        $this->markAttempt($transaction, $receiptMeta);
 
         try {
             $response = $paylov->registerFiscalReceipt(
                 (string) $transaction->provider_transaction_id,
                 $items,
-                (int) config('services.paylov.ofd.receipt_type', 1),
-                $this->advanceContractId($transaction),
+                $receiptMeta['receipt_type'],
+                $receiptMeta['advance_contract_id'],
             );
 
             $ofd = data_get($response, 'result.ofd', []);
@@ -477,12 +478,14 @@ class PaylovFiscalizationService
         return true;
     }
 
-    private function markAttempt(Transaction $transaction): void
+    private function markAttempt(Transaction $transaction, array $receiptMeta): void
     {
         $data = is_array($transaction->perform_fiscal_data) ? $transaction->perform_fiscal_data : [];
         $transaction->forceFill([
             'perform_fiscal_data' => array_merge($data, [
                 'status' => 'pending',
+                'flow' => $receiptMeta['flow'],
+                'receipt_type' => $receiptMeta['receipt_type'],
                 'attempts' => ((int) ($data['attempts'] ?? 0)) + 1,
                 'last_attempt_at' => now()->toDateTimeString(),
             ]),
@@ -506,9 +509,32 @@ class PaylovFiscalizationService
         ])->save();
     }
 
-    private function advanceContractId(Transaction $transaction): ?string
+    /**
+     * Oddiy order hech qachon global split/avans konfiguratsiyasini meros olmaydi.
+     * Bu ajratish noto'g'ri "Bo'nak (Avans)" chek yaratilishining oldini oladi.
+     *
+     * @return array{flow: string, receipt_type: int, advance_contract_id: ?string}
+     */
+    private function receiptMetaFor(Transaction $transaction): array
     {
-        $configured = trim((string) config('services.paylov.ofd.advance_contract_id', ''));
+        if ((string) $transaction->payment_type !== 'split') {
+            return [
+                'flow' => 'standard',
+                'receipt_type' => (int) config('services.paylov.ofd.standard_receipt_type', 0),
+                'advance_contract_id' => null,
+            ];
+        }
+
+        return [
+            'flow' => 'split_advance',
+            'receipt_type' => (int) config('services.paylov.ofd.split_receipt_type', 1),
+            'advance_contract_id' => $this->splitAdvanceContractId($transaction),
+        ];
+    }
+
+    private function splitAdvanceContractId(Transaction $transaction): ?string
+    {
+        $configured = trim((string) config('services.paylov.ofd.split_advance_contract_id', ''));
         if ($configured !== '') {
             return $configured;
         }

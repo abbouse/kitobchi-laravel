@@ -15,6 +15,7 @@ type Summary = {
 
 type Health = { key: string; label: string; ready: boolean; value: string; hint: string };
 type Coverage = { total: number; ready: number; missing: number; direct: number; categoryFallback: number; globalFallback: number; percent: number };
+type FiscalConfig = { standardReceiptType: number; splitReceiptType: number; splitAdvanceConfigured: boolean; amountMultiplier: number; vatPercent: number };
 type FiscalRow = {
   id: number;
   orderId: number;
@@ -39,11 +40,14 @@ type FiscalRow = {
 
 type Pagination = { page: number; totalPages: number; from: number; to: number; total: number };
 
+const defaultSummary: Summary = { paid: 0, registered: 0, pending: 0, failed: 0, refunded: 0, coveragePercent: 100 };
+const defaultConfig: FiscalConfig = { standardReceiptType: 0, splitReceiptType: 1, splitAdvanceConfigured: false, amountMultiplier: 100, vatPercent: 0 };
+
 export default function Fiscalization() {
   const {
-    fiscalSummary = { paid: 0, registered: 0, pending: 0, failed: 0, refunded: 0, coveragePercent: 100 },
+    fiscalSummary = defaultSummary,
     fiscalHealth = [],
-    fiscalConfig = { receiptType: 1, amountMultiplier: 100, vatPercent: 0 },
+    fiscalConfig = defaultConfig,
     fiscalCatalogCoverage = {},
     fiscalTransactions = [],
     fiscalPagination = { page: 1, totalPages: 1, from: 0, to: 0, total: 0 },
@@ -53,7 +57,7 @@ export default function Fiscalization() {
   } = usePage<{
     fiscalSummary?: Summary;
     fiscalHealth?: Health[];
-    fiscalConfig?: { receiptType: number; amountMultiplier: number; vatPercent: number };
+    fiscalConfig?: FiscalConfig;
     fiscalCatalogCoverage?: { books?: Coverage; stationery?: Coverage };
     fiscalTransactions?: FiscalRow[];
     fiscalPagination?: Pagination;
@@ -65,7 +69,8 @@ export default function Fiscalization() {
   const [status, setStatus] = useState(fiscalFilters.status || 'all');
   const [search, setSearch] = useState(fiscalFilters.search || '');
   const [busy, setBusy] = useState<string | null>(null);
-  const coverage = fiscalCatalogCoverage as { books?: Coverage; stationery?: Coverage };
+  const readyHealth = fiscalHealth.filter((item) => item.ready).length;
+  const safeCoverage = Math.max(0, Math.min(100, Number(fiscalSummary.coveragePercent || 0)));
 
   const load = (page = 1, nextStatus = status) => router.get('/boshqaruv/fiscalization', {
     fiscal_status: nextStatus,
@@ -78,6 +83,11 @@ export default function Fiscalization() {
     load(1);
   };
 
+  const changeStatus = (nextStatus: string) => {
+    setStatus(nextStatus);
+    load(1, nextStatus);
+  };
+
   const post = (url: string, key: string, data: Record<string, number> = {}) => {
     if (!url || busy) return;
     setBusy(key);
@@ -85,134 +95,199 @@ export default function Fiscalization() {
   };
 
   return (
-    <div>
-      <div className="page-head">
-        <div>
+    <div className="fiscal-page">
+      <header className="fiscal-header">
+        <div className="fiscal-header__copy">
+          <span className="fiscal-eyebrow"><i className="bi bi-shield-check"></i> Paylov OFD nazorati</span>
           <h1 className="page-title">Fiskalizatsiya</h1>
-          <p className="page-subtitle">Paylov OFD cheklari, katalog kodlari va xatolarni bitta joydan nazorat qilish</p>
+          <p className="page-subtitle">Cheklar, katalog kodlari va integratsiya xatolari yagona nazorat markazida.</p>
         </div>
-        <button className="btn btn-primary-gradient" disabled={Boolean(busy) || !retryPendingUrl} onClick={() => post(retryPendingUrl, 'batch', { limit: 100 })}>
-          <i className={`bi ${busy === 'batch' ? 'bi-arrow-repeat' : 'bi-arrow-clockwise'} me-2`}></i>
-          100 ta kutilayotgan chekni yuborish
+        <button className="fiscal-retry-btn" disabled={Boolean(busy) || !retryPendingUrl} onClick={() => post(retryPendingUrl, 'batch', { limit: 100 })}>
+          <i className={`bi ${busy === 'batch' ? 'bi-arrow-repeat fiscal-spin' : 'bi-arrow-clockwise'}`}></i>
+          <span>Kutilayotganlarni yuborish</span>
+          <small>eng ko‘pi 100 ta</small>
         </button>
-      </div>
+      </header>
 
-      {flash.success ? <div className="alert alert-success">{flash.success}</div> : null}
-      {flash.error ? <div className="alert alert-danger">{flash.error}</div> : null}
+      {flash.success ? <div className="alert alert-success fiscal-alert">{flash.success}</div> : null}
+      {flash.error ? <div className="alert alert-danger fiscal-alert">{flash.error}</div> : null}
 
-      <div className="row g-3 mb-3">
-        {[
-          ['To‘langan orderlar', fiscalSummary.paid, 'bi-credit-card', '#4f46e5'],
-          ['Fiskal chek tayyor', fiscalSummary.registered, 'bi-patch-check', '#10b981'],
-          ['Chek kutilmoqda', fiscalSummary.pending, 'bi-hourglass-split', '#f59e0b'],
-          ['Xato bilan qolgan', fiscalSummary.failed, 'bi-exclamation-octagon', '#ef4444'],
-        ].map(([label, value, icon, color]) => (
-          <div className="col-xl-3 col-md-6" key={String(label)}>
-            <div className="stat-card">
-              <div className="d-flex align-items-center gap-3">
-                <div className="stat-icon" style={{ background: String(color) }}><i className={`bi ${icon}`}></i></div>
-                <div><div className="stat-value">{fmt(Number(value))}</div><div className="stat-label">{label}</div></div>
-              </div>
-            </div>
+      <section className="fiscal-overview" aria-label="Fiskalizatsiya umumiy holati">
+        <div className="fiscal-overview__lead">
+          <div className="fiscal-overview__ring" style={{ '--fiscal-progress': `${safeCoverage * 3.6}deg` } as React.CSSProperties}>
+            <div><strong>{safeCoverage}%</strong><span>qamrov</span></div>
           </div>
-        ))}
-      </div>
+          <div className="fiscal-overview__copy">
+            <span>Umumiy holat</span>
+            <strong>{fiscalSummary.failed > 0 ? `${fmt(fiscalSummary.failed)} ta chek e’tibor talab qiladi` : 'Fiskal oqim nazoratda'}</strong>
+            <small>{fmt(fiscalSummary.registered)} ta chek muvaffaqiyatli ro‘yxatdan o‘tgan</small>
+          </div>
+        </div>
+        <div className="fiscal-metrics">
+          <Metric icon="bi-credit-card" label="To‘langan" value={fiscalSummary.paid} tone="ink" />
+          <Metric icon="bi-patch-check" label="Chek tayyor" value={fiscalSummary.registered} tone="green" />
+          <Metric icon="bi-hourglass-split" label="Kutilmoqda" value={fiscalSummary.pending} tone="amber" />
+          <Metric icon="bi-exclamation-octagon" label="Xatolik" value={fiscalSummary.failed} tone="red" />
+        </div>
+      </section>
 
-      <div className="row g-3 mb-3">
-        <div className="col-xl-7">
-          <div className="card-panel h-100">
-            <div className="panel-head">
-              <div><div className="panel-title">Integratsiya tayyorligi</div><small className="text-muted">Secret qiymatlar panelda ochiq ko‘rsatilmaydi</small></div>
-              <span className={`chip ${fiscalHealth.every((item) => item.ready) ? 'chip-success' : 'chip-warning'}`}>{fiscalHealth.filter((item) => item.ready).length}/{fiscalHealth.length} tayyor</span>
+      <div className="fiscal-control-grid">
+        <section className="fiscal-section">
+          <div className="fiscal-section__head">
+            <div>
+              <span className="fiscal-section__eyebrow">Tizim</span>
+              <h2>Integratsiya tayyorligi</h2>
             </div>
-            <div className="row g-2">
-              {fiscalHealth.map((item) => (
-                <div className="col-md-6" key={item.key}>
-                  <div className="mini-stat h-100 d-flex align-items-start gap-3">
-                    <div className={`rounded-circle d-grid flex-shrink-0 ${item.ready ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'}`} style={{ width: 36, height: 36, placeItems: 'center' }}>
-                      <i className={`bi ${item.ready ? 'bi-check-lg' : 'bi-exclamation-lg'}`}></i>
-                    </div>
-                    <div className="min-w-0"><strong className="d-block">{item.label}</strong><span className={item.ready ? 'text-success small' : 'text-danger small'}>{item.value}</span><small className="text-muted d-block mt-1">{item.hint}</small></div>
-                  </div>
+            <span className={`fiscal-count ${readyHealth === fiscalHealth.length ? 'is-ready' : 'is-warning'}`}>{readyHealth}/{fiscalHealth.length}</span>
+          </div>
+          <div className="fiscal-health-list">
+            {fiscalHealth.map((item) => (
+              <div className="fiscal-health-row" key={item.key}>
+                <span className={`fiscal-health-row__icon ${item.ready ? 'is-ready' : 'is-error'}`}><i className={`bi ${item.ready ? 'bi-check-lg' : 'bi-exclamation-lg'}`}></i></span>
+                <div className="fiscal-health-row__content">
+                  <div><strong>{item.label}</strong><span className={item.ready ? 'is-ready' : 'is-error'}>{item.value}</span></div>
+                  <small>{item.hint}</small>
                 </div>
-              ))}
-            </div>
-            <div className="d-flex flex-wrap gap-2 mt-3">
-              <span className="chip chip-gray">Receipt type: {fiscalConfig.receiptType}</span>
-              <span className="chip chip-gray">Multiplier: ×{fiscalConfig.amountMultiplier}</span>
-              <span className="chip chip-gray">QQS: {fiscalConfig.vatPercent}%</span>
-              <span className="chip chip-info">Qamrov: {fiscalSummary.coveragePercent}%</span>
-              <span className="chip chip-gray">Refund chek: {fmt(fiscalSummary.refunded)}</span>
-            </div>
+              </div>
+            ))}
           </div>
-        </div>
-        <div className="col-xl-5">
-          <div className="card-panel h-100">
-            <div className="panel-title mb-3">Katalog OFD qamrovi</div>
-            <CoverageRow label="Kitoblar" coverage={coverage.books} href="/boshqaruv/books" />
-            <CoverageRow label="Kanselyariya" coverage={coverage.stationery} href="/boshqaruv/stationeries" />
-            <small className="text-muted d-block mt-3">Mahsulot kodi → kategoriya kodi → global fallback tartibida tekshiriladi. “Yetishmaydi” bo‘lgan mahsulot fiskal chekni to‘xtatadi.</small>
+        </section>
+
+        <section className="fiscal-section">
+          <div className="fiscal-section__head">
+            <div>
+              <span className="fiscal-section__eyebrow">Katalog</span>
+              <h2>OFD kodlari qamrovi</h2>
+            </div>
+            <span className="fiscal-count is-neutral">2 tur</span>
           </div>
-        </div>
+          <div className="fiscal-coverage-list">
+            <CoverageRow label="Kitoblar" icon="bi-book" coverage={fiscalCatalogCoverage.books} href="/boshqaruv/books" />
+            <CoverageRow label="Kanselyariya" icon="bi-pencil-square" coverage={fiscalCatalogCoverage.stationery} href="/boshqaruv/stationeries" />
+          </div>
+          <div className="fiscal-config-grid">
+            <ConfigItem label="Oddiy chek" value={`Type ${fiscalConfig.standardReceiptType}`} state="ready" />
+            <ConfigItem label="Split avans" value={`Type ${fiscalConfig.splitReceiptType}`} />
+            <ConfigItem label="Split ID" value={fiscalConfig.splitAdvanceConfigured ? 'Tayyor' : 'Kiritilmagan'} state={fiscalConfig.splitAdvanceConfigured ? 'ready' : 'warning'} />
+            <ConfigItem label="Hisob birligi" value={`×${fiscalConfig.amountMultiplier}`} />
+            <ConfigItem label="QQS" value={`${fiscalConfig.vatPercent}%`} />
+            <ConfigItem label="Refund chek" value={fmt(fiscalSummary.refunded)} />
+          </div>
+          <p className="fiscal-section__note">Kod mahsulotdan, keyin kategoriyadan, undan keyin global fallback’dan olinadi.</p>
+        </section>
       </div>
 
-      <div className="card-panel">
-        <div className="panel-head gap-3 flex-wrap">
-          <div><div className="panel-title">OFD tranzaksiyalari</div><small className="text-muted">{fiscalPagination.from}-{fiscalPagination.to} / {fiscalPagination.total}</small></div>
-          <form className="d-flex gap-2 flex-wrap ms-auto" onSubmit={submit}>
-            <select className="form-select form-select-sm" style={{ width: 180 }} value={status} onChange={(event) => { const value = event.target.value; setStatus(value); setTimeout(() => load(1, value), 0); }}>
-              <option value="all">Barchasi</option>
-              <option value="registered">Chek tayyor</option>
-              <option value="pending">Kutilmoqda</option>
-              <option value="failed">Xatolik</option>
-              <option value="refunded">Refund qilingan</option>
-            </select>
-            <input className="form-control form-control-sm" style={{ width: 280 }} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Order ID, transaction, user" />
-            <button className="btn btn-sm btn-light"><i className="bi bi-search"></i></button>
+      <section className="fiscal-section fiscal-transactions">
+        <div className="fiscal-transactions__head">
+          <div>
+            <span className="fiscal-section__eyebrow">Operatsiyalar</span>
+            <h2>OFD tranzaksiyalari</h2>
+            <small>{fiscalPagination.from}-{fiscalPagination.to} / {fiscalPagination.total}</small>
+          </div>
+          <form className="fiscal-filters" onSubmit={submit}>
+            <label>
+              <span>Holat</span>
+              <select className="form-select form-select-sm" value={status} onChange={(event) => changeStatus(event.target.value)}>
+                <option value="all">Barchasi</option>
+                <option value="registered">Chek tayyor</option>
+                <option value="pending">Kutilmoqda</option>
+                <option value="failed">Xatolik</option>
+                <option value="refunded">Refund qilingan</option>
+              </select>
+            </label>
+            <label className="fiscal-search">
+              <span>Qidiruv</span>
+              <div><i className="bi bi-search"></i><input className="form-control form-control-sm" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Order, transaction yoki mijoz" /><button type="submit" aria-label="Qidirish"><i className="bi bi-arrow-right"></i></button></div>
+            </label>
           </form>
         </div>
-        <div className="table-responsive">
-          <table className="data-table">
+
+        <div className="fiscal-table-wrap">
+          <table className="data-table fiscal-table">
             <thead><tr><th>Order</th><th>Mijoz</th><th>Summa</th><th>Holat</th><th>Urinish</th><th>Paylov / xato</th><th>Sana</th><th>Amallar</th></tr></thead>
             <tbody>
               {fiscalTransactions.map((row) => (
                 <tr key={row.id}>
-                  <td><a className="fw-semibold text-primary" href={row.orderUrl}>#{row.orderId}</a><small className="text-muted d-block">TX #{row.id}</small></td>
-                  <td><strong>{row.user}</strong><small className="text-muted d-block">{row.phone || '—'}</small></td>
-                  <td className="fw-semibold">{fmt(row.amount)} so‘m</td>
-                  <td><span className={`chip ${statusChip(row.status)}`}>{statusLabel(row.status)}</span>{row.receiptId ? <small className="text-muted d-block mt-1">Receipt #{row.receiptId}</small> : null}</td>
-                  <td><strong>{row.attempts}</strong><small className="text-muted d-block">{row.lastAttemptAt || 'Hali yuborilmagan'}</small></td>
-                  <td style={{ minWidth: 260 }}>
-                    {row.error ? <><span className="text-danger small d-block">{row.error}</span><small className="text-muted">{[row.errorCode, row.errorField ? `field: ${row.errorField}` : null].filter(Boolean).join(' · ')}</small></> : <small className="text-muted text-break">{row.transactionId || 'Transaction ID yo‘q'}</small>}
-                  </td>
-                  <td className="text-muted">{row.createdAt || '—'}</td>
-                  <td>
-                    <div className="d-flex gap-1">
-                      {row.receiptUrl ? <a className="btn btn-sm btn-light" href={row.receiptUrl} target="_blank" rel="noreferrer" title="Fiskal chek"><i className="bi bi-receipt"></i></a> : null}
-                      {row.refundReceiptUrl ? <a className="btn btn-sm btn-light" href={row.refundReceiptUrl} target="_blank" rel="noreferrer" title="Refund chek"><i className="bi bi-arrow-counterclockwise"></i></a> : null}
-                      <button className="btn btn-sm btn-light" disabled={Boolean(busy)} onClick={() => post(row.syncUrl, `sync-${row.id}`)} title="Paylovdan tekshirish"><i className={`bi ${busy === `sync-${row.id}` ? 'bi-arrow-repeat' : 'bi-cloud-download'}`}></i></button>
-                      {row.status !== 'registered' && row.status !== 'refunded' ? <button className="btn btn-sm btn-outline-primary" disabled={Boolean(busy)} onClick={() => post(row.registerUrl, `register-${row.id}`)} title="Qayta fiskalizatsiya"><i className={`bi ${busy === `register-${row.id}` ? 'bi-arrow-repeat' : 'bi-send'}`}></i></button> : null}
-                    </div>
-                  </td>
+                  <td><a className="fiscal-order-link" href={row.orderUrl}>#{row.orderId}</a><small>TX #{row.id}</small></td>
+                  <td><strong>{row.user}</strong><small>{row.phone || '—'}</small></td>
+                  <td className="fiscal-nowrap"><strong>{fmt(row.amount)}</strong><small>so‘m</small></td>
+                  <td><FiscalStatus row={row} /></td>
+                  <td><strong>{row.attempts}</strong><small>{row.lastAttemptAt || 'Hali yuborilmagan'}</small></td>
+                  <td><FiscalMessage row={row} /></td>
+                  <td className="fiscal-date">{row.createdAt || '—'}</td>
+                  <td><FiscalActions row={row} busy={busy} post={post} /></td>
                 </tr>
               ))}
-              {fiscalTransactions.length === 0 ? <tr><td colSpan={8} className="text-center text-muted py-5">Bu filter bo‘yicha fiskal tranzaksiya topilmadi.</td></tr> : null}
+              {fiscalTransactions.length === 0 ? <tr><td colSpan={8}><EmptyTransactions /></td></tr> : null}
             </tbody>
           </table>
         </div>
+
+        <div className="fiscal-mobile-list">
+          {fiscalTransactions.map((row) => (
+            <article className="fiscal-mobile-card" key={row.id}>
+              <div className="fiscal-mobile-card__head"><div><a href={row.orderUrl}>Buyurtma #{row.orderId}</a><small>TX #{row.id}</small></div><FiscalStatus row={row} /></div>
+              <div className="fiscal-mobile-card__body">
+                <div><span>Mijoz</span><strong>{row.user}</strong><small>{row.phone || '—'}</small></div>
+                <div><span>Summa</span><strong>{fmt(row.amount)} so‘m</strong><small>{row.createdAt || '—'}</small></div>
+              </div>
+              <FiscalMessage row={row} />
+              <div className="fiscal-mobile-card__footer"><small>{row.attempts} urinish · {row.lastAttemptAt || 'hali yuborilmagan'}</small><FiscalActions row={row} busy={busy} post={post} /></div>
+            </article>
+          ))}
+          {fiscalTransactions.length === 0 ? <EmptyTransactions /> : null}
+        </div>
+
         <PaginationControls {...fiscalPagination} onPageChange={(page) => load(page)} />
-      </div>
+      </section>
     </div>
   );
 }
 
-function CoverageRow({ label, coverage, href }: { label: string; coverage?: Coverage; href: string }) {
+function Metric({ icon, label, value, tone }: { icon: string; label: string; value: number; tone: string }) {
+  return <div className={`fiscal-metric fiscal-metric--${tone}`}><span><i className={`bi ${icon}`}></i></span><div><strong>{fmt(value)}</strong><small>{label}</small></div></div>;
+}
+
+function ConfigItem({ label, value, state = 'neutral' }: { label: string; value: string; state?: 'neutral' | 'ready' | 'warning' }) {
+  return <div className={`fiscal-config fiscal-config--${state}`}><span>{label}</span><strong>{value}</strong></div>;
+}
+
+function CoverageRow({ label, icon, coverage, href }: { label: string; icon: string; coverage?: Coverage; href: string }) {
   const data = coverage || { total: 0, ready: 0, missing: 0, direct: 0, categoryFallback: 0, globalFallback: 0, percent: 100 };
-  return <div className="mini-stat mb-2">
-    <div className="d-flex align-items-center justify-content-between gap-2"><strong>{label}</strong><a href={href} className={`chip text-decoration-none ${data.missing ? 'chip-danger' : 'chip-success'}`}>{data.ready}/{data.total} · {data.percent}%</a></div>
-    <div className="progress mt-2" style={{ height: 6 }}><div className={`progress-bar ${data.missing ? 'bg-warning' : 'bg-success'}`} style={{ width: `${Math.max(0, Math.min(100, data.percent))}%` }}></div></div>
-    <div className="d-flex flex-wrap gap-2 mt-2"><small className="text-muted">Product: {data.direct}</small><small className="text-muted">Kategoriya: {data.categoryFallback}</small><small className="text-muted">Global: {data.globalFallback}</small>{data.missing ? <small className="text-danger">Yetishmaydi: {data.missing}</small> : null}</div>
+  const percent = Math.max(0, Math.min(100, Number(data.percent || 0)));
+  return <a className="fiscal-coverage" href={href}>
+    <span className="fiscal-coverage__icon"><i className={`bi ${icon}`}></i></span>
+    <div className="fiscal-coverage__body">
+      <div><strong>{label}</strong><span className={data.missing ? 'is-warning' : 'is-ready'}>{data.ready}/{data.total}</span></div>
+      <div className="fiscal-progress"><span style={{ width: `${percent}%` }}></span></div>
+      <small>Product {data.direct} · Kategoriya {data.categoryFallback} · Global {data.globalFallback}{data.missing ? ` · Yetishmaydi ${data.missing}` : ''}</small>
+    </div>
+    <i className="bi bi-chevron-right"></i>
+  </a>;
+}
+
+function FiscalStatus({ row }: { row: FiscalRow }) {
+  return <div className="fiscal-status-wrap"><span className={`chip ${statusChip(row.status)}`}>{statusLabel(row.status)}</span>{row.receiptId ? <small>Receipt #{row.receiptId}</small> : null}</div>;
+}
+
+function FiscalMessage({ row }: { row: FiscalRow }) {
+  if (row.error) {
+    return <div className="fiscal-error"><span>{row.error}</span><small>{[row.errorCode, row.errorField ? `field: ${row.errorField}` : null].filter(Boolean).join(' · ')}</small></div>;
+  }
+  return <span className="fiscal-transaction-id">{row.transactionId || 'Transaction ID yo‘q'}</span>;
+}
+
+function FiscalActions({ row, busy, post }: { row: FiscalRow; busy: string | null; post: (url: string, key: string) => void }) {
+  return <div className="fiscal-actions">
+    {row.receiptUrl ? <a href={row.receiptUrl} target="_blank" rel="noreferrer" title="Fiskal chek"><i className="bi bi-receipt"></i></a> : null}
+    {row.refundReceiptUrl ? <a href={row.refundReceiptUrl} target="_blank" rel="noreferrer" title="Refund chek"><i className="bi bi-arrow-counterclockwise"></i></a> : null}
+    <button disabled={Boolean(busy)} onClick={() => post(row.syncUrl, `sync-${row.id}`)} title="Paylovdan tekshirish"><i className={`bi ${busy === `sync-${row.id}` ? 'bi-arrow-repeat fiscal-spin' : 'bi-cloud-download'}`}></i></button>
+    {row.status !== 'registered' && row.status !== 'refunded' ? <button className="is-primary" disabled={Boolean(busy)} onClick={() => post(row.registerUrl, `register-${row.id}`)} title="Qayta fiskalizatsiya"><i className={`bi ${busy === `register-${row.id}` ? 'bi-arrow-repeat fiscal-spin' : 'bi-send'}`}></i></button> : null}
   </div>;
+}
+
+function EmptyTransactions() {
+  return <div className="fiscal-empty"><span><i className="bi bi-receipt"></i></span><strong>Tranzaksiya topilmadi</strong><small>Filter yoki qidiruv qiymatini o‘zgartirib ko‘ring.</small></div>;
 }
 
 function statusChip(status: FiscalRow['status']) {

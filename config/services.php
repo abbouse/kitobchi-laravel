@@ -49,11 +49,19 @@ return [
         // https://developer.paylov.uz/uz/subscribe/ofd/register
         'ofd' => [
             'enabled' => (bool) env('PAYLOV_OFD_ENABLED', false),
-            // Paylov merchant profilingizga biriktirilgan chek turi.
-            'receipt_type' => (int) env('PAYLOV_OFD_RECEIPT_TYPE', 1),
-            // Paylov ayrim merchantlarda majburiy qiladigan avans shartnoma IDsi.
-            // Qiymatni Paylov kabineti/supportidan oling; transaction ID bilan almashtirmang.
-            'advance_contract_id' => env('PAYLOV_OFD_ADVANCE_CONTRACT_ID', ''),
+            // Oddiy karta xaridi savdo cheki, split to'lovi esa avans cheki sifatida
+            // alohida yuradi. Eski global qiymatlar faqat split fallback'i bo'lib qoladi.
+            'standard_receipt_type' => (int) env('PAYLOV_OFD_STANDARD_RECEIPT_TYPE', 0),
+            'split_receipt_type' => (int) env(
+                'PAYLOV_OFD_SPLIT_RECEIPT_TYPE',
+                env('PAYLOV_OFD_RECEIPT_TYPE', 1),
+            ),
+            // Faqat split uchun Paylov bergan avans shartnoma IDsi.
+            // Transaction ID yoki lokal split_contracts.id bilan almashtirmang.
+            'split_advance_contract_id' => env(
+                'PAYLOV_OFD_SPLIT_ADVANCE_CONTRACT_ID',
+                env('PAYLOV_OFD_ADVANCE_CONTRACT_ID', ''),
+            ),
             // Item narxlari OFD ga tiyin ko'rinishida yuboriladi.
             // To'lov API'lari qaysi birlikda ishlatilgan bo'lsa, shunga
             // moslang: to'lovlar so'mda yuborilsa 100, tiyinda bo'lsa 1.

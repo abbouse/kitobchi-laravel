@@ -11,7 +11,7 @@ use Tests\TestCase;
 
 class PaylovFiscalizationPayloadTest extends TestCase
 {
-    public function test_register_payload_contains_receipt_and_advance_contract_fields(): void
+    public function test_standard_receipt_does_not_send_advance_contract_id(): void
     {
         Http::fake([
             'https://gw.paylov.test/*' => Http::response([
@@ -32,15 +32,38 @@ class PaylovFiscalizationPayloadTest extends TestCase
             'vat_percent' => 0,
             'package_code' => '1',
             'tin' => '123456789',
-        ]], 1, 'advance-contract-7');
+        ]], 0);
 
         Http::assertSent(function (Request $request) {
             return $request->url() === 'https://gw.paylov.test/merchant/fiscalization/register/'
                 && $request['transactionId'] === 'transaction-1'
-                && $request['receiptType'] === 1
-                && $request['advanceContractId'] === 'advance-contract-7'
+                && $request['receiptType'] === 0
+                && ! isset($request['advanceContractId'])
                 && count($request['items']) === 1;
         });
+    }
+
+    public function test_fiscal_context_keeps_standard_and_split_receipts_separate(): void
+    {
+        config([
+            'services.paylov.ofd.standard_receipt_type' => 0,
+            'services.paylov.ofd.split_receipt_type' => 1,
+            'services.paylov.ofd.split_advance_contract_id' => 'advance-contract-7',
+        ]);
+
+        $service = new \App\Services\PaylovFiscalizationService;
+        $method = (new ReflectionClass($service))->getMethod('receiptMetaFor');
+        $method->setAccessible(true);
+
+        $standard = $method->invoke($service, new \App\Models\Transaction([
+            'payment_type' => 'order',
+        ]));
+        $split = $method->invoke($service, new \App\Models\Transaction([
+            'payment_type' => 'split',
+        ]));
+
+        $this->assertSame(['flow' => 'standard', 'receipt_type' => 0, 'advance_contract_id' => null], $standard);
+        $this->assertSame(['flow' => 'split_advance', 'receipt_type' => 1, 'advance_contract_id' => 'advance-contract-7'], $split);
     }
 
     public function test_paylov_error_preserves_required_field_context(): void
