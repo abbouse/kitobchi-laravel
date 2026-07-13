@@ -15,6 +15,7 @@ use App\Models\UserCard;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
 class SplitProfileService
@@ -255,6 +256,22 @@ class SplitProfileService
             splitHistory: $splitHistory,
         );
 
+        // ── QO'LDA BERILGAN LIMIT ──────────────────────────────────────
+        // Admin manual_limit bergan bo'lsa, SKORING talablari chetlab
+        // o'tiladi — faqat QATTIQ bloklar qoladi (admin blok, muddati
+        // o'tgan to'lov, default, bloklangan akkaunt). Limit 0 bo'lguncha
+        // yoki blok tushguncha amal qiladi.
+        $manualLimit = max(0, (int) ($existingProfile?->manual_limit ?? 0));
+
+        if ($manualLimit > 0) {
+            $reasons = $this->hardBlockReasons(
+                user: $user,
+                manualBlocked: $manualBlocked,
+                manualBlockReason: $manualBlockReason,
+                splitHistory: $splitHistory,
+            );
+        }
+
         // Shartnomalar soni cheklanmaydi — user bo'sh limiti yetguncha olaveradi.
         $eligible = $reasons === [];
         $limitEligible = $eligible;
@@ -274,18 +291,23 @@ class SplitProfileService
             splitHistory: $splitHistory,
         );
 
-        $computedLimit = $limitEligible
-            ? $this->computeLimit(
-                settings: $settings,
-                confidenceScore: $confidenceScore,
-                completedAll: $completedAll,
-                completedGmv180d: $completedGmv180d,
-                successfulCardPayments180d: $successfulCardPayments180d,
-                verifiedCardAgeDays: $verifiedCardAgeDays,
-                reputationScore: $reputationScore,
-                splitHistory: $splitHistory,
-            )
-            : 0;
+        if ($manualLimit > 0) {
+            // Qo'lda berilgan limit — skoring hisobisiz, 1 000 ga yaxlit
+            $computedLimit = $limitEligible ? intdiv($manualLimit, 1000) * 1000 : 0;
+        } else {
+            $computedLimit = $limitEligible
+                ? $this->computeLimit(
+                    settings: $settings,
+                    confidenceScore: $confidenceScore,
+                    completedAll: $completedAll,
+                    completedGmv180d: $completedGmv180d,
+                    successfulCardPayments180d: $successfulCardPayments180d,
+                    verifiedCardAgeDays: $verifiedCardAgeDays,
+                    reputationScore: $reputationScore,
+                    splitHistory: $splitHistory,
+                )
+                : 0;
+        }
 
         // YAXLITLASH: bo'sh limit 1 000 so'mga karrali (pastga). Exposure
         // ixtiyoriy son bo'lishi mumkin (foizlar, qisman to'lovlar) — mijozga
@@ -330,13 +352,87 @@ class SplitProfileService
                 ['user_id' => $user->id],
                 $payload,
             );
+
+            // Limit BIRINCHI marta ochilganda tabrik push (skoring yoki admin)
+            $this->maybeSendLimitGrantedPush($user, $existingProfile, $eligible, $computedLimit);
         }
 
         return [
             ...$payload,
+            'manual_limit_active' => $manualLimit > 0,
+            'manual_limit' => $manualLimit,
+            'manual_limit_set_at' => $existingProfile?->manual_limit_set_at?->toDateTimeString(),
             'eligibility_reasons' => array_values($reasons),
             'last_refreshed_at' => $now->toIso8601String(),
         ];
+    }
+
+    /**
+     * Faqat QATTIQ blok sabablari — manual limit egalari uchun skoring
+     * talablari tekshirilmaydi, lekin bular har doim amal qiladi.
+     */
+    private function hardBlockReasons(
+        User $user,
+        bool $manualBlocked,
+        string $manualBlockReason,
+        array $splitHistory,
+    ): array {
+        $reasons = [];
+
+        if ($manualBlocked) {
+            $reasons[] = $manualBlockReason !== ''
+                ? "Admin tomonidan split bloklangan: {$manualBlockReason}"
+                : 'Admin tomonidan split vaqtincha bloklangan.';
+        }
+
+        if (! empty($splitHistory['has_active_overdue'])) {
+            $reasons[] = "Faol splitda muddati o'tgan to'lov bor.";
+        }
+
+        if ((int) ($splitHistory['defaulted_contracts'] ?? 0) > 0) {
+            $reasons[] = "Oldingi split shartnoma to'lanmay yopilgan (default).";
+        }
+
+        if ($user->isBlocked()) {
+            $reasons[] = 'Foydalanuvchi bloklangan.';
+        }
+
+        return $reasons;
+    }
+
+    /**
+     * Limit birinchi marta ochilganda (skoring o'tdi yoki admin berdi)
+     * mijozga bir martalik tabrik push yuboradi.
+     */
+    private function maybeSendLimitGrantedPush(
+        User $user,
+        ?SplitUserProfile $previousProfile,
+        bool $eligible,
+        int $computedLimit,
+    ): void {
+        if (! $eligible || $computedLimit <= 0) {
+            return;
+        }
+
+        // Avval xabar berilgan bo'lsa — qayta yubormaymiz
+        if ($previousProfile?->limit_granted_notified_at !== null) {
+            return;
+        }
+
+        try {
+            $sent = app(SplitPushService::class)->sendLimitGranted($user, $computedLimit);
+
+            if ($sent) {
+                SplitUserProfile::query()
+                    ->where('user_id', $user->id)
+                    ->update(['limit_granted_notified_at' => now()]);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('[Split] Limit granted push failed', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     public function manuallyBlockUser(User $user, string $reason, ?int $adminId = null): array

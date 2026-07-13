@@ -207,7 +207,7 @@ class BookClubController extends Controller
             'ai_checked_at' => null,
             'ai_note' => null,
             'ai_model' => null,
-        ]);
+        ] + app(\App\Services\BookClubContentPolicy::class)->initialState((string) $request->content));
 
         return back()->with('success', 'Izoh yangilandi.');
     }

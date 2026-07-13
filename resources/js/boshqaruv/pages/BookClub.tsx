@@ -15,6 +15,10 @@ interface Post {
   aiStatus?: string;
   aiScore?: number;
   aiNote?: string;
+  hiddenByAi?: boolean;
+  moderationStatus?: string | null;
+  moderationNote?: string | null;
+  moderationUrl?: string;
   warning: boolean;
   date?: string;
   dataUrl?: string;
@@ -34,9 +38,9 @@ type CommentRow = Person & {
   hiddenByAi?: boolean;
   moderationStatus?: string | null;
   moderationNote?: string | null;
-  kangarooStatus?: string | null;
   updateUrl?: string;
   destroyUrl?: string;
+  moderationUrl?: string;
 };
 type ProductDetail = {
   id: number;
@@ -52,7 +56,7 @@ type ProductDetail = {
   comments?: Array<{ id: number; postId?: number; name: string; content: string; aiScore?: number | null; aiStatus?: string | null; date?: string }>;
 };
 type PostDetail = {
-  post: Post & { phone?: string; originalAuthor?: string | null; aiModel?: string; aiCheckedAt?: string; warning?: { note?: string; date?: string } | null; images?: string[] };
+  post: Post & { phone?: string; originalAuthor?: string | null; aiModel?: string; aiCheckedAt?: string; moderationModel?: string; moderatedAt?: string; warning?: { note?: string; date?: string } | null; images?: string[] };
   stats: { likes: number; comments: number; reposts: number; votes: number };
   product?: ProductDetail | null;
   comments: CommentRow[];
@@ -132,6 +136,11 @@ export default function BookClub() {
     router.delete(url, { preserveScroll: true, onSuccess: reloadDetail });
   };
 
+  const setModeration = (url: string | undefined, hidden: boolean) => {
+    if (!url) return;
+    router.patch(url, { action: hidden ? 'hide' : 'show' }, { preserveScroll: true, onSuccess: reloadDetail });
+  };
+
   return (
     <div>
       <div className="page-head">
@@ -154,6 +163,7 @@ export default function BookClub() {
                     <span className={`chip ${post.repost ? 'chip-purple' : 'chip-info'}`}>{post.repost ? 'Repost' : 'Post'}</span>
                     {post.productType ? <span className="chip chip-gray">{post.productType} #{post.productId || '—'}</span> : null}
                     {post.warning ? <span className="chip chip-danger">Warning</span> : null}
+                    {post.hiddenByAi ? <span className="chip chip-danger">Yashirilgan</span> : null}
                   </div>
                   <p className="text-muted my-3" style={{ cursor: 'pointer', whiteSpace: 'pre-line' }} onClick={() => openDetail(post)}>
                     {(post.text || '').slice(0, 260) || 'Matn yo‘q'}
@@ -162,6 +172,7 @@ export default function BookClub() {
                     <span className="btn btn-sm btn-light"><i className="bi bi-heart-fill text-danger"></i> {post.likes}</span>
                     <button className="btn btn-sm btn-light" onClick={() => openDetail(post)}><i className="bi bi-chat"></i> {post.comments}</button>
                     <span className={`chip ${post.aiStatus === 'scored' ? 'chip-success' : post.aiStatus === 'failed' ? 'chip-danger' : 'chip-gray'}`}>AI: {post.aiStatus || '—'} {post.aiScore ?? ''}</span>
+                    <span className={`chip ${post.hiddenByAi ? 'chip-danger' : post.moderationStatus === 'clean' || post.moderationStatus === 'manual_clean' ? 'chip-success' : 'chip-gray'}`}>Moderatsiya: {post.moderationStatus || 'pending'}</span>
                     <button className="btn btn-sm btn-light ms-auto" onClick={() => openDetail(post)} title="Tafsilot"><i className="bi bi-eye"></i></button>
                     <button className="btn btn-sm btn-light" onClick={() => warn(post)} title="Ogohlantirish"><i className="bi bi-flag"></i></button>
                     <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(post)} title="O'chirish"><i className="bi bi-trash"></i></button>
@@ -217,6 +228,13 @@ export default function BookClub() {
                     <Info label="Tekshirilgan" value={detail.post.aiCheckedAt || '—'} />
                   </div>
                   {detail.post.aiNote ? <div className="text-muted mt-3">{detail.post.aiNote}</div> : null}
+                  <div className="row g-3 mt-1">
+                    <Info label="Moderatsiya" value={detail.post.moderationStatus || 'pending'} />
+                    <Info label="Moderatsiya modeli" value={detail.post.moderationModel || '—'} />
+                    <Info label="Moderatsiya vaqti" value={detail.post.moderatedAt || '—'} />
+                    <Info label="Ko‘rinish" value={detail.post.hiddenByAi ? 'Yashirilgan' : 'Ochiq'} />
+                  </div>
+                  {detail.post.moderationNote ? <div className="text-muted mt-3">{detail.post.moderationNote}</div> : null}
                   {detail.post.warning ? <div className="alert alert-warning mt-3 mb-0">{detail.post.warning.note || 'Ogohlantirish bor'}</div> : null}
                 </div>
 
@@ -229,7 +247,7 @@ export default function BookClub() {
                   </div>
                   <div className="d-grid gap-3">
                     {detail.comments.map((comment) => (
-                      <CommentCard key={comment.id} comment={comment} onEdit={() => editComment(comment)} onDelete={deleteComment} />
+                      <CommentCard key={comment.id} comment={comment} onEdit={() => editComment(comment)} onDelete={deleteComment} onModerate={setModeration} />
                     ))}
                     {detail.comments.length === 0 ? <div className="text-muted">Comment yo‘q</div> : null}
                   </div>
@@ -263,6 +281,7 @@ export default function BookClub() {
         </Modal.Body>
         <Modal.Footer>
           {detail ? <Button variant="outline-warning" onClick={() => warn(detail.post)}>Ogohlantirish</Button> : null}
+          {detail ? <Button variant={detail.post.hiddenByAi ? 'outline-success' : 'outline-secondary'} onClick={() => setModeration(detail.post.moderationUrl, !detail.post.hiddenByAi)}>{detail.post.hiddenByAi ? 'Qayta ochish' : 'Yashirish'}</Button> : null}
           {detail ? <Button variant="outline-danger" onClick={() => destroy(detail.post)}>O'chirish</Button> : null}
           <Button variant="light" onClick={() => { setSelectedPost(null); setDetail(null); }}>Yopish</Button>
         </Modal.Footer>
@@ -307,7 +326,7 @@ function PeoplePanel({ title, people, icon }: { title: string; people: Person[];
   );
 }
 
-function CommentCard({ comment, onEdit, onDelete }: { comment: CommentRow; onEdit: () => void; onDelete: (url?: string, label?: string) => void }) {
+function CommentCard({ comment, onEdit, onDelete, onModerate }: { comment: CommentRow; onEdit: () => void; onDelete: (url?: string, label?: string) => void; onModerate: (url: string | undefined, hidden: boolean) => void }) {
   return (
     <div className="p-3 rounded border">
       <div className="d-flex align-items-start gap-2">
@@ -323,7 +342,7 @@ function CommentCard({ comment, onEdit, onDelete }: { comment: CommentRow; onEdi
           <div className="d-flex gap-2 flex-wrap mt-2">
             <span className="chip chip-info">AI: {comment.aiStatus || '—'} {comment.aiScore ?? ''}</span>
             {comment.moderationStatus ? <span className="chip chip-warning">{comment.moderationStatus}</span> : null}
-            {comment.kangarooStatus ? <span className="chip chip-purple">{comment.kangarooStatus}</span> : null}
+            <button className={`btn btn-sm btn-light ${comment.hiddenByAi ? 'text-success' : 'text-secondary'}`} onClick={() => onModerate(comment.moderationUrl, !comment.hiddenByAi)} title={comment.hiddenByAi ? 'Qayta ochish' : 'Yashirish'}><i className={`bi ${comment.hiddenByAi ? 'bi-eye' : 'bi-eye-slash'}`}></i></button>
             <button className="btn btn-sm btn-light ms-auto" onClick={onEdit}><i className="bi bi-pencil"></i></button>
             <button className="btn btn-sm btn-light text-danger" onClick={() => onDelete(comment.destroyUrl)}><i className="bi bi-trash"></i></button>
           </div>

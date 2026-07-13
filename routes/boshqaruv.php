@@ -29,6 +29,7 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
         Route::post('/users/{user}/unblock', [\App\Http\Controllers\A122\UserController::class, 'unblock'])->name('users.unblock');
         Route::post('/users/{user}/split-block', [AdminController::class, 'blockUserSplit'])->name('users.split.block');
         Route::post('/users/{user}/split-unblock', [AdminController::class, 'unblockUserSplit'])->name('users.split.unblock');
+        Route::post('/users/{user}/split-manual-limit', [AdminController::class, 'setUserSplitManualLimit'])->name('users.split.manual-limit');
         Route::patch('/users/{user}/verify', [\App\Http\Controllers\A122\UserController::class, 'toggleVerify'])->name('users.verify');
         Route::patch('/users/{user}/premium', [\App\Http\Controllers\A122\UserController::class, 'togglePremium'])->name('users.premium');
         Route::delete('/users/{user}/cards/{card}', [\App\Http\Controllers\A122\UserController::class, 'destroyCard'])->name('users.cards.destroy');
@@ -198,8 +199,10 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
         Route::patch('/api-webhooks/{apiWebhook}/toggle', [AdminController::class, 'toggleApiWebhook'])->name('api-webhooks.toggle');
         Route::delete('/api-webhooks/{apiWebhook}', [AdminController::class, 'destroyApiWebhook'])->name('api-webhooks.destroy');
         Route::post('/book-club/{bookClub}/warn', [\App\Http\Controllers\A122\BookClubController::class, 'warn'])->name('book-club.warn');
+        Route::patch('/book-club/{bookClub}/moderation', [AdminController::class, 'updateBookClubModeration'])->name('book-club.moderation');
         Route::delete('/book-club/{bookClub}', [AdminController::class, 'destroyBookClub'])->name('book-club.destroy');
         Route::patch('/book-club/comments/{comment}', [\App\Http\Controllers\A122\BookClubController::class, 'updateComment'])->name('book-club.comment.update');
+        Route::patch('/book-club/comments/{comment}/moderation', [AdminController::class, 'updateBookClubCommentModeration'])->name('book-club.comment.moderation');
         Route::delete('/book-club/comments/{comment}', [\App\Http\Controllers\A122\BookClubController::class, 'deleteComment'])->name('book-club.comment.delete');
         Route::post('/hubs', [\App\Http\Controllers\A122\HubController::class, 'store'])->name('hubs.store');
         Route::put('/hubs/{hub}', [\App\Http\Controllers\A122\HubController::class, 'update'])->name('hubs.update');

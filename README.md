@@ -1,6 +1,6 @@
 # Kitobchi (Laravel)
 
-**Kitobchi** — kitob va kanstovar marketplace uchun Laravel 11 backend: mobil ilova API (foydalanuvchi, sotuvchi, kuryer), admin panel, to‘lovlar (Payme), push (FCM), Telegram-bot, AI (Google Gemini va OpenAI), mahsulot listing moderatsiyasi (tashqi **Kangaroo** xizmati), Book Club, savat, buyurtmalar, kontent va boshqalar.
+**Kitobchi** — kitob va kanstovar marketplace uchun Laravel 11 backend: mobil ilova API (foydalanuvchi, sotuvchi, kuryer), admin panel, to‘lovlar (Payme), push (FCM), Telegram-bot, AI (Google Gemini va OpenAI), avtomatik mahsulot va Book Club moderatsiyasi, savat, buyurtmalar, kontent va boshqalar.
 
 Bu hujjat repoda **o‘rnatish**, **sozlash**, **yo‘llar**, **jadval (scheduler)**, **integratsiyalar** va **papka tuzilmasi** bo‘yicha yo‘riqnoma.
 
@@ -30,7 +30,7 @@ Eski `status` / `paymentStatus` ustunlari hali compatibility uchun saqlanadi, le
 | Navbat | `database` yoki `redis` — `.env` bo‘yicha |
 | Kesh / sessiya | odatda **database** driver (migratsiyalar bilan) |
 | Push | **Firebase** + **FCM** (`kreait/laravel-firebase`, `laravel-notification-channels/fcm`) |
-| AI | **Google Gemini** (`google-gemini-php/laravel`) |
+| AI | **Google Gemini** (`google-gemini-php/laravel`) va **OpenAI** (`openai-php/client`) |
 | Chatbot | **OpenAI** client (`openai-php/client`) |
 | Telegram | **Nutgram** (`nutgram/laravel`) |
 | SMS | **Android SMS Gateway** (`capcom6/android-sms-gateway`) |
@@ -47,7 +47,7 @@ Eski `status` / `paymentStatus` ustunlari hali compatibility uchun saqlanadi, le
 - **MySQL 8** (ishlab chiqarishda tavsiya) yoki lokal uchun `.env.example` dagi **SQLite**
 - **Redis** — Reverb masshtablash yoki `REDIS_*` bilan kesh/navbat uchun
 - **FFmpeg** — videolar bilan ishlash funksiyalari yoqilgan bo‘lsa
-- **Kangaroo** — alohida Python xizmati (moderatsiya va bozor tahlili); batafsil: monorepo ichida `../kangaroo/README.md` yoki alohida Kangaroo reposi
+- **OpenAI API key** — chatbot, UGC baholash va avtomatik mahsulot moderatsiyasi uchun
 
 ---
 
@@ -91,7 +91,7 @@ composer run dev
 ```
 kitobchi/
 ├── app/
-│   ├── Console/Commands/       # Artisan buyruqlar (jadval, Kangaroo, buyurtma eslatmalari, …)
+│   ├── Console/Commands/       # Artisan buyruqlar (AI, jadval, buyurtma eslatmalari, …)
 │   ├── Http/
 │   │   ├── Controllers/
 │   │   │   ├── Api/            # Mobil va tashqi API (User, Seller, Courier, Payme, Webhook, …)
@@ -99,7 +99,7 @@ kitobchi/
 │   │   └── Middleware/         # locale, Payme, panel auth, API client, ruxsatlar
 │   ├── Models/                 # Eloquent modellar (Books, Orders, Seller, BookClub, …)
 │   ├── Notifications/          # FCM va boshqa bildirishnomalar
-│   └── Services/               # Masalan Kangaroo HTTP klienti
+│   └── Services/               # To‘lov, AI, logistika va domen servis qatlamlari
 ├── bootstrap/app.php           # middleware aliaslari, Laravel scheduler
 ├── config/                     # services, firebase, fcm, gemini, nutgram, reverb, payme, seo, …
 ├── database/
@@ -186,15 +186,6 @@ Asosiy namuna: **`.env.example`**. Quyida Kitobchi uchun muhim guruhlar (to‘li
 - `PAYME_SUBSCRIBE_PASSWORD`
 - `PAYME_ENDPOINT`
 
-### Kangaroo (tashqi API)
-
-| O‘zgaruvchi | Tavsif |
-|-------------|--------|
-| `KANGAROO_API_URL` | Masalan `https://kangaroo.example.com` |
-| `KANGAROO_API_KEY` | Kangaroo serveridagi `API_SECRET_KEY` bilan **bir xil** (`X-Kangaroo-Key`) |
-| `KANGAROO_LISTING_AUTO_APPLY` | `true` bo‘lsa Kangaroo listing qarorlari to‘g‘ridan-to‘g‘ri `is_approved` ga yoziladi (**ehtiyot bilan**) |
-| `KANGAROO_HTTP_TIMEOUT`, `KANGAROO_HTTP_RETRIES`, `KANGAROO_HTTP_RETRY_DELAY_MS` | HTTP qayta urinish |
-
 ### Firebase va FCM
 
 - `FIREBASE_PROJECT` (default konfig nomi)
@@ -206,7 +197,10 @@ Asosiy namuna: **`.env.example`**. Quyida Kitobchi uchun muhim guruhlar (to‘li
 - `GEMINI_API_KEY`
 - Ixtiyoriy: `GEMINI_BASE_URL`, `GEMINI_REQUEST_TIMEOUT`, `GEMINI_TIMEOUT`, `GEMINI_CACHE_TTL` (`config/gemini.php`)
 
-### OpenAI (chatbot / Book Club AI baholash / boshqa servislar)
+### OpenAI (chatbot / Book Club / mahsulot moderatsiyasi)
+
+- `OPENAI_API_KEY`
+- `PRODUCT_AI_MODERATION_*` — model, batch, limit, rasm sifati, confidence va retry sozlamalari
 
 - `OPENAI_API_KEY` — `App\Services\OpenAIService` (`config('openai.api_key')` bo‘lsa, u ustunlik qiladi)
 
@@ -290,7 +284,7 @@ php artisan products:refresh-ugc-ratings
 
 - `openai:score-book-club-content` — kuniga 2 marta
 - `products:refresh-ugc-ratings` — haftasiga 1 marta
-- `kangaroo:sync-content-moderation` — endi faqat listing moderatsiyasi
+- `products:moderate-ai --type=all` — har 30 daqiqada
 
 ### SMS (Eskiz)
 
@@ -317,7 +311,7 @@ php artisan products:refresh-ugc-ratings
 
 | Buyruq | Tavsif |
 |--------|--------|
-| `php artisan kangaroo:sync-content-moderation` | Kitob/kanstovar listing + Book Club UGC ni Kangaroo orqali sinxron moderatsiya (`--listings=0\|1`, `--ugc=0\|1`) |
+| `php artisan products:moderate-ai --type=all` | Kitob va kanstovar listinglarini metadata hamda rasmlari bilan AI moderatsiyadan o‘tkazish |
 | `php artisan ai:daily-reset` | AI limitlari va chat tozalash (kunlik) |
 | `php artisan orders:remind-unpaid` | To‘lanmagan buyurtma eslatmasi |
 | `php artisan orders:cancel-unpaid` | Muddati o‘tgan to‘lanmagan buyurtmalarni bekor qilish |
@@ -355,7 +349,7 @@ Rejalashtirilgan vazifalar (`bootstrap/app.php`):
 | `queue:prune-batches` | Har kuni 03:00 |
 | `gifts:expire` | Har kuni 02:00 |
 | `mystery-box:check-deliveries` | Har kuni 08:30 |
-| `kangaroo:sync-content-moderation` | Har 30 daqiqa (25 daqiqa `withoutOverlapping`) |
+| `products:moderate-ai --type=all` | Har 30 daqiqa |
 
 ---
 
@@ -482,10 +476,9 @@ Kod uslubi: `./vendor/bin/pint` (Laravel Pint).
 
 ---
 
-## Tashqi loyihalar
+## Mobil ilovalar
 
-- **Kangaroo** (Python FastAPI) — `KANGAROO_API_URL` / `KANGAROO_API_KEY` orqali ulanadi; moderatsiya va bozor insightlari.
-- Mobil ilovalar bu repodagi **`/api/v1/...`** endpointlardan foydalanadi.
+Mobil ilovalar bu repodagi **`/api/v1/...`** endpointlardan foydalanadi.
 
 ---
 

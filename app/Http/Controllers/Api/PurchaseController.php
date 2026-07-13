@@ -495,7 +495,9 @@ class PurchaseController extends Controller
                     return false;
                 }
 
-                if ($plan->min_confidence_score !== null
+                // Qo'lda limit berilganlarga skoring (confidence) to'siq bo'lmaydi
+                if (! (bool) ($profile['manual_limit_active'] ?? false)
+                    && $plan->min_confidence_score !== null
                     && (float) $profile['confidence_score'] < (float) $plan->min_confidence_score) {
                     return false;
                 }

@@ -27,7 +27,8 @@ class ProductReviewFeedbackPushService
             return false;
         }
 
-        [$title, $body] = $this->messageFor($this->resolveLocale($user->locale ?? null), $score);
+        // messageFor() assotsiativ massiv qaytaradi — kalitli destrukturatsiya
+        ['title' => $title, 'body' => $body] = $this->messageFor($this->resolveLocale($user->locale ?? null), $score);
 
         $result = (new FCMService('kitobchi'))->send(
             $tokens->all(),

@@ -13,7 +13,8 @@ interface StatItem {
   discountPercent?: number; discountExpiresAt?: string; stock: number; variantStock?: number; sold: number; clients?: number;
   revenue?: number; views?: number; status?: number; active?: boolean; hidden?: boolean; recommended?: boolean;
   recommendedExpiresAt?: string; icon?: string | null; images?: string[]; rawImages?: string[]; barcode?: string; material?: string;
-  description?: string; createdAt?: string; updatedAt?: string; variants?: Variant[]; recentOrders?: MiniOrder[]; sellerOrders?: MiniOrder[]; editUrl?: string; moderateUrl?: string;
+  description?: string; createdAt?: string; updatedAt?: string; aiModerationStatus?: string | null; aiModerationNote?: string | null;
+  aiModerationModel?: string | null; aiModerationCheckedAt?: string | null; variants?: Variant[]; recentOrders?: MiniOrder[]; sellerOrders?: MiniOrder[]; editUrl?: string; moderateUrl?: string;
 }
 const statusLabel = (status?: number) => status === 1 ? ['Tasdiqlangan', 'chip-success'] : status === 2 ? ['Rad etilgan', 'chip-danger'] : ['Moderatsiya', 'chip-warning'];
 
@@ -54,7 +55,8 @@ export default function Stationeries() {
       <Info title="Asosiy ma'lumotlar" rows={[['Kategoriya', selected.category], ['Seller', selected.seller || 'Ichki katalog'], ['Barcode', selected.barcode || '—'], ['Material', selected.material || '—'], ['Marketplace', selected.active ? 'Faol' : 'Nofaol'], ['Visibility', selected.hidden ? 'Yashirin' : 'Ochiq']]} />
       <Info title="KPI va narx" rows={[['Narx', `${fmt(selected.price)} so'm`], ['Chegirma', selected.discountPrice ? `${fmt(selected.discountPrice)} so'm (${selected.discountPercent || 0}%)` : '—'], ['Ombor', `${selected.stock} dona`], ['Variant stock', `${selected.variantStock || 0} dona`], ['Sotilgan', `${selected.sold} dona`], ['Daromad', `${fmt(selected.revenue || 0)} so'm`], ['Mijozlar', String(selected.clients || 0)], ['Ko‘rishlar', String(selected.views || 0)]]} />
       <div className="col-xl-6"><div className="detail-panel h-100"><h6 className="fw-bold mb-3">Variantlar</h6>{(selected.variants || []).map((variant) => <div className="d-flex justify-content-between border-bottom py-2" key={variant.id}><span>{variant.name}</span><strong>{variant.stock} dona</strong></div>)}{(selected.variants || []).length === 0 ? <div className="text-muted">Variant mavjud emas</div> : null}</div></div>
-      <Info title="Admin nazorati" rows={[['Moderatsiya', statusLabel(selected.status)[0]], ['Recommended', selected.recommended ? 'Ha' : "Yo'q"], ['Chegirma muddati', selected.discountExpiresAt || '—'], ['Recommendation muddati', selected.recommendedExpiresAt || '—'], ['Yaratilgan', selected.createdAt || '—'], ['Yangilangan', selected.updatedAt || '—']]} />
+      <Info title="Admin nazorati" rows={[['Moderatsiya', statusLabel(selected.status)[0]], ['AI holati', aiStatusLabel(selected.aiModerationStatus)], ['AI modeli', selected.aiModerationModel || '—'], ['AI tekshiruv vaqti', selected.aiModerationCheckedAt || '—'], ['Recommended', selected.recommended ? 'Ha' : "Yo'q"], ['Chegirma muddati', selected.discountExpiresAt || '—'], ['Recommendation muddati', selected.recommendedExpiresAt || '—'], ['Yaratilgan', selected.createdAt || '—'], ['Yangilangan', selected.updatedAt || '—']]} />
+      {selected.aiModerationNote ? <div className="col-12"><div className="detail-panel"><h6 className="fw-bold mb-2">AI moderatsiya sababi</h6><div className="text-muted">{selected.aiModerationNote}</div></div></div> : null}
       <div className="col-12"><div className="detail-panel"><h6 className="fw-bold mb-2">Tavsif</h6><div className="text-muted">{selected.description || 'Tavsif kiritilmagan'}</div></div></div>
       <div className="col-xl-6"><div className="detail-panel h-100"><h6 className="fw-bold mb-3">Shu mahsulot buyurtmalari</h6><MiniOrdersTable rows={selected.recentOrders || []} empty="Bu kanselyariya bo'yicha buyurtma topilmadi" /></div></div>
       <div className="col-xl-6"><div className="detail-panel h-100"><h6 className="fw-bold mb-3">Seller orderlar</h6><MiniOrdersTable rows={selected.sellerOrders || []} empty="Seller order topilmadi" /></div></div>
@@ -99,4 +101,7 @@ function MiniOrdersTable({ rows, empty }: { rows: MiniOrder[]; empty: string }) 
 function toInputDate(value?: string | null) {
   if (!value) return '';
   return String(value).replace(' ', 'T').slice(0, 16);
+}
+function aiStatusLabel(value?: string | null) {
+  return ({ pending: 'Navbatda', processing: 'Tekshirilmoqda', approved: 'AI tasdiqladi', rejected: 'AI rad etdi', human_review: 'Admin ko‘rigi kerak', failed: 'Vaqtincha xato', manual_approved: 'Admin tasdiqladi', manual_rejected: 'Admin rad etdi' } as Record<string, string>)[value || ''] || value || 'Hali tekshirilmagan';
 }

@@ -2,15 +2,14 @@
 
 namespace App\Http\Controllers\A122;
 
-use App\Http\Controllers\Controller;
 use App\Enums\CourierOrderStatusCode;
 use App\Enums\OrderStatusCode;
 use App\Enums\PaymentStatusCode;
 use App\Enums\SellerOrderStatusCode;
-use App\Models\BookClub;
-use App\Models\BookClubComment;
+use App\Http\Controllers\Controller;
 use App\Models\Books;
 use App\Models\BotTicket;
+use App\Models\CourierOrder;
 use App\Models\Couriers;
 use App\Models\CourierTransaction;
 use App\Models\GiftCertificate;
@@ -24,7 +23,6 @@ use App\Models\SellerTransaction;
 use App\Models\Sold;
 use App\Models\Stationery;
 use App\Models\User;
-use App\Models\CourierOrder;
 use App\Services\SellerOrderSettlementService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -83,7 +81,7 @@ class DashboardController extends Controller
     private function normalizeGeoText(?string $value): string
     {
         $value = mb_strtolower(trim((string) $value));
-        $value = str_replace(["’", "`", "ʻ", "ʼ"], "'", $value);
+        $value = str_replace(['’', '`', 'ʻ', 'ʼ'], "'", $value);
         $value = preg_replace('/[^\p{L}\p{N}\s\']+/u', ' ', $value) ?? '';
         $value = preg_replace('/\s+/u', ' ', $value) ?? '';
 
@@ -97,7 +95,7 @@ class DashboardController extends Controller
 
         if (is_array($order->address)) {
             foreach ($order->address as $chunk) {
-                if (!is_array($chunk)) {
+                if (! is_array($chunk)) {
                     continue;
                 }
                 foreach (['fullAddress', 'branch_address', 'address', 'region', 'city'] as $field) {
@@ -155,7 +153,7 @@ class DashboardController extends Controller
             }
         }
 
-        if (!$countryKey) {
+        if (! $countryKey) {
             return null;
         }
 
@@ -286,11 +284,11 @@ class DashboardController extends Controller
         $todayOrders = Cache::remember('dash5_ord_today', $hot, fn () => Sold::whereDate('created_at', today())->count());
         $weekOrders = Cache::remember('dash5_ord_week', $ttl, fn () => Sold::where('created_at', '>=', now()->startOfWeek())->count());
         $completedOrders = Cache::remember('dash5_ord_D', $ttl, fn () => Sold::whereNotNull('completed_at')->count());
-        $pendingOrders   = Cache::remember('dash5_ord_A', $hot, fn () => $ordersByStatus(OrderStatusCode::PENDING)->count());
-        $packingOrders   = Cache::remember('dash5_ord_P', $ttl, fn () => $ordersByStatus(OrderStatusCode::PACKING)->count());
-        $onwayOrders     = Cache::remember('dash5_ord_B', $ttl, fn () => $ordersByStatus(OrderStatusCode::IN_DELIVERY)->count());
+        $pendingOrders = Cache::remember('dash5_ord_A', $hot, fn () => $ordersByStatus(OrderStatusCode::PENDING)->count());
+        $packingOrders = Cache::remember('dash5_ord_P', $ttl, fn () => $ordersByStatus(OrderStatusCode::PACKING)->count());
+        $onwayOrders = Cache::remember('dash5_ord_B', $ttl, fn () => $ordersByStatus(OrderStatusCode::IN_DELIVERY)->count());
         $cancelledOrders = Cache::remember('dash5_ord_F', $ttl, fn () => $ordersByStatus(OrderStatusCode::CANCELLED)->count());
-        $completionRate  = $totalOrders > 0 ? round($completedOrders / $totalOrders * 100, 1) : 0;
+        $completionRate = $totalOrders > 0 ? round($completedOrders / $totalOrders * 100, 1) : 0;
         $cancellationRate = $totalOrders > 0 ? round($cancelledOrders / $totalOrders * 100, 1) : 0;
         $dailyOrders = Cache::remember('dash5_daily_ord', $ttl, fn () => collect(range(6, 0))->map(fn ($i) => [
             'day' => now()->subDays($i)->format('D'),
@@ -484,7 +482,7 @@ class DashboardController extends Controller
                     ->chunk(300, function ($orders) use (&$countries, &$regionsByCountry) {
                         foreach ($orders as $order) {
                             $geo = $this->detectSalesGeoFromOrder($order);
-                            if (!$geo) {
+                            if (! $geo) {
                                 continue;
                             }
 
@@ -492,7 +490,7 @@ class DashboardController extends Controller
                             $regionKey = $geo['region_key'];
                             $amount = (float) ($order->amount ?? 0);
 
-                            if (!isset($countries[$countryKey])) {
+                            if (! isset($countries[$countryKey])) {
                                 $countries[$countryKey] = [
                                     'key' => $countryKey,
                                     'label' => $geo['country_label'],
@@ -506,7 +504,7 @@ class DashboardController extends Controller
                             $countries[$countryKey]['revenue'] += $amount;
 
                             if ($regionKey && $geo['region_label']) {
-                                if (!isset($regionsByCountry[$countryKey][$regionKey])) {
+                                if (! isset($regionsByCountry[$countryKey][$regionKey])) {
                                     $regionsByCountry[$countryKey][$regionKey] = [
                                         'key' => $regionKey,
                                         'label' => $geo['region_label'],
@@ -564,7 +562,7 @@ class DashboardController extends Controller
         // Yaqinda tugaydigan va allaqachon tugagan shartnomalar — alert va widget
         // uchun. Migration hali ishga tushmagan bo'lsa ham xato chiqarmaydi.
         $contractsExpiringCount = 0;
-        $contractsExpiredCount  = 0;
+        $contractsExpiredCount = 0;
         $contractsUnsignedCount = 0;
         try {
             $contractsExpiringCount = Cache::remember('dash5_s_contract_expiring', $ttl, fn () => Seller::query()
@@ -719,9 +717,6 @@ class DashboardController extends Controller
             'gift' => (bool) $o->gift,
         ])
         );
-
-        $kangarooHumanReviewBooks = 0;
-        $kangarooHumanReviewStationery = 0;
 
         // ── ALERTS ────────────────────────────────────────────
         // [color, icon, title, description, url]
@@ -955,7 +950,7 @@ class DashboardController extends Controller
                     'payment_pending' => "To'lov jarayonida",
                     'new' => 'Yangi',
                     'accepted' => "Do'kon qabul qildi",
-                    'handed_to_courier' => "Kuryerga berildi",
+                    'handed_to_courier' => 'Kuryerga berildi',
                     'cancelled' => 'Bekor qilindi',
                     default => (string) ($order->status_code ?? $order->status),
                 },
@@ -1014,6 +1009,6 @@ class DashboardController extends Controller
             return $value;
         }
 
-        return asset('storage/' . ltrim($value, '/'));
+        return asset('storage/'.ltrim($value, '/'));
     }
 }

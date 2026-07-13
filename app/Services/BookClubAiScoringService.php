@@ -10,8 +10,10 @@ use Illuminate\Support\Str;
 
 class BookClubAiScoringService
 {
-    private const POST_CHUNK = 25;
-    private const COMMENT_CHUNK = 40;
+    // Kichikroq chunk = tezroq javob, token chegarasiga tiqilmaydi va
+    // bitta xato butun katta guruhni yiqitmaydi
+    private const POST_CHUNK = 15;
+    private const COMMENT_CHUNK = 15;
     private const MODEL_NAME = 'gpt-4o-mini';
 
     public function __construct(
@@ -199,7 +201,7 @@ TXT
                     'role' => 'user',
                     'content' => json_encode(['posts' => $payload], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
                 ],
-            ], 2200, 0.2);
+            ], 2200, 0.2, long: true);
 
             $rows = collect($result['posts'] ?? [])->keyBy(fn ($row) => (int) ($row['id'] ?? 0));
 
@@ -230,12 +232,22 @@ TXT
 
                 $this->moderationService->syncAiWarningForPost($post, $score, $aiNote);
 
-                if ($this->shouldSendProductFeedbackPush($post)) {
-                    if ($this->productReviewFeedbackPushService->sendForPost($post, $score)) {
-                        BookClub::query()->whereKey($post->id)->update([
-                            'ai_post_feedback_notified_at' => now(),
-                        ]);
+                // Push — qo'shimcha qulaylik xolos: uning xatosi BAHOLASHNI
+                // to'xtatmasligi shart (avval bitta push bug'i butun
+                // baholash buyrug'ini yiqitib kelgan)
+                try {
+                    if ($this->shouldSendProductFeedbackPush($post)) {
+                        if ($this->productReviewFeedbackPushService->sendForPost($post, $score)) {
+                            BookClub::query()->whereKey($post->id)->update([
+                                'ai_post_feedback_notified_at' => now(),
+                            ]);
+                        }
                     }
+                } catch (\Throwable $pushError) {
+                    Log::warning('Product review feedback push failed', [
+                        'post_id' => $post->id,
+                        'message' => $pushError->getMessage(),
+                    ]);
                 }
             }
         });
@@ -282,7 +294,7 @@ TXT
                     'role' => 'user',
                     'content' => json_encode(['comments' => $payload], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
                 ],
-            ], 2600, 0.2);
+            ], 2600, 0.2, long: true);
 
             $rows = collect($result['comments'] ?? [])->keyBy(fn ($row) => (int) ($row['id'] ?? 0));
 

@@ -3,13 +3,14 @@
 namespace App\Services\CatalogParsers;
 
 use App\Models\BookCategories;
-use App\Models\BookTag;
 use App\Models\Books;
+use App\Models\BookTag;
 use App\Models\CatalogParserItem;
 use App\Models\Publisher;
 use App\Models\Seller;
 use App\Services\AuthorDirectoryService;
 use App\Services\OpenAIService;
+use App\Services\ProductModerationStateService;
 use App\Support\ProductImageVariantGenerator;
 use DOMDocument;
 use DOMNode;
@@ -25,10 +26,18 @@ use Illuminate\Support\Str;
 class BookUzParserService
 {
     public const PROVIDER = 'book_uz';
+
     public const SELLER_ID = 55;
+
     private const BASE_URL = 'https://book.uz';
+
     private const USER_API_BASE_URL = 'https://backend.book.uz/user-api';
+
     private ?array $booksTableColumns = null;
+
+    public function __construct(
+        private readonly ProductModerationStateService $productModerationState,
+    ) {}
 
     public function syncCatalog(?int $limit = null, ?string $singleUrl = null): array
     {
@@ -47,7 +56,7 @@ class BookUzParserService
                 $synced++;
             } catch (\Throwable $e) {
                 $failed++;
-                $errors[] = trim($singleUrl) . ' — ' . $e->getMessage();
+                $errors[] = trim($singleUrl).' — '.$e->getMessage();
             }
         } else {
             $catalogItems = $this->discoverCatalogEntriesViaApi($limit);
@@ -60,7 +69,7 @@ class BookUzParserService
                         $synced++;
                     } catch (\Throwable $e) {
                         $failed++;
-                        $errors[] = ($catalogItem['link'] ?? $catalogItem['_id'] ?? 'catalog-item') . ' — ' . $e->getMessage();
+                        $errors[] = ($catalogItem['link'] ?? $catalogItem['_id'] ?? 'catalog-item').' — '.$e->getMessage();
                     }
                 }
             } else {
@@ -73,7 +82,7 @@ class BookUzParserService
                         $synced++;
                     } catch (\Throwable $e) {
                         $failed++;
-                        $errors[] = $url . ' — ' . $e->getMessage();
+                        $errors[] = $url.' — '.$e->getMessage();
                     }
                 }
             }
@@ -184,7 +193,7 @@ class BookUzParserService
                 'pages' => $this->normalizeImportPages($item->pages),
                 'status' => true,
                 'is_hidden' => false,
-                'is_approved' => 1,
+                'is_approved' => 0,
                 'recommended' => false,
             ];
 
@@ -238,7 +247,7 @@ class BookUzParserService
                 $item->forceFill([
                     'last_import_error' => Str::limit($e->getMessage(), 65000),
                 ])->save();
-                $errors[] = '#' . $item->id . ' — ' . $e->getMessage();
+                $errors[] = '#'.$item->id.' — '.$e->getMessage();
             }
         }
 
@@ -310,6 +319,7 @@ class BookUzParserService
         $fromPayload = $this->cleanField(data_get($item->payload, 'author_resolution.author'));
         if ($fromPayload) {
             $item->forceFill(['author' => $fromPayload])->save();
+
             return $fromPayload;
         }
 
@@ -452,7 +462,7 @@ class BookUzParserService
                         ],
                     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
                 ],
-            ], 300, 0.1);
+            ], 300, 0.1, long: true);
 
             $author = $this->cleanField($result['author_name'] ?? null);
 
@@ -496,9 +506,9 @@ class BookUzParserService
     {
         $sitemapUrls = array_unique(array_filter([
             ...$this->discoverSitemapsFromRobots(),
-            self::BASE_URL . '/sitemap.xml',
-            self::BASE_URL . '/sitemap_index.xml',
-            self::BASE_URL . '/sitemap-index.xml',
+            self::BASE_URL.'/sitemap.xml',
+            self::BASE_URL.'/sitemap_index.xml',
+            self::BASE_URL.'/sitemap-index.xml',
         ]));
 
         $visited = [];
@@ -518,7 +528,7 @@ class BookUzParserService
         $perPage = $limit !== null ? max(1, min(100, $limit)) : 36;
 
         while (true) {
-            $payload = $this->fetchJson(self::USER_API_BASE_URL . '/book', [
+            $payload = $this->fetchJson(self::USER_API_BASE_URL.'/book', [
                 'page' => $page,
                 'limit' => $perPage,
             ]);
@@ -569,7 +579,7 @@ class BookUzParserService
     private function discoverSitemapsFromRobots(): array
     {
         try {
-            $body = $this->fetchText(self::BASE_URL . '/robots.txt');
+            $body = $this->fetchText(self::BASE_URL.'/robots.txt');
             if (! is_string($body) || trim($body) === '') {
                 return [];
             }
@@ -614,6 +624,7 @@ class BookUzParserService
                         $nodes = array_merge($nodes, $this->readSitemapRecursive($loc, $visited));
                     }
                 }
+
                 return $nodes;
             }
 
@@ -626,6 +637,7 @@ class BookUzParserService
                             $nodes = array_merge($nodes, $this->readSitemapRecursive($loc, $visited));
                         }
                     }
+
                     return $nodes;
                 }
             }
@@ -695,11 +707,11 @@ class BookUzParserService
     {
         $candidates = $page === 1
             ? [
-                self::BASE_URL . '/books',
-                self::BASE_URL . '/books?page=1',
+                self::BASE_URL.'/books',
+                self::BASE_URL.'/books?page=1',
             ]
             : [
-                self::BASE_URL . '/books?page=' . $page,
+                self::BASE_URL.'/books?page='.$page,
             ];
 
         foreach ($candidates as $url) {
@@ -721,7 +733,7 @@ class BookUzParserService
         $urls = [];
         $xpath = $this->makeXPath($html);
 
-        foreach ($xpath->query("//a[@href]/@href | //*[@data-href]/@data-href") ?? [] as $node) {
+        foreach ($xpath->query('//a[@href]/@href | //*[@data-href]/@data-href') ?? [] as $node) {
             $value = trim((string) $node->nodeValue);
             if ($value !== '' && preg_match('~(?:https?://book\.uz)?/books/details/~i', $value)) {
                 $urls[] = $value;
@@ -746,7 +758,7 @@ class BookUzParserService
             return null;
         }
 
-        return $this->sanitizeProductUrl(self::BASE_URL . '/books/details/' . ltrim($slug, '/'));
+        return $this->sanitizeProductUrl(self::BASE_URL.'/books/details/'.ltrim($slug, '/'));
     }
 
     private function sanitizeProductUrl(?string $url): ?string
@@ -763,7 +775,7 @@ class BookUzParserService
         $scheme = $parts['scheme'] ?? 'https';
         $host = $parts['host'] ?? parse_url(self::BASE_URL, PHP_URL_HOST);
 
-        return $scheme . '://' . $host . $parts['path'];
+        return $scheme.'://'.$host.$parts['path'];
     }
 
     private function buildPayloadFromCatalogApiItem(array $item): array
@@ -957,7 +969,7 @@ class BookUzParserService
     {
         $response = $this->fetchResponse($url);
         if ($response === null || ($response['status'] ?? 0) >= 400) {
-            throw new \RuntimeException('Sahifa olinmadi: HTTP ' . ($response['status'] ?? 0));
+            throw new \RuntimeException('Sahifa olinmadi: HTTP '.($response['status'] ?? 0));
         }
 
         $html = (string) ($response['body'] ?? '');
@@ -969,7 +981,7 @@ class BookUzParserService
         $title = $this->extractMetaContent($xpath, 'property', 'og:title')
             ?: Arr::get($productLd, 'name')
             ?: $this->extractFirstText($xpath, [
-                "//h1",
+                '//h1',
                 "//*[contains(@class,'product')]//h1",
                 "//*[contains(@class,'title')]//h1",
             ]);
@@ -1090,7 +1102,7 @@ class BookUzParserService
             return trim($name);
         }
 
-        $nodes = $xpath->query("//nav//*[self::a or self::span]");
+        $nodes = $xpath->query('//nav//*[self::a or self::span]');
         if (! $nodes) {
             return null;
         }
@@ -1160,7 +1172,7 @@ class BookUzParserService
     private function extractSpecFromText(string $text, array $aliases): ?string
     {
         foreach ($aliases as $alias) {
-            $pattern = '/(?:' . preg_quote($alias, '/') . ')\s*[:\-]?\s*([^\n\r|]{1,180})/ui';
+            $pattern = '/(?:'.preg_quote($alias, '/').')\s*[:\-]?\s*([^\n\r|]{1,180})/ui';
             if (preg_match($pattern, $text, $matches)) {
                 return trim((string) ($matches[1] ?? ''));
             }
@@ -1185,6 +1197,7 @@ class BookUzParserService
         return collect($matches[1] ?? [])
             ->map(function ($json) {
                 $decoded = json_decode(trim((string) $json), true);
+
                 return is_array($decoded) ? $decoded : null;
             })
             ->filter()
@@ -1213,8 +1226,9 @@ class BookUzParserService
 
     private function makeXPath(string $html): DOMXPath
     {
-        $document = new DOMDocument();
+        $document = new DOMDocument;
         @$document->loadHTML($html);
+
         return new DOMXPath($document);
     }
 
@@ -1222,6 +1236,7 @@ class BookUzParserService
     {
         $literal = $this->xpathLiteral($value);
         $node = $xpath->query("//meta[@{$attr}={$literal}]/@content")?->item(0);
+
         return $node ? trim((string) $node->nodeValue) : null;
     }
 
@@ -1262,14 +1277,14 @@ class BookUzParserService
         }
 
         if (Str::startsWith($url, '//')) {
-            return 'https:' . $url;
+            return 'https:'.$url;
         }
 
         if (Str::startsWith($url, ['img/', '/img/'])) {
-            return rtrim(self::USER_API_BASE_URL, '/') . '/' . ltrim($url, '/');
+            return rtrim(self::USER_API_BASE_URL, '/').'/'.ltrim($url, '/');
         }
 
-        return rtrim(self::BASE_URL, '/') . '/' . ltrim($url, '/');
+        return rtrim(self::BASE_URL, '/').'/'.ltrim($url, '/');
     }
 
     private function downloadImages(CatalogParserItem $item): array
@@ -1285,7 +1300,7 @@ class BookUzParserService
 
                 $contentType = (string) (($response['headers']['content-type'][0] ?? '') ?: '');
                 $extension = $this->guessImageExtension($url, $contentType);
-                $filename = 'books/parser_' . $item->id . '_' . ($index + 1) . '_' . Str::random(8) . '.' . $extension;
+                $filename = 'books/parser_'.$item->id.'_'.($index + 1).'_'.Str::random(8).'.'.$extension;
 
                 Storage::disk('public')->put($filename, $response['body']);
                 ProductImageVariantGenerator::generateForPath($filename);
@@ -1331,8 +1346,11 @@ class BookUzParserService
             ->values()
             ->all();
 
-        if (!empty($tagIds)) {
-            $book->tags()->syncWithoutDetaching($tagIds);
+        if (! empty($tagIds)) {
+            $changes = $book->tags()->syncWithoutDetaching($tagIds);
+            if (($changes['attached'] ?? []) !== [] || ($changes['updated'] ?? []) !== []) {
+                $this->productModerationState->markPending($book, 'catalog_parser_tags_changed');
+            }
         }
     }
 
@@ -1375,7 +1393,7 @@ class BookUzParserService
         if ($significantTokens->isNotEmpty()) {
             $candidateQuery->where(function ($query) use ($significantTokens) {
                 foreach ($significantTokens as $token) {
-                    $query->orWhere('name', 'like', '%' . $token . '%');
+                    $query->orWhere('name', 'like', '%'.$token.'%');
                 }
             });
         }
@@ -1504,7 +1522,7 @@ class BookUzParserService
                         ],
                     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
                 ],
-            ], 500, 0.1);
+            ], 500, 0.1, long: true);
 
             $categoryId = (int) ($result['category_id'] ?? 0) ?: null;
             $matchedCategory = $categoryId ? $categories->firstWhere('id', $categoryId) : null;
@@ -1530,7 +1548,7 @@ class BookUzParserService
 
     private function suggestTags(array $payload, ?int $categoryId): array
     {
-        if (!$categoryId) {
+        if (! $categoryId) {
             return [
                 'tag_ids' => [],
                 'tag_names' => [],
@@ -1556,7 +1574,7 @@ class BookUzParserService
         $titleText = Str::lower((string) ($payload['title'] ?? ''));
         $descriptionText = Str::lower((string) ($payload['description'] ?? ''));
         $sourceCategoryText = Str::lower((string) ($payload['source_category'] ?? ''));
-        $haystack = $titleText . ' ' . $descriptionText . ' ' . $sourceCategoryText;
+        $haystack = $titleText.' '.$descriptionText.' '.$sourceCategoryText;
 
         $heuristicMatches = $availableTags->filter(function (BookTag $tag) use ($haystack) {
             $variants = array_filter([
@@ -1622,7 +1640,7 @@ class BookUzParserService
                         ],
                     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
                 ],
-            ], 500, 0.1);
+            ], 500, 0.1, long: true);
 
             $validIds = collect($result['tag_ids'] ?? [])
                 ->map(fn ($id) => (int) $id)
@@ -1768,6 +1786,7 @@ class BookUzParserService
         }
 
         $value = trim((string) $value);
+
         return $value === '' ? null : Str::limit($value, 255, '');
     }
 
@@ -1786,7 +1805,7 @@ class BookUzParserService
                             return null;
                         }
 
-                        return ! empty($item['newLine']) ? ("\n" . $chunk) : $chunk;
+                        return ! empty($item['newLine']) ? ("\n".$chunk) : $chunk;
                     }
 
                     return null;
@@ -1802,6 +1821,7 @@ class BookUzParserService
         }
 
         $text = trim((string) $value);
+
         return $text === '' ? null : Str::limit($text, 5000, '');
     }
 
@@ -1813,6 +1833,7 @@ class BookUzParserService
         }
 
         $digits = preg_replace('/\D/', '', $canonical);
+
         return $digits !== '' ? $digits : null;
     }
 
@@ -1825,7 +1846,7 @@ class BookUzParserService
 
         $value = mb_strtolower($value);
         $value = str_replace(
-            ["’", "'", "`", "ʻ", "ʼ", "ʹ", "“", "”", "\"", "-", "_", "/", "\\", "(", ")", "[", "]", "{", "}", ".", ",", ":", ";", "!", "?", "+", "&"],
+            ['’', "'", '`', 'ʻ', 'ʼ', 'ʹ', '“', '”', '"', '-', '_', '/', '\\', '(', ')', '[', ']', '{', '}', '.', ',', ':', ';', '!', '?', '+', '&'],
             ' ',
             $value
         );
@@ -1842,21 +1863,23 @@ class BookUzParserService
         }
 
         similar_text($left, $right, $percent);
+
         return (int) round($percent);
     }
 
     private function xpathLiteral(string $value): string
     {
         if (! str_contains($value, "'")) {
-            return "'" . $value . "'";
+            return "'".$value."'";
         }
 
         if (! str_contains($value, '"')) {
-            return '"' . $value . '"';
+            return '"'.$value.'"';
         }
 
         $parts = explode("'", $value);
-        return "concat('" . implode("', \"'\", '", $parts) . "')";
+
+        return "concat('".implode("', \"'\", '", $parts)."')";
     }
 
     private function fetchJson(string $url, array $query = []): ?array
@@ -1867,6 +1890,7 @@ class BookUzParserService
         }
 
         $decoded = json_decode((string) ($response['body'] ?? ''), true);
+
         return is_array($decoded) ? $decoded : null;
     }
 
@@ -1878,6 +1902,7 @@ class BookUzParserService
         }
 
         $body = (string) ($response['body'] ?? '');
+
         return $body !== '' ? $body : null;
     }
 
@@ -1902,7 +1927,7 @@ class BookUzParserService
 
     private function fetchResponseViaCurl(string $url, array $query = [], bool $binary = false): ?array
     {
-        $fullUrl = $query === [] ? $url : $url . (str_contains($url, '?') ? '&' : '?') . http_build_query($query);
+        $fullUrl = $query === [] ? $url : $url.(str_contains($url, '?') ? '&' : '?').http_build_query($query);
         $headers = [
             'User-Agent: Mozilla/5.0 (compatible; KitobchiParser/1.0; +https://kitobchi.com)',
             'Accept-Language: uz,en;q=0.9,ru;q=0.8',
@@ -1935,6 +1960,7 @@ class BookUzParserService
                         $responseHeaders[$name] ??= [];
                         $responseHeaders[$name][] = $value;
                     }
+
                     return $length;
                 },
             ]);

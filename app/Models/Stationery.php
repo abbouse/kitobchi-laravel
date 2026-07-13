@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Stationery extends Model
@@ -24,6 +24,14 @@ class Stationery extends Model
         'description',
         'is_hidden',
         'is_approved',
+        'ai_moderation_status',
+        'ai_moderation_checked_at',
+        'ai_moderation_note',
+        'ai_moderation_model',
+        'ai_moderation_content_hash',
+        'ai_moderation_attempts',
+        'ai_moderation_next_retry_at',
+        'ai_moderation_meta',
         'status',
         'images',
         'totalSales',
@@ -39,9 +47,6 @@ class Stationery extends Model
         'recommended',
         'views',
         'recommendedExpiresAt',
-        'kangaroo_listing_decision',
-        'kangaroo_listing_checked_at',
-        'kangaroo_listing_issues',
         'ugc_aggregate_score',
         'ugc_reviews_count',
         'ugc_last_scored_at',
@@ -55,8 +60,10 @@ class Stationery extends Model
         'vectorData' => 'json',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
-        'kangaroo_listing_issues' => 'array',
-        'kangaroo_listing_checked_at' => 'datetime',
+        'ai_moderation_checked_at' => 'datetime',
+        'ai_moderation_next_retry_at' => 'datetime',
+        'ai_moderation_meta' => 'array',
+        'ai_moderation_attempts' => 'integer',
         'ugc_last_scored_at' => 'datetime',
     ];
 

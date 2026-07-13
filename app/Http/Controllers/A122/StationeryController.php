@@ -9,6 +9,7 @@ use App\Models\Sold;
 use App\Models\Stationery;
 use App\Models\StationeryCategory;
 use App\Models\StationeryVariant;
+use App\Services\ProductModerationStateService;
 use App\Support\ProductImageUrls;
 use App\Support\ProductImageVariantGenerator;
 use Illuminate\Http\Request;
@@ -16,6 +17,10 @@ use Illuminate\Support\Facades\Storage;
 
 class StationeryController extends Controller
 {
+    public function __construct(
+        private readonly ProductModerationStateService $productModerationState,
+    ) {}
+
     private function parseImagesText(?string $raw): array
     {
         if (! is_string($raw) || trim($raw) === '') {
@@ -120,7 +125,7 @@ class StationeryController extends Controller
                 if (! $image->isValid()) {
                     continue;
                 }
-                $filename = time() . "_admin_stationery_{$index}." . $image->getClientOriginalExtension();
+                $filename = time()."_admin_stationery_{$index}.".$image->getClientOriginalExtension();
                 $path = $image->storeAs('stationery', $filename, 'public');
                 $images[] = $path;
                 ProductImageVariantGenerator::generateForPath($path);
@@ -131,10 +136,11 @@ class StationeryController extends Controller
         $data['status'] = $request->boolean('status', true);
         $data['recommended'] = $request->boolean('recommended', false);
         $data['is_hidden'] = $request->boolean('is_hidden', false);
-        $data['is_approved'] = $data['is_approved'] ?? 1;
+        $data['is_approved'] = 0;
 
         $item = Stationery::create($data);
         $this->syncVariants($request, $item);
+        $this->productModerationState->markPending($item, 'admin_created');
 
         return redirect()->route('admin.stationery.show', $item->id)->with('success', 'Kanstovar yaratildi.');
     }
@@ -149,6 +155,7 @@ class StationeryController extends Controller
             ->values();
         $item->variants->transform(function (StationeryVariant $variant) {
             $variant->image_url = ProductImageUrls::originalUrl($variant->image_path);
+
             return $variant;
         });
         $sellerOrders = $item->seller_id
@@ -230,7 +237,7 @@ class StationeryController extends Controller
                 if (! $image->isValid()) {
                     continue;
                 }
-                $filename = time() . "_admin_stationery_{$index}." . $image->getClientOriginalExtension();
+                $filename = time()."_admin_stationery_{$index}.".$image->getClientOriginalExtension();
                 $path = $image->storeAs('stationery', $filename, 'public');
                 $images[] = $path;
                 ProductImageVariantGenerator::generateForPath($path);
@@ -244,6 +251,7 @@ class StationeryController extends Controller
 
         $item->update($data);
         $this->syncVariants($request, $item);
+        $this->productModerationState->markPending($item, 'admin_edited');
 
         return redirect()->route('admin.stationery.show', $item->id)->with('success', 'Kanstovar yangilandi.');
     }
@@ -272,7 +280,7 @@ class StationeryController extends Controller
                     Storage::disk('public')->delete($imagePath);
                     ProductImageVariantGenerator::deleteForPath($imagePath);
                 }
-                $filename = time() . "_admin_variant_{$index}." . $uploaded->getClientOriginalExtension();
+                $filename = time()."_admin_variant_{$index}.".$uploaded->getClientOriginalExtension();
                 $imagePath = $uploaded->storeAs('stationery/variants', $filename, 'public');
                 ProductImageVariantGenerator::generateForPath($imagePath);
             }
@@ -310,7 +318,19 @@ class StationeryController extends Controller
         $request->validate(['is_approved' => 'required|in:0,1,2']);
 
         $item = Stationery::findOrFail($id);
-        $item->update(['is_approved' => (int) $request->input('is_approved')]);
+        $approval = (int) $request->input('is_approved');
+        $item->updateQuietly([
+            'is_approved' => $approval,
+            'ai_moderation_status' => match ($approval) {
+                1 => 'manual_approved',
+                2 => 'manual_rejected',
+                default => 'pending',
+            },
+            'ai_moderation_checked_at' => now(),
+            'ai_moderation_note' => 'Admin tomonidan qo‘lda moderatsiya qilindi.',
+            'ai_moderation_next_retry_at' => null,
+            'ai_moderation_meta' => ['source' => 'admin_manual_override'],
+        ]);
 
         return back()->with('success', 'Kanstovar moderatsiyasi yangilandi.');
     }

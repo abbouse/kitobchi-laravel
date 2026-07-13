@@ -25,17 +25,14 @@ class BookClubComment extends Model
         'ai_moderated_at',
         'ai_moderation_note',
         'ai_moderation_model',
-        'kangaroo_star_equivalent',
-        'kangaroo_toxicity',
-        'kangaroo_checked_at',
-        'kangaroo_ugc_status',
+        'ai_moderation_meta',
     ];
 
     protected $casts = [
         'ai_checked_at' => 'datetime',
         'ai_moderated_at' => 'datetime',
-        'kangaroo_checked_at' => 'datetime',
         'is_hidden_by_ai' => 'boolean',
+        'ai_moderation_meta' => 'array',
     ];
 
     public function post()

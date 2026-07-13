@@ -74,6 +74,9 @@ class ProductUgcRatingService
             $posts = DB::table('book_club as p')
                 ->where('p.is_deleted', 0)
                 ->where(function ($query) {
+                    $query->whereNull('p.is_hidden_by_ai')->orWhere('p.is_hidden_by_ai', false);
+                })
+                ->where(function ($query) {
                     $query->where('p.repost', false)->orWhereNull('p.repost');
                 })
                 ->where('p.product_type', $productType)
@@ -91,6 +94,9 @@ class ProductUgcRatingService
             $comments = DB::table('book_club_comments as c')
                 ->join('book_club as p', 'p.id', '=', 'c.post_id')
                 ->where('p.is_deleted', 0)
+                ->where(function ($query) {
+                    $query->whereNull('p.is_hidden_by_ai')->orWhere('p.is_hidden_by_ai', false);
+                })
                 ->where(function ($query) {
                     $query->where('p.repost', false)->orWhereNull('p.repost');
                 })

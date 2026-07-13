@@ -105,11 +105,14 @@ return Application::configure(basePath: dirname(__DIR__))
             ->timezone($tz)
             ->withoutOverlapping();
 
-        // ── Book Club AI baholash — haftasiga 1 marta ─────────────────
+        // ── Book Club AI baholash — HAR KUNI (izohlar keshbek bilan
+        // rag'batlantirilgani uchun haftalik kechikish nomaqbul; faqat
+        // yangi/o'zgargan kontent baholanadi, xarajat minimal) ─────────
         $schedule->command('openai:score-book-club-content')
-            ->weeklyOn(0, '09:00')
+            ->dailyAt('03:15')
             ->timezone($tz)
-            ->withoutOverlapping();
+            ->withoutOverlapping()
+            ->runInBackground();
 
         // ── Mahsulot UGC ratinglari — haftasiga 1 marta qayta yig'iladi ──
         $schedule->command('products:refresh-ugc-ratings')
@@ -117,11 +120,21 @@ return Application::configure(basePath: dirname(__DIR__))
             ->timezone($tz)
             ->withoutOverlapping();
 
-        // ── Book Club komment moderatsiyasi — haftalik ───────────────
-        $schedule->command('openai:moderate-book-club-comments --all=1')
-            ->weeklyOn(0, '03:30')
+        // Kitob va kanselyariya listinglari: faqat yangi/o'zgargan mahsulotlar
+        // barcha metadata va rasmlari bilan AI tekshiruvdan o'tadi.
+        $schedule->command('products:moderate-ai --type=all')
+            ->everyThirtyMinutes()
             ->timezone($tz)
-            ->withoutOverlapping();
+            ->withoutOverlapping(29)
+            ->runInBackground();
+
+        // Faqat yangi/o'zgargan kontent batch tekshiriladi; limitlar server va
+        // OpenAI yukini nazoratda ushlab turadi.
+        $schedule->command('openai:moderate-book-club-comments --post-limit=150 --comment-limit=300')
+            ->everyFiveMinutes()
+            ->timezone($tz)
+            ->withoutOverlapping()
+            ->runInBackground();
 
         // ── Seller reputatsiyasi — har tong qayta hisoblanadi ─────────
         $schedule->command('sellers:recalculate-reputation')
@@ -154,6 +167,13 @@ return Application::configure(basePath: dirname(__DIR__))
             ->runInBackground();
 
         // ── Split to'lov eslatmasi: 2 kun oldin, ertalab ──
+        // ── Bo'sh nasiya limitini eslatuvchi haftalik promo push ──────
+        $schedule->command('split:send-limit-promos')
+            ->weeklyOn(4, '11:00')
+            ->timezone($tz)
+            ->withoutOverlapping()
+            ->runInBackground();
+
         $schedule->command('split:send-payment-reminders --days=2')
             ->dailyAt('10:30')
             ->timezone($tz)

@@ -108,7 +108,7 @@ PROMPT,
                     'comments' => $payload,
                 ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
             ],
-        ], 2500, 0.1);
+        ], 2500, 0.1, long: true);
 
         $mapped = collect($result['comments'] ?? [])
             ->filter(fn ($item) => is_array($item) && !empty($item['id']))

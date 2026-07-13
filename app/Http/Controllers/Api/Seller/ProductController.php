@@ -23,6 +23,7 @@ use App\Services\AuthorDirectoryService;
 use App\Support\ProductImageVariantGenerator;
 use App\Support\ProductArtikul;
 use App\Services\SellerPremiumService;
+use App\Services\ProductModerationStateService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
@@ -35,7 +36,8 @@ class ProductController extends Controller
     public function __construct(
         protected \App\Services\OpenAIService $ai,
         protected SellerPremiumService $premiumService,
-        protected AuthorDirectoryService $authorDirectory
+        protected AuthorDirectoryService $authorDirectory,
+        protected ProductModerationStateService $productModerationState,
     )
     {
         $this->middleware('auth:seller');
@@ -398,7 +400,6 @@ public function createStationery(Request $request)
     }
 
     $normalizedBarcode = $this->normalizeBarcode($request->input('barcode'));
-    $autoApproved = $this->shouldAutoApproveStationery($normalizedBarcode);
 
     // 4. Mahsulotni yaratish
     $stationery = Stationery::create([
@@ -412,7 +413,7 @@ public function createStationery(Request $request)
         'stock'          => $request->stock,
         'description'    => $request->description,
         'images'         => $imagePaths,
-        'is_approved'    => $autoApproved ? 1 : 0,
+        'is_approved'    => 0,
     ]);
     $this->assignGeneratedArtikul($stationery, 'stationery');
 
@@ -450,8 +451,8 @@ public function createStationery(Request $request)
         }
     }
 
-    $logSuffix = $autoApproved ? ' (avto-tasdiqlandi)' : '';
-    $this->writeLog($seller, 'Yangi kanselyariya mahsuloti qo‘shdi' . $logSuffix, $stationery->name);
+    $this->productModerationState->markPending($stationery, 'seller_created');
+    $this->writeLog($seller, 'Yangi kanselyariya mahsuloti qo‘shdi (AI moderatsiyaga yuborildi)', $stationery->name);
 
     return response()->json([
         'success' => true,
@@ -630,16 +631,6 @@ $variantsToDelete = array_diff($existingVariants, $incomingVariantIds);
     $stationery->tags()->sync($tagIds);
 
     $normalizedBarcode = $this->normalizeBarcode($request->input('barcode'));
-    $sensitiveChanged = $this->stationerySensitiveFieldsChanged(
-        $stationery,
-        [
-            'name' => $request->name,
-            'description' => $request->description,
-            'images' => $finalImages,
-        ]
-    );
-    $autoApproved = !$sensitiveChanged;
-
     // === ASOSIY MA'LUMOTLARNI YANGILASH ===
     $stationery->update([
         'name' => $request->name,
@@ -652,12 +643,11 @@ $variantsToDelete = array_diff($existingVariants, $incomingVariantIds);
         'description' => $request->description,
         'images' => $finalImages,
         'category_id' => $request->category_id,
-        'is_approved' => $autoApproved ? 1 : 0,
+        'is_approved' => 0,
     ]);
 
-    // Log yozish
-    $logSuffix = $autoApproved ? ' (avto-tasdiqlandi)' : ' (moderatsiyaga yuborildi)';
-    $this->writeLog($seller, 'Kanselyariya mahsulotini tahrirladi' . $logSuffix, $stationery->name);
+    $this->productModerationState->markPending($stationery, 'seller_edited');
+    $this->writeLog($seller, 'Kanselyariya mahsulotini tahrirladi (AI moderatsiyaga yuborildi)', $stationery->name);
 
     return response()->json([
         'success' => true,
@@ -839,13 +829,6 @@ public function updateProductStatus(Request $request)
             }
         }
 
-        // Avto-approve: ISBN bor va bazada (boshqa sellerda ham) shu ISBN
-        // YOKI nom+muallif mos kelsa — yangi qator ham tasdiqlangan deb yoziladi.
-        $autoApproved = $this->shouldAutoApprove(
-            $canonicalIsbn,
-            $request->input('name'),
-            $request->input('author')
-        );
         $author = $this->authorDirectory->resolveOrCreateByName($request->input('author'));
 
         $book = Books::create([
@@ -869,7 +852,7 @@ public function updateProductStatus(Request $request)
             'category_id' => $request->input('category_id'),
             'status' => true,
             'is_hidden' => false,
-            'is_approved' => $autoApproved ? 1 : 0,
+            'is_approved' => 0,
         ]);
         $this->assignGeneratedArtikul($book, 'book');
 
@@ -877,9 +860,8 @@ public function updateProductStatus(Request $request)
             $book->tags()->attach($request->input('tag_ids'));
         }
 
-        // ✅ LOG YOZISH (FAQAT CREATE UCHUN)
-        $logSuffix = $autoApproved ? ' (avto-tasdiqlandi)' : '';
-        $this->writeLog($seller, 'Yangi maxsulot qo\'shdi' . $logSuffix, $book->name);
+        $this->productModerationState->markPending($book, 'seller_created');
+        $this->writeLog($seller, 'Yangi maxsulot qo\'shdi (AI moderatsiyaga yuborildi)', $book->name);
 
         return response()->json([
             'success' => true,
@@ -1012,20 +994,7 @@ public function updateProductStatus(Request $request)
         ], 422);
     }
 
-    // Book update qoidasi:
-    // - name / author / description / images o'zgarsa → moderatsiya
-    // - qolgan fieldlar o'zgarsa → auto-approve
     $canonicalIsbn = Books::normalizeIsbn($request->input('isbn'));
-    $sensitiveChanged = $this->bookSensitiveFieldsChanged(
-        $product,
-        [
-            'name' => $request->name,
-            'author' => $request->author,
-            'description' => $request->description,
-            'images' => $finalImages,
-        ]
-    );
-    $autoApproved = !$sensitiveChanged;
     $author = $this->authorDirectory->resolveOrCreateByName($request->author);
 
     // Mahsulotni yangilash
@@ -1048,11 +1017,11 @@ public function updateProductStatus(Request $request)
         'description' => $request->description,
         'images' => $finalImages,
         'category_id' => $request->category_id,
-        'is_approved' => $autoApproved ? 1 : 0,
+        'is_approved' => 0,
     ]);
     $product->tags()->sync($request->input('tag_ids', []));
-    $logSuffix = $autoApproved ? ' (avto-tasdiqlandi)' : ' (moderatsiyaga yuborildi)';
-    $this->writeLog($seller, 'Mahsulot ma\'lumotlarini yangiladi' . $logSuffix, $product->name);
+    $this->productModerationState->markPending($product, 'seller_edited');
+    $this->writeLog($seller, 'Mahsulot ma\'lumotlarini yangiladi (AI moderatsiyaga yuborildi)', $product->name);
     return response()->json([
         'success' => true,
         'message' => 'Mahsulot muvaffaqiyatli yangilandi',
@@ -1199,95 +1168,6 @@ public function productStatistics(Request $request, $id)
 
     return response()->json(['success' => true, 'data' => [$result]], 200);
 }
-
-    /**
-     * Avto-approve qarori — yangi yoki yangilangan kitobni admin
-     * tasdiqlashisiz darrov nashrga chiqarish mumkinmi?
-     *
-     * Sharti:
-     *  1) ISBN bor va bazada (boshqa sellerda ham) is_approved=1, is_hidden=0
-     *     qator ichida shu ISBN MOS — true.
-     *  2) Aks holda nomi va muallifi case-insensitive trim bilan aynan mos
-     *     keladigan tasdiqlangan kitob bor — true.
-     *  3) Hech biri bajarilmasa — false (admin tasdiqlashi kutiladi).
-     */
-    private function shouldAutoApprove(
-        ?string $canonicalIsbn,
-        string $name,
-        string $author,
-        ?int $excludeBookId = null
-    ): bool {
-        $query = Books::query()
-            ->where('is_approved', 1)
-            ->where('is_hidden', 0);
-
-        if ($excludeBookId) {
-            $query->where('id', '!=', $excludeBookId);
-        }
-
-        // 1-shart: ISBN MOS
-        if ($canonicalIsbn !== null) {
-            $isbnMatch = (clone $query)->whereIsbn($canonicalIsbn)->exists();
-            if ($isbnMatch) return true;
-        }
-
-        // 2-shart: nom + muallif case-insensitive trim mos
-        $normalizedName   = mb_strtolower(trim($name));
-        $normalizedAuthor = mb_strtolower(trim($author));
-        if ($normalizedName === '' || $normalizedAuthor === '') return false;
-
-        return (clone $query)
-            ->whereRaw('LOWER(TRIM(name)) = ?', [$normalizedName])
-            ->whereRaw('LOWER(TRIM(author)) = ?', [$normalizedAuthor])
-            ->exists();
-    }
-
-    private function shouldAutoApproveStationery(?string $normalizedBarcode, ?int $excludeId = null): bool
-    {
-        if ($normalizedBarcode === null || trim($normalizedBarcode) === '') {
-            return false;
-        }
-
-        $query = Stationery::query()
-            ->where('is_approved', 1)
-            ->where('is_hidden', 0)
-            ->where('barcode', $normalizedBarcode);
-
-        if ($excludeId) {
-            $query->where('id', '!=', $excludeId);
-        }
-
-        return $query->exists();
-    }
-
-    private function bookSensitiveFieldsChanged(Books $product, array $incoming): bool
-    {
-        return $this->normalizedText($product->name) !== $this->normalizedText((string) ($incoming['name'] ?? ''))
-            || $this->normalizedText($product->author) !== $this->normalizedText((string) ($incoming['author'] ?? ''))
-            || $this->normalizedText($product->description) !== $this->normalizedText((string) ($incoming['description'] ?? ''))
-            || $this->normalizedImages($product->images ?? []) !== $this->normalizedImages($incoming['images'] ?? []);
-    }
-
-    private function stationerySensitiveFieldsChanged(Stationery $product, array $incoming): bool
-    {
-        return $this->normalizedText($product->name) !== $this->normalizedText((string) ($incoming['name'] ?? ''))
-            || $this->normalizedText($product->description) !== $this->normalizedText((string) ($incoming['description'] ?? ''))
-            || $this->normalizedImages($product->images ?? []) !== $this->normalizedImages($incoming['images'] ?? []);
-    }
-
-    private function normalizedText(?string $value): string
-    {
-        return preg_replace('/\s+/u', ' ', mb_strtolower(trim((string) $value))) ?? '';
-    }
-
-    private function normalizedImages($images): array
-    {
-        $list = is_array($images) ? $images : (json_decode((string) $images, true) ?: []);
-        $list = array_values(array_filter(array_map(fn ($item) => trim((string) $item), $list)));
-        sort($list);
-
-        return $list;
-    }
 
     /**
      * ✅ ISBN AUTOFILL — barcode scannerdan keladigan ISBN bo'yicha

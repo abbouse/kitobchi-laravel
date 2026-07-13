@@ -10,6 +10,7 @@ use App\Models\Seller;
 use App\Models\SellerOrder;
 use App\Models\Sold;
 use App\Services\AuthorDirectoryService;
+use App\Services\ProductModerationStateService;
 use App\Support\ProductImageUrls;
 use App\Support\ProductImageVariantGenerator;
 use Illuminate\Http\Request;
@@ -18,9 +19,9 @@ use Illuminate\Support\Facades\Storage;
 class BookController extends Controller
 {
     public function __construct(
-        protected AuthorDirectoryService $authorDirectory
-    ) {
-    }
+        protected AuthorDirectoryService $authorDirectory,
+        protected ProductModerationStateService $productModerationState,
+    ) {}
 
     private function parseImagesText(?string $raw): array
     {
@@ -144,7 +145,7 @@ class BookController extends Controller
                 if (! $image->isValid()) {
                     continue;
                 }
-                $filename = time() . "_admin_book_{$index}." . $image->getClientOriginalExtension();
+                $filename = time()."_admin_book_{$index}.".$image->getClientOriginalExtension();
                 $path = $image->storeAs('books', $filename, 'public');
                 $images[] = $path;
                 ProductImageVariantGenerator::generateForPath($path);
@@ -153,7 +154,7 @@ class BookController extends Controller
 
         $data['isbn'] = Books::normalizeIsbn($request->input('isbn'));
         $data['images'] = array_values(array_unique($images));
-        $data['is_approved'] = (int) ($request->input('is_approved', 1));
+        $data['is_approved'] = 0;
         $data['status'] = $request->boolean('status', true);
         $data['is_hidden'] = $request->boolean('is_hidden', false);
         $data['recommended'] = $request->boolean('recommended', false);
@@ -162,6 +163,8 @@ class BookController extends Controller
         $data['author'] = $author?->name ?: trim((string) $request->input('author'));
 
         $book = Books::create($data);
+        $this->productModerationState->markPending($book, 'admin_created');
+
         return redirect()->route('admin.books.show', $book)->with('success', 'Yangi kitob yaratildi.');
     }
 
@@ -253,7 +256,7 @@ class BookController extends Controller
                 if (! $image->isValid()) {
                     continue;
                 }
-                $filename = time() . "_admin_book_{$index}." . $image->getClientOriginalExtension();
+                $filename = time()."_admin_book_{$index}.".$image->getClientOriginalExtension();
                 $path = $image->storeAs('books', $filename, 'public');
                 $images[] = $path;
                 ProductImageVariantGenerator::generateForPath($path);
@@ -270,13 +273,28 @@ class BookController extends Controller
         $data['author'] = $author?->name ?: trim((string) $request->input('author'));
 
         $book->update($data);
-        return redirect()->route('admin.books.show', $book)->with('success', "Kitob yangilandi.");
+        $this->productModerationState->markPending($book, 'admin_edited');
+
+        return redirect()->route('admin.books.show', $book)->with('success', 'Kitob yangilandi.');
     }
 
     public function moderate(Request $request, Books $book)
     {
         $request->validate(['is_approved' => 'required|in:0,1,2']);
-        $book->update(['is_approved' => $request->input('is_approved')]);
+        $approval = (int) $request->input('is_approved');
+        $book->updateQuietly([
+            'is_approved' => $approval,
+            'ai_moderation_status' => match ($approval) {
+                1 => 'manual_approved',
+                2 => 'manual_rejected',
+                default => 'pending',
+            },
+            'ai_moderation_checked_at' => now(),
+            'ai_moderation_note' => 'Admin tomonidan qo‘lda moderatsiya qilindi.',
+            'ai_moderation_next_retry_at' => null,
+            'ai_moderation_meta' => ['source' => 'admin_manual_override'],
+        ]);
+
         return back()->with('success', 'Moderatsiya yangilandi.');
     }
 }

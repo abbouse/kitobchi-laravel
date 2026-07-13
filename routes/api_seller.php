@@ -7,11 +7,10 @@ use App\Http\Controllers\Api\Seller\HisobotController;
 use App\Http\Controllers\Api\Seller\OrderController;
 use App\Http\Controllers\Api\Seller\PremiumController;
 use App\Http\Controllers\Api\Seller\ProductController;
+use App\Http\Controllers\Api\Seller\SellerAiController;
 use App\Http\Controllers\Api\Seller\SellerAuthController;
 use App\Http\Controllers\Api\Seller\SellerController;
-use App\Http\Controllers\Api\Seller\SellerAiController;
 use App\Http\Controllers\Api\Seller\SellerLocationController;
-use App\Http\Controllers\Api\Seller\SellerMarketInsightController;
 use App\Http\Controllers\Api\Seller\SellerStaffController;
 use App\Http\Controllers\Api\Seller\SupportTicketController;
 use App\Http\Controllers\Api\Seller\TargetController;
@@ -64,9 +63,6 @@ Route::middleware('auth:seller')->group(function () {
     Route::get('products/stationery/categories/{category_id}/tags', [ProductController::class, 'getStationeryTagsForCategory']);
     Route::get('products/categories/{category_id}/tags', [ProductController::class, 'getTagsForCategory']);
     Route::get('products/stat/{product}', [ProductController::class, 'productStatistics']);
-    Route::get('products/{type}/{id}/market-insight', [SellerMarketInsightController::class, 'show'])
-        ->whereIn('type', ['book', 'stationery']);
-    Route::get('analytics/bundle-signals', [SellerMarketInsightController::class, 'bundleSignals']);
     Route::post('products/generate-description', [ProductController::class, 'generateDescription']);
     Route::post('products/set-recommended', [ProductController::class, 'setRecommended']);
     Route::get('gifts/list', [GiftController::class, 'list']);

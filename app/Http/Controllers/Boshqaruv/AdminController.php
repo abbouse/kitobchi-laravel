@@ -87,6 +87,7 @@ use App\Services\HubRoleAccessService;
 use App\Services\OpenAIService;
 use App\Services\PaylovFiscalizationService;
 use App\Services\PayoutReportService;
+use App\Services\ProductModerationStateService;
 use App\Services\SellerCancellationReasonCatalog;
 use App\Services\SellerOrderSettlementService;
 use App\Services\SellerPremiumService;
@@ -285,6 +286,46 @@ class AdminController extends Controller
         $service->clearManualBlock($user);
 
         return back()->with('success', 'Foydalanuvchi uchun split blok bekor qilindi.');
+    }
+
+    /**
+     * Admin istagan foydalanuvchiga qo'lda split limit beradi.
+     * amount = 0 — qo'lda limitni olib tashlash (skoring rejimiga qaytadi).
+     * Manual limit skoring talablarini chetlab o'tadi; faqat qattiq bloklar
+     * (admin blok, muddati o'tgan to'lov, default) amal qiladi.
+     */
+    public function setUserSplitManualLimit(Request $request, User $user, SplitProfileService $service): \Illuminate\Http\RedirectResponse
+    {
+        $data = $request->validate([
+            'amount' => 'required|integer|min:0|max:100000000',
+        ]);
+
+        $amount = intdiv((int) $data['amount'], 1000) * 1000; // yaxlit
+
+        \App\Models\SplitUserProfile::query()->updateOrCreate(
+            ['user_id' => $user->id],
+            [
+                'manual_limit' => $amount > 0 ? $amount : null,
+                'manual_limit_set_by' => Auth::guard('panel')->id(),
+                'manual_limit_set_at' => $amount > 0 ? now() : null,
+            ],
+        );
+
+        // Profilni darhol qayta hisoblash — limit shu zahoti kuchga kiradi.
+        // Limit birinchi marta ochilayotgan bo'lsa, tabrik push ham shu
+        // yerda avtomatik ketadi (maybeSendLimitGrantedPush).
+        try {
+            $service->refreshUser($user, true);
+        } catch (\Throwable $e) {
+            Log::warning('[Split] Manual limit refresh failed', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return back()->with('success', $amount > 0
+            ? 'Foydalanuvchiga '.number_format($amount)." so'm split limit berildi."
+            : "Qo'lda berilgan split limit olib tashlandi.");
     }
 
     public function updateSplitSettings(Request $request): \Illuminate\Http\RedirectResponse
@@ -616,6 +657,42 @@ class AdminController extends Controller
         return back()->with('success', "Post o'chirildi.");
     }
 
+    public function updateBookClubModeration(Request $request, BookClub $bookClub): \Illuminate\Http\RedirectResponse
+    {
+        $this->applyManualBookClubModeration($request, $bookClub);
+
+        return back()->with('success', "Post ko'rinish holati yangilandi.");
+    }
+
+    public function updateBookClubCommentModeration(Request $request, BookClubComment $comment): \Illuminate\Http\RedirectResponse
+    {
+        $this->applyManualBookClubModeration($request, $comment);
+
+        return back()->with('success', "Izoh ko'rinish holati yangilandi.");
+    }
+
+    private function applyManualBookClubModeration(Request $request, BookClub|BookClubComment $content): void
+    {
+        $data = $request->validate([
+            'action' => ['required', 'in:show,hide'],
+            'note' => ['nullable', 'string', 'max:240'],
+        ]);
+        $hidden = $data['action'] === 'hide';
+
+        $content->forceFill([
+            'is_hidden_by_ai' => $hidden,
+            'ai_moderation_status' => $hidden ? 'manual_hidden' : 'manual_clean',
+            'ai_moderated_at' => now(),
+            'ai_moderation_note' => trim((string) ($data['note'] ?? '')) ?: 'Admin qarori',
+            'ai_moderation_model' => 'manual:'.(Auth::guard('panel')->id() ?? 'admin'),
+            'ai_moderation_meta' => array_merge($content->ai_moderation_meta ?? [], [
+                'manual' => true,
+                'manual_action' => $data['action'],
+                'manual_admin_id' => Auth::guard('panel')->id(),
+            ]),
+        ])->save();
+    }
+
     public function authorData(Author $author): JsonResponse
     {
         return response()->json($this->authorDetailPayload($author));
@@ -657,6 +734,10 @@ class AdminController extends Controller
                 'author' => $author->name,
                 'vector_text_hash' => null,
             ]);
+            app(ProductModerationStateService::class)->markBooksPendingByIds(
+                Books::query()->where('author_id', $author->id)->pluck('id'),
+                'author_changed',
+            );
         }
 
         return back()->with('success', 'Muallif yangilandi.');
@@ -677,9 +758,11 @@ class AdminController extends Controller
 
     public function destroyAuthor(Author $author): \Illuminate\Http\RedirectResponse
     {
+        $affectedBookIds = Books::query()->where('author_id', $author->id)->pluck('id');
         Books::query()
             ->where('author_id', $author->id)
             ->update(['author_id' => null, 'author' => null, 'vector_text_hash' => null]);
+        app(ProductModerationStateService::class)->markBooksPendingByIds($affectedBookIds, 'author_removed');
 
         $this->deleteStoredFile($author->image);
         $author->delete();
@@ -719,13 +802,19 @@ class AdminController extends Controller
         }
 
         $publisher->update($data);
+        app(ProductModerationStateService::class)->markBooksPendingByIds(
+            Books::query()->where('publisher_id', $publisher->id)->pluck('id'),
+            'publisher_changed',
+        );
 
         return back()->with('success', 'Nashriyot yangilandi.');
     }
 
     public function destroyPublisher(Publisher $publisher): \Illuminate\Http\RedirectResponse
     {
+        $affectedBookIds = Books::query()->where('publisher_id', $publisher->id)->pluck('id');
         Books::query()->where('publisher_id', $publisher->id)->update(['publisher_id' => null]);
+        app(ProductModerationStateService::class)->markBooksPendingByIds($affectedBookIds, 'publisher_removed');
 
         $this->deleteStoredFile($publisher->image);
         $publisher->delete();
@@ -743,6 +832,10 @@ class AdminController extends Controller
     public function updateBookCategory(Request $request, BookCategories $bookCategory): \Illuminate\Http\RedirectResponse
     {
         $bookCategory->forceFill($this->categoryData($request, 'book_categories'))->save();
+        app(ProductModerationStateService::class)->markBooksPendingByIds(
+            $bookCategory->books()->pluck('books.id'),
+            'category_changed',
+        );
 
         return back()->with('success', 'Kitob kategoriyasi yangilandi.');
     }
@@ -768,6 +861,10 @@ class AdminController extends Controller
     public function updateStationeryCategory(Request $request, StationeryCategory $stationeryCategory): \Illuminate\Http\RedirectResponse
     {
         $stationeryCategory->forceFill($this->categoryData($request, 'stationery_categories'))->save();
+        app(ProductModerationStateService::class)->markStationeriesPendingByIds(
+            $stationeryCategory->stationeries()->pluck('stationeries.id'),
+            'category_changed',
+        );
 
         return back()->with('success', 'Kanstovar kategoriyasi yangilandi.');
     }
@@ -823,6 +920,7 @@ class AdminController extends Controller
         $data['author'] = $author?->name ?: trim((string) $request->input('author'));
 
         $book->update($data);
+        app(ProductModerationStateService::class)->markPending($book, 'admin_edited');
 
         return back()->with('success', 'Kitob yangilandi.');
     }
@@ -862,6 +960,7 @@ class AdminController extends Controller
 
         $stationery->update($data);
         $this->syncStationeryVariants($request, $stationery);
+        app(ProductModerationStateService::class)->markPending($stationery, 'admin_edited');
 
         return back()->with('success', 'Kanselyariya mahsuloti yangilandi.');
     }
@@ -3006,6 +3105,11 @@ PROMPT;
                     'pages' => $book->pages,
                     'year' => $book->year,
                     'description' => $book->description,
+                    'aiModerationStatus' => $book->ai_moderation_status,
+                    'aiModerationNote' => $book->ai_moderation_note,
+                    'aiModerationModel' => $book->ai_moderation_model,
+                    'aiModerationCheckedAt' => $this->dateTime($book->ai_moderation_checked_at),
+                    'aiModerationMeta' => $book->ai_moderation_meta,
                     'mediaCount' => $images->count(),
                     'recentOrders' => $recentOrders,
                     'sellerOrders' => $sellerOrders,
@@ -3469,6 +3573,8 @@ PROMPT;
                 'completedOrdersAll' => (int) $splitProfile['completed_orders_all'],
                 'codReturnStrikes' => (int) $splitProfile['cod_return_strikes'],
                 'reasons' => array_values($splitProfile['eligibility_reasons'] ?? []),
+                'manualLimit' => (int) ($splitProfile['manual_limit'] ?? 0),
+                'manualLimitSetAt' => $this->dateTime($splitProfile['manual_limit_set_at'] ?? null),
                 'lastRefreshedAt' => $splitProfile['last_refreshed_at'] ?? null,
             ] : null,
             'actions' => [
@@ -3476,6 +3582,7 @@ PROMPT;
                 'unblockUrl' => route('boshqaruv.users.unblock', $user),
                 'splitBlockUrl' => route('boshqaruv.users.split.block', $user),
                 'splitUnblockUrl' => route('boshqaruv.users.split.unblock', $user),
+                'splitManualLimitUrl' => route('boshqaruv.users.split.manual-limit', $user),
                 'verifyUrl' => route('boshqaruv.users.verify', $user),
                 'premiumUrl' => route('boshqaruv.users.premium', $user),
             ],
@@ -4150,6 +4257,11 @@ PROMPT;
                     'barcode' => $item->barcode,
                     'material' => $item->material,
                     'description' => $item->description,
+                    'aiModerationStatus' => $item->ai_moderation_status,
+                    'aiModerationNote' => $item->ai_moderation_note,
+                    'aiModerationModel' => $item->ai_moderation_model,
+                    'aiModerationCheckedAt' => $this->dateTime($item->ai_moderation_checked_at),
+                    'aiModerationMeta' => $item->ai_moderation_meta,
                     'recommendedExpiresAt' => $this->dateTime($item->recommendedExpiresAt),
                     'createdAt' => $this->dateTime($item->created_at),
                     'updatedAt' => $this->dateTime($item->updated_at),
@@ -8226,11 +8338,15 @@ PROMPT;
                 'aiStatus' => $post->ai_post_status,
                 'aiScore' => $post->ai_post_score,
                 'aiNote' => $post->ai_post_note,
+                'hiddenByAi' => (bool) $post->is_hidden_by_ai,
+                'moderationStatus' => $post->ai_moderation_status,
+                'moderationNote' => $post->ai_moderation_note,
                 'warning' => (bool) $post->activeWarning,
                 'date' => optional($post->created_at)->format('Y-m-d H:i'),
                 'dataUrl' => route('boshqaruv.book-club.data', $post),
                 'warnUrl' => route('boshqaruv.book-club.warn', $post),
                 'destroyUrl' => route('boshqaruv.book-club.destroy', $post),
+                'moderationUrl' => route('boshqaruv.book-club.moderation', $post),
             ])
             ->values()
             ->all();
@@ -8294,6 +8410,11 @@ PROMPT;
                 'aiNote' => $post->ai_post_note,
                 'aiModel' => $post->ai_post_model,
                 'aiCheckedAt' => $this->dateTime($post->ai_post_checked_at),
+                'hiddenByAi' => (bool) $post->is_hidden_by_ai,
+                'moderationStatus' => $post->ai_moderation_status,
+                'moderationNote' => $post->ai_moderation_note,
+                'moderationModel' => $post->ai_moderation_model,
+                'moderatedAt' => $this->dateTime($post->ai_moderated_at),
                 'warning' => $post->activeWarning ? [
                     'note' => $post->activeWarning->note,
                     'date' => $this->dateTime($post->activeWarning->created_at),
@@ -8335,6 +8456,7 @@ PROMPT;
             'actions' => [
                 'warnUrl' => route('boshqaruv.book-club.warn', $post),
                 'destroyUrl' => route('boshqaruv.book-club.destroy', $post),
+                'moderationUrl' => route('boshqaruv.book-club.moderation', $post),
             ],
         ];
     }
@@ -8359,10 +8481,9 @@ PROMPT;
             'hiddenByAi' => (bool) $comment->is_hidden_by_ai,
             'moderationStatus' => $comment->ai_moderation_status,
             'moderationNote' => $comment->ai_moderation_note,
-            'kangarooStatus' => $comment->kangaroo_ugc_status,
-            'kangarooScore' => $comment->kangaroo_star_equivalent,
             'updateUrl' => route('boshqaruv.book-club.comment.update', $comment),
             'destroyUrl' => route('boshqaruv.book-club.comment.delete', $comment),
+            'moderationUrl' => route('boshqaruv.book-club.comment.moderation', $comment),
             'replies' => $comment->replies->take(5)->map(fn (BookClubComment $reply) => [
                 'id' => $reply->id,
                 'name' => trim(($reply->user?->name ?? '').' '.($reply->user?->lastname ?? '')) ?: 'Foydalanuvchi',

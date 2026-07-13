@@ -32,6 +32,11 @@ class SplitUserProfile extends Model
         'manual_blocked_at',
         'manual_block_reason',
         'manual_blocked_by_admin_id',
+        'manual_limit',
+        'manual_limit_set_by',
+        'manual_limit_set_at',
+        'limit_granted_notified_at',
+        'last_promo_push_at',
         'last_refreshed_at',
         'snapshot',
     ];
@@ -43,6 +48,9 @@ class SplitUserProfile extends Model
         'reputation_score' => 'decimal:2',
         'cancel_rate_90d' => 'decimal:4',
         'manual_blocked_at' => 'datetime',
+        'manual_limit_set_at' => 'datetime',
+        'limit_granted_notified_at' => 'datetime',
+        'last_promo_push_at' => 'datetime',
         'last_refreshed_at' => 'datetime',
         'snapshot' => 'array',
     ];

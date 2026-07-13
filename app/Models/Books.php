@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Schema;
@@ -40,6 +40,14 @@ class Books extends Model
         'publisher_id',
         'is_hidden',
         'is_approved',
+        'ai_moderation_status',
+        'ai_moderation_checked_at',
+        'ai_moderation_note',
+        'ai_moderation_model',
+        'ai_moderation_content_hash',
+        'ai_moderation_attempts',
+        'ai_moderation_next_retry_at',
+        'ai_moderation_meta',
         'totalSales',
         'totalRevenue',
         'totalClients',
@@ -53,9 +61,6 @@ class Books extends Model
         'recommended',
         'views',
         'recommendedExpiresAt',
-        'kangaroo_listing_decision',
-        'kangaroo_listing_checked_at',
-        'kangaroo_listing_issues',
         'ugc_aggregate_score',
         'ugc_reviews_count',
         'ugc_last_scored_at',
@@ -66,8 +71,10 @@ class Books extends Model
         'status' => 'boolean',
         'recommended' => 'boolean',
         'vectorData' => 'json',
-        'kangaroo_listing_issues' => 'array',
-        'kangaroo_listing_checked_at' => 'datetime',
+        'ai_moderation_checked_at' => 'datetime',
+        'ai_moderation_next_retry_at' => 'datetime',
+        'ai_moderation_meta' => 'array',
+        'ai_moderation_attempts' => 'integer',
         'ugc_last_scored_at' => 'datetime',
     ];
 
@@ -168,6 +175,7 @@ class Books extends Model
         }
 
         $raw = is_string($value) ? trim($value) : '';
+
         return $raw !== '' ? $raw : null;
     }
 
@@ -191,11 +199,18 @@ class Books extends Model
      */
     public static function normalizeIsbn(?string $raw): ?string
     {
-        if ($raw === null) return null;
+        if ($raw === null) {
+            return null;
+        }
         $clean = strtoupper(preg_replace('/[^0-9Xx]/', '', $raw) ?? '');
-        if ($clean === '') return null;
+        if ($clean === '') {
+            return null;
+        }
         // Faqat 10 yoki 13 belgili variantni qabul qilamiz, oraliq qiymatlarni kesmaymiz.
-        if (strlen($clean) === 10 || strlen($clean) === 13) return $clean;
+        if (strlen($clean) === 10 || strlen($clean) === 13) {
+            return $clean;
+        }
+
         return null;
     }
 
@@ -206,9 +221,10 @@ class Books extends Model
     public function scopeWhereIsbn($query, string $isbn)
     {
         $canonical = self::normalizeIsbn($isbn) ?? $isbn;
+
         return $query->where(function ($q) use ($isbn, $canonical) {
             $q->where('isbn', $canonical)
-              ->orWhere('isbn', $isbn);
+                ->orWhere('isbn', $isbn);
         });
     }
 }

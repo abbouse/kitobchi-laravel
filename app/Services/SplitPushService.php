@@ -59,6 +59,86 @@ class SplitPushService
         ],
     ];
 
+    private const LIMIT_GRANTED_MESSAGES = [
+        'uz' => [
+            'title' => "Sizga nasiya limiti ochildi! 🎉",
+            'body' => "Tabriklaymiz! Sizga :amount so'mlik nasiya limiti berildi. Endi kitoblarni bo'lib to'lash bilan xarid qilishingiz mumkin.",
+        ],
+        'ru' => [
+            'title' => 'Вам открыт лимит рассрочки! 🎉',
+            'body' => 'Поздравляем! Вам доступен лимит рассрочки :amount сум. Теперь вы можете покупать книги в рассрочку.',
+        ],
+        'en' => [
+            'title' => 'Installment limit unlocked! 🎉',
+            'body' => 'Congrats! You now have an installment limit of :amount UZS. Buy books and pay over time.',
+        ],
+        'ja' => [
+            'title' => '分割払い枠が開放されました！🎉',
+            'body' => 'おめでとうございます！:amount スムの分割払い枠が利用可能になりました。',
+        ],
+    ];
+
+    private const LIMIT_PROMO_MESSAGES = [
+        'uz' => [
+            'title' => "Nasiya limitingiz kutmoqda 📚",
+            'body' => ":amount so'mlik bo'sh nasiya limitingiz bor. Yoqqan kitobni hoziroq olib, bo'lib to'lang!",
+        ],
+        'ru' => [
+            'title' => 'Ваш лимит рассрочки ждёт 📚',
+            'body' => 'У вас свободный лимит рассрочки :amount сум. Возьмите любимую книгу сейчас и платите по частям!',
+        ],
+        'en' => [
+            'title' => 'Your installment limit awaits 📚',
+            'body' => 'You have :amount UZS of unused installment limit. Grab a book now and pay over time!',
+        ],
+        'ja' => [
+            'title' => '分割払い枠が利用可能です 📚',
+            'body' => ':amount スムの分割払い枠が未使用です。今すぐ本を選んで分割払いで購入しましょう！',
+        ],
+    ];
+
+    /**
+     * Limit berilganda bir martalik tabrik push (skoring yoki admin orqali).
+     */
+    public function sendLimitGranted(?User $user, int $limit): bool
+    {
+        if ($limit <= 0) {
+            return false;
+        }
+
+        return $this->send(
+            $user,
+            self::LIMIT_GRANTED_MESSAGES,
+            [':amount' => number_format($limit, 0, '.', ' ')],
+            [
+                'type' => 'split_limit_granted',
+                'limit' => (string) $limit,
+                'click_action' => 'FLUTTER_NOTIFICATION_CLICK',
+            ],
+        );
+    }
+
+    /**
+     * Haftalik promo: bo'sh limitni eslatish.
+     */
+    public function sendLimitPromo(?User $user, int $availableLimit): bool
+    {
+        if ($availableLimit <= 0) {
+            return false;
+        }
+
+        return $this->send(
+            $user,
+            self::LIMIT_PROMO_MESSAGES,
+            [':amount' => number_format($availableLimit, 0, '.', ' ')],
+            [
+                'type' => 'split_limit_promo',
+                'available_limit' => (string) $availableLimit,
+                'click_action' => 'FLUTTER_NOTIFICATION_CLICK',
+            ],
+        );
+    }
+
     public function sendInstallmentReminder(SplitInstallment $installment): bool
     {
         $remaining = max(0, (int) $installment->amount - (int) $installment->paid_amount);

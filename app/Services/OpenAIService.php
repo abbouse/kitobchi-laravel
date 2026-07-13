@@ -8,6 +8,9 @@ use Illuminate\Support\Facades\Log;
 class OpenAIService
 {
     protected \OpenAI\Client $client;
+
+    /** Batch (uzoq) ishlar uchun alohida client — katta javoblarni kutadi */
+    protected ?\OpenAI\Client $longClient = null;
     protected string $chatModel   = 'gpt-4o-mini';
     protected string $visionModel = 'gpt-4o-mini';
     protected string $embedModel  = 'text-embedding-3-small';
@@ -33,6 +36,26 @@ class OpenAIService
                 'connect_timeout' => 5.0,
             ]))
             ->make();
+    }
+
+    /**
+     * Batch ishlar (masalan, izohlarni ommaviy baholash) uchun uzun
+     * timeout'li client. Chat oqimidagi qattiq 14s bu ishlarga tor —
+     * 2000+ tokenli javob 30-60s da yoziladi.
+     */
+    protected function longClient(): \OpenAI\Client
+    {
+        if ($this->longClient === null) {
+            $this->longClient = \OpenAI::factory()
+                ->withApiKey((string) config('services.openai.key', ''))
+                ->withHttpClient(new \GuzzleHttp\Client([
+                    'timeout' => (float) config('services.openai.batch_timeout', 120),
+                    'connect_timeout' => 5.0,
+                ]))
+                ->make();
+        }
+
+        return $this->longClient;
     }
 
     // ─── Oddiy matn ─────────────────────────────────────────────────────────
@@ -82,16 +105,27 @@ class OpenAIService
     //   4. Retry ham muvaffaqiyatsiz — xavfsiz fallback
     // ────────────────────────────────────────────────────────────────────────
 
-    public function askJsonWithMessages(array $messages, int $maxTokens = 800, float $temperature = 0.3): array
+    /**
+     * @param bool $long true — batch rejim: uzun timeout'li client ishlatiladi
+     *                    (katta javobli ommaviy baholashlar uchun)
+     */
+    public function askJsonWithMessages(
+        array $messages,
+        int $maxTokens = 800,
+        float $temperature = 0.3,
+        bool $long = false,
+        ?string $model = null,
+    ): array
     {
         $attempt = 0;
+        $client = $long ? $this->longClient() : $this->client;
 
         while ($attempt < 2) {
             $attempt++;
 
             try {
-                $response = $this->client->chat()->create([
-                    'model'           => $this->chatModel,
+                $response = $client->chat()->create([
+                    'model'           => $model ?: $this->chatModel,
                     'max_tokens'      => $maxTokens,
                     'temperature'     => $temperature,
                     'response_format' => ['type' => 'json_object'],

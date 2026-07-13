@@ -10,6 +10,7 @@ use App\Models\BookClubCommentReply;
 use App\Models\BookClubCommentLike;
 use App\Models\BookClub;
 use App\Services\BookClubModerationService;
+use App\Services\BookClubContentPolicy;
 use App\Services\MentionService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -18,11 +19,18 @@ class BookClubCommentController extends Controller {
     public function __construct(
         private readonly BookClubModerationService $moderationService,
         private readonly MentionService $mentionService,
+        private readonly BookClubContentPolicy $contentPolicy,
     ) {}
     
-    private function visibleCommentContent(BookClubComment $comment): string
+    private function visibleCommentContent(BookClubComment $comment, ?User $viewer): string
     {
-        return $comment->is_hidden_by_ai ? '' : (string) $comment->content;
+        if (! $comment->is_hidden_by_ai
+            || ($viewer && ((int) $viewer->id === (int) $comment->user_id || $viewer->canModerateCommunity()))
+        ) {
+            return (string) $comment->content;
+        }
+
+        return '';
     }
 
     private function commentUserSelect(): array
@@ -54,7 +62,7 @@ class BookClubCommentController extends Controller {
             'id' => $comment->id,
             'post_id' => $comment->post_id,
             'parent_id' => $comment->parent_id,
-            'content' => $this->visibleCommentContent($comment),
+            'content' => $this->visibleCommentContent($comment, $viewer),
             'created_at' => optional($comment->created_at)?->toIso8601String(),
             'user' => $comment->user,
             'likes' => (int) ($comment->likes_count ?? $comment->likes?->count() ?? 0),
@@ -90,6 +98,22 @@ class BookClubCommentController extends Controller {
             'newest', 'oldest', 'interesting' => $sort,
             default => 'interesting',
         };
+    }
+
+    private function applyAiVisibility($query, ?User $viewer)
+    {
+        if ($viewer?->canModerateCommunity()) {
+            return $query;
+        }
+
+        return $query->where(function ($visibility) use ($viewer) {
+            $visibility->whereNull('book_club_comments.is_hidden_by_ai')
+                ->orWhere('book_club_comments.is_hidden_by_ai', false);
+
+            if ($viewer) {
+                $visibility->orWhere('book_club_comments.user_id', $viewer->id);
+            }
+        });
     }
 
     private function rankedRepliesQuery(int $commentId, array $followingIds, int $postOwnerId, int $commentOwnerId, string $sort = 'interesting')
@@ -144,7 +168,7 @@ class BookClubCommentController extends Controller {
         $followingIdsString = implode(',', array_map('intval', $followingIds ?: [0]));
         $likesCountSql = "(SELECT COUNT(*) FROM book_club_comment_likes WHERE book_club_comment_likes.comment_id = book_club_comments.id)";
         $followersCountSql = "(SELECT COUNT(*) FROM user_follows WHERE user_follows.following_id = book_club_comments.user_id)";
-        $repliesCountSql = "(SELECT COUNT(*) FROM book_club_comments child_comments WHERE child_comments.parent_id = book_club_comments.id)";
+        $repliesCountSql = "(SELECT COUNT(*) FROM book_club_comments child_comments WHERE child_comments.parent_id = book_club_comments.id AND COALESCE(child_comments.is_hidden_by_ai, 0) = 0)";
 
         $scoreSql = "
             (
@@ -205,6 +229,7 @@ class BookClubCommentController extends Controller {
             (int) $parentComment->user_id,
             $sort,
         );
+        $this->applyAiVisibility($query, $viewer);
 
         $priorityPreview = $sort === 'interesting'
             ? (clone $query)->havingRaw('smart_rank >= 70')->take($limit)->get()
@@ -240,6 +265,7 @@ public function index(Request $request, $post_id) {
         (int) ($post?->user_id ?? 0),
         $replySort,
     );
+    $this->applyAiVisibility($query, $user);
 
     $total = (clone $query)->count(DB::raw('distinct book_club_comments.id'));
 
@@ -293,6 +319,7 @@ public function replies(Request $request, $comment_id) {
         (int) $parentComment->user_id,
         $replySort,
     );
+    $this->applyAiVisibility($query, $user);
 
     $total = (clone $query)->count(DB::raw('distinct book_club_comments.id'));
     $comments = (clone $query)
@@ -334,24 +361,21 @@ public function replies(Request $request, $comment_id) {
                 'message' => "Boshqalarning xavfsizligi uchun siz Book Club va xabar almashish bo'limida vaqtincha bloklangansiz.",
             ], 423);
         }
-        $comment = BookClubComment::create([
+        $content = (string) $request->content;
+        $comment = BookClubComment::create(array_merge([
             'post_id' => $request->post_id,
             'user_id' => $user->id,
-            'content' => $request->content,
+            'content' => $content,
             'ai_status' => 'pending',
             'ai_score' => null,
             'ai_checked_at' => null,
             'ai_note' => null,
             'ai_model' => null,
-            'is_hidden_by_ai' => false,
-            'ai_moderation_status' => 'pending',
-            'ai_moderated_at' => null,
-            'ai_moderation_note' => null,
-            'ai_moderation_model' => null,
-        ]);
+        ], $this->contentPolicy->initialState($content)));
 
+        $hardRisk = (bool) data_get($comment->ai_moderation_meta, 'hard_risk', false);
         $post = BookClub::find($request->post_id);
-        if ($post) {
+        if ($post && ! $hardRisk) {
             NotificationHelper::send(
                 $post->user_id,
                 $user,
@@ -361,13 +385,15 @@ public function replies(Request $request, $comment_id) {
             );
         }
 
-        $this->mentionService->notifyMentionedUsers(
-            $this->mentionService->extractMentions($comment->content),
-            $user,
-            'mention',
-            (int) $comment->post_id,
-            ['comment_id' => $comment->id]
-        );
+        if (! $hardRisk) {
+            $this->mentionService->notifyMentionedUsers(
+                $this->mentionService->extractMentions($comment->content),
+                $user,
+                'mention',
+                (int) $comment->post_id,
+                ['comment_id' => $comment->id]
+            );
+        }
 
         return response()->json(['status' => 'success', 'data' => $comment], 201);
     }
@@ -397,33 +423,32 @@ public function replies(Request $request, $comment_id) {
     }
     $replyToUserId = $request->filled('reply_to_user_id') ? (int) $request->reply_to_user_id : null;
 
-    $reply = BookClubComment::create([
+    $content = (string) $request->content;
+    $reply = BookClubComment::create(array_merge([
         'post_id' => $parentComment->post_id,
         'parent_id' => $comment_id,
         'user_id' => $user->id,
-        'content' => $request->content,
+        'content' => $content,
         'reply_to_user_id' => $replyToUserId,
         'ai_status' => 'pending',
         'ai_score' => null,
         'ai_checked_at' => null,
         'ai_note' => null,
         'ai_model' => null,
-        'is_hidden_by_ai' => false,
-        'ai_moderation_status' => 'pending',
-        'ai_moderated_at' => null,
-        'ai_moderation_note' => null,
-        'ai_moderation_model' => null,
-    ]);
+    ], $this->contentPolicy->initialState($content)));
 
-    NotificationHelper::send(
-        $parentComment->user_id,
-        $user,
-        'reply',
-        $parentComment->post_id,
-        ['comment_id' => $parentComment->id]
-    );
+    $hardRisk = (bool) data_get($reply->ai_moderation_meta, 'hard_risk', false);
+    if (! $hardRisk) {
+        NotificationHelper::send(
+            $parentComment->user_id,
+            $user,
+            'reply',
+            $parentComment->post_id,
+            ['comment_id' => $parentComment->id]
+        );
+    }
 
-    if ($replyToUserId && $replyToUserId !== (int) $parentComment->user_id && $replyToUserId !== (int) $user->id) {
+    if (! $hardRisk && $replyToUserId && $replyToUserId !== (int) $parentComment->user_id && $replyToUserId !== (int) $user->id) {
         NotificationHelper::send(
             $replyToUserId,
             $user,
@@ -434,7 +459,7 @@ public function replies(Request $request, $comment_id) {
     }
 
     $post = BookClub::find($parentComment->post_id);
-    if ($post && $post->user_id !== $parentComment->user_id) {
+    if (! $hardRisk && $post && $post->user_id !== $parentComment->user_id) {
         NotificationHelper::send(
             $post->user_id,
             $user,
@@ -444,13 +469,15 @@ public function replies(Request $request, $comment_id) {
         );
     }
 
-    $this->mentionService->notifyMentionedUsers(
-        $this->mentionService->extractMentions($reply->content),
-        $user,
-        'mention',
-        (int) $reply->post_id,
-        ['comment_id' => $reply->id]
-    );
+    if (! $hardRisk) {
+        $this->mentionService->notifyMentionedUsers(
+            $this->mentionService->extractMentions($reply->content),
+            $user,
+            'mention',
+            (int) $reply->post_id,
+            ['comment_id' => $reply->id]
+        );
+    }
 
     return response()->json(['status' => 'success', 'data' => $reply], 201);
 }

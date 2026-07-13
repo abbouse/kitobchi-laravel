@@ -991,7 +991,12 @@ class SplitContractService
             throw new RuntimeException($reason);
         }
 
-        if ($plan->min_confidence_score !== null && (float) $profile['confidence_score'] < (float) $plan->min_confidence_score) {
+        // Qo'lda limit berilganlarga skoring (confidence) to'siq bo'lmaydi
+        $manualLimitActive = (bool) ($profile['manual_limit_active'] ?? false);
+
+        if (! $manualLimitActive
+            && $plan->min_confidence_score !== null
+            && (float) $profile['confidence_score'] < (float) $plan->min_confidence_score) {
             throw new RuntimeException('Bu tarif uchun ishonch balli yetarli emas.');
         }
 

@@ -97,6 +97,9 @@ class ProductReviewPromptService
             ->where('product_id', $productId)
             ->where('product_type', $productType)
             ->where('is_deleted', false)
+            ->where(function ($query) {
+                $query->whereNull('is_hidden_by_ai')->orWhere('is_hidden_by_ai', false);
+            })
             ->exists();
     }
 

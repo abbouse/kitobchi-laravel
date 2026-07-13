@@ -46,6 +46,9 @@ Route::get('/', function () {
     $landingUgcReviews = Cache::remember('welcome_ugc_reviews', 600, function () {
         return \App\Models\BookClub::with('user')
             ->where('is_deleted', false)
+            ->where(function ($query) {
+                $query->whereNull('is_hidden_by_ai')->orWhere('is_hidden_by_ai', false);
+            })
             ->whereNotNull('ai_post_score')
             ->where('ai_post_status', 'scored')
             ->whereNotNull('text')

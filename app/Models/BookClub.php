@@ -30,9 +30,12 @@ class BookClub extends Model
         'ai_post_status',
         'ai_post_note',
         'ai_post_model',
-        'kangaroo_post_star',
-        'kangaroo_post_checked_at',
-        'kangaroo_post_ugc_status',
+        'is_hidden_by_ai',
+        'ai_moderation_status',
+        'ai_moderated_at',
+        'ai_moderation_note',
+        'ai_moderation_model',
+        'ai_moderation_meta',
     ];
 
     protected $casts = [
@@ -42,7 +45,9 @@ class BookClub extends Model
         'edited_at' => 'datetime',
         'ai_post_checked_at' => 'datetime',
         'ai_post_feedback_notified_at' => 'datetime',
-        'kangaroo_post_checked_at' => 'datetime',
+        'is_hidden_by_ai' => 'boolean',
+        'ai_moderated_at' => 'datetime',
+        'ai_moderation_meta' => 'array',
     ];
 
     // ── Morph map — product_type qiymatlari model klasslarga bog'lanadi ──────

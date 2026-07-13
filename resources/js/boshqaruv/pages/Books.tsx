@@ -66,6 +66,10 @@ interface Book {
   sellerOrders?: MiniOrder[];
   createdAt?: string;
   updatedAt?: string;
+  aiModerationStatus?: string | null;
+  aiModerationNote?: string | null;
+  aiModerationModel?: string | null;
+  aiModerationCheckedAt?: string | null;
   showUrl?: string;
   editUrl?: string;
   moderateUrl?: string;
@@ -308,6 +312,17 @@ export default function Books() {
                 </div>
 
                 <div className="detail-panel mt-3">
+                  <h6 className="fw-bold mb-3">AI moderatsiya auditi</h6>
+                  <div className="row g-3">
+                    <Detail label="AI holati" value={aiStatusLabel(selectedBook.aiModerationStatus)} />
+                    <Detail label="Tekshirgan model" value={selectedBook.aiModerationModel} />
+                    <Detail label="Tekshiruv vaqti" value={selectedBook.aiModerationCheckedAt} />
+                    <Detail label="Qaror" value={selectedBook.statusLabel} />
+                  </div>
+                  {selectedBook.aiModerationNote ? <div className="alert alert-light border mt-3 mb-0 small">{selectedBook.aiModerationNote}</div> : null}
+                </div>
+
+                <div className="detail-panel mt-3">
                   <h6 className="fw-bold mb-3">Savdo analitikasi</h6>
                   <div className="row g-3">
                     <Detail label="Jami sotuv" value={`${fmt(selectedBook.sold)} dona`} />
@@ -380,6 +395,10 @@ export default function Books() {
 function toInputDate(value?: string | null) {
   if (!value) return '';
   return String(value).replace(' ', 'T').slice(0, 16);
+}
+
+function aiStatusLabel(value?: string | null) {
+  return ({ pending: 'Navbatda', processing: 'Tekshirilmoqda', approved: 'AI tasdiqladi', rejected: 'AI rad etdi', human_review: 'Admin ko‘rigi kerak', failed: 'Vaqtincha xato', manual_approved: 'Admin tasdiqladi', manual_rejected: 'Admin rad etdi' } as Record<string, string>)[value || ''] || value || 'Hali tekshirilmagan';
 }
 
 function MiniOrdersTable({ rows, empty }: { rows: MiniOrder[]; empty: string }) {

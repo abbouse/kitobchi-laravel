@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Helpers\NotificationHelper;
 use App\Http\Controllers\Controller;
 use App\Services\BookClubModerationService;
+use App\Services\BookClubContentPolicy;
 use App\Services\BookClubNotificationTextService;
 use App\Services\MentionService;
 use App\Services\ProductReviewPromptService;
@@ -21,6 +22,7 @@ class BookClubController extends Controller
     public function __construct(
         private readonly BookClubNotificationTextService $notificationTextService,
         private readonly BookClubModerationService $moderationService,
+        private readonly BookClubContentPolicy $contentPolicy,
         private readonly MentionService $mentionService,
         private readonly ProductReviewPromptService $productReviewPromptService,
         private readonly UserPositionService $userPositionService,
@@ -132,6 +134,9 @@ class BookClubController extends Controller
             ->flip() : collect();
 
         $commentsCount = BookClubComment::whereIn('post_id', $postIds)
+            ->where(function ($query) {
+                $query->whereNull('is_hidden_by_ai')->orWhere('is_hidden_by_ai', false);
+            })
             ->select('post_id', DB::raw('count(*) as count'))
             ->groupBy('post_id')
             ->pluck('count', 'post_id');
@@ -250,6 +255,15 @@ class BookClubController extends Controller
         if ($user && $user->canModerateCommunity()) {
             return $query;
         }
+
+        $query->where(function ($visibilityQuery) use ($user) {
+            $visibilityQuery->whereNull('is_hidden_by_ai')
+                ->orWhere('is_hidden_by_ai', false);
+
+            if ($user) {
+                $visibilityQuery->orWhere('user_id', $user->id);
+            }
+        });
 
         return $query->where(function ($visibilityQuery) use ($user) {
             $visibilityQuery->whereDoesntHave('activeWarning');
@@ -856,9 +870,10 @@ class BookClubController extends Controller
                 }
 
                 // ── Post ──────────────────────────────────────────────────────
-                $bookClub = BookClub::create([
+                $postText = (string) $request->input('post_text', '');
+                $bookClub = BookClub::create(array_merge([
                     'user_id'      => $user->id,
-                    'text'         => $request->input('post_text', ''),
+                    'text'         => $postText,
                     'product_id'   => $productId,
                     'product_type' => $productType,
                     'product_snapshot' => $this->buildProductSnapshot($productType, $productId, $user),
@@ -868,7 +883,7 @@ class BookClubController extends Controller
                     'ai_post_checked_at' => null,
                     'ai_post_note' => null,
                     'ai_post_model' => null,
-                ]);
+                ], $this->contentPolicy->initialState($postText)));
 
                 // ── Rasmlar ───────────────────────────────────────────────────
                 if ($request->hasFile('images')) {
@@ -899,18 +914,23 @@ class BookClubController extends Controller
                     }
                 }
 
-                $this->notifyFollowers($user, $bookClub->id);
-                $this->mentionService->notifyMentionedUsers(
-                    $this->mentionService->extractMentions($bookClub->text),
-                    $user,
-                    'mention',
-                    (int) $bookClub->id
-                );
                 $freshPost = $bookClub->fresh();
-                $this->productReviewPromptService->markReviewedByPost($freshPost);
+                $hardRisk = (bool) data_get($freshPost->ai_moderation_meta, 'hard_risk', false);
+                $reviewCashback = null;
 
-                // Sotib olingan mahsulotga izoh — keshbek (har mahsulotga 1 marta)
-                $reviewCashback = $this->reviewCashbackService->awardForPost($freshPost);
+                if (! $hardRisk) {
+                    $this->notifyFollowers($user, $bookClub->id);
+                    $this->mentionService->notifyMentionedUsers(
+                        $this->mentionService->extractMentions($bookClub->text),
+                        $user,
+                        'mention',
+                        (int) $bookClub->id
+                    );
+                    $this->productReviewPromptService->markReviewedByPost($freshPost);
+
+                    // Sotib olingan mahsulotga izoh — keshbek (har mahsulotga 1 marta)
+                    $reviewCashback = $this->reviewCashbackService->awardForPost($freshPost);
+                }
 
                 return response()->json([
                     'status'          => 'success',
@@ -1021,19 +1041,21 @@ class BookClubController extends Controller
                     'ai_post_checked_at' => null,
                     'ai_post_note' => null,
                     'ai_post_model' => null,
-                ])->save();
-                $this->mentionService->notifyMentionedUsers(
-                    $this->mentionService->extractMentions((string) $post->text),
-                    $user,
-                    'mention',
-                    (int) $post->id
-                );
+                ] + $this->contentPolicy->initialState((string) $post->text))->save();
                 $updatedPost = $post->fresh();
-                $this->productReviewPromptService->markReviewedByPost($updatedPost);
+                if (! (bool) data_get($updatedPost->ai_moderation_meta, 'hard_risk', false)) {
+                    $this->mentionService->notifyMentionedUsers(
+                        $this->mentionService->extractMentions((string) $post->text),
+                        $user,
+                        'mention',
+                        (int) $post->id
+                    );
+                    $this->productReviewPromptService->markReviewedByPost($updatedPost);
 
-                // Post tahrirlanib mahsulot biriktirilgan bo'lsa ham keshbek
-                // berilishi mumkin (har mahsulotga 1 marta — xizmat o'zi tekshiradi)
-                $this->reviewCashbackService->awardForPost($updatedPost);
+                    // Post tahrirlanib mahsulot biriktirilgan bo'lsa ham keshbek
+                    // berilishi mumkin (har mahsulotga 1 marta — xizmat o'zi tekshiradi)
+                    $this->reviewCashbackService->awardForPost($updatedPost);
+                }
 
                 // ── Rasmlarni o'chirish ────────────────────────────────────────
                 $deletedIds = json_decode($request->input('deleted_image_ids', '[]'), true);
@@ -1490,8 +1512,17 @@ class BookClubController extends Controller
 
     private function repostAiFields(BookClub $original): array
     {
+        $moderation = [
+            'is_hidden_by_ai' => (bool) $original->is_hidden_by_ai,
+            'ai_moderation_status' => $original->ai_moderation_status,
+            'ai_moderated_at' => $original->ai_moderated_at,
+            'ai_moderation_note' => $original->ai_moderation_note,
+            'ai_moderation_model' => $original->ai_moderation_model,
+            'ai_moderation_meta' => $original->ai_moderation_meta,
+        ];
+
         if ($original->ai_post_status === 'scored' && $original->ai_post_score !== null) {
-            return [
+            return $moderation + [
                 'ai_post_score' => $original->ai_post_score,
                 'ai_post_status' => 'scored',
                 'ai_post_note' => $original->ai_post_note ?: 'Repost: original post AI bahosi ishlatildi',
@@ -1501,7 +1532,7 @@ class BookClubController extends Controller
             ];
         }
 
-        return [
+        return $moderation + [
             'ai_post_score' => null,
             'ai_post_status' => 'skipped_repost',
             'ai_post_note' => 'Repost: original post AI bahosi kutilmoqda',
