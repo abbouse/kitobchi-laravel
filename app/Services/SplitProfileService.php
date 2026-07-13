@@ -78,6 +78,9 @@ class SplitProfileService
     public function refreshUser(User $user, bool $persist = true): array
     {
         $settings = $this->settings();
+        $existingProfile = Schema::hasTable('split_user_profiles')
+            ? SplitUserProfile::query()->where('user_id', $user->id)->first()
+            : null;
         $reputation = $this->userReputationService->recalculateUser($user, false);
         $now = now();
         $ninetyDaysAgo = $now->copy()->subDays(90);
@@ -235,6 +238,8 @@ class SplitProfileService
 
         $reputationScore = (float) ($reputation['reputation_score'] ?? $user->reputation_score ?? 0);
         $codReturnStrikes = (int) ($reputation['cod_return_strikes'] ?? $user->cod_return_strikes ?? 0);
+        $manualBlocked = $existingProfile?->manual_blocked_at !== null;
+        $manualBlockReason = trim((string) ($existingProfile?->manual_block_reason ?? ''));
         $reasons = $this->eligibilityReasons(
             user: $user,
             settings: $settings,
@@ -245,6 +250,8 @@ class SplitProfileService
             codReturnStrikes: $codReturnStrikes,
             completedAll: $completedAll,
             activeWarningCount: $activeWarningCount,
+            manualBlocked: $manualBlocked,
+            manualBlockReason: $manualBlockReason,
             splitHistory: $splitHistory,
         );
 
@@ -307,6 +314,9 @@ class SplitProfileService
             'device_count_90d' => $deviceCount90d,
             'card_churn_90d' => $cardChurn90d,
             'active_warning_count' => $activeWarningCount,
+            'manual_blocked_at' => $existingProfile?->manual_blocked_at,
+            'manual_block_reason' => $manualBlockReason !== '' ? $manualBlockReason : null,
+            'manual_blocked_by_admin_id' => $existingProfile?->manual_blocked_by_admin_id,
             'last_refreshed_at' => $now,
             'snapshot' => [
                 'settings' => $settings,
@@ -327,6 +337,39 @@ class SplitProfileService
             'eligibility_reasons' => array_values($reasons),
             'last_refreshed_at' => $now->toIso8601String(),
         ];
+    }
+
+    public function manuallyBlockUser(User $user, string $reason, ?int $adminId = null): array
+    {
+        if (! Schema::hasTable('split_user_profiles')) {
+            return [];
+        }
+
+        SplitUserProfile::query()->updateOrCreate(
+            ['user_id' => $user->id],
+            [
+                'manual_blocked_at' => now(),
+                'manual_block_reason' => trim($reason),
+                'manual_blocked_by_admin_id' => $adminId,
+            ],
+        );
+
+        return $this->refreshUser($user, true);
+    }
+
+    public function clearManualBlock(User $user): array
+    {
+        if (! Schema::hasTable('split_user_profiles')) {
+            return [];
+        }
+
+        SplitUserProfile::query()->where('user_id', $user->id)->update([
+            'manual_blocked_at' => null,
+            'manual_block_reason' => null,
+            'manual_blocked_by_admin_id' => null,
+        ]);
+
+        return $this->refreshUser($user, true);
     }
 
     public function cardRemovalBlocked(User $user): bool
@@ -360,9 +403,17 @@ class SplitProfileService
         int $codReturnStrikes,
         int $completedAll,
         int $activeWarningCount,
+        bool $manualBlocked = false,
+        string $manualBlockReason = '',
         array $splitHistory = [],
     ): array {
         $reasons = [];
+
+        if ($manualBlocked) {
+            $reasons[] = $manualBlockReason !== ''
+                ? "Admin tomonidan split bloklangan: {$manualBlockReason}"
+                : 'Admin tomonidan split vaqtincha bloklangan.';
+        }
 
         if (! empty($splitHistory['has_active_overdue'])) {
             $reasons[] = "Faol splitda muddati o'tgan to'lov bor.";

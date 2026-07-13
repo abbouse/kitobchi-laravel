@@ -29,6 +29,9 @@ class SplitUserProfile extends Model
         'device_count_90d',
         'card_churn_90d',
         'active_warning_count',
+        'manual_blocked_at',
+        'manual_block_reason',
+        'manual_blocked_by_admin_id',
         'last_refreshed_at',
         'snapshot',
     ];
@@ -39,6 +42,7 @@ class SplitUserProfile extends Model
         'confidence_score' => 'decimal:2',
         'reputation_score' => 'decimal:2',
         'cancel_rate_90d' => 'decimal:4',
+        'manual_blocked_at' => 'datetime',
         'last_refreshed_at' => 'datetime',
         'snapshot' => 'array',
     ];

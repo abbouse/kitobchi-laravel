@@ -86,6 +86,7 @@ use App\Services\DeliveryZoneResolverService;
 use App\Services\FcmRecipientService;
 use App\Services\HubRoleAccessService;
 use App\Services\OpenAIService;
+use App\Services\PaylovFiscalizationService;
 use App\Services\PayoutReportService;
 use App\Services\SellerCancellationReasonCatalog;
 use App\Services\SellerOrderSettlementService;
@@ -210,6 +211,78 @@ class AdminController extends Controller
         $count = $service->refreshAll();
 
         return back()->with('success', "{$count} ta foydalanuvchi split profili yangilandi.");
+    }
+
+    public function registerFiscalReceipt(Sold $order, PaylovFiscalizationService $service): \Illuminate\Http\RedirectResponse
+    {
+        try {
+            if ($service->registerForOrder($order)) {
+                return back()->with('success', "#{$order->id} buyurtma fiskal cheki tayyor.");
+            }
+
+            $error = $this->latestFiscalError($order);
+
+            return back()->with('error', $error ?: 'Fiskal chek yaratilmadi. To‘lov va OFD sozlamalarini tekshiring.');
+        } catch (\Throwable $error) {
+            report($error);
+
+            return back()->with('error', 'Fiskalizatsiya vaqtincha ishlamadi: '.$error->getMessage());
+        }
+    }
+
+    public function syncFiscalReceipt(Sold $order, PaylovFiscalizationService $service): \Illuminate\Http\RedirectResponse
+    {
+        if ($service->syncFromStatus($order)) {
+            return back()->with('success', "#{$order->id} fiskal chek holati Paylovdan yangilandi.");
+        }
+
+        return back()->with('error', 'Paylovda ushbu buyurtma uchun tayyor fiskal chek topilmadi.');
+    }
+
+    public function retryPendingFiscalReceipts(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $data = $request->validate([
+            'limit' => ['nullable', 'integer', 'min:1', 'max:500'],
+        ]);
+        $limit = (int) ($data['limit'] ?? 100);
+
+        $orderIds = Transaction::query()
+            ->where('payment_type', 'order')
+            ->where('provider', 'paylov')
+            ->where('state', 2)
+            ->whereNotNull('order_id')
+            ->where(fn ($query) => $query
+                ->whereNull('perform_fiscal_data')
+                ->orWhereNull('perform_fiscal_data->qr_code_url'))
+            ->latest('id')
+            ->limit($limit)
+            ->pluck('order_id')
+            ->unique()
+            ->values();
+
+        foreach ($orderIds as $orderId) {
+            \App\Jobs\RegisterOrderFiscalReceiptJob::dispatch((int) $orderId);
+        }
+
+        return back()->with('success', $orderIds->count().' ta buyurtma fiskalizatsiya navbatiga qo‘shildi.');
+    }
+
+    public function blockUserSplit(Request $request, User $user, SplitProfileService $service): \Illuminate\Http\RedirectResponse
+    {
+        $data = $request->validate([
+            'reason' => 'required|string|max:2000',
+        ]);
+
+        $service->manuallyBlockUser($user, (string) $data['reason'], Auth::guard('panel')->id());
+
+        return back()->with('success', 'Foydalanuvchi splitdan mahrum qilindi.');
+    }
+
+    public function unblockUserSplit(User $user, SplitProfileService $service): \Illuminate\Http\RedirectResponse
+    {
+        $service->clearManualBlock($user);
+
+        return back()->with('success', 'Foydalanuvchi uchun split blok bekor qilindi.');
     }
 
     public function updateSplitSettings(Request $request): \Illuminate\Http\RedirectResponse
@@ -2331,6 +2404,7 @@ PROMPT;
             ],
             'Hubs' => $this->hubsPagePayload(),
             'Transaksiyalar' => $this->transactionsPagePayload(),
+            'Fiscalization' => $this->fiscalizationPagePayload(),
             'CommissionAudit' => $this->commissionAuditPagePayload(),
             'AuditLogs' => $this->auditLogsPagePayload(),
             'SellerAiActions' => $this->sellerAiActionsPagePayload(),
@@ -3089,13 +3163,32 @@ PROMPT;
             ->latest()
             ->take(20)
             ->get() : collect();
-        $cartItems = Schema::hasTable('my_carts') ? MyCart::query()
+        $allCartItems = Schema::hasTable('my_carts') ? MyCart::query()
             ->where('user_id', $user->id)
             ->with('variant')
             ->latest()
-            ->take(20)
             ->get() : collect();
+        $cartItems = $allCartItems->take(20);
         $cartHasPriceItem = Schema::hasTable('my_carts') && Schema::hasColumn('my_carts', 'priceItem');
+        $cartProductMaps = [
+            'book' => Books::query()->whereIn('id', $allCartItems->where('product_type', 'book')->pluck('product_id'))->get()->keyBy('id'),
+            'stationery' => Stationery::query()->whereIn('id', $allCartItems->where('product_type', 'stationery')->pluck('product_id'))->get()->keyBy('id'),
+            'gift' => Gifts::query()->whereIn('id', $allCartItems->where('product_type', 'gift')->pluck('product_id'))->get()->keyBy('id'),
+        ];
+        $cartUnitPrice = function (MyCart $item) use ($cartHasPriceItem, $cartProductMaps): float {
+            if ($cartHasPriceItem && $item->priceItem !== null) {
+                return (float) $item->priceItem;
+            }
+
+            if ($item->product_type === 'stationery' && (float) ($item->variant?->price ?? 0) > 0) {
+                return (float) $item->variant->price;
+            }
+
+            $type = (string) $item->product_type;
+            $product = $cartProductMaps[$type]->get((int) $item->product_id) ?? null;
+
+            return $this->userProductPrice($type, (int) $item->product_id, $product);
+        };
 
         return [
             'profile' => [
@@ -3144,15 +3237,12 @@ PROMPT;
                 'mysteryBoxes' => $subscriptions->count(),
                 'searches' => $searchHistory->sum(fn (SearchHistory $history) => max(1, (int) ($history->search_count ?? 1))),
                 'favourites' => $favourites->count(),
-                'cartItems' => $cartItems->count(),
-                'cartQuantity' => $cartItems->sum(fn (MyCart $item) => max(1, (int) ($item->count_item ?? 1))),
-                'cartTotal' => $cartItems->sum(function (MyCart $item) use ($cartHasPriceItem) {
+                'cartItems' => $allCartItems->count(),
+                'cartQuantity' => $allCartItems->sum(fn (MyCart $item) => max(1, (int) ($item->count_item ?? 1))),
+                'cartTotal' => $allCartItems->sum(function (MyCart $item) use ($cartUnitPrice) {
                     $quantity = max(1, (int) ($item->count_item ?? 1));
-                    $unitPrice = $cartHasPriceItem && $item->priceItem !== null
-                        ? (float) $item->priceItem
-                        : $this->userProductPrice((string) $item->product_type, (int) $item->product_id);
 
-                    return $unitPrice * $quantity;
+                    return $cartUnitPrice($item) * $quantity;
                 }),
             ],
             'orders' => (clone $orders)->latest()->take(12)->get()->map(fn (Sold $order) => [
@@ -3218,16 +3308,14 @@ PROMPT;
                     'addedAt' => optional($favourite->created_at)->format('Y-m-d H:i'),
                 ]);
             })->values(),
-            'cartItems' => $cartItems->map(function (MyCart $item) use ($cartHasPriceItem) {
+            'cartItems' => $cartItems->map(function (MyCart $item) use ($cartUnitPrice) {
                 $quantity = max(1, (int) ($item->count_item ?? 1));
                 $product = $this->userProductPayload(
                     (string) $item->product_type,
                     (int) $item->product_id,
                     $item->variant,
                 );
-                $unitPrice = $cartHasPriceItem && $item->priceItem !== null
-                    ? (float) $item->priceItem
-                    : (float) $product['price'];
+                $unitPrice = $cartUnitPrice($item);
 
                 return array_merge($product, [
                     'id' => $item->id,
@@ -3261,6 +3349,9 @@ PROMPT;
             ])->values(),
             'splitProfile' => $splitProfile ? [
                 'eligible' => (bool) $splitProfile['eligible'],
+                'manuallyBlocked' => ! empty($splitProfile['manual_blocked_at']),
+                'manualBlockReason' => $splitProfile['manual_block_reason'] ?? null,
+                'manualBlockedAt' => $this->dateTime($splitProfile['manual_blocked_at'] ?? null),
                 'confidenceScore' => (float) $splitProfile['confidence_score'],
                 'computedLimit' => (int) $splitProfile['computed_limit'],
                 'availableLimit' => (int) $splitProfile['available_limit'],
@@ -3276,6 +3367,8 @@ PROMPT;
             'actions' => [
                 'blockUrl' => route('boshqaruv.users.block', $user),
                 'unblockUrl' => route('boshqaruv.users.unblock', $user),
+                'splitBlockUrl' => route('boshqaruv.users.split.block', $user),
+                'splitUnblockUrl' => route('boshqaruv.users.split.unblock', $user),
                 'verifyUrl' => route('boshqaruv.users.verify', $user),
                 'premiumUrl' => route('boshqaruv.users.premium', $user),
             ],
@@ -7321,6 +7414,7 @@ PROMPT;
                     $builder->where('split_profiles.eligible', false)->orWhereNull('split_profiles.eligible');
                 }))
                 ->when($status === 'locked', fn ($builder) => $builder->where('split_profiles.active_exposure', '>', 0))
+                ->when($status === 'blocked', fn ($builder) => $builder->whereNotNull('split_profiles.manual_blocked_at'))
                 ->orderByDesc(DB::raw('COALESCE(split_profiles.eligible, 0)'))
                 ->orderByDesc(DB::raw('COALESCE(split_profiles.confidence_score, 0)'));
         }
@@ -7355,6 +7449,9 @@ PROMPT;
                     'phone' => $this->formatPhone($user->phone_number ?? $user->phone ?? ''),
                     'verified' => (bool) $user->isVerified,
                     'eligible' => (bool) ($profile?->eligible ?? false),
+                    'manuallyBlocked' => $profile?->manual_blocked_at !== null,
+                    'manualBlockReason' => $profile?->manual_block_reason,
+                    'manualBlockedAt' => optional($profile?->manual_blocked_at)->format('Y-m-d H:i'),
                     'confidenceScore' => (float) ($profile?->confidence_score ?? 0),
                     'computedLimit' => (int) ($profile?->computed_limit ?? 0),
                     'availableLimit' => (int) ($profile?->available_limit ?? 0),
@@ -7369,6 +7466,8 @@ PROMPT;
                     'lastRefreshedAt' => optional($profile?->last_refreshed_at)->format('Y-m-d H:i'),
                     'profileUrl' => route('boshqaruv.users', ['users_search' => $user->id]),
                     'refreshUrl' => route('boshqaruv.split.refresh'),
+                    'blockUrl' => route('boshqaruv.users.split.block', $user),
+                    'unblockUrl' => route('boshqaruv.users.split.unblock', $user),
                 ];
             })->values()->all(),
             'splitPagination' => $this->paginationMeta($users),
@@ -7586,6 +7685,7 @@ PROMPT;
                 'profiles' => 0,
                 'eligible' => 0,
                 'locked' => 0,
+                'blocked' => 0,
                 'avgConfidence' => 0,
                 'totalAvailableLimit' => 0,
             ];
@@ -7595,6 +7695,7 @@ PROMPT;
             'profiles' => (int) SplitUserProfile::query()->count(),
             'eligible' => (int) SplitUserProfile::query()->where('eligible', true)->count(),
             'locked' => (int) SplitUserProfile::query()->where('active_exposure', '>', 0)->count(),
+            'blocked' => (int) SplitUserProfile::query()->whereNotNull('manual_blocked_at')->count(),
             'avgConfidence' => round((float) SplitUserProfile::query()->avg('confidence_score'), 2),
             'totalAvailableLimit' => (int) round((float) SplitUserProfile::query()->sum('available_limit')),
         ];
@@ -9003,14 +9104,19 @@ PROMPT;
      * 'pending' — to'langan lekin chek hali yo'q, 'none' — tranzaksiya yo'q
      * (naqd yoki to'lanmagan), 'disabled' — OFD o'chirilgan.
      */
-    private function orderFiscalReceiptPayload(?Transaction $transaction): array
+    private function orderFiscalReceiptPayload(?Transaction $transaction, ?int $orderId = null): array
     {
+        $actions = $orderId ? [
+            'registerUrl' => route('boshqaruv.fiscalization.register', $orderId),
+            'syncUrl' => route('boshqaruv.fiscalization.sync', $orderId),
+        ] : [];
+
         if (! (bool) config('services.paylov.ofd.enabled', false)) {
-            return ['status' => 'disabled'];
+            return ['status' => 'disabled', ...$actions];
         }
 
         if (! $transaction || (int) $transaction->state !== 2) {
-            return ['status' => 'none'];
+            return ['status' => 'none', ...$actions];
         }
 
         $perform = is_array($transaction->perform_fiscal_data) ? $transaction->perform_fiscal_data : [];
@@ -9027,6 +9133,7 @@ PROMPT;
                 'receiptId' => $perform['receipt_id'] ?? null,
                 'fiscalSign' => $perform['fiscal_sign'] ?? null,
                 'date' => $perform['date'] ?? null,
+                ...$actions,
             ];
         }
 
@@ -9038,10 +9145,231 @@ PROMPT;
                 'receiptId' => $perform['receipt_id'] ?? null,
                 'fiscalSign' => $perform['fiscal_sign'] ?? null,
                 'date' => $perform['date'] ?? null,
+                ...$actions,
             ];
         }
 
-        return ['status' => 'pending'];
+        if (($perform['status'] ?? null) === 'failed') {
+            return [
+                'status' => 'failed',
+                'error' => $perform['last_error'] ?? null,
+                'errorCode' => $perform['last_error_code'] ?? null,
+                'errorField' => $perform['last_error_field'] ?? null,
+                ...$actions,
+            ];
+        }
+
+        return ['status' => 'pending', ...$actions];
+    }
+
+    private function fiscalizationPagePayload(): array
+    {
+        $status = (string) request('fiscal_status', 'all');
+        $search = trim((string) request('fiscal_search', ''));
+        $allowedStatuses = ['all', 'registered', 'pending', 'failed', 'refunded'];
+        if (! in_array($status, $allowedStatuses, true)) {
+            $status = 'all';
+        }
+
+        $base = Transaction::query()
+            ->where('payment_type', 'order')
+            ->where('provider', 'paylov')
+            ->where('state', 2)
+            ->whereNotNull('order_id');
+
+        $registered = (clone $base)->whereNotNull('perform_fiscal_data->qr_code_url')->count();
+        $failed = (clone $base)
+            ->whereNull('perform_fiscal_data->qr_code_url')
+            ->where('perform_fiscal_data->status', 'failed')
+            ->count();
+        $refunded = (clone $base)->whereNotNull('cancel_fiscal_data->qr_code_url')->count();
+        $total = (clone $base)->count();
+
+        $query = (clone $base)
+            ->with([
+                'user:id,name,lastname,phone_number',
+                'order:id,user_id,amount,status,status_code,paymentStatus,payment_status_code,created_at',
+            ])
+            ->when($status === 'registered', fn ($builder) => $builder->whereNotNull('perform_fiscal_data->qr_code_url'))
+            ->when($status === 'refunded', fn ($builder) => $builder->whereNotNull('cancel_fiscal_data->qr_code_url'))
+            ->when($status === 'failed', fn ($builder) => $builder
+                ->whereNull('perform_fiscal_data->qr_code_url')
+                ->where('perform_fiscal_data->status', 'failed'))
+            ->when($status === 'pending', fn ($builder) => $builder
+                ->whereNull('perform_fiscal_data->qr_code_url')
+                ->where(fn ($pending) => $pending
+                    ->whereNull('perform_fiscal_data->status')
+                    ->orWhere('perform_fiscal_data->status', 'pending')))
+            ->when($search !== '', function ($builder) use ($search) {
+                $builder->where(function ($nested) use ($search) {
+                    $nested->where('order_id', $search)
+                        ->orWhere('provider_transaction_id', 'like', "%{$search}%")
+                        ->orWhereHas('user', fn ($userQuery) => $userQuery
+                            ->where('phone_number', 'like', "%{$search}%")
+                            ->orWhere('name', 'like', "%{$search}%")
+                            ->orWhere('lastname', 'like', "%{$search}%"));
+                });
+            })
+            ->latest('id');
+
+        $transactions = $query->paginate(25, ['*'], 'fiscal_page')->withQueryString();
+        $cfg = (array) config('services.paylov.ofd', []);
+        $bookCoverage = $this->fiscalCatalogCoverage(
+            Books::class,
+            (string) ($cfg['book_ikpu'] ?? ''),
+            (string) ($cfg['book_package_code'] ?? ''),
+        );
+        $stationeryCoverage = $this->fiscalCatalogCoverage(
+            Stationery::class,
+            (string) ($cfg['stationery_ikpu'] ?? ''),
+            (string) ($cfg['stationery_package_code'] ?? ''),
+        );
+
+        $authReady = filled(config('services.paylov.access_token')) || (
+            filled(config('services.paylov.consumer_key'))
+            && filled(config('services.paylov.consumer_secret'))
+            && filled(config('services.paylov.username'))
+            && filled(config('services.paylov.password'))
+        );
+        $tin = preg_replace('/\D+/', '', (string) ($cfg['tin'] ?? ''));
+        $advanceContractId = trim((string) ($cfg['advance_contract_id'] ?? ''));
+
+        return [
+            'fiscalSummary' => [
+                'paid' => $total,
+                'registered' => $registered,
+                'pending' => max(0, $total - $registered),
+                'failed' => $failed,
+                'refunded' => $refunded,
+                'coveragePercent' => $total > 0 ? round(($registered / $total) * 100, 1) : 100,
+            ],
+            'fiscalHealth' => [
+                ['key' => 'enabled', 'label' => 'OFD moduli', 'ready' => (bool) ($cfg['enabled'] ?? false), 'value' => ($cfg['enabled'] ?? false) ? 'Yoqilgan' : 'O‘chirilgan', 'hint' => 'PAYLOV_OFD_ENABLED'],
+                ['key' => 'auth', 'label' => 'Paylov autentifikatsiya', 'ready' => $authReady, 'value' => $authReady ? 'Tayyor' : 'Sozlanmagan', 'hint' => 'Access token yoki OAuth credentiallari'],
+                ['key' => 'advance', 'label' => 'Avans shartnoma ID', 'ready' => $advanceContractId !== '', 'value' => $advanceContractId !== '' ? $this->maskSecret($advanceContractId) : 'Kiritilmagan', 'hint' => 'PAYLOV_OFD_ADVANCE_CONTRACT_ID'],
+                ['key' => 'tin', 'label' => 'Platforma STIR', 'ready' => strlen($tin) === 9, 'value' => strlen($tin) === 9 ? $this->maskSecret($tin) : '9 xonali STIR kerak', 'hint' => 'PAYLOV_OFD_TIN'],
+                ['key' => 'services', 'label' => 'Xizmat IKPU/qadoq', 'ready' => filled($cfg['service_ikpu'] ?? null) && filled($cfg['service_package_code'] ?? null), 'value' => (filled($cfg['service_ikpu'] ?? null) && filled($cfg['service_package_code'] ?? null)) ? 'Tayyor' : 'To‘liq emas', 'hint' => 'Yetkazish va qadoqlash uchun'],
+                ['key' => 'queue', 'label' => 'Queue rejimi', 'ready' => config('queue.default') !== 'sync', 'value' => (string) config('queue.default'), 'hint' => 'Productionda queue worker doimiy ishlashi kerak'],
+            ],
+            'fiscalConfig' => [
+                'receiptType' => (int) ($cfg['receipt_type'] ?? 1),
+                'amountMultiplier' => (int) ($cfg['amount_multiplier'] ?? 100),
+                'vatPercent' => (int) ($cfg['vat_percent'] ?? 0),
+            ],
+            'fiscalCatalogCoverage' => [
+                'books' => $bookCoverage,
+                'stationery' => $stationeryCoverage,
+            ],
+            'fiscalTransactions' => $transactions->getCollection()->map(function (Transaction $transaction) {
+                $perform = is_array($transaction->perform_fiscal_data) ? $transaction->perform_fiscal_data : [];
+                $cancel = is_array($transaction->cancel_fiscal_data) ? $transaction->cancel_fiscal_data : [];
+                $receiptUrl = (string) ($perform['qr_code_url'] ?? '');
+                $refundUrl = (string) ($cancel['qr_code_url'] ?? '');
+                $rowStatus = $refundUrl !== ''
+                    ? 'refunded'
+                    : ($receiptUrl !== '' ? 'registered' : (($perform['status'] ?? null) === 'failed' ? 'failed' : 'pending'));
+
+                return [
+                    'id' => $transaction->id,
+                    'orderId' => (int) $transaction->order_id,
+                    'transactionId' => $transaction->provider_transaction_id,
+                    'user' => $transaction->user?->full_name ?: 'Mijoz topilmadi',
+                    'phone' => $this->formatPhone($transaction->user?->phone_number),
+                    'amount' => (float) ($transaction->order?->amount ?? $transaction->amount ?? 0),
+                    'status' => $rowStatus,
+                    'attempts' => (int) ($perform['attempts'] ?? 0),
+                    'lastAttemptAt' => $perform['last_attempt_at'] ?? null,
+                    'error' => $perform['last_error'] ?? null,
+                    'errorCode' => $perform['last_error_code'] ?? null,
+                    'errorField' => $perform['last_error_field'] ?? null,
+                    'receiptUrl' => $receiptUrl ?: null,
+                    'refundReceiptUrl' => $refundUrl ?: null,
+                    'receiptId' => $perform['receipt_id'] ?? null,
+                    'createdAt' => optional($transaction->created_at)->format('Y-m-d H:i'),
+                    'orderUrl' => route('boshqaruv.orders', ['orders_search' => $transaction->order_id, 'orders_tab' => 'all']),
+                    'registerUrl' => route('boshqaruv.fiscalization.register', $transaction->order_id),
+                    'syncUrl' => route('boshqaruv.fiscalization.sync', $transaction->order_id),
+                ];
+            })->values()->all(),
+            'fiscalPagination' => $this->paginationMeta($transactions),
+            'fiscalFilters' => ['status' => $status, 'search' => $search],
+            'retryPendingUrl' => route('boshqaruv.fiscalization.retry-pending'),
+        ];
+    }
+
+    private function fiscalCatalogCoverage(string $modelClass, string $defaultIkpu, string $defaultPackage): array
+    {
+        if (! Schema::hasTable((new $modelClass)->getTable())) {
+            return ['total' => 0, 'ready' => 0, 'missing' => 0, 'direct' => 0, 'categoryFallback' => 0, 'globalFallback' => 0];
+        }
+
+        $totals = ['total' => 0, 'ready' => 0, 'missing' => 0, 'direct' => 0, 'categoryFallback' => 0, 'globalFallback' => 0];
+        $query = $modelClass::query()->with('category:id,ofd_ikpu_code,ofd_package_code');
+        $table = (new $modelClass)->getTable();
+        if (Schema::hasColumn($table, 'status')) {
+            $query->where('status', true);
+        }
+        if (Schema::hasColumn($table, 'is_approved')) {
+            $query->where('is_approved', true);
+        }
+        if (Schema::hasColumn($table, 'is_hidden')) {
+            $query->where('is_hidden', false);
+        }
+
+        $query->select(['id', 'category_id', 'ofd_ikpu_code', 'ofd_package_code'])
+            ->chunkById(500, function ($products) use (&$totals, $defaultIkpu, $defaultPackage) {
+                foreach ($products as $product) {
+                    $totals['total']++;
+                    $directIkpu = trim((string) $product->ofd_ikpu_code);
+                    $directPackage = trim((string) $product->ofd_package_code);
+                    $categoryIkpu = trim((string) ($product->category?->ofd_ikpu_code ?? ''));
+                    $categoryPackage = trim((string) ($product->category?->ofd_package_code ?? ''));
+                    $effectiveIkpu = $directIkpu ?: ($categoryIkpu ?: trim($defaultIkpu));
+                    $effectivePackage = $directPackage ?: ($categoryPackage ?: trim($defaultPackage));
+
+                    if ($effectiveIkpu === '' || $effectivePackage === '') {
+                        $totals['missing']++;
+                        continue;
+                    }
+
+                    $totals['ready']++;
+                    if ($directIkpu !== '' && $directPackage !== '') {
+                        $totals['direct']++;
+                    } elseif (($directIkpu === '' && $categoryIkpu !== '') || ($directPackage === '' && $categoryPackage !== '')) {
+                        $totals['categoryFallback']++;
+                    } else {
+                        $totals['globalFallback']++;
+                    }
+                }
+            });
+
+        $totals['percent'] = $totals['total'] > 0 ? round(($totals['ready'] / $totals['total']) * 100, 1) : 100;
+
+        return $totals;
+    }
+
+    private function latestFiscalError(Sold $order): ?string
+    {
+        $transaction = Transaction::query()
+            ->where('payment_type', 'order')
+            ->where('order_id', $order->id)
+            ->where('provider', 'paylov')
+            ->where('state', 2)
+            ->latest('id')
+            ->first();
+        $data = is_array($transaction?->perform_fiscal_data) ? $transaction->perform_fiscal_data : [];
+
+        return filled($data['last_error'] ?? null) ? (string) $data['last_error'] : null;
+    }
+
+    private function maskSecret(string $value): string
+    {
+        $value = trim($value);
+        if (mb_strlen($value) <= 6) {
+            return str_repeat('•', mb_strlen($value));
+        }
+
+        return mb_substr($value, 0, 3).str_repeat('•', max(4, mb_strlen($value) - 6)).mb_substr($value, -3);
     }
 
     private function orderPayload(Sold $order): array
@@ -9073,6 +9401,13 @@ PROMPT;
         $paymentTransaction = Schema::hasTable('transactions') ? Transaction::query()
             ->where('order_id', $order->id)
             ->where('payment_type', 'order')
+            ->latest('id')
+            ->first() : null;
+        $fiscalTransaction = Schema::hasTable('transactions') ? Transaction::query()
+            ->where('order_id', $order->id)
+            ->where('payment_type', 'order')
+            ->where('provider', 'paylov')
+            ->where('state', 2)
             ->latest('id')
             ->first() : null;
         $canProcessRefunds = $this->canProcessOperationalRefunds($order, $paymentTransaction);
@@ -9342,7 +9677,7 @@ PROMPT;
                 'date' => $this->dateTime($paymentTransaction->created_at),
             ] : null,
             'paymentCard' => $paymentCardView,
-            'fiscalReceipt' => $this->orderFiscalReceiptPayload($paymentTransaction),
+            'fiscalReceipt' => $this->orderFiscalReceiptPayload($fiscalTransaction, (int) $order->id),
             'split' => $this->orderSplitDetailPayload($order),
             'settlementOverview' => $settlementOverview,
             'canRefundPayment' => (bool) $canRefundPayment,

@@ -47,4 +47,9 @@ class Transaction extends Model
     {
         return $this->belongsTo(User::class, 'owner_id');
     }
+
+    public function order()
+    {
+        return $this->belongsTo(Sold::class, 'order_id');
+    }
 }

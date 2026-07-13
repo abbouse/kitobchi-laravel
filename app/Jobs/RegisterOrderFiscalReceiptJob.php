@@ -6,6 +6,7 @@ use App\Models\Sold;
 use App\Services\PaylovFiscalizationService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
@@ -15,13 +16,15 @@ use Illuminate\Queue\SerializesModels;
  * yaratadi. Queued — to'lov oqimini sekinlashtirmaydi, OFD vaqtincha
  * ishlamasa retry qiladi.
  */
-class RegisterOrderFiscalReceiptJob implements ShouldQueue
+class RegisterOrderFiscalReceiptJob implements ShouldQueue, ShouldBeUnique
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $timeout = 60;
 
     public int $tries = 3;
+
+    public int $uniqueFor = 600;
 
     /** @var array<int, int> retry oralig'i (sekund) */
     public array $backoff = [60, 300];
@@ -43,5 +46,10 @@ class RegisterOrderFiscalReceiptJob implements ShouldQueue
         }
 
         $service->registerForOrder($order);
+    }
+
+    public function uniqueId(): string
+    {
+        return (string) $this->orderId;
     }
 }

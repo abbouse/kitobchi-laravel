@@ -168,7 +168,7 @@ interface Ord {
   } | null;
   paymentTransaction?: { id: number; provider?: string; providerCardId?: string; amount?: number; status?: string; date?: string } | null;
   paymentCard?: { provider?: string | null; providerCardId?: string | null; maskedNumber?: string | null; vendor?: string | null; cardName?: string | null; phone?: string | null };
-  fiscalReceipt?: { status: 'disabled' | 'none' | 'pending' | 'registered' | 'refunded'; receiptUrl?: string | null; refundReceiptUrl?: string | null; receiptId?: number | string | null; fiscalSign?: string | null; date?: string | null };
+  fiscalReceipt?: { status: 'disabled' | 'none' | 'pending' | 'failed' | 'registered' | 'refunded'; receiptUrl?: string | null; refundReceiptUrl?: string | null; receiptId?: number | string | null; fiscalSign?: string | null; date?: string | null; error?: string | null; errorCode?: string | null; errorField?: string | null; registerUrl?: string; syncUrl?: string };
   split?: {
     contractId: number;
     contractNumber: string;
@@ -965,6 +965,9 @@ export default function Orders() {
                             {selectedOrd.fiscalReceipt?.status === 'pending' && (
                               <span className="chip chip-warning border-0">Kutilmoqda</span>
                             )}
+                            {selectedOrd.fiscalReceipt?.status === 'failed' && (
+                              <span className="chip chip-danger border-0">Xatolik</span>
+                            )}
                             {selectedOrd.fiscalReceipt?.status === 'none' && <span className="text-muted">—</span>}
                             {(!selectedOrd.fiscalReceipt || selectedOrd.fiscalReceipt.status === 'disabled') && (
                               <span className="text-muted">O'chirilgan</span>
@@ -972,6 +975,15 @@ export default function Orders() {
                           </div>
                           {selectedOrd.fiscalReceipt?.fiscalSign && (
                             <div className="text-muted small">Fiskal belgi: {selectedOrd.fiscalReceipt.fiscalSign}</div>
+                          )}
+                          {selectedOrd.fiscalReceipt?.error && (
+                            <div className="text-danger small mt-1">{selectedOrd.fiscalReceipt.error}</div>
+                          )}
+                          {selectedOrd.fiscalReceipt && ['pending', 'failed'].includes(selectedOrd.fiscalReceipt.status) && (
+                            <div className="d-flex gap-1 mt-2">
+                              {selectedOrd.fiscalReceipt.syncUrl ? <button className="btn btn-sm btn-light" onClick={() => router.post(selectedOrd.fiscalReceipt!.syncUrl!, {}, { preserveScroll: true })}><i className="bi bi-cloud-download me-1"></i>Tekshirish</button> : null}
+                              {selectedOrd.fiscalReceipt.registerUrl ? <button className="btn btn-sm btn-outline-primary" onClick={() => router.post(selectedOrd.fiscalReceipt!.registerUrl!, {}, { preserveScroll: true })}><i className="bi bi-send me-1"></i>Qayta yuborish</button> : null}
+                            </div>
                           )}
                         </div>
                         <Detail label="Kuryer" value={selectedOrd.courierOrder?.courier || selectedOrd.courierName} />

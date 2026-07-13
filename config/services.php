@@ -49,6 +49,11 @@ return [
         // https://developer.paylov.uz/uz/subscribe/ofd/register
         'ofd' => [
             'enabled' => (bool) env('PAYLOV_OFD_ENABLED', false),
+            // Paylov merchant profilingizga biriktirilgan chek turi.
+            'receipt_type' => (int) env('PAYLOV_OFD_RECEIPT_TYPE', 1),
+            // Paylov ayrim merchantlarda majburiy qiladigan avans shartnoma IDsi.
+            // Qiymatni Paylov kabineti/supportidan oling; transaction ID bilan almashtirmang.
+            'advance_contract_id' => env('PAYLOV_OFD_ADVANCE_CONTRACT_ID', ''),
             // Item narxlari OFD ga tiyin ko'rinishida yuboriladi.
             // To'lov API'lari qaysi birlikda ishlatilgan bo'lsa, shunga
             // moslang: to'lovlar so'mda yuborilsa 100, tiyinda bo'lsa 1.

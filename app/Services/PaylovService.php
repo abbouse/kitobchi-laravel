@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\PaylovApiException;
 use App\Models\UserCard;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Cache;
@@ -200,15 +201,27 @@ class PaylovService
      *                              discount, count, code (IKPU), vat_percent,
      *                              package_code, ixtiyoriy: tin yoki pinfl
      */
-    public function registerFiscalReceipt(string $transactionId, array $items): array
+    public function registerFiscalReceipt(
+        string $transactionId,
+        array $items,
+        ?int $receiptType = null,
+        ?string $advanceContractId = null,
+    ): array
     {
-        return $this->post('/merchant/fiscalization/register/', [
+        $payload = [
             'transactionId' => $transactionId,
-            // Docs namunasida 0 deyilgan, lekin real validatsiya faqat 1 ni
-            // qabul qiladi ("receiptType must be one of: 1")
-            'receiptType' => 1,
             'items' => array_values($items),
-        ]);
+        ];
+
+        if ($receiptType !== null) {
+            $payload['receiptType'] = $receiptType;
+        }
+
+        if (filled($advanceContractId)) {
+            $payload['advanceContractId'] = trim((string) $advanceContractId);
+        }
+
+        return $this->post('/merchant/fiscalization/register/', $payload);
     }
 
     /**
@@ -387,7 +400,16 @@ class PaylovService
                 'response_headers' => $response->headers(),
             ]);
 
-            throw new RuntimeException("{$message} ({$code})");
+            $errorData = is_array($body['error']['data'] ?? null) ? $body['error']['data'] : [];
+            $field = trim((string) ($errorData['field'] ?? ''));
+            $details = $field !== '' ? " (field: {$field})" : '';
+
+            throw new PaylovApiException(
+                "{$message} ({$code}){$details}",
+                (string) $code,
+                $response->status(),
+                $errorData,
+            );
         }
 
         return $body;

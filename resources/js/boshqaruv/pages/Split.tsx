@@ -22,6 +22,7 @@ type SplitSummary = {
   profiles: number;
   eligible: number;
   locked: number;
+  blocked: number;
   avgConfidence: number;
   totalAvailableLimit: number;
 };
@@ -41,6 +42,9 @@ type SplitUserRow = {
   phone: string;
   verified: boolean;
   eligible: boolean;
+  manuallyBlocked: boolean;
+  manualBlockReason?: string | null;
+  manualBlockedAt?: string | null;
   confidenceScore: number;
   computedLimit: number;
   availableLimit: number;
@@ -55,6 +59,8 @@ type SplitUserRow = {
   lastRefreshedAt?: string | null;
   profileUrl: string;
   refreshUrl: string;
+  blockUrl: string;
+  unblockUrl: string;
 };
 
 type PaginationMeta = { page: number; totalPages: number; from: number; to: number; total: number };
@@ -225,6 +231,7 @@ export default function Split() {
           ['Profil yozuvlari', splitSummary.profiles, 'bi-database-check', '#4f46e5'],
           ['Mos userlar', splitSummary.eligible, 'bi-patch-check', '#10b981'],
           ['Kartasi lock bo‘ladiganlar', splitSummary.locked, 'bi-lock', '#ef4444'],
+          ['Split bloklanganlar', splitSummary.blocked, 'bi-slash-circle', '#dc2626'],
           ['Bo‘sh limitlar jami', `${fmt(splitSummary.totalAvailableLimit)} so'm`, 'bi-wallet2', '#0ea5e9'],
         ].map(([label, value, icon, color]) => (
           <div className="col-xl-3 col-md-6" key={String(label)}>
@@ -341,6 +348,7 @@ export default function Split() {
                   <option value="eligible">Moslar</option>
                   <option value="ineligible">Mos emaslar</option>
                   <option value="locked">Exposure borlar</option>
+                  <option value="blocked">Admin bloklaganlar</option>
                 </select>
                 <input className="form-control form-control-sm" style={{ width: 260 }} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="ID, ism, telefon, email" />
                 <button className="btn btn-sm btn-outline-secondary"><i className="bi bi-search"></i></button>
@@ -394,9 +402,11 @@ export default function Split() {
                       <td>
                         <div className="d-flex flex-wrap gap-2">
                           <span className={`chip ${user.eligible ? 'chip-success' : 'chip-warning'}`}>{user.eligible ? 'Mos' : 'Mos emas'}</span>
+                          {user.manuallyBlocked ? <span className="chip chip-danger">Admin blok</span> : null}
                           {user.verified ? <span className="chip chip-info">Verified</span> : null}
                         </div>
                         {user.reasons.length > 0 ? <small className="text-muted d-block mt-1">{user.reasons[0]}</small> : null}
+                        {user.manuallyBlocked && user.manualBlockedAt ? <small className="text-danger d-block mt-1">Bloklangan: {user.manualBlockedAt}</small> : null}
                       </td>
                       <td>
                         <strong>{user.confidenceScore}</strong>
@@ -426,6 +436,15 @@ export default function Split() {
                         <div className="d-flex gap-2">
                           <a className="btn btn-sm btn-light" href={user.profileUrl}><i className="bi bi-person-lines-fill"></i></a>
                           <button className="btn btn-sm btn-light" onClick={() => refreshProfiles(user.id)}><i className="bi bi-arrow-clockwise"></i></button>
+                          {user.manuallyBlocked ? (
+                            <button className="btn btn-sm btn-outline-success" onClick={() => router.post(user.unblockUrl, {}, { preserveScroll: true })}><i className="bi bi-unlock"></i></button>
+                          ) : (
+                            <button className="btn btn-sm btn-outline-danger" onClick={() => {
+                              const reason = window.prompt('Splitni bloklash sababi');
+                              if (!reason) return;
+                              router.post(user.blockUrl, { reason }, { preserveScroll: true });
+                            }}><i className="bi bi-slash-circle"></i></button>
+                          )}
                         </div>
                       </td>
                     </tr>

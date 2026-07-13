@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\PaylovApiException;
 use App\Models\Books;
 use App\Models\Sold;
 use App\Models\Stationery;
@@ -62,11 +63,14 @@ class PaylovFiscalizationService
         }
 
         $paylov = PaylovService::make();
+        $this->markAttempt($transaction);
 
         try {
             $response = $paylov->registerFiscalReceipt(
                 (string) $transaction->provider_transaction_id,
                 $items,
+                (int) config('services.paylov.ofd.receipt_type', 1),
+                $this->advanceContractId($transaction),
             );
 
             $ofd = data_get($response, 'result.ofd', []);
@@ -78,13 +82,19 @@ class PaylovFiscalizationService
                 return $this->syncFromStatus($order);
             }
 
+            $this->markFailure($transaction, $e);
+
             Log::error('[Paylov OFD] Register failed', [
                 'order_id' => $order->id,
                 'transaction_id' => $transaction->provider_transaction_id,
                 'error' => $e->getMessage(),
             ]);
 
-            throw $e; // Job retry qilishi uchun
+            if (! $e instanceof PaylovApiException || $e->isRetryable()) {
+                throw $e; // Tarmoq va vaqtinchalik OFD xatolarida job retry qiladi.
+            }
+
+            return false;
         }
     }
 
@@ -346,36 +356,25 @@ class PaylovFiscalizationService
         // Promo/keshbek chegirmalari itemlar narxida aks etmagan — farqni
         // discount sifatida eng katta itemlardan boshlab taqsimlaymiz.
         $expected = (int) round(((float) $order->amount) * $mult);
-        $itemsTotal = array_sum(array_map(
-            fn ($i) => $i['price'] * $i['count'] - $i['discount'],
-            $items,
-        ));
+        $itemsTotal = array_sum(array_map(fn ($item) => $item['price'] * $item['count'], $items));
 
         $diff = $itemsTotal - $expected; // musbat = chegirma kerak
 
         if ($diff > 0) {
-            // Eng katta line-totaldan boshlab chegirma singdiramiz
-            $indexes = array_keys($items);
-            usort($indexes, fn ($a, $b) => ($items[$b]['price'] * $items[$b]['count'])
-                <=> ($items[$a]['price'] * $items[$a]['count']));
-
-            foreach ($indexes as $idx) {
-                if ($diff <= 0) {
-                    break;
-                }
-
-                $lineMax = $items[$idx]['price'] * $items[$idx]['count'];
-                $apply = min($diff, $lineMax);
-                $items[$idx]['discount'] = $apply;
-                $diff -= $apply;
-            }
+            [$items, $diff] = $this->allocateDiscount($items, $diff);
         }
 
-        if ($diff !== 0) {
+        $resolvedTotal = array_sum(array_map(
+            fn ($item) => ($item['price'] - $item['discount']) * $item['count'],
+            $items,
+        ));
+
+        if ($diff !== 0 || $resolvedTotal !== $expected) {
             Log::warning('[Paylov OFD] Items total mismatch with order amount', [
                 'order_id' => $order->id,
                 'expected' => $expected,
                 'items_total' => $itemsTotal,
+                'resolved_total' => $resolvedTotal,
                 'unresolved_diff' => $diff,
             ]);
 
@@ -385,6 +384,53 @@ class PaylovFiscalizationService
         return $items;
     }
 
+    /**
+     * Paylov discountni dona narxiga qo'llaydi va u price'dan oshmasligi kerak.
+     * Umumiy chegirma quantityga qoldiqsiz bo'linmasa, line ko'pi bilan ikki
+     * guruhga ajratiladi: masalan 3 dona va 100 tiyin => 2×33 + 1×34.
+     *
+     * @return array{0: array, 1: int} [items, unresolved discount]
+     */
+    private function allocateDiscount(array $items, int $discount): array
+    {
+        usort($items, fn ($left, $right) => ($right['price'] * $right['count']) <=> ($left['price'] * $left['count']));
+        $result = [];
+        $remaining = max(0, $discount);
+
+        foreach ($items as $item) {
+            $count = max(1, (int) $item['count']);
+            $price = max(1, (int) $item['price']);
+            $lineDiscount = min($remaining, max(0, ($price - 1) * $count));
+            $remaining -= $lineDiscount;
+
+            if ($lineDiscount <= 0) {
+                $item['discount'] = 0;
+                $result[] = $item;
+                continue;
+            }
+
+            $baseDiscount = intdiv($lineDiscount, $count);
+            $remainder = $lineDiscount % $count;
+            $baseCount = $count - $remainder;
+
+            if ($baseCount > 0) {
+                $baseItem = $item;
+                $baseItem['count'] = $baseCount;
+                $baseItem['discount'] = $baseDiscount;
+                $result[] = $baseItem;
+            }
+
+            if ($remainder > 0) {
+                $remainderItem = $item;
+                $remainderItem['count'] = $remainder;
+                $remainderItem['discount'] = $baseDiscount + 1;
+                $result[] = $remainderItem;
+            }
+        }
+
+        return [$result, $remaining];
+    }
+
     // ─── Yordamchilar ────────────────────────────────────────────────────────
 
     private function paidTransactionFor(Sold $order): ?Transaction
@@ -392,6 +438,7 @@ class PaylovFiscalizationService
         return Transaction::query()
             ->where('payment_type', 'order')
             ->where('order_id', $order->id)
+            ->where('provider', 'paylov')
             ->where('state', 2)
             ->latest('id')
             ->first();
@@ -407,14 +454,19 @@ class PaylovFiscalizationService
             return false;
         }
 
+        $existing = is_array($transaction->perform_fiscal_data) ? $transaction->perform_fiscal_data : [];
         $transaction->forceFill([
-            'perform_fiscal_data' => [
+            'perform_fiscal_data' => array_merge($existing, [
+                'status' => 'registered',
                 'qr_code_url' => $receiptUrl,
                 'terminal_id' => $ofd['terminalId'] ?? null,
                 'receipt_id' => $ofd['receiptId'] ?? null,
                 'fiscal_sign' => $ofd['fiscalSign'] ?? null,
                 'date' => now()->toDateTimeString(),
-            ],
+                'last_error' => null,
+                'last_error_code' => null,
+                'last_error_field' => null,
+            ]),
         ])->save();
 
         Log::info('[Paylov OFD] Fiscal receipt stored', [
@@ -423,5 +475,56 @@ class PaylovFiscalizationService
         ]);
 
         return true;
+    }
+
+    private function markAttempt(Transaction $transaction): void
+    {
+        $data = is_array($transaction->perform_fiscal_data) ? $transaction->perform_fiscal_data : [];
+        $transaction->forceFill([
+            'perform_fiscal_data' => array_merge($data, [
+                'status' => 'pending',
+                'attempts' => ((int) ($data['attempts'] ?? 0)) + 1,
+                'last_attempt_at' => now()->toDateTimeString(),
+            ]),
+        ])->save();
+    }
+
+    private function markFailure(Transaction $transaction, \Throwable $error): void
+    {
+        $transaction->refresh();
+        $data = is_array($transaction->perform_fiscal_data) ? $transaction->perform_fiscal_data : [];
+        $transaction->forceFill([
+            'perform_fiscal_data' => array_merge($data, [
+                'status' => 'failed',
+                'last_error' => mb_substr($error->getMessage(), 0, 1000),
+                'last_error_code' => $error instanceof PaylovApiException ? $error->apiCode : class_basename($error),
+                'last_error_field' => $error instanceof PaylovApiException
+                    ? ($error->errorData['field'] ?? null)
+                    : null,
+                'last_failed_at' => now()->toDateTimeString(),
+            ]),
+        ])->save();
+    }
+
+    private function advanceContractId(Transaction $transaction): ?string
+    {
+        $configured = trim((string) config('services.paylov.ofd.advance_contract_id', ''));
+        if ($configured !== '') {
+            return $configured;
+        }
+
+        foreach ([
+            'create.result.advanceContractId',
+            'pay.result.advanceContractId',
+            'transaction.advanceContractId',
+            'advanceContractId',
+        ] as $path) {
+            $value = trim((string) data_get($transaction->provider_response, $path, ''));
+            if ($value !== '') {
+                return $value;
+            }
+        }
+
+        return null;
     }
 }

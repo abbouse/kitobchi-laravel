@@ -2777,6 +2777,7 @@ class PurchaseController extends Controller
         $transaction = Transaction::query()
             ->where('payment_type', 'order')
             ->where('order_id', $order->id)
+            ->where('provider', 'paylov')
             ->where('state', 2)
             ->latest('id')
             ->first(['perform_fiscal_data', 'cancel_fiscal_data', 'provider_response']);

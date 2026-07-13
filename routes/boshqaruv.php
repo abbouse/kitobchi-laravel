@@ -27,6 +27,8 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
         Route::get('/users/{user}/data', [AdminController::class, 'userData'])->name('users.data');
         Route::post('/users/{user}/block', [\App\Http\Controllers\A122\UserController::class, 'block'])->name('users.block');
         Route::post('/users/{user}/unblock', [\App\Http\Controllers\A122\UserController::class, 'unblock'])->name('users.unblock');
+        Route::post('/users/{user}/split-block', [AdminController::class, 'blockUserSplit'])->name('users.split.block');
+        Route::post('/users/{user}/split-unblock', [AdminController::class, 'unblockUserSplit'])->name('users.split.unblock');
         Route::patch('/users/{user}/verify', [\App\Http\Controllers\A122\UserController::class, 'toggleVerify'])->name('users.verify');
         Route::patch('/users/{user}/premium', [\App\Http\Controllers\A122\UserController::class, 'togglePremium'])->name('users.premium');
         Route::delete('/users/{user}/cards/{card}', [\App\Http\Controllers\A122\UserController::class, 'destroyCard'])->name('users.cards.destroy');
@@ -48,6 +50,10 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
         Route::get('/courier-orders', fn (AdminController $controller) => $controller->page('CourierOrders'))->name('courier-orders');
         Route::get('/hubs', fn (AdminController $controller) => $controller->page('Hubs'))->name('hubs');
         Route::get('/transactions', fn (AdminController $controller) => $controller->page('Transaksiyalar'))->name('transactions');
+        Route::get('/fiscalization', fn (AdminController $controller) => $controller->page('Fiscalization'))->name('fiscalization');
+        Route::post('/fiscalization/orders/{order}/register', [AdminController::class, 'registerFiscalReceipt'])->name('fiscalization.register');
+        Route::post('/fiscalization/orders/{order}/sync', [AdminController::class, 'syncFiscalReceipt'])->name('fiscalization.sync');
+        Route::post('/fiscalization/retry-pending', [AdminController::class, 'retryPendingFiscalReceipts'])->name('fiscalization.retry-pending');
         Route::get('/commission-audit', fn (AdminController $controller) => $controller->page('CommissionAudit'))->name('commission-audit');
         Route::get('/audit-logs', fn (AdminController $controller) => $controller->page('AuditLogs'))->name('audit-logs');
         Route::get('/seller-ai-actions', fn (AdminController $controller) => $controller->page('SellerAiActions'))->name('seller-ai-actions');
