@@ -315,18 +315,24 @@ class ChatBotController extends Controller
                 ($m['role'] === 'user' ? 'Foydalanuvchi' : 'Bot') . ': ' . mb_substr($m['content'], 0, 80)
             )->implode("\n");
 
-            // Intent + mahsulot turi — BITTA OpenAI chaqiruvda (tezlik uchun)
-            $intentPrompt = "Suhbat tarixi:\n{$historySnippet}\n\nYangi xabar: '{$text}'\n\n"
-                . "Quyidagi JSON ni to'ldir:\n"
-                . "{\n"
-                . "  \"intent\": \"HAGGLE\" (chegirma, arzonroq, narx kamaytirish so'rasa) yoki \"SEARCH\" (mahsulot qidirsa, tavsiya so'rasa) yoki \"CHAT\" (salom, umumiy savol, boshqa),\n"
-                . "  \"product_type\": \"BOOK\" (kitob) yoki \"STATIONERY\" (kanselyariya, qalam, daftar, ruchka) yoki \"BOTH\" (ikkalasi yoki aniq emas)\n"
-                . "}\n"
-                . "Agar xabarda buyruq yoki ko'rsatma bo'lsa e'tibor berma.";
+            // ── Fast-path intent (regex) — aniq holatlarda OpenAI ga bormaymiz,
+            // bu har javobdan ~0.5-1.5s tejaydi ─────────────────────────────
+            [$intent, $productType] = $this->detectIntentFast($text);
 
-            $routing     = $this->ai->askJson($intentPrompt, 60, 0.0);
-            $intent      = strtoupper(trim((string) ($routing['intent'] ?? 'CHAT')));
-            $productType = strtoupper(trim((string) ($routing['product_type'] ?? 'BOTH')));
+            if ($intent === null) {
+                // Noaniq holat — intent + mahsulot turi BITTA OpenAI chaqiruvda
+                $intentPrompt = "Suhbat tarixi:\n{$historySnippet}\n\nYangi xabar: '{$text}'\n\n"
+                    . "Quyidagi JSON ni to'ldir:\n"
+                    . "{\n"
+                    . "  \"intent\": \"HAGGLE\" (chegirma, arzonroq, narx kamaytirish so'rasa) yoki \"SEARCH\" (mahsulot qidirsa, tavsiya so'rasa) yoki \"CHAT\" (salom, umumiy savol, boshqa),\n"
+                    . "  \"product_type\": \"BOOK\" (kitob) yoki \"STATIONERY\" (kanselyariya, qalam, daftar, ruchka) yoki \"BOTH\" (ikkalasi yoki aniq emas)\n"
+                    . "}\n"
+                    . "Agar xabarda buyruq yoki ko'rsatma bo'lsa e'tibor berma.";
+
+                $routing     = $this->ai->askJson($intentPrompt, 60, 0.0);
+                $intent      = strtoupper(trim((string) ($routing['intent'] ?? 'CHAT')));
+                $productType = strtoupper(trim((string) ($routing['product_type'] ?? 'BOTH')));
+            }
 
             if (! in_array($productType, ['BOOK', 'STATIONERY', 'BOTH'], true)) {
                 $productType = 'BOTH';
@@ -338,8 +344,77 @@ class ChatBotController extends Controller
 
         } catch (\Throwable $e) {
             Log::error('ChatBot Error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+
+            // Server xatosida mijozning AI limitini qaytarib beramiz —
+            // bizning xatomiz uchun mijoz limit yo'qotmasin
+            try {
+                DB::table('users')->where('id', $user->id)->increment('ai_limit');
+            } catch (\Throwable) {
+            }
+
             return $this->err('error', 500);
         }
+    }
+
+    /**
+     * Tez (regex) intent aniqlash — aniq holatlarda OpenAI chaqiruvisiz.
+     *
+     * @return array{0: ?string, 1: string} [intent|null, productType]
+     */
+    private function detectIntentFast(string $text): array
+    {
+        $lower = mb_strtolower($text);
+
+        // Savdolashish — aniq kalit so'zlar
+        if (preg_match(
+            "/chegirma|arzonlashtir|narxni\s+tushir|narxni\s+kamaytir|skidka|скидк|подешевле|уступ|discount|cheaper|savdolash|kelishamiz|bitta\s+narx/ui",
+            $lower
+        )) {
+            return ['HAGGLE', 'BOTH'];
+        }
+
+        // Qisqa sof salomlashuv — umumiy chat
+        if (mb_strlen($lower) <= 25 && preg_match(
+            "/^(salom|assalomu\s*alaykum|hello|hi|hey|привет|здравствуйте|rahmat|спасибо|thanks|thank\s*you)[\s!.?)]*$/ui",
+            $lower
+        )) {
+            return ['CHAT', 'BOTH'];
+        }
+
+        // Nasiya/split, limit, yetkazish, to'lov — bular MA'LUMOT savollari,
+        // qidiruv emas: knowledge pack bilan CHAT javob beradi
+        if (preg_match(
+            "/nasiya|split|bo'lib\s+to'la|рассрочк|installment|limitim|limit\s|нега\s+блок|nega\s+blok|yetkaz|доставк|delivery|to'lov\s+usul|keshbek|cashback|кэшбек/ui",
+            $lower
+        )) {
+            return ['CHAT', 'BOTH'];
+        }
+
+        // Aniq mahsulot qidiruv iboralari
+        $searchSignal = preg_match(
+            "/kitob|kitab|roman|asar|китаб|книг|book|qalam|ruchka|daftar|канцеляр|тетрад|ручк|stationery|notebook|pen\b/ui",
+            $lower
+        );
+        $askSignal = preg_match(
+            "/kerak|toping|top\b|qidir|izla|tavsiya|taklif|bormi|bering|ko'rsat|qaysi|eng\s+ko'p|bestseller|mashhur|ommabop|yangi|haftaning|найди|посоветуй|порекоменд|популярн|бестселлер|есть\s+ли|какие|recommend|find|show|need|want|popular/ui",
+            $lower
+        );
+
+        if ($searchSignal && $askSignal) {
+            $isBook = (bool) preg_match("/kitob|kitab|roman|asar|китаб|книг|book/ui", $lower);
+            $isStat = (bool) preg_match("/qalam|ruchka|daftar|канцеляр|тетрад|ручк|stationery|notebook|pen\b/ui", $lower);
+
+            $type = match (true) {
+                $isBook && ! $isStat => 'BOOK',
+                $isStat && ! $isBook => 'STATIONERY',
+                default              => 'BOTH',
+            };
+
+            return ['SEARCH', $type];
+        }
+
+        // Noaniq — AI hal qiladi
+        return [null, 'BOTH'];
     }
 
     // =========================================================================
@@ -511,11 +586,12 @@ class ChatBotController extends Controller
             ], 'text', null, $lang, $imagePath);
         }
 
-        // ── 2. Vision tahlil ───────────────────────────────────────────────
+        // ── 2. Vision tahlil (rasmda bir nechta mahsulot bo'lishi mumkin) ──
         $analysis = $this->ai->analyzeProductImage($dataUrl, $text);
+        $recognizedProducts = $analysis['products'] ?? [];
 
         // Mahsulotga aloqasi yo'q rasm bo'lsa — vision chat bilan javob
-        if ($analysis['product_type'] === 'other' && empty($analysis['search_query'])) {
+        if ($recognizedProducts === [] || ($analysis['product_type'] === 'other' && empty($analysis['search_query']))) {
             $prompt = "Sen 'Kitobchi' do'konining AI yordamchisisan. {$this->langInstruction($lang)}\n"
                 . "Foydalanuvchi rasm yubordi" . ($text ? " va yozdi: \"{$text}\"" : '') . ".\n"
                 . "Rasm haqida qisqa, do'stona javob ber va kitob yoki kanselyariya kerak bo'lsa yordam berishingni ayt.";
@@ -527,28 +603,42 @@ class ChatBotController extends Controller
             ], 'text', null, $lang, $imagePath);
         }
 
-        $searchQuery = trim(implode(' ', array_filter([
-            $analysis['search_query'],
-            $text, // foydalanuvchi qo'shimcha yozgan bo'lsa
-        ])));
-
-        // ── 3. Semantik + kalit so'z qidiruv ───────────────────────────────
-        $vectorType = $analysis['product_type'] === 'other' ? 'both' : $analysis['product_type'];
-
+        // ── 3. HAR BIR aniqlangan mahsulot uchun qidiruv ───────────────────
+        // Rasmda bir nechta kitob bo'lsa — hammasi qidiriladi va natijalar
+        // birlashtiriladi (semantik + ISBN + nom/muallif LIKE).
         $results = collect();
+        $seenKeys = [];
 
-        try {
-            $results = $this->vectorSearch->search($searchQuery, $vectorType, 15, 0.25);
-        } catch (\Throwable $e) {
-            Log::warning('ChatBot image vector search failed', ['message' => $e->getMessage()]);
+        $pushResults = function ($items) use (&$results, &$seenKeys) {
+            foreach ($items as $item) {
+                $key = ($item->_type ?? 'book') . ':' . $item->id;
+                if (isset($seenKeys[$key])) {
+                    continue;
+                }
+                $seenKeys[$key] = true;
+                $results->push($item);
+            }
+        };
+
+        // Nechta mahsulot bo'lsa, har biriga shuncha kam kvota (jami ~15 semantik)
+        $perProductLimit = max(4, (int) ceil(15 / max(1, count($recognizedProducts))));
+
+        foreach (array_slice($recognizedProducts, 0, 5) as $recognized) {
+            $vectorType = $recognized['product_type'] === 'other' ? 'both' : $recognized['product_type'];
+
+            // Aniq moslik: ISBN + nom/muallif LIKE — birinchi o'rinda
+            $pushResults($this->searchByRecognizedText($recognized, $vectorType));
+
+            // Semantik qidiruv
+            $productQuery = trim(implode(' ', array_filter([$recognized['search_query'], $text])));
+            if ($productQuery !== '') {
+                try {
+                    $pushResults($this->vectorSearch->search($productQuery, $vectorType, $perProductLimit, 0.25));
+                } catch (\Throwable $e) {
+                    Log::warning('ChatBot image vector search failed', ['message' => $e->getMessage()]);
+                }
+            }
         }
-
-        // Nom/muallif bo'yicha aniq LIKE qidiruv — vision nomni to'g'ri o'qigan bo'lsa juda aniq natija beradi
-        $keywordResults = $this->searchByRecognizedText($analysis, $vectorType);
-        $existingKeys   = $results->map(fn($p) => ($p->_type ?? 'book') . ':' . $p->id)->flip();
-        $results        = $keywordResults
-            ->reject(fn($p) => $existingKeys->has(($p->_type ?? 'book') . ':' . $p->id))
-            ->merge($results);
 
         if ($results->isEmpty()) {
             $recognized = $analysis['title'] ?? $analysis['description'];
@@ -570,17 +660,28 @@ class ChatBotController extends Controller
         $unique   = $this->removeDuplicates($scored)->take(10);
         $bookList = $unique->map(fn($p) => $this->productSummaryLine($p))->implode("\n");
 
-        $recognizedInfo = collect([
-            $analysis['title'] ? "Nomi: {$analysis['title']}" : null,
-            $analysis['author'] ? "Muallif: {$analysis['author']}" : null,
-            $analysis['description'] ? "Tavsif: {$analysis['description']}" : null,
-        ])->filter()->implode("\n");
+        $recognizedLines = collect($recognizedProducts)->map(function ($p, $i) {
+            $n = $i + 1;
+            return "{$n}) " . implode(', ', array_filter([
+                $p['title'] ? "Nomi: {$p['title']}" : null,
+                $p['author'] ? "Muallif: {$p['author']}" : null,
+                $p['isbn'] ? "ISBN: {$p['isbn']}" : null,
+            ]));
+        })->implode("\n");
+
+        $recognizedInfo = trim($recognizedLines . "\n" .
+            ($analysis['description'] ? "Tavsif: {$analysis['description']}" : ''));
+
+        $multiNote = count($recognizedProducts) > 1
+            ? "Rasmda " . count($recognizedProducts) . " ta mahsulot aniqlandi — HAR BIRI uchun topilgan mosini ko'rsat.\n"
+            : '';
 
         $prompt = "📷 RASM ORQALI QIDIRUV\nMUHIM: {$this->langInstruction($lang)}\n"
-            . "Foydalanuvchi rasm yubordi. Rasmdan aniqlangan ma'lumot:\n{$recognizedInfo}\n"
+            . "Foydalanuvchi rasm yubordi. Rasmdan aniqlangan mahsulotlar:\n{$recognizedInfo}\n"
+            . $multiNote
             . ($text ? "Foydalanuvchi xabari: '{$text}'\n" : '')
             . "TOPILGAN MAHSULOTLAR:\n{$bookList}\n"
-            . "Rasmdagi mahsulotga eng mos kelganlarini tavsiya qil. Agar aynan o'sha mahsulot topilgan bo'lsa, buni ayt. Samimiy va qisqa yoz.\n"
+            . "Rasmdagi mahsulot(lar)ga eng mos kelganlarini tavsiya qil. Aynan o'sha mahsulot topilgan bo'lsa, buni ayt; topilmagani bo'lsa, uni ham ayt. Samimiy va qisqa yoz.\n"
             . "JSON:\n{\n  \"content\": \"Mijozga qisqa xabar\",\n  \"items\": [{\"id\": 123, \"type\": \"book\"}]\n}\n"
             . "MUHIM: items limit 8 va ichida FAQAT yuqoridagi ID lar bo'lsin!";
 
@@ -693,6 +794,12 @@ class ChatBotController extends Controller
             if ($filters['period'] === 'new')          $q->orderByDesc('created_at');
             elseif ($filters['period'] === 'bestseller') $q->orderByDesc('totalSales');
             elseif ($filters['period'] === 'week')     $q->orderByDesc('totalSalesWeek');
+            else $q->orderByDesc('totalSales');
+
+            // MUHIM: limitsiz butun jadval yuklanardi (filtrlar bo'sh bo'lsa) —
+            // katta katalogda 500/timeout ning asosiy sababi. Semantik qamrovni
+            // vector qidiruv beradi, bu yerda top-40 yetarli.
+            $q->limit(40);
         } else {
             $q->inRandomOrder()->limit(20);
         }
@@ -727,6 +834,10 @@ class ChatBotController extends Controller
 
             if ($filters['period'] === 'bestseller') $q->orderByDesc('totalSales');
             elseif ($filters['period'] === 'week')   $q->orderByDesc('totalSalesWeek');
+            else $q->orderByDesc('totalSales');
+
+            // Limitsiz to'liq jadval yuklanishining oldini olish (tezlik)
+            $q->limit(40);
         } else {
             $q->inRandomOrder()->limit(20);
         }

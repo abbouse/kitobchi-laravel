@@ -35,7 +35,14 @@ class RegisterTransactionFiscalReceiptJob implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        $transaction = Transaction::query()->with('order')->find($this->transactionId);
+        $transaction = Transaction::query()
+            ->with('order')
+            ->whereKey($this->transactionId)
+            ->where('provider', 'paylov')
+            ->where('state', 2)
+            ->whereNotNull('provider_transaction_id')
+            ->where('provider_transaction_id', '<>', '')
+            ->first();
         if (! $transaction) {
             return;
         }

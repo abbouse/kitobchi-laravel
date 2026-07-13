@@ -251,6 +251,8 @@ class AdminController extends Controller
             ->where('provider', 'paylov')
             ->where('state', 2)
             ->whereNotNull('order_id')
+            ->whereNotNull('provider_transaction_id')
+            ->where('provider_transaction_id', '<>', '')
             ->where(fn ($query) => $query
                 ->whereNull('perform_fiscal_data')
                 ->orWhereNull('perform_fiscal_data->qr_code_url'))

@@ -23,7 +23,16 @@ class OpenAIService
             throw new \RuntimeException('OpenAI API key is not configured. Expected config("services.openai.key").');
         }
 
-        $this->client = \OpenAI::client($apiKey);
+        // MUHIM: timeout siz OpenAI sekinlashsa butun so'rov osilib qoladi —
+        // ilova 20s da uzib, mijoz "noma'lum xatolik" ko'radi. Qattiq timeout
+        // bilan xato tez qaytadi va fallback ishlaydi.
+        $this->client = \OpenAI::factory()
+            ->withApiKey($apiKey)
+            ->withHttpClient(new \GuzzleHttp\Client([
+                'timeout' => (float) config('services.openai.timeout', 14),
+                'connect_timeout' => 5.0,
+            ]))
+            ->make();
     }
 
     // ─── Oddiy matn ─────────────────────────────────────────────────────────
@@ -195,22 +204,27 @@ class OpenAIService
     public function analyzeProductImage(string $imageDataUrl, string $userText = ''): array
     {
         $instruction = <<<EOT
-Sen rasmdagi mahsulotni aniqlaydigan yordamchisan. Rasm kitob do'koni (kitoblar va kanselyariya) konteksti uchun tahlil qilinadi.
-Rasmni diqqat bilan ko'r: muqovadagi matnni (nom, muallif) o'qi, mahsulot turini aniqla.
+Sen rasmdagi mahsulot(lar)ni aniqlaydigan yordamchisan. Rasm kitob do'koni (kitoblar va kanselyariya) konteksti uchun tahlil qilinadi.
+DIQQAT: rasmda BIR NECHTA mahsulot (masalan, javondagi bir nechta kitob) bo'lishi mumkin — HAMMASINI alohida aniqla (ko'pi bilan 5 ta, eng aniq ko'ringanlaridan boshlab).
 FAQAT quyidagi JSON formatida javob ber:
 {
-  "product_type": "book" yoki "stationery" yoki "other",
-  "title": "kitob/mahsulot nomi yoki null",
-  "author": "muallif ismi yoki null",
-  "isbn": "rasmda ISBN raqami yoki shtrix-kod ostidagi raqam ko'rinsa (masalan 978-...) yoki null",
+  "products": [
+    {
+      "product_type": "book" yoki "stationery" yoki "other",
+      "title": "kitob/mahsulot nomi yoki null",
+      "author": "muallif ismi yoki null",
+      "isbn": "ISBN/shtrix-kod raqami ko'rinsa (masalan 978-...) yoki null",
+      "keywords": ["qidiruv", "kalit", "so'zlari"],
+      "search_query": "shu mahsulotni topish uchun eng yaxshi qidiruv matni"
+    }
+  ],
   "text_on_image": "rasmda ko'ringan asosiy matn yoki null",
-  "keywords": ["qidiruv", "uchun", "kalit", "so'zlar"],
-  "search_query": "mahsulotni topish uchun eng yaxshi qidiruv matni (nom + muallif + tur)",
   "description": "rasmning qisqa tavsifi (1-2 gap)"
 }
 Kitob muqovasi bo'lsa: title va author ni aniq o'qishga harakat qil.
-Kitobning orqa muqovasida ISBN/shtrix-kod bo'lsa — raqamini aynan o'qib "isbn" ga yoz.
+ISBN/shtrix-kod ko'rinsa — raqamini aynan o'qib yoz.
 Kanselyariya bo'lsa (qalam, daftar, ruchka, sumka...): turini va rangini keywords ga yoz.
+Faqat aniq ko'ringan mahsulotlarni yoz — taxmin qilma.
 EOT;
 
         if (trim($userText) !== '') {
@@ -284,41 +298,81 @@ EOT;
 
     private function normalizeImageAnalysis(array $data): array
     {
-        $type = strtolower(trim((string) ($data['product_type'] ?? 'other')));
-        if (! in_array($type, ['book', 'stationery', 'other'], true)) {
-            $type = 'other';
-        }
+        // Bitta mahsulot yozuvini normalizatsiya qiladi
+        $normalizeProduct = function (array $p): ?array {
+            $type = strtolower(trim((string) ($p['product_type'] ?? 'other')));
+            if (! in_array($type, ['book', 'stationery', 'other'], true)) {
+                $type = 'other';
+            }
 
-        $keywords = array_values(array_filter(array_map(
-            fn ($k) => trim((string) $k),
-            is_array($data['keywords'] ?? null) ? $data['keywords'] : []
-        )));
+            $keywords = array_values(array_filter(array_map(
+                fn ($k) => trim((string) $k),
+                is_array($p['keywords'] ?? null) ? $p['keywords'] : []
+            )));
 
-        $title  = filled($data['title'] ?? null) ? trim((string) $data['title']) : null;
-        $author = filled($data['author'] ?? null) ? trim((string) $data['author']) : null;
+            $title  = filled($p['title'] ?? null) ? trim((string) $p['title']) : null;
+            $author = filled($p['author'] ?? null) ? trim((string) $p['author']) : null;
 
-        // ISBN: faqat raqam va X qoldiramiz, 10 yoki 13 xonali bo'lsa qabul qilinadi
-        $isbn = null;
-        if (filled($data['isbn'] ?? null)) {
-            $cleaned = preg_replace('/[^0-9Xx]/', '', (string) $data['isbn']);
-            if (in_array(strlen($cleaned), [10, 13], true)) {
-                $isbn = strtoupper($cleaned);
+            // ISBN: faqat raqam va X, 10 yoki 13 xonali bo'lsa qabul qilinadi
+            $isbn = null;
+            if (filled($p['isbn'] ?? null)) {
+                $cleaned = preg_replace('/[^0-9Xx]/', '', (string) $p['isbn']);
+                if (in_array(strlen($cleaned), [10, 13], true)) {
+                    $isbn = strtoupper($cleaned);
+                }
+            }
+
+            $searchQuery = trim((string) ($p['search_query'] ?? ''));
+            if ($searchQuery === '') {
+                $searchQuery = trim(implode(' ', array_filter([$title, $author, implode(' ', $keywords)])));
+            }
+
+            // Butunlay bo'sh yozuv — tashlab yuboriladi
+            if ($title === null && $isbn === null && $searchQuery === '') {
+                return null;
+            }
+
+            return [
+                'product_type' => $type,
+                'title'        => $title,
+                'author'       => $author,
+                'isbn'         => $isbn,
+                'keywords'     => $keywords,
+                'search_query' => $searchQuery,
+            ];
+        };
+
+        // Yangi format: products[] massivi. Eski format ham qo'llab-quvvatlanadi
+        // (top-level product_type/title/... bo'lsa bitta yozuv sifatida olinadi).
+        $rawProducts = is_array($data['products'] ?? null) ? $data['products'] : [$data];
+
+        $products = [];
+        foreach (array_slice($rawProducts, 0, 5) as $raw) {
+            if (! is_array($raw)) {
+                continue;
+            }
+            $normalized = $normalizeProduct($raw);
+            if ($normalized !== null) {
+                $products[] = $normalized;
             }
         }
 
-        $searchQuery = trim((string) ($data['search_query'] ?? ''));
-        if ($searchQuery === '') {
-            $searchQuery = trim(implode(' ', array_filter([$title, $author, implode(' ', $keywords)])));
-        }
+        // Birinchi mahsulot — asosiy (eski chaqiruvchilar bilan moslik uchun
+        // top-level maydonlar saqlanadi)
+        $primary = $products[0] ?? [
+            'product_type' => 'other', 'title' => null, 'author' => null,
+            'isbn' => null, 'keywords' => [], 'search_query' => '',
+        ];
 
         return [
-            'product_type'  => $type,
-            'title'         => $title,
-            'author'        => $author,
-            'isbn'          => $isbn,
+            'product_type'  => $primary['product_type'],
+            'title'         => $primary['title'],
+            'author'        => $primary['author'],
+            'isbn'          => $primary['isbn'],
+            'keywords'      => $primary['keywords'],
+            'search_query'  => $primary['search_query'],
+            'products'      => $products,
             'text_on_image' => filled($data['text_on_image'] ?? null) ? trim((string) $data['text_on_image']) : null,
-            'keywords'      => $keywords,
-            'search_query'  => $searchQuery,
             'description'   => trim((string) ($data['description'] ?? '')),
         ];
     }

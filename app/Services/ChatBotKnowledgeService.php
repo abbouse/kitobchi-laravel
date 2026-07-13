@@ -243,6 +243,79 @@ class ChatBotKnowledgeService
             $parts[] = "Mijoz Premium obunachi.";
         }
 
+        // ── Nasiya (split) — mijozning JONLI holati ─────────────────────
+        $parts[] = $this->buildUserSplitContext($user);
+
         return implode("\n", $parts);
+    }
+
+    /**
+     * Mijozning nasiya (split) profili — limit, bloklanish sabablari va
+     * limitni oshirish yo'llari. Bot "nega nasiya ololmayapman?",
+     * "limitim qancha?", "qanday oshiraman?" savollariga ANIQ javob
+     * berishi uchun.
+     */
+    private function buildUserSplitContext(User $user): string
+    {
+        try {
+            $settings = ProjectSetting::query()->first();
+            if (! ($settings?->split_enabled ?? false) || ! ($settings?->split_public_enabled ?? false)) {
+                return '';
+            }
+
+            if (! Schema::hasTable('split_user_profiles')) {
+                return '';
+            }
+
+            $profile = \App\Models\SplitUserProfile::query()
+                ->where('user_id', $user->id)
+                ->first();
+
+            $lines = ["NASIYA HOLATI (shu mijozning o'zi uchun, jonli ma'lumot):"];
+
+            if (! $profile) {
+                $lines[] = "- Profil hali hisoblanmagan. Profil > Nasiya bo'limiga kirsa avtomatik hisoblanadi.";
+            } elseif ($profile->eligible) {
+                $lines[] = sprintf(
+                    "- Nasiya OCHIQ. Umumiy limit: %s so'm, hozir ishlatsa bo'ladigan bo'sh limit: %s so'm.",
+                    number_format((int) $profile->computed_limit),
+                    number_format((int) $profile->available_limit)
+                );
+
+                if ((int) $profile->active_contract_count > 0) {
+                    $lines[] = sprintf(
+                        "- Faol shartnomalari: %d ta (band summa: %s so'm).",
+                        (int) $profile->active_contract_count,
+                        number_format((int) $profile->active_exposure)
+                    );
+                }
+            } else {
+                $reasons = collect((array) ($profile->eligibility_reasons ?? []))
+                    ->filter()->values();
+
+                $lines[] = "- Nasiya HOZIRCHA YOPIQ. Aniq sabablari:";
+                foreach ($reasons as $reason) {
+                    $lines[] = '  • ' . $reason;
+                }
+
+                if ($reasons->isEmpty()) {
+                    $lines[] = "  • Sabab ko'rsatilmagan — Profil > Nasiya bo'limida tekshirishni ayt.";
+                }
+            }
+
+            // Limitni oshirish omillari — computeLimit formulasidan
+            $lines[] = "LIMITNI OSHIRISH OMILLARI (mijoz so'rasa shulardan mosini tushuntir):";
+            $lines[] = "- Har bir yakunlangan pullik buyurtma limitni oshiradi (eng kuchli omil).";
+            $lines[] = "- Karta orqali muvaffaqiyatli to'lovlar (oxirgi 6 oy) va xaridlar summasi.";
+            $lines[] = "- Tasdiqlangan kartaning yoshi (qancha uzoq ishlatilsa shuncha yaxshi).";
+            $lines[] = "- Reputatsiya balli (buyurtmalarni bekor qilmaslik, naqd buyurtmani qaytarmaslik).";
+            $lines[] = "- Har bir muddatida to'lab yopilgan nasiya shartnomasi limitni sezilarli oshiradi; kechikkan to'lovlar esa kamaytiradi.";
+
+            return implode("\n", $lines);
+        } catch (\Throwable $e) {
+            Log::warning('ChatBot split context failed: ' . $e->getMessage());
+
+            return '';
+        }
     }
 }

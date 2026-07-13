@@ -28,6 +28,8 @@ class BackfillSplitFiscalReceipts extends Command
             ->where('provider', 'paylov')
             ->where('state', 2)
             ->whereNotNull('order_id')
+            ->whereNotNull('provider_transaction_id')
+            ->where('provider_transaction_id', '<>', '')
             ->where(function ($query) {
                 $query->whereNull('perform_fiscal_data')
                     ->orWhereNull('perform_fiscal_data->qr_code_url');

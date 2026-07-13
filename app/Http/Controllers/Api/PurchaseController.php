@@ -896,6 +896,7 @@ class PurchaseController extends Controller
 
                         if ($installment->status === 'paid'
                             && $transaction !== null
+                            && filled($transaction->provider_transaction_id)
                             && blank($receiptUrl)
                             && config('services.paylov.ofd.enabled', false)
                             && \Illuminate\Support\Facades\Cache::add(
@@ -2805,7 +2806,7 @@ class PurchaseController extends Controller
             ->where('provider', 'paylov')
             ->where('state', 2)
             ->latest('id')
-            ->first(['id', 'payment_type', 'perform_fiscal_data', 'cancel_fiscal_data', 'provider_response']);
+            ->first(['id', 'payment_type', 'provider_transaction_id', 'perform_fiscal_data', 'cancel_fiscal_data', 'provider_response']);
 
         // Split buyurtmasida ViewPurchase faqat birinchi real to'lov chekini
         // ko'rsatadi. Keyingi cheklar shartnoma jadvaliga tegishli.
@@ -2816,7 +2817,7 @@ class PurchaseController extends Controller
                 ->where('provider', 'paylov')
                 ->where('state', 2)
                 ->orderBy('id')
-                ->get(['id', 'payment_type', 'perform_fiscal_data', 'cancel_fiscal_data', 'provider_response']);
+                ->get(['id', 'payment_type', 'provider_transaction_id', 'perform_fiscal_data', 'cancel_fiscal_data', 'provider_response']);
 
             $transaction = $splitTransactions->first(fn (Transaction $candidate) => (int) data_get($candidate->provider_response, 'split_installment_sequence', 0) === 1
             ) ?? $splitTransactions->first();
@@ -2850,6 +2851,7 @@ class PurchaseController extends Controller
         // qilamiz (eski buyurtmalar uchun; kuniga 1 marta throttle).
         if (! $order->has_payment_receipt
             && $transaction !== null
+            && filled($transaction->provider_transaction_id)
             && config('services.paylov.ofd.enabled', false)
             && \Illuminate\Support\Facades\Cache::add("ofd:backfill:{$transaction->id}", 1, now()->addDay())
         ) {

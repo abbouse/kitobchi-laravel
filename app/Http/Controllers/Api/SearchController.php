@@ -1092,6 +1092,9 @@ class SearchController extends Controller
             $analysis = app(\App\Services\OpenAIService::class)
                 ->analyzeProductImage($dataUrl, $extraText);
 
+            // Rasmda bir nechta mahsulot bo'lishi mumkin — hammasi qidiriladi
+            $recognizedProducts = array_slice($analysis['products'] ?? [], 0, 5);
+
             $recognized = [
                 'product_type' => $analysis['product_type'],
                 'title'        => $analysis['title'],
@@ -1099,6 +1102,8 @@ class SearchController extends Controller
                 'isbn'         => $analysis['isbn'] ?? null,
                 'description'  => $analysis['description'],
                 'search_query' => $analysis['search_query'],
+                'products'     => $recognizedProducts,
+                'count'        => count($recognizedProducts),
             ];
 
             $results = collect();
@@ -1115,64 +1120,70 @@ class SearchController extends Controller
                 }
             };
 
-            // ── 1. ISBN — aniq moslik ──────────────────────────────────
-            if (! empty($analysis['isbn'])) {
-                $isbnBooks = $this->visibleBooks(['category', 'seller', 'tags'])
-                    ->whereIsbn($analysis['isbn'])
-                    ->limit(5)
-                    ->get()
-                    ->each(fn ($b) => $b->_type = 'book');
+            // HAR BIR aniqlangan mahsulot uchun kaskad qidiruv
+            // (rasmda bir nechta kitob bo'lsa — hammasi topiladi)
+            $perProductLimit = max(4, (int) ceil(12 / max(1, count($recognizedProducts))));
 
-                $push($isbnBooks, 'isbn');
-            }
+            foreach ($recognizedProducts as $product) {
+                $type = $product['product_type'];
 
-            // ── 2. Aniqlangan nom/muallif — LIKE ───────────────────────
-            $type = $analysis['product_type'];
+                // ── 1. ISBN — aniq moslik ──────────────────────────────
+                if (! empty($product['isbn'])) {
+                    $isbnBooks = $this->visibleBooks(['category', 'seller', 'tags'])
+                        ->whereIsbn($product['isbn'])
+                        ->limit(5)
+                        ->get()
+                        ->each(fn ($b) => $b->_type = 'book');
 
-            if (in_array($type, ['book', 'other'], true)) {
-                $q = $this->visibleBooks(['category', 'seller', 'tags']);
-                $applied = false;
-
-                $q->where(function ($sub) use ($analysis, &$applied) {
-                    if (filled($analysis['title']) && mb_strlen($analysis['title']) >= 3) {
-                        $sub->orWhere('name', 'LIKE', '%' . $analysis['title'] . '%');
-                        $applied = true;
-                    }
-                    if (filled($analysis['author']) && mb_strlen($analysis['author']) >= 3) {
-                        $sub->orWhere('author', 'LIKE', '%' . $analysis['author'] . '%');
-                        $applied = true;
-                    }
-                });
-
-                if ($applied) {
-                    $push($q->limit(10)->get()->each(fn ($b) => $b->_type = 'book'), 'text');
+                    $push($isbnBooks, 'isbn');
                 }
-            }
 
-            if (in_array($type, ['stationery', 'other'], true) && filled($analysis['title'])) {
-                $stationeries = $this->visibleStationeries(['category', 'seller', 'tags'])
-                    ->where('name', 'LIKE', '%' . $analysis['title'] . '%')
-                    ->limit(10)
-                    ->get()
-                    ->each(fn ($s) => $s->_type = 'stationery');
+                // ── 2. Aniqlangan nom/muallif — LIKE ───────────────────
+                if (in_array($type, ['book', 'other'], true)) {
+                    $q = $this->visibleBooks(['category', 'seller', 'tags']);
+                    $applied = false;
 
-                $push($stationeries, 'text');
-            }
+                    $q->where(function ($sub) use ($product, &$applied) {
+                        if (filled($product['title']) && mb_strlen($product['title']) >= 3) {
+                            $sub->orWhere('name', 'LIKE', '%' . $product['title'] . '%');
+                            $applied = true;
+                        }
+                        if (filled($product['author']) && mb_strlen($product['author']) >= 3) {
+                            $sub->orWhereHas('authorProfile', fn ($a) => $a->where('name', 'LIKE', '%' . $product['author'] . '%'));
+                            $applied = true;
+                        }
+                    });
 
-            // ── 3. Semantik (vector) qidiruv ───────────────────────────
-            $searchQuery = trim(implode(' ', array_filter([$analysis['search_query'], $extraText])));
+                    if ($applied) {
+                        $push($q->limit(6)->get()->each(fn ($b) => $b->_type = 'book'), 'text');
+                    }
+                }
 
-            if ($searchQuery !== '' && $results->count() < 12) {
-                $vectorType = match ($type) {
-                    'book'       => 'book',
-                    'stationery' => 'stationery',
-                    default      => 'both',
-                };
+                if (in_array($type, ['stationery', 'other'], true) && filled($product['title'])) {
+                    $stationeries = $this->visibleStationeries(['category', 'seller', 'tags'])
+                        ->where('name', 'LIKE', '%' . $product['title'] . '%')
+                        ->limit(6)
+                        ->get()
+                        ->each(fn ($s) => $s->_type = 'stationery');
 
-                $semantic = app(\App\Services\VectorSearchService::class)
-                    ->search($searchQuery, $vectorType, 12, 0.25, inStockOnly: true);
+                    $push($stationeries, 'text');
+                }
 
-                $push($semantic, 'semantic');
+                // ── 3. Semantik (vector) qidiruv ───────────────────────
+                $searchQuery = trim(implode(' ', array_filter([$product['search_query'], $extraText])));
+
+                if ($searchQuery !== '') {
+                    $vectorType = match ($type) {
+                        'book'       => 'book',
+                        'stationery' => 'stationery',
+                        default      => 'both',
+                    };
+
+                    $semantic = app(\App\Services\VectorSearchService::class)
+                        ->search($searchQuery, $vectorType, $perProductLimit, 0.25, inStockOnly: true);
+
+                    $push($semantic, 'semantic');
+                }
             }
 
             $items = $results
