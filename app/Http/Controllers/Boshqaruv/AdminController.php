@@ -4962,7 +4962,7 @@ PROMPT;
         } catch (\Throwable $e) {
             Log::warning('[Staff] Parol reset SMS yuborilmadi', ['staff_id' => $staff->id, 'error' => $e->getMessage()]);
 
-            return back()->with('error', 'SMS yuborilmadi — parol o'zgartirilmadi. Birozdan so'ng qayta urinib ko'ring.');
+            return back()->with('error', "SMS yuborilmadi — parol o'zgartirilmadi. Birozdan so'ng qayta urinib ko'ring.");
         }
 
         $staff->update([
