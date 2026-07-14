@@ -8511,6 +8511,7 @@ PROMPT;
                 'centerLat' => $rule->center_lat,
                 'centerLon' => $rule->center_lon,
                 'radiusKm' => $rule->radius_km,
+                'polygon' => $rule->polygon,
                 'deliveryServiceId' => $rule->delivery_service_id,
                 'service' => $rule->deliveryService?->name,
                 'priority' => (int) $rule->priority,
@@ -8528,6 +8529,8 @@ PROMPT;
                 'services' => $services->count(),
                 'activeServices' => $services->where('status', true)->count(),
                 'rules' => $rules->count(),
+                'polygonRules' => $rules->where('scope', 'polygon')->count(),
+                'radiusRules' => $rules->where('scope', 'radius')->count(),
                 'codRules' => Schema::hasTable('delivery_zone_rules') ? DeliveryZoneRule::query()->active()->where('cod_allowed', true)->count() : 0,
             ],
             'logisticsFilters' => [

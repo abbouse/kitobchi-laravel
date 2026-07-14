@@ -9,6 +9,7 @@ use App\Services\DeliveryEtaSyncService;
 use App\Services\DeliveryZoneResolverService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 class LogisticsController extends Controller
 {
@@ -83,6 +84,7 @@ class LogisticsController extends Controller
 
     public function store(Request $request)
     {
+        $this->normalizePolygonInput($request);
         $validated = $this->validateRule($request);
 
         DeliveryZoneRule::create($this->payload($validated, $request));
@@ -92,6 +94,7 @@ class LogisticsController extends Controller
 
     public function update(Request $request, DeliveryZoneRule $logistic)
     {
+        $this->normalizePolygonInput($request);
         $validated = $this->validateRule($request);
         $previousEtaDays = $logistic->eta_days;
 
@@ -133,13 +136,16 @@ class LogisticsController extends Controller
         return $request->validate([
             'zone_name' => 'required|string|max:255',
             'country_code' => 'required|string|max:8',
-            'scope' => 'required|in:country,radius',
+            'scope' => 'required|in:country,radius,polygon',
             'region_name' => 'nullable|string|max:150',
             'district_name' => 'nullable|string|max:150',
             'city_name' => 'nullable|string|max:150',
             'center_lat' => 'nullable|numeric',
             'center_lon' => 'nullable|numeric',
             'radius_km' => 'nullable|numeric|min:0.1|max:5000',
+            'polygon' => 'nullable|array|max:1000',
+            'polygon.*' => 'array|size:2',
+            'polygon.*.*' => 'numeric',
             'delivery_service_id' => 'required|integer|exists:delivery_services,id',
             'priority' => 'required|integer|min:0|max:10000',
             'base_price' => 'nullable|integer|min:0|max:100000000',
@@ -155,9 +161,25 @@ class LogisticsController extends Controller
         ]);
     }
 
+    /**
+     * Frontend polygonni JSON string ko'rinishida yuboradi — uni massivga aylantiramiz.
+     */
+    private function normalizePolygonInput(Request $request): void
+    {
+        $polygon = $request->input('polygon');
+
+        if (is_string($polygon)) {
+            $trimmed = trim($polygon);
+            $decoded = $trimmed === '' ? null : json_decode($trimmed, true);
+            $request->merge(['polygon' => is_array($decoded) ? $decoded : null]);
+        }
+    }
+
     private function payload(array $validated, Request $request): array
     {
-        if (($validated['scope'] ?? 'radius') === 'radius') {
+        $scope = $validated['scope'] ?? 'radius';
+
+        if ($scope === 'radius') {
             $request->validate([
                 'center_lat' => 'required|numeric',
                 'center_lon' => 'required|numeric',
@@ -165,16 +187,42 @@ class LogisticsController extends Controller
             ]);
         }
 
+        $polygon = null;
+        $bbox = ['min_lat' => null, 'min_lon' => null, 'max_lat' => null, 'max_lon' => null];
+
+        if ($scope === 'polygon') {
+            $polygon = DeliveryZoneRule::sanitizePolygon($validated['polygon'] ?? $request->input('polygon'));
+
+            if ($polygon === null) {
+                throw ValidationException::withMessages([
+                    'polygon' => "Polygon zonasi kamida 3 ta nuqtadan iborat bo'lishi kerak. Xaritada zonani chizing.",
+                ]);
+            }
+
+            $box = DeliveryZoneRule::boundingBox($polygon);
+            $bbox = [
+                'min_lat' => $box['min_lat'],
+                'min_lon' => $box['min_lon'],
+                'max_lat' => $box['max_lat'],
+                'max_lon' => $box['max_lon'],
+            ];
+        }
+
         return [
             'zone_name' => $validated['zone_name'],
             'country_code' => strtoupper($validated['country_code']),
-            'scope' => $validated['scope'],
+            'scope' => $scope,
             'region_name' => $validated['region_name'] ?? null,
             'district_name' => $validated['district_name'] ?? null,
             'city_name' => $validated['city_name'] ?? null,
-            'center_lat' => $validated['scope'] === 'radius' ? (float) $validated['center_lat'] : null,
-            'center_lon' => $validated['scope'] === 'radius' ? (float) $validated['center_lon'] : null,
-            'radius_km' => $validated['scope'] === 'radius' ? (float) $validated['radius_km'] : null,
+            'center_lat' => $scope === 'radius' ? (float) $validated['center_lat'] : null,
+            'center_lon' => $scope === 'radius' ? (float) $validated['center_lon'] : null,
+            'radius_km' => $scope === 'radius' ? (float) $validated['radius_km'] : null,
+            'polygon' => $polygon,
+            'bbox_min_lat' => $bbox['min_lat'],
+            'bbox_min_lon' => $bbox['min_lon'],
+            'bbox_max_lat' => $bbox['max_lat'],
+            'bbox_max_lon' => $bbox['max_lon'],
             'delivery_service_id' => (int) $validated['delivery_service_id'],
             'priority' => (int) $validated['priority'],
             'base_price' => array_key_exists('base_price', $validated) && $validated['base_price'] !== null ? (int) $validated['base_price'] : null,

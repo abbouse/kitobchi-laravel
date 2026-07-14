@@ -13,6 +13,11 @@
     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  {{-- Yandex Maps 2.1 — logistika zonalari (polygon chizish/tahrirlash). Kalit: .env YANDEX_MAPS_API_KEY --}}
+  @if (config('services.yandex_maps.key'))
+    <script src="https://api-maps.yandex.ru/2.1/?apikey={{ config('services.yandex_maps.key') }}&lang={{ config('services.yandex_maps.lang', 'ru_RU') }}"></script>
+  @endif
+  <script>window.__YANDEX_MAPS_ENABLED__ = @json((bool) config('services.yandex_maps.key'));</script>
   @viteReactRefresh
   @vite('resources/js/boshqaruv/main.tsx')
   @inertiaHead

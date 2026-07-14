@@ -1,7 +1,7 @@
 import { ChangeEvent, FormEvent, useMemo, useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button, Form } from 'react-bootstrap';
-import { LeafletMapPicker, LeafletZonesMap } from '../components/LeafletMap';
+import { YandexZoneEditor, YandexZonesOverview, Ring } from '../components/YandexMap';
 
 // ===== MYSTERY BOX =====
 export function MysteryBox() {
@@ -138,6 +138,7 @@ type DeliveryRule = {
   centerLat?: string | number | null;
   centerLon?: string | number | null;
   radiusKm?: string | number | null;
+  polygon?: Array<[number, number]> | null;
   deliveryServiceId?: number;
   service?: string;
   priority?: number;
@@ -155,7 +156,7 @@ type DeliveryRule = {
 type LogisticsPayload = {
   deliveryServices?: DeliveryService[];
   deliveryRules?: DeliveryRule[];
-  logisticsStats?: { services?: number; activeServices?: number; rules?: number; codRules?: number };
+  logisticsStats?: { services?: number; activeServices?: number; rules?: number; polygonRules?: number; radiusRules?: number; codRules?: number };
   logisticsFilters?: {
     codFilter?: string;
     previewLat?: string;
@@ -448,18 +449,23 @@ function DeliveryServiceForm({ service, action, onDone }: { service?: DeliverySe
 }
 
 function DeliveryRuleForm({ rule, services, action, onDone }: { rule?: DeliveryRule | null; services: DeliveryService[]; action?: string; onDone: () => void }) {
-  const [scope, setScope] = useState(rule?.scope || 'radius');
+  const [scope, setScope] = useState(rule?.scope || 'polygon');
   const [lat, setLat] = useState(toLogisticsDecimal(rule?.centerLat, '41.311081'));
   const [lon, setLon] = useState(toLogisticsDecimal(rule?.centerLon, '69.240562'));
   const [radius, setRadius] = useState(toLogisticsDecimal(rule?.radiusKm, '28'));
+  const [polygon, setPolygon] = useState<Ring | null>(
+    Array.isArray(rule?.polygon) && (rule?.polygon?.length ?? 0) >= 3 ? (rule!.polygon as Ring) : null,
+  );
 
   if (!action) return null;
+
+  const radiusLabel = Math.max(1, Number.parseFloat(radius || '28')).toFixed(Number.parseFloat(radius || '28') % 1 === 0 ? 0 : 1);
 
   return (
     <form onSubmit={(event) => submitLogistics(event, rule ? 'put' : 'post', action, onDone)}>
       <div className="rounded-4 border bg-light-subtle p-3 mb-3">
-        <div className="fw-bold mb-1">Zona qoidasi - bu xizmat qayerda va qanday narxda ishlashini belgilaydi</div>
-        <div className="small text-muted">Bitta xizmatga bir nechta zona qo'shish mumkin. Masalan: Kitobchi kuryer 28 km standart, Kitobchi kuryer 45 km uzoq zona. Servisni ikki marta ochish shart emas.</div>
+        <div className="fw-bold mb-1">Zona qoidasi — bu xizmat qayerda va qanday narxda ishlashini belgilaydi</div>
+        <div className="small text-muted">Bitta xizmatga bir nechta zona qo'shish mumkin. Chegarani <b>polygon</b> qilib xaritada chizing (taksi uslubi) yoki oddiy <b>radius</b> bering.</div>
       </div>
       <div className="row g-3">
         <div className="col-md-6"><LogisticsInput name="zone_name" label="Zona nomi" required defaultValue={rule?.zoneName} /></div>
@@ -467,20 +473,50 @@ function DeliveryRuleForm({ rule, services, action, onDone }: { rule?: DeliveryR
         <div className="col-md-3">
           <label className="form-label small text-muted fw-semibold">Zona turi</label>
           <select className="form-select" name="scope" required value={scope} onChange={(event) => setScope(event.target.value)}>
-            <option value="radius">Radius bo'yicha</option>
+            <option value="polygon">Polygon (xaritada chizish)</option>
+            <option value="radius">Radius (doira)</option>
             <option value="country">Butun mamlakat</option>
           </select>
         </div>
         <div className="col-12">
           <div className="alert alert-light border mb-0">
             <div className="fw-semibold mb-1">Nom maydonlari ixtiyoriy</div>
-            <div className="small text-muted">Toshkent kuryer zonalarida viloyat/tuman/shaharni bo'sh qoldiring. Shunda Yandex manzil nomlari ruscha yoki inglizcha kelsa ham radius bo'yicha to'g'ri ishlaydi.</div>
+            <div className="small text-muted">Toshkent kuryer zonalarida viloyat/tuman/shaharni bo'sh qoldiring. Shunda Yandex manzil nomlari ruscha yoki inglizcha kelsa ham geometriya (polygon/radius) bo'yicha to'g'ri ishlaydi.</div>
           </div>
         </div>
         <div className="col-md-4"><LogisticsInput name="region_name" label="Viloyat" help="Faqat nom bo'yicha majburan cheklash kerak bo'lsa yozing." defaultValue={rule?.region} /></div>
         <div className="col-md-4"><LogisticsInput name="district_name" label="Tuman" help="Bo'sh bo'lsa tuman tekshirilmaydi." defaultValue={rule?.district} /></div>
         <div className="col-md-4"><LogisticsInput name="city_name" label="Shahar" help="Bo'sh bo'lsa shahar tekshirilmaydi." defaultValue={rule?.city} /></div>
-        {scope === 'radius' ? (
+
+        {scope === 'polygon' ? (
+          <>
+            <div className="col-12">
+              <div className="rounded-4 border bg-light-subtle p-3">
+                <div className="d-flex align-items-start justify-content-between gap-3 mb-2">
+                  <div>
+                    <div className="fw-bold">Zona chegarasi (polygon)</div>
+                    <div className="small text-muted">Kuryer yetkaza oladigan hududni xaritada erkin shakl qilib chizing.</div>
+                  </div>
+                  <span className={`chip ${polygon && polygon.length >= 3 ? 'chip-purple' : 'chip-gray'}`}>{polygon ? polygon.length : 0} nuqta</span>
+                </div>
+                <YandexZoneEditor
+                  scope="polygon"
+                  lat={lat}
+                  lon={lon}
+                  radiusKm={radius}
+                  polygon={polygon}
+                  onRadiusChange={() => undefined}
+                  onPolygonChange={(points) => setPolygon(points.length >= 3 ? points : null)}
+                  height={400}
+                />
+              </div>
+            </div>
+            <input type="hidden" name="polygon" value={JSON.stringify(polygon ?? [])} />
+            <input type="hidden" name="center_lat" value="" />
+            <input type="hidden" name="center_lon" value="" />
+            <input type="hidden" name="radius_km" value="" />
+          </>
+        ) : scope === 'radius' ? (
           <>
             <div className="col-12">
               <div className="rounded-4 border bg-light-subtle p-3">
@@ -489,17 +525,17 @@ function DeliveryRuleForm({ rule, services, action, onDone }: { rule?: DeliveryR
                     <div className="fw-bold">Radius xaritasi</div>
                     <div className="small text-muted">Xaritaga bosing yoki markerni sudrang. Manzil qidiruvi ham ishlaydi.</div>
                   </div>
-                  <span className="chip chip-success">{Math.max(1, Number.parseFloat(radius || '28')).toFixed(Number.parseFloat(radius || '28') % 1 === 0 ? 0 : 1)} km</span>
+                  <span className="chip chip-success">{radiusLabel} km</span>
                 </div>
-                <LeafletMapPicker
+                <YandexZoneEditor
+                  scope="radius"
                   lat={lat}
                   lon={lon}
-                  radiusKm={Number.parseFloat(radius || '28')}
-                  onChange={(next) => {
-                    if (next.lat !== null) setLat(next.lat.toFixed(6));
-                    if (next.lon !== null) setLon(next.lon.toFixed(6));
-                  }}
-                  height={300}
+                  radiusKm={radius}
+                  polygon={null}
+                  onRadiusChange={(coords) => { setLat(coords[0].toFixed(6)); setLon(coords[1].toFixed(6)); }}
+                  onPolygonChange={() => undefined}
+                  height={360}
                 />
                 <div className="d-flex flex-wrap gap-2 mt-3">
                   <button type="button" className="btn btn-sm btn-light" onClick={() => { setLat('41.311081'); setLon('69.240562'); setRadius('28'); }}>Toshkent markaz · 28 km</button>
@@ -507,7 +543,7 @@ function DeliveryRuleForm({ rule, services, action, onDone }: { rule?: DeliveryR
                   <button type="button" className="btn btn-sm btn-light" onClick={() => { setLat('41.299496'); setLon('69.240073'); setRadius('45'); }}>Uzoq zona · 45 km</button>
                 </div>
                 <div className="mt-3">
-                  <label className="form-label small text-muted fw-semibold">Radius: {Math.max(1, Number.parseFloat(radius || '28')).toFixed(Number.parseFloat(radius || '28') % 1 === 0 ? 0 : 1)} km</label>
+                  <label className="form-label small text-muted fw-semibold">Radius: {radiusLabel} km</label>
                   <input className="form-range" type="range" min="1" max="80" step="1" value={Number.isFinite(Number.parseFloat(radius)) ? Number.parseFloat(radius) : 28} onChange={(event) => setRadius(event.target.value)} />
                 </div>
               </div>
@@ -561,11 +597,26 @@ export function Logistika() {
   const [editingService, setEditingService] = useState<DeliveryService | null | undefined>(undefined);
   const [editingRule, setEditingRule] = useState<DeliveryRule | null | undefined>(undefined);
   const [ruleQuery, setRuleQuery] = useState('');
-  const [ruleScope, setRuleScope] = useState<'all' | 'radius' | 'country'>('all');
+  const [ruleScope, setRuleScope] = useState<'all' | 'radius' | 'polygon' | 'country'>('all');
   const [serviceQuery, setServiceQuery] = useState('');
   const courierServices = deliveryServices.filter((service) => service.type === 'courier_service');
   const postalServices = deliveryServices.filter((service) => service.type === 'mail_service');
   const radiusRules = deliveryRules.filter((rule) => rule.scope === 'radius');
+  const polygonRules = deliveryRules.filter((rule) => rule.scope === 'polygon');
+  const mapZones = deliveryRules
+    .filter((rule) =>
+      (rule.scope === 'radius' && rule.centerLat != null && rule.centerLon != null) ||
+      (rule.scope === 'polygon' && Array.isArray(rule.polygon) && rule.polygon.length >= 3))
+    .map((rule) => ({
+      id: rule.id,
+      scope: rule.scope,
+      lat: rule.centerLat ?? null,
+      lon: rule.centerLon ?? null,
+      radiusKm: rule.radiusKm ?? null,
+      polygon: (Array.isArray(rule.polygon) ? rule.polygon : null) as Ring | null,
+      label: rule.zoneName,
+      color: rule.active ? (rule.scope === 'polygon' ? '#4f46e5' : '#10b981') : '#9ca3af',
+    }));
 
   const filteredRules = useMemo(() => {
     const q = ruleQuery.trim().toLowerCase();
@@ -587,12 +638,14 @@ export function Logistika() {
       (service.name || '').toLowerCase().includes(q) || (service.type || '').toLowerCase().includes(q) || (service.country || '').toLowerCase().includes(q),
     );
   }, [deliveryServices, serviceQuery]);
-  const overviewHeight = 300;
+  const legendDot = (color: string) => (
+    <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 999, background: color, marginRight: 6 }} />
+  );
 
   return (
     <div>
       <div className="page-head">
-        <div><h1 className="page-title">Logistika</h1><p className="page-subtitle">Xizmatni bir marta oching, keyin u qaysi zonalarda ishlashini qoidalar orqali belgilang.</p></div>
+        <div><h1 className="page-title">Logistika</h1><p className="page-subtitle">Kuryer yetkazish zonalarini xaritada belgilang — polygon (taksi uslubi) yoki radius.</p></div>
         <div className="d-flex gap-2">
           <button className="btn btn-light" onClick={() => setEditingService(null)}><i className="bi bi-truck me-1"></i>Xizmat</button>
           <button className="btn btn-primary-gradient" onClick={() => setEditingRule(null)}><i className="bi bi-plus-circle me-1"></i>Zona qoidasi</button>
@@ -603,10 +656,11 @@ export function Logistika() {
         {[
           { label: 'Xizmatlar', value: logisticsStats.services ?? deliveryServices.length, icon: 'bi-truck', color: '#4f46e5' },
           { label: 'Faol xizmat', value: logisticsStats.activeServices ?? deliveryServices.filter((item) => item.active).length, icon: 'bi-check-circle', color: '#10b981' },
-          { label: 'Zona qoidalari', value: logisticsStats.rules ?? deliveryRules.length, icon: 'bi-geo-alt', color: '#f59e0b' },
+          { label: 'Polygon zona', value: logisticsStats.polygonRules ?? polygonRules.length, icon: 'bi-pentagon', color: '#4f46e5' },
+          { label: 'Radius zona', value: logisticsStats.radiusRules ?? radiusRules.length, icon: 'bi-record-circle', color: '#10b981' },
           { label: 'COD qoidalari', value: logisticsStats.codRules ?? deliveryRules.filter((item) => item.codAllowed).length, icon: 'bi-cash-coin', color: '#7c3aed' },
         ].map((item) => (
-          <div className="col-xl-3 col-md-6" key={item.label}>
+          <div className="col-xl col-md-4 col-6" key={item.label}>
             <div className="stat-card">
               <div className="d-flex align-items-center gap-3">
                 <div className="stat-icon" style={{ background: item.color }}><i className={`bi ${item.icon}`}></i></div>
@@ -617,58 +671,49 @@ export function Logistika() {
         ))}
       </div>
 
+      <div className="card-panel mb-4">
+        <div className="panel-head">
+          <div>
+            <div className="panel-title"><i className="bi bi-map me-2 text-primary"></i>Yetkazish zonalari xaritasi</div>
+            <small className="text-muted">Polygon chegaralar va radius doiralari real Yandex xaritada. Zonaga bosib tahrirlang.</small>
+          </div>
+          <div className="d-flex gap-2 align-items-center flex-wrap">
+            <span className="chip chip-purple">{polygonRules.length} polygon</span>
+            <span className="chip chip-success">{radiusRules.length} radius</span>
+          </div>
+        </div>
+        <YandexZonesOverview
+          height={440}
+          zones={mapZones}
+          onSelect={(id) => {
+            const rule = deliveryRules.find((item) => item.id === id);
+            if (rule) setEditingRule(rule);
+          }}
+        />
+        <div className="d-flex flex-wrap gap-3 mt-3 small text-muted align-items-center">
+          <span>{legendDot('#4f46e5')}Polygon zona</span>
+          <span>{legendDot('#10b981')}Radius zona</span>
+          <span>{legendDot('#9ca3af')}Nofaol</span>
+          <span className="ms-auto"><i className="bi bi-lightbulb me-1 text-warning"></i>Yangi zona uchun <b>Zona qoidasi</b> tugmasini bosing va xaritada chizing.</span>
+        </div>
+      </div>
+
       <div className="row g-3 mb-4">
-        <div className="col-xl-4">
-          <div className="card-panel h-100">
-            <div className="d-flex align-items-center gap-3 mb-3">
-              <div className="stat-icon" style={{ background: '#111827' }}><i className="bi bi-diagram-3"></i></div>
+        {[
+          { step: '1', title: 'Xizmat', icon: 'bi-truck', color: '#4f46e5', text: 'Kuryer yoki pochta kanali (Kitobchi kuryer, UzPost). Bir marta ochiladi.' },
+          { step: '2', title: 'Zona chegarasi', icon: 'bi-pentagon', color: '#7c3aed', text: 'Polygon qilib xaritada chizasiz yoki radius berasiz — narx, COD, ETA shu yerda.' },
+          { step: '3', title: 'Preview', icon: 'bi-calculator', color: '#10b981', text: 'Koordinata kiritib, checkoutda qaysi yetkazish chiqishini oldindan tekshirasiz.' },
+        ].map((item) => (
+          <div className="col-md-4" key={item.step}>
+            <div className="card-panel h-100 d-flex align-items-start gap-3">
+              <div style={{ background: item.color, flexShrink: 0, width: 44, height: 44, borderRadius: 12, display: 'grid', placeItems: 'center', color: '#fff', fontSize: 20 }}><i className={`bi ${item.icon}`}></i></div>
               <div>
-                <div className="panel-title">Qanday ishlaydi?</div>
-                <small className="text-muted">Chalkashmaslik uchun ikki qismga bo'lingan</small>
-              </div>
-            </div>
-            <div className="d-flex flex-column gap-3">
-              <div className="rounded-4 border p-3">
-                <div className="fw-bold">1. Xizmat</div>
-                <div className="small text-muted">Kuryer yoki pochta kanali. Masalan: Kitobchi kuryer, UzPost. Buni ikki marta qo'shish shart emas.</div>
-              </div>
-              <div className="rounded-4 border p-3">
-                <div className="fw-bold">2. Zona qoidasi</div>
-                <div className="small text-muted">Shu xizmat qayerda ishlaydi, narxi qancha, COD bormi, radius nechchi km - hammasi shu yerda.</div>
-              </div>
-              <div className="rounded-4 border p-3">
-                <div className="fw-bold">3. Preview</div>
-                <div className="small text-muted">User koordinatasini kiritib, checkoutda qaysi yetkazish chiqishini oldindan tekshirasiz.</div>
+                <div className="fw-bold">{item.step}. {item.title}</div>
+                <div className="small text-muted">{item.text}</div>
               </div>
             </div>
           </div>
-        </div>
-        <div className="col-xl-8">
-          <div className="card-panel h-100">
-            <div className="panel-head">
-              <div>
-                <div className="panel-title">Faol logistika xaritasi</div>
-                <small className="text-muted">Radiusli qoidalar haqiqiy xaritada ko'rinadi. Markerga bosib tahrirlaysiz.</small>
-              </div>
-              <span className="chip chip-gray">{radiusRules.length} radius</span>
-            </div>
-            <LeafletZonesMap
-              height={overviewHeight}
-              zones={radiusRules.map((rule) => ({
-                id: rule.id,
-                lat: rule.centerLat ?? null,
-                lon: rule.centerLon ?? null,
-                radiusKm: rule.radiusKm ?? null,
-                label: rule.zoneName,
-                color: rule.active ? '#10b981' : '#9ca3af',
-              }))}
-              onSelect={(id) => {
-                const rule = deliveryRules.find((item) => item.id === id);
-                if (rule) setEditingRule(rule);
-              }}
-            />
-          </div>
-        </div>
+        ))}
       </div>
 
       <div className="row g-3 mb-4">
@@ -694,9 +739,9 @@ export function Logistika() {
                 <input className="form-control form-control-sm" style={{ paddingLeft: 32 }} placeholder="Zona, xizmat yoki hudud bo'yicha" value={ruleQuery} onChange={(event) => setRuleQuery(event.target.value)} />
               </div>
               <div className="btn-group btn-group-sm">
-                {(['all', 'radius', 'country'] as const).map((value) => (
+                {(['all', 'polygon', 'radius', 'country'] as const).map((value) => (
                   <button key={value} type="button" className={`btn ${ruleScope === value ? 'btn-primary-gradient' : 'btn-light'}`} onClick={() => setRuleScope(value)}>
-                    {value === 'all' ? 'Barchasi' : value === 'radius' ? 'Radius' : 'Mamlakat'}
+                    {value === 'all' ? 'Barchasi' : value === 'polygon' ? 'Polygon' : value === 'radius' ? 'Radius' : 'Mamlakat'}
                   </button>
                 ))}
               </div>
@@ -707,7 +752,11 @@ export function Logistika() {
                 <tbody>{filteredRules.map((rule) => (
                   <tr key={rule.id}>
                     <td><div className="fw-semibold">{rule.zoneName}</div><small className="text-muted">{[rule.city, rule.district, rule.region, rule.country].filter(Boolean).join(', ') || '—'}</small></td>
-                    <td><span className="chip chip-gray">{rule.scope || '—'}</span>{rule.scope === 'radius' ? <div className="small text-muted">{rule.radiusKm || 0} km</div> : null}</td>
+                    <td>
+                      <span className={`chip ${rule.scope === 'polygon' ? 'chip-purple' : rule.scope === 'radius' ? 'chip-success' : 'chip-gray'}`}>{rule.scope || '—'}</span>
+                      {rule.scope === 'radius' ? <div className="small text-muted">{rule.radiusKm || 0} km</div> : null}
+                      {rule.scope === 'polygon' ? <div className="small text-muted">{Array.isArray(rule.polygon) ? rule.polygon.length : 0} nuqta</div> : null}
+                    </td>
                     <td>{rule.service || '—'}</td>
                     <td><strong>{(rule.basePrice || 0).toLocaleString()} so'm</strong><div className="small text-muted">{rule.freePriceFrom ? `${rule.freePriceFrom.toLocaleString()} dan bepul` : 'chegara yoq'}</div></td>
                     <td>{rule.etaDays || 0} kun</td>

@@ -160,11 +160,74 @@ class DeliveryZoneResolverService
 
         $lat = $this->floatValue($location, 'lat');
         $lon = $this->floatValue($location, 'lon');
-        if ($lat === null || $lon === null || $rule->center_lat === null || $rule->center_lon === null || $rule->radius_km === null) {
+        if ($lat === null || $lon === null) {
+            return false;
+        }
+
+        if ($rule->scope === 'polygon') {
+            return $this->matchesPolygon($rule, $lat, $lon);
+        }
+
+        if ($rule->center_lat === null || $rule->center_lon === null || $rule->radius_km === null) {
             return false;
         }
 
         return $this->distanceKm($lat, $lon, (float) $rule->center_lat, (float) $rule->center_lon) <= (float) $rule->radius_km;
+    }
+
+    /**
+     * Nuqta polygon zonasi ichida yotadimi? Avval bounding-box bilan tez rad etadi,
+     * so'ng ray-casting (even-odd) algoritmi bilan aniq tekshiradi.
+     */
+    private function matchesPolygon(DeliveryZoneRule $rule, float $lat, float $lon): bool
+    {
+        $polygon = DeliveryZoneRule::sanitizePolygon($rule->polygon);
+        if ($polygon === null) {
+            return false;
+        }
+
+        if ($rule->bbox_min_lat !== null && $rule->bbox_max_lat !== null
+            && $rule->bbox_min_lon !== null && $rule->bbox_max_lon !== null) {
+            if ($lat < (float) $rule->bbox_min_lat || $lat > (float) $rule->bbox_max_lat
+                || $lon < (float) $rule->bbox_min_lon || $lon > (float) $rule->bbox_max_lon) {
+                return false;
+            }
+        }
+
+        return $this->pointInPolygon($lat, $lon, $polygon);
+    }
+
+    /**
+     * Ray-casting (even-odd rule) point-in-polygon.
+     * Polygon nuqtalari [[lat, lon], ...] ko'rinishida (y = lat, x = lon).
+     *
+     * @param  array<int, array{0: float, 1: float}>  $polygon
+     */
+    private function pointInPolygon(float $lat, float $lon, array $polygon): bool
+    {
+        $inside = false;
+        $count = count($polygon);
+
+        for ($i = 0, $j = $count - 1; $i < $count; $j = $i++) {
+            $latI = $polygon[$i][0];
+            $lonI = $polygon[$i][1];
+            $latJ = $polygon[$j][0];
+            $lonJ = $polygon[$j][1];
+
+            $denominator = $latJ - $latI;
+            if ($denominator === 0.0) {
+                $denominator = 1e-12;
+            }
+
+            $intersects = (($latI > $lat) !== ($latJ > $lat))
+                && ($lon < ($lonJ - $lonI) * ($lat - $latI) / $denominator + $lonI);
+
+            if ($intersects) {
+                $inside = ! $inside;
+            }
+        }
+
+        return $inside;
     }
 
     private function locationNamesMatchRule(DeliveryZoneRule $rule, object|array $location): bool
@@ -203,7 +266,10 @@ class DeliveryZoneResolverService
             return 10;
         }
 
-        return 100
+        // Polygon aniq chegara — teng priority'da radiusdan ustun turadi.
+        $base = $rule->scope === 'polygon' ? 120 : 100;
+
+        return $base
             + ($rule->city_name ? 15 : 0)
             + ($rule->district_name ? 10 : 0)
             + ($rule->region_name ? 5 : 0);

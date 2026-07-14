@@ -102,6 +102,12 @@ return [
     'openai' => [
         'key' => env('OPENAI_API_KEY'),
     ],
+
+    // Yandex Maps JS API 2.1 — logistika zonalari xaritasi (polygon chizish)
+    'yandex_maps' => [
+        'key' => env('YANDEX_MAPS_API_KEY', ''),
+        'lang' => env('YANDEX_MAPS_LANG', 'ru_RU'),
+    ],
     'eskiz' => [
         'email' => env('ESKIZ_EMAIL', 'toordaliev@gmail.com'),
         'password' => env('ESKIZ_PASSWORD', 'aF6WH2CcaKes30zgLPCZ1MM7CPfPlgCX07HoM8rE'),
