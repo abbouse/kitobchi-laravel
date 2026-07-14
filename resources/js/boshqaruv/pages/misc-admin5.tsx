@@ -1,7 +1,7 @@
 import { ChangeEvent, FormEvent, useMemo, useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button, Form } from 'react-bootstrap';
-import { YandexZoneEditor, YandexZonesOverview, YandexPreviewMap, resolveZonesForPoint, Ring, ZoneLike, LatLon } from '../components/YandexMap';
+import { YandexZoneEditor, YandexPreviewMap, resolveZonesForPoint, Ring, ZoneLike, LatLon } from '../components/YandexMap';
 
 // ===== MYSTERY BOX =====
 export function MysteryBox() {
@@ -605,7 +605,6 @@ export function Logistika() {
   const [ruleQuery, setRuleQuery] = useState('');
   const [ruleScope, setRuleScope] = useState<'all' | 'radius' | 'polygon' | 'country'>('all');
   const [serviceQuery, setServiceQuery] = useState('');
-  const [focusZoneId, setFocusZoneId] = useState<number | null>(null);
   const [previewPoint, setPreviewPoint] = useState<LatLon | null>(null);
   const [sortKey, setSortKey] = useState<'priority' | 'basePrice' | null>(null);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
@@ -614,20 +613,6 @@ export function Logistika() {
   const radiusRules = deliveryRules.filter((rule) => rule.scope === 'radius');
   const polygonRules = deliveryRules.filter((rule) => rule.scope === 'polygon');
   const zoneColor = (rule: DeliveryRule) => rule.color || (rule.scope === 'polygon' ? '#4f46e5' : '#10b981');
-  const mapZones = deliveryRules
-    .filter((rule) =>
-      (rule.scope === 'radius' && rule.centerLat != null && rule.centerLon != null) ||
-      (rule.scope === 'polygon' && Array.isArray(rule.polygon) && rule.polygon.length >= 3))
-    .map((rule) => ({
-      id: rule.id,
-      scope: rule.scope,
-      lat: rule.centerLat ?? null,
-      lon: rule.centerLon ?? null,
-      radiusKm: rule.radiusKm ?? null,
-      polygon: (Array.isArray(rule.polygon) ? rule.polygon : null) as Ring | null,
-      label: rule.zoneName,
-      color: rule.active ? zoneColor(rule) : '#9ca3af',
-    }));
 
   // Client-side resolver uchun to'liq zona ma'lumoti (aqlli preview + overlap)
   const previewZones: ZoneLike[] = deliveryRules.map((rule) => ({
@@ -668,10 +653,6 @@ export function Logistika() {
       (service.name || '').toLowerCase().includes(q) || (service.type || '').toLowerCase().includes(q) || (service.country || '').toLowerCase().includes(q),
     );
   }, [deliveryServices, serviceQuery]);
-  const legendDot = (color: string) => (
-    <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 999, background: color, marginRight: 6 }} />
-  );
-
   const sortedRules = useMemo(() => {
     if (!sortKey) return filteredRules;
     const dir = sortDir === 'asc' ? 1 : -1;
@@ -698,38 +679,6 @@ export function Logistika() {
   const duplicateZone = (rule: DeliveryRule) => {
     setEditingRule({ ...rule, id: 0, zoneName: `${rule.zoneName} (nusxa)`, updateUrl: undefined, destroyUrl: undefined, toggleUrl: undefined });
   };
-
-  // Overlap: faol, geometrik, bir xil davlat zonalari orasida bounding-box kesishuvi (yumshoq ogohlantirish)
-  const overlapPairs = useMemo(() => {
-    const geo = deliveryRules.filter((r) => r.active && (r.scope === 'radius' || r.scope === 'polygon'));
-    const box = (r: DeliveryRule): [number, number, number, number] | null => {
-      if (r.scope === 'polygon' && Array.isArray(r.polygon) && r.polygon.length >= 3) {
-        const la = r.polygon.map((p) => p[0]);
-        const lo = r.polygon.map((p) => p[1]);
-        return [Math.min(...la), Math.min(...lo), Math.max(...la), Math.max(...lo)];
-      }
-      const cLat = Number(r.centerLat);
-      const cLon = Number(r.centerLon);
-      const rk = Number(r.radiusKm);
-      if (!Number.isFinite(cLat) || !Number.isFinite(cLon) || !Number.isFinite(rk)) return null;
-      const dLat = rk / 111;
-      const dLon = rk / (111 * Math.cos((cLat * Math.PI) / 180) || 1);
-      return [cLat - dLat, cLon - dLon, cLat + dLat, cLon + dLon];
-    };
-    const pairs: Array<{ a: DeliveryRule; b: DeliveryRule }> = [];
-    for (let i = 0; i < geo.length; i += 1) {
-      for (let j = i + 1; j < geo.length; j += 1) {
-        if ((geo[i].country || '') !== (geo[j].country || '')) continue;
-        const ba = box(geo[i]);
-        const bb = box(geo[j]);
-        if (!ba || !bb) continue;
-        if (ba[0] <= bb[2] && bb[0] <= ba[2] && ba[1] <= bb[3] && bb[1] <= ba[3]) {
-          pairs.push({ a: geo[i], b: geo[j] });
-        }
-      }
-    }
-    return pairs;
-  }, [deliveryRules]);
 
   const exportGeoJson = () => {
     const features = deliveryRules.map((rule) => {
@@ -789,61 +738,6 @@ export function Logistika() {
         ))}
       </div>
 
-      <div className="card-panel mb-4">
-        <div className="panel-head">
-          <div>
-            <div className="panel-title"><i className="bi bi-map me-2 text-primary"></i>Yetkazish zonalari xaritasi</div>
-            <small className="text-muted">Polygon chegaralar va radius doiralari real Yandex xaritada. Zonaga bosib tahrirlang.</small>
-          </div>
-          <div className="d-flex gap-2 align-items-center flex-wrap">
-            <span className="chip chip-purple">{polygonRules.length} polygon</span>
-            <span className="chip chip-success">{radiusRules.length} radius</span>
-            {focusZoneId != null ? <button className="btn btn-sm btn-light" onClick={() => setFocusZoneId(null)}><i className="bi bi-x-circle me-1"></i>Fokus</button> : null}
-            <button className="btn btn-sm btn-light" onClick={exportGeoJson}><i className="bi bi-download me-1"></i>GeoJSON</button>
-          </div>
-        </div>
-        <YandexZonesOverview
-          height={440}
-          zones={mapZones}
-          focusId={focusZoneId}
-          onSelect={(id) => {
-            const rule = deliveryRules.find((item) => item.id === id);
-            if (rule) setEditingRule(rule);
-          }}
-        />
-        <div className="d-flex flex-wrap gap-3 mt-3 small text-muted align-items-center">
-          <span>{legendDot('#4f46e5')}Polygon zona</span>
-          <span>{legendDot('#10b981')}Radius zona</span>
-          <span>{legendDot('#9ca3af')}Nofaol</span>
-          <span className="ms-auto"><i className="bi bi-lightbulb me-1 text-warning"></i>Yangi zona uchun <b>Zona qoidasi</b> tugmasini bosing va xaritada chizing.</span>
-        </div>
-      </div>
-
-      {overlapPairs.length > 0 ? (
-        <div className="card-panel mb-4" style={{ borderColor: '#fde68a', background: '#fffbeb' }}>
-          <div className="d-flex align-items-start gap-2">
-            <i className="bi bi-exclamation-triangle-fill text-warning fs-5"></i>
-            <div className="flex-fill">
-              <div className="fw-bold">Zona ustma-ustligi: {overlapPairs.length} ta juftlik</div>
-              <div className="small text-muted mb-2">Bu zonalar bir-birini qoplaydi. Kesishgan joyda <b>priority yuqori</b> (teng bo'lsa polygon) zona ishlaydi — pastdagi preview'da aniq tekshiring.</div>
-              <div className="d-flex flex-wrap gap-2">
-                {overlapPairs.slice(0, 12).map(({ a, b }, index) => {
-                  const winner = (a.priority ?? 0) === (b.priority ?? 0)
-                    ? (a.scope === 'polygon' ? a : b.scope === 'polygon' ? b : a)
-                    : ((a.priority ?? 0) > (b.priority ?? 0) ? a : b);
-                  return (
-                    <span key={index} className="chip chip-warning" style={{ cursor: 'pointer' }} onClick={() => setFocusZoneId(a.id)} title="Xaritada ko'rsatish">
-                      {a.zoneName} ⟷ {b.zoneName} · g'olib: {winner.zoneName}
-                    </span>
-                  );
-                })}
-                {overlapPairs.length > 12 ? <span className="chip chip-gray">+{overlapPairs.length - 12}</span> : null}
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
       <div className="row g-3 mb-4">
         {[
           { step: '1', title: 'Xizmat', icon: 'bi-truck', color: '#4f46e5', text: 'Kuryer yoki pochta kanali (Kitobchi kuryer, UzPost). Bir marta ochiladi.' },
@@ -870,14 +764,17 @@ export function Logistika() {
                 <div className="panel-title">Zona qoidalari</div>
                 <small className="text-muted">A122 resolver ishlatadigan narx, radius, COD va priority sozlamalari</small>
               </div>
-              <form className="d-flex gap-2" onSubmit={(event) => submitLogistics(event, 'get', indexUrl)}>
-                <select className="form-select form-select-sm" name="cod_filter" defaultValue={logisticsFilters.codFilter || ''}>
-                  <option value="">COD: barchasi</option>
-                  <option value="on">COD bor</option>
-                  <option value="off">COD yo'q</option>
-                </select>
-                <button className="btn btn-sm btn-light"><i className="bi bi-funnel"></i></button>
-              </form>
+              <div className="d-flex gap-2 align-items-center">
+                <button type="button" className="btn btn-sm btn-light" onClick={exportGeoJson} title="Zonalarni GeoJSON qilib yuklab olish"><i className="bi bi-download me-1"></i>GeoJSON</button>
+                <form className="d-flex gap-2" onSubmit={(event) => submitLogistics(event, 'get', indexUrl)}>
+                  <select className="form-select form-select-sm" name="cod_filter" defaultValue={logisticsFilters.codFilter || ''}>
+                    <option value="">COD: barchasi</option>
+                    <option value="on">COD bor</option>
+                    <option value="off">COD yo'q</option>
+                  </select>
+                  <button className="btn btn-sm btn-light"><i className="bi bi-funnel"></i></button>
+                </form>
+              </div>
             </div>
             <div className="d-flex flex-wrap gap-2 mb-2">
               <div className="position-relative flex-fill" style={{ minWidth: 180 }}>
@@ -907,7 +804,7 @@ export function Logistika() {
                 </tr></thead>
                 <tbody>{sortedRules.map((rule) => (
                   <tr key={rule.id}>
-                    <td style={{ cursor: rule.scope !== 'country' ? 'pointer' : 'default' }} onClick={() => rule.scope !== 'country' && setFocusZoneId(rule.id)} title={rule.scope !== 'country' ? "Xaritada ko'rsatish" : ''}>
+                    <td>
                       <div className="fw-semibold d-flex align-items-center gap-2">
                         <span style={{ width: 10, height: 10, borderRadius: 999, background: zoneColor(rule), display: 'inline-block', flexShrink: 0 }}></span>
                         {rule.zoneName}

@@ -257,18 +257,28 @@ function GeocodeSearch({ onPick }: { onPick: (coords: LatLon, label: string) => 
     const text = query.trim();
     if (!text || !window.ymaps) return;
     setBusy(true);
-    window.ymaps
-      .geocode(text, { results: 5 })
-      .then((res: any) => {
-        const list: Array<{ label: string; coords: LatLon }> = [];
-        res.geoObjects.each((obj: any) => {
-          const coords = obj.geometry.getCoordinates();
-          list.push({ label: obj.getAddressLine ? obj.getAddressLine() : obj.properties.get('text'), coords: [coords[0], coords[1]] });
-        });
-        setResults(list);
-      })
-      .catch(() => setResults([]))
-      .finally(() => setBusy(false));
+    // MUHIM: Yandex geocode "vow" promise qaytaradi — unda .catch/.finally YO'Q.
+    // Faqat .then(onOk, onErr) ishlaydi; busy'ni ikkala tarmoqda ham o'chiramiz.
+    try {
+      window.ymaps.geocode(text, { results: 5 }).then(
+        (res: any) => {
+          const list: Array<{ label: string; coords: LatLon }> = [];
+          res.geoObjects.each((obj: any) => {
+            const coords = obj.geometry.getCoordinates();
+            list.push({ label: obj.getAddressLine ? obj.getAddressLine() : obj.properties.get('text'), coords: [coords[0], coords[1]] });
+          });
+          setResults(list);
+          setBusy(false);
+        },
+        () => {
+          setResults([]);
+          setBusy(false);
+        },
+      );
+    } catch {
+      setResults([]);
+      setBusy(false);
+    }
   };
 
   return (
