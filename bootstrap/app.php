@@ -184,6 +184,20 @@ return Application::configure(basePath: dirname(__DIR__))
             ->timezone($tz)
             ->withoutOverlapping();
 
+        // ── User qiziqish profili: product viewlardan tavsiya signalini yig'ish ──
+        $schedule->command('products:refresh-user-interests --limit=400 --days=90 --cleanup-guest-days=45')
+            ->hourly()
+            ->between('08:00', '23:00')
+            ->timezone($tz)
+            ->withoutOverlapping()
+            ->runInBackground();
+
+        $schedule->command('products:refresh-user-interests --limit=5000 --days=90 --cleanup-guest-days=45')
+            ->dailyAt('04:25')
+            ->timezone($tz)
+            ->withoutOverlapping()
+            ->runInBackground();
+
         $schedule->command('seller-premium:sync-renewals')
             ->hourly()
             ->timezone($tz)

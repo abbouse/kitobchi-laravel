@@ -12,6 +12,7 @@ use App\Models\FavouriteProducts;
 use App\Support\ProductImageUrls;
 use App\Support\ProductPayloadFormatter;
 use App\Models\SearchHistory;
+use App\Services\ProductPersonalizationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
@@ -1580,9 +1581,18 @@ class SearchController extends Controller
 
         $books        = collect();
         $stationeries = collect();
+        $personalized = $this->personalizedSearchRecommendations($request, $user, 20, $type);
 
         if ($recentQueries->isEmpty()) {
-            $books        = $this->getPopularBooks(12);
+            if ($personalized->isNotEmpty()) {
+                return response()->json([
+                    'status'   => 'success',
+                    'data'     => $personalized,
+                    'based_on' => 'product_views',
+                ]);
+            }
+
+            $books = $this->getPopularBooks(12);
             $stationeries = $this->getPopularStationeries(8);
         } else {
             $combinedQuery = $recentQueries->implode(' ');
@@ -1638,7 +1648,10 @@ class SearchController extends Controller
 
         $items = $books->map(fn($p) => $this->formatProduct($p, $user))
             ->merge($stationeries->map(fn($p) => $this->formatProduct($p, $user)))
-            ->filter()->shuffle()->values();
+            ->merge($personalized)
+            ->filter()
+            ->unique(fn($item) => ($item['type'] ?? 'book').'_'.($item['id'] ?? '0'))
+            ->values();
 
         if ($items->isEmpty()) {
             $books        = $this->getPopularBooks(12);
@@ -1653,6 +1666,43 @@ class SearchController extends Controller
             'data'     => $items,
             'based_on' => $recentQueries->isEmpty() ? 'popular' : 'user_history',
         ]);
+    }
+
+    private function personalizedSearchRecommendations(Request $request, $user, int $limit, string $type = 'all')
+    {
+        $keys = app(ProductPersonalizationService::class)->recommendationKeys($request, $limit, $type);
+
+        if ($keys->isEmpty()) {
+            return collect();
+        }
+
+        $bookIds = $keys->where('type', 'book')->pluck('id')->all();
+        $stationeryIds = $keys->where('type', 'stationery')->pluck('id')->all();
+
+        $books = $bookIds === []
+            ? collect()
+            : $this->visibleBooks(['category', 'seller', 'tags'])
+                ->whereIn('id', $bookIds)
+                ->get()
+                ->keyBy('id');
+
+        $stationeries = $stationeryIds === []
+            ? collect()
+            : $this->visibleStationeries(['category', 'seller', 'tags', 'variants'])
+                ->whereIn('id', $stationeryIds)
+                ->get()
+                ->keyBy('id');
+
+        return $keys
+            ->map(function (array $key) use ($books, $stationeries, $user) {
+                $product = $key['type'] === 'book'
+                    ? $books->get($key['id'])
+                    : $stationeries->get($key['id']);
+
+                return $product ? $this->formatProduct($product, $user) : null;
+            })
+            ->filter()
+            ->values();
     }
 
     // ─────────────────────────────────────────────

@@ -1,11 +1,19 @@
 <?php
 
 return [
-    // Yangi kontent muallifning o'ziga ko'rinadi, boshqalarga esa AI qaroridan
-    // keyin ochiladi. Bu spam tarqalishini moderatsiya oralig'ida ham to'xtatadi.
-    'hold_pending' => (bool) env('BOOK_CLUB_MODERATION_HOLD_PENDING', true),
+    // Ijtimoiy tarmoqlar uslubi: yangi kontent DARHOL ko'rinadi. AI faqat
+    // aniq buzg'unchi kontentni (yuqori ishonch bilan) keyin yashiradi.
+    // hold_pending=true bo'lsagina hammasi moderatsiyagacha yashirin turadi
+    // (default false — zararsiz postlar bekorga yashirilmaydi).
+    'hold_pending' => (bool) env('BOOK_CLUB_MODERATION_HOLD_PENDING', false),
     'post_limit' => (int) env('BOOK_CLUB_MODERATION_POST_LIMIT', 150),
     'comment_limit' => (int) env('BOOK_CLUB_MODERATION_COMMENT_LIMIT', 300),
+
+    // AI "hide" qarori shu ishonchdan past bo'lsa — yashirmaymiz (ko'rsatamiz).
+    // Og'ir toifalar (scam, jinsiy, nafrat, tahdid, noqonuniy, xavfli link) uchun
+    // pastroq bo'sag'a; oddiy toifalar (spam, ma'nosiz) uchun yuqoriroq.
+    'hide_confidence' => (float) env('BOOK_CLUB_MODERATION_HIDE_CONFIDENCE', 0.80),
+    'severe_confidence' => (float) env('BOOK_CLUB_MODERATION_SEVERE_CONFIDENCE', 0.55),
 
     // Reklama faqat obro'li, ommaviy platformalarga olib borganda ko'rib
     // chiqiladi. Allowlist reklamaning o'zini avtomatik tasdiqlamaydi: firib,

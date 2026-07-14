@@ -175,6 +175,7 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
         Route::delete('/market-news/{news}', [AdminController::class, 'destroyMarketNews'])->name('market-news.destroy');
         Route::post('/content/translate', [AdminController::class, 'translateContent'])->name('content.translate');
         Route::get('/collections/book-search', [AdminController::class, 'collectionBookSearch'])->name('collections.book-search');
+        Route::post('/collections/ai-recommend', [AdminController::class, 'collectionAiRecommendation'])->name('collections.ai-recommend');
         Route::post('/collections', [AdminController::class, 'storeCollection'])->name('collections.store');
         Route::put('/collections/{collection}', [AdminController::class, 'updateCollection'])->name('collections.update');
         Route::patch('/collections/{collection}/toggle', [AdminController::class, 'toggleCollection'])->name('collections.toggle');

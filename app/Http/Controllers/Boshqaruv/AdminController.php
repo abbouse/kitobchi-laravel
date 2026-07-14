@@ -1275,6 +1275,41 @@ class AdminController extends Controller
         ]);
     }
 
+    public function collectionAiRecommendation(Request $request, \App\Services\CollectionAiAdvisorService $advisor): JsonResponse
+    {
+        if (! (bool) config('collection_advisor.enabled', true)) {
+            return response()->json(['status' => 'error', 'message' => "AI maslahatchisi o'chirilgan."], 422);
+        }
+
+        $validated = $request->validate([
+            'theme_hint' => 'nullable|string|max:160',
+            'size' => 'nullable|integer|min:2|max:12',
+            'target_discount_percent' => 'nullable|numeric|min:0|max:90',
+            'category_id' => 'nullable|integer',
+        ]);
+
+        try {
+            $result = $advisor->recommend($validated);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Collection AI recommend error', ['error' => $e->getMessage()]);
+
+            return response()->json(['status' => 'error', 'message' => 'AI tavsiya vaqtincha ishlamadi.'], 500);
+        }
+
+        if (! ($result['ok'] ?? false)) {
+            return response()->json(['status' => 'error', 'message' => $result['message'] ?? 'Tavsiya topilmadi.'], 422);
+        }
+
+        // Kitob rasmlarini to'liq URL'ga aylantiramiz (asset logikasi kontrollerda).
+        $result['books'] = collect($result['books'] ?? [])->map(function (array $book) {
+            $book['image'] = $this->assetFromStorage($book['image'] ?? null);
+
+            return $book;
+        })->all();
+
+        return response()->json(['status' => 'success', 'recommendation' => $result]);
+    }
+
     private function searchBooksForCollection(string $search): array
     {
         return Books::query()

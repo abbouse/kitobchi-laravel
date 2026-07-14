@@ -13,6 +13,7 @@ use App\Models\StationeryVariant;
 use App\Models\FavouriteProducts;
 use App\Models\MyCart;
 use App\Models\ProductViewLog;
+use App\Services\ProductPersonalizationService;
 use App\Services\ProductStockAlertService;
 use App\Support\ProductImageUrls;
 use App\Support\ProductPayloadFormatter;
@@ -308,7 +309,7 @@ class ProductsController extends Controller
     // =========================================================================
     public function index(Request $request, string $col)
     {
-        $user  = Auth::guard('user')->user();
+        $user  = $request->user('user') ?? auth('sanctum')->user() ?? Auth::guard('user')->user();
         $books = $this->bookScope()
             ->with(['seller', 'category', 'tags'])
             ->orderBy('created_at', 'DESC')
@@ -334,9 +335,10 @@ class ProductsController extends Controller
     // =========================================================================
     public function recommendation(Request $request, string $col)
     {
-        $user  = Auth::guard('user')->user();
+        $user  = $request->user('user') ?? auth('sanctum')->user() ?? Auth::guard('user')->user();
         $limit = (int)$col;
-        $result = collect();
+        $personalized = $this->personalizedRecommendations($request, $user, $limit);
+        $result = collect($personalized);
 
         // ── 1. Recommended (true + muddati o'tmagan) ─────────────
         $recBooks = $this->isRecommended($this->bookScope())
@@ -411,14 +413,58 @@ class ProductsController extends Controller
             $result = $result->merge($newBooks);
         }
 
+        $items = $result
+            ->unique(fn($p) => $p['type'].'_'.$p['id'])
+            ->when($personalized->isEmpty(), fn($collection) => $collection->shuffle())
+            ->take($limit)
+            ->values();
+
         return response()->json([
             'status' => 'success',
-            'data'   => $result
-                ->unique(fn($p) => $p['type'].'_'.$p['id'])
-                ->shuffle()
-                ->take($limit)
-                ->values(),
+            'data'   => $items,
+            'based_on' => $personalized->isEmpty() ? 'default' : 'product_views',
         ]);
+    }
+
+    private function personalizedRecommendations(Request $request, $user, int $limit)
+    {
+        $keys = app(ProductPersonalizationService::class)->recommendationKeys($request, $limit, 'all');
+
+        if ($keys->isEmpty()) {
+            return collect();
+        }
+
+        $bookIds = $keys->where('type', 'book')->pluck('id')->all();
+        $stationeryIds = $keys->where('type', 'stationery')->pluck('id')->all();
+
+        $books = $bookIds === []
+            ? collect()
+            : $this->bookScope()
+                ->with(['category', 'tags', 'seller'])
+                ->whereIn('id', $bookIds)
+                ->get()
+                ->keyBy('id');
+
+        $stationeries = $stationeryIds === []
+            ? collect()
+            : $this->stationeryScope()
+                ->with(['category', 'tags', 'variants', 'seller'])
+                ->whereIn('id', $stationeryIds)
+                ->get()
+                ->keyBy('id');
+
+        return $keys
+            ->map(function (array $key) use ($books, $stationeries, $user) {
+                if ($key['type'] === 'book') {
+                    $book = $books->get($key['id']);
+                    return $book ? $this->formatProduct($book, $user, 'book') : null;
+                }
+
+                $stationery = $stationeries->get($key['id']);
+                return $stationery ? $this->formatProduct($stationery, $user, 'stationery') : null;
+            })
+            ->filter()
+            ->values();
     }
 
     // =========================================================================
@@ -1242,25 +1288,57 @@ class ProductsController extends Controller
 
         $recommendationActive = $this->isRecommendationActiveForProduct($product);
 
-        ProductViewLog::query()->create([
+        $user = $request->user('user') ?? auth('sanctum')->user() ?? Auth::guard('user')->user();
+        $deviceId = trim((string) $request->header('X-Device-Id', ''));
+        $sessionId = trim((string) $request->header('X-Session-Id', ''));
+
+        $recentViewQuery = ProductViewLog::query()
+            ->where('product_id', (int) $product->id)
+            ->where('product_type', $type)
+            ->where('created_at', '>=', now()->subMinutes(30));
+
+        if ($user) {
+            $recentViewQuery->where('user_id', $user->id);
+        } elseif ($sessionId !== '') {
+            $recentViewQuery->where('session_id', $sessionId);
+        } elseif ($deviceId !== '' && $deviceId !== 'unknown_device') {
+            $recentViewQuery->where('device_id', $deviceId);
+        } else {
+            $recentViewQuery->whereRaw('1 = 0');
+        }
+
+        $recentView = $recentViewQuery->latest()->first();
+
+        if ($recentView) {
+            $recentView->update([
+                'recommendation_active' => $recommendationActive,
+                'ip_address' => $request->ip(),
+                'user_agent' => substr((string) $request->userAgent(), 0, 255),
+                'updated_at' => now(),
+            ]);
+        } else {
+            ProductViewLog::query()->create([
             'seller_id' => (int) $product->seller_id,
             'product_id' => (int) $product->id,
             'product_type' => $type,
-            'user_id' => optional(Auth::guard('user')->user())->id,
+            'user_id' => optional($user)->id,
             'recommendation_active' => $recommendationActive,
-            'device_id' => $request->header('X-Device-Id'),
-            'session_id' => $request->header('X-Session-Id'),
+            'device_id' => $deviceId !== '' ? $deviceId : null,
+            'session_id' => $sessionId !== '' ? $sessionId : null,
             'ip_address' => $request->ip(),
             'user_agent' => substr((string) $request->userAgent(), 0, 255),
-        ]);
+            ]);
 
-        $product->increment('views');
+            $product->increment('views');
+            $product->views = (int) ($product->views ?? 0) + 1;
+        }
 
         return response()->json([
             'status' => 'success',
             'data' => [
                 'views' => (int) ($product->views ?? 0),
                 'recommendation_active' => $recommendationActive,
+                'deduped' => (bool) $recentView,
             ],
         ]);
     }

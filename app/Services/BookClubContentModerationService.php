@@ -23,6 +23,10 @@ class BookClubContentModerationService
     {
         $posts = BookClub::query()
             ->where('is_deleted', false)
+            // Admin qo'lda hal qilgan (manual) kontentni AI qayta baholamaydi — qaror qaytmaydi.
+            ->where(fn ($query) => $query
+                ->whereNull('ai_moderation_status')
+                ->orWhereNotIn('ai_moderation_status', ['manual_hidden', 'manual_clean']))
             ->where(function ($query) {
                 $query->whereNull('ai_moderation_status')
                     ->orWhere('ai_moderation_status', 'pending')
@@ -38,6 +42,9 @@ class BookClubContentModerationService
 
         $comments = BookClubComment::query()
             ->whereHas('post', fn ($query) => $query->where('is_deleted', false))
+            ->where(fn ($query) => $query
+                ->whereNull('ai_moderation_status')
+                ->orWhereNotIn('ai_moderation_status', ['manual_hidden', 'manual_clean']))
             ->where(function ($query) {
                 $query->whereNull('ai_moderation_status')
                     ->orWhere('ai_moderation_status', 'pending')
@@ -59,9 +66,15 @@ class BookClubContentModerationService
     {
         $postsQuery = BookClub::query()
             ->where('is_deleted', false)
+            ->where(fn ($query) => $query
+                ->whereNull('ai_moderation_status')
+                ->orWhereNotIn('ai_moderation_status', ['manual_hidden', 'manual_clean']))
             ->orderBy('id');
         $commentsQuery = BookClubComment::query()
             ->whereHas('post', fn ($query) => $query->where('is_deleted', false))
+            ->where(fn ($query) => $query
+                ->whereNull('ai_moderation_status')
+                ->orWhereNotIn('ai_moderation_status', ['manual_hidden', 'manual_clean']))
             ->orderBy('id');
 
         if ($limit > 0) {
@@ -128,10 +141,25 @@ class BookClubContentModerationService
                 $note = Str::limit(trim((string) ($decision['note'] ?? '')), 360, '');
                 $confidence = max(0, min(1, (float) ($decision['confidence'] ?? 0)));
 
-                // Allowlistga kirmagan tashqi linkni AI tasodifan ochib yubormaydi.
-                if (($item['policy']['untrusted_domains'] ?? []) !== []
-                    || ($item['policy']['shortener_domains'] ?? []) !== []
-                ) {
+                // Ishonch past bo'lsa yashirmaymiz — zararsiz post bekorga ketmasligi uchun
+                // (ijtimoiy tarmoq uslubi). Og'ir toifalarda bo'sag'a pastroq.
+                if ($action === 'hide') {
+                    $severeReasons = ['scam', 'sexual', 'hate', 'harassment', 'illegal', 'suspicious_link'];
+                    $threshold = in_array($reason, $severeReasons, true)
+                        ? (float) config('book_club_moderation.severe_confidence', 0.55)
+                        : (float) config('book_club_moderation.hide_confidence', 0.80);
+                    if ($confidence < $threshold) {
+                        $action = 'show';
+                    }
+                }
+
+                // Faqat KUCHLI link xavfi (qisqartirilgan / yashirilgan / IP) majburan
+                // yashiriladi. Oddiy tashqi link o'zi yashirish sababi emas.
+                $policy = $item['policy'];
+                $severeLink = ($policy['shortener_domains'] ?? []) !== []
+                    || in_array('obfuscated_link', $policy['signals'] ?? [], true)
+                    || in_array('ip_address_link', $policy['signals'] ?? [], true);
+                if ($severeLink) {
                     $action = 'hide';
                     $reason = 'suspicious_link';
                 }
@@ -257,9 +285,9 @@ PROMPT,
     private function markFailed(BookClub|BookClubComment $model, array $policy, string $message): void
     {
         $model->forceFill([
-            'is_hidden_by_ai' => config('book_club_moderation.hold_pending', true)
-                ? true
-                : (bool) $model->is_hidden_by_ai,
+            // Fail-open: AI javob bermasa ham zararsiz kontentni yashirmaymiz —
+            // joriy ko'rinish saqlanadi (keyingi urinishda qayta baholanadi).
+            'is_hidden_by_ai' => (bool) $model->is_hidden_by_ai,
             'ai_moderation_status' => 'failed',
             'ai_moderated_at' => now(),
             'ai_moderation_note' => $message,

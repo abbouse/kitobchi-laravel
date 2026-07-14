@@ -78,6 +78,34 @@ const itemKey = (type: ProductType, id: number) => `${type}-${id}`;
 const translateLocaleLabels: Record<TranslateLocale, string> = { ru: 'RU', en: 'EN', ja: 'JA' };
 const getCsrfToken = () => document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content || '';
 
+type AiBook = {
+  id: number; name: string; author?: string; seller?: string;
+  price: number; stock: number; commission_percent: number;
+  sales: number; carts: number; views: number; score: number; image?: string | null; quantity?: number;
+};
+
+type AiRecommendation = {
+  theme: { title_uz: string; title_ru: string; subtitle_uz: string; subtitle_ru: string; description_uz: string; description_ru: string };
+  books: AiBook[];
+  pricing: {
+    currency: string; gross_retail: number; total_commission: number; seller_payout: number;
+    target_discount_percent: number; applied_discount_percent: number; applied_discount: number;
+    bundle_price: number; payment_fee: number; tax: number; tax_mode: string; platform_net: number;
+    margin_floor: number; margin_floor_percent: number; max_safe_discount: number; discount_clamped: boolean;
+  };
+  reasoning: string;
+  demand: { window_days: number; candidate_count: number; top_searches: string[]; method: string };
+};
+
+const money = (n: number) => `${(Number(n) || 0).toLocaleString('ru-RU')} so'm`;
+
+const InfoRow = ({ label, value, strong = false }: { label: string; value: string; strong?: boolean }) => (
+  <div className="col-md-6 d-flex justify-content-between border-bottom py-1" style={{ gap: 8 }}>
+    <span className="text-muted">{label}</span>
+    <span className={strong ? 'fw-bold' : 'fw-semibold'} style={{ textAlign: 'right' }}>{value}</span>
+  </div>
+);
+
 const defaultForm = {
   slug: '',
   sortOrder: 0,
@@ -117,6 +145,7 @@ export default function CollectionsPage() {
   }>().props;
   const baseSearchUrl = collections[0]?.bookSearchUrl || '/boshqaruv/collections/book-search';
   const baseCreateUrl = collections[0]?.createUrl || '/boshqaruv/collections';
+  const aiRecommendUrl = '/boshqaruv/collections/ai-recommend';
 
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<CollectionRow | null>(null);
@@ -128,6 +157,12 @@ export default function CollectionsPage() {
   const [searchResults, setSearchResults] = useState<SearchProduct[]>([]);
   const [items, setItems] = useState<CollectionItem[]>([]);
   const [form, setForm] = useState(defaultForm);
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiResult, setAiResult] = useState<AiRecommendation | null>(null);
+  const [aiThemeHint, setAiThemeHint] = useState('');
+  const [aiSize, setAiSize] = useState('');
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [translatingLocales, setTranslatingLocales] = useState<TranslateLocale[]>([]);
 
@@ -354,6 +389,62 @@ export default function CollectionsPage() {
     }
   };
 
+  const runAiRecommend = async () => {
+    setAiLoading(true);
+    setAiError(null);
+    try {
+      const response = await fetch(aiRecommendUrl, {
+        method: 'POST',
+        headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': getCsrfToken() },
+        body: JSON.stringify({
+          theme_hint: aiThemeHint.trim() || null,
+          size: aiSize ? Number(aiSize) : null,
+        }),
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || payload?.status !== 'success') {
+        throw new Error(payload?.message || 'AI tavsiya xatosi');
+      }
+      setAiResult(payload.recommendation as AiRecommendation);
+    } catch (error) {
+      setAiResult(null);
+      setAiError(error instanceof Error ? error.message : 'AI tavsiya vaqtincha ishlamadi.');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const applyAiRecommendation = () => {
+    if (!aiResult) return;
+    resetForm();
+    setItems(aiResult.books.map((b, index) => ({
+      productId: b.id,
+      productType: 'book' as ProductType,
+      name: b.name,
+      author: b.author,
+      seller: b.seller,
+      quantity: b.quantity || 1,
+      sortOrder: index,
+      price: b.price,
+      stock: b.stock,
+      available: true,
+      image: b.image,
+    })));
+    setForm({
+      ...defaultForm,
+      titleUz: aiResult.theme.title_uz || '',
+      titleRu: aiResult.theme.title_ru || '',
+      subtitleUz: aiResult.theme.subtitle_uz || '',
+      subtitleRu: aiResult.theme.subtitle_ru || '',
+      descriptionUz: aiResult.theme.description_uz || '',
+      descriptionRu: aiResult.theme.description_ru || '',
+      customTotalPrice: aiResult.pricing.bundle_price ? String(aiResult.pricing.bundle_price) : '',
+    });
+    setEditing(null);
+    setAiOpen(false);
+    setShowForm(true);
+  };
+
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -475,16 +566,103 @@ export default function CollectionsPage() {
           <h1 className="page-title">To'plamlar</h1>
           <p className="page-subtitle">Banner orqali ochiladigan tayyor kitob va kanselyariya to'plamlari, ularning sahifa dizayni</p>
         </div>
-        <button
-          className="btn btn-primary-gradient"
-          onClick={() => {
-            hydrateForm(null);
-            setShowForm(true);
-          }}
-        >
-          <i className="bi bi-plus-lg me-1"></i>To'plam qo'shish
-        </button>
+        <div className="d-flex gap-2">
+          <button className="btn btn-light" onClick={() => { setAiError(null); setAiOpen(true); }}>
+            <i className="bi bi-stars me-1"></i>AI tavsiya
+          </button>
+          <button
+            className="btn btn-primary-gradient"
+            onClick={() => {
+              hydrateForm(null);
+              setShowForm(true);
+            }}
+          >
+            <i className="bi bi-plus-lg me-1"></i>To'plam qo'shish
+          </button>
+        </div>
       </div>
+
+      <Modal show={aiOpen} onHide={() => setAiOpen(false)} centered size="lg" scrollable>
+        <Modal.Header closeButton>
+          <Modal.Title className="fs-5 fw-bold"><i className="bi bi-stars me-2 text-warning"></i>AI to'plam tavsiyasi</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <div className="rounded-4 border bg-light-subtle p-3 mb-3 small text-muted">
+            AI bizning real talab ma'lumotimiz (sotuv, savat, ko'rish, qidiruv) va bozor bilimi asosida ombordagi kitoblardan mavzuli to'plam hamda marketing narxini (seller komissiyasi + soliq hisobga olingan) tavsiya qiladi.
+          </div>
+          <div className="row g-2 align-items-end mb-3">
+            <div className="col-md-6">
+              <label className="form-label small text-muted fw-semibold">Mavzu (ixtiyoriy)</label>
+              <input className="form-control" placeholder="masalan: Shaxsiy rivojlanish" value={aiThemeHint} onChange={(e) => setAiThemeHint(e.target.value)} />
+            </div>
+            <div className="col-md-3">
+              <label className="form-label small text-muted fw-semibold">Kitob soni</label>
+              <input className="form-control" type="number" min={2} max={12} placeholder="auto" value={aiSize} onChange={(e) => setAiSize(e.target.value)} />
+            </div>
+            <div className="col-md-3">
+              <button className="btn btn-primary-gradient w-100" onClick={runAiRecommend} disabled={aiLoading}>
+                {aiLoading ? <span className="spinner-border spinner-border-sm" /> : <><i className="bi bi-magic me-1"></i>Tahlil</>}
+              </button>
+            </div>
+          </div>
+
+          {aiError ? <div className="alert alert-danger py-2 px-3 small mb-3">{aiError}</div> : null}
+          {aiLoading ? <div className="text-center text-muted py-4"><span className="spinner-border spinner-border-sm me-2" />Chuqur tahlil qilinmoqda…</div> : null}
+
+          {aiResult ? (
+            <div>
+              <div className="mb-3">
+                <div className="fw-bold fs-5">{aiResult.theme.title_uz || '—'}</div>
+                {aiResult.theme.subtitle_uz ? <div className="text-muted">{aiResult.theme.subtitle_uz}</div> : null}
+                {aiResult.theme.description_uz ? <div className="small text-muted mt-1">{aiResult.theme.description_uz}</div> : null}
+              </div>
+
+              <div className="table-responsive mb-3">
+                <table className="data-table">
+                  <thead><tr><th></th><th>Kitob</th><th>Narx</th><th>Talab (sot/savat/ko'r)</th></tr></thead>
+                  <tbody>
+                    {aiResult.books.map((b) => (
+                      <tr key={b.id}>
+                        <td><div className="thumb" style={{ width: 34, height: 44 }}>{b.image ? <img src={b.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <i className="bi bi-book"></i>}</div></td>
+                        <td><div className="fw-semibold">{b.name}</div><small className="text-muted">{[b.author, b.seller].filter(Boolean).join(' · ')}</small></td>
+                        <td className="fw-semibold">{money(b.price)}</td>
+                        <td><span className="chip chip-gray">{b.sales} / {b.carts} / {b.views}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="rounded-4 border p-3 mb-3">
+                <div className="fw-bold mb-2"><i className="bi bi-cash-coin me-1 text-success"></i>Narx tahlili — marketing, margin-himoyalangan</div>
+                <div className="row g-2 small">
+                  <InfoRow label="Alohida narx (jami)" value={money(aiResult.pricing.gross_retail)} />
+                  <InfoRow label="Chegirma" value={`−${money(aiResult.pricing.applied_discount)} · ${aiResult.pricing.applied_discount_percent}%`} />
+                  <InfoRow label="To'plam narxi" value={money(aiResult.pricing.bundle_price)} strong />
+                  <InfoRow label="Seller to'lovi" value={money(aiResult.pricing.seller_payout)} />
+                  <InfoRow label="Platforma komissiyasi" value={money(aiResult.pricing.total_commission)} />
+                  <InfoRow label={`Soliq (${aiResult.pricing.tax_mode})`} value={money(aiResult.pricing.tax)} />
+                  <InfoRow label="To'lov xizmati" value={money(aiResult.pricing.payment_fee)} />
+                  <InfoRow label="Platforma sof margini" value={money(aiResult.pricing.platform_net)} strong />
+                  <InfoRow label={`Margin poli (${aiResult.pricing.margin_floor_percent}%)`} value={money(aiResult.pricing.margin_floor)} />
+                </div>
+                {aiResult.pricing.discount_clamped ? <div className="small text-warning mt-2"><i className="bi bi-shield-check me-1"></i>Chegirma margin-poliga qarab avtomatik cheklandi (margin himoyalandi).</div> : null}
+              </div>
+
+              {aiResult.reasoning ? <div className="rounded-4 border p-3 mb-3"><div className="fw-semibold mb-1"><i className="bi bi-lightbulb me-1 text-warning"></i>AI izohi</div><div className="small text-muted">{aiResult.reasoning}</div></div> : null}
+
+              <div className="small text-muted">
+                <i className="bi bi-graph-up me-1"></i>{aiResult.demand.method} · {aiResult.demand.window_days} kun · {aiResult.demand.candidate_count} nomzod
+                {aiResult.demand.top_searches.length ? <div className="mt-1">Top qidiruvlar: {aiResult.demand.top_searches.slice(0, 8).join(', ')}</div> : null}
+              </div>
+            </div>
+          ) : null}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="light" onClick={() => setAiOpen(false)}>Yopish</Button>
+          <Button variant="success" disabled={!aiResult} onClick={applyAiRecommendation}><i className="bi bi-check2 me-1"></i>Qabul qilish va tahrirlash</Button>
+        </Modal.Footer>
+      </Modal>
 
       <div className="row g-3 mb-4">
         {[

@@ -67,6 +67,15 @@ class BookClubContentPolicy
                     'profanity',
                     'scam_pattern',
                 ]) !== [],
+            // severe_risk — deyarli aniq spam/scam. Faqat SHU holatda yangi kontent
+            // darhol yashiriladi; oddiy tashqi link yoki so'kinish o'zi yashirmaydi
+            // (ijtimoiy tarmoq uslubi — AI keyin ishonch bilan qaror qiladi).
+            'severe_risk' => $shorteners !== []
+                || array_intersect($signals, [
+                    'obfuscated_link',
+                    'ip_address_link',
+                    'scam_pattern',
+                ]) !== [],
         ];
     }
 
@@ -76,8 +85,10 @@ class BookClubContentPolicy
         $inspection = $this->inspect($content);
 
         return [
-            'is_hidden_by_ai' => (bool) config('book_club_moderation.hold_pending', true)
-                || (bool) $inspection['hard_risk'],
+            // Optimistik: default ko'rinadi. Faqat hold_pending yoqilgan bo'lsa yoki
+            // deyarli aniq spam/scam (severe_risk) bo'lsagina darhol yashiriladi.
+            'is_hidden_by_ai' => (bool) config('book_club_moderation.hold_pending', false)
+                || (bool) $inspection['severe_risk'],
             'ai_moderation_status' => 'pending',
             'ai_moderated_at' => null,
             'ai_moderation_note' => null,
