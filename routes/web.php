@@ -121,6 +121,11 @@ Route::get('/demo', function () {
 
 Route::post('/telegram/webhook', TelegramWebhookController::class)->withoutMiddleware(['web', \App\Http\Middleware\VerifyCsrfToken::class]);
 
+Route::get('/contact', [\App\Http\Controllers\ContactController::class, 'index'])->name('contact.index');
+Route::post('/contact', [\App\Http\Controllers\ContactController::class, 'store'])
+    ->middleware('throttle:6,1')
+    ->name('contact.store');
+
 Route::get('/careers', [CareersController::class, 'index'])->name('careers.index');
 Route::middleware('throttle:12,1')->group(function () {
     Route::post('/careers/vacancy/{vacancy}/apply', [CareersController::class, 'storeVacancy'])->name('careers.apply');

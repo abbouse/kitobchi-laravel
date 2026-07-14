@@ -7,6 +7,7 @@ return [
     'faq' => 'よくある質問',
     'careers' => '採用',
     'legal' => '資料',
+    'contact' => 'お問い合わせ',
     'download' => 'ダウンロード',
     'download_aria' => 'Kitobchi — アプリをダウンロード',
     'menu_aria' => 'メニュー',

@@ -10,6 +10,7 @@
                 <div class="footer-cell">
                     <div class="footer-heading">{{ __('nav.footer_good') }}</div>
                     <!-- <a href="{{ url('/') }}#stats" class="footer-link">{{ __('nav.stats') }}</a> -->
+                    <a href="{{ route('contact.index') }}" class="footer-link">{{ __('nav.contact') }}</a>
                     <a href="{{ route('careers.index') }}" class="footer-link">{{ __('nav.careers') }}</a>
                     <a href="https://t.me/kitobchi_market" target="_blank" rel="noopener" class="footer-link">Telegram</a>
                     <a href="https://instagram.com/kitobchi_market" target="_blank" rel="noopener" class="footer-link">Instagram</a>

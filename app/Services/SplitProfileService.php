@@ -470,18 +470,33 @@ class SplitProfileService
         $normalizedAmount = max(0, intdiv($amount, 1000) * 1000);
 
         return $this->withUserMutationLock($user, function () use ($user, $normalizedAmount, $adminId) {
+            $existing = SplitUserProfile::query()->where('user_id', $user->id)->first();
+
+            $attributes = [
+                'manual_limit' => $normalizedAmount > 0 ? $normalizedAmount : null,
+                'manual_limit_set_by' => $normalizedAmount > 0 ? $adminId : null,
+                'manual_limit_set_at' => $normalizedAmount > 0 ? now() : null,
+                // Refresh muvaffaqiyatsiz qolsa eski limit ishlamasin.
+                'eligible' => false,
+                'computed_limit' => 0,
+                'available_limit' => 0,
+                'last_refreshed_at' => null,
+            ];
+
+            // Limit qayta berilyapti-yu, user hozirgacha ishlaydigan limitga
+            // ega bo'lmagan bo'lsa (avval olib tashlangan yoki skoring 0) —
+            // tabrik pushi QAYTA ketishi uchun bayroqni tozalaymiz.
+            $hadUsableLimit = $existing !== null
+                && (bool) $existing->eligible
+                && (int) $existing->computed_limit > 0;
+
+            if ($normalizedAmount > 0 && ! $hadUsableLimit) {
+                $attributes['limit_granted_notified_at'] = null;
+            }
+
             SplitUserProfile::query()->updateOrCreate(
                 ['user_id' => $user->id],
-                [
-                    'manual_limit' => $normalizedAmount > 0 ? $normalizedAmount : null,
-                    'manual_limit_set_by' => $normalizedAmount > 0 ? $adminId : null,
-                    'manual_limit_set_at' => $normalizedAmount > 0 ? now() : null,
-                    // Refresh muvaffaqiyatsiz qolsa eski limit ishlamasin.
-                    'eligible' => false,
-                    'computed_limit' => 0,
-                    'available_limit' => 0,
-                    'last_refreshed_at' => null,
-                ],
+                $attributes,
             );
 
             return $this->refreshUser($user, true, true);

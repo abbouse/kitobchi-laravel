@@ -58,6 +58,8 @@ use App\Models\Reel;
 use App\Models\Report;
 use App\Models\SearchHistory;
 use App\Models\Seller;
+use App\Models\SellerLocation;
+use App\Models\SellerStaffLog;
 use App\Models\SellerAd;
 use App\Models\SellerAiAction;
 use App\Models\SellerBanLog;
@@ -107,6 +109,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -214,6 +217,28 @@ class AdminController extends Controller
         return back()->with('success', "{$count} ta foydalanuvchi split profili yangilandi.");
     }
 
+    /**
+     * Pochta buyurtmasiga trek raqami va boradigan pochta bo'limi manzilini
+     * biriktirish — "yetib keldi" SMS'ida mijozga aynan shular ko'rsatiladi.
+     */
+    public function updateOrderPostalInfo(Request $request, Sold $order): \Illuminate\Http\RedirectResponse
+    {
+        $data = $request->validate([
+            'tracking' => 'nullable|string|max:64',
+            'postal_office_address' => 'nullable|string|max:255',
+        ]);
+
+        \App\Models\OrderFulfillment::query()->updateOrCreate(
+            ['order_id' => $order->id],
+            [
+                'postal_tracking_number' => trim((string) ($data['tracking'] ?? '')) ?: null,
+                'postal_office_address' => trim((string) ($data['postal_office_address'] ?? '')) ?: null,
+            ],
+        );
+
+        return back()->with('success', "#{$order->id} buyurtmaning pochta ma'lumotlari saqlandi.");
+    }
+
     public function registerFiscalReceipt(Sold $order, PaylovFiscalizationService $service): \Illuminate\Http\RedirectResponse
     {
         try {
@@ -306,7 +331,7 @@ class AdminController extends Controller
             // Limit o'zgarishi, profil refreshi va checkout bir xil per-user
             // lockdan foydalanadi. Shu sabab parallel so'rov eski limitni
             // sarflab yubora olmaydi.
-            $service->setManualLimit($user, $amount, Auth::guard('panel')->id());
+            $profile = $service->setManualLimit($user, $amount, Auth::guard('panel')->id());
         } catch (\Throwable $e) {
             Log::warning('[Split] Manual limit update failed', [
                 'user_id' => $user->id,
@@ -316,9 +341,24 @@ class AdminController extends Controller
             return back()->with('error', $e->getMessage());
         }
 
-        return back()->with('success', $amount > 0
-            ? 'Foydalanuvchiga '.number_format($amount)." so'm split limit berildi."
-            : "Qo'lda berilgan split limit olib tashlandi.");
+        if ($amount <= 0) {
+            return back()->with('success', "Qo'lda berilgan split limit olib tashlandi.");
+        }
+
+        // Limit saqlandi, lekin qattiq blok tufayli ishlamasligi mumkin —
+        // adminni aniq ogohlantiramiz (aks holda "berildi" deb o'ylab yuradi).
+        if (! ($profile['eligible'] ?? false)) {
+            $reason = $profile['eligibility_reasons'][0] ?? "noma'lum sabab";
+
+            return back()->with('error', 'Limit ('.number_format($amount)." so'm) saqlandi, LEKIN mijoz hozircha foydalana olmaydi: {$reason}");
+        }
+
+        $available = (int) ($profile['available_limit'] ?? 0);
+        $note = $available < $amount
+            ? ' Faol shartnomalar hisobga olinib, bo\'sh limit: '.number_format($available)." so'm."
+            : '';
+
+        return back()->with('success', 'Foydalanuvchiga '.number_format($amount)." so'm split limit berildi.".$note);
     }
 
     /**
@@ -4759,8 +4799,207 @@ PROMPT;
                 'rotateQrUrl' => route('boshqaruv.sellers.qr.rotate', $seller),
                 'extendContractUrl' => route('boshqaruv.sellers.contract.extend', $seller),
                 'uploadDocumentUrl' => route('boshqaruv.sellers.documents.store', $seller),
+                'staffUrl' => route('boshqaruv.sellers.staff.data', $seller),
+                'staffStoreUrl' => route('boshqaruv.sellers.staff.store', $seller),
             ],
         ];
+    }
+
+    /** Hodim rollari (business ilovadagi mapping bilan bir xil) */
+    private const STAFF_ROLE_LABELS = [
+        1 => 'Admin',
+        2 => 'Mahsulot menejeri',
+        3 => 'Mijozlarga xizmat',
+        4 => 'Buxgalter',
+    ];
+
+    /**
+     * Do'kon hodimlari ro'yxati (faqat owner do'kon uchun).
+     */
+    public function sellerStaffData(Seller $seller): JsonResponse
+    {
+        abort_if($seller->parent_id, 404);
+
+        $staff = Seller::query()
+            ->where('parent_id', $seller->id)
+            ->with('assignedLocation:id,fullAddress,is_main')
+            ->orderByDesc('created_at')
+            ->get();
+
+        return response()->json([
+            'staff' => $staff->map(fn (Seller $member) => [
+                'id' => $member->id,
+                'name' => trim(($member->firstname ?? '').' '.($member->lastname ?? '')),
+                'phone' => (string) $member->phone_number,
+                'role' => (int) $member->role,
+                'roleLabel' => self::STAFF_ROLE_LABELS[(int) $member->role] ?? ('Rol '.$member->role),
+                'status' => (string) ($member->staff_status ?? 'active'),
+                'hidden' => (bool) $member->is_hidden,
+                'canWithdraw' => (bool) $member->can_withdraw_balance,
+                'location' => $member->assignedLocation?->fullAddress,
+                'passwordResetLimit' => (int) ($member->password_reset_limit ?? 0),
+                'createdAt' => optional($member->created_at)->format('Y-m-d H:i'),
+                'resetPasswordUrl' => route('boshqaruv.sellers.staff.reset', $member),
+                'toggleUrl' => route('boshqaruv.sellers.staff.toggle', $member),
+            ])->values()->all(),
+            'locations' => $seller->locations()
+                ->where('is_deleted', false)
+                ->orderByDesc('is_main')
+                ->get(['id', 'fullAddress', 'is_main'])
+                ->map(fn ($location) => [
+                    'id' => $location->id,
+                    'fullAddress' => (string) $location->fullAddress,
+                    'isMain' => (bool) $location->is_main,
+                ])->values()->all(),
+            'roles' => collect(self::STAFF_ROLE_LABELS)
+                ->map(fn ($label, $value) => ['value' => $value, 'label' => $label])
+                ->values()->all(),
+            'storeUrl' => route('boshqaruv.sellers.staff.store', $seller),
+        ]);
+    }
+
+    /**
+     * Admin do'konga hodim qo'shadi. Parol berilmasa avtomatik yaratiladi
+     * va hodim telefoniga SMS bilan boradi.
+     */
+    public function storeSellerStaff(Request $request, Seller $seller): \Illuminate\Http\RedirectResponse
+    {
+        abort_if($seller->parent_id, 404);
+
+        $data = $request->validate([
+            'firstname' => 'required|string|max:50',
+            'lastname' => 'required|string|max:50',
+            'phone_number' => 'required|string|max:20|unique:sellers,phone_number',
+            'password' => 'nullable|string|min:6|max:64',
+            'role' => 'required|integer|in:1,2,3,4',
+            'seller_location_id' => 'required|integer',
+            'can_withdraw_balance' => 'nullable|boolean',
+        ]);
+
+        $location = SellerLocation::query()
+            ->where('id', (int) $data['seller_location_id'])
+            ->where('seller_id', $seller->id)
+            ->where('is_deleted', false)
+            ->first();
+
+        if (! $location) {
+            return back()->with('error', "Tanlangan filial ushbu do'konga tegishli emas.");
+        }
+
+        $password = trim((string) ($data['password'] ?? '')) !== ''
+            ? trim((string) $data['password'])
+            : Str::random(8);
+
+        try {
+            $staff = DB::transaction(function () use ($data, $seller, $location, $password) {
+                SellerLocation::query()->whereKey($location->id)->lockForUpdate()->first();
+                $staffCount = Seller::query()
+                    ->where('parent_id', $seller->id)
+                    ->where('seller_location_id', $location->id)
+                    ->where('is_hidden', false)
+                    ->lockForUpdate()
+                    ->count();
+
+                if ($staffCount >= 5) {
+                    throw new \DomainException('Bu filialga maksimal 5 ta xodim biriktirish mumkin.');
+                }
+
+                $staff = Seller::create([
+                    'parent_id' => $seller->id,
+                    'seller_location_id' => $location->id,
+                    'firstname' => $data['firstname'],
+                    'lastname' => $data['lastname'],
+                    'phone_number' => $data['phone_number'],
+                    'password' => $password,
+                    'role' => (int) $data['role'],
+                    'staff_status' => 'active',
+                    'can_withdraw_balance' => (int) $data['role'] === 4 && ! empty($data['can_withdraw_balance']),
+                    'status' => 'approved',
+                    'is_hidden' => 0,
+                    'password_reset_limit' => 3,
+                ]);
+
+                SellerStaffLog::create([
+                    'seller_staff_id' => $staff->id,
+                    'text' => "Xodim boshqaruv (admin) tomonidan yaratildi: {$staff->firstname} {$staff->lastname} | Filial: {$location->fullAddress}",
+                ]);
+
+                return $staff;
+            });
+        } catch (\DomainException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        try {
+            app(\App\Services\SmsService::class)->send(
+                $staff->phone_number,
+                "Kitobchi Business: siz do'konga xodim sifatida qo'shildingiz. Login: {$staff->phone_number}, parol: {$password}"
+            );
+        } catch (\Throwable $e) {
+            Log::warning('[Staff] Yangi hodim SMS yuborilmadi', ['staff_id' => $staff->id, 'error' => $e->getMessage()]);
+
+            return back()->with('error', "Hodim yaratildi, LEKIN SMS yuborilmadi. Parolni o'zingiz yetkazing: {$password}");
+        }
+
+        return back()->with('success', "Hodim qo'shildi. Kirish ma'lumotlari {$staff->phone_number} raqamiga SMS bilan yuborildi.");
+    }
+
+    /**
+     * Admin hodim parolini yangilaydi — yangi parol hodimga SMS bilan boradi.
+     * Owner'dagi reset-limitdan farqli, admin reset limiti tiklab qo'yadi.
+     */
+    public function resetSellerStaffPassword(Seller $staff): \Illuminate\Http\RedirectResponse
+    {
+        abort_unless($staff->parent_id, 404);
+
+        $newPassword = Str::random(8);
+
+        try {
+            app(\App\Services\SmsService::class)->send(
+                $staff->phone_number,
+                "Kitobchi Business: sizning yangi parolingiz — {$newPassword}"
+            );
+        } catch (\Throwable $e) {
+            Log::warning('[Staff] Parol reset SMS yuborilmadi', ['staff_id' => $staff->id, 'error' => $e->getMessage()]);
+
+            return back()->with('error', 'SMS yuborilmadi — parol o'zgartirilmadi. Birozdan so'ng qayta urinib ko'ring.');
+        }
+
+        $staff->update([
+            'password' => $newPassword,
+            'password_reset_limit' => 3,
+        ]);
+
+        SellerStaffLog::create([
+            'seller_staff_id' => $staff->id,
+            'text' => 'Parol boshqaruv (admin) tomonidan yangilandi va SMS yuborildi.',
+        ]);
+
+        return back()->with('success', "Yangi parol {$staff->phone_number} raqamiga SMS bilan yuborildi.");
+    }
+
+    /**
+     * Hodimni faollashtirish/deaktivatsiya (business ilovadagi bilan bir xil semantika).
+     */
+    public function toggleSellerStaff(Seller $staff): \Illuminate\Http\RedirectResponse
+    {
+        abort_unless($staff->parent_id, 404);
+
+        $activate = $staff->is_hidden || $staff->staff_status !== 'active';
+
+        $staff->update([
+            'staff_status' => $activate ? 'active' : 'inactive',
+            'is_hidden' => $activate ? 0 : 1,
+        ]);
+
+        SellerStaffLog::create([
+            'seller_staff_id' => $staff->id,
+            'text' => $activate
+                ? 'Hodim boshqaruv (admin) tomonidan faollashtirildi.'
+                : 'Hodim boshqaruv (admin) tomonidan deaktivatsiya qilindi.',
+        ]);
+
+        return back()->with('success', $activate ? 'Hodim faollashtirildi.' : 'Hodim deaktivatsiya qilindi.');
     }
 
     private function sellerStatusCounts(): array
@@ -10032,6 +10271,7 @@ PROMPT;
                 'isCod' => (bool) $fulfillment->is_cod,
                 'cashCollectAmount' => (float) ($fulfillment->cash_collect_amount ?? 0),
                 'tracking' => $fulfillment->postal_tracking_number,
+                'postalOfficeAddress' => $fulfillment->postal_office_address,
                 'labelCode' => $fulfillment->label_code,
                 'notes' => $fulfillment->notes,
                 'routingVersion' => $fulfillment->routing_version,
@@ -10049,6 +10289,11 @@ PROMPT;
                 'date' => $this->dateTime($paymentTransaction->created_at),
             ] : null,
             'paymentCard' => $paymentCardView,
+            'postalInfo' => [
+                'tracking' => (string) ($fulfillment?->postal_tracking_number ?? ''),
+                'address' => (string) ($fulfillment?->postal_office_address ?? ''),
+                'saveUrl' => route('boshqaruv.orders.postal-info', $order),
+            ],
             'fiscalReceipt' => $this->orderFiscalReceiptPayload($fiscalTransaction, (int) $order->id),
             'split' => $this->orderSplitDetailPayload($order),
             'settlementOverview' => $settlementOverview,

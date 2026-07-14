@@ -7,6 +7,7 @@ return [
     'faq' => 'Savollar',
     'careers' => 'Karyera',
     'legal' => 'Hujjatlar',
+    'contact' => 'Aloqa',
     'download' => 'Yuklab oling',
     'download_aria' => 'Kitobchi — yuklab olish',
     'menu_aria' => 'Menyu',

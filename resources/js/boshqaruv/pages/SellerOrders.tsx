@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Accordion, Modal, Button } from 'react-bootstrap';
 import PaginationControls from '../components/PaginationControls';
@@ -151,6 +151,7 @@ export default function SellerOrders() {
   const [selectedSeller, setSelectedSeller] = useState<Seller | null>(null);
   const [editingSeller, setEditingSeller] = useState<Seller | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<SellerOrder | null>(null);
+  const [staffSeller, setStaffSeller] = useState<Seller | null>(null);
 
   const totalBalance = useMemo(() => sellers.reduce((sum, seller) => sum + (seller.balance || 0), 0), [sellers]);
   const orderStatusTabs = [{ key: 'all', label: 'Barchasi' }, ...Object.entries(sellerOrderStatuses).map(([key, meta]) => ({ key, label: meta.label }))];
@@ -253,6 +254,7 @@ export default function SellerOrders() {
                     {seller.status !== 'approved' ? <button className="btn btn-sm btn-light me-1" onClick={() => runPatch(seller.actions?.approveUrl, 'Seller tasdiqlansinmi?')}><i className="bi bi-check2-circle"></i></button> : null}
                     <button className="btn btn-sm btn-light me-1" onClick={() => runPatch(seller.actions?.rejectUrl, 'Seller bekor qilinsinmi?')}><i className="bi bi-x-circle"></i></button>
                     {seller.status === 'blocked' ? <button className="btn btn-sm btn-light me-1" onClick={() => runPatch(seller.actions?.unblockUrl, 'Seller blokdan chiqarilsinmi?', { message: 'Admin tomonidan blokdan chiqarildi.' })}><i className="bi bi-unlock"></i></button> : null}
+                    <button className="btn btn-sm btn-light me-1" title="Hodimlar" onClick={() => setStaffSeller(seller)}><i className="bi bi-people"></i></button>
                     <button className="btn btn-sm btn-light text-warning" onClick={() => warnSeller(seller)}><i className="bi bi-exclamation-triangle"></i></button>
                   </td>
                 </tr>
@@ -308,6 +310,7 @@ export default function SellerOrders() {
 
       <SellerModal seller={selectedSeller} onHide={() => setSelectedSeller(null)} onWarn={warnSeller} onResetPassword={resetPassword} onPatch={runPatch} onEdit={(seller) => setEditingSeller(seller)} />
       <SellerEditModal seller={editingSeller} onHide={() => setEditingSeller(null)} />
+      <SellerStaffModal seller={staffSeller} onHide={() => setStaffSeller(null)} />
       <OrderModal order={selectedOrder} statuses={sellerOrderStatuses} onHide={() => setSelectedOrder(null)} onPatch={runPatch} />
     </div>
   );
@@ -697,5 +700,153 @@ function MapButtons({ mapLinks }: { mapLinks?: Record<string, string> }) {
       {mapLinks.google ? <a className="btn btn-sm btn-light" href={mapLinks.google} target="_blank" rel="noreferrer"><i className="bi bi-geo-alt me-1"></i>Google Map</a> : null}
       {mapLinks.yandex ? <a className="btn btn-sm btn-light" href={mapLinks.yandex} target="_blank" rel="noreferrer"><i className="bi bi-map me-1"></i>Yandex Map</a> : null}
     </div>
+  );
+}
+
+
+// ── Do'kon hodimlari: ro'yxat, qo'shish, parol reset, on/off ──────────
+type StaffRow = {
+  id: number; name: string; phone: string; role: number; roleLabel: string;
+  status: string; hidden: boolean; canWithdraw: boolean; location?: string | null;
+  passwordResetLimit: number; createdAt?: string; resetPasswordUrl: string; toggleUrl: string;
+};
+type StaffData = {
+  staff: StaffRow[];
+  locations: Array<{ id: number; fullAddress: string; isMain: boolean }>;
+  roles: Array<{ value: number; label: string }>;
+  storeUrl: string;
+};
+
+function SellerStaffModal({ seller, onHide }: { seller: Seller | null; onHide: () => void }) {
+  const [data, setData] = useState<StaffData | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [showAdd, setShowAdd] = useState(false);
+  const [role, setRole] = useState(2);
+
+  const reload = async () => {
+    if (!seller?.actions?.staffUrl) return;
+    setLoading(true);
+    try {
+      const response = await fetch(seller.actions.staffUrl, { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+      if (response.ok) setData(await response.json());
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    setData(null); setShowAdd(false); setRole(2);
+    if (seller) void reload();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seller?.id]);
+
+  const submitAdd = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!data?.storeUrl) return;
+    const payload = Object.fromEntries(new FormData(event.currentTarget).entries());
+    router.post(data.storeUrl, payload, {
+      preserveScroll: true,
+      onSuccess: () => { setShowAdd(false); void reload(); },
+    });
+  };
+
+  const resetStaffPassword = (member: StaffRow) => {
+    if (!confirm(`${member.name} uchun yangi parol yaratilib, ${member.phone} raqamiga SMS yuborilsinmi?`)) return;
+    router.post(member.resetPasswordUrl, {}, { preserveScroll: true, onSuccess: () => void reload() });
+  };
+
+  const toggleStaff = (member: StaffRow) => {
+    const activate = member.hidden || member.status !== 'active';
+    if (!confirm(activate ? `${member.name} faollashtirilsinmi?` : `${member.name} deaktivatsiya qilinsinmi?`)) return;
+    router.patch(member.toggleUrl, {}, { preserveScroll: true, onSuccess: () => void reload() });
+  };
+
+  return (
+    <Modal show={seller !== null} onHide={onHide} centered size="lg">
+      <Modal.Header closeButton>
+        <Modal.Title className="fs-5 fw-bold">Hodimlar — {seller?.name}</Modal.Title>
+      </Modal.Header>
+      <Modal.Body>
+        {loading && !data ? <div className="text-center text-muted py-4">Yuklanmoqda...</div> : null}
+        {data ? (
+          <>
+            {data.staff.length ? (
+              <div className="table-responsive mb-3">
+                <table className="data-table">
+                  <thead><tr><th>Hodim</th><th>Rol</th><th>Filial</th><th>Holat</th><th>Amallar</th></tr></thead>
+                  <tbody>
+                    {data.staff.map((member) => {
+                      const active = !member.hidden && member.status === 'active';
+                      return (
+                        <tr key={member.id}>
+                          <td>
+                            <div className="fw-semibold">{member.name}</div>
+                            <small className="text-muted">{member.phone}{member.createdAt ? ` · ${member.createdAt}` : ''}</small>
+                          </td>
+                          <td>
+                            <span className="chip chip-purple">{member.roleLabel}</span>
+                            {member.canWithdraw ? <small className="d-block text-muted">Pul yechish: bor</small> : null}
+                          </td>
+                          <td className="text-muted" style={{ maxWidth: 180 }}>{member.location || String.fromCharCode(8212)}</td>
+                          <td><span className={`chip ${active ? 'chip-success' : 'chip-gray'}`}>{active ? 'Faol' : 'Nofaol'}</span></td>
+                          <td>
+                            <button className="btn btn-sm btn-light me-1" title="Parolni yangilash (SMS bilan boradi)" onClick={() => resetStaffPassword(member)}>
+                              <i className="bi bi-key"></i>
+                            </button>
+                            <button className="btn btn-sm btn-light" title={active ? 'Deaktivatsiya' : 'Faollashtirish'} onClick={() => toggleStaff(member)}>
+                              <i className={`bi ${active ? 'bi-pause-circle text-warning' : 'bi-play-circle text-success'}`}></i>
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : <p className="text-muted">Bu do&apos;konda hali hodim yo&apos;q.</p>}
+
+            {showAdd ? (
+              <form onSubmit={submitAdd} className="detail-panel">
+                <h6 className="fw-bold mb-3">Yangi hodim qo&apos;shish</h6>
+                <div className="row g-2">
+                  <div className="col-md-6"><label className="form-label">Ism</label><input name="firstname" required maxLength={50} className="form-control form-control-sm" /></div>
+                  <div className="col-md-6"><label className="form-label">Familiya</label><input name="lastname" required maxLength={50} className="form-control form-control-sm" /></div>
+                  <div className="col-md-6"><label className="form-label">Telefon</label><input name="phone_number" required maxLength={20} placeholder="+998901234567" className="form-control form-control-sm" /></div>
+                  <div className="col-md-6"><label className="form-label">Parol <span className="text-muted">(bo&apos;sh qoldirilsa avtomatik yaratiladi)</span></label><input name="password" minLength={6} maxLength={64} className="form-control form-control-sm" /></div>
+                  <div className="col-md-6">
+                    <label className="form-label">Rol</label>
+                    <select name="role" className="form-select form-select-sm" value={role} onChange={(e) => setRole(Number(e.target.value))}>
+                      {data.roles.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                    </select>
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">Filial</label>
+                    <select name="seller_location_id" required className="form-select form-select-sm" defaultValue={data.locations[0]?.id ?? ''}>
+                      {data.locations.map((location) => <option key={location.id} value={location.id}>{location.fullAddress}{location.isMain ? ' (asosiy)' : ''}</option>)}
+                    </select>
+                  </div>
+                  {role === 4 ? (
+                    <div className="col-12 form-check ms-2">
+                      <input className="form-check-input" type="checkbox" name="can_withdraw_balance" value="1" id="staff-can-withdraw" />
+                      <label className="form-check-label" htmlFor="staff-can-withdraw">Balansdan pul yechishga ruxsat</label>
+                    </div>
+                  ) : null}
+                </div>
+                <div className="d-flex gap-2 mt-3">
+                  <Button size="sm" type="submit" className="btn-primary-gradient border-0">Qo&apos;shish (parol SMS bilan boradi)</Button>
+                  <Button size="sm" variant="light" onClick={() => setShowAdd(false)}>Bekor</Button>
+                </div>
+              </form>
+            ) : (
+              <Button size="sm" className="btn-primary-gradient border-0" onClick={() => setShowAdd(true)} disabled={data.locations.length === 0}>
+                <i className="bi bi-person-plus me-1"></i>Hodim qo&apos;shish
+              </Button>
+            )}
+            {data.locations.length === 0 ? <small className="text-danger d-block mt-2">Do&apos;konda faol filial yo&apos;q — avval filial kerak.</small> : null}
+          </>
+        ) : null}
+      </Modal.Body>
+      <Modal.Footer><Button variant="light" onClick={onHide}>Yopish</Button></Modal.Footer>
+    </Modal>
   );
 }

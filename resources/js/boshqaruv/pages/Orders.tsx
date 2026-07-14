@@ -168,6 +168,7 @@ interface Ord {
   } | null;
   paymentTransaction?: { id: number; provider?: string; providerCardId?: string; amount?: number; status?: string; date?: string } | null;
   paymentCard?: { provider?: string | null; providerCardId?: string | null; maskedNumber?: string | null; vendor?: string | null; cardName?: string | null; phone?: string | null };
+  postalInfo?: { tracking: string; address: string; saveUrl: string };
   fiscalReceipt?: { status: 'disabled' | 'none' | 'pending' | 'failed' | 'registered' | 'refunded'; receiptUrl?: string | null; refundReceiptUrl?: string | null; receiptId?: number | string | null; fiscalSign?: string | null; date?: string | null; error?: string | null; errorCode?: string | null; errorField?: string | null; registerUrl?: string; syncUrl?: string };
   split?: {
     contractId: number;
@@ -904,6 +905,31 @@ export default function Orders() {
                     </div>
                   </div>
                 </div>
+
+                {selectedOrd.deliveryType === 'postal' && selectedOrd.postalInfo ? (
+                  <div className="detail-panel mt-3">
+                    <h6 className="fw-bold mb-3">Pochta ma'lumotlari <span className="text-muted small fw-normal">(trek va manzil «yetib keldi» SMS'ida mijozga boradi)</span></h6>
+                    <form
+                      className="row g-2 align-items-end"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        router.patch(selectedOrd.postalInfo!.saveUrl, Object.fromEntries(new FormData(event.currentTarget).entries()), { preserveScroll: true });
+                      }}
+                    >
+                      <div className="col-md-4">
+                        <label className="form-label small">Trek raqami</label>
+                        <input name="tracking" className="form-control form-control-sm" maxLength={64} defaultValue={selectedOrd.postalInfo.tracking} placeholder="UZ123456789" />
+                      </div>
+                      <div className="col-md-6">
+                        <label className="form-label small">Pochta bo'limi manzili</label>
+                        <input name="postal_office_address" className="form-control form-control-sm" maxLength={255} defaultValue={selectedOrd.postalInfo.address} placeholder="Toshkent sh., Chilonzor t., 5-pochta bo'limi" />
+                      </div>
+                      <div className="col-md-2">
+                        <button className="btn btn-sm btn-primary-gradient w-100" type="submit">Saqlash</button>
+                      </div>
+                    </form>
+                  </div>
+                ) : null}
 
                 <div className="detail-panel mt-3">
                   <h6 className="fw-bold mb-3">Operatsion timeline</h6>

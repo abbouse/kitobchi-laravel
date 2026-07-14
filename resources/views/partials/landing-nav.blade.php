@@ -12,6 +12,7 @@
                         <a href="{{ url('/') }}#faq" class="nav-link">{{ __('nav.faq') }}</a>
                         <a href="{{ route('careers.index') }}" class="nav-link {{ request()->routeIs('careers.index') ? 'w--current' : '' }}">{{ __('nav.careers') }}</a>
                         <a href="{{ route('legal.index') }}" class="nav-link {{ request()->routeIs('legal.index', 'legal.policy') ? 'w--current' : '' }}">{{ __('nav.legal') }}</a>
+                        <a href="{{ route('contact.index') }}" class="nav-link {{ request()->routeIs('contact.index') ? 'w--current' : '' }}">{{ __('nav.contact') }}</a>
                     </div>
                 </div>
                 <div class="nav-right">
@@ -57,6 +58,7 @@
                     </div>
                     <div class="mobile-menu-fade" style="--delay: 0.17s;">
                         <a href="{{ route('legal.index') }}" class="nav-mobile-link {{ request()->routeIs('legal.index', 'legal.policy') ? 'w--current' : '' }}">{{ __('nav.legal') }}</a>
+                        <a href="{{ route('contact.index') }}" class="nav-mobile-link {{ request()->routeIs('contact.index') ? 'w--current' : '' }}">{{ __('nav.contact') }}</a>
                     </div>
                     <div class="mobile-menu-fade" style="--delay: 0.22s;">
                         <a href="https://play.google.com/store/apps/details?id=com.kitobchi.kitobchi" target="_blank" rel="noopener" class="nav-mobile-link cc-small">Google Play</a>

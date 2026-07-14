@@ -1,0 +1,60 @@
+<?php
+
+return [
+    'seo' => [
+        'title' => 'お問い合わせ — Kitobchi',
+        'desc' => 'Kitobchiチームへのお問い合わせ：各アプリの電話番号・メールアドレス、お問い合わせフォーム。',
+    ],
+    'hero' => [
+        'eyebrow' => 'お問い合わせ',
+        'heading_l1' => 'お気軽に',
+        'heading_l2' => 'ご連絡ください。',
+        'p1' => 'ご質問・ご提案・不具合はありませんか？各アプリに専用サポート窓口があります。こちらのフォームからも送信できます。',
+    ],
+    'cards' => [
+        'title' => 'サポート窓口',
+        'kitobchi_title' => 'Kitobchi',
+        'kitobchi_sub' => '購入者向けアプリ',
+        'business_title' => 'Kitobchi Business',
+        'business_sub' => '販売者向け',
+        'express_title' => 'Kitobchi Express',
+        'express_sub' => '配達員向け',
+        'phone' => '電話',
+        'email' => 'メール',
+        'community_title' => 'コミュニティ',
+        'community_sub' => 'ニュースとお知らせ',
+    ],
+    'form' => [
+        'title' => 'メッセージを送る',
+        'subtitle' => 'フォームに記入すると、チームに直接届きます。',
+        'full_name' => 'お名前',
+        'phone' => '電話番号',
+        'email' => 'メール（任意）',
+        'topic' => 'トピック',
+        'topic_kitobchi' => 'Kitobchiアプリ（購入・注文）',
+        'topic_business' => 'Kitobchi Business（出店・販売）',
+        'topic_express' => 'Kitobchi Express（配達）',
+        'topic_other' => 'その他',
+        'message' => 'メッセージ',
+        'message_ph' => '内容を詳しくご記入ください...',
+        'submit' => '送信',
+    ],
+    'flash' => [
+        'sent' => 'メッセージを送信しました。追ってご連絡いたします。',
+        'failed' => '送信に失敗しました。しばらくしてから再度お試しいただくか、お電話でご連絡ください。',
+    ],
+    'validation' => [
+        'full_name.required' => 'お名前を入力してください。',
+        'phone.required' => '電話番号を入力してください。',
+        'email.email' => 'メール形式が正しくありません。',
+        'message.required' => 'メッセージを入力してください。',
+        'message.min' => 'メッセージが短すぎます（10文字以上）。',
+    ],
+    'attributes' => [
+        'full_name' => '名前',
+        'phone' => '電話',
+        'email' => 'メール',
+        'message' => 'メッセージ',
+        'topic' => 'トピック',
+    ],
+];

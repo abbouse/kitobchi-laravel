@@ -36,6 +36,7 @@ class OrderFulfillment extends Model
         'delivered_at',
         'returned_at',
         'postal_tracking_number',
+        'postal_office_address',
         'label_code',
         'notes',
         'meta',

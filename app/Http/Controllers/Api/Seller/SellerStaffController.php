@@ -158,6 +158,20 @@ class SellerStaffController extends Controller
                 return $staff;
             });
 
+            // Hodimga kirish ma'lumotlari SMS bilan boradi. SMS yiqilsa ham
+            // hodim yaratilgan bo'lib qoladi (owner parolni biladi).
+            try {
+                $this->smsService->send(
+                    $staff->phone_number,
+                    "Kitobchi Business: siz do'konga xodim sifatida qo'shildingiz. Login: {$staff->phone_number}, parol: {$request->password}"
+                );
+            } catch (\Throwable $e) {
+                Log::warning('Hodimga parol SMS yuborilmadi', [
+                    'staff_id' => $staff->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'Yangi hodim muvaffaqiyatli yaratildi',

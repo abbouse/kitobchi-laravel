@@ -116,6 +116,7 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
         Route::get('/orders/{order}/print/receipt', [\App\Http\Controllers\A122\OrderController::class, 'printReceipt'])->name('orders.print.receipt');
         Route::post('/orders/{order}/fulfillment/switch-mode', [\App\Http\Controllers\A122\OrderController::class, 'switchFulfillmentMode'])->name('orders.switch-mode');
         Route::post('/orders/{order}/fulfillment/reroute-hub', [\App\Http\Controllers\A122\OrderController::class, 'rerouteHub'])->name('orders.reroute-hub');
+        Route::patch('/orders/{order}/postal-info', [AdminController::class, 'updateOrderPostalInfo'])->name('orders.postal-info');
         Route::patch('/orders/{order}/postal-return', [\App\Http\Controllers\A122\OrderController::class, 'markPostalReturned'])->name('orders.postal-return');
         Route::post('/orders/{order}/refund-cancel', [\App\Http\Controllers\A122\OrderController::class, 'refundAndCancel'])->name('orders.refund-cancel');
         Route::post('/seller-orders/{sellerOrder}/refund', [\App\Http\Controllers\A122\OrderController::class, 'refundSellerOrder'])->name('seller-orders.refund');
@@ -126,6 +127,10 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
         Route::patch('/sellers/{seller}/unblock', [\App\Http\Controllers\A122\SellerController::class, 'unblock'])->name('sellers.unblock');
         Route::post('/sellers/{seller}/warn', [\App\Http\Controllers\A122\SellerController::class, 'warn'])->name('sellers.warn');
         Route::post('/sellers/{seller}/reset-password', [\App\Http\Controllers\A122\SellerController::class, 'resetPassword'])->name('sellers.reset-password');
+        Route::get('/sellers/{seller}/staff', [AdminController::class, 'sellerStaffData'])->name('sellers.staff.data');
+        Route::post('/sellers/{seller}/staff', [AdminController::class, 'storeSellerStaff'])->name('sellers.staff.store');
+        Route::post('/sellers/staff/{staff}/reset-password', [AdminController::class, 'resetSellerStaffPassword'])->name('sellers.staff.reset');
+        Route::patch('/sellers/staff/{staff}/toggle', [AdminController::class, 'toggleSellerStaff'])->name('sellers.staff.toggle');
         Route::post('/sellers/{seller}/qr/rotate', [\App\Http\Controllers\A122\SellerController::class, 'rotateQr'])->name('sellers.qr.rotate');
         Route::post('/sellers/{seller}/locations/{location}/qr/rotate', [\App\Http\Controllers\A122\SellerController::class, 'rotateLocationQr'])->name('sellers.locations.qr.rotate');
         Route::patch('/sellers/{seller}/contract/extend', [\App\Http\Controllers\A122\SellerController::class, 'extendContract'])->name('sellers.contract.extend');

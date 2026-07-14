@@ -7,6 +7,7 @@ return [
     'faq' => 'FAQ',
     'careers' => 'Careers',
     'legal' => 'Documents',
+    'contact' => 'Contact',
     'download' => 'Download',
     'download_aria' => 'Kitobchi — download the app',
     'menu_aria' => 'Menu',

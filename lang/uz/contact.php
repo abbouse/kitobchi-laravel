@@ -1,0 +1,60 @@
+<?php
+
+return [
+    'seo' => [
+        'title' => 'Biz bilan aloqa — Kitobchi',
+        'desc' => 'Kitobchi jamoasi bilan bog‘laning: har bir ilova uchun telefon raqamlari, emaillar va murojaat formasi.',
+    ],
+    'hero' => [
+        'eyebrow' => 'Aloqa',
+        'heading_l1' => 'Biz bilan',
+        'heading_l2' => 'aloqa.',
+        'p1' => 'Savol, taklif yoki muammo bormi? Har bir ilovaning o‘z qo‘llab-quvvatlash liniyasi bor — yoki shu yerdan yozib qoldiring, tez orada javob beramiz.',
+    ],
+    'cards' => [
+        'title' => 'Qo‘llab-quvvatlash liniyalari',
+        'kitobchi_title' => 'Kitobchi',
+        'kitobchi_sub' => 'Xaridorlar ilovasi',
+        'business_title' => 'Kitobchi Business',
+        'business_sub' => 'Sotuvchilar uchun',
+        'express_title' => 'Kitobchi Express',
+        'express_sub' => 'Kuryerlar uchun',
+        'phone' => 'Telefon',
+        'email' => 'Email',
+        'community_title' => 'Hamjamiyat',
+        'community_sub' => 'Yangiliklar va e‘lonlar',
+    ],
+    'form' => [
+        'title' => 'Murojaat qoldiring',
+        'subtitle' => 'Formani to‘ldiring — xabaringiz to‘g‘ridan-to‘g‘ri jamoamizga boradi.',
+        'full_name' => 'Ismingiz',
+        'phone' => 'Telefon raqamingiz',
+        'email' => 'Email (ixtiyoriy)',
+        'topic' => 'Mavzu',
+        'topic_kitobchi' => 'Kitobchi ilovasi (xarid, buyurtma)',
+        'topic_business' => 'Kitobchi Business (sotuvchi bo‘lish, do‘kon)',
+        'topic_express' => 'Kitobchi Express (kuryerlik)',
+        'topic_other' => 'Boshqa mavzu',
+        'message' => 'Xabaringiz',
+        'message_ph' => 'Murojaatingizni batafsil yozing...',
+        'submit' => 'Yuborish',
+    ],
+    'flash' => [
+        'sent' => 'Murojaatingiz yuborildi! Tez orada siz bilan bog‘lanamiz.',
+        'failed' => 'Xabar yuborishda xatolik yuz berdi. Birozdan so‘ng qayta urinib ko‘ring yoki telefon orqali bog‘laning.',
+    ],
+    'validation' => [
+        'full_name.required' => 'Ismingizni kiriting.',
+        'phone.required' => 'Telefon raqamingizni kiriting.',
+        'email.email' => 'Email manzili noto‘g‘ri ko‘rinishda.',
+        'message.required' => 'Xabar matnini yozing.',
+        'message.min' => 'Xabar juda qisqa — kamida 10 belgi yozing.',
+    ],
+    'attributes' => [
+        'full_name' => 'ism',
+        'phone' => 'telefon',
+        'email' => 'email',
+        'message' => 'xabar',
+        'topic' => 'mavzu',
+    ],
+];

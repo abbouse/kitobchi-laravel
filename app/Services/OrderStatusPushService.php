@@ -169,6 +169,10 @@ class OrderStatusPushService
             return;
         }
 
+        // SMS bosqichlari (yetib bordi / qabul qilindi) — push tokeni
+        // bo'lmasa ham ketishi kerak, shu sabab token tekshiruvidan oldin.
+        app(OrderSmsService::class)->handleTransition($order, $previousStatus, $newStatus);
+
         $user = $order->user()->first(['id', 'locale']);
         if (!$user) {
             return;

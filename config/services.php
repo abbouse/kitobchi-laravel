@@ -79,6 +79,9 @@ return [
         ],
     ],
 
+    // Saytdagi "Biz bilan aloqa" formasi murojaatlari boradigan inbox
+    'contact_inbox' => env('CONTACT_INBOX_EMAIL', 'toordaliev@gmail.com'),
+
     // ── Split (nasiya) shartnomalari uchun kreditor rekvizitlari ──────
     'split_lender' => [
         'name' => env('SPLIT_LENDER_NAME', "YaTT TURDALIYEV ABBOS ERKIN O'G'LI"),

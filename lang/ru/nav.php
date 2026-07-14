@@ -7,6 +7,7 @@ return [
     'faq' => 'Вопросы',
     'careers' => 'Карьера',
     'legal' => 'Документы',
+    'contact' => 'Контакты',
     'download' => 'Скачать',
     'download_aria' => 'Kitobchi — скачать приложение',
     'menu_aria' => 'Меню',

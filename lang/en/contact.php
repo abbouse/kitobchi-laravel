@@ -1,0 +1,60 @@
+<?php
+
+return [
+    'seo' => [
+        'title' => 'Contact us — Kitobchi',
+        'desc' => 'Get in touch with the Kitobchi team: phone numbers and emails for each app, plus a contact form.',
+    ],
+    'hero' => [
+        'eyebrow' => 'Contact',
+        'heading_l1' => 'Get in',
+        'heading_l2' => 'touch.',
+        'p1' => 'Question, suggestion or an issue? Each app has its own support line — or drop us a message right here and we will get back to you shortly.',
+    ],
+    'cards' => [
+        'title' => 'Support lines',
+        'kitobchi_title' => 'Kitobchi',
+        'kitobchi_sub' => 'Customer app',
+        'business_title' => 'Kitobchi Business',
+        'business_sub' => 'For sellers',
+        'express_title' => 'Kitobchi Express',
+        'express_sub' => 'For couriers',
+        'phone' => 'Phone',
+        'email' => 'Email',
+        'community_title' => 'Community',
+        'community_sub' => 'News and announcements',
+    ],
+    'form' => [
+        'title' => 'Send a message',
+        'subtitle' => 'Fill in the form — your message goes straight to our team.',
+        'full_name' => 'Your name',
+        'phone' => 'Phone number',
+        'email' => 'Email (optional)',
+        'topic' => 'Topic',
+        'topic_kitobchi' => 'Kitobchi app (shopping, orders)',
+        'topic_business' => 'Kitobchi Business (become a seller, store)',
+        'topic_express' => 'Kitobchi Express (courier work)',
+        'topic_other' => 'Other topic',
+        'message' => 'Your message',
+        'message_ph' => 'Describe your request in detail...',
+        'submit' => 'Send',
+    ],
+    'flash' => [
+        'sent' => 'Your message has been sent! We will contact you shortly.',
+        'failed' => 'Failed to send the message. Please try again later or reach us by phone.',
+    ],
+    'validation' => [
+        'full_name.required' => 'Please enter your name.',
+        'phone.required' => 'Please enter your phone number.',
+        'email.email' => 'Invalid email format.',
+        'message.required' => 'Please write your message.',
+        'message.min' => 'The message is too short — at least 10 characters.',
+    ],
+    'attributes' => [
+        'full_name' => 'name',
+        'phone' => 'phone',
+        'email' => 'email',
+        'message' => 'message',
+        'topic' => 'topic',
+    ],
+];
