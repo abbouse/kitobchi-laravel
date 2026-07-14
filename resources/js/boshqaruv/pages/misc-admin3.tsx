@@ -4,7 +4,10 @@ import { Modal, Button, Form } from 'react-bootstrap';
 import PaginationControls from '../components/PaginationControls';
 
 type TranslateLocale = 'ru' | 'en' | 'ja';
+type PushLocale = 'uz' | TranslateLocale;
 const translateLocaleLabels: Record<TranslateLocale, string> = { ru: 'RU', en: 'EN', ja: 'JA' };
+const pushLocaleLabels: Record<PushLocale, string> = { uz: "O'zbek", ru: 'Русский', en: 'English', ja: '日本語' };
+const pushLocales: PushLocale[] = ['uz', 'ru', 'en', 'ja'];
 const getCsrfToken = () => document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content || '';
 
 // ===== REELS =====
@@ -23,6 +26,12 @@ export function Reels() {
   };
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!pushText.uz.title.trim() || !pushText.uz.body.trim()) {
+      setActiveLocale('uz');
+      window.alert("Push yuborish uchun o'zbekcha sarlavha va matn majburiy.");
+      return;
+    }
+
     const data = Object.fromEntries(new FormData(event.currentTarget).entries());
     const options = { preserveScroll: true, onSuccess: () => { setEditing(null); setShowForm(false); } };
     editing?.updateUrl ? router.put(editing.updateUrl, data, options) : router.post(createUrl, data, options);
@@ -588,16 +597,106 @@ export function ChatKuzatuv() {
 
 // ===== PUSH BILDIRISHNOMALAR =====
 export function PushNotifications() {
-  const { notifications = [] } = usePage<{
-    notifications?: Array<{ id: number; title: string; body?: string; who?: string; targetMode?: 'audience' | 'individual'; targetLabel?: string; source?: string; status: string; sentCount?: number; failedCount?: number; date?: string; createUrl?: string; destroyUrl?: string }>;
+  const { notifications = [], translateUrl = '/boshqaruv/content/translate' } = usePage<{
+    notifications?: Array<{ id: number; title: string; body?: string; localized?: Record<PushLocale, { title?: string | null; body?: string | null }>; who?: string; targetMode?: 'audience' | 'individual'; targetLabel?: string; source?: string; status: string; sentCount?: number; failedCount?: number; date?: string; createUrl?: string; destroyUrl?: string }>;
+    translateUrl?: string;
   }>().props;
   const [showForm, setShowForm] = useState(false);
   const [targetMode, setTargetMode] = useState<'audience' | 'individual'>('individual');
   const [audience, setAudience] = useState('users');
+  const [activeLocale, setActiveLocale] = useState<PushLocale>('uz');
+  const [pushText, setPushText] = useState<Record<PushLocale, { title: string; body: string }>>({
+    uz: { title: '', body: '' },
+    ru: { title: '', body: '' },
+    en: { title: '', body: '' },
+    ja: { title: '', body: '' },
+  });
+  const [translating, setTranslating] = useState(false);
   const createUrl = notifications[0]?.createUrl || '/boshqaruv/push';
+  const updatePushText = (locale: PushLocale, field: 'title' | 'body', value: string) => {
+    setPushText((prev) => ({ ...prev, [locale]: { ...prev[locale], [field]: value } }));
+  };
+  const resetForm = () => {
+    setTargetMode('individual');
+    setAudience('users');
+    setActiveLocale('uz');
+    setPushText({
+      uz: { title: '', body: '' },
+      ru: { title: '', body: '' },
+      en: { title: '', body: '' },
+      ja: { title: '', body: '' },
+    });
+  };
+  const translatePush = async () => {
+    const texts: Record<string, string> = {};
+    if (pushText.uz.title.trim()) texts.title = pushText.uz.title.trim();
+    if (pushText.uz.body.trim()) texts.body = pushText.uz.body.trim();
+
+    if (!texts.title || !texts.body) {
+      window.alert("AI tarjima uchun avval o'zbekcha sarlavha va matnni yozing.");
+      return;
+    }
+
+    setTranslating(true);
+    try {
+      const response = await fetch(translateUrl, {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': getCsrfToken(),
+        },
+        body: JSON.stringify({
+          source_locale: 'uz',
+          target_locales: ['ru', 'en', 'ja'],
+          texts,
+        }),
+      });
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok || payload?.status !== 'success') {
+        throw new Error(payload?.message || payload?.errors?.texts?.[0] || 'AI tarjima xatosi');
+      }
+
+      setPushText((prev) => {
+        const next = { ...prev };
+        (['ru', 'en', 'ja'] as TranslateLocale[]).forEach((locale) => {
+          next[locale] = {
+            title: payload.data?.[locale]?.title || prev[locale].title,
+            body: payload.data?.[locale]?.body || prev[locale].body,
+          };
+        });
+        return next;
+      });
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'AI tarjima xatosi');
+    } finally {
+      setTranslating(false);
+    }
+  };
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    router.post(createUrl, Object.fromEntries(new FormData(event.currentTarget).entries()), { preserveScroll: true, onSuccess: () => setShowForm(false) });
+    if (!pushText.uz.title.trim() || !pushText.uz.body.trim()) {
+      setActiveLocale('uz');
+      window.alert("Push yuborish uchun o'zbekcha sarlavha va matn majburiy.");
+      return;
+    }
+
+    const data = Object.fromEntries(new FormData(event.currentTarget).entries());
+    pushLocales.forEach((locale) => {
+      data[`name_${locale}`] = pushText[locale].title;
+      data[`description_${locale}`] = pushText[locale].body;
+    });
+    data.name = pushText.uz.title;
+    data.description = pushText.uz.body;
+
+    router.post(createUrl, data, {
+      preserveScroll: true,
+      onSuccess: () => {
+        setShowForm(false);
+        resetForm();
+      },
+    });
   };
   const destroy = (notification: (typeof notifications)[0]) => {
     if (!notification.destroyUrl || !confirm(`#${notification.id} push o'chirilsinmi?`)) return;
@@ -608,7 +707,7 @@ export function PushNotifications() {
     <div>
       <div className="page-head">
         <div><h1 className="page-title">Push bildirishnomalar</h1><p className="page-subtitle">Jami {notifications.length} ta yuborilgan</p></div>
-        <button className="btn btn-primary-gradient" onClick={() => setShowForm(true)}><i className="bi bi-send me-1"></i>Push yaratish</button>
+        <button className="btn btn-primary-gradient" onClick={() => { resetForm(); setShowForm(true); }}><i className="bi bi-send me-1"></i>Push yaratish</button>
       </div>
       <div className="card-panel">
         <div className="table-responsive"><table className="data-table">
@@ -616,7 +715,19 @@ export function PushNotifications() {
           <tbody>{notifications.map(notification => (
             <tr key={notification.id}>
               <td className="fw-semibold" style={{ color: '#4f46e5' }}>#{notification.id}</td>
-              <td className="fw-semibold">{notification.title}</td>
+              <td>
+                <div className="fw-semibold">{notification.title}</div>
+                <div className="d-flex flex-wrap gap-1 mt-1">
+                  {pushLocales.map((locale) => {
+                    const filled = locale === 'uz' || Boolean(notification.localized?.[locale]?.title || notification.localized?.[locale]?.body);
+                    return (
+                      <span key={locale} className={`chip ${filled ? 'chip-success' : 'chip-gray'}`} style={{ fontSize: 9 }}>
+                        {locale.toUpperCase()}
+                      </span>
+                    );
+                  })}
+                </div>
+              </td>
               <td className="text-muted">{notification.body || '—'}</td>
               <td>
                 <span className={`chip ${notification.targetMode === 'individual' ? 'chip-success' : 'chip-gray'}`}>
@@ -635,12 +746,56 @@ export function PushNotifications() {
           ))}</tbody>
         </table></div>
       </div>
-      <Modal show={showForm} onHide={() => setShowForm(false)} centered>
+      <Modal show={showForm} onHide={() => setShowForm(false)} centered size="lg">
         <Form onSubmit={submit}>
           <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">Push bildirishnoma</Modal.Title></Modal.Header>
           <Modal.Body>
-            <Form.Label>Sarlavha</Form.Label><Form.Control name="name" required className="mb-3" />
-            <Form.Label>Matn</Form.Label><Form.Control as="textarea" rows={4} name="description" required className="mb-3" />
+            <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+              <div className="btn-group bg-light rounded-3 p-1">
+                {pushLocales.map((locale) => (
+                  <button
+                    key={locale}
+                    type="button"
+                    className={`btn btn-sm rounded-3 ${activeLocale === locale ? 'btn-dark' : 'btn-light'}`}
+                    onClick={() => setActiveLocale(locale)}
+                  >
+                    {pushLocaleLabels[locale]}
+                  </button>
+                ))}
+              </div>
+              <Button
+                type="button"
+                variant="light"
+                className="border"
+                disabled={translating}
+                onClick={translatePush}
+              >
+                <i className="bi bi-stars me-1"></i>{translating ? 'Tarjima qilinyapti...' : 'AI tarjima'}
+              </Button>
+            </div>
+            <div className="alert alert-light border small mb-3">
+              Avval o'zbekcha matnni yozing, AI tarjima ru/en/ja maydonlarini to'ldiradi. Xohlasangiz har bir tilni alohida qo'lda tahrirlashingiz mumkin.
+            </div>
+            <Form.Label>Sarlavha ({pushLocaleLabels[activeLocale]})</Form.Label>
+            <Form.Control
+              required={activeLocale === 'uz'}
+              value={pushText[activeLocale].title}
+              onChange={(event) => updatePushText(activeLocale, 'title', event.target.value)}
+              className="mb-3"
+              maxLength={255}
+              placeholder={activeLocale === 'uz' ? 'Masalan: Yangi chegirmalar boshlandi' : `${pushLocaleLabels[activeLocale]} sarlavha`}
+            />
+            <Form.Label>Matn ({pushLocaleLabels[activeLocale]})</Form.Label>
+            <Form.Control
+              as="textarea"
+              rows={4}
+              required={activeLocale === 'uz'}
+              value={pushText[activeLocale].body}
+              onChange={(event) => updatePushText(activeLocale, 'body', event.target.value)}
+              className="mb-3"
+              maxLength={1000}
+              placeholder={activeLocale === 'uz' ? 'Push matnini yozing...' : `${pushLocaleLabels[activeLocale]} matn`}
+            />
             <Form.Label>Ilova auditoriyasi</Form.Label>
             <Form.Select name="who" required value={audience} onChange={(event) => setAudience(event.target.value)} className="mb-3">
               <option value="users">Foydalanuvchilar</option>

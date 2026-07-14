@@ -1523,13 +1523,22 @@ class AdminController extends Controller
     public function storePushNotification(Request $request): \Illuminate\Http\RedirectResponse
     {
         $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'description' => ['required', 'string', 'max:500'],
+            'name' => ['nullable', 'string', 'max:255'],
+            'description' => ['nullable', 'string', 'max:1000'],
+            'name_uz' => ['nullable', 'string', 'max:255'],
+            'description_uz' => ['nullable', 'string', 'max:1000'],
+            'name_ru' => ['nullable', 'string', 'max:255'],
+            'description_ru' => ['nullable', 'string', 'max:1000'],
+            'name_en' => ['nullable', 'string', 'max:255'],
+            'description_en' => ['nullable', 'string', 'max:1000'],
+            'name_ja' => ['nullable', 'string', 'max:255'],
+            'description_ja' => ['nullable', 'string', 'max:1000'],
             'who' => ['required', Rule::in(['users', 'business', 'courier'])],
             'target_mode' => ['required', Rule::in(['audience', 'individual'])],
             'recipient' => ['nullable', 'string', 'max:255', Rule::requiredIf($request->input('target_mode') === 'individual')],
         ]);
 
+        $localizedPush = $this->localizedPushPayload($data);
         $userType = $data['who'] === 'users' ? 'user' : $data['who'];
         $target = null;
 
@@ -1543,9 +1552,17 @@ class AdminController extends Controller
         }
 
         $recipientService = app(FcmRecipientService::class);
-        $tokens = $target
-            ? $recipientService->tokensFor($userType, (int) $target->id)
-            : $recipientService->tokensForAudience($userType);
+        $tokensByLocale = $target
+            ? [$this->pushRecipientLocale($data['who'], $target) => $recipientService->tokensFor($userType, (int) $target->id)]
+            : $recipientService->tokensForAudienceByLocale($userType);
+
+        $tokensByLocale = collect($tokensByLocale)
+            ->mapWithKeys(fn (array $tokens, string $locale) => [
+                $recipientService->normalizeLocale($locale) => array_values(array_unique(array_filter($tokens))),
+            ])
+            ->filter(fn (array $tokens) => $tokens !== [])
+            ->all();
+        $tokens = collect($tokensByLocale)->flatten()->unique()->values()->all();
 
         if (empty($tokens)) {
             return back()->withErrors([
@@ -1559,49 +1576,107 @@ class AdminController extends Controller
             ? ($data['who'] === 'users' ? (string) $target->id : "{$data['who']}:{$target->id}")
             : $data['who'];
 
-        $notification = FcmNotifications::create([
-            'name' => $data['name'],
-            'description' => $data['description'],
+        $notificationData = [
+            'name' => $localizedPush['uz']['title'],
+            'description' => $localizedPush['uz']['body'],
             'who' => $who,
             'source' => 'admin',
             'delivery_status' => 'sending',
             'is_read' => false,
-        ]);
+        ];
 
-        $pushRequest = new Request([
-            'app_key' => match ($data['who']) {
-                'business' => 'business',
-                'courier' => 'courier',
-                default => 'kitobchi',
-            },
-            'title' => $notification->name,
-            'body' => $notification->description,
-            'tokens' => $tokens,
-            'data' => [
-                'type' => 'general',
-                'notification_id' => (string) $notification->id,
-                'target_mode' => $data['target_mode'],
-            ],
-        ]);
+        foreach (array_merge(['uz'], self::CONTENT_LOCALES) as $locale) {
+            if (Schema::hasColumn('fcm_notifications', "name_{$locale}")) {
+                $notificationData["name_{$locale}"] = $localizedPush[$locale]['title'];
+            }
+            if (Schema::hasColumn('fcm_notifications', "description_{$locale}")) {
+                $notificationData["description_{$locale}"] = $localizedPush[$locale]['body'];
+            }
+        }
 
-        $response = app(\App\Http\Controllers\PushController::class)->sendPush($pushRequest);
-        $result = (array) $response->getData(true);
+        $notification = FcmNotifications::create($notificationData);
+
+        $sent = 0;
+        $failed = 0;
+        $lastError = null;
+
+        foreach ($tokensByLocale as $locale => $localeTokens) {
+            $message = $localizedPush[$locale] ?? $localizedPush['uz'];
+            $pushRequest = new Request([
+                'app_key' => match ($data['who']) {
+                    'business' => 'business',
+                    'courier' => 'courier',
+                    default => 'kitobchi',
+                },
+                'title' => $message['title'],
+                'body' => $message['body'],
+                'tokens' => $localeTokens,
+                'data' => [
+                    'type' => 'general',
+                    'notification_id' => (string) $notification->id,
+                    'target_mode' => $data['target_mode'],
+                    'locale' => $locale,
+                ],
+            ]);
+
+            $response = app(\App\Http\Controllers\PushController::class)->sendPush($pushRequest);
+            $result = (array) $response->getData(true);
+            $sent += (int) ($result['sent'] ?? 0);
+            $failed += (int) ($result['failed'] ?? 0);
+
+            if (! ($result['success'] ?? false)) {
+                $lastError = (string) ($result['message'] ?? 'Push yuborilmadi.');
+            }
+        }
 
         $notification->update([
-            'delivery_status' => ($result['success'] ?? false) ? 'sent' : 'failed',
-            'sent_count' => (int) ($result['sent'] ?? 0),
-            'failed_count' => (int) ($result['failed'] ?? count($tokens)),
+            'delivery_status' => $sent > 0 ? 'sent' : 'failed',
+            'sent_count' => $sent,
+            'failed_count' => $failed,
         ]);
 
-        if (! ($result['success'] ?? false)) {
+        if ($sent === 0) {
             return back()->withErrors([
-                'recipient' => (string) ($result['message'] ?? 'Push yuborilmadi.'),
+                'recipient' => $lastError ?: 'Push yuborilmadi.',
             ])->withInput();
         }
 
         $targetLabel = $target ? $this->pushRecipientLabel($data['who'], $target) : count($tokens).' ta qurilma';
 
         return back()->with('success', "Push {$targetLabel} uchun yuborildi.");
+    }
+
+    private function localizedPushPayload(array $data): array
+    {
+        $uzTitle = trim((string) ($data['name_uz'] ?? $data['name'] ?? ''));
+        $uzBody = trim((string) ($data['description_uz'] ?? $data['description'] ?? ''));
+
+        if ($uzTitle === '' || $uzBody === '') {
+            $messages = [];
+            if ($uzTitle === '') {
+                $messages['name_uz'] = "O'zbekcha sarlavha majburiy.";
+            }
+            if ($uzBody === '') {
+                $messages['description_uz'] = "O'zbekcha matn majburiy.";
+            }
+
+            throw ValidationException::withMessages($messages);
+        }
+
+        $localized = [
+            'uz' => ['title' => $uzTitle, 'body' => $uzBody],
+        ];
+
+        foreach (self::CONTENT_LOCALES as $locale) {
+            $title = trim((string) ($data["name_{$locale}"] ?? ''));
+            $body = trim((string) ($data["description_{$locale}"] ?? ''));
+            $localized[$locale] = [
+                'title' => $title !== '' ? $title : $uzTitle,
+                'body' => $body !== '' ? $body : $uzBody,
+            ];
+        }
+
+        return $localized;
     }
 
     private function resolvePushRecipient(string $audience, string $identifier): User|Seller|Couriers|null
@@ -1646,6 +1721,17 @@ class AdminController extends Controller
             'courier' => trim((string) ($recipient->first_name.' '.$recipient->last_name)) ?: "Kuryer #{$recipient->id}",
             default => trim((string) ($recipient->name.' '.$recipient->lastname)) ?: "Foydalanuvchi #{$recipient->id}",
         };
+    }
+
+    private function pushRecipientLocale(string $audience, User|Seller|Couriers $recipient): string
+    {
+        $locale = match ($audience) {
+            'business' => $recipient instanceof Seller ? ($recipient->tg_lang ?? null) : null,
+            'courier' => $recipient->locale ?? null,
+            default => $recipient instanceof User ? ($recipient->locale ?? null) : null,
+        };
+
+        return app(FcmRecipientService::class)->normalizeLocale(is_string($locale) ? $locale : null);
     }
 
     public function destroyPushNotification(FcmNotifications $notification): \Illuminate\Http\RedirectResponse
@@ -2593,7 +2679,10 @@ PROMPT;
             'Siyosatlar' => [
                 'policies' => $this->policiesPayload(),
             ],
-            'PushNotifications' => ['notifications' => $this->pushNotificationsPayload()],
+            'PushNotifications' => [
+                'notifications' => $this->pushNotificationsPayload(),
+                'translateUrl' => route('boshqaruv.content.translate'),
+            ],
             'SearchHistory' => $this->searchHistoryPagePayload(),
             'Sovgalar' => ['gifts' => $this->giftsPayload()],
             'Tickets' => $this->ticketsPagePayload(),
@@ -6695,6 +6784,7 @@ PROMPT;
                     'id' => $notification->id,
                     'title' => $notification->name,
                     'body' => $notification->description,
+                    'localized' => $this->pushNotificationLocalizedPayload($notification),
                     'who' => $who,
                     'targetMode' => $targetMode,
                     'targetLabel' => $this->pushTargetLabel($who),
@@ -6714,6 +6804,25 @@ PROMPT;
             })
             ->values()
             ->all();
+    }
+
+    private function pushNotificationLocalizedPayload(FcmNotifications $notification): array
+    {
+        $localized = [
+            'uz' => [
+                'title' => $notification->name_uz ?? $notification->name,
+                'body' => $notification->description_uz ?? $notification->description,
+            ],
+        ];
+
+        foreach (self::CONTENT_LOCALES as $locale) {
+            $localized[$locale] = [
+                'title' => $notification->{"name_{$locale}"} ?? null,
+                'body' => $notification->{"description_{$locale}"} ?? null,
+            ];
+        }
+
+        return $localized;
     }
 
     private function pushTargetLabel(string $who): string

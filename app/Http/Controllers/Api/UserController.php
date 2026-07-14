@@ -217,7 +217,27 @@ class UserController extends Controller
             });
         }
 
+        $locale = $this->normalizeNotificationLocale($user->locale ?? null);
+        $data->each(function (FcmNotifications $notification) use ($locale) {
+            $title = $notification->{"name_{$locale}"} ?? null;
+            $body = $notification->{"description_{$locale}"} ?? null;
+
+            if (filled($title)) {
+                $notification->name = $title;
+            }
+            if (filled($body)) {
+                $notification->description = $body;
+            }
+        });
+
         return response()->json(['status' => 'success', 'data' => $data], 201);
+    }
+
+    private function normalizeNotificationLocale(?string $locale): string
+    {
+        $locale = strtolower(trim((string) $locale));
+
+        return in_array($locale, ['uz', 'ru', 'en', 'ja'], true) ? $locale : 'uz';
     }
 
     public function markAsRead(Request $request, $id)
