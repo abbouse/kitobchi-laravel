@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { Component, ReactNode, useEffect, useRef, useState } from 'react';
 
 // Yandex Maps 2.1 global (boshqaruv/app.blade.php da apikey bilan yuklanadi)
 declare global {
@@ -21,12 +21,20 @@ const COLORS = {
 
 type ReadyState = 'loading' | 'ready' | 'disabled';
 
-/** ymaps global tayyorligini kuzatadi. Kalit bo'lmasa 'disabled'. */
+// ymaps.ready() bir marta ishga tushgach eslab qolamiz — keyingi mount'lar darhol tayyor.
+let ymapsReadyOnce = false;
+
+/**
+ * ymaps API TO'LIQ tayyorligini kuzatadi (ymaps.ready orqali).
+ * MUHIM: to'liq reload'da <head> skripti window.ymaps ni sinxron aniqlaydi,
+ * lekin ymaps.Map/Polygon modullari ymaps.ready'dan keyin yuklanadi. Shuning uchun
+ * window.ymaps mavjudligining o'zi yetarli emas — aks holda new ymaps.Map() throw beradi.
+ */
 export function useYmapsReady(): ReadyState {
   const [state, setState] = useState<ReadyState>(() => {
     if (typeof window === 'undefined') return 'loading';
     if (window.__YANDEX_MAPS_ENABLED__ === false) return 'disabled';
-    return window.ymaps ? 'ready' : 'loading';
+    return ymapsReadyOnce ? 'ready' : 'loading';
   });
 
   useEffect(() => {
@@ -39,7 +47,11 @@ export function useYmapsReady(): ReadyState {
     let cancelled = false;
     const markReady = () => {
       if (cancelled) return;
-      window.ymaps.ready(() => !cancelled && setState('ready'));
+      window.ymaps.ready(() => {
+        if (cancelled) return;
+        ymapsReadyOnce = true;
+        setState('ready');
+      });
     };
 
     if (window.ymaps) {
@@ -78,6 +90,87 @@ function num(value: number | string | null | undefined): number | null {
   if (value === null || value === undefined || value === '') return null;
   const n = typeof value === 'string' ? Number.parseFloat(value) : value;
   return Number.isFinite(n) ? n : null;
+}
+
+// ───────────────────────── Client-side zona resolver ─────────────────────────
+// MUHIM: bu backend DeliveryZoneResolverService bilan BIR XIL mantiqda bo'lishi kerak
+// (haversine 6371 km, ray-casting point-in-polygon, priority > specificity saralash).
+// Faqat preview/overlap vizuali uchun — haqiqiy narx baribir serverdan keladi.
+
+export type ZoneLike = {
+  id: number;
+  scope?: string;
+  active?: boolean;
+  centerLat?: number | string | null;
+  centerLon?: number | string | null;
+  radiusKm?: number | string | null;
+  polygon?: Ring | null;
+  priority?: number;
+  zoneName?: string;
+  service?: string;
+  color?: string | null;
+  basePrice?: number;
+  etaDays?: number;
+  codAllowed?: boolean;
+};
+
+export function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(Math.max(0, 1 - a)));
+}
+
+/** Ray-casting (even-odd) — ring = [[lat, lon], ...]. */
+export function pointInRing(lat: number, lon: number, ring: Ring): boolean {
+  let inside = false;
+  const n = ring.length;
+  for (let i = 0, j = n - 1; i < n; j = i++) {
+    const latI = ring[i][0], lonI = ring[i][1];
+    const latJ = ring[j][0], lonJ = ring[j][1];
+    let denom = latJ - latI;
+    if (denom === 0) denom = 1e-12;
+    const intersects = ((latI > lat) !== (latJ > lat)) && (lon < ((lonJ - lonI) * (lat - latI)) / denom + lonI);
+    if (intersects) inside = !inside;
+  }
+  return inside;
+}
+
+export function zoneMatchesPoint(zone: ZoneLike, lat: number, lon: number): boolean {
+  if (zone.active === false) return false;
+  const scope = zone.scope || 'radius';
+  if (scope === 'country') return true;
+  if (scope === 'polygon') {
+    const ring = Array.isArray(zone.polygon) ? zone.polygon : null;
+    if (!ring || ring.length < 3) return false;
+    return pointInRing(lat, lon, ring);
+  }
+  const cLat = num(zone.centerLat);
+  const cLon = num(zone.centerLon);
+  const r = num(zone.radiusKm);
+  if (cLat === null || cLon === null || r === null) return false;
+  return haversineKm(lat, lon, cLat, cLon) <= r;
+}
+
+function zoneSpecificity(zone: ZoneLike): number {
+  const scope = zone.scope || 'radius';
+  if (scope === 'country') return 10;
+  return scope === 'polygon' ? 120 : 100;
+}
+
+/** Nuqtaga mos zonalarni g'olib (priority > specificity > id) birinchi bo'lgan holda qaytaradi. */
+export function resolveZonesForPoint(zones: ZoneLike[], lat: number, lon: number): ZoneLike[] {
+  return zones
+    .filter((z) => zoneMatchesPoint(z, lat, lon))
+    .sort((a, b) => {
+      const pa = a.priority ?? 0, pb = b.priority ?? 0;
+      if (pb !== pa) return pb - pa;
+      const sa = zoneSpecificity(a), sb = zoneSpecificity(b);
+      if (sb !== sa) return sb - sa;
+      return (b.id ?? 0) - (a.id ?? 0);
+    });
 }
 
 /** Halqadan yopiluvchi takror nuqtani olib tashlaydi. */
@@ -119,6 +212,39 @@ function MapFallback({ height, state }: { height: number; state: ReadyState }) {
       )}
     </div>
   );
+}
+
+/**
+ * Xarita xatosi (masalan Yandex modul yuklanmasligi) butun boshqaruv sahifasini
+ * oq qilib qo'ymasligi uchun himoya to'sig'i.
+ */
+class MapErrorBoundary extends Component<{ height: number; children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  componentDidCatch(error: unknown) {
+    // eslint-disable-next-line no-console
+    console.error('Yandex xarita xatosi:', error);
+  }
+
+  render() {
+    if (this.state.failed) {
+      return (
+        <div
+          className="d-flex flex-column align-items-center justify-content-center text-center text-muted small border rounded-4 gap-2 p-3"
+          style={{ height: this.props.height, background: '#f8fafc' }}
+        >
+          <i className="bi bi-exclamation-triangle fs-4 text-warning" />
+          <div className="fw-semibold text-dark">Xaritani ochishda xatolik</div>
+          <div>Sahifani yangilang. Muammo qaytarilsa, Yandex kaliti yoki internet aloqasini tekshiring.</div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
 
 /** Manzil bo'yicha qidiruv — Yandex geocoder. */
@@ -192,7 +318,7 @@ function GeocodeSearch({ onPick }: { onPick: (coords: LatLon, label: string) => 
  * Zona muharriri — radius (marker + doira) yoki polygon (xaritada chizish) rejimida.
  * Taksi xizmatlaridagi kabi: xaritaga bosib zona chegarasini belgilaysiz.
  */
-export function YandexZoneEditor({
+function YandexZoneEditorInner({
   scope,
   lat,
   lon,
@@ -397,10 +523,11 @@ export function YandexZoneEditor({
 /**
  * Faqat ko'rish uchun: barcha zonalarni (radius doiralari + polygonlar) xaritada ko'rsatadi.
  */
-export function YandexZonesOverview({
+function YandexZonesOverviewInner({
   zones,
   height = 320,
   onSelect,
+  focusId = null,
 }: {
   zones: Array<{
     id: number;
@@ -414,6 +541,7 @@ export function YandexZonesOverview({
   }>;
   height?: number;
   onSelect?: (id: number) => void;
+  focusId?: number | null;
 }) {
   const state = useYmapsReady();
   const mapEl = useRef<HTMLDivElement | null>(null);
@@ -435,54 +563,58 @@ export function YandexZonesOverview({
     const map = mapRef.current;
     map.geoObjects.removeAll();
 
-    const allBounds: LatLon[] = [];
+    let focusBounds: any = null;
 
     zones.forEach((zone) => {
       const color = zone.color || (zone.scope === 'polygon' ? COLORS.polygon : COLORS.radius);
       const hint = zone.label || '';
+      const focused = focusId != null && zone.id === focusId;
 
       if (zone.scope === 'polygon' && zone.polygon && zone.polygon.length >= 3) {
         const poly = new ymaps.Polygon([zone.polygon], { hintContent: hint }, {
-          fillColor: color + '26',
+          fillColor: color + (focused ? '40' : '26'),
           strokeColor: color,
-          strokeWidth: 2,
+          strokeWidth: focused ? 4 : 2,
         });
         if (onSelectRef.current) poly.events.add('click', () => onSelectRef.current!(zone.id));
         map.geoObjects.add(poly);
-        zone.polygon.forEach((p) => allBounds.push(p));
+        if (focused) focusBounds = poly.geometry.getBounds();
       } else {
         const cLat = num(zone.lat);
         const cLon = num(zone.lon);
         const r = num(zone.radiusKm);
         if (cLat === null || cLon === null) return;
+        let circle: any = null;
         if (r && r > 0) {
-          const circle = new ymaps.Circle([[cLat, cLon], r * 1000], { hintContent: hint }, {
-            fillColor: color + '20',
+          circle = new ymaps.Circle([[cLat, cLon], r * 1000], { hintContent: hint }, {
+            fillColor: color + (focused ? '33' : '20'),
             strokeColor: color,
-            strokeWidth: 1,
+            strokeWidth: focused ? 3 : 1,
           });
           if (onSelectRef.current) circle.events.add('click', () => onSelectRef.current!(zone.id));
           map.geoObjects.add(circle);
         }
         const placemark = new ymaps.Placemark([cLat, cLon], { iconCaption: hint, hintContent: hint }, {
-          preset: 'islands#circleIcon',
+          preset: focused ? 'islands#redCircleDotIcon' : 'islands#circleIcon',
           iconColor: color,
         });
         if (onSelectRef.current) placemark.events.add('click', () => onSelectRef.current!(zone.id));
         map.geoObjects.add(placemark);
-        allBounds.push([cLat, cLon]);
+        if (focused) focusBounds = circle ? circle.geometry.getBounds() : [[cLat, cLon], [cLat, cLon]];
       }
     });
 
-    if (map.geoObjects.getLength() > 0) {
-      try {
+    try {
+      if (focusBounds) {
+        map.setBounds(focusBounds, { checkZoomRange: true, zoomMargin: 60 });
+      } else if (map.geoObjects.getLength() > 0) {
         map.setBounds(map.geoObjects.getBounds(), { checkZoomRange: true, zoomMargin: 40 });
-      } catch {
-        /* bo'sh */
       }
+    } catch {
+      /* bo'sh */
     }
     setTimeout(() => map.container.fitToViewport(), 200);
-  }, [state, zones]);
+  }, [state, zones, focusId]);
 
   useEffect(() => () => {
     if (mapRef.current) {
@@ -504,4 +636,134 @@ export function YandexZonesOverview({
   }
 
   return <div ref={mapEl} style={{ height, borderRadius: 14, overflow: 'hidden' }} />;
+}
+
+// Tashqi eksportlar — har biri MapErrorBoundary bilan o'ralgan (xarita xatosi sahifani buzmasin).
+export function YandexZoneEditor(props: Parameters<typeof YandexZoneEditorInner>[0]) {
+  return (
+    <MapErrorBoundary height={props.height ?? 380}>
+      <YandexZoneEditorInner {...props} />
+    </MapErrorBoundary>
+  );
+}
+
+export function YandexZonesOverview(props: Parameters<typeof YandexZonesOverviewInner>[0]) {
+  return (
+    <MapErrorBoundary height={props.height ?? 320}>
+      <YandexZonesOverviewInner {...props} />
+    </MapErrorBoundary>
+  );
+}
+
+/**
+ * Aqlli preview xaritasi: xaritaga bosib (yoki manzil qidirib) nuqta tanlaysiz,
+ * mos keladigan zonalar ajratiladi, g'olib (priority > specificity) qizil bo'ladi.
+ * Bir nechta zona mos kelsa — bu overlap; g'olib qizil rang orqali ko'rinadi.
+ */
+function YandexPreviewMapInner({
+  zones,
+  point,
+  onPick,
+  height = 360,
+}: {
+  zones: ZoneLike[];
+  point: LatLon | null;
+  onPick: (coords: LatLon) => void;
+  height?: number;
+}) {
+  const state = useYmapsReady();
+  const mapEl = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<any>(null);
+  const onPickRef = useRef(onPick);
+  onPickRef.current = onPick;
+
+  const pLat = point ? point[0] : null;
+  const pLon = point ? point[1] : null;
+
+  useEffect(() => {
+    if (state !== 'ready' || !mapEl.current || mapRef.current) return;
+    const ymaps = window.ymaps;
+    const map = new ymaps.Map(
+      mapEl.current,
+      { center: point ?? TASHKENT, zoom: 11, controls: ['zoomControl', 'typeSelector'] },
+      { suppressMapOpenBlock: true },
+    );
+    mapRef.current = map;
+    map.events.add('click', (e: any) => onPickRef.current(e.get('coords')));
+    setTimeout(() => map.container.fitToViewport(), 200);
+    return () => {
+      map.destroy();
+      mapRef.current = null;
+    };
+  }, [state]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (state !== 'ready' || !map) return;
+    const ymaps = window.ymaps;
+    map.geoObjects.removeAll();
+
+    const matched = point ? resolveZonesForPoint(zones, point[0], point[1]) : [];
+    const matchedIds = new Set(matched.map((z) => z.id));
+    const winnerId = matched.length ? matched[0].id : null;
+
+    zones.forEach((zone) => {
+      const base = zone.color || (zone.scope === 'polygon' ? COLORS.polygon : COLORS.radius);
+      const isMatch = matchedIds.has(zone.id);
+      const isWinner = zone.id === winnerId;
+      const color = isWinner ? '#dc2626' : base;
+      const dim = point != null && !isMatch;
+      const stroke = isWinner ? 5 : isMatch ? 3 : 1;
+      const fillA = dim ? '0d' : isMatch ? '33' : '1f';
+      const opts = { fillColor: color + fillA, strokeColor: color, strokeWidth: stroke, strokeStyle: dim ? 'dash' : 'solid' };
+
+      if (zone.scope === 'polygon' && Array.isArray(zone.polygon) && zone.polygon.length >= 3) {
+        map.geoObjects.add(new ymaps.Polygon([zone.polygon], { hintContent: zone.zoneName || '' }, opts));
+      } else if (zone.scope !== 'country') {
+        const cLat = num(zone.centerLat);
+        const cLon = num(zone.centerLon);
+        const r = num(zone.radiusKm);
+        if (cLat !== null && cLon !== null && r) {
+          map.geoObjects.add(new ymaps.Circle([[cLat, cLon], r * 1000], { hintContent: zone.zoneName || '' }, opts));
+        }
+      }
+    });
+
+    if (point) {
+      map.geoObjects.add(new ymaps.Placemark(point, { iconCaption: 'Tekshiruv nuqtasi' }, { preset: 'islands#blackStretchyIcon' }));
+    }
+    setTimeout(() => map.container.fitToViewport(), 120);
+  }, [state, zones, pLat, pLon]);
+
+  useEffect(() => () => {
+    if (mapRef.current) {
+      mapRef.current.destroy();
+      mapRef.current = null;
+    }
+  }, []);
+
+  if (state !== 'ready') {
+    return <MapFallback height={height} state={state} />;
+  }
+
+  return (
+    <div>
+      <div className="mb-2">
+        <GeocodeSearch onPick={(coords) => onPickRef.current(coords)} />
+      </div>
+      <div className="alert alert-light border py-2 px-3 small mb-2">
+        <i className="bi bi-cursor me-1 text-primary" />
+        Xaritaga bosing yoki manzil qidiring — mos zonalar ajraladi, <b className="text-danger">g'olib qizil</b> bo'ladi.
+      </div>
+      <div ref={mapEl} style={{ height, borderRadius: 14, overflow: 'hidden' }} />
+    </div>
+  );
+}
+
+export function YandexPreviewMap(props: Parameters<typeof YandexPreviewMapInner>[0]) {
+  return (
+    <MapErrorBoundary height={props.height ?? 360}>
+      <YandexPreviewMapInner {...props} />
+    </MapErrorBoundary>
+  );
 }

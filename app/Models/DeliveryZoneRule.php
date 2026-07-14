@@ -18,6 +18,7 @@ class DeliveryZoneRule extends Model
         'center_lon',
         'radius_km',
         'polygon',
+        'color',
         'bbox_min_lat',
         'bbox_min_lon',
         'bbox_max_lat',

@@ -131,6 +131,13 @@ class LogisticsController extends Controller
         return back()->with('success', "Logistika qoidasi o'chirildi.");
     }
 
+    public function toggleActive(DeliveryZoneRule $logistic)
+    {
+        $logistic->update(['is_active' => ! $logistic->is_active]);
+
+        return back()->with('success', $logistic->is_active ? 'Zona yoqildi.' : "Zona o'chirildi (nofaol).");
+    }
+
     private function validateRule(Request $request): array
     {
         return $request->validate([
@@ -146,6 +153,7 @@ class LogisticsController extends Controller
             'polygon' => 'nullable|array|max:1000',
             'polygon.*' => 'array|size:2',
             'polygon.*.*' => 'numeric',
+            'color' => 'nullable|string|max:16',
             'delivery_service_id' => 'required|integer|exists:delivery_services,id',
             'priority' => 'required|integer|min:0|max:10000',
             'base_price' => 'nullable|integer|min:0|max:100000000',
@@ -219,6 +227,7 @@ class LogisticsController extends Controller
             'center_lon' => $scope === 'radius' ? (float) $validated['center_lon'] : null,
             'radius_km' => $scope === 'radius' ? (float) $validated['radius_km'] : null,
             'polygon' => $polygon,
+            'color' => $validated['color'] ?? null,
             'bbox_min_lat' => $bbox['min_lat'],
             'bbox_min_lon' => $bbox['min_lon'],
             'bbox_max_lat' => $bbox['max_lat'],

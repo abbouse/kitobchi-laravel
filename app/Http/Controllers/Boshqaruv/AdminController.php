@@ -8512,6 +8512,7 @@ PROMPT;
                 'centerLon' => $rule->center_lon,
                 'radiusKm' => $rule->radius_km,
                 'polygon' => $rule->polygon,
+                'color' => $rule->color,
                 'deliveryServiceId' => $rule->delivery_service_id,
                 'service' => $rule->deliveryService?->name,
                 'priority' => (int) $rule->priority,
@@ -8524,6 +8525,7 @@ PROMPT;
                 'notes' => $rule->notes,
                 'updateUrl' => route('boshqaruv.logistika.update', $rule),
                 'destroyUrl' => route('boshqaruv.logistika.destroy', $rule),
+                'toggleUrl' => route('boshqaruv.logistika.toggle', $rule),
             ])->values()->all(),
             'logisticsStats' => [
                 'services' => $services->count(),

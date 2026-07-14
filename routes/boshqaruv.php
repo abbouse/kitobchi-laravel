@@ -221,6 +221,7 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
         Route::post('/logistika/rules', [\App\Http\Controllers\A122\LogisticsController::class, 'store'])->name('logistika.store');
         Route::put('/logistika/rules/{logistic}', [\App\Http\Controllers\A122\LogisticsController::class, 'update'])->name('logistika.update');
         Route::delete('/logistika/rules/{logistic}', [\App\Http\Controllers\A122\LogisticsController::class, 'destroy'])->name('logistika.destroy');
+        Route::patch('/logistika/rules/{logistic}/toggle', [\App\Http\Controllers\A122\LogisticsController::class, 'toggleActive'])->name('logistika.toggle');
         Route::post('/logistika/services', [\App\Http\Controllers\A122\SettingsController::class, 'storeDelivery'])->name('logistika.services.store');
         Route::put('/logistika/services/{deliveryService}', [\App\Http\Controllers\A122\SettingsController::class, 'updateDelivery'])->name('logistika.services.update');
         Route::delete('/logistika/services/{deliveryService}', [\App\Http\Controllers\A122\SettingsController::class, 'destroyDelivery'])->name('logistika.services.destroy');

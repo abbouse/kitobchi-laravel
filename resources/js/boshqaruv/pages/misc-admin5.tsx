@@ -1,7 +1,7 @@
 import { ChangeEvent, FormEvent, useMemo, useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Modal, Button, Form } from 'react-bootstrap';
-import { YandexZoneEditor, YandexZonesOverview, Ring } from '../components/YandexMap';
+import { YandexZoneEditor, YandexZonesOverview, YandexPreviewMap, resolveZonesForPoint, Ring, ZoneLike, LatLon } from '../components/YandexMap';
 
 // ===== MYSTERY BOX =====
 export function MysteryBox() {
@@ -139,6 +139,7 @@ type DeliveryRule = {
   centerLon?: string | number | null;
   radiusKm?: string | number | null;
   polygon?: Array<[number, number]> | null;
+  color?: string | null;
   deliveryServiceId?: number;
   service?: string;
   priority?: number;
@@ -456,20 +457,21 @@ function DeliveryRuleForm({ rule, services, action, onDone }: { rule?: DeliveryR
   const [polygon, setPolygon] = useState<Ring | null>(
     Array.isArray(rule?.polygon) && (rule?.polygon?.length ?? 0) >= 3 ? (rule!.polygon as Ring) : null,
   );
+  const [color, setColor] = useState(rule?.color || (rule?.scope === 'radius' ? '#10b981' : '#4f46e5'));
 
   if (!action) return null;
 
   const radiusLabel = Math.max(1, Number.parseFloat(radius || '28')).toFixed(Number.parseFloat(radius || '28') % 1 === 0 ? 0 : 1);
 
   return (
-    <form onSubmit={(event) => submitLogistics(event, rule ? 'put' : 'post', action, onDone)}>
+    <form onSubmit={(event) => submitLogistics(event, rule?.updateUrl ? 'put' : 'post', action, onDone)}>
       <div className="rounded-4 border bg-light-subtle p-3 mb-3">
         <div className="fw-bold mb-1">Zona qoidasi — bu xizmat qayerda va qanday narxda ishlashini belgilaydi</div>
         <div className="small text-muted">Bitta xizmatga bir nechta zona qo'shish mumkin. Chegarani <b>polygon</b> qilib xaritada chizing (taksi uslubi) yoki oddiy <b>radius</b> bering.</div>
       </div>
       <div className="row g-3">
-        <div className="col-md-6"><LogisticsInput name="zone_name" label="Zona nomi" required defaultValue={rule?.zoneName} /></div>
-        <div className="col-md-3"><LogisticsInput name="country_code" label="Mamlakat kodi" required max={2} defaultValue={rule?.country || 'UZ'} /></div>
+        <div className="col-md-5"><LogisticsInput name="zone_name" label="Zona nomi" required defaultValue={rule?.zoneName} /></div>
+        <div className="col-md-2"><LogisticsInput name="country_code" label="Mamlakat" required max={2} defaultValue={rule?.country || 'UZ'} /></div>
         <div className="col-md-3">
           <label className="form-label small text-muted fw-semibold">Zona turi</label>
           <select className="form-select" name="scope" required value={scope} onChange={(event) => setScope(event.target.value)}>
@@ -477,6 +479,10 @@ function DeliveryRuleForm({ rule, services, action, onDone }: { rule?: DeliveryR
             <option value="radius">Radius (doira)</option>
             <option value="country">Butun mamlakat</option>
           </select>
+        </div>
+        <div className="col-md-2">
+          <label className="form-label small text-muted fw-semibold">Rang</label>
+          <input className="form-control form-control-color w-100" type="color" name="color" value={color} onChange={(event) => setColor(event.target.value)} title="Xaritadagi rangi" />
         </div>
         <div className="col-12">
           <div className="alert alert-light border mb-0">
@@ -578,7 +584,7 @@ function DeliveryRuleForm({ rule, services, action, onDone }: { rule?: DeliveryR
         </div>
       </div>
       <div className="text-end mt-4">
-        <button className="btn btn-primary-gradient"><i className="bi bi-check2 me-1"></i>{rule ? 'Saqlash' : "Qoida qo'shish"}</button>
+        <button className="btn btn-primary-gradient"><i className="bi bi-check2 me-1"></i>{rule?.updateUrl ? 'Saqlash' : "Qoida qo'shish"}</button>
       </div>
     </form>
   );
@@ -599,10 +605,15 @@ export function Logistika() {
   const [ruleQuery, setRuleQuery] = useState('');
   const [ruleScope, setRuleScope] = useState<'all' | 'radius' | 'polygon' | 'country'>('all');
   const [serviceQuery, setServiceQuery] = useState('');
+  const [focusZoneId, setFocusZoneId] = useState<number | null>(null);
+  const [previewPoint, setPreviewPoint] = useState<LatLon | null>(null);
+  const [sortKey, setSortKey] = useState<'priority' | 'basePrice' | null>(null);
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const courierServices = deliveryServices.filter((service) => service.type === 'courier_service');
   const postalServices = deliveryServices.filter((service) => service.type === 'mail_service');
   const radiusRules = deliveryRules.filter((rule) => rule.scope === 'radius');
   const polygonRules = deliveryRules.filter((rule) => rule.scope === 'polygon');
+  const zoneColor = (rule: DeliveryRule) => rule.color || (rule.scope === 'polygon' ? '#4f46e5' : '#10b981');
   const mapZones = deliveryRules
     .filter((rule) =>
       (rule.scope === 'radius' && rule.centerLat != null && rule.centerLon != null) ||
@@ -615,8 +626,27 @@ export function Logistika() {
       radiusKm: rule.radiusKm ?? null,
       polygon: (Array.isArray(rule.polygon) ? rule.polygon : null) as Ring | null,
       label: rule.zoneName,
-      color: rule.active ? (rule.scope === 'polygon' ? '#4f46e5' : '#10b981') : '#9ca3af',
+      color: rule.active ? zoneColor(rule) : '#9ca3af',
     }));
+
+  // Client-side resolver uchun to'liq zona ma'lumoti (aqlli preview + overlap)
+  const previewZones: ZoneLike[] = deliveryRules.map((rule) => ({
+    id: rule.id,
+    scope: rule.scope,
+    active: rule.active,
+    centerLat: rule.centerLat ?? null,
+    centerLon: rule.centerLon ?? null,
+    radiusKm: rule.radiusKm ?? null,
+    polygon: (Array.isArray(rule.polygon) ? rule.polygon : null) as Ring | null,
+    priority: rule.priority ?? 0,
+    zoneName: rule.zoneName,
+    service: rule.service,
+    color: zoneColor(rule),
+    basePrice: rule.basePrice ?? 0,
+    etaDays: rule.etaDays ?? 0,
+    codAllowed: rule.codAllowed,
+  }));
+  const previewMatches = previewPoint ? resolveZonesForPoint(previewZones, previewPoint[0], previewPoint[1]) : [];
 
   const filteredRules = useMemo(() => {
     const q = ruleQuery.trim().toLowerCase();
@@ -641,6 +671,94 @@ export function Logistika() {
   const legendDot = (color: string) => (
     <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 999, background: color, marginRight: 6 }} />
   );
+
+  const sortedRules = useMemo(() => {
+    if (!sortKey) return filteredRules;
+    const dir = sortDir === 'asc' ? 1 : -1;
+    return [...filteredRules].sort((a, b) => {
+      const av = sortKey === 'priority' ? (a.priority ?? 0) : (a.basePrice ?? 0);
+      const bv = sortKey === 'priority' ? (b.priority ?? 0) : (b.basePrice ?? 0);
+      return (av - bv) * dir;
+    });
+  }, [filteredRules, sortKey, sortDir]);
+
+  const toggleSort = (key: 'priority' | 'basePrice') => {
+    if (sortKey === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    else {
+      setSortKey(key);
+      setSortDir('desc');
+    }
+  };
+  const sortCaret = (key: 'priority' | 'basePrice') => (sortKey === key ? (sortDir === 'asc' ? ' ▲' : ' ▼') : '');
+
+  const toggleZoneActive = (rule: DeliveryRule) => {
+    if (rule.toggleUrl) router.patch(rule.toggleUrl, {}, { preserveScroll: true });
+  };
+
+  const duplicateZone = (rule: DeliveryRule) => {
+    setEditingRule({ ...rule, id: 0, zoneName: `${rule.zoneName} (nusxa)`, updateUrl: undefined, destroyUrl: undefined, toggleUrl: undefined });
+  };
+
+  // Overlap: faol, geometrik, bir xil davlat zonalari orasida bounding-box kesishuvi (yumshoq ogohlantirish)
+  const overlapPairs = useMemo(() => {
+    const geo = deliveryRules.filter((r) => r.active && (r.scope === 'radius' || r.scope === 'polygon'));
+    const box = (r: DeliveryRule): [number, number, number, number] | null => {
+      if (r.scope === 'polygon' && Array.isArray(r.polygon) && r.polygon.length >= 3) {
+        const la = r.polygon.map((p) => p[0]);
+        const lo = r.polygon.map((p) => p[1]);
+        return [Math.min(...la), Math.min(...lo), Math.max(...la), Math.max(...lo)];
+      }
+      const cLat = Number(r.centerLat);
+      const cLon = Number(r.centerLon);
+      const rk = Number(r.radiusKm);
+      if (!Number.isFinite(cLat) || !Number.isFinite(cLon) || !Number.isFinite(rk)) return null;
+      const dLat = rk / 111;
+      const dLon = rk / (111 * Math.cos((cLat * Math.PI) / 180) || 1);
+      return [cLat - dLat, cLon - dLon, cLat + dLat, cLon + dLon];
+    };
+    const pairs: Array<{ a: DeliveryRule; b: DeliveryRule }> = [];
+    for (let i = 0; i < geo.length; i += 1) {
+      for (let j = i + 1; j < geo.length; j += 1) {
+        if ((geo[i].country || '') !== (geo[j].country || '')) continue;
+        const ba = box(geo[i]);
+        const bb = box(geo[j]);
+        if (!ba || !bb) continue;
+        if (ba[0] <= bb[2] && bb[0] <= ba[2] && ba[1] <= bb[3] && bb[1] <= ba[3]) {
+          pairs.push({ a: geo[i], b: geo[j] });
+        }
+      }
+    }
+    return pairs;
+  }, [deliveryRules]);
+
+  const exportGeoJson = () => {
+    const features = deliveryRules.map((rule) => {
+      let geometry: unknown = null;
+      if (rule.scope === 'polygon' && Array.isArray(rule.polygon) && rule.polygon.length >= 3) {
+        const ring = rule.polygon.map((p) => [p[1], p[0]]); // GeoJSON = [lon, lat]
+        ring.push(ring[0]);
+        geometry = { type: 'Polygon', coordinates: [ring] };
+      } else if (rule.centerLat != null && rule.centerLon != null) {
+        geometry = { type: 'Point', coordinates: [Number(rule.centerLon), Number(rule.centerLat)] };
+      }
+      return {
+        type: 'Feature',
+        geometry,
+        properties: {
+          id: rule.id, zone_name: rule.zoneName, scope: rule.scope, service: rule.service,
+          radius_km: rule.radiusKm, priority: rule.priority, base_price: rule.basePrice,
+          eta_days: rule.etaDays, cod_allowed: rule.codAllowed, active: rule.active, color: rule.color,
+        },
+      };
+    });
+    const blob = new Blob([JSON.stringify({ type: 'FeatureCollection', features }, null, 2)], { type: 'application/geo+json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'kitobchi-zonalar.geojson';
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div>
@@ -680,11 +798,14 @@ export function Logistika() {
           <div className="d-flex gap-2 align-items-center flex-wrap">
             <span className="chip chip-purple">{polygonRules.length} polygon</span>
             <span className="chip chip-success">{radiusRules.length} radius</span>
+            {focusZoneId != null ? <button className="btn btn-sm btn-light" onClick={() => setFocusZoneId(null)}><i className="bi bi-x-circle me-1"></i>Fokus</button> : null}
+            <button className="btn btn-sm btn-light" onClick={exportGeoJson}><i className="bi bi-download me-1"></i>GeoJSON</button>
           </div>
         </div>
         <YandexZonesOverview
           height={440}
           zones={mapZones}
+          focusId={focusZoneId}
           onSelect={(id) => {
             const rule = deliveryRules.find((item) => item.id === id);
             if (rule) setEditingRule(rule);
@@ -697,6 +818,31 @@ export function Logistika() {
           <span className="ms-auto"><i className="bi bi-lightbulb me-1 text-warning"></i>Yangi zona uchun <b>Zona qoidasi</b> tugmasini bosing va xaritada chizing.</span>
         </div>
       </div>
+
+      {overlapPairs.length > 0 ? (
+        <div className="card-panel mb-4" style={{ borderColor: '#fde68a', background: '#fffbeb' }}>
+          <div className="d-flex align-items-start gap-2">
+            <i className="bi bi-exclamation-triangle-fill text-warning fs-5"></i>
+            <div className="flex-fill">
+              <div className="fw-bold">Zona ustma-ustligi: {overlapPairs.length} ta juftlik</div>
+              <div className="small text-muted mb-2">Bu zonalar bir-birini qoplaydi. Kesishgan joyda <b>priority yuqori</b> (teng bo'lsa polygon) zona ishlaydi — pastdagi preview'da aniq tekshiring.</div>
+              <div className="d-flex flex-wrap gap-2">
+                {overlapPairs.slice(0, 12).map(({ a, b }, index) => {
+                  const winner = (a.priority ?? 0) === (b.priority ?? 0)
+                    ? (a.scope === 'polygon' ? a : b.scope === 'polygon' ? b : a)
+                    : ((a.priority ?? 0) > (b.priority ?? 0) ? a : b);
+                  return (
+                    <span key={index} className="chip chip-warning" style={{ cursor: 'pointer' }} onClick={() => setFocusZoneId(a.id)} title="Xaritada ko'rsatish">
+                      {a.zoneName} ⟷ {b.zoneName} · g'olib: {winner.zoneName}
+                    </span>
+                  );
+                })}
+                {overlapPairs.length > 12 ? <span className="chip chip-gray">+{overlapPairs.length - 12}</span> : null}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <div className="row g-3 mb-4">
         {[
@@ -748,10 +894,26 @@ export function Logistika() {
             </div>
             <div className="table-responsive">
               <table className="data-table">
-                <thead><tr><th>Zona</th><th>Scope</th><th>Xizmat</th><th>Narx</th><th>ETA</th><th>COD</th><th>Holat</th><th></th></tr></thead>
-                <tbody>{filteredRules.map((rule) => (
+                <thead><tr>
+                  <th>Zona</th>
+                  <th>Scope</th>
+                  <th>Xizmat</th>
+                  <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => toggleSort('basePrice')}>Narx{sortCaret('basePrice')}</th>
+                  <th style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => toggleSort('priority')}>Priority{sortCaret('priority')}</th>
+                  <th>ETA</th>
+                  <th>COD</th>
+                  <th>Holat</th>
+                  <th></th>
+                </tr></thead>
+                <tbody>{sortedRules.map((rule) => (
                   <tr key={rule.id}>
-                    <td><div className="fw-semibold">{rule.zoneName}</div><small className="text-muted">{[rule.city, rule.district, rule.region, rule.country].filter(Boolean).join(', ') || '—'}</small></td>
+                    <td style={{ cursor: rule.scope !== 'country' ? 'pointer' : 'default' }} onClick={() => rule.scope !== 'country' && setFocusZoneId(rule.id)} title={rule.scope !== 'country' ? "Xaritada ko'rsatish" : ''}>
+                      <div className="fw-semibold d-flex align-items-center gap-2">
+                        <span style={{ width: 10, height: 10, borderRadius: 999, background: zoneColor(rule), display: 'inline-block', flexShrink: 0 }}></span>
+                        {rule.zoneName}
+                      </div>
+                      <small className="text-muted">{[rule.city, rule.district, rule.region, rule.country].filter(Boolean).join(', ') || '—'}</small>
+                    </td>
                     <td>
                       <span className={`chip ${rule.scope === 'polygon' ? 'chip-purple' : rule.scope === 'radius' ? 'chip-success' : 'chip-gray'}`}>{rule.scope || '—'}</span>
                       {rule.scope === 'radius' ? <div className="small text-muted">{rule.radiusKm || 0} km</div> : null}
@@ -759,16 +921,22 @@ export function Logistika() {
                     </td>
                     <td>{rule.service || '—'}</td>
                     <td><strong>{(rule.basePrice || 0).toLocaleString()} so'm</strong><div className="small text-muted">{rule.freePriceFrom ? `${rule.freePriceFrom.toLocaleString()} dan bepul` : 'chegara yoq'}</div></td>
+                    <td className="fw-semibold">{rule.priority ?? 0}</td>
                     <td>{rule.etaDays || 0} kun</td>
                     <td><span className={`chip ${rule.codAllowed ? 'chip-success' : 'chip-gray'}`}>{rule.codAllowed ? 'Bor' : "Yo'q"}</span></td>
-                    <td><span className={`chip ${rule.active ? 'chip-success' : 'chip-gray'}`}>{rule.active ? 'Faol' : 'Nofaol'}</span></td>
-                    <td className="text-end">
-                      <button className="btn btn-sm btn-light me-1" onClick={() => setEditingRule(rule)}><i className="bi bi-pencil"></i></button>
-                      <button className="btn btn-sm btn-light text-danger" onClick={() => removeLogistics(rule.destroyUrl, `${rule.zoneName} qoidasi o'chirilsinmi?`)}><i className="bi bi-trash"></i></button>
+                    <td>
+                      <button type="button" className="btn btn-sm p-0 border-0 bg-transparent" title={rule.active ? 'Nofaol qilish' : 'Faollashtirish'} onClick={() => toggleZoneActive(rule)}>
+                        <i className={`bi ${rule.active ? 'bi-toggle-on text-success' : 'bi-toggle-off text-muted'}`} style={{ fontSize: 20 }}></i>
+                      </button>
+                    </td>
+                    <td className="text-end" style={{ whiteSpace: 'nowrap' }}>
+                      <button className="btn btn-sm btn-light me-1" title="Nusxalash" onClick={() => duplicateZone(rule)}><i className="bi bi-files"></i></button>
+                      <button className="btn btn-sm btn-light me-1" title="Tahrirlash" onClick={() => setEditingRule(rule)}><i className="bi bi-pencil"></i></button>
+                      <button className="btn btn-sm btn-light text-danger" title="O'chirish" onClick={() => removeLogistics(rule.destroyUrl, `${rule.zoneName} qoidasi o'chirilsinmi?`)}><i className="bi bi-trash"></i></button>
                     </td>
                   </tr>
                 ))}
-                {filteredRules.length === 0 ? <tr><td colSpan={8} className="text-center text-muted py-4">Mos zona qoidasi topilmadi</td></tr> : null}</tbody>
+                {sortedRules.length === 0 ? <tr><td colSpan={9} className="text-center text-muted py-4">Mos zona qoidasi topilmadi</td></tr> : null}</tbody>
               </table>
             </div>
           </div>
@@ -777,33 +945,74 @@ export function Logistika() {
           <div className="card-panel h-100">
             <div className="panel-head">
               <div>
-                <div className="panel-title">Yetkazish preview</div>
-                <small className="text-muted">Koordinata orqali resolver natijasini tekshirish</small>
+                <div className="panel-title"><i className="bi bi-cursor-fill me-2 text-primary"></i>Aqlli preview</div>
+                <small className="text-muted">Xaritaga bosing — manzil qaysi zonaga tushishini darhol ko'rsatadi</small>
               </div>
             </div>
-            <form onSubmit={(event) => submitLogistics(event, 'get', indexUrl)}>
-              <input type="hidden" name="cod_filter" value={logisticsFilters.codFilter || ''} />
-              <div className="row g-2">
-                <div className="col-md-6"><LogisticsInput name="preview_lat" label="Latitude" type="number" step="0.000001" defaultValue={logisticsFilters.previewLat} required /></div>
-                <div className="col-md-6"><LogisticsInput name="preview_lon" label="Longitude" type="number" step="0.000001" defaultValue={logisticsFilters.previewLon} required /></div>
-                <div className="col-md-6"><LogisticsInput name="preview_country_code" label="Mamlakat" defaultValue={logisticsFilters.previewCountry || 'UZ'} /></div>
-                <div className="col-md-6"><LogisticsInput name="preview_seller_count" label="Seller soni" type="number" min={1} max={20} defaultValue={logisticsFilters.previewSellerCount || 1} /></div>
-                <div className="col-md-6"><LogisticsInput name="preview_total_sum" label="Buyurtma summasi" type="number" min={0} defaultValue={logisticsFilters.previewTotalSum || 0} /></div>
-                <div className="col-md-6"><LogisticsInput name="preview_address" label="Manzil" defaultValue={logisticsFilters.previewAddress} /></div>
-              </div>
-              <div className="text-end mt-3"><button className="btn btn-light"><i className="bi bi-calculator me-1"></i>Hisoblash</button></div>
-            </form>
-            {logisticsPreview ? (
-              <div className="mt-3 d-flex flex-column gap-2">
-                {(logisticsPreview.offers || []).map((offer, index) => (
-                  <div className="p-3 rounded border" key={`${offer.service}-${index}`}>
-                    <div className="d-flex justify-content-between gap-3"><strong>{offer.service || 'Xizmat'}</strong><span className="fw-bold">{(offer.price || 0).toLocaleString()} so'm</span></div>
-                    <div className="small text-muted">{offer.rule || 'qoida'} · {offer.etaDays || 0} kun · COD {offer.codAllowed ? 'bor' : "yo'q"}</div>
+            <YandexPreviewMap
+              height={280}
+              zones={previewZones}
+              point={previewPoint}
+              onPick={(coords) => setPreviewPoint([Number(coords[0].toFixed(6)), Number(coords[1].toFixed(6))])}
+            />
+            {previewPoint ? (
+              <div className="mt-3">
+                <div className="small text-muted mb-2 d-flex align-items-center flex-wrap gap-2">
+                  <span><i className="bi bi-geo-alt me-1"></i>{previewPoint[0].toFixed(5)}, {previewPoint[1].toFixed(5)}</span>
+                  {previewMatches.length > 1 ? <span className="chip chip-warning">{previewMatches.length} zona mos · overlap</span> : null}
+                  <button type="button" className="btn btn-sm btn-light ms-auto" onClick={() => setPreviewPoint(null)}><i className="bi bi-x"></i></button>
+                </div>
+                {previewMatches.length === 0 ? (
+                  <div className="alert alert-warning py-2 px-3 small mb-0">Bu nuqta hech qaysi zonaga tushmaydi — checkoutda kuryer <b>ko'rsatilmaydi</b>.</div>
+                ) : (
+                  <div className="d-flex flex-column gap-2">
+                    {previewMatches.map((zone, index) => (
+                      <div key={zone.id} className="p-2 rounded border d-flex justify-content-between align-items-center gap-2" style={{ borderColor: index === 0 ? '#dc2626' : '#e5e7eb', background: index === 0 ? '#fef2f2' : '#fff' }}>
+                        <div>
+                          <div className="fw-semibold d-flex align-items-center gap-2">
+                            <span style={{ width: 8, height: 8, borderRadius: 999, background: index === 0 ? '#dc2626' : (zone.color || '#9ca3af'), display: 'inline-block', flexShrink: 0 }}></span>
+                            {zone.zoneName}
+                            {index === 0 ? <span className="chip chip-danger">g'olib</span> : null}
+                          </div>
+                          <div className="small text-muted">{zone.service || '—'} · {zone.scope} · priority {zone.priority}</div>
+                        </div>
+                        <div className="text-end">
+                          <div className="fw-bold">{(zone.basePrice || 0).toLocaleString()} so'm</div>
+                          <div className="small text-muted">{zone.etaDays || 0} kun · COD {zone.codAllowed ? 'bor' : "yo'q"}</div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-                {(logisticsPreview.offers || []).length === 0 ? <div className="text-muted small">Mos yetkazish taklifi topilmadi.</div> : null}
+                )}
               </div>
             ) : null}
+
+            <details className="mt-3">
+              <summary className="small text-muted" style={{ cursor: 'pointer' }}>Server orqali aniq narx (seller soni, summa bilan hisoblash)</summary>
+              <form className="mt-2" onSubmit={(event) => submitLogistics(event, 'get', indexUrl)}>
+                <input type="hidden" name="cod_filter" value={logisticsFilters.codFilter || ''} />
+                <div className="row g-2">
+                  <div className="col-md-6"><LogisticsInput key={`plat-${previewPoint ? previewPoint[0] : 'x'}`} name="preview_lat" label="Latitude" type="number" step="0.000001" defaultValue={previewPoint ? previewPoint[0] : logisticsFilters.previewLat} required /></div>
+                  <div className="col-md-6"><LogisticsInput key={`plon-${previewPoint ? previewPoint[1] : 'x'}`} name="preview_lon" label="Longitude" type="number" step="0.000001" defaultValue={previewPoint ? previewPoint[1] : logisticsFilters.previewLon} required /></div>
+                  <div className="col-md-6"><LogisticsInput name="preview_country_code" label="Mamlakat" defaultValue={logisticsFilters.previewCountry || 'UZ'} /></div>
+                  <div className="col-md-6"><LogisticsInput name="preview_seller_count" label="Seller soni" type="number" min={1} max={20} defaultValue={logisticsFilters.previewSellerCount || 1} /></div>
+                  <div className="col-md-6"><LogisticsInput name="preview_total_sum" label="Buyurtma summasi" type="number" min={0} defaultValue={logisticsFilters.previewTotalSum || 0} /></div>
+                  <div className="col-md-6"><LogisticsInput name="preview_address" label="Manzil" defaultValue={logisticsFilters.previewAddress} /></div>
+                </div>
+                <div className="text-end mt-2"><button className="btn btn-light btn-sm"><i className="bi bi-calculator me-1"></i>Server narxi</button></div>
+              </form>
+              {logisticsPreview ? (
+                <div className="mt-2 d-flex flex-column gap-2">
+                  {(logisticsPreview.offers || []).map((offer, index) => (
+                    <div className="p-2 rounded border" key={`${offer.service}-${index}`}>
+                      <div className="d-flex justify-content-between gap-3"><strong>{offer.service || 'Xizmat'}</strong><span className="fw-bold">{(offer.price || 0).toLocaleString()} so'm</span></div>
+                      <div className="small text-muted">{offer.rule || 'qoida'} · {offer.etaDays || 0} kun · COD {offer.codAllowed ? 'bor' : "yo'q"}</div>
+                    </div>
+                  ))}
+                  {(logisticsPreview.offers || []).length === 0 ? <div className="text-muted small">Mos yetkazish taklifi topilmadi.</div> : null}
+                </div>
+              ) : null}
+            </details>
           </div>
         </div>
       </div>
@@ -847,7 +1056,7 @@ export function Logistika() {
       </div>
 
       <Modal show={editingRule !== undefined} onHide={() => setEditingRule(undefined)} centered size="lg">
-        <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">{editingRule ? 'Zona qoidasini tahrirlash' : 'Yangi zona qoidasi'}</Modal.Title></Modal.Header>
+        <Modal.Header closeButton><Modal.Title className="fs-5 fw-bold">{editingRule?.updateUrl ? 'Zona qoidasini tahrirlash' : 'Yangi zona qoidasi'}</Modal.Title></Modal.Header>
         <Modal.Body>
           <DeliveryRuleForm rule={editingRule} services={deliveryServices} action={editingRule?.updateUrl || logisticsActions.ruleStoreUrl} onDone={() => setEditingRule(undefined)} />
         </Modal.Body>
