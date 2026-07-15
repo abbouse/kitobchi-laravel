@@ -95,6 +95,7 @@ class CollectionAiAdvisorService
             ],
             'books' => $books->all(),
             'pricing' => $pricing,
+            'market_analysis' => $this->text($decision['market_analysis_uz'] ?? '', 800),
             'reasoning' => $this->text($decision['reasoning_uz'] ?? '', 900),
             'demand' => [
                 'window_days' => $days,
@@ -255,7 +256,8 @@ uchun jozibali, MANTIQAN BOG'LIQ mavzuli to'plam (bundle) tuzish.
 Chuqur tahlil qiling:
 - sales/carts/views — bizning real talab signallarimiz (sotuv, savatga qo'shish, ko'rish). Yuqori bo'lsa — talab kuchli.
 - top_searches — o'quvchilar nimani qidirmoqda (mavzuga ishora).
-- Kitoblarni bitta aniq mavzu/g'oya atrofida birlashtiring (masalan: "Shaxsiy rivojlanish", "O'zbek nasri", "Bolalar uchun", "Biznes va moliya"). Tasodifiy aралашма emas.
+- BOZOR BILIMI: o'z bilimingizdan foydalaning — o'zbek, rus va jahon kitob bozorida qaysi janr, muallif va mavzular doimiy talabga ega (mashhur mualliflar, doimiy bestsellerlar, ommabop yo'nalishlar). Shuni ichki talab signallari bilan birlashtiring. (Sizda real-vaqt internet yo'q, shuning uchun eng yangi 2026 relizlarga emas, isbotlangan talabga tayaning.)
+- Kitoblarni bitta aniq mavzu/g'oya atrofida birlashtiring (masalan: "Shaxsiy rivojlanish", "O'zbek nasri", "Bolalar uchun", "Biznes va moliya"). Tasodifiy aralashma emas.
 - Talab yuqori + mavzuga mos + narx muvozanati bo'lgan kitoblarni afzal ko'ring.
 
 Qoidalar:
@@ -273,6 +275,7 @@ Faqat JSON qaytaring:
   },
   "book_ids": [id, id, ...],
   "suggested_discount_percent": 0,
+  "market_analysis_uz": "o'zbek/mintaqa kitob bozori bo'yicha qisqa tahlil: qaysi janr/muallif/mavzu talabga ega va nega bu to'plam bozorga mos",
   "reasoning_uz": "nega aynan shu kitoblar va mavzu — talab va marketing asosida qisqa izoh"
 }
 PROMPT;

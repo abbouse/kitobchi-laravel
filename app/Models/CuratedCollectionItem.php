@@ -12,6 +12,7 @@ class CuratedCollectionItem extends Model
 
     protected $fillable = [
         'collection_id',
+        'section_id',
         'product_id',
         'product_type',
         'quantity',
@@ -26,6 +27,11 @@ class CuratedCollectionItem extends Model
     public function collection(): BelongsTo
     {
         return $this->belongsTo(CuratedCollection::class, 'collection_id');
+    }
+
+    public function section(): BelongsTo
+    {
+        return $this->belongsTo(CuratedCollectionSection::class, 'section_id');
     }
 
     public function book(): BelongsTo

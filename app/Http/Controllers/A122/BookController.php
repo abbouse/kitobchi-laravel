@@ -280,8 +280,12 @@ class BookController extends Controller
 
     public function moderate(Request $request, Books $book)
     {
-        $request->validate(['is_approved' => 'required|in:0,1,2']);
+        $request->validate([
+            'is_approved' => 'required|in:0,1,2',
+            'note' => 'nullable|string|max:500',
+        ]);
         $approval = (int) $request->input('is_approved');
+        $note = trim((string) $request->input('note'));
         $book->updateQuietly([
             'is_approved' => $approval,
             'ai_moderation_status' => match ($approval) {
@@ -290,11 +294,14 @@ class BookController extends Controller
                 default => 'pending',
             },
             'ai_moderation_checked_at' => now(),
-            'ai_moderation_note' => 'Admin tomonidan qo‘lda moderatsiya qilindi.',
+            // Rad etilganda sabab sellerga ko'rinadi (ai_moderation_note).
+            'ai_moderation_note' => $note !== ''
+                ? $note
+                : ($approval === 2 ? 'Admin tomonidan rad etildi.' : 'Admin tomonidan qo‘lda moderatsiya qilindi.'),
             'ai_moderation_next_retry_at' => null,
-            'ai_moderation_meta' => ['source' => 'admin_manual_override'],
+            'ai_moderation_meta' => ['source' => 'admin_manual_override', 'manual_note' => $note ?: null],
         ]);
 
-        return back()->with('success', 'Moderatsiya yangilandi.');
+        return back()->with('success', $approval === 2 ? 'Mahsulot rad etildi.' : 'Moderatsiya yangilandi.');
     }
 }

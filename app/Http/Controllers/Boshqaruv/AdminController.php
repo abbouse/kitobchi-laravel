@@ -1404,14 +1404,15 @@ class AdminController extends Controller
     {
         $data = $this->collectionData($request);
         $items = $data['items'];
-        unset($data['items'], $data['items_json']);
+        $sections = $data['sections'] ?? [];
+        unset($data['items'], $data['items_json'], $data['sections'], $data['sections_json']);
 
         if ($request->hasFile('hero_image')) {
             $data['hero_image'] = $request->file('hero_image')->store('collections', 'public');
         }
 
         $collection = CuratedCollection::create($data);
-        $this->syncCollectionItems($collection, $items);
+        $this->syncCollectionItems($collection, $items, $sections);
 
         return back()->with('success', "To'plam yaratildi.");
     }
@@ -1420,7 +1421,8 @@ class AdminController extends Controller
     {
         $data = $this->collectionData($request, $collection);
         $items = $data['items'];
-        unset($data['items'], $data['items_json']);
+        $sections = $data['sections'] ?? [];
+        unset($data['items'], $data['items_json'], $data['sections'], $data['sections_json']);
 
         if ($request->hasFile('hero_image')) {
             if ($collection->hero_image) {
@@ -1430,7 +1432,7 @@ class AdminController extends Controller
         }
 
         $collection->update($data);
-        $this->syncCollectionItems($collection, $items);
+        $this->syncCollectionItems($collection, $items, $sections);
 
         return back()->with('success', "To'plam yangilandi.");
     }
@@ -1456,6 +1458,9 @@ class AdminController extends Controller
     public function duplicateCollection(CuratedCollection $collection): \Illuminate\Http\RedirectResponse
     {
         $collection->load('items');
+        if (Schema::hasTable('curated_collection_sections')) {
+            $collection->load(['sections.items', 'sections.children.items']);
+        }
 
         $baseSlug = Str::slug($collection->slug.'-nusxa');
         $slug = $baseSlug;
@@ -1484,13 +1489,59 @@ class AdminController extends Controller
         }
         $copy->save();
 
-        foreach ($collection->items as $item) {
+        // Root (bo'limsiz) mahsulotlar.
+        foreach ($collection->items->filter(fn ($item) => $item->section_id === null) as $item) {
             $copy->items()->create([
+                'section_id' => null,
                 'product_id' => $item->product_id,
                 'product_type' => $item->product_type,
                 'quantity' => $item->quantity,
                 'sort_order' => $item->sort_order,
             ]);
+        }
+
+        // Bo'limlar (2 daraja) va ularning mahsulotlari.
+        if (Schema::hasTable('curated_collection_sections')) {
+            foreach ($collection->sections as $section) {
+                $newLevel1 = $copy->allSections()->create([
+                    'parent_id' => null,
+                    'name_uz' => $section->name_uz,
+                    'name_ru' => $section->name_ru,
+                    'name_en' => $section->name_en,
+                    'name_ja' => $section->name_ja,
+                    'custom_total_price' => $section->custom_total_price,
+                    'sort_order' => $section->sort_order,
+                ]);
+                foreach ($section->items as $item) {
+                    $copy->items()->create([
+                        'section_id' => $newLevel1->id,
+                        'product_id' => $item->product_id,
+                        'product_type' => $item->product_type,
+                        'quantity' => $item->quantity,
+                        'sort_order' => $item->sort_order,
+                    ]);
+                }
+                foreach ($section->children as $child) {
+                    $newLevel2 = $copy->allSections()->create([
+                        'parent_id' => $newLevel1->id,
+                        'name_uz' => $child->name_uz,
+                        'name_ru' => $child->name_ru,
+                        'name_en' => $child->name_en,
+                        'name_ja' => $child->name_ja,
+                        'custom_total_price' => $child->custom_total_price,
+                        'sort_order' => $child->sort_order,
+                    ]);
+                    foreach ($child->items as $item) {
+                        $copy->items()->create([
+                            'section_id' => $newLevel2->id,
+                            'product_id' => $item->product_id,
+                            'product_type' => $item->product_type,
+                            'quantity' => $item->quantity,
+                            'sort_order' => $item->sort_order,
+                        ]);
+                    }
+                }
+            }
         }
 
         return back()->with('success', "To'plamdan nusxa olindi (yashirin holatda). Tahrirlab faollashtiring.");
@@ -2381,7 +2432,8 @@ PROMPT;
             'button_text_color' => $colorRule,
             'hero_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
             'festive_effect' => ['nullable', 'boolean'],
-            'items_json' => ['required', 'string'],
+            'items_json' => ['nullable', 'string'],
+            'sections_json' => ['nullable', 'string'],
         ]);
 
         $data['slug'] = Str::slug($data['slug'] ?: $data['title_uz']);
@@ -2401,20 +2453,69 @@ PROMPT;
         $data['button_bg_color'] = strtoupper((string) $data['button_bg_color']);
         $data['button_text_color'] = strtoupper((string) $data['button_text_color']);
 
-        $decodedItems = json_decode((string) $request->input('items_json'), true);
-        if (! is_array($decodedItems)) {
+        $items = $this->parseCollectionItemList($request->input('items_json'));
+        $sections = $this->parseCollectionSections($request->input('sections_json'));
+
+        // Barcha mahsulotlar (root + bo'limlar) — kamida bitta bo'lishi kerak.
+        $allItems = collect($items);
+        foreach ($sections as $section) {
+            $allItems = $allItems->concat($section['items']);
+            foreach ($section['children'] as $child) {
+                $allItems = $allItems->concat($child['items']);
+            }
+        }
+
+        if ($allItems->isEmpty()) {
             throw ValidationException::withMessages([
-                'items_json' => "To'plam mahsulotlari noto'g'ri formatda yuborildi.",
+                'items_json' => "To'plam uchun kamida bitta mahsulot tanlang.",
             ]);
         }
 
-        $items = collect($decodedItems)
+        // Mahsulot mavjudligini o'z jadvalidan tekshiramiz.
+        $bookIds = $allItems->where('product_type', 'book')->pluck('product_id')->unique();
+        $stationeryIds = $allItems->where('product_type', 'stationery')->pluck('product_id')->unique();
+
+        $missing = [];
+        if ($bookIds->isNotEmpty()) {
+            $existingBookIds = Books::query()->whereIn('id', $bookIds->all())->pluck('id')->map(fn ($id) => (int) $id);
+            foreach ($bookIds->diff($existingBookIds)->values()->all() as $id) {
+                $missing[] = "kitob #{$id}";
+            }
+        }
+        if ($stationeryIds->isNotEmpty() && Schema::hasTable('stationeries')) {
+            $existingStationeryIds = Stationery::query()->whereIn('id', $stationeryIds->all())->pluck('id')->map(fn ($id) => (int) $id);
+            foreach ($stationeryIds->diff($existingStationeryIds)->values()->all() as $id) {
+                $missing[] = "kanselyariya #{$id}";
+            }
+        }
+        if ($missing !== []) {
+            throw ValidationException::withMessages([
+                'items_json' => "Ba'zi mahsulotlar topilmadi: ".implode(', ', $missing),
+            ]);
+        }
+
+        $data['items'] = $items;
+        $data['sections'] = $sections;
+
+        return $data;
+    }
+
+    /** @return array<int, array{product_id:int, product_type:string, quantity:int, sort_order:int}> */
+    private function parseCollectionItemList(mixed $raw): array
+    {
+        if (is_string($raw)) {
+            $raw = json_decode($raw, true);
+        }
+        if (! is_array($raw)) {
+            return [];
+        }
+
+        return collect($raw)
             ->map(function ($item, $index) {
                 $productId = (int) data_get($item, 'product_id', 0);
                 if ($productId <= 0) {
                     return null;
                 }
-
                 $type = strtolower((string) data_get($item, 'product_type', 'book'));
                 if (! in_array($type, ['book', 'stationery'], true)) {
                     $type = 'book';
@@ -2428,53 +2529,124 @@ PROMPT;
                 ];
             })
             ->filter()
-            ->values();
-
-        if ($items->isEmpty()) {
-            throw ValidationException::withMessages([
-                'items_json' => "To'plam uchun kamida bitta mahsulot tanlang.",
-            ]);
-        }
-
-        // Har bir mahsulot turini o'z jadvalidan tekshiramiz.
-        $bookIds = $items->where('product_type', 'book')->pluck('product_id')->unique();
-        $stationeryIds = $items->where('product_type', 'stationery')->pluck('product_id')->unique();
-
-        $missing = [];
-
-        if ($bookIds->isNotEmpty()) {
-            $existingBookIds = Books::query()->whereIn('id', $bookIds->all())->pluck('id')
-                ->map(fn ($id) => (int) $id);
-            foreach ($bookIds->diff($existingBookIds)->values()->all() as $id) {
-                $missing[] = "kitob #{$id}";
-            }
-        }
-
-        if ($stationeryIds->isNotEmpty() && Schema::hasTable('stationeries')) {
-            $existingStationeryIds = Stationery::query()->whereIn('id', $stationeryIds->all())->pluck('id')
-                ->map(fn ($id) => (int) $id);
-            foreach ($stationeryIds->diff($existingStationeryIds)->values()->all() as $id) {
-                $missing[] = "kanselyariya #{$id}";
-            }
-        }
-
-        if ($missing !== []) {
-            throw ValidationException::withMessages([
-                'items_json' => "Ba'zi mahsulotlar topilmadi: ".implode(', ', $missing),
-            ]);
-        }
-
-        $data['items'] = $items->all();
-
-        return $data;
+            ->values()
+            ->all();
     }
 
-    private function syncCollectionItems(CuratedCollection $collection, array $items): void
+    /**
+     * 2 darajali bo'limlarni normallashtiradi (nom 4 til + narx + items + children).
+     * @return array<int, array<string, mixed>>
+     */
+    private function parseCollectionSections(mixed $raw): array
     {
-        $collection->items()->delete();
+        if (is_string($raw)) {
+            $raw = json_decode($raw, true);
+        }
+        if (! is_array($raw)) {
+            return [];
+        }
 
+        $name = fn ($node): array => [
+            'name_uz' => mb_substr(trim((string) data_get($node, 'name_uz', '')), 0, 255),
+            'name_ru' => mb_substr(trim((string) data_get($node, 'name_ru', '')), 0, 255) ?: null,
+            'name_en' => mb_substr(trim((string) data_get($node, 'name_en', '')), 0, 255) ?: null,
+            'name_ja' => mb_substr(trim((string) data_get($node, 'name_ja', '')), 0, 255) ?: null,
+        ];
+        $price = function ($node): ?int {
+            $p = data_get($node, 'custom_total_price');
+
+            return is_numeric($p) && (int) $p > 0 ? min(2000000000, max(1000, (int) $p)) : null;
+        };
+
+        $sections = [];
+        foreach (array_slice($raw, 0, 50) as $index => $node) {
+            $nameData = $name($node);
+
+            $children = [];
+            foreach (array_slice((array) data_get($node, 'children', []), 0, 50) as $ci => $childNode) {
+                $childName = $name($childNode);
+                if (($childName['name_uz'] ?? '') === '') {
+                    continue;
+                }
+                $children[] = array_merge($childName, [
+                    'custom_total_price' => $price($childNode),
+                    'sort_order' => max(0, (int) data_get($childNode, 'sort_order', $ci)),
+                    'items' => $this->parseCollectionItemList(data_get($childNode, 'items', [])),
+                ]);
+            }
+
+            $items = $this->parseCollectionItemList(data_get($node, 'items', []));
+
+            if (($nameData['name_uz'] ?? '') === '' && $children === [] && $items === []) {
+                continue;
+            }
+            if (($nameData['name_uz'] ?? '') === '') {
+                throw ValidationException::withMessages([
+                    'sections_json' => "Har bir bo'lim uchun o'zbekcha nom kiritilishi shart.",
+                ]);
+            }
+
+            $sections[] = array_merge($nameData, [
+                'custom_total_price' => $price($node),
+                'sort_order' => max(0, (int) data_get($node, 'sort_order', $index)),
+                'items' => $items,
+                'children' => $children,
+            ]);
+        }
+
+        return $sections;
+    }
+
+    private function syncCollectionItems(CuratedCollection $collection, array $items, array $sections = []): void
+    {
+        // To'liq almashtirish: avval barcha mahsulot va bo'limlarni o'chiramiz.
+        $collection->items()->delete();
+        if (Schema::hasTable('curated_collection_sections')) {
+            $collection->allSections()->whereNotNull('parent_id')->delete(); // 2-daraja
+            $collection->allSections()->whereNull('parent_id')->delete();    // 1-daraja
+        }
+
+        // Root (bo'limsiz) mahsulotlar — default rejim.
+        $this->createCollectionItems($collection, null, $items);
+
+        if (! Schema::hasTable('curated_collection_sections')) {
+            return;
+        }
+
+        // Bo'limlar (2 daraja) va ularning mahsulotlari.
+        foreach ($sections as $sIndex => $section) {
+            $level1 = $collection->allSections()->create([
+                'parent_id' => null,
+                'name_uz' => $section['name_uz'],
+                'name_ru' => $section['name_ru'] ?? null,
+                'name_en' => $section['name_en'] ?? null,
+                'name_ja' => $section['name_ja'] ?? null,
+                'custom_total_price' => $section['custom_total_price'] ?? null,
+                'sort_order' => (int) ($section['sort_order'] ?? $sIndex),
+            ]);
+            $this->createCollectionItems($collection, (int) $level1->id, $section['items'] ?? []);
+
+            foreach (($section['children'] ?? []) as $cIndex => $child) {
+                $level2 = $collection->allSections()->create([
+                    'parent_id' => (int) $level1->id,
+                    'name_uz' => $child['name_uz'],
+                    'name_ru' => $child['name_ru'] ?? null,
+                    'name_en' => $child['name_en'] ?? null,
+                    'name_ja' => $child['name_ja'] ?? null,
+                    'custom_total_price' => $child['custom_total_price'] ?? null,
+                    'sort_order' => (int) ($child['sort_order'] ?? $cIndex),
+                ]);
+                $this->createCollectionItems($collection, (int) $level2->id, $child['items'] ?? []);
+            }
+        }
+    }
+
+    /** @param array<int, array<string, mixed>> $items */
+    private function createCollectionItems(CuratedCollection $collection, ?int $sectionId, array $items): void
+    {
         foreach ($items as $item) {
             $collection->items()->create([
+                'section_id' => $sectionId,
                 'product_id' => (int) $item['product_id'],
                 'product_type' => in_array(($item['product_type'] ?? 'book'), ['book', 'stationery'], true)
                     ? $item['product_type']
@@ -6632,17 +6804,19 @@ PROMPT;
         }
 
         $hasStationery = Schema::hasTable('stationeries');
+        $hasSections = Schema::hasTable('curated_collection_sections');
 
         return [
             'collections' => CuratedCollection::query()
                 ->with(array_filter([
                     'items.book.seller:id,shop_name',
                     $hasStationery ? 'items.stationery.seller:id,shop_name' : null,
+                    $hasSections ? 'sections.children' : null,
                 ]))
                 ->orderBy('sort_order')
                 ->latest('id')
                 ->get()
-                ->map(function (CuratedCollection $collection) {
+                ->map(function (CuratedCollection $collection) use ($hasSections) {
                     $items = $collection->items->map(function (CuratedCollectionItem $item) {
                         $isStationery = $item->product_type === 'stationery';
                         $product = $isStationery ? $item->stationery : $item->book;
@@ -6675,8 +6849,25 @@ PROMPT;
                             'stock' => $stock,
                             'available' => (bool) $available,
                             'image' => $this->assetFromStorage(collect($product?->images ?? [])->first()),
+                            'sectionId' => $item->section_id !== null ? (int) $item->section_id : null,
                         ];
                     })->values();
+
+                    $rootItems = $items->where('sectionId', '===', null)->values();
+                    $buildSection = function (\App\Models\CuratedCollectionSection $section) use (&$buildSection, $items) {
+                        return [
+                            'id' => (int) $section->id,
+                            'nameUz' => $section->name_uz,
+                            'nameRu' => $section->name_ru,
+                            'nameEn' => $section->name_en,
+                            'nameJa' => $section->name_ja,
+                            'customTotalPrice' => $section->custom_total_price !== null ? (int) $section->custom_total_price : null,
+                            'sortOrder' => (int) ($section->sort_order ?? 0),
+                            'items' => $items->where('sectionId', '===', (int) $section->id)->values()->all(),
+                            'children' => $section->children->map($buildSection)->values()->all(),
+                        ];
+                    };
+                    $sections = ($hasSections ? $collection->sections : collect())->map($buildSection)->values()->all();
 
                     return [
                         'id' => $collection->id,
@@ -6708,7 +6899,8 @@ PROMPT;
                         'totalAmount' => $collection->custom_total_price !== null
                             ? (int) $collection->custom_total_price
                             : (int) $items->sum(fn ($item) => ((int) $item['price']) * ((int) $item['quantity'])),
-                        'items' => $items->all(),
+                        'items' => $rootItems->all(),
+                        'sections' => $sections,
                         'bookSearchUrl' => route('boshqaruv.collections.book-search'),
                         'createUrl' => route('boshqaruv.collections.store'),
                         'updateUrl' => route('boshqaruv.collections.update', $collection),

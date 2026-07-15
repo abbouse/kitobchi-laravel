@@ -112,9 +112,16 @@ export default function Books() {
     router.get('/boshqaruv/books', { books_page: page, books_tab: tab, books_search: term }, { preserveState: true, preserveScroll: true, replace: true });
   };
 
-  const handleModerate = (book: Book, status: 0 | 1 | 2) => {
+  const handleModerate = (book: Book, status: 0 | 1 | 2, note?: string) => {
     if (!book.moderateUrl) return;
-    router.patch(book.moderateUrl, { is_approved: status }, { preserveScroll: true });
+    router.patch(book.moderateUrl, { is_approved: status, note: note ?? '' }, { preserveScroll: true });
+  };
+
+  const handleReject = (book: Book) => {
+    if (!book.moderateUrl) return;
+    const reason = window.prompt("Rad etish sababi (sellerga ko'rinadi):", '');
+    if (reason === null) return; // admin bekor qildi
+    handleModerate(book, 2, reason.trim());
   };
 
   const submitEdit = (event: FormEvent<HTMLFormElement>) => {
@@ -219,9 +226,14 @@ export default function Books() {
                   <i className="bi bi-eye"></i>
                 </button>
                 {book.moderateUrl ? (
-                  <button className="btn btn-sm btn-light flex-fill" onClick={() => handleModerate(book, book.status ? 0 : 1)} title="Moderatsiya">
-                    <i className="bi bi-shield-check"></i>
-                  </button>
+                  <>
+                    <button className="btn btn-sm btn-light flex-fill text-success" onClick={() => handleModerate(book, 1)} title="Tasdiqlash">
+                      <i className="bi bi-check-lg"></i>
+                    </button>
+                    <button className="btn btn-sm btn-light flex-fill text-danger" onClick={() => handleReject(book)} title="Rad etish">
+                      <i className="bi bi-x-lg"></i>
+                    </button>
+                  </>
                 ) : null}
               </div>
             </div>
@@ -381,7 +393,8 @@ export default function Books() {
         <Modal.Footer>
           {selectedBook?.moderateUrl ? (
             <>
-              <Button variant="outline-secondary" onClick={() => handleModerate(selectedBook, 0)}>Moderatsiya</Button>
+              <Button variant="outline-danger" onClick={() => handleReject(selectedBook)}>Rad etish</Button>
+              <Button variant="outline-secondary" onClick={() => handleModerate(selectedBook, 0)}>Moderatsiyaga</Button>
               <Button variant="primary" className="btn-primary-gradient" onClick={() => handleModerate(selectedBook, 1)}>Tasdiqlash</Button>
             </>
           ) : null}

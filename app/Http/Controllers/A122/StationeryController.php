@@ -315,10 +315,14 @@ class StationeryController extends Controller
 
     public function moderate(Request $request, int $id)
     {
-        $request->validate(['is_approved' => 'required|in:0,1,2']);
+        $request->validate([
+            'is_approved' => 'required|in:0,1,2',
+            'note' => 'nullable|string|max:500',
+        ]);
 
         $item = Stationery::findOrFail($id);
         $approval = (int) $request->input('is_approved');
+        $note = trim((string) $request->input('note'));
         $item->updateQuietly([
             'is_approved' => $approval,
             'ai_moderation_status' => match ($approval) {
@@ -327,11 +331,13 @@ class StationeryController extends Controller
                 default => 'pending',
             },
             'ai_moderation_checked_at' => now(),
-            'ai_moderation_note' => 'Admin tomonidan qo‘lda moderatsiya qilindi.',
+            'ai_moderation_note' => $note !== ''
+                ? $note
+                : ($approval === 2 ? 'Admin tomonidan rad etildi.' : 'Admin tomonidan qo‘lda moderatsiya qilindi.'),
             'ai_moderation_next_retry_at' => null,
-            'ai_moderation_meta' => ['source' => 'admin_manual_override'],
+            'ai_moderation_meta' => ['source' => 'admin_manual_override', 'manual_note' => $note ?: null],
         ]);
 
-        return back()->with('success', 'Kanstovar moderatsiyasi yangilandi.');
+        return back()->with('success', $approval === 2 ? 'Kanstovar rad etildi.' : 'Kanstovar moderatsiyasi yangilandi.');
     }
 }

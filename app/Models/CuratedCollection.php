@@ -49,6 +49,21 @@ class CuratedCollection extends Model
             ->orderBy('id');
     }
 
+    /** Faqat 1-daraja bo'limlar (parent_id null). Ichki bo'limlar children orqali olinadi. */
+    public function sections(): HasMany
+    {
+        return $this->hasMany(CuratedCollectionSection::class, 'collection_id')
+            ->whereNull('parent_id')
+            ->orderBy('sort_order')
+            ->orderBy('id');
+    }
+
+    /** Barcha bo'limlar (1 va 2-daraja) — sync/o'chirish uchun. */
+    public function allSections(): HasMany
+    {
+        return $this->hasMany(CuratedCollectionSection::class, 'collection_id');
+    }
+
     public function localized(string $field, string $locale = 'uz'): ?string
     {
         $preferred = $this->getAttribute("{$field}_{$locale}");

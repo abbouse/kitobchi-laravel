@@ -30,4 +30,9 @@ return [
     // kamida shuncha % qismidan past tushmasligi kerak. Chegirma shu polga
     // qarab avtomatik cheklanadi (deterministik, AI hal qilmaydi).
     'margin_floor_percent' => (float) env('COLLECTION_ADVISOR_MARGIN_FLOOR', 25),
+
+    // Bozor tahlili AI'ning O'Z bilimidan olinadi (o'zbek/mintaqa/jahon kitob bozori:
+    // mashhur janrlar, mualliflar, doimiy bestsellerlar) — pullik servis yoki kalit
+    // kerak emas. Ichki talab ASOSIY signal, bu esa uni AI bilimi bilan boyitadi.
+    'market_knowledge' => (bool) env('COLLECTION_ADVISOR_MARKET_KNOWLEDGE', true),
 ];
