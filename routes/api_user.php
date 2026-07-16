@@ -41,6 +41,7 @@ Route::prefix('products')->group(function () {
     Route::get('books-by-category', [ProductsController::class, 'booksByCategory']);
     Route::get('recommendation/{col}', [ProductsController::class, 'recommendation']);
     Route::get('cart-recommendation', [ProductsController::class, 'cartRecommendation']);
+    Route::get('{type}/{id}/similar', [ProductsController::class, 'similarProducts']);
     Route::post('{type}/{id}/view', [ProductsController::class, 'trackView']);
     Route::get('{col}', [ProductsController::class, 'index']);
 });

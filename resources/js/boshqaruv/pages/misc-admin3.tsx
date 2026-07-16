@@ -10,6 +10,67 @@ const pushLocaleLabels: Record<PushLocale, string> = { uz: "O'zbek", ru: 'Рус
 const pushLocales: PushLocale[] = ['uz', 'ru', 'en', 'ja'];
 const getCsrfToken = () => document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content || '';
 
+function BannerImageHint() {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <span className="position-relative d-inline-block" style={{ verticalAlign: 'middle' }}>
+      <button
+        type="button"
+        className="btn btn-link p-0 ms-1 text-muted"
+        style={{ lineHeight: 1 }}
+        aria-label="Banner rasmi bo'yicha tavsiya"
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          setOpen((value) => !value);
+        }}
+      >
+        <i className="bi bi-question-circle"></i>
+      </button>
+      {open ? (
+        <span
+          className="shadow"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            setOpen(false);
+          }}
+          style={{
+            position: 'absolute',
+            zIndex: 80,
+            top: 24,
+            left: -96,
+            width: 310,
+            background: '#111827',
+            color: '#f8fafc',
+            borderRadius: 14,
+            padding: '12px 14px',
+            fontSize: 12,
+            fontWeight: 400,
+            lineHeight: 1.55,
+            textAlign: 'left',
+            whiteSpace: 'normal',
+            cursor: 'pointer',
+          }}
+        >
+          <strong className="d-block mb-1">Banner rasmi uchun tavsiya</strong>
+          O'lcham: <strong>1440 × 320 px</strong> (nisbat <strong>4.5:1</strong>). Aynan shu nisbatdagi rasm barcha qurilmada <strong>qirqilmasdan</strong> joylashadi.
+          <span className="d-block mt-2">
+            Boshqa nisbatdagi rasm <b>cover</b> qilib kesiladi. Shunda muhim narsalar (matn, logo, mahsulot, yuz) chetlardan uzoqroq tursin:
+            <span className="d-block">• chap va o'ngdan <strong>≥ 120 px</strong></span>
+            <span className="d-block">• yuqori va pastdan <strong>≥ 30 px</strong></span>
+            (markazdagi ~1200 × 260 px maydonda).
+          </span>
+          <span className="d-block mt-2" style={{ color: '#cbd5e1' }}>
+            Fonni to'liq chetgacha to'ldiring. Format WebP/JPG/PNG, 300–600 KB.
+          </span>
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
 // ===== REELS =====
 export function Reels() {
   const { reels = [] } = usePage<{
@@ -392,7 +453,16 @@ export function MarketNews() {
               <div className="col-md-4"><Form.Label>Sarlavha (JA)</Form.Label><Form.Control value={form.titleJa} onChange={(event) => setForm((prev) => ({ ...prev, titleJa: event.target.value }))} /></div>
               <div className="col-md-6"><Form.Label>Action</Form.Label><Form.Select value={form.action} onChange={(event) => setForm((prev) => ({ ...prev, action: event.target.value as NewsForm['action'] }))}><option value="to_bottomsheet">Bottomsheet</option><option value="to_shop">Do'konga o'tish</option><option value="to_product">Mahsulotga o'tish</option><option value="to_collection">Muayyan to'plam</option></Form.Select></div>
               <div className="col-md-6"><Form.Label>Action ID</Form.Label><Form.Control type="number" min={1} placeholder="Shop / mahsulot / to'plam ID" value={form.actionId} onChange={(event) => setForm((prev) => ({ ...prev, actionId: event.target.value }))} /><div className="form-text">Bottomsheet uchun bo'sh qoldiring.</div></div>
-              <div className="col-12"><Form.Label>Rasm</Form.Label><Form.Control type="file" accept="image/*" onChange={(event) => setImageFile(event.target.files?.[0] || null)} />{editing?.image ? <div className="form-text">Yangi rasm tanlanmasa, hozirgisi saqlanadi.</div> : null}</div>
+              <div className="col-12">
+                <Form.Label>
+                  Rasm <BannerImageHint />
+                </Form.Label>
+                <Form.Control type="file" accept="image/*" onChange={(event) => setImageFile(event.target.files?.[0] || null)} />
+                <div className="form-text">
+                  Tavsiya: <b>1440 × 320 px</b> (4.5:1) — aynan shu nisbat qirqilmasdan joylashadi. Boshqa nisbatda muhim matn/logoni chetlardan <b>chap-o'ng ≥120 px, yuqori-past ≥30 px</b> ichkarida qoldiring. Fonni to'liq to'ldiring.
+                  {editing?.image ? ' Yangi rasm tanlanmasa, hozirgisi saqlanadi.' : ''}
+                </div>
+              </div>
               <div className="col-md-6"><Form.Label>Tavsif (UZ)</Form.Label><Form.Control as="textarea" rows={4} value={form.descriptionUz} onChange={(event) => setForm((prev) => ({ ...prev, descriptionUz: event.target.value }))} /></div>
               <div className="col-md-6"><Form.Label>Tavsif (RU)</Form.Label><Form.Control as="textarea" rows={4} value={form.descriptionRu} onChange={(event) => setForm((prev) => ({ ...prev, descriptionRu: event.target.value }))} /></div>
               <div className="col-md-6"><Form.Label>Tavsif (EN)</Form.Label><Form.Control as="textarea" rows={4} value={form.descriptionEn} onChange={(event) => setForm((prev) => ({ ...prev, descriptionEn: event.target.value }))} /></div>

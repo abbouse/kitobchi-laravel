@@ -374,6 +374,34 @@ class SplitContractService
     {
         $contract = $installment->contract;
 
+        if (! $contract) {
+            return false;
+        }
+
+        try {
+            return Cache::lock(
+                SplitProfileService::mutationLockKey((int) $contract->user_id),
+                120,
+            )->block(
+                10,
+                function () use ($installment) {
+                    $freshInstallment = $installment->fresh();
+                    if (! $freshInstallment) {
+                        return false;
+                    }
+
+                    return $this->chargeDueInstallmentUnderLock($freshInstallment);
+                },
+            );
+        } catch (LockTimeoutException) {
+            return false;
+        }
+    }
+
+    private function chargeDueInstallmentUnderLock(SplitInstallment $installment): bool
+    {
+        $contract = $installment->contract;
+
         if (! $contract || ! in_array($contract->status, [SplitContract::STATUS_ACTIVE, SplitContract::STATUS_OVERDUE], true)) {
             return false;
         }
@@ -635,6 +663,28 @@ class SplitContractService
      */
     public function payInstallmentsUpTo(SplitContract $contract, int $upToSequence, UserCard $card): array
     {
+        try {
+            return Cache::lock(
+                SplitProfileService::mutationLockKey((int) $contract->user_id),
+                120,
+            )->block(
+                10,
+                function () use ($contract, $upToSequence, $card) {
+                    $freshContract = $contract->fresh();
+                    if (! $freshContract) {
+                        throw new RuntimeException('Shartnoma topilmadi.');
+                    }
+
+                    return $this->payInstallmentsUpToUnderLock($freshContract, $upToSequence, $card);
+                },
+            );
+        } catch (LockTimeoutException) {
+            throw new RuntimeException("Nasiya to'lovi hozir qayta ishlanmoqda. Bir ozdan keyin qayta urinib ko'ring.");
+        }
+    }
+
+    private function payInstallmentsUpToUnderLock(SplitContract $contract, int $upToSequence, UserCard $card): array
+    {
         if (! in_array($contract->status, [SplitContract::STATUS_ACTIVE, SplitContract::STATUS_OVERDUE], true)) {
             throw new RuntimeException('Faqat faol shartnoma to\'lovlarini amalga oshirish mumkin.');
         }
@@ -699,6 +749,28 @@ class SplitContractService
      * $card berilmasa default verified karta ishlatiladi.
      */
     public function settleEarly(SplitContract $contract, ?UserCard $card = null): array
+    {
+        try {
+            return Cache::lock(
+                SplitProfileService::mutationLockKey((int) $contract->user_id),
+                120,
+            )->block(
+                10,
+                function () use ($contract, $card) {
+                    $freshContract = $contract->fresh();
+                    if (! $freshContract) {
+                        throw new RuntimeException('Shartnoma topilmadi.');
+                    }
+
+                    return $this->settleEarlyUnderLock($freshContract, $card);
+                },
+            );
+        } catch (LockTimeoutException) {
+            throw new RuntimeException("Nasiya yopish amali hozir qayta ishlanmoqda. Bir ozdan keyin qayta urinib ko'ring.");
+        }
+    }
+
+    private function settleEarlyUnderLock(SplitContract $contract, ?UserCard $card = null): array
     {
         if (! in_array($contract->status, [SplitContract::STATUS_ACTIVE, SplitContract::STATUS_OVERDUE], true)) {
             throw new RuntimeException('Faqat faol shartnomani muddatidan oldin yopish mumkin.');

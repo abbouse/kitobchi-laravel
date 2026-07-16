@@ -8,6 +8,8 @@ use App\Models\SplitContract;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\UserCard;
+use Illuminate\Contracts\Cache\LockTimeoutException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
@@ -26,6 +28,24 @@ class PaylovOrderPaymentService
 
     public function payPendingOrder(Sold $order, User $user, UserCard $card): array
     {
+        try {
+            return Cache::lock("paylov:order-payment:{$order->id}", 120)
+                ->block(
+                    8,
+                    fn () => $this->payPendingOrderUnderLock($order, $user, $card),
+                );
+        } catch (LockTimeoutException) {
+            throw new RuntimeException("Buyurtma to'lovi hozir qayta ishlanmoqda. Bir ozdan keyin tekshirib ko'ring.");
+        }
+    }
+
+    private function payPendingOrderUnderLock(Sold $order, User $user, UserCard $card): array
+    {
+        $order = Sold::query()->find($order->id);
+        if (! $order) {
+            throw new RuntimeException('Buyurtma topilmadi.');
+        }
+
         if ((int) $order->user_id !== (int) $user->id) {
             throw new RuntimeException('Buyurtma sizga tegishli emas.');
         }

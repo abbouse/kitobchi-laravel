@@ -7,7 +7,9 @@ use App\Models\MysteryBoxSubscription;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\UserCard;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
@@ -28,6 +30,27 @@ class PaylovPayablePaymentService
         User $user,
         UserCard $card,
     ): array {
+        try {
+            return Cache::lock("paylov:payable:gift_certificate:{$certificate->id}", 120)
+                ->block(
+                    8,
+                    fn () => $this->payPendingGiftCertificateUnderLock($certificate, $user, $card),
+                );
+        } catch (LockTimeoutException) {
+            throw new RuntimeException("Sertifikat to'lovi hozir qayta ishlanmoqda. Bir ozdan keyin tekshirib ko'ring.");
+        }
+    }
+
+    private function payPendingGiftCertificateUnderLock(
+        GiftCertificate $certificate,
+        User $user,
+        UserCard $card,
+    ): array {
+        $certificate = GiftCertificate::query()->find($certificate->id);
+        if (! $certificate) {
+            throw new RuntimeException('Sertifikat topilmadi.');
+        }
+
         if ((int) $certificate->buyer_user_id !== (int) $user->id) {
             throw new RuntimeException('Sertifikat sizga tegishli emas.');
         }
@@ -54,6 +77,27 @@ class PaylovPayablePaymentService
         User $user,
         UserCard $card,
     ): array {
+        try {
+            return Cache::lock("paylov:payable:mystery_box:{$subscription->id}", 120)
+                ->block(
+                    8,
+                    fn () => $this->payPendingMysteryBoxUnderLock($subscription, $user, $card),
+                );
+        } catch (LockTimeoutException) {
+            throw new RuntimeException("Mystery Box to'lovi hozir qayta ishlanmoqda. Bir ozdan keyin tekshirib ko'ring.");
+        }
+    }
+
+    private function payPendingMysteryBoxUnderLock(
+        MysteryBoxSubscription $subscription,
+        User $user,
+        UserCard $card,
+    ): array {
+        $subscription = MysteryBoxSubscription::query()->find($subscription->id);
+        if (! $subscription) {
+            throw new RuntimeException('Obuna topilmadi.');
+        }
+
         if ((int) $subscription->user_id !== (int) $user->id) {
             throw new RuntimeException('Obuna sizga tegishli emas.');
         }

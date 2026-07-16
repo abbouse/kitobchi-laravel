@@ -1812,7 +1812,7 @@ class PurchaseController extends Controller
     //  Body:
     //   - seller_id (required, integer): scan qilingan do'kon
     //   - items (required, array): [{ product_id, type, quantity, variant_id? }]
-    //   - promocode (nullable, string)
+    //   - withCashback (nullable, boolean)
     //
     //  Effekt:
     //   - Sold qator (deliveryType=pickup, deliveryPrice=0, paymentStatus=1)
@@ -1831,12 +1831,15 @@ class PurchaseController extends Controller
             'items.*.type' => 'required|string|in:book,stationery',
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.variant_id' => 'nullable|integer|exists:stationery_variants,id',
-            'promocode' => 'nullable|string|max:50',
+            'withCashback' => 'nullable|boolean',
         ]);
 
         $user = Auth::guard('user')->user();
         if (! $user) {
             return $this->err('Foydalanuvchi topilmadi!', 401);
+        }
+        if ($request->filled('promocode')) {
+            return $this->err("Do'kon ichida xaridda promokod ishlatilmaydi.", 422);
         }
 
         $sellerId = (int) $request->input('seller_id');
@@ -1975,23 +1978,33 @@ class PurchaseController extends Controller
                 return $this->err('Mahsulot tanlanmagan!', 400);
             }
 
-            // ── Promokod ──────────────────────────────────────────
+            // ── Keshbek ───────────────────────────────────────────
             $priceBeforePromo = $totalSum;
             $discountAmount = 0;
-            $appliedPromo = null;
-            $appliedPromoId = null;
+            $cashbackUsed = 0;
 
-            if ($request->filled('promocode')) {
-                $res = $this->validatePromocode($request->promocode, $user->id, $priceBeforePromo);
-                if (isset($res['error'])) {
-                    DB::rollBack();
+            if ($request->boolean('withCashback') && $priceBeforePromo > 0) {
+                $cashbackBalance = (int) DB::table('users')
+                    ->where('id', $user->id)
+                    ->lockForUpdate()
+                    ->value('cashback');
+                // In-store xaridda keshbek butun chekni yopmasin:
+                // kamida 1% real to'lov qolishi shart.
+                $maxCashback = intdiv(((int) $priceBeforePromo) * 99, 100);
+                $cashbackUsed = min($cashbackBalance, $maxCashback);
 
-                    return $this->err($res['error']);
+                if ($cashbackUsed > 0) {
+                    $updated = DB::table('users')
+                        ->where('id', $user->id)
+                        ->where('cashback', '>=', $cashbackUsed)
+                        ->decrement('cashback', $cashbackUsed);
+
+                    if ($updated) {
+                        $totalSum = max(0, $priceBeforePromo - $cashbackUsed);
+                    } else {
+                        $cashbackUsed = 0;
+                    }
                 }
-                $discountAmount = $res['discount'];
-                $appliedPromo = $res['promo']->code;
-                $appliedPromoId = $res['promo']->id;
-                $totalSum = max(0, $priceBeforePromo - $discountAmount);
             }
 
             $finalPrice = $totalSum; // delivery 0, packaging 0
@@ -2036,9 +2049,24 @@ class PurchaseController extends Controller
                 'deliveryPrice' => 0,
                 'paymentStatus' => 1,
                 'amount' => $finalPrice,
-                'promocode' => $appliedPromo,
+                'promocode' => null,
                 'discountAmount' => $discountAmount,
+                'withCashback' => $cashbackUsed > 0,
+                'cashbackAmount' => $cashbackUsed,
             ]);
+
+            if ($cashbackUsed > 0) {
+                $balanceAfter = (int) DB::table('users')->where('id', $user->id)->value('cashback');
+                $this->cashbackHistoryService->record(
+                    userId: $user->id,
+                    action: 'spent',
+                    amount: -$cashbackUsed,
+                    order: $purchase,
+                    balanceBefore: $balanceAfter + $cashbackUsed,
+                    balanceAfter: $balanceAfter,
+                    meta: ['source' => 'in_store'],
+                );
+            }
 
             // ── Seller order ─────────────────────────────────────
             $sellerOrder = SellerOrder::create([
@@ -2074,12 +2102,6 @@ class PurchaseController extends Controller
             foreach ($productsToUpdate as $data) {
                 $this->orderService->decrementStock($data);
                 $this->orderService->incrementProductStats($data, $purchase->id);
-            }
-
-            // ── Promokod tarixi ──────────────────────────────────
-            if ($appliedPromoId) {
-                PromocodeHistory::create(['user_id' => $user->id, 'promocode_id' => $appliedPromoId]);
-                DB::table('promocodes')->where('id', $appliedPromoId)->increment('usedCount');
             }
 
             DB::commit();

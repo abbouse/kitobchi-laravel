@@ -655,6 +655,243 @@ class ProductsController extends Controller
         ]);
     }
 
+    public function similarProducts(Request $request, string $type, int $id)
+    {
+        $type = strtolower($type);
+        if (! in_array($type, ['book', 'stationery'], true)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Invalid product type',
+            ], 422);
+        }
+
+        $user = $request->user('user') ?? auth('sanctum')->user() ?? Auth::guard('user')->user();
+        $page = max(1, (int) $request->input('page', 1));
+        $perPage = max(3, min(40, (int) $request->input('per_page', 20)));
+
+        $base = $type === 'book'
+            ? $this->bookScope()->with(['category', 'tags', 'seller'])->find($id)
+            : $this->stationeryScope()->with(['category', 'tags', 'variants', 'seller'])->find($id);
+
+        if (! $base) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Product not found',
+            ], 404);
+        }
+
+        $scored = $this->rankSimilarProducts($base, $type, $page, $perPage);
+        $total = $scored->count();
+        $items = $scored
+            ->slice(($page - 1) * $perPage, $perPage)
+            ->values()
+            ->map(fn ($product) => $this->formatProduct($product, $user, $type));
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $items,
+            'meta' => [
+                'page' => $page,
+                'per_page' => $perPage,
+                'total' => $total,
+                'has_more' => ($page * $perPage) < $total,
+            ],
+        ]);
+    }
+
+    private function rankSimilarProducts($base, string $type, int $page, int $perPage)
+    {
+        $baseTagIds = $this->tagIds($base);
+        $tokens = $this->similarityTokens(implode(' ', array_filter([
+            $base->name ?? '',
+            $base->author ?? '',
+            $base->material ?? '',
+            $base->description ?? '',
+        ])));
+
+        $candidateLimit = min(700, max(160, ($page * $perPage) + 160));
+        $query = $type === 'book'
+            ? $this->bookScope()->with(['category', 'tags', 'seller'])
+            : $this->stationeryScope()->with(['category', 'tags', 'variants', 'seller']);
+
+        $query->where('id', '!=', $base->id);
+
+        $hasFocusedFilter = ! empty($base->category_id)
+            || ($type === 'book' && ! empty($base->author))
+            || ($type === 'stationery' && ! empty($base->material))
+            || ! empty($baseTagIds)
+            || ! empty($tokens);
+
+        if ($hasFocusedFilter) {
+            $query->where(function ($q) use ($base, $type, $baseTagIds, $tokens) {
+                if (! empty($base->category_id)) {
+                    $q->orWhere('category_id', $base->category_id);
+                }
+
+                if ($type === 'book' && ! empty($base->author)) {
+                    $q->orWhereRaw('LOWER(author) = ?', [mb_strtolower($base->author)]);
+                }
+
+                if ($type === 'stationery' && ! empty($base->material)) {
+                    $q->orWhereRaw('LOWER(material) = ?', [mb_strtolower($base->material)]);
+                }
+
+                if (! empty($baseTagIds)) {
+                    $q->orWhereHas('tags', fn ($tagQuery) => $tagQuery->whereIn('id', $baseTagIds));
+                }
+
+                foreach (array_slice($tokens, 0, 6) as $token) {
+                    $q->orWhere('name', 'like', '%' . $token . '%');
+                }
+            });
+        }
+
+        $candidates = $query
+            ->orderByDesc('totalSalesWeek')
+            ->orderByDesc('totalSales')
+            ->limit($candidateLimit)
+            ->get();
+
+        if ($candidates->count() < ($page * $perPage)) {
+            $existingIds = $candidates->pluck('id')->push($base->id)->all();
+            $fallback = ($type === 'book'
+                ? $this->bookScope()->with(['category', 'tags', 'seller'])
+                : $this->stationeryScope()->with(['category', 'tags', 'variants', 'seller']))
+                ->whereNotIn('id', $existingIds)
+                ->orderByDesc('totalSalesWeek')
+                ->orderByDesc('totalSales')
+                ->limit($candidateLimit - $candidates->count())
+                ->get();
+            $candidates = $candidates->merge($fallback);
+        }
+
+        return $candidates
+            ->map(function ($product) use ($base, $type, $baseTagIds, $tokens) {
+                $product->similarity_score = $this->similarityScore($base, $product, $type, $baseTagIds, $tokens);
+                return $product;
+            })
+            ->sortByDesc(fn ($product) => $product->similarity_score)
+            ->values();
+    }
+
+    private function similarityScore($base, $product, string $type, array $baseTagIds, array $baseTokens): float
+    {
+        $score = 0.0;
+
+        $vectorScore = $this->vectorSimilarity($base->vectorData ?? null, $product->vectorData ?? null);
+        if ($vectorScore !== null) {
+            $score += $vectorScore * 80;
+        }
+
+        if (! empty($base->category_id) && (string) $base->category_id === (string) ($product->category_id ?? '')) {
+            $score += 45;
+        }
+
+        $tagOverlap = count(array_intersect($baseTagIds, $this->tagIds($product)));
+        $score += min(36, $tagOverlap * 12);
+
+        if ($type === 'book') {
+            if (! empty($base->author) && mb_strtolower($base->author) === mb_strtolower((string) ($product->author ?? ''))) {
+                $score += 35;
+            }
+            if (! empty($base->publisher_id) && (string) $base->publisher_id === (string) ($product->publisher_id ?? '')) {
+                $score += 10;
+            }
+        } elseif (! empty($base->material) && mb_strtolower($base->material) === mb_strtolower((string) ($product->material ?? ''))) {
+            $score += 18;
+        }
+
+        $productTokens = $this->similarityTokens(implode(' ', array_filter([
+            $product->name ?? '',
+            $product->author ?? '',
+            $product->material ?? '',
+            $product->description ?? '',
+        ])));
+        $tokenOverlap = count(array_intersect($baseTokens, $productTokens));
+        $score += min(32, $tokenOverlap * 8);
+
+        $score += min(8, ((int) ($product->totalSalesWeek ?? 0)) * 0.15);
+        $score += min(6, ((int) ($product->totalSales ?? 0)) * 0.03);
+
+        if ((bool) ($product->recommended ?? false)) {
+            $score += 3;
+        }
+
+        return $score;
+    }
+
+    private function tagIds($product): array
+    {
+        if (! $product->relationLoaded('tags') || ! $product->tags) {
+            return [];
+        }
+
+        return $product->tags
+            ->pluck('id')
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->all();
+    }
+
+    private function similarityTokens(string $text): array
+    {
+        $text = mb_strtolower($text);
+        $text = preg_replace('/[^\p{L}\p{N}]+/u', ' ', $text) ?? '';
+        $parts = preg_split('/\s+/u', trim($text)) ?: [];
+
+        return collect($parts)
+            ->filter(fn ($token) => mb_strlen($token) >= 3)
+            ->unique()
+            ->take(12)
+            ->values()
+            ->all();
+    }
+
+    private function vectorSimilarity($left, $right): ?float
+    {
+        $a = $this->normalizeVector($left);
+        $b = $this->normalizeVector($right);
+
+        if (empty($a) || empty($b) || count($a) !== count($b)) {
+            return null;
+        }
+
+        $dot = 0.0;
+        $normA = 0.0;
+        $normB = 0.0;
+
+        foreach ($a as $i => $value) {
+            $other = $b[$i] ?? 0.0;
+            $dot += $value * $other;
+            $normA += $value * $value;
+            $normB += $other * $other;
+        }
+
+        if ($normA <= 0 || $normB <= 0) {
+            return null;
+        }
+
+        return max(0.0, min(1.0, $dot / (sqrt($normA) * sqrt($normB))));
+    }
+
+    private function normalizeVector($value): array
+    {
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            $value = is_array($decoded) ? $decoded : [];
+        }
+
+        if (! is_array($value)) {
+            return [];
+        }
+
+        return array_values(array_filter(array_map(
+            fn ($item) => is_numeric($item) ? (float) $item : null,
+            $value
+        ), fn ($item) => $item !== null));
+    }
+
     // =========================================================================
     //  4. KATEGORIYA BO'YICHA KITOBLAR
     //  GET /products/books-by-category?type=new|recommended
