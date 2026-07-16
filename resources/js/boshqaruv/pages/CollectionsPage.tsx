@@ -52,6 +52,7 @@ type CollectionRow = {
   festiveEffect?: boolean;
   sortOrder: number;
   customTotalPrice?: number | null;
+  deliveryPrice?: number | null;
   titleUz: string;
   titleRu?: string | null;
   titleEn?: string | null;
@@ -197,12 +198,17 @@ const walkSectionTree = (secs: SectionNode[], key: string, fn: (n: SectionNode) 
 const updateSectionItems = (secs: SectionNode[], key: string, itemsFn: (list: CollectionItem[]) => CollectionItem[]): SectionNode[] =>
   walkSectionTree(secs, key, (n) => ({ ...n, items: itemsFn(n.items) }));
 
+// Bo'lim mahsulotlaridan avto narx (yig'indi). Narx bo'sh bo'lsa shu ishlatiladi.
+const sectionItemsTotal = (node: SectionNode): number =>
+  node.items.reduce((sum, it) => sum + (it.price || 0) * (it.quantity || 1), 0);
+
 const defaultForm = {
   slug: '',
   sortOrder: 0,
   isActive: true,
   festiveEffect: true,
   customTotalPrice: '',
+  deliveryPrice: '',
   titleUz: '',
   titleRu: '',
   titleEn: '',
@@ -299,6 +305,7 @@ export default function CollectionsPage() {
       isActive: collection.isActive,
       festiveEffect: collection.festiveEffect ?? true,
       customTotalPrice: collection.customTotalPrice ? String(collection.customTotalPrice) : '',
+      deliveryPrice: collection.deliveryPrice ? String(collection.deliveryPrice) : '',
       titleUz: collection.titleUz || '',
       titleRu: collection.titleRu || '',
       titleEn: collection.titleEn || '',
@@ -362,18 +369,76 @@ export default function CollectionsPage() {
     }
   }, [errors]);
 
+  const findNode = (key: string): SectionNode | null => {
+    for (const s of sections) {
+      if (s.key === key) return s;
+      for (const c of s.children) if (c.key === key) return c;
+    }
+    return null;
+  };
+
   const addProduct = (product: SearchProduct) => {
     if (activeKey === 'root') {
+      if (sections.length > 0) {
+        window.alert("Bo'limli to'plamga bo'limsiz mahsulot qo'shib bo'lmaydi. Avval bo'lim tanlang.");
+        return;
+      }
       setItems((current) => addToItemList(current, product));
+      return;
+    }
+    const node = findNode(activeKey);
+    if (node && node.children.length > 0) {
+      window.alert("Bu bo'lim ichki bo'limlarga bo'lingan — mahsulotni ichki bo'limga qo'shing.");
       return;
     }
     setSections((current) => updateSectionItems(current, activeKey, (list) => addToItemList(list, product)));
   };
 
   // --- Bo'lim boshqaruvi (2 daraja) ---
-  const addSection = () => setSections((cur) => [...cur, emptySection()]);
-  const addChildSection = (sectionKey: string) =>
-    setSections((cur) => cur.map((s) => (s.key === sectionKey ? { ...s, children: [...s.children, emptySection()] } : s)));
+  const addSection = () => {
+    const sec = emptySection();
+    setSections((cur) => [...cur, sec]);
+    if (sections.length === 0) setActiveKey(sec.key);
+  };
+  const addChildSection = (sectionKey: string) => {
+    const child = emptySection();
+    setSections((cur) =>
+      cur.map((s) => {
+        if (s.key !== sectionKey) return s;
+        // Leaf bo'lim (mahsuloti bor) ichki bo'limga aylanmoqda — mavjud
+        // mahsulotlarni yangi ichki bo'limga ko'chiramiz (yo'qolmasligi uchun).
+        const moved = s.children.length === 0 ? s.items : [];
+        return {
+          ...s,
+          items: s.children.length === 0 ? [] : s.items,
+          price: s.children.length === 0 ? '' : s.price,
+          children: [...s.children, { ...child, items: moved }],
+        };
+      }),
+    );
+    setActiveKey(child.key); // yangi ichki bo'limni faol qilamiz
+  };
+  // Bo'limni (1 yoki 2-daraja) yuqori/pastga ko'chirish.
+  const moveNode = (key: string, dir: -1 | 1) =>
+    setSections((cur) => {
+      const i = cur.findIndex((s) => s.key === key);
+      if (i >= 0) {
+        const j = i + dir;
+        if (j < 0 || j >= cur.length) return cur;
+        const next = [...cur];
+        [next[i], next[j]] = [next[j], next[i]];
+        return next;
+      }
+      return cur.map((s) => {
+        const ci = s.children.findIndex((c) => c.key === key);
+        if (ci < 0) return s;
+        const cj = ci + dir;
+        if (cj < 0 || cj >= s.children.length) return s;
+        const kids = [...s.children];
+        [kids[ci], kids[cj]] = [kids[cj], kids[ci]];
+        return { ...s, children: kids };
+      });
+    });
   const removeSection = (key: string) => {
     setSections((cur) => cur.filter((s) => s.key !== key).map((s) => ({ ...s, children: s.children.filter((c) => c.key !== key) })));
     setActiveKey((prev) => (prev === key ? 'root' : prev));
@@ -400,58 +465,83 @@ export default function CollectionsPage() {
     items.length > 0 ||
     sections.some((s) => s.items.length > 0 || s.children.some((c) => c.items.length > 0));
 
-  const renderNode = (node: SectionNode, level: 1 | 2) => (
-    <div
-      key={node.key}
-      className={`border rounded-4 p-2 mb-2 ${level === 2 ? 'ms-3' : ''}`}
-      style={{ borderColor: activeKey === node.key ? '#7c3aed' : undefined, background: activeKey === node.key ? '#faf5ff' : undefined }}
-    >
-      <div className="d-flex gap-2 align-items-center mb-2 flex-wrap">
-        <span className="chip chip-gray">{level === 1 ? "Bo'lim" : 'Ichki'}</span>
-        <button
-          type="button"
-          className={`btn btn-sm py-0 ${activeKey === node.key ? 'btn-primary-gradient' : 'btn-light'}`}
-          onClick={() => setActiveKey(node.key)}
-          title="Chapdagi qidiruvdan mahsulot shu bo'limga qo'shiladi"
-        >
-          {activeKey === node.key ? '◉ Faol' : '◉ Shu yerga'}
-        </button>
-        <span className="small text-muted ms-auto">{node.items.length} mahsulot</span>
-        <button type="button" className="btn btn-sm btn-light text-danger py-0" onClick={() => removeSection(node.key)}><i className="bi bi-trash"></i></button>
-      </div>
-      <div className="row g-1 mb-2">
-        <div className="col-6 col-md-3"><Form.Control size="sm" placeholder="Nom UZ*" value={node.nameUz} onChange={(e) => updateSection(node.key, { nameUz: e.target.value })} /></div>
-        <div className="col-6 col-md-3"><Form.Control size="sm" placeholder="RU" value={node.nameRu} onChange={(e) => updateSection(node.key, { nameRu: e.target.value })} /></div>
-        <div className="col-4 col-md-2"><Form.Control size="sm" placeholder="EN" value={node.nameEn} onChange={(e) => updateSection(node.key, { nameEn: e.target.value })} /></div>
-        <div className="col-4 col-md-2"><Form.Control size="sm" placeholder="JA" value={node.nameJa} onChange={(e) => updateSection(node.key, { nameJa: e.target.value })} /></div>
-        <div className="col-4 col-md-2"><Form.Control size="sm" type="number" placeholder="Narx" value={node.price} onChange={(e) => updateSection(node.key, { price: e.target.value })} /></div>
-      </div>
-      {node.items.length > 0 ? (
-        <div className="mb-2">
-          {node.items.map((item, index) => (
-            <div key={`${item.productType}-${item.productId}-${index}`} className="d-flex align-items-center gap-2 small border rounded-3 p-1 mb-1" style={{ borderColor: !item.available ? '#FCA5A5' : undefined }}>
-              {item.image ? <img src={item.image} alt="" width={24} height={24} style={{ borderRadius: 4, objectFit: 'cover' }} /> : null}
-              <span className="text-truncate flex-fill">{item.name}</span>
-              <div className="input-group input-group-sm" style={{ width: 96 }}>
-                <button type="button" className="btn btn-light" onClick={() => updateSectionItem(node.key, index, { quantity: Math.max(1, item.quantity - 1) })}>−</button>
-                <span className="form-control text-center bg-white">{item.quantity}</span>
-                <button type="button" className="btn btn-light" onClick={() => updateSectionItem(node.key, index, { quantity: item.quantity + 1 })}>+</button>
-              </div>
-              <button type="button" className="btn btn-sm btn-light text-danger py-0" onClick={() => removeSectionItem(node.key, index)}><i className="bi bi-x-lg"></i></button>
+  const renderNode = (node: SectionNode, level: 1 | 2) => {
+    const isGroup = node.children.length > 0; // ichki bo'limi bor → guruh (mahsulot qabul qilmaydi)
+    const total = sectionItemsTotal(node);
+    return (
+      <div
+        key={node.key}
+        className={`border rounded-4 p-2 mb-2 ${level === 2 ? 'ms-3' : ''}`}
+        style={{ borderColor: activeKey === node.key ? '#7c3aed' : undefined, background: activeKey === node.key ? '#faf5ff' : undefined }}
+      >
+        <div className="d-flex gap-2 align-items-center mb-2 flex-wrap">
+          <span className={`chip ${isGroup ? 'chip-purple' : 'chip-gray'}`}>
+            {level === 2 ? "Ichki bo'lim" : isGroup ? "Bo'lim (guruh)" : "Bo'lim"}
+          </span>
+          {!isGroup ? (
+            <button
+              type="button"
+              className={`btn btn-sm py-0 ${activeKey === node.key ? 'btn-primary-gradient' : 'btn-light'}`}
+              onClick={() => setActiveKey(node.key)}
+              title="Chapdagi qidiruvdan mahsulot shu bo'limga qo'shiladi"
+            >
+              {activeKey === node.key ? '◉ Faol' : '◉ Shu yerga'}
+            </button>
+          ) : null}
+          <span className="small text-muted">
+            {isGroup ? `${node.children.length} ichki bo'lim` : `${node.items.length} mahsulot`}
+          </span>
+          <div className="ms-auto d-flex gap-1">
+            <button type="button" className="btn btn-sm btn-light py-0" title="Yuqoriga" onClick={() => moveNode(node.key, -1)}><i className="bi bi-arrow-up"></i></button>
+            <button type="button" className="btn btn-sm btn-light py-0" title="Pastga" onClick={() => moveNode(node.key, 1)}><i className="bi bi-arrow-down"></i></button>
+            <button type="button" className="btn btn-sm btn-light text-danger py-0" title="O'chirish" onClick={() => removeSection(node.key)}><i className="bi bi-trash"></i></button>
+          </div>
+        </div>
+        <div className="row g-1 mb-2">
+          <div className="col-6 col-md-3"><Form.Control size="sm" placeholder="Nom UZ*" value={node.nameUz} onChange={(e) => updateSection(node.key, { nameUz: e.target.value })} /></div>
+          <div className="col-6 col-md-3"><Form.Control size="sm" placeholder="RU" value={node.nameRu} onChange={(e) => updateSection(node.key, { nameRu: e.target.value })} /></div>
+          <div className="col-4 col-md-2"><Form.Control size="sm" placeholder="EN" value={node.nameEn} onChange={(e) => updateSection(node.key, { nameEn: e.target.value })} /></div>
+          <div className="col-4 col-md-2"><Form.Control size="sm" placeholder="JA" value={node.nameJa} onChange={(e) => updateSection(node.key, { nameJa: e.target.value })} /></div>
+          {!isGroup ? (
+            <div className="col-4 col-md-2"><Form.Control size="sm" type="number" placeholder={`avto ${total.toLocaleString('ru-RU')}`} value={node.price} onChange={(e) => updateSection(node.key, { price: e.target.value })} /></div>
+          ) : null}
+        </div>
+        {!isGroup ? (
+          <>
+            <div className="small text-muted mb-2" style={{ fontSize: 11 }}>
+              Avto narx: <b>{total.toLocaleString('ru-RU')} so'm</b>. Bo'sh = avto; kamaytirmoqchi bo'lsangiz yozing.
             </div>
-          ))}
-        </div>
-      ) : (
-        <div className="small text-muted mb-2">Mahsulot yo'q — "◉ Shu yerga" ni bosing, so'ng chapdan qidiruvdan qo'shing.</div>
-      )}
-      {level === 1 ? (
-        <div>
-          {node.children.map((child) => renderNode(child, 2))}
-          <button type="button" className="btn btn-sm btn-light" onClick={() => addChildSection(node.key)}><i className="bi bi-plus me-1"></i>Ichki bo'lim</button>
-        </div>
-      ) : null}
-    </div>
-  );
+            {node.items.length > 0 ? (
+              <div className="mb-2">
+                {node.items.map((item, index) => (
+                  <div key={`${item.productType}-${item.productId}-${index}`} className="d-flex align-items-center gap-2 small border rounded-3 p-1 mb-1" style={{ borderColor: !item.available ? '#FCA5A5' : undefined }}>
+                    {item.image ? <img src={item.image} alt="" width={24} height={24} style={{ borderRadius: 4, objectFit: 'cover' }} /> : null}
+                    <span className="text-truncate flex-fill">{item.name}</span>
+                    <div className="input-group input-group-sm" style={{ width: 96 }}>
+                      <button type="button" className="btn btn-light" onClick={() => updateSectionItem(node.key, index, { quantity: Math.max(1, item.quantity - 1) })}>−</button>
+                      <span className="form-control text-center bg-white">{item.quantity}</span>
+                      <button type="button" className="btn btn-light" onClick={() => updateSectionItem(node.key, index, { quantity: item.quantity + 1 })}>+</button>
+                    </div>
+                    <button type="button" className="btn btn-sm btn-light text-danger py-0" onClick={() => removeSectionItem(node.key, index)}><i className="bi bi-x-lg"></i></button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="small text-muted mb-2">Mahsulot yo'q — "◉ Shu yerga" ni bosing, so'ng chapdan qidiruvdan qo'shing.</div>
+            )}
+          </>
+        ) : (
+          <div className="small text-muted mb-2"><i className="bi bi-info-circle me-1"></i>Bu bo'lim ichki bo'limlarga bo'lingan — mahsulotlar faqat ichki bo'limlarga qo'shiladi.</div>
+        )}
+        {level === 1 ? (
+          <div>
+            {node.children.map((child) => renderNode(child, 2))}
+            <button type="button" className="btn btn-sm btn-light" onClick={() => addChildSection(node.key)}><i className="bi bi-plus me-1"></i>Ichki bo'lim</button>
+          </div>
+        ) : null}
+      </div>
+    );
+  };
 
   const updateItem = (index: number, patch: Partial<CollectionItem>) => {
     setItems((current) => current.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item)));
@@ -493,8 +583,17 @@ export default function CollectionsPage() {
     if (form.subtitleUz.trim()) texts.subtitle = form.subtitleUz.trim();
     if (form.descriptionUz.trim()) texts.description = form.descriptionUz.trim();
 
+    // Bo'lim (parent + child) nomlarini ham tarjimaga qo'shamiz — har biriga `section_<key>`.
+    const collectSectionNames = (nodes: SectionNode[]) => {
+      nodes.forEach((n) => {
+        if (n.nameUz.trim()) texts[`section_${n.key}`] = n.nameUz.trim();
+        collectSectionNames(n.children);
+      });
+    };
+    collectSectionNames(sections);
+
     if (Object.keys(texts).length === 0) {
-      window.alert("Avval UZ maydonlarini to'ldiring.");
+      window.alert("Avval UZ maydonlarini (yoki bo'lim nomlarini) to'ldiring.");
       return;
     }
 
@@ -539,6 +638,22 @@ export default function CollectionsPage() {
         });
 
         return next;
+      });
+
+      // Bo'lim nomlari tarjimasini daraxtga (parent + child) qo'llaymiz.
+      setSections((cur) => {
+        const applyNode = (n: SectionNode): SectionNode => {
+          const patch: Partial<SectionNode> = {};
+          targetLocales.forEach((locale) => {
+            const translated = payload.data?.[locale] || {};
+            const val = translated[`section_${n.key}`];
+            if (val) {
+              (patch as any)[`name${locale.charAt(0).toUpperCase()}${locale.slice(1)}`] = val;
+            }
+          });
+          return { ...n, ...patch, children: n.children.map(applyNode) };
+        };
+        return cur.map(applyNode);
       });
     } catch (error) {
       window.alert(error instanceof Error ? error.message : 'AI tarjima vaqtincha ishlamadi.');
@@ -612,6 +727,7 @@ export default function CollectionsPage() {
     payload.append('is_active', form.isActive ? '1' : '0');
     payload.append('festive_effect', form.festiveEffect ? '1' : '0');
     payload.append('custom_total_price', String((form as any).customTotalPrice || ''));
+    payload.append('delivery_price', String((form as any).deliveryPrice || ''));
     payload.append('title_uz', form.titleUz);
     payload.append('title_ru', form.titleRu);
     payload.append('title_en', form.titleEn);
@@ -1054,12 +1170,27 @@ export default function CollectionsPage() {
                     />
                     <div className="form-text">Bundle umumiy narxini admin qo'lda belgilashi mumkin.</div>
                   </div>
+                  <div className="col-md-6">
+                    <Form.Label>Yetkazish narxi</Form.Label>
+                    <Form.Control
+                      type="number"
+                      min={0}
+                      value={(form as any).deliveryPrice}
+                      onChange={(event) => setForm((prev) => ({ ...prev, deliveryPrice: event.target.value }))}
+                      placeholder="Bo'sh yoki 0 = bepul yetkazish"
+                    />
+                    <div className="form-text">
+                      {Number((form as any).deliveryPrice || 0) > 0
+                        ? `Buyurtmaga ${fmt(Number((form as any).deliveryPrice || 0))} so'm qo'shiladi — qayerdan buyurtma qilinishidan qat'i nazar.`
+                        : 'Bepul yetkazish — mijozdan qo\'shimcha haq olinmaydi.'}
+                    </div>
+                  </div>
 
                   <div className="col-12">
                     <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 rounded-4 border px-3 py-2">
                       <div>
                         <div className="fw-semibold">UZ matndan AI tarjima</div>
-                        <div className="small text-muted">Nomi, subtitle va tavsif RU, EN, JA maydonlariga to'ldiriladi.</div>
+                        <div className="small text-muted">Nomi, subtitle, tavsif va bo'lim nomlari RU, EN, JA maydonlariga to'ldiriladi.</div>
                       </div>
                       <div className="d-flex flex-wrap gap-2">
                         {(['ru', 'en', 'ja'] as TranslateLocale[]).map((locale) => (
@@ -1197,8 +1328,10 @@ export default function CollectionsPage() {
 
                   <div className="d-flex align-items-center gap-2 mb-2 small flex-wrap">
                     <span className="text-muted">Qo'shilmoqda:</span>
-                    <span className="chip chip-purple">{findNodeName(activeKey)}</span>
-                    {activeKey !== 'root' ? (
+                    <span className={`chip ${activeKey === 'root' && sections.length > 0 ? 'chip-warning' : 'chip-purple'}`}>
+                      {activeKey === 'root' && sections.length > 0 ? "Bo'lim tanlang!" : findNodeName(activeKey)}
+                    </span>
+                    {activeKey !== 'root' && sections.length === 0 ? (
                       <button type="button" className="btn btn-sm btn-light py-0" onClick={() => setActiveKey('root')}>To'plamga (umumiy)</button>
                     ) : null}
                   </div>
@@ -1230,13 +1363,21 @@ export default function CollectionsPage() {
                     ))}
                   </div>
 
-                  <div className="d-flex justify-content-between align-items-center mb-1">
-                    <div className="fw-semibold small">Tanlangan ({items.length})</div>
-                    {unavailableCount > 0 ? <span className="small text-danger">{unavailableCount} ta tugagan</span> : null}
-                  </div>
-                  <div className="small text-muted mb-2">Tartibni sudrab (drag) o'zgartiring.</div>
+                  {sections.length > 0 ? (
+                    <div className="alert alert-light border py-2 px-3 small mb-2">
+                      <i className="bi bi-info-circle me-1"></i>Bu bo'limli to'plam — mahsulotlar faqat bo'limlar ichida boshqariladi (bo'limsiz mahsulot qo'shilmaydi).
+                    </div>
+                  ) : (
+                    <>
+                      <div className="d-flex justify-content-between align-items-center mb-1">
+                        <div className="fw-semibold small">Tanlangan ({items.length})</div>
+                        {unavailableCount > 0 ? <span className="small text-danger">{unavailableCount} ta tugagan</span> : null}
+                      </div>
+                      <div className="small text-muted mb-2">Tartibni sudrab (drag) o'zgartiring.</div>
+                    </>
+                  )}
 
-                  <div className="border rounded-4 p-2" style={{ maxHeight: 360, overflowY: 'auto' }}>
+                  <div className="border rounded-4 p-2" style={{ maxHeight: 360, overflowY: 'auto', display: sections.length > 0 ? 'none' : undefined }}>
                     {items.length === 0 ? <div className="text-muted small">Hali mahsulot tanlanmagan.</div> : null}
                     {items.map((item, index) => (
                       <div
@@ -1299,7 +1440,30 @@ export default function CollectionsPage() {
                       <div className="fw-semibold small"><i className="bi bi-diagram-3 me-1"></i>Bo'limlar (ixtiyoriy)</div>
                       <button type="button" className="btn btn-sm btn-light" onClick={addSection}><i className="bi bi-plus-lg me-1"></i>Bo'lim</button>
                     </div>
-                    <div className="small text-muted mb-2">Bo'lim qo'shsangiz to'plam sinf/tur bo'yicha bo'linadi (har biriga 4 tilda nom + alohida narx). Bo'lim qo'shmasangiz oddiy to'plam bo'lib qoladi.</div>
+                    <div className="small text-muted mb-2">Bo'lim qo'shsangiz to'plam sinf/tur bo'yicha bo'linadi (har biriga 4 tilda nom + alohida narx). Bo'lim ichida ichki bo'lim bo'lsa — u <b>guruh</b>ga aylanadi (mahsulot faqat ichki bo'limlarga). Bo'lim qo'shmasangiz oddiy to'plam bo'lib qoladi.</div>
+                    {sections.length > 0 ? (() => {
+                      let leaves = 0;
+                      let products = 0;
+                      let autoTotal = 0;
+                      const walk = (n: SectionNode) => {
+                        if (n.children.length > 0) {
+                          n.children.forEach(walk);
+                        } else {
+                          leaves += 1;
+                          products += n.items.length;
+                          autoTotal += sectionItemsTotal(n);
+                        }
+                      };
+                      sections.forEach(walk);
+                      return (
+                        <div className="d-flex flex-wrap gap-2 mb-2">
+                          <span className="chip chip-purple">{sections.length} bosh bo'lim</span>
+                          <span className="chip chip-gray">{leaves} sotiladigan bo'lim</span>
+                          <span className="chip chip-gray">{products} mahsulot</span>
+                          <span className="chip chip-success">avto jami: {autoTotal.toLocaleString('ru-RU')} so'm</span>
+                        </div>
+                      );
+                    })() : null}
                     {sections.length === 0 ? <div className="text-muted small">Bo'lim yo'q. "Bo'lim" tugmasini bosib qo'shing.</div> : null}
                     {sections.map((section) => renderNode(section, 1))}
                   </div>

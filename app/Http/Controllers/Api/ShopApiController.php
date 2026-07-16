@@ -278,6 +278,9 @@ class ShopApiController extends Controller
             'total_price' => $customTotalPrice ?? $baseTotalPrice,
             'is_custom_pricing' => $customTotalPrice !== null,
             'checkout_enabled' => $items->isNotEmpty() && $items->count() === $availableItems->count(),
+            // Yetkazish narxi to'plam darajasida (flat): 0 = bepul, joylashuvdan qat'i nazar.
+            'delivery_price' => max(0, (int) ($collection->delivery_price ?? 0)),
+            'delivery_is_free' => max(0, (int) ($collection->delivery_price ?? 0)) <= 0,
         ];
     }
 
@@ -515,6 +518,8 @@ class ShopApiController extends Controller
             $checkoutRequest->attributes->set('collection_checkout_meta', [
                 'source_collection_id' => (int) $model->id,
                 'collection_discount_amount' => $collectionDiscountAmount,
+                // Flat yetkazish narxi (0 = bepul). Buyurtma jamiga shu qo'shiladi.
+                'collection_delivery_price' => max(0, (int) ($model->delivery_price ?? 0)),
             ]);
 
             /** @var PurchaseController $purchaseController */

@@ -32,6 +32,7 @@ class CuratedCollection extends Model
         'button_bg_color',
         'button_text_color',
         'custom_total_price',
+        'delivery_price',
         'festive_effect',
     ];
 
@@ -39,6 +40,7 @@ class CuratedCollection extends Model
         'is_active' => 'boolean',
         'sort_order' => 'integer',
         'custom_total_price' => 'integer',
+        'delivery_price' => 'integer',
         'festive_effect' => 'boolean',
     ];
 

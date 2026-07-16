@@ -2414,6 +2414,7 @@ PROMPT;
             'sort_order' => ['nullable', 'integer', 'min:0', 'max:100000'],
             'is_active' => ['nullable', 'boolean'],
             'custom_total_price' => ['nullable', 'integer', 'min:1000', 'max:2000000000'],
+            'delivery_price' => ['nullable', 'integer', 'min:0', 'max:2000000000'],
             'title_uz' => ['required', 'string', 'max:255'],
             'title_ru' => ['nullable', 'string', 'max:255'],
             'title_en' => ['nullable', 'string', 'max:255'],
@@ -2442,6 +2443,14 @@ PROMPT;
         $data['custom_total_price'] = filled($request->input('custom_total_price'))
             ? max(1000, (int) $request->input('custom_total_price'))
             : null;
+        // Yetkazish narxi (flat): bo'sh yoki 0 = bepul. Ustun mavjud bo'lsagina saqlaymiz.
+        if (Schema::hasColumn('curated_collections', 'delivery_price')) {
+            $data['delivery_price'] = filled($request->input('delivery_price'))
+                ? max(0, (int) $request->input('delivery_price'))
+                : 0;
+        } else {
+            unset($data['delivery_price']);
+        }
         // Bayramona effekt — ustun mavjud bo'lsagina saqlaymiz (migratsiya kechiksa 500 bermasin)
         if (Schema::hasColumn('curated_collections', 'festive_effect')) {
             $data['festive_effect'] = $request->boolean('festive_effect', true);
@@ -2494,7 +2503,8 @@ PROMPT;
             ]);
         }
 
-        $data['items'] = $items;
+        // Bo'limli to'plamga bo'limsiz (root) mahsulot kiritilmaydi.
+        $data['items'] = $sections !== [] ? [] : $items;
         $data['sections'] = $sections;
 
         return $data;
@@ -2586,10 +2596,12 @@ PROMPT;
                 ]);
             }
 
+            // Ichki bo'limi bor bo'lim — guruh: o'z mahsuloti va narxi bo'lmaydi.
+            $isGroup = $children !== [];
             $sections[] = array_merge($nameData, [
-                'custom_total_price' => $price($node),
+                'custom_total_price' => $isGroup ? null : $price($node),
                 'sort_order' => max(0, (int) data_get($node, 'sort_order', $index)),
-                'items' => $items,
+                'items' => $isGroup ? [] : $items,
                 'children' => $children,
             ]);
         }
@@ -6876,6 +6888,7 @@ PROMPT;
                         'festiveEffect' => (bool) ($collection->festive_effect ?? true),
                         'sortOrder' => (int) ($collection->sort_order ?? 0),
                         'customTotalPrice' => $collection->custom_total_price !== null ? (int) $collection->custom_total_price : null,
+                        'deliveryPrice' => (int) ($collection->delivery_price ?? 0),
                         'titleUz' => $collection->title_uz,
                         'titleRu' => $collection->title_ru,
                         'titleEn' => $collection->title_en,

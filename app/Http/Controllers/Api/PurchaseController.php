@@ -1168,6 +1168,10 @@ class PurchaseController extends Controller
         $collectionCheckoutMeta = $this->collectionCheckoutMeta($request);
         $sourceCollectionId = max(0, (int) ($collectionCheckoutMeta['source_collection_id'] ?? 0));
         $collectionDiscountAmount = max(0, (int) ($collectionCheckoutMeta['collection_discount_amount'] ?? 0));
+        // To'plamga biriktirilgan flat yetkazish narxi (0 = bepul). null = to'plam emas.
+        $collectionDeliveryOverride = array_key_exists('collection_delivery_price', $collectionCheckoutMeta)
+            ? max(0, (int) $collectionCheckoutMeta['collection_delivery_price'])
+            : null;
         $supportsCollectionDiscountAmount = Schema::hasColumn('solds', 'collectionDiscountAmount');
         $supportsSourceCollectionId = Schema::hasColumn('solds', 'source_collection_id');
 
@@ -1311,6 +1315,12 @@ class PurchaseController extends Controller
 
             // ── Yetkazish narxi ───────────────────────────────────
             $deliveryPrice = (int) ($selectedDeliveryOffer['calculated_price'] ?? 0);
+
+            // To'plam buyurtmasi: yetkazish narxi flat (to'plamga biriktirilgan),
+            // joylashuvdan qat'i nazar bir xil; 0 bo'lsa bepul.
+            if ($sourceCollectionId > 0 && $collectionDeliveryOverride !== null) {
+                $deliveryPrice = $collectionDeliveryOverride;
+            }
 
             // ── Cashback ──────────────────────────────────────────
             $amountBeforeCashback = $totalSum + $deliveryPrice;
