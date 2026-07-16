@@ -88,6 +88,7 @@ class ShopApiController extends Controller
                 'items.book.tags',
                 'items.book.seller:id,shop_name,photo,rating,rating_reviews_count,reputation_score,isVerified,status,is_hidden',
             ])
+            ->when(Schema::hasTable('curated_collection_sections'), fn ($query) => $query->with('sections.children'))
             ->where(function ($query) use ($value) {
                 if (is_numeric($value)) {
                     $query->where('id', (int) $value);
@@ -175,41 +176,42 @@ class ShopApiController extends Controller
 
     private function buildCollectionPayload(CuratedCollection $collection, string $locale, $user = null): array
     {
-        $items = collect($collection->items)
-            ->map(function ($item) use ($user) {
-                $book = $item->book;
-                $seller = $book?->seller;
-                $available = $book
-                    && (int) ($book->is_approved ?? 0) === 1
-                    && (int) ($book->is_hidden ?? 0) === 0
-                    && (int) ($seller?->status === 'approved')
-                    && (int) ($seller?->is_hidden ?? 0) === 0
-                    && (int) ($book->count ?? 0) >= (int) ($item->quantity ?? 1);
+        $mapItem = function ($item) use ($user) {
+            $book = $item->book;
+            $seller = $book?->seller;
+            $available = $book
+                && (int) ($book->is_approved ?? 0) === 1
+                && (int) ($book->is_hidden ?? 0) === 0
+                && (int) ($seller?->status === 'approved')
+                && (int) ($seller?->is_hidden ?? 0) === 0
+                && (int) ($book->count ?? 0) >= (int) ($item->quantity ?? 1);
 
-                $price = (int) (($book?->discountPrice ?: $book?->price) ?? 0);
-                $productPayload = $book
-                    ? ProductPayloadFormatter::format($book, [
-                        'user' => $user,
-                        'type' => 'book',
-                        'mode' => 'card',
-                        'category_format' => 'title',
-                    ])
-                    : null;
+            $price = (int) (($book?->discountPrice ?: $book?->price) ?? 0);
+            $productPayload = $book
+                ? ProductPayloadFormatter::format($book, [
+                    'user' => $user,
+                    'type' => 'book',
+                    'mode' => 'card',
+                    'category_format' => 'title',
+                ])
+                : null;
 
-                return [
-                    'id' => (int) $item->id,
-                    'product_id' => (int) $item->product_id,
-                    'product_type' => 'book',
-                    'quantity' => (int) ($item->quantity ?? 1),
-                    'sort_order' => (int) ($item->sort_order ?? 0),
-                    'available' => (bool) $available,
-                    'price' => $price,
-                    'line_total' => $price * (int) ($item->quantity ?? 1),
-                    'stock' => (int) ($book?->count ?? 0),
-                    'product' => $productPayload,
-                ];
-            })
-            ->values();
+            return [
+                'id' => (int) $item->id,
+                'product_id' => (int) $item->product_id,
+                'product_type' => 'book',
+                'section_id' => $item->section_id !== null ? (int) $item->section_id : null,
+                'quantity' => (int) ($item->quantity ?? 1),
+                'sort_order' => (int) ($item->sort_order ?? 0),
+                'available' => (bool) $available,
+                'price' => $price,
+                'line_total' => $price * (int) ($item->quantity ?? 1),
+                'stock' => (int) ($book?->count ?? 0),
+                'product' => $productPayload,
+            ];
+        };
+
+        $items = collect($collection->items)->map($mapItem)->values();
 
         $availableItems = $items->where('available', true)->values();
         $baseTotalPrice = (int) $availableItems->sum('line_total');
@@ -221,6 +223,36 @@ class ShopApiController extends Controller
             ->filter()
             ->unique()
             ->count();
+
+        // ── Bo'limlar (parent/child, har biriga o'z narxi/checkout holati) ──
+        // Faqat detail so'rovida (sections eager-load qilingan) quriladi; ro'yxatda emas.
+        $buildSection = function ($section) use (&$buildSection, $items, $locale) {
+            $sectionItems = $items->where('section_id', (int) $section->id)->values();
+            $availSectionItems = $sectionItems->where('available', true)->values();
+            $sectionBase = (int) $availSectionItems->sum('line_total');
+            $sectionCustom = $section->custom_total_price !== null
+                ? max(1000, (int) $section->custom_total_price)
+                : null;
+
+            return [
+                'id' => (int) $section->id,
+                'name' => $section->localizedName($locale),
+                'sort_order' => (int) ($section->sort_order ?? 0),
+                'custom_total_price' => $sectionCustom,
+                'base_total_price' => $sectionBase,
+                'total_price' => $sectionCustom ?? $sectionBase,
+                'is_custom_pricing' => $sectionCustom !== null,
+                'items' => $sectionItems->all(),
+                'item_count' => $sectionItems->count(),
+                'available_item_count' => $availSectionItems->count(),
+                'checkout_enabled' => $sectionItems->isNotEmpty()
+                    && $sectionItems->count() === $availSectionItems->count(),
+                'children' => collect($section->children ?? [])->map($buildSection)->values()->all(),
+            ];
+        };
+        $sections = $collection->relationLoaded('sections')
+            ? collect($collection->sections)->map($buildSection)->values()->all()
+            : [];
 
         return [
             'id' => $collection->id,
@@ -238,6 +270,8 @@ class ShopApiController extends Controller
             'custom_total_price' => $customTotalPrice,
             'base_total_price' => $baseTotalPrice,
             'items' => $items->all(),
+            'sections' => $sections,
+            'has_sections' => $sections !== [],
             'item_count' => $items->count(),
             'available_item_count' => $availableItems->count(),
             'seller_count' => $sellerCount,
@@ -245,6 +279,27 @@ class ShopApiController extends Controller
             'is_custom_pricing' => $customTotalPrice !== null,
             'checkout_enabled' => $items->isNotEmpty() && $items->count() === $availableItems->count(),
         ];
+    }
+
+    /**
+     * Nested sections (parent/child) ichidan id bo'yicha bo'limni topadi.
+     *
+     * @param  array<int, array<string, mixed>>  $sections
+     * @return array<string, mixed>|null
+     */
+    private function findCollectionSection(array $sections, int $id): ?array
+    {
+        foreach ($sections as $section) {
+            if ((int) ($section['id'] ?? 0) === $id) {
+                return $section;
+            }
+            $child = $this->findCollectionSection((array) ($section['children'] ?? []), $id);
+            if ($child !== null) {
+                return $child;
+            }
+        }
+
+        return null;
     }
 
     private function selectCollectionDeliveryOffer(object $location, int $sellerCount, int $totalAmount): ?array
@@ -354,6 +409,24 @@ class ShopApiController extends Controller
         }
 
         $payload = $this->buildCollectionPayload($model, $this->collectionLocale($request), $user);
+
+        // Bo'lim tanlangan bo'lsa — faqat o'sha (leaf) bo'lim items va narxida checkout.
+        // Downstream mantiq o'zgarmasligi uchun $payload'ni bo'lim konteksti bilan almashtiramiz.
+        $sectionId = $request->filled('section_id') ? (int) $request->input('section_id') : null;
+        if ($sectionId !== null) {
+            $section = $this->findCollectionSection($payload['sections'] ?? [], $sectionId);
+            if (! $section || (int) ($section['item_count'] ?? 0) < 1) {
+                return response()->json(['status' => 'error', 'message' => "Bo'lim topilmadi"], 404);
+            }
+            $section['seller_count'] = collect($section['items'] ?? [])
+                ->where('available', true)
+                ->pluck('product.seller.seller_id')
+                ->filter()
+                ->unique()
+                ->count();
+            $payload = $section;
+        }
+
         if (! ($payload['checkout_enabled'] ?? false)) {
             return response()->json([
                 'status' => 'error',
