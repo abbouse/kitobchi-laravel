@@ -22,6 +22,7 @@ class CourierTaskOrchestratorService
     public function __construct(
         private readonly CourierCashOnDeliveryCapacityService $codCapacityService,
         private readonly CourierTaskPayoutService $payoutService,
+        private readonly OrderRealtimeService $orderRealtimeService,
     ) {}
 
     public function ensureTasksForOrder(Sold $order): Collection
@@ -346,6 +347,22 @@ class CourierTaskOrchestratorService
                         'updated_at' => now(),
                     ]);
             });
+
+            // Kuryer ilovasiga darhol signal. Buni qo'shmasak, hub o'zi
+            // "qabul qildim" bosganda kuryerga hech qanday xabar bormaydi va
+            // buyurtma uning ekranida "Yo'lda" bo'lib qotib qoladi.
+            $courierOrder = CourierOrder::query()
+                ->where('order_id', $task->order_id)
+                ->where('courier_id', $task->courier_id)
+                ->latest('updated_at')
+                ->first();
+
+            if ($courierOrder) {
+                $this->orderRealtimeService->broadcastCourierOrderUpdated(
+                    $courierOrder,
+                    'courier_order.hub_delivered'
+                );
+            }
         }
     }
 
@@ -381,7 +398,7 @@ class CourierTaskOrchestratorService
             feeAmount: (int) ($order->deliveryPrice ?? 0),
         );
 
-        CourierOrder::query()->firstOrCreate(
+        $courierOrder = CourierOrder::query()->firstOrCreate(
             [
                 'order_id' => $order->id,
                 'courier_id' => null,
@@ -395,6 +412,16 @@ class CourierTaskOrchestratorService
                 'courierBonus' => (int) $task->bonus_amount,
             ]
         );
+
+        // Yangi qator yaratilsa, CourierOrderObserver o'zi xabar beradi.
+        // Ammo eski egasiz `pending` qator qayta ishlatilsa observer ishlamaydi
+        // va kuryerlar yangi hub->mijoz buyurtmasini ko'rmay qoladi.
+        if (! $courierOrder->wasRecentlyCreated && empty($courierOrder->courier_id)) {
+            $this->orderRealtimeService->broadcastCourierOrderUpdated(
+                $courierOrder,
+                'courier_order.available'
+            );
+        }
 
         return $task;
     }
