@@ -105,8 +105,8 @@ class BookClubController extends Controller
         $statIds   = $posts->where('product_type', 'stationery')->pluck('product_id')->filter()->unique();
         $orderIds  = $posts->where('product_type', 'order')->pluck('product_id')->filter()->unique();
 
-        $books       = Books::with(['category', 'tags', 'seller'])->whereIn('id', $bookIds)->get()->keyBy('id');
-        $stationeries = Stationery::with(['category', 'tags', 'seller'])->whereIn('id', $statIds)->get()->keyBy('id');
+        $books       = Books::with(['category', 'tags', 'seller'])->withAvailableTotal()->whereIn('id', $bookIds)->get()->keyBy('id');
+        $stationeries = Stationery::with(['category', 'tags', 'seller'])->withAvailableTotal()->whereIn('id', $statIds)->get()->keyBy('id');
         // Order uchun faqat id, amount, items, status kerak
         $orders     = $orderIds->isNotEmpty()
             ? Sold::whereIn('id', $orderIds)->get(['id', 'amount', 'items', 'status'])->keyBy('id')

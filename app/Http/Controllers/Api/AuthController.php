@@ -685,29 +685,26 @@ class AuthController extends Controller
             $book = Books::where('id', $productId)
                 ->where('is_hidden', 0)
                 ->where('is_approved', 1)
-                ->where('count', '>', 0)
-                ->value('count');
+                ->inStock()
+                ->first(['id']);
 
-            return (int)($book ?? 0);
+            return (int)($book?->count ?? 0);
         }
 
         // Stationery
         $stat = Stationery::where('id', $productId)
             ->where('is_hidden', 0)
             ->where('is_approved', 1)
-            ->where('stock', '>', 0)
-            ->first(['id', 'stock']);
+            ->inStock()
+            ->first(['id']);
 
         if (!$stat) return 0;
 
         // Variant bo'lsa — variant stock
         if ($variantId) {
-            $variantStock = $stat->variants()
-                ->where('id', $variantId)
-                ->where('stock', '>', 0)
-                ->value('stock');
+            $variant = $stat->variants()->where('id', $variantId)->first(['id', 'product_id']);
 
-            return (int)($variantStock ?? 0);
+            return (int)($variant?->stock ?? 0);
         }
 
         return (int)($stat->stock ?? 0);

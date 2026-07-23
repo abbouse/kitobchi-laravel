@@ -23,6 +23,51 @@ class SharedCartController extends Controller
         ], $code);
     }
 
+    /**
+     * N+1 OLDINI OLISH: item ro'yxatidagi barcha mahsulot/variantlarni BITTA
+     * so'rovda (tur bo'yicha) yuklaydi. Avval har item uchun Books::find /
+     * Stationery::find chaqirilardi (N+1). Natija bir xil — faqat so'rov soni kamayadi.
+     *
+     * @return array{book: \Illuminate\Support\Collection, stationery: \Illuminate\Support\Collection, variant: \Illuminate\Support\Collection}
+     */
+    private function preloadItemProducts(iterable $items, string $idKey, string $typeKey, string $variantKey): array
+    {
+        $bookIds = [];
+        $statIds = [];
+        $variantIds = [];
+
+        foreach ($items as $it) {
+            $pid = $it[$idKey] ?? null;
+            if (! $pid) {
+                continue;
+            }
+            $type = $it[$typeKey] ?? 'book';
+            if ($type === 'gift') {
+                continue;
+            }
+            if ($type === 'book') {
+                $bookIds[] = $pid;
+            } else {
+                $statIds[] = $pid;
+            }
+            if (! empty($it[$variantKey])) {
+                $variantIds[] = $it[$variantKey];
+            }
+        }
+
+        return [
+            'book' => $bookIds
+                ? Books::withAvailableTotal()->whereIn('id', array_unique($bookIds))->get()->keyBy('id')
+                : collect(),
+            'stationery' => $statIds
+                ? Stationery::withAvailableTotal()->whereIn('id', array_unique($statIds))->get()->keyBy('id')
+                : collect(),
+            'variant' => $variantIds
+                ? StationeryVariant::withAvailableTotal()->whereIn('id', array_unique($variantIds))->get()->keyBy('id')
+                : collect(),
+        ];
+    }
+
     // =========================================================================
     // CREATE
     // =========================================================================
@@ -122,6 +167,9 @@ class SharedCartController extends Controller
 
             $orderId = $order->id;
 
+            // Barcha mahsulot/variantlarni bitta so'rovda oldindan yuklaymiz (N+1 yo'q)
+            $preloaded = $this->preloadItemProducts($order->items, 'item_id', 'type', 'variant_id');
+
             foreach ($order->items as $orderItem) {
 
                 // ❗ GIFT DOIM KESILADI
@@ -134,17 +182,18 @@ class SharedCartController extends Controller
                 $productType =
                     $orderItem['type'] ?? 'book';
 
-                $product =
-                    $productType === 'book'
-                    ? Books::find($productId)
-                    : Stationery::find($productId);
+                $product = $productId
+                    ? ($productType === 'book'
+                        ? $preloaded['book']->get($productId)
+                        : $preloaded['stationery']->get($productId))
+                    : null;
 
                 $variantId =
                     $orderItem['variant_id'] ?? null;
 
                 $variant =
                     $variantId
-                    ? StationeryVariant::find($variantId)
+                    ? $preloaded['variant']->get($variantId)
                     : null;
 
                 $currentStock =
@@ -268,6 +317,9 @@ class SharedCartController extends Controller
 
         $shared->increment('view_count');
 
+        // Barcha mahsulot/variantlarni bitta so'rovda oldindan yuklaymiz (N+1 yo'q)
+        $preloaded = $this->preloadItemProducts($shared->items, 'product_id', 'product_type', 'variant_id');
+
         $items = collect($shared->items)
 
             // ❗ GIFT FILTER
@@ -275,7 +327,7 @@ class SharedCartController extends Controller
                 return ($item['product_type'] ?? '') !== 'gift';
             })
 
-            ->map(function ($item) {
+            ->map(function ($item) use ($preloaded) {
 
                 $productId =
                     $item['product_id'] ?? null;
@@ -288,14 +340,13 @@ class SharedCartController extends Controller
 
                 if (!$productId) return $item;
 
-                $product =
-                    $productType === 'book'
-                    ? Books::find($productId)
-                    : Stationery::find($productId);
+                $product = $productType === 'book'
+                    ? $preloaded['book']->get($productId)
+                    : $preloaded['stationery']->get($productId);
 
                 $variant =
                     $variantId
-                    ? StationeryVariant::find($variantId)
+                    ? $preloaded['variant']->get($variantId)
                     : null;
 
                 $currentStock =
@@ -375,8 +426,11 @@ class SharedCartController extends Controller
  
         $shared->increment('view_count');
  
+        // Barcha mahsulot/variantlarni bitta so'rovda oldindan yuklaymiz (N+1 yo'q)
+        $preloaded = $this->preloadItemProducts($shared->items, 'product_id', 'product_type', 'variant_id');
+
         // Har bir item uchun hozirgi stock va narxni yangilaymiz
-        $items = collect($shared->items)->map(function ($item) {
+        $items = collect($shared->items)->map(function ($item) use ($preloaded) {
             $productId   = $item['product_id'] ?? null;
             $productType = $item['product_type'] ?? 'book';
             $variantId   = $item['variant_id'] ?? null;
@@ -384,10 +438,10 @@ class SharedCartController extends Controller
             if (!$productId) return $item;
  
             $product = $productType === 'book'
-                ? Books::find($productId)
-                : Stationery::find($productId);
- 
-            $variant = $variantId ? StationeryVariant::find($variantId) : null;
+                ? $preloaded['book']->get($productId)
+                : $preloaded['stationery']->get($productId);
+
+            $variant = $variantId ? $preloaded['variant']->get($variantId) : null;
  
             $currentStock = $variant
                 ? ($variant->stock ?? 0)

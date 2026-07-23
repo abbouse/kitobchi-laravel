@@ -33,8 +33,10 @@ class CourierOrderItem extends Model
 
     public function product()
     {
+        // withAvailableTotal — `count` accessori N+1 qilmasin (stock subselect bilan keladi)
         return $this->belongsTo(Books::class, 'product_id')
-        ->select('id', 'name', 'author', 'seller_id', 'images');
+        ->select('id', 'name', 'author', 'seller_id', 'images')
+        ->withAvailableTotal();
     }
     public function orderStatus()
     {

@@ -150,28 +150,30 @@ public function lastProductsBS(Request $request)
     // COUNTS (paginationdan mustaqil, serverdagi aniq sonlar)
     $booksCounts = [
         'all' => (clone $bookBase)->count(),
-        'active' => (clone $bookBase)->where('is_approved', 1)->where('count', '>', 3)->count(),
-        'out_stock' => (clone $bookBase)->where('count', '<=', 0)->count(),
-        'low_stock' => (clone $bookBase)->where('is_approved', 1)->whereBetween('count', [1, 3])->count(),
+        'active' => (clone $bookBase)->where('is_approved', 1)->whereStockAvailable('>', 3)->count(),
+        'out_stock' => (clone $bookBase)->whereStockAvailable('<=', 0)->count(),
+        'low_stock' => (clone $bookBase)->where('is_approved', 1)->stockBetween(1, 3)->count(),
         'pending' => (clone $bookBase)->where(fn ($query) => $query->whereNull('is_approved')->orWhere('is_approved', 0))->count(),
         'rejected' => (clone $bookBase)->where('is_approved', 2)->count(),
     ];
 
     $stationeryCounts = [
         'all' => (clone $stationeryBase)->count(),
-        'active' => (clone $stationeryBase)->where('is_approved', 1)->where('stock', '>', 3)->count(),
-        'out_stock' => (clone $stationeryBase)->where('stock', '<=', 0)->count(),
-        'low_stock' => (clone $stationeryBase)->where('is_approved', 1)->whereBetween('stock', [1, 3])->count(),
+        'active' => (clone $stationeryBase)->where('is_approved', 1)->whereStockAvailable('>', 3)->count(),
+        'out_stock' => (clone $stationeryBase)->whereStockAvailable('<=', 0)->count(),
+        'low_stock' => (clone $stationeryBase)->where('is_approved', 1)->stockBetween(1, 3)->count(),
         'pending' => (clone $stationeryBase)->where(fn ($query) => $query->whereNull('is_approved')->orWhere('is_approved', 0))->count(),
         'rejected' => (clone $stationeryBase)->where('is_approved', 2)->count(),
     ];
 
     // Asosiy querylar
     $booksQuery = Seller::find($storeSellerId)->books()
+        ->withAvailableTotal()
         ->where('is_hidden', false)
         ->with(['category', 'tags', 'publisher:id,name']);
 
     $stationeryQuery = Seller::find($storeSellerId)->stationeries()
+        ->withAvailableTotal()
         ->where('is_hidden', false)
         ->with(['category', 'variants', 'tags']);
 
@@ -196,11 +198,11 @@ public function lastProductsBS(Request $request)
 
     // Books filter
     if ($booksFilter === 'active') {
-        $booksQuery->where('is_approved', 1)->where('count', '>', 3);
+        $booksQuery->where('is_approved', 1)->whereStockAvailable('>', 3);
     } elseif ($booksFilter === 'out_stock') {
-        $booksQuery->where('count', '<=', 0);
+        $booksQuery->whereStockAvailable('<=', 0);
     } elseif ($booksFilter === 'low_stock') {
-        $booksQuery->where('is_approved', 1)->whereBetween('count', [1, 3]);
+        $booksQuery->where('is_approved', 1)->stockBetween(1, 3);
     } elseif ($booksFilter === 'pending') {
         $booksQuery->where(fn ($query) => $query->whereNull('is_approved')->orWhere('is_approved', 0));
     } elseif ($booksFilter === 'rejected') {
@@ -209,11 +211,11 @@ public function lastProductsBS(Request $request)
 
     // Stationery filter
     if ($stationeryFilter === 'active') {
-        $stationeryQuery->where('is_approved', 1)->where('stock', '>', 3);
+        $stationeryQuery->where('is_approved', 1)->whereStockAvailable('>', 3);
     } elseif ($stationeryFilter === 'out_stock') {
-        $stationeryQuery->where('stock', '<=', 0);
+        $stationeryQuery->whereStockAvailable('<=', 0);
     } elseif ($stationeryFilter === 'low_stock') {
-        $stationeryQuery->where('is_approved', 1)->whereBetween('stock', [1, 3]);
+        $stationeryQuery->where('is_approved', 1)->stockBetween(1, 3);
     } elseif ($stationeryFilter === 'pending') {
         $stationeryQuery->where(fn ($query) => $query->whereNull('is_approved')->orWhere('is_approved', 0));
     } elseif ($stationeryFilter === 'rejected') {
@@ -410,12 +412,19 @@ public function createStationery(Request $request)
         'material'       => $request->material,
         'price'          => $request->price,
         'discount_price' => $request->discountPrice ?? 0,
-        'stock'          => $request->stock,
         'description'    => $request->description,
         'images'         => $imagePaths,
         'is_approved'    => 0,
     ]);
     $this->assignGeneratedArtikul($stationery, 'stationery');
+
+    // FILIAL STOCK: kirim hodim filialiga (bo'lmasa asosiy filialga)
+    app(\App\Services\BranchStockService::class)->setTotalFromLegacy(
+        'stationery', (int) $stationery->id, 0, (int) $storeSellerId,
+        (int) $request->stock,
+        $seller->seller_location_id ? (int) $seller->seller_location_id : null,
+        ['actor_type' => 'seller', 'actor_id' => $seller->id, 'note' => 'Mahsulot yaratildi']
+    );
 
     // 5. Taglarni bog'lash
     if ($request->filled('tag_ids')) {
@@ -581,6 +590,14 @@ $variantsToDelete = array_diff($existingVariants, $incomingVariantIds);
         $variant->delete();
     });
 
+// O'chirilgan variantlarning filial stock qatorlarini tozalash
+if (!empty($variantsToDelete)) {
+    \App\Models\BranchStock::where('product_type', 'stationery')
+        ->where('product_id', $stationery->id)
+        ->whereIn('variant_id', $variantsToDelete)
+        ->delete();
+}
+
 
     // === VARIANTLARNI YANGILASH / YARATISH ===
     if ($request->has('variant_colors')) {
@@ -602,8 +619,15 @@ $variantsToDelete = array_diff($existingVariants, $incomingVariantIds);
                 if ($variant) {
                     $updateData = [
                         'color_name' => $vData['color_name'],
-                        'stock' => $vData['stock'], // YANGI: stock yangilanadi
                     ];
+
+                    // FILIAL STOCK: variant stock service orqali
+                    app(\App\Services\BranchStockService::class)->setTotalFromLegacy(
+                        'stationery', (int) $stationery->id, (int) $variant->id, (int) $storeSellerId,
+                        (int) ($vData['stock'] ?? 0),
+                        $seller->seller_location_id ? (int) $seller->seller_location_id : null,
+                        ['actor_type' => 'seller', 'actor_id' => $seller->id, 'note' => 'Variant tahriri']
+                    );
 
                     if ($variantImagePath) {
                         if ($variant->image_path) {
@@ -617,11 +641,17 @@ $variantsToDelete = array_diff($existingVariants, $incomingVariantIds);
                 }
             } else {
                 // Yangi variant yaratish
-                $stationery->variants()->create([
+                $newVariant = $stationery->variants()->create([
                     'color_name' => $vData['color_name'],
-                    'stock' => $vData['stock'], // YANGI: stock saqlanadi
                     'image_path' => $variantImagePath,
                 ]);
+
+                app(\App\Services\BranchStockService::class)->setTotalFromLegacy(
+                    'stationery', (int) $stationery->id, (int) $newVariant->id, (int) $storeSellerId,
+                    (int) ($vData['stock'] ?? 0),
+                    $seller->seller_location_id ? (int) $seller->seller_location_id : null,
+                    ['actor_type' => 'seller', 'actor_id' => $seller->id, 'note' => 'Variant yaratildi']
+                );
             }
         }
     }
@@ -639,12 +669,19 @@ $variantsToDelete = array_diff($existingVariants, $incomingVariantIds);
         'material' => $request->material ?? $stationery->material,
         'price' => $request->price,
         'discount_price' => $request->discountPrice ?? 0,
-        'stock' => $request->stock,
         'description' => $request->description,
         'images' => $finalImages,
         'category_id' => $request->category_id,
         'is_approved' => 0,
     ]);
+
+    // FILIAL STOCK: mahsulot darajasidagi stock service orqali
+    app(\App\Services\BranchStockService::class)->setTotalFromLegacy(
+        'stationery', (int) $stationery->id, 0, (int) $storeSellerId,
+        (int) $request->stock,
+        $seller->seller_location_id ? (int) $seller->seller_location_id : null,
+        ['actor_type' => 'seller', 'actor_id' => $seller->id, 'note' => 'Mahsulot tahriri']
+    );
 
     $this->productModerationState->markPending($stationery, 'seller_edited');
     $this->writeLog($seller, 'Kanselyariya mahsulotini tahrirladi (AI moderatsiyaga yuborildi)', $stationery->name);
@@ -845,7 +882,6 @@ public function updateProductStatus(Request $request)
             'coverType' => $request->input('coverType'),
             'price' => $request->input('price'),
             'discountPrice' => $request->input('discountPrice', 0),
-            'count' => $request->input('count'),
             'description' => $request->input('description'),
             'images' => $imagePaths,
             'year' => 2025,
@@ -855,6 +891,14 @@ public function updateProductStatus(Request $request)
             'is_approved' => 0,
         ]);
         $this->assignGeneratedArtikul($book, 'book');
+
+        // FILIAL STOCK: kirim hodim filialiga (bo'lmasa asosiy filialga)
+        app(\App\Services\BranchStockService::class)->setTotalFromLegacy(
+            'book', (int) $book->id, 0, (int) $storeSellerId,
+            (int) $request->input('count'),
+            $seller->seller_location_id ? (int) $seller->seller_location_id : null,
+            ['actor_type' => 'seller', 'actor_id' => $seller->id, 'note' => 'Mahsulot yaratildi']
+        );
 
         if ($request->has('tag_ids')) {
             $book->tags()->attach($request->input('tag_ids'));
@@ -1013,12 +1057,19 @@ public function updateProductStatus(Request $request)
         'price' => $request->price,
         'discountPrice' => $request->discountPrice ?? 0,
         'discountExpiresAt' => $request->filled('discountExpiresAt') ? $request->discountExpiresAt : null,
-        'count' => $request->count,
         'description' => $request->description,
         'images' => $finalImages,
         'category_id' => $request->category_id,
         'is_approved' => 0,
     ]);
+    // FILIAL STOCK: jami stock yangi songa keltiriladi (farq hodim filialiga)
+    app(\App\Services\BranchStockService::class)->setTotalFromLegacy(
+        'book', (int) $product->id, 0, (int) $storeSellerId,
+        (int) $request->count,
+        $seller->seller_location_id ? (int) $seller->seller_location_id : null,
+        ['actor_type' => 'seller', 'actor_id' => $seller->id, 'note' => 'Mahsulot tahriri']
+    );
+
     $product->tags()->sync($request->input('tag_ids', []));
     $this->productModerationState->markPending($product, 'seller_edited');
     $this->writeLog($seller, 'Mahsulot ma\'lumotlarini yangiladi (AI moderatsiyaga yuborildi)', $product->name);

@@ -665,10 +665,16 @@ class UserController extends Controller
         $favourites = FavouriteProducts::where('user_id', $user->id)
             ->with([
                 'product.seller',
+                'product.category',  // N+1 oldini oladi (formatCategory uchun)
                 'variant',           // tanlangan variant (morphTo yoki belongsTo)
             ])
             ->latest()
             ->paginate(20);
+
+        // Stock accessorlari uchun jami qoldiqni bitta so'rovda iliqlaymiz
+        $branchStock = app(\App\Services\BranchStockService::class);
+        $branchStock->warmProducts($favourites->getCollection()->map(fn ($i) => $i->product)->filter());
+        $branchStock->warmVariants($favourites->getCollection()->map(fn ($i) => $i->variant)->filter());
 
         $result = $favourites->getCollection()
             ->map(function ($item) use ($user) {

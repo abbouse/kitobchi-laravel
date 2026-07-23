@@ -445,8 +445,8 @@ class MysteryBoxService
             ->where('is_hidden', 0)
             ->where('is_approved', 1)
             ->where('status', true)
-            ->where('count', '>', 0)
-            ->get(['id', 'name', 'author', 'price', 'count', 'totalSales']);
+            ->inStock()
+            ->get(['id', 'name', 'author', 'price', 'totalSales']);
 
         if ($books->isEmpty()) {
             return collect();

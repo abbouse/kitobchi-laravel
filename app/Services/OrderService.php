@@ -40,34 +40,37 @@ class OrderService
     //  STOCK KAMAYTIRISH
     // =========================================================================
 
+    /**
+     * FILIAL-DARAJALI: stock endi branch_stocks'da. Buyurtma pickup filiali
+     * ($data['location_id']) birinchi kamayadi, yetmasa boshqa filiallardan.
+     */
     public function decrementStock(array $data): void
     {
         $product = $data['product'];
         $variant = $data['variant'] ?? null;
-        $quantity = $data['quantity'];
+        $quantity = (int) $data['quantity'];
+        $locationId = isset($data['location_id']) ? (int) $data['location_id'] : null;
+        $ctx = [
+            'reason' => 'sale',
+            'ref_type' => 'order',
+            'ref_id' => $data['order_id'] ?? null,
+        ];
+
+        $branchStock = app(BranchStockService::class);
 
         if ($variant) {
-            $variant->decrement('stock', $quantity);
-            if ($variant->stock < 0) {
-                $variant->stock = 0;
-                $variant->save();
-            }
+            $branchStock->decrementForSale(
+                'stationery', (int) $variant->product_id, (int) $variant->id,
+                $quantity, $locationId, $ctx
+            );
 
             return;
         }
 
         if ($product instanceof Books) {
-            $product->decrement('count', $quantity);
-            if ($product->count < 0) {
-                $product->count = 0;
-                $product->save();
-            }
+            $branchStock->decrementForSale('book', (int) $product->id, 0, $quantity, $locationId, $ctx);
         } elseif ($product instanceof Stationery) {
-            $product->decrement('stock', $quantity);
-            if ($product->stock < 0) {
-                $product->stock = 0;
-                $product->save();
-            }
+            $branchStock->decrementForSale('stationery', (int) $product->id, 0, $quantity, $locationId, $ctx);
         }
     }
 
@@ -75,39 +78,29 @@ class OrderService
     //  STOCK QAYTARISH
     // =========================================================================
 
+    /**
+     * FILIAL-DARAJALI: bekor/qaytarishda stock filialga qaytadi.
+     * $item['location_id'] berilsa o'sha filialga, aks holda asosiy filialga.
+     */
     public function incrementStock(array $item): void
     {
         $type = $item['type'] ?? 'book';
-        $productId = $item['item_id'];
-        $variantId = $item['variant_id'] ?? null;
-        $quantity = $item['count_item'];
+        $productId = (int) $item['item_id'];
+        $variantId = (int) ($item['variant_id'] ?? 0);
+        $quantity = (int) $item['count_item'];
+        $locationId = isset($item['location_id']) ? (int) $item['location_id'] : null;
+        $ctx = [
+            'reason' => 'cancel_return',
+            'ref_type' => 'order',
+            'ref_id' => $item['order_id'] ?? null,
+        ];
+
+        $branchStock = app(BranchStockService::class);
 
         if ($type === 'book') {
-            $product = Books::query()->lockForUpdate()->find($productId);
-            if (! $product) {
-                return;
-            }
-
-            $product->count = (int) ($product->count ?? 0) + (int) $quantity;
-            $product->save();
+            $branchStock->incrementForReturn('book', $productId, 0, $quantity, $locationId, $ctx);
         } elseif ($type === 'stationery') {
-            if ($variantId) {
-                $variant = StationeryVariant::query()->lockForUpdate()->find($variantId);
-                if (! $variant) {
-                    return;
-                }
-
-                $variant->stock = (int) ($variant->stock ?? 0) + (int) $quantity;
-                $variant->save();
-            } else {
-                $product = Stationery::query()->lockForUpdate()->find($productId);
-                if (! $product) {
-                    return;
-                }
-
-                $product->stock = (int) ($product->stock ?? 0) + (int) $quantity;
-                $product->save();
-            }
+            $branchStock->incrementForReturn('stationery', $productId, $variantId, $quantity, $locationId, $ctx);
         }
     }
 
@@ -580,7 +573,10 @@ class OrderService
 
             // ── Gift stoki qaytarish ──────────────────────────────────────
             if ($order->gift) {
-                Gifts::where('id', $order->gift)->increment('stock', 1);
+                app(BranchStockService::class)->incrementForReturn(
+                    'gift', (int) $order->gift, 0, 1, null,
+                    ['ref_type' => 'sold', 'ref_id' => $order->id]
+                );
                 $gift = Gifts::find($order->gift);
                 if ($gift) {
                     $gift->totalSales = max(0, $gift->totalSales - 1);

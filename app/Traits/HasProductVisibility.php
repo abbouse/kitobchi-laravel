@@ -49,6 +49,9 @@ trait HasProductVisibility
         $q->with($with);
 
         return $q
+            // FILIAL STOCK: `count` accessor uchun jami mavjud stockni bitta
+            // subselect bilan yuklaydi (N+1 oldini oladi)
+            ->withAvailableTotal()
             ->where('status', true)
             ->where('is_approved', 1)
             ->where('is_hidden', false)
@@ -67,6 +70,8 @@ trait HasProductVisibility
         }
 
         return $q
+            // FILIAL STOCK: `stock` accessor uchun subselect (N+1 oldini oladi)
+            ->withAvailableTotal()
             ->where('status', true)
             ->where('is_approved', 1)
             ->where('is_hidden', false)

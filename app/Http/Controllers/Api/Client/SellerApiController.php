@@ -130,8 +130,10 @@ class SellerApiController extends Controller
                 $book = $seller->books()->whereIsbn($canonical)->first();
                 if ($book) {
                     $new = $hasStock ? (int) $data['stock'] : max(0, (int) $book->count + (int) $data['delta']);
-                    $book->count = $new;
-                    $book->save();
+                    app(\App\Services\BranchStockService::class)->setTotalFromLegacy(
+                        'book', (int) $book->id, 0, $sellerId, $new, null,
+                        ['actor_type' => 'api_client', 'note' => 'API stock update']
+                    );
 
                     return [$this->ok('book', $book->id, $book->name, $new), 200];
                 }
@@ -150,8 +152,10 @@ class SellerApiController extends Controller
                 $stationery = $seller->stationeries()->where('barcode', $normalized)->first();
                 if ($stationery) {
                     $new = $hasStock ? (int) $data['stock'] : max(0, (int) $stationery->stock + (int) $data['delta']);
-                    $stationery->stock = $new;
-                    $stationery->save();
+                    app(\App\Services\BranchStockService::class)->setTotalFromLegacy(
+                        'stationery', (int) $stationery->id, 0, $sellerId, $new, null,
+                        ['actor_type' => 'api_client', 'note' => 'API stock update']
+                    );
 
                     return [$this->ok('stationery', $stationery->id, $stationery->name, $new), 200];
                 }

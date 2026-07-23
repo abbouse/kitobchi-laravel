@@ -987,6 +987,16 @@ class AdminController extends Controller
         $data['author'] = $author?->name ?: trim((string) $request->input('author'));
 
         $book->update($data);
+
+        // FILIAL STOCK: jami stock yangi songa keltiriladi
+        if ($book->seller_id) {
+            app(\App\Services\BranchStockService::class)->setTotalFromLegacy(
+                'book', (int) $book->id, 0, (int) $book->seller_id,
+                (int) $request->input('count'), null,
+                ['actor_type' => 'admin', 'note' => 'Admin: kitob tahriri']
+            );
+        }
+
         app(ProductModerationStateService::class)->markPending($book, 'admin_edited');
 
         return back()->with('success', 'Kitob yangilandi.');
@@ -1026,6 +1036,16 @@ class AdminController extends Controller
         $data['is_hidden'] = $request->boolean('is_hidden');
 
         $stationery->update($data);
+
+        // FILIAL STOCK: jami stock yangi songa keltiriladi
+        if ($stationery->seller_id) {
+            app(\App\Services\BranchStockService::class)->setTotalFromLegacy(
+                'stationery', (int) $stationery->id, 0, (int) $stationery->seller_id,
+                (int) $request->input('stock'), null,
+                ['actor_type' => 'admin', 'note' => 'Admin: kanstovar tahriri']
+            );
+        }
+
         $this->syncStationeryVariants($request, $stationery);
         app(ProductModerationStateService::class)->markPending($stationery, 'admin_edited');
 
@@ -1317,7 +1337,7 @@ class AdminController extends Controller
             ->where('status', true)
             ->where('is_approved', 1)
             ->where('is_hidden', 0)
-            ->where('count', '>', 0)
+            ->inStock()
             ->whereHas('seller', fn ($sellerQuery) => $sellerQuery
                 ->where('status', 'approved')
                 ->where('is_hidden', 0))
@@ -1334,7 +1354,7 @@ class AdminController extends Controller
             })
             ->latest('updated_at')
             ->limit(20)
-            ->get(['id', 'name', 'author', 'artikul', 'price', 'discountPrice', 'count', 'seller_id', 'images'])
+            ->get(['id', 'name', 'author', 'artikul', 'price', 'discountPrice', 'seller_id', 'images'])
             ->map(fn (Books $book) => [
                 'id' => $book->id,
                 'productType' => 'book',
@@ -1361,8 +1381,7 @@ class AdminController extends Controller
             ->where('is_approved', 1)
             ->where('is_hidden', 0)
             ->where(function ($query) {
-                $query->where('stock', '>', 0)
-                    ->orWhereHas('variants', fn ($variantQuery) => $variantQuery->where('stock', '>', 0));
+                $query->inStock();
             })
             ->whereHas('seller', fn ($sellerQuery) => $sellerQuery
                 ->where('status', 'approved')
@@ -1380,7 +1399,7 @@ class AdminController extends Controller
             })
             ->latest('updated_at')
             ->limit(20)
-            ->get(['id', 'name', 'artikul', 'price', 'discount_price', 'stock', 'seller_id', 'images'])
+            ->get(['id', 'name', 'artikul', 'price', 'discount_price', 'seller_id', 'images'])
             ->map(function (Stationery $item) {
                 $variantStock = (int) $item->variants->sum(fn ($variant) => (int) ($variant->stock ?? 0));
                 $stock = max((int) ($item->stock ?? 0), $variantStock);
@@ -4427,21 +4446,33 @@ PROMPT;
             $variant->fill([
                 'product_id' => $item->id,
                 'color_name' => $name,
-                'stock' => $stock,
                 'image_path' => $imagePath ?: null,
             ])->save();
             $seen[] = $variant->id;
+
+            // FILIAL STOCK: variant stock service orqali
+            if ($item->seller_id) {
+                app(\App\Services\BranchStockService::class)->setTotalFromLegacy(
+                    'stationery', (int) $item->id, (int) $variant->id, (int) $item->seller_id,
+                    $stock, null,
+                    ['actor_type' => 'admin', 'note' => 'Admin: variant stock']
+                );
+            }
         }
 
         StationeryVariant::query()
             ->where('product_id', $item->id)
             ->when($seen !== [], fn ($query) => $query->whereNotIn('id', $seen))
             ->get()
-            ->each(function (StationeryVariant $variant) {
+            ->each(function (StationeryVariant $variant) use ($item) {
                 if ($variant->image_path && ! str_starts_with($variant->image_path, 'http')) {
                     Storage::disk('public')->delete($variant->image_path);
                     ProductImageVariantGenerator::deleteForPath($variant->image_path);
                 }
+                \App\Models\BranchStock::where('product_type', 'stationery')
+                    ->where('product_id', $item->id)
+                    ->where('variant_id', $variant->id)
+                    ->delete();
                 $variant->delete();
             });
     }

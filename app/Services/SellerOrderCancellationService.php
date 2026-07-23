@@ -999,71 +999,63 @@ class SellerOrderCancellationService
         return (int) ($row['variant_id'] ?? 0) === (int) ($item->variant_id ?? 0);
     }
 
+    /**
+     * Seller "mahsulot yo'q" deganda — jami stockni 0 ga tushirish
+     * (filial-darajali: barcha filiallardan drain qilinadi, ledger'ga yoziladi).
+     */
     private function zeroStockForItem(SellerOrderItem $item): void
     {
-        if ($item->type === 'book') {
-            DB::table('books')->where('id', $item->product_id)->update([
-                'count' => 0,
-                'updated_at' => now(),
-            ]);
-
+        if (! in_array($item->type, ['book', 'stationery'], true)) {
             return;
         }
 
-        if ($item->type === 'stationery') {
-            if ($item->variant_id) {
-                DB::table('stationery_variants')->where('id', $item->variant_id)->update([
-                    'stock' => 0,
-                    'updated_at' => now(),
-                ]);
-
-                return;
-            }
-
-            DB::table('stationeries')->where('id', $item->product_id)->update([
-                'stock' => 0,
-                'updated_at' => now(),
-            ]);
-        }
+        app(\App\Services\BranchStockService::class)->setTotalFromLegacy(
+            (string) $item->type,
+            (int) $item->product_id,
+            $item->type === 'book' ? 0 : (int) ($item->variant_id ?? 0),
+            (int) $item->seller_id,
+            0,
+            null,
+            [
+                'actor_type' => 'system',
+                'ref_type' => 'seller_order_item',
+                'ref_id' => $item->id,
+                'note' => 'Seller mahsulot yo\'qligini bildirdi — stock 0',
+            ]
+        );
     }
 
+    /** Bekor qilinganda mahsulot kamida item miqdoricha mavjud bo'lsin. */
     private function restoreProductAvailabilityForItem(SellerOrderItem $item): void
     {
-        $quantity = max(1, (int) $item->quantity);
-
-        if ($item->type === 'book') {
-            DB::table('books')
-                ->where('id', $item->product_id)
-                ->where('count', '<', $quantity)
-                ->update([
-                    'count' => $quantity,
-                    'updated_at' => now(),
-                ]);
-
+        if (! in_array($item->type, ['book', 'stationery'], true)) {
             return;
         }
 
-        if ($item->type === 'stationery') {
-            if ($item->variant_id) {
-                DB::table('stationery_variants')
-                    ->where('id', $item->variant_id)
-                    ->where('stock', '<', $quantity)
-                    ->update([
-                        'stock' => $quantity,
-                        'updated_at' => now(),
-                    ]);
+        $quantity = max(1, (int) $item->quantity);
+        $variantId = $item->type === 'book' ? 0 : (int) ($item->variant_id ?? 0);
 
-                return;
-            }
+        $service = app(\App\Services\BranchStockService::class);
+        $current = $service->totalAvailable((string) $item->type, (int) $item->product_id, $variantId);
 
-            DB::table('stationeries')
-                ->where('id', $item->product_id)
-                ->where('stock', '<', $quantity)
-                ->update([
-                    'stock' => $quantity,
-                    'updated_at' => now(),
-                ]);
+        if ($current >= $quantity) {
+            return;
         }
+
+        $service->setTotalFromLegacy(
+            (string) $item->type,
+            (int) $item->product_id,
+            $variantId,
+            (int) $item->seller_id,
+            $quantity,
+            null,
+            [
+                'actor_type' => 'system',
+                'ref_type' => 'seller_order_item',
+                'ref_id' => $item->id,
+                'note' => 'Bekor qilingan buyurtma — mavjudlik tiklandi',
+            ]
+        );
     }
 
     private function shouldRefundToCard(Sold $order): bool

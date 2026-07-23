@@ -1530,12 +1530,22 @@ EOT;
             $lang    = $lastMsg ? $this->getUserLanguage($user->id, $lastMsg->message) : 'uz';
         }
 
+        // N+1 oldini olish: mahsulotlarni tur bo'yicha bitta so'rovda yuklaymiz
+        $bookIds = $items->where('product_type', '!=', 'stationery')->pluck('product_id')->filter()->unique();
+        $statIds = $items->where('product_type', 'stationery')->pluck('product_id')->filter()->unique();
+        $bookMap = $bookIds->isNotEmpty()
+            ? Books::withAvailableTotal()->whereIn('id', $bookIds)->get()->keyBy('id')
+            : collect();
+        $statMap = $statIds->isNotEmpty()
+            ? Stationery::withAvailableTotal()->whereIn('id', $statIds)->get()->keyBy('id')
+            : collect();
+
         $added = 0;
         foreach ($items as $item) {
             $type   = $item->product_type ?? 'book';
             $exists = $type === 'stationery'
-                ? Stationery::find($item->product_id)
-                : Books::find($item->product_id);
+                ? $statMap->get($item->product_id)
+                : $bookMap->get($item->product_id);
 
             // Tugagan mahsulot savatga qo'shilmaydi (chatda faqat ko'rish uchun)
             if ($exists) {
@@ -1582,6 +1592,12 @@ EOT;
             ->where('user_id', $user->id)
             ->orderByDesc('created_at')
             ->paginate(20);
+
+        // Stock accessorlari uchun barcha mahsulot qoldig'ini oldindan iliqlaymiz (N+1 yo'q)
+        $allProducts = $messages->getCollection()
+            ->flatMap(fn ($msg) => $msg->items->map(fn ($i) => $i->product))
+            ->filter();
+        app(\App\Services\BranchStockService::class)->warmProducts($allProducts);
 
         $formatted = $messages->getCollection()->map(function ($msg) use ($user) {
             $data = null;

@@ -72,9 +72,9 @@ class GiftController extends Controller
             'active' => (clone $baseQuery)
                 ->where('status', true)
                 ->where('is_approved', 1)
-                ->where('stock', '>', 0)
+                ->inStock()
                 ->count(),
-            'out_stock' => (clone $baseQuery)->where('stock', '<=', 0)->count(),
+            'out_stock' => (clone $baseQuery)->whereStockAvailable('<=', 0)->count(),
             'pending' => (clone $baseQuery)
                 ->where(fn ($query) => $query->whereNull('is_approved')->orWhere('is_approved', 0))
                 ->count(),
@@ -95,8 +95,8 @@ class GiftController extends Controller
             'active' => $query
                 ->where('status', true)
                 ->where('is_approved', 1)
-                ->where('stock', '>', 0),
-            'out_stock' => $query->where('stock', '<=', 0),
+                ->inStock(),
+            'out_stock' => $query->whereStockAvailable('<=', 0),
             'pending' => $query->where(
                 fn ($query) => $query->whereNull('is_approved')->orWhere('is_approved', 0)
             ),
@@ -145,12 +145,19 @@ class GiftController extends Controller
         $gift = Gifts::create([
             'seller_id' => $this->getStoreSellerId($seller),
             'name'      => $request->name,
-            'stock'     => (int) $request->stock,
             'priceFrom' => (int) $request->min_price,
             'priceTo'   => (int) $request->max_price,
             'images'     => $paths, // to'g'ridan-to'g'ri array beramiz, Laravel json_encode qiladi
         ]);
         $this->assignGeneratedArtikul($gift);
+
+        // FILIAL STOCK: kirim hodim filialiga (bo'lmasa asosiy filialga)
+        app(\App\Services\BranchStockService::class)->setTotalFromLegacy(
+            'gift', (int) $gift->id, 0, (int) $this->getStoreSellerId($seller),
+            (int) $request->stock,
+            $seller->seller_location_id ? (int) $seller->seller_location_id : null,
+            ['actor_type' => 'seller', 'actor_id' => $seller->id, 'note' => 'Sovg\'a yaratildi']
+        );
 
         $this->writeLog($seller, 'Created gift', "Gift ID: {$gift->id}");
 
@@ -214,7 +221,15 @@ class GiftController extends Controller
         }
 
         // Oddiy maydonlar
-        $gift->fill($request->only(['name', 'stock']));
+        $gift->fill($request->only(['name']));
+
+        // FILIAL STOCK: jami stock service orqali yangilanadi
+        app(\App\Services\BranchStockService::class)->setTotalFromLegacy(
+            'gift', (int) $gift->id, 0, (int) $gift->seller_id,
+            (int) $request->stock,
+            $seller->seller_location_id ? (int) $seller->seller_location_id : null,
+            ['actor_type' => 'seller', 'actor_id' => $seller->id, 'note' => 'Sovg\'a tahriri']
+        );
         $gift->artikul = $gift->artikul ?: ProductArtikul::generate('gift', (int) $gift->id);
         $gift->priceFrom = (int) $request->min_price;
         $gift->priceTo = (int) $request->max_price;
@@ -285,9 +300,13 @@ class GiftController extends Controller
         if ($isUsedInOrders) {
             $gift->update([
                 'status' => false,
-                'stock' => 0,
                 'archived_at' => now(),
             ]);
+
+            app(\App\Services\BranchStockService::class)->setTotalFromLegacy(
+                'gift', (int) $gift->id, 0, (int) $gift->seller_id, 0, null,
+                ['actor_type' => 'seller', 'actor_id' => $seller->id, 'note' => 'Sovg\'a arxivlandi']
+            );
 
             return response()->json([
                 'success' => true,

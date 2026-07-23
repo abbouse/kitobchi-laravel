@@ -2,15 +2,17 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasBranchStock;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
 class Books extends Model
 {
-    use HasFactory;
+    use HasBranchStock, HasFactory;
 
     protected static ?bool $hasAuthorColumnCache = null;
 
@@ -29,7 +31,6 @@ class Books extends Model
         'price',
         'discountPrice',
         'discountExpiresAt',
-        'count',
         'lang',
         'langType',
         'coverType',
@@ -66,6 +67,43 @@ class Books extends Model
         'ugc_last_scored_at',
     ];
 
+    /**
+     * Legacy API kontrakt: `count` maydoni JSON javoblarda saqlanadi —
+     * endi branch_stocks yig'indisidan hisoblanadi (HasBranchStock).
+     * `first_image` — avvaldan mavjud append.
+     */
+    protected $appends = ['count', 'first_image'];
+
+    /**
+     * JSON javoblarda KERAKSIZ og'ir maydonlar chiqmasin:
+     * - vectorData: 1536 ta float (embedding) — har mahsulotda ulkan payload
+     * - vector_text_hash / branch_available_total: ichki texnik maydonlar
+     * Bu API kontraktni buzmaydi (bu maydonlar app'ga hech qachon kerak emas edi).
+     */
+    protected $hidden = ['vectorData', 'vector_text_hash', 'branch_available_total'];
+
+    public function branchStockType(): string
+    {
+        return 'book';
+    }
+
+    public function getCountAttribute(): int
+    {
+        return $this->totalAvailableStock();
+    }
+
+    /**
+     * Legacy yozuvlarni himoya: `count` endi ustun emas. To'g'ridan-to'g'ri
+     * o'rnatishlar DB xatosiga olib kelmasligi uchun yutiladi va log qilinadi.
+     * Stock o'zgarishi FAQAT BranchStockService orqali.
+     */
+    public function setCountAttribute($value): void
+    {
+        Log::warning('Books.count setter ignored — use BranchStockService', [
+            'book_id' => $this->id, 'value' => $value,
+        ]);
+    }
+
     protected $casts = [
         'images' => 'json',
         'status' => 'boolean',
@@ -77,8 +115,6 @@ class Books extends Model
         'ai_moderation_attempts' => 'integer',
         'ugc_last_scored_at' => 'datetime',
     ];
-
-    protected $appends = ['first_image'];
 
     public function category(): BelongsTo
     {

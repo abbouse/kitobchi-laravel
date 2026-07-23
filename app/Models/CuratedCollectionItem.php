@@ -36,12 +36,14 @@ class CuratedCollectionItem extends Model
 
     public function book(): BelongsTo
     {
-        return $this->belongsTo(Books::class, 'product_id');
+        // withAvailableTotal — `count` accessori uchun stockni eager subselect
+        // bilan yuklaydi (har eager-load'da N+1 bo'lmaydi).
+        return $this->belongsTo(Books::class, 'product_id')->withAvailableTotal();
     }
 
     public function stationery(): BelongsTo
     {
-        return $this->belongsTo(Stationery::class, 'product_id');
+        return $this->belongsTo(Stationery::class, 'product_id')->withAvailableTotal();
     }
 
     public function isStationery(): bool

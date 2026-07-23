@@ -35,24 +35,26 @@ class SellerOrderItem extends Model
         'cancel_restore_until' => 'datetime',
     ];
 
+    // withAvailableTotal — toArray() `count`/`stock` accessorlari uchun stockni
+    // eager subselect bilan yuklaydi (buyurtma ro'yxatlarida N+1 bo'lmaydi).
     public function book()
     {
-        return $this->belongsTo(Books::class, 'product_id');
+        return $this->belongsTo(Books::class, 'product_id')->withAvailableTotal();
     }
 
     public function stationery()
     {
-        return $this->belongsTo(Stationery::class, 'product_id');
+        return $this->belongsTo(Stationery::class, 'product_id')->withAvailableTotal();
     }
 
     public function variant()
     {
-        return $this->belongsTo(StationeryVariant::class, 'variant_id');
+        return $this->belongsTo(StationeryVariant::class, 'variant_id')->withAvailableTotal();
     }
 
     public function gift()
     {
-        return $this->belongsTo(Gifts::class, 'product_id');
+        return $this->belongsTo(Gifts::class, 'product_id')->withAvailableTotal();
     }
 
     public function order()

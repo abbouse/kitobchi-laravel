@@ -83,16 +83,30 @@ class ProductPayloadFormatter
         return $payload;
     }
 
+    /**
+     * Request-scoped favourite kesh: "userId:type" => [product_id => true].
+     * Bir foydalanuvchining sevimlilari bir marta yuklanadi, keyin xotiradan
+     * tekshiriladi. Natija avvalgidek — faqat N ta so'rov 1 taga tushadi.
+     * (Octane yo'q — static har request'da tozalanadi.)
+     */
+    private static array $favouriteCache = [];
+
     private static function resolveFavourite($product, $user, string $type): bool
     {
         if (!$user || !$product?->id) {
             return false;
         }
 
-        return FavouriteProducts::where('user_id', $user->id)
-            ->where('product_id', $product->id)
-            ->where('product_type', $type)
-            ->exists();
+        $key = $user->id . ':' . $type;
+        if (!array_key_exists($key, self::$favouriteCache)) {
+            self::$favouriteCache[$key] = FavouriteProducts::where('user_id', $user->id)
+                ->where('product_type', $type)
+                ->pluck('product_id')
+                ->flip()
+                ->all();
+        }
+
+        return isset(self::$favouriteCache[$key][$product->id]);
     }
 
     private static function normalizeImages($images): array

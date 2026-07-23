@@ -163,6 +163,16 @@ class BookController extends Controller
         $data['author'] = $author?->name ?: trim((string) $request->input('author'));
 
         $book = Books::create($data);
+
+        // FILIAL STOCK: sotuvchining asosiy filialiga kirim
+        if ($book->seller_id) {
+            app(\App\Services\BranchStockService::class)->setTotalFromLegacy(
+                'book', (int) $book->id, 0, (int) $book->seller_id,
+                (int) $request->input('count'), null,
+                ['actor_type' => 'admin', 'note' => 'A122: kitob yaratildi']
+            );
+        }
+
         $this->productModerationState->markPending($book, 'admin_created');
 
         return redirect()->route('admin.books.show', $book)->with('success', 'Yangi kitob yaratildi.');
@@ -273,6 +283,16 @@ class BookController extends Controller
         $data['author'] = $author?->name ?: trim((string) $request->input('author'));
 
         $book->update($data);
+
+        // FILIAL STOCK: jami stock yangi songa keltiriladi
+        if ($book->seller_id) {
+            app(\App\Services\BranchStockService::class)->setTotalFromLegacy(
+                'book', (int) $book->id, 0, (int) $book->seller_id,
+                (int) $request->input('count'), null,
+                ['actor_type' => 'admin', 'note' => 'A122: kitob tahriri']
+            );
+        }
+
         $this->productModerationState->markPending($book, 'admin_edited');
 
         return redirect()->route('admin.books.show', $book)->with('success', 'Kitob yangilandi.');

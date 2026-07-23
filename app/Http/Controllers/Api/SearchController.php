@@ -1711,20 +1711,27 @@ class SearchController extends Controller
     public function allCategories()
     {
         try {
-            $bookCats = BookCategories::where('is_active', 1)
-                ->select('id', 'name_uz', 'name_ru', 'name_en', 'slug', 'icon')
-                ->orderBy('name_uz')
-                ->get();
+            // Kategoriyalar kam o'zgaradi — 1 soat keshlanadi (DB yuki kamayadi,
+            // javob tez keladi). Kesh admin kategoriya tahrirlaganda tozalanadi.
+            $data = \Illuminate\Support\Facades\Cache::remember(
+                'api:all_categories:v1',
+                now()->addHour(),
+                function () {
+                    $bookCats = BookCategories::where('is_active', 1)
+                        ->select('id', 'name_uz', 'name_ru', 'name_en', 'slug', 'icon')
+                        ->orderBy('name_uz')
+                        ->get();
 
-            $statCats = StationeryCategory::where('is_active', 1)
-                ->select('id', 'name_uz', 'name_ru', 'name_en')
-                ->orderBy('name_uz')
-                ->get();
+                    $statCats = StationeryCategory::where('is_active', 1)
+                        ->select('id', 'name_uz', 'name_ru', 'name_en')
+                        ->orderBy('name_uz')
+                        ->get();
 
-            return response()->json([
-                'status' => 'success',
-                'data'   => ['book' => $bookCats, 'stationery' => $statCats],
-            ]);
+                    return ['book' => $bookCats, 'stationery' => $statCats];
+                }
+            );
+
+            return response()->json(['status' => 'success', 'data' => $data]);
         } catch (\Throwable $e) {
             return response()->json(['status' => 'error', 'message' => 'Xato'], 500);
         }

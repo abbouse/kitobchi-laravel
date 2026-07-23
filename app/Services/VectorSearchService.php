@@ -224,12 +224,14 @@ class VectorSearchService
 
         $books = empty($bookIds) ? collect() : Books::with(['category', 'seller', 'tags', 'authorProfile'])
             ->activeForVector()
-            ->when($inStockOnly, fn ($q) => $q->where('count', '>', 0))
+            ->withAvailableTotal()
+            ->when($inStockOnly, fn ($q) => $q->inStock())
             ->whereIn('id', $bookIds)->get()->keyBy('id');
 
         $stats = empty($statIds) ? collect() : Stationery::with(['category', 'seller', 'tags'])
             ->activeForVector()
-            ->when($inStockOnly, fn ($q) => $q->where('stock', '>', 0))
+            ->withAvailableTotal()
+            ->when($inStockOnly, fn ($q) => $q->inStock())
             ->whereIn('id', $statIds)->get()->keyBy('id');
 
         return $scored->map(function (array $row) use ($books, $stats) {

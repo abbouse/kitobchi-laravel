@@ -185,7 +185,6 @@ class BookUzParserService
                 'price' => (int) ($item->price_uzs ?? 0),
                 'discountPrice' => 0,
                 'discountExpiresAt' => null,
-                'count' => $item->in_stock ? 1 : 0,
                 'lang' => $this->normalizeImportLanguage($item->language),
                 'langType' => $this->normalizeImportScript($item->script),
                 'coverType' => $this->normalizeImportCoverType($item->cover_type),
@@ -213,6 +212,14 @@ class BookUzParserService
                 $book->update($payload);
             } else {
                 $book = Books::query()->create($payload);
+
+                // FILIAL STOCK: import stock asosiy filialga
+                if ($item->in_stock) {
+                    app(\App\Services\BranchStockService::class)->setTotalFromLegacy(
+                        'book', (int) $book->id, 0, (int) $seller->id, 1, null,
+                        ['actor_type' => 'system', 'note' => 'Catalog import']
+                    );
+                }
             }
 
             $this->attachSuggestedTags($book, $item);

@@ -165,7 +165,7 @@ class CollectionAiAdvisorService
             ->where('status', true)
             ->where('is_approved', 1)
             ->where('is_hidden', 0)
-            ->where('count', '>', 0)
+            ->inStock()
             ->whereHas('seller', fn ($q) => $q->where('status', 'approved')->where('is_hidden', 0));
 
         if (! empty($opts['category_id'])) {

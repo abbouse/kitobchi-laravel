@@ -90,10 +90,10 @@ class GiftsController extends Controller
         $result = [];
 
         // ── Platforma sovg'alari (seller_id = 1) ─────────────────
-        $platformQuery = Gifts::where('status', true)
+        $platformQuery = Gifts::withAvailableTotal()->where('status', true)
             ->whereNull('archived_at')
             ->where('is_approved', true)
-            ->where('stock', '>', 0)
+            ->inStock()
             ->where('seller_id', 1)
             ->where('priceFrom', '<=', $totalCartSum)
             ->where('priceTo',   '>=', $totalCartSum)
@@ -120,10 +120,10 @@ class GiftsController extends Controller
 
             $sum = $sellerSums[$sellerId];
 
-            $sellerQuery = Gifts::where('status', true)
+            $sellerQuery = Gifts::withAvailableTotal()->where('status', true)
                 ->whereNull('archived_at')
                 ->where('is_approved', true)
-                ->where('stock', '>', 0)
+                ->inStock()
                 ->where('seller_id', $sellerId)
                 ->where('priceFrom', '<=', $sum)
                 ->where('priceTo',   '>=', $sum)
@@ -189,10 +189,10 @@ class GiftsController extends Controller
         // Seller uchun filter
         if ($sellerId == 1) {
             // Platforma — umumiy summa bo'yicha
-            $query = Gifts::where('status', true)
+            $query = Gifts::withAvailableTotal()->where('status', true)
                 ->whereNull('archived_at')
                 ->where('is_approved', true)
-                ->where('stock', '>', 0)
+                ->inStock()
                 ->where('seller_id', 1)
                 ->where('priceFrom', '<=', $totalCartSum)
                 ->where('priceTo',   '>=', $totalCartSum);
@@ -202,10 +202,10 @@ class GiftsController extends Controller
             if ($sum == 0) {
                 return response()->json(['status' => 'success', 'data' => [], 'meta' => ['has_more' => false]]);
             }
-            $query = Gifts::where('status', true)
+            $query = Gifts::withAvailableTotal()->where('status', true)
                 ->whereNull('archived_at')
                 ->where('is_approved', true)
-                ->where('stock', '>', 0)
+                ->inStock()
                 ->where('seller_id', $sellerId)
                 ->where('priceFrom', '<=', $sum)
                 ->where('priceTo',   '>=', $sum);
@@ -247,7 +247,7 @@ class GiftsController extends Controller
             ->whereNull('archived_at')
             ->where('status', true)
             ->where('is_approved', true)
-            ->where('stock', '>', 0)
+            ->inStock()
             ->first();
 
         if (! $gift) {

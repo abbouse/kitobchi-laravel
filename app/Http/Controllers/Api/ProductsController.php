@@ -128,7 +128,7 @@ class ProductsController extends Controller
         }
 
         $bookCount = Books::where('seller_id', $sellerId)
-            ->where('is_approved', 1)->where('is_hidden', 0)->where('count', '>', 0)
+            ->where('is_approved', 1)->where('is_hidden', 0)->inStock()
             ->where('discountPrice', '>', 0)
             ->where(fn($q) => $q->whereNull('discountExpiresAt')
                 ->orWhere('discountExpiresAt', '>', now()))
@@ -140,7 +140,7 @@ class ProductsController extends Controller
         }
 
         $statCount = Stationery::where('seller_id', $sellerId)
-            ->where('is_approved', 1)->where('is_hidden', 0)->where('stock', '>', 0)
+            ->where('is_approved', 1)->where('is_hidden', 0)->inStock()
             ->where('discount_price', '>', 0)
             ->where(fn($q) => $q->whereNull('discountExpiresAt')
                 ->orWhere('discountExpiresAt', '>', now()))

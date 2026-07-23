@@ -137,38 +137,31 @@ class SoldObserver
                     'updated_at' => now(),
                 ]);
 
-            // ── 2. Mahsulot stocklari ─────────────────────────────────────────
+            // ── 2. Mahsulot stocklari (filial-darajali qaytarish) ────────────
+            $branchStock = app(\App\Services\BranchStockService::class);
+
             foreach ($order->items ?? [] as $item) {
                 $type      = $item['type'] ?? 'book';
                 $productId = (int) ($item['item_id'] ?? 0);
-                $variantId = isset($item['variant_id']) ? (int) $item['variant_id'] : null;
+                $variantId = (int) ($item['variant_id'] ?? 0);
                 $quantity  = (int) ($item['count_item'] ?? 1);
 
                 if (!$productId || $type === 'gift') continue;
 
-                if ($type === 'book') {
-                    $product = Books::find($productId);
-                    if ($product) $product->increment('count', $quantity);
-
-                } elseif ($type === 'stationery') {
-                    $product = Stationery::find($productId);
-                    if ($product) {
-                        if ($variantId) {
-                            $variant = StationeryVariant::find($variantId);
-                            if ($variant) $variant->increment('stock', $quantity);
-                        } else {
-                            $product->increment('stock', $quantity);
-                        }
-                    }
+                if (in_array($type, ['book', 'stationery'], true)) {
+                    $branchStock->incrementForReturn(
+                        $type, $productId, $type === 'book' ? 0 : $variantId, $quantity, null,
+                        ['ref_type' => 'sold', 'ref_id' => $order->id, 'note' => 'Buyurtma bekor qilindi']
+                    );
                 }
             }
 
             // ── 3. Gift stock ─────────────────────────────────────────────────
             if ($order->gift) {
-                $gift = Gifts::find($order->gift);
-                if ($gift) {
-                    $gift->increment('stock', 1);
-                }
+                $branchStock->incrementForReturn(
+                    'gift', (int) $order->gift, 0, 1, null,
+                    ['ref_type' => 'sold', 'ref_id' => $order->id]
+                );
             }
 
             // ── 4. Statistika minus ───────────────────────────────────────────

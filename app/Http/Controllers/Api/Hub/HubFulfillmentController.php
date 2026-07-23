@@ -15,6 +15,7 @@ use App\Services\QrTokenService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\Rule;
 
 class HubFulfillmentController extends Controller
@@ -39,38 +40,50 @@ class HubFulfillmentController extends Controller
         }
         $hubId = $staff->hub_id;
 
+        // Dashboard is hub-scoped (not staff-scoped) and polled every ~20s by
+        // every operator. Compute the heavy counts + analytics once per hub and
+        // share it for a short window instead of running ~13 queries per poll.
+        $data = Cache::remember(
+            "hub:{$hubId}:dashboard",
+            now()->addSeconds(15),
+            fn () => [
+                'counts' => [
+                    'inbound' => $this->baseQuery($hubId)->whereIn('status_code', [
+                        FulfillmentStatusCode::PICKED_FROM_SELLER->value,
+                        FulfillmentStatusCode::ARRIVED_AT_HUB->value,
+                    ])->count(),
+                    'qc' => $this->baseQuery($hubId)->whereIn('status_code', [
+                        FulfillmentStatusCode::ARRIVED_AT_HUB->value,
+                        FulfillmentStatusCode::QC_CHECKED->value,
+                    ])->count(),
+                    'packing' => $this->baseQuery($hubId)->whereIn('status_code', [
+                        FulfillmentStatusCode::QC_CHECKED->value,
+                        FulfillmentStatusCode::PACKED->value,
+                    ])->count(),
+                    'dispatch' => $this->baseQuery($hubId)->whereIn('status_code', [
+                        FulfillmentStatusCode::LABELED->value,
+                        FulfillmentStatusCode::DISPATCHED_TO_POST->value,
+                        FulfillmentStatusCode::ASSIGNED_LAST_MILE->value,
+                    ])->count(),
+                    'exceptions' => $this->baseQuery($hubId)
+                        ->whereNotNull('meta->exception->code')
+                        ->count(),
+                    'active_couriers' => CourierTask::query()
+                        ->where('hub_id', $hubId)
+                        ->whereNotNull('courier_id')
+                        ->whereIn('status_code', $this->activeCourierTaskStatuses())
+                        ->distinct('courier_id')
+                        ->count('courier_id'),
+                ],
+                'analytics' => $this->dashboardAnalytics($hubId),
+            ],
+        );
+
         return response()->json([
             'status' => 'success',
             'hub' => $staff->hub?->only(['id', 'name', 'code', 'city_name', 'country_code']),
-            'counts' => [
-                'inbound' => $this->baseQuery($hubId)->whereIn('status_code', [
-                    FulfillmentStatusCode::PICKED_FROM_SELLER->value,
-                    FulfillmentStatusCode::ARRIVED_AT_HUB->value,
-                ])->count(),
-                'qc' => $this->baseQuery($hubId)->whereIn('status_code', [
-                    FulfillmentStatusCode::ARRIVED_AT_HUB->value,
-                    FulfillmentStatusCode::QC_CHECKED->value,
-                ])->count(),
-                'packing' => $this->baseQuery($hubId)->whereIn('status_code', [
-                    FulfillmentStatusCode::QC_CHECKED->value,
-                    FulfillmentStatusCode::PACKED->value,
-                ])->count(),
-                'dispatch' => $this->baseQuery($hubId)->whereIn('status_code', [
-                    FulfillmentStatusCode::LABELED->value,
-                    FulfillmentStatusCode::DISPATCHED_TO_POST->value,
-                    FulfillmentStatusCode::ASSIGNED_LAST_MILE->value,
-                ])->count(),
-                'exceptions' => $this->baseQuery($hubId)
-                    ->whereNotNull('meta->exception->code')
-                    ->count(),
-                'active_couriers' => CourierTask::query()
-                    ->where('hub_id', $hubId)
-                    ->whereNotNull('courier_id')
-                    ->whereIn('status_code', $this->activeCourierTaskStatuses())
-                    ->distinct('courier_id')
-                    ->count('courier_id'),
-            ],
-            'analytics' => $this->dashboardAnalytics($hubId),
+            'counts' => $data['counts'],
+            'analytics' => $data['analytics'],
         ]);
     }
 
@@ -115,7 +128,7 @@ class HubFulfillmentController extends Controller
             ->when($request->filled('mode'), fn ($query) => $query->where('fulfillment_mode', (string) $request->string('mode')))
             ->latest('updated_at')
             ->paginate((int) min(50, max(10, (int) $request->input('limit', 20))))
-            ->through(fn (OrderFulfillment $fulfillment) => $this->serializeFulfillment($fulfillment));
+            ->through(fn (OrderFulfillment $fulfillment) => $this->serializeListItem($fulfillment));
 
         return response()->json([
             'status' => 'success',
@@ -164,7 +177,7 @@ class HubFulfillmentController extends Controller
             })
             ->latest('updated_at')
             ->paginate((int) min(50, max(10, (int) $request->input('limit', 20))))
-            ->through(fn (OrderFulfillment $fulfillment) => $this->serializeFulfillment($fulfillment));
+            ->through(fn (OrderFulfillment $fulfillment) => $this->serializeListItem($fulfillment));
 
         return response()->json([
             'status' => 'success',
@@ -770,6 +783,65 @@ class HubFulfillmentController extends Controller
 
         Arr::set($meta, 'timeline', $timeline);
         $fulfillment->meta = $meta;
+    }
+
+    /**
+     * Lightweight row for list endpoints (queue / exceptions).
+     *
+     * Drops the heavy detail-only payload — full timeline, print history,
+     * per-stage timestamps and inactive courier tasks — keeping only what the
+     * hub app list card renders. The full payload is still served by show()
+     * and scan() via serializeFulfillment(). The Flutter client tolerates the
+     * omitted keys (they default to empty), so this is backward compatible.
+     */
+    private function serializeListItem(OrderFulfillment $fulfillment): array
+    {
+        $order = $fulfillment->order;
+        $address = collect($order?->address ?? [])->first() ?? [];
+        $exception = Arr::get($fulfillment->meta ?? [], 'exception');
+        $activeStatuses = $this->activeCourierTaskStatuses();
+
+        return [
+            'id' => $fulfillment->id,
+            'order_id' => $fulfillment->order_id,
+            'status_code' => $fulfillment->status_code,
+            'fulfillment_mode' => $fulfillment->fulfillment_mode,
+            'first_mile_mode' => $fulfillment->first_mile_mode,
+            'last_mile_mode' => $fulfillment->last_mile_mode,
+            'is_cod' => (bool) $fulfillment->is_cod,
+            'cash_collect_amount' => (int) ($fulfillment->cash_collect_amount ?? 0),
+            'label_code' => $fulfillment->label_code,
+            'postal_tracking_number' => $fulfillment->postal_tracking_number,
+            'exception' => is_array($exception) ? $exception : null,
+            'courier_tasks' => $fulfillment->courierTasks
+                ->filter(fn (CourierTask $task) => $task->courier_id
+                    && in_array($task->status_code, $activeStatuses, true))
+                ->sortByDesc('id')
+                ->map(fn (CourierTask $task) => [
+                    'id' => (int) $task->id,
+                    'leg' => (string) $task->leg,
+                    'status_code' => (string) $task->status_code,
+                    'is_active' => true,
+                    'courier' => $task->courier ? [
+                        'id' => (int) $task->courier->id,
+                        'name' => trim((string) ($task->courier->first_name.' '.$task->courier->last_name)),
+                    ] : null,
+                ])
+                ->values()
+                ->all(),
+            'order' => $order ? [
+                'id' => $order->id,
+                'amount' => (int) $order->amount,
+                'delivery_price' => (int) ($order->deliveryPrice ?? 0),
+                'customer' => [
+                    'name' => trim((string) (($order->user?->name ?? '').' '.($order->user?->lastname ?? ''))),
+                    'phone_number' => $order->user?->phone_number,
+                ],
+                'address' => [
+                    'full_address' => $address['fullAddress'] ?? $address['branch_address'] ?? null,
+                ],
+            ] : null,
+        ];
     }
 
     private function serializeFulfillment(OrderFulfillment $fulfillment): array

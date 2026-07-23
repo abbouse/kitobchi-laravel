@@ -190,8 +190,8 @@ class GuestSyncController extends Controller
             $book = Books::where('id', $productId)
                 ->where('is_hidden', 0)
                 ->where('is_approved', 1)
-                ->when($checkStock, fn ($q) => $q->where('count', '>', 0))
-                ->first(['id', 'count']);
+                ->when($checkStock, fn ($q) => $q->inStock())
+                ->first(['id']);
 
             if (! $book) {
                 return [false, 0];
@@ -203,15 +203,15 @@ class GuestSyncController extends Controller
         $stat = Stationery::where('id', $productId)
             ->where('is_hidden', 0)
             ->where('is_approved', 1)
-            ->when($checkStock, fn ($q) => $q->where('stock', '>', 0))
-            ->first(['id', 'stock']);
+            ->when($checkStock, fn ($q) => $q->inStock())
+            ->first(['id']);
 
         if (! $stat) {
             return [false, 0];
         }
 
         if ($variantId) {
-            $variant = $stat->variants()->where('id', $variantId)->first(['id', 'stock']);
+            $variant = $stat->variants()->where('id', $variantId)->first(['id', 'product_id']);
             if (! $variant) {
                 return [false, 0];
             }

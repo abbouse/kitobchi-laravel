@@ -2,13 +2,47 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasBranchStock;
+use App\Services\BranchStockService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
 
 class Stationery extends Model
 {
-    use HasFactory;
+    use HasBranchStock, HasFactory;
+
+    /** Legacy API kontrakt: `stock` JSON javoblarda saqlanadi. */
+    protected $appends = ['stock'];
+
+    /**
+     * Og'ir/ichki maydonlar JSON'ga chiqmasin (vectorData = 1536 float embedding).
+     * API kontrakt buzilmaydi — bu maydonlar app'ga kerak emas.
+     */
+    protected $hidden = ['vectorData', 'vector_text_hash', 'branch_available_total'];
+
+    public function branchStockType(): string
+    {
+        return 'stationery';
+    }
+
+    /** Mahsulot darajasidagi stock (variantlar alohida hisoblanadi). */
+    public function getStockAttribute(): int
+    {
+        if (array_key_exists('branch_available_total', $this->attributes)) {
+            return max(0, (int) $this->attributes['branch_available_total']);
+        }
+
+        return app(BranchStockService::class)->totalAvailable('stationery', (int) $this->id, 0);
+    }
+
+    public function setStockAttribute($value): void
+    {
+        Log::warning('Stationery.stock setter ignored — use BranchStockService', [
+            'stationery_id' => $this->id, 'value' => $value,
+        ]);
+    }
 
     protected $fillable = [
         'seller_id',
@@ -20,7 +54,6 @@ class Stationery extends Model
         'price',
         'discount_price',
         'discountExpiresAt',
-        'stock',
         'description',
         'is_hidden',
         'is_approved',
@@ -78,10 +111,12 @@ class Stationery extends Model
         return $this->belongsToMany(StationeryTag::class, 'stationery_tag_relations', 'stationery_id', 'tag_id');
     }
 
-    // Rang variantlari
+    // Rang variantlari — variant stock (branch_available_total) avtomatik
+    // subselect bilan yuklanadi, N+1 bo'lmaydi.
     public function variants()
     {
-        return $this->hasMany(StationeryVariant::class, 'product_id');
+        return $this->hasMany(StationeryVariant::class, 'product_id')
+            ->withAvailableTotal();
     }
 
     public function seller()

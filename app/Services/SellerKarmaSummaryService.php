@@ -56,14 +56,14 @@ class SellerKarmaSummaryService
             ->where('seller_id', $seller->id)
             ->where('is_hidden', 0)
             ->where('status', 1)
-            ->where('count', '>', 0)
+            ->inStock()
             ->count();
 
         $activeStationery = (int) Stationery::query()
             ->where('seller_id', $seller->id)
             ->where('is_hidden', 0)
             ->where('status', 1)
-            ->where('stock', '>', 0)
+            ->inStock()
             ->count();
 
         $ratedSources = collect([$bookAvg, $stationeryAvg])->filter(fn ($value) => $value > 0);

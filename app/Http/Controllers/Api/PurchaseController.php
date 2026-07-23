@@ -160,7 +160,7 @@ class PurchaseController extends Controller
             ->whereNull('archived_at')
             ->where('status', true)
             ->where('is_approved', true)
-            ->where('stock', '>', 0);
+            ->inStock();
 
         if ($giftId === self::DEFAULT_PLATFORM_GIFT_ID) {
             $query->where('seller_id', self::PLATFORM_SELLER_ID);
@@ -1443,11 +1443,10 @@ class PurchaseController extends Controller
                     'type' => 'gift',
                 ];
 
-                $gift->decrement('stock', 1);
-                if ($gift->stock < 0) {
-                    $gift->stock = 0;
-                    $gift->save();
-                }
+                app(\App\Services\BranchStockService::class)->decrementForSale(
+                    'gift', (int) $gift->id, 0, 1, null,
+                    ['reason' => 'sale', 'ref_type' => 'order_gift']
+                );
             }
 
             // ── Packaging narxi ───────────────────────────────────
@@ -1591,12 +1590,22 @@ class PurchaseController extends Controller
             $sellerMainLocations = [];
             foreach ($groupedBySeller as $sellerId => $items) {
                 $sellerAmount = 0;
-                $sellerLocation = DB::table('seller_locations')
-                    ->where('seller_id', $sellerId)
-                    ->where('is_deleted', false)
-                    ->orderByDesc('is_main')
-                    ->orderBy('id')
-                    ->first(['id', 'fullAddress', 'lat', 'lon', 'is_main']);
+
+                // FILIAL ROUTING: eng ko'p itemni stock bilan qoplaydigan
+                // filial → mijozga eng yaqini → main. (Avval: doim main.)
+                $routingItems = collect($items)->map(fn ($ci) => [
+                    'type' => (string) $ci->product_type,
+                    'product_id' => (int) $ci->product_id,
+                    'variant_id' => (int) ($ci->variant_id ?? 0),
+                    'quantity' => (int) $ci->count_item,
+                ])->all();
+
+                $sellerLocation = app(\App\Services\BranchStockService::class)->chooseFulfillmentLocation(
+                    (int) $sellerId,
+                    $routingItems,
+                    isset($location->lat) ? (float) $location->lat : null,
+                    isset($location->lon) ? (float) $location->lon : null,
+                );
 
                 if (! $sellerLocation) {
                     DB::rollBack();
@@ -1617,7 +1626,7 @@ class PurchaseController extends Controller
                     'branch_address' => $sellerLocation->fullAddress,
                     'branch_lat' => $sellerLocation->lat,
                     'branch_lon' => $sellerLocation->lon,
-                    'branch_is_main' => true,
+                    'branch_is_main' => (bool) ($sellerLocation->is_main ?? false),
                 ]);
 
                 $sellerOrder = SellerOrder::create([
@@ -1731,6 +1740,13 @@ class PurchaseController extends Controller
 
                     continue;
                 }
+                // Pickup filiali birinchi kamayadi (routing tanlagan filial)
+                $itemSellerId = (int) ($data['product']->seller_id ?? 0);
+                $data['location_id'] = isset($sellerMainLocations[$itemSellerId])
+                    ? (int) $sellerMainLocations[$itemSellerId]->id
+                    : null;
+                $data['order_id'] = (int) $purchase->id;
+
                 $this->orderService->decrementStock($data);
                 $this->orderService->incrementProductStats($data, $purchase->id);
             }
@@ -2110,6 +2126,9 @@ class PurchaseController extends Controller
 
             // ── Stock + statistika ───────────────────────────────
             foreach ($productsToUpdate as $data) {
+                // Do'kon ichida xarid — stock shu filialdan kamayadi
+                $data['location_id'] = (int) $sellerLocation->id;
+                $data['order_id'] = (int) $purchase->id;
                 $this->orderService->decrementStock($data);
                 $this->orderService->incrementProductStats($data, $purchase->id);
             }

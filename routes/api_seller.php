@@ -115,6 +115,12 @@ Route::middleware('auth:seller')->group(function () {
     Route::get('staff/{id}/delete', [SellerStaffController::class, 'destroy']);
     Route::get('staff/{id}/getpassword', [SellerStaffController::class, 'getPasswordSms']);
 
+    // FILIAL-DARAJALI STOCK (branch_stocks)
+    Route::get('branch-stocks', [\App\Http\Controllers\Api\Seller\BranchStockController::class, 'show']);
+    Route::post('branch-stocks/set', [\App\Http\Controllers\Api\Seller\BranchStockController::class, 'set']);
+    Route::post('branch-stocks/transfer', [\App\Http\Controllers\Api\Seller\BranchStockController::class, 'transfer']);
+    Route::get('branch-stocks/movements', [\App\Http\Controllers\Api\Seller\BranchStockController::class, 'movements']);
+
     Route::get('locations', [SellerLocationController::class, 'index']);
     Route::post('locations', [SellerLocationController::class, 'store']);
     Route::post('locations/{id}', [SellerLocationController::class, 'update']);

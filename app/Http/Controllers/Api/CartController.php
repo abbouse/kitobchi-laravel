@@ -40,9 +40,14 @@ class CartController extends Controller
             return response()->json(['status' => 'error', 'message' => "Bunday foydalanuvchi mavjud emas!"], 401);
         }
     $cartItems = MyCart::where('user_id', $user->id)
-        ->with(['variant', 'product.seller']) // Endi morphTo ishlaydi!
+        ->with(['variant', 'product.seller', 'product.category']) // morphTo + category (N+1 oldini oladi)
         ->orderBy('created_at', 'DESC')
         ->get();
+
+    // Stock accessorlari uchun jami qoldiqni bitta so'rovda iliqlaymiz (N+1 yo'q)
+    $branchStock = app(\App\Services\BranchStockService::class);
+    $branchStock->warmProducts($cartItems->map(fn ($i) => $i->product)->filter());
+    $branchStock->warmVariants($cartItems->map(fn ($i) => $i->variant)->filter());
 
     $formattedItems = $cartItems->map(function ($item) use ($user) {
         $product = $item->product;

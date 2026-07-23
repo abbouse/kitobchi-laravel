@@ -139,6 +139,16 @@ class StationeryController extends Controller
         $data['is_approved'] = 0;
 
         $item = Stationery::create($data);
+
+        // FILIAL STOCK: sotuvchining asosiy filialiga kirim
+        if ($item->seller_id) {
+            app(\App\Services\BranchStockService::class)->setTotalFromLegacy(
+                'stationery', (int) $item->id, 0, (int) $item->seller_id,
+                (int) $request->input('stock'), null,
+                ['actor_type' => 'admin', 'note' => 'A122: kanstovar yaratildi']
+            );
+        }
+
         $this->syncVariants($request, $item);
         $this->productModerationState->markPending($item, 'admin_created');
 
@@ -250,6 +260,15 @@ class StationeryController extends Controller
         $data['is_hidden'] = $request->boolean('is_hidden', false);
 
         $item->update($data);
+
+        // FILIAL STOCK: jami stock yangi songa keltiriladi
+        if ($item->seller_id) {
+            app(\App\Services\BranchStockService::class)->setTotalFromLegacy(
+                'stationery', (int) $item->id, 0, (int) $item->seller_id,
+                (int) $request->input('stock'), null,
+                ['actor_type' => 'admin', 'note' => 'A122: kanstovar tahriri']
+            );
+        }
         $this->syncVariants($request, $item);
         $this->productModerationState->markPending($item, 'admin_edited');
 
@@ -287,10 +306,10 @@ class StationeryController extends Controller
 
             $payload = [
                 'color_name' => $name,
-                'stock' => (int) $stock,
                 'image_path' => $imagePath !== '' ? $imagePath : null,
             ];
 
+            $variant = null;
             if ($variantId) {
                 $variant = $item->variants->firstWhere('id', (int) $variantId);
                 if ($variant) {
@@ -298,8 +317,17 @@ class StationeryController extends Controller
                     $incomingIds[] = (int) $variant->id;
                 }
             } else {
-                $created = $item->variants()->create($payload);
-                $incomingIds[] = (int) $created->id;
+                $variant = $item->variants()->create($payload);
+                $incomingIds[] = (int) $variant->id;
+            }
+
+            // FILIAL STOCK: variant stock service orqali
+            if ($variant && $item->seller_id) {
+                app(\App\Services\BranchStockService::class)->setTotalFromLegacy(
+                    'stationery', (int) $item->id, (int) $variant->id, (int) $item->seller_id,
+                    (int) $stock, null,
+                    ['actor_type' => 'admin', 'note' => 'A122: variant stock']
+                );
             }
         }
 
@@ -309,6 +337,10 @@ class StationeryController extends Controller
                 Storage::disk('public')->delete($variant->image_path);
                 ProductImageVariantGenerator::deleteForPath($variant->image_path);
             }
+            \App\Models\BranchStock::where('product_type', 'stationery')
+                ->where('product_id', $item->id)
+                ->where('variant_id', $variant->id)
+                ->delete();
             $variant->delete();
         }
     }

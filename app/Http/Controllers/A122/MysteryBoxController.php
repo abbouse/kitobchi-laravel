@@ -51,7 +51,7 @@ class MysteryBoxController extends Controller
         $books = $booksQuery
             ->orderByDesc('totalSales')
             ->limit(!empty($ids) ? count($ids) : 12)
-            ->get(['id', 'name', 'author_id', 'count', 'images']);
+            ->get(['id', 'name', 'author_id', 'images']);
 
         return response()->json([
             'status' => 'success',

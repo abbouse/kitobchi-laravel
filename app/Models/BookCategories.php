@@ -13,6 +13,14 @@ class BookCategories extends Model
     use HasFactory;
     protected $fillable = ['name_ru', 'name_en', 'name_uz', 'name_ja', 'slug', 'is_active', 'ofd_ikpu_code', 'ofd_package_code'];
 
+    /** Kategoriya o'zgarsa allCategories keshini tozalaymiz. */
+    protected static function booted(): void
+    {
+        $forget = fn () => \Illuminate\Support\Facades\Cache::forget('api:all_categories:v1');
+        static::saved($forget);
+        static::deleted($forget);
+    }
+
     public function tags()
     {
         return $this->belongsToMany(BookTag::class, 'category_tag_relations', 'category_id', 'tag_id');

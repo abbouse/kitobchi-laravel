@@ -166,7 +166,7 @@ class DashboardExportService
         $row++;
 
         $books = Books::with(['category', 'seller'])
-            ->orderBy('count')
+            ->orderByStock('asc')
             ->get();
 
         $index = 1;

@@ -33,7 +33,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // BranchStockService — singleton: request davomida totalCache saqlanadi,
+        // shuning uchun warmTotals() bilan iliqlangan qiymatlar model accessorlariga
+        // ko'rinadi (stock N+1 oldi olinadi).
+        $this->app->singleton(\App\Services\BranchStockService::class);
     }
 
     /**

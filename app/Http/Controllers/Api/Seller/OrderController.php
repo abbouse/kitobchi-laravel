@@ -376,6 +376,7 @@ class OrderController extends Controller
         if ($scope === 'home') {
             $this->applySellerStatusFilter(
                 $query,
+                SellerOrderStatusCode::NEW,
                 SellerOrderStatusCode::ACCEPTED,
                 SellerOrderStatusCode::HANDED_TO_COURIER,
             );

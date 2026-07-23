@@ -26,7 +26,6 @@ class ProductVectorService
         'status',
         'is_hidden',
         'is_approved',
-        'count',
         'totalSales',
         'totalSalesWeek',
     ];

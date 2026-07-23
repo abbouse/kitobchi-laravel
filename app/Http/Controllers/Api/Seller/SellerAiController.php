@@ -480,7 +480,7 @@ class SellerAiController extends Controller
             $book = Books::query()
                 ->where('seller_id', $sellerId)
                 ->where(fn ($query) => $query->where('artikul', $identifier)->orWhere('isbn', $identifier))
-                ->first(['id', 'name', 'artikul', 'count', 'price', 'discountPrice', 'status', 'is_hidden']);
+                ->first(['id', 'name', 'artikul', 'price', 'discountPrice', 'status', 'is_hidden']);
             if ($book) {
                 return $this->productArray($book, 'book');
             }
@@ -490,7 +490,7 @@ class SellerAiController extends Controller
             $stationery = Stationery::query()
                 ->where('seller_id', $sellerId)
                 ->where(fn ($query) => $query->where('artikul', $identifier)->orWhere('barcode', $identifier))
-                ->first(['id', 'name', 'artikul', 'stock', 'price', 'discount_price', 'status', 'is_hidden']);
+                ->first(['id', 'name', 'artikul', 'price', 'discount_price', 'status', 'is_hidden']);
             if ($stationery) {
                 return $this->productArray($stationery, 'stationery');
             }
@@ -506,14 +506,14 @@ class SellerAiController extends Controller
         }
 
         if ($typeHint !== 'stationery') {
-            $book = Books::query()->where('seller_id', $sellerId)->find($id, ['id', 'name', 'artikul', 'count', 'price', 'discountPrice', 'status', 'is_hidden']);
+            $book = Books::query()->where('seller_id', $sellerId)->find($id, ['id', 'name', 'artikul', 'price', 'discountPrice', 'status', 'is_hidden']);
             if ($book) {
                 return $this->productArray($book, 'book');
             }
         }
 
         if ($typeHint !== 'book') {
-            $stationery = Stationery::query()->where('seller_id', $sellerId)->find($id, ['id', 'name', 'artikul', 'stock', 'price', 'discount_price', 'status', 'is_hidden']);
+            $stationery = Stationery::query()->where('seller_id', $sellerId)->find($id, ['id', 'name', 'artikul', 'price', 'discount_price', 'status', 'is_hidden']);
             if ($stationery) {
                 return $this->productArray($stationery, 'stationery');
             }
@@ -537,7 +537,7 @@ class SellerAiController extends Controller
                     ->whereRaw('LOWER(TRIM(name)) = ?', [mb_strtolower($name)])
                     ->orWhere('name', 'like', '%' . $name . '%'))
                 ->limit(6)
-                ->get(['id', 'name', 'artikul', 'count', 'price', 'discountPrice', 'status', 'is_hidden']);
+                ->get(['id', 'name', 'artikul', 'price', 'discountPrice', 'status', 'is_hidden']);
 
             foreach ($books as $book) {
                 $results[] = $this->productArray($book, 'book');
@@ -551,7 +551,7 @@ class SellerAiController extends Controller
                     ->whereRaw('LOWER(TRIM(name)) = ?', [mb_strtolower($name)])
                     ->orWhere('name', 'like', '%' . $name . '%'))
                 ->limit(6)
-                ->get(['id', 'name', 'artikul', 'stock', 'price', 'discount_price', 'status', 'is_hidden']);
+                ->get(['id', 'name', 'artikul', 'price', 'discount_price', 'status', 'is_hidden']);
 
             foreach ($stationeries as $stationery) {
                 $results[] = $this->productArray($stationery, 'stationery');
@@ -635,11 +635,11 @@ class SellerAiController extends Controller
         $ordersBase = SellerOrder::query()->where('seller_id', $storeSellerId);
 
         $lowBooks = (clone $bookBase)
-            ->where('count', '>', 0)
-            ->where('count', '<=', 5)
-            ->orderBy('count')
+            ->whereStockAvailable('>', 0)
+            ->whereStockAvailable('<=', 5)
+            ->orderByStock('asc')
             ->limit(5)
-            ->get(['id', 'name', 'artikul', 'count', 'price'])
+            ->get(['id', 'name', 'artikul', 'price'])
             ->map(fn (Books $book) => [
                 'type' => 'book',
                 'id' => $book->id,
@@ -651,11 +651,11 @@ class SellerAiController extends Controller
             ->values();
 
         $lowStationery = (clone $stationeryBase)
-            ->where('stock', '>', 0)
-            ->where('stock', '<=', 5)
-            ->orderBy('stock')
+            ->whereStockAvailable('>', 0)
+            ->whereStockAvailable('<=', 5)
+            ->orderByStock('asc')
             ->limit(5)
-            ->get(['id', 'name', 'artikul', 'stock', 'price'])
+            ->get(['id', 'name', 'artikul', 'price'])
             ->map(fn (Stationery $item) => [
                 'type' => 'stationery',
                 'id' => $item->id,
@@ -669,7 +669,7 @@ class SellerAiController extends Controller
         $topBooks = (clone $bookBase)
             ->orderByDesc('totalSales')
             ->limit(5)
-            ->get(['id', 'name', 'artikul', 'totalSales', 'totalRevenue', 'count'])
+            ->get(['id', 'name', 'artikul', 'totalSales', 'totalRevenue'])
             ->map(fn (Books $book) => [
                 'type' => 'book',
                 'id' => $book->id,
@@ -684,7 +684,7 @@ class SellerAiController extends Controller
         $topStationery = (clone $stationeryBase)
             ->orderByDesc('totalSales')
             ->limit(5)
-            ->get(['id', 'name', 'artikul', 'totalSales', 'totalRevenue', 'stock'])
+            ->get(['id', 'name', 'artikul', 'totalSales', 'totalRevenue'])
             ->map(fn (Stationery $item) => [
                 'type' => 'stationery',
                 'id' => $item->id,
@@ -782,8 +782,8 @@ class SellerAiController extends Controller
                 'active_stationery_count' => (clone $stationeryBase)->where('status', true)->where('is_hidden', false)->count(),
                 'low_stock' => $lowBooks->merge($lowStationery)->take(10)->values(),
                 'out_of_stock' => [
-                    'books' => (clone $bookBase)->where('count', '<=', 0)->count(),
-                    'stationery' => (clone $stationeryBase)->where('stock', '<=', 0)->count(),
+                    'books' => (clone $bookBase)->whereStockAvailable('<=', 0)->count(),
+                    'stationery' => (clone $stationeryBase)->whereStockAvailable('<=', 0)->count(),
                 ],
                 'not_approved' => [
                     'books' => (clone $bookBase)->where('is_approved', 0)->count(),
@@ -927,8 +927,7 @@ class SellerAiController extends Controller
 
                 $stockColumn = $type === 'book' ? 'count' : 'stock';
                 $oldStock = (int) ($product->{$stockColumn} ?? 0);
-                $product->{$stockColumn} = $newStock;
-                $product->save();
+                $this->writeStockViaService($type, $product, (int) $newStock, $action, 'AI: stock yangilandi');
 
                 $applied[] = [
                     'product_type' => $type,
@@ -983,8 +982,7 @@ class SellerAiController extends Controller
 
                 $stockColumn = $type === 'book' ? 'count' : 'stock';
                 $currentStock = (int) ($product->{$stockColumn} ?? 0);
-                $product->{$stockColumn} = $oldStock;
-                $product->save();
+                $this->writeStockViaService($type, $product, (int) $oldStock, $action, 'AI: stock rollback');
 
                 $rows[] = [
                     'product_type' => $type,
@@ -1060,8 +1058,12 @@ class SellerAiController extends Controller
         $oldValue = $product->{$column};
         $newValue = $this->normalizeProductFieldValue($field, $payload['new_value'] ?? null);
 
-        $product->{$column} = $newValue;
-        $product->save();
+        if (in_array($column, ['count', 'stock'], true)) {
+            $this->writeStockViaService($type, $product, (int) $newValue, $action, 'AI: stock yangilandi');
+        } else {
+            $product->{$column} = $newValue;
+            $product->save();
+        }
 
         $applied = [[
             'product_type' => $type,
@@ -1102,8 +1104,13 @@ class SellerAiController extends Controller
             }
 
             $currentValue = $product->{$column};
-            $product->{$column} = $item['old_value'] ?? null;
-            $product->save();
+
+            if (in_array($column, ['count', 'stock'], true)) {
+                $this->writeStockViaService($type, $product, (int) ($item['old_value'] ?? 0), $action, 'AI: stock rollback');
+            } else {
+                $product->{$column} = $item['old_value'] ?? null;
+                $product->save();
+            }
 
             $rows[] = [
                 'product_type' => $type,
@@ -1144,6 +1151,20 @@ class SellerAiController extends Controller
             'status', 'is_hidden' => filter_var($value, FILTER_VALIDATE_BOOLEAN),
             default => max(0, (int) $value),
         };
+    }
+
+
+    /**
+     * FILIAL STOCK: AI action orqali stock o'zgarishi service'ga yo'naltiriladi
+     * (legacy ustun setterlari endi yozmaydi).
+     */
+    private function writeStockViaService(?string $type, $product, int $value, SellerAiAction $action, string $note): void
+    {
+        $stockType = $type === 'book' ? 'book' : 'stationery';
+        app(\App\Services\BranchStockService::class)->setTotalFromLegacy(
+            $stockType, (int) $product->id, 0, (int) $action->seller_id, max(0, $value), null,
+            ['actor_type' => 'seller', 'actor_id' => $action->seller_id, 'ref_type' => 'seller_ai_action', 'ref_id' => $action->id, 'note' => $note]
+        );
     }
 
     private function sellerAction(string $token): SellerAiAction
@@ -1203,7 +1224,7 @@ class SellerAiController extends Controller
             ->map(fn ($item) => ($item['product_type'] ?? '') . ':' . ($item['product_id'] ?? ''))
             ->all();
 
-        Books::query()->where('seller_id', $sellerId)->where('count', '>', 0)->get(['id', 'name', 'artikul', 'isbn', 'count'])->each(function ($book) use (&$preview, $seen) {
+        Books::query()->where('seller_id', $sellerId)->inStock()->get(['id', 'name', 'artikul', 'isbn'])->each(function ($book) use (&$preview, $seen) {
             if (in_array('book:' . $book->id, $seen, true)) return;
             $preview[] = [
                 'row' => null,
@@ -1220,7 +1241,7 @@ class SellerAiController extends Controller
             ];
         });
 
-        Stationery::query()->where('seller_id', $sellerId)->where('stock', '>', 0)->get(['id', 'name', 'artikul', 'barcode', 'stock'])->each(function ($item) use (&$preview, $seen) {
+        Stationery::query()->where('seller_id', $sellerId)->inStock()->get(['id', 'name', 'artikul', 'barcode'])->each(function ($item) use (&$preview, $seen) {
             if (in_array('stationery:' . $item->id, $seen, true)) return;
             $preview[] = [
                 'row' => null,
@@ -1249,7 +1270,7 @@ class SellerAiController extends Controller
             $book = Books::query()
                 ->where('seller_id', $sellerId)
                 ->where(fn ($q) => $q->where('artikul', $value)->orWhere('isbn', $value))
-                ->first(['id', 'name', 'artikul', 'isbn', 'count']);
+                ->first(['id', 'name', 'artikul', 'isbn']);
             if ($book) {
                 return ['type' => 'book', 'id' => $book->id, 'name' => $book->name, 'stock' => (int) $book->count, 'reason' => $key, 'identifier' => $value, 'confidence' => 0.98];
             }
@@ -1257,7 +1278,7 @@ class SellerAiController extends Controller
             $stationery = Stationery::query()
                 ->where('seller_id', $sellerId)
                 ->where(fn ($q) => $q->where('artikul', $value)->orWhere('barcode', $value))
-                ->first(['id', 'name', 'artikul', 'barcode', 'stock']);
+                ->first(['id', 'name', 'artikul', 'barcode']);
             if ($stationery) {
                 return ['type' => 'stationery', 'id' => $stationery->id, 'name' => $stationery->name, 'stock' => (int) $stationery->stock, 'reason' => $key, 'identifier' => $value, 'confidence' => 0.98];
             }
@@ -1266,12 +1287,12 @@ class SellerAiController extends Controller
         $name = mb_strtolower(trim((string) ($record['name'] ?? $row[0] ?? '')));
         if ($name === '') return null;
 
-        $book = Books::query()->where('seller_id', $sellerId)->whereRaw('LOWER(TRIM(name)) = ?', [$name])->first(['id', 'name', 'count']);
+        $book = Books::query()->where('seller_id', $sellerId)->whereRaw('LOWER(TRIM(name)) = ?', [$name])->first(['id', 'name']);
         if ($book) {
             return ['type' => 'book', 'id' => $book->id, 'name' => $book->name, 'stock' => (int) $book->count, 'reason' => 'name', 'confidence' => 0.72];
         }
 
-        $stationery = Stationery::query()->where('seller_id', $sellerId)->whereRaw('LOWER(TRIM(name)) = ?', [$name])->first(['id', 'name', 'stock']);
+        $stationery = Stationery::query()->where('seller_id', $sellerId)->whereRaw('LOWER(TRIM(name)) = ?', [$name])->first(['id', 'name']);
         if ($stationery) {
             return ['type' => 'stationery', 'id' => $stationery->id, 'name' => $stationery->name, 'stock' => (int) $stationery->stock, 'reason' => 'name', 'confidence' => 0.72];
         }
