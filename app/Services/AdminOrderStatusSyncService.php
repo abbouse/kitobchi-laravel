@@ -92,7 +92,9 @@ class AdminOrderStatusSyncService
 
             $this->syncCompletedOrderSideEffects($order, $previousCompletedPaid, 'main_status_update');
 
+            $courierOrderId = (int) $order->id;
             DB::afterCommit(fn () => $this->orderStatusPushService->sendForTransition($order->fresh(), $previousStatus, $statusCode->legacy()));
+            DB::afterCommit(fn () => app(CourierBroadcaster::class)->notifyPendingForOrder($courierOrderId));
         });
     }
 
@@ -147,7 +149,9 @@ class AdminOrderStatusSyncService
                 'updated_at' => now(),
             ]);
 
+            $courierOrderId = (int) $order->id;
             DB::afterCommit(fn () => $this->orderStatusPushService->sendForTransition($order->fresh(), $previousStatus, (string) $order->status));
+            DB::afterCommit(fn () => app(CourierBroadcaster::class)->notifyPendingForOrder($courierOrderId));
         });
     }
 

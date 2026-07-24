@@ -59,6 +59,7 @@ use App\Models\Report;
 use App\Models\SearchHistory;
 use App\Models\Seller;
 use App\Models\SellerLocation;
+use App\Models\ProductStockAlert;
 use App\Models\SellerStaffLog;
 use App\Models\SellerAd;
 use App\Models\SellerAiAction;
@@ -193,6 +194,117 @@ class AdminController extends Controller
     public function liveData(): JsonResponse
     {
         return response()->json($this->liveSnapshot());
+    }
+
+    /**
+     * Dashboardni tanlangan davr bo'yicha Excel (.xlsx) hisobotga eksport qiladi.
+     * Ekrandagi payload bilan bir xil manbadan olinadi — raqamlar aynan mos.
+     */
+    public function exportReport(Request $request)
+    {
+        $payload = $this->dashboardPayload($request);
+        $rows = $this->buildDashboardExportRows($payload);
+        $filename = 'kitobchi-dashboard-'.now()->format('Y-m-d_His').'.xlsx';
+
+        return \Maatwebsite\Excel\Facades\Excel::download(
+            new \App\Exports\DashboardReportExport($rows, 'Dashboard'),
+            $filename
+        );
+    }
+
+    /**
+     * dashboardPayload'ni Excel varaqiga mos seksiyali 2D massivga aylantiradi.
+     *
+     * @param  array<string, mixed>  $p
+     * @return array<int, array<int, mixed>>
+     */
+    private function buildDashboardExportRows(array $p): array
+    {
+        $rows = [];
+        $rows[] = ['Kitobchi — Dashboard hisoboti'];
+        $rows[] = ['Davr', $p['range']['label'] ?? '-'];
+        $rows[] = ['Yaratilgan', $p['generatedAt'] ?? now()->format('Y-m-d H:i')];
+        $rows[] = [];
+
+        $m = $p['metrics'] ?? [];
+        $rows[] = ["ASOSIY KO'RSATKICHLAR"];
+        $rows[] = ['Buyurtmalar', (int) ($m['orders'] ?? 0)];
+        $rows[] = ['Yakuniy savdolar', (int) ($m['paidOrders'] ?? 0)];
+        $rows[] = ['Foydalanuvchilar', (int) ($m['users'] ?? 0)];
+        $rows[] = ['Sotuvchilar', (int) ($m['sellers'] ?? 0)];
+        $rows[] = ['Kuryerlar', (int) ($m['couriers'] ?? 0)];
+        $rows[] = [];
+
+        $f = $p['financial'] ?? [];
+        $rows[] = ['MOLIYA (so\'m)'];
+        $rows[] = ['Yakuniy savdo tushumi', (int) round($f['grossRevenue'] ?? 0)];
+        $rows[] = ['Seller komissiya', (int) round($f['commission'] ?? 0)];
+        $rows[] = ['Yetkazish daromadi', (int) round($f['deliveryIncome'] ?? 0)];
+        $rows[] = ['Promo chegirma', (int) round($f['promoDiscount'] ?? 0)];
+        $rows[] = ['Cashback', (int) round($f['cashback'] ?? 0)];
+        $rows[] = ['Kuryer payout', (int) round($f['courierPayout'] ?? 0)];
+        $rows[] = ['Provider komissiya', (int) round($f['providerFee'] ?? 0)];
+        $rows[] = ['Soliq', (int) round($f['tax'] ?? 0)];
+        $rows[] = ['Platforma sof marja', (int) round($f['platformProfit'] ?? 0)];
+        $rows[] = [];
+
+        $u = $p['unitEconomics'] ?? [];
+        $rows[] = ['UNIT ECONOMICS'];
+        $rows[] = ['Yangi xaridorlar (davr)', (int) ($u['newBuyers'] ?? 0)];
+        $rows[] = ['CAC (marketing/yangi xaridor)', (int) ($u['cac'] ?? 0)];
+        $rows[] = ['Blended CAC (jami xarajat/yangi)', (int) ($u['blendedCac'] ?? 0)];
+        $rows[] = ['LTV (margin, lifetime)', (int) ($u['ltv'] ?? 0)];
+        $rows[] = ['LTV : CAC', $u['ltvCacRatio'] ?? 0];
+        $rows[] = ['ARPU (o\'rtacha tushum/xaridor)', (int) ($u['arpu'] ?? 0)];
+        $rows[] = ['Contribution margin / order', (int) ($u['contributionPerOrder'] ?? 0)];
+        $rows[] = ['Gross margin %', $u['marginPct'] ?? 0];
+        $rows[] = ['Refund rate %', $u['refundRate'] ?? 0];
+        $rows[] = ['Refund summa', (int) ($u['refundAmount'] ?? 0)];
+        $rows[] = ['Cancel rate %', $u['cancelRate'] ?? 0];
+        $rows[] = ['Repeat purchase %', $u['repeatRate'] ?? 0];
+        $rows[] = ['Payback (order)', $u['paybackOrders'] ?? 0];
+        $rows[] = [];
+
+        $rows[] = ['XARID VORONKASI'];
+        $rows[] = ['Bosqich', 'Soni', 'Konversiya %'];
+        foreach (($p['funnel']['stages'] ?? []) as $st) {
+            $rows[] = [$st['label'] ?? '-', (int) ($st['value'] ?? 0), $st['rate'] ?? 0];
+        }
+        $rows[] = [];
+
+        $rows[] = ['SOTUVCHILAR REYTINGI'];
+        $rows[] = ['Sotuvchi', 'Order', "Tushum (so'm)", 'Bekor %', 'Qabul (daqiqa)', 'Reyting', 'Reputatsiya'];
+        foreach (($p['sellerScorecard'] ?? []) as $s) {
+            $rows[] = [
+                $s['name'] ?? '-', (int) ($s['orders'] ?? 0), (int) round($s['revenue'] ?? 0),
+                $s['cancelRate'] ?? 0, $s['acceptMinutes'] ?? '-', $s['rating'] ?? 0, $s['reputation'] ?? 0,
+            ];
+        }
+        $rows[] = [];
+
+        $rows[] = ['TOP MAHSULOTLAR'];
+        $rows[] = ['Mahsulot', 'Sotildi', "Tushum (so'm)"];
+        foreach (($p['topProducts'] ?? []) as $tp) {
+            $rows[] = [$tp['name'] ?? '-', (int) ($tp['quantity'] ?? 0), (int) round($tp['revenue'] ?? 0)];
+        }
+        $rows[] = [];
+
+        $maxOffset = (int) ($p['retention']['maxOffset'] ?? 5);
+        $rows[] = ['RETENTION KOGORTALARI (%)'];
+        $header = ['Kogorta', 'Hajm'];
+        for ($i = 0; $i <= $maxOffset; $i++) {
+            $header[] = 'M+'.$i;
+        }
+        $rows[] = $header;
+        foreach (($p['retention']['cohorts'] ?? []) as $c) {
+            $line = [$c['month'] ?? '-', (int) ($c['size'] ?? 0)];
+            foreach (($c['retention'] ?? []) as $val) {
+                $line[] = $val === null ? '' : $val;
+            }
+            $rows[] = $line;
+        }
+
+        return $rows;
     }
 
     public function page(string $component): Response
@@ -3039,6 +3151,11 @@ PROMPT;
             'deliverySplit' => $this->deliverySplit($range['from'], $range['to']),
             'regions' => $this->liveRegionStats($range['from'], $range['to']),
             'platformAnalysis' => $this->dashboardPlatformAnalysis(),
+            'funnel' => $this->dashboardConversionFunnel($range['from'], $range['to']),
+            'retention' => $this->dashboardRetentionCohorts(),
+            'sellerScorecard' => $this->dashboardSellerScorecard(),
+            'unitEconomics' => $this->dashboardUnitEconomics($range['from'], $range['to']),
+            'exportUrl' => route('boshqaruv.dashboard.export'),
             'alerts' => $this->liveAlerts($mainCounts, $sellerCounts, $courierCounts),
         ];
     }
@@ -3768,6 +3885,18 @@ PROMPT;
             ->latest()
             ->take(20)
             ->get() : collect();
+        // Mijoz "kelganda xabar ber" (stock-alert) bosgan, hali xabar
+        // yuborilmagan (tugagan) mahsulotlar — user showda ko'rsatiladi.
+        $stockAlerts = Schema::hasTable('product_stock_alerts') ? ProductStockAlert::query()
+            ->where('user_id', $user->id)
+            ->whereNull('notified_at')
+            ->latest()
+            ->take(30)
+            ->get() : collect();
+        $stockAlertVariants = $stockAlerts->pluck('variant_id')->filter()->unique()->values();
+        $stockAlertVariantMap = ($stockAlertVariants->isNotEmpty() && Schema::hasTable('stationery_variants'))
+            ? StationeryVariant::query()->whereIn('id', $stockAlertVariants)->get()->keyBy('id')
+            : collect();
         $allCartItems = Schema::hasTable('my_carts') ? MyCart::query()
             ->where('user_id', $user->id)
             ->with('variant')
@@ -3842,6 +3971,7 @@ PROMPT;
                 'mysteryBoxes' => $subscriptions->count(),
                 'searches' => $searchHistory->sum(fn (SearchHistory $history) => max(1, (int) ($history->search_count ?? 1))),
                 'favourites' => $favourites->count(),
+                'stockAlerts' => $stockAlerts->count(),
                 'cartItems' => $allCartItems->count(),
                 'cartQuantity' => $allCartItems->sum(fn (MyCart $item) => max(1, (int) ($item->count_item ?? 1))),
                 'cartTotal' => $allCartItems->sum(function (MyCart $item) use ($cartUnitPrice) {
@@ -3911,6 +4041,20 @@ PROMPT;
                     'id' => $favourite->id,
                     'favouriteId' => $favourite->id,
                     'addedAt' => optional($favourite->created_at)->format('Y-m-d H:i'),
+                ]);
+            })->values(),
+            'stockAlerts' => $stockAlerts->map(function (ProductStockAlert $alert) use ($stockAlertVariantMap) {
+                $variant = $alert->variant_id ? $stockAlertVariantMap->get($alert->variant_id) : null;
+                $product = $this->userProductPayload(
+                    (string) $alert->product_type,
+                    (int) $alert->product_id,
+                    $variant,
+                );
+
+                return array_merge($product, [
+                    'id' => $alert->id,
+                    'alertId' => $alert->id,
+                    'requestedAt' => optional($alert->created_at)->format('Y-m-d H:i'),
                 ]);
             })->values(),
             'cartItems' => $cartItems->map(function (MyCart $item) use ($cartUnitPrice) {
@@ -10001,19 +10145,324 @@ PROMPT;
 
     private function deliverySplit(?Carbon $start = null, ?Carbon $end = null): array
     {
-        return $this->applyCompletedRange($this->paidOrdersQuery(), $start, $end)
+        // Xom DB enum o'rniga o'zbekcha yorliq (order detalidagi bilan bir xil).
+        $label = fn ($type): string => match ((string) $type) {
+            'pickup' => "Do'kondan olib ketish",
+            'postal' => 'Pochta orqali',
+            'hub' => 'Punktdan olish',
+            default => 'Kuryer yetkazish',
+        };
+
+        // Bir yorliqqa tushadigan turlarni (masalan null va "delivery") birlashtiramiz.
+        $merged = [];
+        $this->applyCompletedRange($this->paidOrdersQuery(), $start, $end)
             ->selectRaw('deliveryType, COUNT(*) as count, COALESCE(SUM(amount), 0) as revenue')
             ->groupBy('deliveryType')
-            ->orderByDesc('count')
-            ->take(5)
             ->get()
-            ->map(fn ($row) => [
-                'name' => $row->deliveryType ?: 'delivery',
-                'count' => (int) $row->count,
-                'revenue' => (float) $row->revenue,
-            ])
+            ->each(function ($row) use (&$merged, $label) {
+                $name = $label($row->deliveryType);
+                $merged[$name] ??= ['name' => $name, 'count' => 0, 'revenue' => 0.0];
+                $merged[$name]['count'] += (int) $row->count;
+                $merged[$name]['revenue'] += (float) $row->revenue;
+            });
+
+        return collect($merged)
+            ->sortByDesc('count')
+            ->take(5)
             ->values()
             ->all();
+    }
+
+    /**
+     * Xarid voronkasi (konversiya): ko'rish → buyurtma → to'lov → yakunlash.
+     * Ko'rishlar real event log (product_view_logs), qolgani bir order kohortasi
+     * (created_at) bo'yicha — shu sabab foizlar izchil va aniq.
+     */
+    private function dashboardConversionFunnel(?Carbon $start = null, ?Carbon $end = null): array
+    {
+        $rangeKey = ($start?->format('YmdHi') ?? 'first').'-'.($end?->format('YmdHi') ?? 'now');
+
+        return Cache::remember('boshqaruv.dash.funnel.v1.'.$rangeKey, now()->addMinutes(2), function () use ($start, $end) {
+            $views = 0;
+            $viewers = 0;
+            if (Schema::hasTable('product_view_logs')) {
+                $viewQuery = $this->applyCreatedRange(DB::table('product_view_logs'), $start, $end);
+                $views = (int) (clone $viewQuery)->count();
+                $viewers = (int) (clone $viewQuery)
+                    ->selectRaw('COUNT(DISTINCT COALESCE(user_id, session_id, device_id, id)) as c')
+                    ->value('c');
+            }
+
+            // Bir order kohortasi — hammasi created_at bo'yicha.
+            $orders = (int) $this->applyCreatedRange(Sold::query(), $start, $end)->count();
+            $paid = (int) $this->applyCreatedRange($this->paymentStatusPaidOrdersQuery(), $start, $end)->count();
+            $completed = (int) $this->applyCreatedRange($this->paidOrdersQuery(), $start, $end)->count();
+
+            $cartUsers = Schema::hasTable('my_carts')
+                ? (int) DB::table('my_carts')->whereNotNull('user_id')->distinct()->count('user_id')
+                : 0;
+
+            $rate = fn ($num, $den) => $den > 0 ? round($num / $den * 100, 1) : 0.0;
+
+            return [
+                'stages' => [
+                    ['key' => 'views', 'label' => "Ko'rishlar", 'value' => $views, 'rate' => 100.0, 'drop' => 0.0, 'color' => '#6366f1'],
+                    ['key' => 'orders', 'label' => 'Buyurtma', 'value' => $orders, 'rate' => $rate($orders, $views), 'drop' => $views > 0 ? $rate($views - $orders, $views) : 0.0, 'color' => '#8b5cf6'],
+                    ['key' => 'paid', 'label' => "To'langan", 'value' => $paid, 'rate' => $rate($paid, $orders), 'drop' => $orders > 0 ? $rate($orders - $paid, $orders) : 0.0, 'color' => '#0ea5e9'],
+                    ['key' => 'completed', 'label' => 'Yakunlangan', 'value' => $completed, 'rate' => $rate($completed, $paid), 'drop' => $paid > 0 ? $rate($paid - $completed, $paid) : 0.0, 'color' => '#10b981'],
+                ],
+                'uniqueViewers' => $viewers,
+                'cartUsers' => $cartUsers,
+                'viewToPaid' => $rate($paid, $views),
+                'hasViewData' => $views > 0,
+            ];
+        });
+    }
+
+    /**
+     * Oylik retention kogortalari: har oy birinchi marta xarid qilgan mijozlar
+     * keyingi oylarda yana xarid qilyaptimi. Faqat to'langan+yakunlangan savdolar.
+     */
+    private function dashboardRetentionCohorts(): array
+    {
+        return Cache::remember('boshqaruv.dash.cohorts.v1', now()->addMinutes(15), function () {
+            // Har mijozning xarid qilgan (oy) to'plami — distinct(user_id, oy).
+            $rows = $this->paidOrdersQuery()
+                ->whereNotNull('user_id')
+                ->selectRaw("user_id, DATE_FORMAT(COALESCE(completed_at, updated_at), '%Y-%m-01') as ym")
+                ->distinct()
+                ->get();
+
+            if ($rows->isEmpty()) {
+                return ['cohorts' => [], 'maxOffset' => 5];
+            }
+
+            $userMonths = [];
+            foreach ($rows as $row) {
+                if ($row->ym) {
+                    $userMonths[(int) $row->user_id][] = $row->ym;
+                }
+            }
+
+            // Oxirgi 6 kogorta oyi (eskidan yangiga).
+            $cohortData = [];
+            for ($i = 5; $i >= 0; $i--) {
+                $cohortData[now()->subMonths($i)->format('Y-m-01')] = ['size' => 0, 'offsets' => array_fill(0, 6, 0)];
+            }
+
+            foreach ($userMonths as $months) {
+                sort($months);
+                $first = $months[0];
+                if (! isset($cohortData[$first])) {
+                    continue; // kogortasi oxirgi 6 oyda emas
+                }
+                $cohortStart = Carbon::parse($first);
+                $seen = [];
+                foreach ($months as $m) {
+                    $offset = (int) $cohortStart->diffInMonths(Carbon::parse($m));
+                    if ($offset >= 0 && $offset <= 5) {
+                        $seen[$offset] = true;
+                    }
+                }
+                $cohortData[$first]['size']++;
+                foreach (array_keys($seen) as $off) {
+                    $cohortData[$first]['offsets'][$off]++;
+                }
+            }
+
+            $cohorts = [];
+            foreach ($cohortData as $month => $data) {
+                if ($data['size'] === 0) {
+                    continue;
+                }
+                $retention = [];
+                foreach ($data['offsets'] as $off => $count) {
+                    $offMonth = Carbon::parse($month)->addMonths($off);
+                    // Hali kelmagan oy — null (bo'sh katak).
+                    $retention[$off] = $offMonth->greaterThan(now()->startOfMonth())
+                        ? null
+                        : (int) round($count / $data['size'] * 100);
+                }
+                $cohorts[] = [
+                    'month' => Carbon::parse($month)->format('M Y'),
+                    'size' => $data['size'],
+                    'retention' => $retention,
+                ];
+            }
+
+            return ['cohorts' => $cohorts, 'maxOffset' => 5];
+        });
+    }
+
+    /**
+     * Sotuvchilar reyting jadvali (scorecard): top sellerlar order, tushum,
+     * bekor %, o'rtacha qabul vaqti, reyting va reputatsiya bo'yicha.
+     */
+    private function dashboardSellerScorecard(): array
+    {
+        if (! Schema::hasTable('seller_orders') || ! Schema::hasTable('sellers')) {
+            return [];
+        }
+
+        return Cache::remember('boshqaruv.dash.seller-scorecard.v1', now()->addMinutes(10), function () {
+            $hasAccepted = Schema::hasColumn('seller_orders', 'accepted_at')
+                && Schema::hasColumn('seller_orders', 'created_at');
+
+            $agg = SellerOrder::query()
+                ->selectRaw('seller_id')
+                ->selectRaw('COUNT(*) as orders')
+                ->selectRaw("SUM(CASE WHEN status_code = 'cancelled' OR status = 'cancelled' THEN 1 ELSE 0 END) as cancelled")
+                ->selectRaw("SUM(CASE WHEN status_code = 'cancelled' OR status = 'cancelled' THEN 0 ELSE COALESCE(amount, 0) END) as revenue")
+                ->when($hasAccepted, fn ($q) => $q->selectRaw('AVG(CASE WHEN accepted_at IS NOT NULL THEN TIMESTAMPDIFF(MINUTE, created_at, accepted_at) END) as accept_min'))
+                ->whereNotNull('seller_id')
+                ->groupBy('seller_id')
+                ->orderByDesc('revenue')
+                ->take(8)
+                ->get();
+
+            if ($agg->isEmpty()) {
+                return [];
+            }
+
+            $sellers = Seller::query()
+                ->whereIn('id', $agg->pluck('seller_id'))
+                ->get(['id', 'shop_name', 'firstname', 'lastname', 'photo', 'rating', 'rating_reviews_count', 'reputation_score'])
+                ->keyBy('id');
+
+            return $agg->map(function ($row) use ($sellers) {
+                $seller = $sellers->get($row->seller_id);
+                $orders = (int) $row->orders;
+                $cancelled = (int) $row->cancelled;
+
+                return [
+                    'id' => (int) $row->seller_id,
+                    'name' => $seller?->shop_name ?: trim(($seller?->firstname ?? '').' '.($seller?->lastname ?? '')) ?: 'Sotuvchi',
+                    'avatar' => $this->assetFromStorage($seller?->photo),
+                    'orders' => $orders,
+                    'revenue' => (float) $row->revenue,
+                    'cancelled' => $cancelled,
+                    'cancelRate' => $orders > 0 ? round($cancelled / $orders * 100, 1) : 0.0,
+                    'acceptMinutes' => isset($row->accept_min) && $row->accept_min !== null ? (int) round((float) $row->accept_min) : null,
+                    'rating' => round((float) ($seller?->rating ?? 0), 2),
+                    'ratingCount' => (int) ($seller?->rating_reviews_count ?? 0),
+                    'reputation' => (int) ($seller?->reputation_score ?? 0),
+                    'url' => route('boshqaruv.sellers'),
+                ];
+            })->values()->all();
+        });
+    }
+
+    /**
+     * Unit economics (investor/operator bloki): CAC, LTV, LTV:CAC, contribution
+     * margin/order, refund & cancel rate, repeat, payback. Hammasi real datadan —
+     * CAC marketing xarajatidan (platform_expenses.category=marketing), LTV margin
+     * asosida (umumiy contribution / xaridorlar), refund Sold.refund_total_amount'dan.
+     */
+    private function dashboardUnitEconomics(?Carbon $start, ?Carbon $end): array
+    {
+        $rangeKey = ($start?->format('YmdHi') ?? 'first').'-'.($end?->format('YmdHi') ?? 'now');
+
+        return Cache::remember('boshqaruv.dash.unit-econ.v1.'.$rangeKey, now()->addMinutes(10), function () use ($start, $end) {
+            // Har mijozning birinchi (paid + qabul qilingan) xaridi sanasi.
+            $firstBuy = $this->paidOrdersQuery()
+                ->whereNotNull('user_id')
+                ->selectRaw('user_id, MIN(COALESCE(completed_at, updated_at)) as first_at')
+                ->groupBy('user_id')
+                ->get();
+
+            $totalBuyers = $firstBuy->count();
+            $newBuyers = 0;
+            foreach ($firstBuy as $row) {
+                if (! $row->first_at) {
+                    continue;
+                }
+                $at = Carbon::parse($row->first_at);
+                if ((! $start || $at->greaterThanOrEqualTo($start)) && (! $end || $at->lessThan($end))) {
+                    $newBuyers++;
+                }
+            }
+
+            // Marketing va umumiy xarajat (period) — spent_at bo'yicha.
+            $marketingSpend = 0.0;
+            $totalOpex = 0.0;
+            if (Schema::hasTable('platform_expenses')) {
+                $inRange = fn ($query) => $query
+                    ->when($start, fn ($q) => $q->where('spent_at', '>=', $start))
+                    ->when($end, fn ($q) => $q->where('spent_at', '<', $end));
+                $marketingSpend = (float) $inRange(PlatformExpense::query()->where('category', 'marketing'))->sum('amount');
+                $totalOpex = (float) $inRange(PlatformExpense::query())->sum('amount');
+            }
+            $cac = $newBuyers > 0 ? (int) round($marketingSpend / $newBuyers) : 0;
+            $blendedCac = $newBuyers > 0 ? (int) round($totalOpex / $newBuyers) : 0;
+
+            // LTV — umumiy (lifetime) margin / xaridorlar.
+            $allFinance = $this->marketplaceFinancialSnapshot();
+            $grossAllTime = (float) $allFinance['grossRevenue'];
+            $contributionAllTime = (float) $allFinance['contributionBeforeTax'];
+            $arpu = $totalBuyers > 0 ? (int) round($grossAllTime / $totalBuyers) : 0;
+            $ltv = $totalBuyers > 0 ? (int) round($contributionAllTime / $totalBuyers) : 0;
+            $ltvCacRatio = $cac > 0 ? round($ltv / $cac, 2) : 0.0;
+
+            // Contribution margin / order (period).
+            $periodFinance = $this->marketplaceFinancialSnapshot($start, $end);
+            $paidOrders = (int) $this->applyCompletedRange($this->paidOrdersQuery(), $start, $end)->count();
+            $contributionPerOrder = $paidOrders > 0 ? (int) round($periodFinance['contributionBeforeTax'] / $paidOrders) : 0;
+            $grossPerOrder = $paidOrders > 0 ? (int) round($periodFinance['grossRevenue'] / $paidOrders) : 0;
+            $marginPct = $periodFinance['grossRevenue'] > 0
+                ? round($periodFinance['contributionBeforeTax'] / $periodFinance['grossRevenue'] * 100, 1)
+                : 0.0;
+
+            // Refund (period) — Sold.refund_total_amount.
+            $refundAmount = 0;
+            $refundOrders = 0;
+            if (Schema::hasColumn('solds', 'refund_total_amount')) {
+                $refunded = $this->applyCompletedRange($this->paidOrdersQuery(), $start, $end)->where('refund_total_amount', '>', 0);
+                $refundAmount = (int) (clone $refunded)->sum('refund_total_amount');
+                $refundOrders = (int) (clone $refunded)->count();
+            }
+            $refundRate = $paidOrders > 0 ? round($refundOrders / $paidOrders * 100, 1) : 0.0;
+
+            // Cancel (period, yaratilgan orderlar).
+            $totalPeriodOrders = (int) $this->applyCreatedRange(Sold::query(), $start, $end)->count();
+            $cancelledPeriod = $this->countStatuses($this->applyCreatedRange(Sold::query(), $start, $end), ['cancelled', 'returned', 'F', 'R']);
+            $cancelRate = $totalPeriodOrders > 0 ? round($cancelledPeriod / $totalPeriodOrders * 100, 1) : 0.0;
+
+            // Repeat (lifetime).
+            $repeatBuyers = (int) $this->paidOrdersQuery()
+                ->whereNotNull('user_id')
+                ->select('user_id')
+                ->groupBy('user_id')
+                ->havingRaw('COUNT(*) > 1')
+                ->get()
+                ->count();
+            $repeatRate = $totalBuyers > 0 ? round($repeatBuyers / $totalBuyers * 100, 1) : 0.0;
+
+            // Payback — CAC ni qoplash uchun necha order kerak.
+            $paybackOrders = $contributionPerOrder > 0 && $cac > 0 ? round($cac / $contributionPerOrder, 1) : 0.0;
+
+            return [
+                'newBuyers' => $newBuyers,
+                'totalBuyers' => $totalBuyers,
+                'marketingSpend' => (int) round($marketingSpend),
+                'totalOpex' => (int) round($totalOpex),
+                'cac' => $cac,
+                'blendedCac' => $blendedCac,
+                'arpu' => $arpu,
+                'ltv' => $ltv,
+                'ltvCacRatio' => $ltvCacRatio,
+                'contributionPerOrder' => $contributionPerOrder,
+                'grossPerOrder' => $grossPerOrder,
+                'marginPct' => $marginPct,
+                'refundAmount' => $refundAmount,
+                'refundOrders' => $refundOrders,
+                'refundRate' => $refundRate,
+                'cancelRate' => $cancelRate,
+                'repeatRate' => $repeatRate,
+                'repeatBuyers' => $repeatBuyers,
+                'paybackOrders' => $paybackOrders,
+                'hasMarketingData' => $marketingSpend > 0,
+            ];
+        });
     }
 
     private function recentBookOrders(Books $book): array

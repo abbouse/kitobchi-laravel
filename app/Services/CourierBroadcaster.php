@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\CourierOrderStatusCode;
 use App\Enums\CourierTaskStatusCode;
 use App\Models\CourierOrder;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
@@ -27,6 +28,39 @@ class CourierBroadcaster
     }
 
     /**
+     * Buyurtma (Sold) uchun barcha `pending` va hali kuryer biriktirilmagan
+     * CourierOrder'larni topib push yuboradi.
+     *
+     * MUHIM: courier order status'i ko'p joyda query-builder mass update
+     * (`CourierOrder::where(...)->update(...)`) bilan `pending`ga o'tkaziladi —
+     * bu Eloquent observer'ni ISHGA TUSHIRMAYDI. Shu sabab to'lov tasdiqlangach
+     * yoki seller qabul qilgach kuryerga push kelmay qolardi. Bu metod har bir
+     * shunday o'tishdan keyin (afterCommit) chaqiriladi.
+     */
+    public function notifyPendingForOrder(int $orderId): void
+    {
+        if ($orderId <= 0) {
+            return;
+        }
+
+        try {
+            CourierOrder::query()
+                ->where('order_id', $orderId)
+                ->whereNull('courier_id')
+                ->where(function ($query) {
+                    $query->where('status', CourierOrderStatusCode::PENDING->legacy())
+                        ->orWhere('status_code', CourierOrderStatusCode::PENDING->value);
+                })
+                ->get()
+                ->each(fn (CourierOrder $courierOrder) => $this->notifyNewOrderAvailable($courierOrder));
+        } catch (\Throwable $e) {
+            Log::error('CourierBroadcaster notifyPendingForOrder error: '.$e->getMessage(), [
+                'order_id' => $orderId,
+            ]);
+        }
+    }
+
+    /**
      * Yangi buyurtma e'lon qilingani haqida barcha tasdiqlangan kuryerlarni xabardor qilish.
      */
     public function notifyNewOrderAvailable(CourierOrder $courierOrder): array
@@ -36,6 +70,8 @@ class CourierBroadcaster
             $tokens = $target['tokens'];
 
             if (empty($tokens)) {
+                // Hozir mos kuryer yo'q — guard QO'YILMAYDI, keyingi trigger
+                // (kuryer online bo'lganda yoki qayta o'tishda) qayta urinadi.
                 Log::info('CourierBroadcaster skipped', [
                     'order_id' => $courierOrder->order_id,
                     'reason' => $target['reason'] ?? 'no_tokens',
@@ -46,6 +82,14 @@ class CourierBroadcaster
                     'reason' => $target['reason'] ?? 'no_tokens',
                     'target_wave' => $target['wave'] ?? null,
                 ];
+            }
+
+            // Dedup: kuryerlar topilgandagina guard qo'yamiz. created() observer
+            // + to'lov o'tishi + admin sinxron bir vaqtda chaqirsa ham "yangi
+            // buyurtma" push bitta courier order uchun faqat bir marta ketadi.
+            $guardKey = 'courier-new-order-push:'.$courierOrder->id;
+            if (! Cache::add($guardKey, 1, now()->addHours(6))) {
+                return ['skipped' => true, 'reason' => 'already_notified'];
             }
 
             $title = __('courier_api.order_confirmed') === 'courier_api.order_confirmed'

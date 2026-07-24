@@ -5,6 +5,7 @@ namespace App\Observers;
 use App\Models\CourierOrder;
 use App\Services\CourierBroadcaster;
 use App\Services\OrderRealtimeService;
+use Illuminate\Support\Facades\DB;
 
 /**
  * CourierOrder uchun observer.
@@ -27,21 +28,29 @@ class CourierOrderObserver
     public function created(CourierOrder $order): void
     {
         if ($this->isAvailableForAllCouriers($order)) {
-            $this->broadcaster->notifyNewOrderAvailable($order);
+            // Push faqat tranzaksiya commit bo'lgach ketadi — rollback bo'lsa
+            // mavjud bo'lmagan buyurtma uchun push yubormaymiz.
+            $orderId = (int) $order->order_id;
+            DB::afterCommit(fn () => $this->broadcaster->notifyPendingForOrder($orderId));
             $this->realtimeService->broadcastCourierOrderUpdated($order, 'courier_order.available');
         }
     }
 
     public function updated(CourierOrder $order): void
     {
-        // Status 'pending' ga endi o'tdi (oldin boshqa edi)
+        // Status 'pending' ga endi o'tdi (oldin boshqa edi).
+        // Eslatma: query-builder mass update bu observer'ni ISHGA TUSHIRMAYDI —
+        // shu sabab to'lov/seller o'tishlarida push CourierBroadcaster orqali
+        // xizmat qatlamidan aniq chaqiriladi. Bu faqat model-instance
+        // update'lari uchun qo'shimcha himoya.
         if (
             $order->wasChanged('status')
             && $order->status === 'pending'
             && $order->getOriginal('status') !== 'pending'
             && $this->isAvailableForAllCouriers($order)
         ) {
-            $this->broadcaster->notifyNewOrderAvailable($order);
+            $orderId = (int) $order->order_id;
+            DB::afterCommit(fn () => $this->broadcaster->notifyPendingForOrder($orderId));
             $this->realtimeService->broadcastCourierOrderUpdated($order, 'courier_order.available');
         }
     }

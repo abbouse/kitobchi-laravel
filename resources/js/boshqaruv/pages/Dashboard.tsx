@@ -41,6 +41,17 @@ interface DashboardPayload {
   deliverySplit: Array<{ name: string; count: number; revenue: number }>;
   regions: Array<{ name: string; value: number; revenue: number; color: string }>;
   platformAnalysis: Array<{ name: string; icon: string; color: string; version: string; activeUsers: number; orders: number; revenue: number; conversion: number; crashRate: number; avgSessionSeconds: number }>;
+  funnel: { stages: Array<{ key: string; label: string; value: number; rate: number; drop: number; color: string }>; uniqueViewers: number; cartUsers: number; viewToPaid: number; hasViewData: boolean };
+  retention: { cohorts: Array<{ month: string; size: number; retention: Array<number | null> }>; maxOffset: number };
+  sellerScorecard: Array<{ id: number; name: string; avatar?: string | null; orders: number; revenue: number; cancelled: number; cancelRate: number; acceptMinutes: number | null; rating: number; ratingCount: number; reputation: number; url?: string }>;
+  unitEconomics: {
+    newBuyers: number; totalBuyers: number; marketingSpend: number; totalOpex: number;
+    cac: number; blendedCac: number; arpu: number; ltv: number; ltvCacRatio: number;
+    contributionPerOrder: number; grossPerOrder: number; marginPct: number;
+    refundAmount: number; refundOrders: number; refundRate: number;
+    cancelRate: number; repeatRate: number; repeatBuyers: number; paybackOrders: number; hasMarketingData: boolean;
+  };
+  exportUrl?: string;
   alerts: Array<{ level: string; icon: string; title: string; text: string; url?: string }>;
 }
 
@@ -62,6 +73,16 @@ const emptyDashboard: DashboardPayload = {
   deliverySplit: [],
   regions: [],
   platformAnalysis: [],
+  funnel: { stages: [], uniqueViewers: 0, cartUsers: 0, viewToPaid: 0, hasViewData: false },
+  retention: { cohorts: [], maxOffset: 5 },
+  sellerScorecard: [],
+  unitEconomics: {
+    newBuyers: 0, totalBuyers: 0, marketingSpend: 0, totalOpex: 0,
+    cac: 0, blendedCac: 0, arpu: 0, ltv: 0, ltvCacRatio: 0,
+    contributionPerOrder: 0, grossPerOrder: 0, marginPct: 0,
+    refundAmount: 0, refundOrders: 0, refundRate: 0,
+    cancelRate: 0, repeatRate: 0, repeatBuyers: 0, paybackOrders: 0, hasMarketingData: false,
+  },
   alerts: [],
 };
 
@@ -144,6 +165,17 @@ export default function Dashboard() {
     selectPeriod('custom', customFrom, customTo);
   };
 
+  // Excel eksport joriy davr bilan bir xil bo'lishi uchun period paramlarini qo'shamiz.
+  const exportHref = (() => {
+    if (!dashboard.exportUrl) return '#';
+    const params = new URLSearchParams({ dashboard_period: dashboard.range.key });
+    if (dashboard.range.key === 'custom' && dashboard.range.from && dashboard.range.to) {
+      params.set('dashboard_from', dashboard.range.from);
+      params.set('dashboard_to', dashboard.range.to);
+    }
+    return `${dashboard.exportUrl}?${params.toString()}`;
+  })();
+
   return (
     <div>
       <div className="page-head">
@@ -172,6 +204,9 @@ export default function Dashboard() {
               <i className="bi bi-calendar-range me-1"></i>Sana
             </button>
           </div>
+          {dashboard.exportUrl ? (
+            <a href={exportHref} className="btn btn-outline-success btn-sm"><i className="bi bi-file-earmark-excel me-1"></i>Excel</a>
+          ) : null}
           <Link href="/boshqaruv/live" className="btn btn-outline-secondary btn-sm"><i className="bi bi-broadcast me-1"></i>Live</Link>
         </div>
       </div>
@@ -220,6 +255,8 @@ export default function Dashboard() {
         <PeriodCard label="O'rtacha chek" value={money(current.aov)} delta={previous ? change(current.aov, previous.aov) : null} icon="bi-receipt" color="#f59e0b" help={periodHelps.aov} />
         <PeriodCard label="Yangi userlar" value={fmt(current.users)} delta={previous ? change(current.users, previous.users) : null} icon="bi-person-plus" color="#ec4899" help={periodHelps.users} />
       </div>
+
+      <UnitEconomics data={dashboard.unitEconomics} />
 
       <div className="row g-3 mb-3">
         <div className="col-xl-8">
@@ -298,6 +335,12 @@ export default function Dashboard() {
       <BusinessKpis dashboard={dashboard} />
 
       <PlatformAnalysis rows={dashboard.platformAnalysis} />
+
+      <FunnelPanel funnel={dashboard.funnel} />
+
+      <CohortPanel retention={dashboard.retention} />
+
+      <SellerScorecard rows={dashboard.sellerScorecard} />
 
       <div className="row g-3">
         <div className="col-xl-4">
@@ -427,6 +470,207 @@ function formatDuration(seconds = 0) {
   }
 
   return `${minutes}m ${rest}s`;
+}
+
+function UnitEconomics({ data }: { data: DashboardPayload['unitEconomics'] }) {
+  const ratioTone = data.ltvCacRatio >= 3 ? '#10b981' : data.ltvCacRatio >= 1 ? '#f59e0b' : '#ef4444';
+  const refundTone = data.refundRate > 5 ? '#ef4444' : data.refundRate > 2 ? '#f59e0b' : '#10b981';
+  const cancelTone = data.cancelRate > 15 ? '#ef4444' : data.cancelRate > 8 ? '#f59e0b' : '#10b981';
+  const marginTone = data.marginPct >= 0 ? '#059669' : '#ef4444';
+
+  const cards = [
+    { l: 'CAC', icon: 'bi-cash-coin', v: data.hasMarketingData ? money(data.cac) : '—', s: data.hasMarketingData ? `${fmt(data.newBuyers)} yangi xaridor` : 'Marketing xarajat kiritilmagan', c: '#6366f1', help: "Customer Acquisition Cost: davrdagi marketing xarajati / yangi xaridorlar. Marketing xarajati Chiqimlar bo'limidagi \"Marketing va reklama\" kategoriyasidan olinadi." },
+    { l: 'LTV (margin)', icon: 'bi-gem', v: money(data.ltv), s: `ARPU ${money(data.arpu)}`, c: '#10b981', help: "Lifetime Value: har bir xaridorga to'g'ri keladigan umumiy platforma marjasi (contribution / jami xaridorlar). ARPU — o'rtacha yalpi tushum/xaridor." },
+    { l: 'LTV : CAC', icon: 'bi-speedometer2', v: data.hasMarketingData ? `${data.ltvCacRatio}×` : '—', s: data.ltvCacRatio >= 3 ? "Sog'lom (≥3)" : data.ltvCacRatio >= 1 ? "O'rtacha" : 'Past', c: ratioTone, help: "Investor uchun asosiy nisbat. ≥3 sog'lom, 1–3 o'rtacha, <1 — mijoz jalb qilish zarar keltiryapti." },
+    { l: 'Payback', icon: 'bi-arrow-repeat', v: data.hasMarketingData && data.paybackOrders > 0 ? `${data.paybackOrders} order` : '—', s: 'CAC ni qoplash', c: '#7c3aed', help: 'CAC ni qoplash uchun bitta xaridordan necha order kerak (CAC / contribution-per-order).' },
+    { l: 'Margin / order', icon: 'bi-cash-stack', v: money(data.contributionPerOrder), s: `Gross ${money(data.grossPerOrder)}`, c: marginTone, help: "Har bir yakuniy orderdan qoladigan platforma marjasi (soliqdan oldingi contribution). Gross — o'rtacha order summasi." },
+    { l: 'Gross margin', icon: 'bi-percent', v: `${data.marginPct}%`, s: 'Contribution / tushum', c: marginTone, help: 'Contribution margin yalpi tushumga nisbatan foizda. Manfiy bo\'lsa xarajat tushumdan oshgan.' },
+    { l: 'Refund rate', icon: 'bi-arrow-return-left', v: `${data.refundRate}%`, s: `${fmt(data.refundOrders)} order · ${money(data.refundAmount)}`, c: refundTone, help: 'Qaytarilgan (refund) orderlar ulushi va summasi. Sold.refund_total_amount asosida.' },
+    { l: 'Cancel rate', icon: 'bi-x-circle', v: `${data.cancelRate}%`, s: 'Bekor + qaytgan', c: cancelTone, help: 'Davrda yaratilgan orderlardan bekor qilingan yoki qaytganlari ulushi.' },
+    { l: 'Repeat', icon: 'bi-arrow-repeat', v: `${data.repeatRate}%`, s: `${fmt(data.repeatBuyers)} qaytgan xaridor`, c: '#ec4899', help: "Bir martadan ko'p xarid qilgan xaridorlar ulushi (lifetime)." },
+  ];
+
+  return (
+    <div className="card-panel mb-3">
+      <div className="panel-head">
+        <div>
+          <div className="d-flex align-items-center gap-2">
+            <div className="panel-title">Unit economics</div>
+            <InfoHint text="Investor va operator uchun birlik iqtisodiyoti. CAC/refund/cancel tanlangan davr bilan, LTV va repeat lifetime bo'yicha. Hammasi real order, xarajat va refund ma'lumotlaridan hisoblanadi." />
+          </div>
+          <small className="text-muted">CAC · LTV · margin/order · refund/cancel · repeat</small>
+        </div>
+        {data.hasMarketingData ? null : <span className="chip chip-warning">CAC uchun Chiqimlarga marketing xarajat kiriting</span>}
+      </div>
+      <div className="row g-2">
+        {cards.map((card) => (
+          <div className="col-xl-2 col-lg-3 col-md-4 col-6" key={card.l}>
+            <div className="mini-stat h-100">
+              <i className={`bi ${card.icon}`} style={{ color: card.c }}></i>
+              <span>
+                <span className="d-inline-flex align-items-center gap-1">{card.l}<InfoHint text={card.help} /></span>
+                <small className="d-block text-muted">{card.s}</small>
+              </span>
+              <strong style={{ color: card.c }}>{card.v}</strong>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FunnelPanel({ funnel }: { funnel: DashboardPayload['funnel'] }) {
+  const stages = funnel.stages || [];
+  const max = Math.max(1, ...stages.map((stage) => stage.value));
+
+  return (
+    <div className="card-panel mb-3">
+      <div className="panel-head">
+        <div>
+          <div className="d-flex align-items-center gap-2">
+            <div className="panel-title">Xarid voronkasi</div>
+            <InfoHint text="Ko'rish → buyurtma → to'lov → yakunlash. Ko'rishlar real mahsulot ko'rish eventlaridan (product_view_logs), qolgan bosqichlar bir order kohortasi (yaratilgan sana) bo'yicha. Foiz — oldingi bosqichdan konversiya." />
+          </div>
+          <small className="text-muted">
+            {funnel.hasViewData
+              ? `${fmt(funnel.uniqueViewers)} unikal ko'ruvchi · hozir savatda ${fmt(funnel.cartUsers)} mijoz`
+              : `Ko'rish logi hali to'planmagan · hozir savatda ${fmt(funnel.cartUsers)} mijoz`}
+          </small>
+        </div>
+        <span className="chip chip-success">Ko'rish→to'lov {funnel.viewToPaid}%</span>
+      </div>
+      {stages.length ? (
+        <div className="d-flex flex-column gap-2">
+          {stages.map((stage, index) => (
+            <div key={stage.key}>
+              <div className="d-flex justify-content-between align-items-center mb-1">
+                <span className="fw-semibold small">{index + 1}. {stage.label}</span>
+                <span className="small text-muted">
+                  {fmt(stage.value)}
+                  {index > 0 ? ` · ${stage.rate}% konversiya` : ''}
+                  {stage.drop > 0 ? ` · −${stage.drop}%` : ''}
+                </span>
+              </div>
+              <div className="progress" style={{ height: 22, background: '#f1f5f9' }}>
+                <div className="progress-bar" style={{ width: `${Math.max(3, stage.value / max * 100)}%`, background: stage.color, fontWeight: 600, fontSize: 12 }}>
+                  {fmt(stage.value)}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : <div className="text-muted small">Voronka uchun ma'lumot yo'q.</div>}
+    </div>
+  );
+}
+
+function CohortPanel({ retention }: { retention: DashboardPayload['retention'] }) {
+  const cohorts = retention.cohorts || [];
+  const offsets = Array.from({ length: (retention.maxOffset ?? 5) + 1 }, (_, index) => index);
+  const cellStyle = (value: number | null) => {
+    if (value === null || value === undefined) return { background: 'transparent', color: '#cbd5e1' };
+    const alpha = Math.min(1, 0.12 + value / 100 * 0.88);
+    return { background: `rgba(79,70,229,${alpha})`, color: value > 45 ? '#fff' : '#1e293b' };
+  };
+
+  return (
+    <div className="card-panel mb-3">
+      <div className="panel-head">
+        <div>
+          <div className="d-flex align-items-center gap-2">
+            <div className="panel-title">Retention kogortalari</div>
+            <InfoHint text="Har oy birinchi marta xarid qilgan mijozlar keyingi oylarda yana xarid qildimi. M+0 doim 100% (birinchi oy). Faqat to'langan va mijoz qabul qilgan savdolar hisobga olinadi. Bo'sh katak — hali kelmagan oy." />
+          </div>
+          <small className="text-muted">Qayta xarid ulushi (%) — oylik kogortalar</small>
+        </div>
+      </div>
+      {cohorts.length ? (
+        <div style={{ overflowX: 'auto' }}>
+          <table className="table table-sm mb-0 text-center align-middle" style={{ minWidth: 620 }}>
+            <thead>
+              <tr>
+                <th className="text-start">Kogorta</th>
+                <th>Mijoz</th>
+                {offsets.map((offset) => <th key={offset}>M+{offset}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {cohorts.map((cohort) => (
+                <tr key={cohort.month}>
+                  <td className="text-start fw-semibold">{cohort.month}</td>
+                  <td>{fmt(cohort.size)}</td>
+                  {offsets.map((offset) => {
+                    const value = cohort.retention[offset] ?? null;
+                    return (
+                      <td key={offset} style={{ ...cellStyle(value), borderRadius: 6, fontWeight: 600, fontSize: 12 }}>
+                        {value === null ? '·' : `${value}%`}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : <div className="text-muted small">Kogorta uchun yetarli xarid tarixi yo'q.</div>}
+    </div>
+  );
+}
+
+function SellerScorecard({ rows }: { rows: DashboardPayload['sellerScorecard'] }) {
+  return (
+    <div className="card-panel mb-3">
+      <div className="panel-head">
+        <div>
+          <div className="d-flex align-items-center gap-2">
+            <div className="panel-title">Sotuvchilar reytingi</div>
+            <InfoHint text="Top sotuvchilar tushum bo'yicha. Bekor % — bekor qilingan orderlar ulushi, Qabul — buyurtmani qabul qilishgacha o'rtacha daqiqa, Reyting va Reputatsiya seller profilidan olinadi." />
+          </div>
+          <small className="text-muted">Tushum bo'yicha top {rows.length || 8} sotuvchi</small>
+        </div>
+      </div>
+      {rows.length ? (
+        <div style={{ overflowX: 'auto' }}>
+          <table className="table table-sm table-hover align-middle mb-0" style={{ minWidth: 720 }}>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Sotuvchi</th>
+                <th className="text-end">Order</th>
+                <th className="text-end">Tushum</th>
+                <th className="text-end">Bekor %</th>
+                <th className="text-end">Qabul</th>
+                <th className="text-end">Reyting</th>
+                <th className="text-end">Reputatsiya</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((seller, index) => (
+                <tr key={seller.id}>
+                  <td>{index + 1}</td>
+                  <td>
+                    <a href={seller.url || '#'} className="text-decoration-none text-body d-flex align-items-center gap-2">
+                      {seller.avatar
+                        ? <img src={seller.avatar} alt="" width={26} height={26} className="rounded-circle" style={{ objectFit: 'cover' }} />
+                        : <span className="rounded-circle bg-light d-inline-flex align-items-center justify-content-center" style={{ width: 26, height: 26 }}><i className="bi bi-shop small"></i></span>}
+                      <span className="text-truncate" style={{ maxWidth: 190 }}>{seller.name}</span>
+                    </a>
+                  </td>
+                  <td className="text-end">{fmt(seller.orders)}</td>
+                  <td className="text-end fw-semibold">{money(seller.revenue)}</td>
+                  <td className="text-end"><span className={seller.cancelRate > 15 ? 'text-danger fw-semibold' : 'text-muted'}>{seller.cancelRate}%</span></td>
+                  <td className="text-end">{seller.acceptMinutes === null ? '—' : `${fmt(seller.acceptMinutes)}m`}</td>
+                  <td className="text-end">{seller.rating ? `${seller.rating.toFixed(1)}★` : '—'}{seller.ratingCount ? <small className="text-muted"> ({fmt(seller.ratingCount)})</small> : null}</td>
+                  <td className="text-end">{fmt(seller.reputation)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : <div className="text-muted small">Sotuvchi order ma'lumotlari topilmadi.</div>}
+    </div>
+  );
 }
 
 function Metric({ label, value = 0, icon, color, href, help }: { label: string; value?: number; icon: string; color: string; href: string; help?: string }) {

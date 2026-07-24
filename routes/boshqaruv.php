@@ -13,6 +13,7 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
         Route::post('/logout', [AdminController::class, 'logout'])->name('logout');
 
         Route::get('/', [AdminController::class, 'dashboard'])->name('dashboard');
+        Route::get('/dashboard/export', [AdminController::class, 'exportReport'])->name('dashboard.export');
         Route::get('/live', [AdminController::class, 'live'])->name('live');
         Route::get('/live/data', [AdminController::class, 'liveData'])->name('live.data');
 

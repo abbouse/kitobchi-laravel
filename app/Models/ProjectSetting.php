@@ -67,4 +67,17 @@ class ProjectSetting extends Model
         'review_cashback_enabled' => 'boolean',
         'review_cashback_amount' => 'integer',
     ];
+
+    /**
+     * Sozlama o'zgarsa (admin saqlaganda) keshni tozalaymiz.
+     * Barcha yozuvlar Eloquent orqali (->update/firstOrCreate) — event otiladi.
+     */
+    protected static function booted(): void
+    {
+        $forget = function () {
+            \Illuminate\Support\Facades\Cache::forget('app:versions:v1');
+        };
+        static::saved($forget);
+        static::deleted($forget);
+    }
 }

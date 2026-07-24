@@ -202,6 +202,10 @@ class OrderService
                 'status' => CourierOrderStatusCode::PENDING->legacy(),
                 'status_code' => CourierOrderStatusCode::PENDING->value,
             ]);
+
+        // Mass update observer'ni chaqirmaydi — kuryer pushini aniq beramiz.
+        $orderId = (int) $order->id;
+        DB::afterCommit(fn () => app(CourierBroadcaster::class)->notifyPendingForOrder($orderId));
     }
 
     // =========================================================================
@@ -241,6 +245,12 @@ class OrderService
                     'status' => CourierOrderStatusCode::PENDING->legacy(),
                     'status_code' => CourierOrderStatusCode::PENDING->value,
                 ]);
+
+            // Mass update observer'ni ishga tushirmaydi — kuryerlarga pushni
+            // shu yerdan aniq chaqiramiz (to'lov tasdiqlangach buyurtma
+            // kuryerlar uchun ochiladi).
+            $orderId = (int) $order->id;
+            DB::afterCommit(fn () => app(CourierBroadcaster::class)->notifyPendingForOrder($orderId));
         }
 
         if ($giveCashback) {

@@ -14,12 +14,13 @@ class ProjectSettingController extends Controller
 {
     public function getVersions()
     {
-        $s = ProjectSetting::findOrFail(1);
+        // Har ilova ochilganda chaqiriladi (eng yuqori chastota) — 10 daqiqa
+        // keshlanadi. Sozlama admin tomonidan saqlanganda kesh avtomatik tozalanadi
+        // (ProjectSetting::booted). Javob shakli aynan avvalgidek.
+        $payload = Cache::remember('app:versions:v1', now()->addMinutes(10), function () {
+            $s = ProjectSetting::findOrFail(1);
 
-        return response()->json([
-            'status' => 'success',
-            'ok'     => true,
-            'data'   => [[
+            return [[
                 'business_version_ios'     => $s->business_version_ios,
                 'business_version_android' => $s->business_version_android,
                 'courier_version_ios'      => $s->courier_version_ios,
@@ -50,7 +51,13 @@ class ProjectSettingController extends Controller
                 'ui_flags' => [
                     'show_home_special_sections' => $s->show_home_special_sections === null ? true : (bool) $s->show_home_special_sections,
                 ],
-            ]],
+            ]];
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'ok'     => true,
+            'data'   => $payload,
         ], 200);
     }
 }
