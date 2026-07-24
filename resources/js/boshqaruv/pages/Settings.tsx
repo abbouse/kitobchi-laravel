@@ -214,6 +214,12 @@ export default function Settings() {
               <div className="col-md-4"><TextInput name="courier_base_fee" label="Bazaviy haq" type="number" min={0} max={1000000} required defaultValue={value(project, 'courier_base_fee', '3000')} /></div>
               <div className="col-md-4"><TextInput name="courier_price_per_km" label="1 km narxi" type="number" min={0} max={1000000} required defaultValue={value(project, 'courier_price_per_km', '1500')} /></div>
               <div className="col-md-4"><TextInput name="courier_min_fee" label="Minimal payout" type="number" min={0} max={1000000} required defaultValue={value(project, 'courier_min_fee', '5000')} /></div>
+              <div className="col-md-4"><TextInput name="seller_courier_min_delivery_price" label="Seller kuryeri minimal narxi" type="number" min={0} max={1000000} required defaultValue={value(project, 'seller_courier_min_delivery_price', '0')} /></div>
+              <div className="col-md-8 d-flex align-items-end">
+                <div className="small text-muted rounded border p-3 w-100">
+                  Seller o'z kuryeri uchun filial narxini bundan arzon qo'ya olmaydi. Narx filialga biriktiriladi, shu filialdagi barcha do'kon kuryerlari bir xil narxda ishlaydi.
+                </div>
+              </div>
               <div className="col-12">
                 <div className="rounded border p-3">
                   <div className="fw-bold mb-2">Masofa bonuslari</div>

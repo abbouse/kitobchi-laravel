@@ -244,6 +244,7 @@ class SettingsController extends Controller
             'courier_base_fee' => 'required|integer|min:0|max:1000000',
             'courier_price_per_km' => 'required|integer|min:0|max:1000000',
             'courier_min_fee' => 'required|integer|min:0|max:1000000',
+            'seller_courier_min_delivery_price' => 'required|integer|min:0|max:1000000',
             'courier_bonus_rules' => 'nullable|array',
             'courier_bonus_rules.*.from_km' => 'nullable|numeric|min:0|max:10000',
             'courier_bonus_rules.*.to_km' => 'nullable|numeric|min:0|max:10000',
@@ -272,6 +273,7 @@ class SettingsController extends Controller
             'courier_base_fee' => $validated['courier_base_fee'],
             'courier_price_per_km' => $validated['courier_price_per_km'],
             'courier_min_fee' => $validated['courier_min_fee'],
+            'seller_courier_min_delivery_price' => $validated['seller_courier_min_delivery_price'],
             'courier_bonus_rules' => $rules,
         ]);
 

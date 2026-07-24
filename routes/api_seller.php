@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\Seller\SellerAuthController;
 use App\Http\Controllers\Api\Seller\SellerController;
 use App\Http\Controllers\Api\Seller\SellerLocationController;
 use App\Http\Controllers\Api\Seller\SellerStaffController;
+use App\Http\Controllers\Api\Seller\SellerCourierController;
 use App\Http\Controllers\Api\Seller\SupportTicketController;
 use App\Http\Controllers\Api\Seller\TargetController;
 use App\Http\Controllers\Api\Seller\TransactionController;
@@ -114,6 +115,13 @@ Route::middleware('auth:seller')->group(function () {
     Route::post('staff/{id}', [SellerStaffController::class, 'update']);
     Route::get('staff/{id}/delete', [SellerStaffController::class, 'destroy']);
     Route::get('staff/{id}/getpassword', [SellerStaffController::class, 'getPasswordSms']);
+
+    // ── Do'kon kuryerlari (store couriers) ──────────────────────────
+    Route::get('couriers', [SellerCourierController::class, 'index']);
+    Route::post('couriers', [SellerCourierController::class, 'store']);
+    Route::post('couriers/settings', [SellerCourierController::class, 'settings']); // {id}dan oldin
+    Route::post('couriers/{id}', [SellerCourierController::class, 'update']);
+    Route::get('couriers/{id}/delete', [SellerCourierController::class, 'destroy']);
 
     // FILIAL-DARAJALI STOCK (branch_stocks)
     Route::get('branch-stocks', [\App\Http\Controllers\Api\Seller\BranchStockController::class, 'show']);

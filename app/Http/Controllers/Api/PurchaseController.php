@@ -308,6 +308,20 @@ class PurchaseController extends Controller
 
         $services = $this->resolveDeliveryOffers($location, $sellerCount, $totalSum);
 
+        // Do'kon kuryeri ("Tez kuryer") — faqat BITTA-do'kon savatda va manzil
+        // kuryer zonasiga tushsa. Platforma servislari yonida boshiga qo'shiladi.
+        if ($sellerCount === 1 && $location->lat !== null && $location->lon !== null) {
+            $storeSeller = \App\Models\Seller::find((int) array_key_first($sellers));
+            $storeCourierService = app(\App\Services\StoreCourierService::class);
+            if ($storeSeller
+                && $storeCourierService->hasCoverage($storeSeller, (float) $location->lat, (float) $location->lon)) {
+                $locale = (string) $request->input('locale', app()->getLocale());
+                $svc = $storeCourierService->deliveryService();
+                $storeOffer = $storeCourierService->buildOffer($storeSeller, $locale, (int) $svc->id, (float) $location->lat, (float) $location->lon);
+                $services = collect($services)->prepend($storeOffer)->values();
+            }
+        }
+
         return response()->json(['status' => 'success', 'data' => [
             'location' => [
                 'id' => $location->id,
@@ -1276,17 +1290,43 @@ class PurchaseController extends Controller
 
             $priceBeforePromo = $totalSum;
             $sellerCount = count($uniqueSellerIds);
-            $selectedDeliveryOffer = $this->deliveryZoneResolverService->resolveSelectedOffer(
-                $location,
-                $sellerCount,
-                $priceBeforePromo,
-                (int) $deliveryService->id,
-            );
 
-            if (! $selectedDeliveryOffer) {
-                DB::rollBack();
+            // Do'kon kuryeri ("Tez kuryer") — alohida oqim: zona-rule emas, do'kon
+            // kuryerlari zonasi va do'kon flat narxi ishlatiladi (hub aralashmaydi).
+            $isStoreCourier = $deliveryService->type === 'store_courier';
+            $storeCourierSellerId = null;
 
-                return $this->err('Tanlangan manzil uchun bu yetkazish xizmati mavjud emas.', 422);
+            if ($isStoreCourier) {
+                if ($sellerCount !== 1) {
+                    DB::rollBack();
+
+                    return $this->err("Tez kuryer faqat bitta do'kon buyurtmasi uchun mavjud.", 422);
+                }
+                $storeSeller = \App\Models\Seller::find((int) array_values($uniqueSellerIds)[0]);
+                $storeCourierService = app(\App\Services\StoreCourierService::class);
+                if (! $storeSeller
+                    || $location->lat === null || $location->lon === null
+                    || ! $storeCourierService->hasCoverage($storeSeller, (float) $location->lat, (float) $location->lon)) {
+                    DB::rollBack();
+
+                    return $this->err("Do'kon kuryeri bu manzilga chiqmaydi.", 422);
+                }
+                $storeCourierSellerId = (int) $storeSeller->id;
+                $locale = (string) $request->input('locale', app()->getLocale());
+                $selectedDeliveryOffer = $storeCourierService->buildOffer($storeSeller, $locale, (int) $deliveryService->id, (float) $location->lat, (float) $location->lon);
+            } else {
+                $selectedDeliveryOffer = $this->deliveryZoneResolverService->resolveSelectedOffer(
+                    $location,
+                    $sellerCount,
+                    $priceBeforePromo,
+                    (int) $deliveryService->id,
+                );
+
+                if (! $selectedDeliveryOffer) {
+                    DB::rollBack();
+
+                    return $this->err('Tanlangan manzil uchun bu yetkazish xizmati mavjud emas.', 422);
+                }
             }
 
             if ((int) $request->paymentStatus === 0 && ! ($selectedDeliveryOffer['cod_allowed'] ?? true)) {
@@ -1686,6 +1726,8 @@ class PurchaseController extends Controller
             $courierOrder = CourierOrder::create([
                 'courier_id' => null,
                 'order_id' => (int) $purchase->id,
+                // Do'kon kuryeri buyurtmasi bo'lsa shu do'kon id (feed filtri shu bo'yicha).
+                'store_seller_id' => $storeCourierSellerId,
                 'user_id' => (int) $user->id,
                 'amount' => (int) round($totalSum),
                 'status' => $request->paymentStatus == 1

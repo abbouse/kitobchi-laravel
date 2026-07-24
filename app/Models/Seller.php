@@ -25,6 +25,8 @@ class Seller extends Authenticatable
         'parent_id', 'seller_location_id', 'role', 'staff_status', 'can_withdraw_balance',
         'commission_percent', 'fcm_token',
         'response_time_hours',
+        // Do'kon kuryeri tanlansa mijoz to'laydigan flat yetkazish narxi (null/0 = bepul).
+        'own_courier_delivery_price',
 
         // ── Shartnoma ─────────────────────────────────────────────
         'contract_number', 'contract_signed', 'contract_signed_at', 'contract_expires_at',
@@ -69,6 +71,7 @@ class Seller extends Authenticatable
         'passport_issued_at' => 'date',
 
         'qr_rotated_at' => 'datetime',
+        'own_courier_delivery_price' => 'integer',
     ];
 
     /**
@@ -245,6 +248,12 @@ class Seller extends Authenticatable
     public function locations(): HasMany
     {
         return $this->hasMany(SellerLocation::class, 'seller_id')->where('is_deleted', false);
+    }
+
+    /** Shu do'konga tegishli kuryerlar (do'kon kuryerlari). */
+    public function storeCouriers(): HasMany
+    {
+        return $this->hasMany(Couriers::class, 'seller_id');
     }
 
     public function assignedLocation()

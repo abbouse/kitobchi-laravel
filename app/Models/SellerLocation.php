@@ -23,12 +23,14 @@ class SellerLocation extends Model
         'qr_rotated_at',
         'is_main',
         'is_deleted',
+        'store_courier_delivery_price',
     ];
 
     protected $casts = [
         'is_main' => 'boolean',
         'is_deleted' => 'boolean',
         'qr_rotated_at' => 'datetime',
+        'store_courier_delivery_price' => 'integer',
     ];
 
     protected $appends = [

@@ -66,8 +66,30 @@ class CourierOrderController extends Controller
             ], 200);
         }
 
+        $storeSellerId = $courier->seller_id ? (int) $courier->seller_id : null;
+        if ($storeSellerId && ($courier->status !== 'approved' || $courier->store_courier_hidden_at !== null)) {
+            return response()->json([
+                'success' => true,
+                'data' => [],
+                'is_online' => false,
+            ], 200);
+        }
+
         $orders = CourierOrder::query()
             ->whereNull('courier_id')
+            ->when($storeSellerId, function ($query) use ($storeSellerId, $courier) {
+                // Do'kon kuryeri: faqat o'z do'koni + biriktirilgan filiallar buyurtmalari.
+                $branchIds = $courier->branches()->pluck('seller_locations.id')->all();
+                $query->where('store_seller_id', $storeSellerId)
+                    ->when(
+                        ! empty($branchIds),
+                        fn ($q) => $q->whereHas('items', fn ($iq) => $iq->whereIn('seller_location_id', $branchIds)),
+                        fn ($q) => $q->whereRaw('1 = 0')
+                    );
+            }, function ($query) {
+                // Platforma kuryeri: do'kon kuryeri buyurtmalarini ko'rmaydi.
+                $query->whereNull('store_seller_id');
+            })
             ->where(function ($query) {
                 $query->where('status_code', CourierOrderStatusCode::PENDING->value)
                     ->orWhere(function ($fallback) {

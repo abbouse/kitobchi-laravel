@@ -20,6 +20,10 @@ class Couriers extends Authenticatable
         'first_name',
         'last_name',
         'region',
+        // Do'kon kuryeri: seller_id to'la = shu do'konniki, null = platforma.
+        'seller_id',
+        'service_area',
+        'store_courier_hidden_at',
         'photo',
         'phone_number',
         'password',
@@ -72,6 +76,9 @@ class Couriers extends Authenticatable
         'location_updated_at'        => 'datetime',
         'is_online'                  => 'boolean',
         'availability_updated_at'    => 'datetime',
+        'seller_id'                  => 'integer',
+        'service_area'               => 'array',
+        'store_courier_hidden_at'    => 'datetime',
     ];
 
     // ── Password ───────────────────────────────────────────────────
@@ -102,6 +109,39 @@ class Couriers extends Authenticatable
     public function orders()
     {
         return $this->hasMany(CourierOrder::class, 'courier_id');
+    }
+
+    /** Do'kon kuryeri bo'lsa — tegishli do'kon (null = platforma kuryeri). */
+    public function store()
+    {
+        return $this->belongsTo(Seller::class, 'seller_id');
+    }
+
+    /** Kuryer xizmat qiladigan filiallar (bir nechta bo'lishi mumkin). */
+    public function branches()
+    {
+        return $this->belongsToMany(SellerLocation::class, 'courier_seller_location', 'courier_id', 'seller_location_id')
+            ->withTimestamps();
+    }
+
+    /** Faqat platforma kuryerlari (do'konga bog'lanmagan). */
+    public function scopePlatform($query)
+    {
+        return $query->whereNull('seller_id');
+    }
+
+    /** Faqat do'kon kuryerlari (ixtiyoriy do'kon bo'yicha). */
+    public function scopeForStore($query, ?int $sellerId = null)
+    {
+        $query->whereNotNull('seller_id');
+
+        return $sellerId ? $query->where('seller_id', $sellerId) : $query;
+    }
+
+    /** Do'kon kuryerimi? */
+    public function getIsStoreCourierAttribute(): bool
+    {
+        return $this->seller_id !== null;
     }
 
     public function transactions()

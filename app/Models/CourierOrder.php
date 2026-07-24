@@ -13,6 +13,8 @@ class CourierOrder extends Model
     protected $fillable = [
         'courier_id',
         'order_id',
+        // Do'kon kuryeri buyurtmasi bo'lsa shu do'kon id (null = platforma).
+        'store_seller_id',
         'user_id',
         'status',
         'status_code',
