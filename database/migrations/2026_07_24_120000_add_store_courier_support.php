@@ -34,23 +34,30 @@ return new class extends Migration
             });
         }
 
-        if (! Schema::hasTable('courier_seller_location')) {
-            Schema::create('courier_seller_location', function (Blueprint $table) {
-                $table->id();
-                $table->unsignedBigInteger('courier_id')->index();
-                $table->unsignedBigInteger('seller_location_id')->index();
-                $table->timestamps();
-
-                $table->unique(['courier_id', 'seller_location_id'], 'courier_branch_unique');
-
-                if (Schema::hasTable('couriers')) {
-                    $table->foreign('courier_id')->references('id')->on('couriers')->cascadeOnDelete();
-                }
-                if (Schema::hasTable('seller_locations')) {
-                    $table->foreign('seller_location_id')->references('id')->on('seller_locations')->cascadeOnDelete();
-                }
-            });
+        if (Schema::hasTable('courier_seller_location')) {
+            // Agar migration oldingi urinishda FK qo'shishda yiqilgan bo'lsa,
+            // MySQL jadvalni FKsiz qoldirishi mumkin. Migration hali yozilmagan
+            // bo'lgani uchun pivotni toza qayta yaratamiz.
+            Schema::drop('courier_seller_location');
         }
+
+        Schema::create('courier_seller_location', function (Blueprint $table) {
+            $table->id();
+            // couriers.id = int unsigned.
+            $table->unsignedInteger('courier_id')->index();
+            // seller_locations.id eski sxemada signed int.
+            $table->integer('seller_location_id')->index();
+            $table->timestamps();
+
+            $table->unique(['courier_id', 'seller_location_id'], 'courier_branch_unique');
+
+            if (Schema::hasTable('couriers')) {
+                $table->foreign('courier_id')->references('id')->on('couriers')->cascadeOnDelete();
+            }
+            if (Schema::hasTable('seller_locations')) {
+                $table->foreign('seller_location_id')->references('id')->on('seller_locations')->cascadeOnDelete();
+            }
+        });
     }
 
     public function down(): void

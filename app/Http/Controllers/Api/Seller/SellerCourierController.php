@@ -169,7 +169,12 @@ class SellerCourierController extends Controller
                 if ($request->has('branch_ids')) {
                     $branchIds = $this->ownedBranchIds($seller->id, (array) $request->input('branch_ids', []));
                     if ($branchIds->isNotEmpty()) {
-                        $this->ensureBranchPrices($seller, $branchIds->all(), $request->has('delivery_price') ? (int) $request->input('delivery_price') : null);
+                        $this->ensureBranchPrices(
+                            $seller,
+                            $branchIds->all(),
+                            $request->has('delivery_price') ? (int) $request->input('delivery_price') : null,
+                            $request->has('delivery_price')
+                        );
                         $courier->branches()->sync($branchIds->all());
                     }
                 }
@@ -343,7 +348,7 @@ class SellerCourierController extends Controller
         ];
     }
 
-    private function ensureBranchPrices(Seller $seller, array $branchIds, ?int $inputPrice): void
+    private function ensureBranchPrices(Seller $seller, array $branchIds, ?int $inputPrice, bool $force = false): void
     {
         $minPrice = $this->minimumDeliveryPrice();
         if ($inputPrice !== null && $inputPrice < $minPrice) {
@@ -357,12 +362,16 @@ class SellerCourierController extends Controller
         $fallback = $inputPrice ?? $seller->own_courier_delivery_price ?? $minPrice;
         $price = max($minPrice, max(0, (int) $fallback));
 
-        SellerLocation::query()
+        $query = SellerLocation::query()
             ->where('seller_id', $seller->id)
             ->where('is_deleted', false)
-            ->whereIn('id', $branchIds)
-            ->whereNull('store_courier_delivery_price')
-            ->update(['store_courier_delivery_price' => $price]);
+            ->whereIn('id', $branchIds);
+
+        if (! $force) {
+            $query->whereNull('store_courier_delivery_price');
+        }
+
+        $query->update(['store_courier_delivery_price' => $price]);
     }
 
     private function branchPrices(int $sellerId)
