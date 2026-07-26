@@ -33,6 +33,7 @@ use App\Services\OrderRealtimeService;
 use App\Services\OrderService;
 use App\Services\PaylovOrderPaymentService;
 use App\Services\PostalResendService;
+use App\Services\PostalTracking\PostalTrackingStatusCatalog;
 use App\Services\PostalTrackingService;
 use App\Services\ProductReviewPromptService;
 use App\Services\QrTokenService;
@@ -3106,7 +3107,8 @@ class PurchaseController extends Controller
                         continue;
                     }
 
-                    $labels = (array) ($event['labels'] ?? []);
+                    $labels = app(PostalTrackingStatusCatalog::class)
+                        ->labels($event['status_code']);
                     $push(
                         $timeline,
                         $seen,
@@ -3128,6 +3130,14 @@ class PurchaseController extends Controller
                             'provider_name' => $postalTracking['provider_name'] ?? null,
                             'tracking_number' => $postalTracking['tracking_number'] ?? null,
                             'location' => $event['location'] ?? null,
+                            'postal_index' => (
+                                ($postalTracking['provider_code'] ?? null) === 'uzpost'
+                                && ($event['status_code'] ?? null) === 'ready_for_issue'
+                            )
+                                ? ($event['postal_index']
+                                    ?? $postalTracking['recipient_postcode']
+                                    ?? null)
+                                : null,
                             'is_external' => true,
                         ],
                     );
@@ -3177,6 +3187,7 @@ class PurchaseController extends Controller
                 'status_code' => $postalTracking['status_code'] ?? null,
                 'status_at' => $postalTracking['status_at'] ?? null,
                 'location' => $postalTracking['location'] ?? null,
+                'recipient_postcode' => $postalTracking['recipient_postcode'] ?? null,
             ] : null,
             'timeline' => array_values($timeline),
         ];

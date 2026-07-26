@@ -55,15 +55,15 @@ class UzPostTrackingProviderTest extends TestCase
 
         $this->assertSame('ready_for_issue', $result['status_code']);
         $this->assertSame(
-            'Pochta bo‘limiga yetib bordi, olib ketishga tayyor',
+            'Pochtadan olib ketishga tayyor',
             $result['labels']['uz'],
         );
         $this->assertSame(
-            'Прибыло в почтовое отделение и готово к выдаче',
+            'Готово к выдаче',
             $result['labels']['ru'],
         );
         $this->assertSame(
-            'Arrived at the post office and ready for pickup',
+            'Ready for pickup',
             $result['labels']['en'],
         );
         $this->assertSame('handoff', $result['step']);
@@ -73,7 +73,9 @@ class UzPostTrackingProviderTest extends TestCase
         $this->assertFalse($result['terminal']);
         $this->assertCount(2, $result['events']);
         $this->assertSame('ready_for_issue', $result['events'][0]['status_code']);
+        $this->assertSame('100125', $result['events'][0]['postal_index']);
         $this->assertSame('in_transit', $result['events'][1]['status_code']);
+        $this->assertArrayNotHasKey('postal_index', $result['events'][1]);
         $this->assertSame('Manzil tomon yo‘lda', $result['events'][1]['labels']['uz']);
 
         Http::assertSent(fn ($request): bool => $request->method() === 'GET'
@@ -105,7 +107,7 @@ class UzPostTrackingProviderTest extends TestCase
 
         $this->assertSame('handoff', $result['step']);
         $this->assertTrue($result['terminal']);
-        $this->assertSame('Qabul qiluvchiga topshirildi', $result['labels']['uz']);
+        $this->assertSame('Qabul qiluvchiga berildi', $result['labels']['uz']);
         $this->assertSame('issued_to_recipient', $result['events'][0]['status_code']);
     }
 

@@ -71,19 +71,21 @@ class PurchaseDeliveryProgressTest extends TestCase
                 ],
                 'status_at' => '2026-07-25T06:00:00+00:00',
                 'location' => "UzPost - 125 pochta bo'limi",
+                'recipient_postcode' => '100125',
                 'step' => 'handoff',
                 'terminal' => false,
                 'events' => [
                     [
                         'status_code' => 'ready_for_issue',
                         'labels' => [
-                            'uz' => 'Pochta bo‘limiga yetib bordi, olib ketishga tayyor',
+                            'uz' => 'Pochta bo‘limiga yetib keldi, olib ketishga tayyor',
                             'ru' => 'Прибыло в почтовое отделение и готово к выдаче',
                             'en' => 'Arrived at the post office and ready for pickup',
                             'ja' => '郵便局に到着し、受け取り可能です',
                         ],
                         'status_at' => '2026-07-25T06:00:00+00:00',
                         'location' => "UzPost - 125 pochta bo'limi",
+                        'postal_index' => '100125',
                         'step' => 'handoff',
                         'terminal' => false,
                     ],
@@ -135,11 +137,14 @@ class PurchaseDeliveryProgressTest extends TestCase
         $this->assertSame('postal_provider_ready_for_issue', $external[2]['code']);
         $this->assertSame('handoff', $external[2]['step']);
         $this->assertSame(
-            'Pochta bo‘limiga yetib bordi, olib ketishga tayyor',
+            'Pochtadan olib ketishga tayyor',
             $external[2]['title_uz'],
         );
+        $this->assertSame('Готово к выдаче', $external[2]['title_ru']);
+        $this->assertSame('Ready for pickup', $external[2]['title_en']);
         $this->assertSame('UzPost', $external[2]['provider_name']);
         $this->assertSame("UzPost - 125 pochta bo'limi", $external[2]['location']);
+        $this->assertSame('100125', $external[2]['postal_index']);
         $this->assertSame($external[2], collect($progress['timeline'])->last());
     }
 

@@ -92,6 +92,17 @@ class UzPostTrackingProvider implements PostalTrackingProvider
             ),
         );
 
+        $destination = data_get($payload, 'header.data.locations.1');
+        $recipientPostcode = $this->clean(data_get($destination, 'postcode'));
+        if ($recipientPostcode) {
+            foreach ($events as &$event) {
+                if (($event['status_code'] ?? null) === 'ready_for_issue') {
+                    $event['postal_index'] = $recipientPostcode;
+                }
+            }
+            unset($event);
+        }
+
         $latest = collect($events)->firstWhere('status_code', $headerStatus)
             ?? $events[0]
             ?? [
@@ -99,6 +110,9 @@ class UzPostTrackingProvider implements PostalTrackingProvider
                 'labels' => $this->statusCatalog->labels($headerStatus),
                 'status_at' => null,
                 'location' => null,
+                'postal_index' => $headerStatus === 'ready_for_issue'
+                    ? $recipientPostcode
+                    : null,
                 'step' => $this->statusCatalog->step($headerStatus),
                 'terminal' => $this->statusCatalog->isTerminal($headerStatus),
             ];
@@ -107,7 +121,6 @@ class UzPostTrackingProvider implements PostalTrackingProvider
             ? $headerStatus
             : $this->statusCatalog->normalize($latest['status_code'] ?? null);
         $labels = $this->statusCatalog->labels($statusCode);
-        $destination = data_get($payload, 'header.data.locations.1');
 
         return [
             'status_code' => $statusCode,
@@ -117,7 +130,7 @@ class UzPostTrackingProvider implements PostalTrackingProvider
             'step' => $this->statusCatalog->step($statusCode),
             'terminal' => $this->statusCatalog->isTerminal($statusCode),
             'recipient_address' => $this->clean(data_get($destination, 'address')),
-            'recipient_postcode' => $this->clean(data_get($destination, 'postcode')),
+            'recipient_postcode' => $recipientPostcode,
             'events' => $events,
         ];
     }
