@@ -17,7 +17,9 @@ interface OrderItem {
   quantity: number;
   price: number;
   total: number;
+  sellerId?: number | null;
   seller?: string | null;
+  ownerLabel?: string | null;
   image?: string | null;
   variantId?: number | null;
   isCancelled?: boolean;
@@ -104,6 +106,7 @@ interface Ord {
   } | null;
   items: number;
   itemsList?: OrderItem[];
+  giftItems?: OrderItem[];
   total: number;
   subtotal?: number;
   deliveryPrice?: number;
@@ -816,7 +819,7 @@ export default function Orders() {
                         </tr>
                       </thead>
                       <tbody>
-                        {(selectedOrd.itemsList || []).map((item, index) => (
+                        {(selectedOrd.itemsList || []).filter((item) => item.type !== 'gift').map((item, index) => (
                           <tr key={`${item.type}-${item.id || index}`}>
                             <td>
                               <div className="d-flex align-items-center gap-2">
@@ -871,6 +874,56 @@ export default function Orders() {
                   </div>
                 </div>
 
+                {(selectedOrd.giftItems || []).length > 0 ? (
+                  <div className="detail-panel mt-3">
+                    <div className="d-flex align-items-center justify-content-between mb-3">
+                      <h6 className="fw-bold mb-0">
+                        <i className="bi bi-gift-fill me-2 text-primary"></i>
+                        Buyurtma sovg‘asi
+                      </h6>
+                      <span className="chip chip-gray">{(selectedOrd.giftItems || []).length} tur</span>
+                    </div>
+                    <div className="d-flex flex-column gap-2">
+                      {(selectedOrd.giftItems || []).map((gift, index) => {
+                        const recipient = selectedOrd.isGiftToOther
+                          ? [selectedOrd.recipient?.name, selectedOrd.recipient?.phone].filter(Boolean).join(' · ')
+                          : selectedOrd.customer;
+
+                        return (
+                          <div className="border rounded-3 p-3" key={`gift-${gift.id || index}`}>
+                            <div className="d-flex align-items-start gap-3">
+                              <div className="item-thumb flex-shrink-0">
+                                {gift.image ? <img src={gift.image} alt={gift.name} /> : <i className="bi bi-gift"></i>}
+                              </div>
+                              <div className="flex-grow-1 min-w-0">
+                                <div className="d-flex flex-wrap align-items-center gap-2">
+                                  {gift.productUrl ? (
+                                    <a className="fw-semibold text-decoration-none" href={gift.productUrl}>{gift.name}</a>
+                                  ) : (
+                                    <span className="fw-semibold">{gift.name}</span>
+                                  )}
+                                  <span className="chip chip-success">Bepul sovg‘a</span>
+                                  {gift.quantity > 1 ? <span className="chip chip-gray">{gift.quantity} dona</span> : null}
+                                </div>
+                                <div className="row g-2 mt-1">
+                                  <div className="col-md-6">
+                                    <div className="text-muted small">Sovg‘a egasi</div>
+                                    <div className="fw-semibold">{gift.ownerLabel || gift.seller || 'Ega aniqlanmagan'}</div>
+                                  </div>
+                                  <div className="col-md-6">
+                                    <div className="text-muted small">Kim uchun</div>
+                                    <div className="fw-semibold">{recipient || 'Mijoz'}</div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null}
+
                 <div className="row g-3 mt-1">
                   <div className="col-lg-6">
                     <div className="detail-panel h-100">
@@ -924,11 +977,14 @@ export default function Orders() {
                   <div className="detail-panel mt-3">
                     <h6 className="fw-bold mb-3">Pochta ma'lumotlari <span className="text-muted small fw-normal">(trek va manzil «yetib keldi» SMS'ida mijozga boradi)</span></h6>
                     <form
+                      key={[
+                        selectedOrd.id,
+                        selectedOrd.postalInfo.provider,
+                        selectedOrd.postalInfo.tracking,
+                        selectedOrd.postalInfo.address,
+                      ].join(':')}
                       className="row g-2 align-items-end"
-                      onSubmit={(event) => {
-                        event.preventDefault();
-                        router.patch(selectedOrd.postalInfo!.saveUrl, Object.fromEntries(new FormData(event.currentTarget).entries()), { preserveScroll: true });
-                      }}
+                      onSubmit={(event) => submitForm(event, selectedOrd.postalInfo!.saveUrl, 'patch')}
                     >
                       <div className="col-md-3">
                         <label className="form-label small">Pochta xizmati</label>

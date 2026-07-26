@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Contracts\PostalTrackingProvider;
 use App\Models\OrderFulfillment;
+use App\Services\PostalTracking\PostalOrderStatusTransitionService;
 use App\Services\PostalTracking\UzPostTrackingProvider;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
@@ -15,8 +16,10 @@ class PostalTrackingService
     /** @var array<string, PostalTrackingProvider> */
     private array $providers;
 
-    public function __construct(UzPostTrackingProvider $uzPost)
-    {
+    public function __construct(
+        UzPostTrackingProvider $uzPost,
+        private readonly PostalOrderStatusTransitionService $transitionService,
+    ) {
         $this->providers = [
             $uzPost->code() => $uzPost,
         ];
@@ -44,6 +47,13 @@ class PostalTrackingService
         return array_keys($this->providers);
     }
 
+    public function isValidTrackingNumber(string $providerCode, string $trackingNumber): bool
+    {
+        $provider = $this->providers[Str::lower(trim($providerCode))] ?? null;
+
+        return $provider?->isValidTrackingNumber($trackingNumber) ?? false;
+    }
+
     /**
      * @return array<string, mixed>|null
      */
@@ -62,8 +72,11 @@ class PostalTrackingService
 
         $meta = (array) ($fulfillment->meta ?? []);
         $cached = data_get($meta, 'postal_tracking');
-        if (! $force && is_array($cached) && $this->isFresh($cached)) {
-            return $this->publicPayload($cached);
+        if (! $force
+            && is_array($cached)
+            && $this->matchesTrackingIdentity($cached, $providerCode, $trackingNumber)
+            && $this->isFresh($cached, $providerCode)) {
+            return $this->reconcileAndReturn($fulfillment, $cached);
         }
 
         try {
@@ -80,9 +93,12 @@ class PostalTrackingService
             data_set($meta, 'postal_tracking', $result);
             $this->saveMeta($fulfillment, $meta);
 
-            return $this->publicPayload($result);
+            return $this->reconcileAndReturn($fulfillment, $result);
         } catch (Throwable $error) {
-            $trackingMeta = is_array($cached) ? $cached : [];
+            $trackingMeta = is_array($cached)
+                && $this->matchesTrackingIdentity($cached, $providerCode, $trackingNumber)
+                    ? $cached
+                    : [];
             $trackingMeta['provider_code'] = $provider->code();
             $trackingMeta['provider_name'] = $provider->name();
             $trackingMeta['tracking_number'] = $trackingNumber;
@@ -99,7 +115,7 @@ class PostalTrackingService
                 'error' => $error->getMessage(),
             ]);
 
-            return $this->publicPayload($trackingMeta);
+            return $this->reconcileAndReturn($fulfillment, $trackingMeta);
         }
     }
 
@@ -124,7 +140,19 @@ class PostalTrackingService
     /**
      * @param  array<string, mixed>  $payload
      */
-    private function isFresh(array $payload): bool
+    private function matchesTrackingIdentity(
+        array $payload,
+        string $providerCode,
+        string $trackingNumber,
+    ): bool {
+        return Str::lower(trim((string) ($payload['provider_code'] ?? ''))) === $providerCode
+            && Str::upper(trim((string) ($payload['tracking_number'] ?? ''))) === $trackingNumber;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function isFresh(array $payload, string $providerCode): bool
     {
         $attemptedAt = $payload['last_attempt_at'] ?? $payload['synced_at'] ?? null;
         if (! is_string($attemptedAt) || $attemptedAt === '') {
@@ -132,7 +160,10 @@ class PostalTrackingService
         }
 
         try {
-            $minutes = max(1, (int) config('services.uzpost.sync_interval_minutes', 10));
+            $minutes = max(1, (int) config(
+                "services.{$providerCode}.sync_interval_minutes",
+                10,
+            ));
 
             return Carbon::parse($attemptedAt)->greaterThan(now()->subMinutes($minutes));
         } catch (Throwable) {
@@ -153,6 +184,22 @@ class PostalTrackingService
         unset($payload['last_error']);
 
         return $payload;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>|null
+     */
+    private function reconcileAndReturn(
+        OrderFulfillment $fulfillment,
+        array $payload,
+    ): ?array {
+        $public = $this->publicPayload($payload);
+        if ($public) {
+            $this->transitionService->reconcile($fulfillment, $public);
+        }
+
+        return $public;
     }
 
     /**

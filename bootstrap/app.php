@@ -209,4 +209,10 @@ return Application::configure(basePath: dirname(__DIR__))
             ->withoutOverlapping(2)
             ->runInBackground();
 
+        $schedule->command('postal:sync-tracking --limit=250')
+            ->everyTenMinutes()
+            ->timezone($tz)
+            ->withoutOverlapping(9)
+            ->runInBackground();
+
     })->create();

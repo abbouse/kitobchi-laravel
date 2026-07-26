@@ -48,9 +48,30 @@ class AdminOrderStatusSyncService
     {
         DB::transaction(function () use ($order, $status, $options) {
             $order = Sold::query()->lockForUpdate()->findOrFail($order->id);
+            $statusCode = OrderStatusCode::fromLegacy($status);
+            $currentStatusCode = OrderStatusCode::fromLegacy(
+                $order->status_code ?? $order->status,
+            );
+
+            if ($currentStatusCode === $statusCode) {
+                return;
+            }
+
+            if (! empty($options['forward_only'])
+                && (
+                    in_array($currentStatusCode, [
+                        OrderStatusCode::CANCELLED,
+                        OrderStatusCode::RETURNED,
+                        OrderStatusCode::CUSTOMER_RECEIVED,
+                    ], true)
+                    || $this->rank($this->mainOrderFlow(), $statusCode->value)
+                        <= $this->rank($this->mainOrderFlow(), $currentStatusCode->value)
+                )) {
+                return;
+            }
+
             $previousStatus = (string) $order->status;
             $previousCompletedPaid = $order->isCompletedAndPaid();
-            $statusCode = OrderStatusCode::fromLegacy($status);
             $this->guardMainTransition($order, $statusCode, $options);
 
             if ($statusCode === OrderStatusCode::CANCELLED) {

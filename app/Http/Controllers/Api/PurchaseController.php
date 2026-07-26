@@ -2989,6 +2989,39 @@ class PurchaseController extends Controller
         $postalTracking = $deliveryFlow === 'postal' && $fulfillment
             ? $this->postalTrackingService->sync($fulfillment)
             : null;
+        if ($postalTracking && $order->exists) {
+            // Tracking sync orderni avtomatik oldinga o'tkazgan bo'lishi mumkin.
+            // Oldin qo'shilgan API meta maydonlarini yo'qotmasdan faqat holatni
+            // va fulfillmentni yangilaymiz.
+            $freshState = Sold::query()->find($order->id, [
+                'status',
+                'status_code',
+                'paymentStatus',
+                'payment_status_code',
+                'completed_at',
+                'updated_at',
+            ]);
+            if ($freshState) {
+                $order->forceFill($freshState->only([
+                    'status',
+                    'status_code',
+                    'paymentStatus',
+                    'payment_status_code',
+                    'completed_at',
+                    'updated_at',
+                ]));
+                $order->formatted_updated_at = Carbon::parse($freshState->updated_at)
+                    ->isoFormat('D MMMM YYYY, HH:mm');
+                $this->appendOrderStatusMeta($order);
+            }
+
+            $freshFulfillment = $fulfillment->fresh();
+            if ($freshFulfillment) {
+                $freshFulfillment->loadMissing('hub:id,name,code');
+                $order->setRelation('fulfillment', $freshFulfillment);
+                $fulfillment = $freshFulfillment;
+            }
+        }
         $timeline = [];
         $seen = [];
 
@@ -3063,31 +3096,42 @@ class PurchaseController extends Controller
             }
 
             if ($postalTracking) {
-                $labels = (array) ($postalTracking['labels'] ?? []);
-                $push(
-                    $timeline,
-                    $seen,
-                    'postal_provider_'.($postalTracking['status_code'] ?? 'status'),
-                    in_array($postalTracking['step'] ?? null, ['in_transit', 'handoff'], true)
-                        ? (string) $postalTracking['step']
-                        : 'in_transit',
-                    (string) (
-                        $postalTracking['status_at']
-                            ?? $postalTracking['synced_at']
-                            ?? now()->toIso8601String()
-                    ),
-                    [
-                        'title_uz' => $labels['uz'] ?? null,
-                        'title_ru' => $labels['ru'] ?? null,
-                        'title_en' => $labels['en'] ?? null,
-                        'title_ja' => $labels['ja'] ?? $labels['en'] ?? null,
-                        'provider_code' => $postalTracking['provider_code'] ?? null,
-                        'provider_name' => $postalTracking['provider_name'] ?? null,
-                        'tracking_number' => $postalTracking['tracking_number'] ?? null,
-                        'location' => $postalTracking['location'] ?? null,
-                        'is_external' => true,
-                    ],
-                );
+                $postalEvents = (array) ($postalTracking['events'] ?? []);
+                if ($postalEvents === [] && ! empty($postalTracking['status_code'])) {
+                    $postalEvents = [$postalTracking];
+                }
+
+                foreach ($postalEvents as $event) {
+                    if (! is_array($event) || empty($event['status_code'])) {
+                        continue;
+                    }
+
+                    $labels = (array) ($event['labels'] ?? []);
+                    $push(
+                        $timeline,
+                        $seen,
+                        'postal_provider_'.$event['status_code'],
+                        in_array($event['step'] ?? null, ['in_transit', 'handoff'], true)
+                            ? (string) $event['step']
+                            : 'in_transit',
+                        (string) (
+                            $event['status_at']
+                                ?? $postalTracking['synced_at']
+                                ?? now()->toIso8601String()
+                        ),
+                        [
+                            'title_uz' => $labels['uz'] ?? null,
+                            'title_ru' => $labels['ru'] ?? null,
+                            'title_en' => $labels['en'] ?? null,
+                            'title_ja' => $labels['ja'] ?? $labels['en'] ?? null,
+                            'provider_code' => $postalTracking['provider_code'] ?? null,
+                            'provider_name' => $postalTracking['provider_name'] ?? null,
+                            'tracking_number' => $postalTracking['tracking_number'] ?? null,
+                            'location' => $event['location'] ?? null,
+                            'is_external' => true,
+                        ],
+                    );
+                }
             }
         }
 
@@ -3101,7 +3145,20 @@ class PurchaseController extends Controller
             );
         }
 
-        usort($timeline, static fn (array $a, array $b) => strcmp((string) ($a['at'] ?? ''), (string) ($b['at'] ?? '')));
+        usort(
+            $timeline,
+            static function (array $a, array $b): int {
+                $dateComparison = (
+                    strtotime((string) ($a['at'] ?? '')) ?: 0
+                ) <=> (
+                    strtotime((string) ($b['at'] ?? '')) ?: 0
+                );
+
+                return $dateComparison !== 0
+                    ? $dateComparison
+                    : strcmp((string) ($a['code'] ?? ''), (string) ($b['code'] ?? ''));
+            },
+        );
 
         return [
             'delivery_flow' => $deliveryFlow,

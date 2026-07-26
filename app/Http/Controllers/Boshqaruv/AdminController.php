@@ -50,6 +50,7 @@ use App\Models\MysteryBoxSubscription;
 use App\Models\OrderRefund;
 use App\Models\PlatformExpense;
 use App\Models\Policy;
+use App\Models\ProductStockAlert;
 use App\Models\ProductViewLog;
 use App\Models\ProjectSetting;
 use App\Models\Promocode;
@@ -58,15 +59,14 @@ use App\Models\Reel;
 use App\Models\Report;
 use App\Models\SearchHistory;
 use App\Models\Seller;
-use App\Models\SellerLocation;
-use App\Models\ProductStockAlert;
-use App\Models\SellerStaffLog;
 use App\Models\SellerAd;
 use App\Models\SellerAiAction;
 use App\Models\SellerBanLog;
 use App\Models\SellerContractHistory;
+use App\Models\SellerLocation;
 use App\Models\SellerOrder;
 use App\Models\SellerOrderItem;
+use App\Models\SellerStaffLog;
 use App\Models\SellerSupportTicket;
 use App\Models\SellerSupportTicketMessage;
 use App\Models\SellerTransaction;
@@ -111,8 +111,8 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -350,6 +350,11 @@ class AdminController extends Controller
         if ($tracking && ! $provider) {
             throw ValidationException::withMessages([
                 'postal_provider' => 'Trek raqami uchun pochta xizmatini tanlang.',
+            ]);
+        }
+        if ($tracking && ! $trackingService->isValidTrackingNumber((string) $provider, $tracking)) {
+            throw ValidationException::withMessages([
+                'tracking' => 'Tanlangan pochta xizmati uchun trek raqami formati noto‘g‘ri.',
             ]);
         }
 
@@ -2702,6 +2707,7 @@ PROMPT;
 
     /**
      * 2 darajali bo'limlarni normallashtiradi (nom 4 til + narx + items + children).
+     *
      * @return array<int, array<string, mixed>>
      */
     private function parseCollectionSections(mixed $raw): array
@@ -10887,9 +10893,50 @@ PROMPT;
             ->latest('id')
             ->first() : null;
         $canProcessRefunds = $this->canProcessOperationalRefunds($order, $paymentTransaction);
+        $rawOrderItems = collect($order->items ?? [])
+            ->map(fn ($item) => (array) $item)
+            ->values();
+
+        // Platform sovg'asi seller_order_items jadvaliga ataylab yozilmaydi.
+        // Shu sabab sovg'alarni Sold JSON va seller itemlaridan alohida yig'amiz.
+        $giftItems = $sellerOrderItemModels
+            ->where('type', 'gift')
+            ->map(fn (SellerOrderItem $item) => $this->sellerOrderItemPayload($item, false))
+            ->concat(
+                $rawOrderItems
+                    ->filter(fn (array $item) => ($item['type'] ?? null) === 'gift')
+                    ->map(fn (array $item) => $this->orderItemPayload($item))
+            )
+            ->unique(fn (array $item) => implode(':', [
+                $item['type'] ?? 'gift',
+                $item['id'] ?? 0,
+                $item['sellerId'] ?? 0,
+            ]))
+            ->values();
+
+        if ($giftItems->isEmpty() && $order->gift) {
+            $gift = Gifts::query()->find((int) $order->gift);
+            if ($gift) {
+                $giftItems = collect([$this->orderItemPayload([
+                    'type' => 'gift',
+                    'item_id' => $gift->id,
+                    'seller_id' => $gift->seller_id,
+                    'count_item' => 1,
+                    'item_price' => 0,
+                    'name' => $gift->name,
+                ])]);
+            }
+        }
+
         $items = $sellerOrderItemModels->isNotEmpty()
-            ? $sellerOrderItemModels->map(fn (SellerOrderItem $item) => $this->sellerOrderItemPayload($item, $canModerateRefunds && $canProcessRefunds))->values()
-            : collect($order->items ?? [])->map(fn ($item) => $this->orderItemPayload((array) $item))->values();
+            ? $sellerOrderItemModels
+                ->reject(fn (SellerOrderItem $item) => $item->type === 'gift')
+                ->map(fn (SellerOrderItem $item) => $this->sellerOrderItemPayload($item, $canModerateRefunds && $canProcessRefunds))
+                ->values()
+            : $rawOrderItems
+                ->reject(fn (array $item) => ($item['type'] ?? null) === 'gift')
+                ->map(fn (array $item) => $this->orderItemPayload($item))
+                ->values();
         $sellerTransactions = Schema::hasTable('seller_transactions') ? SellerTransaction::query()
             ->where('order_id', $order->id)
             ->get() : collect();
@@ -11077,6 +11124,7 @@ PROMPT;
             ] : null,
             'items' => (int) $activeItems->sum(fn ($item) => (int) ($item['quantity'] ?? 1)),
             'itemsList' => $items->all(),
+            'giftItems' => $giftItems->all(),
             'total' => (float) ($order->amount ?? 0),
             'subtotal' => (float) $activeItems->sum(fn ($item) => ((float) ($item['price'] ?? 0)) * (int) ($item['quantity'] ?? 1)),
             'deliveryPrice' => (float) ($order->deliveryPrice ?? 0),
@@ -11349,7 +11397,7 @@ PROMPT;
             'gift' => $productId ? Gifts::find($productId) : null,
             default => $productId ? Books::with('seller:id,shop_name')->find($productId) : null,
         };
-        $sellerId = (int) ($item['seller_id'] ?? $item['sellerId'] ?? 0);
+        $sellerId = (int) ($item['seller_id'] ?? $item['sellerId'] ?? $product?->seller_id ?? 0);
         $seller = $sellerId > 0 ? Seller::select('id', 'shop_name')->find($sellerId) : null;
         $quantity = (int) ($item['count_item'] ?? $item['count'] ?? $item['quantity'] ?? $item['qty'] ?? 1);
         $price = (float) ($item['item_price'] ?? $item['price'] ?? $item['amount'] ?? 0);
@@ -11377,7 +11425,11 @@ PROMPT;
             'quantity' => $quantity,
             'price' => $price,
             'total' => $price * $quantity,
+            'sellerId' => $sellerId ?: null,
             'seller' => $seller?->shop_name ?? $product?->seller?->shop_name ?? ($item['seller'] ?? $item['seller_name'] ?? null),
+            'ownerLabel' => $type === 'gift'
+                ? ($sellerId === 1 ? 'Kitobchi platformasi' : ($seller?->shop_name ?? ($sellerId > 0 ? "Seller #{$sellerId}" : 'Ega aniqlanmagan')))
+                : null,
             'image' => $this->productImageUrl($product),
         ];
     }
@@ -11412,7 +11464,11 @@ PROMPT;
             'quantity' => (int) ($item->quantity ?? 1),
             'price' => (float) ($item->price ?? 0),
             'total' => (float) (($item->price ?? 0) * ($item->quantity ?? 1)),
+            'sellerId' => $item->seller_id ? (int) $item->seller_id : null,
             'seller' => $seller?->shop_name,
+            'ownerLabel' => $item->type === 'gift'
+                ? ((int) $item->seller_id === 1 ? 'Kitobchi platformasi' : ($seller?->shop_name ?? "Seller #{$item->seller_id}"))
+                : null,
             'image' => $item->type === 'stationery' && $item->variant?->image_path
                 ? ProductImageUrls::originalUrl((string) $item->variant->image_path)
                 : $this->productImageUrl($product),

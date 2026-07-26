@@ -11,6 +11,10 @@ use Throwable;
 
 class UzPostTrackingProvider implements PostalTrackingProvider
 {
+    public function __construct(
+        private readonly PostalTrackingStatusCatalog $statusCatalog,
+    ) {}
+
     public function code(): string
     {
         return 'uzpost';
@@ -21,10 +25,18 @@ class UzPostTrackingProvider implements PostalTrackingProvider
         return 'UzPost';
     }
 
+    public function isValidTrackingNumber(string $trackingNumber): bool
+    {
+        return preg_match(
+            '/^[A-Z0-9-]{6,64}$/',
+            Str::upper(trim($trackingNumber)),
+        ) === 1;
+    }
+
     public function track(string $trackingNumber): array
     {
         $trackingNumber = Str::upper(trim($trackingNumber));
-        if (! preg_match('/^[A-Z0-9-]{6,64}$/', $trackingNumber)) {
+        if (! $this->isValidTrackingNumber($trackingNumber)) {
             throw new RuntimeException('UzPost trek raqami formati noto‘g‘ri.');
         }
 
@@ -63,9 +75,11 @@ class UzPostTrackingProvider implements PostalTrackingProvider
     private function normalize(array $payload): array
     {
         $events = $this->events($payload);
-        $headerStatus = $this->scalar(data_get($payload, 'header.data.status'));
+        $headerStatus = $this->statusCatalog->normalize(
+            $this->scalar(data_get($payload, 'header.data.status')),
+        );
 
-        if ($events === [] && $headerStatus === null) {
+        if ($events === [] && $headerStatus === 'unknown') {
             throw new RuntimeException('UzPost javobida tracking statusi topilmadi.');
         }
 
@@ -78,28 +92,33 @@ class UzPostTrackingProvider implements PostalTrackingProvider
             ),
         );
 
-        $latest = $events[0] ?? [
-            'status_code' => $headerStatus,
-            'labels' => [],
-            'status_at' => null,
-            'location' => null,
-        ];
+        $latest = collect($events)->firstWhere('status_code', $headerStatus)
+            ?? $events[0]
+            ?? [
+                'status_code' => $headerStatus,
+                'labels' => $this->statusCatalog->labels($headerStatus),
+                'status_at' => null,
+                'location' => null,
+                'step' => $this->statusCatalog->step($headerStatus),
+                'terminal' => $this->statusCatalog->isTerminal($headerStatus),
+            ];
 
-        $statusCode = $this->scalar($latest['status_code'] ?? null)
-            ?? $headerStatus
-            ?? 'unknown';
-        $labels = $this->labels((array) ($latest['labels'] ?? []), $statusCode);
+        $statusCode = $headerStatus !== 'unknown'
+            ? $headerStatus
+            : $this->statusCatalog->normalize($latest['status_code'] ?? null);
+        $labels = $this->statusCatalog->labels($statusCode);
         $destination = data_get($payload, 'header.data.locations.1');
 
         return [
-            'status_code' => Str::lower($statusCode),
+            'status_code' => $statusCode,
             'labels' => $labels,
             'status_at' => $latest['status_at'] ?? null,
             'location' => $this->clean($latest['location'] ?? null),
-            'step' => $this->stepFor($statusCode, $labels),
-            'terminal' => $this->isTerminal($statusCode),
+            'step' => $this->statusCatalog->step($statusCode),
+            'terminal' => $this->statusCatalog->isTerminal($statusCode),
             'recipient_address' => $this->clean(data_get($destination, 'address')),
             'recipient_postcode' => $this->clean(data_get($destination, 'postcode')),
+            'events' => $events,
         ];
     }
 
@@ -165,10 +184,21 @@ class UzPostTrackingProvider implements PostalTrackingProvider
             }
         }
 
-        return array_values(array_filter(
-            $events,
-            static fn (array $event): bool => ! empty($event['status_code']),
-        ));
+        $unique = [];
+        foreach ($events as $event) {
+            if (empty($event['status_code'])) {
+                continue;
+            }
+
+            $key = implode('|', [
+                (string) $event['status_code'],
+                (string) ($event['status_at'] ?? ''),
+                (string) ($event['location'] ?? ''),
+            ]);
+            $unique[$key] = $event;
+        }
+
+        return array_values($unique);
     }
 
     /**
@@ -181,25 +211,11 @@ class UzPostTrackingProvider implements PostalTrackingProvider
             ?? $this->scalar($event['code'] ?? null)
             ?? $this->scalar($event['event_code'] ?? null)
             ?? $this->scalar($event['status_desc'] ?? null);
-        $fallback = $this->scalar($event['status_desc'] ?? null)
-            ?? $this->scalar($event['description'] ?? null)
-            ?? $this->scalar($event['name'] ?? null)
-            ?? $statusCode;
+        $statusCode = $this->statusCatalog->normalize($statusCode);
 
         return [
             'status_code' => $statusCode,
-            'labels' => [
-                'uz' => $this->scalar($event['status_uz'] ?? null)
-                    ?? $this->scalar($event['comment_uz'] ?? null)
-                    ?? $fallback,
-                'ru' => $this->scalar($event['status_ru'] ?? null)
-                    ?? $this->scalar($event['comment_ru'] ?? null)
-                    ?? $fallback,
-                'en' => $this->scalar($event['status_eng'] ?? null)
-                    ?? $this->scalar($event['status_en'] ?? null)
-                    ?? $this->scalar($event['comment_eng'] ?? null)
-                    ?? $fallback,
-            ],
+            'labels' => $this->statusCatalog->labels($statusCode),
             'status_at' => $this->date(
                 $event['date']
                     ?? $event['time']
@@ -213,67 +229,9 @@ class UzPostTrackingProvider implements PostalTrackingProvider
                     ?? $event['location_translated']
                     ?? null,
             ),
+            'step' => $this->statusCatalog->step($statusCode),
+            'terminal' => $this->statusCatalog->isTerminal($statusCode),
         ];
-    }
-
-    /**
-     * @param  array<string, mixed>  $labels
-     * @return array{uz: string, ru: string, en: string, ja: string}
-     */
-    private function labels(array $labels, string $fallback): array
-    {
-        $uz = $this->clean($labels['uz'] ?? null) ?? $fallback;
-        $ru = $this->clean($labels['ru'] ?? null) ?? $uz;
-        $en = $this->clean($labels['en'] ?? null) ?? $uz;
-
-        return [
-            'uz' => $uz,
-            'ru' => $ru,
-            'en' => $en,
-            'ja' => $en,
-        ];
-    }
-
-    /**
-     * @param  array{uz: string, ru: string, en: string, ja: string}  $labels
-     */
-    private function stepFor(string $statusCode, array $labels): string
-    {
-        $value = Str::lower($statusCode.' '.implode(' ', $labels));
-
-        foreach ([
-            'ready_for_issue',
-            'out_for_delivery',
-            'issued_to_recipient',
-            'delivered',
-            'returned',
-            'return_to_sender',
-            'olib ketishga tayyor',
-            'qabul qiluvchiga berildi',
-            'готов к выдаче',
-            'выдан получателю',
-        ] as $needle) {
-            if (str_contains($value, $needle)) {
-                return 'handoff';
-            }
-        }
-
-        return 'in_transit';
-    }
-
-    private function isTerminal(string $statusCode): bool
-    {
-        $statusCode = Str::lower($statusCode);
-
-        return in_array($statusCode, [
-            'issued_to_recipient',
-            'delivered',
-            'returned',
-            'returned_to_sender',
-            'return_to_sender',
-            'cancelled',
-            'destroyed',
-        ], true);
     }
 
     private function date(mixed $value): ?string
