@@ -158,6 +158,7 @@ interface Ord {
     isCod?: boolean;
     cashCollectAmount?: number;
     tracking?: string | null;
+    postalProvider?: string | null;
     labelCode?: string | null;
     notes?: unknown;
     routingVersion?: string | null;
@@ -168,7 +169,20 @@ interface Ord {
   } | null;
   paymentTransaction?: { id: number; provider?: string; providerCardId?: string; amount?: number; status?: string; date?: string } | null;
   paymentCard?: { provider?: string | null; providerCardId?: string | null; maskedNumber?: string | null; vendor?: string | null; cardName?: string | null; phone?: string | null };
-  postalInfo?: { tracking: string; address: string; saveUrl: string };
+  postalInfo?: {
+    provider: string;
+    providers: Array<{ code: string; name: string }>;
+    tracking: string;
+    address: string;
+    currentStatus?: {
+      code?: string | null;
+      providerName?: string | null;
+      title?: string | null;
+      location?: string | null;
+      at?: string | null;
+    } | null;
+    saveUrl: string;
+  };
   fiscalReceipt?: { status: 'disabled' | 'none' | 'pending' | 'failed' | 'registered' | 'refunded'; receiptUrl?: string | null; refundReceiptUrl?: string | null; receiptId?: number | string | null; fiscalSign?: string | null; date?: string | null; error?: string | null; errorCode?: string | null; errorField?: string | null; registerUrl?: string; syncUrl?: string };
   split?: {
     contractId: number;
@@ -916,11 +930,23 @@ export default function Orders() {
                         router.patch(selectedOrd.postalInfo!.saveUrl, Object.fromEntries(new FormData(event.currentTarget).entries()), { preserveScroll: true });
                       }}
                     >
-                      <div className="col-md-4">
-                        <label className="form-label small">Trek raqami</label>
-                        <input name="tracking" className="form-control form-control-sm" maxLength={64} defaultValue={selectedOrd.postalInfo.tracking} placeholder="UZ123456789" />
+                      <div className="col-md-3">
+                        <label className="form-label small">Pochta xizmati</label>
+                        <select
+                          name="postal_provider"
+                          className="form-select form-select-sm"
+                          defaultValue={selectedOrd.postalInfo.provider || 'uzpost'}
+                        >
+                          {selectedOrd.postalInfo.providers.map((provider) => (
+                            <option key={provider.code} value={provider.code}>{provider.name}</option>
+                          ))}
+                        </select>
                       </div>
-                      <div className="col-md-6">
+                      <div className="col-md-3">
+                        <label className="form-label small">Trek raqami</label>
+                        <input name="tracking" className="form-control form-control-sm" maxLength={64} defaultValue={selectedOrd.postalInfo.tracking} placeholder="MM196558286UZ" />
+                      </div>
+                      <div className="col-md-4">
                         <label className="form-label small">Pochta bo'limi manzili</label>
                         <input name="postal_office_address" className="form-control form-control-sm" maxLength={255} defaultValue={selectedOrd.postalInfo.address} placeholder="Toshkent sh., Chilonzor t., 5-pochta bo'limi" />
                       </div>
@@ -928,6 +954,15 @@ export default function Orders() {
                         <button className="btn btn-sm btn-primary-gradient w-100" type="submit">Saqlash</button>
                       </div>
                     </form>
+                    {selectedOrd.postalInfo.currentStatus?.title ? (
+                      <div className="small text-muted mt-2">
+                        <span className="fw-semibold text-body">
+                          {selectedOrd.postalInfo.currentStatus.providerName || 'Pochta'}:
+                        </span>{' '}
+                        {selectedOrd.postalInfo.currentStatus.title}
+                        {selectedOrd.postalInfo.currentStatus.location ? ` • ${selectedOrd.postalInfo.currentStatus.location}` : ''}
+                      </div>
+                    ) : null}
                   </div>
                 ) : null}
 

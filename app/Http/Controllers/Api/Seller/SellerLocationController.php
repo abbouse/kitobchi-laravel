@@ -40,6 +40,7 @@ class SellerLocationController extends Controller
             ->when($seller->parent_id, function ($query) use ($seller) {
                 $query->where('id', $seller->seller_location_id);
             })
+            ->orderBy('id')
             ->get();
 
         return response()->json(['success' => true, 'data' => $locations]);

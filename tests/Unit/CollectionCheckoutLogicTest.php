@@ -16,6 +16,7 @@ use App\Services\OrderService;
 use App\Services\PaylovOrderPaymentService;
 use App\Services\PaylovPayablePaymentService;
 use App\Services\PostalResendService;
+use App\Services\PostalTrackingService;
 use App\Services\ProductReviewPromptService;
 use App\Services\QrTokenService;
 use App\Services\UserReputationService;
@@ -129,6 +130,7 @@ class CollectionCheckoutLogicTest extends TestCase
             Mockery::mock(PaylovOrderPaymentService::class),
             Mockery::mock(ProductReviewPromptService::class),
             Mockery::mock(OrderFinancialSnapshotService::class),
+            Mockery::mock(PostalTrackingService::class),
         );
 
         $book = new Books([

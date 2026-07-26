@@ -33,6 +33,7 @@ use App\Services\OrderRealtimeService;
 use App\Services\OrderService;
 use App\Services\PaylovOrderPaymentService;
 use App\Services\PostalResendService;
+use App\Services\PostalTrackingService;
 use App\Services\ProductReviewPromptService;
 use App\Services\QrTokenService;
 use App\Services\UserReputationService;
@@ -64,6 +65,7 @@ class PurchaseController extends Controller
         private readonly PaylovOrderPaymentService $paylovOrderPaymentService,
         private readonly ProductReviewPromptService $productReviewPromptService,
         private readonly OrderFinancialSnapshotService $orderFinancialSnapshotService,
+        private readonly PostalTrackingService $postalTrackingService,
     ) {}
 
     // ── Xatolik response ──────────────────────────────────────
@@ -2984,6 +2986,9 @@ class PurchaseController extends Controller
         };
 
         $fulfillment = $order->fulfillment;
+        $postalTracking = $deliveryFlow === 'postal' && $fulfillment
+            ? $this->postalTrackingService->sync($fulfillment)
+            : null;
         $timeline = [];
         $seen = [];
 
@@ -3056,6 +3061,34 @@ class PurchaseController extends Controller
 
                 $push($timeline, $seen, $code, $step, (string) $row['at']);
             }
+
+            if ($postalTracking) {
+                $labels = (array) ($postalTracking['labels'] ?? []);
+                $push(
+                    $timeline,
+                    $seen,
+                    'postal_provider_'.($postalTracking['status_code'] ?? 'status'),
+                    in_array($postalTracking['step'] ?? null, ['in_transit', 'handoff'], true)
+                        ? (string) $postalTracking['step']
+                        : 'in_transit',
+                    (string) (
+                        $postalTracking['status_at']
+                            ?? $postalTracking['synced_at']
+                            ?? now()->toIso8601String()
+                    ),
+                    [
+                        'title_uz' => $labels['uz'] ?? null,
+                        'title_ru' => $labels['ru'] ?? null,
+                        'title_en' => $labels['en'] ?? null,
+                        'title_ja' => $labels['ja'] ?? $labels['en'] ?? null,
+                        'provider_code' => $postalTracking['provider_code'] ?? null,
+                        'provider_name' => $postalTracking['provider_name'] ?? null,
+                        'tracking_number' => $postalTracking['tracking_number'] ?? null,
+                        'location' => $postalTracking['location'] ?? null,
+                        'is_external' => true,
+                    ],
+                );
+            }
         }
 
         if ($order->status_code === OrderStatusCode::CUSTOMER_RECEIVED->value) {
@@ -3074,13 +3107,33 @@ class PurchaseController extends Controller
             'delivery_flow' => $deliveryFlow,
             'fulfillment_status' => $fulfillment?->status_code,
             'hub_name' => $fulfillment?->hub?->name,
-            'active_step' => $this->resolveDeliveryProgressActiveStep($order, $fulfillment, $deliveryFlow),
+            'active_step' => $this->resolveDeliveryProgressActiveStep(
+                $order,
+                $fulfillment,
+                $deliveryFlow,
+                $postalTracking,
+            ),
+            'postal_tracking' => $postalTracking ? [
+                'provider_code' => $postalTracking['provider_code'] ?? null,
+                'provider_name' => $postalTracking['provider_name'] ?? null,
+                'tracking_number' => $postalTracking['tracking_number'] ?? null,
+                'status_code' => $postalTracking['status_code'] ?? null,
+                'status_at' => $postalTracking['status_at'] ?? null,
+                'location' => $postalTracking['location'] ?? null,
+            ] : null,
             'timeline' => array_values($timeline),
         ];
     }
 
-    private function resolveDeliveryProgressActiveStep(Sold $order, $fulfillment, string $deliveryFlow): string
-    {
+    /**
+     * @param  array<string, mixed>|null  $postalTracking
+     */
+    private function resolveDeliveryProgressActiveStep(
+        Sold $order,
+        $fulfillment,
+        string $deliveryFlow,
+        ?array $postalTracking = null,
+    ): string {
         $statusCode = $order->status_code;
         $paymentStatusCode = $order->payment_status_code;
         $fulfillmentStatus = $fulfillment?->status_code;
@@ -3093,6 +3146,10 @@ class PurchaseController extends Controller
             return 'handoff';
         }
 
+        if ($deliveryFlow === 'postal' && ($postalTracking['step'] ?? null) === 'handoff') {
+            return 'handoff';
+        }
+
         if ($deliveryFlow !== 'postal' && $statusCode === OrderStatusCode::DELIVERED->value) {
             return 'received';
         }
@@ -3102,6 +3159,10 @@ class PurchaseController extends Controller
         }
 
         if (in_array($fulfillmentStatus, ['picked_from_seller', 'dispatched_to_post'], true) || $statusCode === OrderStatusCode::IN_DELIVERY->value) {
+            return 'in_transit';
+        }
+
+        if ($deliveryFlow === 'postal' && ($postalTracking['step'] ?? null) === 'in_transit') {
             return 'in_transit';
         }
 

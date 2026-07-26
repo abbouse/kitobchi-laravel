@@ -90,6 +90,7 @@ use App\Services\HubRoleAccessService;
 use App\Services\OpenAIService;
 use App\Services\PaylovFiscalizationService;
 use App\Services\PayoutReportService;
+use App\Services\PostalTrackingService;
 use App\Services\ProductModerationStateService;
 use App\Services\SellerCancellationReasonCatalog;
 use App\Services\SellerOrderSettlementService;
@@ -330,23 +331,48 @@ class AdminController extends Controller
     }
 
     /**
-     * Pochta buyurtmasiga trek raqami va boradigan pochta bo'limi manzilini
-     * biriktirish — "yetib keldi" SMS'ida mijozga aynan shular ko'rsatiladi.
+     * Pochta buyurtmasiga xizmat, trek raqami va boradigan pochta bo'limi
+     * manzilini biriktirish — mijozga aynan shu ma'lumotlar ko'rsatiladi.
      */
-    public function updateOrderPostalInfo(Request $request, Sold $order): \Illuminate\Http\RedirectResponse
-    {
+    public function updateOrderPostalInfo(
+        Request $request,
+        Sold $order,
+        PostalTrackingService $trackingService,
+    ): \Illuminate\Http\RedirectResponse {
         $data = $request->validate([
+            'postal_provider' => ['nullable', 'string', Rule::in($trackingService->providerCodes())],
             'tracking' => 'nullable|string|max:64',
             'postal_office_address' => 'nullable|string|max:255',
         ]);
 
-        \App\Models\OrderFulfillment::query()->updateOrCreate(
-            ['order_id' => $order->id],
-            [
-                'postal_tracking_number' => trim((string) ($data['tracking'] ?? '')) ?: null,
-                'postal_office_address' => trim((string) ($data['postal_office_address'] ?? '')) ?: null,
-            ],
-        );
+        $provider = Str::lower(trim((string) ($data['postal_provider'] ?? ''))) ?: null;
+        $tracking = Str::upper(trim((string) ($data['tracking'] ?? ''))) ?: null;
+        if ($tracking && ! $provider) {
+            throw ValidationException::withMessages([
+                'postal_provider' => 'Trek raqami uchun pochta xizmatini tanlang.',
+            ]);
+        }
+
+        $fulfillment = \App\Models\OrderFulfillment::query()->firstOrNew([
+            'order_id' => $order->id,
+        ]);
+        $trackingIdentityChanged = $fulfillment->postal_provider !== $provider
+            || $fulfillment->postal_tracking_number !== $tracking;
+        $meta = (array) ($fulfillment->meta ?? []);
+        if ($trackingIdentityChanged) {
+            data_forget($meta, 'postal_tracking');
+        }
+
+        $fulfillment->fill([
+            'postal_provider' => $provider,
+            'postal_tracking_number' => $tracking,
+            'postal_office_address' => trim((string) ($data['postal_office_address'] ?? '')) ?: null,
+            'meta' => $meta,
+        ])->save();
+
+        if ($tracking && $provider) {
+            $trackingService->sync($fulfillment, force: true);
+        }
 
         return back()->with('success', "#{$order->id} buyurtmaning pochta ma'lumotlari saqlandi.");
     }
@@ -10844,6 +10870,10 @@ PROMPT;
         $address = collect($order->address ?? [])->values()->map(fn ($item) => $this->orderAddressPayload((array) $item));
         $primaryAddress = (array) ($address->first() ?? []);
         $fulfillment = $order->fulfillment;
+        $postalTrackingService = app(PostalTrackingService::class);
+        $postalTracking = $order->deliveryType === 'postal' && $fulfillment
+            ? $postalTrackingService->sync($fulfillment)
+            : null;
         $paymentTransaction = Schema::hasTable('transactions') ? Transaction::query()
             ->where('order_id', $order->id)
             ->where('payment_type', 'order')
@@ -11106,6 +11136,7 @@ PROMPT;
                 'isCod' => (bool) $fulfillment->is_cod,
                 'cashCollectAmount' => (float) ($fulfillment->cash_collect_amount ?? 0),
                 'tracking' => $fulfillment->postal_tracking_number,
+                'postalProvider' => $fulfillment->postal_provider,
                 'postalOfficeAddress' => $fulfillment->postal_office_address,
                 'labelCode' => $fulfillment->label_code,
                 'notes' => $fulfillment->notes,
@@ -11125,8 +11156,17 @@ PROMPT;
             ] : null,
             'paymentCard' => $paymentCardView,
             'postalInfo' => [
+                'provider' => (string) ($fulfillment?->postal_provider ?? ''),
+                'providers' => $postalTrackingService->providerOptions(),
                 'tracking' => (string) ($fulfillment?->postal_tracking_number ?? ''),
                 'address' => (string) ($fulfillment?->postal_office_address ?? ''),
+                'currentStatus' => $postalTracking ? [
+                    'code' => $postalTracking['status_code'] ?? null,
+                    'providerName' => $postalTracking['provider_name'] ?? null,
+                    'title' => $postalTrackingService->localizedLabel($postalTracking, 'uz'),
+                    'location' => $postalTracking['location'] ?? null,
+                    'at' => $postalTracking['status_at'] ?? null,
+                ] : null,
                 'saveUrl' => route('boshqaruv.orders.postal-info', $order),
             ],
             'fiscalReceipt' => $this->orderFiscalReceiptPayload($fiscalTransaction, (int) $order->id),

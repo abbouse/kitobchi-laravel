@@ -177,15 +177,6 @@ class SellerController extends Controller
                 'message' => 'Access denied. Only Owner can update store status.'
             ], 403);
         }
-        $main_location = SellerLocation::where('seller_id', $seller->id)
-            ->where('is_main', true)
-            ->get();
-            if (!$main_location) {
-                return response()->json([
-                'success' => false, 
-                'message' => 'Access denied'
-            ], 403);
-            }
         if ($request->has('is_active')) {
             $seller->is_hidden = ! $request->boolean('is_active');
         } else {

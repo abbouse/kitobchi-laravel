@@ -108,6 +108,16 @@ return [
         'key' => env('YANDEX_MAPS_API_KEY', ''),
         'lang' => env('YANDEX_MAPS_LANG', 'ru_RU'),
     ],
+    'uzpost' => [
+        'tracking_url' => rtrim(
+            env('UZPOST_TRACKING_URL', 'https://tracking.pochta.uz/api/v1/public/test'),
+            '/',
+        ),
+        'connect_timeout' => (int) env('UZPOST_CONNECT_TIMEOUT', 3),
+        'timeout' => (int) env('UZPOST_TIMEOUT', 7),
+        // UzPost javobi o'zi 10 daqiqaga keshlanadi, undan tez so'ramaymiz.
+        'sync_interval_minutes' => (int) env('UZPOST_SYNC_INTERVAL_MINUTES', 10),
+    ],
     'eskiz' => [
         'email' => env('ESKIZ_EMAIL', 'toordaliev@gmail.com'),
         'password' => env('ESKIZ_PASSWORD', 'aF6WH2CcaKes30zgLPCZ1MM7CPfPlgCX07HoM8rE'),
