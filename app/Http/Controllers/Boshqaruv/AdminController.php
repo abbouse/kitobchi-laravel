@@ -120,6 +120,12 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class AdminController extends Controller
 {
@@ -207,9 +213,75 @@ class AdminController extends Controller
         $rows = $this->buildDashboardExportRows($payload);
         $filename = 'kitobchi-dashboard-'.now()->format('Y-m-d_His').'.xlsx';
 
-        return \Maatwebsite\Excel\Facades\Excel::download(
-            new \App\Exports\DashboardReportExport($rows, 'Dashboard'),
-            $filename
+        return $this->downloadDashboardSpreadsheet($rows, $filename);
+    }
+
+    /**
+     * Dashboard hisobotini serverda mavjud PhpSpreadsheet orqali yuklab beradi.
+     * Laravel Excel paketi o'rnatilmagan muhitlarda ham 500 bermasligi uchun
+     * Maatwebsite facade ishlatilmaydi.
+     *
+     * @param  array<int, array<int, mixed>>  $rows
+     */
+    private function downloadDashboardSpreadsheet(array $rows, string $filename): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Dashboard');
+
+        $sheet->fromArray($rows, null, 'A1', true);
+
+        $highestRow = max(1, count($rows));
+        $highestColumn = $sheet->getHighestColumn();
+        $highestColumnIndex = Coordinate::columnIndexFromString($highestColumn);
+
+        for ($columnIndex = 1; $columnIndex <= $highestColumnIndex; $columnIndex++) {
+            $column = Coordinate::stringFromColumnIndex($columnIndex);
+            $sheet->getColumnDimension($column)->setAutoSize(true);
+        }
+
+        $sheet->getStyle("A1:{$highestColumn}{$highestRow}")
+            ->getAlignment()
+            ->setVertical(Alignment::VERTICAL_CENTER);
+
+        $sheet->getStyle('A1')->applyFromArray([
+            'font' => ['bold' => true, 'size' => 16, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '111827']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+        ]);
+        $sheet->mergeCells("A1:{$highestColumn}1");
+
+        for ($row = 1; $row <= $highestRow; $row++) {
+            $firstCell = (string) $sheet->getCell("A{$row}")->getValue();
+            $secondCell = (string) $sheet->getCell("B{$row}")->getValue();
+
+            if ($firstCell !== '' && $secondCell === '') {
+                $sheet->getStyle("A{$row}:{$highestColumn}{$row}")->applyFromArray([
+                    'font' => ['bold' => true],
+                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $row === 1 ? '111827' : 'EEF2FF']],
+                ]);
+            }
+        }
+
+        $sheet->getStyle("A1:{$highestColumn}{$highestRow}")
+            ->getBorders()
+            ->getAllBorders()
+            ->setBorderStyle(Border::BORDER_HAIR)
+            ->getColor()
+            ->setRGB('E5E7EB');
+
+        $writer = new Xlsx($spreadsheet);
+
+        return response()->streamDownload(
+            static function () use ($writer, $spreadsheet): void {
+                $writer->save('php://output');
+                $spreadsheet->disconnectWorksheets();
+            },
+            $filename,
+            [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'Cache-Control' => 'max-age=0, no-cache, no-store, must-revalidate',
+            ]
         );
     }
 
