@@ -131,6 +131,18 @@ class AdminController extends Controller
 {
     private const CONTENT_LOCALES = ['ru', 'en', 'ja'];
 
+    /**
+     * marketplaceFinancialSnapshot() natijalarini bitta HTTP so'rov ichida
+     * qayta hisoblamaslik uchun xotira-ichi kesh. Dashboard sahifasi bitta
+     * yuklanishda shu metodni bir xil (yoki mos) sana oralig'i bilan 2-3
+     * marta chaqiradi (dashboardPayload + dashboardUnitEconomics) — har
+     * chaqiruv ~10 ta alohida SUM/COUNT so'rovi, shuning uchun takrorlanishi
+     * bekorga DB yukini oshiradi.
+     *
+     * @var array<string, array<string, mixed>>
+     */
+    private array $financialSnapshotMemo = [];
+
     public function login(): Response|\Illuminate\Http\RedirectResponse
     {
         if (Auth::guard('panel')->check()) {
@@ -193,14 +205,44 @@ class AdminController extends Controller
                 'books' => $this->tableCount('books'),
                 'sellers' => $this->tableCount('sellers'),
             ],
-            'snapshot' => $this->liveSnapshot(),
+            'snapshot' => $this->liveSnapshotForCurrentAdmin(),
             'liveEndpoint' => route('boshqaruv.live.data'),
         ]);
     }
 
     public function liveData(): JsonResponse
     {
-        return response()->json($this->liveSnapshot());
+        return response()->json($this->liveSnapshotForCurrentAdmin());
+    }
+
+    /**
+     * liveSnapshot() natijasi 2 soniyalik keshda BARCHA adminlar uchun
+     * umumiy saqlanadi (performance uchun) — shuning uchun rolga qarab
+     * moliyaviy maydonlarni yopish keshdan KEYIN, har so'rov uchun alohida
+     * qilinadi. Aks holda bitta superadmin ko'rgan to'liq snapshot keshda
+     * qolib, keyingi moderatorga ham to'liq holida ko'rinib qolar edi.
+     */
+    private function liveSnapshotForCurrentAdmin(): array
+    {
+        $snapshot = $this->liveSnapshot();
+
+        if (Auth::guard('panel')->user()?->isSuperAdmin()) {
+            return $snapshot;
+        }
+
+        foreach ([
+            'total_revenue', 'today_revenue', 'month_revenue', 'platform_profit',
+            'avg_order_value', 'delivery_income', 'promo_discount', 'cashback',
+            'commission', 'courier_payout', 'manual_expenses', 'provider_fee',
+            'tax', 'profit_margin',
+        ] as $moneyKey) {
+            if (array_key_exists($moneyKey, $snapshot['kpis'] ?? [])) {
+                $snapshot['kpis'][$moneyKey] = 0;
+            }
+        }
+        $snapshot['financialRestricted'] = true;
+
+        return $snapshot;
     }
 
     /**
@@ -1859,7 +1901,7 @@ class AdminController extends Controller
         ]);
 
         $localizedPush = $this->localizedPushPayload($data);
-        $userType = $data['who'] === 'users' ? 'user' : $data['who'];
+        $userType = $this->pushAudienceUserType($data['who']);
         $target = null;
 
         if ($data['target_mode'] === 'individual') {
@@ -2059,6 +2101,163 @@ class AdminController extends Controller
         $notification->delete();
 
         return back()->with('success', "Push bildirishnoma o'chirildi.");
+    }
+
+    public function resendPushNotification(FcmNotifications $notification): \Illuminate\Http\RedirectResponse
+    {
+        [$audience, $targetMode, $target] = $this->pushDispatchTargetFromStoredWho((string) $notification->who);
+
+        if (! $audience) {
+            return back()->withErrors([
+                'recipient' => 'Ushbu push uchun auditoriya aniqlanmadi.',
+            ]);
+        }
+
+        if ($targetMode === 'individual' && ! $target) {
+            return back()->withErrors([
+                'recipient' => 'Ushbu push yuborilgan qabul qiluvchi hozir topilmadi.',
+            ]);
+        }
+
+        $localizedPush = $this->localizedPushPayloadFromNotification($notification);
+        if (($localizedPush['uz']['title'] ?? '') === '' || ($localizedPush['uz']['body'] ?? '') === '') {
+            return back()->withErrors([
+                'recipient' => 'Ushbu pushda qayta yuborish uchun sarlavha yoki matn yetarli emas.',
+            ]);
+        }
+
+        $recipientService = app(FcmRecipientService::class);
+        $userType = $this->pushAudienceUserType($audience);
+        $tokensByLocale = $target
+            ? [$this->pushRecipientLocale($audience, $target) => $recipientService->tokensFor($userType, (int) $target->id)]
+            : $recipientService->tokensForAudienceByLocale($userType);
+
+        $tokensByLocale = collect($tokensByLocale)
+            ->mapWithKeys(fn (array $tokens, string $locale) => [
+                $recipientService->normalizeLocale($locale) => array_values(array_unique(array_filter($tokens))),
+            ])
+            ->filter(fn (array $tokens) => $tokens !== [])
+            ->all();
+        $tokens = collect($tokensByLocale)->flatten()->unique()->values()->all();
+
+        if (empty($tokens)) {
+            return back()->withErrors([
+                'recipient' => $target
+                    ? 'Ushbu qabul qiluvchining faol push qurilmasi topilmadi.'
+                    : 'Tanlangan auditoriyada faol push qurilmasi topilmadi.',
+            ]);
+        }
+
+        $duplicate = $notification->replicate();
+        $duplicate->source = 'admin_resend';
+        $duplicate->delivery_status = 'sending';
+        $duplicate->sent_count = 0;
+        $duplicate->failed_count = 0;
+        $duplicate->is_read = false;
+        $duplicate->save();
+
+        $sent = 0;
+        $failed = 0;
+        $lastError = null;
+
+        foreach ($tokensByLocale as $locale => $localeTokens) {
+            $message = $localizedPush[$locale] ?? $localizedPush['uz'];
+            $pushRequest = new Request([
+                'app_key' => match ($audience) {
+                    'business' => 'business',
+                    'courier' => 'courier',
+                    default => 'kitobchi',
+                },
+                'title' => $message['title'],
+                'body' => $message['body'],
+                'tokens' => $localeTokens,
+                'data' => [
+                    'type' => 'general',
+                    'notification_id' => (string) $duplicate->id,
+                    'target_mode' => $targetMode,
+                    'locale' => $locale,
+                    'resent_from' => (string) $notification->id,
+                ],
+            ]);
+
+            $response = app(\App\Http\Controllers\PushController::class)->sendPush($pushRequest);
+            $result = (array) $response->getData(true);
+            $sent += (int) ($result['sent'] ?? 0);
+            $failed += (int) ($result['failed'] ?? 0);
+
+            if (! ($result['success'] ?? false)) {
+                $lastError = (string) ($result['message'] ?? 'Push yuborilmadi.');
+            }
+        }
+
+        $duplicate->update([
+            'delivery_status' => $sent > 0 ? 'sent' : 'failed',
+            'sent_count' => $sent,
+            'failed_count' => $failed,
+        ]);
+
+        if ($sent === 0) {
+            return back()->withErrors([
+                'recipient' => $lastError ?: 'Push qayta yuborilmadi.',
+            ]);
+        }
+
+        $targetLabel = $target ? $this->pushRecipientLabel($audience, $target) : count($tokens).' ta qurilma';
+
+        return back()->with('success', "#{$notification->id} push dublikat qilindi va {$targetLabel} uchun qayta yuborildi.");
+    }
+
+    private function pushDispatchTargetFromStoredWho(string $who): array
+    {
+        $who = trim($who);
+
+        if (in_array($who, ['users', 'business', 'courier'], true)) {
+            return [$who, 'audience', null];
+        }
+
+        if (ctype_digit($who)) {
+            return ['users', 'individual', User::query()->find((int) $who)];
+        }
+
+        if (preg_match('/^(business|courier):(\d+)$/', $who, $matches)) {
+            $target = $matches[1] === 'business'
+                ? Seller::query()->find((int) $matches[2])
+                : Couriers::query()->find((int) $matches[2]);
+
+            return [$matches[1], 'individual', $target];
+        }
+
+        return [null, 'audience', null];
+    }
+
+    private function pushAudienceUserType(string $audience): string
+    {
+        return match ($audience) {
+            'users' => 'user',
+            'business' => 'seller',
+            default => $audience,
+        };
+    }
+
+    private function localizedPushPayloadFromNotification(FcmNotifications $notification): array
+    {
+        $uzTitle = trim((string) ($notification->name_uz ?? $notification->name ?? ''));
+        $uzBody = trim((string) ($notification->description_uz ?? $notification->description ?? ''));
+
+        $localized = [
+            'uz' => ['title' => $uzTitle, 'body' => $uzBody],
+        ];
+
+        foreach (self::CONTENT_LOCALES as $locale) {
+            $title = trim((string) ($notification->{"name_{$locale}"} ?? ''));
+            $body = trim((string) ($notification->{"description_{$locale}"} ?? ''));
+            $localized[$locale] = [
+                'title' => $title !== '' ? $title : $uzTitle,
+                'body' => $body !== '' ? $body : $uzBody,
+            ];
+        }
+
+        return $localized;
     }
 
     public function storeVacancy(Request $request): \Illuminate\Http\RedirectResponse
@@ -3202,7 +3401,7 @@ PROMPT;
             'rejected' => Schema::hasTable('courier_orders') ? $this->countStatuses(CourierOrder::query(), ['cancelled', 'returned']) : 0,
         ];
 
-        return [
+        $payload = [
             'generatedAt' => now()->format('Y-m-d H:i:s'),
             'metrics' => [
                 'orders' => $totalOrders,
@@ -3262,6 +3461,53 @@ PROMPT;
             'exportUrl' => route('boshqaruv.dashboard.export'),
             'alerts' => $this->liveAlerts($mainCounts, $sellerCounts, $courierCounts),
         ];
+
+        return $this->redactFinancialsForNonSuperAdmin($payload);
+    }
+
+    /**
+     * Daromad, komissiya, profit va h.k. moliyaviy ko'rsatkichlarni faqat
+     * superadmin ko'rishi kerak — operatsion son-sanoqlar (buyurtmalar,
+     * statuslar, foydalanuvchilar) esa admin/moderator uchun ham ochiq
+     * qoladi. Kalitlar saqlanadi (0 ga tenglashtiriladi), shunda frontend
+     * hech qanday qo'shimcha null-tekshiruvsiz ishlayveradi.
+     *
+     * ESLATMA: bu birinchi bosqich — `financial`, `business.avgRevenuePerBuyer`
+     * va `unitEconomics` ichidagi pul maydonlari yopiladi. `sellerScorecard`
+     * kabi boshqa joylarda ham pul raqami bo'lishi mumkin — keyingi bosqichda
+     * kengaytirilishi kerak.
+     *
+     * @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
+    private function redactFinancialsForNonSuperAdmin(array $payload): array
+    {
+        if (Auth::guard('panel')->user()?->isSuperAdmin()) {
+            return $payload;
+        }
+
+        if (isset($payload['financial']) && is_array($payload['financial'])) {
+            $payload['financial'] = array_map(
+                fn ($value) => is_numeric($value) ? 0 : $value,
+                $payload['financial']
+            );
+        }
+
+        if (isset($payload['business']['avgRevenuePerBuyer'])) {
+            $payload['business']['avgRevenuePerBuyer'] = 0;
+        }
+
+        if (isset($payload['unitEconomics']) && is_array($payload['unitEconomics'])) {
+            foreach (['cac', 'blendedCac', 'arpu', 'ltv', 'ltvCacRatio', 'contributionPerOrder', 'grossPerOrder', 'marginPct', 'refundAmount'] as $moneyKey) {
+                if (array_key_exists($moneyKey, $payload['unitEconomics'])) {
+                    $payload['unitEconomics'][$moneyKey] = 0;
+                }
+            }
+        }
+
+        $payload['financialRestricted'] = true;
+
+        return $payload;
     }
 
     private function dashboardPlatformAnalysis(): array
@@ -3403,6 +3649,16 @@ PROMPT;
     }
 
     private function marketplaceFinancialSnapshot(?Carbon $start = null, ?Carbon $end = null): array
+    {
+        $memoKey = ($start?->toDateTimeString() ?? 'null').'|'.($end?->toDateTimeString() ?? 'null');
+        if (array_key_exists($memoKey, $this->financialSnapshotMemo)) {
+            return $this->financialSnapshotMemo[$memoKey];
+        }
+
+        return $this->financialSnapshotMemo[$memoKey] = $this->computeMarketplaceFinancialSnapshot($start, $end);
+    }
+
+    private function computeMarketplaceFinancialSnapshot(?Carbon $start = null, ?Carbon $end = null): array
     {
         $between = function ($query, string $column = 'created_at') use ($start, $end) {
             return $query
@@ -7318,6 +7574,7 @@ PROMPT;
                     'failedCount' => (int) ($notification->failed_count ?? 0),
                     'date' => optional($notification->created_at)->format('Y-m-d H:i'),
                     'createUrl' => route('boshqaruv.push.store'),
+                    'resendUrl' => route('boshqaruv.push.resend', $notification),
                     'destroyUrl' => route('boshqaruv.push.destroy', $notification),
                 ];
             })
@@ -9479,6 +9736,19 @@ PROMPT;
     }
 
     private function liveSnapshot(): array
+    {
+        // MUHIM: bu metod /live sahifasi va /live/data poll endpointi orqali
+        // eng tez rejimda HAR 2 SONIYADA chaqiriladi (LiveDashboard.tsx, x5
+        // tezlik) va ~50-60 ta xom SQL so'rov yuboradi (barcha status
+        // hisoblari, moliyaviy yig'indilar va h.k.), hech qanday keshsiz.
+        // Bir nechta admin oynasi ochiq bo'lsa, bu DB'ga sezilarli yuk beradi.
+        // 2 soniyalik qisqa kesh — "live" tuyg'usini yo'qotmasdan (eng tez
+        // poll oralig'idan uzun emas) bir nechta bir vaqtdagi so'rovni bitta
+        // hisoblashga birlashtiradi.
+        return Cache::remember('boshqaruv:live-snapshot', 2, fn () => $this->buildLiveSnapshot());
+    }
+
+    private function buildLiveSnapshot(): array
     {
         $now = now();
         $today = $now->copy()->startOfDay();

@@ -668,7 +668,7 @@ export function ChatKuzatuv() {
 // ===== PUSH BILDIRISHNOMALAR =====
 export function PushNotifications() {
   const { notifications = [], translateUrl = '/boshqaruv/content/translate' } = usePage<{
-    notifications?: Array<{ id: number; title: string; body?: string; localized?: Record<PushLocale, { title?: string | null; body?: string | null }>; who?: string; targetMode?: 'audience' | 'individual'; targetLabel?: string; source?: string; status: string; sentCount?: number; failedCount?: number; date?: string; createUrl?: string; destroyUrl?: string }>;
+    notifications?: Array<{ id: number; title: string; body?: string; localized?: Record<PushLocale, { title?: string | null; body?: string | null }>; who?: string; targetMode?: 'audience' | 'individual'; targetLabel?: string; source?: string; status: string; sentCount?: number; failedCount?: number; date?: string; createUrl?: string; resendUrl?: string; destroyUrl?: string }>;
     translateUrl?: string;
   }>().props;
   const [showForm, setShowForm] = useState(false);
@@ -772,6 +772,10 @@ export function PushNotifications() {
     if (!notification.destroyUrl || !confirm(`#${notification.id} push o'chirilsinmi?`)) return;
     router.delete(notification.destroyUrl, { preserveScroll: true });
   };
+  const resend = (notification: (typeof notifications)[0]) => {
+    if (!notification.resendUrl || !confirm(`#${notification.id} push dublikat qilinib qayta yuborilsinmi?`)) return;
+    router.post(notification.resendUrl, {}, { preserveScroll: true });
+  };
 
   return (
     <div>
@@ -811,7 +815,16 @@ export function PushNotifications() {
                 {notification.status === 'Yuborildi' ? <div className="text-muted mt-1" style={{ fontSize: 10 }}>{notification.sentCount || 0} qurilma</div> : null}
               </td>
               <td className="text-muted">{notification.date}</td>
-              <td><button className="btn btn-sm btn-light text-danger" onClick={() => destroy(notification)}><i className="bi bi-trash"></i></button></td>
+              <td>
+                <div className="d-flex gap-1">
+                  <button className="btn btn-sm btn-light text-primary" onClick={() => resend(notification)} title="Dublikat qilib qayta yuborish">
+                    <i className="bi bi-arrow-repeat"></i>
+                  </button>
+                  <button className="btn btn-sm btn-light text-danger" onClick={() => destroy(notification)} title="O'chirish">
+                    <i className="bi bi-trash"></i>
+                  </button>
+                </div>
+              </td>
             </tr>
           ))}</tbody>
         </table></div>

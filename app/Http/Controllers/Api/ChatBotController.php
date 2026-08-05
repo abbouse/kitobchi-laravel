@@ -173,8 +173,20 @@ class ChatBotController extends Controller
         // Yapon (Hiragana, Katakana, Kanji)
         if (preg_match('/[\x{3040}-\x{30FF}\x{4E00}-\x{9FFF}]/u', $text)) return 'ja';
 
-        // Kirill → rus
-        if (preg_match('/[\x{0400}-\x{04FF}]/u', $text)) return 'ru';
+        // Kirill: avval o'zbek kirillga XOS harflar (ў/қ/ғ/ҳ — ruschada yo'q)
+        // yoki o'zbekcha kirill so'zlar tekshiriladi. Bulardan biri topilsa —
+        // o'zbek tili, aks holda standart rus deb hisoblanadi.
+        // (Ilgari HAR QANDAY kirill matn to'g'ridan-to'g'ri ruscha deb
+        // belgilanardi — bu kirill yozadigan o'zbek foydalanuvchilari uchun
+        // botni noto'g'ri tilda javob berishga majbur qilardi.)
+        if (preg_match('/[\x{0400}-\x{04FF}]/u', $text)) {
+            $isUzbekCyrillic = preg_match('/[ўқғҳЎҚҒҲ]/u', $text) || preg_match(
+                "/\b(салом|рахмат|раҳмат|китоб|қидир|нарх|арзон|сават|менга|керак|тавсия|беринг|қанча|топинг|чегирма|илтимос|қанақа|бормикин|бормi)\b/ui",
+                $text
+            );
+
+            return $isUzbekCyrillic ? 'uz' : 'ru';
+        }
 
         // O'zbek-spesifik so'zlar (lotin)
         if (preg_match(

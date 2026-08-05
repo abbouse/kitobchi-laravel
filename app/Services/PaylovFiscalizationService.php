@@ -295,6 +295,15 @@ class PaylovFiscalizationService
                 continue;
             }
 
+            // Yakuniy bekor qilingan itemlar mijozdan olinadigan summaga
+            // kirmaydi. Ularni OFD payloadida qoldirish Paylovda eski seller
+            // STIRi bilan "commitent/subcommission not active" xatosini ham
+            // chiqarishi mumkin.
+            $isCancelled = filter_var($row['is_cancelled'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            if ($isCancelled || filled($row['cancelled_at'] ?? null)) {
+                continue;
+            }
+
             $type = (string) ($row['type'] ?? 'book');
             $unitPrice = (int) round(((float) ($row['item_price'] ?? 0)) * $mult);
             $count = max(1, (int) ($row['count_item'] ?? 1));

@@ -89,41 +89,49 @@ class ProductAiModerationService
                     continue;
                 }
 
-                try {
-                    $decisions = $this->requestDecisions($aiItems);
-                } catch (\Throwable $e) {
-                    Log::error('Product AI moderation request failed', [
-                        'type' => $type,
-                        'ids' => $aiItems->pluck('id')->all(),
-                        'message' => $e->getMessage(),
-                    ]);
-                    foreach ($aiItems as $item) {
-                        $stats[$this->markFailed($item, $e->getMessage())]++;
-                    }
-
-                    continue;
-                }
-
-                foreach ($aiItems as $item) {
+                // Bitta OpenAI so'rovida haddan tashqari ko'p rasm bo'lsa,
+                // model rasmlarni noto'g'ri mahsulotga bog'lab qo'yish
+                // ehtimoli oshadi ("rasm mos kelmadi" xato pozitivlarining
+                // asosiy manbai). Shuning uchun so'rovni rasm-byudjetiga
+                // qarab kichikroq sub-batchlarga bo'lamiz.
+                $imageBudget = max(1, (int) config('product_moderation.max_images_per_request', 4));
+                foreach ($this->chunkByImageBudget($aiItems, $imageBudget) as $subBatch) {
                     try {
-                        $decision = $decisions->get($item['key']);
-                        if (! is_array($decision)) {
-                            $stats[$this->markFailed($item, 'AI javobida mahsulot qarori topilmadi.')]++;
-
-                            continue;
-                        }
-
-                        $status = $this->storeDecision($item, $decision);
-                        $stats[$status]++;
-                        if ($status !== 'skipped') {
-                            $stats['processed']++;
-                        }
+                        $decisions = $this->requestDecisions($subBatch);
                     } catch (\Throwable $e) {
-                        Log::error('Product AI moderation decision failed', [
-                            'key' => $item['key'],
+                        Log::error('Product AI moderation request failed', [
+                            'type' => $type,
+                            'ids' => $subBatch->pluck('id')->all(),
                             'message' => $e->getMessage(),
                         ]);
-                        $stats[$this->markFailed($item, $e->getMessage())]++;
+                        foreach ($subBatch as $item) {
+                            $stats[$this->markFailed($item, $e->getMessage())]++;
+                        }
+
+                        continue;
+                    }
+
+                    foreach ($subBatch as $item) {
+                        try {
+                            $decision = $decisions->get($item['key']);
+                            if (! is_array($decision)) {
+                                $stats[$this->markFailed($item, 'AI javobida mahsulot qarori topilmadi.')]++;
+
+                                continue;
+                            }
+
+                            $status = $this->storeDecision($item, $decision);
+                            $stats[$status]++;
+                            if ($status !== 'skipped') {
+                                $stats['processed']++;
+                            }
+                        } catch (\Throwable $e) {
+                            Log::error('Product AI moderation decision failed', [
+                                'key' => $item['key'],
+                                'message' => $e->getMessage(),
+                            ]);
+                            $stats[$this->markFailed($item, $e->getMessage())]++;
+                        }
                     }
                 }
             } catch (\Throwable $e) {
@@ -152,6 +160,41 @@ class ProductAiModerationService
         }
 
         return $stats;
+    }
+
+    /**
+     * $items ni ketma-ketligini buzmasdan, har bir sub-batchdagi jami rasm
+     * soni $budget dan oshmaydigan qilib bo'lib chiqadi. Rasmi bo'lmagan
+     * itemlar (faqat matn tekshiruvi) budjetga ta'sir qilmaydi va birga
+     * ketaveradi — faqat rasm-og'ir itemlar ajratiladi.
+     *
+     * @param Collection<int, array<string, mixed>> $items
+     * @return list<Collection<int, array<string, mixed>>>
+     */
+    private function chunkByImageBudget(Collection $items, int $budget): array
+    {
+        $batches = [];
+        $current = collect();
+        $currentImages = 0;
+
+        foreach ($items as $item) {
+            $imageCount = count($item['vision_images']);
+
+            if ($current->isNotEmpty() && $imageCount > 0 && ($currentImages + $imageCount) > $budget) {
+                $batches[] = $current;
+                $current = collect();
+                $currentImages = 0;
+            }
+
+            $current->push($item);
+            $currentImages += $imageCount;
+        }
+
+        if ($current->isNotEmpty()) {
+            $batches[] = $current;
+        }
+
+        return $batches;
     }
 
     private function queueQuery(string $type, bool $all): Builder
@@ -382,6 +425,32 @@ class ProductAiModerationService
             ->all();
     }
 
+    /**
+     * Rasm blokidan darhol oldin/keyin qo'yiladigan qisqa, o'sha mahsulotga
+     * tegishli kontekst (nomi, muallifi, kategoriyasi). Modelga rasmni to'g'ri
+     * mahsulotga bog'lash uchun mahalliy (local) ma'lumot beradi — uzoqdagi
+     * JSON blokka qaytib borishga majbur qilmaydi.
+     *
+     * @param array<string, mixed> $item
+     */
+    private function imageContextLabel(array $item): string
+    {
+        $payload = $item['payload'];
+        $bits = [$item['key']];
+
+        if (filled($payload['name'] ?? null)) {
+            $bits[] = 'nomi: '.Str::limit((string) $payload['name'], 80, '');
+        }
+        if ($item['type'] === 'book' && filled($payload['author'] ?? null)) {
+            $bits[] = 'muallif: '.Str::limit((string) $payload['author'], 60, '');
+        }
+        if (is_array($payload['category'] ?? null) && filled($payload['category']['name_uz'] ?? null)) {
+            $bits[] = 'kategoriya: '.$payload['category']['name_uz'];
+        }
+
+        return implode(' | ', $bits);
+    }
+
     /** @param Collection<int, array<string, mixed>> $items */
     private function requestDecisions(Collection $items): Collection
     {
@@ -397,13 +466,31 @@ class ProductAiModerationService
             'text' => json_encode(['products' => $textPayload], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
         ]];
         foreach ($items as $item) {
+            $imageCount = count($item['vision_images']);
+            if ($imageCount === 0) {
+                continue;
+            }
+
+            // MUHIM: rasmdan oldin va keyin O'SHA mahsulotning nomi/muallifi/
+            // kategoriyasi bilan boyitilgan label qo'yiladi. Faqat "book:123"
+            // kabi yalang'och kalit modelga uzoqdagi JSON blokka qaytib borib
+            // moslashtirishga majbur qiladi — ko'p mahsulotli batchda bu aynan
+            // "rasm mos kelmadi" xato pozitivlarining asosiy manbai bo'lgan.
+            $label = $this->imageContextLabel($item);
             foreach ($item['vision_images'] as $index => $url) {
-                $content[] = ['type' => 'text', 'text' => $item['key'].' image '.($index + 1)];
+                $content[] = [
+                    'type' => 'text',
+                    'text' => "=== {$label} — rasm ".($index + 1)."/{$imageCount} boshlanishi ===",
+                ];
                 $detail = (string) config('product_moderation.image_detail', 'high');
                 $content[] = ['type' => 'image_url', 'image_url' => [
                     'url' => $url,
                     'detail' => in_array($detail, ['low', 'high', 'auto'], true) ? $detail : 'high',
                 ]];
+                $content[] = [
+                    'type' => 'text',
+                    'text' => "=== {$label} rasmi tugadi. Yuqoridagi rasmni FAQAT shu kalit ({$item['key']}) bilan solishtir, boshqa mahsulotga taqqoslama. ===",
+                ];
             }
         }
 
@@ -421,14 +508,21 @@ APPROVE faqat quyidagilarda:
 - listingda tashqi aloqa, telefon, messenjer, havola, firibgarlik yoki marketplace tashqarisiga olib chiqish yo'q;
 - noqonuniy, pornografik, nafratli, zo'ravonlikni targ'ib qiluvchi, qalbaki yoki xavfli mahsulot belgisi yo'q.
 
+RASM TAHLILI — JUDA MUHIM, ehtiyot bo'ling (bu yerda ko'p xato bo'ladi):
+- Bitta so'rovda BIR NECHTA mahsulot va ularning rasmlari ketma-ket keladi. Har bir rasm "=== KEY | nomi: ... — rasm N/M boshlanishi ===" va "=== ... tugadi ===" bloklari orasida keladi — rasmni FAQAT o'sha aniq belgilangan KEY bilan solishtiring. Boshqa mahsulotning rasmini yoki matn tavsifini bu qarorga hech qachon aralashtirmang.
+- Bir xil kitobning turli nashri, muqova dizayni, qadoqlash, orqa muqova, qirra/spine surati, yorug'lik/burchak farqi — bularning barchasi ODATIY holat va "image_mismatch" SABABI EMAS. Faqat rasmda aniq va shubhasiz BOSHQA TOifadagi (masalan kitob o'rniga poyabzal, yoki mutlaqo boshqa nomdagi/mavzudagi kitob) mahsulot ko'rinsa "image_mismatch" deb belgilang.
+- Agar rasm sifati past, matn xira yoki qaysi mahsulotga tegishli ekanligi to'liq aniq bo'lmasa — bu REJECT emas, HUMAN_REVIEW: "aniq emas" bilan "mos kelmaydi" bir xil narsa emas.
+- "reason_codes" ichida rasmga oid kod (masalan image_mismatch) yozsangiz, "field_findings.images" da NIMANI ko'rganingizni va NIMA kutilganini (masalan: "rasmda temir stol ko'rindi, listing 'Alifbe' kitobi deb yozilgan") aniq yozing — bo'sh yoki umumiy izoh yozmang.
+
 REJECT:
 - deterministic_issues ichida severity=block bo'lsa;
-- rasm boshqa mahsulotniki, nom/tavsif aldamchi yoki metadata jiddiy zid bo'lsa;
+- rasm shubhasiz boshqa toifadagi/nomdagi mahsulotniki, nom/tavsif aldamchi yoki metadata jiddiy zid bo'lsa (yuqoridagi "rasm tahlili" qoidalariga rioya qilgan holda);
 - spam, kalit so'z to'ldirish, aloqa ma'lumoti, tashqi savdo, noqonuniy yoki xavfli kontent bo'lsa;
 - mahsulotni aniqlash uchun majburiy ma'lumot yoki rasm yetishmasa.
 
 HUMAN_REVIEW:
 - mualliflik huquqi, qalbakilik, yosh cheklovi yoki rasm mosligi bo'yicha asosli shubha bor, lekin qat'iy xulosa qilib bo'lmasa;
+- rasm past sifatli, xira yoki qaysi mahsulotga tegishli ekanligi to'liq aniq emas;
 - confidence past bo'lsa.
 
 Mayda imlo yoki uslub xatosi o'zi reject sababi emas. Hech qachon yetishmagan ma'lumotni o'ylab topmang. Faqat JSON qaytaring:
@@ -440,7 +534,7 @@ Mayda imlo yoki uslub xatosi o'zi reject sababi emas. Hech qachon yetishmagan ma
       "confidence": 0.0,
       "reason_codes": ["image_mismatch"],
       "note": "admin va seller uchun qisqa o'zbekcha sabab",
-      "field_findings": {"images": "ok", "description": "ok"},
+      "field_findings": {"images": "aniq nima ko'rilgani va kutilgani bilan", "description": "ok"},
       "needs_admin_review": false
     }
   ]
@@ -453,6 +547,23 @@ PROMPT,
         return collect($result['items'] ?? [])
             ->filter(fn ($row) => is_array($row) && filled($row['key'] ?? null))
             ->keyBy(fn ($row) => (string) $row['key']);
+    }
+
+    /**
+     * Reject sababi FAQAT rasmga (image_mismatch va shunga o'xshash kodlarga)
+     * asoslanganmi — matn/spam/aloqa kabi boshqa dalil yo'qmi.
+     *
+     * @param list<string> $reasons
+     */
+    private function isImageOnlyRejection(array $reasons): bool
+    {
+        if ($reasons === []) {
+            return false;
+        }
+
+        return collect($reasons)->every(
+            fn (string $reason) => str_contains(strtolower($reason), 'image')
+        );
     }
 
     /** @param array<string, mixed> $item @param array<string, mixed> $decision */
@@ -470,6 +581,17 @@ PROMPT,
             if ($this->policy->hasBlockingIssues($current['deterministic_issues'])) {
                 $action = 'reject';
                 $reasons[] = 'deterministic_validation_failed';
+            } elseif ($action === 'reject'
+                && $this->isImageOnlyRejection($reasons)
+                && $confidence < (float) config('product_moderation.image_reject_confidence', 0.93)
+            ) {
+                // Xavfsizlik to'sig'i: rasm-mahsulot mosligi ko'p-mahsulotli
+                // batch so'rovida modelning eng ko'p adashadigan joyi (rasm
+                // boshqa itemga noto'g'ri bog'lanishi mumkin). Faqat rasmga
+                // asoslangan va juda yuqori ishonch bilan tasdiqlanmagan reject
+                // qarorlarini avtomatik ravishda inson tekshiruviga yuboramiz —
+                // haqiqiy, mos rasmli kitob noto'g'ri bloklanib qolmasin.
+                $action = 'human_review';
             } elseif (! in_array($action, ['approve', 'reject', 'human_review'], true)
                 || ! empty($decision['needs_admin_review'])
                 || $confidence < (float) config('product_moderation.approval_confidence', 0.78)

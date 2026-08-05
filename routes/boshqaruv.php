@@ -190,6 +190,7 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
         Route::patch('/siyosatlar/{policy}/toggle', [AdminController::class, 'togglePolicy'])->name('policies.toggle');
         Route::delete('/siyosatlar/{policy}', [AdminController::class, 'destroyPolicy'])->name('policies.destroy');
         Route::post('/push', [AdminController::class, 'storePushNotification'])->name('push.store');
+        Route::post('/push/{notification}/resend', [AdminController::class, 'resendPushNotification'])->name('push.resend');
         Route::delete('/push/{notification}', [AdminController::class, 'destroyPushNotification'])->name('push.destroy');
         Route::post('/vakansiyalar', [AdminController::class, 'storeVacancy'])->name('vacancies.store');
         Route::put('/vakansiyalar/{vacancy}', [AdminController::class, 'updateVacancy'])->name('vacancies.update');
