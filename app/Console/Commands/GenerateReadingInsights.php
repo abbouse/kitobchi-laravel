@@ -26,7 +26,7 @@ class GenerateReadingInsights extends Command
 {
     protected $signature = 'reading-intelligence:generate-insights
         {--type=all : book|stationery|all}
-        {--limit=30 : Bir yurishda har turdan nechta mahsulot}';
+        {--limit=15 : Bir yurishda har turdan nechta mahsulot}';
 
     protected $description = 'Reading Intelligence kartochkasi uchun mahsulot tahlilini (qiyinlik/kayfiyat/auditoriya) fon jarayonida generatsiya qiladi';
 
@@ -34,14 +34,25 @@ class GenerateReadingInsights extends Command
     {
         $type = strtolower(trim((string) $this->option('type')));
         $limit = max(1, (int) $this->option('limit'));
+        // MUHIM: OpenAI'ning RPM (daqiqasiga so'rov) limitiga urilib
+        // qolmaslik uchun har bir mahsulotdan keyin pauza — ketma-ket
+        // zarba bilan o'nlab so'rov yubormaslik kerak (config orqali
+        // sozlanadi, kod o'zgartirish shart emas).
+        $delayMs = max(0, (int) config('reading_intelligence.generation_delay_ms', 2000));
 
         $processed = 0;
         $failed = 0;
+        $first = true;
 
         foreach ($this->candidateTypes($type) as $productType) {
             $ids = $this->pendingProductIds($productType, $limit);
 
             foreach ($ids as $id) {
+                if (! $first && $delayMs > 0) {
+                    usleep($delayMs * 1000);
+                }
+                $first = false;
+
                 $result = $generator->generateAndStore($productType, $id);
                 $processed++;
 

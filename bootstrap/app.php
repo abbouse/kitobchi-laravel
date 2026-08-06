@@ -132,7 +132,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // mahsulot tahlilini FON JARAYONIDA generatsiya qiladi. Item
         // sahifasi so'rovlari hech qachon AI kutib turmaydi — bu buyruq
         // ishlamasa ham hech narsa buzilmaydi, faqat kontent kechroq keladi.
-        $schedule->command('reading-intelligence:generate-insights --type=all --limit=30')
+        $schedule->command('reading-intelligence:generate-insights --type=all --limit=15')
             ->everyThirtyMinutes()
             ->timezone($tz)
             ->withoutOverlapping(29)
