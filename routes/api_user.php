@@ -161,6 +161,7 @@ Route::middleware('auth:user')->group(function () {
     Route::get('favourite_products', [UserController::class, 'favouriteProducts']);
     Route::get('favourite_products/{id}/add', [UserController::class, 'addFavourite']);
     Route::delete('favourite_products/clear', [UserController::class, 'clearFavorites']);
+    Route::post('user/interests', [UserController::class, 'saveInterests']);
 
     // Xaridlar
     Route::prefix('purchase')->group(function () {

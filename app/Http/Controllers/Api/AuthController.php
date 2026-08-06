@@ -505,6 +505,7 @@ class AuthController extends Controller
                 'phoneVerified' => $user->hasVerifiedPhone(),
                 'phoneVerifiedAt' => optional($user->phone_verified_at)->toIso8601String(),
                 'isSupport' => (bool) $user->isSupport,
+                'hasSelectedInterests' => (bool) $user->has_selected_interests,
                 'role_emoji' => $user->role_emoji,
                 'role_title' => $user->role_title,
                 'role_place' => $user->role_place,

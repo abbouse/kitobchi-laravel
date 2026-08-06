@@ -17,6 +17,8 @@ use App\Models\Message;
 use App\Models\Books;
 use App\Models\Stationery;
 use App\Models\FavouriteProducts;
+use App\Models\BookCategories;
+use App\Models\UserInterestSelection;
 use App\Models\FcmNotifications;
 use App\Models\DeliveryService;
 use App\Models\ProjectSetting;
@@ -643,6 +645,59 @@ class UserController extends Controller
             'message'    => "Sevimlilarga qo'shildi",
             'variant_id' => $variantId,
         ], 200);
+    }
+
+    /**
+     * Onboarding'dagi "Sizga nima yoqadi?" chip-tanlash qadamidan
+     * qiziqishlarni saqlaydi. Bo'sh massiv ham qabul qilinadi (foydalanuvchi
+     * "o'tkazib yuborish"ni bosgan) — ikkalasida ham `has_selected_interests`
+     * true bo'ladi, shu orqali bu qadam boshqa hech qachon qayta
+     * ko'rsatilmaydi.
+     *
+     * Eski tanlovlar to'liq almashtiriladi (qo'shilmaydi) — bu ekran hozircha
+     * faqat BIR MARTA (onboardingda) chaqiriladi, shuning uchun sync
+     * xulq-atvori kutilganidek ishlaydi.
+     */
+    public function saveInterests(Request $request)
+    {
+        $user = Auth::guard('user')->user();
+        if (! $user) {
+            return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'category_ids' => ['present', 'array'],
+            'category_ids.*' => ['integer', 'exists:book_categories,id'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => 'error', 'message' => $validator->errors()->first()], 422);
+        }
+
+        $categoryIds = array_values(array_unique(array_map('intval', $request->input('category_ids', []))));
+
+        DB::transaction(function () use ($user, $categoryIds) {
+            UserInterestSelection::where('user_id', $user->id)->delete();
+
+            if (! empty($categoryIds)) {
+                $rows = array_map(fn (int $categoryId) => [
+                    'user_id' => $user->id,
+                    'category_id' => $categoryId,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ], $categoryIds);
+                UserInterestSelection::insert($rows);
+            }
+
+            $user->has_selected_interests = true;
+            $user->save();
+        });
+
+        // Reading Intelligence did-vektori endi bu tanlovlarga ham
+        // bog'liq — eski keshni darhol tozalaymiz (1 soat kutmasdan).
+        Cache::forget("reading-intel:interests:{$user->id}");
+
+        return response()->json(['status' => 'success']);
     }
 
 // ──────────────────────────────────────────────

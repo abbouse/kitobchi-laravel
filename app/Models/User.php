@@ -58,7 +58,8 @@ class User extends Authenticatable
         'is_premium',
         'premium_until',
         'firstEdit',
-        'locale'
+        'locale',
+        'has_selected_interests',
     ];
 
     protected $hidden = [
@@ -72,6 +73,7 @@ class User extends Authenticatable
         'isVerified' => 'boolean',
         'isSupport' => 'boolean',
         'firstEdit' => 'boolean',
+        'has_selected_interests' => 'boolean',
         'telegram_connected_at' => 'datetime',
         'phone_verified_at' => 'datetime',
         'blocked_until' => 'datetime',

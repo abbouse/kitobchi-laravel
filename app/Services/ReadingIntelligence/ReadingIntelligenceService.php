@@ -96,11 +96,31 @@ class ReadingIntelligenceService
         // ── S3: universal sifat ──────────────────────────────────────────
         $quality = $this->qualityPayload($product, $type, $locale);
         if ($quality !== null) {
-            return $quality;
+            return $user ? $quality : $this->withGuestCta($quality, $locale);
         }
 
         // ── Hech narsa yo'q: faqat kontent ──────────────────────────────
-        return $this->newProductPayload($product, $insight, $locale);
+        $new = $this->newProductPayload($product, $insight, $locale);
+
+        return $user ? $new : $this->withGuestCta($new, $locale);
+    }
+
+    /**
+     * Mehmon (tizimga kirmagan) foydalanuvchi uchun: shaxsiy moslik/D1/D2/S2
+     * signallari umuman hisoblanmaydi (bular userga bog'liq), shuning uchun
+     * mehmon faqat 'quality' yoki 'new' yo'liga tushadi. Bu ikkalasiga ham
+     * "tizimga kiring — shaxsiy tavsiya ko'ring" degan qo'shimcha bo'lim
+     * qo'shamiz, shu orqali mehmonga NEGA umumiy kontent ko'rsatilayotgani
+     * va nima qilsa shaxsiylashtirilgan tajriba olishi tushuntiriladi.
+     */
+    private function withGuestCta(array $payload, string $locale): array
+    {
+        $payload['sheet']['guest_cta'] = [
+            'label' => __('reading_intelligence.guest_cta_label'),
+            'detail' => __('reading_intelligence.guest_cta_detail'),
+        ];
+
+        return $payload;
     }
 
     // ─── Holat A — aniq mos ──────────────────────────────────────────────
@@ -109,6 +129,7 @@ class ReadingIntelligenceService
     {
         $percent = (int) round($score * 100);
         $reason = $this->personalReason($user, $product, $type, $score, $locale);
+        $similar = $this->similarSection($product, $type, $locale);
 
         return [
             'variant' => 'match',
@@ -124,7 +145,10 @@ class ReadingIntelligenceService
                     'reason' => $reason,
                 ],
                 'traits' => $this->traitsSection($product, $type, $locale),
-                'similar' => $this->similarSection($product, $type, $locale),
+                'similar' => $similar,
+                // Front-end'da statik kalitlarni qayta tarjima qilmaslik
+                // uchun sarlavhani ham shu yerda, tayyor holda yuboramiz.
+                'similar_label' => $similar ? __('reading_intelligence.section_similar') : null,
             ]),
         ];
     }
@@ -338,6 +362,8 @@ class ReadingIntelligenceService
     private function softHintPayload(Books|Stationery $product, ?BookReadingInsight $insight, float $score, string $locale): array
     {
         $hint = $insight?->localizedReviewSynthesis($locale) ?? $insight?->localizedAudienceFit($locale);
+        $type = is_a($product, Books::class) ? 'book' : 'stationery';
+        $similar = $this->similarSection($product, $type, $locale);
 
         return [
             'variant' => 'soft_hint',
@@ -347,8 +373,9 @@ class ReadingIntelligenceService
                 'subtitle' => __('reading_intelligence.teaser_soft_title'),
             ],
             'sheet' => array_filter([
-                'traits' => $this->traitsSection($product, is_a($product, Books::class) ? 'book' : 'stationery', $locale),
-                'similar' => $this->similarSection($product, is_a($product, Books::class) ? 'book' : 'stationery', $locale),
+                'traits' => $this->traitsSection($product, $type, $locale),
+                'similar' => $similar,
+                'similar_label' => $similar ? __('reading_intelligence.section_similar') : null,
             ]),
         ];
     }
@@ -506,10 +533,14 @@ class ReadingIntelligenceService
             return null;
         }
 
+        // MUHIM: front-end endi "similar" ro'yxatini gorizontal skroll
+        // qatorida ko'rsatadi (qattiq 2-3 ta bilan cheklangan grid emas),
+        // shuning uchun bu yerda ham chegarani kengaytiramiz — nechta
+        // o'xshash mahsulot bo'lsa, shunchasi (6 tagacha) qaytariladi.
         $results = $this->vectorSearch
-            ->searchByVector($product->vectorData, $type, limit: 4, minScore: 0.5, inStockOnly: true)
+            ->searchByVector($product->vectorData, $type, limit: 8, minScore: 0.5, inStockOnly: true)
             ->filter(fn ($item) => (int) $item->id !== (int) $product->id)
-            ->take(3);
+            ->take(6);
 
         if ($results->isEmpty()) {
             return null;

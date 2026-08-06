@@ -42,4 +42,9 @@ return [
     'similar_score' => ':percent% o\'xshash',
     'bestseller_label' => 'Eng ko\'p sotilganlardan',
     'pages_count' => ':count bet',
+    'sheet_empty_placeholder' => 'Bu mahsulot uchun batafsil tahlil tez orada tayyor bo\'ladi.',
+
+    // ── Mehmon (tizimga kirmagan) foydalanuvchi uchun taklif ────────────
+    'guest_cta_label' => 'Sizga qanchalik mos ekanini bilmoqchimisiz?',
+    'guest_cta_detail' => 'Tizimga kiring — did va xaridlaringizga qarab shaxsiy moslik va tavsiyalarni ko\'rsatamiz.',
 ];

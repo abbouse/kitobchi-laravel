@@ -37,4 +37,8 @@ return [
     'similar_score' => ':percent% similar',
     'bestseller_label' => 'Among the best-sellers',
     'pages_count' => ':count pages',
+    'sheet_empty_placeholder' => 'A detailed analysis of this item will be ready soon.',
+
+    'guest_cta_label' => 'Want to know how well this fits you?',
+    'guest_cta_detail' => 'Log in — we\'ll tailor matches and recommendations to your taste and purchases.',
 ];

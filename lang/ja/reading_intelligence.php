@@ -37,4 +37,8 @@ return [
     'similar_score' => ':percent%類似',
     'bestseller_label' => 'ベストセラーの一つ',
     'pages_count' => ':countページ',
+    'sheet_empty_placeholder' => 'この商品の詳しい分析はまもなく表示されます。',
+
+    'guest_cta_label' => 'あなたにどれだけ合うか知りたいですか？',
+    'guest_cta_detail' => 'ログインすると、購入履歴や好みに基づいたおすすめを表示します。',
 ];

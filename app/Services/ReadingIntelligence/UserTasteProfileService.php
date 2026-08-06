@@ -3,8 +3,11 @@
 namespace App\Services\ReadingIntelligence;
 
 use App\Models\Books;
+use App\Models\FavouriteProducts;
+use App\Models\MyCart;
 use App\Models\Sold;
 use App\Models\Stationery;
+use App\Models\UserInterestSelection;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 
@@ -12,47 +15,117 @@ use Illuminate\Support\Facades\Cache;
  * Foydalanuvchining "did vektori"ni va xarid tarixiga bog'liq signallarni
  * hisoblaydi — S1 (did moslik) va D1/D2 holatlari uchun asos.
  *
+ * Did vektori endi TO'RT signalning VAZNLI aralashmasi: sotib olingan (eng
+ * ishonchli — pul to'langan, aniq qaror), savatga qo'shilgan (ikkilanishi
+ * mumkin, lekin mavzu/janrga qiziqishni bildiradi), sevimlilarga qo'shilgan
+ * (eng yumshoq REAL mahsulot signali — ko'pincha "keyinroq ko'raman" yoki
+ * hatto sovg'a rejasi), va onboarding'da qo'lda tanlangan qiziqish
+ * kategoriyalari (eng yumshoq umuman — shunchaki e'lon qilingan istak,
+ * xatti-harakat emas; asosan sovuq-start uchun). Bitta mahsulot bir nechta
+ * manbada bo'lsa (masalan ham sevimlida, ham savatda), ikki marta
+ * hisoblanmaydi — eng yuqori vazn olinadi.
+ *
  * MUHIM (yuklama xavfsizligi): bu servisning har bir metodi item sahifasi
  * OCHILGANDA (ya'ni juda tez-tez) chaqiriladi. Shuning uchun bu yerda:
  *   - hech qanday cheklovsiz (`LIMIT`siz) so'rov YO'Q,
  *   - hech qanday keshlanmagan foydalanuvchi-darajali so'rov YO'Q,
  *   - hech qanday N+1 (loop ichida bitta-bitta so'rov) YO'Q — barcha
- *     mahsulot ma'lumotlari `whereIn` bilan bitta so'rovda olinadi.
+ *     mahsulot ma'lumotlari `whereIn` bilan bitta so'rovda olinadi (uch
+ *     manbadan yig'ilgan idlar ham bitta umumiy so'rov juftligiga qo'shiladi,
+ *     manba boshiga alohida so'rov EMAS).
  *
  * Hech qanday yangi AI chaqiruvi yo'q — faqat mavjud `vectorData` (product
- * embedding, ProductVectorService orqali allaqachon hisoblangan) va `solds`
- * jadvalidan qurilgan oddiy statistik agregatsiya.
+ * embedding, ProductVectorService orqali allaqachon hisoblangan) va
+ * `solds`/`my_carts`/`favourite_products` jadvallaridan qurilgan oddiy
+ * statistik agregatsiya.
  */
 class UserTasteProfileService
 {
     private const LOOKBACK_DAYS = 365;
     private const MAX_ORDERS_FOR_VECTOR = 20;
-    private const MIN_ORDERS_FOR_TASTE = 3;
     private const CACHE_TTL = 3600;
 
     /** "Allaqachon sotib olinganmi" indeksi uchun — kengroq, lekin baribir CHEGARALANGAN tarix. */
     private const MAX_ORDERS_FOR_PURCHASE_INDEX = 300;
 
+    /** Savat/sevimlilar — eng oxirgi shuncha yozuv, cheksiz skanerlash yo'q. */
+    private const MAX_CART_ITEMS = 50;
+    private const MAX_FAVORITES = 50;
+
     /**
-     * Foydalanuvchining oxirgi xaridlaridan qurilgan o'rtacha embedding.
-     * Kamida MIN_ORDERS_FOR_TASTE ta tugallangan xarid bo'lmasa null —
-     * bu holda S1 "mavjud emas" deb hisoblanadi (Holat C/D ga tushadi).
+     * Savat uchun ATAYLAB qisqaroq TTL: `ReadingIntelTasteCacheObserver`
+     * qo'shish/`$model->delete()` orqali o'chirishda keshni darhol
+     * tozalaydi, LEKIN `CartController::remove()`/`batchDelete()` kabi
+     * ba'zi o'chirish yo'llari query builder (`MyCart::where(...)->delete()`)
+     * orqali ishlaydi — bular Eloquent event otmaydi, observer buni
+     * ushlolmaydi. Shuning uchun savat uchun umumiy 1 soat o'rniga 10
+     * daqiqalik TTL — bo'shliq chegaralangan, "sevimlilar" kabi to'liq
+     * observer-qamrovi yo'q.
+     */
+    private const CART_CACHE_TTL = 600;
+
+    /** Signal ishonch vazni — sotib olish eng kuchli, sevimli eng yumshoq. */
+    private const PURCHASE_WEIGHT = 1.0;
+    private const CART_WEIGHT = 0.6;
+    private const FAVORITE_WEIGHT = 0.4;
+
+    /**
+     * Onboarding'da qo'lda tanlangan qiziqish (kategoriya) — bu XATTI-
+     * HARAKAT emas, shunchaki e'lon qilingan istak, shuning uchun eng past
+     * vazn. Faqat sovuq-start (xarid/savat/sevimli hali yo'q) holatida
+     * asosiy rol o'ynaydi.
+     */
+    private const INTEREST_WEIGHT = 0.25;
+
+    /** Har bir tanlangan kategoriya uchun "markaz vektor" — shu kategoriyada eng ko'p sotilgan N ta kitobning o'rtachasi. */
+    private const CATEGORY_CENTROID_SIZE = 8;
+    private const CATEGORY_CENTROID_TTL = 21600; // 6 soat — kategoriya bestsellerlari tez o'zgarmaydi
+
+    /**
+     * Ishonchli vektor qurish uchun kamida shuncha DISTINCT mahsulot kerak
+     * (manbasidan qat'i nazar) — bitta xarid/sevimli asosida haddan tashqari
+     * tor vektor qurilib ketmasligi uchun.
+     */
+    private const MIN_SIGNAL_PRODUCTS = 3;
+
+    /**
+     * Foydalanuvchining xarid+savat+sevimli+e'lon qilingan qiziqishlaridan
+     * qurilgan VAZNLI o'rtacha embedding. Kamida MIN_SIGNAL_PRODUCTS ta
+     * signal (manbasidan qat'i nazar — real mahsulot yoki qiziqish
+     * kategoriyasi) bo'lmasa null — bu holda S1 "mavjud emas" deb
+     * hisoblanadi (Holat C/D ga tushadi).
+     *
+     * MUHIM: onboarding'da tanlangan qiziqishlar TUFAYLI, hali birorta ham
+     * xarid/savat/sevimlisi yo'q YANGI mijoz ham (kamida 3 ta kategoriya
+     * tanlagan bo'lsa) shaxsiylashtirilgan moslikni ko'rishi mumkin — bu
+     * sovuq-start muammosini yumshatish uchun ATAYLAB qilingan.
      */
     public function tasteVector(int $userId, string $excludeType, int $excludeId): ?array
     {
-        $purchases = $this->recentPurchases($userId)
-            ->reject(fn (array $p) => $p['type'] === $excludeType && $p['id'] === $excludeId)
-            ->values();
+        // "type:id" => ['type'=>..,'id'=>..,'weight'=>..] — bitta mahsulot
+        // bir nechta manbada bo'lsa, eng yuqori vazn saqlanadi (ikki marta
+        // hisoblanmaydi).
+        $weighted = [];
+        $accumulate = function (array $items, float $weight) use (&$weighted, $excludeType, $excludeId) {
+            foreach ($items as $it) {
+                if ($it['type'] === $excludeType && $it['id'] === $excludeId) {
+                    continue;
+                }
+                $key = $it['type'] . ':' . $it['id'];
+                $current = $weighted[$key]['weight'] ?? 0.0;
+                $weighted[$key] = ['type' => $it['type'], 'id' => $it['id'], 'weight' => max($current, $weight)];
+            }
+        };
 
-        if ($purchases->count() < self::MIN_ORDERS_FOR_TASTE) {
-            return null;
-        }
+        $accumulate($this->recentPurchases($userId)->all(), self::PURCHASE_WEIGHT);
+        $accumulate($this->cartItems($userId)->all(), self::CART_WEIGHT);
+        $accumulate($this->favoriteItems($userId)->all(), self::FAVORITE_WEIGHT);
 
-        $bookIds = $purchases->where('type', 'book')->pluck('id')->unique()->values()->all();
-        $stationeryIds = $purchases->where('type', 'stationery')->pluck('id')->unique()->values()->all();
+        $bookIds = collect($weighted)->where('type', 'book')->pluck('id')->unique()->values()->all();
+        $stationeryIds = collect($weighted)->where('type', 'stationery')->pluck('id')->unique()->values()->all();
 
-        // MUHIM: bitta-bitta emas — ikkita `whereIn` so'rov (ko'pi bilan
-        // 20 mahsulot uchun 20 ta alohida so'rov o'rniga).
+        // MUHIM: bitta-bitta emas — ikkita `whereIn` so'rov, manbalar soni
+        // (xarid/savat/sevimli) qancha bo'lishidan qat'i nazar.
         $bookVectors = ! empty($bookIds)
             ? Books::query()->whereIn('id', $bookIds)->whereNotNull('vectorData')->pluck('vectorData', 'id')
             : collect();
@@ -61,35 +134,51 @@ class UserTasteProfileService
             : collect();
 
         $vectors = [];
-        foreach ($purchases as $p) {
-            $vec = $p['type'] === 'book'
-                ? ($bookVectors[$p['id']] ?? null)
-                : ($stationeryVectors[$p['id']] ?? null);
+        $weights = [];
+        foreach ($weighted as $w) {
+            $vec = $w['type'] === 'book'
+                ? ($bookVectors[$w['id']] ?? null)
+                : ($stationeryVectors[$w['id']] ?? null);
 
             if (is_array($vec) && ! empty($vec)) {
                 $vectors[] = $vec;
+                $weights[] = $w['weight'];
             }
         }
 
-        if (count($vectors) < self::MIN_ORDERS_FOR_TASTE) {
+        // Onboarding'dagi e'lon qilingan qiziqishlar — har bir tanlangan
+        // kategoriya uchun "markaz vektor" (shu kategoriyada eng ko'p
+        // sotilgan kitoblarning o'rtachasi), eng past vaznda qo'shiladi.
+        foreach ($this->selectedInterestCategoryIds($userId) as $categoryId) {
+            $centroid = $this->categoryCentroidVector($categoryId);
+            if ($centroid !== null) {
+                $vectors[] = $centroid;
+                $weights[] = self::INTEREST_WEIGHT;
+            }
+        }
+
+        if (count($vectors) < self::MIN_SIGNAL_PRODUCTS) {
             return null;
         }
 
-        return $this->averageVector($vectors);
+        return $this->weightedAverageVector($vectors, $weights);
     }
 
     /**
-     * Xarid tarixi imzosi — yangi xarid qilinganda o'zgaradi, shu orqali
-     * `user_book_match_reasons` keshi qo'lda invalidatsiya qilinmasdan
-     * o'zi eskiradi.
+     * Did-kontekst imzosi — xarid, savat yoki sevimlilar o'zgarganda
+     * o'zgaradi, shu orqali `user_book_match_reasons` keshi qo'lda
+     * invalidatsiya qilinmasdan o'zi eskiradi. Nomi tarixiy sabablarga ko'ra
+     * "purchase" bo'lsa-da (DB ustuni shunday), endi UCHALA signalni ham
+     * qamrab oladi — chunki moslik hisobi endi shularga bog'liq.
      */
     public function purchaseContextHash(int $userId): string
     {
-        $ids = $this->recentPurchases($userId)
-            ->map(fn (array $p) => $p['type'] . ':' . $p['id'])
-            ->sort()
-            ->values()
-            ->all();
+        $purchaseIds = $this->recentPurchases($userId)->map(fn (array $p) => $p['type'] . ':' . $p['id']);
+        $cartIds = $this->cartItems($userId)->map(fn (array $c) => 'cart:' . $c['type'] . ':' . $c['id']);
+        $favoriteIds = $this->favoriteItems($userId)->map(fn (array $f) => 'fav:' . $f['type'] . ':' . $f['id']);
+        $interestIds = collect($this->selectedInterestCategoryIds($userId))->map(fn (int $id) => 'interest:' . $id);
+
+        $ids = $purchaseIds->concat($cartIds)->concat($favoriteIds)->concat($interestIds)->sort()->values()->all();
 
         return md5(implode('|', $ids));
     }
@@ -286,21 +375,131 @@ class UserTasteProfileService
     }
 
     /**
-     * @param array<int, array<int, float>> $vectors
+     * Foydalanuvchining joriy savatidagi mahsulotlar — eng oxirgi
+     * MAX_CART_ITEMS ta, 1 soatga keshlangan. `MyCart` "hozirgi holat"
+     * jadvali (savatdan o'chirilgan qator butunlay o'chadi), shuning uchun
+     * qo'shimcha filtrlash shart emas — mavjud qator = hozir ham qiziqadi.
+     *
+     * @return \Illuminate\Support\Collection<int, array{type:string,id:int}>
      */
-    private function averageVector(array $vectors): array
+    private function cartItems(int $userId): \Illuminate\Support\Collection
+    {
+        $cacheKey = "reading-intel:cart:{$userId}";
+
+        return Cache::remember($cacheKey, self::CART_CACHE_TTL, function () use ($userId) {
+            return MyCart::query()
+                ->where('user_id', $userId)
+                ->orderByDesc('id')
+                ->limit(self::MAX_CART_ITEMS)
+                ->get(['product_id', 'product_type'])
+                ->map(fn ($row) => [
+                    'type' => $row->product_type === 'stationery' ? 'stationery' : 'book',
+                    'id' => (int) $row->product_id,
+                ])
+                ->filter(fn (array $x) => $x['id'] > 0)
+                ->values();
+        });
+    }
+
+    /**
+     * Foydalanuvchining sevimlilar ro'yxati — eng oxirgi MAX_FAVORITES ta,
+     * 1 soatga keshlangan. Xuddi savat kabi "hozirgi holat" jadvali.
+     *
+     * @return \Illuminate\Support\Collection<int, array{type:string,id:int}>
+     */
+    private function favoriteItems(int $userId): \Illuminate\Support\Collection
+    {
+        $cacheKey = "reading-intel:favorites:{$userId}";
+
+        return Cache::remember($cacheKey, self::CACHE_TTL, function () use ($userId) {
+            return FavouriteProducts::query()
+                ->where('user_id', $userId)
+                ->orderByDesc('id')
+                ->limit(self::MAX_FAVORITES)
+                ->get(['product_id', 'product_type'])
+                ->map(fn ($row) => [
+                    'type' => $row->product_type === 'stationery' ? 'stationery' : 'book',
+                    'id' => (int) $row->product_id,
+                ])
+                ->filter(fn (array $x) => $x['id'] > 0)
+                ->values();
+        });
+    }
+
+    /**
+     * Foydalanuvchi onboarding'da tanlagan kategoriya idlari — 1 soatga
+     * keshlangan (`UserController::saveInterests()` saqlaganda darhol
+     * tozalaydi, shuning uchun kutish shart emas).
+     *
+     * @return array<int, int>
+     */
+    private function selectedInterestCategoryIds(int $userId): array
+    {
+        $cacheKey = "reading-intel:interests:{$userId}";
+
+        return Cache::remember($cacheKey, self::CACHE_TTL, function () use ($userId) {
+            return UserInterestSelection::query()
+                ->where('user_id', $userId)
+                ->pluck('category_id')
+                ->map(fn ($id) => (int) $id)
+                ->values()
+                ->all();
+        });
+    }
+
+    /**
+     * Bitta kategoriya uchun "markaz vektor" — shu kategoriyada eng ko'p
+     * sotilgan CATEGORY_CENTROID_SIZE ta (faol/tasdiqlangan) kitobning
+     * o'rtacha embeddingi. 6 soatga keshlangan (kategoriya bo'yicha,
+     * foydalanuvchidan mustaqil — bir marta hisoblansa, ko'p foydalanuvchi
+     * uchun qayta ishlatiladi, N+1 emas).
+     */
+    private function categoryCentroidVector(int $categoryId): ?array
+    {
+        $cacheKey = "reading-intel:category-centroid:{$categoryId}";
+
+        return Cache::remember($cacheKey, self::CATEGORY_CENTROID_TTL, function () use ($categoryId) {
+            $vectors = Books::query()
+                ->activeForVector()
+                ->where('category_id', $categoryId)
+                ->whereNotNull('vectorData')
+                ->orderByDesc('totalSales')
+                ->limit(self::CATEGORY_CENTROID_SIZE)
+                ->pluck('vectorData')
+                ->filter(fn ($v) => is_array($v) && ! empty($v))
+                ->values()
+                ->all();
+
+            if (empty($vectors)) {
+                return null;
+            }
+
+            return $this->weightedAverageVector($vectors, array_fill(0, count($vectors), 1.0));
+        });
+    }
+
+    /**
+     * @param array<int, array<int, float>> $vectors
+     * @param array<int, float> $weights
+     */
+    private function weightedAverageVector(array $vectors, array $weights): array
     {
         $dim = count($vectors[0]);
         $sum = array_fill(0, $dim, 0.0);
+        $totalWeight = 0.0;
 
-        foreach ($vectors as $vec) {
+        foreach ($vectors as $idx => $vec) {
+            $weight = $weights[$idx] ?? 1.0;
+            $totalWeight += $weight;
             for ($i = 0; $i < $dim; $i++) {
-                $sum[$i] += $vec[$i] ?? 0.0;
+                $sum[$i] += ($vec[$i] ?? 0.0) * $weight;
             }
         }
 
-        $count = count($vectors);
+        if ($totalWeight <= 0.0) {
+            $totalWeight = count($vectors);
+        }
 
-        return array_map(fn (float $v) => $v / $count, $sum);
+        return array_map(fn (float $v) => $v / $totalWeight, $sum);
     }
 }
