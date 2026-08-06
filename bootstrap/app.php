@@ -128,6 +128,16 @@ return Application::configure(basePath: dirname(__DIR__))
             ->withoutOverlapping(29)
             ->runInBackground();
 
+        // Reading Intelligence — "bu menga mosmi?" kartochkasi uchun
+        // mahsulot tahlilini FON JARAYONIDA generatsiya qiladi. Item
+        // sahifasi so'rovlari hech qachon AI kutib turmaydi — bu buyruq
+        // ishlamasa ham hech narsa buzilmaydi, faqat kontent kechroq keladi.
+        $schedule->command('reading-intelligence:generate-insights --type=all --limit=30')
+            ->everyThirtyMinutes()
+            ->timezone($tz)
+            ->withoutOverlapping(29)
+            ->runInBackground();
+
         // Faqat yangi/o'zgargan kontent batch tekshiriladi; limitlar server va
         // OpenAI yukini nazoratda ushlab turadi.
         $schedule->command('openai:moderate-book-club-comments --post-limit=150 --comment-limit=300')

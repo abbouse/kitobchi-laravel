@@ -89,7 +89,18 @@ class Couriers extends Authenticatable
             return;
         }
 
-        $stringValue = (string) $value;
+        // MUHIM: boshida/oxirida bo'sh joy (masalan admin panelda parolni
+        // nusxalab joylashtirganda tasodifan qo'shilib qolgan probel yoki
+        // yangi qator belgisi) bo'lsa, uni kesib tashlaymiz. Aks holda bu
+        // yerda probel bilan hash qilinadi, lekin kuryer ilovasi login
+        // paytida parolni trim() qilib yuboradi — natijada hash mos
+        // kelmay, kuryer to'g'ri parol bilan ham kira olmay qoladi.
+        $stringValue = trim((string) $value);
+
+        if ($stringValue === '') {
+            $this->attributes['password'] = null;
+            return;
+        }
 
         // Plain password kelsa hash qilamiz, allaqachon hash bo'lgan qiymatni
         // esa yana hash qilib yubormaymiz.

@@ -45,6 +45,11 @@ class ProductPayloadFormatter
                 : ($product->discount_price ?? $product->price ?? 0),
             'count' => $isBook ? ($product->count ?? 0) : ($product->stock ?? 0),
             'stock' => $isBook ? ($product->count ?? 0) : ($product->stock ?? 0),
+            // Ko'rinish uchun yashiringan qoldiq: haqiqiy son yuqori chegaradan
+            // katta bo'lsa "10+" kabi ko'rsatiladi. `count`/`stock` maydonlari
+            // yuqorida haqiqiy qiymat bilan qoladi — ular savat/checkout
+            // limitlash (stepper max) uchun ishlatiladi va bu yerda TEGILMAYDI.
+            'stock_display' => self::stockDisplayLabel($isBook ? ($product->count ?? 0) : ($product->stock ?? 0)),
             'sales' => $product->totalSales ?? 0,
             'weekly_sales' => $product->totalSalesWeek ?? 0,
             'ugc_aggregate_score' => (float) ($product->ugc_aggregate_score ?? 0),
@@ -199,6 +204,23 @@ class ProductPayloadFormatter
             'image_medium_url' => ProductImageUrls::variantUrl($variant->image_path ?? null, 'medium'),
             'image_thumb_url' => ProductImageUrls::variantUrl($variant->image_path ?? null, 'thumb'),
             'stock' => $variant->stock,
+            'stock_display' => self::stockDisplayLabel($variant->stock ?? 0),
         ])->values()->toArray();
+    }
+
+    /**
+     * Mijozga ko'rsatiladigan qoldiq yorlig'i: chegaradan katta bo'lsa
+     * "{cap}+", aks holda aniq son (string sifatida — front-end qo'shimcha
+     * formatlashsiz to'g'ridan-to'g'ri matnga qo'ya oladi).
+     */
+    private static function stockDisplayLabel(int $realStock): string
+    {
+        $cap = (int) config('catalog.stock_display_cap', 10);
+
+        if ($realStock > $cap) {
+            return $cap.'+';
+        }
+
+        return (string) max(0, $realStock);
     }
 }

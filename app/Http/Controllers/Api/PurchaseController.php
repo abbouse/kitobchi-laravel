@@ -7,6 +7,7 @@ use App\Enums\FulfillmentMode;
 use App\Enums\OrderStatusCode;
 use App\Enums\PaymentStatusCode;
 use App\Enums\SellerOrderStatusCode;
+use App\Exceptions\InsufficientStockException;
 use App\Http\Controllers\Controller;
 use App\Models\Books;
 use App\Models\CourierOrder;
@@ -1723,6 +1724,26 @@ class PurchaseController extends Controller
                 $sellerOrder->update(['amount' => (int) round($sellerAmount)]);
             }
             $this->trace('seller_orders_created', ['count' => count($groupedBySeller)]);
+
+            // MUHIM: $allItems (Sold.items) $sellerMainLocations aniqlanishidan
+            // OLDIN tuzilgan edi, shuning uchun har bir itemda qaysi filialdan
+            // olib ketilgani (location_id) yozilmagan bo'lardi. Bekor
+            // qilinganda OrderService::incrementStock() aynan shu maydonga
+            // qarab stockni qaytaradi — bo'lmasa har doim sotuvchining ASOSIY
+            // filialiga qaytarardi, garchi mahsulot boshqa filialdan olingan
+            // bo'lsa ham (filiallararo stock chalkashib ketishi). Endi
+            // routing tugagach itemlarni to'ldirib, saqlangan buyurtmani
+            // yangilaymiz.
+            foreach ($allItems as &$soldItem) {
+                $itemSellerId = (int) ($soldItem['seller_id'] ?? 0);
+                if (isset($sellerMainLocations[$itemSellerId])) {
+                    $soldItem['location_id'] = (int) $sellerMainLocations[$itemSellerId]->id;
+                }
+            }
+            unset($soldItem);
+            $purchase->items = $allItems;
+            $purchase->save();
+
             $this->orderFinancialSnapshotService->ensureSnapshotsForOrder($purchase);
 
             // ── Courier order ─────────────────────────────────────
@@ -1850,6 +1871,24 @@ class PurchaseController extends Controller
                 'payment_status' => $purchase->fresh()->paymentStatus,
             ], 201);
 
+        } catch (InsufficientStockException $e) {
+            DB::rollBack();
+            Log::warning('Purchase blocked: insufficient stock at decrement time', [
+                'user_id' => $user->id ?? null,
+                'product_type' => $e->productType,
+                'product_id' => $e->productId,
+                'variant_id' => $e->variantId,
+                'requested' => $e->requested,
+                'available' => $e->available,
+            ]);
+
+            // Boshqa mijoz ayni paytda oxirgi donani olib ketgan bo'lishi
+            // mumkin — mijozga tushunarli xabar, "server xatosi" emas.
+            return response()->json([
+                'status' => 'error',
+                'message' => "Kechirasiz, ushbu mahsulotdan endi yetarli miqdorda qolmadi. Iltimos, savatingizni yangilang.",
+                'error_code' => 'insufficient_stock',
+            ], 409);
         } catch (\Throwable $e) {
             DB::rollBack();
             Log::error('Purchase failed', [
@@ -2101,6 +2140,14 @@ class PurchaseController extends Controller
                 return $this->err("Filial topilmadi yoki noto'g'ri tanlangan.", 404);
             }
 
+            // Do'kon ichida xarid bitta filialda bo'ladi — shu filial ID'sini
+            // har bir itemga yozamiz, shunda bekor qilinganda stock aynan
+            // shu filialga qaytadi (asosiy filialga emas).
+            foreach ($allItems as &$soldItem) {
+                $soldItem['location_id'] = (int) $sellerLocation->id;
+            }
+            unset($soldItem);
+
             $purchase = Sold::create([
                 'user_id' => $user->id,
                 'qr' => Str::random(40),
@@ -2185,6 +2232,21 @@ class PurchaseController extends Controller
                 'order_id' => $purchase->id,
                 'amount' => $finalPrice,
             ], 201);
+        } catch (InsufficientStockException $e) {
+            DB::rollBack();
+            Log::warning('In-store purchase blocked: insufficient stock at decrement time', [
+                'product_type' => $e->productType,
+                'product_id' => $e->productId,
+                'variant_id' => $e->variantId,
+                'requested' => $e->requested,
+                'available' => $e->available,
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => "Kechirasiz, ushbu mahsulotdan endi yetarli miqdorda qolmadi.",
+                'error_code' => 'insufficient_stock',
+            ], 409);
         } catch (\Throwable $e) {
             DB::rollBack();
             Log::error('In-store purchase failed', [

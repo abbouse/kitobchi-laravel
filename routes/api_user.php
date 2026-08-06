@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\NewsController;
 use App\Http\Controllers\Api\PremiumController;
 use App\Http\Controllers\Api\ProductsController;
 use App\Http\Controllers\Api\PurchaseController;
+use App\Http\Controllers\Api\ReadingIntelligenceController;
 use App\Http\Controllers\Api\ReelController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\SearchController;
@@ -42,6 +43,10 @@ Route::prefix('products')->group(function () {
     Route::get('recommendation/{col}', [ProductsController::class, 'recommendation']);
     Route::get('cart-recommendation', [ProductsController::class, 'cartRecommendation']);
     Route::get('{type}/{id}/similar', [ProductsController::class, 'similarProducts']);
+    // Boshqa product endpointlariga qaraganda og'irroq (bir nechta DB
+    // so'rov + keshlanmagan holatlarda hisoblash) — himoya sifatida throttle.
+    Route::get('{type}/{id}/reading-intelligence', [ReadingIntelligenceController::class, 'show'])
+        ->middleware('throttle:60,1');
     Route::post('{type}/{id}/view', [ProductsController::class, 'trackView']);
     Route::get('{col}', [ProductsController::class, 'index']);
 });

@@ -145,12 +145,18 @@ class SoldObserver
                 $productId = (int) ($item['item_id'] ?? 0);
                 $variantId = (int) ($item['variant_id'] ?? 0);
                 $quantity  = (int) ($item['count_item'] ?? 1);
+                // MUHIM: null qattiq yozilgan bo'lsa, stock har doim
+                // sotuvchining ASOSIY filialiga qaytadi — mahsulot boshqa
+                // filialdan olingan bo'lsa ham. Item ichida saqlangan
+                // location_id (PurchaseController checkout paytida yozadi)
+                // bo'lsa, o'sha aniq filialga qaytariladi.
+                $locationId = isset($item['location_id']) ? (int) $item['location_id'] : null;
 
                 if (!$productId || $type === 'gift') continue;
 
                 if (in_array($type, ['book', 'stationery'], true)) {
                     $branchStock->incrementForReturn(
-                        $type, $productId, $type === 'book' ? 0 : $variantId, $quantity, null,
+                        $type, $productId, $type === 'book' ? 0 : $variantId, $quantity, $locationId,
                         ['ref_type' => 'sold', 'ref_id' => $order->id, 'note' => 'Buyurtma bekor qilindi']
                     );
                 }

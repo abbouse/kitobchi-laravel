@@ -492,6 +492,19 @@ class CourierOrderController extends Controller
             ], 409);
         }
 
+        // Do'kon kuryeri bloklangan/o'chirilgan bo'lsa, qabul qilishni ham
+        // to'xtatamiz — getAvailableOrders() bu holatda ro'yxatni bo'shatadi,
+        // lekin ro'yxatda ko'rinmasligi qabul qilishni bloklamas edi (courier
+        // eski buyurtma ID'sini bilib, to'g'ridan-to'g'ri shu endpointga
+        // murojaat qilishi mumkin edi).
+        if ($courier->seller_id && ($courier->status !== 'approved' || $courier->store_courier_hidden_at !== null)) {
+            return response()->json([
+                'success' => false,
+                'error_code' => 'courier_offline',
+                'message' => "Buyurtmani qabul qilish uchun onlayn holatga o'ting.",
+            ], 409);
+        }
+
         try {
             $response = DB::transaction(function () use ($courier, $id) {
                 $activeOrdersCount = CourierOrder::query()
@@ -538,6 +551,22 @@ class CourierOrderController extends Controller
                     ->first();
 
                 if (! $order || ! $sold) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => __('courier_api.order_already_taken'),
+                    ], 404);
+                }
+
+                // MUHIM: getAvailableOrders() faqat RO'YXATNI do'kon kuryeriga
+                // mos buyurtmalar bilan cheklaydi — bu yerda (haqiqiy qabul
+                // qilish amalida) hech qanday egalik tekshiruvi yo'q edi.
+                // Natijada istalgan login qilgan kuryer (platforma yoki
+                // boshqa do'konning shaxsiy kuryeri) buyurtma ID'sini bilib,
+                // to'g'ridan-to'g'ri shu endpointga murojaat qilib, unga
+                // aloqasi bo'lmagan buyurtmani (jumladan naqd pul bilan)
+                // o'ziga olib qo'yishi mumkin edi. Ro'yxat bilan bir xil
+                // qoidani shu yerda ham qattiq talab qilamiz.
+                if (! $this->courierEligibleForOrder($courier, $order)) {
                     return response()->json([
                         'success' => false,
                         'message' => __('courier_api.order_already_taken'),
@@ -619,6 +648,34 @@ class CourierOrderController extends Controller
 
             return response()->json(['success' => false, 'message' => 'Xatolik: '.$th->getMessage()], $code);
         }
+    }
+
+    /**
+     * getAvailableOrders() dagi ro'yxat filtri bilan bir xil qoida: platforma
+     * kuryeri faqat do'konga tegishli bo'lmagan (`store_seller_id = null`)
+     * buyurtmalarni, do'kon kuryeri esa FAQAT o'z do'koniga tegishli va o'ziga
+     * biriktirilgan filiallardan chiqqan buyurtmalarni oladi. Bu tekshiruv
+     * avval faqat ro'yxatlashda bo'lib, haqiqiy "qabul qilish" amalida yo'q
+     * edi — shu yerda ham majburiy qilinadi.
+     */
+    private function courierEligibleForOrder($courier, CourierOrder $order): bool
+    {
+        $storeSellerId = $courier->seller_id ? (int) $courier->seller_id : null;
+
+        if ($storeSellerId === null) {
+            return $order->store_seller_id === null;
+        }
+
+        if ((int) $order->store_seller_id !== $storeSellerId) {
+            return false;
+        }
+
+        $branchIds = $courier->branches()->pluck('seller_locations.id')->all();
+        if (empty($branchIds)) {
+            return false;
+        }
+
+        return $order->items()->whereIn('seller_location_id', $branchIds)->exists();
     }
 
     public function myOrders(Request $request)

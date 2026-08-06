@@ -332,14 +332,28 @@ class BranchStockService
                 $type, $productId, $variantId, null, $quantity, $preferredLocationId,
                 $ctx['reason'] ?? 'sale', $ctx
             );
-            $this->afterTotalChanged($type, $productId, $variantId, $oldTotal);
 
             if ($taken < $quantity) {
-                Log::warning('BranchStock: oversell clamp', [
+                // MUHIM: avval bu yerda faqat Log::warning yozilib, buyurtma
+                // baribir "muvaffaqiyatli" yaratilardi — ya'ni ikkita mijoz
+                // oxirgi donaga deyarli bir vaqtda checkout qilsa, ikkalasi
+                // ham buyurtma olardi, garchi omborda faqat bittasiga
+                // yetadigan mahsulot bo'lsa ham (oversell). Endi bu holatda
+                // istisno tashlanadi — bu FUNKSIYA o'z DB::transaction'ini
+                // bekor qiladi (shu paytgacha olingan $taken miqdor ham
+                // qaytariladi/rollback bo'ladi), va tashqi chaqiruvchi
+                // (checkout) butun buyurtmani ham bekor qilishi kerak.
+                Log::warning('BranchStock: insufficient stock, aborting decrement', [
                     'type' => $type, 'product_id' => $productId, 'variant_id' => $variantId,
                     'requested' => $quantity, 'taken' => $taken,
                 ]);
+
+                throw new \App\Exceptions\InsufficientStockException(
+                    $type, $productId, $variantId, $quantity, $taken
+                );
             }
+
+            $this->afterTotalChanged($type, $productId, $variantId, $oldTotal);
 
             return $taken;
         });
