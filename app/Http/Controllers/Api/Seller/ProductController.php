@@ -672,8 +672,15 @@ if (!empty($variantsToDelete)) {
         'description' => $request->description,
         'images' => $finalImages,
         'category_id' => $request->category_id,
-        'is_approved' => 0,
     ]);
+    // MUHIM: `is_approved` va AI moderatsiya holati BU YERDA majburan
+    // qayta o'rnatilmaydi — `ProductModerationObserver::updating()` buni
+    // avtomatik va TO'G'RI qiladi: faqat moderatsiyaga aloqador maydonlar
+    // (nom, narx, rasm, tavsif va h.k.) haqiqatan o'zgargan bo'lsagina
+    // mahsulot qayta AI ko'rib chiqishiga yuboriladi. Aks holda (masalan
+    // faqat stock yangilangan yoki forma o'zgarishsiz qayta yuborilgan
+    // bo'lsa) allaqachon faol/tasdiqlangan mahsulot bekorga qayta
+    // moderatsiyaga tushib qolmaydi.
 
     // FILIAL STOCK: mahsulot darajasidagi stock service orqali
     app(\App\Services\BranchStockService::class)->setTotalFromLegacy(
@@ -683,8 +690,7 @@ if (!empty($variantsToDelete)) {
         ['actor_type' => 'seller', 'actor_id' => $seller->id, 'note' => 'Mahsulot tahriri']
     );
 
-    $this->productModerationState->markPending($stationery, 'seller_edited');
-    $this->writeLog($seller, 'Kanselyariya mahsulotini tahrirladi (AI moderatsiyaga yuborildi)', $stationery->name);
+    $this->writeLog($seller, 'Kanselyariya mahsulotini tahrirladi', $stationery->name);
 
     return response()->json([
         'success' => true,
@@ -1060,8 +1066,12 @@ public function updateProductStatus(Request $request)
         'description' => $request->description,
         'images' => $finalImages,
         'category_id' => $request->category_id,
-        'is_approved' => 0,
     ]);
+    // MUHIM: yuqoridagi izohga qarang (stationery tahriri) — `is_approved`
+    // va AI moderatsiya holati bu yerda ham majburan qayta o'rnatilmaydi,
+    // `ProductModerationObserver` moderatsiyaga aloqador maydonlar
+    // haqiqatan o'zgarganda buni o'zi to'g'ri bajaradi.
+
     // FILIAL STOCK: jami stock yangi songa keltiriladi (farq hodim filialiga)
     app(\App\Services\BranchStockService::class)->setTotalFromLegacy(
         'book', (int) $product->id, 0, (int) $storeSellerId,
@@ -1071,8 +1081,7 @@ public function updateProductStatus(Request $request)
     );
 
     $product->tags()->sync($request->input('tag_ids', []));
-    $this->productModerationState->markPending($product, 'seller_edited');
-    $this->writeLog($seller, 'Mahsulot ma\'lumotlarini yangiladi (AI moderatsiyaga yuborildi)', $product->name);
+    $this->writeLog($seller, 'Mahsulot ma\'lumotlarini yangiladi', $product->name);
     return response()->json([
         'success' => true,
         'message' => 'Mahsulot muvaffaqiyatli yangilandi',

@@ -152,6 +152,12 @@ class ProductsController extends Controller
     }
 
     // ── Seller info formatlash (seller() va sellersWithLatest uchun) ─
+    // MUHIM: bu — BUYERGA (xaridorga) ko'rinadigan ma'lumot. Sotuvchining
+    // ichki ishlash ko'rsatkichlari (reputation_score, successful_orders,
+    // response_time_hours va h.k.) ATAYLAB shu yerdan chiqarib
+    // tashlangan — xaridorga faqat reyting (rating + necha ta xariddan
+    // ekanligi) ko'rinishi kerak, xolos. Ichki ko'rsatkichlar sotuvchining
+    // o'z panelida (seller dashboard) ko'rinaveradi, bu yerga aloqasi yo'q.
     private function formatSellerInfo($seller): array
     {
         return [
@@ -163,10 +169,6 @@ class ProductsController extends Controller
             'region'          => $seller->region,
             'rating'          => (float) ($seller->rating ?? 0),
             'rating_reviews_count' => (int) ($seller->rating_reviews_count ?? 0),
-            'reputation_score' => (float) ($seller->reputation_score ?? 0),
-            'reputation_last_calculated_at' => optional($seller->reputation_last_calculated_at)?->toIso8601String(),
-            'successful_orders' => (int) ($seller->successful_orders ?? 0),
-            'response_time_hours' => (float) ($seller->response_time_hours ?? 24),
             'activity_types'  => $seller->activity_types,
             'isVerified'      => $seller->isVerified,
             'isPremium'       => $this->sellerIsPremium($seller),
@@ -1093,23 +1095,14 @@ class ProductsController extends Controller
             );
         }
 
-        $bookCount = Books::where('seller_id', $id)
-            ->where('status', true)->where('is_hidden', 0)->where('is_approved', 1)
-            ->count();
-        $stationeryCount = Stationery::where('seller_id', $id)
-            ->where('status', true)->where('is_hidden', 0)->where('is_approved', 1)
-            ->count();
+        // MUHIM: `summary` (kitoblar/kanselyariya soni) ATAYLAB olib
+        // tashlandi — bu ham xaridorga kerak bo'lmagan "statistika" turi
+        // (foydalanuvchi so'rovi: profilida faqat reyting ko'rinsa bas).
 
         return response()->json([
             'status' => 'success',
             'data'   => [
-                'seller' => array_merge($this->formatSellerInfo($seller), [
-                    'summary' => [
-                        'books_count' => $bookCount,
-                        'stationeries_count' => $stationeryCount,
-                        'total_products' => $bookCount + $stationeryCount,
-                    ],
-                ]),
+                'seller' => $this->formatSellerInfo($seller),
                 'books' => [
                     'discounted'   => $discountedBooks,
                     'trending'     => $trendingBooks,

@@ -270,7 +270,10 @@ class StationeryController extends Controller
             );
         }
         $this->syncVariants($request, $item);
-        $this->productModerationState->markPending($item, 'admin_edited');
+        // MUHIM: `markPending()` shart-sharoitsiz chaqiruvi olib tashlandi
+        // (BookController'dagi bir xil izohga qarang) — `$item->update($data)`
+        // ichida `ProductModerationObserver` buni faqat kontent haqiqatan
+        // o'zgarganda to'g'ri bajaradi.
 
         return redirect()->route('admin.stationery.show', $item->id)->with('success', 'Kanstovar yangilandi.');
     }

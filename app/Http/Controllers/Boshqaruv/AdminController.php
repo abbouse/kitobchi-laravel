@@ -1254,7 +1254,12 @@ class AdminController extends Controller
             );
         }
 
-        app(ProductModerationStateService::class)->markPending($book, 'admin_edited');
+        // MUHIM: `markPending()` shart-sharoitsiz chaqiruvi ATAYLAB olib
+        // tashlandi — bu, jumladan, admin shu forma orqali `is_approved`ni
+        // qo'lda tasdiqlagan hollarda ham, uni zumda yana pending holatiga
+        // qaytarib yuborardi. `$book->update($data)` ichida
+        // `ProductModerationObserver` moderatsiyaga aloqador maydonlar
+        // haqiqatan o'zgarganda buni o'zi to'g'ri bajaradi.
 
         return back()->with('success', 'Kitob yangilandi.');
     }
@@ -1304,7 +1309,8 @@ class AdminController extends Controller
         }
 
         $this->syncStationeryVariants($request, $stationery);
-        app(ProductModerationStateService::class)->markPending($stationery, 'admin_edited');
+        // MUHIM: yuqoridagi kitob tahriri izohiga qarang — `markPending()`
+        // shart-sharoitsiz chaqiruvi shu sababdan olib tashlandi.
 
         return back()->with('success', 'Kanselyariya mahsuloti yangilandi.');
     }

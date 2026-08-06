@@ -293,7 +293,13 @@ class BookController extends Controller
             );
         }
 
-        $this->productModerationState->markPending($book, 'admin_edited');
+        // MUHIM: `markPending()` bu yerdan ATAYLAB olib tashlandi — bu
+        // shart-sharoitsiz chaqiruv `status`/`is_hidden`/`recommended` kabi
+        // moderatsiyaga aloqasi yo'q maydonlar o'zgarganda ham allaqachon
+        // tasdiqlangan kitobni qayta AI ko'rib chiqishiga majburlab
+        // yuborardi. `ProductModerationObserver::updating()` yuqoridagi
+        // `$book->update($data)` chaqiruvi ichida buni o'zi, faqat haqiqiy
+        // kontent maydonlari o'zgarganda, to'g'ri bajaradi.
 
         return redirect()->route('admin.books.show', $book)->with('success', 'Kitob yangilandi.');
     }
