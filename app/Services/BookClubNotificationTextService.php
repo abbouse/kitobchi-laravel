@@ -41,7 +41,15 @@ class BookClubNotificationTextService
      */
     private function preview(?string $text): ?string
     {
-        $text = trim(preg_replace('/\s+/u', ' ', (string) $text) ?? '');
+        $text = (string) $text;
+
+        // Izoh/javob matni ko'pincha "@kimdir ..." bilan boshlanadi (kimgadir
+        // javob yozilganda ilova shu username'ni matn boshiga qo'shadi).
+        // Bildirishnomada bu ortiqcha — notification o'zi allaqachon "SIZGA"
+        // yo'nalgan, boshidagi @username qaytariq bo'lib qoladi.
+        $text = preg_replace('/^\s*(?:@[A-Za-z0-9_.]{3,32}[\s,:]*)+/u', '', $text) ?? $text;
+
+        $text = trim(preg_replace('/\s+/u', ' ', $text) ?? '');
 
         if ($text === '') {
             return null;
@@ -64,10 +72,10 @@ class BookClubNotificationTextService
     {
         $map = [
             'uz' => [
-                'like' => 'Yangi like',
+                'like' => 'Yangi yoqtirish',
                 'comment' => 'Yangi izoh',
                 'reply' => 'Yangi javob',
-                'comment_like' => 'Izohga like',
+                'comment_like' => 'Izohga yoqtirish',
                 'vote' => 'Yangi ovoz',
                 'follow' => 'Yangi obuna',
                 'repost' => 'Yangi repost',
@@ -118,10 +126,10 @@ class BookClubNotificationTextService
 
         return match ($locale) {
             'ru' => match ($type) {
-                'like' => $many ? "{$name} и ещё {$extra} человек поставили лайк вашему посту" : "{$name} поставил(а) лайк вашему посту",
+                'like' => $many ? "{$name} и ещё {$extra} человек оценили ваш пост" : "{$name} оценил(а) ваш пост",
                 'comment' => $many ? "{$name} и ещё {$extra} человек прокомментировали ваш пост" : "{$name} прокомментировал(а) ваш пост",
                 'reply' => $many ? "{$name} и ещё {$extra} человек ответили на ваш комментарий" : "{$name} ответил(а) на ваш комментарий",
-                'comment_like' => $many ? "{$name} и ещё {$extra} человек лайкнули ваш комментарий" : "{$name} лайкнул(а) ваш комментарий",
+                'comment_like' => $many ? "{$name} и ещё {$extra} человек оценили ваш комментарий" : "{$name} оценил(а) ваш комментарий",
                 'vote' => $many ? "{$name} и ещё {$extra} человек проголосовали в вашем опросе" : "{$name} проголосовал(а) в вашем опросе",
                 'follow' => "{$name} подписался(ась) на вас",
                 'repost' => $many ? "{$name} и ещё {$extra} человек сделали репост вашего поста" : "{$name} сделал(а) репост вашего поста",
@@ -154,10 +162,10 @@ class BookClubNotificationTextService
                 default => "{$name}さんから新しい通知があります",
             },
             default => match ($type) {
-                'like' => $many ? "{$name} va yana {$extra} kishi postingizga like bosdi" : "{$name} postingizga like bosdi",
+                'like' => $many ? "{$name} va yana {$extra} kishi postingizni yoqtirdi" : "{$name} postingizni yoqtirdi",
                 'comment' => $many ? "{$name} va yana {$extra} kishi postingizga izoh qoldirdi" : "{$name} postingizga izoh qoldirdi",
                 'reply' => $many ? "{$name} va yana {$extra} kishi izohingizga javob yozdi" : "{$name} izohingizga javob yozdi",
-                'comment_like' => $many ? "{$name} va yana {$extra} kishi izohingizga like bosdi" : "{$name} izohingizga like bosdi",
+                'comment_like' => $many ? "{$name} va yana {$extra} kishi izohingizni yoqtirdi" : "{$name} izohingizni yoqtirdi",
                 'vote' => $many ? "{$name} va yana {$extra} kishi so'rovnomangizda ovoz berdi" : "{$name} so'rovnomangizda ovoz berdi",
                 'follow' => "{$name} sizga obuna bo'ldi",
                 'repost' => $many ? "{$name} va yana {$extra} kishi postingizni repost qildi" : "{$name} postingizni repost qildi",
