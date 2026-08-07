@@ -15,6 +15,7 @@ return [
     'teaser_reminder_title'   => 'Reminder',
     'teaser_reminder_subtitle' => 'You bought this on :date',
     'teaser_generic_subtitle' => 'See details',
+    'teaser_curious_subtitle' => 'You might like this — find out',
 
     'section_match'     => 'How well it fits you',
     'section_interest_match' => 'How well it fits your interests',

@@ -15,6 +15,7 @@ return [
     'teaser_reminder_title'   => 'Напоминание',
     'teaser_reminder_subtitle' => 'Вы купили это :date',
     'teaser_generic_subtitle' => 'Подробнее',
+    'teaser_curious_subtitle' => 'Может вам понравиться — узнайте',
 
     'section_match'     => 'Насколько подходит вам',
     'section_interest_match' => 'Насколько подходит вашим интересам',

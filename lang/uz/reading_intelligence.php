@@ -16,6 +16,7 @@ return [
     'teaser_reminder_title'   => 'Eslatma',
     'teaser_reminder_subtitle' => 'Buni :date sanasida sotib olgansiz',
     'teaser_generic_subtitle' => 'Batafsil ko\'ring',
+    'teaser_curious_subtitle' => 'Sizga yoqishi mumkin — bilib oling',
 
     // ── Bottom sheet bo'lim sarlavhalari ────────────────────────────────
     'section_match'     => 'Sizga mosligi',

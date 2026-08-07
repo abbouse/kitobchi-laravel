@@ -15,6 +15,7 @@ return [
     'teaser_reminder_title'   => 'お知らせ',
     'teaser_reminder_subtitle' => ':dateに購入済みです',
     'teaser_generic_subtitle' => '詳細を見る',
+    'teaser_curious_subtitle' => '気に入るかも?確認してみて',
 
     'section_match'     => 'あなたとの相性',
     'section_interest_match' => 'あなたの興味との相性',

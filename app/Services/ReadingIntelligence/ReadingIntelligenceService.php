@@ -592,7 +592,12 @@ class ReadingIntelligenceService
             'teaser' => [
                 'icon' => 'tag',
                 'title' => __('reading_intelligence.teaser_new_title'),
-                'subtitle' => $this->difficultySummary($product, $insight, $locale) ?? __('reading_intelligence.teaser_generic_subtitle'),
+                // MUHIM: bu yerda ATAYLAB sahifa soni/qiyinlik darajasi
+                // YOZILMAYDI — banner qisqa, "antiqa" (qiziqtiruvchi) matn
+                // bilan bosishga undaydi, batafsil tahlil (qiyinlik,
+                // kayfiyat, kimlar uchun mos) esa faqat bosilgandan keyin,
+                // to'liq sheet ichida ochiladi.
+                'subtitle' => __('reading_intelligence.teaser_curious_subtitle'),
             ],
             'sheet' => array_filter([
                 'traits' => $this->traitsSection($product, $type, $locale),
@@ -613,7 +618,10 @@ class ReadingIntelligenceService
             'teaser' => [
                 'icon' => 'book',
                 'title' => $this->productFactLine($product, $type, $locale),
-                'subtitle' => $this->difficultySummary($product, $insight, $locale) ?? '',
+                // MUHIM: sahifa soni/qiyinlik darajasi endi bu yerda
+                // yozilmaydi (newProductPayload'dagi izohga qarang) —
+                // qiziqtiruvchi umumiy matn ishlatiladi.
+                'subtitle' => __('reading_intelligence.teaser_curious_subtitle'),
             ],
             'sheet' => array_filter([
                 'traits' => $this->traitsSection($product, $type, $locale),
@@ -720,16 +728,13 @@ class ReadingIntelligenceService
         return implode(' · ', $parts);
     }
 
+    // MUHIM: bu yerda ATAYLAB sahifa soni qo'shilmaydi — teaser banner
+    // qisqa va qiziqtiruvchi bo'lishi kerak, ortiqcha "quruq" fakt (necha
+    // bet) emas. Faqat kategoriya nomi (yoki mahsulot topilmasa, uning
+    // nomi) yetarli.
     private function productFactLine(Books|Stationery $product, string $type, string $locale): string
     {
-        $parts = array_filter([
-            $this->categoryName($product->category, $locale),
-            $type === 'book' && $product->pages
-                ? __('reading_intelligence.pages_count', ['count' => $product->pages])
-                : null,
-        ]);
-
-        return implode(' · ', $parts) ?: $product->name;
+        return $this->categoryName($product->category, $locale) ?? $product->name;
     }
 
     private function loadProduct(string $type, int $id): Books|Stationery|null
