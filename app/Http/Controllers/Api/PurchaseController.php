@@ -245,6 +245,17 @@ class PurchaseController extends Controller
                 : "Siz bu promokoddan maksimal {$perUserLimit} marta foydalana olasiz."];
         }
 
+        $eligibleOrderCount = (int) ($promo->eligible_order_count ?? 0);
+        if ($eligibleOrderCount > 0) {
+            $completedOrders = $this->completedPaidOrdersCount($userId);
+
+            if ($completedOrders >= $eligibleOrderCount) {
+                return ['error' => $eligibleOrderCount === 1
+                    ? 'Bu promokod faqat birinchi muvaffaqiyatli buyurtma uchun amal qiladi.'
+                    : "Bu promokod faqat birinchi {$eligibleOrderCount} ta muvaffaqiyatli buyurtma uchun amal qiladi."];
+            }
+        }
+
         if ($promo->min_order_amount && $total < $promo->min_order_amount) {
             return ['error' => "Promokod {$promo->min_order_amount} so'mdan yuqori buyurtmalarga amal qiladi."];
         }
@@ -265,6 +276,42 @@ class PurchaseController extends Controller
         };
 
         return ['discount' => $discount, 'promo' => $promo];
+    }
+
+    private function completedPaidOrdersCount(int $userId): int
+    {
+        return Sold::query()
+            ->where('user_id', $userId)
+            ->where(function ($query) {
+                $query->where('payment_status_code', PaymentStatusCode::PAID->value)
+                    ->orWhere(function ($fallback) {
+                        $fallback->whereNull('payment_status_code')
+                            ->where('paymentStatus', PaymentStatusCode::PAID->legacy());
+                    });
+            })
+            ->where(function ($query) {
+                $query->where('status_code', OrderStatusCode::CUSTOMER_RECEIVED->value)
+                    ->orWhere(function ($delivered) {
+                        $delivered->where('status_code', OrderStatusCode::DELIVERED->value)
+                            ->where(function ($deliveryType) {
+                                $deliveryType->whereNull('deliveryType')
+                                    ->orWhere('deliveryType', '!=', 'postal');
+                            });
+                    })
+                    ->orWhere(function ($legacy) {
+                        $legacy->whereNull('status_code')
+                            ->whereIn('status', [
+                                OrderStatusCode::CUSTOMER_RECEIVED->legacy(),
+                                OrderStatusCode::DELIVERED->legacy(),
+                            ])
+                            ->where(function ($deliveryType) {
+                                $deliveryType->where('status', OrderStatusCode::CUSTOMER_RECEIVED->legacy())
+                                    ->orWhereNull('deliveryType')
+                                    ->orWhere('deliveryType', '!=', 'postal');
+                            });
+                    });
+            })
+            ->count();
     }
 
     // =========================================================================

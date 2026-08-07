@@ -45,7 +45,7 @@ return [
 
     // ── Umumiy ────────────────────────────────────────────────────────
     'similar_score' => ':percent% o\'xshash',
-    'bestseller_label' => 'Eng ko\'p sotilganlardan',
+    'bestseller_label' => 'Ko\'p sotilgan',
     'pages_count' => ':count bet',
     'sheet_empty_placeholder' => 'Bu mahsulot uchun batafsil tahlil tez orada tayyor bo\'ladi.',
 

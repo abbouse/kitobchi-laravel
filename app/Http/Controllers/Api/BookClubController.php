@@ -919,12 +919,13 @@ class BookClubController extends Controller
                 $reviewCashback = null;
 
                 if (! $hardRisk) {
-                    $this->notifyFollowers($user, $bookClub->id);
+                    $this->notifyFollowers($user, $bookClub->id, $bookClub->text);
                     $this->mentionService->notifyMentionedUsers(
                         $this->mentionService->extractMentions($bookClub->text),
                         $user,
                         'mention',
-                        (int) $bookClub->id
+                        (int) $bookClub->id,
+                        ['target_text' => $bookClub->text]
                     );
                     $this->productReviewPromptService->markReviewedByPost($freshPost);
 
@@ -1048,7 +1049,8 @@ class BookClubController extends Controller
                         $this->mentionService->extractMentions((string) $post->text),
                         $user,
                         'mention',
-                        (int) $post->id
+                        (int) $post->id,
+                        ['target_text' => (string) $post->text]
                     );
                     $this->productReviewPromptService->markReviewedByPost($updatedPost);
 
@@ -1303,7 +1305,7 @@ class BookClubController extends Controller
 
             if (!$like) {
                 BookClubLikes::create(['post_id' => $post->id, 'user_id' => $user->id]);
-                $this->sendNotification($post->user_id, $user, 'like', $post->id);
+                $this->sendNotification($post->user_id, $user, 'like', $post->id, ['target_text' => $post->text]);
                 $status = 'liked';
             } else {
                 $like->delete();
@@ -1378,7 +1380,7 @@ class BookClubController extends Controller
                 'updated_at' => now(),
             ]);
 
-            $this->sendNotification($post->user_id, $user, 'vote', $post->id);
+            $this->sendNotification($post->user_id, $user, 'vote', $post->id, ['target_text' => $post->text]);
 
             return response()->json(['status' => 'success', 'action' => 'voted']);
         } catch (\Exception $e) {
@@ -1473,8 +1475,8 @@ class BookClubController extends Controller
                     ]);
                 }
 
-                $this->sendNotification($original->user_id, $user, 'repost', $original->id);
-                $this->notifyFollowers($user, $newPost->id);
+                $this->sendNotification($original->user_id, $user, 'repost', $original->id, ['target_text' => $original->text]);
+                $this->notifyFollowers($user, $newPost->id, $newPost->text);
 
                 return response()->json(['status' => 'success', 'post_id' => $newPost->id]);
             });
@@ -1542,20 +1544,24 @@ class BookClubController extends Controller
         ];
     }
 
-    private function notifyFollowers($user, $postId)
+    private function notifyFollowers($user, $postId, ?string $targetText = null)
     {
         $followers = DB::table('user_follows')
             ->where('following_id', $user->id)
             ->pluck('follower_id');
 
+        $extra = $targetText !== null && trim($targetText) !== ''
+            ? ['target_text' => $targetText]
+            : [];
+
         foreach ($followers as $fId) {
-            $this->sendNotification($fId, $user, 'new_post', $postId);
+            $this->sendNotification($fId, $user, 'new_post', $postId, $extra);
         }
     }
 
-    private function sendNotification($receiverId, $sender, $type, $postId = null)
+    private function sendNotification($receiverId, $sender, $type, $postId = null, array $extra = [])
     {
-        NotificationHelper::send($receiverId, $sender, $type, $postId);
+        NotificationHelper::send($receiverId, $sender, $type, $postId, $extra);
     }
 
     public function getNotifications(Request $request)
@@ -1583,7 +1589,16 @@ class BookClubController extends Controller
 
             $usersById = User::whereIn('id', $actorIds)->get()->keyBy('id');
 
-            $notifications = $notifications->map(function ($n) use ($user, $usersById) {
+            // "follow" turidagi bildirishnomalar uchun: menga obuna bo'lgan
+            // odamga men ham obuna bo'lganmanmi? (mutual bo'lsa — "Xabar
+            // yozish" tugmasi, aks holda — "Obuna bo'lish" tugmasi). Har bir
+            // notification uchun alohida so'rov o'rniga BITTA so'rov bilan
+            // hammasini oldindan olib qo'yamiz (N+1'dan qochish uchun).
+            $followingIds = $user->followings()->pluck('users.id')
+                ->map(fn ($id) => (int) $id)
+                ->flip();
+
+            $notifications = $notifications->map(function ($n) use ($user, $usersById, $followingIds) {
                     $data  = $n->data;
                     $formatted = $this->notificationTextService->format($n, $user->locale ?? 'uz');
                     $actors = collect($data['actors'] ?? []);
@@ -1624,6 +1639,10 @@ class BookClubController extends Controller
                         'sender_name' => $data['last_user_name'] ?? null,
                         'title'      => $formatted['title'],
                         'text'       => $formatted['body'],
+                        'preview'    => $formatted['preview'] ?? null,
+                        'is_following_back' => $n->type === 'follow'
+                            ? $followingIds->has((int) ($data['last_user_id'] ?? 0))
+                            : null,
                         'group_count'=> $formatted['group_count'],
                         'avatar'     => $data['last_user_avatar'] ?? null,
                         'actors'     => $actors->take(8)->map(function ($actor) use ($user) {

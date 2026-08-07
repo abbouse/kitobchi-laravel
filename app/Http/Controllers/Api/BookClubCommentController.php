@@ -381,7 +381,7 @@ public function replies(Request $request, $comment_id) {
                 $user,
                 'comment',
                 $post->id,
-                ['comment_id' => $comment->id]
+                ['comment_id' => $comment->id, 'target_text' => $post->text]
             );
         }
 
@@ -391,7 +391,7 @@ public function replies(Request $request, $comment_id) {
                 $user,
                 'mention',
                 (int) $comment->post_id,
-                ['comment_id' => $comment->id]
+                ['comment_id' => $comment->id, 'target_text' => $comment->content]
             );
         }
 
@@ -444,7 +444,7 @@ public function replies(Request $request, $comment_id) {
             $user,
             'reply',
             $parentComment->post_id,
-            ['comment_id' => $parentComment->id]
+            ['comment_id' => $parentComment->id, 'target_text' => $parentComment->content]
         );
     }
 
@@ -454,7 +454,7 @@ public function replies(Request $request, $comment_id) {
             $user,
             'reply',
             $parentComment->post_id,
-            ['comment_id' => $reply->id]
+            ['comment_id' => $reply->id, 'target_text' => $reply->content]
         );
     }
 
@@ -465,7 +465,7 @@ public function replies(Request $request, $comment_id) {
             $user,
             'comment',
             $post->id,
-            ['comment_id' => $reply->id]
+            ['comment_id' => $reply->id, 'target_text' => $post->text]
         );
     }
 
@@ -475,7 +475,7 @@ public function replies(Request $request, $comment_id) {
             $user,
             'mention',
             (int) $reply->post_id,
-            ['comment_id' => $reply->id]
+            ['comment_id' => $reply->id, 'target_text' => $reply->content]
         );
     }
 
@@ -516,7 +516,7 @@ public function replies(Request $request, $comment_id) {
                 $user,
                 'comment_like',
                 $comment->post_id,
-                ['comment_id' => $comment->id]
+                ['comment_id' => $comment->id, 'target_text' => $comment->content]
             );
         }
         return response()->json(['status' => 'success'], 201);

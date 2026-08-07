@@ -40,10 +40,15 @@ class SendBookClubPushNotification implements ShouldQueue
         $formatter = app(BookClubNotificationTextService::class);
         $formatted = $formatter->format($n, $receiver->locale ?? 'uz');
 
+        // Push xabarida ham qisqa ko'rinish bo'lsin — OS bildirishnomani
+        // o'zi qatorlarga qarab kesadi, shuning uchun bu yerda faqat
+        // matnni biriktiramiz, qo'shimcha kesish shart emas.
+        $body = trim($formatted['body'] . ' ' . ($formatted['preview'] ?? ''));
+
         $pushRequest = new Request([
             'app_key' => 'kitobchi',
             'title'   => $formatted['title'],
-            'body'    => $formatted['body'],
+            'body'    => $body,
             'tokens'  => $tokens,
             'data'    => [
                 'type' => 'book_club_notification',

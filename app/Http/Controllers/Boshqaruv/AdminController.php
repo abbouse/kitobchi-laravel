@@ -4758,6 +4758,7 @@ PROMPT;
             'max_discount_amount' => ['nullable', 'integer', 'min:0'],
             'min_order_amount' => ['nullable', 'integer', 'min:0'],
             'per_user_limit' => ['nullable', 'integer', 'min:0'],
+            'eligible_order_count' => ['nullable', 'integer', 'min:0', 'max:50'],
             'usesLimit' => ['nullable', 'integer', 'min:0'],
             'expires_at' => ['required', 'date'],
             'status' => ['required', 'boolean'],
@@ -4773,6 +4774,13 @@ PROMPT;
         $data = $request->validate($rules);
         $data['min_order_amount'] = $data['min_order_amount'] ?? 0;
         $data['per_user_limit'] = $data['per_user_limit'] ?? 1;
+        if (Schema::hasColumn('promocodes', 'eligible_order_count')) {
+            $data['eligible_order_count'] = ((int) ($data['eligible_order_count'] ?? 0)) > 0
+                ? (int) $data['eligible_order_count']
+                : null;
+        } else {
+            unset($data['eligible_order_count']);
+        }
         $data['usesLimit'] = $data['usesLimit'] ?? 0;
         $data['type'] = $data['type'] === 'percent' ? 'percent' : 'uzs';
 
@@ -7210,6 +7218,7 @@ PROMPT;
                 'status' => $promocode->is_active ? 'Active' : 'Inactive',
                 'expiresAt' => optional($promocode->expires_at)->format('Y-m-d'),
                 'perUserLimit' => (int) ($promocode->per_user_limit ?? 1),
+                'eligibleOrderCount' => (int) ($promocode->eligible_order_count ?? 0),
                 'createUrl' => route('boshqaruv.promokodlar.store'),
                 'generateUrl' => route('boshqaruv.promokodlar.generate'),
                 'updateUrl' => route('boshqaruv.promokodlar.update', $promocode),

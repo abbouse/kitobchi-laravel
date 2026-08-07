@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Promocode;
 use App\Models\PromocodeHistory;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class PromocodeController extends Controller
@@ -50,12 +51,13 @@ class PromocodeController extends Controller
             'max_discount_amount' => 'nullable|integer|min:0',
             'min_order_amount' => 'nullable|integer|min:0',
             'per_user_limit'   => 'nullable|integer|min:0',
+            'eligible_order_count' => 'nullable|integer|min:0|max:50',
             'usesLimit'        => 'nullable|integer|min:0',
             'expires_at'       => 'required|date|after:now',
             'status'           => 'required|boolean',
         ]);
 
-        Promocode::create([
+        $payload = [
             'code'             => strtoupper($request->code),
             'type'             => $request->type,
             'amount'           => $request->amount,
@@ -68,7 +70,15 @@ class PromocodeController extends Controller
             'usedCount'        => 0,
             'status'           => $request->status,
             'expires_at'       => $request->expires_at,
-        ]);
+        ];
+
+        if (Schema::hasColumn('promocodes', 'eligible_order_count')) {
+            $payload['eligible_order_count'] = $request->filled('eligible_order_count') && (int) $request->eligible_order_count > 0
+                ? (int) $request->eligible_order_count
+                : null;
+        }
+
+        Promocode::create($payload);
 
         return redirect()->route('admin.promocodes.index')->with('success', "Promokod qo'shildi.");
     }
@@ -95,12 +105,13 @@ class PromocodeController extends Controller
             'max_discount_amount' => 'nullable|integer|min:0',
             'min_order_amount' => 'nullable|integer|min:0',
             'per_user_limit'   => 'nullable|integer|min:0',
+            'eligible_order_count' => 'nullable|integer|min:0|max:50',
             'usesLimit'        => 'nullable|integer|min:0',
             'expires_at'       => 'required|date',
             'status'           => 'required|boolean',
         ]);
 
-        $promocode->update([
+        $payload = [
             'type' => $request->type,
             'amount' => $request->amount,
             'max_discount_amount' => $request->type === 'percent'
@@ -111,7 +122,15 @@ class PromocodeController extends Controller
             'usesLimit' => $request->usesLimit ?? 0,
             'expires_at' => $request->expires_at,
             'status' => $request->status,
-        ]);
+        ];
+
+        if (Schema::hasColumn('promocodes', 'eligible_order_count')) {
+            $payload['eligible_order_count'] = $request->filled('eligible_order_count') && (int) $request->eligible_order_count > 0
+                ? (int) $request->eligible_order_count
+                : null;
+        }
+
+        $promocode->update($payload);
         return back()->with('success', 'Promokod yangilandi.');
     }
 

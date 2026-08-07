@@ -875,6 +875,7 @@ CREATE TABLE IF NOT EXISTS `promocodes` (
   `type` enum('percent','uzs') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT 'uzs',
   `amount` int NOT NULL DEFAULT '0',
   `min_order_amount` int DEFAULT '0',
+  `eligible_order_count` smallint unsigned DEFAULT NULL,
   `usesLimit` int DEFAULT '0',
   `usedCount` int DEFAULT '0',
   `status` tinyint(1) DEFAULT '0',

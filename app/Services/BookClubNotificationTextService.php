@@ -17,12 +17,37 @@ class BookClubNotificationTextService
 
         $title = $this->title($notification->type, $locale);
         $body = $this->body($notification->type, $name, $extra, $locale);
+        $preview = $this->preview($data['target_text'] ?? null);
+
+        if ($preview !== null) {
+            $body .= ':';
+        }
 
         return [
             'title' => $title,
             'body' => $body,
+            'preview' => $preview,
             'group_count' => $count,
         ];
+    }
+
+    /**
+     * Bildirishnoma tegishli bo'lgan post/izoh matnidan qisqa ko'rinish
+     * tayyorlaydi — Flutter tomonida 2 qatorgacha ko'rsatilib, ortig'i
+     * "..." bilan kesiladi (maxLines: 2, overflow: ellipsis). Bu yerda
+     * faqat qatorlarni tozalab, haddan tashqari uzun matnni (server->client
+     * hajmi uchun) cheklab qo'yamiz — aniq 2 qatorlik kesish Flutter'ning
+     * o'zida, chunki u ekran kengligi/shriftga bog'liq.
+     */
+    private function preview(?string $text): ?string
+    {
+        $text = trim(preg_replace('/\s+/u', ' ', (string) $text) ?? '');
+
+        if ($text === '') {
+            return null;
+        }
+
+        return \Illuminate\Support\Str::limit($text, 200);
     }
 
     private function unknownUserName(string $locale): string
