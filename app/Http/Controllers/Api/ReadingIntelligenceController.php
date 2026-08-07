@@ -36,13 +36,15 @@ class ReadingIntelligenceController extends Controller
 
         $payload = $this->readingIntelligence->forProduct($type, $id, $user, $locale);
 
-        if ($payload === null) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Product not found',
-            ], 404);
-        }
-
+        // MUHIM: `forProduct()` `null` qaytarishi ikki xil (lekin front-end
+        // uchun bir xil natijali) holatni bildiradi — (1) mahsulot umuman
+        // topilmadi, yoki (2) mahsulot bor, lekin AI hali tahlil qilmagan
+        // (shu bois karta hali ko'rsatilmaydi). Ikkalasi ham XATO EMAS —
+        // oddiy "hozircha ma'lumot yo'q" holati, shuning uchun 404 o'rniga
+        // muvaffaqiyatli javob + `data: null` qaytaramiz. Bu, ayniqsa,
+        // server monitoring/xato darajasini yangi qo'shilgan (hali AI
+        // yetib bormagan) mahsulotlar bilan keraksiz "xato" sifatida
+        // to'ldirib yubormasligi uchun muhim.
         return response()->json([
             'status' => 'success',
             'data' => $payload,

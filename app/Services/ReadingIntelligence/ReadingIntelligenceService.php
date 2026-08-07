@@ -17,17 +17,32 @@ use Illuminate\Support\Facades\Cache;
  * uchun asosiy orkestrator. docs/reading-intelligence-card-logic.md dagi
  * qaror daraxtini (Holat A/B/C/D1/D2/E/F/G) amalga oshiradi.
  *
- * Ustuvorlik tartibi (birinchi mos kelgani ishlatiladi):
+ * MUHIM QOIDA (0-bosqich, hammasidan OLDIN): agar AI bu mahsulotni hali
+ * tahlil qilmagan bo'lsa (`book_reading_insights`da yozuv yo'q) — karta
+ * BUTUNLAY qaytarilmaydi (`null`), Item sahifasida bu bo'lim umuman
+ * ko'rinmaydi. Sabab: qiyinlik/kayfiyat/kimlar-uchun tahlili bo'lmasa,
+ * qolgan har qanday signal (kashfiyot foizi, reyting, eslatma) yolg'iz
+ * (bitta qatorli) va "yarim tayyor" ko'rinadi — bu ishonchni pasaytiradi.
+ * Fon jarayoni (`reading-intelligence:generate-insights`, endi har
+ * daqiqada ishlaydi) tez orada barcha mahsulotlarga yetib boradi, shunda
+ * karta to'liq holda paydo bo'ladi.
+ *
+ * Insight mavjud bo'lganda, ustuvorlik tartibi (birinchi mos kelgani
+ * ishlatiladi) — VA HAR BIR holat endi albatta `traits` (qiyinlik/
+ * kayfiyat/kimlar uchun mos-emas) bilan BOYITILGAN holda qaytadi, hech
+ * qachon yagona/yolg'iz bo'lim sifatida emas:
  *   1. D2 — mahsulot allaqachon sotib olingan          → 'reminder'
  *   2. D1 — shu kategoriyada salbiy tarix bor           → 'neutral_fact'
- *   3. S1 kuchli (>= taste_strong_threshold)            → 'match'
- *   4. S1 zaif ijobiy (taste_soft..strong oralig'i)     → 'soft_hint'
- *   5. S2 kollaborativ kuchli                           → 'discovery'
- *   6. S3 universal sifat yetarli                       → 'quality'
- *   7. Hech narsa yo'q                                  → 'new'
+ *   3. YANGI — xarid tarixi yo'q, qiziqish+kollaborativ → 'interest_match'
+ *   4. S1 kuchli (>= taste_strong_threshold)            → 'match'
+ *   5. S1 zaif ijobiy (taste_soft..strong oralig'i)     → 'soft_hint'
+ *   6. S2 kollaborativ kuchli                           → 'discovery'
+ *   7. S3 universal sifat yetarli                       → 'quality'
+ *   8. Hech narsa yo'q (lekin insight BOR)               → 'new'
  *
- * Karta HECH QACHON butunlay yashirilmaydi — faqat ishonch darajasi
- * pasayganda shaxsiylashtirishdan faktik kontentga tushadi.
+ * Mehmon (tizimga kirmagan) foydalanuvchi ham endi 'quality'/'new'
+ * holatida to'liq `traits` (kayfiyat + kimlar uchun mos) ko'radi —
+ * faqat `guest_cta` bilan bezatilgan yalang'och karta emas.
  */
 class ReadingIntelligenceService
 {
@@ -48,18 +63,20 @@ class ReadingIntelligenceService
 
         $categoryId = $product->category_id ? (int) $product->category_id : null;
 
+        // ── 0-BOSQICH: AI hali tahlil qilmagan bo'lsa — karta umuman
+        // ko'rsatilmaydi (yuqoridagi klass docblock'idagi izohga qarang).
+        $insight = $this->insightGenerator->get($type, $id);
+        if ($insight === null) {
+            return null;
+        }
+
         // ── D2: allaqachon sotib olingan ────────────────────────────────
-        // MUHIM: bu tekshiruv insight (AI kontent) generatsiyasidan OLDIN —
-        // "allaqachon sotib olingan" holatda mahsulot tavsifi kerak emas,
-        // shuning uchun bu yo'lda hech qachon keraksiz AI chaqiruvi bo'lmaydi.
         if ($user) {
             $purchasedAt = $this->tasteProfile->purchasedAt($user->id, $type, $id);
             if ($purchasedAt) {
-                return $this->reminderPayload($purchasedAt, $locale);
+                return $this->reminderPayload($purchasedAt, $product, $type, $locale);
             }
         }
-
-        $insight = $this->insightGenerator->get($type, $id);
 
         // ── D1: shu kategoriyada salbiy tarix ───────────────────────────
         if ($user && $categoryId && $this->tasteProfile->hasNegativeSignalForCategory($user->id, $categoryId, $type)) {
@@ -109,7 +126,7 @@ class ReadingIntelligenceService
         if ($user && $categoryId) {
             $collaborative = $this->collaborativeAffinity($user->id, $categoryId, $type, $id, $locale);
             if ($collaborative !== null) {
-                return $this->discoveryPayload($collaborative, $locale);
+                return $this->discoveryPayload($collaborative, $product, $type, $locale);
             }
         }
 
@@ -432,10 +449,11 @@ class ReadingIntelligenceService
         return $value !== null ? (string) $value : null;
     }
 
-    private function discoveryPayload(array $collaborative, string $locale): array
+    private function discoveryPayload(array $collaborative, Books|Stationery $product, string $type, string $locale): array
     {
         $percent = (int) round(($collaborative['rate'] ?? 0) * 100);
         $clusterLabel = $collaborative['cluster_label'] ?? '';
+        $similar = $this->similarSection($product, $type, $locale);
 
         return [
             'variant' => 'discovery',
@@ -447,7 +465,11 @@ class ReadingIntelligenceService
                     'cluster' => $clusterLabel,
                 ]),
             ],
-            'sheet' => [
+            // MUHIM: faqat 'discovery' emas — 'traits'/'similar' ham
+            // qo'shiladi, aks holda karta bitta yolg'iz jumladan iborat
+            // bo'lib qolar edi (foydalanuvchi buni "yarim tayyor" deb
+            // topgan edi).
+            'sheet' => array_filter([
                 'discovery' => [
                     'label' => __('reading_intelligence.teaser_discovery_title'),
                     'detail' => __('reading_intelligence.teaser_discovery_subtitle', [
@@ -455,7 +477,10 @@ class ReadingIntelligenceService
                         'cluster' => $clusterLabel,
                     ]),
                 ],
-            ],
+                'traits' => $this->traitsSection($product, $type, $locale),
+                'similar' => $similar,
+                'similar_label' => $similar ? __('reading_intelligence.section_similar') : null,
+            ]),
         ];
     }
 
@@ -499,6 +524,12 @@ class ReadingIntelligenceService
             return null;
         }
 
+        // MUHIM: 'quality' + 'traits' + 'similar' birga — bu yo'l MEHMON
+        // foydalanuvchilarga ham ko'rsatiladi (guest_cta bilan birga),
+        // shuning uchun ular ham kayfiyat/qiyinlik va "kimlar uchun mos"
+        // tahlilini ko'rishlari kerak, faqat "top N talikda" jumlasi emas.
+        $similar = $this->similarSection($product, $type, $locale);
+
         return [
             'variant' => 'quality',
             'teaser' => [
@@ -506,12 +537,15 @@ class ReadingIntelligenceService
                 'title' => __('reading_intelligence.teaser_quality_title', ['rank' => $rank]),
                 'subtitle' => __('reading_intelligence.teaser_quality_subtitle'),
             ],
-            'sheet' => [
+            'sheet' => array_filter([
                 'quality' => [
                     'label' => __('reading_intelligence.teaser_quality_title', ['rank' => $rank]),
                     'detail' => __('reading_intelligence.bestseller_label'),
                 ],
-            ],
+                'traits' => $this->traitsSection($product, $type, $locale),
+                'similar' => $similar,
+                'similar_label' => $similar ? __('reading_intelligence.section_similar') : null,
+            ]),
         ];
     }
 
@@ -550,6 +584,9 @@ class ReadingIntelligenceService
 
     private function newProductPayload(Books|Stationery $product, ?BookReadingInsight $insight, string $locale): array
     {
+        $type = is_a($product, Books::class) ? 'book' : 'stationery';
+        $similar = $this->similarSection($product, $type, $locale);
+
         return [
             'variant' => 'new',
             'teaser' => [
@@ -558,7 +595,9 @@ class ReadingIntelligenceService
                 'subtitle' => $this->difficultySummary($product, $insight, $locale) ?? __('reading_intelligence.teaser_generic_subtitle'),
             ],
             'sheet' => array_filter([
-                'traits' => $this->traitsSection($product, is_a($product, Books::class) ? 'book' : 'stationery', $locale),
+                'traits' => $this->traitsSection($product, $type, $locale),
+                'similar' => $similar,
+                'similar_label' => $similar ? __('reading_intelligence.section_similar') : null,
             ]),
         ];
     }
@@ -567,6 +606,8 @@ class ReadingIntelligenceService
 
     private function neutralFactPayload(Books|Stationery $product, string $type, ?BookReadingInsight $insight, string $locale): array
     {
+        $similar = $this->similarSection($product, $type, $locale);
+
         return [
             'variant' => 'neutral_fact',
             'teaser' => [
@@ -576,14 +617,21 @@ class ReadingIntelligenceService
             ],
             'sheet' => array_filter([
                 'traits' => $this->traitsSection($product, $type, $locale),
+                'similar' => $similar,
+                'similar_label' => $similar ? __('reading_intelligence.section_similar') : null,
             ]),
         ];
     }
 
     // ─── Holat D2 — allaqachon sotib olingan ────────────────────────────
 
-    private function reminderPayload(\Illuminate\Support\Carbon $purchasedAt, string $locale): array
+    private function reminderPayload(\Illuminate\Support\Carbon $purchasedAt, Books|Stationery $product, string $type, string $locale): array
     {
+        // MUHIM: reminder ham endi 'traits' bilan boyitilgan — foydalanuvchi
+        // buni yolg'iz, "quruq" eslatma sifatida ko'rmasligi kerak, balki
+        // mahsulot haqidagi to'liq tahlil bilan birga (masalan qayta
+        // sotib olishga undash yoki sovg'a sifatida tavsiya qilish uchun
+        // foydali bo'lishi mumkin).
         return [
             'variant' => 'reminder',
             'teaser' => [
@@ -593,14 +641,15 @@ class ReadingIntelligenceService
                     'date' => $purchasedAt->translatedFormat('d.m.Y'),
                 ]),
             ],
-            'sheet' => [
+            'sheet' => array_filter([
                 'reminder' => [
                     'label' => __('reading_intelligence.section_reminder'),
                     'detail' => __('reading_intelligence.teaser_reminder_subtitle', [
                         'date' => $purchasedAt->translatedFormat('d.m.Y'),
                     ]),
                 ],
-            ],
+                'traits' => $this->traitsSection($product, $type, $locale),
+            ]),
         ];
     }
 
