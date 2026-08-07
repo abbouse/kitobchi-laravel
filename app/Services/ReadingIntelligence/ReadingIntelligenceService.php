@@ -17,7 +17,13 @@ use Illuminate\Support\Facades\Cache;
  * uchun asosiy orkestrator. docs/reading-intelligence-card-logic.md dagi
  * qaror daraxtini (Holat A/B/C/D1/D2/E/F/G) amalga oshiradi.
  *
- * MUHIM QOIDA (0-bosqich, hammasidan OLDIN): agar AI bu mahsulotni hali
+ * MUHIM QOIDA (-1-bosqich, HAMMASIDAN OLDIN): bu karta FAQAT KITOB uchun
+ * ishlaydi. Kanselyariya (stationery) uchun `forProduct()` darhol `null`
+ * qaytaradi — "qiyinlik darajasi"/"kayfiyat" kabi tushunchalar o'qish
+ * tajribasiga xos, jismoniy kanselyariya buyumiga mos kelmaydi. AI ham bu
+ * tur uchun generatsiya qilmaydi (qarang: `GenerateReadingInsights`).
+ *
+ * MUHIM QOIDA (0-bosqich): agar AI bu mahsulotni hali
  * tahlil qilmagan bo'lsa (`book_reading_insights`da yozuv yo'q) — karta
  * BUTUNLAY qaytarilmaydi (`null`), Item sahifasida bu bo'lim umuman
  * ko'rinmaydi. Sabab: qiyinlik/kayfiyat/kimlar-uchun tahlili bo'lmasa,
@@ -56,6 +62,18 @@ class ReadingIntelligenceService
 
     public function forProduct(string $type, int $id, ?User $user, string $locale): ?array
     {
+        // ── FAQAT KITOB: kanselyariya (stationery) uchun bu karta ATAYLAB
+        // ko'rsatilmaydi. "Qiyinlik darajasi" va "kayfiyat" — sof KITOBIY
+        // tushunchalar (o'qish tajribasiga oid), ruchka/daftar/sumka kabi
+        // jismoniy mahsulotlarga mos kelmaydi — AI ularni majburan
+        // "o'ylab topishga" majbur bo'lardi. Shuning uchun AI ham bu tur
+        // uchun umuman generatsiya qilmaydi (qarang: `GenerateReadingInsights`
+        // — endi faqat 'book'), bu yerda esa hech qanday hisoblash
+        // boshlanmasdanoq erta chiqamiz.
+        if ($type !== 'book') {
+            return null;
+        }
+
         $product = $this->loadProduct($type, $id);
         if (! $product) {
             return null;
@@ -74,13 +92,13 @@ class ReadingIntelligenceService
         if ($user) {
             $purchasedAt = $this->tasteProfile->purchasedAt($user->id, $type, $id);
             if ($purchasedAt) {
-                return $this->reminderPayload($purchasedAt, $product, $type, $locale);
+                return $this->reminderPayload($purchasedAt, $product, $type, $locale, $insight);
             }
         }
 
         // ── D1: shu kategoriyada salbiy tarix ───────────────────────────
         if ($user && $categoryId && $this->tasteProfile->hasNegativeSignalForCategory($user->id, $categoryId, $type)) {
-            return $this->neutralFactPayload($product, $type, $insight, $locale);
+            return $this->neutralFactPayload($product, $type, $insight, $locale, $user);
         }
 
         // ── YANGI — sotib olish tarixi YO'Q mijoz: onboarding qiziqish +
@@ -97,7 +115,7 @@ class ReadingIntelligenceService
         // tanlagansiz" + "boshqa xaridorlar orasida bu mahsulot mashhur" —
         // ishlatiladi.
         if ($user && $categoryId && ! $this->tasteProfile->hasAnyPurchases($user->id)) {
-            $interestMatch = $this->interestMatchPayload($user, $product, $type, $categoryId, $locale);
+            $interestMatch = $this->interestMatchPayload($user, $product, $type, $categoryId, $locale, $insight);
             if ($interestMatch !== null) {
                 return $interestMatch;
             }
@@ -113,11 +131,11 @@ class ReadingIntelligenceService
                 $soft = (float) config('reading_intelligence.taste_soft_threshold');
 
                 if ($score >= $strong) {
-                    return $this->matchPayload($user, $product, $type, $score, $locale);
+                    return $this->matchPayload($user, $product, $type, $score, $locale, $insight);
                 }
 
                 if ($score >= $soft) {
-                    return $this->softHintPayload($product, $insight, $score, $locale);
+                    return $this->softHintPayload($product, $insight, $score, $locale, $user);
                 }
             }
         }
@@ -126,18 +144,18 @@ class ReadingIntelligenceService
         if ($user && $categoryId) {
             $collaborative = $this->collaborativeAffinity($user->id, $categoryId, $type, $id, $locale);
             if ($collaborative !== null) {
-                return $this->discoveryPayload($collaborative, $product, $type, $locale);
+                return $this->discoveryPayload($collaborative, $product, $type, $locale, $user, $insight);
             }
         }
 
         // ── S3: universal sifat ──────────────────────────────────────────
-        $quality = $this->qualityPayload($product, $type, $locale);
+        $quality = $this->qualityPayload($product, $type, $locale, $user, $insight);
         if ($quality !== null) {
             return $user ? $quality : $this->withGuestCta($quality, $locale);
         }
 
         // ── Hech narsa yo'q: faqat kontent ──────────────────────────────
-        $new = $this->newProductPayload($product, $insight, $locale);
+        $new = $this->newProductPayload($product, $insight, $locale, $user);
 
         return $user ? $new : $this->withGuestCta($new, $locale);
     }
@@ -162,11 +180,11 @@ class ReadingIntelligenceService
 
     // ─── Holat A — aniq mos ──────────────────────────────────────────────
 
-    private function matchPayload(User $user, Books|Stationery $product, string $type, float $score, string $locale): array
+    private function matchPayload(?User $user, Books|Stationery $product, string $type, float $score, string $locale, ?BookReadingInsight $insight = null): array
     {
         $percent = (int) round($score * 100);
         $reason = $this->personalReason($user, $product, $type, $score, $locale);
-        $similar = $this->similarSection($product, $type, $locale);
+        $similar = $this->similarSection($product, $type, $locale, $user);
 
         return [
             'variant' => 'match',
@@ -181,7 +199,7 @@ class ReadingIntelligenceService
                     'percent' => $percent,
                     'reason' => $reason,
                 ],
-                'traits' => $this->traitsSection($product, $type, $locale),
+                'traits' => $this->traitsSection($insight, $locale),
                 'similar' => $similar,
                 // Front-end'da statik kalitlarni qayta tarjima qilmaslik
                 // uchun sarlavhani ham shu yerda, tayyor holda yuboramiz.
@@ -266,7 +284,7 @@ class ReadingIntelligenceService
      * hech qachon bo'sh qolmaydi, faqat kamroq shaxsiylashtirilgan holatga
      * tushadi).
      */
-    private function interestMatchPayload(User $user, Books|Stationery $product, string $type, int $categoryId, string $locale): ?array
+    private function interestMatchPayload(User $user, Books|Stationery $product, string $type, int $categoryId, string $locale, ?BookReadingInsight $insight = null): ?array
     {
         $interestIds = $this->tasteProfile->selectedInterestCategoryIds($user->id);
         if (! in_array($categoryId, $interestIds, true)) {
@@ -312,7 +330,7 @@ class ReadingIntelligenceService
             ? 'reading_intelligence.teaser_interest_match_subtitle_collab'
             : 'reading_intelligence.teaser_interest_match_subtitle';
 
-        $similar = $this->similarSection($product, $type, $locale);
+        $similar = $this->similarSection($product, $type, $locale, $user);
 
         return [
             'variant' => 'interest_match',
@@ -327,7 +345,7 @@ class ReadingIntelligenceService
                     'percent' => $percent,
                     'reason' => __($reasonKey, ['cluster' => $clusterLabel]),
                 ],
-                'traits' => $this->traitsSection($product, $type, $locale),
+                'traits' => $this->traitsSection($insight, $locale),
                 'similar' => $similar,
                 'similar_label' => $similar ? __('reading_intelligence.section_similar') : null,
             ]),
@@ -354,11 +372,60 @@ class ReadingIntelligenceService
     {
         $minSample = (int) config('reading_intelligence.collaborative_min_sample_size');
         $minRate = (float) config('reading_intelligence.collaborative_min_positive_rate');
+
+        $categoryStat = $this->categoryCollaborativeStats($type, $categoryId);
+        if ($categoryStat === null) {
+            return null;
+        }
+
+        $sampleSize = $categoryStat['sample_size'];
+        $buyersOfThisProduct = $categoryStat['product_buyers'][$productId] ?? 0;
+        $rate = $sampleSize > 0 ? $buyersOfThisProduct / $sampleSize : 0.0;
+
+        if ($sampleSize < $minSample || $rate < $minRate) {
+            return null;
+        }
+
+        $category = ($type === 'book' ? Books::query() : Stationery::query())
+            ->whereKey($productId)
+            ->with('category')
+            ->first()
+            ?->category;
+
+        return [
+            'rate' => $rate,
+            'sample_size' => $sampleSize,
+            'cluster_label' => $this->categoryName($category, $locale) ?? '',
+        ];
+    }
+
+    /**
+     * Bitta KATEGORIYA uchun kollaborativ statistika — "shu kategoriyadan
+     * xarid qilganlar" to'plami VA har bir mahsulot bo'yicha ular orasidan
+     * necha kishi aynan o'sha mahsulotni ham olgani, bitta 2000-ta-
+     * buyurtmalik skanerlashda birgalikda hisoblanadi.
+     *
+     * MUHIM (tezlik tuzatishi): avval bu og'ir skanerlash HAR BIR
+     * MAHSULOT uchun alohida keshlangan edi (`collab:{type}:{productId}:
+     * cat:{categoryId}`), lekin ichidagi eng qimmat qism — 2000 ta
+     * buyurtmani skanerlash — aslida faqat KATEGORIYAGA bog'liq, mahsulotga
+     * emas. Natijada bitta kategoriyadagi har xil mahsulot sahifasi
+     * (masalan, "interest_match" holatida — xarid tarixi yo'q
+     * foydalanuvchilar uchun eng tez-tez ishlaydigan yo'l) ochilganda
+     * xuddi shu 2000 ta buyurtma qayta-qayta skanerlanardi — bu
+     * "moslik %" tahlilining item sahifasida kech chiqishining asosiy
+     * sababi edi. Endi kesh KATEGORIYA darajasida — bir marta (soatiga)
+     * hisoblanadi, o'sha kategoriyadagi qolgan barcha mahsulotlar uchun
+     * darhol (massiv qidiruvi, O(1)) ishlatiladi.
+     *
+     * @return array{sample_size:int, product_buyers:array<int,int>}|null
+     */
+    private function categoryCollaborativeStats(string $type, int $categoryId): ?array
+    {
         $ttl = (int) config('reading_intelligence.collaborative_cache_ttl');
+        $cacheKey = "reading-intel:collab-cat:{$type}:{$categoryId}";
 
-        $cacheKey = "reading-intel:collab:{$type}:{$productId}:cat:{$categoryId}";
-
-        $stat = Cache::remember($cacheKey, $ttl, function () use ($categoryId, $type, $productId) {
+        return Cache::remember($cacheKey, $ttl, function () use ($categoryId, $type) {
             $categoryProductIds = ($type === 'book' ? Books::query() : Stationery::query())
                 ->where('category_id', $categoryId)
                 ->pluck('id')
@@ -377,11 +444,13 @@ class ReadingIntelligenceService
                 ->get(['user_id', 'items']);
 
             $categoryBuyers = [];
-            $alsoBoughtProduct = [];
+            // product_id => [user_id => true] — kategoriya xaridorlaridan
+            // qanchasi aynan shu mahsulotni ham olgani.
+            $productBuyers = [];
 
             foreach ($orders as $order) {
                 $boughtCategory = false;
-                $boughtProduct = false;
+                $categoryProductsInOrder = [];
 
                 foreach ((array) $order->items as $item) {
                     $itemType = ($item['type'] ?? 'book') === 'stationery' ? 'stationery' : 'book';
@@ -391,16 +460,14 @@ class ReadingIntelligenceService
                     $itemId = (int) ($item['item_id'] ?? 0);
                     if (isset($categoryProductIds[$itemId])) {
                         $boughtCategory = true;
-                    }
-                    if ($itemId === $productId) {
-                        $boughtProduct = true;
+                        $categoryProductsInOrder[] = $itemId;
                     }
                 }
 
                 if ($boughtCategory) {
                     $categoryBuyers[$order->user_id] = true;
-                    if ($boughtProduct) {
-                        $alsoBoughtProduct[$order->user_id] = true;
+                    foreach ($categoryProductsInOrder as $productId) {
+                        $productBuyers[$productId][$order->user_id] = true;
                     }
                 }
             }
@@ -411,24 +478,10 @@ class ReadingIntelligenceService
             }
 
             return [
-                'rate' => count($alsoBoughtProduct) / $sampleSize,
                 'sample_size' => $sampleSize,
+                'product_buyers' => array_map('count', $productBuyers),
             ];
         });
-
-        if (! $stat || $stat['sample_size'] < $minSample || $stat['rate'] < $minRate) {
-            return null;
-        }
-
-        $category = ($type === 'book' ? Books::query() : Stationery::query())
-            ->whereKey($productId)
-            ->with('category')
-            ->first()
-            ?->category;
-
-        $stat['cluster_label'] = $this->categoryName($category, $locale) ?? '';
-
-        return $stat;
     }
 
     /**
@@ -449,11 +502,11 @@ class ReadingIntelligenceService
         return $value !== null ? (string) $value : null;
     }
 
-    private function discoveryPayload(array $collaborative, Books|Stationery $product, string $type, string $locale): array
+    private function discoveryPayload(array $collaborative, Books|Stationery $product, string $type, string $locale, ?User $user = null, ?BookReadingInsight $insight = null): array
     {
         $percent = (int) round(($collaborative['rate'] ?? 0) * 100);
         $clusterLabel = $collaborative['cluster_label'] ?? '';
-        $similar = $this->similarSection($product, $type, $locale);
+        $similar = $this->similarSection($product, $type, $locale, $user);
 
         return [
             'variant' => 'discovery',
@@ -477,7 +530,7 @@ class ReadingIntelligenceService
                         'cluster' => $clusterLabel,
                     ]),
                 ],
-                'traits' => $this->traitsSection($product, $type, $locale),
+                'traits' => $this->traitsSection($insight, $locale),
                 'similar' => $similar,
                 'similar_label' => $similar ? __('reading_intelligence.section_similar') : null,
             ]),
@@ -486,11 +539,11 @@ class ReadingIntelligenceService
 
     // ─── Holat G — yumshoq ishora ─────────────────────────────────────────
 
-    private function softHintPayload(Books|Stationery $product, ?BookReadingInsight $insight, float $score, string $locale): array
+    private function softHintPayload(Books|Stationery $product, ?BookReadingInsight $insight, float $score, string $locale, ?User $user = null): array
     {
         $hint = $insight?->localizedReviewSynthesis($locale) ?? $insight?->localizedAudienceFit($locale);
         $type = is_a($product, Books::class) ? 'book' : 'stationery';
-        $similar = $this->similarSection($product, $type, $locale);
+        $similar = $this->similarSection($product, $type, $locale, $user);
 
         return [
             'variant' => 'soft_hint',
@@ -500,7 +553,7 @@ class ReadingIntelligenceService
                 'subtitle' => __('reading_intelligence.teaser_soft_title'),
             ],
             'sheet' => array_filter([
-                'traits' => $this->traitsSection($product, $type, $locale),
+                'traits' => $this->traitsSection($insight, $locale),
                 'similar' => $similar,
                 'similar_label' => $similar ? __('reading_intelligence.section_similar') : null,
             ]),
@@ -509,7 +562,7 @@ class ReadingIntelligenceService
 
     // ─── Holat C/E — faqat universal sifat ─────────────────────────────
 
-    private function qualityPayload(Books|Stationery $product, string $type, string $locale): ?array
+    private function qualityPayload(Books|Stationery $product, string $type, string $locale, ?User $user = null, ?BookReadingInsight $insight = null): ?array
     {
         $minReviews = (int) config('reading_intelligence.min_reviews_for_quality');
         $reviewsCount = (int) ($product->ugc_reviews_count ?? 0);
@@ -528,7 +581,7 @@ class ReadingIntelligenceService
         // foydalanuvchilarga ham ko'rsatiladi (guest_cta bilan birga),
         // shuning uchun ular ham kayfiyat/qiyinlik va "kimlar uchun mos"
         // tahlilini ko'rishlari kerak, faqat "top N talikda" jumlasi emas.
-        $similar = $this->similarSection($product, $type, $locale);
+        $similar = $this->similarSection($product, $type, $locale, $user);
 
         return [
             'variant' => 'quality',
@@ -542,7 +595,7 @@ class ReadingIntelligenceService
                     'label' => __('reading_intelligence.teaser_quality_title', ['rank' => $rank]),
                     'detail' => __('reading_intelligence.bestseller_label'),
                 ],
-                'traits' => $this->traitsSection($product, $type, $locale),
+                'traits' => $this->traitsSection($insight, $locale),
                 'similar' => $similar,
                 'similar_label' => $similar ? __('reading_intelligence.section_similar') : null,
             ]),
@@ -582,10 +635,10 @@ class ReadingIntelligenceService
 
     // ─── Holat F — yangi mahsulot (faqat kontent) ──────────────────────
 
-    private function newProductPayload(Books|Stationery $product, ?BookReadingInsight $insight, string $locale): array
+    private function newProductPayload(Books|Stationery $product, ?BookReadingInsight $insight, string $locale, ?User $user = null): array
     {
         $type = is_a($product, Books::class) ? 'book' : 'stationery';
-        $similar = $this->similarSection($product, $type, $locale);
+        $similar = $this->similarSection($product, $type, $locale, $user);
 
         return [
             'variant' => 'new',
@@ -600,7 +653,7 @@ class ReadingIntelligenceService
                 'subtitle' => __('reading_intelligence.teaser_curious_subtitle'),
             ],
             'sheet' => array_filter([
-                'traits' => $this->traitsSection($product, $type, $locale),
+                'traits' => $this->traitsSection($insight, $locale),
                 'similar' => $similar,
                 'similar_label' => $similar ? __('reading_intelligence.section_similar') : null,
             ]),
@@ -609,9 +662,9 @@ class ReadingIntelligenceService
 
     // ─── Holat D1 — did salbiy: neytral fakt kartasi (BO'SH EMAS) ──────
 
-    private function neutralFactPayload(Books|Stationery $product, string $type, ?BookReadingInsight $insight, string $locale): array
+    private function neutralFactPayload(Books|Stationery $product, string $type, ?BookReadingInsight $insight, string $locale, ?User $user = null): array
     {
-        $similar = $this->similarSection($product, $type, $locale);
+        $similar = $this->similarSection($product, $type, $locale, $user);
 
         return [
             'variant' => 'neutral_fact',
@@ -624,7 +677,7 @@ class ReadingIntelligenceService
                 'subtitle' => __('reading_intelligence.teaser_curious_subtitle'),
             ],
             'sheet' => array_filter([
-                'traits' => $this->traitsSection($product, $type, $locale),
+                'traits' => $this->traitsSection($insight, $locale),
                 'similar' => $similar,
                 'similar_label' => $similar ? __('reading_intelligence.section_similar') : null,
             ]),
@@ -633,7 +686,7 @@ class ReadingIntelligenceService
 
     // ─── Holat D2 — allaqachon sotib olingan ────────────────────────────
 
-    private function reminderPayload(\Illuminate\Support\Carbon $purchasedAt, Books|Stationery $product, string $type, string $locale): array
+    private function reminderPayload(\Illuminate\Support\Carbon $purchasedAt, Books|Stationery $product, string $type, string $locale, ?BookReadingInsight $insight = null): array
     {
         // MUHIM: reminder ham endi 'traits' bilan boyitilgan — foydalanuvchi
         // buni yolg'iz, "quruq" eslatma sifatida ko'rmasligi kerak, balki
@@ -656,16 +709,23 @@ class ReadingIntelligenceService
                         'date' => $purchasedAt->translatedFormat('d.m.Y'),
                     ]),
                 ],
-                'traits' => $this->traitsSection($product, $type, $locale),
+                'traits' => $this->traitsSection($insight, $locale),
             ]),
         ];
     }
 
     // ─── Umumiy bo'limlar ────────────────────────────────────────────────
 
-    private function traitsSection(Books|Stationery $product, string $type, string $locale): ?array
+    /**
+     * MUHIM (tezlik): bu metod avval `$insight`ni o'zi qayta so'rar edi
+     * (`insightGenerator->get()`), garchi u ALLAQACHON `forProduct()`
+     * boshida bir marta olingan bo'lsa ham — har bir sheet yig'ilishida
+     * qo'shimcha (keraksiz) kesh so'rovi degani edi. Endi tayyor
+     * `$insight` to'g'ridan-to'g'ri parametr sifatida uzatiladi — qayta
+     * so'rov yo'q.
+     */
+    private function traitsSection(?BookReadingInsight $insight, string $locale): ?array
     {
-        $insight = $this->insightGenerator->get($type, $product->id);
         if (! $insight) {
             return null;
         }
@@ -686,32 +746,105 @@ class ReadingIntelligenceService
         ]);
     }
 
-    private function similarSection(Books|Stationery $product, string $type, string $locale): ?array
+    /**
+     * "Sizga yana yoqishi mumkin" bo'limi — UCH bosqichli zaxira zanjiri,
+     * shu orqali bu bo'lim deyarli hech qachon "o'xshash mahsulot yo'q"
+     * deb bo'sh qolmaydi (maksimal darajada sotishga xizmat qiladi):
+     *   1. Joriy mahsulotga VEKTOR bo'yicha eng o'xshashlar — eng aniq
+     *      signal, mavjud bo'lsa shu ishlatiladi.
+     *   2. (1) bo'sh bo'lsa VA foydalanuvchi ro'yxatdan o'tgan bo'lsa —
+     *      uning eng ko'p XARID QILGAN toifasidan eng ko'p sotilganlar
+     *      ("avval sotib olganlaringizga o'xshash" — har bir xarid uchun
+     *      alohida qimmat vektor qidiruvi o'rniga, bitta kategoriya
+     *      bo'yicha bitta oddiy so'rov — soddaroq, lekin ishonchli).
+     *   3. Hali ham bo'sh bo'lsa — mahsulot toifasidagi (yoki umuman)
+     *      ENG KO'P SOTILGAN mahsulotlar (oxirgi zaxira, doim biror
+     *      natija beradi).
+     */
+    private function similarSection(Books|Stationery $product, string $type, string $locale, ?User $user = null): ?array
     {
-        if (! is_array($product->vectorData) || empty($product->vectorData)) {
-            return null;
+        $results = $this->vectorSimilar($product, $type);
+
+        if ($results->isEmpty() && $user) {
+            $results = $this->purchaseBasedSimilar($user, $type, (int) $product->id);
         }
 
-        // MUHIM: front-end endi "similar" ro'yxatini gorizontal skroll
-        // qatorida ko'rsatadi (qattiq 2-3 ta bilan cheklangan grid emas),
-        // shuning uchun bu yerda ham chegarani kengaytiramiz — nechta
-        // o'xshash mahsulot bo'lsa, shunchasi (6 tagacha) qaytariladi.
-        $results = $this->vectorSearch
-            ->searchByVector($product->vectorData, $type, limit: 8, minScore: 0.5, inStockOnly: true)
-            ->filter(fn ($item) => (int) $item->id !== (int) $product->id)
-            ->take(6);
+        if ($results->isEmpty()) {
+            $results = $this->bestSellingSimilar($product, $type);
+        }
 
         if ($results->isEmpty()) {
             return null;
         }
 
-        return $results->map(fn ($item) => [
-            'id' => $item->id,
-            'name' => $item->name,
-            'score' => __('reading_intelligence.similar_score', [
-                'percent' => (int) round(($item->_similarity ?? 0) * 100),
-            ]),
-        ])->values()->all();
+        // MUHIM: front-end "similar" ro'yxatini gorizontal skroll qatorida
+        // ko'rsatadi (qattiq 2-3 ta bilan cheklangan grid emas), shuning
+        // uchun bu yerda ham 6 tagacha qaytariladi. Vektor natijalari
+        // `_similarity` (0-1) bilan keladi — "X% o'xshash" matni; xarid-
+        // asosidagi/eng-ko'p-sotilgan natijalarda bu yo'q, ular uchun
+        // "eng ko'p sotilganlardan" yorlig'i ishlatiladi.
+        return $results->take(6)->map(function ($item) {
+            $similarity = $item->_similarity ?? null;
+
+            return [
+                'id' => $item->id,
+                'name' => $item->name,
+                'score' => $similarity !== null
+                    ? __('reading_intelligence.similar_score', ['percent' => (int) round($similarity * 100)])
+                    : __('reading_intelligence.bestseller_label'),
+            ];
+        })->values()->all();
+    }
+
+    private function vectorSimilar(Books|Stationery $product, string $type): \Illuminate\Support\Collection
+    {
+        if (! is_array($product->vectorData) || empty($product->vectorData)) {
+            return collect();
+        }
+
+        return $this->vectorSearch
+            ->searchByVector($product->vectorData, $type, limit: 8, minScore: 0.5, inStockOnly: true)
+            ->filter(fn ($item) => (int) $item->id !== (int) $product->id)
+            ->take(6);
+    }
+
+    /**
+     * Foydalanuvchi eng ko'p xarid qilgan kategoriyadan, u ALLAQACHON
+     * sotib olmagan, eng ko'p sotilgan mahsulotlar.
+     */
+    private function purchaseBasedSimilar(User $user, string $type, int $excludeId): \Illuminate\Support\Collection
+    {
+        $categoryId = $this->tasteProfile->dominantCategoryId($user->id, $type);
+        if (! $categoryId) {
+            return collect();
+        }
+
+        $query = $type === 'book' ? Books::query() : Stationery::query();
+
+        return $query
+            ->activeForVector()
+            ->where('category_id', $categoryId)
+            ->where('id', '!=', $excludeId)
+            ->orderByDesc('totalSales')
+            ->limit(6)
+            ->get();
+    }
+
+    /**
+     * Oxirgi zaxira — mahsulot toifasidagi (topilmasa, umuman) eng ko'p
+     * sotilganlar. Karta HECH QACHON "o'xshash mahsulot yo'q" deb bo'sh
+     * qolmasligi uchun.
+     */
+    private function bestSellingSimilar(Books|Stationery $product, string $type): \Illuminate\Support\Collection
+    {
+        $query = $type === 'book' ? Books::query() : Stationery::query();
+        $query->activeForVector()->where('id', '!=', $product->id);
+
+        if ($product->category_id) {
+            $query->where('category_id', $product->category_id);
+        }
+
+        return $query->orderByDesc('totalSales')->limit(6)->get();
     }
 
     private function difficultySummary(Books|Stationery $product, ?BookReadingInsight $insight, string $locale): ?string

@@ -427,6 +427,28 @@ class UserTasteProfileService
     }
 
     /**
+     * Foydalanuvchi allaqachon sotib olgan mahsulot idlari (bitta turdan) —
+     * push-tavsiya (`RecommendBooksPush`) kabi joylarda, tavsiya qilinayotgan
+     * mahsulot ro'yxatidan allaqachon sotib olinganlarni chiqarib tashlash
+     * uchun. Mavjud (keshlangan) `purchaseIndex()` dan qayta foydalanadi —
+     * yangi so'rov qo'shmaydi.
+     *
+     * @return array<int, int>
+     */
+    public function purchasedProductIds(int $userId, string $type): array
+    {
+        $ids = [];
+        foreach ($this->purchaseIndex($userId) as $key => $timestamp) {
+            [$itemType, $itemId] = explode(':', $key, 2);
+            if ($itemType === $type) {
+                $ids[] = (int) $itemId;
+            }
+        }
+
+        return $ids;
+    }
+
+    /**
      * Foydalanuvchida kamida bitta TO'LANGAN va yetkazilgan (`completed_at`
      * bor) buyurtma bormi — sovuq-start (hali xarid tarixi yo'q)
      * foydalanuvchilarni aniqlash uchun. Bitta yengil `exists()` so'rovi,

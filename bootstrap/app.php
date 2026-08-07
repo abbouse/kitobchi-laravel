@@ -76,6 +76,15 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('users:book-remind')
             ->weeklyOn(6, '12:00')->timezone($tz);
 
+        // ── Avvalgi xaridlarga o'xshash / eng ko'p sotilgan kitob tavsiyasi
+        // — haftada 2 marta, boshqa push'lar bilan kunlar/soatlar mos
+        // kelmasligi uchun chorshanba va yakshanba, boshqa vaqtda ─────────
+        $schedule->command('users:recommend-books')
+            ->weeklyOn(3, '11:00')->timezone($tz);
+
+        $schedule->command('users:recommend-books')
+            ->weeklyOn(0, '16:00')->timezone($tz);
+
         $schedule->command('backup:clean')
             ->dailyAt('01:15')->timezone($tz);
 
@@ -143,7 +152,12 @@ return Application::configure(basePath: dirname(__DIR__))
         // shuning uchun har daqiqada chaqirish item-darajasidagi RPM
         // pauzasini BUZMAYDI — faqat navbatdagi yurish darhol boshlanadi va
         // bo'sh turish vaqti yo'qoladi (backfill ~20-30 barobar tezlashadi).
-        $schedule->command('reading-intelligence:generate-insights --type=all --limit=15')
+        // MUHIM: faqat 'book' — kanselyariya (stationery) uchun Reading
+        // Intelligence kartasi endi umuman ko'rsatilmaydi (qiyinlik/
+        // kayfiyat kabi tushunchalar unga mos emas), shuning uchun uni
+        // AI orqali generatsiya qilishning ham hojati yo'q — behuda
+        // OpenAI xarajatini oldini oladi.
+        $schedule->command('reading-intelligence:generate-insights --type=book --limit=15')
             ->everyMinute()
             ->timezone($tz)
             ->withoutOverlapping(5)
