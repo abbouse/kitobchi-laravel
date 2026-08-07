@@ -132,10 +132,21 @@ return Application::configure(basePath: dirname(__DIR__))
         // mahsulot tahlilini FON JARAYONIDA generatsiya qiladi. Item
         // sahifasi so'rovlari hech qachon AI kutib turmaydi — bu buyruq
         // ishlamasa ham hech narsa buzilmaydi, faqat kontent kechroq keladi.
+        //
+        // MUHIM — nega har daqiqada: bitta yurishda (15 kitob + 15
+        // kansteller) OpenAI'ga item boshiga `generation_delay_ms` (standart
+        // 2000ms) pauza bilan so'rov ketadi — bu OpenAI RPM limitini
+        // himoya qiladigan yagona joy. Avval bu buyruq har 30 daqiqada bir
+        // marta ishga tushar edi, lekin bitta yurish atigi ~1-2 daqiqa
+        // davom etadi — qolgan ~28 daqiqa ishchi shunchaki bo'sh turardi.
+        // `withoutOverlapping` bir vaqtda faqat bitta yurishga yo'l qo'yadi,
+        // shuning uchun har daqiqada chaqirish item-darajasidagi RPM
+        // pauzasini BUZMAYDI — faqat navbatdagi yurish darhol boshlanadi va
+        // bo'sh turish vaqti yo'qoladi (backfill ~20-30 barobar tezlashadi).
         $schedule->command('reading-intelligence:generate-insights --type=all --limit=15')
-            ->everyThirtyMinutes()
+            ->everyMinute()
             ->timezone($tz)
-            ->withoutOverlapping(29)
+            ->withoutOverlapping(5)
             ->runInBackground();
 
         // Faqat yangi/o'zgargan kontent batch tekshiriladi; limitlar server va

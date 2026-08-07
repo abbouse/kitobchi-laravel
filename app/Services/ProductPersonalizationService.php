@@ -10,6 +10,7 @@ use App\Models\Stationery;
 use App\Models\StationeryCategory;
 use App\Models\User;
 use App\Models\UserInterestProfile;
+use App\Models\UserInterestSelection;
 use App\Traits\HasProductVisibility;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -25,13 +26,24 @@ class ProductPersonalizationService
         $limit = max(1, min($limit, 40));
         $context = $this->viewContext($request);
 
-        if ($context->isEmpty()) {
-            return collect();
+        // MUHIM: avval bu yerda ko'rish tarixi (`ProductViewLog`) bo'lmasa
+        // funksiya darhol BO'SH natija bilan to'xtardi — ya'ni onboarding
+        // qadamida "Sizga nima yoqadi?" bo'limida kategoriya tanlagan,
+        // lekin hali biror mahsulotni ko'rmagan (sovuq-start) foydalanuvchi
+        // uchun tavsiyalar HECH QACHON chiqmasdi, garchi u aniq qiziqish
+        // bildirgan bo'lsa ham. Endi ko'rish tarixi bo'lmasa ham davom
+        // etamiz — tanlangan qiziqishlar (`user_interest_selections`)
+        // pastda alohida signal sifatida qo'shiladi.
+        $signals = $context->isEmpty() ? $this->emptySignals() : $this->signalsFromViews($context);
+
+        $interestWeights = $this->interestCategoryWeights($request);
+        foreach ($interestWeights as $categoryId => $weight) {
+            $signals['book_category_weights'][$categoryId] =
+                ($signals['book_category_weights'][$categoryId] ?? 0) + $weight;
         }
 
-        $signals = $this->signalsFromViews($context);
-
-        if ($signals['viewed_book_ids'] === [] && $signals['viewed_stationery_ids'] === []) {
+        $hasViewSignal = $signals['viewed_book_ids'] !== [] || $signals['viewed_stationery_ids'] !== [];
+        if (! $hasViewSignal && $interestWeights === []) {
             return collect();
         }
 
@@ -182,6 +194,46 @@ class ProductPersonalizationService
         }
 
         return $query->get(['product_type', 'product_id', 'created_at']);
+    }
+
+    // MUHIM: `signalsFromViews()` bilan bir xil shakl (kalitlar) — faqat
+    // ko'rish tarixi umuman bo'lmagan (yangi/sovuq-start) foydalanuvchi
+    // uchun boshlang'ich nol signal.
+    private function emptySignals(): array
+    {
+        return [
+            'viewed_book_ids' => [],
+            'viewed_stationery_ids' => [],
+            'book_category_weights' => [],
+            'stationery_category_weights' => [],
+            'author_id_weights' => [],
+            'author_name_weights' => [],
+            'seller_weights' => [],
+        ];
+    }
+
+    // Onboarding'dagi "Sizga nima yoqadi?" qadamida foydalanuvchi
+    // BEVOSITA tanlagan kitob kategoriyalari (`user_interest_selections`)
+    // — ko'rish tarixidan mustaqil, aniq bildirilgan qiziqish signali.
+    // Faqat tizimga kirgan foydalanuvchilar uchun (mehmon/guest'da bu
+    // jadvalda yozuv bo'lmaydi). `weightedCounts()` bilan bir xil
+    // (string kalitli) formatda qaytaradi, shu bilan `book_category_weights`
+    // massiviga to'g'ridan-to'g'ri qo'shsa bo'ladi.
+    private function interestCategoryWeights(Request $request): array
+    {
+        $user = $this->requestUser($request);
+
+        if (! $user || ! Schema::hasTable('user_interest_selections')) {
+            return [];
+        }
+
+        return UserInterestSelection::query()
+            ->where('user_id', $user->id)
+            ->pluck('category_id')
+            ->filter()
+            ->map(fn ($id) => (string) $id)
+            ->countBy()
+            ->all();
     }
 
     private function signalsFromViews(Collection $views): array

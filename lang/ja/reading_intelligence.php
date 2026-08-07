@@ -3,6 +3,9 @@
 return [
     'teaser_match_title'      => 'あなたに:percent%マッチ',
     'teaser_match_subtitle'   => '理由を見る',
+    'teaser_interest_match_title'    => 'あなたの興味に:percent%マッチ',
+    'teaser_interest_match_subtitle' => ':clusterを選択しました',
+    'teaser_interest_match_subtitle_collab' => ':cluster購入者にも人気',
     'teaser_discovery_title'  => 'あなたにとって新しいジャンル',
     'teaser_discovery_subtitle' => ':clusterファンの:percent%が高評価',
     'teaser_quality_title'    => 'このカテゴリでトップ:rank',
@@ -14,6 +17,7 @@ return [
     'teaser_generic_subtitle' => '詳細を見る',
 
     'section_match'     => 'あなたとの相性',
+    'section_interest_match' => 'あなたの興味との相性',
     'section_difficulty' => '難易度',
     'section_mood'      => '雰囲気',
     'section_audience'  => 'おすすめの読者',
@@ -38,6 +42,9 @@ return [
     'bestseller_label' => 'ベストセラーの一つ',
     'pages_count' => ':countページ',
     'sheet_empty_placeholder' => 'この商品の詳しい分析はまもなく表示されます。',
+
+    'interest_match_reason' => '登録時に":cluster"を選択されました。これに基づいておすすめしています。',
+    'interest_match_reason_collab' => ':clusterを選択されました。この商品はこのカテゴリの購入者にも人気があります。',
 
     'guest_cta_label' => 'あなたにどれだけ合うか知りたいですか？',
     'guest_cta_detail' => 'ログインすると、購入履歴や好みに基づいたおすすめを表示します。',

@@ -427,13 +427,38 @@ class UserTasteProfileService
     }
 
     /**
+     * Foydalanuvchida kamida bitta TO'LANGAN va yetkazilgan (`completed_at`
+     * bor) buyurtma bormi — sovuq-start (hali xarid tarixi yo'q)
+     * foydalanuvchilarni aniqlash uchun. Bitta yengil `exists()` so'rovi,
+     * qisqa (5 daqiqa) keshlangan — item sahifasi ochilganda tez-tez
+     * chaqirilishi mumkin, shuning uchun har safar to'liq tarix skanerlash
+     * shart emas.
+     */
+    public function hasAnyPurchases(int $userId): bool
+    {
+        $cacheKey = "reading-intel:has-purchases:{$userId}";
+
+        return Cache::remember($cacheKey, 300, function () use ($userId) {
+            return Sold::query()
+                ->where('user_id', $userId)
+                ->whereNotNull('completed_at')
+                ->exists();
+        });
+    }
+
+    /**
      * Foydalanuvchi onboarding'da tanlagan kategoriya idlari — 1 soatga
      * keshlangan (`UserController::saveInterests()` saqlaganda darhol
      * tozalaydi, shuning uchun kutish shart emas).
      *
+     * MUHIM: bu metod ATAYLAB public — `ReadingIntelligenceService` sotib
+     * olish tarixi yo'q foydalanuvchilar uchun onboarding qiziqishlarini
+     * to'g'ridan-to'g'ri (vektor orqali emas) solishtirish uchun ham
+     * ishlatadi (`interestMatchPayload`).
+     *
      * @return array<int, int>
      */
-    private function selectedInterestCategoryIds(int $userId): array
+    public function selectedInterestCategoryIds(int $userId): array
     {
         $cacheKey = "reading-intel:interests:{$userId}";
 

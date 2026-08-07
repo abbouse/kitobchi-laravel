@@ -66,6 +66,26 @@ class ReadingIntelligenceService
             return $this->neutralFactPayload($product, $type, $insight, $locale);
         }
 
+        // ── YANGI — sotib olish tarixi YO'Q mijoz: onboarding qiziqish +
+        // kollaborativ signal ────────────────────────────────────────────
+        // MUHIM: bu tekshiruv ATAYLAB S1 (vektor did moslik)dan OLDIN, lekin
+        // FAQAT hech qanday xarid tarixi bo'lmagan foydalanuvchilar uchun
+        // ishlaydi ("agar mijozda sotib olishlar bo'lmasa"). Xarid tarixi
+        // bor foydalanuvchilar uchun S1'ning to'liq (xarid+savat+sevimli+
+        // qiziqish) vaznli vektori ancha ishonchli, shuning uchun ularga
+        // tegilmaymiz. Sotib olmagan mijoz uchun esa vektor asosidagi moslik
+        // ko'pincha yetarlicha kuchli bo'lmaydi (faqat past vaznli — 0.25 —
+        // qiziqish markazidan qurilgani uchun), shu bois bu yerda ANIQROQ va
+        // TUSHUNARLIROQ (izohlanadigan) signal — "siz shu yo'nalishni
+        // tanlagansiz" + "boshqa xaridorlar orasida bu mahsulot mashhur" —
+        // ishlatiladi.
+        if ($user && $categoryId && ! $this->tasteProfile->hasAnyPurchases($user->id)) {
+            $interestMatch = $this->interestMatchPayload($user, $product, $type, $categoryId, $locale);
+            if ($interestMatch !== null) {
+                return $interestMatch;
+            }
+        }
+
         // ── S1: did moslik ───────────────────────────────────────────────
         if ($user && is_array($product->vectorData) && ! empty($product->vectorData)) {
             $tasteVector = $this->tasteProfile->tasteVector($user->id, $type, $id);
@@ -213,6 +233,88 @@ class ReadingIntelligenceService
         $reason = $result['reason'] ?? null;
 
         return (is_string($reason) && trim($reason) !== '') ? trim($reason) : null;
+    }
+
+    // ─── YANGI — sotib olish tarixi yo'q: qiziqish + kollaborativ ───────
+
+    /**
+     * Sotib olish tarixi yo'q mijoz uchun: onboarding'da tanlangan
+     * qiziqish (mahsulot kategoriyasi shu ro'yxatda bormi) + mavjud bo'lsa
+     * kollaborativ signal (`collaborativeAffinity` — shu kategoriyada
+     * xarid qilganlarning necha foizi aynan shu mahsulotni ham olgan)
+     * birlashtirilib, bitta izohlanadigan N% moslik hisoblanadi.
+     *
+     * Mahsulot kategoriyasi foydalanuvchi tanlagan qiziqishlar ro'yxatida
+     * bo'lmasa — null qaytadi, zanjir S1/S2/S3/S4 ga davom etadi (karta
+     * hech qachon bo'sh qolmaydi, faqat kamroq shaxsiylashtirilgan holatga
+     * tushadi).
+     */
+    private function interestMatchPayload(User $user, Books|Stationery $product, string $type, int $categoryId, string $locale): ?array
+    {
+        $interestIds = $this->tasteProfile->selectedInterestCategoryIds($user->id);
+        if (! in_array($categoryId, $interestIds, true)) {
+            return null;
+        }
+
+        // Komponent 1 — qiziqish mosligi: foydalanuvchi ushbu kategoriyani
+        // o'zi, qo'lda tanlagan — shuning uchun bazaviy ishonch darajasi
+        // o'rtacha-yuqori (62%), lekin hali "kuchli" (S1 strong) darajasida
+        // emas, chunki bu haqiqiy xatti-harakat emas, e'lon qilingan istak.
+        $interestComponent = 62.0;
+
+        // Komponent 2 — kollaborativ signal (mavjud bo'lsa): shu
+        // kategoriyada xarid qilganlarning necha foizi aynan shu
+        // mahsulotni ham olgan (mavjud `collaborativeAffinity` qayta
+        // ishlatiladi — u foydalanuvchining O'ZI xarid qilganiga bog'liq
+        // emas, faqat mahsulot+kategoriya darajasida ishlaydi).
+        $collaborative = $this->collaborativeAffinity($user->id, $categoryId, $type, $product->id, $locale);
+
+        $hasCollaborative = $collaborative !== null;
+        $percent = $interestComponent;
+
+        if ($hasCollaborative) {
+            $collabPercent = min(100.0, ($collaborative['rate'] ?? 0) * 100);
+            // Ikkala komponent teng vaznda aralashtiriladi — sof
+            // e'lon qilingan istak (qiziqish) va real ijtimoiy dalil
+            // (boshqalar xaridi) bir xil darajada hisobga olinadi.
+            $percent = ($interestComponent * 0.45) + ($collabPercent * 0.55);
+        }
+
+        // 50-96% oralig'ida — hech qachon "100% mos" kabi aldamchi da'vo
+        // qilinmaydi (bu haqiqiy xarid tarixiga asoslanmagan taxmin),
+        // lekin 50% dan past ham ko'rsatilmaydi (unda umuman ko'rsatmaslik
+        // ma'noliroq — shu holatda zanjir S2/S3/S4'ga tushadi).
+        $percent = (int) round(min(96, max(50, $percent)));
+
+        $clusterLabel = $this->categoryName($product->category, $locale) ?? '';
+
+        $reasonKey = $hasCollaborative
+            ? 'reading_intelligence.interest_match_reason_collab'
+            : 'reading_intelligence.interest_match_reason';
+        $subtitleKey = $hasCollaborative
+            ? 'reading_intelligence.teaser_interest_match_subtitle_collab'
+            : 'reading_intelligence.teaser_interest_match_subtitle';
+
+        $similar = $this->similarSection($product, $type, $locale);
+
+        return [
+            'variant' => 'interest_match',
+            'teaser' => [
+                'icon' => 'heart',
+                'title' => __('reading_intelligence.teaser_interest_match_title', ['percent' => $percent]),
+                'subtitle' => __($subtitleKey, ['cluster' => $clusterLabel]),
+            ],
+            'sheet' => array_filter([
+                'interest_match' => [
+                    'label' => __('reading_intelligence.section_interest_match'),
+                    'percent' => $percent,
+                    'reason' => __($reasonKey, ['cluster' => $clusterLabel]),
+                ],
+                'traits' => $this->traitsSection($product, $type, $locale),
+                'similar' => $similar,
+                'similar_label' => $similar ? __('reading_intelligence.section_similar') : null,
+            ]),
+        ];
     }
 
     // ─── Holat B — boshqa janr, kashfiyot (kollaborativ) ────────────────

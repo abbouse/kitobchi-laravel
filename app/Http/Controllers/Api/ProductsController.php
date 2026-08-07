@@ -912,50 +912,115 @@ class ProductsController extends Controller
             $categoryIds = $this->bookScope()
                 ->whereNotNull('category_id')
                 ->distinct()
-                ->pluck('category_id');
+                ->pluck('category_id')
+                ->all();
 
-            $result = [];
+            if (empty($categoryIds)) {
+                return response()->json(['status' => 'success', 'type' => $type, 'data' => []]);
+            }
 
-            foreach ($categoryIds as $catId) {
-                $baseQuery = $this->bookScope()
-                    ->where('category_id', $catId)
-                    ->with(['seller', 'category', 'tags']);
+            // MUHIM — nega bitta (yoki bir nechta FIQAT) so'rov: ilgari har
+            // bir kategoriya uchun alohida foreach ichida 1-3 ta so'rov
+            // yuborilardi (N kategoriya => 2N-3N alohida DB round-trip, har
+            // biri seller/stock uchun correlated subquery bilan). Kategoriya
+            // soni ko'paygani sayin "hammasini ko'rish" sahifasi sekinlashib,
+            // oxir-oqibat timeout bera boshladi. Endi har bosqich uchun
+            // BARCHA kategoriyalar bitta `whereIn` so'rovda olinadi va
+            // natija PHP tomonida category_id bo'yicha guruhlanadi — DB
+            // so'rovlari soni kategoriya soniga bog'liq bo'lmay qoladi.
+            $perCategory = 10;
+            $safetyCap = max(1000, count($categoryIds) * 40);
 
-                if ($type === 'recommended') {
-                    // 1. Recommended bo'lganlarni olishga urinib ko'ramiz
-                    $books = $this->isRecommended(clone $baseQuery)
-                        ->orderByDesc('totalSalesWeek')
-                        ->orderByDesc('totalSales')
-                        ->limit(10)
-                        ->get();
+            $grouped = [];
 
-                    // 2. Kam bo'lsa (< 3) — haftalik sotuvga qarab to'ldiramiz
-                    if ($books->count() < 3) {
-                        $existIds = $books->pluck('id')->toArray();
-                        $fill = (clone $baseQuery)
-                            ->whereNotIn('id', $existIds)
-                            ->orderByDesc('totalSalesWeek')
-                            ->orderByDesc('totalSales')
-                            ->limit(10 - $books->count())
-                            ->get();
-                        $books = $books->merge($fill);
-                    }
+            if ($type === 'recommended') {
+                // 1. Recommended bo'lganlarni olishga urinib ko'ramiz
+                //    (bu flag admin tomonidan qo'lda belgilanadi — odatda
+                //    kam sonli, shuning uchun limitsiz olinadi)
+                $recommended = $this->isRecommended(
+                    $this->bookScope()
+                        ->whereIn('category_id', $categoryIds)
+                        ->with(['seller', 'category', 'tags'])
+                )
+                    ->orderBy('category_id')
+                    ->orderByDesc('totalSalesWeek')
+                    ->orderByDesc('totalSales')
+                    ->get()
+                    ->groupBy('category_id');
 
-                    // 3. Hali ham bo'sh — yangi kitoblar
-                    if ($books->isEmpty()) {
-                        $books = (clone $baseQuery)
-                            ->orderByDesc('created_at')
-                            ->limit(10)
-                            ->get();
-                    }
-                } else {
-                    // type=new — yangi kitoblar
-                    $books = (clone $baseQuery)
-                        ->orderByDesc('created_at')
-                        ->limit(10)
-                        ->get();
+                foreach ($recommended as $catId => $books) {
+                    $grouped[$catId] = $books->take($perCategory)->values();
                 }
 
+                // 2. Kam bo'lgan (< 3) kategoriyalarni haftalik sotuvga
+                //    qarab bitta qo'shimcha so'rovda to'ldiramiz
+                $needFill = [];
+                foreach ($categoryIds as $catId) {
+                    $have = $grouped[$catId] ?? collect();
+                    if ($have->count() < 3) {
+                        $needFill[$catId] = $have;
+                    }
+                }
+
+                if (!empty($needFill)) {
+                    $existIds = collect($needFill)->flatMap(fn($c) => $c->pluck('id'))->all();
+
+                    $fill = $this->bookScope()
+                        ->whereIn('category_id', array_keys($needFill))
+                        ->whereNotIn('id', $existIds ?: [0])
+                        ->with(['seller', 'category', 'tags'])
+                        ->orderBy('category_id')
+                        ->orderByDesc('totalSalesWeek')
+                        ->orderByDesc('totalSales')
+                        ->limit($safetyCap)
+                        ->get()
+                        ->groupBy('category_id');
+
+                    foreach ($needFill as $catId => $have) {
+                        $extra = ($fill[$catId] ?? collect())->take($perCategory - $have->count());
+                        $grouped[$catId] = $have->concat($extra)->values();
+                    }
+                }
+
+                // 3. Hali ham bo'sh qolgan kategoriyalar — yangi kitoblar
+                $stillEmpty = array_values(array_filter(
+                    $categoryIds,
+                    fn($catId) => empty($grouped[$catId] ?? null)
+                ));
+
+                if (!empty($stillEmpty)) {
+                    $newFill = $this->bookScope()
+                        ->whereIn('category_id', $stillEmpty)
+                        ->with(['seller', 'category', 'tags'])
+                        ->orderBy('category_id')
+                        ->orderByDesc('created_at')
+                        ->limit($safetyCap)
+                        ->get()
+                        ->groupBy('category_id');
+
+                    foreach ($stillEmpty as $catId) {
+                        $grouped[$catId] = ($newFill[$catId] ?? collect())->take($perCategory)->values();
+                    }
+                }
+            } else {
+                // type=new — yangi kitoblar, barcha kategoriyalar uchun
+                // bitta so'rovda
+                $newBooks = $this->bookScope()
+                    ->whereIn('category_id', $categoryIds)
+                    ->with(['seller', 'category', 'tags'])
+                    ->orderBy('category_id')
+                    ->orderByDesc('created_at')
+                    ->limit($safetyCap)
+                    ->get()
+                    ->groupBy('category_id');
+
+                foreach ($newBooks as $catId => $books) {
+                    $grouped[$catId] = $books->take($perCategory)->values();
+                }
+            }
+
+            $result = [];
+            foreach ($grouped as $catId => $books) {
                 if ($books->isEmpty()) continue;
 
                 $category = $books->first()->category;
