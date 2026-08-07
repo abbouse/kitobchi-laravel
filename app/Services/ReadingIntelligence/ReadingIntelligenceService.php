@@ -741,8 +741,12 @@ class ReadingIntelligenceService
                 ? __('reading_intelligence.difficulty_' . $insight->difficulty)
                 : null,
             'mood' => $moodLabels ?: null,
+            // MUHIM: 'audience_avoid' ("kimlar uchun mos emas") ATAYLAB
+            // olib tashlandi — salbiy/qo'rqituvchi ohang bergani uchun.
+            // 'audience_fit' endi o'zi chuqurroq (2-3 gapli) tahlil bo'lib,
+            // nega mos kelishini yoritadi (qarang: `ReadingInsightGenerator`
+            // dagi yangi prompt).
             'audience_fit' => $insight->localizedAudienceFit($locale),
-            'audience_avoid' => $insight->localizedAudienceAvoid($locale),
         ]);
     }
 

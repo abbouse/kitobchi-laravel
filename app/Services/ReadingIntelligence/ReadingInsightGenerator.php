@@ -161,8 +161,13 @@ class ReadingInsightGenerator
         ];
 
         // Fingerprint — vector_text_hash bilan bir xil naqsh: shu matn
-        // o'zgarmasa qayta AI chaqirilmaydi.
-        $fingerprint = json_encode($facts) . '|reviews:' . implode('|', $reviewExcerpts);
+        // o'zgarmasa qayta AI chaqirilmaydi. `schema:v2` qismi ATAYLAB
+        // qo'shildi — prompt/sxema o'zgarganda (masalan, 'audience_avoid'
+        // olib tashlanib, 'audience_fit' kengaytirilganda) BARCHA mavjud
+        // yozuvlarning hash'i eskirgan hisoblanishi uchun, garchi
+        // mahsulotning o'zi o'zgarmagan bo'lsa ham. Kelajakda promptni
+        // yana o'zgartirsangiz, shu belgini oshiring (v3, v4...).
+        $fingerprint = json_encode($facts) . '|reviews:' . implode('|', $reviewExcerpts) . '|schema:v2';
 
         return [
             'facts' => array_filter($facts, fn ($v) => $v !== null && $v !== ''),
@@ -173,6 +178,9 @@ class ReadingInsightGenerator
 
     /**
      * @return array{difficulty:string,mood_tags:array,audience_fit:array,audience_avoid:array,review_synthesis:array}|null
+     *
+     * (audience_avoid — endi doim bo'sh massiv, saqlab qolingan garchi
+     * DB ustuni hali mavjud bo'lsa ham. Qarang: validate() dagi izoh.)
      */
     private function generate(array $context): ?array
     {
@@ -189,17 +197,31 @@ class ReadingInsightGenerator
         $moodList = implode(', ', self::MOOD_TAGS);
 
         $system = <<<EOT
-Sen kitob/mahsulot bo'yicha xolis va aniq tahlilchisan. Vazifang — quyida
+Sen kitob bo'yicha xolis va chuqur tahlilchisan. Vazifang — quyida
 berilgan MA'LUMOTLAR asosida (hech narsani o'ylab topmasdan) foydalanuvchiga
-"bu menga mosmi?" savoliga tez javob beradigan qisqa tahlil tayyorlash.
+"bu menga mosmi?" savoliga ISHONARLI javob beradigan tahlil tayyorlash.
 
 QATTIQ QOIDALAR:
 1. "difficulty" faqat shu qiymatlardan biri bo'lishi kerak: {$difficultyList}
 2. "mood_tags" faqat shu ro'yxatdan 1-3 ta kalit bo'lishi kerak: {$moodList}
    (boshqa so'z ishlatma, faqat shu inglizcha kalitlar)
-3. "audience_fit" va "audience_avoid" — HAR BIR TIL uchun ({$localeList})
-   alohida, juda qisqa (5-10 so'z) va KONKRET jumla. Umumiy ("qiziqarli
-   kitob" kabi) emas — nima uchun mos/mos emasligini aniq ayt.
+3. "audience_fit" — HAR BIR TIL uchun ({$localeList}) alohida, 2-3 gapli
+   (taxminan 25-45 so'z) HAQIQIY TAHLIL — nega aynan shu kitob o'quvchiga
+   mos kelishi mumkinligini chuqurroq tushuntiradi. HECH QANDAY salbiy/
+   qo'rqituvchi "kimlar uchun mos emas" qismi YO'Q — faqat ijobiy,
+   ishontiruvchi ohangda.
+   ENG MUHIM QOIDA — TAKRORLAMASLIK: yuqoridagi "tavsif" maydoni — bu
+   DO'KON tomonidan yozilgan mahsulot tavsifi (syujet/mavzu haqida). Sen
+   YOZAYOTGAN "audience_fit" USHBU TAVSIFNI TAKRORLAMASLIGI yoki qayta
+   ifodalamasligi SHART — bu boshqa, chuqurroq burchak bo'lishi kerak:
+   masalan, kitobning KAYFIYATI/USLUBI kimga yoqishi mumkinligi, qanday
+   holat/kayfiyatda o'qish yaxshi ta'sir qilishi, qaysi o'quvchi TIPIGA
+   (masalan "tez syujetli voqealarni yoqtiradiganlar", "chuqur falsafiy
+   mulohaza izlaydiganlar", "amaliy maslahat qidiruvchilar") mos kelishi,
+   yoki o'qigandan keyin qanday HISSIY natija/ta'sir qoldirishi haqida
+   yoz. Descriptionda bor narsani qayta aytib berish TAQIQLANADI. Umumiy
+   ("qiziqarli kitob" kabi) jumla ham TAQIQLANADI — har doim KONKRET va
+   sababli bo'lsin.
 4. "review_synthesis" — faqat pastdagi community postlar mavjud bo'lsa
    to'ldir (bo'sh bo'lsa, o'sha til uchun null qo'y). O'quvchilar haqiqatan
    yozgan narsani mazmunini ber, o'ylab topma.
@@ -210,17 +232,19 @@ QATTIQ QOIDALAR:
   "difficulty": "...",
   "mood_tags": ["...", "..."],
   "audience_fit": {"uz": "...", "ru": "...", "en": "...", "ja": "..."},
-  "audience_avoid": {"uz": "...", "ru": "...", "en": "...", "ja": "..."},
   "review_synthesis": {"uz": "..." | null, "ru": "..." | null, "en": "..." | null, "ja": "..." | null}
 }
 EOT;
 
         $user = "MAHSULOT MA'LUMOTLARI:\n{$factsText}\n\nCOMMUNITY POSTLAR/SHARHLAR:\n{$reviewsText}";
 
+        // MUHIM: maxTokens oshirildi (900 → 1300) — "audience_fit" endi
+        // 4 tilning har birida 2-3 gapli tahlil (avvalgi 5-10 so'zlik
+        // qisqa jumla o'rniga), shuning uchun ko'proq joy kerak.
         $result = $this->ai->askJsonWithMessages([
             ['role' => 'system', 'content' => $system],
             ['role' => 'user', 'content' => $user],
-        ], maxTokens: 900, temperature: 0.4);
+        ], maxTokens: 1300, temperature: 0.4);
 
         return $this->validate($result);
     }
@@ -239,7 +263,6 @@ EOT;
         ));
 
         $audienceFit = $this->normalizeLocaleBag($result['audience_fit'] ?? null);
-        $audienceAvoid = $this->normalizeLocaleBag($result['audience_avoid'] ?? null);
         $reviewSynthesis = $this->normalizeLocaleBag($result['review_synthesis'] ?? null, allowEmpty: true);
 
         if (empty($audienceFit)) {
@@ -251,7 +274,15 @@ EOT;
             'difficulty' => $difficulty,
             'mood_tags' => $moodTags,
             'audience_fit' => $audienceFit,
-            'audience_avoid' => $audienceAvoid,
+            // MUHIM: 'audience_avoid' ENDI generatsiya qilinmaydi — salbiy/
+            // qo'rqituvchi "kimlar uchun mos emas" qismi butunlay olib
+            // tashlandi, o'rniga 'audience_fit' chuqurroq (2-3 gapli)
+            // tahlilga aylantirildi (yuqoridagi prompt izohiga qarang).
+            // Ustun DB'da hali bor (eski yozuvlar uchun, migratsiya
+            // qilinmadi), lekin endi har doim bo'sh massiv sifatida
+            // yoziladi — shu orqali eski salbiy matn ham regeneratsiyada
+            // avtomatik tozalanadi.
+            'audience_avoid' => [],
             'review_synthesis' => $reviewSynthesis,
         ];
     }

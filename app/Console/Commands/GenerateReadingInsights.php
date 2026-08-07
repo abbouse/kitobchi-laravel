@@ -26,7 +26,8 @@ class GenerateReadingInsights extends Command
 {
     protected $signature = 'reading-intelligence:generate-insights
         {--type=all : book|stationery|all}
-        {--limit=15 : Bir yurishda har turdan nechta mahsulot}';
+        {--limit=15 : Bir yurishda har turdan nechta mahsulot}
+        {--force : Allaqachon tahlil qilingan mahsulotlarni ham QAYTA generatsiya qilish (masalan, AI prompt/sxema o\'zgarganda — eng ko\'p sotilganidan boshlab)}';
 
     protected $description = 'Reading Intelligence kartochkasi uchun mahsulot tahlilini (qiyinlik/kayfiyat/auditoriya) fon jarayonida generatsiya qiladi';
 
@@ -34,6 +35,7 @@ class GenerateReadingInsights extends Command
     {
         $type = strtolower(trim((string) $this->option('type')));
         $limit = max(1, (int) $this->option('limit'));
+        $force = (bool) $this->option('force');
         // MUHIM: OpenAI'ning RPM (daqiqasiga so'rov) limitiga urilib
         // qolmaslik uchun har bir mahsulotdan keyin pauza — ketma-ket
         // zarba bilan o'nlab so'rov yubormaslik kerak (config orqali
@@ -45,7 +47,7 @@ class GenerateReadingInsights extends Command
         $first = true;
 
         foreach ($this->candidateTypes($type) as $productType) {
-            $ids = $this->pendingProductIds($productType, $limit);
+            $ids = $this->pendingProductIds($productType, $limit, $force);
 
             foreach ($ids as $id) {
                 if (! $first && $delayMs > 0) {
@@ -83,18 +85,30 @@ class GenerateReadingInsights extends Command
      * Hali `book_reading_insights` yozuvi yo'q mahsulotlar — eng ko'p
      * sotilganlardan boshlab, chegaralangan miqdorda.
      *
+     * `$force = true` bo'lsa — "hali yo'q" filtri olib tashlanadi, ya'ni
+     * ALLAQACHON tahlil qilingan mahsulotlar ham qayta navbatga tushadi.
+     * Bu holatda `generateAndStore()` ichidagi content_hash solishtiruvi
+     * hal qiladi: agar mahsulot (yoki AI prompt/sxema — `schema:v2` kabi)
+     * o'zgarmagan bo'lsa, hech narsa qayta yozilmaydi (AI ham chaqirilmaydi,
+     * xarajat ketmaydi); faqat HAQIQATAN eskirgan yozuvlar yangilanadi.
+     * Shuning uchun `--force` ni istalgan vaqt xavfsiz qayta-qayta
+     * ishga tushirish mumkin — ortiqcha ish qilmaydi.
+     *
      * @return array<int, int>
      */
-    private function pendingProductIds(string $type, int $limit): array
+    private function pendingProductIds(string $type, int $limit, bool $force = false): array
     {
-        $existingIds = BookReadingInsight::query()
-            ->where('product_type', $type)
-            ->pluck('product_id');
-
         $query = $type === 'book' ? Books::query() : Stationery::query();
 
+        if (! $force) {
+            $existingIds = BookReadingInsight::query()
+                ->where('product_type', $type)
+                ->pluck('product_id');
+
+            $query->whereNotIn('id', $existingIds);
+        }
+
         return $query
-            ->whereNotIn('id', $existingIds)
             ->where('is_hidden', false)
             ->orderByDesc('totalSales')
             ->limit($limit)
