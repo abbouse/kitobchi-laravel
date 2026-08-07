@@ -76,14 +76,19 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('users:book-remind')
             ->weeklyOn(6, '12:00')->timezone($tz);
 
-        // ── Avvalgi xaridlarga o'xshash / eng ko'p sotilgan kitob tavsiyasi
-        // — haftada 2 marta, boshqa push'lar bilan kunlar/soatlar mos
-        // kelmasligi uchun chorshanba va yakshanba, boshqa vaqtda ─────────
+        // ── Avvalgi xaridlarga o'xshash / eng ko'p sotilgan mahsulot
+        // tavsiyasi (kitob YOKI kanselyariya — foydalanuvchining o'ziga
+        // qarab) — HAR 2 HAFTADA 1 MARTA yetarli (tez-tez yuborilsa
+        // push charchashi — notification fatigue — xavfi bor). Laravel
+        // scheduler'da to'g'ridan-to'g'ri "2 haftada bir" degan metod
+        // yo'q, shuning uchun haftaning shu kuni/soatida TEKSHIRILADI,
+        // lekin `when()` orqali faqat JUFT ISO hafta raqamlarida
+        // (yiliga ~26 marta, ya'ni aynan har 2 haftada 1) haqiqatan
+        // ishga tushadi. ─────────────────────────────────────────────
         $schedule->command('users:recommend-books')
-            ->weeklyOn(3, '11:00')->timezone($tz);
-
-        $schedule->command('users:recommend-books')
-            ->weeklyOn(0, '16:00')->timezone($tz);
+            ->weeklyOn(3, '11:00')
+            ->timezone($tz)
+            ->when(fn () => now($tz)->weekOfYear % 2 === 0);
 
         $schedule->command('backup:clean')
             ->dailyAt('01:15')->timezone($tz);

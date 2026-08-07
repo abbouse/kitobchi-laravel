@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Books;
+use App\Models\Stationery;
 use App\Models\User;
 use App\Services\FCMService;
 use App\Services\ReadingIntelligence\UserTasteProfileService;
@@ -11,14 +12,28 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Foydalanuvchilarga davriy ravishda kitob tavsiya qiluvchi push xabar:
- *   - Xarid tarixi BOR foydalanuvchiga — eng ko'p xarid qilgan
- *     kategoriyasidan, u hali sotib olmagan, eng ko'p sotilgan kitob
- *     tavsiya qilinadi ("avvalgi xaridlaringizga o'xshash").
- *   - Xarid tarixi YO'Q (yoki kategoriyasi aniqlanmagan) foydalanuvchiga —
- *     umumiy eng ko'p sotilgan kitob tavsiya qilinadi (zaxira).
+ * Foydalanuvchilarga davriy ravishda mahsulot tavsiya qiluvchi push xabar.
  *
- * Push bosilganda foydalanuvchi to'g'ridan-to'g'ri shu kitob sahifasiga
+ * MUHIM (arxitektura): bu butunlay "Reading Intelligence" AI kartasidan
+ * (`ReadingIntelligenceService`/`BookReadingInsight`) MUSTAQIL — hech
+ * qanday AI chaqiruvi yo'q, faqat oddiy statistik qoida:
+ *   1. Har bir foydalanuvchi uchun avval qaysi TURDAN (kitob yoki
+ *      kanselyariya) ko'proq xarid qilgani aniqlanadi
+ *      (`UserTasteProfileService::dominantProductType()`). Xarid tarixi
+ *      umuman yo'q bo'lsa — standart 'book' (ilova kitob-markazli).
+ *   2. Shu TUR ichida — foydalanuvchining eng ko'p xarid qilgan
+ *      kategoriyasidan, u hali sotib olmagan, eng ko'p sotilgan mahsulot
+ *      tavsiya qilinadi ("avvalgi xaridlaringizga o'xshash").
+ *   3. Toping bo'lmasa (kategoriya aniqlanmagan/barchasini sotib olgan) —
+ *      o'sha TURDAGI umumiy eng ko'p sotilgan mahsulot (zaxira).
+ *
+ * Shuning uchun kanselyariya (stationery) uchun ham to'liq ishlaydi —
+ * "Reading Intelligence" kartasi (qiyinlik/kayfiyat) faqat kitobga xos
+ * bo'lgani uchun item sahifasida cheklangan bo'lsa-da, bu push oddiy
+ * "sizga mos mahsulot" tavsiyasi bo'lgani uchun ikkala turga ham baravar
+ * tegishli.
+ *
+ * Push bosilganda foydalanuvchi to'g'ridan-to'g'ri shu mahsulot sahifasiga
  * o'tadi — bu allaqachon ishlatilayotgan `type=product` deep-link
  * kontraktidan foydalanadi (qarang: `ProductStockAlertService`,
  * Flutter tomonda `NotificationService.dart`), shuning uchun ilova
@@ -28,54 +43,102 @@ class RecommendBooksPush extends Command
 {
     protected $signature = 'users:recommend-books';
 
-    protected $description = "Foydalanuvchilarga avvalgi xaridlariga o'xshash yoki eng ko'p sotilgan kitoblarni tavsiya qiluvchi push xabar";
+    protected $description = "Foydalanuvchilarga avvalgi xaridlariga o'xshash yoki eng ko'p sotilgan mahsulotlarni (kitob yoki kanselyariya) tavsiya qiluvchi push xabar";
 
     private const TEXTS = [
         'uz' => [
-            'purchase_based' => [
-                'title' => '📚 Sizga yoqishi mumkin',
-                'body'  => '":name" — avval sotib olgan kitoblaringizga juda o\'xshaydi. Ko\'rib qo\'ying!',
+            'book' => [
+                'purchase_based' => [
+                    'title' => '📚 Sizga yoqishi mumkin',
+                    'body'  => '":name" — avval sotib olgan kitoblaringizga juda o\'xshaydi. Ko\'rib qo\'ying!',
+                ],
+                'bestseller' => [
+                    'title' => '🔥 Eng ko\'p sotilayotgan kitob',
+                    'body'  => '":name" — hozir eng ko\'p sotib olinayotgan kitoblardan biri. O\'zingiz ham sinab ko\'ring!',
+                ],
             ],
-            'bestseller' => [
-                'title' => '🔥 Eng ko\'p sotilayotgan kitob',
-                'body'  => '":name" — hozir eng ko\'p sotib olinayotgan kitoblardan biri. O\'zingiz ham sinab ko\'ring!',
+            'stationery' => [
+                'purchase_based' => [
+                    'title' => '🖊️ Sizga yoqishi mumkin',
+                    'body'  => '":name" — avval sotib olgan kanselyariya buyumlaringizga juda o\'xshaydi. Ko\'rib qo\'ying!',
+                ],
+                'bestseller' => [
+                    'title' => '🔥 Eng ko\'p sotilayotgan mahsulot',
+                    'body'  => '":name" — hozir eng ko\'p sotib olinayotganlardan biri. O\'zingiz ham sinab ko\'ring!',
+                ],
             ],
         ],
         'ru' => [
-            'purchase_based' => [
-                'title' => '📚 Это может вам понравиться',
-                'body'  => '":name" — очень похоже на книги, которые вы уже покупали. Загляните!',
+            'book' => [
+                'purchase_based' => [
+                    'title' => '📚 Это может вам понравиться',
+                    'body'  => '":name" — очень похоже на книги, которые вы уже покупали. Загляните!',
+                ],
+                'bestseller' => [
+                    'title' => '🔥 Самая продаваемая книга',
+                    'body'  => '":name" — сейчас один из самых популярных бестселлеров. Попробуйте и вы!',
+                ],
             ],
-            'bestseller' => [
-                'title' => '🔥 Самая продаваемая книга',
-                'body'  => '":name" — сейчас один из самых популярных бестселлеров. Попробуйте и вы!',
+            'stationery' => [
+                'purchase_based' => [
+                    'title' => '🖊️ Это может вам понравиться',
+                    'body'  => '":name" — очень похоже на канцтовары, которые вы уже покупали. Загляните!',
+                ],
+                'bestseller' => [
+                    'title' => '🔥 Самый продаваемый товар',
+                    'body'  => '":name" — сейчас один из самых популярных товаров. Попробуйте и вы!',
+                ],
             ],
         ],
         'en' => [
-            'purchase_based' => [
-                'title' => '📚 You might like this',
-                'body'  => '":name" is a lot like the books you\'ve bought before. Take a look!',
+            'book' => [
+                'purchase_based' => [
+                    'title' => '📚 You might like this',
+                    'body'  => '":name" is a lot like the books you\'ve bought before. Take a look!',
+                ],
+                'bestseller' => [
+                    'title' => "🔥 Today's best-seller",
+                    'body'  => '":name" is one of the best-selling books right now. Give it a try!',
+                ],
             ],
-            'bestseller' => [
-                'title' => "🔥 Today's best-seller",
-                'body'  => '":name" is one of the best-selling books right now. Give it a try!',
+            'stationery' => [
+                'purchase_based' => [
+                    'title' => '🖊️ You might like this',
+                    'body'  => '":name" is a lot like the stationery items you\'ve bought before. Take a look!',
+                ],
+                'bestseller' => [
+                    'title' => "🔥 Today's best-seller",
+                    'body'  => '":name" is one of the best-selling items right now. Give it a try!',
+                ],
             ],
         ],
         'ja' => [
-            'purchase_based' => [
-                'title' => '📚 気に入るかもしれません',
-                'body'  => '「:name」は、これまで購入した本とよく似ています。ぜひご覧ください！',
+            'book' => [
+                'purchase_based' => [
+                    'title' => '📚 気に入るかもしれません',
+                    'body'  => '「:name」は、これまで購入した本とよく似ています。ぜひご覧ください！',
+                ],
+                'bestseller' => [
+                    'title' => '🔥 今売れている本',
+                    'body'  => '「:name」は今、最も売れている本の一つです。ぜひお試しください！',
+                ],
             ],
-            'bestseller' => [
-                'title' => '🔥 今売れている本',
-                'body'  => '「:name」は今、最も売れている本の一つです。ぜひお試しください！',
+            'stationery' => [
+                'purchase_based' => [
+                    'title' => '🖊️ 気に入るかもしれません',
+                    'body'  => '「:name」は、これまで購入した文房具とよく似ています。ぜひご覧ください！',
+                ],
+                'bestseller' => [
+                    'title' => '🔥 今売れている商品',
+                    'body'  => '「:name」は今、最も売れている商品の一つです。ぜひお試しください！',
+                ],
             ],
         ],
     ];
 
     public function handle(): void
     {
-        $this->info(now()->format('d.m.Y H:i:s') . " — Kitob tavsiya push boshlandi...");
+        $this->info(now()->format('d.m.Y H:i:s') . " — Mahsulot tavsiya push boshlandi...");
 
         $tasteProfile = app(UserTasteProfileService::class);
 
@@ -94,14 +157,21 @@ class RecommendBooksPush extends Command
 
         $this->info('Foydalanuvchilar soni: ' . count($userIds));
 
-        // Eng ko'p sotilgan kitoblar — zaxira (bestseller) tavsiyasi uchun
-        // bir marta oldindan olinadi, har bir foydalanuvchi uchun qayta
-        // so'ralmaydi.
-        $globalBestsellers = Books::query()
-            ->activeForVector()
-            ->orderByDesc('totalSales')
-            ->limit(30)
-            ->get(['id', 'name', 'category_id']);
+        // Eng ko'p sotilganlar — zaxira (bestseller) tavsiyasi uchun har
+        // ikki tur bo'yicha bir marta oldindan olinadi, har bir
+        // foydalanuvchi uchun qayta so'ralmaydi.
+        $globalBestsellers = [
+            'book' => Books::query()
+                ->activeForVector()
+                ->orderByDesc('totalSales')
+                ->limit(30)
+                ->get(['id', 'name', 'category_id']),
+            'stationery' => Stationery::query()
+                ->activeForVector()
+                ->orderByDesc('totalSales')
+                ->limit(30)
+                ->get(['id', 'name', 'category_id']),
+        ];
 
         $sent = 0;
         $skip = 0;
@@ -113,14 +183,20 @@ class RecommendBooksPush extends Command
                 continue;
             }
 
-            $purchasedIds = $tasteProfile->purchasedProductIds($user->id, 'book');
+            // 1-qadam: foydalanuvchi qaysi TURDAN ko'proq xarid qilgan —
+            // shu tur bo'yicha tavsiya beramiz. Xarid tarixi yo'q bo'lsa,
+            // standart 'book' (ilova kitob-markazli).
+            $type = $tasteProfile->dominantProductType($user->id) ?? 'book';
+
+            $purchasedIds = $tasteProfile->purchasedProductIds($user->id, $type);
 
             $candidate = null;
             $variant = 'bestseller';
 
-            $categoryId = $tasteProfile->dominantCategoryId($user->id, 'book');
+            $categoryId = $tasteProfile->dominantCategoryId($user->id, $type);
             if ($categoryId) {
-                $candidate = Books::query()
+                $query = $type === 'book' ? Books::query() : Stationery::query();
+                $candidate = $query
                     ->activeForVector()
                     ->where('category_id', $categoryId)
                     ->when(! empty($purchasedIds), fn ($q) => $q->whereNotIn('id', $purchasedIds))
@@ -133,8 +209,8 @@ class RecommendBooksPush extends Command
             }
 
             if (! $candidate) {
-                $candidate = $globalBestsellers->first(
-                    fn ($book) => ! in_array((int) $book->id, $purchasedIds, true)
+                $candidate = $globalBestsellers[$type]->first(
+                    fn ($product) => ! in_array((int) $product->id, $purchasedIds, true)
                 );
             }
 
@@ -143,22 +219,22 @@ class RecommendBooksPush extends Command
                 continue;
             }
 
-            $this->sendRecommendation($user, $candidate, $variant) ? $sent++ : $skip++;
+            $this->sendRecommendation($user, $candidate, $variant, $type) ? $sent++ : $skip++;
         }
 
         $this->info("Yuborildi: {$sent} | O'tkazib yuborildi: {$skip}");
     }
 
-    private function sendRecommendation(User $user, Books $book, string $variant): bool
+    private function sendRecommendation(User $user, Books|Stationery $product, string $variant, string $type): bool
     {
         try {
             $lang = in_array($user->locale ?? 'uz', ['uz', 'ru', 'en', 'ja'])
                 ? ($user->locale ?? 'uz')
                 : 'uz';
 
-            $msg = self::TEXTS[$lang][$variant];
+            $msg = self::TEXTS[$lang][$type][$variant];
             $title = $msg['title'];
-            $body = str_replace(':name', (string) $book->name, $msg['body']);
+            $body = str_replace(':name', (string) $product->name, $msg['body']);
 
             $tokens = DB::table('connected_devices')
                 ->where('user_type', 'user')
@@ -175,17 +251,17 @@ class RecommendBooksPush extends Command
 
             $payload = [
                 'type' => 'product',
-                'product_id' => (string) $book->id,
-                'product_type' => 'book',
+                'product_id' => (string) $product->id,
+                'product_type' => $type,
             ];
 
             $result = (new FCMService('kitobchi'))->send($tokens, $title, $body, $payload);
 
-            Log::info("RecommendBooksPush: user #{$user->id}, lang={$lang}, variant={$variant}, book #{$book->id}", [
+            Log::info("RecommendBooksPush: user #{$user->id}, lang={$lang}, type={$type}, variant={$variant}, product #{$product->id}", [
                 'result' => $result,
             ]);
 
-            $this->line("  ✓ user #{$user->id} [{$lang}] [{$variant}] → \"{$book->name}\"");
+            $this->line("  ✓ user #{$user->id} [{$lang}] [{$type}/{$variant}] → \"{$product->name}\"");
 
             return true;
         } catch (\Throwable $e) {

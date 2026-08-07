@@ -277,6 +277,28 @@ class UserTasteProfileService
     }
 
     /**
+     * Foydalanuvchi umuman qaysi TURDAN (kitob yoki kanselyariya) ko'proq
+     * xarid qilgan — push-tavsiya (`RecommendBooksPush`) kabi "qaysi
+     * turdan tavsiya berish kerak" degan savolga javob berish uchun.
+     * Xarid tarixi umuman yo'q bo'lsa — `null` (chaqiruvchi o'zi standart
+     * turni, masalan 'book', tanlaydi). Teng bo'lsa — 'book' ustuvor
+     * (ilova asosan kitob-markazli).
+     */
+    public function dominantProductType(int $userId): ?string
+    {
+        $counts = ['book' => 0, 'stationery' => 0];
+        foreach ($this->recentPurchases($userId) as $purchase) {
+            $counts[$purchase['type']] = ($counts[$purchase['type']] ?? 0) + 1;
+        }
+
+        if ($counts['book'] === 0 && $counts['stationery'] === 0) {
+            return null;
+        }
+
+        return $counts['stationery'] > $counts['book'] ? 'stationery' : 'book';
+    }
+
+    /**
      * Did-vektor va kategoriya statistikasi uchun — oxirgi 20 ta buyurtma,
      * 1 soatga keshlangan. Bitta so'rov + ikkita batch kategoriya lookup.
      *
