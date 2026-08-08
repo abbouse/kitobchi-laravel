@@ -1014,6 +1014,63 @@ body {
 .compact-table tbody td {
   padding: 10px 12px;
 }
+.econ-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid #eef0f4;
+  border-radius: 12px;
+}
+.econ-table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.econ-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #111827;
+  color: #fff;
+  font-weight: 600;
+  padding: 10px 14px;
+  text-align: right;
+  white-space: nowrap;
+}
+.econ-table thead th:first-child {
+  text-align: left;
+}
+.econ-table tbody td {
+  padding: 9px 14px;
+  text-align: right;
+  white-space: nowrap;
+  border-bottom: 1px solid #f3f4f6;
+  color: #111827;
+  font-variant-numeric: tabular-nums;
+}
+.econ-table tbody tr:hover td {
+  background: #fafbff;
+}
+.econ-table .econ-table-label {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: #fff;
+  text-align: left;
+  font-weight: 500;
+  color: #374151;
+  box-shadow: 1px 0 0 #f3f4f6;
+}
+.econ-table tbody tr:hover .econ-table-label {
+  background: #fafbff;
+}
+.econ-table .econ-section-row td {
+  background: #eef2ff;
+  color: #4338ca;
+  font-weight: 700;
+  text-align: left;
+  padding: 8px 14px;
+}
 .address-list {
   display: grid;
   gap: 8px;
@@ -1176,6 +1233,32 @@ body.boshqaruv-dark .data-table tbody td {
 }
 body.boshqaruv-dark .data-table tbody tr:hover {
   background: #111c32;
+}
+body.boshqaruv-dark .econ-table-wrap {
+  border-color: #334155;
+}
+body.boshqaruv-dark .econ-table thead th {
+  background: #0f172a;
+  color: #cbd5e1;
+}
+body.boshqaruv-dark .econ-table tbody td {
+  border-color: #334155;
+  color: #e2e8f0;
+}
+body.boshqaruv-dark .econ-table tbody tr:hover td {
+  background: #111c32;
+}
+body.boshqaruv-dark .econ-table .econ-table-label {
+  background: #1e293b;
+  color: #cbd5e1;
+  box-shadow: 1px 0 0 #334155;
+}
+body.boshqaruv-dark .econ-table tbody tr:hover .econ-table-label {
+  background: #111c32;
+}
+body.boshqaruv-dark .econ-table .econ-section-row td {
+  background: rgba(99, 102, 241, .18);
+  color: #c7d2fe;
 }
 body.boshqaruv-dark .table {
   --bs-table-bg: transparent;

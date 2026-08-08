@@ -66,6 +66,7 @@ use App\Models\SellerContractHistory;
 use App\Models\SellerLocation;
 use App\Models\SellerOrder;
 use App\Models\SellerOrderItem;
+use App\Models\SellerPremiumSubscription;
 use App\Models\SellerStaffLog;
 use App\Models\SellerSupportTicket;
 use App\Models\SellerSupportTicketMessage;
@@ -296,10 +297,12 @@ class AdminController extends Controller
             $this->addDashboardSheet($spreadsheet, 'Dashboard', $this->buildDashboardExportRows($payload));
         } elseif ($type === 'unit') {
             $this->addDashboardSheet($spreadsheet, 'Unit Economics', $this->dashboardUnitEconomicsRows($payload));
+            $this->addDashboardSheet($spreadsheet, 'Partners MRR', $this->dashboardPartnerEconomicsRows($payload));
             $this->addDashboardSheet($spreadsheet, 'P&L', $this->dashboardProfitAndLossRows($payload));
         } else {
             $this->addDashboardSheet($spreadsheet, 'Investor Summary', $this->dashboardInvestorSummaryRows($payload));
             $this->addDashboardSheet($spreadsheet, 'Unit Economics', $this->dashboardUnitEconomicsRows($payload));
+            $this->addDashboardSheet($spreadsheet, 'Partners MRR', $this->dashboardPartnerEconomicsRows($payload));
             $this->addDashboardSheet($spreadsheet, 'P&L', $this->dashboardProfitAndLossRows($payload));
             $this->addDashboardSheet($spreadsheet, 'Sales Trend', $this->dashboardSalesTrendRowsForExport($payload));
             $this->addDashboardSheet($spreadsheet, 'Category Sales', $this->dashboardCategoryRowsForExport($payload));
@@ -476,6 +479,59 @@ class AdminController extends Controller
             ['Total buyers', '', '', (int) ($u['totalBuyers'] ?? 0), 'Lifetime paid xaridorlar'],
             ['Repeat buyers', '', '', (int) ($u['repeatBuyers'] ?? 0), 'Lifetime qaytgan xaridorlar'],
         ];
+    }
+
+    private function dashboardPartnerEconomicsRows(array $p): array
+    {
+        $pe = $p['partnerEconomics'] ?? [];
+        $months = $pe['months'] ?? [];
+        $s = $pe['summary'] ?? [];
+        $labels = array_map(fn ($m) => $m['month'] ?? '-', $months);
+        $blank = array_fill(0, count($months), '');
+        $dash = fn ($v) => $v === null ? '-' : $v;
+
+        $rows = [
+            ['Kitobchi — Partners (Premium) MRR'],
+            ['Metric', 'O‘rtacha (AVG)', 'Izoh'],
+            ['ARPC', (float) ($s['arpc'] ?? 0), 'O‘rtacha oylik daromad / faol partner'],
+            ['CAC', $dash($s['cac'] ?? null), 'Marketing xarajat / yangi partner'],
+            ['CAC Payback (oy)', $dash($s['cacPaybackMonths'] ?? null), 'CAC ni ARPC bilan qoplash uchun oy'],
+            ['Churn Rate — MRR (%)', (float) ($s['churnRateMrr'] ?? 0), 'Bekor bo‘lgan MRR / oy boshi MRR'],
+            ['Churn Rate — partner soni (%)', (float) ($s['churnRateCount'] ?? 0), 'Ketgan partner / oy boshi partner'],
+            ['Gross Retention (%)', $dash($s['grossRetention'] ?? null), '(Oy boshi MRR − churn) / oy boshi MRR'],
+            ['Net Retention (%)', $dash($s['netRetention'] ?? null), 'Mavjud partnerlar joriy MRR / oy boshi MRR'],
+            ['Lifetime (oy)', $dash($s['lifetimeMonths'] ?? null), '1 / churn rate (partner soni)'],
+            ['LTV', $dash($s['ltv'] ?? null), 'ARPC × Lifetime'],
+            ['LTV : CAC', $dash($s['ltvCacRatio'] ?? null), 'LTV / CAC'],
+            [],
+            array_merge(['Oylik jadval'], $labels),
+            array_merge([' Input Data'], $blank),
+            array_merge([" Partners' MRR (so‘m)"], array_map(fn ($m) => (float) $m['mrr'], $months)),
+            array_merge([' Yangi partner MRR (so‘m)'], array_map(fn ($m) => (float) $m['newMrr'], $months)),
+            array_merge([' Bekor bo‘lgan MRR (so‘m)'], array_map(fn ($m) => (float) $m['churnedMrr'], $months)),
+            array_merge([' Faol partnerlar'], array_map(fn ($m) => (int) $m['currentPartners'], $months)),
+            array_merge([' Yangi partnerlar'], array_map(fn ($m) => (int) $m['newPartners'], $months)),
+            array_merge([' Bekor qilgan partnerlar'], array_map(fn ($m) => (int) $m['churnedPartners'], $months)),
+            array_merge([' Marketing xarajat (so‘m)'], array_map(fn ($m) => (float) $m['marketingSpend'], $months)),
+            array_merge(['Key Indicators'], $blank),
+            array_merge([' ARPC (so‘m)'], array_map(fn ($m) => (float) $m['arpc'], $months)),
+            array_merge([' CAC (so‘m)'], array_map(fn ($m) => $dash($m['cac']), $months)),
+            array_merge([' CAC Payback (oy)'], array_map(fn ($m) => $dash($m['cacPaybackMonths']), $months)),
+            array_merge([' Churn Rate — MRR (%)'], array_map(fn ($m) => (float) $m['churnRateMrr'], $months)),
+            array_merge([' Churn Rate — soni (%)'], array_map(fn ($m) => (float) $m['churnRateCount'], $months)),
+            array_merge([' Gross Retention (%)'], array_map(fn ($m) => $dash($m['grossRetention']), $months)),
+            array_merge([' Net Retention (%)'], array_map(fn ($m) => $dash($m['netRetention']), $months)),
+            array_merge([' Lifetime (oy)'], array_map(fn ($m) => $dash($m['lifetimeMonths']), $months)),
+            array_merge([' LTV (so‘m)'], array_map(fn ($m) => $dash($m['ltv']), $months)),
+            array_merge([' LTV : CAC'], array_map(fn ($m) => $dash($m['ltvCacRatio']), $months)),
+        ];
+
+        if (empty($months)) {
+            $rows[] = [];
+            $rows[] = ['Hali faol premium (hamkor) obuna topilmadi — birinchi sotib olingandan keyin bu yerda oylik MRR paydo bo‘ladi.'];
+        }
+
+        return $rows;
     }
 
     private function dashboardProfitAndLossRows(array $p): array
@@ -3773,6 +3829,7 @@ PROMPT;
             'retention' => $this->dashboardRetentionCohorts(),
             'sellerScorecard' => $this->dashboardSellerScorecard(),
             'unitEconomics' => $this->dashboardUnitEconomics($range['from'], $range['to']),
+            'partnerEconomics' => $this->dashboardPartnerEconomics(),
             'exportUrl' => route('boshqaruv.dashboard.export'),
             'alerts' => $this->liveAlerts($mainCounts, $sellerCounts, $courierCounts),
         ];
@@ -3816,6 +3873,27 @@ PROMPT;
             foreach (['cac', 'blendedCac', 'arpu', 'ltv', 'ltvCacRatio', 'contributionPerOrder', 'grossPerOrder', 'marginPct', 'refundAmount'] as $moneyKey) {
                 if (array_key_exists($moneyKey, $payload['unitEconomics'])) {
                     $payload['unitEconomics'][$moneyKey] = 0;
+                }
+            }
+        }
+
+        if (isset($payload['partnerEconomics']) && is_array($payload['partnerEconomics'])) {
+            $moneyKeys = ['arpc', 'cac', 'ltv', 'ltvCacRatio', 'mrr', 'newMrr', 'churnedMrr', 'marketingSpend'];
+            $payload['partnerEconomics']['currentMrr'] = 0;
+            if (isset($payload['partnerEconomics']['summary']) && is_array($payload['partnerEconomics']['summary'])) {
+                foreach ($moneyKeys as $moneyKey) {
+                    if (array_key_exists($moneyKey, $payload['partnerEconomics']['summary'])) {
+                        $payload['partnerEconomics']['summary'][$moneyKey] = $payload['partnerEconomics']['summary'][$moneyKey] === null ? null : 0;
+                    }
+                }
+            }
+            if (isset($payload['partnerEconomics']['months']) && is_array($payload['partnerEconomics']['months'])) {
+                foreach ($payload['partnerEconomics']['months'] as $i => $monthRow) {
+                    foreach ($moneyKeys as $moneyKey) {
+                        if (array_key_exists($moneyKey, $monthRow)) {
+                            $payload['partnerEconomics']['months'][$i][$moneyKey] = $monthRow[$moneyKey] === null ? null : 0;
+                        }
+                    }
                 }
             }
         }
@@ -11162,6 +11240,217 @@ PROMPT;
                 'hasMarketingData' => $marketingSpend > 0,
             ];
         });
+    }
+
+    /**
+     * Hamkorlar (Premium obuna to'lagan sotuvchilar) uchun SaaS uslubidagi
+     * MRR / churn / retention / LTV hisoboti — oylik dinamika bilan.
+     *
+     * MUHIM: bu xaridor unit economics'idan (yuqoridagi metod) butunlay
+     * ALOHIDA daromad oqimi — seller_premium_subscriptions jadvalidagi
+     * haqiqiy, to'lanadigan obuna yozuvlaridan hisoblanadi. Ikkalasi
+     * qo'shilmaydi/aralashtirilmaydi.
+     */
+    private function dashboardPartnerEconomics(): array
+    {
+        return Cache::remember('boshqaruv.dash.partner-econ.v2', now()->addMinutes(10), function () {
+            if (! Schema::hasTable('seller_premium_subscriptions')) {
+                return $this->emptyPartnerEconomics();
+            }
+
+            $rows = SellerPremiumSubscription::query()
+                ->whereNotNull('started_at')
+                ->get(['id', 'plan', 'duration_months', 'price_uzs', 'status', 'started_at', 'expires_at', 'cancelled_at', 'stopped_at'])
+                ->map(function (SellerPremiumSubscription $s) {
+                    $monthly = (int) $s->duration_months > 0 ? ((float) $s->price_uzs / (int) $s->duration_months) : 0.0;
+                    $churned = in_array($s->status, [SellerPremiumSubscription::STATUS_CANCELLED, SellerPremiumSubscription::STATUS_PAUSED], true);
+                    $end = match ($s->status) {
+                        SellerPremiumSubscription::STATUS_CANCELLED => $s->cancelled_at ?? $s->expires_at,
+                        SellerPremiumSubscription::STATUS_PAUSED => $s->stopped_at ?? $s->expires_at,
+                        default => $s->expires_at,
+                    };
+
+                    return (object) [
+                        'start' => $s->started_at,
+                        'end' => $end,
+                        'monthly' => $monthly,
+                        'churned' => $churned,
+                    ];
+                })
+                ->values();
+
+            if ($rows->isEmpty()) {
+                return $this->emptyPartnerEconomics();
+            }
+
+            $firstMonth = $rows->min('start')->copy()->startOfMonth();
+            $earliestAllowed = now()->startOfMonth()->subMonths(11);
+            $windowStart = $firstMonth->greaterThan($earliestAllowed) ? $firstMonth : $earliestAllowed;
+
+            [$prevMrr, $prevCount] = $this->partnerSnapshotAt($rows, $windowStart->copy()->subSecond());
+
+            $months = [];
+            $cursor = $windowStart->copy();
+            $loopEnd = now()->startOfMonth();
+            $now = now();
+
+            while ($cursor->lessThanOrEqualTo($loopEnd)) {
+                $monthStart = $cursor->copy()->startOfMonth();
+                $monthEnd = $cursor->copy()->endOfMonth();
+                $snapshotPoint = $monthEnd->greaterThan($now) ? $now : $monthEnd;
+
+                [$mrr, $count] = $this->partnerSnapshotAt($rows, $snapshotPoint);
+                [$newMrr, $newCount] = $this->partnerNewInRange($rows, $monthStart, $monthEnd);
+                [$churnedMrr, $churnedCount] = $this->partnerChurnedInRange($rows, $monthStart, $monthEnd);
+
+                $marketingSpend = Schema::hasTable('platform_expenses')
+                    ? (float) PlatformExpense::query()
+                        ->where('category', 'marketing')
+                        ->where('spent_at', '>=', $monthStart)
+                        ->where('spent_at', '<=', $monthEnd)
+                        ->sum('amount')
+                    : 0.0;
+
+                $arpc = $count > 0 ? $mrr / $count : 0.0;
+                $churnRateMrr = $prevMrr > 0 ? $churnedMrr / $prevMrr : 0.0;
+                $churnRateCount = $prevCount > 0 ? $churnedCount / $prevCount : 0.0;
+                // Net Retention faqat "davomchi" (yangi bo'lmagan) kohorta bo'yicha
+                // hisoblanishi kerak — shuning uchun $newMrr emas, balki "shu oyda
+                // boshlangan VA snapshot pontida hali ham faol" MRR ayiriladi. Aks
+                // holda bir oy ichida qo'shilib-chiqib ketgan hamkor noto'g'ri
+                // ravishda davomchilar summasidan ayirib tashlanardi.
+                $newMrrStillActive = $this->partnerNewMrrActiveAt($rows, $monthStart, $monthEnd, $snapshotPoint);
+                $grossRetention = $prevMrr > 0 ? max(0.0, ($prevMrr - $churnedMrr) / $prevMrr) : null;
+                $netRetention = $prevMrr > 0 ? ($mrr - $newMrrStillActive) / $prevMrr : null;
+                $lifetimeMonths = $churnRateCount > 0 ? 1 / $churnRateCount : null;
+                $cac = ($newCount > 0 && $marketingSpend > 0) ? $marketingSpend / $newCount : null;
+                $ltv = $lifetimeMonths !== null ? $arpc * $lifetimeMonths : null;
+                $cacPayback = ($cac !== null && $arpc > 0) ? $cac / $arpc : null;
+                $ltvCac = ($ltv !== null && $cac !== null && $cac > 0) ? $ltv / $cac : null;
+
+                $months[] = [
+                    'month' => $monthStart->format('M Y'),
+                    'mrr' => (int) round($mrr),
+                    'newMrr' => (int) round($newMrr),
+                    'churnedMrr' => (int) round($churnedMrr),
+                    'currentPartners' => $count,
+                    'newPartners' => $newCount,
+                    'churnedPartners' => $churnedCount,
+                    'marketingSpend' => (int) round($marketingSpend),
+                    'arpc' => (int) round($arpc),
+                    'cac' => $cac !== null ? (int) round($cac) : null,
+                    'cacPaybackMonths' => $cacPayback !== null ? round($cacPayback, 1) : null,
+                    'churnRateMrr' => round($churnRateMrr * 100, 2),
+                    'churnRateCount' => round($churnRateCount * 100, 2),
+                    'grossRetention' => $grossRetention !== null ? round($grossRetention * 100, 1) : null,
+                    'netRetention' => $netRetention !== null ? round($netRetention * 100, 1) : null,
+                    'lifetimeMonths' => $lifetimeMonths !== null ? round($lifetimeMonths, 1) : null,
+                    'ltv' => $ltv !== null ? (int) round($ltv) : null,
+                    'ltvCacRatio' => $ltvCac !== null ? round($ltvCac, 2) : null,
+                ];
+
+                $prevMrr = $mrr;
+                $prevCount = $count;
+                $cursor->addMonthNoOverflow();
+            }
+
+            $avg = function (string $key) use ($months) {
+                $values = array_filter(array_column($months, $key), fn ($v) => $v !== null);
+
+                return count($values) ? round(array_sum($values) / count($values), 2) : null;
+            };
+
+            $lastMonth = count($months) ? $months[count($months) - 1] : null;
+            $totalMarketing = array_sum(array_column($months, 'marketingSpend'));
+
+            return [
+                'hasData' => true,
+                'hasMarketingData' => $totalMarketing > 0,
+                'currentPartners' => $lastMonth ? $lastMonth['currentPartners'] : 0,
+                'currentMrr' => $lastMonth ? $lastMonth['mrr'] : 0,
+                'summary' => [
+                    'arpc' => $avg('arpc') ?? 0,
+                    'cac' => $avg('cac'),
+                    'cacPaybackMonths' => $avg('cacPaybackMonths'),
+                    'churnRateMrr' => $avg('churnRateMrr') ?? 0,
+                    'churnRateCount' => $avg('churnRateCount') ?? 0,
+                    'grossRetention' => $avg('grossRetention'),
+                    'netRetention' => $avg('netRetention'),
+                    'lifetimeMonths' => $avg('lifetimeMonths'),
+                    'ltv' => $avg('ltv'),
+                    'ltvCacRatio' => $avg('ltvCacRatio'),
+                ],
+                'months' => $months,
+            ];
+        });
+    }
+
+    private function emptyPartnerEconomics(): array
+    {
+        return [
+            'hasData' => false,
+            'hasMarketingData' => false,
+            'currentPartners' => 0,
+            'currentMrr' => 0,
+            'summary' => [
+                'arpc' => 0,
+                'cac' => null,
+                'cacPaybackMonths' => null,
+                'churnRateMrr' => 0,
+                'churnRateCount' => 0,
+                'grossRetention' => null,
+                'netRetention' => null,
+                'lifetimeMonths' => null,
+                'ltv' => null,
+                'ltvCacRatio' => null,
+            ],
+            'months' => [],
+        ];
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, object{start: Carbon, end: ?Carbon, monthly: float, churned: bool}>  $rows
+     * @return array{0: float, 1: int} [MRR, partner soni]
+     */
+    private function partnerSnapshotAt($rows, Carbon $at): array
+    {
+        $set = $rows->filter(fn ($r) => $r->start->lessThanOrEqualTo($at) && (! $r->end || $r->end->greaterThanOrEqualTo($at)));
+
+        return [(float) $set->sum('monthly'), $set->count()];
+    }
+
+    /**
+     * @return array{0: float, 1: int} [yangi MRR, yangi partner soni]
+     */
+    private function partnerNewInRange($rows, Carbon $from, Carbon $to): array
+    {
+        $set = $rows->filter(fn ($r) => $r->start->greaterThanOrEqualTo($from) && $r->start->lessThanOrEqualTo($to));
+
+        return [(float) $set->sum('monthly'), $set->count()];
+    }
+
+    /**
+     * @return array{0: float, 1: int} [bekor bo'lgan MRR, bekor qilgan partner soni]
+     */
+    private function partnerChurnedInRange($rows, Carbon $from, Carbon $to): array
+    {
+        $set = $rows->filter(fn ($r) => $r->churned && $r->end && $r->end->greaterThanOrEqualTo($from) && $r->end->lessThanOrEqualTo($to));
+
+        return [(float) $set->sum('monthly'), $set->count()];
+    }
+
+    /**
+     * [$from, $to] oralig'ida boshlangan VA $at nuqtasida hali ham faol
+     * bo'lgan obunalarning oylik MRR yig'indisi. Net Retention'ni faqat
+     * "davomchi" kohorta bo'yicha to'g'ri hisoblash uchun kerak.
+     */
+    private function partnerNewMrrActiveAt($rows, Carbon $from, Carbon $to, Carbon $at): float
+    {
+        return (float) $rows->filter(fn ($r) => $r->start->greaterThanOrEqualTo($from)
+            && $r->start->lessThanOrEqualTo($to)
+            && $r->start->lessThanOrEqualTo($at)
+            && (! $r->end || $r->end->greaterThanOrEqualTo($at)))
+            ->sum('monthly');
     }
 
     private function recentBookOrders(Books $book): array

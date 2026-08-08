@@ -51,6 +51,23 @@ interface DashboardPayload {
     refundAmount: number; refundOrders: number; refundRate: number;
     cancelRate: number; repeatRate: number; repeatBuyers: number; paybackOrders: number; hasMarketingData: boolean;
   };
+  partnerEconomics: {
+    hasData: boolean; hasMarketingData: boolean; currentPartners: number; currentMrr: number;
+    summary: {
+      arpc: number; cac: number | null; cacPaybackMonths: number | null;
+      churnRateMrr: number; churnRateCount: number;
+      grossRetention: number | null; netRetention: number | null;
+      lifetimeMonths: number | null; ltv: number | null; ltvCacRatio: number | null;
+    };
+    months: Array<{
+      month: string; mrr: number; newMrr: number; churnedMrr: number;
+      currentPartners: number; newPartners: number; churnedPartners: number; marketingSpend: number;
+      arpc: number; cac: number | null; cacPaybackMonths: number | null;
+      churnRateMrr: number; churnRateCount: number;
+      grossRetention: number | null; netRetention: number | null;
+      lifetimeMonths: number | null; ltv: number | null; ltvCacRatio: number | null;
+    }>;
+  };
   exportUrl?: string;
   alerts: Array<{ level: string; icon: string; title: string; text: string; url?: string }>;
 }
@@ -82,6 +99,16 @@ const emptyDashboard: DashboardPayload = {
     contributionPerOrder: 0, grossPerOrder: 0, marginPct: 0,
     refundAmount: 0, refundOrders: 0, refundRate: 0,
     cancelRate: 0, repeatRate: 0, repeatBuyers: 0, paybackOrders: 0, hasMarketingData: false,
+  },
+  partnerEconomics: {
+    hasData: false, hasMarketingData: false, currentPartners: 0, currentMrr: 0,
+    summary: {
+      arpc: 0, cac: null, cacPaybackMonths: null,
+      churnRateMrr: 0, churnRateCount: 0,
+      grossRetention: null, netRetention: null,
+      lifetimeMonths: null, ltv: null, ltvCacRatio: null,
+    },
+    months: [],
   },
   alerts: [],
 };
@@ -205,18 +232,32 @@ export default function Dashboard() {
             </button>
           </div>
           {dashboard.exportUrl ? (
-            <div className="btn-group btn-group-sm">
-              <a href={exportHref('investor')} className="btn btn-outline-success">
-                <i className="bi bi-file-earmark-spreadsheet me-1"></i>Investor pack
-              </a>
-              <button type="button" className="btn btn-outline-success dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
-                <span className="visually-hidden">Export turlari</span>
-              </button>
-              <ul className="dropdown-menu dropdown-menu-end">
-                <li><a className="dropdown-item" href={exportHref('investor')}><i className="bi bi-stars me-2"></i>Investor pack · multi-sheet</a></li>
-                <li><a className="dropdown-item" href={exportHref('unit')}><i className="bi bi-calculator me-2"></i>Unit economics</a></li>
-                <li><a className="dropdown-item" href={exportHref('dashboard')}><i className="bi bi-table me-2"></i>Dashboard snapshot</a></li>
-              </ul>
+            <div className="d-flex align-items-center gap-1">
+              <div className="btn-group btn-group-sm">
+                <a href={exportHref('investor')} className="btn btn-outline-success" title="To'liq investor paketi: assumptions, unit economics, P&L, sales trend, sellers va h.k. — bir nechta varaqda.">
+                  <i className="bi bi-file-earmark-spreadsheet me-1"></i>Excel export
+                </a>
+                <button type="button" className="btn btn-outline-success dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                  <span className="visually-hidden">Export turlari</span>
+                </button>
+                <ul className="dropdown-menu dropdown-menu-end">
+                  <li><a className="dropdown-item" href={exportHref('investor')}>
+                    <i className="bi bi-stars me-2"></i>Investor pack · multi-sheet
+                    <small className="d-block text-muted ms-4">Barcha varaqlar: summary, unit econ, P&L, trend, sellers</small>
+                  </a></li>
+                  <li><hr className="dropdown-divider" /></li>
+                  <li><a className="dropdown-item" href={exportHref('unit')}>
+                    <i className="bi bi-calculator me-2"></i>Unit economics + Partners MRR
+                    <small className="d-block text-muted ms-4">Xaridor CAC/LTV va hamkorlar (premium) MRR/churn, oylik</small>
+                  </a></li>
+                  <li><hr className="dropdown-divider" /></li>
+                  <li><a className="dropdown-item" href={exportHref('dashboard')}>
+                    <i className="bi bi-table me-2"></i>Dashboard snapshot
+                    <small className="d-block text-muted ms-4">Ekrandagi asosiy KPI'lar — tezkor umumiy jadval</small>
+                  </a></li>
+                </ul>
+              </div>
+              <InfoHint text="Excel fayl joriy tanlangan davr (yuqoridagi filtr) bilan bir xil ma'lumotdan generatsiya qilinadi — ekrandagi raqamlar bilan aynan mos keladi. Katta marketpleyslar kabi: bir tugma, tayyor .xlsx." />
             </div>
           ) : null}
           <Link href="/boshqaruv/live" className="btn btn-outline-secondary btn-sm"><i className="bi bi-broadcast me-1"></i>Live</Link>
@@ -269,6 +310,8 @@ export default function Dashboard() {
       </div>
 
       <UnitEconomics data={dashboard.unitEconomics} />
+
+      <PartnerEconomics data={dashboard.partnerEconomics} />
 
       <div className="row g-3 mb-3">
         <div className="col-xl-8">
@@ -527,6 +570,128 @@ function UnitEconomics({ data }: { data: DashboardPayload['unitEconomics'] }) {
             </div>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+type PartnerMonth = DashboardPayload['partnerEconomics']['months'][number];
+
+function PartnerEconomics({ data }: { data: DashboardPayload['partnerEconomics'] }) {
+  const pct = (v: number | null) => (v === null ? '—' : `${v}%`);
+  const months = data.months || [];
+
+  if (!data.hasData || !months.length) {
+    return (
+      <div className="card-panel mb-3">
+        <div className="panel-head">
+          <div>
+            <div className="d-flex align-items-center gap-2">
+              <div className="panel-title">Hamkorlar MRR (Premium obuna)</div>
+              <InfoHint text="Premium obuna to'lagan sotuvchilar (hamkorlar) uchun SaaS uslubidagi MRR, churn, retention va LTV hisoboti. Xaridor unit economics blokidan alohida — ikkalasi qo'shilmaydi." />
+            </div>
+            <small className="text-muted">seller_premium_subscriptions asosida, oylik dinamika</small>
+          </div>
+        </div>
+        <div className="text-muted small">Hali faol premium (hamkor) obuna topilmadi. Birinchi sotuvchi premium sotib olgach, shu yerda MRR, churn va LTV avtomatik hisoblanib boradi.</div>
+      </div>
+    );
+  }
+
+  const s = data.summary;
+  const ratioTone = s.ltvCacRatio === null ? '#6b7280' : s.ltvCacRatio >= 3 ? '#10b981' : s.ltvCacRatio >= 1 ? '#f59e0b' : '#ef4444';
+  const churnTone = s.churnRateMrr > 5 ? '#ef4444' : s.churnRateMrr > 2 ? '#f59e0b' : '#10b981';
+  const netTone = s.netRetention === null ? '#6b7280' : s.netRetention >= 100 ? '#059669' : '#f59e0b';
+
+  const cards: Array<{ l: string; icon: string; v: string; s: string; c: string; help: string }> = [
+    { l: 'Faol hamkor', icon: 'bi-people-fill', v: fmt(data.currentPartners), s: `MRR ${money(data.currentMrr)}`, c: '#4f46e5', help: "Joriy oyda faol (to'lovi o'tgan) premium sotuvchilar soni va ularning umumiy oylik takrorlanuvchi daromadi (MRR)." },
+    { l: 'ARPC', icon: 'bi-cash-coin', v: money(s.arpc), s: 'Hamkor boshiga MRR', c: '#10b981', help: "Average Revenue Per Customer — faol hamkor boshiga o'rtacha oylik daromad, oylik jadval o'rtachasi." },
+    { l: 'CAC', icon: 'bi-magnet', v: data.hasMarketingData && s.cac !== null ? money(s.cac) : '—', s: 'Marketing / yangi hamkor', c: '#6366f1', help: "Marketing xarajati / davrdagi yangi premium hamkorlar. Chiqimlar bo'limida marketing kategoriyasi kiritilishi kerak." },
+    { l: 'CAC Payback', icon: 'bi-hourglass-split', v: s.cacPaybackMonths !== null ? `${s.cacPaybackMonths} oy` : '—', s: 'CAC ni qoplash muddati', c: '#7c3aed', help: 'CAC ni ARPC bilan qoplash uchun kerak bo\'ladigan oylar soni (CAC / ARPC).' },
+    { l: 'Churn · MRR', icon: 'bi-graph-down-arrow', v: pct(s.churnRateMrr), s: "Oylik, MRR bo'yicha", c: churnTone, help: "Oy davomida bekor bo'lgan MRR / oy boshidagi MRR, oylar bo'yicha o'rtacha." },
+    { l: 'Churn · hamkor', icon: 'bi-person-dash', v: pct(s.churnRateCount), s: "Oylik, soni bo'yicha", c: churnTone, help: "Oy davomida ketgan hamkorlar soni / oy boshidagi hamkorlar soni, oylar bo'yicha o'rtacha." },
+    { l: 'Gross Retention', icon: 'bi-shield-check', v: pct(s.grossRetention), s: 'Churn hisobga olib', c: '#059669', help: "(Oy boshi MRR − bekor bo'lgan MRR) / oy boshi MRR. 100% dan yuqori bo'lmaydi." },
+    { l: 'Net Retention', icon: 'bi-arrow-up-right-circle', v: pct(s.netRetention), s: 'Upgrade/downgrade bilan', c: netTone, help: "Mavjud hamkorlarning joriy MRR'si / ularning oy boshidagi MRR'si. 100% dan yuqori bo'lsa — mavjud hamkorlar ko'proq to'lamoqda." },
+    { l: 'Lifetime', icon: 'bi-infinity', v: s.lifetimeMonths !== null ? `${s.lifetimeMonths} oy` : '—', s: '1 / churn rate', c: '#0ea5e9', help: "Hamkorning o'rtacha faollik davomiyligi (oyda): 1 / churn rate (soni bo'yicha)." },
+    { l: 'LTV : CAC', icon: 'bi-speedometer2', v: s.ltvCacRatio !== null ? `${s.ltvCacRatio}×` : '—', s: s.ltv !== null ? `LTV ${money(s.ltv)}` : 'LTV —', c: ratioTone, help: "Lifetime Value (ARPC × Lifetime) / CAC. ≥3 sog'lom signal, <1 — hamkor jalb qilish zarar keltiryapti." },
+  ];
+
+  const inputRows: Array<{ label: string; get: (m: PartnerMonth) => string }> = [
+    { label: "Partners' MRR", get: (m) => money(m.mrr) },
+    { label: 'Yangi hamkor MRR', get: (m) => money(m.newMrr) },
+    { label: "Bekor bo'lgan MRR", get: (m) => money(m.churnedMrr) },
+    { label: 'Faol hamkorlar', get: (m) => fmt(m.currentPartners) },
+    { label: 'Yangi hamkorlar', get: (m) => fmt(m.newPartners) },
+    { label: 'Bekor qilgan hamkorlar', get: (m) => fmt(m.churnedPartners) },
+    { label: 'Marketing xarajat', get: (m) => money(m.marketingSpend) },
+  ];
+
+  const indicatorRows: Array<{ label: string; get: (m: PartnerMonth) => string }> = [
+    { label: 'ARPC', get: (m) => money(m.arpc) },
+    { label: 'CAC', get: (m) => (m.cac !== null ? money(m.cac) : '—') },
+    { label: 'CAC Payback (oy)', get: (m) => (m.cacPaybackMonths !== null ? String(m.cacPaybackMonths) : '—') },
+    { label: 'Churn — MRR', get: (m) => `${m.churnRateMrr}%` },
+    { label: 'Churn — soni', get: (m) => `${m.churnRateCount}%` },
+    { label: 'Gross Retention', get: (m) => (m.grossRetention !== null ? `${m.grossRetention}%` : '—') },
+    { label: 'Net Retention', get: (m) => (m.netRetention !== null ? `${m.netRetention}%` : '—') },
+    { label: 'Lifetime (oy)', get: (m) => (m.lifetimeMonths !== null ? String(m.lifetimeMonths) : '—') },
+    { label: 'LTV', get: (m) => (m.ltv !== null ? money(m.ltv) : '—') },
+    { label: 'LTV : CAC', get: (m) => (m.ltvCacRatio !== null ? `${m.ltvCacRatio}×` : '—') },
+  ];
+
+  return (
+    <div className="card-panel mb-3">
+      <div className="panel-head">
+        <div>
+          <div className="d-flex align-items-center gap-2">
+            <div className="panel-title">Hamkorlar MRR (Premium obuna)</div>
+            <InfoHint text="Premium obuna to'lagan sotuvchilar (hamkorlar) uchun SaaS uslubidagi MRR, churn, retention va LTV hisoboti — Google Sheets namunasidagi tuzilishda (Input Data + Key Indicators, oylar ustunlarda). Xaridor unit economics blokidan alohida hisoblanadi, ikkalasi qo'shilmaydi." />
+          </div>
+          <small className="text-muted">MRR · Churn · Retention · LTV — oylik dinamika</small>
+        </div>
+        {data.hasMarketingData ? null : <span className="chip chip-warning">CAC uchun Chiqimlarga marketing xarajat kiriting</span>}
+      </div>
+
+      <div className="row g-2 mb-3">
+        {cards.map((card) => (
+          <div className="col-xl-2 col-lg-3 col-md-4 col-6" key={card.l}>
+            <div className="mini-stat h-100">
+              <i className={`bi ${card.icon}`} style={{ color: card.c }}></i>
+              <span>
+                <span className="d-inline-flex align-items-center gap-1">{card.l}<InfoHint text={card.help} /></span>
+                <small className="d-block text-muted">{card.s}</small>
+              </span>
+              <strong style={{ color: card.c }}>{card.v}</strong>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="econ-table-wrap">
+        <table className="econ-table">
+          <thead>
+            <tr>
+              <th className="econ-table-label">Metric</th>
+              {months.map((m) => <th key={m.month}>{m.month}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="econ-section-row"><td colSpan={months.length + 1}>Input Data</td></tr>
+            {inputRows.map((row) => (
+              <tr key={row.label}>
+                <td className="econ-table-label">{row.label}</td>
+                {months.map((m) => <td key={m.month}>{row.get(m)}</td>)}
+              </tr>
+            ))}
+            <tr className="econ-section-row"><td colSpan={months.length + 1}>Key Indicators</td></tr>
+            {indicatorRows.map((row) => (
+              <tr key={row.label}>
+                <td className="econ-table-label">{row.label}</td>
+                {months.map((m) => <td key={m.month}>{row.get(m)}</td>)}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
