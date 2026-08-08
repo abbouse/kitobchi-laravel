@@ -51,6 +51,18 @@ interface DashboardPayload {
     refundAmount: number; refundOrders: number; refundRate: number;
     cancelRate: number; repeatRate: number; repeatBuyers: number; paybackOrders: number; hasMarketingData: boolean;
   };
+  unitEconomicsMonthly: {
+    hasData: boolean;
+    months: Array<{
+      month: string; grossRevenue: number; contribution: number; platformProfit: number;
+      commission: number; deliveryIncome: number; promoDiscount: number; collectionDiscount: number;
+      cashback: number; courierPayout: number; manualExpenses: number; providerFee: number; tax: number;
+      marketingSpend: number; paidOrders: number; totalBuyers: number; newBuyers: number; repeatBuyers: number;
+      repeatRate: number; cac: number | null; cacPaybackOrders: number | null; arpu: number;
+      grossPerOrder: number; contributionPerOrder: number; marginPct: number;
+      refundAmount: number; refundOrders: number; refundRate: number; cancelRate: number;
+    }>;
+  };
   partnerEconomics: {
     hasData: boolean; hasMarketingData: boolean; currentPartners: number; currentMrr: number;
     summary: {
@@ -100,6 +112,7 @@ const emptyDashboard: DashboardPayload = {
     refundAmount: 0, refundOrders: 0, refundRate: 0,
     cancelRate: 0, repeatRate: 0, repeatBuyers: 0, paybackOrders: 0, hasMarketingData: false,
   },
+  unitEconomicsMonthly: { hasData: false, months: [] },
   partnerEconomics: {
     hasData: false, hasMarketingData: false, currentPartners: 0, currentMrr: 0,
     summary: {
@@ -309,7 +322,7 @@ export default function Dashboard() {
         <PeriodCard label="Yangi userlar" value={fmt(current.users)} delta={previous ? change(current.users, previous.users) : null} icon="bi-person-plus" color="#ec4899" help={periodHelps.users} />
       </div>
 
-      <UnitEconomics data={dashboard.unitEconomics} />
+      <UnitEconomics data={dashboard.unitEconomics} monthly={dashboard.unitEconomicsMonthly} />
 
       <PartnerEconomics data={dashboard.partnerEconomics} />
 
@@ -527,11 +540,38 @@ function formatDuration(seconds = 0) {
   return `${minutes}m ${rest}s`;
 }
 
-function UnitEconomics({ data }: { data: DashboardPayload['unitEconomics'] }) {
+type UnitEconomicsMonth = DashboardPayload['unitEconomicsMonthly']['months'][number];
+
+function UnitEconomics({ data, monthly }: { data: DashboardPayload['unitEconomics']; monthly: DashboardPayload['unitEconomicsMonthly'] }) {
   const ratioTone = data.ltvCacRatio >= 3 ? '#10b981' : data.ltvCacRatio >= 1 ? '#f59e0b' : '#ef4444';
   const refundTone = data.refundRate > 5 ? '#ef4444' : data.refundRate > 2 ? '#f59e0b' : '#10b981';
   const cancelTone = data.cancelRate > 15 ? '#ef4444' : data.cancelRate > 8 ? '#f59e0b' : '#10b981';
   const marginTone = data.marginPct >= 0 ? '#059669' : '#ef4444';
+  const months = monthly?.months || [];
+
+  const inputRows: Array<{ label: string; get: (m: UnitEconomicsMonth) => string }> = [
+    { label: 'Yakuniy savdo tushumi', get: (m) => money(m.grossRevenue) },
+    { label: 'Contribution (soliqdan oldin)', get: (m) => money(m.contribution) },
+    { label: 'Platforma sof marja', get: (m) => money(m.platformProfit) },
+    { label: 'Marketing xarajat', get: (m) => money(m.marketingSpend) },
+    { label: "To'langan orderlar", get: (m) => fmt(m.paidOrders) },
+    { label: 'Xaridorlar (oy)', get: (m) => fmt(m.totalBuyers) },
+    { label: 'Yangi xaridorlar', get: (m) => fmt(m.newBuyers) },
+    { label: 'Qaytgan xaridorlar', get: (m) => fmt(m.repeatBuyers) },
+    { label: 'Refund summa', get: (m) => money(m.refundAmount) },
+  ];
+
+  const indicatorRows: Array<{ label: string; get: (m: UnitEconomicsMonth) => string }> = [
+    { label: 'CAC', get: (m) => (m.cac !== null ? money(m.cac) : '—') },
+    { label: 'CAC Payback (order)', get: (m) => (m.cacPaybackOrders !== null ? String(m.cacPaybackOrders) : '—') },
+    { label: 'AOV / Gross per order', get: (m) => money(m.grossPerOrder) },
+    { label: 'Contribution / order', get: (m) => money(m.contributionPerOrder) },
+    { label: 'Gross margin', get: (m) => `${m.marginPct}%` },
+    { label: 'ARPU — oylik', get: (m) => money(m.arpu) },
+    { label: 'Repeat purchase rate', get: (m) => `${m.repeatRate}%` },
+    { label: 'Refund rate', get: (m) => `${m.refundRate}%` },
+    { label: 'Cancel rate', get: (m) => `${m.cancelRate}%` },
+  ];
 
   const cards = [
     { l: 'CAC', icon: 'bi-cash-coin', v: data.hasMarketingData ? money(data.cac) : '—', s: data.hasMarketingData ? `${fmt(data.newBuyers)} yangi xaridor` : 'Marketing xarajat kiritilmagan', c: '#6366f1', help: "Customer Acquisition Cost: davrdagi marketing xarajati / yangi xaridorlar. Marketing xarajati Chiqimlar bo'limidagi \"Marketing va reklama\" kategoriyasidan olinadi." },
@@ -551,13 +591,13 @@ function UnitEconomics({ data }: { data: DashboardPayload['unitEconomics'] }) {
         <div>
           <div className="d-flex align-items-center gap-2">
             <div className="panel-title">Unit economics</div>
-            <InfoHint text="Investor va operator uchun birlik iqtisodiyoti. CAC/refund/cancel tanlangan davr bilan, LTV va repeat lifetime bo'yicha. Hammasi real order, xarajat va refund ma'lumotlaridan hisoblanadi." />
+            <InfoHint text="Investor va operator uchun birlik iqtisodiyoti — Google Sheets namunasidagi tuzilishda (Input Data + Key Indicators, oylar ustunlarda). Yuqoridagi kartalar tanlangan davr/lifetime bo'yicha, pastdagi jadval so'nggi 12 oy dinamikasi." />
           </div>
           <small className="text-muted">CAC · LTV · margin/order · refund/cancel · repeat</small>
         </div>
         {data.hasMarketingData ? null : <span className="chip chip-warning">CAC uchun Chiqimlarga marketing xarajat kiriting</span>}
       </div>
-      <div className="row g-2">
+      <div className="row g-2 mb-3">
         {cards.map((card) => (
           <div className="col-xl-2 col-lg-3 col-md-4 col-6" key={card.l}>
             <div className="mini-stat h-100">
@@ -571,6 +611,35 @@ function UnitEconomics({ data }: { data: DashboardPayload['unitEconomics'] }) {
           </div>
         ))}
       </div>
+
+      {months.length ? (
+        <div className="econ-table-wrap">
+          <table className="econ-table">
+            <thead>
+              <tr>
+                <th className="econ-table-label">Metric</th>
+                {months.map((m) => <th key={m.month}>{m.month}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="econ-section-row"><td colSpan={months.length + 1}>Input Data</td></tr>
+              {inputRows.map((row) => (
+                <tr key={row.label}>
+                  <td className="econ-table-label">{row.label}</td>
+                  {months.map((m) => <td key={m.month}>{row.get(m)}</td>)}
+                </tr>
+              ))}
+              <tr className="econ-section-row"><td colSpan={months.length + 1}>Key Indicators</td></tr>
+              {indicatorRows.map((row) => (
+                <tr key={row.label}>
+                  <td className="econ-table-label">{row.label}</td>
+                  {months.map((m) => <td key={m.month}>{row.get(m)}</td>)}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
     </div>
   );
 }

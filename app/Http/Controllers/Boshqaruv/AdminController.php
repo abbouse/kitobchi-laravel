@@ -254,6 +254,7 @@ class AdminController extends Controller
     public function exportReport(Request $request)
     {
         $payload = $this->dashboardPayload($request);
+        $range = $this->dashboardDateRange($request);
         $type = (string) $request->query('export_type', 'investor');
         if (! in_array($type, ['dashboard', 'investor', 'unit'], true)) {
             $type = 'investor';
@@ -269,7 +270,9 @@ class AdminController extends Controller
             $payload,
             $filename,
             $type,
-            max(1, (float) $request->query('usd_rate', config('services.investor_usd_rate', 12500)))
+            max(1, (float) $request->query('usd_rate', config('services.investor_usd_rate', 12500))),
+            $range['from'] ?? null,
+            $range['to'] ?? null
         );
     }
 
@@ -278,7 +281,7 @@ class AdminController extends Controller
      * workbook qilib yuklab beradi. Investor pack Google Sheets uslubida:
      * assumptionlar, formula-driven unit economics, P&L va xom KPI sheetlari.
      */
-    private function downloadDashboardWorkbook(array $payload, string $filename, string $type, float $usdRate): \Symfony\Component\HttpFoundation\StreamedResponse
+    private function downloadDashboardWorkbook(array $payload, string $filename, string $type, float $usdRate, ?Carbon $rangeStart = null, ?Carbon $rangeEnd = null): \Symfony\Component\HttpFoundation\StreamedResponse
     {
         $spreadsheet = new Spreadsheet();
         $spreadsheet->getProperties()
@@ -306,11 +309,12 @@ class AdminController extends Controller
             $this->addDashboardSheet($spreadsheet, 'P&L', $this->dashboardProfitAndLossRows($payload));
             $this->addDashboardSheet($spreadsheet, 'Sales Trend', $this->dashboardSalesTrendRowsForExport($payload));
             $this->addDashboardSheet($spreadsheet, 'Category Sales', $this->dashboardCategoryRowsForExport($payload));
-            $this->addDashboardSheet($spreadsheet, 'Top Products', $this->dashboardTopProductRowsForExport($payload));
+            $this->addDashboardSheet($spreadsheet, 'Top Products', $this->dashboardTopProductRowsForExport($payload, $rangeStart, $rangeEnd));
             $this->addDashboardSheet($spreadsheet, 'Funnel', $this->dashboardFunnelRowsForExport($payload));
             $this->addDashboardSheet($spreadsheet, 'Retention', $this->dashboardRetentionRowsForExport($payload));
-            $this->addDashboardSheet($spreadsheet, 'Sellers', $this->dashboardSellerRowsForExport($payload));
+            $this->addDashboardSheet($spreadsheet, 'Sellers', $this->dashboardSellerRowsForExport());
             $this->addDashboardSheet($spreadsheet, 'Operations', $this->dashboardOperationRowsForExport($payload));
+            $this->addDashboardSheet($spreadsheet, 'Orders detail', $this->dashboardOrdersDetailRows($rangeStart, $rangeEnd));
         }
 
         $spreadsheet->setActiveSheetIndex(0);
@@ -430,7 +434,7 @@ class AdminController extends Controller
         $u = $p['unitEconomics'] ?? [];
         $b = $p['business'] ?? [];
 
-        return [
+        $rows = [
             ['Kitobchi — Investor summary'],
             ['Ko‘rsatkich', 'UZS', 'USD', 'Soni / %', 'Investor uchun ma’nosi'],
             ['Yakuniy savdo tushumi', (float) ($f['grossRevenue'] ?? 0), '=B3/\'Assumptions\'!$B$7', '', 'Davrda mijoz qabul qilgan paid orderlar tushumi'],
@@ -454,14 +458,36 @@ class AdminController extends Controller
             ['Xaridorlar', '', '', (int) ($b['buyingUsers'] ?? 0), 'Paid order qilgan userlar'],
             ['Order / xaridor', '', '', (float) ($b['avgOrdersPerBuyer'] ?? 0), 'Frequency signali'],
         ];
+
+        $trend = $p['salesByMonth'] ?? [];
+        if (! empty($trend)) {
+            $rows[] = [];
+            $rows[] = ['Savdo trendi', 'Revenue UZS', 'Revenue USD', 'Signal (profit) UZS', 'Orders'];
+            foreach ($trend as $row) {
+                $excelRow = count($rows) + 1;
+                $rows[] = [
+                    $row['month'] ?? '-',
+                    (float) ($row['revenue'] ?? 0),
+                    "=B{$excelRow}/'Assumptions'!\$B\$7",
+                    (float) ($row['profit'] ?? 0),
+                    (int) ($row['orders'] ?? 0),
+                ];
+            }
+        }
+
+        return $rows;
     }
 
     private function dashboardUnitEconomicsRows(array $p): array
     {
         $u = $p['unitEconomics'] ?? [];
+        $months = $p['unitEconomicsMonthly']['months'] ?? [];
+        $labels = array_map(fn ($m) => $m['month'] ?? '-', $months);
+        $blank = array_fill(0, count($months), '');
+        $dash = fn ($v) => $v === null ? '-' : $v;
 
-        return [
-            ['Kitobchi — Unit economics'],
+        $rows = [
+            ['Kitobchi — Unit economics (xaridor)'],
             ['Metric', 'UZS', 'USD', '% / ratio', 'Hisoblash / izoh'],
             ['Marketing spend', (float) ($u['marketingSpend'] ?? 0), '=B3/\'Assumptions\'!$B$7', '', 'Platform expenses ichida marketing kategoriyasi'],
             ['New buyers', '', '', (int) ($u['newBuyers'] ?? 0), 'Davrda birinchi paid order qilgan xaridorlar'],
@@ -479,6 +505,33 @@ class AdminController extends Controller
             ['Total buyers', '', '', (int) ($u['totalBuyers'] ?? 0), 'Lifetime paid xaridorlar'],
             ['Repeat buyers', '', '', (int) ($u['repeatBuyers'] ?? 0), 'Lifetime qaytgan xaridorlar'],
         ];
+
+        if (! empty($months)) {
+            $rows[] = [];
+            $rows[] = array_merge(['Oylik jadval (so‘nggi 12 oy)'], $labels);
+            $rows[] = array_merge([' Input Data'], $blank);
+            $rows[] = array_merge([' Yakuniy savdo tushumi (so‘m)'], array_map(fn ($m) => (float) $m['grossRevenue'], $months));
+            $rows[] = array_merge([' Contribution (so‘m)'], array_map(fn ($m) => (float) $m['contribution'], $months));
+            $rows[] = array_merge([' Platforma sof marja (so‘m)'], array_map(fn ($m) => (float) $m['platformProfit'], $months));
+            $rows[] = array_merge([' Marketing xarajat (so‘m)'], array_map(fn ($m) => (float) $m['marketingSpend'], $months));
+            $rows[] = array_merge([' To‘langan orderlar'], array_map(fn ($m) => (int) $m['paidOrders'], $months));
+            $rows[] = array_merge([' Xaridorlar (oy)'], array_map(fn ($m) => (int) $m['totalBuyers'], $months));
+            $rows[] = array_merge([' Yangi xaridorlar'], array_map(fn ($m) => (int) $m['newBuyers'], $months));
+            $rows[] = array_merge([' Qaytgan xaridorlar'], array_map(fn ($m) => (int) $m['repeatBuyers'], $months));
+            $rows[] = array_merge([' Refund summa (so‘m)'], array_map(fn ($m) => (float) $m['refundAmount'], $months));
+            $rows[] = array_merge(['Key Indicators'], $blank);
+            $rows[] = array_merge([' CAC (so‘m)'], array_map(fn ($m) => $dash($m['cac']), $months));
+            $rows[] = array_merge([' CAC Payback (order)'], array_map(fn ($m) => $dash($m['cacPaybackOrders']), $months));
+            $rows[] = array_merge([' AOV / Gross per order (so‘m)'], array_map(fn ($m) => (float) $m['grossPerOrder'], $months));
+            $rows[] = array_merge([' Contribution / order (so‘m)'], array_map(fn ($m) => (float) $m['contributionPerOrder'], $months));
+            $rows[] = array_merge([' Gross margin (%)'], array_map(fn ($m) => (float) $m['marginPct'], $months));
+            $rows[] = array_merge([' ARPU — oylik (so‘m)'], array_map(fn ($m) => (float) $m['arpu'], $months));
+            $rows[] = array_merge([' Repeat purchase rate (%)'], array_map(fn ($m) => (float) $m['repeatRate'], $months));
+            $rows[] = array_merge([' Refund rate (%)'], array_map(fn ($m) => (float) $m['refundRate'], $months));
+            $rows[] = array_merge([' Cancel rate (%)'], array_map(fn ($m) => (float) $m['cancelRate'], $months));
+        }
+
+        return $rows;
     }
 
     private function dashboardPartnerEconomicsRows(array $p): array
@@ -534,11 +587,84 @@ class AdminController extends Controller
         return $rows;
     }
 
+    /**
+     * Xom (order-level) hisobot — investorlar va ichki jamoa uchun "haqiqiy
+     * qatorlar" kerak bo'lganda katta marketpleyslardagi kabi to'liq
+     * ro'yxat. Tanlangan davrda YARATILGAN barcha orderlar (holatidan
+     * qat'i nazar) — faqat "yakuniy savdo" emas, shu bilan bekor/kutilayotgan
+     * orderlar ham ko'rinadi. Juda uzoq davr (masalan "Barchasi") uchun
+     * so'nggi 5000 ta bilan cheklanadi va oxirida shu haqda eslatma qatori
+     * qo'shiladi.
+     */
+    private function dashboardOrdersDetailRows(?Carbon $start, ?Carbon $end): array
+    {
+        $limit = 5000;
+        $deliveryLabel = fn ($type): string => match ((string) $type) {
+            'pickup' => "Do'kondan olib ketish",
+            'postal' => 'Pochta orqali',
+            'hub' => 'Punktdan olish',
+            default => 'Kuryer yetkazish',
+        };
+        $hasRefund = Schema::hasColumn('solds', 'refund_total_amount');
+
+        $query = $this->applyCreatedRange(Sold::query(), $start, $end)
+            ->with('user:id,name,lastname,phone_number')
+            ->latest('created_at');
+
+        $total = (clone $query)->count();
+        $orders = $query->take($limit)->get();
+
+        $header = ['#', 'Order ID', 'Sana', 'Xaridor', 'Telefon', "Summa (so'm)", 'Yetkazish (so\'m)', 'Yetkazish turi', 'Holat', "To'lov holati", 'Mahsulot soni'];
+        if ($hasRefund) {
+            $header[] = "Refund (so'm)";
+        }
+
+        $rows = [['Kitobchi — Orders detail'], $header];
+
+        $index = 0;
+        foreach ($orders as $order) {
+            $index++;
+            $paymentPaid = in_array($order->payment_status_code, ['paid', 'success', 'completed'], true)
+                || (! $order->payment_status_code && in_array($order->paymentStatus, ['2', 2, 'paid', 'success', 'completed', 'C', 'c'], true));
+            $paymentCancelled = $order->payment_status_code === PaymentStatusCode::CANCELLED->value
+                || (! $order->payment_status_code && in_array($order->paymentStatus, [3, '3', 'cancelled', 'rejected'], true));
+            $paymentLabel = $paymentPaid ? "To'langan" : ($paymentCancelled ? 'Bekor qilingan' : 'Kutilmoqda');
+
+            $line = [
+                $index,
+                $order->id,
+                optional($order->created_at)->format('Y-m-d H:i'),
+                trim(($order->user?->name ?? '').' '.($order->user?->lastname ?? '')) ?: 'Mehmon',
+                $order->user?->phone_number ?? '-',
+                (float) ($order->amount ?? 0),
+                (float) ($order->deliveryPrice ?? 0),
+                $deliveryLabel($order->deliveryType ?? null),
+                $this->orderStatusLabel((string) ($order->status_code ?? $order->status ?? '')),
+                $paymentLabel,
+                is_array($order->items ?? null) ? count($order->items) : 0,
+            ];
+            if ($hasRefund) {
+                $line[] = (float) ($order->refund_total_amount ?? 0);
+            }
+
+            $rows[] = $line;
+        }
+
+        if ($total > $limit) {
+            $rows[] = [];
+            $rows[] = ["Eslatma: davrda jami {$total} ta order bor, fayl hajmi uchun so'nggi {$limit} tasi ko'rsatildi."];
+        }
+
+        return $rows;
+    }
+
     private function dashboardProfitAndLossRows(array $p): array
     {
         $f = $p['financial'] ?? [];
+        $months = $p['unitEconomicsMonthly']['months'] ?? [];
+        $labels = array_map(fn ($m) => $m['month'] ?? '-', $months);
 
-        return [
+        $rows = [
             ['Kitobchi — P&L signal'],
             ['Line item', 'UZS', 'USD', 'Izoh'],
             ['Gross revenue', (float) ($f['grossRevenue'] ?? 0), '=B3/\'Assumptions\'!$B$7', 'Yakuniy savdo tushumi'],
@@ -554,6 +680,25 @@ class AdminController extends Controller
             ['Tax', -(float) ($f['tax'] ?? 0), '=B13/\'Assumptions\'!$B$7', 'Settings bo‘yicha soliq'],
             ['Platform profit signal', (float) ($f['platformProfit'] ?? 0), '=B14/\'Assumptions\'!$B$7', 'Contribution - tax'],
         ];
+
+        if (! empty($months)) {
+            $rows[] = [];
+            $rows[] = array_merge(['Oylik P&L (so‘nggi 12 oy, so‘m)'], $labels);
+            $rows[] = array_merge([' Gross revenue'], array_map(fn ($m) => (float) $m['grossRevenue'], $months));
+            $rows[] = array_merge([' Seller commission'], array_map(fn ($m) => (float) $m['commission'], $months));
+            $rows[] = array_merge([' Delivery income'], array_map(fn ($m) => (float) $m['deliveryIncome'], $months));
+            $rows[] = array_merge([' Promo discount'], array_map(fn ($m) => -(float) $m['promoDiscount'], $months));
+            $rows[] = array_merge([' Collection discount'], array_map(fn ($m) => -(float) $m['collectionDiscount'], $months));
+            $rows[] = array_merge([' Cashback'], array_map(fn ($m) => -(float) $m['cashback'], $months));
+            $rows[] = array_merge([' Courier payout'], array_map(fn ($m) => -(float) $m['courierPayout'], $months));
+            $rows[] = array_merge([' Manual expenses'], array_map(fn ($m) => -(float) $m['manualExpenses'], $months));
+            $rows[] = array_merge([' Provider fee'], array_map(fn ($m) => -(float) $m['providerFee'], $months));
+            $rows[] = array_merge([' Contribution before tax'], array_map(fn ($m) => (float) $m['contribution'], $months));
+            $rows[] = array_merge([' Tax'], array_map(fn ($m) => -(float) $m['tax'], $months));
+            $rows[] = array_merge([' Platform profit signal'], array_map(fn ($m) => (float) $m['platformProfit'], $months));
+        }
+
+        return $rows;
     }
 
     private function dashboardSalesTrendRowsForExport(array $p): array
@@ -585,12 +730,24 @@ class AdminController extends Controller
         return $rows;
     }
 
-    private function dashboardTopProductRowsForExport(array $p): array
+    /**
+     * Dashboard vidjeti faqat top-5 mahsulotni ko'rsatadi (liveTopProducts);
+     * export uchun esa paidOrderItemAggregates() ichidagi TO'LIQ ro'yxatdan
+     * (hech qanday cheklovsiz) foydalanamiz — investor/ichki jamoa uchun
+     * "batafsil" degani shu.
+     */
+    private function dashboardTopProductRowsForExport(array $p, ?Carbon $start, ?Carbon $end): array
     {
-        $rows = [['Kitobchi — Top products'], ['Mahsulot', 'Sotilgan dona', 'Revenue UZS', 'Revenue USD']];
-        foreach (($p['topProducts'] ?? []) as $row) {
+        $products = collect($this->paidOrderItemAggregates($start, $end)['products'] ?? [])
+            ->sortByDesc('revenue')
+            ->values();
+
+        $rows = [['Kitobchi — Barcha mahsulotlar (davr bo‘yicha)'], ['#', 'Mahsulot', 'Sotilgan dona', 'Revenue UZS', 'Revenue USD']];
+        $index = 0;
+        foreach ($products as $row) {
+            $index++;
             $excelRow = count($rows) + 1;
-            $rows[] = [$row['name'] ?? '-', (int) ($row['quantity'] ?? 0), (float) ($row['revenue'] ?? 0), "=C{$excelRow}/'Assumptions'!\$B\$7"];
+            $rows[] = [$index, $row['name'] ?? '-', (int) ($row['quantity'] ?? 0), (float) ($row['revenue'] ?? 0), "=D{$excelRow}/'Assumptions'!\$B\$7"];
         }
 
         return $rows;
@@ -626,22 +783,64 @@ class AdminController extends Controller
         return $rows;
     }
 
-    private function dashboardSellerRowsForExport(array $p): array
+    /**
+     * Dashboard vidjeti (dashboardSellerScorecard) faqat top-8 sotuvchini
+     * ko'rsatadi; export uchun BARCHA sotuvchilar (lifetime) — komissiya
+     * signal, o'rtacha chek va premium status bilan.
+     */
+    private function dashboardSellerRowsForExport(): array
     {
-        $rows = [['Kitobchi — Seller scorecard'], ['Sotuvchi', 'Orders', 'Revenue UZS', 'Revenue USD', 'Cancelled', 'Cancel %', 'Accept min', 'Rating', 'Rating count', 'Reputation']];
-        foreach (($p['sellerScorecard'] ?? []) as $row) {
+        if (! Schema::hasTable('seller_orders') || ! Schema::hasTable('sellers')) {
+            return [['Kitobchi — Seller scorecard'], ['Sotuvchilar jadvali topilmadi.']];
+        }
+
+        $hasAccepted = Schema::hasColumn('seller_orders', 'accepted_at') && Schema::hasColumn('seller_orders', 'created_at');
+
+        $agg = SellerOrder::query()
+            ->selectRaw('seller_id')
+            ->selectRaw('COUNT(*) as orders')
+            ->selectRaw("SUM(CASE WHEN status_code = 'cancelled' OR status = 'cancelled' THEN 1 ELSE 0 END) as cancelled")
+            ->selectRaw("SUM(CASE WHEN status_code = 'cancelled' OR status = 'cancelled' THEN 0 ELSE COALESCE(amount, 0) END) as revenue")
+            ->when($hasAccepted, fn ($q) => $q->selectRaw('AVG(CASE WHEN accepted_at IS NOT NULL THEN TIMESTAMPDIFF(MINUTE, created_at, accepted_at) END) as accept_min'))
+            ->whereNotNull('seller_id')
+            ->groupBy('seller_id')
+            ->orderByDesc('revenue')
+            ->get();
+
+        $rows = [['Kitobchi — Barcha sotuvchilar (lifetime)'], ['#', 'Sotuvchi', 'Premium', 'Orders', 'Revenue UZS', 'Revenue USD', "O'rtacha chek UZS", 'Cancelled', 'Cancel %', 'Accept min', 'Rating', 'Rating count', 'Reputation']];
+
+        if ($agg->isEmpty()) {
+            return $rows;
+        }
+
+        $sellers = Seller::query()
+            ->whereIn('id', $agg->pluck('seller_id'))
+            ->get(['id', 'shop_name', 'firstname', 'lastname', 'rating', 'rating_reviews_count', 'reputation_score', 'isPremiumShop'])
+            ->keyBy('id');
+
+        $index = 0;
+        foreach ($agg as $row) {
+            $index++;
+            $seller = $sellers->get($row->seller_id);
+            $orders = (int) $row->orders;
+            $cancelled = (int) $row->cancelled;
+            $revenue = (float) $row->revenue;
             $excelRow = count($rows) + 1;
+
             $rows[] = [
-                $row['name'] ?? '-',
-                (int) ($row['orders'] ?? 0),
-                (float) ($row['revenue'] ?? 0),
-                "=C{$excelRow}/'Assumptions'!\$B\$7",
-                (int) ($row['cancelled'] ?? 0),
-                (float) ($row['cancelRate'] ?? 0),
-                $row['acceptMinutes'] ?? '',
-                (float) ($row['rating'] ?? 0),
-                (int) ($row['ratingCount'] ?? 0),
-                (int) ($row['reputation'] ?? 0),
+                $index,
+                $seller?->shop_name ?: trim(($seller?->firstname ?? '').' '.($seller?->lastname ?? '')) ?: 'Sotuvchi',
+                $seller?->isPremiumShop ? 'Ha' : "Yo'q",
+                $orders,
+                $revenue,
+                "=E{$excelRow}/'Assumptions'!\$B\$7",
+                $orders > 0 ? round($revenue / $orders) : 0,
+                $cancelled,
+                $orders > 0 ? round($cancelled / $orders * 100, 1) : 0.0,
+                isset($row->accept_min) && $row->accept_min !== null ? (int) round((float) $row->accept_min) : '',
+                round((float) ($seller?->rating ?? 0), 2),
+                (int) ($seller?->rating_reviews_count ?? 0),
+                (int) ($seller?->reputation_score ?? 0),
             ];
         }
 
@@ -3829,6 +4028,7 @@ PROMPT;
             'retention' => $this->dashboardRetentionCohorts(),
             'sellerScorecard' => $this->dashboardSellerScorecard(),
             'unitEconomics' => $this->dashboardUnitEconomics($range['from'], $range['to']),
+            'unitEconomicsMonthly' => $this->dashboardUnitEconomicsMonthly(),
             'partnerEconomics' => $this->dashboardPartnerEconomics(),
             'exportUrl' => route('boshqaruv.dashboard.export'),
             'alerts' => $this->liveAlerts($mainCounts, $sellerCounts, $courierCounts),
@@ -3873,6 +4073,22 @@ PROMPT;
             foreach (['cac', 'blendedCac', 'arpu', 'ltv', 'ltvCacRatio', 'contributionPerOrder', 'grossPerOrder', 'marginPct', 'refundAmount'] as $moneyKey) {
                 if (array_key_exists($moneyKey, $payload['unitEconomics'])) {
                     $payload['unitEconomics'][$moneyKey] = 0;
+                }
+            }
+        }
+
+        if (isset($payload['unitEconomicsMonthly']['months']) && is_array($payload['unitEconomicsMonthly']['months'])) {
+            $monthlyMoneyKeys = [
+                'grossRevenue', 'contribution', 'platformProfit', 'commission', 'deliveryIncome',
+                'promoDiscount', 'collectionDiscount', 'cashback', 'courierPayout', 'manualExpenses',
+                'providerFee', 'tax', 'marketingSpend', 'cac', 'arpu', 'grossPerOrder',
+                'contributionPerOrder', 'refundAmount',
+            ];
+            foreach ($payload['unitEconomicsMonthly']['months'] as $i => $monthRow) {
+                foreach ($monthlyMoneyKeys as $moneyKey) {
+                    if (array_key_exists($moneyKey, $monthRow)) {
+                        $payload['unitEconomicsMonthly']['months'][$i][$moneyKey] = $monthRow[$moneyKey] === null ? null : 0;
+                    }
                 }
             }
         }
@@ -11239,6 +11455,133 @@ PROMPT;
                 'paybackOrders' => $paybackOrders,
                 'hasMarketingData' => $marketingSpend > 0,
             ];
+        });
+    }
+
+    /**
+     * Xaridor unit economics'ining OYLIK dinamikasi — yuqoridagi
+     * dashboardUnitEconomics() bitta tanlangan davr uchun bitta snapshot
+     * bersa, bu metod so'nggi 12 oy (yoki birinchi savdodan beri, qaysi
+     * qisqa bo'lsa) bo'yicha har oy uchun alohida hisoblaydi — Google
+     * Sheets namunasidagi "Input Data + Key Indicators" oylik jadval bilan
+     * bir xil shaklda. Har bir oy uchun to'liq P&L breakdown ham
+     * qaytariladi, shunda export'dagi P&L varag'i ham shu bitta
+     * hisoblashdan (qayta so'rov yubormasdan) oylik bo'lib chiqishi mumkin.
+     */
+    private function dashboardUnitEconomicsMonthly(): array
+    {
+        return Cache::remember('boshqaruv.dash.unit-econ-monthly.v1', now()->addMinutes(10), function () {
+            $firstSaleAt = $this->paidOrdersQuery()
+                ->selectRaw('MIN(COALESCE(completed_at, updated_at)) as first_sale_at')
+                ->value('first_sale_at');
+
+            if (! $firstSaleAt) {
+                return ['hasData' => false, 'months' => []];
+            }
+
+            $firstMonth = Carbon::parse($firstSaleAt)->startOfMonth();
+            $earliestAllowed = now()->startOfMonth()->subMonths(11);
+            $windowStart = $firstMonth->greaterThan($earliestAllowed) ? $firstMonth : $earliestAllowed;
+
+            // Har xaridorning birinchi (paid + qabul qilingan) xaridi sanasi —
+            // qaysi oy uchun "yangi" yoki "qaytgan" xaridor ekanini aniqlash uchun.
+            $firstBuyByUser = $this->paidOrdersQuery()
+                ->whereNotNull('user_id')
+                ->selectRaw('user_id, MIN(COALESCE(completed_at, updated_at)) as first_at')
+                ->groupBy('user_id')
+                ->pluck('first_at', 'user_id');
+
+            $months = [];
+            $cursor = $windowStart->copy();
+            $loopEnd = now()->startOfMonth();
+
+            while ($cursor->lessThanOrEqualTo($loopEnd)) {
+                $monthStart = $cursor->copy()->startOfMonth();
+                $monthEnd = $cursor->copy()->endOfMonth();
+
+                $finance = $this->marketplaceFinancialSnapshot($monthStart, $monthEnd);
+                $paidOrders = (int) $this->applyCompletedRange($this->paidOrdersQuery(), $monthStart, $monthEnd)->count();
+
+                $buyerIds = $this->applyCompletedRange($this->paidOrdersQuery(), $monthStart, $monthEnd)
+                    ->whereNotNull('user_id')
+                    ->distinct()
+                    ->pluck('user_id');
+
+                $totalBuyersMonth = $buyerIds->count();
+                $newBuyersMonth = 0;
+                foreach ($buyerIds as $uid) {
+                    $firstAt = $firstBuyByUser->get($uid);
+                    if ($firstAt && Carbon::parse($firstAt)->between($monthStart, $monthEnd)) {
+                        $newBuyersMonth++;
+                    }
+                }
+                $repeatBuyersMonth = max(0, $totalBuyersMonth - $newBuyersMonth);
+                $repeatRateMonth = $totalBuyersMonth > 0 ? round($repeatBuyersMonth / $totalBuyersMonth * 100, 1) : 0.0;
+
+                $marketingSpend = Schema::hasTable('platform_expenses')
+                    ? (float) PlatformExpense::query()
+                        ->where('category', 'marketing')
+                        ->where('spent_at', '>=', $monthStart)
+                        ->where('spent_at', '<=', $monthEnd)
+                        ->sum('amount')
+                    : 0.0;
+
+                $grossPerOrder = $paidOrders > 0 ? $finance['grossRevenue'] / $paidOrders : 0.0;
+                $contributionPerOrder = $paidOrders > 0 ? $finance['contributionBeforeTax'] / $paidOrders : 0.0;
+                $marginPct = $finance['grossRevenue'] > 0 ? round($finance['contributionBeforeTax'] / $finance['grossRevenue'] * 100, 1) : 0.0;
+                $arpu = $totalBuyersMonth > 0 ? $finance['grossRevenue'] / $totalBuyersMonth : 0.0;
+                $cac = ($newBuyersMonth > 0 && $marketingSpend > 0) ? $marketingSpend / $newBuyersMonth : null;
+                $cacPaybackOrders = ($cac !== null && $contributionPerOrder > 0) ? round($cac / $contributionPerOrder, 1) : null;
+
+                $refundAmount = 0;
+                $refundOrders = 0;
+                if (Schema::hasColumn('solds', 'refund_total_amount')) {
+                    $refunded = $this->applyCompletedRange($this->paidOrdersQuery(), $monthStart, $monthEnd)->where('refund_total_amount', '>', 0);
+                    $refundAmount = (int) (clone $refunded)->sum('refund_total_amount');
+                    $refundOrders = (int) (clone $refunded)->count();
+                }
+                $refundRate = $paidOrders > 0 ? round($refundOrders / $paidOrders * 100, 1) : 0.0;
+
+                $totalPeriodOrders = (int) $this->applyCreatedRange(Sold::query(), $monthStart, $monthEnd)->count();
+                $cancelledPeriod = $this->countStatuses($this->applyCreatedRange(Sold::query(), $monthStart, $monthEnd), ['cancelled', 'returned', 'F', 'R']);
+                $cancelRate = $totalPeriodOrders > 0 ? round($cancelledPeriod / $totalPeriodOrders * 100, 1) : 0.0;
+
+                $months[] = [
+                    'month' => $monthStart->format('M Y'),
+                    'grossRevenue' => (int) round($finance['grossRevenue']),
+                    'contribution' => (int) round($finance['contributionBeforeTax']),
+                    'platformProfit' => (int) round($finance['platformProfit']),
+                    'commission' => (int) round($finance['commission']),
+                    'deliveryIncome' => (int) round($finance['deliveryIncome']),
+                    'promoDiscount' => (int) round($finance['promoDiscount']),
+                    'collectionDiscount' => (int) round($finance['collectionDiscount']),
+                    'cashback' => (int) round($finance['cashback']),
+                    'courierPayout' => (int) round($finance['courierPayout']),
+                    'manualExpenses' => (int) round($finance['manualExpenses']),
+                    'providerFee' => (int) round($finance['providerFee']),
+                    'tax' => (int) round($finance['tax']),
+                    'marketingSpend' => (int) round($marketingSpend),
+                    'paidOrders' => $paidOrders,
+                    'totalBuyers' => $totalBuyersMonth,
+                    'newBuyers' => $newBuyersMonth,
+                    'repeatBuyers' => $repeatBuyersMonth,
+                    'repeatRate' => $repeatRateMonth,
+                    'cac' => $cac !== null ? (int) round($cac) : null,
+                    'cacPaybackOrders' => $cacPaybackOrders,
+                    'arpu' => (int) round($arpu),
+                    'grossPerOrder' => (int) round($grossPerOrder),
+                    'contributionPerOrder' => (int) round($contributionPerOrder),
+                    'marginPct' => $marginPct,
+                    'refundAmount' => $refundAmount,
+                    'refundOrders' => $refundOrders,
+                    'refundRate' => $refundRate,
+                    'cancelRate' => $cancelRate,
+                ];
+
+                $cursor->addMonthNoOverflow();
+            }
+
+            return ['hasData' => count($months) > 0, 'months' => $months];
         });
     }
 
