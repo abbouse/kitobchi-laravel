@@ -302,11 +302,15 @@ class AdminController extends Controller
             $this->addDashboardSheet($spreadsheet, 'Unit Economics', $this->dashboardUnitEconomicsRows($payload));
             $this->addDashboardSheet($spreadsheet, 'Partners MRR', $this->dashboardPartnerEconomicsRows($payload));
             $this->addDashboardSheet($spreadsheet, 'P&L', $this->dashboardProfitAndLossRows($payload));
+            $this->styleMonthlyEconomicsTable($spreadsheet, 'Unit Economics');
+            $this->styleMonthlyEconomicsTable($spreadsheet, 'Partners MRR');
         } else {
             $this->addDashboardSheet($spreadsheet, 'Investor Summary', $this->dashboardInvestorSummaryRows($payload));
             $this->addDashboardSheet($spreadsheet, 'Unit Economics', $this->dashboardUnitEconomicsRows($payload));
             $this->addDashboardSheet($spreadsheet, 'Partners MRR', $this->dashboardPartnerEconomicsRows($payload));
             $this->addDashboardSheet($spreadsheet, 'P&L', $this->dashboardProfitAndLossRows($payload));
+            $this->styleMonthlyEconomicsTable($spreadsheet, 'Unit Economics');
+            $this->styleMonthlyEconomicsTable($spreadsheet, 'Partners MRR');
             $this->addDashboardSheet($spreadsheet, 'Sales Trend', $this->dashboardSalesTrendRowsForExport($payload));
             $this->addDashboardSheet($spreadsheet, 'Category Sales', $this->dashboardCategoryRowsForExport($payload));
             $this->addDashboardSheet($spreadsheet, 'Top Products', $this->dashboardTopProductRowsForExport($payload, $rangeStart, $rangeEnd));
@@ -351,6 +355,7 @@ class AdminController extends Controller
         $sheet->setTitle(Str::limit($title, 31, ''));
         $sheet->fromArray($rows, null, 'A1', true);
         $sheet->freezePane('A4');
+        $sheet->setShowGridlines(false);
 
         $highestRow = max(1, count($rows));
         $highestColumn = $sheet->getHighestColumn();
@@ -408,6 +413,98 @@ class AdminController extends Controller
             ->setBorderStyle(Border::BORDER_HAIR)
             ->getColor()
             ->setRGB('E5E7EB');
+    }
+
+    /**
+     * Foydalanuvchi yuborgan "Unit Economics.xlsx" namunasidagi oylik jadval
+     * uslubini takrorlaydi: gridline yashirilgan, oy sarlavha qatori bold +
+     * kulrang fon bilan ajratilgan, "Input Data"/"Key Indicators" bo'limlari
+     * ingichka border bilan quticha qilinadi, birinchi (eng eski) oy ustuni
+     * referens fayldagi kabi yengil yashil rang bilan belgilanadi, va label
+     * ustuni + sarlavha qatorlari scroll qilinganda ham ko'rinib turadi.
+     *
+     * Qator turini header matnidan (A ustunidan) avtomatik aniqlaydi —
+     * "Oylik jadval" bilan boshlangan qator va undan keyingi "Input Data" /
+     * "Key Indicators" qatorlari — shu bilan qator raqamlarini qattiq
+     * yozib qo'yishga hojat qolmaydi.
+     */
+    private function styleMonthlyEconomicsTable(Spreadsheet $spreadsheet, string $sheetTitle): void
+    {
+        $sheet = $spreadsheet->getSheetByName(Str::limit($sheetTitle, 31, ''));
+        if (! $sheet) {
+            return;
+        }
+
+        $highestRow = $sheet->getHighestRow();
+        $highestColumn = $sheet->getHighestColumn();
+
+        $monthlyHeaderRow = null;
+        for ($row = 1; $row <= $highestRow; $row++) {
+            $label = trim((string) $sheet->getCell("A{$row}")->getValue());
+            if (Str::startsWith($label, 'Oylik jadval')) {
+                $monthlyHeaderRow = $row;
+                break;
+            }
+        }
+
+        if (! $monthlyHeaderRow) {
+            return;
+        }
+
+        // Oy sarlavha qatori: bold + kulrang fon, o'rtaga tekislangan.
+        $sheet->getStyle("A{$monthlyHeaderRow}:{$highestColumn}{$monthlyHeaderRow}")->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => '111827']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'D9D9D9']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+        ]);
+        $sheet->getStyle("A{$monthlyHeaderRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+
+        // Birinchi (eng eski) oy ustuni — referens fayldagi kabi yengil
+        // yashil urg'u bilan ajratiladi, shu bilan "boshlang'ich nuqta"
+        // ko'zga ko'rinib turadi.
+        $firstMonthColumn = 'B';
+        $sheet->getStyle("{$firstMonthColumn}{$monthlyHeaderRow}")->applyFromArray([
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'A9D18E']],
+        ]);
+
+        $lastRow = $monthlyHeaderRow;
+        for ($row = $monthlyHeaderRow + 1; $row <= $highestRow; $row++) {
+            $label = trim((string) $sheet->getCell("A{$row}")->getValue());
+            if ($label === '') {
+                continue;
+            }
+            $lastRow = $row;
+
+            if (in_array($label, ['Input Data', 'Key Indicators'], true)) {
+                $sheet->getStyle("A{$row}:{$highestColumn}{$row}")->applyFromArray([
+                    'font' => ['bold' => true, 'color' => ['rgb' => '374151']],
+                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E5E7EB']],
+                    'borders' => [
+                        'top' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'D1D5DB']],
+                        'bottom' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'D1D5DB']],
+                    ],
+                ]);
+
+                continue;
+            }
+
+            // Detail qator — birinchi oy ustunini engil yashil tint bilan
+            // davom ettiramiz (reference'dagi D ustun uslubi).
+            $sheet->getStyle("{$firstMonthColumn}{$row}")->applyFromArray([
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'EDF7ED']],
+            ]);
+        }
+
+        // Butun oylik jadval atrofida yupqa quticha chizig'i.
+        $sheet->getStyle("A{$monthlyHeaderRow}:{$highestColumn}{$lastRow}")->applyFromArray([
+            'borders' => [
+                'outline' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => '9CA3AF']],
+            ],
+        ]);
+
+        // Label ustuni (A) va sarlavha qatorlari scroll qilinganda ham
+        // ko'rinib tursin — referensdagi freeze pane bilan bir xil g'oya.
+        $sheet->freezePane('B'.($monthlyHeaderRow + 1));
     }
 
     private function dashboardAssumptionRows(array $p, float $usdRate): array
