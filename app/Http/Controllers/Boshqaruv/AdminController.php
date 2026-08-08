@@ -125,6 +125,7 @@ use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class AdminController extends Controller
@@ -252,65 +253,64 @@ class AdminController extends Controller
     public function exportReport(Request $request)
     {
         $payload = $this->dashboardPayload($request);
-        $rows = $this->buildDashboardExportRows($payload);
-        $filename = 'kitobchi-dashboard-'.now()->format('Y-m-d_His').'.xlsx';
+        $type = (string) $request->query('export_type', 'investor');
+        if (! in_array($type, ['dashboard', 'investor', 'unit'], true)) {
+            $type = 'investor';
+        }
 
-        return $this->downloadDashboardSpreadsheet($rows, $filename);
+        $filename = match ($type) {
+            'dashboard' => 'kitobchi-dashboard-'.now()->format('Y-m-d_His').'.xlsx',
+            'unit' => 'kitobchi-unit-economics-'.now()->format('Y-m-d_His').'.xlsx',
+            default => 'kitobchi-investor-pack-'.now()->format('Y-m-d_His').'.xlsx',
+        };
+
+        return $this->downloadDashboardWorkbook(
+            $payload,
+            $filename,
+            $type,
+            max(1, (float) $request->query('usd_rate', config('services.investor_usd_rate', 12500)))
+        );
     }
 
     /**
-     * Dashboard hisobotini serverda mavjud PhpSpreadsheet orqali yuklab beradi.
-     * Laravel Excel paketi o'rnatilmagan muhitlarda ham 500 bermasligi uchun
-     * Maatwebsite facade ishlatilmaydi.
-     *
-     * @param  array<int, array<int, mixed>>  $rows
+     * Dashboard hisobotini serverda mavjud PhpSpreadsheet orqali multi-sheet
+     * workbook qilib yuklab beradi. Investor pack Google Sheets uslubida:
+     * assumptionlar, formula-driven unit economics, P&L va xom KPI sheetlari.
      */
-    private function downloadDashboardSpreadsheet(array $rows, string $filename): \Symfony\Component\HttpFoundation\StreamedResponse
+    private function downloadDashboardWorkbook(array $payload, string $filename, string $type, float $usdRate): \Symfony\Component\HttpFoundation\StreamedResponse
     {
         $spreadsheet = new Spreadsheet();
-        $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setTitle('Dashboard');
+        $spreadsheet->getProperties()
+            ->setCreator('Kitobchi')
+            ->setTitle('Kitobchi dashboard export')
+            ->setSubject('Marketplace dashboard, unit economics and investor pack')
+            ->setDescription('Kitobchi boshqaruv panelidan avtomatik yaratilgan Excel hisobot.');
 
-        $sheet->fromArray($rows, null, 'A1', true);
+        $this->fillDashboardSheet(
+            $spreadsheet->getActiveSheet(),
+            'Assumptions',
+            $this->dashboardAssumptionRows($payload, $usdRate)
+        );
 
-        $highestRow = max(1, count($rows));
-        $highestColumn = $sheet->getHighestColumn();
-        $highestColumnIndex = Coordinate::columnIndexFromString($highestColumn);
-
-        for ($columnIndex = 1; $columnIndex <= $highestColumnIndex; $columnIndex++) {
-            $column = Coordinate::stringFromColumnIndex($columnIndex);
-            $sheet->getColumnDimension($column)->setAutoSize(true);
+        if ($type === 'dashboard') {
+            $this->addDashboardSheet($spreadsheet, 'Dashboard', $this->buildDashboardExportRows($payload));
+        } elseif ($type === 'unit') {
+            $this->addDashboardSheet($spreadsheet, 'Unit Economics', $this->dashboardUnitEconomicsRows($payload));
+            $this->addDashboardSheet($spreadsheet, 'P&L', $this->dashboardProfitAndLossRows($payload));
+        } else {
+            $this->addDashboardSheet($spreadsheet, 'Investor Summary', $this->dashboardInvestorSummaryRows($payload));
+            $this->addDashboardSheet($spreadsheet, 'Unit Economics', $this->dashboardUnitEconomicsRows($payload));
+            $this->addDashboardSheet($spreadsheet, 'P&L', $this->dashboardProfitAndLossRows($payload));
+            $this->addDashboardSheet($spreadsheet, 'Sales Trend', $this->dashboardSalesTrendRowsForExport($payload));
+            $this->addDashboardSheet($spreadsheet, 'Category Sales', $this->dashboardCategoryRowsForExport($payload));
+            $this->addDashboardSheet($spreadsheet, 'Top Products', $this->dashboardTopProductRowsForExport($payload));
+            $this->addDashboardSheet($spreadsheet, 'Funnel', $this->dashboardFunnelRowsForExport($payload));
+            $this->addDashboardSheet($spreadsheet, 'Retention', $this->dashboardRetentionRowsForExport($payload));
+            $this->addDashboardSheet($spreadsheet, 'Sellers', $this->dashboardSellerRowsForExport($payload));
+            $this->addDashboardSheet($spreadsheet, 'Operations', $this->dashboardOperationRowsForExport($payload));
         }
 
-        $sheet->getStyle("A1:{$highestColumn}{$highestRow}")
-            ->getAlignment()
-            ->setVertical(Alignment::VERTICAL_CENTER);
-
-        $sheet->getStyle('A1')->applyFromArray([
-            'font' => ['bold' => true, 'size' => 16, 'color' => ['rgb' => 'FFFFFF']],
-            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '111827']],
-            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
-        ]);
-        $sheet->mergeCells("A1:{$highestColumn}1");
-
-        for ($row = 1; $row <= $highestRow; $row++) {
-            $firstCell = (string) $sheet->getCell("A{$row}")->getValue();
-            $secondCell = (string) $sheet->getCell("B{$row}")->getValue();
-
-            if ($firstCell !== '' && $secondCell === '') {
-                $sheet->getStyle("A{$row}:{$highestColumn}{$row}")->applyFromArray([
-                    'font' => ['bold' => true],
-                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $row === 1 ? '111827' : 'EEF2FF']],
-                ]);
-            }
-        }
-
-        $sheet->getStyle("A1:{$highestColumn}{$highestRow}")
-            ->getBorders()
-            ->getAllBorders()
-            ->setBorderStyle(Border::BORDER_HAIR)
-            ->getColor()
-            ->setRGB('E5E7EB');
+        $spreadsheet->setActiveSheetIndex(0);
 
         $writer = new Xlsx($spreadsheet);
 
@@ -325,6 +325,315 @@ class AdminController extends Controller
                 'Cache-Control' => 'max-age=0, no-cache, no-store, must-revalidate',
             ]
         );
+    }
+
+    /**
+     * @param  array<int, array<int, mixed>>  $rows
+     */
+    private function addDashboardSheet(Spreadsheet $spreadsheet, string $title, array $rows): void
+    {
+        $sheet = $spreadsheet->createSheet();
+        $this->fillDashboardSheet($sheet, $title, $rows);
+    }
+
+    /**
+     * @param  array<int, array<int, mixed>>  $rows
+     */
+    private function fillDashboardSheet($sheet, string $title, array $rows): void
+    {
+        $sheet->setTitle(Str::limit($title, 31, ''));
+        $sheet->fromArray($rows, null, 'A1', true);
+        $sheet->freezePane('A4');
+
+        $highestRow = max(1, count($rows));
+        $highestColumn = $sheet->getHighestColumn();
+        $highestColumnIndex = Coordinate::columnIndexFromString($highestColumn);
+
+        for ($columnIndex = 1; $columnIndex <= $highestColumnIndex; $columnIndex++) {
+            $column = Coordinate::stringFromColumnIndex($columnIndex);
+            $sheet->getColumnDimension($column)->setAutoSize(true);
+        }
+
+        $sheet->getStyle("A1:{$highestColumn}{$highestRow}")
+            ->getAlignment()
+            ->setVertical(Alignment::VERTICAL_CENTER)
+            ->setWrapText(true);
+
+        $sheet->getStyle("A1:{$highestColumn}1")->applyFromArray([
+            'font' => ['bold' => true, 'size' => 16, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '111827']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+        ]);
+        $sheet->mergeCells("A1:{$highestColumn}1");
+
+        for ($row = 1; $row <= $highestRow; $row++) {
+            $firstCell = trim((string) $sheet->getCell("A{$row}")->getValue());
+            $secondCell = trim((string) $sheet->getCell("B{$row}")->getValue());
+            $nonEmptyCells = 0;
+            for ($columnIndex = 1; $columnIndex <= $highestColumnIndex; $columnIndex++) {
+                $column = Coordinate::stringFromColumnIndex($columnIndex);
+                if (trim((string) $sheet->getCell("{$column}{$row}")->getValue()) !== '') {
+                    $nonEmptyCells++;
+                }
+            }
+
+            if ($firstCell !== '' && $secondCell === '' && $nonEmptyCells === 1) {
+                $sheet->getStyle("A{$row}:{$highestColumn}{$row}")->applyFromArray([
+                    'font' => ['bold' => true, 'color' => ['rgb' => $row === 1 ? 'FFFFFF' : '111827']],
+                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $row === 1 ? '111827' : 'EEF2FF']],
+                ]);
+            } elseif ($row > 1 && $nonEmptyCells > 1) {
+                $sheet->getStyle("A{$row}:{$highestColumn}{$row}")->applyFromArray([
+                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $row % 2 === 0 ? 'FFFFFF' : 'F8FAFC']],
+                ]);
+            }
+        }
+
+        if ($highestRow >= 2 && $highestColumnIndex >= 2) {
+            $sheet->getStyle("B2:{$highestColumn}{$highestRow}")
+                ->getNumberFormat()
+                ->setFormatCode(NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1);
+        }
+
+        $sheet->getStyle("A1:{$highestColumn}{$highestRow}")
+            ->getBorders()
+            ->getAllBorders()
+            ->setBorderStyle(Border::BORDER_HAIR)
+            ->getColor()
+            ->setRGB('E5E7EB');
+    }
+
+    private function dashboardAssumptionRows(array $p, float $usdRate): array
+    {
+        return [
+            ['Kitobchi — Excel export sozlamalari'],
+            ['Maydon', 'Qiymat', 'Izoh'],
+            ['Davr', $p['range']['label'] ?? '-', 'Dashboardda tanlangan davr'],
+            ['Boshlanish', $p['range']['from'] ?? '-', 'Custom yoki avtomatik davr'],
+            ['Tugash', $p['range']['to'] ?? '-', 'Dashboard display sanasi'],
+            ['Yaratilgan vaqt', $p['generatedAt'] ?? now()->format('Y-m-d H:i:s'), 'Export generatsiya vaqti'],
+            ['USD kursi', $usdRate, 'Investor varaqdagi USD hisoblar shu katakka bog‘langan. Zarur bo‘lsa Excel ichida o‘zgartiring.'],
+            ['Moliyaviy ruxsat', ! empty($p['financialRestricted']) ? 'Cheklangan' : 'To‘liq', 'Superadmin bo‘lmasa pul maydonlari 0 qilib beriladi.'],
+            [],
+            ['Eslatma'],
+            ['Bu faylda asosiy pul raqamlar UZS bo‘yicha real dashboard payload’dan olinadi, USD ustunlari formulalar orqali hisoblanadi.'],
+        ];
+    }
+
+    private function dashboardInvestorSummaryRows(array $p): array
+    {
+        $m = $p['metrics'] ?? [];
+        $f = $p['financial'] ?? [];
+        $u = $p['unitEconomics'] ?? [];
+        $b = $p['business'] ?? [];
+
+        return [
+            ['Kitobchi — Investor summary'],
+            ['Ko‘rsatkich', 'UZS', 'USD', 'Soni / %', 'Investor uchun ma’nosi'],
+            ['Yakuniy savdo tushumi', (float) ($f['grossRevenue'] ?? 0), '=B3/\'Assumptions\'!$B$7', '', 'Davrda mijoz qabul qilgan paid orderlar tushumi'],
+            ['Platforma sof marjasi', (float) ($f['platformProfit'] ?? 0), '=B4/\'Assumptions\'!$B$7', (float) ($f['netMargin'] ?? 0), 'Marketplacega qoladigan taxminiy net signal'],
+            ['O‘rtacha chek', (float) ($f['avgOrderValue'] ?? 0), '=B5/\'Assumptions\'!$B$7', '', 'Gross revenue / paid orders'],
+            ['Contribution / order', (float) ($u['contributionPerOrder'] ?? 0), '=B6/\'Assumptions\'!$B$7', (float) ($u['marginPct'] ?? 0), 'Bitta yakuniy orderdan soliqdan oldin qoladigan contribution'],
+            ['LTV', (float) ($u['ltv'] ?? 0), '=B7/\'Assumptions\'!$B$7', '', 'Xaridorga to‘g‘ri keladigan lifetime contribution'],
+            ['CAC', (float) ($u['cac'] ?? 0), '=B8/\'Assumptions\'!$B$7', '', 'Marketing xarajat / yangi xaridor. Marketing kiritilmasa 0/blank bo‘ladi.'],
+            ['LTV : CAC', '', '', (float) ($u['ltvCacRatio'] ?? 0), 'Investor uchun asosiy ratio: 3x+ sog‘lom signal'],
+            ['Payback', '', '', (float) ($u['paybackOrders'] ?? 0), 'CAC qoplanishi uchun kerak bo‘ladigan order soni'],
+            ['Repeat buyer rate', '', '', (float) ($u['repeatRate'] ?? 0), 'Qaytib xarid qilgan xaridorlar ulushi'],
+            ['Refund rate', '', '', (float) ($u['refundRate'] ?? 0), 'Pul qaytarilgan paid orderlar ulushi'],
+            ['Cancel rate', '', '', (float) ($u['cancelRate'] ?? 0), 'Davrda yaratilgan orderlardan bekor/qaytganlari'],
+            [],
+            ['Operatsion bazis'],
+            ['Jami orderlar', '', '', (int) ($m['orders'] ?? 0), 'Barcha vaqt orderlar'],
+            ['Yakuniy savdolar', '', '', (int) ($m['paidOrders'] ?? 0), 'Mijoz qabul qilgan paid orderlar'],
+            ['Foydalanuvchilar', '', '', (int) ($m['users'] ?? 0), 'Jami userlar'],
+            ['Sotuvchilar', '', '', (int) ($m['sellers'] ?? 0), 'Marketplace supply'],
+            ['Kuryerlar', '', '', (int) ($m['couriers'] ?? 0), 'Logistika capacity'],
+            ['Xaridorlar', '', '', (int) ($b['buyingUsers'] ?? 0), 'Paid order qilgan userlar'],
+            ['Order / xaridor', '', '', (float) ($b['avgOrdersPerBuyer'] ?? 0), 'Frequency signali'],
+        ];
+    }
+
+    private function dashboardUnitEconomicsRows(array $p): array
+    {
+        $u = $p['unitEconomics'] ?? [];
+
+        return [
+            ['Kitobchi — Unit economics'],
+            ['Metric', 'UZS', 'USD', '% / ratio', 'Hisoblash / izoh'],
+            ['Marketing spend', (float) ($u['marketingSpend'] ?? 0), '=B3/\'Assumptions\'!$B$7', '', 'Platform expenses ichida marketing kategoriyasi'],
+            ['New buyers', '', '', (int) ($u['newBuyers'] ?? 0), 'Davrda birinchi paid order qilgan xaridorlar'],
+            ['CAC', (float) ($u['cac'] ?? 0), '=B5/\'Assumptions\'!$B$7', '', 'Marketing spend / new buyers'],
+            ['Blended CAC', (float) ($u['blendedCac'] ?? 0), '=B6/\'Assumptions\'!$B$7', '', 'Jami opex / new buyers'],
+            ['AOV / Gross per order', (float) ($u['grossPerOrder'] ?? 0), '=B7/\'Assumptions\'!$B$7', '', 'Gross revenue / paid orders'],
+            ['Contribution per order', (float) ($u['contributionPerOrder'] ?? 0), '=B8/\'Assumptions\'!$B$7', (float) ($u['marginPct'] ?? 0), 'Contribution before tax / paid orders'],
+            ['ARPU', (float) ($u['arpu'] ?? 0), '=B9/\'Assumptions\'!$B$7', '', 'Lifetime gross revenue / total buyers'],
+            ['LTV', (float) ($u['ltv'] ?? 0), '=B10/\'Assumptions\'!$B$7', '', 'Lifetime contribution / total buyers'],
+            ['LTV : CAC', '', '', (float) ($u['ltvCacRatio'] ?? 0), 'LTV / CAC'],
+            ['Payback orders', '', '', (float) ($u['paybackOrders'] ?? 0), 'CAC / contribution per order'],
+            ['Refund amount', (float) ($u['refundAmount'] ?? 0), '=B13/\'Assumptions\'!$B$7', (float) ($u['refundRate'] ?? 0), 'Refund orderlar summasi va ulushi'],
+            ['Cancel rate', '', '', (float) ($u['cancelRate'] ?? 0), 'Bekor + qaytgan orderlar / davr orderlari'],
+            ['Repeat buyer rate', '', '', (float) ($u['repeatRate'] ?? 0), '1 martadan ko‘p xarid qilganlar / total buyers'],
+            ['Total buyers', '', '', (int) ($u['totalBuyers'] ?? 0), 'Lifetime paid xaridorlar'],
+            ['Repeat buyers', '', '', (int) ($u['repeatBuyers'] ?? 0), 'Lifetime qaytgan xaridorlar'],
+        ];
+    }
+
+    private function dashboardProfitAndLossRows(array $p): array
+    {
+        $f = $p['financial'] ?? [];
+
+        return [
+            ['Kitobchi — P&L signal'],
+            ['Line item', 'UZS', 'USD', 'Izoh'],
+            ['Gross revenue', (float) ($f['grossRevenue'] ?? 0), '=B3/\'Assumptions\'!$B$7', 'Yakuniy savdo tushumi'],
+            ['Seller commission', (float) ($f['commission'] ?? 0), '=B4/\'Assumptions\'!$B$7', 'Seller transaction komissiyasi'],
+            ['Delivery income', (float) ($f['deliveryIncome'] ?? 0), '=B5/\'Assumptions\'!$B$7', 'Mijozlardan olingan yetkazish'],
+            ['Promo discount', -(float) ($f['promoDiscount'] ?? 0), '=B6/\'Assumptions\'!$B$7', 'Promokod chegirmalari'],
+            ['Collection discount', -(float) ($f['collectionDiscount'] ?? 0), '=B7/\'Assumptions\'!$B$7', 'To‘plam chegirmalari'],
+            ['Cashback', -(float) ($f['cashback'] ?? 0), '=B8/\'Assumptions\'!$B$7', 'Ishlatilgan cashback'],
+            ['Courier payout', -(float) ($f['courierPayout'] ?? 0), '=B9/\'Assumptions\'!$B$7', 'Kuryerlarga to‘langan summa'],
+            ['Manual expenses', -(float) ($f['manualExpenses'] ?? 0), '=B10/\'Assumptions\'!$B$7', 'Chiqimlar bo‘limidan'],
+            ['Provider fee', -(float) ($f['providerFee'] ?? 0), '=B11/\'Assumptions\'!$B$7', 'Payment provider komissiyasi'],
+            ['Contribution before tax', (float) ($f['contributionBeforeTax'] ?? 0), '=B12/\'Assumptions\'!$B$7', 'Soliqdan oldingi contribution'],
+            ['Tax', -(float) ($f['tax'] ?? 0), '=B13/\'Assumptions\'!$B$7', 'Settings bo‘yicha soliq'],
+            ['Platform profit signal', (float) ($f['platformProfit'] ?? 0), '=B14/\'Assumptions\'!$B$7', 'Contribution - tax'],
+        ];
+    }
+
+    private function dashboardSalesTrendRowsForExport(array $p): array
+    {
+        $rows = [['Kitobchi — Sales trend'], ['Davr', 'Revenue UZS', 'Revenue USD', 'Profit signal UZS', 'Profit signal USD', 'Orders']];
+        foreach (($p['salesByMonth'] ?? []) as $row) {
+            $excelRow = count($rows) + 1;
+            $rows[] = [
+                $row['month'] ?? '-',
+                (float) ($row['revenue'] ?? 0),
+                "=B{$excelRow}/'Assumptions'!\$B\$7",
+                (float) ($row['profit'] ?? 0),
+                "=D{$excelRow}/'Assumptions'!\$B\$7",
+                (int) ($row['orders'] ?? 0),
+            ];
+        }
+
+        return $rows;
+    }
+
+    private function dashboardCategoryRowsForExport(array $p): array
+    {
+        $rows = [['Kitobchi — Category sales'], ['Kategoriya', 'Ulush %', 'Revenue UZS', 'Revenue USD']];
+        foreach (($p['categoryShare'] ?? []) as $row) {
+            $excelRow = count($rows) + 1;
+            $rows[] = [$row['name'] ?? '-', (float) ($row['value'] ?? 0), (float) ($row['revenue'] ?? 0), "=C{$excelRow}/'Assumptions'!\$B\$7"];
+        }
+
+        return $rows;
+    }
+
+    private function dashboardTopProductRowsForExport(array $p): array
+    {
+        $rows = [['Kitobchi — Top products'], ['Mahsulot', 'Sotilgan dona', 'Revenue UZS', 'Revenue USD']];
+        foreach (($p['topProducts'] ?? []) as $row) {
+            $excelRow = count($rows) + 1;
+            $rows[] = [$row['name'] ?? '-', (int) ($row['quantity'] ?? 0), (float) ($row['revenue'] ?? 0), "=C{$excelRow}/'Assumptions'!\$B\$7"];
+        }
+
+        return $rows;
+    }
+
+    private function dashboardFunnelRowsForExport(array $p): array
+    {
+        $rows = [['Kitobchi — Purchase funnel'], ['Bosqich', 'Soni', 'Konversiya %', 'Drop %']];
+        foreach (($p['funnel']['stages'] ?? []) as $row) {
+            $rows[] = [$row['label'] ?? '-', (int) ($row['value'] ?? 0), (float) ($row['rate'] ?? 0), (float) ($row['drop'] ?? 0)];
+        }
+
+        return $rows;
+    }
+
+    private function dashboardRetentionRowsForExport(array $p): array
+    {
+        $maxOffset = (int) ($p['retention']['maxOffset'] ?? 5);
+        $header = ['Kogorta', 'Hajm'];
+        for ($i = 0; $i <= $maxOffset; $i++) {
+            $header[] = 'M+'.$i;
+        }
+
+        $rows = [['Kitobchi — Retention cohorts'], $header];
+        foreach (($p['retention']['cohorts'] ?? []) as $cohort) {
+            $line = [$cohort['month'] ?? '-', (int) ($cohort['size'] ?? 0)];
+            foreach (($cohort['retention'] ?? []) as $value) {
+                $line[] = $value === null ? '' : (float) $value;
+            }
+            $rows[] = $line;
+        }
+
+        return $rows;
+    }
+
+    private function dashboardSellerRowsForExport(array $p): array
+    {
+        $rows = [['Kitobchi — Seller scorecard'], ['Sotuvchi', 'Orders', 'Revenue UZS', 'Revenue USD', 'Cancelled', 'Cancel %', 'Accept min', 'Rating', 'Rating count', 'Reputation']];
+        foreach (($p['sellerScorecard'] ?? []) as $row) {
+            $excelRow = count($rows) + 1;
+            $rows[] = [
+                $row['name'] ?? '-',
+                (int) ($row['orders'] ?? 0),
+                (float) ($row['revenue'] ?? 0),
+                "=C{$excelRow}/'Assumptions'!\$B\$7",
+                (int) ($row['cancelled'] ?? 0),
+                (float) ($row['cancelRate'] ?? 0),
+                $row['acceptMinutes'] ?? '',
+                (float) ($row['rating'] ?? 0),
+                (int) ($row['ratingCount'] ?? 0),
+                (int) ($row['reputation'] ?? 0),
+            ];
+        }
+
+        return $rows;
+    }
+
+    private function dashboardOperationRowsForExport(array $p): array
+    {
+        $rows = [['Kitobchi — Operations']];
+        $rows[] = ['Status bloki', 'Status', 'Soni'];
+        foreach (($p['status']['main'] ?? []) as $key => $value) {
+            $rows[] = ['Main orders', $key, (int) $value];
+        }
+        foreach (($p['status']['seller'] ?? []) as $key => $value) {
+            $rows[] = ['Seller orders', $key, (int) $value];
+        }
+        foreach (($p['status']['courier'] ?? []) as $key => $value) {
+            $rows[] = ['Courier orders', $key, (int) $value];
+        }
+        $rows[] = [];
+        $rows[] = ['Payment split', 'Count', 'Share %'];
+        foreach (($p['paymentSplit'] ?? []) as $row) {
+            $rows[] = [$row['name'] ?? '-', (int) ($row['count'] ?? 0), (float) ($row['share'] ?? 0)];
+        }
+        $rows[] = [];
+        $rows[] = ['Delivery split', 'Count', 'Revenue UZS'];
+        foreach (($p['deliverySplit'] ?? []) as $row) {
+            $rows[] = [$row['name'] ?? '-', (int) ($row['count'] ?? 0), (float) ($row['revenue'] ?? 0)];
+        }
+        $rows[] = [];
+        $rows[] = ['Regions', 'Orders', 'Revenue UZS'];
+        foreach (($p['regions'] ?? []) as $row) {
+            $rows[] = [$row['name'] ?? '-', (int) ($row['value'] ?? 0), (float) ($row['revenue'] ?? 0)];
+        }
+        $rows[] = [];
+        $rows[] = ['Platform', 'Active users', 'Orders', 'Revenue UZS', 'Conversion %', 'Avg session sec'];
+        foreach (($p['platformAnalysis'] ?? []) as $row) {
+            $rows[] = [
+                ($row['name'] ?? '-').' '.($row['version'] ?? ''),
+                (int) ($row['activeUsers'] ?? 0),
+                (int) ($row['orders'] ?? 0),
+                (float) ($row['revenue'] ?? 0),
+                (float) ($row['conversion'] ?? 0),
+                (int) ($row['avgSessionSeconds'] ?? 0),
+            ];
+        }
+
+        return $rows;
     }
 
     /**

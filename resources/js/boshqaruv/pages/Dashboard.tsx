@@ -166,15 +166,15 @@ export default function Dashboard() {
   };
 
   // Excel eksport joriy davr bilan bir xil bo'lishi uchun period paramlarini qo'shamiz.
-  const exportHref = (() => {
+  const exportHref = (exportType: 'investor' | 'dashboard' | 'unit' = 'investor') => {
     if (!dashboard.exportUrl) return '#';
-    const params = new URLSearchParams({ dashboard_period: dashboard.range.key });
+    const params = new URLSearchParams({ dashboard_period: dashboard.range.key, export_type: exportType });
     if (dashboard.range.key === 'custom' && dashboard.range.from && dashboard.range.to) {
       params.set('dashboard_from', dashboard.range.from);
       params.set('dashboard_to', dashboard.range.to);
     }
     return `${dashboard.exportUrl}?${params.toString()}`;
-  })();
+  };
 
   return (
     <div>
@@ -205,7 +205,19 @@ export default function Dashboard() {
             </button>
           </div>
           {dashboard.exportUrl ? (
-            <a href={exportHref} className="btn btn-outline-success btn-sm"><i className="bi bi-file-earmark-excel me-1"></i>Excel</a>
+            <div className="btn-group btn-group-sm">
+              <a href={exportHref('investor')} className="btn btn-outline-success">
+                <i className="bi bi-file-earmark-spreadsheet me-1"></i>Investor pack
+              </a>
+              <button type="button" className="btn btn-outline-success dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                <span className="visually-hidden">Export turlari</span>
+              </button>
+              <ul className="dropdown-menu dropdown-menu-end">
+                <li><a className="dropdown-item" href={exportHref('investor')}><i className="bi bi-stars me-2"></i>Investor pack · multi-sheet</a></li>
+                <li><a className="dropdown-item" href={exportHref('unit')}><i className="bi bi-calculator me-2"></i>Unit economics</a></li>
+                <li><a className="dropdown-item" href={exportHref('dashboard')}><i className="bi bi-table me-2"></i>Dashboard snapshot</a></li>
+              </ul>
+            </div>
           ) : null}
           <Link href="/boshqaruv/live" className="btn btn-outline-secondary btn-sm"><i className="bi bi-broadcast me-1"></i>Live</Link>
         </div>
