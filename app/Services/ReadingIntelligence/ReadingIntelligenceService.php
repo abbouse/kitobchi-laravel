@@ -2,6 +2,7 @@
 
 namespace App\Services\ReadingIntelligence;
 
+use App\Jobs\GeneratePersonalMatchReasonJob;
 use App\Models\BookReadingInsight;
 use App\Models\Books;
 use App\Models\Sold;
@@ -211,6 +212,25 @@ class ReadingIntelligenceService
     /**
      * Sabab jumlasi — (foydalanuvchi, mahsulot, til) bo'yicha keshlanadi.
      * `purchase_context_hash` orqali yangi xarid bo'lganda o'zi eskiradi.
+     *
+     * MUHIM (tezlik — 2026-08-08 audit): AVVAL kesh bo'sh/eskirgan bo'lsa,
+     * bu yerda AI'ga JONLI (HTTP so'rovi ICHIDA) murojaat qilinardi —
+     * `OpenAIService::askJsonWithMessages()` 14s timeout, parse xato
+     * bo'lsa yana 1 marta qayta urinadi (eng yomon holatda ~28s!). Bu
+     * "bu menga mosmi?" bannerining item sahifasida "juda sekin chiqib,
+     * keyin birdan paydo bo'lishi" muammosining ENG KATTA ta'sirli sababi
+     * edi — chunki 'match' (Holat A, kuchli did-moslik) ko'p faol
+     * foydalanuvchi uchun tez-tez tushadigan yo'l, va savat/sevimli/xarid
+     * o'zgargan sayin (purchase_context_hash) kesh eskiradi.
+     *
+     * ENDI: kesh bo'sh/eskirgan bo'lsa — DARHOL deterministik (AI'siz)
+     * jumla qaytariladi (pastda, `fallbackPersonalReason()`), haqiqiy AI
+     * jumlasi esa `GeneratePersonalMatchReasonJob` orqali, FAQAT javob
+     * yuborilgandan KEYIN (`->afterResponse()` — navbat sozlamasidan
+     * qat'i nazar ishlaydi, worker talab qilmaydi) fonda generatsiya
+     * qilinib, keshga yoziladi. Foydalanuvchi javobni HECH QACHON
+     * kutmaydi; keyingi safar (yoki boshqa foydalanuvchi xuddi shu
+     * kontekstda) tayyor AI jumlasini darhol ko'radi.
      */
     private function personalReason(User $user, Books|Stationery $product, string $type, float $score, string $locale): ?string
     {
@@ -227,13 +247,63 @@ class ReadingIntelligenceService
             return $cached->reason_text;
         }
 
+        GeneratePersonalMatchReasonJob::dispatch($user->id, $type, $product->id, $locale)
+            ->afterResponse();
+
+        return $this->fallbackPersonalReason($product, $locale);
+    }
+
+    /**
+     * AI javobini kutmasdan darhol ko'rsatiladigan, sifatli-lekin-umumiy
+     * sabab jumlasi. `interestMatchPayload()`dagi AI'siz yondashuv bilan
+     * bir xil naqsh — bu yerda ham "hozircha umumiy, tez orada aniqroq"
+     * murosaga kelinadi, "hech narsa yo'q/kutish" o'rniga.
+     */
+    private function fallbackPersonalReason(Books|Stationery $product, string $locale): string
+    {
+        $category = $this->categoryName($product->category, $locale);
+
+        return $category
+            ? __('reading_intelligence.match_reason_fallback_category', ['category' => $category])
+            : __('reading_intelligence.match_reason_fallback');
+    }
+
+    /**
+     * `GeneratePersonalMatchReasonJob` orqali, HTTP javobi yuborilgandan
+     * KEYIN chaqiriladi — shuning uchun bu yerda vaqt cheklovi yo'q, AI'ga
+     * xotirjam murojaat qilinadi. Ball (`match_score`) ham shu yerda qayta
+     * hisoblanadi (eskirgan bo'lishi mumkin — foydalanuvchi did-vektori
+     * job navbatga tushgandan keyin ham o'zgargan bo'lishi mumkin).
+     */
+    public function generateAndCachePersonalReason(int $userId, string $type, int $productId, string $locale): void
+    {
+        $user = User::find($userId);
+        $product = $this->loadProduct($type, $productId);
+
+        if (! $user || ! $product || ! is_array($product->vectorData) || empty($product->vectorData)) {
+            return;
+        }
+
+        $tasteVector = $this->tasteProfile->tasteVector($userId, $type, $productId);
+        if ($tasteVector === null) {
+            return;
+        }
+
+        $score = $this->ai->calculateSimilarity($tasteVector, $product->vectorData);
+        $contextHash = $this->tasteProfile->purchaseContextHash($userId);
+
         $reason = $this->generatePersonalReason($product, $type, $locale);
+        if ($reason === null) {
+            // AI muvaffaqiyatsiz — eski (yoki fallback) qatorga tegmaymiz,
+            // keyingi so'rov shunchaki qayta urinib ko'radi.
+            return;
+        }
 
         UserBookMatchReason::updateOrCreate(
             [
-                'user_id' => $user->id,
+                'user_id' => $userId,
                 'product_type' => $type,
-                'product_id' => $product->id,
+                'product_id' => $productId,
                 'locale' => $locale,
             ],
             [
@@ -243,8 +313,6 @@ class ReadingIntelligenceService
                 'generated_at' => now(),
             ]
         );
-
-        return $reason;
     }
 
     private function generatePersonalReason(Books|Stationery $product, string $type, string $locale): ?string

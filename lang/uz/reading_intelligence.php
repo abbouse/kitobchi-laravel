@@ -53,6 +53,10 @@ return [
     'interest_match_reason' => 'Ro\'yxatdan o\'tishda ":cluster" yo\'nalishini tanlagan edingiz — shu asosda tavsiya qilyapmiz.',
     'interest_match_reason_collab' => 'Siz ":cluster" yo\'nalishini tanlagansiz, bu mahsulot esa shu toifadagi xaridorlar orasida ham ko\'p sotilgan.',
 
+    // ── Kuchli did-moslik (Holat A) — AI sababi hali tayyor bo'lmaganda darhol ko'rsatiladigan jumla ──
+    'match_reason_fallback' => 'Avvalgi xaridlaringiz va did profilingizga asoslanib tavsiya qilyapmiz.',
+    'match_reason_fallback_category' => 'Avvalgi xaridlaringiz va :category yo\'nalishiga qiziqishingiz asosida tavsiya qilyapmiz.',
+
     // ── Mehmon (tizimga kirmagan) foydalanuvchi uchun taklif ────────────
     'guest_cta_label' => 'Sizga qanchalik mos ekanini bilmoqchimisiz?',
     'guest_cta_detail' => 'Tizimga kiring — did va xaridlaringizga qarab shaxsiy moslik va tavsiyalarni ko\'rsatamiz.',

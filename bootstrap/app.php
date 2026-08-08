@@ -102,6 +102,17 @@ return Application::configure(basePath: dirname(__DIR__))
             ->withoutOverlapping(9)
             ->runInBackground();
 
+        // ── Semantik qidiruv indeksini issiq ushlab turish (tezlik audit) ──
+        // `vectors:rebuild`dan 2 daqiqa keyin (u ba'zan indeksni eskirtiradi
+        // — ProductVectorService::invalidateSearchIndex()) — shu orqali
+        // HAQIQIY foydalanuvchi so'rovi hech qachon sovuq indeksga duch
+        // kelmaydi (qarang: WarmVectorSearchIndex buyrug'i docblock'i).
+        $schedule->command('reading-intelligence:warm-search-index')
+            ->cron('2-59/10 * * * *')
+            ->timezone($tz)
+            ->withoutOverlapping(5)
+            ->runInBackground();
+
         $schedule->command('queue:prune-batches --hours=24')
             ->dailyAt('03:00')->timezone($tz);
 

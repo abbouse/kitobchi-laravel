@@ -46,6 +46,32 @@ class VectorSearchService
     }
 
     /**
+     * Indeksni oldindan (foydalanuvchi so'rovidan TASHQARIDA) tayyorlaydi/
+     * yangilaydi — chaqiruvchi natijaning o'zi bilan qiziqmaydi, faqat
+     * keshni "isitadi".
+     *
+     * MUHIM (tezlik — 2026-08-08 audit): `ProductVectorService` har safar
+     * biror mahsulot vektori o'zgarganda `invalidateIndex()` chaqiradi
+     * (va `vectors:rebuild` buyrug'i HAR 10 DAQIQADA ishlaydi — faol
+     * katalogda deyarli har yurishda kamida bitta mahsulot o'zgaradi).
+     * Demak indeks ko'pincha TTL (10 daqiqa) tugashini ham kutmay
+     * eskirib qoladi. Indeks eskirgandan keyin uni birinchi so'ragan
+     * HAQIQIY foydalanuvchi so'rovi esa butun faol katalogni (`chunk(500)`
+     * — har mahsulot ~30KB vectorData JSON) qayta o'qib, normalizatsiya
+     * qilishi kerak bo'lardi — bu "bu menga mosmi?" bannerining
+     * item sahifasida tasodifiy-sekin chiqishining ikkinchi asosiy sababi
+     * edi (`similarSection()` deyarli HAR bir holatda chaqiriladi).
+     *
+     * Shu metod `reading-intelligence:warm-search-index` buyrug'i orqali
+     * (schedule'da tez-tez) chaqirilib, indeksni doim ISSIQ ushlab turadi
+     * — haqiqiy foydalanuvchi so'rovi hech qachon qayta qurishni kutmaydi.
+     */
+    public function warmIndex(string $type): int
+    {
+        return count($this->getIndex($type));
+    }
+
+    /**
      * Tur bo'yicha indeksni qaytaradi: [id => packed_normalized_vector].
      */
     private function getIndex(string $type): array

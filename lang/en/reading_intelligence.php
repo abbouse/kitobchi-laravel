@@ -47,6 +47,9 @@ return [
     'interest_match_reason' => 'You selected ":cluster" during onboarding — recommended based on that.',
     'interest_match_reason_collab' => 'You picked ":cluster", and this item is also popular among buyers in this category.',
 
+    'match_reason_fallback' => 'Recommended based on your past purchases and taste.',
+    'match_reason_fallback_category' => 'Recommended based on your purchases and interest in ":category".',
+
     'guest_cta_label' => 'Want to know how well this fits you?',
     'guest_cta_detail' => 'Log in — we\'ll tailor matches and recommendations to your taste and purchases.',
 ];

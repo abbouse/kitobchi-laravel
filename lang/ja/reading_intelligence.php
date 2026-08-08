@@ -47,6 +47,9 @@ return [
     'interest_match_reason' => '登録時に":cluster"を選択されました。これに基づいておすすめしています。',
     'interest_match_reason_collab' => ':clusterを選択されました。この商品はこのカテゴリの購入者にも人気があります。',
 
+    'match_reason_fallback' => 'これまでの購入履歴と好みに基づくおすすめです。',
+    'match_reason_fallback_category' => 'これまでの購入履歴と":category"への関心に基づくおすすめです。',
+
     'guest_cta_label' => 'あなたにどれだけ合うか知りたいですか？',
     'guest_cta_detail' => 'ログインすると、購入履歴や好みに基づいたおすすめを表示します。',
 ];
