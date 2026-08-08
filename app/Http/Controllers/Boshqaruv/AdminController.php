@@ -62,7 +62,9 @@ use App\Models\Seller;
 use App\Models\SellerAd;
 use App\Models\SellerAiAction;
 use App\Models\SellerBanLog;
+use App\Models\SellerCommissionPromotion;
 use App\Models\SellerContractHistory;
+use App\Models\SellerDocument;
 use App\Models\SellerLocation;
 use App\Models\SellerOrder;
 use App\Models\SellerOrderItem;
@@ -94,6 +96,7 @@ use App\Services\PayoutReportService;
 use App\Services\PostalTrackingService;
 use App\Services\ProductModerationStateService;
 use App\Services\SellerCancellationReasonCatalog;
+use App\Services\SellerCommissionService;
 use App\Services\SellerOrderSettlementService;
 use App\Services\SellerPremiumService;
 use App\Services\SplitContractService;
@@ -283,7 +286,7 @@ class AdminController extends Controller
      */
     private function downloadDashboardWorkbook(array $payload, string $filename, string $type, float $usdRate, ?Carbon $rangeStart = null, ?Carbon $rangeEnd = null): \Symfony\Component\HttpFoundation\StreamedResponse
     {
-        $spreadsheet = new Spreadsheet();
+        $spreadsheet = new Spreadsheet;
         $spreadsheet->getProperties()
             ->setCreator('Kitobchi')
             ->setTitle('Kitobchi dashboard export')
@@ -578,6 +581,7 @@ class AdminController extends Controller
     private function dashboardUnitEconomicsRows(array $p): array
     {
         $u = $p['unitEconomics'] ?? [];
+        $f = $p['financial'] ?? [];
         $months = $p['unitEconomicsMonthly']['months'] ?? [];
         $labels = array_map(fn ($m) => $m['month'] ?? '-', $months);
         $blank = array_fill(0, count($months), '');
@@ -601,6 +605,10 @@ class AdminController extends Controller
             ['Repeat buyer rate', '', '', (float) ($u['repeatRate'] ?? 0), '1 martadan ko‘p xarid qilganlar / total buyers'],
             ['Total buyers', '', '', (int) ($u['totalBuyers'] ?? 0), 'Lifetime paid xaridorlar'],
             ['Repeat buyers', '', '', (int) ($u['repeatBuyers'] ?? 0), 'Lifetime qaytgan xaridorlar'],
+            ['Standard seller commission', (float) ($f['standardCommission'] ?? $f['commission'] ?? 0), '=B18/\'Assumptions\'!$B$7', '', 'Imtiyozsiz bazaviy komissiya'],
+            ['Seller commission incentive', (float) ($f['commissionBenefit'] ?? 0), '=B19/\'Assumptions\'!$B$7', '', 'Sellerlarga vaqtinchalik berilgan imtiyoz qiymati'],
+            ['Net seller commission', (float) ($f['commission'] ?? 0), '=B20/\'Assumptions\'!$B$7', '', 'Platforma real olgan komissiya'],
+            ['Incentivized seller orders', '', '', (int) ($f['incentivizedSellerOrders'] ?? 0), 'Komissiya imtiyozi qo‘llangan yakuniy buyurtmalar'],
         ];
 
         if (! empty($months)) {
@@ -609,6 +617,10 @@ class AdminController extends Controller
             $rows[] = array_merge([' Input Data'], $blank);
             $rows[] = array_merge([' Yakuniy savdo tushumi (so‘m)'], array_map(fn ($m) => (float) $m['grossRevenue'], $months));
             $rows[] = array_merge([' Contribution (so‘m)'], array_map(fn ($m) => (float) $m['contribution'], $months));
+            $rows[] = array_merge([' Standart seller komissiyasi (so‘m)'], array_map(fn ($m) => (float) ($m['standardCommission'] ?? $m['commission']), $months));
+            $rows[] = array_merge([' Seller imtiyozi (so‘m)'], array_map(fn ($m) => (float) ($m['commissionBenefit'] ?? 0), $months));
+            $rows[] = array_merge([' Sof seller komissiyasi (so‘m)'], array_map(fn ($m) => (float) $m['commission'], $months));
+            $rows[] = array_merge([' Imtiyozli seller orderlari'], array_map(fn ($m) => (int) ($m['incentivizedSellerOrders'] ?? 0), $months));
             $rows[] = array_merge([' Platforma sof marja (so‘m)'], array_map(fn ($m) => (float) $m['platformProfit'], $months));
             $rows[] = array_merge([' Marketing xarajat (so‘m)'], array_map(fn ($m) => (float) $m['marketingSpend'], $months));
             $rows[] = array_merge([' To‘langan orderlar'], array_map(fn ($m) => (int) $m['paidOrders'], $months));
@@ -764,25 +776,29 @@ class AdminController extends Controller
         $rows = [
             ['Kitobchi — P&L signal'],
             ['Line item', 'UZS', 'USD', 'Izoh'],
-            ['Gross revenue', (float) ($f['grossRevenue'] ?? 0), '=B3/\'Assumptions\'!$B$7', 'Yakuniy savdo tushumi'],
-            ['Seller commission', (float) ($f['commission'] ?? 0), '=B4/\'Assumptions\'!$B$7', 'Seller transaction komissiyasi'],
-            ['Delivery income', (float) ($f['deliveryIncome'] ?? 0), '=B5/\'Assumptions\'!$B$7', 'Mijozlardan olingan yetkazish'],
-            ['Promo discount', -(float) ($f['promoDiscount'] ?? 0), '=B6/\'Assumptions\'!$B$7', 'Promokod chegirmalari'],
-            ['Collection discount', -(float) ($f['collectionDiscount'] ?? 0), '=B7/\'Assumptions\'!$B$7', 'To‘plam chegirmalari'],
-            ['Cashback', -(float) ($f['cashback'] ?? 0), '=B8/\'Assumptions\'!$B$7', 'Ishlatilgan cashback'],
-            ['Courier payout', -(float) ($f['courierPayout'] ?? 0), '=B9/\'Assumptions\'!$B$7', 'Kuryerlarga to‘langan summa'],
-            ['Manual expenses', -(float) ($f['manualExpenses'] ?? 0), '=B10/\'Assumptions\'!$B$7', 'Chiqimlar bo‘limidan'],
-            ['Provider fee', -(float) ($f['providerFee'] ?? 0), '=B11/\'Assumptions\'!$B$7', 'Payment provider komissiyasi'],
-            ['Contribution before tax', (float) ($f['contributionBeforeTax'] ?? 0), '=B12/\'Assumptions\'!$B$7', 'Soliqdan oldingi contribution'],
-            ['Tax', -(float) ($f['tax'] ?? 0), '=B13/\'Assumptions\'!$B$7', 'Settings bo‘yicha soliq'],
-            ['Platform profit signal', (float) ($f['platformProfit'] ?? 0), '=B14/\'Assumptions\'!$B$7', 'Contribution - tax'],
+            ['GMV / Gross sales', (float) ($f['grossRevenue'] ?? 0), '=B3/\'Assumptions\'!$B$7', 'Muvaffaqiyatli buyurtmalar umumiy savdosi; platforma daromadi emas'],
+            ['Standard seller commission', (float) ($f['standardCommission'] ?? $f['commission'] ?? 0), '=B4/\'Assumptions\'!$B$7', 'Imtiyozsiz global yoki individual tarif bo‘yicha'],
+            ['Seller commission incentive', -(float) ($f['commissionBenefit'] ?? 0), '=B5/\'Assumptions\'!$B$7', 'Vaqtinchalik imtiyoz sabab olinmagan komissiya'],
+            ['Net seller commission', (float) ($f['commission'] ?? 0), '=B6/\'Assumptions\'!$B$7', 'Real undirilgan seller komissiyasi'],
+            ['Delivery income', (float) ($f['deliveryIncome'] ?? 0), '=B7/\'Assumptions\'!$B$7', 'Mijozlardan olingan yetkazish'],
+            ['Promo discount', -(float) ($f['promoDiscount'] ?? 0), '=B8/\'Assumptions\'!$B$7', 'Promokod chegirmalari'],
+            ['Collection discount', -(float) ($f['collectionDiscount'] ?? 0), '=B9/\'Assumptions\'!$B$7', 'To‘plam chegirmalari'],
+            ['Cashback', -(float) ($f['cashback'] ?? 0), '=B10/\'Assumptions\'!$B$7', 'Ishlatilgan cashback'],
+            ['Courier payout', -(float) ($f['courierPayout'] ?? 0), '=B11/\'Assumptions\'!$B$7', 'Kuryerlarga to‘langan summa'],
+            ['Manual expenses', -(float) ($f['manualExpenses'] ?? 0), '=B12/\'Assumptions\'!$B$7', 'Chiqimlar bo‘limidan'],
+            ['Provider fee', -(float) ($f['providerFee'] ?? 0), '=B13/\'Assumptions\'!$B$7', 'Payment provider komissiyasi'],
+            ['Contribution before tax', (float) ($f['contributionBeforeTax'] ?? 0), '=B14/\'Assumptions\'!$B$7', 'Soliqdan oldingi contribution'],
+            ['Tax', -(float) ($f['tax'] ?? 0), '=B15/\'Assumptions\'!$B$7', 'Settings bo‘yicha soliq'],
+            ['Platform profit signal', (float) ($f['platformProfit'] ?? 0), '=B16/\'Assumptions\'!$B$7', 'Contribution - tax'],
         ];
 
         if (! empty($months)) {
             $rows[] = [];
             $rows[] = array_merge(['Oylik P&L (so‘nggi 12 oy, so‘m)'], $labels);
-            $rows[] = array_merge([' Gross revenue'], array_map(fn ($m) => (float) $m['grossRevenue'], $months));
-            $rows[] = array_merge([' Seller commission'], array_map(fn ($m) => (float) $m['commission'], $months));
+            $rows[] = array_merge([' GMV / Gross sales'], array_map(fn ($m) => (float) $m['grossRevenue'], $months));
+            $rows[] = array_merge([' Standard seller commission'], array_map(fn ($m) => (float) ($m['standardCommission'] ?? $m['commission']), $months));
+            $rows[] = array_merge([' Seller commission incentive'], array_map(fn ($m) => -(float) ($m['commissionBenefit'] ?? 0), $months));
+            $rows[] = array_merge([' Net seller commission'], array_map(fn ($m) => (float) $m['commission'], $months));
             $rows[] = array_merge([' Delivery income'], array_map(fn ($m) => (float) $m['deliveryIncome'], $months));
             $rows[] = array_merge([' Promo discount'], array_map(fn ($m) => -(float) $m['promoDiscount'], $months));
             $rows[] = array_merge([' Collection discount'], array_map(fn ($m) => -(float) $m['collectionDiscount'], $months));
@@ -904,16 +920,29 @@ class AdminController extends Controller
             ->orderByDesc('revenue')
             ->get();
 
-        $rows = [['Kitobchi — Barcha sotuvchilar (lifetime)'], ['#', 'Sotuvchi', 'Premium', 'Orders', 'Revenue UZS', 'Revenue USD', "O'rtacha chek UZS", 'Cancelled', 'Cancel %', 'Accept min', 'Rating', 'Rating count', 'Reputation']];
+        $rows = [['Kitobchi — Barcha sotuvchilar (lifetime)'], ['#', 'Sotuvchi', 'Premium', 'Orders', 'Revenue UZS', 'Revenue USD', "O'rtacha chek UZS", 'Cancelled', 'Cancel %', 'Accept min', 'Rating', 'Rating count', 'Reputation', 'Komissiya rejimi', 'Individual %', 'Faol imtiyoz', 'Imtiyoz tugashi', 'Berilgan imtiyoz UZS']];
 
         if ($agg->isEmpty()) {
             return $rows;
         }
 
+        $hasCommissionPromotions = Schema::hasTable('seller_commission_promotions');
         $sellers = Seller::query()
+            ->when($hasCommissionPromotions, fn ($query) => $query->with(['commissionPromotions' => fn ($promotionQuery) => $promotionQuery->effectiveAt(now())]))
             ->whereIn('id', $agg->pluck('seller_id'))
-            ->get(['id', 'shop_name', 'firstname', 'lastname', 'rating', 'rating_reviews_count', 'reputation_score', 'isPremiumShop'])
+            ->get(['id', 'shop_name', 'firstname', 'lastname', 'rating', 'rating_reviews_count', 'reputation_score', 'isPremiumShop', 'commission_percent'])
             ->keyBy('id');
+
+        $benefitsBySeller = collect();
+        if (Schema::hasTable('seller_transactions') && Schema::hasColumn('seller_transactions', 'commissionBenefitAmount')) {
+            $benefitsBySeller = SellerTransaction::query()
+                ->selectRaw('seller_id, SUM(CASE WHEN type = ? THEN commissionBenefitAmount ELSE -commissionBenefitAmount END) as benefit', ['income'])
+                ->where('status', SellerTransaction::STATUS_APPROVED)
+                ->whereIn('category', [SellerOrderSettlementService::CATEGORY_ORDER_SALE, SellerOrderSettlementService::CATEGORY_ORDER_REVERSAL])
+                ->whereIn('seller_id', $agg->pluck('seller_id'))
+                ->groupBy('seller_id')
+                ->pluck('benefit', 'seller_id');
+        }
 
         $index = 0;
         foreach ($agg as $row) {
@@ -923,6 +952,7 @@ class AdminController extends Controller
             $cancelled = (int) $row->cancelled;
             $revenue = (float) $row->revenue;
             $excelRow = count($rows) + 1;
+            $promotion = $hasCommissionPromotions ? $seller?->commissionPromotions?->first() : null;
 
             $rows[] = [
                 $index,
@@ -938,6 +968,11 @@ class AdminController extends Controller
                 round((float) ($seller?->rating ?? 0), 2),
                 (int) ($seller?->rating_reviews_count ?? 0),
                 (int) ($seller?->reputation_score ?? 0),
+                $seller?->commission_percent === null ? 'Global' : 'Individual',
+                $seller?->commission_percent === null ? '' : (int) $seller->commission_percent,
+                $promotion ? ($promotion->type === SellerCommissionPromotion::TYPE_FREE ? 'Komissiyasiz (0%)' : ((int) $promotion->value).'%') : 'Yo‘q',
+                $promotion?->ends_at?->format('Y-m-d H:i') ?? '',
+                max(0, (float) ($benefitsBySeller->get($row->seller_id) ?? 0)),
             ];
         }
 
@@ -3003,7 +3038,7 @@ class AdminController extends Controller
 
     public function destroyPanelAdmin(Admin $admin): \Illuminate\Http\RedirectResponse
     {
-        abort_if(Auth::id() === $admin->id, 422, "O'zingizni o'chira olmaysiz.");
+        abort_if(Auth::guard('panel')->id() === $admin->id, 422, "O'zingizni o'chira olmaysiz.");
         $admin->delete();
 
         return back()->with('success', "Admin o'chirildi.");
@@ -3100,7 +3135,18 @@ class AdminController extends Controller
             'activity_types.*' => ['string', Rule::in(['Kitob', 'Kanstovar', 'book', 'books', 'stationery', 'stationary', 'kitob', 'kanselyariya', 'Книги', 'Канцелярия'])],
             'status' => ['required', Rule::in(['pending', 'approved', 'rejected', 'blocked'])],
             'balance' => ['nullable', 'numeric', 'min:0'],
-            'commission_percent' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'commission_mode' => ['nullable', Rule::in(['global', 'individual'])],
+            'commission_percent' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'commission_promotion_action' => ['nullable', Rule::in(['keep', 'grant', 'revoke'])],
+            'commission_promotion_type' => ['nullable', Rule::in([
+                SellerCommissionPromotion::TYPE_FREE,
+                SellerCommissionPromotion::TYPE_FIXED_RATE,
+            ])],
+            'commission_promotion_value' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'commission_promotion_starts_at' => ['nullable', 'date', 'required_if:commission_promotion_action,grant'],
+            'commission_promotion_ends_at' => ['nullable', 'date', 'required_if:commission_promotion_action,grant', 'after:commission_promotion_starts_at'],
+            'commission_promotion_reason' => ['nullable', 'string', 'max:255', 'required_if:commission_promotion_action,grant'],
+            'commission_promotion_notes' => ['nullable', 'string', 'max:2000'],
             'legal_type' => ['nullable', 'string', 'max:50'],
             'inn' => ['nullable', 'string', 'max:20'],
             'passport_series' => ['nullable', 'string', 'max:10'],
@@ -3132,7 +3178,44 @@ class AdminController extends Controller
             return back()->withErrors(['premium_plan' => 'Premium berish uchun tarifni tanlang.']);
         }
 
-        unset($data['premium_action'], $data['premium_plan']);
+        $commissionMode = (string) ($data['commission_mode'] ?? ($seller->commission_percent === null ? 'global' : 'individual'));
+        if ($commissionMode === 'individual' && ! array_key_exists('commission_percent', $data)) {
+            return back()->withErrors(['commission_percent' => 'Individual rejim uchun komissiya foizini kiriting.']);
+        }
+
+        $commissionPromotionAction = (string) ($data['commission_promotion_action'] ?? 'keep');
+        $commissionPromotionType = (string) ($data['commission_promotion_type'] ?? SellerCommissionPromotion::TYPE_FREE);
+        if ($commissionPromotionAction === 'grant'
+            && $commissionPromotionType === SellerCommissionPromotion::TYPE_FIXED_RATE
+            && ! array_key_exists('commission_promotion_value', $data)) {
+            return back()->withErrors(['commission_promotion_value' => 'Imtiyozli komissiya foizini kiriting.']);
+        }
+        $commissionPromotionValue = (int) ($data['commission_promotion_value'] ?? 0);
+        $commissionPromotionStartsAt = ! empty($data['commission_promotion_starts_at'])
+            ? Carbon::parse($data['commission_promotion_starts_at'])
+            : null;
+        $commissionPromotionEndsAt = ! empty($data['commission_promotion_ends_at'])
+            ? Carbon::parse($data['commission_promotion_ends_at'])
+            : null;
+        $commissionPromotionReason = trim((string) ($data['commission_promotion_reason'] ?? ''));
+        $commissionPromotionNotes = $data['commission_promotion_notes'] ?? null;
+
+        $data['commission_percent'] = $commissionMode === 'global'
+            ? null
+            : (int) ($data['commission_percent'] ?? 0);
+
+        unset(
+            $data['premium_action'],
+            $data['premium_plan'],
+            $data['commission_mode'],
+            $data['commission_promotion_action'],
+            $data['commission_promotion_type'],
+            $data['commission_promotion_value'],
+            $data['commission_promotion_starts_at'],
+            $data['commission_promotion_ends_at'],
+            $data['commission_promotion_reason'],
+            $data['commission_promotion_notes'],
+        );
         $data['activity_types'] = $this->normalizeSellerActivityTypes($request->input('activity_types', []));
         $data['contract_signed'] = $request->boolean('contract_signed');
         if (! $request->filled('password')) {
@@ -3152,13 +3235,46 @@ class AdminController extends Controller
             || $seller->contract_status !== ($data['contract_status'] ?? null)
             || (bool) $seller->contract_signed !== (bool) $data['contract_signed'];
 
-        DB::transaction(function () use ($seller, $data, $premiumAction, $premiumPlan, $contractChanged, $oldExpiry, $newExpiry) {
+        DB::transaction(function () use (
+            $seller,
+            $data,
+            $premiumAction,
+            $premiumPlan,
+            $commissionPromotionAction,
+            $commissionPromotionType,
+            $commissionPromotionValue,
+            $commissionPromotionStartsAt,
+            $commissionPromotionEndsAt,
+            $commissionPromotionReason,
+            $commissionPromotionNotes,
+            $contractChanged,
+            $oldExpiry,
+            $newExpiry,
+        ) {
             $seller->update($data);
             $premiumService = app(SellerPremiumService::class);
             if ($premiumAction === 'grant') {
                 $premiumService->grantByAdmin($seller, (string) $premiumPlan);
             } elseif ($premiumAction === 'revoke') {
                 $premiumService->revokeByAdmin($seller);
+            }
+
+            if (Schema::hasTable('seller_commission_promotions')) {
+                $commissionService = app(SellerCommissionService::class);
+                if ($commissionPromotionAction === 'grant' && $commissionPromotionStartsAt && $commissionPromotionEndsAt) {
+                    $commissionService->grant(
+                        $seller,
+                        $commissionPromotionType,
+                        $commissionPromotionValue,
+                        $commissionPromotionStartsAt,
+                        $commissionPromotionEndsAt,
+                        $commissionPromotionReason,
+                        $commissionPromotionNotes,
+                        Auth::guard('panel')->id(),
+                    );
+                } elseif ($commissionPromotionAction === 'revoke') {
+                    $commissionService->revoke($seller);
+                }
             }
             if ($contractChanged && Schema::hasTable('seller_contract_history')) {
                 SellerContractHistory::create([
@@ -3168,13 +3284,13 @@ class AdminController extends Controller
                     'old_expires_at' => $oldExpiry,
                     'new_expires_at' => $newExpiry,
                     'notes' => 'Boshqaruv panelidan yangilandi.',
-                    'performed_by' => Auth::id(),
+                    'performed_by' => Auth::guard('panel')->id(),
                     'created_at' => now(),
                 ]);
             }
         });
 
-        return back()->with('success', 'Seller yangilandi.');
+        return redirect()->route('boshqaruv.sellers.detail', $seller)->with('success', 'Seller yangilandi.');
     }
 
     public function updateCourier(Request $request, Couriers $courier): \Illuminate\Http\RedirectResponse
@@ -3367,7 +3483,7 @@ class AdminController extends Controller
 
     public function storeExpense(Request $request): \Illuminate\Http\RedirectResponse
     {
-        PlatformExpense::create($this->expenseData($request) + ['created_by' => Auth::id()]);
+        PlatformExpense::create($this->expenseData($request) + ['created_by' => Auth::guard('panel')->id()]);
 
         return back()->with('success', "Chiqim qo'shildi.");
     }
@@ -4146,7 +4262,7 @@ PROMPT;
      * kabi boshqa joylarda ham pul raqami bo'lishi mumkin — keyingi bosqichda
      * kengaytirilishi kerak.
      *
-     * @param array<string, mixed> $payload
+     * @param  array<string, mixed>  $payload
      * @return array<string, mixed>
      */
     private function redactFinancialsForNonSuperAdmin(array $payload): array
@@ -4381,6 +4497,9 @@ PROMPT;
         $giftDiscount = Schema::hasColumn('solds', 'giftCertAmount') ? (float) $paid()->sum('giftCertAmount') : 0;
 
         $commissionIncome = $commissionReversal = $sellerPayout = 0.0;
+        $standardCommissionIncome = $standardCommissionReversal = 0.0;
+        $commissionBenefitIncome = $commissionBenefitReversal = 0.0;
+        $incentivizedSellerOrders = 0;
         if (Schema::hasTable('seller_transactions')) {
             $sellerTransactions = fn () => $between(SellerTransaction::query()->where('status', 'approved'));
             $commissionIncome = (float) $sellerTransactions()
@@ -4395,8 +4514,47 @@ PROMPT;
                 ->where('type', 'income')
                 ->where('category', SellerOrderSettlementService::CATEGORY_ORDER_SALE)
                 ->sum('netAmount');
+
+            if (Schema::hasColumn('seller_transactions', 'baseCommissionPrice')) {
+                $standardCommissionIncome = (float) $sellerTransactions()
+                    ->where('type', 'income')
+                    ->where('category', SellerOrderSettlementService::CATEGORY_ORDER_SALE)
+                    ->sum('baseCommissionPrice');
+                $standardCommissionReversal = (float) $sellerTransactions()
+                    ->where('type', 'expense')
+                    ->where('category', SellerOrderSettlementService::CATEGORY_ORDER_REVERSAL)
+                    ->sum('baseCommissionPrice');
+            } else {
+                $standardCommissionIncome = $commissionIncome;
+                $standardCommissionReversal = $commissionReversal;
+            }
+
+            if (Schema::hasColumn('seller_transactions', 'commissionBenefitAmount')) {
+                $commissionBenefitIncome = (float) $sellerTransactions()
+                    ->where('type', 'income')
+                    ->where('category', SellerOrderSettlementService::CATEGORY_ORDER_SALE)
+                    ->sum('commissionBenefitAmount');
+                $commissionBenefitReversal = (float) $sellerTransactions()
+                    ->where('type', 'expense')
+                    ->where('category', SellerOrderSettlementService::CATEGORY_ORDER_REVERSAL)
+                    ->sum('commissionBenefitAmount');
+
+                $incentivizedIncomeOrders = (int) $sellerTransactions()
+                    ->where('type', 'income')
+                    ->where('category', SellerOrderSettlementService::CATEGORY_ORDER_SALE)
+                    ->where('commissionBenefitAmount', '>', 0)
+                    ->count();
+                $incentivizedReversalOrders = (int) $sellerTransactions()
+                    ->where('type', 'expense')
+                    ->where('category', SellerOrderSettlementService::CATEGORY_ORDER_REVERSAL)
+                    ->where('commissionBenefitAmount', '>', 0)
+                    ->count();
+                $incentivizedSellerOrders = max(0, $incentivizedIncomeOrders - $incentivizedReversalOrders);
+            }
         }
         $commission = $commissionIncome - $commissionReversal;
+        $standardCommission = $standardCommissionIncome - $standardCommissionReversal;
+        $commissionBenefit = $commissionBenefitIncome - $commissionBenefitReversal;
 
         $courierPayout = Schema::hasTable('courier_orders')
             ? (float) $between($this->customerReceivedCourierQuery())
@@ -4432,6 +4590,9 @@ PROMPT;
             'grossRevenue' => $grossRevenue,
             'deliveryIncome' => $deliveryIncome,
             'commission' => $commission,
+            'standardCommission' => $standardCommission,
+            'commissionBenefit' => $commissionBenefit,
+            'incentivizedSellerOrders' => $incentivizedSellerOrders,
             'commissionIncome' => $commissionIncome,
             'commissionReversal' => $commissionReversal,
             'promoDiscount' => $promoDiscount,
@@ -6179,6 +6340,12 @@ PROMPT;
     private function sellerPayload(Seller $seller): array
     {
         $karmaSummary = app(\App\Services\SellerKarmaSummaryService::class)->cachedSummary($seller);
+        $commissionPromotion = Schema::hasTable('seller_commission_promotions')
+            ? app(SellerCommissionService::class)->effectivePromotion($seller)
+            : null;
+        $commissionPromotionHistory = Schema::hasTable('seller_commission_promotions')
+            ? SellerCommissionPromotion::query()->where('seller_id', $seller->id)->latest('starts_at')->take(8)->get()
+            : collect();
         $activityTypes = $this->normalizeSellerActivityTypes($seller->activity_types);
         $sellerIds = Seller::query()
             ->where('id', $seller->id)
@@ -6195,10 +6362,10 @@ PROMPT;
             ? SellerBanLog::query()->where('seller_id', $seller->id)->latest()->take(6)->get()
             : collect();
         $documents = Schema::hasTable('seller_documents')
-            ? $seller->documents()->take(20)->get()
+            ? $seller->documents()->with('uploader:id,name')->take(20)->get()
             : collect();
         $contractHistory = Schema::hasTable('seller_contract_history')
-            ? $seller->contractHistory()->take(20)->get()
+            ? $seller->contractHistory()->with('performer:id,name')->take(20)->get()
             : collect();
         $totalRevenue = Schema::hasTable('seller_transactions')
             ? (float) SellerTransaction::query()
@@ -6206,6 +6373,15 @@ PROMPT;
                 ->where('status', 'approved')
                 ->where('type', 'income')
                 ->sum('netAmount')
+            : 0;
+        $totalCommissionBenefit = Schema::hasTable('seller_transactions')
+            && Schema::hasColumn('seller_transactions', 'commissionBenefitAmount')
+            ? (float) SellerTransaction::query()
+                ->whereIn('seller_id', $sellerIds)
+                ->where('status', SellerTransaction::STATUS_APPROVED)
+                ->whereIn('category', [SellerOrderSettlementService::CATEGORY_ORDER_SALE, SellerOrderSettlementService::CATEGORY_ORDER_REVERSAL])
+                ->selectRaw("COALESCE(SUM(CASE WHEN type = 'income' THEN commissionBenefitAmount ELSE -commissionBenefitAmount END), 0) as benefit")
+                ->value('benefit')
             : 0;
 
         return [
@@ -6244,7 +6420,35 @@ PROMPT;
             'catalogHealth' => (float) ($karmaSummary['catalog_health'] ?? 0),
             'balance' => (float) ($seller->balance ?? 0),
             'totalRevenue' => $totalRevenue,
-            'commissionRate' => (float) ($seller->commission_percent ?? 0),
+            'commissionMode' => $seller->commission_percent === null ? 'global' : 'individual',
+            'commissionRate' => $seller->commission_percent === null ? null : (float) $seller->commission_percent,
+            'commissionBenefitTotal' => max(0, $totalCommissionBenefit),
+            'commission' => [
+                'mode' => $seller->commission_percent === null ? 'global' : 'individual',
+                'individualRate' => $seller->commission_percent === null ? null : (float) $seller->commission_percent,
+                'activePromotion' => $commissionPromotion ? [
+                    'id' => $commissionPromotion->id,
+                    'type' => $commissionPromotion->type,
+                    'value' => (int) $commissionPromotion->value,
+                    'reason' => $commissionPromotion->reason,
+                    'notes' => $commissionPromotion->notes,
+                    'startsAt' => $commissionPromotion->starts_at?->format('Y-m-d\TH:i'),
+                    'endsAt' => $commissionPromotion->ends_at?->format('Y-m-d\TH:i'),
+                    'endsAtLabel' => $this->dateTime($commissionPromotion->ends_at),
+                ] : null,
+                'history' => $commissionPromotionHistory->map(fn (SellerCommissionPromotion $promotion) => [
+                    'id' => $promotion->id,
+                    'type' => $promotion->type,
+                    'value' => (int) $promotion->value,
+                    'reason' => $promotion->reason,
+                    'startsAtLabel' => $this->dateTime($promotion->starts_at),
+                    'endsAtLabel' => $this->dateTime($promotion->ends_at),
+                    'revokedAtLabel' => $this->dateTime($promotion->revoked_at),
+                    'status' => $promotion->revoked_at
+                        ? 'revoked'
+                        : ($promotion->starts_at?->isFuture() ? 'scheduled' : ($promotion->ends_at?->isPast() ? 'ended' : 'active')),
+                ])->values()->all(),
+            ],
             'products' => (int) (($seller->books_count ?? 0) + ($seller->stationeries_count ?? 0)),
             'books' => (int) ($seller->books_count ?? 0),
             'stationeries' => (int) ($seller->stationeries_count ?? 0),
@@ -6255,6 +6459,8 @@ PROMPT;
                 'typeLabel' => $this->sellerLegalTypeLabel($seller->legal_type),
                 'inn' => $seller->inn,
                 'passport' => trim(($seller->passport_series ?? '').' '.($seller->passport_number ?? '')) ?: null,
+                'passportSeries' => $seller->passport_series,
+                'passportNumber' => $seller->passport_number,
                 'passportIssuedBy' => $seller->passport_issued_by,
                 'passportIssuedAt' => optional($seller->passport_issued_at)->format('Y-m-d'),
                 'legalAddress' => $seller->legal_address,
@@ -6285,40 +6491,9 @@ PROMPT;
                 'token' => $seller->qr_token,
                 'rotatedAt' => optional($seller->qr_rotated_at)->format('Y-m-d H:i'),
             ],
-            'locations' => $seller->locations->map(fn ($location) => [
-                'id' => $location->id,
-                'address' => $location->fullAddress,
-                'description' => $location->description,
-                'main' => (bool) $location->is_main,
-                'lat' => $location->lat,
-                'lon' => $location->lon,
-                'mapLinks' => $this->mapLinks($location->lat, $location->lon, $location->fullAddress),
-                'qrUrl' => $location->qr_url,
-                'qrImageUrl' => $this->qrImageUrl($location->qr_url),
-                'qrToken' => $location->qr_token,
-                'rotatedAt' => optional($location->qr_rotated_at)->format('Y-m-d H:i'),
-                'rotateUrl' => route('boshqaruv.sellers.locations.qr.rotate', [$seller, $location]),
-            ])->values()->all(),
-            'documents' => $documents->map(fn ($document) => [
-                'id' => $document->id,
-                'type' => $document->type,
-                'typeLabel' => $document->type_label,
-                'name' => $document->original_name,
-                'description' => $document->description,
-                'size' => (int) ($document->file_size_kb ?? 0),
-                'url' => $document->file_url,
-                'date' => $this->dateTime($document->created_at),
-                'deleteUrl' => route('boshqaruv.sellers.documents.destroy', [$seller, $document]),
-            ])->values()->all(),
-            'contractHistory' => $contractHistory->map(fn (SellerContractHistory $history) => [
-                'id' => $history->id,
-                'action' => $history->action_label,
-                'number' => $history->contract_number,
-                'oldExpiresAt' => optional($history->old_expires_at)->format('Y-m-d'),
-                'newExpiresAt' => optional($history->new_expires_at)->format('Y-m-d'),
-                'notes' => $history->notes,
-                'date' => $this->dateTime($history->created_at),
-            ])->values()->all(),
+            'locations' => $seller->locations->map(fn ($location) => $this->mapSellerLocationRow($seller, $location))->values()->all(),
+            'documents' => $documents->map(fn ($document) => $this->mapSellerDocumentRow($seller, $document))->values()->all(),
+            'contractHistory' => $contractHistory->map(fn (SellerContractHistory $history) => $this->mapSellerContractHistoryRow($history))->values()->all(),
             'recentOrders' => $recentOrders->map(fn (SellerOrder $order) => [
                 'id' => $order->id,
                 'customer' => trim(($order->client?->name ?? '').' '.($order->client?->lastname ?? '')) ?: 'Mijoz',
@@ -6328,25 +6503,11 @@ PROMPT;
                 'date' => optional($order->created_at)->format('Y-m-d H:i'),
                 'url' => route('boshqaruv.seller-orders'),
             ])->values()->all(),
-            'transactions' => $transactions->map(fn (SellerTransaction $transaction) => [
-                'id' => $transaction->id,
-                'type' => $transaction->type,
-                'category' => $transaction->category,
-                'amount' => (float) ($transaction->amount ?? 0),
-                'commission' => (float) ($transaction->commissionPrice ?? 0),
-                'net' => (float) ($transaction->netAmount ?? 0),
-                'status' => $transaction->status,
-                'date' => optional($transaction->created_at)->format('Y-m-d H:i'),
-            ])->values()->all(),
-            'banLogs' => $banLogs->map(fn (SellerBanLog $log) => [
-                'id' => $log->id,
-                'title' => $log->title,
-                'message' => $log->message,
-                'type' => $log->type,
-                'read' => (bool) $log->is_read,
-                'date' => optional($log->created_at)->format('Y-m-d H:i'),
-            ])->values()->all(),
+            'transactions' => $transactions->map(fn (SellerTransaction $transaction) => $this->mapSellerTransactionRow($transaction))->values()->all(),
+            'banLogs' => $banLogs->map(fn (SellerBanLog $log) => $this->mapSellerBanLogRow($log))->values()->all(),
             'actions' => [
+                'detailUrl' => route('boshqaruv.sellers.detail', $seller),
+                'editUrl' => route('boshqaruv.sellers.edit', $seller),
                 'approveUrl' => route('boshqaruv.sellers.approve', $seller),
                 'rejectUrl' => route('boshqaruv.sellers.reject', $seller),
                 'unblockUrl' => route('boshqaruv.sellers.unblock', $seller),
@@ -6360,6 +6521,193 @@ PROMPT;
                 'staffStoreUrl' => route('boshqaruv.sellers.staff.store', $seller),
             ],
         ];
+    }
+
+    private function mapSellerLocationRow(Seller $seller, SellerLocation $location): array
+    {
+        return [
+            'id' => $location->id,
+            'address' => $location->fullAddress,
+            'description' => $location->description,
+            'main' => (bool) $location->is_main,
+            'lat' => $location->lat,
+            'lon' => $location->lon,
+            'mapLinks' => $this->mapLinks($location->lat, $location->lon, $location->fullAddress),
+            'qrUrl' => $location->qr_url,
+            'qrImageUrl' => $this->qrImageUrl($location->qr_url),
+            'qrToken' => $location->qr_token,
+            'rotatedAt' => optional($location->qr_rotated_at)->format('Y-m-d H:i'),
+            'rotateUrl' => route('boshqaruv.sellers.locations.qr.rotate', [$seller, $location]),
+        ];
+    }
+
+    private function mapSellerDocumentRow(Seller $seller, SellerDocument $document): array
+    {
+        return [
+            'id' => $document->id,
+            'type' => $document->type,
+            'typeLabel' => $document->type_label,
+            'name' => $document->original_name,
+            'description' => $document->description,
+            'size' => (int) ($document->file_size_kb ?? 0),
+            'url' => $document->file_url,
+            'date' => $this->dateTime($document->created_at),
+            'uploadedBy' => $document->uploader?->name,
+            'deleteUrl' => route('boshqaruv.sellers.documents.destroy', [$seller, $document]),
+        ];
+    }
+
+    private function mapSellerContractHistoryRow(SellerContractHistory $history): array
+    {
+        return [
+            'id' => $history->id,
+            'action' => $history->action_label,
+            'number' => $history->contract_number,
+            'oldExpiresAt' => optional($history->old_expires_at)->format('Y-m-d'),
+            'newExpiresAt' => optional($history->new_expires_at)->format('Y-m-d'),
+            'notes' => $history->notes,
+            'performedBy' => $history->performer?->name,
+            'date' => $this->dateTime($history->created_at),
+        ];
+    }
+
+    private function mapSellerTransactionRow(SellerTransaction $transaction): array
+    {
+        return [
+            'id' => $transaction->id,
+            'type' => $transaction->type,
+            'category' => $transaction->category,
+            'amount' => (float) ($transaction->amount ?? 0),
+            'commission' => (float) ($transaction->commissionPrice ?? 0),
+            'net' => (float) ($transaction->netAmount ?? 0),
+            'status' => $transaction->status,
+            'date' => optional($transaction->created_at)->format('Y-m-d H:i'),
+        ];
+    }
+
+    private function mapSellerBanLogRow(SellerBanLog $log): array
+    {
+        return [
+            'id' => $log->id,
+            'title' => $log->title,
+            'message' => $log->message,
+            'type' => $log->type,
+            'read' => (bool) $log->is_read,
+            'date' => optional($log->created_at)->format('Y-m-d H:i'),
+        ];
+    }
+
+    /**
+     * Seller profili — to'liq sahifa (Inertia). Ro'yxatdagi modal o'rniga
+     * professional darajadagi alohida sahifa: to'liq paginatsiya bilan
+     * filiallar, hujjatlar, shartnoma tarixi, buyurtmalar, tranzaksiyalar,
+     * ogohlantirishlar.
+     */
+    public function sellerDetail(Request $request, Seller $seller): Response
+    {
+        return Inertia::render('SellerDetail', $this->sellerDetailPayload($request, $seller));
+    }
+
+    /**
+     * Seller tahrirlash — alohida sahifa (bir necha bo'limga bo'lingan forma).
+     * Bir xil payload'dan foydalanadi — forma default qiymatlari shu yerdan keladi.
+     */
+    public function sellerEdit(Request $request, Seller $seller): Response
+    {
+        return Inertia::render('SellerEdit', $this->sellerDetailPayload($request, $seller));
+    }
+
+    private function sellerDetailPayload(Request $request, Seller $seller): array
+    {
+        abort_unless(Schema::hasTable('sellers'), 404);
+
+        // Xodim (staff) ID'si berilsa ham — asosiy do'kon profilini ko'rsatamiz.
+        $storeSeller = $seller->parent_id
+            ? Seller::query()->findOrFail($seller->parent_id)
+            : $seller;
+        $storeSeller->loadCount(['books', 'stationeries', 'orders', 'premiumSubscriptions']);
+        $storeSeller->load(['locations' => fn ($builder) => $builder->orderByDesc('is_main')->orderBy('id')->take(12)]);
+
+        $base = $this->sellerPayload($storeSeller);
+
+        $sellerIds = Seller::query()
+            ->where('id', $storeSeller->id)
+            ->orWhere('parent_id', $storeSeller->id)
+            ->pluck('id');
+
+        $locations = $storeSeller->locations()
+            ->orderByDesc('is_main')->orderBy('id')
+            ->paginate(6, ['*'], 'locations_page')->withQueryString();
+
+        $documents = Schema::hasTable('seller_documents')
+            ? $storeSeller->documents()->with('uploader:id,name')->latest()
+                ->paginate(8, ['*'], 'documents_page')->withQueryString()
+            : $this->emptyPaginator($request, 'documents_page', 8);
+
+        $contractHistory = Schema::hasTable('seller_contract_history')
+            ? $storeSeller->contractHistory()->with('performer:id,name')->latest('created_at')
+                ->paginate(8, ['*'], 'contract_history_page')->withQueryString()
+            : $this->emptyPaginator($request, 'contract_history_page', 8);
+
+        $orders = Schema::hasTable('seller_orders')
+            ? SellerOrder::query()
+                ->with(['seller:id,shop_name,firstname,lastname,phone_number,photo', 'client:id,name,lastname,phone_number', 'courier:id,first_name,last_name,phone_number', 'order:id,user_id,amount,status,paymentStatus,deliveryPrice,deliveryType,items,address,created_at'])
+                ->whereIn('seller_id', $sellerIds)
+                ->latest()
+                ->paginate(10, ['*'], 'orders_page')->withQueryString()
+            : $this->emptyPaginator($request, 'orders_page', 10);
+
+        $transactions = Schema::hasTable('seller_transactions')
+            ? SellerTransaction::query()->whereIn('seller_id', $sellerIds)->latest()
+                ->paginate(10, ['*'], 'transactions_page')->withQueryString()
+            : $this->emptyPaginator($request, 'transactions_page', 10);
+
+        $banLogs = Schema::hasTable('seller_ban_logs')
+            ? SellerBanLog::query()->where('seller_id', $storeSeller->id)->latest()
+                ->paginate(10, ['*'], 'ban_logs_page')->withQueryString()
+            : $this->emptyPaginator($request, 'ban_logs_page', 10);
+
+        return array_merge($base, [
+            'isStaffView' => (bool) $seller->parent_id,
+            'isStaffOwner' => ! $storeSeller->parent_id,
+            'backUrl' => route('boshqaruv.sellers'),
+            'locations' => $locations->getCollection()->map(fn ($location) => $this->mapSellerLocationRow($storeSeller, $location))->values()->all(),
+            'locationsPagination' => $this->paginationMeta($locations),
+            'documents' => $documents->getCollection()->map(fn ($document) => $this->mapSellerDocumentRow($storeSeller, $document))->values()->all(),
+            'documentsPagination' => $this->paginationMeta($documents),
+            'contractHistory' => $contractHistory->getCollection()->map(fn ($history) => $this->mapSellerContractHistoryRow($history))->values()->all(),
+            'contractHistoryPagination' => $this->paginationMeta($contractHistory),
+            // Diqqat: `orders` kaliti $base ichida seller buyurtmalari SONI (int).
+            // Shuning uchun to'liq buyurtmalar ro'yxati alohida `sellerOrders`
+            // nomi bilan qaytariladi — array_merge orqali sonni ustidan
+            // yozib yubormaslik uchun.
+            'sellerOrders' => $orders->getCollection()->map(fn (SellerOrder $order) => $this->sellerOrderPayload($order))->values()->all(),
+            'sellerOrdersPagination' => $this->paginationMeta($orders),
+            'sellerOrderStatuses' => AdminOrderStatusSyncService::SELLER_STATUSES,
+            'transactions' => $transactions->getCollection()->map(fn (SellerTransaction $transaction) => $this->mapSellerTransactionRow($transaction))->values()->all(),
+            'transactionsPagination' => $this->paginationMeta($transactions),
+            'banLogs' => $banLogs->getCollection()->map(fn (SellerBanLog $log) => $this->mapSellerBanLogRow($log))->values()->all(),
+            'banLogsPagination' => $this->paginationMeta($banLogs),
+        ]);
+    }
+
+    /**
+     * Jadval mavjud bo'lmasa ham view/Inertia qulay ishlashi uchun bo'sh,
+     * lekin haqiqiy LengthAwarePaginator interfeysiga mos paginator.
+     */
+    private function emptyPaginator(Request $request, string $pageName, int $perPage): LengthAwarePaginator
+    {
+        return new LengthAwarePaginator(
+            collect(),
+            0,
+            $perPage,
+            max(1, (int) $request->query($pageName, 1)),
+            [
+                'path' => $request->url(),
+                'pageName' => $pageName,
+                'query' => $request->query(),
+            ],
+        );
     }
 
     /** Hodim rollari (business ilovadagi mapping bilan bir xil) */
@@ -7701,13 +8049,30 @@ PROMPT;
             ->latest();
 
         $rows = $query->paginate(30, ['*'], 'commission_page')->withQueryString();
-        $collection = $rows->getCollection()->map(function (SellerTransaction $transaction) {
+        $hasCommissionSnapshots = Schema::hasColumn('seller_transactions', 'baseCommissionPercent')
+            && Schema::hasColumn('seller_transactions', 'baseCommissionPrice')
+            && Schema::hasColumn('seller_transactions', 'commissionBenefitAmount');
+        $collection = $rows->getCollection()->map(function (SellerTransaction $transaction) use ($hasCommissionSnapshots) {
             $sellerRate = (float) ($transaction->seller?->commission_percent ?? 0);
             $amount = (float) ($transaction->amount ?? 0);
-            $expected = $this->expectedCommissionRule($transaction->seller, $amount);
             $actualPercent = (float) ($transaction->commissionPercent ?? 0);
             $actualCommission = (float) ($transaction->commissionPrice ?? 0);
-            $expectedCommission = round($amount * $expected['percent'] / 100);
+            $hasSnapshot = $hasCommissionSnapshots && $transaction->baseCommissionPercent !== null;
+            $expected = $hasSnapshot
+                ? [
+                    'percent' => $actualPercent,
+                    'source' => (string) ($transaction->commissionSource ?: 'snapshot'),
+                    'globalRule' => null,
+                ]
+                : $this->expectedCommissionRule($transaction->seller, $amount);
+            $basePercent = $hasSnapshot ? (float) $transaction->baseCommissionPercent : (float) $expected['percent'];
+            $baseCommission = $hasSnapshot
+                ? (float) $transaction->baseCommissionPrice
+                : round($amount * $basePercent / 100);
+            $benefitAmount = $hasSnapshot ? (float) $transaction->commissionBenefitAmount : 0.0;
+            $expectedCommission = $hasSnapshot
+                ? max(0, $baseCommission - $benefitAmount)
+                : round($amount * $expected['percent'] / 100);
             $netAmount = (float) ($transaction->netAmount ?? max(0, $amount - $actualCommission));
             $balanceEffect = 0.0;
             if ($transaction->status === SellerTransaction::STATUS_APPROVED) {
@@ -7732,6 +8097,9 @@ PROMPT;
                 'actualCommission' => $actualCommission,
                 'expectedPercent' => $expected['percent'],
                 'expectedCommission' => $expectedCommission,
+                'basePercent' => $basePercent,
+                'baseCommission' => $baseCommission,
+                'benefitAmount' => $benefitAmount,
                 'ruleSource' => $expected['source'],
                 'sellerRate' => $sellerRate,
                 'globalRule' => $expected['globalRule'],
@@ -7751,7 +8119,7 @@ PROMPT;
             'commissionAuditTotals' => [
                 'rows' => (int) $rows->total(),
                 'mismatches' => (int) $collection->where('ok', false)->count(),
-                'sellerSpecific' => (int) $collection->where('ruleSource', 'seller')->count(),
+                'sellerSpecific' => (int) $collection->whereIn('ruleSource', ['seller', 'individual', 'promotion'])->count(),
                 'global' => (int) $collection->where('ruleSource', 'global')->count(),
                 'balanceAdded' => (float) $collection->where('balanceEffect', '>', 0)->sum('balanceEffect'),
             ],
@@ -7815,12 +8183,13 @@ PROMPT;
 
     private function expectedCommissionRule(?Seller $seller, float $amount): array
     {
-        $sellerRate = (float) ($seller?->commission_percent ?? 0);
-        if ($sellerRate > 0) {
+        if ($seller) {
+            $base = app(SellerCommissionService::class)->resolveBase($seller, (int) round($amount));
+
             return [
-                'percent' => min(100, $sellerRate),
-                'source' => 'seller',
-                'globalRule' => null,
+                'percent' => (float) $base['percent'],
+                'source' => (string) $base['source'],
+                'globalRule' => $base['global_rule'],
             ];
         }
 
@@ -11567,7 +11936,7 @@ PROMPT;
      */
     private function dashboardUnitEconomicsMonthly(): array
     {
-        return Cache::remember('boshqaruv.dash.unit-econ-monthly.v1', now()->addMinutes(10), function () {
+        return Cache::remember('boshqaruv.dash.unit-econ-monthly.v2', now()->addMinutes(10), function () {
             $firstSaleAt = $this->paidOrdersQuery()
                 ->selectRaw('MIN(COALESCE(completed_at, updated_at)) as first_sale_at')
                 ->value('first_sale_at');
@@ -11649,6 +12018,9 @@ PROMPT;
                     'contribution' => (int) round($finance['contributionBeforeTax']),
                     'platformProfit' => (int) round($finance['platformProfit']),
                     'commission' => (int) round($finance['commission']),
+                    'standardCommission' => (int) round($finance['standardCommission'] ?? $finance['commission']),
+                    'commissionBenefit' => (int) round($finance['commissionBenefit'] ?? 0),
+                    'incentivizedSellerOrders' => (int) ($finance['incentivizedSellerOrders'] ?? 0),
                     'deliveryIncome' => (int) round($finance['deliveryIncome']),
                     'promoDiscount' => (int) round($finance['promoDiscount']),
                     'collectionDiscount' => (int) round($finance['collectionDiscount']),
@@ -12452,36 +12824,48 @@ PROMPT;
         }
 
         $sellerOrders = $sellerOrderModels
-            ->map(fn (SellerOrder $sellerOrder) => [
-                'id' => $sellerOrder->id,
-                'sellerId' => $sellerOrder->seller_id,
-                'seller' => $sellerOrder->seller?->shop_name,
-                'sellerPhone' => $sellerOrder->seller?->phone_number,
-                'sellerCommissionPercent' => (int) ($sellerOrder->seller?->commission_percent ?? 0),
-                'courier' => trim(($sellerOrder->courier?->first_name ?? '').' '.($sellerOrder->courier?->last_name ?? '')) ?: ($sellerOrder->courierName ?? null),
-                'courierPhone' => $sellerOrder->courier?->phone_number,
-                'courierRegion' => $sellerOrder->courier?->region,
-                'amount' => (float) ($sellerOrder->amount ?? 0),
-                'deliveryType' => $sellerOrder->delivery_type,
-                'status' => (string) ($sellerOrder->status_code ?? $sellerOrder->status ?? ''),
-                'acceptedAt' => $this->dateTime($sellerOrder->accepted_at),
-                'createdAt' => $this->dateTime($sellerOrder->created_at),
-                'address' => $this->orderAddressPayload((array) ($sellerOrder->address ?? [])),
-                'settlement' => $sellerSettlements[$sellerOrder->id] ?? null,
-                'url' => route('boshqaruv.seller-orders'),
-                'isCancelled' => $sellerOrder->cancelled_at !== null,
-                'cancelledAt' => $this->dateTime($sellerOrder->cancelled_at),
-                'cancelReasonCode' => $sellerOrder->cancel_reason_code,
-                'cancelNotes' => [
-                    'uz' => $sellerOrder->cancel_note_uz,
-                    'ru' => $sellerOrder->cancel_note_ru,
-                    'en' => $sellerOrder->cancel_note_en,
-                    'ja' => $sellerOrder->cancel_note_ja,
-                ],
-                'refundStatus' => $sellerOrder->refund_status,
-                'canRefund' => $canModerateRefunds && $canProcessRefunds && $sellerOrder->cancelled_at === null,
-                'refundUrl' => route('boshqaruv.seller-orders.refund', $sellerOrder),
-            ])
+            ->map(function (SellerOrder $sellerOrder) use ($sellerSettlements, $canModerateRefunds, $canProcessRefunds) {
+                $commissionRule = $sellerOrder->seller
+                    ? app(SellerCommissionService::class)->resolve(
+                        $sellerOrder->seller,
+                        (int) ($sellerOrder->amount ?? 0),
+                        $sellerOrder->created_at ?? now(),
+                    )
+                    : null;
+
+                return [
+                    'id' => $sellerOrder->id,
+                    'sellerId' => $sellerOrder->seller_id,
+                    'seller' => $sellerOrder->seller?->shop_name,
+                    'sellerPhone' => $sellerOrder->seller?->phone_number,
+                    'sellerCommissionPercent' => (int) ($commissionRule['effective_percent'] ?? 0),
+                    'sellerBaseCommissionPercent' => (int) ($commissionRule['base_percent'] ?? 0),
+                    'sellerCommissionSource' => $commissionRule['source'] ?? null,
+                    'courier' => trim(($sellerOrder->courier?->first_name ?? '').' '.($sellerOrder->courier?->last_name ?? '')) ?: ($sellerOrder->courierName ?? null),
+                    'courierPhone' => $sellerOrder->courier?->phone_number,
+                    'courierRegion' => $sellerOrder->courier?->region,
+                    'amount' => (float) ($sellerOrder->amount ?? 0),
+                    'deliveryType' => $sellerOrder->delivery_type,
+                    'status' => (string) ($sellerOrder->status_code ?? $sellerOrder->status ?? ''),
+                    'acceptedAt' => $this->dateTime($sellerOrder->accepted_at),
+                    'createdAt' => $this->dateTime($sellerOrder->created_at),
+                    'address' => $this->orderAddressPayload((array) ($sellerOrder->address ?? [])),
+                    'settlement' => $sellerSettlements[$sellerOrder->id] ?? null,
+                    'url' => route('boshqaruv.seller-orders'),
+                    'isCancelled' => $sellerOrder->cancelled_at !== null,
+                    'cancelledAt' => $this->dateTime($sellerOrder->cancelled_at),
+                    'cancelReasonCode' => $sellerOrder->cancel_reason_code,
+                    'cancelNotes' => [
+                        'uz' => $sellerOrder->cancel_note_uz,
+                        'ru' => $sellerOrder->cancel_note_ru,
+                        'en' => $sellerOrder->cancel_note_en,
+                        'ja' => $sellerOrder->cancel_note_ja,
+                    ],
+                    'refundStatus' => $sellerOrder->refund_status,
+                    'canRefund' => $canModerateRefunds && $canProcessRefunds && $sellerOrder->cancelled_at === null,
+                    'refundUrl' => route('boshqaruv.seller-orders.refund', $sellerOrder),
+                ];
+            })
             ->values()
             ->all();
         $canRefundPayment = $panelAdmin?->isSuperAdmin()

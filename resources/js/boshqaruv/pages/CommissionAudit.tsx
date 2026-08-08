@@ -21,6 +21,9 @@ interface Row {
   actualCommission: number;
   expectedPercent: number;
   expectedCommission: number;
+  basePercent?: number;
+  baseCommission?: number;
+  benefitAmount?: number;
   ruleSource: string;
   sellerRate: number;
   type?: string;
@@ -117,9 +120,9 @@ export default function CommissionAudit() {
                     </strong>
                     <small className="d-block text-muted">{row.balanceEffect > 0 ? 'seller balansiga qo‘shildi' : row.balanceEffect < 0 ? 'balansdan qaytarildi' : 'balansga ta’sir yo‘q'}</small>
                   </td>
-                  <td><span className={`chip ${row.ruleSource === 'seller' || row.ruleSource === 'km_formula' ? 'chip-success' : 'chip-info'}`}>{isCourier ? courierRuleLabel(row) : `${row.ruleSource === 'seller' ? 'Seller' : 'Global'} · ${row.expectedPercent}%`}</span></td>
+                  <td><span className={`chip ${['seller', 'individual', 'promotion', 'km_formula'].includes(row.ruleSource) ? 'chip-success' : 'chip-info'}`}>{isCourier ? courierRuleLabel(row) : sellerRuleLabel(row)}</span></td>
                   <td>{isCourier && row.auditKind !== 'withdrawal_commission' ? money(row.actualCommission) : `${row.actualPercent}% · ${money(row.actualCommission)}`}</td>
-                  <td>{isCourier && row.auditKind !== 'withdrawal_commission' ? money(row.expectedCommission) : `${row.expectedPercent}% · ${money(row.expectedCommission)}`}</td>
+                  <td>{isCourier && row.auditKind !== 'withdrawal_commission' ? money(row.expectedCommission) : row.ruleSource === 'promotion' ? `${money(row.baseCommission || 0)} − ${money(row.benefitAmount || 0)} = ${money(row.expectedCommission)}` : `${row.expectedPercent}% · ${money(row.expectedCommission)}`}</td>
                   <td><span className={`chip ${row.ok ? 'chip-success' : 'chip-danger'}`}>{row.ok ? 'OK' : `${isCourier && row.auditKind !== 'withdrawal_commission' ? '' : `${row.diffPercent}% · `}${money(row.diffAmount)}`}</span></td>
                   <td><small className="text-muted">{row.status} · {row.date || '—'}</small></td>
                 </tr>
@@ -138,4 +141,12 @@ function courierRuleLabel(row: Row) {
   if (row.auditKind === 'withdrawal_commission') return `Withdrawal · ${row.expectedPercent}%`;
   if (row.ruleSource === 'km_formula') return `${Number(row.distanceKm || 0).toFixed(2)} km · base ${money(row.baseFee || 0)} + km ${money(row.distanceFee || 0)} + bonus ${money(row.bonus || 0)}`;
   return row.ruleSource || 'Tranzaksiya';
+}
+
+function sellerRuleLabel(row: Row) {
+  if (row.ruleSource === 'promotion') return `Imtiyoz · ${row.actualPercent}% (bazaviy ${row.basePercent || 0}%)`;
+  if (row.ruleSource === 'individual' || row.ruleSource === 'seller') return `Individual · ${row.expectedPercent}%`;
+  if (row.ruleSource === 'legacy_snapshot') return `Tarixiy snapshot · ${row.expectedPercent}%`;
+  if (row.ruleSource === 'missing') return 'Tarif topilmadi · 0%';
+  return `Global · ${row.expectedPercent}%`;
 }

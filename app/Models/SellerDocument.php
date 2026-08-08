@@ -87,9 +87,14 @@ class SellerDocument extends Model
         return $this->belongsTo(Seller::class, 'seller_id');
     }
 
+    /**
+     * Hujjatni yuklagan panel admin. `uploaded_by` faqat boshqaruv panelidan
+     * (Auth::guard('panel')) to'ldiriladi — shuning uchun Admin modeliga
+     * bog'langan, User'ga emas.
+     */
     public function uploader()
     {
-        return $this->belongsTo(User::class, 'uploaded_by')
-            ->select('id', 'name', 'lastname');
+        return $this->belongsTo(Admin::class, 'uploaded_by')
+            ->select('id', 'name');
     }
 }

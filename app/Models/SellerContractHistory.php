@@ -67,9 +67,14 @@ class SellerContractHistory extends Model
         return $this->belongsTo(Seller::class, 'seller_id');
     }
 
+    /**
+     * Shartnomani o'zgartirgan panel admin. `performed_by` faqat boshqaruv
+     * panelidan (Auth::guard('panel')) to'ldiriladi — shuning uchun Admin
+     * modeliga bog'langan, User'ga emas.
+     */
     public function performer()
     {
-        return $this->belongsTo(User::class, 'performed_by')
-            ->select('id', 'name', 'lastname');
+        return $this->belongsTo(Admin::class, 'performed_by')
+            ->select('id', 'name');
     }
 }

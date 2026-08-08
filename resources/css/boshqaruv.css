@@ -1688,3 +1688,86 @@ body.boshqaruv-dark .fiscal-order-link { color: #e8edf5; }
   background-image: linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
                     linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
 }
+
+/* ── Seller profil / tahrirlash sahifalari (SellerDetail, SellerEdit) ── */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  margin-bottom: 14px;
+}
+.back-link:hover { color: #4f46e5; }
+
+.seller-row-link { min-width: 0; }
+.seller-row-link:hover .fw-semibold { color: #4f46e5; }
+
+.resource-avatar.xl {
+  width: 84px;
+  height: 84px;
+  font-size: 28px;
+  border-radius: 20px;
+}
+
+.seller-profile-header { padding: 24px; }
+
+.seller-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  border-bottom: 1px solid #e5e7eb;
+}
+.seller-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 10px 10px 0 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color .15s, background .15s;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.seller-tab-btn i { font-size: 15px; }
+.seller-tab-btn:hover { color: #4f46e5; background: #f5f3ff; }
+.seller-tab-btn.active { color: #4f46e5; border-bottom-color: #4f46e5; background: #f5f3ff; }
+
+.seller-edit-form .card-panel { scroll-margin-top: 90px; }
+
+.edit-save-bar {
+  position: sticky;
+  bottom: 16px;
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #fff;
+  border: 1px solid #eef0f4;
+  border-radius: 14px;
+  padding: 14px 20px;
+  margin-top: 20px;
+  box-shadow: 0 -8px 28px rgba(15,23,42,.1);
+}
+
+body.boshqaruv-dark .back-link { color: #94a3b8; }
+body.boshqaruv-dark .back-link:hover { color: #a5b4fc; }
+body.boshqaruv-dark .seller-tabs { border-bottom-color: #1f2937; }
+body.boshqaruv-dark .seller-tab-btn { color: #94a3b8; }
+body.boshqaruv-dark .seller-tab-btn:hover,
+body.boshqaruv-dark .seller-tab-btn.active { color: #a5b4fc; background: rgba(99,102,241,.14); }
+body.boshqaruv-dark .edit-save-bar { background: #111827; border-color: #1f2937; }
+
+@media (max-width: 640px) {
+  .seller-profile-header .d-flex.flex-wrap.gap-2.align-self-start { align-self: stretch !important; }
+  .edit-save-bar { flex-wrap: wrap; }
+  .edit-save-bar .d-flex.gap-2.ms-auto { width: 100%; margin-left: 0 !important; }
+  .edit-save-bar .d-flex.gap-2.ms-auto .btn { flex: 1; }
+}

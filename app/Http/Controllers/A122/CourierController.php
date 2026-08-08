@@ -449,7 +449,7 @@ class CourierController extends Controller
             'original_name' => $file->getClientOriginalName(),
             'mime_type'     => $file->getMimeType(),
             'file_size_kb'  => (int) round($file->getSize() / 1024),
-            'uploaded_by'   => Auth::id(),
+            'uploaded_by'   => Auth::guard('panel')->id(),
             'description'   => $validated['description'] ?? null,
         ]);
 

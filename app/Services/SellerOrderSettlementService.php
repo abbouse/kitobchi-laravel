@@ -3,23 +3,26 @@
 namespace App\Services;
 
 use App\Enums\OrderKind;
-use App\Enums\OrderStatusCode;
-use App\Enums\PaymentStatusCode;
 use App\Enums\SellerOrderStatusCode;
-use App\Models\CommissionSetting;
 use App\Models\Seller;
 use App\Models\SellerOrder;
 use App\Models\SellerTransaction;
 use App\Models\Sold;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class SellerOrderSettlementService
 {
     public const CATEGORY_ORDER_SALE = 'order_sale';
+
     public const CATEGORY_ORDER_REVERSAL = 'order_reversal';
+
     public const CATEGORY_WITHDRAWAL = 'withdrawal';
+
     public const CATEGORY_LEGACY_INFLIGHT_ADJUSTMENT = 'legacy_inflight_adjustment';
+
+    public function __construct(private readonly SellerCommissionService $commissionService) {}
 
     public function settleCompletedOrder(Sold $order): void
     {
@@ -27,7 +30,7 @@ class SellerOrderSettlementService
             return;
         }
 
-        if (!$order->isCompletedAndPaid()) {
+        if (! $order->isCompletedAndPaid()) {
             return;
         }
 
@@ -44,7 +47,7 @@ class SellerOrderSettlementService
                 }
 
                 $seller = Seller::query()->lockForUpdate()->find($sellerOrder->seller_id);
-                if (!$seller) {
+                if (! $seller) {
                     continue;
                 }
 
@@ -53,8 +56,10 @@ class SellerOrderSettlementService
                     continue;
                 }
 
-                $commissionPercent = $this->resolveCommissionPercent($seller, $grossAmount);
-                $commissionPrice = (int) round(($grossAmount * $commissionPercent) / 100);
+                $ruleDate = Carbon::parse($sellerOrder->created_at ?? $order->created_at ?? now());
+                $commission = $this->commissionService->resolve($seller, $grossAmount, $ruleDate);
+                $commissionPercent = (int) $commission['effective_percent'];
+                $commissionPrice = (int) $commission['commission_price'];
                 $netAmount = max(0, $grossAmount - $commissionPrice);
 
                 SellerTransaction::create([
@@ -66,7 +71,13 @@ class SellerOrderSettlementService
                     'card' => null,
                     'amount' => $grossAmount,
                     'commissionPercent' => $commissionPercent,
+                    'baseCommissionPercent' => (int) $commission['base_percent'],
                     'commissionPrice' => $commissionPrice,
+                    'baseCommissionPrice' => (int) $commission['base_price'],
+                    'commissionBenefitAmount' => (int) $commission['benefit_amount'],
+                    'commissionPromotionId' => $commission['promotion']?->id,
+                    'commissionSource' => (string) $commission['source'],
+                    'commissionRuleDate' => $ruleDate,
                     'netAmount' => $netAmount,
                     'status' => SellerTransaction::STATUS_APPROVED,
                     'description' => "Buyurtma #{$order->id} muvaffaqiyatli yakunlandi.",
@@ -83,6 +94,9 @@ class SellerOrderSettlementService
                     'gross' => $grossAmount,
                     'commission_percent' => $commissionPercent,
                     'commission_price' => $commissionPrice,
+                    'base_commission_price' => (int) $commission['base_price'],
+                    'commission_benefit' => (int) $commission['benefit_amount'],
+                    'commission_source' => (string) $commission['source'],
                     'net' => $netAmount,
                 ]);
             }
@@ -110,7 +124,7 @@ class SellerOrderSettlementService
                 }
 
                 $seller = Seller::query()->lockForUpdate()->find($saleTransaction->seller_id);
-                if (!$seller) {
+                if (! $seller) {
                     continue;
                 }
 
@@ -125,7 +139,13 @@ class SellerOrderSettlementService
                     'card' => null,
                     'amount' => (int) $saleTransaction->amount,
                     'commissionPercent' => (int) $saleTransaction->commissionPercent,
+                    'baseCommissionPercent' => $saleTransaction->baseCommissionPercent,
                     'commissionPrice' => (int) $saleTransaction->commissionPrice,
+                    'baseCommissionPrice' => (int) ($saleTransaction->baseCommissionPrice ?? $saleTransaction->commissionPrice),
+                    'commissionBenefitAmount' => (int) ($saleTransaction->commissionBenefitAmount ?? 0),
+                    'commissionPromotionId' => $saleTransaction->commissionPromotionId,
+                    'commissionSource' => $saleTransaction->commissionSource,
+                    'commissionRuleDate' => $saleTransaction->commissionRuleDate,
                     'netAmount' => $netAmount,
                     'status' => SellerTransaction::STATUS_APPROVED,
                     'description' => $reason
@@ -150,26 +170,7 @@ class SellerOrderSettlementService
 
     public function resolveCommissionPercent(Seller $seller, int $grossAmount): int
     {
-        if ((int) ($seller->commission_percent ?? 0) > 0) {
-            return min(100, (int) $seller->commission_percent);
-        }
-
-        $setting = CommissionSetting::query()
-            ->where('priceFrom', '<=', $grossAmount)
-            ->where('priceTo', '>=', $grossAmount)
-            ->orderByDesc('priceFrom')
-            ->first();
-
-        if ($setting) {
-            return max(0, min(100, (int) $setting->percent));
-        }
-
-        Log::warning('Commission setting missing for seller order settlement', [
-            'seller_id' => $seller->id,
-            'gross_amount' => $grossAmount,
-        ]);
-
-        return 0;
+        return (int) $this->commissionService->resolve($seller, $grossAmount)['effective_percent'];
     }
 
     private function approvedSaleTransactionsCount(int $sellerOrderId): int

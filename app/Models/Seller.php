@@ -61,6 +61,7 @@ class Seller extends Authenticatable
         'reputation_last_calculated_at' => 'datetime',
         'is_hidden' => 'boolean',
         'can_withdraw_balance' => 'boolean',
+        'commission_percent' => 'integer',
         'password_reset_limit' => 'integer',
         'password_reset_limit_reset_at' => 'datetime',
         'password' => 'hashed',
@@ -154,6 +155,14 @@ class Seller extends Authenticatable
         $this->attributes['activity_types'] = is_array($value)
             ? json_encode($value)
             : $value;
+    }
+
+    public function setCommissionPercentAttribute($value): void
+    {
+        $percent = is_numeric($value) ? (int) $value : 0;
+        $this->attributes['commission_percent'] = $percent > 0
+            ? min(100, $percent)
+            : null;
     }
 
     // ── Helpers ──────────────────────────────────────────────────
@@ -271,6 +280,11 @@ class Seller extends Authenticatable
     public function premiumSubscriptions()
     {
         return $this->hasMany(SellerPremiumSubscription::class, 'seller_id');
+    }
+
+    public function commissionPromotions(): HasMany
+    {
+        return $this->hasMany(SellerCommissionPromotion::class, 'seller_id')->latest('starts_at');
     }
 
     public function documents(): HasMany

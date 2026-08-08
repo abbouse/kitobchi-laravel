@@ -403,7 +403,7 @@ class SellerController extends Controller
                     'old_expires_at'  => $oldExpiry,
                     'new_expires_at'  => $newExpiry,
                     'notes'           => "Admin edit form orqali yangilandi" . $signedNote,
-                    'performed_by'    => Auth::id(),
+                    'performed_by'    => Auth::guard('panel')->id(),
                     'created_at'      => now(),
                 ]);
             }
@@ -460,7 +460,7 @@ class SellerController extends Controller
                 'old_expires_at'  => $oldExpiry->toDateString(),
                 'new_expires_at'  => $newExpiry->toDateString(),
                 'notes'           => $request->input('notes') ?: "Tez uzaytirish tugmasi",
-                'performed_by'    => Auth::id(),
+                'performed_by'    => Auth::guard('panel')->id(),
                 'created_at'      => now(),
             ]);
         });
@@ -490,7 +490,7 @@ class SellerController extends Controller
             'original_name' => $file->getClientOriginalName(),
             'mime_type'     => $file->getMimeType(),
             'file_size_kb'  => (int) round($file->getSize() / 1024),
-            'uploaded_by'   => Auth::id(),
+            'uploaded_by'   => Auth::guard('panel')->id(),
             'description'   => $request->input('description'),
         ]);
 

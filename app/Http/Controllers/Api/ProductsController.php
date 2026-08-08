@@ -906,17 +906,41 @@ class ProductsController extends Controller
     public function booksByCategory(Request $request)
     {
         $user = Auth::guard('user')->user();
-        $type = $request->query('type', 'new');
+        $requestedType = (string) $request->query('type', 'new');
+        $type = in_array($requestedType, ['new', 'recommended'], true)
+            ? $requestedType
+            : 'new';
+        $page = max(1, (int) $request->query('page', 1));
+        $categoryLimit = max(3, min(12, (int) $request->query('category_limit', 6)));
+        $perCategory = max(4, min(12, (int) $request->query('per_category', 10)));
 
         try {
-            $categoryIds = $this->bookScope()
+            $allCategoryIds = $this->bookScope()
                 ->whereNotNull('category_id')
                 ->distinct()
+                ->orderBy('category_id')
                 ->pluck('category_id')
+                ->map(fn($id) => (int) $id)
+                ->filter(fn($id) => $id > 0)
+                ->values()
                 ->all();
 
+            $totalCategories = count($allCategoryIds);
+            $categoryIds = array_slice($allCategoryIds, ($page - 1) * $categoryLimit, $categoryLimit);
+
             if (empty($categoryIds)) {
-                return response()->json(['status' => 'success', 'type' => $type, 'data' => []]);
+                return response()->json([
+                    'status' => 'success',
+                    'type' => $type,
+                    'data' => [],
+                    'meta' => [
+                        'page' => $page,
+                        'category_limit' => $categoryLimit,
+                        'per_category' => $perCategory,
+                        'total_categories' => $totalCategories,
+                        'has_more' => false,
+                    ],
+                ]);
             }
 
             // MUHIM — nega bitta (yoki bir nechta FIQAT) so'rov: ilgari har
@@ -928,8 +952,12 @@ class ProductsController extends Controller
             // BARCHA kategoriyalar bitta `whereIn` so'rovda olinadi va
             // natija PHP tomonida category_id bo'yicha guruhlanadi — DB
             // so'rovlari soni kategoriya soniga bog'liq bo'lmay qoladi.
-            $perCategory = 10;
-            $safetyCap = max(1000, count($categoryIds) * 40);
+            // Frontend endi kategoriya-kategoriya pagination qiladi. Shu
+            // sabab bu endpoint "barcha kategoriyalarni bir urinishda" emas,
+            // faqat ko'rinadigan navbatdagi bo'lakni formatlaydi. Ilgari
+            // 20+ kategoriya * 10 mahsulot + seller/tag/favourite formatlash
+            // birinchi ochilishda sezilarli sekinlik berardi.
+            $safetyCap = max(80, count($categoryIds) * $perCategory * 4);
 
             $grouped = [];
 
@@ -1045,6 +1073,13 @@ class ProductsController extends Controller
                 'status' => 'success',
                 'type'   => $type,
                 'data'   => $result,
+                'meta' => [
+                    'page' => $page,
+                    'category_limit' => $categoryLimit,
+                    'per_category' => $perCategory,
+                    'total_categories' => $totalCategories,
+                    'has_more' => ($page * $categoryLimit) < $totalCategories,
+                ],
             ]);
         } catch (\Throwable $e) {
             Log::error('booksByCategory error', ['error' => $e->getMessage()]);

@@ -49,6 +49,8 @@ Route::prefix('boshqaruv')->name('boshqaruv.')->group(function () {
         Route::post('/split/installments/{splitInstallment}/charge', [AdminController::class, 'chargeSplitInstallment'])->name('split.installments.charge');
         Route::get('/orders', fn (AdminController $controller) => $controller->page('Orders'))->name('orders');
         Route::get('/sellers', fn (AdminController $controller) => $controller->page('SellerOrders'))->name('sellers');
+        Route::get('/sellers/{seller}/edit', [AdminController::class, 'sellerEdit'])->name('sellers.edit');
+        Route::get('/sellers/{seller}', [AdminController::class, 'sellerDetail'])->name('sellers.detail');
         Route::get('/seller-orders', fn (AdminController $controller) => $controller->page('SellerOrders'))->name('seller-orders');
         Route::get('/couriers', fn (AdminController $controller) => $controller->page('CourierOrders'))->name('couriers');
         Route::get('/courier-orders', fn (AdminController $controller) => $controller->page('CourierOrders'))->name('courier-orders');
