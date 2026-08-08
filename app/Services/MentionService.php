@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Helpers\NotificationHelper;
 use App\Models\User;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 
 class MentionService
 {
@@ -59,13 +60,23 @@ class MentionService
                 continue;
             }
 
-            NotificationHelper::send(
-                (int) $mentionedUser->id,
-                $sender,
-                $type,
-                $postId,
-                $extra
-            );
+            try {
+                NotificationHelper::send(
+                    (int) $mentionedUser->id,
+                    $sender,
+                    $type,
+                    $postId,
+                    $extra
+                );
+            } catch (\Throwable $e) {
+                Log::warning('[BookClubMention] Mention notification failed', [
+                    'receiver_id' => (int) $mentionedUser->id,
+                    'sender_id' => (int) $sender->id,
+                    'type' => $type,
+                    'post_id' => $postId,
+                    'message' => $e->getMessage(),
+                ]);
+            }
         }
     }
 }

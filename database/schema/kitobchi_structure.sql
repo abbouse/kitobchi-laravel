@@ -120,7 +120,7 @@ CREATE TABLE IF NOT EXISTS `book_club_likes` (
 CREATE TABLE IF NOT EXISTS `book_club_notifications` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `user_id` bigint unsigned NOT NULL,
-  `type` enum('like','comment','reply','comment_like','vote','new_post','follow','repost') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `type` enum('like','comment','reply','comment_like','vote','new_post','follow','repost','mention') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `post_id` bigint unsigned DEFAULT NULL,
   `group_key` varchar(255) DEFAULT NULL,
   `data` json NOT NULL,
