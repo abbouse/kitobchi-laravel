@@ -1,6 +1,10 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import '../../css/boshqaruv.css';
+// Bootstrap'ning JS qismi (dropdown, modal, offcanvas va h.k.) — avval faqat
+// CSS import qilingan edi, shuning uchun data-bs-toggle="dropdown" kabi
+// barcha elementlar butun panelda bosilganda hech narsa qilmasdi.
+import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 
 import React from 'react';
 import { createRoot } from 'react-dom/client';
