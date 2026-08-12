@@ -44,6 +44,14 @@
                     'description' => $__seoDesc,
                     'inLanguage' => $__inLang,
                     'publisher' => ['@id' => $base.'/#organization'],
+                    'potentialAction' => [
+                        '@type' => 'SearchAction',
+                        'target' => [
+                            '@type' => 'EntryPoint',
+                            'urlTemplate' => route('web.catalog') . '?search={search_term_string}',
+                        ],
+                        'query-input' => 'required name=search_term_string',
+                    ],
                 ],
                 [
                     '@type' => 'Organization',

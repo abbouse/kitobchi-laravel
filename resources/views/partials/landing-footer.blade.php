@@ -18,7 +18,14 @@
                 </div>
                 <div class="footer-cell">
                     <div class="footer-heading">{{ __('nav.footer_boring') }}</div>
-                    @foreach(\App\Models\Policy::active()->with('translations')->orderBy('sort_order')->limit(2)->get() as $p)
+                    @php
+                        try {
+                            $footerPolicies = \App\Models\Policy::active()->with('translations')->orderBy('sort_order')->limit(2)->get();
+                        } catch (\Throwable) {
+                            $footerPolicies = collect();
+                        }
+                    @endphp
+                    @foreach($footerPolicies as $p)
                         <a href="{{ route('legal.policy', $p->slug) }}" class="footer-link">{{ $p->localizedTitle() }}</a>
                     @endforeach
                     <a href="{{ route('legal.index') }}" class="footer-link">{{ __('nav.footer_all_doc') }}</a>

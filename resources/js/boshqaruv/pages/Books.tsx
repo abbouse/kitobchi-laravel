@@ -411,7 +411,7 @@ function toInputDate(value?: string | null) {
 }
 
 function aiStatusLabel(value?: string | null) {
-  return ({ pending: 'Navbatda', processing: 'Tekshirilmoqda', approved: 'AI tasdiqladi', rejected: 'AI rad etdi', human_review: 'Admin ko‘rigi kerak', failed: 'Vaqtincha xato', manual_approved: 'Admin tasdiqladi', manual_rejected: 'Admin rad etdi' } as Record<string, string>)[value || ''] || value || 'Hali tekshirilmagan';
+  return ({ pending: 'Navbatda', processing: 'Tekshirilmoqda', approved: 'AI tasdiqladi', rejected: 'AI rad etdi', human_review: 'Admin ko‘rigi kerak', failed: 'Vaqtincha xato', manual_approved: 'Admin tasdiqladi', manual_rejected: 'Admin rad etdi', legacy_exempt: 'Eski (moderatsiyadan chetlashtirilgan)' } as Record<string, string>)[value || ''] || value || 'Hali tekshirilmagan';
 }
 
 function MiniOrdersTable({ rows, empty }: { rows: MiniOrder[]; empty: string }) {

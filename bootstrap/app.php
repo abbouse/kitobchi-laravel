@@ -90,11 +90,13 @@ return Application::configure(basePath: dirname(__DIR__))
             ->timezone($tz)
             ->when(fn () => now($tz)->weekOfYear % 2 === 0);
 
-        $schedule->command('backup:clean')
-            ->dailyAt('01:15')->timezone($tz);
+        if (class_exists(\Spatie\Backup\BackupServiceProvider::class)) {
+            $schedule->command('backup:clean')
+                ->dailyAt('01:15')->timezone($tz);
 
-        $schedule->command('backup:run')
-            ->dailyAt('02:10')->timezone($tz);
+            $schedule->command('backup:run')
+                ->dailyAt('02:10')->timezone($tz);
+        }
 
         $schedule->command('vectors:rebuild --type=all --limit=120')
             ->everyTenMinutes()

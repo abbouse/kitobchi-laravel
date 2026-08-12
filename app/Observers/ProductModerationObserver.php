@@ -8,15 +8,26 @@ use App\Services\ProductModerationStateService;
 
 class ProductModerationObserver
 {
+    // MUHIM — faqat MAHSULOT MOHIYATINI (nima ekanligini, kim yozganini,
+    // qanday ko'rinishini) belgilaydigan maydonlar AI moderatsiyani qayta
+    // ishga tushiradi. Narx/chegirma, ISBN, sahifa soni, yil, muqova turi,
+    // tarjimon, shtrix-kod kabi "ikkinchi darajali" maydonlar — bular
+    // moderatorning "bu listing firibgarlik/mos emasmi" qaroriga deyarli
+    // ta'sir qilmaydi — seller o'zgartirganda DARHOL ko'rinadi, qayta
+    // tekshiruv kutmaydi. Ro'yxatni qisqartirish qarori: eski (keng)
+    // ro'yxat har bir narx/chegirma tahririda ham butun listingni qaytadan
+    // AI navbatiga yuborardi — bu ham keraksiz OpenAI xarajati, ham
+    // sellerga foydasiz kutish edi.
     private const BOOK_FIELDS = [
-        'name', 'author', 'author_id', 'translator', 'isbn', 'category_id',
-        'images', 'description', 'price', 'discountPrice', 'discountExpiresAt',
-        'lang', 'langType', 'coverType', 'year', 'pages', 'publisher_id',
+        'name', 'author', 'author_id', 'publisher_id', 'category_id',
+        'images', 'description', 'lang',
     ];
 
+    // Qayta moderatsiya TALAB QILMAYDIGAN (darhol ko'rinadigan) maydonlar:
+    // translator, isbn, price, discountPrice, discountExpiresAt, langType,
+    // coverType, year, pages, barcode, discount_price.
     private const STATIONERY_FIELDS = [
-        'name', 'barcode', 'material', 'category_id', 'images', 'description',
-        'price', 'discount_price', 'discountExpiresAt',
+        'name', 'material', 'category_id', 'images', 'description',
     ];
 
     public function __construct(

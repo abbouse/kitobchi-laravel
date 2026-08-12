@@ -169,7 +169,7 @@ class AuthController extends Controller
                 User::create([
                     'phone_number' => $phone_number,
                     'verifyCode'   => $verifyCode,
-                    'password'     => bcrypt('kitobchi122'),
+                    'password'     => bcrypt(\Illuminate\Support\Str::random(32)),
                 ]);
             } else {
                 $user->update(['verifyCode' => $verifyCode]);

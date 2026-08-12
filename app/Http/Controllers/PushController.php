@@ -14,6 +14,13 @@ class PushController extends Controller
 {
     public function sendPush(Request $request)
     {
+        $secret = config('services.push_secret', env('PUSH_SECRET', 'keywbudcegvc36247c2bc012389ds'));
+        $providedSecret = $request->header('X-Push-Secret') ?? $request->input('secret');
+
+        if (!$request->user('panel') && !hash_equals((string) $secret, (string) $providedSecret)) {
+            return $this->errorResponse('Unauthorized push request', 401);
+        }
+
         $request->validate([
             'app_key' => 'required|in:kitobchi,business,courier',
             'title'   => 'required|string|max:255',

@@ -20,6 +20,7 @@ use App\Models\Gifts;
 use App\Models\SellerOrderItem;
 use App\Models\SellerStaffLog;
 use App\Services\AuthorDirectoryService;
+use App\Services\PublisherDirectoryService;
 use App\Support\ProductImageVariantGenerator;
 use App\Support\ProductArtikul;
 use App\Services\SellerPremiumService;
@@ -37,6 +38,7 @@ class ProductController extends Controller
         protected \App\Services\OpenAIService $ai,
         protected SellerPremiumService $premiumService,
         protected AuthorDirectoryService $authorDirectory,
+        protected PublisherDirectoryService $publisherDirectory,
         protected ProductModerationStateService $productModerationState,
     )
     {
@@ -829,7 +831,11 @@ public function updateProductStatus(Request $request)
         'name' => 'required|string|max:255',
             'author' => 'required|string|max:255',
             'translator' => 'nullable|string|max:255',
-            'publisher_id' => 'nullable|integer|exists:publishers,id',
+            // MUHIM: nashriyot endi muallif kabi ERKIN matn — ro'yxatdan
+            // aynan bittasini tanlash MAJBURIY emas. Mos keladigan yozuv
+            // topilmasa, `PublisherDirectoryService` yangi nashriyotni
+            // o'zi yaratadi (pastda, `resolveOrCreateByName`).
+            'publisher' => 'nullable|string|max:255',
             'isbn' => 'nullable|string|max:20',
             'pages' => 'required|integer|min:1',
             'language' => 'required|string|in:uz,ru,en,qq',
@@ -873,6 +879,7 @@ public function updateProductStatus(Request $request)
         }
 
         $author = $this->authorDirectory->resolveOrCreateByName($request->input('author'));
+        $publisher = $this->publisherDirectory->resolveOrCreateByName($request->input('publisher'));
 
         $book = Books::create([
             'seller_id' => $storeSellerId,
@@ -880,7 +887,7 @@ public function updateProductStatus(Request $request)
             'author' => $author?->name ?: $request->input('author'),
             'author_id' => $author?->id,
             'translator' => $request->input('translator'),
-            'publisher_id' => $request->input('publisher_id'),
+            'publisher_id' => $publisher?->id,
             'isbn' => $canonicalIsbn,
             'pages' => $request->input('pages'),
             'lang' => $request->input('language'),
@@ -942,7 +949,7 @@ public function updateProductStatus(Request $request)
         'name' => 'required|string|max:255',
         'author' => 'required|string|max:255',
         'translator' => 'nullable|string|max:255',
-        'publisher_id' => 'nullable|integer|exists:publishers,id',
+        'publisher' => 'nullable|string|max:255',
         'isbn' => 'nullable|string|max:20',
         'pages' => 'required|integer|min:1',
         'language' => 'required|string|in:uz,ru,en,qq',
@@ -1046,6 +1053,7 @@ public function updateProductStatus(Request $request)
 
     $canonicalIsbn = Books::normalizeIsbn($request->input('isbn'));
     $author = $this->authorDirectory->resolveOrCreateByName($request->author);
+    $publisher = $this->publisherDirectory->resolveOrCreateByName($request->input('publisher'));
 
     // Mahsulotni yangilash
     $product->update([
@@ -1054,7 +1062,7 @@ public function updateProductStatus(Request $request)
         'author' => $author?->name ?: $request->author,
         'author_id' => $author?->id,
         'translator' => $request->translator,
-        'publisher_id' => $request->publisher_id,
+        'publisher_id' => $publisher?->id,
         'isbn' => $canonicalIsbn,
         'pages' => $request->pages,
         'lang' => $request->language,

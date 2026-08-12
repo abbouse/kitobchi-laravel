@@ -42,6 +42,14 @@
                     'description' => $__seoDesc,
                     'inLanguage' => $__inLang,
                     'publisher' => ['@id' => $base.'/#organization'],
+                    'potentialAction' => [
+                        '@type' => 'SearchAction',
+                        'target' => [
+                            '@type' => 'EntryPoint',
+                            'urlTemplate' => route('web.catalog') . '?search={search_term_string}',
+                        ],
+                        'query-input' => 'required name=search_term_string',
+                    ],
                 ],
                 [
                     '@type' => 'Organization',
@@ -335,7 +343,7 @@
                     <?php if($landingUgcReviews->isNotEmpty()): ?>
                         <?php $__currentLoopData = $landingUgcReviews; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $ugcPost): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                             <?php
-                                $stars   = (int) round($ugcPost->ai_post_score ?? $ugcPost->kangaroo_post_star ?? 5);
+                                $stars   = (int) round($ugcPost->ai_post_score ?? 5);
                                 $stars   = max(1, min(5, $stars));
                                 $excerpt = mb_strtolower(mb_substr(trim($ugcPost->text), 0, 1))
                                            . mb_substr(trim($ugcPost->text), 1);

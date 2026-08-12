@@ -1,61 +1,67 @@
-@extends('layouts.error-public')
+@extends('layouts.landing')
 
-@section('title', $title ?? __('errors.meta_title'))
+@section('title', $title ?? 'Kitobchi — Ilovaga o\'tish')
 
 @push('meta')
-    <meta name="description" content="{{ $description ?? 'Kitobchi' }}">
-    <meta property="og:title" content="{{ $title ?? 'Kitobchi' }}">
-    <meta property="og:description" content="{{ $description ?? 'Kitobchi' }}">
-    <meta property="og:image" content="{{ asset('images/og-cover.png') }}">
-    <meta property="og:url" content="{{ request()->url() }}">
-    <meta property="og:type" content="website">
+    @include('partials.seo-social', [
+        'title' => $title ?? 'Kitobchi',
+        'description' => $description ?? 'Kitobchi ilovasida ochish',
+        'canonical' => request()->url(),
+    ])
     <meta name="apple-itunes-app" content="app-id=6753818078">
 @endpush
 
 @section('content')
-    <div class="kc-share-card">
-        <div class="kc-error-pill-wrap">
-            <div class="eyebrow-pill">
-                <div class="eyebrow-pill-inner"><div>Kitobchi</div></div>
-                <div class="eyebrow-pill-bg u-rainbow u-blur-perf"></div>
+<div class="kc-redirect-page">
+    <div class="page-padding">
+        <div class="container">
+            <div class="kc-redirect-card">
+                <div class="eyebrow-pill u-mb-m">
+                    <div class="eyebrow-pill-inner"><div>Kitobchi App</div></div>
+                    <div class="eyebrow-pill-bg u-rainbow u-blur-perf"></div>
+                </div>
+
+                <h1 class="section-heading u-mb-m">{{ $title ?? 'Kitobchi' }}</h1>
+                <p class="subheading u-mb-xl">{{ $description ?? 'Kitobchi mobil ilovasiga yo\'naltirilmoqda...' }}</p>
+
+                <div class="kc-redirect-action">
+                    <button type="button" class="cta w-inline-block" id="openAppBtn" onclick="kcOpenApp()">
+                        <div class="cta-bg u-rainbow u-blur-perf"></div>
+                        <div class="cta-inner">
+                            <div><strong><span class="kc-share-spinner" id="loadingSpinner" aria-hidden="true"></span>{{ __('errors.share_open_app') }}</strong></div>
+                        </div>
+                    </button>
+                </div>
+
+                <div class="kc-redirect-divider u-mt-xl u-mb-l">
+                    <span>{{ __('errors.share_download') }}</span>
+                </div>
+
+                <div class="kc-redirect-stores">
+                    <a href="https://apps.apple.com/uz/app/kitobchi/id6753818078" class="kc-store-badge" target="_blank" rel="noopener">
+                        <img src="{{ asset('vendor/popcorn/images/feature-pin.png') }}" width="20" height="20" alt="">
+                        <span>App Store</span>
+                    </a>
+                    <a href="https://play.google.com/store/apps/details?id=com.kitobchi.kitobchi" class="kc-store-badge" target="_blank" rel="noopener">
+                        <img src="{{ asset('vendor/popcorn/images/feature-event.png') }}" width="20" height="20" alt="">
+                        <span>Google Play</span>
+                    </a>
+                </div>
+
+                <div class="u-mt-xl">
+                    <a href="{{ url('/') }}" class="kc-back-home-link">&larr; {{ __('errors.cta_home') }}</a>
+                </div>
             </div>
         </div>
-        <h1 class="section-heading kc-error-heading">{{ $title ?? 'Kitobchi' }}</h1>
-        <p class="subheading kc-error-lead">{{ $description ?? '' }}</p>
-
-        <div class="kc-error-actions">
-            <button type="button" class="cta w-inline-block" id="openAppBtn" onclick="kcOpenApp()">
-                <div class="cta-bg u-rainbow u-blur-perf"></div>
-                <div class="cta-inner">
-                    <div><strong><span class="kc-share-spinner" id="loadingSpinner" aria-hidden="true"></span>{{ __('errors.share_open_app') }}</strong></div>
-                </div>
-            </button>
-        </div>
-
-        <p class="kc-share-divider"><span>{{ __('errors.share_download') }}</span></p>
-
-        <div class="kc-share-stores">
-            <a href="https://apps.apple.com/app/id6753818078" class="kc-store-link" target="_blank" rel="noopener">
-                <svg class="kc-store-ico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
-                App Store
-            </a>
-            <a href="https://play.google.com/store/apps/details?id=com.kitobchi.kitobchi" class="kc-store-link" target="_blank" rel="noopener">
-                <svg class="kc-store-ico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3.18 23.76c.3.17.64.22.99.14l12.75-7.36-2.88-2.88-10.86 10.1zm-1.67-20.1c-.06.2-.1.42-.1.65v19.38c0 .23.04.45.1.65l.07.06 10.85-10.85v-.25L1.58 3.6l-.07.06zM20.56 10.4l-2.88-1.66-3.23 3.23 3.23 3.23 2.9-1.67c.83-.48.83-1.26-.02-1.73zm-18.3 12.24l12.75-7.36-2.88-2.88L2.38 22.49l-.12 1.15z"/></svg>
-                Google Play
-            </a>
-        </div>
-
-        <p class="kc-share-foot">
-            <a href="{{ url('/') }}" class="kc-share-home-link">{{ __('errors.cta_home') }}</a>
-        </p>
     </div>
+</div>
 @endsection
 
 @push('scripts')
 <script>
 (function () {
     const APP_SCHEME = @json($appScheme ?? 'kitobchi://');
-    const APP_STORE_URL = 'https://apps.apple.com/app/id6753818078';
+    const APP_STORE_URL = 'https://apps.apple.com/uz/app/kitobchi/id6753818078';
     const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.kitobchi.kitobchi';
     let appOpened = false;
 

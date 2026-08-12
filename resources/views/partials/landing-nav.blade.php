@@ -7,6 +7,7 @@
                         <img src="{{ asset('images/logo/logo_black.png') }}" alt="{{ __('nav.logo_aria') }}" width="120" height="32" style="height:28px;width:auto;display:block">
                     </a>
                     <div class="nav-menu">
+                        <a href="{{ route('web.catalog') }}" class="nav-link {{ request()->routeIs('web.catalog', 'web.books.show', 'web.stationery.show') ? 'w--current' : '' }}">Katalog</a>
                         <a href="{{ url('/') }}#stats" class="nav-link">{{ __('nav.stats') }}</a>
                         <a href="{{ url('/') }}#business" class="nav-link">{{ __('nav.stores') }}</a>
                         <a href="{{ url('/') }}#faq" class="nav-link">{{ __('nav.faq') }}</a>

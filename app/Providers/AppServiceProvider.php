@@ -58,10 +58,12 @@ class AppServiceProvider extends ServiceProvider
         Books::observe(ProductObserver::class);
         Books::observe(BookStockObserver::class);
         Books::observe(ReadingInsightObserver::class);
+        Books::observe(\App\Observers\BooksObserver::class);
         Stationery::observe(ProductModerationObserver::class);
         Stationery::observe(ProductObserver::class);
         Stationery::observe(StationeryStockObserver::class);
         Stationery::observe(ReadingInsightObserver::class);
+        Stationery::observe(\App\Observers\StationeryObserver::class);
         StationeryVariant::observe(StationeryVariantStockObserver::class);
         Sold::observe(SoldObserver::class);
 

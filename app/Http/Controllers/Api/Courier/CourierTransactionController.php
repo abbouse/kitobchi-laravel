@@ -92,7 +92,12 @@ class CourierTransactionController extends Controller
                 'transaction_id' => $transaction->id,
             ], 200);
         } catch (\Throwable $th) {
-            return response()->json(['success' => false, 'message' => 'Xatolik: ' . $th->getMessage()], 500);
+            \Illuminate\Support\Facades\Log::error('Courier withdrawal request error', [
+                'error' => $th->getMessage(),
+                'trace' => $th->getTraceAsString(),
+            ]);
+            $userMsg = config('app.debug') ? $th->getMessage() : "So'rovni amalga oshirishda xatolik yuz berdi. Qayta urinib ko'ring.";
+            return response()->json(['success' => false, 'message' => 'Xatolik: ' . $userMsg], 500);
         }
     }
 

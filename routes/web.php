@@ -18,12 +18,16 @@ Route::get('/developers/api/openapi.json', [ApiDocsController::class, 'openapi']
 Route::get('/developers/api/{page?}', ApiDocsController::class)->name('developers.api-docs');
 
 Route::get('/', function () {
-    $featuredBooks = \App\Models\Books::where('is_approved', 1)
-        ->where('is_hidden', 0)
-        ->where('status', 1)
-        ->orderByDesc('totalSales')
-        ->take(20)
-        ->get();
+    try {
+        $featuredBooks = \App\Models\Books::where('is_approved', 1)
+            ->where('is_hidden', 0)
+            ->where('status', 1)
+            ->orderByDesc('totalSales')
+            ->take(20)
+            ->get();
+    } catch (\Throwable) {
+        $featuredBooks = collect();
+    }
 
     $ttl = 300;
     try {
@@ -43,23 +47,27 @@ Route::get('/', function () {
         $landingCustomersCount = 0;
     }
 
-    $landingUgcReviews = Cache::remember('welcome_ugc_reviews', 600, function () {
-        return \App\Models\BookClub::with('user')
-            ->where('is_deleted', false)
-            ->where(function ($query) {
-                $query->whereNull('is_hidden_by_ai')->orWhere('is_hidden_by_ai', false);
-            })
-            ->whereNotNull('ai_post_score')
-            ->where('ai_post_status', 'scored')
-            ->whereNotNull('text')
-            ->where('text', '!=', '')
-            ->orderByDesc('ai_post_score')
-            ->take(30)
-            ->get()
-            ->shuffle()
-            ->take(3)
-            ->values();
-    });
+    try {
+        $landingUgcReviews = Cache::remember('welcome_ugc_reviews', 600, function () {
+            return \App\Models\BookClub::with('user')
+                ->where('is_deleted', false)
+                ->where(function ($query) {
+                    $query->whereNull('is_hidden_by_ai')->orWhere('is_hidden_by_ai', false);
+                })
+                ->whereNotNull('ai_post_score')
+                ->where('ai_post_status', 'scored')
+                ->whereNotNull('text')
+                ->where('text', '!=', '')
+                ->orderByDesc('ai_post_score')
+                ->take(30)
+                ->get()
+                ->shuffle()
+                ->take(3)
+                ->values();
+        });
+    } catch (\Throwable) {
+        $landingUgcReviews = collect();
+    }
 
     return view('welcome', compact(
         'featuredBooks',
@@ -69,6 +77,15 @@ Route::get('/', function () {
         'landingUgcReviews',
     ));
 })->name('welcome');
+
+// ── Web SEO & Product Catalog Routes ─────────────────────────────────
+Route::get('/catalog', [\App\Http\Controllers\Web\ProductCatalogController::class, 'catalog'])->name('web.catalog');
+Route::get('/books/{id}-{slug?}', [\App\Http\Controllers\Web\ProductCatalogController::class, 'showBook'])->where('id', '[0-9]+')->name('web.books.show');
+Route::get('/stationery/{id}-{slug?}', [\App\Http\Controllers\Web\ProductCatalogController::class, 'showStationery'])->where('id', '[0-9]+')->name('web.stationery.show');
+Route::get('/p/{artikul}', [\App\Http\Controllers\Web\ProductCatalogController::class, 'byArtikul'])->where('artikul', '[A-Za-z0-9\-]+')->name('web.by_artikul');
+Route::get('/sitemap.xml', [\App\Http\Controllers\Web\ProductCatalogController::class, 'sitemap'])->name('web.sitemap');
+Route::get('/google-merchant.xml', [\App\Http\Controllers\Web\ProductCatalogController::class, 'googleMerchantFeed'])->name('web.google_merchant');
+Route::get('/robots.txt', [\App\Http\Controllers\Web\ProductCatalogController::class, 'robots'])->name('web.robots');
 
 Route::get('/share/product/{id}', function (int $id) {
     return view('share.redirect', [

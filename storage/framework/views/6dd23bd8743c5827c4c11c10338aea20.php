@@ -10,6 +10,7 @@
                 <div class="footer-cell">
                     <div class="footer-heading"><?php echo e(__('nav.footer_good')); ?></div>
                     <!-- <a href="<?php echo e(url('/')); ?>#stats" class="footer-link"><?php echo e(__('nav.stats')); ?></a> -->
+                    <a href="<?php echo e(route('contact.index')); ?>" class="footer-link"><?php echo e(__('nav.contact')); ?></a>
                     <a href="<?php echo e(route('careers.index')); ?>" class="footer-link"><?php echo e(__('nav.careers')); ?></a>
                     <a href="https://t.me/kitobchi_market" target="_blank" rel="noopener" class="footer-link">Telegram</a>
                     <a href="https://instagram.com/kitobchi_market" target="_blank" rel="noopener" class="footer-link">Instagram</a>
@@ -17,7 +18,14 @@
                 </div>
                 <div class="footer-cell">
                     <div class="footer-heading"><?php echo e(__('nav.footer_boring')); ?></div>
-                    <?php $__currentLoopData = \App\Models\Policy::active()->with('translations')->orderBy('sort_order')->limit(2)->get(); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $p): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                    <?php
+                        try {
+                            $footerPolicies = \App\Models\Policy::active()->with('translations')->orderBy('sort_order')->limit(2)->get();
+                        } catch (\Throwable) {
+                            $footerPolicies = collect();
+                        }
+                    ?>
+                    <?php $__currentLoopData = $footerPolicies; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $p): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                         <a href="<?php echo e(route('legal.policy', $p->slug)); ?>" class="footer-link"><?php echo e($p->localizedTitle()); ?></a>
                     <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                     <a href="<?php echo e(route('legal.index')); ?>" class="footer-link"><?php echo e(__('nav.footer_all_doc')); ?></a>

@@ -7,11 +7,13 @@
                         <img src="<?php echo e(asset('images/logo/logo_black.png')); ?>" alt="<?php echo e(__('nav.logo_aria')); ?>" width="120" height="32" style="height:28px;width:auto;display:block">
                     </a>
                     <div class="nav-menu">
+                        <a href="<?php echo e(route('web.catalog')); ?>" class="nav-link <?php echo e(request()->routeIs('web.catalog', 'web.books.show', 'web.stationery.show') ? 'w--current' : ''); ?>">Katalog</a>
                         <a href="<?php echo e(url('/')); ?>#stats" class="nav-link"><?php echo e(__('nav.stats')); ?></a>
                         <a href="<?php echo e(url('/')); ?>#business" class="nav-link"><?php echo e(__('nav.stores')); ?></a>
                         <a href="<?php echo e(url('/')); ?>#faq" class="nav-link"><?php echo e(__('nav.faq')); ?></a>
                         <a href="<?php echo e(route('careers.index')); ?>" class="nav-link <?php echo e(request()->routeIs('careers.index') ? 'w--current' : ''); ?>"><?php echo e(__('nav.careers')); ?></a>
                         <a href="<?php echo e(route('legal.index')); ?>" class="nav-link <?php echo e(request()->routeIs('legal.index', 'legal.policy') ? 'w--current' : ''); ?>"><?php echo e(__('nav.legal')); ?></a>
+                        <a href="<?php echo e(route('contact.index')); ?>" class="nav-link <?php echo e(request()->routeIs('contact.index') ? 'w--current' : ''); ?>"><?php echo e(__('nav.contact')); ?></a>
                     </div>
                 </div>
                 <div class="nav-right">
@@ -57,6 +59,7 @@
                     </div>
                     <div class="mobile-menu-fade" style="--delay: 0.17s;">
                         <a href="<?php echo e(route('legal.index')); ?>" class="nav-mobile-link <?php echo e(request()->routeIs('legal.index', 'legal.policy') ? 'w--current' : ''); ?>"><?php echo e(__('nav.legal')); ?></a>
+                        <a href="<?php echo e(route('contact.index')); ?>" class="nav-mobile-link <?php echo e(request()->routeIs('contact.index') ? 'w--current' : ''); ?>"><?php echo e(__('nav.contact')); ?></a>
                     </div>
                     <div class="mobile-menu-fade" style="--delay: 0.22s;">
                         <a href="https://play.google.com/store/apps/details?id=com.kitobchi.kitobchi" target="_blank" rel="noopener" class="nav-mobile-link cc-small">Google Play</a>
