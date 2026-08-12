@@ -7,6 +7,10 @@
   <meta name="csrf-token" content="{{ csrf_token() }}" />
   <title>@yield('title', 'Hub Desk') — Kitobchi Hub</title>
 
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
+
   {{-- Hub-desk uses its own minimal stylesheet on top of Tailwind base. --}}
   @vite(['resources/css/app.css', 'resources/css/kitobchi-hubdesk.css'])
   @stack('head')

@@ -19,7 +19,7 @@
   @endif
   <script>window.__YANDEX_MAPS_ENABLED__ = @json((bool) config('services.yandex_maps.key'));</script>
   @viteReactRefresh
-  @vite('resources/js/boshqaruv/main.tsx')
+  @vite(['resources/css/boshqaruv.css', 'resources/js/boshqaruv/main.tsx'])
   @inertiaHead
 </head>
 <body>

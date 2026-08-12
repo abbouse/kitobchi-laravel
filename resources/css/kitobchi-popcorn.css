@@ -1953,3 +1953,137 @@ body.kc-landing .footer {
     margin: 0 auto;
 }
 
+/* Enhanced Redirect Showcase Styles */
+.kc-redirect-card {
+    max-width: 580px;
+    margin: 0 auto;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 24px;
+    padding: 32px 28px;
+    box-shadow: 0 12px 36px rgba(15, 23, 42, 0.06);
+    text-align: center;
+}
+
+.kc-redirect-product-preview {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 16px;
+    text-align: left;
+}
+
+.kc-redirect-cover {
+    width: 72px;
+    height: 96px;
+    flex-shrink: 0;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #e2e8f0;
+    display: grid;
+    place-items: center;
+}
+
+.kc-redirect-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.kc-redirect-product-title {
+    font-size: 17px;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0 0 4px;
+    line-height: 1.3;
+}
+
+.kc-redirect-product-author {
+    font-size: 13px;
+    color: #64748b;
+    margin-bottom: 6px;
+}
+
+.kc-redirect-product-price {
+    font-size: 16px;
+    font-weight: 800;
+    color: #4f46e5;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.kc-redirect-product-price del {
+    font-size: 13px;
+    color: #94a3b8;
+    font-weight: 500;
+}
+
+/* Redirect Progress Bar */
+.kc-redirect-progress-wrap {
+    background: #f1f5f9;
+    border-radius: 100px;
+    height: 6px;
+    position: relative;
+    overflow: hidden;
+}
+
+.kc-redirect-progress-bar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 0%;
+    background: linear-gradient(90deg, #4f46e5, #9333ea);
+    border-radius: 100px;
+    transition: width 2.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.kc-redirect-status-text {
+    font-size: 12px;
+    color: #64748b;
+    margin-top: 8px;
+    font-weight: 600;
+}
+
+/* Redirect Desktop QR Box */
+.kc-redirect-qr-box {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: #eef2ff;
+    border: 1px solid #c7d2fe;
+    border-radius: 16px;
+    padding: 14px 18px;
+    text-align: left;
+}
+
+.kc-redirect-qr-box img {
+    border-radius: 10px;
+    background: #fff;
+    padding: 4px;
+}
+
+.kc-qr-desc strong {
+    display: block;
+    font-size: 14px;
+    color: #1e1b4b;
+    margin-bottom: 2px;
+}
+
+.kc-qr-desc p {
+    margin: 0;
+    font-size: 12px;
+    color: #4338ca;
+    line-height: 1.45;
+}
+
+@media (max-width: 640px) {
+    .kc-redirect-qr-box {
+        display: none;
+    }
+}
+

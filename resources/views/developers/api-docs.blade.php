@@ -695,7 +695,7 @@
         <span>◐</span>
       </button>
       <a class="docs-btn primary" href="{{ url('/') }}">
-        <span>Kitobchi.uz &rarr;</span>
+        <span>Bosh sahifa &rarr;</span>
       </a>
     </div>
   </header>

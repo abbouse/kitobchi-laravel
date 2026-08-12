@@ -21,12 +21,16 @@
     .total-row td { font-weight: 700; padding-top: 2mm; }
   </style>
 </head>
+@php
+    $logoPath = public_path('images/logo/logo_black.png');
+    $logoSrc = is_file($logoPath) ? 'data:image/png;base64,'.base64_encode(file_get_contents($logoPath)) : asset('images/logo/logo_black.png');
+@endphp
 <body onload="window.print()">
   <div class="sheet">
     <div class="center">
-      <img src="{{ asset('images/logo/logo_black.png') }}" alt="Kitobchi" style="height: 7mm; margin-bottom: 1.5mm;">
-      <div class="title">Kitobchi Hub Receipt</div>
-      <div class="muted">{{ $receipt['hub_name'] ?: 'Hub' }}</div>
+      <img src="{{ $logoSrc }}" alt="Kitobchi" style="height: 7.5mm; margin-bottom: 1.5mm;">
+      <div class="title">Kitobchi Hub Cheki</div>
+      <div class="muted">{{ $receipt['hub_name'] ?: 'Hub Terminali' }}</div>
       <div class="muted">{{ $receipt['order_number'] }} · {{ $receipt['created_at'] ?: '—' }}</div>
     </div>
 

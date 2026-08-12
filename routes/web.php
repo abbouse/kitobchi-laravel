@@ -88,22 +88,56 @@ Route::get('/google-merchant.xml', [\App\Http\Controllers\Web\ProductCatalogCont
 Route::get('/robots.txt', [\App\Http\Controllers\Web\ProductCatalogController::class, 'robots'])->name('web.robots');
 
 Route::get('/share/product/{id}', function (int $id) {
+    try {
+        $book = \App\Models\Books::where('id', $id)->first();
+        $stationery = ! $book ? \App\Models\Stationery::where('id', $id)->first() : null;
+        $product = $book ?: $stationery;
+    } catch (\Throwable $e) {
+        $book = null;
+        $stationery = null;
+        $product = null;
+    }
+
+    $title = $product ? $product->name . ($book && $book->author ? " — {$book->author}" : '') : 'Kitobchi — Mahsulot';
+    $description = $product && $product->description ? \Illuminate\Support\Str::limit(strip_tags($product->description), 150) : 'Kitobchi ilovasida bu mahsulotni ko\'ring';
+    $image = $product && $product->first_image ? asset('storage/' . $product->first_image) : asset('images/logo/logo_blue.png');
+
     return view('share.redirect', [
         'type' => 'product',
         'value' => $id,
+        'product' => $product,
+        'productType' => $book ? 'book' : ($stationery ? 'stationery' : null),
         'appScheme' => "kitobchi://share/product/{$id}",
-        'title' => 'Kitobchi — Mahsulot',
-        'description' => 'Kitobchi ilovasida bu mahsulotni ko\'ring',
+        'title' => $title,
+        'description' => $description,
+        'image' => $image,
     ]);
 })->where('id', '[0-9]+');
 
 Route::get('/art/{artikul}', function (string $artikul) {
+    try {
+        $book = \App\Models\Books::where('artikul', $artikul)->first();
+        $stationery = ! $book ? \App\Models\Stationery::where('artikul', $artikul)->first() : null;
+        $product = $book ?: $stationery;
+    } catch (\Throwable $e) {
+        $book = null;
+        $stationery = null;
+        $product = null;
+    }
+
+    $title = $product ? $product->name . ($book && $book->author ? " — {$book->author}" : '') : 'Kitobchi — Mahsulot';
+    $description = $product && $product->description ? \Illuminate\Support\Str::limit(strip_tags($product->description), 150) : 'Kitobchi ilovasida bu mahsulotni ko\'ring';
+    $image = $product && $product->first_image ? asset('storage/' . $product->first_image) : asset('images/logo/logo_blue.png');
+
     return view('share.redirect', [
         'type' => 'artikul',
         'value' => $artikul,
+        'product' => $product,
+        'productType' => $book ? 'book' : ($stationery ? 'stationery' : null),
         'appScheme' => "kitobchi://art/{$artikul}",
-        'title' => 'Kitobchi — Mahsulot',
-        'description' => 'Kitobchi ilovasida bu mahsulotni ko\'ring',
+        'title' => $title,
+        'description' => $description,
+        'image' => $image,
     ]);
 })->where('artikul', '[A-Za-z0-9\-]+');
 
