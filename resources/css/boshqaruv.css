@@ -1791,19 +1791,57 @@ body.boshqaruv-dark .edit-save-bar { background: #111827; border-color: #1f2937;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   Boshqaruv Modern Design System Overrides — Tables, Inputs, Buttons, Badges
+   Boshqaruv Modern Design System — Light & Dark Mode Harmonization
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* Inputs & Form Controls */
+/* Light Mode Defaults */
+:root {
+  --kc-bg-page: #f8fafc;
+  --kc-bg-card: #ffffff;
+  --kc-bg-subtle: #f1f5f9;
+  --kc-bg-hover: #f8fafc;
+  --kc-border: #cbd5e1;
+  --kc-border-subtle: #e2e8f0;
+  --kc-text: #0f172a;
+  --kc-text-muted: #64748b;
+  --kc-input-bg: #ffffff;
+  --kc-input-border: #cbd5e1;
+  --kc-input-text: #0f172a;
+  --kc-table-head-bg: #f8fafc;
+  --kc-table-head-text: #64748b;
+  --kc-table-row-hover: #f8fafc;
+  --kc-table-border: #f1f5f9;
+}
+
+/* Dark Mode Overrides */
+body.boshqaruv-dark {
+  --kc-bg-page: #0f172a;
+  --kc-bg-card: #1e293b;
+  --kc-bg-subtle: #182235;
+  --kc-bg-hover: #1e293b;
+  --kc-border: #334155;
+  --kc-border-subtle: #334155;
+  --kc-text: #f8fafc;
+  --kc-text-muted: #94a3b8;
+  --kc-input-bg: #111827;
+  --kc-input-border: #334155;
+  --kc-input-text: #f8fafc;
+  --kc-table-head-bg: #111827;
+  --kc-table-head-text: #94a3b8;
+  --kc-table-row-hover: #182235;
+  --kc-table-border: #334155;
+}
+
+/* Form Controls */
 .form-control,
 .form-select,
 .input,
 select.form-control,
 textarea.form-control {
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--kc-input-border);
   border-radius: 10px;
-  background-color: #ffffff;
-  color: #0f172a;
+  background-color: var(--kc-input-bg);
+  color: var(--kc-input-text);
   font-size: 13.5px;
   padding: 9px 14px;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
@@ -1811,13 +1849,13 @@ textarea.form-control {
 
 .form-control:hover,
 .form-select:hover {
-  border-color: #94a3b8;
+  border-color: #6366f1;
 }
 
 .form-control:focus,
 .form-select:focus {
   border-color: #6366f1;
-  box-shadow: 0 0 0 3.5px rgba(99, 102, 241, 0.15);
+  box-shadow: 0 0 0 3.5px rgba(99, 102, 241, 0.2);
   outline: none;
 }
 
@@ -1845,53 +1883,52 @@ textarea.form-control {
 
 .btn-primary {
   background: linear-gradient(135deg, #4f46e5, #6366f1);
-  color: #ffffff;
+  color: #ffffff !important;
   border: none;
   box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
 }
 
 .btn-primary:hover {
   background: linear-gradient(135deg, #4338ca, #4f46e5);
-  color: #ffffff;
+  color: #ffffff !important;
   box-shadow: 0 6px 16px rgba(79, 70, 229, 0.35);
 }
 
 .btn-secondary,
 .btn-outline-secondary {
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
-  color: #334155;
+  background: var(--kc-bg-card);
+  border: 1px solid var(--kc-border);
+  color: var(--kc-text);
 }
 
 .btn-secondary:hover,
 .btn-outline-secondary:hover {
-  background: #f8fafc;
-  border-color: #94a3b8;
-  color: #0f172a;
+  background: var(--kc-bg-subtle);
+  border-color: #6366f1;
+  color: var(--kc-text);
 }
 
-.btn-success {
-  background: #10b981;
-  color: #ffffff;
-  border: none;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+body.boshqaruv-dark .btn-secondary,
+body.boshqaruv-dark .btn-outline-secondary {
+  background: #1e293b;
+  border-color: #334155;
+  color: #f8fafc;
 }
 
-.btn-danger {
-  background: #ef4444;
+body.boshqaruv-dark .btn-secondary:hover,
+body.boshqaruv-dark .btn-outline-secondary:hover {
+  background: #334155;
   color: #ffffff;
-  border: none;
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
 }
 
 /* Modern Tables & Table Containers */
 .table-responsive,
 .table-container {
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--kc-border);
   border-radius: 14px;
   overflow: hidden;
   box-shadow: 0 4px 20px rgba(15, 23, 42, 0.03);
-  background: #ffffff;
+  background: var(--kc-bg-card);
 }
 
 .table,
@@ -1903,33 +1940,57 @@ textarea.form-control {
 
 .table thead th,
 .data-table thead th {
-  background: #f8fafc;
-  color: #64748b;
+  background: var(--kc-table-head-bg);
+  color: var(--kc-table-head-text);
   font-size: 11.5px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: 12px 16px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--kc-border);
 }
 
 .table tbody td,
 .data-table tbody td {
   padding: 14px 16px;
   vertical-align: middle;
-  border-bottom: 1px solid #f1f5f9;
-  color: #1e293b;
+  border-bottom: 1px solid var(--kc-table-border);
+  color: var(--kc-text);
   font-size: 13.5px;
 }
 
 .table tbody tr:hover,
 .data-table tbody tr:hover {
-  background-color: #f8fafc;
+  background-color: var(--kc-table-row-hover);
 }
 
 .table tbody tr:last-child td,
 .data-table tbody tr:last-child td {
   border-bottom: none;
+}
+
+body.boshqaruv-dark .table-responsive,
+body.boshqaruv-dark .table-container {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+body.boshqaruv-dark .table thead th,
+body.boshqaruv-dark .data-table thead th {
+  background: #111827;
+  color: #94a3b8;
+  border-color: #334155;
+}
+
+body.boshqaruv-dark .table tbody td,
+body.boshqaruv-dark .data-table tbody td {
+  color: #f8fafc;
+  border-color: #334155;
+}
+
+body.boshqaruv-dark .table tbody tr:hover,
+body.boshqaruv-dark .data-table tbody tr:hover {
+  background-color: #182235;
 }
 
 /* Status Chips & Badges */
@@ -1951,11 +2012,25 @@ textarea.form-control {
   border: 1px solid #bbf7d0;
 }
 
+body.boshqaruv-dark .chip-success,
+body.boshqaruv-dark .badge-success {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
 .chip-warning,
 .badge-warning {
   background: #fef3c7;
   color: #b45309;
   border: 1px solid #fde68a;
+}
+
+body.boshqaruv-dark .chip-warning,
+body.boshqaruv-dark .badge-warning {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.3);
 }
 
 .chip-danger,
@@ -1965,10 +2040,24 @@ textarea.form-control {
   border: 1px solid #fecaca;
 }
 
+body.boshqaruv-dark .chip-danger,
+body.boshqaruv-dark .badge-danger {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
 .chip-info,
 .badge-info {
   background: #e0e7ff;
   color: #4338ca;
   border: 1px solid #c7d2fe;
+}
+
+body.boshqaruv-dark .chip-info,
+body.boshqaruv-dark .badge-info {
+  background: rgba(99, 102, 241, 0.15);
+  color: #818cf8;
+  border-color: rgba(99, 102, 241, 0.3);
 }
 

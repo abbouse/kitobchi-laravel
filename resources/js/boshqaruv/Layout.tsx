@@ -245,16 +245,20 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     return url.startsWith(match);
   };
 
-  // Brauzer tab sarlavhasi joriy bo'limga mos bo'ladi
-  useEffect(() => {
-    const current = nav
-      .flatMap((g) => g.items)
+  // Current active menu item for breadcrumbs
+  const currentNav = useMemo(() => {
+    return nav
+      .flatMap((g) => g.items.map((it) => ({ ...it, group: g.group })))
       .filter((it) => isActive(it.match))
       .sort((a, b) => b.match.length - a.match.length)[0];
-    document.title = current && current.match !== '/boshqaruv'
-      ? `${current.label} — Kitobchi Boshqaruv`
-      : 'Kitobchi Boshqaruv';
   }, [url]);
+
+  // Brauzer tab sarlavhasi joriy bo'limga mos bo'ladi
+  useEffect(() => {
+    document.title = currentNav && currentNav.match !== '/boshqaruv'
+      ? `${currentNav.label} — Kitobchi Boshqaruv`
+      : 'Kitobchi Boshqaruv';
+  }, [currentNav]);
 
   return (
     <div className="app-shell">
@@ -303,16 +307,35 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <button className="icon-btn sidebar-toggle" onClick={() => setOpen(!open)}>
             <i className="bi bi-list" style={{ fontSize: 20 }}></i>
           </button>
+          
+          <div className="d-none d-lg-flex align-items-center gap-2 text-muted small me-2">
+            <span style={{ fontWeight: 600, color: 'var(--kc-text-muted)' }}>Boshqaruv</span>
+            {currentNav && currentNav.match !== '/boshqaruv' && (
+              <>
+                <span>/</span>
+                <span className="text-body fw-bold">{currentNav.label}</span>
+              </>
+            )}
+          </div>
+
           <QuickSearch />
+          
           <div style={{ flex: 1 }}></div>
+
+          <div className="d-none d-xl-flex align-items-center gap-2 px-3 py-1 rounded-pill" style={{ background: 'var(--kc-bg-subtle)', border: '1px solid var(--kc-border-subtle)', fontSize: 12, fontWeight: 600 }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', display: 'inline-block' }}></span>
+            <span>Tizim barqaror</span>
+          </div>
+
           <button className="icon-btn" onClick={() => setDarkMode((value) => !value)} title={darkMode ? "Light mode" : "Dark mode"}>
             <i className={`bi ${darkMode ? 'bi-sun' : 'bi-moon'}`}></i>
           </button>
+
           <div className="d-flex align-items-center gap-2 ps-2 border-start">
             <div className="avatar" style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg,#f472b6,#8b5cf6)', color: 'white', fontWeight: 700, display: 'grid', placeItems: 'center', fontSize: 13 }}>{initials}</div>
             <div className="d-none d-md-block">
-              <div style={{ fontSize: 13, fontWeight: 600 }}>{admin?.name || 'Admin'}</div>
-              <div style={{ fontSize: 11, color: '#6b7280' }}>{admin?.email || 'admin@kitobchi.uz'}</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--kc-text)' }}>{admin?.name || 'Admin'}</div>
+              <div style={{ fontSize: 11, color: 'var(--kc-text-muted)' }}>{admin?.email || 'admin@kitobchi.com'}</div>
             </div>
           </div>
         </header>
