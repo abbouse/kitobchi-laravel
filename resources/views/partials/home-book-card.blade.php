@@ -12,6 +12,8 @@
     
     // Kitobchi specific monthly installment calculation (e.g., Alif nasiya or just simple 12 month div)
     $monthly = ceil($price / 12);
+
+    $isFav = in_array($book->id, $favoritedBookIds ?? [], true);
 @endphp
 
 <a class="group relative flex flex-col rounded-xl bg-white border border-white hover:shadow-md transition-all duration-200 overflow-hidden" href="{{ $url }}">
@@ -39,8 +41,8 @@
         <div class="absolute top-1.5 right-1.5 md:top-2 md:right-2 z-20">
             <div class="relative overflow-hidden transition-shadow duration-300 rounded-2xl px-5 py-[14px] hover:shadow-sm hover:shadow-black/10 backdrop-blur-sm glass-card-bg p-0!">
                 <div class="absolute inset-0 pointer-events-none glass-border rounded-2xl"></div>
-                <button aria-label="Sevimlilar" onclick="event.preventDefault(); this.querySelector('span').classList.add('text-red-500');" class="relative w-8 h-8 flex items-center justify-center rounded-full transition-all duration-300 hover:scale-110 active:scale-95 text-gray-500 hover:text-gray-900">
-                    <span aria-hidden="true" class="iconify i-heroicons:heart w-5 h-5 relative z-10 transition-colors"></span>
+                <button aria-label="Sevimlilar" data-fav="{{ $isFav ? '1' : '0' }}" onclick="event.preventDefault(); toggleFavorite(this, {{ $book->id }}, 'book');" class="relative w-8 h-8 flex items-center justify-center rounded-full transition-all duration-300 hover:scale-110 active:scale-95 text-gray-500 hover:text-gray-900">
+                    <iconify-icon aria-hidden="true" icon="{{ $isFav ? 'heroicons-solid:heart' : 'heroicons:heart' }}" class="w-5 h-5 relative z-10 transition-colors" style="{{ $isFav ? 'color:#ef4444;' : '' }}"></iconify-icon>
                 </button>
             </div>
         </div>

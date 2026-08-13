@@ -56,13 +56,19 @@ function renderCartPage() {
     cart.forEach(item => {
         const itemTotal = item.price * item.qty;
         total += itemTotal;
+        const openTag = item.url
+            ? `<a href="${item.url}" style="display:flex;align-items:center;gap:0.875rem;flex:1;min-width:0;text-decoration:none;color:inherit;">`
+            : `<div style="display:flex;align-items:center;gap:0.875rem;flex:1;min-width:0;">`;
+        const closeTag = item.url ? '</a>' : '</div>';
         itemsHtml += `
-            <div style="display:flex;align-items:center;gap:0.875rem;padding:0.875rem;background:#fff;border-radius:0.875rem;margin-bottom:0.5rem;">
-                <img src="${item.image}" alt="${item.name}" style="width:64px;height:80px;object-fit:cover;border-radius:0.625rem;flex-shrink:0;border:1px solid #f3f4f6;">
-                <div style="flex:1;min-width:0;">
-                    <div style="font-size:0.875rem;font-weight:600;color:#111827;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;margin-bottom:0.375rem;">${item.name}</div>
-                    <div style="font-size:0.9375rem;font-weight:700;color:var(--color-tima-500);">${new Intl.NumberFormat('uz').format(item.price)} so'm</div>
-                </div>
+            <div style="display:flex;align-items:center;gap:0.875rem;padding:0.875rem;background:#fff;border-radius:0.875rem;margin-bottom:0.625rem;border:1px solid #f3f4f6;box-shadow:0 4px 16px rgba(15,23,42,0.04);">
+                ${openTag}
+                    <img src="${item.image}" alt="${item.name}" style="width:64px;height:80px;object-fit:cover;border-radius:0.625rem;flex-shrink:0;border:1px solid #f3f4f6;">
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-size:0.875rem;font-weight:600;color:#111827;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;margin-bottom:0.375rem;">${item.name}</div>
+                        <div style="font-size:0.9375rem;font-weight:700;color:var(--color-tima-500);">${new Intl.NumberFormat('uz').format(item.price)} so'm</div>
+                    </div>
+                ${closeTag}
                 <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.75rem;flex-shrink:0;">
                     <div style="display:flex;align-items:center;gap:0.375rem;">
                         <button type="button"
@@ -106,13 +112,16 @@ function renderCartPage() {
                         </div>
                         <div style="display:flex;justify-content:space-between;font-size:0.875rem;color:#6b7280;">
                             <span>Yetkazib berish:</span>
-                            <span style="font-weight:600;color:#16a34a;">20,000 so'm</span>
+                            <span style="font-weight:600;color:#6b7280;">Hududga qarab</span>
                         </div>
                     </div>
 
-                    <div style="border-top:1px solid #f3f4f6;padding-top:1rem;display:flex;justify-content:space-between;font-size:1.125rem;font-weight:800;color:#111827;margin-bottom:1.25rem;">
-                        <span>Jami summasi:</span>
-                        <span style="color:var(--color-tima-500);">${new Intl.NumberFormat('uz').format(total + 20000)} so'm</span>
+                    <div style="border-top:1px solid #f3f4f6;padding-top:1rem;margin-bottom:1.25rem;">
+                        <div style="display:flex;justify-content:space-between;font-size:1.125rem;font-weight:800;color:#111827;">
+                            <span>Mahsulotlar summasi:</span>
+                            <span style="color:var(--color-tima-500);">${new Intl.NumberFormat('uz').format(total)} so'm</span>
+                        </div>
+                        <div style="font-size:0.75rem;color:#9ca3af;margin-top:0.25rem;">Yetkazib berish narxi hududingiz bo'yicha keyingi bosqichda hisoblanadi</div>
                     </div>
 
                     <a href="{{ route('web.checkout') }}" class="kc-primary-btn" style="width:100%;">

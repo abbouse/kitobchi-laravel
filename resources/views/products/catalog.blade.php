@@ -12,6 +12,17 @@
 
         @php
             $isStationery = $type === 'stationery';
+            $sort = $sort ?? 'popular';
+            // Joriy filtrlarni saqlagan holda link/param quramiz — kategoriya
+            // yoki turni almashtirganda saralash/narx oralig'i yo'qolmasin.
+            $baseParams = array_filter([
+                'search' => $search ?: null,
+                'category' => request('category'),
+                'sort' => $sort !== 'popular' ? $sort : null,
+                'price_min' => $priceMin ?? null,
+                'price_max' => $priceMax ?? null,
+            ], fn ($v) => $v !== null && $v !== '');
+            $sortLabels = ['popular' => 'Mashhur', 'new' => 'Yangi', 'price_asc' => 'Arzon narx', 'price_desc' => 'Qimmat narx'];
         @endphp
 
         <!-- ====== FILTER ROW (top) ====== -->
@@ -19,13 +30,13 @@
 
             <!-- Type Switcher Pill -->
             <div style="display:inline-flex;align-items:center;background:#f3f4f6;border-radius:9999px;padding:0.25rem;gap:0.25rem;">
-                <a href="{{ route('web.catalog', array_filter(['type' => 'book', 'search' => $search])) }}"
+                <a href="{{ route('web.catalog', array_merge($baseParams, ['type' => 'book'])) }}"
                    style="display:inline-flex;align-items:center;gap:0.375rem;padding:0.5rem 1rem;border-radius:9999px;font-size:0.875rem;font-weight:{{ $type === 'book' ? '600' : '500' }};text-decoration:none;transition:all 0.2s;
                           background:{{ $type === 'book' ? 'var(--color-tima-500)' : 'transparent' }};
                           color:{{ $type === 'book' ? '#fff' : '#6b7280' }};">
                     Kitoblar
                 </a>
-                <a href="{{ route('web.catalog', array_filter(['type' => 'stationery', 'search' => $search])) }}"
+                <a href="{{ route('web.catalog', array_merge($baseParams, ['type' => 'stationery'])) }}"
                    style="display:inline-flex;align-items:center;gap:0.375rem;padding:0.5rem 1rem;border-radius:9999px;font-size:0.875rem;font-weight:{{ $type === 'stationery' ? '600' : '500' }};text-decoration:none;transition:all 0.2s;
                           background:{{ $type === 'stationery' ? 'var(--color-tima-500)' : 'transparent' }};
                           color:{{ $type === 'stationery' ? '#fff' : '#6b7280' }};">
@@ -33,7 +44,7 @@
                 </a>
             </div>
 
-            <!-- Right: results count + sort -->
+            <!-- Right: results count + sort + filter toggle -->
             <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
                 @if($search)
                     <div style="display:flex;align-items:center;gap:0.5rem;padding:0.375rem 0.875rem;background:#f3f4f6;border-radius:9999px;font-size:0.8125rem;color:#374151;">
@@ -43,6 +54,56 @@
                     </div>
                 @endif
                 <span style="font-size:0.8125rem;color:#9ca3af;">{{ $products->total() }} ta mahsulot</span>
+
+                <!-- Sort dropdown -->
+                <div class="relative kc-lang-wrap">
+                    <button type="button" onclick="toggleLangMenu(event, 'kcSortMenu')" aria-haspopup="menu" aria-expanded="false"
+                            style="display:inline-flex;align-items:center;gap:0.375rem;padding:0.5rem 0.875rem;background:#f3f4f6;border-radius:9999px;border:none;font-size:0.8125rem;font-weight:600;color:#374151;cursor:pointer;font-family:inherit;">
+                        <iconify-icon icon="lucide:arrow-up-down" style="font-size:14px;"></iconify-icon>
+                        {{ $sortLabels[$sort] ?? 'Saralash' }}
+                        <iconify-icon icon="lucide:chevron-down" style="font-size:14px;"></iconify-icon>
+                    </button>
+                    <div id="kcSortMenu" class="kc-lang-menu" style="display:none;position:absolute;top:calc(100% + 8px);right:0;min-width:160px;background:#fff;border-radius:1rem;box-shadow:0 20px 40px rgba(0,0,0,0.14);z-index:200;overflow:hidden;padding:0.375rem;">
+                        @foreach($sortLabels as $sortKey => $sortLabel)
+                            <a href="{{ route('web.catalog', array_merge($baseParams, ['type' => $type, 'sort' => $sortKey !== 'popular' ? $sortKey : null])) }}"
+                               style="display:flex;align-items:center;justify-content:space-between;gap:0.75rem;padding:0.625rem 0.75rem;border-radius:0.625rem;text-decoration:none;font-size:0.875rem;{{ $sort === $sortKey ? 'background:var(--color-tima-50);font-weight:700;color:var(--color-tima-600);' : 'font-weight:500;color:#111827;' }}">
+                                {{ $sortLabel }}
+                                @if($sort === $sortKey)
+                                    <iconify-icon icon="lucide:check" style="font-size:14px;"></iconify-icon>
+                                @endif
+                            </a>
+                        @endforeach
+                    </div>
+                </div>
+
+                <!-- Price range filter -->
+                <div class="relative kc-lang-wrap">
+                    <button type="button" onclick="toggleLangMenu(event, 'kcPriceMenu')" aria-haspopup="menu" aria-expanded="false"
+                            style="display:inline-flex;align-items:center;gap:0.375rem;padding:0.5rem 0.875rem;background:{{ ($priceMin || $priceMax) ? 'var(--color-tima-500)' : '#f3f4f6' }};border-radius:9999px;border:none;font-size:0.8125rem;font-weight:600;color:{{ ($priceMin || $priceMax) ? '#fff' : '#374151' }};cursor:pointer;font-family:inherit;">
+                        <iconify-icon icon="lucide:sliders-horizontal" style="font-size:14px;"></iconify-icon>
+                        Narx
+                    </button>
+                    <div id="kcPriceMenu" class="kc-lang-menu" style="display:none;position:absolute;top:calc(100% + 8px);right:0;width:240px;background:#fff;border-radius:1rem;box-shadow:0 20px 40px rgba(0,0,0,0.14);z-index:200;padding:1rem;">
+                        <form method="GET" action="{{ route('web.catalog') }}">
+                            <input type="hidden" name="type" value="{{ $type }}">
+                            @if($search)<input type="hidden" name="search" value="{{ $search }}">@endif
+                            @if(request('category'))<input type="hidden" name="category" value="{{ request('category') }}">@endif
+                            @if($sort !== 'popular')<input type="hidden" name="sort" value="{{ $sort }}">@endif
+                            <label style="display:block;font-size:0.75rem;font-weight:600;color:#6b7280;margin-bottom:0.5rem;">Narx oralig'i, so'm</label>
+                            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;">
+                                <input type="number" name="price_min" min="0" placeholder="Dan" value="{{ $priceMin }}" style="width:100%;height:2.25rem;padding:0 0.625rem;border:1px solid #e5e7eb;border-radius:0.5rem;font-size:0.8125rem;font-family:inherit;">
+                                <span style="color:#9ca3af;">—</span>
+                                <input type="number" name="price_max" min="0" placeholder="Gacha" value="{{ $priceMax }}" style="width:100%;height:2.25rem;padding:0 0.625rem;border:1px solid #e5e7eb;border-radius:0.5rem;font-size:0.8125rem;font-family:inherit;">
+                            </div>
+                            <div style="display:flex;gap:0.5rem;">
+                                <button type="submit" style="flex:1;height:2.25rem;background:var(--color-tima-500);color:#fff;border:none;border-radius:0.5rem;font-size:0.8125rem;font-weight:700;cursor:pointer;">Qo'llash</button>
+                                @if($priceMin || $priceMax)
+                                    <a href="{{ route('web.catalog', array_merge(array_diff_key($baseParams, ['price_min' => 1, 'price_max' => 1]), ['type' => $type])) }}" style="display:flex;align-items:center;justify-content:center;height:2.25rem;padding:0 0.75rem;background:#f3f4f6;color:#374151;border-radius:0.5rem;font-size:0.8125rem;text-decoration:none;">Tozalash</a>
+                                @endif
+                            </div>
+                        </form>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -55,7 +116,7 @@
                 <h3 style="font-size:0.9375rem;font-weight:700;color:#111827;margin:0 0 0.875rem;">Kategoriyalar</h3>
 
                 <div style="display:flex;flex-direction:column;gap:0.125rem;">
-                    <a href="{{ route('web.catalog', ['type' => $type]) }}" class="text-neutral-600 leading-6 py-3 hover:text-primary-500 hover:underline font-medium transition-all duration-200"
+                    <a href="{{ route('web.catalog', array_merge(array_diff_key($baseParams, ['category' => 1]), ['type' => $type])) }}" class="text-neutral-600 leading-6 py-3 hover:text-primary-500 hover:underline font-medium transition-all duration-200"
                        style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.625rem;border-radius:0.5rem;font-size:0.875rem;text-decoration:none;
                               background:{{ !request('category') ? 'var(--color-tima-50)' : 'transparent' }};
                               color:{{ !request('category') ? 'var(--color-tima-600)' : '#374151' }};
@@ -69,7 +130,7 @@
                     @php $activeCategories = $isStationery ? ($stationeryCategories ?? collect()) : ($bookCategories ?? collect()); @endphp
 
                     @foreach($activeCategories as $cat)
-                        <a href="{{ route('web.catalog', ['type' => $type, 'category' => $cat->id, 'search' => request('search')]) }}" class="text-neutral-600 leading-6 py-3 hover:text-primary-500 hover:underline font-medium transition-all duration-200"
+                        <a href="{{ route('web.catalog', array_merge($baseParams, ['type' => $type, 'category' => $cat->id])) }}" class="text-neutral-600 leading-6 py-3 hover:text-primary-500 hover:underline font-medium transition-all duration-200"
                            style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.625rem;border-radius:0.5rem;font-size:0.875rem;text-decoration:none;
                                   background:{{ request('category') == $cat->id ? 'var(--color-tima-50)' : 'transparent' }};
                                   color:{{ request('category') == $cat->id ? 'var(--color-tima-600)' : '#374151' }};
@@ -82,7 +143,7 @@
                     @endforeach
                 </div>
 
-                @if(request('category'))
+                @if(request('category') || $priceMin || $priceMax || $sort !== 'popular' || $search)
                     <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid #f3f4f6;">
                         <a href="{{ route('web.catalog', ['type' => $type]) }}"
                            style="display:block;text-align:center;padding:0.5rem;background:#f3f4f6;border-radius:0.5rem;font-size:0.8125rem;color:#6b7280;text-decoration:none;transition:all 0.2s;"
@@ -99,14 +160,14 @@
                 <!-- Mobile category filter pills (horizontal scroll) -->
                 <div style="overflow-x:auto;-ms-overflow-style:none;scrollbar-width:none;margin-bottom:1rem;">
                     <div style="display:flex;gap:0.5rem;padding-bottom:0.25rem;width:max-content;">
-                        <a href="{{ route('web.catalog', ['type' => $type]) }}"
+                        <a href="{{ route('web.catalog', array_merge(array_diff_key($baseParams, ['category' => 1]), ['type' => $type])) }}"
                            style="display:inline-flex;align-items:center;padding:0.375rem 0.875rem;border-radius:9999px;font-size:0.8125rem;font-weight:500;text-decoration:none;white-space:nowrap;transition:all 0.2s;flex-shrink:0;
                                   background:{{ !request('category') ? 'var(--color-tima-500)' : '#f3f4f6' }};
                                   color:{{ !request('category') ? '#fff' : '#374151' }};">
                             Barchasi
                         </a>
                         @foreach($activeCategories as $cat)
-                            <a href="{{ route('web.catalog', ['type' => $type, 'category' => $cat->id, 'search' => request('search')]) }}"
+                            <a href="{{ route('web.catalog', array_merge($baseParams, ['type' => $type, 'category' => $cat->id])) }}"
                                style="display:inline-flex;align-items:center;padding:0.375rem 0.875rem;border-radius:9999px;font-size:0.8125rem;font-weight:500;text-decoration:none;white-space:nowrap;transition:all 0.2s;flex-shrink:0;
                                       background:{{ request('category') == $cat->id ? 'var(--color-tima-500)' : '#f3f4f6' }};
                                       color:{{ request('category') == $cat->id ? '#fff' : '#374151' }};">
@@ -132,6 +193,7 @@
                                 $price = $isDisc ? $discRaw : $rawPrice;
                                 $discPct = $isDisc ? round((($rawPrice - $price) / $rawPrice) * 100) : 0;
                                 $subtitle = $isStationery ? ($item->material ?: 'Kanselyariya') : ($item->author ?: 'Kitobchi');
+                                $isFav = in_array($item->id, $favoritedIds ?? [], true);
                             @endphp
 
                             <!-- Product card — exactly like PiyolaMarket: group relative flex flex-col rounded-xl bg-white border border-white hover:shadow-md transition-all duration-200 overflow-hidden -->
@@ -165,12 +227,11 @@
                                         <div style="position:relative;overflow:hidden;transition:box-shadow 0.3s;border-radius:1rem;padding:0!important;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);background:rgba(255,255,255,0.5);">
                                             <div style="position:absolute;inset:0;pointer-events:none;"></div>
                                             <button aria-label="Sevimlilar"
-                                                    onclick="event.preventDefault();toggleFav(this);"
+                                                    data-fav="{{ $isFav ? '1' : '0' }}"
+                                                    onclick="event.preventDefault();toggleFavorite(this, {{ $item->id }}, '{{ $isStationery ? 'stationery' : 'book' }}');"
                                                     name="Sevimlilar"
                                                     style="width:2rem;height:2rem;display:flex;align-items:center;justify-content:center;border-radius:9999px;background:none;border:none;cursor:pointer;transition:all 0.3s;position:relative;z-index:10;">
-                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="1.5" style="position:relative;z-index:10;">
-                                                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-                                                </svg>
+                                                <iconify-icon icon="{{ $isFav ? 'heroicons-solid:heart' : 'heroicons:heart' }}" style="font-size:18px;position:relative;z-index:10;color:{{ $isFav ? '#ef4444' : '#374151' }};"></iconify-icon>
                                             </button>
                                         </div>
                                     </div>
@@ -266,18 +327,4 @@
     .pagination .page-item.active .page-link:hover { background: var(--color-tima-600); }
 </style>
 
-@push('scripts')
-<script>
-    function toggleFav(btn) {
-        const svg = btn.querySelector('svg');
-        if (svg.getAttribute('fill') === 'none') {
-            svg.setAttribute('fill', '#ef4444');
-            svg.setAttribute('stroke', '#ef4444');
-        } else {
-            svg.setAttribute('fill', 'none');
-            svg.setAttribute('stroke', '#374151');
-        }
-    }
-</script>
-@endpush
 @endsection

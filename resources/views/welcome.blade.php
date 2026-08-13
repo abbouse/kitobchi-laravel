@@ -133,6 +133,17 @@
                 return $sections;
             });
         } catch(\Throwable $e) { $categorySections = collect(); }
+
+        // 5. Joriy foydalanuvchining sevimli kitob ID'lari — yurak
+        // ikonkasini to'ldirilgan/bo'sh holatda ko'rsatish uchun.
+        try {
+            $favoritedBookIds = auth()->check()
+                ? \App\Models\FavouriteProducts::where('user_id', auth()->id())
+                    ->where('product_type', 'book')
+                    ->pluck('product_id')
+                    ->all()
+                : [];
+        } catch (\Throwable $e) { $favoritedBookIds = []; }
     @endphp
 
     <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto max-md:px-0 max-md:p-0!">
@@ -174,10 +185,10 @@
                     @if($banners->count() > 1)
                         <div class="hidden md:block">
                             <button onclick="slideBanner(-1)" aria-label="Prev" class="font-medium inline-flex items-center transition-colors text-sm gap-1.5 ring ring-inset ring-primary/50 text-primary hover:bg-primary/10 active:bg-primary/10 outline-primary/25 focus-visible:outline-3 focus-visible:ring-primary p-1.5 absolute rounded-full start-4 sm:-start-12 top-1/2 -translate-y-1/2 start-6! z-20! bg-gray-600/50! text-white! border-gray-600/50! cursor-pointer" type="button">
-                                <span aria-hidden="true" class="iconify i-lucide:arrow-left shrink-0 size-5"></span>
+                                <iconify-icon aria-hidden="true" icon="lucide:arrow-left" class="shrink-0" style="font-size:20px;"></iconify-icon>
                             </button>
                             <button onclick="slideBanner(1)" aria-label="Next" class="font-medium inline-flex items-center transition-colors text-sm gap-1.5 text-inverted bg-inverted hover:bg-inverted/90 active:bg-inverted/90 outline-inverted/25 focus-visible:outline-3 p-1.5 absolute rounded-full end-4 sm:-end-12 top-1/2 -translate-y-1/2 end-6! z-20! bg-gray-600/50! text-white! border-gray-600/50! cursor-pointer" type="button">
-                                <span aria-hidden="true" class="iconify i-lucide:arrow-right shrink-0 size-5"></span>
+                                <iconify-icon aria-hidden="true" icon="lucide:arrow-right" class="shrink-0" style="font-size:20px;"></iconify-icon>
                             </button>
                         </div>
                     @endif
@@ -254,7 +265,7 @@
                     </h2>
                     <a class="text-sm font-semibold text-primary" href="{{ route('web.catalog') }}">
                         Barchasi
-                        <span aria-hidden="true" class="iconify i-lucide:chevron-right"></span>
+                        <iconify-icon aria-hidden="true" icon="lucide:chevron-right"></iconify-icon>
                     </a>
                 </div>
                 <div class="grid grid-cols-2 lg:grid-cols-4 2xl:grid-cols-5 gap-4">
@@ -276,7 +287,7 @@
                     </h2>
                     <a class="text-sm font-semibold text-primary" href="{{ route('web.catalog') }}">
                         Barchasi
-                        <span aria-hidden="true" class="iconify i-lucide:chevron-right"></span>
+                        <iconify-icon aria-hidden="true" icon="lucide:chevron-right"></iconify-icon>
                     </a>
                 </div>
                 <div class="grid grid-cols-2 lg:grid-cols-4 2xl:grid-cols-5 gap-4">
@@ -299,7 +310,7 @@
                         </h2>
                         <a class="text-sm font-semibold text-primary" href="{{ route('web.catalog', ['category' => $section->category->id]) }}">
                             Barchasi
-                            <span aria-hidden="true" class="iconify i-lucide:chevron-right"></span>
+                            <iconify-icon aria-hidden="true" icon="lucide:chevron-right"></iconify-icon>
                         </a>
                     </div>
                     <div class="grid grid-cols-2 lg:grid-cols-4 2xl:grid-cols-5 gap-4">
@@ -321,7 +332,7 @@
             <div class="w-10 h-1 bg-gray-300 rounded-full mx-auto absolute left-1/2 -translate-x-1/2 -top-2"></div>
             <h3 id="kcBottomSheetTitle" class="text-xl font-bold text-gray-900 mt-2">Aksiya</h3>
             <button onclick="closeBannerBottomSheet()" class="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 mt-2">
-                <span class="iconify i-lucide:x w-5 h-5"></span>
+                <iconify-icon icon="lucide:x" class="w-5 h-5"></iconify-icon>
             </button>
         </div>
 

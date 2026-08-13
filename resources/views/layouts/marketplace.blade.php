@@ -250,10 +250,10 @@
                     <a href="{{ url('/') }}" aria-current="page" class="router-link-active router-link-exact-active">
                         <img alt="Kitobchi" class="h-8 w-auto" src="{{ asset('images/logo/logo_blue.png') }}" />
                     </a>
-                    <a href="{{ route('web.catalog') }}" class="relative overflow-hidden transition-shadow duration-300 rounded-2xl px-5 py-[14px] rounded-full! hover:shadow-sm hover:shadow-black/10 glass-card-bg p-1! h-12 cursor-pointer bg-secondary-200!" style="text-decoration:none;color:#111827;">
+                    <a href="{{ route('web.catalog') }}" aria-current="{{ request()->routeIs('web.catalog') ? 'page' : 'false' }}" class="relative overflow-hidden transition-shadow duration-300 rounded-2xl px-5 py-[14px] rounded-full! hover:shadow-sm hover:shadow-black/10 glass-card-bg p-1! h-12 cursor-pointer bg-secondary-200!" style="text-decoration:none;color:#111827;">
                         <div class="absolute inset-0 pointer-events-none glass-border rounded-2xl rounded-full!"></div>
-                        <div class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2">
-                            <span aria-hidden="true" class="iconify i-heroicons-solid:squares-2x2 w-5 h-5 transition-all duration-300 shrink-0"></span>
+                        <div class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 {{ request()->routeIs('web.catalog') ? 'bg-primary-200' : '' }}">
+                            <iconify-icon aria-hidden="true" icon="heroicons-solid:squares-2x2" class="w-5 h-5 transition-all duration-300 shrink-0"></iconify-icon>
                             <span class="max-lg:hidden font-medium text-sm transition-all duration-300">Kataloglar</span>
                         </div>
                     </a>
@@ -262,7 +262,7 @@
                 <!-- Center: Search -->
                 <div class="relative overflow-hidden transition-shadow duration-300 rounded-2xl px-5 py-[14px] rounded-full! hover:shadow-sm hover:shadow-black/10 glass-card-bg h-12 grow flex-y-center gap-2 text-gray cursor-pointer bg-secondary-200!" style="max-width:600px;">
                     <div class="absolute inset-0 pointer-events-none glass-border rounded-2xl rounded-full!"></div>
-                    <span aria-hidden="true" class="iconify i-heroicons-solid:magnifying-glass w-5 h-5 text-gray-500"></span>
+                    <iconify-icon aria-hidden="true" icon="heroicons-solid:magnifying-glass" class="w-5 h-5 text-gray-500"></iconify-icon>
                     <form action="{{ route('web.catalog') }}" method="GET" style="flex:1;display:flex;">
                         <input type="text" name="search" value="{{ request('search') }}"
                                placeholder="Mahsulotni izlash..."
@@ -280,36 +280,43 @@
                         
                         <button onclick="toggleCartDrawer(true)" class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group" style="background:none;border:none;cursor:pointer;font-family:inherit;color:#111827;">
                             <div class="flex-center relative">
-                                <span class="iconify i-heroicons:shopping-cart w-5 h-5 group-hover:text-green-500 transition-colors duration-200"></span>
+                                <iconify-icon icon="heroicons:shopping-cart" class="w-5 h-5 group-hover:text-green-500 transition-colors duration-200"></iconify-icon>
                                 <span id="kcCartBadge" style="display:none;position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;background:var(--color-tima-500);color:#fff;font-size:10px;font-weight:700;border-radius:9999px;display:flex;align-items:center;justify-content:center;padding:0 3px;"></span>
                             </div>
                             <span class="max-lg:hidden font-normal text-sm leading-5 group-hover:text-green-500 transition-colors duration-200">Savatcha</span>
                         </button>
                         
-                        <a href="{{ route('web.catalog') }}" class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group" style="text-decoration:none;color:#111827;">
-                            <div class="flex-center relative">
-                                <span class="iconify i-heroicons:heart w-5 h-5 group-hover:text-green-500 transition-colors duration-200"></span>
+                        <a href="{{ route('web.favorites') }}" aria-current="{{ request()->routeIs('web.favorites') ? 'page' : 'false' }}" class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group {{ request()->routeIs('web.favorites') ? 'bg-primary-200' : '' }}" style="text-decoration:none;color:#111827;">
+                            <div class="flex-center relative" id="kcFavBadgeWrap">
+                                <iconify-icon icon="heroicons:heart" class="w-5 h-5 group-hover:text-green-500 transition-colors duration-200"></iconify-icon>
+                                @if(($kcFavCount ?? 0) > 0)
+                                    <span id="kcFavBadge" style="position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;background:var(--color-tima-500);color:#fff;font-size:10px;font-weight:700;border-radius:9999px;display:flex;align-items:center;justify-content:center;padding:0 3px;">{{ $kcFavCount > 99 ? '99+' : $kcFavCount }}</span>
+                                @endif
                             </div>
                             <span class="max-lg:hidden font-normal text-sm leading-5 group-hover:text-green-500 transition-colors duration-200">Sevimlilar</span>
                         </a>
 
-                        <button class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group" style="background:none;border:none;cursor:pointer;font-family:inherit;color:#111827;">
-                            <span class="iconify i-heroicons:globe-alt w-5 h-5 group-hover:text-green-500 transition-colors duration-200"></span>
-                            <span class="max-lg:hidden font-normal text-sm leading-5 group-hover:text-green-500 transition-colors duration-200">O’zbekcha</span>
-                        </button>
+                        <div class="relative kc-lang-wrap" id="kcLangWrap">
+                            <button onclick="toggleLangMenu(event, 'kcLangMenu')" aria-haspopup="menu" aria-expanded="false" class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group" style="background:none;border:none;cursor:pointer;font-family:inherit;color:#111827;">
+                                <iconify-icon icon="heroicons:globe-alt" class="w-5 h-5 group-hover:text-green-500 transition-colors duration-200"></iconify-icon>
+                                <span class="max-lg:hidden font-normal text-sm leading-5 group-hover:text-green-500 transition-colors duration-200">{{ (config('landing_locales.labels')[app()->getLocale()] ?? "O'zbekcha") }}</span>
+                                <iconify-icon icon="lucide:chevron-down" class="w-4 h-4 max-lg:hidden group-hover:text-green-500 transition-colors duration-200"></iconify-icon>
+                            </button>
+                            @include('partials.lang-menu', ['menuId' => 'kcLangMenu'])
+                        </div>
                     </div>
 
                     <div class="relative overflow-hidden transition-shadow duration-300 rounded-2xl px-5 py-[14px] rounded-full! hover:shadow-sm hover:shadow-black/10 glass-card-bg flex-y-center h-12 p-1! cursor-pointer bg-secondary-200!">
                         <div class="absolute inset-0 pointer-events-none glass-border rounded-2xl rounded-full!"></div>
-                        <div class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2">
+                        <div class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 {{ request()->routeIs('web.profile') ? 'bg-primary-200' : '' }}">
                             @auth
                                 <a href="{{ route('web.profile') }}" class="flex-y-center gap-2 group h-full" style="text-decoration:none;color:#111827;">
-                                    <span class="iconify i-heroicons:user-circle w-5 h-5"></span>
+                                    <iconify-icon icon="heroicons:user-circle" class="w-5 h-5"></iconify-icon>
                                     <span class="font-normal text-sm leading-5 max-lg:hidden">{{ Str::limit(auth()->user()->name ?: auth()->user()->phone_number, 12) }}</span>
                                 </a>
                             @else
                                 <button onclick="openAuthModal()" class="flex-y-center gap-2 group h-full" style="background:none;border:none;cursor:pointer;font-family:inherit;color:#111827;">
-                                    <span class="iconify i-heroicons:user-circle w-5 h-5"></span>
+                                    <iconify-icon icon="heroicons:user-circle" class="w-5 h-5"></iconify-icon>
                                     <span class="font-normal text-sm leading-5 max-lg:hidden">Kirish</span>
                                 </button>
                             @endauth
@@ -324,14 +331,25 @@
                     <a href="{{ url('/') }}" style="display:flex;align-items:center;flex-shrink:0;">
                         <img alt="Kitobchi" class="h-8 w-auto" src="{{ asset('images/logo/logo_blue.png') }}" />
                     </a>
-                    <div class="relative overflow-hidden transition-shadow duration-300 rounded-2xl px-5 py-[14px] hover:shadow-sm hover:shadow-black/10 h-12 rounded-[20px] text-gray bg-secondary-300! flex-center cursor-pointer gap-3" style="flex:1;">
-                        <div class="absolute inset-0 pointer-events-none glass-border rounded-2xl"></div>
-                        <span class="iconify i-lucide:search text-xl text-gray-500"></span>
-                        <form action="{{ route('web.catalog') }}" method="GET" style="flex:1;display:flex;">
-                            <input type="text" name="search" value="{{ request('search') }}"
-                                   placeholder="Kitobchi'da izlash"
-                                   style="flex:1;background:transparent;border:none;outline:none;font-size:0.875rem;font-family:inherit;color:#111827;">
-                        </form>
+                    <div style="position:relative;flex:1;">
+                        <div class="relative overflow-hidden transition-shadow duration-300 rounded-2xl px-5 py-[14px] hover:shadow-sm hover:shadow-black/10 h-12 rounded-[20px] text-gray bg-secondary-300! flex-center cursor-pointer gap-3">
+                            <div class="absolute inset-0 pointer-events-none glass-border rounded-2xl"></div>
+                            <iconify-icon icon="lucide:search" class="text-xl text-gray-500"></iconify-icon>
+                            <form action="{{ route('web.catalog') }}" method="GET" style="flex:1;display:flex;">
+                                <input type="text" name="search" value="{{ request('search') }}"
+                                       placeholder="Kitobchi'da izlash"
+                                       id="kcSearchInputMobile"
+                                       autocomplete="off"
+                                       style="flex:1;background:transparent;border:none;outline:none;font-size:0.875rem;font-family:inherit;color:#111827;">
+                            </form>
+                        </div>
+                        <div id="kcSearchPopupMobile" style="display:none;position:absolute;top:calc(100% + 8px);left:0;right:0;background:#fff;border-radius:1rem;box-shadow:0 20px 40px rgba(0,0,0,0.12);z-index:200;overflow:hidden;max-height:60vh;overflow-y:auto;"></div>
+                    </div>
+                    <div class="relative kc-lang-wrap" style="flex-shrink:0;">
+                        <button onclick="toggleLangMenu(event, 'kcLangMenuMobile')" aria-haspopup="menu" aria-expanded="false" aria-label="Tilni tanlash" style="width:2.5rem;height:2.5rem;display:flex;align-items:center;justify-content:center;background:#f3f4f6;border-radius:9999px;border:none;cursor:pointer;color:#374151;">
+                            <iconify-icon icon="heroicons:globe-alt" class="w-5 h-5"></iconify-icon>
+                        </button>
+                        @include('partials.lang-menu', ['menuId' => 'kcLangMenuMobile'])
                     </div>
                 </div>
             </div>
@@ -444,6 +462,16 @@
                 <rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>
             </svg>
             <span>Katalog</span>
+        </a>
+        <a href="{{ route('web.favorites') }}"
+           style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:0.5rem 0;text-decoration:none;color:{{ request()->routeIs('web.favorites') ? 'var(--color-tima-500)' : '#6b7280' }};font-size:0.6875rem;font-weight:{{ request()->routeIs('web.favorites') ? '600' : '400' }};">
+            <div style="position:relative;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="{{ request()->routeIs('web.favorites') ? 'var(--color-tima-500)' : 'none' }}" stroke="currentColor" stroke-width="{{ request()->routeIs('web.favorites') ? '0' : '2' }}">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                </svg>
+                <span id="kcFavBadgeMob" style="position:absolute;top:-6px;right:-6px;min-width:16px;height:16px;background:var(--color-tima-500);color:#fff;font-size:9px;font-weight:700;border-radius:9999px;align-items:center;justify-content:center;padding:0 2px;{{ ($kcFavCount ?? 0) > 0 ? 'display:flex;' : 'display:none;' }}">{{ ($kcFavCount ?? 0) > 99 ? '99+' : ($kcFavCount ?? 0) }}</span>
+            </div>
+            <span>Sevimlilar</span>
         </a>
         <button onclick="toggleCartDrawer(true)"
                 style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:0.5rem 0;background:none;border:none;cursor:pointer;color:#6b7280;font-size:0.6875rem;font-family:inherit;position:relative;">
@@ -609,9 +637,9 @@
         });
     }
 
-    function addToCart(id, name, price, image) {
+    function addToCart(id, name, price, image, url) {
         const ex = kcCart.find(i => i.id === id);
-        if (ex) { ex.qty++; } else { kcCart.push({ id, name, price, image, qty: 1 }); }
+        if (ex) { ex.qty++; if (url) ex.url = url; } else { kcCart.push({ id, name, price, image, qty: 1, url: url || null }); }
         saveCart();
         toggleCartDrawer(true);
     }
@@ -628,6 +656,106 @@
         kcCart = kcCart.filter(i => i.id !== id);
         saveCart();
     }
+
+    // FAVORITES (server-persisted — FavouriteProducts jadvali)
+    window.kcIsAuthed = {{ auth()->check() ? 'true' : 'false' }};
+
+    function toggleFavorite(btn, productId, productType) {
+        if (!window.kcIsAuthed) {
+            if (typeof openAuthModal === 'function') openAuthModal();
+            return;
+        }
+
+        const icon = btn.querySelector('iconify-icon');
+        const wasFav = btn.getAttribute('data-fav') === '1';
+        const nowFav = !wasFav;
+
+        applyFavVisual(btn, icon, nowFav);
+        bumpFavBadge(nowFav ? 1 : -1);
+
+        fetch("{{ route('web.favorites.toggle') }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            },
+            body: JSON.stringify({ product_id: productId, product_type: productType }),
+        })
+        .then(r => r.json())
+        .then(res => {
+            if (res.status !== 'success') {
+                applyFavVisual(btn, icon, wasFav);
+                bumpFavBadge(wasFav ? 1 : -1);
+                if (res.require_auth && typeof openAuthModal === 'function') openAuthModal();
+            }
+        })
+        .catch(() => {
+            applyFavVisual(btn, icon, wasFav);
+            bumpFavBadge(wasFav ? 1 : -1);
+        });
+    }
+
+    function applyFavVisual(btn, icon, isFav) {
+        btn.setAttribute('data-fav', isFav ? '1' : '0');
+        if (icon) {
+            icon.setAttribute('icon', isFav ? 'heroicons-solid:heart' : 'heroicons:heart');
+            icon.style.color = isFav ? '#ef4444' : '';
+        }
+    }
+
+    function bumpFavBadge(delta) {
+        let badge = document.getElementById('kcFavBadge');
+        const wrap = document.getElementById('kcFavBadgeWrap');
+        const mobBadge = document.getElementById('kcFavBadgeMob');
+        const current = badge
+            ? (parseInt(badge.textContent, 10) || 0)
+            : (mobBadge && mobBadge.style.display !== 'none' ? (parseInt(mobBadge.textContent, 10) || 0) : 0);
+        const n = current + delta;
+
+        // Desktop header badge — dinamik yaratiladi/o'chiriladi (0 bo'lsa DOM'da umuman yo'q).
+        if (n <= 0) {
+            if (badge) badge.remove();
+        } else {
+            if (!badge && wrap) {
+                badge = document.createElement('span');
+                badge.id = 'kcFavBadge';
+                badge.style.cssText = 'position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;background:var(--color-tima-500);color:#fff;font-size:10px;font-weight:700;border-radius:9999px;display:flex;align-items:center;justify-content:center;padding:0 3px;';
+                wrap.appendChild(badge);
+            }
+            if (badge) badge.textContent = n > 99 ? '99+' : String(n);
+        }
+
+        // Mobil pastki navigatsiyadagi badge — doim DOM'da bor, faqat
+        // ko'rinishi/matni yangilanadi.
+        if (mobBadge) {
+            if (n <= 0) {
+                mobBadge.style.display = 'none';
+            } else {
+                mobBadge.style.display = 'flex';
+                mobBadge.textContent = n > 99 ? '99+' : String(n);
+            }
+        }
+    }
+
+    // LANGUAGE SWITCHER
+    function toggleLangMenu(e, menuId) {
+        if (e) e.stopPropagation();
+        const menu = document.getElementById(menuId);
+        if (!menu) return;
+        const willOpen = menu.style.display !== 'block';
+        document.querySelectorAll('.kc-lang-menu').forEach(m => { m.style.display = 'none'; });
+        menu.style.display = willOpen ? 'block' : 'none';
+        const btn = e && e.currentTarget;
+        if (btn) btn.setAttribute('aria-expanded', String(willOpen));
+    }
+    document.addEventListener('click', function(e) {
+        document.querySelectorAll('.kc-lang-wrap').forEach(function(wrap) {
+            if (!wrap.contains(e.target)) {
+                const m = wrap.querySelector('.kc-lang-menu');
+                if (m) m.style.display = 'none';
+            }
+        });
+    });
 
     function toggleCartDrawer(open) {
         const overlay = document.getElementById('kcCartOverlay');
@@ -660,11 +788,17 @@
         let html = '';
         kcCart.forEach(item => {
             total += item.price * item.qty;
+            const openTag = item.url
+                ? `<a href="${item.url}" style="display:block;text-decoration:none;color:inherit;">`
+                : `<div>`;
+            const closeTag = item.url ? '</a>' : '</div>';
             html += `<div style="display:flex;gap:0.75rem;padding:0.75rem 0;border-bottom:1px solid #f9fafb;align-items:flex-start;">
                 <img src="${item.image}" alt="${item.name}" style="width:52px;height:70px;object-fit:cover;border-radius:0.5rem;flex-shrink:0;">
                 <div style="flex:1;min-width:0;">
-                    <div style="font-size:0.8125rem;font-weight:500;color:#111827;margin-bottom:0.25rem;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${item.name}</div>
-                    <div style="font-size:0.875rem;font-weight:700;color:var(--color-tima-500);margin-bottom:0.5rem;">${new Intl.NumberFormat('uz').format(item.price)} so'm</div>
+                    ${openTag}
+                        <div style="font-size:0.8125rem;font-weight:500;color:#111827;margin-bottom:0.25rem;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${item.name}</div>
+                        <div style="font-size:0.875rem;font-weight:700;color:var(--color-tima-500);margin-bottom:0.5rem;">${new Intl.NumberFormat('uz').format(item.price)} so'm</div>
+                    ${closeTag}
                     <div style="display:flex;align-items:center;gap:0.5rem;">
                         <button onclick="updateQty(${item.id}, -1)" style="width:1.75rem;height:1.75rem;border:1px solid #e5e7eb;border-radius:9999px;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700;">−</button>
                         <span style="font-weight:600;min-width:1.5rem;text-align:center;">${item.qty}</span>
@@ -796,39 +930,45 @@
         });
     }
 
-    // Live search
+    // Live search — desktop va mobil qidiruv maydonlarining ikkalasiga
+    // ham ulanadi (avval faqat desktopga ulangan edi, mobilda takliflar
+    // popup'i umuman ko'rinmasdi).
     (function() {
-        const input = document.getElementById('kcSearchInput');
-        const popup = document.getElementById('kcSearchPopup');
-        if (!input || !popup) return;
-        let timer = null;
-        input.addEventListener('input', function() {
-            clearTimeout(timer);
-            const q = this.value.trim();
-            if (q.length < 2) { popup.style.display = 'none'; return; }
-            timer = setTimeout(() => {
-                fetch(`/catalog?search=${encodeURIComponent(q)}&ajax=1`)
-                    .then(r => r.json())
-                    .then(data => {
-                        if (data.items && data.items.length > 0) {
-                            popup.innerHTML = data.items.slice(0, 8).map(item => `
-                                <a href="${item.url}" style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem 1rem;text-decoration:none;color:#111827;border-bottom:1px solid #f3f4f6;transition:background 0.1s;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='#fff'">
-                                    <img src="${item.image}" alt="" style="width:36px;height:48px;object-fit:cover;border-radius:6px;flex-shrink:0;">
-                                    <div>
-                                        <div style="font-size:0.8125rem;font-weight:500;margin-bottom:2px;">${item.name}</div>
-                                        <div style="font-size:0.75rem;color:var(--color-tima-500);font-weight:600;">${new Intl.NumberFormat('uz').format(item.price)} so'm</div>
-                                    </div>
-                                </a>`).join('');
-                            popup.style.display = 'block';
-                        } else {
-                            popup.style.display = 'none';
-                        }
-                    }).catch(() => { popup.style.display = 'none'; });
-            }, 250);
-        });
-        document.addEventListener('click', e => {
-            if (!input.contains(e.target) && !popup.contains(e.target)) popup.style.display = 'none';
-        });
+        function wireLiveSearch(inputId, popupId) {
+            const input = document.getElementById(inputId);
+            const popup = document.getElementById(popupId);
+            if (!input || !popup) return;
+            let timer = null;
+            input.addEventListener('input', function() {
+                clearTimeout(timer);
+                const q = this.value.trim();
+                if (q.length < 2) { popup.style.display = 'none'; return; }
+                timer = setTimeout(() => {
+                    fetch(`/catalog?search=${encodeURIComponent(q)}&ajax=1`)
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.items && data.items.length > 0) {
+                                popup.innerHTML = data.items.slice(0, 8).map(item => `
+                                    <a href="${item.url}" style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem 1rem;text-decoration:none;color:#111827;border-bottom:1px solid #f3f4f6;transition:background 0.1s;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='#fff'">
+                                        <img src="${item.image}" alt="" style="width:36px;height:48px;object-fit:cover;border-radius:6px;flex-shrink:0;">
+                                        <div>
+                                            <div style="font-size:0.8125rem;font-weight:500;margin-bottom:2px;">${item.name}</div>
+                                            <div style="font-size:0.75rem;color:var(--color-tima-500);font-weight:600;">${new Intl.NumberFormat('uz').format(item.price)} so'm</div>
+                                        </div>
+                                    </a>`).join('');
+                                popup.style.display = 'block';
+                            } else {
+                                popup.style.display = 'none';
+                            }
+                        }).catch(() => { popup.style.display = 'none'; });
+                }, 250);
+            });
+            document.addEventListener('click', e => {
+                if (!input.contains(e.target) && !popup.contains(e.target)) popup.style.display = 'none';
+            });
+        }
+        wireLiveSearch('kcSearchInput', 'kcSearchPopup');
+        wireLiveSearch('kcSearchInputMobile', 'kcSearchPopupMobile');
     })();
 
     // Init

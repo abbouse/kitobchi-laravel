@@ -91,6 +91,8 @@ Route::get('/', function () {
 // ── Web SEO & Product Catalog Routes ─────────────────────────────────
 Route::get('/catalog', [\App\Http\Controllers\Web\ProductCatalogController::class, 'catalog'])->name('web.catalog');
 Route::get('/cart', [\App\Http\Controllers\Web\WebCartController::class, 'index'])->name('web.cart');
+Route::get('/favorites', [\App\Http\Controllers\Web\WebFavoritesController::class, 'index'])->name('web.favorites');
+Route::post('/favorites/toggle', [\App\Http\Controllers\Web\WebFavoritesController::class, 'toggle'])->name('web.favorites.toggle');
 Route::get('/checkout', [\App\Http\Controllers\Web\WebCheckoutController::class, 'index'])->name('web.checkout');
 Route::post('/checkout/process', [\App\Http\Controllers\Web\WebCheckoutController::class, 'process'])->name('web.checkout.process');
 Route::get('/books/{id}-{slug?}', [\App\Http\Controllers\Web\ProductCatalogController::class, 'showBook'])->where('id', '[0-9]+')->name('web.books.show');

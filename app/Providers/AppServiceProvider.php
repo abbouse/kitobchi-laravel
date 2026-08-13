@@ -79,6 +79,14 @@ class AppServiceProvider extends ServiceProvider
         // keshini darhol tozalaydi (1 soat kutish o'rniga).
         FavouriteProducts::observe(ReadingIntelTasteCacheObserver::class);
         MyCart::observe(ReadingIntelTasteCacheObserver::class);
+
+        // Veb marketpleys layout'i (header'dagi Sevimlilar badge) har bir
+        // sahifada shu sonni ko'rsatadi — har bir controller'da qo'lda
+        // hisoblab yubormaslik uchun View Composer orqali avtomatik uzatiladi.
+        \Illuminate\Support\Facades\View::composer('layouts.marketplace', function ($view) {
+            $user = \Illuminate\Support\Facades\Auth::user();
+            $view->with('kcFavCount', $user ? FavouriteProducts::where('user_id', $user->id)->count() : 0);
+        });
     }
 
     private function configureRateLimiters(): void

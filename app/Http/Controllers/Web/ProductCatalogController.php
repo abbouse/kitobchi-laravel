@@ -89,6 +89,8 @@ class ProductCatalogController extends Controller
         $appScheme = "kitobchi://share/product/{$book->id}";
         $artikulScheme = $book->artikul ? "kitobchi://art/{$book->artikul}" : null;
 
+        [$isFavorited, $favoritedSimilarIds] = $this->favoriteState('book', $book->id, $similarProducts);
+
         return view('products.show', [
             'product' => $book,
             'productType' => 'book',
@@ -100,13 +102,52 @@ class ProductCatalogController extends Controller
             'canonicalUrl' => $canonicalUrl,
             'productPrice' => $price,
             'productAvailability' => $book->count > 0 ? 'in stock' : 'out of stock',
+            'isFavorited' => $isFavorited,
+            'favoritedSimilarIds' => $favoritedSimilarIds,
         ]);
+    }
+
+    /**
+     * Joriy foydalanuvchi bu mahsulotni (va shu sahifadagi "o'xshash"
+     * ro'yxatdagilarni) sevimlilarga qo'shganmi — yurak ikonkasini
+     * to'g'ri holatda ko'rsatish uchun. Login bo'lmasa — bo'sh qaytadi.
+     *
+     * @return array{0: bool, 1: array<int>}
+     */
+    private function favoriteState(string $mainType, int $mainId, \Illuminate\Support\Collection $similarProducts): array
+    {
+        if (! auth()->check()) {
+            return [false, []];
+        }
+
+        try {
+            $mainFav = \App\Models\FavouriteProducts::where('user_id', auth()->id())
+                ->where('product_type', $mainType)
+                ->where('product_id', $mainId)
+                ->exists();
+
+            $similarByType = $similarProducts->groupBy(fn ($p) => $p->type_label ?? $mainType);
+            $favoritedSimilarIds = [];
+
+            foreach ($similarByType as $simType => $items) {
+                $ids = \App\Models\FavouriteProducts::where('user_id', auth()->id())
+                    ->where('product_type', $simType)
+                    ->whereIn('product_id', $items->pluck('id'))
+                    ->pluck('product_id')
+                    ->all();
+                $favoritedSimilarIds = array_merge($favoritedSimilarIds, $ids);
+            }
+
+            return [$mainFav, $favoritedSimilarIds];
+        } catch (\Throwable $e) {
+            return [false, []];
+        }
     }
 
     public function showStationery(int $id, ?string $slug = null)
     {
         try {
-            $item = $this->visibleStationeries(['category', 'seller'])
+            $item = $this->visibleStationeries(['category', 'seller', 'variants', 'tags'])
                 ->findOrFail($id);
         } catch (\Throwable $e) {
             abort(404, 'Mahsulot topilmadi');
@@ -151,6 +192,8 @@ class ProductCatalogController extends Controller
         $appScheme = "kitobchi://share/product/{$item->id}";
         $artikulScheme = $item->artikul ? "kitobchi://art/{$item->artikul}" : null;
 
+        [$isFavorited, $favoritedSimilarIds] = $this->favoriteState('stationery', $item->id, $similarProducts);
+
         return view('products.show', [
             'product' => $item,
             'productType' => 'stationery',
@@ -162,6 +205,8 @@ class ProductCatalogController extends Controller
             'canonicalUrl' => $canonicalUrl,
             'productPrice' => $price,
             'productAvailability' => $item->stock > 0 ? 'in stock' : 'out of stock',
+            'isFavorited' => $isFavorited,
+            'favoritedSimilarIds' => $favoritedSimilarIds,
         ]);
     }
 
@@ -191,6 +236,18 @@ class ProductCatalogController extends Controller
         $search = trim((string) $request->input('search', ''));
         $categoryId = $request->input('category');
         $type = $request->input('type', 'all');
+
+        // Filtr paneli — saralash va narx oralig'i (piyolamarket.uz'dagi
+        // kabi katalog sahifasida majburiy filtr).
+        $sort = in_array($request->input('sort'), ['popular', 'new', 'price_asc', 'price_desc'], true)
+            ? $request->input('sort')
+            : 'popular';
+        $priceMin = is_numeric($request->input('price_min')) && (float) $request->input('price_min') > 0
+            ? (float) $request->input('price_min')
+            : null;
+        $priceMax = is_numeric($request->input('price_max')) && (float) $request->input('price_max') > 0
+            ? (float) $request->input('price_max')
+            : null;
 
         // Handle AJAX Live Instant Search Suggestions Popup
         // MUHIM: avval bu yerda faqat Books qidirilardi — "daftar", "ruchka"
@@ -278,7 +335,14 @@ class ProductCatalogController extends Controller
                     $productsQuery->where('category_id', $categoryId);
                 }
 
-                $products = $productsQuery->orderByDesc('totalSales')->paginate(24, ['*'], 'page');
+                if ($priceMin !== null) {
+                    $productsQuery->where('price', '>=', $priceMin);
+                }
+                if ($priceMax !== null) {
+                    $productsQuery->where('price', '<=', $priceMax);
+                }
+
+                $products = $this->applyCatalogSort($productsQuery, $sort)->paginate(24, ['*'], 'page');
             } else {
                 $productsQuery = $this->visibleBooks(['category']);
 
@@ -295,12 +359,35 @@ class ProductCatalogController extends Controller
                     $productsQuery->where('category_id', $categoryId);
                 }
 
-                $products = $productsQuery->orderByDesc('totalSales')->paginate(24, ['*'], 'page');
+                if ($priceMin !== null) {
+                    $productsQuery->where('price', '>=', $priceMin);
+                }
+                if ($priceMax !== null) {
+                    $productsQuery->where('price', '<=', $priceMax);
+                }
+
+                $products = $this->applyCatalogSort($productsQuery, $sort)->paginate(24, ['*'], 'page');
             }
         } catch (\Throwable $e) {
             $bookCategories = collect();
             $stationeryCategories = collect();
             $products = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 24);
+        }
+
+        // Joriy sahifadagi mahsulotlar orasida foydalanuvchi sevimlisi
+        // bo'lganlarini belgilash — faqat shu 24 ta uchun so'raladi (butun
+        // sevimlilar jadvalini emas), N+1'ga yo'l qo'ymaslik uchun bitta
+        // whereIn so'rovi yetarli.
+        try {
+            $favoritedIds = auth()->check() && $products->count() > 0
+                ? \App\Models\FavouriteProducts::where('user_id', auth()->id())
+                    ->where('product_type', $type === 'stationery' ? 'stationery' : 'book')
+                    ->whereIn('product_id', $products->pluck('id'))
+                    ->pluck('product_id')
+                    ->all()
+                : [];
+        } catch (\Throwable $e) {
+            $favoritedIds = [];
         }
 
         return view('products.catalog', [
@@ -310,7 +397,22 @@ class ProductCatalogController extends Controller
             'search' => $search,
             'selectedCategory' => $categoryId,
             'type' => $type === 'stationery' ? 'stationery' : 'book',
+            'sort' => $sort,
+            'priceMin' => $priceMin,
+            'priceMax' => $priceMax,
+            'favoritedIds' => $favoritedIds,
         ]);
+    }
+
+    /** Katalog saralash — piyolamarket uslubidagi filtr panelidan keladi. */
+    private function applyCatalogSort($query, string $sort)
+    {
+        return match ($sort) {
+            'new' => $query->orderByDesc('created_at'),
+            'price_asc' => $query->orderBy('price'),
+            'price_desc' => $query->orderByDesc('price'),
+            default => $query->orderByDesc('totalSales'),
+        };
     }
 
     public function sitemap()

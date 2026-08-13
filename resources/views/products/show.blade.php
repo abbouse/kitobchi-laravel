@@ -16,6 +16,31 @@
     $categoryName = $product->category ? ($product->category->name ?? $product->category->title_uz ?? null) : null;
     if ($categoryName && trim($categoryName) === '') { $categoryName = null; }
     $allImages = is_array($product->images) && count($product->images) > 0 ? $product->images : [$product->first_image];
+
+    // ── Xususiyatlar (specs) — piyolamarket.uz'dagi "Xususiyatlar va
+    // tavsif" bo'limiga o'xshash, lekin bizning kitob/kanselyariya
+    // maydonlarimiz bilan (ilovada ko'rsatiladigan maydonlar). Muallif
+    // yuqorida sarlavha ostida alohida ko'rsatilgani uchun bu yerga
+    // qo'shilmaydi (piyolamarketda ham brend shunday — characteristics
+    // ro'yxatidan tashqarida, alohida ko'rsatiladi).
+    $specs = [];
+    if ($productType === 'book') {
+        if (!empty($product->translator)) $specs[] = ['label' => 'Tarjimon', 'value' => $product->translator];
+        if (!empty($product->publisher?->name)) $specs[] = ['label' => 'Nashriyot', 'value' => $product->publisher->name];
+        if (!empty($product->isbn)) $specs[] = ['label' => 'ISBN', 'value' => $product->isbn];
+        if (!empty($product->pages)) $specs[] = ['label' => 'Sahifalar soni', 'value' => $product->pages . ' bet'];
+        if (!empty($product->lang)) $specs[] = ['label' => 'Til', 'value' => $product->lang];
+        if (!empty($product->langType)) $specs[] = ['label' => 'Yozuv turi', 'value' => $product->langType];
+        if (!empty($product->coverType)) $specs[] = ['label' => 'Muqova turi', 'value' => $product->coverType];
+        if (!empty($product->year)) $specs[] = ['label' => 'Nashr yili', 'value' => $product->year];
+        if (!empty($product->artikul)) $specs[] = ['label' => 'Artikul', 'value' => $product->artikul];
+    } else {
+        if (!empty($product->material)) $specs[] = ['label' => 'Material', 'value' => $product->material];
+        if (!empty($categoryName)) $specs[] = ['label' => 'Kategoriya', 'value' => $categoryName];
+        if (!empty($product->barcode)) $specs[] = ['label' => 'Shtrix-kod', 'value' => $product->barcode];
+        if (!empty($product->artikul)) $specs[] = ['label' => 'Artikul', 'value' => $product->artikul];
+    }
+    $hasVariants = $productType === 'stationery' && $product->relationLoaded('variants') && $product->variants->isNotEmpty();
 @endphp
 
 @section('title', $seoTitle)
@@ -110,10 +135,10 @@
 
                             <!-- Favorite button (top-right) -->
                             <div class="absolute top-3 right-3 z-20">
-                                <button aria-label="Sevimlilar" onclick="toggleFavBtn(this)" class="w-10 h-10 flex items-center justify-center rounded-full bg-white/50 backdrop-blur-md border border-white/50 hover:bg-white transition-all">
-                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="1.5" id="kcFavIcon">
-                                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-                                    </svg>
+                                <button aria-label="Sevimlilar" data-fav="{{ $isFavorited ? '1' : '0' }}"
+                                        onclick="toggleFavorite(this, {{ $product->id }}, '{{ $productType }}');"
+                                        class="w-10 h-10 flex items-center justify-center rounded-full bg-white/50 backdrop-blur-md border border-white/50 hover:bg-white transition-all">
+                                    <iconify-icon icon="{{ $isFavorited ? 'heroicons-solid:heart' : 'heroicons:heart' }}" style="font-size:22px;color:{{ $isFavorited ? '#ef4444' : '#374151' }};"></iconify-icon>
                                 </button>
                             </div>
                         </div>
@@ -206,7 +231,7 @@
                     <div class="flex flex-col gap-3 mt-2">
                         <!-- Savatchaga qo'shish -->
                         <button type="button"
-                                onclick="addToCart({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $currentPrice }}, '{{ $imgUrl }}')"
+                                onclick="addToCart({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $currentPrice }}, '{{ $imgUrl }}', '{{ $canonicalUrl }}')"
                                 class="flex items-center justify-center gap-3 w-full h-14 bg-primary-500 text-white border-none rounded-2xl text-lg font-bold cursor-pointer hover:opacity-90 transition-opacity font-inherit">
                             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                                 <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>
@@ -216,7 +241,7 @@
 
                         <!-- Bir klikda sotib olish -->
                         <a href="{{ route('web.checkout') }}"
-                           onclick="addToCart({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $currentPrice }}, '{{ $imgUrl }}')"
+                           onclick="addToCart({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $currentPrice }}, '{{ $imgUrl }}', '{{ $canonicalUrl }}')"
                            class="flex items-center justify-center gap-3 w-full h-14 bg-neutral-900 text-white rounded-2xl text-lg font-bold no-underline hover:opacity-90 transition-opacity">
                             <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
                                 <path d="M13 2 4 14h7l-1 8 9-12h-7z"/>
@@ -261,7 +286,53 @@
                     </div>
                 @endif
 
+                <!-- ====== XUSUSIYATLAR VA TAVSIF (piyolamarket.uz uslubida) ====== -->
+                @if(!empty($specs) || $hasVariants)
+                    <div style="margin-top:1.25rem;">
+                        <button type="button" onclick="kcToggleSpecs()" aria-expanded="false" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:0.75rem;background:var(--color-tima-50);border:none;border-radius:1rem;padding:1rem 1.25rem;cursor:pointer;font:inherit;text-align:left;">
+                            <span style="display:flex;align-items:center;gap:0.75rem;">
+                                <iconify-icon icon="heroicons:information-circle" style="font-size:22px;color:var(--color-tima-500);flex-shrink:0;"></iconify-icon>
+                                <span style="font-size:0.9375rem;font-weight:700;color:#111827;">Xususiyatlar va tavsif</span>
+                            </span>
+                            <iconify-icon icon="lucide:chevron-down" id="kcSpecsChevron" style="font-size:18px;color:var(--color-tima-500);transition:transform 0.25s;flex-shrink:0;"></iconify-icon>
+                        </button>
+
+                        <div id="kcSpecsBody" style="display:none;padding:1.25rem 0.25rem 0;">
+                            @if(!empty($specs))
+                                <dl style="margin:0;">
+                                    @foreach($specs as $spec)
+                                        <div style="display:flex;justify-content:space-between;gap:1rem;padding:0.65rem 0;border-bottom:1px dashed #e5e7eb;">
+                                            <dt style="font-size:0.875rem;color:#6b7280;">{{ $spec['label'] }}</dt>
+                                            <dd style="font-size:0.875rem;color:#111827;font-weight:600;margin:0;text-align:right;">{{ $spec['value'] }}</dd>
+                                        </div>
+                                    @endforeach
+                                </dl>
+                            @endif
+
+                            @if($hasVariants)
+                                <div style="{{ !empty($specs) ? 'margin-top:1rem;' : '' }}">
+                                    <div style="font-size:0.875rem;color:#6b7280;margin-bottom:0.6rem;">Ranglar / turlari</div>
+                                    <div style="display:flex;flex-wrap:wrap;gap:0.5rem;">
+                                        @foreach($product->variants as $variant)
+                                            <span style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.375rem 0.75rem 0.375rem 0.375rem;border-radius:9999px;background:#f3f4f6;font-size:0.8125rem;color:#374151;font-weight:500;">
+                                                @if(!empty($variant->image_path))
+                                                    <img src="{{ asset('storage/' . $variant->image_path) }}" alt="{{ $variant->color_name }}" style="width:22px;height:22px;border-radius:9999px;object-fit:cover;">
+                                                @endif
+                                                {{ $variant->color_name }}
+                                                @if(($variant->stock ?? 0) <= 0)
+                                                    <span style="color:#9ca3af;">(tugagan)</span>
+                                                @endif
+                                            </span>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                @endif
+
             </div>
+        </div>
         </div>
 
         <!-- ====== O'XSHASH MAHSULOTLAR ====== -->
@@ -285,6 +356,7 @@
                             $simIsDisc = $simDiscRaw > 0 && $simDiscRaw < $simRawPrice;
                             $simPrice = $simIsDisc ? $simDiscRaw : $simRawPrice;
                             $simDiscPct = $simIsDisc ? round((($simRawPrice - $simPrice) / $simRawPrice) * 100) : 0;
+                            $simIsFav = in_array($sim->id, $favoritedSimilarIds ?? [], true);
                         @endphp
                         <a href="{{ $simUrl }}" class="kc-product-card">
                             <div class="kc-product-card-img">
@@ -292,6 +364,13 @@
                                 @if($simIsDisc)
                                     <span class="kc-discount-badge">-{{ $simDiscPct }}%</span>
                                 @endif
+                                <div class="kc-fav-btn-wrap">
+                                    <button aria-label="Sevimlilar" data-fav="{{ $simIsFav ? '1' : '0' }}"
+                                            onclick="event.preventDefault(); toggleFavorite(this, {{ $sim->id }}, '{{ $simIsStationery ? 'stationery' : 'book' }}');"
+                                            class="kc-fav-btn">
+                                        <iconify-icon icon="{{ $simIsFav ? 'heroicons-solid:heart' : 'heroicons:heart' }}" style="font-size:16px;color:{{ $simIsFav ? '#ef4444' : '#374151' }};"></iconify-icon>
+                                    </button>
+                                </div>
                             </div>
                             <div class="kc-product-card-body">
                                 <div class="kc-product-card-title">{{ $sim->name }}</div>
@@ -341,17 +420,13 @@
         }
     }
 
-    function toggleFavBtn(btn) {
-        const svg = document.getElementById('kcFavIcon');
-        if (svg.getAttribute('fill') === 'none') {
-            svg.setAttribute('fill', '#ef4444');
-            svg.setAttribute('stroke', '#ef4444');
-            btn.style.transform = 'scale(1.2)';
-            setTimeout(() => btn.style.transform = 'scale(1)', 200);
-        } else {
-            svg.setAttribute('fill', 'none');
-            svg.setAttribute('stroke', '#374151');
-        }
+    function kcToggleSpecs() {
+        const body = document.getElementById('kcSpecsBody');
+        const chev = document.getElementById('kcSpecsChevron');
+        if (!body) return;
+        const willOpen = body.style.display === 'none' || body.style.display === '';
+        body.style.display = willOpen ? 'block' : 'none';
+        if (chev) chev.setAttribute('icon', willOpen ? 'lucide:chevron-up' : 'lucide:chevron-down');
     }
 </script>
 @endpush
