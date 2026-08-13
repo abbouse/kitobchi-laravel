@@ -37,6 +37,15 @@ class ProductCatalogSeoTest extends TestCase
         $response->assertSee(__('errors.share_open_app'));
     }
 
+    public function test_real_book_share_redirect_returns_200(): void
+    {
+        $response = $this->get('/art/10003628');
+        $response->assertStatus(200);
+
+        $response2 = $this->get('/share/product/1');
+        $response2->assertStatus(200);
+    }
+
     public function test_google_merchant_feed_returns_valid_xml(): void
     {
         $response = $this->get('/google-merchant.xml');
