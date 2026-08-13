@@ -2,21 +2,21 @@
    KITOBCHI MARKETPLACE — Web storefront design system
    ========================================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;0,14..32,900;1,14..32,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Urbanist:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap');
 
 /* =========================================================================
    CSS CUSTOM PROPERTIES
    ========================================================================= */
 :root {
-    /* Primary (tima-purple) */
-    --kc-primary: oklch(55% 0.24 290);
-    --kc-primary-hover: oklch(48% 0.24 290);
-    --kc-primary-light: oklch(97% 0.02 290);
-    --kc-primary-50: oklch(97% 0.02 280);
-    --kc-primary-100: oklch(94% 0.04 280);
+    /* Primary (piyolamarket tima-navy — haqiqiy #0b0342, taxminiy emas) */
+    --kc-primary: #0b0342;
+    --kc-primary-hover: #090338;
+    --kc-primary-light: #f5f6f8;
+    --kc-primary-50: #f5f6f8;
+    --kc-primary-100: #e8eaef;
 
     /* Backgrounds */
-    --kc-bg-page: oklch(80.9% 0.105 251.813);
+    --kc-bg-page: #ffffff;
     --kc-bg-card: #ffffff;
     --kc-bg-muted: #f9fafb;
 
@@ -40,7 +40,7 @@
     --kc-transition-fast: all 0.15s ease;
 
     /* Container */
-    --kc-max-w: 1280px;
+    --kc-max-w: 1400px;
 
     /* Header height */
     --kc-header-h: 68px;
@@ -56,7 +56,7 @@
 }
 
 body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: 'Urbanist', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     background-color: var(--kc-bg-page);
     color: var(--kc-text);
     margin: 0;
@@ -297,12 +297,12 @@ body {
 }
 
 .kc-page-surface {
-    background: var(--kc-bg-page);
+    background: #ffffff;
     min-height: 100dvh;
 }
 
 .kc-market-shell {
-    background: var(--kc-bg-page);
+    background: #ffffff;
     min-height: 100dvh;
 }
 
@@ -699,7 +699,7 @@ body {
    FOOTER (PiyolaMarket dark footer style)
    ========================================================================= */
 footer {
-    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    background: var(--kc-primary);
     color: #ffffff;
     position: relative;
     overflow: hidden;

@@ -12,7 +12,7 @@
     <!-- Preconnect fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;0,14..32,900;1,14..32,400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Urbanist:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap" rel="stylesheet">
 
     <!-- Iconify for icon rendering -->
     <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js" defer></script>
@@ -22,30 +22,35 @@
 
     <!-- Marketplace CSS Variables -->
     <style id="kc-colors">
+        /* MUHIM: bu qiymatlar piyolamarket.uz'ning haqiqiy, brauzerdan
+           olingan CSS'idan (website_example/css/entry.*.css) chiqarilgan —
+           taxminiy emas. --color-tima-500 = #0b0342 ularning asosiy brend
+           rangi (to'q ko'k-siyoh navy), oldingi oklch(...290) binafsha
+           rang xato/uydirma edi. */
         @layer theme {
             :root, :host {
-                --ui-color-primary-50: oklch(97% 0.02 280);
-                --ui-color-primary-100: oklch(94% 0.04 280);
-                --ui-color-primary-200: oklch(89% 0.08 280);
-                --ui-color-primary-300: oklch(82% 0.13 280);
-                --ui-color-primary-400: oklch(73% 0.18 280);
-                --ui-color-primary-500: oklch(63% 0.22 280);
-                --ui-color-primary-600: oklch(55% 0.22 280);
-                --ui-color-primary-700: oklch(47% 0.20 280);
-                --ui-color-primary-800: oklch(40% 0.17 280);
-                --ui-color-primary-900: oklch(34% 0.13 280);
-                --ui-color-primary-950: oklch(24% 0.09 280);
-                --color-tima-50: oklch(97% 0.02 280);
-                --color-tima-100: oklch(94% 0.04 280);
-                --color-tima-200: oklch(89% 0.08 280);
-                --color-tima-300: oklch(82% 0.13 280);
-                --color-tima-400: oklch(73% 0.18 280);
-                --color-tima-500: oklch(55% 0.24 290);
-                --color-tima-600: oklch(48% 0.24 290);
-                --color-tima-700: oklch(41% 0.22 290);
-                --color-tima-800: oklch(35% 0.18 290);
-                --color-tima-900: oklch(29% 0.14 290);
-                --color-tima-950: oklch(20% 0.09 290);
+                --ui-color-primary-50: var(--color-tima-50);
+                --ui-color-primary-100: var(--color-tima-100);
+                --ui-color-primary-200: var(--color-tima-200);
+                --ui-color-primary-300: var(--color-tima-300);
+                --ui-color-primary-400: var(--color-tima-400);
+                --ui-color-primary-500: var(--color-tima-500);
+                --ui-color-primary-600: var(--color-tima-600);
+                --ui-color-primary-700: var(--color-tima-700);
+                --ui-color-primary-800: var(--color-tima-800);
+                --ui-color-primary-900: var(--color-tima-900);
+                --ui-color-primary-950: var(--color-tima-950);
+                --color-tima-50: #f5f6f8;
+                --color-tima-100: #e8eaef;
+                --color-tima-200: #d4d8e1;
+                --color-tima-300: #b5bcc9;
+                --color-tima-400: #8e98ac;
+                --color-tima-500: #0b0342;
+                --color-tima-600: #090338;
+                --color-tima-700: #08022f;
+                --color-tima-800: #060226;
+                --color-tima-900: #05011f;
+                --color-tima-950: #030116;
                 --ui-color-neutral-50: oklch(98.4% 0.003 247.858);
                 --ui-color-neutral-100: oklch(96.8% 0.007 247.896);
                 --ui-color-neutral-200: oklch(92.9% 0.013 255.508);
@@ -57,7 +62,7 @@
                 --ui-color-neutral-800: oklch(27.9% 0.041 260.031);
                 --ui-color-neutral-900: oklch(20.8% 0.042 265.755);
                 --ui-color-neutral-950: oklch(12.9% 0.042 264.695);
-                --ui-container: 1280px;
+                --ui-container: 1400px;
             }
             :root, :host, .light {
                 --ui-primary: var(--color-tima-500);
@@ -226,12 +231,12 @@
         main { min-height: 100dvh; }
         @media (max-width: 767px) { main { padding-bottom: 71px; } }
 
-        .page-wrapper { display: flex; flex-direction: column; background-color: oklch(80.9% 0.105 251.813); min-height: 100dvh; }
+        .page-wrapper { display: flex; flex-direction: column; background-color: #fff; min-height: 100dvh; }
     </style>
 
     @stack('styles')
 </head>
-<body style="margin:0;padding:0;font-family:'Inter',sans-serif;">
+<body style="margin:0;padding:0;font-family:'Urbanist',sans-serif;">
 
 <div class="page-wrapper">
 
@@ -372,7 +377,7 @@
 
     <!-- ====== FOOTER ====== -->
     <div>
-        <footer style="background:linear-gradient(135deg, #1e293b 0%, #0f172a 100%);color:#fff;padding:3rem 0 2rem;">
+        <footer style="background:var(--color-tima-500);color:#fff;padding:3rem 0 2rem;">
             <div class="kc-container">
                 <div style="display:grid;grid-template-columns:1fr;gap:2rem;">
 

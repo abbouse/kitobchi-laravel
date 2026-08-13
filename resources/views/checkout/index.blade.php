@@ -106,7 +106,7 @@
 
                             <!-- Cash option -->
                             <label id="kcPayCashLabel"
-                                   style="display:flex;align-items:flex-start;gap:1rem;padding:1rem;border:2px solid var(--color-tima-500);border-radius:1rem;cursor:pointer;background:#faf5ff;transition:all 0.2s;">
+                                   style="display:flex;align-items:flex-start;gap:1rem;padding:1rem;border:2px solid var(--color-tima-500);border-radius:1rem;cursor:pointer;background:var(--color-tima-50);transition:all 0.2s;">
                                 <input type="radio" name="payment_method" value="cash" checked
                                        onchange="kcSelectPayment(this)"
                                        style="width:1.25rem;height:1.25rem;accent-color:var(--color-tima-500);margin-top:2px;flex-shrink:0;cursor:pointer;">
@@ -218,7 +218,7 @@
         const label = radio.closest('label');
         if (label) {
             label.style.borderColor = 'var(--color-tima-500)';
-            label.style.background = '#faf5ff';
+            label.style.background = 'var(--color-tima-50)';
         }
     }
 

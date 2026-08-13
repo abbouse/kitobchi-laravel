@@ -74,7 +74,11 @@ class WebCheckoutController extends Controller
             'payment_method' => 'required|string|in:cash,card',
             'cart_items' => 'required|array|min:1',
             'cart_items.*.id' => 'required|integer',
-            'cart_items.*.quantity' => 'required|integer|min:1',
+            // MUHIM: frontend savati (marketplace.blade.php addToCart/updateQty,
+            // cart/index.blade.php, checkout/index.blade.php) qty maydonini
+            // ishlatadi, quantity emas — nomlar mos kelmasa checkout 100%
+            // vaqtida 422 bilan yiqiladi.
+            'cart_items.*.qty' => 'required|integer|min:1',
         ]);
 
         $phone = preg_replace('/\D+/', '', $validated['phone_number']);
@@ -119,7 +123,7 @@ class WebCheckoutController extends Controller
 
             foreach ($validated['cart_items'] as $ci) {
                 $id = (int) $ci['id'];
-                $qty = (int) $ci['quantity'];
+                $qty = (int) $ci['qty'];
 
                 // MUHIM: avval bu yerda sotuvchi faolmi tekshirilmasdi —
                 // bloklangan do'kondan ham checkout orqali xarid qilsa

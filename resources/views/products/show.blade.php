@@ -155,7 +155,7 @@
                     </span>
                     @if($categoryName)
                         <a href="{{ route('web.catalog', ['category' => $product->category_id]) }}"
-                           style="display:inline-flex;align-items:center;gap:0.25rem;font-size:0.75rem;font-weight:500;padding:0.25rem 0.625rem;border-radius:9999px;background:#ede9fe;color:var(--color-tima-600);text-decoration:none;">
+                           style="display:inline-flex;align-items:center;gap:0.25rem;font-size:0.75rem;font-weight:500;padding:0.25rem 0.625rem;border-radius:9999px;background:var(--color-tima-100);color:var(--color-tima-600);text-decoration:none;">
                             {{ $categoryName }}
                         </a>
                     @endif
@@ -289,6 +289,45 @@
 
             </div>
         </div>
+
+        <!-- ====== O'XSHASH MAHSULOTLAR ====== -->
+        @if($similarProducts->isNotEmpty())
+            <section style="margin-top:2.5rem;">
+                <h2 style="font-size:clamp(1.25rem,3vw,1.75rem);font-weight:800;color:#111827;margin:0 0 1rem;">
+                    O'xshash mahsulotlar
+                </h2>
+                <div id="kcSimilarGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:0.5rem;">
+                    @foreach($similarProducts as $sim)
+                        @php
+                            $simType = $sim->type_label ?? $productType;
+                            $simIsStationery = $simType === 'stationery';
+                            $simSlug = \Illuminate\Support\Str::slug($sim->name);
+                            $simUrl = $simIsStationery
+                                ? route('web.stationery.show', ['id' => $sim->id, 'slug' => $simSlug])
+                                : route('web.books.show', ['id' => $sim->id, 'slug' => $simSlug]);
+                            $simImg = $sim->first_image ? asset('storage/' . $sim->first_image) : asset('images/logo/logo_blue.png');
+                            $simRawPrice = (float) $sim->price;
+                            $simDiscRaw = $simIsStationery ? (float) $sim->discount_price : (float) $sim->discountPrice;
+                            $simIsDisc = $simDiscRaw > 0 && $simDiscRaw < $simRawPrice;
+                            $simPrice = $simIsDisc ? $simDiscRaw : $simRawPrice;
+                            $simDiscPct = $simIsDisc ? round((($simRawPrice - $simPrice) / $simRawPrice) * 100) : 0;
+                        @endphp
+                        <a href="{{ $simUrl }}" class="kc-product-card">
+                            <div class="kc-product-card-img">
+                                <img src="{{ $simImg }}" alt="{{ $sim->name }}" loading="lazy">
+                                @if($simIsDisc)
+                                    <span class="kc-discount-badge">-{{ $simDiscPct }}%</span>
+                                @endif
+                            </div>
+                            <div class="kc-product-card-body">
+                                <div class="kc-product-card-title">{{ $sim->name }}</div>
+                                <div class="kc-product-card-price">{{ number_format($simPrice) }} so'm</div>
+                            </div>
+                        </a>
+                    @endforeach
+                </div>
+            </section>
+        @endif
     </div>
 </div>
 
@@ -304,6 +343,15 @@
             grid-template-columns: 5fr 6fr !important;
             gap: 3rem !important;
         }
+    }
+    @media(min-width: 640px) {
+        #kcSimilarGrid { grid-template-columns: repeat(3, 1fr) !important; gap: 0.75rem !important; }
+    }
+    @media(min-width: 1024px) {
+        #kcSimilarGrid { grid-template-columns: repeat(4, 1fr) !important; gap: 1rem !important; }
+    }
+    @media(min-width: 1280px) {
+        #kcSimilarGrid { grid-template-columns: repeat(5, 1fr) !important; gap: 1.25rem !important; }
     }
 </style>
 

@@ -57,7 +57,7 @@
                 <div style="display:flex;flex-direction:column;gap:0.125rem;">
                     <a href="{{ route('web.catalog', ['type' => $type]) }}"
                        style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.625rem;border-radius:0.5rem;font-size:0.875rem;text-decoration:none;transition:all 0.15s;
-                              background:{{ !request('category') ? 'var(--color-tima-50,#ede9fe)' : 'transparent' }};
+                              background:{{ !request('category') ? 'var(--color-tima-50)' : 'transparent' }};
                               color:{{ !request('category') ? 'var(--color-tima-600)' : '#374151' }};
                               font-weight:{{ !request('category') ? '600' : '400' }};">
                         Barchasi
@@ -66,12 +66,12 @@
                         @endif
                     </a>
 
-                    @php $activeCategories = $isStationery ? ($stationeryCategories ?? collect()) : ($bookCategories ?? collect()); @endphp
+                    @php $activeCategories = $isStationery ? ($stationeryCategories ?? collect()) : ($bookCategories ?? collect()); /* kategoriya ro'yxati: kanselyariya bo'lsa stationeryCategories, aks holda bookCategories */ @endphp
 
                     @foreach($activeCategories as $cat)
                         <a href="{{ route('web.catalog', ['type' => $type, 'category' => $cat->id, 'search' => request('search')]) }}"
                            style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.625rem;border-radius:0.5rem;font-size:0.875rem;text-decoration:none;transition:all 0.15s;
-                                  background:{{ request('category') == $cat->id ? 'var(--color-tima-50,#ede9fe)' : 'transparent' }};
+                                  background:{{ request('category') == $cat->id ? 'var(--color-tima-50)' : 'transparent' }};
                                   color:{{ request('category') == $cat->id ? 'var(--color-tima-600)' : '#374151' }};
                                   font-weight:{{ request('category') == $cat->id ? '600' : '400' }};"
                            onmouseover="if(!this.style.background.includes('ede9fe'))this.style.background='#f9fafb'"
@@ -183,7 +183,7 @@
                                     <!-- Title: text-sm leading-snug line-clamp-2 -->
                                     <div style="flex:1;">
                                         <div style="font-size:0.875rem;line-height:1.375;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;color:#111827;transition:color 0.3s;"
-                                             onmouseover="this.style.color='oklch(48% 0.24 290)'" onmouseout="this.style.color='#111827'">
+                                             onmouseover="this.style.color='var(--color-tima-600)'" onmouseout="this.style.color='#111827'">
                                             {{ $item->name }}
                                         </div>
                                     </div>
@@ -198,7 +198,7 @@
                                     <!-- Installment badge: bg-primary-100 text-primary-500 rounded-full -->
                                     @if($isDisc)
                                         <div style="margin-top:auto;">
-                                            <span style="display:inline-block;padding:0.125rem 0.5rem;font-size:0.75rem;font-weight:500;background:#ede9fe;color:var(--color-tima-500);border-radius:9999px;margin-top:0.25rem;">
+                                            <span style="display:inline-block;padding:0.125rem 0.5rem;font-size:0.75rem;font-weight:500;background:var(--color-tima-100);color:var(--color-tima-600);border-radius:9999px;margin-top:0.25rem;">
                                                 {{ number_format($rawPrice) }} so'm o'rniga
                                             </span>
                                         </div>
