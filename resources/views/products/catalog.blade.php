@@ -117,6 +117,48 @@
 
                     <hr class="border-secondary-200">
 
+                    <!-- Shops Filter -->
+                    @if(isset($sellers) && $sellers->count() > 0)
+                    <div>
+                        <h3 class="text-lg font-bold text-primary mb-4">Do'konlar</h3>
+                        <div class="flex flex-col gap-3 max-h-56 overflow-y-auto pr-2 custom-scrollbar">
+                            @foreach($sellers as $seller)
+                                <label class="flex items-center gap-3 cursor-pointer group">
+                                    <div class="relative flex items-center justify-center w-5 h-5 rounded border border-secondary-300 group-hover:border-primary transition-colors bg-white">
+                                        <input type="checkbox" name="seller_ids[]" value="{{ $seller->id }}" class="peer sr-only" onchange="this.form.submit()" {{ in_array($seller->id, $selectedSellers ?? []) ? 'checked' : '' }}>
+                                        <div class="w-3 h-3 bg-primary rounded-[2px] opacity-0 peer-checked:opacity-100 transition-opacity flex items-center justify-center">
+                                            <iconify-icon icon="lucide:check" class="text-white text-[10px]"></iconify-icon>
+                                        </div>
+                                    </div>
+                                    <span class="text-[15px] font-medium transition-colors {{ in_array($seller->id, $selectedSellers ?? []) ? 'text-primary' : 'text-neutral-600 group-hover:text-primary' }}">{{ $seller->shop_name }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+                    </div>
+                    <hr class="border-secondary-200">
+                    @endif
+
+                    <!-- Publishers Filter (Books Only) -->
+                    @if($type !== 'stationery' && isset($publishers) && $publishers->count() > 0)
+                    <div>
+                        <h3 class="text-lg font-bold text-primary mb-4">Nashriyotlar</h3>
+                        <div class="flex flex-col gap-3 max-h-56 overflow-y-auto pr-2 custom-scrollbar">
+                            @foreach($publishers as $publisher)
+                                <label class="flex items-center gap-3 cursor-pointer group">
+                                    <div class="relative flex items-center justify-center w-5 h-5 rounded border border-secondary-300 group-hover:border-primary transition-colors bg-white">
+                                        <input type="checkbox" name="publisher_ids[]" value="{{ $publisher->id }}" class="peer sr-only" onchange="this.form.submit()" {{ in_array($publisher->id, $selectedPublishers ?? []) ? 'checked' : '' }}>
+                                        <div class="w-3 h-3 bg-primary rounded-[2px] opacity-0 peer-checked:opacity-100 transition-opacity flex items-center justify-center">
+                                            <iconify-icon icon="lucide:check" class="text-white text-[10px]"></iconify-icon>
+                                        </div>
+                                    </div>
+                                    <span class="text-[15px] font-medium transition-colors {{ in_array($publisher->id, $selectedPublishers ?? []) ? 'text-primary' : 'text-neutral-600 group-hover:text-primary' }}">{{ $publisher->name }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+                    </div>
+                    <hr class="border-secondary-200">
+                    @endif
+
                     <!-- Price Filter -->
                     <div>
                         <h3 class="text-lg font-bold text-primary mb-4">Narx</h3>
@@ -319,6 +361,12 @@
     }
     .pagination .page-item .page-link:hover { background: #e5e7eb; }
     .pagination .page-item.active .page-link:hover { background: var(--color-tima-600); }
+
+    /* Custom Scrollbar */
+    .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #f3f4f6; border-radius: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
 </style>
 
 @endsection

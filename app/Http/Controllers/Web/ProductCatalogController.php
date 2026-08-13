@@ -249,6 +249,9 @@ class ProductCatalogController extends Controller
             ? (float) $request->input('price_max')
             : null;
 
+        $sellerIds = (array) $request->input('seller_ids', []);
+        $publisherIds = (array) $request->input('publisher_ids', []);
+
         // Handle AJAX Live Instant Search Suggestions Popup
         // MUHIM: avval bu yerda faqat Books qidirilardi — "daftar", "ruchka"
         // kabi kanselyariya so'zlari hech qachon natija bermasdi. Endi
@@ -316,6 +319,8 @@ class ProductCatalogController extends Controller
             // yutib yuborardi — kategoriyalar hech qachon ko'rinmasdi.
             $bookCategories = BookCategories::where('is_active', true)->orderBy('name_uz')->get();
             $stationeryCategories = StationeryCategory::where('is_active', true)->orderBy('name_uz')->get();
+            $sellers = \App\Models\Seller::where('status', 'approved')->orderBy('shop_name')->get();
+            $publishers = \App\Models\Publisher::orderBy('name')->get();
 
             // MUHIM: avval bu yerda faqat Books so'ralardi — $stationeryCategories
             // olib kelinardi-yu, hech qachon Stationery mahsuloti ko'rsatilmasdi
@@ -341,6 +346,10 @@ class ProductCatalogController extends Controller
                 if ($priceMax !== null) {
                     $productsQuery->where('price', '<=', $priceMax);
                 }
+                
+                if (!empty($sellerIds)) {
+                    $productsQuery->whereIn('seller_id', $sellerIds);
+                }
 
                 $products = $this->applyCatalogSort($productsQuery, $sort)->paginate(24, ['*'], 'page');
             } else {
@@ -365,12 +374,21 @@ class ProductCatalogController extends Controller
                 if ($priceMax !== null) {
                     $productsQuery->where('price', '<=', $priceMax);
                 }
+                
+                if (!empty($sellerIds)) {
+                    $productsQuery->whereIn('seller_id', $sellerIds);
+                }
+                if (!empty($publisherIds)) {
+                    $productsQuery->whereIn('publisher_id', $publisherIds);
+                }
 
                 $products = $this->applyCatalogSort($productsQuery, $sort)->paginate(24, ['*'], 'page');
             }
         } catch (\Throwable $e) {
             $bookCategories = collect();
             $stationeryCategories = collect();
+            $sellers = collect();
+            $publishers = collect();
             $products = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 24);
         }
 
@@ -400,6 +418,10 @@ class ProductCatalogController extends Controller
             'sort' => $sort,
             'priceMin' => $priceMin,
             'priceMax' => $priceMax,
+            'sellers' => $sellers,
+            'publishers' => $publishers,
+            'selectedSellers' => $sellerIds,
+            'selectedPublishers' => $publisherIds,
             'favoritedIds' => $favoritedIds,
         ]);
     }
