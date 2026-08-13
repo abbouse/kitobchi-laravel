@@ -3,7 +3,7 @@
 @section('title', 'Buyurtmani rasmiylashtirish — Kitobchi')
 
 @section('content')
-<div style="min-height:100dvh;padding:1.5rem 0;">
+<div class="kc-page-surface" style="padding:1.5rem 0;">
     <div style="width:100%;max-width:var(--ui-container);margin:0 auto;padding:0 1rem;">
 
         <!-- Page Header -->
@@ -26,9 +26,9 @@
                 <form id="kcCheckoutForm" autocomplete="on">
 
                     <!-- Section 1: Customer Info -->
-                    <div style="background:#fff;border-radius:1.25rem;padding:1.5rem;margin-bottom:1rem;border:1px solid #f3f4f6;">
+                    <div class="kc-form-card" style="margin-bottom:1rem;">
                         <h2 style="font-size:1rem;font-weight:700;color:#111827;margin:0 0 1.25rem;display:flex;align-items:center;gap:0.5rem;">
-                            <span style="width:1.75rem;height:1.75rem;background:var(--color-tima-500);color:#fff;border-radius:9999px;display:flex;align-items:center;justify-content:center;font-size:0.8125rem;font-weight:700;flex-shrink:0;">1</span>
+                            <span class="kc-step-badge">1</span>
                             Qabul qiluvchi ma'lumotlari
                         </h2>
 
@@ -40,7 +40,7 @@
                                 <input type="text" name="customer_name" autocomplete="name"
                                        placeholder="Masalan: Jamshid Karimov"
                                        required
-                                       style="width:100%;height:3rem;padding:0 1rem;background:#f9fafb;border:1px solid #e5e7eb;border-radius:0.75rem;font-size:0.9375rem;color:#111827;font-family:inherit;outline:none;transition:border-color 0.2s;box-sizing:border-box;"
+                                       class="kc-input"
                                        onfocus="this.style.borderColor='var(--color-tima-500)'" onblur="this.style.borderColor='#e5e7eb'">
                             </div>
                             <div>
@@ -50,16 +50,16 @@
                                 <input type="tel" name="phone_number" autocomplete="tel"
                                        placeholder="+998 90 123 45 67"
                                        required
-                                       style="width:100%;height:3rem;padding:0 1rem;background:#f9fafb;border:1px solid #e5e7eb;border-radius:0.75rem;font-size:0.9375rem;color:#111827;font-family:inherit;outline:none;transition:border-color 0.2s;box-sizing:border-box;"
+                                       class="kc-input"
                                        onfocus="this.style.borderColor='var(--color-tima-500)'" onblur="this.style.borderColor='#e5e7eb'">
                             </div>
                         </div>
                     </div>
 
                     <!-- Section 2: Delivery Address -->
-                    <div style="background:#fff;border-radius:1.25rem;padding:1.5rem;margin-bottom:1rem;border:1px solid #f3f4f6;">
+                    <div class="kc-form-card" style="margin-bottom:1rem;">
                         <h2 style="font-size:1rem;font-weight:700;color:#111827;margin:0 0 1.25rem;display:flex;align-items:center;gap:0.5rem;">
-                            <span style="width:1.75rem;height:1.75rem;background:var(--color-tima-500);color:#fff;border-radius:9999px;display:flex;align-items:center;justify-content:center;font-size:0.8125rem;font-weight:700;flex-shrink:0;">2</span>
+                            <span class="kc-step-badge">2</span>
                             Yetkazib berish manzili
                         </h2>
 
@@ -70,7 +70,8 @@
                                 </label>
                                 <div style="position:relative;">
                                     <select name="region" required
-                                            style="width:100%;height:3rem;padding:0 2.5rem 0 1rem;background:#f9fafb;border:1px solid #e5e7eb;border-radius:0.75rem;font-size:0.9375rem;color:#111827;font-family:inherit;outline:none;transition:border-color 0.2s;box-sizing:border-box;appearance:none;-webkit-appearance:none;cursor:pointer;"
+                                            class="kc-select"
+                                            style="padding-right:2.5rem;appearance:none;-webkit-appearance:none;cursor:pointer;"
                                             onfocus="this.style.borderColor='var(--color-tima-500)'" onblur="this.style.borderColor='#e5e7eb'">
                                         <option value="" disabled selected>Tanlang...</option>
                                         @foreach($regions as $region)
@@ -88,16 +89,16 @@
                                 </label>
                                 <textarea name="address" rows="3" required
                                           placeholder="Chilonzor tumani, 12-uy, 45-xonadon"
-                                          style="width:100%;padding:0.875rem 1rem;background:#f9fafb;border:1px solid #e5e7eb;border-radius:0.75rem;font-size:0.9375rem;color:#111827;font-family:inherit;outline:none;transition:border-color 0.2s;box-sizing:border-box;resize:vertical;line-height:1.5;"
+                                          class="kc-textarea"
                                           onfocus="this.style.borderColor='var(--color-tima-500)'" onblur="this.style.borderColor='#e5e7eb'"></textarea>
                             </div>
                         </div>
                     </div>
 
                     <!-- Section 3: Payment Method -->
-                    <div style="background:#fff;border-radius:1.25rem;padding:1.5rem;margin-bottom:1rem;border:1px solid #f3f4f6;">
+                    <div class="kc-form-card" style="margin-bottom:1rem;">
                         <h2 style="font-size:1rem;font-weight:700;color:#111827;margin:0 0 1.25rem;display:flex;align-items:center;gap:0.5rem;">
-                            <span style="width:1.75rem;height:1.75rem;background:var(--color-tima-500);color:#fff;border-radius:9999px;display:flex;align-items:center;justify-content:center;font-size:0.8125rem;font-weight:700;flex-shrink:0;">3</span>
+                            <span class="kc-step-badge">3</span>
                             To'lov usuli
                         </h2>
 
@@ -111,7 +112,7 @@
                                        style="width:1.25rem;height:1.25rem;accent-color:var(--color-tima-500);margin-top:2px;flex-shrink:0;cursor:pointer;">
                                 <div>
                                     <div style="font-size:0.9375rem;font-weight:700;color:#111827;display:flex;align-items:center;gap:0.5rem;margin-bottom:0.25rem;">
-                                        💵 Qabul qilganda naqd to'lov
+                                        Qabul qilganda naqd to'lov
                                     </div>
                                     <div style="font-size:0.8125rem;color:#6b7280;line-height:1.5;">
                                         Kuryer mahsulotni yetkazib berganda naqd pulda to'laysiz
@@ -127,7 +128,7 @@
                                        style="width:1.25rem;height:1.25rem;accent-color:var(--color-tima-500);margin-top:2px;flex-shrink:0;cursor:pointer;">
                                 <div>
                                     <div style="font-size:0.9375rem;font-weight:700;color:#111827;display:flex;align-items:center;gap:0.5rem;margin-bottom:0.25rem;">
-                                        💳 Karta orqali to'lov
+                                        Karta orqali to'lov
                                     </div>
                                     <div style="font-size:0.8125rem;color:#6b7280;line-height:1.5;">
                                         Kuryerga karta orqali yoki karta raqamiga o'tkazib to'laysiz
@@ -140,9 +141,7 @@
 
                     <!-- Submit Button (mobile: shown here, desktop: in summary box) -->
                     <div id="kcSubmitMobile">
-                        <button type="submit" id="kcSubmitOrderBtn"
-                                style="display:flex;align-items:center;justify-content:center;gap:0.75rem;width:100%;height:3.5rem;background:var(--color-tima-500);color:#fff;border:none;border-radius:9999px;font-size:1.0625rem;font-weight:700;cursor:pointer;transition:all 0.2s;font-family:inherit;"
-                                onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+                        <button type="submit" id="kcSubmitOrderBtn" class="kc-primary-btn" style="width:100%;height:3.5rem;">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
                             Buyurtmani tasdiqlash
                         </button>
@@ -153,7 +152,7 @@
 
             <!-- ====== RIGHT: ORDER SUMMARY ====== -->
             <div>
-                <div style="background:#fff;border-radius:1.25rem;padding:1.5rem;border:1px solid #f3f4f6;position:sticky;top:80px;">
+                <div class="kc-panel-card" style="position:sticky;top:80px;">
                     <h3 style="font-size:1rem;font-weight:700;color:#111827;margin:0 0 1.25rem;">Buyurtma tarkibi</h3>
 
                     <!-- Items list -->
@@ -177,9 +176,7 @@
                     </div>
 
                     <!-- Submit (desktop, in summary) -->
-                    <button type="submit" form="kcCheckoutForm"
-                            style="display:flex;align-items:center;justify-content:center;gap:0.75rem;width:100%;height:3.25rem;background:var(--color-tima-500);color:#fff;border:none;border-radius:9999px;font-size:1rem;font-weight:700;cursor:pointer;transition:all 0.2s;font-family:inherit;"
-                            onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+                    <button type="submit" form="kcCheckoutForm" class="kc-primary-btn" style="width:100%;height:3.25rem;">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
                         Buyurtmani tasdiqlash
                     </button>

@@ -1,11 +1,11 @@
 /* ==========================================================================
-   KITOBCHI MARKETPLACE — PiyolaMarket Design System Port
+   KITOBCHI MARKETPLACE — Web storefront design system
    ========================================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;0,14..32,900;1,14..32,400&display=swap');
 
 /* =========================================================================
-   CSS CUSTOM PROPERTIES (PiyolaMarket `tima` color range + secondary blue)
+   CSS CUSTOM PROPERTIES
    ========================================================================= */
 :root {
     /* Primary (tima-purple) */
@@ -16,7 +16,7 @@
     --kc-primary-100: oklch(94% 0.04 280);
 
     /* Backgrounds */
-    --kc-bg-page: oklch(80.9% 0.105 251.813); /* secondary-300 blue like PiyolaMarket */
+    --kc-bg-page: #ffffff;
     --kc-bg-card: #ffffff;
     --kc-bg-muted: #f9fafb;
 
@@ -75,7 +75,7 @@ body {
 }
 
 /* =========================================================================
-   GLASS CARD COMPONENTS (PiyolaMarket exact)
+   GLASS CARD COMPONENTS
    ========================================================================= */
 .glass-card-bg {
     background: linear-gradient(
@@ -104,7 +104,7 @@ body {
 }
 
 /* =========================================================================
-   LIQUID GLASS BUTTON (PiyolaMarket)
+   LIQUID GLASS BUTTON
    ========================================================================= */
 .liquidGlass-wrapper {
     position: relative;
@@ -167,9 +167,11 @@ body {
     position: sticky;
     top: 0;
     z-index: 50;
-    background: #ffffff;
+    background: rgba(255, 255, 255, 0.94);
     padding: 1rem 0;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
     transition: var(--kc-transition);
 }
 
@@ -278,7 +280,7 @@ body {
 }
 
 /* =========================================================================
-   PRODUCT CARD (PiyolaMarket exact card style)
+   PRODUCT CARD
    ========================================================================= */
 .kc-product-card {
     position: relative;
@@ -291,6 +293,170 @@ body {
     overflow: hidden;
     text-decoration: none;
     color: inherit;
+}
+
+.kc-page-surface {
+    background: #fff;
+    min-height: 100dvh;
+}
+
+.kc-storefront-section {
+    padding: 1.25rem 0 2.25rem;
+}
+
+.kc-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.kc-section-title {
+    color: #111827;
+    font-size: clamp(1.125rem, 3vw, 1.875rem);
+    font-weight: 800;
+    line-height: 1.05;
+    margin: 0;
+    letter-spacing: -0.01em;
+}
+
+.kc-link-more {
+    color: var(--kc-primary);
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.kc-link-more:hover {
+    opacity: 0.78;
+}
+
+.kc-soft-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    min-height: 2.25rem;
+    padding: 0.5rem 0.95rem;
+    border-radius: 9999px;
+    border: 0;
+    background: #f3f4f6;
+    color: #374151;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.kc-soft-pill:hover {
+    background: #e5e7eb;
+}
+
+.kc-soft-pill.is-active {
+    background: var(--kc-primary);
+    color: #fff;
+}
+
+.kc-primary-btn,
+.kc-muted-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    min-height: 3rem;
+    border: 0;
+    border-radius: 9999px;
+    padding: 0.75rem 1.45rem;
+    font: inherit;
+    font-size: 0.9375rem;
+    font-weight: 800;
+    text-decoration: none;
+    cursor: pointer;
+    transition: opacity 0.2s ease, transform 0.2s ease, background 0.2s ease;
+}
+
+.kc-primary-btn {
+    background: var(--kc-primary);
+    color: #fff;
+}
+
+.kc-muted-btn {
+    background: #f3f4f6;
+    color: #111827;
+}
+
+.kc-primary-btn:hover,
+.kc-muted-btn:hover {
+    opacity: 0.88;
+}
+
+.kc-form-card,
+.kc-panel-card {
+    background: #fff;
+    border: 1px solid #f3f4f6;
+    border-radius: 1.25rem;
+    padding: 1.5rem;
+}
+
+.kc-input,
+.kc-select,
+.kc-textarea {
+    width: 100%;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.875rem;
+    color: #111827;
+    font: inherit;
+    outline: none;
+    transition: border-color 0.2s ease, background 0.2s ease;
+    box-sizing: border-box;
+}
+
+.kc-input,
+.kc-select {
+    height: 3rem;
+    padding: 0 1rem;
+}
+
+.kc-textarea {
+    padding: 0.875rem 1rem;
+    resize: vertical;
+    line-height: 1.5;
+}
+
+.kc-input:focus,
+.kc-select:focus,
+.kc-textarea:focus {
+    border-color: var(--kc-primary);
+    background: #fff;
+}
+
+.kc-step-badge {
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 9999px;
+    background: var(--kc-primary);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8125rem;
+    font-weight: 800;
+    flex-shrink: 0;
+}
+
+.kc-icon-empty {
+    width: 4rem;
+    height: 4rem;
+    border-radius: 1.25rem;
+    background: #f3f4f6;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #9ca3af;
+    margin-bottom: 1rem;
 }
 
 .kc-product-card:hover {

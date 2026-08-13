@@ -17,10 +17,10 @@
     <!-- Iconify for icon rendering -->
     <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js" defer></script>
 
-    <!-- Kitobchi Entry CSS (PiyolaMarket Tailwind base) -->
+    <!-- Kitobchi Entry CSS -->
     @vite(['resources/css/kitobchi-entry.css', 'resources/css/kitobchi-marketplace.css'])
 
-    <!-- PiyolaMarket CSS Variables -->
+    <!-- Marketplace CSS Variables -->
     <style id="kc-colors">
         @layer theme {
             :root, :host {
@@ -151,10 +151,12 @@
             position: sticky;
             top: 0;
             z-index: 50;
-            background: #fff;
+            background: rgba(255,255,255,0.94);
             padding-top: 1rem;
             padding-bottom: 1rem;
-            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
+            box-shadow: 0 10px 30px rgba(15,23,42,0.08);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
             transition: all 0.3s;
         }
         @media (max-width: 767px) {
@@ -224,7 +226,7 @@
         main { min-height: 100dvh; }
         @media (max-width: 767px) { main { padding-bottom: 71px; } }
 
-        .page-wrapper { display: flex; flex-direction: column; background-color: #e2e8f0; min-height: 100dvh; }
+        .page-wrapper { display: flex; flex-direction: column; background-color: #fff; min-height: 100dvh; }
     </style>
 
     @stack('styles')
@@ -272,7 +274,7 @@
                             </svg>
                             <form action="{{ route('web.catalog') }}" method="GET" style="flex:1;display:flex;">
                                 <input type="text" name="search" value="{{ request('search') }}"
-                                       placeholder="Kitobchi'da izlash..."
+                                       placeholder="Mahsulotni izlash..."
                                        id="kcSearchInput"
                                        autocomplete="off"
                                        style="flex:1;background:transparent;border:none;outline:none;font-size:0.875rem;color:#111827;font-family:inherit;">
@@ -346,7 +348,7 @@
                             </svg>
                             <form action="{{ route('web.catalog') }}" method="GET" style="flex:1;display:flex;">
                                 <input type="text" name="search" value="{{ request('search') }}"
-                                       placeholder="Izlash..."
+                                       placeholder="Mahsulotni izlash..."
                                        style="flex:1;background:transparent;border:none;outline:none;font-size:0.875rem;font-family:inherit;">
                             </form>
                         </div>
@@ -389,7 +391,7 @@
 
                         <!-- Katalog -->
                         <div>
-                            <h3 style="font-size:1rem;font-weight:700;margin:0 0 1rem;">Katalog</h3>
+                            <h3 style="font-size:1rem;font-weight:700;margin:0 0 1rem;">Kataloglar</h3>
                             <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:0.5rem;">
                                 <li><a href="{{ route('web.catalog') }}" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.875rem;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">Barcha kitoblar</a></li>
                                 <li><a href="{{ route('web.catalog', ['type' => 'stationery']) }}" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.875rem;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">Kanselyariya</a></li>
@@ -525,7 +527,11 @@
         </div>
         <div id="kcCartBody" style="flex:1;overflow-y:auto;padding:1rem 1.25rem;">
             <div style="text-align:center;padding:3rem 0;color:#9ca3af;">
-                <div style="font-size:3rem;">🛒</div>
+                <div class="kc-icon-empty" aria-hidden="true">
+                    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                        <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>
+                    </svg>
+                </div>
                 <div style="font-weight:600;margin-top:0.5rem;">Savatchangiz bo'sh</div>
             </div>
         </div>
@@ -543,7 +549,7 @@
     </div>
 </div>
 
-<!-- ====== AUTH MODAL (PiyolaMarket Style) ====== -->
+<!-- ====== AUTH MODAL ====== -->
 <div id="kcAuthModalOverlay" class="kc-modal-overlay" onclick="if(event.target===this) closeAuthModal()">
     <div class="kc-auth-card">
         <button onclick="closeAuthModal()" style="position:absolute;top:1.25rem;right:1.25rem;width:2rem;height:2rem;display:flex;align-items:center;justify-content:center;border:none;background:#f3f4f6;border-radius:9999px;cursor:pointer;">
@@ -553,7 +559,6 @@
         <!-- Step 1: Phone -->
         <div id="kcAuthStep1">
             <div style="text-align:center;margin-bottom:1.5rem;">
-                <div style="font-size:2.5rem;margin-bottom:0.5rem;">📱</div>
                 <h3 style="font-size:1.25rem;font-weight:800;color:#111827;margin:0 0 0.5rem;">Tizimga kirish</h3>
                 <p style="color:#6b7280;font-size:0.875rem;margin:0;line-height:1.5;">Buyurtmalaringizni kuzatish va xarid qilish uchun telefon raqamingizni kiriting.</p>
             </div>
@@ -580,7 +585,6 @@
         <!-- Step 2: Code -->
         <div id="kcAuthStep2" style="display:none;">
             <div style="text-align:center;margin-bottom:1.5rem;">
-                <div style="font-size:2.5rem;margin-bottom:0.5rem;">🔑</div>
                 <h3 style="font-size:1.25rem;font-weight:800;color:#111827;margin:0 0 0.5rem;">Kodni kiriting</h3>
                 <p style="color:#6b7280;font-size:0.875rem;margin:0;line-height:1.5;" id="kcAuthSentMsg">SMS orqali yuborilgan 6 xonali kodni kiriting.</p>
             </div>
@@ -667,7 +671,11 @@
 
         if (kcCart.length === 0) {
             body.innerHTML = `<div style="text-align:center;padding:3rem 0;color:#9ca3af;">
-                <div style="font-size:3rem;">🛒</div>
+                <div class="kc-icon-empty" aria-hidden="true">
+                    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                        <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>
+                    </svg>
+                </div>
                 <div style="font-weight:600;margin-top:0.5rem;color:#374151;">Savatchangiz bo'sh</div>
                 <div style="font-size:0.875rem;margin-top:0.25rem;">Biror mahsulot qo'shing</div>
             </div>`;

@@ -7,7 +7,7 @@
 @endpush
 
 @section('content')
-<div style="background:#fff;min-height:100vh;">
+<div class="kc-page-surface">
     <div style="width:100%;max-width:var(--ui-container);margin:0 auto;padding:0 1rem;">
 
         @php
@@ -23,13 +23,13 @@
                    style="display:inline-flex;align-items:center;gap:0.375rem;padding:0.5rem 1rem;border-radius:9999px;font-size:0.875rem;font-weight:{{ $type === 'book' ? '600' : '500' }};text-decoration:none;transition:all 0.2s;
                           background:{{ $type === 'book' ? 'var(--color-tima-500)' : 'transparent' }};
                           color:{{ $type === 'book' ? '#fff' : '#6b7280' }};">
-                    📚 Kitoblar
+                    Kitoblar
                 </a>
                 <a href="{{ route('web.catalog', array_filter(['type' => 'stationery', 'search' => $search])) }}"
                    style="display:inline-flex;align-items:center;gap:0.375rem;padding:0.5rem 1rem;border-radius:9999px;font-size:0.875rem;font-weight:{{ $type === 'stationery' ? '600' : '500' }};text-decoration:none;transition:all 0.2s;
                           background:{{ $type === 'stationery' ? 'var(--color-tima-500)' : 'transparent' }};
                           color:{{ $type === 'stationery' ? '#fff' : '#6b7280' }};">
-                    ✏️ Kanselyariya
+                    Kanselyariya
                 </a>
             </div>
 
@@ -76,7 +76,7 @@
                                   font-weight:{{ request('category') == $cat->id ? '600' : '400' }};"
                            onmouseover="if(!this.style.background.includes('ede9fe'))this.style.background='#f9fafb'"
                            onmouseout="if(!this.style.background.includes('ede9fe'))this.style.background='transparent'">
-                            {{ $cat->icon ? $cat->icon . ' ' : '' }}{{ $cat->name_uz ?? $cat->name }}
+                            {{ $cat->name_uz ?? $cat->name }}
                             @if(request('category') == $cat->id)
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
                             @endif
@@ -112,7 +112,7 @@
                                style="display:inline-flex;align-items:center;padding:0.375rem 0.875rem;border-radius:9999px;font-size:0.8125rem;font-weight:500;text-decoration:none;white-space:nowrap;transition:all 0.2s;flex-shrink:0;
                                       background:{{ request('category') == $cat->id ? 'var(--color-tima-500)' : '#f3f4f6' }};
                                       color:{{ request('category') == $cat->id ? '#fff' : '#374151' }};">
-                                {{ $cat->icon ? $cat->icon . ' ' : '' }}{{ $cat->name_uz ?? $cat->name }}
+                                {{ $cat->name_uz ?? $cat->name }}
                             </a>
                         @endforeach
                     </div>
@@ -216,14 +216,16 @@
                 @else
                     <!-- Empty state -->
                     <div style="text-align:center;padding:4rem 1rem;background:#fff;border-radius:1rem;">
-                        <div style="font-size:3.5rem;margin-bottom:1rem;">📚</div>
+                        <div class="kc-icon-empty" aria-hidden="true">
+                            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                <path d="M12 7v14"/><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z"/>
+                            </svg>
+                        </div>
                         <h3 style="font-size:1.25rem;font-weight:700;color:#111827;margin:0 0 0.5rem;">Mahsulotlar topilmadi</h3>
                         <p style="color:#6b7280;font-size:0.9375rem;max-width:360px;margin:0 auto 1.5rem;line-height:1.6;">
                             Kiritilgan so'rov bo'yicha hech narsa topilmadi. Qidiruvni o'zgartiring yoki barcha katalogga qaytish.
                         </p>
-                        <a href="{{ route('web.catalog') }}"
-                           style="display:inline-flex;align-items:center;gap:0.5rem;padding:0.75rem 1.5rem;background:var(--color-tima-500);color:#fff;border-radius:9999px;font-weight:600;text-decoration:none;transition:all 0.2s;"
-                           onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+                        <a href="{{ route('web.catalog') }}" class="kc-primary-btn">
                             Barcha katalog
                         </a>
                     </div>

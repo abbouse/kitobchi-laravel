@@ -7,8 +7,7 @@
     $discPct = $isDisc ? round((($book->price - $price) / $book->price) * 100) : 0;
 @endphp
 
-<div style="position:relative;display:flex;flex-direction:column;border-radius:1rem;background:#fff;border:1px solid #f1f5f9;overflow:hidden;transition:all 0.3s;box-shadow:0 1px 3px rgba(0,0,0,0.05);"
-     onmouseover="this.style.boxShadow='0 10px 25px rgba(0,0,0,0.1)'" onmouseout="this.style.boxShadow='0 1px 3px rgba(0,0,0,0.05)'">
+<div class="kc-product-card">
 
     <!-- Image area with aspect 3/4 -->
     <a href="{{ $url }}" style="position:relative;width:100%;background:#f8fafc;overflow:hidden;display:block;aspect-ratio:3/4;">
@@ -58,7 +57,10 @@
             <button onclick="addToCart({{ $book->id }}, '{{ addslashes($book->name) }}', {{ $price }}, '{{ $img }}')"
                     style="margin-top:0.75rem;width:100%;height:2.375rem;border:none;border-radius:9999px;background:var(--color-tima-500);color:#fff;font-size:0.8125rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:0.375rem;transition:opacity 0.2s;"
                     onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
-                <span>🛒</span> Savatga
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>
+                </svg>
+                Savatga
             </button>
         </div>
     </div>

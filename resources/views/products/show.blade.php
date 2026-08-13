@@ -151,7 +151,7 @@
                 <!-- Stock & Category Badges -->
                 <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
                     <span style="display:inline-flex;align-items:center;gap:0.25rem;font-size:0.75rem;font-weight:500;padding:0.25rem 0.625rem;border-radius:9999px;background:#f3f4f6;color:#374151;">
-                        {{ $productType === 'book' ? '📖 Kitob' : '✏️ Kanselyariya' }}
+                        {{ $productType === 'book' ? 'Kitob' : 'Kanselyariya' }}
                     </span>
                     @if($categoryName)
                         <a href="{{ route('web.catalog', ['category' => $product->category_id]) }}"
@@ -245,14 +245,19 @@
                    onclick="addToCart({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $currentPrice }}, '{{ $imgUrl }}')"
                    style="display:flex;align-items:center;justify-content:center;gap:0.75rem;width:100%;height:3.5rem;background:#111827;color:#fff;border-radius:1rem;font-size:1.0625rem;font-weight:700;text-decoration:none;transition:all 0.2s;"
                    onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
-                    ⚡ Bir klikda sotib olish
+                    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+                        <path d="M13 2 4 14h7l-1 8 9-12h-7z"/>
+                    </svg>
+                    Bir klikda sotib olish
                 </a>
 
                 <!-- Delivery info -->
                 <div style="border:1px solid #f3f4f6;border-radius:1rem;padding:1rem;display:flex;flex-direction:column;gap:0.75rem;">
                     <div style="display:flex;align-items:center;gap:0.75rem;">
-                        <div style="width:2.5rem;height:2.5rem;background:#f0fdf4;border-radius:0.75rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                            🚀
+                        <div style="width:2.5rem;height:2.5rem;background:#f0fdf4;border-radius:0.75rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#16a34a;">
+                            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
+                                <path d="M10 17h4V5H2v12h3"/><path d="M14 8h4l4 4v5h-3"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/>
+                            </svg>
                         </div>
                         <div>
                             <div style="font-size:0.875rem;font-weight:600;color:#111827;">Tezkor yetkazib berish</div>
@@ -260,8 +265,10 @@
                         </div>
                     </div>
                     <div style="display:flex;align-items:center;gap:0.75rem;">
-                        <div style="width:2.5rem;height:2.5rem;background:#faf5ff;border-radius:0.75rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                            💳
+                        <div style="width:2.5rem;height:2.5rem;background:#f3f4f6;border-radius:0.75rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#374151;">
+                            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
+                                <rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>
+                            </svg>
                         </div>
                         <div>
                             <div style="font-size:0.875rem;font-weight:600;color:#111827;">Qulay to'lov</div>

@@ -3,7 +3,7 @@
 @section('title', 'Savatcha — Kitobchi')
 
 @section('content')
-<div style="min-height:100dvh;padding:1.5rem 0;">
+<div class="kc-page-surface" style="padding:1.5rem 0;">
     <div style="width:100%;max-width:var(--ui-container);margin:0 auto;padding:0 1rem;">
 
         <!-- Page Header -->
@@ -34,14 +34,16 @@ function renderCartPage() {
     if (!cart || cart.length === 0) {
         container.innerHTML = `
             <div style="text-align:center;padding:4rem 1rem;background:#fff;border-radius:1.5rem;">
-                <div style="font-size:4rem;margin-bottom:1rem;">🛒</div>
+                <div class="kc-icon-empty" aria-hidden="true">
+                    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                        <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>
+                    </svg>
+                </div>
                 <h2 style="font-size:1.25rem;font-weight:700;color:#111827;margin:0 0 0.5rem;">Savatingiz bo'sh</h2>
                 <p style="color:#6b7280;font-size:0.9375rem;max-width:360px;margin:0 auto 1.5rem;line-height:1.6;">
                     Katalogdan o'zingizga yoqqan kitob va mahsulotlarni tanlang.
                 </p>
-                <a href="{{ route('web.catalog') }}"
-                   style="display:inline-flex;align-items:center;gap:0.5rem;padding:0.875rem 2rem;background:var(--color-tima-500);color:#fff;border-radius:9999px;font-weight:700;text-decoration:none;transition:all 0.2s;"
-                   onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+                <a href="{{ route('web.catalog') }}" class="kc-primary-btn">
                     Katalogga o'tish
                 </a>
             </div>`;
@@ -113,9 +115,7 @@ function renderCartPage() {
                         <span style="color:var(--color-tima-500);">${new Intl.NumberFormat('uz').format(total + 20000)} so'm</span>
                     </div>
 
-                    <a href="{{ route('web.checkout') }}"
-                       style="display:flex;align-items:center;justify-content:center;gap:0.75rem;width:100%;height:3.25rem;background:var(--color-tima-500);color:#fff;border-radius:9999px;font-size:1rem;font-weight:700;text-decoration:none;transition:all 0.2s;"
-                       onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+                    <a href="{{ route('web.checkout') }}" class="kc-primary-btn" style="width:100%;">
                         Buyurtmani rasmiylashtirish →
                     </a>
 

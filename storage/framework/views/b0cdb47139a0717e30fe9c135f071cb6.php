@@ -5,7 +5,7 @@
 <?php $__env->stopPush(); ?>
 
 <?php $__env->startSection('content'); ?>
-<div class="bg-white">
+<div class="kc-page-surface">
     <h1 class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">
         Kitobchi — Online kitoblar marketpleysi
     </h1>
@@ -134,41 +134,32 @@
     ?>
 
     <!-- ====== HERO BANNER SLIDER ====== -->
+    <?php if($banners->isNotEmpty()): ?>
     <div style="width:100%;max-width:var(--ui-container);margin:0 auto;padding:0 1rem;">
         <section style="padding:1.25rem 0 1rem;">
             <div id="kcBannerSlider" style="position:relative;overflow:hidden;border-radius:1.25rem;aspect-ratio:520/141;background:#f1f5f9;">
                 <!-- Slides Track -->
                 <div id="kcBannerTrack" style="display:flex;transition:transform 0.7s cubic-bezier(0.16,1,0.3,1);height:100%;">
-                    <?php if($banners->isNotEmpty()): ?>
-                        <?php $__currentLoopData = $banners; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $banner): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                            <div style="min-width:100%;flex-shrink:0;position:relative;height:100%;" class="kc-banner-slide">
-                                <?php if($banner->type === 'product'): ?>
-                                    <a href="<?php echo e($banner->url); ?>" style="display:block;width:100%;height:100%;position:relative;overflow:hidden;" class="group/item">
-                                        <img src="<?php echo e($banner->image); ?>"
-                                             alt="<?php echo e($banner->title); ?>"
-                                             style="width:100%;height:100%;object-fit:cover;display:block;transition:transform 0.7s;"
-                                             loading="eager" fetchpriority="high">
-                                    </a>
-                                <?php else: ?>
-                                    <div onclick="openBannerBottomSheet('<?php echo e(addslashes($banner->title)); ?>', '<?php echo e(addslashes($banner->description)); ?>', '<?php echo e($banner->image); ?>', '<?php echo e($banner->url); ?>')"
-                                         style="display:block;width:100%;height:100%;position:relative;overflow:hidden;cursor:pointer;" class="group/item">
-                                        <img src="<?php echo e($banner->image); ?>"
-                                             alt="<?php echo e($banner->title); ?>"
-                                             style="width:100%;height:100%;object-fit:cover;display:block;transition:transform 0.7s;"
-                                             loading="eager" fetchpriority="high">
-                                    </div>
-                                <?php endif; ?>
-                            </div>
-                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-                    <?php else: ?>
-                        <!-- Default Gradient Banner -->
-                        <div style="min-width:100%;flex-shrink:0;background:linear-gradient(135deg, var(--color-tima-500) 0%, #6366f1 100%);display:flex;align-items:center;justify-content:center;height:100%;">
-                            <div style="text-align:center;color:#fff;padding:2rem;">
-                                <div style="font-size:clamp(1.5rem,4vw,2.5rem);font-weight:900;margin-bottom:0.5rem;">📚 Kitobchi Marketpleysi</div>
-                                <div style="font-size:1.125rem;opacity:0.9;">Muborak va original kitoblar eng hamyonbop narxlarda</div>
-                            </div>
+                    <?php $__currentLoopData = $banners; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $banner): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                        <div style="min-width:100%;flex-shrink:0;position:relative;height:100%;" class="kc-banner-slide">
+                            <?php if($banner->type === 'product'): ?>
+                                <a href="<?php echo e($banner->url); ?>" style="display:block;width:100%;height:100%;position:relative;overflow:hidden;" class="group/item">
+                                    <img src="<?php echo e($banner->image); ?>"
+                                         alt="<?php echo e($banner->title); ?>"
+                                         style="width:100%;height:100%;object-fit:cover;display:block;transition:transform 0.7s;"
+                                         loading="eager" fetchpriority="high">
+                                </a>
+                            <?php else: ?>
+                                <div onclick="openBannerBottomSheet('<?php echo e(addslashes($banner->title)); ?>', '<?php echo e(addslashes($banner->description)); ?>', '<?php echo e($banner->image); ?>', '<?php echo e($banner->url); ?>')"
+                                     style="display:block;width:100%;height:100%;position:relative;overflow:hidden;cursor:pointer;" class="group/item">
+                                    <img src="<?php echo e($banner->image); ?>"
+                                         alt="<?php echo e($banner->title); ?>"
+                                         style="width:100%;height:100%;object-fit:cover;display:block;transition:transform 0.7s;"
+                                         loading="eager" fetchpriority="high">
+                                </div>
+                            <?php endif; ?>
                         </div>
-                    <?php endif; ?>
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                 </div>
 
                 <!-- Slider Controls -->
@@ -187,11 +178,12 @@
             </div>
         </section>
     </div>
+    <?php endif; ?>
 
     <!-- ====== CATEGORIES CAROUSEL ====== -->
-    <section style="padding:1rem 0 2rem;">
+    <section class="kc-storefront-section">
         <div style="width:100%;max-width:var(--ui-container);margin:0 auto;padding:0 1rem;">
-            <h2 style="font-weight:800;font-size:clamp(1.25rem,4vw,2rem);color:var(--color-tima-500);line-height:1;margin:0 0 1rem;text-transform:capitalize;">Kataloglar</h2>
+            <h2 class="kc-section-title" style="margin-bottom:1rem;">Kataloglar</h2>
             <div style="position:relative;">
                 <div style="overflow-x:auto;overflow-y:hidden;-ms-overflow-style:none;scrollbar-width:none;" id="kcCatScroll">
                     <div style="display:flex;gap:0.875rem;padding-bottom:0.5rem;width:max-content;">
@@ -206,9 +198,12 @@
                         <!-- All categories item -->
                         <a href="<?php echo e(route('web.catalog')); ?>"
                            style="display:flex;flex-direction:column;align-items:center;gap:0.5rem;text-decoration:none;flex-shrink:0;width:84px;">
-                            <div style="width:80px;height:80px;border-radius:9999px;overflow:hidden;border:2px solid transparent;transition:border-color 0.3s;background:linear-gradient(135deg,var(--color-tima-500),#6366f1);display:flex;align-items:center;justify-content:center;"
+                            <div style="width:80px;height:80px;border-radius:9999px;overflow:hidden;border:2px solid transparent;transition:border-color 0.3s;background:#f3f4f6;display:flex;align-items:center;justify-content:center;color:#111827;"
                                  onmouseover="this.style.borderColor='var(--color-tima-500)'" onmouseout="this.style.borderColor='transparent'">
-                                <span style="font-size:1.75rem;">📚</span>
+                                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                    <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>
+                                    <rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/>
+                                </svg>
                             </div>
                             <span style="font-size:0.8125rem;font-weight:600;color:#111827;text-align:center;line-height:1.3;max-width:84px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">Barchasi</span>
                         </a>
@@ -241,13 +236,11 @@
 
     <!-- ====== SECTION 1: YANGI KITOBLAR ====== -->
     <?php if($newBooks->isNotEmpty()): ?>
-        <section style="padding:1rem 0 2.5rem;">
+        <section class="kc-storefront-section">
             <div style="width:100%;max-width:var(--ui-container);margin:0 auto;padding:0 1rem;">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
-                    <h2 style="font-weight:800;font-size:clamp(1.25rem,3.5vw,1.875rem);line-height:1;margin:0;color:#111827;">
-                        🆕 Yangi kelgan kitoblar
-                    </h2>
-                    <a href="<?php echo e(route('web.catalog')); ?>" style="font-size:0.875rem;font-weight:700;color:var(--color-tima-500);text-decoration:none;">
+                <div class="kc-section-head">
+                    <h2 class="kc-section-title">Yangi kelgan kitoblar</h2>
+                    <a href="<?php echo e(route('web.catalog')); ?>" class="kc-link-more">
                         Barchasi →
                     </a>
                 </div>
@@ -264,13 +257,11 @@
 
     <!-- ====== SECTION 2: TAVSIYA ETAMIZ (TOP SOTUVLAR) ====== -->
     <?php if($recommendedBooks->isNotEmpty()): ?>
-        <section style="padding:1rem 0 2.5rem;background:#f8fafc;">
+        <section class="kc-storefront-section" style="background:#f8fafc;">
             <div style="width:100%;max-width:var(--ui-container);margin:0 auto;padding:0 1rem;">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
-                    <h2 style="font-weight:800;font-size:clamp(1.25rem,3.5vw,1.875rem);line-height:1;margin:0;color:#111827;">
-                        🔥 Tavsiya etamiz & Top sotuvlar
-                    </h2>
-                    <a href="<?php echo e(route('web.catalog')); ?>" style="font-size:0.875rem;font-weight:700;color:var(--color-tima-500);text-decoration:none;">
+                <div class="kc-section-head">
+                    <h2 class="kc-section-title">Tavsiya etamiz</h2>
+                    <a href="<?php echo e(route('web.catalog')); ?>" class="kc-link-more">
                         Barchasi →
                     </a>
                 </div>
@@ -287,14 +278,11 @@
     <!-- ====== SECTION 3+: JANRLAR BO'YICHA KITOBLAR ====== -->
     <?php if($categorySections->isNotEmpty()): ?>
         <?php $__currentLoopData = $categorySections; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $section): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-            <section style="padding:1.5rem 0 2.5rem;border-top:1px solid #f1f5f9;">
+            <section class="kc-storefront-section" style="border-top:1px solid #f1f5f9;">
                 <div style="width:100%;max-width:var(--ui-container);margin:0 auto;padding:0 1rem;">
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
-                        <h2 style="font-weight:800;font-size:clamp(1.125rem,3vw,1.75rem);line-height:1;margin:0;color:#111827;">
-                            📚 <?php echo e($section->category->name_uz); ?>
-
-                        </h2>
-                        <a href="<?php echo e(route('web.catalog', ['category' => $section->category->id])); ?>" style="font-size:0.875rem;font-weight:700;color:var(--color-tima-500);text-decoration:none;">
+                    <div class="kc-section-head">
+                        <h2 class="kc-section-title"><?php echo e($section->category->name_uz); ?></h2>
+                        <a href="<?php echo e(route('web.catalog', ['category' => $section->category->id])); ?>" class="kc-link-more">
                             Barchasi →
                         </a>
                     </div>
