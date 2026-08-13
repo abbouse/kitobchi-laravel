@@ -2,12 +2,15 @@
     $slug = \Illuminate\Support\Str::slug($book->name);
     $url = route('web.books.show', ['id' => $book->id, 'slug' => $slug]);
     $img = $book->first_image ? asset('storage/' . $book->first_image) : asset('images/logo/logo_blue.png');
-    $isDisc = $book->discountPrice > 0 && $book->discountPrice < $book->price;
-    $price = $isDisc ? $book->discountPrice : $book->price;
-    $discPct = $isDisc ? round((($book->price - $price) / $book->price) * 100) : 0;
+    
+    $basePrice = floatval($book->price);
+    $discPrice = floatval($book->discountPrice);
+    
+    $isDisc = $discPrice > 0 && $basePrice > 0 && $discPrice < $basePrice;
+    $price = $isDisc ? $discPrice : $basePrice;
+    $discPct = $isDisc ? round((($basePrice - $price) / $basePrice) * 100) : 0;
     
     // Kitobchi specific monthly installment calculation (e.g., Alif nasiya or just simple 12 month div)
-    // Here we just display a placeholder similar to Piyola if there's no actual logic yet
     $monthly = ceil($price / 12);
 @endphp
 
