@@ -33,9 +33,9 @@
                     <div class="eyebrow-pill-bg u-rainbow u-blur-perf"></div>
                 </div>
 
-                <!-- Product Preview Section (if product loaded) -->
+                <!-- Product Showcase Hero -->
                 <?php if(isset($product) && $product): ?>
-                    <div class="kc-redirect-product-preview u-mb-l">
+                    <div class="kc-redirect-product-hero">
                         <div class="kc-redirect-cover">
                             <?php if($product->first_image): ?>
                                 <img src="<?php echo e(asset('storage/' . $product->first_image)); ?>" alt="<?php echo e($product->name); ?>">
@@ -43,34 +43,28 @@
                                 <div class="ph">&#128218;</div>
                             <?php endif; ?>
                         </div>
-                        <div class="kc-redirect-product-info">
-                            <h2 class="kc-redirect-product-title"><?php echo e($product->name); ?></h2>
+                        <div class="kc-redirect-details">
+                            <h1 class="kc-redirect-title"><?php echo e($product->name); ?></h1>
                             <?php if(isset($product->author) && $product->author): ?>
-                                <div class="kc-redirect-product-author">Muallif: <strong><?php echo e($product->author); ?></strong></div>
+                                <div class="kc-redirect-meta">Muallif: <strong><?php echo e($product->author); ?></strong></div>
                             <?php endif; ?>
                             
-                            <div class="kc-redirect-product-price">
-                                <strong><?php echo e(number_format(($product->discountPrice ?: $product->discount_price) ?: $product->price)); ?> UZS</strong>
+                            <div class="kc-redirect-price-row">
+                                <span class="kc-redirect-price"><?php echo e(number_format(($product->discountPrice ?: $product->discount_price) ?: $product->price)); ?> UZS</span>
                                 <?php if(($product->discountPrice ?: $product->discount_price) > 0 && ($product->discountPrice ?: $product->discount_price) < $product->price): ?>
-                                    <del><?php echo e(number_format($product->price)); ?> UZS</del>
+                                    <del class="kc-redirect-old-price"><?php echo e(number_format($product->price)); ?> UZS</del>
                                 <?php endif; ?>
-                                <span class="kc-stock-badge <?php echo e(($product->stock ?? 1) > 0 ? 'in-stock' : 'out-stock'); ?> ms-auto" style="font-size: 11px; padding: 2px 8px;">
-                                    <?php echo e(($product->stock ?? 1) > 0 ? 'Mavjud' : 'Omborda tugagan'); ?>
+                                <span class="kc-stock-badge <?php echo e(($product->stock ?? $product->count ?? 1) > 0 ? 'in-stock' : 'out-stock'); ?>">
+                                    <?php echo e(($product->stock ?? $product->count ?? 1) > 0 ? '✓ Sotuvda mavjud' : 'Omborda tugagan'); ?>
 
                                 </span>
                             </div>
 
                             <?php if($product->description): ?>
-                                <p class="kc-redirect-product-desc u-mt-s">
-                                    <?php echo e(\Illuminate\Support\Str::limit(strip_tags($product->description), 140)); ?>
+                                <p class="kc-redirect-desc">
+                                    <?php echo e(\Illuminate\Support\Str::limit(strip_tags($product->description), 160)); ?>
 
                                 </p>
-                            <?php endif; ?>
-
-                            <?php if(isset($webUrl) && $webUrl): ?>
-                                <div class="u-mt-xs">
-                                    <a href="<?php echo e($webUrl); ?>" class="kc-redirect-web-link">Saytda to'liq ko'rish &rarr;</a>
-                                </div>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -80,33 +74,30 @@
                 <?php endif; ?>
 
                 <!-- Redirect Progress Bar -->
-                <div class="kc-redirect-progress-wrap u-mb-l">
+                <div class="kc-redirect-progress-wrap u-my-l">
                     <div class="kc-redirect-progress-bar" id="redirectProgressBar"></div>
                     <div class="kc-redirect-status-text" id="redirectStatusText">Mobil ilovaga yo'naltirilmoqda...</div>
                 </div>
 
                 <!-- Primary CTA Action -->
-                <div class="kc-redirect-action">
+                <div class="kc-redirect-actions">
                     <a href="<?php echo e($redirectUrl); ?>" class="cta w-inline-block" id="openAppBtn" onclick="kcOpenApp(event)">
                         <div class="cta-bg u-rainbow u-blur-perf"></div>
                         <div class="cta-inner">
                             <div><strong><span class="kc-share-spinner" id="loadingSpinner" aria-hidden="true"></span><?php echo e(__('errors.share_open_app')); ?></strong></div>
                         </div>
                     </a>
-                </div>
 
-                <!-- Desktop QR Scanner Box -->
-                <div class="kc-redirect-qr-box u-mt-xl">
-                    <img src="<?php echo e($qrCodeUrl); ?>" alt="QR Code" width="130" height="130" class="kc-qr-img">
-                    <div class="kc-qr-desc">
-                        <strong>Telefoningiz bilan skanerlang</strong>
-                        <p>Kompyuterda bo'lsangiz, kamerangizni tutib ilovani darhol oching.</p>
-                    </div>
+                    <?php if(isset($webUrl) && $webUrl): ?>
+                        <div class="u-mt-m">
+                            <a href="<?php echo e($webUrl); ?>" class="kc-redirect-web-btn">Veb-saytda ko'rish &rarr;</a>
+                        </div>
+                    <?php endif; ?>
                 </div>
 
                 <!-- App Store & Google Play Badges -->
                 <div class="kc-redirect-divider u-mt-xl u-mb-l">
-                    <span>Yoki ilovani o'rnating:</span>
+                    <span>Yoki mobil ilovani yuklab oling:</span>
                 </div>
 
                 <div class="kc-redirect-stores">

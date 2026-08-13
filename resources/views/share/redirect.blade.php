@@ -35,9 +35,9 @@
                     <div class="eyebrow-pill-bg u-rainbow u-blur-perf"></div>
                 </div>
 
-                <!-- Product Preview Section (if product loaded) -->
+                <!-- Product Showcase Hero -->
                 @if(isset($product) && $product)
-                    <div class="kc-redirect-product-preview u-mb-l">
+                    <div class="kc-redirect-product-hero">
                         <div class="kc-redirect-cover">
                             @if($product->first_image)
                                 <img src="{{ asset('storage/' . $product->first_image) }}" alt="{{ $product->name }}">
@@ -45,32 +45,26 @@
                                 <div class="ph">&#128218;</div>
                             @endif
                         </div>
-                        <div class="kc-redirect-product-info">
-                            <h2 class="kc-redirect-product-title">{{ $product->name }}</h2>
+                        <div class="kc-redirect-details">
+                            <h1 class="kc-redirect-title">{{ $product->name }}</h1>
                             @if(isset($product->author) && $product->author)
-                                <div class="kc-redirect-product-author">Muallif: <strong>{{ $product->author }}</strong></div>
+                                <div class="kc-redirect-meta">Muallif: <strong>{{ $product->author }}</strong></div>
                             @endif
                             
-                            <div class="kc-redirect-product-price">
-                                <strong>{{ number_format(($product->discountPrice ?: $product->discount_price) ?: $product->price) }} UZS</strong>
+                            <div class="kc-redirect-price-row">
+                                <span class="kc-redirect-price">{{ number_format(($product->discountPrice ?: $product->discount_price) ?: $product->price) }} UZS</span>
                                 @if(($product->discountPrice ?: $product->discount_price) > 0 && ($product->discountPrice ?: $product->discount_price) < $product->price)
-                                    <del>{{ number_format($product->price) }} UZS</del>
+                                    <del class="kc-redirect-old-price">{{ number_format($product->price) }} UZS</del>
                                 @endif
-                                <span class="kc-stock-badge {{ ($product->stock ?? 1) > 0 ? 'in-stock' : 'out-stock' }} ms-auto" style="font-size: 11px; padding: 2px 8px;">
-                                    {{ ($product->stock ?? 1) > 0 ? 'Mavjud' : 'Omborda tugagan' }}
+                                <span class="kc-stock-badge {{ ($product->stock ?? $product->count ?? 1) > 0 ? 'in-stock' : 'out-stock' }}">
+                                    {{ ($product->stock ?? $product->count ?? 1) > 0 ? '✓ Sotuvda mavjud' : 'Omborda tugagan' }}
                                 </span>
                             </div>
 
                             @if($product->description)
-                                <p class="kc-redirect-product-desc u-mt-s">
-                                    {{ \Illuminate\Support\Str::limit(strip_tags($product->description), 140) }}
+                                <p class="kc-redirect-desc">
+                                    {{ \Illuminate\Support\Str::limit(strip_tags($product->description), 160) }}
                                 </p>
-                            @endif
-
-                            @if(isset($webUrl) && $webUrl)
-                                <div class="u-mt-xs">
-                                    <a href="{{ $webUrl }}" class="kc-redirect-web-link">Saytda to'liq ko'rish &rarr;</a>
-                                </div>
                             @endif
                         </div>
                     </div>
@@ -80,33 +74,30 @@
                 @endif
 
                 <!-- Redirect Progress Bar -->
-                <div class="kc-redirect-progress-wrap u-mb-l">
+                <div class="kc-redirect-progress-wrap u-my-l">
                     <div class="kc-redirect-progress-bar" id="redirectProgressBar"></div>
                     <div class="kc-redirect-status-text" id="redirectStatusText">Mobil ilovaga yo'naltirilmoqda...</div>
                 </div>
 
                 <!-- Primary CTA Action -->
-                <div class="kc-redirect-action">
+                <div class="kc-redirect-actions">
                     <a href="{{ $redirectUrl }}" class="cta w-inline-block" id="openAppBtn" onclick="kcOpenApp(event)">
                         <div class="cta-bg u-rainbow u-blur-perf"></div>
                         <div class="cta-inner">
                             <div><strong><span class="kc-share-spinner" id="loadingSpinner" aria-hidden="true"></span>{{ __('errors.share_open_app') }}</strong></div>
                         </div>
                     </a>
-                </div>
 
-                <!-- Desktop QR Scanner Box -->
-                <div class="kc-redirect-qr-box u-mt-xl">
-                    <img src="{{ $qrCodeUrl }}" alt="QR Code" width="130" height="130" class="kc-qr-img">
-                    <div class="kc-qr-desc">
-                        <strong>Telefoningiz bilan skanerlang</strong>
-                        <p>Kompyuterda bo'lsangiz, kamerangizni tutib ilovani darhol oching.</p>
-                    </div>
+                    @if(isset($webUrl) && $webUrl)
+                        <div class="u-mt-m">
+                            <a href="{{ $webUrl }}" class="kc-redirect-web-btn">Veb-saytda ko'rish &rarr;</a>
+                        </div>
+                    @endif
                 </div>
 
                 <!-- App Store & Google Play Badges -->
                 <div class="kc-redirect-divider u-mt-xl u-mb-l">
-                    <span>Yoki ilovani o'rnating:</span>
+                    <span>Yoki mobil ilovani yuklab oling:</span>
                 </div>
 
                 <div class="kc-redirect-stores">

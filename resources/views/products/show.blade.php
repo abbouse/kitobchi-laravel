@@ -99,6 +99,11 @@
                                 </div>
                                 <div class="eyebrow-pill-bg u-rainbow u-blur-perf"></div>
                             </div>
+                            @if($product->category)
+                                <a href="{{ route('web.catalog', ['category' => $product->category_id]) }}" class="kc-stock-badge" style="background: #eef2ff; color: #4f46e5; border-color: #c7d2fe; text-decoration: none;">
+                                    📁 {{ $product->category->name ?? $product->category->title_uz }}
+                                </a>
+                            @endif
                             @if($inStock)
                                 <span class="kc-stock-badge in-stock">&#10004; Sotuvda mavjud</span>
                             @else
@@ -109,8 +114,19 @@
                         <h1 class="kc-product-title">{{ $product->name }}</h1>
 
                         @if($productType === 'book' && $product->author)
-                            <div class="kc-product-author">
-                                Muallif: <strong>{{ $product->author }}</strong>
+                            <div class="kc-product-author u-mb-s">
+                                Muallif: <a href="{{ route('web.catalog', ['search' => $product->author]) }}" style="color: #4f46e5; font-weight: 700; text-decoration: underline;">{{ $product->author }}</a>
+                            </div>
+                        @endif
+
+                        <!-- Product Tags -->
+                        @if(isset($product->tags) && count($product->tags) > 0)
+                            <div class="d-flex align-items-center gap-1 u-mb-m flex-wrap">
+                                @foreach($product->tags as $tag)
+                                    <a href="{{ route('web.catalog', ['search' => $tag->name]) }}" class="badge rounded-pill" style="background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; text-decoration: none; font-size: 12px; padding: 4px 10px;">
+                                        #{{ $tag->name }}
+                                    </a>
+                                @endforeach
                             </div>
                         @endif
 
@@ -137,42 +153,34 @@
                             @endif
                         </div>
 
-                        <!-- App Redirection Box & Desktop QR Scanner -->
+                        <!-- App Redirection & Conversion Box -->
                         <div class="kc-app-conversion-box">
-                            <div class="kc-conversion-grid">
-                                <div class="kc-conversion-left">
-                                    <div class="kc-conversion-title">
-                                        {{ $inStock ? 'Kitobchi ilovasida xarid qiling' : 'Ilovada eslatishni yoqing' }}
-                                    </div>
-                                    <p class="kc-conversion-sub">
-                                        {{ $inStock ? 'Veb-saytda xarid qilish cheklangan. Barcha chegirmalar va keshbek bilan mobil ilovamizda oling!' : 'Ushbu mahsulot omborda vaqtinchalik tugagan. Kitobchi ilovasini oching va sotuvga chiqganda darhol xabar oling!' }}
-                                    </p>
+                            <div class="kc-conversion-left">
+                                <div class="kc-conversion-title">
+                                    {{ $inStock ? 'Kitobchi ilovasida xarid qiling' : 'Ilovada eslatishni yoqing' }}
+                                </div>
+                                <p class="kc-conversion-sub">
+                                    {{ $inStock ? 'Barcha eksklyuziv chegirmalar, keshbek va tezkor yetkazib berish bilan mobil ilovamizda buyurtma bering!' : 'Ushbu mahsulot omborda vaqtinchalik tugagan. Kitobchi ilovasini oching va sotuvga chiqganda darhol xabar oling!' }}
+                                </p>
 
-                                    <div class="kc-conversion-actions">
-                                        <a href="{{ $appScheme }}" class="cta w-inline-block kc-smart-store" data-play="https://play.google.com/store/apps/details?id=com.kitobchi.kitobchi" data-appstore="https://apps.apple.com/uz/app/kitobchi/id6753818078" aria-label="Ilovada ko'rish">
-                                            <div class="cta-bg u-rainbow u-blur-perf"></div>
-                                            <div class="cta-inner">
-                                                <div><strong>{{ $inStock ? 'Kitobchi ilovasida ochish' : 'Ilovada ko\'rish va eslatish' }}</strong></div>
-                                            </div>
-                                        </a>
-                                    </div>
-
-                                    <div class="kc-conversion-stores">
-                                        <a href="https://apps.apple.com/uz/app/kitobchi/id6753818078" target="_blank" rel="noopener" class="kc-store-badge">
-                                            <img src="{{ asset('vendor/popcorn/images/feature-pin.png') }}" width="20" height="20" alt="">
-                                            <span>App Store</span>
-                                        </a>
-                                        <a href="https://play.google.com/store/apps/details?id=com.kitobchi.kitobchi" target="_blank" rel="noopener" class="kc-store-badge">
-                                            <img src="{{ asset('vendor/popcorn/images/feature-event.png') }}" width="20" height="20" alt="">
-                                            <span>Google Play</span>
-                                        </a>
-                                    </div>
+                                <div class="kc-conversion-actions">
+                                    <a href="{{ $appScheme }}" class="cta w-inline-block kc-smart-store" data-play="https://play.google.com/store/apps/details?id=com.kitobchi.kitobchi" data-appstore="https://apps.apple.com/uz/app/kitobchi/id6753818078" aria-label="Ilovada ko'rish">
+                                        <div class="cta-bg u-rainbow u-blur-perf"></div>
+                                        <div class="cta-inner">
+                                            <div><strong>{{ $inStock ? 'Kitobchi ilovasida ochish' : 'Ilovada ko\'rish va eslatish' }}</strong></div>
+                                        </div>
+                                    </a>
                                 </div>
 
-                                <!-- Desktop QR code helper box -->
-                                <div class="kc-conversion-qr-box">
-                                    <img src="{{ $qrUrl }}" alt="QR Code" width="110" height="110" class="kc-qr-img">
-                                    <div class="kc-qr-sub">Telefon kamerangiz bilan skanerlang</div>
+                                <div class="kc-conversion-stores">
+                                    <a href="https://apps.apple.com/uz/app/kitobchi/id6753818078" target="_blank" rel="noopener" class="kc-store-badge">
+                                        <img src="{{ asset('vendor/popcorn/images/feature-pin.png') }}" width="20" height="20" alt="">
+                                        <span>App Store</span>
+                                    </a>
+                                    <a href="https://play.google.com/store/apps/details?id=com.kitobchi.kitobchi" target="_blank" rel="noopener" class="kc-store-badge">
+                                        <img src="{{ asset('vendor/popcorn/images/feature-event.png') }}" width="20" height="20" alt="">
+                                        <span>Google Play</span>
+                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -260,7 +268,17 @@
                         @if($product->category)
                             <div class="spec-row">
                                 <dt>Kategoriya</dt>
-                                <dd>{{ $product->category->name ?? $product->category->title_uz }}</dd>
+                                <dd><a href="{{ route('web.catalog', ['category' => $product->category_id]) }}" style="color: #4f46e5; text-decoration: underline;">{{ $product->category->name ?? $product->category->title_uz }}</a></dd>
+                            </div>
+                        @endif
+                        @if(isset($product->tags) && count($product->tags) > 0)
+                            <div class="spec-row">
+                                <dt>Teglar</dt>
+                                <dd>
+                                    @foreach($product->tags as $tag)
+                                        <a href="{{ route('web.catalog', ['search' => $tag->name]) }}" style="color: #64748b; text-decoration: none; margin-right: 4px;">#{{ $tag->name }}</a>
+                                    @endforeach
+                                </dd>
                             </div>
                         @endif
                     </dl>

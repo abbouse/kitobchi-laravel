@@ -16,7 +16,7 @@ class ProductCatalogController extends Controller
     public function showBook(int $id, ?string $slug = null)
     {
         try {
-            $book = Books::with(['category', 'publisher', 'authorProfile', 'seller'])
+            $book = Books::with(['category', 'publisher', 'authorProfile', 'seller', 'tags'])
                 ->where('status', true)
                 ->where('is_approved', 1)
                 ->where('is_hidden', 0)

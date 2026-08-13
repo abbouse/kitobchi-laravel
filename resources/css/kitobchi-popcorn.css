@@ -1965,26 +1965,36 @@ body.kc-landing .footer {
     text-align: center;
 }
 
-.kc-redirect-product-preview {
+.kc-redirect-product-hero {
     display: flex;
-    align-items: center;
-    gap: 20px;
+    align-items: flex-start;
+    gap: 22px;
     background: #f8fafc;
     border: 1px solid #e2e8f0;
-    border-radius: 16px;
-    padding: 16px;
+    border-radius: 20px;
+    padding: 20px;
     text-align: left;
+    margin-bottom: 24px;
+}
+
+@media (max-width: 540px) {
+    .kc-redirect-product-hero {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
 }
 
 .kc-redirect-cover {
-    width: 72px;
-    height: 96px;
+    width: 90px;
+    height: 124px;
     flex-shrink: 0;
-    border-radius: 10px;
+    border-radius: 12px;
     overflow: hidden;
     background: #e2e8f0;
     display: grid;
     place-items: center;
+    box-shadow: 0 10px 24px -4px rgba(15, 23, 42, 0.15);
 }
 
 .kc-redirect-cover img {
@@ -1993,53 +2003,69 @@ body.kc-landing .footer {
     object-fit: cover;
 }
 
-.kc-redirect-product-title {
-    font-size: 17px;
+.kc-redirect-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.kc-redirect-title {
+    font-size: 18px;
     font-weight: 800;
     color: #0f172a;
-    margin: 0 0 4px;
-    line-height: 1.3;
+    margin: 0 0 6px;
+    line-height: 1.35;
 }
 
-.kc-redirect-product-author {
-    font-size: 13px;
+.kc-redirect-meta {
+    font-size: 13.5px;
     color: #64748b;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
 }
 
-.kc-redirect-product-price {
-    font-size: 16px;
-    font-weight: 800;
-    color: #4f46e5;
+.kc-redirect-price-row {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
 }
 
-.kc-redirect-product-price del {
+.kc-redirect-price {
+    font-size: 17px;
+    font-weight: 800;
+    color: #4f46e5;
+}
+
+.kc-redirect-old-price {
     font-size: 13.5px;
     color: #94a3b8;
     font-weight: 500;
 }
 
-.kc-redirect-product-desc {
-    font-size: 12.5px;
+.kc-redirect-desc {
+    font-size: 13px;
     color: #475569;
-    line-height: 1.45;
-    margin: 8px 0 4px;
+    line-height: 1.5;
+    margin: 6px 0 0;
 }
 
-.kc-redirect-web-link {
-    font-size: 12px;
+.kc-redirect-web-btn {
+    display: inline-block;
+    font-size: 13.5px;
     font-weight: 700;
     color: #4f46e5;
     text-decoration: none;
-    transition: color 0.15s ease;
+    padding: 8px 16px;
+    border-radius: 100px;
+    background: #eef2ff;
+    border: 1px solid #c7d2fe;
+    transition: all 0.2s ease;
 }
 
-.kc-redirect-web-link:hover {
+.kc-redirect-web-btn:hover {
+    background: #e0e7ff;
     color: #3730a3;
-    text-decoration: underline;
+    transform: translateY(-1px);
 }
 
 /* Redirect Progress Bar */
