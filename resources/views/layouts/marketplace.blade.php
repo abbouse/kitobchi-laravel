@@ -51,6 +51,28 @@
                 --color-tima-800: #060226;
                 --color-tima-900: #05011f;
                 --color-tima-950: #030116;
+                --ui-color-secondary-50: oklch(97% 0.014 254.604);
+                --ui-color-secondary-100: oklch(93.2% 0.032 255.585);
+                --ui-color-secondary-200: oklch(88.2% 0.059 254.128);
+                --ui-color-secondary-300: oklch(80.9% 0.105 251.813);
+                --ui-color-secondary-400: oklch(70.7% 0.165 254.624);
+                --ui-color-secondary-500: oklch(62.3% 0.214 259.815);
+                --ui-color-secondary-600: oklch(54.6% 0.245 262.881);
+                --ui-color-secondary-700: oklch(48.8% 0.243 264.376);
+                --ui-color-secondary-800: oklch(42.4% 0.199 265.638);
+                --ui-color-secondary-900: oklch(37.9% 0.146 265.522);
+                --ui-color-secondary-950: oklch(28.2% 0.091 267.935);
+                --ui-color-success-50: oklch(98.2% 0.018 155.826);
+                --ui-color-success-100: oklch(96.2% 0.044 156.743);
+                --ui-color-success-200: oklch(92.5% 0.084 155.995);
+                --ui-color-success-300: oklch(87.1% 0.15 154.449);
+                --ui-color-success-400: oklch(79.2% 0.209 151.711);
+                --ui-color-success-500: oklch(72.3% 0.219 149.579);
+                --ui-color-success-600: oklch(62.7% 0.194 149.214);
+                --ui-color-success-700: oklch(52.7% 0.154 150.069);
+                --ui-color-success-800: oklch(44.8% 0.119 151.328);
+                --ui-color-success-900: oklch(39.3% 0.095 152.535);
+                --ui-color-success-950: oklch(26.6% 0.065 152.934);
                 --ui-color-neutral-50: oklch(98.4% 0.003 247.858);
                 --ui-color-neutral-100: oklch(96.8% 0.007 247.896);
                 --ui-color-neutral-200: oklch(92.9% 0.013 255.508);
@@ -246,13 +268,13 @@
             <!-- Desktop Header -->
             <div class="hidden md:flex items-center justify-between w-full gap-6">
                 <!-- Left: Logo + Kataloglar -->
-                <div class="flex-y-center gap-6">
+                <div class="flex flex-row items-center gap-6">
                     <a href="{{ url('/') }}" aria-current="page" class="router-link-active router-link-exact-active">
                         <img alt="Kitobchi" class="h-8 w-auto" src="{{ asset('images/logo/logo_blue.png') }}" />
                     </a>
                     <a href="{{ route('web.catalog') }}" aria-current="{{ request()->routeIs('web.catalog') ? 'page' : 'false' }}" class="relative overflow-hidden transition-shadow duration-300 rounded-2xl px-5 py-[14px] rounded-full! hover:shadow-sm hover:shadow-black/10 glass-card-bg p-1! h-12 cursor-pointer bg-secondary-200!" style="text-decoration:none;color:#111827;">
                         <div class="absolute inset-0 pointer-events-none glass-border rounded-2xl rounded-full!"></div>
-                        <div class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 {{ request()->routeIs('web.catalog') ? 'bg-primary-200' : '' }}">
+                        <div class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex flex-row items-center gap-2 {{ request()->routeIs('web.catalog') ? 'bg-primary-200' : '' }}">
                             <iconify-icon aria-hidden="true" icon="heroicons-solid:squares-2x2" class="w-5 h-5 transition-all duration-300 shrink-0"></iconify-icon>
                             <span class="max-lg:hidden font-medium text-sm transition-all duration-300">Kataloglar</span>
                         </div>
@@ -260,35 +282,36 @@
                 </div>
 
                 <!-- Center: Search -->
-                <div class="relative overflow-hidden transition-shadow duration-300 rounded-2xl px-5 py-[14px] rounded-full! hover:shadow-sm hover:shadow-black/10 glass-card-bg h-12 grow flex-y-center gap-2 text-gray cursor-pointer bg-secondary-200!" style="max-width:600px;">
+                <div class="relative overflow-hidden transition-shadow duration-300 rounded-2xl px-5 py-[14px] rounded-full! hover:shadow-sm hover:shadow-black/10 glass-card-bg h-12 grow flex items-center gap-2 text-gray cursor-pointer bg-secondary-200!" style="max-width:600px;">
                     <div class="absolute inset-0 pointer-events-none glass-border rounded-2xl rounded-full!"></div>
                     <iconify-icon aria-hidden="true" icon="heroicons-solid:magnifying-glass" class="w-5 h-5 text-gray-500"></iconify-icon>
-                    <form action="{{ route('web.catalog') }}" method="GET" style="flex:1;display:flex;">
+                    <form action="{{ route('web.catalog') }}" method="GET" class="flex flex-1 items-center h-full m-0 p-0">
                         <input type="text" name="search" value="{{ request('search') }}"
                                placeholder="Mahsulotni izlash..."
                                id="kcSearchInput"
                                autocomplete="off"
-                               style="flex:1;background:transparent;border:none;outline:none;font-size:0.875rem;color:#111827;font-family:inherit;">
+                               class="flex-1 bg-transparent border-none outline-none text-sm text-neutral-900 font-inherit m-0 p-0 h-full w-full"
+                               style="background:transparent;border:none;outline:none;font-size:0.875rem;color:#111827;font-family:inherit;">
                     </form>
                     <div id="kcSearchPopup" style="display:none;position:absolute;top:calc(100% + 8px);left:0;right:0;background:#fff;border-radius:1rem;box-shadow:0 20px 40px rgba(0,0,0,0.12);z-index:200;overflow:hidden;max-height:400px;overflow-y:auto;"></div>
                 </div>
 
                 <!-- Right: Cart + Favorites + Lang + Profile -->
-                <div class="flex-y-center gap-4">
-                    <div class="relative overflow-hidden transition-shadow duration-300 rounded-2xl px-5 py-[14px] rounded-full! hover:shadow-sm hover:shadow-black/10 glass-card-bg flex-y-center p-1! h-12 bg-secondary-200!">
+                <div class="flex flex-row items-center gap-4">
+                    <div class="relative overflow-hidden transition-shadow duration-300 rounded-2xl px-5 py-[14px] rounded-full! hover:shadow-sm hover:shadow-black/10 glass-card-bg flex flex-row items-center p-1! h-12 bg-secondary-200!">
                         <div class="absolute inset-0 pointer-events-none glass-border rounded-2xl rounded-full!"></div>
                         
-                        <button onclick="toggleCartDrawer(true)" class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group" style="background:none;border:none;cursor:pointer;font-family:inherit;color:#111827;">
-                            <div class="flex-center relative">
-                                <iconify-icon icon="heroicons:shopping-cart" class="w-5 h-5 group-hover:text-green-500 transition-colors duration-200"></iconify-icon>
+                        <a href="{{ route('web.cart') }}" class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex flex-row items-center gap-2 group {{ request()->routeIs('web.cart') ? 'bg-primary-200' : '' }}" style="text-decoration:none;color:#111827;">
+                            <div class="flex items-center justify-center relative">
+                                <i class="icon-order group-hover:text-green-500 text-lg transition-colors duration-200"></i>
                                 <span id="kcCartBadge" style="display:none;position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;background:var(--color-tima-500);color:#fff;font-size:10px;font-weight:700;border-radius:9999px;display:flex;align-items:center;justify-content:center;padding:0 3px;"></span>
                             </div>
                             <span class="max-lg:hidden font-normal text-sm leading-5 group-hover:text-green-500 transition-colors duration-200">Savatcha</span>
-                        </button>
+                        </a>
                         
-                        <a href="{{ route('web.favorites') }}" aria-current="{{ request()->routeIs('web.favorites') ? 'page' : 'false' }}" class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group {{ request()->routeIs('web.favorites') ? 'bg-primary-200' : '' }}" style="text-decoration:none;color:#111827;">
-                            <div class="flex-center relative" id="kcFavBadgeWrap">
-                                <iconify-icon icon="heroicons:heart" class="w-5 h-5 group-hover:text-green-500 transition-colors duration-200"></iconify-icon>
+                        <a href="{{ route('web.favorites') }}" aria-current="{{ request()->routeIs('web.favorites') ? 'page' : 'false' }}" class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex flex-row items-center gap-2 group {{ request()->routeIs('web.favorites') ? 'bg-primary-200' : '' }}" style="text-decoration:none;color:#111827;">
+                            <div class="flex items-center justify-center relative" id="kcFavBadgeWrap">
+                                <i class="icon-heart group-hover:text-green-500 text-lg transition-colors duration-200"></i>
                                 @if(($kcFavCount ?? 0) > 0)
                                     <span id="kcFavBadge" style="position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;background:var(--color-tima-500);color:#fff;font-size:10px;font-weight:700;border-radius:9999px;display:flex;align-items:center;justify-content:center;padding:0 3px;">{{ $kcFavCount > 99 ? '99+' : $kcFavCount }}</span>
                                 @endif
@@ -297,26 +320,25 @@
                         </a>
 
                         <div class="relative kc-lang-wrap" id="kcLangWrap">
-                            <button onclick="toggleLangMenu(event, 'kcLangMenu')" aria-haspopup="menu" aria-expanded="false" class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group" style="background:none;border:none;cursor:pointer;font-family:inherit;color:#111827;">
-                                <iconify-icon icon="heroicons:globe-alt" class="w-5 h-5 group-hover:text-green-500 transition-colors duration-200"></iconify-icon>
+                            <button onclick="toggleLangMenu(event, 'kcLangMenu')" aria-haspopup="menu" aria-expanded="false" class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex flex-row items-center gap-2 group" style="background:none;border:none;cursor:pointer;font-family:inherit;color:#111827;">
+                                <i class="icon-globe text-lg transition-colors duration-200 group-hover:text-green-500"></i>
                                 <span class="max-lg:hidden font-normal text-sm leading-5 group-hover:text-green-500 transition-colors duration-200">{{ (config('landing_locales.labels')[app()->getLocale()] ?? "O'zbekcha") }}</span>
-                                <iconify-icon icon="lucide:chevron-down" class="w-4 h-4 max-lg:hidden group-hover:text-green-500 transition-colors duration-200"></iconify-icon>
                             </button>
                             @include('partials.lang-menu', ['menuId' => 'kcLangMenu'])
                         </div>
                     </div>
 
-                    <div class="relative overflow-hidden transition-shadow duration-300 rounded-2xl px-5 py-[14px] rounded-full! hover:shadow-sm hover:shadow-black/10 glass-card-bg flex-y-center h-12 p-1! cursor-pointer bg-secondary-200!">
+                    <div class="relative overflow-hidden transition-shadow duration-300 rounded-2xl px-5 py-[14px] rounded-full! hover:shadow-sm hover:shadow-black/10 glass-card-bg flex flex-row items-center h-12 p-1! cursor-pointer bg-secondary-200!">
                         <div class="absolute inset-0 pointer-events-none glass-border rounded-2xl rounded-full!"></div>
-                        <div class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 {{ request()->routeIs('web.profile') ? 'bg-primary-200' : '' }}">
+                        <div class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex flex-row items-center gap-2 {{ request()->routeIs('web.profile') ? 'bg-primary-200' : '' }}">
                             @auth
-                                <a href="{{ route('web.profile') }}" class="flex-y-center gap-2 group h-full" style="text-decoration:none;color:#111827;">
-                                    <iconify-icon icon="heroicons:user-circle" class="w-5 h-5"></iconify-icon>
+                                <a href="{{ route('web.profile') }}" class="flex flex-row items-center gap-2 group h-full" style="text-decoration:none;color:#111827;">
+                                    <i class="icon-profile text-lg"></i>
                                     <span class="font-normal text-sm leading-5 max-lg:hidden">{{ Str::limit(auth()->user()->name ?: auth()->user()->phone_number, 12) }}</span>
                                 </a>
                             @else
-                                <button onclick="openAuthModal()" class="flex-y-center gap-2 group h-full" style="background:none;border:none;cursor:pointer;font-family:inherit;color:#111827;">
-                                    <iconify-icon icon="heroicons:user-circle" class="w-5 h-5"></iconify-icon>
+                                <button onclick="openAuthModal()" class="flex flex-row items-center gap-2 group h-full" style="background:none;border:none;cursor:pointer;font-family:inherit;color:#111827;">
+                                    <i class="icon-profile text-lg"></i>
                                     <span class="font-normal text-sm leading-5 max-lg:hidden">Kirish</span>
                                 </button>
                             @endauth
@@ -327,30 +349,18 @@
 
             <!-- Mobile Header -->
             <div class="md:hidden">
-                <div style="display:flex;align-items:center;gap:0.75rem;">
-                    <a href="{{ url('/') }}" style="display:flex;align-items:center;flex-shrink:0;">
-                        <img alt="Kitobchi" class="h-8 w-auto" src="{{ asset('images/logo/logo_blue.png') }}" />
-                    </a>
-                    <div style="position:relative;flex:1;">
-                        <div class="relative overflow-hidden transition-shadow duration-300 rounded-2xl px-5 py-[14px] hover:shadow-sm hover:shadow-black/10 h-12 rounded-[20px] text-gray bg-secondary-300! flex-center cursor-pointer gap-3">
-                            <div class="absolute inset-0 pointer-events-none glass-border rounded-2xl"></div>
-                            <iconify-icon icon="lucide:search" class="text-xl text-gray-500"></iconify-icon>
-                            <form action="{{ route('web.catalog') }}" method="GET" style="flex:1;display:flex;">
-                                <input type="text" name="search" value="{{ request('search') }}"
-                                       placeholder="Kitobchi'da izlash"
-                                       id="kcSearchInputMobile"
-                                       autocomplete="off"
-                                       style="flex:1;background:transparent;border:none;outline:none;font-size:0.875rem;font-family:inherit;color:#111827;">
-                            </form>
-                        </div>
-                        <div id="kcSearchPopupMobile" style="display:none;position:absolute;top:calc(100% + 8px);left:0;right:0;background:#fff;border-radius:1rem;box-shadow:0 20px 40px rgba(0,0,0,0.12);z-index:200;overflow:hidden;max-height:60vh;overflow-y:auto;"></div>
-                    </div>
-                    <div class="relative kc-lang-wrap" style="flex-shrink:0;">
-                        <button onclick="toggleLangMenu(event, 'kcLangMenuMobile')" aria-haspopup="menu" aria-expanded="false" aria-label="Tilni tanlash" style="width:2.5rem;height:2.5rem;display:flex;align-items:center;justify-content:center;background:#f3f4f6;border-radius:9999px;border:none;cursor:pointer;color:#374151;">
-                            <iconify-icon icon="heroicons:globe-alt" class="w-5 h-5"></iconify-icon>
-                        </button>
-                        @include('partials.lang-menu', ['menuId' => 'kcLangMenuMobile'])
-                    </div>
+                <div class="relative overflow-hidden transition-shadow duration-300 rounded-[20px] px-5 py-[14px] hover:shadow-sm hover:shadow-black/10 h-12 text-gray bg-secondary-300! flex items-center justify-center cursor-pointer gap-3 w-full">
+                    <div class="absolute inset-0 pointer-events-none glass-border rounded-2xl"></div>
+                    <iconify-icon icon="lucide:search" class="text-xl text-gray-500"></iconify-icon>
+                    <form action="{{ route('web.catalog') }}" method="GET" class="flex flex-1 items-center h-full m-0 p-0">
+                        <input type="text" name="search" value="{{ request('search') }}"
+                               placeholder="Kitobchi'da izlash"
+                               id="kcSearchInputMobile"
+                               autocomplete="off"
+                               class="flex-1 bg-transparent border-none outline-none text-sm text-neutral-900 font-inherit m-0 p-0 h-full w-full"
+                               style="background:transparent;border:none;outline:none;font-size:0.875rem;font-family:inherit;color:#111827;">
+                    </form>
+                    <div id="kcSearchPopupMobile" style="display:none;position:absolute;top:calc(100% + 8px);left:0;right:0;background:#fff;border-radius:1rem;box-shadow:0 20px 40px rgba(0,0,0,0.12);z-index:200;overflow:hidden;max-height:60vh;overflow-y:auto;"></div>
                 </div>
             </div>
         </div>
@@ -473,9 +483,10 @@
             </div>
             <span>Sevimlilar</span>
         </a>
-        <button onclick="toggleCartDrawer(true)"
-                style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:0.5rem 0;background:none;border:none;cursor:pointer;color:#6b7280;font-size:0.6875rem;font-family:inherit;position:relative;">
-            <div style="position:relative;">
+        <a href="{{ route('web.cart') }}"
+           class="flex flex-col items-center justify-center gap-[4px] py-2 bg-transparent text-gray-500 hover:text-green-500 transition-colors duration-300 {{ request()->routeIs('web.cart') ? 'text-green-500' : '' }}"
+           style="flex:1;text-decoration:none;font-size:0.6875rem;font-weight:500;">
+            <div class="relative flex items-center justify-center">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>
                 </svg>
@@ -517,38 +528,7 @@
 
 </div>
 
-<!-- ====== CART DRAWER ====== -->
-<div id="kcCartOverlay" class="kc-cart-overlay" onclick="if(event.target===this) toggleCartDrawer(false)">
-    <div class="kc-cart-panel">
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid #f3f4f6;">
-            <h5 style="font-size:1.125rem;font-weight:800;margin:0;color:#111827;">Savatcha</h5>
-            <button onclick="toggleCartDrawer(false)" style="width:2rem;height:2rem;display:flex;align-items:center;justify-content:center;border:none;background:#f3f4f6;border-radius:9999px;cursor:pointer;">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
-            </button>
-        </div>
-        <div id="kcCartBody" style="flex:1;overflow-y:auto;padding:1rem 1.25rem;">
-            <div style="text-align:center;padding:3rem 0;color:#9ca3af;">
-                <div class="kc-icon-empty" aria-hidden="true">
-                    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                        <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>
-                    </svg>
-                </div>
-                <div style="font-weight:600;margin-top:0.5rem;">Savatchangiz bo'sh</div>
-            </div>
-        </div>
-        <div style="padding:1rem 1.25rem;border-top:1px solid #f3f4f6;background:#fff;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.875rem;">
-                <span style="font-size:1rem;font-weight:600;color:#111827;">Jami:</span>
-                <span style="font-size:1.25rem;font-weight:800;color:var(--color-tima-500);" id="kcCartTotal">0 so'm</span>
-            </div>
-            <a href="{{ route('web.checkout') }}"
-               style="display:block;width:100%;padding:0.875rem;background:var(--color-tima-500);color:#fff;text-align:center;border-radius:9999px;font-weight:700;font-size:1rem;text-decoration:none;transition:all 0.2s;"
-               onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
-                Buyurtmani rasmiylashtirish →
-            </a>
-        </div>
-    </div>
-</div>
+
 
 <!-- ====== AUTH MODAL ====== -->
 <div id="kcAuthModalOverlay" class="kc-modal-overlay" onclick="if(event.target===this) closeAuthModal()">
@@ -641,7 +621,7 @@
         const ex = kcCart.find(i => i.id === id);
         if (ex) { ex.qty++; if (url) ex.url = url; } else { kcCart.push({ id, name, price, image, qty: 1, url: url || null }); }
         saveCart();
-        toggleCartDrawer(true);
+        window.location.href = "{{ route('web.cart') }}";
     }
 
     function updateQty(id, delta) {
@@ -683,7 +663,13 @@
         })
         .then(r => r.json())
         .then(res => {
-            if (res.status !== 'success') {
+            if (res.status === 'success') {
+                // Server har doim "hozir ko'rinadigan" mahsulotlar sonini
+                // qaytaradi — optimistik +1/-1 hisobni shu bilan to'g'rilaymiz
+                // (masalan boshqa bir sevimli mahsulot orada yashiringan
+                // bo'lsa, badge son shu yerda haqiqiy holatga qaytadi).
+                if (typeof res.count === 'number') setFavBadge(res.count);
+            } else {
                 applyFavVisual(btn, icon, wasFav);
                 bumpFavBadge(wasFav ? 1 : -1);
                 if (res.require_auth && typeof openAuthModal === 'function') openAuthModal();
@@ -705,12 +691,21 @@
 
     function bumpFavBadge(delta) {
         let badge = document.getElementById('kcFavBadge');
-        const wrap = document.getElementById('kcFavBadgeWrap');
         const mobBadge = document.getElementById('kcFavBadgeMob');
         const current = badge
             ? (parseInt(badge.textContent, 10) || 0)
             : (mobBadge && mobBadge.style.display !== 'none' ? (parseInt(mobBadge.textContent, 10) || 0) : 0);
-        const n = current + delta;
+        setFavBadge(current + delta);
+    }
+
+    // Badge'ni ANIQ songa o'rnatadi (delta emas) — server javobidagi
+    // haqiqiy hisoblagichga (faqat hozir ko'rinadigan mahsulotlar) sinxron
+    // qilish uchun ishlatiladi, optimistik +1/-1 hisobdagi chetlanishni
+    // (masalan boshqa sevimli mahsulot orada yashiringan bo'lsa) tuzatadi.
+    function setFavBadge(n) {
+        let badge = document.getElementById('kcFavBadge');
+        const wrap = document.getElementById('kcFavBadgeWrap');
+        const mobBadge = document.getElementById('kcFavBadgeMob');
 
         // Desktop header badge — dinamik yaratiladi/o'chiriladi (0 bo'lsa DOM'da umuman yo'q).
         if (n <= 0) {
@@ -757,63 +752,7 @@
         });
     });
 
-    function toggleCartDrawer(open) {
-        const overlay = document.getElementById('kcCartOverlay');
-        if (!overlay) return;
-        overlay.classList.toggle('active', open);
-        if (open) renderCartBody();
-        document.body.style.overflow = open ? 'hidden' : '';
-    }
 
-    function renderCartBody() {
-        const body = document.getElementById('kcCartBody');
-        const totalEl = document.getElementById('kcCartTotal');
-        if (!body) return;
-
-        if (kcCart.length === 0) {
-            body.innerHTML = `<div style="text-align:center;padding:3rem 0;color:#9ca3af;">
-                <div class="kc-icon-empty" aria-hidden="true">
-                    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                        <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>
-                    </svg>
-                </div>
-                <div style="font-weight:600;margin-top:0.5rem;color:#374151;">Savatchangiz bo'sh</div>
-                <div style="font-size:0.875rem;margin-top:0.25rem;">Biror mahsulot qo'shing</div>
-            </div>`;
-            if (totalEl) totalEl.textContent = '0 so\'m';
-            return;
-        }
-
-        let total = 0;
-        let html = '';
-        kcCart.forEach(item => {
-            total += item.price * item.qty;
-            const openTag = item.url
-                ? `<a href="${item.url}" style="display:block;text-decoration:none;color:inherit;">`
-                : `<div>`;
-            const closeTag = item.url ? '</a>' : '</div>';
-            html += `<div style="display:flex;gap:0.75rem;padding:0.75rem 0;border-bottom:1px solid #f9fafb;align-items:flex-start;">
-                <img src="${item.image}" alt="${item.name}" style="width:52px;height:70px;object-fit:cover;border-radius:0.5rem;flex-shrink:0;">
-                <div style="flex:1;min-width:0;">
-                    ${openTag}
-                        <div style="font-size:0.8125rem;font-weight:500;color:#111827;margin-bottom:0.25rem;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${item.name}</div>
-                        <div style="font-size:0.875rem;font-weight:700;color:var(--color-tima-500);margin-bottom:0.5rem;">${new Intl.NumberFormat('uz').format(item.price)} so'm</div>
-                    ${closeTag}
-                    <div style="display:flex;align-items:center;gap:0.5rem;">
-                        <button onclick="updateQty(${item.id}, -1)" style="width:1.75rem;height:1.75rem;border:1px solid #e5e7eb;border-radius:9999px;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700;">−</button>
-                        <span style="font-weight:600;min-width:1.5rem;text-align:center;">${item.qty}</span>
-                        <button onclick="updateQty(${item.id}, 1)" style="width:1.75rem;height:1.75rem;border:1px solid #e5e7eb;border-radius:9999px;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700;">+</button>
-                        <button onclick="removeFromCart(${item.id})" style="margin-left:auto;width:1.75rem;height:1.75rem;border:none;border-radius:9999px;background:#fee2e2;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#ef4444;">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
-                        </button>
-                    </div>
-                </div>
-            </div>`;
-        });
-
-        body.innerHTML = html;
-        if (totalEl) totalEl.textContent = new Intl.NumberFormat('uz').format(total) + ' so\'m';
-    }
 
     // AUTH MODAL FUNCTIONS
     function openAuthModal() {

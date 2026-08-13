@@ -22,16 +22,9 @@ Route::get('/', function () {
         // MUHIM: avval bu yerda sotuvchining o'zi faolmi (Seller.status=
         // 'approved') tekshirilmasdi — bloklangan/faol bo'lmagan do'konning
         // kitoblari ham bosh sahifada "xaridorgir mahsulotlar"da chiqardi.
-        $featuredBooks = \App\Models\Books::where('is_approved', 1)
-            ->where('is_hidden', 0)
-            ->where('status', 1)
-            ->whereHas('seller', function ($s) {
-                $s->where('status', 'approved')
-                    ->where('is_hidden', false)
-                    ->where(function ($q) {
-                        $q->whereNull('parent_id')->orWhere('parent_id', 0);
-                    });
-            })
+        // Endi \App\Support\ProductVisibilityScope — saytning boshqa hamma
+        // joyida ishlatiladigan YAGONA qoida manbasi — orqali tekshiriladi.
+        $featuredBooks = \App\Support\ProductVisibilityScope::applyBooks(\App\Models\Books::query())
             ->orderByDesc('totalSales')
             ->take(20)
             ->get();
@@ -106,13 +99,20 @@ Route::get('/robots.txt', [\App\Http\Controllers\Web\ProductCatalogController::c
 Route::post('/auth/send-code', [\App\Http\Controllers\Web\WebAuthController::class, 'sendCode'])->name('web.auth.send_code');
 Route::post('/auth/verify-code', [\App\Http\Controllers\Web\WebAuthController::class, 'verifyCode'])->name('web.auth.verify_code');
 Route::get('/profile', [\App\Http\Controllers\Web\WebAuthController::class, 'profile'])->name('web.profile');
+Route::post('/profile/location', [\App\Http\Controllers\Web\WebAuthController::class, 'addLocation'])->name('web.profile.location.add');
+Route::delete('/profile/location/{id}', [\App\Http\Controllers\Web\WebAuthController::class, 'deleteLocation'])->name('web.profile.location.delete');
+Route::post('/profile/location/{id}/main', [\App\Http\Controllers\Web\WebAuthController::class, 'setMainLocation'])->name('web.profile.location.main');
 Route::post('/auth/logout', [\App\Http\Controllers\Web\WebAuthController::class, 'logout'])->name('web.auth.logout');
 
 
 Route::get('/share/product/{id}', function (int $id) {
     try {
-        $book = \App\Models\Books::where('id', $id)->first();
-        $stationery = ! $book ? \App\Models\Stationery::where('id', $id)->first() : null;
+        // MUHIM: berkitilgan/tasdiqlanmagan mahsulot yoki bloklangan
+        // do'kon mahsuloti ulashish (share) preview kartasida ham
+        // ko'rinmasligi kerak — shu sabab bu yerda ham
+        // ProductVisibilityScope orqali tekshiriladi.
+        $book = \App\Support\ProductVisibilityScope::applyBooks(\App\Models\Books::where('id', $id))->first();
+        $stationery = ! $book ? \App\Support\ProductVisibilityScope::applyStationeries(\App\Models\Stationery::where('id', $id))->first() : null;
         $product = $book ?: $stationery;
     } catch (\Throwable $e) {
         $book = null;
@@ -140,8 +140,8 @@ Route::get('/share/product/{id}', function (int $id) {
 
 Route::get('/art/{artikul}', function (string $artikul) {
     try {
-        $book = \App\Models\Books::where('artikul', $artikul)->first();
-        $stationery = ! $book ? \App\Models\Stationery::where('artikul', $artikul)->first() : null;
+        $book = \App\Support\ProductVisibilityScope::applyBooks(\App\Models\Books::where('artikul', $artikul))->first();
+        $stationery = ! $book ? \App\Support\ProductVisibilityScope::applyStationeries(\App\Models\Stationery::where('artikul', $artikul))->first() : null;
         $product = $book ?: $stationery;
     } catch (\Throwable $e) {
         $book = null;

@@ -4,6 +4,7 @@ namespace App\Traits;
 
 use App\Models\Books;
 use App\Models\Stationery;
+use App\Support\ProductVisibilityScope;
 
 /**
  * Mahsulot va do'kon ko'rinish shartlarini qo'llash uchun trait.
@@ -21,6 +22,13 @@ use App\Models\Stationery;
  *   - Stationery da variant bo'lsa parent stock noto'g'ri bo'lishi mumkin
  *   - User mahsulotni ko'rishi kerak, Item sahifasida "tugagan" badge ko'rinadi
  *   - Qolmagan mahsulot ham tavsiya va search da foydali
+ *
+ * MUHIM: shart matnining o'zi endi app/Support/ProductVisibilityScope.php
+ * ichida — bitta joyda. Bu trait faqat controller'lar uchun qulay
+ * $this->visibleBooks() kabi qisqa nom beradi, lekin qoidani QAYTA
+ * YOZMAYDI. Controller instansiyasiga ega bo'lmagan joylar (Blade
+ * view'lar, service provider'lar) ProductVisibilityScope'ni to'g'ridan-
+ * to'g'ri chaqiradi — ikkalasi doim bir xil natija beradi.
  */
 trait HasProductVisibility
 {
@@ -29,13 +37,7 @@ trait HasProductVisibility
      */
     protected function activeSeller(): \Closure
     {
-        return fn($s) => $s
-            ->where('status', 'approved')
-            ->where('is_hidden', false)
-            ->where(function ($q) {
-                $q->whereNull('parent_id')
-                    ->orWhere('parent_id', 0);
-            });
+        return ProductVisibilityScope::activeSeller();
     }
 
     /**
@@ -48,14 +50,9 @@ trait HasProductVisibility
 
         $q->with($with);
 
-        return $q
-            // FILIAL STOCK: `count` accessor uchun jami mavjud stockni bitta
-            // subselect bilan yuklaydi (N+1 oldini oladi)
-            ->withAvailableTotal()
-            ->where('status', true)
-            ->where('is_approved', 1)
-            ->where('is_hidden', false)
-            ->whereHas('seller', $this->activeSeller());
+        // FILIAL STOCK: `count` accessor uchun jami mavjud stockni bitta
+        // subselect bilan yuklaydi (N+1 oldini oladi)
+        return ProductVisibilityScope::applyBooks($q->withAvailableTotal());
     }
 
     /**
@@ -69,13 +66,8 @@ trait HasProductVisibility
             $q->with($with);
         }
 
-        return $q
-            // FILIAL STOCK: `stock` accessor uchun subselect (N+1 oldini oladi)
-            ->withAvailableTotal()
-            ->where('status', true)
-            ->where('is_approved', 1)
-            ->where('is_hidden', false)
-            ->whereHas('seller', $this->activeSeller());
+        // FILIAL STOCK: `stock` accessor uchun subselect (N+1 oldini oladi)
+        return ProductVisibilityScope::applyStationeries($q->withAvailableTotal());
     }
 
     /**
@@ -83,11 +75,7 @@ trait HasProductVisibility
      */
     protected function applyBookVisibility($query): \Illuminate\Database\Eloquent\Builder
     {
-        return $query
-            ->where('status', true)
-            ->where('is_approved', 1)
-            ->where('is_hidden', false)
-            ->whereHas('seller', $this->activeSeller());
+        return ProductVisibilityScope::applyBooks($query);
     }
 
     /**
@@ -95,10 +83,6 @@ trait HasProductVisibility
      */
     protected function applyStationeryVisibility($query): \Illuminate\Database\Eloquent\Builder
     {
-        return $query
-            ->where('status', true)
-            ->where('is_approved', 1)
-            ->where('is_hidden', false)
-            ->whereHas('seller', $this->activeSeller());
+        return ProductVisibilityScope::applyStationeries($query);
     }
 }

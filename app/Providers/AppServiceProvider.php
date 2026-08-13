@@ -85,7 +85,13 @@ class AppServiceProvider extends ServiceProvider
         // hisoblab yubormaslik uchun View Composer orqali avtomatik uzatiladi.
         \Illuminate\Support\Facades\View::composer('layouts.marketplace', function ($view) {
             $user = \Illuminate\Support\Facades\Auth::user();
-            $view->with('kcFavCount', $user ? FavouriteProducts::where('user_id', $user->id)->count() : 0);
+            // MUHIM: xom son emas — faqat hozir ko'rinadigan (bloklangan
+            // do'konga tegishli bo'lmagan) sevimlilar sanaladi, aks holda
+            // header badge foydalanuvchi ko'ra olmaydigan mahsulotlarni
+            // ham qo'shib yuboradi (bir joyda: ProductVisibilityScope).
+            $view->with('kcFavCount', $user
+                ? \App\Support\ProductVisibilityScope::visibleFavouriteCount($user->id)
+                : 0);
         });
     }
 

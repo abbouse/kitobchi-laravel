@@ -210,117 +210,106 @@
                         </div>
                     @endif
 
-                    <!-- ====== PRICE BLOCK ====== -->
-                    <div class="bg-neutral-50 rounded-2xl p-5 border border-neutral-100">
-                        <div class="flex items-baseline gap-3 flex-wrap">
-                            <div class="text-3xl font-black text-primary-500 leading-none">
-                                {{ number_format($currentPrice) }} <span class="text-base font-semibold">so'm</span>
-                            </div>
-                            @if($isDiscounted)
-                                <div class="text-lg text-neutral-400 line-through font-medium">
-                                    {{ number_format($origPrice) }} so'm
+                    <!-- ====== PRICE AND PAYMENT TABS BLOCK ====== -->
+                    <div class="p-6 rounded-3xl bg-secondary-100 space-y-5 mt-4">
+                        <!-- Tabs -->
+                        <div class="relative inline-flex bg-secondary-300 rounded-xl p-1 flex">
+                            <button id="tab-installment" class="text-sm px-4 py-2 text-gray-900 bg-white shadow-sm flex-1 relative z-10 font-medium rounded-lg transition-colors duration-200 whitespace-nowrap" onclick="togglePaymentTab('installment')">
+                                Muddatli to‘lov
+                            </button>
+                            <button id="tab-cash" class="text-sm px-4 py-2 text-gray-400 hover:text-gray-500 flex-1 relative z-10 font-medium rounded-lg transition-colors duration-200 whitespace-nowrap" onclick="togglePaymentTab('cash')">
+                                Naqd to'lov
+                            </button>
+                        </div>
+
+                        <!-- Installment View -->
+                        <div id="view-installment" class="flex max-md:flex-col md:justify-between gap-4 w-full transition-all">
+                            <div>
+                                <p class="text-sm text-gray font-normal text-neutral-500">Muddatli to'lov</p>
+                                <div class="inline-flex mt-1 md:mt-2">
+                                    <div class="relative inline-flex bg-secondary-300 rounded-xl p-1">
+                                        <button class="relative z-10 font-medium rounded-lg transition-colors duration-200 whitespace-nowrap text-sm px-3 py-1.5 text-gray-400 hover:text-gray-500">6 oy</button>
+                                        <button class="relative z-10 font-medium rounded-lg transition-colors duration-200 whitespace-nowrap text-sm px-3 py-1.5 text-gray-900 bg-white shadow-sm">12 oy</button>
+                                    </div>
                                 </div>
-                                <span class="inline-flex items-center text-xs font-bold px-2 py-1 rounded-full bg-red-100 text-red-500">
-                                    -{{ $discPct }}% chegirma
-                                </span>
-                            @endif
+                            </div>
+                            <div class="flex flex-col md:items-end">
+                                <p class="text-sm text-gray font-normal text-neutral-500">Muddatli to'lovga sotib olish</p>
+                                <div class="flex items-end justify-between md:justify-end gap-3 mt-1 md:mt-4 w-full">
+                                    <div class="flex items-end gap-1">
+                                        <span class="text-xl font-bold text-neutral-900">{{ number_format(ceil($currentPrice * 1.44 / 12)) }}</span>
+                                        <span class="text-neutral-500 text-sm">so'm/oyiga</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                    </div>
 
-                    <!-- ====== BUY ACTIONS ====== -->
-                    <div class="flex flex-col gap-3 mt-2">
-                        <!-- Savatchaga qo'shish -->
-                        <button type="button"
-                                onclick="addToCart({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $currentPrice }}, '{{ $imgUrl }}', '{{ $canonicalUrl }}')"
-                                class="flex items-center justify-center gap-3 w-full h-14 bg-primary-500 text-white border-none rounded-2xl text-lg font-bold cursor-pointer hover:opacity-90 transition-opacity font-inherit">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                                <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>
-                            </svg>
-                            Savatga qo'shish
-                        </button>
+                        <!-- Cash View -->
+                        <div id="view-cash" class="flex flex-col transition-all" style="display:none;">
+                            <p class="text-sm text-gray font-normal text-neutral-500">Narxi</p>
+                            <div class="flex items-center gap-1 mt-1">
+                                <div class="flex items-end gap-3">
+                                    <span class="text-2xl font-bold text-neutral-900">{{ number_format($currentPrice) }} so'm</span>
+                                    @if($isDiscounted)
+                                        <span class="text-base text-neutral-400 line-through">{{ number_format($origPrice) }} so'm</span>
+                                        <span class="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded text-[#ED3131] bg-[#ED3131]/10">
+                                            -{{ $discPct }}%
+                                        </span>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
 
-                        <!-- Bir klikda sotib olish -->
-                        <a href="{{ route('web.checkout') }}"
-                           onclick="addToCart({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $currentPrice }}, '{{ $imgUrl }}', '{{ $canonicalUrl }}')"
-                           class="flex items-center justify-center gap-3 w-full h-14 bg-neutral-900 text-white rounded-2xl text-lg font-bold no-underline hover:opacity-90 transition-opacity">
-                            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
-                                <path d="M13 2 4 14h7l-1 8 9-12h-7z"/>
-                            </svg>
-                            Bir klikda sotib olish
-                        </a>
-                    </div>
-
-                <!-- Delivery info -->
-                <div style="border:1px solid #f3f4f6;border-radius:1rem;padding:1rem;display:flex;flex-direction:column;gap:0.75rem;">
-                    <div style="display:flex;align-items:center;gap:0.75rem;">
-                        <div style="width:2.5rem;height:2.5rem;background:#f0fdf4;border-radius:0.75rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#16a34a;">
-                            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
-                                <path d="M10 17h4V5H2v12h3"/><path d="M14 8h4l4 4v5h-3"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/>
-                            </svg>
-                        </div>
-                        <div>
-                            <div style="font-size:0.875rem;font-weight:600;color:#111827;">Tezkor yetkazib berish</div>
-                            <div style="font-size:0.8125rem;color:#6b7280;">Toshkent bo'ylab 1-2 soatda</div>
+                        <!-- ====== BUY ACTIONS ====== -->
+                        <div class="flex items-center gap-2 sm:gap-3">
+                            <div class="flex-1">
+                                <button type="button" onclick="addToCart({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $currentPrice }}, '{{ $imgUrl }}', '{{ $canonicalUrl }}'); window.location.href='{{ route('web.checkout') }}'" class="font-medium inline-flex items-center justify-center transition-colors py-1.5 gap-1.5 text-white bg-primary hover:bg-primary/90 active:bg-primary/90 h-12 rounded-2xl text-base px-6 w-full cursor-pointer">
+                                    Buyurtma berish
+                                </button>
+                            </div>
+                            <div>
+                                <button type="button" onclick="addToCart({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $currentPrice }}, '{{ $imgUrl }}', '{{ $canonicalUrl }}')" class="font-medium inline-flex items-center justify-center transition-colors text-base gap-2 text-primary bg-primary/10 hover:bg-primary/15 active:bg-primary/15 h-12 w-14 rounded-2xl cursor-pointer">
+                                    <iconify-icon icon="heroicons-solid:shopping-cart" style="font-size: 24px;"></iconify-icon>
+                                </button>
+                            </div>
                         </div>
                     </div>
-                    <div style="display:flex;align-items:center;gap:0.75rem;">
-                        <div style="width:2.5rem;height:2.5rem;background:#f3f4f6;border-radius:0.75rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#374151;">
-                            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
-                                <rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>
-                            </svg>
-                        </div>
-                        <div>
-                            <div style="font-size:0.875rem;font-weight:600;color:#111827;">Qulay to'lov</div>
-                            <div style="font-size:0.8125rem;color:#6b7280;">Naqd yoki karta orqali</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Description -->
-                @if(!empty($product->description))
-                    <div style="border-top:1px solid #f3f4f6;padding-top:1.25rem;">
-                        <h3 style="font-size:1rem;font-weight:700;color:#111827;margin:0 0 0.75rem;">Mahsulot haqida</h3>
-                        <div style="font-size:0.9rem;color:#4b5563;line-height:1.7;white-space:pre-line;">
-                            {!! strip_tags($product->description) !!}
-                        </div>
-                    </div>
-                @endif
 
                 <!-- ====== XUSUSIYATLAR VA TAVSIF (piyolamarket.uz uslubida) ====== -->
                 @if(!empty($specs) || $hasVariants)
-                    <div style="margin-top:1.25rem;">
-                        <button type="button" onclick="kcToggleSpecs()" aria-expanded="false" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:0.75rem;background:var(--color-tima-50);border:none;border-radius:1rem;padding:1rem 1.25rem;cursor:pointer;font:inherit;text-align:left;">
-                            <span style="display:flex;align-items:center;gap:0.75rem;">
-                                <iconify-icon icon="heroicons:information-circle" style="font-size:22px;color:var(--color-tima-500);flex-shrink:0;"></iconify-icon>
-                                <span style="font-size:0.9375rem;font-weight:700;color:#111827;">Xususiyatlar va tavsif</span>
-                            </span>
-                            <iconify-icon icon="lucide:chevron-down" id="kcSpecsChevron" style="font-size:18px;color:var(--color-tima-500);transition:transform 0.25s;flex-shrink:0;"></iconify-icon>
-                        </button>
+                    <div>
+                        <div onclick="kcToggleSpecs()" class="w-full bg-secondary-300 cursor-pointer rounded-2xl p-4 md:px-6 flex items-center justify-between transition-colors duration-300 hover:bg-secondary-400 mt-2">
+                            <div class="flex items-center gap-3">
+                                <iconify-icon icon="heroicons:information-circle" class="w-6 h-6 text-primary" style="font-size: 24px;"></iconify-icon>
+                                <span class="font-medium text-primary text-base">Xususiyatlar va tavsif</span>
+                            </div>
+                            <iconify-icon icon="heroicons:chevron-down" id="kcSpecsChevron" class="w-5 h-5 text-primary transition-transform duration-300" style="font-size: 20px;"></iconify-icon>
+                        </div>
 
-                        <div id="kcSpecsBody" style="display:none;padding:1.25rem 0.25rem 0;">
+                        <div id="kcSpecsBody" class="mt-4 p-6 rounded-3xl bg-secondary-100 hidden">
                             @if(!empty($specs))
-                                <dl style="margin:0;">
+                                <dl class="space-y-3">
                                     @foreach($specs as $spec)
-                                        <div style="display:flex;justify-content:space-between;gap:1rem;padding:0.65rem 0;border-bottom:1px dashed #e5e7eb;">
-                                            <dt style="font-size:0.875rem;color:#6b7280;">{{ $spec['label'] }}</dt>
-                                            <dd style="font-size:0.875rem;color:#111827;font-weight:600;margin:0;text-align:right;">{{ $spec['value'] }}</dd>
+                                        <div class="flex justify-between gap-4 py-2 border-b border-secondary-200 border-dashed">
+                                            <dt class="text-sm text-neutral-500">{{ $spec['label'] }}</dt>
+                                            <dd class="text-sm font-semibold text-neutral-900 text-right">{{ $spec['value'] }}</dd>
                                         </div>
                                     @endforeach
                                 </dl>
                             @endif
 
                             @if($hasVariants)
-                                <div style="{{ !empty($specs) ? 'margin-top:1rem;' : '' }}">
-                                    <div style="font-size:0.875rem;color:#6b7280;margin-bottom:0.6rem;">Ranglar / turlari</div>
-                                    <div style="display:flex;flex-wrap:wrap;gap:0.5rem;">
+                                <div class="{{ !empty($specs) ? 'mt-6' : '' }}">
+                                    <div class="text-sm text-neutral-500 mb-3">Ranglar / turlari</div>
+                                    <div class="flex flex-wrap gap-2">
                                         @foreach($product->variants as $variant)
-                                            <span style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.375rem 0.75rem 0.375rem 0.375rem;border-radius:9999px;background:#f3f4f6;font-size:0.8125rem;color:#374151;font-weight:500;">
+                                            <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-secondary-200 text-sm font-medium text-neutral-700">
                                                 @if(!empty($variant->image_path))
-                                                    <img src="{{ asset('storage/' . $variant->image_path) }}" alt="{{ $variant->color_name }}" style="width:22px;height:22px;border-radius:9999px;object-fit:cover;">
+                                                    <img src="{{ asset('storage/' . $variant->image_path) }}" alt="{{ $variant->color_name }}" class="w-5 h-5 rounded-full object-cover">
                                                 @endif
                                                 {{ $variant->color_name }}
                                                 @if(($variant->stock ?? 0) <= 0)
-                                                    <span style="color:#9ca3af;">(tugagan)</span>
+                                                    <span class="text-neutral-400 font-normal">(tugagan)</span>
                                                 @endif
                                             </span>
                                         @endforeach
@@ -424,9 +413,33 @@
         const body = document.getElementById('kcSpecsBody');
         const chev = document.getElementById('kcSpecsChevron');
         if (!body) return;
-        const willOpen = body.style.display === 'none' || body.style.display === '';
-        body.style.display = willOpen ? 'block' : 'none';
-        if (chev) chev.setAttribute('icon', willOpen ? 'lucide:chevron-up' : 'lucide:chevron-down');
+        const willOpen = body.classList.contains('hidden');
+        if(willOpen) {
+            body.classList.remove('hidden');
+            if (chev) chev.style.transform = 'rotate(180deg)';
+        } else {
+            body.classList.add('hidden');
+            if (chev) chev.style.transform = 'rotate(0deg)';
+        }
+    }
+
+    function togglePaymentTab(tab) {
+        const tInst = document.getElementById('tab-installment');
+        const tCash = document.getElementById('tab-cash');
+        const vInst = document.getElementById('view-installment');
+        const vCash = document.getElementById('view-cash');
+
+        if(tab === 'installment') {
+            tInst.className = 'text-sm px-4 py-2 text-gray-900 bg-white shadow-sm flex-1 relative z-10 font-medium rounded-lg transition-colors duration-200 whitespace-nowrap';
+            tCash.className = 'text-sm px-4 py-2 text-gray-400 hover:text-gray-500 flex-1 relative z-10 font-medium rounded-lg transition-colors duration-200 whitespace-nowrap';
+            vInst.style.display = 'flex';
+            vCash.style.display = 'none';
+        } else {
+            tCash.className = 'text-sm px-4 py-2 text-gray-900 bg-white shadow-sm flex-1 relative z-10 font-medium rounded-lg transition-colors duration-200 whitespace-nowrap';
+            tInst.className = 'text-sm px-4 py-2 text-gray-400 hover:text-gray-500 flex-1 relative z-10 font-medium rounded-lg transition-colors duration-200 whitespace-nowrap';
+            vCash.style.display = 'flex';
+            vInst.style.display = 'none';
+        }
     }
 </script>
 @endpush

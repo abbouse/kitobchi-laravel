@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\FavouriteProducts;
+use App\Support\ProductVisibilityScope;
 use App\Traits\HasProductVisibility;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -31,10 +32,33 @@ class WebFavoritesController extends Controller
             ->latest()
             ->get();
 
+        // MUHIM: morphTo('product') hech qanday ko'rinish shartisiz xom
+        // qatorni qaytaradi — bloklangan/yashiringan do'konning yoki
+        // o'chirilgan/tasdiqlanmagan mahsulotning yozuvi ham shu yerga
+        // kirib qolardi. Sevimlilar sahifasida ham saytning boshqa hamma
+        // joyidagi bir xil qoida (ProductVisibilityScope) qo'llaniladi —
+        // hozir ko'rinmaydigan mahsulot ro'yxatdan butunlay chiqarib
+        // tashlanadi (o'chirilmaydi, faqat shu ro'yxatda ko'rsatilmaydi;
+        // do'kon qayta faollashsa yana paydo bo'ladi).
+        $visibleBookIds = array_flip(ProductVisibilityScope::visibleBookIds(
+            $favourites->where('product_type', 'book')->pluck('product_id')->all()
+        ));
+        $visibleStationeryIds = array_flip(ProductVisibilityScope::visibleStationeryIds(
+            $favourites->where('product_type', 'stationery')->pluck('product_id')->all()
+        ));
+
         $items = $favourites
-            ->map(function ($fav) {
+            ->map(function ($fav) use ($visibleBookIds, $visibleStationeryIds) {
                 $product = $fav->product;
                 if (! $product) {
+                    return null;
+                }
+
+                $isVisible = $fav->product_type === 'stationery'
+                    ? isset($visibleStationeryIds[$fav->product_id])
+                    : isset($visibleBookIds[$fav->product_id]);
+
+                if (! $isVisible) {
                     return null;
                 }
 
@@ -93,7 +117,10 @@ class WebFavoritesController extends Controller
             return response()->json([
                 'status' => 'success',
                 'action' => 'removed',
-                'count' => FavouriteProducts::where('user_id', $user->id)->count(),
+                // Faqat hozir ko'rinadigan mahsulotlar sanaladi — aks holda
+                // header'dagi badge foydalanuvchi ko'ra olmaydigan
+                // (bloklangan do'kon) mahsulotlarni ham qo'shib yuboradi.
+                'count' => ProductVisibilityScope::visibleFavouriteCount($user->id),
             ]);
         }
 
@@ -106,7 +133,7 @@ class WebFavoritesController extends Controller
         return response()->json([
             'status' => 'success',
             'action' => 'added',
-            'count' => FavouriteProducts::where('user_id', $user->id)->count(),
+            'count' => ProductVisibilityScope::visibleFavouriteCount($user->id),
         ]);
     }
 }

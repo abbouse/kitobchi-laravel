@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Sold;
+use App\Models\Locations;
 use App\Services\SmsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -135,7 +136,88 @@ class WebAuthController extends Controller
             ->take(20)
             ->get();
 
-        return view('user.profile', compact('user', 'orders'));
+        $locations = Locations::where('user_id', $user->id)->where('isDeleted', false)->get();
+
+        return view('user.profile', compact('user', 'orders', 'locations'));
+    }
+
+    /**
+     * Yangi manzil qo'shish (Yandex Map orqali)
+     */
+    public function addLocation(Request $request)
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
+        }
+
+        $validated = $request->validate([
+            'lat' => 'required|numeric',
+            'lon' => 'required|numeric',
+            'fullAddress' => 'required|string|max:1000',
+        ]);
+
+        $location = new Locations();
+        $location->user_id = $user->id;
+        $location->lat = $validated['lat'];
+        $location->lon = $validated['lon'];
+        $location->fullAddress = $validated['fullAddress'];
+        $location->country_code = 'UZ'; // By default for now, similar to mobile API
+        $location->save();
+
+        if (!$user->mainAddressID) {
+            $user->update(['mainAddressID' => $location->id]);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Manzil muvaffaqiyatli saqlandi',
+            'location' => $location
+        ]);
+    }
+
+    /**
+     * Manzilni o'chirish (soft delete)
+     */
+    public function deleteLocation(Request $request, $id)
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
+        }
+
+        $location = Locations::where('id', $id)->where('user_id', $user->id)->first();
+        if (!$location) {
+            return response()->json(['status' => 'error', 'message' => 'Manzil topilmadi'], 404);
+        }
+
+        if ($user->mainAddressID == $location->id) {
+            return response()->json(['status' => 'error', 'message' => 'Asosiy manzilni o\'chirib bo\'lmaydi'], 400);
+        }
+
+        $location->update(['isDeleted' => true]);
+
+        return response()->json(['status' => 'success', 'message' => 'Manzil o\'chirildi']);
+    }
+
+    /**
+     * Asosiy manzilni o'zgartirish
+     */
+    public function setMainLocation(Request $request, $id)
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
+        }
+
+        $location = Locations::where('id', $id)->where('user_id', $user->id)->where('isDeleted', false)->first();
+        if (!$location) {
+            return response()->json(['status' => 'error', 'message' => 'Manzil topilmadi'], 404);
+        }
+
+        $user->update(['mainAddressID' => $location->id]);
+
+        return response()->json(['status' => 'success', 'message' => 'Asosiy manzil o\'zgartirildi']);
     }
 
     /**

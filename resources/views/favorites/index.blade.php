@@ -1,113 +1,91 @@
 @extends('layouts.marketplace')
 
-@section('title', "Sevimlilar | Kitobchi Marketpleysi")
+@section('title', "Sevimlilar | Kitobchi")
 
 @section('content')
-<div style="min-height:100dvh;padding:1.5rem 0;">
-    <div style="width:100%;max-width:var(--ui-container);margin:0 auto;padding:0 1rem;">
-
-        <!-- ====== BREADCRUMBS ====== -->
-        <div style="margin-bottom:1.25rem;">
-            <nav aria-label="Breadcrumb">
-                <ol style="display:flex;align-items:center;gap:0.5rem;list-style:none;padding:0;margin:0;">
-                    <li>
-                        <a href="{{ url('/') }}" style="font-size:0.875rem;color:#8F8FA1;text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='#111827'" onmouseout="this.style.color='#8F8FA1'">Asosiy</a>
-                    </li>
-                    <li aria-hidden="true" style="color:#8F8FA1;font-size:0.75rem;">/</li>
-                    <li>
-                        <span style="font-size:0.875rem;color:#111827;font-weight:600;">Sevimlilar</span>
-                    </li>
-                </ol>
-            </nav>
-        </div>
-
-        <!-- ====== HEADING ====== -->
-        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem;">
-            <iconify-icon icon="heroicons-solid:heart" style="font-size:26px;color:#ef4444;flex-shrink:0;"></iconify-icon>
-            <h1 style="font-size:clamp(1.375rem,4vw,1.875rem);font-weight:800;color:#111827;margin:0;">
-                Sevimlilar
-                @if($items->isNotEmpty())
-                    <span style="font-size:1rem;font-weight:600;color:#9ca3af;">({{ $items->count() }})</span>
-                @endif
-            </h1>
-        </div>
-
-        @if($items->isEmpty())
-            <!-- ====== EMPTY STATE ====== -->
-            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:4.5rem 1rem;background:#fafafa;border-radius:1.5rem;">
-                <iconify-icon icon="heroicons:heart" style="font-size:56px;color:#d1d5db;"></iconify-icon>
-                <h2 style="font-size:1.125rem;font-weight:700;color:#111827;margin:1.25rem 0 0.5rem;">Sevimlilar ro'yxati bo'sh</h2>
-                <p style="font-size:0.9rem;color:#6b7280;margin:0 0 1.5rem;max-width:360px;line-height:1.6;">
-                    Yoqqan kitob yoki kanselyariya buyumlarini yurak belgisini bosib shu yerga qo'shing.
-                </p>
-                <a href="{{ route('web.catalog') }}" class="kc-primary-btn">
-                    <iconify-icon icon="heroicons-solid:squares-2x2" style="font-size:18px;"></iconify-icon>
-                    Katalogga o'tish
-                </a>
-            </div>
-        @else
-            <!-- ====== FAVORITES GRID ====== -->
-            <div id="kcFavGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:0.5rem;">
-                @foreach($items as $fav)
-                    @php
-                        $product = $fav->product;
-                        $isStationery = $fav->type === 'stationery';
-                        $favSlug = \Illuminate\Support\Str::slug($product->name);
-                        $favUrl = $isStationery
-                            ? route('web.stationery.show', ['id' => $product->id, 'slug' => $favSlug])
-                            : route('web.books.show', ['id' => $product->id, 'slug' => $favSlug]);
-                        $favImg = $product->first_image ? asset('storage/' . $product->first_image) : asset('images/logo/logo_blue.png');
-                        $favRawPrice = (float) $product->price;
-                        $favDiscRaw = $isStationery ? (float) ($product->discount_price ?? 0) : (float) ($product->discountPrice ?? 0);
-                        $favIsDisc = $favDiscRaw > 0 && $favDiscRaw < $favRawPrice;
-                        $favPrice = $favIsDisc ? $favDiscRaw : $favRawPrice;
-                        $favDiscPct = $favIsDisc ? round((($favRawPrice - $favPrice) / $favRawPrice) * 100) : 0;
-                    @endphp
-                    <a href="{{ $favUrl }}" class="kc-product-card">
-                        <div class="kc-product-card-img">
-                            <img src="{{ $favImg }}" alt="{{ $product->name }}" loading="lazy">
-                            @if($favIsDisc)
-                                <span class="kc-discount-badge">-{{ $favDiscPct }}%</span>
-                            @endif
-                            <div class="kc-fav-btn-wrap">
-                                <button aria-label="Sevimlilardan o'chirish"
-                                        onclick="event.preventDefault(); removeFavoriteCard(this, {{ $product->id }}, '{{ $isStationery ? 'stationery' : 'book' }}');"
-                                        class="kc-fav-btn">
-                                    <iconify-icon icon="heroicons-solid:heart" style="font-size:16px;color:#ef4444;"></iconify-icon>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="kc-product-card-body">
-                            <div class="kc-product-card-title">{{ $product->name }}</div>
-                            <div class="kc-product-card-price">{{ number_format($favPrice) }} so'm</div>
-                        </div>
-                    </a>
-                @endforeach
-            </div>
-        @endif
-
+<div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto py-6 rounded-t-2xl grow">
+    
+    <div class="flex items-center gap-2 mb-5">
+        <a href="{{ route('web.catalog') }}" class="rounded-md font-medium inline-flex items-center transition-colors px-2.5 py-1.5 text-sm gap-1.5 text-primary hover:text-primary/75 outline-primary/25">
+            <i class="icon-up-arrow text-xl -rotate-135"></i>
+        </a>
+        <nav aria-label="breadcrumb" class="relative min-w-0">
+            <ol class="flex items-center gap-2">
+                <li class="flex min-w-0 text-[#8F8FA1] text-sm">
+                    <a href="{{ url('/') }}" class="hover:text-neutral-900 transition-colors">Asosiy</a>
+                </li>
+                <li class="flex text-gray text-xs">/</li>
+                <li class="flex min-w-0 text-[#8F8FA1] text-sm font-semibold">
+                    Sevimlilar
+                </li>
+            </ol>
+        </nav>
     </div>
-</div>
 
-<style>
-    @media(min-width: 640px) {
-        #kcFavGrid { grid-template-columns: repeat(3, 1fr) !important; gap: 0.75rem !important; }
-    }
-    @media(min-width: 1024px) {
-        #kcFavGrid { grid-template-columns: repeat(4, 1fr) !important; gap: 1rem !important; }
-    }
-    @media(min-width: 1280px) {
-        #kcFavGrid { grid-template-columns: repeat(5, 1fr) !important; gap: 1.25rem !important; }
-    }
-</style>
+    <h1 class="text-4xl text-primary font-bold dark:text-white mb-6">
+        Sevimlilar
+        @if($items->isNotEmpty())
+            <span class="text-xl font-medium text-neutral-400">({{ $items->count() }})</span>
+        @endif
+    </h1>
+
+    @if($items->isEmpty())
+        <!-- ====== EMPTY STATE ====== -->
+        <div class="pt-10 pb-20">
+            <div class="py-10 text-center">
+                <div class="w-full">
+                    <img alt="Empty favorites" class="w-full max-w-[250px] mx-auto mb-4" src="{{ asset('images/empty-favorites.svg') }}">
+                </div>
+                <h2 class="text-xl font-bold dark:text-white mb-2">
+                    Sevimlilar ro'yxati bo'sh
+                </h2>
+                <p class="text-neutral-500 mb-6">
+                    Ushbu bo’limda hozircha ma’lumot yo’q, ammo tez orada qo’shiladi
+                </p>
+                <div>
+                    <a href="{{ route('web.catalog') }}" class="font-medium items-center transition-colors py-1.5 gap-1.5 text-inverted bg-primary hover:bg-primary/75 h-12 justify-center sm:min-w-40 rounded-2xl text-base max-md:w-full inline-flex px-6" style="color:#fff;">
+                        Katalogga o‘tish
+                    </a>
+                </div>
+            </div>
+        </div>
+    @else
+        <!-- ====== FAVORITES GRID ====== -->
+        <div id="kcFavGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-5 xl:gap-6">
+            @foreach($items as $fav)
+                @php
+                    $product = $fav->product;
+                    $isStationery = $fav->type === 'stationery';
+                    $favSlug = \Illuminate\Support\Str::slug($product->name);
+                    $favUrl = $isStationery
+                        ? route('web.stationery.show', ['id' => $product->id, 'slug' => $favSlug])
+                        : route('web.books.show', ['id' => $product->id, 'slug' => $favSlug]);
+                    $favImg = $product->first_image ? asset('storage/' . $product->first_image) : asset('images/logo/logo_blue.png');
+                    $favRawPrice = (float) $product->price;
+                    $favDiscRaw = $isStationery ? (float) ($product->discount_price ?? 0) : (float) ($product->discountPrice ?? 0);
+                    $favIsDisc = $favDiscRaw > 0 && $favDiscRaw < $favRawPrice;
+                    $favPrice = $favIsDisc ? $favDiscRaw : $favRawPrice;
+                @endphp
+                
+                <div class="relative group block h-full">
+                    @include('partials.home-book-card', ['book' => $product, 'isStationery' => $isStationery])
+                    
+                    <div class="absolute top-3 right-3 z-20">
+                        <button onclick="event.preventDefault(); removeFavoriteCard(this, {{ $product->id }}, '{{ $isStationery ? 'stationery' : 'book' }}');" class="w-9 h-9 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-sm shadow-sm hover:bg-white text-error-500 transition-colors">
+                            <iconify-icon icon="heroicons-solid:heart" class="text-lg"></iconify-icon>
+                        </button>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+    @endif
+
+</div>
 
 @push('scripts')
 <script>
-    // Sevimlilar sahifasida yurakni bosish — boshqa sahifalardagi
-    // toggleFavorite()'dan farqli o'laroq, bu yerda faqat "o'chirish"
-    // ma'nosini bildiradi: kartani ro'yxatdan butunlay olib tashlaydi.
     function removeFavoriteCard(btn, productId, productType) {
-        const card = btn.closest('.kc-product-card');
+        const card = btn.closest('.relative.group.block');
         if (card) {
             card.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
             card.style.opacity = '0';

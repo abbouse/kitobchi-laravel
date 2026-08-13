@@ -3,23 +3,31 @@
 @section('title', 'Savatcha — Kitobchi')
 
 @section('content')
-<div class="kc-page-surface" style="padding:1.5rem 0;">
-    <div style="width:100%;max-width:var(--ui-container);margin:0 auto;padding:0 1rem;">
-
-        <!-- Page Header -->
-        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem;">
-            <a href="{{ route('web.catalog') }}"
-               style="width:2.5rem;height:2.5rem;display:flex;align-items:center;justify-content:center;background:#f3f4f6;border-radius:9999px;text-decoration:none;color:#374151;transition:all 0.2s;flex-shrink:0;"
-               onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg>
-            </a>
-            <h1 style="font-size:clamp(1.25rem,4vw,1.75rem);font-weight:800;color:#111827;margin:0;">Savatcha</h1>
-        </div>
-
-        <!-- Dynamic cart content -->
-        <div id="kcCartPageContent"></div>
-
+<div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto py-6 rounded-t-2xl grow">
+    
+    <div class="flex items-center gap-2 mb-5">
+        <a href="{{ route('web.catalog') }}" class="rounded-md font-medium inline-flex items-center transition-colors px-2.5 py-1.5 text-sm gap-1.5 text-primary hover:text-primary/75 outline-primary/25">
+            <i class="icon-up-arrow text-xl -rotate-135"></i>
+        </a>
+        <nav aria-label="breadcrumb" class="relative min-w-0">
+            <ol class="flex items-center gap-2">
+                <li class="flex min-w-0 text-[#8F8FA1] text-sm">
+                    <a href="{{ url('/') }}" class="hover:text-neutral-900 transition-colors">Asosiy</a>
+                </li>
+                <li class="flex text-gray text-xs">/</li>
+                <li class="flex min-w-0 text-[#8F8FA1] text-sm font-semibold">
+                    Savatcha
+                </li>
+            </ol>
+        </nav>
     </div>
+
+    <h1 class="text-4xl text-primary font-bold dark:text-white mb-6">
+        Savatcha
+    </h1>
+
+    <div id="kcCartPageContent"></div>
+
 </div>
 @endsection
 
@@ -33,19 +41,23 @@ function renderCartPage() {
 
     if (!cart || cart.length === 0) {
         container.innerHTML = `
-            <div style="text-align:center;padding:4rem 1rem;background:#fff;border-radius:1.5rem;">
-                <div class="kc-icon-empty" aria-hidden="true">
-                    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                        <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>
-                    </svg>
+            <div class="pt-10 pb-20">
+                <div class="py-10 text-center">
+                    <div class="w-full">
+                        <img alt="Empty cart" class="w-full max-w-[250px] mx-auto mb-4" src="{{ asset('images/empty-basket.svg') }}">
+                    </div>
+                    <h2 class="text-xl font-bold dark:text-white mb-2">
+                        Savatingiz bo'sh
+                    </h2>
+                    <p class="text-neutral-500 mb-6">
+                        Ushbu bo’limda hozircha ma’lumot yo’q, ammo tez orada qo’shiladi
+                    </p>
+                    <div>
+                        <a href="{{ route('web.catalog') }}" class="font-medium items-center transition-colors py-1.5 gap-1.5 text-inverted bg-primary hover:bg-primary/75 h-12 justify-center sm:min-w-40 rounded-2xl text-base max-md:w-full inline-flex px-6" style="color:#fff;">
+                            Katalogga o‘tish
+                        </a>
+                    </div>
                 </div>
-                <h2 style="font-size:1.25rem;font-weight:700;color:#111827;margin:0 0 0.5rem;">Savatingiz bo'sh</h2>
-                <p style="color:#6b7280;font-size:0.9375rem;max-width:360px;margin:0 auto 1.5rem;line-height:1.6;">
-                    Katalogdan o'zingizga yoqqan kitob va mahsulotlarni tanlang.
-                </p>
-                <a href="{{ route('web.catalog') }}" class="kc-primary-btn">
-                    Katalogga o'tish
-                </a>
             </div>`;
         return;
     }
@@ -56,35 +68,36 @@ function renderCartPage() {
     cart.forEach(item => {
         const itemTotal = item.price * item.qty;
         total += itemTotal;
-        const openTag = item.url
-            ? `<a href="${item.url}" style="display:flex;align-items:center;gap:0.875rem;flex:1;min-width:0;text-decoration:none;color:inherit;">`
-            : `<div style="display:flex;align-items:center;gap:0.875rem;flex:1;min-width:0;">`;
+        const openTag = item.url ? `<a href="${item.url}" class="group block bg-white rounded-xl overflow-hidden">` : `<div>`;
         const closeTag = item.url ? '</a>' : '</div>';
+        
         itemsHtml += `
-            <div style="display:flex;align-items:center;gap:0.875rem;padding:0.875rem;background:#fff;border-radius:0.875rem;margin-bottom:0.625rem;border:1px solid #f3f4f6;box-shadow:0 4px 16px rgba(15,23,42,0.04);">
-                ${openTag}
-                    <img src="${item.image}" alt="${item.name}" style="width:64px;height:80px;object-fit:cover;border-radius:0.625rem;flex-shrink:0;border:1px solid #f3f4f6;">
-                    <div style="flex:1;min-width:0;">
-                        <div style="font-size:0.875rem;font-weight:600;color:#111827;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;margin-bottom:0.375rem;">${item.name}</div>
-                        <div style="font-size:0.9375rem;font-weight:700;color:var(--color-tima-500);">${new Intl.NumberFormat('uz').format(item.price)} so'm</div>
+            <div class="flex max-md:flex-col gap-4 md:gap-5 border-b border-secondary-300 pb-5">
+                <div class="w-full md:w-32 lg:w-40 xl:w-48 shrink-0 relative bg-neutral-100 rounded-xl overflow-hidden aspect-square flex items-center justify-center">
+                    <img src="${item.image}" alt="${item.name}" class="w-full h-full object-cover">
+                </div>
+                <div class="flex-1 flex flex-col sm:justify-between py-2 gap-4">
+                    <div class="flex items-start justify-between gap-4">
+                        ${openTag}
+                            <h3 class="text-lg md:text-xl font-medium text-primary hover:text-primary-500 transition-colors line-clamp-2">${item.name}</h3>
+                        ${closeTag}
+                        <button type="button" onclick="removeFromCart(${item.id}); renderCartPage();" class="shrink-0 p-2 text-neutral-400 hover:text-error-500 hover:bg-error-50 rounded-lg transition-all duration-300">
+                            <span class="iconify i-lucide:trash-2 w-5 h-5 block"></span>
+                        </button>
                     </div>
-                ${closeTag}
-                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.75rem;flex-shrink:0;">
-                    <div style="display:flex;align-items:center;gap:0.375rem;">
-                        <button type="button"
-                                onclick="updateQty(${item.id}, -1); renderCartPage();"
-                                style="width:1.875rem;height:1.875rem;border:1px solid #e5e7eb;border-radius:9999px;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.1em;font-weight:700;">−</button>
-                        <span style="min-width:1.5rem;text-align:center;font-weight:700;font-size:1rem;">${item.qty}</span>
-                        <button type="button"
-                                onclick="updateQty(${item.id}, 1); renderCartPage();"
-                                style="width:1.875rem;height:1.875rem;border:1px solid #e5e7eb;border-radius:9999px;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.1em;font-weight:700;">+</button>
+                    <div class="flex max-sm:flex-col sm:items-center justify-between gap-4">
+                        <div class="flex items-center gap-3">
+                            <span class="text-sm text-neutral-500">Narxi:</span>
+                            <span class="font-bold text-lg md:text-xl text-primary">${new Intl.NumberFormat('uz').format(item.price)} so'm</span>
+                        </div>
+                        <div class="flex items-center justify-between sm:justify-end gap-6 max-sm:w-full">
+                            <div class="flex items-center gap-3 bg-secondary-100 rounded-lg p-1">
+                                <button type="button" onclick="updateQty(${item.id}, -1); renderCartPage();" class="w-8 h-8 rounded-md bg-white flex items-center justify-center text-primary shadow-sm hover:bg-gray-50 transition-colors font-medium">−</button>
+                                <span class="w-8 text-center font-medium text-primary">${item.qty}</span>
+                                <button type="button" onclick="updateQty(${item.id}, 1); renderCartPage();" class="w-8 h-8 rounded-md bg-white flex items-center justify-center text-primary shadow-sm hover:bg-gray-50 transition-colors font-medium">+</button>
+                            </div>
+                        </div>
                     </div>
-                    <div style="font-size:0.9375rem;font-weight:700;color:#111827;white-space:nowrap;">${new Intl.NumberFormat('uz').format(itemTotal)} so'm</div>
-                    <button type="button" onclick="removeFromCart(${item.id}); renderCartPage();"
-                            style="font-size:0.75rem;color:#9ca3af;background:none;border:none;cursor:pointer;padding:0;transition:color 0.2s;"
-                            onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#9ca3af'">
-                        O'chirish
-                    </button>
                 </div>
             </div>`;
     });
@@ -92,64 +105,46 @@ function renderCartPage() {
     const totalCount = cart.reduce((s, i) => s + i.qty, 0);
 
     container.innerHTML = `
-        <div id="kcCartGrid" style="display:grid;grid-template-columns:1fr;gap:1.5rem;align-items:flex-start;">
-            <!-- Items -->
-            <div>${itemsHtml}</div>
+        <div class="flex flex-col lg:flex-row gap-6 xl:gap-8 relative items-start">
+            <div class="flex-1 flex flex-col gap-5 w-full bg-white p-4 sm:p-6 rounded-2xl border border-secondary-200">
+                ${itemsHtml}
+            </div>
 
-            <!-- Summary -->
-            <div>
-                <div style="background:#fff;border-radius:1.25rem;padding:1.5rem;border:1px solid #f3f4f6;position:sticky;top:80px;">
-                    <h3 style="font-size:1rem;font-weight:700;color:#111827;margin:0 0 1.25rem;">Buyurtma xulosasi</h3>
-
-                    <div style="display:flex;flex-direction:column;gap:0.625rem;margin-bottom:1.25rem;">
-                        <div style="display:flex;justify-content:space-between;font-size:0.875rem;color:#6b7280;">
-                            <span>Mahsulotlar soni:</span>
-                            <span style="font-weight:600;color:#111827;">${totalCount} ta</span>
+            <div class="w-full lg:w-[380px] shrink-0 sticky top-24">
+                <div class="bg-white rounded-2xl p-5 md:p-6 border border-secondary-200 shadow-sm flex flex-col gap-6">
+                    <h3 class="text-xl font-bold text-primary">
+                        Buyurtmangiz
+                    </h3>
+                    <div class="flex flex-col gap-4">
+                        <div class="flex justify-between items-center text-base">
+                            <span class="text-neutral-500">Mahsulotlar (${totalCount}):</span>
+                            <span class="font-medium text-primary">${new Intl.NumberFormat('uz').format(total)} so'm</span>
                         </div>
-                        <div style="display:flex;justify-content:space-between;font-size:0.875rem;color:#6b7280;">
-                            <span>Mahsulotlar:</span>
-                            <span style="font-weight:600;color:#111827;">${new Intl.NumberFormat('uz').format(total)} so'm</span>
+                        <div class="flex justify-between items-center text-base">
+                            <span class="text-neutral-500">Chegirma:</span>
+                            <span class="font-medium text-error-500">-0 so'm</span>
                         </div>
-                        <div style="display:flex;justify-content:space-between;font-size:0.875rem;color:#6b7280;">
-                            <span>Yetkazib berish:</span>
-                            <span style="font-weight:600;color:#6b7280;">Hududga qarab</span>
+                        <div class="flex justify-between items-center text-base">
+                            <span class="text-neutral-500">Yetkazib berish:</span>
+                            <span class="font-medium text-primary">0 so'm</span>
+                        </div>
+                        
+                        <hr class="border-secondary-200 my-1">
+                        
+                        <div class="flex justify-between items-center">
+                            <span class="text-lg font-bold text-primary">Jami:</span>
+                            <span class="text-2xl font-bold text-primary">${new Intl.NumberFormat('uz').format(total)} so'm</span>
                         </div>
                     </div>
-
-                    <div style="border-top:1px solid #f3f4f6;padding-top:1rem;margin-bottom:1.25rem;">
-                        <div style="display:flex;justify-content:space-between;font-size:1.125rem;font-weight:800;color:#111827;">
-                            <span>Mahsulotlar summasi:</span>
-                            <span style="color:var(--color-tima-500);">${new Intl.NumberFormat('uz').format(total)} so'm</span>
-                        </div>
-                        <div style="font-size:0.75rem;color:#9ca3af;margin-top:0.25rem;">Yetkazib berish narxi hududingiz bo'yicha keyingi bosqichda hisoblanadi</div>
-                    </div>
-
-                    <a href="{{ route('web.checkout') }}" class="kc-primary-btn" style="width:100%;">
-                        Buyurtmani rasmiylashtirish →
-                    </a>
-
-                    <a href="{{ route('web.catalog') }}"
-                       style="display:flex;align-items:center;justify-content:center;margin-top:0.75rem;font-size:0.875rem;color:#6b7280;text-decoration:none;gap:0.25rem;transition:color 0.2s;"
-                       onmouseover="this.style.color='#111827'" onmouseout="this.style.color='#6b7280'">
-                        ← Xaridni davom ettirish
+                    
+                    <a href="{{ route('web.checkout') }}" class="font-medium items-center transition-colors py-1.5 gap-1.5 text-inverted bg-primary hover:bg-primary/75 h-14 justify-center rounded-2xl text-lg w-full inline-flex" style="color:#fff;">
+                        Xaridni davom ettirish
                     </a>
                 </div>
             </div>
         </div>`;
-
-    // Responsive grid after render
-    const grid = document.getElementById('kcCartGrid');
-    if (grid && window.innerWidth >= 768) {
-        grid.style.gridTemplateColumns = '1fr 360px';
-    }
 }
 
 document.addEventListener('DOMContentLoaded', renderCartPage);
-window.addEventListener('resize', function() {
-    const grid = document.getElementById('kcCartGrid');
-    if (grid) {
-        grid.style.gridTemplateColumns = window.innerWidth >= 768 ? '1fr 360px' : '1fr';
-    }
-});
 </script>
 @endpush

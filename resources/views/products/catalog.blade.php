@@ -76,33 +76,6 @@
                     </div>
                 </div>
 
-                <!-- Price range filter -->
-                <div class="relative kc-lang-wrap">
-                    <button type="button" onclick="toggleLangMenu(event, 'kcPriceMenu')" aria-haspopup="menu" aria-expanded="false"
-                            style="display:inline-flex;align-items:center;gap:0.375rem;padding:0.5rem 0.875rem;background:{{ ($priceMin || $priceMax) ? 'var(--color-tima-500)' : '#f3f4f6' }};border-radius:9999px;border:none;font-size:0.8125rem;font-weight:600;color:{{ ($priceMin || $priceMax) ? '#fff' : '#374151' }};cursor:pointer;font-family:inherit;">
-                        <iconify-icon icon="lucide:sliders-horizontal" style="font-size:14px;"></iconify-icon>
-                        Narx
-                    </button>
-                    <div id="kcPriceMenu" class="kc-lang-menu" style="display:none;position:absolute;top:calc(100% + 8px);right:0;width:240px;background:#fff;border-radius:1rem;box-shadow:0 20px 40px rgba(0,0,0,0.14);z-index:200;padding:1rem;">
-                        <form method="GET" action="{{ route('web.catalog') }}">
-                            <input type="hidden" name="type" value="{{ $type }}">
-                            @if($search)<input type="hidden" name="search" value="{{ $search }}">@endif
-                            @if(request('category'))<input type="hidden" name="category" value="{{ request('category') }}">@endif
-                            @if($sort !== 'popular')<input type="hidden" name="sort" value="{{ $sort }}">@endif
-                            <label style="display:block;font-size:0.75rem;font-weight:600;color:#6b7280;margin-bottom:0.5rem;">Narx oralig'i, so'm</label>
-                            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;">
-                                <input type="number" name="price_min" min="0" placeholder="Dan" value="{{ $priceMin }}" style="width:100%;height:2.25rem;padding:0 0.625rem;border:1px solid #e5e7eb;border-radius:0.5rem;font-size:0.8125rem;font-family:inherit;">
-                                <span style="color:#9ca3af;">—</span>
-                                <input type="number" name="price_max" min="0" placeholder="Gacha" value="{{ $priceMax }}" style="width:100%;height:2.25rem;padding:0 0.625rem;border:1px solid #e5e7eb;border-radius:0.5rem;font-size:0.8125rem;font-family:inherit;">
-                            </div>
-                            <div style="display:flex;gap:0.5rem;">
-                                <button type="submit" style="flex:1;height:2.25rem;background:var(--color-tima-500);color:#fff;border:none;border-radius:0.5rem;font-size:0.8125rem;font-weight:700;cursor:pointer;">Qo'llash</button>
-                                @if($priceMin || $priceMax)
-                                    <a href="{{ route('web.catalog', array_merge(array_diff_key($baseParams, ['price_min' => 1, 'price_max' => 1]), ['type' => $type])) }}" style="display:flex;align-items:center;justify-content:center;height:2.25rem;padding:0 0.75rem;background:#f3f4f6;color:#374151;border-radius:0.5rem;font-size:0.8125rem;text-decoration:none;">Tozalash</a>
-                                @endif
-                            </div>
-                        </form>
-                    </div>
                 </div>
             </div>
         </div>
@@ -111,47 +84,68 @@
         <div class="flex flex-col lg:flex-row gap-8" style="align-items:flex-start;">
 
             <!-- ====== SIDEBAR FILTERS ====== -->
-            <aside class="w-full lg:w-64 shrink-0 hidden lg:block" style="position:sticky;top:80px;background:#fff;border-radius:1rem;padding:1.25rem;border:1px solid #f3f4f6;">
+            <aside class="w-full lg:w-[280px] shrink-0 hidden lg:block">
+                <form method="GET" action="{{ route('web.catalog') }}" class="bg-white rounded-2xl border border-secondary-200 p-5 shadow-sm sticky top-24 flex flex-col gap-6" id="kcFilterForm">
+                    <input type="hidden" name="type" value="{{ $type }}">
+                    @if($search)<input type="hidden" name="search" value="{{ $search }}">@endif
+                    @if($sort !== 'popular')<input type="hidden" name="sort" value="{{ $sort }}">@endif
 
-                <h3 style="font-size:0.9375rem;font-weight:700;color:#111827;margin:0 0 0.875rem;">Kategoriyalar</h3>
+                    <!-- Categories Filter (Radio style) -->
+                    <div>
+                        <h3 class="text-lg font-bold text-primary mb-4">Kategoriyalar</h3>
+                        <div class="flex flex-col gap-3">
+                            <label class="flex items-center gap-3 cursor-pointer group">
+                                <div class="relative flex items-center justify-center w-5 h-5 rounded-full border border-secondary-300 group-hover:border-primary transition-colors bg-white">
+                                    <input type="radio" name="category" value="" class="peer sr-only" onchange="this.form.submit()" {{ !request('category') ? 'checked' : '' }}>
+                                    <div class="w-2.5 h-2.5 rounded-full bg-primary opacity-0 peer-checked:opacity-100 transition-opacity"></div>
+                                </div>
+                                <span class="text-[15px] font-medium transition-colors {{ !request('category') ? 'text-primary' : 'text-neutral-600 group-hover:text-primary' }}">Barchasi</span>
+                            </label>
 
-                <div style="display:flex;flex-direction:column;gap:0.125rem;">
-                    <a href="{{ route('web.catalog', array_merge(array_diff_key($baseParams, ['category' => 1]), ['type' => $type])) }}" class="text-neutral-600 leading-6 py-3 hover:text-primary-500 hover:underline font-medium transition-all duration-200"
-                       style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.625rem;border-radius:0.5rem;font-size:0.875rem;text-decoration:none;
-                              background:{{ !request('category') ? 'var(--color-tima-50)' : 'transparent' }};
-                              color:{{ !request('category') ? 'var(--color-tima-600)' : '#374151' }};
-                              font-weight:{{ !request('category') ? '600' : '400' }};">
-                        Barchasi
-                        @if(!request('category'))
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
-                        @endif
-                    </a>
-
-                    @php $activeCategories = $isStationery ? ($stationeryCategories ?? collect()) : ($bookCategories ?? collect()); @endphp
-
-                    @foreach($activeCategories as $cat)
-                        <a href="{{ route('web.catalog', array_merge($baseParams, ['type' => $type, 'category' => $cat->id])) }}" class="text-neutral-600 leading-6 py-3 hover:text-primary-500 hover:underline font-medium transition-all duration-200"
-                           style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.625rem;border-radius:0.5rem;font-size:0.875rem;text-decoration:none;
-                                  background:{{ request('category') == $cat->id ? 'var(--color-tima-50)' : 'transparent' }};
-                                  color:{{ request('category') == $cat->id ? 'var(--color-tima-600)' : '#374151' }};
-                                  font-weight:{{ request('category') == $cat->id ? '600' : '400' }};">
-                            {{ $cat->name_uz ?? $cat->name }}
-                            @if(request('category') == $cat->id)
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
-                            @endif
-                        </a>
-                    @endforeach
-                </div>
-
-                @if(request('category') || $priceMin || $priceMax || $sort !== 'popular' || $search)
-                    <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid #f3f4f6;">
-                        <a href="{{ route('web.catalog', ['type' => $type]) }}"
-                           style="display:block;text-align:center;padding:0.5rem;background:#f3f4f6;border-radius:0.5rem;font-size:0.8125rem;color:#6b7280;text-decoration:none;transition:all 0.2s;"
-                           onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">
-                            Filtrlarni tozalash
-                        </a>
+                            @php $activeCategories = $isStationery ? ($stationeryCategories ?? collect()) : ($bookCategories ?? collect()); @endphp
+                            @foreach($activeCategories as $cat)
+                                <label class="flex items-center gap-3 cursor-pointer group">
+                                    <div class="relative flex items-center justify-center w-5 h-5 rounded-full border border-secondary-300 group-hover:border-primary transition-colors bg-white">
+                                        <input type="radio" name="category" value="{{ $cat->id }}" class="peer sr-only" onchange="this.form.submit()" {{ request('category') == $cat->id ? 'checked' : '' }}>
+                                        <div class="w-2.5 h-2.5 rounded-full bg-primary opacity-0 peer-checked:opacity-100 transition-opacity"></div>
+                                    </div>
+                                    <span class="text-[15px] font-medium transition-colors {{ request('category') == $cat->id ? 'text-primary' : 'text-neutral-600 group-hover:text-primary' }}">{{ $cat->name_uz ?? $cat->name }}</span>
+                                </label>
+                            @endforeach
+                        </div>
                     </div>
-                @endif
+
+                    <hr class="border-secondary-200">
+
+                    <!-- Price Filter -->
+                    <div>
+                        <h3 class="text-lg font-bold text-primary mb-4">Narx</h3>
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="flex-1 relative">
+                                <input type="number" name="price_min" min="0" placeholder="Dan" value="{{ $priceMin }}" 
+                                       class="w-full h-11 bg-secondary-100 border-none rounded-xl px-4 text-sm font-medium text-primary placeholder-neutral-400 focus:ring-2 focus:ring-primary/20 outline-none transition-all">
+                            </div>
+                            <span class="text-neutral-400 font-medium">-</span>
+                            <div class="flex-1 relative">
+                                <input type="number" name="price_max" min="0" placeholder="Gacha" value="{{ $priceMax }}" 
+                                       class="w-full h-11 bg-secondary-100 border-none rounded-xl px-4 text-sm font-medium text-primary placeholder-neutral-400 focus:ring-2 focus:ring-primary/20 outline-none transition-all">
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full h-11 bg-primary hover:bg-primary/90 text-white rounded-xl text-[15px] font-medium transition-colors flex items-center justify-center">
+                            Ko'rsatish
+                        </button>
+                    </div>
+
+                    @if(request('category') || $priceMin || $priceMax || $sort !== 'popular' || $search)
+                        <div class="pt-2">
+                            <a href="{{ route('web.catalog', ['type' => $type]) }}"
+                               class="flex items-center justify-center h-10 w-full bg-error-50 hover:bg-error-100 text-error-500 rounded-xl text-[15px] font-medium transition-colors gap-2">
+                                <iconify-icon icon="lucide:x" class="text-lg"></iconify-icon>
+                                Filtrlarni tozalash
+                            </a>
+                        </div>
+                    @endif
+                </form>
             </aside>
 
             <!-- ====== PRODUCT GRID ====== -->

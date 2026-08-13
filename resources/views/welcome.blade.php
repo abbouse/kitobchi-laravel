@@ -82,11 +82,15 @@
         });
 
         // 2. New Books (Yangi kitoblar)
+        // MUHIM: bu yerda avval faqat mahsulotning o'z status/is_approved/
+        // is_hidden maydonlari tekshirilardi — sotuvchining o'zi faolmi
+        // (bloklangan/yashiringan do'kon) hech qachon so'ralmasdi. Natijada
+        // bloklangan do'konning kitobi ham bosh sahifada ko'rinaverardi.
+        // Endi \App\Support\ProductVisibilityScope orqali saytning boshqa
+        // hamma joyida ishlatiladigan XUDDI SHU qoida qo'llaniladi.
         try {
-            $newBooks = Cache::remember('web_home_new_books_v3', 300, function() {
-                return \App\Models\Books::where('status', true)
-                    ->where('is_approved', 1)
-                    ->where('is_hidden', 0)
+            $newBooks = Cache::remember('web_home_new_books_v4', 300, function() {
+                return \App\Support\ProductVisibilityScope::applyBooks(\App\Models\Books::query())
                     ->orderByDesc('created_at')
                     ->take(10)
                     ->get();
@@ -95,10 +99,8 @@
 
         // 3. Recommended Books (Tavsiya etamiz)
         try {
-            $recommendedBooks = Cache::remember('web_home_rec_books_v3', 300, function() {
-                return \App\Models\Books::where('status', true)
-                    ->where('is_approved', 1)
-                    ->where('is_hidden', 0)
+            $recommendedBooks = Cache::remember('web_home_rec_books_v4', 300, function() {
+                return \App\Support\ProductVisibilityScope::applyBooks(\App\Models\Books::query())
                     ->orderByDesc('totalSales')
                     ->take(10)
                     ->get();
@@ -107,7 +109,7 @@
 
         // 4. Genre / Category Sections (Janrlar bo'yicha kitoblar)
         try {
-            $categorySections = Cache::remember('web_home_cat_sections_v3', 600, function() {
+            $categorySections = Cache::remember('web_home_cat_sections_v4', 600, function() {
                 $categories = \App\Models\BookCategories::where('is_active', true)
                     ->orderBy('name_uz')
                     ->take(6)
@@ -115,9 +117,7 @@
 
                 $sections = collect();
                 foreach ($categories as $cat) {
-                    $books = \App\Models\Books::where('status', true)
-                        ->where('is_approved', 1)
-                        ->where('is_hidden', 0)
+                    $books = \App\Support\ProductVisibilityScope::applyBooks(\App\Models\Books::query())
                         ->where('category_id', $cat->id)
                         ->orderByDesc('totalSales')
                         ->take(5)

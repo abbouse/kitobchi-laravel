@@ -38,6 +38,59 @@
                 </div>
             </div>
 
+            <!-- Right Column -->
+            <div style="display:flex;flex-direction:column;gap:1.5rem;min-width:0;">
+                
+                <!-- Addresses / Locations -->
+                <div class="kc-panel-card">
+                    <h3 style="font-size:1.125rem;font-weight:800;color:#0f172a;margin:0 0 1.25rem;display:flex;align-items:center;gap:0.5rem;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
+                            <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>
+                        </svg>
+                        Mening manzillarim
+                    </h3>
+
+                    @if(count($locations) > 0)
+                        <div style="display:flex;flex-direction:column;gap:0.75rem;margin-bottom:1.5rem;">
+                            @foreach($locations as $loc)
+                                <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem;border:1px solid {{ $user->mainAddressID == $loc->id ? 'var(--color-tima-500)' : '#e2e8f0' }};border-radius:0.75rem;background:{{ $user->mainAddressID == $loc->id ? '#eff6ff' : '#fff' }};">
+                                    <div style="display:flex;align-items:center;gap:0.75rem;flex:1;">
+                                        <svg width="20" height="20" fill="none" stroke="{{ $user->mainAddressID == $loc->id ? 'var(--color-tima-500)' : '#94a3b8' }}" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                                        <div style="font-size:0.875rem;color:#334155;">{{ $loc->fullAddress }}</div>
+                                    </div>
+                                    <div style="display:flex;align-items:center;gap:0.5rem;">
+                                        @if($user->mainAddressID != $loc->id)
+                                            <button onclick="setMainLocation({{ $loc->id }})" style="padding:0.375rem 0.75rem;font-size:0.75rem;font-weight:600;color:var(--color-tima-600);background:#eff6ff;border:none;border-radius:0.375rem;cursor:pointer;">Asosiy qilish</button>
+                                            <button onclick="deleteLocation({{ $loc->id }})" style="padding:0.375rem 0.75rem;font-size:0.75rem;font-weight:600;color:#ef4444;background:#fef2f2;border:none;border-radius:0.375rem;cursor:pointer;">O'chirish</button>
+                                        @else
+                                            <span style="font-size:0.75rem;font-weight:700;color:var(--color-tima-500);background:#dbeafe;padding:0.25rem 0.5rem;border-radius:9999px;">Asosiy</span>
+                                        @endif
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+
+                    <!-- Add New Location Form -->
+                    <div style="border:1px dashed #cbd5e1;border-radius:0.75rem;padding:1.25rem;background:#f8fafc;">
+                        <h4 style="font-size:1rem;font-weight:700;color:#0f172a;margin:0 0 1rem;">Yangi manzil qo'shish</h4>
+                        <div id="yandex-map" style="width:100%;height:300px;border-radius:0.5rem;background:#e2e8f0;margin-bottom:1rem;overflow:hidden;"></div>
+                        <form id="newLocationForm" style="display:flex;flex-direction:column;gap:0.75rem;margin:0;">
+                            <input type="hidden" id="locLat" name="lat">
+                            <input type="hidden" id="locLon" name="lon">
+                            <div>
+                                <label style="display:block;font-size:0.8125rem;font-weight:600;color:#475569;margin-bottom:0.25rem;">Manzil to'liq nomi</label>
+                                <input type="text" id="locAddress" name="fullAddress" required
+                                    style="width:100%;padding:0.75rem 1rem;border:1px solid #cbd5e1;border-radius:0.5rem;font-size:0.875rem;outline:none;" 
+                                    placeholder="Xaritadan tanlang yoki o'zingiz kiriting">
+                            </div>
+                            <button type="submit" class="kc-primary-btn" style="width:100%;padding:0.75rem;font-size:0.875rem;border-radius:0.5rem;display:flex;align-items:center;justify-content:center;gap:0.5rem;">
+                                Manzilni saqlash
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
             <!-- Orders History -->
             <div class="kc-panel-card">
                 <h3 style="font-size:1.125rem;font-weight:800;color:#0f172a;margin:0 0 1.25rem;display:flex;align-items:center;gap:0.5rem;">
@@ -96,6 +149,7 @@
                     </div>
                 @endif
             </div>
+            </div>
         </div>
 
     </div>
@@ -108,7 +162,123 @@ window.addEventListener('DOMContentLoaded', function() {
     const grid = document.getElementById('kcProfileGrid');
     if (grid && window.innerWidth >= 768) {
         grid.style.gridTemplateColumns = '300px 1fr';
+        // Apply sticky behavior to left column
+        const leftCol = grid.firstElementChild;
+        if (leftCol) {
+            leftCol.style.position = 'sticky';
+            leftCol.style.top = '1.5rem';
+            leftCol.style.alignSelf = 'start';
+        }
     }
 });
+
+// Yandex Maps Logic
+@if(config('services.yandex_maps.key'))
+ymaps.ready(initYandexMap);
+
+function initYandexMap() {
+    const map = new ymaps.Map("yandex-map", {
+        center: [41.311081, 69.240562], // Tashkent
+        zoom: 12,
+        controls: ['zoomControl', 'searchControl']
+    });
+
+    let placemark = null;
+
+    map.events.add('click', function (e) {
+        const coords = e.get('coords');
+        updatePlacemark(coords);
+    });
+
+    function updatePlacemark(coords) {
+        document.getElementById('locLat').value = coords[0];
+        document.getElementById('locLon').value = coords[1];
+
+        if (placemark) {
+            placemark.geometry.setCoordinates(coords);
+        } else {
+            placemark = new ymaps.Placemark(coords, {}, { preset: 'islands#redDotIcon', draggable: true });
+            map.geoObjects.add(placemark);
+            placemark.events.add('dragend', function () {
+                updatePlacemark(placemark.geometry.getCoordinates());
+            });
+        }
+
+        // Reverse geocoding
+        ymaps.geocode(coords).then(function (res) {
+            const firstGeoObject = res.geoObjects.get(0);
+            if (firstGeoObject) {
+                document.getElementById('locAddress').value = firstGeoObject.getAddressLine();
+            }
+        });
+    }
+}
+@endif
+
+// Location AJAX Actions
+document.getElementById('newLocationForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const lat = document.getElementById('locLat').value;
+    const lon = document.getElementById('locLon').value;
+    const address = document.getElementById('locAddress').value;
+
+    if(!lat || !lon) {
+        alert("Iltimos xaritadan manzilni belgilang!");
+        return;
+    }
+
+    fetch("{{ route('web.profile.location.add') }}", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-TOKEN": "{{ csrf_token() }}",
+            "Accept": "application/json"
+        },
+        body: JSON.stringify({ lat: lat, lon: lon, fullAddress: address })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if(data.status === 'success') {
+            window.location.reload();
+        } else {
+            alert(data.message || "Xatolik yuz berdi");
+        }
+    })
+    .catch(err => console.error(err));
+});
+
+function deleteLocation(id) {
+    if(!confirm("Manzilni o'chirmoqchimisiz?")) return;
+    fetch(`/profile/location/${id}`, {
+        method: "DELETE",
+        headers: {
+            "X-CSRF-TOKEN": "{{ csrf_token() }}",
+            "Accept": "application/json"
+        }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if(data.status === 'success') window.location.reload();
+        else alert(data.message || "Xatolik");
+    });
+}
+
+function setMainLocation(id) {
+    fetch(`/profile/location/${id}/main`, {
+        method: "POST",
+        headers: {
+            "X-CSRF-TOKEN": "{{ csrf_token() }}",
+            "Accept": "application/json"
+        }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if(data.status === 'success') window.location.reload();
+        else alert(data.message || "Xatolik");
+    });
+}
 </script>
+@if(config('services.yandex_maps.key'))
+<script src="https://api-maps.yandex.ru/2.1/?apikey={{ config('services.yandex_maps.key') }}&lang={{ config('services.yandex_maps.lang', 'ru_RU') }}"></script>
+@endif
 @endpush
