@@ -50,12 +50,28 @@
                             @if(isset($product->author) && $product->author)
                                 <div class="kc-redirect-product-author">Muallif: <strong>{{ $product->author }}</strong></div>
                             @endif
+                            
                             <div class="kc-redirect-product-price">
                                 <strong>{{ number_format(($product->discountPrice ?: $product->discount_price) ?: $product->price) }} UZS</strong>
                                 @if(($product->discountPrice ?: $product->discount_price) > 0 && ($product->discountPrice ?: $product->discount_price) < $product->price)
                                     <del>{{ number_format($product->price) }} UZS</del>
                                 @endif
+                                <span class="kc-stock-badge {{ ($product->stock ?? 1) > 0 ? 'in-stock' : 'out-stock' }} ms-auto" style="font-size: 11px; padding: 2px 8px;">
+                                    {{ ($product->stock ?? 1) > 0 ? 'Mavjud' : 'Omborda tugagan' }}
+                                </span>
                             </div>
+
+                            @if($product->description)
+                                <p class="kc-redirect-product-desc u-mt-s">
+                                    {{ \Illuminate\Support\Str::limit(strip_tags($product->description), 140) }}
+                                </p>
+                            @endif
+
+                            @if(isset($webUrl) && $webUrl)
+                                <div class="u-mt-xs">
+                                    <a href="{{ $webUrl }}" class="kc-redirect-web-link">Saytda to'liq ko'rish &rarr;</a>
+                                </div>
+                            @endif
                         </div>
                     </div>
                 @else

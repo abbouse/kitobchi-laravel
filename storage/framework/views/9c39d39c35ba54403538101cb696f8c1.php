@@ -48,12 +48,30 @@
                             <?php if(isset($product->author) && $product->author): ?>
                                 <div class="kc-redirect-product-author">Muallif: <strong><?php echo e($product->author); ?></strong></div>
                             <?php endif; ?>
+                            
                             <div class="kc-redirect-product-price">
                                 <strong><?php echo e(number_format(($product->discountPrice ?: $product->discount_price) ?: $product->price)); ?> UZS</strong>
                                 <?php if(($product->discountPrice ?: $product->discount_price) > 0 && ($product->discountPrice ?: $product->discount_price) < $product->price): ?>
                                     <del><?php echo e(number_format($product->price)); ?> UZS</del>
                                 <?php endif; ?>
+                                <span class="kc-stock-badge <?php echo e(($product->stock ?? 1) > 0 ? 'in-stock' : 'out-stock'); ?> ms-auto" style="font-size: 11px; padding: 2px 8px;">
+                                    <?php echo e(($product->stock ?? 1) > 0 ? 'Mavjud' : 'Omborda tugagan'); ?>
+
+                                </span>
                             </div>
+
+                            <?php if($product->description): ?>
+                                <p class="kc-redirect-product-desc u-mt-s">
+                                    <?php echo e(\Illuminate\Support\Str::limit(strip_tags($product->description), 140)); ?>
+
+                                </p>
+                            <?php endif; ?>
+
+                            <?php if(isset($webUrl) && $webUrl): ?>
+                                <div class="u-mt-xs">
+                                    <a href="<?php echo e($webUrl); ?>" class="kc-redirect-web-link">Saytda to'liq ko'rish &rarr;</a>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     </div>
                 <?php else: ?>

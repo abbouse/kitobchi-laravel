@@ -2017,9 +2017,29 @@ body.kc-landing .footer {
 }
 
 .kc-redirect-product-price del {
-    font-size: 13px;
+    font-size: 13.5px;
     color: #94a3b8;
     font-weight: 500;
+}
+
+.kc-redirect-product-desc {
+    font-size: 12.5px;
+    color: #475569;
+    line-height: 1.45;
+    margin: 8px 0 4px;
+}
+
+.kc-redirect-web-link {
+    font-size: 12px;
+    font-weight: 700;
+    color: #4f46e5;
+    text-decoration: none;
+    transition: color 0.15s ease;
+}
+
+.kc-redirect-web-link:hover {
+    color: #3730a3;
+    text-decoration: underline;
 }
 
 /* Redirect Progress Bar */

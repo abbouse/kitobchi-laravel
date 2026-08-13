@@ -101,6 +101,7 @@ Route::get('/share/product/{id}', function (int $id) {
     $title = $product ? $product->name . ($book && $book->author ? " — {$book->author}" : '') : 'Kitobchi — Mahsulot';
     $description = $product && $product->description ? \Illuminate\Support\Str::limit(strip_tags($product->description), 150) : 'Kitobchi ilovasida bu mahsulotni ko\'ring';
     $image = $product && $product->first_image ? asset('storage/' . $product->first_image) : asset('images/logo/logo_blue.png');
+    $webUrl = $product ? ($book ? route('web.products.books.show', $product->id) : route('web.products.stationery.show', $product->id)) : null;
 
     return view('share.redirect', [
         'type' => 'product',
@@ -111,6 +112,7 @@ Route::get('/share/product/{id}', function (int $id) {
         'title' => $title,
         'description' => $description,
         'image' => $image,
+        'webUrl' => $webUrl,
     ]);
 })->where('id', '[0-9]+');
 
@@ -128,6 +130,7 @@ Route::get('/art/{artikul}', function (string $artikul) {
     $title = $product ? $product->name . ($book && $book->author ? " — {$book->author}" : '') : 'Kitobchi — Mahsulot';
     $description = $product && $product->description ? \Illuminate\Support\Str::limit(strip_tags($product->description), 150) : 'Kitobchi ilovasida bu mahsulotni ko\'ring';
     $image = $product && $product->first_image ? asset('storage/' . $product->first_image) : asset('images/logo/logo_blue.png');
+    $webUrl = $product ? ($book ? route('web.products.books.show', $product->id) : route('web.products.stationery.show', $product->id)) : null;
 
     return view('share.redirect', [
         'type' => 'artikul',
@@ -138,6 +141,7 @@ Route::get('/art/{artikul}', function (string $artikul) {
         'title' => $title,
         'description' => $description,
         'image' => $image,
+        'webUrl' => $webUrl,
     ]);
 })->where('artikul', '[A-Za-z0-9\-]+');
 
