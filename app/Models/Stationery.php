@@ -106,6 +106,18 @@ class Stationery extends Model
         return $this->belongsTo(StationeryCategory::class, 'category_id');
     }
 
+    /** Books::getFirstImageAttribute() bilan bir xil — veb katalog/qidiruvda ishlatiladi. */
+    public function getFirstImageAttribute(): ?string
+    {
+        $images = $this->images;
+
+        if (empty($images) || ! is_array($images)) {
+            return null;
+        }
+
+        return $images[0] ?? null;
+    }
+
     public function tags()
     {
         return $this->belongsToMany(StationeryTag::class, 'stationery_tag_relations', 'stationery_id', 'tag_id');

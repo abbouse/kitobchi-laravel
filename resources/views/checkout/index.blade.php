@@ -29,8 +29,17 @@
 
                 <h5 class="fw-bold text-dark u-my-m">2. Yetkazib berish manzili</h5>
                 <div class="mb-3">
-                    <label class="form-label text-muted small fw-bold">Shahar va to'liq manzil *</label>
-                    <textarea name="address" class="form-control rounded-3" rows="3" placeholder="Toshkent sh., Chilonzor tumani, 12-uy, 45-xonadon" required></textarea>
+                    <label class="form-label text-muted small fw-bold">Viloyat / shahar *</label>
+                    <select name="region" class="form-select rounded-3 py-2" required>
+                        <option value="" disabled selected>Tanlang...</option>
+                        @foreach($regions as $region)
+                            <option value="{{ $region }}">{{ $region }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-muted small fw-bold">Tuman va to'liq manzil *</label>
+                    <textarea name="address" class="form-control rounded-3" rows="3" placeholder="Chilonzor tumani, 12-uy, 45-xonadon" required></textarea>
                 </div>
 
                 <h5 class="fw-bold text-dark u-my-m">3. To'lov usuli</h5>
@@ -147,6 +156,7 @@
                 const payload = {
                     customer_name: formData.get('customer_name'),
                     phone_number: formData.get('phone_number'),
+                    region: formData.get('region'),
                     address: formData.get('address'),
                     payment_method: formData.get('payment_method'),
                     cart_items: kcCartState,

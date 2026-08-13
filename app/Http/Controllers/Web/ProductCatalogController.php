@@ -190,36 +190,60 @@ class ProductCatalogController extends Controller
         $type = $request->input('type', 'all');
 
         // Handle AJAX Live Instant Search Suggestions Popup
+        // MUHIM: avval bu yerda faqat Books qidirilardi — "daftar", "ruchka"
+        // kabi kanselyariya so'zlari hech qachon natija bermasdi. Endi
+        // ikkalasi ham qidiriladi va natijalar aralashtirib beriladi.
         if ($request->ajax() || $request->input('ajax') == 1) {
             try {
-                $query = Books::where('status', true)
-                    ->where('is_approved', 1)
-                    ->where('is_hidden', 0);
+                $items = collect();
 
                 if ($search !== '') {
-                    $query->where(function ($q) use ($search) {
-                        $q->where('name', 'like', "%{$search}%")
-                            ->orWhere('author', 'like', "%{$search}%")
-                            ->orWhere('isbn', 'like', "%{$search}%")
-                            ->orWhere('artikul', 'like', "%{$search}%");
-                    });
+                    $items = $items->merge(
+                        Books::where('status', true)->where('is_approved', 1)->where('is_hidden', 0)
+                            ->where(function ($q) use ($search) {
+                                $q->where('name', 'like', "%{$search}%")
+                                    ->orWhere('author', 'like', "%{$search}%")
+                                    ->orWhere('isbn', 'like', "%{$search}%")
+                                    ->orWhere('artikul', 'like', "%{$search}%");
+                            })
+                            ->take(6)->get()->map(function ($book) {
+                                $isDiscounted = $book->discountPrice > 0 && $book->discountPrice < $book->price;
+                                $price = $isDiscounted ? $book->discountPrice : $book->price;
+
+                                return [
+                                    'id' => $book->id,
+                                    'name' => $book->name,
+                                    'author' => $book->author,
+                                    'price' => $price,
+                                    'image' => $book->first_image ? asset('storage/'.$book->first_image) : asset('images/logo/logo_blue.png'),
+                                    'url' => route('web.books.show', ['id' => $book->id, 'slug' => Str::slug($book->name)]),
+                                ];
+                            })
+                    );
+
+                    $items = $items->merge(
+                        Stationery::where('status', true)->where('is_approved', 1)->where('is_hidden', 0)
+                            ->where(function ($q) use ($search) {
+                                $q->where('name', 'like', "%{$search}%")
+                                    ->orWhere('artikul', 'like', "%{$search}%");
+                            })
+                            ->take(6)->get()->map(function ($item) {
+                                $isDiscounted = $item->discount_price > 0 && $item->discount_price < $item->price;
+                                $price = $isDiscounted ? $item->discount_price : $item->price;
+
+                                return [
+                                    'id' => $item->id,
+                                    'name' => $item->name,
+                                    'author' => $item->material,
+                                    'price' => $price,
+                                    'image' => $item->first_image ? asset('storage/'.$item->first_image) : asset('images/logo/logo_blue.png'),
+                                    'url' => route('web.stationery.show', ['id' => $item->id, 'slug' => Str::slug($item->name)]),
+                                ];
+                            })
+                    );
                 }
 
-                $items = $query->take(8)->get()->map(function ($book) {
-                    $isDiscounted = $book->discountPrice > 0 && $book->discountPrice < $book->price;
-                    $price = $isDiscounted ? $book->discountPrice : $book->price;
-                    $slug = Str::slug($book->name);
-                    return [
-                        'id' => $book->id,
-                        'name' => $book->name,
-                        'author' => $book->author,
-                        'price' => $price,
-                        'image' => $book->first_image ? asset('storage/' . $book->first_image) : asset('images/logo/logo_blue.png'),
-                        'url' => route('web.books.show', ['id' => $book->id, 'slug' => $slug]),
-                    ];
-                });
-
-                return response()->json(['items' => $items]);
+                return response()->json(['items' => $items->take(8)->values()]);
             } catch (\Throwable $e) {
                 return response()->json(['items' => []]);
             }
@@ -229,38 +253,62 @@ class ProductCatalogController extends Controller
             $bookCategories = BookCategories::where('status', true)->orderBy('name')->get();
             $stationeryCategories = StationeryCategory::where('status', true)->orderBy('name')->get();
 
-            $booksQuery = Books::with(['category'])
-                ->where('status', true)
-                ->where('is_approved', 1)
-                ->where('is_hidden', 0);
+            // MUHIM: avval bu yerda faqat Books so'ralardi — $stationeryCategories
+            // olib kelinardi-yu, hech qachon Stationery mahsuloti ko'rsatilmasdi
+            // (type=stationery tanlansa ham bo'sh natija chiqardi). Endi $type
+            // qaysi modelni so'rashni belgilaydi.
+            if ($type === 'stationery') {
+                $productsQuery = Stationery::with(['category'])
+                    ->where('status', true)
+                    ->where('is_approved', 1)
+                    ->where('is_hidden', 0);
 
-            if ($search !== '') {
-                $booksQuery->where(function ($q) use ($search) {
-                    $q->where('name', 'like', "%{$search}%")
-                        ->orWhere('author', 'like', "%{$search}%")
-                        ->orWhere('isbn', 'like', "%{$search}%")
-                        ->orWhere('artikul', 'like', "%{$search}%");
-                });
+                if ($search !== '') {
+                    $productsQuery->where(function ($q) use ($search) {
+                        $q->where('name', 'like', "%{$search}%")
+                            ->orWhere('artikul', 'like', "%{$search}%");
+                    });
+                }
+
+                if ($categoryId) {
+                    $productsQuery->where('category_id', $categoryId);
+                }
+
+                $products = $productsQuery->orderByDesc('totalSales')->paginate(24, ['*'], 'page');
+            } else {
+                $productsQuery = Books::with(['category'])
+                    ->where('status', true)
+                    ->where('is_approved', 1)
+                    ->where('is_hidden', 0);
+
+                if ($search !== '') {
+                    $productsQuery->where(function ($q) use ($search) {
+                        $q->where('name', 'like', "%{$search}%")
+                            ->orWhere('author', 'like', "%{$search}%")
+                            ->orWhere('isbn', 'like', "%{$search}%")
+                            ->orWhere('artikul', 'like', "%{$search}%");
+                    });
+                }
+
+                if ($categoryId) {
+                    $productsQuery->where('category_id', $categoryId);
+                }
+
+                $products = $productsQuery->orderByDesc('totalSales')->paginate(24, ['*'], 'page');
             }
-
-            if ($categoryId && $type !== 'stationery') {
-                $booksQuery->where('category_id', $categoryId);
-            }
-
-            $books = $booksQuery->orderByDesc('totalSales')->paginate(24, ['*'], 'page');
         } catch (\Throwable $e) {
             $bookCategories = collect();
             $stationeryCategories = collect();
-            $books = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 24);
+            $products = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 24);
         }
 
         return view('products.catalog', [
-            'books' => $books,
+            'products' => $products,
             'bookCategories' => $bookCategories,
             'stationeryCategories' => $stationeryCategories,
             'search' => $search,
             'selectedCategory' => $categoryId,
-            'type' => $type,
+            'type' => $type === 'stationery' ? 'stationery' : 'book',
         ]);
     }
 

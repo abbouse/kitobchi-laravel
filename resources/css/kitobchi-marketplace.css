@@ -1,151 +1,281 @@
 /* ==========================================================================
-   KITOBCHI MARKETPLACE — PIYOLAMARKET ULTRA-MINIMALIST DESIGN SYSTEM
+   KITOBCHI MARKETPLACE — DESIGN SYSTEM
+   Toza, minimal, ko'p bo'sh joy, bitta ishonchli aksent rang (piyolamarket.uz
+   uslubidagi zamonaviy o'zbek marketpleys estetikasi).
+
+   MUHIM: bu fayl to'liq qayta yozildi. Avvalgi versiyada bu yerdagi sinflar
+   (.kc-mk-header, .kc-nav-top, .kc-brand-logo, .kc-search-bar, .kc-card...)
+   resources/views/layouts/marketplace.blade.php va products/catalog.blade.php
+   da ISHLATILMAYDIGAN, eskirgan nomlar edi — ya'ni butun sayt (header,
+   qidiruv, savat paneli, katalog kartalari) DEYARLI HECH QANDAY custom
+   uslubga ega bo'lmay, faqat xom Bootstrap defaultlari bilan chiqardi.
+   Bundan tashqari u-mb-*/u-mt-*/u-my-* spacing utilitylari ham HECH QAYERDA
+   aniqlanmagan edi — bo'sh joylar butunlay yo'qolgan edi. Quyida HAR IKKALA
+   muammo ham tuzatildi: haqiqiy blade fayllarida ishlatiladigan sinf
+   nomlariga mos CSS yozildi.
    ========================================================================== */
 
 :root {
     --kc-primary: #4f46e5;
+    --kc-primary-rgb: 79, 70, 229;
     --kc-primary-hover: #4338ca;
     --kc-primary-light: #eef2ff;
+    --kc-primary-border: #c7d2fe;
     --kc-text-dark: #111827;
     --kc-text-muted: #6b7280;
     --kc-bg: #f9fafb;
     --kc-card-bg: #ffffff;
     --kc-border: #e5e7eb;
-    --kc-radius: 12px;
+    --kc-radius-sm: 8px;
+    --kc-radius: 14px;
+    --kc-radius-lg: 20px;
+    --kc-shadow: 0 10px 25px -8px rgba(17, 24, 39, 0.10);
 }
 
+/* ── Bootstrap "primary" ni brend indigosiga bog'lash ──────────────────
+   Sahifalarda (checkout, savat, mahsulot) ko'plab joyda oddiy Bootstrap
+   sinflari (btn-primary, text-primary, bg-primary-subtle) ishlatilgan —
+   ular avvalgi Bootstrap ko'k rangda chiqardi, kc- sinflaridagi indigo
+   bilan mos kelmasdi. Endi hammasi bir xil rangda. */
+body.kc-mk-body {
+    --bs-primary: var(--kc-primary);
+    --bs-primary-rgb: var(--kc-primary-rgb);
+    --bs-primary-text-emphasis: var(--kc-primary-hover);
+    --bs-primary-bg-subtle: var(--kc-primary-light);
+    --bs-primary-border-subtle: var(--kc-primary-border);
+    --bs-link-color: var(--kc-primary);
+    --bs-link-color-rgb: var(--kc-primary-rgb);
+    --bs-link-hover-color: var(--kc-primary-hover);
+    --bs-link-hover-color-rgb: var(--kc-primary-rgb);
+}
+
+body.kc-mk-body .btn-primary {
+    background-color: var(--kc-primary);
+    border-color: var(--kc-primary);
+}
+
+body.kc-mk-body .btn-primary:hover,
+body.kc-mk-body .btn-primary:focus,
+body.kc-mk-body .btn-primary:active {
+    background-color: var(--kc-primary-hover) !important;
+    border-color: var(--kc-primary-hover) !important;
+}
+
+/* products/show.blade.php'dagi "ilovada ochish" bloki haqiqiy Bootstrap
+   sinfi bo'lmagan bg-indigo-subtle/border-indigo-subtle/btn-outline-indigo
+   ishlatadi — shu sabab hech qanday rang chiqmasdi. */
+body.kc-mk-body .bg-indigo-subtle { background-color: var(--kc-primary-light) !important; }
+body.kc-mk-body .border-indigo-subtle { border-color: var(--kc-primary-border) !important; }
+body.kc-mk-body .btn-outline-indigo {
+    color: var(--kc-primary);
+    border: 1px solid var(--kc-primary-border);
+    background: #fff;
+}
+body.kc-mk-body .btn-outline-indigo:hover { background: var(--kc-primary); color: #fff; border-color: var(--kc-primary); }
+
+/* ── Spacing utilitylari — hech qayerda aniqlanmagan edi ────────────────── */
+.u-mb-xs { margin-bottom: 6px; }
+.u-mb-s  { margin-bottom: 12px; }
+.u-mb-m  { margin-bottom: 20px; }
+.u-mb-l  { margin-bottom: 32px; }
+.u-mb-xl { margin-bottom: 48px; }
+.u-mt-xs { margin-top: 6px; }
+.u-mt-s  { margin-top: 12px; }
+.u-mt-m  { margin-top: 20px; }
+.u-mt-l  { margin-top: 32px; }
+.u-mt-xl { margin-top: 48px; }
+.u-my-xs { margin-top: 6px; margin-bottom: 6px; }
+.u-my-s  { margin-top: 12px; margin-bottom: 12px; }
+.u-my-m  { margin-top: 20px; margin-bottom: 20px; }
+.u-my-l  { margin-top: 32px; margin-bottom: 32px; }
+.u-my-xl { margin-top: 48px; margin-bottom: 48px; }
+
+.color-inherit { color: inherit; }
+
+/* ── Asosiy tana ─────────────────────────────────────────────────────── */
 body.kc-mk-body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     background-color: var(--kc-bg);
     color: var(--kc-text-dark);
-    line-height: 1.4;
-    margin: 0;
-    padding: 0;
     -webkit-font-smoothing: antialiased;
 }
 
-/* Header Navbar */
-.kc-mk-header {
-    background: #ffffff;
-    border-bottom: 1px solid var(--kc-border);
+.kc-mk-main { min-height: 55vh; }
+
+.fw-black { font-weight: 900; }
+.fw-extrabold { font-weight: 800; }
+
+/* ── Yuqori e'lon paneli ─────────────────────────────────────────────── */
+.kc-top-bar {
+    background: var(--kc-text-dark);
+    color: #e5e7eb;
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 7px 0;
+}
+.kc-top-bar a { color: #fff; text-decoration: none; }
+.kc-top-bar a:hover { text-decoration: underline; }
+
+/* ── Header ──────────────────────────────────────────────────────────── */
+.kc-header-sticky {
     position: sticky;
     top: 0;
-    z-index: 1000;
-}
-
-.kc-nav-top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    padding: 12px 0;
-}
-
-.kc-brand-logo {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    text-decoration: none;
-    font-size: 22px;
-    font-weight: 900;
-    color: var(--kc-primary);
-    letter-spacing: -0.5px;
-}
-
-.kc-brand-logo img {
-    height: 32px;
-    width: auto;
-}
-
-/* Search Bar */
-.kc-search-bar {
-    position: relative;
-    flex: 1;
-    max-width: 600px;
-}
-
-.kc-search-bar input {
-    width: 100%;
-    padding: 10px 42px 10px 16px;
-    background: #f3f4f6;
-    border: 1px solid var(--kc-border);
-    border-radius: 100px;
-    font-size: 14px;
-    outline: none;
-    transition: all 0.2s ease;
-}
-
-.kc-search-bar input:focus {
+    z-index: 1030;
     background: #ffffff;
-    border-color: var(--kc-primary);
-    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    border-bottom: 1px solid var(--kc-border);
 }
 
-.kc-search-bar button {
-    position: absolute;
-    right: 4px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 32px;
-    height: 32px;
-    background: var(--kc-primary);
-    color: #ffffff;
-    border: none;
-    border-radius: 50%;
-    display: grid;
-    place-items: center;
-    cursor: pointer;
+.kc-nav-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 14px 0;
 }
 
-/* Header Buttons */
-.kc-nav-btn {
+.kc-logo {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 8px 16px;
+    text-decoration: none;
+    font-size: 21px;
+    font-weight: 900;
+    color: var(--kc-text-dark);
+    letter-spacing: -0.5px;
+    flex-shrink: 0;
+}
+.kc-logo img { height: 30px; width: auto; }
+
+.kc-cat-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
     border-radius: 100px;
+    background: var(--kc-text-dark);
+    color: #fff;
     font-size: 13.5px;
     font-weight: 700;
     text-decoration: none;
-    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s ease;
+}
+.kc-cat-btn:hover { background: #1f2937; color: #fff; }
+
+.kc-search-wrap { position: relative; flex: 1; min-width: 0; }
+.kc-search-form { position: relative; display: flex; }
+.kc-search-input {
+    width: 100%;
+    padding: 11px 46px 11px 18px;
+    background: #f3f4f6;
+    border: 1.5px solid transparent;
+    border-radius: 100px;
+    font-size: 14px;
+    outline: none;
     transition: all 0.15s ease;
 }
-
-.kc-nav-btn-cat {
-    background: #111827;
-    color: #ffffff;
-}
-
-.kc-nav-btn-cat:hover {
-    background: #1f2937;
-    color: #ffffff;
-}
-
-.kc-nav-btn-cart {
-    background: var(--kc-primary-light);
-    color: var(--kc-primary);
-    border: 1px solid #c7d2fe;
-}
-
-.kc-nav-btn-cart:hover {
-    background: var(--kc-primary);
-    color: #ffffff;
-}
-
-/* Category Pills Strip */
-.kc-category-strip {
+.kc-search-input:focus {
     background: #ffffff;
-    border-bottom: 1px solid var(--kc-border);
-    padding: 8px 0;
+    border-color: var(--kc-primary);
+    box-shadow: 0 0 0 4px rgba(var(--kc-primary-rgb), 0.10);
+}
+.kc-search-submit {
+    position: absolute;
+    right: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 34px;
+    height: 34px;
+    border: none;
+    border-radius: 50%;
+    background: var(--kc-primary);
+    color: #fff;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+.kc-search-submit:hover { background: var(--kc-primary-hover); }
+
+.kc-search-results-popup {
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    background: #ffffff;
+    border: 1px solid var(--kc-border);
+    border-radius: var(--kc-radius);
+    box-shadow: var(--kc-shadow);
+    max-height: 420px;
+    overflow-y: auto;
+    z-index: 1040;
+    padding: 6px;
+}
+.kc-search-results-popup.active { display: block; }
+
+.kc-search-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px;
+    border-radius: 10px;
+    text-decoration: none;
+    color: inherit;
+    transition: background 0.1s ease;
+}
+.kc-search-item:hover { background: #f3f4f6; }
+.kc-search-item img { width: 40px; height: 54px; object-fit: cover; border-radius: 6px; flex-shrink: 0; background: #f3f4f6; }
+.kc-search-item-name { font-size: 13.5px; font-weight: 700; color: var(--kc-text-dark); line-height: 1.3; }
+.kc-search-item-meta { font-size: 12px; color: var(--kc-text-muted); }
+
+.kc-nav-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+.kc-action-icon-btn {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #f3f4f6;
+    color: var(--kc-text-dark);
+    text-decoration: none;
+    transition: all 0.15s ease;
+}
+.kc-action-icon-btn:hover { background: var(--kc-primary-light); color: var(--kc-primary); }
+
+.kc-cart-trigger-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 16px;
+    border-radius: 100px;
+    background: var(--kc-primary);
+    color: #fff;
+    border: none;
+    font-size: 13.5px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+.kc-cart-trigger-btn:hover { background: var(--kc-primary-hover); }
+#kcCartCountBadge { font-size: 10.5px; padding: 2px 6px; }
+
+/* ── Kategoriya chip qatori ──────────────────────────────────────────── */
+.kc-cat-quick-bar {
+    border-top: 1px solid var(--kc-border);
+    background: #ffffff;
     overflow-x: auto;
     scrollbar-width: none;
 }
-
-.kc-category-strip::-webkit-scrollbar {
-    display: none;
+.kc-cat-quick-bar::-webkit-scrollbar { display: none; }
+.kc-cat-chips {
+    display: flex;
+    gap: 8px;
+    padding: 10px 0;
+    white-space: nowrap;
 }
-
-.kc-pill-link {
+.kc-chip {
     display: inline-block;
     padding: 6px 14px;
     background: #f3f4f6;
@@ -154,104 +284,86 @@ body.kc-mk-body {
     font-size: 13px;
     font-weight: 600;
     text-decoration: none;
-    white-space: nowrap;
     transition: all 0.15s ease;
+    flex-shrink: 0;
 }
+.kc-chip:hover { background: #e5e7eb; color: var(--kc-text-dark); }
+.kc-chip.active { background: var(--kc-primary); color: #fff; }
 
-.kc-pill-link:hover, .kc-pill-link.active {
-    background: var(--kc-primary);
-    color: #ffffff;
-}
-
-/* Product Cards Grid (PiyolaMarket Style) */
-.kc-products-grid {
+/* ── Mahsulot kartalari — ikkala nom konvensiyasi ham qo'llab-quvvatlanadi
+   (welcome.blade.php eski .kc-card/.kc-products-grid, products/catalog.blade.php
+   yangi .kc-product-card/.kc-mk-grid ishlatadi — ikkalasi ham bir xil
+   ko'rinishda chiqishi uchun) ───────────────────────────────────────── */
+.kc-mk-grid, .kc-products-grid {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
-    gap: 16px;
+    gap: 18px;
 }
+@media (max-width: 1200px) { .kc-mk-grid, .kc-products-grid { grid-template-columns: repeat(4, 1fr); } }
+@media (max-width: 900px)  { .kc-mk-grid, .kc-products-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 600px)  { .kc-mk-grid, .kc-products-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; } }
 
-@media (max-width: 1200px) {
-    .kc-products-grid { grid-template-columns: repeat(4, 1fr); }
-}
-
-@media (max-width: 900px) {
-    .kc-products-grid { grid-template-columns: repeat(3, 1fr); }
-}
-
-@media (max-width: 600px) {
-    .kc-products-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-}
-
-.kc-card {
-    background: #ffffff;
+.kc-product-card, .kc-card {
+    background: var(--kc-card-bg);
     border: 1px solid var(--kc-border);
-    border-radius: 12px;
+    border-radius: var(--kc-radius);
     padding: 12px;
     display: flex;
     flex-direction: column;
     height: 100%;
     position: relative;
-    transition: all 0.2s ease;
+    transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+}
+.kc-product-card:hover, .kc-card:hover {
+    box-shadow: var(--kc-shadow);
+    transform: translateY(-3px);
+    border-color: var(--kc-primary-border);
 }
 
-.kc-card:hover {
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
-    transform: translateY(-2px);
-    border-color: #c7d2fe;
-}
-
-.kc-card-img-wrap {
+.kc-card-cover-wrap, .kc-card-img-wrap {
     aspect-ratio: 3 / 4;
-    border-radius: 8px;
+    border-radius: var(--kc-radius-sm);
     overflow: hidden;
-    background: #f9fafb;
+    background: #f3f4f6;
     margin-bottom: 10px;
-    display: grid;
-    place-items: center;
     position: relative;
 }
+.kc-card-cover-img, .kc-card-img { width: 100%; height: 100%; object-fit: cover; }
 
-.kc-card-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.kc-badge-sale {
+.kc-discount-badge, .kc-badge-sale {
     position: absolute;
-    top: 6px;
-    left: 6px;
+    top: 8px;
+    left: 8px;
     background: #ef4444;
-    color: #ffffff;
+    color: #fff;
     font-size: 10.5px;
     font-weight: 800;
-    padding: 2px 6px;
-    border-radius: 4px;
+    padding: 3px 7px;
+    border-radius: 6px;
 }
 
-.kc-card-name {
+.kc-card-title, .kc-card-name {
     font-size: 13.5px;
     font-weight: 700;
-    color: #111827;
-    margin: 0 0 4px;
+    color: var(--kc-text-dark);
+    margin: 0 0 3px;
     line-height: 1.35;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
-    height: 36px;
+    min-height: 36px;
 }
-
-.kc-card-sub {
+.kc-card-author, .kc-card-sub {
     font-size: 12px;
-    color: #6b7280;
+    color: var(--kc-text-muted);
     margin-bottom: 8px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.kc-card-footer {
+.kc-card-bottom, .kc-card-footer {
     margin-top: auto;
     display: flex;
     align-items: flex-end;
@@ -259,71 +371,150 @@ body.kc-mk-body {
     gap: 6px;
     padding-top: 6px;
 }
-
-.kc-price-val {
+.kc-card-price-main, .kc-price-val {
     font-size: 15px;
     font-weight: 800;
     color: var(--kc-primary);
-    line-height: 1;
+    line-height: 1.2;
 }
-
-.kc-price-old {
+.kc-card-price-main small, .kc-price-val small { font-size: 10.5px; font-weight: 700; }
+.kc-card-price-old, .kc-price-old {
     font-size: 11.5px;
     color: #9ca3af;
     text-decoration: line-through;
     margin-top: 2px;
 }
 
-.kc-btn-cart-add {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
+.kc-add-cart-btn, .kc-btn-cart-add {
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
     background: var(--kc-primary-light);
     color: var(--kc-primary);
-    border: 1px solid #c7d2fe;
+    border: 1px solid var(--kc-primary-border);
     display: grid;
     place-items: center;
     cursor: pointer;
     transition: all 0.15s ease;
     flex-shrink: 0;
 }
+.kc-add-cart-btn:hover, .kc-btn-cart-add:hover { background: var(--kc-primary); color: #fff; border-color: var(--kc-primary); }
 
-.kc-btn-cart-add:hover {
-    background: var(--kc-primary);
-    color: #ffffff;
-}
-
-/* Cart Drawer */
-.kc-drawer-bg {
+/* ── Savat paneli (drawer) ───────────────────────────────────────────── */
+.kc-drawer-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.4);
+    background: rgba(17, 24, 39, 0.45);
     z-index: 2000;
     opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.2s ease;
+    visibility: hidden;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
 }
+.kc-drawer-overlay.active { opacity: 1; visibility: visible; }
 
-.kc-drawer-bg.active {
-    opacity: 1;
-    pointer-events: auto;
-}
-
-.kc-drawer-box {
+.kc-drawer-panel {
     position: fixed;
     top: 0;
     right: 0;
     bottom: 0;
     width: 100%;
-    max-width: 400px;
+    max-width: 420px;
     background: #ffffff;
     z-index: 2001;
     transform: translateX(100%);
-    transition: transform 0.25s ease;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     display: flex;
     flex-direction: column;
+    box-shadow: -12px 0 40px rgba(0, 0, 0, 0.12);
 }
+.kc-drawer-overlay.active .kc-drawer-panel { transform: translateX(0); }
 
-.kc-drawer-bg.active .kc-drawer-box {
-    transform: translateX(0);
+.kc-drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--kc-border);
+}
+.kc-drawer-title { font-size: 17px; font-weight: 800; margin: 0; }
+.kc-drawer-close {
+    background: #f3f4f6;
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    font-size: 18px;
+    line-height: 1;
+    color: var(--kc-text-muted);
+    cursor: pointer;
+}
+.kc-drawer-close:hover { background: #e5e7eb; }
+
+.kc-drawer-body { flex: 1; overflow-y: auto; padding: 12px 20px; }
+.kc-drawer-footer { padding: 16px 20px 20px; border-top: 1px solid var(--kc-border); }
+.kc-drawer-summary-row {
+    display: flex;
+    justify-content: space-between;
+    font-weight: 700;
+    margin-bottom: 12px;
+    font-size: 14.5px;
+}
+.kc-checkout-btn {
+    display: block;
+    text-align: center;
+    background: var(--kc-primary);
+    color: #fff;
+    text-decoration: none;
+    padding: 13px;
+    border-radius: 100px;
+    font-weight: 700;
+    font-size: 14.5px;
+    transition: background 0.15s ease;
+}
+.kc-checkout-btn:hover { background: var(--kc-primary-hover); color: #fff; }
+
+.kc-cart-item {
+    display: flex;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--kc-border);
+}
+.kc-cart-item-img { width: 52px; height: 70px; object-fit: cover; border-radius: 8px; background: #f3f4f6; flex-shrink: 0; }
+.kc-cart-item-info { flex: 1; min-width: 0; }
+.kc-cart-item-title {
+    font-size: 13.5px;
+    font-weight: 700;
+    margin: 0 0 4px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.kc-cart-item-price { font-size: 13px; font-weight: 700; color: var(--kc-primary); margin-bottom: 6px; }
+
+.kc-qty-control { display: inline-flex; align-items: center; gap: 10px; background: #f3f4f6; border-radius: 100px; padding: 4px 6px; }
+.kc-qty-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: none;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    font-weight: 700;
+    color: var(--kc-text-dark);
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    line-height: 1;
+}
+.kc-qty-btn:hover { background: var(--kc-primary); color: #fff; }
+.kc-qty-val { font-weight: 700; font-size: 13px; min-width: 16px; text-align: center; }
+
+/* ── Mobil moslashuv ─────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+    .kc-nav-wrapper { flex-wrap: wrap; gap: 10px; padding: 10px 0; }
+    .kc-logo { order: 1; }
+    .kc-nav-actions { order: 2; margin-left: auto; }
+    .kc-search-wrap { order: 3; flex-basis: 100%; }
+    .kc-drawer-panel { max-width: 100%; }
 }
