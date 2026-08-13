@@ -250,7 +250,7 @@
         #kcSidebar { width: 240px !important; }
     }
     @media(min-width: 1280px) {
-        #kcCatalogGrid { grid-template-columns: repeat(4, 1fr) !important; }
+        #kcCatalogGrid { grid-template-columns: repeat(5, 1fr) !important; gap: 1.25rem !important; }
     }
 
     /* Pagination */

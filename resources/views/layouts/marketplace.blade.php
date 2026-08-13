@@ -151,7 +151,7 @@
             position: sticky;
             top: 0;
             z-index: 50;
-            background: rgba(255,255,255,0.94);
+            background: #fff;
             padding-top: 1rem;
             padding-bottom: 1rem;
             box-shadow: 0 10px 30px rgba(15,23,42,0.08);
@@ -226,7 +226,7 @@
         main { min-height: 100dvh; }
         @media (max-width: 767px) { main { padding-bottom: 71px; } }
 
-        .page-wrapper { display: flex; flex-direction: column; background-color: #fff; min-height: 100dvh; }
+        .page-wrapper { display: flex; flex-direction: column; background-color: oklch(80.9% 0.105 251.813); min-height: 100dvh; }
     </style>
 
     @stack('styles')

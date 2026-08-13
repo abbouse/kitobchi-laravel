@@ -5,7 +5,7 @@
 <?php $__env->stopPush(); ?>
 
 <?php $__env->startSection('content'); ?>
-<div class="kc-page-surface">
+<div class="kc-market-shell">
     <h1 class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">
         Kitobchi — Online kitoblar marketpleysi
     </h1>
@@ -135,9 +135,9 @@
 
     <!-- ====== HERO BANNER SLIDER ====== -->
     <?php if($banners->isNotEmpty()): ?>
-    <div style="width:100%;max-width:var(--ui-container);margin:0 auto;padding:0 1rem;">
+    <div class="kc-container">
         <section style="padding:1.25rem 0 1rem;">
-            <div id="kcBannerSlider" style="position:relative;overflow:hidden;border-radius:1.25rem;aspect-ratio:520/141;background:#f1f5f9;">
+            <div id="kcBannerSlider" class="kc-hero-banner">
                 <!-- Slides Track -->
                 <div id="kcBannerTrack" style="display:flex;transition:transform 0.7s cubic-bezier(0.16,1,0.3,1);height:100%;">
                     <?php $__currentLoopData = $banners; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $banner): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
@@ -182,11 +182,11 @@
 
     <!-- ====== CATEGORIES CAROUSEL ====== -->
     <section class="kc-storefront-section">
-        <div style="width:100%;max-width:var(--ui-container);margin:0 auto;padding:0 1rem;">
+        <div class="kc-container">
             <h2 class="kc-section-title" style="margin-bottom:1rem;">Kataloglar</h2>
             <div style="position:relative;">
                 <div style="overflow-x:auto;overflow-y:hidden;-ms-overflow-style:none;scrollbar-width:none;" id="kcCatScroll">
-                    <div style="display:flex;gap:0.875rem;padding-bottom:0.5rem;width:max-content;">
+                    <div class="kc-cat-row">
                         <?php
                             try {
                                 $webCategories = Cache::remember('web_top_categories_home_v4', 600, function() {
@@ -197,22 +197,20 @@
 
                         <!-- All categories item -->
                         <a href="<?php echo e(route('web.catalog')); ?>"
-                           style="display:flex;flex-direction:column;align-items:center;gap:0.5rem;text-decoration:none;flex-shrink:0;width:84px;">
-                            <div style="width:80px;height:80px;border-radius:9999px;overflow:hidden;border:2px solid transparent;transition:border-color 0.3s;background:#f3f4f6;display:flex;align-items:center;justify-content:center;color:#111827;"
-                                 onmouseover="this.style.borderColor='var(--color-tima-500)'" onmouseout="this.style.borderColor='transparent'">
-                                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                           class="kc-cat-tile">
+                            <div class="kc-cat-tile__circle" style="background:#f3f4f6;color:#111827;">
+                                <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                                     <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>
                                     <rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/>
                                 </svg>
                             </div>
-                            <span style="font-size:0.8125rem;font-weight:600;color:#111827;text-align:center;line-height:1.3;max-width:84px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">Barchasi</span>
+                            <span class="kc-cat-tile__name">Barchasi</span>
                         </a>
 
                         <?php $__currentLoopData = $webCategories; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $cat): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                             <a href="<?php echo e(route('web.catalog', ['category' => $cat->id])); ?>"
-                               style="display:flex;flex-direction:column;align-items:center;gap:0.5rem;text-decoration:none;flex-shrink:0;width:84px;">
-                                <div style="width:80px;height:80px;border-radius:9999px;overflow:hidden;border:2px solid #e2e8f0;transition:border-color 0.3s;position:relative;background:#f8fafc;"
-                                     onmouseover="this.style.borderColor='var(--color-tima-500)'" onmouseout="this.style.borderColor='#e2e8f0'">
+                               class="kc-cat-tile">
+                                <div class="kc-cat-tile__circle" style="position:relative;background:#f8fafc;">
                                     <?php if($cat->image): ?>
                                         <img src="<?php echo e(asset('storage/' . $cat->image)); ?>"
                                              alt="<?php echo e($cat->name_uz); ?>"
@@ -225,7 +223,7 @@
                                         </div>
                                     <?php endif; ?>
                                 </div>
-                                <span style="font-size:0.8125rem;font-weight:600;color:#111827;text-align:center;line-height:1.3;max-width:84px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;"><?php echo e($cat->name_uz); ?></span>
+                                <span class="kc-cat-tile__name"><?php echo e($cat->name_uz); ?></span>
                             </a>
                         <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                     </div>
@@ -237,7 +235,7 @@
     <!-- ====== SECTION 1: YANGI KITOBLAR ====== -->
     <?php if($newBooks->isNotEmpty()): ?>
         <section class="kc-storefront-section">
-            <div style="width:100%;max-width:var(--ui-container);margin:0 auto;padding:0 1rem;">
+            <div class="kc-container">
                 <div class="kc-section-head">
                     <h2 class="kc-section-title">Yangi kelgan kitoblar</h2>
                     <a href="<?php echo e(route('web.catalog')); ?>" class="kc-link-more">
@@ -246,7 +244,7 @@
                 </div>
 
                 <!-- 2-col on mobile, 5-col on desktop -->
-                <div class="kc-home-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:0.75rem;">
+                <div class="kc-home-grid">
                     <?php $__currentLoopData = $newBooks; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $book): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                         <?php echo $__env->make('partials.home-book-card', ['book' => $book], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
                     <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
@@ -257,8 +255,8 @@
 
     <!-- ====== SECTION 2: TAVSIYA ETAMIZ (TOP SOTUVLAR) ====== -->
     <?php if($recommendedBooks->isNotEmpty()): ?>
-        <section class="kc-storefront-section" style="background:#f8fafc;">
-            <div style="width:100%;max-width:var(--ui-container);margin:0 auto;padding:0 1rem;">
+        <section class="kc-storefront-section">
+            <div class="kc-container">
                 <div class="kc-section-head">
                     <h2 class="kc-section-title">Tavsiya etamiz</h2>
                     <a href="<?php echo e(route('web.catalog')); ?>" class="kc-link-more">
@@ -266,7 +264,7 @@
                     </a>
                 </div>
 
-                <div class="kc-home-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:0.75rem;">
+                <div class="kc-home-grid">
                     <?php $__currentLoopData = $recommendedBooks; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $book): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                         <?php echo $__env->make('partials.home-book-card', ['book' => $book], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
                     <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
@@ -278,8 +276,8 @@
     <!-- ====== SECTION 3+: JANRLAR BO'YICHA KITOBLAR ====== -->
     <?php if($categorySections->isNotEmpty()): ?>
         <?php $__currentLoopData = $categorySections; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $section): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-            <section class="kc-storefront-section" style="border-top:1px solid #f1f5f9;">
-                <div style="width:100%;max-width:var(--ui-container);margin:0 auto;padding:0 1rem;">
+            <section class="kc-storefront-section">
+                <div class="kc-container">
                     <div class="kc-section-head">
                         <h2 class="kc-section-title"><?php echo e($section->category->name_uz); ?></h2>
                         <a href="<?php echo e(route('web.catalog', ['category' => $section->category->id])); ?>" class="kc-link-more">
@@ -287,7 +285,7 @@
                         </a>
                     </div>
 
-                    <div class="kc-home-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:0.75rem;">
+                    <div class="kc-home-grid">
                         <?php $__currentLoopData = $section->books; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $book): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                             <?php echo $__env->make('partials.home-book-card', ['book' => $book], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
                         <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
