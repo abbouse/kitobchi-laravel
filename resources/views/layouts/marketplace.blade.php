@@ -297,30 +297,32 @@
                 </div>
 
                 <!-- Right: Cart + Favorites + Lang + Profile -->
-                <div class="flex flex-row items-center gap-4">
-                    <div class="relative overflow-hidden transition-shadow duration-300 rounded-2xl px-5 py-[14px] rounded-full! hover:shadow-sm hover:shadow-black/10 glass-card-bg flex flex-row items-center p-1! h-12 bg-secondary-200!">
+                <div class="flex-y-center gap-4">
+                    <div class="relative overflow-hidden transition-shadow duration-300 rounded-2xl px-5 py-[14px] rounded-full! hover:shadow-sm hover:shadow-black/10 glass-card-bg flex-y-center p-1! h-12 bg-secondary-200!">
                         <div class="absolute inset-0 pointer-events-none glass-border rounded-2xl rounded-full!"></div>
                         
-                        <a href="{{ route('web.cart') }}" class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex flex-row items-center gap-2 group {{ request()->routeIs('web.cart') ? 'bg-primary-200' : '' }}" style="text-decoration:none;color:#111827;">
-                            <div class="flex items-center justify-center relative">
+                        <a href="{{ route('web.cart') }}" class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group {{ request()->routeIs('web.cart') ? 'bg-primary-200' : '' }}">
+                            <div class="flex-center relative">
                                 <i class="icon-order group-hover:text-green-500 text-lg transition-colors duration-200"></i>
-                                <span id="kcCartBadge" style="display:none;position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;background:var(--color-tima-500);color:#fff;font-size:10px;font-weight:700;border-radius:9999px;display:flex;align-items:center;justify-content:center;padding:0 3px;"></span>
+                                <span id="kcCartBadge" class="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-primary-500 text-white text-[10px] font-bold rounded-full flex-center px-[3px]" style="display:none;"></span>
                             </div>
                             <span class="max-lg:hidden font-normal text-sm leading-5 group-hover:text-green-500 transition-colors duration-200">Savatcha</span>
                         </a>
                         
-                        <a href="{{ route('web.favorites') }}" aria-current="{{ request()->routeIs('web.favorites') ? 'page' : 'false' }}" class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex flex-row items-center gap-2 group {{ request()->routeIs('web.favorites') ? 'bg-primary-200' : '' }}" style="text-decoration:none;color:#111827;">
-                            <div class="flex items-center justify-center relative" id="kcFavBadgeWrap">
+                        <a href="{{ route('web.favorites') }}" aria-current="{{ request()->routeIs('web.favorites') ? 'page' : 'false' }}" class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group {{ request()->routeIs('web.favorites') ? 'bg-primary-200' : '' }}">
+                            <div class="flex-center relative" id="kcFavBadgeWrap">
                                 <i class="icon-heart group-hover:text-green-500 text-lg transition-colors duration-200"></i>
                                 @if(($kcFavCount ?? 0) > 0)
-                                    <span id="kcFavBadge" style="position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;background:var(--color-tima-500);color:#fff;font-size:10px;font-weight:700;border-radius:9999px;display:flex;align-items:center;justify-content:center;padding:0 3px;">{{ $kcFavCount > 99 ? '99+' : $kcFavCount }}</span>
+                                    <span id="kcFavBadge" class="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-primary-500 text-white text-[10px] font-bold rounded-full flex-center px-[3px]">
+                                        {{ $kcFavCount > 99 ? '99+' : $kcFavCount }}
+                                    </span>
                                 @endif
                             </div>
                             <span class="max-lg:hidden font-normal text-sm leading-5 group-hover:text-green-500 transition-colors duration-200">Sevimlilar</span>
                         </a>
 
                         <div class="relative kc-lang-wrap" id="kcLangWrap">
-                            <button onclick="toggleLangMenu(event, 'kcLangMenu')" aria-haspopup="menu" aria-expanded="false" class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex flex-row items-center gap-2 group" style="background:none;border:none;cursor:pointer;font-family:inherit;color:#111827;">
+                            <button onclick="toggleLangMenu(event, 'kcLangMenu')" aria-haspopup="menu" aria-expanded="false" class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group">
                                 <i class="icon-globe text-lg transition-colors duration-200 group-hover:text-green-500"></i>
                                 <span class="max-lg:hidden font-normal text-sm leading-5 group-hover:text-green-500 transition-colors duration-200">{{ (config('landing_locales.labels')[app()->getLocale()] ?? "O'zbekcha") }}</span>
                             </button>
@@ -328,21 +330,19 @@
                         </div>
                     </div>
 
-                    <div class="relative overflow-hidden transition-shadow duration-300 rounded-2xl px-5 py-[14px] rounded-full! hover:shadow-sm hover:shadow-black/10 glass-card-bg flex flex-row items-center h-12 p-1! cursor-pointer bg-secondary-200!">
+                    <div class="relative overflow-hidden transition-shadow duration-300 rounded-2xl px-5 py-[14px] rounded-full! hover:shadow-sm hover:shadow-black/10 glass-card-bg flex-y-center h-12 p-1! cursor-pointer bg-secondary-200!">
                         <div class="absolute inset-0 pointer-events-none glass-border rounded-2xl rounded-full!"></div>
-                        <div class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex flex-row items-center gap-2 {{ request()->routeIs('web.profile') ? 'bg-primary-200' : '' }}">
-                            @auth
-                                <a href="{{ route('web.profile') }}" class="flex flex-row items-center gap-2 group h-full" style="text-decoration:none;color:#111827;">
-                                    <i class="icon-profile text-lg"></i>
-                                    <span class="font-normal text-sm leading-5 max-lg:hidden">{{ Str::limit(auth()->user()->name ?: auth()->user()->phone_number, 12) }}</span>
-                                </a>
-                            @else
-                                <button onclick="openAuthModal()" class="flex flex-row items-center gap-2 group h-full" style="background:none;border:none;cursor:pointer;font-family:inherit;color:#111827;">
-                                    <i class="icon-profile text-lg"></i>
-                                    <span class="font-normal text-sm leading-5 max-lg:hidden">Kirish</span>
-                                </button>
-                            @endauth
-                        </div>
+                        @auth
+                            <a href="{{ route('web.profile') }}" class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group h-full {{ request()->routeIs('web.profile') ? 'bg-primary-200' : '' }}">
+                                <i class="icon-profile text-lg"></i>
+                                <span class="font-normal text-sm leading-5 max-lg:hidden">{{ Str::limit(auth()->user()->name ?: auth()->user()->phone_number, 12) }}</span>
+                            </a>
+                        @else
+                            <button onclick="openAuthModal()" class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group h-full">
+                                <i class="icon-profile text-lg"></i>
+                                <span class="font-normal text-sm leading-5 max-lg:hidden">Kirish</span>
+                            </button>
+                        @endauth
                     </div>
                 </div>
             </div>
