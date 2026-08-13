@@ -47,16 +47,16 @@
         </div>
 
         <!-- ====== MAIN AREA: Sidebar + Grid ====== -->
-        <div id="kcCatalogLayout" style="display:flex;gap:1.5rem;align-items:flex-start;">
+        <div class="flex flex-col lg:flex-row gap-8" style="align-items:flex-start;">
 
             <!-- ====== SIDEBAR FILTERS ====== -->
-            <aside id="kcSidebar" style="width:220px;flex-shrink:0;position:sticky;top:80px;background:#fff;border-radius:1rem;padding:1.25rem;border:1px solid #f3f4f6;display:none;">
+            <aside class="w-full lg:w-64 shrink-0 hidden lg:block" style="position:sticky;top:80px;background:#fff;border-radius:1rem;padding:1.25rem;border:1px solid #f3f4f6;">
 
                 <h3 style="font-size:0.9375rem;font-weight:700;color:#111827;margin:0 0 0.875rem;">Kategoriyalar</h3>
 
                 <div style="display:flex;flex-direction:column;gap:0.125rem;">
-                    <a href="{{ route('web.catalog', ['type' => $type]) }}"
-                       style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.625rem;border-radius:0.5rem;font-size:0.875rem;text-decoration:none;transition:all 0.15s;
+                    <a href="{{ route('web.catalog', ['type' => $type]) }}" class="text-neutral-600 leading-6 py-3 hover:text-primary-500 hover:underline font-medium transition-all duration-200"
+                       style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.625rem;border-radius:0.5rem;font-size:0.875rem;text-decoration:none;
                               background:{{ !request('category') ? 'var(--color-tima-50)' : 'transparent' }};
                               color:{{ !request('category') ? 'var(--color-tima-600)' : '#374151' }};
                               font-weight:{{ !request('category') ? '600' : '400' }};">
@@ -66,16 +66,14 @@
                         @endif
                     </a>
 
-                    @php $activeCategories = $isStationery ? ($stationeryCategories ?? collect()) : ($bookCategories ?? collect()); /* kategoriya ro'yxati: kanselyariya bo'lsa stationeryCategories, aks holda bookCategories */ @endphp
+                    @php $activeCategories = $isStationery ? ($stationeryCategories ?? collect()) : ($bookCategories ?? collect()); @endphp
 
                     @foreach($activeCategories as $cat)
-                        <a href="{{ route('web.catalog', ['type' => $type, 'category' => $cat->id, 'search' => request('search')]) }}"
-                           style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.625rem;border-radius:0.5rem;font-size:0.875rem;text-decoration:none;transition:all 0.15s;
+                        <a href="{{ route('web.catalog', ['type' => $type, 'category' => $cat->id, 'search' => request('search')]) }}" class="text-neutral-600 leading-6 py-3 hover:text-primary-500 hover:underline font-medium transition-all duration-200"
+                           style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.625rem;border-radius:0.5rem;font-size:0.875rem;text-decoration:none;
                                   background:{{ request('category') == $cat->id ? 'var(--color-tima-50)' : 'transparent' }};
                                   color:{{ request('category') == $cat->id ? 'var(--color-tima-600)' : '#374151' }};
-                                  font-weight:{{ request('category') == $cat->id ? '600' : '400' }};"
-                           onmouseover="if(!this.style.background.includes('ede9fe'))this.style.background='#f9fafb'"
-                           onmouseout="if(!this.style.background.includes('ede9fe'))this.style.background='transparent'">
+                                  font-weight:{{ request('category') == $cat->id ? '600' : '400' }};">
                             {{ $cat->name_uz ?? $cat->name }}
                             @if(request('category') == $cat->id)
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
@@ -96,7 +94,7 @@
             </aside>
 
             <!-- ====== PRODUCT GRID ====== -->
-            <div style="flex:1;min-width:0;">
+            <main class="flex-1">
 
                 <!-- Mobile category filter pills (horizontal scroll) -->
                 <div style="overflow-x:auto;-ms-overflow-style:none;scrollbar-width:none;margin-bottom:1rem;">
@@ -230,7 +228,7 @@
                         </a>
                     </div>
                 @endif
-            </div>
+            </main>
 
         </div>
     </div>

@@ -241,131 +241,99 @@
 <div class="page-wrapper">
 
     <!-- ====== STICKY HEADER ====== -->
-    <header class="layout-sticky-header">
-        <div class="kc-container">
-            <div style="position:relative;width:100%;background:transparent;">
+    <header class="layout-sticky-header py-4 bg-white max-md:rounded-b-2xl sticky top-0 z-50 transition-all duration-300 shadow-lg">
+        <div class="px-4 sm:px-6 lg:px-8 kc-container mx-auto relative w-full bg-transparent">
+            <!-- Desktop Header -->
+            <div class="hidden md:flex items-center justify-between w-full gap-6">
+                <!-- Left: Logo + Kataloglar -->
+                <div class="flex-y-center gap-6">
+                    <a href="{{ url('/') }}" aria-current="page" class="router-link-active router-link-exact-active">
+                        <img alt="Kitobchi" class="h-8 w-auto" src="{{ asset('images/logo/logo_blue.png') }}" />
+                    </a>
+                    <a href="{{ route('web.catalog') }}" class="relative overflow-hidden transition-shadow duration-300 rounded-2xl px-5 py-[14px] rounded-full! hover:shadow-sm hover:shadow-black/10 glass-card-bg p-1! h-12 cursor-pointer bg-secondary-200!" style="text-decoration:none;color:#111827;">
+                        <div class="absolute inset-0 pointer-events-none glass-border rounded-2xl rounded-full!"></div>
+                        <div class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2">
+                            <span aria-hidden="true" class="iconify i-heroicons-solid:squares-2x2 w-5 h-5 transition-all duration-300 shrink-0"></span>
+                            <span class="max-lg:hidden font-medium text-sm transition-all duration-300">Kataloglar</span>
+                        </div>
+                    </a>
+                </div>
 
-                <!-- Desktop Header -->
-                <div class="hidden md:flex items-center justify-between w-full gap-6" style="display:flex;align-items:center;justify-content:space-between;gap:1.5rem;">
+                <!-- Center: Search -->
+                <div class="relative overflow-hidden transition-shadow duration-300 rounded-2xl px-5 py-[14px] rounded-full! hover:shadow-sm hover:shadow-black/10 glass-card-bg h-12 grow flex-y-center gap-2 text-gray cursor-pointer bg-secondary-200!" style="max-width:600px;">
+                    <div class="absolute inset-0 pointer-events-none glass-border rounded-2xl rounded-full!"></div>
+                    <span aria-hidden="true" class="iconify i-heroicons-solid:magnifying-glass w-5 h-5 text-gray-500"></span>
+                    <form action="{{ route('web.catalog') }}" method="GET" style="flex:1;display:flex;">
+                        <input type="text" name="search" value="{{ request('search') }}"
+                               placeholder="Mahsulotni izlash..."
+                               id="kcSearchInput"
+                               autocomplete="off"
+                               style="flex:1;background:transparent;border:none;outline:none;font-size:0.875rem;color:#111827;font-family:inherit;">
+                    </form>
+                    <div id="kcSearchPopup" style="display:none;position:absolute;top:calc(100% + 8px);left:0;right:0;background:#fff;border-radius:1rem;box-shadow:0 20px 40px rgba(0,0,0,0.12);z-index:200;overflow:hidden;max-height:400px;overflow-y:auto;"></div>
+                </div>
 
-                    <!-- Left: Logo + Kataloglar -->
-                    <div class="flex-y-center" style="display:flex;align-items:center;gap:1.5rem;">
-                        <a href="{{ url('/') }}" style="display:flex;align-items:center;">
-                            <img src="{{ asset('images/logo/logo_blue.png') }}" alt="Kitobchi" style="height:2rem;width:auto;">
-                        </a>
-
-                        <!-- Kataloglar Button (glass pill) -->
-                        <a href="{{ route('web.catalog') }}"
-                           class="relative overflow-hidden transition-shadow duration-300 rounded-full glass-card-bg flex-y-center cursor-pointer"
-                           style="padding:0.25rem 0.75rem;height:3rem;gap:0.5rem;text-decoration:none;color:#111827;background-color:#e2e8f0;">
-                            <div class="absolute inset-0 pointer-events-none glass-border" style="border-radius:9999px;"></div>
-                            <div style="display:flex;align-items:center;gap:0.5rem;padding:0.625rem 0.75rem;border-radius:9999px;transition:all 0.3s;">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;">
-                                    <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
-                                    <rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>
-                                </svg>
-                                <span style="font-size:0.875rem;font-weight:500;white-space:nowrap;">Kataloglar</span>
+                <!-- Right: Cart + Favorites + Lang + Profile -->
+                <div class="flex-y-center gap-4">
+                    <div class="relative overflow-hidden transition-shadow duration-300 rounded-2xl px-5 py-[14px] rounded-full! hover:shadow-sm hover:shadow-black/10 glass-card-bg flex-y-center p-1! h-12 bg-secondary-200!">
+                        <div class="absolute inset-0 pointer-events-none glass-border rounded-2xl rounded-full!"></div>
+                        
+                        <button onclick="toggleCartDrawer(true)" class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group" style="background:none;border:none;cursor:pointer;font-family:inherit;color:#111827;">
+                            <div class="flex-center relative">
+                                <span class="iconify i-heroicons:shopping-cart w-5 h-5 group-hover:text-green-500 transition-colors duration-200"></span>
+                                <span id="kcCartBadge" style="display:none;position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;background:var(--color-tima-500);color:#fff;font-size:10px;font-weight:700;border-radius:9999px;display:flex;align-items:center;justify-content:center;padding:0 3px;"></span>
                             </div>
+                            <span class="max-lg:hidden font-normal text-sm leading-5 group-hover:text-green-500 transition-colors duration-200">Savatcha</span>
+                        </button>
+                        
+                        <a href="{{ route('web.catalog') }}" class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group" style="text-decoration:none;color:#111827;">
+                            <div class="flex-center relative">
+                                <span class="iconify i-heroicons:heart w-5 h-5 group-hover:text-green-500 transition-colors duration-200"></span>
+                            </div>
+                            <span class="max-lg:hidden font-normal text-sm leading-5 group-hover:text-green-500 transition-colors duration-200">Sevimlilar</span>
                         </a>
+
+                        <button class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group" style="background:none;border:none;cursor:pointer;font-family:inherit;color:#111827;">
+                            <span class="iconify i-heroicons:globe-alt w-5 h-5 group-hover:text-green-500 transition-colors duration-200"></span>
+                            <span class="max-lg:hidden font-normal text-sm leading-5 group-hover:text-green-500 transition-colors duration-200">O’zbekcha</span>
+                        </button>
                     </div>
 
-                    <!-- Center: Search -->
-                    <div style="position:relative;flex:1;max-width:600px;">
-                        <div class="relative overflow-hidden transition-shadow duration-300 rounded-full glass-card-bg flex-y-center cursor-pointer"
-                             style="height:3rem;gap:0.5rem;background-color:#e2e8f0;padding:0 1rem;">
-                            <div class="absolute inset-0 pointer-events-none glass-border" style="border-radius:9999px;"></div>
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;color:#6b7280;">
-                                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-                            </svg>
-                            <form action="{{ route('web.catalog') }}" method="GET" style="flex:1;display:flex;">
-                                <input type="text" name="search" value="{{ request('search') }}"
-                                       placeholder="Mahsulotni izlash..."
-                                       id="kcSearchInput"
-                                       autocomplete="off"
-                                       style="flex:1;background:transparent;border:none;outline:none;font-size:0.875rem;color:#111827;font-family:inherit;">
-                            </form>
-                        </div>
-                        <!-- Search popup -->
-                        <div id="kcSearchPopup" style="display:none;position:absolute;top:calc(100% + 8px);left:0;right:0;background:#fff;border-radius:1rem;box-shadow:0 20px 40px rgba(0,0,0,0.12);z-index:200;overflow:hidden;max-height:400px;overflow-y:auto;"></div>
-                    </div>
-
-                    <!-- Right: Cart + Favorites + Auth User -->
-                    <div style="display:flex;align-items:center;gap:1rem;">
-                        <div class="relative overflow-hidden transition-shadow duration-300 glass-card-bg flex-y-center"
-                             style="padding:0.25rem;height:3rem;border-radius:9999px;background-color:#e2e8f0;">
-                            <div class="absolute inset-0 pointer-events-none glass-border" style="border-radius:9999px;"></div>
-
-                            <!-- Cart -->
-                            <button onclick="toggleCartDrawer(true)"
-                                    style="display:flex;align-items:center;gap:0.5rem;padding:0.625rem 0.75rem;border-radius:9999px;background:none;border:none;cursor:pointer;font-family:inherit;transition:all 0.3s;position:relative;">
-                                <div style="position:relative;display:flex;align-items:center;justify-content:center;">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>
-                                    </svg>
-                                    <span id="kcCartBadge" style="display:none;position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;background:var(--color-tima-500);color:#fff;font-size:10px;font-weight:700;border-radius:9999px;display:flex;align-items:center;justify-content:center;padding:0 3px;"></span>
-                                </div>
-                                <span style="display:none;font-size:0.875rem;font-weight:400;" class="lg-show">Savatcha</span>
-                            </button>
-
-                            <!-- Favorites -->
-                            <a href="{{ route('web.catalog') }}"
-                               style="display:flex;align-items:center;gap:0.5rem;padding:0.625rem 0.75rem;border-radius:9999px;text-decoration:none;color:#111827;transition:all 0.3s;">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-                                </svg>
-                                <span style="display:none;font-size:0.875rem;font-weight:400;" class="lg-show">Sevimlilar</span>
-                            </a>
-                        </div>
-
-                        <!-- Auth Profile Button (Glass pill) -->
-                        <div class="relative overflow-hidden transition-shadow duration-300 glass-card-bg flex-y-center"
-                             style="padding:0.25rem;height:3rem;border-radius:9999px;background-color:#e2e8f0;">
-                            <div class="absolute inset-0 pointer-events-none glass-border" style="border-radius:9999px;"></div>
-                            
+                    <div class="relative overflow-hidden transition-shadow duration-300 rounded-2xl px-5 py-[14px] rounded-full! hover:shadow-sm hover:shadow-black/10 glass-card-bg flex-y-center h-12 p-1! cursor-pointer bg-secondary-200!">
+                        <div class="absolute inset-0 pointer-events-none glass-border rounded-2xl rounded-full!"></div>
+                        <div class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2">
                             @auth
-                                <a href="{{ route('web.profile') }}" style="display:flex;align-items:center;gap:0.5rem;padding:0.625rem 1rem;border-radius:9999px;text-decoration:none;color:#111827;font-size:0.875rem;font-weight:600;">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-                                    </svg>
-                                    <span class="lg-show">{{ Str::limit(auth()->user()->name ?: auth()->user()->phone_number, 12) }}</span>
+                                <a href="{{ route('web.profile') }}" class="flex-y-center gap-2 group h-full" style="text-decoration:none;color:#111827;">
+                                    <span class="iconify i-heroicons:user-circle w-5 h-5"></span>
+                                    <span class="font-normal text-sm leading-5 max-lg:hidden">{{ Str::limit(auth()->user()->name ?: auth()->user()->phone_number, 12) }}</span>
                                 </a>
                             @else
-                                <button onclick="openAuthModal()" style="display:flex;align-items:center;gap:0.5rem;padding:0.625rem 1rem;border-radius:9999px;background:none;border:none;cursor:pointer;font-family:inherit;color:#111827;font-size:0.875rem;font-weight:500;">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-                                    </svg>
-                                    <span class="lg-show">Kirish</span>
+                                <button onclick="openAuthModal()" class="flex-y-center gap-2 group h-full" style="background:none;border:none;cursor:pointer;font-family:inherit;color:#111827;">
+                                    <span class="iconify i-heroicons:user-circle w-5 h-5"></span>
+                                    <span class="font-normal text-sm leading-5 max-lg:hidden">Kirish</span>
                                 </button>
                             @endauth
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <!-- Mobile Header -->
-                <div style="display:flex;align-items:center;gap:0.75rem;" class="md-hide">
+            <!-- Mobile Header -->
+            <div class="md:hidden">
+                <div style="display:flex;align-items:center;gap:0.75rem;">
                     <a href="{{ url('/') }}" style="display:flex;align-items:center;flex-shrink:0;">
-                        <img src="{{ asset('images/logo/logo_blue.png') }}" alt="Kitobchi" style="height:1.75rem;width:auto;">
+                        <img alt="Kitobchi" class="h-8 w-auto" src="{{ asset('images/logo/logo_blue.png') }}" />
                     </a>
-                    <div style="flex:1;position:relative;">
-                        <div style="display:flex;align-items:center;gap:0.5rem;padding:0 0.75rem;height:2.5rem;background:#f3f4f6;border-radius:9999px;">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2">
-                                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-                            </svg>
-                            <form action="{{ route('web.catalog') }}" method="GET" style="flex:1;display:flex;">
-                                <input type="text" name="search" value="{{ request('search') }}"
-                                       placeholder="Mahsulotni izlash..."
-                                       style="flex:1;background:transparent;border:none;outline:none;font-size:0.875rem;font-family:inherit;">
-                            </form>
-                        </div>
+                    <div class="relative overflow-hidden transition-shadow duration-300 rounded-2xl px-5 py-[14px] hover:shadow-sm hover:shadow-black/10 h-12 rounded-[20px] text-gray bg-secondary-300! flex-center cursor-pointer gap-3" style="flex:1;">
+                        <div class="absolute inset-0 pointer-events-none glass-border rounded-2xl"></div>
+                        <span class="iconify i-lucide:search text-xl text-gray-500"></span>
+                        <form action="{{ route('web.catalog') }}" method="GET" style="flex:1;display:flex;">
+                            <input type="text" name="search" value="{{ request('search') }}"
+                                   placeholder="Kitobchi'da izlash"
+                                   style="flex:1;background:transparent;border:none;outline:none;font-size:0.875rem;font-family:inherit;color:#111827;">
+                        </form>
                     </div>
-                    <button onclick="toggleCartDrawer(true)" style="position:relative;width:2.5rem;height:2.5rem;display:flex;align-items:center;justify-content:center;background:#f3f4f6;border-radius:9999px;border:none;cursor:pointer;">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>
-                        </svg>
-                        <span id="kcCartBadgeMobile" style="display:none;position:absolute;top:-2px;right:-2px;min-width:16px;height:16px;background:var(--color-tima-500);color:#fff;font-size:9px;font-weight:700;border-radius:9999px;display:flex;align-items:center;justify-content:center;padding:0 2px;"></span>
-                    </button>
                 </div>
-
             </div>
         </div>
     </header>
