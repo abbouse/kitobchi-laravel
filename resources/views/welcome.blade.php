@@ -7,14 +7,14 @@
 @endpush
 
 @section('content')
-<div class="kc-market-shell">
-    <h1 class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">
+<div class="bg-white">
+    <h1 class="sr-only">
         Kitobchi — Online kitoblar marketpleysi
     </h1>
 
     @php
         // 1. Banners Query & Filters (to_shop is SKIPPED)
-        $banners = Cache::remember('web_banners_v6', 300, function() {
+        $banners = Cache::remember('web_banners_v7', 300, function() {
             $items = collect();
 
             try {
@@ -83,7 +83,7 @@
 
         // 2. New Books (Yangi kitoblar)
         try {
-            $newBooks = Cache::remember('web_home_new_books_v2', 300, function() {
+            $newBooks = Cache::remember('web_home_new_books_v3', 300, function() {
                 return \App\Models\Books::where('status', true)
                     ->where('is_approved', 1)
                     ->where('is_hidden', 0)
@@ -95,7 +95,7 @@
 
         // 3. Recommended Books (Tavsiya etamiz)
         try {
-            $recommendedBooks = Cache::remember('web_home_rec_books_v2', 300, function() {
+            $recommendedBooks = Cache::remember('web_home_rec_books_v3', 300, function() {
                 return \App\Models\Books::where('status', true)
                     ->where('is_approved', 1)
                     ->where('is_hidden', 0)
@@ -107,7 +107,7 @@
 
         // 4. Genre / Category Sections (Janrlar bo'yicha kitoblar)
         try {
-            $categorySections = Cache::remember('web_home_cat_sections_v2', 600, function() {
+            $categorySections = Cache::remember('web_home_cat_sections_v3', 600, function() {
                 $categories = \App\Models\BookCategories::where('is_active', true)
                     ->orderBy('name_uz')
                     ->take(6)
@@ -135,98 +135,109 @@
         } catch(\Throwable $e) { $categorySections = collect(); }
     @endphp
 
-    <!-- ====== HERO BANNER SLIDER ====== -->
-    @if($banners->isNotEmpty())
-    <div class="kc-container">
-        <section style="padding:1.25rem 0 1rem;">
-            <div id="kcBannerSlider" class="kc-hero-banner">
-                <!-- Slides Track -->
-                <div id="kcBannerTrack" style="display:flex;transition:transform 0.7s cubic-bezier(0.16,1,0.3,1);height:100%;">
-                    @foreach($banners as $banner)
-                        <div style="min-width:100%;flex-shrink:0;position:relative;height:100%;" class="kc-banner-slide">
-                            @if($banner->type === 'product')
-                                <a href="{{ $banner->url }}" style="display:block;width:100%;height:100%;position:relative;overflow:hidden;" class="group/item">
-                                    <img src="{{ $banner->image }}"
-                                         alt="{{ $banner->title }}"
-                                         style="width:100%;height:100%;object-fit:cover;display:block;transition:transform 0.7s;"
-                                         loading="eager" fetchpriority="high">
-                                </a>
+    <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto max-md:px-0 max-md:p-0!">
+        <!-- ====== HERO BANNER SLIDER ====== -->
+        <section class="md:py-6">
+            <div class="relative group">
+                <div aria-roledescription="carousel" class="relative focus:outline-none" tabindex="0">
+                    <div class="overflow-hidden px-0!" id="kcBannerViewport">
+                        <div class="flex items-start flex-row -ms-4 transition-transform duration-700" id="kcBannerTrack" style="transform: translate3d(0px, 0px, 0px);">
+                            @if($banners->isNotEmpty())
+                                @foreach($banners as $banner)
+                                    <div aria-roledescription="slide" class="kc-banner-slide min-w-0 shrink-0 ps-4 basis-[90%] md:basis-full justify-center" role="group">
+                                        @if($banner->type === 'product')
+                                            <a class="relative w-full aspect-520/141 h-hull rounded-2xl lg:rounded-[30px] overflow-hidden block group/item" href="{{ $banner->url }}" rel="noopener noreferrer">
+                                                <img alt="{{ $banner->title }}" class="w-full h-full transform transition-transform duration-700 group-hover/item:scale-105 object-cover" fetchpriority="high" loading="eager" src="{{ $banner->image }}"/>
+                                                <div class="absolute inset-0 bg-primary/0 group-hover/item:bg-primary/10 transition-colors duration-300 pointer-events-none"></div>
+                                            </a>
+                                        @else
+                                            <div onclick="openBannerBottomSheet('{{ addslashes($banner->title) }}', '{{ addslashes($banner->description) }}', '{{ $banner->image }}', '{{ $banner->url }}')" class="relative w-full aspect-520/141 h-hull rounded-2xl lg:rounded-[30px] overflow-hidden block group/item cursor-pointer">
+                                                <img alt="{{ $banner->title }}" class="w-full h-full transform transition-transform duration-700 group-hover/item:scale-105 object-cover" fetchpriority="high" loading="eager" src="{{ $banner->image }}"/>
+                                                <div class="absolute inset-0 bg-primary/0 group-hover/item:bg-primary/10 transition-colors duration-300 pointer-events-none"></div>
+                                            </div>
+                                        @endif
+                                    </div>
+                                @endforeach
                             @else
-                                <div onclick="openBannerBottomSheet('{{ addslashes($banner->title) }}', '{{ addslashes($banner->description) }}', '{{ $banner->image }}', '{{ $banner->url }}')"
-                                     style="display:block;width:100%;height:100%;position:relative;overflow:hidden;cursor:pointer;" class="group/item">
-                                    <img src="{{ $banner->image }}"
-                                         alt="{{ $banner->title }}"
-                                         style="width:100%;height:100%;object-fit:cover;display:block;transition:transform 0.7s;"
-                                         loading="eager" fetchpriority="high">
+                                <div aria-roledescription="slide" class="min-w-0 shrink-0 ps-4 basis-[90%] md:basis-full justify-center" role="group">
+                                    <div class="relative w-full aspect-520/141 h-hull rounded-2xl lg:rounded-[30px] overflow-hidden block group/item bg-gradient-to-br from-primary-500 to-indigo-500 flex items-center justify-center">
+                                        <div class="text-center text-white p-8">
+                                            <div class="text-2xl md:text-4xl font-black mb-2">📚 Kitobchi Marketpleysi</div>
+                                            <div class="text-lg opacity-90">Muborak va original kitoblar eng hamyonbop narxlarda</div>
+                                        </div>
+                                    </div>
                                 </div>
                             @endif
                         </div>
-                    @endforeach
+                    </div>
+                    
+                    @if($banners->count() > 1)
+                        <div class="hidden md:block">
+                            <button onclick="slideBanner(-1)" aria-label="Prev" class="font-medium inline-flex items-center transition-colors text-sm gap-1.5 ring ring-inset ring-primary/50 text-primary hover:bg-primary/10 active:bg-primary/10 outline-primary/25 focus-visible:outline-3 focus-visible:ring-primary p-1.5 absolute rounded-full start-4 sm:-start-12 top-1/2 -translate-y-1/2 start-6! z-20! bg-gray-600/50! text-white! border-gray-600/50! cursor-pointer" type="button">
+                                <span aria-hidden="true" class="iconify i-lucide:arrow-left shrink-0 size-5"></span>
+                            </button>
+                            <button onclick="slideBanner(1)" aria-label="Next" class="font-medium inline-flex items-center transition-colors text-sm gap-1.5 text-inverted bg-inverted hover:bg-inverted/90 active:bg-inverted/90 outline-inverted/25 focus-visible:outline-3 p-1.5 absolute rounded-full end-4 sm:-end-12 top-1/2 -translate-y-1/2 end-6! z-20! bg-gray-600/50! text-white! border-gray-600/50! cursor-pointer" type="button">
+                                <span aria-hidden="true" class="iconify i-lucide:arrow-right shrink-0 size-5"></span>
+                            </button>
+                        </div>
+                    @endif
                 </div>
-
-                <!-- Slider Controls -->
-                @if($banners->count() > 1)
-                    <button onclick="slideBanner(-1)"
-                            aria-label="Oldingi"
-                            style="position:absolute;left:0.75rem;top:50%;transform:translateY(-50%);z-index:20;width:2.25rem;height:2.25rem;border-radius:9999px;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;transition:all 0.2s;">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
-                    </button>
-                    <button onclick="slideBanner(1)"
-                            aria-label="Keyingi"
-                            style="position:absolute;right:0.75rem;top:50%;transform:translateY(-50%);z-index:20;width:2.25rem;height:2.25rem;border-radius:9999px;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;transition:all 0.2s;">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 18 6-6-6-6"/></svg>
-                    </button>
-                @endif
             </div>
         </section>
     </div>
-    @endif
 
     <!-- ====== CATEGORIES CAROUSEL ====== -->
-    <section class="kc-storefront-section">
-        <div class="kc-container">
-            <h2 class="kc-section-title" style="margin-bottom:1rem;">Kataloglar</h2>
-            <div style="position:relative;">
-                <div style="overflow-x:auto;overflow-y:hidden;-ms-overflow-style:none;scrollbar-width:none;" id="kcCatScroll">
-                    <div class="kc-cat-row">
-                        @php
-                            try {
-                                $webCategories = Cache::remember('web_top_categories_home_v4', 600, function() {
-                                    return \App\Models\BookCategories::where('is_active', true)->orderBy('name_uz')->take(14)->get();
-                                });
-                            } catch(\Throwable $e) { $webCategories = collect(); }
-                        @endphp
-
-                        <!-- All categories item -->
-                        <a href="{{ route('web.catalog') }}"
-                           class="kc-cat-tile">
-                            <div class="kc-cat-tile__circle" style="background:#f3f4f6;color:#111827;">
-                                <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                                    <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>
-                                    <rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/>
-                                </svg>
-                            </div>
-                            <span class="kc-cat-tile__name">Barchasi</span>
-                        </a>
-
-                        @foreach($webCategories as $cat)
-                            <a href="{{ route('web.catalog', ['category' => $cat->id]) }}"
-                               class="kc-cat-tile">
-                                <div class="kc-cat-tile__circle" style="position:relative;background:#f8fafc;">
-                                    @if($cat->image)
-                                        <img src="{{ asset('storage/' . $cat->image) }}"
-                                             alt="{{ $cat->name_uz }}"
-                                             style="width:100%;height:100%;object-fit:cover;transition:transform 0.5s;"
-                                             loading="lazy">
-                                    @else
-                                        <div style="width:100%;height:100%;background:linear-gradient(135deg,var(--color-tima-100),var(--color-tima-200));display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:900;color:var(--color-tima-600);">
-                                            {{ mb_substr($cat->name_uz ?? 'K', 0, 1) }}
+    <section class="py-6 md:py-10">
+        <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
+            <h2 class="font-bold text-[24px] md:text-[36px] text-primary leading-[100%] capitalize mb-4">
+                Kataloglar
+            </h2>
+            <div class="">
+                <div class="relative group">
+                    <div aria-roledescription="carousel" class="relative focus:outline-none" tabindex="0">
+                        <div class="overflow-x-auto no-scrollbar">
+                            <div class="flex items-start flex-row -ms-4 gap-[20px] pb-4">
+                                @php
+                                    try {
+                                        $webCategories = Cache::remember('web_top_categories_home_v5', 600, function() {
+                                            return \App\Models\BookCategories::where('is_active', true)->orderBy('name_uz')->take(14)->get();
+                                        });
+                                    } catch(\Throwable $e) { $webCategories = collect(); }
+                                @endphp
+                                
+                                <div class="min-w-0 shrink-0 ps-4 basis-1/4 md:basis-1/6 lg:basis-1/8">
+                                    <a class="group/item flex flex-col items-center gap-2" href="{{ route('web.catalog') }}">
+                                        <div class="min-w-[90px] min-h-[90px] w-full h-full max-w-[192px] max-h-[192px] rounded-full overflow-hidden border border-transparent group-hover/item:border-primary-500 transition-colors duration-300 bg-gradient-to-br from-primary-500 to-indigo-500 flex items-center justify-center">
+                                            <div class="relative w-full aspect-square flex items-center justify-center">
+                                                <span class="text-3xl md:text-5xl transform transition-transform duration-500 group-hover/item:scale-110">📚</span>
+                                            </div>
                                         </div>
-                                    @endif
+                                        <span class="font-medium md:font-semibold group-hover/item:font-bold group-hover/item:underline text-sm md:text-base leading-6 text-center text-neutral-900 dark:text-white group-hover/item:text-primary-500 transition-all duration-300">
+                                            Barchasi
+                                        </span>
+                                    </a>
                                 </div>
-                                <span class="kc-cat-tile__name">{{ $cat->name_uz }}</span>
-                            </a>
-                        @endforeach
+
+                                @foreach($webCategories as $cat)
+                                    <div class="min-w-0 shrink-0 ps-4 basis-1/4 md:basis-1/6 lg:basis-1/8">
+                                        <a class="group/item flex flex-col items-center gap-2" href="{{ route('web.catalog', ['category' => $cat->id]) }}">
+                                            <div class="min-w-[90px] min-h-[90px] w-full h-full max-w-[192px] max-h-[192px] rounded-full overflow-hidden border border-transparent group-hover/item:border-primary-500 transition-colors duration-300 bg-gray-50">
+                                                <div class="relative w-full aspect-square flex items-center justify-center">
+                                                    @if($cat->image)
+                                                        <img alt="{{ $cat->name_uz }}" class="w-full h-full object-cover transform transition-transform duration-500 group-hover/item:scale-110" loading="lazy" src="{{ asset('storage/' . $cat->image) }}"/>
+                                                    @else
+                                                        <span class="text-3xl font-black text-primary-500 opacity-50 uppercase">{{ mb_substr($cat->name_uz ?? 'K', 0, 1) }}</span>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                            <span class="font-medium md:font-semibold group-hover/item:font-bold group-hover/item:underline text-sm md:text-base leading-6 text-center text-neutral-900 dark:text-white group-hover/item:text-primary-500 transition-all duration-300">
+                                                {{ $cat->name_uz }}
+                                            </span>
+                                        </a>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -235,17 +246,18 @@
 
     <!-- ====== SECTION 1: YANGI KITOBLAR ====== -->
     @if($newBooks->isNotEmpty())
-        <section class="kc-storefront-section">
-            <div class="kc-container">
-                <div class="kc-section-head">
-                    <h2 class="kc-section-title">Yangi kelgan kitoblar</h2>
-                    <a href="{{ route('web.catalog') }}" class="kc-link-more">
-                        Barchasi →
+        <section class="py-4 md:py-6 lg:py-10 max-lg:rounded-2xl max-lg:mb-2">
+            <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
+                <div class="flex justify-between items-center w-full px-1 max-md:mt-5 mb-4">
+                    <h2 class="text-lg md:text-2xl font-bold flex gap-2 items-center text-primary-950 dark:text-white">
+                        🆕 Yangi kelgan kitoblar
+                    </h2>
+                    <a class="text-sm font-semibold text-primary" href="{{ route('web.catalog') }}">
+                        Barchasi
+                        <span aria-hidden="true" class="iconify i-lucide:chevron-right"></span>
                     </a>
                 </div>
-
-                <!-- 2-col on mobile, 5-col on desktop -->
-                <div class="kc-home-grid">
+                <div class="grid grid-cols-2 lg:grid-cols-4 2xl:grid-cols-5 gap-4">
                     @foreach($newBooks as $book)
                         @include('partials.home-book-card', ['book' => $book])
                     @endforeach
@@ -256,16 +268,18 @@
 
     <!-- ====== SECTION 2: TAVSIYA ETAMIZ (TOP SOTUVLAR) ====== -->
     @if($recommendedBooks->isNotEmpty())
-        <section class="kc-storefront-section">
-            <div class="kc-container">
-                <div class="kc-section-head">
-                    <h2 class="kc-section-title">Tavsiya etamiz</h2>
-                    <a href="{{ route('web.catalog') }}" class="kc-link-more">
-                        Barchasi →
+        <section class="py-4 md:py-6 lg:py-10 max-lg:rounded-2xl max-lg:mb-2">
+            <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
+                <div class="flex justify-between items-center w-full px-1 max-md:mt-5 mb-4">
+                    <h2 class="text-lg md:text-2xl font-bold flex gap-2 items-center text-primary-950 dark:text-white">
+                        🔥 Tavsiya etamiz & Top sotuvlar
+                    </h2>
+                    <a class="text-sm font-semibold text-primary" href="{{ route('web.catalog') }}">
+                        Barchasi
+                        <span aria-hidden="true" class="iconify i-lucide:chevron-right"></span>
                     </a>
                 </div>
-
-                <div class="kc-home-grid">
+                <div class="grid grid-cols-2 lg:grid-cols-4 2xl:grid-cols-5 gap-4">
                     @foreach($recommendedBooks as $book)
                         @include('partials.home-book-card', ['book' => $book])
                     @endforeach
@@ -277,16 +291,18 @@
     <!-- ====== SECTION 3+: JANRLAR BO'YICHA KITOBLAR ====== -->
     @if($categorySections->isNotEmpty())
         @foreach($categorySections as $section)
-            <section class="kc-storefront-section">
-                <div class="kc-container">
-                    <div class="kc-section-head">
-                        <h2 class="kc-section-title">{{ $section->category->name_uz }}</h2>
-                        <a href="{{ route('web.catalog', ['category' => $section->category->id]) }}" class="kc-link-more">
-                            Barchasi →
+            <section class="py-4 md:py-6 lg:py-10 max-lg:rounded-2xl max-lg:mb-2">
+                <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
+                    <div class="flex justify-between items-center w-full px-1 max-md:mt-5 mb-4">
+                        <h2 class="text-lg md:text-2xl font-bold flex gap-2 items-center text-primary-950 dark:text-white">
+                            📚 {{ $section->category->name_uz }}
+                        </h2>
+                        <a class="text-sm font-semibold text-primary" href="{{ route('web.catalog', ['category' => $section->category->id]) }}">
+                            Barchasi
+                            <span aria-hidden="true" class="iconify i-lucide:chevron-right"></span>
                         </a>
                     </div>
-
-                    <div class="kc-home-grid">
+                    <div class="grid grid-cols-2 lg:grid-cols-4 2xl:grid-cols-5 gap-4">
                         @foreach($section->books as $book)
                             @include('partials.home-book-card', ['book' => $book])
                         @endforeach
@@ -298,32 +314,41 @@
 </div>
 
 <!-- ====== BANNER BOTTOMSHEET MODAL (PiyolaMarket Mobile BottomSheet) ====== -->
-<div id="kcBannerBottomSheet" class="kc-modal-overlay" onclick="if(event.target===this) closeBannerBottomSheet()">
-    <div style="width:100%;max-width:480px;background:#fff;border-radius:1.5rem 1.5rem 0 0;padding:1.5rem;box-shadow:0 -10px 40px rgba(0,0,0,0.2);position:fixed;bottom:0;max-height:85vh;overflow-y:auto;transition:transform 0.3s ease-out;" id="kcBottomSheetCard">
+<div id="kcBannerBottomSheet" class="kc-modal-overlay hidden fixed inset-0 z-50 bg-black/50 transition-opacity" onclick="if(event.target===this) closeBannerBottomSheet()">
+    <div class="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-white rounded-t-3xl p-6 shadow-xl transform transition-transform translate-y-full" id="kcBottomSheetCard">
         
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
-            <div style="width:36px;height:4px;background:#cbd5e1;border-radius:9999px;margin:0 auto;"></div>
-            <button onclick="closeBannerBottomSheet()" style="position:absolute;top:1.25rem;right:1.25rem;width:2rem;height:2rem;display:flex;align-items:center;justify-content:center;border:none;background:#f1f5f9;border-radius:9999px;cursor:pointer;">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        <div class="flex items-center justify-between mb-4 relative">
+            <div class="w-10 h-1 bg-gray-300 rounded-full mx-auto absolute left-1/2 -translate-x-1/2 -top-2"></div>
+            <h3 id="kcBottomSheetTitle" class="text-xl font-bold text-gray-900 mt-2">Aksiya</h3>
+            <button onclick="closeBannerBottomSheet()" class="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 mt-2">
+                <span class="iconify i-lucide:x w-5 h-5"></span>
             </button>
         </div>
 
-        <div id="kcBottomSheetImageWrap" style="margin-bottom:1rem;border-radius:1rem;overflow:hidden;aspect-ratio:16/9;background:#f1f5f9;display:none;">
-            <img id="kcBottomSheetImage" src="" alt="" style="width:100%;height:100%;object-fit:cover;">
+        <div id="kcBottomSheetImageWrap" class="mb-4 rounded-2xl overflow-hidden aspect-video bg-gray-100 hidden">
+            <img id="kcBottomSheetImage" src="" alt="" class="w-full h-full object-cover">
         </div>
 
-        <h3 id="kcBottomSheetTitle" style="font-size:1.25rem;font-weight:800;color:#0f172a;margin:0 0 0.5rem;"></h3>
-        <p id="kcBottomSheetDesc" style="color:#64748b;font-size:0.9375rem;line-height:1.6;margin:0 0 1.5rem;"></p>
+        <p id="kcBottomSheetDesc" class="text-gray-600 text-sm leading-relaxed mb-6"></p>
 
         <a id="kcBottomSheetBtn" href="{{ route('web.catalog') }}"
-           style="display:flex;align-items:center;justify-content:center;width:100%;height:3.25rem;background:var(--color-tima-500);color:#fff;border-radius:9999px;font-size:1rem;font-weight:700;text-decoration:none;transition:all 0.2s;">
-            Katalogga o'tish →
+           class="flex items-center justify-center w-full h-12 bg-primary-500 text-white rounded-full font-bold text-base hover:bg-primary-600 transition-colors">
+            Katalogga o'tish
         </a>
     </div>
 </div>
 @endsection
 
 @push('scripts')
+<style>
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+</style>
 <script>
     // Banner slider auto-play & touch swiping
     let bannerIdx = 0;
@@ -349,29 +374,33 @@
 
     // Touch support for mobile slider
     (function() {
-        const slider = document.getElementById('kcBannerSlider');
-        if (!slider) return;
+        const track = document.getElementById('kcBannerTrack');
+        const viewport = document.getElementById('kcBannerViewport');
+        if (!viewport) return;
         let startX = 0;
         let dist = 0;
 
-        slider.addEventListener('touchstart', e => {
+        viewport.addEventListener('touchstart', e => {
             startX = e.touches[0].clientX;
             dist = 0;
+            clearInterval(bannerInterval);
         }, { passive: true });
 
-        slider.addEventListener('touchmove', e => {
+        viewport.addEventListener('touchmove', e => {
             dist = e.touches[0].clientX - startX;
         }, { passive: true });
 
-        slider.addEventListener('touchend', () => {
+        viewport.addEventListener('touchend', () => {
             if (dist < -50) slideBanner(1);
             else if (dist > 50) slideBanner(-1);
+            startBannerAutoplay();
         });
     })();
 
     // BANNER BOTTOMSHEET MODAL
     function openBannerBottomSheet(title, desc, image, url) {
         const modal = document.getElementById('kcBannerBottomSheet');
+        const card = document.getElementById('kcBottomSheetCard');
         const imgWrap = document.getElementById('kcBottomSheetImageWrap');
         const imgEl = document.getElementById('kcBottomSheetImage');
         const titleEl = document.getElementById('kcBottomSheetTitle');
@@ -385,48 +414,42 @@
 
         if (image) {
             imgEl.src = image;
-            imgWrap.style.display = 'block';
+            imgWrap.classList.remove('hidden');
         } else {
-            imgWrap.style.display = 'none';
+            imgWrap.classList.add('hidden');
         }
 
         if (url) {
             btnEl.href = url;
-            btnEl.style.display = 'flex';
+            btnEl.classList.remove('hidden');
+            btnEl.classList.add('flex');
         } else {
-            btnEl.style.display = 'none';
+            btnEl.classList.add('hidden');
+            btnEl.classList.remove('flex');
         }
 
-        modal.classList.add('active');
+        modal.classList.remove('hidden');
+        // Trigger animation
+        setTimeout(() => {
+            card.classList.remove('translate-y-full');
+        }, 10);
         document.body.style.overflow = 'hidden';
     }
 
     function closeBannerBottomSheet() {
         const modal = document.getElementById('kcBannerBottomSheet');
+        const card = document.getElementById('kcBottomSheetCard');
         if (!modal) return;
-        modal.classList.remove('active');
-        document.body.style.overflow = '';
-    }
-
-    // Responsive grid
-    function updateResponsiveGrids() {
-        const grids = document.querySelectorAll('.kc-home-grid');
-        const w = window.innerWidth;
-
-        let cols = 2;
-        if (w >= 1280) cols = 5;
-        else if (w >= 1024) cols = 4;
-        else if (w >= 768) cols = 3;
-
-        grids.forEach(g => {
-            g.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-        });
+        
+        card.classList.add('translate-y-full');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            document.body.style.overflow = '';
+        }, 300);
     }
 
     document.addEventListener('DOMContentLoaded', () => {
         startBannerAutoplay();
-        updateResponsiveGrids();
     });
-    window.addEventListener('resize', updateResponsiveGrids);
 </script>
 @endpush

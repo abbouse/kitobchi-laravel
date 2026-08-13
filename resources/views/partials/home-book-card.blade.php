@@ -5,63 +5,59 @@
     $isDisc = $book->discountPrice > 0 && $book->discountPrice < $book->price;
     $price = $isDisc ? $book->discountPrice : $book->price;
     $discPct = $isDisc ? round((($book->price - $price) / $book->price) * 100) : 0;
+    
+    // Kitobchi specific monthly installment calculation (e.g., Alif nasiya or just simple 12 month div)
+    // Here we just display a placeholder similar to Piyola if there's no actual logic yet
+    $monthly = ceil($price / 12);
 @endphp
 
-<div class="kc-product-card">
+<a class="group relative flex flex-col rounded-xl bg-white border border-white hover:shadow-md transition-all duration-200 overflow-hidden" href="{{ $url }}">
+    <div class="relative w-full rounded-xl bg-white" style="aspect-ratio: 232 / 309;">
+        <div class="focus:outline-none h-full relative z-0">
+            <div class="overflow-hidden h-full">
+                <div class="flex items-start flex-row h-full">
+                    <div class="min-w-0 shrink-0 basis-full aspect-[3/4] overflow-hidden">
+                        <div class="w-full h-full rounded-xl overflow-hidden bg-gray-50 flex items-center justify-center">
+                            <img alt="{{ $book->name }}" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" loading="lazy" src="{{ $img }}"/>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-    <!-- Image area with aspect 3/4 -->
-    <a href="{{ $url }}" style="position:relative;width:100%;background:#f8fafc;overflow:hidden;display:block;aspect-ratio:3/4;">
-        <img src="{{ $img }}"
-             alt="{{ $book->name }}"
-             style="width:100%;height:100%;object-fit:cover;transition:transform 0.5s;"
-             loading="lazy"
-             onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-
-        <!-- Discount badge -->
         @if($isDisc)
-            <div style="position:absolute;bottom:0.5rem;left:0.5rem;z-index:10;">
-                <span style="font-size:0.75rem;font-weight:700;border-radius:0.375rem;color:#fff;padding:0.2rem 0.4rem;background:#ED3131;">
+            <div class="absolute bottom-1.5 left-1.5 md:bottom-2 md:left-2 z-20 inline-flex items-start flex-col gap-1">
+                <span class="font-medium inline-flex items-center text-xs gap-1 rounded-md text-inverted px-1 py-0.5 bg-[#ED3131] text-white">
                     -{{ $discPct }}%
                 </span>
             </div>
         @endif
 
-        <!-- Favorite button -->
-        <button aria-label="Sevimlilar"
-                onclick="event.preventDefault();this.querySelector('svg').style.fill='#ef4444';this.querySelector('svg').style.stroke='#ef4444';"
-                style="position:absolute;top:0.5rem;right:0.5rem;z-index:10;width:2.25rem;height:2.25rem;display:flex;align-items:center;justify-content:center;border-radius:9999px;background:rgba(255,255,255,0.8);border:none;cursor:pointer;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);transition:all 0.2s;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="2">
-                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-            </svg>
-        </button>
-    </a>
-
-    <!-- Info area -->
-    <div style="padding:0.875rem;display:flex;flex-direction:column;flex:1;">
-        <a href="{{ $url }}" style="text-decoration:none;color:#111827;flex:1;">
-            <div style="font-size:0.875rem;font-weight:600;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;margin-bottom:0.5rem;">
-                {{ $book->name }}
+        <div class="absolute top-1.5 right-1.5 md:top-2 md:right-2 z-20">
+            <div class="relative overflow-hidden transition-shadow duration-300 rounded-2xl px-5 py-[14px] hover:shadow-sm hover:shadow-black/10 backdrop-blur-sm glass-card-bg p-0!">
+                <div class="absolute inset-0 pointer-events-none glass-border rounded-2xl"></div>
+                <button aria-label="Sevimlilar" onclick="event.preventDefault(); this.querySelector('span').classList.add('text-red-500');" class="relative w-8 h-8 flex items-center justify-center rounded-full transition-all duration-300 hover:scale-110 active:scale-95 text-gray-500 hover:text-gray-900">
+                    <span aria-hidden="true" class="iconify i-heroicons:heart w-5 h-5 relative z-10 transition-colors"></span>
+                </button>
             </div>
-        </a>
-
-        <div style="margin-top:auto;">
-            <div style="font-size:1rem;font-weight:800;color:var(--color-tima-500);">
-                {{ number_format($price) }} so'm
-            </div>
-            @if($isDisc)
-                <div style="font-size:0.75rem;color:#9ca3af;text-decoration:line-through;">
-                    {{ number_format($book->price) }} so'm
-                </div>
-            @endif
-
-            <button onclick="addToCart({{ $book->id }}, '{{ addslashes($book->name) }}', {{ $price }}, '{{ $img }}')"
-                    style="margin-top:0.75rem;width:100%;height:2.375rem;border:none;border-radius:9999px;background:var(--color-tima-500);color:#fff;font-size:0.8125rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:0.375rem;transition:opacity 0.2s;"
-                    onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>
-                </svg>
-                Savatga
-            </button>
         </div>
     </div>
-</div>
+
+    <div class="px-1 pt-4 pb-4 flex flex-col h-full">
+        <div class="group/title grow">
+            <div class="text-sm leading-snug line-clamp-2 transition-colors duration-300 group-hover:text-primary-600 text-neutral-900 dark:text-white">
+                {{ $book->name }}
+            </div>
+        </div>
+        <div class="flex items-start justify-between gap-2 mt-2">
+            <p class="text-sm md:text-base text-gray-600 dark:text-gray-400 font-semibold leading-tight">
+                {{ number_format($price, 0, '', ' ') }} so'm
+            </p>
+        </div>
+        <div class="mt-auto">
+            <span class="inline-block px-2 py-0.5 text-xs md:text-sm font-medium bg-primary-100 text-primary-500 rounded-full my-1">
+                {{ number_format($monthly, 0, '', ' ') }} so'm/oyiga
+            </span>
+        </div>
+    </div>
+</a>
