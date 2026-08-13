@@ -8,7 +8,7 @@
     <!-- Page Title Header -->
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 u-mb-m">
         <div>
-            <h1 class="h3 fw-black text-dark mb-0">Kitoblar va Mahsulotlar Katalogi</h1>
+            <h1 class="h3 fw-black text-primary mb-0">Kitoblar va Mahsulotlar Katalogi</h1>
             <small class="text-muted">Barcha original adabiyotlar va o'quv qurollari</small>
         </div>
         <div class="text-muted small">
@@ -17,13 +17,13 @@
     </div>
 
     <!-- Type Switcher -->
-    <div class="d-inline-flex p-1 bg-white border rounded-pill u-mb-m" role="group">
+    <div class="d-inline-flex kc-pm-glass-pill p-1 u-mb-m" role="group">
         <a href="{{ route('web.catalog', array_filter(['type' => 'book', 'search' => $search])) }}"
-           class="btn btn-sm rounded-pill px-3 {{ $type === 'book' ? 'btn-primary' : 'btn-light text-muted' }}">
+           class="btn btn-sm rounded-pill px-3 {{ $type === 'book' ? 'btn-primary' : 'btn-light text-muted border-0 bg-transparent' }}">
             📚 Kitoblar
         </a>
         <a href="{{ route('web.catalog', array_filter(['type' => 'stationery', 'search' => $search])) }}"
-           class="btn btn-sm rounded-pill px-3 {{ $type === 'stationery' ? 'btn-primary' : 'btn-light text-muted' }}">
+           class="btn btn-sm rounded-pill px-3 {{ $type === 'stationery' ? 'btn-primary' : 'btn-light text-muted border-0 bg-transparent' }}">
             ✏️ Kanselyariya
         </a>
     </div>
@@ -41,7 +41,7 @@
                     @if(isset($activeCategories) && $activeCategories->isNotEmpty())
                         @foreach($activeCategories as $cat)
                             <a href="{{ route('web.catalog', ['type' => $type, 'category' => $cat->id, 'search' => request('search')]) }}" class="list-group-item list-group-item-action border-0 px-2 py-2 rounded-2 {{ request('category') == $cat->id ? 'active fw-bold' : '' }}">
-                                {{ $cat->name }}
+                                @if($cat->icon) <span class="me-1">{{ $cat->icon }}</span> @endif{{ $cat->name }}
                             </a>
                         @endforeach
                     @endif
@@ -58,7 +58,7 @@
         <!-- Catalog Product Grid Column -->
         <div class="col-lg-9">
             @if($products->count() > 0)
-                <div class="kc-mk-grid">
+                <div class="kc-pm-grid">
                     @foreach($products as $item)
                         @php
                             $isStationery = $type === 'stationery';
@@ -73,25 +73,25 @@
                             $price = $isDiscounted ? $discountRaw : $rawPrice;
                             $subtitle = $isStationery ? ($item->material ?: "Kanselyariya") : ($item->author ?: 'Kitobchi');
                         @endphp
-                        <div class="kc-product-card">
+                        <div class="kc-pm-product-card">
                             <a href="{{ $url }}" class="text-decoration-none color-inherit">
-                                <div class="kc-card-cover-wrap">
-                                    <img src="{{ $img }}" alt="{{ $item->name }}" class="kc-card-cover-img" loading="lazy">
+                                <div class="kc-pm-cover-wrap">
+                                    <img src="{{ $img }}" alt="{{ $item->name }}" class="kc-pm-cover-img" loading="lazy">
                                     @if($isDiscounted)
-                                        <span class="kc-discount-badge">-{{ round((($rawPrice - $price) / $rawPrice) * 100) }}%</span>
+                                        <span class="kc-pm-discount-pill">-{{ round((($rawPrice - $price) / $rawPrice) * 100) }}%</span>
                                     @endif
                                 </div>
-                                <h3 class="kc-card-title">{{ $item->name }}</h3>
-                                <div class="kc-card-author">{{ $subtitle }}</div>
+                                <h3 class="kc-pm-title">{{ $item->name }}</h3>
+                                <div class="kc-pm-author">{{ $subtitle }}</div>
                             </a>
-                            <div class="kc-card-bottom">
+                            <div class="kc-pm-card-bottom">
                                 <div>
-                                    <div class="kc-card-price-main">{{ number_format($price) }} <small>UZS</small></div>
+                                    <div class="kc-pm-price">{{ number_format($price) }} so'm</div>
                                     @if($isDiscounted)
-                                        <div class="kc-card-price-old">{{ number_format($rawPrice) }} UZS</div>
+                                        <div class="kc-pm-old-price">{{ number_format($rawPrice) }} so'm</div>
                                     @endif
                                 </div>
-                                <button type="button" class="kc-add-cart-btn" onclick="addToCart({{ $item->id }}, '{{ addslashes($item->name) }}', {{ $price }}, '{{ $img }}')" title="Savatga qo'shish">
+                                <button type="button" class="kc-pm-add-btn" onclick="addToCart({{ $item->id }}, '{{ addslashes($item->name) }}', {{ $price }}, '{{ $img }}')" title="Savatchaga qo'shish">
                                     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
                                 </button>
                             </div>

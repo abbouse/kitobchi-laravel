@@ -19,9 +19,19 @@ Route::get('/developers/api/{page?}', ApiDocsController::class)->name('developer
 
 Route::get('/', function () {
     try {
+        // MUHIM: avval bu yerda sotuvchining o'zi faolmi (Seller.status=
+        // 'approved') tekshirilmasdi — bloklangan/faol bo'lmagan do'konning
+        // kitoblari ham bosh sahifada "xaridorgir mahsulotlar"da chiqardi.
         $featuredBooks = \App\Models\Books::where('is_approved', 1)
             ->where('is_hidden', 0)
             ->where('status', 1)
+            ->whereHas('seller', function ($s) {
+                $s->where('status', 'approved')
+                    ->where('is_hidden', false)
+                    ->where(function ($q) {
+                        $q->whereNull('parent_id')->orWhere('parent_id', 0);
+                    });
+            })
             ->orderByDesc('totalSales')
             ->take(20)
             ->get();

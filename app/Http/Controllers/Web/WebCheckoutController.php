@@ -4,10 +4,9 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Api\PurchaseController;
 use App\Http\Controllers\Controller;
-use App\Models\Books;
-use App\Models\Stationery;
 use App\Models\User;
 use App\Services\DeliveryZoneResolverService;
+use App\Traits\HasProductVisibility;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -30,6 +29,10 @@ use Illuminate\Support\Str;
  */
 class WebCheckoutController extends Controller
 {
+    // Ilova API'si ishlatadigan xuddi shu ko'rinish qoidasi (mahsulot HAM
+    // sotuvchi faol bo'lishi kerak) — mehmon checkoutda ham qo'llanadi.
+    use HasProductVisibility;
+
     /**
      * O'zbekiston viloyatlari — taxminiy markaziy koordinatalar bilan.
      * Manzil xaritadan aniq tanlanmagani uchun (veb'da hozircha xarita
@@ -118,14 +121,12 @@ class WebCheckoutController extends Controller
                 $id = (int) $ci['id'];
                 $qty = (int) $ci['quantity'];
 
-                $book = Books::where('id', $id)
-                    ->where('status', true)->where('is_approved', 1)->where('is_hidden', 0)
-                    ->first();
-                $stationery = ! $book
-                    ? Stationery::where('id', $id)
-                        ->where('status', true)->where('is_approved', 1)->where('is_hidden', 0)
-                        ->first()
-                    : null;
+                // MUHIM: avval bu yerda sotuvchi faolmi tekshirilmasdi —
+                // bloklangan do'kondan ham checkout orqali xarid qilsa
+                // bo'lardi (buy_book o'zi ham tekshiradi, lekin bu yerda
+                // aniq xato xabari bilan oldindan filtrlash to'g'riroq).
+                $book = $this->visibleBooks()->where('id', $id)->first();
+                $stationery = ! $book ? $this->visibleStationeries()->where('id', $id)->first() : null;
                 $product = $book ?: $stationery;
 
                 if (! $product || ! $product->seller_id) {

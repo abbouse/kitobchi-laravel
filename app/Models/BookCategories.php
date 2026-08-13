@@ -30,4 +30,23 @@ class BookCategories extends Model
     {
         return $this->hasMany(Books::class, 'category_id');
     }
+
+    /**
+     * Joriy tilga mos nom — jadvalda `name` ustuni yo'q, faqat
+     * name_uz/name_ru/name_en/name_ja bor. Veb (Blade) kod avval
+     * to'g'ridan-to'g'ri $cat->name'ga murojaat qilardi — bu doim
+     * null qaytarardi (kategoriya nomlari hech qayerda ko'rinmasdi).
+     */
+    public function getNameAttribute(): string
+    {
+        $locale = app()->getLocale();
+
+        foreach (["name_{$locale}", 'name_uz', 'name_ru', 'name_en', 'name_ja'] as $field) {
+            if (! empty($this->attributes[$field] ?? null)) {
+                return $this->attributes[$field];
+            }
+        }
+
+        return '';
+    }
 }

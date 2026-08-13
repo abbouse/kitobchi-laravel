@@ -226,5 +226,51 @@
         </div>
     </div>
 
+    <!-- O'xshash mahsulotlar -->
+    @if(isset($similarProducts) && $similarProducts->isNotEmpty())
+        <div class="u-mb-xl">
+            <h3 class="h4 fw-black text-primary u-mb-m">O'xshash mahsulotlar</h3>
+            <div class="kc-pm-grid">
+                @foreach($similarProducts as $sp)
+                    @php
+                        $spSlug = \Illuminate\Support\Str::slug($sp->name);
+                        $spUrl = $productType === 'book'
+                            ? route('web.books.show', ['id' => $sp->id, 'slug' => $spSlug])
+                            : route('web.stationery.show', ['id' => $sp->id, 'slug' => $spSlug]);
+                        $spImg = $sp->first_image ? asset('storage/' . $sp->first_image) : asset('images/logo/logo_blue.png');
+                        $spRawPrice = (float) $sp->price;
+                        $spDiscountRaw = $productType === 'book' ? (float) $sp->discountPrice : (float) $sp->discount_price;
+                        $spIsDiscounted = $spDiscountRaw > 0 && $spDiscountRaw < $spRawPrice;
+                        $spPrice = $spIsDiscounted ? $spDiscountRaw : $spRawPrice;
+                        $spSubtitle = $productType === 'book' ? ($sp->author ?: 'Kitobchi') : ($sp->material ?: 'Kanselyariya');
+                    @endphp
+                    <div class="kc-pm-product-card">
+                        <a href="{{ $spUrl }}" class="text-decoration-none color-inherit">
+                            <div class="kc-pm-cover-wrap">
+                                <img src="{{ $spImg }}" alt="{{ $sp->name }}" class="kc-pm-cover-img" loading="lazy">
+                                @if($spIsDiscounted)
+                                    <span class="kc-pm-discount-pill">-{{ round((($spRawPrice - $spPrice) / $spRawPrice) * 100) }}%</span>
+                                @endif
+                            </div>
+                            <h3 class="kc-pm-title">{{ $sp->name }}</h3>
+                            <div class="kc-pm-author">{{ $spSubtitle }}</div>
+                        </a>
+                        <div class="kc-pm-card-bottom">
+                            <div>
+                                <div class="kc-pm-price">{{ number_format($spPrice) }} so'm</div>
+                                @if($spIsDiscounted)
+                                    <div class="kc-pm-old-price">{{ number_format($spRawPrice) }} so'm</div>
+                                @endif
+                            </div>
+                            <button type="button" class="kc-pm-add-btn" onclick="addToCart({{ $sp->id }}, '{{ addslashes($sp->name) }}', {{ $spPrice }}, '{{ $spImg }}')" title="Savatchaga qo'shish">
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @endif
+
 </div>
 @endsection

@@ -8,18 +8,27 @@ use App\Models\Books;
 use App\Models\Policy;
 use App\Models\Stationery;
 use App\Models\StationeryCategory;
+use App\Traits\HasProductVisibility;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
 class ProductCatalogController extends Controller
 {
+    // MUHIM: avval bu yerda "ko'rinish" har joyda qo'lda
+    // status=true/is_approved=1/is_hidden=0 orqali tekshirilardi — lekin
+    // SOTUVCHINING o'zi faolmi (Seller.status='approved') hech qachon
+    // so'ralmasdi! Natijada bloklangan/faol bo'lmagan do'konning
+    // mahsulotlari ham katalogda, qidiruvda va mahsulot sahifasida
+    // ko'rinaverardi. Ilovaning haqiqiy API'si (ProductsController,
+    // SearchController) foydalanadigan XUDDI SHU HasProductVisibility
+    // trait endi bu yerda ham ishlatiladi — ikkalasi bir xil qoidaga
+    // bo'ysunadi.
+    use HasProductVisibility;
+
     public function showBook(int $id, ?string $slug = null)
     {
         try {
-            $book = Books::with(['category', 'publisher', 'authorProfile', 'seller', 'tags'])
-                ->where('status', true)
-                ->where('is_approved', 1)
-                ->where('is_hidden', 0)
+            $book = $this->visibleBooks(['category', 'publisher', 'seller', 'tags'])
                 ->findOrFail($id);
         } catch (\Throwable $e) {
             abort(404, 'Mahsulot topilmadi');
@@ -31,9 +40,7 @@ class ProductCatalogController extends Controller
         }
 
         try {
-            $similarProducts = Books::where('status', true)
-                ->where('is_approved', 1)
-                ->where('is_hidden', 0)
+            $similarProducts = $this->visibleBooks()
                 ->where('id', '!=', $book->id)
                 ->where(function ($q) use ($book) {
                     if ($book->category_id) {
@@ -90,10 +97,7 @@ class ProductCatalogController extends Controller
     public function showStationery(int $id, ?string $slug = null)
     {
         try {
-            $item = Stationery::with(['category', 'seller'])
-                ->where('status', true)
-                ->where('is_approved', 1)
-                ->where('is_hidden', 0)
+            $item = $this->visibleStationeries(['category', 'seller'])
                 ->findOrFail($id);
         } catch (\Throwable $e) {
             abort(404, 'Mahsulot topilmadi');
@@ -105,9 +109,7 @@ class ProductCatalogController extends Controller
         }
 
         try {
-            $similarProducts = Stationery::where('status', true)
-                ->where('is_approved', 1)
-                ->where('is_hidden', 0)
+            $similarProducts = $this->visibleStationeries()
                 ->where('id', '!=', $item->id)
                 ->where('category_id', $item->category_id)
                 ->orderByDesc('totalSales')
@@ -157,21 +159,13 @@ class ProductCatalogController extends Controller
     public function byArtikul(string $artikul)
     {
         try {
-            $book = Books::where('artikul', $artikul)
-                ->where('status', true)
-                ->where('is_approved', 1)
-                ->where('is_hidden', 0)
-                ->first();
+            $book = $this->visibleBooks()->where('artikul', $artikul)->first();
 
             if ($book) {
                 return redirect()->route('web.books.show', ['id' => $book->id, 'slug' => Str::slug($book->name)]);
             }
 
-            $stationery = Stationery::where('artikul', $artikul)
-                ->where('status', true)
-                ->where('is_approved', 1)
-                ->where('is_hidden', 0)
-                ->first();
+            $stationery = $this->visibleStationeries()->where('artikul', $artikul)->first();
 
             if ($stationery) {
                 return redirect()->route('web.stationery.show', ['id' => $stationery->id, 'slug' => Str::slug($stationery->name)]);
@@ -199,7 +193,7 @@ class ProductCatalogController extends Controller
 
                 if ($search !== '') {
                     $items = $items->merge(
-                        Books::where('status', true)->where('is_approved', 1)->where('is_hidden', 0)
+                        $this->visibleBooks()
                             ->where(function ($q) use ($search) {
                                 $q->where('name', 'like', "%{$search}%")
                                     ->orWhere('author', 'like', "%{$search}%")
@@ -222,7 +216,7 @@ class ProductCatalogController extends Controller
                     );
 
                     $items = $items->merge(
-                        Stationery::where('status', true)->where('is_approved', 1)->where('is_hidden', 0)
+                        $this->visibleStationeries()
                             ->where(function ($q) use ($search) {
                                 $q->where('name', 'like', "%{$search}%")
                                     ->orWhere('artikul', 'like', "%{$search}%");
@@ -250,18 +244,19 @@ class ProductCatalogController extends Controller
         }
 
         try {
-            $bookCategories = BookCategories::where('status', true)->orderBy('name')->get();
-            $stationeryCategories = StationeryCategory::where('status', true)->orderBy('name')->get();
+            // MUHIM: bu jadvallarda `status`/`name` ustunlari yo'q (faqat
+            // is_active va name_uz/ru/en/ja) — avval bu yerda noto'g'ri ustun
+            // nomlari ishlatilgani sabab SQL xato berardi va try/catch uni
+            // yutib yuborardi — kategoriyalar hech qachon ko'rinmasdi.
+            $bookCategories = BookCategories::where('is_active', true)->orderBy('name_uz')->get();
+            $stationeryCategories = StationeryCategory::where('is_active', true)->orderBy('name_uz')->get();
 
             // MUHIM: avval bu yerda faqat Books so'ralardi — $stationeryCategories
             // olib kelinardi-yu, hech qachon Stationery mahsuloti ko'rsatilmasdi
             // (type=stationery tanlansa ham bo'sh natija chiqardi). Endi $type
             // qaysi modelni so'rashni belgilaydi.
             if ($type === 'stationery') {
-                $productsQuery = Stationery::with(['category'])
-                    ->where('status', true)
-                    ->where('is_approved', 1)
-                    ->where('is_hidden', 0);
+                $productsQuery = $this->visibleStationeries(['category']);
 
                 if ($search !== '') {
                     $productsQuery->where(function ($q) use ($search) {
@@ -276,10 +271,7 @@ class ProductCatalogController extends Controller
 
                 $products = $productsQuery->orderByDesc('totalSales')->paginate(24, ['*'], 'page');
             } else {
-                $productsQuery = Books::with(['category'])
-                    ->where('status', true)
-                    ->where('is_approved', 1)
-                    ->where('is_hidden', 0);
+                $productsQuery = $this->visibleBooks(['category']);
 
                 if ($search !== '') {
                     $productsQuery->where(function ($q) use ($search) {
@@ -315,17 +307,13 @@ class ProductCatalogController extends Controller
     public function sitemap()
     {
         try {
-            $books = Books::where('status', true)
-                ->where('is_approved', 1)
-                ->where('is_hidden', 0)
+            $books = $this->visibleBooks()
                 ->select('id', 'name', 'updated_at')
                 ->orderByDesc('updated_at')
                 ->take(5000)
                 ->get();
 
-            $stationeries = Stationery::where('status', true)
-                ->where('is_approved', 1)
-                ->where('is_hidden', 0)
+            $stationeries = $this->visibleStationeries()
                 ->select('id', 'name', 'updated_at')
                 ->orderByDesc('updated_at')
                 ->take(2000)
@@ -346,17 +334,11 @@ class ProductCatalogController extends Controller
     public function googleMerchantFeed()
     {
         try {
-            $books = Books::where('status', true)
-                ->where('is_approved', 1)
-                ->where('is_hidden', 0)
-                ->with(['publisher', 'category'])
+            $books = $this->visibleBooks(['publisher', 'category'])
                 ->take(5000)
                 ->get();
 
-            $stationeries = Stationery::where('status', true)
-                ->where('is_approved', 1)
-                ->where('is_hidden', 0)
-                ->with(['category'])
+            $stationeries = $this->visibleStationeries(['category'])
                 ->take(2000)
                 ->get();
         } catch (\Throwable $e) {

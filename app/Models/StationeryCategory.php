@@ -34,4 +34,18 @@ class StationeryCategory extends Model
     {
         return $this->hasMany(Stationery::class, 'category_id');
     }
+
+    /** BookCategories::getNameAttribute() bilan bir xil — jadvalda `name` ustuni yo'q. */
+    public function getNameAttribute(): string
+    {
+        $locale = app()->getLocale();
+
+        foreach (["name_{$locale}", 'name_uz', 'name_ru', 'name_en', 'name_ja'] as $field) {
+            if (! empty($this->attributes[$field] ?? null)) {
+                return $this->attributes[$field];
+            }
+        }
+
+        return '';
+    }
 }
