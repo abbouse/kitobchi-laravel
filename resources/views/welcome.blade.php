@@ -1,106 +1,370 @@
 @extends('layouts.marketplace')
 
-@section('title', 'Kitobchi — Online kitob va kanselyariya marketpleysi')
+@section('title', 'Kitobchi — Online kitoblar va kanselyariya marketpleysi')
+
+@push('meta')
+<meta name="description" content="Kitobchi — original kitoblar, darsliklar va kanselyariya mahsulotlarini onlayn xarid qiling. O'zbekiston bo'ylab tezkor yetkazib berish.">
+@endpush
 
 @section('content')
-<div class="container">
+<div class="bg-white">
+    <h1 class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">
+        Kitobchi — Online kitoblar va kanselyariya marketpleysi
+    </h1>
 
-    <!-- Circular Categories Section ("Kataloglar") -->
-    <div class="kc-mk-cat-section">
-        <h2 class="kc-mk-cat-title">Kataloglar</h2>
-        <div class="kc-mk-cat-row">
-            <a href="{{ route('web.catalog') }}" class="kc-mk-cat-item">
-                <div class="kc-mk-cat-avatar">
-                    <img src="{{ asset('images/logo/logo_blue.png') }}" alt="Barchasi">
+    <!-- ====== HERO BANNER SLIDER ====== -->
+    <div style="width:100%;max-width:var(--ui-container);margin:0 auto;padding:0 1rem;">
+        <section style="padding:1.5rem 0;">
+            <div id="kcBannerSlider" style="position:relative;overflow:hidden;border-radius:1rem;aspect-ratio:520/141;background:#e2e8f0;">
+                <!-- Slides -->
+                <div id="kcBannerTrack" style="display:flex;transition:transform 0.7s cubic-bezier(0.16,1,0.3,1);">
+                    @php
+                        try {
+                            $banners = Cache::remember('web_banners_v2', 300, function() {
+                                return \App\Models\Banner::where('is_active', true)->orderBy('order')->take(6)->get();
+                            });
+                        } catch(\Throwable $e) { $banners = collect(); }
+                    @endphp
+
+                    @if($banners->isNotEmpty())
+                        @foreach($banners as $banner)
+                            <div style="min-width:100%;flex-shrink:0;position:relative;" class="kc-banner-slide">
+                                <div style="position:absolute;inset:0;background:var(--color-tima-500)/10;pointer-events:none;transition:background 0.3s;"></div>
+                                @if($banner->url)
+                                    <a href="{{ $banner->url }}" rel="noopener noreferrer" style="display:block;width:100%;height:100%;">
+                                @else
+                                    <div style="display:block;width:100%;height:100%;">
+                                @endif
+                                        <img src="{{ asset('storage/' . $banner->image) }}"
+                                             alt="{{ $banner->title }}"
+                                             style="width:100%;height:100%;object-fit:cover;transition:transform 0.7s;display:block;"
+                                             loading="eager" fetchpriority="high"
+                                             onerror="this.style.display='none'">
+                                @if($banner->url)
+                                    </a>
+                                @else
+                                    </div>
+                                @endif
+                            </div>
+                        @endforeach
+                    @else
+                        <!-- Fallback gradient banner -->
+                        <div style="min-width:100%;flex-shrink:0;background:linear-gradient(135deg, var(--color-tima-500) 0%, #6366f1 100%);display:flex;align-items:center;justify-content:center;min-height:180px;">
+                            <div style="text-align:center;color:#fff;padding:2rem;">
+                                <div style="font-size:2.5rem;font-weight:900;margin-bottom:0.5rem;">📚 Kitobchi</div>
+                                <div style="font-size:1.125rem;opacity:0.9;">Online kitoblar va kanselyariya do'koni</div>
+                            </div>
+                        </div>
+                    @endif
                 </div>
-                <div class="kc-mk-cat-name">Barchasi</div>
-            </a>
 
-            @php
-                try {
-                    $bookCategories = Cache::remember('web_top_categories_kc_merged', 600, function() {
-                        return \App\Models\BookCategories::where('status', true)->orderBy('name')->take(12)->get();
-                    });
-                } catch (\Throwable $e) {
-                    $bookCategories = collect();
-                }
-            @endphp
-
-            @foreach($bookCategories as $cat)
-                <a href="{{ route('web.catalog', ['category' => $cat->id]) }}" class="kc-mk-cat-item">
-                    <div class="kc-mk-cat-avatar">
-                        @if($cat->image)
-                            <img src="{{ asset('storage/' . $cat->image) }}" alt="{{ $cat->name }}">
-                        @else
-                            <div class="fw-black text-primary fs-4">{{ mb_substr($cat->name, 0, 1) }}</div>
-                        @endif
-                    </div>
-                    <div class="kc-mk-cat-name">{{ $cat->name }}</div>
-                </a>
-            @endforeach
-        </div>
+                <!-- Slider Controls -->
+                @if($banners->count() > 1)
+                    <button id="kcBannerPrev" onclick="slideBanner(-1)"
+                            aria-label="Oldingi"
+                            style="position:absolute;left:1rem;top:50%;transform:translateY(-50%);z-index:20;width:2.5rem;height:2.5rem;border-radius:9999px;background:rgba(96,96,96,0.5);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;transition:all 0.2s;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg>
+                    </button>
+                    <button id="kcBannerNext" onclick="slideBanner(1)"
+                            aria-label="Keyingi"
+                            style="position:absolute;right:1rem;top:50%;transform:translateY(-50%);z-index:20;width:2.5rem;height:2.5rem;border-radius:9999px;background:rgba(30,30,30,0.7);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;transition:all 0.2s;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>
+                    </button>
+                @endif
+            </div>
+        </section>
     </div>
 
-    <!-- Section 1: Xaridorgir Kitoblar Grid -->
-    <div class="u-mt-l u-mb-xl">
-        <div class="d-flex justify-content-between align-items-center u-mb-m">
-            <div>
-                <h2 class="h3 fw-black text-primary mb-0">🔥 Xaridorgir mahsulotlar</h2>
-                <small class="text-muted">Eng ko'p xarid qilingan original adabiyotlar</small>
-            </div>
-            <a href="{{ route('web.catalog') }}" class="text-primary text-decoration-none fw-bold small">
-                Barchasi &rarr;
-            </a>
-        </div>
+    <!-- ====== CATEGORIES CAROUSEL ====== -->
+    <section style="padding:1.5rem 0 2.5rem;">
+        <div style="width:100%;max-width:var(--ui-container);margin:0 auto;padding:0 1rem;">
+            <h2 style="font-weight:700;font-size:clamp(1.25rem,4vw,2.25rem);color:var(--color-tima-500);line-height:1;margin:0 0 1rem;text-transform:capitalize;">Kataloglar</h2>
+            <div style="position:relative;">
+                <div style="overflow-x:auto;overflow-y:hidden;-ms-overflow-style:none;scrollbar-width:none;" id="kcCatScroll">
+                    <div style="display:flex;gap:0.75rem;padding-bottom:0.5rem;width:max-content;">
 
-        @if(isset($featuredBooks) && $featuredBooks->isNotEmpty())
-            <div class="kc-mk-product-grid">
-                @foreach($featuredBooks->take(15) as $book)
-                    @php
-                        $slug = \Illuminate\Support\Str::slug($book->name);
-                        $url = route('web.books.show', ['id' => $book->id, 'slug' => $slug]);
-                        $img = $book->first_image ? asset('storage/' . $book->first_image) : asset('images/logo/logo_blue.png');
-                        $isDiscounted = $book->discountPrice > 0 && $book->discountPrice < $book->price;
-                        $price = $isDiscounted ? $book->discountPrice : $book->price;
-                        $rating = $book->ugc_aggregate_score > 0 ? number_format($book->ugc_aggregate_score, 1) : '5.0';
-                    @endphp
-                    <div class="kc-mk-card">
-                        <a href="{{ $url }}" class="text-decoration-none color-inherit">
-                            <div class="kc-mk-card-cover">
-                                <img src="{{ $img }}" alt="{{ $book->name }}" loading="lazy">
-                                @if($isDiscounted)
-                                    <span class="kc-mk-discount-tag">-{{ round((($book->price - $price) / $book->price) * 100) }}%</span>
-                                @endif
+                        @php
+                            try {
+                                $webCategories = Cache::remember('web_top_categories_home', 600, function() {
+                                    return \App\Models\BookCategories::where('status', true)->orderBy('name')->take(12)->get();
+                                });
+                            } catch(\Throwable $e) { $webCategories = collect(); }
+                        @endphp
+
+                        <!-- All categories item -->
+                        <a href="{{ route('web.catalog') }}"
+                           style="display:flex;flex-direction:column;align-items:center;gap:0.5rem;text-decoration:none;flex-shrink:0;width:90px;">
+                            <div style="width:90px;height:90px;border-radius:9999px;overflow:hidden;border:2px solid transparent;transition:border-color 0.3s;background:linear-gradient(135deg,var(--color-tima-500),#6366f1);display:flex;align-items:center;justify-content:center;"
+                                 onmouseover="this.style.borderColor='var(--color-tima-500)'" onmouseout="this.style.borderColor='transparent'">
+                                <span style="font-size:2rem;">📚</span>
                             </div>
-                            <div class="d-flex align-items-center gap-1 mb-1">
-                                <span class="text-warning small fw-bold">⭐ {{ $rating }}</span>
-                                @if($book->ugc_reviews_count)
-                                    <span class="text-muted" style="font-size: 11px;">({{ $book->ugc_reviews_count }})</span>
-                                @endif
-                            </div>
-                            <h3 class="kc-mk-card-title">{{ $book->name }}</h3>
-                            <div class="kc-mk-card-author">{{ $book->author ?: 'Kitobchi' }}</div>
+                            <span style="font-size:0.8125rem;font-weight:500;color:#111827;text-align:center;line-height:1.3;transition:all 0.3s;max-width:90px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">Barchasi</span>
                         </a>
-                        <div class="kc-mk-card-footer">
-                            <div>
-                                <div class="kc-mk-card-price">{{ number_format($price) }} so'm</div>
-                                @if($isDiscounted)
-                                    <div class="kc-mk-card-old-price">{{ number_format($book->price) }} so'm</div>
+
+                        @foreach($webCategories as $cat)
+                            <a href="{{ route('web.catalog', ['category' => $cat->id]) }}"
+                               style="display:flex;flex-direction:column;align-items:center;gap:0.5rem;text-decoration:none;flex-shrink:0;width:90px;">
+                                <div style="width:90px;height:90px;border-radius:9999px;overflow:hidden;border:2px solid transparent;transition:border-color 0.3s;position:relative;"
+                                     onmouseover="this.style.borderColor='var(--color-tima-500)'" onmouseout="this.style.borderColor='transparent'">
+                                    @if($cat->image)
+                                        <img src="{{ asset('storage/' . $cat->image) }}"
+                                             alt="{{ $cat->name }}"
+                                             style="width:100%;height:100%;object-fit:cover;transition:transform 0.5s;"
+                                             loading="lazy"
+                                             onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
+                                    @else
+                                        <div style="width:100%;height:100%;background:linear-gradient(135deg,var(--color-tima-100),var(--color-tima-200));display:flex;align-items:center;justify-content:center;font-size:1.75rem;font-weight:900;color:var(--color-tima-600);">
+                                            {{ mb_substr($cat->name, 0, 1) }}
+                                        </div>
+                                    @endif
+                                </div>
+                                <span style="font-size:0.8125rem;font-weight:500;color:#111827;text-align:center;line-height:1.3;transition:all 0.3s;max-width:90px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">{{ $cat->name }}</span>
+                            </a>
+                        @endforeach
+                    </div>
+                </div>
+                <!-- Fade edges (desktop) -->
+                <div style="position:absolute;inset-y:0;left:0;width:50px;background:linear-gradient(to right,#fff,transparent);pointer-events:none;display:none;" class="kc-fade-left"></div>
+                <div style="position:absolute;inset-y:0;right:0;width:50px;background:linear-gradient(to left,#fff,transparent);pointer-events:none;display:none;" class="kc-fade-right"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ====== FEATURED PRODUCTS SECTION ====== -->
+    @php
+        try {
+            $featuredProducts = Cache::remember('web_featured_home_v2', 300, function() {
+                return \App\Models\Books::where('status', true)
+                    ->orderByDesc('created_at')
+                    ->take(20)
+                    ->get();
+            });
+        } catch(\Throwable $e) { $featuredProducts = collect(); }
+    @endphp
+
+    @if($featuredProducts->isNotEmpty())
+        <section style="padding:1rem 0 2.5rem;">
+            <div style="width:100%;max-width:var(--ui-container);margin:0 auto;padding:0 1rem;">
+                <h2 style="font-weight:700;font-size:clamp(1.125rem,3.5vw,2rem);line-height:1;margin:0 0 0.75rem 0;color:#111827;">
+                    🔥 Yangi Kitoblar
+                </h2>
+                <!-- Product Grid — exactly like PiyolaMarket: grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 -->
+                <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:0.5rem;margin-bottom:2.5rem;"
+                     id="kcProductGrid1">
+                    @foreach($featuredProducts->take(10) as $book)
+                        @php
+                            $slug = \Illuminate\Support\Str::slug($book->name);
+                            $url = route('web.books.show', ['id' => $book->id, 'slug' => $slug]);
+                            $img = $book->first_image ? asset('storage/' . $book->first_image) : asset('images/logo/logo_blue.png');
+                            $isDisc = $book->discountPrice > 0 && $book->discountPrice < $book->price;
+                            $price = $isDisc ? $book->discountPrice : $book->price;
+                            $discPct = $isDisc ? round((($book->price - $price) / $book->price) * 100) : 0;
+                        @endphp
+                        <a href="{{ $url }}"
+                           style="position:relative;display:flex;flex-direction:column;border-radius:0.75rem;background:#fff;border:1px solid #fff;box-shadow:none;transition:box-shadow 0.2s;overflow:hidden;text-decoration:none;color:inherit;"
+                           onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,0.08)'" onmouseout="this.style.boxShadow='none'">
+
+                            <!-- Image area with aspect-ratio 232/309 like PiyolaMarket -->
+                            <div style="position:relative;width:100%;background:#fff;border-radius:0.75rem;overflow:hidden;" class="kc-card-img-wrap">
+                                <img src="{{ $img }}"
+                                     alt="{{ $book->name }}"
+                                     style="width:100%;display:block;object-fit:cover;transition:transform 0.7s;aspect-ratio:3/4;"
+                                     loading="lazy"
+                                     onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
+
+                                <!-- Discount badge (bottom-left like PiyolaMarket) -->
+                                @if($isDisc)
+                                    <div style="position:absolute;bottom:0.375rem;left:0.375rem;z-index:20;">
+                                        <span style="display:inline-flex;align-items:center;font-size:0.75rem;font-weight:500;border-radius:0.375rem;color:#fff;padding:0.125rem 0.25rem;background:#ED3131;">
+                                            -{{ $discPct }}%
+                                        </span>
+                                    </div>
+                                @endif
+
+                                <!-- Favorite button (top-right like PiyolaMarket) -->
+                                <div style="position:absolute;top:0.375rem;right:0.375rem;z-index:20;">
+                                    <button aria-label="Sevimlilar"
+                                            onclick="event.preventDefault();this.querySelector('svg').style.fill='#ef4444';this.querySelector('svg').style.stroke='#ef4444';"
+                                            style="width:2rem;height:2rem;display:flex;align-items:center;justify-content:center;border-radius:9999px;background:rgba(255,255,255,0.7);border:none;cursor:pointer;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);transition:all 0.3s;">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="1.5">
+                                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Info area: padding:1rem 0.25rem 1rem like PiyolaMarket -->
+                            <div style="padding:1rem 0.25rem 1rem;display:flex;flex-direction:column;flex:1;">
+                                <!-- Title: text-sm leading-snug line-clamp-2 -->
+                                <div style="font-size:0.875rem;line-height:1.375;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;color:#111827;margin-bottom:0.5rem;flex:1;">
+                                    {{ $book->name }}
+                                </div>
+
+                                <!-- Price -->
+                                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.5rem;">
+                                    <p style="font-size:0.875rem;color:#6b7280;font-weight:600;margin:0.5rem 0 0;line-height:1.25;">
+                                        {{ number_format($price) }} so'm
+                                    </p>
+                                </div>
+
+                                @if($isDisc)
+                                    <div style="margin-top:auto;">
+                                        <span style="display:inline-block;padding:0.125rem 0.5rem;font-size:0.75rem;font-weight:500;background:var(--color-tima-100,#ede9fe);color:var(--color-tima-500);border-radius:9999px;margin-top:0.25rem;">
+                                            {{ number_format($book->price) }} so'm
+                                        </span>
+                                    </div>
                                 @endif
                             </div>
-                            <button type="button" class="kc-mk-add-cart-btn" onclick="addToCart({{ $book->id }}, '{{ addslashes($book->name) }}', {{ $price }}, '{{ $img }}')" title="Savatchaga qo'shish">
-                                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
-                            </button>
-                        </div>
+                        </a>
+                    @endforeach
+                </div>
+
+                <!-- View All Button -->
+                <div style="text-align:center;">
+                    <a href="{{ route('web.catalog') }}"
+                       style="display:inline-flex;align-items:center;gap:0.5rem;padding:0.875rem 2rem;background:var(--color-tima-500);color:#fff;border-radius:9999px;font-weight:700;font-size:1rem;text-decoration:none;transition:all 0.2s;"
+                       onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+                        Barcha kitoblarni ko'rish
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14m-7-7 7 7-7 7"/></svg>
+                    </a>
+                </div>
+            </div>
+        </section>
+    @endif
+
+    <!-- ====== STATIONERY SECTION ====== -->
+    @php
+        try {
+            $webStationery = Cache::remember('web_stationery_home_v2', 300, function() {
+                return \App\Models\Stationery::where('status', true)
+                    ->orderByDesc('created_at')
+                    ->take(10)
+                    ->get();
+            });
+        } catch(\Throwable $e) { $webStationery = collect(); }
+    @endphp
+
+    @if($webStationery->isNotEmpty())
+        <section style="padding:1rem 0 2.5rem;">
+            <div style="width:100%;max-width:var(--ui-container);margin:0 auto;padding:0 1rem;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
+                    <h2 style="font-weight:700;font-size:clamp(1.125rem,3.5vw,2rem);line-height:1;margin:0;color:#111827;">
+                        ✏️ Kanselyariya
+                    </h2>
+                    <a href="{{ route('web.catalog', ['type' => 'stationery']) }}"
+                       style="display:flex;align-items:center;gap:0.25rem;font-size:0.875rem;font-weight:600;color:var(--color-tima-500);text-decoration:none;">
+                        Barchasi
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>
+                    </a>
+                </div>
+
+                <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:0.5rem;">
+                    @foreach($webStationery->take(8) as $item)
+                        @php
+                            $sSlug = \Illuminate\Support\Str::slug($item->name);
+                            $sUrl = route('web.stationery.show', ['id' => $item->id, 'slug' => $sSlug]);
+                            $sImg = $item->first_image ? asset('storage/' . $item->first_image) : asset('images/logo/logo_blue.png');
+                            $sIsDisc = $item->discount_price > 0 && $item->discount_price < $item->price;
+                            $sPrice = $sIsDisc ? $item->discount_price : $item->price;
+                            $sDiscPct = $sIsDisc ? round((($item->price - $sPrice) / $item->price) * 100) : 0;
+                        @endphp
+                        <a href="{{ $sUrl }}"
+                           style="position:relative;display:flex;flex-direction:column;border-radius:0.75rem;background:#fff;border:1px solid #fff;transition:box-shadow 0.2s;overflow:hidden;text-decoration:none;color:inherit;"
+                           onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,0.08)'" onmouseout="this.style.boxShadow='none'">
+
+                            <div style="position:relative;width:100%;background:#fff;border-radius:0.75rem;overflow:hidden;">
+                                <img src="{{ $sImg }}"
+                                     alt="{{ $item->name }}"
+                                     style="width:100%;display:block;object-fit:cover;transition:transform 0.7s;aspect-ratio:3/4;"
+                                     loading="lazy"
+                                     onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
+                                @if($sIsDisc)
+                                    <div style="position:absolute;bottom:0.375rem;left:0.375rem;z-index:20;">
+                                        <span style="display:inline-flex;font-size:0.75rem;font-weight:500;border-radius:0.375rem;color:#fff;padding:0.125rem 0.25rem;background:#ED3131;">-{{ $sDiscPct }}%</span>
+                                    </div>
+                                @endif
+                                <div style="position:absolute;top:0.375rem;right:0.375rem;z-index:20;">
+                                    <button aria-label="Sevimlilar" onclick="event.preventDefault();"
+                                            style="width:2rem;height:2rem;display:flex;align-items:center;justify-content:center;border-radius:9999px;background:rgba(255,255,255,0.7);border:none;cursor:pointer;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="1.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div style="padding:1rem 0.25rem 1rem;display:flex;flex-direction:column;flex:1;">
+                                <div style="font-size:0.875rem;line-height:1.375;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;color:#111827;margin-bottom:0.5rem;flex:1;">
+                                    {{ $item->name }}
+                                </div>
+                                <p style="font-size:0.875rem;color:#6b7280;font-weight:600;margin:0.5rem 0 0;line-height:1.25;">
+                                    {{ number_format($sPrice) }} so'm
+                                </p>
+                            </div>
+                        </a>
+                    @endforeach
+                </div>
+            </div>
+        </section>
+    @endif
+
+    <!-- ====== WHY US SECTION ====== -->
+    <section style="padding:2rem 0 3rem;background:linear-gradient(135deg,#f8fafc,#f1f5f9);">
+        <div style="width:100%;max-width:var(--ui-container);margin:0 auto;padding:0 1rem;">
+            <h2 style="font-weight:700;font-size:clamp(1.25rem,4vw,2rem);text-align:center;margin:0 0 2rem;color:#111827;">Nima uchun Kitobchi?</h2>
+            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:1rem;">
+                @foreach([
+                    ['🚀', 'Tezkor yetkazib berish', 'Toshkent bo\'ylab 1-2 soatda'],
+                    ['📦', 'Original mahsulotlar', 'Sifati kafolatlangan'],
+                    ['💳', 'Qulay to\'lov', 'Naqd yoki karta orqali'],
+                    ['🔄', 'Qaytarish kafolati', '7 kun ichida qaytarish'],
+                ] as [$icon, $title, $desc])
+                    <div style="background:#fff;border-radius:1rem;padding:1.25rem;display:flex;flex-direction:column;align-items:flex-start;gap:0.5rem;box-shadow:0 1px 4px rgba(0,0,0,0.05);">
+                        <div style="font-size:1.75rem;">{{ $icon }}</div>
+                        <div style="font-weight:700;font-size:0.9375rem;color:#111827;">{{ $title }}</div>
+                        <div style="font-size:0.8125rem;color:#6b7280;line-height:1.5;">{{ $desc }}</div>
                     </div>
                 @endforeach
             </div>
-        @else
-            <div class="p-5 bg-white rounded-4 border text-center text-muted">
-                Katalog tayyorlanmoqda...
-            </div>
-        @endif
-    </div>
+        </div>
+    </section>
 
 </div>
+
+<!-- Responsive grid adjustments -->
+<style>
+    @media(min-width:768px) {
+        #kcProductGrid1 { grid-template-columns: repeat(3, 1fr) !important; gap: 0.75rem !important; }
+    }
+    @media(min-width:1024px) {
+        #kcProductGrid1 { grid-template-columns: repeat(4, 1fr) !important; gap: 1rem !important; }
+    }
+    @media(min-width:1280px) {
+        #kcProductGrid1 { grid-template-columns: repeat(5, 1fr) !important; }
+    }
+    .kc-cat-scroll::-webkit-scrollbar { display: none; }
+    @media(min-width:768px) {
+        .kc-fade-left, .kc-fade-right { display: block !important; }
+    }
+</style>
+
+@push('scripts')
+<script>
+    // Banner Slider
+    (function() {
+        let current = 0;
+        const track = document.getElementById('kcBannerTrack');
+        if (!track) return;
+        const slides = track.children;
+        const total = slides.length;
+        if (total <= 1) return;
+
+        window.slideBanner = function(dir) {
+            current = (current + dir + total) % total;
+            track.style.transform = `translateX(-${current * 100}%)`;
+        };
+
+        // Auto-play
+        setInterval(() => slideBanner(1), 4500);
+    })();
+</script>
+@endpush
 @endsection

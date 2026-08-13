@@ -1,106 +1,238 @@
 @extends('layouts.marketplace')
 
-@section('title', 'Buyurtmani rasmiylashtirish — Kitobchi Marketpleysi')
+@section('title', 'Buyurtmani rasmiylashtirish — Kitobchi')
 
 @section('content')
-<div class="container">
-    <div class="d-flex justify-content-between align-items-center u-mb-m">
-        <h1 class="h3 fw-black text-dark mb-0">Buyurtmani rasmiylashtirish</h1>
-        <a href="{{ route('web.cart') }}" class="btn btn-sm btn-outline-secondary rounded-pill">
-            &larr; Savatga qaytish
-        </a>
-    </div>
+<div style="min-height:100dvh;padding:1.5rem 0;">
+    <div style="width:100%;max-width:var(--ui-container);margin:0 auto;padding:0 1rem;">
 
-    <div class="row g-4" id="kcCheckoutWrapper">
-        <!-- Left: Form -->
-        <div class="col-lg-7">
-            <form id="kcCheckoutForm" class="p-4 bg-white rounded-4 border shadow-sm">
-                <h5 class="fw-bold text-dark u-mb-m">1. Qabul qiluvchi ma'lumotlari</h5>
-                
-                <div class="mb-3">
-                    <label class="form-label text-muted small fw-bold">Ismingiz va familiyangiz *</label>
-                    <input type="text" name="customer_name" class="form-control rounded-3 py-2" placeholder="Masalan: Jamshid Karimov" required>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label text-muted small fw-bold">Telefon raqamingiz *</label>
-                    <input type="tel" name="phone_number" class="form-control rounded-3 py-2" placeholder="+998 90 123 45 67" required>
-                </div>
-
-                <h5 class="fw-bold text-dark u-my-m">2. Yetkazib berish manzili</h5>
-                <div class="mb-3">
-                    <label class="form-label text-muted small fw-bold">Viloyat / shahar *</label>
-                    <select name="region" class="form-select rounded-3 py-2" required>
-                        <option value="" disabled selected>Tanlang...</option>
-                        @foreach($regions as $region)
-                            <option value="{{ $region }}">{{ $region }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label text-muted small fw-bold">Tuman va to'liq manzil *</label>
-                    <textarea name="address" class="form-control rounded-3" rows="3" placeholder="Chilonzor tumani, 12-uy, 45-xonadon" required></textarea>
-                </div>
-
-                <h5 class="fw-bold text-dark u-my-m">3. To'lov usuli</h5>
-                <div class="d-grid gap-2 mb-4">
-                    <label class="p-3 border rounded-3 d-flex align-items-center gap-3 cursor-pointer">
-                        <input type="radio" name="payment_method" value="cash" checked class="form-check-input">
-                        <div>
-                            <div class="fw-bold text-dark">💵 Qabul qilganda naqd to'lov</div>
-                            <small class="text-muted">Kuryer mahsulotni yetkazib berganda naqd pulda to'laysiz</small>
-                        </div>
-                    </label>
-                    <label class="p-3 border rounded-3 d-flex align-items-center gap-3 cursor-pointer">
-                        <input type="radio" name="payment_method" value="card" class="form-check-input">
-                        <div>
-                            <div class="fw-bold text-dark">💳 Karta orqali to'lov (Kartadan kartaga o'tkazma / terminal)</div>
-                            <small class="text-muted">Kuryerga karta orqali yoki karta raqamiga o'tkazib to'laysiz</small>
-                        </div>
-                    </label>
-                </div>
-
-                <button type="submit" class="btn btn-primary btn-lg w-100 rounded-pill fw-bold" id="kcSubmitOrderBtn">
-                    ✅ Buyurtmani tasdiqlash
-                </button>
-            </form>
+        <!-- Page Header -->
+        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem;">
+            <a href="{{ route('web.catalog') }}"
+               style="width:2.5rem;height:2.5rem;display:flex;align-items:center;justify-content:center;background:#f3f4f6;border-radius:9999px;text-decoration:none;color:#374151;transition:all 0.2s;flex-shrink:0;"
+               onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg>
+            </a>
+            <h1 style="font-size:clamp(1.25rem,4vw,1.75rem);font-weight:800;color:#111827;margin:0;">
+                Buyurtmani rasmiylashtirish
+            </h1>
         </div>
 
-        <!-- Right: Summary -->
-        <div class="col-lg-5">
-            <div class="p-4 bg-white rounded-4 border shadow-sm sticky-top" style="top: 90px;">
-                <h5 class="fw-bold text-dark u-mb-m">Buyurtma tarkibi</h5>
-                <div id="kcCheckoutItemsList" class="u-mb-m">
-                    <!-- Rendered dynamically -->
-                </div>
-                <hr>
-                <div class="d-flex justify-content-between text-muted mb-2">
-                    <span>Mahsulotlar:</span>
-                    <span class="fw-bold text-dark" id="kcCheckoutSubtotal">0 UZS</span>
-                </div>
-                <div class="d-flex justify-content-between text-muted mb-3">
-                    <span>Yetkazib berish:</span>
-                    <span class="fw-bold text-success">20,000 UZS</span>
-                </div>
-                <hr>
-                <div class="d-flex justify-content-between h4 fw-black text-dark mb-0">
-                    <span>Jami:</span>
-                    <span class="text-primary" id="kcCheckoutGrandTotal">0 UZS</span>
+        <!-- Main layout: form (left) + summary (right) -->
+        <div id="kcCheckoutWrapper" style="display:grid;grid-template-columns:1fr;gap:1.5rem;align-items:flex-start;">
+
+            <!-- ====== LEFT: FORM ====== -->
+            <div>
+                <form id="kcCheckoutForm" autocomplete="on">
+
+                    <!-- Section 1: Customer Info -->
+                    <div style="background:#fff;border-radius:1.25rem;padding:1.5rem;margin-bottom:1rem;border:1px solid #f3f4f6;">
+                        <h2 style="font-size:1rem;font-weight:700;color:#111827;margin:0 0 1.25rem;display:flex;align-items:center;gap:0.5rem;">
+                            <span style="width:1.75rem;height:1.75rem;background:var(--color-tima-500);color:#fff;border-radius:9999px;display:flex;align-items:center;justify-content:center;font-size:0.8125rem;font-weight:700;flex-shrink:0;">1</span>
+                            Qabul qiluvchi ma'lumotlari
+                        </h2>
+
+                        <div style="display:flex;flex-direction:column;gap:1rem;">
+                            <div>
+                                <label style="display:block;font-size:0.8125rem;font-weight:600;color:#374151;margin-bottom:0.375rem;">
+                                    Ism va familiya <span style="color:#ef4444;">*</span>
+                                </label>
+                                <input type="text" name="customer_name" autocomplete="name"
+                                       placeholder="Masalan: Jamshid Karimov"
+                                       required
+                                       style="width:100%;height:3rem;padding:0 1rem;background:#f9fafb;border:1px solid #e5e7eb;border-radius:0.75rem;font-size:0.9375rem;color:#111827;font-family:inherit;outline:none;transition:border-color 0.2s;box-sizing:border-box;"
+                                       onfocus="this.style.borderColor='var(--color-tima-500)'" onblur="this.style.borderColor='#e5e7eb'">
+                            </div>
+                            <div>
+                                <label style="display:block;font-size:0.8125rem;font-weight:600;color:#374151;margin-bottom:0.375rem;">
+                                    Telefon raqam <span style="color:#ef4444;">*</span>
+                                </label>
+                                <input type="tel" name="phone_number" autocomplete="tel"
+                                       placeholder="+998 90 123 45 67"
+                                       required
+                                       style="width:100%;height:3rem;padding:0 1rem;background:#f9fafb;border:1px solid #e5e7eb;border-radius:0.75rem;font-size:0.9375rem;color:#111827;font-family:inherit;outline:none;transition:border-color 0.2s;box-sizing:border-box;"
+                                       onfocus="this.style.borderColor='var(--color-tima-500)'" onblur="this.style.borderColor='#e5e7eb'">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 2: Delivery Address -->
+                    <div style="background:#fff;border-radius:1.25rem;padding:1.5rem;margin-bottom:1rem;border:1px solid #f3f4f6;">
+                        <h2 style="font-size:1rem;font-weight:700;color:#111827;margin:0 0 1.25rem;display:flex;align-items:center;gap:0.5rem;">
+                            <span style="width:1.75rem;height:1.75rem;background:var(--color-tima-500);color:#fff;border-radius:9999px;display:flex;align-items:center;justify-content:center;font-size:0.8125rem;font-weight:700;flex-shrink:0;">2</span>
+                            Yetkazib berish manzili
+                        </h2>
+
+                        <div style="display:flex;flex-direction:column;gap:1rem;">
+                            <div>
+                                <label style="display:block;font-size:0.8125rem;font-weight:600;color:#374151;margin-bottom:0.375rem;">
+                                    Viloyat / Shahar <span style="color:#ef4444;">*</span>
+                                </label>
+                                <div style="position:relative;">
+                                    <select name="region" required
+                                            style="width:100%;height:3rem;padding:0 2.5rem 0 1rem;background:#f9fafb;border:1px solid #e5e7eb;border-radius:0.75rem;font-size:0.9375rem;color:#111827;font-family:inherit;outline:none;transition:border-color 0.2s;box-sizing:border-box;appearance:none;-webkit-appearance:none;cursor:pointer;"
+                                            onfocus="this.style.borderColor='var(--color-tima-500)'" onblur="this.style.borderColor='#e5e7eb'">
+                                        <option value="" disabled selected>Tanlang...</option>
+                                        @foreach($regions as $region)
+                                            <option value="{{ $region }}">{{ $region }}</option>
+                                        @endforeach
+                                    </select>
+                                    <div style="position:absolute;right:1rem;top:50%;transform:translateY(-50%);pointer-events:none;color:#6b7280;">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <label style="display:block;font-size:0.8125rem;font-weight:600;color:#374151;margin-bottom:0.375rem;">
+                                    Tuman va to'liq manzil <span style="color:#ef4444;">*</span>
+                                </label>
+                                <textarea name="address" rows="3" required
+                                          placeholder="Chilonzor tumani, 12-uy, 45-xonadon"
+                                          style="width:100%;padding:0.875rem 1rem;background:#f9fafb;border:1px solid #e5e7eb;border-radius:0.75rem;font-size:0.9375rem;color:#111827;font-family:inherit;outline:none;transition:border-color 0.2s;box-sizing:border-box;resize:vertical;line-height:1.5;"
+                                          onfocus="this.style.borderColor='var(--color-tima-500)'" onblur="this.style.borderColor='#e5e7eb'"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 3: Payment Method -->
+                    <div style="background:#fff;border-radius:1.25rem;padding:1.5rem;margin-bottom:1rem;border:1px solid #f3f4f6;">
+                        <h2 style="font-size:1rem;font-weight:700;color:#111827;margin:0 0 1.25rem;display:flex;align-items:center;gap:0.5rem;">
+                            <span style="width:1.75rem;height:1.75rem;background:var(--color-tima-500);color:#fff;border-radius:9999px;display:flex;align-items:center;justify-content:center;font-size:0.8125rem;font-weight:700;flex-shrink:0;">3</span>
+                            To'lov usuli
+                        </h2>
+
+                        <div style="display:flex;flex-direction:column;gap:0.75rem;">
+
+                            <!-- Cash option -->
+                            <label id="kcPayCashLabel"
+                                   style="display:flex;align-items:flex-start;gap:1rem;padding:1rem;border:2px solid var(--color-tima-500);border-radius:1rem;cursor:pointer;background:#faf5ff;transition:all 0.2s;">
+                                <input type="radio" name="payment_method" value="cash" checked
+                                       onchange="kcSelectPayment(this)"
+                                       style="width:1.25rem;height:1.25rem;accent-color:var(--color-tima-500);margin-top:2px;flex-shrink:0;cursor:pointer;">
+                                <div>
+                                    <div style="font-size:0.9375rem;font-weight:700;color:#111827;display:flex;align-items:center;gap:0.5rem;margin-bottom:0.25rem;">
+                                        💵 Qabul qilganda naqd to'lov
+                                    </div>
+                                    <div style="font-size:0.8125rem;color:#6b7280;line-height:1.5;">
+                                        Kuryer mahsulotni yetkazib berganda naqd pulda to'laysiz
+                                    </div>
+                                </div>
+                            </label>
+
+                            <!-- Card option -->
+                            <label id="kcPayCardLabel"
+                                   style="display:flex;align-items:flex-start;gap:1rem;padding:1rem;border:2px solid #e5e7eb;border-radius:1rem;cursor:pointer;background:#fff;transition:all 0.2s;">
+                                <input type="radio" name="payment_method" value="card"
+                                       onchange="kcSelectPayment(this)"
+                                       style="width:1.25rem;height:1.25rem;accent-color:var(--color-tima-500);margin-top:2px;flex-shrink:0;cursor:pointer;">
+                                <div>
+                                    <div style="font-size:0.9375rem;font-weight:700;color:#111827;display:flex;align-items:center;gap:0.5rem;margin-bottom:0.25rem;">
+                                        💳 Karta orqali to'lov
+                                    </div>
+                                    <div style="font-size:0.8125rem;color:#6b7280;line-height:1.5;">
+                                        Kuryerga karta orqali yoki karta raqamiga o'tkazib to'laysiz
+                                    </div>
+                                </div>
+                            </label>
+
+                        </div>
+                    </div>
+
+                    <!-- Submit Button (mobile: shown here, desktop: in summary box) -->
+                    <div id="kcSubmitMobile">
+                        <button type="submit" id="kcSubmitOrderBtn"
+                                style="display:flex;align-items:center;justify-content:center;gap:0.75rem;width:100%;height:3.5rem;background:var(--color-tima-500);color:#fff;border:none;border-radius:9999px;font-size:1.0625rem;font-weight:700;cursor:pointer;transition:all 0.2s;font-family:inherit;"
+                                onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
+                            Buyurtmani tasdiqlash
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+
+            <!-- ====== RIGHT: ORDER SUMMARY ====== -->
+            <div>
+                <div style="background:#fff;border-radius:1.25rem;padding:1.5rem;border:1px solid #f3f4f6;position:sticky;top:80px;">
+                    <h3 style="font-size:1rem;font-weight:700;color:#111827;margin:0 0 1.25rem;">Buyurtma tarkibi</h3>
+
+                    <!-- Items list -->
+                    <div id="kcCheckoutItemsList" style="margin-bottom:1rem;display:flex;flex-direction:column;gap:0.75rem;">
+                        <!-- JS rendered -->
+                    </div>
+
+                    <div style="border-top:1px solid #f3f4f6;padding-top:1rem;display:flex;flex-direction:column;gap:0.5rem;margin-bottom:1.25rem;">
+                        <div style="display:flex;justify-content:space-between;font-size:0.875rem;color:#6b7280;">
+                            <span>Mahsulotlar:</span>
+                            <span id="kcCheckoutSubtotal" style="font-weight:600;color:#111827;">0 so'm</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;font-size:0.875rem;color:#6b7280;">
+                            <span>Yetkazib berish:</span>
+                            <span style="font-weight:600;color:#16a34a;">20,000 so'm</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;font-size:1.125rem;font-weight:800;color:#111827;padding-top:0.75rem;border-top:1px solid #f3f4f6;margin-top:0.25rem;">
+                            <span>Jami:</span>
+                            <span id="kcCheckoutGrandTotal" style="color:var(--color-tima-500);">0 so'm</span>
+                        </div>
+                    </div>
+
+                    <!-- Submit (desktop, in summary) -->
+                    <button type="submit" form="kcCheckoutForm"
+                            style="display:flex;align-items:center;justify-content:center;gap:0.75rem;width:100%;height:3.25rem;background:var(--color-tima-500);color:#fff;border:none;border-radius:9999px;font-size:1rem;font-weight:700;cursor:pointer;transition:all 0.2s;font-family:inherit;"
+                            onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
+                        Buyurtmani tasdiqlash
+                    </button>
+
+                    <!-- Trust badges -->
+                    <div style="display:flex;flex-direction:column;gap:0.5rem;margin-top:1rem;padding-top:1rem;border-top:1px solid #f3f4f6;">
+                        <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.8125rem;color:#6b7280;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                            Xavfsiz buyurtma
+                        </div>
+                        <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.8125rem;color:#6b7280;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>
+                            Original mahsulotlar kafolati
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<style>
+    @media(min-width: 768px) {
+        #kcCheckoutWrapper { grid-template-columns: 1fr 380px !important; }
+        #kcSubmitMobile { display: none !important; }
+    }
+</style>
 @endsection
 
 @push('scripts')
 <script>
+    function kcSelectPayment(radio) {
+        // Reset all
+        document.querySelectorAll('[id^="kcPay"]').forEach(el => {
+            el.style.borderColor = '#e5e7eb';
+            el.style.background = '#fff';
+        });
+        // Highlight selected
+        const label = radio.closest('label');
+        if (label) {
+            label.style.borderColor = 'var(--color-tima-500)';
+            label.style.background = '#faf5ff';
+        }
+    }
+
     function renderCheckoutSummary() {
         const listEl = document.getElementById('kcCheckoutItemsList');
         const subtotalEl = document.getElementById('kcCheckoutSubtotal');
         const grandTotalEl = document.getElementById('kcCheckoutGrandTotal');
 
-        if (!kcCartState || kcCartState.length === 0) {
+        const cart = kcCart || JSON.parse(localStorage.getItem('kc_cart') || '[]');
+
+        if (!cart || cart.length === 0) {
             window.location.href = "{{ route('web.catalog') }}";
             return;
         }
@@ -108,23 +240,22 @@
         let total = 0;
         let html = '';
 
-        kcCartState.forEach(item => {
-            const itemTotal = item.price * item.quantity;
+        cart.forEach(item => {
+            const itemTotal = item.price * item.qty;
             total += itemTotal;
-            html += `
-                <div class="d-flex align-items-center justify-content-between py-2 border-bottom">
-                    <div class="text-truncate me-2" style="max-width: 220px;">
-                        <span class="fw-bold text-dark d-block text-truncate" style="font-size: 13.5px;">${item.name}</span>
-                        <small class="text-muted">${item.quantity} x ${new Intl.NumberFormat().format(item.price)} UZS</small>
-                    </div>
-                    <span class="fw-bold text-dark" style="font-size: 13.5px;">${new Intl.NumberFormat().format(itemTotal)} UZS</span>
+            html += `<div style="display:flex;align-items:center;gap:0.75rem;">
+                <img src="${item.image}" alt="${item.name}" style="width:44px;height:56px;object-fit:cover;border-radius:0.5rem;flex-shrink:0;border:1px solid #f3f4f6;">
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:0.8125rem;font-weight:500;color:#111827;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.3;">${item.name}</div>
+                    <div style="font-size:0.75rem;color:#9ca3af;margin-top:2px;">${item.qty} x ${new Intl.NumberFormat('uz').format(item.price)} so'm</div>
                 </div>
-            `;
+                <div style="font-size:0.875rem;font-weight:700;color:#111827;white-space:nowrap;">${new Intl.NumberFormat('uz').format(itemTotal)} so'm</div>
+            </div>`;
         });
 
         if (listEl) listEl.innerHTML = html;
-        if (subtotalEl) subtotalEl.innerText = new Intl.NumberFormat().format(total) + ' UZS';
-        if (grandTotalEl) grandTotalEl.innerText = new Intl.NumberFormat().format(total + 20000) + ' UZS';
+        if (subtotalEl) subtotalEl.textContent = new Intl.NumberFormat('uz').format(total) + ' so\'m';
+        if (grandTotalEl) grandTotalEl.textContent = new Intl.NumberFormat('uz').format(total + 20000) + ' so\'m';
     }
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -136,16 +267,18 @@
                 e.preventDefault();
 
                 const btn = document.getElementById('kcSubmitOrderBtn');
-                if (btn) btn.disabled = true;
+                const allBtns = document.querySelectorAll('[form="kcCheckoutForm"], #kcSubmitOrderBtn');
+                allBtns.forEach(b => { b.disabled = true; b.style.opacity = '0.7'; });
 
                 const formData = new FormData(this);
+                const cart = kcCart || JSON.parse(localStorage.getItem('kc_cart') || '[]');
                 const payload = {
                     customer_name: formData.get('customer_name'),
                     phone_number: formData.get('phone_number'),
                     region: formData.get('region'),
                     address: formData.get('address'),
                     payment_method: formData.get('payment_method'),
-                    cart_items: kcCartState,
+                    cart_items: cart,
                 };
 
                 fetch("{{ route('web.checkout.process') }}", {
@@ -159,34 +292,31 @@
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
-                        // Clear Cart State
-                        kcCartState = [];
-                        localStorage.removeItem('kc_web_cart');
+                        // Clear cart
+                        if (typeof kcCart !== 'undefined') kcCart = [];
+                        localStorage.removeItem('kc_cart');
 
-                        const wrapper = document.getElementById('kcCheckoutWrapper');
-                        wrapper.innerHTML = `
-                            <div class="col-12">
-                                <div class="p-5 bg-white rounded-4 border text-center">
-                                    <div style="font-size: 64px;">🎉</div>
-                                    <h2 class="fw-black text-success mt-3">Buyurtmangiz muvaffaqiyatli qabul qilindi!</h2>
-                                    <p class="text-muted fs-5 mb-3">Buyurtma kodi: <strong class="text-dark">${data.order_code}</strong></p>
-                                    <p class="text-muted" style="max-width: 500px; margin: 0 auto 24px;">
-                                        Bizning operatorimiz tez orada siz bilan bog'lanadi hamda yetkazib berish tafsilotlarini tasdiqlaydi.
-                                    </p>
-                                    <a href="{{ route('web.catalog') }}" class="btn btn-primary rounded-pill px-4 fw-bold">
-                                        Bosh sahifaga qaytish
-                                    </a>
-                                </div>
-                            </div>
-                        `;
+                        document.getElementById('kcCheckoutWrapper').innerHTML = `
+                            <div style="grid-column:1/-1;text-align:center;padding:3rem 1rem;background:#fff;border-radius:1.5rem;">
+                                <div style="font-size:4rem;margin-bottom:1rem;">🎉</div>
+                                <h2 style="font-size:1.5rem;font-weight:800;color:#111827;margin:0 0 0.75rem;">Buyurtmangiz qabul qilindi!</h2>
+                                <p style="color:#6b7280;font-size:1rem;margin:0 0 0.5rem;">Buyurtma kodi: <strong style="color:var(--color-tima-500);font-size:1.125rem;">${data.order_code}</strong></p>
+                                <p style="color:#9ca3af;font-size:0.9375rem;max-width:400px;margin:0 auto 2rem;line-height:1.6;">
+                                    Operatorimiz tez orada siz bilan bog'lanadi va yetkazib berish tafsilotlarini tasdiqlaydi.
+                                </p>
+                                <a href="{{ route('web.catalog') }}"
+                                   style="display:inline-flex;align-items:center;gap:0.5rem;padding:0.875rem 2rem;background:var(--color-tima-500);color:#fff;border-radius:9999px;font-weight:700;font-size:1rem;text-decoration:none;">
+                                    Bosh sahifaga qaytish
+                                </a>
+                            </div>`;
                     } else {
                         alert(data.message || 'Xatolik yuz berdi');
-                        if (btn) btn.disabled = false;
+                        allBtns.forEach(b => { b.disabled = false; b.style.opacity = '1'; });
                     }
                 })
                 .catch(() => {
-                    alert('Tarmoq xatoligi. Qayta urinib ko\'ring.');
-                    if (btn) btn.disabled = false;
+                    alert("Tarmoq xatoligi. Qayta urinib ko'ring.");
+                    allBtns.forEach(b => { b.disabled = false; b.style.opacity = '1'; });
                 });
             });
         }
