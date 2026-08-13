@@ -328,37 +328,14 @@
                         </div>
                     </div>
 
-                    <div class="relative overflow-visible transition-shadow duration-300 rounded-2xl px-5 py-[14px] rounded-full! hover:shadow-sm hover:shadow-black/10 glass-card-bg flex flex-row items-center h-12 p-1! bg-secondary-200! group">
+                    <div class="relative overflow-hidden transition-shadow duration-300 rounded-2xl px-5 py-[14px] rounded-full! hover:shadow-sm hover:shadow-black/10 glass-card-bg flex flex-row items-center h-12 p-1! cursor-pointer bg-secondary-200!">
                         <div class="absolute inset-0 pointer-events-none glass-border rounded-2xl rounded-full!"></div>
-                        <div class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex flex-row items-center gap-2 {{ request()->routeIs('web.profile') ? 'bg-primary-200' : '' }} cursor-pointer h-full">
+                        <div class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex flex-row items-center gap-2 {{ request()->routeIs('web.profile') ? 'bg-primary-200' : '' }}">
                             @auth
-                                <div class="flex flex-row items-center gap-2 h-full" style="color:#111827;">
+                                <a href="{{ route('web.profile') }}" class="flex flex-row items-center gap-2 group h-full" style="text-decoration:none;color:#111827;">
                                     <i class="icon-profile text-lg"></i>
                                     <span class="font-normal text-sm leading-5 max-lg:hidden">{{ Str::limit(auth()->user()->name ?: auth()->user()->phone_number, 12) }}</span>
-                                </div>
-                                
-                                <!-- Profile Dropdown Menu -->
-                                <div class="absolute top-[110%] right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-[100] transform origin-top-right scale-95 group-hover:scale-100">
-                                    <div class="p-2 flex flex-col gap-1">
-                                        <a href="{{ route('web.profile') }}" class="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-primary-50 hover:text-primary rounded-xl transition-all duration-200" style="text-decoration:none;">
-                                            <iconify-icon icon="lucide:user" class="text-xl opacity-70"></iconify-icon>
-                                            Mening profilim
-                                        </a>
-                                        <a href="{{ route('web.profile') }}#locations" class="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-primary-50 hover:text-primary rounded-xl transition-all duration-200" style="text-decoration:none;">
-                                            <iconify-icon icon="lucide:map-pin" class="text-xl opacity-70"></iconify-icon>
-                                            Mening manzillarim
-                                        </a>
-                                        <a href="{{ route('web.profile') }}#orders" class="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-primary-50 hover:text-primary rounded-xl transition-all duration-200" style="text-decoration:none;">
-                                            <iconify-icon icon="lucide:shopping-bag" class="text-xl opacity-70"></iconify-icon>
-                                            Mening buyurtmalarim
-                                        </a>
-                                        <div class="h-px bg-gray-100 my-1 mx-2"></div>
-                                        <button onclick="handleLogout()" class="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 rounded-xl transition-all duration-200 cursor-pointer text-left border-none bg-transparent">
-                                            <iconify-icon icon="lucide:log-out" class="text-xl opacity-70"></iconify-icon>
-                                            Chiqish
-                                        </button>
-                                    </div>
-                                </div>
+                                </a>
                             @else
                                 <button onclick="openAuthModal()" class="flex flex-row items-center gap-2 group h-full" style="background:none;border:none;cursor:pointer;font-family:inherit;color:#111827;">
                                     <i class="icon-profile text-lg"></i>
@@ -658,19 +635,6 @@
     function removeFromCart(id) {
         kcCart = kcCart.filter(i => i.id !== id);
         saveCart();
-    }
-
-    function handleLogout() {
-        fetch("{{ route('web.logout') }}", {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                'Accept': 'application/json'
-            }
-        }).then(() => {
-            window.location.reload();
-        });
     }
 
     // FAVORITES (server-persisted — FavouriteProducts jadvali)
