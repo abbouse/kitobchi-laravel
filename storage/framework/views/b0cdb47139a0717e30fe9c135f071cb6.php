@@ -3,6 +3,15 @@
 <?php $__env->startSection('content'); ?>
 <div class="container">
 
+    <!-- Hero Banner -->
+    <div class="kc-pm-banner u-mt-m u-mb-l">
+        <div class="kc-pm-banner-title">Original kitoblar va kanselyariya —<br>bir joyda</div>
+        <div class="kc-pm-banner-sub">O'zbekiston bo'ylab tezkor yetkazib berish. Minglab kitob va o'quv qurollari eng qulay narxlarda.</div>
+        <a href="<?php echo e(route('web.catalog')); ?>" class="kc-pm-banner-btn">
+            Xarid qilishni boshlash &rarr;
+        </a>
+    </div>
+
     <!-- PiyolaMarket Circular Categories Section ("Kataloglar") -->
     <div class="kc-pm-cat-section">
         <h2 class="h3 fw-black text-primary u-mb-m">Kataloglar</h2>
@@ -16,8 +25,12 @@
 
             <?php
                 try {
+                    // MUHIM: jadvalda `status`/`name` ustunlari yo'q (faqat
+                    // is_active va name_uz/ru/en/ja) — noto'g'ri ustun nomi
+                    // SQL xatoga sabab bo'lib, try/catch uni yutib yuborardi,
+                    // kategoriyalar hech qachon ko'rinmasdi.
                     $bookCategories = Cache::remember('web_top_categories_avatars', 600, function() {
-                        return \App\Models\BookCategories::where('status', true)->orderBy('name')->take(10)->get();
+                        return \App\Models\BookCategories::where('is_active', true)->orderBy('name_uz')->take(10)->get();
                     });
                 } catch (\Throwable $e) {
                     $bookCategories = collect();
@@ -27,8 +40,9 @@
             <?php $__currentLoopData = $bookCategories; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $cat): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                 <a href="<?php echo e(route('web.catalog', ['category' => $cat->id])); ?>" class="kc-pm-cat-card">
                     <div class="kc-pm-cat-avatar">
-                        <?php if($cat->image): ?>
-                            <img src="<?php echo e(asset('storage/' . $cat->image)); ?>" alt="<?php echo e($cat->name); ?>">
+                        
+                        <?php if($cat->icon): ?>
+                            <div class="fs-3"><?php echo e($cat->icon); ?></div>
                         <?php else: ?>
                             <div class="fw-black text-primary fs-4"><?php echo e(mb_substr($cat->name, 0, 1)); ?></div>
                         <?php endif; ?>

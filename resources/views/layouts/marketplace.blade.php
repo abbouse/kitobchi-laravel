@@ -23,44 +23,43 @@
 </head>
 <body class="kc-mk-body">
 
-    <!-- PiyolaMarket Sticky Header -->
-    <header class="kc-pm-header">
+    <!-- PiyolaMarket Master Header -->
+    <header class="kc-layout-header">
         <div class="container">
-            <div class="kc-pm-nav">
+            <div class="kc-header-container">
                 
                 <!-- Logo -->
-                <a href="{{ url('/') }}" class="kc-pm-logo">
+                <a href="{{ url('/') }}" class="kc-brand-link">
                     <img src="{{ asset('images/logo/logo_blue.png') }}" alt="Kitobchi Logo">
-                    <span>Kitobchi</span>
                 </a>
 
-                <!-- Catalog Dropdown Button -->
-                <a href="{{ route('web.catalog') }}" class="kc-pm-glass-pill kc-pm-cat-btn d-none d-md-inline-flex">
+                <!-- Catalog Trigger Button -->
+                <a href="{{ route('web.catalog') }}" class="kc-cat-trigger d-none d-md-inline-flex">
                     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
                     <span>Kataloglar</span>
                 </a>
 
-                <!-- Piyola Glass Search Input -->
-                <div class="kc-pm-search-wrap">
+                <!-- Search Bar -->
+                <div class="kc-header-search-wrap">
                     <form action="{{ route('web.catalog') }}" method="GET" id="kcSearchForm">
-                        <input type="text" name="search" class="kc-pm-search-input" id="kcSearchInput" placeholder="Mahsulotni izlash..." value="{{ request('search') }}" autocomplete="off">
-                        <button type="submit" class="kc-pm-search-btn" aria-label="Izlash">
+                        <input type="text" name="search" class="kc-header-search-input" id="kcSearchInput" placeholder="Kitobchi’da izlash..." value="{{ request('search') }}" autocomplete="off">
+                        <button type="submit" class="kc-header-search-btn" aria-label="Qidirish">
                             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
                         </button>
                     </form>
-                    <!-- Instant Search Popup -->
+                    <!-- Instant Live Search Dropdown Popup -->
                     <div class="kc-search-results-popup" id="kcSearchPopup"></div>
                 </div>
 
-                <!-- Right Header Actions -->
-                <div class="kc-pm-actions">
-                    <button type="button" class="kc-pm-action-link" onclick="toggleCartDrawer(true)">
+                <!-- Header Actions -->
+                <div class="kc-header-actions">
+                    <button type="button" class="kc-action-pill" onclick="toggleCartDrawer(true)">
                         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
                         <span class="d-none d-lg-inline">Savatcha</span>
-                        <span class="badge-count" id="kcCartCountBadge">0</span>
+                        <span class="kc-badge-count" id="kcCartCountBadge">0</span>
                     </button>
 
-                    <a href="{{ route('web.catalog') }}" class="kc-pm-action-link d-none d-sm-inline-flex">
+                    <a href="{{ route('web.catalog') }}" class="kc-action-pill d-none d-sm-inline-flex">
                         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                         <span class="d-none d-lg-inline">Sevimlilar</span>
                     </a>
@@ -70,22 +69,22 @@
         </div>
     </header>
 
-    <!-- Main Content Slot -->
+    <!-- Main Content -->
     <main class="kc-mk-main pb-5">
         @yield('content')
     </main>
 
-    <!-- Piyola Floating Mobile Bottom Navigation Bar -->
-    <nav class="kc-pm-mobile-bottom-bar">
-        <a href="{{ url('/') }}" class="kc-pm-mobile-nav-item {{ request()->is('/') ? 'active' : '' }}">
+    <!-- Piyola Floating Bottom Bar for Mobile -->
+    <nav class="kc-pm-mobile-bar">
+        <a href="{{ url('/') }}" class="kc-pm-mobile-nav-link {{ request()->is('/') ? 'active' : '' }}">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
             <span>Bosh sahifa</span>
         </a>
-        <a href="{{ route('web.catalog') }}" class="kc-pm-mobile-nav-item {{ request()->is('catalog*') ? 'active' : '' }}">
+        <a href="{{ route('web.catalog') }}" class="kc-pm-mobile-nav-link {{ request()->is('catalog*') ? 'active' : '' }}">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
             <span>Katalog</span>
         </a>
-        <a href="javascript:void(0)" onclick="toggleCartDrawer(true)" class="kc-pm-mobile-nav-item">
+        <a href="javascript:void(0)" onclick="toggleCartDrawer(true)" class="kc-pm-mobile-nav-link">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
             <span>Savatcha</span>
         </a>
@@ -103,7 +102,7 @@
             </div>
             <div class="p-3 border-top bg-white">
                 <div class="d-flex justify-content-between h5 fw-black text-dark mb-3">
-                    <span>Jami:</span>
+                    <span>Jami summasi:</span>
                     <span class="text-primary" id="kcCartTotalSum">0 UZS</span>
                 </div>
                 <a href="{{ route('web.checkout') }}" class="btn btn-primary btn-lg w-100 rounded-pill fw-bold">
@@ -118,9 +117,8 @@
         <div class="container">
             <div class="row g-4">
                 <div class="col-lg-4">
-                    <a href="{{ url('/') }}" class="kc-pm-logo u-mb-s">
+                    <a href="{{ url('/') }}" class="kc-brand-link u-mb-s">
                         <img src="{{ asset('images/logo/logo_blue.png') }}" alt="Kitobchi Logo">
-                        <span>Kitobchi</span>
                     </a>
                     <p class="text-muted small" style="line-height: 1.6;">
                         Original kitoblar va o'quv qurollari online do'koni. O'zbekiston bo'ylab tezkor yetkazib berish.
@@ -152,7 +150,7 @@
         </div>
     </footer>
 
-    <!-- Client JS Script -->
+    <!-- Interactive Client JS Script -->
     <script>
         let kcCartState = JSON.parse(localStorage.getItem('kc_web_cart') || '[]');
 

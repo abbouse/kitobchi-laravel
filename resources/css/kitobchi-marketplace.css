@@ -1,163 +1,199 @@
 /* ==========================================================================
-   KITOBCHI MARKETPLACE — 1:1 PIYOLAMARKET NUXT GLASS UI DESIGN SYSTEM
+   KITOBCHI MARKETPLACE — 1:1 PIYOLAMARKET NUXT TAILWIND UI/UX DESIGN SYSTEM
    ========================================================================== */
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
 :root {
-    --kc-primary: #4f46e5;
-    --kc-primary-hover: #4338ca;
-    --kc-primary-500: #4f46e5;
-    --kc-primary-light: #eef2ff;
+    --pm-primary: #4f46e5;
+    --pm-primary-hover: #4338ca;
+    --pm-primary-light: #eef2ff;
     
-    --kc-bg-slate: #f8fafc;
-    --kc-pill-bg: #f1f5f9;
-    --kc-border: #e2e8f0;
+    --pm-secondary-100: #f8fafc;
+    --pm-secondary-200: #f1f5f9;
+    --pm-secondary-300: #e2e8f0;
     
-    --kc-text-dark: #0f172a;
-    --kc-text-muted: #64748b;
+    --pm-text-dark: #0f172a;
+    --pm-text-gray: #64748b;
+    --pm-text-light: #94a3b8;
     
-    --kc-radius-pill: 9999px;
-    --kc-radius-card: 24px;
-    --kc-radius-avatar: 50%;
+    --pm-radius-pill: 9999px;
+    --pm-radius-2xl: 16px;
+    --pm-radius-3xl: 24px;
+    --pm-radius-4xl: 30px;
+    
+    --pm-glass-bg: rgba(241, 245, 249, 0.95);
+    --pm-glass-border: rgba(255, 255, 255, 0.8);
+    --pm-shadow-sm: 0 4px 12px rgba(15, 23, 42, 0.04);
+    --pm-shadow-lg: 0 16px 36px rgba(15, 23, 42, 0.08);
 }
 
+/* Global Reset */
 body.kc-mk-body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background-color: #f8fafc;
-    color: var(--kc-text-dark);
+    background-color: var(--pm-secondary-200);
+    color: var(--pm-text-dark);
     margin: 0;
     padding: 0;
     -webkit-font-smoothing: antialiased;
+    line-height: 1.4;
+}
+
+/* Glass Card & Border Helpers */
+.kc-glass-card {
+    background: #ffffff;
+    border: 1px solid var(--pm-secondary-300);
+    border-radius: var(--pm-radius-3xl);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.kc-glass-pill {
+    background: var(--pm-secondary-200);
+    border: 1px solid var(--pm-secondary-300);
+    border-radius: var(--pm-radius-pill);
+    transition: all 0.25s ease;
+}
+
+.kc-glass-pill:hover {
+    background: var(--pm-primary-light);
+    border-color: #c7d2fe;
 }
 
 /* PiyolaMarket Sticky Header */
-.kc-pm-header {
+.kc-layout-header {
     position: sticky;
     top: 0;
     z-index: 1000;
     background: #ffffff;
-    border-bottom: 1px solid #e2e8f0;
-    padding: 12px 0;
+    border-bottom: 1px solid var(--pm-secondary-300);
+    padding: 14px 0;
 }
 
-.kc-pm-nav {
+.kc-header-container {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
+    gap: 20px;
 }
 
-/* Brand Logo */
-.kc-pm-logo {
+.kc-brand-link {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     text-decoration: none;
     font-size: 22px;
     font-weight: 900;
-    color: #4f46e5;
+    color: var(--pm-primary);
     letter-spacing: -0.5px;
 }
 
-.kc-pm-logo img {
+.kc-brand-link img {
     height: 34px;
     width: auto;
 }
 
-/* Piyola Glass Pill Buttons & Search */
-.kc-pm-glass-pill {
-    background: #f1f5f9;
-    border: 1px solid #e2e8f0;
-    border-radius: var(--kc-radius-pill);
-    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.kc-pm-glass-pill:hover {
-    background: #e2e8f0;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-}
-
-/* Catalog Button */
-.kc-pm-cat-btn {
+/* Header Catalog Button */
+.kc-cat-trigger {
     display: inline-flex;
     align-items: center;
     gap: 8px;
     padding: 10px 20px;
-    color: #0f172a;
+    background: var(--pm-secondary-200);
+    border: 1px solid var(--pm-secondary-300);
+    border-radius: var(--pm-radius-pill);
+    color: var(--pm-text-dark);
     font-size: 14px;
     font-weight: 700;
     text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
     white-space: nowrap;
 }
 
-/* Glass Search Bar */
-.kc-pm-search-wrap {
+.kc-cat-trigger:hover {
+    background: var(--pm-primary-light);
+    color: var(--pm-primary);
+    border-color: #c7d2fe;
+}
+
+/* Search Bar Pill */
+.kc-header-search-wrap {
     flex: 1;
     max-width: 580px;
     position: relative;
 }
 
-.kc-pm-search-input {
+.kc-header-search-input {
     width: 100%;
-    padding: 11px 44px 11px 18px;
-    background: #f1f5f9;
-    border: 1px solid #e2e8f0;
-    border-radius: var(--kc-radius-pill);
+    height: 48px;
+    padding: 0 46px 0 20px;
+    background: var(--pm-secondary-200);
+    border: 1px solid var(--pm-secondary-300);
+    border-radius: var(--pm-radius-pill);
     font-size: 14px;
-    color: #0f172a;
+    color: var(--pm-text-dark);
     outline: none;
-    transition: all 0.2s ease;
+    transition: all 0.25s ease;
 }
 
-.kc-pm-search-input:focus {
+.kc-header-search-input:focus {
     background: #ffffff;
-    border-color: #4f46e5;
-    box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+    border-color: var(--pm-primary);
+    box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.12);
 }
 
-.kc-pm-search-btn {
+.kc-header-search-btn {
     position: absolute;
-    right: 5px;
+    right: 6px;
     top: 50%;
     transform: translateY(-50%);
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
     border: none;
-    background: #4f46e5;
+    background: var(--pm-primary);
     color: #ffffff;
     border-radius: 50%;
     display: grid;
     place-items: center;
     cursor: pointer;
+    transition: background 0.15s ease;
 }
 
-/* Header Actions Cluster */
-.kc-pm-actions {
+.kc-header-search-btn:hover {
+    background: var(--pm-primary-hover);
+}
+
+/* Action Group */
+.kc-header-actions {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
 }
 
-.kc-pm-action-link {
+.kc-action-pill {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 8px 16px;
-    color: #0f172a;
+    gap: 8px;
+    padding: 9px 18px;
+    background: var(--pm-secondary-200);
+    border: 1px solid var(--pm-secondary-300);
+    border-radius: var(--pm-radius-pill);
+    color: var(--pm-text-dark);
     font-size: 13.5px;
     font-weight: 600;
     text-decoration: none;
-    border-radius: var(--kc-radius-pill);
-    background: #f1f5f9;
-    border: 1px solid #e2e8f0;
-    transition: all 0.15s ease;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
 }
 
-.kc-pm-action-link:hover {
-    background: #eef2ff;
-    color: #4f46e5;
+.kc-action-pill:hover {
+    background: var(--pm-primary-light);
+    color: var(--pm-primary);
+    border-color: #c7d2fe;
 }
 
-.kc-pm-action-link .badge-count {
+.kc-badge-count {
     background: #ef4444;
     color: #ffffff;
     font-size: 11px;
@@ -166,64 +202,78 @@ body.kc-mk-body {
     border-radius: 10px;
 }
 
-/* Circular Categories Horizontal Row (Piyola Market Style) */
-.kc-pm-cat-section {
-    padding: 24px 0;
+/* Circular Category Avatar Carousel (Piyola Market "Kataloglar") */
+.kc-cat-avatar-section {
+    padding: 32px 0 24px;
 }
 
-.kc-pm-cat-row {
+.kc-cat-avatar-title {
+    font-size: 26px;
+    font-weight: 900;
+    color: var(--pm-primary);
+    margin-bottom: 20px;
+    letter-spacing: -0.5px;
+}
+
+@media (min-width: 768px) {
+    .kc-cat-avatar-title {
+        font-size: 34px;
+    }
+}
+
+.kc-cat-avatar-row {
     display: flex;
     gap: 20px;
     overflow-x: auto;
     scrollbar-width: none;
-    padding-bottom: 8px;
+    padding-bottom: 10px;
 }
 
-.kc-pm-cat-row::-webkit-scrollbar {
+.kc-cat-avatar-row::-webkit-scrollbar {
     display: none;
 }
 
-.kc-pm-cat-card {
+.kc-cat-avatar-item {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     text-decoration: none;
-    width: 100px;
+    width: 105px;
     flex-shrink: 0;
 }
 
-.kc-pm-cat-avatar {
-    width: 84px;
-    height: 84px;
+.kc-cat-avatar-circle {
+    width: 90px;
+    height: 90px;
     border-radius: 50%;
     overflow: hidden;
     background: #ffffff;
-    border: 2px solid #e2e8f0;
+    border: 2px solid var(--pm-secondary-300);
     display: grid;
     place-items: center;
     padding: 4px;
-    transition: all 0.25s ease;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: var(--pm-shadow-sm);
 }
 
-.kc-pm-cat-card:hover .kc-pm-cat-avatar {
-    border-color: #4f46e5;
-    transform: scale(1.06);
-    box-shadow: 0 8px 20px rgba(79, 70, 229, 0.15);
+.kc-cat-avatar-item:hover .kc-cat-avatar-circle {
+    border-color: var(--pm-primary);
+    transform: scale(1.08);
+    box-shadow: 0 10px 24px rgba(79, 70, 229, 0.18);
 }
 
-.kc-pm-cat-avatar img {
+.kc-cat-avatar-circle img {
     width: 100%;
     height: 100%;
     object-fit: cover;
     border-radius: 50%;
 }
 
-.kc-pm-cat-name {
-    font-size: 13px;
-    font-weight: 600;
-    color: #0f172a;
+.kc-cat-avatar-name {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--pm-text-dark);
     text-align: center;
     line-height: 1.25;
     display: -webkit-box;
@@ -232,71 +282,81 @@ body.kc-mk-body {
     overflow: hidden;
 }
 
-/* Hero Carousel Banner */
-.kc-pm-banner {
-    border-radius: 28px;
+.kc-cat-avatar-item:hover .kc-cat-avatar-name {
+    color: var(--pm-primary);
+}
+
+/* Piyola Market Hero Banner Carousel */
+.kc-hero-banner {
+    border-radius: var(--pm-radius-4xl);
     overflow: hidden;
-    background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
+    background: linear-gradient(135deg, #4f46e5 0%, #312e81 100%);
     color: #ffffff;
-    padding: 40px 48px;
+    padding: 48px;
     position: relative;
     box-shadow: 0 20px 40px -10px rgba(79, 70, 229, 0.3);
 }
 
-/* Piyola Product Cards Grid */
-.kc-pm-grid {
+/* Piyola Market 5-Column Product Grid */
+.kc-pm-product-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    grid-template-columns: repeat(5, 1fr);
     gap: 20px;
 }
 
-@media (max-width: 640px) {
-    .kc-pm-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 12px;
-    }
+@media (max-width: 1200px) {
+    .kc-pm-product-grid { grid-template-columns: repeat(4, 1fr); }
 }
 
-.kc-pm-product-card {
+@media (max-width: 900px) {
+    .kc-pm-product-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 600px) {
+    .kc-pm-product-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+}
+
+.kc-product-card-pm {
     background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 24px;
+    border: 1px solid var(--pm-secondary-300);
+    border-radius: var(--pm-radius-3xl);
     padding: 16px;
     display: flex;
     flex-direction: column;
+    height: 100%;
     position: relative;
-    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.kc-pm-product-card:hover {
+.kc-product-card-pm:hover {
     border-color: #c7d2fe;
-    box-shadow: 0 16px 32px -6px rgba(15, 23, 42, 0.08);
+    box-shadow: var(--pm-shadow-lg);
     transform: translateY(-4px);
 }
 
-.kc-pm-cover-wrap {
+.kc-card-cover-pm {
     aspect-ratio: 3 / 4;
-    border-radius: 16px;
+    border-radius: var(--pm-radius-2xl);
     overflow: hidden;
-    background: #f8fafc;
+    background: var(--pm-secondary-100);
     margin-bottom: 12px;
     position: relative;
     display: grid;
     place-items: center;
 }
 
-.kc-pm-cover-img {
+.kc-card-cover-pm img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform 0.3s ease;
+    transition: transform 0.35s ease;
 }
 
-.kc-pm-product-card:hover .kc-pm-cover-img {
-    transform: scale(1.05);
+.kc-product-card-pm:hover .kc-card-cover-pm img {
+    transform: scale(1.06);
 }
 
-.kc-pm-discount-pill {
+.kc-card-discount-tag {
     position: absolute;
     top: 8px;
     left: 8px;
@@ -305,13 +365,13 @@ body.kc-mk-body {
     font-size: 11px;
     font-weight: 800;
     padding: 3px 8px;
-    border-radius: 12px;
+    border-radius: var(--pm-radius-pill);
 }
 
-.kc-pm-title {
+.kc-card-title-pm {
     font-size: 14.5px;
     font-weight: 700;
-    color: #0f172a;
+    color: var(--pm-text-dark);
     line-height: 1.35;
     margin: 0 0 4px;
     display: -webkit-box;
@@ -321,45 +381,45 @@ body.kc-mk-body {
     height: 38px;
 }
 
-.kc-pm-author {
+.kc-card-author-pm {
     font-size: 12.5px;
-    color: #64748b;
+    color: var(--pm-text-gray);
     margin-bottom: 10px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.kc-pm-card-bottom {
+.kc-card-footer-pm {
     margin-top: auto;
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
     gap: 8px;
     padding-top: 10px;
-    border-top: 1px solid #f1f5f9;
+    border-top: 1px solid var(--pm-secondary-200);
 }
 
-.kc-pm-price {
+.kc-card-price-pm {
     font-size: 16px;
     font-weight: 800;
-    color: #4f46e5;
+    color: var(--pm-primary);
     line-height: 1;
 }
 
-.kc-pm-old-price {
+.kc-card-old-price-pm {
     font-size: 12px;
-    color: #94a3b8;
+    color: var(--pm-text-light);
     text-decoration: line-through;
     margin-top: 3px;
 }
 
-.kc-pm-add-btn {
+.kc-card-add-btn-pm {
     width: 36px;
     height: 36px;
     border-radius: 12px;
-    background: #eef2ff;
-    color: #4f46e5;
+    background: var(--pm-primary-light);
+    color: var(--pm-primary);
     border: 1px solid #c7d2fe;
     display: grid;
     place-items: center;
@@ -368,19 +428,19 @@ body.kc-mk-body {
     flex-shrink: 0;
 }
 
-.kc-pm-add-btn:hover {
-    background: #4f46e5;
+.kc-card-add-btn-pm:hover {
+    background: var(--pm-primary);
     color: #ffffff;
-    border-color: #4f46e5;
+    border-color: var(--pm-primary);
 }
 
-/* Piyola Floating Mobile Bottom Bar */
-.kc-pm-mobile-bottom-bar {
+/* Piyola Floating Bottom Bar for Mobile */
+.kc-pm-mobile-bar {
     display: none;
 }
 
 @media (max-width: 768px) {
-    .kc-pm-mobile-bottom-bar {
+    .kc-pm-mobile-bar {
         position: fixed;
         bottom: 0;
         left: 0;
@@ -388,212 +448,26 @@ body.kc-mk-body {
         background: rgba(255, 255, 255, 0.95);
         backdrop-filter: blur(16px);
         -webkit-backdrop-filter: blur(16px);
-        border-top: 1px solid #e2e8f0;
-        z-index: 999;
+        border-top: 1px solid var(--pm-secondary-300);
+        z-index: 1000;
         display: flex;
         align-items: center;
         justify-content: space-around;
         padding: 8px 0;
     }
 
-    .kc-pm-mobile-nav-item {
+    .kc-pm-mobile-nav-link {
         display: flex;
         flex-direction: column;
         align-items: center;
         gap: 3px;
         text-decoration: none;
-        color: #64748b;
+        color: var(--pm-text-gray);
         font-size: 11px;
         font-weight: 600;
     }
 
-    .kc-pm-mobile-nav-item.active {
-        color: #4f46e5;
+    .kc-pm-mobile-nav-link.active {
+        color: var(--pm-primary);
     }
-
-    /* Pastdagi suzuvchi navigatsiya kontentni yopib qo'ymasligi uchun joy */
-    .kc-mk-main { padding-bottom: 72px; }
 }
-
-/* ==========================================================================
-   QOLGAN SAHIFALAR (katalog, mahsulot, savat, checkout) HAM shu "kc-pm-"
-   tizimidan foydalanadi — lekin ularga kerakli quyidagi umumiy bo'laklar
-   bu yerda hali yo'q edi: bo'sh joy utilitylari, Bootstrap "primary"
-   ranggi ko'prigi, savat paneli (drawer) va live-qidiruv popup uslubi.
-   Bularsiz sayt bo'ylab matnlar bir-biriga yopishib, savat paneli/qidiruv
-   ochilganda ko'rinmasdi. ========================================== */
-
-/* ── Bootstrap "primary"ni brend indigosiga bog'lash ────────────────────
-   checkout/savat/mahsulot sahifalarida oddiy btn-primary/text-primary/
-   bg-primary-subtle sinflari ko'p ishlatilgan — indigo bilan mos bo'lishi
-   uchun. */
-body.kc-mk-body {
-    --bs-primary: var(--kc-primary);
-    --bs-primary-rgb: 79, 70, 229;
-    --bs-primary-text-emphasis: var(--kc-primary-hover);
-    --bs-primary-bg-subtle: var(--kc-primary-light);
-    --bs-primary-border-subtle: #c7d2fe;
-    --bs-link-color: var(--kc-primary);
-    --bs-link-color-rgb: 79, 70, 229;
-    --bs-link-hover-color: var(--kc-primary-hover);
-}
-
-body.kc-mk-body .btn-primary {
-    background-color: var(--kc-primary);
-    border-color: var(--kc-primary);
-}
-body.kc-mk-body .btn-primary:hover,
-body.kc-mk-body .btn-primary:focus,
-body.kc-mk-body .btn-primary:active {
-    background-color: var(--kc-primary-hover) !important;
-    border-color: var(--kc-primary-hover) !important;
-}
-
-/* products/show.blade.php'dagi "ilovada ochish" bloki haqiqiy Bootstrap
-   sinfi bo'lmagan bg-indigo-subtle/border-indigo-subtle/btn-outline-indigo
-   ishlatadi. */
-body.kc-mk-body .bg-indigo-subtle { background-color: var(--kc-primary-light) !important; }
-body.kc-mk-body .border-indigo-subtle { border-color: #c7d2fe !important; }
-body.kc-mk-body .btn-outline-indigo { color: var(--kc-primary); border: 1px solid #c7d2fe; background: #fff; }
-body.kc-mk-body .btn-outline-indigo:hover { background: var(--kc-primary); color: #fff; border-color: var(--kc-primary); }
-
-/* ── Bo'sh joy utilitylari — hech qayerda aniqlanmagan edi ──────────────── */
-.u-mb-xs { margin-bottom: 6px; }
-.u-mb-s  { margin-bottom: 12px; }
-.u-mb-m  { margin-bottom: 20px; }
-.u-mb-l  { margin-bottom: 32px; }
-.u-mb-xl { margin-bottom: 48px; }
-.u-mt-xs { margin-top: 6px; }
-.u-mt-s  { margin-top: 12px; }
-.u-mt-m  { margin-top: 20px; }
-.u-mt-l  { margin-top: 32px; }
-.u-mt-xl { margin-top: 48px; }
-.u-my-xs { margin-top: 6px; margin-bottom: 6px; }
-.u-my-s  { margin-top: 12px; margin-bottom: 12px; }
-.u-my-m  { margin-top: 20px; margin-bottom: 20px; }
-.u-my-l  { margin-top: 32px; margin-bottom: 32px; }
-.u-my-xl { margin-top: 48px; margin-bottom: 48px; }
-
-.fw-black { font-weight: 900; }
-.fw-extrabold { font-weight: 800; }
-.color-inherit { color: inherit; }
-
-.kc-mk-main { min-height: 55vh; }
-
-/* ── Savat paneli (drawer) — marketplace.blade.php shu sinflarni ishlatadi:
-   .kc-drawer-bg / .kc-drawer-box, "active" holatda ochiladi ─────────────── */
-.kc-drawer-bg {
-    position: fixed;
-    inset: 0;
-    background: rgba(15, 23, 42, 0.45);
-    z-index: 2000;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.25s ease, visibility 0.25s ease;
-}
-.kc-drawer-bg.active { opacity: 1; visibility: visible; }
-
-.kc-drawer-box {
-    position: fixed;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: 100%;
-    max-width: 420px;
-    background: #ffffff;
-    z-index: 2001;
-    transform: translateX(100%);
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    display: flex;
-    flex-direction: column;
-    box-shadow: -12px 0 40px rgba(0, 0, 0, 0.12);
-}
-.kc-drawer-bg.active .kc-drawer-box { transform: translateX(0); }
-
-@media (max-width: 480px) {
-    .kc-drawer-box { max-width: 100%; }
-}
-
-/* ── Live-qidiruv popup — header shu sinflarni ishlatadi ────────────────── */
-.kc-search-results-popup {
-    display: none;
-    position: absolute;
-    top: calc(100% + 8px);
-    left: 0;
-    right: 0;
-    background: #ffffff;
-    border: 1px solid var(--kc-border);
-    border-radius: var(--kc-radius-card);
-    box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.12);
-    max-height: 420px;
-    overflow-y: auto;
-    z-index: 1040;
-    padding: 6px;
-}
-.kc-search-results-popup.active { display: block; }
-
-.kc-search-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 8px;
-    border-radius: 14px;
-    text-decoration: none;
-    color: inherit;
-    transition: background 0.1s ease;
-}
-.kc-search-item:hover { background: var(--kc-pill-bg); }
-.kc-search-item img { width: 40px; height: 54px; object-fit: cover; border-radius: 8px; flex-shrink: 0; background: var(--kc-pill-bg); }
-.kc-search-item-info { flex: 1; min-width: 0; }
-.kc-search-item-name { font-size: 13.5px; font-weight: 700; color: var(--kc-text-dark); line-height: 1.3; }
-.kc-search-item-meta { font-size: 12px; color: var(--kc-text-muted); }
-
-/* ── Hero banner ichidagi matn/tugma (kc-pm-banner allaqachon bor edi,
-   lekin ichidagi elementlar uslubsiz edi) ──────────────────────────────── */
-.kc-pm-banner-title { font-size: 30px; font-weight: 900; line-height: 1.2; margin-bottom: 8px; }
-.kc-pm-banner-sub { font-size: 15px; opacity: 0.9; margin-bottom: 20px; max-width: 480px; }
-.kc-pm-banner-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: #ffffff;
-    color: var(--kc-primary);
-    font-weight: 800;
-    font-size: 14px;
-    padding: 12px 24px;
-    border-radius: var(--kc-radius-pill);
-    text-decoration: none;
-    transition: transform 0.15s ease;
-}
-.kc-pm-banner-btn:hover { transform: translateY(-2px); color: var(--kc-primary-hover); }
-
-@media (max-width: 640px) {
-    .kc-pm-banner { padding: 28px 24px; }
-    .kc-pm-banner-title { font-size: 22px; }
-}
-
-/* ── Miqdor stepper (savat sahifasi va drawer'da ishlatiladi) ───────────── */
-.kc-qty-control {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    background: var(--kc-pill-bg);
-    border-radius: var(--kc-radius-pill);
-    padding: 4px 6px;
-}
-.kc-qty-btn {
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    border: none;
-    background: #ffffff;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-    font-weight: 700;
-    color: var(--kc-text-dark);
-    cursor: pointer;
-    display: grid;
-    place-items: center;
-    line-height: 1;
-}
-.kc-qty-btn:hover { background: var(--kc-primary); color: #fff; }
-.kc-qty-val { font-weight: 700; font-size: 13px; min-width: 16px; text-align: center; }
