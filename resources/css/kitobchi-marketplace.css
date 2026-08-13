@@ -1,362 +1,341 @@
 /* ==========================================================================
-   KITOBCHI MARKETPLACE — 1:1 PIYOLAMARKET NUXT TAILWIND UI/UX DESIGN SYSTEM
+   KITOBCHI MARKETPLACE — CHITAI-GOROD.RU BLUEPRINT DESIGN SYSTEM
    ========================================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
 :root {
-    --pm-primary: #4f46e5;
-    --pm-primary-hover: #4338ca;
-    --pm-primary-light: #eef2ff;
+    --cg-primary: #4f46e5;
+    --cg-primary-hover: #4338ca;
+    --cg-primary-light: #eef2ff;
     
-    --pm-secondary-100: #f8fafc;
-    --pm-secondary-200: #f1f5f9;
-    --pm-secondary-300: #e2e8f0;
+    --cg-bg-main: #f8fafc;
+    --cg-bg-white: #ffffff;
+    --cg-border-light: #e2e8f0;
     
-    --pm-text-dark: #0f172a;
-    --pm-text-gray: #64748b;
-    --pm-text-light: #94a3b8;
+    --cg-text-black: #0f172a;
+    --cg-text-gray: #64748b;
+    --cg-text-muted: #94a3b8;
     
-    --pm-radius-pill: 9999px;
-    --pm-radius-2xl: 16px;
-    --pm-radius-3xl: 24px;
-    --pm-radius-4xl: 30px;
-    
-    --pm-glass-bg: rgba(241, 245, 249, 0.95);
-    --pm-glass-border: rgba(255, 255, 255, 0.8);
-    --pm-shadow-sm: 0 4px 12px rgba(15, 23, 42, 0.04);
-    --pm-shadow-lg: 0 16px 36px rgba(15, 23, 42, 0.08);
+    --cg-radius-sm: 8px;
+    --cg-radius-md: 12px;
+    --cg-radius-lg: 16px;
+    --cg-radius-xl: 24px;
 }
 
-/* Global Reset */
-body.kc-mk-body {
+body.kc-cg-body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background-color: var(--pm-secondary-200);
-    color: var(--pm-text-dark);
+    background-color: var(--cg-bg-main);
+    color: var(--cg-text-black);
     margin: 0;
     padding: 0;
     -webkit-font-smoothing: antialiased;
     line-height: 1.4;
 }
 
-/* Glass Card & Border Helpers */
-.kc-glass-card {
+/* Chitai-Gorod Top Location & Utility Bar */
+.cg-top-bar {
     background: #ffffff;
-    border: 1px solid var(--pm-secondary-300);
-    border-radius: var(--pm-radius-3xl);
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    border-bottom: 1px solid var(--cg-border-light);
+    font-size: 13px;
+    color: var(--cg-text-gray);
+    padding: 6px 0;
 }
 
-.kc-glass-pill {
-    background: var(--pm-secondary-200);
-    border: 1px solid var(--pm-secondary-300);
-    border-radius: var(--pm-radius-pill);
-    transition: all 0.25s ease;
+.cg-top-bar-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 
-.kc-glass-pill:hover {
-    background: var(--pm-primary-light);
-    border-color: #c7d2fe;
+.cg-top-links {
+    display: flex;
+    align-items: center;
+    gap: 20px;
 }
 
-/* PiyolaMarket Sticky Header */
-.kc-layout-header {
+.cg-top-link {
+    color: var(--cg-text-gray);
+    text-decoration: none;
+    transition: color 0.15s ease;
+}
+
+.cg-top-link:hover {
+    color: var(--cg-primary);
+}
+
+/* Chitai-Gorod Main Header */
+.cg-header {
+    background: #ffffff;
+    border-bottom: 1px solid var(--cg-border-light);
     position: sticky;
     top: 0;
     z-index: 1000;
-    background: #ffffff;
-    border-bottom: 1px solid var(--pm-secondary-300);
-    padding: 14px 0;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
 }
 
-.kc-header-container {
+.cg-header-main {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 20px;
+    padding: 16px 0;
 }
 
-.kc-brand-link {
+/* Logo */
+.cg-logo-wrap {
     display: flex;
     align-items: center;
-    gap: 10px;
     text-decoration: none;
-    font-size: 22px;
-    font-weight: 900;
-    color: var(--pm-primary);
-    letter-spacing: -0.5px;
 }
 
-.kc-brand-link img {
-    height: 34px;
+.cg-logo-img {
+    height: 40px;
     width: auto;
 }
 
-/* Header Catalog Button */
-.kc-cat-trigger {
+/* Catalog Button (Chitai-Gorod Style Solid Button) */
+.cg-catalog-btn {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 10px 20px;
-    background: var(--pm-secondary-200);
-    border: 1px solid var(--pm-secondary-300);
-    border-radius: var(--pm-radius-pill);
-    color: var(--pm-text-dark);
-    font-size: 14px;
+    gap: 10px;
+    padding: 12px 24px;
+    background: var(--cg-primary);
+    color: #ffffff;
+    border-radius: var(--cg-radius-md);
+    font-size: 15px;
     font-weight: 700;
     text-decoration: none;
-    cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background 0.2s ease;
     white-space: nowrap;
+    border: none;
 }
 
-.kc-cat-trigger:hover {
-    background: var(--pm-primary-light);
-    color: var(--pm-primary);
-    border-color: #c7d2fe;
+.cg-catalog-btn:hover {
+    background: var(--cg-primary-hover);
+    color: #ffffff;
 }
 
-/* Search Bar Pill */
-.kc-header-search-wrap {
+/* Search Bar (Chitai-Gorod Style Input) */
+.cg-search-box {
     flex: 1;
-    max-width: 580px;
+    max-width: 620px;
     position: relative;
 }
 
-.kc-header-search-input {
+.cg-search-input {
     width: 100%;
     height: 48px;
-    padding: 0 46px 0 20px;
-    background: var(--pm-secondary-200);
-    border: 1px solid var(--pm-secondary-300);
-    border-radius: var(--pm-radius-pill);
-    font-size: 14px;
-    color: var(--pm-text-dark);
+    padding: 0 48px 0 16px;
+    background: var(--cg-bg-main);
+    border: 1px solid var(--cg-border-light);
+    border-radius: var(--cg-radius-md);
+    font-size: 14.5px;
+    color: var(--cg-text-black);
     outline: none;
-    transition: all 0.25s ease;
+    transition: all 0.2s ease;
 }
 
-.kc-header-search-input:focus {
+.cg-search-input:focus {
     background: #ffffff;
-    border-color: var(--pm-primary);
-    box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.12);
+    border-color: var(--cg-primary);
+    box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
 }
 
-.kc-header-search-btn {
+.cg-search-btn {
     position: absolute;
-    right: 6px;
+    right: 4px;
     top: 50%;
     transform: translateY(-50%);
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
     border: none;
-    background: var(--pm-primary);
-    color: #ffffff;
-    border-radius: 50%;
+    background: transparent;
+    color: var(--cg-text-gray);
+    border-radius: var(--cg-radius-md);
     display: grid;
     place-items: center;
     cursor: pointer;
-    transition: background 0.15s ease;
 }
 
-.kc-header-search-btn:hover {
-    background: var(--pm-primary-hover);
+.cg-search-btn:hover {
+    color: var(--cg-primary);
 }
 
-/* Action Group */
-.kc-header-actions {
+/* Header Right Control Buttons (Chitai-Gorod Style Verticals) */
+.cg-controls {
     display: flex;
     align-items: center;
-    gap: 10px;
-}
-
-.kc-action-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 9px 18px;
-    background: var(--pm-secondary-200);
-    border: 1px solid var(--pm-secondary-300);
-    border-radius: var(--pm-radius-pill);
-    color: var(--pm-text-dark);
-    font-size: 13.5px;
-    font-weight: 600;
-    text-decoration: none;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    white-space: nowrap;
-}
-
-.kc-action-pill:hover {
-    background: var(--pm-primary-light);
-    color: var(--pm-primary);
-    border-color: #c7d2fe;
-}
-
-.kc-badge-count {
-    background: #ef4444;
-    color: #ffffff;
-    font-size: 11px;
-    font-weight: 800;
-    padding: 2px 7px;
-    border-radius: 10px;
-}
-
-/* Circular Category Avatar Carousel (Piyola Market "Kataloglar") */
-.kc-cat-avatar-section {
-    padding: 32px 0 24px;
-}
-
-.kc-cat-avatar-title {
-    font-size: 26px;
-    font-weight: 900;
-    color: var(--pm-primary);
-    margin-bottom: 20px;
-    letter-spacing: -0.5px;
-}
-
-@media (min-width: 768px) {
-    .kc-cat-avatar-title {
-        font-size: 34px;
-    }
-}
-
-.kc-cat-avatar-row {
-    display: flex;
     gap: 20px;
-    overflow-x: auto;
-    scrollbar-width: none;
-    padding-bottom: 10px;
 }
 
-.kc-cat-avatar-row::-webkit-scrollbar {
-    display: none;
-}
-
-.kc-cat-avatar-item {
+.cg-control-btn {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
+    gap: 4px;
     text-decoration: none;
-    width: 105px;
-    flex-shrink: 0;
-}
-
-.kc-cat-avatar-circle {
-    width: 90px;
-    height: 90px;
-    border-radius: 50%;
-    overflow: hidden;
-    background: #ffffff;
-    border: 2px solid var(--pm-secondary-300);
-    display: grid;
-    place-items: center;
-    padding: 4px;
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    box-shadow: var(--pm-shadow-sm);
-}
-
-.kc-cat-avatar-item:hover .kc-cat-avatar-circle {
-    border-color: var(--pm-primary);
-    transform: scale(1.08);
-    box-shadow: 0 10px 24px rgba(79, 70, 229, 0.18);
-}
-
-.kc-cat-avatar-circle img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: 50%;
-}
-
-.kc-cat-avatar-name {
-    font-size: 13.5px;
-    font-weight: 700;
-    color: var(--pm-text-dark);
-    text-align: center;
-    line-height: 1.25;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-
-.kc-cat-avatar-item:hover .kc-cat-avatar-name {
-    color: var(--pm-primary);
-}
-
-/* Piyola Market Hero Banner Carousel */
-.kc-hero-banner {
-    border-radius: var(--pm-radius-4xl);
-    overflow: hidden;
-    background: linear-gradient(135deg, #4f46e5 0%, #312e81 100%);
-    color: #ffffff;
-    padding: 48px;
+    color: var(--cg-text-black);
+    font-size: 12.5px;
+    font-weight: 600;
     position: relative;
-    box-shadow: 0 20px 40px -10px rgba(79, 70, 229, 0.3);
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
 }
 
-/* Piyola Market 5-Column Product Grid */
-.kc-pm-product-grid {
+.cg-control-btn:hover {
+    color: var(--cg-primary);
+}
+
+.cg-control-btn svg {
+    width: 24px;
+    height: 24px;
+}
+
+.cg-badge {
+    position: absolute;
+    top: -4px;
+    right: -6px;
+    background: #ef4444;
+    color: #ffffff;
+    font-size: 10.5px;
+    font-weight: 800;
+    padding: 1px 6px;
+    border-radius: 10px;
+}
+
+/* Chitai-Gorod Micro Banners / Pills Bar */
+.cg-pills-bar {
+    background: #ffffff;
+    border-bottom: 1px solid var(--cg-border-light);
+    padding: 10px 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.cg-pills-bar::-webkit-scrollbar {
+    display: none;
+}
+
+.cg-pill-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: var(--cg-bg-main);
+    border: 1px solid var(--cg-border-light);
+    border-radius: var(--cg-radius-md);
+    color: var(--cg-text-black);
+    font-size: 13.5px;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+}
+
+.cg-pill-item:hover, .cg-pill-item.active {
+    background: var(--cg-primary);
+    color: #ffffff;
+    border-color: var(--cg-primary);
+}
+
+/* Shelf White Box Container (Chitai-Gorod Style Card Container) */
+.cg-shelf-box {
+    background: #ffffff;
+    border-radius: var(--cg-radius-xl);
+    padding: 24px 28px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+    margin-bottom: 32px;
+}
+
+.cg-shelf-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.cg-shelf-title {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--cg-text-black);
+    margin: 0;
+}
+
+.cg-shelf-link {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--cg-primary);
+    text-decoration: none;
+}
+
+.cg-shelf-link:hover {
+    text-decoration: underline;
+}
+
+/* Chitai-Gorod Product Card Grid (5 Columns) */
+.cg-product-grid {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
     gap: 20px;
 }
 
 @media (max-width: 1200px) {
-    .kc-pm-product-grid { grid-template-columns: repeat(4, 1fr); }
+    .cg-product-grid { grid-template-columns: repeat(4, 1fr); }
 }
 
 @media (max-width: 900px) {
-    .kc-pm-product-grid { grid-template-columns: repeat(3, 1fr); }
+    .cg-product-grid { grid-template-columns: repeat(3, 1fr); }
 }
 
 @media (max-width: 600px) {
-    .kc-pm-product-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .cg-product-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
 }
 
-.kc-product-card-pm {
-    background: #ffffff;
-    border: 1px solid var(--pm-secondary-300);
-    border-radius: var(--pm-radius-3xl);
-    padding: 16px;
+/* Chitai-Gorod Product Card Component */
+.cg-product-card {
     display: flex;
     flex-direction: column;
     height: 100%;
+    background: #ffffff;
+    border: 1px solid var(--cg-border-light);
+    border-radius: var(--cg-radius-lg);
+    padding: 14px;
     position: relative;
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: all 0.25s ease;
 }
 
-.kc-product-card-pm:hover {
+.cg-product-card:hover {
     border-color: #c7d2fe;
-    box-shadow: var(--pm-shadow-lg);
-    transform: translateY(-4px);
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+    transform: translateY(-3px);
 }
 
-.kc-card-cover-pm {
-    aspect-ratio: 3 / 4;
-    border-radius: var(--pm-radius-2xl);
+.cg-card-image-wrap {
+    aspect-ratio: 13 / 20;
+    border-radius: var(--cg-radius-md);
     overflow: hidden;
-    background: var(--pm-secondary-100);
+    background: var(--cg-bg-main);
     margin-bottom: 12px;
     position: relative;
     display: grid;
     place-items: center;
 }
 
-.kc-card-cover-pm img {
+.cg-card-image-wrap img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform 0.35s ease;
+    transition: transform 0.3s ease;
 }
 
-.kc-product-card-pm:hover .kc-card-cover-pm img {
-    transform: scale(1.06);
+.cg-product-card:hover .cg-card-image-wrap img {
+    transform: scale(1.05);
 }
 
-.kc-card-discount-tag {
+.cg-badge-sale {
     position: absolute;
     top: 8px;
     left: 8px;
@@ -364,14 +343,34 @@ body.kc-mk-body {
     color: #ffffff;
     font-size: 11px;
     font-weight: 800;
-    padding: 3px 8px;
-    border-radius: var(--pm-radius-pill);
+    padding: 2px 7px;
+    border-radius: var(--cg-radius-sm);
 }
 
-.kc-card-title-pm {
-    font-size: 14.5px;
+.cg-card-price-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.cg-card-price {
+    font-size: 17px;
+    font-weight: 800;
+    color: var(--cg-primary);
+    line-height: 1;
+}
+
+.cg-card-old-price {
+    font-size: 12px;
+    color: var(--cg-text-muted);
+    text-decoration: line-through;
+}
+
+.cg-card-title {
+    font-size: 14px;
     font-weight: 700;
-    color: var(--pm-text-dark);
+    color: var(--cg-text-black);
     line-height: 1.35;
     margin: 0 0 4px;
     display: -webkit-box;
@@ -381,93 +380,72 @@ body.kc-mk-body {
     height: 38px;
 }
 
-.kc-card-author-pm {
+.cg-card-author {
     font-size: 12.5px;
-    color: var(--pm-text-gray);
-    margin-bottom: 10px;
+    color: var(--cg-text-gray);
+    margin-bottom: 12px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.kc-card-footer-pm {
+.cg-card-btn {
     margin-top: auto;
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 8px;
-    padding-top: 10px;
-    border-top: 1px solid var(--pm-secondary-200);
-}
-
-.kc-card-price-pm {
-    font-size: 16px;
-    font-weight: 800;
-    color: var(--pm-primary);
-    line-height: 1;
-}
-
-.kc-card-old-price-pm {
-    font-size: 12px;
-    color: var(--pm-text-light);
-    text-decoration: line-through;
-    margin-top: 3px;
-}
-
-.kc-card-add-btn-pm {
-    width: 36px;
-    height: 36px;
-    border-radius: 12px;
-    background: var(--pm-primary-light);
-    color: var(--pm-primary);
+    width: 100%;
+    padding: 10px 0;
+    border-radius: var(--cg-radius-md);
+    background: var(--cg-primary-light);
+    color: var(--cg-primary);
     border: 1px solid #c7d2fe;
-    display: grid;
-    place-items: center;
+    font-size: 13.5px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     cursor: pointer;
     transition: all 0.15s ease;
-    flex-shrink: 0;
 }
 
-.kc-card-add-btn-pm:hover {
-    background: var(--pm-primary);
+.cg-card-btn:hover {
+    background: var(--cg-primary);
     color: #ffffff;
-    border-color: var(--pm-primary);
+    border-color: var(--cg-primary);
 }
 
-/* Piyola Floating Bottom Bar for Mobile */
-.kc-pm-mobile-bar {
+/* Chitai-Gorod Mobile Bottom Bar */
+.cg-mobile-bar {
     display: none;
 }
 
 @media (max-width: 768px) {
-    .kc-pm-mobile-bar {
+    .cg-mobile-bar {
         position: fixed;
         bottom: 0;
         left: 0;
         right: 0;
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(16px);
-        -webkit-backdrop-filter: blur(16px);
-        border-top: 1px solid var(--pm-secondary-300);
+        background: #ffffff;
+        border-top: 1px solid var(--cg-border-light);
         z-index: 1000;
         display: flex;
         align-items: center;
         justify-content: space-around;
         padding: 8px 0;
+        box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05);
     }
 
-    .kc-pm-mobile-nav-link {
+    .cg-mobile-link {
         display: flex;
         flex-direction: column;
         align-items: center;
         gap: 3px;
         text-decoration: none;
-        color: var(--pm-text-gray);
+        color: var(--cg-text-gray);
         font-size: 11px;
         font-weight: 600;
     }
 
-    .kc-pm-mobile-nav-link.active {
-        color: var(--pm-primary);
+    .cg-mobile-link.active {
+        color: var(--cg-primary);
     }
 }

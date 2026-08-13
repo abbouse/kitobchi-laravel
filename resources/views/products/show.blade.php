@@ -32,7 +32,7 @@
 
 @section('content')
 <div class="container">
-    <!-- Breadcrumbs Navigation -->
+    <!-- Breadcrumbs -->
     <nav class="u-mb-m" aria-label="Breadcrumb" style="font-size: 13px; color: #64748b;">
         <a href="{{ url('/') }}" class="text-decoration-none text-muted">Bosh sahifa</a>
         <span class="mx-1">/</span>
@@ -45,15 +45,15 @@
         <span class="text-dark fw-semibold">{{ \Illuminate\Support\Str::limit($product->name, 28) }}</span>
     </nav>
 
-    <!-- Main Product Card Grid -->
-    <div class="p-4 bg-white rounded-4 border shadow-sm u-mb-xl">
+    <!-- Chitai-Gorod Style Main Product Box -->
+    <div class="cg-shelf-box">
         <div class="row g-4">
-            <!-- Left Column: Image Gallery -->
+            <!-- Left Column: Image -->
             <div class="col-md-5">
-                <div class="rounded-3 overflow-hidden border bg-light position-relative text-center p-3" style="aspect-ratio: 3/4; display: grid; place-items: center;">
+                <div class="cg-card-image-wrap text-center p-3" style="aspect-ratio: 13/20; position: relative;">
                     <img src="{{ $imgUrl }}" alt="{{ $product->name }}" id="mainProductImg" style="max-height: 100%; max-width: 100%; object-fit: contain;">
                     @if($isDiscounted)
-                        <span class="badge bg-danger position-absolute top-0 start-0 m-3 px-3 py-2 rounded-pill fw-bold">
+                        <span class="cg-badge-sale" style="font-size: 12px; padding: 4px 10px;">
                             -{{ round((($origPrice - $currentPrice) / $origPrice) * 100) }}% CHEGIRMA
                         </span>
                     @endif
@@ -62,7 +62,7 @@
                 @if(is_array($product->images) && count($product->images) > 1)
                     <div class="d-flex gap-2 u-mt-m overflow-x-auto">
                         @foreach($product->images as $idx => $img)
-                            <button type="button" class="btn btn-outline-light border p-1 rounded-2" onclick="document.getElementById('mainProductImg').src='{{ asset('storage/' . $img) }}'" style="width: 60px; height: 75px;">
+                            <button type="button" class="btn btn-outline-light border p-1 rounded-3" onclick="document.getElementById('mainProductImg').src='{{ asset('storage/' . $img) }}'" style="width: 60px; height: 80px;">
                                 <img src="{{ asset('storage/' . $img) }}" alt="" style="width: 100%; height: 100%; object-fit: cover;">
                             </button>
                         @endforeach
@@ -70,7 +70,7 @@
                 @endif
             </div>
 
-            <!-- Right Column: Product Specs & Direct Web Buying Actions -->
+            <!-- Right Column: Specs & Buying Actions -->
             <div class="col-md-7 d-flex flex-column">
                 
                 <!-- Stock & Category Badges -->
@@ -94,12 +94,12 @@
                     @endif
                 </div>
 
-                <h1 class="h3 fw-black text-dark u-mb-xs" style="line-height: 1.3;">
+                <h1 class="h2 fw-black text-dark u-mb-xs" style="line-height: 1.3;">
                     {{ $product->name }}
                 </h1>
 
                 @if($productType === 'book' && $product->author)
-                    <div class="text-muted u-mb-s" style="font-size: 14.5px;">
+                    <div class="text-muted u-mb-s" style="font-size: 15px;">
                         Muallif: <a href="{{ route('web.catalog', ['search' => $product->author]) }}" class="fw-bold text-primary text-decoration-underline">{{ $product->author }}</a>
                     </div>
                 @endif
@@ -127,11 +127,11 @@
                 <div class="p-3 bg-light rounded-3 border u-mb-l">
                     <div class="d-flex align-items-baseline gap-2">
                         <div class="h2 fw-black text-primary mb-0">
-                            {{ number_format($currentPrice) }} <small class="fs-6">UZS</small>
+                            {{ number_format($currentPrice) }} <small class="fs-6">so'm</small>
                         </div>
                         @if($isDiscounted)
                             <div class="text-muted text-decoration-line-through fs-6">
-                                {{ number_format($origPrice) }} UZS
+                                {{ number_format($origPrice) }} so'm
                             </div>
                         @endif
                     </div>
@@ -139,138 +139,26 @@
 
                 <!-- Web Purchase Buttons -->
                 <div class="d-grid gap-2 d-sm-flex u-mb-l">
-                    <button type="button" class="btn btn-primary btn-lg rounded-pill px-4 fw-bold" onclick="addToCart({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $currentPrice }}, '{{ $imgUrl }}')">
+                    <button type="button" class="btn btn-primary btn-lg rounded-3 px-4 fw-bold" onclick="addToCart({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $currentPrice }}, '{{ $imgUrl }}')">
                         🛒 Savatga qo'shish
                     </button>
-                    <a href="{{ route('web.checkout') }}" class="btn btn-dark btn-lg rounded-pill px-4 fw-bold" onclick="addToCart({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $currentPrice }}, '{{ $imgUrl }}')">
+                    <a href="{{ route('web.checkout') }}" class="btn btn-dark btn-lg rounded-3 px-4 fw-bold" onclick="addToCart({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $currentPrice }}, '{{ $imgUrl }}')">
                         ⚡ Bir klikda sotib olish
                     </a>
                 </div>
 
-                <!-- App Referral Option -->
-                <div class="p-3 bg-indigo-subtle border border-indigo-subtle rounded-3 mt-auto">
-                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-                        <div>
-                            <small class="fw-bold text-dark d-block">Kitobchi mobil ilovasi orqali ochasizmi?</small>
-                            <small class="text-muted">Keshbek va chegirmalar bilan ilovada ko'rish mumkin.</small>
+                <!-- Description -->
+                @if(!empty($product->description))
+                    <div class="border-top pt-4 mt-auto">
+                        <h5 class="fw-bold text-dark mb-2">Kitob haqida ma'lumot</h5>
+                        <div class="text-muted small" style="line-height: 1.7; white-space: pre-line;">
+                            {!! strip_tags($product->description) !!}
                         </div>
-                        <a href="{{ $appScheme }}" class="btn btn-sm btn-outline-indigo rounded-pill fw-bold">
-                            📲 Ilovada ochish
-                        </a>
                     </div>
-                </div>
+                @endif
 
             </div>
         </div>
     </div>
-
-    <!-- Specifications & Description Grid -->
-    <div class="row g-4 u-mb-xl">
-        <div class="col-lg-7">
-            <div class="p-4 bg-white rounded-4 border h-100">
-                <h3 class="h5 fw-bold text-dark u-mb-m">Mahsulot haqida</h3>
-                <div class="text-muted" style="line-height: 1.7; font-size: 14.5px;">
-                    {!! nl2br(e($product->description ?? 'Bu mahsulot haqida qo\'shimcha ma\'lumot kiritilmagan.')) !!}
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-5">
-            <div class="p-4 bg-white rounded-4 border h-100">
-                <h3 class="h5 fw-bold text-dark u-mb-m">Xususiyatlari</h3>
-                <table class="table table-borderless table-sm text-muted" style="font-size: 14px;">
-                    <tbody>
-                        <tr>
-                            <td>Ombor holati:</td>
-                            <td class="fw-bold text-dark text-end">{{ $inStock ? 'Sotuvda mavjud' : 'Vaqtinchalik tugagan' }}</td>
-                        </tr>
-                        @if($product->artikul)
-                            <tr>
-                                <td>Artikul:</td>
-                                <td class="fw-bold text-dark text-end">{{ $product->artikul }}</td>
-                            </tr>
-                        @endif
-                        @if($productType === 'book' && $product->isbn)
-                            <tr>
-                                <td>ISBN:</td>
-                                <td class="fw-bold text-dark text-end">{{ $product->isbn }}</td>
-                            </tr>
-                        @endif
-                        @if($productType === 'book' && $product->publisher && $product->publisher->name)
-                            <tr>
-                                <td>Nashriyot:</td>
-                                <td class="fw-bold text-dark text-end">{{ $product->publisher->name }}</td>
-                            </tr>
-                        @endif
-                        @if($productType === 'book' && $product->year)
-                            <tr>
-                                <td>Chop etilgan yili:</td>
-                                <td class="fw-bold text-dark text-end">{{ $product->year }}</td>
-                            </tr>
-                        @endif
-                        @if($productType === 'book' && $product->pages)
-                            <tr>
-                                <td>Sahifalar soni:</td>
-                                <td class="fw-bold text-dark text-end">{{ $product->pages }} bet</td>
-                            </tr>
-                        @endif
-                        @if($categoryName)
-                            <tr>
-                                <td>Kategoriya:</td>
-                                <td class="fw-bold text-end"><a href="{{ route('web.catalog', ['category' => $product->category_id]) }}" class="text-primary text-decoration-underline">{{ $categoryName }}</a></td>
-                            </tr>
-                        @endif
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- O'xshash mahsulotlar -->
-    @if(isset($similarProducts) && $similarProducts->isNotEmpty())
-        <div class="u-mb-xl">
-            <h3 class="h4 fw-black text-primary u-mb-m">O'xshash mahsulotlar</h3>
-            <div class="kc-pm-grid">
-                @foreach($similarProducts as $sp)
-                    @php
-                        $spSlug = \Illuminate\Support\Str::slug($sp->name);
-                        $spUrl = $productType === 'book'
-                            ? route('web.books.show', ['id' => $sp->id, 'slug' => $spSlug])
-                            : route('web.stationery.show', ['id' => $sp->id, 'slug' => $spSlug]);
-                        $spImg = $sp->first_image ? asset('storage/' . $sp->first_image) : asset('images/logo/logo_blue.png');
-                        $spRawPrice = (float) $sp->price;
-                        $spDiscountRaw = $productType === 'book' ? (float) $sp->discountPrice : (float) $sp->discount_price;
-                        $spIsDiscounted = $spDiscountRaw > 0 && $spDiscountRaw < $spRawPrice;
-                        $spPrice = $spIsDiscounted ? $spDiscountRaw : $spRawPrice;
-                        $spSubtitle = $productType === 'book' ? ($sp->author ?: 'Kitobchi') : ($sp->material ?: 'Kanselyariya');
-                    @endphp
-                    <div class="kc-pm-product-card">
-                        <a href="{{ $spUrl }}" class="text-decoration-none color-inherit">
-                            <div class="kc-pm-cover-wrap">
-                                <img src="{{ $spImg }}" alt="{{ $sp->name }}" class="kc-pm-cover-img" loading="lazy">
-                                @if($spIsDiscounted)
-                                    <span class="kc-pm-discount-pill">-{{ round((($spRawPrice - $spPrice) / $spRawPrice) * 100) }}%</span>
-                                @endif
-                            </div>
-                            <h3 class="kc-pm-title">{{ $sp->name }}</h3>
-                            <div class="kc-pm-author">{{ $spSubtitle }}</div>
-                        </a>
-                        <div class="kc-pm-card-bottom">
-                            <div>
-                                <div class="kc-pm-price">{{ number_format($spPrice) }} so'm</div>
-                                @if($spIsDiscounted)
-                                    <div class="kc-pm-old-price">{{ number_format($spRawPrice) }} so'm</div>
-                                @endif
-                            </div>
-                            <button type="button" class="kc-pm-add-btn" onclick="addToCart({{ $sp->id }}, '{{ addslashes($sp->name) }}', {{ $spPrice }}, '{{ $spImg }}')" title="Savatchaga qo'shish">
-                                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
-                            </button>
-                        </div>
-                    </div>
-                @endforeach
-            </div>
-        </div>
-    @endif
-
 </div>
 @endsection
