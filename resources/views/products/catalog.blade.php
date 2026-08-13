@@ -16,8 +16,8 @@
         </div>
     </div>
 
-    <!-- Type Switcher -->
-    <div class="d-inline-flex kc-pm-glass-pill p-1 u-mb-m" role="group">
+    <!-- Type Switcher Pills -->
+    <div class="d-inline-flex piyola-glass-pill p-1 u-mb-m" role="group">
         <a href="{{ route('web.catalog', array_filter(['type' => 'book', 'search' => $search])) }}"
            class="btn btn-sm rounded-pill px-3 {{ $type === 'book' ? 'btn-primary' : 'btn-light text-muted border-0 bg-transparent' }}">
             📚 Kitoblar
@@ -58,7 +58,7 @@
         <!-- Catalog Product Grid Column -->
         <div class="col-lg-9">
             @if($products->count() > 0)
-                <div class="kc-pm-grid">
+                <div class="piyola-product-grid">
                     @foreach($products as $item)
                         @php
                             $isStationery = $type === 'stationery';
@@ -73,25 +73,25 @@
                             $price = $isDiscounted ? $discountRaw : $rawPrice;
                             $subtitle = $isStationery ? ($item->material ?: "Kanselyariya") : ($item->author ?: 'Kitobchi');
                         @endphp
-                        <div class="kc-pm-product-card">
+                        <div class="piyola-card">
                             <a href="{{ $url }}" class="text-decoration-none color-inherit">
-                                <div class="kc-pm-cover-wrap">
-                                    <img src="{{ $img }}" alt="{{ $item->name }}" class="kc-pm-cover-img" loading="lazy">
+                                <div class="piyola-card-cover">
+                                    <img src="{{ $img }}" alt="{{ $item->name }}" loading="lazy">
                                     @if($isDiscounted)
-                                        <span class="kc-pm-discount-pill">-{{ round((($rawPrice - $price) / $rawPrice) * 100) }}%</span>
+                                        <span class="piyola-discount-tag">-{{ round((($rawPrice - $price) / $rawPrice) * 100) }}%</span>
                                     @endif
                                 </div>
-                                <h3 class="kc-pm-title">{{ $item->name }}</h3>
-                                <div class="kc-pm-author">{{ $subtitle }}</div>
+                                <h3 class="piyola-card-title">{{ $item->name }}</h3>
+                                <div class="piyola-card-author">{{ $subtitle }}</div>
                             </a>
-                            <div class="kc-pm-card-bottom">
+                            <div class="piyola-card-footer">
                                 <div>
-                                    <div class="kc-pm-price">{{ number_format($price) }} so'm</div>
+                                    <div class="piyola-card-price">{{ number_format($price) }} so'm</div>
                                     @if($isDiscounted)
-                                        <div class="kc-pm-old-price">{{ number_format($rawPrice) }} so'm</div>
+                                        <div class="piyola-card-old-price">{{ number_format($rawPrice) }} so'm</div>
                                     @endif
                                 </div>
-                                <button type="button" class="kc-pm-add-btn" onclick="addToCart({{ $item->id }}, '{{ addslashes($item->name) }}', {{ $price }}, '{{ $img }}')" title="Savatchaga qo'shish">
+                                <button type="button" class="piyola-add-cart-btn" onclick="addToCart({{ $item->id }}, '{{ addslashes($item->name) }}', {{ $price }}, '{{ $img }}')" title="Savatchaga qo'shish">
                                     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
                                 </button>
                             </div>

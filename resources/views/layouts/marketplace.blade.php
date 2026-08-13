@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>@yield('title', 'Читай-город uslubidagi Kitobchi marketpleysi')</title>
+    <title>@yield('title', 'PiyolaMarket uslubidagi Kitobchi online do\'koni')</title>
     
     @stack('meta')
 
@@ -21,116 +21,71 @@
     
     @stack('styles')
 </head>
-<body class="kc-cg-body">
+<body class="kc-piyola-body">
 
-    <!-- Chitai-Gorod Top Location & Utility Bar -->
-    <div class="cg-top-bar d-none d-md-block">
+    <!-- PiyolaMarket Sticky Header -->
+    <header class="piyola-header">
         <div class="container">
-            <div class="cg-top-bar-inner">
-                <div class="d-flex align-items-center gap-2">
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z"/><circle cx="12" cy="10" r="3"/></svg>
-                    <span>Toshkent bo'ylab yetkazib berish</span>
-                </div>
-                <div class="cg-top-links">
-                    <a href="{{ route('web.catalog') }}" class="cg-top-link">Kataloglar</a>
-                    <a href="{{ route('legal.terms') }}" class="cg-top-link">Yetkazib berish va to'lov</a>
-                    <a href="{{ route('contact.index') }}" class="cg-top-link">Yordam</a>
-                    <a href="tel:+998712000000" class="cg-top-link fw-bold">+998 71 200 00 00</a>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Chitai-Gorod Main Navigation Sticky Header -->
-    <header class="cg-header">
-        <div class="container">
-            <div class="cg-header-main">
+            <div class="piyola-header-inner">
                 
                 <!-- Logo -->
-                <a href="{{ url('/') }}" class="cg-logo-wrap">
-                    <img src="{{ asset('images/logo/logo_blue.png') }}" alt="Kitobchi Logo" class="cg-logo-img">
+                <a href="{{ url('/') }}" class="piyola-logo">
+                    <img src="{{ asset('images/logo/logo_blue.png') }}" alt="Kitobchi Logo">
                 </a>
 
-                <!-- Catalog Button (Solid Primary) -->
-                <a href="{{ route('web.catalog') }}" class="cg-catalog-btn d-none d-md-inline-flex">
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
-                    <span>Katalog</span>
+                <!-- Kataloglar Button -->
+                <a href="{{ route('web.catalog') }}" class="piyola-cat-btn d-none d-md-inline-flex">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+                    <span>Kataloglar</span>
                 </a>
 
                 <!-- Search Input -->
-                <div class="cg-search-box">
+                <div class="piyola-search-wrap">
                     <form action="{{ route('web.catalog') }}" method="GET" id="kcSearchForm">
-                        <input type="text" name="search" class="cg-search-input" id="kcSearchInput" placeholder="Muallif, nom yoki janr bo'yicha qidirish..." value="{{ request('search') }}" autocomplete="off">
-                        <button type="submit" class="cg-search-btn" aria-label="Qidirish">
-                            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                        <input type="text" name="search" class="piyola-search-input" id="kcSearchInput" placeholder="Kitobchi’da izlash..." value="{{ request('search') }}" autocomplete="off">
+                        <button type="submit" class="piyola-search-btn" aria-label="Qidirish">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
                         </button>
                     </form>
                     <!-- Instant Live Search Dropdown Popup -->
                     <div class="kc-search-results-popup" id="kcSearchPopup"></div>
                 </div>
 
-                <!-- Right Controls (Chitai-Gorod Style Control Icons) -->
-                <div class="cg-controls">
-                    <a href="{{ route('web.catalog') }}" class="cg-control-btn d-none d-sm-flex">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                        <span>Sevimlilar</span>
-                    </a>
-
-                    <button type="button" class="cg-control-btn" onclick="toggleCartDrawer(true)">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-                        <span>Savatcha</span>
-                        <span class="cg-badge" id="kcCartCountBadge">0</span>
+                <!-- Right Actions -->
+                <div class="piyola-actions">
+                    <button type="button" class="piyola-action-link" onclick="toggleCartDrawer(true)">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                        <span class="d-none d-lg-inline">Savatcha</span>
+                        <span class="piyola-badge" id="kcCartCountBadge">0</span>
                     </button>
+
+                    <a href="{{ route('web.catalog') }}" class="piyola-action-link d-none d-sm-inline-flex">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                        <span class="d-none d-lg-inline">Sevimlilar</span>
+                    </a>
                 </div>
 
             </div>
         </div>
     </header>
 
-    <!-- Chitai-Gorod Horizontal Category Pills Strip -->
-    <div class="cg-pills-bar">
-        <div class="container">
-            <div class="d-flex align-items-center gap-2 overflow-x-auto">
-                <a href="{{ route('web.catalog') }}" class="cg-pill-item {{ !request('category') ? 'active' : '' }}">
-                    🔥 Barcha kitoblar
-                </a>
-
-                @php
-                    try {
-                        $topCategories = Cache::remember('web_top_categories_pills', 600, function() {
-                            return \App\Models\BookCategories::where('status', true)->orderBy('name')->take(10)->get();
-                        });
-                    } catch (\Throwable $e) {
-                        $topCategories = collect();
-                    }
-                @endphp
-
-                @foreach($topCategories as $cat)
-                    <a href="{{ route('web.catalog', ['category' => $cat->id]) }}" class="cg-pill-item {{ request('category') == $cat->id ? 'active' : '' }}">
-                        {{ $cat->name }}
-                    </a>
-                @endforeach
-            </div>
-        </div>
-    </div>
-
-    <!-- Main Content -->
-    <main class="kc-cg-main py-4">
+    <!-- Main Content Slot -->
+    <main class="kc-mk-main pb-5">
         @yield('content')
     </main>
 
-    <!-- Mobile Bottom Navigation Bar -->
-    <nav class="cg-mobile-bar">
-        <a href="{{ url('/') }}" class="cg-mobile-link {{ request()->is('/') ? 'active' : '' }}">
-            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+    <!-- Piyola Mobile Bottom Navigation Bar -->
+    <nav class="piyola-mobile-bar">
+        <a href="{{ url('/') }}" class="piyola-mobile-link {{ request()->is('/') ? 'active' : '' }}">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
             <span>Bosh sahifa</span>
         </a>
-        <a href="{{ route('web.catalog') }}" class="cg-mobile-link {{ request()->is('catalog*') ? 'active' : '' }}">
-            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        <a href="{{ route('web.catalog') }}" class="piyola-mobile-link {{ request()->is('catalog*') ? 'active' : '' }}">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
             <span>Katalog</span>
         </a>
-        <a href="javascript:void(0)" onclick="toggleCartDrawer(true)" class="cg-mobile-link">
-            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+        <a href="javascript:void(0)" onclick="toggleCartDrawer(true)" class="piyola-mobile-link">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
             <span>Savatcha</span>
         </a>
     </nav>
@@ -147,39 +102,40 @@
             </div>
             <div class="p-3 border-top bg-white">
                 <div class="d-flex justify-content-between h5 fw-black text-dark mb-3">
-                    <span>Jami:</span>
+                    <span>Jami summasi:</span>
                     <span class="text-primary" id="kcCartTotalSum">0 UZS</span>
                 </div>
-                <a href="{{ route('web.checkout') }}" class="btn btn-primary btn-lg w-100 rounded-3 fw-bold">
+                <a href="{{ route('web.checkout') }}" class="btn btn-primary btn-lg w-100 rounded-pill fw-bold">
                     Buyurtmani rasmiylashtirish &rarr;
                 </a>
             </div>
         </div>
     </div>
 
-    <!-- Chitai-Gorod Style Footer -->
-    <footer class="bg-white border-top mt-5 py-5">
+    <!-- Marketplace Footer -->
+    <footer class="bg-white border-top u-mt-xl py-5">
         <div class="container">
             <div class="row g-4">
                 <div class="col-lg-4">
-                    <a href="{{ url('/') }}" class="cg-logo-wrap mb-3">
-                        <img src="{{ asset('images/logo/logo_blue.png') }}" alt="Kitobchi Logo" class="cg-logo-img">
+                    <a href="{{ url('/') }}" class="piyola-logo u-mb-s">
+                        <img src="{{ asset('images/logo/logo_blue.png') }}" alt="Kitobchi Logo">
                     </a>
                     <p class="text-muted small" style="line-height: 1.6;">
-                        Читай-город uslubidagi original kitoblar va o'quv qurollari internet-do'koni. O'zbekiston bo'ylab tezkor yetkazib berish.
+                        Original kitoblar va o'quv qurollari online do'koni. O'zbekiston bo'ylab tezkor yetkazib berish.
                     </p>
                 </div>
 
                 <div class="col-6 col-lg-3">
                     <h6 class="fw-bold text-dark mb-3">Kataloglar</h6>
                     <ul class="list-unstyled text-muted small" style="line-height: 2;">
-                        <li><a href="{{ route('web.catalog') }}" class="text-muted text-decoration-none">Barcha kitoblar</a></li>
+                        <li><a href="{{ route('web.catalog') }}" class="text-muted text-decoration-none">Kataloglar</a></li>
                         <li><a href="{{ route('legal.terms') }}" class="text-muted text-decoration-none">Yetkazib berish va to'lov</a></li>
+                        <li><a href="{{ route('careers.index') }}" class="text-muted text-decoration-none">Vakansiyalar</a></li>
                     </ul>
                 </div>
 
                 <div class="col-6 col-lg-3">
-                    <h6 class="fw-bold text-dark mb-3">Ma'lumotlar</h6>
+                    <h6 class="fw-bold text-dark mb-3">Hujjatlar</h6>
                     <ul class="list-unstyled text-muted small" style="line-height: 2;">
                         <li><a href="{{ route('legal.privacy') }}" class="text-muted text-decoration-none">Maxfiylik siyosati</a></li>
                         <li><a href="{{ route('legal.terms') }}" class="text-muted text-decoration-none">Foydalanish shartlari</a></li>
@@ -194,7 +150,7 @@
         </div>
     </footer>
 
-    <!-- Client Interactive JS -->
+    <!-- Client JS Script -->
     <script>
         let kcCartState = JSON.parse(localStorage.getItem('kc_web_cart') || '[]');
 

@@ -47,29 +47,15 @@
                     <label class="p-3 border rounded-3 d-flex align-items-center gap-3 cursor-pointer">
                         <input type="radio" name="payment_method" value="cash" checked class="form-check-input">
                         <div>
-                            <div class="fw-bold text-dark">💵 Qabul qilganda naqd yoki karta orqali</div>
-                            <small class="text-muted">Kuryer mahsulotni topshirganda to'laysiz</small>
+                            <div class="fw-bold text-dark">💵 Qabul qilganda naqd to'lov</div>
+                            <small class="text-muted">Kuryer mahsulotni yetkazib berganda naqd pulda to'laysiz</small>
                         </div>
                     </label>
                     <label class="p-3 border rounded-3 d-flex align-items-center gap-3 cursor-pointer">
-                        <input type="radio" name="payment_method" value="click" class="form-check-input">
+                        <input type="radio" name="payment_method" value="card" class="form-check-input">
                         <div>
-                            <div class="fw-bold text-dark">🔹 Click App / USSD</div>
-                            <small class="text-muted">Click ilovasi orqali to'lov</small>
-                        </div>
-                    </label>
-                    <label class="p-3 border rounded-3 d-flex align-items-center gap-3 cursor-pointer">
-                        <input type="radio" name="payment_method" value="payme" class="form-check-input">
-                        <div>
-                            <div class="fw-bold text-dark">🟢 Payme</div>
-                            <small class="text-muted">Payme ilovasi orqali to'lov</small>
-                        </div>
-                    </label>
-                    <label class="p-3 border rounded-3 d-flex align-items-center gap-3 cursor-pointer">
-                        <input type="radio" name="payment_method" value="uzum" class="form-check-input">
-                        <div>
-                            <div class="fw-bold text-dark">🟣 Uzum Pay</div>
-                            <small class="text-muted">Uzum Pay orqali instant to'lov</small>
+                            <div class="fw-bold text-dark">💳 Karta orqali to'lov (Kartadan kartaga o'tkazma / terminal)</div>
+                            <small class="text-muted">Kuryerga karta orqali yoki karta raqamiga o'tkazib to'laysiz</small>
                         </div>
                     </label>
                 </div>

@@ -71,7 +71,7 @@ class WebCheckoutController extends Controller
             'phone_number' => 'required|string|max:25',
             'address' => 'required|string|max:255',
             'region' => ['required', 'string', 'in:'.implode(',', array_keys(self::REGIONS))],
-            'payment_method' => 'required|string|in:cash,click,payme,uzum',
+            'payment_method' => 'required|string|in:cash,card',
             'cart_items' => 'required|array|min:1',
             'cart_items.*.id' => 'required|integer',
             'cart_items.*.quantity' => 'required|integer|min:1',
