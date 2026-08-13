@@ -268,12 +268,20 @@ class ProductCatalogController extends Controller
                 ->with(['publisher', 'category'])
                 ->take(5000)
                 ->get();
+
+            $stationeries = Stationery::where('status', true)
+                ->where('is_approved', 1)
+                ->where('is_hidden', 0)
+                ->with(['category'])
+                ->take(2000)
+                ->get();
         } catch (\Throwable $e) {
             $books = collect();
+            $stationeries = collect();
         }
 
         return response()
-            ->view('seo.google-merchant', compact('books'))
+            ->view('seo.google-merchant', compact('books', 'stationeries'))
             ->header('Content-Type', 'text/xml');
     }
 

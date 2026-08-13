@@ -6,6 +6,13 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="theme-color" content="#393737">
     @stack('meta')
+    @php
+        $seoService = app(\App\Services\SeoService::class);
+        $websiteSchema = $seoService->buildWebSiteSearchSchema();
+    @endphp
+    <script type="application/ld+json">
+        {!! json_encode($websiteSchema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}
+    </script>
     <title>@yield('title', 'Kitobchi — kitob va kanselyariya marketpleysi')</title>
     <link rel="stylesheet" href="{{ asset('vendor/popcorn/popcorn-2024.webflow.shared.cef7bd9c3.min.css') }}">
     <link rel="stylesheet" href="{{ asset('vendor/popcorn/popcorn-embed.css') }}">

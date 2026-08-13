@@ -6,6 +6,14 @@
     <meta name="csrf-token" content="<?php echo e(csrf_token()); ?>">
     <meta name="theme-color" content="#393737">
     <?php echo $__env->yieldPushContent('meta'); ?>
+    <?php
+        $seoService = app(\App\Services\SeoService::class);
+        $websiteSchema = $seoService->buildWebSiteSearchSchema();
+    ?>
+    <script type="application/ld+json">
+        <?php echo json_encode($websiteSchema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>
+
+    </script>
     <title><?php echo $__env->yieldContent('title', 'Kitobchi — kitob va kanselyariya marketpleysi'); ?></title>
     <link rel="stylesheet" href="<?php echo e(asset('vendor/popcorn/popcorn-2024.webflow.shared.cef7bd9c3.min.css')); ?>">
     <link rel="stylesheet" href="<?php echo e(asset('vendor/popcorn/popcorn-embed.css')); ?>">
