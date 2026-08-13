@@ -40,7 +40,7 @@ class ProductCatalogController extends Controller
         }
 
         try {
-            $similarProducts = $this->visibleBooks()
+            $similarBooks = $this->visibleBooks()
                 ->where('id', '!=', $book->id)
                 ->where(function ($q) use ($book) {
                     if ($book->category_id) {
@@ -51,8 +51,17 @@ class ProductCatalogController extends Controller
                     }
                 })
                 ->orderByDesc('totalSales')
-                ->take(12)
-                ->get();
+                ->take(8)
+                ->get()
+                ->map(function($b) { $b->type_label = 'book'; return $b; });
+
+            $similarStationery = $this->visibleStationeries()
+                ->orderByDesc('totalSales')
+                ->take(4)
+                ->get()
+                ->map(function($s) { $s->type_label = 'stationery'; return $s; });
+
+            $similarProducts = $similarBooks->concat($similarStationery)->shuffle();
         } catch (\Throwable $e) {
             $similarProducts = collect();
         }

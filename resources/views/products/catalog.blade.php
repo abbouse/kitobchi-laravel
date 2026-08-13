@@ -76,7 +76,7 @@
                                   font-weight:{{ request('category') == $cat->id ? '600' : '400' }};"
                            onmouseover="if(!this.style.background.includes('ede9fe'))this.style.background='#f9fafb'"
                            onmouseout="if(!this.style.background.includes('ede9fe'))this.style.background='transparent'">
-                            {{ $cat->icon ? $cat->icon . ' ' : '' }}{{ $cat->name }}
+                            {{ $cat->icon ? $cat->icon . ' ' : '' }}{{ $cat->name_uz ?? $cat->name }}
                             @if(request('category') == $cat->id)
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
                             @endif
@@ -112,7 +112,7 @@
                                style="display:inline-flex;align-items:center;padding:0.375rem 0.875rem;border-radius:9999px;font-size:0.8125rem;font-weight:500;text-decoration:none;white-space:nowrap;transition:all 0.2s;flex-shrink:0;
                                       background:{{ request('category') == $cat->id ? 'var(--color-tima-500)' : '#f3f4f6' }};
                                       color:{{ request('category') == $cat->id ? '#fff' : '#374151' }};">
-                                {{ $cat->icon ? $cat->icon . ' ' : '' }}{{ $cat->name }}
+                                {{ $cat->icon ? $cat->icon . ' ' : '' }}{{ $cat->name_uz ?? $cat->name }}
                             </a>
                         @endforeach
                     </div>

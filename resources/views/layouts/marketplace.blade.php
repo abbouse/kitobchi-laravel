@@ -178,14 +178,16 @@
         }
 
         /* Cart drawer */
-        .kc-cart-overlay {
+        .kc-cart-overlay, .kc-modal-overlay {
             display: none;
             position: fixed;
             inset: 0;
             z-index: 100;
             background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
         }
-        .kc-cart-overlay.active { display: block; }
+        .kc-cart-overlay.active, .kc-modal-overlay.active { display: flex; align-items: center; justify-content: center; }
+        
         .kc-cart-panel {
             position: fixed;
             top: 0;
@@ -199,14 +201,16 @@
             box-shadow: -4px 0 24px rgba(0,0,0,0.1);
         }
 
-        /* icon fonts from icomoon (PiyolaMarket uses these) */
-        .icon-order::before { content: "🛒"; font-style: normal; }
-        .icon-heart::before { content: "♡"; font-style: normal; }
-        .icon-globe::before { content: "🌐"; font-style: normal; }
-
-        /* Slider dots */
-        [data-state=active].kc-dot { width: 1rem; background: #010101; }
-        .kc-dot { height: 0.375rem; width: 0.375rem; background: #d1d5db; border-radius: 9999px; transition: all 0.3s; cursor: pointer; }
+        /* Auth Modal Container */
+        .kc-auth-card {
+            width: 90%;
+            max-width: 400px;
+            background: #fff;
+            border-radius: 1.5rem;
+            padding: 2rem;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+            position: relative;
+        }
 
         /* bg-secondary-300 */
         .bg-secondary-300 { background-color: oklch(80.9% 0.105 251.813); }
@@ -220,9 +224,7 @@
         main { min-height: 100dvh; }
         @media (max-width: 767px) { main { padding-bottom: 71px; } }
 
-        /* Tailwind bg-secondary-300 = slate-300 ish */
         .page-wrapper { display: flex; flex-direction: column; background-color: #e2e8f0; min-height: 100dvh; }
-        @media (min-width: 768px) { .page-wrapper { min-height: 100dvh; } }
     </style>
 
     @stack('styles')
@@ -280,7 +282,7 @@
                         <div id="kcSearchPopup" style="display:none;position:absolute;top:calc(100% + 8px);left:0;right:0;background:#fff;border-radius:1rem;box-shadow:0 20px 40px rgba(0,0,0,0.12);z-index:200;overflow:hidden;max-height:400px;overflow-y:auto;"></div>
                     </div>
 
-                    <!-- Right: Cart + Favorites + Language -->
+                    <!-- Right: Cart + Favorites + Auth User -->
                     <div style="display:flex;align-items:center;gap:1rem;">
                         <div class="relative overflow-hidden transition-shadow duration-300 glass-card-bg flex-y-center"
                              style="padding:0.25rem;height:3rem;border-radius:9999px;background-color:#e2e8f0;">
@@ -306,6 +308,28 @@
                                 </svg>
                                 <span style="display:none;font-size:0.875rem;font-weight:400;" class="lg-show">Sevimlilar</span>
                             </a>
+                        </div>
+
+                        <!-- Auth Profile Button (Glass pill) -->
+                        <div class="relative overflow-hidden transition-shadow duration-300 glass-card-bg flex-y-center"
+                             style="padding:0.25rem;height:3rem;border-radius:9999px;background-color:#e2e8f0;">
+                            <div class="absolute inset-0 pointer-events-none glass-border" style="border-radius:9999px;"></div>
+                            
+                            @auth
+                                <a href="{{ route('web.profile') }}" style="display:flex;align-items:center;gap:0.5rem;padding:0.625rem 1rem;border-radius:9999px;text-decoration:none;color:#111827;font-size:0.875rem;font-weight:600;">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                                    </svg>
+                                    <span class="lg-show">{{ Str::limit(auth()->user()->name ?: auth()->user()->phone_number, 12) }}</span>
+                                </a>
+                            @else
+                                <button onclick="openAuthModal()" style="display:flex;align-items:center;gap:0.5rem;padding:0.625rem 1rem;border-radius:9999px;background:none;border:none;cursor:pointer;font-family:inherit;color:#111827;font-size:0.875rem;font-weight:500;">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                                    </svg>
+                                    <span class="lg-show">Kirish</span>
+                                </button>
+                            @endauth
                         </div>
                     </div>
                 </div>
@@ -350,19 +374,14 @@
             <div class="kc-container">
                 <div style="display:grid;grid-template-columns:1fr;gap:2rem;">
 
-                    <!-- Row 1: Brand + Links + Social -->
-                    <div style="display:grid;grid-template-columns:1fr;gap:2rem;">
-
-                        <!-- Brand -->
-                        <div>
-                            <a href="{{ url('/') }}" style="display:inline-flex;align-items:center;margin-bottom:1rem;">
-                                <img src="{{ asset('images/logo/logo_blue.png') }}" alt="Kitobchi" style="height:2rem;width:auto;filter:brightness(0) invert(1);">
-                            </a>
-                            <p style="color:rgba(255,255,255,0.7);font-size:0.875rem;line-height:1.7;max-width:280px;margin:0;">
-                                Original kitoblar va kanselyariya mahsulotlarini onlayn xarid qiling. O'zbekiston bo'ylab tezkor yetkazib berish.
-                            </p>
-                        </div>
-
+                    <!-- Row 1: Brand + Description -->
+                    <div>
+                        <a href="{{ url('/') }}" style="display:inline-flex;align-items:center;margin-bottom:1rem;">
+                            <img src="{{ asset('images/logo/logo_blue.png') }}" alt="Kitobchi" style="height:2rem;width:auto;filter:brightness(0) invert(1);">
+                        </a>
+                        <p style="color:rgba(255,255,255,0.7);font-size:0.875rem;line-height:1.7;max-width:340px;margin:0;">
+                            Kitobchi — O'zbekistondagi eng ulkan onlayn kitoblar va kanselyariya marketpleysi. Foydalanuvchilarga sifatli va hamyonbop mahsulotlarni tezda yetkazamiz.
+                        </p>
                     </div>
 
                     <!-- Row 2: Nav columns -->
@@ -379,7 +398,7 @@
 
                         <!-- Yordam -->
                         <div>
-                            <h3 style="font-size:1rem;font-weight:700;margin:0 0 1rem;">Yordam</h3>
+                            <h3 style="font-size:1rem;font-weight:700;margin:0 0 1rem;">Mijozlar xizmati</h3>
                             <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:0.5rem;">
                                 <li><a href="{{ route('legal.terms') }}" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.875rem;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">Yetkazib berish</a></li>
                                 <li><a href="{{ route('legal.terms') }}" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.875rem;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">To'lovlar</a></li>
@@ -391,9 +410,7 @@
                         <div>
                             <h3 style="font-size:1rem;font-weight:700;margin:0 0 1rem;">Ijtimoiy tarmoqlar</h3>
                             <div style="display:flex;gap:0.75rem;margin-bottom:1.5rem;">
-                                <a href="https://t.me/kitobchi" target="_blank"
-                                   class="liquidGlass-wrapper"
-                                   style="width:2.5rem;height:2.5rem;display:flex;align-items:center;justify-content:center;">
+                                <a href="https://t.me/kitobchi" target="_blank" class="liquidGlass-wrapper" style="width:2.5rem;height:2.5rem;display:flex;align-items:center;justify-content:center;">
                                     <div class="liquidGlass-effect"></div>
                                     <div class="liquidGlass-tint"></div>
                                     <div class="liquidGlass-shine"></div>
@@ -403,9 +420,7 @@
                                         </svg>
                                     </div>
                                 </a>
-                                <a href="https://instagram.com/kitobchi" target="_blank"
-                                   class="liquidGlass-wrapper"
-                                   style="width:2.5rem;height:2.5rem;display:flex;align-items:center;justify-content:center;">
+                                <a href="https://instagram.com/kitobchi" target="_blank" class="liquidGlass-wrapper" style="width:2.5rem;height:2.5rem;display:flex;align-items:center;justify-content:center;">
                                     <div class="liquidGlass-effect"></div>
                                     <div class="liquidGlass-tint"></div>
                                     <div class="liquidGlass-shine"></div>
@@ -416,26 +431,9 @@
                                     </div>
                                 </a>
                             </div>
-                            <a href="tel:+998909999999" style="font-size:1.25rem;font-weight:700;color:#fff;text-decoration:none;display:block;margin-bottom:1rem;">
-                                +998 90 999 99 99
+                            <a href="tel:+998555120102" style="font-size:1.25rem;font-weight:700;color:#fff;text-decoration:none;display:block;margin-bottom:1rem;">
+                                +998 55 512 01 02
                             </a>
-                            <!-- App stores -->
-                            <div style="display:flex;flex-wrap:wrap;gap:0.5rem;">
-                                <a href="#" style="display:inline-flex;align-items:center;gap:0.5rem;background:#000;border-radius:0.75rem;padding:0.5rem 0.75rem;text-decoration:none;transition:opacity 0.2s;" target="_blank">
-                                    <svg width="28" height="28" viewBox="0 0 28 28" fill="white"><path d="M14 2.333C7.557 2.333 2.333 7.557 2.333 14S7.557 25.667 14 25.667 25.667 20.443 25.667 14 20.443 2.333 14 2.333zm.7 16.917h-1.4v-7h1.4v7zm0-9.333h-1.4V8.75h1.4v1.167z"/></svg>
-                                    <div style="display:flex;flex-direction:column;line-height:1.2;color:#fff;">
-                                        <span style="font-size:10px;">Yuklab olish</span>
-                                        <span style="font-size:13px;font-weight:700;">Google Play</span>
-                                    </div>
-                                </a>
-                                <a href="#" style="display:inline-flex;align-items:center;gap:0.5rem;background:#000;border-radius:0.75rem;padding:0.5rem 0.75rem;text-decoration:none;transition:opacity 0.2s;" target="_blank">
-                                    <svg width="28" height="28" viewBox="0 0 28 28" fill="white"><path d="M18.667 2.333H9.333A2.336 2.336 0 0 0 7 4.667v18.666A2.336 2.336 0 0 0 9.333 25.667h9.334A2.336 2.336 0 0 0 21 23.333V4.667A2.336 2.336 0 0 0 18.667 2.333zM14 24.5a1.167 1.167 0 1 1 0-2.334A1.167 1.167 0 0 1 14 24.5zm5.833-4.083H8.167V6.417h11.666v14z"/></svg>
-                                    <div style="display:flex;flex-direction:column;line-height:1.2;color:#fff;">
-                                        <span style="font-size:10px;">Yuklab olish</span>
-                                        <span style="font-size:13px;font-weight:700;">App Store</span>
-                                    </div>
-                                </a>
-                            </div>
                         </div>
                     </div>
 
@@ -482,14 +480,24 @@
             </div>
             <span>Savatcha</span>
         </button>
-        <a href="{{ route('web.catalog') }}"
-           style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:0.5rem 0;text-decoration:none;color:#6b7280;font-size:0.6875rem;">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                <circle cx="12" cy="7" r="4"/>
-            </svg>
-            <span>Profil</span>
-        </a>
+
+        @auth
+            <a href="{{ route('web.profile') }}"
+               style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:0.5rem 0;text-decoration:none;color:{{ request()->is('profile*') ? 'var(--color-tima-500)' : '#6b7280' }};font-size:0.6875rem;font-weight:{{ request()->is('profile*') ? '600' : '400' }};">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                </svg>
+                <span>Profil</span>
+            </a>
+        @else
+            <button onclick="openAuthModal()"
+                    style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:0.5rem 0;background:none;border:none;cursor:pointer;color:#6b7280;font-size:0.6875rem;font-family:inherit;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                </svg>
+                <span>Kirish</span>
+            </button>
+        @endauth
     </nav>
 
     <!-- ====== CHAT FAB ====== -->
@@ -509,25 +517,18 @@
 <!-- ====== CART DRAWER ====== -->
 <div id="kcCartOverlay" class="kc-cart-overlay" onclick="if(event.target===this) toggleCartDrawer(false)">
     <div class="kc-cart-panel">
-        <!-- Header -->
         <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid #f3f4f6;">
             <h5 style="font-size:1.125rem;font-weight:800;margin:0;color:#111827;">Savatcha</h5>
             <button onclick="toggleCartDrawer(false)" style="width:2rem;height:2rem;display:flex;align-items:center;justify-content:center;border:none;background:#f3f4f6;border-radius:9999px;cursor:pointer;">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <path d="M18 6 6 18M6 6l12 12"/>
-                </svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
             </button>
         </div>
-
-        <!-- Body -->
         <div id="kcCartBody" style="flex:1;overflow-y:auto;padding:1rem 1.25rem;">
             <div style="text-align:center;padding:3rem 0;color:#9ca3af;">
                 <div style="font-size:3rem;">🛒</div>
                 <div style="font-weight:600;margin-top:0.5rem;">Savatchangiz bo'sh</div>
             </div>
         </div>
-
-        <!-- Footer -->
         <div style="padding:1rem 1.25rem;border-top:1px solid #f3f4f6;background:#fff;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.875rem;">
                 <span style="font-size:1rem;font-weight:600;color:#111827;">Jami:</span>
@@ -542,10 +543,74 @@
     </div>
 </div>
 
+<!-- ====== AUTH MODAL (PiyolaMarket Style) ====== -->
+<div id="kcAuthModalOverlay" class="kc-modal-overlay" onclick="if(event.target===this) closeAuthModal()">
+    <div class="kc-auth-card">
+        <button onclick="closeAuthModal()" style="position:absolute;top:1.25rem;right:1.25rem;width:2rem;height:2rem;display:flex;align-items:center;justify-content:center;border:none;background:#f3f4f6;border-radius:9999px;cursor:pointer;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+
+        <!-- Step 1: Phone -->
+        <div id="kcAuthStep1">
+            <div style="text-align:center;margin-bottom:1.5rem;">
+                <div style="font-size:2.5rem;margin-bottom:0.5rem;">📱</div>
+                <h3 style="font-size:1.25rem;font-weight:800;color:#111827;margin:0 0 0.5rem;">Tizimga kirish</h3>
+                <p style="color:#6b7280;font-size:0.875rem;margin:0;line-height:1.5;">Buyurtmalaringizni kuzatish va xarid qilish uchun telefon raqamingizni kiriting.</p>
+            </div>
+
+            <form id="kcPhoneForm" onsubmit="handleSendCode(event)">
+                <div style="margin-bottom:1.25rem;">
+                    <label style="display:block;font-size:0.8125rem;font-weight:600;color:#374151;margin-bottom:0.375rem;">Telefon raqami</label>
+                    <div style="display:flex;align-items:center;background:#f9fafb;border:1px solid #d1d5db;border-radius:0.75rem;padding:0 0.875rem;height:3rem;">
+                        <span style="font-weight:700;color:#111827;margin-right:0.5rem;font-size:0.9375rem;">+998</span>
+                        <input type="tel" id="kcAuthPhone" placeholder="90 123 45 67" required
+                               style="flex:1;background:transparent;border:none;outline:none;font-size:1rem;font-weight:600;color:#111827;font-family:inherit;">
+                    </div>
+                </div>
+
+                <div id="kcAuthError1" style="display:none;color:#ef4444;font-size:0.8125rem;margin-bottom:1rem;text-align:center;"></div>
+
+                <button type="submit" id="kcSendBtn"
+                        style="width:100%;height:3rem;background:var(--color-tima-500);color:#fff;border:none;border-radius:9999px;font-size:0.9375rem;font-weight:700;cursor:pointer;transition:all 0.2s;">
+                    Kodni yuborish →
+                </button>
+            </form>
+        </div>
+
+        <!-- Step 2: Code -->
+        <div id="kcAuthStep2" style="display:none;">
+            <div style="text-align:center;margin-bottom:1.5rem;">
+                <div style="font-size:2.5rem;margin-bottom:0.5rem;">🔑</div>
+                <h3 style="font-size:1.25rem;font-weight:800;color:#111827;margin:0 0 0.5rem;">Kodni kiriting</h3>
+                <p style="color:#6b7280;font-size:0.875rem;margin:0;line-height:1.5;" id="kcAuthSentMsg">SMS orqali yuborilgan 6 xonali kodni kiriting.</p>
+            </div>
+
+            <form id="kcCodeForm" onsubmit="handleVerifyCode(event)">
+                <div style="margin-bottom:1.25rem;">
+                    <input type="text" id="kcAuthCode" placeholder="222222" maxlength="6" required
+                           style="width:100%;height:3.25rem;background:#f9fafb;border:2px solid var(--color-tima-500);border-radius:0.75rem;text-align:center;font-size:1.5rem;font-weight:800;letter-spacing:0.375rem;color:#111827;outline:none;font-family:inherit;">
+                </div>
+
+                <div id="kcAuthError2" style="display:none;color:#ef4444;font-size:0.8125rem;margin-bottom:1rem;text-align:center;"></div>
+
+                <button type="submit" id="kcVerifyBtn"
+                        style="width:100%;height:3rem;background:var(--color-tima-500);color:#fff;border:none;border-radius:9999px;font-size:0.9375rem;font-weight:700;cursor:pointer;transition:all 0.2s;">
+                    Tasdiqlash va Kirish
+                </button>
+
+                <button type="button" onclick="showAuthStep1()"
+                        style="width:100%;background:none;border:none;color:#6b7280;font-size:0.8125rem;margin-top:0.75rem;cursor:pointer;">
+                    ← Raqamni o'zgartirish
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- ====== SCRIPTS ====== -->
 <script>
-    // Cart state
     let kcCart = JSON.parse(localStorage.getItem('kc_cart') || '[]');
+    let currentAuthPhone = '';
 
     function saveCart() {
         localStorage.setItem('kc_cart', JSON.stringify(kcCart));
@@ -633,6 +698,121 @@
 
         body.innerHTML = html;
         if (totalEl) totalEl.textContent = new Intl.NumberFormat('uz').format(total) + ' so\'m';
+    }
+
+    // AUTH MODAL FUNCTIONS
+    function openAuthModal() {
+        const modal = document.getElementById('kcAuthModalOverlay');
+        if (!modal) return;
+        showAuthStep1();
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeAuthModal() {
+        const modal = document.getElementById('kcAuthModalOverlay');
+        if (!modal) return;
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+
+    function showAuthStep1() {
+        document.getElementById('kcAuthStep1').style.display = 'block';
+        document.getElementById('kcAuthStep2').style.display = 'none';
+        document.getElementById('kcAuthError1').style.display = 'none';
+    }
+
+    function handleSendCode(e) {
+        e.preventDefault();
+        const input = document.getElementById('kcAuthPhone');
+        const err = document.getElementById('kcAuthError1');
+        const btn = document.getElementById('kcSendBtn');
+        const phoneVal = input.value.trim().replace(/\D+/g, '');
+
+        if (phoneVal.length < 9) {
+            err.textContent = 'Telefon raqamni to\'liq kiriting.';
+            err.style.display = 'block';
+            return;
+        }
+
+        currentAuthPhone = '998' + (phoneVal.length === 9 ? phoneVal : phoneVal.slice(-9));
+
+        btn.disabled = true;
+        btn.textContent = 'Yuborilmoqda...';
+        err.style.display = 'none';
+
+        fetch('/auth/send-code', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({ phone_number: currentAuthPhone })
+        })
+        .then(r => r.json())
+        .then(res => {
+            btn.disabled = false;
+            btn.textContent = 'Kodni yuborish →';
+            if (res.status === 'success') {
+                document.getElementById('kcAuthStep1').style.display = 'none';
+                document.getElementById('kcAuthStep2').style.display = 'block';
+                document.getElementById('kcAuthSentMsg').textContent = '+' + currentAuthPhone + ' raqamiga yuborilgan tasdiqlash kodini kiriting.';
+            } else {
+                err.textContent = res.message || 'Xatolik yuz berdi.';
+                err.style.display = 'block';
+            }
+        })
+        .catch(() => {
+            btn.disabled = false;
+            btn.textContent = 'Kodni yuborish →';
+            err.textContent = 'Ulanishda xatolik.';
+            err.style.display = 'block';
+        });
+    }
+
+    function handleVerifyCode(e) {
+        e.preventDefault();
+        const input = document.getElementById('kcAuthCode');
+        const err = document.getElementById('kcAuthError2');
+        const btn = document.getElementById('kcVerifyBtn');
+        const code = input.value.trim();
+
+        if (code.length < 6) {
+            err.textContent = '6 xonali kodni kiriting.';
+            err.style.display = 'block';
+            return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = 'Tekshirilmoqda...';
+        err.style.display = 'none';
+
+        fetch('/auth/verify-code', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({ phone_number: currentAuthPhone, code: code })
+        })
+        .then(r => r.json())
+        .then(res => {
+            btn.disabled = false;
+            btn.textContent = 'Tasdiqlash va Kirish';
+            if (res.status === 'success') {
+                if (res.token) localStorage.setItem('kc_token', res.token);
+                window.location.reload();
+            } else {
+                err.textContent = res.message || 'Kod noto\'g\'ri.';
+                err.style.display = 'block';
+            }
+        })
+        .catch(() => {
+            btn.disabled = false;
+            btn.textContent = 'Tasdiqlash va Kirish';
+            err.textContent = 'Ulanishda xatolik.';
+            err.style.display = 'block';
+        });
     }
 
     // Live search

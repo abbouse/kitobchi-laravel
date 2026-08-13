@@ -100,6 +100,13 @@ Route::get('/sitemap.xml', [\App\Http\Controllers\Web\ProductCatalogController::
 Route::get('/google-merchant.xml', [\App\Http\Controllers\Web\ProductCatalogController::class, 'googleMerchantFeed'])->name('web.google_merchant');
 Route::get('/robots.txt', [\App\Http\Controllers\Web\ProductCatalogController::class, 'robots'])->name('web.robots');
 
+// ── Web User Auth & Profile Routes ───────────────────────────────────
+Route::post('/auth/send-code', [\App\Http\Controllers\Web\WebAuthController::class, 'sendCode'])->name('web.auth.send_code');
+Route::post('/auth/verify-code', [\App\Http\Controllers\Web\WebAuthController::class, 'verifyCode'])->name('web.auth.verify_code');
+Route::get('/profile', [\App\Http\Controllers\Web\WebAuthController::class, 'profile'])->name('web.profile');
+Route::post('/auth/logout', [\App\Http\Controllers\Web\WebAuthController::class, 'logout'])->name('web.auth.logout');
+
+
 Route::get('/share/product/{id}', function (int $id) {
     try {
         $book = \App\Models\Books::where('id', $id)->first();
