@@ -17,6 +17,7 @@ export default defineConfig({
                 'resources/css/legal-pages.css',
                 'resources/css/legal-doc-static.css',
                 'resources/css/kitobchi-popcorn.css',
+                'resources/css/kitobchi-marketplace.css',
                 'resources/css/boshqaruv.css',
                 'resources/js/app.js',
                 'resources/js/a122-admin.js',

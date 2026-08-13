@@ -189,6 +189,42 @@ class ProductCatalogController extends Controller
         $categoryId = $request->input('category');
         $type = $request->input('type', 'all');
 
+        // Handle AJAX Live Instant Search Suggestions Popup
+        if ($request->ajax() || $request->input('ajax') == 1) {
+            try {
+                $query = Books::where('status', true)
+                    ->where('is_approved', 1)
+                    ->where('is_hidden', 0);
+
+                if ($search !== '') {
+                    $query->where(function ($q) use ($search) {
+                        $q->where('name', 'like', "%{$search}%")
+                            ->orWhere('author', 'like', "%{$search}%")
+                            ->orWhere('isbn', 'like', "%{$search}%")
+                            ->orWhere('artikul', 'like', "%{$search}%");
+                    });
+                }
+
+                $items = $query->take(8)->get()->map(function ($book) {
+                    $isDiscounted = $book->discountPrice > 0 && $book->discountPrice < $book->price;
+                    $price = $isDiscounted ? $book->discountPrice : $book->price;
+                    $slug = Str::slug($book->name);
+                    return [
+                        'id' => $book->id,
+                        'name' => $book->name,
+                        'author' => $book->author,
+                        'price' => $price,
+                        'image' => $book->first_image ? asset('storage/' . $book->first_image) : asset('images/logo/logo_blue.png'),
+                        'url' => route('web.books.show', ['id' => $book->id, 'slug' => $slug]),
+                    ];
+                });
+
+                return response()->json(['items' => $items]);
+            } catch (\Throwable $e) {
+                return response()->json(['items' => []]);
+            }
+        }
+
         try {
             $bookCategories = BookCategories::where('status', true)->orderBy('name')->get();
             $stationeryCategories = StationeryCategory::where('status', true)->orderBy('name')->get();
