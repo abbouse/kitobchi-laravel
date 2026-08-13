@@ -1,68 +1,68 @@
 /* ==========================================================================
-   KITOBCHI MARKETPLACE — PIYOLAMARKET.UZ 1:1 EXACT NUXT UI DESIGN SYSTEM
+   KITOBCHI MARKETPLACE — NUXT UI MARKETPLACE DESIGN SYSTEM
    ========================================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
 :root {
-    --piyola-primary: #4f46e5;
-    --piyola-primary-hover: #4338ca;
-    --piyola-primary-light: #eef2ff;
+    --kc-mk-primary: #4f46e5;
+    --kc-mk-primary-hover: #4338ca;
+    --kc-mk-primary-light: #eef2ff;
     
-    --piyola-bg: #f3f4f6;
-    --piyola-card-bg: #ffffff;
-    --piyola-border: #e5e7eb;
+    --kc-mk-bg: #f3f4f6;
+    --kc-mk-card-bg: #ffffff;
+    --kc-mk-border: #e5e7eb;
     
-    --piyola-text: #111827;
-    --piyola-muted: #6b7280;
+    --kc-mk-text: #111827;
+    --kc-mk-muted: #6b7280;
     
-    --piyola-pill: 9999px;
-    --piyola-card-radius: 20px;
-    --piyola-img-radius: 14px;
+    --kc-mk-pill: 9999px;
+    --kc-mk-card-radius: 20px;
+    --kc-mk-img-radius: 14px;
 }
 
-body.kc-piyola-body {
+body.kc-mk-body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background-color: var(--piyola-bg);
-    color: var(--piyola-text);
+    background-color: var(--kc-mk-bg);
+    color: var(--kc-mk-text);
     margin: 0;
     padding: 0;
     -webkit-font-smoothing: antialiased;
     line-height: 1.4;
 }
 
-/* Piyola Glass UI Components */
-.piyola-glass-card {
+/* Glass UI Components */
+.kc-mk-glass-card {
     background: linear-gradient(135deg, rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.02) 15%, rgba(0, 0, 0, 0) 35%), #ffffff;
-    border: 1px solid var(--piyola-border);
-    border-radius: var(--piyola-card-radius);
+    border: 1px solid var(--kc-mk-border);
+    border-radius: var(--kc-mk-card-radius);
     transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.piyola-glass-pill {
+.kc-mk-glass-pill {
     background: #e5e7eb;
     border: 1px solid #d1d5db;
-    border-radius: var(--piyola-pill);
+    border-radius: var(--kc-mk-pill);
     transition: all 0.2s ease;
 }
 
-.piyola-glass-pill:hover {
-    background: var(--piyola-primary-light);
+.kc-mk-glass-pill:hover {
+    background: var(--kc-mk-primary-light);
     border-color: #c7d2fe;
 }
 
-/* PiyolaMarket Sticky Header */
-.piyola-header {
+/* Sticky Header */
+.kc-mk-header {
     position: sticky;
     top: 0;
     z-index: 1000;
     background: #ffffff;
-    border-bottom: 1px solid var(--piyola-border);
+    border-bottom: 1px solid var(--kc-mk-border);
     padding: 12px 0;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
 }
 
-.piyola-header-inner {
+.kc-mk-header-inner {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -70,26 +70,26 @@ body.kc-piyola-body {
 }
 
 /* Brand Logo */
-.piyola-logo {
+.kc-mk-logo {
     display: flex;
     align-items: center;
     text-decoration: none;
 }
 
-.piyola-logo img {
+.kc-mk-logo img {
     height: 36px;
     width: auto;
 }
 
 /* Kataloglar Pill Button */
-.piyola-cat-btn {
+.kc-mk-cat-btn {
     display: inline-flex;
     align-items: center;
     gap: 8px;
     padding: 10px 22px;
     background: #e5e7eb;
     border: 1px solid #d1d5db;
-    border-radius: var(--piyola-pill);
+    border-radius: var(--kc-mk-pill);
     color: #111827;
     font-size: 14px;
     font-weight: 700;
@@ -99,39 +99,39 @@ body.kc-piyola-body {
     white-space: nowrap;
 }
 
-.piyola-cat-btn:hover {
-    background: var(--piyola-primary);
+.kc-mk-cat-btn:hover {
+    background: var(--kc-mk-primary);
     color: #ffffff;
-    border-color: var(--piyola-primary);
+    border-color: var(--kc-mk-primary);
 }
 
-/* Search Bar (Piyola Exact Input) */
-.piyola-search-wrap {
+/* Search Bar */
+.kc-mk-search-wrap {
     flex: 1;
     max-width: 600px;
     position: relative;
 }
 
-.piyola-search-input {
+.kc-mk-search-input {
     width: 100%;
     height: 46px;
     padding: 0 46px 0 20px;
     background: #f3f4f6;
     border: 1px solid #e5e7eb;
-    border-radius: var(--piyola-pill);
+    border-radius: var(--kc-mk-pill);
     font-size: 14px;
     color: #111827;
     outline: none;
     transition: all 0.2s ease;
 }
 
-.piyola-search-input:focus {
+.kc-mk-search-input:focus {
     background: #ffffff;
-    border-color: var(--piyola-primary);
+    border-color: var(--kc-mk-primary);
     box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
 }
 
-.piyola-search-btn {
+.kc-mk-search-btn {
     position: absolute;
     right: 5px;
     top: 50%;
@@ -139,7 +139,7 @@ body.kc-piyola-body {
     width: 36px;
     height: 36px;
     border: none;
-    background: var(--piyola-primary);
+    background: var(--kc-mk-primary);
     color: #ffffff;
     border-radius: 50%;
     display: grid;
@@ -148,20 +148,20 @@ body.kc-piyola-body {
 }
 
 /* Header Actions */
-.piyola-actions {
+.kc-mk-actions {
     display: flex;
     align-items: center;
     gap: 10px;
 }
 
-.piyola-action-link {
+.kc-mk-action-link {
     display: inline-flex;
     align-items: center;
     gap: 8px;
     padding: 9px 18px;
     background: #f3f4f6;
     border: 1px solid #e5e7eb;
-    border-radius: var(--piyola-pill);
+    border-radius: var(--kc-mk-pill);
     color: #111827;
     font-size: 13.5px;
     font-weight: 600;
@@ -170,13 +170,13 @@ body.kc-piyola-body {
     transition: all 0.15s ease;
 }
 
-.piyola-action-link:hover {
-    background: var(--piyola-primary-light);
-    color: var(--piyola-primary);
+.kc-mk-action-link:hover {
+    background: var(--kc-mk-primary-light);
+    color: var(--kc-mk-primary);
     border-color: #c7d2fe;
 }
 
-.piyola-badge {
+.kc-mk-badge {
     background: #ef4444;
     color: #ffffff;
     font-size: 11px;
@@ -185,20 +185,20 @@ body.kc-piyola-body {
     border-radius: 10px;
 }
 
-/* Circular Category Avatars ("Kataloglar" Slider Section) */
-.piyola-cat-section {
+/* Circular Category Avatars Slider Section */
+.kc-mk-cat-section {
     padding: 28px 0 20px;
 }
 
-.piyola-cat-title {
+.kc-mk-cat-title {
     font-size: 28px;
     font-weight: 900;
-    color: var(--piyola-primary);
+    color: var(--kc-mk-primary);
     margin-bottom: 20px;
     letter-spacing: -0.5px;
 }
 
-.piyola-cat-row {
+.kc-mk-cat-row {
     display: flex;
     gap: 20px;
     overflow-x: auto;
@@ -206,11 +206,11 @@ body.kc-piyola-body {
     padding-bottom: 8px;
 }
 
-.piyola-cat-row::-webkit-scrollbar {
+.kc-mk-cat-row::-webkit-scrollbar {
     display: none;
 }
 
-.piyola-cat-item {
+.kc-mk-cat-item {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -220,7 +220,7 @@ body.kc-piyola-body {
     flex-shrink: 0;
 }
 
-.piyola-cat-avatar {
+.kc-mk-cat-avatar {
     width: 90px;
     height: 90px;
     border-radius: 50%;
@@ -234,19 +234,19 @@ body.kc-piyola-body {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
 }
 
-.piyola-cat-item:hover .piyola-cat-avatar {
-    border-color: var(--piyola-primary);
+.kc-mk-cat-item:hover .kc-mk-cat-avatar {
+    border-color: var(--kc-mk-primary);
     transform: scale(1.08);
 }
 
-.piyola-cat-avatar img {
+.kc-mk-cat-avatar img {
     width: 100%;
     height: 100%;
     object-fit: cover;
     border-radius: 50%;
 }
 
-.piyola-cat-name {
+.kc-mk-cat-name {
     font-size: 13px;
     font-weight: 700;
     color: #111827;
@@ -258,30 +258,30 @@ body.kc-piyola-body {
     overflow: hidden;
 }
 
-/* Piyola Product Grid (5 Columns) */
-.piyola-product-grid {
+/* Product Grid (5 Columns) */
+.kc-mk-product-grid {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
     gap: 16px;
 }
 
 @media (max-width: 1200px) {
-    .piyola-product-grid { grid-template-columns: repeat(4, 1fr); }
+    .kc-mk-product-grid { grid-template-columns: repeat(4, 1fr); }
 }
 
 @media (max-width: 900px) {
-    .piyola-product-grid { grid-template-columns: repeat(3, 1fr); }
+    .kc-mk-product-grid { grid-template-columns: repeat(3, 1fr); }
 }
 
 @media (max-width: 600px) {
-    .piyola-product-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .kc-mk-product-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
 }
 
 /* Product Card */
-.piyola-card {
+.kc-mk-card {
     background: #ffffff;
-    border: 1px solid var(--piyola-border);
-    border-radius: var(--piyola-card-radius);
+    border: 1px solid var(--kc-mk-border);
+    border-radius: var(--kc-mk-card-radius);
     padding: 12px;
     display: flex;
     flex-direction: column;
@@ -290,15 +290,15 @@ body.kc-piyola-body {
     transition: all 0.25s ease;
 }
 
-.piyola-card:hover {
+.kc-mk-card:hover {
     border-color: #c7d2fe;
     box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
     transform: translateY(-3px);
 }
 
-.piyola-card-cover {
+.kc-mk-card-cover {
     aspect-ratio: 3 / 4;
-    border-radius: var(--piyola-img-radius);
+    border-radius: var(--kc-mk-img-radius);
     overflow: hidden;
     background: #f9fafb;
     margin-bottom: 10px;
@@ -307,18 +307,18 @@ body.kc-piyola-body {
     place-items: center;
 }
 
-.piyola-card-cover img {
+.kc-mk-card-cover img {
     width: 100%;
     height: 100%;
     object-fit: cover;
     transition: transform 0.3s ease;
 }
 
-.piyola-card:hover .piyola-card-cover img {
+.kc-mk-card:hover .kc-mk-card-cover img {
     transform: scale(1.05);
 }
 
-.piyola-discount-tag {
+.kc-mk-discount-tag {
     position: absolute;
     top: 6px;
     left: 6px;
@@ -330,7 +330,7 @@ body.kc-piyola-body {
     border-radius: 10px;
 }
 
-.piyola-card-title {
+.kc-mk-card-title {
     font-size: 14px;
     font-weight: 700;
     color: #111827;
@@ -343,16 +343,16 @@ body.kc-piyola-body {
     height: 38px;
 }
 
-.piyola-card-author {
+.kc-mk-card-author {
     font-size: 12px;
-    color: var(--piyola-muted);
+    color: var(--kc-mk-muted);
     margin-bottom: 8px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.piyola-card-footer {
+.kc-mk-card-footer {
     margin-top: auto;
     display: flex;
     align-items: flex-end;
@@ -362,26 +362,26 @@ body.kc-piyola-body {
     border-top: 1px solid #f3f4f6;
 }
 
-.piyola-card-price {
+.kc-mk-card-price {
     font-size: 16px;
     font-weight: 800;
-    color: var(--piyola-primary);
+    color: var(--kc-mk-primary);
     line-height: 1;
 }
 
-.piyola-card-old-price {
+.kc-mk-card-old-price {
     font-size: 11.5px;
     color: #9ca3af;
     text-decoration: line-through;
     margin-top: 2px;
 }
 
-.piyola-add-cart-btn {
+.kc-mk-add-cart-btn {
     width: 34px;
     height: 34px;
     border-radius: 10px;
-    background: var(--piyola-primary-light);
-    color: var(--piyola-primary);
+    background: var(--kc-mk-primary-light);
+    color: var(--kc-mk-primary);
     border: 1px solid #c7d2fe;
     display: grid;
     place-items: center;
@@ -390,19 +390,19 @@ body.kc-piyola-body {
     flex-shrink: 0;
 }
 
-.piyola-add-cart-btn:hover {
-    background: var(--piyola-primary);
+.kc-mk-add-cart-btn:hover {
+    background: var(--kc-mk-primary);
     color: #ffffff;
-    border-color: var(--piyola-primary);
+    border-color: var(--kc-mk-primary);
 }
 
-/* Piyola Floating Mobile Bottom Navigation */
-.piyola-mobile-bar {
+/* Floating Mobile Bottom Navigation */
+.kc-mk-mobile-bar {
     display: none;
 }
 
 @media (max-width: 768px) {
-    .piyola-mobile-bar {
+    .kc-mk-mobile-bar {
         position: fixed;
         bottom: 0;
         left: 0;
@@ -410,7 +410,7 @@ body.kc-piyola-body {
         background: rgba(255, 255, 255, 0.95);
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
-        border-top: 1px solid var(--piyola-border);
+        border-top: 1px solid var(--kc-mk-border);
         z-index: 1000;
         display: flex;
         align-items: center;
@@ -418,18 +418,18 @@ body.kc-piyola-body {
         padding: 8px 0;
     }
 
-    .piyola-mobile-link {
+    .kc-mk-mobile-link {
         display: flex;
         flex-direction: column;
         align-items: center;
         gap: 3px;
         text-decoration: none;
-        color: var(--piyola-muted);
+        color: var(--kc-mk-muted);
         font-size: 11px;
         font-weight: 600;
     }
 
-    .piyola-mobile-link.active {
-        color: var(--piyola-primary);
+    .kc-mk-mobile-link.active {
+        color: var(--kc-mk-primary);
     }
 }

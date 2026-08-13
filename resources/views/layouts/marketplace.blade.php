@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>@yield('title', 'PiyolaMarket uslubidagi Kitobchi online do\'koni')</title>
+    <title>@yield('title', 'Kitobchi — Online kitoblar va kanselyariya marketpleysi')</title>
     
     @stack('meta')
 
@@ -17,33 +17,33 @@
     <!-- Bootstrap 5 CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
 
-    @vite(['resources/css/kitobchi-marketplace.css'])
+    @vite(['resources/css/kitobchi-entry.css', 'resources/css/kitobchi-cart.css', 'resources/css/kitobchi-default.css', 'resources/css/kitobchi-marketplace.css'])
     
     @stack('styles')
 </head>
-<body class="kc-piyola-body">
+<body class="kc-mk-body">
 
-    <!-- PiyolaMarket Sticky Header -->
-    <header class="piyola-header">
+    <!-- Sticky Header -->
+    <header class="kc-mk-header">
         <div class="container">
-            <div class="piyola-header-inner">
+            <div class="kc-mk-header-inner">
                 
                 <!-- Logo -->
-                <a href="{{ url('/') }}" class="piyola-logo">
+                <a href="{{ url('/') }}" class="kc-mk-logo">
                     <img src="{{ asset('images/logo/logo_blue.png') }}" alt="Kitobchi Logo">
                 </a>
 
                 <!-- Kataloglar Button -->
-                <a href="{{ route('web.catalog') }}" class="piyola-cat-btn d-none d-md-inline-flex">
+                <a href="{{ route('web.catalog') }}" class="kc-mk-cat-btn d-none d-md-inline-flex">
                     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
                     <span>Kataloglar</span>
                 </a>
 
                 <!-- Search Input -->
-                <div class="piyola-search-wrap">
+                <div class="kc-mk-search-wrap">
                     <form action="{{ route('web.catalog') }}" method="GET" id="kcSearchForm">
-                        <input type="text" name="search" class="piyola-search-input" id="kcSearchInput" placeholder="Kitobchi’da izlash..." value="{{ request('search') }}" autocomplete="off">
-                        <button type="submit" class="piyola-search-btn" aria-label="Qidirish">
+                        <input type="text" name="search" class="kc-mk-search-input" id="kcSearchInput" placeholder="Kitobchi’da izlash..." value="{{ request('search') }}" autocomplete="off">
+                        <button type="submit" class="kc-mk-search-btn" aria-label="Qidirish">
                             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
                         </button>
                     </form>
@@ -52,14 +52,14 @@
                 </div>
 
                 <!-- Right Actions -->
-                <div class="piyola-actions">
-                    <button type="button" class="piyola-action-link" onclick="toggleCartDrawer(true)">
+                <div class="kc-mk-actions">
+                    <button type="button" class="kc-mk-action-link" onclick="toggleCartDrawer(true)">
                         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
                         <span class="d-none d-lg-inline">Savatcha</span>
-                        <span class="piyola-badge" id="kcCartCountBadge">0</span>
+                        <span class="kc-mk-badge" id="kcCartCountBadge">0</span>
                     </button>
 
-                    <a href="{{ route('web.catalog') }}" class="piyola-action-link d-none d-sm-inline-flex">
+                    <a href="{{ route('web.catalog') }}" class="kc-mk-action-link d-none d-sm-inline-flex">
                         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                         <span class="d-none d-lg-inline">Sevimlilar</span>
                     </a>
@@ -74,17 +74,17 @@
         @yield('content')
     </main>
 
-    <!-- Piyola Mobile Bottom Navigation Bar -->
-    <nav class="piyola-mobile-bar">
-        <a href="{{ url('/') }}" class="piyola-mobile-link {{ request()->is('/') ? 'active' : '' }}">
+    <!-- Mobile Bottom Navigation Bar -->
+    <nav class="kc-mk-mobile-bar">
+        <a href="{{ url('/') }}" class="kc-mk-mobile-link {{ request()->is('/') ? 'active' : '' }}">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
             <span>Bosh sahifa</span>
         </a>
-        <a href="{{ route('web.catalog') }}" class="piyola-mobile-link {{ request()->is('catalog*') ? 'active' : '' }}">
+        <a href="{{ route('web.catalog') }}" class="kc-mk-mobile-link {{ request()->is('catalog*') ? 'active' : '' }}">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
             <span>Katalog</span>
         </a>
-        <a href="javascript:void(0)" onclick="toggleCartDrawer(true)" class="piyola-mobile-link">
+        <a href="javascript:void(0)" onclick="toggleCartDrawer(true)" class="kc-mk-mobile-link">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
             <span>Savatcha</span>
         </a>
@@ -117,7 +117,7 @@
         <div class="container">
             <div class="row g-4">
                 <div class="col-lg-4">
-                    <a href="{{ url('/') }}" class="piyola-logo u-mb-s">
+                    <a href="{{ url('/') }}" class="kc-mk-logo u-mb-s">
                         <img src="{{ asset('images/logo/logo_blue.png') }}" alt="Kitobchi Logo">
                     </a>
                     <p class="text-muted small" style="line-height: 1.6;">
