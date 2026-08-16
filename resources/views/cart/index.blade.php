@@ -6,24 +6,24 @@
 <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto py-6 rounded-t-2xl grow">
     
     <div class="flex items-center gap-2 mb-5">
-        <a href="{{ route('web.catalog') }}" class="rounded-full w-9 h-9 flex items-center justify-center transition-colors text-primary bg-secondary-200 hover:bg-secondary-300" title="Katalogga qaytish">
+        <a href="{{ route('web.catalog') }}" class="rounded-full w-9 h-9 flex items-center justify-center transition-colors text-primary bg-secondary-200 hover:bg-secondary-300" title="{{ __('marketplace.back_to_catalog') }}">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
         </a>
         <nav aria-label="breadcrumb" class="relative min-w-0">
             <ol class="flex items-center gap-2">
                 <li class="flex min-w-0 text-[#8F8FA1] text-sm">
-                    <a href="{{ url('/') }}" class="hover:text-neutral-900 transition-colors">Asosiy</a>
+                    <a href="{{ url('/') }}" class="hover:text-neutral-900 transition-colors">{{ __('marketplace.breadcrumb_home') }}</a>
                 </li>
                 <li class="flex text-gray text-xs">/</li>
                 <li class="flex min-w-0 text-[#8F8FA1] text-sm font-semibold">
-                    Savatcha
+                    {{ __('marketplace.cart_title') }}
                 </li>
             </ol>
         </nav>
     </div>
 
     <h1 class="text-4xl text-primary font-bold dark:text-white mb-6">
-        Savatcha
+        {{ __('marketplace.cart_title') }}
         <span id="kcCartCount" class="text-xl font-medium text-neutral-400"></span>
     </h1>
 
@@ -34,6 +34,24 @@
 
 @push('scripts')
 <script>
+    const KC_CART_I18N = {
+        empty: @json(__('marketplace.cart_empty_title')),
+        emptyDesc: @json(__('marketplace.cart_empty_desc')),
+        goToCatalog: @json(__('marketplace.go_to_catalog')),
+        selectAll: @json(__('marketplace.select_all')),
+        selectedCount: @json(__('marketplace.selected_count')),
+        priceLabel: @json(__('marketplace.price_label')),
+        promoCode: @json(__('marketplace.promo_code')),
+        orderSummary: @json(__('marketplace.order_summary')),
+        productsLabel: @json(__('marketplace.products_label')),
+        delivery: @json(__('marketplace.delivery')),
+        deliveryByRegion: @json(__('marketplace.delivery_by_region')),
+        productsColon: @json(__('marketplace.products_colon')),
+        deliveryNote: @json(__('marketplace.delivery_note')),
+        continuePurchase: @json(__('marketplace.continue_purchase')),
+        currency: @json(__('marketplace.currency')),
+    };
+
 // ── Tanlash (selection) ────────────────────────────────────────────
 // Piyolamarket'da savat har bir mahsulotni alohida checkbox bilan
 // tanlash imkonini beradi (masalan ba'zi mahsulotlarni keyinroqqa
@@ -87,14 +105,14 @@ function renderCartPage() {
                         <img alt="Empty cart" class="w-full max-w-[250px] mx-auto mb-4" src="{{ asset('images/empty-basket.svg') }}">
                     </div>
                     <h2 class="text-xl font-bold dark:text-white mb-2">
-                        Savatingiz bo'sh
+                        ${KC_CART_I18N.empty}
                     </h2>
                     <p class="text-neutral-500 mb-6">
-                        Yoqqan mahsulotlaringizni savatga qo'shing — xaridni shu yerdan bir necha bosishda yakunlaysiz
+                        ${KC_CART_I18N.emptyDesc}
                     </p>
                     <div>
                         <a href="{{ route('web.catalog') }}" class="font-medium items-center transition-colors py-1.5 gap-1.5 text-inverted bg-primary hover:bg-primary/75 h-12 justify-center sm:min-w-40 rounded-2xl text-base max-md:w-full inline-flex px-6" style="color:#fff;">
-                            Katalogga o‘tish
+                            ${KC_CART_I18N.goToCatalog}
                         </a>
                     </div>
                 </div>
@@ -129,8 +147,8 @@ function renderCartPage() {
                         </div>
                         <div class="flex max-sm:flex-col sm:items-center justify-between gap-4">
                             <div class="flex items-center gap-3">
-                                <span class="text-sm text-neutral-500">Narxi:</span>
-                                <span class="font-bold text-lg md:text-xl text-primary">${new Intl.NumberFormat('uz').format(item.price)} so'm</span>
+                                <span class="text-sm text-neutral-500">${KC_CART_I18N.priceLabel}</span>
+                                <span class="font-bold text-lg md:text-xl text-primary">${new Intl.NumberFormat('uz').format(item.price)} ${KC_CART_I18N.currency}</span>
                             </div>
                             <div class="flex items-center justify-between sm:justify-end gap-6 max-sm:w-full">
                                 <div class="flex items-center gap-3 bg-secondary-100 rounded-lg p-1">
@@ -156,9 +174,9 @@ function renderCartPage() {
         <div class="flex items-center justify-between bg-white rounded-xl border border-secondary-200 px-4 py-3 mb-4">
             <label class="flex items-center gap-3 cursor-pointer">
                 <input type="checkbox" class="w-5 h-5 accent-primary cursor-pointer" ${allSelected ? 'checked' : ''} onchange="kcToggleSelectAll(this.checked)">
-                <span class="font-medium text-primary">Barcha mahsulotlarni tanlash</span>
+                <span class="font-medium text-primary">${KC_CART_I18N.selectAll}</span>
             </label>
-            <span class="text-sm text-neutral-400">${totalCount} ta mahsulot tanlandi</span>
+            <span class="text-sm text-neutral-400">${KC_CART_I18N.selectedCount.replace(':count', totalCount)}</span>
         </div>
 
         <div class="flex flex-col lg:flex-row gap-6 xl:gap-8 relative items-start">
@@ -168,36 +186,36 @@ function renderCartPage() {
                 </div>
 
                 <div class="bg-white p-4 sm:p-5 rounded-2xl border border-secondary-200">
-                    <input type="text" id="kcPromoInput" placeholder="Promokod" value="${savedPromo.replace(/"/g, '&quot;')}" oninput="kcSavePromo(this.value)" class="w-full h-12 bg-secondary-100 border-none rounded-xl px-4 text-sm font-medium text-primary outline-none focus:ring-2 ring-primary/20 transition-all" autocomplete="off">
+                    <input type="text" id="kcPromoInput" placeholder="${KC_CART_I18N.promoCode}" value="${savedPromo.replace(/"/g, '&quot;')}" oninput="kcSavePromo(this.value)" class="w-full h-12 bg-secondary-100 border-none rounded-xl px-4 text-sm font-medium text-primary outline-none focus:ring-2 ring-primary/20 transition-all" autocomplete="off">
                 </div>
             </div>
 
             <div class="w-full lg:w-[380px] shrink-0 sticky top-24">
                 <div class="bg-white rounded-2xl p-5 md:p-6 border border-secondary-200 shadow-sm flex flex-col gap-6">
                     <h3 class="text-xl font-bold text-primary">
-                        Buyurtmangiz
+                        ${KC_CART_I18N.orderSummary}
                     </h3>
                     <div class="flex flex-col gap-4">
                         <div class="flex justify-between items-center text-base">
-                            <span class="text-neutral-500">Mahsulotlar (${totalCount}):</span>
-                            <span class="font-medium text-primary">${new Intl.NumberFormat('uz').format(total)} so'm</span>
+                            <span class="text-neutral-500">${KC_CART_I18N.productsLabel.replace(':count', totalCount)}</span>
+                            <span class="font-medium text-primary">${new Intl.NumberFormat('uz').format(total)} ${KC_CART_I18N.currency}</span>
                         </div>
                         <div class="flex justify-between items-center text-base">
-                            <span class="text-neutral-500">Yetkazib berish:</span>
-                            <span class="font-medium text-neutral-500">Hududga qarab</span>
+                            <span class="text-neutral-500">${KC_CART_I18N.delivery}</span>
+                            <span class="font-medium text-neutral-500">${KC_CART_I18N.deliveryByRegion}</span>
                         </div>
 
                         <hr class="border-secondary-200 my-1">
 
                         <div class="flex justify-between items-center">
-                            <span class="text-lg font-bold text-primary">Mahsulotlar:</span>
-                            <span class="text-2xl font-bold text-primary">${new Intl.NumberFormat('uz').format(total)} so'm</span>
+                            <span class="text-lg font-bold text-primary">${KC_CART_I18N.productsColon}</span>
+                            <span class="text-2xl font-bold text-primary">${new Intl.NumberFormat('uz').format(total)} ${KC_CART_I18N.currency}</span>
                         </div>
-                        <div class="text-xs text-neutral-400 -mt-2">Yetkazib berish narxi va promokod chegirmasi keyingi bosqichda hisoblanadi</div>
+                        <div class="text-xs text-neutral-400 -mt-2">${KC_CART_I18N.deliveryNote}</div>
                     </div>
 
                     <a href="${checkoutDisabled ? '#' : `{{ route('web.checkout') }}`}" class="font-medium items-center transition-colors gap-2 text-inverted bg-primary hover:bg-primary/75 h-14 justify-center rounded-2xl text-lg w-full inline-flex ${checkoutDisabled ? 'opacity-40 pointer-events-none' : ''}" style="color:#fff;">
-                        Xaridni davom ettirish
+                        ${KC_CART_I18N.continuePurchase}
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:1.1em;height:1.1em;"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M12 5l7 7-7 7"/></svg>
                     </a>
                 </div>

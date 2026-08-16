@@ -258,6 +258,81 @@
         /* bg-secondary-300 */
         .bg-secondary-300 { background-color: oklch(80.9% 0.105 251.813); }
 
+        /* Kataloglar drawer (piyolamarket.uz uslubida — chapdan chiqadigan
+           2 ustunli panel: turlar + kategoriyalar). */
+        .kc-catalog-drawer {
+            display: flex;
+            height: 100%;
+            max-width: 100vw;
+            transform: translateX(-24px);
+            opacity: 0;
+            transition: transform 0.28s cubic-bezier(0.16,1,0.3,1), opacity 0.28s ease;
+        }
+        .kc-catalog-drawer.kc-catalog-drawer--open { transform: translateX(0); opacity: 1; }
+        .kc-catalog-drawer__col {
+            background: #fff;
+            height: 100%;
+            overflow-y: auto;
+        }
+        .kc-catalog-drawer__col--types {
+            width: 260px;
+            max-width: 78vw;
+            flex-shrink: 0;
+            box-shadow: 4px 0 24px rgba(15,23,42,0.06);
+            display: flex;
+            flex-direction: column;
+        }
+        .kc-catalog-drawer__col--cats {
+            width: 280px;
+            max-width: 78vw;
+            flex-shrink: 0;
+            padding: 1.25rem 0.75rem;
+            border-left: 1px solid var(--kc-border-light, #f3f4f6);
+        }
+        @media (max-width: 640px) { .kc-catalog-drawer__col--cats { display: none; } }
+        .kc-catalog-drawer__head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.25rem 1.25rem 1rem;
+        }
+        .kc-catalog-drawer__head h3 { font-size: 1.125rem; font-weight: 800; color: #0f172a; margin: 0; }
+        .kc-catalog-drawer__close {
+            width: 2rem; height: 2rem; display: flex; align-items: center; justify-content: center;
+            border: none; background: #f3f4f6; border-radius: 9999px; cursor: pointer; color: #374151;
+        }
+        .kc-catalog-drawer__types { display: flex; flex-direction: column; padding: 0 0.5rem 1rem; gap: 2px; }
+        .kc-catalog-drawer__cats-title { font-size: 0.9375rem; font-weight: 800; color: var(--color-tima-500); margin: 0 0 0.75rem; padding: 0 0.5rem; }
+
+        .kc-drawer-type-btn {
+            display: flex; align-items: center; gap: 0.75rem;
+            padding: 0.75rem; border-radius: 0.75rem; border: none; background: transparent;
+            font-family: inherit; font-size: 0.9375rem; font-weight: 600; color: #374151;
+            cursor: pointer; text-align: left; transition: background 0.15s, color 0.15s;
+        }
+        .kc-drawer-type-btn:hover { background: #f8fafc; }
+        .kc-drawer-type-btn--active { background: var(--color-tima-50); color: var(--color-tima-600); }
+        .kc-drawer-type-icon { display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .kc-drawer-type-label { flex: 1; }
+        .kc-drawer-type-chevron { flex-shrink: 0; opacity: 0.5; }
+        .kc-drawer-type-btn--active .kc-drawer-type-chevron { opacity: 1; }
+
+        .kc-drawer-cat-list { display: flex; flex-direction: column; gap: 2px; }
+        .kc-drawer-cat-item {
+            display: flex; align-items: center; gap: 0.625rem;
+            padding: 0.625rem 0.5rem; border-radius: 0.75rem;
+            text-decoration: none; color: #1f2937; font-size: 0.875rem; font-weight: 500;
+            transition: background 0.15s;
+        }
+        .kc-drawer-cat-item:hover { background: #f8fafc; }
+        .kc-drawer-cat-avatar {
+            width: 2rem; height: 2rem; border-radius: 9999px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            background: var(--color-tima-500); color: #fff; font-size: 0.75rem; font-weight: 800;
+        }
+        .kc-drawer-cat-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .kc-drawer-cat-chevron { flex-shrink: 0; opacity: 0.35; }
+
         /* container max-width */
         .kc-container { width: 100%; max-width: var(--ui-container); margin: 0 auto; padding: 0 1rem; }
         @media (min-width: 640px) { .kc-container { padding: 0 1.5rem; } }
@@ -277,6 +352,16 @@
 </head>
 <body style="margin:0;padding:0;font-family:'Urbanist',sans-serif;">
 
+@php
+    // Header'dagi "Kataloglar" ochib beradigan 2-ustunli panel (piyolamarket.uz'dagi
+    // kabi) uchun kategoriyalar — bu HAR bir sahifada (nafaqat katalog sahifasida)
+    // kerak bo'lgani uchun shu yerda, layout darajasida, qisqa TTL bilan keshlab
+    // olinadi (controller'ni o'zgartirmasdan, ProductCatalogController@catalog'dagi
+    // bilan bir xil so'rov naqshi).
+    $kcHeaderBookCategories = \Illuminate\Support\Facades\Cache::remember('kc_header_book_categories_v1', 300, fn () => \App\Models\BookCategories::where('is_active', true)->orderBy('name_uz')->get());
+    $kcHeaderStationeryCategories = \Illuminate\Support\Facades\Cache::remember('kc_header_stationery_categories_v1', 300, fn () => \App\Models\StationeryCategory::where('is_active', true)->orderBy('name_uz')->get());
+@endphp
+
 <div class="page-wrapper">
 
     <!-- ====== STICKY HEADER ====== -->
@@ -289,13 +374,20 @@
                     <a href="{{ url('/') }}" aria-current="page" class="router-link-active router-link-exact-active">
                         <img alt="Kitobchi" class="h-8 w-auto" src="{{ asset('images/logo/logo_blue.png') }}" />
                     </a>
-                    <a href="{{ route('web.catalog') }}" aria-current="{{ request()->routeIs('web.catalog') ? 'page' : 'false' }}" class="relative overflow-hidden transition-shadow duration-300 rounded-2xl px-5 py-[14px] rounded-full! hover:shadow-sm hover:shadow-black/10 glass-card-bg p-1! h-12 cursor-pointer bg-secondary-200!" style="text-decoration:none;color:#111827;">
+                    {{--
+                        MUHIM: avval bu yerda oddiy <a href="..."> (katalog sahifasiga
+                        to'g'ridan-to'g'ri o'tuvchi havola) edi. Piyolamarket.uz'da esa
+                        "Kataloglar" bosilganda chapdan chiqadigan 2 ustunli panel ochiladi
+                        (1-ustun: turlar, 2-ustun: shu turga tegishli kategoriyalar) — endi
+                        shu bilan bir xil ishlaydi (pastdagi kcCatalogDrawerOverlay'ga qarang).
+                    --}}
+                    <button type="button" onclick="openCatalogDrawer()" aria-haspopup="dialog" aria-expanded="false" class="relative overflow-hidden transition-shadow duration-300 rounded-2xl px-5 py-[14px] rounded-full! hover:shadow-sm hover:shadow-black/10 glass-card-bg p-1! h-12 cursor-pointer bg-secondary-200! border-none" style="text-decoration:none;color:#111827;font-family:inherit;">
                         <div class="absolute inset-0 pointer-events-none glass-border rounded-2xl rounded-full!"></div>
                         <div class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex flex-row items-center gap-2 {{ request()->routeIs('web.catalog') ? 'bg-primary-200' : '' }}">
                             <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 transition-all duration-300 shrink-0"><path d="M4.5 4.5a3 3 0 00-3 3v2.25a3 3 0 003 3h2.25a3 3 0 003-3V7.5a3 3 0 00-3-3H4.5zM4.5 15a3 3 0 00-3 3v.75a3 3 0 003 3h2.25a3 3 0 003-3V18a3 3 0 00-3-3H4.5zM15 4.5a3 3 0 00-3 3v2.25a3 3 0 003 3h2.25a3 3 0 003-3V7.5a3 3 0 00-3-3H15zM15 15a3 3 0 00-3 3v.75a3 3 0 003 3h2.25a3 3 0 003-3V18a3 3 0 00-3-3H15z"/></svg>
-                            <span class="max-lg:hidden font-medium text-sm transition-all duration-300">Kataloglar</span>
+                            <span class="max-lg:hidden font-medium text-sm transition-all duration-300">{{ __('marketplace.catalogs') }}</span>
                         </div>
-                    </a>
+                    </button>
                 </div>
 
                 <!-- Center: Search -->
@@ -304,7 +396,7 @@
                     <i class="icon-search text-lg text-gray-500"></i>
                     <form action="{{ route('web.catalog') }}" method="GET" class="flex flex-1 items-center h-full m-0 p-0">
                         <input type="text" name="search" value="{{ request('search') }}"
-                               placeholder="Mahsulotni izlash..."
+                               placeholder="{{ __('marketplace.search_placeholder') }}"
                                id="kcSearchInput"
                                autocomplete="off"
                                class="flex-1 bg-transparent border-none outline-none text-sm text-neutral-900 font-inherit m-0 p-0 h-full w-full"
@@ -323,9 +415,9 @@
                                 <i class="icon-order group-hover:text-green-500 text-lg transition-colors duration-200"></i>
                                 <span id="kcCartBadge" class="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-primary-500 text-white text-[10px] font-bold rounded-full flex-center px-[3px]" style="display:none;"></span>
                             </div>
-                            <span class="max-lg:hidden font-normal text-sm leading-5 group-hover:text-green-500 transition-colors duration-200">Savatcha</span>
+                            <span class="max-lg:hidden font-normal text-sm leading-5 group-hover:text-green-500 transition-colors duration-200">{{ __('marketplace.cart') }}</span>
                         </a>
-                        
+
                         <a href="{{ route('web.favorites') }}" aria-current="{{ request()->routeIs('web.favorites') ? 'page' : 'false' }}" class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group {{ request()->routeIs('web.favorites') ? 'bg-primary-200' : '' }}">
                             <div class="flex-center relative" id="kcFavBadgeWrap">
                                 <i class="icon-heart group-hover:text-green-500 text-lg transition-colors duration-200"></i>
@@ -335,12 +427,13 @@
                                     </span>
                                 @endif
                             </div>
-                            <span class="max-lg:hidden font-normal text-sm leading-5 group-hover:text-green-500 transition-colors duration-200">Sevimlilar</span>
+                            <span class="max-lg:hidden font-normal text-sm leading-5 group-hover:text-green-500 transition-colors duration-200">{{ __('marketplace.favorites') }}</span>
                         </a>
 
                         <div class="relative kc-lang-wrap" id="kcLangWrap">
-                            <button onclick="toggleLangMenu(event, 'kcLangMenu')" aria-haspopup="menu" aria-expanded="false" class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group">
-                                <i class="icon-globe text-lg transition-colors duration-200 group-hover:text-green-500"></i>
+                            <button onclick="toggleLangMenu(event, 'kcLangMenu')" aria-haspopup="menu" aria-expanded="false" class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group border-none bg-transparent" style="font-family:inherit;">
+                                <img src="https://cdn.jsdelivr.net/gh/hatscripts/circle-flags@gh-pages/flags/{{ ['uz' => 'uz', 'ru' => 'ru', 'en' => 'us', 'ja' => 'jp'][app()->getLocale()] ?? 'uz' }}.svg"
+                                     alt="" width="18" height="18" style="width:18px;height:18px;border-radius:9999px;flex-shrink:0;object-fit:cover;" loading="lazy">
                                 <span class="max-lg:hidden font-normal text-sm leading-5 group-hover:text-green-500 transition-colors duration-200">{{ (config('landing_locales.labels')[app()->getLocale()] ?? "O'zbekcha") }}</span>
                             </button>
                             @include('partials.lang-menu', ['menuId' => 'kcLangMenu'])
@@ -357,7 +450,7 @@
                         @else
                             <button onclick="openAuthModal()" class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group h-full">
                                 <i class="icon-profile text-lg"></i>
-                                <span class="font-normal text-sm leading-5 max-lg:hidden">Kirish</span>
+                                <span class="font-normal text-sm leading-5 max-lg:hidden">{{ __('marketplace.login') }}</span>
                             </button>
                         @endauth
                     </div>
@@ -371,7 +464,7 @@
                     <i class="icon-search text-xl text-gray-500"></i>
                     <form action="{{ route('web.catalog') }}" method="GET" class="flex flex-1 items-center h-full m-0 p-0">
                         <input type="text" name="search" value="{{ request('search') }}"
-                               placeholder="Kitobchi'da izlash"
+                               placeholder="{{ __('marketplace.search_placeholder_mobile') }}"
                                id="kcSearchInputMobile"
                                autocomplete="off"
                                class="flex-1 bg-transparent border-none outline-none text-sm text-neutral-900 font-inherit m-0 p-0 h-full w-full"
@@ -389,90 +482,181 @@
         @yield('content')
     </main>
 
-    <!-- ====== FOOTER ====== -->
+    <!-- ====== FOOTER ======
+         MUHIM: piyolamarket.uz'ning haqiqiy footer tuzilishiga moslab qayta
+         qurildi — 4 ta teng ustun (Umumiy / Kataloglar / Mijozlar xizmati /
+         Ijtimoiy tarmoqlar), dumaloq ijtimoiy tarmoq tugmalari (avval
+         "liquidGlass" shisha effekt bor edi — piyolada oddiy tekis dumaloq
+         tugmalar), va App Store/Google Play belgilari qo'shildi (avval
+         umuman yo'q edi). -->
     <div>
         <footer style="background:var(--color-tima-500);color:#fff;padding:3rem 0 2rem;">
             <div class="kc-container">
                 <div style="display:grid;grid-template-columns:1fr;gap:2rem;">
 
-                    <!-- Row 1: Brand + Description -->
+                    <!-- Brand -->
                     <div>
-                        <a href="{{ url('/') }}" style="display:inline-flex;align-items:center;margin-bottom:1rem;">
+                        <a href="{{ url('/') }}" style="display:inline-flex;align-items:center;margin-bottom:0.75rem;">
                             <img src="{{ asset('images/logo/logo_blue.png') }}" alt="Kitobchi" style="height:2rem;width:auto;filter:brightness(0) invert(1);">
                         </a>
-                        <p style="color:rgba(255,255,255,0.7);font-size:0.875rem;line-height:1.7;max-width:340px;margin:0;">
-                            Kitobchi — O'zbekistondagi eng ulkan onlayn kitoblar va kanselyariya marketpleysi. Foydalanuvchilarga sifatli va hamyonbop mahsulotlarni tezda yetkazamiz.
+                        <p style="color:rgba(255,255,255,0.6);font-size:0.8125rem;line-height:1.7;max-width:420px;margin:0;">
+                            {{ __('marketplace.footer_description') }}
                         </p>
                     </div>
 
-                    <!-- Row 2: Nav columns -->
+                    <!-- 4 columns -->
                     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:2rem;">
 
-                        <!-- Katalog -->
+                        <!-- Umumiy -->
                         <div>
-                            <h3 style="font-size:1rem;font-weight:700;margin:0 0 1rem;">Kataloglar</h3>
+                            <h3 style="font-size:1rem;font-weight:700;margin:0 0 1rem;">{{ __('marketplace.footer_general') }}</h3>
                             <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:0.5rem;">
-                                <li><a href="{{ route('web.catalog') }}" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.875rem;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">Barcha kitoblar</a></li>
-                                <li><a href="{{ route('web.catalog', ['type' => 'stationery']) }}" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.875rem;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">Kanselyariya</a></li>
+                                <li><a href="{{ route('legal.index') }}" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.875rem;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">{{ __('marketplace.footer_about') }}</a></li>
+                                <li><a href="{{ route('contact.index') }}" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.875rem;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">{{ __('marketplace.footer_contact') }}</a></li>
+                                <li><a href="{{ route('careers.index') }}" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.875rem;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">{{ __('marketplace.footer_careers') }}</a></li>
                             </ul>
                         </div>
 
-                        <!-- Yordam -->
+                        <!-- Kataloglar -->
                         <div>
-                            <h3 style="font-size:1rem;font-weight:700;margin:0 0 1rem;">Mijozlar xizmati</h3>
+                            <h3 style="font-size:1rem;font-weight:700;margin:0 0 1rem;">{{ __('marketplace.footer_catalogs') }}</h3>
                             <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:0.5rem;">
-                                <li><a href="{{ route('legal.terms') }}" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.875rem;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">Yetkazib berish</a></li>
-                                <li><a href="{{ route('legal.terms') }}" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.875rem;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">To'lovlar</a></li>
-                                <li><a href="{{ route('legal.privacy') }}" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.875rem;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">Maxfiylik siyosati</a></li>
-                                <li><a href="{{ route('contact.index') }}" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.875rem;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">Aloqa</a></li>
-                                <li><a href="{{ route('careers.index') }}" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.875rem;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">Karyera</a></li>
+                                <li><a href="{{ route('web.catalog') }}" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.875rem;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">{{ __('marketplace.footer_all_books') }}</a></li>
+                                <li><a href="{{ route('web.catalog', ['type' => 'stationery']) }}" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.875rem;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">{{ __('marketplace.footer_stationery') }}</a></li>
+                                @foreach($kcHeaderBookCategories->take(3) as $footerCat)
+                                    <li><a href="{{ route('web.catalog', ['category' => $footerCat->id]) }}" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.875rem;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">{{ $footerCat->name }}</a></li>
+                                @endforeach
+                                <li><a href="{{ route('web.catalog') }}" style="color:#fff;text-decoration:none;font-size:0.875rem;font-weight:600;display:inline-flex;align-items:center;gap:0.25rem;">{{ __('marketplace.footer_see_all') }} <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg></a></li>
                             </ul>
                         </div>
 
-                        <!-- Ijtimoiy + Kontakt -->
+                        <!-- Mijozlar xizmati -->
                         <div>
-                            <h3 style="font-size:1rem;font-weight:700;margin:0 0 1rem;">Ijtimoiy tarmoqlar</h3>
-                            <div style="display:flex;gap:0.75rem;margin-bottom:1.5rem;">
-                                <a href="https://t.me/kitobchi" target="_blank" class="liquidGlass-wrapper" style="width:2.5rem;height:2.5rem;display:flex;align-items:center;justify-content:center;">
-                                    <div class="liquidGlass-effect"></div>
-                                    <div class="liquidGlass-tint"></div>
-                                    <div class="liquidGlass-shine"></div>
-                                    <div class="liquidGlass-inner">
-                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
-                                            <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12a12 12 0 0 0 12-12A12 12 0 0 0 12 0zm4.962 7.224c.1-.002.321.023.465.14a.5.5 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024q-.159.037-5.061 3.345q-.72.495-1.302.48c-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789q.04-.324.893-.663q5.247-2.286 6.998-3.014c3.332-1.386 4.025-1.627 4.476-1.635"/>
-                                        </svg>
-                                    </div>
+                            <h3 style="font-size:1rem;font-weight:700;margin:0 0 1rem;">{{ __('marketplace.footer_customer_service') }}</h3>
+                            <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:0.5rem;">
+                                <li><a href="{{ route('legal.terms') }}" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.875rem;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">{{ __('marketplace.footer_delivery') }}</a></li>
+                                <li><a href="{{ route('legal.terms') }}" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.875rem;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">{{ __('marketplace.footer_payments') }}</a></li>
+                                <li><a href="{{ route('legal.privacy') }}" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.875rem;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">{{ __('marketplace.footer_privacy') }}</a></li>
+                            </ul>
+                        </div>
+
+                        <!-- Ijtimoiy tarmoqlar -->
+                        <div>
+                            <h3 style="font-size:1rem;font-weight:700;margin:0 0 1rem;">{{ __('marketplace.footer_social') }}</h3>
+                            <div style="display:flex;gap:0.625rem;margin-bottom:1.25rem;">
+                                <a href="https://t.me/kitobchi" target="_blank" rel="noopener" aria-label="Telegram" style="width:2.25rem;height:2.25rem;border-radius:9999px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.22)'" onmouseout="this.style.background='rgba(255,255,255,0.12)'">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
+                                        <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12a12 12 0 0 0 12-12A12 12 0 0 0 12 0zm4.962 7.224c.1-.002.321.023.465.14a.5.5 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024q-.159.037-5.061 3.345q-.72.495-1.302.48c-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789q.04-.324.893-.663q5.247-2.286 6.998-3.014c3.332-1.386 4.025-1.627 4.476-1.635"/>
+                                    </svg>
                                 </a>
-                                <a href="https://instagram.com/kitobchi" target="_blank" class="liquidGlass-wrapper" style="width:2.5rem;height:2.5rem;display:flex;align-items:center;justify-content:center;">
-                                    <div class="liquidGlass-effect"></div>
-                                    <div class="liquidGlass-tint"></div>
-                                    <div class="liquidGlass-shine"></div>
-                                    <div class="liquidGlass-inner">
-                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
-                                            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/>
-                                        </svg>
-                                    </div>
+                                <a href="https://instagram.com/kitobchi" target="_blank" rel="noopener" aria-label="Instagram" style="width:2.25rem;height:2.25rem;border-radius:9999px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.22)'" onmouseout="this.style.background='rgba(255,255,255,0.12)'">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
+                                        <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/>
+                                    </svg>
                                 </a>
                             </div>
-                            <a href="tel:+998555120102" style="font-size:1.25rem;font-weight:700;color:#fff;text-decoration:none;display:block;margin-bottom:1rem;">
+                            <a href="tel:+998555120102" style="font-size:1.0625rem;font-weight:700;color:#fff;text-decoration:none;display:block;margin-bottom:1rem;">
                                 +998 55 512 01 02
                             </a>
+                            <div style="display:flex;flex-direction:column;gap:0.5rem;">
+                                <a href="https://apps.apple.com/uz/app/kitobchi/id6753818078" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;background:rgba(255,255,255,0.1);border-radius:0.625rem;text-decoration:none;color:#fff;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.18)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">
+                                    <svg width="16" height="16" viewBox="0 0 384 512" fill="white"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg>
+                                    <span style="font-size:0.75rem;">App Store</span>
+                                </a>
+                                <a href="https://play.google.com/store/apps/details?id=com.kitobchi.kitobchi" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;background:rgba(255,255,255,0.1);border-radius:0.625rem;text-decoration:none;color:#fff;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.18)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">
+                                    <svg width="16" height="16" viewBox="0 0 512 512" fill="white"><path d="M99.6 8.6C91 13.3 85.3 21.9 85.3 32.3v447.4c0 10.4 5.7 19 14.3 23.7l246.5-247.2L99.6 8.6zm275.2 254.9L318 322.4l-192.3 192.8 246.5-140.4c8.6-4.9 13.9-13.9 13.9-23.6s-5.3-18.7-13.9-23.6l-.4-.1zm0-11.4l58.2-58.6c8.6-4.9 13.9-13.9 13.9-23.6s-5.3-18.7-13.9-23.6L316.4 88.2 125 280.3l249.8 250z"/></svg>
+                                    <span style="font-size:0.75rem;">Google Play</span>
+                                </a>
+                            </div>
                         </div>
                     </div>
 
                     <!-- Bottom copyright -->
                     <div style="border-top:1px solid rgba(255,255,255,0.15);padding-top:1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
                         <p style="color:rgba(255,255,255,0.5);font-size:0.8125rem;margin:0;">
-                            © {{ date('Y') }} Kitobchi. Barcha huquqlar himoyalangan.
+                            © {{ date('Y') }} Kitobchi. {{ __('marketplace.footer_rights') }}
                         </p>
                         <div style="display:flex;gap:1rem;">
-                            <a href="{{ route('legal.privacy') }}" style="color:rgba(255,255,255,0.5);font-size:0.8125rem;text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.5)'">Maxfiylik</a>
-                            <a href="{{ route('legal.terms') }}" style="color:rgba(255,255,255,0.5);font-size:0.8125rem;text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.5)'">Shartlar</a>
+                            <a href="{{ route('legal.privacy') }}" style="color:rgba(255,255,255,0.5);font-size:0.8125rem;text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.5)'">{{ __('marketplace.footer_privacy_short') }}</a>
+                            <a href="{{ route('legal.terms') }}" style="color:rgba(255,255,255,0.5);font-size:0.8125rem;text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.5)'">{{ __('marketplace.footer_terms') }}</a>
                         </div>
                     </div>
                 </div>
             </div>
         </footer>
+    </div>
+
+    <!-- ====== KATALOGLAR DRAWER ======
+         Piyolamarket.uz'dagi kabi: "Kataloglar" bosilganda chapdan chiqadigan
+         2 ustunli panel. 1-ustun: turlar (Kitoblar/Kanselyariya), 2-ustun:
+         tanlangan turga tegishli kategoriyalar ro'yxati. Kitobchi'da
+         kategoriyalarning rasm-ikonkasi yo'q (piyolada har birining aylana
+         rasmi bor) — shu sabab har bir kategoriya uchun nomining bosh
+         harfidan iborat rangli aylana "avatar" ishlatiladi. -->
+    <div id="kcCatalogDrawerOverlay" class="kc-modal-overlay" onclick="if(event.target===this) closeCatalogDrawer()" style="align-items:stretch;justify-content:flex-start;">
+        <div id="kcCatalogDrawer" class="kc-catalog-drawer">
+            <div class="kc-catalog-drawer__col kc-catalog-drawer__col--types">
+                <div class="kc-catalog-drawer__head">
+                    <h3>{{ __('marketplace.catalogs') }}</h3>
+                    <button type="button" onclick="closeCatalogDrawer()" class="kc-catalog-drawer__close" aria-label="{{ __('marketplace.close') }}">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                    </button>
+                </div>
+                <div class="kc-catalog-drawer__types">
+                    <button type="button" id="kcDrawerTypeBook" onclick="kcSelectDrawerType('book')" class="kc-drawer-type-btn kc-drawer-type-btn--active">
+                        <span class="kc-drawer-type-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                        </span>
+                        <span class="kc-drawer-type-label">{{ __('marketplace.books') }}</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="kc-drawer-type-chevron"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
+                    </button>
+                    <button type="button" id="kcDrawerTypeStationery" onclick="kcSelectDrawerType('stationery')" class="kc-drawer-type-btn">
+                        <span class="kc-drawer-type-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m12 19 7-7 3 3-7 7-3-3z"/><path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="m2 2 7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
+                        </span>
+                        <span class="kc-drawer-type-label">{{ __('marketplace.stationery') }}</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="kc-drawer-type-chevron"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
+                    </button>
+                </div>
+            </div>
+            <div class="kc-catalog-drawer__col kc-catalog-drawer__col--cats">
+                <h4 id="kcDrawerCategoryTitle" class="kc-catalog-drawer__cats-title">{{ __('marketplace.books') }}</h4>
+
+                <div id="kcDrawerCategoryListBook" class="kc-drawer-cat-list">
+                    <a href="{{ route('web.catalog', ['type' => 'book']) }}" class="kc-drawer-cat-item">
+                        <span class="kc-drawer-cat-avatar" style="background:var(--color-tima-100);color:var(--color-tima-600);">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+                        </span>
+                        <span class="kc-drawer-cat-name">{{ __('marketplace.all_categories') }}</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="kc-drawer-cat-chevron"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
+                    </a>
+                    @foreach($kcHeaderBookCategories as $drawerCat)
+                        <a href="{{ route('web.catalog', ['type' => 'book', 'category' => $drawerCat->id]) }}" class="kc-drawer-cat-item">
+                            <span class="kc-drawer-cat-avatar">{{ mb_strtoupper(mb_substr($drawerCat->name, 0, 1)) }}</span>
+                            <span class="kc-drawer-cat-name">{{ $drawerCat->name }}</span>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="kc-drawer-cat-chevron"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
+                        </a>
+                    @endforeach
+                </div>
+
+                <div id="kcDrawerCategoryListStationery" class="kc-drawer-cat-list" style="display:none;">
+                    <a href="{{ route('web.catalog', ['type' => 'stationery']) }}" class="kc-drawer-cat-item">
+                        <span class="kc-drawer-cat-avatar" style="background:var(--color-tima-100);color:var(--color-tima-600);">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+                        </span>
+                        <span class="kc-drawer-cat-name">{{ __('marketplace.all_categories') }}</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="kc-drawer-cat-chevron"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
+                    </a>
+                    @foreach($kcHeaderStationeryCategories as $drawerCat)
+                        <a href="{{ route('web.catalog', ['type' => 'stationery', 'category' => $drawerCat->id]) }}" class="kc-drawer-cat-item">
+                            <span class="kc-drawer-cat-avatar">{{ mb_strtoupper(mb_substr($drawerCat->name, 0, 1)) }}</span>
+                            <span class="kc-drawer-cat-name">{{ $drawerCat->name }}</span>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="kc-drawer-cat-chevron"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
+                        </a>
+                    @endforeach
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- ====== MOBILE BOTTOM NAV ======
@@ -489,7 +673,7 @@
                 <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
                 <polyline points="9 22 9 12 15 12 15 22"/>
             </svg>
-            <span>Bosh sahifa</span>
+            <span>{{ __('marketplace.nav_home') }}</span>
         </a>
         <a href="{{ route('web.catalog') }}"
            style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:0.5rem 0;text-decoration:none;color:{{ request()->is('catalog*') ? 'var(--color-tima-500)' : '#6b7280' }};font-size:0.6875rem;font-weight:{{ request()->is('catalog*') ? '600' : '400' }};">
@@ -497,7 +681,7 @@
                 <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
                 <rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>
             </svg>
-            <span>Katalog</span>
+            <span>{{ __('marketplace.nav_catalog') }}</span>
         </a>
         <a href="{{ route('web.cart') }}"
            class="flex flex-col items-center justify-center gap-[4px] py-2 bg-transparent text-gray-500 hover:text-green-500 transition-colors duration-300 {{ request()->routeIs('web.cart') ? 'text-green-500' : '' }}"
@@ -508,7 +692,7 @@
                 </svg>
                 <span id="kcCartBadgeMob" style="display:none;position:absolute;top:-6px;right:-6px;min-width:16px;height:16px;background:var(--color-tima-500);color:#fff;font-size:9px;font-weight:700;border-radius:9999px;align-items:center;justify-content:center;padding:0 2px;"></span>
             </div>
-            <span>Savatcha</span>
+            <span>{{ __('marketplace.nav_cart') }}</span>
         </a>
 
         @auth
@@ -517,7 +701,7 @@
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
                 </svg>
-                <span>Profil</span>
+                <span>{{ __('marketplace.nav_profile') }}</span>
             </a>
         @else
             <button onclick="openAuthModal()"
@@ -525,7 +709,7 @@
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
                 </svg>
-                <span>Kirish</span>
+                <span>{{ __('marketplace.nav_login') }}</span>
             </button>
         @endauth
     </nav>
@@ -556,13 +740,13 @@
         <!-- Step 1: Phone -->
         <div id="kcAuthStep1">
             <div style="text-align:center;margin-bottom:1.5rem;">
-                <h3 style="font-size:1.25rem;font-weight:800;color:#111827;margin:0 0 0.5rem;">Tizimga kirish</h3>
-                <p style="color:#6b7280;font-size:0.875rem;margin:0;line-height:1.5;">Buyurtmalaringizni kuzatish va xarid qilish uchun telefon raqamingizni kiriting.</p>
+                <h3 style="font-size:1.25rem;font-weight:800;color:#111827;margin:0 0 0.5rem;">{{ __('marketplace.auth_title') }}</h3>
+                <p style="color:#6b7280;font-size:0.875rem;margin:0;line-height:1.5;">{{ __('marketplace.auth_desc') }}</p>
             </div>
 
             <form id="kcPhoneForm" onsubmit="handleSendCode(event)">
                 <div style="margin-bottom:1.25rem;">
-                    <label style="display:block;font-size:0.8125rem;font-weight:600;color:#374151;margin-bottom:0.375rem;">Telefon raqami</label>
+                    <label style="display:block;font-size:0.8125rem;font-weight:600;color:#374151;margin-bottom:0.375rem;">{{ __('marketplace.phone_number') }}</label>
                     <div style="display:flex;align-items:center;background:#f9fafb;border:1px solid #d1d5db;border-radius:0.75rem;padding:0 0.875rem;height:3rem;">
                         <span style="font-weight:700;color:#111827;margin-right:0.5rem;font-size:0.9375rem;">+998</span>
                         <input type="tel" id="kcAuthPhone" placeholder="90 123 45 67" required
@@ -574,7 +758,7 @@
 
                 <button type="submit" id="kcSendBtn"
                         style="width:100%;height:3rem;background:var(--color-tima-500);color:#fff;border:none;border-radius:9999px;font-size:0.9375rem;font-weight:700;cursor:pointer;transition:all 0.2s;">
-                    Kodni yuborish →
+                    {{ __('marketplace.send_code') }}
                 </button>
             </form>
         </div>
@@ -582,8 +766,8 @@
         <!-- Step 2: Code -->
         <div id="kcAuthStep2" style="display:none;">
             <div style="text-align:center;margin-bottom:1.5rem;">
-                <h3 style="font-size:1.25rem;font-weight:800;color:#111827;margin:0 0 0.5rem;">Kodni kiriting</h3>
-                <p style="color:#6b7280;font-size:0.875rem;margin:0;line-height:1.5;" id="kcAuthSentMsg">SMS orqali yuborilgan 6 xonali kodni kiriting.</p>
+                <h3 style="font-size:1.25rem;font-weight:800;color:#111827;margin:0 0 0.5rem;">{{ __('marketplace.enter_code_title') }}</h3>
+                <p style="color:#6b7280;font-size:0.875rem;margin:0;line-height:1.5;" id="kcAuthSentMsg">{{ __('marketplace.enter_code_desc') }}</p>
             </div>
 
             <form id="kcCodeForm" onsubmit="handleVerifyCode(event)">
@@ -596,12 +780,12 @@
 
                 <button type="submit" id="kcVerifyBtn"
                         style="width:100%;height:3rem;background:var(--color-tima-500);color:#fff;border:none;border-radius:9999px;font-size:0.9375rem;font-weight:700;cursor:pointer;transition:all 0.2s;">
-                    Tasdiqlash va Kirish
+                    {{ __('marketplace.verify') }}
                 </button>
 
                 <button type="button" onclick="showAuthStep1()"
                         style="width:100%;background:none;border:none;color:#6b7280;font-size:0.8125rem;margin-top:0.75rem;cursor:pointer;">
-                    ← Raqamni o'zgartirish
+                    {{ __('marketplace.change_number') }}
                 </button>
             </form>
         </div>
@@ -613,6 +797,24 @@
 
 <!-- ====== SCRIPTS ====== -->
 <script>
+    // Server tomonidan tarjima qilingan matnlar — JS ichida ishlatish uchun
+    // (toast xabarlari, xatolik matnlari va h.k.). Bular Blade orqali __()
+    // bilan chiqariladi, shu sabab joriy tilga (uz/ru/en/ja) mos keladi.
+    const KC_I18N = {
+        addedToCart: @json(__('marketplace.toast_added_to_cart')),
+        goToCart: @json(__('marketplace.toast_go_to_cart')),
+        sendCode: @json(__('marketplace.send_code')),
+        sending: @json(__('marketplace.sending')),
+        verify: @json(__('marketplace.verify')),
+        verifying: @json(__('marketplace.verifying')),
+        phoneIncomplete: @json(__('marketplace.phone_incomplete')),
+        codeIncomplete: @json(__('marketplace.code_incomplete')),
+        genericError: @json(__('marketplace.generic_error')),
+        connectionError: @json(__('marketplace.connection_error')),
+        codeWrong: @json(__('marketplace.code_wrong')),
+        codeSentTo: @json(__('marketplace.code_sent_to')),
+    };
+
     let kcCart = JSON.parse(localStorage.getItem('kc_cart') || '[]');
     let currentAuthPhone = '';
 
@@ -679,7 +881,7 @@
         if (redirect) {
             window.location.href = "{{ route('web.checkout') }}";
         } else {
-            kcShowToast("Mahsulot savatchaga qo'shildi!", "success", "Savatchaga o'tish →", "{{ route('web.cart') }}");
+            kcShowToast(KC_I18N.addedToCart, "success", KC_I18N.goToCart, "{{ route('web.cart') }}");
         }
     }
 
@@ -794,17 +996,65 @@
         }
     }
 
-    // LANGUAGE SWITCHER
+    // LANGUAGE SWITCHER / GENERIC DROPDOWN POPOVERS (til, saralash, narx,
+    // do'konlar, nashriyotlar — hammasi shu bitta mexanizmdan foydalanadi).
+    //
+    // MUHIM (filtr bug fix): bu popover'lar ba'zan overflow-x:auto bo'lgan
+    // gorizontal skroll qatori ichida joylashadi (masalan katalog sahifasidagi
+    // filtr qatori). CSS spetsifikatsiyasiga ko'ra overflow-x:auto qo'yilgan
+    // konteyner overflow-y'ni ham "auto"ga majburlaydi — shu sabab avval
+    // position:absolute bo'lgan popover shu konteyner chegarasida KO'RINMAS
+    // holda kesib tashlanardi (display:block bo'lardi, lekin klip qilingani
+    // uchun hech narsa ko'rinmasdi — "filtr bosilsa ham hech narsa
+    // bo'lmayapti" degan xato aynan shundan edi). Yechim: menyuni
+    // position:fixed qilib, JS orqali trigger tugmaning ekrandagi haqiqiy
+    // joylashuviga qarab joylashtiramiz — position:fixed har qanday ajdod
+    // elementning overflow'idan qat'iy nazar kesilmaydi.
     function toggleLangMenu(e, menuId) {
         if (e) e.stopPropagation();
         const menu = document.getElementById(menuId);
         if (!menu) return;
-        const willOpen = menu.style.display !== 'block';
+        const isOpen = menu.style.display === 'block';
         document.querySelectorAll('.kc-lang-menu').forEach(m => { m.style.display = 'none'; });
-        menu.style.display = willOpen ? 'block' : 'none';
+        if (!isOpen) {
+            const trigger = e && e.currentTarget;
+            menu.style.visibility = 'hidden';
+            menu.style.display = 'block';
+            kcPositionDropdown(trigger, menu);
+            menu.style.visibility = 'visible';
+        }
         const btn = e && e.currentTarget;
-        if (btn) btn.setAttribute('aria-expanded', String(willOpen));
+        if (btn) btn.setAttribute('aria-expanded', String(!isOpen));
     }
+
+    function kcPositionDropdown(trigger, menu) {
+        if (!trigger) return;
+        const rect = trigger.getBoundingClientRect();
+        const margin = 8;
+        const menuWidth = menu.offsetWidth || 260;
+        const menuHeight = menu.offsetHeight || 0;
+        const alignRight = menu.classList.contains('kc-lang-menu--right');
+
+        let left = alignRight ? rect.right - menuWidth : rect.left;
+        left = Math.max(margin, Math.min(left, window.innerWidth - menuWidth - margin));
+
+        let top = rect.bottom + 8;
+        if (top + menuHeight > window.innerHeight - margin) {
+            // Ekranning pastida joy yetmasa — tugma ustiga ochamiz.
+            top = Math.max(margin, rect.top - menuHeight - 8);
+        }
+
+        menu.style.position = 'fixed';
+        menu.style.left = left + 'px';
+        menu.style.top = top + 'px';
+        menu.style.right = 'auto';
+        menu.style.bottom = 'auto';
+    }
+
+    function kcCloseAllDropdowns() {
+        document.querySelectorAll('.kc-lang-menu').forEach(m => { m.style.display = 'none'; });
+    }
+
     document.addEventListener('click', function(e) {
         document.querySelectorAll('.kc-lang-wrap').forEach(function(wrap) {
             if (!wrap.contains(e.target)) {
@@ -813,8 +1063,40 @@
             }
         });
     });
+    // Ochiq popover joylashuvi oyna o'lchami/skroll o'zgarganda eskirib
+    // qolmasligi uchun — eng oddiy va ishonchli yechim: shunchaki yopamiz.
+    window.addEventListener('resize', kcCloseAllDropdowns);
+    window.addEventListener('scroll', kcCloseAllDropdowns, true);
 
+    // KATALOGLAR DRAWER (piyolamarket.uz uslubidagi 2 ustunli panel)
+    function openCatalogDrawer() {
+        const overlay = document.getElementById('kcCatalogDrawerOverlay');
+        const drawer = document.getElementById('kcCatalogDrawer');
+        if (!overlay || !drawer) return;
+        overlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+        requestAnimationFrame(() => { drawer.classList.add('kc-catalog-drawer--open'); });
+    }
 
+    function closeCatalogDrawer() {
+        const overlay = document.getElementById('kcCatalogDrawerOverlay');
+        const drawer = document.getElementById('kcCatalogDrawer');
+        if (!overlay || !drawer) return;
+        drawer.classList.remove('kc-catalog-drawer--open');
+        document.body.style.overflow = '';
+        setTimeout(() => { overlay.classList.remove('active'); }, 300);
+    }
+
+    function kcSelectDrawerType(type) {
+        const isBook = type === 'book';
+        document.getElementById('kcDrawerTypeBook').classList.toggle('kc-drawer-type-btn--active', isBook);
+        document.getElementById('kcDrawerTypeStationery').classList.toggle('kc-drawer-type-btn--active', !isBook);
+        document.getElementById('kcDrawerCategoryListBook').style.display = isBook ? 'flex' : 'none';
+        document.getElementById('kcDrawerCategoryListStationery').style.display = isBook ? 'none' : 'flex';
+        document.getElementById('kcDrawerCategoryTitle').textContent = isBook
+            ? @json(__('marketplace.books'))
+            : @json(__('marketplace.stationery'));
+    }
 
     // AUTH MODAL FUNCTIONS
     function openAuthModal() {
@@ -846,7 +1128,7 @@
         const phoneVal = input.value.trim().replace(/\D+/g, '');
 
         if (phoneVal.length < 9) {
-            err.textContent = 'Telefon raqamni to\'liq kiriting.';
+            err.textContent = KC_I18N.phoneIncomplete;
             err.style.display = 'block';
             return;
         }
@@ -854,7 +1136,7 @@
         currentAuthPhone = '998' + (phoneVal.length === 9 ? phoneVal : phoneVal.slice(-9));
 
         btn.disabled = true;
-        btn.textContent = 'Yuborilmoqda...';
+        btn.textContent = KC_I18N.sending;
         err.style.display = 'none';
 
         fetch('/auth/send-code', {
@@ -868,20 +1150,20 @@
         .then(r => r.json())
         .then(res => {
             btn.disabled = false;
-            btn.textContent = 'Kodni yuborish →';
+            btn.textContent = KC_I18N.sendCode;
             if (res.status === 'success') {
                 document.getElementById('kcAuthStep1').style.display = 'none';
                 document.getElementById('kcAuthStep2').style.display = 'block';
-                document.getElementById('kcAuthSentMsg').textContent = '+' + currentAuthPhone + ' raqamiga yuborilgan tasdiqlash kodini kiriting.';
+                document.getElementById('kcAuthSentMsg').textContent = KC_I18N.codeSentTo.replace('{phone}', '+' + currentAuthPhone);
             } else {
-                err.textContent = res.message || 'Xatolik yuz berdi.';
+                err.textContent = res.message || KC_I18N.genericError;
                 err.style.display = 'block';
             }
         })
         .catch(() => {
             btn.disabled = false;
-            btn.textContent = 'Kodni yuborish →';
-            err.textContent = 'Ulanishda xatolik.';
+            btn.textContent = KC_I18N.sendCode;
+            err.textContent = KC_I18N.connectionError;
             err.style.display = 'block';
         });
     }
@@ -894,13 +1176,13 @@
         const code = input.value.trim();
 
         if (code.length < 6) {
-            err.textContent = '6 xonali kodni kiriting.';
+            err.textContent = KC_I18N.codeIncomplete;
             err.style.display = 'block';
             return;
         }
 
         btn.disabled = true;
-        btn.textContent = 'Tekshirilmoqda...';
+        btn.textContent = KC_I18N.verifying;
         err.style.display = 'none';
 
         fetch('/auth/verify-code', {
@@ -914,19 +1196,19 @@
         .then(r => r.json())
         .then(res => {
             btn.disabled = false;
-            btn.textContent = 'Tasdiqlash va Kirish';
+            btn.textContent = KC_I18N.verify;
             if (res.status === 'success') {
                 if (res.token) localStorage.setItem('kc_token', res.token);
                 window.location.reload();
             } else {
-                err.textContent = res.message || 'Kod noto\'g\'ri.';
+                err.textContent = res.message || KC_I18N.codeWrong;
                 err.style.display = 'block';
             }
         })
         .catch(() => {
             btn.disabled = false;
-            btn.textContent = 'Tasdiqlash va Kirish';
-            err.textContent = 'Ulanishda xatolik.';
+            btn.textContent = KC_I18N.verify;
+            err.textContent = KC_I18N.connectionError;
             err.style.display = 'block';
         });
     }

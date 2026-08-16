@@ -1,0 +1,153 @@
+<?php
+
+// Переводы для маркетплейса Kitobchi — header, footer, каталог, корзина,
+// избранное, профиль и т.д.
+
+return [
+    // Header
+    'catalogs' => 'Каталоги',
+    'cart' => 'Корзина',
+    'favorites' => 'Избранное',
+    'login' => 'Войти',
+    'search_placeholder' => 'Поиск товара...',
+    'search_placeholder_mobile' => "Поиск в Kitobchi",
+    'close' => 'Закрыть',
+
+    // Kataloglar drawer
+    'books' => 'Книги',
+    'stationery' => 'Канцтовары',
+    'all_categories' => 'Все',
+
+    // Breadcrumb
+    'breadcrumb_home' => 'Главная',
+    'breadcrumb_catalog' => 'Каталог',
+    'back_to_home' => 'Вернуться на главную',
+    'back_to_catalog' => 'Вернуться в каталог',
+
+    // Catalog / filters
+    'sort' => 'Сортировка',
+    'sort_popular' => 'Популярные',
+    'sort_new' => 'Новые',
+    'sort_price_asc' => 'Дешевле',
+    'sort_price_desc' => 'Дороже',
+    'price' => 'Цена',
+    'price_from' => 'От',
+    'price_to' => 'До',
+    'apply' => "Применить",
+    'shops' => "Магазины",
+    'publishers' => 'Издательства',
+    'clear_filters' => 'Очистить',
+    'products_count' => ':count товаров',
+    'products_not_found' => 'Товары не найдены',
+    'products_not_found_desc' => "По вашему запросу ничего не найдено. Измените запрос или вернитесь в общий каталог.",
+    'all_catalog' => 'Весь каталог',
+    'new_products' => 'Новые поступления',
+    'popular_products' => 'Популярные товары',
+    'search_results' => 'Результаты поиска: :query',
+    'currency' => "сум",
+    'instead_of_price' => 'вместо :price',
+
+    // Cart
+    'cart_title' => 'Корзина',
+    'cart_empty_title' => "Ваша корзина пуста",
+    'cart_empty_desc' => "Добавьте понравившиеся товары в корзину — оформить заказ можно будет в пару кликов",
+    'go_to_catalog' => "Перейти в каталог",
+    'select_all' => 'Выбрать все товары',
+    'selected_count' => 'Выбрано товаров: :count',
+    'price_label' => 'Цена:',
+    'promo_code' => 'Промокод',
+    'order_summary' => 'Ваш заказ',
+    'products_label' => 'Товары (:count):',
+    'delivery' => 'Доставка:',
+    'delivery_by_region' => 'В зависимости от региона',
+    'products_colon' => 'Товары:',
+    'delivery_note' => 'Стоимость доставки и скидка по промокоду рассчитываются на следующем шаге',
+    'continue_purchase' => 'Продолжить покупку',
+
+    // Favorites
+    'favorites_title' => 'Избранное',
+    'favorites_empty_title' => "Список избранного пуст",
+    'favorites_empty_desc' => "Чтобы сохранить понравившиеся товары, нажмите на значок",
+
+    // Footer
+    'footer_general' => 'Общее',
+    'footer_about' => 'О нас',
+    'footer_contact' => 'Контакты',
+    'footer_careers' => 'Карьера',
+    'footer_catalogs' => 'Каталоги',
+    'footer_all_books' => 'Все книги',
+    'footer_stationery' => 'Канцтовары',
+    'footer_see_all' => "Смотреть все",
+    'footer_customer_service' => 'Обслуживание клиентов',
+    'footer_delivery' => 'Доставка',
+    'footer_payments' => "Оплата",
+    'footer_privacy' => 'Политика конфиденциальности',
+    'footer_social' => 'Социальные сети',
+    'footer_description' => "Kitobchi — крупнейший онлайн-маркетплейс книг и канцтоваров в Узбекистане. Мы быстро доставляем качественные и доступные товары.",
+    'footer_rights' => 'Все права защищены.',
+    'footer_privacy_short' => 'Конфиденциальность',
+    'footer_terms' => 'Условия',
+
+    // Mobile nav
+    'nav_home' => 'Главная',
+    'nav_catalog' => 'Каталог',
+    'nav_cart' => 'Корзина',
+    'nav_profile' => 'Профиль',
+    'nav_login' => 'Войти',
+
+    // Auth modal
+    'auth_title' => 'Вход в систему',
+    'auth_desc' => 'Введите номер телефона, чтобы отслеживать заказы и совершать покупки.',
+    'phone_number' => 'Номер телефона',
+    'send_code' => "Отправить код →",
+    'sending' => 'Отправка...',
+    'enter_code_title' => 'Введите код',
+    'enter_code_desc' => 'Введите 6-значный код, отправленный по SMS.',
+    'verify' => 'Подтвердить и войти',
+    'verifying' => 'Проверка...',
+    'change_number' => "← Изменить номер",
+    'phone_incomplete' => "Введите номер телефона полностью.",
+    'code_incomplete' => 'Введите 6-значный код.',
+    'generic_error' => 'Произошла ошибка.',
+    'connection_error' => 'Ошибка соединения.',
+    'code_wrong' => "Неверный код.",
+    'code_sent_to' => 'Введите код подтверждения, отправленный на номер {phone}.',
+
+    // Toasts
+    'toast_added_to_cart' => "Товар добавлен в корзину!",
+    'toast_go_to_cart' => "Перейти в корзину →",
+
+    // Product page CTA
+    'place_order' => 'Оформить заказ',
+    'add_to_cart' => "Добавить в корзину",
+
+    // Profile
+    'profile_title' => 'Профиль',
+    'profile_orders' => 'Мои заказы',
+    'profile_info' => "Мои данные",
+    'profile_logout' => 'Выйти из аккаунта',
+    'profile_user' => 'Пользователь',
+    'profile_orders_title' => 'Ваши заказы',
+    'profile_no_orders' => "У вас пока нет заказов",
+    'profile_no_orders_desc' => "Вы можете выбрать понравившиеся книги из каталога.",
+    'profile_order_number' => 'Заказ #:number',
+    'profile_status_paid' => "Успешно оплачено",
+    'profile_status_pending' => 'В ожидании',
+    'profile_status_accepted' => 'Принято',
+    'profile_address' => 'Адрес:',
+    'profile_address_unset' => 'Не указан',
+    'profile_total' => 'Итого:',
+    'profile_full_name' => "Полное имя",
+    'profile_not_entered' => 'Не указано',
+    'profile_phone' => 'Номер телефона',
+    'profile_addresses' => 'Мои адреса',
+    'profile_add_address' => "Добавить новый адрес",
+    'profile_address_placeholder' => "Выберите на карте или введите вручную",
+    'profile_address_full_name_label' => "Название адреса",
+    'profile_save_address' => 'Сохранить адрес',
+    'profile_set_main' => 'Сделать основным',
+    'profile_delete' => "Удалить",
+    'profile_main' => 'Основной',
+    'profile_confirm_delete_address' => "Удалить этот адрес?",
+    'profile_map_select_alert' => "Пожалуйста, укажите адрес на карте!",
+];

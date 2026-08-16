@@ -22,37 +22,43 @@
             ], fn ($v) => $v !== null && $v !== '');
             $sortLabels = ['popular' => 'Ommabop', 'new' => 'Yangi', 'price_asc' => 'Arzon narx', 'price_desc' => 'Qimmat narx'];
 
+            // MUHIM (i18n fix): avval bu yerda "$cat->name_uz ?? $cat->name" ishlatilardi —
+            // bu doim name_uz'ni ustun qo'yardi, hatto joriy til boshqa bo'lsa ham (masalan
+            // ru/en/ja tanlangan bo'lsa ham kategoriya nomi hech qachon tarjima qilinmasdi).
+            // $cat->name accessor'i (BookCategories/StationeryCategory modeli) o'zi allaqachon
+            // joriy tilga qarab name_{locale} → name_uz fallback qiladi — shuning uchun endi
+            // to'g'ridan-to'g'ri $cat->name ishlatiladi.
             if ($currentCategory) {
-                $pageTitle = $currentCategory->name_uz ?? $currentCategory->name;
+                $pageTitle = $currentCategory->name;
             } elseif ($search) {
-                $pageTitle = '"' . $search . '" bo\'yicha qidiruv';
+                $pageTitle = __('marketplace.search_results', ['query' => $search]);
             } elseif ($sort === 'new') {
-                $pageTitle = 'Yangi kelgan mahsulotlar';
+                $pageTitle = __('marketplace.new_products');
             } elseif ($sort === 'popular') {
-                $pageTitle = 'Ommabop mahsulotlar';
+                $pageTitle = __('marketplace.popular_products');
             } else {
-                $pageTitle = $type === 'book' ? 'Kitoblar' : 'Kanselyariya';
+                $pageTitle = $type === 'book' ? __('marketplace.books') : __('marketplace.stationery');
             }
         @endphp
 
         <!-- Breadcrumb & Back button (PiyolaMarket style) -->
         <div class="flex items-center gap-2 pt-4 pb-1">
-            <a href="{{ url('/') }}" class="rounded-full w-9 h-9 flex items-center justify-center transition-colors text-primary bg-secondary-200 hover:bg-secondary-300" title="Bosh sahifaga qaytish">
+            <a href="{{ url('/') }}" class="rounded-full w-9 h-9 flex items-center justify-center transition-colors text-primary bg-secondary-200 hover:bg-secondary-300" title="{{ __('marketplace.back_to_home') }}">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
             </a>
             <nav aria-label="breadcrumb" class="relative min-w-0">
                 <ol class="flex items-center gap-2">
                     <li class="flex min-w-0 text-[#8F8FA1] text-sm">
-                        <a href="{{ url('/') }}" class="hover:text-neutral-900 transition-colors">Asosiy</a>
+                        <a href="{{ url('/') }}" class="hover:text-neutral-900 transition-colors">{{ __('marketplace.breadcrumb_home') }}</a>
                     </li>
                     <li class="flex text-gray text-xs">/</li>
                     <li class="flex min-w-0 text-[#8F8FA1] text-sm">
-                        <a href="{{ route('web.catalog') }}" class="hover:text-neutral-900 transition-colors">Katalog</a>
+                        <a href="{{ route('web.catalog') }}" class="hover:text-neutral-900 transition-colors">{{ __('marketplace.breadcrumb_catalog') }}</a>
                     </li>
                     @if($currentCategory)
                         <li class="flex text-gray text-xs">/</li>
                         <li class="flex min-w-0 text-[#8F8FA1] text-sm font-semibold truncate">
-                            {{ $currentCategory->name_uz ?? $currentCategory->name }}
+                            {{ $currentCategory->name }}
                         </li>
                     @endif
                 </ol>
@@ -65,33 +71,48 @@
             <h1 class="text-2xl sm:text-3xl text-primary font-bold">
                 {{ $pageTitle }}
             </h1>
-            <span style="font-size:0.875rem;color:#9ca3af;font-weight:500;">{{ $products->total() }} ta mahsulot</span>
+            <span style="font-size:0.875rem;color:#9ca3af;font-weight:500;">{{ __('marketplace.products_count', ['count' => $products->total()]) }}</span>
         </div>
 
-        <!-- ====== HORIZONTAL FILTERS ====== -->
+        <!-- ====== HORIZONTAL FILTERS ======
+             MUHIM (filtr bug fix): quyidagi har bir popover (Saralash/Narx/Do'konlar/
+             Nashriyotlar) avval position:absolute + gorizontal overflow-x:auto qatorining
+             ICHIDA edi — bu ularni ko'rinmas holda kesib tashlardi (bosilganda hech narsa
+             ko'rinmasdi). Endi ular JS orqali (toggleLangMenu/kcPositionDropdown,
+             layouts/marketplace.blade.php) position:fixed qilib ochiladi, shu sabab inline
+             style'dan position/top/left olib tashlandi — joylashuvni endi to'liq JS boshqaradi. -->
         <div class="flex items-center gap-2 py-4 overflow-x-auto no-scrollbar flex-nowrap" style="-ms-overflow-style:none;scrollbar-width:none;">
             <!-- Type Switcher Pill -->
             <a href="{{ route('web.catalog', array_merge($baseParams, ['type' => 'book'])) }}"
                class="inline-flex items-center px-4 py-2 rounded-2xl text-[15px] font-semibold transition-colors shrink-0 gap-2 {{ $type === 'book' ? 'bg-primary text-white' : 'bg-secondary-300 text-primary hover:bg-primary/10' }}">
-                Kitoblar
+                {{ __('marketplace.books') }}
             </a>
             <a href="{{ route('web.catalog', array_merge($baseParams, ['type' => 'stationery'])) }}"
                class="inline-flex items-center px-4 py-2 rounded-2xl text-[15px] font-semibold transition-colors shrink-0 gap-2 {{ $type === 'stationery' ? 'bg-primary text-white' : 'bg-secondary-300 text-primary hover:bg-primary/10' }}">
-                Kanselyariya
+                {{ __('marketplace.stationery') }}
             </a>
 
             <!-- Divider -->
             <div class="w-px h-6 bg-secondary-200 mx-1 shrink-0"></div>
 
+            @php
+                $sortLabelsTranslated = [
+                    'popular' => __('marketplace.sort_popular'),
+                    'new' => __('marketplace.sort_new'),
+                    'price_asc' => __('marketplace.sort_price_asc'),
+                    'price_desc' => __('marketplace.sort_price_desc'),
+                ];
+            @endphp
+
             <!-- Sort Dropdown -->
             <div class="relative kc-lang-wrap shrink-0">
                 <button type="button" onclick="toggleLangMenu(event, 'kcSortMenu')"
                         class="inline-flex items-center gap-1.5 text-primary hover:bg-primary/10 bg-secondary-300 rounded-2xl px-4 py-2 text-[15px] font-semibold border-none cursor-pointer transition-colors">
-                    <span class="truncate">Saralash: {{ $sortLabels[$sort] ?? 'Ommabop' }}</span>
+                    <span class="truncate">{{ __('marketplace.sort') }}: {{ $sortLabelsTranslated[$sort] ?? $sortLabelsTranslated['popular'] }}</span>
                     <svg viewBox="0 0 20 20" fill="currentColor" class="size-5"><path fill-rule="evenodd" d="M5.22 8.22a.75.75 0 011.06 0L10 11.94l3.72-3.72a.75.75 0 111.06 1.06l-4.25 4.25a.75.75 0 01-1.06 0L5.22 9.28a.75.75 0 010-1.06z" clip-rule="evenodd"/></svg>
                 </button>
-                <div id="kcSortMenu" class="kc-lang-menu" style="display:none;position:absolute;top:calc(100% + 8px);left:0;min-width:180px;background:#fff;border-radius:1rem;box-shadow:0 20px 40px rgba(0,0,0,0.14);z-index:200;padding:0.375rem;">
-                    @foreach($sortLabels as $sortKey => $sortLabel)
+                <div id="kcSortMenu" class="kc-lang-menu" style="display:none;min-width:180px;background:#fff;border-radius:1rem;box-shadow:0 20px 40px rgba(0,0,0,0.14);z-index:200;padding:0.375rem;">
+                    @foreach($sortLabelsTranslated as $sortKey => $sortLabel)
                         <a href="{{ route('web.catalog', array_merge($baseParams, ['type' => $type, 'sort' => $sortKey !== 'popular' ? $sortKey : null])) }}"
                            style="display:flex;align-items:center;justify-content:space-between;padding:0.625rem 0.75rem;border-radius:0.625rem;text-decoration:none;font-size:0.875rem;{{ $sort === $sortKey ? 'background:var(--color-tima-50);font-weight:700;color:var(--color-tima-600);' : 'font-weight:500;color:#111827;' }}">
                             {{ $sortLabel }}
@@ -107,10 +128,10 @@
             <div class="relative kc-lang-wrap shrink-0">
                 <button type="button" onclick="toggleLangMenu(event, 'kcPriceMenu')"
                         class="inline-flex items-center gap-1.5 {{ ($priceMin || $priceMax) ? 'bg-primary text-white' : 'text-primary hover:bg-primary/10 bg-secondary-300' }} rounded-2xl px-4 py-2 text-[15px] font-semibold border-none cursor-pointer transition-colors">
-                    <span class="truncate">Narx</span>
+                    <span class="truncate">{{ __('marketplace.price') }}</span>
                     <svg viewBox="0 0 20 20" fill="currentColor" class="size-5"><path fill-rule="evenodd" d="M5.22 8.22a.75.75 0 011.06 0L10 11.94l3.72-3.72a.75.75 0 111.06 1.06l-4.25 4.25a.75.75 0 01-1.06 0L5.22 9.28a.75.75 0 010-1.06z" clip-rule="evenodd"/></svg>
                 </button>
-                <div id="kcPriceMenu" class="kc-lang-menu" style="display:none;position:absolute;top:calc(100% + 8px);left:0;width:300px;background:#fff;border-radius:1.25rem;box-shadow:0 20px 40px rgba(0,0,0,0.14);z-index:200;padding:1.25rem;border:1px solid #f3f4f6;">
+                <div id="kcPriceMenu" class="kc-lang-menu" style="display:none;width:300px;background:#fff;border-radius:1.25rem;box-shadow:0 20px 40px rgba(0,0,0,0.14);z-index:200;padding:1.25rem;border:1px solid #f3f4f6;">
                     <form method="GET" action="{{ route('web.catalog') }}">
                         <input type="hidden" name="type" value="{{ $type }}">
                         @if($search)<input type="hidden" name="search" value="{{ $search }}">@endif
@@ -120,12 +141,12 @@
                         @foreach($selectedPublishers ?? [] as $pid)<input type="hidden" name="publisher_ids[]" value="{{ $pid }}">@endforeach
 
                         <div class="flex items-center gap-3 mb-4">
-                            <input type="number" name="price_min" value="{{ $priceMin }}" placeholder="Dan" class="w-full h-11 bg-secondary-100 rounded-xl px-4 text-[15px] font-medium text-primary outline-none focus:ring-2 ring-primary/20 transition-all border-none">
+                            <input type="number" name="price_min" value="{{ $priceMin }}" placeholder="{{ __('marketplace.price_from') }}" class="w-full h-11 bg-secondary-100 rounded-xl px-4 text-[15px] font-medium text-primary outline-none focus:ring-2 ring-primary/20 transition-all border-none">
                             <span class="text-neutral-400 font-medium">-</span>
-                            <input type="number" name="price_max" value="{{ $priceMax }}" placeholder="Gacha" class="w-full h-11 bg-secondary-100 rounded-xl px-4 text-[15px] font-medium text-primary outline-none focus:ring-2 ring-primary/20 transition-all border-none">
+                            <input type="number" name="price_max" value="{{ $priceMax }}" placeholder="{{ __('marketplace.price_to') }}" class="w-full h-11 bg-secondary-100 rounded-xl px-4 text-[15px] font-medium text-primary outline-none focus:ring-2 ring-primary/20 transition-all border-none">
                         </div>
                         <button type="submit" class="w-full h-11 bg-primary hover:bg-primary/90 text-white rounded-xl text-[15px] font-semibold transition-colors shadow-md shadow-primary/20">
-                            Qo'llash
+                            {{ __('marketplace.apply') }}
                         </button>
                     </form>
                 </div>
@@ -136,11 +157,11 @@
             <div class="relative kc-lang-wrap shrink-0">
                 <button type="button" onclick="toggleLangMenu(event, 'kcShopsMenu')"
                         class="inline-flex items-center gap-1.5 {{ !empty($selectedSellers) ? 'bg-primary text-white' : 'text-primary hover:bg-primary/10 bg-secondary-300' }} rounded-2xl px-4 py-2 text-[15px] font-semibold border-none cursor-pointer transition-colors">
-                    <span class="truncate">Do'konlar</span>
+                    <span class="truncate">{{ __('marketplace.shops') }}</span>
                     @if(!empty($selectedSellers)) <span class="bg-white text-primary rounded-full px-2 py-0.5 text-xs ml-1 flex-center">{{ count($selectedSellers) }}</span> @endif
                     <svg viewBox="0 0 20 20" fill="currentColor" class="size-5"><path fill-rule="evenodd" d="M5.22 8.22a.75.75 0 011.06 0L10 11.94l3.72-3.72a.75.75 0 111.06 1.06l-4.25 4.25a.75.75 0 01-1.06 0L5.22 9.28a.75.75 0 010-1.06z" clip-rule="evenodd"/></svg>
                 </button>
-                <div id="kcShopsMenu" class="kc-lang-menu" style="display:none;position:absolute;top:calc(100% + 8px);left:0;width:280px;background:#fff;border-radius:1.25rem;box-shadow:0 20px 40px rgba(0,0,0,0.14);z-index:200;padding:1.25rem;border:1px solid #f3f4f6;">
+                <div id="kcShopsMenu" class="kc-lang-menu" style="display:none;width:280px;background:#fff;border-radius:1.25rem;box-shadow:0 20px 40px rgba(0,0,0,0.14);z-index:200;padding:1.25rem;border:1px solid #f3f4f6;">
                     <form method="GET" action="{{ route('web.catalog') }}">
                         <input type="hidden" name="type" value="{{ $type }}">
                         @if($search)<input type="hidden" name="search" value="{{ $search }}">@endif
@@ -163,7 +184,7 @@
                                 </label>
                             @endforeach
                         </div>
-                        <button type="submit" class="w-full h-11 bg-primary hover:bg-primary/90 text-white rounded-xl text-[15px] font-semibold transition-colors shadow-md shadow-primary/20">Qo'llash</button>
+                        <button type="submit" class="w-full h-11 bg-primary hover:bg-primary/90 text-white rounded-xl text-[15px] font-semibold transition-colors shadow-md shadow-primary/20">{{ __('marketplace.apply') }}</button>
                     </form>
                 </div>
             </div>
@@ -174,11 +195,11 @@
             <div class="relative kc-lang-wrap shrink-0">
                 <button type="button" onclick="toggleLangMenu(event, 'kcPublishersMenu')"
                         class="inline-flex items-center gap-1.5 {{ !empty($selectedPublishers) ? 'bg-primary text-white' : 'text-primary hover:bg-primary/10 bg-secondary-300' }} rounded-2xl px-4 py-2 text-[15px] font-semibold border-none cursor-pointer transition-colors">
-                    <span class="truncate">Nashriyotlar</span>
+                    <span class="truncate">{{ __('marketplace.publishers') }}</span>
                     @if(!empty($selectedPublishers)) <span class="bg-white text-primary rounded-full px-2 py-0.5 text-xs ml-1 flex-center">{{ count($selectedPublishers) }}</span> @endif
                     <svg viewBox="0 0 20 20" fill="currentColor" class="size-5"><path fill-rule="evenodd" d="M5.22 8.22a.75.75 0 011.06 0L10 11.94l3.72-3.72a.75.75 0 111.06 1.06l-4.25 4.25a.75.75 0 01-1.06 0L5.22 9.28a.75.75 0 010-1.06z" clip-rule="evenodd"/></svg>
                 </button>
-                <div id="kcPublishersMenu" class="kc-lang-menu" style="display:none;position:absolute;top:calc(100% + 8px);left:0;width:280px;background:#fff;border-radius:1.25rem;box-shadow:0 20px 40px rgba(0,0,0,0.14);z-index:200;padding:1.25rem;border:1px solid #f3f4f6;">
+                <div id="kcPublishersMenu" class="kc-lang-menu" style="display:none;width:280px;background:#fff;border-radius:1.25rem;box-shadow:0 20px 40px rgba(0,0,0,0.14);z-index:200;padding:1.25rem;border:1px solid #f3f4f6;">
                     <form method="GET" action="{{ route('web.catalog') }}">
                         <input type="hidden" name="type" value="{{ $type }}">
                         @if($search)<input type="hidden" name="search" value="{{ $search }}">@endif
@@ -201,7 +222,7 @@
                                 </label>
                             @endforeach
                         </div>
-                        <button type="submit" class="w-full h-11 bg-primary hover:bg-primary/90 text-white rounded-xl text-[15px] font-semibold transition-colors shadow-md shadow-primary/20">Qo'llash</button>
+                        <button type="submit" class="w-full h-11 bg-primary hover:bg-primary/90 text-white rounded-xl text-[15px] font-semibold transition-colors shadow-md shadow-primary/20">{{ __('marketplace.apply') }}</button>
                     </form>
                 </div>
             </div>
@@ -212,7 +233,7 @@
                 <a href="{{ route('web.catalog', ['type' => $type]) }}"
                    class="inline-flex items-center px-4 py-2 rounded-2xl text-[15px] font-semibold transition-colors shrink-0 gap-1.5 bg-error-50 text-error-500 hover:bg-error-100 border-none ml-2">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:1.125em;height:1.125em;"><path stroke-linecap="round" stroke-linejoin="round" d="M18 6 6 18M6 6l12 12"/></svg>
-                    Tozalash
+                    {{ __('marketplace.clear_filters') }}
                 </a>
             @endif
         </div>
@@ -222,12 +243,12 @@
             @php $activeCategories = $isStationery ? ($stationeryCategories ?? collect()) : ($bookCategories ?? collect()); @endphp
             <a href="{{ route('web.catalog', array_merge(array_diff_key($baseParams, ['category' => 1]), ['type' => $type])) }}"
                class="inline-flex items-center px-4 py-2 rounded-full text-[15px] font-medium transition-colors shrink-0 {{ !request('category') ? 'bg-primary text-white' : 'bg-transparent text-primary hover:bg-secondary-100' }}">
-                Barchasi
+                {{ __('marketplace.all_categories') }}
             </a>
             @foreach($activeCategories as $cat)
                 <a href="{{ route('web.catalog', array_merge($baseParams, ['type' => $type, 'category' => $cat->id])) }}"
                    class="inline-flex items-center px-4 py-2 rounded-full text-[15px] font-medium transition-colors shrink-0 {{ request('category') == $cat->id ? 'bg-primary text-white' : 'bg-transparent text-primary hover:bg-secondary-100' }}">
-                    {{ $cat->name_uz ?? $cat->name }}
+                    {{ $cat->name }}
                 </a>
             @endforeach
         </div>
@@ -284,10 +305,10 @@
                                     <div style="position:absolute;top:0.375rem;right:0.375rem;z-index:20;">
                                         <div style="position:relative;overflow:hidden;transition:box-shadow 0.3s;border-radius:1rem;padding:0!important;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);background:rgba(255,255,255,0.5);">
                                             <div style="position:absolute;inset:0;pointer-events:none;"></div>
-                                            <button aria-label="Sevimlilar"
+                                            <button aria-label="{{ __('marketplace.favorites') }}"
                                                     data-fav="{{ $isFav ? '1' : '0' }}"
                                                     onclick="event.preventDefault();toggleFavorite(this, {{ $item->id }}, '{{ $isStationery ? 'stationery' : 'book' }}');"
-                                                    name="Sevimlilar"
+                                                    name="{{ __('marketplace.favorites') }}"
                                                     style="width:2rem;height:2rem;display:flex;align-items:center;justify-content:center;border-radius:9999px;background:none;border:none;cursor:pointer;transition:all 0.3s;position:relative;z-index:10;">
                                                 <svg class="kc-heart-icon" viewBox="0 0 24 24" style="width:18px;height:18px;position:relative;z-index:10;"
                                                      fill="{{ $isFav ? '#ef4444' : 'none' }}" stroke="{{ $isFav ? '#ef4444' : '#374151' }}" stroke-width="1.8">
@@ -311,7 +332,7 @@
                                     <!-- Price: text-sm md:text-base text-muted font-semibold mt-2 -->
                                     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.5rem;">
                                         <p style="font-size:0.875rem;color:#6b7280;font-weight:600;margin:0.5rem 0 0;line-height:1.25;">
-                                            {{ number_format($price) }} so'm
+                                            {{ number_format($price) }} {{ __('marketplace.currency') }}
                                         </p>
                                     </div>
 
@@ -319,7 +340,7 @@
                                     @if($isDisc)
                                         <div style="margin-top:auto;">
                                             <span style="display:inline-block;padding:0.125rem 0.5rem;font-size:0.75rem;font-weight:500;background:var(--color-tima-100);color:var(--color-tima-600);border-radius:9999px;margin-top:0.25rem;">
-                                                {{ number_format($rawPrice) }} so'm o'rniga
+                                                {{ __('marketplace.instead_of_price', ['price' => number_format($rawPrice) . ' ' . __('marketplace.currency')]) }}
                                             </span>
                                         </div>
                                     @endif
@@ -341,12 +362,12 @@
                                 <path d="M12 7v14"/><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z"/>
                             </svg>
                         </div>
-                        <h3 style="font-size:1.25rem;font-weight:700;color:#111827;margin:0 0 0.5rem;">Mahsulotlar topilmadi</h3>
+                        <h3 style="font-size:1.25rem;font-weight:700;color:#111827;margin:0 0 0.5rem;">{{ __('marketplace.products_not_found') }}</h3>
                         <p style="color:#6b7280;font-size:0.9375rem;max-width:360px;margin:0 auto 1.5rem;line-height:1.6;">
-                            Kiritilgan so'rov bo'yicha hech narsa topilmadi. Qidiruvni o'zgartiring yoki barcha katalogga qaytish.
+                            {{ __('marketplace.products_not_found_desc') }}
                         </p>
                         <a href="{{ route('web.catalog') }}" class="kc-primary-btn">
-                            Barcha katalog
+                            {{ __('marketplace.all_catalog') }}
                         </a>
                     </div>
                 @endif

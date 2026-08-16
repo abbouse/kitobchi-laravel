@@ -333,11 +333,11 @@
                         <div class="flex items-center gap-2 sm:gap-3 kc-buybar-mobile">
                             <div class="flex-1">
                                 <button type="button" onclick="addToCart({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $currentPrice }}, '{{ $imgUrl }}', '{{ $canonicalUrl }}', true)" class="font-medium inline-flex items-center justify-center transition-colors py-1.5 gap-1.5 text-white bg-primary hover:bg-primary/90 active:bg-primary/90 h-12 rounded-2xl text-base px-6 w-full cursor-pointer">
-                                    Buyurtma berish
+                                    {{ __('marketplace.place_order') }}
                                 </button>
                             </div>
                             <div>
-                                <button type="button" onclick="addToCart({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $currentPrice }}, '{{ $imgUrl }}', '{{ $canonicalUrl }}', false)" title="Savatchaga qo'shish" class="font-medium inline-flex items-center justify-center transition-colors text-base gap-2 text-primary bg-primary/10 hover:bg-primary/15 active:bg-primary/15 h-12 w-14 rounded-2xl cursor-pointer">
+                                <button type="button" onclick="addToCart({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $currentPrice }}, '{{ $imgUrl }}', '{{ $canonicalUrl }}', false)" title="{{ __('marketplace.add_to_cart') }}" class="font-medium inline-flex items-center justify-center transition-colors text-base gap-2 text-primary bg-primary/10 hover:bg-primary/15 active:bg-primary/15 h-12 w-14 rounded-2xl cursor-pointer">
                                     <svg viewBox="0 0 24 24" fill="currentColor" style="width:24px;height:24px;"><path d="M2.25 2.25a.75.75 0 000 1.5h1.386c.17 0 .318.114.362.278l2.558 9.592a3.752 3.752 0 00-2.806 3.63c0 .414.336.75.75.75h15.75a.75.75 0 000-1.5H5.378A2.25 2.25 0 017.5 15h11.218a.75.75 0 00.674-.421 60.358 60.358 0 002.96-7.228.75.75 0 00-.525-.965A60.864 60.864 0 005.68 4.509l-.232-.867A1.875 1.875 0 003.636 2.25H2.25zM3.75 20.25a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zM16.5 20.25a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0z"/></svg>
                                 </button>
                             </div>
