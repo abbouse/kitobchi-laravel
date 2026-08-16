@@ -38,6 +38,11 @@ return [
     'apply' => "Qo'llash",
     'shops' => "Do'konlar",
     'publishers' => 'Nashriyotlar',
+    'authors' => 'Mualliflar',
+    'cover_type' => 'Muqova',
+    'cover_type_soft' => 'Yumshoq muqova',
+    'cover_type_hard' => 'Qattiq muqova',
+    'material' => 'Material',
     'clear_filters' => 'Tozalash',
     'products_count' => ':count ta mahsulot',
     'products_not_found' => 'Mahsulotlar topilmadi',
@@ -63,6 +68,7 @@ return [
     'delivery' => 'Yetkazib berish:',
     'delivery_by_region' => 'Hududga qarab',
     'products_colon' => 'Mahsulotlar:',
+    'cart_total_label' => 'Jami:',
     'delivery_note' => 'Yetkazib berish narxi va promokod chegirmasi keyingi bosqichda hisoblanadi',
     'continue_purchase' => 'Xaridni davom ettirish',
 
@@ -122,6 +128,19 @@ return [
     // Product page CTA
     'place_order' => 'Buyurtma berish',
     'add_to_cart' => "Savatchaga qo'shish",
+
+    // Product reviews (BookClub postlari — piyolamarket uslubida sharh sifatida)
+    'reviews_title' => 'Xaridorlar sharhlari',
+    'reviews_helpful' => ':count kishi foydali deb topdi',
+    'reviews_comments_count' => ':count ta izoh',
+
+    // Seller/shop info (product sahifasida)
+    'seller_shop' => "Do'kon",
+
+    // AI tavsiya (item.dart'dagi kabi, vektor-asosidagi o'xshashlik)
+    'ai_recommendations_title' => 'AI tavsiya',
+    'ai_recommendations_desc' => "Sun'iy intellekt shu mahsulot bilan o'xshash bo'lgan variantlarni tanladi",
+    'similar_products_title' => "O'xshash mahsulotlar",
 
     // Profile
     'profile_title' => 'Profil',

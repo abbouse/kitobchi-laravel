@@ -36,6 +36,11 @@ return [
     'apply' => '適用',
     'shops' => 'ショップ',
     'publishers' => '出版社',
+    'authors' => '著者',
+    'cover_type' => '表紙',
+    'cover_type_soft' => 'ソフトカバー',
+    'cover_type_hard' => 'ハードカバー',
+    'material' => '素材',
     'clear_filters' => 'クリア',
     'products_count' => '商品 :count 件',
     'products_not_found' => '商品が見つかりません',
@@ -61,6 +66,7 @@ return [
     'delivery' => '配送:',
     'delivery_by_region' => '地域により異なります',
     'products_colon' => '商品:',
+    'cart_total_label' => '合計:',
     'delivery_note' => '配送料とプロモコードの割引は次のステップで計算されます',
     'continue_purchase' => '購入を続ける',
 
@@ -120,6 +126,19 @@ return [
     // Product page CTA
     'place_order' => '注文する',
     'add_to_cart' => 'カートに追加',
+
+    // Product reviews
+    'reviews_title' => 'レビュー',
+    'reviews_helpful' => ':count 人が役に立ったと回答',
+    'reviews_comments_count' => 'コメント :count 件',
+
+    // Seller/shop info
+    'seller_shop' => 'ショップ',
+
+    // AI recommendations
+    'ai_recommendations_title' => 'AIのおすすめ',
+    'ai_recommendations_desc' => 'AIがこの商品に似たアイテムを選びました',
+    'similar_products_title' => '類似商品',
 
     // Profile
     'profile_title' => 'プロフィール',

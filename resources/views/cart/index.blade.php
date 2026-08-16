@@ -26,6 +26,9 @@
         {{ __('marketplace.cart_title') }}
         <span id="kcCartCount" class="text-xl font-medium text-neutral-400"></span>
     </h1>
+    {{-- MUHIM (piyolamarket'ga moslashtirish): piyola sarlavha yonida sonni
+         qavs ICHIDA emas, oddiy matn sifatida ko'rsatadi (masalan "Savat  2
+         ta mahsulot"), JS pastda shunga moslab yozildi. --}}
 
     <div id="kcCartPageContent"></div>
 
@@ -42,11 +45,11 @@
         selectedCount: @json(__('marketplace.selected_count')),
         priceLabel: @json(__('marketplace.price_label')),
         promoCode: @json(__('marketplace.promo_code')),
-        orderSummary: @json(__('marketplace.order_summary')),
-        productsLabel: @json(__('marketplace.products_label')),
+        moveToFavorites: @json(__('marketplace.favorites')),
+        productsCount: @json(__('marketplace.products_count')),
         delivery: @json(__('marketplace.delivery')),
         deliveryByRegion: @json(__('marketplace.delivery_by_region')),
-        productsColon: @json(__('marketplace.products_colon')),
+        totalLabel: @json(__('marketplace.cart_total_label')),
         deliveryNote: @json(__('marketplace.delivery_note')),
         continuePurchase: @json(__('marketplace.continue_purchase')),
         currency: @json(__('marketplace.currency')),
@@ -95,7 +98,7 @@ function renderCartPage() {
 
     const cart = kcCart || JSON.parse(localStorage.getItem('kc_cart') || '[]');
 
-    if (countEl) countEl.textContent = cart.length > 0 ? `(${cart.length})` : '';
+    if (countEl) countEl.textContent = cart.length > 0 ? KC_CART_I18N.productsCount.replace(':count', cart.length) : '';
 
     if (!cart || cart.length === 0) {
         container.innerHTML = `
@@ -122,13 +125,23 @@ function renderCartPage() {
 
     let itemsHtml = '';
 
+    // MUHIM (piyolamarket'ga moslashtirish): avval BARCHA mahsulotlar bitta
+    // umumiy oq karta ichida chiziqlar (border-b) bilan ajratilardi. Piyolada
+    // esa har bir mahsulot O'ZINING alohida (gap bilan ajratilgan) oq
+    // kartochkasida — shu tarzga moslashtirildi. Shuningdek piyolada har bir
+    // qatorda savatdan o'chirish (trash) tugmasi bilan bir qatorda sevimliga
+    // qo'shish (heart) tugmasi ham bor edi — item.url'dan (masalan
+    // "/stationery/12-...") mahsulot turini aniqlab, umumiy toggleFavorite()
+    // funksiyasi chaqiriladi (savat elementida alohida "type" maydoni
+    // saqlanmagani uchun URL'dan xulosa chiqariladi).
     cart.forEach(item => {
         const isSelected = item.selected !== false;
-        const openTag = item.url ? `<a href="${item.url}" class="group block bg-white rounded-xl overflow-hidden">` : `<div>`;
+        const openTag = item.url ? `<a href="${item.url}" class="group block">` : `<div>`;
         const closeTag = item.url ? '</a>' : '</div>';
+        const inferredType = (item.url || '').includes('/stationery/') ? 'stationery' : 'book';
 
         itemsHtml += `
-            <div class="flex gap-3 border-b border-secondary-300 pb-5 ${isSelected ? '' : 'opacity-50'}">
+            <div class="flex gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-secondary-200 ${isSelected ? '' : 'opacity-50'}">
                 <label class="flex items-start pt-1 cursor-pointer shrink-0">
                     <input type="checkbox" class="w-5 h-5 accent-primary cursor-pointer" ${isSelected ? 'checked' : ''} onchange="kcToggleItemSelect(${item.id}, this.checked)">
                 </label>
@@ -137,13 +150,18 @@ function renderCartPage() {
                         <img src="${item.image}" alt="${item.name}" class="w-full h-full object-cover">
                     </div>
                     <div class="flex-1 flex flex-col sm:justify-between py-2 gap-4 min-w-0">
-                        <div class="flex items-start justify-between gap-4">
+                        <div class="flex items-start justify-between gap-2">
                             ${openTag}
                                 <h3 class="text-lg md:text-xl font-medium text-primary hover:text-primary-500 transition-colors line-clamp-2">${item.name}</h3>
                             ${closeTag}
-                            <button type="button" onclick="removeFromCart(${item.id}); renderCartPage();" class="shrink-0 p-2 text-neutral-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all duration-300">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5 block"><path stroke-linecap="round" stroke-linejoin="round" d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14ZM10 11v6M14 11v6"/></svg>
-                            </button>
+                            <div class="flex items-center gap-1 shrink-0">
+                                <button type="button" aria-label="${KC_CART_I18N.moveToFavorites || ''}" onclick="toggleFavorite(this, ${item.id}, '${inferredType}')" class="kc-cart-fav-btn shrink-0 p-2 text-neutral-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all duration-300">
+                                    <svg class="kc-heart-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:1.25rem;height:1.25rem;"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/></svg>
+                                </button>
+                                <button type="button" onclick="removeFromCart(${item.id}); renderCartPage();" class="shrink-0 p-2 text-neutral-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all duration-300">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5 block"><path stroke-linecap="round" stroke-linejoin="round" d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14ZM10 11v6M14 11v6"/></svg>
+                                </button>
+                            </div>
                         </div>
                         <div class="flex max-sm:flex-col sm:items-center justify-between gap-4">
                             <div class="flex items-center gap-3">
@@ -171,7 +189,7 @@ function renderCartPage() {
     const checkoutDisabled = totalCount === 0;
 
     container.innerHTML = `
-        <div class="flex items-center justify-between bg-white rounded-xl border border-secondary-200 px-4 py-3 mb-4">
+        <div class="flex items-center justify-between px-1 py-2 mb-4">
             <label class="flex items-center gap-3 cursor-pointer">
                 <input type="checkbox" class="w-5 h-5 accent-primary cursor-pointer" ${allSelected ? 'checked' : ''} onchange="kcToggleSelectAll(this.checked)">
                 <span class="font-medium text-primary">${KC_CART_I18N.selectAll}</span>
@@ -180,10 +198,8 @@ function renderCartPage() {
         </div>
 
         <div class="flex flex-col lg:flex-row gap-6 xl:gap-8 relative items-start">
-            <div class="flex-1 flex flex-col gap-5 w-full min-w-0">
-                <div class="flex flex-col gap-5 w-full bg-white p-4 sm:p-6 rounded-2xl border border-secondary-200">
-                    ${itemsHtml}
-                </div>
+            <div class="flex-1 flex flex-col gap-4 w-full min-w-0">
+                ${itemsHtml}
 
                 <div class="bg-white p-4 sm:p-5 rounded-2xl border border-secondary-200">
                     <input type="text" id="kcPromoInput" placeholder="${KC_CART_I18N.promoCode}" value="${savedPromo.replace(/"/g, '&quot;')}" oninput="kcSavePromo(this.value)" class="w-full h-12 bg-secondary-100 border-none rounded-xl px-4 text-sm font-medium text-primary outline-none focus:ring-2 ring-primary/20 transition-all" autocomplete="off">
@@ -192,12 +208,9 @@ function renderCartPage() {
 
             <div class="w-full lg:w-[380px] shrink-0 sticky top-24">
                 <div class="bg-white rounded-2xl p-5 md:p-6 border border-secondary-200 shadow-sm flex flex-col gap-6">
-                    <h3 class="text-xl font-bold text-primary">
-                        ${KC_CART_I18N.orderSummary}
-                    </h3>
                     <div class="flex flex-col gap-4">
                         <div class="flex justify-between items-center text-base">
-                            <span class="text-neutral-500">${KC_CART_I18N.productsLabel.replace(':count', totalCount)}</span>
+                            <span class="text-neutral-500">${KC_CART_I18N.productsCount.replace(':count', totalCount)}</span>
                             <span class="font-medium text-primary">${new Intl.NumberFormat('uz').format(total)} ${KC_CART_I18N.currency}</span>
                         </div>
                         <div class="flex justify-between items-center text-base">
@@ -208,7 +221,7 @@ function renderCartPage() {
                         <hr class="border-secondary-200 my-1">
 
                         <div class="flex justify-between items-center">
-                            <span class="text-lg font-bold text-primary">${KC_CART_I18N.productsColon}</span>
+                            <span class="text-lg font-bold text-primary">${KC_CART_I18N.totalLabel}</span>
                             <span class="text-2xl font-bold text-primary">${new Intl.NumberFormat('uz').format(total)} ${KC_CART_I18N.currency}</span>
                         </div>
                         <div class="text-xs text-neutral-400 -mt-2">${KC_CART_I18N.deliveryNote}</div>

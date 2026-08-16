@@ -36,6 +36,11 @@ return [
     'apply' => "Применить",
     'shops' => "Магазины",
     'publishers' => 'Издательства',
+    'authors' => 'Авторы',
+    'cover_type' => 'Обложка',
+    'cover_type_soft' => 'Мягкая обложка',
+    'cover_type_hard' => 'Твёрдая обложка',
+    'material' => 'Материал',
     'clear_filters' => 'Очистить',
     'products_count' => ':count товаров',
     'products_not_found' => 'Товары не найдены',
@@ -61,6 +66,7 @@ return [
     'delivery' => 'Доставка:',
     'delivery_by_region' => 'В зависимости от региона',
     'products_colon' => 'Товары:',
+    'cart_total_label' => 'Итого:',
     'delivery_note' => 'Стоимость доставки и скидка по промокоду рассчитываются на следующем шаге',
     'continue_purchase' => 'Продолжить покупку',
 
@@ -120,6 +126,19 @@ return [
     // Product page CTA
     'place_order' => 'Оформить заказ',
     'add_to_cart' => "Добавить в корзину",
+
+    // Product reviews
+    'reviews_title' => 'Отзывы покупателей',
+    'reviews_helpful' => ':count чел. считают это полезным',
+    'reviews_comments_count' => 'Комментариев: :count',
+
+    // Seller/shop info
+    'seller_shop' => 'Магазин',
+
+    // AI-рекомендации
+    'ai_recommendations_title' => 'ИИ-рекомендации',
+    'ai_recommendations_desc' => 'Искусственный интеллект подобрал похожие на этот товар варианты',
+    'similar_products_title' => 'Похожие товары',
 
     // Profile
     'profile_title' => 'Профиль',

@@ -275,6 +275,52 @@
                         </div>
                     @endif
 
+                    <!-- ====== SOTUVCHI (Seller/Shop) ======
+                         Mahsulot qaysi do'kondan sotilayotganini ko'rsatadi —
+                         avval bu ma'lumot mahsulot sahifasida umuman
+                         chiqmasdi. Do'kon nomiga bosilsa katalogga shu
+                         do'konning barcha mahsulotlari bilan filtrlangan
+                         holda o'tadi (alohida "do'kon sahifasi" web'da hali
+                         yo'q, shuning uchun mavjud Do'konlar filtridan
+                         foydalaniladi). -->
+                    @if($product->seller)
+                        @php $sellerObj = $product->seller; @endphp
+                        <a href="{{ route('web.catalog', ['type' => $productType, 'seller_ids' => [$sellerObj->id]]) }}"
+                           style="display:flex;align-items:center;gap:0.75rem;padding:0.875rem 1rem;background:#fff;border:1px solid #f1f5f9;border-radius:1rem;text-decoration:none;transition:border-color 0.2s;"
+                           onmouseover="this.style.borderColor='var(--color-tima-300,#a3d9c9)'" onmouseout="this.style.borderColor='#f1f5f9'">
+                            @if(!empty($sellerObj->photo))
+                                <img src="{{ str_starts_with($sellerObj->photo, 'http') ? $sellerObj->photo : asset('storage/' . ltrim($sellerObj->photo, '/')) }}"
+                                     alt="{{ $sellerObj->shop_name }}" style="width:2.75rem;height:2.75rem;border-radius:9999px;object-fit:cover;flex-shrink:0;">
+                            @else
+                                <div style="width:2.75rem;height:2.75rem;border-radius:9999px;background:var(--color-tima-100,#e8eaef);color:var(--color-tima-600);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.125rem;flex-shrink:0;">
+                                    {{ mb_strtoupper(mb_substr($sellerObj->shop_name ?: '?', 0, 1)) }}
+                                </div>
+                            @endif
+                            <div style="min-width:0;flex:1;">
+                                <div style="display:flex;align-items:center;gap:0.375rem;">
+                                    <span style="font-weight:700;font-size:0.9375rem;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ $sellerObj->shop_name }}</span>
+                                    @if($sellerObj->isVerified)
+                                        <svg viewBox="0 0 24 24" fill="#3b82f6" style="width:15px;height:15px;flex-shrink:0;" aria-label="Tasdiqlangan do'kon"><path d="M12 2l2.4 1.2 2.7-.3 1.2 2.4 2.4 1.2-.3 2.7L22 12l-1.2 2.4.3 2.7-2.4 1.2-1.2 2.4-2.7-.3L12 22l-2.4-1.2-2.7.3-1.2-2.4-2.4-1.2.3-2.7L2 12l1.2-2.4-.3-2.7 2.4-1.2 1.2-2.4 2.7.3z"/><path d="M9 12l2 2 4-4" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                    @endif
+                                    @if($sellerObj->isPremiumShop)
+                                        <span style="font-size:0.625rem;font-weight:700;color:#a16207;background:#fef9c3;padding:0.0625rem 0.375rem;border-radius:9999px;">PREMIUM</span>
+                                    @endif
+                                </div>
+                                <div style="font-size:0.8125rem;color:#9ca3af;margin-top:0.125rem;">
+                                    @if($sellerObj->rating > 0)
+                                        <span style="color:#f59e0b;font-weight:600;">★ {{ number_format($sellerObj->rating, 1) }}</span>
+                                        @if($sellerObj->rating_reviews_count > 0)
+                                            <span>({{ $sellerObj->rating_reviews_count }})</span>
+                                        @endif
+                                        <span> · </span>
+                                    @endif
+                                    {{ __('marketplace.seller_shop') }}
+                                </div>
+                            </div>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" style="width:18px;height:18px;flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
+                        </a>
+                    @endif
+
                     <!-- ====== PRICE AND PAYMENT TABS BLOCK ====== -->
                     <div class="p-6 rounded-3xl bg-secondary-100 space-y-5 mt-4">
                         <!-- Tabs -->
@@ -407,7 +453,7 @@
             <section style="margin-top:2.5rem;">
                 <div style="display:flex;align-items:center;gap:0.625rem;margin-bottom:1.25rem;">
                     <h2 style="font-size:clamp(1.25rem,3vw,1.75rem);font-weight:800;color:#111827;margin:0;">
-                        Xaridorlar sharhlari
+                        {{ __('marketplace.reviews_title') }}
                     </h2>
                     <span style="font-size:1rem;font-weight:600;color:#9ca3af;">({{ $ugcReviews->count() }})</span>
                 </div>
@@ -452,7 +498,74 @@
                                     @endforeach
                                 </div>
                             @endif
+
+                            {{-- Book club'dagi like/izoh sonlari — ilovadagi kabi
+                                 like = "foydali", izoh soni = shu postga yozilgan
+                                 javoblar (BookClubComment) miqdori. --}}
+                            @if(($review->likes_count ?? 0) > 0 || ($review->comments_count ?? 0) > 0)
+                                <div style="display:flex;align-items:center;gap:1rem;margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid #f3f4f6;">
+                                    @if(($review->likes_count ?? 0) > 0)
+                                        <span style="display:inline-flex;align-items:center;gap:0.3rem;font-size:0.75rem;font-weight:600;color:#ef4444;">
+                                            <svg viewBox="0 0 24 24" fill="currentColor" style="width:14px;height:14px;"><path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z"/></svg>
+                                            {{ __('marketplace.reviews_helpful', ['count' => $review->likes_count]) }}
+                                        </span>
+                                    @endif
+                                    @if(($review->comments_count ?? 0) > 0)
+                                        <span style="display:inline-flex;align-items:center;gap:0.3rem;font-size:0.75rem;font-weight:600;color:#9ca3af;">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.97-4.03 9-9 9-1.5 0-2.91-.37-4.15-1.02L3 21l1.05-3.16A8.96 8.96 0 013 12c0-4.97 4.03-9 9-9s9 4.03 9 9z"/></svg>
+                                            {{ __('marketplace.reviews_comments_count', ['count' => $review->comments_count]) }}
+                                        </span>
+                                    @endif
+                                </div>
+                            @endif
                         </div>
+                    @endforeach
+                </div>
+            </section>
+        @endif
+
+        <!-- ====== AI TAVSIYA ======
+             $aiRecommendations — mobil ilova (item.dart)dagi "AI tavsiya"
+             bilan bir xil mantiq: mahsulotning AI embedding'i (vectorData)
+             boshqalarnikiga kosinus o'xshashligi bo'yicha solishtirilib,
+             kategoriya/tag/muallif/matn signallari bilan kuchaytiriladi
+             (ProductCatalogController::aiRecommendedProducts()). Oddiy
+             "O'xshash mahsulotlar" ro'yxatidan farqlash uchun ataylab
+             boshqacha — gradient fon + robot ikonkasi bilan — chizilgan. -->
+        @if(($aiRecommendations ?? collect())->isNotEmpty())
+            <section style="margin-top:2.5rem;padding:1.5rem;border-radius:1.5rem;background:linear-gradient(135deg,rgba(124,58,237,0.06),rgba(16,185,129,0.06));border:1px solid rgba(124,58,237,0.12);">
+                <div style="display:flex;align-items:center;gap:0.625rem;margin-bottom:0.375rem;">
+                    <div style="width:2rem;height:2rem;border-radius:0.625rem;background:linear-gradient(135deg,#7c3aed,#10b981);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16"/><line x1="16" y1="16" x2="16" y2="16"/></svg>
+                    </div>
+                    <h2 style="font-size:clamp(1.125rem,3vw,1.5rem);font-weight:800;color:#111827;margin:0;">
+                        {{ __('marketplace.ai_recommendations_title') }}
+                    </h2>
+                </div>
+                <p style="font-size:0.8125rem;color:#6b7280;margin:0 0 1.25rem;">{{ __('marketplace.ai_recommendations_desc') }}</p>
+                <div id="kcAiGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:0.5rem;">
+                    @foreach($aiRecommendations as $sim)
+                        @php
+                            $aiIsStationery = $productType === 'stationery';
+                            $aiSlug = \Illuminate\Support\Str::slug($sim->name);
+                            $aiUrl = $aiIsStationery
+                                ? route('web.stationery.show', ['id' => $sim->id, 'slug' => $aiSlug])
+                                : route('web.books.show', ['id' => $sim->id, 'slug' => $aiSlug]);
+                            $aiImg = $sim->first_image ? asset('storage/' . $sim->first_image) : asset('images/logo/logo_blue.png');
+                            $aiRawPrice = (float) $sim->price;
+                            $aiDiscRaw = $aiIsStationery ? (float) $sim->discount_price : (float) $sim->discountPrice;
+                            $aiIsDisc = $aiDiscRaw > 0 && $aiDiscRaw < $aiRawPrice;
+                            $aiPrice = $aiIsDisc ? $aiDiscRaw : $aiRawPrice;
+                        @endphp
+                        <a href="{{ $aiUrl }}" class="kc-product-card" style="background:#fff;">
+                            <div class="kc-product-card-img">
+                                <img src="{{ $aiImg }}" alt="{{ $sim->name }}" loading="lazy">
+                            </div>
+                            <div class="kc-product-card-body">
+                                <div class="kc-product-card-title">{{ $sim->name }}</div>
+                                <div class="kc-product-card-price">{{ number_format($aiPrice) }} {{ __('marketplace.currency') }}</div>
+                            </div>
+                        </a>
                     @endforeach
                 </div>
             </section>
@@ -462,7 +575,7 @@
         @if($similarProducts->isNotEmpty())
             <section style="margin-top:2.5rem;">
                 <h2 style="font-size:clamp(1.25rem,3vw,1.75rem);font-weight:800;color:#111827;margin:0 0 1rem;">
-                    O'xshash mahsulotlar
+                    {{ __('marketplace.similar_products_title') }}
                 </h2>
                 <div id="kcSimilarGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:0.5rem;">
                     @foreach($similarProducts as $sim)
@@ -500,7 +613,7 @@
                             </div>
                             <div class="kc-product-card-body">
                                 <div class="kc-product-card-title">{{ $sim->name }}</div>
-                                <div class="kc-product-card-price">{{ number_format($simPrice) }} so'm</div>
+                                <div class="kc-product-card-price">{{ number_format($simPrice) }} {{ __('marketplace.currency') }}</div>
                             </div>
                         </a>
                     @endforeach
@@ -512,13 +625,13 @@
 
 <style>
     @media(min-width: 640px) {
-        #kcSimilarGrid { grid-template-columns: repeat(3, 1fr) !important; gap: 0.75rem !important; }
+        #kcSimilarGrid, #kcAiGrid { grid-template-columns: repeat(3, 1fr) !important; gap: 0.75rem !important; }
     }
     @media(min-width: 1024px) {
-        #kcSimilarGrid { grid-template-columns: repeat(4, 1fr) !important; gap: 1rem !important; }
+        #kcSimilarGrid, #kcAiGrid { grid-template-columns: repeat(4, 1fr) !important; gap: 1rem !important; }
     }
     @media(min-width: 1280px) {
-        #kcSimilarGrid { grid-template-columns: repeat(5, 1fr) !important; gap: 1.25rem !important; }
+        #kcSimilarGrid, #kcAiGrid { grid-template-columns: repeat(5, 1fr) !important; gap: 1.25rem !important; }
     }
 </style>
 

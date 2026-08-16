@@ -36,6 +36,11 @@ return [
     'apply' => "Apply",
     'shops' => "Shops",
     'publishers' => 'Publishers',
+    'authors' => 'Authors',
+    'cover_type' => 'Cover',
+    'cover_type_soft' => 'Softcover',
+    'cover_type_hard' => 'Hardcover',
+    'material' => 'Material',
     'clear_filters' => 'Clear',
     'products_count' => ':count products',
     'products_not_found' => 'No products found',
@@ -61,6 +66,7 @@ return [
     'delivery' => 'Delivery:',
     'delivery_by_region' => 'Depends on region',
     'products_colon' => 'Products:',
+    'cart_total_label' => 'Total:',
     'delivery_note' => 'Delivery cost and promo code discount will be calculated at the next step',
     'continue_purchase' => 'Continue purchase',
 
@@ -120,6 +126,19 @@ return [
     // Product page CTA
     'place_order' => 'Place order',
     'add_to_cart' => "Add to cart",
+
+    // Product reviews
+    'reviews_title' => 'Customer reviews',
+    'reviews_helpful' => ':count people found this helpful',
+    'reviews_comments_count' => ':count comments',
+
+    // Seller/shop info
+    'seller_shop' => 'Shop',
+
+    // AI recommendations
+    'ai_recommendations_title' => 'AI recommendations',
+    'ai_recommendations_desc' => 'AI picked out items similar to this product',
+    'similar_products_title' => 'Similar products',
 
     // Profile
     'profile_title' => 'Profile',

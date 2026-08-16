@@ -6,8 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\BookCategories;
 use App\Models\Books;
 use App\Models\Policy;
+use App\Models\Publisher;
+use App\Models\Seller;
 use App\Models\Stationery;
 use App\Models\StationeryCategory;
+use App\Support\ProductVisibilityScope;
 use App\Traits\HasProductVisibility;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -67,7 +70,12 @@ class ProductCatalogController extends Controller
         }
 
         try {
+            // MUHIM: withCount(['likes','comments']) — piyolamarket'dagi kabi har
+            // bir sharh (BookClub posti) ostida "N kishi foydali deb topdi" (like)
+            // va "N ta izoh" (comment) sonini ko'rsatish uchun. Ilova (mobil)dagi
+            // bilan bir xil mantiq: post = sharh, like = "foydali", comment = izoh.
             $ugcReviews = \App\Models\BookClub::with(['user', 'images'])
+                ->withCount(['likes', 'comments'])
                 ->where('product_type', 'book')
                 ->where('product_id', $book->id)
                 ->where('is_deleted', false)
@@ -79,6 +87,12 @@ class ProductCatalogController extends Controller
                 ->get();
         } catch (\Throwable $e) {
             $ugcReviews = collect();
+        }
+
+        try {
+            $aiRecommendations = $this->aiRecommendedProducts($book, 'book', 8);
+        } catch (\Throwable $e) {
+            $aiRecommendations = collect();
         }
 
         $canonicalUrl = route('web.books.show', ['id' => $book->id, 'slug' => $expectedSlug]);
@@ -97,6 +111,7 @@ class ProductCatalogController extends Controller
             'schemas' => $schemas,
             'similarProducts' => $similarProducts,
             'ugcReviews' => $ugcReviews,
+            'aiRecommendations' => $aiRecommendations,
             'appScheme' => $appScheme,
             'artikulScheme' => $artikulScheme,
             'canonicalUrl' => $canonicalUrl,
@@ -144,6 +159,196 @@ class ProductCatalogController extends Controller
         }
     }
 
+    /**
+     * "AI tavsiya" — mobil ilova (item.dart)dagi kabi vektor-asosidagi
+     * o'xshashlik hisoblovi. Kategoriya/muallif bo'yicha oddiy moslashdan
+     * farqli o'laroq bu yerda mahsulotning AI embedding'i (vectorData —
+     * OpenAI orqali oldindan hisoblab qo'yilgan) boshqa mahsulotlarnikiga
+     * kosinus o'xshashligi bo'yicha solishtiriladi, so'ng kategoriya/tag/
+     * muallif/nashriyot/matn tokenlari va sotuv statistikasi bilan
+     * kuchaytiriladi. Xuddi shu mantiq Api/ProductsController::
+     * similarProducts()'da mobil ilova uchun ishlatiladi — bu yerda web
+     * uchun soddalashtirilgan nusxasi (natija saytda alohida, "🤖 AI
+     * tavsiya" deb belgilangan bo'limda — oddiy "O'xshash mahsulotlar"
+     * ro'yxatidan vizual jihatdan ajratib ko'rsatiladi).
+     */
+    private function aiRecommendedProducts($base, string $type, int $limit = 8)
+    {
+        $baseTagIds = $this->productTagIds($base);
+        $tokens = $this->similarityTokens(implode(' ', array_filter([
+            $base->name ?? '',
+            $base->author ?? '',
+            $base->material ?? '',
+            $base->description ?? '',
+        ])));
+
+        $query = $type === 'book'
+            ? $this->visibleBooks(['category', 'tags'])
+            : $this->visibleStationeries(['category', 'tags']);
+
+        $query->where('id', '!=', $base->id);
+
+        $hasFocusedFilter = ! empty($base->category_id)
+            || ($type === 'book' && ! empty($base->author))
+            || ($type === 'stationery' && ! empty($base->material))
+            || ! empty($baseTagIds)
+            || ! empty($tokens);
+
+        if ($hasFocusedFilter) {
+            $query->where(function ($q) use ($base, $type, $baseTagIds, $tokens) {
+                if (! empty($base->category_id)) {
+                    $q->orWhere('category_id', $base->category_id);
+                }
+                if ($type === 'book' && ! empty($base->author)) {
+                    $q->orWhereRaw('LOWER(author) = ?', [mb_strtolower($base->author)]);
+                }
+                if ($type === 'stationery' && ! empty($base->material)) {
+                    $q->orWhereRaw('LOWER(material) = ?', [mb_strtolower($base->material)]);
+                }
+                if (! empty($baseTagIds)) {
+                    $q->orWhereHas('tags', fn ($tagQuery) => $tagQuery->whereIn('id', $baseTagIds));
+                }
+                foreach (array_slice($tokens, 0, 6) as $token) {
+                    $q->orWhere('name', 'like', '%'.$token.'%');
+                }
+            });
+        }
+
+        $candidates = $query
+            ->orderByDesc('totalSalesWeek')
+            ->orderByDesc('totalSales')
+            ->limit(200)
+            ->get();
+
+        return $candidates
+            ->map(function ($product) use ($base, $type, $baseTagIds, $tokens) {
+                $product->ai_score = $this->aiSimilarityScore($base, $product, $type, $baseTagIds, $tokens);
+
+                return $product;
+            })
+            ->sortByDesc(fn ($product) => $product->ai_score)
+            ->take($limit)
+            ->values();
+    }
+
+    private function aiSimilarityScore($base, $product, string $type, array $baseTagIds, array $baseTokens): float
+    {
+        $score = 0.0;
+
+        $vectorScore = $this->aiVectorSimilarity($base->vectorData ?? null, $product->vectorData ?? null);
+        if ($vectorScore !== null) {
+            $score += $vectorScore * 80;
+        }
+
+        if (! empty($base->category_id) && (string) $base->category_id === (string) ($product->category_id ?? '')) {
+            $score += 45;
+        }
+
+        $tagOverlap = count(array_intersect($baseTagIds, $this->productTagIds($product)));
+        $score += min(36, $tagOverlap * 12);
+
+        if ($type === 'book') {
+            if (! empty($base->author) && mb_strtolower($base->author) === mb_strtolower((string) ($product->author ?? ''))) {
+                $score += 35;
+            }
+            if (! empty($base->publisher_id) && (string) $base->publisher_id === (string) ($product->publisher_id ?? '')) {
+                $score += 10;
+            }
+        } elseif (! empty($base->material) && mb_strtolower($base->material) === mb_strtolower((string) ($product->material ?? ''))) {
+            $score += 18;
+        }
+
+        $productTokens = $this->similarityTokens(implode(' ', array_filter([
+            $product->name ?? '',
+            $product->author ?? '',
+            $product->material ?? '',
+            $product->description ?? '',
+        ])));
+        $tokenOverlap = count(array_intersect($baseTokens, $productTokens));
+        $score += min(32, $tokenOverlap * 8);
+
+        $score += min(8, ((int) ($product->totalSalesWeek ?? 0)) * 0.15);
+        $score += min(6, ((int) ($product->totalSales ?? 0)) * 0.03);
+
+        if ((bool) ($product->recommended ?? false)) {
+            $score += 3;
+        }
+
+        return $score;
+    }
+
+    private function productTagIds($product): array
+    {
+        if (! $product->relationLoaded('tags') || ! $product->tags) {
+            return [];
+        }
+
+        return $product->tags
+            ->pluck('id')
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->all();
+    }
+
+    private function similarityTokens(string $text): array
+    {
+        $text = mb_strtolower($text);
+        $text = preg_replace('/[^\p{L}\p{N}]+/u', ' ', $text) ?? '';
+        $parts = preg_split('/\s+/u', trim($text)) ?: [];
+
+        return collect($parts)
+            ->filter(fn ($token) => mb_strlen($token) >= 3)
+            ->unique()
+            ->take(12)
+            ->values()
+            ->all();
+    }
+
+    private function aiVectorSimilarity($left, $right): ?float
+    {
+        $a = $this->aiNormalizeVector($left);
+        $b = $this->aiNormalizeVector($right);
+
+        if (empty($a) || empty($b) || count($a) !== count($b)) {
+            return null;
+        }
+
+        $dot = 0.0;
+        $normA = 0.0;
+        $normB = 0.0;
+
+        foreach ($a as $i => $value) {
+            $other = $b[$i] ?? 0.0;
+            $dot += $value * $other;
+            $normA += $value * $value;
+            $normB += $other * $other;
+        }
+
+        if ($normA <= 0 || $normB <= 0) {
+            return null;
+        }
+
+        return max(0.0, min(1.0, $dot / (sqrt($normA) * sqrt($normB))));
+    }
+
+    private function aiNormalizeVector($value): array
+    {
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            $value = is_array($decoded) ? $decoded : [];
+        }
+
+        if (! is_array($value)) {
+            return [];
+        }
+
+        return array_values(array_filter(array_map(
+            fn ($item) => is_numeric($item) ? (float) $item : null,
+            $value
+        ), fn ($item) => $item !== null));
+    }
+
     public function showStationery(int $id, ?string $slug = null)
     {
         try {
@@ -171,6 +376,7 @@ class ProductCatalogController extends Controller
 
         try {
             $ugcReviews = \App\Models\BookClub::with(['user', 'images'])
+                ->withCount(['likes', 'comments'])
                 ->where('product_type', 'stationery')
                 ->where('product_id', $item->id)
                 ->where('is_deleted', false)
@@ -182,6 +388,12 @@ class ProductCatalogController extends Controller
                 ->get();
         } catch (\Throwable $e) {
             $ugcReviews = collect();
+        }
+
+        try {
+            $aiRecommendations = $this->aiRecommendedProducts($item, 'stationery', 8);
+        } catch (\Throwable $e) {
+            $aiRecommendations = collect();
         }
 
         $canonicalUrl = route('web.stationery.show', ['id' => $item->id, 'slug' => $expectedSlug]);
@@ -200,6 +412,7 @@ class ProductCatalogController extends Controller
             'schemas' => $schemas,
             'similarProducts' => $similarProducts,
             'ugcReviews' => $ugcReviews,
+            'aiRecommendations' => $aiRecommendations,
             'appScheme' => $appScheme,
             'artikulScheme' => $artikulScheme,
             'canonicalUrl' => $canonicalUrl,
@@ -251,6 +464,27 @@ class ProductCatalogController extends Controller
 
         $sellerIds = (array) $request->input('seller_ids', []);
         $publisherIds = (array) $request->input('publisher_ids', []);
+
+        // Kategoriyaga xos atribut filtrlari (piyolamarket.uz'dagi kabi) —
+        // bizda alohida "attribute" jadvali yo'q, shu sabab loyihada
+        // haqiqatda mavjud bo'lgan real ustunlardan foydalanamiz:
+        // kitoblar uchun muallif (author) va muqova turi (coverType, ozod
+        // matn — shuning uchun "yumshoq/qattiq" ikkita guruhga normalize
+        // qilinadi, xuddi Api/Seller/ProductController'dagi
+        // normalizeCoverTypeOut bilan bir xil mantiqda), kanselyariya
+        // uchun material.
+        $authorNames = array_values(array_filter(array_map(
+            fn ($v) => trim((string) $v),
+            (array) $request->input('authors', [])
+        ), fn ($v) => $v !== ''));
+        $coverTypes = array_values(array_intersect(
+            (array) $request->input('cover_types', []),
+            ['soft', 'hard']
+        ));
+        $materialNames = array_values(array_filter(array_map(
+            fn ($v) => trim((string) $v),
+            (array) $request->input('materials', [])
+        ), fn ($v) => $v !== ''));
 
         // Handle AJAX Live Instant Search Suggestions Popup
         // MUHIM: avval bu yerda faqat Books qidirilardi — "daftar", "ruchka"
@@ -319,8 +553,29 @@ class ProductCatalogController extends Controller
             // yutib yuborardi — kategoriyalar hech qachon ko'rinmasdi.
             $bookCategories = BookCategories::where('is_active', true)->orderBy('name_uz')->get();
             $stationeryCategories = StationeryCategory::where('is_active', true)->orderBy('name_uz')->get();
-            $sellers = \App\Models\Seller::where('status', 'approved')->orderBy('shop_name')->get();
-            $publishers = \App\Models\Publisher::orderBy('name')->get();
+
+            // MUHIM: avval bu yerda faqat status='approved' tekshirilardi —
+            // ProductVisibilityScope::activeSeller() esa yana ikkita shartni
+            // talab qiladi: is_hidden=false (admin tomonidan yashirilgan
+            // do'kon chiqmasin) va parent_id bo'sh/0 (do'kon HODIMLARI ham
+            // Seller jadvalida alohida qator sifatida saqlanadi — ular
+            // filtrlar ro'yxatida ALOHIDA "do'kon" bo'lib ko'rinmasligi
+            // kerak, faqat asosiy/egasi hisobi ko'rinadi). Bu yagona qoida
+            // — xuddi katalogdagi mahsulot ko'rinish shartlari bilan bir xil
+            // manbadan (ProductVisibilityScope) olinadi.
+            $sellers = (ProductVisibilityScope::activeSeller())(Seller::query())
+                ->orderBy('shop_name')
+                ->get();
+
+            // Nashriyotlar jadvalida alohida is_active/is_hidden ustuni yo'q —
+            // "nofaol" nashriyot degani shu nashriyotning HOZIR ko'rinadigan
+            // (visible) birorta ham kitobi yo'qligi (masalan yagona kitobi
+            // moderatsiyada yoki do'koni bloklangan bo'lishi mumkin). Bunday
+            // nashriyot filtr ro'yxatida ko'rsatilsa, tanlanganda 0 natija
+            // qaytaradi — shuning uchun chiqarilmaydi.
+            $publishers = Publisher::whereHas('books', function ($q) {
+                ProductVisibilityScope::applyBooks($q);
+            })->orderBy('name')->get();
 
             // MUHIM: avval bu yerda faqat Books so'ralardi — $stationeryCategories
             // olib kelinardi-yu, hech qachon Stationery mahsuloti ko'rsatilmasdi
@@ -349,6 +604,9 @@ class ProductCatalogController extends Controller
                 
                 if (!empty($sellerIds)) {
                     $productsQuery->whereIn('seller_id', $sellerIds);
+                }
+                if (!empty($materialNames)) {
+                    $productsQuery->whereIn('material', $materialNames);
                 }
 
                 $products = $this->applyCatalogSort($productsQuery, $sort)->paginate(24, ['*'], 'page');
@@ -381,8 +639,69 @@ class ProductCatalogController extends Controller
                 if (!empty($publisherIds)) {
                     $productsQuery->whereIn('publisher_id', $publisherIds);
                 }
+                if (!empty($authorNames)) {
+                    $productsQuery->whereIn('author', $authorNames);
+                }
+                if (!empty($coverTypes)) {
+                    // "qattiq"/"hard" so'zini o'z ichiga olgan qiymatlar — Qattiq
+                    // muqova guruhi; qolgan hamma (bo'sh bo'lmagan) qiymat —
+                    // Yumshoq guruhi. Xuddi normalizeCoverTypeOut() bilan bir xil.
+                    $productsQuery->where(function ($q) use ($coverTypes) {
+                        if (in_array('hard', $coverTypes, true)) {
+                            $q->orWhere(function ($qq) {
+                                $qq->where('coverType', 'like', '%qat%')
+                                    ->orWhere('coverType', 'like', '%hard%');
+                            });
+                        }
+                        if (in_array('soft', $coverTypes, true)) {
+                            $q->orWhere(function ($qq) {
+                                $qq->whereNotNull('coverType')
+                                    ->where('coverType', '!=', '')
+                                    ->where('coverType', 'not like', '%qat%')
+                                    ->where('coverType', 'not like', '%hard%');
+                            });
+                        }
+                    });
+                }
 
                 $products = $this->applyCatalogSort($productsQuery, $sort)->paginate(24, ['*'], 'page');
+            }
+
+            // Filtr paneli variantlari — faqat JORIY turkum (kitob/kanselyariya)
+            // va JORIY kategoriya ichida haqiqatda mavjud bo'lgan qiymatlar
+            // ko'rsatiladi (piyolamarket'dagi kabi "kategoriyaga xos" filtrlar —
+            // bo'sh yoki mos kelmaydigan variant hech qachon chiqmaydi).
+            $authorOptions = collect();
+            $coverTypeAvailable = false;
+            $materialOptions = collect();
+
+            if ($type === 'stationery') {
+                $matQuery = $this->applyStationeryVisibility(Stationery::query());
+                if ($categoryId) {
+                    $matQuery->where('category_id', $categoryId);
+                }
+                $materialOptions = $matQuery->whereNotNull('material')
+                    ->where('material', '!=', '')
+                    ->distinct()
+                    ->orderBy('material')
+                    ->limit(40)
+                    ->pluck('material');
+            } else {
+                $attrQuery = $this->applyBookVisibility(Books::query());
+                if ($categoryId) {
+                    $attrQuery->where('category_id', $categoryId);
+                }
+                $authorOptions = (clone $attrQuery)
+                    ->whereNotNull('author')
+                    ->where('author', '!=', '')
+                    ->distinct()
+                    ->orderBy('author')
+                    ->limit(60)
+                    ->pluck('author');
+                $coverTypeAvailable = (clone $attrQuery)
+                    ->whereNotNull('coverType')
+                    ->where('coverType', '!=', '')
+                    ->exists();
             }
         } catch (\Throwable $e) {
             $bookCategories = collect();
@@ -390,6 +709,9 @@ class ProductCatalogController extends Controller
             $sellers = collect();
             $publishers = collect();
             $products = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 24);
+            $authorOptions = collect();
+            $coverTypeAvailable = false;
+            $materialOptions = collect();
         }
 
         // Joriy sahifadagi mahsulotlar orasida foydalanuvchi sevimlisi
@@ -430,6 +752,12 @@ class ProductCatalogController extends Controller
             'publishers' => $publishers,
             'selectedSellers' => $sellerIds,
             'selectedPublishers' => $publisherIds,
+            'authorOptions' => $authorOptions ?? collect(),
+            'coverTypeAvailable' => $coverTypeAvailable ?? false,
+            'materialOptions' => $materialOptions ?? collect(),
+            'selectedAuthors' => $authorNames,
+            'selectedCoverTypes' => $coverTypes,
+            'selectedMaterials' => $materialNames,
             'favoritedIds' => $favoritedIds,
         ]);
     }

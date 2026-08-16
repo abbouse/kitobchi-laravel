@@ -133,12 +133,7 @@
                 </button>
                 <div id="kcPriceMenu" class="kc-lang-menu" style="display:none;width:300px;background:#fff;border-radius:1.25rem;box-shadow:0 20px 40px rgba(0,0,0,0.14);z-index:200;padding:1.25rem;border:1px solid #f3f4f6;">
                     <form method="GET" action="{{ route('web.catalog') }}">
-                        <input type="hidden" name="type" value="{{ $type }}">
-                        @if($search)<input type="hidden" name="search" value="{{ $search }}">@endif
-                        @if(request('category'))<input type="hidden" name="category" value="{{ request('category') }}">@endif
-                        @if($sort !== 'popular')<input type="hidden" name="sort" value="{{ $sort }}">@endif
-                        @foreach($selectedSellers ?? [] as $sid)<input type="hidden" name="seller_ids[]" value="{{ $sid }}">@endforeach
-                        @foreach($selectedPublishers ?? [] as $pid)<input type="hidden" name="publisher_ids[]" value="{{ $pid }}">@endforeach
+                        @include('partials.catalog-filter-hidden-inputs', ['except' => ['price']])
 
                         <div class="flex items-center gap-3 mb-4">
                             <input type="number" name="price_min" value="{{ $priceMin }}" placeholder="{{ __('marketplace.price_from') }}" class="w-full h-11 bg-secondary-100 rounded-xl px-4 text-[15px] font-medium text-primary outline-none focus:ring-2 ring-primary/20 transition-all border-none">
@@ -163,13 +158,7 @@
                 </button>
                 <div id="kcShopsMenu" class="kc-lang-menu" style="display:none;width:280px;background:#fff;border-radius:1.25rem;box-shadow:0 20px 40px rgba(0,0,0,0.14);z-index:200;padding:1.25rem;border:1px solid #f3f4f6;">
                     <form method="GET" action="{{ route('web.catalog') }}">
-                        <input type="hidden" name="type" value="{{ $type }}">
-                        @if($search)<input type="hidden" name="search" value="{{ $search }}">@endif
-                        @if(request('category'))<input type="hidden" name="category" value="{{ request('category') }}">@endif
-                        @if($sort !== 'popular')<input type="hidden" name="sort" value="{{ $sort }}">@endif
-                        @if($priceMin)<input type="hidden" name="price_min" value="{{ $priceMin }}">@endif
-                        @if($priceMax)<input type="hidden" name="price_max" value="{{ $priceMax }}">@endif
-                        @foreach($selectedPublishers ?? [] as $pid)<input type="hidden" name="publisher_ids[]" value="{{ $pid }}">@endforeach
+                        @include('partials.catalog-filter-hidden-inputs', ['except' => ['sellers']])
 
                         <div class="flex flex-col gap-3 max-h-56 overflow-y-auto pr-2 custom-scrollbar mb-4">
                             @foreach($sellers as $seller)
@@ -201,13 +190,7 @@
                 </button>
                 <div id="kcPublishersMenu" class="kc-lang-menu" style="display:none;width:280px;background:#fff;border-radius:1.25rem;box-shadow:0 20px 40px rgba(0,0,0,0.14);z-index:200;padding:1.25rem;border:1px solid #f3f4f6;">
                     <form method="GET" action="{{ route('web.catalog') }}">
-                        <input type="hidden" name="type" value="{{ $type }}">
-                        @if($search)<input type="hidden" name="search" value="{{ $search }}">@endif
-                        @if(request('category'))<input type="hidden" name="category" value="{{ request('category') }}">@endif
-                        @if($sort !== 'popular')<input type="hidden" name="sort" value="{{ $sort }}">@endif
-                        @if($priceMin)<input type="hidden" name="price_min" value="{{ $priceMin }}">@endif
-                        @if($priceMax)<input type="hidden" name="price_max" value="{{ $priceMax }}">@endif
-                        @foreach($selectedSellers ?? [] as $sid)<input type="hidden" name="seller_ids[]" value="{{ $sid }}">@endforeach
+                        @include('partials.catalog-filter-hidden-inputs', ['except' => ['publishers']])
 
                         <div class="flex flex-col gap-3 max-h-56 overflow-y-auto pr-2 custom-scrollbar mb-4">
                             @foreach($publishers as $publisher)
@@ -228,8 +211,109 @@
             </div>
             @endif
 
+            <!-- Muallif (Author) Popover — faqat kitoblar uchun, kategoriyaga xos
+                 atribut filtri (piyolamarket.uz'dagi kabi). -->
+            @if($type !== 'stationery' && isset($authorOptions) && $authorOptions->count() > 0)
+            <div class="relative kc-lang-wrap shrink-0">
+                <button type="button" onclick="toggleLangMenu(event, 'kcAuthorsMenu')"
+                        class="inline-flex items-center gap-1.5 {{ !empty($selectedAuthors) ? 'bg-primary text-white' : 'text-primary hover:bg-primary/10 bg-secondary-300' }} rounded-2xl px-4 py-2 text-[15px] font-semibold border-none cursor-pointer transition-colors">
+                    <span class="truncate">{{ __('marketplace.authors') }}</span>
+                    @if(!empty($selectedAuthors)) <span class="bg-white text-primary rounded-full px-2 py-0.5 text-xs ml-1 flex-center">{{ count($selectedAuthors) }}</span> @endif
+                    <svg viewBox="0 0 20 20" fill="currentColor" class="size-5"><path fill-rule="evenodd" d="M5.22 8.22a.75.75 0 011.06 0L10 11.94l3.72-3.72a.75.75 0 111.06 1.06l-4.25 4.25a.75.75 0 01-1.06 0L5.22 9.28a.75.75 0 010-1.06z" clip-rule="evenodd"/></svg>
+                </button>
+                <div id="kcAuthorsMenu" class="kc-lang-menu" style="display:none;width:280px;background:#fff;border-radius:1.25rem;box-shadow:0 20px 40px rgba(0,0,0,0.14);z-index:200;padding:1.25rem;border:1px solid #f3f4f6;">
+                    <form method="GET" action="{{ route('web.catalog') }}">
+                        @include('partials.catalog-filter-hidden-inputs', ['except' => ['authors']])
+
+                        <div class="flex flex-col gap-3 max-h-56 overflow-y-auto pr-2 custom-scrollbar mb-4">
+                            @foreach($authorOptions as $authorName)
+                                <label class="flex items-center gap-3 cursor-pointer group">
+                                    <div class="relative flex items-center justify-center w-5 h-5 rounded border border-secondary-300 group-hover:border-primary bg-white transition-colors">
+                                        <input type="checkbox" name="authors[]" value="{{ $authorName }}" class="peer sr-only" {{ in_array($authorName, $selectedAuthors ?? []) ? 'checked' : '' }}>
+                                        <div class="w-3 h-3 bg-primary rounded-[2px] opacity-0 peer-checked:opacity-100 flex-center transition-opacity">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" class="text-white" style="width:10px;height:10px;"><path stroke-linecap="round" stroke-linejoin="round" d="M20 6 9 17l-5-5"/></svg>
+                                        </div>
+                                    </div>
+                                    <span class="text-[15px] font-medium text-neutral-700 group-hover:text-primary transition-colors">{{ $authorName }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+                        <button type="submit" class="w-full h-11 bg-primary hover:bg-primary/90 text-white rounded-xl text-[15px] font-semibold transition-colors shadow-md shadow-primary/20">{{ __('marketplace.apply') }}</button>
+                    </form>
+                </div>
+            </div>
+            @endif
+
+            <!-- Muqova turi (Cover type) Popover — faqat kitoblar uchun. DB'da
+                 coverType ozod matn ("Yumshoq"/"Qattiq" va h.k.) — shu sabab
+                 checkbox qiymatlari controller darajasida ikkita guruhga
+                 (soft/hard) normalize qilingan, xom matn emas. -->
+            @if($type !== 'stationery' && ($coverTypeAvailable ?? false))
+            <div class="relative kc-lang-wrap shrink-0">
+                <button type="button" onclick="toggleLangMenu(event, 'kcCoverTypeMenu')"
+                        class="inline-flex items-center gap-1.5 {{ !empty($selectedCoverTypes) ? 'bg-primary text-white' : 'text-primary hover:bg-primary/10 bg-secondary-300' }} rounded-2xl px-4 py-2 text-[15px] font-semibold border-none cursor-pointer transition-colors">
+                    <span class="truncate">{{ __('marketplace.cover_type') }}</span>
+                    @if(!empty($selectedCoverTypes)) <span class="bg-white text-primary rounded-full px-2 py-0.5 text-xs ml-1 flex-center">{{ count($selectedCoverTypes) }}</span> @endif
+                    <svg viewBox="0 0 20 20" fill="currentColor" class="size-5"><path fill-rule="evenodd" d="M5.22 8.22a.75.75 0 011.06 0L10 11.94l3.72-3.72a.75.75 0 111.06 1.06l-4.25 4.25a.75.75 0 01-1.06 0L5.22 9.28a.75.75 0 010-1.06z" clip-rule="evenodd"/></svg>
+                </button>
+                <div id="kcCoverTypeMenu" class="kc-lang-menu" style="display:none;width:240px;background:#fff;border-radius:1.25rem;box-shadow:0 20px 40px rgba(0,0,0,0.14);z-index:200;padding:1.25rem;border:1px solid #f3f4f6;">
+                    <form method="GET" action="{{ route('web.catalog') }}">
+                        @include('partials.catalog-filter-hidden-inputs', ['except' => ['cover_types']])
+
+                        <div class="flex flex-col gap-3 mb-4">
+                            @foreach(['soft' => __('marketplace.cover_type_soft'), 'hard' => __('marketplace.cover_type_hard')] as $ctVal => $ctLabel)
+                                <label class="flex items-center gap-3 cursor-pointer group">
+                                    <div class="relative flex items-center justify-center w-5 h-5 rounded border border-secondary-300 group-hover:border-primary bg-white transition-colors">
+                                        <input type="checkbox" name="cover_types[]" value="{{ $ctVal }}" class="peer sr-only" {{ in_array($ctVal, $selectedCoverTypes ?? []) ? 'checked' : '' }}>
+                                        <div class="w-3 h-3 bg-primary rounded-[2px] opacity-0 peer-checked:opacity-100 flex-center transition-opacity">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" class="text-white" style="width:10px;height:10px;"><path stroke-linecap="round" stroke-linejoin="round" d="M20 6 9 17l-5-5"/></svg>
+                                        </div>
+                                    </div>
+                                    <span class="text-[15px] font-medium text-neutral-700 group-hover:text-primary transition-colors">{{ $ctLabel }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+                        <button type="submit" class="w-full h-11 bg-primary hover:bg-primary/90 text-white rounded-xl text-[15px] font-semibold transition-colors shadow-md shadow-primary/20">{{ __('marketplace.apply') }}</button>
+                    </form>
+                </div>
+            </div>
+            @endif
+
+            <!-- Material Popover — faqat kanselyariya uchun, kategoriyaga xos
+                 atribut filtri. -->
+            @if($type === 'stationery' && isset($materialOptions) && $materialOptions->count() > 0)
+            <div class="relative kc-lang-wrap shrink-0">
+                <button type="button" onclick="toggleLangMenu(event, 'kcMaterialMenu')"
+                        class="inline-flex items-center gap-1.5 {{ !empty($selectedMaterials) ? 'bg-primary text-white' : 'text-primary hover:bg-primary/10 bg-secondary-300' }} rounded-2xl px-4 py-2 text-[15px] font-semibold border-none cursor-pointer transition-colors">
+                    <span class="truncate">{{ __('marketplace.material') }}</span>
+                    @if(!empty($selectedMaterials)) <span class="bg-white text-primary rounded-full px-2 py-0.5 text-xs ml-1 flex-center">{{ count($selectedMaterials) }}</span> @endif
+                    <svg viewBox="0 0 20 20" fill="currentColor" class="size-5"><path fill-rule="evenodd" d="M5.22 8.22a.75.75 0 011.06 0L10 11.94l3.72-3.72a.75.75 0 111.06 1.06l-4.25 4.25a.75.75 0 01-1.06 0L5.22 9.28a.75.75 0 010-1.06z" clip-rule="evenodd"/></svg>
+                </button>
+                <div id="kcMaterialMenu" class="kc-lang-menu" style="display:none;width:280px;background:#fff;border-radius:1.25rem;box-shadow:0 20px 40px rgba(0,0,0,0.14);z-index:200;padding:1.25rem;border:1px solid #f3f4f6;">
+                    <form method="GET" action="{{ route('web.catalog') }}">
+                        @include('partials.catalog-filter-hidden-inputs', ['except' => ['materials']])
+
+                        <div class="flex flex-col gap-3 max-h-56 overflow-y-auto pr-2 custom-scrollbar mb-4">
+                            @foreach($materialOptions as $materialName)
+                                <label class="flex items-center gap-3 cursor-pointer group">
+                                    <div class="relative flex items-center justify-center w-5 h-5 rounded border border-secondary-300 group-hover:border-primary bg-white transition-colors">
+                                        <input type="checkbox" name="materials[]" value="{{ $materialName }}" class="peer sr-only" {{ in_array($materialName, $selectedMaterials ?? []) ? 'checked' : '' }}>
+                                        <div class="w-3 h-3 bg-primary rounded-[2px] opacity-0 peer-checked:opacity-100 flex-center transition-opacity">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" class="text-white" style="width:10px;height:10px;"><path stroke-linecap="round" stroke-linejoin="round" d="M20 6 9 17l-5-5"/></svg>
+                                        </div>
+                                    </div>
+                                    <span class="text-[15px] font-medium text-neutral-700 group-hover:text-primary transition-colors">{{ $materialName }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+                        <button type="submit" class="w-full h-11 bg-primary hover:bg-primary/90 text-white rounded-xl text-[15px] font-semibold transition-colors shadow-md shadow-primary/20">{{ __('marketplace.apply') }}</button>
+                    </form>
+                </div>
+            </div>
+            @endif
+
             <!-- Clear filters -->
-            @if(request('category') || $priceMin || $priceMax || $sort !== 'popular' || $search || !empty($selectedSellers) || !empty($selectedPublishers))
+            @if(request('category') || $priceMin || $priceMax || $sort !== 'popular' || $search || !empty($selectedSellers) || !empty($selectedPublishers) || !empty($selectedAuthors) || !empty($selectedCoverTypes) || !empty($selectedMaterials))
                 <a href="{{ route('web.catalog', ['type' => $type]) }}"
                    class="inline-flex items-center px-4 py-2 rounded-2xl text-[15px] font-semibold transition-colors shrink-0 gap-1.5 bg-error-50 text-error-500 hover:bg-error-100 border-none ml-2">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:1.125em;height:1.125em;"><path stroke-linecap="round" stroke-linejoin="round" d="M18 6 6 18M6 6l12 12"/></svg>
