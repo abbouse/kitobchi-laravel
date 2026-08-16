@@ -267,7 +267,7 @@
                         <svg viewBox="0 0 24 24" fill="currentColor" class="text-primary-500" style="width:0.85em;height:0.85em;"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.287 1.288L3 12l5.8 1.9a2 2 0 0 1 1.288 1.287L12 21l1.9-5.8a2 2 0 0 1 1.287-1.288L21 12l-5.8-1.9a2 2 0 0 1-1.288-1.287Z"/></svg>
                         Yangi kelgan kitoblar
                     </h2>
-                    <a class="text-sm font-semibold text-primary" href="{{ route('web.catalog') }}">
+                    <a class="text-sm font-semibold text-primary" href="{{ route('web.catalog', ['sort' => 'new']) }}">
                         Barchasi
                         <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:1em;height:1em;display:inline-block;vertical-align:-0.125em;"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
                     </a>
@@ -290,7 +290,7 @@
                         <svg viewBox="0 0 24 24" fill="currentColor" class="text-primary-500" style="width:0.85em;height:0.85em;"><path fill-rule="evenodd" d="M12.963 2.286a.75.75 0 00-1.071-.136 9.742 9.742 0 00-3.539 6.176 7.547 7.547 0 01-1.705-1.715.75.75 0 00-1.152-.082A9 9 0 1015.68 4.534a7.46 7.46 0 01-2.717-2.248zM15.75 14.25a3.75 3.75 0 11-7.313-1.172c.628.465 1.35.81 2.133 1.005a5.981 5.981 0 011.925-3.545 3.75 3.75 0 013.255 3.712z" clip-rule="evenodd"/></svg>
                         Tavsiya etamiz & Top sotuvlar
                     </h2>
-                    <a class="text-sm font-semibold text-primary" href="{{ route('web.catalog') }}">
+                    <a class="text-sm font-semibold text-primary" href="{{ route('web.catalog', ['sort' => 'popular']) }}">
                         Barchasi
                         <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:1em;height:1em;display:inline-block;vertical-align:-0.125em;"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
                     </a>

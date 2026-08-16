@@ -6,8 +6,8 @@
 <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto py-6 rounded-t-2xl grow">
     
     <div class="flex items-center gap-2 mb-5">
-        <a href="{{ route('web.catalog') }}" class="rounded-md font-medium inline-flex items-center transition-colors px-2.5 py-1.5 text-sm gap-1.5 text-primary hover:text-primary/75 outline-primary/25">
-            <i class="icon-up-arrow text-xl -rotate-135"></i>
+        <a href="{{ route('web.catalog') }}" class="rounded-full w-9 h-9 flex items-center justify-center transition-colors text-primary bg-secondary-200 hover:bg-secondary-300" title="Katalogga qaytish">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
         </a>
         <nav aria-label="breadcrumb" class="relative min-w-0">
             <ol class="flex items-center gap-2">

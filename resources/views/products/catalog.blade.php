@@ -21,16 +21,49 @@
                 'price_max' => $priceMax ?? null,
             ], fn ($v) => $v !== null && $v !== '');
             $sortLabels = ['popular' => 'Ommabop', 'new' => 'Yangi', 'price_asc' => 'Arzon narx', 'price_desc' => 'Qimmat narx'];
+
+            if ($currentCategory) {
+                $pageTitle = $currentCategory->name_uz ?? $currentCategory->name;
+            } elseif ($search) {
+                $pageTitle = '"' . $search . '" bo\'yicha qidiruv';
+            } elseif ($sort === 'new') {
+                $pageTitle = 'Yangi kelgan mahsulotlar';
+            } elseif ($sort === 'popular') {
+                $pageTitle = 'Ommabop mahsulotlar';
+            } else {
+                $pageTitle = $type === 'book' ? 'Kitoblar' : 'Kanselyariya';
+            }
         @endphp
 
+        <!-- Breadcrumb & Back button (PiyolaMarket style) -->
+        <div class="flex items-center gap-2 pt-4 pb-1">
+            <a href="{{ url('/') }}" class="rounded-full w-9 h-9 flex items-center justify-center transition-colors text-primary bg-secondary-200 hover:bg-secondary-300" title="Bosh sahifaga qaytish">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
+            </a>
+            <nav aria-label="breadcrumb" class="relative min-w-0">
+                <ol class="flex items-center gap-2">
+                    <li class="flex min-w-0 text-[#8F8FA1] text-sm">
+                        <a href="{{ url('/') }}" class="hover:text-neutral-900 transition-colors">Asosiy</a>
+                    </li>
+                    <li class="flex text-gray text-xs">/</li>
+                    <li class="flex min-w-0 text-[#8F8FA1] text-sm">
+                        <a href="{{ route('web.catalog') }}" class="hover:text-neutral-900 transition-colors">Katalog</a>
+                    </li>
+                    @if($currentCategory)
+                        <li class="flex text-gray text-xs">/</li>
+                        <li class="flex min-w-0 text-[#8F8FA1] text-sm font-semibold truncate">
+                            {{ $currentCategory->name_uz ?? $currentCategory->name }}
+                        </li>
+                    @endif
+                </ol>
+            </nav>
+        </div>
+
         <!-- ====== FILTER ROW (top) ====== -->
-        <div class="flex-y-center justify-between flex-wrap gap-3 pt-6 pb-2">
+        <div class="flex-y-center justify-between flex-wrap gap-3 pt-2 pb-2">
             <!-- Title -->
             <h1 class="text-2xl sm:text-3xl text-primary font-bold">
-                {{ $type === 'book' ? 'Kitoblar' : 'Kanselyariya' }}
-                @if($search) 
-                    <span class="text-neutral-500 font-medium text-lg ml-2">"{{ $search }}" bo'yicha qidiruv</span>
-                @endif
+                {{ $pageTitle }}
             </h1>
             <span style="font-size:0.875rem;color:#9ca3af;font-weight:500;">{{ $products->total() }} ta mahsulot</span>
         </div>

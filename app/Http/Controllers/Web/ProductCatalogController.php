@@ -408,10 +408,18 @@ class ProductCatalogController extends Controller
             $favoritedIds = [];
         }
 
+        $currentCategory = null;
+        if ($categoryId) {
+            $currentCategory = ($type === 'stationery')
+                ? $stationeryCategories->firstWhere('id', $categoryId)
+                : $bookCategories->firstWhere('id', $categoryId);
+        }
+
         return view('products.catalog', [
             'products' => $products,
             'bookCategories' => $bookCategories,
             'stationeryCategories' => $stationeryCategories,
+            'currentCategory' => $currentCategory,
             'search' => $search,
             'selectedCategory' => $categoryId,
             'type' => $type === 'stationery' ? 'stationery' : 'book',

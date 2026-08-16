@@ -608,6 +608,9 @@
     </div>
 </div>
 
+<!-- ====== TOAST CONTAINER ====== -->
+<div id="kcToastContainer" style="position:fixed;bottom:5.5rem;left:50%;transform:translateX(-50%);z-index:9999;pointer-events:none;display:flex;flex-direction:column;gap:0.5rem;align-items:center;"></div>
+
 <!-- ====== SCRIPTS ====== -->
 <script>
     let kcCart = JSON.parse(localStorage.getItem('kc_cart') || '[]');
@@ -626,17 +629,58 @@
             if (total > 0) {
                 el.style.display = 'flex';
                 el.textContent = total > 99 ? '99+' : total;
+                el.style.transform = 'scale(1.25)';
+                setTimeout(() => { el.style.transform = 'scale(1)'; }, 200);
             } else {
                 el.style.display = 'none';
             }
         });
     }
 
-    function addToCart(id, name, price, image, url) {
+    function kcShowToast(message, type = 'success', actionText = null, actionUrl = null) {
+        const container = document.getElementById('kcToastContainer');
+        if (!container) return;
+
+        const toast = document.createElement('div');
+        toast.style.cssText = 'pointer-events:auto;background:rgba(17,24,39,0.95);color:#fff;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding:0.75rem 1.25rem;border-radius:1rem;box-shadow:0 20px 40px rgba(0,0,0,0.25);display:flex;align-items:center;gap:0.75rem;font-size:0.875rem;font-weight:500;transition:all 0.3s cubic-bezier(0.16,1,0.3,1);transform:translateY(20px) scale(0.95);opacity:0;';
+        
+        const iconSvg = type === 'success'
+            ? `<span style="display:flex;align-items:center;justify-content:center;width:22px;height:22px;background:#10b981;border-radius:9999px;flex-shrink:0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M20 6 9 17l-5-5"/></svg></span>`
+            : `<span style="display:flex;align-items:center;justify-content:center;width:22px;height:22px;background:#ef4444;border-radius:9999px;flex-shrink:0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M18 6 6 18M6 6l12 12"/></svg></span>`;
+
+        const actionHtml = (actionText && actionUrl)
+            ? `<a href="${actionUrl}" style="color:#60a5fa;font-weight:700;text-decoration:none;margin-left:0.5rem;white-space:nowrap;">${actionText}</a>`
+            : '';
+
+        toast.innerHTML = `${iconSvg}<span>${message}</span>${actionHtml}`;
+        container.appendChild(toast);
+
+        requestAnimationFrame(() => {
+            toast.style.transform = 'translateY(0) scale(1)';
+            toast.style.opacity = '1';
+        });
+
+        setTimeout(() => {
+            toast.style.transform = 'translateY(10px) scale(0.95)';
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 300);
+        }, 3200);
+    }
+
+    function addToCart(id, name, price, image, url, redirect = false) {
         const ex = kcCart.find(i => i.id === id);
-        if (ex) { ex.qty++; if (url) ex.url = url; } else { kcCart.push({ id, name, price, image, qty: 1, url: url || null }); }
+        if (ex) {
+            ex.qty++;
+            if (url) ex.url = url;
+        } else {
+            kcCart.push({ id, name, price, image, qty: 1, url: url || null });
+        }
         saveCart();
-        window.location.href = "{{ route('web.cart') }}";
+        if (redirect) {
+            window.location.href = "{{ route('web.checkout') }}";
+        } else {
+            kcShowToast("Mahsulot savatchaga qo'shildi!", "success", "Savatchaga o'tish →", "{{ route('web.cart') }}");
+        }
     }
 
     function updateQty(id, delta) {
