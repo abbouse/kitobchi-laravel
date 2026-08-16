@@ -173,7 +173,10 @@
                                 <div aria-roledescription="slide" class="min-w-0 shrink-0 ps-4 basis-[90%] md:basis-full justify-center" role="group">
                                     <div class="relative w-full aspect-520/141 h-hull rounded-2xl lg:rounded-[30px] overflow-hidden block group/item bg-gradient-to-br from-primary-500 to-indigo-500 flex items-center justify-center">
                                         <div class="text-center text-white p-8">
-                                            <div class="text-2xl md:text-4xl font-black mb-2">📚 Kitobchi Marketpleysi</div>
+                                            <div class="text-2xl md:text-4xl font-black mb-2 flex items-center justify-center gap-3">
+                                                <svg viewBox="0 0 24 24" fill="currentColor" style="width:1em;height:1em;"><path d="M11.25 4.533A9.707 9.707 0 006 3a9.735 9.735 0 00-3.25.555.75.75 0 00-.5.707v14.25a.75.75 0 001 .707A8.237 8.237 0 016 18.75c1.995 0 3.823.707 5.25 1.886V4.533zM12.75 20.636A8.214 8.214 0 0118 18.75c.966 0 1.89.166 2.75.47a.75.75 0 001-.708V4.262a.75.75 0 00-.5-.707A9.735 9.735 0 0018 3a9.707 9.707 0 00-5.25 1.533v16.103z"/></svg>
+                                                Kitobchi Marketpleysi
+                                            </div>
                                             <div class="text-lg opacity-90">Muborak va original kitoblar eng hamyonbop narxlarda</div>
                                         </div>
                                     </div>
@@ -185,10 +188,10 @@
                     @if($banners->count() > 1)
                         <div class="hidden md:block">
                             <button onclick="slideBanner(-1)" aria-label="Prev" class="font-medium inline-flex items-center transition-colors text-sm gap-1.5 ring ring-inset ring-primary/50 text-primary hover:bg-primary/10 active:bg-primary/10 outline-primary/25 focus-visible:outline-3 focus-visible:ring-primary p-1.5 absolute rounded-full start-4 sm:-start-12 top-1/2 -translate-y-1/2 start-6! z-20! bg-gray-600/50! text-white! border-gray-600/50! cursor-pointer" type="button">
-                                <iconify-icon aria-hidden="true" icon="lucide:arrow-left" class="shrink-0" style="font-size:20px;"></iconify-icon>
+                                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="shrink-0" style="width:20px;height:20px;"><path stroke-linecap="round" stroke-linejoin="round" d="M19 12H5M12 19l-7-7 7-7"/></svg>
                             </button>
                             <button onclick="slideBanner(1)" aria-label="Next" class="font-medium inline-flex items-center transition-colors text-sm gap-1.5 text-inverted bg-inverted hover:bg-inverted/90 active:bg-inverted/90 outline-inverted/25 focus-visible:outline-3 p-1.5 absolute rounded-full end-4 sm:-end-12 top-1/2 -translate-y-1/2 end-6! z-20! bg-gray-600/50! text-white! border-gray-600/50! cursor-pointer" type="button">
-                                <iconify-icon aria-hidden="true" icon="lucide:arrow-right" class="shrink-0" style="font-size:20px;"></iconify-icon>
+                                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="shrink-0" style="width:20px;height:20px;"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M12 5l7 7-7 7"/></svg>
                             </button>
                         </div>
                     @endif
@@ -220,7 +223,7 @@
                                     <a class="group/item flex flex-col items-center gap-2" href="{{ route('web.catalog') }}">
                                         <div class="min-w-[90px] min-h-[90px] w-full h-full max-w-[192px] max-h-[192px] rounded-full overflow-hidden border border-transparent group-hover/item:border-primary-500 transition-colors duration-300 bg-gradient-to-br from-primary-500 to-indigo-500 flex items-center justify-center">
                                             <div class="relative w-full aspect-square flex items-center justify-center">
-                                                <span class="text-3xl md:text-5xl transform transition-transform duration-500 group-hover/item:scale-110">📚</span>
+                                                <svg viewBox="0 0 24 24" fill="currentColor" class="text-3xl md:text-5xl text-white transform transition-transform duration-500 group-hover/item:scale-110" style="width:1em;height:1em;"><path d="M4.5 4.5a3 3 0 00-3 3v2.25a3 3 0 003 3h2.25a3 3 0 003-3V7.5a3 3 0 00-3-3H4.5zM4.5 15a3 3 0 00-3 3v.75a3 3 0 003 3h2.25a3 3 0 003-3V18a3 3 0 00-3-3H4.5zM15 4.5a3 3 0 00-3 3v2.25a3 3 0 003 3h2.25a3 3 0 003-3V7.5a3 3 0 00-3-3H15zM15 15a3 3 0 00-3 3v.75a3 3 0 003 3h2.25a3 3 0 003-3V18a3 3 0 00-3-3H15z"/></svg>
                                             </div>
                                         </div>
                                         <span class="font-medium md:font-semibold group-hover/item:font-bold group-hover/item:underline text-sm md:text-base leading-6 text-center text-neutral-900 dark:text-white group-hover/item:text-primary-500 transition-all duration-300">
@@ -261,11 +264,12 @@
             <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
                 <div class="flex justify-between items-center w-full px-1 max-md:mt-5 mb-4">
                     <h2 class="text-lg md:text-2xl font-bold flex gap-2 items-center text-primary-950 dark:text-white">
-                        🆕 Yangi kelgan kitoblar
+                        <svg viewBox="0 0 24 24" fill="currentColor" class="text-primary-500" style="width:0.85em;height:0.85em;"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.287 1.288L3 12l5.8 1.9a2 2 0 0 1 1.288 1.287L12 21l1.9-5.8a2 2 0 0 1 1.287-1.288L21 12l-5.8-1.9a2 2 0 0 1-1.288-1.287Z"/></svg>
+                        Yangi kelgan kitoblar
                     </h2>
                     <a class="text-sm font-semibold text-primary" href="{{ route('web.catalog') }}">
                         Barchasi
-                        <iconify-icon aria-hidden="true" icon="lucide:chevron-right"></iconify-icon>
+                        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:1em;height:1em;display:inline-block;vertical-align:-0.125em;"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
                     </a>
                 </div>
                 <div class="grid grid-cols-2 lg:grid-cols-4 2xl:grid-cols-5 gap-4">
@@ -283,11 +287,12 @@
             <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
                 <div class="flex justify-between items-center w-full px-1 max-md:mt-5 mb-4">
                     <h2 class="text-lg md:text-2xl font-bold flex gap-2 items-center text-primary-950 dark:text-white">
-                        🔥 Tavsiya etamiz & Top sotuvlar
+                        <svg viewBox="0 0 24 24" fill="currentColor" class="text-primary-500" style="width:0.85em;height:0.85em;"><path fill-rule="evenodd" d="M12.963 2.286a.75.75 0 00-1.071-.136 9.742 9.742 0 00-3.539 6.176 7.547 7.547 0 01-1.705-1.715.75.75 0 00-1.152-.082A9 9 0 1015.68 4.534a7.46 7.46 0 01-2.717-2.248zM15.75 14.25a3.75 3.75 0 11-7.313-1.172c.628.465 1.35.81 2.133 1.005a5.981 5.981 0 011.925-3.545 3.75 3.75 0 013.255 3.712z" clip-rule="evenodd"/></svg>
+                        Tavsiya etamiz & Top sotuvlar
                     </h2>
                     <a class="text-sm font-semibold text-primary" href="{{ route('web.catalog') }}">
                         Barchasi
-                        <iconify-icon aria-hidden="true" icon="lucide:chevron-right"></iconify-icon>
+                        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:1em;height:1em;display:inline-block;vertical-align:-0.125em;"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
                     </a>
                 </div>
                 <div class="grid grid-cols-2 lg:grid-cols-4 2xl:grid-cols-5 gap-4">
@@ -306,11 +311,12 @@
                 <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
                     <div class="flex justify-between items-center w-full px-1 max-md:mt-5 mb-4">
                         <h2 class="text-lg md:text-2xl font-bold flex gap-2 items-center text-primary-950 dark:text-white">
-                            📚 {{ $section->category->name_uz }}
+                            <svg viewBox="0 0 24 24" fill="currentColor" class="text-primary-500" style="width:0.85em;height:0.85em;"><path d="M11.25 4.533A9.707 9.707 0 006 3a9.735 9.735 0 00-3.25.555.75.75 0 00-.5.707v14.25a.75.75 0 001 .707A8.237 8.237 0 016 18.75c1.995 0 3.823.707 5.25 1.886V4.533zM12.75 20.636A8.214 8.214 0 0118 18.75c.966 0 1.89.166 2.75.47a.75.75 0 001-.708V4.262a.75.75 0 00-.5-.707A9.735 9.735 0 0018 3a9.707 9.707 0 00-5.25 1.533v16.103z"/></svg>
+                            {{ $section->category->name_uz }}
                         </h2>
                         <a class="text-sm font-semibold text-primary" href="{{ route('web.catalog', ['category' => $section->category->id]) }}">
                             Barchasi
-                            <iconify-icon aria-hidden="true" icon="lucide:chevron-right"></iconify-icon>
+                            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:1em;height:1em;display:inline-block;vertical-align:-0.125em;"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
                         </a>
                     </div>
                     <div class="grid grid-cols-2 lg:grid-cols-4 2xl:grid-cols-5 gap-4">
@@ -332,7 +338,7 @@
             <div class="w-10 h-1 bg-gray-300 rounded-full mx-auto absolute left-1/2 -translate-x-1/2 -top-2"></div>
             <h3 id="kcBottomSheetTitle" class="text-xl font-bold text-gray-900 mt-2">Aksiya</h3>
             <button onclick="closeBannerBottomSheet()" class="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 mt-2">
-                <iconify-icon icon="lucide:x" class="w-5 h-5"></iconify-icon>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M18 6 6 18M6 6l12 12"/></svg>
             </button>
         </div>
 

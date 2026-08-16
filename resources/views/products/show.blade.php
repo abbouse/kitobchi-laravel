@@ -200,7 +200,10 @@
                                 <button aria-label="Sevimlilar" data-fav="{{ $isFavorited ? '1' : '0' }}"
                                         onclick="toggleFavorite(this, {{ $product->id }}, '{{ $productType }}');"
                                         class="w-10 h-10 flex items-center justify-center rounded-full bg-white/50 backdrop-blur-md border border-white/50 hover:bg-white transition-all">
-                                    <iconify-icon icon="{{ $isFavorited ? 'heroicons-solid:heart' : 'heroicons:heart' }}" style="font-size:22px;color:{{ $isFavorited ? '#ef4444' : '#374151' }};"></iconify-icon>
+                                    <svg class="kc-heart-icon" viewBox="0 0 24 24" style="width:22px;height:22px;"
+                                         fill="{{ $isFavorited ? '#ef4444' : 'none' }}" stroke="{{ $isFavorited ? '#ef4444' : '#374151' }}" stroke-width="1.6">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/>
+                                    </svg>
                                 </button>
                             </div>
                         </div>
@@ -335,7 +338,7 @@
                             </div>
                             <div>
                                 <button type="button" onclick="addToCart({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $currentPrice }}, '{{ $imgUrl }}', '{{ $canonicalUrl }}')" class="font-medium inline-flex items-center justify-center transition-colors text-base gap-2 text-primary bg-primary/10 hover:bg-primary/15 active:bg-primary/15 h-12 w-14 rounded-2xl cursor-pointer">
-                                    <iconify-icon icon="heroicons-solid:shopping-cart" style="font-size: 24px;"></iconify-icon>
+                                    <svg viewBox="0 0 24 24" fill="currentColor" style="width:24px;height:24px;"><path d="M2.25 2.25a.75.75 0 000 1.5h1.386c.17 0 .318.114.362.278l2.558 9.592a3.752 3.752 0 00-2.806 3.63c0 .414.336.75.75.75h15.75a.75.75 0 000-1.5H5.378A2.25 2.25 0 017.5 15h11.218a.75.75 0 00.674-.421 60.358 60.358 0 002.96-7.228.75.75 0 00-.525-.965A60.864 60.864 0 005.68 4.509l-.232-.867A1.875 1.875 0 003.636 2.25H2.25zM3.75 20.25a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zM16.5 20.25a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0z"/></svg>
                                 </button>
                             </div>
                         </div>
@@ -346,10 +349,10 @@
                     <div>
                         <div onclick="kcToggleSpecs()" class="w-full bg-secondary-300 cursor-pointer rounded-2xl p-4 md:px-6 flex items-center justify-between transition-colors duration-300 hover:bg-secondary-400 mt-2">
                             <div class="flex items-center gap-3">
-                                <iconify-icon icon="heroicons:information-circle" class="w-6 h-6 text-primary" style="font-size: 24px;"></iconify-icon>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="w-6 h-6 text-primary"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"/></svg>
                                 <span class="font-medium text-primary text-base">Xususiyatlar va tavsif</span>
                             </div>
-                            <iconify-icon icon="heroicons:chevron-down" id="kcSpecsChevron" class="w-5 h-5 text-primary transition-transform duration-300" style="font-size: 20px;"></iconify-icon>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="kcSpecsChevron" class="w-5 h-5 text-primary transition-transform duration-300"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
                         </div>
 
                         <div id="kcSpecsBody" class="mt-4 p-6 rounded-3xl bg-secondary-100 hidden">
@@ -488,7 +491,10 @@
                                     <button aria-label="Sevimlilar" data-fav="{{ $simIsFav ? '1' : '0' }}"
                                             onclick="event.preventDefault(); toggleFavorite(this, {{ $sim->id }}, '{{ $simIsStationery ? 'stationery' : 'book' }}');"
                                             class="kc-fav-btn">
-                                        <iconify-icon icon="{{ $simIsFav ? 'heroicons-solid:heart' : 'heroicons:heart' }}" style="font-size:16px;color:{{ $simIsFav ? '#ef4444' : '#374151' }};"></iconify-icon>
+                                        <svg class="kc-heart-icon" viewBox="0 0 24 24" style="width:16px;height:16px;"
+                                             fill="{{ $simIsFav ? '#ef4444' : 'none' }}" stroke="{{ $simIsFav ? '#ef4444' : '#374151' }}" stroke-width="1.8">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/>
+                                        </svg>
                                     </button>
                                 </div>
                             </div>

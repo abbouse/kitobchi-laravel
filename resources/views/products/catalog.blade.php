@@ -55,7 +55,7 @@
                 <button type="button" onclick="toggleLangMenu(event, 'kcSortMenu')"
                         class="inline-flex items-center gap-1.5 text-primary hover:bg-primary/10 bg-secondary-300 rounded-2xl px-4 py-2 text-[15px] font-semibold border-none cursor-pointer transition-colors">
                     <span class="truncate">Saralash: {{ $sortLabels[$sort] ?? 'Ommabop' }}</span>
-                    <iconify-icon icon="heroicons:chevron-down-20-solid" class="size-5"></iconify-icon>
+                    <svg viewBox="0 0 20 20" fill="currentColor" class="size-5"><path fill-rule="evenodd" d="M5.22 8.22a.75.75 0 011.06 0L10 11.94l3.72-3.72a.75.75 0 111.06 1.06l-4.25 4.25a.75.75 0 01-1.06 0L5.22 9.28a.75.75 0 010-1.06z" clip-rule="evenodd"/></svg>
                 </button>
                 <div id="kcSortMenu" class="kc-lang-menu" style="display:none;position:absolute;top:calc(100% + 8px);left:0;min-width:180px;background:#fff;border-radius:1rem;box-shadow:0 20px 40px rgba(0,0,0,0.14);z-index:200;padding:0.375rem;">
                     @foreach($sortLabels as $sortKey => $sortLabel)
@@ -63,7 +63,7 @@
                            style="display:flex;align-items:center;justify-content:space-between;padding:0.625rem 0.75rem;border-radius:0.625rem;text-decoration:none;font-size:0.875rem;{{ $sort === $sortKey ? 'background:var(--color-tima-50);font-weight:700;color:var(--color-tima-600);' : 'font-weight:500;color:#111827;' }}">
                             {{ $sortLabel }}
                             @if($sort === $sortKey)
-                                <iconify-icon icon="lucide:check" style="font-size:14px;"></iconify-icon>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" d="M20 6 9 17l-5-5"/></svg>
                             @endif
                         </a>
                     @endforeach
@@ -75,7 +75,7 @@
                 <button type="button" onclick="toggleLangMenu(event, 'kcPriceMenu')"
                         class="inline-flex items-center gap-1.5 {{ ($priceMin || $priceMax) ? 'bg-primary text-white' : 'text-primary hover:bg-primary/10 bg-secondary-300' }} rounded-2xl px-4 py-2 text-[15px] font-semibold border-none cursor-pointer transition-colors">
                     <span class="truncate">Narx</span>
-                    <iconify-icon icon="heroicons:chevron-down-20-solid" class="size-5"></iconify-icon>
+                    <svg viewBox="0 0 20 20" fill="currentColor" class="size-5"><path fill-rule="evenodd" d="M5.22 8.22a.75.75 0 011.06 0L10 11.94l3.72-3.72a.75.75 0 111.06 1.06l-4.25 4.25a.75.75 0 01-1.06 0L5.22 9.28a.75.75 0 010-1.06z" clip-rule="evenodd"/></svg>
                 </button>
                 <div id="kcPriceMenu" class="kc-lang-menu" style="display:none;position:absolute;top:calc(100% + 8px);left:0;width:300px;background:#fff;border-radius:1.25rem;box-shadow:0 20px 40px rgba(0,0,0,0.14);z-index:200;padding:1.25rem;border:1px solid #f3f4f6;">
                     <form method="GET" action="{{ route('web.catalog') }}">
@@ -105,7 +105,7 @@
                         class="inline-flex items-center gap-1.5 {{ !empty($selectedSellers) ? 'bg-primary text-white' : 'text-primary hover:bg-primary/10 bg-secondary-300' }} rounded-2xl px-4 py-2 text-[15px] font-semibold border-none cursor-pointer transition-colors">
                     <span class="truncate">Do'konlar</span>
                     @if(!empty($selectedSellers)) <span class="bg-white text-primary rounded-full px-2 py-0.5 text-xs ml-1 flex-center">{{ count($selectedSellers) }}</span> @endif
-                    <iconify-icon icon="heroicons:chevron-down-20-solid" class="size-5"></iconify-icon>
+                    <svg viewBox="0 0 20 20" fill="currentColor" class="size-5"><path fill-rule="evenodd" d="M5.22 8.22a.75.75 0 011.06 0L10 11.94l3.72-3.72a.75.75 0 111.06 1.06l-4.25 4.25a.75.75 0 01-1.06 0L5.22 9.28a.75.75 0 010-1.06z" clip-rule="evenodd"/></svg>
                 </button>
                 <div id="kcShopsMenu" class="kc-lang-menu" style="display:none;position:absolute;top:calc(100% + 8px);left:0;width:280px;background:#fff;border-radius:1.25rem;box-shadow:0 20px 40px rgba(0,0,0,0.14);z-index:200;padding:1.25rem;border:1px solid #f3f4f6;">
                     <form method="GET" action="{{ route('web.catalog') }}">
@@ -123,7 +123,7 @@
                                     <div class="relative flex items-center justify-center w-5 h-5 rounded border border-secondary-300 group-hover:border-primary bg-white transition-colors">
                                         <input type="checkbox" name="seller_ids[]" value="{{ $seller->id }}" class="peer sr-only" {{ in_array($seller->id, $selectedSellers ?? []) ? 'checked' : '' }}>
                                         <div class="w-3 h-3 bg-primary rounded-[2px] opacity-0 peer-checked:opacity-100 flex-center transition-opacity">
-                                            <iconify-icon icon="lucide:check" class="text-white text-[10px]"></iconify-icon>
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" class="text-white" style="width:10px;height:10px;"><path stroke-linecap="round" stroke-linejoin="round" d="M20 6 9 17l-5-5"/></svg>
                                         </div>
                                     </div>
                                     <span class="text-[15px] font-medium text-neutral-700 group-hover:text-primary transition-colors">{{ $seller->shop_name }}</span>
@@ -143,7 +143,7 @@
                         class="inline-flex items-center gap-1.5 {{ !empty($selectedPublishers) ? 'bg-primary text-white' : 'text-primary hover:bg-primary/10 bg-secondary-300' }} rounded-2xl px-4 py-2 text-[15px] font-semibold border-none cursor-pointer transition-colors">
                     <span class="truncate">Nashriyotlar</span>
                     @if(!empty($selectedPublishers)) <span class="bg-white text-primary rounded-full px-2 py-0.5 text-xs ml-1 flex-center">{{ count($selectedPublishers) }}</span> @endif
-                    <iconify-icon icon="heroicons:chevron-down-20-solid" class="size-5"></iconify-icon>
+                    <svg viewBox="0 0 20 20" fill="currentColor" class="size-5"><path fill-rule="evenodd" d="M5.22 8.22a.75.75 0 011.06 0L10 11.94l3.72-3.72a.75.75 0 111.06 1.06l-4.25 4.25a.75.75 0 01-1.06 0L5.22 9.28a.75.75 0 010-1.06z" clip-rule="evenodd"/></svg>
                 </button>
                 <div id="kcPublishersMenu" class="kc-lang-menu" style="display:none;position:absolute;top:calc(100% + 8px);left:0;width:280px;background:#fff;border-radius:1.25rem;box-shadow:0 20px 40px rgba(0,0,0,0.14);z-index:200;padding:1.25rem;border:1px solid #f3f4f6;">
                     <form method="GET" action="{{ route('web.catalog') }}">
@@ -161,7 +161,7 @@
                                     <div class="relative flex items-center justify-center w-5 h-5 rounded border border-secondary-300 group-hover:border-primary bg-white transition-colors">
                                         <input type="checkbox" name="publisher_ids[]" value="{{ $publisher->id }}" class="peer sr-only" {{ in_array($publisher->id, $selectedPublishers ?? []) ? 'checked' : '' }}>
                                         <div class="w-3 h-3 bg-primary rounded-[2px] opacity-0 peer-checked:opacity-100 flex-center transition-opacity">
-                                            <iconify-icon icon="lucide:check" class="text-white text-[10px]"></iconify-icon>
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" class="text-white" style="width:10px;height:10px;"><path stroke-linecap="round" stroke-linejoin="round" d="M20 6 9 17l-5-5"/></svg>
                                         </div>
                                     </div>
                                     <span class="text-[15px] font-medium text-neutral-700 group-hover:text-primary transition-colors">{{ $publisher->name }}</span>
@@ -178,7 +178,7 @@
             @if(request('category') || $priceMin || $priceMax || $sort !== 'popular' || $search || !empty($selectedSellers) || !empty($selectedPublishers))
                 <a href="{{ route('web.catalog', ['type' => $type]) }}"
                    class="inline-flex items-center px-4 py-2 rounded-2xl text-[15px] font-semibold transition-colors shrink-0 gap-1.5 bg-error-50 text-error-500 hover:bg-error-100 border-none ml-2">
-                    <iconify-icon icon="lucide:x" class="text-lg"></iconify-icon>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:1.125em;height:1.125em;"><path stroke-linecap="round" stroke-linejoin="round" d="M18 6 6 18M6 6l12 12"/></svg>
                     Tozalash
                 </a>
             @endif
@@ -256,7 +256,10 @@
                                                     onclick="event.preventDefault();toggleFavorite(this, {{ $item->id }}, '{{ $isStationery ? 'stationery' : 'book' }}');"
                                                     name="Sevimlilar"
                                                     style="width:2rem;height:2rem;display:flex;align-items:center;justify-content:center;border-radius:9999px;background:none;border:none;cursor:pointer;transition:all 0.3s;position:relative;z-index:10;">
-                                                <iconify-icon icon="{{ $isFav ? 'heroicons-solid:heart' : 'heroicons:heart' }}" style="font-size:18px;position:relative;z-index:10;color:{{ $isFav ? '#ef4444' : '#374151' }};"></iconify-icon>
+                                                <svg class="kc-heart-icon" viewBox="0 0 24 24" style="width:18px;height:18px;position:relative;z-index:10;"
+                                                     fill="{{ $isFav ? '#ef4444' : 'none' }}" stroke="{{ $isFav ? '#ef4444' : '#374151' }}" stroke-width="1.8">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/>
+                                                </svg>
                                             </button>
                                         </div>
                                     </div>

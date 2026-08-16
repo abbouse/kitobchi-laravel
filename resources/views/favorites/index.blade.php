@@ -40,7 +40,7 @@
                     Sevimlilar ro'yxati bo'sh
                 </h2>
                 <p class="text-neutral-500 mb-6">
-                    Yoqqan mahsulotlaringizni saqlab qo'yish uchun ularning ustidagi <iconify-icon icon="heroicons-solid:heart" style="color:#ef4444;vertical-align:-2px;"></iconify-icon> belgisini bosing
+                    Yoqqan mahsulotlaringizni saqlab qo'yish uchun ularning ustidagi <svg viewBox="0 0 24 24" fill="#ef4444" style="width:1em;height:1em;display:inline;vertical-align:-2px;"><path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z"/></svg> belgisini bosing
                 </p>
                 <div>
                     <a href="{{ route('web.catalog') }}" class="font-medium items-center transition-colors py-1.5 gap-1.5 text-inverted bg-primary hover:bg-primary/75 h-12 justify-center sm:min-w-40 rounded-2xl text-base max-md:w-full inline-flex px-6" style="color:#fff;">
@@ -72,7 +72,7 @@
 
                     <div class="absolute top-3 right-3 z-20">
                         <button onclick="event.preventDefault(); removeFavoriteCard(this, {{ $product->id }}, '{{ $isStationery ? 'stationery' : 'book' }}');" class="w-9 h-9 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-sm shadow-sm hover:bg-white text-error-500 transition-colors">
-                            <iconify-icon icon="heroicons-solid:heart" class="text-lg"></iconify-icon>
+                            <svg viewBox="0 0 24 24" fill="currentColor" class="text-lg" style="width:1em;height:1em;"><path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z"/></svg>
                         </button>
                     </div>
                 </div>

@@ -124,7 +124,7 @@ function renderCartPage() {
                                 <h3 class="text-lg md:text-xl font-medium text-primary hover:text-primary-500 transition-colors line-clamp-2">${item.name}</h3>
                             ${closeTag}
                             <button type="button" onclick="removeFromCart(${item.id}); renderCartPage();" class="shrink-0 p-2 text-neutral-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all duration-300">
-                                <iconify-icon icon="lucide:trash-2" class="w-5 h-5 block"></iconify-icon>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5 block"><path stroke-linecap="round" stroke-linejoin="round" d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14ZM10 11v6M14 11v6"/></svg>
                             </button>
                         </div>
                         <div class="flex max-sm:flex-col sm:items-center justify-between gap-4">
@@ -198,7 +198,7 @@ function renderCartPage() {
 
                     <a href="${checkoutDisabled ? '#' : `{{ route('web.checkout') }}`}" class="font-medium items-center transition-colors gap-2 text-inverted bg-primary hover:bg-primary/75 h-14 justify-center rounded-2xl text-lg w-full inline-flex ${checkoutDisabled ? 'opacity-40 pointer-events-none' : ''}" style="color:#fff;">
                         Xaridni davom ettirish
-                        <iconify-icon icon="lucide:arrow-right" class="text-xl"></iconify-icon>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:1.1em;height:1.1em;"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M12 5l7 7-7 7"/></svg>
                     </a>
                 </div>
             </div>

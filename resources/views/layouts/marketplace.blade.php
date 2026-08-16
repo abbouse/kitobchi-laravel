@@ -14,8 +14,13 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Urbanist:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap" rel="stylesheet">
 
-    <!-- Iconify for icon rendering -->
-    <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js" defer></script>
+    {{-- Iconify <iconify-icon> veb-komponenti bu yerda ISHLATILMAYDI —
+         u runtime'da tashqi so'rov orqali SVG olib kelishga tayanadi va
+         bu muhitda hech qachon chizilmasdi (barcha ikonkalar ko'rinmas
+         edi — sevimlilar yuragi, savat, chevron va h.k., o'nlab joyda).
+         Butun marketplace shu sabab inline SVG'ga o'tkazildi (hech qanday
+         tashqi so'rovga muhtoj emas, har doim ishlaydi). Skript endi
+         kerak emas — olib tashlandi. --}}
 
     <!-- Kitobchi Entry CSS -->
     @vite(['resources/css/kitobchi-entry.css', 'resources/css/kitobchi-marketplace.css'])
@@ -287,7 +292,7 @@
                     <a href="{{ route('web.catalog') }}" aria-current="{{ request()->routeIs('web.catalog') ? 'page' : 'false' }}" class="relative overflow-hidden transition-shadow duration-300 rounded-2xl px-5 py-[14px] rounded-full! hover:shadow-sm hover:shadow-black/10 glass-card-bg p-1! h-12 cursor-pointer bg-secondary-200!" style="text-decoration:none;color:#111827;">
                         <div class="absolute inset-0 pointer-events-none glass-border rounded-2xl rounded-full!"></div>
                         <div class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex flex-row items-center gap-2 {{ request()->routeIs('web.catalog') ? 'bg-primary-200' : '' }}">
-                            <iconify-icon aria-hidden="true" icon="heroicons-solid:squares-2x2" class="w-5 h-5 transition-all duration-300 shrink-0"></iconify-icon>
+                            <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 transition-all duration-300 shrink-0"><path d="M4.5 4.5a3 3 0 00-3 3v2.25a3 3 0 003 3h2.25a3 3 0 003-3V7.5a3 3 0 00-3-3H4.5zM4.5 15a3 3 0 00-3 3v.75a3 3 0 003 3h2.25a3 3 0 003-3V18a3 3 0 00-3-3H4.5zM15 4.5a3 3 0 00-3 3v2.25a3 3 0 003 3h2.25a3 3 0 003-3V7.5a3 3 0 00-3-3H15zM15 15a3 3 0 00-3 3v.75a3 3 0 003 3h2.25a3 3 0 003-3V18a3 3 0 00-3-3H15z"/></svg>
                             <span class="max-lg:hidden font-medium text-sm transition-all duration-300">Kataloglar</span>
                         </div>
                     </a>
@@ -656,7 +661,7 @@
             return;
         }
 
-        const icon = btn.querySelector('iconify-icon');
+        const icon = btn.querySelector('svg.kc-heart-icon');
         const wasFav = btn.getAttribute('data-fav') === '1';
         const nowFav = !wasFav;
 
@@ -694,8 +699,11 @@
     function applyFavVisual(btn, icon, isFav) {
         btn.setAttribute('data-fav', isFav ? '1' : '0');
         if (icon) {
-            icon.setAttribute('icon', isFav ? 'heroicons-solid:heart' : 'heroicons:heart');
-            icon.style.color = isFav ? '#ef4444' : '';
+            // icon — inline <svg class="kc-heart-icon"> (avval <iconify-icon>
+            // edi, "icon" atributini almashtirar edi; endi to'g'ridan-to'g'ri
+            // fill/stroke o'zgartiramiz — bir xil SVG, faqat rangi almashadi).
+            icon.setAttribute('fill', isFav ? '#ef4444' : 'none');
+            icon.setAttribute('stroke', isFav ? '#ef4444' : 'currentColor');
         }
     }
 
