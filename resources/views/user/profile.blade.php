@@ -2,6 +2,21 @@
 
 @section('title', 'Mening profilim — Kitobchi')
 
+@push('styles')
+<style>
+    /* Desktop'da chap ustun (foydalanuvchi kartasi) + o'ng ustun (manzillar,
+       buyurtmalar) yonma-yon — avval bu JS orqali (DOMContentLoaded'da
+       window.innerWidth tekshirib) qo'yilardi, shuning uchun sahifa birinchi
+       chizilganda bir zumga bitta ustun ko'rinib, keyin "sakrab" ikkiga
+       bo'linardi (FOUC), va oyna o'lchami keyin o'zgarsa umuman moslashmasdi.
+       Endi oddiy CSS media query — darhol to'g'ri, resize'da ham ishlaydi. */
+    @media (min-width: 768px) {
+        #kcProfileGrid { grid-template-columns: 300px 1fr; }
+        #kcProfileGrid > :first-child { position: sticky; top: 1.5rem; align-self: start; }
+    }
+</style>
+@endpush
+
 @section('content')
 <div class="kc-page-surface" style="min-height:80dvh;padding:2rem 0;background:#f8fafc;">
     <div style="width:100%;max-width:var(--ui-container);margin:0 auto;padding:0 1rem;">
@@ -158,20 +173,6 @@
 
 @push('scripts')
 <script>
-window.addEventListener('DOMContentLoaded', function() {
-    const grid = document.getElementById('kcProfileGrid');
-    if (grid && window.innerWidth >= 768) {
-        grid.style.gridTemplateColumns = '300px 1fr';
-        // Apply sticky behavior to left column
-        const leftCol = grid.firstElementChild;
-        if (leftCol) {
-            leftCol.style.position = 'sticky';
-            leftCol.style.top = '1.5rem';
-            leftCol.style.alignSelf = 'start';
-        }
-    }
-});
-
 // Yandex Maps Logic
 @if(config('services.yandex_maps.key'))
 ymaps.ready(initYandexMap);

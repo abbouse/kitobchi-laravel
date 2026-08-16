@@ -13,8 +13,6 @@
         @php
             $isStationery = $type === 'stationery';
             $sort = $sort ?? 'popular';
-            // Joriy filtrlarni saqlagan holda link/param quramiz — kategoriya
-            // yoki turni almashtirganda saralash/narx oralig'i yo'qolmasin.
             $baseParams = array_filter([
                 'search' => $search ?: null,
                 'category' => request('category'),
@@ -22,196 +20,187 @@
                 'price_min' => $priceMin ?? null,
                 'price_max' => $priceMax ?? null,
             ], fn ($v) => $v !== null && $v !== '');
-            $sortLabels = ['popular' => 'Mashhur', 'new' => 'Yangi', 'price_asc' => 'Arzon narx', 'price_desc' => 'Qimmat narx'];
+            $sortLabels = ['popular' => 'Ommabop', 'new' => 'Yangi', 'price_asc' => 'Arzon narx', 'price_desc' => 'Qimmat narx'];
         @endphp
 
         <!-- ====== FILTER ROW (top) ====== -->
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem;padding:1rem 0 0.75rem;">
-
-            <!-- Type Switcher Pill -->
-            <div style="display:inline-flex;align-items:center;background:#f3f4f6;border-radius:9999px;padding:0.25rem;gap:0.25rem;">
-                <a href="{{ route('web.catalog', array_merge($baseParams, ['type' => 'book'])) }}"
-                   style="display:inline-flex;align-items:center;gap:0.375rem;padding:0.5rem 1rem;border-radius:9999px;font-size:0.875rem;font-weight:{{ $type === 'book' ? '600' : '500' }};text-decoration:none;transition:all 0.2s;
-                          background:{{ $type === 'book' ? 'var(--color-tima-500)' : 'transparent' }};
-                          color:{{ $type === 'book' ? '#fff' : '#6b7280' }};">
-                    Kitoblar
-                </a>
-                <a href="{{ route('web.catalog', array_merge($baseParams, ['type' => 'stationery'])) }}"
-                   style="display:inline-flex;align-items:center;gap:0.375rem;padding:0.5rem 1rem;border-radius:9999px;font-size:0.875rem;font-weight:{{ $type === 'stationery' ? '600' : '500' }};text-decoration:none;transition:all 0.2s;
-                          background:{{ $type === 'stationery' ? 'var(--color-tima-500)' : 'transparent' }};
-                          color:{{ $type === 'stationery' ? '#fff' : '#6b7280' }};">
-                    Kanselyariya
-                </a>
-            </div>
-
-            <!-- Right: results count + sort + filter toggle -->
-            <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
-                @if($search)
-                    <div style="display:flex;align-items:center;gap:0.5rem;padding:0.375rem 0.875rem;background:#f3f4f6;border-radius:9999px;font-size:0.8125rem;color:#374151;">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                        {{ $search }}
-                        <a href="{{ route('web.catalog', ['type' => $type]) }}" style="color:#6b7280;text-decoration:none;font-size:1.1em;">×</a>
-                    </div>
+        <div class="flex-y-center justify-between flex-wrap gap-3 pt-6 pb-2">
+            <!-- Title -->
+            <h1 class="text-2xl sm:text-3xl text-primary font-bold">
+                {{ $type === 'book' ? 'Kitoblar' : 'Kanselyariya' }}
+                @if($search) 
+                    <span class="text-neutral-500 font-medium text-lg ml-2">"{{ $search }}" bo'yicha qidiruv</span>
                 @endif
-                <span style="font-size:0.8125rem;color:#9ca3af;">{{ $products->total() }} ta mahsulot</span>
-
-                <!-- Sort dropdown -->
-                <div class="relative kc-lang-wrap">
-                    <button type="button" onclick="toggleLangMenu(event, 'kcSortMenu')" aria-haspopup="menu" aria-expanded="false"
-                            style="display:inline-flex;align-items:center;gap:0.375rem;padding:0.5rem 0.875rem;background:#f3f4f6;border-radius:9999px;border:none;font-size:0.8125rem;font-weight:600;color:#374151;cursor:pointer;font-family:inherit;">
-                        <iconify-icon icon="lucide:arrow-up-down" style="font-size:14px;"></iconify-icon>
-                        {{ $sortLabels[$sort] ?? 'Saralash' }}
-                        <iconify-icon icon="lucide:chevron-down" style="font-size:14px;"></iconify-icon>
-                    </button>
-                    <div id="kcSortMenu" class="kc-lang-menu" style="display:none;position:absolute;top:calc(100% + 8px);right:0;min-width:160px;background:#fff;border-radius:1rem;box-shadow:0 20px 40px rgba(0,0,0,0.14);z-index:200;overflow:hidden;padding:0.375rem;">
-                        @foreach($sortLabels as $sortKey => $sortLabel)
-                            <a href="{{ route('web.catalog', array_merge($baseParams, ['type' => $type, 'sort' => $sortKey !== 'popular' ? $sortKey : null])) }}"
-                               style="display:flex;align-items:center;justify-content:space-between;gap:0.75rem;padding:0.625rem 0.75rem;border-radius:0.625rem;text-decoration:none;font-size:0.875rem;{{ $sort === $sortKey ? 'background:var(--color-tima-50);font-weight:700;color:var(--color-tima-600);' : 'font-weight:500;color:#111827;' }}">
-                                {{ $sortLabel }}
-                                @if($sort === $sortKey)
-                                    <iconify-icon icon="lucide:check" style="font-size:14px;"></iconify-icon>
-                                @endif
-                            </a>
-                        @endforeach
-                    </div>
-                </div>
-
-                </div>
-            </div>
+            </h1>
+            <span style="font-size:0.875rem;color:#9ca3af;font-weight:500;">{{ $products->total() }} ta mahsulot</span>
         </div>
 
-        <!-- ====== MAIN AREA: Sidebar + Grid ====== -->
-        <div class="flex flex-col lg:flex-row gap-8" style="align-items:flex-start;">
+        <!-- ====== HORIZONTAL FILTERS ====== -->
+        <div class="flex items-center gap-2 py-4 overflow-x-auto no-scrollbar flex-nowrap" style="-ms-overflow-style:none;scrollbar-width:none;">
+            <!-- Type Switcher Pill -->
+            <a href="{{ route('web.catalog', array_merge($baseParams, ['type' => 'book'])) }}"
+               class="inline-flex items-center px-4 py-2 rounded-2xl text-[15px] font-semibold transition-colors shrink-0 gap-2 {{ $type === 'book' ? 'bg-primary text-white' : 'bg-secondary-300 text-primary hover:bg-primary/10' }}">
+                Kitoblar
+            </a>
+            <a href="{{ route('web.catalog', array_merge($baseParams, ['type' => 'stationery'])) }}"
+               class="inline-flex items-center px-4 py-2 rounded-2xl text-[15px] font-semibold transition-colors shrink-0 gap-2 {{ $type === 'stationery' ? 'bg-primary text-white' : 'bg-secondary-300 text-primary hover:bg-primary/10' }}">
+                Kanselyariya
+            </a>
 
-            <!-- ====== SIDEBAR FILTERS ====== -->
-            <aside class="w-full lg:w-[280px] shrink-0 hidden lg:block">
-                <form method="GET" action="{{ route('web.catalog') }}" class="bg-white rounded-2xl border border-secondary-200 p-5 shadow-sm sticky top-24 flex flex-col gap-6" id="kcFilterForm">
-                    <input type="hidden" name="type" value="{{ $type }}">
-                    @if($search)<input type="hidden" name="search" value="{{ $search }}">@endif
-                    @if($sort !== 'popular')<input type="hidden" name="sort" value="{{ $sort }}">@endif
+            <!-- Divider -->
+            <div class="w-px h-6 bg-secondary-200 mx-1 shrink-0"></div>
 
-                    <!-- Categories Filter (Radio style) -->
-                    <div>
-                        <h3 class="text-lg font-bold text-primary mb-4">Kategoriyalar</h3>
-                        <div class="flex flex-col gap-3">
-                            <label class="flex items-center gap-3 cursor-pointer group">
-                                <div class="relative flex items-center justify-center w-5 h-5 rounded-full border border-secondary-300 group-hover:border-primary transition-colors bg-white">
-                                    <input type="radio" name="category" value="" class="peer sr-only" onchange="this.form.submit()" {{ !request('category') ? 'checked' : '' }}>
-                                    <div class="w-2.5 h-2.5 rounded-full bg-primary opacity-0 peer-checked:opacity-100 transition-opacity"></div>
-                                </div>
-                                <span class="text-[15px] font-medium transition-colors {{ !request('category') ? 'text-primary' : 'text-neutral-600 group-hover:text-primary' }}">Barchasi</span>
-                            </label>
+            <!-- Sort Dropdown -->
+            <div class="relative kc-lang-wrap shrink-0">
+                <button type="button" onclick="toggleLangMenu(event, 'kcSortMenu')"
+                        class="inline-flex items-center gap-1.5 text-primary hover:bg-primary/10 bg-secondary-300 rounded-2xl px-4 py-2 text-[15px] font-semibold border-none cursor-pointer transition-colors">
+                    <span class="truncate">Saralash: {{ $sortLabels[$sort] ?? 'Ommabop' }}</span>
+                    <iconify-icon icon="heroicons:chevron-down-20-solid" class="size-5"></iconify-icon>
+                </button>
+                <div id="kcSortMenu" class="kc-lang-menu" style="display:none;position:absolute;top:calc(100% + 8px);left:0;min-width:180px;background:#fff;border-radius:1rem;box-shadow:0 20px 40px rgba(0,0,0,0.14);z-index:200;padding:0.375rem;">
+                    @foreach($sortLabels as $sortKey => $sortLabel)
+                        <a href="{{ route('web.catalog', array_merge($baseParams, ['type' => $type, 'sort' => $sortKey !== 'popular' ? $sortKey : null])) }}"
+                           style="display:flex;align-items:center;justify-content:space-between;padding:0.625rem 0.75rem;border-radius:0.625rem;text-decoration:none;font-size:0.875rem;{{ $sort === $sortKey ? 'background:var(--color-tima-50);font-weight:700;color:var(--color-tima-600);' : 'font-weight:500;color:#111827;' }}">
+                            {{ $sortLabel }}
+                            @if($sort === $sortKey)
+                                <iconify-icon icon="lucide:check" style="font-size:14px;"></iconify-icon>
+                            @endif
+                        </a>
+                    @endforeach
+                </div>
+            </div>
 
-                            @php $activeCategories = $isStationery ? ($stationeryCategories ?? collect()) : ($bookCategories ?? collect()); @endphp
-                            @foreach($activeCategories as $cat)
-                                <label class="flex items-center gap-3 cursor-pointer group">
-                                    <div class="relative flex items-center justify-center w-5 h-5 rounded-full border border-secondary-300 group-hover:border-primary transition-colors bg-white">
-                                        <input type="radio" name="category" value="{{ $cat->id }}" class="peer sr-only" onchange="this.form.submit()" {{ request('category') == $cat->id ? 'checked' : '' }}>
-                                        <div class="w-2.5 h-2.5 rounded-full bg-primary opacity-0 peer-checked:opacity-100 transition-opacity"></div>
-                                    </div>
-                                    <span class="text-[15px] font-medium transition-colors {{ request('category') == $cat->id ? 'text-primary' : 'text-neutral-600 group-hover:text-primary' }}">{{ $cat->name_uz ?? $cat->name }}</span>
-                                </label>
-                            @endforeach
+            <!-- Price Popover -->
+            <div class="relative kc-lang-wrap shrink-0">
+                <button type="button" onclick="toggleLangMenu(event, 'kcPriceMenu')"
+                        class="inline-flex items-center gap-1.5 {{ ($priceMin || $priceMax) ? 'bg-primary text-white' : 'text-primary hover:bg-primary/10 bg-secondary-300' }} rounded-2xl px-4 py-2 text-[15px] font-semibold border-none cursor-pointer transition-colors">
+                    <span class="truncate">Narx</span>
+                    <iconify-icon icon="heroicons:chevron-down-20-solid" class="size-5"></iconify-icon>
+                </button>
+                <div id="kcPriceMenu" class="kc-lang-menu" style="display:none;position:absolute;top:calc(100% + 8px);left:0;width:300px;background:#fff;border-radius:1.25rem;box-shadow:0 20px 40px rgba(0,0,0,0.14);z-index:200;padding:1.25rem;border:1px solid #f3f4f6;">
+                    <form method="GET" action="{{ route('web.catalog') }}">
+                        <input type="hidden" name="type" value="{{ $type }}">
+                        @if($search)<input type="hidden" name="search" value="{{ $search }}">@endif
+                        @if(request('category'))<input type="hidden" name="category" value="{{ request('category') }}">@endif
+                        @if($sort !== 'popular')<input type="hidden" name="sort" value="{{ $sort }}">@endif
+                        @foreach($selectedSellers ?? [] as $sid)<input type="hidden" name="seller_ids[]" value="{{ $sid }}">@endforeach
+                        @foreach($selectedPublishers ?? [] as $pid)<input type="hidden" name="publisher_ids[]" value="{{ $pid }}">@endforeach
+
+                        <div class="flex items-center gap-3 mb-4">
+                            <input type="number" name="price_min" value="{{ $priceMin }}" placeholder="Dan" class="w-full h-11 bg-secondary-100 rounded-xl px-4 text-[15px] font-medium text-primary outline-none focus:ring-2 ring-primary/20 transition-all border-none">
+                            <span class="text-neutral-400 font-medium">-</span>
+                            <input type="number" name="price_max" value="{{ $priceMax }}" placeholder="Gacha" class="w-full h-11 bg-secondary-100 rounded-xl px-4 text-[15px] font-medium text-primary outline-none focus:ring-2 ring-primary/20 transition-all border-none">
                         </div>
-                    </div>
+                        <button type="submit" class="w-full h-11 bg-primary hover:bg-primary/90 text-white rounded-xl text-[15px] font-semibold transition-colors shadow-md shadow-primary/20">
+                            Qo'llash
+                        </button>
+                    </form>
+                </div>
+            </div>
 
-                    <hr class="border-secondary-200">
+            <!-- Shops Popover -->
+            @if(isset($sellers) && $sellers->count() > 0)
+            <div class="relative kc-lang-wrap shrink-0">
+                <button type="button" onclick="toggleLangMenu(event, 'kcShopsMenu')"
+                        class="inline-flex items-center gap-1.5 {{ !empty($selectedSellers) ? 'bg-primary text-white' : 'text-primary hover:bg-primary/10 bg-secondary-300' }} rounded-2xl px-4 py-2 text-[15px] font-semibold border-none cursor-pointer transition-colors">
+                    <span class="truncate">Do'konlar</span>
+                    @if(!empty($selectedSellers)) <span class="bg-white text-primary rounded-full px-2 py-0.5 text-xs ml-1 flex-center">{{ count($selectedSellers) }}</span> @endif
+                    <iconify-icon icon="heroicons:chevron-down-20-solid" class="size-5"></iconify-icon>
+                </button>
+                <div id="kcShopsMenu" class="kc-lang-menu" style="display:none;position:absolute;top:calc(100% + 8px);left:0;width:280px;background:#fff;border-radius:1.25rem;box-shadow:0 20px 40px rgba(0,0,0,0.14);z-index:200;padding:1.25rem;border:1px solid #f3f4f6;">
+                    <form method="GET" action="{{ route('web.catalog') }}">
+                        <input type="hidden" name="type" value="{{ $type }}">
+                        @if($search)<input type="hidden" name="search" value="{{ $search }}">@endif
+                        @if(request('category'))<input type="hidden" name="category" value="{{ request('category') }}">@endif
+                        @if($sort !== 'popular')<input type="hidden" name="sort" value="{{ $sort }}">@endif
+                        @if($priceMin)<input type="hidden" name="price_min" value="{{ $priceMin }}">@endif
+                        @if($priceMax)<input type="hidden" name="price_max" value="{{ $priceMax }}">@endif
+                        @foreach($selectedPublishers ?? [] as $pid)<input type="hidden" name="publisher_ids[]" value="{{ $pid }}">@endforeach
 
-                    <!-- Shops Filter -->
-                    @if(isset($sellers) && $sellers->count() > 0)
-                    <div>
-                        <h3 class="text-lg font-bold text-primary mb-4">Do'konlar</h3>
-                        <div class="flex flex-col gap-3 max-h-56 overflow-y-auto pr-2 custom-scrollbar">
+                        <div class="flex flex-col gap-3 max-h-56 overflow-y-auto pr-2 custom-scrollbar mb-4">
                             @foreach($sellers as $seller)
                                 <label class="flex items-center gap-3 cursor-pointer group">
-                                    <div class="relative flex items-center justify-center w-5 h-5 rounded border border-secondary-300 group-hover:border-primary transition-colors bg-white">
-                                        <input type="checkbox" name="seller_ids[]" value="{{ $seller->id }}" class="peer sr-only" onchange="this.form.submit()" {{ in_array($seller->id, $selectedSellers ?? []) ? 'checked' : '' }}>
-                                        <div class="w-3 h-3 bg-primary rounded-[2px] opacity-0 peer-checked:opacity-100 transition-opacity flex items-center justify-center">
+                                    <div class="relative flex items-center justify-center w-5 h-5 rounded border border-secondary-300 group-hover:border-primary bg-white transition-colors">
+                                        <input type="checkbox" name="seller_ids[]" value="{{ $seller->id }}" class="peer sr-only" {{ in_array($seller->id, $selectedSellers ?? []) ? 'checked' : '' }}>
+                                        <div class="w-3 h-3 bg-primary rounded-[2px] opacity-0 peer-checked:opacity-100 flex-center transition-opacity">
                                             <iconify-icon icon="lucide:check" class="text-white text-[10px]"></iconify-icon>
                                         </div>
                                     </div>
-                                    <span class="text-[15px] font-medium transition-colors {{ in_array($seller->id, $selectedSellers ?? []) ? 'text-primary' : 'text-neutral-600 group-hover:text-primary' }}">{{ $seller->shop_name }}</span>
+                                    <span class="text-[15px] font-medium text-neutral-700 group-hover:text-primary transition-colors">{{ $seller->shop_name }}</span>
                                 </label>
                             @endforeach
                         </div>
-                    </div>
-                    <hr class="border-secondary-200">
-                    @endif
+                        <button type="submit" class="w-full h-11 bg-primary hover:bg-primary/90 text-white rounded-xl text-[15px] font-semibold transition-colors shadow-md shadow-primary/20">Qo'llash</button>
+                    </form>
+                </div>
+            </div>
+            @endif
 
-                    <!-- Publishers Filter (Books Only) -->
-                    @if($type !== 'stationery' && isset($publishers) && $publishers->count() > 0)
-                    <div>
-                        <h3 class="text-lg font-bold text-primary mb-4">Nashriyotlar</h3>
-                        <div class="flex flex-col gap-3 max-h-56 overflow-y-auto pr-2 custom-scrollbar">
+            <!-- Publishers Popover -->
+            @if($type !== 'stationery' && isset($publishers) && $publishers->count() > 0)
+            <div class="relative kc-lang-wrap shrink-0">
+                <button type="button" onclick="toggleLangMenu(event, 'kcPublishersMenu')"
+                        class="inline-flex items-center gap-1.5 {{ !empty($selectedPublishers) ? 'bg-primary text-white' : 'text-primary hover:bg-primary/10 bg-secondary-300' }} rounded-2xl px-4 py-2 text-[15px] font-semibold border-none cursor-pointer transition-colors">
+                    <span class="truncate">Nashriyotlar</span>
+                    @if(!empty($selectedPublishers)) <span class="bg-white text-primary rounded-full px-2 py-0.5 text-xs ml-1 flex-center">{{ count($selectedPublishers) }}</span> @endif
+                    <iconify-icon icon="heroicons:chevron-down-20-solid" class="size-5"></iconify-icon>
+                </button>
+                <div id="kcPublishersMenu" class="kc-lang-menu" style="display:none;position:absolute;top:calc(100% + 8px);left:0;width:280px;background:#fff;border-radius:1.25rem;box-shadow:0 20px 40px rgba(0,0,0,0.14);z-index:200;padding:1.25rem;border:1px solid #f3f4f6;">
+                    <form method="GET" action="{{ route('web.catalog') }}">
+                        <input type="hidden" name="type" value="{{ $type }}">
+                        @if($search)<input type="hidden" name="search" value="{{ $search }}">@endif
+                        @if(request('category'))<input type="hidden" name="category" value="{{ request('category') }}">@endif
+                        @if($sort !== 'popular')<input type="hidden" name="sort" value="{{ $sort }}">@endif
+                        @if($priceMin)<input type="hidden" name="price_min" value="{{ $priceMin }}">@endif
+                        @if($priceMax)<input type="hidden" name="price_max" value="{{ $priceMax }}">@endif
+                        @foreach($selectedSellers ?? [] as $sid)<input type="hidden" name="seller_ids[]" value="{{ $sid }}">@endforeach
+
+                        <div class="flex flex-col gap-3 max-h-56 overflow-y-auto pr-2 custom-scrollbar mb-4">
                             @foreach($publishers as $publisher)
                                 <label class="flex items-center gap-3 cursor-pointer group">
-                                    <div class="relative flex items-center justify-center w-5 h-5 rounded border border-secondary-300 group-hover:border-primary transition-colors bg-white">
-                                        <input type="checkbox" name="publisher_ids[]" value="{{ $publisher->id }}" class="peer sr-only" onchange="this.form.submit()" {{ in_array($publisher->id, $selectedPublishers ?? []) ? 'checked' : '' }}>
-                                        <div class="w-3 h-3 bg-primary rounded-[2px] opacity-0 peer-checked:opacity-100 transition-opacity flex items-center justify-center">
+                                    <div class="relative flex items-center justify-center w-5 h-5 rounded border border-secondary-300 group-hover:border-primary bg-white transition-colors">
+                                        <input type="checkbox" name="publisher_ids[]" value="{{ $publisher->id }}" class="peer sr-only" {{ in_array($publisher->id, $selectedPublishers ?? []) ? 'checked' : '' }}>
+                                        <div class="w-3 h-3 bg-primary rounded-[2px] opacity-0 peer-checked:opacity-100 flex-center transition-opacity">
                                             <iconify-icon icon="lucide:check" class="text-white text-[10px]"></iconify-icon>
                                         </div>
                                     </div>
-                                    <span class="text-[15px] font-medium transition-colors {{ in_array($publisher->id, $selectedPublishers ?? []) ? 'text-primary' : 'text-neutral-600 group-hover:text-primary' }}">{{ $publisher->name }}</span>
+                                    <span class="text-[15px] font-medium text-neutral-700 group-hover:text-primary transition-colors">{{ $publisher->name }}</span>
                                 </label>
                             @endforeach
                         </div>
-                    </div>
-                    <hr class="border-secondary-200">
-                    @endif
-
-                    <!-- Price Filter -->
-                    <div>
-                        <h3 class="text-lg font-bold text-primary mb-4">Narx</h3>
-                        <div class="flex items-center gap-3 mb-4">
-                            <div class="flex-1 relative">
-                                <input type="number" name="price_min" min="0" placeholder="Dan" value="{{ $priceMin }}" 
-                                       class="w-full h-11 bg-secondary-100 border-none rounded-xl px-4 text-sm font-medium text-primary placeholder-neutral-400 focus:ring-2 focus:ring-primary/20 outline-none transition-all">
-                            </div>
-                            <span class="text-neutral-400 font-medium">-</span>
-                            <div class="flex-1 relative">
-                                <input type="number" name="price_max" min="0" placeholder="Gacha" value="{{ $priceMax }}" 
-                                       class="w-full h-11 bg-secondary-100 border-none rounded-xl px-4 text-sm font-medium text-primary placeholder-neutral-400 focus:ring-2 focus:ring-primary/20 outline-none transition-all">
-                            </div>
-                        </div>
-                        <button type="submit" class="w-full h-11 bg-primary hover:bg-primary/90 text-white rounded-xl text-[15px] font-medium transition-colors flex items-center justify-center">
-                            Ko'rsatish
-                        </button>
-                    </div>
-
-                    @if(request('category') || $priceMin || $priceMax || $sort !== 'popular' || $search)
-                        <div class="pt-2">
-                            <a href="{{ route('web.catalog', ['type' => $type]) }}"
-                               class="flex items-center justify-center h-10 w-full bg-error-50 hover:bg-error-100 text-error-500 rounded-xl text-[15px] font-medium transition-colors gap-2">
-                                <iconify-icon icon="lucide:x" class="text-lg"></iconify-icon>
-                                Filtrlarni tozalash
-                            </a>
-                        </div>
-                    @endif
-                </form>
-            </aside>
-
-            <!-- ====== PRODUCT GRID ====== -->
-            <main class="flex-1">
-
-                <!-- Mobile category filter pills (horizontal scroll) -->
-                <div style="overflow-x:auto;-ms-overflow-style:none;scrollbar-width:none;margin-bottom:1rem;">
-                    <div style="display:flex;gap:0.5rem;padding-bottom:0.25rem;width:max-content;">
-                        <a href="{{ route('web.catalog', array_merge(array_diff_key($baseParams, ['category' => 1]), ['type' => $type])) }}"
-                           style="display:inline-flex;align-items:center;padding:0.375rem 0.875rem;border-radius:9999px;font-size:0.8125rem;font-weight:500;text-decoration:none;white-space:nowrap;transition:all 0.2s;flex-shrink:0;
-                                  background:{{ !request('category') ? 'var(--color-tima-500)' : '#f3f4f6' }};
-                                  color:{{ !request('category') ? '#fff' : '#374151' }};">
-                            Barchasi
-                        </a>
-                        @foreach($activeCategories as $cat)
-                            <a href="{{ route('web.catalog', array_merge($baseParams, ['type' => $type, 'category' => $cat->id])) }}"
-                               style="display:inline-flex;align-items:center;padding:0.375rem 0.875rem;border-radius:9999px;font-size:0.8125rem;font-weight:500;text-decoration:none;white-space:nowrap;transition:all 0.2s;flex-shrink:0;
-                                      background:{{ request('category') == $cat->id ? 'var(--color-tima-500)' : '#f3f4f6' }};
-                                      color:{{ request('category') == $cat->id ? '#fff' : '#374151' }};">
-                                {{ $cat->name_uz ?? $cat->name }}
-                            </a>
-                        @endforeach
-                    </div>
+                        <button type="submit" class="w-full h-11 bg-primary hover:bg-primary/90 text-white rounded-xl text-[15px] font-semibold transition-colors shadow-md shadow-primary/20">Qo'llash</button>
+                    </form>
                 </div>
+            </div>
+            @endif
+
+            <!-- Clear filters -->
+            @if(request('category') || $priceMin || $priceMax || $sort !== 'popular' || $search || !empty($selectedSellers) || !empty($selectedPublishers))
+                <a href="{{ route('web.catalog', ['type' => $type]) }}"
+                   class="inline-flex items-center px-4 py-2 rounded-2xl text-[15px] font-semibold transition-colors shrink-0 gap-1.5 bg-error-50 text-error-500 hover:bg-error-100 border-none ml-2">
+                    <iconify-icon icon="lucide:x" class="text-lg"></iconify-icon>
+                    Tozalash
+                </a>
+            @endif
+        </div>
+
+        <!-- Categories Horizontal -->
+        <div class="flex items-center gap-2 pb-5 mb-5 overflow-x-auto no-scrollbar flex-nowrap" style="-ms-overflow-style:none;scrollbar-width:none;border-bottom:1px solid var(--kc-border-light);">
+            @php $activeCategories = $isStationery ? ($stationeryCategories ?? collect()) : ($bookCategories ?? collect()); @endphp
+            <a href="{{ route('web.catalog', array_merge(array_diff_key($baseParams, ['category' => 1]), ['type' => $type])) }}"
+               class="inline-flex items-center px-4 py-2 rounded-full text-[15px] font-medium transition-colors shrink-0 {{ !request('category') ? 'bg-primary text-white' : 'bg-transparent text-primary hover:bg-secondary-100' }}">
+                Barchasi
+            </a>
+            @foreach($activeCategories as $cat)
+                <a href="{{ route('web.catalog', array_merge($baseParams, ['type' => $type, 'category' => $cat->id])) }}"
+                   class="inline-flex items-center px-4 py-2 rounded-full text-[15px] font-medium transition-colors shrink-0 {{ request('category') == $cat->id ? 'bg-primary text-white' : 'bg-transparent text-primary hover:bg-secondary-100' }}">
+                    {{ $cat->name_uz ?? $cat->name }}
+                </a>
+            @endforeach
+        </div>
+
+        <!-- ====== PRODUCT GRID ====== -->
+        <main class="w-full">
 
                 @if($products->count() > 0)
                     <!-- Product Grid — grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-3 lg:gap-5 -->
@@ -327,7 +316,6 @@
                 @endif
             </main>
 
-        </div>
     </div>
 </div>
 

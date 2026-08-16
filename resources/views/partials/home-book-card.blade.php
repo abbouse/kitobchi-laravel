@@ -1,19 +1,40 @@
 @php
+    // MUHIM: bu partial avval faqat kitob uchun yozilgan edi (hardcoded
+    // web.books.show route va $book->discountPrice). Endi sevimlilar
+    // sahifasi ham shu kartani stationery (kanselyariya) uchun ham
+    // ishlatadi — shuning uchun $isStationery orqali ikkalasini ham
+    // to'g'ri qo'llab-quvvatlaydi (aks holda kanselyariya mahsuloti
+    // noto'g'ri — hatto boshqa bir kitobning — sahifasiga olib borardi).
+    $isStationery = $isStationery ?? false;
+
     $slug = \Illuminate\Support\Str::slug($book->name);
-    $url = route('web.books.show', ['id' => $book->id, 'slug' => $slug]);
+    $url = $isStationery
+        ? route('web.stationery.show', ['id' => $book->id, 'slug' => $slug])
+        : route('web.books.show', ['id' => $book->id, 'slug' => $slug]);
     $img = $book->first_image ? asset('storage/' . $book->first_image) : asset('images/logo/logo_blue.png');
-    
+
     $basePrice = floatval($book->price);
-    $discPrice = floatval($book->discountPrice);
-    
+    $discPrice = $isStationery ? floatval($book->discount_price ?? 0) : floatval($book->discountPrice ?? 0);
+
     $isDisc = $discPrice > 0 && $basePrice > 0 && $discPrice < $basePrice;
     $price = $isDisc ? $discPrice : $basePrice;
     $discPct = $isDisc ? round((($basePrice - $price) / $basePrice) * 100) : 0;
-    
-    // Kitobchi specific monthly installment calculation (e.g., Alif nasiya or just simple 12 month div)
-    $monthly = ceil($price / 12);
 
-    $isFav = in_array($book->id, $favoritedBookIds ?? [], true);
+    // Oyiga taxminiy narx — product/show.blade.php'dagi bilan bir xil formula
+    // (piyolamarket.uz'ning haqiqiy karta-darajasidagi ko'rsatkichiga mos
+    // keladi: masalan 800 000 so'm -> 96 000 so'm/oyiga = narx*1.44/12).
+    // Kartalar ro'yxatida har biriga alohida split-preview API so'rovi
+    // yubormaymiz (ko'p va sekin bo'lardi) — mahsulot sahifasida esa haqiqiy
+    // SplitPlan asosida hisoblangan aniq summa ko'rsatiladi.
+    $monthly = ceil($price * 1.44 / 12);
+
+    // Chaqiruvchi sahifa xohlasa aniq isFav/showFavButton uzatishi mumkin
+    // (masalan sevimlilar sahifasida bu karta har doim sevimli — va u
+    // sahifa o'zining alohida "olib tashlash" tugmasini ko'rsatadi, shu
+    // sabab bu yerdagi standart yurak tugmasi ikki marta chiqmasligi
+    // uchun yashiriladi).
+    $showFavButton = $showFavButton ?? true;
+    $isFav = $isFav ?? in_array($book->id, $favoritedBookIds ?? [], true);
 @endphp
 
 <a class="group relative flex flex-col rounded-xl bg-white border border-white hover:shadow-md transition-all duration-200 overflow-hidden" href="{{ $url }}">
@@ -38,14 +59,16 @@
             </div>
         @endif
 
+        @if($showFavButton)
         <div class="absolute top-1.5 right-1.5 md:top-2 md:right-2 z-20">
             <div class="relative overflow-hidden transition-shadow duration-300 rounded-2xl px-5 py-[14px] hover:shadow-sm hover:shadow-black/10 backdrop-blur-sm glass-card-bg p-0!">
                 <div class="absolute inset-0 pointer-events-none glass-border rounded-2xl"></div>
-                <button aria-label="Sevimlilar" data-fav="{{ $isFav ? '1' : '0' }}" onclick="event.preventDefault(); toggleFavorite(this, {{ $book->id }}, 'book');" class="relative w-8 h-8 flex items-center justify-center rounded-full transition-all duration-300 hover:scale-110 active:scale-95 text-gray-500 hover:text-gray-900">
+                <button aria-label="Sevimlilar" data-fav="{{ $isFav ? '1' : '0' }}" onclick="event.preventDefault(); toggleFavorite(this, {{ $book->id }}, '{{ $isStationery ? 'stationery' : 'book' }}');" class="relative w-8 h-8 flex items-center justify-center rounded-full transition-all duration-300 hover:scale-110 active:scale-95 text-gray-500 hover:text-gray-900">
                     <iconify-icon aria-hidden="true" icon="{{ $isFav ? 'heroicons-solid:heart' : 'heroicons:heart' }}" class="w-5 h-5 relative z-10 transition-colors" style="{{ $isFav ? 'color:#ef4444;' : '' }}"></iconify-icon>
                 </button>
             </div>
         </div>
+        @endif
     </div>
 
     <div class="px-1 pt-4 pb-4 flex flex-col h-full">

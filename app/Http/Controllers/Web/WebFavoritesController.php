@@ -23,8 +23,14 @@ class WebFavoritesController extends Controller
     public function index()
     {
         $user = Auth::user();
+
+        // MUHIM: avval mehmon (login qilmagan) foydalanuvchi /favorites'ga
+        // kirsa bosh sahifaga otlantirilar edi — piyolamarket.uz'da esa
+        // mehmon ham shu sahifani ko'radi (bo'sh holat, "Kirish" taklif
+        // qilinadi), faqat yurakni bosganda login so'raladi (toggle() da
+        // pastda). Endi shu xatti-harakatga moslashtirildi.
         if (! $user) {
-            return redirect()->route('welcome');
+            return view('favorites.index', ['items' => collect()]);
         }
 
         $favourites = FavouriteProducts::where('user_id', $user->id)

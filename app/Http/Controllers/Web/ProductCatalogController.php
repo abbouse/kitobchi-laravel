@@ -67,7 +67,7 @@ class ProductCatalogController extends Controller
         }
 
         try {
-            $ugcReviews = \App\Models\BookClub::with('user')
+            $ugcReviews = \App\Models\BookClub::with(['user', 'images'])
                 ->where('product_type', 'book')
                 ->where('product_id', $book->id)
                 ->where('is_deleted', false)
@@ -170,7 +170,7 @@ class ProductCatalogController extends Controller
         }
 
         try {
-            $ugcReviews = \App\Models\BookClub::with('user')
+            $ugcReviews = \App\Models\BookClub::with(['user', 'images'])
                 ->where('product_type', 'stationery')
                 ->where('product_id', $item->id)
                 ->where('is_deleted', false)

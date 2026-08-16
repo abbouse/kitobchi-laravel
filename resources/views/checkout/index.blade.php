@@ -11,7 +11,7 @@
             <a href="{{ route('web.catalog') }}"
                style="width:2.5rem;height:2.5rem;display:flex;align-items:center;justify-content:center;background:#f3f4f6;border-radius:9999px;text-decoration:none;color:#374151;transition:all 0.2s;flex-shrink:0;"
                onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg>
+                <i class="icon-up-arrow" style="font-size:18px;display:inline-block;transform:rotate(-135deg);"></i>
             </a>
             <h1 style="font-size:clamp(1.25rem,4vw,1.75rem);font-weight:800;color:#111827;margin:0;">
                 Buyurtmani rasmiylashtirish
@@ -167,12 +167,13 @@
                         </div>
                         <div style="display:flex;justify-content:space-between;font-size:0.875rem;color:#6b7280;">
                             <span>Yetkazib berish:</span>
-                            <span style="font-weight:600;color:#16a34a;">20,000 so'm</span>
+                            <span style="font-weight:600;color:#6b7280;">Hududga qarab</span>
                         </div>
                         <div style="display:flex;justify-content:space-between;font-size:1.125rem;font-weight:800;color:#111827;padding-top:0.75rem;border-top:1px solid #f3f4f6;margin-top:0.25rem;">
-                            <span>Jami:</span>
+                            <span>Mahsulotlar:</span>
                             <span id="kcCheckoutGrandTotal" style="color:var(--color-tima-500);">0 so'm</span>
                         </div>
+                        <div style="font-size:0.75rem;color:#9ca3af;margin-top:-0.25rem;">Yetkazib berish narxi tasdiqlashda hududingiz bo'yicha hisoblanadi</div>
                     </div>
 
                     <!-- Submit (desktop, in summary) -->
@@ -227,10 +228,18 @@
         const subtotalEl = document.getElementById('kcCheckoutSubtotal');
         const grandTotalEl = document.getElementById('kcCheckoutGrandTotal');
 
-        const cart = kcCart || JSON.parse(localStorage.getItem('kc_cart') || '[]');
+        const fullCart = kcCart || JSON.parse(localStorage.getItem('kc_cart') || '[]');
+        // Savatchada foydalanuvchi ba'zi mahsulotlarni "tanlanmagan" holatda
+        // qoldirgan bo'lishi mumkin (kcToggleItemSelect, cart/index.blade.php) —
+        // checkout faqat tanlangan mahsulotlar bilan davom etadi.
+        const cart = fullCart.filter(i => i.selected !== false);
 
-        if (!cart || cart.length === 0) {
+        if (!fullCart || fullCart.length === 0) {
             window.location.href = "{{ route('web.catalog') }}";
+            return;
+        }
+        if (!cart || cart.length === 0) {
+            window.location.href = "{{ route('web.cart') }}";
             return;
         }
 
@@ -252,7 +261,7 @@
 
         if (listEl) listEl.innerHTML = html;
         if (subtotalEl) subtotalEl.textContent = new Intl.NumberFormat('uz').format(total) + ' so\'m';
-        if (grandTotalEl) grandTotalEl.textContent = new Intl.NumberFormat('uz').format(total + 20000) + ' so\'m';
+        if (grandTotalEl) grandTotalEl.textContent = new Intl.NumberFormat('uz').format(total) + ' so\'m';
     }
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -268,7 +277,8 @@
                 allBtns.forEach(b => { b.disabled = true; b.style.opacity = '0.7'; });
 
                 const formData = new FormData(this);
-                const cart = kcCart || JSON.parse(localStorage.getItem('kc_cart') || '[]');
+                const cart = (kcCart || JSON.parse(localStorage.getItem('kc_cart') || '[]')).filter(i => i.selected !== false);
+                const promo = localStorage.getItem('kc_promo') || '';
                 const payload = {
                     customer_name: formData.get('customer_name'),
                     phone_number: formData.get('phone_number'),
@@ -276,6 +286,7 @@
                     address: formData.get('address'),
                     payment_method: formData.get('payment_method'),
                     cart_items: cart,
+                    promocode: promo || null,
                 };
 
                 fetch("{{ route('web.checkout.process') }}", {
@@ -289,15 +300,28 @@
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
-                        // Clear cart
-                        if (typeof kcCart !== 'undefined') kcCart = [];
-                        localStorage.removeItem('kc_cart');
+                        // Faqat shu buyurtmaga kirgan (tanlangan) mahsulotlarni
+                        // savatdan olib tashlaymiz — agar foydalanuvchi ba'zi
+                        // mahsulotlarni "tanlanmagan" holda keyinroqqa qoldirgan
+                        // bo'lsa, ular savatda qolishi kerak.
+                        const orderedIds = new Set(cart.map(i => i.id));
+                        const remaining = (JSON.parse(localStorage.getItem('kc_cart') || '[]')).filter(i => !orderedIds.has(i.id));
+                        if (remaining.length > 0) {
+                            localStorage.setItem('kc_cart', JSON.stringify(remaining));
+                            if (typeof kcCart !== 'undefined') kcCart = remaining;
+                        } else {
+                            localStorage.removeItem('kc_cart');
+                            if (typeof kcCart !== 'undefined') kcCart = [];
+                        }
+                        localStorage.removeItem('kc_promo');
+                        if (typeof updateBadges === 'function') updateBadges();
 
                         document.getElementById('kcCheckoutWrapper').innerHTML = `
                             <div style="grid-column:1/-1;text-align:center;padding:3rem 1rem;background:#fff;border-radius:1.5rem;">
                                 <div style="font-size:4rem;margin-bottom:1rem;">🎉</div>
                                 <h2 style="font-size:1.5rem;font-weight:800;color:#111827;margin:0 0 0.75rem;">Buyurtmangiz qabul qilindi!</h2>
                                 <p style="color:#6b7280;font-size:1rem;margin:0 0 0.5rem;">Buyurtma kodi: <strong style="color:var(--color-tima-500);font-size:1.125rem;">${data.order_code}</strong></p>
+                                ${data.total_amount ? `<p style="color:#6b7280;font-size:1rem;margin:0 0 0.5rem;">Jami summa (yetkazib berish bilan): <strong style="color:#111827;">${data.total_amount}</strong></p>` : ''}
                                 <p style="color:#9ca3af;font-size:0.9375rem;max-width:400px;margin:0 auto 2rem;line-height:1.6;">
                                     Operatorimiz tez orada siz bilan bog'lanadi va yetkazib berish tafsilotlarini tasdiqlaydi.
                                 </p>

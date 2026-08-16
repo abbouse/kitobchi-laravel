@@ -190,21 +190,30 @@
             .layout-sticky-header { border-bottom-left-radius: 1rem; border-bottom-right-radius: 1rem; }
         }
 
-        /* Mobile nav bottom bar */
+        /* Mobile nav bottom bar — piyolamarket'dagidek pastdan suzuvchi,
+           dumaloq, shisha effektli panel (avval butun eninga yopishgan
+           to'g'ri chiziqli oq panel edi). */
         .kc-mobile-nav {
             display: none;
             position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
+            bottom: 1rem;
+            left: 1rem;
+            right: 1rem;
             z-index: 50;
-            background: #fff;
-            border-top: 1px solid #e5e7eb;
-            padding: 0.5rem 0;
+            background: rgba(255,255,255,0.82);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.6);
+            border-radius: 9999px;
+            box-shadow: 0 12px 32px rgba(15,23,42,0.16);
+            padding: 0.375rem 0.5rem;
         }
         @media (max-width: 767px) {
             .kc-mobile-nav { display: flex; }
         }
+        /* Mahsulot sahifasida pastki nav o'rniga "Buyurtma berish" tugmasi
+           chiqadi (piyolamarketdagidek) — shu sahifada nav yashiriladi. */
+        .kc-mobile-nav.kc-nav-hidden { display: none !important; }
 
         /* Cart drawer */
         .kc-cart-overlay, .kc-modal-overlay {
@@ -251,7 +260,10 @@
 
         /* main content */
         main { min-height: 100dvh; }
-        @media (max-width: 767px) { main { padding-bottom: 71px; } }
+        @media (max-width: 767px) { main { padding-bottom: 96px; } }
+        /* Mahsulot sahifasida pastki nav o'rniga sticky buy-bar bo'lgani
+           uchun shu sahifada padding kamroq (buy-bar o'zi hisoblab qo'yadi). */
+        @media (max-width: 767px) { main.kc-main-buybar { padding-bottom: 88px; } }
 
         .page-wrapper { display: flex; flex-direction: column; background-color: #fff; min-height: 100dvh; }
     </style>
@@ -284,7 +296,7 @@
                 <!-- Center: Search -->
                 <div class="relative overflow-hidden transition-shadow duration-300 rounded-2xl px-5 py-[14px] rounded-full! hover:shadow-sm hover:shadow-black/10 glass-card-bg h-12 grow flex items-center gap-2 text-gray cursor-pointer bg-secondary-200!" style="max-width:600px;">
                     <div class="absolute inset-0 pointer-events-none glass-border rounded-2xl rounded-full!"></div>
-                    <iconify-icon aria-hidden="true" icon="heroicons-solid:magnifying-glass" class="w-5 h-5 text-gray-500"></iconify-icon>
+                    <i class="icon-search text-lg text-gray-500"></i>
                     <form action="{{ route('web.catalog') }}" method="GET" class="flex flex-1 items-center h-full m-0 p-0">
                         <input type="text" name="search" value="{{ request('search') }}"
                                placeholder="Mahsulotni izlash..."
@@ -351,7 +363,7 @@
             <div class="md:hidden">
                 <div class="relative overflow-hidden transition-shadow duration-300 rounded-[20px] px-5 py-[14px] hover:shadow-sm hover:shadow-black/10 h-12 text-gray bg-secondary-300! flex items-center justify-center cursor-pointer gap-3 w-full">
                     <div class="absolute inset-0 pointer-events-none glass-border rounded-2xl"></div>
-                    <iconify-icon icon="lucide:search" class="text-xl text-gray-500"></iconify-icon>
+                    <i class="icon-search text-xl text-gray-500"></i>
                     <form action="{{ route('web.catalog') }}" method="GET" class="flex flex-1 items-center h-full m-0 p-0">
                         <input type="text" name="search" value="{{ request('search') }}"
                                placeholder="Kitobchi'da izlash"
@@ -367,7 +379,8 @@
     </header>
 
     <!-- ====== MAIN CONTENT ====== -->
-    <main>
+    @php($kcIsProductPage = request()->routeIs('web.books.show') || request()->routeIs('web.stationery.show'))
+    <main @if($kcIsProductPage) class="kc-main-buybar" @endif>
         @yield('content')
     </main>
 
@@ -406,6 +419,8 @@
                                 <li><a href="{{ route('legal.terms') }}" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.875rem;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">Yetkazib berish</a></li>
                                 <li><a href="{{ route('legal.terms') }}" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.875rem;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">To'lovlar</a></li>
                                 <li><a href="{{ route('legal.privacy') }}" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.875rem;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">Maxfiylik siyosati</a></li>
+                                <li><a href="{{ route('contact.index') }}" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.875rem;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">Aloqa</a></li>
+                                <li><a href="{{ route('careers.index') }}" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.875rem;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">Karyera</a></li>
                             </ul>
                         </div>
 
@@ -455,8 +470,14 @@
         </footer>
     </div>
 
-    <!-- ====== MOBILE BOTTOM NAV ====== -->
-    <nav class="kc-mobile-nav" style="align-items:stretch;">
+    <!-- ====== MOBILE BOTTOM NAV ======
+         Piyolamarketdagidek 4ta: Bosh sahifa / Katalog / Savatcha / Profil
+         (avval 5ta edi, "Sevimlilar" alohida tab sifatida bor edi — endi
+         sevimlilar header'dagi yurak ikonkasi va mahsulot kartalari orqali
+         qo'shiladi/ko'riladi, xuddi piyolamarketdagidek).
+         Mahsulot sahifasida bu panel butunlay yashiriladi — o'rniga
+         pastda sticky "Buyurtma berish" paneli chiqadi. -->
+    <nav class="kc-mobile-nav @if($kcIsProductPage) kc-nav-hidden @endif" style="align-items:stretch;">
         <a href="{{ url('/') }}"
            style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:0.5rem 0;text-decoration:none;color:{{ request()->is('/') ? 'var(--color-tima-500)' : '#6b7280' }};font-size:0.6875rem;font-weight:{{ request()->is('/') ? '600' : '400' }};">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="{{ request()->is('/') ? '2.5' : '2' }}">
@@ -473,16 +494,6 @@
             </svg>
             <span>Katalog</span>
         </a>
-        <a href="{{ route('web.favorites') }}"
-           style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:0.5rem 0;text-decoration:none;color:{{ request()->routeIs('web.favorites') ? 'var(--color-tima-500)' : '#6b7280' }};font-size:0.6875rem;font-weight:{{ request()->routeIs('web.favorites') ? '600' : '400' }};">
-            <div style="position:relative;">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="{{ request()->routeIs('web.favorites') ? 'var(--color-tima-500)' : 'none' }}" stroke="currentColor" stroke-width="{{ request()->routeIs('web.favorites') ? '0' : '2' }}">
-                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-                </svg>
-                <span id="kcFavBadgeMob" style="position:absolute;top:-6px;right:-6px;min-width:16px;height:16px;background:var(--color-tima-500);color:#fff;font-size:9px;font-weight:700;border-radius:9999px;align-items:center;justify-content:center;padding:0 2px;{{ ($kcFavCount ?? 0) > 0 ? 'display:flex;' : 'display:none;' }}">{{ ($kcFavCount ?? 0) > 99 ? '99+' : ($kcFavCount ?? 0) }}</span>
-            </div>
-            <span>Sevimlilar</span>
-        </a>
         <a href="{{ route('web.cart') }}"
            class="flex flex-col items-center justify-center gap-[4px] py-2 bg-transparent text-gray-500 hover:text-green-500 transition-colors duration-300 {{ request()->routeIs('web.cart') ? 'text-green-500' : '' }}"
            style="flex:1;text-decoration:none;font-size:0.6875rem;font-weight:500;">
@@ -493,7 +504,7 @@
                 <span id="kcCartBadgeMob" style="display:none;position:absolute;top:-6px;right:-6px;min-width:16px;height:16px;background:var(--color-tima-500);color:#fff;font-size:9px;font-weight:700;border-radius:9999px;align-items:center;justify-content:center;padding:0 2px;"></span>
             </div>
             <span>Savatcha</span>
-        </button>
+        </a>
 
         @auth
             <a href="{{ route('web.profile') }}"
@@ -600,7 +611,6 @@
     function saveCart() {
         localStorage.setItem('kc_cart', JSON.stringify(kcCart));
         updateBadges();
-        renderCartBody();
     }
 
     function updateBadges() {

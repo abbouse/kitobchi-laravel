@@ -57,6 +57,70 @@
     ])
 @endpush
 
+@push('styles')
+<style>
+    /* Piyolamarketdagidek: mahsulot sahifasida "Buyurtma berish" bloki
+       mobil ekranda pastga mahkamlanadi (pastki navigatsiya kcIsProductPage
+       o'zgaruvchisi yordamida marketplace.blade.php'da yashiriladi).
+       Desktop'da (md+) hech narsa o'zgarmaydi — blok o'z joyida, narx
+       kartasi ichida qoladi. */
+    .kc-buybar-mobile {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 60;
+        background: #fff;
+        margin: 0;
+        padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
+        box-shadow: 0 -8px 24px rgba(15,23,42,0.12);
+        border-top: 1px solid #e5e7eb;
+        border-radius: 1.25rem 1.25rem 0 0;
+    }
+    @media (min-width: 768px) {
+        .kc-buybar-mobile {
+            position: static;
+            left: auto;
+            right: auto;
+            bottom: auto;
+            z-index: auto;
+            background: transparent;
+            margin: 0;
+            padding: 0;
+            box-shadow: none;
+            border-top: none;
+            border-radius: 0;
+        }
+    }
+
+    /* Xaridorlar sharhlari — mobil'da gorizontal skroll, desktop'da grid. */
+    .kc-reviews-scroll {
+        display: flex;
+        gap: 1rem;
+        overflow-x: auto;
+        padding-bottom: 0.5rem;
+        scroll-snap-type: x proximity;
+        -webkit-overflow-scrolling: touch;
+    }
+    .kc-review-card {
+        flex: 0 0 280px;
+        scroll-snap-align: start;
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 1.25rem;
+        padding: 1.25rem;
+    }
+    @media (min-width: 1024px) {
+        .kc-reviews-scroll {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            overflow-x: visible;
+        }
+        .kc-review-card { flex: none; }
+    }
+</style>
+@endpush
+
 @section('content')
 <div style="min-height:100dvh;padding:1.5rem 0;">
     <div style="width:100%;max-width:var(--ui-container);margin:0 auto;padding:0 1rem;">
@@ -66,9 +130,7 @@
             <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
                 <a href="{{ url('/') }}" onclick="history.length > 1 ? (event.preventDefault(), history.back()) : null"
                    style="display:inline-flex;align-items:center;gap:0.375rem;padding:0.375rem 0.75rem 0.375rem 0.5rem;border-radius:0.375rem;font-size:0.875rem;font-weight:500;color:var(--color-tima-500);background:none;border:none;cursor:pointer;text-decoration:none;transition:color 0.2s;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="transform:rotate(-135deg);">
-                        <path d="M12 5l7 7-7 7M5 12h14"/>
-                    </svg>
+                    <i class="icon-up-arrow" style="font-size:20px;display:inline-block;transform:rotate(-135deg);"></i>
                 </a>
                 <nav aria-label="Breadcrumb">
                     <ol style="display:flex;align-items:center;gap:0.5rem;list-style:none;padding:0;margin:0;">
@@ -226,10 +288,11 @@
                         <div id="view-installment" class="flex max-md:flex-col md:justify-between gap-4 w-full transition-all">
                             <div>
                                 <p class="text-sm text-gray font-normal text-neutral-500">Muddatli to'lov</p>
-                                <div class="inline-flex mt-1 md:mt-2">
+                                <div id="kcPlanPills" class="inline-flex mt-1 md:mt-2">
+                                    <!-- JS to'ldiradi: kcLoadSplitPreview() -->
                                     <div class="relative inline-flex bg-secondary-300 rounded-xl p-1">
-                                        <button class="relative z-10 font-medium rounded-lg transition-colors duration-200 whitespace-nowrap text-sm px-3 py-1.5 text-gray-400 hover:text-gray-500">6 oy</button>
-                                        <button class="relative z-10 font-medium rounded-lg transition-colors duration-200 whitespace-nowrap text-sm px-3 py-1.5 text-gray-900 bg-white shadow-sm">12 oy</button>
+                                        <button type="button" class="relative z-10 font-medium rounded-lg transition-colors duration-200 whitespace-nowrap text-sm px-3 py-1.5 text-gray-400 hover:text-gray-500">6 oy</button>
+                                        <button type="button" class="relative z-10 font-medium rounded-lg transition-colors duration-200 whitespace-nowrap text-sm px-3 py-1.5 text-gray-900 bg-white shadow-sm">12 oy</button>
                                     </div>
                                 </div>
                             </div>
@@ -237,7 +300,7 @@
                                 <p class="text-sm text-gray font-normal text-neutral-500">Muddatli to'lovga sotib olish</p>
                                 <div class="flex items-end justify-between md:justify-end gap-3 mt-1 md:mt-4 w-full">
                                     <div class="flex items-end gap-1">
-                                        <span class="text-xl font-bold text-neutral-900">{{ number_format(ceil($currentPrice * 1.44 / 12)) }}</span>
+                                        <span id="kcMonthlyPrice" class="text-xl font-bold text-neutral-900">{{ number_format(ceil($currentPrice * 1.44 / 12)) }}</span>
                                         <span class="text-neutral-500 text-sm">so'm/oyiga</span>
                                     </div>
                                 </div>
@@ -260,8 +323,11 @@
                             </div>
                         </div>
 
-                        <!-- ====== BUY ACTIONS ====== -->
-                        <div class="flex items-center gap-2 sm:gap-3">
+                        <!-- ====== BUY ACTIONS ======
+                             Mobil'da bu blok pastga mahkamlanadi (.kc-buybar-mobile —
+                             piyolamarket'dagi sticky "Buyurtma berish" panelining
+                             o'zi), desktop'da hech narsa o'zgarmaydi. -->
+                        <div class="flex items-center gap-2 sm:gap-3 kc-buybar-mobile">
                             <div class="flex-1">
                                 <button type="button" onclick="addToCart({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $currentPrice }}, '{{ $imgUrl }}', '{{ $canonicalUrl }}'); window.location.href='{{ route('web.checkout') }}'" class="font-medium inline-flex items-center justify-center transition-colors py-1.5 gap-1.5 text-white bg-primary hover:bg-primary/90 active:bg-primary/90 h-12 rounded-2xl text-base px-6 w-full cursor-pointer">
                                     Buyurtma berish
@@ -323,6 +389,71 @@
             </div>
         </div>
         </div>
+
+        <!-- ====== XARIDORLAR SHARHLARI (piyolamarket.uz uslubida) ======
+             $ugcReviews — BookClub'dagi shu mahsulotga yozilgan postlar
+             (ProductCatalogController'da allaqachon olib kelinardi, lekin
+             hech qayerda ko'rsatilmasdi — endi shu yerda chiqariladi). AI
+             tomonidan yashirilgan (is_hidden_by_ai) yoki o'chirilgan
+             postlar controller darajasida allaqachon filtrlangan. Har bir
+             postning o'ziga xos yulduzcha reytingi yo'q (faqat AI sifat
+             bahosi bor, u FOYDALANUVCHI reytingi emas) — shu sabab bu yerda
+             yulduz o'ylab topilmaydi, faqat matn/rasm/muallif ko'rsatiladi;
+             umumiy ★ reyting yuqorida (mahsulot darajasida) allaqachon bor. -->
+        @if($ugcReviews->isNotEmpty())
+            <section style="margin-top:2.5rem;">
+                <div style="display:flex;align-items:center;gap:0.625rem;margin-bottom:1.25rem;">
+                    <h2 style="font-size:clamp(1.25rem,3vw,1.75rem);font-weight:800;color:#111827;margin:0;">
+                        Xaridorlar sharhlari
+                    </h2>
+                    <span style="font-size:1rem;font-weight:600;color:#9ca3af;">({{ $ugcReviews->count() }})</span>
+                </div>
+
+                <div class="kc-reviews-scroll">
+                    @foreach($ugcReviews as $review)
+                        @php
+                            $ruName = $review->user->name ?? null;
+                            $ruPhone = $review->user->phone_number ?? null;
+                            $ruLabel = $ruName ?: ($ruPhone ? \Illuminate\Support\Str::mask($ruPhone, '*', 4, 4) : 'Foydalanuvchi');
+                            $ruInitial = mb_strtoupper(mb_substr($ruLabel, 0, 1));
+                            $ruAvatar = $review->user->avatar ?? null;
+                            $ruDate = optional($review->created_at)->translatedFormat('d M Y');
+                        @endphp
+                        <div class="kc-review-card">
+                            <div style="display:flex;align-items:center;gap:0.625rem;margin-bottom:0.75rem;">
+                                @if($ruAvatar)
+                                    <img src="{{ asset('storage/' . $ruAvatar) }}" alt="{{ $ruLabel }}" style="width:2.5rem;height:2.5rem;border-radius:9999px;object-fit:cover;flex-shrink:0;">
+                                @else
+                                    <div style="width:2.5rem;height:2.5rem;border-radius:9999px;background:var(--color-tima-100,#e8eaef);color:var(--color-tima-500);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1rem;flex-shrink:0;">
+                                        {{ $ruInitial }}
+                                    </div>
+                                @endif
+                                <div style="min-width:0;">
+                                    <div style="font-weight:700;font-size:0.875rem;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ $ruLabel }}</div>
+                                    @if($ruDate)
+                                        <div style="font-size:0.75rem;color:#9ca3af;">{{ $ruDate }}</div>
+                                    @endif
+                                </div>
+                            </div>
+
+                            @if(trim((string) $review->text) !== '')
+                                <p style="font-size:0.875rem;line-height:1.6;color:#374151;margin:0 0 0.75rem;overflow:hidden;display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;">
+                                    {{ $review->text }}
+                                </p>
+                            @endif
+
+                            @if($review->images->isNotEmpty())
+                                <div style="display:flex;gap:0.375rem;overflow-x:auto;">
+                                    @foreach($review->images->take(4) as $img)
+                                        <img src="{{ asset('storage/' . $img->image) }}" alt="" loading="lazy" style="width:4.5rem;height:4.5rem;border-radius:0.75rem;object-fit:cover;flex-shrink:0;">
+                                    @endforeach
+                                </div>
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+            </section>
+        @endif
 
         <!-- ====== O'XSHASH MAHSULOTLAR ====== -->
         @if($similarProducts->isNotEmpty())
@@ -441,6 +572,75 @@
             vInst.style.display = 'none';
         }
     }
+
+    // ── Muddatli to'lov: haqiqiy hisob-kitob ──────────────────────────
+    // Avval bu yerda doim price*1.44/12 (taxminiy, 12 oy deb qattiq yozilgan)
+    // ko'rsatilar, "6 oy"/"12 oy" tugmalari esa hech narsaga ulanmagan edi.
+    // Endi backend'ning haqiqiy, autentifikatsiyasiz split-preview API'sidan
+    // (SplitScheduleService orqali hisoblangan) haqiqiy oylik summa olinadi,
+    // va tugmalar shu haqiqiy rejalar orasida almashtiradi. Agar nasiya shu
+    // mahsulot/kategoriya uchun yoqilmagan bo'lsa, "Muddatli to'lov" tabi
+    // butunlay yashiriladi (soxta raqam ko'rsatilmaydi) — faqat "Naqd to'lov"
+    // qoladi.
+    let kcSplitPlans = [];
+
+    function kcLoadSplitPreview() {
+        const amount = {{ (int) $currentPrice }};
+        const params = new URLSearchParams({
+            amount: amount,
+            product_type: '{{ $productType }}',
+            product_id: '{{ $product->id }}',
+        });
+
+        fetch('/api/v1/kitobchi/split-preview?' + params.toString())
+            .then(r => r.json())
+            .then(res => {
+                const data = res.data || {};
+                if (!data.enabled || !Array.isArray(data.plans) || data.plans.length === 0) {
+                    kcHideInstallmentOption();
+                    return;
+                }
+                kcSplitPlans = data.plans;
+                // 12 oylikni afzal ko'ramiz, bo'lmasa birinchi mavjud reja.
+                const preferred = kcSplitPlans.find(p => p.months === 12) || kcSplitPlans[0];
+                kcRenderPlanPills(preferred.months);
+                kcApplyPlan(preferred);
+            })
+            .catch(() => kcHideInstallmentOption());
+    }
+
+    function kcHideInstallmentOption() {
+        const tabInst = document.getElementById('tab-installment');
+        if (tabInst) tabInst.style.display = 'none';
+        togglePaymentTab('cash');
+    }
+
+    function kcRenderPlanPills(activeMonths) {
+        const wrap = document.getElementById('kcPlanPills');
+        if (!wrap) return;
+        const pills = kcSplitPlans.map(p => {
+            const active = p.months === activeMonths;
+            const cls = active
+                ? 'relative z-10 font-medium rounded-lg transition-colors duration-200 whitespace-nowrap text-sm px-3 py-1.5 text-gray-900 bg-white shadow-sm'
+                : 'relative z-10 font-medium rounded-lg transition-colors duration-200 whitespace-nowrap text-sm px-3 py-1.5 text-gray-400 hover:text-gray-500';
+            return `<button type="button" class="${cls}" onclick="kcSelectPlanByMonths(${p.months})">${p.months} oy</button>`;
+        }).join('');
+        wrap.innerHTML = `<div class="relative inline-flex bg-secondary-300 rounded-xl p-1">${pills}</div>`;
+    }
+
+    function kcSelectPlanByMonths(months) {
+        const plan = kcSplitPlans.find(p => p.months === months);
+        if (!plan) return;
+        kcRenderPlanPills(months);
+        kcApplyPlan(plan);
+    }
+
+    function kcApplyPlan(plan) {
+        const el = document.getElementById('kcMonthlyPrice');
+        if (el) el.textContent = new Intl.NumberFormat('uz').format(plan.regular_payment);
+    }
+
+    document.addEventListener('DOMContentLoaded', kcLoadSplitPreview);
 </script>
 @endpush
 @endsection

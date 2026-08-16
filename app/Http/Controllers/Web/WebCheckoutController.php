@@ -79,6 +79,7 @@ class WebCheckoutController extends Controller
             // ishlatadi, quantity emas — nomlar mos kelmasa checkout 100%
             // vaqtida 422 bilan yiqiladi.
             'cart_items.*.qty' => 'required|integer|min:1',
+            'promocode' => 'nullable|string|max:50',
         ]);
 
         $phone = preg_replace('/\D+/', '', $validated['phone_number']);
@@ -226,6 +227,7 @@ class WebCheckoutController extends Controller
             'paymentStatus' => 0,
             'deliveryservice_id' => (int) $offer['id'],
             'buyerWish' => $note,
+            'promocode' => $validated['promocode'] ?? null,
         ]);
 
         // MUHIM: bu yerda avvalgi auth holatini tiklashga urinish yo'q —

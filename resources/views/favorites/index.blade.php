@@ -40,7 +40,7 @@
                     Sevimlilar ro'yxati bo'sh
                 </h2>
                 <p class="text-neutral-500 mb-6">
-                    Ushbu bo’limda hozircha ma’lumot yo’q, ammo tez orada qo’shiladi
+                    Yoqqan mahsulotlaringizni saqlab qo'yish uchun ularning ustidagi <iconify-icon icon="heroicons-solid:heart" style="color:#ef4444;vertical-align:-2px;"></iconify-icon> belgisini bosing
                 </p>
                 <div>
                     <a href="{{ route('web.catalog') }}" class="font-medium items-center transition-colors py-1.5 gap-1.5 text-inverted bg-primary hover:bg-primary/75 h-12 justify-center sm:min-w-40 rounded-2xl text-base max-md:w-full inline-flex px-6" style="color:#fff;">
@@ -68,8 +68,8 @@
                 @endphp
                 
                 <div class="relative group block h-full">
-                    @include('partials.home-book-card', ['book' => $product, 'isStationery' => $isStationery])
-                    
+                    @include('partials.home-book-card', ['book' => $product, 'isStationery' => $isStationery, 'showFavButton' => false])
+
                     <div class="absolute top-3 right-3 z-20">
                         <button onclick="event.preventDefault(); removeFavoriteCard(this, {{ $product->id }}, '{{ $isStationery ? 'stationery' : 'book' }}');" class="w-9 h-9 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-sm shadow-sm hover:bg-white text-error-500 transition-colors">
                             <iconify-icon icon="heroicons-solid:heart" class="text-lg"></iconify-icon>
