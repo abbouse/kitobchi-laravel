@@ -264,6 +264,41 @@
                         </div>
                     @endif
 
+                    <!-- ====== "BU MENGA MOSMI?" (Reading Intelligence) ======
+                         Mobil ilova (item.dart)dagi "Bu menga mosmi?" kartasi
+                         bilan bir xil orkestrator (ReadingIntelligenceService)
+                         ishlatiladi — reyting ostida, XUDDI ILOVADAGIDEK
+                         joylashadi. Faqat kitoblar uchun va faqat AI mahsulotni
+                         allaqachon tahlil qilgan bo'lsa ko'rinadi (aks holda
+                         $readingIntelligence null — hech narsa chiqmaydi). Bosilganda
+                         pastdan chiquvchi "sheet" (mobil bottom-sheet'ga o'xshash
+                         modal) ochiladi — batafsil tahlil shu yerda. -->
+                    @if($productType === 'book' && !empty($readingIntelligence))
+                        @php
+                            $riIconPaths = [
+                                'sparkles' => '<path d="M12 2l1.8 4.9L19 8.5l-5.2 1.6L12 15l-1.8-4.9L5 8.5l5.2-1.6L12 2z"/><path d="M19 15l.9 2.4L22 18l-2.1.6L19 21l-.9-2.4L16 18l2.1-.6L19 15z"/>',
+                                'heart' => '<path d="M12 21s-6.5-4.35-9.3-8.1C.6 9.9 1.7 6 5.1 5c2-.6 3.9.2 4.9 1.9C11 5.2 12.9 4.4 14.9 5c3.4 1 4.5 4.9 2.4 7.9C18.5 16.65 12 21 12 21z"/>',
+                                'compass' => '<circle cx="12" cy="12" r="10"/><path d="M16 8l-2 6-6 2 2-6 6-2z"/>',
+                                'trending-up' => '<path d="M23 6l-9.5 9.5-5-5L1 18"/><path d="M17 6h6v6"/>',
+                                'message-circle' => '<path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/>',
+                                'tag' => '<path d="M20.59 13.41L11 3.83 3.83 11l9.58 9.59a2 2 0 002.83 0l4.35-4.35a2 2 0 000-2.83z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
+                                'info-circle' => '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>',
+                                'book' => '<path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>',
+                            ];
+                            $riIcon = $riIconPaths[$readingIntelligence['teaser']['icon'] ?? ''] ?? $riIconPaths['sparkles'];
+                        @endphp
+                        <button type="button" onclick="kcOpenMoslikModal()" style="display:flex;align-items:center;gap:0.75rem;width:100%;text-align:left;padding:0.875rem 1rem;background:linear-gradient(135deg,rgba(124,58,237,0.07),rgba(16,185,129,0.07));border:1px solid rgba(124,58,237,0.15);border-radius:1rem;cursor:pointer;">
+                            <div style="width:2.5rem;height:2.5rem;border-radius:0.75rem;background:linear-gradient(135deg,#7c3aed,#10b981);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{!! $riIcon !!}</svg>
+                            </div>
+                            <div style="min-width:0;flex:1;">
+                                <div style="font-weight:700;font-size:0.9375rem;color:#111827;">{{ $readingIntelligence['teaser']['title'] }}</div>
+                                <div style="font-size:0.8125rem;color:#6b7280;margin-top:0.125rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ $readingIntelligence['teaser']['subtitle'] }}</div>
+                            </div>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" style="width:18px;height:18px;flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
+                        </button>
+                    @endif
+
                     <!-- Tags -->
                     @if($validTags->isNotEmpty())
                         <div class="flex flex-wrap gap-1.5">
@@ -623,6 +658,103 @@
     </div>
 </div>
 
+<!-- ====== "BU MENGA MOSMI?" MODAL (bottom-sheet, mobil ilovadagi kabi) ======
+     $readingIntelligence['sheet'] — bo'limlar (match/interest_match/
+     discovery/quality/reminder — birinchi mos kelgani, hech qachon bir
+     nechtasi birga emas) + traits (qiyinlik/kayfiyat/kimlar uchun) +
+     similar (yana yoqishi mumkin) + guest_cta (mehmon uchun kirish taklifi).
+     Barchasi allaqachon serverda tarjima qilingan holda keladi
+     (ReadingIntelligenceService), shuning uchun bu yerda faqat chiqariladi. -->
+@if($productType === 'book' && !empty($readingIntelligence))
+    @php $riSheet = $readingIntelligence['sheet'] ?? []; @endphp
+    <div id="kcMoslikOverlay" class="kc-modal-overlay" onclick="if(event.target===this) kcCloseMoslikModal()" style="align-items:flex-end;">
+        <div class="kc-moslik-panel">
+            <div class="kc-moslik-grabber"></div>
+            <button onclick="kcCloseMoslikModal()" aria-label="{{ __('marketplace.close') }}" style="position:absolute;top:1rem;right:1rem;width:2rem;height:2rem;display:flex;align-items:center;justify-content:center;border:none;background:#f3f4f6;border-radius:9999px;cursor:pointer;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="2.5"><path stroke-linecap="round" d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+
+            <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem;padding-right:2rem;">
+                <div style="width:2.75rem;height:2.75rem;border-radius:0.875rem;background:linear-gradient(135deg,#7c3aed,#10b981);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{!! $riIcon !!}</svg>
+                </div>
+                <div style="min-width:0;">
+                    <div style="font-weight:800;font-size:1.0625rem;color:#111827;">{{ $readingIntelligence['teaser']['title'] }}</div>
+                    <div style="font-size:0.8125rem;color:#6b7280;">{{ $readingIntelligence['teaser']['subtitle'] }}</div>
+                </div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:1rem;">
+                @foreach(['match', 'interest_match', 'discovery', 'quality', 'reminder'] as $riKey)
+                    @if(!empty($riSheet[$riKey]))
+                        @php $riBlock = $riSheet[$riKey]; @endphp
+                        <div style="padding:1rem;background:#f8fafc;border-radius:1rem;">
+                            <div style="display:flex;align-items:center;justify-content:space-between;gap:0.75rem;margin-bottom:0.375rem;">
+                                <span style="font-weight:700;font-size:0.875rem;color:#111827;">{{ $riBlock['label'] }}</span>
+                                @if(isset($riBlock['percent']))
+                                    <span style="font-weight:800;font-size:1.125rem;color:#7c3aed;flex-shrink:0;">{{ $riBlock['percent'] }}%</span>
+                                @endif
+                            </div>
+                            @if(!empty($riBlock['reason']))
+                                <p style="font-size:0.8125rem;color:#4b5563;line-height:1.6;margin:0;">{{ $riBlock['reason'] }}</p>
+                            @endif
+                            @if(!empty($riBlock['detail']))
+                                <p style="font-size:0.8125rem;color:#4b5563;line-height:1.6;margin:0;">{{ $riBlock['detail'] }}</p>
+                            @endif
+                        </div>
+                    @endif
+                @endforeach
+
+                @if(!empty($riSheet['traits']))
+                    @php $riTraits = $riSheet['traits']; @endphp
+                    <div style="padding:1rem;background:#fff;border:1px solid #f1f5f9;border-radius:1rem;">
+                        @if(!empty($riTraits['difficulty']))
+                            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.625rem;">
+                                <span style="font-size:0.6875rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.02em;">{{ __('reading_intelligence.section_difficulty') }}</span>
+                                <span style="font-size:0.8125rem;font-weight:600;color:#111827;background:#eef2ff;padding:0.1875rem 0.625rem;border-radius:9999px;">{{ $riTraits['difficulty'] }}</span>
+                            </div>
+                        @endif
+                        @if(!empty($riTraits['mood']))
+                            <div style="display:flex;flex-wrap:wrap;gap:0.375rem;margin-bottom:0.625rem;">
+                                @foreach($riTraits['mood'] as $riMood)
+                                    <span style="font-size:0.75rem;font-weight:600;color:#059669;background:#ecfdf5;padding:0.1875rem 0.625rem;border-radius:9999px;">{{ $riMood }}</span>
+                                @endforeach
+                            </div>
+                        @endif
+                        @if(!empty($riTraits['audience_fit']))
+                            <p style="font-size:0.8125rem;color:#4b5563;line-height:1.6;margin:0;">{{ $riTraits['audience_fit'] }}</p>
+                        @endif
+                    </div>
+                @endif
+
+                @if(!empty($riSheet['similar']))
+                    <div>
+                        <div style="font-size:0.8125rem;font-weight:700;color:#111827;margin-bottom:0.625rem;">{{ $riSheet['similar_label'] ?? __('reading_intelligence.section_similar') }}</div>
+                        <div style="display:flex;flex-direction:column;gap:0.5rem;">
+                            @foreach($riSheet['similar'] as $riSim)
+                                <a href="{{ route('web.books.show', ['id' => $riSim['id'], 'slug' => \Illuminate\Support\Str::slug($riSim['name'])]) }}" style="display:flex;align-items:center;justify-content:space-between;gap:0.75rem;padding:0.625rem 0.75rem;background:#f8fafc;border-radius:0.75rem;text-decoration:none;">
+                                    <span style="font-size:0.8125rem;font-weight:600;color:#111827;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ $riSim['name'] }}</span>
+                                    <span style="font-size:0.75rem;font-weight:600;color:#7c3aed;flex-shrink:0;">{{ $riSim['score'] }}</span>
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+
+                @if(!empty($riSheet['guest_cta']))
+                    <div style="padding:1rem;background:#fffbeb;border:1px solid #fde68a;border-radius:1rem;">
+                        <div style="font-weight:700;font-size:0.875rem;color:#92400e;margin-bottom:0.25rem;">{{ $riSheet['guest_cta']['label'] }}</div>
+                        <p style="font-size:0.8125rem;color:#92400e;line-height:1.6;margin:0 0 0.75rem;">{{ $riSheet['guest_cta']['detail'] }}</p>
+                        <button type="button" onclick="kcCloseMoslikModal(); if (typeof openAuthModal === 'function') openAuthModal();" style="font-size:0.8125rem;font-weight:700;color:#fff;background:#f59e0b;border:none;padding:0.5rem 1rem;border-radius:0.625rem;cursor:pointer;">
+                            {{ __('marketplace.login') }}
+                        </button>
+                    </div>
+                @endif
+            </div>
+        </div>
+    </div>
+@endif
+
 <style>
     @media(min-width: 640px) {
         #kcSimilarGrid, #kcAiGrid { grid-template-columns: repeat(3, 1fr) !important; gap: 0.75rem !important; }
@@ -632,6 +764,32 @@
     }
     @media(min-width: 1280px) {
         #kcSimilarGrid, #kcAiGrid { grid-template-columns: repeat(5, 1fr) !important; gap: 1.25rem !important; }
+    }
+
+    /* "Bu menga mosmi?" bottom-sheet — mobil'da pastdan chiqadi (ilovadagi
+       kabi), desktop'da (sm+) markazlashgan oddiy modal kartaga aylanadi. */
+    .kc-moslik-panel {
+        position: relative;
+        width: 100%;
+        max-width: 480px;
+        max-height: 85vh;
+        overflow-y: auto;
+        background: #fff;
+        border-radius: 1.5rem 1.5rem 0 0;
+        padding: 1.5rem 1.25rem calc(1.5rem + env(safe-area-inset-bottom, 0px));
+        box-shadow: 0 -8px 40px rgba(0,0,0,0.18);
+    }
+    .kc-moslik-grabber {
+        width: 2.5rem;
+        height: 0.25rem;
+        background: #e5e7eb;
+        border-radius: 9999px;
+        margin: 0 auto 1rem;
+    }
+    @media (min-width: 640px) {
+        #kcMoslikOverlay.active { align-items: center !important; }
+        .kc-moslik-panel { border-radius: 1.5rem; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); }
+        .kc-moslik-grabber { display: none; }
     }
 </style>
 
@@ -760,6 +918,22 @@
     }
 
     document.addEventListener('DOMContentLoaded', kcLoadSplitPreview);
+
+    // "Bu menga mosmi?" bottom-sheet — mavjud kcCartOverlay/kcAuthModalOverlay
+    // bilan bir xil ochish/yopish naqshi (.kc-modal-overlay + .active klassi).
+    function kcOpenMoslikModal() {
+        const modal = document.getElementById('kcMoslikOverlay');
+        if (!modal) return;
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function kcCloseMoslikModal() {
+        const modal = document.getElementById('kcMoslikOverlay');
+        if (!modal) return;
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+    }
 </script>
 @endpush
 @endsection

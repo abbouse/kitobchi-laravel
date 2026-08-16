@@ -95,6 +95,21 @@ class ProductCatalogController extends Controller
             $aiRecommendations = collect();
         }
 
+        // ── "Bu menga mosmi?" (moslik) kartasi — ilovadagi item.dart bilan
+        // BIR XIL `ReadingIntelligenceService` orkestratori ishlatiladi
+        // (yuqoridagi "AI tavsiya" — bu boshqa narsa: mahsulotga o'xshash
+        // TOVARLAR ro'yxati; bu esa foydalanuvchiga shu mahsulotning
+        // ShAXSAN qanchalik mos kelishini tushuntiruvchi karta). Faqat
+        // kitoblar uchun (xizmat o'zi shunday loyihalangan — pastga
+        // qarang), va AI hali bu mahsulotni tahlil qilmagan bo'lsa `null`
+        // qaytadi — bunda karta sahifada umuman ko'rinmaydi.
+        try {
+            $readingIntelligence = app(\App\Services\ReadingIntelligence\ReadingIntelligenceService::class)
+                ->forProduct('book', $book->id, auth()->user(), app()->getLocale());
+        } catch (\Throwable $e) {
+            $readingIntelligence = null;
+        }
+
         $canonicalUrl = route('web.books.show', ['id' => $book->id, 'slug' => $expectedSlug]);
         $seoService = app(\App\Services\SeoService::class);
         $schemas = $seoService->buildBookSchemas($book, $canonicalUrl);
@@ -112,6 +127,7 @@ class ProductCatalogController extends Controller
             'similarProducts' => $similarProducts,
             'ugcReviews' => $ugcReviews,
             'aiRecommendations' => $aiRecommendations,
+            'readingIntelligence' => $readingIntelligence,
             'appScheme' => $appScheme,
             'artikulScheme' => $artikulScheme,
             'canonicalUrl' => $canonicalUrl,
@@ -412,6 +428,10 @@ class ProductCatalogController extends Controller
             'schemas' => $schemas,
             'similarProducts' => $similarProducts,
             'ugcReviews' => $ugcReviews,
+            // MUHIM: `ReadingIntelligenceService` ATAYLAB faqat kitoblar
+            // uchun ishlaydi ("qiyinlik darajasi"/"kayfiyat" kanselyariya
+            // buyumiga mos kelmaydi) — shuning uchun bu yerda doim null.
+            'readingIntelligence' => null,
             'aiRecommendations' => $aiRecommendations,
             'appScheme' => $appScheme,
             'artikulScheme' => $artikulScheme,
