@@ -34,22 +34,62 @@
         </nav>
       </div>
 
-      <!-- Auth State Check -->
-      <div v-if="!authStore.isAuthenticated" class="text-center py-20">
-        <div class="w-20 h-20 rounded-full bg-secondary-100 text-neutral-400 mx-auto flex items-center justify-center mb-4">
-          <svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      <!-- Auth State Check — piyoladagi HAQIQIY guest profil sahifasidan
+           (jonli tekshirilib olingan: /profile ga tizimga kirmasdan kirilganda)
+           to'g'ridan-to'g'ri olingan tuzilma: avatar + "Foydalanuvchi" sarlavha +
+           izoh matni + to'liq kengliкdagi "Akkauntga kiring" tugmasi, BIR XIL
+           oq rangli rounded-3xl kartada — va pastida piyolada guest holatida
+           ham ko'rinadigan info/sozlama ro'yxati (Muddatli to'lov, Yetkazib
+           berish, Biz haqimizda, Karyera, Ilova tili, Biz bilan bog'lanish).
+           Ilgari bu yerda faqat markazlashtirilgan "Tizimga kiring" matni
+           bo'lib, pastdagi menyu umuman ko'rinmas edi. -->
+      <div v-if="!authStore.isAuthenticated">
+        <div class="bg-white rounded-3xl border border-neutral-100 py-8 px-6 flex flex-col items-center gap-3 mb-3">
+          <div class="w-16 h-16 rounded-full bg-secondary-100 text-neutral-400 flex items-center justify-center">
+            <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          </div>
+          <p class="text-xl font-bold text-neutral-900 m-0">Foydalanuvchi</p>
+          <p class="text-sm text-neutral-500 text-center max-w-sm leading-relaxed m-0">
+            Buyurtmalarni rasmiylashtirish, bo'lib to'lash imkoniyatidan foydalanish va mahsulotlarni saqlab qo'yish uchun
+          </p>
+          <button
+            type="button"
+            @click="authStore.openAuthModal()"
+            class="w-full h-12 rounded-2xl bg-primary text-white font-semibold text-base border-none cursor-pointer shadow-md hover:bg-primary/90 transition-colors mt-1"
+          >
+            Akkauntga kiring
+          </button>
         </div>
-        <h2 class="text-2xl font-bold text-neutral-800 mb-2">Tizimga kiring</h2>
-        <p class="text-sm text-neutral-500 mb-6 max-w-sm mx-auto">
-          Buyurtmalar va shaxsiy ma'lumotlarni ko'rish uchun telefon raqamingiz orqali tizimga kiring.
-        </p>
-        <button
-          type="button"
-          @click="authStore.openAuthModal()"
-          class="inline-flex items-center px-8 py-3.5 rounded-2xl bg-primary text-white font-bold text-sm border-none cursor-pointer shadow-md hover:bg-primary/90 transition-colors"
-        >
-          Kirish
-        </button>
+
+        <!-- Guest holatida ham ko'rinadigan info/sozlama menyusi (piyoladan) -->
+        <div v-for="(group, gi) in guestMenuGroups" :key="'guest-' + gi" class="bg-white rounded-3xl border border-neutral-100 divide-y divide-neutral-100 overflow-hidden mb-3">
+          <template v-for="item in group" :key="item.key">
+            <NuxtLink
+              v-if="item.to"
+              :to="item.to"
+              class="w-full flex items-center justify-between gap-3 px-5 py-4 hover:bg-neutral-50 transition-colors text-left group"
+            >
+              <div class="flex items-center gap-3 min-w-0">
+                <svg class="w-5 h-5 text-neutral-400 group-hover:text-primary transition-colors shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" v-html="ICONS[item.icon]"></svg>
+                <span class="text-sm font-medium text-neutral-800 truncate">{{ item.label }}</span>
+              </div>
+              <div class="flex items-center gap-2 shrink-0">
+                <span v-if="item.value" class="text-sm text-neutral-400">{{ item.value }}</span>
+                <svg class="w-4 h-4 text-neutral-300 group-hover:text-primary transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/></svg>
+              </div>
+            </NuxtLink>
+
+            <div v-else class="w-full flex items-center justify-between gap-3 px-5 py-4">
+              <div class="flex items-center gap-3 min-w-0">
+                <svg class="w-5 h-5 text-neutral-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" v-html="ICONS[item.icon]"></svg>
+                <span class="text-sm font-medium text-neutral-800 truncate">{{ item.label }}</span>
+              </div>
+              <div class="flex items-center gap-2 shrink-0">
+                <span v-if="item.value" class="text-sm text-neutral-400">{{ item.value }}</span>
+              </div>
+            </div>
+          </template>
+        </div>
       </div>
 
       <!-- Authenticated Profile Hub (Piyola style) -->
@@ -166,6 +206,11 @@ const menuGroups: MenuItem[][] = [
     { key: 'contacts', label: "Biz bilan bog'lanish", icon: 'phone', to: '/contacts' },
   ],
 ]
+
+// Guest holatida piyoladagi kabi faqat info/sozlama guruhlari ko'rinadi
+// (shaxsiy — Buyurtmalarim/Sharhlarim/Sevimlilar/Ma'lumotlarim — guruhi
+// autentifikatsiya talab qilgani uchun bu yerda emas).
+const guestMenuGroups: MenuItem[][] = [menuGroups[1], menuGroups[2]]
 
 function handleLogout() {
   authStore.logout()

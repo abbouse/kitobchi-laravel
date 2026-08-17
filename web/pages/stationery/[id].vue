@@ -356,7 +356,7 @@
     </div>
 
     <!-- ====== MOBILE STICKY BUY BAR (Piyola 1:1) ====== -->
-    <div class="fixed bottom-0 left-0 right-0 p-3 bg-white/90 backdrop-blur-md border-t border-gray-100 z-50 md:hidden flex items-center gap-3">
+    <div class="fixed bottom-0 left-0 right-0 p-3 bg-white shadow-2xl rounded-t-2xl z-60 md:hidden flex items-center gap-3">
       <div class="flex-1 min-w-0">
         <div class="text-xs text-gray-400">{{ paymentTab === 'installment' ? `${selectedMonths} oyga:` : 'Narxi:' }}</div>
         <div class="text-base font-bold text-neutral-900 leading-tight truncate">

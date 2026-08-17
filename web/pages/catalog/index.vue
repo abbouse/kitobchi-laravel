@@ -74,6 +74,22 @@
 
       <!-- Filters & Sorting Pills -->
       <div class="flex items-center gap-2 pb-6 overflow-x-auto no-scrollbar">
+        <!-- Faol kategoriya chip'i — piyolada kategoriya ichiga kirilganda
+             sahifa konteksti (nom) doim ko'rinib turadi; kitobchida bunday
+             ko'rinish yo'q edi, foydalanuvchi qaysi kategoriyada ekanini
+             va uni qanday tozalashni bilmasdi. -->
+        <button
+          v-if="activeCategory"
+          type="button"
+          @click="clearCategory"
+          class="px-4 py-2 rounded-2xl text-sm font-semibold transition-all border-none cursor-pointer inline-flex items-center gap-1.5 shrink-0 bg-primary text-white"
+        >
+          {{ activeCategory.name_uz || activeCategory.name }}
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+
+        <div v-if="activeCategory" class="w-px h-6 bg-secondary-200 mx-1 shrink-0"></div>
+
         <!-- Type Pill -->
         <button
           type="button"
@@ -206,13 +222,39 @@ const activeType = ref<'book' | 'stationery'>((route.query.type as any) || 'book
 const activeSort = ref<string>((route.query.sort as string) || 'popular')
 const searchInput = ref<string>((route.query.search as string) || '')
 
+// Kategoriya nomlari — CatalogDrawer.vue bilan bir xil kalit ('catalog-drawer-
+// categories'), shuning uchun Nuxt payload keshi orqali ikkalasi bitta so'rovni
+// ulashadi (qayta-qayta fetch qilinmaydi). MUHIM: bu yerga kirilganda (ya'ni
+// biror kategoriya bosilganda) piyolada sahifa sarlavhasi va breadcrumb HAQIQIY
+// kategoriya nomini ko'rsatadi ("Erkaklar original" kabi) — ilgari kitobchida
+// `category` query parametri sarlavhada umuman aks etmas, foydalanuvchi qaysi
+// kategoriyada ekanini bilolmas edi.
+const { data: categoriesData } = await useFetch<any>(`${config.public.apiBase}/v1/kitobchi/search/categories`, {
+  key: 'catalog-drawer-categories',
+  lazy: true
+})
+
+const activeCategory = computed(() => {
+  const catId = route.query.category
+  if (!catId) return null
+  const list = categoriesData.value?.data?.[activeType.value] || []
+  return list.find((c: any) => String(c.id) === String(catId)) || null
+})
+
 const pageTitle = computed(() => {
   if (route.query.search) return `Qidiruv: ${route.query.search}`
+  if (activeCategory.value) return activeCategory.value.name_uz || activeCategory.value.name
   if (activeType.value === 'stationery') return 'Kanselyariya'
   if (activeSort.value === 'new') return 'Yangi kelgan kitoblar'
   if (activeSort.value === 'popular') return 'Ommabop kitoblar'
   return 'Kitoblar katalogi'
 })
+
+function clearCategory() {
+  const query = { ...route.query }
+  delete query.category
+  router.push({ query })
+}
 
 // MUHIM: `/v1/kitobchi/products/search` degan endpoint HAQIQATDA MAVJUD
 // EMAS edi — u aslida `products/{col}` route'iga tushib, {col}='search'

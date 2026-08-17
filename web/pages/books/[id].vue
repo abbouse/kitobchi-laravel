@@ -55,10 +55,10 @@
       </div>
 
       <!-- Main Layout: 2 Columns (Piyola 1:1 — lg:grid lg:grid-cols-2 xl:grid-cols-3) -->
-      <div class="lg:grid lg:grid-cols-2 xl:grid-cols-3 gap-5 pb-10 lg:pb-0">
+      <div class="lg:grid lg:grid-cols-2 xl:grid-cols-3 gap-5 pb-24 lg:pb-0">
         <!-- Left: Image Gallery — thumbnail rail + main carousel w/ arrows -->
         <div class="col-span-1 xl:col-span-2 h-full mb-8">
-          <div class="flex flex-col-reverse md:flex-row gap-4 h-full">
+          <div class="flex flex-col-reverse md:flex-row gap-3 h-full">
             <!-- Thumbnail rail -->
             <div
               v-if="galleryImages.length > 1"
@@ -68,50 +68,75 @@
                 v-for="(img, idx) in galleryImages"
                 :key="idx"
                 type="button"
-                @click="activeIndex = idx"
+                @click="goToSlide(idx)"
                 :aria-label="`gallery-image-selector-${idx}`"
                 :class="[
-                  'relative shrink-0 w-[75px] h-[100px] rounded-2xl overflow-hidden border-2 transition-all duration-300 cursor-pointer bg-[#FAFAFA] p-1 flex items-center justify-center',
-                  activeIndex === idx ? 'border-primary ring-2 ring-primary/20 shadow-sm' : 'border-gray-200 hover:border-gray-300'
+                  'relative shrink-0 w-[75px] h-[100px] rounded-xl overflow-hidden border-2 transition-all duration-300 cursor-pointer bg-secondary-50',
+                  activeIndex === idx ? 'border-primary-500' : 'border-transparent hover:border-neutral-200'
                 ]"
               >
-                <img :src="img" class="w-full h-full object-contain rounded-xl" :alt="`${product.name} ${idx + 1}`" />
+                <img :src="img" class="w-full h-full object-cover" :alt="`${product.name} ${idx + 1}`" />
               </button>
             </div>
 
-            <!-- Main image + prev/next arrows -->
-            <div class="flex-1 relative rounded-3xl min-h-0 min-w-0">
-              <div class="relative w-full aspect-[3/4] sm:aspect-square lg:aspect-[4/5] max-h-[560px] rounded-3xl overflow-hidden bg-[#FAFAFA] border border-gray-100 flex items-center justify-center p-4 md:p-8">
-                <!-- Top Left Discount Badge -->
-                <div v-if="discountPercent > 0" class="absolute top-4 left-4 z-10 px-3 py-1 rounded-full text-xs font-bold bg-[#ED3131] text-white shadow-sm">
-                  -{{ discountPercent }}%
+            <!-- Main image + prev/next arrows — piyoladagi kabi surish
+                 (swipe) mumkin bo'lgan karusel (ProductCard.vue'dagi bilan
+                 bir xil scroll-snap texnikasi), oldingi versiyada faqat
+                 bosish orqali (thumbnail/strelka) almashardi. -->
+            <div class="flex-1 relative rounded-2xl min-h-0 min-w-0">
+              <div class="relative h-full">
+                <div class="product-gallery-frame overflow-hidden rounded-2xl bg-secondary-50 border border-gray-100 w-full">
+                  <div
+                    ref="mainTrackEl"
+                    class="flex w-full h-full overflow-x-auto no-scrollbar snap-x snap-mandatory"
+                    @scroll="onMainTrackScroll"
+                  >
+                    <div
+                      v-for="(img, idx) in galleryImages"
+                      :key="idx"
+                      class="w-full h-full shrink-0 snap-center flex items-center justify-center"
+                    >
+                      <img
+                        :src="img"
+                        :alt="product.name"
+                        class="w-full h-full object-contain p-4"
+                        :loading="idx === 0 ? 'eager' : 'lazy'"
+                      />
+                    </div>
+                  </div>
                 </div>
-
-                <!-- Main Product Image -->
-                <img
-                  :src="activeImage"
-                  :alt="product.name"
-                  class="max-w-full max-h-full object-contain rounded-2xl drop-shadow-md select-none transition-all duration-300"
-                  loading="eager"
-                />
 
                 <template v-if="galleryImages.length > 1">
                   <button
                     type="button"
                     @click="prevImage"
                     aria-label="Prev"
-                    class="font-medium inline-flex items-center text-sm shadow-md bg-white/90 hover:bg-white text-primary backdrop-blur p-2 absolute rounded-full start-4 top-1/2 -translate-y-1/2 cursor-pointer border border-gray-100 hover:scale-105 active:scale-95 transition-all"
+                    class="font-medium inline-flex items-center text-sm ring ring-inset ring-accented text-default bg-default hover:bg-elevated active:bg-elevated transition-colors p-1.5 absolute rounded-full start-4 top-1/2 -translate-y-1/2 cursor-pointer"
                   >
-                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"/></svg>
                   </button>
                   <button
                     type="button"
                     @click="nextImage"
                     aria-label="Next"
-                    class="font-medium inline-flex items-center text-sm shadow-md bg-white/90 hover:bg-white text-primary backdrop-blur p-2 absolute rounded-full end-4 top-1/2 -translate-y-1/2 cursor-pointer border border-gray-100 hover:scale-105 active:scale-95 transition-all"
+                    class="font-medium inline-flex items-center text-sm ring ring-inset ring-accented text-default bg-default hover:bg-elevated active:bg-elevated transition-colors p-1.5 absolute rounded-full end-4 top-1/2 -translate-y-1/2 cursor-pointer"
                   >
-                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m13.5 4.5 7.5 7.5m0 0-7.5 7.5M21 12H3"/></svg>
                   </button>
+
+                  <!-- Slide dots (ProductCard.vue'dagi bilan bir xil) -->
+                  <div class="absolute bottom-1.5 inset-x-0 z-20 flex items-center justify-center gap-1 pointer-events-none">
+                    <button
+                      v-for="(img, idx) in galleryImages"
+                      :key="idx"
+                      type="button"
+                      :aria-label="`${idx + 1}-rasm`"
+                      class="pointer-events-auto rounded-full transition-all duration-300 border-none cursor-pointer p-0"
+                      :class="idx === activeIndex ? 'w-3 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/70'"
+                      style="box-shadow: 0 0 2px rgba(0,0,0,.35);"
+                      @click="goToSlide(idx)"
+                    ></button>
+                  </div>
                 </template>
               </div>
             </div>
@@ -288,12 +313,37 @@
         </div>
       </div>
 
-      <!-- Book Club Reviews Section -->
-      <ProductReviews :product-id="product.id" type="book" />
+      <!-- ====== O'XSHASH MAHSULOTLAR (bir xil kategoriyadagi boshqa
+           kitoblar — real backend qidiruv orqali, joriy mahsulot chiqarib
+           tashlanadi) ====== -->
+      <section v-if="similarProducts.length > 0" class="mt-10 pb-8">
+        <div class="flex justify-between items-center w-full px-1 mb-3 md:mb-5 lg:mb-8">
+          <h2 class="font-bold text-xl md:text-3xl leading-[100%] text-primary m-0 capitalize">
+            O‘xshash mahsulotlar
+          </h2>
+          <NuxtLink
+            v-if="product?.category_id"
+            :to="`/catalog?category=${product.category_id}`"
+            class="text-sm font-semibold text-primary hover:underline flex items-center gap-1 shrink-0"
+          >
+            Barchasi
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
+          </NuxtLink>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 md:gap-4 lg:gap-5">
+          <ProductCard
+            v-for="sp in similarProducts"
+            :key="'similar-' + sp.id"
+            :product="sp"
+            type="book"
+          />
+        </div>
+      </section>
     </div>
 
     <!-- ====== MOBILE STICKY BUY BAR (Piyola 1:1) ====== -->
-    <div class="fixed bottom-0 left-0 right-0 p-3 bg-white/90 backdrop-blur-md border-t border-gray-100 z-50 md:hidden flex items-center gap-3">
+    <div class="fixed bottom-0 left-0 right-0 p-3 bg-white shadow-2xl rounded-t-2xl z-60 md:hidden flex items-center gap-3">
       <div class="flex-1 min-w-0">
         <div class="text-xs text-gray-400">{{ paymentTab === 'installment' ? `${selectedMonths} oyga:` : 'Narxi:' }}</div>
         <div class="text-base font-bold text-neutral-900 leading-tight truncate">
@@ -382,7 +432,31 @@ const galleryImages = computed(() => {
   return ['/images/logo/logo_blue.png']
 })
 
+// O'xshash mahsulotlar — piyoladagi kabi, HAQIQIY backend qidiruv
+// endpointidan (bir xil category_id, "popular" saralash, joriy mahsulot
+// chiqarib tashlanadi). category_id faqat mahsulot yuklangandan keyin
+// ma'lum bo'lgani uchun reaktiv query + lazy bilan ishlaydi (mahsulot
+// almashganda — masalan boshqa "o'xshash" kitobga o'tilganda — ham to'g'ri
+// yangilanadi).
+const { data: similarRes } = await useFetch<any>(`${config.public.apiBase}/v1/kitobchi/search/`, {
+  query: computed(() => ({
+    type: 'book',
+    category_id: product.value?.category_id || undefined,
+    sort: 'popular',
+    page: 1
+  })),
+  lazy: true,
+  watch: [() => product.value?.category_id]
+})
+
+const similarProducts = computed(() => {
+  const list = similarRes.value?.data || []
+  return list.filter((p: any) => p.id !== product.value?.id).slice(0, 10)
+})
+
 const activeIndex = ref(0)
+const mainTrackEl = ref<HTMLElement | null>(null)
+let mainScrollRaf = 0
 
 watchEffect(() => {
   if (activeIndex.value >= galleryImages.value.length) {
@@ -392,16 +466,38 @@ watchEffect(() => {
 
 const activeImage = computed(() => galleryImages.value[activeIndex.value] || galleryImages.value[0] || '/images/logo/logo_blue.png')
 
+// Asosiy rasm endi piyoladagi kabi surish (swipe) mumkin bo'lgan
+// scroll-snap karusel — qo'l bilan surilganda shu handler activeIndex'ni
+// yangilaydi (ProductCard.vue'dagi onTrackScroll bilan bir xil mantiq).
+function onMainTrackScroll() {
+  if (mainScrollRaf) cancelAnimationFrame(mainScrollRaf)
+  mainScrollRaf = requestAnimationFrame(() => {
+    const el = mainTrackEl.value
+    if (!el || el.clientWidth === 0) return
+    activeIndex.value = Math.round(el.scrollLeft / el.clientWidth)
+  })
+}
+
+// Thumbnail/strelka/nuqta bosilganda ham indeks, ham haqiqiy scroll
+// pozitsiyasi yangilanadi.
+function goToSlide(idx: number) {
+  activeIndex.value = idx
+  const el = mainTrackEl.value
+  if (el) {
+    el.scrollTo({ left: idx * el.clientWidth, behavior: 'smooth' })
+  }
+}
+
 function prevImage() {
   const len = galleryImages.value.length
   if (len < 2) return
-  activeIndex.value = (activeIndex.value - 1 + len) % len
+  goToSlide((activeIndex.value - 1 + len) % len)
 }
 
 function nextImage() {
   const len = galleryImages.value.length
   if (len < 2) return
-  activeIndex.value = (activeIndex.value + 1) % len
+  goToSlide((activeIndex.value + 1) % len)
 }
 
 // Accordion: Xususiyatlar va tavsif
