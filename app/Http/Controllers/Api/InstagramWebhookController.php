@@ -46,14 +46,18 @@ class InstagramWebhookController extends Controller
             ], 400);
         }
 
-        $response = Http::get("https://graph.facebook.com/v19.0/me?access_token={$token}");
+        // 1. Check token validity
+        $userResponse = Http::get("https://graph.facebook.com/v19.0/me?access_token={$token}");
+
+        // 2. Discover linked Facebook Pages and Page Access Tokens
+        $pagesResponse = Http::get("https://graph.facebook.com/v19.0/me/accounts?fields=id,name,access_token,instagram_business_account&access_token={$token}");
 
         return response()->json([
             'token_configured' => true,
-            'token_prefix' => substr($token, 0, 10) . '...',
-            'token_length' => strlen($token),
-            'meta_status' => $response->status(),
-            'meta_response' => $response->json(),
+            'token_prefix'     => substr($token, 0, 12) . '...',
+            'token_length'     => strlen($token),
+            'user_info'        => $userResponse->json(),
+            'managed_pages'    => $pagesResponse->json(),
         ]);
     }
 }
