@@ -1,0 +1,203 @@
+/*
+ * piyola-extra.css
+ * ------------------------------------------------------------------
+ * piyola.css (Tailwind v4 dan kompilyatsiya qilingan statik fayl)
+ * piyolamarket.uz saytining faqat FOYDALANILGAN klasslarini o'z ichiga
+ * oladi — ya'ni piyola'ning har bir sahifasi qayta ochilib, faqat o'sha
+ * sahifada ishlatilgan klasslar generatsiya qilingan.
+ *
+ * Ushbu loyihada (kitobchi web/) Tailwind moduli faollashtirilmagan
+ * (@nuxtjs/tailwindcss yoqilsa, piyola.css ichidagi native `@layer`
+ * qoidalari bilan to'qnashib, build buziladi — sinab ko'rilgan va
+ * qasddan o'chirib qo'yilgan). Shuning uchun piyola'da bor-u, lekin
+ * piyola.css'da yo'q bo'lgan klasslar (masalan, vakansiya sahifasi
+ * kabi kam ishlatiladigan sahifalarga xos klasslar) shu faylga QO'LDA
+ * ko'chirib qo'yiladi.
+ *
+ * Qoida: bu faylga faqat piyola'ning haqiqiy HTML/CSS manbasidan olingan
+ * yoki piyola bilan vizual mos custom qoidalar qo'shiladi — hech qanday
+ * o'ylab topilgan (fabricated) stil qo'shilmaydi.
+ * ------------------------------------------------------------------ */
+
+/* ===================================================================
+ * 1) VAKANSIYALAR SAHIFASI — piyolamarket.uz/vacancies.html va
+ *    /vacancies/1.html'dan ajratib olingan (inline <style> blok #7).
+ *    Vue scoped-style attributelari ([data-v-xxxxx]) olib tashlangan.
+ * =================================================================== */
+.vacancies-hero{background:linear-gradient(135deg,#0b0342,#1a0a5e 40%,#0b0342);position:relative;overflow:hidden}
+.vacancies-hero__grid{position:absolute;inset:0;background-image:linear-gradient(#ffffff08 1px,#0000 0),linear-gradient(90deg,#ffffff08 1px,#0000 0);background-size:60px 60px;-webkit-mask-image:radial-gradient(ellipse 80% 70% at 50% 40%,#000 20%,#0000 80%);mask-image:radial-gradient(ellipse 80% 70% at 50% 40%,#000 20%,#0000 80%)}
+.vacancies-hero__orb{position:absolute;border-radius:50%;filter:blur(80px);opacity:.5;animation:orb-float-1860aa3a 12s ease-in-out infinite}
+.vacancies-hero__orb--1{width:220px;height:220px}
+@media(min-width:768px){.vacancies-hero__orb--1{width:400px;height:400px}}
+.vacancies-hero__orb--1{background:#7c3aed;top:-100px;right:-80px;animation-delay:0s}
+.vacancies-hero__orb--2{width:160px;height:160px;background:#3b82f6;bottom:20px;left:-40px;animation-delay:-4s}
+@media(min-width:768px){.vacancies-hero__orb--2{width:300px;height:300px;bottom:40px;left:-60px}}
+.vacancies-hero__orb--3{width:120px;height:120px;background:#10b981;top:50%;left:50%;transform:translate(-50%,-50%);animation-delay:-8s;opacity:.3}
+@media(min-width:768px){.vacancies-hero__orb--3{width:200px;height:200px}}
+.vacancies-hero__badge{background:#ffffff14;border:1px solid #ffffff1f;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);animation:fade-up-1860aa3a .8s ease-out both}
+.vacancies-hero__pulse{width:8px;height:8px;border-radius:50%;background:#34d399;box-shadow:0 0 #34d39980;animation:pulse-ring-1860aa3a 2s ease-out infinite}
+.vacancies-hero__title{background:linear-gradient(135deg,#fff,#e0e7ff 50%,#c4b5fd);-webkit-background-clip:text;-webkit-text-fill-color:#0000;background-clip:text;animation:fade-up-1860aa3a .8s ease-out .1s both}
+.vacancies-hero__counter{animation:fade-up-1860aa3a .8s ease-out .3s both}
+.vacancies-hero__wave{position:absolute;bottom:-1px;left:0;right:0;height:48px;z-index:5}
+@media(min-width:768px){.vacancies-hero__wave{height:80px}}
+.vacancies-bg__blob{position:absolute;border-radius:50%;filter:blur(100px);pointer-events:none}
+.vacancies-bg__blob--1{width:500px;height:500px;background:#7c3aed14;top:0;right:-150px}
+.vacancies-bg__blob--2{width:400px;height:400px;background:#3b82f60f;bottom:100px;left:-100px}
+.vacancy-card{--ease-smooth:cubic-bezier(.33,1,.68,1);animation:card-enter-1860aa3a .5s var(--ease-smooth) both;animation-delay:var(--delay)}
+.vacancy-card__inner{border:1px solid #e8eaef;box-shadow:0 1px 3px #0b03420a;transition:transform .45s var(--ease-smooth),box-shadow .45s var(--ease-smooth),border-color .45s var(--ease-smooth);will-change:transform,box-shadow}
+@media(hover:hover){
+  .group:hover .vacancy-card__inner{transform:translateY(-4px);border-color:#0b034224;box-shadow:0 14px 36px #0b03421a}
+  .group:hover .vacancy-card__rail{background:#eef0f4}
+  .group:hover .vacancy-card__rail:before{transform:scaleY(1);transform-origin:center top}
+  .group:hover .vacancy-card__number{color:#0b03428c;transform:scale(1.04)}
+  .group:hover .vacancy-card__company{color:#6b6b80}
+  .group:hover .vacancy-card__title{color:#1a1454}
+  .group:hover .vacancy-card__salary{color:#065f46}
+  .group:hover .vacancy-card__salary-icon{color:#34d399}
+  .group:hover .vacancy-card__action{background:#0b0342;color:#fff;transform:translate(3px)}
+}
+.vacancy-card__rail{width:44px}
+@media(min-width:768px){.vacancy-card__rail{width:52px}}
+.vacancy-card__rail{background:#f5f6f8;border-right:1px solid #e8eaef;position:relative;transition:background-color .45s var(--ease-smooth)}
+.vacancy-card__rail:before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:#0b0342;transform:scaleY(0);transform-origin:center bottom;transition:transform .45s var(--ease-smooth)}
+.vacancy-card__number{font-size:1.375rem;font-weight:800;letter-spacing:-.04em;line-height:1;color:#0b03422e;transition:color .45s var(--ease-smooth),transform .45s var(--ease-smooth)}
+.vacancy-card__status{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#059669}
+.vacancy-card__dot{width:6px;height:6px;border-radius:50%;background:#34d399;flex-shrink:0;animation:pulse-ring-1860aa3a 2.5s ease-out infinite}
+.vacancy-card__divider{color:#d4d8e1;font-size:12px;line-height:1}
+.vacancy-card__company{font-size:12px;font-weight:500;color:#8f8fa1;transition:color .45s var(--ease-smooth)}
+.vacancy-card__title{font-size:1rem;font-weight:600;line-height:1.4;color:#0b0342;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;transition:color .45s var(--ease-smooth)}
+@media(min-width:640px){.vacancy-card__title{font-size:1.0625rem}}
+.vacancy-card__salary{display:flex;align-items:center;gap:6px;margin-top:10px;font-size:.8125rem;font-weight:600;color:#047857;transition:color .45s var(--ease-smooth)}
+.vacancy-card__salary-icon{color:#6ee7b7;transition:color .45s var(--ease-smooth)}
+.vacancy-card__meta{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:10px}
+.vacancy-card__meta-item{display:inline-flex;align-items:center;gap:4px;font-size:.75rem;font-weight:500;color:#6b6b80;min-width:0}
+.vacancy-card__action{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:#f6f6f9;color:#8f8fa1;margin-top:2px;transition:background-color .45s var(--ease-smooth),color .45s var(--ease-smooth),transform .45s var(--ease-smooth)}
+.vacancies-skeleton{background:linear-gradient(90deg,#f0f0f5 25%,#fafafa,#f0f0f5 75%);background-size:200% 100%;animation:skeleton-shimmer-1860aa3a 1.5s ease-in-out infinite}
+.vacancies-empty{background:#fff;border:1px solid #0b03420f;box-shadow:0 8px 40px #0b03420f;animation:fade-up-1860aa3a .6s ease-out both}
+.vacancies-empty__icon{background:linear-gradient(135deg,#f5f6f8,#e8eaef)}
+@keyframes orb-float-1860aa3a{0%,to{transform:translate(0) scale(1)}33%{transform:translate(30px,-20px) scale(1.05)}66%{transform:translate(-20px,15px) scale(.95)}}
+@keyframes pulse-ring-1860aa3a{0%{box-shadow:0 0 #34d39980}70%{box-shadow:0 0 0 8px #34d39900}to{box-shadow:0 0 #34d39900}}
+@keyframes fade-up-1860aa3a{0%{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+@keyframes card-enter-1860aa3a{0%{opacity:0;transform:translateY(16px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes skeleton-shimmer-1860aa3a{0%{background-position:200% 0}to{background-position:-200% 0}}
+@media(prefers-reduced-motion:reduce){
+  .vacancies-hero__badge,.vacancies-hero__counter,.vacancies-hero__orb,.vacancies-hero__title,.vacancies-skeleton,.vacancy-card,.vacancy-card__dot{animation:none}
+  .group:hover :is(.vacancy-card__action,.vacancy-card__inner,.vacancy-card__number){transform:none}
+  .vacancy-card__action,.vacancy-card__company,.vacancy-card__inner,.vacancy-card__number,.vacancy-card__rail,.vacancy-card__salary,.vacancy-card__title{transition:none}
+}
+
+/* ===================================================================
+ * 2) liquidGlass-* — piyola.css ichida bu klasslar Vue scoped-style
+ *    ([data-v-b511cd03]) bilan cheklangan (piyola'ning ichki Button
+ *    komponentiga xos). Kitobchi tomonida bu atribut mavjud bo'lmagani
+ *    uchun asl qoidalar ishlamaydi — shu sabab pastda [data-v-xxxxx]
+ *    olib tashlangan, umumiy (global) versiyasi qo'shildi. Qiymatlar
+ *    piyola.css'dagi bilan bir xil, faqat selektor tozalangan.
+ *    Ishlatilishi: AppFooter.vue (ijtimoiy tarmoq tugmalari).
+ * =================================================================== */
+.liquidGlass-wrapper{position:relative;display:flex;font-weight:600;overflow:hidden;color:#000;cursor:pointer;transition:all .4s cubic-bezier(.175,.885,.32,2.2)}
+.liquidGlass-effect{position:absolute;z-index:0;inset:0;-webkit-backdrop-filter:blur(1px);backdrop-filter:blur(1px);overflow:hidden;isolation:isolate}
+.liquidGlass-tint{z-index:10;position:absolute;inset:0;background:#ffffff1a}
+.liquidGlass-shine{position:absolute;inset:0;z-index:2;overflow:hidden;box-shadow:inset 1px 1px 1px #ffffffe6,inset 2px 1px 0 2px #2e3950,inset 0 0 1px 1px #ffffffe6,inset 0 -2px 2px 4px #2e3950}
+
+/* ===================================================================
+ * 3) glass-card-bg / glass-border — MUHIM TOPILMA: bu klasslar
+ *    AppHeader.vue'da (desktop capsulalar + mobil qidiruv paneli, 5+
+ *    joyda) ALLAQACHON ishlatilgan, lekin piyola.css'da FAQAT
+ *    [data-v-e6e68965] bilan scoped holda mavjud edi — ya'ni haqiqiy
+ *    saytda bu "oynasimon" (glass) fon effekti umuman ko'rinmayotgan
+ *    edi (browser klass nomini topolmagani uchun qoidani qo'llamagan).
+ *    Pastdagi global versiya shu bugni tuzatadi.
+ * =================================================================== */
+.glass-card-bg{background:linear-gradient(135deg,#00000014,#0000000d 15%,#00000005 35%,#0000 60%),#ffffff80}
+.glass-border{padding:1px;background:linear-gradient(165deg,#ffffffb3,#ffffff4d 25%,#0000,#ffffffb3 75%,#ffffff4d);-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+
+/* ===================================================================
+ * 4) Yo'qolgan bir nechta oddiy Tailwind utility'lari — piyola.css
+ *    faqat piyola sahifalarida ISHLATILGAN klasslarni o'z ichiga
+ *    oladi, shu sabab kitobchi kodida bor-u piyola'da yo'q bir nechta
+ *    STANDART (arbitrary bo'lmagan) Tailwind qiymatlari mavjud edi.
+ *    Standart Tailwind v3 spacing/rang jadvaliga mos qiymatlar bilan
+ *    qo'lda qo'shildi (loyihada Tailwind JIT o'chirilgan — sabab:
+ *    yuqoridagi izohga qarang).
+ *    Topilgan joylar: AppBottomNav.vue badge pozitsiyasi (-right-2 va
+ *    -top-1 — ikkalasi ham bir xil badge uchun kerak edi), bir nechta
+ *    sahifadagi breadcrumb ajratuvchisi ("/"), profile/comments.vue
+ *    segment tugmalari (md:flex-none).
+ * =================================================================== */
+.-right-2{right:-.5rem}
+.-top-1{top:-.25rem}
+.text-gray-300{color:#d1d5db}
+@media(min-width:768px){.md\:flex-none{flex:none}}
+
+/* ===================================================================
+ * 5) Scroll-snap utility'lari — piyola o'zi gorizontal slayderlar
+ *    uchun Embla Carousel (JS) ishlatadi, shu sabab piyola.css'da
+ *    tayyor snap-* klasslari YO'Q. Kitobchi tomonida esa (Nuxt UI
+ *    o'rniga) native CSS scroll-snap yondashuvi tanlangan — bu yengil
+ *    va qo'shimcha kutubxonasiz to'g'ri yechim, faqat klasslar hech
+ *    qachon generatsiya qilinmagan edi. Standart Tailwind v3 chiqishi
+ *    bilan bir xil qiymatlar bilan qo'lda qo'shildi.
+ *    Ishlatilishi: index.vue bannerlar, ProductCard.vue rasm karuseli.
+ * =================================================================== */
+.no-scrollbar{scrollbar-width:none;-ms-overflow-style:none}
+.no-scrollbar::-webkit-scrollbar{display:none;width:0;height:0}
+.snap-x{scroll-snap-type:x var(--tw-scroll-snap-strictness,mandatory)}
+.snap-mandatory{--tw-scroll-snap-strictness:mandatory}
+.snap-center{scroll-snap-align:center}
+
+/* ===================================================================
+ * 6) kb-prose — admin (boshqaruv) tomonidan yozilgan HTML kontentni
+ *    (Policy.content — Biz haqimizda / Maxfiylik siyosati / Foydalanish
+ *    shartlari va h.k.) piyola'ning privacy.html sahifasidagi uslubga
+ *    yaqin ko'rinishda chiqarish uchun. piyola.css'da Tailwind Typography
+ *    plagini (.prose) klasslari YO'Q (0 marta uchraydi) — shu sabab
+ *    qo'lda, piyola'ning haqiqiy h1/h2/p rang-o'lcham qiymatlariga mos
+ *    custom klass yozildi (index.vue/privacy.html outline'idan olingan:
+ *    h1 text-3xl md:text-4xl font-bold, h2 text-xl font-semibold,
+ *    p text-neutral-600 leading-relaxed).
+ * =================================================================== */
+.kb-prose h1{font-size:1.875rem;line-height:2.25rem;font-weight:700;margin-bottom:1rem;color:#0b0342}
+.kb-prose h2{font-size:1.25rem;line-height:1.75rem;font-weight:600;margin-top:2.5rem;margin-bottom:1rem;color:#0b0342}
+.kb-prose h3{font-size:1.125rem;line-height:1.75rem;font-weight:600;margin-top:2rem;margin-bottom:.75rem;color:#0b0342}
+.kb-prose h2:first-child,.kb-prose h3:first-child{margin-top:0}
+.kb-prose p{color:#525252;line-height:1.75;margin-bottom:1rem}
+.kb-prose ul,.kb-prose ol{color:#525252;line-height:1.75;margin-bottom:1rem;padding-left:1.5rem}
+.kb-prose ul{list-style-type:disc}
+.kb-prose ol{list-style-type:decimal}
+.kb-prose li{margin-bottom:.5rem}
+.kb-prose li>ul,.kb-prose li>ol{margin-top:.5rem;margin-bottom:0}
+.kb-prose a{color:#0b0342;text-decoration:underline}
+.kb-prose strong,.kb-prose b{font-weight:600;color:#171717}
+.kb-prose img{max-width:100%;border-radius:.75rem;margin:1rem 0}
+.kb-prose>*:last-child{margin-bottom:0}
+
+/* ===================================================================
+ * 7) product-gallery-frame — mahsulot sahifasi (books/[id].vue,
+ *    stationery/[id].vue) asosiy rasm konteyneri. piyola.css'da
+ *    `aspect-auto` klassi umuman yo'q (0 marta uchraydi), lekin bizga
+ *    ikkita holat kerak: mobil/tablet'da (lg dan past) atrofida grid
+ *    ustun bo'lmagani uchun oddiy kvadrat (aspect-ratio:1/1) shart —
+ *    aks holda konteyner balandligi 0 bo'lib qoladi; lg dan boshlab esa
+ *    galereya ustuni o'ng (info) ustun bilan bir xil balandlikka
+ *    cho'ziladi (grid stretch) — shu holatda aspect-ratio o'chirilishi
+ *    kerak, aks holda kvadrat shakl o'sha balandlikdan KENGLIK talab
+ *    qilib, ustunidan tashqariga toshib chiqadi (chap tomondagi
+ *    matnni yashiradigan bug — screenshot orqali topilgan).
+ * =================================================================== */
+.product-gallery-frame{aspect-ratio:1/1;height:auto}
+@media(min-width:1024px){.product-gallery-frame{aspect-ratio:auto;height:100%}}
+
+/* ===================================================================
+ * 8) AuthModal kirish animatsiyasi — piyola.css'da @keyframes fade-in
+ *    va @keyframes scale-in ALLAQACHON mavjud (Nuxt UI'ning UModal
+ *    komponenti ichida JS orqali data-state atributi bilan avtomatik
+ *    ishga tushiriladi), lekin buni qo'lda yoquvchi tailwindcss-animate
+ *    utility klasslari (animate-in/fade-in/zoom-in) piyola.css'da yo'q
+ *    — chunki sahifa muallifi ularni hech qachon to'g'ridan-to'g'ri
+ *    yozmagan. Kitobchi'ning maxsus (Nuxt UI'siz) AuthModal.vue
+ *    komponenti uchun piyola'ning haqiqiy @keyframes scale-in
+ *    qiymatidan (opacity 0->1 + scale .95->1) foydalanib, alohida
+ *    klass qo'shildi.
+ * =================================================================== */
+.auth-modal-pop-in{animation:scale-in .2s ease-out both}

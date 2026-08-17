@@ -21,7 +21,7 @@
               <div class="absolute inset-0 pointer-events-none glass-border rounded-2xl rounded-full!"></div>
               <div :class="[
                 'rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2',
-                $route.path.startsWith('/catalog') ? 'bg-primary-200' : ''
+                $route.path.startsWith('/catalog') ? 'bg-primary-100' : ''
               ]">
                 <svg class="w-5 h-5 transition-all duration-300 shrink-0" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M4.5 4.5a3 3 0 00-3 3v2.25a3 3 0 003 3h2.25a3 3 0 003-3V7.5a3 3 0 00-3-3H4.5zM4.5 15a3 3 0 00-3 3v.75a3 3 0 003 3h2.25a3 3 0 003-3V18a3 3 0 00-3-3H15zM15 4.5a3 3 0 00-3 3v2.25a3 3 0 003 3h2.25a3 3 0 003-3V7.5a3 3 0 00-3-3H15zM15 15a3 3 0 00-3 3v.75a3 3 0 003 3h2.25a3 3 0 003-3V18a3 3 0 00-3-3H15z"/>
@@ -40,7 +40,7 @@
                 v-model="searchQuery"
                 type="text"
                 placeholder="Mahsulotni izlash..."
-                class="flex-1 bg-transparent border-none outline-none text-sm text-neutral-900 font-inherit m-0 p-0 h-full w-full"
+                class="flex-1 bg-transparent border-none outline-none text-sm text-neutral-900 m-0 p-0 h-full w-full"
               />
             </form>
           </div>
@@ -56,7 +56,7 @@
                 to="/cart"
                 :class="[
                   'rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group',
-                  $route.path === '/cart' ? 'bg-primary-200 text-primary font-semibold' : ''
+                  $route.path === '/cart' ? 'bg-primary-100 text-primary font-semibold' : ''
                 ]"
               >
                 <div class="flex-center relative">
@@ -76,7 +76,7 @@
                 to="/favorites"
                 :class="[
                   'rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group',
-                  $route.path === '/favorites' ? 'bg-primary-200 text-primary font-semibold' : ''
+                  $route.path === '/favorites' ? 'bg-primary-100 text-primary font-semibold' : ''
                 ]"
               >
                 <div class="flex-center relative">
@@ -112,7 +112,7 @@
                 to="/profile"
                 :class="[
                   'rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2',
-                  $route.path === '/profile' ? 'bg-primary-200 text-primary font-semibold' : ''
+                  $route.path === '/profile' ? 'bg-primary-100 text-primary font-semibold' : ''
                 ]"
               >
                 <i class="icon-profile text-lg"></i>
@@ -141,7 +141,7 @@
                 v-model="searchQuery"
                 type="text"
                 placeholder="Kitobchi’da izlash"
-                class="flex-1 bg-transparent border-none outline-none text-sm text-neutral-900 font-inherit m-0 p-0 h-full w-full"
+                class="flex-1 bg-transparent border-none outline-none text-sm text-neutral-900 m-0 p-0 h-full w-full"
               />
             </form>
           </div>

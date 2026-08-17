@@ -9,9 +9,11 @@
               <button
                 type="button"
                 @click="$router.back()"
-                class="font-medium inline-flex items-center text-base gap-2 text-primary p-2 rounded-full bg-secondary-100 hover:bg-primary/10 transition-colors border-none cursor-pointer"
+                aria-label="Orqaga"
+                class="relative overflow-hidden transition-shadow duration-300 rounded-full! px-5 py-[14px] hover:shadow-sm hover:shadow-black/10 glass-card-bg h-11 w-11 flex-center p-0! cursor-pointer border-none text-primary"
               >
-                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
+                <div class="absolute inset-0 pointer-events-none glass-border rounded-full!"></div>
+                <svg class="w-5 h-5 relative z-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
               </button>
             </div>
             <div class="col-span-3">
@@ -19,7 +21,16 @@
                 {{ pageTitle }}
               </h1>
             </div>
-            <div class="col-span-1 flex justify-end"></div>
+            <div class="col-span-1 flex justify-end">
+              <button
+                type="button"
+                @click="isCatalogOpen = true"
+                aria-label="Kataloglar"
+                class="font-medium inline-flex items-center text-base gap-2 text-primary p-2 rounded-full bg-secondary-100 hover:bg-primary/10 transition-colors border-none cursor-pointer"
+              >
+                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9m-9 6h9m-9 6h9M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12.75h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 18.75h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" /></svg>
+              </button>
+            </div>
           </div>
 
           <div>
@@ -30,7 +41,7 @@
                 type="text"
                 placeholder="Kitobchi’da izlash"
                 @keyup.enter="updateSearch"
-                class="flex-1 bg-transparent border-none outline-none text-sm text-neutral-900 font-inherit m-0 p-0 h-full w-full"
+                class="flex-1 bg-transparent border-none outline-none text-sm text-neutral-900 m-0 p-0 h-full w-full"
               />
             </div>
           </div>
@@ -41,11 +52,11 @@
     <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
       <!-- Breadcrumb (Desktop) -->
       <div class="flex items-center gap-2 pt-4 pb-2 max-md:hidden">
-        <NuxtLink to="/" class="rounded-full w-9 h-9 flex items-center justify-center transition-colors text-primary bg-secondary-200 hover:bg-secondary-300" title="Asosiy">
+        <NuxtLink to="/" class="rounded-full w-9 h-9 flex items-center justify-center transition-colors text-primary bg-secondary-200 hover:bg-secondary-400" title="Asosiy">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
         </NuxtLink>
         <nav class="flex items-center gap-2 text-sm text-[#8F8FA1]">
-          <NuxtLink to="/" class="hover:text-neutral-900 transition-colors">Asosiy</NuxtLink>
+          <NuxtLink to="/" class="hover:text-neutral-600 transition-colors">Asosiy</NuxtLink>
           <span class="text-gray-300">/</span>
           <span class="text-neutral-900 font-semibold">Katalog</span>
         </nav>
@@ -62,7 +73,7 @@
       </div>
 
       <!-- Filters & Sorting Pills -->
-      <div class="flex items-center gap-2 pb-6 overflow-x-auto no-scrollbar flex-nowrap">
+      <div class="flex items-center gap-2 pb-6 overflow-x-auto no-scrollbar">
         <!-- Type Pill -->
         <button
           type="button"
@@ -129,6 +140,8 @@
         <p class="text-sm text-neutral-500">Qidiruv so‘zini o‘zgartirib ko‘ring yoki filtrlarni tozalang</p>
       </div>
     </div>
+
+    <CatalogDrawer :is-open="isCatalogOpen" @close="isCatalogOpen = false" />
   </div>
 </template>
 
@@ -137,6 +150,7 @@ const route = useRoute()
 const router = useRouter()
 const config = useRuntimeConfig()
 
+const isCatalogOpen = ref(false)
 const activeType = ref<'book' | 'stationery'>((route.query.type as any) || 'book')
 const activeSort = ref<string>((route.query.sort as string) || 'popular')
 const searchInput = ref<string>((route.query.search as string) || '')

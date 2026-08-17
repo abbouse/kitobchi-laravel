@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\BookClubCommentController;
 use App\Http\Controllers\Api\BookClubController;
 use App\Http\Controllers\Api\BookClubThemeController;
 use App\Http\Controllers\Api\CardController;
+use App\Http\Controllers\Api\CareersController;
 use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\ChatBotController;
 use App\Http\Controllers\Api\ChatController;
@@ -11,6 +12,7 @@ use App\Http\Controllers\Api\GiftCertificateController;
 use App\Http\Controllers\Api\GiftsController;
 use App\Http\Controllers\Api\GuestSyncController;
 use App\Http\Controllers\Api\HomeController;
+use App\Http\Controllers\Api\LegalController;
 use App\Http\Controllers\Api\NewsController;
 use App\Http\Controllers\Api\PremiumController;
 use App\Http\Controllers\Api\ProductsController;
@@ -84,6 +86,23 @@ Route::prefix('share')->group(function () {
     Route::get('product/{id}', [ShareController::class, 'product']);
     Route::get('art/{artikul}', [ShareController::class, 'productByArtikul']);
     Route::get('cart/{slug}', [SharedCartController::class, 'show']);
+});
+
+// Web (Nuxt) frontend uchun: huquqiy hujjatlar (About/FAQ/Privacy/Terms va
+// h.k. — boshqaruv panelida Policy sifatida yaratiladi) va Karyera/
+// Vakansiyalar (boshqaruvda Vacancy sifatida yaratiladi). Kontent bu yerda
+// fabrikatsiya qilinmaydi — faqat mavjud, faol yozuvlar chiqariladi.
+Route::prefix('legal')->group(function () {
+    Route::get('/', [LegalController::class, 'index']);
+    Route::get('{slug}', [LegalController::class, 'show']);
+});
+Route::prefix('vacancies')->group(function () {
+    Route::get('/', [CareersController::class, 'index']);
+    Route::get('{vacancy}', [CareersController::class, 'show']);
+    // Ariza/murojaat yuborish — routes/web.php'dagi careers.apply/inquiry
+    // bilan bir xil throttle (12/daqiqa).
+    Route::post('{vacancy}/apply', [CareersController::class, 'apply'])->middleware('throttle:12,1');
+    Route::post('inquiry', [CareersController::class, 'inquiry'])->middleware('throttle:12,1');
 });
 
 // --- Faqat Token bilan kiriladigan qismlar ---

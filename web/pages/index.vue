@@ -10,20 +10,20 @@
             <div
               v-for="(banner, idx) in banners"
               :key="idx"
-              class="min-w-0 shrink-0 basis-[92%] md:basis-full snap-center"
+              class="min-w-0 shrink-0 basis-full snap-center"
             >
               <a
                 :href="banner.url || '/catalog'"
-                class="relative w-full aspect-520/141 h-full rounded-2xl lg:rounded-[30px] overflow-hidden block group bg-secondary-100 shadow-sm"
+                class="relative w-full aspect-520/141 h-full rounded-2xl lg:rounded-[30px] overflow-hidden block group/item bg-secondary-100 shadow-sm"
               >
                 <img
                   :src="banner.image"
                   :alt="banner.title || 'Kitobchi aksiya'"
-                  class="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-105"
+                  class="w-full h-full object-cover transform transition-transform duration-700 group-hover/item:scale-105"
                   loading="eager"
                   fetchpriority="high"
                 />
-                <div class="absolute inset-0 bg-primary/0 group-hover:bg-primary/10 transition-colors duration-300 pointer-events-none"></div>
+                <div class="absolute inset-0 bg-primary/0 group-hover/item:bg-primary/10 transition-colors duration-300 pointer-events-none"></div>
               </a>
             </div>
           </div>
@@ -34,10 +34,10 @@
     <!-- ====== CATEGORIES CIRCLE CAROUSEL (Piyola 1:1) ====== -->
     <section v-if="categories.length > 0" class="py-6 md:py-8">
       <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
-        <h2 class="font-bold text-[22px] md:text-[32px] text-primary leading-[100%] capitalize mb-4">
+        <h2 class="font-bold text-[22px] md:text-3xl text-primary leading-[100%] capitalize mb-4">
           Kataloglar
         </h2>
-        <div class="flex items-start flex-row -ms-4 gap-[16px] md:gap-[24px] overflow-x-auto no-scrollbar pb-2 px-4">
+        <div class="flex items-start flex-row -ms-4 gap-4 md:gap-6 overflow-x-auto no-scrollbar pb-2 px-4">
           <div
             v-for="cat in categories"
             :key="cat.id"
@@ -45,9 +45,9 @@
           >
             <NuxtLink
               :to="`/catalog?category=${cat.id}`"
-              class="group/item flex flex-col items-center gap-2 no-underline"
+              class="group/item flex flex-col items-center gap-2"
             >
-              <div class="min-w-[80px] min-h-[80px] w-20 h-20 md:w-28 md:h-28 rounded-full overflow-hidden border-2 border-transparent group-hover/item:border-primary transition-all duration-300 bg-secondary-100 flex items-center justify-center shadow-xs">
+              <div class="w-20 h-20 md:w-30 md:h-30 rounded-full overflow-hidden border-2 border-transparent group-hover/item:border-primary-500 transition-all duration-300 bg-secondary-100 flex items-center justify-center shadow-xs">
                 <div class="relative w-full h-full flex items-center justify-center p-3">
                   <img
                     :src="cat.image || '/images/logo/logo_blue.png'"
@@ -57,7 +57,7 @@
                   />
                 </div>
               </div>
-              <span class="font-medium md:font-semibold group-hover/item:font-bold group-hover/item:underline text-xs md:text-sm leading-tight text-center text-neutral-900 group-hover/item:text-primary transition-all duration-300 truncate max-w-full">
+              <span class="font-medium md:font-semibold group-hover/item:font-bold group-hover/item:underline text-xs md:text-sm leading-tight text-center text-neutral-900 group-hover/item:text-primary-500 transition-all duration-300 truncate max-w-full">
                 {{ cat.name }}
               </span>
             </NuxtLink>
@@ -67,13 +67,13 @@
     </section>
 
     <!-- ====== SECTION 1: YANGI KELGAN KITOBLAR (Piyola 1:1) ====== -->
-    <section v-if="newBooks.length > 0" class="py-4 md:py-6 lg:py-8">
+    <section v-if="newBooks.length > 0" class="py-4 md:py-6 lg:py-10">
       <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
-        <div class="flex justify-between items-center w-full px-1 max-md:mt-4 mb-3 md:mb-5 lg:mb-6">
+        <div class="flex justify-between items-center w-full px-1 max-md:mt-4 mb-3 md:mb-5 lg:mb-8">
           <h2 class="font-bold text-xl md:text-3xl leading-[100%] text-primary m-0 capitalize flex items-center gap-2">
             Yangi kelgan kitoblar
           </h2>
-          <NuxtLink to="/catalog?sort=new" class="text-sm font-semibold text-primary hover:underline flex items-center gap-1 no-underline">
+          <NuxtLink to="/catalog?sort=new" class="text-sm font-semibold text-primary hover:underline flex items-center gap-1">
             Barchasi
             <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
           </NuxtLink>
@@ -91,7 +91,7 @@
         <div class="flex justify-center">
           <NuxtLink
             to="/catalog?sort=new"
-            class="font-semibold items-center py-2.5 px-8 text-white bg-primary hover:bg-primary/90 h-12 flex justify-center sm:min-w-48 rounded-2xl text-base max-md:w-full no-underline transition-all shadow-md shadow-primary/10"
+            class="font-semibold items-center py-2.5 px-8 text-white bg-primary hover:bg-primary/90 h-12 flex justify-center min-w-48 rounded-2xl text-base max-md:w-full transition-all shadow-md"
           >
             Barchasini ko‘rish
           </NuxtLink>
@@ -100,13 +100,13 @@
     </section>
 
     <!-- ====== SECTION 2: TAVSIYA ETAMIZ ====== -->
-    <section v-if="recommendedBooks.length > 0" class="py-4 md:py-6 lg:py-8 bg-secondary-50/50">
+    <section v-if="recommendedBooks.length > 0" class="py-4 md:py-6 lg:py-10 bg-secondary-50">
       <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
-        <div class="flex justify-between items-center w-full px-1 max-md:mt-4 mb-3 md:mb-5 lg:mb-6">
+        <div class="flex justify-between items-center w-full px-1 max-md:mt-4 mb-3 md:mb-5 lg:mb-8">
           <h2 class="font-bold text-xl md:text-3xl leading-[100%] text-primary m-0 capitalize flex items-center gap-2">
             Tavsiya etamiz
           </h2>
-          <NuxtLink to="/catalog?sort=popular" class="text-sm font-semibold text-primary hover:underline flex items-center gap-1 no-underline">
+          <NuxtLink to="/catalog?sort=popular" class="text-sm font-semibold text-primary hover:underline flex items-center gap-1">
             Barchasi
             <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
           </NuxtLink>
@@ -124,7 +124,45 @@
         <div class="flex justify-center">
           <NuxtLink
             to="/catalog?sort=popular"
-            class="font-semibold items-center py-2.5 px-8 text-white bg-primary hover:bg-primary/90 h-12 flex justify-center sm:min-w-48 rounded-2xl text-base max-md:w-full no-underline transition-all shadow-md shadow-primary/10"
+            class="font-semibold items-center py-2.5 px-8 text-white bg-primary hover:bg-primary/90 h-12 flex justify-center min-w-48 rounded-2xl text-base max-md:w-full transition-all shadow-md"
+          >
+            Barchasini ko‘rish
+          </NuxtLink>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== KATEGORIYA QATORLARI (Piyola 1:1 — "Lyuks parfyum" /
+         "Original parfyum" kabi har bir kategoriya alohida qator) ====== -->
+    <section
+      v-for="cat in categoryRows"
+      :key="cat.category_id"
+      class="py-4 md:py-6 lg:py-10"
+    >
+      <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
+        <div class="flex justify-between items-center w-full px-1 mb-3 md:mb-5 lg:mb-8">
+          <h2 class="font-bold text-xl md:text-4xl leading-[100%] capitalize text-primary m-0">
+            {{ cat.name_uz }}
+          </h2>
+          <NuxtLink :to="`/catalog?category=${cat.category_id}`" class="text-sm font-semibold text-primary hover:underline flex items-center gap-1 shrink-0">
+            Barchasi
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
+          </NuxtLink>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 md:gap-4 lg:gap-5 mb-5">
+          <ProductCard
+            v-for="book in cat.books"
+            :key="'cat-' + cat.category_id + '-' + book.id"
+            :product="book"
+            type="book"
+          />
+        </div>
+
+        <div class="flex justify-center">
+          <NuxtLink
+            :to="`/catalog?category=${cat.category_id}`"
+            class="font-semibold items-center py-2.5 px-8 text-white bg-primary hover:bg-primary/90 h-12 flex justify-center min-w-48 rounded-2xl text-base max-md:w-full transition-all shadow-md"
           >
             Barchasini ko‘rish
           </NuxtLink>
@@ -146,6 +184,18 @@ const { data: homeRes } = await useFetch<any>(`${config.public.apiBase}/v1/kitob
 const { data: catRes } = await useFetch<any>(`${config.public.apiBase}/v1/kitobchi/search/categories`, {
   lazy: false
 })
+
+// 3. Fetch per-category product rows (Piyola'dagi "Lyuks parfyum" /
+// "Original parfyum" kabi nomlangan kategoriya qatorlari). Backend
+// kategoriyalarni avtomatik saralab, har biriga eng mos 10 ta mahsulot
+// biriktirib beradi (recommended -> haftalik sotuv -> yangi, fallback
+// zanjiri bilan) — bitta so'rov, N+1 muammosiz.
+const { data: catRowsRes } = await useFetch<any>(`${config.public.apiBase}/v1/kitobchi/products/books-by-category`, {
+  lazy: true,
+  query: { type: 'recommended', category_limit: 4, per_category: 10 }
+})
+
+const categoryRows = computed(() => catRowsRes.value?.data || [])
 
 const banners = computed(() => {
   const data = homeRes.value?.data || homeRes.value || {}
@@ -208,7 +258,7 @@ useHead({
   script: [
     {
       type: 'application/ld+json',
-      children: JSON.stringify({
+      innerHTML: JSON.stringify({
         '@context': 'https://schema.org',
         '@type': 'WebSite',
         name: 'Kitobchi Marketpleysi',

@@ -7,7 +7,7 @@
       @click.self="authStore.closeAuthModal()"
     >
       <!-- Modal Card -->
-      <div class="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl relative animate-in fade-in zoom-in duration-200">
+      <div class="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl relative auth-modal-pop-in">
         <button
           type="button"
           @click="authStore.closeAuthModal()"
@@ -23,7 +23,7 @@
           <h2 class="text-xl font-bold text-neutral-900 m-0">
             {{ step === 'phone' ? 'Tizimga kirish' : 'Kodni tasdiqlash' }}
           </h2>
-          <p class="text-sm text-neutral-500 mt-1 mb-0">
+          <p class="text-sm text-neutral-500 mt-1 mb-0!">
             {{ step === 'phone' ? 'Telefon raqamingizni kiriting' : `+${phone} raqamiga yuborilgan kodni kiriting` }}
           </p>
         </div>
@@ -32,8 +32,8 @@
         <form v-if="step === 'phone'" @submit.prevent="handleSendOtp" class="space-y-4">
           <div>
             <label class="block text-xs font-semibold text-neutral-700 uppercase mb-1">Telefon raqam</label>
-            <div class="flex items-center rounded-2xl bg-secondary-100 px-4 py-3 border border-secondary-200 focus-within:border-primary">
-              <span class="text-sm font-semibold text-neutral-600 mr-2">+998</span>
+            <div class="flex items-center rounded-2xl bg-secondary-100 px-4 py-3 border border-gray-200 focus-within:border-gray">
+              <span class="text-sm font-semibold text-neutral-600 me-2">+998</span>
               <input
                 v-model="phoneInput"
                 type="tel"
@@ -52,7 +52,7 @@
           <button
             type="submit"
             :disabled="loading"
-            class="w-full py-3.5 rounded-2xl bg-primary text-white font-semibold text-base hover:bg-primary/90 transition-colors border-none cursor-pointer disabled:opacity-50"
+            class="w-full py-3.5 rounded-2xl bg-primary text-white font-semibold text-base hover:bg-primary/90 transition-colors border-none cursor-pointer disabled:opacity-75"
           >
             {{ loading ? 'Yuborilmoqda...' : 'Kodni olish' }}
           </button>
@@ -68,7 +68,7 @@
               placeholder="123456"
               maxlength="6"
               required
-              class="w-full rounded-2xl bg-secondary-100 px-4 py-3.5 text-center text-xl font-bold tracking-widest text-neutral-900 border border-secondary-200 focus:border-primary outline-none"
+              class="w-full rounded-2xl bg-secondary-100 px-4 py-3.5 text-center text-xl font-bold tracking-widest text-neutral-900 border border-gray-200 focus:border-primary/20 outline-none"
             />
           </div>
 
@@ -79,7 +79,7 @@
           <button
             type="submit"
             :disabled="loading"
-            class="w-full py-3.5 rounded-2xl bg-primary text-white font-semibold text-base hover:bg-primary/90 transition-colors border-none cursor-pointer disabled:opacity-50"
+            class="w-full py-3.5 rounded-2xl bg-primary text-white font-semibold text-base hover:bg-primary/90 transition-colors border-none cursor-pointer disabled:opacity-75"
           >
             {{ loading ? 'Tekshirilmoqda...' : 'Kirish' }}
           </button>
@@ -87,7 +87,7 @@
           <button
             type="button"
             @click="step = 'phone'"
-            class="w-full py-2 text-xs font-medium text-neutral-500 hover:text-neutral-800 bg-transparent border-none cursor-pointer"
+            class="w-full py-2 text-xs font-medium text-neutral-500 hover:text-neutral-600 bg-transparent border-none cursor-pointer"
           >
             Raqamni o‘zgartirish
           </button>

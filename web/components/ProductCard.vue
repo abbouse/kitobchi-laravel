@@ -1,17 +1,48 @@
 <template>
   <div class="group relative flex flex-col rounded-xl bg-white border border-white hover:shadow-md transition-all duration-200 overflow-hidden">
-    <!-- Image with Aspect Ratio 232/309 -->
-    <div class="relative w-full rounded-xl bg-white" style="aspect-ratio: 232 / 309;">
-      <NuxtLink :to="productUrl" class="block w-full h-full">
-        <div class="w-full h-full rounded-xl overflow-hidden bg-gray-50 flex items-center justify-center">
-          <img
-            :src="imageSrc"
-            :alt="product.name"
-            class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-            loading="lazy"
-          />
-        </div>
-      </NuxtLink>
+    <!-- Image — piyola'dagi kabi bir nechta rasmni gorizontal swipe/snap
+         orqali ko'rsatadigan mini-karusel (Nuxt UI mavjud bo'lmagani
+         uchun toza CSS scroll-snap bilan qo'lda qurilgan). -->
+    <div class="relative w-full rounded-xl bg-white" style="aspect-ratio: 3 / 4;">
+      <div
+        ref="trackEl"
+        class="flex w-full h-full overflow-x-auto no-scrollbar snap-x snap-mandatory rounded-xl"
+        @scroll="onTrackScroll"
+      >
+        <NuxtLink
+          v-for="(img, idx) in images"
+          :key="idx"
+          :to="productUrl"
+          class="block w-full h-full shrink-0 snap-center"
+        >
+          <div class="w-full h-full rounded-xl overflow-hidden bg-gray-50 flex items-center justify-center">
+            <img
+              :src="img"
+              :alt="product.name"
+              class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+              :loading="idx === 0 ? 'lazy' : 'lazy'"
+            />
+          </div>
+        </NuxtLink>
+      </div>
+
+      <!-- Slide dots (faqat 1 tadan ortiq rasm bo'lsa) -->
+      <div
+        v-if="images.length > 1"
+        class="absolute bottom-1.5 inset-x-0 z-20 flex items-center justify-center gap-1 pointer-events-none"
+        aria-label="Rasmni tanlash"
+      >
+        <button
+          v-for="(img, idx) in images"
+          :key="idx"
+          type="button"
+          :aria-label="`${idx + 1}-rasm`"
+          class="pointer-events-auto rounded-full transition-all duration-300 border-none cursor-pointer p-0"
+          :class="idx === activeIndex ? 'w-3 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/70'"
+          style="box-shadow: 0 0 2px rgba(0,0,0,.35);"
+          @click.prevent="goToSlide(idx)"
+        ></button>
+      </div>
 
       <!-- Discount Pill -->
       <div v-if="discountPercent > 0" class="absolute bottom-1.5 left-1.5 md:bottom-2 md:left-2 z-20 inline-flex items-start flex-col gap-1 pointer-events-none">
@@ -28,7 +59,7 @@
             type="button"
             aria-label="Sevimlilar"
             @click.prevent="favStore.toggleFavorite(product, type)"
-            class="relative w-8 h-8 flex items-center justify-center rounded-full transition-all duration-300 hover:scale-110 active:scale-95 text-gray-500 hover:text-gray-900 border-none bg-transparent cursor-pointer"
+            class="relative w-8 h-8 flex items-center justify-center rounded-full transition-all duration-300 hover:scale-110 active:scale-95 text-gray-500 hover:text-neutral-600 border-none bg-transparent cursor-pointer"
           >
             <svg
               class="w-5 h-5 relative z-10 transition-colors"
@@ -46,7 +77,7 @@
 
     <!-- Product Info -->
     <div class="px-1 pt-4 pb-4 flex flex-col h-full grow">
-      <NuxtLink :to="productUrl" class="group/title grow no-underline">
+      <NuxtLink :to="productUrl" class="group grow">
         <div class="text-sm leading-snug line-clamp-2 transition-colors duration-300 group-hover:text-primary-600 text-neutral-900">
           {{ product.name }}
         </div>
@@ -91,35 +122,56 @@ const productUrl = computed(() => {
     : `/books/${props.product.id}-${slug}`
 })
 
-const imageSrc = computed(() => {
-  if (props.product.medium_images && props.product.medium_images[0]) {
-    return props.product.medium_images[0]
+function resolveImg(src: string) {
+  if (!src) return ''
+  return src.startsWith('http') || src.startsWith('data:') ? src : `/storage/${src}`
+}
+
+// Mahsulotning barcha rasmlari — piyoladagi kabi karusel uchun. Bir nechta
+// maydon nomi tekshiriladi (backend turli endpointlarda turlicha nomlagan),
+// birinchi mavjud bo'lgan RO'YXAT ishlatiladi (faqat bitta emas — hammasi).
+const images = computed(() => {
+  const p = props.product || {}
+  const lists = [p.medium_images, p.thumb_images, p.image_urls, p.images]
+  for (const list of lists) {
+    if (Array.isArray(list) && list.length > 0) {
+      const resolved = list.map(resolveImg).filter(Boolean)
+      if (resolved.length > 0) return resolved
+    }
   }
-  if (props.product.thumb_images && props.product.thumb_images[0]) {
-    return props.product.thumb_images[0]
+  if (p.first_image) {
+    return [resolveImg(p.first_image)]
   }
-  if (props.product.image_urls && props.product.image_urls[0]) {
-    return props.product.image_urls[0]
-  }
-  if (props.product.first_image) {
-    return props.product.first_image.startsWith('http')
-      ? props.product.first_image
-      : `/storage/${props.product.first_image}`
-  }
-  if (Array.isArray(props.product.images) && props.product.images[0]) {
-    const img = props.product.images[0]
-    return img.startsWith('http') ? img : `/storage/${img}`
-  }
-  return '/images/logo/logo_blue.png'
+  return ['/images/logo/logo_blue.png']
 })
 
+const trackEl = ref<HTMLElement | null>(null)
+const activeIndex = ref(0)
+let scrollRaf = 0
+
+function onTrackScroll() {
+  if (scrollRaf) cancelAnimationFrame(scrollRaf)
+  scrollRaf = requestAnimationFrame(() => {
+    const el = trackEl.value
+    if (!el || el.clientWidth === 0) return
+    activeIndex.value = Math.round(el.scrollLeft / el.clientWidth)
+  })
+}
+
+function goToSlide(idx: number) {
+  const el = trackEl.value
+  if (!el) return
+  el.scrollTo({ left: idx * el.clientWidth, behavior: 'smooth' })
+  activeIndex.value = idx
+}
+
+// Backend (ProductPayloadFormatter) har doim `discountPrice` (camelCase)
+// maydonini qaytaradi — kitob ham, stationery ham. `discount_price` faqat
+// xavfsizlik uchun fallback sifatida tekshiriladi.
 const currentPrice = computed(() => {
-  const isDisc = props.type === 'book'
-    ? (props.product.discountPrice > 0 && props.product.discountPrice < props.product.price)
-    : (props.product.discount_price > 0 && props.product.discount_price < props.product.price)
-  return isDisc
-    ? (props.type === 'book' ? props.product.discountPrice : props.product.discount_price)
-    : props.product.price
+  const discountPrice = props.product.discountPrice ?? props.product.discount_price ?? 0
+  const isDisc = discountPrice > 0 && discountPrice < props.product.price
+  return isDisc ? discountPrice : props.product.price
 })
 
 const discountPercent = computed(() => {

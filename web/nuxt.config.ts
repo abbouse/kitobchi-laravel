@@ -10,7 +10,8 @@ export default defineNuxtConfig({
   ],
 
   css: [
-    '~/assets/css/piyola.css'
+    '~/assets/css/piyola.css',
+    '~/assets/css/piyola-extra.css'
   ],
 
   runtimeConfig: {

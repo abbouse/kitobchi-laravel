@@ -24,11 +24,11 @@
     <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
       <!-- Breadcrumb (Desktop) -->
       <div class="flex items-center gap-2 mb-6 max-md:hidden">
-        <NuxtLink to="/catalog" class="rounded-full w-9 h-9 flex items-center justify-center transition-colors text-primary bg-secondary-200 hover:bg-secondary-300 shrink-0">
+        <NuxtLink to="/catalog" class="rounded-full w-9 h-9 flex items-center justify-center transition-colors text-primary bg-secondary-200 hover:bg-secondary-400 shrink-0">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
         </NuxtLink>
         <nav class="flex items-center gap-2 text-sm text-[#8F8FA1]">
-          <NuxtLink to="/" class="hover:text-neutral-900 transition-colors">Asosiy</NuxtLink>
+          <NuxtLink to="/" class="hover:text-neutral-600 transition-colors">Asosiy</NuxtLink>
           <span class="text-gray-300">/</span>
           <span class="text-neutral-900 font-semibold">Sevimlilar</span>
         </nav>
@@ -70,7 +70,7 @@
         </p>
         <NuxtLink
           to="/catalog"
-          class="inline-flex items-center px-8 py-3.5 rounded-2xl bg-primary text-white font-bold text-sm no-underline shadow-md hover:bg-primary/90 transition-colors"
+          class="inline-flex items-center px-8 py-3.5 rounded-2xl bg-primary text-white font-bold text-sm shadow-md hover:bg-primary/90 transition-colors"
         >
           Katalogga o‘tish
         </NuxtLink>

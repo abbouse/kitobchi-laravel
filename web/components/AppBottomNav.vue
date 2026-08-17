@@ -1,14 +1,14 @@
 <template>
   <!-- Floating Bottom Nav Pill (Piyola 1:1) -->
   <div class="fixed bottom-4 left-4 right-4 z-40 max-h-15 md:hidden pointer-events-none">
-    <div class="glass-card-bg rounded-full p-1 shadow-lg pointer-events-auto border border-white/60 bg-white/80 backdrop-blur-md">
+    <div class="glass-card-bg rounded-full p-1 shadow-lg pointer-events-auto border border-white/15 backdrop-blur-md">
       <div class="grid grid-cols-5 items-center gap-1">
         <!-- 1. Bosh sahifa -->
         <NuxtLink
           to="/"
           :class="[
             'flex flex-col items-center justify-center py-1.5 px-2 rounded-full transition-all text-xs font-medium',
-            $route.path === '/' ? 'bg-[#EDEDED] text-primary font-semibold' : 'text-neutral-600 hover:text-primary'
+            $route.path === '/' ? 'bg-[#EDEDED] text-primary font-semibold' : 'text-neutral-600 hover:text-primary/75'
           ]"
         >
           <svg class="w-5 h-5 mb-0.5" viewBox="0 0 24 24" fill="currentColor">
@@ -23,7 +23,7 @@
           to="/catalog"
           :class="[
             'flex flex-col items-center justify-center py-1.5 px-2 rounded-full transition-all text-xs font-medium',
-            $route.path.startsWith('/catalog') ? 'bg-[#EDEDED] text-primary font-semibold' : 'text-neutral-600 hover:text-primary'
+            $route.path.startsWith('/catalog') ? 'bg-[#EDEDED] text-primary font-semibold' : 'text-neutral-600 hover:text-primary/75'
           ]"
         >
           <svg class="w-5 h-5 mb-0.5" viewBox="0 0 24 24" fill="currentColor">
@@ -37,7 +37,7 @@
           to="/cart"
           :class="[
             'relative flex flex-col items-center justify-center py-1.5 px-2 rounded-full transition-all text-xs font-medium',
-            $route.path === '/cart' ? 'bg-[#EDEDED] text-primary font-semibold' : 'text-neutral-600 hover:text-primary'
+            $route.path === '/cart' ? 'bg-[#EDEDED] text-primary font-semibold' : 'text-neutral-600 hover:text-primary/75'
           ]"
         >
           <div class="relative">
@@ -57,7 +57,7 @@
           to="/favorites"
           :class="[
             'relative flex flex-col items-center justify-center py-1.5 px-2 rounded-full transition-all text-xs font-medium',
-            $route.path === '/favorites' ? 'bg-[#EDEDED] text-primary font-semibold' : 'text-neutral-600 hover:text-primary'
+            $route.path === '/favorites' ? 'bg-[#EDEDED] text-primary font-semibold' : 'text-neutral-600 hover:text-primary/75'
           ]"
         >
           <div class="relative">
@@ -77,7 +77,7 @@
           to="/profile"
           :class="[
             'flex flex-col items-center justify-center py-1.5 px-2 rounded-full transition-all text-xs font-medium',
-            $route.path === '/profile' ? 'bg-[#EDEDED] text-primary font-semibold' : 'text-neutral-600 hover:text-primary'
+            $route.path === '/profile' ? 'bg-[#EDEDED] text-primary font-semibold' : 'text-neutral-600 hover:text-primary/75'
           ]"
         >
           <i class="icon-profile text-lg mb-0.5"></i>

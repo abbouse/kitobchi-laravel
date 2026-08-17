@@ -3,16 +3,18 @@
     <!-- Backdrop -->
     <div
       v-if="isOpen"
-      class="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs transition-opacity duration-300"
+      class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs transition-opacity duration-300"
       @click="$emit('close')"
     ></div>
 
     <!-- Drawer Panel (PiyolaMarket 1:1) -->
+    <!-- MUHIM: translate-x-0 / -translate-x-full klasslari piyola.css'da
+         mavjud emas edi (Tailwind JIT bu loyihada faol emas) — shuning
+         uchun drawer hech qachon yashirinmasdi. Shu sabab inline style
+         orqali transform qo'lda boshqariladi. -->
     <div
-      :class="[
-        'fixed top-0 left-0 bottom-0 z-50 w-full max-w-md bg-white shadow-2xl transition-transform duration-300 flex flex-col',
-        isOpen ? 'translate-x-0' : '-translate-x-full'
-      ]"
+      class="fixed top-0 left-0 bottom-0 z-50 w-full max-w-md bg-white shadow-2xl transition-transform duration-300 flex flex-col"
+      :style="{ transform: isOpen ? 'translateX(0)' : 'translateX(-100%)' }"
     >
       <div class="p-4 border-b border-gray-100 flex items-center justify-between">
         <h2 class="text-lg font-bold text-primary m-0 flex items-center gap-2">
@@ -61,7 +63,7 @@
           :key="cat.id"
           :to="`/catalog?category=${cat.id}&type=${activeType}`"
           @click="$emit('close')"
-          class="flex items-center justify-between p-3 rounded-2xl hover:bg-secondary-50 transition-colors group no-underline text-neutral-800"
+          class="flex items-center justify-between p-3 rounded-2xl hover:bg-neutral-50 transition-colors group text-neutral-800"
         >
           <span class="text-sm font-medium group-hover:text-primary transition-colors">
             {{ cat.name || cat.name_uz }}
@@ -86,11 +88,12 @@ const activeType = ref<'book' | 'stationery'>('book')
 const config = useRuntimeConfig()
 
 const { data: categoriesData } = await useFetch<any>(`${config.public.apiBase}/v1/kitobchi/search/categories`, {
+  key: 'catalog-drawer-categories',
   lazy: true
 })
 
+// API javobi turkum bo'yicha kalitlangan: { data: { book: [...], stationery: [...] } }
 const filteredCategories = computed(() => {
-  const all = categoriesData.value?.categories || categoriesData.value?.data || []
-  return all
+  return categoriesData.value?.data?.[activeType.value] || []
 })
 </script>
