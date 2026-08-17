@@ -1,40 +1,45 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- Primary Color Background: Kitobchi #0b0342 -->
+  <!-- Kitobchi Primary Background (#0b0342) -->
   <rect width="512" height="512" rx="115" fill="#0b0342"/>
 
-  <!-- Organic Swallowtail Butterfly forming K -->
-  <!-- Upper Forewing: large, sweeps up-right -->
+  <!--
+    PAGES TO WINGS (KITOBCI K)
+    Designed for maximum 16x16px clarity:
+    1. Bold vertical spine bar (Book Spine / K Stem) on the left
+    2. Upper page/wing sweeping up-right
+    3. Lower page/wing sweeping down-right
+    4. Clean gap between wings forming sharp K negative space
+  -->
+
+  <!-- Left Vertical Spine (Book Spine / Stem of K) -->
+  <rect x="100" y="88" width="64" height="336" rx="32" fill="#FFFFFF"/>
+
+  <!-- Upper Wing / Page (Sweeps up and right with organic page curve) -->
   <path
-    d="M 168 258
-       C 185 220, 220 175, 266 145
-       C 308 116, 360 100, 408 96
-       C 432 94, 442 112, 428 136
-       C 406 174, 356 204, 300 226
-       C 258 242, 210 254, 168 258 Z"
+    d="M 172 256
+       C 172 190, 220 120, 310 96
+       C 350 85, 412 88, 412 128
+       C 412 165, 330 215, 256 238
+       C 220 250, 190 256, 172 256 Z"
     fill="#FFFFFF"
   />
 
-  <!-- Lower Hindwing: sweeps down-right with swallowtail tail -->
+  <!-- Lower Wing / Page (Sweeps down and right with matching page curve) -->
   <path
-    d="M 168 262
-       C 210 258, 258 268, 300 284
-       C 352 306, 400 336, 424 374
-       C 438 396, 430 416, 408 416
-       C 362 416, 310 390, 272 362
-       C 234 334, 208 298, 168 262 Z"
+    d="M 172 256
+       C 190 256, 220 262, 256 274
+       C 330 297, 412 347, 412 384
+       C 412 424, 350 427, 310 416
+       C 220 392, 172 322, 172 256 Z"
     fill="#FFFFFF"
   />
 
-  <!-- Swallowtail elegant pointed tail on hindwing -->
+  <!-- Secondary inner page detail line (subtle layer effect on upper wing) -->
   <path
-    d="M 370 392
-       C 384 408, 390 428, 378 440
-       C 366 452, 346 446, 340 430
-       C 334 416, 344 404, 358 400
-       C 364 398, 368 394, 370 392 Z"
-    fill="#FFFFFF"
+    d="M 210 210
+       C 250 168, 310 135, 370 120
+       C 340 152, 280 196, 225 228 Z"
+    fill="#0b0342"
+    opacity="0.15"
   />
-
-  <!-- Butterfly body / thorax dot at wing junction (K joint) -->
-  <circle cx="168" cy="260" r="10" fill="#FFFFFF"/>
 </svg>
