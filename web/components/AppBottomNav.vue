@@ -77,7 +77,7 @@
           to="/profile"
           :class="[
             'flex flex-col items-center justify-center py-1.5 px-2 rounded-full transition-all text-xs font-medium',
-            $route.path === '/profile' ? 'bg-[#EDEDED] text-primary font-semibold' : 'text-neutral-600 hover:text-primary/75'
+            $route.path.startsWith('/profile') ? 'bg-[#EDEDED] text-primary font-semibold' : 'text-neutral-600 hover:text-primary/75'
           ]"
         >
           <i class="icon-profile text-lg mb-0.5"></i>

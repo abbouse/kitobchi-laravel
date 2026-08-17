@@ -46,7 +46,7 @@ export const useAuthStore = defineStore('auth', () => {
       method: 'POST',
       body: {
         phone_number: phone,
-        code: code
+        verifyCode: code  // AuthController::store() expects 'verifyCode', not 'code'
       }
     })
 
