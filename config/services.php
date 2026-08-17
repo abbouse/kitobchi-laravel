@@ -129,4 +129,11 @@ return [
         'timeout' => (int) env('ESKIZ_TIMEOUT', 10),
     ],
 
+    'instagram' => [
+        'verify_token' => env('INSTAGRAM_VERIFY_TOKEN', 'kitobchi_sec_token_2026'),
+        'page_access_token' => env('INSTAGRAM_PAGE_ACCESS_TOKEN', ''),
+        'app_id' => env('INSTAGRAM_APP_ID', '3389748577867163'),
+        'app_secret' => env('INSTAGRAM_APP_SECRET', ''),
+    ],
+
 ];
