@@ -98,7 +98,14 @@ function renderCartPage() {
 
     const cart = kcCart || JSON.parse(localStorage.getItem('kc_cart') || '[]');
 
-    if (countEl) countEl.textContent = cart.length > 0 ? KC_CART_I18N.productsCount.replace(':count', cart.length) : '';
+    // MUHIM TUZATISH: avval bu yerda cart.length (FARQLI mahsulotlar soni)
+    // ishlatilardi, pastda esa totalCount (miqdorlar YIG'INDISI) — agar
+    // biror mahsulotning soni birdan ko'p bo'lsa, sarlavhadagi son
+    // ("1 ta mahsulot") pastdagi "2 ta mahsulot tanlandi" bilan mos
+    // kelmasdi. Endi hammasi bir xil — umumiy miqdor (barcha
+    // mahsulotlar, tanlanganidan qat'i nazar).
+    const kcCartTotalQty = cart.reduce((s, i) => s + (i.qty || 1), 0);
+    if (countEl) countEl.textContent = cart.length > 0 ? KC_CART_I18N.productsCount.replace(':count', kcCartTotalQty) : '';
 
     if (!cart || cart.length === 0) {
         container.innerHTML = `
@@ -145,8 +152,8 @@ function renderCartPage() {
                 <label class="flex items-start pt-1 cursor-pointer shrink-0">
                     <input type="checkbox" class="w-5 h-5 accent-primary cursor-pointer" ${isSelected ? 'checked' : ''} onchange="kcToggleItemSelect(${item.id}, this.checked)">
                 </label>
-                <div class="flex max-md:flex-col gap-4 md:gap-5 flex-1 min-w-0">
-                    <div class="w-full md:w-32 lg:w-40 xl:w-48 shrink-0 relative bg-neutral-100 rounded-xl overflow-hidden aspect-square flex items-center justify-center">
+                <div class="flex gap-3 md:gap-5 flex-1 min-w-0">
+                    <div class="w-[100px] h-[133px] md:w-32 md:h-32 lg:w-40 lg:h-40 xl:w-48 xl:h-48 shrink-0 relative bg-neutral-100 rounded-xl overflow-hidden flex items-center justify-center">
                         <img src="${item.image}" alt="${item.name}" class="w-full h-full object-cover">
                     </div>
                     <div class="flex-1 flex flex-col sm:justify-between py-2 gap-4 min-w-0">

@@ -142,6 +142,11 @@ return [
     'ai_recommendations_desc' => "Sun'iy intellekt shu mahsulot bilan o'xshash bo'lgan variantlarni tanladi",
     'similar_products_title' => "O'xshash mahsulotlar",
 
+    // Mahsulot haqida (tavsif bo'limi, product sahifasida)
+    'about_product_title' => 'Mahsulot haqida',
+    'about_product_expand' => "To'liq o'qish",
+    'about_product_collapse' => 'Qisqartirish',
+
     // Profile
     'profile_title' => 'Profil',
     'profile_orders' => 'Buyurtmalarim',

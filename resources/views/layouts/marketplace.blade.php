@@ -7,15 +7,6 @@
 
     <title>@yield('title', 'Kitobchi — Online kitoblar va kanselyariya marketpleysi')</title>
 
-    <!-- Favicon -->
-    <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
-    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon-32x32.png') }}">
-    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('favicon-16x16.png') }}">
-    <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
-    <link rel="manifest" href="{{ asset('site.webmanifest') }}">
-    <meta name="theme-color" content="#0065ca">
-    @include('partials.favicon-animation')
-
     @stack('meta')
 
     <!-- Preconnect fonts -->
@@ -669,10 +660,12 @@
     </div>
 
     <!-- ====== MOBILE BOTTOM NAV ======
-         Piyolamarketdagidek 4ta: Bosh sahifa / Katalog / Savatcha / Profil
-         (avval 5ta edi, "Sevimlilar" alohida tab sifatida bor edi — endi
-         sevimlilar header'dagi yurak ikonkasi va mahsulot kartalari orqali
-         qo'shiladi/ko'riladi, xuddi piyolamarketdagidek).
+         5ta: Bosh sahifa / Katalog / Savatcha / Sevimlilar / Profil —
+         desktop header'dagi bo'limlar bilan bir xil to'plam (pastga
+         qarang: bu yerda "Sevimlilar" bir muddat olib tashlangan edi,
+         lekin mobil header'da unga boshqa hech qanday kirish yo'li
+         bo'lmagani va shu tab uchun yozilgan JS/badge kodi hamon
+         ishlatilayotgani sababli qayta tiklandi).
          Mahsulot sahifasida bu panel butunlay yashiriladi — o'rniga
          pastda sticky "Buyurtma berish" paneli chiqadi. -->
     <nav class="kc-mobile-nav @if($kcIsProductPage) kc-nav-hidden @endif" style="align-items:stretch;">
@@ -702,6 +695,29 @@
                 <span id="kcCartBadgeMob" style="display:none;position:absolute;top:-6px;right:-6px;min-width:16px;height:16px;background:var(--color-tima-500);color:#fff;font-size:9px;font-weight:700;border-radius:9999px;align-items:center;justify-content:center;padding:0 2px;"></span>
             </div>
             <span>{{ __('marketplace.nav_cart') }}</span>
+        </a>
+
+        {{-- MUHIM TUZATISH: bu tab avvalroq "piyolamarketga o'xshatish"
+             maqsadida OLIB TASHLANGAN edi (yuqoridagi eski izohga qarang),
+             lekin pastdagi bumpFavBadge()/setFavBadge() JS funksiyalari
+             ("Mobil pastki navigatsiyadagi badge — doim DOM'da bor...")
+             hamon #kcFavBadgeMob elementini qidiradi — u yo'q bo'lgani
+             uchun bu kod HECH NARSA qilmay ishlayotgan edi. Bundan ham
+             muhimi: mobil header'da (faqat qidiruv satri) sevimlilarga
+             umuman boshqa kirish yo'li yo'q edi — ya'ni telefon
+             foydalanuvchisi o'z sevimlilar ro'yxatini HECH QAYERDAN topa
+             olmasdi, desktop'da esa u alohida tugma sifatida bor. Shu
+             sabab qayta tikladim — endi desktop bilan bir xil 5ta bo'lim. --}}
+        <a href="{{ route('web.favorites') }}"
+           class="flex flex-col items-center justify-center gap-[4px] py-2 bg-transparent text-gray-500 hover:text-green-500 transition-colors duration-300 {{ request()->routeIs('web.favorites') ? 'text-green-500' : '' }}"
+           style="flex:1;text-decoration:none;font-size:0.6875rem;font-weight:500;">
+            <div class="relative flex items-center justify-center">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                </svg>
+                <span id="kcFavBadgeMob" style="display:none;position:absolute;top:-6px;right:-6px;min-width:16px;height:16px;background:var(--color-tima-500);color:#fff;font-size:9px;font-weight:700;border-radius:9999px;align-items:center;justify-content:center;padding:0 2px;"></span>
+            </div>
+            <span>{{ __('marketplace.favorites') }}</span>
         </a>
 
         @auth

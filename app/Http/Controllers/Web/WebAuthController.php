@@ -129,15 +129,46 @@ class WebAuthController extends Controller
     {
         $user = Auth::user();
         if (!$user) {
-            return redirect()->route('welcome')->with('error', 'Iltimos, avval tizimga kiring.');
+            // MUHIM TUZATISH: jonli saytda /profile'ga mehmon (login
+            // qilmagan) holda kirilganda 500 chiqayotgani aniqlandi —
+            // brauzerda to'g'ridan-to'g'ri tekshirib ko'rdim. Bu yerdagi
+            // redirect()->route('welcome')->with(...) chaqiruvi (route
+            // nomini yechish yoki session'ga flash yozish) production'da
+            // biror sababga ko'ra istisno tashlayotganga o'xshaydi — aniq
+            // xato matni productiondagi log'sifz ko'rinmayapti (APP_DEBUG
+            // yoqilmagan / maxsus 500 sahifa bor). Shu sabab bu yerni
+            // try/catch bilan o'rab, eng oddiy (session'ga yozmaydigan,
+            // route nomini yechmaydigan) redirect('/') ga tushirib
+            // qo'ydim — bu qulash o'rniga hech bo'lmaganda foydalanuvchini
+            // bosh sahifaga qaytaradi.
+            try {
+                return redirect()->route('welcome')->with('error', 'Iltimos, avval tizimga kiring.');
+            } catch (\Throwable $e) {
+                report($e);
+                return redirect('/');
+            }
         }
 
-        $orders = Sold::where('user_id', $user->id)
-            ->orderByDesc('created_at')
-            ->take(20)
-            ->get();
+        // MUHIM TUZATISH: quyidagi ikkala so'rov ham try/catch bilan
+        // o'raldi — sababi yuqoridagi izohda tushuntirilgan (production'da
+        // /profile doim 500 berayotgani jonli saytda tasdiqlandi, lekin
+        // aniq sabab productiondagi log'siz ko'rinmayapti). Bitta
+        // buyurtma/manzil yozuvidagi kutilmagan holat butun sahifani
+        // qulatib qo'ymasligi uchun — xato bo'lsa report() orqali
+        // baribir log'ga yoziladi, foydalanuvchi esa bo'sh ro'yxat bilan
+        // bo'lsa ham sahifani ko'radi.
+        try {
+            $orders = Sold::where('user_id', $user->id)
+                ->orderByDesc('created_at')
+                ->take(20)
+                ->get();
 
-        $locations = Locations::where('user_id', $user->id)->where('isDeleted', false)->get();
+            $locations = Locations::where('user_id', $user->id)->where('isDeleted', false)->get();
+        } catch (\Throwable $e) {
+            report($e);
+            $orders = collect();
+            $locations = collect();
+        }
 
         // MUHIM: piyolamarket.uz'ning /profile sahifasida "Sharhlarim"
         // degan alohida bo'lim bor — foydalanuvchi yozgan sharhlari
@@ -162,7 +193,32 @@ class WebAuthController extends Controller
             $myReviews = collect();
         }
 
-        return view('user.profile', compact('user', 'orders', 'locations', 'myReviews'));
+        // MUHIM TUZATISH: oddiy `return view(...)` Blade shablonini
+        // DARHOL render qilmaydi (Laravel buni javob yuborilayotganda,
+        // controller'dan chiqib ketgandan KEYIN qiladi) — shu sabab
+        // shablon ICHIDA (masalan $user yoki $orders'ning kutilmagan
+        // holatida) yuz beradigan xato bu yerdagi try/catch'ga
+        // umuman tushmay, baribir 500 berardi. Endi ->render() orqali
+        // DARHOL shu yerda render qilinadi, shunday qilib xatoni ushlab,
+        // avval bo'sh ma'lumotlar bilan qayta urinib ko'ramiz (ehtimol
+        // xato faqat bitta noto'g'ri buyurtma/manzil yozuvida edi), u ham
+        // ishlamasa — hech bo'lmaganda report() orqali LOG'GA yoziladi.
+        try {
+            return response(view('user.profile', compact('user', 'orders', 'locations', 'myReviews'))->render());
+        } catch (\Throwable $e) {
+            report($e);
+            try {
+                return response(view('user.profile', [
+                    'user' => $user,
+                    'orders' => collect(),
+                    'locations' => collect(),
+                    'myReviews' => collect(),
+                ])->render());
+            } catch (\Throwable $e2) {
+                report($e2);
+                abort(500, "Profil sahifasini yuklab bo'lmadi.");
+            }
+        }
     }
 
     /**

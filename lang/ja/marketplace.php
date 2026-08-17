@@ -140,6 +140,11 @@ return [
     'ai_recommendations_desc' => 'AIがこの商品に似たアイテムを選びました',
     'similar_products_title' => '類似商品',
 
+    // 商品について（商品ページの説明セクション）
+    'about_product_title' => '商品について',
+    'about_product_expand' => 'もっと見る',
+    'about_product_collapse' => '折りたたむ',
+
     // Profile
     'profile_title' => 'プロフィール',
     'profile_orders' => '注文履歴',

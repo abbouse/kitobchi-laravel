@@ -140,6 +140,11 @@ return [
     'ai_recommendations_desc' => 'AI picked out items similar to this product',
     'similar_products_title' => 'Similar products',
 
+    // About the product (description section on product page)
+    'about_product_title' => 'About the product',
+    'about_product_expand' => 'Read more',
+    'about_product_collapse' => 'Show less',
+
     // Profile
     'profile_title' => 'Profile',
     'profile_orders' => 'My orders',

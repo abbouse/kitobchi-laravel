@@ -140,6 +140,11 @@ return [
     'ai_recommendations_desc' => 'Искусственный интеллект подобрал похожие на этот товар варианты',
     'similar_products_title' => 'Похожие товары',
 
+    // О товаре (описание на странице товара)
+    'about_product_title' => 'О товаре',
+    'about_product_expand' => 'Читать полностью',
+    'about_product_collapse' => 'Свернуть',
+
     // Profile
     'profile_title' => 'Профиль',
     'profile_orders' => 'Мои заказы',

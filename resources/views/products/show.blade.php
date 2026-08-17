@@ -487,7 +487,7 @@
         @if($ugcReviews->isNotEmpty())
             <section style="margin-top:2.5rem;">
                 <div style="display:flex;align-items:center;gap:0.625rem;margin-bottom:1.25rem;">
-                    <h2 style="font-size:clamp(1.25rem,3vw,1.75rem);font-weight:800;color:#111827;margin:0;">
+                    <h2 style="font-size:clamp(1.25rem,3vw,1.75rem);font-weight:600;color:var(--kc-primary,#0b0342);margin:0;">
                         {{ __('marketplace.reviews_title') }}
                     </h2>
                     <span style="font-size:1rem;font-weight:600;color:#9ca3af;">({{ $ugcReviews->count() }})</span>
@@ -559,49 +559,28 @@
             </section>
         @endif
 
-        <!-- ====== AI TAVSIYA ======
-             $aiRecommendations — mobil ilova (item.dart)dagi "AI tavsiya"
-             bilan bir xil mantiq: mahsulotning AI embedding'i (vectorData)
-             boshqalarnikiga kosinus o'xshashligi bo'yicha solishtirilib,
-             kategoriya/tag/muallif/matn signallari bilan kuchaytiriladi
-             (ProductCatalogController::aiRecommendedProducts()). Oddiy
-             "O'xshash mahsulotlar" ro'yxatidan farqlash uchun ataylab
-             boshqacha — gradient fon + robot ikonkasi bilan — chizilgan. -->
-        @if(($aiRecommendations ?? collect())->isNotEmpty())
-            <section style="margin-top:2.5rem;padding:1.5rem;border-radius:1.5rem;background:linear-gradient(135deg,rgba(124,58,237,0.06),rgba(16,185,129,0.06));border:1px solid rgba(124,58,237,0.12);">
-                <div style="display:flex;align-items:center;gap:0.625rem;margin-bottom:0.375rem;">
-                    <div style="width:2rem;height:2rem;border-radius:0.625rem;background:linear-gradient(135deg,#7c3aed,#10b981);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16"/><line x1="16" y1="16" x2="16" y2="16"/></svg>
+        <!-- ====== MAHSULOT HAQIDA (piyolamarket.uz uslubida) ======
+             Piyolada Sharhlar bo'limidan keyin, alohida "Mahsulot haqida"
+             degan bo'lim bor — mahsulotning to'liq tavsifi (uzun bo'lsa,
+             pastdan fade + "Batafsil ko'rib chiqing" tugmasi bilan
+             yig'ilgan holda). Bizda $product->description ALLAQACHON bor
+             edi, lekin faqat SEO meta teglarida ishlatilardi — sahifada
+             HECH QAYERDA ko'rsatilmasdi. Endi shu yerda chiqariladi. -->
+        @if(!empty(trim(strip_tags((string) $product->description))))
+            <section style="margin-top:2.5rem;">
+                <h2 style="font-size:clamp(1.25rem,3vw,1.75rem);font-weight:600;color:var(--kc-primary,#0b0342);margin:0 0 1rem;">
+                    {{ __('marketplace.about_product_title') }}
+                </h2>
+                <div style="position:relative;">
+                    <div id="kcProductDescBody" class="kc-product-desc-body" style="background:#fff;border:1px solid #f1f5f9;border-radius:1.25rem;padding:1.5rem;font-size:0.9375rem;line-height:1.75;color:#374151;max-height:9.5rem;overflow:hidden;">
+                        {!! $product->description !!}
                     </div>
-                    <h2 style="font-size:clamp(1.125rem,3vw,1.5rem);font-weight:800;color:#111827;margin:0;">
-                        {{ __('marketplace.ai_recommendations_title') }}
-                    </h2>
-                </div>
-                <p style="font-size:0.8125rem;color:#6b7280;margin:0 0 1.25rem;">{{ __('marketplace.ai_recommendations_desc') }}</p>
-                <div id="kcAiGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:0.5rem;">
-                    @foreach($aiRecommendations as $sim)
-                        @php
-                            $aiIsStationery = $productType === 'stationery';
-                            $aiSlug = \Illuminate\Support\Str::slug($sim->name);
-                            $aiUrl = $aiIsStationery
-                                ? route('web.stationery.show', ['id' => $sim->id, 'slug' => $aiSlug])
-                                : route('web.books.show', ['id' => $sim->id, 'slug' => $aiSlug]);
-                            $aiImg = $sim->first_image ? asset('storage/' . $sim->first_image) : asset('images/logo/logo_blue.png');
-                            $aiRawPrice = (float) $sim->price;
-                            $aiDiscRaw = $aiIsStationery ? (float) $sim->discount_price : (float) $sim->discountPrice;
-                            $aiIsDisc = $aiDiscRaw > 0 && $aiDiscRaw < $aiRawPrice;
-                            $aiPrice = $aiIsDisc ? $aiDiscRaw : $aiRawPrice;
-                        @endphp
-                        <a href="{{ $aiUrl }}" class="kc-product-card" style="background:#fff;">
-                            <div class="kc-product-card-img">
-                                <img src="{{ $aiImg }}" alt="{{ $sim->name }}" loading="lazy">
-                            </div>
-                            <div class="kc-product-card-body">
-                                <div class="kc-product-card-title">{{ $sim->name }}</div>
-                                <div class="kc-product-card-price">{{ number_format($aiPrice) }} {{ __('marketplace.currency') }}</div>
-                            </div>
-                        </a>
-                    @endforeach
+                    <div id="kcProductDescFade" style="position:absolute;left:0;right:0;bottom:0;height:5rem;background:linear-gradient(to bottom, rgba(255,255,255,0) 0%, #fff 85%);border-radius:0 0 1.25rem 1.25rem;pointer-events:none;"></div>
+                    <div style="text-align:center;margin-top:-0.5rem;position:relative;">
+                        <button type="button" id="kcProductDescToggle" onclick="kcToggleProductDesc()" style="background:#fff;color:#111827;padding:0.75rem 2rem;border-radius:9999px;font-weight:600;font-size:0.875rem;box-shadow:0 4px 16px rgba(15,23,42,0.14);border:1px solid #f1f5f9;cursor:pointer;">
+                            {{ __('marketplace.about_product_expand') }}
+                        </button>
+                    </div>
                 </div>
             </section>
         @endif
@@ -609,7 +588,7 @@
         <!-- ====== O'XSHASH MAHSULOTLAR ====== -->
         @if($similarProducts->isNotEmpty())
             <section style="margin-top:2.5rem;">
-                <h2 style="font-size:clamp(1.25rem,3vw,1.75rem);font-weight:800;color:#111827;margin:0 0 1rem;">
+                <h2 style="font-size:clamp(1.25rem,3vw,1.75rem);font-weight:600;color:var(--kc-primary,#0b0342);margin:0 0 1rem;">
                     {{ __('marketplace.similar_products_title') }}
                 </h2>
                 <div id="kcSimilarGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:0.5rem;">
@@ -757,13 +736,13 @@
 
 <style>
     @media(min-width: 640px) {
-        #kcSimilarGrid, #kcAiGrid { grid-template-columns: repeat(3, 1fr) !important; gap: 0.75rem !important; }
+        #kcSimilarGrid { grid-template-columns: repeat(3, 1fr) !important; gap: 0.75rem !important; }
     }
     @media(min-width: 1024px) {
-        #kcSimilarGrid, #kcAiGrid { grid-template-columns: repeat(4, 1fr) !important; gap: 1rem !important; }
+        #kcSimilarGrid { grid-template-columns: repeat(4, 1fr) !important; gap: 1rem !important; }
     }
     @media(min-width: 1280px) {
-        #kcSimilarGrid, #kcAiGrid { grid-template-columns: repeat(5, 1fr) !important; gap: 1.25rem !important; }
+        #kcSimilarGrid { grid-template-columns: repeat(5, 1fr) !important; gap: 1.25rem !important; }
     }
 
     /* "Bu menga mosmi?" bottom-sheet — mobil'da pastdan chiqadi (ilovadagi
@@ -934,6 +913,34 @@
         modal.classList.remove('active');
         document.body.style.overflow = '';
     }
+
+    // "Mahsulot haqida" — piyolamarket'dagi kabi uzun tavsiflar dastlab
+    // yig'ilgan (max-height + pastdan oq fade) holda ko'rsatiladi, "Batafsil
+    // ko'rib chiqing" bosilganda to'liq ochiladi. Agar tavsif QISQA bo'lib,
+    // umuman kesilmasa (scrollHeight <= clientHeight) — fade va tugma
+    // ko'rsatilmaydi, chunki "ko'proq ko'rsatish" uchun hech narsa yo'q.
+    function kcToggleProductDesc() {
+        const body = document.getElementById('kcProductDescBody');
+        const fade = document.getElementById('kcProductDescFade');
+        const btn = document.getElementById('kcProductDescToggle');
+        if (!body) return;
+        const isExpanded = body.style.maxHeight === 'none';
+        body.style.maxHeight = isExpanded ? '9.5rem' : 'none';
+        if (fade) fade.style.display = isExpanded ? 'block' : 'none';
+        if (btn) btn.textContent = isExpanded
+            ? @json(__('marketplace.about_product_expand'))
+            : @json(__('marketplace.about_product_collapse'));
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const body = document.getElementById('kcProductDescBody');
+        const fade = document.getElementById('kcProductDescFade');
+        const btn = document.getElementById('kcProductDescToggle');
+        if (body && body.scrollHeight <= body.clientHeight + 4) {
+            if (fade) fade.style.display = 'none';
+            if (btn) btn.style.display = 'none';
+        }
+    });
 </script>
 @endpush
 @endsection

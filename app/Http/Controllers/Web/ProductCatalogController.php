@@ -89,12 +89,6 @@ class ProductCatalogController extends Controller
             $ugcReviews = collect();
         }
 
-        try {
-            $aiRecommendations = $this->aiRecommendedProducts($book, 'book', 8);
-        } catch (\Throwable $e) {
-            $aiRecommendations = collect();
-        }
-
         // ── "Bu menga mosmi?" (moslik) kartasi — ilovadagi item.dart bilan
         // BIR XIL `ReadingIntelligenceService` orkestratori ishlatiladi
         // (yuqoridagi "AI tavsiya" — bu boshqa narsa: mahsulotga o'xshash
@@ -126,7 +120,6 @@ class ProductCatalogController extends Controller
             'schemas' => $schemas,
             'similarProducts' => $similarProducts,
             'ugcReviews' => $ugcReviews,
-            'aiRecommendations' => $aiRecommendations,
             'readingIntelligence' => $readingIntelligence,
             'appScheme' => $appScheme,
             'artikulScheme' => $artikulScheme,
@@ -406,12 +399,6 @@ class ProductCatalogController extends Controller
             $ugcReviews = collect();
         }
 
-        try {
-            $aiRecommendations = $this->aiRecommendedProducts($item, 'stationery', 8);
-        } catch (\Throwable $e) {
-            $aiRecommendations = collect();
-        }
-
         $canonicalUrl = route('web.stationery.show', ['id' => $item->id, 'slug' => $expectedSlug]);
         $seoService = app(\App\Services\SeoService::class);
         $schemas = $seoService->buildStationerySchemas($item, $canonicalUrl);
@@ -432,7 +419,6 @@ class ProductCatalogController extends Controller
             // uchun ishlaydi ("qiyinlik darajasi"/"kayfiyat" kanselyariya
             // buyumiga mos kelmaydi) — shuning uchun bu yerda doim null.
             'readingIntelligence' => null,
-            'aiRecommendations' => $aiRecommendations,
             'appScheme' => $appScheme,
             'artikulScheme' => $artikulScheme,
             'canonicalUrl' => $canonicalUrl,
