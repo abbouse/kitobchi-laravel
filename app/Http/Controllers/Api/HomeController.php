@@ -12,6 +12,39 @@ class HomeController extends Controller
     public function index(Request $request): JsonResponse
     {
         $limit = max(4, min(20, (int) $request->query('limit', 8)));
+        $user = auth('user')->user();
+        if (!$user) {
+            return \Illuminate\Support\Facades\Cache::remember("api_home_guest_{$limit}", 60, function () use ($request, $limit) {
+                $errors = [];
+                $countsPayload = $this->section('counts', fn () => app(UserController::class)->getGlobalCounts($request), $errors);
+                $newsPayload = $this->section('news', fn () => app(NewsController::class)->index($request), $errors);
+                $newProductsPayload = $this->section('new_products', fn () => app(ProductsController::class)->index($request, (string) $limit), $errors);
+                $recommendedPayload = $this->section('recommended_products', fn () => app(ProductsController::class)->recommendation($request, (string) $limit), $errors);
+                $sellersPayload = $this->section('sellers', fn () => app(ProductsController::class)->sellersWithLatestProducts($request), $errors);
+
+                $news = collect($newsPayload['data'] ?? [])->values();
+
+                return response()->json([
+                    'status' => 'success',
+                    'data' => [
+                        'counts' => $countsPayload['data'] ?? null,
+                        'news' => $news->all(),
+                        'top_banners' => $news->where('type', 'top_banner')->values()->all(),
+                        'center_banners' => $news->where('type', 'center_banner')->values()->all(),
+                        'new_products' => $newProductsPayload['data'] ?? [],
+                        'recommended_products' => $recommendedPayload['data'] ?? [],
+                        'recommendation_based_on' => $recommendedPayload['based_on'] ?? 'default',
+                        'sellers' => $sellersPayload['data'] ?? [],
+                    ],
+                    'errors' => $errors,
+                    'meta' => [
+                        'limit' => $limit,
+                        'generated_at' => now()->toIso8601String(),
+                    ],
+                ]);
+            });
+        }
+
         $errors = [];
 
         $countsPayload = $this->section('counts', fn () => app(UserController::class)->getGlobalCounts($request), $errors);

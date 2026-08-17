@@ -914,6 +914,14 @@ class ProductsController extends Controller
         $categoryLimit = max(3, min(12, (int) $request->query('category_limit', 6)));
         $perCategory = max(4, min(12, (int) $request->query('per_category', 10)));
 
+        $cacheKey = "api_books_by_cat_{$type}_{$page}_{$categoryLimit}_{$perCategory}";
+        if (!$user) {
+            $cached = \Illuminate\Support\Facades\Cache::get($cacheKey);
+            if ($cached !== null) {
+                return response()->json($cached);
+            }
+        }
+
         try {
             $allCategoryIds = $this->bookScope()
                 ->whereNotNull('category_id')
@@ -1069,7 +1077,7 @@ class ProductsController extends Controller
 
             usort($result, fn($a, $b) => count($b['books']) - count($a['books']));
 
-            return response()->json([
+            $payload = [
                 'status' => 'success',
                 'type'   => $type,
                 'data'   => $result,
@@ -1080,7 +1088,13 @@ class ProductsController extends Controller
                     'total_categories' => $totalCategories,
                     'has_more' => ($page * $categoryLimit) < $totalCategories,
                 ],
-            ]);
+            ];
+
+            if (!$user) {
+                \Illuminate\Support\Facades\Cache::put($cacheKey, $payload, 60);
+            }
+
+            return response()->json($payload);
         } catch (\Throwable $e) {
             Log::error('booksByCategory error', ['error' => $e->getMessage()]);
             return response()->json(['status' => 'error', 'message' => 'Server xatosi'], 500);
