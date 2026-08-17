@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400" width="1200" height="400">
+  <defs>
+    <!-- Dark canvas gradient -->
+    <linearGradient id="darkCanvas" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0F141C"/>
+      <stop offset="100%" stop-color="#080A0E"/>
+    </linearGradient>
+
+    <!-- Subtle Blue Accent -->
+    <linearGradient id="blueGlow" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#2980DD"/>
+      <stop offset="100%" stop-color="#469EF8"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="400" fill="url(#darkCanvas)"/>
+
+  <!-- ===== SECTION 1: JIDDIY RASMIY WORDMARK (EXECUTIVE MONOCHROME) ===== -->
+  <g transform="translate(80, 80)">
+    <!-- Small elegant Emblem K -->
+    <g transform="translate(0, 0) scale(0.14)">
+      <rect width="512" height="512" rx="115" fill="#2980DD"/>
+      <!-- Stem -->
+      <path d="M 132 88 C 114 88, 100 102, 98 120 C 84 196, 84 316, 98 392 C 100 410, 114 424, 132 424 C 148 424, 160 410, 156 392 C 144 316, 144 196, 156 120 C 160 102, 148 88, 132 88 Z" fill="#FFFFFF"/>
+      <!-- Wings -->
+      <path d="M 150 256 C 150 182, 206 112, 312 88 C 358 76, 420 82, 420 126 C 420 166, 338 216, 258 237 C 210 248, 178 256, 150 256 Z" fill="#FFFFFF"/>
+      <path d="M 150 256 C 178 256, 210 264, 258 275 C 338 296, 420 346, 420 386 C 420 430, 358 436, 312 424 C 206 400, 150 330, 150 256 Z" fill="#FFFFFF"/>
+    </g>
+
+    <!-- Executive Uppercase Serif / Sans Typography -->
+    <text x="95" y="46" font-family="'Urbanist', 'Cinzel', 'Trajan Pro', sans-serif" font-size="40" font-weight="800" letter-spacing="12" fill="#FFFFFF">
+      KITOBCI
+    </text>
+
+    <!-- Tagline line -->
+    <text x="96" y="68" font-family="'Urbanist', sans-serif" font-size="11" font-weight="600" letter-spacing="4" fill="#708090">
+      MARKETPLACE &amp; PUBLISHING
+    </text>
+  </g>
+
+  <!-- Divider -->
+  <line x1="80" y1="200" x2="1120" y2="200" stroke="#1E293B" stroke-width="1"/>
+
+  <!-- ===== SECTION 2: WATERMARK & BANNER ADAPTATION (ULTRA-CLEAN HORIZONTAL) ===== -->
+  <text x="80" y="235" font-family="'Urbanist', sans-serif" font-size="13" font-weight="700" letter-spacing="3" fill="#38BDF8">
+    WATERMARK &amp; BANNER NAMOUNALARI (O'TA JIDDIY VA SHAFFOF)
+  </text>
+
+  <!-- Demo 1: Banner / Photo Corner Watermark (White 40% Opacity) -->
+  <g transform="translate(80, 270)">
+    <rect width="480" height="90" rx="8" fill="#161E2E" stroke="#26334D"/>
+    <text x="20" y="30" font-family="'Urbanist', sans-serif" font-size="11" fill="#64748B">Rasm / Banner burchagida (40% Opacity)</text>
+
+    <!-- Watermark text -->
+    <g opacity="0.4" transform="translate(20, 48)">
+      <text font-family="'Urbanist', sans-serif" font-size="24" font-weight="900" letter-spacing="8" fill="#FFFFFF">
+        KITOBCI
+      </text>
+    </g>
+  </g>
+
+  <!-- Demo 2: Photo Center Seal Watermark (Minimal Outline) -->
+  <g transform="translate(640, 270)">
+    <rect width="480" height="90" rx="8" fill="#161E2E" stroke="#26334D"/>
+    <text x="20" y="30" font-family="'Urbanist', sans-serif" font-size="11" fill="#64748B">Kontur (Outline) Muhri — Rasmlarni yopib qo'ymaydi</text>
+
+    <!-- Outline Watermark text -->
+    <g opacity="0.5" transform="translate(20, 48)">
+      <text font-family="'Urbanist', sans-serif" font-size="24" font-weight="800" letter-spacing="6" fill="none" stroke="#FFFFFF" stroke-width="1.5">
+        KITOBCI.COM
+      </text>
+    </g>
+  </g>
+
+</svg>
