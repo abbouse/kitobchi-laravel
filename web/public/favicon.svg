@@ -1,86 +1,54 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
-  <defs>
-    <!-- Background Depth -->
-    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#05011D" />
-      <stop offset="50%" stop-color="#0A033D" />
-      <stop offset="100%" stop-color="#12065E" />
-    </linearGradient>
+  <!-- Solid Kitobchi Brand Navy Background -->
+  <rect width="512" height="512" rx="120" fill="#0B0342" />
 
-    <!-- Electric Sapphire Blue (Layer Depth) -->
-    <linearGradient id="sapphireGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#2D68FF" />
-      <stop offset="100%" stop-color="#5B8EFF" />
-    </linearGradient>
-
-    <!-- Pure Brilliant White (Front Faces) -->
-    <linearGradient id="whiteGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#FFFFFF" />
-      <stop offset="100%" stop-color="#EEF4FF" />
-    </linearGradient>
-
-    <!-- Subtle Drop Shadow -->
-    <filter id="shadow" x="-15%" y="-15%" width="130%" height="130%">
-      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.4" />
-    </filter>
-  </defs>
-
-  <!-- Squircle Base -->
-  <rect width="512" height="512" rx="124" fill="url(#bgGrad)" />
-
-  <!-- Ambient Glow -->
-  <circle cx="280" cy="240" r="160" fill="#2D68FF" opacity="0.22" filter="blur(28px)" />
-
-  <!-- ================= THE MASTERPIECE: SOARING WINGS K-BOOK ================= -->
-  <g filter="url(#shadow)">
-    <!-- BACK LAYER: Sapphire Blue Under-Wing / Under-Page (Adds 3D Layered Motion) -->
-    <!-- Upper Back Feather/Page -->
+  <!-- Soaring Humo Bird in Flight forming Letter 'K' in Pure White -->
+  <g fill="#FFFFFF">
+    <!-- Bird Body, Proud Arched Chest & Majestic Head/Crest (Dynamic Curved K Stem) -->
     <path
-      d="M 230 236
-         C 246 160, 298 90, 404 74
-         C 424 70, 436 92, 422 110
-         C 382 166, 308 214, 230 236 Z"
-      fill="url(#sapphireGrad)"
+      d="M 172 96
+         C 152 96, 138 112, 142 132
+         C 146 150, 154 164, 154 180
+         C 154 200, 136 218, 122 248
+         C 106 282, 108 326, 126 364
+         C 136 384, 150 404, 168 408
+         C 178 410, 186 398, 184 386
+         C 172 344, 172 300, 188 258
+         C 198 232, 204 202, 196 174
+         C 190 152, 182 132, 186 112
+         C 188 102, 182 96, 172 96 Z"
     />
 
-    <!-- Lower Back Feather/Page -->
+    <!-- Main Upper Soaring Wing (Airfoil & Flying Book Pages - Top Arm of K) -->
     <path
-      d="M 230 276
-         C 308 298, 382 346, 422 402
-         C 436 420, 424 442, 404 438
-         C 298 422, 246 352, 230 276 Z"
-      fill="url(#sapphireGrad)"
+      d="M 204 232
+         C 220 174, 268 114, 362 90
+         C 394 82, 412 106, 396 138
+         C 358 210, 274 238, 204 232 Z"
     />
 
-    <!-- FRONT LAYER: Pure White Soaring Wings / Open Pages -->
-    <!-- Left Vertical Spine Pillar (The Stem of K / Pillar of Wisdom) -->
-    <rect x="116" y="96" width="56" height="320" rx="28" fill="url(#whiteGrad)" />
-
-    <!-- Upper Main Flying Wing / Page (Top Arm of K) -->
+    <!-- Secondary Upper Feather (Layered Wing Tip) -->
     <path
-      d="M 194 246
-         C 206 182, 252 116, 358 102
-         C 388 98, 404 124, 388 154
-         C 346 226, 258 248, 194 246 Z"
-      fill="url(#whiteGrad)"
+      d="M 234 212
+         C 254 160, 304 104, 394 76
+         C 416 70, 428 90, 414 110
+         C 374 164, 302 202, 234 212 Z"
     />
 
-    <!-- Lower Main Flying Wing / Page (Bottom Arm of K) -->
+    <!-- Lower Wing / Flight Tail Feathers (Bottom Arm of K) -->
     <path
-      d="M 194 266
-         C 258 264, 346 286, 388 358
-         C 404 388, 388 414, 358 410
-         C 252 396, 206 330, 194 266 Z"
-      fill="url(#whiteGrad)"
+      d="M 204 268
+         C 264 262, 348 284, 392 354
+         C 408 382, 392 410, 360 408
+         C 268 400, 222 334, 204 268 Z"
     />
 
-    <!-- Center Fold Overlap Ribbon in Electric Accent Blue -->
+    <!-- Secondary Lower Tail Feather -->
     <path
-      d="M 164 228
-         C 188 228, 230 240, 250 256
-         C 230 272, 188 284, 164 284
-         Z"
-      fill="url(#sapphireGrad)"
+      d="M 234 288
+         C 292 292, 362 330, 408 396
+         C 422 416, 410 436, 388 434
+         C 304 424, 252 360, 234 288 Z"
     />
   </g>
 </svg>
