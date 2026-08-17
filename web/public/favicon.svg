@@ -1,44 +1,55 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
-  <!-- Clean White Background -->
-  <rect width="512" height="512" rx="120" fill="#FFFFFF" />
+  <!-- Kitobchi Brand Navy Background -->
+  <rect width="512" height="512" rx="120" fill="#0B0342" />
 
-  <!-- Outer Rounded Squircle Frame in Kitobchi Navy -->
-  <rect x="32" y="32" width="448" height="448" rx="110" fill="none" stroke="#0B0342" stroke-width="28" />
+  <!-- Masterclass Uzbek National Islimiy & Humo Wings 'K' Monogram in Pure White -->
+  <g fill="#FFFFFF">
+    <!-- Left Stem: Traditional Book Spine / Lavh Pillar with Islimiy Taper -->
+    <path
+      d="M 136 128
+         C 136 108, 150 94, 163 94
+         C 176 94, 190 108, 190 128
+         L 190 384
+         C 190 404, 176 418, 163 418
+         C 150 418, 136 404, 136 384
+         Z"
+    />
 
-  <!-- The Organic Growth Letter K (Stem + 3 Knowledge Leaves/Pages) -->
+    <!-- Top Wing: Soaring Humo Wing / Islimiy Bodomcha Leaf (Upper Arm of K) -->
+    <path
+      d="M 204 246
+         C 214 186, 252 118, 344 104
+         C 378 98, 396 118, 388 152
+         C 376 200, 316 238, 248 248
+         C 226 252, 212 250, 204 246 Z"
+    />
+
+    <!-- Bottom Wing: Oriental Islimiy Foundation Leaf (Lower Arm of K) -->
+    <path
+      d="M 204 266
+         C 212 262, 226 260, 248 264
+         C 316 274, 376 312, 388 360
+         C 396 394, 378 414, 344 408
+         C 252 394, 214 326, 204 266 Z"
+    />
+  </g>
+
+  <!-- Islimiy Ziyo Cutouts (Sharqona naqsh o'yig'i) in Background Navy -->
   <g fill="#0B0342">
-    <!-- Curved Central Stem (Arching upwards to the right) -->
+    <!-- Upper Wing Islimiy Bodom Cut -->
     <path
-      d="M 164 382
-         C 180 340, 240 260, 308 190
-         C 322 176, 330 184, 318 198
-         C 252 272, 198 348, 186 388
-         C 182 400, 160 394, 164 382 Z"
+      d="M 244 226
+         C 252 178, 282 136, 336 128
+         C 352 126, 360 138, 354 154
+         C 340 190, 292 218, 244 226 Z"
     />
 
-    <!-- Left Knowledge Leaf / Sprouting Page (Top-Left) -->
+    <!-- Lower Wing Islimiy Bodom Cut -->
     <path
-      d="M 174 274
-         C 126 270, 114 200, 148 138
-         C 158 120, 172 120, 180 138
-         C 214 204, 222 278, 174 274 Z"
-    />
-
-    <!-- Top-Right Knowledge Leaf / Soaring Page (Top-Right) -->
-    <path
-      d="M 264 266
-         C 246 220, 264 154, 336 130
-         C 356 124, 368 138, 388 156
-         C 400 166, 396 178, 382 192
-         C 328 248, 282 278, 264 266 Z"
-    />
-
-    <!-- Bottom-Right Knowledge Leaf / Foundation Page (Bottom-Right) -->
-    <path
-      d="M 244 334
-         C 260 292, 332 294, 390 326
-         C 414 340, 412 358, 392 374
-         C 342 414, 264 416, 244 334 Z"
+      d="M 244 286
+         C 292 294, 340 322, 354 358
+         C 360 374, 352 386, 336 384
+         C 282 376, 252 334, 244 286 Z"
     />
   </g>
 </svg>
