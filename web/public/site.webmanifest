@@ -1,0 +1,19 @@
+{
+  "name": "Kitobchi — Online Kitoblar va Kanselyariya Marketpleysi",
+  "short_name": "Kitobchi",
+  "icons": [
+    {
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "theme_color": "#0b0342",
+  "background_color": "#0b0342",
+  "display": "standalone"
+}
