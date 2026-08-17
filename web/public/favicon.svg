@@ -1,45 +1,64 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
-  <!-- Solid Kitobchi Brand Blue Background -->
+  <!-- Solid Kitobchi Brand Navy Background -->
   <rect width="512" height="512" rx="120" fill="#0B0342" />
 
-  <!-- The K-Butterfly Monogram in Solid Pure White -->
-  <g fill="#FFFFFF">
-    <!-- Left Spine / Butterfly Body (Solid K Stem) -->
-    <rect x="124" y="106" width="54" height="300" rx="27" />
+  <!-- Masterclass Creative K-Book: Ribbon Wing Origami -->
+  <!-- Upper Butterfly Wing / Flying Open Page (Top Arm of K) -->
+  <path
+    d="M 190 240
+       C 190 170, 230 110, 340 100
+       C 385 96, 412 130, 390 170
+       C 340 250, 240 260, 190 260
+       Z"
+    fill="#FFFFFF"
+  />
 
-    <!-- Upper Butterfly Wing (Top Arm of K) with Wing Cell Geometry -->
-    <path
-      d="M 198 250
-         C 208 184, 256 116, 356 108
-         C 390 106, 408 132, 392 164
-         C 348 238, 260 252, 198 250 Z"
-    />
+  <!-- Lower Butterfly Wing / Flowing Page (Bottom Arm of K) -->
+  <path
+    d="M 190 260
+       C 240 260, 340 270, 390 350
+       C 412 390, 385 424, 340 420
+       C 230 410, 190 350, 190 280
+       Z"
+    fill="#FFFFFF"
+  />
 
-    <!-- Lower Butterfly Wing (Bottom Arm of K) -->
-    <path
-      d="M 198 262
-         C 260 260, 348 274, 392 348
-         C 408 380, 390 406, 356 404
-         C 256 396, 208 328, 198 262 Z"
-    />
-  </g>
+  <!-- Vertical Book Spine (Stem of K) with Subtle Perspective Twist -->
+  <path
+    d="M 120 106
+       C 120 92, 134 82, 148 86
+       L 174 94
+       C 184 97, 190 106, 190 116
+       L 190 396
+       C 190 406, 184 415, 174 418
+       L 148 426
+       C 134 430, 120 420, 120 406
+       Z"
+    fill="#FFFFFF"
+  />
 
-  <!-- Butterfly Wing Cell Accents (Negative Space Cuts inside the Wings) -->
+  <!-- The Clever Optical Cut (Center Negative Space Fold revealing the Book & Butterfly Body) -->
   <g fill="#0B0342">
-    <!-- Upper Wing Inner Drop -->
+    <!-- Spine Separation Channel -->
+    <rect x="176" y="80" width="16" height="352" rx="8" />
+
+    <!-- Upper Wing Inner Petal (Butterfly Cell) -->
     <path
-      d="M 238 234
-         C 246 190, 278 148, 342 140
-         C 362 138, 368 152, 356 168
-         C 328 214, 276 228, 238 234 Z"
+      d="M 226 230
+         C 232 176, 268 136, 334 130
+         C 356 128, 368 144, 356 164
+         C 324 210, 268 226, 226 230 Z"
     />
 
-    <!-- Lower Wing Inner Drop -->
+    <!-- Lower Wing Inner Petal (Butterfly Cell) -->
     <path
-      d="M 238 278
-         C 276 284, 328 298, 356 344
-         C 368 360, 362 374, 342 372
-         C 278 364, 246 322, 238 278 Z"
+      d="M 226 290
+         C 268 294, 324 310, 356 356
+         C 368 376, 356 392, 334 390
+         C 268 384, 232 344, 226 290 Z"
     />
+
+    <!-- Center Fold Diamond Notch -->
+    <polygon points="184,260 214,242 244,260 214,278" />
   </g>
 </svg>
