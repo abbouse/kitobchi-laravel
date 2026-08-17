@@ -1,54 +1,48 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
-  <!-- Solid Kitobchi Brand Navy Background -->
-  <rect width="512" height="512" rx="120" fill="#0B0342" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Kitobchi Navy Background -->
+  <rect width="512" height="512" rx="115" fill="#0B0342"/>
 
-  <!-- Soaring Humo Bird in Flight forming Letter 'K' in Pure White -->
-  <g fill="#FFFFFF">
-    <!-- Bird Body, Proud Arched Chest & Majestic Head/Crest (Dynamic Curved K Stem) -->
-    <path
-      d="M 172 96
-         C 152 96, 138 112, 142 132
-         C 146 150, 154 164, 154 180
-         C 154 200, 136 218, 122 248
-         C 106 282, 108 326, 126 364
-         C 136 384, 150 404, 168 408
-         C 178 410, 186 398, 184 386
-         C 172 344, 172 300, 188 258
-         C 198 232, 204 202, 196 174
-         C 190 152, 182 132, 186 112
-         C 188 102, 182 96, 172 96 Z"
-    />
+  <!-- K SPINE: Left vertical white bar -->
+  <rect x="96" y="90" width="68" height="332" rx="34" fill="#FFFFFF"/>
 
-    <!-- Main Upper Soaring Wing (Airfoil & Flying Book Pages - Top Arm of K) -->
-    <path
-      d="M 204 232
-         C 220 174, 268 114, 362 90
-         C 394 82, 412 106, 396 138
-         C 358 210, 274 238, 204 232 Z"
-    />
+  <!--
+    UPPER WING (Forewing): Sweeps up-right from pivot point (164, 256)
+    Swallowtail forewing — large, elegant, pointed tip at upper-right
+  -->
+  <path
+    d="M 164 256
+       C 178 230, 202 190, 238 158
+       C 272 128, 318 104, 374 96
+       C 404 92, 418 112, 406 140
+       C 390 178, 340 210, 290 232
+       C 252 248, 210 256, 164 256 Z"
+    fill="#FFFFFF"
+  />
 
-    <!-- Secondary Upper Feather (Layered Wing Tip) -->
-    <path
-      d="M 234 212
-         C 254 160, 304 104, 394 76
-         C 416 70, 428 90, 414 110
-         C 374 164, 302 202, 234 212 Z"
-    />
+  <!--
+    LOWER WING (Hindwing): Sweeps down-right from same pivot point (164, 256)
+    Swallowtail hindwing — slightly smaller, with characteristic pointed tail tip
+  -->
+  <path
+    d="M 164 256
+       C 210 256, 252 264, 290 280
+       C 336 300, 382 328, 406 366
+       C 422 392, 408 416, 378 414
+       C 322 410, 268 378, 234 350
+       C 200 322, 178 290, 164 256 Z"
+    fill="#FFFFFF"
+  />
 
-    <!-- Lower Wing / Flight Tail Feathers (Bottom Arm of K) -->
-    <path
-      d="M 204 268
-         C 264 262, 348 284, 392 354
-         C 408 382, 392 410, 360 408
-         C 268 400, 222 334, 204 268 Z"
-    />
+  <!-- Swallowtail Tail Extension on lower wing (signature detail) -->
+  <path
+    d="M 330 390
+       C 338 398, 350 416, 342 428
+       C 334 440, 316 438, 304 424
+       C 298 416, 302 404, 314 400
+       C 320 398, 326 394, 330 390 Z"
+    fill="#FFFFFF"
+  />
 
-    <!-- Secondary Lower Tail Feather -->
-    <path
-      d="M 234 288
-         C 292 292, 362 330, 408 396
-         C 422 416, 410 436, 388 434
-         C 304 424, 252 360, 234 288 Z"
-    />
-  </g>
+  <!-- Tiny pivot dot at wing junction (thorax detail) -->
+  <circle cx="164" cy="256" r="8" fill="#FFFFFF"/>
 </svg>
