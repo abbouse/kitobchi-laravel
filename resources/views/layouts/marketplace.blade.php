@@ -364,8 +364,8 @@
 
 <div class="page-wrapper">
 
-    <!-- ====== STICKY HEADER ====== -->
-    <header class="layout-sticky-header py-4 bg-white max-md:rounded-b-2xl sticky top-0 z-50 transition-all duration-300 shadow-lg">
+    <!-- ====== STICKY HEADER (PiyolaMarket 1:1) ====== -->
+    <header class="@if(!request()->is('/')) max-md:hidden! @endif layout-sticky-header py-4 bg-white max-md:rounded-b-2xl sticky top-0 z-50 transition-all duration-300 shadow-sm">
         <div class="px-4 sm:px-6 lg:px-8 kc-container mx-auto relative w-full bg-transparent">
             <!-- Desktop Header -->
             <div class="hidden md:flex items-center justify-between w-full gap-6">
@@ -484,103 +484,106 @@
          Ijtimoiy tarmoqlar), dumaloq ijtimoiy tarmoq tugmalari (avval
          "liquidGlass" shisha effekt bor edi — piyolada oddiy tekis dumaloq
          tugmalar), va App Store/Google Play belgilari qo'shildi (avval
-         umuman yo'q edi). -->
-    <div>
-        <footer style="background:var(--color-tima-500);color:#fff;padding:3rem 0 2rem;">
-            <div class="kc-container">
-                <div style="display:grid;grid-template-columns:1fr;gap:2rem;">
-
-                    <!-- Brand -->
-                    <div>
-                        <a href="{{ url('/') }}" style="display:inline-flex;align-items:center;margin-bottom:0.75rem;">
-                            <img src="{{ asset('images/logo/logo_blue.png') }}" alt="Kitobchi" style="height:2rem;width:auto;filter:brightness(0) invert(1);">
+             <!-- ====== FOOTER (PiyolaMarket 1:1) ====== -->
+    <footer class="relative bg-primary text-white pt-12 md:pt-20 pb-28 md:pb-10 overflow-hidden">
+        <div class="kc-container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-10">
+                <!-- 1. Brand & Umumiy -->
+                <div>
+                    <div class="mb-4">
+                        <a href="{{ url('/') }}" class="inline-flex items-center">
+                            <img src="{{ asset('images/logo/logo_blue.png') }}" alt="Kitobchi" class="h-8 w-auto brightness-0 invert">
                         </a>
-                        <p style="color:rgba(255,255,255,0.6);font-size:0.8125rem;line-height:1.7;max-width:420px;margin:0;">
-                            {{ __('marketplace.footer_description') }}
-                        </p>
                     </div>
+                    <h3 class="font-bold text-lg md:text-xl mb-4 text-white">Umumiy</h3>
+                    <ul class="space-y-3 p-0 m-0 list-none">
+                        <li><a href="{{ route('legal.index') }}" class="text-white/80 hover:text-white hover:underline text-sm transition-colors">{{ __('marketplace.footer_about') }}</a></li>
+                        <li><a href="{{ route('contact.index') }}" class="text-white/80 hover:text-white hover:underline text-sm transition-colors">{{ __('marketplace.footer_contact') }}</a></li>
+                        <li><a href="{{ route('careers.index') }}" class="text-white/80 hover:text-white hover:underline text-sm transition-colors">{{ __('marketplace.footer_careers') }}</a></li>
+                    </ul>
+                </div>
 
-                    <!-- 4 columns -->
-                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:2rem;">
-
-                        <!-- Umumiy -->
-                        <div>
-                            <h3 style="font-size:1rem;font-weight:700;margin:0 0 1rem;">{{ __('marketplace.footer_general') }}</h3>
-                            <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:0.5rem;">
-                                <li><a href="{{ route('legal.index') }}" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.875rem;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">{{ __('marketplace.footer_about') }}</a></li>
-                                <li><a href="{{ route('contact.index') }}" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.875rem;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">{{ __('marketplace.footer_contact') }}</a></li>
-                                <li><a href="{{ route('careers.index') }}" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.875rem;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">{{ __('marketplace.footer_careers') }}</a></li>
-                            </ul>
-                        </div>
-
-                        <!-- Kataloglar -->
-                        <div>
-                            <h3 style="font-size:1rem;font-weight:700;margin:0 0 1rem;">{{ __('marketplace.footer_catalogs') }}</h3>
-                            <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:0.5rem;">
-                                <li><a href="{{ route('web.catalog') }}" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.875rem;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">{{ __('marketplace.footer_all_books') }}</a></li>
-                                <li><a href="{{ route('web.catalog', ['type' => 'stationery']) }}" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.875rem;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">{{ __('marketplace.footer_stationery') }}</a></li>
-                                @foreach($kcHeaderBookCategories->take(3) as $footerCat)
-                                    <li><a href="{{ route('web.catalog', ['category' => $footerCat->id]) }}" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.875rem;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">{{ $footerCat->name }}</a></li>
-                                @endforeach
-                                <li><a href="{{ route('web.catalog') }}" style="color:#fff;text-decoration:none;font-size:0.875rem;font-weight:600;display:inline-flex;align-items:center;gap:0.25rem;">{{ __('marketplace.footer_see_all') }} <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg></a></li>
-                            </ul>
-                        </div>
-
-                        <!-- Mijozlar xizmati -->
-                        <div>
-                            <h3 style="font-size:1rem;font-weight:700;margin:0 0 1rem;">{{ __('marketplace.footer_customer_service') }}</h3>
-                            <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:0.5rem;">
-                                <li><a href="{{ route('legal.terms') }}" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.875rem;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">{{ __('marketplace.footer_delivery') }}</a></li>
-                                <li><a href="{{ route('legal.terms') }}" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.875rem;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">{{ __('marketplace.footer_payments') }}</a></li>
-                                <li><a href="{{ route('legal.privacy') }}" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.875rem;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.7)'">{{ __('marketplace.footer_privacy') }}</a></li>
-                            </ul>
-                        </div>
-
-                        <!-- Ijtimoiy tarmoqlar -->
-                        <div>
-                            <h3 style="font-size:1rem;font-weight:700;margin:0 0 1rem;">{{ __('marketplace.footer_social') }}</h3>
-                            <div style="display:flex;gap:0.625rem;margin-bottom:1.25rem;">
-                                <a href="https://t.me/kitobchi" target="_blank" rel="noopener" aria-label="Telegram" style="width:2.25rem;height:2.25rem;border-radius:9999px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.22)'" onmouseout="this.style.background='rgba(255,255,255,0.12)'">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
-                                        <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12a12 12 0 0 0 12-12A12 12 0 0 0 12 0zm4.962 7.224c.1-.002.321.023.465.14a.5.5 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024q-.159.037-5.061 3.345q-.72.495-1.302.48c-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789q.04-.324.893-.663q5.247-2.286 6.998-3.014c3.332-1.386 4.025-1.627 4.476-1.635"/>
-                                    </svg>
-                                </a>
-                                <a href="https://instagram.com/kitobchi" target="_blank" rel="noopener" aria-label="Instagram" style="width:2.25rem;height:2.25rem;border-radius:9999px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.22)'" onmouseout="this.style.background='rgba(255,255,255,0.12)'">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
-                                        <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/>
-                                    </svg>
-                                </a>
-                            </div>
-                            <a href="tel:+998555120102" style="font-size:1.0625rem;font-weight:700;color:#fff;text-decoration:none;display:block;margin-bottom:1rem;">
-                                +998 55 512 01 02
+                <!-- 2. Kataloglar -->
+                <div>
+                    <h3 class="font-bold text-lg md:text-xl mb-4 text-white">Kataloglar</h3>
+                    <ul class="space-y-3 p-0 m-0 list-none">
+                        <li><a href="{{ route('web.catalog') }}" class="text-white/80 hover:text-white hover:underline text-sm transition-colors">{{ __('marketplace.footer_all_books') }}</a></li>
+                        <li><a href="{{ route('web.catalog', ['type' => 'stationery']) }}" class="text-white/80 hover:text-white hover:underline text-sm transition-colors">{{ __('marketplace.footer_stationery') }}</a></li>
+                        @foreach($kcHeaderBookCategories->take(3) as $footerCat)
+                            <li><a href="{{ route('web.catalog', ['category' => $footerCat->id]) }}" class="text-white/80 hover:text-white hover:underline text-sm transition-colors">{{ $footerCat->name }}</a></li>
+                        @endforeach
+                        <li>
+                            <a href="{{ route('web.catalog') }}" class="inline-flex items-center gap-1.5 text-white font-semibold text-sm hover:underline group">
+                                <span>{{ __('marketplace.footer_see_all') }}</span>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="group-hover:translate-x-1 transition-transform"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
                             </a>
-                            <div style="display:flex;flex-direction:column;gap:0.5rem;">
-                                <a href="https://apps.apple.com/uz/app/kitobchi/id6753818078" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;background:rgba(255,255,255,0.1);border-radius:0.625rem;text-decoration:none;color:#fff;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.18)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">
-                                    <svg width="16" height="16" viewBox="0 0 384 512" fill="white"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg>
-                                    <span style="font-size:0.75rem;">App Store</span>
-                                </a>
-                                <a href="https://play.google.com/store/apps/details?id=com.kitobchi.kitobchi" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;background:rgba(255,255,255,0.1);border-radius:0.625rem;text-decoration:none;color:#fff;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.18)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">
-                                    <svg width="16" height="16" viewBox="0 0 512 512" fill="white"><path d="M99.6 8.6C91 13.3 85.3 21.9 85.3 32.3v447.4c0 10.4 5.7 19 14.3 23.7l246.5-247.2L99.6 8.6zm275.2 254.9L318 322.4l-192.3 192.8 246.5-140.4c8.6-4.9 13.9-13.9 13.9-23.6s-5.3-18.7-13.9-23.6l-.4-.1zm0-11.4l58.2-58.6c8.6-4.9 13.9-13.9 13.9-23.6s-5.3-18.7-13.9-23.6L316.4 88.2 125 280.3l249.8 250z"/></svg>
-                                    <span style="font-size:0.75rem;">Google Play</span>
-                                </a>
-                            </div>
-                        </div>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- 3. Mijozlar xizmati -->
+                <div>
+                    <h3 class="font-bold text-lg md:text-xl mb-4 text-white">Mijozlar xizmati</h3>
+                    <ul class="space-y-3 p-0 m-0 list-none">
+                        <li><a href="{{ route('legal.terms') }}" class="text-white/80 hover:text-white hover:underline text-sm transition-colors">{{ __('marketplace.footer_delivery') }}</a></li>
+                        <li><a href="{{ route('legal.terms') }}" class="text-white/80 hover:text-white hover:underline text-sm transition-colors">{{ __('marketplace.footer_payments') }}</a></li>
+                        <li><a href="{{ route('legal.privacy') }}" class="text-white/80 hover:text-white hover:underline text-sm transition-colors">{{ __('marketplace.footer_privacy') }}</a></li>
+                    </ul>
+                </div>
+
+                <!-- 4. Ijtimoiy tarmoqlar, Telefon & App Badges -->
+                <div>
+                    <h3 class="font-bold text-lg md:text-xl mb-4 text-white">Ijtimoiy tarmoqlar</h3>
+                    <div class="flex items-center gap-3 mb-5">
+                        <a href="https://t.me/kitobchi" target="_blank" rel="noopener" aria-label="Telegram" class="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12a12 12 0 0 0 12-12A12 12 0 0 0 12 0zm4.962 7.224c.1-.002.321.023.465.14a.5.5 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024q-.159.037-5.061 3.345q-.72.495-1.302.48c-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789q.04-.324.893-.663q5.247-2.286 6.998-3.014c3.332-1.386 4.025-1.627 4.476-1.635"/></svg>
+                        </a>
+                        <a href="https://instagram.com/kitobchi" target="_blank" rel="noopener" aria-label="Instagram" class="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>
+                        </a>
+                        <a href="https://facebook.com" target="_blank" rel="noopener" aria-label="Facebook" class="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M9.101 23.691v-7.98H6.627v-3.667h2.474v-1.58c0-4.085 1.848-5.978 5.858-5.978c.401 0 .955.042 1.468.103a9 9 0 0 1 1.141.195v3.325a9 9 0 0 0-.653-.036a27 27 0 0 0-.733-.009c-.707 0-1.259.096-1.675.309a1.7 1.7 0 0 0-.679.622c-.258.42-.374.995-.374 1.752v1.297h3.919l-.386 2.103l-.287 1.564h-3.246v8.245C19.396 23.238 24 18.179 24 12.044c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.628 3.874 10.35 9.101 11.647"/></svg>
+                        </a>
+                        <a href="https://youtube.com" target="_blank" rel="noopener" aria-label="YouTube" class="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M23.498 6.186a3.02 3.02 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.02 3.02 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.02 3.02 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.02 3.02 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814M9.545 15.568V8.432L15.818 12z"/></svg>
+                        </a>
                     </div>
 
-                    <!-- Bottom copyright -->
-                    <div style="border-top:1px solid rgba(255,255,255,0.15);padding-top:1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
-                        <p style="color:rgba(255,255,255,0.5);font-size:0.8125rem;margin:0;">
-                            © {{ date('Y') }} Kitobchi. {{ __('marketplace.footer_rights') }}
-                        </p>
-                        <div style="display:flex;gap:1rem;">
-                            <a href="{{ route('legal.privacy') }}" style="color:rgba(255,255,255,0.5);font-size:0.8125rem;text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.5)'">{{ __('marketplace.footer_privacy_short') }}</a>
-                            <a href="{{ route('legal.terms') }}" style="color:rgba(255,255,255,0.5);font-size:0.8125rem;text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.5)'">{{ __('marketplace.footer_terms') }}</a>
-                        </div>
+                    <a href="tel:+998555120102" class="font-bold text-xl md:text-2xl text-white block mb-4 no-underline hover:text-white/90">
+                        +998 55 512 01 02
+                    </a>
+
+                    <div class="flex flex-wrap gap-2.5">
+                        <a href="https://apps.apple.com/uz/app/kitobchi/id6753818078" target="_blank" rel="noopener" class="inline-flex items-center gap-2 bg-black/90 hover:bg-black text-white rounded-xl px-3 py-2 transition-opacity no-underline">
+                            <svg width="18" height="18" viewBox="0 0 384 512" fill="white"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg>
+                            <div class="flex flex-col leading-tight">
+                                <span class="text-[9px] text-white/70">Yuklab olish</span>
+                                <span class="text-xs font-bold">App Store</span>
+                            </div>
+                        </a>
+                        <a href="https://play.google.com/store/apps/details?id=com.kitobchi.kitobchi" target="_blank" rel="noopener" class="inline-flex items-center gap-2 bg-black/90 hover:bg-black text-white rounded-xl px-3 py-2 transition-opacity no-underline">
+                            <svg width="18" height="18" viewBox="0 0 512 512" fill="white"><path d="M99.6 8.6C91 13.3 85.3 21.9 85.3 32.3v447.4c0 10.4 5.7 19 14.3 23.7l246.5-247.2L99.6 8.6zm275.2 254.9L318 322.4l-192.3 192.8 246.5-140.4c8.6-4.9 13.9-13.9 13.9-23.6s-5.3-18.7-13.9-23.6l-.4-.1zm0-11.4l58.2-58.6c8.6-4.9 13.9-13.9 13.9-23.6s-5.3-18.7-13.9-23.6L316.4 88.2 125 280.3l249.8 250z"/></svg>
+                            <div class="flex flex-col leading-tight">
+                                <span class="text-[9px] text-white/70">Yuklab olish</span>
+                                <span class="text-xs font-bold">Google Play</span>
+                            </div>
+                        </a>
                     </div>
                 </div>
             </div>
-        </footer>
-    </div>
+
+            <!-- Bottom copyright -->
+            <div class="border-t border-white/15 mt-10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-white/60">
+                <p class="m-0 text-center sm:text-left">
+                    © {{ date('Y') }} Kitobchi. {{ __('marketplace.footer_rights') }}
+                </p>
+                <div class="flex items-center gap-4">
+                    <a href="{{ route('legal.privacy') }}" class="text-white/60 hover:text-white text-xs transition-colors">{{ __('marketplace.footer_privacy_short') }}</a>
+                    <a href="{{ route('legal.terms') }}" class="text-white/60 hover:text-white text-xs transition-colors">{{ __('marketplace.footer_terms') }}</a>
+                </div>
+            </div>
+        </div>
+    </footer>
 
     <!-- ====== KATALOGLAR DRAWER ======
          Piyolamarket.uz'dagi kabi: "Kataloglar" bosilganda chapdan chiqadigan

@@ -18,11 +18,28 @@
 @endpush
 
 @section('content')
-<div class="py-6 min-h-dvh">
+<div class="py-4 md:py-6 min-h-dvh grow">
+    <!-- ====== MOBILE TOP BAR (PiyolaMarket 1:1) ====== -->
+    <div class="md:hidden py-3 rounded-b-2xl mb-4 bg-white sticky top-0 z-40 transition-all duration-300">
+        <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
+            <div class="grid grid-cols-5 items-center gap-2">
+                <div class="col-span-1">
+                    <a href="javascript:history.back()" class="font-medium inline-flex items-center text-base gap-2 text-primary p-2 rounded-full bg-secondary-100 hover:bg-primary/10 transition-colors">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
+                    </a>
+                </div>
+                <div class="col-span-3">
+                    <h1 class="text-xl sm:text-2xl text-primary font-semibold text-center m-0">{{ __('marketplace.profile_title') }}</h1>
+                </div>
+                <div class="col-span-1 flex justify-end"></div>
+            </div>
+        </div>
+    </div>
+
     <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
 
-        <!-- ====== BREADCRUMBS ====== -->
-        <div class="flex items-center gap-2 mb-6">
+        <!-- ====== BREADCRUMBS (Desktop) ====== -->
+        <div class="flex items-center gap-2 mb-6 max-md:hidden">
             <a href="{{ route('web.catalog') }}" class="rounded-full w-9 h-9 flex items-center justify-center transition-colors text-primary bg-secondary-200 hover:bg-secondary-300 shrink-0" title="{{ __('marketplace.back_to_catalog') }}">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
             </a>
@@ -39,7 +56,7 @@
 
         <div class="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6 items-start" id="kcProfileGrid">
             <!-- Sidebar: user card + tab navigation (PiyolaMarket 1:1) -->
-            <div class="bg-white rounded-3xl p-5 border border-secondary-100 shadow-sm sticky top-24 flex flex-col gap-4">
+            <div class="bg-secondary-50 md:bg-secondary-50 rounded-3xl p-4 md:p-6 border border-secondary-100 sticky top-24 flex flex-col gap-4">
                 <div class="flex items-center gap-3 pb-4 border-b border-secondary-100">
                     <div class="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center text-lg font-bold shrink-0">
                         {{ strtoupper(substr($user->name ?: $user->phone_number, 0, 1)) }}
