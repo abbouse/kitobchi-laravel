@@ -1,80 +1,18 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
-  <defs>
-    <!-- Background Gradient (Kitobchi Midnight Sapphire Depth) -->
-    <linearGradient id="kbBg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#05011F" />
-      <stop offset="45%" stop-color="#0B0342" />
-      <stop offset="100%" stop-color="#180D70" />
-    </linearGradient>
+  <!-- Pure Flat Kitobchi Brand Blue Background -->
+  <rect width="512" height="512" rx="120" fill="#0B0342" />
 
-    <!-- Top Rim Highlight -->
-    <linearGradient id="kbRim" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.35" />
-      <stop offset="40%" stop-color="#3875FF" stop-opacity="0.2" />
-      <stop offset="100%" stop-color="#000000" stop-opacity="0" />
-    </linearGradient>
+  <!-- The Minimalist K-Book Glyph in Solid Pure White -->
+  <g fill="none" stroke="#FFFFFF" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Spine (Vertical Stem) -->
+    <line x1="148" y1="116" x2="148" y2="396" stroke-width="56" />
 
-    <!-- Page Shading Gradient -->
-    <linearGradient id="pageTop" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#FFFFFF" />
-      <stop offset="100%" stop-color="#EDF3FF" />
-    </linearGradient>
-    <linearGradient id="pageBot" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#FFFFFF" />
-      <stop offset="100%" stop-color="#D9E6FF" />
-    </linearGradient>
-
-    <!-- Center Fold Electric Accent -->
-    <linearGradient id="foldAccent" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#2B66FF" />
-      <stop offset="100%" stop-color="#598EFF" />
-    </linearGradient>
-
-    <!-- Ambient Shadow Filter -->
-    <filter id="drop" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#000000" flood-opacity="0.45" />
-    </filter>
-  </defs>
-
-  <!-- Squircle Base -->
-  <rect width="512" height="512" rx="128" fill="url(#kbBg)" />
-
-  <!-- Outer Rim Stroke -->
-  <rect x="3" y="3" width="506" height="506" rx="126" fill="none" stroke="url(#kbRim)" stroke-width="3" />
-
-  <!-- Center Ambient Radial Light -->
-  <circle cx="270" cy="256" r="160" fill="#265CFF" opacity="0.25" filter="blur(25px)" />
-
-  <!-- ================= THE K-BOOK MONOGRAM ================= -->
-  <g filter="url(#drop)">
-    <!-- Left Book Spine Pillar (Bold Vertical Stem of K) -->
-    <rect x="116" y="106" width="54" height="300" rx="27" fill="url(#pageTop)" />
-
-    <!-- Upper Flying Page (Top Wing of K) -->
+    <!-- Open Book Dynamic Pages (Arms of K) -->
     <path
-      d="M 198 256
-         C 206 196, 252 124, 354 112
-         C 386 108, 404 134, 388 164
-         C 346 238, 258 256, 198 256 Z"
-      fill="url(#pageTop)"
-    />
-
-    <!-- Lower Flying Page (Bottom Wing of K) -->
-    <path
-      d="M 198 256
-         C 258 256, 346 274, 388 348
-         C 404 378, 386 404, 354 400
-         C 252 388, 206 316, 198 256 Z"
-      fill="url(#pageBot)"
-    />
-
-    <!-- Origami Center Fold & Dynamic Bookmark Ribbon Connection -->
-    <path
-      d="M 166 226
-         C 192 226, 234 238, 254 256
-         C 234 274, 192 286, 166 286
-         Z"
-      fill="url(#foldAccent)"
+      d="M 364 138
+         C 310 160, 240 200, 204 256
+         C 240 312, 310 352, 364 374"
+      stroke-width="56"
     />
   </g>
 </svg>
