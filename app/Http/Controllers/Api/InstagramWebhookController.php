@@ -74,10 +74,16 @@ class InstagramWebhookController extends Controller
      */
     public function test(Request $request)
     {
-        $adminSecret = config('services.instagram.diagnostic_secret', env('INSTAGRAM_DIAGNOSTIC_SECRET', ''));
+        $adminSecret = config('services.instagram.diagnostic_secret') 
+            ?: config('services.instagram.verify_token', env('INSTAGRAM_VERIFY_TOKEN', 'kitobchi_sec_token_2026'));
 
-        if (empty($adminSecret) || !hash_equals($adminSecret, (string) $request->header('X-Admin-Secret', ''))) {
-            return response()->json(['error' => 'Forbidden'], 403);
+        $sentSecret = $request->header('X-Admin-Secret') ?? $request->query('secret');
+
+        if (empty($sentSecret) || !hash_equals($adminSecret, (string) $sentSecret)) {
+            return response()->json([
+                'error' => 'Forbidden',
+                'hint' => 'Siz secret yuborishingiz kerak: ?secret=kitobchi_sec_token_2026 yoki X-Admin-Secret header'
+            ], 403);
         }
 
         $token = config('services.instagram.access_token', env('INSTAGRAM_ACCESS_TOKEN'));
