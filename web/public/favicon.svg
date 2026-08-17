@@ -10,6 +10,13 @@
       <stop offset="0%" stop-color="#195498" stop-opacity="0.35"/>
       <stop offset="100%" stop-color="#2980DD" stop-opacity="0.0"/>
     </linearGradient>
+
+    <!-- Book Spine Vertical Crease Gradient -->
+    <linearGradient id="spineCrease" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#195498" stop-opacity="0.25"/>
+      <stop offset="50%" stop-color="#2980DD" stop-opacity="0.0"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.3"/>
+    </linearGradient>
   </defs>
 
   <!-- Background: Kitobchi App Primary Blue (#2980DD) -->
@@ -17,6 +24,9 @@
 
   <!-- Left Vertical Book Spine (K Stem) -->
   <rect x="96" y="88" width="64" height="336" rx="32" fill="#FFFFFF"/>
+
+  <!-- VARIANT B: Book Spine Vertical Crease (Hardcover Book Fold Shadow) -->
+  <rect x="122" y="104" width="8" height="304" rx="4" fill="#195498" opacity="0.18"/>
 
   <!-- ===== UPPER WING (Multi-layered Book Pages) ===== -->
   <!-- Base Outer Wing -->
@@ -49,7 +59,6 @@
     fill="#FFFFFF"
     opacity="0.9"
   />
-
 
   <!-- ===== LOWER WING (Multi-layered Book Pages) ===== -->
   <!-- Base Outer Wing -->
