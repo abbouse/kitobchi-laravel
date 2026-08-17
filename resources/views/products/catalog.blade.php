@@ -1,9 +1,45 @@
 @extends('layouts.marketplace')
 
-@section('title', 'Kitoblar va Mahsulotlar Katalogi | Kitobchi')
+@php
+    if ($currentCategory) {
+        $dynamicTitle = $currentCategory->name . ' — Kitoblar Katalogi | Kitobchi';
+        $dynamicDesc = $currentCategory->name . " bo'limidagi barcha original kitoblar va mahsulotlar. Tezkor yetkazib berish va arzon narxlar Kitobchi marketpleysida.";
+        $canonicalCatalogUrl = route('web.catalog', array_filter(['category' => $currentCategory->id, 'type' => $type !== 'book' ? $type : null]));
+    } elseif ($search) {
+        $dynamicTitle = 'Qidiruv: ' . $search . ' — Kitobchi';
+        $dynamicDesc = '"' . $search . '" bo\'yicha qidiruv natijalari Kitobchi marketpleysida.';
+        $canonicalCatalogUrl = route('web.catalog');
+    } elseif ($type === 'stationery') {
+        $dynamicTitle = 'Kanselyariya Mahsulotlari Katalogi | Kitobchi';
+        $dynamicDesc = "Kitobchi'da sifatli daftarlar, ruchkalar, qalamlar va barcha kanselyariya mahsulotlarini qulay narxlarda xarid qiling.";
+        $canonicalCatalogUrl = route('web.catalog', ['type' => 'stationery']);
+    } else {
+        $dynamicTitle = 'Kitoblar va Mahsulotlar Katalogi | Kitobchi';
+        $dynamicDesc = "Kitobchi'da barcha original kitoblar, darsliklar va badiiy adabiyotlarni toping. Qulay filtrlar, tezkor yetkazib berish.";
+        $canonicalCatalogUrl = route('web.catalog');
+    }
+@endphp
+
+@section('title', $dynamicTitle)
 
 @push('meta')
-<meta name="description" content="Kitobchi'da barcha original kitoblar, darsliklar va kanselyariya mahsulotlarini toping. Qulay filtrlar, tezkor yetkazib berish.">
+    @php
+        $catalogBreadcrumbs = [
+            ['name' => __('marketplace.breadcrumb_home'), 'url' => url('/')],
+            ['name' => __('marketplace.catalog'), 'url' => route('web.catalog')],
+        ];
+        if ($currentCategory) {
+            $catalogBreadcrumbs[] = ['name' => $currentCategory->name, 'url' => $canonicalCatalogUrl];
+        }
+    @endphp
+    @include('partials.seo-social', [
+        'title' => $dynamicTitle,
+        'description' => $dynamicDesc,
+        'canonical' => $canonicalCatalogUrl,
+        'robots' => request()->filled('search') ? 'noindex, follow' : 'index, follow',
+        'ogType' => 'website',
+        'breadcrumbs' => $catalogBreadcrumbs,
+    ])
 @endpush
 
 @section('content')

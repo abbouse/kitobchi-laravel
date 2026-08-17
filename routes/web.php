@@ -99,6 +99,7 @@ Route::get('/robots.txt', [\App\Http\Controllers\Web\ProductCatalogController::c
 Route::post('/auth/send-code', [\App\Http\Controllers\Web\WebAuthController::class, 'sendCode'])->name('web.auth.send_code');
 Route::post('/auth/verify-code', [\App\Http\Controllers\Web\WebAuthController::class, 'verifyCode'])->name('web.auth.verify_code');
 Route::get('/profile', [\App\Http\Controllers\Web\WebAuthController::class, 'profile'])->name('web.profile');
+Route::post('/profile/update', [\App\Http\Controllers\Web\WebAuthController::class, 'updateProfile'])->name('web.profile.update');
 Route::post('/profile/location', [\App\Http\Controllers\Web\WebAuthController::class, 'addLocation'])->name('web.profile.location.add');
 Route::delete('/profile/location/{id}', [\App\Http\Controllers\Web\WebAuthController::class, 'deleteLocation'])->name('web.profile.location.delete');
 Route::post('/profile/location/{id}/main', [\App\Http\Controllers\Web\WebAuthController::class, 'setMainLocation'])->name('web.profile.location.main');

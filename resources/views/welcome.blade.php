@@ -3,7 +3,12 @@
 @section('title', 'Kitobchi — Online kitoblar marketpleysi')
 
 @push('meta')
-<meta name="description" content="Kitobchi — original kitoblar, darsliklar va badiiy adabiyotlarni onlayn xarid qiling. O'zbekiston bo'ylab tezkor yetkazib berish.">
+    @include('partials.seo-social', [
+        'title' => 'Kitobchi — Online kitoblar va kanselyariya marketpleysi',
+        'description' => "Kitobchi — barcha original kitoblar, badiiy adabiyotlar, darsliklar va kanselyariya mahsulotlari marketpleysi. O'zbekiston bo'ylab tezkor yetkazib berish.",
+        'canonical' => url('/'),
+        'ogType' => 'website',
+    ])
 @endpush
 
 @section('content')

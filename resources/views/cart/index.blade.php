@@ -2,6 +2,10 @@
 
 @section('title', 'Savatcha — Kitobchi')
 
+@push('meta')
+<meta name="robots" content="noindex, follow">
+@endpush
+
 @section('content')
 <div class="py-6 min-h-dvh">
     <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
@@ -54,14 +58,19 @@
 
     function kcGetCart() {
         try {
-            return JSON.parse(localStorage.getItem('cart')) || [];
+            if (typeof kcCart !== 'undefined' && Array.isArray(kcCart) && kcCart.length > 0) {
+                return kcCart;
+            }
+            const data = localStorage.getItem('kc_cart') || localStorage.getItem('cart');
+            return data ? JSON.parse(data) : [];
         } catch (e) {
             return [];
         }
     }
 
     function kcSetCart(cart) {
-        localStorage.setItem('cart', JSON.stringify(cart));
+        if (typeof kcCart !== 'undefined') kcCart = cart;
+        localStorage.setItem('kc_cart', JSON.stringify(cart));
         if (typeof updateBadges === 'function') updateBadges();
     }
 

@@ -2,6 +2,10 @@
 
 @section('title', "Sevimlilar | Kitobchi")
 
+@push('meta')
+<meta name="robots" content="noindex, follow">
+@endpush
+
 @section('content')
 <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto py-6 rounded-t-2xl grow">
     

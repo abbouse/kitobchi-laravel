@@ -222,7 +222,36 @@ class WebAuthController extends Controller
     }
 
     /**
-     * Yangi manzil qo'shish (Yandex Map orqali)
+     * Foydalanuvchi ma'lumotlarini yangilash
+     */
+    public function updateProfile(Request $request)
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
+        }
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:100',
+            'lastname' => 'nullable|string|max:100',
+            'email' => 'nullable|email|max:255',
+        ]);
+
+        $user->update([
+            'name' => $validated['name'],
+            'lastname' => $validated['lastname'] ?? $user->lastname,
+            'email' => $validated['email'] ?? $user->email,
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Ma\'lumotlar muvaffaqiyatli saqlandi',
+            'user' => $user
+        ]);
+    }
+
+    /**
+     * Yangi manzil qo'shish (Xarita yoki Qo'lda kiritish orqali)
      */
     public function addLocation(Request $request)
     {
@@ -232,17 +261,49 @@ class WebAuthController extends Controller
         }
 
         $validated = $request->validate([
-            'lat' => 'required|numeric',
-            'lon' => 'required|numeric',
+            'lat' => 'nullable|numeric',
+            'lon' => 'nullable|numeric',
             'fullAddress' => 'required|string|max:1000',
+            'region_name' => 'nullable|string|max:255',
+            'district_name' => 'nullable|string|max:255',
         ]);
+
+        $regionCoordinates = [
+            'Toshkent shahri' => [41.2995, 69.2401],
+            'Toshkent viloyati' => [41.0000, 69.3000],
+            'Andijon viloyati' => [40.7821, 72.3442],
+            "Farg'ona viloyati" => [40.3894, 71.7864],
+            'Namangan viloyati' => [41.0011, 71.6726],
+            'Samarqand viloyati' => [39.6542, 66.9597],
+            'Buxoro viloyati' => [39.7747, 64.4286],
+            'Navoiy viloyati' => [40.0844, 65.3792],
+            'Qashqadaryo viloyati' => [38.8606, 65.7891],
+            'Surxondaryo viloyati' => [37.2242, 67.2783],
+            'Jizzax viloyati' => [40.1158, 67.8422],
+            'Sirdaryo viloyati' => [40.4897, 68.7842],
+            'Xorazm viloyati' => [41.5500, 60.6333],
+            "Qoraqalpog'iston Respublikasi" => [42.4600, 59.6200],
+        ];
+
+        $lat = $validated['lat'] ?? null;
+        $lon = $validated['lon'] ?? null;
+        $regionName = $validated['region_name'] ?? null;
+
+        if ((!$lat || !$lon) && $regionName && isset($regionCoordinates[$regionName])) {
+            [$lat, $lon] = $regionCoordinates[$regionName];
+        } elseif (!$lat || !$lon) {
+            $lat = 41.2995;
+            $lon = 69.2401; // Toshkent default
+        }
 
         $location = new Locations();
         $location->user_id = $user->id;
-        $location->lat = $validated['lat'];
-        $location->lon = $validated['lon'];
+        $location->lat = (string) $lat;
+        $location->lon = (string) $lon;
         $location->fullAddress = $validated['fullAddress'];
-        $location->country_code = 'UZ'; // By default for now, similar to mobile API
+        $location->region_name = $regionName;
+        $location->district_name = $validated['district_name'] ?? null;
+        $location->country_code = 'UZ';
         $location->save();
 
         if (!$user->mainAddressID) {

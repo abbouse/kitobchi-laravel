@@ -1,2 +1,8 @@
 User-agent: *
-Disallow:
+Disallow: /cart
+Disallow: /checkout
+Disallow: /profile
+Disallow: /login
+Disallow: /auth/
+
+Sitemap: https://kitobchi.com/sitemap.xml

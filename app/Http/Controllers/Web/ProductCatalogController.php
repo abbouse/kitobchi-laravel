@@ -785,24 +785,34 @@ class ProductCatalogController extends Controller
             $books = $this->visibleBooks()
                 ->select('id', 'name', 'updated_at')
                 ->orderByDesc('updated_at')
-                ->take(5000)
+                ->take(10000)
                 ->get();
 
             $stationeries = $this->visibleStationeries()
                 ->select('id', 'name', 'updated_at')
                 ->orderByDesc('updated_at')
-                ->take(2000)
+                ->take(5000)
+                ->get();
+
+            $bookCategories = \App\Models\BookCategories::where('is_active', true)
+                ->select('id', 'slug', 'updated_at')
+                ->get();
+
+            $stationeryCategories = \App\Models\StationeryCategory::where('is_active', true)
+                ->select('id', 'slug', 'updated_at')
                 ->get();
 
             $policies = Policy::where('is_active', true)->get();
         } catch (\Throwable $e) {
             $books = collect();
             $stationeries = collect();
+            $bookCategories = collect();
+            $stationeryCategories = collect();
             $policies = collect();
         }
 
         return response()
-            ->view('seo.sitemap', compact('books', 'stationeries', 'policies'))
+            ->view('seo.sitemap', compact('books', 'stationeries', 'bookCategories', 'stationeryCategories', 'policies'))
             ->header('Content-Type', 'text/xml');
     }
 

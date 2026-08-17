@@ -40,20 +40,39 @@
         if (!empty($product->barcode)) $specs[] = ['label' => 'Shtrix-kod', 'value' => $product->barcode];
         if (!empty($product->artikul)) $specs[] = ['label' => 'Artikul', 'value' => $product->artikul];
     }
-    $hasVariants = $productType === 'stationery' && $product->relationLoaded('variants') && $product->variants->isNotEmpty();
+    $hasVariants = $productType === 'stationery' && !empty($product->variants) && (is_countable($product->variants) ? count($product->variants) > 0 : false);
 @endphp
 
 @section('title', $seoTitle)
 
 @push('meta')
+    @php
+        $breadcrumbList = [
+            ['name' => __('marketplace.breadcrumb_home'), 'url' => url('/')],
+            ['name' => $productType === 'book' ? __('marketplace.books') : __('marketplace.stationery'), 'url' => route('web.catalog', ['type' => $productType])],
+        ];
+        if (!empty($categoryName)) {
+            $breadcrumbList[] = ['name' => $categoryName, 'url' => route('web.catalog', array_filter(['type' => $productType, 'category' => $product->category_id ?? null]))];
+        }
+        $breadcrumbList[] = ['name' => $product->name, 'url' => $canonicalUrl];
+    @endphp
     @include('partials.seo-social', [
         'title' => $seoTitle,
         'description' => $seoDesc,
         'canonical' => $canonicalUrl,
         'ogImage' => $imgUrl,
+        'extraImages' => $allImages ?? [],
         'ogType' => 'product',
         'productPrice' => $currentPrice,
         'productAvailability' => $inStock ? 'in stock' : 'out of stock',
+        'author' => $productType === 'book' ? ($product->author ?? null) : null,
+        'publisher' => $productType === 'book' ? ($product->publisher?->name ?? null) : null,
+        'isbn' => $productType === 'book' ? ($product->isbn ?? null) : null,
+        'sku' => $product->artikul ?: ($productType . '-' . $product->id),
+        'brand' => $product->seller?->shop_name ?: 'Kitobchi',
+        'ratingValue' => $product->ugc_aggregate_score ?? 5.0,
+        'reviewCount' => $product->ugc_reviews_count ?? 1,
+        'breadcrumbs' => $breadcrumbList,
     ])
 @endpush
 
@@ -260,6 +279,75 @@
 
                 <!-- ====== XUSUSIYATLAR VA TAVSIF ACCORDION (Above Payment) ====== -->
                 @if(!empty($specs) || $hasVariants)
+                <div class="border border-secondary-200/80 rounded-2xl overflow-hidden bg-[#F6F7F9]">
+                    <button type="button" onclick="const p = document.getElementById('kcSpecsPanel'); const arr = document.getElementById('kcSpecsArrow'); if (p.style.display === 'none') { p.style.display = 'block'; arr.style.transform = 'rotate(180deg)'; } else { p.style.display = 'none'; arr.style.transform = 'rotate(0deg)'; }" class="w-full flex items-center justify-between p-4 text-left font-bold text-sm text-neutral-800 hover:bg-neutral-200/60 transition-colors border-none bg-transparent cursor-pointer">
+                        <span>Xususiyatlar va tavsif</span>
+                        <svg id="kcSpecsArrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="transition-transform text-neutral-500"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                    </button>
+                    <div id="kcSpecsPanel" style="display:none;" class="p-4 pt-0 border-t border-neutral-200/50">
+                        @if($hasVariants)
+                            <div class="py-2 mb-2">
+                                <span class="text-xs text-neutral-400 font-medium block mb-1">Variantlar:</span>
+                                <div class="flex flex-wrap gap-2">
+                                    @foreach($product->variants as $variant)
+                                        <span class="px-2.5 py-1 text-xs bg-white rounded-lg border border-neutral-200 font-medium text-neutral-700">{{ $variant->name }}</span>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
+                        @foreach($specs as $s)
+                            <div class="flex justify-between py-2 border-b border-neutral-200/50 last:border-0 text-sm">
+                                <span class="text-neutral-500">{{ $s['label'] }}</span>
+                                <span class="font-semibold text-neutral-900 text-right">{{ $s['value'] }}</span>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+                @endif
+
+                <!-- ====== TO'LOV KARTASI (PIYOLAMARKET 1:1) ====== -->
+                <div class="bg-[#F6F7F9] rounded-3xl p-5 md:p-6 flex flex-col gap-4">
+                    <!-- Tablar: Muddatli to'lov / Naqd to'lov -->
+                    <div class="flex items-center gap-2 p-1 bg-neutral-200/60 rounded-2xl w-fit">
+                        <button type="button" id="kcTabInstallment" onclick="kcSwitchPaymentTab('installment')" class="px-4 py-2 rounded-xl text-xs font-bold transition-all border-none cursor-pointer bg-white text-primary shadow-sm">
+                            Muddatli to'lov
+                        </button>
+                        <button type="button" id="kcTabCash" onclick="kcSwitchPaymentTab('cash')" class="px-4 py-2 rounded-xl text-xs font-medium transition-all border-none cursor-pointer bg-transparent text-neutral-600 hover:text-neutral-900">
+                            Naqd to'lov
+                        </button>
+                    </div>
+
+                    <!-- Muddatli to'lov qatori -->
+                    <div id="kcInstallmentOptions" class="flex items-center justify-between gap-3 pt-1">
+                        <div class="flex items-center gap-1.5 bg-neutral-200/60 p-1 rounded-xl">
+                            <button type="button" onclick="kcSelectMonths(6, this)" class="kc-month-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border-none cursor-pointer bg-transparent text-neutral-600">6 oy</button>
+                            <button type="button" onclick="kcSelectMonths(12, this)" class="kc-month-btn px-3 py-1.5 rounded-lg text-xs font-bold transition-all border-none cursor-pointer bg-white text-primary shadow-sm">12 oy</button>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xs text-neutral-400 font-medium block">oyiga</span>
+                            <span id="kcMonthlyRate" class="text-base md:text-lg font-bold text-neutral-900">{{ number_format(round(($currentPrice * 1.25) / 12)) }} so'm</span>
+                        </div>
+                    </div>
+
+                    <!-- Harakat tugmalari: Buyurtma berish + Savatcha -->
+                    <div class="flex items-center gap-3 pt-2">
+                        <button type="button" onclick="addToCart({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $currentPrice }}, '{{ $imgUrl }}', true, '{{ $canonicalUrl }}')" class="flex-1 h-14 bg-primary hover:bg-primary/90 active:scale-[0.99] text-white rounded-2xl font-bold text-base transition-all flex items-center justify-center gap-2 border-none cursor-pointer shadow-sm">
+                            Buyurtma berish
+                        </button>
+                        <button type="button" onclick="addToCart({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $currentPrice }}, '{{ $imgUrl }}', false, '{{ $canonicalUrl }}')" class="w-14 h-14 bg-white hover:bg-neutral-50 active:scale-[0.98] text-primary border border-secondary-200 rounded-2xl flex items-center justify-center transition-all cursor-pointer shadow-sm shrink-0" title="Savatga qo'shish">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2.25 2.25a.75.75 0 000 1.5h1.386c.17 0 .318.114.362.278l2.558 9.592a3.752 3.752 0 00-2.806 3.63c0 .414.336.75.75.75h15.75a.75.75 0 000-1.5H5.378A2.25 2.25 0 017.5 15h11.218a.75.75 0 00.674-.421 60.358 60.358 0 002.96-7.228.75.75 0 00-.525-.965A60.864 60.864 0 005.68 4.509l-.232-.867A1.875 1.875 0 003.636 2.25H2.25zM3.75 20.25a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zM16.5 20.25a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0z"/></svg>
+                        </button>
+                    </div>
+
+                    <!-- Yetkazib berish -->
+                    <div class="flex items-center gap-2 text-xs text-neutral-500 pt-1">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-neutral-400 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9H5.625c-.621 0-1.125.504-1.125 1.125v1.875m15 4.5V11.25m-15 0h15"/></svg>
+                        <span>Yetkazib berish: 1 kun ichida butun O'zbekiston bo'ylab</span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
 
         <!-- ====== XARIDORLAR SHARHLARI (piyolamarket.uz uslubida) ======
              $ugcReviews — BookClub'dagi shu mahsulotga yozilgan postlar

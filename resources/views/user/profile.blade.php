@@ -2,87 +2,17 @@
 
 @section('title', __('marketplace.profile_title') . ' — Kitobchi')
 
-{{--
-    QAYTA QURILDI: piyolamarket.uz'ning /profile sahifasidagi kabi — chapda
-    doim ko'rinadigan navigatsiya kartasi (Buyurtmalarim / Sharhlarim /
-    Ma'lumotlarim / Hisobdan chiqish), o'ngda esa tanlangan bo'limning
-    paneli. Avval bu sahifada HAMMASI bir vaqtda (manzillar + buyurtmalar)
-    pastma-past ko'rsatilardi va eski "popcorn" inline-style'lar (qattiq
-    #hex ranglar) ishlatilgan edi — endi qolgan marketplace sahifalari
-    bilan bir xil dizayn tokenlaridan (--color-tima-*, bg-secondary-*,
-    text-primary va h.k.) foydalanadi va tarjima qilingan.
-
-    Yo'naltirilgan (server-rendered) URL bir xil qoladi (/profile) — bo'limlar
-    orasidagi almashish sahifani qayta yuklamasdan, faqat JS orqali (hidden/
-    visible) amalga oshadi, shu bilan controller/route o'zgartirilmadi.
-
-    YANGI (bu round): piyolamarket'da uchinchi bo'lim — "Sharhlarim" — bor
-    edi, bizda yo'q edi. Kitobchida "sharh" tushunchasi BookClub postlari
-    orqali ifodalanadi (product sahifasidagi "Xaridorlar sharhlari" bo'limi
-    bilan BIR XIL manba — WebAuthController::profile() endi joriy
-    foydalanuvchining o'z postlarini $myReviews orqali uzatadi). Shuningdek
-    manzillar bo'limida, ro'yxat bo'sh bo'lganda ENDI chiroyli bo'sh holat
-    (icon + sarlavha + izoh) ko'rsatiladi — avval bu holatda hech narsa
-    chiqmay, to'g'ridan-to'g'ri "yangi manzil qo'shish" formasiga o'tib
-    ketardi.
-
-    MUHIM TUZATISH: pastdagi Yandex Maps skriptida haqiqiy XATO bor edi —
-    `ymaps.ready(initYandexMap)` chaqiruvi shu <script> blokining ICHIDA,
-    Yandex API'ning haqiqiy <script src="https://api-maps.yandex.ru/...">
-    tegidan OLDIN turardi (blade fayl oxirida edi) — ya'ni sahifa yuklanganda
-    `ymaps` obyekti hali mavjud bo'lmagan paytda chaqirilardi va
-    "ymaps is not defined" xatosi bilan bu <script> blokining QOLGAN QISMI
-    (jumladan "Yangi manzil qo'shish" formasining submit handleri!) umuman
-    ishga tushmay qolardi. Hozircha YANDEX_MAPS_API_KEY bo'sh bo'lgani uchun
-    bu xato ko'rinmayapti (butun blok shartli @if orqali chiqarilmaydi), lekin
-    kalit qo'shilishi bilan zudlik bilan namoyon bo'lardi. Endi to'g'ri: xarita
-    ishga tushirish faqat API skripti YUKLANIB BO'LGANDAN keyin (script
-    tegining o'zidagi onload="ymaps.ready(initYandexMap)" orqali) chaqiriladi.
---}}
+@push('meta')
+<meta name="robots" content="noindex, follow">
+@endpush
 
 @push('styles')
+<!-- Leaflet Map CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <style>
-    @media (min-width: 900px) {
-        #kcProfileGrid { grid-template-columns: 280px 1fr; }
-        #kcProfileGrid > :first-child { position: sticky; top: 1.5rem; align-self: start; }
-    }
-
-    .kc-profile-sidebar { background: #fff; border-radius: 1.25rem; padding: 1.5rem; box-shadow: 0 1px 2px rgba(15,23,42,0.04); }
-    .kc-profile-sidebar__user { display: flex; align-items: center; gap: 0.875rem; margin-bottom: 1.25rem; }
-    .kc-profile-avatar {
-        width: 3.5rem; height: 3.5rem; border-radius: 9999px; flex-shrink: 0;
-        background: var(--color-tima-100); color: var(--color-tima-600);
-        display: flex; align-items: center; justify-content: center;
-        font-size: 1.375rem; font-weight: 800;
-    }
-    .kc-profile-sidebar__user h2 { font-size: 1.0625rem; font-weight: 800; color: #0f172a; margin: 0 0 0.125rem; }
-    .kc-profile-sidebar__user p { color: #64748b; font-size: 0.8125rem; margin: 0; }
-    .kc-profile-nav { display: flex; flex-direction: column; gap: 2px; border-top: 1px solid #f1f5f9; padding-top: 1rem; }
-    .kc-profile-nav__item {
-        display: flex; align-items: center; gap: 0.75rem;
-        width: 100%; padding: 0.75rem 0.875rem; border-radius: 0.75rem;
-        border: none; background: transparent; cursor: pointer; text-align: left;
-        font-family: inherit; font-size: 0.9375rem; font-weight: 600; color: #475569;
-        transition: background 0.15s, color 0.15s;
-    }
-    .kc-profile-nav__item:hover { background: #f8fafc; }
-    .kc-profile-nav__item--active { background: var(--color-tima-500); color: #fff; }
-    .kc-profile-nav__item--active:hover { background: var(--color-tima-500); }
-    .kc-profile-nav__item--danger { color: #ef4444; }
-    .kc-profile-nav__item--danger:hover { background: #fef2f2; }
-
-    .kc-profile-info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.25rem; }
-    .kc-profile-info-item .kc-profile-info-label { display: block; font-size: 0.75rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.02em; margin-bottom: 0.25rem; }
-    .kc-profile-info-item .kc-profile-info-value { font-size: 0.9375rem; font-weight: 700; color: #0f172a; }
-
-    /* Sharhlarim — BookClub postlari ro'yxati (product sahifasidagi sharh
-       kartasi bilan bir xil ruh, lekin bu yerda o'z ichiga qaysi mahsulot
-       haqida ekanini ko'rsatuvchi kichik havola ham qo'shiladi). */
-    .kc-my-review-card { padding: 1.25rem; border: 1px solid #f1f5f9; border-radius: 0.875rem; background: #fafafa; }
-    .kc-my-review-product {
-        display: inline-flex; align-items: center; gap: 0.375rem; margin-bottom: 0.625rem;
-        font-size: 0.75rem; font-weight: 700; color: var(--color-tima-600);
-        background: var(--color-tima-50); padding: 0.25rem 0.625rem; border-radius: 9999px; text-decoration: none;
+    .leaflet-container {
+        font-family: inherit;
+        z-index: 10 !important;
     }
 </style>
 @endpush
@@ -108,20 +38,20 @@
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6 items-start" id="kcProfileGrid">
-            <!-- Sidebar: user card + tab navigation (piyolamarket.uz uslubida) -->
+            <!-- Sidebar: user card + tab navigation (PiyolaMarket 1:1) -->
             <div class="bg-white rounded-3xl p-5 border border-secondary-100 shadow-sm sticky top-24 flex flex-col gap-4">
                 <div class="flex items-center gap-3 pb-4 border-b border-secondary-100">
                     <div class="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center text-lg font-bold shrink-0">
                         {{ strtoupper(substr($user->name ?: $user->phone_number, 0, 1)) }}
                     </div>
                     <div class="min-w-0 flex-1">
-                        <div class="text-base font-bold text-neutral-900 truncate leading-snug">{{ $user->name ?: __('marketplace.profile_user') }}</div>
+                        <div id="kcProfileSidebarName" class="text-base font-bold text-neutral-900 truncate leading-snug">{{ $user->name ?: __('marketplace.profile_user') }}</div>
                         <div class="text-xs text-neutral-500 truncate mt-0.5">+{{ $user->phone_number }}</div>
                     </div>
                 </div>
 
                 <nav class="flex flex-col gap-1">
-                    <button type="button" id="kcProfileTabBtnOrders" onclick="kcProfileSwitchTab('orders')" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all text-left cursor-pointer border-none bg-transparent text-neutral-600 hover:bg-neutral-50">
+                    <button type="button" id="kcProfileTabBtnOrders" onclick="kcProfileSwitchTab('orders')" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all text-left cursor-pointer border-none bg-transparent text-neutral-600 hover:bg-neutral-50">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
                         <span>{{ __('marketplace.profile_orders') }}</span>
                     </button>
@@ -270,7 +200,7 @@
                         <!-- Top Header -->
                         <div class="flex items-center justify-between">
                             <h3 class="text-xl font-bold text-neutral-900">{{ __('marketplace.profile_info') }}</h3>
-                            <button type="button" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-secondary-100 hover:bg-secondary-200 text-xs font-semibold text-neutral-700 transition-colors border-none cursor-pointer">
+                            <button type="button" onclick="kcOpenEditProfileModal()" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-secondary-100 hover:bg-secondary-200 text-xs font-semibold text-neutral-700 transition-colors border-none cursor-pointer">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
                                 <span>Tahrirlash</span>
                             </button>
@@ -280,7 +210,7 @@
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8">
                             <div>
                                 <div class="text-xs text-neutral-400 mb-1">To'liq ism</div>
-                                <div class="text-sm font-semibold text-neutral-900">{{ $user->name ?: 'Kiritilmagan' }}</div>
+                                <div id="kcProfileInfoName" class="text-sm font-semibold text-neutral-900">{{ trim(($user->name ?? '') . ' ' . ($user->lastname ?? '')) ?: 'Kiritilmagan' }}</div>
                             </div>
                             <div>
                                 <div class="text-xs text-neutral-400 mb-1">Tug'ilgan sana</div>
@@ -296,21 +226,50 @@
                             </div>
                             <div>
                                 <div class="text-xs text-neutral-400 mb-1">Elektron pochta</div>
-                                <div class="text-sm font-semibold text-neutral-900">{{ $user->email ?: 'Kiritilmagan' }}</div>
+                                <div id="kcProfileInfoEmail" class="text-sm font-semibold text-neutral-900">{{ $user->email ?: 'Kiritilmagan' }}</div>
                             </div>
                         </div>
 
                         <!-- Section: Saqlangan manzillar (Piyola 1:1) -->
-                        <div class="pt-4 border-t border-secondary-100">
-                            <h4 class="text-base font-bold text-neutral-900 mb-4">{{ __('marketplace.profile_addresses') }}</h4>
+                        <div class="pt-6 border-t border-secondary-100">
+                            <div class="flex items-center justify-between mb-4">
+                                <h4 class="text-base font-bold text-neutral-900">{{ __('marketplace.profile_addresses') }}</h4>
+                                @if(count($locations) > 0)
+                                    <button type="button" onclick="kcOpenAddressModal()" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-primary text-white text-xs font-semibold hover:bg-primary/90 transition-colors border-none cursor-pointer">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+                                        <span>Yangi manzil</span>
+                                    </button>
+                                @endif
+                            </div>
 
                             @if(count($locations) > 0)
-                                <div class="flex flex-col gap-3 mb-6">
+                                <div class="flex flex-col gap-3" id="kcLocationsList">
                                     @foreach($locations as $loc)
-                                        <div class="flex items-center justify-between p-4 border border-secondary-100 rounded-2xl bg-[#F8FAFC]">
+                                        <div class="flex items-center justify-between p-4 border border-secondary-100 rounded-2xl bg-[#F8FAFC] gap-3">
                                             <div class="flex items-center gap-3 flex-1 min-w-0">
-                                                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="text-neutral-400 shrink-0"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                                                <div class="text-sm text-neutral-800 truncate">{{ $loc->fullAddress }}</div>
+                                                <div class="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                                                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                                                </div>
+                                                <div class="min-w-0 flex-1">
+                                                    <div class="text-sm font-semibold text-neutral-900 truncate">{{ $loc->fullAddress }}</div>
+                                                    @if($loc->region_name)
+                                                        <div class="text-xs text-neutral-400 mt-0.5">{{ $loc->region_name }}</div>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center gap-2 shrink-0">
+                                                @if($user->mainAddressID == $loc->id)
+                                                    <span class="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-700 text-xs font-bold">Asosiy</span>
+                                                @else
+                                                    <button type="button" onclick="setMainLocation({{ $loc->id }})" class="px-2.5 py-1 rounded-lg bg-secondary-100 hover:bg-secondary-200 text-neutral-600 text-xs font-semibold border-none cursor-pointer transition-colors">
+                                                        Asosiy qilish
+                                                    </button>
+                                                @endif
+                                                @if($user->mainAddressID != $loc->id)
+                                                    <button type="button" onclick="deleteLocation({{ $loc->id }})" class="p-2 text-neutral-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors border-none bg-transparent cursor-pointer" title="O'chirish">
+                                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14ZM10 11v6M14 11v6"/></svg>
+                                                    </button>
+                                                @endif
                                             </div>
                                         </div>
                                     @endforeach
@@ -323,31 +282,13 @@
                                         </svg>
                                     </div>
                                     <div class="text-base font-bold text-neutral-900">Saqlangan manzillar mavjud emas</div>
-                                    <div class="text-xs text-neutral-400 mt-1">Yetkazib berish manzilini qo'shing</div>
-                                    <button type="button" onclick="document.getElementById('kcAddressAddBox').classList.toggle('hidden')" class="mt-4 px-6 py-2.5 rounded-2xl bg-primary hover:bg-primary/90 text-white text-sm font-semibold border-none cursor-pointer transition-colors">
-                                        Yangi manzil qo'shish
+                                    <div class="text-xs text-neutral-400 mt-1 mb-4">Yetkazib berish manzilini qo'shing</div>
+                                    <button type="button" onclick="kcOpenAddressModal()" class="px-6 py-2.5 rounded-2xl bg-primary hover:bg-primary/90 text-white text-sm font-semibold border-none cursor-pointer transition-colors shadow-sm flex items-center gap-2">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+                                        <span>Yangi manzil qo'shish</span>
                                     </button>
                                 </div>
                             @endif
-
-                            <!-- Add New Location Form (collapsible) -->
-                            <div id="kcAddressAddBox" class="mt-4 border border-dashed border-secondary-200 rounded-2xl p-5 bg-[#F8FAFC] hidden">
-                                <h5 class="text-sm font-bold text-neutral-900 mb-3">{{ __('marketplace.profile_add_address') }}</h5>
-                                <div id="yandex-map" class="w-full h-64 rounded-xl bg-neutral-200 mb-3 overflow-hidden"></div>
-                                <form id="newLocationForm" class="flex flex-col gap-3 m-0">
-                                    <input type="hidden" id="locLat" name="lat">
-                                    <input type="hidden" id="locLon" name="lon">
-                                    <div>
-                                        <label class="block text-xs font-semibold text-neutral-600 mb-1">{{ __('marketplace.profile_address_full_name_label') }}</label>
-                                        <input type="text" id="locAddress" name="fullAddress" required
-                                            class="w-full px-4 py-2.5 border border-secondary-200 rounded-xl text-sm outline-none focus:ring-2 ring-primary/20 bg-white"
-                                            placeholder="{{ __('marketplace.profile_address_placeholder') }}">
-                                    </div>
-                                    <button type="submit" class="w-full py-3 bg-primary hover:bg-primary/90 text-white font-semibold text-sm rounded-xl border-none cursor-pointer transition-colors">
-                                        {{ __('marketplace.profile_save_address') }}
-                                    </button>
-                                </form>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -357,15 +298,160 @@
 
     </div>
 </div>
+
+<!-- ====== YANGI MANZIL QO'SHISH MODAL ====== -->
+<div id="kcAddressModal" style="display:none;" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+    <div class="bg-white w-full max-w-xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-200">
+        <!-- Modal Header -->
+        <div class="flex items-center justify-between p-5 border-b border-secondary-100">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                </div>
+                <div>
+                    <h3 class="text-base font-bold text-neutral-900 leading-tight">Yangi manzil qo'shish</h3>
+                    <p class="text-xs text-neutral-400">Yetkazib berish manzilini belgilang</p>
+                </div>
+            </div>
+            <button type="button" onclick="kcCloseAddressModal()" class="w-9 h-9 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-600 flex items-center justify-center border-none cursor-pointer transition-colors">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+        </div>
+
+        <!-- Mode Switcher Tabs (Map vs Manual) -->
+        <div class="px-5 pt-3">
+            <div class="flex items-center gap-1.5 p-1 bg-neutral-100 rounded-2xl w-full">
+                <button type="button" id="kcTabBtnMap" onclick="kcSwitchAddressMode('map')" class="flex-1 py-2 rounded-xl text-xs font-bold transition-all border-none cursor-pointer bg-white text-primary shadow-sm flex items-center justify-center gap-1.5">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    <span>Xaritadan tanlash</span>
+                </button>
+                <button type="button" id="kcTabBtnManual" onclick="kcSwitchAddressMode('manual')" class="flex-1 py-2 rounded-xl text-xs font-medium transition-all border-none cursor-pointer bg-transparent text-neutral-600 hover:text-neutral-900 flex items-center justify-center gap-1.5">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    <span>Qo'lda kiritish</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Modal Body: Scrollable -->
+        <div class="p-5 overflow-y-auto flex-1 flex flex-col gap-4">
+            
+            <!-- MODE 1: XARITA (Leaflet + OpenStreetMap) -->
+            <div id="kcAddressMapContainer" class="flex flex-col gap-3">
+                <div id="kcLocationStatusBanner" class="p-2.5 rounded-xl bg-amber-50 border border-amber-200/60 text-xs text-amber-800 flex items-center gap-2" style="display:none;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    <span id="kcLocationStatusText">Joylashuv aniqlanmoqda...</span>
+                </div>
+
+                <div class="relative w-full h-64 sm:h-72 rounded-2xl overflow-hidden border border-secondary-200 bg-neutral-100">
+                    <div id="kcLeafletMap" class="w-full h-full"></div>
+                    <button type="button" onclick="kcDetectCurrentLocation()" class="absolute bottom-3 right-3 z-20 px-3 py-2 bg-white/95 backdrop-blur-xs text-neutral-800 text-xs font-bold rounded-xl shadow-md border border-neutral-200/80 hover:bg-white flex items-center gap-1.5 cursor-pointer">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-primary"><circle cx="12" cy="12" r="10"/><polygon points="12 2 15 8 12 14 9 8 12 2"/></svg>
+                        <span>Mening joylashuvim</span>
+                    </button>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-neutral-600 mb-1">Tanlangan / Aniqlangan manzil</label>
+                    <input type="text" id="kcMapSelectedAddress" class="w-full px-4 py-3 bg-[#F8FAFC] border border-secondary-200 rounded-xl text-sm font-medium text-neutral-900 outline-none focus:ring-2 ring-primary/20" placeholder="Xaritada nuqtani bosing yoki manzilni yozing">
+                </div>
+            </div>
+
+            <!-- MODE 2: QO'LDA KIRITISH (Smart Fallback Form) -->
+            <div id="kcAddressManualContainer" class="flex flex-col gap-3" style="display:none;">
+                <div>
+                    <label class="block text-xs font-semibold text-neutral-700 mb-1">Viloyat / Shahar <span class="text-red-500">*</span></label>
+                    <select id="kcManualRegion" class="w-full px-4 py-3 bg-[#F8FAFC] border border-secondary-200 rounded-xl text-sm font-medium text-neutral-900 outline-none focus:ring-2 ring-primary/20 cursor-pointer">
+                        <option value="Toshkent shahri">Toshkent shahri</option>
+                        <option value="Toshkent viloyati">Toshkent viloyati</option>
+                        <option value="Andijon viloyati">Andijon viloyati</option>
+                        <option value="Farg'ona viloyati">Farg'ona viloyati</option>
+                        <option value="Namangan viloyati">Namangan viloyati</option>
+                        <option value="Samarqand viloyati">Samarqand viloyati</option>
+                        <option value="Buxoro viloyati">Buxoro viloyati</option>
+                        <option value="Navoiy viloyati">Navoiy viloyati</option>
+                        <option value="Qashqadaryo viloyati">Qashqadaryo viloyati</option>
+                        <option value="Surxondaryo viloyati">Surxondaryo viloyati</option>
+                        <option value="Jizzax viloyati">Jizzax viloyati</option>
+                        <option value="Sirdaryo viloyati">Sirdaryo viloyati</option>
+                        <option value="Xorazm viloyati">Xorazm viloyati</option>
+                        <option value="Qoraqalpog'iston Respublikasi">Qoraqalpog'iston Respublikasi</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-neutral-700 mb-1">Tuman / Shahar <span class="text-red-500">*</span></label>
+                    <input type="text" id="kcManualDistrict" placeholder="Masalan: Chilonzor tumani yoki Samarqand sh." class="w-full px-4 py-3 bg-[#F8FAFC] border border-secondary-200 rounded-xl text-sm font-medium text-neutral-900 outline-none focus:ring-2 ring-primary/20">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-neutral-700 mb-1">Ko'cha, uy, xonadon <span class="text-red-500">*</span></label>
+                    <input type="text" id="kcManualStreet" placeholder="Masalan: Qatortol ko'chasi, 28-uy, 14-xonadon" class="w-full px-4 py-3 bg-[#F8FAFC] border border-secondary-200 rounded-xl text-sm font-medium text-neutral-900 outline-none focus:ring-2 ring-primary/20">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-neutral-700 mb-1">Mo'ljal (ixtiyoriy)</label>
+                    <input type="text" id="kcManualLandmark" placeholder="Masalan: Rayhon restorani ro'parasida" class="w-full px-4 py-3 bg-[#F8FAFC] border border-secondary-200 rounded-xl text-sm font-medium text-neutral-900 outline-none focus:ring-2 ring-primary/20">
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Modal Footer Button -->
+        <div class="p-5 border-t border-secondary-100 bg-[#FAFAFA]">
+            <button type="button" id="kcBtnSaveAddress" onclick="kcSubmitAddress()" class="w-full h-13 bg-primary hover:bg-primary/90 text-white font-bold rounded-2xl flex items-center justify-center gap-2 text-base transition-all border-none cursor-pointer shadow-sm">
+                <span>Manzilni saqlash</span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ====== PROFIL MA'LUMOTLARINI TAHRIRLASH MODAL ====== -->
+<div id="kcEditProfileModal" style="display:none;" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+    <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
+        <div class="flex items-center justify-between p-5 border-b border-secondary-100">
+            <h3 class="text-base font-bold text-neutral-900 leading-tight">Ma'lumotlarni tahrirlash</h3>
+            <button type="button" onclick="kcCloseEditProfileModal()" class="w-9 h-9 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-600 flex items-center justify-center border-none cursor-pointer transition-colors">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <div class="p-5 flex flex-col gap-4">
+            <div>
+                <label class="block text-xs font-semibold text-neutral-700 mb-1">Ism <span class="text-red-500">*</span></label>
+                <input type="text" id="kcEditName" value="{{ $user->name }}" class="w-full px-4 py-3 bg-[#F8FAFC] border border-secondary-200 rounded-xl text-sm font-medium text-neutral-900 outline-none focus:ring-2 ring-primary/20">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-neutral-700 mb-1">Familiya</label>
+                <input type="text" id="kcEditLastname" value="{{ $user->lastname }}" class="w-full px-4 py-3 bg-[#F8FAFC] border border-secondary-200 rounded-xl text-sm font-medium text-neutral-900 outline-none focus:ring-2 ring-primary/20">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-neutral-700 mb-1">Elektron pochta</label>
+                <input type="email" id="kcEditEmail" value="{{ $user->email }}" class="w-full px-4 py-3 bg-[#F8FAFC] border border-secondary-200 rounded-xl text-sm font-medium text-neutral-900 outline-none focus:ring-2 ring-primary/20">
+            </div>
+        </div>
+        <div class="p-5 border-t border-secondary-100 bg-[#FAFAFA]">
+            <button type="button" onclick="kcSubmitProfileEdit()" class="w-full h-12 bg-primary hover:bg-primary/90 text-white font-bold rounded-2xl flex items-center justify-center text-sm transition-all border-none cursor-pointer">
+                Saqlash
+            </button>
+        </div>
+    </div>
+</div>
 @endsection
 
 @push('scripts')
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
 <script>
 const KC_PROFILE_I18N = {
     confirmDeleteAddress: @json(__('marketplace.profile_confirm_delete_address')),
-    mapSelectAlert: @json(__('marketplace.profile_map_select_alert')),
     genericError: @json(__('marketplace.generic_error')),
 };
+
+let kcCurrentAddressMode = 'map'; // 'map' | 'manual'
+let kcLeafletMapInstance = null;
+let kcLeafletMarker = null;
+let kcSelectedCoords = { lat: 41.2995, lon: 69.2401 };
 
 function kcProfileSwitchTab(tab) {
     const panels = { orders: 'kcProfilePanelOrders', reviews: 'kcProfilePanelReviews', info: 'kcProfilePanelInfo' };
@@ -388,63 +474,198 @@ function kcProfileSwitchTab(tab) {
         history.replaceState(null, '', tab === 'orders' ? '{{ route("web.profile") }}' : '{{ route("web.profile") }}#' + tab);
     }
 }
+
 document.addEventListener('DOMContentLoaded', function () {
     const hash = window.location.hash.replace('#', '');
     if (hash === 'orders' || hash === 'reviews') kcProfileSwitchTab(hash);
-    else kcProfileSwitchTab('info'); // default to info as in Piyola
+    else kcProfileSwitchTab('info');
 });
 
-// Yandex Maps Logic
-@if(config('services.yandex_maps.key'))
-function initYandexMap() {
-    const map = new ymaps.Map("yandex-map", {
-        center: [41.311081, 69.240562], // Tashkent
-        zoom: 12,
-        controls: ['zoomControl', 'searchControl']
-    });
+// ====== ADDRESS MODAL & MAP LOGIC ======
+function kcOpenAddressModal() {
+    const modal = document.getElementById('kcAddressModal');
+    if (modal) modal.style.display = 'flex';
+    kcSwitchAddressMode('map');
+    setTimeout(() => {
+        kcInitLeafletMap();
+        kcDetectCurrentLocation();
+    }, 150);
+}
 
-    let placemark = null;
+function kcCloseAddressModal() {
+    const modal = document.getElementById('kcAddressModal');
+    if (modal) modal.style.display = 'none';
+}
 
-    map.events.add('click', function (e) {
-        const coords = e.get('coords');
-        updatePlacemark(coords);
-    });
+function kcSwitchAddressMode(mode) {
+    kcCurrentAddressMode = mode;
+    const mapBox = document.getElementById('kcAddressMapContainer');
+    const manualBox = document.getElementById('kcAddressManualContainer');
+    const btnMap = document.getElementById('kcTabBtnMap');
+    const btnManual = document.getElementById('kcTabBtnManual');
 
-    function updatePlacemark(coords) {
-        document.getElementById('locLat').value = coords[0];
-        document.getElementById('locLon').value = coords[1];
-
-        if (placemark) {
-            placemark.geometry.setCoordinates(coords);
-        } else {
-            placemark = new ymaps.Placemark(coords, {}, { preset: 'islands#redDotIcon', draggable: true });
-            map.geoObjects.add(placemark);
-            placemark.events.add('dragend', function () {
-                updatePlacemark(placemark.geometry.getCoordinates());
-            });
+    if (mode === 'map') {
+        if (mapBox) mapBox.style.display = 'flex';
+        if (manualBox) manualBox.style.display = 'none';
+        btnMap.className = 'flex-1 py-2 rounded-xl text-xs font-bold transition-all border-none cursor-pointer bg-white text-primary shadow-sm flex items-center justify-center gap-1.5';
+        btnManual.className = 'flex-1 py-2 rounded-xl text-xs font-medium transition-all border-none cursor-pointer bg-transparent text-neutral-600 hover:text-neutral-900 flex items-center justify-center gap-1.5';
+        if (kcLeafletMapInstance) {
+            setTimeout(() => kcLeafletMapInstance.invalidateSize(), 100);
         }
-
-        // Reverse geocoding
-        ymaps.geocode(coords).then(function (res) {
-            const firstGeoObject = res.geoObjects.get(0);
-            if (firstGeoObject) {
-                document.getElementById('locAddress').value = firstGeoObject.getAddressLine();
-            }
-        });
+    } else {
+        if (mapBox) mapBox.style.display = 'none';
+        if (manualBox) manualBox.style.display = 'flex';
+        btnManual.className = 'flex-1 py-2 rounded-xl text-xs font-bold transition-all border-none cursor-pointer bg-white text-primary shadow-sm flex items-center justify-center gap-1.5';
+        btnMap.className = 'flex-1 py-2 rounded-xl text-xs font-medium transition-all border-none cursor-pointer bg-transparent text-neutral-600 hover:text-neutral-900 flex items-center justify-center gap-1.5';
     }
 }
-@endif
 
-// Location AJAX Actions
-document.getElementById('newLocationForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    const lat = document.getElementById('locLat').value;
-    const lon = document.getElementById('locLon').value;
-    const address = document.getElementById('locAddress').value;
+function kcInitLeafletMap() {
+    const el = document.getElementById('kcLeafletMap');
+    if (!el || typeof L === 'undefined') return;
 
-    if(!lat || !lon) {
-        alert(KC_PROFILE_I18N.mapSelectAlert);
+    if (kcLeafletMapInstance) {
+        kcLeafletMapInstance.invalidateSize();
         return;
+    }
+
+    // Default to Tashkent coordinates
+    const defaultLat = 41.2995;
+    const defaultLng = 69.2401;
+
+    kcLeafletMapInstance = L.map('kcLeafletMap', {
+        center: [defaultLat, defaultLng],
+        zoom: 13,
+        zoomControl: true
+    });
+
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap'
+    }).addTo(kcLeafletMapInstance);
+
+    // Marker
+    kcLeafletMarker = L.marker([defaultLat, defaultLng], { draggable: true }).addTo(kcLeafletMapInstance);
+
+    kcLeafletMarker.on('dragend', function(e) {
+        const pos = e.target.getLatLng();
+        kcSetMapCoordinates(pos.lat, pos.lng);
+    });
+
+    kcLeafletMapInstance.on('click', function(e) {
+        const pos = e.latlng;
+        kcLeafletMarker.setLatLng(pos);
+        kcSetMapCoordinates(pos.lat, pos.lng);
+    });
+}
+
+function kcSetMapCoordinates(lat, lng) {
+    kcSelectedCoords = { lat: lat, lon: lng };
+    kcReverseGeocode(lat, lng);
+}
+
+function kcReverseGeocode(lat, lng) {
+    const input = document.getElementById('kcMapSelectedAddress');
+    if (!input) return;
+
+    // Fetch from OpenStreetMap Nominatim
+    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=uz,ru,en`)
+        .then(r => r.json())
+        .then(data => {
+            if (data && data.display_name) {
+                input.value = data.display_name;
+            } else {
+                input.value = `Koordinata: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+            }
+        })
+        .catch(() => {
+            input.value = `Koordinata: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+        });
+}
+
+function kcDetectCurrentLocation() {
+    const banner = document.getElementById('kcLocationStatusBanner');
+    const statusText = document.getElementById('kcLocationStatusText');
+
+    if (!navigator.geolocation) {
+        if (banner) {
+            banner.style.display = 'flex';
+            statusText.textContent = "Brauzeringiz joylashuvni aniqlashni qo'llab-quvvatlamaydi. Xaritadan tanlang yoki qo'lda kiriting.";
+        }
+        return;
+    }
+
+    if (banner) {
+        banner.style.display = 'flex';
+        statusText.textContent = "Joylashuvingiz aniqlanmoqda...";
+    }
+
+    navigator.geolocation.getCurrentPosition(
+        function (pos) {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            kcSelectedCoords = { lat: lat, lon: lng };
+
+            if (banner) {
+                banner.className = 'p-2.5 rounded-xl bg-emerald-50 border border-emerald-200/60 text-xs text-emerald-800 flex items-center gap-2';
+                statusText.textContent = "📍 Joylashuvingiz aniqlandi! Zarur bo'lsa xaritani bosing.";
+            }
+
+            if (kcLeafletMapInstance && kcLeafletMarker) {
+                kcLeafletMapInstance.setView([lat, lng], 16);
+                kcLeafletMarker.setLatLng([lat, lng]);
+                kcReverseGeocode(lat, lng);
+            }
+        },
+        function (err) {
+            if (banner) {
+                banner.className = 'p-2.5 rounded-xl bg-amber-50 border border-amber-200/60 text-xs text-amber-800 flex items-center gap-2';
+                statusText.textContent = "⚠️ Joylashuvga ruxsat berilmadi. Xaritadan nuqtani bosing yoki yuqoridagi 'Qo'lda kiritish' tabini tanlang.";
+            }
+        },
+        { timeout: 8000, enableHighAccuracy: true }
+    );
+}
+
+function kcSubmitAddress() {
+    let payload = {};
+    const btn = document.getElementById('kcBtnSaveAddress');
+
+    if (kcCurrentAddressMode === 'map') {
+        const address = (document.getElementById('kcMapSelectedAddress').value || '').trim();
+        if (!address) {
+            alert("Iltimos, xaritadan manzilni belgilang yoki yozing");
+            return;
+        }
+        payload = {
+            lat: kcSelectedCoords.lat,
+            lon: kcSelectedCoords.lon,
+            fullAddress: address,
+        };
+    } else {
+        const region = document.getElementById('kcManualRegion').value;
+        const district = (document.getElementById('kcManualDistrict').value || '').trim();
+        const street = (document.getElementById('kcManualStreet').value || '').trim();
+        const landmark = (document.getElementById('kcManualLandmark').value || '').trim();
+
+        if (!district || !street) {
+            alert("Iltimos, Tuman va Ko'cha/uy maydonlarini to'ldiring");
+            return;
+        }
+
+        let full = `${region}, ${district}, ${street}`;
+        if (landmark) full += ` (Mo'ljal: ${landmark})`;
+
+        payload = {
+            region_name: region,
+            district_name: district,
+            fullAddress: full,
+        };
+    }
+
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = "Saqlanmoqda...";
     }
 
     fetch("{{ route('web.profile.location.add') }}", {
@@ -454,18 +675,30 @@ document.getElementById('newLocationForm').addEventListener('submit', function(e
             "X-CSRF-TOKEN": "{{ csrf_token() }}",
             "Accept": "application/json"
         },
-        body: JSON.stringify({ lat: lat, lon: lon, fullAddress: address })
+        body: JSON.stringify(payload)
     })
     .then(r => r.json())
     .then(data => {
-        if(data.status === 'success') {
+        if (data.status === 'success') {
+            kcCloseAddressModal();
             window.location.reload();
         } else {
             alert(data.message || KC_PROFILE_I18N.genericError);
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = "Manzilni saqlash";
+            }
         }
     })
-    .catch(err => console.error(err));
-});
+    .catch(err => {
+        console.error(err);
+        alert(KC_PROFILE_I18N.genericError);
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = "Manzilni saqlash";
+        }
+    });
+}
 
 function deleteLocation(id) {
     if(!confirm(KC_PROFILE_I18N.confirmDeleteAddress)) return;
@@ -497,8 +730,56 @@ function setMainLocation(id) {
         else alert(data.message || KC_PROFILE_I18N.genericError);
     });
 }
+
+// ====== EDIT PROFILE MODAL ======
+function kcOpenEditProfileModal() {
+    const modal = document.getElementById('kcEditProfileModal');
+    if (modal) modal.style.display = 'flex';
+}
+
+function kcCloseEditProfileModal() {
+    const modal = document.getElementById('kcEditProfileModal');
+    if (modal) modal.style.display = 'none';
+}
+
+function kcSubmitProfileEdit() {
+    const name = (document.getElementById('kcEditName').value || '').trim();
+    const lastname = (document.getElementById('kcEditLastname').value || '').trim();
+    const email = (document.getElementById('kcEditEmail').value || '').trim();
+
+    if (!name) {
+        alert("Ism kiritilishi shart");
+        return;
+    }
+
+    fetch("{{ route('web.profile.update') }}", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-TOKEN": "{{ csrf_token() }}",
+            "Accept": "application/json"
+        },
+        body: JSON.stringify({ name, lastname, email })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status === 'success') {
+            kcCloseEditProfileModal();
+            const fullName = `${name} ${lastname}`.trim();
+            const nameEl = document.getElementById('kcProfileInfoName');
+            const sideNameEl = document.getElementById('kcProfileSidebarName');
+            const emailEl = document.getElementById('kcProfileInfoEmail');
+            if (nameEl) nameEl.textContent = fullName;
+            if (sideNameEl) sideNameEl.textContent = name;
+            if (emailEl) emailEl.textContent = email || 'Kiritilmagan';
+            if (typeof kcShowToast === 'function') {
+                kcShowToast("Ma'lumotlar muvaffaqiyatli yangilandi", "success");
+            }
+        } else {
+            alert(data.message || KC_PROFILE_I18N.genericError);
+        }
+    })
+    .catch(err => console.error(err));
+}
 </script>
-@if(config('services.yandex_maps.key'))
-<script src="https://api-maps.yandex.ru/2.1/?apikey={{ config('services.yandex_maps.key') }}&lang={{ config('services.yandex_maps.lang', 'ru_RU') }}" onload="ymaps.ready(initYandexMap);"></script>
-@endif
 @endpush
