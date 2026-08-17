@@ -132,8 +132,12 @@ return [
     'instagram' => [
         'verify_token' => env('INSTAGRAM_VERIFY_TOKEN', 'kitobchi_sec_token_2026'),
         'page_access_token' => env('INSTAGRAM_PAGE_ACCESS_TOKEN', ''),
-        'app_id' => env('INSTAGRAM_APP_ID', '3389748577867163'),
+        'app_id' => env('INSTAGRAM_APP_ID', ''),
         'app_secret' => env('INSTAGRAM_APP_SECRET', ''),
+        // /api/instagram/test diagnostika endpointini himoya qiluvchi maxfiy
+        // kalit — X-Admin-Secret header'ida shu qiymat yuborilmasa, endpoint
+        // 403 qaytaradi. .env'da o'zingiz uzun, tasodifiy qiymat qo'ying.
+        'diagnostic_secret' => env('INSTAGRAM_DIAGNOSTIC_SECRET', ''),
     ],
 
 ];

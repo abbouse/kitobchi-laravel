@@ -26,9 +26,14 @@ Route::post('push-notify/send', [PushController::class, 'sendPush'])->middleware
 Route::post('sendSms', [SendSmsController::class, 'sendSms'])->middleware('throttle:send-sms')->name('api.sendSms');
 Route::get('appversion/check', [ProjectSettingController::class, 'getVersions']);
 Route::post('hook', WebhookController::class);
+// XAVFSIZLIK: instagram/webhook (POST) endi InstagramBotService::verifySignature()
+// orqali Meta'ning X-Hub-Signature-256 imzosini tekshiradi (imzosiz/soxta
+// so'rovlar 403 bilan rad etiladi), instagram/test esa X-Admin-Secret
+// himoyasi bilan yopilgan — shu sabab bu yerdagi throttle qo'shimcha
+// himoya qatlami sifatida qo'shildi (asosiy himoya emas).
 Route::get('instagram/webhook', [\App\Http\Controllers\Api\InstagramWebhookController::class, 'verify']);
-Route::post('instagram/webhook', [\App\Http\Controllers\Api\InstagramWebhookController::class, 'handle']);
-Route::get('instagram/test', [\App\Http\Controllers\Api\InstagramWebhookController::class, 'test']);
+Route::post('instagram/webhook', [\App\Http\Controllers\Api\InstagramWebhookController::class, 'handle'])->middleware('throttle:300,1');
+Route::get('instagram/test', [\App\Http\Controllers\Api\InstagramWebhookController::class, 'test'])->middleware('throttle:30,1');
 Route::get('update_locale', [UserController::class, 'updateLocale']);
 Route::get('counts', [UserController::class, 'getGlobalCounts']);
 Route::prefix('v1')->group(function () {

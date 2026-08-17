@@ -38,10 +38,55 @@ class InstagramBotService
     }
 
     /**
+     * XAVFSIZLIK: Meta har bir POST webhook so'roviga X-Hub-Signature-256
+     * headerini qo'shib yuboradi — bu App Secret bilan hisoblangan HMAC-SHA256
+     * imzo (raw body ustidan). Shu imzoni tekshirmasdan payloadni ishonib
+     * qabul qilish HAR KIMGA (nafaqat Meta'ga) soxta "Instagram xabari"
+     * yuborish imkonini beradi — masalan botni istalgan foydalanuvchiga
+     * cheksiz DM yubortirish, cheksiz promokod "ishlab chiqarish" (mentions
+     * soxtalashtirib) yoki boshqa mijozning buyurtma ma'lumotlarini
+     * so'rash uchun foydalanish mumkin edi. Ilgari bu tekshiruv UMUMAN
+     * yo'q edi (loyihaning o'zida, DeliverWebhook.php'da xuddi shu HMAC
+     * pattern chiquvchi webhooklar uchun ishlatilgan, lekin kiruvchi
+     * Instagram webhook'iga qo'llanmagan edi).
+     */
+    public function verifySignature(Request $request): bool
+    {
+        $appSecret = config('services.instagram.app_secret', env('INSTAGRAM_APP_SECRET', ''));
+
+        if (empty($appSecret)) {
+            // App Secret hali sozlanmagan bo'lsa, xavfsizlik tekshiruvini
+            // butunlay o'chirib qo'ymaymiz — rad etamiz va logga yozamiz,
+            // shunda muammo "sozlanmagan" ekani darhol ko'rinadi.
+            Log::warning('Instagram webhook: INSTAGRAM_APP_SECRET sozlanmagan, so\'rov rad etildi');
+            return false;
+        }
+
+        $signatureHeader = $request->header('X-Hub-Signature-256', '');
+        if (empty($signatureHeader) || !str_starts_with($signatureHeader, 'sha256=')) {
+            Log::warning('Instagram webhook: X-Hub-Signature-256 header yo\'q yoki noto\'g\'ri formatda');
+            return false;
+        }
+
+        $expectedSignature = 'sha256=' . hash_hmac('sha256', (string) $request->getContent(), (string) $appSecret);
+
+        return hash_equals($expectedSignature, $signatureHeader);
+    }
+
+    /**
      * Handle incoming Meta Webhook Payload (POST /api/instagram/webhook)
      */
-    public function handlePayload(array $payload)
+    public function handlePayload(Request $request)
     {
+        if (!$this->verifySignature($request)) {
+            Log::warning('Instagram Webhook: imzo tekshiruvidan o\'tmadi, so\'rov rad etildi', [
+                'ip' => $request->ip(),
+            ]);
+            return response()->json(['error' => 'Invalid signature'], 403);
+        }
+
+        $payload = $request->all();
+
         Log::info('Instagram Webhook Payload Received', ['payload' => $payload]);
 
         if (empty($payload['entry'])) {
@@ -108,8 +153,22 @@ class InstagramBotService
             return;
         }
 
-        // B. Check for Order Tracking (e.g., #1234 or buyurtma 1234)
-        if (preg_match('/(?:#|buyurtma\s*|order\s*)?(\d{4,8})/i', $messageText, $matches)) {
+        // B. Check for Order Tracking (masalan "#1234" yoki "buyurtma 1234").
+        // XAVFSIZLIK: ilgari prefiks SHART EMAS edi (masalan "2024 yilda"
+        // degan oddiy xabar ham buyurtma qidiruvini ishga tushirar edi),
+        // va Order::find() HECH QANDAY egalik tekshiruvisiz TOPILGAN
+        // buyurtmaning narxi + yetkazib berish MANZILINI o'sha xabarni
+        // yozgan har qanday Instagram foydalanuvchisiga qaytarar edi —
+        // ya'ni istalgan kishi 4-8 xonali raqam yozib, BOSHQA mijozning
+        // buyurtma tafsilotlarini (jumladan manzilini) bilib olishi mumkin
+        // edi (IDOR). Hozircha Instagram foydalanuvchisi bilan Kitobchi
+        // akkaunti o'rtasida tasdiqlangan bog'lanish yo'qligi sababli,
+        // to'liq egalikni tekshirib bo'lmaydi — shu sabab: (1) prefiks
+        // ENDI SHART qilindi (tasodifiy raqamlar endi ishga tushmaydi),
+        // (2) javobdan MANZIL butunlay olib tashlandi (eng sezgir maydon).
+        // To'liq tuzatish uchun Instagram akkauntini foydalanuvchining
+        // haqiqiy Kitobchi profiliga bog'lash kerak bo'ladi.
+        if (preg_match('/(?:#|buyurtma\s*|order\s*)(\d{4,8})/i', $messageText, $matches)) {
             $orderId = $matches[1];
             $order = Order::find($orderId);
 
@@ -124,9 +183,8 @@ class InstagramBotService
                 $statusText = $statusMap[$order->status] ?? $order->status;
 
                 $reply = "📦 Buyurtma №{$order->id} holati:\n\n"
-                    . "• Holat: {$statusText}\n"
-                    . "• Summa: " . number_format($order->total_price ?? $order->price ?? 0, 0, '', ' ') . " so‘m\n"
-                    . "• Manzil: " . ($order->address ?? 'Registratsiya qilingan manzil') . "\n\n"
+                    . "• Holat: {$statusText}\n\n"
+                    . "To‘liq tafsilotlar (narxi, manzili) uchun kitobchi.com saytidagi shaxsiy kabinetingizga kiring — u yerda faqat SIZning buyurtmalaringiz ko‘rinadi.\n\n"
                     . "Qo‘shimcha savollaringiz bo‘lsa, Kitobchi qo‘llab-quvvatlash xizmati har doim yoningizda!";
             } else {
                 $reply = "Kechirasiz, №{$orderId} raqamli buyurtma topilmadi. Buyurtma raqamini to‘g‘ri kiritganingizni tekshirib ko‘ring yoki kitobchi.com saytidagi shaxsiy kabinetingizdan ko‘rishingiz mumkin.";
@@ -291,7 +349,14 @@ class InstagramBotService
 
         $sent = $this->sendDirectMessage($inquiry->instagram_user_id, $officialReply);
 
-        if ($sent || true) {
+        // MUHIM: ilgari bu yerda "if ($sent || true)" deb yozilgan edi —
+        // ya'ni jo'natish MUVAFFAQIYATSIZ bo'lsa ham, murojaat har doim
+        // "replied" (javob berildi) deb belgilanardi. Natijada admin panel
+        // haqiqatda YETKAZILMAGAN javobni "yuborildi" deb noto'g'ri
+        // ko'rsatib kelgan. Endi holat FAQAT haqiqatda yuborilganda
+        // "replied" ga o'zgaradi, aks holda "failed" deb belgilanadi va
+        // admin buni ko'rib qayta urinishi mumkin.
+        if ($sent) {
             $inquiry->update([
                 'admin_reply' => $rawReply,
                 'status'      => 'replied',
@@ -299,6 +364,11 @@ class InstagramBotService
             ]);
             return true;
         }
+
+        $inquiry->update([
+            'admin_reply' => $rawReply,
+            'status'      => 'failed',
+        ]);
 
         return false;
     }
