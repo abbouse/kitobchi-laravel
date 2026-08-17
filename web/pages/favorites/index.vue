@@ -53,6 +53,8 @@
             name: item.name,
             price: item.price,
             discountPrice: item.discountPrice,
+            image_urls: [item.image],
+            medium_images: [item.image],
             first_image: item.image
           }"
           :type="item.type"

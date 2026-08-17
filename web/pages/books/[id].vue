@@ -55,10 +55,10 @@
       </div>
 
       <!-- Main Layout: 2 Columns (Piyola 1:1 — lg:grid lg:grid-cols-2 xl:grid-cols-3) -->
-      <div class="lg:grid lg:grid-cols-2 xl:grid-cols-3 gap-5 pb-24 lg:pb-0">
+      <div class="lg:grid lg:grid-cols-2 xl:grid-cols-3 gap-5 pb-10 lg:pb-0">
         <!-- Left: Image Gallery — thumbnail rail + main carousel w/ arrows -->
         <div class="col-span-1 xl:col-span-2 h-full mb-8">
-          <div class="flex flex-col-reverse md:flex-row gap-3 h-full">
+          <div class="flex flex-col-reverse md:flex-row gap-4 h-full">
             <!-- Thumbnail rail -->
             <div
               v-if="galleryImages.length > 1"
@@ -71,42 +71,46 @@
                 @click="activeIndex = idx"
                 :aria-label="`gallery-image-selector-${idx}`"
                 :class="[
-                  'relative shrink-0 w-[75px] h-[100px] rounded-xl overflow-hidden border-2 transition-all duration-300 cursor-pointer bg-secondary-50',
-                  activeIndex === idx ? 'border-primary-500' : 'border-transparent hover:border-neutral-200'
+                  'relative shrink-0 w-[75px] h-[100px] rounded-2xl overflow-hidden border-2 transition-all duration-300 cursor-pointer bg-[#FAFAFA] p-1 flex items-center justify-center',
+                  activeIndex === idx ? 'border-primary ring-2 ring-primary/20 shadow-sm' : 'border-gray-200 hover:border-gray-300'
                 ]"
               >
-                <img :src="img" class="w-full h-full object-cover" :alt="`${product.name} ${idx + 1}`" />
+                <img :src="img" class="w-full h-full object-contain rounded-xl" :alt="`${product.name} ${idx + 1}`" />
               </button>
             </div>
 
             <!-- Main image + prev/next arrows -->
-            <div class="flex-1 relative rounded-2xl min-h-0 min-w-0">
-              <div class="relative h-full">
-                <div class="product-gallery-frame overflow-hidden rounded-2xl bg-secondary-50 border border-gray-100 w-full">
-                  <img
-                    :src="activeImage"
-                    :alt="product.name"
-                    class="w-full h-full object-contain p-4"
-                    loading="eager"
-                  />
+            <div class="flex-1 relative rounded-3xl min-h-0 min-w-0">
+              <div class="relative w-full aspect-[3/4] sm:aspect-square lg:aspect-[4/5] max-h-[560px] rounded-3xl overflow-hidden bg-[#FAFAFA] border border-gray-100 flex items-center justify-center p-4 md:p-8">
+                <!-- Top Left Discount Badge -->
+                <div v-if="discountPercent > 0" class="absolute top-4 left-4 z-10 px-3 py-1 rounded-full text-xs font-bold bg-[#ED3131] text-white shadow-sm">
+                  -{{ discountPercent }}%
                 </div>
+
+                <!-- Main Product Image -->
+                <img
+                  :src="activeImage"
+                  :alt="product.name"
+                  class="max-w-full max-h-full object-contain rounded-2xl drop-shadow-md select-none transition-all duration-300"
+                  loading="eager"
+                />
 
                 <template v-if="galleryImages.length > 1">
                   <button
                     type="button"
                     @click="prevImage"
                     aria-label="Prev"
-                    class="font-medium inline-flex items-center text-sm ring ring-inset ring-accented text-default bg-default hover:bg-elevated active:bg-elevated transition-colors p-1.5 absolute rounded-full start-4 top-1/2 -translate-y-1/2 cursor-pointer"
+                    class="font-medium inline-flex items-center text-sm shadow-md bg-white/90 hover:bg-white text-primary backdrop-blur p-2 absolute rounded-full start-4 top-1/2 -translate-y-1/2 cursor-pointer border border-gray-100 hover:scale-105 active:scale-95 transition-all"
                   >
-                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"/></svg>
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
                   </button>
                   <button
                     type="button"
                     @click="nextImage"
                     aria-label="Next"
-                    class="font-medium inline-flex items-center text-sm ring ring-inset ring-accented text-default bg-default hover:bg-elevated active:bg-elevated transition-colors p-1.5 absolute rounded-full end-4 top-1/2 -translate-y-1/2 cursor-pointer"
+                    class="font-medium inline-flex items-center text-sm shadow-md bg-white/90 hover:bg-white text-primary backdrop-blur p-2 absolute rounded-full end-4 top-1/2 -translate-y-1/2 cursor-pointer border border-gray-100 hover:scale-105 active:scale-95 transition-all"
                   >
-                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m13.5 4.5 7.5 7.5m0 0-7.5 7.5M21 12H3"/></svg>
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
                   </button>
                 </template>
               </div>
@@ -283,6 +287,9 @@
           </div>
         </div>
       </div>
+
+      <!-- Book Club Reviews Section -->
+      <ProductReviews :product-id="product.id" type="book" />
     </div>
 
     <!-- ====== MOBILE STICKY BUY BAR (Piyola 1:1) ====== -->

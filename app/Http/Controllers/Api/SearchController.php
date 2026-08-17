@@ -693,14 +693,8 @@ class SearchController extends Controller
         $minPrice    = $request->query('min_price') ? (float)$request->query('min_price') : null;
         $maxPrice    = $request->query('max_price') ? (float)$request->query('max_price') : null;
 
-        // Qidiruv so'z yoki teg yoki kategoriya bo'lishi kerak
-        if (mb_strlen($query) < 2 && mb_strlen($tag) < 2 && !$categoryId) {
-            return response()->json([
-                'status'     => 'success',
-                'data'       => [],
-                'pagination' => ['has_more' => false],
-            ]);
-        }
+        // Agar query, tag yoki category bo'lmasa — barcha mahsulotlar saralash bilan beriladi
+        $hasFilter = mb_strlen($query) >= 2 || mb_strlen($tag) >= 2 || $categoryId || $sellerId || $minPrice !== null || $maxPrice !== null || in_array($sort, ['popular', 'newest', 'price_asc', 'price_desc', 'discount']);
 
         try {
             $user     = auth('sanctum')->user();

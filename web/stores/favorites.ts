@@ -10,6 +10,19 @@ export interface FavoriteItem {
   image: string
 }
 
+function extractImg(p: any): string {
+  if (!p) return '/images/logo/logo_blue.png'
+  const raw = p.medium_images?.[0]
+    || p.thumb_images?.[0]
+    || p.image_urls?.[0]
+    || (Array.isArray(p.images) ? p.images[0] : null)
+    || p.first_image
+    || p.image
+  if (!raw) return '/images/logo/logo_blue.png'
+  if (raw.startsWith('http') || raw.startsWith('data:')) return raw
+  return `/storage/${raw}`
+}
+
 export const useFavoritesStore = defineStore('favorites', () => {
   const items = useLocalStorage<FavoriteItem[]>('kc_favorite_items', [])
 
@@ -32,7 +45,7 @@ export const useFavoritesStore = defineStore('favorites', () => {
         name: product.name,
         price: Number(product.price),
         discountPrice: product.discountPrice || product.discount_price,
-        image: product.first_image ? `/storage/${product.first_image}` : '/images/logo/logo_blue.png'
+        image: extractImg(product)
       })
       return true
     }

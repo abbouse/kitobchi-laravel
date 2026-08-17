@@ -163,18 +163,18 @@ const pageTitle = computed(() => {
   return 'Kitoblar katalogi'
 })
 
-const { data: catalogData } = await useFetch<any>(`${config.public.apiBase}/v1/kitobchi/products/search`, {
+const { data: catalogData } = await useFetch<any>(`${config.public.apiBase}/v1/kitobchi/search`, {
   query: computed(() => ({
     type: activeType.value,
-    sort: activeSort.value,
-    search: route.query.search || undefined,
-    category: route.query.category || undefined
+    sort: activeSort.value === 'new' ? 'newest' : activeSort.value,
+    q: (route.query.search as string) || (route.query.q as string) || undefined,
+    category_id: (route.query.category as string) || (route.query.category_id as string) || undefined
   })),
   watch: [() => route.query]
 })
 
 const products = computed(() => {
-  return catalogData.value?.data || catalogData.value?.products || []
+  return catalogData.value?.data || []
 })
 
 function setType(type: 'book' | 'stationery') {
