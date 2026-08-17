@@ -1,14 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- Kitobchi Primary Background (#0b0342) -->
-  <rect width="512" height="512" rx="115" fill="#0b0342"/>
+  <!-- Kitobchi App Primary Background (#2980DD) -->
+  <rect width="512" height="512" rx="115" fill="#2980DD"/>
 
   <!--
     PAGES TO WINGS (KITOBCI K)
-    Designed for maximum 16x16px clarity:
-    1. Bold vertical spine bar (Book Spine / K Stem) on the left
-    2. Upper page/wing sweeping up-right
-    3. Lower page/wing sweeping down-right
-    4. Clean gap between wings forming sharp K negative space
+    Icon in pure white over #2980DD Kitobchi App Primary Blue
   -->
 
   <!-- Left Vertical Spine (Book Spine / Stem of K) -->
@@ -34,12 +30,12 @@
     fill="#FFFFFF"
   />
 
-  <!-- Secondary inner page detail line (subtle layer effect on upper wing) -->
+  <!-- Subtle inner page overlay line -->
   <path
     d="M 210 210
        C 250 168, 310 135, 370 120
        C 340 152, 280 196, 225 228 Z"
-    fill="#0b0342"
-    opacity="0.15"
+    fill="#2980DD"
+    opacity="0.2"
   />
 </svg>
