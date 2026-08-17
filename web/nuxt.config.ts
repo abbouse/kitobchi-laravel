@@ -14,6 +14,16 @@ export default defineNuxtConfig({
     '~/assets/css/piyola-extra.css'
   ],
 
+  routeRules: {
+    '/': { swr: 60 },
+    '/catalog/**': { swr: 30 },
+    '/about': { prerender: true },
+    '/contacts': { prerender: true },
+    '/privacy': { prerender: true },
+    '/faq': { prerender: true },
+    '/legal/**': { swr: 300 }
+  },
+
   runtimeConfig: {
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE || 'https://kitobchi.com/api',

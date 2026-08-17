@@ -175,27 +175,25 @@
 <script setup lang="ts">
 const config = useRuntimeConfig()
 
-// 1. Fetch Home Data
-const { data: homeRes } = await useFetch<any>(`${config.public.apiBase}/v1/kitobchi/home`, {
-  lazy: false
+// Parallel SSR Data Fetching for maximum performance and instant speed
+const { data: pageData } = await useAsyncData('homepage-data', async () => {
+  try {
+    const [home, cat, catRows] = await Promise.all([
+      $fetch<any>(`${config.public.apiBase}/v1/kitobchi/home`).catch(() => null),
+      $fetch<any>(`${config.public.apiBase}/v1/kitobchi/search/categories`).catch(() => null),
+      $fetch<any>(`${config.public.apiBase}/v1/kitobchi/products/books-by-category`, {
+        query: { type: 'recommended', category_limit: 4, per_category: 10 }
+      }).catch(() => null)
+    ])
+    return { home, cat, catRows }
+  } catch (e) {
+    return { home: null, cat: null, catRows: null }
+  }
 })
 
-// 2. Fetch Categories
-const { data: catRes } = await useFetch<any>(`${config.public.apiBase}/v1/kitobchi/search/categories`, {
-  lazy: false
-})
-
-// 3. Fetch per-category product rows (Piyola'dagi "Lyuks parfyum" /
-// "Original parfyum" kabi nomlangan kategoriya qatorlari). Backend
-// kategoriyalarni avtomatik saralab, har biriga eng mos 10 ta mahsulot
-// biriktirib beradi (recommended -> haftalik sotuv -> yangi, fallback
-// zanjiri bilan) — bitta so'rov, N+1 muammosiz.
-const { data: catRowsRes } = await useFetch<any>(`${config.public.apiBase}/v1/kitobchi/products/books-by-category`, {
-  lazy: true,
-  query: { type: 'recommended', category_limit: 4, per_category: 10 }
-})
-
-const categoryRows = computed(() => catRowsRes.value?.data || [])
+const homeRes = computed(() => pageData.value?.home)
+const catRes = computed(() => pageData.value?.cat)
+const categoryRows = computed(() => pageData.value?.catRows?.data || [])
 
 const banners = computed(() => {
   const data = homeRes.value?.data || homeRes.value || {}
