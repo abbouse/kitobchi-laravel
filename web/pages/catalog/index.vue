@@ -68,7 +68,7 @@
           {{ pageTitle }}
         </h1>
         <span class="text-sm text-neutral-400 font-medium">
-          {{ products.length }} ta mahsulot
+          {{ totalCount }} ta mahsulot
         </span>
       </div>
 
@@ -119,6 +119,24 @@
         >
           Yangi
         </button>
+
+        <div class="w-px h-6 bg-secondary-200 mx-1 shrink-0"></div>
+
+        <!-- Narx filtri — piyoladagi mobil "Narx ⌄" chip'iga mos (jonli
+             tekshirilib tasdiqlangan: chevron-down ikonkali pill, bosilganda
+             pastdan chiquvchi "bottom sheet" ochiladi — generic "Filtr"
+             so'zi emas, aynan "Narx" nomi bilan). -->
+        <button
+          type="button"
+          @click="isFilterOpen = true"
+          :class="[
+            'px-4 py-2 rounded-2xl text-sm font-semibold transition-all border-none cursor-pointer inline-flex items-center gap-1.5 shrink-0',
+            isFilterActive ? 'bg-primary text-white' : 'bg-secondary-300 text-primary hover:bg-primary/10'
+          ]"
+        >
+          Narx
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>
+        </button>
       </div>
 
       <!-- Products Grid -->
@@ -132,16 +150,47 @@
       </div>
 
       <!-- Empty State -->
-      <div v-else class="text-center py-20">
+      <div v-else-if="!pending" class="text-center py-20">
         <div class="w-20 h-20 rounded-full bg-secondary-100 text-neutral-400 mx-auto flex items-center justify-center mb-4">
           <i class="icon-search text-3xl"></i>
         </div>
         <h3 class="text-lg font-bold text-neutral-800 mb-1">Hech narsa topilmadi</h3>
         <p class="text-sm text-neutral-500">Qidiruv so‘zini o‘zgartirib ko‘ring yoki filtrlarni tozalang</p>
       </div>
+
+      <!-- Loading skeleton (birinchi yuklanish) -->
+      <div v-else class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-3 lg:gap-5 mb-10">
+        <div v-for="n in 10" :key="n" class="flex flex-col w-full animate-pulse">
+          <div class="aspect-232/309 w-full bg-neutral-200 rounded-xl"></div>
+          <div class="pt-4 px-3 pb-4 space-y-2">
+            <div class="h-4 w-full bg-neutral-200 rounded-md"></div>
+            <div class="h-4 w-2/3 bg-neutral-200 rounded-md"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Yana ko'rsatish -->
+      <div v-if="hasMore" class="flex justify-center mb-10">
+        <button
+          type="button"
+          :disabled="isLoadingMore"
+          @click="loadMore"
+          class="px-6 py-3 rounded-2xl bg-secondary-200 text-primary font-semibold text-sm hover:bg-secondary-400 transition-colors border-none cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed"
+        >
+          {{ isLoadingMore ? 'Yuklanmoqda...' : 'Yana ko‘rsatish' }}
+        </button>
+      </div>
     </div>
 
     <CatalogDrawer :is-open="isCatalogOpen" @close="isCatalogOpen = false" />
+
+    <CatalogFilterDrawer
+      :is-open="isFilterOpen"
+      :min-price="route.query.min_price as string"
+      :max-price="route.query.max_price as string"
+      @close="isFilterOpen = false"
+      @apply="applyFilter"
+    />
   </div>
 </template>
 
@@ -151,6 +200,8 @@ const router = useRouter()
 const config = useRuntimeConfig()
 
 const isCatalogOpen = ref(false)
+const isFilterOpen = ref(false)
+const isFilterActive = computed(() => !!(route.query.min_price || route.query.max_price))
 const activeType = ref<'book' | 'stationery'>((route.query.type as any) || 'book')
 const activeSort = ref<string>((route.query.sort as string) || 'popular')
 const searchInput = ref<string>((route.query.search as string) || '')
@@ -163,19 +214,67 @@ const pageTitle = computed(() => {
   return 'Kitoblar katalogi'
 })
 
-const { data: catalogData } = await useFetch<any>(`${config.public.apiBase}/v1/kitobchi/search`, {
-  query: computed(() => ({
-    type: activeType.value,
-    sort: activeSort.value === 'new' ? 'newest' : activeSort.value,
-    q: (route.query.search as string) || (route.query.q as string) || undefined,
-    category_id: (route.query.category as string) || (route.query.category_id as string) || undefined
-  })),
+// MUHIM: `/v1/kitobchi/products/search` degan endpoint HAQIQATDA MAVJUD
+// EMAS edi — u aslida `products/{col}` route'iga tushib, {col}='search'
+// (int)ga o'girilganda 0 (LIMIT 0) bo'lib, doim BO'SH natija qaytargan
+// (shuning uchun kategoriyaga kirilganda mahsulotlar umuman ko'rinmasdi).
+// To'g'ri, real qidiruv/katalog endpointi — SearchController::search():
+// GET /v1/kitobchi/search/  (params: q, category_id, type, sort, page,
+// min_price, max_price...). Backend browse-rejimini (matn/teg/kategoriyasiz,
+// faqat sort bilan) qo'llab-quvvatlashi uchun ham moslashtirildi.
+const currentPage = ref(1)
+const allProducts = ref<any[]>([])
+const totalCount = ref(0)
+const hasMore = ref(false)
+const isLoadingMore = ref(false)
+
+// Bu sahifadagi "new" qiymati (tugma/URL uchun, boshqa sahifalar ham shu
+// bilan link beradi: /catalog?sort=new) backendning "newest" enumiga mos
+// kelmaydi — shu yerda tarjima qilinadi, boshqa hech narsa o'zgarmaydi.
+function toApiSort(sort: string) {
+  return sort === 'new' ? 'newest' : sort
+}
+
+const searchQuery = computed(() => ({
+  type: activeType.value,
+  sort: toApiSort(activeSort.value),
+  q: route.query.search || undefined,
+  category_id: route.query.category || undefined,
+  min_price: route.query.min_price || undefined,
+  max_price: route.query.max_price || undefined,
+  page: 1
+}))
+
+const { data: catalogData, pending } = await useFetch<any>(`${config.public.apiBase}/v1/kitobchi/search/`, {
+  query: searchQuery,
   watch: [() => route.query]
 })
 
-const products = computed(() => {
-  return catalogData.value?.data || []
-})
+watch(catalogData, (val) => {
+  allProducts.value = val?.data || []
+  totalCount.value = val?.pagination?.total ?? allProducts.value.length
+  hasMore.value = !!val?.pagination?.has_more
+  currentPage.value = 1
+}, { immediate: true })
+
+const products = computed(() => allProducts.value)
+
+async function loadMore() {
+  if (isLoadingMore.value || !hasMore.value) return
+  isLoadingMore.value = true
+  try {
+    const nextPage = currentPage.value + 1
+    const res: any = await $fetch(`${config.public.apiBase}/v1/kitobchi/search/`, {
+      query: { ...searchQuery.value, page: nextPage }
+    })
+    allProducts.value = [...allProducts.value, ...(res?.data || [])]
+    totalCount.value = res?.pagination?.total ?? totalCount.value
+    hasMore.value = !!res?.pagination?.has_more
+    currentPage.value = nextPage
+  } finally {
+    isLoadingMore.value = false
+  }
+}
 
 function setType(type: 'book' | 'stationery') {
   activeType.value = type
@@ -189,6 +288,16 @@ function setSort(sort: string) {
 
 function updateSearch() {
   router.push({ query: { ...route.query, search: searchInput.value || undefined } })
+}
+
+function applyFilter(payload: { minPrice: string | undefined; maxPrice: string | undefined }) {
+  router.push({
+    query: {
+      ...route.query,
+      min_price: payload.minPrice,
+      max_price: payload.maxPrice
+    }
+  })
 }
 
 useSeoMeta({

@@ -39,22 +39,15 @@
         <!-- Left Column: Items List (Piyola 1:1) -->
         <div class="md:p-6 rounded-3xl bg-secondary-50 flex-1 space-y-4 w-full p-4">
           <div class="flex items-center justify-between pb-3 border-b border-gray-200">
-            <label class="flex items-center gap-2 text-sm font-semibold text-neutral-800 cursor-pointer">
-              <input
-                type="checkbox"
-                :checked="cartStore.isAllSelected"
-                @change="cartStore.toggleSelectAll()"
-                class="w-4 h-4 rounded text-primary"
-              />
-              <span>Hammasini tanlash</span>
-            </label>
             <button
               type="button"
-              @click="cartStore.clearCart()"
-              class="text-xs font-semibold text-red-500 hover:underline border-none bg-transparent cursor-pointer"
+              @click="cartStore.toggleSelectAll()"
+              class="flex items-center gap-2 text-sm font-semibold text-neutral-800 border-none bg-transparent cursor-pointer p-0"
             >
-              Savatni tozalash
+              <CartCheckbox :checked="cartStore.isAllSelected" />
+              <span>Barcha mahsulotlarni tanlash</span>
             </button>
+            <span class="text-xs text-neutral-400 font-medium">{{ cartStore.selectedCount }} ta mahsulot tanlandi</span>
           </div>
 
           <!-- Item Card -->
@@ -63,12 +56,14 @@
             :key="item.id"
             class="rounded-[20px] p-4 bg-secondary-50 transition-colors flex flex-col sm:flex-row items-start sm:items-end gap-4"
           >
-            <input
-              type="checkbox"
-              :checked="item.selected"
-              @change="cartStore.toggleSelect(item.id)"
-              class="w-4 h-4 rounded text-primary shrink-0"
-            />
+            <button
+              type="button"
+              @click="cartStore.toggleSelect(item.id)"
+              class="border-none bg-transparent cursor-pointer p-0 shrink-0"
+              aria-label="Tanlash"
+            >
+              <CartCheckbox :checked="item.selected" />
+            </button>
 
             <!-- Image — mahsulot sahifasiga o'tish uchun link (ilgari oddiy
                  <img> edi, bosilganda hech qayerga ochilmasdi) -->
@@ -105,6 +100,19 @@
                   +
                 </button>
               </div>
+
+              <!-- Sevimlilarga ko'chirish — piyoladagi kabi yurakcha
+                   ikonkasi. Haqiqiy `favorites` do'koniga yozadi (mahsulot
+                   nomi/narxi/rasmi savatdagi haqiqiy ma'lumotdan olinadi —
+                   hech narsa o'ylab topilmagan). -->
+              <button
+                type="button"
+                @click="moveToFavorites(item)"
+                class="w-8 h-8 rounded-full bg-secondary-100 text-neutral-400 hover:text-primary-500 flex items-center justify-center border-none cursor-pointer transition-colors"
+                title="Sevimlilarga qo‘shish"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/></svg>
+              </button>
 
               <button
                 type="button"
@@ -166,6 +174,32 @@
         </NuxtLink>
       </div>
     </div>
+
+    <!-- Buyurtma tasdiqlash oynasi — AuthModal bilan bir xil uslub.
+         Haqiqiy to'lov integratsiyasi ulanmagani uchun bu shunchaki
+         vizual tasdiqlash, real buyurtma backendga yuborilmaydi. -->
+    <div
+      v-if="isOrderConfirmOpen"
+      class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+      @click.self="closeOrderConfirm"
+    >
+      <div class="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl text-center">
+        <div class="w-16 h-16 rounded-full bg-emerald-400 text-white mx-auto flex items-center justify-center mb-4">
+          <svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+        </div>
+        <h2 class="text-xl font-bold text-neutral-900 mb-2">Buyurtmangiz qabul qilindi!</h2>
+        <p class="text-sm text-neutral-500 mb-6">
+          Operatorimiz tez orada siz bilan bog‘lanib, buyurtmani tasdiqlaydi.
+        </p>
+        <button
+          type="button"
+          @click="closeOrderConfirm"
+          class="w-full py-3.5 rounded-2xl bg-primary text-white font-semibold text-base hover:bg-primary/90 transition-colors border-none cursor-pointer"
+        >
+          Tushunarli
+        </button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -173,10 +207,27 @@
 import { useCartStore } from '~/stores/cart'
 import type { CartItem } from '~/stores/cart'
 import { useAuthStore } from '~/stores/auth'
+import { useFavoritesStore } from '~/stores/favorites'
 
 const cartStore = useCartStore()
 const authStore = useAuthStore()
+const favStore = useFavoritesStore()
 const router = useRouter()
+const isOrderConfirmOpen = ref(false)
+
+// Savatdagi mahsulotni Sevimlilarga ko'chirish (piyoladagi yurakcha
+// tugmasi). `resolveProductImage`ning `image_urls` ustuvorligidan
+// foydalanib, savatda ALLAQACHON aniqlangan haqiqiy rasmni saqlab qolamiz
+// (aks holda placeholder logotipga tushib qolar edi).
+function moveToFavorites(item: CartItem) {
+  favStore.toggleFavorite({
+    id: item.productId,
+    name: item.name,
+    price: item.originalPrice,
+    discountPrice: item.price < item.originalPrice ? item.price : undefined,
+    image_urls: [item.image]
+  }, item.type)
+}
 
 function formatPrice(val: number) {
   return (val || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
@@ -189,12 +240,25 @@ function productUrl(item: CartItem) {
   return item.type === 'stationery' ? `/stationery/${item.productId}-${slug}` : `/books/${item.productId}-${slug}`
 }
 
+// MUHIM: haqiqiy to'lov integratsiyasi ULANMAGAN (loyihaning aniq shartiga
+// ko'ra) — shuning uchun bu yerda haqiqiy buyurtma backendga yuborilmaydi.
+// Ilgari bu joyda brauzerning standart `alert()`i ishlatilardi — bu ilova
+// dizayniga mos kelmaydi. Endi shu sahifaning o'zida, qolgan modal'lar
+// (masalan AuthModal) bilan bir xil uslubda tasdiqlash oynasi ko'rsatiladi.
 function handleCheckout() {
   if (!authStore.isAuthenticated) {
     authStore.openAuthModal()
-  } else {
-    alert('Buyurtmangiz qabul qilindi! Operator tez orada siz bilan bog‘lanadi.')
+    return
   }
+  isOrderConfirmOpen.value = true
+}
+
+function closeOrderConfirm() {
+  isOrderConfirmOpen.value = false
+  // Tanlangan mahsulotlarni "buyurtma qilingan" deb hisoblab savatdan
+  // olib tashlaymiz — real backend integratsiyasi bo'lmasa-da, foydalanuvchi
+  // uchun oqim tugallangandek his qilinishi kerak.
+  cartStore.removeSelected()
 }
 
 useSeoMeta({
