@@ -169,4 +169,11 @@ return [
     'profile_main' => 'メイン',
     'profile_confirm_delete_address' => 'この住所を削除しますか？',
     'profile_map_select_alert' => '地図上で住所を選択してください！',
+
+    // Profile — マイレビュー
+    'profile_reviews' => 'マイレビュー',
+    'profile_no_reviews' => 'まだレビューがありません',
+    'profile_no_reviews_desc' => '購入した商品のレビューを書くと、ここに表示されます。',
+    'profile_addresses_empty_title' => '保存された住所がありません',
+    'profile_addresses_empty_desc' => 'お届け先住所を追加してください',
 ];

@@ -169,4 +169,11 @@ return [
     'profile_main' => 'Main',
     'profile_confirm_delete_address' => "Delete this address?",
     'profile_map_select_alert' => "Please select an address on the map!",
+
+    // Profile — My reviews
+    'profile_reviews' => 'My reviews',
+    'profile_no_reviews' => "You don't have any reviews yet",
+    'profile_no_reviews_desc' => "Review products you've bought and they'll show up here.",
+    'profile_addresses_empty_title' => 'No saved addresses',
+    'profile_addresses_empty_desc' => 'Add a delivery address',
 ];

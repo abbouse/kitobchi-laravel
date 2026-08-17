@@ -171,4 +171,12 @@ return [
     'profile_main' => 'Asosiy',
     'profile_confirm_delete_address' => "Manzilni o'chirmoqchimisiz?",
     'profile_map_select_alert' => "Iltimos xaritadan manzilni belgilang!",
+
+    // Profile — Sharhlarim (BookClub postlari, piyolamarket.uz'dagi
+    // "Sharhlarim" bo'limiga o'xshab)
+    'profile_reviews' => 'Sharhlarim',
+    'profile_no_reviews' => "Sizda hozircha sharhlar yo'q",
+    'profile_no_reviews_desc' => "Sotib olgan mahsulotlaringiz haqida fikr bildirsangiz, shu yerda ko'rinadi.",
+    'profile_addresses_empty_title' => 'Saqlangan manzillar mavjud emas',
+    'profile_addresses_empty_desc' => 'Yetkazib berish manzilini qo\'shing',
 ];

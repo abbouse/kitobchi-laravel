@@ -141,7 +141,7 @@ function renderCartPage() {
         const inferredType = (item.url || '').includes('/stationery/') ? 'stationery' : 'book';
 
         itemsHtml += `
-            <div class="flex gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-secondary-200 ${isSelected ? '' : 'opacity-50'}">
+            <div class="flex gap-3 bg-white px-[14px] py-[18px] rounded-[20px] border border-secondary-100 ${isSelected ? '' : 'opacity-50'}">
                 <label class="flex items-start pt-1 cursor-pointer shrink-0">
                     <input type="checkbox" class="w-5 h-5 accent-primary cursor-pointer" ${isSelected ? 'checked' : ''} onchange="kcToggleItemSelect(${item.id}, this.checked)">
                 </label>
@@ -200,14 +200,17 @@ function renderCartPage() {
         <div class="flex flex-col lg:flex-row gap-6 xl:gap-8 relative items-start">
             <div class="flex-1 flex flex-col gap-4 w-full min-w-0">
                 ${itemsHtml}
-
-                <div class="bg-white p-4 sm:p-5 rounded-2xl border border-secondary-200">
-                    <input type="text" id="kcPromoInput" placeholder="${KC_CART_I18N.promoCode}" value="${savedPromo.replace(/"/g, '&quot;')}" oninput="kcSavePromo(this.value)" class="w-full h-12 bg-secondary-100 border-none rounded-xl px-4 text-sm font-medium text-primary outline-none focus:ring-2 ring-primary/20 transition-all" autocomplete="off">
-                </div>
             </div>
 
+            <!-- MUHIM (piyolamarket'ga moslashtirish): piyolada promokod
+                 maydoni chap ustunda ALOHIDA karta emas — o'ng tarafdagi
+                 buyurtma xulosasi kartasining ICHIDA, eng tepada. Avval bu
+                 yerda ikkita alohida karta bo'lgan (promo chapda, xulosa
+                 o'ngda) — endi bittaga birlashtirildi, xuddi piyoladagidek. -->
             <div class="w-full lg:w-[380px] shrink-0 sticky top-24">
-                <div class="bg-white rounded-2xl p-5 md:p-6 border border-secondary-200 shadow-sm flex flex-col gap-6">
+                <div class="bg-white rounded-[20px] p-5 md:p-6 border border-secondary-100 flex flex-col gap-5">
+                    <input type="text" id="kcPromoInput" placeholder="${KC_CART_I18N.promoCode}" value="${savedPromo.replace(/"/g, '&quot;')}" oninput="kcSavePromo(this.value)" class="w-full h-12 bg-secondary-100 border-none rounded-xl px-4 text-sm font-medium text-primary outline-none focus:ring-2 ring-primary/20 transition-all" autocomplete="off">
+
                     <div class="flex flex-col gap-4">
                         <div class="flex justify-between items-center text-base">
                             <span class="text-neutral-500">${KC_CART_I18N.productsCount.replace(':count', totalCount)}</span>

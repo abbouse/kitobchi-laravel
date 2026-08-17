@@ -169,4 +169,11 @@ return [
     'profile_main' => 'Основной',
     'profile_confirm_delete_address' => "Удалить этот адрес?",
     'profile_map_select_alert' => "Пожалуйста, укажите адрес на карте!",
+
+    // Profile — Мои отзывы
+    'profile_reviews' => 'Мои отзывы',
+    'profile_no_reviews' => "У вас пока нет отзывов",
+    'profile_no_reviews_desc' => "Оставьте отзыв о купленных товарах — он появится здесь.",
+    'profile_addresses_empty_title' => 'Сохранённых адресов нет',
+    'profile_addresses_empty_desc' => 'Добавьте адрес доставки',
 ];

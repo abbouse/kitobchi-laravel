@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Sold;
 use App\Models\Locations;
+use App\Models\BookClub;
 use App\Services\SmsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -138,7 +139,30 @@ class WebAuthController extends Controller
 
         $locations = Locations::where('user_id', $user->id)->where('isDeleted', false)->get();
 
-        return view('user.profile', compact('user', 'orders', 'locations'));
+        // MUHIM: piyolamarket.uz'ning /profile sahifasida "Sharhlarim"
+        // degan alohida bo'lim bor — foydalanuvchi yozgan sharhlari
+        // ro'yxati. Kitobchida "sharh" tushunchasi BookClub postlari
+        // orqali ifodalanadi (product sahifasidagi "Xaridorlar sharhlari"
+        // bo'limi ham xuddi shu manbadan — ProductCatalogController::
+        // showBook()/showStationery() ga qarang). Shu sabab bu yerda ham
+        // o'sha jadvaldan, FAQAT joriy foydalanuvchining o'z postlari
+        // olinadi (o'chirilmagan va AI tomonidan yashirilmagan).
+        try {
+            $myReviews = BookClub::with('images')
+                ->withCount(['likes', 'comments'])
+                ->where('user_id', $user->id)
+                ->where('is_deleted', false)
+                ->where(function ($q) {
+                    $q->whereNull('is_hidden_by_ai')->orWhere('is_hidden_by_ai', false);
+                })
+                ->orderByDesc('created_at')
+                ->take(30)
+                ->get();
+        } catch (\Throwable $e) {
+            $myReviews = collect();
+        }
+
+        return view('user.profile', compact('user', 'orders', 'locations', 'myReviews'));
     }
 
     /**
