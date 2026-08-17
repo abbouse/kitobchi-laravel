@@ -11,12 +11,11 @@
   </div>
 </template>
 
-<script setup lang="ts">
-import { useAuthStore } from '~/stores/auth'
-
-const authStore = useAuthStore()
-
-onMounted(() => {
-  authStore.fetchUser()
-})
-</script>
+<!--
+  MUHIM: bu yerda ilgari har bir sahifa ochilganda `authStore.fetchUser()`
+  chaqirilardi — lekin haqiqiy backendda ishlaydigan mos endpoint yo'qligi
+  (stores/auth.ts'dagi izohga qarang) tufayli bu chaqiruv HAR DOIM
+  muvaffaqiyatsiz bo'lar, foydali hech narsa qilmasdi. `user` endi
+  cookie'da saqlanadi (token bilan bir xil), shuning uchun sahifa qayta
+  ochilganda ham darhol mavjud — alohida so'rov shart emas.
+-->

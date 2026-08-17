@@ -257,10 +257,15 @@ const config = useRuntimeConfig()
 
 const userAny = computed(() => authStore.user as any)
 
+// MUHIM: qiymatlar ('erkak'/'ayol') haqiqiy backend javobidan
+// TASDIQLANGAN (jonli login orqali sinovdan o'tkazildi — foydalanuvchi
+// ma'lumotida `"sex":"erkak"` kelgan edi). Ilgari bu yerda inglizcha
+// 'male'/'female' ishlatilgan edi — shu sababli mavjud qiymat hech qachon
+// tanlangan sifatida ko'rsatilmasdi (SEX_OPTIONS bilan mos kelmasdi).
 const SEX_OPTIONS = [
   { value: '', label: "Ko'rsatilmagan" },
-  { value: 'male', label: 'Erkak' },
-  { value: 'female', label: 'Ayol' },
+  { value: 'erkak', label: 'Erkak' },
+  { value: 'ayol', label: 'Ayol' },
 ]
 
 const sexLabel = computed(() => {
@@ -307,7 +312,13 @@ async function handleSave() {
         sex: form.sex,
       }
     })
-    await authStore.fetchUser()
+    // MUHIM: `settings` javobi yangilangan foydalanuvchi ma'lumotini
+    // qaytarmaydi (faqat {status, role, username}), va profilni QAYTA
+    // OLISH uchun ishlaydigan endpoint yo'q (stores/auth.ts'ga qarang).
+    // Shu sababli saqlangan qiymatlarni O'ZIMIZ, LOKAL ravishda
+    // (optimistik) yangilaymiz — backendga aynan shularni yuborganimiz
+    // uchun bu xavfsiz.
+    authStore.updateUser({ name: form.name, lastname: form.lastname, sex: form.sex })
     saveSuccess.value = true
     editing.value = false
   } catch (e: any) {
@@ -381,7 +392,12 @@ async function submitAddress() {
   savingAddress.value = true
   addressError.value = ''
   try {
-    await $fetch(`${config.public.apiBase}/v1/kitobchi/locations/new`, {
+    // MUHIM: backend (UserController::new_location) YANGI qo'shilgan
+    // manzilni HAR DOIM avtomatik asosiy manzil qilib belgilaydi
+    // (`$user->update(['mainAddressID' => $location->id])`) va javobda
+    // `location_id` ni qaytaradi — shu qiymat bilan `mainAddressID` ni
+    // lokal yangilaymiz (ishlamaydigan fetchUser() o'rniga).
+    const res: any = await $fetch(`${config.public.apiBase}/v1/kitobchi/locations/new`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${authStore.token}` },
       body: {
@@ -390,7 +406,10 @@ async function submitAddress() {
         fullAddress: newAddressText.value.trim(),
       }
     })
-    await Promise.all([fetchAddresses(), authStore.fetchUser()])
+    if (res?.location_id) {
+      authStore.updateUser({ mainAddressID: res.location_id })
+    }
+    await fetchAddresses()
     addingAddress.value = false
   } catch (e: any) {
     addressError.value = e?.data?.message || "Manzilni saqlashda xatolik yuz berdi"
@@ -404,7 +423,9 @@ async function makeMain(loc: any) {
     await $fetch(`${config.public.apiBase}/v1/kitobchi/locations/select/${loc.id}`, {
       headers: { Authorization: `Bearer ${authStore.token}` }
     })
-    await authStore.fetchUser()
+    // Backend (UserController::select_location) `mainAddressID` ni aynan
+    // shu `loc.id` ga o'rnatadi — lokal ravishda ham shunday yangilaymiz.
+    authStore.updateUser({ mainAddressID: loc.id })
   } catch (e) {
     // jim — asosiy manzilni belgilashda xatolik, ro'yxat holati o'zgarmaydi
   }

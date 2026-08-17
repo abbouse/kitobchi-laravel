@@ -104,7 +104,7 @@
           <div v-else class="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div v-for="post in posts" :key="post.id" class="bg-white border border-neutral-100 rounded-2xl p-4 flex flex-col gap-2 shadow-sm">
               <div class="flex items-center justify-between gap-2">
-                <span class="text-xs text-neutral-400">{{ post.formatted_created_at || post.created_at }}</span>
+                <span class="text-xs text-neutral-400">{{ formatUzDate(post.created_at) || post.formatted_created_at }}</span>
                 <span v-if="post.repost" class="text-xs font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">Repost</span>
               </div>
               <p class="text-sm text-neutral-800 line-clamp-3 whitespace-pre-wrap break-words">{{ post.text || post.content || '' }}</p>

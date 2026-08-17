@@ -87,7 +87,7 @@
                 <span :class="statusBadgeClass(order)" class="text-xs font-semibold px-2.5 py-1 rounded-full shrink-0">{{ statusLabel(order) }}</span>
               </div>
               <div class="flex items-center justify-between text-sm text-neutral-500">
-                <span>{{ order.formatted_created_at || order.created_at }}</span>
+                <span>{{ formatOrderDate(order) }}</span>
                 <span>{{ orderItemCount(order) }} mahsulot</span>
               </div>
               <div class="mt-3 pt-3 border-t border-neutral-100 flex items-center justify-between">
@@ -162,6 +162,14 @@ function orderItemCount(order: any) {
 
 function formatPrice(value: number) {
   return new Intl.NumberFormat('ru-RU').format(value || 0)
+}
+
+// `formatUzDate` — utils/formatDate.ts (Nuxt avto-import). Backendning
+// `formatted_created_at` (Carbon::isoFormat) rus tilidagi oy nomlari bilan
+// qaytishi jonli production API orqali tasdiqlangani uchun xom
+// `created_at`dan o'zimiz o'zbekcha formatlaymiz.
+function formatOrderDate(order: any): string {
+  return formatUzDate(order.created_at) || order.formatted_created_at || ''
 }
 
 const STATUS_LABELS: Record<string, string> = {
