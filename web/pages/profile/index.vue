@@ -242,6 +242,21 @@ function handleLogout() {
   router.push('/')
 }
 
+// Piyolada haqiqiy tekshirilgan: mehmon /profile'ga TO'G'RIDAN-TO'G'RI
+// (masalan URL orqali yoki header'dagi "Kirish" tugmasi emas, balki
+// to'g'ridan-to'g'ri sahifaga) kirsa — DESKTOP'da (>=768px) darhol "/" ga
+// qaytarib yuboriladi (guest uchun alohida sahifa umuman ko'rsatilmaydi,
+// chunki desktopda header'dagi "Kirish" tugmasi istalgan vaqt modalni ochadi).
+// MOBILE'da esa piyolaning pastki navigatsiyasidagi "Profil" tugmasi orqali
+// kirilgani uchun (bottom nav — desktopda mavjud emas) shu yerdagi guest
+// kartasi + info menyu ko'rsatiladi. Shu sabab bu yerdagi guest UI faqat
+// mobile uchun qoladi, desktop uchun emas.
+onMounted(() => {
+  if (!authStore.isAuthenticated && window.matchMedia('(min-width: 768px)').matches) {
+    router.replace('/')
+  }
+})
+
 useSeoMeta({
   title: 'Foydalanuvchi profili — Kitobchi',
   description: 'Shaxsiy kabinet, buyurtmalar tarixi va sozlamalar.'

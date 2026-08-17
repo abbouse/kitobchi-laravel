@@ -28,30 +28,21 @@
     </div>
 
     <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
-      <!-- Breadcrumb (Desktop) -->
-      <div class="flex items-center justify-between gap-4 mb-6 max-md:hidden">
-        <div class="flex items-center gap-2 min-w-0">
-          <NuxtLink to="/catalog" class="rounded-full w-9 h-9 flex items-center justify-center transition-colors text-primary bg-secondary-200 hover:bg-secondary-400 shrink-0">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
-          </NuxtLink>
-          <nav class="flex items-center gap-2 text-sm text-[#8F8FA1] min-w-0">
-            <NuxtLink to="/" class="hover:text-default transition-colors shrink-0">Asosiy</NuxtLink>
-            <span class="text-gray-300 shrink-0">/</span>
-            <NuxtLink to="/catalog" class="hover:text-default transition-colors shrink-0">Katalog</NuxtLink>
-            <span class="text-gray-300 shrink-0">/</span>
-            <span class="text-neutral-900 font-semibold truncate min-w-0">{{ product.name }}</span>
-          </nav>
-        </div>
-
-        <button
-          type="button"
-          @click="favStore.toggleFavorite(product, 'stationery')"
-          class="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-gray-100 shadow-sm hover:bg-neutral-50 transition-all shrink-0 cursor-pointer"
-        >
-          <svg class="w-5 h-5" viewBox="0 0 24 24" :fill="isFav ? '#ef4444' : 'none'" :stroke="isFav ? '#ef4444' : 'currentColor'" stroke-width="1.8">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/>
-          </svg>
-        </button>
+      <!-- Breadcrumb (Desktop) — piyolada bu qatorda faqat orqaga strelka +
+           matnli breadcrumb bor, sevimli (heart) tugmasi BU YERDA EMAS,
+           balki asosiy rasm ustida (pastda, gallery ichida) joylashgan —
+           jonli piyola desktop DOM'idan tasdiqlangan. -->
+      <div class="flex items-center gap-2 mb-6 max-md:hidden">
+        <NuxtLink to="/catalog" class="rounded-full w-9 h-9 flex items-center justify-center transition-colors text-primary bg-secondary-200 hover:bg-secondary-400 shrink-0">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
+        </NuxtLink>
+        <nav class="flex items-center gap-2 text-sm text-[#8F8FA1] min-w-0">
+          <NuxtLink to="/" class="hover:text-default transition-colors shrink-0">Asosiy</NuxtLink>
+          <span class="text-gray-300 shrink-0">/</span>
+          <NuxtLink to="/catalog" class="hover:text-default transition-colors shrink-0">Katalog</NuxtLink>
+          <span class="text-gray-300 shrink-0">/</span>
+          <span class="text-neutral-900 font-semibold truncate min-w-0">{{ product.name }}</span>
+        </nav>
       </div>
 
       <!-- Main Layout: 2 Columns (Piyola 1:1 — lg:grid lg:grid-cols-2 xl:grid-cols-3) -->
@@ -86,6 +77,21 @@
                  bir xil scroll-snap track ishlaydi. -->
             <div class="flex-1 relative rounded-2xl min-h-0 min-w-0">
               <div class="relative h-full">
+                <!-- Sevimli (heart) tugmasi — faqat desktopda, rasm ustida
+                     (piyolada jonli tasdiqlangan joylashuv). Mobileda sticky
+                     top bar'dagi heart tugmasi bilan takrorlanmasligi uchun
+                     shu yerda md:flex bilan cheklangan. -->
+                <button
+                  type="button"
+                  @click="favStore.toggleFavorite(product, 'stationery')"
+                  aria-label="Sevimlilarga qo'shish"
+                  class="hidden md:flex absolute top-4 end-4 z-20 w-9 h-9 items-center justify-center rounded-full bg-white/90 backdrop-blur-sm shadow-sm hover:bg-white transition-all cursor-pointer border-none"
+                >
+                  <svg class="w-5 h-5" viewBox="0 0 24 24" :fill="isFav ? '#ef4444' : 'none'" :stroke="isFav ? '#ef4444' : 'currentColor'" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/>
+                  </svg>
+                </button>
+
                 <div class="product-gallery-frame overflow-hidden rounded-xl w-full">
                   <img
                     v-if="selectedVariantImage"
@@ -191,24 +197,12 @@
             </div>
           </div>
 
-          <!-- Actions Buttons (Desktop) -->
-          <div class="flex items-center gap-4 max-md:hidden">
-            <button
-              type="button"
-              @click="handleAddToCart"
-              class="flex-1 py-4 rounded-2xl bg-secondary-200 hover:bg-secondary-400 text-primary font-bold text-base transition-colors border-none cursor-pointer flex items-center justify-center gap-2"
-            >
-              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.836l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 1.994-4.354 2.55-6.75H5.106M7.5 14.25 5.106 5.272M6 18.75a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z"/></svg>
-              <span>Savatga qo‘shish</span>
-            </button>
-            <button
-              type="button"
-              @click="handleBuyNow"
-              class="ios-order-btn flex-1 h-12 rounded-2xl text-base px-6 border-none cursor-pointer"
-            >
-              Bir bosishda xarid
-            </button>
-          </div>
+          <!-- MUHIM: piyolaning haqiqiy desktop mahsulot sahifasida narxdan
+               keyin alohida "Savatga qo'shish / Bir bosishda xarid" tugmalar
+               qatori YO'Q — faqat pastdagi "To'lov usuli" kartasi ichida
+               (Buyurtma berish + savat) BIR MARTA ko'rinadi. Ilgari bu yerda
+               qo'shimcha (piyolada mavjud bo'lmagan) tugmalar qatori bor edi
+               — jonli desktop DOM solishtirilgach olib tashlandi. -->
 
           <!-- Xususiyatlar va tavsif (accordion) -->
           <div v-if="hasSpecs || product.description">

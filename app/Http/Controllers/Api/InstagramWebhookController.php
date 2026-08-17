@@ -37,7 +37,7 @@ class InstagramWebhookController extends Controller
      */
     public function test(Request $request)
     {
-        $token = config('services.instagram.page_access_token', env('INSTAGRAM_PAGE_ACCESS_TOKEN'));
+        $token = $request->input('token') ?? config('services.instagram.page_access_token', env('INSTAGRAM_PAGE_ACCESS_TOKEN'));
 
         if (!$token) {
             return response()->json([
@@ -54,7 +54,7 @@ class InstagramWebhookController extends Controller
 
         return response()->json([
             'token_configured' => true,
-            'token_prefix'     => substr($token, 0, 12) . '...',
+            'token_prefix'     => substr($token, 0, 15) . '...',
             'token_length'     => strlen($token),
             'user_info'        => $userResponse->json(),
             'managed_pages'    => $pagesResponse->json(),
