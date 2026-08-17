@@ -1,64 +1,34 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
-  <!-- Solid Kitobchi Brand Navy Background -->
+  <!-- Kitobchi Brand Blue Background -->
   <rect width="512" height="512" rx="120" fill="#0B0342" />
 
-  <!-- Masterclass Creative K-Book: Ribbon Wing Origami -->
-  <!-- Upper Butterfly Wing / Flying Open Page (Top Arm of K) -->
-  <path
-    d="M 190 240
-       C 190 170, 230 110, 340 100
-       C 385 96, 412 130, 390 170
-       C 340 250, 240 260, 190 260
-       Z"
-    fill="#FFFFFF"
-  />
+  <!-- Pure White Butterfly-K Mark -->
+  <g fill="#FFFFFF">
+    <!-- Left Stem (Spine of K / Butterfly Body) -->
+    <rect x="136" y="112" width="56" height="288" rx="28" />
 
-  <!-- Lower Butterfly Wing / Flowing Page (Bottom Arm of K) -->
-  <path
-    d="M 190 260
-       C 240 260, 340 270, 390 350
-       C 412 390, 385 424, 340 420
-       C 230 410, 190 350, 190 280
-       Z"
-    fill="#FFFFFF"
-  />
-
-  <!-- Vertical Book Spine (Stem of K) with Subtle Perspective Twist -->
-  <path
-    d="M 120 106
-       C 120 92, 134 82, 148 86
-       L 174 94
-       C 184 97, 190 106, 190 116
-       L 190 396
-       C 190 406, 184 415, 174 418
-       L 148 426
-       C 134 430, 120 420, 120 406
-       Z"
-    fill="#FFFFFF"
-  />
-
-  <!-- The Clever Optical Cut (Center Negative Space Fold revealing the Book & Butterfly Body) -->
-  <g fill="#0B0342">
-    <!-- Spine Separation Channel -->
-    <rect x="176" y="80" width="16" height="352" rx="8" />
-
-    <!-- Upper Wing Inner Petal (Butterfly Cell) -->
+    <!-- Upper Butterfly Wing (Upper Arm of K) -->
     <path
-      d="M 226 230
-         C 232 176, 268 136, 334 130
-         C 356 128, 368 144, 356 164
-         C 324 210, 268 226, 226 230 Z"
+      d="M 212 240
+         C 220 180, 260 120, 356 112
+         C 388 110, 404 136, 388 166
+         C 346 236, 266 250, 212 240 Z"
     />
 
-    <!-- Lower Wing Inner Petal (Butterfly Cell) -->
+    <!-- Lower Butterfly Wing (Lower Arm of K) -->
     <path
-      d="M 226 290
-         C 268 294, 324 310, 356 356
-         C 368 376, 356 392, 334 390
-         C 268 384, 232 344, 226 290 Z"
+      d="M 212 272
+         C 266 262, 346 276, 388 346
+         C 404 376, 388 402, 356 400
+         C 260 392, 220 332, 212 272 Z"
     />
+  </g>
 
-    <!-- Center Fold Diamond Notch -->
-    <polygon points="184,260 214,242 244,260 214,278" />
+  <!-- Wing Vein / Page Texture Lines in Background Blue -->
+  <g fill="none" stroke="#0B0342" stroke-width="14" stroke-linecap="round">
+    <!-- Upper Wing Vein Arc -->
+    <path d="M 252 226 C 280 190, 320 160, 362 144" />
+    <!-- Lower Wing Vein Arc -->
+    <path d="M 252 286 C 280 322, 320 352, 362 368" />
   </g>
 </svg>
