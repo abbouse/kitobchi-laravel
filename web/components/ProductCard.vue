@@ -92,10 +92,23 @@ const productUrl = computed(() => {
 })
 
 const imageSrc = computed(() => {
+  if (props.product.medium_images && props.product.medium_images[0]) {
+    return props.product.medium_images[0]
+  }
+  if (props.product.thumb_images && props.product.thumb_images[0]) {
+    return props.product.thumb_images[0]
+  }
+  if (props.product.image_urls && props.product.image_urls[0]) {
+    return props.product.image_urls[0]
+  }
   if (props.product.first_image) {
     return props.product.first_image.startsWith('http')
       ? props.product.first_image
       : `/storage/${props.product.first_image}`
+  }
+  if (Array.isArray(props.product.images) && props.product.images[0]) {
+    const img = props.product.images[0]
+    return img.startsWith('http') ? img : `/storage/${img}`
   }
   return '/images/logo/logo_blue.png'
 })
