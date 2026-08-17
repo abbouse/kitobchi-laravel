@@ -28,6 +28,7 @@ Route::get('appversion/check', [ProjectSettingController::class, 'getVersions'])
 Route::post('hook', WebhookController::class);
 Route::get('instagram/webhook', [\App\Http\Controllers\Api\InstagramWebhookController::class, 'verify']);
 Route::post('instagram/webhook', [\App\Http\Controllers\Api\InstagramWebhookController::class, 'handle']);
+Route::get('instagram/test', [\App\Http\Controllers\Api\InstagramWebhookController::class, 'test']);
 Route::get('update_locale', [UserController::class, 'updateLocale']);
 Route::get('counts', [UserController::class, 'getGlobalCounts']);
 Route::prefix('v1')->group(function () {
