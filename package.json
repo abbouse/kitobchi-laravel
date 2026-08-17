@@ -3,7 +3,10 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite"
+        "dev": "vite",
+        "web:dev": "npm --prefix web run dev",
+        "web:build": "npm --prefix web run build",
+        "web:start": "node web/.output/server/index.mjs"
     },
     "devDependencies": {
         "autoprefixer": "^10.4.27",

@@ -77,8 +77,38 @@
             }
         @endphp
 
-        <!-- Breadcrumb & Back button (PiyolaMarket style) -->
-        <div class="flex items-center gap-2 pt-4 pb-1">
+        <!-- ====== MOBILE STICKY TOP BAR (PiyolaMarket 1:1) ====== -->
+        <div class="md:hidden sticky top-0 z-40 -mx-4 mb-3">
+            <div class="py-3 rounded-b-2xl bg-white shadow-sm transition-all duration-300">
+                <div class="px-4 space-y-2">
+                    <div class="grid grid-cols-5 items-center gap-2">
+                        <div class="col-span-1">
+                            <a href="javascript:history.back()" class="font-medium inline-flex items-center text-base gap-2 text-primary p-2 rounded-full bg-secondary-100 hover:bg-primary/10 transition-colors">
+                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
+                            </a>
+                        </div>
+                        <div class="col-span-3">
+                            <h1 class="text-lg sm:text-xl text-primary font-semibold text-center m-0 truncate">{{ $pageTitle }}</h1>
+                        </div>
+                        <div class="col-span-1 flex justify-end"></div>
+                    </div>
+                    
+                    <div>
+                        <div class="relative overflow-hidden transition-shadow duration-300 rounded-[20px] px-4 py-2.5 h-11 text-gray bg-secondary-300! flex items-center gap-2.5">
+                            <span class="iconify i-lucide:search text-lg text-gray-500"></span>
+                            <form action="{{ route('web.catalog') }}" method="GET" class="flex flex-1 items-center h-full m-0 p-0">
+                                <input type="text" name="search" value="{{ request('search') }}"
+                                       placeholder="Kitobchi’da izlash"
+                                       class="flex-1 bg-transparent border-none outline-none text-sm text-neutral-900 font-inherit m-0 p-0 h-full w-full">
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Breadcrumb & Back button (Desktop - PiyolaMarket style) -->
+        <div class="flex items-center gap-2 pt-4 pb-1 max-md:hidden">
             <a href="{{ url('/') }}" class="rounded-full w-9 h-9 flex items-center justify-center transition-colors text-primary bg-secondary-200 hover:bg-secondary-300" title="{{ __('marketplace.back_to_home') }}">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
             </a>

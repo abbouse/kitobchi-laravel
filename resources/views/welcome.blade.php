@@ -276,10 +276,15 @@
                         <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:1em;height:1em;display:inline-block;vertical-align:-0.125em;"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
                     </a>
                 </div>
-                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-3 lg:gap-5 mb-4 md:mb-10">
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-3 lg:gap-5 mb-4 md:mb-6">
                     @foreach($newBooks as $book)
                         @include('partials.home-book-card', ['book' => $book])
                     @endforeach
+                </div>
+                <div class="flex justify-center">
+                    <a href="{{ route('web.catalog', ['sort' => 'new']) }}" class="font-medium items-center py-1.5 gap-1.5 text-white bg-primary hover:bg-primary/75 h-12 flex justify-center sm:min-w-40 rounded-2xl text-base px-6 max-md:w-full no-underline transition-colors">
+                        Barchasini ko‘rish
+                    </a>
                 </div>
             </div>
         </section>
@@ -298,10 +303,15 @@
                         <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:1em;height:1em;display:inline-block;vertical-align:-0.125em;"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
                     </a>
                 </div>
-                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-3 lg:gap-5 mb-4 md:mb-10">
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-3 lg:gap-5 mb-4 md:mb-6">
                     @foreach($recommendedBooks as $book)
                         @include('partials.home-book-card', ['book' => $book])
                     @endforeach
+                </div>
+                <div class="flex justify-center">
+                    <a href="{{ route('web.catalog', ['sort' => 'popular']) }}" class="font-medium items-center py-1.5 gap-1.5 text-white bg-primary hover:bg-primary/75 h-12 flex justify-center sm:min-w-40 rounded-2xl text-base px-6 max-md:w-full no-underline transition-colors">
+                        Barchasini ko‘rish
+                    </a>
                 </div>
             </div>
         </section>
@@ -321,10 +331,15 @@
                             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:1em;height:1em;display:inline-block;vertical-align:-0.125em;"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
                         </a>
                     </div>
-                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-3 lg:gap-5 mb-4 md:mb-10">
+                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-3 lg:gap-5 mb-4 md:mb-6">
                         @foreach($section->books as $book)
                             @include('partials.home-book-card', ['book' => $book])
                         @endforeach
+                    </div>
+                    <div class="flex justify-center">
+                        <a href="{{ route('web.catalog', ['category' => $section->category->id]) }}" class="font-medium items-center py-1.5 gap-1.5 text-white bg-primary hover:bg-primary/75 h-12 flex justify-center sm:min-w-40 rounded-2xl text-base px-6 max-md:w-full no-underline transition-colors">
+                            Barchasini ko‘rish
+                        </a>
                     </div>
                 </div>
             </section>

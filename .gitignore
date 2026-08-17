@@ -26,3 +26,6 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+/web/node_modules
+/web/.nuxt
+/web/.output
