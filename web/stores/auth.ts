@@ -47,18 +47,25 @@ export const useAuthStore = defineStore('auth', () => {
       method: 'POST',
       body: {
         phone_number: phone,
-        verifyCode: code  // AuthController::store() expects 'verifyCode', not 'code'
+        verifyCode: code
       }
     })
 
-    if (res?.token) {
-      token.value = res.token
-      user.value = res.user || {
-        id: res.user_id || 1,
-        name: res.name || null,
-        phone_number: phone
+    const payload = res?.data || res
+    const authToken = payload?.token || res?.token
+
+    if (authToken) {
+      token.value = authToken
+      user.value = {
+        id: payload.id || 1,
+        name: payload.name || null,
+        phone_number: payload.phone_number || phone,
+        avatar: payload.photo || payload.avatar || undefined,
+        role: payload.staff_role || payload.position || undefined
       }
       isAuthModalOpen.value = false
+      // Shuningdek, to'liq user profilini yuklab olish
+      await fetchUser().catch(() => {})
     }
     return res
   }
