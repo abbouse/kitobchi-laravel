@@ -61,7 +61,7 @@
           <div
             v-for="item in cartStore.items"
             :key="item.id"
-            class="rounded-[20px] p-4 bg-white border border-gray-100 flex flex-col sm:flex-row items-start sm:items-end gap-4"
+            class="rounded-[20px] p-4 bg-secondary-50 transition-colors flex flex-col sm:flex-row items-start sm:items-end gap-4"
           >
             <input
               type="checkbox"
@@ -70,14 +70,17 @@
               class="w-4 h-4 rounded text-primary shrink-0"
             />
 
-            <!-- Image -->
-            <div class="w-16 h-20 rounded-xl overflow-hidden bg-secondary-100 shrink-0 flex items-center justify-center">
+            <!-- Image — mahsulot sahifasiga o'tish uchun link (ilgari oddiy
+                 <img> edi, bosilganda hech qayerga ochilmasdi) -->
+            <NuxtLink :to="productUrl(item)" class="w-16 h-20 rounded-xl overflow-hidden bg-secondary-100 shrink-0 flex items-center justify-center">
               <img :src="item.image" :alt="item.name" class="w-full h-full object-cover" />
-            </div>
+            </NuxtLink>
 
             <!-- Title & Info -->
             <div class="flex-1 min-w-0">
-              <h3 class="text-sm font-bold text-neutral-900 line-clamp-2 m-0">{{ item.name }}</h3>
+              <h3 class="text-sm font-bold text-neutral-900 m-0">
+                <NuxtLink :to="productUrl(item)" class="line-clamp-2 hover:underline">{{ item.name }}</NuxtLink>
+              </h3>
               <div class="text-base font-bold text-primary mt-1">
                 {{ formatPrice(item.price) }} so‘m
               </div>
@@ -168,6 +171,7 @@
 
 <script setup lang="ts">
 import { useCartStore } from '~/stores/cart'
+import type { CartItem } from '~/stores/cart'
 import { useAuthStore } from '~/stores/auth'
 
 const cartStore = useCartStore()
@@ -176,6 +180,13 @@ const router = useRouter()
 
 function formatPrice(val: number) {
   return (val || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+}
+
+// Savatdagi mahsulot rasmi/nomi bosilganda mahsulot sahifasiga o'tish
+// uchun — ProductCard.vue'dagi bilan bir xil slug mantig'i.
+function productUrl(item: CartItem) {
+  const slug = (item.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+  return item.type === 'stationery' ? `/stationery/${item.productId}-${slug}` : `/books/${item.productId}-${slug}`
 }
 
 function handleCheckout() {

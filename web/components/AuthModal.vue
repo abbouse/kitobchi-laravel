@@ -35,16 +35,12 @@
             <div class="flex items-center rounded-2xl bg-secondary-100 px-4 py-3 border border-gray-200 focus-within:border-gray">
               <span class="text-sm font-semibold text-neutral-600 me-2">+998</span>
               <input
-                :value="phoneDisplay"
-                @input="handlePhoneInput"
-                @keydown="handlePhoneKeydown"
-                inputmode="numeric"
+                v-model="phoneInput"
                 type="tel"
                 placeholder="90 123 45 67"
-                maxlength="12"
+                maxlength="9"
                 required
-                autocomplete="tel"
-                class="flex-1 bg-transparent border-none outline-none text-base text-neutral-900 font-medium tracking-wide"
+                class="flex-1 bg-transparent border-none outline-none text-base text-neutral-900 font-medium"
               />
             </div>
           </div>
@@ -68,14 +64,11 @@
             <label class="block text-xs font-semibold text-neutral-700 uppercase mb-1">Tasdiqlash kodi</label>
             <input
               v-model="codeInput"
-              ref="codeInputRef"
               type="text"
-              inputmode="numeric"
-              placeholder="· · · · · ·"
+              placeholder="123456"
               maxlength="6"
               required
-              autocomplete="one-time-code"
-              class="w-full rounded-2xl bg-secondary-100 px-4 py-3.5 text-center text-2xl font-bold tracking-[0.5em] text-neutral-900 border border-gray-200 focus:border-primary/20 outline-none"
+              class="w-full rounded-2xl bg-secondary-100 px-4 py-3.5 text-center text-xl font-bold tracking-widest text-neutral-900 border border-gray-200 focus:border-primary/20 outline-none"
             />
           </div>
 
@@ -110,61 +103,15 @@ import { useAuthStore } from '~/stores/auth'
 const authStore = useAuthStore()
 
 const step = ref<'phone' | 'code'>('phone')
-const phoneRaw = ref('')      // faqat raqamlar, 9ta, API uchun
-const phoneDisplay = ref('')  // formatlangan: "90 123 45 67"
+const phoneInput = ref('')
 const codeInput = ref('')
 const loading = ref(false)
 const errorMessage = ref('')
-const codeInputRef = ref<HTMLInputElement | null>(null)
 
-// Eski nom bilan saqlanadi (phone computed uchun)
-const phoneInput = computed(() => phoneRaw.value)
-const phone = computed(() => '998' + phoneRaw.value)
-
-// Format: XX XXX XX XX
-function formatPhone(digits: string): string {
-  const d = digits.slice(0, 9)
-  if (d.length <= 2) return d
-  if (d.length <= 5) return d.slice(0, 2) + ' ' + d.slice(2)
-  if (d.length <= 7) return d.slice(0, 2) + ' ' + d.slice(2, 5) + ' ' + d.slice(5)
-  return d.slice(0, 2) + ' ' + d.slice(2, 5) + ' ' + d.slice(5, 7) + ' ' + d.slice(7)
-}
-
-function handlePhoneInput(e: Event) {
-  const input = e.target as HTMLInputElement
-  const cursor = input.selectionStart ?? 0
-  const raw = input.value.replace(/\D/g, '').slice(0, 9)
-  phoneRaw.value = raw
-  const formatted = formatPhone(raw)
-  phoneDisplay.value = formatted
-  // kursor pozitsiyasini to'g'rilash
-  nextTick(() => {
-    // raqam kiriting keyingi bo'sh joyni o'tkazib yuborish
-    let newCursor = cursor
-    if (formatted[cursor - 1] === ' ') newCursor = cursor + 1
-    if (newCursor > formatted.length) newCursor = formatted.length
-    input.setSelectionRange(newCursor, newCursor)
-  })
-  errorMessage.value = ''
-}
-
-function handlePhoneKeydown(e: KeyboardEvent) {
-  const allowed = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Enter']
-  if (allowed.includes(e.key)) return
-  if (e.ctrlKey || e.metaKey) return  // copy/paste
-  if (!/^\d$/.test(e.key)) e.preventDefault()
-}
-
-// OTP step ga o'tganda avtomatik focus
-watch(step, async (val) => {
-  if (val === 'code') {
-    await nextTick()
-    codeInputRef.value?.focus()
-  }
-})
+const phone = computed(() => '998' + phoneInput.value.replace(/\D/g, ''))
 
 async function handleSendOtp() {
-  if (phoneRaw.value.length !== 9) {
+  if (phoneInput.value.replace(/\D/g, '').length !== 9) {
     errorMessage.value = 'Iltimos, 9 xonali raqam kiriting (masalan: 90 123 45 67)'
     return
   }
@@ -174,7 +121,7 @@ async function handleSendOtp() {
     await authStore.sendOtp(phone.value)
     step.value = 'code'
   } catch (err: any) {
-    errorMessage.value = err?.data?.message || 'SMS yuborishda xatolik yuz berdi'
+    errorMessage.value = err?.data?.message || err?.message || 'SMS yuborishda xatolik yuz berdi'
   } finally {
     loading.value = false
   }
@@ -182,7 +129,7 @@ async function handleSendOtp() {
 
 async function handleVerifyOtp() {
   if (codeInput.value.length < 4) {
-    errorMessage.value = 'Kodni to\'liq kiriting'
+    errorMessage.value = 'Kodni to‘liq kiriting'
     return
   }
   loading.value = true
@@ -190,11 +137,10 @@ async function handleVerifyOtp() {
   try {
     await authStore.verifyOtp(phone.value, codeInput.value)
     step.value = 'phone'
-    phoneRaw.value = ''
-    phoneDisplay.value = ''
+    phoneInput.value = ''
     codeInput.value = ''
   } catch (err: any) {
-    errorMessage.value = err?.data?.message || 'Kiritilgan kod noto\'g\'ri'
+    errorMessage.value = err?.data?.message || err?.message || 'Kiritilgan kod noto‘g‘ri'
   } finally {
     loading.value = false
   }

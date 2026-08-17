@@ -122,28 +122,12 @@ const productUrl = computed(() => {
     : `/books/${props.product.id}-${slug}`
 })
 
-function resolveImg(src: string) {
-  if (!src) return ''
-  return src.startsWith('http') || src.startsWith('data:') ? src : `/storage/${src}`
-}
-
 // Mahsulotning barcha rasmlari — piyoladagi kabi karusel uchun. Bir nechta
 // maydon nomi tekshiriladi (backend turli endpointlarda turlicha nomlagan),
 // birinchi mavjud bo'lgan RO'YXAT ishlatiladi (faqat bitta emas — hammasi).
-const images = computed(() => {
-  const p = props.product || {}
-  const lists = [p.medium_images, p.thumb_images, p.image_urls, p.images]
-  for (const list of lists) {
-    if (Array.isArray(list) && list.length > 0) {
-      const resolved = list.map(resolveImg).filter(Boolean)
-      if (resolved.length > 0) return resolved
-    }
-  }
-  if (p.first_image) {
-    return [resolveImg(p.first_image)]
-  }
-  return ['/images/logo/logo_blue.png']
-})
+// Logika savat/sevimlilar bilan bir xil bo'lishi uchun utils/productImage.ts
+// ga chiqarilgan (bitta joyda tuzatish — hammasida tuzaladi).
+const images = computed(() => resolveProductImages(props.product))
 
 const trackEl = ref<HTMLElement | null>(null)
 const activeIndex = ref(0)

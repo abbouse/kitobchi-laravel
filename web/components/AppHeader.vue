@@ -31,19 +31,18 @@
             </button>
           </div>
 
-          <!-- Center: Search -->
-          <div class="relative overflow-hidden transition-shadow duration-300 rounded-2xl px-5 py-[14px] rounded-full! hover:shadow-sm hover:shadow-black/10 glass-card-bg h-12 grow flex-y-center gap-2 text-gray cursor-pointer bg-secondary-200!">
+          <!-- Center: Search — bosilganda piyola'dagi kabi to'liq ekranli
+               qidiruv overlay'i ochiladi (SearchOverlay.vue), shu yerda
+               to'g'ridan-to'g'ri yozilmaydi. -->
+          <button
+            type="button"
+            @click="searchStore.open()"
+            class="relative overflow-hidden transition-shadow duration-300 rounded-2xl px-5 py-[14px] rounded-full! hover:shadow-sm hover:shadow-black/10 glass-card-bg h-12 grow flex-y-center gap-2 text-gray cursor-pointer bg-secondary-200! border-none text-left"
+          >
             <div class="absolute inset-0 pointer-events-none glass-border rounded-2xl rounded-full!"></div>
             <i class="icon-search text-lg text-gray-500"></i>
-            <form @submit.prevent="onSearch" class="flex flex-1 items-center h-full m-0 p-0">
-              <input
-                v-model="searchQuery"
-                type="text"
-                placeholder="Mahsulotni izlash..."
-                class="flex-1 bg-transparent border-none outline-none text-sm text-neutral-900 m-0 p-0 h-full w-full"
-              />
-            </form>
-          </div>
+            <span class="flex-1 text-sm text-neutral-500 m-0 p-0 h-full w-full">Mahsulotni izlash...</span>
+          </button>
 
           <!-- Right: Capsule 1 & Capsule 2 -->
           <div class="flex-y-center gap-4">
@@ -133,18 +132,15 @@
 
         <!-- Mobile Header (Piyola 1:1) -->
         <div class="md:hidden">
-          <div class="relative overflow-hidden transition-shadow duration-300 rounded-2xl px-5 py-[14px] hover:shadow-sm hover:shadow-black/10 h-12 rounded-[20px] text-gray bg-secondary-300! flex-center cursor-pointer gap-3">
+          <button
+            type="button"
+            @click="searchStore.open()"
+            class="relative overflow-hidden transition-shadow duration-300 rounded-2xl px-5 py-[14px] hover:shadow-sm hover:shadow-black/10 h-12 rounded-[20px] text-gray bg-secondary-300! flex-center cursor-pointer gap-3 w-full border-none text-left"
+          >
             <div class="absolute inset-0 pointer-events-none glass-border rounded-2xl"></div>
             <i class="icon-search text-xl text-gray-500"></i>
-            <form @submit.prevent="onSearch" class="flex flex-1 items-center h-full m-0 p-0">
-              <input
-                v-model="searchQuery"
-                type="text"
-                placeholder="Kitobchi’da izlash"
-                class="flex-1 bg-transparent border-none outline-none text-sm text-neutral-900 m-0 p-0 h-full w-full"
-              />
-            </form>
-          </div>
+            <span class="flex-1 text-sm text-neutral-500 m-0 p-0 h-full w-full">Kitobchi’da izlash</span>
+          </button>
         </div>
       </div>
     </header>
@@ -158,22 +154,16 @@
 import { useCartStore } from '~/stores/cart'
 import { useFavoritesStore } from '~/stores/favorites'
 import { useAuthStore } from '~/stores/auth'
+import { useSearchStore } from '~/stores/search'
 
 const route = useRoute()
-const router = useRouter()
 const cartStore = useCartStore()
 const favStore = useFavoritesStore()
 const authStore = useAuthStore()
+const searchStore = useSearchStore()
 
-const searchQuery = ref('')
 const isCatalogOpen = ref(false)
 const isLangOpen = ref(false)
 
 const isHomePage = computed(() => route.path === '/')
-
-function onSearch() {
-  if (searchQuery.value.trim()) {
-    router.push(`/catalog?search=${encodeURIComponent(searchQuery.value.trim())}`)
-  }
-}
 </script>

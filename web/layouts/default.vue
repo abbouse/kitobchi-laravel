@@ -7,6 +7,7 @@
     <AppFooter />
     <AppBottomNav />
     <AuthModal />
+    <SearchOverlay />
   </div>
 </template>
 

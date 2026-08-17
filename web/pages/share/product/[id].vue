@@ -36,11 +36,6 @@
 const route = useRoute()
 const config = useRuntimeConfig()
 
-function resolveImg(src: string) {
-  if (!src) return ''
-  return src.startsWith('http') || src.startsWith('data:') ? src : `/storage/${src}`
-}
-
 // Ulashilgan havolada mahsulot turi (book/stationery) yo'q — real backend
 // (routes/web.php'dagi /share/product/{id} Blade route) qanday hal qilsa,
 // shu tartibda: avval kitob sifatida qidiramiz, topilmasa — kanselyariya.
@@ -64,18 +59,7 @@ const { data: result } = await useAsyncData(`share-product-${route.params.id}`, 
 const product = computed(() => result.value?.product || null)
 const productType = computed(() => result.value?.type || 'book')
 
-const previewImage = computed(() => {
-  const p = product.value
-  if (!p) return '/images/logo/logo_blue.png'
-  const lists = [p.medium_images, p.image_urls, p.thumb_images, p.images]
-  for (const list of lists) {
-    if (Array.isArray(list) && list.length > 0) {
-      const resolved = resolveImg(list[0])
-      if (resolved) return resolved
-    }
-  }
-  return '/images/logo/logo_blue.png'
-})
+const previewImage = computed(() => resolveProductImage(product.value))
 
 const viewOnSiteUrl = computed(() => {
   const id = route.params.id

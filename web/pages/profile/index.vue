@@ -35,77 +35,22 @@
       </div>
 
       <!-- Auth State Check -->
-      <!-- Guest State — Piyola uslubida (screenshot bilan 1:1) -->
-      <div v-if="!authStore.isAuthenticated">
-        <!-- User avatar + login block -->
-        <div class="bg-white rounded-3xl border border-neutral-100 p-5 mb-3 text-center">
-          <div class="w-16 h-16 rounded-full bg-secondary-100 text-neutral-400 mx-auto flex items-center justify-center mb-3">
-            <svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-          </div>
-          <h2 class="text-base font-bold text-neutral-900 mb-1">Foydalanuvchi</h2>
-          <p class="text-xs text-neutral-500 mb-4 leading-relaxed">
-            Buyurtmalarni rasmiylashtirish, bo'lib to'lash<br>imkoniyatidan foydalanish va mahsulotlarni saqlab<br>qo'yish uchun
-          </p>
-          <button
-            type="button"
-            @click="authStore.openAuthModal()"
-            class="w-full py-3.5 rounded-2xl bg-primary text-white font-semibold text-sm border-none cursor-pointer hover:bg-primary/90 transition-colors"
-          >
-            Akkauntga kiring
-          </button>
+      <div v-if="!authStore.isAuthenticated" class="text-center py-20">
+        <div class="w-20 h-20 rounded-full bg-secondary-100 text-neutral-400 mx-auto flex items-center justify-center mb-4">
+          <svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
         </div>
-
-        <!-- Info menu group -->
-        <div class="bg-white rounded-3xl border border-neutral-100 divide-y divide-neutral-100 overflow-hidden mb-3">
-          <NuxtLink to="/legal/tolov-va-qaytarish" class="w-full flex items-center justify-between gap-3 px-5 py-4 hover:bg-neutral-50 transition-colors group">
-            <div class="flex items-center gap-3">
-              <svg class="w-5 h-5 text-neutral-400 group-hover:text-primary transition-colors shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z"/></svg>
-              <span class="text-sm font-medium text-neutral-800">Muddatli to'lov haqida</span>
-            </div>
-            <svg class="w-4 h-4 text-neutral-300 group-hover:text-primary transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/></svg>
-          </NuxtLink>
-          <NuxtLink to="/legal/yetkazib-berish-va-qaytarish" class="w-full flex items-center justify-between gap-3 px-5 py-4 hover:bg-neutral-50 transition-colors group">
-            <div class="flex items-center gap-3">
-              <svg class="w-5 h-5 text-neutral-400 group-hover:text-primary transition-colors shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.25h5.797c.75 0 1.44.398 1.816 1.045l2.15 3.696c.196.336.297.72.297 1.11v3.399m-3 4.5h-9m3-8.25V6.75"/></svg>
-              <span class="text-sm font-medium text-neutral-800">Yetkazib berish haqida</span>
-            </div>
-            <svg class="w-4 h-4 text-neutral-300 group-hover:text-primary transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/></svg>
-          </NuxtLink>
-          <NuxtLink to="/about" class="w-full flex items-center justify-between gap-3 px-5 py-4 hover:bg-neutral-50 transition-colors group">
-            <div class="flex items-center gap-3">
-              <svg class="w-5 h-5 text-neutral-400 group-hover:text-primary transition-colors shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21"/></svg>
-              <span class="text-sm font-medium text-neutral-800">Biz haqimizda</span>
-            </div>
-            <svg class="w-4 h-4 text-neutral-300 group-hover:text-primary transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/></svg>
-          </NuxtLink>
-          <NuxtLink to="/vacancies" class="w-full flex items-center justify-between gap-3 px-5 py-4 hover:bg-neutral-50 transition-colors group">
-            <div class="flex items-center gap-3">
-              <svg class="w-5 h-5 text-neutral-400 group-hover:text-primary transition-colors shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25M16.5 6.75V4.5A2.25 2.25 0 0014.25 2.25h-4.5A2.25 2.25 0 007.5 4.5v2.25m9 0h2.25A2.25 2.25 0 0121 9v6.75a2.25 2.25 0 01-.659 1.591L16.5 21H7.5l-3.841-3.659A2.25 2.25 0 013 15.75V9a2.25 2.25 0 012.25-2.25H7.5m9 0h-9"/></svg>
-              <span class="text-sm font-medium text-neutral-800">Karyera</span>
-            </div>
-            <svg class="w-4 h-4 text-neutral-300 group-hover:text-primary transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/></svg>
-          </NuxtLink>
-        </div>
-
-        <!-- Settings group -->
-        <div class="bg-white rounded-3xl border border-neutral-100 divide-y divide-neutral-100 overflow-hidden mb-3">
-          <div class="w-full flex items-center justify-between gap-3 px-5 py-4">
-            <div class="flex items-center gap-3">
-              <svg class="w-5 h-5 text-neutral-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A8.959 8.959 0 013 12c0-1.605.42-3.113 1.157-4.418"/></svg>
-              <span class="text-sm font-medium text-neutral-800">Ilova tili</span>
-            </div>
-            <span class="text-sm text-neutral-400">O'zbekcha</span>
-          </div>
-          <NuxtLink to="/contacts" class="w-full flex items-center justify-between gap-3 px-5 py-4 hover:bg-neutral-50 transition-colors group">
-            <div class="flex items-center gap-3">
-              <svg class="w-5 h-5 text-neutral-400 group-hover:text-primary transition-colors shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z"/></svg>
-              <span class="text-sm font-medium text-neutral-800">Biz bilan bog'lanish</span>
-            </div>
-            <svg class="w-4 h-4 text-neutral-300 group-hover:text-primary transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/></svg>
-          </NuxtLink>
-        </div>
+        <h2 class="text-2xl font-bold text-neutral-800 mb-2">Tizimga kiring</h2>
+        <p class="text-sm text-neutral-500 mb-6 max-w-sm mx-auto">
+          Buyurtmalar va shaxsiy ma'lumotlarni ko'rish uchun telefon raqamingiz orqali tizimga kiring.
+        </p>
+        <button
+          type="button"
+          @click="authStore.openAuthModal()"
+          class="inline-flex items-center px-8 py-3.5 rounded-2xl bg-primary text-white font-bold text-sm border-none cursor-pointer shadow-md hover:bg-primary/90 transition-colors"
+        >
+          Kirish
+        </button>
       </div>
-
 
       <!-- Authenticated Profile Hub (Piyola style) -->
       <div v-else class="lg:flex lg:items-start lg:gap-5">
@@ -188,6 +133,7 @@ const ICONS: Record<string, string> = {
   briefcase: '<path stroke-linecap="round" stroke-linejoin="round" d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25M16.5 6.75V4.5A2.25 2.25 0 0014.25 2.25h-4.5A2.25 2.25 0 007.5 4.5v2.25m9 0h2.25A2.25 2.25 0 0121 9v6.75a2.25 2.25 0 01-.659 1.591L16.5 21H7.5l-3.841-3.659A2.25 2.25 0 013 15.75V9a2.25 2.25 0 012.25-2.25H7.5m9 0h-9"/>',
   globe: '<path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A8.959 8.959 0 013 12c0-1.605.42-3.113 1.157-4.418"/>',
   phone: '<path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z"/>',
+  heart: '<path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/>',
 }
 
 interface MenuItem {
@@ -202,6 +148,11 @@ const menuGroups: MenuItem[][] = [
   [
     { key: 'orders', label: 'Buyurtmalarim', icon: 'order', to: '/profile/orders' },
     { key: 'comments', label: 'Sharhlarim', icon: 'comment', to: '/profile/comments' },
+    // Piyola'ning haqiqiy (autentifikatsiyalangan) profil sahifasidan
+    // tasdiqlangan tartib: Buyurtmalarim → Sharhlarim → Sevimlilar →
+    // Ma'lumotlarim (/tmp/piyola_extract/profile_text.txt). Ilgari bu
+    // yerda "Sevimlilar" umuman yo'q edi.
+    { key: 'favorites', label: 'Sevimlilar', icon: 'heart', to: '/favorites' },
     { key: 'info', label: "Ma'lumotlarim", icon: 'user', to: '/profile/info' },
   ],
   [

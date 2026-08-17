@@ -32,14 +32,17 @@
           </ul>
         </div>
 
-        <!-- 3. Mijozlar xizmati -->
-        <div>
+        <!-- 3. Mijozlar xizmati — boshqaruv panelidagi Policy ro'yxatidan
+             avtomatik, oxirgi 4 tasi (sort_order bo'yicha tartiblangan
+             ro'yxatning oxiri) chiqariladi. Statik/qotib qolgan matn yo'q —
+             admin policy qo'shsa/o'chirsa/tartibini o'zgartirsa shu yerda
+             ham avtomatik yangilanadi. -->
+        <div v-if="footerPolicies.length">
           <h3 class="font-bold text-[24px] mb-6">Mijozlar xizmati</h3>
           <ul class="space-y-4">
-            <li><NuxtLink to="/faq" class="text-white hover:underline">Savol-javoblar</NuxtLink></li>
-            <li><NuxtLink to="/faq" class="text-white hover:underline">Yordam</NuxtLink></li>
-            <li><NuxtLink to="/legal/tolov-va-qaytarish" class="text-white hover:underline">To'lovlar</NuxtLink></li>
-            <li><NuxtLink to="/privacy" class="text-white hover:underline">Maxfiylik siyosati</NuxtLink></li>
+            <li v-for="item in footerPolicies" :key="item.slug">
+              <NuxtLink :to="policyLink(item.slug)" class="text-white hover:underline">{{ item.title }}</NuxtLink>
+            </li>
           </ul>
         </div>
 
@@ -117,13 +120,42 @@
 const config = useRuntimeConfig()
 const { kitobchiPhone } = useSiteSettings()
 
-const { data: categoriesData } = await useFetch<any>(`${config.public.apiBase}/v1/kitobchi/search/categories`, {
+// Kategoriyalar va huquqiy hujjatlar (Policy) ro'yxatini parallel
+// so'raymiz (ketma-ket useFetch waterfall yaratmaslik uchun) — ikkalasi
+// ham bir-biriga bog'liq emas.
+const categoriesPromise = useFetch<any>(`${config.public.apiBase}/v1/kitobchi/search/categories`, {
   key: 'footer-categories',
   lazy: true
 })
+const legalPromise = useFetch<any>(`${config.public.apiBase}/v1/kitobchi/legal`, {
+  key: 'footer-legal',
+  lazy: true
+})
+const { data: categoriesData } = await categoriesPromise
+const { data: legalData } = await legalPromise
 
 const footerCategories = computed(() => {
   const books = categoriesData.value?.data?.book || []
   return books.slice(0, 4)
+})
+
+// Ba'zi policy'lar Nuxt'da alohida (SEO-optimallashtirilgan) sahifaga ega
+// (masalan /faq, /privacy) — shu slug'lar shu maxsus yo'llarga, qolgani
+// generic /legal/{slug} sahifasiga yo'naltiriladi.
+const SPECIAL_POLICY_ROUTES: Record<string, string> = {
+  'savol-javoblar': '/faq',
+  'maxfiylik-siyosati': '/privacy',
+  'biz-haqimizda': '/about'
+}
+
+function policyLink(slug: string) {
+  return SPECIAL_POLICY_ROUTES[slug] || `/legal/${slug}`
+}
+
+const footerPolicies = computed(() => {
+  const list = legalData.value?.data || []
+  // "oxirgi 4 tasi" — backend sort_order/id bo'yicha tartiblab qaytaradi,
+  // biz shu tartibning oxirgi 4 tasini olamiz (tartib buzilmaydi).
+  return list.slice(-4)
 })
 </script>
