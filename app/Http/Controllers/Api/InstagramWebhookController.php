@@ -57,6 +57,20 @@ class InstagramWebhookController extends Controller
      * olinmaydi — doim serverning o'zidagi haqiqiy tokendan foydalaniladi;
      * (3) javobda hech qachon to'liq token qaytarilmaydi — faqat
      * boshlanishi (prefiks) va uzunligi ko'rsatiladi.
+     *
+     * MUHIM (2026-08): bot Instagram Login oqimiga o'tkazilgani sabab bu
+     * diagnostika endpointi ham graph.facebook.com/me+me/accounts (Page-based)
+     * o'rniga graph.instagram.com/me (Instagram User token) ni tekshiradi.
+     * Bundan tashqari, Meta'ning rasmiy webhook sozlash yo'riqnomasidagi
+     * 3-qadam ("профессиональный аккаунт... включить получение уведомлений
+     * путем выполнения вызова API") Dashboard'dagi "Webhooks" tugmachasi
+     * BILAN AVTOMATIK bajarilmaydi — bu alohida, majburiy POST
+     * /me/subscribed_apps chaqiruvi, va aynan shu qadam bajarilmagani bot
+     * "sozlandi, lekin ishlamayapti" muammosining asosiy sababi bo'lishi
+     * mumkin edi. Shu sabab bu endpoint endi har chaqirilganda akkauntni
+     * "messages" (va bog'liq messaging_* field'lar)ga QAYTA obuna qiladi —
+     * bu amal xavfsiz va idempotent (necha marta takrorlansa ham zarar
+     * keltirmaydi), so'ng joriy holatni qaytarib ko'rsatadi.
      */
     public function test(Request $request)
     {
@@ -66,48 +80,44 @@ class InstagramWebhookController extends Controller
             return response()->json(['error' => 'Forbidden'], 403);
         }
 
-        $token = config('services.instagram.page_access_token', env('INSTAGRAM_PAGE_ACCESS_TOKEN'));
+        $token = config('services.instagram.access_token', env('INSTAGRAM_ACCESS_TOKEN'));
 
         if (!$token) {
             return response()->json([
-                'error' => 'INSTAGRAM_PAGE_ACCESS_TOKEN is missing or empty in .env!',
-                'token_configured' => false
+                'error' => 'INSTAGRAM_ACCESS_TOKEN is missing or empty in .env!',
+                'token_configured' => false,
             ], 400);
         }
 
-        // 1. Check token validity
-        $userResponse = Http::get("https://graph.facebook.com/v19.0/me?access_token={$token}");
+        // 1. Token haqiqiy Instagram professional akkauntiga tegishli
+        //    ekanini va uning ID/username'ini tekshirish.
+        $accountResponse = Http::withToken($token)
+            ->get('https://graph.instagram.com/v26.0/me', [
+                'fields' => 'user_id,username,name,account_type',
+            ]);
 
-        // 2. Discover linked Facebook Pages and Page Access Tokens
-        $pagesResponse = Http::get("https://graph.facebook.com/v19.0/me/accounts?fields=id,name,access_token,instagram_business_account&access_token={$token}");
+        // 2. Webhook obunasini (qayta) yoqish — Meta docs: "Отправка
+        //    сообщений" bo'limida talab qilingan majburiy qadam.
+        $subscribeFields = 'messages,messaging_postbacks,messaging_optins,messaging_seen,messaging_reactions,messaging_referral';
+        $subscribeResponse = Http::withToken($token)
+            ->post('https://graph.instagram.com/v26.0/me/subscribed_apps', [
+                'subscribed_fields' => $subscribeFields,
+            ]);
+
+        // 3. Joriy obuna holatini ko'rsatish (subscribe chaqiruvidan keyin).
+        $subscriptionsResponse = Http::withToken($token)
+            ->get('https://graph.instagram.com/v26.0/me/subscribed_apps');
 
         return response()->json([
-            'token_configured' => true,
-            'token_prefix'     => substr($token, 0, 8) . '...',
-            'token_length'     => strlen($token),
-            'user_info'        => $userResponse->json(),
-            'managed_pages'    => $this->maskPageTokens($pagesResponse->json()),
+            'token_configured'          => true,
+            'token_prefix'              => substr($token, 0, 8) . '...',
+            'token_length'              => strlen($token),
+            'account_info'              => $accountResponse->json(),
+            'account_info_ok'           => $accountResponse->successful(),
+            'subscribe_attempt'         => $subscribeResponse->json(),
+            'subscribe_attempt_ok'      => $subscribeResponse->successful(),
+            'webhook_subscriptions'     => $subscriptionsResponse->json(),
+            'webhook_subscriptions_ok'  => $subscriptionsResponse->successful(),
         ]);
-    }
-
-    /**
-     * managed_pages ro'yxatidagi har bir Page'ning access_token maydonini
-     * niqoblaydi — diagnostika uchun to'liq token qiymati shart emas,
-     * faqat mavjud/mavjud emasligini bilish kifoya.
-     */
-    protected function maskPageTokens(?array $pagesResponse): ?array
-    {
-        if (!is_array($pagesResponse) || empty($pagesResponse['data']) || !is_array($pagesResponse['data'])) {
-            return $pagesResponse;
-        }
-
-        foreach ($pagesResponse['data'] as &$page) {
-            if (!empty($page['access_token'])) {
-                $page['access_token'] = substr($page['access_token'], 0, 8) . '... (' . strlen($page['access_token']) . ' ta belgi)';
-            }
-        }
-        unset($page);
-
-        return $pagesResponse;
     }
 }

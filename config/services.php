@@ -131,6 +131,17 @@ return [
 
     'instagram' => [
         'verify_token' => env('INSTAGRAM_VERIFY_TOKEN', 'kitobchi_sec_token_2026'),
+        // Instagram Login orqali olingan Instagram User Access Token (bot
+        // shu token bilan graph.instagram.com'ga so'rov yuboradi). Meta
+        // App Dashboard > Instagram > API setup with Instagram Login >
+        // "1. Generate access tokens" bo'limidan olinadi (uzoq muddatli —
+        // 60 kun — tokenga almashtirib saqlash tavsiya etiladi).
+        'access_token' => env('INSTAGRAM_ACCESS_TOKEN', ''),
+        // ESKI (endi ishlatilmaydi): Facebook Login/Page-based oqim uchun
+        // Page Access Token. Loyiha Instagram Login oqimiga o'tkazildi
+        // (graph.facebook.com emas, graph.instagram.com), shu sabab bu
+        // qiymat hozircha kodda ishlatilmaydi — kelajakda Page-based
+        // oqimga qaytish kerak bo'lib qolsa deb saqlab turilyapti.
         'page_access_token' => env('INSTAGRAM_PAGE_ACCESS_TOKEN', ''),
         'app_id' => env('INSTAGRAM_APP_ID', ''),
         'app_secret' => env('INSTAGRAM_APP_SECRET', ''),

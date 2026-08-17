@@ -304,21 +304,30 @@ class InstagramBotService
 
     /**
      * Send Instagram Direct Message via Graph API
+     *
+     * MUHIM (2026-08): loyiha Facebook Login/Page-based oqimdan (graph.facebook.com,
+     * Page Access Token) Instagram Login oqimiga (graph.instagram.com, Instagram
+     * User Access Token) o'tkazildi — Meta Dashboard'da haqiqatda sozlangan
+     * (kitobchi_market IG akkaunti, Facebook Page bog'lanmagan) oqim shu edi.
+     * Rasmiy hujjat: developers.facebook.com/docs/instagram-platform/
+     * instagram-api-with-instagram-login/messaging-api — POST /<IG_ID>/messages
+     * (yoki /me/messages), Authorization: Bearer <INSTAGRAM_USER_ACCESS_TOKEN>.
      */
     public function sendDirectMessage(string $recipientId, string $messageText)
     {
-        $pageAccessToken = config('services.instagram.page_access_token', env('INSTAGRAM_PAGE_ACCESS_TOKEN'));
+        $accessToken = config('services.instagram.access_token', env('INSTAGRAM_ACCESS_TOKEN'));
 
-        if (!$pageAccessToken) {
-            Log::warning('INSTAGRAM_PAGE_ACCESS_TOKEN is missing in config/env');
+        if (!$accessToken) {
+            Log::warning('INSTAGRAM_ACCESS_TOKEN is missing in config/env');
             return false;
         }
 
         try {
-            $response = Http::post("https://graph.facebook.com/v19.0/me/messages?access_token={$pageAccessToken}", [
-                'recipient' => ['id' => $recipientId],
-                'message'   => ['text' => $messageText],
-            ]);
+            $response = Http::withToken($accessToken)
+                ->post('https://graph.instagram.com/v26.0/me/messages', [
+                    'recipient' => ['id' => $recipientId],
+                    'message'   => ['text' => $messageText],
+                ]);
 
             if ($response->successful()) {
                 Log::info("Instagram DM sent successfully to {$recipientId}");
