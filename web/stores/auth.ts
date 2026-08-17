@@ -35,7 +35,8 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function sendOtp(phone: string) {
-    return await $fetch<any>(`${config.public.apiBase}/sendSms`, {
+    // AuthController::store() — verifyCode yo'q bo'lsa SMS yuboradi
+    return await $fetch<any>(`${config.public.apiBase}/auth`, {
       method: 'POST',
       body: { phone_number: phone }
     })
