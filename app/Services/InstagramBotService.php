@@ -5,9 +5,11 @@ namespace App\Services;
 use App\Models\Books;
 use App\Models\InstagramInquiry;
 use App\Models\Order;
+use App\Models\Promocode;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class InstagramBotService
 {
@@ -96,7 +98,7 @@ class InstagramBotService
                 'status'            => 'pending',
             ]);
 
-            $reply = "Assalomu alaykum! Kitobchi platformasiga bo‘lgan e’tiboringiz uchun rahmat. ✨\n\nHamkorlik bo‘yicha murojaatingiz qabul qilindi. Menejerimiz tez orada taklifingizni atroflicha ko‘rib chiqib, rasmiy javob beradi.";
+            $reply = "Assalomu alaykum! @kitobchi_market sahifamizga hamda Kitobchi platformasiga bo‘lgan e’tiboringiz uchun rahmat. ✨\n\nHamkorlik bo‘yicha murojaatingiz qabul qilindi. Menejerimiz tez orada taklifingizni atroflicha ko‘rib chiqib, rasmiy javob beradi.";
             $this->sendDirectMessage($senderId, $reply);
             return;
         }
@@ -155,7 +157,7 @@ class InstagramBotService
         }
 
         // D. General Platform FAQ Fallback
-        $reply = "Assalomu alaykum! Kitobchi — online kitoblar va kanselyariya marketpleysiga xush kelibsiz. 📚\n\n"
+        $reply = "Assalomu alaykum! @kitobchi_market — online kitoblar va kanselyariya marketpleysiga xush kelibsiz. 📚\n\n"
             . "Sizga qanday yordam bera olamiz?\n"
             . "• Kitob qidirish uchun kitob nomini yozing\n"
             . "• Buyurtma holatini ko‘rish uchun buyurtma raqamini yozing (masalan: #1234)\n"
@@ -176,23 +178,50 @@ class InstagramBotService
         // 1. Post Comment Notification
         if ($field === 'comments') {
             $senderId = $value['from']['id'] ?? null;
-            $commentText = $value['text'] ?? '';
-            $commentId = $value['id'] ?? null;
 
             if ($senderId) {
-                $reply = "Salom! Kitoblar va kanselyariya mahsulotlarimiz haqida batafsil ma’lumot va narxlarni kitobchi.com saytimizda ko‘rishingiz mumkin 📥\n\nSavollaringiz bo‘lsa, bajonidil javob beramiz!";
+                $reply = "Salom! @kitobchi_market mahsulotlari haqida batafsil ma’lumot va narxlarni kitobchi.com saytimizda ko‘rishingiz mumkin 📥\n\nSavollaringiz bo‘lsa, DM da bajonidil javob beramiz!";
                 $this->sendDirectMessage($senderId, $reply);
             }
         }
 
-        // 2. Story Mention Notification
+        // 2. Story Mention Notification (Single-Use Unique Promocode Generator)
         if ($field === 'mentions') {
             $senderId = $value['sender']['id'] ?? $value['from']['id'] ?? null;
             if ($senderId) {
-                $reply = "Ajoyib foto uchun rahmat! 📸\n\nKitobchi platformasida keyingi xaridingiz uchun maxsus 10% CHEGIRMA promokodingiz: STORY10 🎁\n\nSaytda foydalanish: https://kitobchi.com";
+                // Generate a unique 1-time single-use promo code
+                $promoCode = $this->generateUniqueStoryPromoCode();
+
+                $reply = "Ajoyib foto uchun rahmat! 📸\n\n"
+                    . "@kitobchi_market ni Story'ingizda belgilaganingiz uchun sizga faqat bir marta foydalaniladigan shaxsiy 10% CHEGIRMA promokodingiz berildi:\n\n"
+                    . "🎟 Promokod: {$promoCode->code}\n\n"
+                    . "(Amal qilish muddati: 7 kun. Kitobchi.com saytida xarid paytida kiriting)\n"
+                    . "Saytda foydalanish: https://kitobchi.com";
+
                 $this->sendDirectMessage($senderId, $reply);
             }
         }
+    }
+
+    /**
+     * Generate Single-Use 1-Time Promocode in Database for Story Mention
+     */
+    protected function generateUniqueStoryPromoCode(): Promocode
+    {
+        do {
+            $code = 'STORY-' . strtoupper(Str::random(6));
+        } while (Promocode::where('code', $code)->exists());
+
+        return Promocode::create([
+            'code'           => $code,
+            'type'           => 'percent',
+            'amount'         => 10,
+            'usesLimit'      => 1, // Single-use!
+            'usedCount'      => 0,
+            'per_user_limit' => 1,
+            'status'         => true,
+            'expires_at'     => now()->addDays(7),
+        ]);
     }
 
     /**
@@ -242,7 +271,7 @@ class InstagramBotService
 
         $sent = $this->sendDirectMessage($inquiry->instagram_user_id, $officialReply);
 
-        if ($sent || true) { // Mark updated
+        if ($sent || true) {
             $inquiry->update([
                 'admin_reply' => $rawReply,
                 'status'      => 'replied',
