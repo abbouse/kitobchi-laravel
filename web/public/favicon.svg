@@ -1,59 +1,80 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
   <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#08022B" />
-      <stop offset="100%" stop-color="#0F065C" />
+    <!-- Background Gradient (Kitobchi Midnight Sapphire Depth) -->
+    <linearGradient id="kbBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#05011F" />
+      <stop offset="45%" stop-color="#0B0342" />
+      <stop offset="100%" stop-color="#180D70" />
     </linearGradient>
-    <linearGradient id="ribbonGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+
+    <!-- Top Rim Highlight -->
+    <linearGradient id="kbRim" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.35" />
+      <stop offset="40%" stop-color="#3875FF" stop-opacity="0.2" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0" />
+    </linearGradient>
+
+    <!-- Page Shading Gradient -->
+    <linearGradient id="pageTop" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#FFFFFF" />
-      <stop offset="70%" stop-color="#FFFFFF" />
-      <stop offset="100%" stop-color="#4685FF" />
+      <stop offset="100%" stop-color="#EDF3FF" />
     </linearGradient>
-    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#3A7CFF" />
-      <stop offset="100%" stop-color="#6CA0FF" />
+    <linearGradient id="pageBot" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="100%" stop-color="#D9E6FF" />
     </linearGradient>
-    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.4" />
+
+    <!-- Center Fold Electric Accent -->
+    <linearGradient id="foldAccent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2B66FF" />
+      <stop offset="100%" stop-color="#598EFF" />
+    </linearGradient>
+
+    <!-- Ambient Shadow Filter -->
+    <filter id="drop" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#000000" flood-opacity="0.45" />
     </filter>
   </defs>
 
-  <!-- Container -->
-  <rect width="512" height="512" rx="128" fill="url(#bg)" />
-  
-  <!-- Subtle Inner Border -->
-  <rect x="4" y="4" width="504" height="504" rx="124" fill="none" stroke="#3A7CFF" stroke-width="2" stroke-opacity="0.2" />
+  <!-- Squircle Base -->
+  <rect width="512" height="512" rx="128" fill="url(#kbBg)" />
 
-  <!-- Dribbble-level Creative K-Book Mark (Continuous Ribbon Glyph) -->
-  <g filter="url(#glow)">
-    <!-- Left Vertical Spine Pillar -->
-    <rect x="116" y="116" width="52" height="280" rx="26" fill="#FFFFFF" />
+  <!-- Outer Rim Stroke -->
+  <rect x="3" y="3" width="506" height="506" rx="126" fill="none" stroke="url(#kbRim)" stroke-width="3" />
 
-    <!-- Top-Right Dynamic Flying Page / Upper K Arm -->
+  <!-- Center Ambient Radial Light -->
+  <circle cx="270" cy="256" r="160" fill="#265CFF" opacity="0.25" filter="blur(25px)" />
+
+  <!-- ================= THE K-BOOK MONOGRAM ================= -->
+  <g filter="url(#drop)">
+    <!-- Left Book Spine Pillar (Bold Vertical Stem of K) -->
+    <rect x="116" y="106" width="54" height="300" rx="27" fill="url(#pageTop)" />
+
+    <!-- Upper Flying Page (Top Wing of K) -->
     <path
-      d="M 200 256
-         C 200 210, 240 130, 340 120
-         C 375 116, 396 142, 380 172
-         C 340 240, 250 256, 200 256 Z"
-      fill="url(#ribbonGrad)"
+      d="M 198 256
+         C 206 196, 252 124, 354 112
+         C 386 108, 404 134, 388 164
+         C 346 238, 258 256, 198 256 Z"
+      fill="url(#pageTop)"
     />
 
-    <!-- Bottom-Right Dynamic Book Page / Lower K Arm -->
+    <!-- Lower Flying Page (Bottom Wing of K) -->
     <path
-      d="M 200 256
-         C 240 256, 330 270, 380 340
-         C 396 370, 375 396, 340 392
-         C 240 382, 200 302, 200 256 Z"
-      fill="url(#ribbonGrad)"
+      d="M 198 256
+         C 258 256, 346 274, 388 348
+         C 404 378, 386 404, 354 400
+         C 252 388, 206 316, 198 256 Z"
+      fill="url(#pageBot)"
     />
 
-    <!-- Center Fold Overlap Ribbon in Electric Brand Blue -->
+    <!-- Origami Center Fold & Dynamic Bookmark Ribbon Connection -->
     <path
-      d="M 168 230
-         C 185 230, 225 240, 240 256
-         C 225 272, 185 282, 168 282
+      d="M 166 226
+         C 192 226, 234 238, 254 256
+         C 234 274, 192 286, 166 286
          Z"
-      fill="url(#accentGrad)"
+      fill="url(#foldAccent)"
     />
   </g>
 </svg>
