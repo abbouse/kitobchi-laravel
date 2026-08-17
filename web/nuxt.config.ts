@@ -52,7 +52,8 @@ export default defineNuxtConfig({
         { property: 'og:locale', content: 'uz_UZ' }
       ],
       link: [
-        { rel: 'icon', type: 'image/png', href: '/images/logo/logo_blue.png' },
+        { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+        { rel: 'apple-touch-icon', href: '/favicon.svg' },
         { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
         { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
         {
