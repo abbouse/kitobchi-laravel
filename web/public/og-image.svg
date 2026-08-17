@@ -1,0 +1,172 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <!-- Background Silk Gradient (Kitobchi App Blue Spectrum) -->
+    <linearGradient id="ogBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#469EF8"/>
+      <stop offset="50%" stop-color="#2980DD"/>
+      <stop offset="100%" stop-color="#1B63B6"/>
+    </linearGradient>
+
+    <!-- Glassmorphic Card Glow -->
+    <linearGradient id="glassCard" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.08"/>
+    </linearGradient>
+
+    <!-- Inner Page Fold Shadows for K emblem -->
+    <linearGradient id="ogPageShadowUpper" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#144B8C" stop-opacity="0.30"/>
+      <stop offset="70%" stop-color="#2980DD" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#2980DD" stop-opacity="0.0"/>
+    </linearGradient>
+
+    <linearGradient id="ogPageShadowLower" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#144B8C" stop-opacity="0.30"/>
+      <stop offset="70%" stop-color="#2980DD" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#2980DD" stop-opacity="0.0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background Canvas -->
+  <rect width="1200" height="630" fill="url(#ogBg)"/>
+
+  <!-- Subtle background decorative rings -->
+  <circle cx="1100" cy="100" r="350" fill="#FFFFFF" opacity="0.04"/>
+  <circle cx="100" cy="550" r="280" fill="#FFFFFF" opacity="0.03"/>
+
+  <!-- Main Container Layout -->
+  <g transform="translate(100, 115)">
+
+    <!-- LEFT SIDE: Emblem K Icon in Glass Card -->
+    <g transform="translate(0, 0)">
+      <!-- Glassmorphic backdrop card -->
+      <rect width="400" height="400" rx="48" fill="url(#glassCard)" stroke="#FFFFFF" stroke-opacity="0.3" stroke-width="2"/>
+
+      <!-- Inner K Emblem scaled inside card -->
+      <g transform="translate(40, 40) scale(0.625)">
+        <!-- K Stem -->
+        <path
+          d="M 132 88
+             C 114 88, 100 102, 98 120
+             C 84 196, 84 316, 98 392
+             C 100 410, 114 424, 132 424
+             C 148 424, 160 410, 156 392
+             C 144 316, 144 196, 156 120
+             C 160 102, 148 88, 132 88 Z"
+          fill="#FFFFFF"
+        />
+
+        <!-- Upper Wing -->
+        <path
+          d="M 150 256
+             C 150 182, 206 112, 312 88
+             C 358 76, 420 82, 420 126
+             C 420 166, 338 216, 258 237
+             C 210 248, 178 256, 150 256 Z"
+          fill="#FFFFFF"
+        />
+        <path
+          d="M 184 250
+             C 208 202, 258 136, 345 106
+             C 376 94, 412 102, 406 123
+             C 392 153, 320 198, 246 224
+             C 210 234, 194 243, 184 250 Z"
+          fill="url(#ogPageShadowUpper)"
+        />
+        <path
+          d="M 204 244
+             C 230 194, 282 145, 362 121
+             C 385 113, 403 117, 399 128
+             C 388 153, 322 193, 256 218
+             C 225 228, 210 237, 204 244 Z"
+          fill="#FFFFFF"
+          opacity="0.95"
+        />
+
+        <!-- Lower Wing -->
+        <path
+          d="M 150 256
+             C 178 256, 210 264, 258 275
+             C 338 296, 420 346, 420 386
+             C 420 430, 358 436, 312 424
+             C 206 400, 150 330, 150 256 Z"
+          fill="#FFFFFF"
+        />
+        <path
+          d="M 184 262
+             C 194 269, 210 278, 246 288
+             C 320 314, 392 359, 406 389
+             C 412 410, 376 418, 345 406
+             C 258 376, 208 310, 184 262 Z"
+          fill="url(#ogPageShadowLower)"
+        />
+        <path
+          d="M 204 268
+             C 210 275, 225 284, 256 294
+             C 322 319, 388 359, 399 384
+             C 403 395, 385 399, 362 391
+             C 282 367, 230 318, 204 268 Z"
+          fill="#FFFFFF"
+          opacity="0.95"
+        />
+      </g>
+    </g>
+
+    <!-- RIGHT SIDE: Typography & Brand Details -->
+    <g transform="translate(470, 30)">
+
+      <!-- Category Pill Badge -->
+      <g transform="translate(0, 0)">
+        <rect width="360" height="38" rx="19" fill="#FFFFFF" opacity="0.18"/>
+        <text x="180" y="24" font-family="'Urbanist', -apple-system, sans-serif" font-size="13" font-weight="800" letter-spacing="3" fill="#FFFFFF" text-anchor="middle">
+          ONLINE MARKETPLACE
+        </text>
+      </g>
+
+      <!-- Main Title: Kitobchi -->
+      <text x="0" y="125" font-family="'Urbanist', -apple-system, sans-serif" font-size="78" font-weight="900" letter-spacing="-1" fill="#FFFFFF">
+        Kitobchi
+      </text>
+
+      <!-- Subtitle -->
+      <text x="0" y="168" font-family="'Urbanist', -apple-system, sans-serif" font-size="22" font-weight="600" fill="#E2E8F0">
+        Online kitoblar va kanselyariya marketpleysi
+      </text>
+
+      <!-- Divider line -->
+      <line x1="0" y1="205" x2="520" y2="205" stroke="#FFFFFF" stroke-opacity="0.25" stroke-width="1.5"/>
+
+      <!-- Feature Highlights -->
+      <g transform="translate(0, 245)">
+        <!-- Bullet 1 -->
+        <g transform="translate(0, 0)">
+          <circle cx="12" cy="0" r="10" fill="#FFFFFF" opacity="0.25"/>
+          <text x="12" y="4" font-family="'Urbanist', sans-serif" font-size="12" fill="#FFFFFF" text-anchor="middle">✓</text>
+          <text x="34" y="5" font-family="'Urbanist', -apple-system, sans-serif" font-size="17" font-weight="600" fill="#FFFFFF">
+            O‘zbekiston bo‘ylab tezkor yetkazib berish
+          </text>
+        </g>
+
+        <!-- Bullet 2 -->
+        <g transform="translate(0, 42)">
+          <circle cx="12" cy="0" r="10" fill="#FFFFFF" opacity="0.25"/>
+          <text x="12" y="4" font-family="'Urbanist', sans-serif" font-size="12" fill="#FFFFFF" text-anchor="middle">✓</text>
+          <text x="34" y="5" font-family="'Urbanist', -apple-system, sans-serif" font-size="17" font-weight="600" fill="#FFFFFF">
+            Original va sifatli kitoblar hamda kanselyariya
+          </text>
+        </g>
+
+        <!-- Bullet 3 -->
+        <g transform="translate(0, 84)">
+          <circle cx="12" cy="0" r="10" fill="#FFFFFF" opacity="0.25"/>
+          <text x="12" y="4" font-family="'Urbanist', sans-serif" font-size="12" fill="#FFFFFF" text-anchor="middle">✓</text>
+          <text x="34" y="5" font-family="'Urbanist', -apple-system, sans-serif" font-size="17" font-weight="600" fill="#FFFFFF">
+            Hamyonbop narxlar va qulay to‘lov turlari
+          </text>
+        </g>
+      </g>
+
+    </g>
+
+  </g>
+</svg>
