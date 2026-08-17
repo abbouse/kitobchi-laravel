@@ -88,53 +88,54 @@
 @endpush
 
 @section('content')
-<div class="kc-page-surface" style="min-height:80dvh;padding:2rem 0;background:#f8fafc;">
-    <div style="width:100%;max-width:var(--ui-container);margin:0 auto;padding:0 1rem;">
+<div class="py-6 min-h-dvh">
+    <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
 
-        <div class="flex items-center gap-2 mb-5">
-            <a href="{{ route('web.catalog') }}" class="rounded-full w-9 h-9 flex items-center justify-center transition-colors text-primary bg-secondary-200 hover:bg-secondary-300" title="{{ __('marketplace.back_to_catalog') }}">
+        <!-- ====== BREADCRUMBS ====== -->
+        <div class="flex items-center gap-2 mb-6">
+            <a href="{{ route('web.catalog') }}" class="rounded-full w-9 h-9 flex items-center justify-center transition-colors text-primary bg-secondary-200 hover:bg-secondary-300 shrink-0" title="{{ __('marketplace.back_to_catalog') }}">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
             </a>
             <nav aria-label="breadcrumb" class="relative min-w-0">
-                <ol class="flex items-center gap-2">
-                    <li class="flex min-w-0 text-[#8F8FA1] text-sm">
+                <ol class="flex items-center gap-2 text-sm text-[#8F8FA1]">
+                    <li>
                         <a href="{{ url('/') }}" class="hover:text-neutral-900 transition-colors">{{ __('marketplace.breadcrumb_home') }}</a>
                     </li>
-                    <li class="flex text-gray text-xs">/</li>
-                    <li class="flex min-w-0 text-[#8F8FA1] text-sm font-semibold">{{ __('marketplace.profile_title') }}</li>
+                    <li class="text-gray-300">/</li>
+                    <li class="text-neutral-900 font-semibold">{{ __('marketplace.profile_title') }}</li>
                 </ol>
             </nav>
         </div>
 
-        <div class="flex flex-col md:flex-row gap-6 relative items-start" id="kcProfileGrid">
+        <div class="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6 items-start" id="kcProfileGrid">
             <!-- Sidebar: user card + tab navigation (piyolamarket.uz uslubida) -->
-            <div class="p-4 md:p-6 h-fit rounded-3xl bg-white border border-secondary-200 shadow-sm w-full md:w-72 lg:w-80 shrink-0 sticky top-24">
-                <div class="flex items-center gap-3.5 mb-5 pb-5 border-b border-secondary-200">
-                    <div class="w-14 h-14 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xl font-bold flex-shrink-0">
+            <div class="bg-white rounded-3xl p-5 border border-secondary-100 shadow-sm sticky top-24 flex flex-col gap-4">
+                <div class="flex items-center gap-3 pb-4 border-b border-secondary-100">
+                    <div class="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center text-lg font-bold shrink-0">
                         {{ strtoupper(substr($user->name ?: $user->phone_number, 0, 1)) }}
                     </div>
                     <div class="min-w-0 flex-1">
-                        <h2 class="text-lg font-bold text-neutral-900 truncate leading-snug">{{ $user->name ?: __('marketplace.profile_user') }}</h2>
-                        <p class="text-neutral-500 text-sm truncate mt-0.5">+{{ $user->phone_number }}</p>
+                        <div class="text-base font-bold text-neutral-900 truncate leading-snug">{{ $user->name ?: __('marketplace.profile_user') }}</div>
+                        <div class="text-xs text-neutral-500 truncate mt-0.5">+{{ $user->phone_number }}</div>
                     </div>
                 </div>
 
-                <nav class="flex flex-col gap-1.5">
-                    <button type="button" id="kcProfileTabBtnOrders" onclick="kcProfileSwitchTab('orders')" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-[15px] font-semibold transition-all duration-200 text-left cursor-pointer border-none bg-primary text-white shadow-sm">
+                <nav class="flex flex-col gap-1">
+                    <button type="button" id="kcProfileTabBtnOrders" onclick="kcProfileSwitchTab('orders')" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all text-left cursor-pointer border-none bg-transparent text-neutral-600 hover:bg-neutral-50">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
                         <span>{{ __('marketplace.profile_orders') }}</span>
                     </button>
-                    <button type="button" id="kcProfileTabBtnReviews" onclick="kcProfileSwitchTab('reviews')" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-[15px] font-semibold transition-all duration-200 text-left cursor-pointer border-none bg-transparent text-neutral-600 hover:bg-secondary-100 hover:text-neutral-900">
+                    <button type="button" id="kcProfileTabBtnReviews" onclick="kcProfileSwitchTab('reviews')" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all text-left cursor-pointer border-none bg-transparent text-neutral-600 hover:bg-neutral-50">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
                         <span>{{ __('marketplace.profile_reviews') }}</span>
                     </button>
-                    <button type="button" id="kcProfileTabBtnInfo" onclick="kcProfileSwitchTab('info')" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-[15px] font-semibold transition-all duration-200 text-left cursor-pointer border-none bg-transparent text-neutral-600 hover:bg-secondary-100 hover:text-neutral-900">
+                    <button type="button" id="kcProfileTabBtnInfo" onclick="kcProfileSwitchTab('info')" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all text-left cursor-pointer border-none bg-[#F1F5F9] text-primary">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 8h20"/><path d="M6 12h4"/></svg>
                         <span>{{ __('marketplace.profile_info') }}</span>
                     </button>
                     <form action="{{ route('web.auth.logout') }}" method="POST" style="margin:0;">
                         @csrf
-                        <button type="submit" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-[15px] font-semibold transition-all duration-200 text-left cursor-pointer border-none bg-transparent text-red-500 hover:bg-red-50">
+                        <button type="submit" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all text-left cursor-pointer border-none bg-transparent text-red-500 hover:bg-red-50">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                             <span>{{ __('marketplace.profile_logout') }}</span>
                         </button>
@@ -143,56 +144,56 @@
             </div>
 
             <!-- Right column: tab panels -->
-            <div style="min-width:0;">
+            <div class="w-full min-w-0">
 
-                <!-- ====== ORDERS PANEL (default) ====== -->
-                <div id="kcProfilePanelOrders" class="kc-profile-panel">
-                    <div class="kc-panel-card">
-                        <h3 style="font-size:1.125rem;font-weight:800;color:#0f172a;margin:0 0 1.25rem;">
+                <!-- ====== ORDERS PANEL ====== -->
+                <div id="kcProfilePanelOrders" class="kc-profile-panel" style="display:none;">
+                    <div class="bg-white p-6 md:p-8 rounded-3xl border border-secondary-100 shadow-sm">
+                        <h3 class="text-xl font-bold text-neutral-900 mb-6">
                             {{ __('marketplace.profile_orders_title') }} ({{ count($orders) }})
                         </h3>
 
                         @if(count($orders) === 0)
-                            <div style="text-align:center;padding:3rem 1rem;">
-                                <div class="kc-icon-empty" aria-hidden="true">
-                                    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                            <div class="text-center py-12 px-4">
+                                <div class="w-16 h-16 rounded-full bg-neutral-100 text-neutral-400 flex items-center justify-center mx-auto mb-4">
+                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                                         <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>
                                     </svg>
                                 </div>
-                                <h4 style="font-size:1.125rem;font-weight:700;color:#0f172a;margin:0 0 0.5rem;">{{ __('marketplace.profile_no_orders') }}</h4>
-                                <p style="color:#64748b;font-size:0.875rem;margin:0 0 1.5rem;">{{ __('marketplace.profile_no_orders_desc') }}</p>
-                                <a href="{{ route('web.catalog') }}" class="kc-primary-btn">
+                                <h4 class="text-lg font-bold text-neutral-900 mb-1">{{ __('marketplace.profile_no_orders') }}</h4>
+                                <p class="text-neutral-400 text-sm mb-6">{{ __('marketplace.profile_no_orders_desc') }}</p>
+                                <a href="{{ route('web.catalog') }}" class="inline-flex items-center justify-center bg-primary hover:bg-primary/90 text-white font-semibold px-6 py-3 rounded-2xl text-sm transition-colors">
                                     {{ __('marketplace.go_to_catalog') }}
                                 </a>
                             </div>
                         @else
-                            <div style="display:flex;flex-direction:column;gap:1rem;">
+                            <div class="flex flex-col gap-4">
                                 @foreach($orders as $order)
-                                    <div style="padding:1.25rem;border:1px solid #f1f5f9;border-radius:0.875rem;background:#fafafa;">
-                                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;flex-wrap:wrap;gap:0.5rem;">
+                                    <div class="p-5 border border-secondary-100 rounded-2xl bg-[#F8FAFC]">
+                                        <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
                                             <div>
-                                                <span style="font-weight:800;color:#0f172a;">{{ __('marketplace.profile_order_number', ['number' => $order->order_number ?? $order->id]) }}</span>
-                                                <span style="color:#64748b;font-size:0.8125rem;margin-left:0.5rem;">
+                                                <span class="font-bold text-neutral-900">{{ __('marketplace.profile_order_number', ['number' => $order->order_number ?? $order->id]) }}</span>
+                                                <span class="text-neutral-400 text-xs ml-2">
                                                     {{ optional($order->created_at)->format('d.m.Y, H:i') }}
                                                 </span>
                                             </div>
-                                            <span style="padding:0.25rem 0.75rem;border-radius:9999px;font-size:0.75rem;font-weight:700;
-                                                @if($order->paymentStatus == 2) background:#dcfce7;color:#15803d;
-                                                @elseif($order->paymentStatus == 1) background:#fef9c3;color:#a16207;
-                                                @else background:#f1f5f9;color:#475569; @endif">
+                                            <span class="px-3 py-1 rounded-full text-xs font-bold
+                                                @if($order->paymentStatus == 2) bg-emerald-100 text-emerald-700
+                                                @elseif($order->paymentStatus == 1) bg-amber-100 text-amber-700
+                                                @else bg-neutral-200 text-neutral-700 @endif">
                                                 @if($order->paymentStatus == 2) {{ __('marketplace.profile_status_paid') }}
                                                 @elseif($order->paymentStatus == 1) {{ __('marketplace.profile_status_pending') }}
                                                 @else {{ __('marketplace.profile_status_accepted') }} @endif
                                             </span>
                                         </div>
 
-                                        <div style="font-size:0.875rem;color:#334155;margin-bottom:0.75rem;">
-                                            <strong>{{ __('marketplace.profile_address') }}</strong> {{ $order->address ?? $order->city ?? __('marketplace.profile_address_unset') }}
+                                        <div class="text-sm text-neutral-600 mb-3">
+                                            <span class="font-semibold">{{ __('marketplace.profile_address') }}:</span> {{ $order->address ?? $order->city ?? __('marketplace.profile_address_unset') }}
                                         </div>
 
-                                        <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid #e2e8f0;padding-top:0.75rem;">
-                                            <span style="font-size:0.875rem;color:#64748b;">{{ __('marketplace.profile_total') }}</span>
-                                            <span style="font-size:1.125rem;font-weight:800;color:var(--color-tima-500);">
+                                        <div class="flex justify-between items-center border-t border-neutral-200/60 pt-3">
+                                            <span class="text-sm text-neutral-400">{{ __('marketplace.profile_total') }}</span>
+                                            <span class="text-lg font-bold text-primary">
                                                 {{ number_format($order->summa ?? $order->price ?? 0, 0, ',', ' ') }} {{ __('marketplace.currency') }}
                                             </span>
                                         </div>
@@ -203,26 +204,25 @@
                     </div>
                 </div>
 
-                <!-- ====== SHARHLARIM PANEL (BookClub postlari — piyolamarket'dagi
-                     "Sharhlarim" bo'limi bilan bir xil g'oya) ====== -->
+                <!-- ====== SHARHLARIM PANEL ====== -->
                 <div id="kcProfilePanelReviews" class="kc-profile-panel" style="display:none;">
-                    <div class="kc-panel-card">
-                        <h3 style="font-size:1.125rem;font-weight:800;color:#0f172a;margin:0 0 1.25rem;">
+                    <div class="bg-white p-6 md:p-8 rounded-3xl border border-secondary-100 shadow-sm">
+                        <h3 class="text-xl font-bold text-neutral-900 mb-6">
                             {{ __('marketplace.profile_reviews') }} ({{ count($myReviews ?? []) }})
                         </h3>
 
                         @if(count($myReviews ?? []) === 0)
-                            <div style="text-align:center;padding:3rem 1rem;">
-                                <div class="kc-icon-empty" aria-hidden="true">
-                                    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                            <div class="text-center py-12 px-4">
+                                <div class="w-16 h-16 rounded-full bg-neutral-100 text-neutral-400 flex items-center justify-center mx-auto mb-4">
+                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                                         <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
                                     </svg>
                                 </div>
-                                <h4 style="font-size:1.125rem;font-weight:700;color:#0f172a;margin:0 0 0.5rem;">{{ __('marketplace.profile_no_reviews') }}</h4>
-                                <p style="color:#64748b;font-size:0.875rem;margin:0;">{{ __('marketplace.profile_no_reviews_desc') }}</p>
+                                <h4 class="text-lg font-bold text-neutral-900 mb-1">{{ __('marketplace.profile_no_reviews') }}</h4>
+                                <p class="text-neutral-400 text-sm">{{ __('marketplace.profile_no_reviews_desc') }}</p>
                             </div>
                         @else
-                            <div style="display:flex;flex-direction:column;gap:1rem;">
+                            <div class="flex flex-col gap-4">
                                 @foreach($myReviews as $review)
                                     @php
                                         $rvName = data_get($review->product_snapshot, 'name');
@@ -234,42 +234,28 @@
                                                 : route('web.books.show', ['id' => $review->product_id, 'slug' => $rvSlug]))
                                             : null;
                                     @endphp
-                                    <div class="kc-my-review-card">
+                                    <div class="p-5 border border-secondary-100 rounded-2xl bg-[#F8FAFC]">
                                         @if($rvUrl && $rvName)
-                                            <a href="{{ $rvUrl }}" class="kc-my-review-product">
+                                            <a href="{{ $rvUrl }}" class="inline-flex items-center gap-1.5 text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full mb-3 no-underline">
                                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
                                                 {{ \Illuminate\Support\Str::limit($rvName, 40) }}
                                             </a>
                                         @endif
 
                                         @if(trim((string) $review->text) !== '')
-                                            <p style="font-size:0.875rem;line-height:1.6;color:#374151;margin:0 0 0.625rem;">{{ $review->text }}</p>
+                                            <p class="text-sm text-neutral-700 leading-relaxed mb-3">{{ $review->text }}</p>
                                         @endif
 
                                         @if($review->images->isNotEmpty())
-                                            <div style="display:flex;gap:0.375rem;overflow-x:auto;margin-bottom:0.625rem;">
+                                            <div class="flex gap-2 overflow-x-auto mb-3">
                                                 @foreach($review->images->take(4) as $img)
-                                                    <img src="{{ asset('storage/' . $img->image) }}" alt="" loading="lazy" style="width:3.5rem;height:3.5rem;border-radius:0.625rem;object-fit:cover;flex-shrink:0;">
+                                                    <img src="{{ asset('storage/' . $img->image) }}" alt="" loading="lazy" class="w-14 h-14 rounded-xl object-cover shrink-0">
                                                 @endforeach
                                             </div>
                                         @endif
 
-                                        <div style="display:flex;align-items:center;justify-content:space-between;">
-                                            <span style="font-size:0.75rem;color:#94a3b8;">{{ optional($review->created_at)->translatedFormat('d M Y') }}</span>
-                                            <div style="display:flex;align-items:center;gap:0.75rem;">
-                                                @if(($review->likes_count ?? 0) > 0)
-                                                    <span style="display:inline-flex;align-items:center;gap:0.25rem;font-size:0.75rem;font-weight:600;color:#ef4444;">
-                                                        <svg viewBox="0 0 24 24" fill="currentColor" style="width:12px;height:12px;"><path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z"/></svg>
-                                                        {{ __('marketplace.reviews_helpful', ['count' => $review->likes_count]) }}
-                                                    </span>
-                                                @endif
-                                                @if(($review->comments_count ?? 0) > 0)
-                                                    <span style="display:inline-flex;align-items:center;gap:0.25rem;font-size:0.75rem;font-weight:600;color:#9ca3af;">
-                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:12px;height:12px;"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.97-4.03 9-9 9-1.5 0-2.91-.37-4.15-1.02L3 21l1.05-3.16A8.96 8.96 0 013 12c0-4.97 4.03-9 9-9s9 4.03 9 9z"/></svg>
-                                                        {{ __('marketplace.reviews_comments_count', ['count' => $review->comments_count]) }}
-                                                    </span>
-                                                @endif
-                                            </div>
+                                        <div class="flex items-center justify-between text-xs text-neutral-400">
+                                            <span>{{ optional($review->created_at)->translatedFormat('d M Y') }}</span>
                                         </div>
                                     </div>
                                 @endforeach
@@ -278,88 +264,90 @@
                     </div>
                 </div>
 
-                <!-- ====== INFO PANEL (ma'lumotlar + manzillar) ====== -->
-                <div id="kcProfilePanelInfo" class="kc-profile-panel" style="display:none;">
-                    <div class="kc-panel-card" style="margin-bottom:1.5rem;">
-                        <h3 style="font-size:1.125rem;font-weight:800;color:#0f172a;margin:0 0 1.25rem;">{{ __('marketplace.profile_info') }}</h3>
-                        <div class="kc-profile-info-grid">
-                            <div class="kc-profile-info-item">
-                                <span class="kc-profile-info-label">{{ __('marketplace.profile_full_name') }}</span>
-                                <span class="kc-profile-info-value">{{ $user->name ?: __('marketplace.profile_not_entered') }}</span>
+                <!-- ====== INFO PANEL (PiyolaMarket 1:1) ====== -->
+                <div id="kcProfilePanelInfo" class="kc-profile-panel">
+                    <div class="bg-white p-6 md:p-8 rounded-3xl border border-secondary-100 shadow-sm flex flex-col gap-6">
+                        <!-- Top Header -->
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-xl font-bold text-neutral-900">{{ __('marketplace.profile_info') }}</h3>
+                            <button type="button" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-secondary-100 hover:bg-secondary-200 text-xs font-semibold text-neutral-700 transition-colors border-none cursor-pointer">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+                                <span>Tahrirlash</span>
+                            </button>
+                        </div>
+
+                        <!-- 2-Column User Info Grid (Piyola 1:1) -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8">
+                            <div>
+                                <div class="text-xs text-neutral-400 mb-1">To'liq ism</div>
+                                <div class="text-sm font-semibold text-neutral-900">{{ $user->name ?: 'Kiritilmagan' }}</div>
                             </div>
-                            <div class="kc-profile-info-item">
-                                <span class="kc-profile-info-label">{{ __('marketplace.profile_phone') }}</span>
-                                <span class="kc-profile-info-value">+{{ $user->phone_number }}</span>
+                            <div>
+                                <div class="text-xs text-neutral-400 mb-1">Tug'ilgan sana</div>
+                                <div class="text-sm font-semibold text-neutral-900">Kiritilmagan</div>
                             </div>
-                            @if(!empty($user->email))
-                                <div class="kc-profile-info-item">
-                                    <span class="kc-profile-info-label">Email</span>
-                                    <span class="kc-profile-info-value">{{ $user->email }}</span>
+                            <div>
+                                <div class="text-xs text-neutral-400 mb-1">Jins</div>
+                                <div class="text-sm font-semibold text-neutral-900">Erkak</div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-neutral-400 mb-1">Telefon raqam</div>
+                                <div class="text-sm font-semibold text-neutral-900">+{{ $user->phone_number }}</div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-neutral-400 mb-1">Elektron pochta</div>
+                                <div class="text-sm font-semibold text-neutral-900">{{ $user->email ?: 'Kiritilmagan' }}</div>
+                            </div>
+                        </div>
+
+                        <!-- Section: Saqlangan manzillar (Piyola 1:1) -->
+                        <div class="pt-4 border-t border-secondary-100">
+                            <h4 class="text-base font-bold text-neutral-900 mb-4">{{ __('marketplace.profile_addresses') }}</h4>
+
+                            @if(count($locations) > 0)
+                                <div class="flex flex-col gap-3 mb-6">
+                                    @foreach($locations as $loc)
+                                        <div class="flex items-center justify-between p-4 border border-secondary-100 rounded-2xl bg-[#F8FAFC]">
+                                            <div class="flex items-center gap-3 flex-1 min-w-0">
+                                                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="text-neutral-400 shrink-0"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                                                <div class="text-sm text-neutral-800 truncate">{{ $loc->fullAddress }}</div>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @else
+                                <div class="bg-[#F8FAFC] rounded-2xl p-8 text-center flex flex-col items-center justify-center">
+                                    <div class="w-14 h-14 rounded-full bg-neutral-200/60 text-neutral-500 flex items-center justify-center mb-3">
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle>
+                                        </svg>
+                                    </div>
+                                    <div class="text-base font-bold text-neutral-900">Saqlangan manzillar mavjud emas</div>
+                                    <div class="text-xs text-neutral-400 mt-1">Yetkazib berish manzilini qo'shing</div>
+                                    <button type="button" onclick="document.getElementById('kcAddressAddBox').classList.toggle('hidden')" class="mt-4 px-6 py-2.5 rounded-2xl bg-primary hover:bg-primary/90 text-white text-sm font-semibold border-none cursor-pointer transition-colors">
+                                        Yangi manzil qo'shish
+                                    </button>
                                 </div>
                             @endif
-                        </div>
-                    </div>
 
-                    <div class="kc-panel-card">
-                        <h3 style="font-size:1.125rem;font-weight:800;color:#0f172a;margin:0 0 1.25rem;display:flex;align-items:center;gap:0.5rem;">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
-                                <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>
-                            </svg>
-                            {{ __('marketplace.profile_addresses') }}
-                        </h3>
-
-                        @if(count($locations) > 0)
-                            <div style="display:flex;flex-direction:column;gap:0.75rem;margin-bottom:1.5rem;">
-                                @foreach($locations as $loc)
-                                    <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem;border:1px solid {{ $user->mainAddressID == $loc->id ? 'var(--color-tima-500)' : '#e2e8f0' }};border-radius:0.75rem;background:{{ $user->mainAddressID == $loc->id ? 'var(--color-tima-50)' : '#fff' }};">
-                                        <div style="display:flex;align-items:center;gap:0.75rem;flex:1;">
-                                            <svg width="20" height="20" fill="none" stroke="{{ $user->mainAddressID == $loc->id ? 'var(--color-tima-500)' : '#94a3b8' }}" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                                            <div style="font-size:0.875rem;color:#334155;">{{ $loc->fullAddress }}</div>
-                                        </div>
-                                        <div style="display:flex;align-items:center;gap:0.5rem;">
-                                            @if($user->mainAddressID != $loc->id)
-                                                <button onclick="setMainLocation({{ $loc->id }})" style="padding:0.375rem 0.75rem;font-size:0.75rem;font-weight:600;color:var(--color-tima-600);background:var(--color-tima-50);border:none;border-radius:0.375rem;cursor:pointer;">{{ __('marketplace.profile_set_main') }}</button>
-                                                <button onclick="deleteLocation({{ $loc->id }})" style="padding:0.375rem 0.75rem;font-size:0.75rem;font-weight:600;color:#ef4444;background:#fef2f2;border:none;border-radius:0.375rem;cursor:pointer;">{{ __('marketplace.profile_delete') }}</button>
-                                            @else
-                                                <span style="font-size:0.75rem;font-weight:700;color:var(--color-tima-500);background:var(--color-tima-100);padding:0.25rem 0.5rem;border-radius:9999px;">{{ __('marketplace.profile_main') }}</span>
-                                            @endif
-                                        </div>
+                            <!-- Add New Location Form (collapsible) -->
+                            <div id="kcAddressAddBox" class="mt-4 border border-dashed border-secondary-200 rounded-2xl p-5 bg-[#F8FAFC] hidden">
+                                <h5 class="text-sm font-bold text-neutral-900 mb-3">{{ __('marketplace.profile_add_address') }}</h5>
+                                <div id="yandex-map" class="w-full h-64 rounded-xl bg-neutral-200 mb-3 overflow-hidden"></div>
+                                <form id="newLocationForm" class="flex flex-col gap-3 m-0">
+                                    <input type="hidden" id="locLat" name="lat">
+                                    <input type="hidden" id="locLon" name="lon">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-neutral-600 mb-1">{{ __('marketplace.profile_address_full_name_label') }}</label>
+                                        <input type="text" id="locAddress" name="fullAddress" required
+                                            class="w-full px-4 py-2.5 border border-secondary-200 rounded-xl text-sm outline-none focus:ring-2 ring-primary/20 bg-white"
+                                            placeholder="{{ __('marketplace.profile_address_placeholder') }}">
                                     </div>
-                                @endforeach
+                                    <button type="submit" class="w-full py-3 bg-primary hover:bg-primary/90 text-white font-semibold text-sm rounded-xl border-none cursor-pointer transition-colors">
+                                        {{ __('marketplace.profile_save_address') }}
+                                    </button>
+                                </form>
                             </div>
-                        @else
-                            {{-- YANGI: avval manzil bo'lmaganda bu yerda hech narsa
-                                 chiqmasdi, to'g'ridan-to'g'ri pastdagi "yangi manzil
-                                 qo'shish" formasiga o'tib ketardi — piyolamarket'dagi
-                                 kabi endi chiroyli bo'sh holat ko'rsatiladi. --}}
-                            <div style="text-align:center;padding:2rem 1rem;margin-bottom:1.5rem;background:#f8fafc;border-radius:0.875rem;">
-                                <div class="kc-icon-empty" aria-hidden="true" style="margin-left:auto;margin-right:auto;">
-                                    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle>
-                                    </svg>
-                                </div>
-                                <h4 style="font-size:1rem;font-weight:700;color:#0f172a;margin:0 0 0.375rem;">{{ __('marketplace.profile_addresses_empty_title') }}</h4>
-                                <p style="color:#64748b;font-size:0.8125rem;margin:0;">{{ __('marketplace.profile_addresses_empty_desc') }}</p>
-                            </div>
-                        @endif
-
-                        <!-- Add New Location Form -->
-                        <div style="border:1px dashed #cbd5e1;border-radius:0.75rem;padding:1.25rem;background:#f8fafc;">
-                            <h4 style="font-size:1rem;font-weight:700;color:#0f172a;margin:0 0 1rem;">{{ __('marketplace.profile_add_address') }}</h4>
-                            <div id="yandex-map" style="width:100%;height:300px;border-radius:0.5rem;background:#e2e8f0;margin-bottom:1rem;overflow:hidden;"></div>
-                            <form id="newLocationForm" style="display:flex;flex-direction:column;gap:0.75rem;margin:0;">
-                                <input type="hidden" id="locLat" name="lat">
-                                <input type="hidden" id="locLon" name="lon">
-                                <div>
-                                    <label style="display:block;font-size:0.8125rem;font-weight:600;color:#475569;margin-bottom:0.25rem;">{{ __('marketplace.profile_address_full_name_label') }}</label>
-                                    <input type="text" id="locAddress" name="fullAddress" required
-                                        style="width:100%;padding:0.75rem 1rem;border:1px solid #cbd5e1;border-radius:0.5rem;font-size:0.875rem;outline:none;"
-                                        placeholder="{{ __('marketplace.profile_address_placeholder') }}">
-                                </div>
-                                <button type="submit" class="kc-primary-btn" style="width:100%;padding:0.75rem;font-size:0.875rem;border-radius:0.5rem;display:flex;align-items:center;justify-content:center;gap:0.5rem;">
-                                    {{ __('marketplace.profile_save_address') }}
-                                </button>
-                            </form>
                         </div>
                     </div>
                 </div>
@@ -379,9 +367,6 @@ const KC_PROFILE_I18N = {
     genericError: @json(__('marketplace.generic_error')),
 };
 
-// ── Tab switching (Buyurtmalarim / Sharhlarim / Ma'lumotlarim) — sahifa
-// qayta yuklanmaydi, faqat tanlangan panel ko'rsatiladi (piyolamarket.uz'dagi
-// kabi chap navigatsiya bilan o'ng panel almashadi).
 function kcProfileSwitchTab(tab) {
     const panels = { orders: 'kcProfilePanelOrders', reviews: 'kcProfilePanelReviews', info: 'kcProfilePanelInfo' };
     const buttons = { orders: 'kcProfileTabBtnOrders', reviews: 'kcProfileTabBtnReviews', info: 'kcProfileTabBtnInfo' };
@@ -392,9 +377,9 @@ function kcProfileSwitchTab(tab) {
         if (panelEl) panelEl.style.display = key === tab ? 'block' : 'none';
         if (btnEl) {
             if (key === tab) {
-                btnEl.className = 'w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-[15px] font-semibold transition-all duration-200 text-left cursor-pointer border-none bg-primary text-white shadow-sm';
+                btnEl.className = 'w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all text-left cursor-pointer border-none bg-[#F1F5F9] text-primary';
             } else {
-                btnEl.className = 'w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-[15px] font-semibold transition-all duration-200 text-left cursor-pointer border-none bg-transparent text-neutral-600 hover:bg-secondary-100 hover:text-neutral-900';
+                btnEl.className = 'w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all text-left cursor-pointer border-none bg-transparent text-neutral-600 hover:bg-neutral-50';
             }
         }
     });
@@ -405,7 +390,8 @@ function kcProfileSwitchTab(tab) {
 }
 document.addEventListener('DOMContentLoaded', function () {
     const hash = window.location.hash.replace('#', '');
-    if (hash === 'info' || hash === 'reviews') kcProfileSwitchTab(hash);
+    if (hash === 'orders' || hash === 'reviews') kcProfileSwitchTab(hash);
+    else kcProfileSwitchTab('info'); // default to info as in Piyola
 });
 
 // Yandex Maps Logic

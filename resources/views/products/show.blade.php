@@ -122,357 +122,144 @@
 @endpush
 
 @section('content')
-<div style="min-height:100dvh;padding:1.5rem 0;">
-    <div style="width:100%;max-width:var(--ui-container);margin:0 auto;padding:0 1rem;">
+<div class="py-6 min-h-dvh">
+    <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
 
-        <!-- ====== BREADCRUMBS (PiyolaMarket style) ====== -->
-        <div style="margin-bottom:1.25rem;">
-            <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+        <!-- ====== BREADCRUMBS & TOP ACTIONS (PiyolaMarket style) ====== -->
+        <div class="flex items-center justify-between gap-4 mb-6">
+            <div class="flex items-center gap-2 min-w-0">
                 <a href="{{ url('/') }}" onclick="history.length > 1 ? (event.preventDefault(), history.back()) : null"
-                   style="display:inline-flex;align-items:center;gap:0.375rem;padding:0.375rem 0.75rem 0.375rem 0.5rem;border-radius:0.375rem;font-size:0.875rem;font-weight:500;color:var(--color-tima-500);background:none;border:none;cursor:pointer;text-decoration:none;transition:color 0.2s;">
-                    <i class="icon-up-arrow" style="font-size:20px;display:inline-block;transform:rotate(-135deg);"></i>
+                   class="rounded-full w-9 h-9 flex items-center justify-center transition-colors text-primary bg-secondary-200 hover:bg-secondary-300 shrink-0" title="Orqaga">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
                 </a>
-                <nav aria-label="Breadcrumb">
-                    <ol style="display:flex;align-items:center;gap:0.5rem;list-style:none;padding:0;margin:0;">
+                <nav aria-label="breadcrumb" class="relative min-w-0">
+                    <ol class="flex items-center gap-2 flex-wrap text-sm text-[#8F8FA1]">
                         <li>
-                            <a href="{{ url('/') }}" style="font-size:0.875rem;color:#8F8FA1;text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='#111827'" onmouseout="this.style.color='#8F8FA1'">Asosiy</a>
+                            <a href="{{ url('/') }}" class="hover:text-neutral-900 transition-colors">Asosiy</a>
                         </li>
-                        <li aria-hidden="true" style="color:#8F8FA1;font-size:0.75rem;">/</li>
+                        <li class="text-gray-300">/</li>
                         <li>
-                            <a href="{{ route('web.catalog') }}" style="font-size:0.875rem;color:#8F8FA1;text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='#111827'" onmouseout="this.style.color='#8F8FA1'">Katalog</a>
+                            <a href="{{ route('web.catalog') }}" class="hover:text-neutral-900 transition-colors">Katalog</a>
                         </li>
                         @if($categoryName)
-                            <li aria-hidden="true" style="color:#8F8FA1;font-size:0.75rem;">/</li>
+                            <li class="text-gray-300">/</li>
                             <li>
-                                <a href="{{ route('web.catalog', ['category' => $product->category_id]) }}" style="font-size:0.875rem;color:#8F8FA1;text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='#111827'" onmouseout="this.style.color='#8F8FA1'">{{ $categoryName }}</a>
+                                <a href="{{ route('web.catalog', ['category' => $product->category_id]) }}" class="hover:text-neutral-900 transition-colors">{{ $categoryName }}</a>
                             </li>
                         @endif
-                        <li aria-hidden="true" style="color:#8F8FA1;font-size:0.75rem;">/</li>
-                        <li>
-                            <span style="font-size:0.875rem;color:#111827;font-weight:600;overflow:hidden;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;max-width:200px;">
-                                {{ \Illuminate\Support\Str::limit($product->name, 30) }}
-                            </span>
+                        <li class="text-gray-300">/</li>
+                        <li class="text-neutral-900 font-semibold truncate max-w-[240px]">
+                            {{ $product->name }}
                         </li>
                     </ol>
                 </nav>
             </div>
+
+            <!-- Top right favorite button -->
+            <button aria-label="Sevimlilar" data-fav="{{ $isFavorited ? '1' : '0' }}"
+                    onclick="toggleFavorite(this, {{ $product->id }}, '{{ $productType }}');"
+                    class="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-secondary-200 shadow-sm hover:bg-neutral-50 transition-all shrink-0 cursor-pointer">
+                <svg class="kc-heart-icon" viewBox="0 0 24 24" style="width:20px;height:20px;"
+                     fill="{{ $isFavorited ? '#ef4444' : 'none' }}" stroke="{{ $isFavorited ? '#ef4444' : '#374151' }}" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/>
+                </svg>
+            </button>
         </div>
 
-        <!-- ====== MAIN PRODUCT AREA ====== -->
-        <div class="lg:grid lg:grid-cols-2 xl:grid-cols-3 gap-5" id="kcProductMain">
+        <!-- ====== MAIN PRODUCT AREA (PiyolaMarket 1:1 Layout) ====== -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-start" id="kcProductMain">
             <!-- ====== LEFT: IMAGE GALLERY ====== -->
-            <div class="col-span-1 xl:col-span-2 h-full">
-                <div class="flex flex-col-reverse md:flex-row gap-3 h-full">
+            <div class="w-full">
+                <div class="flex flex-col-reverse md:flex-row gap-4 items-start">
                     <!-- Thumbnail strip -->
                     @if(count($allImages) > 1)
-                    <div class="flex md:flex-col gap-3 overflow-x-auto md:overflow-y-auto md:overflow-x-hidden w-full md:w-auto md:h-0 md:min-h-full scrollbar-hide py-1 shrink-0">
+                    <div class="flex md:flex-col gap-3 overflow-x-auto md:overflow-y-auto scrollbar-hide py-1 shrink-0 w-full md:w-auto">
                         @foreach($allImages as $tIdx => $tImg)
-                        <button onclick="kcGotoSlide({{ $tIdx }})" aria-label="gallery-image-selector-{{ $tIdx }}" class="border-transparent hover:border-neutral-200 relative shrink-0 w-[75px] h-[100px] rounded-xl overflow-hidden border-2 transition-all duration-300" id="kcThumb_{{ $tIdx }}">
+                        <button onclick="kcGotoSlide({{ $tIdx }})" aria-label="gallery-thumb-{{ $tIdx }}" class="{{ $tIdx === 0 ? 'border-primary' : 'border-transparent' }} hover:border-neutral-300 relative shrink-0 w-[75px] h-[100px] rounded-2xl overflow-hidden border-2 transition-all duration-200 cursor-pointer bg-[#F6F7F9]" id="kcThumb_{{ $tIdx }}">
                             <img src="{{ $tImg ? asset('storage/' . $tImg) : $imgUrl }}" class="w-full h-full object-cover">
                         </button>
                         @endforeach
                     </div>
                     @endif
 
-                    <!-- Main image -->
-                    <div class="flex-1 relative rounded-2xl group min-h-0">
-                        <div class="relative focus:outline-none h-full" id="kcImgWrap">
-                            <div class="overflow-hidden h-full">
-                                <div id="kcImgTrack" class="flex flex-row -ms-4 rounded-2xl items-stretch h-full" style="transition:transform 0.5s cubic-bezier(0.16,1,0.3,1);">
-                                    @foreach($allImages as $imgIdx => $imgPath)
-                                    <div class="min-w-0 shrink-0 ps-4 basis-full">
-                                        <img src="{{ $imgPath ? asset('storage/' . $imgPath) : $imgUrl }}" class="object-cover rounded-2xl w-full h-full aspect-[3/4]" id="{{ $imgIdx === 0 ? 'kcMainImg' : 'kcImg_' . $imgIdx }}">
-                                    </div>
-                                    @endforeach
-                                </div>
+                    <!-- Main image card -->
+                    <div class="flex-1 w-full relative rounded-3xl overflow-hidden bg-[#F6F7F9] aspect-[3/4] flex items-center justify-center">
+                        <div id="kcImgTrack" class="flex flex-row w-full h-full" style="transition:transform 0.5s cubic-bezier(0.16,1,0.3,1);">
+                            @foreach($allImages as $imgIdx => $imgPath)
+                            <div class="min-w-full w-full h-full flex items-center justify-center shrink-0">
+                                <img src="{{ $imgPath ? asset('storage/' . $imgPath) : $imgUrl }}" class="w-full h-full object-cover" id="{{ $imgIdx === 0 ? 'kcMainImg' : 'kcImg_' . $imgIdx }}">
                             </div>
-                            <!-- Discount badge (bottom-left) -->
-                            @if($isDiscounted)
-                                <div class="absolute bottom-3 left-3 z-20 flex flex-col gap-1">
-                                    <span class="inline-flex items-center text-sm font-medium rounded-md text-white px-2 py-1 bg-[#ED3131]">
-                                        -{{ $discPct }}%
-                                    </span>
-                                </div>
-                            @endif
-
-                            <!-- Favorite button (top-right) -->
-                            <div class="absolute top-3 right-3 z-20">
-                                <button aria-label="Sevimlilar" data-fav="{{ $isFavorited ? '1' : '0' }}"
-                                        onclick="toggleFavorite(this, {{ $product->id }}, '{{ $productType }}');"
-                                        class="w-10 h-10 flex items-center justify-center rounded-full bg-white/50 backdrop-blur-md border border-white/50 hover:bg-white transition-all">
-                                    <svg class="kc-heart-icon" viewBox="0 0 24 24" style="width:22px;height:22px;"
-                                         fill="{{ $isFavorited ? '#ef4444' : 'none' }}" stroke="{{ $isFavorited ? '#ef4444' : '#374151' }}" stroke-width="1.6">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/>
-                                    </svg>
-                                </button>
-                            </div>
+                            @endforeach
                         </div>
+
+                        <!-- Discount badge (bottom-left) -->
+                        @if($isDiscounted)
+                            <div class="absolute bottom-4 left-4 z-20">
+                                <span class="inline-flex items-center text-xs font-bold rounded-lg text-white px-2.5 py-1 bg-[#ED3131]">
+                                    -{{ $discPct }}%
+                                </span>
+                            </div>
+                        @endif
                     </div>
                 </div>
             </div>
 
             <!-- ====== RIGHT: PRODUCT INFO ====== -->
-            <div class="h-max sticky top-24">
-                <div class="flex flex-col gap-4">
-
-                    <!-- Stock & Category Badges -->
-                    <div class="flex items-center gap-2 flex-wrap">
-                        <span class="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-neutral-100 text-neutral-700">
-                            {{ $productType === 'book' ? 'Kitob' : 'Kanselyariya' }}
-                        </span>
-                        @if($categoryName)
-                            <a href="{{ route('web.catalog', ['category' => $product->category_id]) }}" class="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-primary-100 text-primary-600 no-underline">
-                                {{ $categoryName }}
-                            </a>
-                        @endif
-                        @if($inStock)
-                            <span class="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-green-100 text-green-700">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
-                                Sotuvda mavjud
-                            </span>
-                        @else
-                            <span class="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-yellow-100 text-yellow-700">
-                                Vaqtinchalik tugagan
-                            </span>
-                        @endif
-                    </div>
-
-                    <!-- Product Title -->
-                    <h1 class="text-[clamp(1.25rem,4vw,1.75rem)] font-extrabold text-neutral-900 leading-tight m-0">
-                        {{ $product->name }}
-                    </h1>
-
-                    <!-- Author (for books) -->
-                    @if($productType === 'book' && $product->author)
-                        <div class="text-sm text-neutral-500">
-                            Muallif: <a href="{{ route('web.catalog', ['search' => $product->author]) }}" class="font-bold text-primary-500 no-underline hover:underline">{{ $product->author }}</a>
-                        </div>
-                    @endif
-
-                    <!-- Rating -->
-                    @if($product->ugc_reviews_count)
-                        <div class="flex items-center gap-2">
-                            <div class="flex gap-0.5">
-                                @for($i = 1; $i <= 5; $i++)
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="{{ $i <= round($product->ugc_aggregate_score) ? '#f59e0b' : '#e5e7eb' }}" stroke="none">
-                                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                                    </svg>
-                                @endfor
-                            </div>
-                            <span class="text-sm font-semibold text-neutral-900">{{ number_format($product->ugc_aggregate_score, 1) }}</span>
-                            <span class="text-xs text-neutral-400">({{ $product->ugc_reviews_count }} ta baho)</span>
-                        </div>
-                    @endif
-
-                    <!-- ====== "BU MENGA MOSMI?" (Reading Intelligence) ======
-                         Mobil ilova (item.dart)dagi "Bu menga mosmi?" kartasi
-                         bilan bir xil orkestrator (ReadingIntelligenceService)
-                         ishlatiladi — reyting ostida, XUDDI ILOVADAGIDEK
-                         joylashadi. Faqat kitoblar uchun va faqat AI mahsulotni
-                         allaqachon tahlil qilgan bo'lsa ko'rinadi (aks holda
-                         $readingIntelligence null — hech narsa chiqmaydi). Bosilganda
-                         pastdan chiquvchi "sheet" (mobil bottom-sheet'ga o'xshash
-                         modal) ochiladi — batafsil tahlil shu yerda. -->
-                    @if($productType === 'book' && !empty($readingIntelligence))
-                        @php
-                            $riIconPaths = [
-                                'sparkles' => '<path d="M12 2l1.8 4.9L19 8.5l-5.2 1.6L12 15l-1.8-4.9L5 8.5l5.2-1.6L12 2z"/><path d="M19 15l.9 2.4L22 18l-2.1.6L19 21l-.9-2.4L16 18l2.1-.6L19 15z"/>',
-                                'heart' => '<path d="M12 21s-6.5-4.35-9.3-8.1C.6 9.9 1.7 6 5.1 5c2-.6 3.9.2 4.9 1.9C11 5.2 12.9 4.4 14.9 5c3.4 1 4.5 4.9 2.4 7.9C18.5 16.65 12 21 12 21z"/>',
-                                'compass' => '<circle cx="12" cy="12" r="10"/><path d="M16 8l-2 6-6 2 2-6 6-2z"/>',
-                                'trending-up' => '<path d="M23 6l-9.5 9.5-5-5L1 18"/><path d="M17 6h6v6"/>',
-                                'message-circle' => '<path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/>',
-                                'tag' => '<path d="M20.59 13.41L11 3.83 3.83 11l9.58 9.59a2 2 0 002.83 0l4.35-4.35a2 2 0 000-2.83z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
-                                'info-circle' => '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>',
-                                'book' => '<path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>',
-                            ];
-                            $riIcon = $riIconPaths[$readingIntelligence['teaser']['icon'] ?? ''] ?? $riIconPaths['sparkles'];
-                        @endphp
-                        <button type="button" onclick="kcOpenMoslikModal()" style="display:flex;align-items:center;gap:0.75rem;width:100%;text-align:left;padding:0.875rem 1rem;background:linear-gradient(135deg,rgba(124,58,237,0.07),rgba(16,185,129,0.07));border:1px solid rgba(124,58,237,0.15);border-radius:1rem;cursor:pointer;">
-                            <div style="width:2.5rem;height:2.5rem;border-radius:0.75rem;background:linear-gradient(135deg,#7c3aed,#10b981);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{!! $riIcon !!}</svg>
-                            </div>
-                            <div style="min-width:0;flex:1;">
-                                <div style="font-weight:700;font-size:0.9375rem;color:#111827;">{{ $readingIntelligence['teaser']['title'] }}</div>
-                                <div style="font-size:0.8125rem;color:#6b7280;margin-top:0.125rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ $readingIntelligence['teaser']['subtitle'] }}</div>
-                            </div>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" style="width:18px;height:18px;flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
-                        </button>
-                    @endif
-
-                    <!-- Tags -->
-                    @if($validTags->isNotEmpty())
-                        <div class="flex flex-wrap gap-1.5">
-                            @foreach($validTags->take(6) as $tag)
-                                <a href="{{ route('web.catalog', ['search' => $tag->name]) }}" class="inline-block px-2.5 py-1 bg-neutral-100 rounded-full text-xs text-neutral-500 no-underline hover:bg-neutral-200 transition-colors">
-                                    #{{ $tag->name }}
-                                </a>
-                            @endforeach
-                        </div>
-                    @endif
-
-                    <!-- ====== SOTUVCHI (Seller/Shop) ======
-                         Mahsulot qaysi do'kondan sotilayotganini ko'rsatadi —
-                         avval bu ma'lumot mahsulot sahifasida umuman
-                         chiqmasdi. Do'kon nomiga bosilsa katalogga shu
-                         do'konning barcha mahsulotlari bilan filtrlangan
-                         holda o'tadi (alohida "do'kon sahifasi" web'da hali
-                         yo'q, shuning uchun mavjud Do'konlar filtridan
-                         foydalaniladi). -->
-                    @if($product->seller)
-                        @php $sellerObj = $product->seller; @endphp
-                        <a href="{{ route('web.catalog', ['type' => $productType, 'seller_ids' => [$sellerObj->id]]) }}"
-                           style="display:flex;align-items:center;gap:0.75rem;padding:0.875rem 1rem;background:#fff;border:1px solid #f1f5f9;border-radius:1rem;text-decoration:none;transition:border-color 0.2s;"
-                           onmouseover="this.style.borderColor='var(--color-tima-300,#a3d9c9)'" onmouseout="this.style.borderColor='#f1f5f9'">
-                            @if(!empty($sellerObj->photo))
-                                <img src="{{ str_starts_with($sellerObj->photo, 'http') ? $sellerObj->photo : asset('storage/' . ltrim($sellerObj->photo, '/')) }}"
-                                     alt="{{ $sellerObj->shop_name }}" style="width:2.75rem;height:2.75rem;border-radius:9999px;object-fit:cover;flex-shrink:0;">
-                            @else
-                                <div style="width:2.75rem;height:2.75rem;border-radius:9999px;background:var(--color-tima-100,#e8eaef);color:var(--color-tima-600);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.125rem;flex-shrink:0;">
-                                    {{ mb_strtoupper(mb_substr($sellerObj->shop_name ?: '?', 0, 1)) }}
-                                </div>
-                            @endif
-                            <div style="min-width:0;flex:1;">
-                                <div style="display:flex;align-items:center;gap:0.375rem;">
-                                    <span style="font-weight:700;font-size:0.9375rem;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ $sellerObj->shop_name }}</span>
-                                    @if($sellerObj->isVerified)
-                                        <svg viewBox="0 0 24 24" fill="#3b82f6" style="width:15px;height:15px;flex-shrink:0;" aria-label="Tasdiqlangan do'kon"><path d="M12 2l2.4 1.2 2.7-.3 1.2 2.4 2.4 1.2-.3 2.7L22 12l-1.2 2.4.3 2.7-2.4 1.2-1.2 2.4-2.7-.3L12 22l-2.4-1.2-2.7.3-1.2-2.4-2.4-1.2.3-2.7L2 12l1.2-2.4-.3-2.7 2.4-1.2 1.2-2.4 2.7.3z"/><path d="M9 12l2 2 4-4" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                                    @endif
-                                    @if($sellerObj->isPremiumShop)
-                                        <span style="font-size:0.625rem;font-weight:700;color:#a16207;background:#fef9c3;padding:0.0625rem 0.375rem;border-radius:9999px;">PREMIUM</span>
-                                    @endif
-                                </div>
-                                <div style="font-size:0.8125rem;color:#9ca3af;margin-top:0.125rem;">
-                                    @if($sellerObj->rating > 0)
-                                        <span style="color:#f59e0b;font-weight:600;">★ {{ number_format($sellerObj->rating, 1) }}</span>
-                                        @if($sellerObj->rating_reviews_count > 0)
-                                            <span>({{ $sellerObj->rating_reviews_count }})</span>
-                                        @endif
-                                        <span> · </span>
-                                    @endif
-                                    {{ __('marketplace.seller_shop') }}
-                                </div>
-                            </div>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" style="width:18px;height:18px;flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
+            <div class="w-full flex flex-col gap-5">
+                <!-- Stock & Category Badges -->
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="inline-flex items-center text-xs font-semibold px-3 py-1 rounded-full bg-neutral-100 text-neutral-700">
+                        {{ $productType === 'book' ? 'Kitob' : 'Kanselyariya' }}
+                    </span>
+                    @if($categoryName)
+                        <a href="{{ route('web.catalog', ['category' => $product->category_id]) }}" class="inline-flex items-center text-xs font-semibold px-3 py-1 rounded-full bg-primary/10 text-primary no-underline hover:bg-primary/20 transition-colors">
+                            {{ $categoryName }}
                         </a>
                     @endif
+                    @if($inStock)
+                        <span class="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1 rounded-full bg-emerald-50 text-emerald-600">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>
+                            Sotuvda mavjud
+                        </span>
+                    @else
+                        <span class="inline-flex items-center text-xs font-semibold px-3 py-1 rounded-full bg-amber-50 text-amber-600">
+                            Vaqtinchalik tugagan
+                        </span>
+                    @endif
+                </div>
 
-                    <!-- ====== PRICE AND PAYMENT TABS BLOCK ====== -->
-                    <div class="p-6 rounded-3xl bg-secondary-100 space-y-5 mt-4">
-                        <!-- Tabs -->
-                        <div class="relative inline-flex bg-secondary-300 rounded-xl p-1 flex">
-                            <button id="tab-installment" class="text-sm px-4 py-2 text-gray-900 bg-white shadow-sm flex-1 relative z-10 font-medium rounded-lg transition-colors duration-200 whitespace-nowrap" onclick="togglePaymentTab('installment')">
-                                Muddatli to‘lov
-                            </button>
-                            <button id="tab-cash" class="text-sm px-4 py-2 text-gray-400 hover:text-gray-500 flex-1 relative z-10 font-medium rounded-lg transition-colors duration-200 whitespace-nowrap" onclick="togglePaymentTab('cash')">
-                                Naqd to'lov
-                            </button>
-                        </div>
+                <!-- Title -->
+                <h1 class="text-2xl lg:text-3xl font-bold text-neutral-900 leading-snug">
+                    {{ $product->name }}
+                </h1>
 
-                        <!-- Installment View -->
-                        <div id="view-installment" class="flex max-md:flex-col md:justify-between gap-4 w-full transition-all">
-                            <div>
-                                <p class="text-sm text-gray font-normal text-neutral-500">Muddatli to'lov</p>
-                                <div id="kcPlanPills" class="inline-flex mt-1 md:mt-2">
-                                    <!-- JS to'ldiradi: kcLoadSplitPreview() -->
-                                    <div class="relative inline-flex bg-secondary-300 rounded-xl p-1">
-                                        <button type="button" class="relative z-10 font-medium rounded-lg transition-colors duration-200 whitespace-nowrap text-sm px-3 py-1.5 text-gray-400 hover:text-gray-500">6 oy</button>
-                                        <button type="button" class="relative z-10 font-medium rounded-lg transition-colors duration-200 whitespace-nowrap text-sm px-3 py-1.5 text-gray-900 bg-white shadow-sm">12 oy</button>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="flex flex-col md:items-end">
-                                <p class="text-sm text-gray font-normal text-neutral-500">Muddatli to'lovga sotib olish</p>
-                                <div class="flex items-end justify-between md:justify-end gap-3 mt-1 md:mt-4 w-full">
-                                    <div class="flex items-end gap-1">
-                                        <span id="kcMonthlyPrice" class="text-xl font-bold text-neutral-900">{{ number_format(ceil($currentPrice * 1.44 / 12)) }}</span>
-                                        <span class="text-neutral-500 text-sm">so'm/oyiga</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Cash View -->
-                        <div id="view-cash" class="flex flex-col transition-all" style="display:none;">
-                            <p class="text-sm text-gray font-normal text-neutral-500">Narxi</p>
-                            <div class="flex items-center gap-1 mt-1">
-                                <div class="flex items-end gap-3">
-                                    <span class="text-2xl font-bold text-neutral-900">{{ number_format($currentPrice) }} so'm</span>
-                                    @if($isDiscounted)
-                                        <span class="text-base text-neutral-400 line-through">{{ number_format($origPrice) }} so'm</span>
-                                        <span class="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded text-[#ED3131] bg-[#ED3131]/10">
-                                            -{{ $discPct }}%
-                                        </span>
-                                    @endif
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- ====== BUY ACTIONS ======
-                             Mobil'da bu blok pastga mahkamlanadi (.kc-buybar-mobile —
-                             piyolamarket'dagi sticky "Buyurtma berish" panelining
-                             o'zi), desktop'da hech narsa o'zgarmaydi. -->
-                        <div class="flex items-center gap-2 sm:gap-3 kc-buybar-mobile">
-                            <div class="flex-1">
-                                <button type="button" onclick="addToCart({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $currentPrice }}, '{{ $imgUrl }}', '{{ $canonicalUrl }}', true)" class="font-medium inline-flex items-center justify-center transition-colors py-1.5 gap-1.5 text-white bg-primary hover:bg-primary/90 active:bg-primary/90 h-12 rounded-2xl text-base px-6 w-full cursor-pointer">
-                                    {{ __('marketplace.place_order') }}
-                                </button>
-                            </div>
-                            <div>
-                                <button type="button" onclick="addToCart({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $currentPrice }}, '{{ $imgUrl }}', '{{ $canonicalUrl }}', false)" title="{{ __('marketplace.add_to_cart') }}" class="font-medium inline-flex items-center justify-center transition-colors text-base gap-2 text-primary bg-primary/10 hover:bg-primary/15 active:bg-primary/15 h-12 w-14 rounded-2xl cursor-pointer">
-                                    <svg viewBox="0 0 24 24" fill="currentColor" style="width:24px;height:24px;"><path d="M2.25 2.25a.75.75 0 000 1.5h1.386c.17 0 .318.114.362.278l2.558 9.592a3.752 3.752 0 00-2.806 3.63c0 .414.336.75.75.75h15.75a.75.75 0 000-1.5H5.378A2.25 2.25 0 017.5 15h11.218a.75.75 0 00.674-.421 60.358 60.358 0 002.96-7.228.75.75 0 00-.525-.965A60.864 60.864 0 005.68 4.509l-.232-.867A1.875 1.875 0 003.636 2.25H2.25zM3.75 20.25a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zM16.5 20.25a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0z"/></svg>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                <!-- ====== XUSUSIYATLAR VA TAVSIF (piyolamarket.uz uslubida) ====== -->
-                @if(!empty($specs) || $hasVariants)
-                    <div>
-                        <div onclick="kcToggleSpecs()" class="w-full bg-secondary-300 cursor-pointer rounded-2xl p-4 md:px-6 flex items-center justify-between transition-colors duration-300 hover:bg-secondary-400 mt-2">
-                            <div class="flex items-center gap-3">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="w-6 h-6 text-primary"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"/></svg>
-                                <span class="font-medium text-primary text-base">Xususiyatlar va tavsif</span>
-                            </div>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="kcSpecsChevron" class="w-5 h-5 text-primary transition-transform duration-300"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
-                        </div>
-
-                        <div id="kcSpecsBody" class="mt-4 p-6 rounded-3xl bg-secondary-100 hidden">
-                            @if(!empty($specs))
-                                <dl class="space-y-3">
-                                    @foreach($specs as $spec)
-                                        <div class="flex justify-between gap-4 py-2 border-b border-secondary-200 border-dashed">
-                                            <dt class="text-sm text-neutral-500">{{ $spec['label'] }}</dt>
-                                            <dd class="text-sm font-semibold text-neutral-900 text-right">{{ $spec['value'] }}</dd>
-                                        </div>
-                                    @endforeach
-                                </dl>
-                            @endif
-
-                            @if($hasVariants)
-                                <div class="{{ !empty($specs) ? 'mt-6' : '' }}">
-                                    <div class="text-sm text-neutral-500 mb-3">Ranglar / turlari</div>
-                                    <div class="flex flex-wrap gap-2">
-                                        @foreach($product->variants as $variant)
-                                            <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-secondary-200 text-sm font-medium text-neutral-700">
-                                                @if(!empty($variant->image_path))
-                                                    <img src="{{ asset('storage/' . $variant->image_path) }}" alt="{{ $variant->color_name }}" class="w-5 h-5 rounded-full object-cover">
-                                                @endif
-                                                {{ $variant->color_name }}
-                                                @if(($variant->stock ?? 0) <= 0)
-                                                    <span class="text-neutral-400 font-normal">(tugagan)</span>
-                                                @endif
-                                            </span>
-                                        @endforeach
-                                    </div>
-                                </div>
-                            @endif
-                        </div>
+                <!-- Author (for books) -->
+                @if($productType === 'book' && !empty($product->author) && $product->author !== 'null')
+                    <div class="text-sm text-neutral-500 font-medium">
+                        Muallif: <a href="{{ route('web.catalog', ['search' => $product->author]) }}" class="font-bold text-primary hover:underline">{{ $product->author }}</a>
                     </div>
                 @endif
 
-            </div>
-        </div>
-        </div>
+                <!-- Rating -->
+                <div class="flex items-center gap-2 text-sm">
+                    <span class="text-amber-500 font-bold">★ 5.00</span>
+                    <span class="text-neutral-400">· {{ $product->ugc_reviews_count ?: 1 }} Sharhlar</span>
+                </div>
+
+                <!-- Price row -->
+                <div>
+                    <div class="text-xs text-neutral-400 font-medium mb-1">Narxi</div>
+                    <div class="flex items-baseline gap-3">
+                        <span class="text-2xl lg:text-3xl font-bold text-neutral-900">{{ number_format($currentPrice) }} so'm</span>
+                        @if($isDiscounted)
+                            <span class="text-base text-neutral-400 line-through">{{ number_format($origPrice) }} so'm</span>
+                            <span class="text-xs font-bold text-[#ED3131] bg-[#ED3131]/10 px-2 py-0.5 rounded-md">-{{ $discPct }}%</span>
+                        @endif
+                    </div>
+                </div>
+
+                <!-- ====== XUSUSIYATLAR VA TAVSIF ACCORDION (Above Payment) ====== -->
+                @if(!empty($specs) || $hasVariants)
 
         <!-- ====== XARIDORLAR SHARHLARI (piyolamarket.uz uslubida) ======
              $ugcReviews — BookClub'dagi shu mahsulotga yozilgan postlar

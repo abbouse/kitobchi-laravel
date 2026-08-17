@@ -405,11 +405,13 @@
                     <div id="kcSearchPopup" style="display:none;position:absolute;top:calc(100% + 8px);left:0;right:0;background:#fff;border-radius:1rem;box-shadow:0 20px 40px rgba(0,0,0,0.12);z-index:200;overflow:hidden;max-height:400px;overflow-y:auto;"></div>
                 </div>
 
-                <!-- Right: Cart + Favorites + Lang + Profile -->
-                <div class="flex-y-center gap-4">
-                    <div class="relative overflow-hidden transition-shadow duration-300 rounded-2xl px-5 py-[14px] rounded-full! hover:shadow-sm hover:shadow-black/10 glass-card-bg flex-y-center p-1! h-12 bg-secondary-200!">
-                        <div class="absolute inset-0 pointer-events-none glass-border rounded-2xl rounded-full!"></div>
-                             <a href="{{ route('web.cart') }}" class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group {{ request()->routeIs('web.cart') ? 'bg-primary-200 text-primary font-semibold' : '' }}">
+                <!-- Right: Cart + Favorites + Lang + Profile (PiyolaMarket 1:1) -->
+                <div class="flex-y-center gap-3">
+                    <div class="relative overflow-hidden transition-shadow duration-300 rounded-full hover:shadow-sm hover:shadow-black/10 glass-card-bg flex-y-center p-1 h-12 bg-secondary-200">
+                        <div class="absolute inset-0 pointer-events-none glass-border rounded-full"></div>
+                        
+                        <!-- Cart -->
+                        <a href="{{ route('web.cart') }}" class="rounded-full px-3 py-2 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group h-full {{ request()->routeIs('web.cart') ? 'bg-primary-200 text-primary font-semibold' : '' }}">
                             <div class="flex-center relative" id="kcCartBadgeWrap">
                                 <i class="icon-order group-hover:text-primary text-lg transition-colors duration-200"></i>
                                 <span id="kcCartBadge" class="w-4 h-4 rounded-full flex-center text-[10px] absolute translate-x-1/2 -translate-y-1/2 top-0 right-0 bg-red-500 text-white border border-white font-bold" style="display:none;"></span>
@@ -417,7 +419,8 @@
                             <span class="max-lg:hidden font-normal text-sm leading-5 group-hover:text-primary transition-colors duration-200">{{ __('marketplace.cart') }}</span>
                         </a>
 
-                        <a href="{{ route('web.favorites') }}" aria-current="{{ request()->routeIs('web.favorites') ? 'page' : 'false' }}" class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group {{ request()->routeIs('web.favorites') ? 'bg-primary-200 text-primary font-semibold' : '' }}">
+                        <!-- Favorites -->
+                        <a href="{{ route('web.favorites') }}" aria-current="{{ request()->routeIs('web.favorites') ? 'page' : 'false' }}" class="rounded-full px-3 py-2 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group h-full {{ request()->routeIs('web.favorites') ? 'bg-primary-200 text-primary font-semibold' : '' }}">
                             <div class="flex-center relative" id="kcFavBadgeWrap">
                                 <i class="icon-heart group-hover:text-primary text-lg transition-colors duration-200"></i>
                                 <span id="kcFavBadge" class="w-4 h-4 rounded-full flex-center text-[10px] absolute translate-x-1/2 -translate-y-1/2 top-0 right-0 bg-red-500 text-white border border-white font-bold" style="{{ ($kcFavCount ?? 0) > 0 ? '' : 'display:none;' }}">{{ ($kcFavCount ?? 0) > 99 ? '99+' : ($kcFavCount ?? 0) }}</span>
@@ -425,24 +428,23 @@
                             <span class="max-lg:hidden font-normal text-sm leading-5 group-hover:text-primary transition-colors duration-200">{{ __('marketplace.favorites') }}</span>
                         </a>
 
-                        <div class="relative kc-lang-wrap" id="kcLangWrap">
-                            <button type="button" onclick="toggleLangMenu(event, 'kcLangMenu')" aria-haspopup="menu" aria-expanded="false" class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group border-none bg-transparent cursor-pointer" style="font-family:inherit;">
+                        <!-- Language -->
+                        <div class="relative kc-lang-wrap h-full flex items-center" id="kcLangWrap">
+                            <button type="button" onclick="toggleLangMenu(event, 'kcLangMenu')" aria-haspopup="menu" aria-expanded="false" class="rounded-full px-3 py-2 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group h-full border-none bg-transparent cursor-pointer" style="font-family:inherit;">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="group-hover:text-primary transition-colors"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20M2 12h20"/></svg>
                                 <span class="max-lg:hidden font-normal text-sm leading-5 group-hover:text-primary transition-colors duration-200">{{ (config('landing_locales.labels')[app()->getLocale()] ?? "O'zbekcha") }}</span>
                             </button>
                             @include('partials.lang-menu', ['menuId' => 'kcLangMenu'])
                         </div>
-                    </div>
 
-                    <div class="relative overflow-hidden transition-shadow duration-300 rounded-2xl px-5 py-[14px] rounded-full! hover:shadow-sm hover:shadow-black/10 glass-card-bg flex-y-center h-12 p-1! cursor-pointer bg-secondary-200!">
-                        <div class="absolute inset-0 pointer-events-none glass-border rounded-2xl rounded-full!"></div>
+                        <!-- Profile / Auth -->
                         @auth
-                            <a href="{{ route('web.profile') }}" class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group h-full {{ request()->routeIs('web.profile') ? 'bg-primary-200 text-primary font-semibold' : '' }}">
+                            <a href="{{ route('web.profile') }}" class="rounded-full px-3 py-2 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group h-full {{ request()->routeIs('web.profile') ? 'bg-primary-200 text-primary font-semibold' : '' }}">
                                 <i class="icon-profile text-lg"></i>
                                 <span class="font-normal text-sm leading-5 max-lg:hidden">{{ Str::limit(auth()->user()->name ?: auth()->user()->phone_number, 12) }}</span>
                             </a>
                         @else
-                            <button type="button" onclick="openAuthModal()" class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group h-full border-none bg-transparent cursor-pointer" style="font-family:inherit;">
+                            <button type="button" onclick="openAuthModal()" class="rounded-full px-3 py-2 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group h-full border-none bg-transparent cursor-pointer" style="font-family:inherit;">
                                 <i class="icon-profile text-lg"></i>
                                 <span class="font-normal text-sm leading-5 max-lg:hidden">{{ __('marketplace.login') }}</span>
                             </button>
