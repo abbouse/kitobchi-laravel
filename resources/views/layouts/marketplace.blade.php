@@ -353,13 +353,13 @@
 <body style="margin:0;padding:0;font-family:'Urbanist',sans-serif;">
 
 @php
-    // Header'dagi "Kataloglar" ochib beradigan 2-ustunli panel (piyolamarket.uz'dagi
-    // kabi) uchun kategoriyalar — bu HAR bir sahifada (nafaqat katalog sahifasida)
-    // kerak bo'lgani uchun shu yerda, layout darajasida, qisqa TTL bilan keshlab
-    // olinadi (controller'ni o'zgartirmasdan, ProductCatalogController@catalog'dagi
-    // bilan bir xil so'rov naqshi).
-    $kcHeaderBookCategories = \Illuminate\Support\Facades\Cache::remember('kc_header_book_categories_v1', 300, fn () => \App\Models\BookCategories::where('is_active', true)->orderBy('name_uz')->get());
-    $kcHeaderStationeryCategories = \Illuminate\Support\Facades\Cache::remember('kc_header_stationery_categories_v1', 300, fn () => \App\Models\StationeryCategory::where('is_active', true)->orderBy('name_uz')->get());
+    try {
+        $kcHeaderBookCategories = \Illuminate\Support\Facades\Cache::remember('kc_header_book_categories_v1', 300, fn () => \App\Models\BookCategories::where('is_active', true)->orderBy('name_uz')->get());
+        $kcHeaderStationeryCategories = \Illuminate\Support\Facades\Cache::remember('kc_header_stationery_categories_v1', 300, fn () => \App\Models\StationeryCategory::where('is_active', true)->orderBy('name_uz')->get());
+    } catch (\Throwable $e) {
+        $kcHeaderBookCategories = collect();
+        $kcHeaderStationeryCategories = collect();
+    }
 @endphp
 
 <div class="page-wrapper">
@@ -409,32 +409,26 @@
                 <div class="flex-y-center gap-4">
                     <div class="relative overflow-hidden transition-shadow duration-300 rounded-2xl px-5 py-[14px] rounded-full! hover:shadow-sm hover:shadow-black/10 glass-card-bg flex-y-center p-1! h-12 bg-secondary-200!">
                         <div class="absolute inset-0 pointer-events-none glass-border rounded-2xl rounded-full!"></div>
-                        
-                        <a href="{{ route('web.cart') }}" class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group {{ request()->routeIs('web.cart') ? 'bg-primary-200' : '' }}">
-                            <div class="flex-center relative">
-                                <i class="icon-order group-hover:text-green-500 text-lg transition-colors duration-200"></i>
-                                <span id="kcCartBadge" class="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-primary-500 text-white text-[10px] font-bold rounded-full flex-center px-[3px]" style="display:none;"></span>
+                             <a href="{{ route('web.cart') }}" class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group {{ request()->routeIs('web.cart') ? 'bg-primary-200 text-primary font-semibold' : '' }}">
+                            <div class="flex-center relative" id="kcCartBadgeWrap">
+                                <i class="icon-order group-hover:text-primary text-lg transition-colors duration-200"></i>
+                                <span id="kcCartBadge" class="w-4 h-4 rounded-full flex-center text-[10px] absolute translate-x-1/2 -translate-y-1/2 top-0 right-0 bg-red-500 text-white border border-white font-bold" style="display:none;"></span>
                             </div>
-                            <span class="max-lg:hidden font-normal text-sm leading-5 group-hover:text-green-500 transition-colors duration-200">{{ __('marketplace.cart') }}</span>
+                            <span class="max-lg:hidden font-normal text-sm leading-5 group-hover:text-primary transition-colors duration-200">{{ __('marketplace.cart') }}</span>
                         </a>
 
-                        <a href="{{ route('web.favorites') }}" aria-current="{{ request()->routeIs('web.favorites') ? 'page' : 'false' }}" class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group {{ request()->routeIs('web.favorites') ? 'bg-primary-200' : '' }}">
+                        <a href="{{ route('web.favorites') }}" aria-current="{{ request()->routeIs('web.favorites') ? 'page' : 'false' }}" class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group {{ request()->routeIs('web.favorites') ? 'bg-primary-200 text-primary font-semibold' : '' }}">
                             <div class="flex-center relative" id="kcFavBadgeWrap">
-                                <i class="icon-heart group-hover:text-green-500 text-lg transition-colors duration-200"></i>
-                                @if(($kcFavCount ?? 0) > 0)
-                                    <span id="kcFavBadge" class="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-primary-500 text-white text-[10px] font-bold rounded-full flex-center px-[3px]">
-                                        {{ $kcFavCount > 99 ? '99+' : $kcFavCount }}
-                                    </span>
-                                @endif
+                                <i class="icon-heart group-hover:text-primary text-lg transition-colors duration-200"></i>
+                                <span id="kcFavBadge" class="w-4 h-4 rounded-full flex-center text-[10px] absolute translate-x-1/2 -translate-y-1/2 top-0 right-0 bg-red-500 text-white border border-white font-bold" style="{{ ($kcFavCount ?? 0) > 0 ? '' : 'display:none;' }}">{{ ($kcFavCount ?? 0) > 99 ? '99+' : ($kcFavCount ?? 0) }}</span>
                             </div>
-                            <span class="max-lg:hidden font-normal text-sm leading-5 group-hover:text-green-500 transition-colors duration-200">{{ __('marketplace.favorites') }}</span>
+                            <span class="max-lg:hidden font-normal text-sm leading-5 group-hover:text-primary transition-colors duration-200">{{ __('marketplace.favorites') }}</span>
                         </a>
 
                         <div class="relative kc-lang-wrap" id="kcLangWrap">
-                            <button onclick="toggleLangMenu(event, 'kcLangMenu')" aria-haspopup="menu" aria-expanded="false" class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group border-none bg-transparent" style="font-family:inherit;">
-                                <img src="https://cdn.jsdelivr.net/gh/hatscripts/circle-flags@gh-pages/flags/{{ ['uz' => 'uz', 'ru' => 'ru', 'en' => 'us', 'ja' => 'jp'][app()->getLocale()] ?? 'uz' }}.svg"
-                                     alt="" width="18" height="18" style="width:18px;height:18px;border-radius:9999px;flex-shrink:0;object-fit:cover;" loading="lazy">
-                                <span class="max-lg:hidden font-normal text-sm leading-5 group-hover:text-green-500 transition-colors duration-200">{{ (config('landing_locales.labels')[app()->getLocale()] ?? "O'zbekcha") }}</span>
+                            <button type="button" onclick="toggleLangMenu(event, 'kcLangMenu')" aria-haspopup="menu" aria-expanded="false" class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group border-none bg-transparent cursor-pointer" style="font-family:inherit;">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="group-hover:text-primary transition-colors"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20M2 12h20"/></svg>
+                                <span class="max-lg:hidden font-normal text-sm leading-5 group-hover:text-primary transition-colors duration-200">{{ (config('landing_locales.labels')[app()->getLocale()] ?? "O'zbekcha") }}</span>
                             </button>
                             @include('partials.lang-menu', ['menuId' => 'kcLangMenu'])
                         </div>
@@ -443,12 +437,12 @@
                     <div class="relative overflow-hidden transition-shadow duration-300 rounded-2xl px-5 py-[14px] rounded-full! hover:shadow-sm hover:shadow-black/10 glass-card-bg flex-y-center h-12 p-1! cursor-pointer bg-secondary-200!">
                         <div class="absolute inset-0 pointer-events-none glass-border rounded-2xl rounded-full!"></div>
                         @auth
-                            <a href="{{ route('web.profile') }}" class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group h-full {{ request()->routeIs('web.profile') ? 'bg-primary-200' : '' }}">
+                            <a href="{{ route('web.profile') }}" class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group h-full {{ request()->routeIs('web.profile') ? 'bg-primary-200 text-primary font-semibold' : '' }}">
                                 <i class="icon-profile text-lg"></i>
                                 <span class="font-normal text-sm leading-5 max-lg:hidden">{{ Str::limit(auth()->user()->name ?: auth()->user()->phone_number, 12) }}</span>
                             </a>
                         @else
-                            <button onclick="openAuthModal()" class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group h-full">
+                            <button type="button" onclick="openAuthModal()" class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group h-full border-none bg-transparent cursor-pointer" style="font-family:inherit;">
                                 <i class="icon-profile text-lg"></i>
                                 <span class="font-normal text-sm leading-5 max-lg:hidden">{{ __('marketplace.login') }}</span>
                             </button>
@@ -668,76 +662,81 @@
          ishlatilayotgani sababli qayta tiklandi).
          Mahsulot sahifasida bu panel butunlay yashiriladi — o'rniga
          pastda sticky "Buyurtma berish" paneli chiqadi. -->
-    <nav class="kc-mobile-nav @if($kcIsProductPage) kc-nav-hidden @endif" style="align-items:stretch;">
-        <a href="{{ url('/') }}"
-           style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:0.5rem 0;text-decoration:none;color:{{ request()->is('/') ? 'var(--color-tima-500)' : '#6b7280' }};font-size:0.6875rem;font-weight:{{ request()->is('/') ? '600' : '400' }};">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="{{ request()->is('/') ? '2.5' : '2' }}">
-                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                <polyline points="9 22 9 12 15 12 15 22"/>
-            </svg>
-            <span>{{ __('marketplace.nav_home') }}</span>
-        </a>
-        <a href="{{ route('web.catalog') }}"
-           style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:0.5rem 0;text-decoration:none;color:{{ request()->is('catalog*') ? 'var(--color-tima-500)' : '#6b7280' }};font-size:0.6875rem;font-weight:{{ request()->is('catalog*') ? '600' : '400' }};">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="{{ request()->is('catalog*') ? '2.5' : '2' }}">
-                <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
-                <rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>
-            </svg>
-            <span>{{ __('marketplace.nav_catalog') }}</span>
-        </a>
-        <a href="{{ route('web.cart') }}"
-           class="flex flex-col items-center justify-center gap-[4px] py-2 bg-transparent text-gray-500 hover:text-green-500 transition-colors duration-300 {{ request()->routeIs('web.cart') ? 'text-green-500' : '' }}"
-           style="flex:1;text-decoration:none;font-size:0.6875rem;font-weight:500;">
-            <div class="relative flex items-center justify-center">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>
-                </svg>
-                <span id="kcCartBadgeMob" style="display:none;position:absolute;top:-6px;right:-6px;min-width:16px;height:16px;background:var(--color-tima-500);color:#fff;font-size:9px;font-weight:700;border-radius:9999px;align-items:center;justify-content:center;padding:0 2px;"></span>
-            </div>
-            <span>{{ __('marketplace.nav_cart') }}</span>
-        </a>
+    <!-- ====== MOBILE BOTTOM NAVIGATION BAR (PiyolaMarket 1:1 Floating Glass Pill) ====== -->
+    <div class="fixed bottom-4 left-4 right-4 z-40 max-h-15 md:hidden @if($kcIsProductPage) kc-nav-hidden @endif" id="kcMobileBottomNav">
+        <div class="relative overflow-hidden transition-shadow duration-300 rounded-full hover:shadow-sm hover:shadow-black/10 glass-card-bg flex items-center justify-between p-1 bg-white/80 backdrop-blur-md border border-white/60 shadow-lg">
+            <div class="absolute inset-0 pointer-events-none glass-border rounded-full"></div>
 
-        {{-- MUHIM TUZATISH: bu tab avvalroq "piyolamarketga o'xshatish"
-             maqsadida OLIB TASHLANGAN edi (yuqoridagi eski izohga qarang),
-             lekin pastdagi bumpFavBadge()/setFavBadge() JS funksiyalari
-             ("Mobil pastki navigatsiyadagi badge — doim DOM'da bor...")
-             hamon #kcFavBadgeMob elementini qidiradi — u yo'q bo'lgani
-             uchun bu kod HECH NARSA qilmay ishlayotgan edi. Bundan ham
-             muhimi: mobil header'da (faqat qidiruv satri) sevimlilarga
-             umuman boshqa kirish yo'li yo'q edi — ya'ni telefon
-             foydalanuvchisi o'z sevimlilar ro'yxatini HECH QAYERDAN topa
-             olmasdi, desktop'da esa u alohida tugma sifatida bor. Shu
-             sabab qayta tikladim — endi desktop bilan bir xil 5ta bo'lim. --}}
-        <a href="{{ route('web.favorites') }}"
-           class="flex flex-col items-center justify-center gap-[4px] py-2 bg-transparent text-gray-500 hover:text-green-500 transition-colors duration-300 {{ request()->routeIs('web.favorites') ? 'text-green-500' : '' }}"
-           style="flex:1;text-decoration:none;font-size:0.6875rem;font-weight:500;">
-            <div class="relative flex items-center justify-center">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+            <!-- 1. Bosh sahifa -->
+            <a href="{{ url('/') }}"
+               class="relative flex flex-col items-center justify-center p-1.5 flex-1 h-full transition-colors {{ request()->is('/') ? 'bg-[#EDEDED] rounded-full text-primary font-semibold' : 'text-gray-500 font-medium' }}"
+               style="text-decoration:none;font-size:0.6875rem;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="{{ request()->is('/') ? 'currentColor' : 'none' }}" stroke="currentColor" stroke-width="2">
+                    <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                    <polyline points="9 22 9 12 15 12 15 22"/>
                 </svg>
-                <span id="kcFavBadgeMob" style="display:none;position:absolute;top:-6px;right:-6px;min-width:16px;height:16px;background:var(--color-tima-500);color:#fff;font-size:9px;font-weight:700;border-radius:9999px;align-items:center;justify-content:center;padding:0 2px;"></span>
-            </div>
-            <span>{{ __('marketplace.favorites') }}</span>
-        </a>
-
-        @auth
-            <a href="{{ route('web.profile') }}"
-               style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:0.5rem 0;text-decoration:none;color:{{ request()->is('profile*') ? 'var(--color-tima-500)' : '#6b7280' }};font-size:0.6875rem;font-weight:{{ request()->is('profile*') ? '600' : '400' }};">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-                </svg>
-                <span>{{ __('marketplace.nav_profile') }}</span>
+                <span>{{ __('marketplace.nav_home') }}</span>
             </a>
-        @else
-            <button onclick="openAuthModal()"
-                    style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:0.5rem 0;background:none;border:none;cursor:pointer;color:#6b7280;font-size:0.6875rem;font-family:inherit;">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+
+            <!-- 2. Katalog -->
+            <a href="{{ route('web.catalog') }}"
+               class="relative flex flex-col items-center justify-center p-1.5 flex-1 h-full transition-colors {{ request()->is('catalog*') ? 'bg-[#EDEDED] rounded-full text-primary font-semibold' : 'text-gray-500 font-medium' }}"
+               style="text-decoration:none;font-size:0.6875rem;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+                    <rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>
                 </svg>
-                <span>{{ __('marketplace.nav_login') }}</span>
-            </button>
-        @endauth
-    </nav>
+                <span>{{ __('marketplace.nav_catalog') }}</span>
+            </a>
+
+            <!-- 3. Savatcha -->
+            <a href="{{ route('web.cart') }}"
+               class="relative flex flex-col items-center justify-center p-1.5 flex-1 h-full transition-colors {{ request()->routeIs('web.cart') ? 'bg-[#EDEDED] rounded-full text-primary font-semibold' : 'text-gray-500 font-medium' }}"
+               style="text-decoration:none;font-size:0.6875rem;">
+                <div class="relative flex items-center justify-center">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>
+                    </svg>
+                    <span id="kcCartBadgeMob" class="w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold absolute translate-x-1/2 -translate-y-1/2 top-0 right-0 bg-red-500 text-white border border-white" style="display:none;"></span>
+                </div>
+                <span>{{ __('marketplace.nav_cart') }}</span>
+            </a>
+
+            <!-- 4. Sevimlilar -->
+            <a href="{{ route('web.favorites') }}"
+               class="relative flex flex-col items-center justify-center p-1.5 flex-1 h-full transition-colors {{ request()->routeIs('web.favorites') ? 'bg-[#EDEDED] rounded-full text-primary font-semibold' : 'text-gray-500 font-medium' }}"
+               style="text-decoration:none;font-size:0.6875rem;">
+                <div class="relative flex items-center justify-center">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="{{ request()->routeIs('web.favorites') ? 'currentColor' : 'none' }}" stroke="currentColor" stroke-width="2">
+                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                    </svg>
+                    <span id="kcFavBadgeMob" class="w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold absolute translate-x-1/2 -translate-y-1/2 top-0 right-0 bg-red-500 text-white border border-white" style="{{ ($kcFavCount ?? 0) > 0 ? '' : 'display:none;' }}">{{ ($kcFavCount ?? 0) > 99 ? '99+' : ($kcFavCount ?? 0) }}</span>
+                </div>
+                <span>{{ __('marketplace.favorites') }}</span>
+            </a>
+
+            <!-- 5. Profil / Kirish -->
+            @auth
+                <a href="{{ route('web.profile') }}"
+                   class="relative flex flex-col items-center justify-center p-1.5 flex-1 h-full transition-colors {{ request()->is('profile*') ? 'bg-[#EDEDED] rounded-full text-primary font-semibold' : 'text-gray-500 font-medium' }}"
+                   style="text-decoration:none;font-size:0.6875rem;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                    </svg>
+                    <span>{{ __('marketplace.nav_profile') }}</span>
+                </a>
+            @else
+                <button type="button" onclick="openAuthModal()"
+                        class="relative flex flex-col items-center justify-center p-1.5 flex-1 h-full transition-colors text-gray-500 font-medium border-none bg-transparent cursor-pointer"
+                        style="font-size:0.6875rem;font-family:inherit;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                    </svg>
+                    <span>{{ __('marketplace.nav_login') }}</span>
+                </button>
+            @endauth
+        </div>
+    </div>
 
     <!-- ====== CHAT FAB ====== -->
     <div style="position:fixed;z-index:91;bottom:5.5rem;right:1rem;pointer-events:auto;">
@@ -849,15 +848,15 @@
     }
 
     function updateBadges() {
-        const total = kcCart.reduce((s, i) => s + i.qty, 0);
+        const total = (kcCart || []).reduce((s, i) => s + i.qty, 0);
         ['kcCartBadge', 'kcCartBadgeMobile', 'kcCartBadgeMob'].forEach(id => {
             const el = document.getElementById(id);
             if (!el) return;
             if (total > 0) {
                 el.style.display = 'flex';
                 el.textContent = total > 99 ? '99+' : total;
-                el.style.transform = 'scale(1.25)';
-                setTimeout(() => { el.style.transform = 'scale(1)'; }, 200);
+                el.style.transform = 'translate(50%, -50%) scale(1.25)';
+                setTimeout(() => { el.style.transform = 'translate(50%, -50%) scale(1)'; }, 200);
             } else {
                 el.style.display = 'none';
             }
@@ -996,17 +995,19 @@
         const wrap = document.getElementById('kcFavBadgeWrap');
         const mobBadge = document.getElementById('kcFavBadgeMob');
 
-        // Desktop header badge — dinamik yaratiladi/o'chiriladi (0 bo'lsa DOM'da umuman yo'q).
         if (n <= 0) {
-            if (badge) badge.remove();
+            if (badge) badge.style.display = 'none';
         } else {
             if (!badge && wrap) {
                 badge = document.createElement('span');
                 badge.id = 'kcFavBadge';
-                badge.style.cssText = 'position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;background:var(--color-tima-500);color:#fff;font-size:10px;font-weight:700;border-radius:9999px;display:flex;align-items:center;justify-content:center;padding:0 3px;';
+                badge.className = 'w-4 h-4 rounded-full flex-center text-[10px] absolute translate-x-1/2 -translate-y-1/2 top-0 right-0 bg-red-500 text-white border border-white font-bold';
                 wrap.appendChild(badge);
             }
-            if (badge) badge.textContent = n > 99 ? '99+' : String(n);
+            if (badge) {
+                badge.style.display = 'flex';
+                badge.textContent = n > 99 ? '99+' : String(n);
+            }
         }
 
         // Mobil pastki navigatsiyadagi badge — doim DOM'da bor, faqat

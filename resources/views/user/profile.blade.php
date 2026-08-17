@@ -106,35 +106,37 @@
             </nav>
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr;gap:1.5rem;" id="kcProfileGrid">
+        <div class="flex flex-col md:flex-row gap-6 relative items-start" id="kcProfileGrid">
             <!-- Sidebar: user card + tab navigation (piyolamarket.uz uslubida) -->
-            <div class="kc-profile-sidebar">
-                <div class="kc-profile-sidebar__user">
-                    <div class="kc-profile-avatar">{{ strtoupper(substr($user->name ?: $user->phone_number, 0, 1)) }}</div>
-                    <div>
-                        <h2>{{ $user->name ?: __('marketplace.profile_user') }}</h2>
-                        <p>+{{ $user->phone_number }}</p>
+            <div class="p-4 md:p-6 h-fit rounded-3xl bg-white border border-secondary-200 shadow-sm w-full md:w-72 lg:w-80 shrink-0 sticky top-24">
+                <div class="flex items-center gap-3.5 mb-5 pb-5 border-b border-secondary-200">
+                    <div class="w-14 h-14 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xl font-bold flex-shrink-0">
+                        {{ strtoupper(substr($user->name ?: $user->phone_number, 0, 1)) }}
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <h2 class="text-lg font-bold text-neutral-900 truncate leading-snug">{{ $user->name ?: __('marketplace.profile_user') }}</h2>
+                        <p class="text-neutral-500 text-sm truncate mt-0.5">+{{ $user->phone_number }}</p>
                     </div>
                 </div>
 
-                <nav class="kc-profile-nav">
-                    <button type="button" id="kcProfileTabBtnOrders" onclick="kcProfileSwitchTab('orders')" class="kc-profile-nav__item kc-profile-nav__item--active">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
-                        {{ __('marketplace.profile_orders') }}
+                <nav class="flex flex-col gap-1.5">
+                    <button type="button" id="kcProfileTabBtnOrders" onclick="kcProfileSwitchTab('orders')" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-[15px] font-semibold transition-all duration-200 text-left cursor-pointer border-none bg-primary text-white shadow-sm">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+                        <span>{{ __('marketplace.profile_orders') }}</span>
                     </button>
-                    <button type="button" id="kcProfileTabBtnReviews" onclick="kcProfileSwitchTab('reviews')" class="kc-profile-nav__item">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
-                        {{ __('marketplace.profile_reviews') }}
+                    <button type="button" id="kcProfileTabBtnReviews" onclick="kcProfileSwitchTab('reviews')" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-[15px] font-semibold transition-all duration-200 text-left cursor-pointer border-none bg-transparent text-neutral-600 hover:bg-secondary-100 hover:text-neutral-900">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                        <span>{{ __('marketplace.profile_reviews') }}</span>
                     </button>
-                    <button type="button" id="kcProfileTabBtnInfo" onclick="kcProfileSwitchTab('info')" class="kc-profile-nav__item">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 8h20"/><path d="M6 12h4"/></svg>
-                        {{ __('marketplace.profile_info') }}
+                    <button type="button" id="kcProfileTabBtnInfo" onclick="kcProfileSwitchTab('info')" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-[15px] font-semibold transition-all duration-200 text-left cursor-pointer border-none bg-transparent text-neutral-600 hover:bg-secondary-100 hover:text-neutral-900">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 8h20"/><path d="M6 12h4"/></svg>
+                        <span>{{ __('marketplace.profile_info') }}</span>
                     </button>
                     <form action="{{ route('web.auth.logout') }}" method="POST" style="margin:0;">
                         @csrf
-                        <button type="submit" class="kc-profile-nav__item kc-profile-nav__item--danger">
+                        <button type="submit" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-[15px] font-semibold transition-all duration-200 text-left cursor-pointer border-none bg-transparent text-red-500 hover:bg-red-50">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                            {{ __('marketplace.profile_logout') }}
+                            <span>{{ __('marketplace.profile_logout') }}</span>
                         </button>
                     </form>
                 </nav>
@@ -388,7 +390,13 @@ function kcProfileSwitchTab(tab) {
         const panelEl = document.getElementById(panels[key]);
         const btnEl = document.getElementById(buttons[key]);
         if (panelEl) panelEl.style.display = key === tab ? 'block' : 'none';
-        if (btnEl) btnEl.classList.toggle('kc-profile-nav__item--active', key === tab);
+        if (btnEl) {
+            if (key === tab) {
+                btnEl.className = 'w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-[15px] font-semibold transition-all duration-200 text-left cursor-pointer border-none bg-primary text-white shadow-sm';
+            } else {
+                btnEl.className = 'w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-[15px] font-semibold transition-all duration-200 text-left cursor-pointer border-none bg-transparent text-neutral-600 hover:bg-secondary-100 hover:text-neutral-900';
+            }
+        }
     });
 
     if (history.replaceState) {
