@@ -49,14 +49,14 @@ class InstagramBotService
         }
 
         foreach ($payload['entry'] as $entry) {
-            // 1. Direct Messages (DM)
+            // 1. Standard Direct Messages array
             if (!empty($entry['messaging'])) {
                 foreach ($entry['messaging'] as $messaging) {
                     $this->processDirectMessage($messaging);
                 }
             }
 
-            // 2. Comments or Mentions
+            // 2. Instagram Changes array (messages, comments, mentions)
             if (!empty($entry['changes'])) {
                 foreach ($entry['changes'] as $change) {
                     $this->processChangeNotification($change);
@@ -72,8 +72,13 @@ class InstagramBotService
      */
     protected function processDirectMessage(array $messaging)
     {
-        $senderId = $messaging['sender']['id'] ?? null;
-        $messageText = trim($messaging['message']['text'] ?? '');
+        $senderId = $messaging['sender']['id'] ?? $messaging['from']['id'] ?? null;
+        $messageText = trim($messaging['message']['text'] ?? $messaging['text'] ?? '');
+
+        Log::info('Processing Instagram Direct Message', [
+            'sender_id' => $senderId,
+            'text'      => $messageText,
+        ]);
 
         if (!$senderId || empty($messageText)) {
             return;
@@ -168,14 +173,28 @@ class InstagramBotService
     }
 
     /**
-     * Process Comment or Story Mention Notification
+     * Process Comment, Story Mention, or Change Notification
      */
     protected function processChangeNotification(array $change)
     {
         $field = $change['field'] ?? '';
         $value = $change['value'] ?? [];
 
-        // 1. Post Comment Notification
+        Log::info('Processing Instagram Change Notification', [
+            'field' => $field,
+            'value' => $value,
+        ]);
+
+        // 1. Direct Message via Changes field
+        if ($field === 'messages') {
+            $this->processDirectMessage([
+                'sender'  => $value['sender'] ?? ['id' => $value['from']['id'] ?? null],
+                'message' => $value['message'] ?? ['text' => $value['text'] ?? ''],
+            ]);
+            return;
+        }
+
+        // 2. Post Comment Notification
         if ($field === 'comments') {
             $senderId = $value['from']['id'] ?? null;
 
@@ -183,13 +202,13 @@ class InstagramBotService
                 $reply = "Salom! @kitobchi_market mahsulotlari haqida batafsil ma’lumot va narxlarni kitobchi.com saytimizda ko‘rishingiz mumkin 📥\n\nSavollaringiz bo‘lsa, DM da bajonidil javob beramiz!";
                 $this->sendDirectMessage($senderId, $reply);
             }
+            return;
         }
 
-        // 2. Story Mention Notification (Single-Use Unique Promocode Generator)
+        // 3. Story Mention Notification (Single-Use Unique Promocode Generator)
         if ($field === 'mentions') {
             $senderId = $value['sender']['id'] ?? $value['from']['id'] ?? null;
             if ($senderId) {
-                // Generate a unique 1-time single-use promo code
                 $promoCode = $this->generateUniqueStoryPromoCode();
 
                 $reply = "Ajoyib foto uchun rahmat! 📸\n\n"
@@ -200,6 +219,7 @@ class InstagramBotService
 
                 $this->sendDirectMessage($senderId, $reply);
             }
+            return;
         }
     }
 
