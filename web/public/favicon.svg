@@ -2,41 +2,44 @@
   <!-- Solid Kitobchi Brand Blue Background -->
   <rect width="512" height="512" rx="120" fill="#0B0342" />
 
-  <!-- Symmetrical Butterfly Book Wings in Solid Pure White -->
+  <!-- The K-Butterfly Monogram in Solid Pure White -->
   <g fill="#FFFFFF">
-    <!-- Center Spine / Body -->
-    <rect x="245" y="150" width="22" height="212" rx="11" />
+    <!-- Left Spine / Butterfly Body (Solid K Stem) -->
+    <rect x="124" y="106" width="54" height="300" rx="27" />
 
-    <!-- Top-Left Wing (Upper Book Page) -->
+    <!-- Upper Butterfly Wing (Top Arm of K) with Wing Cell Geometry -->
     <path
-      d="M 238 214
-         C 220 154, 154 108, 106 128
-         C 76 140, 68 174, 94 216
-         C 128 270, 204 268, 238 246 Z"
+      d="M 198 250
+         C 208 184, 256 116, 356 108
+         C 390 106, 408 132, 392 164
+         C 348 238, 260 252, 198 250 Z"
     />
 
-    <!-- Bottom-Left Wing (Lower Book Page) -->
+    <!-- Lower Butterfly Wing (Bottom Arm of K) -->
     <path
-      d="M 238 266
-         C 204 278, 136 308, 114 348
-         C 100 372, 122 396, 150 392
-         C 194 386, 228 326, 238 286 Z"
+      d="M 198 262
+         C 260 260, 348 274, 392 348
+         C 408 380, 390 406, 356 404
+         C 256 396, 208 328, 198 262 Z"
+    />
+  </g>
+
+  <!-- Butterfly Wing Cell Accents (Negative Space Cuts inside the Wings) -->
+  <g fill="#0B0342">
+    <!-- Upper Wing Inner Drop -->
+    <path
+      d="M 238 234
+         C 246 190, 278 148, 342 140
+         C 362 138, 368 152, 356 168
+         C 328 214, 276 228, 238 234 Z"
     />
 
-    <!-- Top-Right Wing (Upper Book Page) -->
+    <!-- Lower Wing Inner Drop -->
     <path
-      d="M 274 214
-         C 292 154, 358 108, 406 128
-         C 436 140, 444 174, 418 216
-         C 384 270, 308 268, 274 246 Z"
-    />
-
-    <!-- Bottom-Right Wing (Lower Book Page) -->
-    <path
-      d="M 274 266
-         C 308 278, 376 308, 398 348
-         C 412 372, 390 396, 362 392
-         C 318 386, 284 326, 274 286 Z"
+      d="M 238 278
+         C 276 284, 328 298, 356 344
+         C 368 360, 362 374, 342 372
+         C 278 364, 246 322, 238 278 Z"
     />
   </g>
 </svg>
