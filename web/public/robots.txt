@@ -1,0 +1,20 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /profile/
+Disallow: /cart/
+Disallow: /checkout/
+Disallow: /auth/
+
+User-agent: Yandex
+Allow: /
+Disallow: /api/
+Disallow: /profile/
+Disallow: /cart/
+Disallow: /checkout/
+Disallow: /auth/
+Clean-param: ref /
+Clean-param: utm_source&utm_medium&utm_campaign /
+
+Host: https://kitobchi.com
+Sitemap: https://kitobchi.com/sitemap.xml
