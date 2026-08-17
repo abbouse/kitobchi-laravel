@@ -1,16 +1,35 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
-  <!-- Kitobchi App Brand Squircle Container -->
+  <!-- Kitobchi Brand Navy Squircle -->
   <rect width="512" height="512" rx="124" fill="#0B0342" />
 
-  <!-- Iconic Kitobchi 3-Book Rhythm (Ultra-bold, Minimalist, Crystal-clear at 16px) -->
-  <g fill="#FFFFFF">
-    <!-- Bar 1: Left tall book -->
-    <rect x="138" y="112" width="60" height="288" rx="30" />
-    
-    <!-- Bar 2: Middle stepped book -->
-    <rect x="226" y="224" width="60" height="176" rx="30" />
-    
-    <!-- Bar 3: Right stepped book -->
-    <rect x="314" y="156" width="60" height="244" rx="30" />
-  </g>
+  <!-- Center Bookmark Ribbon in Vivid Blue Accent -->
+  <path
+    d="M 238 120 L 274 120 L 274 230 L 256 212 L 238 230 Z"
+    fill="#3A7CFF"
+  />
+
+  <!-- Bold Modern Open Book Pages in Pure White -->
+  <!-- Left Page -->
+  <path
+    d="M 244 170
+       C 180 142, 124 162, 102 178
+       C 96 183, 92 190, 92 198
+       L 92 344
+       C 92 355, 101 364, 112 362
+       C 142 354, 192 340, 244 362
+       Z"
+    fill="#FFFFFF"
+  />
+
+  <!-- Right Page -->
+  <path
+    d="M 268 170
+       C 332 142, 388 162, 410 178
+       C 416 183, 420 190, 420 198
+       L 420 344
+       C 420 355, 411 364, 400 362
+       C 370 354, 320 340, 268 362
+       Z"
+    fill="#FFFFFF"
+  />
 </svg>
