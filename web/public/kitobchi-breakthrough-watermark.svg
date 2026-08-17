@@ -1,0 +1,126 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" width="1200" height="700">
+  <defs>
+    <!-- Background -->
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0B0E14"/>
+      <stop offset="100%" stop-color="#040609"/>
+    </linearGradient>
+
+    <!-- Blue Gradient -->
+    <linearGradient id="blueGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#469EF8"/>
+      <stop offset="100%" stop-color="#2178D7"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="700" fill="url(#bg)"/>
+
+  <!-- Title -->
+  <text x="600" y="45" font-family="'Urbanist', sans-serif" font-size="22" font-weight="900" letter-spacing="4" fill="#FFFFFF" text-anchor="middle">
+    KITOBCI — O'ZGACHA VA KREATIV WATERMARK G'OYALARI
+  </text>
+  <text x="600" y="70" font-family="'Urbanist', sans-serif" font-size="13" font-weight="500" fill="#708090" text-anchor="middle">
+    Jiddiy, eksklyuziv va banner hamda rasmlarga qo'yishga o'ta qulay 3 ta yangi konsept
+  </text>
+
+  <!-- ==================== G'OYA 1: BOOKMARK RIBBON (XATCHO'P LENTASI) ==================== -->
+  <g transform="translate(60, 110)">
+    <rect width="1080" height="160" rx="14" fill="#131924" stroke="#232D3F"/>
+
+    <text x="30" y="32" font-family="'Urbanist', sans-serif" font-size="14" font-weight="800" fill="#38BDF8" letter-spacing="2">
+      1-G'OYA: "BOOKMARK RIBBON" (KITOB XATCHO'P LENTASI INTEGRATSIYASI)
+    </text>
+
+    <!-- Visual Example -->
+    <g transform="translate(30, 50)">
+      <!-- Custom Text "kitobchi" with Ribbon tail on 'i' -->
+      <g transform="translate(0, 20)">
+        <text font-family="'Urbanist', sans-serif" font-size="46" font-weight="900" letter-spacing="2" fill="#FFFFFF">
+          kitobch<tspan fill="#2980DD">i</tspan>
+        </text>
+
+        <!-- Bookmark ribbon dropping from the end 'i' -->
+        <path d="M 188 12 L 188 50 L 195 44 L 202 50 L 202 12 Z" fill="#2980DD"/>
+      </g>
+    </g>
+
+    <!-- Watermark Demo Badge (Placement on Photo Corner) -->
+    <g transform="translate(740, 30)">
+      <rect width="300" height="100" rx="8" fill="#1C2433" stroke="#2B384E"/>
+      <text x="15" y="22" font-family="'Urbanist', sans-serif" font-size="11" fill="#64748B">Rasm / Banner burchagida turishi:</text>
+
+      <!-- Ribbon Watermark Corner Tab -->
+      <g transform="translate(160, 0)">
+        <path d="M 0 0 L 100 0 L 100 85 L 50 68 L 0 85 Z" fill="#2980DD" opacity="0.9"/>
+        <text x="50" y="42" font-family="'Urbanist', sans-serif" font-size="15" font-weight="900" letter-spacing="2" fill="#FFFFFF" text-anchor="middle">
+          KITOBCI
+        </text>
+      </g>
+    </g>
+  </g>
+
+  <!-- ==================== G'OYA 2: ELEGANT LIGATURE (HARFLAR UZLUKSZ VARAQ BOG'LANISHI) ==================== -->
+  <g transform="translate(60, 295)">
+    <rect width="1080" height="160" rx="14" fill="#131924" stroke="#232D3F"/>
+
+    <text x="30" y="32" font-family="'Urbanist', sans-serif" font-size="14" font-weight="800" fill="#38BDF8" letter-spacing="2">
+      2-G'OYA: "PAGE LIGATURE" (HARFLARNING UZLUKSZ VARAQ LIGATURASI)
+    </text>
+
+    <g transform="translate(30, 60)">
+      <!-- Custom Ligature Flow -->
+      <path d="M 0 35 Q 25 10 50 35 Q 75 60 100 35 T 150 35 L 520 35" stroke="#2980DD" stroke-width="2" fill="none" opacity="0.4"/>
+
+      <text font-family="'Urbanist', sans-serif" font-size="44" font-weight="800" letter-spacing="6" fill="#FFFFFF">
+        k<tspan fill="#2980DD">i</tspan>tobch<tspan fill="#2980DD">i</tspan>
+      </text>
+
+      <!-- Sub-line continuous book page baseline -->
+      <path d="M 0 48 L 320 48 C 340 48, 350 54, 360 54 L 400 54" stroke="#2980DD" stroke-width="3" stroke-linecap="round"/>
+    </g>
+
+    <!-- Watermark Demo Badge -->
+    <g transform="translate(740, 30)">
+      <rect width="300" height="100" rx="8" fill="#1C2433" stroke="#2B384E"/>
+      <text x="15" y="22" font-family="'Urbanist', sans-serif" font-size="11" fill="#64748B">Rasm markazida (30% Opacity Line):</text>
+
+      <g transform="translate(20, 55)" opacity="0.45">
+        <text font-family="'Urbanist', sans-serif" font-size="20" font-weight="900" letter-spacing="5" fill="#FFFFFF">
+          KITOBCI.COM
+        </text>
+        <line x1="0" y1="8" x2="260" y2="8" stroke="#469EF8" stroke-width="2"/>
+      </g>
+    </g>
+  </g>
+
+  <!-- ==================== G'OYA 3: SIDEBAR / SPINE EMBED (VERTICAL & HORIZONTAL DUAL) ==================== -->
+  <g transform="translate(60, 480)">
+    <rect width="1080" height="170" rx="14" fill="#131924" stroke="#232D3F"/>
+
+    <text x="30" y="32" font-family="'Urbanist', sans-serif" font-size="14" font-weight="800" fill="#38BDF8" letter-spacing="2">
+      3-G'OYA: "BOOK SPINE STAMP" (KITOB YON UMURTQA MUHRI STILI)
+    </text>
+
+    <g transform="translate(30, 60)">
+      <!-- Rectangle Spine Border Box -->
+      <rect x="0" y="0" width="340" height="52" rx="6" fill="none" stroke="#2980DD" stroke-width="2" stroke-dasharray="240 20 60 20"/>
+      <text x="170" y="34" font-family="'Urbanist', sans-serif" font-size="22" font-weight="900" letter-spacing="8" fill="#FFFFFF" text-anchor="middle">
+        KITOBCI
+      </text>
+    </g>
+
+    <!-- Watermark Demo Badge -->
+    <g transform="translate(740, 35)">
+      <rect width="300" height="105" rx="8" fill="#1C2433" stroke="#2B384E"/>
+      <text x="15" y="22" font-family="'Urbanist', sans-serif" font-size="11" fill="#64748B">Banner va fotolar chetida muhrdek:</text>
+
+      <g transform="translate(45, 45)" opacity="0.6">
+        <rect x="0" y="0" width="210" height="36" rx="4" fill="none" stroke="#FFFFFF" stroke-width="1.5"/>
+        <text x="105" y="24" font-family="'Urbanist', sans-serif" font-size="14" font-weight="900" letter-spacing="6" fill="#FFFFFF" text-anchor="middle">
+          KITOBCI
+        </text>
+      </g>
+    </g>
+  </g>
+
+</svg>
