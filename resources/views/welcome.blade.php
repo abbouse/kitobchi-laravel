@@ -267,17 +267,16 @@
     @if($newBooks->isNotEmpty())
         <section class="py-4 md:py-6 lg:py-10 max-lg:rounded-2xl max-lg:mb-2">
             <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
-                <div class="flex justify-between items-center w-full px-1 max-md:mt-5 mb-4">
-                    <h2 class="text-lg md:text-2xl font-bold flex gap-2 items-center text-primary-950 dark:text-white">
-                        <svg viewBox="0 0 24 24" fill="currentColor" class="text-primary-500" style="width:0.85em;height:0.85em;"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.287 1.288L3 12l5.8 1.9a2 2 0 0 1 1.288 1.287L12 21l1.9-5.8a2 2 0 0 1 1.287-1.288L21 12l-5.8-1.9a2 2 0 0 1-1.288-1.287Z"/></svg>
+                <div class="flex justify-between items-center w-full px-1 max-md:mt-5 mb-3 md:mb-5 lg:mb-8">
+                    <h2 class="font-bold text-xl md:text-4xl leading-[100%] text-primary m-0 capitalize flex items-center gap-2">
                         Yangi kelgan kitoblar
                     </h2>
-                    <a class="text-sm font-semibold text-primary" href="{{ route('web.catalog', ['sort' => 'new']) }}">
+                    <a class="text-sm font-semibold text-primary hover:underline" href="{{ route('web.catalog', ['sort' => 'new']) }}">
                         Barchasi
                         <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:1em;height:1em;display:inline-block;vertical-align:-0.125em;"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
                     </a>
                 </div>
-                <div class="grid grid-cols-2 lg:grid-cols-4 2xl:grid-cols-5 gap-4">
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-3 lg:gap-5 mb-4 md:mb-10">
                     @foreach($newBooks as $book)
                         @include('partials.home-book-card', ['book' => $book])
                     @endforeach
@@ -290,17 +289,16 @@
     @if($recommendedBooks->isNotEmpty())
         <section class="py-4 md:py-6 lg:py-10 max-lg:rounded-2xl max-lg:mb-2">
             <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
-                <div class="flex justify-between items-center w-full px-1 max-md:mt-5 mb-4">
-                    <h2 class="text-lg md:text-2xl font-bold flex gap-2 items-center text-primary-950 dark:text-white">
-                        <svg viewBox="0 0 24 24" fill="currentColor" class="text-primary-500" style="width:0.85em;height:0.85em;"><path fill-rule="evenodd" d="M12.963 2.286a.75.75 0 00-1.071-.136 9.742 9.742 0 00-3.539 6.176 7.547 7.547 0 01-1.705-1.715.75.75 0 00-1.152-.082A9 9 0 1015.68 4.534a7.46 7.46 0 01-2.717-2.248zM15.75 14.25a3.75 3.75 0 11-7.313-1.172c.628.465 1.35.81 2.133 1.005a5.981 5.981 0 011.925-3.545 3.75 3.75 0 013.255 3.712z" clip-rule="evenodd"/></svg>
-                        Tavsiya etamiz & Top sotuvlar
+                <div class="flex justify-between items-center w-full px-1 max-md:mt-5 mb-3 md:mb-5 lg:mb-8">
+                    <h2 class="font-bold text-xl md:text-4xl leading-[100%] text-primary m-0 capitalize flex items-center gap-2">
+                        Tavsiya etamiz
                     </h2>
-                    <a class="text-sm font-semibold text-primary" href="{{ route('web.catalog', ['sort' => 'popular']) }}">
+                    <a class="text-sm font-semibold text-primary hover:underline" href="{{ route('web.catalog', ['sort' => 'popular']) }}">
                         Barchasi
                         <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:1em;height:1em;display:inline-block;vertical-align:-0.125em;"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
                     </a>
                 </div>
-                <div class="grid grid-cols-2 lg:grid-cols-4 2xl:grid-cols-5 gap-4">
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-3 lg:gap-5 mb-4 md:mb-10">
                     @foreach($recommendedBooks as $book)
                         @include('partials.home-book-card', ['book' => $book])
                     @endforeach
@@ -314,17 +312,16 @@
         @foreach($categorySections as $section)
             <section class="py-4 md:py-6 lg:py-10 max-lg:rounded-2xl max-lg:mb-2">
                 <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
-                    <div class="flex justify-between items-center w-full px-1 max-md:mt-5 mb-4">
-                        <h2 class="text-lg md:text-2xl font-bold flex gap-2 items-center text-primary-950 dark:text-white">
-                            <svg viewBox="0 0 24 24" fill="currentColor" class="text-primary-500" style="width:0.85em;height:0.85em;"><path d="M11.25 4.533A9.707 9.707 0 006 3a9.735 9.735 0 00-3.25.555.75.75 0 00-.5.707v14.25a.75.75 0 001 .707A8.237 8.237 0 016 18.75c1.995 0 3.823.707 5.25 1.886V4.533zM12.75 20.636A8.214 8.214 0 0118 18.75c.966 0 1.89.166 2.75.47a.75.75 0 001-.708V4.262a.75.75 0 00-.5-.707A9.735 9.735 0 0018 3a9.707 9.707 0 00-5.25 1.533v16.103z"/></svg>
+                    <div class="flex justify-between items-center w-full px-1 max-md:mt-5 mb-3 md:mb-5 lg:mb-8">
+                        <h2 class="font-bold text-xl md:text-4xl leading-[100%] text-primary m-0 capitalize flex items-center gap-2">
                             {{ $section->category->name_uz }}
                         </h2>
-                        <a class="text-sm font-semibold text-primary" href="{{ route('web.catalog', ['category' => $section->category->id]) }}">
+                        <a class="text-sm font-semibold text-primary hover:underline" href="{{ route('web.catalog', ['category' => $section->category->id]) }}">
                             Barchasi
                             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:1em;height:1em;display:inline-block;vertical-align:-0.125em;"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
                         </a>
                     </div>
-                    <div class="grid grid-cols-2 lg:grid-cols-4 2xl:grid-cols-5 gap-4">
+                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-3 lg:gap-5 mb-4 md:mb-10">
                         @foreach($section->books as $book)
                             @include('partials.home-book-card', ['book' => $book])
                         @endforeach

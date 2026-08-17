@@ -22,8 +22,8 @@
          tashqi so'rovga muhtoj emas, har doim ishlaydi). Skript endi
          kerak emas — olib tashlandi. --}}
 
-    <!-- Kitobchi Entry CSS -->
-    @vite(['resources/css/kitobchi-entry.css', 'resources/css/kitobchi-marketplace.css'])
+    <!-- Kitobchi Entry CSS & Piyola Engine -->
+    @vite(['resources/css/kitobchi-entry.css', 'resources/css/kitobchi-marketplace.css', 'resources/css/piyola-engine.css'])
 
     <!-- Marketplace CSS Variables -->
     <style id="kc-colors">
@@ -365,38 +365,31 @@
 <div class="page-wrapper">
 
     <!-- ====== STICKY HEADER (PiyolaMarket 1:1) ====== -->
-    <header class="@if(!request()->is('/')) max-md:hidden! @endif layout-sticky-header py-4 bg-white max-md:rounded-b-2xl sticky top-0 z-50 transition-all duration-300 shadow-sm">
-        <div class="px-4 sm:px-6 lg:px-8 kc-container mx-auto relative w-full bg-transparent">
+    <header class="@if(!request()->is('/')) max-md:hidden! @endif layout-sticky-header py-4 bg-white max-md:rounded-b-2xl sticky top-0 z-50 transition-all duration-300">
+        <div class="px-4 sm:px-6 lg:px-8 max-w-(--ui-container) mx-auto relative w-full bg-transparent">
             <!-- Desktop Header -->
             <div class="hidden md:flex items-center justify-between w-full gap-6">
                 <!-- Left: Logo + Kataloglar -->
-                <div class="flex flex-row items-center gap-6">
-                    <a href="{{ url('/') }}" aria-current="page" class="router-link-active router-link-exact-active">
-                        <img alt="Kitobchi" class="h-8 w-auto" src="{{ asset('images/logo/logo_blue.png') }}" />
+                <div class="flex-y-center gap-6">
+                    <a href="{{ url('/') }}" class="router-link-active router-link-exact-active" aria-current="page">
+                        <img alt="Kitobchi" class="h-8 w-auto" src="{{ asset('images/logo/logo_blue.png') }}">
                     </a>
-                    {{--
-                        MUHIM: avval bu yerda oddiy <a href="..."> (katalog sahifasiga
-                        to'g'ridan-to'g'ri o'tuvchi havola) edi. Piyolamarket.uz'da esa
-                        "Kataloglar" bosilganda chapdan chiqadigan 2 ustunli panel ochiladi
-                        (1-ustun: turlar, 2-ustun: shu turga tegishli kategoriyalar) — endi
-                        shu bilan bir xil ishlaydi (pastdagi kcCatalogDrawerOverlay'ga qarang).
-                    --}}
-                    <button type="button" onclick="openCatalogDrawer()" aria-haspopup="dialog" aria-expanded="false" class="relative overflow-hidden transition-shadow duration-300 rounded-2xl px-5 py-[14px] rounded-full! hover:shadow-sm hover:shadow-black/10 glass-card-bg p-1! h-12 cursor-pointer bg-secondary-200! border-none" style="text-decoration:none;color:#111827;font-family:inherit;">
-                        <div class="absolute inset-0 pointer-events-none glass-border rounded-2xl rounded-full!"></div>
-                        <div class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex flex-row items-center gap-2 {{ request()->routeIs('web.catalog') ? 'bg-primary-200' : '' }}">
-                            <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 transition-all duration-300 shrink-0"><path d="M4.5 4.5a3 3 0 00-3 3v2.25a3 3 0 003 3h2.25a3 3 0 003-3V7.5a3 3 0 00-3-3H4.5zM4.5 15a3 3 0 00-3 3v.75a3 3 0 003 3h2.25a3 3 0 003-3V18a3 3 0 00-3-3H4.5zM15 4.5a3 3 0 00-3 3v2.25a3 3 0 003 3h2.25a3 3 0 003-3V7.5a3 3 0 00-3-3H15zM15 15a3 3 0 00-3 3v.75a3 3 0 003 3h2.25a3 3 0 003-3V18a3 3 0 00-3-3H15z"/></svg>
+                    <div onclick="openCatalogDrawer()" class="relative overflow-hidden transition-shadow duration-300 rounded-2xl px-5 py-[14px] rounded-full! hover:shadow-sm hover:shadow-black/10 glass-card-bg p-1! h-12 cursor-pointer bg-secondary-200!" data-v-e6e68965="">
+                        <div class="absolute inset-0 pointer-events-none glass-border rounded-2xl rounded-full!" data-v-e6e68965=""></div>
+                        <div class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 {{ request()->routeIs('web.catalog') ? 'bg-primary-200' : '' }}">
+                            <span class="iconify i-heroicons-solid:squares-2x2 w-5 h-5 transition-all duration-300 shrink-0" aria-hidden="true"></span>
                             <span class="max-lg:hidden font-medium text-sm transition-all duration-300">{{ __('marketplace.catalogs') }}</span>
                         </div>
-                    </button>
+                    </div>
                 </div>
 
                 <!-- Center: Search -->
-                <div class="relative overflow-hidden transition-shadow duration-300 rounded-2xl px-5 py-[14px] rounded-full! hover:shadow-sm hover:shadow-black/10 glass-card-bg h-12 grow flex items-center gap-2 text-gray cursor-pointer bg-secondary-200!" style="max-width:600px;">
-                    <div class="absolute inset-0 pointer-events-none glass-border rounded-2xl rounded-full!"></div>
-                    <i class="icon-search text-lg text-gray-500"></i>
+                <div class="relative overflow-hidden transition-shadow duration-300 rounded-2xl px-5 py-[14px] rounded-full! hover:shadow-sm hover:shadow-black/10 glass-card-bg h-12 grow flex-y-center gap-2 text-gray cursor-pointer bg-secondary-200!" data-v-e6e68965="">
+                    <div class="absolute inset-0 pointer-events-none glass-border rounded-2xl rounded-full!" data-v-e6e68965=""></div>
+                    <span class="iconify i-heroicons-solid:magnifying-glass w-5 h-5 shrink-0" aria-hidden="true"></span>
                     <form action="{{ route('web.catalog') }}" method="GET" class="flex flex-1 items-center h-full m-0 p-0">
                         <input type="text" name="search" value="{{ request('search') }}"
-                               placeholder="{{ __('marketplace.search_placeholder') }}"
+                               placeholder="Mahsulotni izlash..."
                                id="kcSearchInput"
                                autocomplete="off"
                                class="flex-1 bg-transparent border-none outline-none text-sm text-neutral-900 font-inherit m-0 p-0 h-full w-full"
@@ -405,46 +398,50 @@
                     <div id="kcSearchPopup" style="display:none;position:absolute;top:calc(100% + 8px);left:0;right:0;background:#fff;border-radius:1rem;box-shadow:0 20px 40px rgba(0,0,0,0.12);z-index:200;overflow:hidden;max-height:400px;overflow-y:auto;"></div>
                 </div>
 
-                <!-- Right: Cart + Favorites + Lang + Profile (PiyolaMarket 1:1) -->
-                <div class="flex-y-center gap-3">
-                    <div class="relative overflow-hidden transition-shadow duration-300 rounded-full hover:shadow-sm hover:shadow-black/10 glass-card-bg flex-y-center p-1 h-12 bg-secondary-200">
-                        <div class="absolute inset-0 pointer-events-none glass-border rounded-full"></div>
+                <!-- Right Actions: Capsule 1 (Cart + Favorites + Lang) & Capsule 2 (Profile) -->
+                <div class="flex-y-center gap-4">
+                    <!-- Capsule 1: Cart, Favorites, Lang -->
+                    <div class="relative overflow-hidden transition-shadow duration-300 rounded-2xl px-5 py-[14px] rounded-full! hover:shadow-sm hover:shadow-black/10 glass-card-bg flex-y-center p-1! h-12 bg-secondary-200!" data-v-e6e68965="">
+                        <div class="absolute inset-0 pointer-events-none glass-border rounded-2xl rounded-full!" data-v-e6e68965=""></div>
                         
                         <!-- Cart -->
-                        <a href="{{ route('web.cart') }}" class="rounded-full px-3 py-2 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group h-full {{ request()->routeIs('web.cart') ? 'bg-primary-200 text-primary font-semibold' : '' }}">
-                            <div class="flex-center relative" id="kcCartBadgeWrap">
-                                <i class="icon-order group-hover:text-primary text-lg transition-colors duration-200"></i>
-                                <span id="kcCartBadge" class="w-4 h-4 rounded-full flex-center text-[10px] absolute translate-x-1/2 -translate-y-1/2 top-0 right-0 bg-red-500 text-white border border-white font-bold" style="display:none;"></span>
+                        <a href="{{ route('web.cart') }}" class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group {{ request()->routeIs('web.cart') ? 'bg-primary-200 text-primary font-semibold' : '' }}">
+                            <div class="flex-center relative">
+                                <i class="icon-order group-hover:text-green-500 text-lg transition-colors duration-200"></i>
+                                <div id="kcCartBadge" class="w-4 h-4 rounded-full flex-center text-[10px] absolute translate-x-1/2 -translate-y-1/2 top-0 right-0 bg-red-500 text-white border border-white" style="display:none;"></div>
                             </div>
-                            <span class="max-lg:hidden font-normal text-sm leading-5 group-hover:text-primary transition-colors duration-200">{{ __('marketplace.cart') }}</span>
+                            <span class="max-lg:hidden font-normal text-sm leading-5 group-hover:text-green-500 transition-colors duration-200">{{ __('marketplace.cart') }}</span>
                         </a>
 
                         <!-- Favorites -->
-                        <a href="{{ route('web.favorites') }}" aria-current="{{ request()->routeIs('web.favorites') ? 'page' : 'false' }}" class="rounded-full px-3 py-2 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group h-full {{ request()->routeIs('web.favorites') ? 'bg-primary-200 text-primary font-semibold' : '' }}">
-                            <div class="flex-center relative" id="kcFavBadgeWrap">
-                                <i class="icon-heart group-hover:text-primary text-lg transition-colors duration-200"></i>
-                                <span id="kcFavBadge" class="w-4 h-4 rounded-full flex-center text-[10px] absolute translate-x-1/2 -translate-y-1/2 top-0 right-0 bg-red-500 text-white border border-white font-bold" style="{{ ($kcFavCount ?? 0) > 0 ? '' : 'display:none;' }}">{{ ($kcFavCount ?? 0) > 99 ? '99+' : ($kcFavCount ?? 0) }}</span>
+                        <a href="{{ route('web.favorites') }}" class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group {{ request()->routeIs('web.favorites') ? 'bg-primary-200 text-primary font-semibold' : '' }}">
+                            <div class="flex-center relative">
+                                <i class="icon-heart group-hover:text-green-500 text-lg transition-colors duration-200"></i>
+                                <div id="kcFavBadge" class="w-4 h-4 rounded-full flex-center text-[10px] absolute translate-x-1/2 -translate-y-1/2 top-0 right-0 bg-red-500 text-white border border-white" style="{{ ($kcFavCount ?? 0) > 0 ? '' : 'display:none;' }}">{{ ($kcFavCount ?? 0) > 99 ? '99+' : ($kcFavCount ?? 0) }}</div>
                             </div>
-                            <span class="max-lg:hidden font-normal text-sm leading-5 group-hover:text-primary transition-colors duration-200">{{ __('marketplace.favorites') }}</span>
+                            <span class="max-lg:hidden font-normal text-sm leading-5 group-hover:text-green-500 transition-colors duration-200">{{ __('marketplace.favorites') }}</span>
                         </a>
 
-                        <!-- Language -->
+                        <!-- Language Switcher -->
                         <div class="relative kc-lang-wrap h-full flex items-center" id="kcLangWrap">
-                            <button type="button" onclick="toggleLangMenu(event, 'kcLangMenu')" aria-haspopup="menu" aria-expanded="false" class="rounded-full px-3 py-2 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group h-full border-none bg-transparent cursor-pointer" style="font-family:inherit;">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="group-hover:text-primary transition-colors"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20M2 12h20"/></svg>
-                                <span class="max-lg:hidden font-normal text-sm leading-5 group-hover:text-primary transition-colors duration-200">{{ (config('landing_locales.labels')[app()->getLocale()] ?? "O'zbekcha") }}</span>
+                            <button id="reka-dropdown-menu-trigger-v-0-0" type="button" onclick="toggleLangMenu(event, 'kcLangMenu')" aria-haspopup="menu" aria-expanded="false" class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 border-none bg-transparent cursor-pointer">
+                                <i class="icon-globe text-lg transition-colors duration-200 group-hover:text-green-500"></i>
+                                <span class="max-lg:hidden font-normal text-sm leading-5 group-hover:text-green-500 transition-colors duration-200">{{ (config('landing_locales.labels')[app()->getLocale()] ?? "O'zbekcha") }}</span>
                             </button>
                             @include('partials.lang-menu', ['menuId' => 'kcLangMenu'])
                         </div>
+                    </div>
 
-                        <!-- Profile / Auth -->
+                    <!-- Capsule 2: Profile / Kirish -->
+                    <div class="relative overflow-hidden transition-shadow duration-300 rounded-2xl px-5 py-[14px] rounded-full! hover:shadow-sm hover:shadow-black/10 glass-card-bg flex-y-center h-12 p-1! cursor-pointer bg-secondary-200!" data-v-e6e68965="">
+                        <div class="absolute inset-0 pointer-events-none glass-border rounded-2xl rounded-full!" data-v-e6e68965=""></div>
                         @auth
-                            <a href="{{ route('web.profile') }}" class="rounded-full px-3 py-2 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group h-full {{ request()->routeIs('web.profile') ? 'bg-primary-200 text-primary font-semibold' : '' }}">
+                            <a href="{{ route('web.profile') }}" class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 {{ request()->routeIs('web.profile') ? 'bg-primary-200 text-primary font-semibold' : '' }}">
                                 <i class="icon-profile text-lg"></i>
                                 <span class="font-normal text-sm leading-5 max-lg:hidden">{{ Str::limit(auth()->user()->name ?: auth()->user()->phone_number, 12) }}</span>
                             </a>
                         @else
-                            <button type="button" onclick="openAuthModal()" class="rounded-full px-3 py-2 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 group h-full border-none bg-transparent cursor-pointer" style="font-family:inherit;">
+                            <button type="button" onclick="openAuthModal()" class="rounded-full px-3 py-2.5 hover:bg-primary-200 transition-all duration-300 flex-y-center gap-2 border-none bg-transparent cursor-pointer">
                                 <i class="icon-profile text-lg"></i>
                                 <span class="font-normal text-sm leading-5 max-lg:hidden">{{ __('marketplace.login') }}</span>
                             </button>
@@ -453,14 +450,14 @@
                 </div>
             </div>
 
-            <!-- Mobile Header -->
+            <!-- Mobile Header (Piyola 1:1) -->
             <div class="md:hidden">
-                <div class="relative overflow-hidden transition-shadow duration-300 rounded-[20px] px-5 py-[14px] hover:shadow-sm hover:shadow-black/10 h-12 text-gray bg-secondary-300! flex items-center justify-center cursor-pointer gap-3 w-full">
+                <div class="relative overflow-hidden transition-shadow duration-300 rounded-2xl px-5 py-[14px] hover:shadow-sm hover:shadow-black/10 h-12 rounded-[20px] text-gray bg-secondary-300! flex-center cursor-pointer gap-3">
                     <div class="absolute inset-0 pointer-events-none glass-border rounded-2xl"></div>
-                    <i class="icon-search text-xl text-gray-500"></i>
+                    <span class="iconify i-lucide:search text-xl"></span>
                     <form action="{{ route('web.catalog') }}" method="GET" class="flex flex-1 items-center h-full m-0 p-0">
                         <input type="text" name="search" value="{{ request('search') }}"
-                               placeholder="{{ __('marketplace.search_placeholder_mobile') }}"
+                               placeholder="Kitobchi’da izlash"
                                id="kcSearchInputMobile"
                                autocomplete="off"
                                class="flex-1 bg-transparent border-none outline-none text-sm text-neutral-900 font-inherit m-0 p-0 h-full w-full"

@@ -19,6 +19,7 @@ export default defineConfig({
                 'resources/css/kitobchi-popcorn.css',
                 'resources/css/kitobchi-entry.css',
                 'resources/css/kitobchi-marketplace.css',
+                'resources/css/piyola-engine.css',
                 'resources/css/boshqaruv.css',
                 'resources/js/app.js',
                 'resources/js/a122-admin.js',
