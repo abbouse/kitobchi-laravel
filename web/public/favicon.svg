@@ -1,26 +1,26 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
-    <!-- Background Soft Luxury Gradient (Kitobchi App Blue Spectrum) -->
+    <!-- Ultra-soft, delicate, silk-like light blue gradient (Nafis va nimjon toblanish) -->
     <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#3C95F5"/>
-      <stop offset="100%" stop-color="#1B63B6"/>
+      <stop offset="0%" stop-color="#469EF8"/>
+      <stop offset="100%" stop-color="#2178D7"/>
     </linearGradient>
 
     <!-- Soft page fold shadows -->
     <linearGradient id="pageShadowUpper" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#144B8C" stop-opacity="0.32"/>
-      <stop offset="70%" stop-color="#2980DD" stop-opacity="0.05"/>
+      <stop offset="0%" stop-color="#144B8C" stop-opacity="0.28"/>
+      <stop offset="70%" stop-color="#2980DD" stop-opacity="0.04"/>
       <stop offset="100%" stop-color="#2980DD" stop-opacity="0.0"/>
     </linearGradient>
 
     <linearGradient id="pageShadowLower" x1="0%" y1="100%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#144B8C" stop-opacity="0.32"/>
-      <stop offset="70%" stop-color="#2980DD" stop-opacity="0.05"/>
+      <stop offset="0%" stop-color="#144B8C" stop-opacity="0.28"/>
+      <stop offset="70%" stop-color="#2980DD" stop-opacity="0.04"/>
       <stop offset="100%" stop-color="#2980DD" stop-opacity="0.0"/>
     </linearGradient>
   </defs>
 
-  <!-- Background: Kitobchi App Primary Blue Soft Gradient (#3C95F5 -> #1B63B6) -->
+  <!-- Background: Ultra-soft silk gradient (#469EF8 -> #2178D7) -->
   <rect width="512" height="512" rx="115" fill="url(#bgGradient)"/>
 
   <!-- Gently Curved Organic Book Spine (Left Stem of K) -->
