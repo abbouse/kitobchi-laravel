@@ -1,35 +1,59 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
-  <!-- Kitobchi Brand Navy Squircle -->
-  <rect width="512" height="512" rx="124" fill="#0B0342" />
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#08022B" />
+      <stop offset="100%" stop-color="#0F065C" />
+    </linearGradient>
+    <linearGradient id="ribbonGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="70%" stop-color="#FFFFFF" />
+      <stop offset="100%" stop-color="#4685FF" />
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3A7CFF" />
+      <stop offset="100%" stop-color="#6CA0FF" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.4" />
+    </filter>
+  </defs>
 
-  <!-- Center Bookmark Ribbon in Vivid Blue Accent -->
-  <path
-    d="M 238 120 L 274 120 L 274 230 L 256 212 L 238 230 Z"
-    fill="#3A7CFF"
-  />
+  <!-- Container -->
+  <rect width="512" height="512" rx="128" fill="url(#bg)" />
+  
+  <!-- Subtle Inner Border -->
+  <rect x="4" y="4" width="504" height="504" rx="124" fill="none" stroke="#3A7CFF" stroke-width="2" stroke-opacity="0.2" />
 
-  <!-- Bold Modern Open Book Pages in Pure White -->
-  <!-- Left Page -->
-  <path
-    d="M 244 170
-       C 180 142, 124 162, 102 178
-       C 96 183, 92 190, 92 198
-       L 92 344
-       C 92 355, 101 364, 112 362
-       C 142 354, 192 340, 244 362
-       Z"
-    fill="#FFFFFF"
-  />
+  <!-- Dribbble-level Creative K-Book Mark (Continuous Ribbon Glyph) -->
+  <g filter="url(#glow)">
+    <!-- Left Vertical Spine Pillar -->
+    <rect x="116" y="116" width="52" height="280" rx="26" fill="#FFFFFF" />
 
-  <!-- Right Page -->
-  <path
-    d="M 268 170
-       C 332 142, 388 162, 410 178
-       C 416 183, 420 190, 420 198
-       L 420 344
-       C 420 355, 411 364, 400 362
-       C 370 354, 320 340, 268 362
-       Z"
-    fill="#FFFFFF"
-  />
+    <!-- Top-Right Dynamic Flying Page / Upper K Arm -->
+    <path
+      d="M 200 256
+         C 200 210, 240 130, 340 120
+         C 375 116, 396 142, 380 172
+         C 340 240, 250 256, 200 256 Z"
+      fill="url(#ribbonGrad)"
+    />
+
+    <!-- Bottom-Right Dynamic Book Page / Lower K Arm -->
+    <path
+      d="M 200 256
+         C 240 256, 330 270, 380 340
+         C 396 370, 375 396, 340 392
+         C 240 382, 200 302, 200 256 Z"
+      fill="url(#ribbonGrad)"
+    />
+
+    <!-- Center Fold Overlap Ribbon in Electric Brand Blue -->
+    <path
+      d="M 168 230
+         C 185 230, 225 240, 240 256
+         C 225 272, 185 282, 168 282
+         Z"
+      fill="url(#accentGrad)"
+    />
+  </g>
 </svg>
