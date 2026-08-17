@@ -79,12 +79,13 @@
           </NuxtLink>
         </div>
 
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 md:gap-4 lg:gap-5 mb-5">
+        <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5 md:gap-4 lg:gap-5 mb-5">
           <ProductCard
-            v-for="book in newBooks"
+            v-for="(book, idx) in newBooks"
             :key="'new-' + book.id"
             :product="book"
             type="book"
+            :class="idx >= 5 ? 'lg:hidden' : ''"
           />
         </div>
 
@@ -112,12 +113,13 @@
           </NuxtLink>
         </div>
 
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 md:gap-4 lg:gap-5 mb-5">
+        <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5 md:gap-4 lg:gap-5 mb-5">
           <ProductCard
-            v-for="book in recommendedBooks"
+            v-for="(book, idx) in recommendedBooks"
             :key="'rec-' + book.id"
             :product="book"
             type="book"
+            :class="idx >= 5 ? 'lg:hidden' : ''"
           />
         </div>
 
@@ -150,12 +152,13 @@
           </NuxtLink>
         </div>
 
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 md:gap-4 lg:gap-5 mb-5">
+        <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5 md:gap-4 lg:gap-5 mb-5">
           <ProductCard
-            v-for="book in cat.books"
+            v-for="(book, idx) in cat.books"
             :key="'cat-' + cat.category_id + '-' + book.id"
             :product="book"
             type="book"
+            :class="idx >= 5 ? 'lg:hidden' : ''"
           />
         </div>
 
@@ -179,7 +182,9 @@ const config = useRuntimeConfig()
 const { data: pageData } = await useAsyncData('homepage-data', async () => {
   try {
     const [home, cat, catRows] = await Promise.all([
-      $fetch<any>(`${config.public.apiBase}/v1/kitobchi/home`).catch(() => null),
+      $fetch<any>(`${config.public.apiBase}/v1/kitobchi/home`, {
+        query: { limit: 10 }
+      }).catch(() => null),
       $fetch<any>(`${config.public.apiBase}/v1/kitobchi/search/categories`).catch(() => null),
       $fetch<any>(`${config.public.apiBase}/v1/kitobchi/products/books-by-category`, {
         query: { type: 'recommended', category_limit: 4, per_category: 10 }
