@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 300" width="1000" height="300">
+  <defs>
+    <!-- Soft background gradient for preview canvas -->
+    <linearGradient id="canvasBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#121620"/>
+      <stop offset="100%" stop-color="#0A0D14"/>
+    </linearGradient>
+
+    <linearGradient id="kPrimaryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#469EF8"/>
+      <stop offset="100%" stop-color="#2178D7"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Dark Background canvas -->
+  <rect width="1000" height="300" rx="20" fill="url(#canvasBg)"/>
+
+  <!-- Subtitle -->
+  <text x="500" y="55" font-family="'Urbanist', 'Segoe UI', sans-serif" font-size="14" font-weight="700" letter-spacing="6" fill="#708090" text-anchor="middle">
+    KITOBCI WATERMARK — G'OYA 1 (ANOMICU + PAGE FOLDS)
+  </text>
+
+  <!-- Decorative line -->
+  <line x1="420" y1="75" x2="580" y2="75" stroke="#2980DD" stroke-width="2" stroke-dasharray="20 10"/>
+
+  <!--
+    CUSTOM GEOMETRIC WORDMARK: "KITOBCHI"
+    Base Y = 120..220 (Height 100px)
+  -->
+  <g transform="translate(60, 20)">
+
+    <!-- ===== LETTER K ===== -->
+    <g transform="translate(0, 0)">
+      <!-- Left Stem with top page fold cutout -->
+      <path d="M 0 100 L 0 200 L 32 200 L 32 132 L 32 100 Z" fill="#FFFFFF"/>
+      <!-- Upper diagonal wing -->
+      <path d="M 38 145 L 82 100 L 118 100 L 68 152 Z" fill="#FFFFFF"/>
+      <!-- Lower diagonal wing -->
+      <path d="M 68 152 L 118 200 L 82 200 L 38 158 Z" fill="#FFFFFF"/>
+      <!-- Accent Block: Gold/Orange square under K wing -->
+      <rect x="0" y="208" width="32" height="12" rx="3" fill="#FFB020"/>
+    </g>
+
+    <!-- ===== LETTER I ===== -->
+    <g transform="translate(132, 0)">
+      <rect x="0" y="100" width="30" height="100" rx="4" fill="#FFFFFF"/>
+      <!-- Accent Block: Cyan square -->
+      <rect x="0" y="208" width="30" height="12" rx="3" fill="#29B8B5"/>
+    </g>
+
+    <!-- ===== LETTER T ===== -->
+    <g transform="translate(178, 0)">
+      <!-- Top Bar with diagonal cut -->
+      <path d="M 0 100 L 84 100 L 84 126 L 58 126 L 58 200 L 26 200 L 26 126 L 0 126 Z" fill="#FFFFFF"/>
+      <!-- Accent Block: Primary Blue -->
+      <rect x="26" y="208" width="32" height="12" rx="3" fill="#2980DD"/>
+    </g>
+
+    <!-- ===== LETTER O ===== -->
+    <g transform="translate(278, 0)">
+      <!-- Circle with wedge cutout -->
+      <path d="M 45 100 A 50 50 0 1 0 45 200 A 50 50 0 1 0 45 100 Z M 45 128 A 22 22 0 1 1 45 172 A 22 22 0 1 1 45 128 Z" fill="#FFFFFF"/>
+      <!-- Top-right wedge page accent -->
+      <path d="M 45 100 A 50 50 0 0 1 85 130 L 68 142 A 22 22 0 0 0 45 128 Z" fill="#29B8B5"/>
+      <!-- Accent Block: Orange -->
+      <rect x="33" y="208" width="24" height="12" rx="3" fill="#FF6B6B"/>
+    </g>
+
+    <!-- ===== LETTER B ===== -->
+    <g transform="translate(388, 0)">
+      <!-- Spine -->
+      <rect x="0" y="100" width="28" height="100" fill="#FFFFFF"/>
+      <!-- Top Loop -->
+      <path d="M 28 100 C 65 100 78 112 78 126 C 78 140 65 148 28 148 Z M 28 122 L 50 122 C 55 122 56 126 50 126 Z" fill="#FFFFFF"/>
+      <!-- Bottom Loop -->
+      <path d="M 28 152 C 68 152 82 165 82 180 C 82 195 68 200 28 200 Z" fill="#FFFFFF"/>
+      <!-- Accent Block: Magenta -->
+      <rect x="52" y="208" width="28" height="12" rx="3" fill="#E24A8D"/>
+    </g>
+
+    <!-- ===== LETTER C ===== -->
+    <g transform="translate(488, 0)">
+      <path d="M 80 122 C 70 108 55 100 40 100 C 18 100 0 122 0 150 C 0 178 18 200 40 200 C 55 200 70 192 80 178 L 56 166 C 50 172 44 176 38 176 C 26 176 22 164 22 150 C 22 136 26 124 38 124 C 44 124 50 128 56 134 Z" fill="#FFFFFF"/>
+      <!-- Accent Block: Light Blue -->
+      <rect x="24" y="208" width="30" height="12" rx="3" fill="#469EF8"/>
+    </g>
+
+    <!-- ===== LETTER H ===== -->
+    <g transform="translate(584, 0)">
+      <rect x="0" y="100" width="26" height="100" fill="#FFFFFF"/>
+      <rect x="54" y="100" width="26" height="100" fill="#FFFFFF"/>
+      <rect x="26" y="138" width="28" height="24" fill="#FFFFFF"/>
+      <!-- Accent Block: Green -->
+      <rect x="26" y="208" width="28" height="12" rx="3" fill="#2ECC71"/>
+    </g>
+
+    <!-- ===== LETTER I ===== -->
+    <g transform="translate(680, 0)">
+      <rect x="0" y="100" width="28" height="100" rx="4" fill="#FFFFFF"/>
+      <!-- Accent Block: Gold -->
+      <rect x="0" y="208" width="28" height="12" rx="3" fill="#FFB020"/>
+    </g>
+
+  </g>
+
+  <!-- Watermark opacity demo bar below -->
+  <text x="500" y="275" font-family="'Urbanist', 'Segoe UI', sans-serif" font-size="12" font-weight="600" fill="#4A5568" text-anchor="middle">
+    SHAFFOFLIK (WATERMARK OPACITY): 100% | 50% | 25% CHAYILMALARDA HAM ANIQ O'QILADI
+  </text>
+</svg>
