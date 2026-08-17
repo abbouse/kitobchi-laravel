@@ -22,7 +22,24 @@
               </h1>
             </div>
             <div class="col-span-1 flex justify-end">
+              <!-- Piyolada kategoriya ichiga kirilganda header'dagi o'ng
+                   tugma "Kataloglar" (barcha kategoriyalarni ko'rish) EMAS,
+                   balki "Filtr" (sozlamalar/slider ikonkasi) ga almashadi —
+                   bosilganda Narx oralig'i + Kategoriyalar birlashtirilgan
+                   bottom sheet ochiladi (jonli tekshirilib tasdiqlandi).
+                   Kategoriya tanlanmagan holatda esa avvalgidek "Kataloglar"
+                   drawer'i ochiladi. -->
               <button
+                v-if="activeCategory"
+                type="button"
+                @click="openCombinedFilter"
+                aria-label="Filtr"
+                class="font-medium inline-flex items-center text-base gap-2 text-primary p-2 rounded-full bg-secondary-100 hover:bg-primary/10 transition-colors border-none cursor-pointer"
+              >
+                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75"/></svg>
+              </button>
+              <button
+                v-else
                 type="button"
                 @click="isCatalogOpen = true"
                 aria-label="Kataloglar"
@@ -144,7 +161,7 @@
              so'zi emas, aynan "Narx" nomi bilan). -->
         <button
           type="button"
-          @click="isFilterOpen = true"
+          @click="openPriceFilter"
           :class="[
             'px-4 py-2 rounded-2xl text-sm font-semibold transition-all border-none cursor-pointer inline-flex items-center gap-1.5 shrink-0',
             isFilterActive ? 'bg-primary text-white' : 'bg-secondary-300 text-primary hover:bg-primary/10'
@@ -152,6 +169,20 @@
         >
           Narx
           <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>
+        </button>
+
+        <!-- Desktopda piyola "Filtr" tugmasini alohida chip sifatida
+             qator ichida ko'rsatadi (mobile'da esa header'dagi slider
+             ikonkasi orqali, yuqoridagi kabi) — faqat kategoriya
+             tanlanganda ko'rinadi (jonli tekshirilib tasdiqlandi). -->
+        <button
+          v-if="activeCategory"
+          type="button"
+          @click="openCombinedFilter"
+          class="max-md:hidden px-4 py-2 rounded-2xl text-sm font-semibold transition-all border-none cursor-pointer inline-flex items-center gap-1.5 shrink-0 bg-secondary-300 text-primary hover:bg-primary/10"
+        >
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75"/></svg>
+          Filtr
         </button>
       </div>
 
@@ -204,6 +235,8 @@
       :is-open="isFilterOpen"
       :min-price="route.query.min_price as string"
       :max-price="route.query.max_price as string"
+      :categories="filterDrawerMode === 'combined' ? (categoriesData?.data?.[activeType] || []) : undefined"
+      :active-category-id="route.query.category as string"
       @close="isFilterOpen = false"
       @apply="applyFilter"
     />
@@ -217,6 +250,19 @@ const config = useRuntimeConfig()
 
 const isCatalogOpen = ref(false)
 const isFilterOpen = ref(false)
+// "Narx" chip'i faqat narx maydonlarini ochadi ('price'), header/desktop
+// "Filtr" tugmasi esa Narx+Kategoriyalar birlashtirilgan ko'rinishni
+// ochadi ('combined') — piyolada bular ikki xil sheet edi (jonli
+// tekshirilib tasdiqlandi).
+const filterDrawerMode = ref<'price' | 'combined'>('price')
+function openPriceFilter() {
+  filterDrawerMode.value = 'price'
+  isFilterOpen.value = true
+}
+function openCombinedFilter() {
+  filterDrawerMode.value = 'combined'
+  isFilterOpen.value = true
+}
 const isFilterActive = computed(() => !!(route.query.min_price || route.query.max_price))
 const activeType = ref<'book' | 'stationery'>((route.query.type as any) || 'book')
 const activeSort = ref<string>((route.query.sort as string) || 'popular')
@@ -332,14 +378,23 @@ function updateSearch() {
   router.push({ query: { ...route.query, search: searchInput.value || undefined } })
 }
 
-function applyFilter(payload: { minPrice: string | undefined; maxPrice: string | undefined }) {
-  router.push({
-    query: {
-      ...route.query,
-      min_price: payload.minPrice,
-      max_price: payload.maxPrice
+function applyFilter(payload: { minPrice: string | undefined; maxPrice: string | undefined; categoryId?: string | undefined }) {
+  const query: Record<string, any> = {
+    ...route.query,
+    min_price: payload.minPrice,
+    max_price: payload.maxPrice
+  }
+  // categoryId faqat "Filtr" (birlashtirilgan) rejimda keladi — "Narx"
+  // rejimida bu maydon undefined bo'lib qoladi, shuning uchun joriy
+  // kategoriya query'da o'zgarishsiz saqlanadi.
+  if (filterDrawerMode.value === 'combined') {
+    if (payload.categoryId) {
+      query.category = payload.categoryId
+    } else {
+      delete query.category
     }
-  })
+  }
+  router.push({ query })
 }
 
 useSeoMeta({

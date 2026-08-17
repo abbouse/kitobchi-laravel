@@ -177,15 +177,23 @@
  *    stationery/[id].vue) asosiy rasm konteyneri. piyola.css'da
  *    `aspect-auto` klassi umuman yo'q (0 marta uchraydi), lekin bizga
  *    ikkita holat kerak: mobil/tablet'da (lg dan past) atrofida grid
- *    ustun bo'lmagani uchun oddiy kvadrat (aspect-ratio:1/1) shart —
- *    aks holda konteyner balandligi 0 bo'lib qoladi; lg dan boshlab esa
- *    galereya ustuni o'ng (info) ustun bilan bir xil balandlikka
- *    cho'ziladi (grid stretch) — shu holatda aspect-ratio o'chirilishi
- *    kerak, aks holda kvadrat shakl o'sha balandlikdan KENGLIK talab
- *    qilib, ustunidan tashqariga toshib chiqadi (chap tomondagi
- *    matnni yashiradigan bug — screenshot orqali topilgan).
+ *    ustun bo'lmagani uchun aniq aspect-ratio shart — aks holda
+ *    konteyner balandligi 0 bo'lib qoladi; lg dan boshlab esa galereya
+ *    ustuni o'ng (info) ustun bilan bir xil balandlikka cho'ziladi
+ *    (grid stretch) — shu holatda aspect-ratio o'chirilishi kerak, aks
+ *    holda shakl o'sha balandlikdan KENGLIK talab qilib, ustunidan
+ *    tashqariga toshib chiqadi (chap tomondagi matnni yashiradigan
+ *    bug — screenshot orqali topilgan). Nisbat 1/1 (kvadrat) emas,
+ *    3/4 — piyolaning HAQIQIY mahsulot sahifasidagi galereya
+ *    ramkasidan (`aspect-[3/4]`) va kitobchining o'zining
+ *    ProductCard.vue katalog kartochkasidan (`aspect-ratio:3/4`) olingan
+ *    qiymat — ilgari 1/1 ishlatilgani sabab detail sahifadagi rasm
+ *    katalogdagi bilan bir xil chiqmasdi (nomuvofiqlik). object-fit
+ *    ham shu bilan birga contain'dan cover'ga o'zgartirildi (pastga
+ *    qarang), shuning uchun rasm ramkani TO'LIQ to'ldiradi — piyolada
+ *    ham bo'shliq/padding yo'q.
  * =================================================================== */
-.product-gallery-frame{aspect-ratio:1/1;height:auto}
+.product-gallery-frame{aspect-ratio:3/4;height:auto}
 @media(min-width:1024px){.product-gallery-frame{aspect-ratio:auto;height:100%}}
 
 /* ===================================================================

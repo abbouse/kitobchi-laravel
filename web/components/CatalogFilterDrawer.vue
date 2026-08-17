@@ -25,38 +25,68 @@
       </div>
 
       <div class="px-5 pt-2 pb-4">
-        <h2 class="text-xl font-bold text-neutral-900 m-0">Narx</h2>
+        <h2 class="text-xl font-bold text-neutral-900 m-0">{{ categories && categories.length ? 'Filtr' : 'Narx' }}</h2>
       </div>
 
       <div class="px-5 pb-6 space-y-6">
-        <div class="flex items-center gap-3">
-          <div class="flex-1">
-            <label class="block text-xs font-semibold text-neutral-500 mb-1.5">Quyidagidan</label>
-            <div class="flex items-center rounded-2xl bg-secondary-100 px-4 py-3 border border-neutral-100 focus-within:border-gray">
-              <input
-                v-model="localMin"
-                type="number"
-                min="0"
-                inputmode="numeric"
-                placeholder="Min"
-                class="flex-1 min-w-0 bg-transparent border-none outline-none font-medium text-neutral-900"
-              />
-              <span class="text-sm text-neutral-400 shrink-0">so‘m</span>
+        <div>
+          <h3 v-if="categories && categories.length" class="text-base font-bold text-neutral-900 mb-3 m-0">Narx oralig‘i</h3>
+          <div class="flex items-center gap-3">
+            <div class="flex-1">
+              <label class="block text-xs font-semibold text-neutral-500 mb-1.5">Quyidagidan</label>
+              <div class="flex items-center rounded-2xl bg-secondary-100 px-4 py-3 border border-neutral-100 focus-within:border-gray">
+                <input
+                  v-model="localMin"
+                  type="number"
+                  min="0"
+                  inputmode="numeric"
+                  placeholder="Min"
+                  class="flex-1 min-w-0 bg-transparent border-none outline-none font-medium text-neutral-900"
+                />
+                <span class="text-sm text-neutral-400 shrink-0">so‘m</span>
+              </div>
+            </div>
+            <div class="flex-1">
+              <label class="block text-xs font-semibold text-neutral-500 mb-1.5">Shungacha</label>
+              <div class="flex items-center rounded-2xl bg-secondary-100 px-4 py-3 border border-neutral-100 focus-within:border-gray">
+                <input
+                  v-model="localMax"
+                  type="number"
+                  min="0"
+                  inputmode="numeric"
+                  placeholder="Max"
+                  class="flex-1 min-w-0 bg-transparent border-none outline-none font-medium text-neutral-900"
+                />
+                <span class="text-sm text-neutral-400 shrink-0">so‘m</span>
+              </div>
             </div>
           </div>
-          <div class="flex-1">
-            <label class="block text-xs font-semibold text-neutral-500 mb-1.5">Shungacha</label>
-            <div class="flex items-center rounded-2xl bg-secondary-100 px-4 py-3 border border-neutral-100 focus-within:border-gray">
-              <input
-                v-model="localMax"
-                type="number"
-                min="0"
-                inputmode="numeric"
-                placeholder="Max"
-                class="flex-1 min-w-0 bg-transparent border-none outline-none font-medium text-neutral-900"
-              />
-              <span class="text-sm text-neutral-400 shrink-0">so‘m</span>
-            </div>
+        </div>
+
+        <!-- Kategoriyalar bo'limi — faqat "Filtr" (birlashtirilgan) rejimda,
+             piyoladagi HAQIQIY kombinatsiyalashgan filtr sheet'idan (Narx
+             oralig'i + Kategoriyalar) jonli tekshirilib olingan. Piyolada
+             kategoriyalar ierarxik bo'lgani uchun faqat joriy (va uning
+             qo'shni) kategoriyasi ko'rinadi; kitobchida kategoriyalar
+             TEKIS (parent/child yo'q — backend'da tasdiqlandi), shuning
+             uchun shu yerda joriy turdagi (kitob/kanselyariya) BARCHA
+             kategoriyalar ro'yxati ko'rsatiladi va bittasini tanlab
+             almashtirish mumkin. -->
+        <div v-if="categories && categories.length">
+          <h3 class="text-base font-bold text-neutral-900 mb-3 m-0">Kategoriyalar</h3>
+          <div class="space-y-1 max-h-64 overflow-y-auto">
+            <button
+              v-for="cat in categories"
+              :key="cat.id"
+              type="button"
+              @click="localCategoryId = String(cat.id)"
+              :class="[
+                'block w-full text-left text-sm py-2 px-1 rounded-lg hover:bg-neutral-50 transition-colors',
+                String(cat.id) === localCategoryId ? 'font-semibold text-primary' : 'font-normal text-neutral-700'
+              ]"
+            >
+              {{ cat.name_uz || cat.name }}
+            </button>
           </div>
         </div>
 
@@ -64,7 +94,7 @@
              — piyolaning bo'sh holatida bu tugma umuman yo'q edi (jonli
              tekshirildi). -->
         <button
-          v-if="localMin || localMax"
+          v-if="localMin || localMax || localCategoryId"
           type="button"
           @click="handleClear"
           class="text-sm font-semibold text-neutral-500 hover:text-neutral-600 bg-transparent border-none cursor-pointer p-0"
@@ -87,35 +117,46 @@
 </template>
 
 <script setup lang="ts">
+interface FilterCategory {
+  id: number | string
+  name_uz?: string
+  name?: string
+}
+
 const props = defineProps<{
   isOpen: boolean
   minPrice?: string | number | null
   maxPrice?: string | number | null
+  categories?: FilterCategory[]
+  activeCategoryId?: string | number | null
 }>()
 const emit = defineEmits<{
   close: []
-  apply: [{ minPrice: string | undefined; maxPrice: string | undefined }]
+  apply: [{ minPrice: string | undefined; maxPrice: string | undefined; categoryId: string | undefined }]
 }>()
 
 const localMin = ref<string>(props.minPrice != null ? String(props.minPrice) : '')
 const localMax = ref<string>(props.maxPrice != null ? String(props.maxPrice) : '')
+const localCategoryId = ref<string>(props.activeCategoryId != null ? String(props.activeCategoryId) : '')
 
 watch(() => props.isOpen, (open) => {
   if (open) {
     localMin.value = props.minPrice != null ? String(props.minPrice) : ''
     localMax.value = props.maxPrice != null ? String(props.maxPrice) : ''
+    localCategoryId.value = props.activeCategoryId != null ? String(props.activeCategoryId) : ''
   }
 })
 
 function handleApply() {
-  emit('apply', { minPrice: localMin.value || undefined, maxPrice: localMax.value || undefined })
+  emit('apply', { minPrice: localMin.value || undefined, maxPrice: localMax.value || undefined, categoryId: localCategoryId.value || undefined })
   emit('close')
 }
 
 function handleClear() {
   localMin.value = ''
   localMax.value = ''
-  emit('apply', { minPrice: undefined, maxPrice: undefined })
+  localCategoryId.value = ''
+  emit('apply', { minPrice: undefined, maxPrice: undefined, categoryId: undefined })
   emit('close')
 }
 </script>

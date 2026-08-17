@@ -85,7 +85,7 @@
                  bosish orqali (thumbnail/strelka) almashardi. -->
             <div class="flex-1 relative rounded-2xl min-h-0 min-w-0">
               <div class="relative h-full">
-                <div class="product-gallery-frame overflow-hidden rounded-2xl bg-secondary-50 border border-gray-100 w-full">
+                <div class="product-gallery-frame overflow-hidden rounded-xl w-full">
                   <div
                     ref="mainTrackEl"
                     class="flex w-full h-full overflow-x-auto no-scrollbar snap-x snap-mandatory"
@@ -99,7 +99,7 @@
                       <img
                         :src="img"
                         :alt="product.name"
-                        class="w-full h-full object-contain p-4"
+                        class="w-full h-full object-cover"
                         :loading="idx === 0 ? 'eager' : 'lazy'"
                       />
                     </div>
