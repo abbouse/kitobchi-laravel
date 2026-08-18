@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col min-h-dvh bg-secondary-300 md:bg-gray-50 grow">
+  <div class="flex flex-col min-h-dvh bg-secondary-300 grow">
     <!-- ====== MOBILE STICKY TOP BAR (Piyola Market 1:1) ====== -->
     <div class="md:hidden py-3 rounded-b-2xl mb-2 bg-white sticky top-0 z-40 transition-all duration-300 shadow-xs">
       <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto space-y-2">
@@ -53,53 +53,62 @@
 
     <!-- ====== MAIN CONTENT ====== -->
     <main class="max-md:grow h-full md:min-h-dvh max-md:pb-24">
-      <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto py-2 md:py-6">
-        <!-- Desktop Breadcrumb -->
-        <div class="flex items-center gap-2 mb-6 max-md:hidden">
-          <NuxtLink to="/catalog" class="rounded-full w-9 h-9 flex items-center justify-center transition-colors text-primary bg-secondary-200 hover:bg-secondary-400 shrink-0">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
-          </NuxtLink>
-          <nav class="flex items-center gap-2 text-sm text-[#8F8FA1]">
-            <NuxtLink to="/" class="hover:text-neutral-600 transition-colors">Asosiy</NuxtLink>
-            <span class="text-gray-300">/</span>
-            <span class="text-neutral-900 font-semibold">Savatcha</span>
-          </nav>
+      <div class="px-4 sm:px-6 lg:px-8 w-full max-w-4xl mx-auto py-2 md:py-8">
+        <!-- Desktop Breadcrumb & Title Header -->
+        <div class="mb-6 max-md:hidden">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <button
+                type="button"
+                @click="$router.back()"
+                class="rounded-full w-9 h-9 flex items-center justify-center transition-colors text-primary bg-white hover:bg-secondary-100 shadow-xs border-none cursor-pointer"
+                aria-label="Orqaga"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
+              </button>
+              <nav class="flex items-center gap-2 text-sm text-[#8F8FA1]">
+                <NuxtLink to="/" class="hover:text-neutral-900 transition-colors">Asosiy</NuxtLink>
+                <span class="text-gray-300">/</span>
+                <span class="text-neutral-900 font-semibold">Savatcha</span>
+              </nav>
+            </div>
+            <h1 class="text-2xl font-bold text-primary m-0">Savatcha</h1>
+          </div>
         </div>
 
         <!-- If cart has items -->
-        <div v-if="cartStore.items.length > 0" class="flex flex-col lg:flex-row gap-5 items-start">
-          <!-- Left Column: Items List -->
-          <div class="flex-1 w-full space-y-2">
-            <!-- Desktop Top Select Bar -->
-            <div class="hidden md:flex items-center justify-between p-4 bg-white rounded-2xl shadow-xs">
+        <div v-if="cartStore.items.length > 0" class="flex flex-col gap-3 min-h-[calc(100dvh-140px)]">
+          <!-- Desktop Top Select Bar -->
+          <div class="hidden md:flex items-center justify-between p-4 bg-white rounded-2xl shadow-xs">
+            <button
+              type="button"
+              @click="cartStore.toggleSelectAll()"
+              class="flex items-center gap-2 text-sm font-semibold text-neutral-800 border-none bg-transparent cursor-pointer p-0"
+            >
+              <div
+                class="flex items-center justify-center w-5 h-5 rounded-sm transition-colors"
+                :class="cartStore.isAllSelected ? 'bg-primary text-white' : 'border-2 border-neutral-300 bg-white'"
+              >
+                <svg v-if="cartStore.isAllSelected" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M20 6L9 17l-5-5"/></svg>
+              </div>
+              <span>Barcha mahsulotlarni tanlash</span>
+            </button>
+            <div class="flex items-center gap-3">
+              <span class="text-xs text-neutral-400 font-medium">{{ cartStore.selectedCount }} ta mahsulot tanlandi</span>
               <button
                 type="button"
-                @click="cartStore.toggleSelectAll()"
-                class="flex items-center gap-2 text-sm font-semibold text-neutral-800 border-none bg-transparent cursor-pointer p-0"
+                @click="cartStore.removeSelected()"
+                :disabled="cartStore.selectedCount === 0"
+                class="p-1.5 text-neutral-400 hover:text-red-500 disabled:opacity-40 transition-colors border-none bg-transparent cursor-pointer"
+                title="Tanlanganlarni o‘chirish"
               >
-                <div
-                  class="flex items-center justify-center w-5 h-5 rounded-sm transition-colors"
-                  :class="cartStore.isAllSelected ? 'bg-primary text-white' : 'border-2 border-neutral-300 bg-white'"
-                >
-                  <svg v-if="cartStore.isAllSelected" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M20 6L9 17l-5-5"/></svg>
-                </div>
-                <span>Barcha mahsulotlarni tanlash</span>
+                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21q.512.078 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48 48 0 0 0-3.478-.397m-12 .562q.51-.088 1.022-.165m0 0a48 48 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a52 52 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a49 49 0 0 0-7.5 0"/></svg>
               </button>
-              <div class="flex items-center gap-3">
-                <span class="text-xs text-neutral-400 font-medium">{{ cartStore.selectedCount }} ta mahsulot tanlandi</span>
-                <button
-                  type="button"
-                  @click="cartStore.removeSelected()"
-                  :disabled="cartStore.selectedCount === 0"
-                  class="p-1.5 text-neutral-400 hover:text-red-500 disabled:opacity-40 transition-colors border-none bg-transparent cursor-pointer"
-                  title="Tanlanganlarni o‘chirish"
-                >
-                  <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21q.512.078 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48 48 0 0 0-3.478-.397m-12 .562q.51-.088 1.022-.165m0 0a48 48 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a52 52 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a49 49 0 0 0-7.5 0"/></svg>
-                </button>
-              </div>
             </div>
+          </div>
 
-            <!-- Items Cards List (Piyola 1:1) -->
+          <!-- Items Cards List (Piyola 1:1) -->
+          <div class="space-y-2">
             <div
               v-for="item in cartStore.items"
               :key="item.id"
@@ -116,7 +125,7 @@
                       type="button"
                       @click.stop="cartStore.toggleSelect(item.id)"
                       class="w-5 h-5 rounded-sm border-2 border-white shadow-xs flex items-center justify-center cursor-pointer transition-colors p-0"
-                      :class="item.selected ? 'bg-primary text-white' : 'bg-white/80 border-white text-transparent'"
+                      :class="item.selected ? 'bg-primary text-white' : 'bg-white/90 border-white text-transparent'"
                       aria-label="Tanlash"
                     >
                       <svg v-if="item.selected" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M20 6L9 17l-5-5"/></svg>
@@ -204,12 +213,12 @@
             </div>
           </div>
 
-          <!-- Right Column: Summary Card & Muddatli to'lov (Piyola 1:1) -->
-          <div class="lg:w-96 w-full shrink-0 flex flex-col justify-end sticky top-24">
-            <div class="p-4 sm:p-6 rounded-2xl bg-white space-y-4 shadow-xs">
+          <!-- Bottom Summary Card & Muddatli to'lov (Piyola 1:1) -->
+          <div class="grow flex flex-col justify-end mt-4">
+            <div class="p-4 sm:p-6 rounded-t-2xl md:rounded-2xl bg-white space-y-4 shadow-xs">
               <!-- Muddatli to'lovga rasmiylashtirish Toggle Row -->
               <div class="flex items-center justify-between">
-                <h3 class="text-base md:text-lg font-semibold leading-6 text-neutral-900 m-0">Muddatli to‘lovga rasmiylashtirish</h3>
+                <h3 class="text-base md:text-xl font-semibold leading-6 text-neutral-900 m-0">Muddatli to‘lovga rasmiylashtirish</h3>
                 <button
                   type="button"
                   @click="isInstallmentActive = !isInstallmentActive"
@@ -228,11 +237,11 @@
               <div
                 v-if="isInstallmentActive"
                 @click="isDrawerOpen = true"
-                class="p-3 rounded-2xl bg-secondary-50 flex items-center justify-between cursor-pointer border border-secondary-200/60 hover:bg-secondary-100 transition-colors"
+                class="p-3.5 rounded-2xl bg-secondary-50 flex items-center justify-between cursor-pointer border border-secondary-200/60 hover:bg-secondary-100 transition-colors"
               >
                 <div>
                   <span class="text-xs text-neutral-500 block">Oylik to'lov</span>
-                  <span class="text-sm font-bold text-primary">
+                  <span class="text-base font-bold text-primary">
                     {{ formatPrice(monthlyPayment) }} so'm <span class="text-xs text-neutral-400 font-normal">× {{ selectedInstallmentMonths }} oy</span>
                   </span>
                 </div>
@@ -248,16 +257,16 @@
                   type="button"
                   @click="handleCheckout"
                   :disabled="cartStore.selectedCount === 0"
-                  class="w-full justify-center bg-primary text-white rounded-2xl h-13 text-base font-medium flex items-center shadow-md hover:bg-primary/90 transition-colors border-none cursor-pointer disabled:opacity-50"
+                  class="w-full justify-center bg-primary! text-white rounded-2xl h-14 text-base font-medium flex items-center shadow-md hover:bg-primary/90 transition-colors border-none cursor-pointer disabled:opacity-50"
                 >
                   <div class="text-center">
-                    <h2 class="text-sm font-semibold m-0 leading-tight">Rasmiylashtirishga o'tish</h2>
+                    <h2 class="text-base font-semibold m-0 leading-tight">Rasmiylashtirishga o'tish</h2>
                     <p class="text-xs font-light m-0 opacity-90">{{ cartStore.selectedCount }} ta mahsulot {{ formatPrice(cartStore.totalAmount) }} so'm</p>
                   </div>
                 </button>
               </div>
 
-              <div class="text-neutral-400 text-xs text-center max-md:hidden">
+              <div class="text-neutral-400 text-sm max-md:hidden text-center">
                 Muddatli to'lovni yoqish orqali xaridingizni qismlarga bo'ling
               </div>
             </div>
