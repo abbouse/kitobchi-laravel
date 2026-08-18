@@ -98,21 +98,24 @@
 
         <div class="flex-1 min-w-0 space-y-2">
           <!-- Mobil Foydalanuvchi kartasi (Piyola 1:1) -->
-          <div class="lg:hidden bg-white rounded-2xl py-3 rounded-[20px]! px-4 flex items-center gap-3">
-            <span class="inline-flex items-center justify-center shrink-0 select-none rounded-full align-middle size-12 text-2xl bg-[#F6F6F9] relative">
-              <svg class="w-6 h-6 text-neutral-400" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-              </svg>
-            </span>
-            <div class="min-w-0 flex-1">
-              <p class="text-neutral-900 text-base font-semibold truncate m-0">
-                {{ authStore.user?.name || 'Foydalanuvchi' }}
-              </p>
-              <p class="text-sm text-neutral-500 truncate m-0 mt-0.5">
-                {{ formatPhone(authStore.user?.phone_number) }}
-              </p>
+          <NuxtLink to="/profile/info" class="lg:hidden bg-white rounded-2xl py-3 rounded-[20px]! px-4 flex items-center justify-between gap-3 transition-colors hover:bg-neutral-50/80">
+            <div class="flex items-center gap-3 min-w-0 flex-1">
+              <span class="inline-flex items-center justify-center shrink-0 select-none rounded-full align-middle size-12 text-2xl bg-[#F6F6F9] relative">
+                <svg class="w-6 h-6 text-neutral-400" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                </svg>
+              </span>
+              <div class="min-w-0 flex-1">
+                <p class="text-neutral-900 text-base font-semibold truncate m-0">
+                  {{ authStore.user?.name || 'Foydalanuvchi' }}
+                </p>
+                <p class="text-sm text-neutral-500 truncate m-0 mt-0.5">
+                  {{ formatPhone(authStore.user?.phone_number) }}
+                </p>
+              </div>
             </div>
-          </div>
+            <svg class="w-5 h-5 text-neutral-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/></svg>
+          </NuxtLink>
 
           <!-- Menu guruhlari (Piyola 1:1) -->
           <div v-for="(group, gi) in menuGroups" :key="'auth-group-' + gi" class="py-1 sm:py-2 bg-white rounded-[20px] px-4">
