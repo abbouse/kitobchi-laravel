@@ -974,93 +974,34 @@ class ProductsController extends Controller
             // faqat ko'rinadigan navbatdagi bo'lakni formatlaydi. Ilgari
             // 20+ kategoriya * 10 mahsulot + seller/tag/favourite formatlash
             // birinchi ochilishda sezilarli sekinlik berardi.
-            $safetyCap = max(80, count($categoryIds) * $perCategory * 4);
-
             $grouped = [];
 
             if ($type === 'recommended') {
-                // 1. Recommended bo'lganlarni olishga urinib ko'ramiz
-                //    (bu flag admin tomonidan qo'lda belgilanadi — odatda
-                //    kam sonli, shuning uchun limitsiz olinadi)
-                $recommended = $this->isRecommended(
-                    $this->bookScope()
-                        ->whereIn('category_id', $categoryIds)
-                        ->with(['seller', 'category', 'tags'])
-                )
-                    ->orderBy('category_id')
-                    ->orderByDesc('totalSalesWeek')
-                    ->orderByDesc('totalSales')
-                    ->get()
-                    ->groupBy('category_id');
-
-                foreach ($recommended as $catId => $books) {
-                    $grouped[$catId] = $books->take($perCategory)->values();
-                }
-
-                // 2. Kam bo'lgan (< 3) kategoriyalarni haftalik sotuvga
-                //    qarab bitta qo'shimcha so'rovda to'ldiramiz
-                $needFill = [];
                 foreach ($categoryIds as $catId) {
-                    $have = $grouped[$catId] ?? collect();
-                    if ($have->count() < 3) {
-                        $needFill[$catId] = $have;
-                    }
-                }
-
-                if (!empty($needFill)) {
-                    $existIds = collect($needFill)->flatMap(fn($c) => $c->pluck('id'))->all();
-
-                    $fill = $this->bookScope()
-                        ->whereIn('category_id', array_keys($needFill))
-                        ->whereNotIn('id', $existIds ?: [0])
+                    $books = $this->bookScope()
+                        ->where('category_id', $catId)
                         ->with(['seller', 'category', 'tags'])
-                        ->orderBy('category_id')
-                        ->orderByDesc('totalSalesWeek')
                         ->orderByDesc('totalSales')
-                        ->limit($safetyCap)
-                        ->get()
-                        ->groupBy('category_id');
-
-                    foreach ($needFill as $catId => $have) {
-                        $extra = ($fill[$catId] ?? collect())->take($perCategory - $have->count());
-                        $grouped[$catId] = $have->concat($extra)->values();
-                    }
-                }
-
-                // 3. Hali ham bo'sh qolgan kategoriyalar — yangi kitoblar
-                $stillEmpty = array_values(array_filter(
-                    $categoryIds,
-                    fn($catId) => empty($grouped[$catId] ?? null)
-                ));
-
-                if (!empty($stillEmpty)) {
-                    $newFill = $this->bookScope()
-                        ->whereIn('category_id', $stillEmpty)
-                        ->with(['seller', 'category', 'tags'])
-                        ->orderBy('category_id')
                         ->orderByDesc('created_at')
-                        ->limit($safetyCap)
-                        ->get()
-                        ->groupBy('category_id');
+                        ->take($perCategory)
+                        ->get();
 
-                    foreach ($stillEmpty as $catId) {
-                        $grouped[$catId] = ($newFill[$catId] ?? collect())->take($perCategory)->values();
+                    if ($books->isNotEmpty()) {
+                        $grouped[$catId] = $books;
                     }
                 }
             } else {
-                // type=new — yangi kitoblar, barcha kategoriyalar uchun
-                // bitta so'rovda
-                $newBooks = $this->bookScope()
-                    ->whereIn('category_id', $categoryIds)
-                    ->with(['seller', 'category', 'tags'])
-                    ->orderBy('category_id')
-                    ->orderByDesc('created_at')
-                    ->limit($safetyCap)
-                    ->get()
-                    ->groupBy('category_id');
+                foreach ($categoryIds as $catId) {
+                    $books = $this->bookScope()
+                        ->where('category_id', $catId)
+                        ->with(['seller', 'category', 'tags'])
+                        ->orderByDesc('created_at')
+                        ->take($perCategory)
+                        ->get();
 
-                foreach ($newBooks as $catId => $books) {
-                    $grouped[$catId] = $books->take($perCategory)->values();
+                    if ($books->isNotEmpty()) {
+                        $grouped[$catId] = $books;
+                    }
                 }
             }
 
