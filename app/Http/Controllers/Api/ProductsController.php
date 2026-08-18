@@ -923,11 +923,20 @@ class ProductsController extends Controller
         }
 
         try {
-            $allCategoryIds = $this->bookScope()
-                ->whereNotNull('category_id')
-                ->distinct()
-                ->orderBy('category_id')
-                ->pluck('category_id')
+            // MUHIM (tuzatildi): ilgari bu yerda Books.category_id ustunidagi
+            // XOM (raw) distinct qiymatlar olinardi. Amalda bu ustunda 3000+
+            // xilma-xil qiymat bor ekan — ularning aksariyati haqiqiy, faol
+            // kategoriyaga mos kelmaydigan eski/nomuvofiq ma'lumotlar edi.
+            // Natijada "birinchi N ta category_id" (o'sish tartibida) deyarli
+            // doim bo'sh yoki deyarli bo'sh "kategoriya"larga tushib, bosh
+            // sahifada faqat bitta (ba'zan umuman hech qanday) kategoriya
+            // qatori ko'rinib qolardi. Endi manba sifatida xuddi "Kataloglar"
+            // qatorida (search/categories, SearchController::allCategories)
+            // ishlatiladigan HAQIQIY, faol BookCategories ro'yxati olinadi —
+            // shu bilan natija "Kataloglar" bilan bir xil, izchil bo'ladi.
+            $allCategoryIds = BookCategories::where('is_active', 1)
+                ->orderBy('name_uz')
+                ->pluck('id')
                 ->map(fn($id) => (int) $id)
                 ->filter(fn($id) => $id > 0)
                 ->values()

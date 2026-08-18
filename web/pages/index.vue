@@ -186,8 +186,13 @@ const { data: pageData } = await useAsyncData('homepage-data', async () => {
         query: { limit: 10 }
       }).catch(() => null),
       $fetch<any>(`${config.public.apiBase}/v1/kitobchi/search/categories`).catch(() => null),
+      // MUHIM: category_limit avval 4 edi — backend tuzatilgach (faqat
+      // haqiqiy, faol BookCategories ro'yxatidan olinadi, hozircha 10 ta)
+      // endi BARCHA haqiqiy kategoriyalarni ko'rsatish uchun 10 ga
+      // ko'tarildi (backend maksimal 12 bilan cheklaydi — kelajakda
+      // kategoriya soni ko'paysa ham xavfsiz).
       $fetch<any>(`${config.public.apiBase}/v1/kitobchi/products/books-by-category`, {
-        query: { type: 'recommended', category_limit: 4, per_category: 10 }
+        query: { type: 'recommended', category_limit: 10, per_category: 10 }
       }).catch(() => null)
     ])
     return { home, cat, catRows }
