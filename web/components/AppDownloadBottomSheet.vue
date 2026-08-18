@@ -23,18 +23,15 @@
           <!-- Drag Handle Pill -->
           <div class="w-12 h-1.5 bg-gray-300/80 rounded-full mx-auto mb-5"></div>
 
-          <!-- App Icon Badge -->
+          <!-- App Icon Badge (Exact 1:1 Favicon Asset) -->
           <div class="flex justify-center mb-4">
-            <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#469EF8] to-[#2178D7] p-2.5 shadow-md shadow-[#2178D7]/20 flex items-center justify-center">
-              <svg viewBox="0 0 512 512" class="w-full h-full text-white" fill="currentColor">
-                <!-- Book Spine (Left Stem of K) -->
-                <path d="M 132 88 C 114 88, 100 102, 98 120 C 84 196, 84 316, 98 392 C 100 410, 114 424, 132 424 C 148 424, 160 410, 156 392 C 144 316, 144 196, 156 120 C 160 102, 148 88, 132 88 Z" fill="#FFFFFF"/>
-                <!-- Upper Wing -->
-                <path d="M 150 256 C 150 182, 206 112, 312 88 C 358 76, 420 82, 420 126 C 420 166, 338 216, 258 237 C 210 248, 178 256, 150 256 Z" fill="#FFFFFF"/>
-                <!-- Lower Wing -->
-                <path d="M 150 256 C 178 256, 210 264, 258 275 C 338 296, 420 346, 420 386 C 420 430, 358 436, 312 424 C 206 400, 150 330, 150 256 Z" fill="#FFFFFF"/>
-              </svg>
-            </div>
+            <img
+              src="/favicon.svg"
+              alt="Kitobchi App"
+              class="w-16 h-16 rounded-2xl shadow-lg shadow-[#2178D7]/25 object-cover"
+              width="64"
+              height="64"
+            />
           </div>
 
           <!-- Title & Subtitle -->
