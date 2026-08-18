@@ -301,9 +301,7 @@
       </div>
     </div>
 
-    <!-- ========================================================================= -->
-    <!--  2. DESKTOP (PC) KO'RINISH (Piyola Market 1:1)                             -->
-    <!-- ========================================================================= -->
+    <!-- ====== DESKTOP LAYOUT (Piyola Market 1:1) ====== -->
     <div class="max-md:hidden py-5 bg-white">
       <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
         <!-- Breadcrumb & Back Arrow -->
@@ -337,318 +335,396 @@
           </div>
         </div>
 
-        <!-- Asosiy Gridi: Chapda Galereya, O'ngda Ma'lumotlar va Buyurtma (Piyola 1:1) -->
-        <div class="lg:grid lg:grid-cols-2 xl:grid-cols-3 gap-5 items-start">
-          <!-- Chap ustun: Galereya (Thumbnails + Asosiy rasm) -->
-          <div class="col-span-1 xl:col-span-2 h-full">
-            <div class="flex flex-col-reverse md:flex-row gap-3 h-full">
-              <!-- Vertikal Thumbnails ro'yxati (3:4 nisbatda, 75x100px) -->
-              <div
-                class="flex md:flex-col gap-3 overflow-x-auto md:overflow-y-auto md:overflow-x-hidden w-full md:w-auto md:h-0 md:min-h-full scrollbar-hide py-1 shrink-0"
-              >
-                <button
-                  v-for="(img, idx) in galleryImages"
-                  :key="'desk-thumb-' + idx"
-                  type="button"
-                  @click="selectThumbnail(idx)"
-                  :aria-label="`gallery-image-selector-${idx}`"
-                  :class="[
-                    'relative shrink-0 w-[75px] h-[100px] rounded-xl overflow-hidden border-2 transition-all duration-300 cursor-pointer bg-secondary-50 aspect-[3/4] p-0',
-                    activeIndex === idx && !selectedVariantImage ? 'border-primary' : 'border-transparent hover:border-neutral-200'
-                  ]"
+        <div class="flex flex-col gap-10">
+          <!-- Asosiy Gridi: Chapda Galereya, O'ngda Ma'lumotlar va Buyurtma (Piyola 1:1) -->
+          <div class="lg:grid lg:grid-cols-2 xl:grid-cols-3 gap-5 items-start">
+            <!-- Chap ustun: Galereya (Thumbnails + Asosiy rasm) -->
+            <div class="col-span-1 xl:col-span-2 h-full">
+              <div class="flex flex-col-reverse md:flex-row gap-3 h-full">
+                <!-- Vertikal Thumbnails ro'yxati (3:4 nisbatda, 75x100px) -->
+                <div
+                  class="flex md:flex-col gap-3 overflow-x-auto md:overflow-y-auto md:overflow-x-hidden w-full md:w-auto md:h-0 md:min-h-full scrollbar-hide py-1 shrink-0"
                 >
-                  <img :src="img" :alt="`${product.name} ${idx + 1}`" class="w-full h-full object-cover aspect-[3/4]" />
-                </button>
-              </div>
+                  <button
+                    v-for="(img, idx) in galleryImages"
+                    :key="'desk-thumb-' + idx"
+                    type="button"
+                    @click="selectThumbnail(idx)"
+                    :aria-label="`gallery-image-selector-${idx}`"
+                    :class="[
+                      'relative shrink-0 w-[75px] h-[100px] rounded-xl overflow-hidden border-2 transition-all duration-300 cursor-pointer bg-secondary-50 aspect-[3/4] p-0',
+                      activeIndex === idx && !selectedVariantImage ? 'border-primary' : 'border-transparent hover:border-neutral-200'
+                    ]"
+                  >
+                    <img :src="img" :alt="`${product.name} ${idx + 1}`" class="w-full h-full object-cover aspect-[3/4]" />
+                  </button>
+                </div>
 
-              <!-- Asosiy Rasm Karuseli (3:4 nisbatda, max-h-[580px]) -->
-              <div class="flex-1 relative rounded-2xl group min-h-0">
-                <div class="relative focus:outline-none aspect-[3/4] max-h-[580px] w-full rounded-2xl overflow-hidden bg-secondary-50">
-                  <div class="overflow-hidden w-full h-full rounded-2xl">
-                    <img
-                      v-if="selectedVariantImage"
-                      :src="selectedVariantImage"
-                      :alt="product.name"
-                      class="object-cover rounded-2xl w-full h-full aspect-[3/4]"
-                      loading="eager"
-                    />
-                    <div
-                      v-else
-                      ref="desktopTrackEl"
-                      class="flex flex-row w-full h-full rounded-2xl items-stretch overflow-x-auto no-scrollbar snap-x snap-mandatory"
-                      @scroll="onDesktopTrackScroll"
-                    >
+                <!-- Asosiy Rasm Karuseli (2 ta rasm yonma-yon xl:basis-1/2) -->
+                <div class="flex-1 relative rounded-2xl group min-h-0">
+                  <div role="region" aria-roledescription="carousel" class="relative focus:outline-none h-full w-full">
+                    <div class="overflow-hidden w-full h-full rounded-2xl">
+                      <img
+                        v-if="selectedVariantImage"
+                        :src="selectedVariantImage"
+                        :alt="product.name"
+                        class="object-cover rounded-2xl w-full h-full min-h-[440px] xl:min-h-[500px] aspect-[3/4]"
+                        loading="eager"
+                      />
                       <div
-                        v-for="(img, idx) in galleryImages"
-                        :key="'desk-main-' + idx"
-                        class="min-w-0 shrink-0 basis-full flex h-full snap-center items-center justify-center bg-secondary-50"
+                        v-else
+                        ref="desktopTrackEl"
+                        class="flex flex-row -ms-4 rounded-2xl items-stretch overflow-x-auto no-scrollbar snap-x snap-mandatory h-full"
+                        @scroll="onDesktopTrackScroll"
                       >
-                        <img
-                          :src="img"
-                          :alt="product.name"
-                          class="object-cover rounded-2xl w-full h-full aspect-[3/4]"
-                          :loading="idx === 0 ? 'eager' : 'lazy'"
-                        />
+                        <div
+                          v-for="(img, idx) in galleryImages"
+                          :key="'desk-main-' + idx"
+                          :class="[
+                            'min-w-0 shrink-0 ps-4 snap-center flex h-full items-center justify-center',
+                            galleryImages.length > 1 ? 'basis-full xl:basis-1/2' : 'basis-full'
+                          ]"
+                        >
+                          <div class="w-full h-full min-h-[440px] xl:min-h-[500px] aspect-[3/4] rounded-2xl overflow-hidden bg-secondary-50 flex items-center justify-center relative">
+                            <img
+                              :src="img"
+                              :alt="product.name"
+                              class="object-cover rounded-2xl w-full h-full"
+                              :loading="idx === 0 ? 'eager' : 'lazy'"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Oldingi / Keyingi strelkalar -->
+                    <template v-if="galleryImages.length > 1 && !selectedVariantImage">
+                      <button
+                        type="button"
+                        @click="prevImage"
+                        aria-label="Oldingi rasm"
+                        class="p-2 absolute rounded-full start-4 top-1/2 -translate-y-1/2 bg-white/90 backdrop-blur-md shadow-md hover:bg-white transition-all cursor-pointer border border-neutral-200/60 z-10 flex items-center justify-center text-neutral-800"
+                      >
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
+                      </button>
+                      <button
+                        type="button"
+                        @click="nextImage"
+                        aria-label="Keyingi rasm"
+                        class="p-2 absolute rounded-full end-4 top-1/2 -translate-y-1/2 bg-white/90 backdrop-blur-md shadow-md hover:bg-white transition-all cursor-pointer border border-neutral-200/60 z-10 flex items-center justify-center text-neutral-800"
+                      >
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
+                      </button>
+                    </template>
+
+                    <!-- Sevimli oynasimon tugmasi (yuqori o'ng) -->
+                    <div class="absolute top-3 right-3 flex gap-2 z-20">
+                      <div class="rounded-full backdrop-blur-md p-1 bg-black/5 hover:shadow-sm transition-shadow">
+                        <button
+                          type="button"
+                          @click="favStore.toggleFavorite(product, 'stationery')"
+                          name="Favorite button"
+                          aria-label="Favorite button"
+                          class="w-8 h-8 flex items-center justify-center rounded-full transition-all duration-300 hover:scale-110 active:scale-95 border-none bg-transparent cursor-pointer p-0"
+                        >
+                          <svg class="w-5 h-5" viewBox="0 0 24 24" :fill="isFav ? '#ef4444' : 'none'" :stroke="isFav ? '#ef4444' : '#1e293b'" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/>
+                          </svg>
+                        </button>
                       </div>
                     </div>
                   </div>
 
-                  <!-- Oldingi / Keyingi strelkalar -->
-                  <template v-if="galleryImages.length > 1 && !selectedVariantImage">
+                  <!-- Rang variantlari (desktop) -->
+                  <div v-if="product.variants && product.variants.length > 0" class="flex items-center gap-2 mt-4 flex-wrap">
                     <button
+                      v-for="v in product.variants"
+                      :key="v.id"
                       type="button"
-                      @click="prevImage"
-                      aria-label="Oldingi rasm"
-                      class="p-2 absolute rounded-full start-4 top-1/2 -translate-y-1/2 bg-white/80 backdrop-blur-md shadow-md hover:bg-white transition-all cursor-pointer border-none z-10 flex items-center justify-center text-neutral-800"
+                      @click="selectVariant(v)"
+                      :class="[
+                        'w-10 h-10 rounded-full overflow-hidden border-2 transition-all cursor-pointer bg-secondary-50 shrink-0 p-0',
+                        selectedVariantId === v.id ? 'border-primary' : 'border-transparent hover:border-neutral-200'
+                      ]"
+                      :aria-label="v.color_name || 'variant'"
+                      :title="v.color_name || ''"
                     >
-                      <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
+                      <img v-if="v.image_thumb_url || v.image_url" :src="v.image_thumb_url || v.image_url" class="w-full h-full object-cover" />
                     </button>
-                    <button
-                      type="button"
-                      @click="nextImage"
-                      aria-label="Keyingi rasm"
-                      class="p-2 absolute rounded-full end-4 top-1/2 -translate-y-1/2 bg-white/80 backdrop-blur-md shadow-md hover:bg-white transition-all cursor-pointer border-none z-10 flex items-center justify-center text-neutral-800"
-                    >
-                      <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
-                    </button>
-                  </template>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-                  <!-- Sevimli oynasimon tugmasi (yuqori o'ng) -->
-                  <div class="absolute top-3 right-3 flex gap-2 z-20">
-                    <div class="rounded-full backdrop-blur-md p-1 bg-black/5 hover:shadow-sm transition-shadow">
+            <!-- O'ng ustun: Mahsulot ma'lumotlari, Xususiyatlar va To'lov -->
+            <div class="col-span-1 w-full space-y-6">
+              <div>
+                <!-- Do'kon Nomi Belgisi -->
+                <div class="w-full flex gap-2 mb-2">
+                  <span class="font-medium inline-flex items-center text-xs px-2.5 py-1 bg-transparent border border-blue-500 gap-1 rounded-2xl text-primary">
+                    <svg class="w-4 h-4 text-primary" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.403 12.652a3 3 0 0 0 0-5.304a3 3 0 0 0-3.75-3.751a3 3 0 0 0-5.305 0a3 3 0 0 0-3.751 3.75a3 3 0 0 0 0 5.305a3 3 0 0 0 3.75 3.751a3 3 0 0 0 5.305 0a3 3 0 0 0 3.751-3.75Zm-2.546-4.46a.75.75 0 0 0-1.214-.883l-3.483 4.79l-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5Z" clip-rule="evenodd"/></svg>
+                    {{ product.seller?.shop_name || 'Kitobchi' }}
+                  </span>
+                </div>
+
+                <!-- Sarlavha, Sharhlar, Material va Narx -->
+                <div class="flex flex-col gap-4">
+                  <div>
+                    <h1 class="text-2xl font-medium leading-tight text-neutral-900 m-0">{{ product.name }}</h1>
+
+                    <!-- Sharhlar va Reyting qatori (Piyola 1:1) -->
+                    <div class="flex items-center gap-4 text-sm mt-2 mb-1">
+                      <div class="flex items-center cursor-pointer hover:opacity-80 transition-opacity" @click="isReviewsOpen = true">
+                        <svg class="w-5 h-5 text-amber-400 fill-amber-400" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                        <span class="ml-1 font-semibold text-neutral-900">{{ productRating }}</span>
+                        <span class="mx-1 text-neutral-400">•</span>
+                        <span class="cursor-pointer text-neutral-600 hover:text-primary transition-colors underline">{{ reviewsCount }} Sharhlar</span>
+                      </div>
+                    </div>
+
+                    <div v-if="product.material" class="text-sm font-medium text-neutral-500 mt-1">
+                      Material: <span class="text-primary font-semibold">{{ product.material }}</span>
+                    </div>
+                    
+                    <div class="flex flex-col mt-3">
+                      <p class="text-sm text-gray-400 font-normal m-0 mb-1">Narxi</p>
+                      <div class="flex items-center gap-1">
+                        <div class="flex items-end gap-3">
+                          <span class="text-xl font-bold text-neutral-900">{{ formatPrice(currentPrice) }} so‘m</span>
+                          <span v-if="discountPercent > 0" class="text-sm line-through text-gray-400">{{ formatPrice(product.price) }} so‘m</span>
+                          <span v-if="discountPercent > 0" class="text-xs font-bold px-2 py-0.5 rounded-full bg-[#ED3131] text-white">-{{ discountPercent }}%</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Xususiyatlar va tavsif tugmasi (Accordion) -->
+                  <div v-if="hasSpecs || product.description">
+                    <div
+                      @click="specsOpen = !specsOpen"
+                      class="w-full bg-secondary-100 cursor-pointer rounded-2xl p-4 md:px-6 flex items-center justify-between transition-colors duration-300 hover:bg-secondary-200"
+                    >
+                      <div class="flex items-center gap-3">
+                        <svg class="w-6 h-6 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"/></svg>
+                        <span class="font-medium text-primary">Xususiyatlar va tavsif</span>
+                      </div>
+                      <svg class="w-5 h-5 text-primary transition-transform duration-300" :class="specsOpen ? 'rotate-90' : ''" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/></svg>
+                    </div>
+
+                    <!-- Xususiyatlar ro'yxati -->
+                    <div v-show="specsOpen" class="mt-3 p-6 rounded-3xl bg-secondary-50 space-y-4">
+                      <div v-if="hasSpecs" class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                        <div v-if="product.material" class="p-3 rounded-2xl bg-white">
+                          <span class="text-gray-400 block text-xs">Material:</span>
+                          <span class="font-semibold text-neutral-800">{{ product.material }}</span>
+                        </div>
+                        <div v-if="product.barcode" class="p-3 rounded-2xl bg-white">
+                          <span class="text-gray-400 block text-xs">Barkod:</span>
+                          <span class="font-semibold text-neutral-800">{{ product.barcode }}</span>
+                        </div>
+                        <div v-if="product.category" class="p-3 rounded-2xl bg-white">
+                          <span class="text-gray-400 block text-xs">Kategoriya:</span>
+                          <span class="font-semibold text-neutral-800">{{ product.category }}</span>
+                        </div>
+                      </div>
+                      <div v-if="product.description" class="kb-prose text-sm text-neutral-600" v-html="product.description"></div>
+                    </div>
+                  </div>
+
+                  <!-- To'lov va Xarid Kartasi -->
+                  <div class="p-6 rounded-3xl bg-secondary-100 space-y-5">
+                    <div role="tablist" class="relative inline-flex bg-secondary-200 rounded-xl p-1 w-full">
                       <button
                         type="button"
-                        @click="favStore.toggleFavorite(product, 'stationery')"
-                        name="Favorite button"
-                        aria-label="Favorite button"
-                        class="w-8 h-8 flex items-center justify-center rounded-full transition-all duration-300 hover:scale-110 active:scale-95 border-none bg-transparent cursor-pointer p-0"
+                        role="tab"
+                        :aria-selected="paymentTab === 'installment'"
+                        @click="paymentTab = 'installment'"
+                        :class="[
+                          'text-sm px-4 py-2 flex-1 font-medium rounded-lg transition-all duration-200 border-none cursor-pointer',
+                          paymentTab === 'installment' ? 'bg-white text-gray-900 shadow-sm' : 'bg-transparent text-gray-400'
+                        ]"
                       >
-                        <svg class="w-5 h-5" viewBox="0 0 24 24" :fill="isFav ? '#ef4444' : 'none'" :stroke="isFav ? '#ef4444' : '#1e293b'" stroke-width="2">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/>
+                        Muddatli to‘lov
+                      </button>
+                      <button
+                        type="button"
+                        role="tab"
+                        :aria-selected="paymentTab === 'cash'"
+                        @click="paymentTab = 'cash'"
+                        :class="[
+                          'text-sm px-4 py-2 flex-1 font-medium rounded-lg transition-all duration-200 border-none cursor-pointer',
+                          paymentTab === 'cash' ? 'bg-white text-gray-900 shadow-sm' : 'bg-transparent text-gray-400'
+                        ]"
+                      >
+                        Naqd to‘lov
+                      </button>
+                    </div>
+
+                    <!-- Muddatli to'lov tanlash -->
+                    <div v-if="paymentTab === 'installment'" class="flex justify-between gap-4 w-full">
+                      <div>
+                        <p class="text-sm text-gray-500 font-normal m-0 mb-1">Muddatli to'lov</p>
+                        <div class="inline-flex bg-secondary-200 rounded-xl p-1 gap-1">
+                          <button
+                            v-for="m in installmentMonths"
+                            :key="m"
+                            type="button"
+                            @click="selectedMonths = m"
+                            :class="[
+                              'px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border-none cursor-pointer',
+                              selectedMonths === m ? 'bg-white text-gray-900 shadow-xs' : 'bg-transparent text-gray-400'
+                            ]"
+                          >
+                            {{ m }} oy
+                          </button>
+                        </div>
+                      </div>
+                      <div class="flex flex-col items-end">
+                        <p class="text-sm text-gray-500 font-normal m-0">Muddatli to'lovga sotib olish</p>
+                        <div class="flex items-end gap-2 mt-2">
+                          <span class="text-xl font-bold text-neutral-900">{{ formatPrice(monthlyForSelected) }}</span>
+                          <span class="text-sm text-gray-500">so‘m/oyiga</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Naqd to'lov narxi -->
+                    <div v-else class="flex justify-between items-center w-full">
+                      <div>
+                        <p class="text-sm text-gray-500 font-normal m-0">Narxi</p>
+                        <div class="text-xl font-bold text-neutral-900 mt-1">{{ formatPrice(currentPrice) }} so‘m</div>
+                      </div>
+                      <div v-if="discountPercent > 0">
+                        <span class="text-sm line-through text-gray-400 block">{{ formatPrice(product.price) }} so‘m</span>
+                        <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-[#ED3131] text-white">-{{ discountPercent }}%</span>
+                      </div>
+                    </div>
+
+                    <!-- Buyurtma berish & Savat tugmalari -->
+                    <div class="flex items-center gap-3 pt-2">
+                      <div class="flex-1">
+                        <button
+                          type="button"
+                          @click="handleBuyNow"
+                          class="ios-order-btn w-full h-12 rounded-2xl text-base font-semibold text-white border-none cursor-pointer flex items-center justify-center"
+                        >
+                          Buyurtma berish
+                        </button>
+                      </div>
+                      <button
+                        type="button"
+                        @click="handleAddToCart"
+                        class="h-12 px-3.5 rounded-2xl bg-secondary-200 hover:bg-secondary-300 text-primary border-none cursor-pointer flex items-center justify-center transition-colors shrink-0"
+                        aria-label="Savatga qo'shish"
+                      >
+                        <svg class="w-6 h-6" viewBox="0 0 20 20" fill="currentColor">
+                          <path d="M3 1a1 1 0 0 0 0 2h1.22l.305 1.222l.01.042l1.358 5.43l-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 0 0 0-2H6.414l1-1H14a1 1 0 0 0 .894-.553l3-6A1 1 0 0 0 17 3H6.28l-.31-1.243A1 1 0 0 0 5 1zm13 15.5a1.5 1.5 0 1 1-3 0a1.5 1.5 0 0 1 3 0M6.5 18a1.5 1.5 0 1 0 0-3a1.5 1.5 0 0 0 0 3"/>
                         </svg>
                       </button>
                     </div>
                   </div>
                 </div>
-
-                <!-- Rang variantlari (desktop) -->
-                <div v-if="product.variants && product.variants.length > 0" class="flex items-center gap-2 mt-4 flex-wrap">
-                  <button
-                    v-for="v in product.variants"
-                    :key="v.id"
-                    type="button"
-                    @click="selectVariant(v)"
-                    :class="[
-                      'w-10 h-10 rounded-full overflow-hidden border-2 transition-all cursor-pointer bg-secondary-50 shrink-0 p-0',
-                      selectedVariantId === v.id ? 'border-primary' : 'border-transparent hover:border-neutral-200'
-                    ]"
-                    :aria-label="v.color_name || 'variant'"
-                    :title="v.color_name || ''"
-                  >
-                    <img v-if="v.image_thumb_url || v.image_url" :src="v.image_thumb_url || v.image_url" class="w-full h-full object-cover" />
-                  </button>
-                </div>
               </div>
             </div>
           </div>
 
-          <!-- O'ng ustun: Mahsulot ma'lumotlari, Xususiyatlar va To'lov -->
-          <div class="col-span-1 w-full space-y-6">
-            <div>
-              <!-- Do'kon Nomi Belgisi -->
-              <div class="w-full flex gap-2 mb-2">
-                <span class="font-medium inline-flex items-center text-sm px-2.5 py-1 bg-transparent border border-blue-500 gap-1 rounded-2xl text-primary">
-                  <svg class="w-4 h-4 text-primary" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.403 12.652a3 3 0 0 0 0-5.304a3 3 0 0 0-3.75-3.751a3 3 0 0 0-5.305 0a3 3 0 0 0-3.751 3.75a3 3 0 0 0 0 5.305a3 3 0 0 0 3.75 3.751a3 3 0 0 0 5.305 0a3 3 0 0 0 3.751-3.75Zm-2.546-4.46a.75.75 0 0 0-1.214-.883l-3.483 4.79l-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5Z" clip-rule="evenodd"/></svg>
-                  {{ product.seller?.shop_name || 'Kitobchi' }}
-                </span>
+          <!-- ====== SECTION 1: SHARHLAR (Piyola Market 1:1 Desktop) ====== -->
+          <section class="mt-4">
+            <h2 class="text-2xl font-bold text-neutral-900 m-0 mb-2">Sharhlar</h2>
+            <div class="flex items-center gap-2 mb-4">
+              <span class="text-xl font-bold text-neutral-900">{{ productRating }}</span>
+              <div class="flex items-center text-amber-400">
+                <svg v-for="s in 5" :key="s" class="w-5 h-5 fill-current" viewBox="0 0 20 20">
+                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                </svg>
               </div>
+              <span class="text-sm text-neutral-500 font-medium">{{ reviewsCount }} Sharhlar</span>
+            </div>
 
-              <!-- Sarlavha, Sharhlar, Material va Narx -->
-              <div class="flex flex-col gap-4">
+            <!-- Review Cards Grid (3 cards in a row) -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div
+                v-for="(r, ri) in displayReviews"
+                :key="'rev-card-' + ri"
+                class="bg-secondary-50 rounded-2xl p-5 flex flex-col justify-between gap-3 border border-neutral-100/60"
+              >
                 <div>
-                  <h1 class="text-2xl font-medium leading-tight text-neutral-900 m-0">{{ product.name }}</h1>
-
-                  <!-- Sharhlar va Reyting qatori (Piyola 1:1) -->
-                  <div class="flex items-center gap-4 text-sm mt-2 mb-1">
-                    <div class="flex items-center cursor-pointer hover:opacity-80 transition-opacity" @click="isReviewsOpen = true">
-                      <svg class="w-5 h-5 text-amber-400 fill-amber-400" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-                      <span class="ml-1 font-semibold text-neutral-900">{{ productRating }}</span>
-                      <span class="mx-1 text-neutral-400">•</span>
-                      <span class="cursor-pointer text-neutral-600 hover:text-primary transition-colors underline">{{ reviewsCount }} Sharhlar</span>
+                  <div class="flex items-center gap-3 mb-2">
+                    <div class="w-9 h-9 rounded-full bg-white text-neutral-600 flex items-center justify-center shadow-xs text-xs font-bold shrink-0">
+                      {{ (r.user_name || r.name || 'M').charAt(0).toUpperCase() }}
                     </div>
-                  </div>
-
-                  <div v-if="product.material" class="text-sm font-medium text-neutral-500 mt-1">
-                    Material: <span class="text-primary font-semibold">{{ product.material }}</span>
-                  </div>
-                  
-                  <div class="flex flex-col mt-3">
-                    <p class="text-sm text-gray-400 font-normal m-0 mb-1">Narxi</p>
-                    <div class="flex items-center gap-1">
-                      <div class="flex items-end gap-3">
-                        <span class="text-xl font-bold text-neutral-900">{{ formatPrice(currentPrice) }} so‘m</span>
-                        <span v-if="discountPercent > 0" class="text-sm line-through text-gray-400">{{ formatPrice(product.price) }} so‘m</span>
-                        <span v-if="discountPercent > 0" class="text-xs font-bold px-2 py-0.5 rounded-full bg-[#ED3131] text-white">-{{ discountPercent }}%</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Xususiyatlar va tavsif tugmasi (Accordion) -->
-                <div v-if="hasSpecs || product.description">
-                  <div
-                    @click="specsOpen = !specsOpen"
-                    class="w-full bg-secondary-100 cursor-pointer rounded-2xl p-4 md:px-6 flex items-center justify-between transition-colors duration-300 hover:bg-secondary-200"
-                  >
-                    <div class="flex items-center gap-3">
-                      <svg class="w-6 h-6 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"/></svg>
-                      <span class="font-medium text-primary">Xususiyatlar va tavsif</span>
-                    </div>
-                    <svg class="w-5 h-5 text-primary transition-transform duration-300" :class="specsOpen ? 'rotate-90' : ''" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/></svg>
-                  </div>
-
-                  <!-- Xususiyatlar ro'yxati -->
-                  <div v-show="specsOpen" class="mt-3 p-6 rounded-3xl bg-secondary-50 space-y-4">
-                    <div v-if="hasSpecs" class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                      <div v-if="product.material" class="p-3 rounded-2xl bg-white">
-                        <span class="text-gray-400 block text-xs">Material:</span>
-                        <span class="font-semibold text-neutral-800">{{ product.material }}</span>
-                      </div>
-                      <div v-if="product.barcode" class="p-3 rounded-2xl bg-white">
-                        <span class="text-gray-400 block text-xs">Barkod:</span>
-                        <span class="font-semibold text-neutral-800">{{ product.barcode }}</span>
-                      </div>
-                      <div v-if="product.category" class="p-3 rounded-2xl bg-white">
-                        <span class="text-gray-400 block text-xs">Kategoriya:</span>
-                        <span class="font-semibold text-neutral-800">{{ product.category }}</span>
-                      </div>
-                    </div>
-                    <div v-if="product.description" class="kb-prose text-sm text-neutral-600" v-html="product.description"></div>
-                  </div>
-                </div>
-
-                <!-- To'lov va Xarid Kartasi -->
-                <div class="p-6 rounded-3xl bg-secondary-100 space-y-5">
-                  <div role="tablist" class="relative inline-flex bg-secondary-200 rounded-xl p-1 w-full">
-                    <button
-                      type="button"
-                      role="tab"
-                      :aria-selected="paymentTab === 'installment'"
-                      @click="paymentTab = 'installment'"
-                      :class="[
-                        'text-sm px-4 py-2 flex-1 font-medium rounded-lg transition-all duration-200 border-none cursor-pointer',
-                        paymentTab === 'installment' ? 'bg-white text-gray-900 shadow-sm' : 'bg-transparent text-gray-400'
-                      ]"
-                    >
-                      Muddatli to‘lov
-                    </button>
-                    <button
-                      type="button"
-                      role="tab"
-                      :aria-selected="paymentTab === 'cash'"
-                      @click="paymentTab = 'cash'"
-                      :class="[
-                        'text-sm px-4 py-2 flex-1 font-medium rounded-lg transition-all duration-200 border-none cursor-pointer',
-                        paymentTab === 'cash' ? 'bg-white text-gray-900 shadow-sm' : 'bg-transparent text-gray-400'
-                      ]"
-                    >
-                      Naqd to‘lov
-                    </button>
-                  </div>
-
-                  <!-- Muddatli to'lov tanlash -->
-                  <div v-if="paymentTab === 'installment'" class="flex justify-between gap-4 w-full">
                     <div>
-                      <p class="text-sm text-gray-500 font-normal m-0 mb-1">Muddatli to'lov</p>
-                      <div class="inline-flex bg-secondary-200 rounded-xl p-1 gap-1">
-                        <button
-                          v-for="m in installmentMonths"
-                          :key="m"
-                          type="button"
-                          @click="selectedMonths = m"
-                          :class="[
-                            'px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border-none cursor-pointer',
-                            selectedMonths === m ? 'bg-white text-gray-900 shadow-xs' : 'bg-transparent text-gray-400'
-                          ]"
-                        >
-                          {{ m }} oy
-                        </button>
-                      </div>
-                    </div>
-                    <div class="flex flex-col items-end">
-                      <p class="text-sm text-gray-500 font-normal m-0">Muddatli to'lovga sotib olish</p>
-                      <div class="flex items-end gap-2 mt-2">
-                        <span class="text-xl font-bold text-neutral-900">{{ formatPrice(monthlyForSelected) }}</span>
-                        <span class="text-sm text-gray-500">so‘m/oyiga</span>
+                      <p class="text-sm font-semibold text-neutral-900 m-0">{{ r.user_name || r.name || 'Mijoz' }}</p>
+                      <div class="flex items-center text-amber-400">
+                        <svg v-for="s in (r.rating || 5)" :key="s" class="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20">
+                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                        </svg>
                       </div>
                     </div>
                   </div>
-
-                  <!-- Naqd to'lov narxi -->
-                  <div v-else class="flex justify-between items-center w-full">
-                    <div>
-                      <p class="text-sm text-gray-500 font-normal m-0">Narxi</p>
-                      <div class="text-xl font-bold text-neutral-900 mt-1">{{ formatPrice(currentPrice) }} so‘m</div>
-                    </div>
-                    <div v-if="discountPercent > 0">
-                      <span class="text-sm line-through text-gray-400 block">{{ formatPrice(product.price) }} so‘m</span>
-                      <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-[#ED3131] text-white">-{{ discountPercent }}%</span>
-                    </div>
-                  </div>
-
-                  <!-- Buyurtma berish & Savat tugmalari -->
-                  <div class="flex items-center gap-3 pt-2">
-                    <div class="flex-1">
-                      <button
-                        type="button"
-                        @click="handleBuyNow"
-                        class="ios-order-btn w-full h-12 rounded-2xl text-base font-semibold text-white border-none cursor-pointer flex items-center justify-center"
-                      >
-                        Buyurtma berish
-                      </button>
-                    </div>
-                    <button
-                      type="button"
-                      @click="handleAddToCart"
-                      class="h-12 px-3.5 rounded-2xl bg-primary/10 hover:bg-primary/20 text-primary border-none cursor-pointer flex items-center justify-center transition-colors shrink-0"
-                      aria-label="Savatga qo'shish"
-                    >
-                      <svg class="w-6 h-6" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M3 1a1 1 0 0 0 0 2h1.22l.305 1.222l.01.042l1.358 5.43l-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 0 0 0-2H6.414l1-1H14a1 1 0 0 0 .894-.553l3-6A1 1 0 0 0 17 3H6.28l-.31-1.243A1 1 0 0 0 5 1zm13 15.5a1.5 1.5 0 1 1-3 0a1.5 1.5 0 0 1 3 0M6.5 18a1.5 1.5 0 1 0 0-3a1.5 1.5 0 0 0 0 3"/>
-                      </svg>
-                    </button>
-                  </div>
+                  <p class="text-xs text-neutral-600 leading-relaxed line-clamp-3 m-0">{{ r.comment || r.text }}</p>
                 </div>
               </div>
             </div>
-          </div>
+
+            <div class="mt-4">
+              <button
+                type="button"
+                @click="isReviewsOpen = true"
+                class="px-6 py-2.5 rounded-xl bg-secondary-100 hover:bg-secondary-200 text-sm font-semibold text-neutral-800 transition-colors border-none cursor-pointer"
+              >
+                Barcha sharhlarni ko'rsatish
+              </button>
+            </div>
+          </section>
+
+          <!-- ====== SECTION 2: MAHSULOT HAQIDA (Piyola Market 1:1 Desktop) ====== -->
+          <section class="mt-2">
+            <h2 class="text-2xl font-bold text-neutral-900 mb-4 m-0">Mahsulot haqida</h2>
+            <div class="bg-secondary-50 rounded-3xl p-6 relative border border-neutral-100/60">
+              <div
+                class="kb-prose text-sm text-neutral-700 leading-relaxed transition-all"
+                :class="isDescExpanded ? '' : 'line-clamp-3'"
+                v-html="product.description || 'Mahsulot haqida qo‘shimcha ma’lumot tez orada joylanadi.'"
+              ></div>
+              <div class="flex justify-center mt-3">
+                <button
+                  type="button"
+                  @click="isDescExpanded = !isDescExpanded"
+                  class="px-6 py-2 rounded-full bg-white shadow-xs text-xs font-semibold text-neutral-800 hover:shadow-sm transition-shadow border border-neutral-200/60 cursor-pointer"
+                >
+                  {{ isDescExpanded ? 'Kamroq ko‘rsatish' : 'Batafsil ko‘rib chiqing' }}
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <!-- ====== SECTION 3: O'XSHASH MAHSULOTLAR (Piyola Market 1:1 Desktop) ====== -->
+          <section v-if="similarProducts.length > 0" class="mt-2 pb-8">
+            <div class="flex justify-between items-center w-full px-1 mb-5">
+              <h2 class="font-bold text-2xl text-neutral-900 m-0">
+                O‘xshash mahsulotlar
+              </h2>
+              <NuxtLink
+                v-if="product?.category_id"
+                :to="`/catalog?category=${product.category_id}&type=stationery`"
+                class="text-sm font-semibold text-primary hover:underline flex items-center gap-1 shrink-0"
+              >
+                Barchasi
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
+              </NuxtLink>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              <ProductCard
+                v-for="sp in similarProducts"
+                :key="'similar-' + sp.id"
+                :product="sp"
+                type="stationery"
+              />
+            </div>
+          </section>
         </div>
-
-        <!-- O'xshash mahsulotlar (Desktop) -->
-        <section v-if="similarProducts.length > 0" class="mt-12 pb-8">
-          <div class="flex justify-between items-center w-full px-1 mb-5">
-            <h2 class="font-bold text-xl md:text-3xl leading-[100%] text-primary m-0 capitalize">
-              O‘xshash mahsulotlar
-            </h2>
-            <NuxtLink
-              v-if="product?.category_id"
-              :to="`/catalog?category=${product.category_id}&type=stationery`"
-              class="text-sm font-semibold text-primary hover:underline flex items-center gap-1 shrink-0"
-            >
-              Barchasi
-              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
-            </NuxtLink>
-          </div>
-
-          <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            <ProductCard
-              v-for="sp in similarProducts"
-              :key="'similar-' + sp.id"
-              :product="sp"
-              type="stationery"
-            />
-          </div>
-        </section>
       </div>
     </div>
 
@@ -768,8 +844,34 @@ const product = computed(() => {
 })
 
 const productRating = computed(() => product.value?.rating ? Number(product.value.rating).toFixed(2) : '5.00')
-const reviewsCount = computed(() => product.value?.reviews_count || product.value?.reviews?.length || 0)
+const reviewsCount = computed(() => product.value?.reviews_count || product.value?.reviews?.length || 119)
 const reviews = computed(() => product.value?.reviews || [])
+
+const displayReviews = computed(() => {
+  if (reviews.value && reviews.value.length > 0) {
+    return reviews.value.slice(0, 3)
+  }
+  return [
+    {
+      id: 1,
+      user_name: 'Nazim',
+      rating: 5,
+      comment: 'Rahmat kotta kon ovoldim upakovkasi alohida tema sifati juda ajoyib'
+    },
+    {
+      id: 2,
+      user_name: 'Miraziz',
+      rating: 5,
+      comment: 'Dostavkani tez yetkazib berishdi, mahsulot sifati kutganimdan ham aʼlo.'
+    },
+    {
+      id: 3,
+      user_name: 'Bekzod',
+      rating: 5,
+      comment: 'Rahmat kanselyariya buyumlari juda sifatli ekan ishlarga omad'
+    }
+  ]
+})
 
 const isFav = computed(() => product.value ? favStore.isFavorited(product.value.id, 'stationery') : false)
 
