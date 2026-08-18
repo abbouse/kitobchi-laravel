@@ -26,12 +26,15 @@ class SetTelegramWebhook extends Command
         return self::SUCCESS;
     }
 
-    private function setWebhook(Nutgram $bot, string $url, ?string $secret): void
+    private function setWebhook(Nutgram $bot, ?string $url, ?string $secret): void
     {
-        $params = ['url' => $url];
-        if ($secret) $params['secret_token'] = $secret;
+        $url = $url ?: (string) config('nutgram.webhook.url');
+        if (empty($url)) {
+            $this->error("Webhook URL sozlanmagan.");
+            return;
+        }
 
-        $result = $bot->setWebhook($url);
+        $result = $bot->setWebhook($url, secret_token: $secret);
 
         if ($result) {
             $this->info("✅ Webhook o'rnatildi: $url");

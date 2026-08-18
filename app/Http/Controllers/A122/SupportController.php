@@ -78,10 +78,17 @@ class SupportController extends Controller
         $request->validate(['operator_id' => 'required|exists:bot_operators,id']);
         $operator = BotOperator::query()->findOrFail((int) $request->operator_id);
 
+        $prevOperatorId = $ticket->operator_id;
+        if ($prevOperatorId && (int) $prevOperatorId !== (int) $operator->telegram_id) {
+            BotOperator::where('telegram_id', $prevOperatorId)->update(['status' => SessionService::OP_ONLINE, 'updated_at' => now()]);
+        }
+
         $ticket->update([
             'operator_id' => $operator->telegram_id,
-            'status' => 'active',
+            'status' => SessionService::STATUS_ACTIVE,
         ]);
+        BotOperator::where('telegram_id', $operator->telegram_id)->update(['status' => SessionService::OP_BUSY, 'updated_at' => now()]);
+
         $operatorLabel = $operator->name ?: ($operator->username ? '@'.$operator->username : (string) $operator->telegram_id);
         SessionService::saveSystemMessage($ticket->id, "Operator tayinlandi: {$operatorLabel}");
 
@@ -90,11 +97,7 @@ class SupportController extends Controller
 
     public function close(BotTicket $ticket)
     {
-        $ticket->update([
-            'status' => 'closed',
-            'closed_at' => now(),
-            'close_reason' => request('close_reason'),
-        ]);
+        SessionService::closeTicket($ticket->id, request('close_reason') ?: 'admin_panel_closed');
         SessionService::saveSystemMessage(
             $ticket->id,
             'Ticket admin paneldan yopildi'.(request('close_reason') ? ': '.request('close_reason') : '.')
