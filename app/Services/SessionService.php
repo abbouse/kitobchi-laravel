@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use App\Models\BotTicketMessage;
 use App\Models\BotTicket;
 use App\Models\BotOperator;
@@ -179,11 +180,16 @@ class SessionService
         $ticket = self::getTicket($ticketId);
         if (!$ticket) return;
 
-        self::updateTicket($ticketId, [
+        $updateData = [
             'status'       => self::STATUS_CLOSED,
             'close_reason' => $reason,
-            'closed_at'    => now(),
-        ]);
+            'updated_at'   => now(),
+        ];
+        if (Schema::hasColumn('bot_tickets', 'closed_at')) {
+            $updateData['closed_at'] = now();
+        }
+
+        self::updateTicket($ticketId, $updateData);
 
         if ($ticket->operator_id) {
             DB::table('bot_operators')
@@ -221,14 +227,18 @@ class SessionService
 
         if ($count === 0) return 0;
 
+        $bulkUpdateData = [
+            'status'       => self::STATUS_CLOSED,
+            'close_reason' => $reason,
+            'updated_at'   => now(),
+        ];
+        if (Schema::hasColumn('bot_tickets', 'closed_at')) {
+            $bulkUpdateData['closed_at'] = now();
+        }
+
         DB::table('bot_tickets')
             ->whereIn('status', [self::STATUS_QUEUE, self::STATUS_ACTIVE])
-            ->update([
-                'status'       => self::STATUS_CLOSED,
-                'close_reason' => $reason,
-                'closed_at'    => now(),
-                'updated_at'   => now(),
-            ]);
+            ->update($bulkUpdateData);
 
         // Barcha band bo'lgan operatorlarni qayta online qilish
         DB::table('bot_operators')
@@ -451,10 +461,11 @@ class SessionService
         $closed  = DB::table('bot_tickets')->where('operator_id', $operatorId)->whereIn('status', [self::STATUS_CLOSED, self::STATUS_RATED])->count();
         $active  = DB::table('bot_tickets')->where('operator_id', $operatorId)->where('status', self::STATUS_ACTIVE)->count();
 
+        $dateColumn = Schema::hasColumn('bot_tickets', 'closed_at') ? 'closed_at' : 'updated_at';
         $todayClosed = DB::table('bot_tickets')
             ->where('operator_id', $operatorId)
             ->whereIn('status', [self::STATUS_CLOSED, self::STATUS_RATED])
-            ->whereDate('closed_at', now()->toDateString())
+            ->whereDate($dateColumn, now()->toDateString())
             ->count();
 
         $ratedCount = DB::table('bot_tickets')->where('operator_id', $operatorId)->whereNotNull('rating')->count();
