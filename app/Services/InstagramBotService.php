@@ -253,6 +253,11 @@ class InstagramBotService
     {
         $handoffReply = "Kechirasiz, bu savolga hozircha aniq javob bera olmadim 🙏 Operatorimizni ulayapman — u tez orada shu yerga javob yozadi.";
 
+        // MUHIM: diagnostika uchun — bu yo'l ilgari "qora quti" edi (hech
+        // narsa loglanmasdi), shu sabab qayerda "tiqilib qolgani"ni bilib
+        // bo'lmasdi. Endi har bosqich aniq loglanadi.
+        Log::info('Instagram: AI javob yo\'li boshlandi', ['sender_id' => $senderId]);
+
         try {
             $ai        = app(\App\Services\OpenAIService::class);
             $knowledge = app(\App\Services\ChatBotKnowledgeService::class)->buildGeneralKnowledgeOnly();
@@ -275,9 +280,17 @@ class InstagramBotService
                 . "FAQAT ushbu JSON formatida javob ber:\n"
                 . "{\n  \"can_answer\": true yoki false,\n  \"reply\": \"mijozga yoziladigan javob matni (can_answer=false bo'lsa bo'sh qoldirsa ham bo'ladi)\"\n}";
 
+            Log::info('Instagram: OpenAI so\'rovi yuborilmoqda', ['sender_id' => $senderId]);
+
             $result    = $ai->askJson($prompt, 350, 0.3);
             $canAnswer = (bool) ($result['can_answer'] ?? false);
             $reply     = trim((string) ($result['reply'] ?? ''));
+
+            Log::info('Instagram: OpenAI javob qaytardi', [
+                'sender_id'  => $senderId,
+                'can_answer' => $canAnswer,
+                'reply_len'  => mb_strlen($reply),
+            ]);
 
             if ($canAnswer && $reply !== '') {
                 $this->sendDirectMessage($senderId, $reply);
@@ -287,8 +300,11 @@ class InstagramBotService
             Log::warning('Instagram AI javob berishda xato, operatorga yo\'naltirilmoqda', [
                 'sender_id' => $senderId,
                 'error'     => $e->getMessage(),
+                'trace'     => $e->getTraceAsString(),
             ]);
         }
+
+        Log::info('Instagram: operatorga yo\'naltirilmoqda (handoff)', ['sender_id' => $senderId]);
 
         // AI ishonchli javob berolmadi (yoki chaqiruv xato berdi) — operatorga
         // ulanish xabari + admin panel uchun InstagramInquiry yozuvi.
@@ -396,7 +412,17 @@ class InstagramBotService
         }
 
         try {
+            // MUHIM: Http::post() ga aniq timeout() qo'yilmasa, Laravel/Guzzle
+            // JAVOBSIZ CHAQIRUVDA CHEKSIZ KUTISHI mumkin (default timeout yo'q!).
+            // Bu — webhook so'rovi umuman javob bermay "osilib qolishi"ning eng
+            // ehtimolli sababi edi: mijoz xabar yozadi, log "Processing..." deb
+            // yozadi, keyin sendDirectMessage() graph.instagram.com'dan javob
+            // kutib abadiy to'xtab qoladi — hech qanday xato ham loglanmaydi,
+            // hech qanday javob ham kelmaydi. 10s qattiq muddat bilan bunday
+            // holatda tezda xato qaytadi va yuqoridagi catch uni ushlab oladi.
             $response = Http::withToken($accessToken)
+                ->timeout(10)
+                ->connectTimeout(5)
                 ->post('https://graph.instagram.com/v26.0/me/messages', [
                     'recipient' => ['id' => $recipientId],
                     'message'   => ['text' => $messageText],

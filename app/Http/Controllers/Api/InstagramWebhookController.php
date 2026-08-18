@@ -74,16 +74,10 @@ class InstagramWebhookController extends Controller
      */
     public function test(Request $request)
     {
-        $adminSecret = config('services.instagram.diagnostic_secret') 
-            ?: config('services.instagram.verify_token', env('INSTAGRAM_VERIFY_TOKEN', 'kitobchi_sec_token_2026'));
+        $adminSecret = config('services.instagram.diagnostic_secret', env('INSTAGRAM_DIAGNOSTIC_SECRET', ''));
 
-        $sentSecret = $request->header('X-Admin-Secret') ?? $request->query('secret');
-
-        if (empty($sentSecret) || !hash_equals($adminSecret, (string) $sentSecret)) {
-            return response()->json([
-                'error' => 'Forbidden',
-                'hint' => 'Siz secret yuborishingiz kerak: ?secret=kitobchi_sec_token_2026 yoki X-Admin-Secret header'
-            ], 403);
+        if (empty($adminSecret) || !hash_equals($adminSecret, (string) $request->header('X-Admin-Secret', ''))) {
+            return response()->json(['error' => 'Forbidden'], 403);
         }
 
         $token = config('services.instagram.access_token', env('INSTAGRAM_ACCESS_TOKEN'));
@@ -98,20 +92,23 @@ class InstagramWebhookController extends Controller
         // 1. Token haqiqiy Instagram professional akkauntiga tegishli
         //    ekanini va uning ID/username'ini tekshirish.
         $accountResponse = Http::withToken($token)
+            ->timeout(10)->connectTimeout(5)
             ->get('https://graph.instagram.com/v26.0/me', [
                 'fields' => 'user_id,username,name,account_type',
             ]);
 
         // 2. Webhook obunasini (qayta) yoqish — Meta docs: "Отправка
         //    сообщений" bo'limida talab qilingan majburiy qadam.
-        $subscribeFields = 'messages,messaging_postbacks,messaging_optins,messaging_seen,messaging_reactions,messaging_referral';
+        $subscribeFields = 'messages,messaging_postbacks,messaging_optins,messaging_seen,message_reactions,messaging_referral';
         $subscribeResponse = Http::withToken($token)
+            ->timeout(10)->connectTimeout(5)
             ->post('https://graph.instagram.com/v26.0/me/subscribed_apps', [
                 'subscribed_fields' => $subscribeFields,
             ]);
 
         // 3. Joriy obuna holatini ko'rsatish (subscribe chaqiruvidan keyin).
         $subscriptionsResponse = Http::withToken($token)
+            ->timeout(10)->connectTimeout(5)
             ->get('https://graph.instagram.com/v26.0/me/subscribed_apps');
 
         return response()->json([
