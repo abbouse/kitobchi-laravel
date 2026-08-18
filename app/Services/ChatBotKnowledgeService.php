@@ -52,6 +52,20 @@ class ChatBotKnowledgeService
         Cache::forget(self::CACHE_KEY);
     }
 
+    /**
+     * Faqat UMUMIY bilim to'plami (do'kon faktlari + boshqaruvdan yozilgan
+     * ai_bot_extra_notes), aniq bir foydalanuvchi (User)ga bog'liq bo'lmagan
+     * holda. Instagram kabi tashqi kanallar uchun — u yerdagi mijoz saytga
+     * kirgan Kitobchi User emas, shu sabab shaxsiy (2-qatlam) kontekst
+     * qurib bo'lmaydi. Xuddi shu cache'dan foydalanadi (buildContext bilan
+     * bir xil kalit), shu sabab admin ai_bot_extra_notes'ni yangilasa —
+     * saytdagi va Instagramdagi bot ikkalasi ham bir vaqtda yangilanadi.
+     */
+    public function buildGeneralKnowledgeOnly(): string
+    {
+        return Cache::remember(self::CACHE_KEY, self::CACHE_TTL, fn () => $this->buildGeneralKnowledge());
+    }
+
     // ─── 1-qatlam: umumiy jonli ma'lumot ─────────────────────────────────────
 
     private function buildGeneralKnowledge(): string
