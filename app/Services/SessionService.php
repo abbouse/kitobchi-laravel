@@ -194,6 +194,18 @@ class SessionService
                 ]);
             self::incrementStat((int) $ticket->operator_id, 'closed');
         }
+
+        // Agar bu shop_chat (veb/ilova) bo'lsa, conversationga bildirishnoma yuborish
+        if ($ticket->source_type === 'shop_chat') {
+            try {
+                $botTicketModel = \App\Models\BotTicket::find($ticketId);
+                if ($botTicketModel) {
+                    app(SupportChatBridgeService::class)->notifyConversationTicketClosed($botTicketModel, $reason);
+                }
+            } catch (\Throwable $e) {
+                Log::warning("[SessionService] shop_chat close bildirishnoma xatosi: " . $e->getMessage());
+            }
+        }
     }
 
     /**

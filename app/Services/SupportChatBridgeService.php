@@ -164,6 +164,46 @@ class SupportChatBridgeService
         return $message;
     }
 
+    public function notifyConversationTicketClosed(BotTicket $ticket, string $reason = ''): void
+    {
+        if ($ticket->source_type !== 'shop_chat' || !(int) $ticket->source_conversation_id) {
+            return;
+        }
+
+        $conversation = Conversation::query()->with('shop')->find($ticket->source_conversation_id);
+        if (!$conversation || !$conversation->shop) {
+            return;
+        }
+
+        $senderSeller = $conversation->shop;
+        $closeText = "✅ Murojaatingiz yakunlandi. Kitobchi xizmatidan foydalanganingiz uchun rahmat!";
+
+        try {
+            $message = $conversation->messages()->create([
+                'sender_id'   => $senderSeller->id,
+                'sender_type' => Seller::class,
+                'message'     => $closeText,
+                'is_read'     => 0,
+                'is_edited'   => 0,
+                'is_deleted'  => 0,
+            ]);
+
+            $conversation->update(['last_message_at' => now()]);
+
+            $freshConversation = $conversation->fresh();
+            $this->safeBroadcast(
+                event: new MessageSent($message->load('replyTo')),
+                context: ['ticket_id' => $ticket->id, 'conversation_id' => $conversation->id]
+            );
+            $this->safeBroadcast(
+                event: new ConversationUpdated($freshConversation, (int) $conversation->user_id, 'user'),
+                context: ['ticket_id' => $ticket->id, 'conversation_id' => $conversation->id]
+            );
+        } catch (\Throwable $e) {
+            Log::warning("[SupportChatBridgeService] notifyConversationTicketClosed xatosi: " . $e->getMessage());
+        }
+    }
+
     private function safeBroadcast(object $event, array $context = []): void
     {
         try {
@@ -180,6 +220,8 @@ class SupportChatBridgeService
         $ticket = BotTicket::query()
             ->where('source_type', 'shop_chat')
             ->where('source_conversation_id', $conversation->id)
+            ->whereIn('status', [SessionService::STATUS_QUEUE, SessionService::STATUS_ACTIVE])
+            ->latest('id')
             ->first();
 
         if ($ticket) {

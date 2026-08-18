@@ -103,6 +103,13 @@ class SupportController extends Controller
             'Ticket admin paneldan yopildi'.(request('close_reason') ? ': '.request('close_reason') : '.')
         );
 
+        if ($ticket->source_type !== 'shop_chat') {
+            try {
+                $bot = app(\SergiX44\Nutgram\Nutgram::class);
+                \App\Handlers\UserHandler::sendRatingRequest($bot, (int) $ticket->user_id, (int) $ticket->id);
+            } catch (\Throwable) {}
+        }
+
         return back()->with('success', "Ticket yopildi.");
     }
 

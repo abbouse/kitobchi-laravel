@@ -305,20 +305,21 @@ class UserHandler
         }
     }
 
-    public static function dispatchTicket(Nutgram $bot, array $ticket): void
+    public static function dispatchTicket(Nutgram $bot, object|array $ticket): void
     {
+        $ticketObj   = is_array($ticket) ? (object) $ticket : $ticket;
         $operators   = SessionService::getOperators();
-        $userDisplay = SessionService::formatUser($ticket['name'] ?? null, $ticket['username'] ?? null, (int) ($ticket['user_id'] ?? 0));
-        $preview     = mb_substr($ticket['first_msg'] ?? '[Media]', 0, 150);
-        $time        = \Carbon\Carbon::parse($ticket['created_at'] ?? now())->format('H:i');
+        $userDisplay = SessionService::formatUser($ticketObj->name ?? null, $ticketObj->username ?? null, (int) ($ticketObj->user_id ?? 0));
+        $preview     = mb_substr($ticketObj->first_msg ?? '[Media]', 0, 150);
+        $time        = \Carbon\Carbon::parse($ticketObj->created_at ?? now())->format('H:i');
 
-        $text  = "🆕 <b>Yangi murojaat #{$ticket['id']}</b>\n\n";
+        $text  = "🆕 <b>Yangi murojaat #{$ticketObj->id}</b>\n\n";
         $text .= "👤 Mijoz: $userDisplay\n";
         $text .= "🕐 Vaqt: $time\n\n";
         $text .= "💬 <i>" . htmlspecialchars($preview) . "</i>";
 
         $keyboard = InlineKeyboardMarkup::make()->addRow(
-            InlineKeyboardButton::make("✋ Qabul qilish", callback_data: "take_ticket:{$ticket['id']}")
+            InlineKeyboardButton::make("✋ Qabul qilish", callback_data: "take_ticket:{$ticketObj->id}")
         );
 
         foreach ($operators as $opId) {

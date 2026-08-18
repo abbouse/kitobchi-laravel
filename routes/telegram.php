@@ -245,14 +245,37 @@ $bot->onMessage(function (Nutgram $bot) {
 // ─── EXCEPTION HANDLER ────────────────────────────────────────────────────────
 
 $bot->onException(function (Nutgram $bot, \Throwable $e) {
+    $msg = $e->getMessage();
+
+    // Telegram API normal ogohlantirishlarini (masalan: message not modified, query too old, bot blocked) e'tiborsiz qoldiramiz
+    if (
+        str_contains($msg, 'message is not modified') ||
+        str_contains($msg, 'query is too old') ||
+        str_contains($msg, 'bot was blocked by the user') ||
+        str_contains($msg, 'user is deactivated') ||
+        str_contains($msg, 'chat not found')
+    ) {
+        Log::info("Nutgram oddiy bildirishnoma: " . $msg);
+        return;
+    }
+
     Log::error("Nutgram global xatosi", [
-        'message' => $e->getMessage(),
+        'message' => $msg,
         'file'    => $e->getFile(),
         'line'    => $e->getLine(),
         'chat_id' => $bot->chatId() ?? 'unknown',
     ]);
 
-    try {
-        $bot->sendMessage("⚠️ Kutilmagan xatolik yuz berdi. Administratorga xabar berildi.");
-    } catch (\Throwable) {}
+    if ($bot->callbackQuery()) {
+        try {
+            $bot->answerCallbackQuery(text: "⚠️ Xatolik yuz berdi!", show_alert: false);
+        } catch (\Throwable) {}
+        return;
+    }
+
+    if ($bot->chatId()) {
+        try {
+            $bot->sendMessage("⚠️ Kutilmagan xatolik yuz berdi. Iltimos, /start buyrug'ini yuboring.");
+        } catch (\Throwable) {}
+    }
 });
