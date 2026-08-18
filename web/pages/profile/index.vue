@@ -111,18 +111,18 @@
         <ProfileSidebar active="" />
 
         <div class="flex-1 min-w-0">
-          <!-- Mobile-only user summary card -->
-          <div class="lg:hidden bg-white border border-neutral-100 rounded-3xl p-4 mb-4 flex items-center gap-3">
-            <div class="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center text-lg font-bold shrink-0">
-              {{ (authStore.user?.name || authStore.user?.phone_number || 'U').charAt(0).toUpperCase() }}
-            </div>
+          <!-- Mobile-only user summary card (Piyola 1:1) -->
+          <div class="lg:hidden bg-white rounded-[20px] py-3 px-4 flex items-center gap-3 mb-3">
+            <span class="inline-flex items-center justify-center shrink-0 select-none rounded-full align-middle size-12 text-2xl bg-secondary-100 group relative">
+              <i class="icon-profile text-neutral-500 text-2xl"></i>
+            </span>
             <div class="min-w-0 flex-1">
-              <div class="text-base font-bold text-neutral-900 truncate leading-snug">
+              <p class="text-highlighted text-base font-semibold truncate m-0">
                 {{ authStore.user?.name || 'Foydalanuvchi' }}
-              </div>
-              <div class="text-xs text-neutral-500 truncate mt-0.5">
-                +{{ authStore.user?.phone_number }}
-              </div>
+              </p>
+              <p class="text-sm text-neutral-500 truncate m-0 mt-0.5">
+                {{ formatPhone(authStore.user?.phone_number) }}
+              </p>
             </div>
           </div>
 
@@ -157,14 +157,18 @@
           </div>
 
           <!-- Logout (mobile — desktop uses sidebar) -->
-          <button
-            type="button"
-            @click="handleLogout"
-            class="lg:hidden w-full flex items-center justify-center gap-2 px-5 py-4 rounded-3xl bg-white border border-neutral-100 text-red-500 text-sm font-semibold hover:bg-neutral-100 transition-colors mb-3"
-          >
-            <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75"/></svg>
-            <span>Hisobdan chiqish</span>
-          </button>
+          <div class="lg:hidden px-4 w-full mx-auto my-2">
+            <button
+              type="button"
+              @click="handleLogout"
+              class="font-medium inline-flex items-center text-sm gap-2 w-full justify-center text-primary hover:bg-primary/10 transition-colors rounded-xl py-2.5 border-none bg-transparent cursor-pointer"
+            >
+              <svg class="w-5 h-5 text-neutral-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15m-3 0l-3-3m0 0l3-3m-3 3H15"/>
+              </svg>
+              <span>Hisobdan chiqish</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -237,23 +241,31 @@ const menuGroups: MenuItem[][] = [
 // autentifikatsiya talab qilgani uchun bu yerda emas).
 const guestMenuGroups: MenuItem[][] = [menuGroups[1], menuGroups[2]]
 
+function formatPhone(phone?: string) {
+  if (!phone) return ''
+  const clean = phone.replace(/\D/g, '')
+  if (clean.length === 12 && clean.startsWith('998')) {
+    return `+998 ${clean.slice(3, 5)} ${clean.slice(5, 8)} ${clean.slice(8, 10)} ${clean.slice(10, 12)}`
+  }
+  if (clean.length === 9) {
+    return `+998 ${clean.slice(0, 2)} ${clean.slice(2, 5)} ${clean.slice(5, 7)} ${clean.slice(7, 9)}`
+  }
+  return phone.startsWith('+') ? phone : `+${phone}`
+}
+
 function handleLogout() {
   authStore.logout()
   router.push('/')
 }
 
 // Piyolada haqiqiy tekshirilgan: mehmon /profile'ga TO'G'RIDAN-TO'G'RI
-// (masalan URL orqali yoki header'dagi "Kirish" tugmasi emas, balki
-// to'g'ridan-to'g'ri sahifaga) kirsa — DESKTOP'da (>=768px) darhol "/" ga
-// qaytarib yuboriladi (guest uchun alohida sahifa umuman ko'rsatilmaydi,
-// chunki desktopda header'dagi "Kirish" tugmasi istalgan vaqt modalni ochadi).
-// MOBILE'da esa piyolaning pastki navigatsiyasidagi "Profil" tugmasi orqali
-// kirilgani uchun (bottom nav — desktopda mavjud emas) shu yerdagi guest
-// kartasi + info menyu ko'rsatiladi. Shu sabab bu yerdagi guest UI faqat
-// mobile uchun qoladi, desktop uchun emas.
+// kirsa — DESKTOP'da (>=768px) darhol "/" ga qaytarib yuboriladi va
+// auth modal ochiladi (desktopda faqat login qilingan foydalanuvchi kira oladi).
+// MOBILE'da esa pastki navigatsiya orqali kirilganda guest kartasi + info menyu ko'rsatiladi.
 onMounted(() => {
   if (!authStore.isAuthenticated && window.matchMedia('(min-width: 768px)').matches) {
     router.replace('/')
+    authStore.openAuthModal()
   }
 })
 

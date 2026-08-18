@@ -115,8 +115,8 @@
         </div>
       </div>
 
-      <!-- Kulrang Fonli Bo'lim Kartalari (bg-gray-100 space-y-2 pb-28 pt-2) -->
-      <div class="relative z-20 bg-gray-100 space-y-2 pb-28 pt-2">
+      <!-- Kulrang Fonli Bo'lim Kartalari (bg-gray-100 space-y-2 pb-40 pt-2) -->
+      <div class="relative z-20 bg-gray-100 space-y-2 pb-40 pt-2">
         <!-- 1-Karta: Sarlavha, Do'kon nomi va Material -->
         <div class="w-full px-4 py-4 bg-white">
           <h1 class="text-lg font-medium text-neutral-900 leading-snug m-0">
@@ -247,6 +247,9 @@
             </div>
           </div>
         </div>
+
+        <!-- Pastki suzuvchi panel uchun qo'shimcha bo'sh joy -->
+        <div class="h-6"></div>
       </div>
 
       <!-- Mobil Pastki Suzuvchi Xarid Paneli (Sticky Buy Bar - Piyola 1:1) -->
