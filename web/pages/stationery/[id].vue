@@ -670,7 +670,7 @@
             <div class="mt-4">
               <button
                 type="button"
-                @click="isReviewsOpen = true"
+                @click="openReviewsModal"
                 class="px-6 py-2.5 rounded-xl bg-secondary-100 hover:bg-secondary-200 text-sm font-semibold text-neutral-800 transition-colors border-none cursor-pointer"
               >
                 Barcha sharhlarni ko'rsatish
@@ -843,35 +843,71 @@ const product = computed(() => {
   return productData.value?.data || productData.value?.product || null
 })
 
-const productRating = computed(() => product.value?.rating ? Number(product.value.rating).toFixed(2) : '5.00')
-const reviewsCount = computed(() => product.value?.reviews_count || product.value?.reviews?.length || 119)
-const reviews = computed(() => product.value?.reviews || [])
+const productRating = computed(() => {
+  if (product.value?.ugc_aggregate_score && Number(product.value.ugc_aggregate_score) > 0) {
+    return Number(product.value.ugc_aggregate_score).toFixed(1)
+  }
+  if (product.value?.rating && Number(product.value.rating) > 0) {
+    return Number(product.value.rating).toFixed(1)
+  }
+  return '5.0'
+})
+
+const reviewsCount = computed(() => {
+  return product.value?.ugc_reviews_count ?? (product.value?.reviews_count || reviews.value.length || 0)
+})
+
+const ugcList = ref<any[]>([])
+const isReviewsLoading = ref(false)
+
+const reviews = computed(() => {
+  if (ugcList.value.length > 0) {
+    return ugcList.value
+  }
+  const preview = product.value?.ugc_reviews_preview
+  if (Array.isArray(preview) && preview.length > 0) {
+    return preview.map((p: any) => ({
+      id: p.id,
+      user_name: [p.user?.name, p.user?.lastname].filter(Boolean).join(' ') || p.user?.name || 'Mijoz',
+      avatar: p.user?.avatar,
+      rating: p.ai_post_score ? Math.min(5, Math.max(1, Math.round(p.ai_post_score))) : 5,
+      comment: p.text || '',
+      created_at: p.created_at ? new Date(p.created_at).toLocaleDateString('uz-UZ') : 'Yaqinda'
+    }))
+  }
+  if (Array.isArray(product.value?.reviews) && product.value.reviews.length > 0) {
+    return product.value.reviews
+  }
+  return []
+})
 
 const displayReviews = computed(() => {
-  if (reviews.value && reviews.value.length > 0) {
-    return reviews.value.slice(0, 3)
-  }
-  return [
-    {
-      id: 1,
-      user_name: 'Nazim',
-      rating: 5,
-      comment: 'Rahmat kotta kon ovoldim upakovkasi alohida tema sifati juda ajoyib'
-    },
-    {
-      id: 2,
-      user_name: 'Miraziz',
-      rating: 5,
-      comment: 'Dostavkani tez yetkazib berishdi, mahsulot sifati kutganimdan ham aʼlo.'
-    },
-    {
-      id: 3,
-      user_name: 'Bekzod',
-      rating: 5,
-      comment: 'Rahmat kanselyariya buyumlari juda sifatli ekan ishlarga omad'
-    }
-  ]
+  return reviews.value.slice(0, 3)
 })
+
+async function openReviewsModal() {
+  isReviewsOpen.value = true
+  if (ugcList.value.length === 0 && rawId.value) {
+    try {
+      isReviewsLoading.value = true
+      const res: any = await $fetch(`${config.public.apiBase}/v1/kitobchi/product_comments/${rawId.value}/stationery`)
+      if (res?.status === 'success' && Array.isArray(res?.data)) {
+        ugcList.value = res.data.map((p: any) => ({
+          id: p.id,
+          user_name: [p.user?.name, p.user?.lastname].filter(Boolean).join(' ') || p.user?.name || 'Mijoz',
+          avatar: p.user?.avatar,
+          rating: p.ai_post_score ? Math.min(5, Math.max(1, Math.round(p.ai_post_score))) : 5,
+          comment: p.text || '',
+          created_at: p.created_at ? new Date(p.created_at).toLocaleDateString('uz-UZ') : 'Yaqinda'
+        }))
+      }
+    } catch (e) {
+      // preview is already displayed
+    } finally {
+      isReviewsLoading.value = false
+    }
+  }
+}
 
 const isFav = computed(() => product.value ? favStore.isFavorited(product.value.id, 'stationery') : false)
 
