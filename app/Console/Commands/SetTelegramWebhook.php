@@ -7,17 +7,17 @@ use SergiX44\Nutgram\Nutgram;
 
 class SetTelegramWebhook extends Command
 {
-    protected $signature   = 'bot:webhook {action=set : set | delete | info}';
+    protected $signature   = 'bot:webhook {action=set : set | delete | info} {--url= : Maxsus webhook URL manzili}';
     protected $description = 'Telegram bot webhook ni boshqarish';
 
     public function handle(Nutgram $bot): int
     {
         $action = $this->argument('action');
-        $url    = config('nutgram.webhook.url');
+        $url    = $this->option('url') ?: config('nutgram.webhook.url');
         $secret = config('nutgram.webhook.secret_token');
 
         match ($action) {
-            'set' => $this->setWebhook($bot, $url, $secret),
+            'set'    => $this->setWebhook($bot, $url, $secret),
             'delete' => $this->deleteWebhook($bot),
             'info'   => $this->webhookInfo($bot),
             default  => $this->error("Noto'g'ri action: $action"),
@@ -28,7 +28,7 @@ class SetTelegramWebhook extends Command
 
     private function setWebhook(Nutgram $bot, ?string $url, ?string $secret): void
     {
-        $url = $url ?: (string) config('nutgram.webhook.url');
+        $url = $url ?: 'https://kitobchi.com/api/telegram/webhook';
         if (empty($url)) {
             $this->error("Webhook URL sozlanmagan.");
             return;
