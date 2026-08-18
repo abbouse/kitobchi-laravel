@@ -187,5 +187,6 @@
     observer.observe(statsSection);
 })();
 </script>
+@include('partials.app-download-bottomsheet')
 </body>
 </html>

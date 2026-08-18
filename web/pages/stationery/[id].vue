@@ -47,8 +47,11 @@
 
       <!-- Main Layout: 2 Columns (Piyola 1:1 — lg:grid lg:grid-cols-2 xl:grid-cols-3) -->
       <div class="lg:grid lg:grid-cols-2 xl:grid-cols-3 gap-5 pb-24 lg:pb-0">
-        <!-- Left: Image Gallery — thumbnail rail + main carousel w/ arrows -->
-        <div class="col-span-1 xl:col-span-2 h-full mb-8">
+        <!-- Left: Image Gallery — thumbnail rail + main carousel w/ arrows.
+             MUHIM (2-tuzatish): qarang books/[id].vue'dagi izoh — butun
+             galereya ustuni piyola nisbatiga yaqin maksimal kenglik bilan
+             cheklandi. -->
+        <div class="col-span-1 xl:col-span-2 h-full mb-8 max-w-[520px] mx-auto lg:mx-0">
           <div class="flex flex-col-reverse md:flex-row gap-3 h-full">
             <!-- Thumbnail rail -->
             <div

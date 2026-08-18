@@ -134,12 +134,18 @@
       </div>
     </section>
 
-    <!-- ====== KATEGORIYA QATORLARI (Piyola 1:1 — "Lyuks parfyum" /
-         "Original parfyum" kabi har bir kategoriya alohida qator) ====== -->
+    <!-- ====== KATEGORIYA QATORLARI — FAQAT DESKTOPDA (Piyola 1:1 —
+         "Lyuks parfyum" / "Original parfyum" kabi har bir kategoriya
+         alohida qator). MUHIM: piyolaning jonli mobil bosh sahifasida bu
+         kategoriya qatorlari UMUMAN YO'Q — mobilda kategoriyalarga
+         bo'linmagan, bitta uzluksiz "Barcha Mahsulotlar" cheksiz grid
+         ko'rsatiladi (pastdagi bo'limga qarang). Shu farqni aynan
+         takrorlash uchun bu bo'lim `max-md:hidden` bilan faqat md+ (planshet/
+         desktop)da ko'rinadi. -->
     <section
       v-for="cat in categoryRows"
       :key="cat.category_id"
-      class="py-4 md:py-6 lg:py-10"
+      class="py-4 md:py-6 lg:py-10 max-md:hidden"
     >
       <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
         <div class="flex justify-between items-center w-full px-1 mb-3 md:mb-5 lg:mb-8">
@@ -172,6 +178,51 @@
         </div>
       </div>
     </section>
+
+    <!-- ====== BARCHA MAHSULOTLAR — FAQAT MOBILDA (Piyola 1:1). Jonli
+         piyolamarket.uz mobil DOM'idan tasdiqlangan: "Kataloglar"
+         doiralaridan keyin to'g'ridan-to'g'ri kategoriyalarga bo'linmagan,
+         bitta uzluksiz cheksiz-scroll grid boshlanadi ("Barcha
+         Mahsulotlar"), yuqoridagi kabi alohida kategoriya sarlavhalari
+         YO'Q. Desktopda bu bo'lim ko'rinmaydi (`md:hidden`) — o'rniga
+         yuqoridagi kategoriya qatorlari ko'rsatiladi. -->
+    <section v-if="mobileFeed.length > 0" class="py-4 md:hidden">
+      <div class="px-4 w-full mx-auto">
+        <h2 class="font-bold text-xl leading-[100%] text-primary m-0 capitalize mb-3">
+          Barcha mahsulotlar
+        </h2>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <ProductCard
+            v-for="product in mobileFeed"
+            :key="'all-' + product.id"
+            :product="product"
+            type="book"
+          />
+        </div>
+
+        <!-- Cheksiz scroll sentinel — IntersectionObserver shu elementga
+             qarab avtomatik keyingi sahifani yuklaydi (piyoladagi kabi
+             tugmasiz, foydalanuvchi scroll qilgani sari o'zi yuklanadi). -->
+        <div ref="mobileSentinel" class="h-1 w-full" aria-hidden="true"></div>
+
+        <div v-if="isMobileLoadingMore" class="flex justify-center py-6">
+          <div class="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+        </div>
+
+        <!-- Fallback tugma — Observer biror sabab bilan ishlamasa ham
+             foydalanuvchi qo'lda davom ettira oladi. -->
+        <div v-else-if="mobileHasMore" class="flex justify-center py-4">
+          <button
+            type="button"
+            @click="loadMoreMobile"
+            class="px-6 py-3 rounded-2xl bg-secondary-200 text-primary font-semibold text-sm border-none cursor-pointer"
+          >
+            Yana ko‘rsatish
+          </button>
+        </div>
+      </div>
+    </section>
   </div>
 </template>
 
@@ -181,7 +232,7 @@ const config = useRuntimeConfig()
 // Parallel SSR Data Fetching for maximum performance and instant speed
 const { data: pageData } = await useAsyncData('homepage-data', async () => {
   try {
-    const [home, cat, catRows] = await Promise.all([
+    const [home, cat, catRows, mobileFirst] = await Promise.all([
       $fetch<any>(`${config.public.apiBase}/v1/kitobchi/home`, {
         query: { limit: 10 }
       }).catch(() => null),
@@ -193,17 +244,81 @@ const { data: pageData } = await useAsyncData('homepage-data', async () => {
       // kategoriya soni ko'paysa ham xavfsiz).
       $fetch<any>(`${config.public.apiBase}/v1/kitobchi/products/books-by-category`, {
         query: { type: 'recommended', category_limit: 10, per_category: 10 }
+      }).catch(() => null),
+      // Mobil "Barcha mahsulotlar" bo'limining 1-sahifasi — real katalog
+      // qidiruv endpointi (catalog/index.vue'dagi bilan bir xil), faqat
+      // kategoriya/qidiruv filtrisiz — piyola mobilidagi kabi barcha
+      // kitoblarni (kategoriyalarga bo'lmasdan) ommabop tartibda beradi.
+      $fetch<any>(`${config.public.apiBase}/v1/kitobchi/search/`, {
+        query: { type: 'book', sort: 'popular', page: 1 }
       }).catch(() => null)
     ])
-    return { home, cat, catRows }
+    return { home, cat, catRows, mobileFirst }
   } catch (e) {
-    return { home: null, cat: null, catRows: null }
+    return { home: null, cat: null, catRows: null, mobileFirst: null }
   }
 })
 
 const homeRes = computed(() => pageData.value?.home)
 const catRes = computed(() => pageData.value?.cat)
 const categoryRows = computed(() => pageData.value?.catRows?.data || [])
+
+// ====== Mobil "Barcha mahsulotlar" cheksiz-scroll holati ======
+// computed emas, `ref` — chunki sahifalab (loadMoreMobile orqali)
+// qo'shilib boradigan, mutatsiyalanadigan ro'yxat.
+const mobileFeed = ref<any[]>([])
+const mobileCurrentPage = ref(1)
+const mobileHasMore = ref(false)
+const isMobileLoadingMore = ref(false)
+
+// SSR va client hydration'da bir xil natija uchun: pageData tayyor
+// bo'lgach faqat BIR MARTA (mobileFeed hali bo'sh bo'lganda) to'ldiriladi —
+// shundan keyin foydalanuvchi scroll qilib qo'shgan sahifalar ustidan
+// yozib yubormaydi.
+watchEffect(() => {
+  const first = pageData.value?.mobileFirst
+  if (first && mobileFeed.value.length === 0) {
+    mobileFeed.value = first.data || []
+    mobileHasMore.value = !!first.pagination?.has_more
+  }
+})
+
+async function loadMoreMobile() {
+  if (isMobileLoadingMore.value || !mobileHasMore.value) return
+  isMobileLoadingMore.value = true
+  try {
+    const nextPage = mobileCurrentPage.value + 1
+    const res: any = await $fetch(`${config.public.apiBase}/v1/kitobchi/search/`, {
+      query: { type: 'book', sort: 'popular', page: nextPage }
+    })
+    mobileFeed.value = [...mobileFeed.value, ...(res?.data || [])]
+    mobileHasMore.value = !!res?.pagination?.has_more
+    mobileCurrentPage.value = nextPage
+  } finally {
+    isMobileLoadingMore.value = false
+  }
+}
+
+// Piyoladagi kabi tugmasiz, o'zi scroll qilgani sari yuklanadigan
+// cheksiz-scroll — sentinel elementi ekranga kirganda keyingi sahifa
+// so'raladi. Faqat client'da ishlaydi (IntersectionObserver SSR'da yo'q).
+const mobileSentinel = ref<HTMLElement | null>(null)
+let mobileObserver: IntersectionObserver | null = null
+
+onMounted(() => {
+  if (!mobileSentinel.value || typeof IntersectionObserver === 'undefined') return
+  mobileObserver = new IntersectionObserver((entries) => {
+    if (entries[0]?.isIntersecting) {
+      loadMoreMobile()
+    }
+  }, { rootMargin: '600px 0px' })
+  mobileObserver.observe(mobileSentinel.value)
+})
+
+onBeforeUnmount(() => {
+  mobileObserver?.disconnect()
+  mobileObserver = null
+})
 
 const banners = computed(() => {
   const data = homeRes.value?.data || homeRes.value || {}

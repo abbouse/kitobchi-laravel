@@ -8,6 +8,7 @@
     <AppBottomNav />
     <AuthModal />
     <SearchOverlay />
+    <AppDownloadBottomSheet />
   </div>
 </template>
 

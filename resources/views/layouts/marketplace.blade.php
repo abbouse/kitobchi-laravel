@@ -1295,6 +1295,8 @@
     document.head.appendChild(style);
 </script>
 
+@include('partials.app-download-bottomsheet')
+
 @stack('scripts')
 </body>
 </html>

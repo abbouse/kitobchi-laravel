@@ -48,8 +48,14 @@
 
       <!-- Main Layout: 2 Columns (Piyola 1:1 — lg:grid lg:grid-cols-2 xl:grid-cols-3) -->
       <div class="lg:grid lg:grid-cols-2 xl:grid-cols-3 gap-5 pb-24 lg:pb-0">
-        <!-- Left: Image Gallery — thumbnail rail + main carousel w/ arrows -->
-        <div class="col-span-1 xl:col-span-2 h-full mb-8">
+        <!-- Left: Image Gallery — thumbnail rail + main carousel w/ arrows.
+             MUHIM (2-tuzatish): aspect-ratio ramka o'lchamini ICHKARIDA
+             to'g'ri qildi, lekin TASHQI ustun (`xl:col-span-2` — grid
+             kengligining 2/3 qismi) hali ham cheksiz kenga borishi mumkin
+             edi — katta ekranlarda rasm piyoladagidan (~391px) sezilarli
+             kattaroq chiqardi. Endi butun galereya ustuni piyola nisbatiga
+             yaqin qat'iy maksimal kenglik bilan cheklandi. -->
+        <div class="col-span-1 xl:col-span-2 h-full mb-8 max-w-[520px] mx-auto lg:mx-0">
           <div class="flex flex-col-reverse md:flex-row gap-3 h-full">
             <!-- Thumbnail rail -->
             <div

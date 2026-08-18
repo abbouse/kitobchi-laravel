@@ -1,5 +1,11 @@
 <template>
-  <footer class="relative bg-primary text-white pt-8 md:pt-24 pb-24 overflow-hidden">
+  <!-- MUHIM: foydalanuvchi tasdiqladi — piyolaning mobil bosh sahifasida
+       footer YO'QLIGI xato emas, ATAYLAB shunday qilingan (mobilda pastki
+       navigatsiya — AppBottomNav — asosiy navigatsiya vazifasini o'tayapti,
+       an'anaviy ko'p-ustunli footer esa faqat desktopda kerak). Shu sabab
+       footer endi faqat md+ (planshet/desktop)da ko'rinadi, mobilda esa
+       butunlay yashirilgan — piyola bilan bir xil. -->
+  <footer class="max-md:hidden relative bg-primary text-white pt-8 md:pt-24 pb-24 overflow-hidden">
     <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto relative z-10">
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
         <!-- 1. Umumiy -->
