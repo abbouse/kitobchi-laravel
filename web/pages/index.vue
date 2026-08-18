@@ -69,23 +69,18 @@
     <!-- ====== SECTION 1: YANGI KELGAN KITOBLAR (Faqat Desktopda) ====== -->
     <section v-if="newBooks.length > 0" class="py-4 md:py-6 lg:py-10 max-md:hidden">
       <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
-        <div class="flex justify-between items-center w-full px-1 max-md:mt-4 mb-3 md:mb-5 lg:mb-8">
-          <h2 class="font-bold text-xl md:text-3xl leading-[100%] text-primary m-0 capitalize flex items-center gap-2">
+        <div class="w-full px-1 max-md:mt-4 mb-3 md:mb-5 lg:mb-8">
+          <h2 class="font-bold text-xl md:text-3xl leading-[100%] text-primary m-0 capitalize">
             Yangi kelgan kitoblar
           </h2>
-          <NuxtLink to="/catalog?sort=new" class="text-sm font-semibold text-primary hover:underline flex items-center gap-1">
-            Barchasi
-            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
-          </NuxtLink>
         </div>
 
         <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5 md:gap-4 lg:gap-5 mb-5">
           <ProductCard
-            v-for="(book, idx) in newBooks"
+            v-for="book in newBooks.slice(0, 5)"
             :key="'new-' + book.id"
             :product="book"
             type="book"
-            :class="idx >= 5 ? 'lg:hidden' : ''"
           />
         </div>
 
@@ -103,23 +98,18 @@
     <!-- ====== SECTION 2: TAVSIYA ETAMIZ (Faqat Desktopda) ====== -->
     <section v-if="recommendedBooks.length > 0" class="py-4 md:py-6 lg:py-10 bg-secondary-50 max-md:hidden">
       <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
-        <div class="flex justify-between items-center w-full px-1 max-md:mt-4 mb-3 md:mb-5 lg:mb-8">
-          <h2 class="font-bold text-xl md:text-3xl leading-[100%] text-primary m-0 capitalize flex items-center gap-2">
+        <div class="w-full px-1 max-md:mt-4 mb-3 md:mb-5 lg:mb-8">
+          <h2 class="font-bold text-xl md:text-3xl leading-[100%] text-primary m-0 capitalize">
             Tavsiya etamiz
           </h2>
-          <NuxtLink to="/catalog?sort=popular" class="text-sm font-semibold text-primary hover:underline flex items-center gap-1">
-            Barchasi
-            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
-          </NuxtLink>
         </div>
 
         <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5 md:gap-4 lg:gap-5 mb-5">
           <ProductCard
-            v-for="(book, idx) in recommendedBooks"
+            v-for="book in recommendedBooks.slice(0, 5)"
             :key="'rec-' + book.id"
             :product="book"
             type="book"
-            :class="idx >= 5 ? 'lg:hidden' : ''"
           />
         </div>
 
@@ -134,37 +124,25 @@
       </div>
     </section>
 
-    <!-- ====== KATEGORIYA QATORLARI — FAQAT DESKTOPDA (Piyola 1:1 —
-         "Lyuks parfyum" / "Original parfyum" kabi har bir kategoriya
-         alohida qator). MUHIM: piyolaning jonli mobil bosh sahifasida bu
-         kategoriya qatorlari UMUMAN YO'Q — mobilda kategoriyalarga
-         bo'linmagan, bitta uzluksiz "Barcha Mahsulotlar" cheksiz grid
-         ko'rsatiladi (pastdagi bo'limga qarang). Shu farqni aynan
-         takrorlash uchun bu bo'lim `max-md:hidden` bilan faqat md+ (planshet/
-         desktop)da ko'rinadi. -->
+    <!-- ====== KATEGORIYA QATORLARI — FAQAT DESKTOPDA (5 tadan mahsulot) ====== -->
     <section
       v-for="cat in categoryRows"
       :key="cat.category_id"
       class="py-4 md:py-6 lg:py-10 max-md:hidden"
     >
       <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
-        <div class="flex justify-between items-center w-full px-1 mb-3 md:mb-5 lg:mb-8">
-          <h2 class="font-bold text-xl md:text-4xl leading-[100%] capitalize text-primary m-0">
+        <div class="w-full px-1 mb-3 md:mb-5 lg:mb-8">
+          <h2 class="font-bold text-xl md:text-3xl lg:text-4xl leading-[100%] capitalize text-primary m-0">
             {{ cat.name_uz }}
           </h2>
-          <NuxtLink :to="`/catalog?category=${cat.category_id}`" class="text-sm font-semibold text-primary hover:underline flex items-center gap-1 shrink-0">
-            Barchasi
-            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
-          </NuxtLink>
         </div>
 
         <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5 md:gap-4 lg:gap-5 mb-5">
           <ProductCard
-            v-for="(book, idx) in cat.books"
+            v-for="book in cat.books.slice(0, 5)"
             :key="'cat-' + cat.category_id + '-' + book.id"
             :product="book"
             type="book"
-            :class="idx >= 5 ? 'lg:hidden' : ''"
           />
         </div>
 
@@ -241,7 +219,7 @@ const { data: pageData } = await useAsyncData('homepage-data', async () => {
       // ko'tarildi (backend maksimal 12 bilan cheklaydi — kelajakda
       // kategoriya soni ko'paysa ham xavfsiz).
       $fetch<any>(`${config.public.apiBase}/v1/kitobchi/products/books-by-category`, {
-        query: { type: 'recommended', category_limit: 10, per_category: 10 }
+        query: { type: 'recommended', category_limit: 50, per_category: 5 }
       }).catch(() => null),
       // Mobil "Barcha mahsulotlar" bo'limining 1-sahifasi — real katalog
       // qidiruv endpointi (catalog/index.vue'dagi bilan bir xil), faqat

@@ -911,8 +911,8 @@ class ProductsController extends Controller
             ? $requestedType
             : 'new';
         $page = max(1, (int) $request->query('page', 1));
-        $categoryLimit = max(3, min(12, (int) $request->query('category_limit', 6)));
-        $perCategory = max(4, min(12, (int) $request->query('per_category', 10)));
+        $categoryLimit = max(1, min(100, (int) $request->query('category_limit', 50)));
+        $perCategory = max(1, min(50, (int) $request->query('per_category', 5)));
 
         $cacheKey = "api_books_by_cat_{$type}_{$page}_{$categoryLimit}_{$perCategory}";
         if (!$user) {
