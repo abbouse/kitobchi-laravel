@@ -36,12 +36,117 @@ class UserHandler
             return;
         }
 
+        $keyboard = InlineKeyboardMarkup::make()
+            ->addRow(
+                InlineKeyboardButton::make("📦 Mening buyurtmam", callback_data: "user_faq_order"),
+                InlineKeyboardButton::make("🚚 Yetkazib berish", callback_data: "user_faq_delivery")
+            )
+            ->addRow(
+                InlineKeyboardButton::make("💳 To'lov va Karta", callback_data: "user_faq_payment"),
+                InlineKeyboardButton::make("🎁 Keshbek tizimi", callback_data: "user_faq_cashback")
+            )
+            ->addRow(
+                InlineKeyboardButton::make("📲 Mobil ilova", callback_data: "user_faq_app"),
+                InlineKeyboardButton::make("💬 Operatorga yozish", callback_data: "user_connect_operator")
+            );
+
         $bot->sendMessage(
             "👋 <b>Assalomu alaykum! Kitobchi Support xizmatiga xush kelibsiz.</b>\n\n" .
-            "Savolingiz yoki taklifingizni yozing — operatorlarimiz tez orada javob berishadi.\n\n" .
+            "Quyidagi bo'limlardan keraklisini tanlang yoki to'g'ridan-to'g'ri savolingizni yozib qoldiring:\n\n" .
             "📎 <i>Matn, rasm, ovozli xabar, dumaloq video, hujjat — barchasini yuborishingiz mumkin.</i>",
-            parse_mode: 'HTML'
+            parse_mode: 'HTML',
+            reply_markup: $keyboard
         );
+    }
+
+    public static function handleFaqOrder(Nutgram $bot): void
+    {
+        $cid = $bot->chatId();
+        $orders = SessionService::getCustomerOrders($cid, 3);
+
+        if (!empty($orders)) {
+            $text = "📦 <b>Sizning oxirgi buyurtmalaringiz:</b>\n\n";
+            foreach ($orders as $o) {
+                $text .= "🔹 <b>Buyurtma #{$o['id']}</b>\n";
+                $text .= "  • Summa: <b>{$o['amount']}</b>\n";
+                $text .= "  • Holati: <b>{$o['status']}</b>\n";
+                $text .= "  • Sana: {$o['date']}\n\n";
+            }
+            $text .= "Buyurtma bo'yicha savolingiz bo'lsa, xabar sifatida yozib yuborishingiz mumkin.";
+        } else {
+            $text = "📦 <b>Buyurtma holatini tekshirish:</b>\n\n" .
+                "Buyurtmangiz holatini bilish uchun <b>buyurtma raqamini</b> yoki ro'yxatdan o'tgan <b>telefon raqamingizni</b> yozib yuboring (Masalan: <code>+998901234567</code> yoki <code>#1045</code>).\n\n" .
+                "Operatorlarimiz darhol tekshirib berishadi!";
+        }
+
+        $keyboard = InlineKeyboardMarkup::make()->addRow(
+            InlineKeyboardButton::make("💬 Operatorga yozish", callback_data: "user_connect_operator"),
+            InlineKeyboardButton::make("⬅️ Bosh menyu", callback_data: "user_faq_menu")
+        );
+
+        $bot->sendMessage($text, parse_mode: 'HTML', reply_markup: $keyboard);
+    }
+
+    public static function handleFaqDelivery(Nutgram $bot): void
+    {
+        $text = "🚚 <b>Yetkazib berish xizmati haqida:</b>\n\n" .
+            "• <b>Toshkent shahri bo'yicha:</b> 24 soat ichida eshikkacha yetkaziladi.\n" .
+            "• <b>Viloyat va tuman markazlariga:</b> 2-3 ish kuni ichida ishonchli kurerlik/pochta orqali yetkaziladi.\n\n" .
+            "💰 <i>Yetkazib berish narxi siz tanlagan manzil va hajmga qarab savatchada avtomatik hisoblanadi.</i>";
+
+        $keyboard = InlineKeyboardMarkup::make()->addRow(
+            InlineKeyboardButton::make("💬 Operatorga yozish", callback_data: "user_connect_operator"),
+            InlineKeyboardButton::make("⬅️ Bosh menyu", callback_data: "user_faq_menu")
+        );
+
+        $bot->sendMessage($text, parse_mode: 'HTML', reply_markup: $keyboard);
+    }
+
+    public static function handleFaqPayment(Nutgram $bot): void
+    {
+        $text = "💳 <b>To'lov va Karta ulash yo'riqnomasi:</b>\n\n" .
+            "Ilovamizda yoki saytimizda <b>Uzcard</b> va <b>Humo</b> kartalaringizni bemalol ulab, to'g'ridan-to'g'ri xavfsiz to'lov qilishingiz mumkin.\n\n" .
+            "🔒 Barcha to'lovlar 100% himoyalangan va karta ma'lumotlaringiz maxfiy saqlanadi.\n" .
+            "Agar to'lov o'tmay qolgan bo'lsa, kartangizda SMS-xabarnoma (3DS) yoqilganligini tekshiring yoki chek skrinshotini yuboring.";
+
+        $keyboard = InlineKeyboardMarkup::make()->addRow(
+            InlineKeyboardButton::make("💬 Operatorga yozish", callback_data: "user_connect_operator"),
+            InlineKeyboardButton::make("⬅️ Bosh menyu", callback_data: "user_faq_menu")
+        );
+
+        $bot->sendMessage($text, parse_mode: 'HTML', reply_markup: $keyboard);
+    }
+
+    public static function handleFaqCashback(Nutgram $bot): void
+    {
+        $text = "🎁 <b>Kitobchi Keshbek tizimi:</b>\n\n" .
+            "Har bir amalga oshirgan kitob xaridingizdan shaxsiy balansingizga keshbek qaytadi.\n\n" .
+            "✨ <b>Afzalliklari:</b>\n" .
+            "• Yig'ilgan keshbeklarni keyingi kitob xaridlaringizda chegirma sifatida to'liq ishlatishingiz mumkin!\n" .
+            "• Keshbek balansini ilovadagi Profil bo'limida kuzatib borasiz.";
+
+        $keyboard = InlineKeyboardMarkup::make()->addRow(
+            InlineKeyboardButton::make("💬 Operatorga yozish", callback_data: "user_connect_operator"),
+            InlineKeyboardButton::make("⬅️ Bosh menyu", callback_data: "user_faq_menu")
+        );
+
+        $bot->sendMessage($text, parse_mode: 'HTML', reply_markup: $keyboard);
+    }
+
+    public static function handleFaqApp(Nutgram $bot): void
+    {
+        $text = "📲 <b>Kitobchi rasmiy mobil ilovasi:</b>\n\n" .
+            "Kitoblar xarid qilish, audio kitoblarni tinglash va keshbek to'plash uchun ilovamizni yuklab oling:\n\n" .
+            "🍏 <a href=\"https://apps.apple.com/uz/app/kitobchi/id6753818078\">App Store orqali yuklash (iOS)</a>\n" .
+            "🤖 <a href=\"https://play.google.com/store/apps/details?id=com.kitobchi.kitobchi\">Google Play orqali yuklash (Android)</a>\n" .
+            "🌐 <a href=\"https://kitobchi.com\">Rasmiy veb-sayt: kitobchi.com</a>";
+
+        $keyboard = InlineKeyboardMarkup::make()->addRow(
+            InlineKeyboardButton::make("💬 Operatorga yozish", callback_data: "user_connect_operator"),
+            InlineKeyboardButton::make("⬅️ Bosh menyu", callback_data: "user_faq_menu")
+        );
+
+        $bot->sendMessage($text, parse_mode: 'HTML', reply_markup: $keyboard);
     }
 
     public static function handleHelp(Nutgram $bot): void
@@ -91,11 +196,25 @@ class UserHandler
 
         $ticket = SessionService::getUserActiveTicket($cid);
 
+        // Kontakt (telefon raqam) yuborilgan bo'lsa
+        if ($message->contact) {
+            $phone = $message->contact->phone_number;
+            try {
+                $cleanPhone = preg_replace('/[^\d]/', '', $phone);
+                $matchedUser = \App\Models\User::where('telegram_id', $cid)
+                    ->orWhere('phone_number', 'LIKE', "%$cleanPhone%")
+                    ->first();
+                if ($matchedUser && empty($matchedUser->telegram_id)) {
+                    $matchedUser->update(['telegram_id' => $cid]);
+                }
+            } catch (\Throwable) {}
+        }
+
         // 1. Yangi ticket ochish
         if (!$ticket) {
             $user = $bot->user();
             $name = trim(($user?->first_name ?? '') . ' ' . ($user?->last_name ?? ''));
-            $text = $message->text ?? $message->caption ?? '[Media fayl]';
+            $text = $message->text ?? $message->caption ?? ($message->contact ? "📱 Telefon raqami: {$message->contact->phone_number}" : '[Media fayl]');
 
             try {
                 $ticket = SessionService::createTicket(
@@ -105,10 +224,19 @@ class UserHandler
                     name: $name ?: null
                 );
 
+                if ($message->contact) {
+                    SessionService::updateTicket($ticket->id, ['phone' => $message->contact->phone_number]);
+                }
+
+                $workingHoursNote = "";
+                if (!SessionService::isWorkingHours()) {
+                    $workingHoursNote = "\n\n🌙 <i>Eslatma: Hozir ish vaqtidan tashqari vaqt (09:00 - 22:00). Operatorlarimiz ertalab birinchi bo'lib javob berishadi.</i>";
+                }
+
                 $bot->sendMessage(
                     "✅ <b>Murojaatingiz qabul qilindi!</b>\n🎫 Ticket #<b>{$ticket->id}</b>\n\n" .
                     "Operatorlarimizga xabar berildi. Tez orada javob beramiz ⏳\n" .
-                    "Qo'shimcha ma'lumotlarni yuborishingiz mumkin.\n\n/cancel — Bekor qilish",
+                    "Qo'shimcha ma'lumotlarni yuborishingiz mumkin.{$workingHoursNote}\n\n/cancel — Bekor qilish",
                     parse_mode: 'HTML'
                 );
 

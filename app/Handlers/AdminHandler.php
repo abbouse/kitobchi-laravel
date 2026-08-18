@@ -52,6 +52,8 @@ class AdminHandler
             "/addop [ID] [Ism] — Operator qo'shish\n" .
             "/removeop [ID] — Operatorni o'chirish\n" .
             "/queue — Navbatni ko'rish\n" .
+            "/close [ticket_id] — Bitta ticketni yopish\n" .
+            "/closeall — Barcha ochiq ticketlarni yopish\n" .
             "/allstats — Umumiy statistika\n" .
             "/broadcast [matn] — Barcha mijozlarga e'lon\n";
 
@@ -61,10 +63,54 @@ class AdminHandler
                 InlineKeyboardButton::make("📊 Statistika", callback_data: "admin_view_stats")
             )
             ->addRow(
-                InlineKeyboardButton::make("📋 Navbat (" . count($queue) . ")", callback_data: "op_view_queue")
+                InlineKeyboardButton::make("📋 Navbat (" . count($queue) . ")", callback_data: "op_view_queue"),
+                InlineKeyboardButton::make("🧹 Barchasini yopish", callback_data: "admin_close_all_prompt")
             );
 
         $bot->sendMessage($text, parse_mode: 'HTML', reply_markup: $keyboard);
+    }
+
+    public static function handleCloseAllPrompt(Nutgram $bot): void
+    {
+        $cid = $bot->chatId();
+        if (!self::isAdmin($bot, $cid)) return;
+
+        $count = DB::table('bot_tickets')->whereIn('status', [SessionService::STATUS_QUEUE, SessionService::STATUS_ACTIVE])->count();
+        if ($count === 0) {
+            $bot->sendMessage("📭 Hozirda ochiq yoki navbatda turgan ticketlar yo'q.");
+            return;
+        }
+
+        $keyboard = InlineKeyboardMarkup::make()->addRow(
+            InlineKeyboardButton::make("⚠️ Ha, barchasini yopish ($count ta)", callback_data: "admin_confirm_close_all"),
+            InlineKeyboardButton::make("❌ Bekor qilish", callback_data: "cancel_close")
+        );
+
+        $bot->sendMessage(
+            "⚠️ <b>DIQQAT! Barcha ochiq ticketlarni yopish</b>\n\n" .
+            "Hozirda tizimda <b>{$count} ta</b> ochiq va navbatdagi murojaatlar mavjud.\n" .
+            "Barchasini birdaniga yopishni va operatorlarni bo'shatishni tasdiqlaysizmi?",
+            parse_mode: 'HTML',
+            reply_markup: $keyboard
+        );
+    }
+
+    public static function handleConfirmCloseAll(Nutgram $bot): void
+    {
+        $cid = $bot->chatId();
+        if (!self::isAdmin($bot, $cid)) {
+            $bot->answerCallbackQuery(text: "Ruxsat berilmagan!");
+            return;
+        }
+
+        $closedCount = SessionService::closeAllOpenTickets('admin_bulk_closed');
+
+        $bot->answerCallbackQuery(text: "✅ $closedCount ta ticket yopildi!");
+        try {
+            $bot->editMessageText("✅ <b>Barcha ochiq ticketlar ({$closedCount} ta) muvaffaqiyatli yopildi!</b>\nBarcha operatorlar qayta 🟢 ONLINE holatiga o'tkazildi.", parse_mode: 'HTML');
+        } catch (\Throwable) {
+            $bot->sendMessage("✅ <b>Barcha ochiq ticketlar ({$closedCount} ta) muvaffaqiyatli yopildi!</b>\nBarcha operatorlar qayta 🟢 ONLINE holatiga o'tkazildi.", parse_mode: 'HTML');
+        }
     }
 
     public static function handleHelp(Nutgram $bot): void
@@ -243,6 +289,26 @@ class AdminHandler
         }
 
         $bot->sendMessage("✅ <b>Broadcast yakunlandi:</b>\n📤 Muvaffaqiyatli: $sent ta\n❌ Yetkazilmadi: $failed ta", parse_mode: 'HTML');
+    }
+
+    public static function handleSetupMenu(Nutgram $bot): void
+    {
+        $cid = $bot->chatId();
+        if (!self::isAdmin($bot, $cid)) return;
+
+        try {
+            // 1. Default (Foydalanuvchilar) menyusi
+            $bot->setMyCommands([
+                \SergiX44\Nutgram\Telegram\Types\Command\BotCommand::make('start', '🚀 Botni ishga tushirish'),
+                \SergiX44\Nutgram\Telegram\Types\Command\BotCommand::make('help', 'ℹ️ Yordam va ma\'lumot'),
+                \SergiX44\Nutgram\Telegram\Types\Command\BotCommand::make('cancel', '❌ Faol murojaatni bekor qilish'),
+                \SergiX44\Nutgram\Telegram\Types\Command\BotCommand::make('myid', '🪪 Telegram ID ni ko\'rish'),
+            ], scope: \SergiX44\Nutgram\Telegram\Types\Command\BotCommandScopeDefault::make());
+
+            $bot->sendMessage("✅ <b>Telegram Bot menyu buyruqlari muvaffaqiyatli sozlandi!</b>", parse_mode: 'HTML');
+        } catch (\Throwable $e) {
+            $bot->sendMessage("❌ Menyu sozlashda xatolik: " . htmlspecialchars($e->getMessage()));
+        }
     }
 
     public static function handleMessage(Nutgram $bot): void

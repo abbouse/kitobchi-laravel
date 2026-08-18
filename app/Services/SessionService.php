@@ -196,6 +196,39 @@ class SessionService
         }
     }
 
+    /**
+     * Barcha ochiq va navbatdagi ticketlarni bir vaqtda yopish (Admin uchun).
+     */
+    public static function closeAllOpenTickets(string $reason = 'admin_bulk_closed'): int
+    {
+        Log::info("[SessionService] closeAllOpenTickets boshlandi", ['reason' => $reason]);
+
+        $count = DB::table('bot_tickets')
+            ->whereIn('status', [self::STATUS_QUEUE, self::STATUS_ACTIVE])
+            ->count();
+
+        if ($count === 0) return 0;
+
+        DB::table('bot_tickets')
+            ->whereIn('status', [self::STATUS_QUEUE, self::STATUS_ACTIVE])
+            ->update([
+                'status'       => self::STATUS_CLOSED,
+                'close_reason' => $reason,
+                'closed_at'    => now(),
+                'updated_at'   => now(),
+            ]);
+
+        // Barcha band bo'lgan operatorlarni qayta online qilish
+        DB::table('bot_operators')
+            ->where('status', self::OP_BUSY)
+            ->update([
+                'status'     => self::OP_ONLINE,
+                'updated_at' => now(),
+            ]);
+
+        return $count;
+    }
+
     // ─── ILOVALAR VA XABARLAR ──────────────────────────────────────────────────
 
     public static function saveAttachment(
@@ -401,54 +434,305 @@ class SessionService
 
     public static function getStats(int $operatorId): object
     {
-        return DB::table('bot_operator_stats')->where('operator_id', $operatorId)->first()
-            ?? (object) ['handled' => 0, 'closed' => 0, 'total_rated' => 0, 'avg_rating' => 0];
+        // 1. bot_tickets jadvalidan jonli hisoblash
+        $handled = DB::table('bot_tickets')->where('operator_id', $operatorId)->count();
+        $closed  = DB::table('bot_tickets')->where('operator_id', $operatorId)->whereIn('status', [self::STATUS_CLOSED, self::STATUS_RATED])->count();
+        $active  = DB::table('bot_tickets')->where('operator_id', $operatorId)->where('status', self::STATUS_ACTIVE)->count();
+
+        $todayClosed = DB::table('bot_tickets')
+            ->where('operator_id', $operatorId)
+            ->whereIn('status', [self::STATUS_CLOSED, self::STATUS_RATED])
+            ->whereDate('closed_at', now()->toDateString())
+            ->count();
+
+        $ratedCount = DB::table('bot_tickets')->where('operator_id', $operatorId)->whereNotNull('rating')->count();
+        $avgRating  = DB::table('bot_tickets')->where('operator_id', $operatorId)->whereNotNull('rating')->avg('rating') ?: 0;
+
+        // 2. bot_operator_stats jadvalidagi ma'lumotlarni hisobga olish
+        $statsRow = DB::table('bot_operator_stats')->where('operator_id', $operatorId)->first();
+        if ($statsRow) {
+            $handled = max($handled, (int) $statsRow->handled);
+            $closed  = max($closed, (int) $statsRow->closed);
+            if ((int) $statsRow->total_rated > $ratedCount) {
+                $ratedCount = (int) $statsRow->total_rated;
+                $avgRating  = (float) $statsRow->avg_rating;
+            }
+        }
+
+        return (object) [
+            'handled'      => $handled,
+            'closed'       => $closed,
+            'active'       => $active,
+            'today_closed' => $todayClosed,
+            'total_rated'  => $ratedCount,
+            'avg_rating'   => round((float) $avgRating, 2),
+        ];
+    }
+
+    public static function getTicketUserMessages(int $ticketId): array
+    {
+        return DB::table('bot_ticket_messages')
+            ->where('ticket_id', $ticketId)
+            ->where('sent_by', 'user')
+            ->orderBy('created_at', 'asc')
+            ->get()
+            ->toArray();
     }
 
     // ─── TEZKOR JAVOBLAR (QUICK REPLIES / CANNED RESPONSES) ───────────────────
 
-    public static function getQuickReplies(): array
+    public static function getQuickReplyCategories(): array
     {
         return [
-            'greeting' => [
-                'title' => '👋 Salomlashish',
-                'text'  => "Assalomu alaykum! Kitobchi mijozlarni qo'llab-quvvatlash xizmati. Sizga qanday yordam bera olaman?",
-            ],
-            'order_status' => [
-                'title' => '📦 Buyurtma holati',
-                'text'  => "Buyurtmangiz holatini tekshirish uchun iltimos buyurtma raqamingizni yoki ro'yxatdan o'tgan telefon raqamingizni yuboring.",
-            ],
-            'payment' => [
-                'title' => '💳 To\'lov ma\'lumoti',
-                'text'  => "To'lov Click, Payme yoki karta orqali amalga oshiriladi. Agar to'lovda muammo bo'lsa, chek skrinshotini yuborishingiz mumkin.",
-            ],
-            'delivery' => [
-                'title' => '🚚 Yetkazib berish',
-                'text'  => "Toshkent shahri bo'yicha yetkazib berish 24 soat ichida, viloyatlarga 2-3 ish kuni ichida amalga oshiriladi.",
-            ],
-            'wait' => [
-                'title' => '⏳ Kuting',
-                'text'  => "Ma'lumotlaringizni tekshirmoqdaman, iltimos bir necha daqiqa kuting...",
-            ],
-            'app' => [
-                'title' => '📱 Ilova havolasi',
-                'text'  => "Kitobchi mobil ilovasini yuklab oling:\niOS: App Store\nAndroid: Google Play Store",
-            ],
-            'farewell' => [
-                'title' => '🙏 Xayrlashuv',
-                'text'  => "Murojaatingiz uchun rahmat! Agar boshqa savollar bo'lsa, bemalol murojaat qiling. Kutingiz hayrli o'tsin!",
-            ],
+            'payment'  => ['title' => '💳 To\'lov va Karta', 'emoji' => '💳'],
+            'delivery' => ['title' => '🚚 Yetkazib berish',  'emoji' => '🚚'],
+            'order'    => ['title' => '📦 Buyurtma',         'emoji' => '📦'],
+            'app'      => ['title' => '📱 Mobil ilova',      'emoji' => '📱'],
+            'cashback' => ['title' => '🎁 Keshbek',          'emoji' => '🎁'],
+            'info'     => ['title' => '📍 Ish vaqti/Manzil', 'emoji' => '📍'],
+            'general'  => ['title' => '💬 Xushmuomalalik',   'emoji' => '💬'],
         ];
     }
 
-    // ─── YORDAMCHILAR ─────────────────────────────────────────────────────────
+    public static function getQuickReplies(?string $category = null): array
+    {
+        $all = [
+            // 💳 To'lov va Karta
+            'payment_card' => [
+                'category' => 'payment',
+                'title'    => '💳 Karta orqali to\'lov (Uzcard/Humo)',
+                'summary'  => 'Uzcard va Humo kartalari orqali to\'lov haqida',
+                'text'     => "💳 <b>To'lov usuli haqida:</b>\n\nIlovamizda yoki saytimizda <b>Uzcard</b> va <b>Humo</b> kartalaringizni bemalol ulab, to'g'ridan-to'g'ri xavfsiz to'lov qilishingiz mumkin.\n\n🔒 Barcha to'lovlar xavfsiz himoyalangan va karta ma'lumotlaringiz maxfiy saqlanadi.",
+            ],
+            'payment_problem' => [
+                'category' => 'payment',
+                'title'    => '⚠️ To\'lovda muammo',
+                'summary'  => 'To\'lov o\'tmay qolganda',
+                'text'     => "⚠️ <b>To'lov amalga oshmay qolgan bo'lsa:</b>\n\n1. Kartangizda SMS-xabarnoma (3DS) yoqilganligini tekshiring.\n2. Mablag' yetarli ekanligiga ishonch hosil qiling.\n3. Agar pul yechilib, buyurtma faollashmagan bo'lsa, to'lov cheki skrinshotini shu yerga yuboring — darhol tekshirib beramiz!",
+            ],
+
+            // 🚚 Yetkazib berish
+            'delivery_terms' => [
+                'category' => 'delivery',
+                'title'    => '🚚 Yetkazib berish muddatlari',
+                'summary'  => 'Toshkent va viloyatlarga yetkazish vaqtlari',
+                'text'     => "🚚 <b>Yetkazib berish xizmati:</b>\n\n• <b>Toshkent shahri bo'yicha:</b> 24 soat ichida eshikkacha yetkaziladi.\n• <b>Viloyat va tuman markazlariga:</b> 2-3 ish kuni ichida ishonchli kurerlik xizmati orqali yetkaziladi.",
+            ],
+            'delivery_price' => [
+                'category' => 'delivery',
+                'title'    => '💰 Yetkazib berish narxi',
+                'summary'  => 'Yetkazish narxlari va bepul yetkazish',
+                'text'     => "💰 <b>Yetkazib berish narxi:</b>\n\nYetkazib berish narxi siz tanlagan manzil va buyurtma hajmiga qarab savatchada avtomatik hisoblanadi.\n\n🎁 Shuningdek, ma'lum miqdordagi xaridlar uchun bepul yetkazib berish aksiyalari mavjud.",
+            ],
+
+            // 📦 Buyurtma
+            'order_tracking' => [
+                'category' => 'order',
+                'title'    => '🔍 Buyurtma holatini tekshirish',
+                'summary'  => 'Buyurtma raqamini so\'rash',
+                'text'     => "📦 <b>Buyurtmangiz holatini tekshirish uchun:</b>\n\nIltimos, <b>buyurtma raqamingizni</b> yoki ro'yxatdan o'tgan <b>telefon raqamingizni</b> yozib yuboring. Darhol tekshirib, xabar beramiz.",
+            ],
+            'order_cancel' => [
+                'category' => 'order',
+                'title'    => '❌ Buyurtmani bekor qilish',
+                'summary'  => 'Buyurtmani bekor qilish tartibi',
+                'text'     => "❌ <b>Buyurtmani bekor qilish:</b>\n\nBuyurtmangiz hali kurerga topshirilmagan bo'lsa, uni bekor qilishimiz mumkin. Iltimos, buyurtma raqamingizni yuboring.",
+            ],
+
+            // 📱 Mobil ilova
+            'app_download' => [
+                'category' => 'app',
+                'title'    => '📲 Mobil ilovani yuklash',
+                'summary'  => 'App Store va Google Play rasmiy havolasi',
+                'text'     => "📲 <b>Kitobchi rasmiy mobil ilovasi:</b>\n\nKitoblar xarid qilish, audio kitoblarni tinglash va keshbek to'plash uchun mobil ilovamizdan foydalaning!\n\n🍏 <a href=\"https://apps.apple.com/uz/app/kitobchi/id6753818078\">App Store orqali yuklash (iOS)</a>\n🤖 <a href=\"https://play.google.com/store/apps/details?id=com.kitobchi.kitobchi\">Google Play orqali yuklash (Android)</a>\n🌐 <a href=\"https://kitobchi.com\">Rasmiy veb-sayt: kitobchi.com</a>",
+            ],
+
+            // 🎁 Keshbek
+            'cashback_info' => [
+                'category' => 'cashback',
+                'title'    => '🎁 Keshbek tizimi haqida',
+                'summary'  => 'Keshbek qanday to\'planadi va ishlatiladi',
+                'text'     => "🎁 <b>Kitobchi Keshbek tizimi:</b>\n\nHar bir amalga oshirgan xaridingizdan shaxsiy balansingizga keshbek hisoblanadi. To'plangan keshbek mablag'larini keyingi kitob xaridlaringizda chegirma sifatida to'liq ishlatishingiz mumkin!",
+            ],
+
+            // 📍 Ish tartibi
+            'work_hours' => [
+                'category' => 'info',
+                'title'    => '⏰ Ish tartibi va aloqa',
+                'summary'  => 'Qo\'llab-quvvatlash ish vaqti',
+                'text'     => "⏰ <b>Ish tartibimiz:</b>\n\nMijozlarni qo'llab-quvvatlash xizmati har kuni <b>09:00 dan 22:00 gacha</b> uzluksiz xizmat ko'rsatadi.\n\nIlovamiz va saytimiz orqali buyurtmalarni esa 24/7 istalgan vaqtda berishingiz mumkin.",
+            ],
+
+            // 💬 Xushmuomalalik
+            'greeting' => [
+                'category' => 'general',
+                'title'    => '👋 Salomlashish',
+                'summary'  => 'Xush kelibsiz xabari',
+                'text'     => "Assalomu alaykum! Kitobchi mijozlarni qo'llab-quvvatlash xizmati. Sizga qanday yordam bera olaman? 😊",
+            ],
+            'waiting' => [
+                'category' => 'general',
+                'title'    => '⏳ Kuting (Tekshirilmoqda)',
+                'summary'  => 'Ma\'lumot tekshirilayotgani haqida',
+                'text'     => "⏳ <b>Ma'lumotlaringizni tekshirmoqdaman</b>, iltimos bir necha daqiqa kuting...",
+            ],
+            'farewell' => [
+                'category' => 'general',
+                'title'    => '🙏 Xayrlashuv va tilaklar',
+                'summary'  => 'Rahmat va tilak',
+                'text'     => "Murojaatingiz uchun rahmat! Kitobchi bilan mutolaadan rohatlaning. Kuningiz xayrli va unumli o'tsin! 🙏📚",
+            ],
+        ];
+
+        if ($category) {
+            return array_filter($all, fn($item) => ($item['category'] ?? '') === $category);
+        }
+
+        return $all;
+    }
+
+    // ─── YORDAMCHILAR VA CRM INTEGRATSIYASI ────────────────────────────────────
+
+    public static function isWorkingHours(): bool
+    {
+        // Toshkent vaqti (UTC+5)
+        $now = now()->setTimezone('Asia/Tashkent');
+        $hour = (int) $now->format('H');
+        return ($hour >= 9 && $hour < 22);
+    }
+
+    public static function formatOrderStatus(?string $status): string
+    {
+        return match (strtolower((string) $status)) {
+            'pending', 'a'           => '⏳ Kutilmoqda',
+            'packing', 'p'           => '📦 Yig\'ilmoqda',
+            'in_delivery', 'b'       => '🚚 Yetkazilmoqda',
+            'delivered', 'c'         => '✅ Yetkazildi',
+            'customer_received', 'd' => '✨ Qabul qilindi',
+            'cancelled', 'f'         => '❌ Bekor qilingan',
+            'returned', 'r'          => '↩️ Qaytarilgan',
+            default                  => $status ?: 'Yangi',
+        };
+    }
+
+    public static function getCustomerInfo(int $telegramId, ?string $username = null, ?string $phone = null): ?array
+    {
+        try {
+            // 1. telegram_id bo'yicha qidirish
+            $user = \App\Models\User::where('telegram_id', $telegramId)->first();
+
+            // 2. Agar topilmasa, telegram_username yoki username bo'yicha qidirish
+            if (!$user && $username) {
+                $cleanUser = ltrim($username, '@');
+                $user = \App\Models\User::where('telegram_username', $cleanUser)
+                    ->orWhere('username', $cleanUser)
+                    ->first();
+
+                // Avtomatik bog'lab qo'yish
+                if ($user && empty($user->telegram_id)) {
+                    $user->update(['telegram_id' => $telegramId]);
+                }
+            }
+
+            // 3. Agar topilmasa va telefon bo'lsa, telefon bo'yicha qidirish
+            if (!$user && $phone) {
+                $cleanPhone = preg_replace('/[^\d]/', '', $phone);
+                if (strlen($cleanPhone) >= 9) {
+                    $user = \App\Models\User::where('phone_number', 'LIKE', "%$cleanPhone%")->first();
+                    if ($user && empty($user->telegram_id)) {
+                        $user->update(['telegram_id' => $telegramId]);
+                    }
+                }
+            }
+
+            if (!$user) return null;
+
+            $soldsCount = \App\Models\Sold::where('user_id', $user->id)->count();
+            $totalSpent = \App\Models\Sold::where('user_id', $user->id)
+                ->whereIn('status_code', ['delivered', 'customer_received'])
+                ->sum('amount');
+
+            $lastOrder = \App\Models\Sold::where('user_id', $user->id)->latest()->first();
+
+            $lastOrderInfo = null;
+            if ($lastOrder) {
+                $statusVal = $lastOrder->status_code instanceof \App\Enums\OrderStatusCode
+                    ? $lastOrder->status_code->value
+                    : ($lastOrder->status_code ?: $lastOrder->status);
+
+                $lastOrderInfo = [
+                    'id'            => $lastOrder->id,
+                    'amount'        => number_format((float) ($lastOrder->amount ?? 0), 0, '', ' ') . " so'm",
+                    'status'        => self::formatOrderStatus($statusVal),
+                    'delivery_type' => $lastOrder->deliveryType ?? 'Standart',
+                    'date'          => \Carbon\Carbon::parse($lastOrder->created_at)->format('d.m.Y H:i'),
+                ];
+            }
+
+            return [
+                'user_id'      => $user->id,
+                'name'         => trim(($user->name ?? '') . ' ' . ($user->lastname ?? '')),
+                'username'     => $user->username ?: $user->telegram_username,
+                'phone'        => $user->phone_number,
+                'cashback'     => number_format((float) ($user->cashback ?? 0), 0, '', ' ') . " so'm",
+                'total_spent'  => number_format((float) $totalSpent, 0, '', ' ') . " so'm",
+                'orders_count' => $soldsCount,
+                'registered'   => \Carbon\Carbon::parse($user->created_at)->format('d.m.Y'),
+                'last_order'   => $lastOrderInfo,
+            ];
+        } catch (\Throwable $e) {
+            Log::warning("[SessionService] getCustomerInfo xatosi: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    public static function getCustomerOrders(int $telegramId, int $limit = 3): array
+    {
+        try {
+            $user = \App\Models\User::where('telegram_id', $telegramId)->first();
+            if (!$user) return [];
+
+            return \App\Models\Sold::where('user_id', $user->id)
+                ->latest()
+                ->take($limit)
+                ->get()
+                ->map(function ($o) {
+                    $statusVal = $o->status_code instanceof \App\Enums\OrderStatusCode
+                        ? $o->status_code->value
+                        : ($o->status_code ?: $o->status);
+
+                    return [
+                        'id'     => $o->id,
+                        'amount' => number_format((float) ($o->amount ?? 0), 0, '', ' ') . " so'm",
+                        'status' => self::formatOrderStatus($statusVal),
+                        'date'   => \Carbon\Carbon::parse($o->created_at)->format('d.m.Y H:i'),
+                    ];
+                })
+                ->toArray();
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+
+    public static function saveInternalNote(int $ticketId, int $operatorId, string $noteText): void
+    {
+        self::saveMessage(
+            ticketId: $ticketId,
+            sentBy: 'operator',
+            message: $noteText,
+            messageType: 'note',
+            operatorId: $operatorId,
+            telegramActorId: $operatorId,
+            isDelivered: true
+        );
+    }
 
     public static function formatUser(?string $name, ?string $username, int $id): string
     {
         $parts = [];
         if ($name)     $parts[] = e($name);
         if ($username) $parts[] = "@" . e($username);
-        if (!$parts)   $parts[] = "ID: <code>$id</code>";
-        return implode(' · ', $parts);
+        $parts[] = "(ID: <code>$id</code>)";
+        return implode(' ', $parts);
     }
 }

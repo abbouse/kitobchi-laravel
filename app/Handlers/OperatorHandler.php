@@ -127,7 +127,14 @@ class OperatorHandler
             $text .= "   💬 <i>" . htmlspecialchars($preview) . "</i>\n\n";
 
             $keyboard->addRow(
-                InlineKeyboardButton::make("✋ #{$ticket->id} ni qabul qilish", callback_data: "take_ticket:{$ticket->id}")
+                InlineKeyboardButton::make("✋ #{$ticket->id} Qabul qilish", callback_data: "take_ticket:{$ticket->id}"),
+                InlineKeyboardButton::make("🔴 Yopish", callback_data: "confirm_close:{$ticket->id}")
+            );
+        }
+
+        if (count($queue) > 1) {
+            $keyboard->addRow(
+                InlineKeyboardButton::make("🧹 Barcha navbatni tozalash", callback_data: "admin_close_queue_prompt")
             );
         }
 
@@ -177,7 +184,7 @@ class OperatorHandler
     public static function handleCurrent(Nutgram $bot): void
     {
         $cid = $bot->chatId();
-        if (!self::isOperator($bot, $cid)) return;
+        if (!self::isOperator($bot, $cid) && !SessionService::isAdmin($cid)) return;
 
         $ticket = SessionService::getOperatorActiveTicket($cid);
         if (!$ticket) {
@@ -187,12 +194,26 @@ class OperatorHandler
 
         $userDisplay = SessionService::formatUser($ticket->name, $ticket->username, $ticket->user_id);
         $time        = \Carbon\Carbon::parse($ticket->created_at)->format('d.m.Y H:i');
+        $userMsgs    = SessionService::getTicketUserMessages((int) $ticket->id);
 
         $text  = "🎫 <b>Faol murojaat #{$ticket->id}</b>\n\n";
         $text .= "👤 Mijoz: $userDisplay\n";
         $text .= "🆔 Telegram ID: <code>{$ticket->user_id}</code>\n";
-        $text .= "🕐 Boshlangan: $time\n";
-        $text .= "📝 Dastlabki xabar: <i>" . htmlspecialchars($ticket->first_msg ?? '') . "</i>\n\n";
+        $text .= "🕐 Boshlangan: $time\n\n";
+
+        if (count($userMsgs) <= 1) {
+            $text .= "📝 <b>Dastlabki xabar:</b> <i>" . htmlspecialchars($ticket->first_msg ?? '') . "</i>\n\n";
+        } else {
+            $text .= "📜 <b>Mijoz yozgan barcha xabarlar (" . count($userMsgs) . " ta):</b>\n";
+            foreach ($userMsgs as $idx => $m) {
+                $mTime = \Carbon\Carbon::parse($m->created_at)->format('H:i');
+                $body  = htmlspecialchars($m->message ?? '[' . $m->message_type . ']');
+                $num   = ($idx + 1);
+                $text .= "  {$num}. <i>($mTime)</i> {$body}\n";
+            }
+            $text .= "\n";
+        }
+
         $text .= "Xabar yozsangiz, to'g'ridan-to'g'ri mijozga yetkaziladi.";
 
         $keyboard = InlineKeyboardMarkup::make()
@@ -208,14 +229,22 @@ class OperatorHandler
         $bot->sendMessage($text, parse_mode: 'HTML', reply_markup: $keyboard);
     }
 
-    public static function handleEnd(Nutgram $bot): void
+    public static function handleEnd(Nutgram $bot, ?int $targetTicketId = null): void
     {
         $cid = $bot->chatId();
-        if (!self::isOperator($bot, $cid)) return;
+        if (!self::isOperator($bot, $cid) && !SessionService::isAdmin($cid)) return;
 
-        $ticket = SessionService::getOperatorActiveTicket($cid);
+        $ticket = null;
+        if ($targetTicketId) {
+            $ticket = SessionService::getTicket($targetTicketId);
+        }
+
         if (!$ticket) {
-            $bot->sendMessage("ℹ️ Sizda hozir faol murojaat yo'q.");
+            $ticket = SessionService::getOperatorActiveTicket($cid);
+        }
+
+        if (!$ticket) {
+            $bot->sendMessage("ℹ️ Sizda hozir faol murojaat yo'q.\nBiror ticketni yopish uchun: /close <code>[ticket_id]</code>", parse_mode: 'HTML');
             return;
         }
 
@@ -231,6 +260,27 @@ class OperatorHandler
             parse_mode: 'HTML',
             reply_markup: $keyboard
         );
+    }
+
+    public static function handleNote(Nutgram $bot, string $noteText): void
+    {
+        $cid = $bot->chatId();
+        if (!self::isOperator($bot, $cid) && !SessionService::isAdmin($cid)) return;
+
+        $ticket = SessionService::getOperatorActiveTicket($cid);
+        if (!$ticket) {
+            $bot->sendMessage("ℹ️ Sizda hozir faol murojaat yo'q.");
+            return;
+        }
+
+        $note = trim($noteText);
+        if ($note === '') {
+            $bot->sendMessage("Foydalanish: /note <code>[Eslatma matni]</code>\n\nMisol: /note Mijoz manzilini Chilonzor deb o'zgartirdi", parse_mode: 'HTML');
+            return;
+        }
+
+        SessionService::saveInternalNote((int) $ticket->id, $cid, $note);
+        $bot->sendMessage("📌 <b>Ichki eslatma saqlandi:</b>\n<i>" . htmlspecialchars($note) . "</i>\n\n🔒 <i>Ushbu eslatma faqat operatorlar va adminlarga ko'rinadi (mijozga bormaydi).</i>", parse_mode: 'HTML');
     }
 
     public static function handleStatus(Nutgram $bot): void
@@ -277,35 +327,72 @@ class OperatorHandler
     public static function handleStats(Nutgram $bot): void
     {
         $cid = $bot->chatId();
-        if (!self::isOperator($bot, $cid)) return;
+        if (!self::isOperator($bot, $cid) && !SessionService::isAdmin($cid)) return;
 
         $stats = SessionService::getStats($cid);
         $stars = $stats->avg_rating > 0
             ? str_repeat('⭐', (int) round($stats->avg_rating)) . " ({$stats->avg_rating} / 5)"
             : "Hali baholanmagan";
 
-        $text  = "📊 <b>Sizning ish ko'rsatkichlaringiz:</b>\n\n";
-        $text .= "📥 Qabul qilingan murojaatlar: <b>{$stats->handled}</b> ta\n";
-        $text .= "✅ Yopilgan murojaatlar: <b>{$stats->closed}</b> ta\n";
-        $text .= "🌟 O'rtacha mijoz bahosi: <b>$stars</b>\n";
-        $text .= "📝 Baholagan mijozlar soni: <b>{$stats->total_rated}</b> ta\n";
+        $activeText = $stats->active > 0 ? "🟢 {$stats->active} ta faol suhbat" : "Yo'q";
+
+        $text  = "📊 <b>Sizning operatorlik ko'rsatkichlaringiz:</b>\n\n";
+        $text .= "📥 Jami qabul qilingan: <b>{$stats->handled} ta</b>\n";
+        $text .= "✅ Jami yopilgan murojaatlar: <b>{$stats->closed} ta</b>\n";
+        $text .= "📅 Bugun yopilgan murojaatlar: <b>{$stats->today_closed} ta</b>\n";
+        $text .= "🎫 Hozirgi holat: <b>{$activeText}</b>\n\n";
+        $text .= "🌟 O'rtacha mijoz bahosi: <b>{$stars}</b>\n";
+        $text .= "📝 Baholagan mijozlar soni: <b>{$stats->total_rated} ta</b>\n";
 
         $bot->sendMessage($text, parse_mode: 'HTML');
     }
 
-    public static function handleQuickReplies(Nutgram $bot): void
+    public static function handleQuickReplies(Nutgram $bot, ?string $category = null): void
     {
         $cid = $bot->chatId();
-        if (!self::isOperator($bot, $cid)) return;
+        if (!self::isOperator($bot, $cid) && !SessionService::isAdmin($cid)) return;
 
         $ticket = SessionService::getOperatorActiveTicket($cid);
-        $replies = SessionService::getQuickReplies();
+        $categories = SessionService::getQuickReplyCategories();
 
-        $text = "⚡ <b>Tezkor javob shablonlari:</b>\n\n";
+        if ($category === null) {
+            $text = "⚡ <b>Tezkor javob shablonlari</b>\n\nKerakli toifani tanlang yoki quyidagi qidiruvdan foydalaning:";
+            $keyboard = InlineKeyboardMarkup::make();
+
+            $row = [];
+            foreach ($categories as $catKey => $cat) {
+                $row[] = InlineKeyboardButton::make("{$cat['title']}", callback_data: "op_canned_cat:{$catKey}");
+                if (count($row) === 2) {
+                    $keyboard->addRow(...$row);
+                    $row = [];
+                }
+            }
+            if (!empty($row)) {
+                $keyboard->addRow(...$row);
+            }
+
+            $keyboard->addRow(
+                InlineKeyboardButton::make("🔍 Inline orqali qidirish", switch_inline_query_current_chat: "")
+            );
+
+            if ($ticket) {
+                $keyboard->addRow(
+                    InlineKeyboardButton::make("🎫 Faol murojaatga qaytish", callback_data: "op_current_ticket")
+                );
+            }
+
+            $bot->sendMessage($text, parse_mode: 'HTML', reply_markup: $keyboard);
+            return;
+        }
+
+        $categoryInfo = $categories[$category] ?? ['title' => 'Shablonlar'];
+        $replies = SessionService::getQuickReplies($category);
+
+        $text = "📂 <b>{$categoryInfo['title']}</b>\n\n";
         $keyboard = InlineKeyboardMarkup::make();
 
         foreach ($replies as $key => $item) {
-            $text .= "<b>{$item['title']}:</b>\n<i>" . htmlspecialchars($item['text']) . "</i>\n\n";
+            $text .= "<b>{$item['title']}:</b>\n<i>" . htmlspecialchars($item['summary'] ?? '') . "</i>\n\n";
             if ($ticket) {
                 $keyboard->addRow(
                     InlineKeyboardButton::make("➡️ {$item['title']} yuborish", callback_data: "op_canned_send:{$key}")
@@ -313,17 +400,57 @@ class OperatorHandler
             }
         }
 
-        if (!$ticket) {
-            $text .= "<i>💡 Faol suhbat mavjud bo'lganda ushbu shablonlarni 1 tugma orqali mijozga yuborishingiz mumkin.</i>";
-        }
+        $keyboard->addRow(
+            InlineKeyboardButton::make("⬅️ Barcha toifalar", callback_data: "op_canned_list")
+        );
 
         $bot->sendMessage($text, parse_mode: 'HTML', reply_markup: $keyboard);
+    }
+
+    public static function handleInlineQuery(Nutgram $bot): void
+    {
+        $query = trim($bot->inlineQuery()?->query ?? '');
+        $userId = $bot->userId();
+
+        if (!SessionService::isOperator($userId) && !SessionService::isAdmin($userId)) {
+            $bot->answerInlineQuery([]);
+            return;
+        }
+
+        $allReplies = SessionService::getQuickReplies();
+        $results = [];
+
+        foreach ($allReplies as $key => $item) {
+            if ($query !== '') {
+                $titleMatch   = str_contains(mb_strtolower($item['title']), mb_strtolower($query));
+                $textMatch    = str_contains(mb_strtolower($item['text']), mb_strtolower($query));
+                $summaryMatch = str_contains(mb_strtolower($item['summary'] ?? ''), mb_strtolower($query));
+                if (!$titleMatch && !$textMatch && !$summaryMatch) {
+                    continue;
+                }
+            }
+
+            $results[] = \SergiX44\Nutgram\Telegram\Types\Inline\InlineQueryResultArticle::make(
+                id: $key,
+                title: $item['title'],
+                input_message_content: \SergiX44\Nutgram\Telegram\Types\Input\InputTextMessageContent::make(
+                    message_text: $item['text'],
+                    parse_mode: 'HTML'
+                ),
+                description: $item['summary'] ?? mb_substr(strip_tags($item['text']), 0, 60)
+            );
+        }
+
+        $bot->answerInlineQuery(array_slice($results, 0, 20), [
+            'cache_time' => 5,
+            'is_personal' => true,
+        ]);
     }
 
     public static function handleSendQuickReply(Nutgram $bot, string $key): void
     {
         $cid = $bot->chatId();
-        if (!self::isOperator($bot, $cid)) return;
+        if (!self::isOperator($bot, $cid) && !SessionService::isAdmin($cid)) return;
 
         $ticket = SessionService::getOperatorActiveTicket($cid);
         if (!$ticket) {
@@ -345,7 +472,7 @@ class OperatorHandler
             app(SupportChatBridgeService::class)->sendReplyToConversation($ticket, $body, $cid);
         } else {
             app(TelegramSupportService::class)->sendChatAction($userId, 'typing');
-            $res = app(TelegramSupportService::class)->sendText($userId, $body, parse_mode: null);
+            $res = app(TelegramSupportService::class)->sendText($userId, $body, parse_mode: 'HTML');
 
             SessionService::saveMessage(
                 ticketId: (int) $ticket->id,
@@ -360,7 +487,7 @@ class OperatorHandler
         }
 
         $bot->answerCallbackQuery(text: "✅ Shablon yuborildi!");
-        $bot->sendMessage("✅ <b>Yuborildi:</b>\n" . htmlspecialchars($body), parse_mode: 'HTML');
+        $bot->sendMessage("✅ <b>Yuborilgan shablon:</b>\n\n" . $body, parse_mode: 'HTML');
     }
 
     public static function handleHistory(Nutgram $bot, ?string $ticketIdParam = null): void
@@ -451,16 +578,25 @@ class OperatorHandler
         $cid      = $bot->chatId();
 
         $ticket = SessionService::getTicket($ticketId);
-        if (!$ticket || ((int) $ticket->operator_id !== $cid && !SessionService::isAdmin($cid))) {
+        if (!$ticket) {
+            $bot->answerCallbackQuery(text: "Ticket topilmadi!");
+            return;
+        }
+
+        if (!SessionService::isOperator($cid) && !SessionService::isAdmin($cid)) {
             $bot->answerCallbackQuery(text: "Ruxsat berilmagan!");
             return;
         }
 
         SessionService::closeTicket($ticketId, 'operator_closed');
-        SessionService::saveSystemMessage($ticketId, "Operator suhbatni yakunladi.");
+        SessionService::saveSystemMessage($ticketId, "Murojaat operator/admin tomonidan yopildi.");
 
-        $bot->answerCallbackQuery(text: "✅ Murojaat yopildi!");
-        $bot->sendMessage("✅ <b>Ticket #$ticketId muvaffaqiyatli yopildi.</b>\nStatusingiz qayta 🟢 ONLINE qilindi.", parse_mode: 'HTML');
+        $bot->answerCallbackQuery(text: "✅ Ticket #$ticketId yopildi!");
+        try {
+            $bot->editMessageText("✅ <b>Ticket #{$ticketId} muvaffaqiyatli yopildi.</b>", parse_mode: 'HTML');
+        } catch (\Throwable) {
+            $bot->sendMessage("✅ <b>Ticket #$ticketId muvaffaqiyatli yopildi.</b>\nStatusingiz qayta 🟢 ONLINE qilindi.", parse_mode: 'HTML');
+        }
 
         if ($ticket->source_type !== 'shop_chat') {
             UserHandler::sendRatingRequest($bot, (int) $ticket->user_id, $ticketId);
@@ -591,6 +727,7 @@ class OperatorHandler
 
         SessionService::saveSystemMessage($ticketId, "Operator suhbatga ulandi.");
         $userDisplay = SessionService::formatUser($ticket->name, $ticket->username, $ticket->user_id);
+        $userMsgs    = SessionService::getTicketUserMessages($ticketId);
 
         $keyboard = InlineKeyboardMarkup::make()
             ->addRow(
@@ -602,13 +739,61 @@ class OperatorHandler
                 InlineKeyboardButton::make("🔴 Suhbatni yopish", callback_data: "confirm_close:$ticketId")
             );
 
+        $crm = SessionService::getCustomerInfo((int) $ticket->user_id, $ticket->username ?? null, $ticket->phone ?? null);
+        $crmText = "";
+        if ($crm) {
+            $crmText .= "📱 <b>Tel:</b> <code>" . ($crm['phone'] ?: 'Kiritilmagan') . "</code>\n";
+            $crmText .= "🎁 <b>Keshbek:</b> {$crm['cashback']} | 🛍 <b>Xaridlar:</b> {$crm['orders_count']} ta ({$crm['total_spent']})\n";
+            if ($crm['last_order']) {
+                $crmText .= "📦 <b>Oxirgi buyurtma:</b> #{$crm['last_order']['id']} ({$crm['last_order']['amount']} · <i>{$crm['last_order']['status']}</i>)\n";
+            }
+            $crmText .= "\n";
+        }
+
         $text  = "✅ <b>Ticket #$ticketId qabul qilindi!</b>\n\n";
         $text .= "👤 Mijoz: $userDisplay\n";
-        $text .= "🆔 ID: <code>{$ticket->user_id}</code>\n\n";
-        $text .= "📝 Dastlabki xabar:\n<i>" . htmlspecialchars($ticket->first_msg ?? '') . "</i>\n\n";
+        $text .= "🆔 Telegram ID: <code>{$ticket->user_id}</code>\n\n";
+        $text .= $crmText;
+
+        if (count($userMsgs) <= 1) {
+            $text .= "📝 <b>Mijoz xabari:</b>\n<i>" . htmlspecialchars($ticket->first_msg ?? '[Media]') . "</i>\n\n";
+        } else {
+            $text .= "📜 <b>Mijoz navbatda yozgan barcha xabarlar (" . count($userMsgs) . " ta):</b>\n";
+            foreach ($userMsgs as $idx => $m) {
+                $time = \Carbon\Carbon::parse($m->created_at)->format('H:i');
+                $body = htmlspecialchars($m->message ?? '[' . $m->message_type . ']');
+                $num  = ($idx + 1);
+                $text .= "  {$num}. <i>($time)</i> {$body}\n";
+            }
+            $text .= "\n";
+        }
+
         $text .= "💬 Endi yozgan barcha xabarlaringiz mijozga yetkaziladi.";
 
         $bot->sendMessage($text, chat_id: $opId, parse_mode: 'HTML', reply_markup: $keyboard);
+
+        // Agar foydalanuvchi navbatda fayl/rasm yuborgan bo'lsa, ularni avtomatik operatorga jo'natish
+        $attachments = SessionService::getTicketAttachments($ticketId);
+        if (!empty($attachments)) {
+            $userAttachments = array_filter($attachments, fn($a) => $a->sent_by === 'user');
+            if (!empty($userAttachments)) {
+                $bot->sendMessage("📎 <b>Mijoz navbatda yuborgan ilovalar (" . count($userAttachments) . " ta):</b>", chat_id: $opId, parse_mode: 'HTML');
+                foreach ($userAttachments as $att) {
+                    try {
+                        match ($att->file_type) {
+                            'photo'      => $bot->sendPhoto(photo: $att->file_id, chat_id: $opId, caption: "👤 Mijoz yuborgan rasm"),
+                            'voice'      => $bot->sendVoice(voice: $att->file_id, chat_id: $opId, caption: "👤 Mijoz ovozli xabari"),
+                            'video_note' => $bot->sendVideoNote(video_note: $att->file_id, chat_id: $opId),
+                            'video'      => $bot->sendVideo(video: $att->file_id, chat_id: $opId, caption: "👤 Mijoz videosi"),
+                            'document'   => $bot->sendDocument(document: $att->file_id, chat_id: $opId, caption: "📄 " . ($att->file_name ?: 'Hujjat')),
+                            'audio'      => $bot->sendAudio(audio: $att->file_id, chat_id: $opId, caption: "🎵 Audio"),
+                            'sticker'    => $bot->sendSticker(sticker: $att->file_id, chat_id: $opId),
+                            default      => null,
+                        };
+                    } catch (\Throwable) {}
+                }
+            }
+        }
 
         // Mijozga xabar berish
         if ($ticket->source_type !== 'shop_chat') {
