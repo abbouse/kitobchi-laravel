@@ -92,7 +92,15 @@
                   </svg>
                 </button>
 
-                <div class="product-gallery-frame overflow-hidden rounded-xl w-full">
+                <!-- MUHIM (tuzatildi): "product-gallery-frame" klassi hech
+                     qayerda (na shu faylda, na global CSS'da) e'lon
+                     qilinmagan bo'lib chiqdi — ya'ni bu ramka HECH QANDAY
+                     balandlik cheklovisiz edi. Natijada rasm o'zining tabiiy
+                     (asl fayl) o'lchamiga (masalan 884x1142px) qarab
+                     cho'zilib, "juda katta" ko'rinardi. Endi aspect-ratio
+                     bilan piyola kabi nisbatga qat'iy cheklandi (mobil:
+                     kvadrat, desktop: 3:4 portret). -->
+                <div class="product-gallery-frame overflow-hidden rounded-xl w-full aspect-square md:aspect-[3/4]">
                   <div
                     ref="mainTrackEl"
                     class="flex w-full h-full overflow-x-auto no-scrollbar snap-x snap-mandatory"

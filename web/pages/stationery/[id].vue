@@ -92,7 +92,12 @@
                   </svg>
                 </button>
 
-                <div class="product-gallery-frame overflow-hidden rounded-xl w-full">
+                <!-- MUHIM (tuzatildi): "product-gallery-frame" klassi hech
+                     qayerda e'lon qilinmagan edi — ramka balandligi cheksiz
+                     bo'lib, rasm o'z tabiiy o'lchamiga cho'zilib "juda katta"
+                     ko'rinardi. Endi piyola kabi aspect-ratio bilan
+                     cheklandi. -->
+                <div class="product-gallery-frame overflow-hidden rounded-xl w-full aspect-square md:aspect-[3/4]">
                   <img
                     v-if="selectedVariantImage"
                     :src="selectedVariantImage"
