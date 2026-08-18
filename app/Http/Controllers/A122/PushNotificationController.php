@@ -100,6 +100,12 @@ class PushNotificationController extends Controller
                 'body' => $notif->description,
                 'tokens' => $tokens,
                 'data' => ['type' => 'general', 'id' => (string) $notif->id],
+                // MUHIM (tuzatildi): bu sun'iy Request in-process yasalgani
+                // uchun na X-Push-Secret header, na panel auth bor — secretni
+                // shu yerda qo'shmasak, PushController::sendPush() doim 401
+                // "Unauthorized push request" qaytarardi (aynan shu bug
+                // "boshqaruvda push ishlamayapti" muammosining sababi edi).
+                'secret' => \App\Http\Controllers\PushController::sharedSecret(),
             ]);
 
             app(\App\Http\Controllers\PushController::class)->sendPush($pushRequest);

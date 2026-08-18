@@ -12,9 +12,26 @@ use Illuminate\Support\Facades\Log;
 
 class PushController extends Controller
 {
+    /**
+     * MUHIM: A122 va Boshqaruv admin panellari sendPush()ni HAQIQIY HTTP
+     * so'rovi orqali emas, balki dastur ICHIDA (in-process) — yangi
+     * Illuminate\Http\Request obyekti yasab, to'g'ridan-to'g'ri chaqirib —
+     * ishlatadi. Bunday "sun'iy" Request obyektida na X-Push-Secret header
+     * bor, na $request->user('panel') ishlaydi (chunki u haqiqiy HTTP
+     * kernel/middleware orqali o'tmagan) — shu sabab pastdagi avtorizatsiya
+     * tekshiruvi doim 401 "Unauthorized push request" bilan rad etib
+     * kelgan (buning uchun secretni shu yerdan olib, sun'iy so'rovga
+     * qo'shib yuborish kerak — qarang: PushNotificationController::store(),
+     * AdminController::storePushNotification()/resendPushNotification()).
+     */
+    public static function sharedSecret(): string
+    {
+        return (string) config('services.push_secret', env('PUSH_SECRET', 'keywbudcegvc36247c2bc012389ds'));
+    }
+
     public function sendPush(Request $request)
     {
-        $secret = config('services.push_secret', env('PUSH_SECRET', 'keywbudcegvc36247c2bc012389ds'));
+        $secret = self::sharedSecret();
         $providedSecret = $request->header('X-Push-Secret') ?? $request->input('secret');
 
         if (!$request->user('panel') && !hash_equals((string) $secret, (string) $providedSecret)) {

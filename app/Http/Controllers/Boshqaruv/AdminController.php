@@ -2681,6 +2681,12 @@ class AdminController extends Controller
                     'target_mode' => $data['target_mode'],
                     'locale' => $locale,
                 ],
+                // MUHIM (tuzatildi): sun'iy in-process Request'da na
+                // X-Push-Secret header, na panel auth bor — secretsiz
+                // PushController::sendPush() doim 401 "Unauthorized push
+                // request" bilan qaytarardi (bu "push ishlamayapti"
+                // muammosining aynan sababi edi).
+                'secret' => \App\Http\Controllers\PushController::sharedSecret(),
             ]);
 
             $response = app(\App\Http\Controllers\PushController::class)->sendPush($pushRequest);
@@ -2880,6 +2886,9 @@ class AdminController extends Controller
                     'locale' => $locale,
                     'resent_from' => (string) $notification->id,
                 ],
+                // MUHIM (tuzatildi): qarang storePushNotification() dagi
+                // izoh — sun'iy in-process Request uchun secret shart.
+                'secret' => \App\Http\Controllers\PushController::sharedSecret(),
             ]);
 
             $response = app(\App\Http\Controllers\PushController::class)->sendPush($pushRequest);
