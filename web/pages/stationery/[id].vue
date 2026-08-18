@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-dvh bg-white grow" v-if="product">
+  <div class="min-h-dvh bg-secondary-300 md:bg-gray-50 grow" v-if="product">
     <!-- ========================================================================= -->
     <!--  1. MOBIL KO'RINISH (Piyola Market 1:1)                                    -->
     <!-- ========================================================================= -->
@@ -8,40 +8,48 @@
       <div class="bg-white p-4 sm:p-6 rounded-b-2xl">
         <div class="relative">
           <!-- 3:4 Nisbatdagi Galereya Karuseli -->
-          <div class="relative w-full aspect-[3/4] rounded-xl overflow-hidden bg-secondary-50">
+          <div role="region" aria-roledescription="carousel" data-orientation="horizontal" tabindex="0" data-slot="root" class="relative focus:outline-none w-full aspect-[3/4] rounded-xl overflow-hidden bg-white">
             <img
               v-if="selectedVariantImage"
               :src="selectedVariantImage"
               :alt="product.name"
-              class="w-full h-full object-cover aspect-[3/4]"
+              class="w-full h-full object-cover"
               loading="eager"
               draggable="false"
             />
             <div
               v-else
-              ref="mobileTrackEl"
-              class="flex flex-row w-full h-full overflow-x-auto no-scrollbar snap-x snap-mandatory touch-pan-x"
-              @scroll="onMobileTrackScroll"
+              data-slot="viewport"
+              class="overflow-hidden w-full h-full"
             >
               <div
-                v-for="(img, idx) in galleryImages"
-                :key="'mob-img-' + idx"
-                class="min-w-full w-full shrink-0 basis-full flex h-full snap-center items-center justify-center bg-secondary-50"
+                ref="mobileTrackEl"
+                class="flex flex-row w-full h-full overflow-x-auto no-scrollbar snap-x snap-mandatory touch-pan-x"
+                @scroll="onMobileTrackScroll"
               >
-                <img
-                  :src="img"
-                  :alt="product.name"
-                  class="w-full h-full object-cover aspect-[3/4]"
-                  :loading="idx === 0 ? 'eager' : 'lazy'"
-                  draggable="false"
-                />
+                <div
+                  v-for="(img, idx) in galleryImages"
+                  :key="'mob-img-' + idx"
+                  role="group"
+                  aria-roledescription="slide"
+                  data-slot="item"
+                  class="min-w-full w-full shrink-0 basis-full flex h-full snap-center items-center justify-center bg-white"
+                >
+                  <img
+                    :src="img"
+                    :alt="product.name"
+                    class="w-full h-full object-cover"
+                    :loading="idx === 0 ? 'eager' : 'lazy'"
+                    draggable="false"
+                  />
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- Pastki chapdagi Nuqtalar (Dots Pill Indicator) -->
-          <div v-if="!selectedVariantImage && galleryImages.length > 1" class="absolute bottom-3 left-3 z-30 flex items-center pointer-events-auto">
-            <div class="flex items-center gap-1 rounded-full py-1 px-2 bg-white/90 backdrop-blur-xs shadow-xs">
+          <!-- Pastki o'ngdagi Nuqtalar (Dots Pill Indicator) -->
+          <div v-if="!selectedVariantImage && galleryImages.length > 1" class="absolute w-full bottom-0 right-0 p-2 z-20 flex justify-between items-end pointer-events-none">
+            <div class="flex items-center gap-1 rounded-full py-1 px-2 bg-white pointer-events-auto shadow-xs">
               <button
                 v-for="(img, idx) in galleryImages"
                 :key="'mob-dot-' + idx"
@@ -61,16 +69,16 @@
             type="button"
             @click.stop="$router.back()"
             aria-label="arrow left"
-            class="absolute top-3 left-3 z-30 border-none bg-transparent p-0 cursor-pointer"
+            class="absolute top-4 left-4 z-30 border-none bg-transparent p-0 cursor-pointer"
           >
-            <div class="rounded-full backdrop-blur-md flex items-center justify-center bg-white/90 w-10 h-10 shadow-sm transition-transform active:scale-95">
-              <svg class="w-5 h-5 text-neutral-900" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
+            <div class="relative overflow-hidden transition-shadow duration-300 rounded-full hover:shadow-sm hover:shadow-black/10 backdrop-blur-sm flex items-center justify-center bg-white w-10 h-10 shadow-sm text-neutral-900">
+              <svg class="w-5 h-5 text-neutral-900" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/></svg>
             </div>
           </button>
 
-          <!-- Yuqori o'ng: Sevimli va Ulashish oynasimon tugmalari (Glass Pill) -->
-          <div class="absolute top-3 right-3 z-30 flex items-center">
-            <div class="rounded-full backdrop-blur-md flex items-center gap-1.5 bg-white/90 py-1 px-2 shadow-sm">
+          <!-- Yuqori o'ng: Sevimli va Ulashish oynasimon kapsulasi (Glass Pill) -->
+          <div class="absolute top-4 right-4 z-30 flex items-center">
+            <div class="relative overflow-hidden transition-shadow duration-300 rounded-full hover:shadow-sm hover:shadow-black/10 backdrop-blur-sm flex items-center gap-2 bg-white py-1.5 px-2.5 shadow-sm">
               <button
                 type="button"
                 @click.stop="favStore.toggleFavorite(product, 'stationery')"
@@ -78,8 +86,8 @@
                 aria-label="Favorite button"
                 class="w-8 h-8 flex items-center justify-center rounded-full transition-all duration-300 hover:scale-110 active:scale-95 border-none bg-transparent cursor-pointer p-0"
               >
-                <svg class="w-5 h-5" viewBox="0 0 24 24" :fill="isFav ? '#ef4444' : 'none'" :stroke="isFav ? '#ef4444' : '#1e293b'" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/>
+                <svg class="w-5 h-5 transition-colors duration-200" :class="isFav ? 'text-red-500 fill-red-500' : 'text-neutral-800'" viewBox="0 0 24 24" :fill="isFav ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="1.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.312-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/>
                 </svg>
               </button>
               <button
@@ -89,7 +97,7 @@
                 aria-label="share button"
                 class="w-8 h-8 flex items-center justify-center rounded-full transition-all duration-300 hover:scale-110 active:scale-95 border-none bg-transparent cursor-pointer p-0 text-neutral-800"
               >
-                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186a2.25 2.25 0 0 0-3.935-2.186m0-12.814a2.25 2.25 0 1 0 3.933-2.185a2.25 2.25 0 0 0-3.933 2.185"/>
                 </svg>
               </button>
@@ -115,135 +123,145 @@
         </div>
       </div>
 
-      <!-- Kulrang Fonli Bo'lim Kartalari (bg-gray-100 space-y-2 pb-40 pt-2) -->
-      <div class="relative z-20 bg-gray-100 space-y-2 pb-40 pt-2">
+      <!-- Kulrang Fonli Bo'lim Kartalari (bg-secondary-300 space-y-2 pb-44 pt-2) -->
+      <div class="relative z-20 bg-secondary-300 space-y-2 pb-44 pt-2">
         <!-- 1-Karta: Sarlavha, Do'kon nomi va Material -->
-        <div class="w-full px-4 py-4 bg-white">
-          <h1 class="text-lg font-medium text-neutral-900 leading-snug m-0">
-            <span class="font-medium inline-flex items-center text-xs rounded-md px-1.5 py-0.5 bg-secondary-200 gap-1 text-primary mr-1.5 align-middle">
-              <svg class="w-3.5 h-3.5 text-primary" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.403 12.652a3 3 0 0 0 0-5.304a3 3 0 0 0-3.75-3.751a3 3 0 0 0-5.305 0a3 3 0 0 0-3.751 3.75a3 3 0 0 0 0 5.305a3 3 0 0 0 3.75 3.751a3 3 0 0 0 5.305 0a3 3 0 0 0 3.751-3.75Zm-2.546-4.46a.75.75 0 0 0-1.214-.883l-3.483 4.79l-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5Z" clip-rule="evenodd"/></svg>
-              {{ product.seller?.shop_name || 'Kitobchi' }}
-            </span>
-            {{ product.name }}
-          </h1>
-          <div v-if="product.material" class="text-xs text-neutral-500 mt-1.5">
-            Material: <span class="font-semibold text-neutral-800">{{ product.material }}</span>
+        <div class="relative z-20">
+          <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto bg-white py-4 rounded-2xl">
+            <h1 class="text-lg font-medium text-neutral-900 leading-snug m-0">
+              <span class="font-medium inline-flex items-center text-xs rounded-md px-1.5 py-0.5 bg-secondary-200 gap-1 text-primary mr-1.5 align-middle">
+                <svg class="w-3.5 h-3.5 text-primary" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.403 12.652a3 3 0 0 0 0-5.304a3 3 0 0 0-3.75-3.751a3 3 0 0 0-5.305 0a3 3 0 0 0-3.751 3.75a3 3 0 0 0 0 5.305a3 3 0 0 0 3.75 3.751a3 3 0 0 0 5.305 0a3 3 0 0 0 3.751-3.75Zm-2.546-4.46a.75.75 0 0 0-1.214-.883l-3.483 4.79l-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5Z" clip-rule="evenodd"/></svg>
+                {{ product.seller?.shop_name || 'Kitobchi' }}
+              </span>
+              {{ product.name }}
+            </h1>
+            <div v-if="product.material" class="text-xs text-neutral-500 mt-1.5">
+              Material: <span class="font-semibold text-neutral-800">{{ product.material }}</span>
+            </div>
           </div>
         </div>
 
         <!-- 2-Karta: Muddatli to'lov / Naqd to'lov Tablari -->
-        <div class="w-full bg-white p-4">
-          <div role="tablist" class="relative inline-flex bg-secondary-200 rounded-xl p-1 w-full mb-3">
-            <button
-              type="button"
-              role="tab"
-              :aria-selected="paymentTab === 'installment'"
-              @click="paymentTab = 'installment'"
-              :class="[
-                'text-sm px-3 py-1.5 flex-1 font-medium rounded-lg transition-all duration-200 border-none cursor-pointer',
-                paymentTab === 'installment' ? 'bg-white text-gray-900 shadow-xs' : 'bg-transparent text-gray-500'
-              ]"
-            >
-              Muddatli to‘lov
-            </button>
-            <button
-              type="button"
-              role="tab"
-              :aria-selected="paymentTab === 'cash'"
-              @click="paymentTab = 'cash'"
-              :class="[
-                'text-sm px-3 py-1.5 flex-1 font-medium rounded-lg transition-all duration-200 border-none cursor-pointer',
-                paymentTab === 'cash' ? 'bg-white text-gray-900 shadow-xs' : 'bg-transparent text-gray-500'
-              ]"
-            >
-              Naqd to‘lov
-            </button>
-          </div>
-
-          <!-- Muddatli to'lov ma'lumoti -->
-          <div v-if="paymentTab === 'installment'" class="space-y-3">
-            <div>
-              <p class="text-xs text-gray-400 font-normal m-0 mb-1">Muddatli to'lov</p>
-              <div class="inline-flex bg-secondary-200 rounded-xl p-1 gap-1">
-                <button
-                  v-for="m in installmentMonths"
-                  :key="m"
-                  type="button"
-                  @click="selectedMonths = m"
-                  :class="[
-                    'text-xs font-medium rounded-lg px-3 py-1.5 transition-colors border-none cursor-pointer',
-                    selectedMonths === m ? 'bg-white text-gray-900 shadow-xs' : 'bg-transparent text-gray-500'
-                  ]"
-                >
-                  {{ m }} oy
-                </button>
-              </div>
+        <div class="relative z-20">
+          <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto bg-white py-4 rounded-2xl">
+            <div role="tablist" class="relative inline-flex bg-secondary-200 rounded-xl p-1 w-full mb-3">
+              <button
+                type="button"
+                role="tab"
+                :aria-selected="paymentTab === 'installment'"
+                @click="paymentTab = 'installment'"
+                :class="[
+                  'text-sm px-3 py-1.5 flex-1 font-medium rounded-lg transition-all duration-200 border-none cursor-pointer',
+                  paymentTab === 'installment' ? 'bg-white text-gray-900 shadow-xs' : 'bg-transparent text-gray-500'
+                ]"
+              >
+                Muddatli to‘lov
+              </button>
+              <button
+                type="button"
+                role="tab"
+                :aria-selected="paymentTab === 'cash'"
+                @click="paymentTab = 'cash'"
+                :class="[
+                  'text-sm px-3 py-1.5 flex-1 font-medium rounded-lg transition-all duration-200 border-none cursor-pointer',
+                  paymentTab === 'cash' ? 'bg-white text-gray-900 shadow-xs' : 'bg-transparent text-gray-500'
+                ]"
+              >
+                Naqd to‘lov
+              </button>
             </div>
-            <div class="flex items-center justify-between pt-1">
+
+            <!-- Muddatli to'lov ma'lumoti -->
+            <div v-if="paymentTab === 'installment'" class="space-y-3">
               <div>
-                <p class="text-xs text-gray-400 font-normal m-0">Muddatli to'lovga sotib olish</p>
-                <div class="flex items-baseline gap-1 mt-0.5">
-                  <span class="text-lg font-bold text-neutral-900">{{ formatPrice(monthlyForSelected) }}</span>
-                  <span class="text-xs text-gray-500">so‘m/oyiga</span>
+                <p class="text-xs text-gray-400 font-normal m-0 mb-1">Muddatli to'lov</p>
+                <div class="inline-flex bg-secondary-200 rounded-xl p-1 gap-1">
+                  <button
+                    v-for="m in installmentMonths"
+                    :key="m"
+                    type="button"
+                    @click="selectedMonths = m"
+                    :class="[
+                      'text-xs font-medium rounded-lg px-3 py-1.5 transition-colors border-none cursor-pointer',
+                      selectedMonths === m ? 'bg-white text-gray-900 shadow-xs' : 'bg-transparent text-gray-500'
+                    ]"
+                  >
+                    {{ m }} oy
+                  </button>
                 </div>
               </div>
-              <div v-if="discountPercent > 0" class="text-right">
-                <span class="text-xs line-through text-gray-400">{{ formatPrice(product.price) }} so‘m</span>
+              <div class="flex items-center justify-between pt-1">
+                <div>
+                  <p class="text-xs text-gray-400 font-normal m-0">Muddatli to'lovga sotib olish</p>
+                  <div class="flex items-baseline gap-1 mt-0.5">
+                    <span class="text-lg font-bold text-neutral-900">{{ formatPrice(monthlyForSelected) }}</span>
+                    <span class="text-xs text-gray-500">so‘m/oyiga</span>
+                  </div>
+                </div>
+                <div v-if="discountPercent > 0" class="text-right">
+                  <span class="text-xs line-through text-gray-400">{{ formatPrice(product.price) }} so‘m</span>
+                </div>
               </div>
             </div>
-          </div>
 
-          <!-- Naqd to'lov ma'lumoti -->
-          <div v-else class="flex items-center justify-between pt-1">
-            <div>
-              <p class="text-xs text-gray-400 font-normal m-0">Narxi</p>
-              <div class="text-lg font-bold text-neutral-900 mt-0.5">{{ formatPrice(currentPrice) }} so‘m</div>
-            </div>
-            <div v-if="discountPercent > 0" class="text-right">
-              <span class="text-xs line-through text-gray-400 block">{{ formatPrice(product.price) }} so‘m</span>
-              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#ED3131] text-white">-{{ discountPercent }}%</span>
+            <!-- Naqd to'lov ma'lumoti -->
+            <div v-else class="flex items-center justify-between pt-1">
+              <div>
+                <p class="text-xs text-gray-400 font-normal m-0">Narxi</p>
+                <div class="text-lg font-bold text-neutral-900 mt-0.5">{{ formatPrice(currentPrice) }} so‘m</div>
+              </div>
+              <div v-if="discountPercent > 0" class="text-right">
+                <span class="text-xs line-through text-gray-400 block">{{ formatPrice(product.price) }} so‘m</span>
+                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#ED3131] text-white">-{{ discountPercent }}%</span>
+              </div>
             </div>
           </div>
         </div>
 
         <!-- 3-Karta: Sharhlar bloki -->
-        <div class="w-full bg-white p-4 flex flex-col gap-2 items-center text-center">
-          <svg class="w-8 h-8 text-gray-300" viewBox="0 0 20 20" fill="currentColor">
-            <path d="M3.505 2.365A41.369 41.369 0 0 1 9 2c1.863 0 3.697.124 5.495.365c1.247.167 2.18 1.108 2.435 2.268a4.45 4.45 0 0 0-.577-.069a43.141 43.141 0 0 0-4.706 0C9.229 4.696 7.5 6.727 7.5 8.998v2.24c0 1.413.67 2.735 1.76 3.562l-2.98 2.98A.75.75 0 0 1 5 17.25v-3.443c-.501-.048-1-.106-1.495-.172C2.033 13.438 1 12.162 1 10.72V5.28c0-1.441 1.033-2.717 2.505-2.914Z"/>
-            <path d="M14 6c-.762 0-1.52.02-2.271.062C10.157 6.148 9 7.472 9 8.998v2.24c0 1.519 1.147 2.839 2.71 2.935c.214.013.428.024.642.034c.2.009.385.09.518.224l2.35 2.35a.75.75 0 0 0 1.28-.531v-2.07c1.453-.195 2.5-1.463 2.5-2.915V8.998c0-1.526-1.157-2.85-2.729-2.936A41.645 41.645 0 0 0 14 6Z"/>
-          </svg>
-          <h2 class="font-semibold text-xs text-neutral-800 m-0">Hozircha sharhlar yo‘q</h2>
+        <div class="relative z-20">
+          <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto bg-white py-4 rounded-2xl flex flex-col gap-2 items-center text-center">
+            <svg class="w-8 h-8 text-gray-300" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M3.505 2.365A41.369 41.369 0 0 1 9 2c1.863 0 3.697.124 5.495.365c1.247.167 2.18 1.108 2.435 2.268a4.45 4.45 0 0 0-.577-.069a43.141 43.141 0 0 0-4.706 0C9.229 4.696 7.5 6.727 7.5 8.998v2.24c0 1.413.67 2.735 1.76 3.562l-2.98 2.98A.75.75 0 0 1 5 17.25v-3.443c-.501-.048-1-.106-1.495-.172C2.033 13.438 1 12.162 1 10.72V5.28c0-1.441 1.033-2.717 2.505-2.914Z"/>
+              <path d="M14 6c-.762 0-1.52.02-2.271.062C10.157 6.148 9 7.472 9 8.998v2.24c0 1.519 1.147 2.839 2.71 2.935c.214.013.428.024.642.034c.2.009.385.09.518.224l2.35 2.35a.75.75 0 0 0 1.28-.531v-2.07c1.453-.195 2.5-1.463 2.5-2.915V8.998c0-1.526-1.157-2.85-2.729-2.936A41.645 41.645 0 0 0 14 6Z"/>
+            </svg>
+            <h2 class="font-semibold text-xs text-neutral-800 m-0">Hozircha sharhlar yo‘q</h2>
+          </div>
         </div>
 
         <!-- 4-Karta: Mahsulot haqida (Description) -->
-        <div v-if="product.description" class="w-full px-4 py-4 bg-white">
-          <h3 class="text-base font-semibold mb-2 text-neutral-900 m-0">Mahsulot haqida</h3>
-          <div :class="['text-xs text-neutral-600 leading-relaxed mb-2', !isDescExpanded ? 'line-clamp-3' : '']" v-html="product.description"></div>
-          <button
-            type="button"
-            @click="isDescExpanded = !isDescExpanded"
-            class="inline-flex items-center gap-1 text-xs font-semibold text-primary border-none bg-transparent cursor-pointer p-0"
-          >
-            {{ isDescExpanded ? 'Yopish' : 'Batafsil o‘qish' }}
-            <svg class="w-3.5 h-3.5 transition-transform duration-300" :class="isDescExpanded ? '-rotate-90' : ''" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/></svg>
-          </button>
+        <div v-if="product.description" class="relative z-20">
+          <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto bg-white py-4 rounded-2xl">
+            <h3 class="text-base font-semibold mb-2 text-neutral-900 m-0">Mahsulot haqida</h3>
+            <div :class="['text-xs text-neutral-600 leading-relaxed mb-2', !isDescExpanded ? 'line-clamp-3' : '']" v-html="product.description"></div>
+            <button
+              type="button"
+              @click="isDescExpanded = !isDescExpanded"
+              class="inline-flex items-center gap-1 text-xs font-semibold text-primary border-none bg-transparent cursor-pointer p-0"
+            >
+              {{ isDescExpanded ? 'Yopish' : 'Batafsil o‘qish' }}
+              <svg class="w-3.5 h-3.5 transition-transform duration-300" :class="isDescExpanded ? '-rotate-90' : ''" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/></svg>
+            </button>
+          </div>
         </div>
 
         <!-- 5-Karta: Xususiyatlar va tavsif (Specs) -->
-        <div v-if="hasSpecs" class="w-full px-4 py-4 bg-white">
-          <h3 class="text-base font-semibold mb-3 text-neutral-900 m-0">Xususiyatlar va tavsif</h3>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-            <div v-if="product.material" class="p-2.5 rounded-xl bg-secondary-50 flex justify-between items-center">
-              <span class="text-neutral-500">Material:</span>
-              <span class="font-semibold text-neutral-800">{{ product.material }}</span>
-            </div>
-            <div v-if="product.barcode" class="p-2.5 rounded-xl bg-secondary-50 flex justify-between items-center">
-              <span class="text-neutral-500">Barkod:</span>
-              <span class="font-semibold text-neutral-800">{{ product.barcode }}</span>
-            </div>
-            <div v-if="product.category" class="p-2.5 rounded-xl bg-secondary-50 flex justify-between items-center">
-              <span class="text-neutral-500">Kategoriya:</span>
-              <span class="font-semibold text-neutral-800">{{ product.category }}</span>
+        <div v-if="hasSpecs" class="relative z-20">
+          <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto bg-white py-4 rounded-2xl">
+            <h3 class="text-base font-semibold mb-3 text-neutral-900 m-0">Xususiyatlar va tavsif</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+              <div v-if="product.material" class="p-2.5 rounded-xl bg-secondary-50 flex justify-between items-center">
+                <span class="text-neutral-500">Material:</span>
+                <span class="font-semibold text-neutral-800">{{ product.material }}</span>
+              </div>
+              <div v-if="product.barcode" class="p-2.5 rounded-xl bg-secondary-50 flex justify-between items-center">
+                <span class="text-neutral-500">Barkod:</span>
+                <span class="font-semibold text-neutral-800">{{ product.barcode }}</span>
+              </div>
+              <div v-if="product.category" class="p-2.5 rounded-xl bg-secondary-50 flex justify-between items-center">
+                <span class="text-neutral-500">Kategoriya:</span>
+                <span class="font-semibold text-neutral-800">{{ product.category }}</span>
+              </div>
             </div>
           </div>
         </div>
