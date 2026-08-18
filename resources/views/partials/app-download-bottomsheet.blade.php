@@ -10,47 +10,55 @@
     <div id="kcAppDownloadBackdrop" class="kc-bottomsheet-backdrop"></div>
 
     <!-- Bottom Sheet Container -->
-    <div class="kc-bottomsheet-sheet">
+    <div class="kc-bottomsheet-sheet catalog-filter-panel">
         <!-- Drag Handle Pill -->
-        <div class="kc-bottomsheet-pill"></div>
+        <div class="flex justify-center pt-1 pb-4">
+            <div class="w-10 h-1 rounded-full bg-neutral-300" style="width:40px;height:4px;background:#d1d5db;border-radius:999px;margin:0 auto 1rem auto;"></div>
+        </div>
 
         <!-- App Icon Badge (Exact 1:1 Favicon Asset) -->
-        <div class="kc-app-icon-wrap">
-            <img src="{{ asset('favicon.svg') }}" alt="Kitobchi App" class="kc-app-icon" width="64" height="64">
+        <div class="kc-app-icon-wrap" style="display:flex;justify-content:center;margin-bottom:0.75rem;">
+            <img src="{{ asset('favicon.svg') }}" alt="Kitobchi App" class="kc-app-icon" width="64" height="64" style="width:64px;height:64px;border-radius:18px;box-shadow:0 8px 24px rgba(33,120,215,0.25);object-fit:cover;">
         </div>
 
         <!-- Title & Subtitle -->
-        <h3 class="kc-app-title">Kitobchi ilovasini yuklab oling</h3>
-        <p class="kc-app-desc">Mahsulotlarni tezroq ko‘ring, buyurtma bering va aksiyalardan birinchi bo‘lib xabardor bo‘ling.</p>
+        <h3 class="kc-app-title" style="font-size:1.25rem;font-weight:700;text-align:center;color:#111827;margin:0 0 0.5rem 0;">Kitobchi ilovasini yuklab oling</h3>
+        <p class="kc-app-desc" style="font-size:0.875rem;color:#6b7280;text-align:center;line-height:1.45;max-width:300px;margin:0 auto 1.5rem auto;">Mahsulotlarni tezroq ko‘ring, oson buyurtma bering va aksiyalardan birinchi bo‘lib xabardor bo‘ling.</p>
 
         <!-- OS-Specific Store Button (Main Action Card) -->
-        <a id="kcStoreBtn" href="https://apps.apple.com/uz/app/kitobchi/id6753818078" target="_blank" rel="noopener noreferrer" class="kc-store-card">
-            <div class="kc-store-left">
-                <div class="kc-store-icon-box">
-                    <!-- Apple SVG for iOS -->
-                    <svg id="kcAppleIcon" class="kc-store-icon-svg" viewBox="0 0 24 24" fill="currentColor">
+        <a id="kcStoreBtn" href="https://apps.apple.com/uz/app/kitobchi/id6753818078" target="_blank" rel="noopener noreferrer" class="kc-store-card" style="background:#f5f6f8;border:1px solid #e5e7eb;border-radius:18px;padding:0.875rem 1rem;display:flex;align-items:center;justify-content:space-between;text-decoration:none;margin-bottom:0.75rem;">
+            <div class="kc-store-left" style="display:flex;align-items:center;gap:0.875rem;">
+                <!-- Apple Box -->
+                <div id="kcAppleBox" class="kc-store-icon-box" style="width:48px;height:48px;border-radius:14px;background:#000;display:flex;align-items:center;justify-content:center;color:#fff;">
+                    <svg class="kc-store-icon-svg" viewBox="0 0 24 24" fill="currentColor" style="width:28px;height:28px;">
                         <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.37c.61-.75 1.04-1.8 0.92-2.87-.93.04-2.01.63-2.65 1.38-.56.65-1.06 1.71-.92 2.74 1.04.08 2.05-.53 2.65-1.25z"/>
                     </svg>
-                    <!-- Google Play SVG for Android -->
-                    <svg id="kcPlayIcon" class="kc-store-icon-svg" style="display:none;" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M3.609 1.814L13.792 12 3.61 22.186a1.98 1.98 0 0 1-.61-.924V2.738c.15-.36.368-.68.61-.924zm11.242 11.244l2.585 2.586-11.83 6.83 9.245-9.416zm0-2.116L5.606 1.526l11.83 6.83-2.585 2.586zm1.488 1.058l3.433 1.982a1.2 1.2 0 0 1 0 2.036l-3.433 1.982-2.43-2.43 2.43-2.43z"/>
+                </div>
+                <!-- Google Play Box -->
+                <div id="kcPlayBox" class="kc-store-icon-box" style="width:48px;height:48px;border-radius:14px;background:#fff;border:1px solid #e5e7eb;display:none;align-items:center;justify-content:center;">
+                    <svg class="kc-store-icon-svg" viewBox="0 0 512 512" style="width:28px;height:28px;">
+                        <path fill="#00C853" d="M266.1 247.9L53.9 35.7C48.2 41.4 45 49.3 45 58v396c0 8.7 3.2 16.6 8.9 22.3l212.2-228.4z"/>
+                        <path fill="#FFD600" d="M352.4 334.2l-86.3-86.3L53.9 476.3c4.2 4.2 9.9 6.7 16.1 6.7h234.7c18.7 0 35.6-9.8 44.8-25.5l2.9-5.3 0-118z"/>
+                        <path fill="#FF3D00" d="M352.4 177.8L355.3 172.5c-9.2-15.7-26.1-25.5-44.8-25.5H70c-6.2 0-11.9 2.5-16.1 6.7l212.2 228.4 86.3-86.3z"/>
+                        <path fill="#00B0FF" d="M460.9 230.5L352.4 177.8l-86.3 70.1 86.3 86.3 108.5-52.7c13.7-6.7 22.1-20.4 22.1-35.5s-8.4-28.8-22.1-35.5z"/>
                     </svg>
                 </div>
-                <div class="kc-store-meta">
-                    <span class="kc-store-sub">Yuklab olish</span>
-                    <span id="kcStoreName" class="kc-store-name">App Store</span>
+
+                <div class="kc-store-meta" style="text-align:left;">
+                    <span class="kc-store-sub" style="font-size:0.75rem;color:#6b7280;display:block;">Yuklab olish</span>
+                    <span id="kcStoreName" class="kc-store-name" style="font-size:1rem;font-weight:700;color:#111827;display:block;">App Store da ochish</span>
                 </div>
             </div>
             <!-- External ↗ icon -->
-            <div class="kc-store-arrow">
-                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+            <div class="kc-store-arrow" style="color:#9ca3af;">
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 19.5 15-15m0 0H8.25m11.25 0v11.25"/>
                 </svg>
             </div>
         </a>
 
         <!-- Secondary "Keyinroq" Button -->
-        <button id="kcAppDownloadDismissBtn" type="button" class="kc-dismiss-btn">
+        <button id="kcAppDownloadDismissBtn" type="button" class="kc-dismiss-btn" style="width:100%;padding:0.875rem;border-radius:18px;background:#e8eaef;color:#0b0342;font-weight:600;font-size:0.9375rem;border:none;cursor:pointer;">
             Keyinroq
         </button>
     </div>
@@ -284,22 +292,21 @@
         const backdrop = document.getElementById('kcAppDownloadBackdrop');
         const dismissBtn = document.getElementById('kcAppDownloadDismissBtn');
         const storeBtn = document.getElementById('kcStoreBtn');
-        const storeName = document.getElementById('kcStoreName');
-        const appleIcon = document.getElementById('kcAppleIcon');
-        const playIcon = document.getElementById('kcPlayIcon');
+        const appleBox = document.getElementById('kcAppleBox');
+        const playBox = document.getElementById('kcPlayBox');
 
         if (!modal) return;
 
         if (isApple) {
             storeBtn.href = APP_STORE_URL;
-            storeName.textContent = 'App Store';
-            appleIcon.style.display = 'block';
-            playIcon.style.display = 'none';
+            storeName.textContent = 'App Store da ochish';
+            if (appleBox) appleBox.style.display = 'flex';
+            if (playBox) playBox.style.display = 'none';
         } else {
             storeBtn.href = PLAY_STORE_URL;
-            storeName.textContent = 'Google Play';
-            appleIcon.style.display = 'none';
-            playIcon.style.display = 'block';
+            storeName.textContent = 'Google Play da ochish';
+            if (appleBox) appleBox.style.display = 'none';
+            if (playBox) playBox.style.display = 'flex';
         }
 
         setTimeout(() => {

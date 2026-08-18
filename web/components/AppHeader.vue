@@ -1,10 +1,10 @@
 <template>
-  <div>
+  <div :class="[
+    isHomePage ? '' : 'max-md:hidden!',
+    'sticky top-0 z-50 w-full'
+  ]">
     <!-- ====== STICKY HEADER (PiyolaMarket 1:1) ====== -->
-    <header :class="[
-      isHomePage ? '' : 'max-md:hidden!',
-      'layout-sticky-header py-4 bg-white max-md:rounded-b-2xl sticky top-0 z-50 transition-all duration-300'
-    ]">
+    <header class="layout-sticky-header py-3 md:py-4 bg-white max-md:rounded-b-2xl shadow-xs md:shadow-sm transition-all duration-300 w-full">
       <div class="px-4 sm:px-6 lg:px-8 max-w-(--ui-container) mx-auto relative w-full bg-transparent">
         <!-- Desktop Header -->
         <div class="hidden md:flex items-center justify-between w-full gap-6">
