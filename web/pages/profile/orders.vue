@@ -57,7 +57,7 @@
 
           <!-- Loading skeleton -->
           <div v-if="pending" class="space-y-4">
-            <div v-for="n in 4" :key="n" class="animate-pulse bg-secondary-100 h-28 w-full rounded-2xl"></div>
+            <div v-for="n in 4" :key="n" class="shimmer h-28 w-full rounded-2xl"></div>
           </div>
 
           <!-- Error -->

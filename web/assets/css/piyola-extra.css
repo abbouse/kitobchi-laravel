@@ -235,32 +235,36 @@
 }
 
 /* ===================================================================
- * 10) PREMIUM SHIMMER EFFECT / SKELETON LOADING
+ * 10) PREMIUM SHIMMER EFFECT / SKELETON LOADING (Light Wave)
  *     Butun loyiha bo'ylab serverdan yuklanadigan har qanday ma'lumot
- *     uchun o'ta nafis, silliq va professional shimmer effekti.
+ *     uchun o'ta nafis, silliq, qotib qolmaydigan to'lqin effekti.
  * =================================================================== */
-@keyframes kc-shimmer-sweep {
+@keyframes kc-shimmer-wave {
   0% {
-    background-position: -200% 0;
+    background-position: 200% 0;
   }
   100% {
-    background-position: 200% 0;
+    background-position: -200% 0;
   }
 }
 
 .shimmer,
 .kc-shimmer,
-.animate-shimmer {
+.animate-shimmer,
+.skeleton,
+.vacancies-skeleton,
+.ui-skeleton {
   background: linear-gradient(
     90deg,
-    #f3f4f6 0%,
-    #e5e7eb 30%,
-    #f9fafb 50%,
-    #e5e7eb 70%,
-    #f3f4f6 100%
+    #f2f3f5 0%,
+    #f2f3f5 25%,
+    #ffffff 50%,
+    #f2f3f5 75%,
+    #f2f3f5 100%
   ) !important;
-  background-size: 200% 100% !important;
-  animation: kc-shimmer-sweep 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite !important;
+  background-size: 250% 100% !important;
+  animation: kc-shimmer-wave 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite !important;
+  will-change: background-position;
 }
 
 .shimmer-card {
@@ -273,4 +277,5 @@
 .shimmer-pill {
   border-radius: 9999px;
 }
+
 

@@ -79,7 +79,7 @@
 
           <!-- Loading skeleton -->
           <div v-if="pending" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div v-for="n in 4" :key="n" class="animate-pulse bg-secondary-100 h-40 w-full rounded-2xl"></div>
+            <div v-for="n in 4" :key="n" class="shimmer h-40 w-full rounded-2xl"></div>
           </div>
 
           <!-- Error -->
