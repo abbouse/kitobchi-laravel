@@ -52,7 +52,7 @@
     </div>
 
     <!-- ====== MAIN CONTENT ====== -->
-    <main class="max-md:grow h-full md:min-h-dvh max-md:pb-24">
+    <main class="max-md:grow h-full md:min-h-dvh max-md:pb-4">
       <div class="px-4 sm:px-6 lg:px-8 w-full max-w-4xl mx-auto py-2 md:py-8">
         <!-- Desktop Breadcrumb & Title Header -->
         <div class="mb-6 max-md:hidden">
@@ -214,8 +214,8 @@
           </div>
 
           <!-- Bottom Summary Card & Muddatli to'lov (Piyola 1:1) -->
-          <div class="grow flex flex-col justify-end mt-4">
-            <div class="p-4 sm:p-6 rounded-t-2xl md:rounded-2xl bg-white space-y-4 shadow-xs">
+          <div class="grow flex flex-col justify-end mt-4 max-md:sticky max-md:bottom-0 max-md:z-30 max-md:shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
+            <div class="p-4 sm:p-6 rounded-t-2xl md:rounded-2xl bg-white space-y-3 md:space-y-4 shadow-xs">
               <!-- Muddatli to'lovga rasmiylashtirish Toggle Row -->
               <div class="flex items-center justify-between">
                 <h3 class="text-base md:text-xl font-semibold leading-6 text-neutral-900 m-0">Muddatli to‘lovga rasmiylashtirish</h3>

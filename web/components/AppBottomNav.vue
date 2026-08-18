@@ -11,7 +11,7 @@
        maxsus ochroq ko'k rangda (#4C8CE4) — matn esa asosiy (primary)
        rangda, bu piyolaning aynan o'zidagi nuance. -->
   <div
-    v-if="!isProductPage"
+    v-if="!isHiddenPage"
     class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto fixed bottom-4 left-0 right-0 z-40 max-h-15 md:hidden pointer-events-none"
     style="padding-bottom: env(safe-area-inset-bottom, 0px)"
   >
@@ -98,11 +98,12 @@ import { useCartStore } from '~/stores/cart'
 const cartStore = useCartStore()
 const route = useRoute()
 
-// Piyolada mahsulot sahifasida (books/[id].vue, stationery/[id].vue)
-// pastki pill-navigatsiya UMUMAN RENDER QILINMAYDI — uning o'rnini
-// sahifaning o'z "sotib olish" sticky paneli egallaydi (jonli tekshirilib
-// tasdiqlandi: shu sahifada faqat bitta fixed bottom-0 z-60 panel bor,
-// pastki pill-nav DOM'da yo'q). Ilgari ikkalasi bir vaqtda ko'rinib,
-// nav pill sticky panel ostida yashiringan/bosib chiqib qolgan edi.
-const isProductPage = computed(() => route.path.startsWith('/books/') || route.path.startsWith('/stationery/'))
+// Piyolada mahsulot va savatcha sahifalarida (books/[id].vue,
+// stationery/[id].vue, cart/index.vue) pastki pill-navigatsiya
+// UMUMAN RENDER QILINMAYDI — chunki ularda pastda o'zining "buyurtma berish"
+// / "rasmiylashtirish" sticky panellari bor.
+const isHiddenPage = computed(() => {
+  const p = route.path
+  return p === '/cart' || p.startsWith('/books/') || p.startsWith('/stationery/') || p === '/profile/edit' || p.startsWith('/profile/address')
+})
 </script>
