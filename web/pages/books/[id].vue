@@ -287,7 +287,7 @@
     <!-- ========================================================================= -->
     <!--  2. DESKTOP (PC) KO'RINISH (Piyola Market 1:1)                             -->
     <!-- ========================================================================= -->
-    <div class="max-md:hidden py-5">
+    <div class="max-md:hidden py-5 bg-white">
       <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
         <!-- Breadcrumb & Back Arrow -->
         <div class="mb-6">
@@ -296,37 +296,37 @@
               type="button"
               @click="$router.back()"
               class="rounded-md font-medium inline-flex items-center p-2 text-primary hover:bg-primary/10 transition-colors border-none bg-transparent cursor-pointer"
+              aria-label="Orqaga"
             >
               <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
             </button>
             <nav aria-label="breadcrumb" class="relative min-w-0">
               <ol class="flex items-center gap-2 text-sm text-[#8F8FA1]">
-                <li><NuxtLink to="/" class="hover:text-default transition-colors">Asosiy</NuxtLink></li>
+                <li><NuxtLink to="/" class="hover:text-neutral-900 transition-colors">Asosiy</NuxtLink></li>
                 <li class="text-gray-400 text-xs"> / </li>
-                <li><NuxtLink to="/catalog" class="hover:text-default transition-colors">Katalog</NuxtLink></li>
+                <li><NuxtLink to="/catalog" class="hover:text-neutral-900 transition-colors">Katalog</NuxtLink></li>
                 <template v-if="product.category || product.category_id">
                   <li class="text-gray-400 text-xs"> / </li>
                   <li>
-                    <NuxtLink :to="`/catalog?category=${product.category_id || product.category?.id}`" class="hover:text-default transition-colors">
+                    <NuxtLink :to="`/catalog?category=${product.category_id || product.category?.id}`" class="hover:text-neutral-900 transition-colors">
                       {{ product.category?.name_uz || product.category?.name || 'Janr' }}
                     </NuxtLink>
                   </li>
                 </template>
                 <li class="text-gray-400 text-xs"> / </li>
-                <li><span class="font-semibold text-neutral-900 truncate max-w-[320px] inline-block align-bottom">{{ product.name }}</span></li>
+                <li><span class="font-semibold text-neutral-900 truncate max-w-[360px] inline-block align-bottom">{{ product.name }}</span></li>
               </ol>
             </nav>
           </div>
         </div>
 
-        <!-- Asosiy Gridi: Chapda Galereya, O'ngda Ma'lumotlar va Buyurtma -->
+        <!-- Asosiy Gridi: Chapda Galereya, O'ngda Ma'lumotlar va Buyurtma (Piyola 1:1) -->
         <div class="lg:grid lg:grid-cols-2 xl:grid-cols-3 gap-5 items-start">
           <!-- Chap ustun: Galereya (Thumbnails + Asosiy rasm) -->
           <div class="col-span-1 xl:col-span-2 h-full">
             <div class="flex flex-col-reverse md:flex-row gap-3 h-full">
               <!-- Vertikal Thumbnails ro'yxati (3:4 nisbatda, 75x100px) -->
               <div
-                v-if="galleryImages.length > 1"
                 class="flex md:flex-col gap-3 overflow-x-auto md:overflow-y-auto md:overflow-x-hidden w-full md:w-auto md:h-0 md:min-h-full scrollbar-hide py-1 shrink-0"
               >
                 <button
@@ -337,7 +337,7 @@
                   :aria-label="`gallery-image-selector-${idx}`"
                   :class="[
                     'relative shrink-0 w-[75px] h-[100px] rounded-xl overflow-hidden border-2 transition-all duration-300 cursor-pointer bg-secondary-50 aspect-[3/4] p-0',
-                    activeIndex === idx ? 'border-primary-500' : 'border-transparent hover:border-neutral-200'
+                    activeIndex === idx ? 'border-primary' : 'border-transparent hover:border-neutral-200'
                   ]"
                 >
                   <img :src="img" :alt="`${product.name} ${idx + 1}`" class="w-full h-full object-cover aspect-[3/4]" />
@@ -420,15 +420,27 @@
                 </span>
               </div>
 
-              <!-- Sarlavha, Muallif va Narx -->
+              <!-- Sarlavha, Sharhlar, Muallif va Narx -->
               <div class="flex flex-col gap-4">
                 <div>
                   <h1 class="text-2xl font-medium leading-tight text-neutral-900 m-0">{{ product.name }}</h1>
+                  
+                  <!-- Sharhlar va Reyting qatori (Piyola 1:1) -->
+                  <div class="flex items-center gap-4 text-sm mt-2 mb-1">
+                    <div class="flex items-center cursor-pointer hover:opacity-80 transition-opacity" @click="isReviewsOpen = true">
+                      <svg class="w-5 h-5 text-amber-400 fill-amber-400" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                      <span class="ml-1 font-semibold text-neutral-900">{{ productRating }}</span>
+                      <span class="mx-1 text-neutral-400">•</span>
+                      <span class="cursor-pointer text-neutral-600 hover:text-primary transition-colors underline">{{ reviewsCount }} Sharhlar</span>
+                    </div>
+                  </div>
+
                   <div v-if="product.author" class="text-sm font-medium text-neutral-500 mt-1">
                     Muallif: <span class="text-primary font-semibold">{{ product.author }}</span>
                   </div>
+                  
                   <div class="flex flex-col mt-3">
-                    <p class="text-sm text-gray-400 font-normal m-0">Narxi</p>
+                    <p class="text-sm text-gray-400 font-normal m-0 mb-1">Narxi</p>
                     <div class="flex items-center gap-1">
                       <div class="flex items-end gap-3">
                         <span class="text-xl font-bold text-neutral-900">{{ formatPrice(currentPrice) }} so‘m</span>
@@ -608,6 +620,61 @@
         </section>
       </div>
     </div>
+
+    <!-- ====== SHARHLAR MODAL / DRAWER (Piyola 1:1) ====== -->
+    <div
+      v-if="isReviewsOpen"
+      class="fixed inset-0 z-70 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+      @click.self="isReviewsOpen = false"
+    >
+      <div class="bg-white rounded-3xl w-full max-w-lg p-6 shadow-2xl max-h-[85vh] flex flex-col">
+        <div class="flex items-center justify-between pb-4 border-b border-gray-100">
+          <div class="flex items-center gap-2">
+            <h3 class="text-lg font-bold text-neutral-900 m-0">Mijozlar sharhlari</h3>
+            <span class="text-xs px-2.5 py-0.5 rounded-full bg-secondary-100 text-primary font-semibold">{{ reviewsCount }}</span>
+          </div>
+          <button
+            type="button"
+            @click="isReviewsOpen = false"
+            class="p-1.5 rounded-full hover:bg-secondary-100 text-neutral-400 border-none bg-transparent cursor-pointer"
+            aria-label="Yopish"
+          >
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+
+        <div class="overflow-y-auto py-4 flex-1 space-y-3">
+          <div v-if="reviews.length === 0" class="py-12 text-center">
+            <div class="w-16 h-16 rounded-full bg-secondary-100 text-neutral-400 mx-auto flex items-center justify-center mb-3">
+              <svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
+              </svg>
+            </div>
+            <h4 class="text-base font-semibold text-neutral-800 mb-1">Hozircha sharhlar mavjud emas</h4>
+            <p class="text-xs text-neutral-400 max-w-xs mx-auto">Ushbu kitob haqida birinchi bo'lib o'z fikringizni bildiring.</p>
+          </div>
+          <div v-else v-for="rev in reviews" :key="rev.id" class="p-4 rounded-2xl bg-secondary-50 space-y-2">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-sm flex items-center justify-center">
+                  {{ rev.user_name?.[0] || 'F' }}
+                </div>
+                <div>
+                  <span class="text-sm font-semibold text-neutral-900 block">{{ rev.user_name }}</span>
+                  <span class="text-[11px] text-neutral-400">{{ rev.created_at || 'Yaqinda' }}</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-0.5 text-amber-400">
+                <svg v-for="s in 5" :key="s" class="w-4 h-4" :class="s <= rev.rating ? 'fill-amber-400' : 'fill-neutral-200 text-neutral-200'" viewBox="0 0 20 20">
+                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                </svg>
+              </div>
+            </div>
+            <p class="text-xs text-neutral-700 m-0 leading-relaxed">{{ rev.comment }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- ====== FULL SHIMMER SKELETON (While loading) ====== -->
@@ -648,6 +715,8 @@ const config = useRuntimeConfig()
 const cartStore = useCartStore()
 const favStore = useFavoritesStore()
 
+const isReviewsOpen = ref(false)
+
 // Extract numeric ID from param like "123-slug-nomi"
 const rawId = computed(() => {
   const param = String(route.params.id || '')
@@ -669,6 +738,10 @@ const { data: productData } = await useFetch<any>(
 const product = computed(() => {
   return productData.value?.data || productData.value?.product || null
 })
+
+const productRating = computed(() => product.value?.rating ? Number(product.value.rating).toFixed(2) : '5.00')
+const reviewsCount = computed(() => product.value?.reviews_count || product.value?.reviews?.length || 0)
+const reviews = computed(() => product.value?.reviews || [])
 
 const isFav = computed(() => product.value ? favStore.isFavorited(product.value.id, 'book') : false)
 
