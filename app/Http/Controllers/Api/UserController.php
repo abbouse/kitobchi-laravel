@@ -341,6 +341,12 @@ class UserController extends Controller
 
         $validator = Validator::make($request->all(), [
             'username' => 'nullable|string|min:3|max:32|regex:/^[A-Za-z0-9_.]+$/|unique:users,username,' . $user->id,
+            // MUHIM: piyola'dagi "Ma'lumotlarim" tahrirlash formasi bilan
+            // funksional parallellik uchun qo'shildi — Kitobchi web
+            // frontendida (profile/info.vue, profile/edit.vue) bu ikki
+            // maydon oldin UMUMAN ko'rsatilmas/yuborilmas edi.
+            'email'     => 'nullable|email:rfc|max:40|unique:users,email,' . $user->id,
+            'birthdate' => 'nullable|date|before:today',
         ]);
 
         if ($validator->fails()) {
@@ -353,6 +359,8 @@ class UserController extends Controller
         if ($request->filled('name'))     $user->name     = $request->name;
         if ($request->filled('lastname')) $user->lastname = $request->lastname;
         if ($request->has('sex'))         $user->sex      = $request->sex;
+        if ($request->has('email'))       $user->email     = $request->filled('email') ? $request->email : null;
+        if ($request->has('birthdate'))   $user->birthdate = $request->filled('birthdate') ? $request->birthdate : null;
         if ($request->has('username')) {
             $username = mb_strtolower(trim((string) $request->username));
             $username = ltrim($username, '@');
@@ -408,6 +416,11 @@ class UserController extends Controller
             'status' => 'success',
             'role' => $displayRole,
             'username' => $user->username,
+            // MUHIM: frontend (auth.ts store) haqiqiy saqlangan qiymatlarni
+            // shu javobdan o'qib, lokal `user` cookie'sini yangilaydi —
+            // birthdate/email uchun ham xuddi shunday (pastga qarang).
+            'email' => $user->email,
+            'birthdate' => $user->birthdate,
         ], 200);
     }
 

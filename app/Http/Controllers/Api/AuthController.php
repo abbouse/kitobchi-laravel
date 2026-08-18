@@ -492,6 +492,17 @@ class AuthController extends Controller
                 'lastname' => $user->lastname,
                 'username' => $user->username,
                 'sex' => $user->sex,
+                // MUHIM: piyola'dagi "Ma'lumotlarim" sahifasiga funksional
+                // parallellik uchun qo'shildi (2026_08_18_130000 migratsiyasi
+                // + UserController::settings()) — login javobiga qo'shilmasa,
+                // frontend (auth.ts) bu ikki maydonni faqat joriy sessiyada
+                // (birinchi marta tahrirlangandan keyin) ko'radi, lekin
+                // qayta kirganda (token/cookie yangilanganda) yo'qolib
+                // qoladi — chunki haqiqiy backendda alohida "joriy
+                // foydalanuvchini qayta olish" endpointi yo'q (auth.ts
+                // ichidagi izohga qarang).
+                'email' => $user->email,
+                'birthdate' => $user->birthdate,
                 'token' => $plainTextToken,
                 'cartItemCount' => (int) $cartItemCount,
                 'photo' => $user->avatar,

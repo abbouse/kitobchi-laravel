@@ -28,6 +28,13 @@ class User extends Authenticatable
         'role_place',
         'role_preset_id',
         'email',
+        // MUHIM: piyola'dagi "Ma'lumotlarim" sahifasiga funksional
+        // parallellik uchun qo'shildi (2026_08_18_130000 migratsiyasi) —
+        // ilgari `sex` fillable ro'yxatida yo'q edi (faqat to'g'ridan-to'g'ri
+        // xossa sifatida o'rnatilardi), `birthdate` esa DB'da ham UMUMAN
+        // mavjud emas edi.
+        'sex',
+        'birthdate',
         'mainAddressID',
         'telegram_id',
         'telegram_username',
