@@ -78,9 +78,12 @@ class SupportChatBridgeService
         ]);
     }
 
-    public function sendReplyToConversation(BotTicket $ticket, string $body, ?int $operatorTelegramId = null, ?int $adminId = null): Message
+    public function sendReplyToConversation(object|array $ticket, string $body, ?int $operatorTelegramId = null, ?int $adminId = null): Message
     {
-        $conversation = Conversation::query()->with('shop')->find($ticket->source_conversation_id);
+        $ticketId     = is_array($ticket) ? ($ticket['id'] ?? null) : ($ticket->id ?? null);
+        $sourceConvId = is_array($ticket) ? ($ticket['source_conversation_id'] ?? null) : ($ticket->source_conversation_id ?? null);
+
+        $conversation = Conversation::query()->with('shop')->find($sourceConvId);
         if (!$this->shouldBridgeConversation($conversation)) {
             throw new \RuntimeException('Support chat conversation topilmadi.');
         }
@@ -106,7 +109,7 @@ class SupportChatBridgeService
         });
 
         SessionService::saveMessage(
-            ticketId: (int) $ticket->id,
+            ticketId: (int) $ticketId,
             sentBy: $adminId ? 'admin' : 'operator',
             message: $body,
             messageType: 'text',
@@ -116,16 +119,22 @@ class SupportChatBridgeService
             isDelivered: true
         );
 
-        $ticket->update([
-            'status' => SessionService::STATUS_ACTIVE,
-            'updated_at' => now(),
-        ]);
+        if ($ticket instanceof BotTicket) {
+            $ticket->update([
+                'status' => SessionService::STATUS_ACTIVE,
+                'updated_at' => now(),
+            ]);
+        } elseif ($ticketId) {
+            SessionService::updateTicket((int) $ticketId, [
+                'status' => SessionService::STATUS_ACTIVE,
+            ]);
+        }
 
         try {
             SendMessagePushNotification::dispatch($message->id)->delay(now()->addSeconds(2));
         } catch (\Throwable $e) {
             Log::warning('Support chat push yuborishda xato', [
-                'ticket_id' => $ticket->id,
+                'ticket_id' => $ticketId,
                 'conversation_id' => $conversation->id,
                 'message_id' => $message->id,
                 'error' => $e->getMessage(),
@@ -136,7 +145,7 @@ class SupportChatBridgeService
         $this->safeBroadcast(
             event: new MessageSent($message->load('replyTo')),
             context: [
-                'ticket_id' => $ticket->id,
+                'ticket_id' => $ticketId,
                 'conversation_id' => $conversation->id,
                 'message_id' => $message->id,
                 'event' => 'MessageSent',
@@ -145,7 +154,7 @@ class SupportChatBridgeService
         $this->safeBroadcast(
             event: new ConversationUpdated($freshConversation, (int) $conversation->user_id, 'user'),
             context: [
-                'ticket_id' => $ticket->id,
+                'ticket_id' => $ticketId,
                 'conversation_id' => $conversation->id,
                 'target' => 'user',
                 'target_id' => (int) $conversation->user_id,
@@ -154,7 +163,7 @@ class SupportChatBridgeService
         $this->safeBroadcast(
             event: new ConversationUpdated($freshConversation, (int) $conversation->shop_id, 'seller'),
             context: [
-                'ticket_id' => $ticket->id,
+                'ticket_id' => $ticketId,
                 'conversation_id' => $conversation->id,
                 'target' => 'seller',
                 'target_id' => (int) $conversation->shop_id,
@@ -164,13 +173,17 @@ class SupportChatBridgeService
         return $message;
     }
 
-    public function notifyConversationTicketClosed(BotTicket $ticket, string $reason = ''): void
+    public function notifyConversationTicketClosed(object|array $ticket, string $reason = ''): void
     {
-        if ($ticket->source_type !== 'shop_chat' || !(int) $ticket->source_conversation_id) {
+        $ticketId     = is_array($ticket) ? ($ticket['id'] ?? null) : ($ticket->id ?? null);
+        $sourceType   = is_array($ticket) ? ($ticket['source_type'] ?? null) : ($ticket->source_type ?? null);
+        $sourceConvId = is_array($ticket) ? ($ticket['source_conversation_id'] ?? null) : ($ticket->source_conversation_id ?? null);
+
+        if ($sourceType !== 'shop_chat' || !(int) $sourceConvId) {
             return;
         }
 
-        $conversation = Conversation::query()->with('shop')->find($ticket->source_conversation_id);
+        $conversation = Conversation::query()->with('shop')->find($sourceConvId);
         if (!$conversation || !$conversation->shop) {
             return;
         }

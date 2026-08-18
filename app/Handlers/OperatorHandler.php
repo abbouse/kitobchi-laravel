@@ -5,6 +5,7 @@ namespace App\Handlers;
 use App\Services\SessionService;
 use App\Services\SupportChatBridgeService;
 use App\Services\TelegramSupportService;
+use App\Services\InlineKnowledgeService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use SergiX44\Nutgram\Nutgram;
@@ -410,41 +411,16 @@ class OperatorHandler
     public static function handleInlineQuery(Nutgram $bot): void
     {
         $query = trim($bot->inlineQuery()?->query ?? '');
-        $userId = $bot->userId();
+        $results = InlineKnowledgeService::search($query);
 
-        if (!SessionService::isOperator($userId) && !SessionService::isAdmin($userId)) {
-            $bot->answerInlineQuery([]);
-            return;
+        try {
+            $bot->answerInlineQuery(array_slice($results, 0, 50), [
+                'cache_time' => 1,
+                'is_personal' => false,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning("[OperatorHandler] answerInlineQuery xatosi: " . $e->getMessage());
         }
-
-        $allReplies = SessionService::getQuickReplies();
-        $results = [];
-
-        foreach ($allReplies as $key => $item) {
-            if ($query !== '') {
-                $titleMatch   = str_contains(mb_strtolower($item['title']), mb_strtolower($query));
-                $textMatch    = str_contains(mb_strtolower($item['text']), mb_strtolower($query));
-                $summaryMatch = str_contains(mb_strtolower($item['summary'] ?? ''), mb_strtolower($query));
-                if (!$titleMatch && !$textMatch && !$summaryMatch) {
-                    continue;
-                }
-            }
-
-            $results[] = \SergiX44\Nutgram\Telegram\Types\Inline\InlineQueryResultArticle::make(
-                id: $key,
-                title: $item['title'],
-                input_message_content: \SergiX44\Nutgram\Telegram\Types\Input\InputTextMessageContent::make(
-                    message_text: $item['text'],
-                    parse_mode: 'HTML'
-                ),
-                description: $item['summary'] ?? mb_substr(strip_tags($item['text']), 0, 60)
-            );
-        }
-
-        $bot->answerInlineQuery(array_slice($results, 0, 20), [
-            'cache_time' => 5,
-            'is_personal' => true,
-        ]);
     }
 
     public static function handleSendQuickReply(Nutgram $bot, string $key): void
