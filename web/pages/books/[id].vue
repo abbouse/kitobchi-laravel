@@ -234,27 +234,32 @@
         </div>
       </div>
 
-      <!-- Mobil Pastki Suzuvchi Xarid Paneli (Sticky Buy Bar) -->
-      <div class="w-full bg-white shadow-2xl rounded-t-2xl fixed bottom-0 left-0 z-60">
-        <div class="px-4 py-3 pb-6 flex items-center gap-3">
-          <div class="flex-1">
-            <button
-              type="button"
-              @click="handleBuyNow"
-              class="ios-order-btn w-full h-12 rounded-2xl text-base font-semibold text-white border-none cursor-pointer flex items-center justify-center"
-            >
-              Buyurtma berish
-            </button>
-          </div>
+      <!-- Mobil Pastki Suzuvchi Xarid Paneli (Sticky Buy Bar - Piyola 1:1) -->
+      <div
+        class="w-full bg-white shadow-2xl rounded-t-2xl fixed bottom-0 left-0 z-60"
+        style="padding-bottom: max(1.25rem, env(safe-area-inset-bottom, 1.25rem))"
+      >
+        <div class="px-4 py-3 flex items-center gap-3">
           <button
             type="button"
             @click="handleAddToCart"
-            class="h-12 px-3.5 rounded-2xl bg-secondary-100 text-primary hover:bg-secondary-200 border-none cursor-pointer flex items-center justify-center shrink-0 transition-colors"
+            class="flex-1 h-12 rounded-2xl bg-secondary-200 hover:bg-secondary-300 text-primary font-bold text-sm border-none cursor-pointer flex items-center justify-center gap-2 transition-all active:scale-95"
             aria-label="Savatga qo'shish"
           >
-            <svg class="w-6 h-6" viewBox="0 0 20 20" fill="currentColor">
+            <svg v-if="!isAdded" class="w-5 h-5 text-primary shrink-0" viewBox="0 0 20 20" fill="currentColor">
               <path d="M3 1a1 1 0 0 0 0 2h1.22l.305 1.222l.01.042l1.358 5.43l-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 0 0 0-2H6.414l1-1H14a1 1 0 0 0 .894-.553l3-6A1 1 0 0 0 17 3H6.28l-.31-1.243A1 1 0 0 0 5 1zm13 15.5a1.5 1.5 0 1 1-3 0a1.5 1.5 0 0 1 3 0M6.5 18a1.5 1.5 0 1 0 0-3a1.5 1.5 0 0 0 0 3"/>
             </svg>
+            <svg v-else class="w-5 h-5 text-emerald-600 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd" />
+            </svg>
+            <span class="truncate">{{ isAdded ? 'Savatga qo‘shildi' : 'Savatga qo‘shish' }}</span>
+          </button>
+          <button
+            type="button"
+            @click="handleBuyNow"
+            class="ios-order-btn flex-1 h-12 rounded-2xl text-base font-semibold text-white border-none cursor-pointer flex items-center justify-center active:scale-95 transition-transform"
+          >
+            Sotib olish
           </button>
         </div>
       </div>
@@ -791,9 +796,17 @@ function formatPrice(val: number) {
   return (val || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
 }
 
+const isAdded = ref(false)
+let isAddedTimeout: any = null
+
 function handleAddToCart() {
   if (product.value) {
     cartStore.addItem(product.value, 'book', 1)
+    isAdded.value = true
+    if (isAddedTimeout) clearTimeout(isAddedTimeout)
+    isAddedTimeout = setTimeout(() => {
+      isAdded.value = false
+    }, 2000)
   }
 }
 
