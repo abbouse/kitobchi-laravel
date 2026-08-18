@@ -928,19 +928,24 @@ function onDesktopTrackScroll() {
   scrollRaf = requestAnimationFrame(() => {
     const el = desktopTrackEl.value
     if (!el || el.clientWidth === 0) return
-    activeIndex.value = Math.round(el.scrollLeft / el.clientWidth)
+    const childWidth = (el.firstElementChild as HTMLElement)?.clientWidth || el.clientWidth
+    if (childWidth > 0) {
+      activeIndex.value = Math.round(el.scrollLeft / childWidth)
+    }
   })
 }
 
 function goToSlide(idx: number) {
   activeIndex.value = idx
   const dEl = desktopTrackEl.value
-  if (dEl) {
-    dEl.scrollTo({ left: idx * dEl.clientWidth, behavior: 'smooth' })
+  if (dEl && dEl.children[idx]) {
+    const targetChild = dEl.children[idx] as HTMLElement
+    dEl.scrollTo({ left: targetChild.offsetLeft, behavior: 'smooth' })
   }
   const mEl = mobileTrackEl.value
-  if (mEl) {
-    mEl.scrollTo({ left: idx * mEl.clientWidth, behavior: 'smooth' })
+  if (mEl && mEl.children[idx]) {
+    const targetChild = mEl.children[idx] as HTMLElement
+    mEl.scrollTo({ left: targetChild.offsetLeft, behavior: 'smooth' })
   }
 }
 
