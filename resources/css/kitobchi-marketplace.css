@@ -865,3 +865,34 @@ nav[role="navigation"] ul li a:hover {
 .kc-mk-body { /* same as body */ }
 .kc-mk-product-grid { /* use .kc-product-grid */ }
 .kc-mk-card { /* use .kc-product-card */ }
+
+/* =========================================================================
+   UNIVERSAL SHIMMER EFFECT / SKELETON LOADING
+   ========================================================================= */
+@keyframes kc-shimmer-sweep {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+.shimmer,
+.kc-shimmer,
+.animate-shimmer {
+    background: linear-gradient(
+        90deg,
+        #f3f4f6 0%,
+        #e5e7eb 30%,
+        #f9fafb 50%,
+        #e5e7eb 70%,
+        #f3f4f6 100%
+    ) !important;
+    background-size: 200% 100% !important;
+    animation: kc-shimmer-sweep 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite !important;
+}
+
+.shimmer-card {
+    background: #ffffff;
+    border-radius: 0.75rem;
+    border: 1px solid #f3f4f6;
+    overflow: hidden;
+}
+

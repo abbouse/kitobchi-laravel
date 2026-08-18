@@ -233,3 +233,44 @@
   .catalog-filter-clear-desktop{display:block;flex:1 1 0%}
   .catalog-filter-apply-btn{flex:1 1 0%;width:auto}
 }
+
+/* ===================================================================
+ * 10) PREMIUM SHIMMER EFFECT / SKELETON LOADING
+ *     Butun loyiha bo'ylab serverdan yuklanadigan har qanday ma'lumot
+ *     uchun o'ta nafis, silliq va professional shimmer effekti.
+ * =================================================================== */
+@keyframes kc-shimmer-sweep {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.shimmer,
+.kc-shimmer,
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    #f3f4f6 0%,
+    #e5e7eb 30%,
+    #f9fafb 50%,
+    #e5e7eb 70%,
+    #f3f4f6 100%
+  ) !important;
+  background-size: 200% 100% !important;
+  animation: kc-shimmer-sweep 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite !important;
+}
+
+.shimmer-card {
+  background: #ffffff;
+  border-radius: 1rem;
+  border: 1px solid #f3f4f6;
+  overflow: hidden;
+}
+
+.shimmer-pill {
+  border-radius: 9999px;
+}
+

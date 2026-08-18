@@ -206,14 +206,8 @@
       </div>
 
       <!-- Loading skeleton (birinchi yuklanish) -->
-      <div v-else class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-3 lg:gap-5 mb-10">
-        <div v-for="n in 10" :key="n" class="flex flex-col w-full animate-pulse">
-          <div class="aspect-232/309 w-full bg-neutral-200 rounded-xl"></div>
-          <div class="pt-4 px-3 pb-4 space-y-2">
-            <div class="h-4 w-full bg-neutral-200 rounded-md"></div>
-            <div class="h-4 w-2/3 bg-neutral-200 rounded-md"></div>
-          </div>
-        </div>
+      <div v-else class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 md:gap-4 lg:gap-5 mb-10">
+        <ProductCardSkeleton v-for="n in 10" :key="'catalog-skeleton-' + n" />
       </div>
 
       <!-- Yana ko'rsatish -->

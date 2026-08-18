@@ -43,12 +43,12 @@
           <p class="text-sm text-neutral-400 m-0">Biror nima yozing</p>
         </div>
 
-        <!-- Loading skeleton -->
-        <div v-else-if="pending" class="animate-pulse space-y-3">
-          <div class="h-3 bg-secondary-100 rounded w-24 mb-4"></div>
-          <div class="h-14 bg-secondary-100 rounded-xl w-full"></div>
-          <div class="h-14 bg-secondary-100 rounded-xl w-full"></div>
-          <div class="h-14 bg-secondary-100 rounded-xl w-full"></div>
+        <!-- Loading shimmer skeleton -->
+        <div v-else-if="pending" class="space-y-3">
+          <div class="h-3.5 shimmer rounded w-28 mb-4"></div>
+          <div class="h-16 shimmer rounded-2xl w-full"></div>
+          <div class="h-16 shimmer rounded-2xl w-full"></div>
+          <div class="h-16 shimmer rounded-2xl w-full"></div>
         </div>
 
         <template v-else>

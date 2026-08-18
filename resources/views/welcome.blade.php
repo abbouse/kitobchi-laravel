@@ -263,9 +263,9 @@
         </div>
     </section>
 
-    <!-- ====== SECTION 1: YANGI KITOBLAR ====== -->
+    <!-- ====== SECTION 1: YANGI KITOBLAR (Faqat Desktopda) ====== -->
     @if($newBooks->isNotEmpty())
-        <section class="py-4 md:py-6 lg:py-10 max-lg:rounded-2xl max-lg:mb-2">
+        <section class="py-4 md:py-6 lg:py-10 max-lg:rounded-2xl max-lg:mb-2 max-md:hidden">
             <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
                 <div class="flex justify-between items-center w-full px-1 max-md:mt-5 mb-3 md:mb-5 lg:mb-8">
                     <h2 class="font-bold text-xl md:text-4xl leading-[100%] text-primary m-0 capitalize flex items-center gap-2">
@@ -290,9 +290,9 @@
         </section>
     @endif
 
-    <!-- ====== SECTION 2: TAVSIYA ETAMIZ (TOP SOTUVLAR) ====== -->
+    <!-- ====== SECTION 2: TAVSIYA ETAMIZ (TOP SOTUVLAR — Faqat Desktopda) ====== -->
     @if($recommendedBooks->isNotEmpty())
-        <section class="py-4 md:py-6 lg:py-10 max-lg:rounded-2xl max-lg:mb-2">
+        <section class="py-4 md:py-6 lg:py-10 max-lg:rounded-2xl max-lg:mb-2 max-md:hidden">
             <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
                 <div class="flex justify-between items-center w-full px-1 max-md:mt-5 mb-3 md:mb-5 lg:mb-8">
                     <h2 class="font-bold text-xl md:text-4xl leading-[100%] text-primary m-0 capitalize flex items-center gap-2">
@@ -317,10 +317,10 @@
         </section>
     @endif
 
-    <!-- ====== SECTION 3+: JANRLAR BO'YICHA KITOBLAR ====== -->
+    <!-- ====== SECTION 3+: JANRLAR BO'YICHA KITOBLAR (Faqat Desktopda) ====== -->
     @if($categorySections->isNotEmpty())
         @foreach($categorySections as $section)
-            <section class="py-4 md:py-6 lg:py-10 max-lg:rounded-2xl max-lg:mb-2">
+            <section class="py-4 md:py-6 lg:py-10 max-lg:rounded-2xl max-lg:mb-2 max-md:hidden">
                 <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
                     <div class="flex justify-between items-center w-full px-1 max-md:mt-5 mb-3 md:mb-5 lg:mb-8">
                         <h2 class="font-bold text-xl md:text-4xl leading-[100%] text-primary m-0 capitalize flex items-center gap-2">
@@ -345,6 +345,30 @@
             </section>
         @endforeach
     @endif
+
+    <!-- ====== MOBILDA FAQAT BARCHA MAHSULOTLAR (Piyola 1:1) ====== -->
+    <section class="py-4 md:hidden">
+        <div class="px-4 w-full mx-auto">
+            <h2 class="font-bold text-xl leading-[100%] text-primary m-0 capitalize mb-3">
+                Barcha mahsulotlar
+            </h2>
+            <div id="kcMobileFeedGrid" class="grid grid-cols-2 gap-2.5">
+                @php
+                    $mobileFeedItems = $featuredBooks->isNotEmpty() ? $featuredBooks : ($recommendedBooks->isNotEmpty() ? $recommendedBooks : $newBooks);
+                @endphp
+                @foreach($mobileFeedItems as $book)
+                    @include('partials.home-book-card', ['book' => $book])
+                @endforeach
+            </div>
+
+            <!-- Shimmer Skeleton Placeholder when loading more -->
+            <div id="kcMobileFeedSkeleton" class="grid grid-cols-2 gap-2.5 mt-2.5" style="display:none;">
+                @for($i = 0; $i < 4; $i++)
+                    @include('partials.home-book-card-skeleton')
+                @endfor
+            </div>
+        </div>
+    </section>
 </div>
 
 <!-- ====== BANNER BOTTOMSHEET MODAL (PiyolaMarket Mobile BottomSheet) ====== -->

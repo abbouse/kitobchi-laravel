@@ -66,8 +66,8 @@
       </div>
     </section>
 
-    <!-- ====== SECTION 1: YANGI KELGAN KITOBLAR (Piyola 1:1) ====== -->
-    <section v-if="newBooks.length > 0" class="py-4 md:py-6 lg:py-10">
+    <!-- ====== SECTION 1: YANGI KELGAN KITOBLAR (Faqat Desktopda) ====== -->
+    <section v-if="newBooks.length > 0" class="py-4 md:py-6 lg:py-10 max-md:hidden">
       <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
         <div class="flex justify-between items-center w-full px-1 max-md:mt-4 mb-3 md:mb-5 lg:mb-8">
           <h2 class="font-bold text-xl md:text-3xl leading-[100%] text-primary m-0 capitalize flex items-center gap-2">
@@ -100,8 +100,8 @@
       </div>
     </section>
 
-    <!-- ====== SECTION 2: TAVSIYA ETAMIZ ====== -->
-    <section v-if="recommendedBooks.length > 0" class="py-4 md:py-6 lg:py-10 bg-secondary-50">
+    <!-- ====== SECTION 2: TAVSIYA ETAMIZ (Faqat Desktopda) ====== -->
+    <section v-if="recommendedBooks.length > 0" class="py-4 md:py-6 lg:py-10 bg-secondary-50 max-md:hidden">
       <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
         <div class="flex justify-between items-center w-full px-1 max-md:mt-4 mb-3 md:mb-5 lg:mb-8">
           <h2 class="font-bold text-xl md:text-3xl leading-[100%] text-primary m-0 capitalize flex items-center gap-2">
@@ -201,17 +201,15 @@
           />
         </div>
 
-        <!-- Cheksiz scroll sentinel — IntersectionObserver shu elementga
-             qarab avtomatik keyingi sahifani yuklaydi (piyoladagi kabi
-             tugmasiz, foydalanuvchi scroll qilgani sari o'zi yuklanadi). -->
+        <!-- Cheksiz scroll sentinel -->
         <div ref="mobileSentinel" class="h-1 w-full" aria-hidden="true"></div>
 
-        <div v-if="isMobileLoadingMore" class="flex justify-center py-6">
-          <div class="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <!-- Shimmer loading state when fetching more items -->
+        <div v-if="isMobileLoadingMore" class="grid grid-cols-2 gap-2.5 mt-2.5">
+          <ProductCardSkeleton v-for="n in 4" :key="'skeleton-more-' + n" />
         </div>
 
-        <!-- Fallback tugma — Observer biror sabab bilan ishlamasa ham
-             foydalanuvchi qo'lda davom ettira oladi. -->
+        <!-- Fallback tugma -->
         <div v-else-if="mobileHasMore" class="flex justify-center py-4">
           <button
             type="button"

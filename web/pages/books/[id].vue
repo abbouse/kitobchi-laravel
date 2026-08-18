@@ -378,6 +378,33 @@
       </button>
     </div>
   </div>
+
+  <!-- ====== FULL SHIMMER SKELETON (While loading) ====== -->
+  <div v-else class="py-4 md:py-6 min-h-dvh bg-white grow">
+    <div class="px-4 sm:px-6 lg:px-8 w-full max-w-(--ui-container) mx-auto">
+      <!-- Breadcrumb shimmer -->
+      <div class="h-8 w-48 rounded-lg shimmer mb-6 max-md:hidden"></div>
+
+      <div class="lg:grid lg:grid-cols-2 xl:grid-cols-3 gap-8">
+        <!-- Gallery Shimmer -->
+        <div class="col-span-1 xl:col-span-2 max-w-[520px] mx-auto lg:mx-0 w-full">
+          <div class="w-full aspect-3/4 max-h-[460px] rounded-3xl shimmer"></div>
+          <div class="flex gap-2 mt-4">
+            <div v-for="n in 4" :key="n" class="w-16 h-16 rounded-xl shimmer"></div>
+          </div>
+        </div>
+
+        <!-- Specs & Price Shimmer -->
+        <div class="space-y-4">
+          <div class="h-8 w-3/4 rounded-lg shimmer"></div>
+          <div class="h-5 w-1/2 rounded-md shimmer"></div>
+          <div class="h-10 w-44 rounded-xl shimmer mt-4"></div>
+          <div class="h-24 w-full rounded-2xl shimmer mt-4"></div>
+          <div class="h-14 w-full rounded-2xl shimmer mt-6"></div>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">

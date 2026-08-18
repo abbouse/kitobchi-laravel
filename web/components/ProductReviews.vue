@@ -79,8 +79,25 @@
       </form>
     </div>
 
+    <!-- Loading Shimmer State -->
+    <div v-if="isReviewsLoading" class="space-y-4">
+      <div v-for="n in 2" :key="'rev-skel-' + n" class="p-5 sm:p-6 rounded-3xl bg-secondary-100 border border-gray-100">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-10 h-10 rounded-full shimmer shrink-0"></div>
+          <div class="space-y-1.5 flex-1">
+            <div class="h-4 w-32 rounded shimmer"></div>
+            <div class="h-3 w-20 rounded shimmer"></div>
+          </div>
+        </div>
+        <div class="space-y-2 mt-2">
+          <div class="h-3.5 w-full rounded shimmer"></div>
+          <div class="h-3.5 w-4/5 rounded shimmer"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- Reviews List -->
-    <div v-if="reviews.length > 0" class="space-y-4">
+    <div v-else-if="reviews.length > 0" class="space-y-4">
       <div
         v-for="item in reviews"
         :key="item.id"
@@ -192,7 +209,7 @@ const newReviewText = ref('')
 const isSubmitting = ref(false)
 
 // Fetch reviews for product
-const { data: reviewsRes, refresh } = await useFetch<any>(
+const { data: reviewsRes, pending: isReviewsLoading, refresh } = await useFetch<any>(
   () => `${config.public.apiBase}/v1/kitobchi/product_comments/${props.productId}/${props.type}`,
   {
     lazy: true
